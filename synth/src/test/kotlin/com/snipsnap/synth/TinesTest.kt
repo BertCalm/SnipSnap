@@ -52,6 +52,53 @@ class TinesTest {
     }
 
     @Test
+    fun `render actually dispatches oversampled before decimating - CHIME's own aliasing regression`() {
+        // CHIME at full BRIGHT drives its modulation index up to 4 at a
+        // carrier around 1500Hz with ratio 3.5 (modHz ~5.25kHz) - FM
+        // sidebands spread roughly (index+1) x modHz either side of the
+        // carrier, well past 44.1kHz's 22.05kHz Nyquist even at these
+        // fairly ordinary settings. Reverting Tines.render's dispatch back
+        // to synthesizing directly at RATE (skipping renderRate +
+        // Dsp.decimate) would leave every other TINES test in this file
+        // green - this is the one that would catch it (Copilot's review of
+        // this PR: "a focused regression through Tines.render").
+        val bright = Tines.render(TinesVoice.CHIME, mapOf("BRIGHT" to 1f, "TUNE" to 1f, "DECAY" to 1f))
+
+        // A direct, non-oversampled reference at the same carrier/index/t60
+        // CHIME's own bright() computes at these macro settings (one
+        // strike, not chime()'s two-detuned-strikes blend - close enough to
+        // isolate the ordering, not an attempt to reproduce chime() exactly),
+        // synthesized with the same strike() primitive Tines.kt wraps, at
+        // Dsp.RATE directly rather than through render()'s oversample step.
+        val carrier = Dsp.expMap(1f, 520f, 1500f)
+        val index = Dsp.lin(1f, 0.6f, 4f)
+        val t60 = Dsp.expMap(1f, 0.2f, 0.9f)
+        val direct = FloatArray((t60 * 1.3f * Dsp.RATE).toInt().coerceAtLeast(64))
+        Tines.strike(direct, carrier, 3.5f, index, t60, bite = 3f, gain = 0.6f, rate = Dsp.RATE)
+        Dsp.normalize(direct)
+
+        val fftSize = 4096
+        val brightSpectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(bright.samples, fftSize)
+        val directSpectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(direct, fftSize)
+        val binHz = Dsp.RATE.toFloat() / fftSize
+
+        // Just under Nyquist: real FM sideband energy that only lands here
+        // if it was never properly band-limited during synthesis - measured
+        // ~6x higher for the direct render than for Tines.render's own
+        // output.
+        val lo = (19_000 / binHz).toInt()
+        val hi = (22_000 / binHz).toInt()
+        fun bandEnergy(spectrum: FloatArray) = (lo..hi).sumOf { (spectrum[it] * spectrum[it]).toDouble() }
+        val brightEnergy = bandEnergy(brightSpectrum)
+        val directEnergy = bandEnergy(directSpectrum)
+        assertTrue(
+            directEnergy > brightEnergy * 3,
+            "a direct RATE-native render should show detectably more near-Nyquist energy than " +
+                "Tines.render's own oversampled-then-decimated output: bright=$brightEnergy direct=$directEnergy",
+        )
+    }
+
+    @Test
     fun `scrambles are reproducible and stay in range`() {
         for (voice in TinesVoice.entries) {
             assertEquals(Tines.scramble(voice, Random(4)), Tines.scramble(voice, Random(4)))
