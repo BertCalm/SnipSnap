@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.ln
@@ -213,5 +214,35 @@ internal object Dsp {
         for (i in 0 until n) {
             buf[buf.size - 1 - i] *= i.toFloat() / n
         }
+    }
+
+    /**
+     * A variable-speed head: for each output frame, [headAt] says where to
+     * read (fractional) and how loud. Linearly interpolated between
+     * neighbours; a position at or past the last source frame, or a zero
+     * gain, leaves that output frame silent — a stop that outruns its
+     * material simply runs out.
+     *
+     * The rack's two varispeed stages read through here — MOTION's capstan,
+     * where the position is the integral of a speed ramp, and SPEED's pitch,
+     * where it is a straight line — so they cannot drift apart in quality.
+     */
+    inline fun readAt(snip: Snip, outFrames: Int, headAt: (Int) -> Pair<Double, Float>): Snip {
+        val ch = snip.channels
+        val src = snip.samples
+        val last = snip.frameCount - 1
+        val out = FloatArray(outFrames * ch)
+        for (k in 0 until outFrames) {
+            val (pos, gain) = headAt(k)
+            if (pos >= last || gain <= 0f) continue
+            val i = pos.toInt()
+            val frac = (pos - i).toFloat()
+            for (c in 0 until ch) {
+                val a = src[i * ch + c]
+                val b = src[(i + 1) * ch + c]
+                out[k * ch + c] = (a + (b - a) * frac) * gain
+            }
+        }
+        return Snip(out, ch, snip.sampleRate)
     }
 }
