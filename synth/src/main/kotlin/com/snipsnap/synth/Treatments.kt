@@ -38,6 +38,14 @@ object Treatments {
         "dubbed" to FxChain(dub = mapOf("GENERATIONS" to 0.6f)),
         // The sound arrives before it strikes.
         "swelled" to FxChain(swell = mapOf("RISE" to 0.6f)),
+        // The attack leaned on rather than taken away.
+        "spiked" to FxChain(spike = mapOf("ATTACK" to 0.7f, "SUSTAIN" to 0.45f)),
+        // Multiplied by a sine: metal, bells, radio.
+        "ringed" to FxChain(ring = mapOf("FREQ" to 0.45f, "MIX" to 0.5f)),
+        // The record under the hit: rumble, groove, and every play before this one.
+        "dusted" to FxChain(dust = mapOf("CRACKLE" to 0.5f, "RUMBLE" to 0.3f, "HISS" to 0.35f)),
+        // Four allpasses, swept.
+        "phased" to FxChain(phase = mapOf("RATE" to 0.3f, "DEPTH" to 0.7f, "FEEDBACK" to 0.4f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

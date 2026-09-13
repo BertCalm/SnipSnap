@@ -662,4 +662,15 @@ class FxTest {
             }
         }
     }
+
+    @Test
+    fun `the four new characters exist and each sets its own section`() {
+        for ((name, section) in listOf(
+            "spiked" to "spike", "ringed" to "ring", "dusted" to "dust", "phased" to "phase",
+        )) {
+            assertTrue(name in Treatments.names, "'$name' is not a treatment")
+            assertTrue(Treatments.chain(name, 1f).section(section) != null, "'$name' does not set $section")
+            assertTrue(Treatments.chain(name, 0f).isBypass, "'$name' at AMT 0 is not a bypass")
+        }
+    }
 }
