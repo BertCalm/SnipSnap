@@ -111,6 +111,7 @@ object Velvet {
 
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf()
+        val env = Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
         var p1 = 0.0
         var p2 = 0.0
         var pSub = 0.0
@@ -131,8 +132,7 @@ object Velvet {
             val fc = floorHz + (peakHz - floorHz) * fEnv
             svf.process(stack, fc, damp)
 
-            val attack = (t / 0.003f).coerceAtMost(1f)
-            out[i] = svf.low * attack * Dsp.envAt(t, t60)
+            out[i] = svf.low * env.at(t)
         }
 
         Dsp.normalize(out)
