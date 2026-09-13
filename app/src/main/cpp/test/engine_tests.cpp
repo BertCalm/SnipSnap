@@ -513,24 +513,27 @@ TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
     CHECK(e.printState() == PrintBuffer::State::Idle);
 }
 
-TEST(surface_engine_mixes_two_loaded_samples_by_crossfade_weight) {
-    // Two constant sources tell the crossfade's sign apart cleanly: a
-    // lowpass's DC gain and tanh's odd symmetry both preserve sign, so
-    // mix=0 must settle positive, mix=1 negative, and mix=0.5 - an exact
-    // +0.9/-0.9 average computed before the filter ever sees it - at
-    // exactly zero. This is the one native check that the crossfade
-    // itself, not just the wiring, reaches the DSP.
-    auto settle = [](float mix) {
+TEST(surface_engine_blends_samples_at_each_vertex_by_weight) {
+    // Three constant sources, deliberately at different signs *and*
+    // magnitudes - loud positive, loud negative, quiet negative - so a
+    // weight wired to the wrong slot (B and C swapped, say) shows up as
+    // the wrong magnitude, not just the wrong sign. A lowpass's DC gain
+    // and tanh's odd symmetry both preserve sign, so this is still a
+    // magnitude/sign check, not an exact-value one - except at an even
+    // A/B split, which is an exact +0.9/-0.9 average computed before the
+    // filter ever sees it and must land on exactly zero.
+    auto settle = [](float a, float b, float c) {
         SurfaceEngine e(kRate);
-        std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+        std::vector<float> hi(100, 0.9f), lo(100, -0.9f), quiet(100, -0.3f);
         e.loadSample(hi.data(), hi.size(), kRate, 0);
         e.loadSample(lo.data(), lo.size(), kRate, 1);
+        e.loadSample(quiet.data(), quiet.size(), kRate, 2);
         ControlFrame f;
         f.mode = 0;
         f.gate = true;
         f.x = 0.5f;
         f.y = 1.0f;  // cutoff wide open
-        f.sampleMix = mix;
+        f.sampleA = a; f.sampleB = b; f.sampleC = c;
         e.pushControl(f);
         std::vector<float> out;
         for (int i = 0; i < 400; ++i) out = callback(e, 64);
@@ -539,43 +542,110 @@ TEST(surface_engine_mixes_two_loaded_samples_by_crossfade_weight) {
         return sum / static_cast<float>(out.size());
     };
 
-    CHECK(settle(0.0f) > 0.1f);
-    CHECK(settle(1.0f) < -0.1f);
-    CHECK(std::fabs(settle(0.5f)) < 0.01f);
+    CHECK(settle(1.0f, 0.0f, 0.0f) > 0.5f);              // slot 0 alone: loud positive
+    CHECK(settle(0.0f, 1.0f, 0.0f) < -0.5f);              // slot 1 alone: loud negative
+    const float thirdAlone = settle(0.0f, 0.0f, 1.0f);    // slot 2 alone: quiet negative
+    CHECK(thirdAlone < -0.02f && thirdAlone > -0.35f);
+    CHECK(std::fabs(settle(0.5f, 0.5f, 0.0f)) < 0.01f);   // slot 0/1 even split cancels exactly
 }
 
-TEST(surface_engine_second_slot_is_silent_until_loaded) {
-    // sampleMix all the way toward a slot nothing was ever loaded into
-    // must settle to honest silence, not NaN. "Settle" matters here as
-    // much as anywhere else in this file: mix_ glides toward its target
+TEST(surface_engine_treats_sample_weights_as_a_ratio_not_absolute_level) {
+    // renderMono renormalises sampleA/B/C every frame, so a caller sending
+    // {2, 0, 0} must sound identical to {1, 0, 0} - the blend is a ratio
+    // between slots, never an absolute level a UI has to keep under 1.
+    // With only one weight nonzero the ratio is 1.0 from the very first
+    // sample (nothing else to divide by), so the two runs are
+    // bit-identical from frame one, not just once a glide has settled.
+    auto run = [](float weight) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.9f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;
+        f.sampleA = weight;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 200; ++i) out = callback(e, 64);
+        return out;
+    };
+
+    CHECK(run(1.0f) == run(5.0f));
+}
+
+TEST(surface_engine_one_loaded_slot_plays_full_level_at_any_touch_weight) {
+    // With only slot 0 loaded, the other two vertices' touch weight is
+    // never really "requesting" anything - there is nothing there to
+    // read. Before this fix, wSum summed every weight the touch sent
+    // regardless of what was loaded, so a touch anywhere but the exact
+    // apex (weights 0.25/0.25 on the unloaded base vertices at the pad's
+    // own centre, say - TouchSurface.sampleWeights(0.5, 0.5)) silently
+    // halved the one loaded sample's level: the opposite of the "no dead
+    // zone" the vertex blend exists for. Settling at the apex and at the
+    // pad's centre must sound the same.
+    auto settle = [](float a, float b, float c) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.9f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = a; f.sampleB = b; f.sampleC = c;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    const float atApex = settle(1.0f, 0.0f, 0.0f);
+    const float atCentre = settle(0.5f, 0.25f, 0.25f);  // weight split across two unloaded vertices too
+    CHECK_NEAR(atApex, atCentre, 0.02f);
+}
+
+TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
+    // A weight aimed entirely at a slot nothing was ever loaded into must
+    // settle to honest silence, not NaN. "Settle" matters here as much as
+    // anywhere else in this file: sampleWeight_ glides toward its target
     // exactly like every other control, so right after gate=true the
-    // still-audible slot 0 legitimately leaks through the transient -
-    // that is the de-zippering working as intended, not a bug, and the
-    // finiteness check (never NaN) has to hold all through it. Silence
-    // is the claim only once the glide has actually arrived.
-    SurfaceEngine e(kRate);
-    std::vector<float> tone(100, 0.5f);
-    e.loadSample(tone.data(), tone.size(), kRate, 0);
-    ControlFrame f;
-    f.mode = 0;
-    f.gate = true;
-    f.x = 0.5f;
-    f.y = 1.0f;
-    f.sampleMix = 1.0f;
-    e.pushControl(f);
-    for (int i = 0; i < 300; ++i) {
-        auto out = callback(e, 64);
-        for (float v : out) CHECK(std::isfinite(v));
-    }  // let mix_ (and the gain envelope) glide all the way to their targets
-    float p = 0.0f;
-    for (int i = 0; i < 100; ++i) p = std::max(p, peak(callback(e, 64)));
-    // A one-pole glide never reaches its target bit-exactly in finite time
-    // (CI measured a ~2e-6 residual against a 1e-6 tolerance here) - 1e-4
-    // is still four orders of magnitude tighter than the ~0.14 this test
-    // catches when the glide hasn't happened at all, so it stays a real
-    // assertion without depending on exactly how many samples a given
-    // compiler's float rounding takes to underflow the rest of the way.
-    CHECK_NEAR(p, 0.0f, 1e-4f);
+    // still-audible slot 0 legitimately leaks through the transient - that
+    // is the de-zippering working as intended, not a bug, and the
+    // finiteness check (never NaN) has to hold all through it. Silence is
+    // the claim only once the glide has actually arrived. Checked for both
+    // slot 1 and slot 2, since each is its own weight and its own bug to have.
+    auto checkSlotSilentUntilLoaded = [](float ControlFrame::*weight) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.5f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;
+        f.sampleA = 0.0f;  // ControlFrame defaults sampleA to 1 - clear it so *weight alone carries the blend
+        f.*weight = 1.0f;
+        e.pushControl(f);
+        for (int i = 0; i < 300; ++i) {
+            auto out = callback(e, 64);
+            for (float v : out) CHECK(std::isfinite(v));
+        }  // let sampleWeight_ (and the gain envelope) glide all the way to their targets
+        float p = 0.0f;
+        for (int i = 0; i < 100; ++i) p = std::max(p, peak(callback(e, 64)));
+        // A one-pole glide never reaches its target bit-exactly in finite time
+        // (CI measured a ~2e-6 residual against a 1e-6 tolerance here) - 1e-4
+        // is still four orders of magnitude tighter than the ~0.14 this test
+        // catches when the glide hasn't happened at all, so it stays a real
+        // assertion without depending on exactly how many samples a given
+        // compiler's float rounding takes to underflow the rest of the way.
+        CHECK_NEAR(p, 0.0f, 1e-4f);
+    };
+    checkSlotSilentUntilLoaded(&ControlFrame::sampleB);
+    checkSlotSilentUntilLoaded(&ControlFrame::sampleC);
 }
 
 TEST(surface_engine_morph_blends_the_corners) {
@@ -597,6 +667,55 @@ TEST(surface_engine_morph_blends_the_corners) {
     for (int i = 0; i < 400; ++i) callback(e, 64);  // let the cutoff glide
     for (int i = 0; i < 100; ++i) pd = std::max(pd, peak(callback(e, 64)));
     CHECK(pa > pd);
+}
+
+TEST(surface_engine_vector_mode_uses_morphs_exact_corner_blend) {
+    // VECTOR shares MORPH's formula exactly (see applyControl's switch) -
+    // the same corner state, the same tilt nudge, at the same touch
+    // reading, must produce byte-identical output whichever of the two
+    // mode numbers is sent.
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+
+    auto run = [&](int32_t mode) {
+        SurfaceEngine engine(kRate);
+        engine.setCorner(0, MacroState{0.5f, 0.6f, 0.5f, 0.0f});
+        engine.loadSample(square.data(), square.size(), kRate);
+        ControlFrame f;
+        f.mode = mode;
+        f.gate = true;
+        f.a = 1; f.b = f.c = f.d = 0;
+        f.tilt = 0.75f;
+        engine.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(engine, 64);
+        return out;
+    };
+
+    CHECK(run(2) == run(3));  // MORPH and VECTOR
+}
+
+TEST(surface_engine_vector_mode_also_drives_the_sample_blend) {
+    // VECTOR is the one mode where the sample vertices and the corner
+    // blend both matter at once - proving the sample side still reaches
+    // the DSP under mode 3, not just under mode 0 (XY) as every other
+    // sample-blend test in this file uses. Corner A (clean: cutoff wide
+    // open, no drive) keeps the filter out of the way of the sign check.
+    SurfaceEngine e(kRate);
+    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+    e.loadSample(hi.data(), hi.size(), kRate, 0);
+    e.loadSample(lo.data(), lo.size(), kRate, 1);
+    ControlFrame f;
+    f.mode = 3;
+    f.gate = true;
+    f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+    f.sampleA = 0.0f; f.sampleB = 1.0f; f.sampleC = 0.0f;
+    e.pushControl(f);
+    std::vector<float> out;
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    float sum = 0.0f;
+    for (float v : out) sum += v;
+    CHECK(sum / static_cast<float>(out.size()) < -0.5f);  // slot 1 alone: negative, full level
 }
 
 TEST(surface_engine_retriggers_the_loop_on_touch_down) {
@@ -708,30 +827,32 @@ TEST(surface_engine_does_not_retrigger_while_the_touch_is_only_held) {
     CHECK(run(true) == run(false));
 }
 
-TEST(surface_engine_retrigger_resets_both_loaded_slots) {
+TEST(surface_engine_retrigger_resets_every_loaded_slot) {
     // A touch-down must restart every loaded source, not just whichever
-    // one currently dominates the mix - otherwise dragging the crossfade
-    // after a retrigger could reveal a source that quietly kept drifting
-    // the whole time it sat inaudible. Two ramps (not two copies of the
-    // same one) so a bug that only resets slot 0 still shows up even
-    // though slot 1's drift never crosses the "audible" threshold on its
-    // own - the two runs' tails just fail to match.
+    // ones currently dominate the blend - otherwise moving the puck after
+    // a retrigger could reveal a source that quietly kept drifting the
+    // whole time it sat inaudible. Three different ramps (not copies of
+    // one) so a bug that only resets slot 0 (or 0 and 1) still shows up
+    // even though a drifting slot's own weight is small - the two runs'
+    // tails just fail to match.
     auto run = [](int32_t releaseCallbacks) {
         SurfaceEngine e(kRate);
-        std::vector<float> rampA(1000), rampB(1000);
+        std::vector<float> rampA(1000), rampB(1000), rampC(1000);
         for (size_t i = 0; i < rampA.size(); ++i) {
             rampA[i] = static_cast<float>(i) / 1000.0f - 0.5f;
             rampB[i] = 0.5f - static_cast<float>(i) / 1000.0f;
+            rampC[i] = std::fmod(static_cast<float>(i) / 333.0f, 1.0f) - 0.5f;
         }
         e.loadSample(rampA.data(), rampA.size(), kRate, 0);
         e.loadSample(rampB.data(), rampB.size(), kRate, 1);
+        e.loadSample(rampC.data(), rampC.size(), kRate, 2);
 
         ControlFrame on;
         on.mode = 0;
         on.gate = true;
         on.x = 0.5f;
         on.y = 1.0f;
-        on.sampleMix = 0.5f;
+        on.sampleA = on.sampleB = on.sampleC = 1.0f;  // renormalised to a third each
         e.pushControl(on);
         for (int i = 0; i < 137; ++i) callback(e, 64);
 

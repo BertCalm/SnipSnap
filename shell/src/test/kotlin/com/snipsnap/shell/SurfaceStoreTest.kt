@@ -37,6 +37,7 @@ class SurfaceStoreTest {
             padSlot = 7,
             corners = listOf(Corner(0f, 1f, 0.5f, 0.25f), Corner.DARK, Corner.LOW, Corner(1f, 0f, 0f, 1f)),
             secondPadSlot = 12,
+            thirdPadSlot = 34,
         )
         val first = SurfaceStore.save(temp, s).readBytes()
         assertEquals(s, SurfaceStore.load(temp))
@@ -51,7 +52,7 @@ class SurfaceStoreTest {
     }
 
     @Test
-    fun `a file saved before secondPad existed still loads, with no second sample`() {
+    fun `a file saved before secondPad or thirdPad existed still loads, with no extra samples`() {
         File(temp, SurfaceStore.FILE_NAME).writeText(
             """{"version":1,"pad":3,"corners":[
                 {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
@@ -63,6 +64,22 @@ class SurfaceStoreTest {
         val loaded = SurfaceStore.load(temp)
         assertEquals(3, loaded.padSlot)
         assertEquals(null, loaded.secondPadSlot)
+        assertEquals(null, loaded.thirdPadSlot)
+    }
+
+    @Test
+    fun `a file saved before thirdPad existed still loads, with the second sample intact`() {
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"secondPad":9,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        val loaded = SurfaceStore.load(temp)
+        assertEquals(9, loaded.secondPadSlot)
+        assertEquals(null, loaded.thirdPadSlot)
     }
 
     @Test
@@ -71,6 +88,7 @@ class SurfaceStoreTest {
         assertFailsWith<IllegalArgumentException> { Corner(Float.NaN, 0f, 0f, 0f) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, secondPadSlot = 0) }
+        assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, thirdPadSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, corners = Corner.DEFAULTS.take(3)) }
         File(temp, SurfaceStore.FILE_NAME).writeText("""{"version":2,"pad":1,"corners":[]}""")
         assertFailsWith<JsonException> { SurfaceStore.load(temp) }
@@ -100,6 +118,21 @@ class SurfaceStoreTest {
         near(Corner.DEFAULTS.map { it.pitch }.average().toFloat(), mid.pitch)
         near(Corner.DEFAULTS.map { it.drive }.average().toFloat(), mid.drive)
         assertFailsWith<IllegalArgumentException> { Corner.from(Mode.MORPH, centre, 0.5f, Corner.DEFAULTS.take(2)) }
+    }
+
+    @Test
+    fun `VECTOR captures a corner exactly like MORPH does - the same blend, not a different one`() {
+        val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)
+        assertEquals(
+            Corner.from(Mode.MORPH, atA, 0.8f, Corner.DEFAULTS),
+            Corner.from(Mode.VECTOR, atA, 0.8f, Corner.DEFAULTS),
+        )
+        val centre = Reading(0.5f, 0.5f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        assertEquals(
+            Corner.from(Mode.MORPH, centre, 0.3f, Corner.DEFAULTS),
+            Corner.from(Mode.VECTOR, centre, 0.3f, Corner.DEFAULTS),
+        )
+        assertFailsWith<IllegalArgumentException> { Corner.from(Mode.VECTOR, centre, 0.5f, Corner.DEFAULTS.take(2)) }
     }
 
     @Test

@@ -8,9 +8,10 @@ import java.io.File
 
 /**
  * `surface.json` beside `kit.json`: what the SURFACE plays from this kit,
- * the four corner states its MORPH pad blends between, and (since
- * [Settings.secondPadSlot]) a second pad the engine crossfades toward via
- * `sampleMix`, independent of mode or corners. Small, typed, and under the
+ * the four corner states its MORPH and VECTOR modes blend between, and (since
+ * [Settings.secondPadSlot]/[Settings.thirdPadSlot]) up to two more pads
+ * the engine barycentrically blends toward - the pad's inscribed sample
+ * triangle, independent of mode or corners. Small, typed, and under the
  * same rules as every sidecar - unknown fields ignored, unknown versions
  * refused, a torn file a [JsonException] in words.
  *
@@ -43,18 +44,21 @@ object SurfaceStore {
              * The macro state under the finger, by the same map the engine
              * applies: XY is pitch across, cutoff up, half the roll as
              * resonance; XYZ adds the pinch as drive and the whole roll as
-             * resonance; MORPH is the weighted blend of [corners] with that
-             * same half-roll nudge layered onto resonance (see
-             * `SurfaceEngine.cpp`'s `morphed()`, which this mirrors) - a
-             * flat phone (tilt 0.5) is a no-op, so a corner blend still
-             * captures exactly what its four corners say.
+             * resonance; MORPH and VECTOR are the weighted blend of
+             * [corners] with that same half-roll nudge layered onto
+             * resonance (see `SurfaceEngine.cpp`'s `morphed()`, which this
+             * mirrors) - a flat phone (tilt 0.5) is a no-op, so a corner
+             * blend still captures exactly what its four corners say.
+             * VECTOR shares MORPH's formula exactly: it is the same corner
+             * blend, just also driving the sample triangle at once - there
+             * is nothing about the sample side for a *corner* to capture.
              */
             fun from(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, corners: List<Corner>): Corner {
                 val t = tilt.coerceIn(0f, 1f)
                 return when (mode) {
                     TouchSurface.Mode.XY -> Corner(reading.x, reading.y, t * 0.5f, 0f)
                     TouchSurface.Mode.XYZ -> Corner(reading.x, reading.y, t, reading.z)
-                    TouchSurface.Mode.MORPH -> {
+                    TouchSurface.Mode.MORPH, TouchSurface.Mode.VECTOR -> {
                         require(corners.size == 4) { "a morph blends four corners, got ${corners.size}" }
                         val w = listOf(reading.a, reading.b, reading.c, reading.d)
                         fun blend(pick: (Corner) -> Float) =
@@ -71,13 +75,16 @@ object SurfaceStore {
         /** The pad the surface plays, by slot; null = the kit's lowest. */
         val padSlot: Int?,
         val corners: List<Corner> = Corner.DEFAULTS,
-        /** The pad in the engine's second source slot, for `sampleMix`'s crossfade; null = none loaded. */
+        /** The pad in the engine's second source slot (the sample triangle's base-left vertex); null = none loaded. */
         val secondPadSlot: Int? = null,
+        /** The pad in the engine's third source slot (the sample triangle's base-right vertex); null = none loaded. */
+        val thirdPadSlot: Int? = null,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
             padSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
             secondPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
+            thirdPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
         }
 
         companion object {
@@ -104,6 +111,7 @@ object SurfaceStore {
             "version" to JsonValue.Num(VERSION.toDouble()),
             "pad" to (s.padSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "secondPad" to (s.secondPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
+            "thirdPad" to (s.thirdPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
                     JsonValue.Obj(
@@ -126,15 +134,16 @@ object SurfaceStore {
             throw JsonException("surface.json version $version is not supported (this build reads $VERSION)")
         }
         val pad = obj["pad"]?.takeUnless { it is JsonValue.Null }?.int()
-        // Absent on a file saved before secondPad existed, same as an
-        // explicit null - both mean "no second sample loaded".
+        // Absent on a file saved before secondPad/thirdPad existed, same as
+        // an explicit null - both mean "no sample loaded there".
         val secondPad = obj["secondPad"]?.takeUnless { it is JsonValue.Null }?.int()
+        val thirdPad = obj["thirdPad"]?.takeUnless { it is JsonValue.Null }?.int()
         val corners = obj["corners"]?.arr()?.map { c ->
             val o = c.obj()
             fun macro(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("corner has no $name")
             Corner(macro("pitch"), macro("cutoff"), macro("resonance"), macro("drive"))
         } ?: Corner.DEFAULTS
         if (corners.size != 4) throw JsonException("surface.json has ${corners.size} corners, not 4")
-        return Settings(pad, corners, secondPad)
+        return Settings(pad, corners, secondPad, thirdPad)
     }
 }

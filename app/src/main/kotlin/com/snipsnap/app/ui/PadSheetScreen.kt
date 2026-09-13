@@ -2417,11 +2417,18 @@ fun PadSheetScreen(
             )
         }
 
+            // fillMaxWidth, never weight: this sits in the MAKE box's
+            // Column, inside the sheet's verticalScroll column, and a
+            // weighted child of a Column whose height is unbounded is
+            // measured at zero — heightIn(min) cannot exceed an incoming
+            // max of 0. The weight was a leftover from a Row, and this is
+            // the only door into GRAIN FIELD, so the door was drawn at no
+            // height at all (September wiring review, finding 5).
             ActionButton(
                 "GRAIN ▸",
                 scheme,
                 enabled = !busy,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 onClick = { onGrainField(slot) },
             )
             ActionButton(

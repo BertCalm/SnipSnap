@@ -29,6 +29,14 @@ object TouchSurface {
 
         /** A vector pad: the puck's position weights four corner states. */
         MORPH(4),
+
+        /**
+         * MORPH's own corner blend, plus the sample triangle
+         * ([sampleWeights]) reading the same finger at once, independently -
+         * the vector-synthesis idea `design/surface-vector` sketches: one
+         * touch position, two blends, neither aware of the other.
+         */
+        VECTOR(4),
     }
 
     /** A finger on the pad, in pixels of the pad's own rectangle. */
@@ -36,7 +44,8 @@ object TouchSurface {
 
     /**
      * What the pad puts out per event. [z] is only meaningful in [Mode.XYZ];
-     * the corner weights only in [Mode.MORPH] (they always sum to 1 there).
+     * the corner weights only in [Mode.MORPH] and [Mode.VECTOR] (they
+     * always sum to 1 there).
      */
     data class Reading(
         val x: Float,
@@ -67,7 +76,10 @@ object TouchSurface {
      *   which is what a player expects of a depth control.
      * - The morph weights are bilinear in (x, y): A top-left, B top-right,
      *   C bottom-left, D bottom-right. Each corner reads 1 exactly at its
-     *   corner, the centre is an even quarter each.
+     *   corner, the centre is an even quarter each. [Mode.VECTOR] computes
+     *   the same weights as [Mode.MORPH] - it is MORPH's corner blend with
+     *   the sample triangle also reading the same position, not a
+     *   different formula.
      *
      * No fingers returns [Reading.REST] with Z carried from [previous],
      * for the same reason.
@@ -87,7 +99,7 @@ object TouchSurface {
             }
             else -> 0f
         }
-        val (a, b, c, d) = if (mode == Mode.MORPH) morphWeights(x, y) else listOf(0.25f, 0.25f, 0.25f, 0.25f)
+        val (a, b, c, d) = if (mode == Mode.MORPH || mode == Mode.VECTOR) morphWeights(x, y) else listOf(0.25f, 0.25f, 0.25f, 0.25f)
         return Reading(x, y, z, a, b, c, d, touching = true)
     }
 
@@ -101,6 +113,35 @@ object TouchSurface {
             (1f - px) * (1f - py), // C: bottom-left
             px * (1f - py), // D: bottom-right
         )
+    }
+
+    /**
+     * Barycentric weights for the pad's inscribed sample triangle - apex
+     * top-centre (slot 0), base-left (slot 1), base-right (slot 2), the
+     * same geometry `design/surface-vector`'s boards draw. Runs off the
+     * raw touch position, independent of [Mode] and [morphWeights]: the
+     * vector-synthesis idea is that a sample blend and an FX blend can
+     * both read the same finger at once, each its own overlay on one pad.
+     *
+     * Outside the triangle (the two top corners) one raw coordinate goes
+     * negative; clamping it to 0 and renormalising the rest keeps the
+     * blend continuous over the *whole* pad rather than leaving a region
+     * where it is undefined - there is deliberately no dead zone. Sums to
+     * 1 everywhere.
+     */
+    fun sampleWeights(x: Float, y: Float): Triple<Float, Float, Float> {
+        val px = x.coerceIn(0f, 1f)
+        val py = y.coerceIn(0f, 1f)
+        // Closed-form barycentric coordinates for this specific triangle
+        // (apex (0.5, 1), base (0, 0)-(1, 0)); always sum to 1 before clamping.
+        var w0 = py
+        var w1 = (1f - px) - 0.5f * py
+        var w2 = px - 0.5f * py
+        w0 = w0.coerceAtLeast(0f)
+        w1 = w1.coerceAtLeast(0f)
+        w2 = w2.coerceAtLeast(0f)
+        val sum = w0 + w1 + w2
+        return if (sum > 1e-6f) Triple(w0 / sum, w1 / sum, w2 / sum) else Triple(1f, 0f, 0f)
     }
 
     /**
