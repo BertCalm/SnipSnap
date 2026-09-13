@@ -607,8 +607,8 @@ fun App(shelf: KitShelf) {
             toast = Copy.PHONE_STOPPED_TAPE
         }
     }
-    // Sessions the reader thread itself ended — the mic (or, for ARM
-    // INSIDE, the playback-capture stream) going silent for good, a
+    // Sessions the reader thread itself ended — the mic (or, for APP
+    // AUDIO, the playback-capture stream) going silent for good, a
     // permission pulled mid-session, or any other read failure — as
     // opposed to `phoneStops` above, which is only the platform stopping
     // a MediaProjection. This used to announce nothing: the notification
@@ -628,7 +628,7 @@ fun App(shelf: KitShelf) {
             toast = Copy.TAPE_STOPPED_ITSELF
         }
     }
-    // ARM INSIDE runs through the same RECORD_AUDIO request as ARM TAPE
+    // ARM APP AUDIO runs through the same RECORD_AUDIO request as ARM TAPE
     // (playback capture needs it too); this remembers which button asked,
     // so the permission callback below knows whether to arm the mic or
     // go on to the projection consent.
@@ -665,7 +665,7 @@ fun App(shelf: KitShelf) {
     }
 
     // The projection consent (INSIDE): the system's own dialog, asked
-    // afresh on every ARM INSIDE — Android 14+ honours each consent for
+    // afresh on every ARM APP AUDIO — Android 14+ honours each consent for
     // exactly one projection, so the result is never cached. Dismissed
     // is a refusal in words, not a failure; the mic path stays open.
     val projectionLauncher = rememberLauncherForActivityResult(

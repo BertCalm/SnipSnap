@@ -169,8 +169,18 @@ object Copy {
     const val APP_AUDIO_ARMED = "TAPE ROLLING ON APP AUDIO."
     /** The projection consent dialog was dismissed: nothing armed, nothing lost; the mic still works. */
     const val APP_AUDIO_REFUSED = "PERMISSION DECLINED. NOTHING ARMED. THE MIC STILL WORKS."
-    /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
-    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS LISTEN AGAIN."
+    /**
+     * The platform ended the session — the lock screen or the status-bar
+     * stop chip, never us.
+     *
+     * Names APP AUDIO, not LISTEN, because this can only ever be an APP
+     * AUDIO session: `phoneStops` ticks from one place, `MicSessionService`'s
+     * `projectionCallback.onStop()`, and a mic-only session has no
+     * projection to stop. It said "PRESS LISTEN AGAIN" until the rename,
+     * which sent the user to the other button — the mic — to restart
+     * something the mic was never running.
+     */
+    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS APP AUDIO AGAIN."
 
     /**
      * The mic session died on its own — a dead `AudioRecord`, the OS
