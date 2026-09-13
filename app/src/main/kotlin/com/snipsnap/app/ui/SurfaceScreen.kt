@@ -187,6 +187,14 @@ fun SurfaceScreen(
     var presetIndexB by remember { mutableStateOf<Int?>(null) }
     var presetIndexC by remember { mutableStateOf<Int?>(null) }
     var presetIndexD by remember { mutableStateOf<Int?>(null) }
+    // The kit `settings` (and so its `corners`) actually belong to - null
+    // while LaunchedEffect(entry) below is still loading a kit's
+    // surface.json. setCorner/stepPreset both refuse to persist while this
+    // disagrees with the current entry, so a fast SET/PRESET press landing
+    // in that window can't write the outgoing kit's other corners into the
+    // incoming kit's surface.json (Copilot review, PR #195) - `settings`
+    // itself, not just armedCorner/presetIndex*, is stale until this is set.
+    var settingsLoadedFor by remember { mutableStateOf<File?>(null) }
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
     var printToPad by remember { mutableStateOf(false) }
@@ -350,6 +358,19 @@ fun SurfaceScreen(
     }
 
     LaunchedEffect(entry) {
+        // Synchronous, before any suspension below: the moment `entry`
+        // changes, `settings` (and so armedCorner's targets) are for a kit
+        // that is no longer showing, so nothing may act on them until this
+        // effect says otherwise. Resetting armedCorner/presetIndex* here
+        // rather than only after the load below closes most of the window
+        // a fast ARM+PRESET press could land in; settingsLoadedFor closes
+        // the rest (see its own declaration).
+        settingsLoadedFor = null
+        armedCorner = null
+        presetIndexA = null
+        presetIndexB = null
+        presetIndexC = null
+        presetIndexD = null
         if (entry == null) {
             padName = null
             padSlot = null
@@ -366,11 +387,6 @@ fun SurfaceScreen(
             pad2Generation++
             pad3Generation++
             pad4Generation++
-            armedCorner = null
-            presetIndexA = null
-            presetIndexB = null
-            presetIndexC = null
-            presetIndexD = null
             return@LaunchedEffect
         }
         // The kit's surface settings first (a torn file is the defaults,
@@ -381,15 +397,7 @@ fun SurfaceScreen(
             SurfaceStore.Settings.DEFAULT
         }
         pushCorners(settings.corners)
-        // A fresh kit's corners are whatever surface.json says, not last
-        // kit's preset steps - stale presetIndex/armedCorner state would
-        // otherwise claim one of this kit's corners is some named preset
-        // it was never actually stepped onto here.
-        armedCorner = null
-        presetIndexA = null
-        presetIndexB = null
-        presetIndexC = null
-        presetIndexD = null
+        settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
         if (pad == null) {
@@ -494,6 +502,7 @@ fun SurfaceScreen(
     // SET A..D: the sound under the last touch becomes a morph corner.
     fun setCorner(index: Int) {
         val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
         val held = lastHeld ?: run {
             onToast(Copy.SURFACE_SET_NEEDS_TOUCH)
             return
@@ -502,6 +511,11 @@ fun SurfaceScreen(
         val corners = settings.corners.toMutableList().also { it[index] = corner }
         pushCorners(corners)
         persist(dir, settings.copy(corners = corners))
+        // A captured corner is no longer whatever preset it may have been
+        // stepped to before - clearing this corner's tracked position stops
+        // the PRESET readout from going on claiming a name that no longer
+        // matches what SET just wrote (Copilot review, PR #195).
+        setPresetIndexFor(index, null)
         onToast(Copy.surfaceCornerSet('A' + index))
     }
 
@@ -512,7 +526,7 @@ fun SurfaceScreen(
         else -> presetIndexD
     }
 
-    fun setPresetIndexFor(corner: Int, index: Int) {
+    fun setPresetIndexFor(corner: Int, index: Int?) {
         when (corner) {
             0 -> presetIndexA = index
             1 -> presetIndexB = index
@@ -527,9 +541,19 @@ fun SurfaceScreen(
     fun stepPreset(delta: Int) {
         val corner = armedCorner ?: return
         val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
         val library = SurfaceStore.Corner.LIBRARY
-        val at = presetIndexFor(corner) ?: -1
-        val next = ((at + delta) % library.size + library.size) % library.size
+        val at = presetIndexFor(corner)
+        // A corner with no tracked position yet starts the stepper at
+        // library's own ends - 0 stepping forward, the last entry stepping
+        // back - rather than folding a sentinel through the same modulo
+        // arithmetic an already-set index uses, which put the first ◄
+        // press one short of the end (Copilot review, PR #195).
+        val next = if (at == null) {
+            if (delta >= 0) 0 else library.lastIndex
+        } else {
+            ((at + delta) % library.size + library.size) % library.size
+        }
         setPresetIndexFor(corner, next)
         val corners = settings.corners.toMutableList().also { it[corner] = library[next].corner }
         pushCorners(corners)
@@ -821,7 +845,11 @@ fun SurfaceScreen(
                         scheme,
                         enabled = padName != null,
                         dimmed = armedCorner != i,
-                        modifier = Modifier.weight(1f),
+                        // A mutually-exclusive row, same as the mode row
+                        // above - TalkBack otherwise has no way to tell
+                        // which corner is armed or when it changes
+                        // (Copilot review, PR #195).
+                        modifier = Modifier.weight(1f).semantics { selected = armedCorner == i },
                     ) { armedCorner = if (armedCorner == i) null else i }
                 }
             }
