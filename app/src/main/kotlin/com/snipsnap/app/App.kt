@@ -674,10 +674,10 @@ fun App(shelf: KitShelf) {
         val data = result.data
         if (result.resultCode == Activity.RESULT_OK && data != null) {
             MicSessionService.armInside(context, result.resultCode, data)
-            toast = Copy.INSIDE_ARMED
+            toast = Copy.APP_AUDIO_ARMED
             offerBubbleOnce()
         } else {
-            toast = Copy.INSIDE_REFUSED
+            toast = Copy.APP_AUDIO_REFUSED
         }
     }
 
@@ -703,7 +703,7 @@ fun App(shelf: KitShelf) {
             if (inside) {
                 val manager = context.getSystemService(MediaProjectionManager::class.java)
                 if (manager == null) {
-                    toast = Copy.INSIDE_REFUSED
+                    toast = Copy.APP_AUDIO_REFUSED
                 } else {
                     projectionLauncher.launch(manager.createScreenCaptureIntent())
                 }

@@ -161,10 +161,14 @@ object Copy {
      */
     const val MIC_PERMISSION_DENIED =
         "SNIPSNAP NEEDS THE MIC TO LISTEN. TURN IT ON IN YOUR PHONE'S SETTINGS, THEN HIT LISTEN AGAIN."
-    // INSIDE: another app's audio, from inside it (M1's second source).
-    const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE."
-    /** The projection consent dialog was dismissed: nothing armed, nothing lost; LISTEN is still there. */
-    const val INSIDE_REFUSED = "PROJECTION DECLINED. NOTHING ARMED. LISTEN STILL WORKS."
+    // APP AUDIO (renamed from INSIDE, oilslick followups): another app's
+    // audio, from inside it (M1's second source). "INSIDE" alone never
+    // told anyone this arms a recording of another app's audio rather than,
+    // say, a screen recording — the button's own KDoc in KitsScreen.kt's
+    // ArmControl has the full reasoning.
+    const val APP_AUDIO_ARMED = "TAPE ROLLING ON APP AUDIO."
+    /** The projection consent dialog was dismissed: nothing armed, nothing lost; the mic still works. */
+    const val APP_AUDIO_REFUSED = "PERMISSION DECLINED. NOTHING ARMED. THE MIC STILL WORKS."
     /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
     const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS LISTEN AGAIN."
 
@@ -762,14 +766,15 @@ object Copy {
      */
     const val HUM_NOT_LISTENING = "THE MIC ISN'T LISTENING. LISTEN · MIC ON KITS, THEN HUM."
     /**
-     * HUM with the INSIDE armed: that ring holds other apps' playback, not
-     * a mouth. The route has a step the not-listening one lacks: while a
-     * session runs, KITS shows STOP where `LISTEN · MIC` was, and arming
-     * again only re-enters the running session (`MicSessionService`'s
-     * ACTION_ARM on an existing ring), so the INSIDE has to be stopped
-     * before the mic can be started.
+     * HUM with APP AUDIO armed (renamed from HUM_INSIDE, oilslick
+     * followups): that ring holds other apps' playback, not a mouth. The
+     * route has a step the not-listening one lacks: while a session runs,
+     * KITS shows STOP where `LISTEN · MIC` was, and arming again only
+     * re-enters the running session (`MicSessionService`'s ACTION_ARM on an
+     * existing ring), so APP AUDIO has to be stopped before the mic can be
+     * started.
      */
-    const val HUM_INSIDE = "THE INSIDE IS LISTENING, NOT THE MIC. STOP ON KITS, THEN LISTEN · MIC, THEN HUM."
+    const val HUM_APP_AUDIO = "APP AUDIO IS LISTENING, NOT THE MIC. STOP ON KITS, THEN LISTEN · MIC, THEN HUM."
     /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
     const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
     /** The bench's readout while the hum runs. */

@@ -676,7 +676,7 @@ class MicSessionService : Service() {
             snipIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val title = if (source == Source.INSIDE) Copy.INSIDE_ARMED else Copy.SESSION_ARMED
+        val title = if (source == Source.INSIDE) Copy.APP_AUDIO_ARMED else Copy.SESSION_ARMED
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)

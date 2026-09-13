@@ -560,7 +560,7 @@ private fun ChopContent(
         }
         // The INSIDE's ring is other apps' playback, not a mouth.
         if (MicSessionService.source.value != MicSessionService.Source.MIC) {
-            onToast(Copy.HUM_INSIDE)
+            onToast(Copy.HUM_APP_AUDIO)
             return
         }
         voice?.release()

@@ -600,7 +600,7 @@ fun KitsScreen(
             // NEW KIT/LISTEN/INSIDE/SNIPS and the conditional rows above
             // all stay top-level per the owner's ruling.
             ActionButton(
-                "TOOLS ▸ BACKUP, CHOP, X-RAY, DOUBLES",
+                "TOOLS ▸ BACKUP, CHOP ALL, X-RAY, DOUBLES",
                 scheme,
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -1330,72 +1330,50 @@ private fun ArmControl(
 ) {
     val scheme = LocalScheme.current
     if (!armed) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Stacked full-width, not side by side (oilslick followups, second
+        // ruling): side by side at displayBig only ever afforded ~13
+        // characters per half, which is what forced "INSIDE ▸ APPS" in the
+        // first place — a label that never said which app's audio gets
+        // captured, or that it's captured at all. The owner's own read:
+        // "I wouldn't assume this means screen record an app." Full width
+        // affords ~34 characters, enough to name the action honestly.
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // "LISTEN" is load-bearing text, not just this button's label:
             // half a dozen toasts and the quick-settings tile
             // (`Copy.TILE_LABEL_IDLE`) all say "PRESS LISTEN AGAIN"/"LISTEN
             // STILL WORKS" expecting that exact word, so it leads this
-            // label rather than being dropped for parallelism with the
-            // button beside it (truncation pass). But "LISTEN" alone never
-            // said what it listens TO: the mic. Paired against the button
-            // beside it (which does name its source), the row used to read
-            // LISTEN vs INSIDE — one source named, one not.
-            //
-            // "· MIC", not "▸ MIC": the ▸ rule (this file's own KEY/REMIX
-            // BANK B precedent in KitScreen.kt) reserves ▸ for a control
-            // that opens a screen or panel. `onArm` (`App.kt`'s
+            // label. "· MIC", not "▸ MIC": the ▸ rule (this file's own
+            // KEY/REMIX BANK B precedent in KitScreen.kt) reserves ▸ for a
+            // control that opens a screen or panel. `onArm` (`App.kt`'s
             // `requestArm`) arms the mic in place — no navigation, no
             // panel — the same shape `onTwins`/REMIX BANK B already
-            // decided doesn't earn a ▸. The mic permission prompt this can
-            // trigger is a one-time OS dialog on first use only, not a
-            // per-session "opens something" the way INSIDE's projection
-            // consent always is (see the comment below) — an occasional
-            // exception, not the rule this button follows every time.
-            // "·" is the plain separator already used for exactly this
-            // case elsewhere in the app.
+            // decided doesn't earn a ▸.
+            PrimaryAction(label = "LISTEN · MIC", enabled = true, onClick = onArm)
+            // "APP AUDIO ▸ RECORD AN APP" (renamed from "INSIDE ▸ APPS",
+            // oilslick followups): the feature itself is renamed in every
+            // piece of user-facing copy that touches it — this button,
+            // `Copy.APP_AUDIO_ARMED`, `Copy.APP_AUDIO_REFUSED`,
+            // `Copy.HUM_APP_AUDIO` — because a vocabulary split between the
+            // button and its own toasts would be worse than either half
+            // alone. Internal identifiers (`onArmInside`,
+            // `requestArmInside`, `Source.INSIDE`,
+            // `MicSessionService.ACTION_ARM_INSIDE` — a broadcast action
+            // string the quick-settings tile contract depends on) are left
+            // alone: this is a copy rename, not a code rename. ▸ kept —
+            // `onArmInside` always opens the system's screen-capture
+            // consent dialog first, which is genuinely "opens something,"
+            // unlike LISTEN's occasional one-time mic permission prompt.
             //
-            // Each box's weight IS its label's character count, so both
-            // halves sit at the same tightness and neither can be starved
-            // by the other growing. Naming LISTEN's source is what forced
-            // this: at displayBig the two labels' natural widths came to
-            // 838px against a 360dp row's 833px, so once "· MIC" was added
-            // NO weight split fit them both — the pair only works now
-            // because INSIDE's half was shortened too (see below).
-            Box(Modifier.weight(12f)) {
-                PrimaryAction(label = "LISTEN · MIC", enabled = true, onClick = onArm)
-            }
-            // Was equal-weighted against "LISTEN" above at 33 characters,
-            // rendering as "LISTEN INSIDE ▸ …" — the half of the pair that
-            // actually says which audio this arms (another app's, not the
-            // mic) was exactly what got cut. PrimaryAction sets
-            // TapeType.displayBig (12sp + 2sp tracking, much wider per
-            // character than ActionButton's own pixel face), so even
-            // weight(2f) against "LISTEN" still ellipsized on-device at
-            // "LISTEN INSIDE ▸ APP A…" — confirmed by screenshot, not just
-            // estimated. "LISTEN" dropped from this half too: it already
-            // sits beside the button of that exact name, so INSIDE alone
-            // (the term this feature's own KDoc above already uses:
-            // "ARM INSIDE") reads as the sibling action without repeating
-            // the word.
-            //
-            // "APPS", not "APP AUDIO": a length fix first — "APP AUDIO"
-            // truncated to "INSIDE ▸ APP AUDI…" at 360dp once LISTEN's
-            // half grew (measured on device, not estimated). It reads at
-            // least as well shortened, because the only words that now
-            // differ across the pair are the two sources themselves —
-            // MIC against APPS — but the reason it changed is that it
-            // did not fit. Safe to reword: "APP AUDIO" appears nowhere
-            // else in the app, unlike "LISTEN" above.
-            //
-            // ▸ kept — `onArmInside` (`App.kt`'s `requestArmInside`) always
-            // opens the system's screen-capture consent dialog first
-            // (`projectionLauncher`/`createScreenCaptureIntent`, asked
-            // fresh every session, never cached), which is genuinely
-            // "opens something," unlike LISTEN's occasional one-time mic
-            // permission prompt.
-            Box(Modifier.weight(13f)) {
-                PrimaryAction(label = "INSIDE ▸ APPS", enabled = true, onClick = onArmInside)
-            }
+            // The owner's own suggested wording was "APP AUDIO ▸ RECORD
+            // ANOTHER APP" (30 chars) — measured on device at both widths:
+            // fit at 411dp (box 984px, text 947px, 19px inset per side) but
+            // *clamped* at 360dp (box 849px, text 849px, zero inset — the
+            // exact "equal widths" signal this file's own KDoc elsewhere
+            // warns to check for). Shortened to "RECORD AN APP" (25 chars),
+            // which measures with real margin at both: 360dp box 849px /
+            // text 768px (41px/40px insets), 411dp box 984px / text 768px
+            // (108px insets both sides).
+            PrimaryAction(label = "APP AUDIO ▸ RECORD AN APP", enabled = true, onClick = onArmInside)
         }
         return
     }

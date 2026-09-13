@@ -70,7 +70,7 @@ class PersonalityTest {
         assertTrue("LOCK SCREEN" in Copy.PHONE_STOPPED_TAPE)
         assertTrue("STOP CHIP" in Copy.PHONE_STOPPED_TAPE)
         // A refused consent must not claim anything is armed.
-        assertTrue("NOTHING ARMED" in Copy.INSIDE_REFUSED)
+        assertTrue("NOTHING ARMED" in Copy.APP_AUDIO_REFUSED)
         // The Ear reports what it heard, in real numbers.
         assertEquals("HEARD 12 HITS OVER 2 BARS AT ~93 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(12, 2, 93))
         assertEquals("HEARD 4 HITS OVER 1 BAR AT ~120 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(4, 1, 120))
@@ -90,11 +90,11 @@ class PersonalityTest {
         // (September wiring review, findings 4 and 14): the reflective
         // laws below hold shape, not route, so a slide back to "ARM THE
         // MIC" or a bare "TRY GRID" would pass them.
-        for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_INSIDE, Copy.HUM_NOTHING)) {
+        for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_APP_AUDIO, Copy.HUM_NOTHING)) {
             assertTrue("LISTEN · MIC ON KITS" in line || ("LISTEN · MIC" in line && "KITS" in line), "HUM's route is the button on KITS: $line")
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
-        assertTrue("STOP ON KITS" in Copy.HUM_INSIDE, "the INSIDE has to be stopped before the mic can start: ${Copy.HUM_INSIDE}")
+        assertTrue("STOP ON KITS" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
         assertTrue("OPEN CUT" in Copy.CHOP_NO_HITS, "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
         // BOUNCE on a stopped GROOVE used to just dim with no reason
         // (wiring review finding 8) - tapping it now names the control
