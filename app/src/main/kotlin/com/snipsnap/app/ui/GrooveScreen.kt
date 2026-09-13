@@ -892,7 +892,13 @@ fun GrooveScreen(
                         onToast(Copy.GROOVE_BOUNCE_PATTERN_CHANGED)
                     }
 
-                    val totalSteps = ((clip?.bars ?: recordBars) * GrooveEdit.STEPS_PER_BAR).toFloat()
+                    // The clip's own length and bar, not `bars × 16`: an
+                    // ORBIT clip declares its meter, and a two-bar 3/4 clip
+                    // looped at 32 steps played eight of silence on the end
+                    // of every pass (September wiring review, finding 2).
+                    // A from-scratch take has no clip yet and is 4/4.
+                    val totalSteps = (clip?.let { GrooveEdit.stepsInClip(it) } ?: (recordBars * GrooveEdit.STEPS_PER_BAR)).toFloat()
+                    val barSteps = clip?.let { GrooveEdit.stepsPerBar(it) } ?: GrooveEdit.STEPS_PER_BAR
                     val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                     val stepsPerSecond = bpm / 60.0 * 4.0
                     val inc = (dtNanos / 1_000_000_000.0 * stepsPerSecond).toFloat()
@@ -955,7 +961,7 @@ fun GrooveScreen(
                         for (b in 0 until totalSteps.toInt() step 4) {
                             val crossed = (b > lastPos && b <= np) ||
                                 (np >= totalSteps && b + totalSteps > lastPos && b + totalSteps <= np)
-                            if (crossed) player.clickHit(accent = b % GrooveEdit.STEPS_PER_BAR == 0)
+                            if (crossed) player.clickHit(accent = b % barSteps == 0)
                         }
                     }
                     // The rare early-DONE case (PadEngine's own byte budget
@@ -1360,7 +1366,7 @@ fun GrooveScreen(
         // coroutine below wakes up) must be told apart from the CURRENT
         // arm by identity, not by mere nullness — see that coroutine's own
         // abort check.
-        val armedTake = LiveRecord.Take(armedBase?.bars ?: recordBars)
+        val armedTake = armedBase?.let { LiveRecord.Take.against(it) } ?: LiveRecord.Take(recordBars)
         take = armedTake
         progIndex = 0
         if (armedBase == null) {
@@ -1497,7 +1503,10 @@ fun GrooveScreen(
                 withContext(Dispatchers.IO) { LiveRecord.land(kitDir, clip) }
                 base = clip
                 justLanded = true
-                onToast(Copy.takeLanded(clip.notes.size, clip.bars))
+                // The take's own count, not the merged clip's: "TOOK n
+                // HITS" names what was played this time, and an overdub
+                // on a full base used to claim the base's hits as new.
+                onToast(Copy.takeLanded(t.notes().size, clip.bars, GrooveEdit.meterLabel(clip)))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("RECORD", e)
@@ -1621,8 +1630,8 @@ fun GrooveScreen(
                         // completely blind — no needle, no bar/beat
                         // readout, and no base to hear once the count-in's
                         // click stops. `NeedleRoll` already null-safes a
-                        // null clip (`totalSteps = (clip?.bars ?: 2) *
-                        // STEPS_PER_BAR`, matching `recordBars`'s own
+                        // null clip (`totalSteps` falls back to two 4/4
+                        // bars, matching `recordBars`'s own
                         // default) — `currentClip` is always null here
                         // (`base` is null throughout this branch), so this
                         // renders unchanged and gets a moving playhead
@@ -1664,8 +1673,9 @@ fun GrooveScreen(
                         // here, "BAR 2.2" on the needle). Same derivation
                         // as NeedleRoll's own nowBar/nowBeat, from the same
                         // posSteps, so the two readouts can't disagree.
-                        val nowBar = (posSteps.toInt() / GrooveEdit.STEPS_PER_BAR) + 1
-                        val nowBeat = ((posSteps.toInt() % GrooveEdit.STEPS_PER_BAR) / 4) + 1
+                        val barSteps = currentClip?.let { GrooveEdit.stepsPerBar(it) } ?: GrooveEdit.STEPS_PER_BAR
+                        val nowBar = (posSteps.toInt() / barSteps) + 1
+                        val nowBeat = ((posSteps.toInt() % barSteps) / 4) + 1
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             TapeText("● RECORDING — BAR $nowBar.$nowBeat", TapeType.pixel, scheme.amber.tape)
                         }
@@ -1730,8 +1740,12 @@ fun GrooveScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
                         val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
+                        // The meter rides along only when it is not 4/4 —
+                        // ORBIT's "BAR 12 · 3/4" said it, and this readout
+                        // used to say "2 BARS" of the same clip.
+                        val meter = currentClip?.let { GrooveEdit.meterLabel(it) }?.let { " · $it" } ?: ""
                         TapeText(
-                            "%.1f BPM · %d BARS · %d NOTES".format(java.util.Locale.ROOT, bpm, currentClip?.bars ?: 0, currentClip?.notes?.size ?: 0),
+                            "%.1f BPM · %d BARS%s · %d NOTES".format(java.util.Locale.ROOT, bpm, currentClip?.bars ?: 0, meter, currentClip?.notes?.size ?: 0),
                             TapeType.lcdSmall,
                             scheme.ink.tape,
                         )
@@ -2362,17 +2376,19 @@ private fun NeedleRoll(
             }
         }
 
-        val totalSteps = (clip?.bars ?: 2) * GrooveEdit.STEPS_PER_BAR
+        // The clip's own bar: a 3/4 clip's ticks read 1.1, 1.2, 1.3, 2.1.
+        val barSteps = clip?.let { GrooveEdit.stepsPerBar(it) } ?: GrooveEdit.STEPS_PER_BAR
+        val totalSteps = clip?.let { GrooveEdit.stepsInClip(it) } ?: (2 * GrooveEdit.STEPS_PER_BAR)
         for (r in 0 until totalSteps step 4) {
             val y = Layout.NEEDLE_Y + (r - posSteps) * Layout.STEP_W
             if (y < -20f || y > maxHeightPx) continue
-            val label = "${r / 16 + 1}.${(r % 16) / 4 + 1}"
-            val color = if (r % 16 == 0) scheme.amber.tape else scheme.ink3.tape
+            val label = "${r / barSteps + 1}.${(r % barSteps) / 4 + 1}"
+            val color = if (r % barSteps == 0) scheme.amber.tape else scheme.ink3.tape
             TapeText(label, TapeType.pixelSmall, color, Modifier.offset(x = 4.dp, y = with(density) { y.toDp() }))
         }
 
-        val nowBar = (posSteps.toInt() / GrooveEdit.STEPS_PER_BAR) + 1
-        val nowBeat = ((posSteps.toInt() % GrooveEdit.STEPS_PER_BAR) / 4) + 1
+        val nowBar = (posSteps.toInt() / barSteps) + 1
+        val nowBeat = ((posSteps.toInt() % barSteps) / 4) + 1
         TapeText(
             "▶ BAR $nowBar.$nowBeat",
             TapeType.pixelSmall,
@@ -2439,17 +2455,20 @@ private fun StepEditorOverlay(
     onToggle: (GrooveEdit.Lane, Int) -> Unit,
     onDone: () -> Unit,
 ) {
-    val totalSteps = clip.bars * GrooveEdit.STEPS_PER_BAR
-    val playheadBar = if (playing) posSteps.toInt() / GrooveEdit.STEPS_PER_BAR else -1
-    val playheadCol = if (playing && playheadBar == editorBar) posSteps.toInt() % GrooveEdit.STEPS_PER_BAR else -1
+    // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
+    // clip's own bar, so a cell's step address is the beat the clip plays.
+    val barSteps = GrooveEdit.stepsPerBar(clip)
+    val totalSteps = GrooveEdit.stepsInClip(clip)
+    val playheadBar = if (playing) posSteps.toInt() / barSteps else -1
+    val playheadCol = if (playing && playheadBar == editorBar) posSteps.toInt() % barSteps else -1
 
     // Recomputed only when the clip or the visible bar changes, not every
     // animation frame while the playhead ring is live.
     val onSteps = remember(clip, editorBar) {
         LANE_ORDER.associateWith { lane ->
             val note = GrooveEdit.noteFor(lane)
-            (0 until GrooveEdit.STEPS_PER_BAR).filter { col ->
-                val step = editorBar * GrooveEdit.STEPS_PER_BAR + col
+            (0 until barSteps).filter { col ->
+                val step = editorBar * barSteps + col
                 clip.notes.any { it.note == note && it.timePulses == step * GrooveEdit.STEP_PULSES }
             }.toSet()
         }
@@ -2533,7 +2552,7 @@ private fun StepEditorOverlay(
                             TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, laneColor)
                         }
                         Row(Modifier.weight(1f).fillMaxHeight()) {
-                            for (col in 0 until GrooveEdit.STEPS_PER_BAR) {
+                            for (col in 0 until barSteps) {
                                 val on = col in laneOnSteps
                                 val isPlayhead = col == playheadCol
                                 val fillColor = when {
@@ -2541,7 +2560,7 @@ private fun StepEditorOverlay(
                                     col % 4 == 0 -> scheme.field.tape
                                     else -> scheme.lcd.tape
                                 }
-                                val step = editorBar * GrooveEdit.STEPS_PER_BAR + col
+                                val step = editorBar * barSteps + col
                                 Box(
                                     Modifier
                                         .weight(1f)

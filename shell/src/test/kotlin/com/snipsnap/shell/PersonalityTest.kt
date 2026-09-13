@@ -74,6 +74,9 @@ class PersonalityTest {
         // The Ear reports what it heard, in real numbers.
         assertEquals("HEARD 12 HITS OVER 2 BARS AT ~93 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(12, 2, 93))
         assertEquals("HEARD 4 HITS OVER 1 BAR AT ~120 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(4, 1, 120))
+        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON PROG A NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
+        assertEquals("TOOK 1 HITS OVER 1 BAR OF 3/4. PLAYING ON PROG A NOW.", Copy.takeLanded(1, 1, "3/4"))
+        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON PROG A NOW.", Copy.takeLanded(5, 2, "5/4"))
         assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
         assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
         // Send-to-grid reports the real slice count.

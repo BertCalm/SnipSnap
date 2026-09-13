@@ -322,13 +322,25 @@ fun PadSheetScreen(
      * from metadata), so an unshaped pad plays its bytes and a shaped one
      * plays `ShapeAudition`'s approximation, the same one `KitPreview`
      * renders; a preview must not claim the card will sound like the file.
+     *
+     * Folded to mono at this door, whatever [target] arrived as. The
+     * voice is a `CHANNEL_OUT_MONO` track over a bare `FloatArray`, so
+     * interleaved stereo handed to it plays every frame twice: an octave
+     * down at half speed. The pad's own file is folded where it is read
+     * (`refreshPadAudio`, `playBefore`), but `Mutate.render` always
+     * returns two channels, and HEAR on the MUTATE card handed them
+     * straight here — the September wiring review's first finding. The
+     * fold lives here rather than at each caller so the next play path
+     * cannot forget it; it is a no-op on mono, which every other caller
+     * already sends.
      */
     fun audition(target: Snip, level: Float, shape: KitPad? = null) {
         // Release synchronously at the swap site — a composition-scoped
         // coroutine can't guarantee the previous voice actually stopped
         // before this one starts (ChopScreen's `audition()` comment).
         voice?.release()
-        val rendered = shape?.let { ShapeAudition.render(target, it) } ?: target
+        val mono = Cleanup.toMono(target)
+        val rendered = shape?.let { ShapeAudition.render(mono, it) } ?: mono
         val gained = if (level == 1f) rendered.samples else FloatArray(rendered.samples.size) { rendered.samples[it] * level }
         val v = TapeVoice(gained, rendered.sampleRate)
         voice = v

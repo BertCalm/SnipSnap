@@ -20,12 +20,12 @@ object NativeSurface {
     external fun needsRestart(handle: Long): Boolean
     external fun isShared(handle: Long): Boolean
     external fun latencyMillis(handle: Long): Double
-    external fun loadSample(handle: Long, mono: FloatArray, sourceRate: Int)
+    external fun loadSample(handle: Long, mono: FloatArray, sourceRate: Int, slot: Int)
     external fun control(
         handle: Long, mode: Int,
         x: Float, y: Float, z: Float, tilt: Float,
         a: Float, b: Float, c: Float, d: Float,
-        gate: Boolean,
+        sampleMix: Float, gate: Boolean,
     )
     external fun setCorner(handle: Long, index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float)
     external fun armPrint(handle: Long, maxFrames: Int): Boolean

@@ -54,27 +54,38 @@ class SurfaceEngine(preferredSampleRate: Int) {
     @Synchronized
     fun needsRestart(): Boolean = open && NativeSurface.needsRestart(handle)
 
-    /** Load a snip as the voice; stereo is folded to mono, the file's own rate is kept (the engine repitches). */
+    /**
+     * Load a snip as one of the engine's source slots; stereo is folded to
+     * mono, the file's own rate is kept (the engine repitches). Slot 0 is
+     * what every mode has always played; slot 1 is [control]'s `sampleMix`
+     * other end. See [MAX_SOURCES] (kept in sync with SurfaceEngine.h's
+     * kMaxSources by hand, not by any shared build-time constant).
+     */
     @Synchronized
-    fun load(snip: Snip) {
+    fun load(snip: Snip, slot: Int = 0) {
         if (!open) return
+        require(slot in 0 until MAX_SOURCES) { "slot is 0..${MAX_SOURCES - 1}, got $slot" }
         val mono = if (snip.channels == 1) {
             snip.samples
         } else {
             FloatArray(snip.samples.size / 2) { i -> (snip.samples[2 * i] + snip.samples[2 * i + 1]) * 0.5f }
         }
-        NativeSurface.loadSample(handle, mono, snip.sampleRate)
+        NativeSurface.loadSample(handle, mono, snip.sampleRate, slot)
     }
 
-    /** One control frame; call at screen rate with the smoothed reading. */
+    /**
+     * One control frame; call at screen rate with the smoothed reading.
+     * [sampleMix] crossfades slot 0 (0f) toward slot 1 (1f); it does
+     * nothing until a sample is loaded into slot 1.
+     */
     @Synchronized
-    fun control(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, gate: Boolean) {
+    fun control(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, sampleMix: Float = 0f, gate: Boolean) {
         if (!open) return
         NativeSurface.control(
             handle, mode.ordinal,
             reading.x, reading.y, reading.z, tilt,
             reading.a, reading.b, reading.c, reading.d,
-            gate,
+            sampleMix, gate,
         )
     }
 
@@ -126,5 +137,8 @@ class SurfaceEngine(preferredSampleRate: Int) {
     companion object {
         /** The print ceiling: a minute at 48 kHz is 11.5 MB of floats, reserved up front. */
         const val MAX_PRINT_SECONDS = 60f
+
+        /** Source slots the engine holds - must match SurfaceEngine.h's kMaxSources. */
+        const val MAX_SOURCES = 4
     }
 }

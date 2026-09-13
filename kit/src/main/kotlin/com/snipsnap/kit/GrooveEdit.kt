@@ -59,6 +59,27 @@ object GrooveEdit {
      */
     fun stepsPerBar(clip: Mpc3Clip): Int = (clip.pulsesPerBar / STEP_PULSES).toInt()
 
+    /**
+     * Cells in the whole of [clip] — its loop length on the editor's grid,
+     * and the length GROOVE's clock wraps at. `bars × STEPS_PER_BAR` is
+     * this number only for a 4/4 clip; a two-bar 3/4 clip is 24, and a
+     * screen that looped it at 32 played eight steps of silence on the
+     * end of every pass (September wiring review, finding 2).
+     */
+    fun stepsInClip(clip: Mpc3Clip): Int = (clip.lengthPulses / STEP_PULSES).toInt()
+
+    /**
+     * The meter as a player reads it — `3/4`, `5/4` — for a readout. Every
+     * bar this app can make is whole quarters ([Mpc3Clip.pulsesPerBar]),
+     * so the denominator is always 4; ORBIT's own label agrees
+     * (`OrbitSet.meterLabel`). Null for 4/4: the ordinary case carries
+     * no label, the way a 4/4 `groove.json` carries no key, so the one
+     * time a meter is drawn it is because it is not what a player would
+     * assume.
+     */
+    fun meterLabel(clip: Mpc3Clip): String? =
+        if (clip.pulsesPerBar == Mpc3Clip.PULSES_PER_BAR) null else "${clip.beatsPerBar}/4"
+
     /** One step's width in pulses — a 16th, matching the editor's grid. */
     val STEP_PULSES: Long = Mpc3Clip.PULSES_PER_16TH
 
@@ -195,8 +216,8 @@ object GrooveEdit {
      * always time-sorted, so repeated toggles round-trip byte-for-byte.
      */
     fun toggleStep(clip: Mpc3Clip, lane: Lane, step: Int): Mpc3Clip {
-        val stepsInClip = clip.bars * stepsPerBar(clip)
-        require(step in 0 until stepsInClip) { "step out of range for a ${clip.bars}-bar clip: $step" }
+        val steps = stepsInClip(clip)
+        require(step in 0 until steps) { "step out of range for a ${clip.bars}-bar clip: $step" }
         val note = noteFor(lane)
         val pulses = step * STEP_PULSES
         val without = clip.notes.filterNot { it.note == note && it.timePulses == pulses }
