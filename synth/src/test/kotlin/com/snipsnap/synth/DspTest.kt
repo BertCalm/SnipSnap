@@ -111,18 +111,36 @@ class DspTest {
         kotlin.math.sqrt(buf.sumOf { (it * it).toDouble() } / buf.size).toFloat()
 
     @Test
-    fun `decimate rejects a tone above the target rate's Nyquist`() {
+    fun `decimate rejects a tone above the target rate's Nyquist more than a single direct step would`() {
         val oversampledRate = Dsp.RATE * Dsp.OVERSAMPLE
         // 30kHz sits above 44.1kHz's 22.05kHz Nyquist but well inside the
-        // oversampled rate's own (88.2kHz) - exactly the band the render
-        // loop is free to produce harmonics into, that decimate then has
-        // to remove before the audio ships at RATE.
+        // oversampled rate's own Nyquist (88.2kHz) - exactly the band the
+        // render loop is free to produce harmonics into, that decimate then
+        // has to remove before the audio ships at RATE.
         val above = sine(30_000.0, seconds = 0.05f, rate = oversampledRate)
         val before = rms(above)
-        val after = rms(Dsp.decimate(above, Dsp.RATE))
+        val cascaded = rms(Dsp.decimate(above.copyOf(), Dsp.RATE))
+        // Compared against a single direct 4:1 Resampler.resample call, not
+        // a hardcoded ratio: measured for this exact tone, a direct step
+        // already rejects it to ~6% of `before` - comfortably under a loose
+        // fixed threshold like 0.3x, so a regression to the single-step
+        // approach this PR chose against would pass a threshold-only
+        // version of this test. The cascaded approach has to actually beat
+        // that, not just clear an arbitrary bar.
+        val direct = rms(
+            com.snipsnap.audio.Resampler.resample(
+                com.snipsnap.audio.Snip(above.copyOf(), channels = 1, sampleRate = oversampledRate),
+                Dsp.RATE,
+            ).samples,
+        )
         assertTrue(
-            after < before * 0.3f,
-            "a 30kHz tone should be substantially rejected decimating to 44.1kHz: $before -> $after",
+            cascaded < direct * 0.5f,
+            "two cascaded 2x steps should reject a 30kHz tone well below a single direct 4:1 step: " +
+                "cascaded=$cascaded direct=$direct (before=$before)",
+        )
+        assertTrue(
+            cascaded < before * 0.05f,
+            "and reject it outright, not just relatively better than the alternative: $before -> $cascaded",
         )
     }
 
