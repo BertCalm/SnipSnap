@@ -37,6 +37,26 @@ class GrooveEditTest {
     }
 
     @Test
+    fun `a 3 over 4 clip has twelve cells a bar and its steps address its own beats`() {
+        val bar34 = 3 * Mpc3Clip.PULSES_PER_BEAT
+        val clip = Mpc3Clip("Orbit 3/4", 2, emptyList(), pulsesPerBar = bar34)
+        assertEquals(12, GrooveEdit.stepsPerBar(clip))
+        assertEquals(24, GrooveEdit.stepsInClip(clip), "two bars of 3/4, not 32")
+        assertEquals("3/4", GrooveEdit.meterLabel(clip))
+        assertNull(GrooveEdit.meterLabel(base), "4/4 carries no label")
+        // Cell 12 is the second bar's downbeat: 2880 pulses, not 4/4's 3840.
+        val toggled = GrooveEdit.toggleStep(clip, GrooveEdit.Lane.KICK, 12)
+        assertEquals(bar34, toggled.notes.single().timePulses)
+        assertEquals(bar34, toggled.pulsesPerBar, "an edit keeps the meter")
+        // Cell 24 is off the end of a two-bar 3/4 clip, though 4/4 has it.
+        kotlin.test.assertFailsWith<IllegalArgumentException> { GrooveEdit.toggleStep(clip, GrooveEdit.Lane.KICK, 24) }
+        // CLEAR BAR 1 clears the second 3/4 bar, and leaves the first alone.
+        val two = GrooveEdit.toggleStep(toggled, GrooveEdit.Lane.SNARE, 0)
+        val cleared = GrooveEdit.clearBar(two, 1)
+        assertEquals(listOf(0L), cleared.notes.map { it.timePulses })
+    }
+
+    @Test
     fun `fork quantizes the source clip's notes to the 16th grid`() {
         val dir = dirWith(base)
         val e = GrooveEdit.fork(dir, base)

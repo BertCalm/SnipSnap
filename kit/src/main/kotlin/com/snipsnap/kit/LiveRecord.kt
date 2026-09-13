@@ -67,14 +67,43 @@ object LiveRecord {
         return ((timePulses % limitPulses) + limitPulses) % limitPulses
     }
 
-    /** Accumulates hits during one take; not itself persisted. */
-    class Take(val bars: Int) {
+    /**
+     * Accumulates hits during one take; not itself persisted.
+     *
+     * [pulsesPerBar] is the bar the take is played against — 4/4 for a
+     * from-scratch take, and the base's own bar for an overdub
+     * ([against]). A take on a 3/4 ORBIT clip that wrapped at 4/4 would
+     * land hits in a fourth beat the clip does not have, and [toClip]
+     * would then refuse the whole take on the first of them.
+     */
+    class Take(val bars: Int, val pulsesPerBar: Long = Mpc3Clip.PULSES_PER_BAR) {
         private val hits = mutableListOf<Mpc3Note>()
+
+        init {
+            // The same bounds [Mpc3Clip] holds its own bar to, checked at
+            // the arm rather than at the first hit or the landing: a take
+            // that cannot become a clip is refused before it records.
+            require(bars in 1..64) { "bars out of range: $bars" }
+            require(pulsesPerBar > 0 && pulsesPerBar % Mpc3Clip.PULSES_PER_BEAT == 0L) {
+                "a bar is whole beats of ${Mpc3Clip.PULSES_PER_BEAT} pulses, not $pulsesPerBar"
+            }
+            require(pulsesPerBar <= Mpc3Clip.MAX_BEATS_PER_BAR * Mpc3Clip.PULSES_PER_BEAT) {
+                "a bar of ${pulsesPerBar / Mpc3Clip.PULSES_PER_BEAT} beats is past the ${Mpc3Clip.MAX_BEATS_PER_BAR} a clip can hold"
+            }
+        }
+
+        /** The take's loop, in pulses — what a hit wraps into. */
+        val lengthPulses: Long get() = bars * pulsesPerBar
 
         /** Wraps before storing — a hit is never held at an out-of-range pulse even transiently. */
         fun add(note: Int, elapsedSeconds: Double, bpm: Float, velocity: Float) {
-            val pulses = wrapped(pulsesFor(elapsedSeconds, bpm), bars)
+            val pulses = wrappedInto(pulsesFor(elapsedSeconds, bpm), lengthPulses)
             hits += Mpc3Note(note = note, timePulses = pulses, velocity = velocity)
+        }
+
+        companion object {
+            /** A take that overdubs [existing]: its bars, and its bar. */
+            fun against(existing: Mpc3Clip): Take = Take(existing.bars, existing.pulsesPerBar)
         }
 
         /**
@@ -95,21 +124,26 @@ object LiveRecord {
      * it never replaces) — same-(note, timePulses) collisions between the
      * two takes resolve by the same louder-wins rule.
      *
-     * `bars` always comes from [existing] when it's given: a take is
-     * always recorded against the currently-loaded base's own bar count
-     * (Task 4 owns the from-scratch case, where there is no [existing]
-     * yet). A [take] recorded against a different bar count than
-     * [existing] is a caller bug — refused here, in words, rather than
-     * left to crash unnamed inside [Mpc3Clip]'s own `require` when a
-     * wrapped note from the wrong-length take falls outside the kept bars.
+     * `bars` and the bar itself always come from [existing] when it's
+     * given: a take is always recorded against the currently-loaded
+     * base's own length ([Take.against]; Task 4 owns the from-scratch
+     * case, where there is no [existing] yet). A [take] recorded against
+     * a different bar count, or a different bar, than [existing] is a
+     * caller bug — refused here, in words, rather than left to crash
+     * unnamed inside [Mpc3Clip]'s own `require` when a wrapped note from
+     * the wrong-length take falls outside the kept bars. The clip keeps
+     * the take's meter, so an overdub on a 3/4 base is still 3/4.
      */
     fun toClip(take: Take, name: String, existing: Mpc3Clip?): Mpc3Clip {
         require(existing == null || existing.bars == take.bars) {
             "take recorded against ${take.bars} bar(s) but the base is ${existing?.bars} - can't merge"
         }
+        require(existing == null || existing.pulsesPerBar == take.pulsesPerBar) {
+            "take recorded against a bar of ${take.pulsesPerBar} pulses but the base's is ${existing?.pulsesPerBar} - can't merge"
+        }
         val bars = existing?.bars ?: take.bars
         val merged = existing?.notes.orEmpty() + take.notes()
-        return Mpc3Clip(name, bars, GrooveEdit.dedupeLouder(merged))
+        return Mpc3Clip(name, bars, GrooveEdit.dedupeLouder(merged), pulsesPerBar = take.pulsesPerBar)
     }
 
     /**

@@ -166,6 +166,49 @@ class LiveRecordTest {
         assertFailsWith<IllegalArgumentException> { LiveRecord.toClip(take, "Base Groove", existing) }
     }
 
+    // ---- a take against a clip that is not 4/4 ----------------------------
+
+    @Test
+    fun `a take against a 3 over 4 base wraps at the base's own length, not at 4 over 4`() {
+        val bar34 = 3 * Mpc3Clip.PULSES_PER_BEAT
+        val existing = Mpc3Clip("Orbit 3/4", 1, listOf(Mpc3Note(36, 0L, 0.5f)), pulsesPerBar = bar34)
+        val take = LiveRecord.Take.against(existing)
+        assertEquals(bar34, take.lengthPulses)
+        // 120 BPM: a beat is half a second. A hit at 1.75 s is beat 3.5 of
+        // 4/4 - and beat 0.5 of the NEXT 3/4 bar, which is where it lands.
+        take.add(note = 38, elapsedSeconds = 1.75, bpm = 120f, velocity = 0.7f)
+        assertEquals(480L, take.notes().single().timePulses)
+        val merged = LiveRecord.toClip(take, "Orbit 3/4", existing)
+        assertEquals(bar34, merged.pulsesPerBar, "an overdub on a 3/4 base is still 3/4")
+        assertEquals(setOf(0L to 36, 480L to 38), merged.notes.map { it.timePulses to it.note }.toSet())
+    }
+
+    @Test
+    fun `toClip refuses a 4 over 4 take on a 3 over 4 base in words`() {
+        val existing = Mpc3Clip("Orbit 3/4", 1, listOf(Mpc3Note(36, 0L, 0.5f)), pulsesPerBar = 3 * Mpc3Clip.PULSES_PER_BEAT)
+        val take = LiveRecord.Take(bars = 1)
+        take.add(note = 38, elapsedSeconds = 0.0, bpm = 120f, velocity = 0.7f)
+        val e = assertFailsWith<IllegalArgumentException> { LiveRecord.toClip(take, "Orbit 3/4", existing) }
+        assertTrue("bar of" in e.message.orEmpty(), e.message)
+    }
+
+    @Test
+    fun `a take refuses a bar a clip could not hold, at the arm`() {
+        assertFailsWith<IllegalArgumentException> { LiveRecord.Take(bars = 1, pulsesPerBar = 1L) }
+        assertFailsWith<IllegalArgumentException> { LiveRecord.Take(bars = 1, pulsesPerBar = Long.MAX_VALUE) }
+        assertFailsWith<IllegalArgumentException> { LiveRecord.Take(bars = 1, pulsesPerBar = (Mpc3Clip.MAX_BEATS_PER_BAR + 1) * Mpc3Clip.PULSES_PER_BEAT) }
+        // The largest bar a clip holds is a take's too.
+        LiveRecord.Take(bars = 64, pulsesPerBar = Mpc3Clip.MAX_BEATS_PER_BAR * Mpc3Clip.PULSES_PER_BEAT)
+    }
+
+    @Test
+    fun `a from-scratch take is 4 over 4 and lands as one`() {
+        val take = LiveRecord.Take(bars = 2)
+        assertEquals(Mpc3Clip.PULSES_PER_BAR, take.pulsesPerBar)
+        take.add(note = 36, elapsedSeconds = 0.0, bpm = 120f, velocity = 0.8f)
+        assertEquals(Mpc3Clip.PULSES_PER_BAR, LiveRecord.toClip(take, "Take", existing = null).pulsesPerBar)
+    }
+
     // ---- land ---------------------------------------------------------------
 
     @Test
