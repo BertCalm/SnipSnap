@@ -121,6 +121,21 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `VECTOR captures a corner exactly like MORPH does - the same blend, not a different one`() {
+        val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)
+        assertEquals(
+            Corner.from(Mode.MORPH, atA, 0.8f, Corner.DEFAULTS),
+            Corner.from(Mode.VECTOR, atA, 0.8f, Corner.DEFAULTS),
+        )
+        val centre = Reading(0.5f, 0.5f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        assertEquals(
+            Corner.from(Mode.MORPH, centre, 0.3f, Corner.DEFAULTS),
+            Corner.from(Mode.VECTOR, centre, 0.3f, Corner.DEFAULTS),
+        )
+        assertFailsWith<IllegalArgumentException> { Corner.from(Mode.VECTOR, centre, 0.5f, Corner.DEFAULTS.take(2)) }
+    }
+
+    @Test
     fun `tilt nudges MORPH resonance the same half-weighted amount XY gives it, and clamps at the ends`() {
         // CLEAN's resonance is 0 (Corner.CLEAN = Corner(0.5f, 1.0f, 0.0f, 0.0f)),
         // so the nudge alone is what shows up here - the same arithmetic
@@ -132,7 +147,11 @@ class SurfaceStoreTest {
 
         // HOT already carries resonance 0.2 (Corner.HOT = Corner(0.75f, 0.85f, 0.2f, 0.9f));
         // a full-tilt nudge of +0.25 lands on top of that, not in place of it.
-        val atD = Reading(0f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
+        // D is bottom-right (x=1, y=0 - see morphWeights), which the blend
+        // now derives the weights from itself; a/b/c/d are set to match
+        // that position rather than a mismatched one the old
+        // implementation didn't check.
+        val atD = Reading(1f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
         near(0.45f, Corner.from(Mode.MORPH, atD, 1f, Corner.DEFAULTS).resonance)
         near(1f, Corner.from(Mode.MORPH, atD, 1f, listOf(Corner(0.5f, 0.5f, 0.9f, 0f), Corner.DARK, Corner.LOW, Corner(0.5f, 0.5f, 0.9f, 0f))).resonance)
     }

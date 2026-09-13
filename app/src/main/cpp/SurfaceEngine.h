@@ -16,7 +16,7 @@ namespace snipsnap {
 
 /** What the UI sends, one per screen frame: which mode, where the fingers are, is a finger down. */
 struct ControlFrame {
-    int32_t mode = 0;  // 0 XY, 1 XYZ, 2 MORPH - TouchSurface.Mode.ordinal
+    int32_t mode = 0;  // 0 XY, 1 XYZ, 2 MORPH, 3 VECTOR - TouchSurface.Mode.ordinal
     float x = 0.5f, y = 0.5f, z = 0.0f, tilt = 0.5f;
     float a = 0.25f, b = 0.25f, c = 0.25f, d = 0.25f;
     // Weights for source slots 0/1/2 - a barycentric blend across the

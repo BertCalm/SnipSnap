@@ -728,8 +728,12 @@ fun App(shelf: KitShelf) {
      */
     val loopLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
-    ) {
+    ) { result ->
         scope.launch { loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) } }
+        // The one thing the result does carry: the empty grid's SNIPS door,
+        // so leaving through it lands where the line promised instead of on
+        // the shelf the trip started from.
+        if (result.data?.getBooleanExtra(LoopActivity.EXTRA_OPEN_SNIPS, false) == true) snipsOpen = true
     }
     LaunchedEffect(Unit) {
         loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) }
