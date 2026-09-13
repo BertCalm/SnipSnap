@@ -17,9 +17,5 @@ object PrintLength {
         return bars * beatsPerBar * 60f / bpm
     }
 
-    fun label(bars: Int): String = when (bars) {
-        0 -> "FREE"
-        1 -> "1 BAR"
-        else -> "$bars BARS"
-    }
+    fun label(bars: Int): String = if (bars == 0) "FREE" else Copy.countOf(bars, "BAR", "BARS")
 }

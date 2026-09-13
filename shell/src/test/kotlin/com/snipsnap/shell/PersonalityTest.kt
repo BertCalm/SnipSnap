@@ -74,14 +74,41 @@ class PersonalityTest {
         // The Ear reports what it heard, in real numbers.
         assertEquals("HEARD 12 HITS OVER 2 BARS AT ~93 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(12, 2, 93))
         assertEquals("HEARD 4 HITS OVER 1 BAR AT ~120 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(4, 1, 120))
+        // A single hit over a single bar is singular in both counts at once —
+        // the shape that would have caught `grooveRead` counting BAR/BARS
+        // right while leaving HITS always plural.
+        assertEquals("HEARD 1 HIT OVER 1 BAR AT ~90 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(1, 1, 90))
         assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON PROG A NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
-        assertEquals("TOOK 1 HITS OVER 1 BAR OF 3/4. PLAYING ON PROG A NOW.", Copy.takeLanded(1, 1, "3/4"))
+        // Was "TOOK 1 HITS OVER 1 BAR OF 3/4." — takeLanded sang BAR/BARS
+        // right (it shares grooveRead's shape) and left HITS always plural,
+        // the same asymmetry inside one sentence that the general helper
+        // below exists to rule out everywhere at once.
+        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON PROG A NOW.", Copy.takeLanded(1, 1, "3/4"))
         assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON PROG A NOW.", Copy.takeLanded(5, 2, "5/4"))
         assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
         assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
         // Send-to-grid reports the real slice count.
         assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
         assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))
+        // A single slice sent to the grid is singular too — sentToGrid used
+        // to say "1 SLICES" (and so did instantKit, which routes through it).
+        assertEquals("1 SLICE ON THE GRID.", Copy.sentToGrid(1, chokeSet = false))
+        assertEquals("ONE TAP, THE WHOLE TAPE. 1 SLICE ON THE GRID.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
+    }
+
+    /**
+     * [Copy.countOf] itself: the general form every counted-noun toast in
+     * this file now routes through. `n == 1` is the only case that picks
+     * the singular; `n == 0` reads as plural, same as English ("0 BARS",
+     * never "0 BAR") — asserted here so a future "simplification" to
+     * `n <= 1` doesn't sneak back in.
+     */
+    @Test
+    fun `countOf picks the singular only at exactly one`() {
+        assertEquals("1 BAR", Copy.countOf(1, "BAR", "BARS"))
+        assertEquals("2 BARS", Copy.countOf(2, "BAR", "BARS"))
+        assertEquals("0 BARS", Copy.countOf(0, "BAR", "BARS"), "zero is plural, same as English")
+        assertEquals("-1 BARS", Copy.countOf(-1, "BAR", "BARS"), "a count can't go negative, but this is not the guard for that")
     }
 
     @Test
@@ -556,6 +583,9 @@ class PersonalityTest {
         assertEquals("BREAK IS ON TRACK 2, 3 BLOCKS LONG.", Copy.loopTrackFilled("BREAK", 2, 3))
         assertEquals("HIT IS ON TRACK 1, 1 BLOCK LONG.", Copy.loopTrackFilled("HIT", 1, 1))
         assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 8 BLOCKS FIT.", Copy.loopTrackTruncated("LONG", 4, 8))
+        // loopTrackFilled beside it already sang "1 BLOCK LONG" — truncated
+        // said "1 BLOCKS FIT" regardless, the same one-sided fix as the rest.
+        assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 1 BLOCK FIT.", Copy.loopTrackTruncated("LONG", 4, 1))
         assertEquals("ALL 6 TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST.", Copy.loopFull(6))
         // The bounce names what it rendered, and names the cycle too when the
         // two differ — a player told only "12 BARS" would read that as the
@@ -702,5 +732,44 @@ class PersonalityTest {
         // And the same on the branch that counts what stayed behind.
         assertTrue(Copy.clippedSectionsIntoKit(1, 2, 8, 1).startsWith("1 SECTION IN"))
         assertTrue(Copy.clippedSectionsIntoKit(2, 2, 8, 2).startsWith("2 SECTIONS IN"))
+        // BARS and NOTES used to stay plural in this same sentence even
+        // though SECTIONS was already singular right beside them — this
+        // function's own KDoc bragged about fixing the count-with-an-S-on-it
+        // bug for SECTIONS while leaving exactly that bug alive for its two
+        // neighbors. One bar, one note, one section, one snip ring, all at
+        // once: the sentence that would have caught it.
+        assertEquals(
+            "1 SECTION IS IN THE KIT'S GROOVES — 1 BAR, 1 NOTE, ONE SEQUENCE EACH. IT RIDES TO THE MPC.",
+            Copy.clippedSectionsIntoKit(1, 1, 1, 0),
+        )
+        assertEquals(
+            "1 SECTION IN THE GROOVES: 1 BAR, 1 NOTE. 1 SNIP RING STAYED OUT.",
+            Copy.clippedSectionsIntoKit(1, 1, 1, 1),
+        )
+    }
+
+    /**
+     * `clippedIntoKit` is `clippedSectionsIntoKit`'s single-section sibling
+     * (CLIP ▸ KIT's own path for a set with no arrangement) and had the same
+     * BARS/NOTES-always-plural bug, with no test pinning it at all before
+     * this one.
+     */
+    @Test
+    fun `clippedIntoKit sings BARS and NOTES singular at one, same as its multi-section sibling`() {
+        assertEquals(
+            "GROOVE IS IN THE KIT'S GROOVES — 1 BAR, 1 NOTE. IT RIDES TO THE MPC.",
+            Copy.clippedIntoKit("GROOVE", 1, 1, 0),
+        )
+        assertEquals(
+            "GROOVE IN THE GROOVES: 2 BARS, 8 NOTES. 1 SNIP RING STAYED OUT.",
+            Copy.clippedIntoKit("GROOVE", 2, 8, 1),
+        )
+    }
+
+    /** CHOP ALL's own singular: one .wav file chopped, not "1 FILES". */
+    @Test
+    fun `choppedAll counts its files singular at one`() {
+        assertEquals("CHOPPED 1 OF 1 FILE INTO 1 KIT.", Copy.choppedAll(made = 1, wavCount = 1, skipped = 0, failed = 0))
+        assertEquals("CHOPPED 2 OF 3 FILES INTO 2 KITS.", Copy.choppedAll(made = 2, wavCount = 3, skipped = 0, failed = 0))
     }
 }

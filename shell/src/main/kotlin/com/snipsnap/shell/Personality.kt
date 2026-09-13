@@ -619,10 +619,8 @@ object Copy {
     const val READ_GROOVE_BUSY = "LISTENING…"
     const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
     /** The reading landed: how much was heard, and where it plays. */
-    fun grooveRead(hits: Int, bars: Int, bpm: Int): String {
-        val barWord = if (bars == 1) "BAR" else "BARS"
-        return "HEARD $hits HITS OVER $bars $barWord AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
-    }
+    fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
+        "HEARD ${countOf(hits, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")} AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
     /** The Ear's refusal, [reason] in its own words ("no confident tempo - the ear needs a grid"). */
     fun grooveRefused(reason: String): String = "NO GROOVE: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val DIG_BUSY = "DIGGING…"
@@ -666,9 +664,8 @@ object Copy {
      * overdubbed a 3/4 ORBIT clip is told the bar they played in.
      */
     fun takeLanded(notes: Int, bars: Int, meter: String? = null): String {
-        val barWord = if (bars == 1) "BAR" else "BARS"
         val of = meter?.let { " OF $it" } ?: ""
-        return "TOOK $notes HITS OVER $bars $barWord$of. PLAYING ON PROG A NOW."
+        return "TOOK ${countOf(notes, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")}$of. PLAYING ON PROG A NOW."
     }
     /** UNDO TAKE's existing-base branch: whatever was captured before this take plays again. */
     const val TAKE_UNDONE = "TAKE UNDONE. BACK TO WHAT WAS THERE BEFORE."
@@ -1117,7 +1114,7 @@ object Copy {
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
-        "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
+        "${countOf(sliceCount, "SLICE", "SLICES")} ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
     /**
      * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
      * GRID says.
@@ -1156,7 +1153,7 @@ object Copy {
             if (skipped > 0) add("$skipped SKIPPED (NOT .WAV)")
         }
         val tail = if (extra.isEmpty()) "" else " — ${extra.joinToString(", ")}"
-        return "CHOPPED $made OF $wavCount FILES INTO $made ${if (made == 1) "KIT" else "KITS"}$tail."
+        return "CHOPPED $made OF ${countOf(wavCount, "FILE", "FILES")} INTO $made ${if (made == 1) "KIT" else "KITS"}$tail."
     }
 
     // ---- X-RAY: read any MPC file, never import it ----
@@ -1468,9 +1465,9 @@ object Copy {
      */
     fun clippedIntoKit(name: String, bars: Int, notes: Int, snipRingsLeftOut: Int): String =
         if (snipRingsLeftOut == 0) {
-            "$name IS IN THE KIT'S GROOVES — $bars BARS, $notes NOTES. IT RIDES TO THE MPC."
+            "$name IS IN THE KIT'S GROOVES — ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}. IT RIDES TO THE MPC."
         } else {
-            "$name IN THE GROOVES: $bars BARS, $notes NOTES. $snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
+            "$name IN THE GROOVES: ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}. ${countOf(snipRingsLeftOut, "SNIP RING", "SNIP RINGS")} STAYED OUT."
         }
 
     /**
@@ -1483,7 +1480,12 @@ object Copy {
      * the line says what is in the kit rather than what was intended.
      */
     fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String {
-        // One section is a sentence, not a count with an S on it.
+        // One section is a sentence, not a count with an S on it — and
+        // [countOf] is what makes that true of BARS and NOTES here too:
+        // this function used to get SECTIONS right and leave those two
+        // plural regardless, "1 SECTION IS IN THE KIT'S GROOVES — 1 BARS,
+        // 1 NOTES" being exactly the bug the singular word for SECTIONS
+        // was written to rule out.
         //
         // This function IS the multi-section path from CLIP ▸ KIT; what
         // has no caller today is the [sections] == 1 case, because a save
@@ -1492,13 +1494,13 @@ object Copy {
         // it that way is a trap left lying about, and the plural is two
         // words.
         val many = sections != 1
-        val subject = if (many) "$sections SECTIONS ARE" else "1 SECTION IS"
+        val subject = countOf(sections, "SECTION IS", "SECTIONS ARE")
         val them = if (many) "THEY RIDE" else "IT RIDES"
         return if (snipRingsLeftOut == 0) {
-            "$subject IN THE KIT'S GROOVES — $bars BARS, $notes NOTES, ONE SEQUENCE EACH. $them TO THE MPC."
+            "$subject IN THE KIT'S GROOVES — ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}, ONE SEQUENCE EACH. $them TO THE MPC."
         } else {
-            "$sections SECTION${if (many) "S" else ""} IN THE GROOVES: $bars BARS, $notes NOTES. " +
-                "$snipRingsLeftOut SNIP RING${if (snipRingsLeftOut == 1) "" else "S"} STAYED OUT."
+            "${countOf(sections, "SECTION", "SECTIONS")} IN THE GROOVES: ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}. " +
+                "${countOf(snipRingsLeftOut, "SNIP RING", "SNIP RINGS")} STAYED OUT."
         }
     }
 
@@ -1578,7 +1580,7 @@ object Copy {
      * detail to bury.
      */
     fun loopTrackTruncated(name: String, track: Int, blocks: Int): String =
-        "$name IS ON TRACK $track. ONLY ITS FIRST $blocks BLOCKS FIT."
+        "$name IS ON TRACK $track. ONLY ITS FIRST ${countOf(blocks, "BLOCK", "BLOCKS")} FIT."
     /** Every track already holds something. [tracks] is the grid's own track count. */
     fun loopFull(tracks: Int): String = "ALL $tracks TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST."
     /** The snip decoded to nothing — empty, or not readable as audio. */
@@ -1653,12 +1655,26 @@ object Copy {
         "${barsOf(bars)} BOUNCED, OUT OF A $cycleBars BAR CYCLE. IT IS IN SNIPS NOW."
 
     /**
+     * "N <singular>" or "N <plural>" — the one place every counted noun in
+     * `Copy` picks its own word, because "1 BARS BOUNCED" is the kind of
+     * sentence a player reads as a bug in everything else too, and that bug
+     * shipped independently in enough different toasts (bars, notes,
+     * sections, pads, hits, slices, blocks, files) that hand-writing the
+     * `if (n == 1)` at each call site was never going to hold. `n == 1`,
+     * not `n <= 1`: a count can't go negative, and 0 is its own plural
+     * ("0 BARS", not "0 BAR").
+     */
+    fun countOf(n: Int, singular: String, plural: String): String = "$n ${if (n == 1) singular else plural}"
+
+    /**
      * "1 BAR" or "N BARS" — one place, because both bounce lines count the
      * same thing and "1 BARS BOUNCED" is the kind of sentence a player reads
      * as a bug in everything else too. The cycle length beside it stays a bare
-     * number: it is already followed by the singular "BAR CYCLE".
+     * number: it is already followed by the singular "BAR CYCLE". A thin call
+     * through [countOf] now — the general form this function's own KDoc
+     * argued for before [countOf] existed to be argued for.
      */
-    private fun barsOf(bars: Int): String = if (bars == 1) "1 BAR" else "$bars BARS"
+    private fun barsOf(bars: Int): String = countOf(bars, "BAR", "BARS")
     /** Every track is still empty — there is nothing to render. */
     const val LOOP_BOUNCE_EMPTY = "NOTHING ON THE GRID TO BOUNCE YET."
     /** The render or the write failed. Law 3: say what did not happen. */

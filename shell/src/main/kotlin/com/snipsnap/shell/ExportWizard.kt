@@ -210,8 +210,8 @@ class ExportWizardModel(
      * (0..[fileCount]); the queued and done lines bracket it.
      */
     fun dubFilesLine(filesShown: Int): String = when (stage) {
-        Stage.READY -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · $fileCount FILES QUEUED"
-        Stage.WRITING -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${filesShown.coerceIn(0, fileCount)} OF $fileCount FILES"
-        Stage.COMPLETE -> "ALL $fileCount FILES ON TAPE. GO MAKE THE THING."
+        Stage.READY -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${Copy.countOf(fileCount, "FILE", "FILES")} QUEUED"
+        Stage.WRITING -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${filesShown.coerceIn(0, fileCount)} OF ${Copy.countOf(fileCount, "FILE", "FILES")}"
+        Stage.COMPLETE -> "ALL ${Copy.countOf(fileCount, "FILE", "FILES")} ON TAPE. GO MAKE THE THING."
     }
 }

@@ -118,7 +118,7 @@ object Chart {
             "SEED ${arrangement.seed}",
             tempoWord(bpm, bpmIsDefault),
             bars(arrangement.totalBars),
-            "${arrangement.sections.size} SECTIONS",
+            sections(arrangement.sections.size),
         ).joinToString(" · ")
         appendLine(title)
         appendLine("=".repeat(title.length))
@@ -284,7 +284,8 @@ object Chart {
         return if (isDefault) "$n BPM (STAND-IN, NO TEMPO SET)" else "$n BPM"
     }
 
-    private fun bars(n: Int) = "$n ${if (n == 1) "BAR" else "BARS"}"
-    private fun notes(n: Int) = "$n ${if (n == 1) "NOTE" else "NOTES"}"
+    private fun bars(n: Int) = Copy.countOf(n, "BAR", "BARS")
+    private fun notes(n: Int) = Copy.countOf(n, "NOTE", "NOTES")
+    private fun sections(n: Int) = Copy.countOf(n, "SECTION", "SECTIONS")
     private fun pulses(n: Long) = "$n ${if (n == 1L) "PULSE" else "PULSES"}"
 }
