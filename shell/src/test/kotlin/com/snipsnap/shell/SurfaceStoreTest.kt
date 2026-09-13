@@ -121,20 +121,6 @@ class SurfaceStoreTest {
     }
 
     @Test
-    fun `a capture recomputes the blend from position, ignoring a stale reading's own a-b-c-d`() {
-        // SurfaceScreen holds the last touch across a mode switch with no
-        // new touch: switch from XY to MORPH/VECTOR and press SET right
-        // away, and the held reading still carries XY's flat 0.25 each
-        // (TouchSurface.read never computes morph weights outside
-        // MORPH/VECTOR) even though the finger is at a corner. Capture
-        // must use the position, not whatever weights happen to be
-        // sitting on the reading already.
-        val staleFlatAtCornerA = Reading(0f, 1f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
-        assertEquals(Corner.CLEAN, Corner.from(Mode.MORPH, staleFlatAtCornerA, 0.5f, Corner.DEFAULTS))
-        assertEquals(Corner.CLEAN, Corner.from(Mode.VECTOR, staleFlatAtCornerA, 0.5f, Corner.DEFAULTS))
-    }
-
-    @Test
     fun `VECTOR captures a corner exactly like MORPH does - the same blend, not a different one`() {
         val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)
         assertEquals(

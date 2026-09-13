@@ -518,6 +518,14 @@ fun SurfaceScreen(
                 // between two: the painted puck and the engine both jump.
                 smoother.snap(target)
                 lastMode = mode
+                // lastHeld's a/b/c/d were smoothed under the *old* mode -
+                // XY/XYZ never compute morph weights at all (TouchSurface.
+                // read leaves them at a flat 0.25 each), so carrying it
+                // into MORPH/VECTOR's SET A..D would capture that flat
+                // blend, not a corner, no matter where the finger was.
+                // Clearing it means SET asks for a fresh touch instead of
+                // capturing a reading that doesn't belong to this mode.
+                lastHeld = null
             }
             val smooth = smoother.step(target)
             if (target.touching) lastHeld = smooth
