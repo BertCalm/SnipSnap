@@ -19,9 +19,9 @@ import kotlin.math.abs
 object Eq {
 
     val MACROS: List<MacroSpec> = listOf(
-        MacroSpec("BASS", 0.5f),
-        MacroSpec("MID", 0.5f),
-        MacroSpec("AIR", 0.5f),
+        MacroSpec("BASS", 0.5f, neutral = 0.5f),
+        MacroSpec("MID", 0.5f, neutral = 0.5f),
+        MacroSpec("AIR", 0.5f, neutral = 0.5f),
     )
 
     private const val BASS_HZ = 100f

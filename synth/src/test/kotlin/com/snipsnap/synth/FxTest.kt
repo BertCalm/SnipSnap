@@ -527,4 +527,30 @@ class FxTest {
             }
         }
     }
+
+    @Test
+    fun `AMT zero lands every macro on its neutral`() {
+        for (name in FxChain.SECTION_NAMES) {
+            for (spec in FxChain.macrosOf(name)) {
+                val chain = FxChain().withSection(name, mapOf(spec.name to 1f))
+                val faded = Treatments.fade(chain, 0f)
+                assertEquals(
+                    spec.neutral,
+                    faded.section(name)!!.getValue(spec.name),
+                    "$name.${spec.name}: AMT 0 did not land on its neutral",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `a flat EQ stays flat as AMT falls`() {
+        val flat = FxChain(eq = mapOf("BASS" to 0.5f, "MID" to 0.5f, "AIR" to 0.5f))
+        for (amount in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+            val faded = Treatments.fade(flat, amount)
+            for ((macro, v) in faded.eq!!) {
+                assertEquals(0.5f, v, "AMT $amount moved a flat $macro off flat")
+            }
+        }
+    }
 }

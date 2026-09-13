@@ -54,10 +54,28 @@ object Treatments {
         // silently become "no treatment". Checked above, before bypass.
         if (amount <= 0f) return FxChain()
         if (amount >= 0.999f) return base
-        var out = base
-        for (section in FxChain.SECTION_NAMES) {
-            val macros = base.section(section) ?: continue
-            out = out.withSection(section, macros.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) })
+        return fade(base, amount)
+    }
+
+    /**
+     * [chain]'s macros faded toward their neutrals by [amount] — 1 leaves the
+     * chain alone, 0 lands every macro where it does nothing. A macro whose
+     * neutral is 0 fades to silence, exactly as `v * amount` always did; a
+     * centered one (EQ's flat, PITCH's native) fades to its centre instead of
+     * being dragged off it.
+     */
+    fun fade(chain: FxChain, amount: Float): FxChain {
+        var out = chain
+        for (name in FxChain.SECTION_NAMES) {
+            val macros = chain.section(name) ?: continue
+            val neutrals = FxChain.macrosOf(name).associate { it.name to it.neutral }
+            out = out.withSection(
+                name,
+                macros.mapValues { (macro, v) ->
+                    val neutral = neutrals[macro] ?: 0f
+                    (neutral + (v - neutral) * amount).coerceIn(0f, 1f)
+                },
+            )
         }
         return out
     }

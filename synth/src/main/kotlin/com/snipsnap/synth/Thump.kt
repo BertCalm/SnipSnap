@@ -21,8 +21,13 @@ import kotlin.random.Random
  */
 enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM }
 
-/** One macro knob: plain-word name, factory default. Range is always 0..1. */
-data class MacroSpec(val name: String, val default: Float)
+/**
+ * One macro: its name, where it starts, and where it *does nothing*.
+ * [neutral] is 0 for a macro that fades to silence and 0.5 for a centered
+ * one (EQ's flat, PITCH's native) — `Treatments.chain` fades toward it, so
+ * a centered macro is not dragged off centre as AMT falls.
+ */
+data class MacroSpec(val name: String, val default: Float, val neutral: Float = 0f)
 
 object Thump {
 
