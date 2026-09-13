@@ -61,9 +61,12 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
     loop — it should stay tappable, toasting BOUNCE PRINTS THE LOOP AS
     IT PLAYS. PRESS ► PLAY FIRST. rather than just dim. PLAY, then
     BOUNCE: the label reads WAITING… then BOUNCING…, and the toast on
-    landing names the seconds bounced to SNIPS. Change PROG, SWING, or
-    FEEL mid-bounce: it should cancel with GROOVE CHANGED. BOUNCE
-    CANCELLED. rather than splice two different takes together.
+    landing names the seconds bounced to SNIPS. Mid-bounce, switch PROG
+    to any other one: it should cancel with GROOVE CHANGED. BOUNCE
+    CANCELLED. rather than splice two different takes together. (SWING
+    only reaches PROG B and FEEL only reaches A/C/D — nudging the one
+    that doesn't touch the program you're on leaves the clip alone and
+    won't cancel; that is correct, not a bug.)
 
 ## PLAY
 22. Mash pads fast with several fingers. Watch VOICES n/16 — it should track
