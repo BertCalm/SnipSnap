@@ -94,55 +94,64 @@ class PunchTest {
         )
     }
 
-    // ---------- saturate before decimate, not after (U6, docs/SYNTH_UPGRADE.md) ----------
-    // An oversampling engine calls Punch.saturate on its own raw buffer
-    // BEFORE Dsp.decimate, specifically so decimate's own band-limiting
-    // filter catches whatever new harmonics saturate's nonlinearity mints.
-    // A regression back to calling it on the already-decimated buffer
-    // would pass every other test in this file (they all call Punch.apply
-    // at a single, already-final rate) - this is the one that would catch it.
+    // ---------- Punch.applyOversampled: saturate/boost before decimate, not after ----------
+    // (U6, docs/SYNTH_UPGRADE.md) An oversampling engine's saturate and
+    // boostEnvelope calls belong BEFORE Dsp.decimate, specifically so
+    // decimate's own band-limiting filter catches whatever new harmonics
+    // and sidebands they mint. Exercising Punch.applyOversampled itself -
+    // the exact function Thump.render() calls - rather than a hand-rolled
+    // stand-in for it, means a future edit that moves either stage back
+    // across the decimate boundary inside that function fails here too,
+    // not just in a reconstruction that could drift out of sync with it.
 
     @Test
-    fun `saturating before decimate leaves far less aliased energy than saturating after`() {
-        // An 18kHz tone: close enough to 44.1kHz's 22.05kHz Nyquist to be
+    fun `applyOversampled leaves far less aliased energy than running saturate and boost after decimate`() {
+        // A 16kHz tone: close enough to 44.1kHz's 22.05kHz Nyquist to be
         // exactly the kind of content a bright THUMP voice (HAT, CLICK) has
-        // plenty of. Its 2nd harmonic (36kHz) sits well inside the
-        // oversampled rate's own Nyquist (88.2kHz) - decimate legitimately
-        // removes it there - but has no representation at all in a signal
-        // already sampled at 44.1kHz except as its alias, 44100-36000 =
-        // 8100Hz: a spurious tone nowhere near the fundamental or its real
-        // harmonics, which a clean sine has no business producing.
-        val hz = 18_000.0
+        // plenty of. Dsp.drive is tanh-based, an odd function, so a sine
+        // only picks up odd harmonics - the 3rd (48kHz) sits well inside
+        // the oversampled rate's own Nyquist (88.2kHz), where decimate
+        // legitimately removes it, but has no representation at all in a
+        // signal already sampled at 44.1kHz except as its alias,
+        // 48000-44100 = 3900Hz: a spurious tone nowhere near the
+        // fundamental or its real harmonics, which a clean sine has no
+        // business producing.
+        val hz = 16_000.0
         val oversampledRate = Dsp.RATE * Dsp.OVERSAMPLE
         fun tone176k() = FloatArray((0.1f * oversampledRate).toInt()) { i ->
             (0.8f * sin(2.0 * PI * hz * i / oversampledRate)).toFloat()
         }
 
-        val correctOrder = tone176k()
-        Punch.saturate(correctOrder, 1f, oversampledRate)
-        val correct = Dsp.decimate(correctOrder, Dsp.RATE)
+        val correct = Punch.applyOversampled(tone176k(), 1f, Dsp.RATE)
 
-        val buggyOrder = Dsp.decimate(tone176k(), Dsp.RATE)
-        Punch.saturate(buggyOrder, 1f, Dsp.RATE)
+        // The buggy ordering this test exists to catch: decimate first,
+        // then run both stages on the already-final-rate buffer - what
+        // Thump.render() did before U6's aliasing fix, and what a
+        // regression back to it would reintroduce.
+        val buggy = Dsp.decimate(tone176k(), Dsp.RATE)
+        Dsp.normalize(buggy)
+        Punch.saturate(buggy, 1f, Dsp.RATE)
+        Punch.boostEnvelope(buggy, 1f, Dsp.RATE)
 
         val fftSize = 4096
         val correctSpectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(correct, fftSize)
-        val buggySpectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(buggyOrder, fftSize)
+        val buggySpectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(buggy, fftSize)
         val binHz = Dsp.RATE.toFloat() / fftSize
 
         // A band with the fundamental, DC, and every real harmonic excluded
-        // - a clean sine saturated the correct way should have essentially
-        // nothing here; measured, saturating post-decimate leaves roughly
-        // 5x the energy in it.
+        // - a clean sine shaped the correct way should have essentially
+        // nothing here; measured, running both stages post-decimate leaves
+        // roughly 90x the energy in it (the boost envelope's own sidebands
+        // compound with saturate's aliased harmonic here).
         val lo = (2_000 / binHz).toInt()
         val hi = (8_500 / binHz).toInt()
         fun bandEnergy(spectrum: FloatArray) = (lo..hi).sumOf { (spectrum[it] * spectrum[it]).toDouble() }
         val correctEnergy = bandEnergy(correctSpectrum)
         val buggyEnergy = bandEnergy(buggySpectrum)
         assertTrue(
-            buggyEnergy > correctEnergy * 3,
-            "saturating after decimate should leave detectably more aliased energy in a band the " +
-                "clean tone has none of: correct=$correctEnergy buggy=$buggyEnergy",
+            buggyEnergy > correctEnergy * 10,
+            "running saturate/boostEnvelope after decimate should leave detectably more aliased " +
+                "energy in a band the clean tone has none of: correct=$correctEnergy buggy=$buggyEnergy",
         )
     }
 }
