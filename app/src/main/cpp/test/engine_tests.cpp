@@ -669,6 +669,55 @@ TEST(surface_engine_morph_blends_the_corners) {
     CHECK(pa > pd);
 }
 
+TEST(surface_engine_vector_mode_uses_morphs_exact_corner_blend) {
+    // VECTOR shares MORPH's formula exactly (see applyControl's switch) -
+    // the same corner state, the same tilt nudge, at the same touch
+    // reading, must produce byte-identical output whichever of the two
+    // mode numbers is sent.
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+
+    auto run = [&](int32_t mode) {
+        SurfaceEngine engine(kRate);
+        engine.setCorner(0, MacroState{0.5f, 0.6f, 0.5f, 0.0f});
+        engine.loadSample(square.data(), square.size(), kRate);
+        ControlFrame f;
+        f.mode = mode;
+        f.gate = true;
+        f.a = 1; f.b = f.c = f.d = 0;
+        f.tilt = 0.75f;
+        engine.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(engine, 64);
+        return out;
+    };
+
+    CHECK(run(2) == run(3));  // MORPH and VECTOR
+}
+
+TEST(surface_engine_vector_mode_also_drives_the_sample_blend) {
+    // VECTOR is the one mode where the sample vertices and the corner
+    // blend both matter at once - proving the sample side still reaches
+    // the DSP under mode 3, not just under mode 0 (XY) as every other
+    // sample-blend test in this file uses. Corner A (clean: cutoff wide
+    // open, no drive) keeps the filter out of the way of the sign check.
+    SurfaceEngine e(kRate);
+    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+    e.loadSample(hi.data(), hi.size(), kRate, 0);
+    e.loadSample(lo.data(), lo.size(), kRate, 1);
+    ControlFrame f;
+    f.mode = 3;
+    f.gate = true;
+    f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+    f.sampleA = 0.0f; f.sampleB = 1.0f; f.sampleC = 0.0f;
+    e.pushControl(f);
+    std::vector<float> out;
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    float sum = 0.0f;
+    for (float v : out) sum += v;
+    CHECK(sum / static_cast<float>(out.size()) < -0.5f);  // slot 1 alone: negative, full level
+}
+
 TEST(surface_engine_retriggers_the_loop_on_touch_down) {
     // Without a reset, phase_ keeps advancing even while ungated - the loop
     // is muted, not paused - so a second touch lands wherever it would

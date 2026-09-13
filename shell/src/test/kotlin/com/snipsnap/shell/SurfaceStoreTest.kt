@@ -121,6 +121,21 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `VECTOR captures a corner exactly like MORPH does - the same blend, not a different one`() {
+        val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)
+        assertEquals(
+            Corner.from(Mode.MORPH, atA, 0.8f, Corner.DEFAULTS),
+            Corner.from(Mode.VECTOR, atA, 0.8f, Corner.DEFAULTS),
+        )
+        val centre = Reading(0.5f, 0.5f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        assertEquals(
+            Corner.from(Mode.MORPH, centre, 0.3f, Corner.DEFAULTS),
+            Corner.from(Mode.VECTOR, centre, 0.3f, Corner.DEFAULTS),
+        )
+        assertFailsWith<IllegalArgumentException> { Corner.from(Mode.VECTOR, centre, 0.5f, Corner.DEFAULTS.take(2)) }
+    }
+
+    @Test
     fun `tilt nudges MORPH resonance the same half-weighted amount XY gives it, and clamps at the ends`() {
         // CLEAN's resonance is 0 (Corner.CLEAN = Corner(0.5f, 1.0f, 0.0f, 0.0f)),
         // so the nudge alone is what shows up here - the same arithmetic
