@@ -2113,7 +2113,7 @@ fun App(shelf: KitShelf) {
     // Back must fall through to the system default, which finishes the
     // Activity, the normal Android expectation for a root screen), SPLIT
     // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
-    // "◄ SHELF" chip, via `onBack`, which also silences the instrument
+    // "◄ KITS" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
         padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null
