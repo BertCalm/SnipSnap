@@ -360,7 +360,7 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB ▸ UP TO ${GRAB_SECONDS}s",
+            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB · UP TO ${GRAB_SECONDS}s",
             enabled = armed && committing == null,
             onClick = ::grab,
         )

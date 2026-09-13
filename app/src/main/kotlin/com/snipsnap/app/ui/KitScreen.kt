@@ -453,7 +453,7 @@ fun KitScreen(
                 // kit shares one room and one floor (docs/DUST.md). Only
                 // offered when the kit came off a tape at all.
                 ActionButton(
-                    "DUST ALL ▸ THE TAPE'S OWN HISS AND ROOM",
+                    "DUST ALL · THE TAPE'S OWN HISS AND ROOM",
                     scheme,
                     enabled = !busy && DustPrints.kitTape(kit) != null,
                     modifier = Modifier.fillMaxWidth(),

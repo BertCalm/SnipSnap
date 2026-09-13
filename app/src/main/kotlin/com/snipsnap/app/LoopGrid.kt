@@ -272,7 +272,7 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.material3.Text(
-            text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE ▸ $bars BARS",
+            text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE · $bars BARS",
             color = if (bouncing) Tape.Dim else Tape.Ink,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,

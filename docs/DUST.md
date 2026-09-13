@@ -92,7 +92,7 @@ and identical at 100.
   card's AMT with that tape. The recipe carries the tape, so AMT moves
   after that keep the borrowed dust, and nothing in the model changed:
   `dustPad` always took the tape by name.
-- **`DUST ALL ▸` on the KIT action row**: the per-pad door on every pad at
+- **`DUST ALL ·` on the KIT action row**: the per-pad door on every pad at
   50, from each pad's own tape else the kit's, under one lock, each
   tape's print read once. Layered and chained pads are left as they are
   and counted. Offered only when the kit came off a tape at all.
