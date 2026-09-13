@@ -1448,6 +1448,8 @@ object Copy {
         if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
 
     // ---- GROOVE: BOUNCE ----
+    /** BOUNCE tapped on a stopped loop - it prints the pattern as it plays, so there is nothing yet to start it against. Named on tap rather than a dimmed button, same as [KIT_STILL_LOADING] for RECORD. */
+    const val GROOVE_BOUNCE_NEEDS_PLAY = "BOUNCE PRINTS THE LOOP AS IT PLAYS. PRESS ► PLAY FIRST."
     /** BOUNCE landed - [SnipStore.Imported.seconds]'s own count, [surfacePrinted]'s twin for the pads' print. */
     fun groovePrinted(seconds: Float): String = "BOUNCED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO SNIPS."
     /** The armed print's own buffer never reached a captured frame worth keeping - the same near-nothing guard [SURFACE_NOTHING_PRINTED] states for the other engine's print. */

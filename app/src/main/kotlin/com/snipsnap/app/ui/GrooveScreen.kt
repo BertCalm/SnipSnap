@@ -1918,12 +1918,22 @@ fun GrooveScreen(
                                 },
                                 scheme = scheme,
                                 modifier = Modifier.fillMaxWidth(),
-                                enabled = playing && currentClip != null && bankReady &&
+                                // `playing` is deliberately not in this gate: a
+                                // stopped loop is a stable state a user can sit
+                                // in, not a transient one, so it gets the same
+                                // toast-beats-gating treatment RECORD's own
+                                // `!bankReady` case gets (Finding #8) rather
+                                // than a dimmed button with no explanation.
+                                enabled = currentClip != null && bankReady &&
                                     !recording && !countingIn &&
                                     !bounceArmed && !bouncing && !landingBounce,
                             ) {
-                                bounceSnapshot = currentClip
-                                bounceArmed = true
+                                if (!playing) {
+                                    onToast(Copy.GROOVE_BOUNCE_NEEDS_PLAY)
+                                } else {
+                                    bounceSnapshot = currentClip
+                                    bounceArmed = true
+                                }
                             }
 
                             TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink3.tape)
