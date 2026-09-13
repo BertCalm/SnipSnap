@@ -153,13 +153,34 @@ logcat tag to grab when something is wrong.
   one finger, two independent blends, neither one visibly affecting the
   other's numbers. Then stage 4b, the named preset library: ARM B (it
   should dim in and the others stay lit), then PRESET ► - the readout
-  should read "LBP +", then "ECHO +" on the next press, wrapping around
-  through "LBP -" and back; morph toward B and it should sound like
-  whichever preset is showing. PRESET ◄ ► with no corner armed should do
+  should read "LBP +", then "ECHO +" on the next press, continuing through
+  "ECHO -"/"LBP -"/"CRUSH +"/"CRUSH -"/"GLITCH +"/"GLITCH -" and wrapping
+  back to "LBP +"; morph toward B and it should sound like whichever
+  preset is showing. PRESET ◄ ► with no corner armed should do
   nothing and the row should read "ARM A CORNER". Leave the screen and
   come back - a stepped corner is stored exactly like a captured one (the
   same `corners` field in `surface.json`), so it is still there, though
   the PRESET row itself starts unarmed again (arming doesn't persist).
+  Then stage 5, a real CRUSH and ECHO in the engine itself: PRESET ►
+  through to "ECHO +" or "ECHO -" (now genuinely wet) and morph a corner
+  toward it - repeats should be audible roughly a fifth of a second
+  behind the dry sound, and should keep ringing on their own for a
+  moment after you lift off the pad, fading rather than cutting off
+  with the touch. SET A..D still captures crush/echo the same way it
+  captures pitch/cutoff/resonance/drive when the mode is MORPH or
+  VECTOR - blend toward a crushed/echoing corner, SET a fresh one, and
+  the fresh capture should carry the same crush/echo the blend was
+  playing. CLEAN/DARK/LOW/HOT and LBP +/LBP - stay untouched (no crush,
+  no echo) - the whole pad should sound exactly as before this stage
+  existed until a corner actually carries a nonzero crush or echo.
+  Then stage 6, two more library pairs built on the same crush/echo:
+  PRESET ► on to "CRUSH +" should sound audibly gritty with no repeats,
+  "CRUSH -" grittier still (more of the sample-and-hold texture, darker);
+  neither should have any echo tail after release. "GLITCH +" and
+  "GLITCH -" should sound like CRUSH's grit *and* ECHO's repeats at once -
+  "GLITCH -" the more extreme, chaotic end of the pair (pitched down
+  slightly, heavier on both macros) - a texture neither LBP nor ECHO nor
+  CRUSH alone can reach.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

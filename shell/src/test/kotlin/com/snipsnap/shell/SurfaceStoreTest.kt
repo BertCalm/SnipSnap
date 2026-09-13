@@ -102,9 +102,64 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `a file saved before crush or echo existed still loads, transparent and dry`() {
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        val loaded = SurfaceStore.load(temp)
+        for (c in loaded.corners) {
+            near(0f, c.crush)
+            near(0f, c.echo)
+        }
+    }
+
+    @Test
+    fun `a present but malformed crush or echo is refused, not silently read as off`() {
+        // Unlike an absent key (the test above), a key that is *there*
+        // with the wrong type is exactly what pitch/cutoff/resonance/drive
+        // already refuse - crush/echo follow the same rule rather than
+        // quietly defaulting a torn value to 0.
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0,"crush":0,"echo":"bad"},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0,"crush":null,"echo":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+    }
+
+    @Test
+    fun `crush and echo round-trip alongside the older macros`() {
+        val withFx = Corner(0.5f, 0.5f, 0.5f, 0.5f, crush = 0.4f, echo = 0.7f)
+        SurfaceStore.save(temp, Settings(padSlot = 1, corners = listOf(withFx, withFx, withFx, withFx)))
+        val loaded = SurfaceStore.load(temp).corners.first()
+        near(0.4f, loaded.crush)
+        near(0.7f, loaded.echo)
+    }
+
+    @Test
     fun `refusals are in words`() {
         assertFailsWith<IllegalArgumentException> { Corner(1.2f, 0f, 0f, 0f) }
         assertFailsWith<IllegalArgumentException> { Corner(Float.NaN, 0f, 0f, 0f) }
+        assertFailsWith<IllegalArgumentException> { Corner(0f, 0f, 0f, 0f, crush = 1.2f) }
+        assertFailsWith<IllegalArgumentException> { Corner(0f, 0f, 0f, 0f, echo = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, secondPadSlot = 0) }
         assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, thirdPadSlot = 0) }
@@ -124,10 +179,33 @@ class SurfaceStoreTest {
     fun `the preset library names LBP+ECHO+ECHO-LBP- distinctly`() {
         // design/surface-vector's boards sketch these four names in this
         // order (LBP +, ECHO +, ECHO -, LBP -) - the order is a promise a
-        // stepper can rely on, not an implementation detail.
-        assertEquals(listOf("LBP +", "ECHO +", "ECHO -", "LBP -"), Corner.LIBRARY.map { it.name })
-        // Four distinct sounds, not four names on the same one.
-        assertEquals(4, Corner.LIBRARY.map { it.corner }.distinct().size)
+        // stepper can rely on, not an implementation detail. CRUSH and
+        // GLITCH (stage 6) are appended after them, not interleaved, so
+        // this original ordering promise still holds.
+        assertEquals(
+            listOf("LBP +", "ECHO +", "ECHO -", "LBP -", "CRUSH +", "CRUSH -", "GLITCH +", "GLITCH -"),
+            Corner.LIBRARY.map { it.name },
+        )
+        // Eight distinct sounds, not eight names on fewer.
+        assertEquals(8, Corner.LIBRARY.map { it.corner }.distinct().size)
+        // The ECHO pair is the one telling itself apart from LBP by
+        // actually using the delay the engine now has - LBP stays a pure
+        // filter pair, crush/echo both off.
+        fun byName(name: String) = Corner.LIBRARY.first { it.name == name }.corner
+        assertTrue(byName("ECHO +").echo > 0f)
+        assertTrue(byName("ECHO -").echo > 0f)
+        near(0f, byName("LBP +").echo); near(0f, byName("LBP +").crush)
+        near(0f, byName("LBP -").echo); near(0f, byName("LBP -").crush)
+        // CRUSH is a pure bitcrush pair - echo stays off, same shape as LBP
+        // being a pure filter pair.
+        assertTrue(byName("CRUSH +").crush > 0f)
+        assertTrue(byName("CRUSH -").crush > byName("CRUSH +").crush)
+        near(0f, byName("CRUSH +").echo); near(0f, byName("CRUSH -").echo)
+        // GLITCH is the one pair reaching for both macros together - a
+        // territory neither LBP nor ECHO nor CRUSH alone can reach.
+        assertTrue(byName("GLITCH +").crush > 0f); assertTrue(byName("GLITCH +").echo > 0f)
+        assertTrue(byName("GLITCH -").crush > byName("GLITCH +").crush)
+        assertTrue(byName("GLITCH -").echo > byName("GLITCH +").echo)
     }
 
     @Test
@@ -148,6 +226,22 @@ class SurfaceStoreTest {
         near(Corner.DEFAULTS.map { it.pitch }.average().toFloat(), mid.pitch)
         near(Corner.DEFAULTS.map { it.drive }.average().toFloat(), mid.drive)
         assertFailsWith<IllegalArgumentException> { Corner.from(Mode.MORPH, centre, 0.5f, Corner.DEFAULTS.take(2)) }
+    }
+
+    @Test
+    fun `crush and echo blend in MORPH exactly like pitch and drive already do`() {
+        val corners = listOf(
+            Corner(0.5f, 0.5f, 0f, 0f, crush = 1f, echo = 0f),
+            Corner(0.5f, 0.5f, 0f, 0f, crush = 0f, echo = 1f),
+            Corner.LOW,
+            Corner.HOT,
+        )
+        val atA = Reading(0f, 1f, 0f, 1f, 0f, 0f, 0f, touching = true)  // 100% corner A
+        val captured = Corner.from(Mode.MORPH, atA, 0.5f, corners)
+        near(1f, captured.crush); near(0f, captured.echo)
+        val centre = Reading(0.5f, 0.5f, 0f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        val mid = Corner.from(Mode.MORPH, centre, 0.5f, corners)
+        near(0.25f, mid.crush); near(0.25f, mid.echo)  // an even quarter each, same as pitch/drive above
     }
 
     @Test

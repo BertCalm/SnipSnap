@@ -108,12 +108,16 @@ object Tines {
         var pc = 0.0
         var pm = 0.0
         val modHz = carrierHz * ratio
+        // A 1ms attack ramp (U5, docs/SYNTH_UPGRADE.md) - declicks the
+        // instant onset every strike used to jump straight into, short
+        // enough that the "struck" bite is untouched.
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             pc += carrierHz / RATE
             pm += modHz / RATE
             val idx = index * Dsp.envAt(t, t60 / bite)
-            out[i] += gain * Dsp.envAt(t, t60) *
+            out[i] += gain * env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
         }
     }
@@ -171,13 +175,14 @@ object Tines {
         val out = FloatArray(frames(t60 * 1.4f))
         var pc = 0.0
         var pm = 0.0
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             val f = endHz * (1f + (dropMult - 1f) * Math.exp(-24.0 * t).toFloat())
             pc += f / RATE
             pm += f * 2.7f / RATE
             val idx = index * Dsp.envAt(t, t60 / 2f)
-            out[i] = Dsp.envAt(t, t60) *
+            out[i] = env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
         }
         return out
@@ -196,13 +201,14 @@ object Tines {
         val out = FloatArray(frames(t60 * 1.4f))
         var pc = 0.0
         var pm = 0.0
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / RATE
             val f = carrier * (1f + wobDepth * sin(2.0 * PI * wobHz * t).toFloat())
             pc += f / RATE
             pm += f * 2f / RATE
             val idx = index * Dsp.envAt(t, t60 / 1.8f)
-            out[i] = Dsp.envAt(t, t60) *
+            out[i] = env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
         }
         return out

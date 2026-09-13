@@ -97,6 +97,7 @@ object Vox {
         }
         val noise = Dsp.Noise(17)
         val noiseLp = Dsp.OnePole()
+        val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = t60) // vocal onsets are soft
 
         var p1 = 0.0
         var p2 = 0.0
@@ -119,8 +120,7 @@ object Vox {
             var s = 0f
             for (f in 0 until 3) s += FORMANT_GAINS[f] * filters[f].process(source)
 
-            val attack = (t / 0.02f).coerceAtMost(1f) // vocal onsets are soft
-            out[i] = s * attack * Dsp.envAt(t, t60)
+            out[i] = s * env.at(t)
         }
 
         Dsp.normalize(out)
