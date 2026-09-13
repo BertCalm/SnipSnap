@@ -116,23 +116,39 @@ class PadSheetTest {
     }
 
     @Test
-    fun `every character segment names a real rack character, and the keyed segments a real keyed treatment`() {
-        assertEquals(PadSheet.Treatment.Keyed("retuned"), PadSheet.treatmentFor(PadSheet.TUNE))
-        assertEquals(PadSheet.TUNE, PadSheet.segmentFor(PadSheet.Treatment.Keyed("retuned")))
-        for (segment in listOf(PadSheet.TUNE) + PadSheet.KEYED_SEGMENTS) {
+    fun `every segment names something real, whatever row it sits on`() {
+        for (segment in PadSheet.ALL_SEGMENTS) {
+            // NONE means "no treatment"; SMEAR rides its own recipe shape
+            // and deliberately dispatches through none of the three doors
+            // (see the dedicated SMEAR-vs-TAIL test above) — both are real
+            // "no Treatment" answers, not gaps, on any row.
+            if (segment == PadSheet.NONE || segment == PadSheet.SMEAR) {
+                assertNull(PadSheet.treatmentFor(segment), "$segment must resolve to no Treatment")
+                continue
+            }
             val t = PadSheet.treatmentFor(segment)
-            assertTrue(t is PadSheet.Treatment.Keyed, "$segment is keyed")
-            assertTrue(t!!.name in Keyed.NAMES, "$segment maps to '${t.name}', which Keyed does not know")
-            assertEquals(segment, PadSheet.segmentFor(t))
+                ?: throw AssertionError("$segment draws a chip but does nothing")
+            when (t) {
+                is PadSheet.Treatment.Era -> {}
+                is PadSheet.Treatment.Character ->
+                    assertTrue(t.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")
+                is PadSheet.Treatment.Keyed ->
+                    assertTrue(t.name in Keyed.NAMES, "$segment maps to '${t.name}', which Keyed does not know")
+            }
+            assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is not treatmentFor's inverse for $segment")
         }
         assertNull(PadSheet.segmentForKeyed("frozen"), "a keyed name no segment draws lights nothing")
-        for (segment in PadSheet.ROWS.drop(1).dropLast(1).flatten()) {
-            if (segment == PadSheet.TUNE) continue
-            val t = PadSheet.treatmentFor(segment)
-            assertTrue(t is PadSheet.Treatment.Character, "$segment is a character")
-            assertTrue(t!!.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")
-            assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is treatmentFor's inverse")
-        }
+    }
+
+    @Test
+    fun `the card draws every chip once and only once`() {
+        assertEquals(
+            PadSheet.ALL_SEGMENTS.size,
+            PadSheet.ALL_SEGMENTS.toSet().size,
+            "a word is drawn on two rows: ${PadSheet.ALL_SEGMENTS.groupBy { it }.filterValues { it.size > 1 }.keys}",
+        )
+        assertEquals(PadSheet.ROWS, PadSheet.ROWS.filter { it.isNotEmpty() }, "an empty row would draw nothing")
+        assertTrue(PadSheet.ROWS.maxOf { it.size } <= 5, "a row wider than 5 makes every chip narrower")
     }
 
     @Test
