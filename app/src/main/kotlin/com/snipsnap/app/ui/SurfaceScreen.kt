@@ -101,12 +101,13 @@ import kotlinx.coroutines.withContext
  * is there when you come back.
  *
  * ARM A..D picks a corner without touching the pad at all; PRESET ◄ ►
- * then steps `SurfaceStore.Corner.LIBRARY`'s named quartet - LBP +/ECHO
- * +/ECHO -/LBP -, `design/surface-vector`'s own idea - onto whichever
- * corner is armed. It writes the very same `corners` SET A..D does, just
- * from a curated library instead of a live capture, so the two are
- * interchangeable afterwards: a stepped corner can be re-captured by
- * touch, and a captured one overwritten by stepping.
+ * then steps `SurfaceStore.Corner.LIBRARY`'s named presets - LBP +/ECHO
+ * +/ECHO -/LBP -, `design/surface-vector`'s own idea, plus CRUSH +/-/GLITCH
+ * +/- once the engine grew a bitcrusher and a delay - onto whichever corner
+ * is armed. It writes the very same `corners` SET A..D does, just from a
+ * curated library instead of a live capture, so the two are interchangeable
+ * afterwards: a stepped corner can be re-captured by touch, and a captured
+ * one overwritten by stepping.
  *
  * PAD2/PAD3/PAD4 ◄ ► load three more voices onto the pad's sample area -
  * PAD at the apex, PAD2 at the base-left, PAD3 at the base-right, PAD4 at
@@ -857,8 +858,9 @@ fun SurfaceScreen(
             Spacer(Modifier.height(6.dp))
 
             // PRESET ◄ ►: design/surface-vector's LBP+/ECHO+/ECHO-/LBP-
-            // idea, a named library stepped onto the armed corner - see
-            // SurfaceStore.Corner.LIBRARY and the class doc.
+            // idea (plus CRUSH+/-/GLITCH+/-), a named library stepped onto
+            // the armed corner - see SurfaceStore.Corner.LIBRARY and the
+            // class doc.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 val armed = armedCorner
                 ActionButton("◄ PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }

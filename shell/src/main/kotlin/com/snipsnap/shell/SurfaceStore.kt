@@ -56,22 +56,33 @@ object SurfaceStore {
             val DEFAULTS: List<Corner> = listOf(CLEAN, DARK, LOW, HOT)
 
             /**
-             * A second, named quartet - `design/surface-vector`'s boards
-             * sketch a MORPH/VECTOR pad whose corners read LBP +/ECHO
-             * +/ECHO -/LBP -, a preset library to *step* onto a corner
-             * instead of always capturing one live. LBP leans mellow and
-             * rounded (a pure filter pair, [crush]/[echo] both 0); ECHO
-             * brighter and more resonant, and - now that the engine
-             * actually has a delay stage (see [Corner.echo]) - genuinely
-             * echoing, [echo]'s wet mix the one thing telling its own +/-
-             * pair apart from LBP's. +/- is each pair's own
-             * brighter/darker sibling.
+             * A named library - `design/surface-vector`'s boards sketch a
+             * MORPH/VECTOR pad whose corners read LBP +/ECHO +/ECHO -/LBP -,
+             * a preset library to *step* onto a corner instead of always
+             * capturing one live. LBP leans mellow and rounded (a pure
+             * filter pair, [crush]/[echo] both 0); ECHO brighter and more
+             * resonant, and - now that the engine actually has a delay
+             * stage (see [Corner.echo]) - genuinely echoing, [echo]'s wet
+             * mix the one thing telling its own +/- pair apart from LBP's.
+             *
+             * CRUSH and GLITCH (PR #197's stage 6) extend the same idea
+             * once [Corner.crush] existed to reach for: CRUSH is a pure
+             * bitcrush pair, [echo] left at 0, the same way LBP is a pure
+             * filter pair; GLITCH stacks crush *and* echo together, a
+             * territory neither LBP nor ECHO alone can reach - a heavily
+             * bitcrushed signal bouncing through its own repeats. +/- is
+             * still each pair's own brighter/lighter vs. darker/heavier
+             * sibling, same convention as LBP/ECHO.
              */
             val LIBRARY: List<NamedCorner> = listOf(
                 NamedCorner("LBP +", Corner(0.5f, 0.55f, 0.1f, 0.0f)),
                 NamedCorner("ECHO +", Corner(0.65f, 0.7f, 0.5f, 0.1f, echo = 0.25f)),
                 NamedCorner("ECHO -", Corner(0.35f, 0.4f, 0.45f, 0.2f, echo = 0.5f)),
                 NamedCorner("LBP -", Corner(0.5f, 0.2f, 0.15f, 0.0f)),
+                NamedCorner("CRUSH +", Corner(0.5f, 0.6f, 0.15f, 0.1f, crush = 0.3f)),
+                NamedCorner("CRUSH -", Corner(0.5f, 0.3f, 0.2f, 0.15f, crush = 0.65f)),
+                NamedCorner("GLITCH +", Corner(0.5f, 0.65f, 0.3f, 0.25f, crush = 0.45f, echo = 0.2f)),
+                NamedCorner("GLITCH -", Corner(0.4f, 0.35f, 0.35f, 0.35f, crush = 0.75f, echo = 0.4f)),
             )
 
             /**
