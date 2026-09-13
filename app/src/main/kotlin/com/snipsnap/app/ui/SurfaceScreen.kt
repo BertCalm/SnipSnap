@@ -75,16 +75,22 @@ import kotlinx.coroutines.withContext
  * writes the performance to TAPE as a new sample the way an SP-404
  * resamples: what you played is now one pad, no DSP to run later.
  *
- * Three modes, one pad:
+ * Four modes, one pad:
  *  - XY: one finger, X pitch, Y filter.
  *  - XYZ: a second finger's distance is Z (drive); the roll of the
  *    phone is resonance.
  *  - MORPH: the puck weights four corner states, A B C D.
+ *  - VECTOR: MORPH's exact corner blend, with the sample triangle below
+ *    also reading the same finger at once - the design/surface-vector
+ *    concept's own mode, kept separate from XY/XYZ/MORPH so none of
+ *    those change: one touch position, two blends, neither aware of the
+ *    other.
  *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
- * captures the sound under the last touch as a morph corner. Both live
- * in `surface.json` beside the kit (`SurfaceStore`), so a morph you set
- * up is there when you come back.
+ * captures the sound under the last touch as a morph corner (MORPH and
+ * VECTOR alike - it is the same corner blend). Both live in
+ * `surface.json` beside the kit (`SurfaceStore`), so a morph you set up
+ * is there when you come back.
  *
  * PAD2/PAD3 ◄ ► load two more voices onto the pad's inscribed sample
  * triangle - PAD at the apex, PAD2 at the base-left, PAD3 at the
@@ -640,7 +646,7 @@ fun SurfaceScreen(
                         "SET ${'A' + i}",
                         scheme,
                         enabled = padName != null,
-                        dimmed = mode != Mode.MORPH,
+                        dimmed = mode != Mode.MORPH && mode != Mode.VECTOR,
                         modifier = Modifier.weight(1f),
                     ) { setCorner(i) }
                 }
@@ -739,8 +745,8 @@ fun SurfaceScreen(
                         val r = 9.dp.toPx() + painted.z * (minOf(w, h) / 2f - 9.dp.toPx())
                         drawCircle(ink.copy(alpha = 0.6f), radius = r, center = Offset(px, py), style = Stroke(2.dp.toPx()))
                     }
-                    // MORPH: a bar per corner, its length the weight.
-                    if (mode == Mode.MORPH) {
+                    // MORPH/VECTOR: a bar per corner, its length the weight.
+                    if (mode == Mode.MORPH || mode == Mode.VECTOR) {
                         val bar = 6.dp.toPx()
                         val len = minOf(w, h) * 0.3f
                         drawRect(ink.copy(alpha = 0.7f), Offset(0f, 0f), Size(len * painted.a, bar))
@@ -749,7 +755,7 @@ fun SurfaceScreen(
                         drawRect(ink.copy(alpha = 0.7f), Offset(w - len * painted.d, h - bar), Size(len * painted.d, bar))
                     }
                 }
-                if (mode == Mode.MORPH) {
+                if (mode == Mode.MORPH || mode == Mode.VECTOR) {
                     TapeText("A", TapeType.lcdSmall, ink, Modifier.align(Alignment.TopStart).padding(8.dp))
                     TapeText("B", TapeType.lcdSmall, ink, Modifier.align(Alignment.TopEnd).padding(8.dp))
                     TapeText("C", TapeType.lcdSmall, ink, Modifier.align(Alignment.BottomStart).padding(8.dp))
@@ -773,7 +779,7 @@ fun SurfaceScreen(
                 append(latency).append("  ·  ")
                 append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
                 if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
-                if (mode == Mode.MORPH) append("  A %.2f B %.2f C %.2f D %.2f".format(java.util.Locale.ROOT, painted.a, painted.b, painted.c, painted.d))
+                if (mode == Mode.MORPH || mode == Mode.VECTOR) append("  A %.2f B %.2f C %.2f D %.2f".format(java.util.Locale.ROOT, painted.a, painted.b, painted.c, painted.d))
                 // Only worth a line once there is a second or third source
                 // actually in the blend - with just PAD loaded the weights
                 // are trivially (1, 0, 0) and say nothing new.
@@ -788,8 +794,10 @@ fun SurfaceScreen(
             // 390dp on one line - a design-canvas board caught it clipping
             // mid-digit. Latency still leads (see above), so a second line
             // is spare capacity, not a redesign: it covers every case but
-            // the rare worst one (MORPH + tilt + a shared stream + a long
-            // pad name), which would need a restructure, not a parameter.
+            // the rare worst one (VECTOR, now the longest possible line -
+            // A/B/C/D and SMPL both at once - plus tilt, a shared stream
+            // and a long pad name), which would need a restructure, not a
+            // parameter.
             TapeText(readout, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.fillMaxWidth(), maxLines = 2)
         }
 

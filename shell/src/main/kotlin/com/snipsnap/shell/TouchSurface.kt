@@ -29,6 +29,14 @@ object TouchSurface {
 
         /** A vector pad: the puck's position weights four corner states. */
         MORPH(4),
+
+        /**
+         * MORPH's own corner blend, plus the sample triangle
+         * ([sampleWeights]) reading the same finger at once, independently -
+         * the vector-synthesis idea `design/surface-vector` sketches: one
+         * touch position, two blends, neither aware of the other.
+         */
+        VECTOR(4),
     }
 
     /** A finger on the pad, in pixels of the pad's own rectangle. */
@@ -36,7 +44,8 @@ object TouchSurface {
 
     /**
      * What the pad puts out per event. [z] is only meaningful in [Mode.XYZ];
-     * the corner weights only in [Mode.MORPH] (they always sum to 1 there).
+     * the corner weights only in [Mode.MORPH] and [Mode.VECTOR] (they
+     * always sum to 1 there).
      */
     data class Reading(
         val x: Float,
@@ -67,7 +76,10 @@ object TouchSurface {
      *   which is what a player expects of a depth control.
      * - The morph weights are bilinear in (x, y): A top-left, B top-right,
      *   C bottom-left, D bottom-right. Each corner reads 1 exactly at its
-     *   corner, the centre is an even quarter each.
+     *   corner, the centre is an even quarter each. [Mode.VECTOR] computes
+     *   the same weights as [Mode.MORPH] - it is MORPH's corner blend with
+     *   the sample triangle also reading the same position, not a
+     *   different formula.
      *
      * No fingers returns [Reading.REST] with Z carried from [previous],
      * for the same reason.
@@ -87,7 +99,7 @@ object TouchSurface {
             }
             else -> 0f
         }
-        val (a, b, c, d) = if (mode == Mode.MORPH) morphWeights(x, y) else listOf(0.25f, 0.25f, 0.25f, 0.25f)
+        val (a, b, c, d) = if (mode == Mode.MORPH || mode == Mode.VECTOR) morphWeights(x, y) else listOf(0.25f, 0.25f, 0.25f, 0.25f)
         return Reading(x, y, z, a, b, c, d, touching = true)
     }
 
