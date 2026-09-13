@@ -415,4 +415,28 @@ class FxTest {
         assertEquals(0f, Smear.floorHz(0f))
         assertEquals(Smear.FLOOR_HI, Smear.floorHz(1f), 1f)
     }
+
+    @Test
+    fun `the section table agrees with the hand-written fields`() {
+        // Structure, not a literal list: five later tasks add sections, and the
+        // exact rack order is pinned by the json-order test and by SPEED's own.
+        assertTrue(FxChain.SECTION_NAMES.isNotEmpty(), "the rack has no sections")
+        assertEquals(
+            FxChain.SECTION_NAMES.size,
+            FxChain.SECTION_NAMES.toSet().size,
+            "two sections share a name",
+        )
+        for (name in FxChain.SECTION_NAMES) {
+            assertTrue(FxChain.macrosOf(name).isNotEmpty(), "$name declares no macros")
+            val macros = FxChain.macrosOf(name).associate { it.name to 0.7f }
+            val chain = FxChain().withSection(name, macros)
+            assertEquals(macros, chain.section(name), "$name: withSection and section disagree")
+            assertEquals(null, FxChain().section(name), "$name: an empty chain is not bypassed there")
+        }
+    }
+
+    @Test
+    fun `an unknown section name is refused by name`() {
+        assertFailsWith<IllegalArgumentException> { FxChain().section("nope") }
+    }
 }

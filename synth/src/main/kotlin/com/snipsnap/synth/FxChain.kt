@@ -136,11 +136,64 @@ data class FxChain(
 
     fun toJsonText(): String = Json.write(toJsonValue())
 
+    /** [name]'s macros on this chain, or null when the section is bypassed. */
+    fun section(name: String): Map<String, Float>? = sectionOf(name).get(this)
+
+    /** This chain with [name] set to [macros]; null bypasses the section. */
+    fun withSection(name: String, macros: Map<String, Float>?): FxChain = sectionOf(name).with(this, macros)
+
     companion object {
         const val VERSION = 1
 
         /** Most tail the whole rack may add over its input, seconds. */
         const val MAX_CHAIN_TAIL_SECONDS = 1.0f
+
+        /** Which pass a section belongs to: the two before the tail budget is measured, and the rack. */
+        enum class Stage { TRANSPORT, ARRIVAL, RACK }
+
+        /**
+         * One rack section, described rather than hand-written. The list below
+         * IS the order — in the signal path and in JSON alike — so the two can
+         * no longer drift apart.
+         */
+        internal class Section(
+            val name: String,
+            val macros: List<MacroSpec>,
+            val get: (FxChain) -> Map<String, Float>?,
+            val with: (FxChain, Map<String, Float>?) -> FxChain,
+            val run: (Snip, Map<String, Float>) -> Snip,
+            val stage: Stage = Stage.RACK,
+        )
+
+        internal val SECTIONS: List<Section> = listOf(
+            Section("swell", Swell.MACROS, { it.swell }, { c, m -> c.copy(swell = m) }, Swell::process, Stage.ARRIVAL),
+            Section("smear", Smear.MACROS, { it.smear }, { c, m -> c.copy(smear = m) }, Smear::process),
+            Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
+            Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
+            Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
+            Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
+            Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
+            Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
+            Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
+            Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
+            Section("motion", Motion.MACROS, { it.motion }, { c, m -> c.copy(motion = m) }, Motion::process),
+        )
+
+        /**
+         * Every section's name, in rack order — the door other modules use.
+         * [Section] itself stays internal: `internal` is module-scoped, and
+         * `:shell`'s Treatments and Breed live outside this one.
+         */
+        val SECTION_NAMES: List<String> get() = SECTIONS.map { it.name }
+
+        /** [name]'s macro specs, or an error naming the sections there are. */
+        fun macrosOf(name: String): List<MacroSpec> = sectionOf(name).macros
+
+        internal fun sectionOf(name: String): Section =
+            SECTIONS.firstOrNull { it.name == name }
+                ?: throw IllegalArgumentException(
+                    "unknown fx section '$name' - the rack has: ${SECTION_NAMES.joinToString(", ")}",
+                )
 
         fun fromJsonValue(value: JsonValue): FxChain {
             val obj = value.obj()
