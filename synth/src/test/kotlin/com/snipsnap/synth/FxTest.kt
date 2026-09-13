@@ -707,11 +707,18 @@ class FxTest {
 
     @Test
     fun `the tail budget is measured from the pitched sound, not the original`() {
-        val chain = FxChain(speed = mapOf("SEMITONES" to 0f))
-        val out = chain.process(kick)
+        // Long enough that capTail would actually engage if the budget were
+        // still measured from the unpitched input: under 2 s the cap never
+        // fires either way and this assertion cannot fail.
+        val long = Snip(
+            FloatArray(kick.samples.size * 8) { kick.samples[it % kick.samples.size] },
+            kick.channels,
+            kick.sampleRate,
+        )
+        val out = FxChain(speed = mapOf("SEMITONES" to 0f)).process(long)
         assertTrue(
-            out.frameCount > kick.frameCount * 1.5,
-            "capTail truncated an octave-down hit to ${out.frameCount} from ${kick.frameCount}",
+            out.frameCount > long.frameCount * 1.5,
+            "capTail truncated an octave-down hit to ${out.frameCount} from ${long.frameCount}",
         )
     }
 
