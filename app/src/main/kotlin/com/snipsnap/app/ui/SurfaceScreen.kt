@@ -133,6 +133,10 @@ fun SurfaceScreen(
     var padName2 by remember { mutableStateOf<String?>(null) }
     var padSlot2 by remember { mutableStateOf<Int?>(null) }
     var mixFraction by remember { mutableStateOf(0f) }
+    // Bumped by every stepPad2 press before its IO read starts, and checked
+    // after: a press whose read finishes after a later one's is stale and
+    // must not overwrite the newer result.
+    var pad2Generation by remember { mutableStateOf(0) }
     var settings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
     var lastHeld by remember { mutableStateOf<Reading?>(null) }
     var printing by remember { mutableStateOf(false) }
@@ -220,12 +224,16 @@ fun SurfaceScreen(
     // quieter than the first pad's: a second voice is optional, so a
     // toast for every unreadable file would be noise the first pad
     // already covers when it matters.
-    suspend fun loadPad2(dir: File, pad: KitPad) {
+    suspend fun loadPad2(dir: File, pad: KitPad, generation: Int) {
         val snip = withContext(Dispatchers.IO) {
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
         }
+        if (generation != pad2Generation) return  // a later press already superseded this one
         if (snip == null) {
             padName2 = null
+            // No working second pad, so MIX must not leak a slot 1 that is
+            // either stale (the old sample) or was never loaded at all.
+            mixFraction = 0f
         } else {
             engine.load(snip, slot = 1)
             padName2 = pad.displayName
@@ -254,6 +262,8 @@ fun SurfaceScreen(
             padSlot = null
             padName2 = null
             padSlot2 = null
+            mixFraction = 0f
+            pad2Generation++  // orphan any in-flight load from before the kit closed
             return@LaunchedEffect
         }
         // The kit's surface settings first (a torn file is the defaults,
@@ -279,8 +289,9 @@ fun SurfaceScreen(
         if (pad2 == null) {
             padName2 = null
             padSlot2 = null
+            mixFraction = 0f
         } else {
-            loadPad2(entry.dir, pad2)
+            loadPad2(entry.dir, pad2, ++pad2Generation)
         }
     }
 
@@ -308,7 +319,8 @@ fun SurfaceScreen(
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
         persist(dir, settings.copy(secondPadSlot = pad.slot))
-        scope.launch { loadPad2(dir, pad) }
+        val generation = ++pad2Generation
+        scope.launch { loadPad2(dir, pad, generation) }
     }
 
     // SET A..D: the sound under the last touch becomes a morph corner.
