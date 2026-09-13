@@ -432,7 +432,13 @@ TEST(surface_engine_mixes_two_loaded_samples_by_crossfade_weight) {
 
 TEST(surface_engine_second_slot_is_silent_until_loaded) {
     // sampleMix all the way toward a slot nothing was ever loaded into
-    // must behave like any other empty slot: honest silence, not NaN.
+    // must settle to honest silence, not NaN. "Settle" matters here as
+    // much as anywhere else in this file: mix_ glides toward its target
+    // exactly like every other control, so right after gate=true the
+    // still-audible slot 0 legitimately leaks through the transient -
+    // that is the de-zippering working as intended, not a bug, and the
+    // finiteness check (never NaN) has to hold all through it. Silence
+    // is the claim only once the glide has actually arrived.
     SurfaceEngine e(kRate);
     std::vector<float> tone(100, 0.5f);
     e.loadSample(tone.data(), tone.size(), kRate, 0);
@@ -443,12 +449,12 @@ TEST(surface_engine_second_slot_is_silent_until_loaded) {
     f.y = 1.0f;
     f.sampleMix = 1.0f;
     e.pushControl(f);
-    float p = 0.0f;
     for (int i = 0; i < 300; ++i) {
         auto out = callback(e, 64);
         for (float v : out) CHECK(std::isfinite(v));
-        p = std::max(p, peak(out));
-    }
+    }  // let mix_ (and the gain envelope) glide all the way to their targets
+    float p = 0.0f;
+    for (int i = 0; i < 100; ++i) p = std::max(p, peak(callback(e, 64)));
     CHECK_NEAR(p, 0.0f, 1e-6f);
 }
 
