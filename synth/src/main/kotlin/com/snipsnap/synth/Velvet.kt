@@ -130,7 +130,9 @@ object Velvet {
             // "wow" is the cutoff falling while the note still sounds.
             val fEnv = Dsp.envAt(t, t60 * 0.5f)
             val fc = floorHz + (peakHz - floorHz) * fEnv
-            svf.process(stack, fc, damp)
+            // SQUEEZE is the acid knob, so the filter self-limits instead
+            // of ringing cleanly at the top of its own travel (U5).
+            svf.process(stack, fc, damp, saturate = true)
 
             out[i] = svf.low * env.at(t)
         }

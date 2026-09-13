@@ -52,6 +52,37 @@ class TapeAndTptTest {
     }
 
     @Test
+    fun `TptSvf saturate defaults to off and only self-limits when opted in`() {
+        // U5's filter saturation (docs/SYNTH_UPGRADE.md) is opt-in, not a
+        // blanket change: every existing caller before this PR (FATHOM,
+        // PadFilter, Wobble, and every other test in this file) needs the
+        // exact old linear filter, proven here so a future refactor can't
+        // quietly flip the default. VELVET is the one caller that opts in.
+        fun ring(saturate: Boolean): Float {
+            val svf = Dsp.TptSvf()
+            var peak = 0f
+            for (i in 0 until 8_820) {
+                // A sustained tone driven right at the resonant peak with
+                // the heaviest resonance the class allows (k at its 0.1
+                // floor) - the actual self-oscillation case saturation is
+                // meant to tame, not a single decaying impulse (too brief
+                // for the resonant buildup to reach a compressed region).
+                val input = sin(2.0 * PI * 500.0 * i / 44_100).toFloat()
+                svf.process(input, 500f, 0.1f, saturate)
+                if (i > 2_000) { val a = abs(svf.low); if (a > peak) peak = a }
+            }
+            return peak
+        }
+        val clean = ring(saturate = false)
+        val saturated = ring(saturate = true)
+        assertTrue(clean.isFinite() && saturated.isFinite(), "neither path should blow up")
+        assertTrue(
+            saturated < clean * 0.8f,
+            "saturate=true should visibly tame a hot resonant ring: clean=$clean, saturated=$saturated",
+        )
+    }
+
+    @Test
     fun `VELVET's filter now opens all the way and stays clean`() {
         for (voice in VelvetVoice.entries) {
             val bright = Velvet.render(voice, mapOf("CUTOFF" to 1f, "SQUEEZE" to 1f))
