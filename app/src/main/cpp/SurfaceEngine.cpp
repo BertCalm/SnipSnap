@@ -212,6 +212,7 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     sampleWeight_[0].setTarget(control01(f.sampleA, 1.0f));
     sampleWeight_[1].setTarget(control01(f.sampleB, 0.0f));
     sampleWeight_[2].setTarget(control01(f.sampleC, 0.0f));
+    sampleWeight_[3].setTarget(control01(f.sampleD, 0.0f));
     // A touch-down restarts every loaded source from its head, so a tapped
     // rhythm triggers like a drum hit regardless of where the crossfade
     // sits; a held note still rides wherever each loop has turned to
@@ -267,9 +268,11 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         const float w1 = sampleWeight_[1].next();
         const float w2 = sampleWeight_[2].next();
 
-        // The source: slots 0/1/2 each loop independently (their own
+        const float w3 = sampleWeight_[3].next();
+
+        // The source: slots 0/1/2/3 each loop independently (their own
         // phase_[slot], the same linear-interpolation read as always),
-        // then blend by sampleA/B/C before drive/filter ever sees the
+        // then blend by sampleA/B/C/D before drive/filter ever sees the
         // result. Each weight glides on its own smoother, so their sum can
         // drift a little off 1 mid-glide (unlike stage 1's paired
         // mix/1-mix) - renormalising here keeps the blend from ever
@@ -281,17 +284,18 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         // sample's level anywhere the puck sits closer to an empty vertex
         // than a full one - exactly the dead zone the vertex blend exists
         // to avoid. Reads as silence, rather than dividing by ~0, only
-        // when every loaded slot's weight is near zero at once. Slot 3
-        // isn't mixed in yet (see kMaxSources).
+        // when every loaded slot's weight is near zero at once.
         const float w0Loaded = slotLoaded(0) ? w0 : 0.0f;
         const float w1Loaded = slotLoaded(1) ? w1 : 0.0f;
         const float w2Loaded = slotLoaded(2) ? w2 : 0.0f;
-        const float wSum = w0Loaded + w1Loaded + w2Loaded;
+        const float w3Loaded = slotLoaded(3) ? w3 : 0.0f;
+        const float wSum = w0Loaded + w1Loaded + w2Loaded + w3Loaded;
         const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
         const float pr = pitchRatio(pitch);
         const float v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
                          (w1Loaded * wInv) * readSlot(1, fs, pr) +
-                         (w2Loaded * wInv) * readSlot(2, fs, pr);
+                         (w2Loaded * wInv) * readSlot(2, fs, pr) +
+                         (w3Loaded * wInv) * readSlot(3, fs, pr);
 
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.
         const float pre = 1.0f + drive * 15.0f;

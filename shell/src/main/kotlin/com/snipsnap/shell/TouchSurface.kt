@@ -116,32 +116,57 @@ object TouchSurface {
     }
 
     /**
-     * Barycentric weights for the pad's inscribed sample triangle - apex
-     * top-centre (slot 0), base-left (slot 1), base-right (slot 2), the
-     * same geometry `design/surface-vector`'s boards draw. Runs off the
-     * raw touch position, independent of [Mode] and [morphWeights]: the
-     * vector-synthesis idea is that a sample blend and an FX blend can
-     * both read the same finger at once, each its own overlay on one pad.
+     * Barycentric weights for the pad's four sample vertices - apex
+     * top-centre (slot 0), base-left (slot 1), base-right (slot 2), and
+     * base-midpoint (slot 3) - the same geometry `design/surface-vector`'s
+     * boards draw, extended with a fourth vertex sitting directly opposite
+     * the apex, at the midpoint of the pad's own bottom edge, between the
+     * other two base vertices. Runs off the raw touch position,
+     * independent of [Mode] and [morphWeights]: the vector-synthesis idea
+     * is that a sample blend and an FX blend can both read the same finger
+     * at once, each its own overlay on one pad.
      *
-     * Outside the triangle (the two top corners) one raw coordinate goes
-     * negative; clamping it to 0 and renormalising the rest keeps the
+     * The fourth vertex splits the original apex/base-left/base-right
+     * triangle into two - apex/base-left/base-mid on the left half (x <
+     * 0.5), apex/base-mid/base-right on the right - each blended exactly
+     * as the three-vertex version was, with the vertex outside that half
+     * pinned to zero. The two halves agree exactly at the x = 0.5 seam
+     * (both reduce to apex/base-mid there), so there is no seam to hear.
+     * Outside either triangle (the two top corners) one raw coordinate
+     * goes negative; clamping it to 0 and renormalising the rest keeps the
      * blend continuous over the *whole* pad rather than leaving a region
      * where it is undefined - there is deliberately no dead zone. Sums to
-     * 1 everywhere.
+     * 1 everywhere. Order: apex, base-left, base-right, base-mid.
      */
-    fun sampleWeights(x: Float, y: Float): Triple<Float, Float, Float> {
+    fun sampleWeights(x: Float, y: Float): List<Float> {
         val px = x.coerceIn(0f, 1f)
         val py = y.coerceIn(0f, 1f)
-        // Closed-form barycentric coordinates for this specific triangle
-        // (apex (0.5, 1), base (0, 0)-(1, 0)); always sum to 1 before clamping.
-        var w0 = py
-        var w1 = (1f - px) - 0.5f * py
-        var w2 = px - 0.5f * py
-        w0 = w0.coerceAtLeast(0f)
-        w1 = w1.coerceAtLeast(0f)
-        w2 = w2.coerceAtLeast(0f)
-        val sum = w0 + w1 + w2
-        return if (sum > 1e-6f) Triple(w0 / sum, w1 / sum, w2 / sum) else Triple(1f, 0f, 0f)
+        // Closed-form barycentric coordinates for each half-triangle
+        // (apex (0.5, 1); base-left (0, 0); base-right (1, 0); base-mid
+        // (0.5, 0)) - always sum to 1 before clamping, within each half.
+        var apex: Float
+        var baseLeft = 0f
+        var baseRight = 0f
+        var baseMid: Float
+        if (px < 0.5f) {
+            apex = py
+            baseLeft = 1f - 2f * px
+            baseMid = 2f * px - py
+        } else {
+            apex = py
+            baseMid = 2f * (1f - px) - py
+            baseRight = 2f * px - 1f
+        }
+        apex = apex.coerceAtLeast(0f)
+        baseLeft = baseLeft.coerceAtLeast(0f)
+        baseRight = baseRight.coerceAtLeast(0f)
+        baseMid = baseMid.coerceAtLeast(0f)
+        val sum = apex + baseLeft + baseRight + baseMid
+        return if (sum > 1e-6f) {
+            listOf(apex / sum, baseLeft / sum, baseRight / sum, baseMid / sum)
+        } else {
+            listOf(1f, 0f, 0f, 0f)
+        }
     }
 
     /**
