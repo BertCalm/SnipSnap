@@ -58,7 +58,7 @@ import kotlinx.coroutines.withContext
  * release: a looped pad holds while the finger does. Over
  * `InstrumentPlayer`, `:shell`'s `InstrumentEngine` on the device.
  */
-private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
+private val GRID_ROWS = WINDOW_GRID_ROWS
 
 @Composable
 fun KeysScreen(

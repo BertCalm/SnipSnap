@@ -77,14 +77,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The KIT screen: bank A as the 4×4 grid, physically laid out — A13–A16
- * across the top, A01 bottom-left, exactly the MPC's own geometry.
- */
-private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
-
-/**
- * [GRID_ROWS] moved onto one bank: bank 0 is the grid as written, bank 1
- * the same sixteen positions starting at slot 17.
+ * The KIT screen's grid: one bank as the 4×4, physically laid out — A13–A16
+ * across the top, A01 bottom-left, exactly the MPC's own geometry. Bank 0
+ * is the grid as written, bank 1 the same sixteen positions starting at
+ * slot 17. The rows are PadGrid's [windowRows], the one definition every
+ * portrait grid in the app draws from, so KIT cannot drift from PLAY,
+ * GROOVE or CATCH.
  *
  * Until the September UAT's finding 11 this screen only ever drew bank A,
  * which meant EVIL TWINS' sixteen pads on slots 17..32 were playable on
@@ -92,10 +90,7 @@ private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
  * renamed or cleared - ever. PAD SHEET opens from this grid and nowhere
  * else, so a pad this grid could not draw was a pad with no door.
  */
-private fun gridRows(bank: Int): List<IntRange> {
-    val base = PadBanks.slots(bank).first - 1
-    return GRID_ROWS.map { (it.first + base)..(it.last + base) }
-}
+private fun gridRows(bank: Int): List<IntRange> = windowRows(bank)
 
 @Composable
 fun KitScreen(
