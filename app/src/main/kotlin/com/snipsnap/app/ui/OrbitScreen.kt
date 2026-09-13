@@ -1734,14 +1734,14 @@ private fun transportLabel(set: OrbitSet): String =
     if (set.sections.isEmpty()) {
         cycleLabel(set)
     } else {
-        OrbitClock.transportBars(set).let { if (it == 1) "1 BAR" else "$it BARS" }
+        Copy.countOf(OrbitClock.transportBars(set), "BAR", "BARS")
     }
 
 /** "15 BARS", or "1 BAR" — the realignment length the loop grid's bounce also reports. */
 private fun cycleLabel(set: OrbitSet): String {
     val bars = OrbitClock.cycleBars(set)
     val whole = bars.roundToInt()
-    return if (abs(bars - whole) < 1e-9) (if (whole == 1) "1 BAR" else "$whole BARS") else "${"%.1f".format(java.util.Locale.ROOT, bars)} BARS"
+    return if (abs(bars - whole) < 1e-9) Copy.countOf(whole, "BAR", "BARS") else "${"%.1f".format(java.util.Locale.ROOT, bars)} BARS"
 }
 
 /**

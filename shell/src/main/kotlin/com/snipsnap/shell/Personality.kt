@@ -740,7 +740,7 @@ object Copy {
     // ---- THE ZOOM LADDER: a pad per sixteenth, beat, bar or phrase (docs/CHOP_CONTROLS.md §11) ----
     /** The ladder row's caption: where the one sits on the source, and how long a phrase runs. */
     fun ladderOne(oneSec: Float, phraseBars: Int): String =
-        String.format(java.util.Locale.ROOT, "THE ONE AT %.2fs · %s A PHRASE", oneSec, if (phraseBars == 1) "1 BAR" else "$phraseBars BARS")
+        String.format(java.util.Locale.ROOT, "THE ONE AT %.2fs · %s A PHRASE", oneSec, countOf(phraseBars, "BAR", "BARS"))
     /** The ladder row's caption with no pulse to climb. */
     const val LADDER_NO_TEMPO = "NO TEMPO HEARD. THE LADDER NEEDS A PULSE."
 
@@ -759,7 +759,7 @@ object Copy {
     const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
     /** SEND of a hummed chop: the beat you sang went onto the new kit as its groove. */
     fun sungGroove(bars: Int): String =
-        "SENT. THE BEAT YOU SANG IS ON THE GRID: ${if (bars == 1) "1 BAR" else "$bars BARS"}. GROOVE HAS IT."
+        "SENT. THE BEAT YOU SANG IS ON THE GRID: ${countOf(bars, "BAR", "BARS")}. GROOVE HAS IT."
     /** The hum landed: how many cuts, and how many sounds found no hit. */
     fun hummed(cuts: Int, missed: Int): String {
         val head = if (cuts == 1) "HUMMED: 1 CUT, YOUR MOUTH'S WORD ON IT." else "HUMMED: $cuts CUTS, YOUR MOUTH'S WORDS ON THEM."
@@ -1572,7 +1572,7 @@ object Copy {
      * the whole feature — and nothing on the grid spells it.
      */
     fun loopTrackFilled(name: String, track: Int, blocks: Int): String =
-        "$name IS ON TRACK $track, ${if (blocks == 1) "1 BLOCK" else "$blocks BLOCKS"} LONG."
+        "$name IS ON TRACK $track, ${countOf(blocks, "BLOCK", "BLOCKS")} LONG."
     /**
      * The same landing, for a snip that ran past what a chain holds: it is on
      * the grid, but only its first [blocks] intervals are. Its own line
