@@ -1679,7 +1679,7 @@ object Copy {
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "NO SNIPS YET."
     /** KIT/PLAY with no tape ever committed to this kit - both screens' own empty deck. */
-    const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE ON THE SHELF."
+    const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM KITS."
     /** IN KEY's row when the kit holds no tonal pad at all. */
     const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
     /** SNIPS → PAD's own header hint once the shelf has a kit to tap - [EMPTY_SHELF_FOR_ASSIGN] carries the instruction when it doesn't. */

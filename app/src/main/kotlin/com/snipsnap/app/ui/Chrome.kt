@@ -74,7 +74,7 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ KITS. */
     KEYS("KEYS"),
 
     /**

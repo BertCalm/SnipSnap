@@ -58,7 +58,7 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 TapeText("X-RAY", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(fileName.uppercase(), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)

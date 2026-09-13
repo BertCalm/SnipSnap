@@ -117,7 +117,7 @@ class UatSimTest {
         val root = tmp("j1")
         var taps = 0
 
-        step(++taps, "App opens on THE SHELF. Kits on disk: ${KitStore.list(root).size}")
+        step(++taps, "App opens on KITS. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
         note("the only primary button reads: NEW KIT ▸ STARTERS")
 

@@ -114,7 +114,7 @@ fun DoublesScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 TapeText("DOUBLES", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(

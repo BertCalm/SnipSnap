@@ -115,7 +115,7 @@ fun KitsScreen(
     /**
      * True while a SNIPS row's → PAD is routing the user here to pick a kit
      * (see `App.kt`'s `pendingSnipAssign`) — swaps the header's own line for
-     * a hint instead of the usual "THE SHELF", and adds a one-line nudge
+     * a hint instead of the usual "KITS", and adds a one-line nudge
      * toward what happens next. Every kit row's `onOpen` stays the same
      * callback either way; `App` is what decides what opening a kit means
      * while this is true.
@@ -285,7 +285,7 @@ fun KitsScreen(
                     when {
                         assigningSnip -> "PICK A KIT FOR THIS SNIP"
                         breedingFrom != null -> Copy.breedPickHeader(breedingFrom.kit.name)
-                        else -> "THE SHELF"
+                        else -> "KITS"
                     },
                     TapeType.lcdHeader,
                     scheme.lcdInk.tape,
@@ -297,8 +297,8 @@ fun KitsScreen(
                 // user's own last kit is right where they left it) vs A-Z.
                 // SHOW (September UAT, finding 16) narrows to one dub
                 // state. Both are hidden during SNIPS → PAD / BREED's own
-                // pick mode (the header's line is a hint there, not "THE
-                // SHELF") and with fewer than two kits, where neither an
+                // pick mode (the header's line is a hint there, not "KITS")
+                // and with fewer than two kits, where neither an
                 // order nor a filter has anything to say.
                 if (!assigningSnip && breedingFrom == null && kits.size > 1) {
                     Row(
