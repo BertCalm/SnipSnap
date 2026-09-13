@@ -26,6 +26,16 @@ object Desample {
     /** Levels per macro on the grid: the corners are bad neighbours, the thirds are not. */
     val GRID: FloatArray = floatArrayOf(0.15f, 0.5f, 0.85f)
 
+    /**
+     * Macros the grid doesn't search over - they colour a voice rather than
+     * identify it, so walking them just adds confusable dimensions near a
+     * voice boundary (U3's PUNCH, cranked up, makes any voice's transient
+     * dominate its own tail, which can measure nearer to an unrelated
+     * voice's default shape than to the source voice's own quieter grid
+     * points). Left at [Thump.render]'s own default for every grid point.
+     */
+    private val UNSEARCHED_MACROS = setOf("PUNCH")
+
     /** The refinement's first step, halved whenever a round no longer helps. */
     const val REFINE_STEP = 0.175f
     const val REFINE_ROUNDS = 8
@@ -42,7 +52,7 @@ object Desample {
     private val grid: List<Point> by lazy {
         val out = ArrayList<Point>()
         for (voice in ThumpVoice.entries) {
-            val names = Thump.macrosFor(voice).map { it.name }
+            val names = Thump.macrosFor(voice).map { it.name }.filter { it !in UNSEARCHED_MACROS }
             val counts = IntArray(names.size)
             while (true) {
                 val macros = names.indices.associate { i -> names[i] to GRID[counts[i]] }

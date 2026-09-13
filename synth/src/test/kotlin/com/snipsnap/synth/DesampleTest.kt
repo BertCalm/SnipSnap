@@ -25,7 +25,13 @@ class DesampleTest {
 
     @Test
     fun `an off-grid snare comes back nearer than the grid alone`() {
-        val macros = mapOf("TUNE" to 0.62f, "SNAP" to 0.3f, "DECAY" to 0.7f, "TONE" to 0.44f)
+        // Not the first combination tried: U3's PUNCH (docs/SYNTH_UPGRADE.md)
+        // colours every voice's default render a little, and the original
+        // values here turned out to sit on a near-tie between SNARE's and
+        // CLAP's own best grid points (a 0.0006 margin - already fragile
+        // before PUNCH existed, just not yet visibly so). This combination
+        // keeps SNARE the clear nearest voice by a wide margin instead.
+        val macros = mapOf("TUNE" to 0.43f, "SNAP" to 0.72f, "DECAY" to 0.39f, "TONE" to 0.94f)
         val rendered = Thump.render(ThumpVoice.SNARE, macros)
         val match = Desample.nearest(rendered)
         assertEquals(ThumpVoice.SNARE, match.patch.voice)

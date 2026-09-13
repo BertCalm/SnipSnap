@@ -122,7 +122,12 @@ class ThumpTest {
         for (voice in ThumpVoice.entries) {
             val preset = ThumpPresets.forVoice(voice).first()
             assertEquals(
-                preset.macros,
+                // A preset doesn't have to name every macro Thump knows about
+                // (PUNCH, added after these presets were written, is exactly
+                // such a gap) - `near`'s seed is always the full default
+                // macro map with the preset's explicit values layered on
+                // top, same as Thump.scramble's own seed construction.
+                Thump.defaults(voice) + preset.macros,
                 Thump.scramble(voice, Random(1), temperature = 0f, near = preset),
                 "$voice: temperature 0 should return the seed untouched",
             )
