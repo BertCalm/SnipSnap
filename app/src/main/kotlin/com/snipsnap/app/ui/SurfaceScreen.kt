@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -75,16 +76,23 @@ import kotlinx.coroutines.withContext
  * writes the performance to TAPE as a new sample the way an SP-404
  * resamples: what you played is now one pad, no DSP to run later.
  *
- * Four modes, one pad:
- *  - XY: one finger, X pitch, Y filter.
+ * Four modes, one pad. The phone's tilt always feeds resonance
+ * (`SurfaceEngine::applyControl`), not just in XYZ, but the mapping
+ * differs per mode:
+ *  - XY: one finger, X pitch, Y filter; tilt sets resonance directly,
+ *    half-scaled (`f.tilt * 0.5`).
  *  - XYZ: a second finger's distance is Z (drive); the roll of the
- *    phone is resonance.
- *  - MORPH: the puck weights four corner states, A B C D.
+ *    phone sets resonance outright (`f.tilt`).
+ *  - MORPH: the puck weights four saved corner states, A B C D; tilt
+ *    only nudges the blended resonance on top of them, so a flat phone
+ *    (tilt 0.5) is a no-op here specifically - every corner still
+ *    sounds exactly as captured.
  *  - VECTOR: MORPH's exact corner blend, with the sample triangle below
  *    also reading the same finger at once - the design/surface-vector
  *    concept's own mode, kept separate from XY/XYZ/MORPH so none of
  *    those change: one touch position, two blends, neither aware of the
- *    other.
+ *    other. `applyControl`'s switch falls VECTOR through to MORPH's own
+ *    case, so tilt behaves exactly as it does there.
  *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
  * captures the sound under the last touch as a morph corner (MORPH and
@@ -132,6 +140,14 @@ fun SurfaceScreen(
     var mode by remember { mutableStateOf(Mode.XY) }
     var target by remember { mutableStateOf(Reading.REST) }
     var painted by remember { mutableStateOf(Reading.REST) }
+    // `tilt.tilt` is a plain `@Volatile var` on `TiltSource`, not Compose
+    // state - reading it directly from the readout/semantics below would
+    // only ever refresh piggybacked on `painted` changing, and `painted`
+    // stops changing the instant the puck is still (Compose skips
+    // recomposition on a structurally-equal `mutableStateOf` write). Tilt
+    // moves independently of the finger, so it needs its own mirror,
+    // stepped every frame in the loop below (Copilot review, PR #187).
+    var tiltReading by remember { mutableStateOf(0.5f) }
     var padName by remember { mutableStateOf<String?>(null) }
     var padSlot by remember { mutableStateOf<Int?>(null) }
     // Slots 1 and 2 of the engine's source array - the sample triangle's
@@ -513,6 +529,11 @@ fun SurfaceScreen(
                 lastLatencyAt = now
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
+            // Every frame, touch or none: tilt moves on its own, and this
+            // is the only thing that keeps `tiltReading` fresh once the
+            // puck itself stops moving. Compose's own equality check on
+            // the `mutableStateOf` write skips the no-op case for free.
+            tiltReading = tilt.tilt
             if (mode != lastMode) {
                 // A mode change is a different instrument, not a glide
                 // between two: the painted puck and the engine both jump.
@@ -552,7 +573,11 @@ fun SurfaceScreen(
                         scheme = scheme,
                         enabled = true,
                         dimmed = m != mode,
-                        modifier = Modifier.weight(1f),
+                        // Equal-sounding buttons to TalkBack otherwise
+                        // (finding #21) - the same `selected` semantics the
+                        // CUT bench's SegmentButtons already carry for their
+                        // own mutually-exclusive row.
+                        modifier = Modifier.weight(1f).semantics { selected = m == mode },
                     ) {
                         mode = m
                         target = Reading.REST // the frame loop snaps to it on the mode change
@@ -680,9 +705,20 @@ fun SurfaceScreen(
                     // scope), so reading it again here costs nothing new.
                     .semantics {
                         contentDescription = "TOUCH SURFACE, $mode MODE"
+                        // Mirrors the visible `readout` TapeText below,
+                        // corner-for-corner: MORPH used to report only X/Y
+                        // here, the least of any mode's state, while its
+                        // own on-screen readout already prints A/B/C/D and
+                        // TILT (finding #21). VECTOR shares MORPH's exact
+                        // corner blend (`TouchSurface.morphWeights`), so it
+                        // gets the same A/B/C/D line.
                         stateDescription = buildString {
                             append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
                             if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
+                            if (mode == Mode.MORPH || mode == Mode.VECTOR) append("  A %.2f B %.2f C %.2f D %.2f".format(java.util.Locale.ROOT, painted.a, painted.b, painted.c, painted.d))
+                            // `tiltReading`, not `tilt.tilt` directly - see
+                            // its own declaration for why (Copilot review).
+                            if (tilt.available) append("  TILT %.2f".format(java.util.Locale.ROOT, tiltReading))
                         }
                     }
                     .pointerInput(mode) {
@@ -795,7 +831,12 @@ fun SurfaceScreen(
                     val (wA, wB, wC) = TouchSurface.sampleWeights(painted.x, painted.y)
                     append("  SMPL %.2f/%.2f/%.2f".format(java.util.Locale.ROOT, wA, wB, wC))
                 }
-                if (tilt.available) append("  TILT %.2f".format(java.util.Locale.ROOT, tilt.tilt))
+                // `tiltReading`, not `tilt.tilt` directly - see its own
+                // declaration for why (Copilot review): this line is only
+                // ever redrawn when something the enclosing recomposition
+                // reads changes, and a still puck stops giving it a reason
+                // to without tilt mirrored into state of its own.
+                if (tilt.available) append("  TILT %.2f".format(java.util.Locale.ROOT, tiltReading))
                 padName?.let { append("  ·  ").append(it.uppercase()) }
             }
             // MORPH's six numbers plus TILT and the pad name run well past
