@@ -87,10 +87,12 @@ import kotlinx.coroutines.withContext
  *    only nudges the blended resonance on top of them, so a flat phone
  *    (tilt 0.5) is a no-op here specifically - every corner still
  *    sounds exactly as captured.
- *  - VECTOR: MORPH's exact corner blend with the sample triangle below
- *    also reading the same finger at once; tilt follows MORPH for the
- *    macro side (nudge, not overwrite), while the sample blend remains
- *    independent.
+ *  - VECTOR: MORPH's exact corner blend, with the sample triangle below
+ *    also reading the same finger at once - the design/surface-vector
+ *    concept's own mode, kept separate from XY/XYZ/MORPH so none of
+ *    those change: one touch position, two blends, neither aware of the
+ *    other. `applyControl`'s switch falls VECTOR through to MORPH's own
+ *    case, so tilt behaves exactly as it does there.
  *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
  * captures the sound under the last touch as a morph corner (MORPH and
@@ -571,7 +573,7 @@ fun SurfaceScreen(
                         scheme = scheme,
                         enabled = true,
                         dimmed = m != mode,
-                        // Three equal-sounding buttons to TalkBack otherwise
+                        // Equal-sounding buttons to TalkBack otherwise
                         // (finding #21) - the same `selected` semantics the
                         // CUT bench's SegmentButtons already carry for their
                         // own mutually-exclusive row.
@@ -707,7 +709,9 @@ fun SurfaceScreen(
                         // corner-for-corner: MORPH used to report only X/Y
                         // here, the least of any mode's state, while its
                         // own on-screen readout already prints A/B/C/D and
-                        // TILT (finding #21).
+                        // TILT (finding #21). VECTOR shares MORPH's exact
+                        // corner blend (`TouchSurface.morphWeights`), so it
+                        // gets the same A/B/C/D line.
                         stateDescription = buildString {
                             append("X %.2f  Y %.2f".format(java.util.Locale.ROOT, painted.x, painted.y))
                             if (mode == Mode.XYZ) append("  Z %.2f".format(java.util.Locale.ROOT, painted.z))
