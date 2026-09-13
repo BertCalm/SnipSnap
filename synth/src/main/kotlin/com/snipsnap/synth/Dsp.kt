@@ -210,6 +210,39 @@ internal object Dsp {
     /** Exponential decay envelope reaching -60 dB at [t60] seconds. */
     fun envAt(t: Float, t60: Float): Float = exp((-6.9078 * t / t60).toDouble()).toFloat()
 
+    /**
+     * Shared envelope primitive (docs/SYNTH_UPGRADE.md, U5) — a linear
+     * attack ramp times a decay curve, both measured from t=0 the way every
+     * engine's own hand-rolled `attack * envAt(t, t60)` already worked, so
+     * adopting this changes nothing on its own. The decay can be a single
+     * [envAt] stage (the default: [decay1Seconds] = 0, decay starts at full
+     * level under the ramp) or two-stage — a fast linear drop to
+     * [decay1Level] over [decay1Seconds] (the "thwack"), then an [envAt]
+     * tail from there at [decay2T60] (the "body") — plus an optional
+     * [holdSeconds] at full level between the ramp and the decay, for a
+     * sustaining/gated voice.
+     */
+    class Env(
+        private val attackSeconds: Float,
+        private val decay2T60: Float,
+        private val holdSeconds: Float = 0f,
+        private val decay1Seconds: Float = 0f,
+        private val decay1Level: Float = 1f,
+    ) {
+        fun at(t: Float): Float {
+            val attack = if (attackSeconds <= 0f) 1f else (t / attackSeconds).coerceAtMost(1f)
+            return attack * decayAt(t)
+        }
+
+        private fun decayAt(t: Float): Float {
+            if (t <= holdSeconds) return 1f
+            val afterHold = t - holdSeconds
+            if (decay1Seconds <= 0f) return Dsp.envAt(afterHold, decay2T60)
+            if (afterHold < decay1Seconds) return Dsp.lin(afterHold / decay1Seconds, 1f, decay1Level)
+            return decay1Level * Dsp.envAt(afterHold - decay1Seconds, decay2T60)
+        }
+    }
+
     /** Peak-normalize in place to [target]; silence is left alone. */
     fun normalize(buf: FloatArray, target: Float = 0.95f) {
         var peak = 0f

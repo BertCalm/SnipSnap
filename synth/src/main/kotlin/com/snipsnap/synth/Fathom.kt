@@ -143,6 +143,7 @@ object Fathom {
 
         val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf()
+        val env = Dsp.Env(attackSeconds = 0.004f, decay2T60 = t60)
         var phase = 0.0
         var phaseLow = 0.0
         var phase2 = 0.0
@@ -184,8 +185,7 @@ object Fathom {
             val driven = drive(source, driveAmt)
             svf.process(driven, fc, damp)
 
-            val attack = (t / 0.004f).coerceAtMost(1f)
-            out[i] = svf.low * attack * Dsp.envAt(t, t60)
+            out[i] = svf.low * env.at(t)
         }
 
         Dsp.normalize(out)
