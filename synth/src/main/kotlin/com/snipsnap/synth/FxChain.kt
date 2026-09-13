@@ -40,51 +40,36 @@ data class FxChain(
     val swell: Map<String, Float>? = null,
 ) {
     init {
-        for ((name, macros, known) in listOf(
-            Triple("smear", smear, Smear.MACROS),
-            Triple("ghost", ghost, Ghost.MACROS),
-            Triple("motion", motion, Motion.MACROS),
-            Triple("dub", dub, Dub.MACROS),
-            Triple("swell", swell, Swell.MACROS),
-            Triple("eq", eq, Eq.MACROS),
-            Triple("squash", squash, Squash.MACROS),
-            Triple("crunch", crunch, Crunch.MACROS),
-            Triple("tape", tape, Tape.MACROS),
-            Triple("echo", echo, Echo.MACROS),
-            Triple("spring", spring, Spring.MACROS),
-        )) {
-            if (macros == null) continue
-            val names = known.map { it.name }.toSet()
+        for (s in SECTIONS) {
+            val macros = s.get(this) ?: continue
+            val names = s.macros.map { it.name }.toSet()
             for ((k, v) in macros) {
-                require(k in names) { "unknown $name macro $k (knows $names)" }
-                require(v in 0f..1f) { "$name macro $k out of 0..1: $v" }
+                require(k in names) { "unknown ${s.name} macro $k (knows $names)" }
+                require(v in 0f..1f) { "${s.name} macro $k out of 0..1: $v" }
             }
         }
     }
 
     val isBypass: Boolean
-        get() = !reverse && swell == null && smear == null && ghost == null && eq == null && squash == null &&
-            crunch == null && dub == null && tape == null && echo == null && spring == null && motion == null
+        get() = !reverse && SECTIONS.all { it.get(this) == null }
 
     fun process(snip: Snip): Snip {
-        // The swell is an arrival, not a tail: the tail budget is measured from the swelled sound.
-        val swelled = swell?.let { Swell.process(snip, it) } ?: snip
-        return capTail(swelled, processRest(swelled))
+        // TRANSPORT then ARRIVAL: the tail budget is measured from what they leave behind.
+        var head = snip
+        for (sec in SECTIONS) {
+            if (sec.stage == Stage.RACK) continue
+            sec.get(this)?.let { head = sec.run(head, it) }
+        }
+        return capTail(head, processRest(head))
     }
 
     private fun processRest(snip: Snip): Snip {
         var s = snip
         if (reverse) s = reversed(s)
-        smear?.let { s = Smear.process(s, it) }
-        ghost?.let { s = Ghost.process(s, it) }
-        eq?.let { s = Eq.process(s, it) }
-        squash?.let { s = Squash.process(s, it) }
-        crunch?.let { s = Crunch.process(s, it) }
-        dub?.let { s = Dub.process(s, it) }
-        tape?.let { s = Tape.process(s, it) }
-        echo?.let { s = Echo.process(s, it) }
-        spring?.let { s = Spring.process(s, it) }
-        motion?.let { s = Motion.process(s, it) }
+        for (sec in SECTIONS) {
+            if (sec.stage != Stage.RACK) continue
+            sec.get(this)?.let { s = sec.run(s, it) }
+        }
         return s
     }
 
@@ -121,15 +106,11 @@ data class FxChain(
         val obj = LinkedHashMap<String, JsonValue>()
         obj["fx"] = JsonValue.Num(VERSION.toDouble())
         obj["reverse"] = JsonValue.Bool(reverse)
-        for ((name, macros) in listOf(
-            "swell" to swell, "smear" to smear, "ghost" to ghost, "eq" to eq, "squash" to squash, "crunch" to crunch,
-            "dub" to dub, "tape" to tape, "echo" to echo, "spring" to spring, "motion" to motion,
-        )) {
-            if (macros != null) {
-                obj[name] = JsonValue.Obj(
-                    macros.entries.associateTo(LinkedHashMap()) { (k, v) -> k to JsonValue.Num(v.toDouble()) },
-                )
-            }
+        for (sec in SECTIONS) {
+            val macros = sec.get(this) ?: continue
+            obj[sec.name] = JsonValue.Obj(
+                macros.entries.associateTo(LinkedHashMap()) { (k, v) -> k to JsonValue.Num(v.toDouble()) },
+            )
         }
         return JsonValue.Obj(obj)
     }
@@ -199,22 +180,13 @@ data class FxChain(
             val obj = value.obj()
             val version = obj["fx"]?.int() ?: throw JsonException("not an fx chain: no fx version")
             if (version != VERSION) throw JsonException("unsupported fx version $version")
-            fun section(name: String): Map<String, Float>? =
-                (obj[name] as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
-            return FxChain(
-                reverse = (obj["reverse"] as? JsonValue.Bool)?.value ?: false,
-                eq = section("eq"),
-                squash = section("squash"),
-                crunch = section("crunch"),
-                tape = section("tape"),
-                echo = section("echo"),
-                spring = section("spring"),
-                smear = section("smear"),
-                ghost = section("ghost"),
-                motion = section("motion"),
-                dub = section("dub"),
-                swell = section("swell"),
-            )
+            var chain = FxChain(reverse = (obj["reverse"] as? JsonValue.Bool)?.value ?: false)
+            for (sec in SECTIONS) {
+                val macros = (obj[sec.name] as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
+                    ?: continue
+                chain = sec.with(chain, macros)
+            }
+            return chain
         }
 
         fun fromJsonText(text: String): FxChain = fromJsonValue(Json.parse(text))

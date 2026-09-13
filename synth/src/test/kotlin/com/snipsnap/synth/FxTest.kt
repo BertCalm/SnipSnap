@@ -439,4 +439,29 @@ class FxTest {
     fun `an unknown section name is refused by name`() {
         assertFailsWith<IllegalArgumentException> { FxChain().section("nope") }
     }
+
+    @Test
+    fun `every section round-trips through json and defeats bypass`() {
+        for (name in FxChain.SECTION_NAMES) {
+            val macros = FxChain.macrosOf(name).associate { it.name to 0.7f }
+            val chain = FxChain().withSection(name, macros)
+            assertTrue(!chain.isBypass, "$name: isBypass does not see it")
+            assertTrue(chain.toJsonText().contains("\"$name\""), "$name: toJsonValue does not emit it")
+            assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()), "$name: fromJsonValue drops it")
+            val out = chain.process(kick)
+            assertTrue(!out.samples.contentEquals(kick.samples), "$name: process is a no-op")
+        }
+    }
+
+    @Test
+    fun `json emits sections in rack order`() {
+        var chain = FxChain()
+        for (name in FxChain.SECTION_NAMES) {
+            chain = chain.withSection(name, FxChain.macrosOf(name).associate { it.name to 0.6f })
+        }
+        val text = chain.toJsonText()
+        val positions = FxChain.SECTION_NAMES.map { text.indexOf("\"$it\"") }
+        assertEquals(positions.sorted(), positions, "json order is not rack order")
+        assertTrue(positions.all { it > 0 }, "a section was not emitted")
+    }
 }
