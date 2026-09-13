@@ -89,7 +89,7 @@ and outrank everything else because the user *hears* them:
 | **20** | **LOOP's mute toggles speak a name but no state.** `TrackHeader` is the track name with a raw `.clickable { onToggle() }`, so TalkBack reads the name and "double tap to activate", but nothing says toggle, and nothing says whether the track is on: engaged is a colour. `TempoStep` and `BlockCell` in the same file were given labels and state for exactly this. | `LoopGrid.kt:345-358` vs `:221`, `:440-446` |
 | **21** | ~~**SURFACE's mode buttons carry no selected state, and the pad's description omits MORPH.**~~ **Fixed 2026-09-13.** The mode row now carries `.semantics { selected = m == mode }` per button, the same convention the CUT bench's `SegmentButton`s already use for their own mutually-exclusive row. The touch pad's `stateDescription` now mirrors the visible readout corner-for-corner: A/B/C/D in MORPH, and TILT (when the sensor is available) in every mode, not just the ones that happened to already ask for it. | was `SurfaceScreen.kt:400-408`, `:502-506`; now the mode `ActionButton`s' `modifier`, and the touch pad's `stateDescription` |
 | **22** | **PAD SHEET is still hold-only.** UAT 4/5 are half closed: the legend is permanent, the hint now repeats until the sheet is first opened, TalkBack has `OPEN PAD SHEET`, and DOUBLES' GO ▸ opens it directly. There is still no tap path and no menu entry; the file says so itself. | `KitScreen.kt:92`, `:361-371`, `:749`, `:856`; `App.kt:2280-2293`, `:2221` |
-| **23** | **Four documents describe a build that no longer exists.** `DEVICE_TEST_GUIDE.md` says LOOP has "no tempo control, and a block tap that does nothing yet" (both shipped) and has no item for GROOVE's BOUNCE, the least verifiable thing in the wave. `SPECS_2026_09.md`'s bounce section has been corrected twice in place, and the second correction is now stale too: "What's still missing is a caller: no screen arms it, runs a take, or lands the result in SNIPS" — GROOVE's BOUNCE does all three. `CHOP_CONTROLS.md` §2 says the CUT bench is four rows (it is up to six). `BENCH.md` benches tilt in XYZ only. | `DEVICE_TEST_GUIDE.md:105-107`; `SPECS_2026_09.md:128-142`; `CHOP_CONTROLS.md:19`; `BENCH.md:130-131` |
+| **23** | ~~**Four documents describe a build that no longer exists.**~~ **Fixed 2026-09-13.** `DEVICE_TEST_GUIDE.md` now has a device-test item for GROOVE's own BOUNCE (the toast, WAITING…/BOUNCING…, and the PROG-switch cancel) and drops the stale "no tempo control, and a block tap that does nothing yet" for what LOOP actually shipped since (a TEMPO stepper, WHAT IS THIS BLOCK). `SPECS_2026_09.md`'s bounce section gets a third correction: GROOVE's BOUNCE is the caller that was missing, so nothing in that estimate is unbuilt anymore. `CHOP_CONTROLS.md` §2 now says what it verified against `CutBench`'s own source — five rows for BY HITS/GHOSTS, three for GRID, not a fixed four. `BENCH.md` benches tilt in XY and MORPH too, both confirmed against `SurfaceEngine::applyControl`'s switch. | was `DEVICE_TEST_GUIDE.md:105-107`; `SPECS_2026_09.md:128-142`; `CHOP_CONTROLS.md:19`; `BENCH.md:130-131`; now `DEVICE_TEST_GUIDE.md`'s new item 21 and its blind-spots line, `SPECS_2026_09.md`'s third correction, `CHOP_CONTROLS.md` §2, `BENCH.md`'s XY/MORPH bullets |
 
 ### S3 — words, glyphs, and stale text
 
@@ -128,7 +128,7 @@ Wired = every callback connected end to end with no no-op default at the call si
 | DUST FROM ▸ / CRACKLE | ✓ | TREATMENT box | ✓ | ✓ HELP | AMT locked on first pick (#18) |
 | OUTSIDE (REAMP/ROOM/KEEP ROOM) | ✓ | fourth box | ✓ stage on the button | ✓ explainer in the box | Cancel doesn't stop the mic (#31) |
 | MORPH tilt | ✓ engine + store, tested | always on, no control | none | HELP line + KDoc (#6) | Fine; still no on/off control, by design |
-| Print tap on pads | ✓ | via GROOVE BOUNCE | — | — | Fine; `SPECS` says it has no caller (#23) |
+| Print tap on pads | ✓ | via GROOVE BOUNCE | — | — | Fine (#23 fixed `SPECS`'s stale "no caller" line) |
 | GRAIN FIELD | ✓ | `GRAIN ▸` in MAKE box | ✓ | legend | **Likely zero-height (S1 #5)** |
 
 ---
@@ -154,4 +154,6 @@ Wired = every callback connected end to end with no no-op default at the call si
 
 All five landed 2026-09-13 (PRs #177, #178, #180, #181, and the GRAIN ▸ one).
 
-Then, cheaply: ~~a toast on GROOVE's disabled BOUNCE (#8)~~ (done 2026-09-13), ~~a `selected` state on SURFACE's modes and a `TILT` word in MORPH's copy (#6, #21)~~ (done 2026-09-13), and the four stale documents (#23).
+Then, cheaply: ~~a toast on GROOVE's disabled BOUNCE (#8)~~ (done 2026-09-13), ~~a `selected` state on SURFACE's modes and a `TILT` word in MORPH's copy (#6, #21)~~ (done 2026-09-13), and ~~the four stale documents (#23)~~ (done 2026-09-13).
+
+All three landed 2026-09-13.
