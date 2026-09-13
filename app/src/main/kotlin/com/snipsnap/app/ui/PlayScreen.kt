@@ -86,19 +86,15 @@ private fun Context.findActivity(): Activity? {
  * their row/velocity constants) lives in `PadGrid.kt`, shared with GROOVE.
  */
 @Composable
-fun PlayScreen(entry: KitShelf.Entry?) {
+fun PlayScreen(
+    entry: KitShelf.Entry?,
+    /** NO_TAPE_IN_DECK's own route: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateKits: () -> Unit,
+) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .lcdPanel(scheme)
-                .padding(14.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText(Copy.NO_TAPE_IN_DECK, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-        }
+        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
         return
     }
 

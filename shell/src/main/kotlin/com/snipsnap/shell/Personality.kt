@@ -76,6 +76,14 @@ object Copy {
     const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
     /** ORBIT from the menu row with no kit open. */
     const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM KITS FIRST."
+    /**
+     * EXPORT with no kit open — distinct from [EMPTY_SHELF], which this
+     * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
+     * but EXPORT dubs a *kit*, and STARTERS makes one without taping
+     * anything at all, so a user with kits and no tape was told nothing
+     * existed. Same shape as [NO_KIT_FOR_ORBIT].
+     */
+    const val NO_KIT_FOR_EXPORT = "EXPORT DUBS A KIT FOR THE MPC. OPEN ONE FROM KITS FIRST."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
     /**

@@ -229,6 +229,8 @@ fun GrooveScreen(
     onArrange: (swingPercent: Int, feel: Float, feelTemplate: GrooveFeel.Template) -> Unit = { _, _, _ -> },
     /** ORBIT ▸ — opens the circular sequencer, the same overlay shape as ARRANGE. */
     onOrbit: () -> Unit = {},
+    /** READ_GROOVE_NEEDS_KIT's own route, for [EmptyGroove] below: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateKits: () -> Unit,
     /**
      * Bug fix (tab-switch data loss): FEEL, SWING and the selected program
      * used to be `remember(kitDir)` locals only, so App.kt's bare
@@ -286,7 +288,7 @@ fun GrooveScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyGroove(scheme)
+        EmptyGroove(onNavigateKits)
         return
     }
 
@@ -399,7 +401,7 @@ fun GrooveScreen(
     if (kit.pads.isEmpty()) {
         // Nothing to record with, groove or no groove — same shelf
         // treatment as an empty kit list everywhere else in this app.
-        EmptyGroove(scheme)
+        EmptyGroove(onNavigateKits)
         return
     }
 
@@ -2087,10 +2089,8 @@ fun GrooveScreen(
 }
 
 @Composable
-private fun EmptyGroove(scheme: Scheme) {
-    Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
-        TapeText(Copy.READ_GROOVE_NEEDS_KIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-    }
+private fun EmptyGroove(onNavigateKits: () -> Unit) {
+    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
 }
 
 @Composable

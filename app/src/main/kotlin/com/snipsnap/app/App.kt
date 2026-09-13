@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.tape
@@ -52,6 +51,8 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.DoublesScreen
+import com.snipsnap.app.ui.EmptyStatePanel
+import com.snipsnap.app.ui.EmptyStateRoute
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
@@ -2575,6 +2576,7 @@ fun App(shelf: KitShelf) {
                                             "LONG-PRESS TO CAPTURE"
                                         }
                                     },
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 )
                             }
                         }
@@ -2624,6 +2626,7 @@ fun App(shelf: KitShelf) {
                             onCaptureLanded = { retrim = null },
                             onCatch = ::catchOnto,
                             onCatchDone = ::catchDone,
+                            onNavigateKits = { goToScreen(AppScreen.KITS) },
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
@@ -2668,6 +2671,8 @@ fun App(shelf: KitShelf) {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
+                            onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                            onNavigateKits = { goToScreen(AppScreen.KITS) },
                         )
                         AppScreen.EXPORT -> ExportScreen(
                             entry = open,
@@ -2679,6 +2684,7 @@ fun App(shelf: KitShelf) {
                             // switch instead of being cancelled by it.
                             appScope = scope,
                             onToast = { toast = it },
+                            onNavigateKits = { goToScreen(AppScreen.KITS) },
                         )
                         AppScreen.SYNTH -> {
                             // Captured here, at this composition, so a SEND TO PAD write that
@@ -2734,7 +2740,7 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
-                        AppScreen.PLAY -> PlayScreen(entry = open)
+                        AppScreen.PLAY -> PlayScreen(entry = open, onNavigateKits = { goToScreen(AppScreen.KITS) })
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> {
                             val songEntry = open
@@ -2784,6 +2790,7 @@ fun App(shelf: KitShelf) {
                                     reloadRequest = grooveReload,
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { orbitOpen = true },
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
                                     feel = grooveFeel,
                                     onFeelChange = { grooveFeel = it },
                                     swingPercent = grooveSwingPercent,
@@ -2805,9 +2812,7 @@ fun App(shelf: KitShelf) {
                             // this one needs no groove and no scrolling, only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
-                                Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
-                                    TapeText(Copy.NO_KIT_FOR_ORBIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-                                }
+                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("KITS ▸", { goToScreen(AppScreen.KITS) })))
                             } else {
                                 OrbitScreen(
                                     entry = orbitEntry,

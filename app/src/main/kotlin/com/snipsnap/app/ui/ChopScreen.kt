@@ -106,6 +106,10 @@ fun ChopScreen(
     onSentToGrid: (KitShelf.Entry) -> Unit,
     /** ONTO <kit> · BANK X landed: the kit as it is now, and the bank (0-based) to open KIT on. */
     onLandedOnto: (KitShelf.Entry, Int) -> Unit = { e, _ -> onSentToGrid(e) },
+    /** EMPTY_CHOP/CHOP_SOURCE_GONE's own "tape something" route. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateTape: () -> Unit,
+    /** EMPTY_CHOP's own second route: a kit with samples already on it. No default, same reasoning as [onNavigateTape]. */
+    onNavigateKits: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -168,7 +172,11 @@ fun ChopScreen(
         // face covers both; a blank LCD for the moment it takes to read a
         // file is the honest state to show in between (TapeScreen's call).
         val reason = emptyReason
-        if (reason != null) EmptyChop(scheme, reason) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        if (reason != null) {
+            EmptyChop(reason, onNavigateTape, onNavigateKits)
+        } else {
+            Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        }
         return
     }
 
@@ -201,17 +209,22 @@ fun ChopScreen(
     )
 }
 
+/**
+ * [message] is one of two reasons ([Copy.EMPTY_CHOP], [Copy.CHOP_SOURCE_GONE])
+ * — EMPTY_CHOP's own sentence names two doors (TAPE something, or open a
+ * kit with samples on it), CHOP_SOURCE_GONE names one (a fresh TAPE source
+ * — its file is gone, not its kit), so only the first gets both routes.
+ * (A third failure, [Copy.CHOP_LAYOUT_FAILED], reuses [EmptyStatePanel]
+ * directly with no routes at all — see that call site's own comment.)
+ */
 @Composable
-private fun EmptyChop(scheme: Scheme, message: String) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .lcdPanel(scheme)
-            .padding(14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+private fun EmptyChop(message: String, onNavigateTape: () -> Unit, onNavigateKits: () -> Unit) {
+    val routes = if (message == Copy.EMPTY_CHOP) {
+        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape), EmptyStateRoute("KITS ▸", onNavigateKits))
+    } else {
+        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape))
     }
+    EmptyStatePanel(message, routes)
 }
 
 /**
@@ -682,7 +695,11 @@ private fun ChopContent(
     }
 
     if (!melodic && classicFailed) {
-        EmptyChop(scheme, Copy.CHOP_LAYOUT_FAILED)
+        // No routes: GRID/MELODIC are the live ways out and both are
+        // in-place toggles right on this screen, not navigation — same
+        // "nothing this screen can send you to" reasoning as EXPORT's own
+        // KIT_WONT_OPEN face.
+        EmptyStatePanel(Copy.CHOP_LAYOUT_FAILED, emptyList())
         return
     }
 

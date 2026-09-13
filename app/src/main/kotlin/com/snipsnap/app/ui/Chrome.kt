@@ -9,6 +9,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
@@ -432,6 +434,57 @@ fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+        }
+    }
+}
+
+/**
+ * One door out of an [EmptyStatePanel] — a [label] and the [onClick] it
+ * fires. The label carries its own "▸" when it opens another screen, the
+ * same convention `KitsScreen.kt`'s `ArmControl` KDoc already documents
+ * (▸ for "opens a screen or panel," none for an in-place action).
+ */
+data class EmptyStateRoute(val label: String, val onClick: () -> Unit)
+
+/**
+ * The shape behind every screen's own "nothing here" face: a message plus
+ * the real controls that get a user out of it, not just words naming
+ * them. Pulled out once GROOVE's `loadedBase == null` branch (RECORD /
+ * STEPS / ORBIT ▸, right under its own message) turned out to be the
+ * template seven *other* empty states should have followed all along —
+ * KIT, PLAY, ORBIT (menu-row door), GROOVE-with-no-kit, TAPE, EXPORT and
+ * CHOP each used to draw [message] alone and leave the route it named for
+ * the user to find by hand (September UAT follow-up).
+ *
+ * [routes] is usually one door, sometimes two (CHOP's own EMPTY_CHOP names
+ * both TAPE and KITS, since its own sentence promises both) — deliberately
+ * never validated non-empty here: a screen with no honest route to offer
+ * (EXPORT's own "kit won't parse" face, `KIT_WONT_OPEN`, same reasoning as
+ * `TakesBinScreen`'s) simply doesn't call this at all, and stays a bare
+ * message the way it always was.
+ */
+@Composable
+fun EmptyStatePanel(
+    message: String,
+    routes: List<EmptyStateRoute>,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = LocalScheme.current
+    Box(
+        modifier
+            .fillMaxSize()
+            .lcdPanel(scheme)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            routes.forEach { route ->
+                ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
+            }
         }
     }
 }

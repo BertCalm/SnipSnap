@@ -249,6 +249,13 @@ fun TapeScreen(
     onCatch: (CatchLanding) -> Unit = {},
     /** DONE on the catch grid: App, which owns the writes, says what landed and opens KIT on its bank. */
     onCatchDone: () -> Unit = {},
+    /**
+     * [EmptyDeck]'s own route: ARM/SNIP and a kit's own fallback sample
+     * both live on the shelf (KitsScreen) — see this function's own KDoc
+     * above on why `entry` is nullable. No default — a screen that forgets
+     * to wire this fails the compile, not the user.
+     */
+    onNavigateKits: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -334,7 +341,7 @@ fun TapeScreen(
         // a readable WAV — the empty-shelf face covers both; a blank LCD
         // for the moment it takes to read a file is the honest state to
         // show in between.
-        if (failed) EmptyDeck(scheme) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        if (failed) EmptyDeck(onNavigateKits) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
         return
     }
 
@@ -357,16 +364,13 @@ fun TapeScreen(
 }
 
 @Composable
-private fun EmptyDeck(scheme: Scheme) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .lcdPanel(scheme)
-            .padding(14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-    }
+private fun EmptyDeck(onNavigateKits: () -> Unit) {
+    // EMPTY_SHELF ("NOTHING TAPED YET.") is genuinely TAPE's own copy —
+    // this is the screen it was written for, unlike EXPORT's borrowed use
+    // of the same string. The route: ARM/SNIP and a kit's own fallback
+    // sample both live on the shelf (KitsScreen) — see this file's own
+    // TapeScreen KDoc on why `entry` is nullable.
+    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
 }
 
 /** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */

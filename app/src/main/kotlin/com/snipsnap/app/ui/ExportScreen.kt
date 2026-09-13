@@ -169,11 +169,13 @@ fun ExportScreen(
     onSessionChange: (ExportSession?) -> Unit,
     appScope: CoroutineScope,
     onToast: (String) -> Unit,
+    /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateKits: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyExport(scheme)
+        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
         return
     }
 
@@ -208,7 +210,7 @@ fun ExportScreen(
         // waiting on (or holding) the mutex throws `CancellationException`
         // through this block, and `runCatching` catches `Throwable` — it
         // would otherwise swallow the cancellation as an ordinary load
-        // failure (`loadFailed = true`, EMPTY_SHELF on a perfectly good
+        // failure (`loadFailed = true`, KIT_WONT_OPEN on a perfectly good
         // kit) instead of letting it propagate.
         val loaded = withContext(Dispatchers.IO) {
             KitWrites.mutex.withLock {
@@ -227,24 +229,23 @@ fun ExportScreen(
         // session on hand belongs to a different kit and a fresh one is
         // being built — same "still decoding vs. genuinely broken" split
         // ChopScreen/PadSheetScreen use; a blank LCD covers the former.
-        if (loadFailed) EmptyExport(scheme) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        //
+        // KIT_WONT_OPEN, not EMPTY_SHELF: a kit IS open here (`entry` is
+        // non-null in this branch), it just wouldn't parse — same
+        // reasoning as TakesBinScreen's own load-failure shell. No route
+        // offered: same precedent, a folder that won't parse isn't fixed
+        // by anything this screen can do.
+        if (loadFailed) {
+            Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
+                TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            }
+        } else {
+            Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        }
         return
     }
 
     ExportContent(activeSession, context, appScope, scheme, onToast)
-}
-
-@Composable
-private fun EmptyExport(scheme: Scheme) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .lcdPanel(scheme)
-            .padding(14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-    }
 }
 
 @Composable
