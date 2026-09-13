@@ -1667,6 +1667,17 @@ object Copy {
     const val LOOP_BOUNCE_BUSY = "BOUNCING…"
 
     /**
+     * The BOUNCE button at rest, naming what it is about to render. Lives
+     * here rather than inline in `LoopGrid` so it counts bars through
+     * [barsOf] like the two toasts above: the button said "1 BARS" at a
+     * one-bar bounce, the exact sentence [barsOf]'s own KDoc exists to
+     * prevent, because it was a raw string outside this file and so out of
+     * that rule's reach. `·`, not `▸`: BOUNCE renders in place and leaves
+     * LOOP open.
+     */
+    fun loopBounceButton(bars: Int): String = "BOUNCE · ${barsOf(bars)}"
+
+    /**
      * LOOP's own legend. Both of the grid's gestures are invisible — a track
      * name is not obviously a mute button and a block is not obviously
      * clearable — and the hold is the one nobody can guess.

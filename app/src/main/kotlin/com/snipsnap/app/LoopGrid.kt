@@ -277,12 +277,12 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
             // labelled BOUNCING…, and pressing it says a bounce is running and
             // where it will land — which is the answer someone pressing a
             // second time is actually looking for.
-            .tapeClick(label = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE · $bars BARS", onClick = onBounce)
+            .tapeClick(label = if (bouncing) Copy.LOOP_BOUNCE_BUSY else Copy.loopBounceButton(bars), onClick = onBounce)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.material3.Text(
-            text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else "BOUNCE · $bars BARS",
+            text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else Copy.loopBounceButton(bars),
             color = if (bouncing) Tape.Dim else Tape.Ink,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
