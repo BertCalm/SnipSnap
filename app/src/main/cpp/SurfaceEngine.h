@@ -141,7 +141,7 @@ private:
     // Per-sample smoothing of every macro plus the gate and the four
     // sample-blend weights (index i glides toward sampleA/B/C/D for slot i).
     ParameterSmoother pitch_, cutoff_, resonance_, drive_, gain_;
-    ParameterSmoother sampleWeight_[4];
+    ParameterSmoother sampleWeight_[kMaxSources];
 
     // The filter (Cytomic trapezoidal SVF), coefficients refreshed every kControlInterval samples.
     static constexpr int32_t kControlInterval = 32;

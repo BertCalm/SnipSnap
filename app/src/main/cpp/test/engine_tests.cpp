@@ -654,6 +654,55 @@ TEST(surface_engine_one_loaded_slot_plays_full_level_at_any_touch_weight) {
     CHECK_NEAR(atApex, atCentre, 0.02f);
 }
 
+TEST(surface_engine_unloaded_pad4_falls_back_to_the_pad2_pad3_blend_at_the_seam) {
+    // Copilot review finding on PR #192: TouchSurface.sampleWeights splits
+    // the pad into two half-triangles meeting at PAD4's own vertex, so
+    // PAD2 and PAD3's raw weights both collapse toward zero approaching
+    // it - unlike an ordinary unloaded slot, there is no third loaded
+    // neighbour left there for the plain renormalisation to fall back on,
+    // so without this fallback an unloaded PAD4 (the common case - it is
+    // brand new) leaves a real hole at the bottom-centre of the pad, not
+    // just the single point PAD4's own vertex sits at. At that exact
+    // point (TouchSurface.sampleWeights(0.5, 0) = {0, 0, 0, 1}), the fix
+    // must recover the even PAD2/PAD3 split this seam gave before PAD4
+    // existed, at full level - not near silence.
+    SurfaceEngine e(kRate);
+    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+    e.loadSample(hi.data(), hi.size(), kRate, 1);   // PAD2
+    e.loadSample(lo.data(), lo.size(), kRate, 2);   // PAD3
+    // Slot 0 (PAD) and slot 3 (PAD4) are deliberately left unloaded.
+    ControlFrame f;
+    f.mode = 0;
+    f.gate = true;
+    f.x = 0.5f;
+    f.y = 1.0f;  // cutoff wide open
+    f.sampleA = 0.0f; f.sampleB = 0.0f; f.sampleC = 0.0f; f.sampleD = 1.0f;  // the seam, per sampleWeights(0.5, 0)
+    e.pushControl(f);
+    std::vector<float> out;
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    float sum = 0.0f;
+    for (float v : out) sum += v;
+    // An even 0.9/-0.9 split cancels to exactly zero - the same "exact
+    // cancellation" shape the three-vertex even-split test above uses -
+    // but the point here is that it is a *cancellation*, not silence: peak
+    // level must still be near 0.9, not near 0 the way true silence (or a
+    // half-fallen-through fallback) would be.
+    CHECK_NEAR(sum / static_cast<float>(out.size()), 0.0f, 0.02f);
+    CHECK(peak(out) > 0.5f);
+
+    // With only PAD2 loaded (PAD3 also empty), the whole fallback share
+    // goes to PAD2 alone, at full level.
+    SurfaceEngine only2(kRate);
+    only2.loadSample(hi.data(), hi.size(), kRate, 1);
+    ControlFrame g = f;
+    only2.pushControl(g);
+    std::vector<float> out2;
+    for (int i = 0; i < 400; ++i) out2 = callback(only2, 64);
+    float sum2 = 0.0f;
+    for (float v : out2) sum2 += v;
+    CHECK(sum2 / static_cast<float>(out2.size()) > 0.5f);
+}
+
 TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
     // A weight aimed entirely at a slot nothing was ever loaded into must
     // settle to honest silence, not NaN. "Settle" matters here as much as
