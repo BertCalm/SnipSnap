@@ -3,11 +3,13 @@ package com.snipsnap.app.ui
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +79,7 @@ import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
@@ -175,6 +178,14 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
+    // Which preset (if any) the current macro values for this (engine,
+    // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
+    // "a starting point to wreck, not a locked sound", so this clears the
+    // moment a slider or SCRAMBLE moves the macros away from what was
+    // loaded, rather than keep highlighting a name that no longer
+    // describes the sound. Not pre-seeded like [macrosByVoice] — nothing
+    // is "loaded" until a tap picks one.
+    val currentPresetByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, String>() }
     // The prototype gates its very first sound behind a "TAP TO POWER ON"
     // veil — a Web Audio autoplay-policy workaround, not part of the actual
     // interaction — and only *after* that makes every move retrigger. This
@@ -185,7 +196,13 @@ fun SynthScreen(
     var touched by remember { mutableStateOf(false) }
     fun updateMacro(name: String, value: Float) {
         touched = true
+        currentPresetByVoice.remove(engine to voice)
         macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value)
+    }
+    fun loadPreset(patch: Patch) {
+        touched = true
+        macrosByVoice[engine to voice] = patch.macros
+        currentPresetByVoice[engine to voice] = patch.name
     }
 
     var snip by remember { mutableStateOf<Snip?>(null) }
@@ -394,6 +411,14 @@ fun SynthScreen(
 
                 VoicePicker(engine, voice, scheme, onSelect = { touched = true; voice = it })
 
+                PresetList(
+                    engine = engine,
+                    voice = voice,
+                    current = currentPresetByVoice[engine to voice],
+                    scheme = scheme,
+                    onSelect = ::loadPreset,
+                )
+
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
@@ -415,6 +440,7 @@ fun SynthScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         touched = true
+                        currentPresetByVoice.remove(engine to voice)
                         macrosByVoice[engine to voice] = engine.scramble(voice, Random(System.nanoTime()))
                     }
                     LabButton(
@@ -684,6 +710,66 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                         TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                 }
+            }
+        }
+    }
+}
+
+// ---------- preset list ----------
+
+/**
+ * U1's preset library (`docs/SYNTH_UPGRADE.md`), by voice — rule 1's other
+ * half, "preset-first, knobs-second": sits between the voice picker and the
+ * macro sliders it fills in. [Presets] returns an empty list for a voice
+ * with no roster yet (every engine but THUMP, until their own U1 passes
+ * land), and an empty row draws nothing rather than a blank sunken strip —
+ * this screen already omits controls this way (SEND TO PAD's own `kit ==
+ * null` case has no placeholder either).
+ *
+ * A horizontally-scrolling strip of chips inside one [sunkenField], not a
+ * vertical list: sixteen names have to fit next to a voice picker and five
+ * sliders on one phone screen, and a horizontal strip is what "tap it, hear
+ * it, tap the next one" (the roadmap's own browsing-speed framing) wants
+ * anyway — no per-row height cost as the roster grows. [current] is `null`
+ * once any slider or SCRAMBLE has moved the macros away from what a tap
+ * loaded (`SynthScreen`'s own `currentPresetByVoice`), so the highlight
+ * never claims a name for a sound that no longer matches it.
+ */
+@Composable
+private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
+    val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
+    if (presets.isEmpty()) return
+    // Keyed on (engine, voice), not the plain `rememberScrollState()` every
+    // other scroll in this file uses: those all sit inside a screen-level
+    // Column that never itself changes identity, but this strip is rebuilt
+    // fresh per voice. Unkeyed, a scroll position picked up browsing one
+    // voice's roster would carry into the next voice's — Copilot's own
+    // finding — and could open a shorter roster already scrolled past its
+    // first presets.
+    val scrollState = remember(engine, voice) { ScrollState(0) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .sunkenField(scheme)
+            .horizontalScroll(scrollState)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (p in presets) {
+            val selected = p.name == current
+            Box(
+                Modifier
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                    .semantics { this.selected = selected }
+                    .tapeClick(label = "PRESET ${p.name}") { onSelect(p) }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
             }
         }
     }
