@@ -379,6 +379,37 @@ class FxTest {
         assertTrue(Classifier.classify(ghosted).drumClass != DrumClass.KICK, "what's left of a kick is not a kick")
     }
 
+    // ---------- SPEED ----------
+
+    @Test
+    fun `SPEED at native is a copy`() {
+        val out = Speed.process(kick, mapOf("SEMITONES" to 0.5f))
+        assertTrue(out.samples.contentEquals(kick.samples), "SPEED at native is not a copy")
+    }
+
+    @Test
+    fun `SPEED snaps to semitones and an octave down doubles the length`() {
+        assertEquals(0, Speed.semitones(0.5f))
+        assertEquals(12, Speed.semitones(1f))
+        assertEquals(-12, Speed.semitones(0f))
+        val down = Speed.process(kick, mapOf("SEMITONES" to 0f))
+        assertTrue(
+            abs(down.frameCount - kick.frameCount * 2) < kick.frameCount / 20,
+            "an octave down should be about twice as long: ${down.frameCount} vs ${kick.frameCount}",
+        )
+        val up = Speed.process(kick, mapOf("SEMITONES" to 1f))
+        assertTrue(up.frameCount < kick.frameCount, "an octave up should be shorter")
+    }
+
+    @Test
+    fun `SPEED moves the pitch of a tone the way it says`() {
+        val up = Speed.process(tone, mapOf("SEMITONES" to 1f))
+        assertTrue(
+            crossings(up, 0.1f, 0.3f) > crossings(tone, 0.1f, 0.3f),
+            "an octave up did not raise the pitch",
+        )
+    }
+
     // ---------- SPIKE ----------
 
     @Test
