@@ -16,9 +16,13 @@ with two in the wrong place, had no answer but "try another tape".
 ## 2. The CUT bench
 
 A `GroupBox` under the tape strip on CHOP, closed to one summary line
-(`12 HITS · BY HITS · FINE`) so the review is what it was; open, four
-rows. Every change is a fresh chop off the main thread through
-`ChopReviewModel.rechopKeeping`, and the markers move with it.
+(`12 HITS · BY HITS · FINE`) so the review is what it was; open, the
+row count depends on mode now, not fixed at four the way round one
+shipped it. The mode segment (BY HITS / GRID / GHOSTS / HUM) and the
+count are always there; BY HITS and GHOSTS then add EAR, CUT and ON
+THE GRID (§8), five rows in all, where GRID adds THE ZOOM LADDER (§11)
+instead, three. Every change is a fresh chop off the main thread
+through `ChopReviewModel.rechopKeeping`, and the markers move with it.
 
 | Control | What it does | Where it lives |
 |---|---|---|

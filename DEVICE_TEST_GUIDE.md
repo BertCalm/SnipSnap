@@ -57,43 +57,50 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 19. EDIT STEPS: toggle cells (each auditions), CLEAR BAR, DONE, re-enter —
     your edits must persist. Kill the app, reopen: still there.
 20. MIDI ▸ → check Files app: Android/data/com.snipsnap.app/files/exports/.
+21. GROOVE's own BOUNCE (TRANSPORT, not LOOP's): tap it on a stopped
+    loop — it should stay tappable, toasting BOUNCE PRINTS THE LOOP AS
+    IT PLAYS. PRESS ► PLAY FIRST. rather than just dim. PLAY, then
+    BOUNCE: the label reads WAITING… then BOUNCING…, and the toast on
+    landing names the seconds bounced to SNIPS. Change PROG, SWING, or
+    FEEL mid-bounce: it should cancel with GROOVE CHANGED. BOUNCE
+    CANCELLED. rather than splice two different takes together.
 
 ## PLAY
-21. Mash pads fast with several fingers. Watch VOICES n/16 — it should track
+22. Mash pads fast with several fingers. Watch VOICES n/16 — it should track
     reality. Choke test again here at speed.
-22. Top-of-pad taps should sound SOFTER (darker) than bottom taps.
-23. ⟳ → landscape 8×2. **Then exit. Then leave PLAY. The app must return to
+23. Top-of-pad taps should sound SOFTER (darker) than bottom taps.
+24. ⟳ → landscape 8×2. **Then exit. Then leave PLAY. The app must return to
     portrait and STAY portrait.** (This was the wave's one Critical — verify
     the fix on hardware.) Also: back-gesture inside fullscreen should exit
     fullscreen only.
-24. Background the app mid-mash: all sound stops.
+25. Background the app mid-mash: all sound stops.
 
 ## EXPORT
-25. DUB a kit in a couple of formats; DONE shows the path; find the files in
+26. DUB a kit in a couple of formats; DONE shows the path; find the files in
     the Files app. Switch tabs mid-dub, come back: DONE state + toast must
     have survived.
 
 ## TAKES + BIN
-26. Save-ish actions (treatments, edits) accumulate takes; RESTORE an old one
+27. Save-ish actions (treatments, edits) accumulate takes; RESTORE an old one
     and confirm the kit audibly reverts. EJECT a pad, find it in the bin,
     BACK restores it. EMPTY THE BIN NOW needs a second tap (armed confirm).
 
 ## LOOP
-27. From SNIPS, → LOOP on a few snips of DIFFERENT lengths — the toast names
+28. From SNIPS, → LOOP on a few snips of DIFFERENT lengths — the toast names
     the track and how many blocks it became. The shelf then shows LOOP ▸ n OF
     6 TRACKS; open it. Listen for the tracks pulling apart and coming back
     together rather than repeating in lockstep; that only happens when the
     block counts differ. Tap a track name to mute it, HOLD a block to clear
     that track, then send a snip again: it fills the leftmost empty track, so
     with one track cleared that is the one it lands on.
-28. BOUNCE (bottom right) says how many bars it will render — that is the
+29. BOUNCE (bottom right) says how many bars it will render — that is the
     grid's full cycle when the cycle is short enough to be a snip, and a
     stated part of it when it isn't. Press it: the button reads BOUNCING…
     while it works, then the toast names the bars and the result is waiting in
     SNIPS. Mute a track first and confirm the bounce is missing it — what is
     heard is what is rendered. Then → LOOP the bounce back onto a free track:
     the grid can eat what it makes.
-29. The bounce outlives the screen, so check both halves of that. Press BOUNCE,
+30. The bounce outlives the screen, so check both halves of that. Press BOUNCE,
     press Back immediately, and open SNIPS while it is still rendering: the new
     snip has to appear in the list on its own when the render lands, with no
     leaving and re-entering. Then reopen LOOP mid-render — the button reads
@@ -103,8 +110,8 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 ## Known blind spots (listen for these specifically)
 - One-shot samples LONGER than ~6s stop responding to chokes after 6s (ledgered).
 - LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears on
-  the shelf), but it is the newest one in the app and the least walked: no
-  tempo control, and a block tap that does nothing yet.
+  the shelf), but it is still the least walked in the app: a TEMPO −/+ stepper
+  and a block tap (WHAT IS THIS BLOCK) shipped since, both worth a device pass.
 - **Screen readers are the biggest blind spot.** 105 controls now carry
   accessibility labels (up from 14), and a disabled control correctly reports as
   disabled rather than vanishing. But an emulator tree dump shows those labels on
