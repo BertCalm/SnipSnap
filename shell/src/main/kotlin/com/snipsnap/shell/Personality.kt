@@ -659,10 +659,16 @@ object Copy {
     const val FEEL_RECENTRED = "BACK TO AS PLAYED."
 
     // ---- GROOVE: RECORD landing and UNDO TAKE (live-record plan, Task 5) ----
-    /** RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape, but names what was PLAYED, not what was heard. */
-    fun takeLanded(notes: Int, bars: Int): String {
+    /**
+     * RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape,
+     * but names what was PLAYED, not what was heard. [meter] is the clip's
+     * when it is not 4/4 (`GrooveEdit.meterLabel`), so a player who
+     * overdubbed a 3/4 ORBIT clip is told the bar they played in.
+     */
+    fun takeLanded(notes: Int, bars: Int, meter: String? = null): String {
         val barWord = if (bars == 1) "BAR" else "BARS"
-        return "TOOK $notes HITS OVER $bars $barWord. PLAYING ON PROG A NOW."
+        val of = meter?.let { " OF $it" } ?: ""
+        return "TOOK $notes HITS OVER $bars $barWord$of. PLAYING ON PROG A NOW."
     }
     /** UNDO TAKE's existing-base branch: whatever was captured before this take plays again. */
     const val TAKE_UNDONE = "TAKE UNDONE. BACK TO WHAT WAS THERE BEFORE."
