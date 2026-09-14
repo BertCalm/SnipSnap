@@ -59,9 +59,11 @@ object Dust {
             return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
         }
 
-        // Nothing to scale the beds against: silence in, silence out.
+        // Nothing to scale the beds against: silence in, silence out. Not a
+        // special case below - every bed is scaled by inPeak, so a zero
+        // inPeak already zeroes every draw, and the final peak-match (whose
+        // own outPeak then comes out exactly zero too) never touches it.
         val inPeak = snip.peak()
-        if (inPeak <= 1e-9f) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
 
         val out = snip.samples.copyOf()
         val noise = Dsp.Noise(SEED)
@@ -70,18 +72,17 @@ object Dust {
         val clickChance = crackle * MAX_CLICKS_PER_SEC / snip.sampleRate
 
         for (f in 0 until snip.frameCount) {
+            // Every draw happens every frame, gated only by multiplying with
+            // its own macro (zero when off) rather than by skipping the
+            // call. RUMBLE and HISS being off must not shift the noise
+            // stream CRACKLE reads from - a macro's level is what a knob
+            // should move, never the crackle pattern underneath it.
             var bed = 0f
-            if (rumble > 0f) {
-                bed += rumbleFilter.lp(noise.next(), RUMBLE_HZ) * rumble * RUMBLE_CEILING * inPeak
-            }
-            if (hiss > 0f) {
-                bed += noise.next() * hiss * HISS_CEILING * inPeak
-            }
-            if (crackle > 0f) {
-                // A click is a single impulse through a bandpass: a pop, not a tone.
-                val impulse = if (noise.next() * 0.5f + 0.5f < clickChance) noise.next() else 0f
-                bed += crackleFilter.process(impulse) * crackle * CRACKLE_CEILING * inPeak
-            }
+            bed += rumbleFilter.lp(noise.next(), RUMBLE_HZ) * rumble * RUMBLE_CEILING * inPeak
+            bed += noise.next() * hiss * HISS_CEILING * inPeak
+            // A click is a single impulse through a bandpass: a pop, not a tone.
+            val impulse = if (noise.next() * 0.5f + 0.5f < clickChance) noise.next() else 0f
+            bed += crackleFilter.process(impulse) * crackle * CRACKLE_CEILING * inPeak
             // One bed across the frame, so a stereo pair shares one record.
             for (ch in 0 until snip.channels) out[f * snip.channels + ch] += bed
         }

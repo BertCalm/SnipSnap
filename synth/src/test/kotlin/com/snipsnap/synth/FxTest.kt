@@ -535,8 +535,13 @@ class FxTest {
     fun `DUST puts noise in the silence after the hit`() {
         val quiet = Snip(FloatArray(44_100), 1, 44_100)
         val dusty = Dust.process(quiet, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
-        // Silence in, silence out: there is no peak to scale the beds against.
-        assertTrue(dusty.samples.all { it == 0f }, "DUST made noise out of pure silence")
+        // Silence in, silence out: there is no peak to scale the beds
+        // against. `.all { it == 0f }` cannot fail here - Kotlin's
+        // -0.0f == 0f is true, so a bed that computed something and was
+        // then zeroed by peak-match's k = 0f / outPeak would pass unnoticed.
+        // contentEquals delegates to Arrays.equals(float[], float[]), which
+        // compares floatToIntBits and so does distinguish -0.0f.
+        assertTrue(dusty.samples.contentEquals(quiet.samples), "DUST made noise out of pure silence")
         val over = Dust.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
         // sustainRms's 80 ms mark still sits inside the kick's own decay (its
         // envelope is only ~-19 dB down there), which swamps an honest -48
