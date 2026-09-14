@@ -130,4 +130,23 @@ class ErasTest {
             )
         }
     }
+
+    @Test
+    fun `hiss draws once per frame - mono-duplicated stereo stays identical`() {
+        // A tape has one noise floor, not one per channel: identical input
+        // channels must come out identical, not decorrelated by an RNG
+        // drawn once per interleaved sample.
+        val mono = noisyHit()
+        val stereo = Snip(
+            FloatArray(mono.samples.size * 2) { i -> mono.samples[i / 2] },
+            2, rate,
+        )
+        val out = Eras.hiss(stereo, levelDb = -54f, mix = 1f)
+        for (f in 0 until out.frameCount) {
+            assertEquals(
+                out.samples[f * 2], out.samples[f * 2 + 1],
+                "hiss: channels diverged at frame $f",
+            )
+        }
+    }
 }

@@ -34,8 +34,10 @@ class FxTest {
     )
 
     /**
-     * Sections not yet held to the per-frame stereo-identity clause, with
-     * the observed divergence. Pre-existing bugs, each its own fix. Stale
+     * Sections not held to the per-frame stereo-identity clause, with the
+     * observed divergence. SWELL is not a bug: its decorrelation is
+     * deliberate, documented in `Stretch.kt`'s KDoc and asserted by
+     * `StretchTest` - it is excused on purpose and stays excused. Stale
      * check: if a section's DSP changes, delete its entry and rerun
      * `stereo stays stereo with identical channels intact` - if it now
      * passes, the exclusion is no longer needed. Self-checked too:
@@ -50,9 +52,6 @@ class FxTest {
             "(i.e. are genuinely different values, not just a sign-of-zero artifact, e.g. " +
             "frame 2: L=4.16e-10, R=-3.12e-10) - independently randomized per-channel phases " +
             "in the stretch wash, not a shared computation across channels",
-        "dub" to "left/right diverge by audible amounts, not float noise - 15256 of 15262 " +
-            "frames differ, starting at frame 0 (L=0.3433, R=0.3370) - the per-channel dub " +
-            "processing does not keep identical input channels identical",
     )
 
     private val kick = Thump.render(ThumpVoice.KICK)
