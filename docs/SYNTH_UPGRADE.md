@@ -320,9 +320,9 @@ design.
 
 **Status: implemented.** All 7 engines (THUMP, TINES, VELVET, FATHOM,
 TONEWHEEL, VOX, PLUCK) render at `RATE * Dsp.OVERSAMPLE` and decimate — see
-`Dsp.OVERSAMPLE`'s KDoc. What remains of this section is the migration work
-below (`alias` flag, `PadRecipe.VERSION` bump, `testkit/` regen), which has
-not shipped yet.
+`Dsp.OVERSAMPLE`'s KDoc. The migration work below (`alias` flag,
+`PadRecipe.VERSION` bump, `testkit/` regen) has shipped too — see that
+section's own "done" status.
 
 The target user will rarely hear this directly. Where it does bite is the S5
 multisampled instruments: a keygroup rendered every minor third across four
@@ -343,31 +343,63 @@ path at once.
 milliseconds; nobody hears the CPU. A live synth could not make this trade, and
 that is a standing advantage this codebase has never spent.
 
-### The per-voice `alias` flag
+### The per-voice `alias` flag — implemented
 
 Grit stays available where it is the point — VELVET `CHIP`, and anything
-feeding CRUNCH or `Eras`. A patch field, defaulting to *clean* for new patches
-and *aliased* for anything authored before the change.
+feeding CRUNCH. Landed as `PadRecipe.alias: Boolean` (`PadRecipe.kt`), not a
+`Patch` field: every `Patch` subtype already carries `name`/`engine`/
+`voiceName` (`Patches.kt:14-18`), but those are required identity fields
+every subtype has always had, not an *additional* per-patch semantic field.
+Adding a genuinely new one would have touched the shared codec plus all 7
+patch data classes' constructors and their own `Patches.VERSION` bump, where
+`PadRecipe` already had the exact optional-field shape (`treatment`/`amount`)
+to extend instead.
 
-### Migration — and the window that is closing
+It is pure metadata — every engine already always renders through the U6
+oversample/decimate path regardless of this flag; it only records whether a
+pad's grit is deliberate. The default is computed from the patch/fx already on
+hand (`true` for VELVET `CHIP` or any chain feeding `Crunch`, `false`
+otherwise) rather than requiring every call site to say so explicitly, and is
+always written explicitly on `toJsonValue` - so the "clean for new, aliased
+for old" framing this section originally had doesn't apply: there is no old
+recipe to read a default for, since v1 is now rejected outright (below), and
+`Eras`-produced audio keeps its own separate `{"era","amount"}` recipe shape,
+never reaching `PadRecipe` at all.
 
-`PadRecipe.VERSION = 1` hard-rejects anything else (`PadRecipe.kt:77`); there
-is no migration path. U3, U5 and U6 all change rendered output, so a kit
-already on someone's SD card would regenerate differently after an update.
+### Migration — done
 
-What is *not* at risk: `PadRecipeTest.kt:78` re-renders both sides in the same
-run, so it is a self-consistency check and will still pass; and the goldens in
+`PadRecipe.VERSION` is now 2; `fromJsonValue` rejects anything else
+(`PadRecipe.kt`) with no migration path, as recommended below. The **369
+committed WAVs** under `testkit/` (this section's original count of 376 was
+off) were regenerated via the existing gradle generator tasks alongside the
+bump.
+
+What was *not* at risk: `PadRecipeTest.kt`'s self-consistency test re-renders
+both sides in the same run, so it stayed green throughout; and the goldens in
 `reference/golden/` are XPM/XML format files, not audio hashes, so export
-tests are unaffected. The mechanical cost is regenerating the **376 committed
-WAVs** under `testkit/`, which the existing gradle generator tasks do.
+tests were unaffected.
 
-**Recommendation: take the clean break now.** Bump `PadRecipe.VERSION` to 2,
-regenerate `testkit/`, ship no back-compat path. With no kits in the field the
-migration cost is close to zero — and it is only close to zero *before launch*.
-The alternative is preserving every pre-U3 render path inside each engine
-forever, which is a permanent tax paid for users who do not exist yet. If kits
-are already in the wild when this is picked up, this decision must be revisited
-rather than assumed.
+The two production call sites that parse a loaded kit's recipe as a
+`PadRecipe` (`Breed.recipeOf` unconditionally; `RecipeReplay.plan` only for
+its `"patch"`-shaped branch) already treated a parse failure as "no recipe
+here" rather than propagating the exception, so a stale v1 *synth-patch*
+recipe degrades those specific features gracefully rather than crashing -
+confirmed by reading both call sites, not assumed.
+
+FX-only treatment recipes (`RecipeReplay.plan`'s `PadSheet.read` branch -
+COPY LAST TREATMENT replaying an `Era`/`Character`) don't share one shape:
+`Treatments.apply` builds its recipe via `PadRecipe(fx = ..., treatment =
+..., amount = ...).toJsonValue()` (`Treatments.kt:101`), so a `Character`
+treatment recipe *does* carry `"recipe": 2` like any other `PadRecipe`;
+`Eras.apply` writes its own literal `{"era", "amount"}` `JsonValue.Obj`
+with no `"recipe"` key at all. Either way, `PadSheet.read` (`PadSheet.kt:310`)
+never looks at that field - it reads `"treatment"`/`"era"`/`"amount"`
+directly regardless of what version tag (or none) rides along, and
+`Treatments.chain`/`Eras.process` (neither touched by U1-U6) rebuild the
+`FxChain` fresh from the name every replay. So a stale recipe's version tag,
+where one exists, is inert here, not ignored by a gap in gating - the whole
+point of COPY LAST TREATMENT is that it re-derives the chain from the
+current code, not from anything frozen in the recipe.
 
 ---
 

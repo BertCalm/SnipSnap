@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitStore
 import java.io.File
@@ -127,9 +128,12 @@ class PadRecipeTest {
     }
 
     @Test
-    fun `recipes written before the tag existed still parse`() {
-        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
-        assertNull(PadRecipe.fromJsonText(old).treatment, "an untagged recipe is not an error")
+    fun `a recipe with no treatment tag still parses`() {
+        // "2" here is the live VERSION, not a stand-in for an old file - see
+        // "a v1 recipe is rejected, not migrated" below for that case. This
+        // is testing that an *optional* field being absent is not an error.
+        val untagged = """{"recipe":2,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(untagged).treatment, "an untagged recipe is not an error")
     }
 
     @Test
@@ -157,9 +161,87 @@ class PadRecipeTest {
     }
 
     @Test
-    fun `a recipe written before amount existed still parses`() {
-        val old = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
-        assertNull(PadRecipe.fromJsonText(old).amount, "an amount-less recipe is not an error")
+    fun `a recipe with no amount still parses`() {
+        val untagged = """{"recipe":2,"fx":{"fx":1,"reverse":true}}"""
+        assertNull(PadRecipe.fromJsonText(untagged).amount, "an amount-less recipe is not an error")
+    }
+
+    @Test
+    fun `a v1 recipe is rejected, not migrated`() {
+        // U3+U5+U6 (docs/SYNTH_UPGRADE.md): Punch, Dsp.Env, filter
+        // saturation and 4x oversampling all change what render() produces
+        // for an identical patch, so a v1 recipe's stored audio can no
+        // longer be trusted to match a fresh render of itself. The doc's
+        // own recommendation is a hard break, not a silent reinterpretation
+        // - this is that break, proven.
+        val v1 = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
+        val thrown = assertFailsWith<JsonException> { PadRecipe.fromJsonText(v1) }
+        assertTrue(
+            "unsupported recipe version 1" in (thrown.message ?: ""),
+            "should name the actual guard that fired, not just any rejection: ${thrown.message}",
+        )
+    }
+
+    @Test
+    fun `alias defaults to true for VELVET CHIP and anything feeding CRUNCH, false otherwise`() {
+        // docs/SYNTH_UPGRADE.md's U6 alias-flag section: grit stays
+        // available where it is the point.
+        val chip = PadRecipe(patch = VelvetPatch("Chip", VelvetVoice.CHIP, emptyMap()))
+        assertTrue(chip.alias, "CHIP should default to aliased")
+
+        val crunched = PadRecipe(
+            patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()),
+            fx = FxChain(crunch = mapOf("BITS" to 0.5f)),
+        )
+        assertTrue(crunched.alias, "a chain feeding CRUNCH should default to aliased")
+
+        val clean = PadRecipe(patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()))
+        assertTrue(!clean.alias, "a plain patch with no crunch should default to clean")
+
+        val otherVoiceCrunchFree = PadRecipe(patch = VelvetPatch("Bass", VelvetVoice.BASS, emptyMap()))
+        assertTrue(!otherVoiceCrunchFree.alias, "a non-CHIP VELVET voice should default to clean")
+    }
+
+    @Test
+    fun `alias can be set explicitly against its computed default`() {
+        val forcedClean = PadRecipe(patch = VelvetPatch("Chip", VelvetVoice.CHIP, emptyMap()), alias = false)
+        assertTrue(!forcedClean.alias, "an explicit alias must override the CHIP default")
+
+        val forcedAliased = PadRecipe(patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()), alias = true)
+        assertTrue(forcedAliased.alias, "an explicit alias must override the clean default")
+    }
+
+    @Test
+    fun `fromJsonValue infers alias when the key is absent from an otherwise-valid v2 recipe`() {
+        // toJsonValue always writes "alias" explicitly, so the round-trip
+        // tests above never touch the obj["alias"]?.bool() ?: impliesAlias(..)
+        // fallback in fromJsonValue - strip the key back out to exercise it
+        // directly, the same way a hand-built or older-tooling v2 document
+        // that simply omitted the field would arrive.
+        val chip = PadRecipe(patch = VelvetPatch("Chip", VelvetVoice.CHIP, emptyMap()))
+        val stripped = JsonValue.Obj(chip.toJsonValue().entries - "alias")
+        assertTrue(
+            PadRecipe.fromJsonValue(stripped).alias,
+            "an omitted alias key on a CHIP recipe should still infer true",
+        )
+
+        val crunched = PadRecipe(
+            patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()),
+            fx = FxChain(crunch = mapOf("BITS" to 0.5f)),
+        )
+        val strippedCrunched = JsonValue.Obj(crunched.toJsonValue().entries - "alias")
+        assertTrue(
+            PadRecipe.fromJsonValue(strippedCrunched).alias,
+            "an omitted alias key on a CRUNCH-feeding recipe should still infer true",
+        )
+    }
+
+    @Test
+    fun `alias round-trips through JSON`() {
+        for (alias in listOf(true, false)) {
+            val r = PadRecipe(patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()), alias = alias)
+            assertEquals(alias, PadRecipe.fromJsonText(r.toJsonText()).alias)
+        }
     }
 
     @Test
