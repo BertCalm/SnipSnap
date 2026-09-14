@@ -7,9 +7,13 @@ import com.snipsnap.json.JsonValue
  * The rack's named characters, available one pad at a time — the remix
  * bank's five (reversed, crushed, slapback, washed, punched) and the
  * ones that arrived after the bank's table was pinned ([EXTRA]).
- * [amount] scales the chain's macros linearly (1 = the character's own
- * settings, lower = subtler); structure switches like reverse stay
- * switched.
+ * [amount] fades every macro toward its own neutral (1 = the character's
+ * own settings, 0 = every macro at the point where it does nothing) — see
+ * [fade]. A macro whose neutral is 0 fades to silence like a plain scale
+ * always did, but a centered one (EQ's flat, PITCH's native) fades toward
+ * its centre instead of being dragged off it, so a centered macro sitting
+ * below its neutral actually *rises* as [amount] falls; structure switches
+ * like reverse stay switched.
  *
  * Every application returns the fx-only recipe that made it, so a treated
  * pad remains re-treatable and undoable like everything else in a kit.
