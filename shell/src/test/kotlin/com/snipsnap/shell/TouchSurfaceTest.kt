@@ -93,6 +93,85 @@ class TouchSurfaceTest {
     }
 
     @Test
+    fun `vector mode computes the same corner weights as morph, not the flat default`() {
+        for (x in listOf(0f, 100f, 200f, 300f, 400f)) {
+            for (y in listOf(0f, 100f, 200f)) {
+                val morph = TouchSurface.read(Mode.MORPH, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                val vector = TouchSurface.read(Mode.VECTOR, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                near(morph.a, vector.a); near(morph.b, vector.b)
+                near(morph.c, vector.c); near(morph.d, vector.d)
+            }
+        }
+        // And it is genuinely the corner blend, not every mode's flat 0.25 fallback.
+        val atCorner = TouchSurface.read(Mode.VECTOR, listOf(Touch(1, 0f, 0f)), w, h, Reading.REST)
+        near(1f, atCorner.a)
+    }
+
+    @Test
+    fun `sample weights are one at each of the four vertices`() {
+        val (apex, baseLeft, baseRight, baseMid) = TouchSurface.sampleWeights(0.5f, 1f)
+        near(1f, apex); near(0f, baseLeft); near(0f, baseRight); near(0f, baseMid)
+        val atBaseLeft = TouchSurface.sampleWeights(0f, 0f)
+        near(1f, atBaseLeft[1])
+        val atBaseRight = TouchSurface.sampleWeights(1f, 0f)
+        near(1f, atBaseRight[2])
+        val atBaseMid = TouchSurface.sampleWeights(0.5f, 0f)
+        near(1f, atBaseMid[3])
+        // Each half-triangle's own centroid (the average of its own three
+        // vertices - apex (0.5,1), base-left (0,0), base-mid (0.5,0) for
+        // the left half) is an even third apex/base-left/base-mid.
+        val leftCentroid = TouchSurface.sampleWeights(1f / 3f, 1f / 3f)
+        near(1f / 3f, leftCentroid[0]); near(1f / 3f, leftCentroid[1]); near(1f / 3f, leftCentroid[3])
+        near(0f, leftCentroid[2])
+    }
+
+    @Test
+    fun `sample weights agree exactly at the seam between the two half-triangles`() {
+        // The two halves are computed by entirely separate formulas (see
+        // sampleWeights), so agreement at x = 0.5 isn't structural - it has
+        // to be checked. A discontinuity here would be an audible click
+        // sweeping the puck straight across the middle of the pad.
+        for (y in 0..10) {
+            val py = y / 10f
+            val justLeft = TouchSurface.sampleWeights(0.49999f, py)
+            val justRight = TouchSurface.sampleWeights(0.50001f, py)
+            for (i in 0..3) near(justLeft[i], justRight[i], 1e-3f)
+        }
+    }
+
+    @Test
+    fun `sample weights have no dead zone outside either triangle`() {
+        // The pad's own centre sits inside the left half (apex-heavier than
+        // that half's own centroid, since it is higher up), and still sums
+        // to one.
+        val centre = TouchSurface.sampleWeights(0.5f, 0.5f)
+        near(1f, centre.sum())
+        assertTrue(centre[0] > 1f / 3f)
+
+        // The two top corners sit outside both triangles - one vertex's raw
+        // coordinate goes negative there - but the blend stays defined,
+        // clamped, and normalised rather than leaving a hole.
+        val topLeft = TouchSurface.sampleWeights(0f, 1f)
+        near(0f, topLeft[3])  // base-mid: not part of the left half at all
+        near(1f, topLeft.sum())
+        assertTrue(topLeft[0] > 0f && topLeft[1] > 0f)
+
+        val topRight = TouchSurface.sampleWeights(1f, 1f)
+        near(0f, topRight[3])
+        near(1f, topRight.sum())
+        assertTrue(topRight[0] > 0f && topRight[2] > 0f)
+    }
+
+    @Test
+    fun `sample weights always sum to one and never go negative`() {
+        for (x in 0..20) for (y in 0..10) {
+            val w = TouchSurface.sampleWeights(x / 20f, y / 10f)
+            near(1f, w.sum())
+            assertTrue(w.all { it >= 0f })
+        }
+    }
+
+    @Test
     fun `a pad with no size is refused in words`() {
         assertFailsWith<IllegalArgumentException> {
             TouchSurface.read(Mode.XY, emptyList(), 0f, 100f, Reading.REST)

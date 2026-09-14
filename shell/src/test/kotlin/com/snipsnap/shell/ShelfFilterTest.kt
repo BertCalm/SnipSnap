@@ -167,7 +167,7 @@ class ShelfFilterTest {
         // Both are state, not commands: one glance down the header says what
         // the shelf is doing, in one grammar.
         for (label in listOf(Copy.shelfFilter(null)) + DubStamp.Status.entries.map { Copy.shelfFilter(it) }) {
-            assertTrue("▸" in label, "the header's chips share one shape: $label vs ${Copy.SHELF_SORT_RECENT}")
+            assertTrue("·" in label, "the header's chips share one shape: $label vs ${Copy.SHELF_SORT_RECENT}")
             assertTrue(!label.endsWith("."), "furniture, not a sentence: $label")
             assertEquals(label.uppercase(java.util.Locale.ROOT), label, "TapeOS shouts: $label")
         }

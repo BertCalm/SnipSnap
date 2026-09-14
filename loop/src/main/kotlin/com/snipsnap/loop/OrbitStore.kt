@@ -16,6 +16,12 @@ object OrbitStore {
     const val FILE_NAME = "orbits.json"
 
     /**
+     * 7: a set may carry `sections` — an arrangement, each section naming
+     * how many bars it lasts and which rings play in it. A set without
+     * them plays every ring forever, which is what every set did before.
+     * 6: a set carries a `seed`, and a hit may carry a `chance`, an
+     * `everyLaps`/`onLap` conditional and a `ratchet`. A hit without them
+     * sounds once on every lap, which is what every hit did before.
      * 5: a hit may carry a `length` — how long it sounds, in pulses. A hit
      * without one plays its sample out, which is what every hit did before.
      * 4: a hit may carry an `offset` — its lean off its step, in pulses. A
@@ -25,7 +31,7 @@ object OrbitStore {
      * `lockToBar: true` and `SAME_LAP` both become `ONE`, and a version 1
      * ring's voice is the pads its hits already named.
      */
-    const val VERSION = 5
+    const val VERSION = 7
     private const val FIRST_VERSION = 1
 
     fun save(set: OrbitSet, dir: File): File {
@@ -54,7 +60,28 @@ object OrbitStore {
             "lapSteps" to num(set.lapSteps),
             "swing" to num(set.swing),
             "sampleRate" to num(set.sampleRate),
+            "seed" to num(set.seed),
             "orbits" to JsonValue.Arr(set.orbits.map { orbitJson(it) }),
+            // Only where there is one, so a set with no arrangement keeps
+            // the exact shape it had at version 6 - the same rule the hit
+            // fields follow, stated once and held to at every bump.
+            *(
+                if (set.sections.isEmpty()) {
+                    emptyArray()
+                } else {
+                    arrayOf("sections" to JsonValue.Arr(set.sections.map { sectionJson(it) }))
+                }
+                ),
+        ),
+    )
+
+    private fun sectionJson(section: OrbitSection): JsonValue = JsonValue.Obj(
+        linkedMapOf(
+            "name" to JsonValue.Str(section.name),
+            "bars" to num(section.bars),
+            // Sorted, because a set is a file a player may read and diff,
+            // and a set of indices has no order of its own to preserve.
+            "plays" to JsonValue.Arr(section.plays.sorted().map { num(it) }),
         ),
     )
 
@@ -98,6 +125,19 @@ object OrbitStore {
                                 // what has to hold at the next bump too.
                                 *(if (it.offset != 0L) arrayOf("offset" to num(it.offset)) else emptyArray()),
                                 *(if (it.gated) arrayOf("length" to num(it.length)) else emptyArray()),
+                                *(if (it.chance != OrbitHit.ALWAYS) arrayOf("chance" to num(it.chance)) else emptyArray()),
+                                // The pair together or not at all: `onLap`
+                                // alone says nothing, and reading a stray
+                                // one back would refuse the file over a
+                                // field that never meant anything.
+                                *(
+                                    if (it.everyLaps != OrbitHit.EVERY_LAP) {
+                                        arrayOf("everyLaps" to num(it.everyLaps), "onLap" to num(it.onLap))
+                                    } else {
+                                        emptyArray()
+                                    }
+                                    ),
+                                *(if (it.ratcheted) arrayOf("ratchet" to num(it.ratchet)) else emptyArray()),
                             ),
                         )
                     },
@@ -117,6 +157,26 @@ object OrbitStore {
             lapSteps = obj["lapSteps"]?.int() ?: OrbitSet.DEFAULT_LAP_STEPS,
             // Optional since version 3 gained it; a file without it is straight.
             swing = obj["swing"]?.int() ?: OrbitSet.STRAIGHT_SWING,
+            // Optional since version 6 gained it. A file without one has
+            // nothing to roll, so any seed is the right seed for it.
+            seed = obj["seed"]?.int() ?: OrbitSet.DEFAULT_SEED,
+            // Absent before version 7, and absent since wherever a set has
+            // no arrangement. Either way every ring plays, forever.
+            sections = obj["sections"]?.arr().orEmpty().map { sectionFrom(it) },
+        )
+    }
+
+    private fun sectionFrom(value: JsonValue): OrbitSection {
+        val o = value.obj()
+        return OrbitSection(
+            name = o["name"]?.str() ?: throw IllegalStateException("section has no name"),
+            bars = o["bars"]?.int() ?: throw IllegalStateException("section has no bars"),
+            // Required, like the two above it: the writer always emits
+            // `plays`, and an EMPTY one is the deliberate spelling of a
+            // break. Defaulting a missing field to empty made a malformed
+            // section indistinguishable from a silence the player chose.
+            plays = (o["plays"] ?: throw IllegalStateException("section has no plays"))
+                .arr().map { it.int() }.toSet(),
         )
     }
 
@@ -172,6 +232,16 @@ object OrbitStore {
             // Absent before version 5, and absent since wherever a hit
             // plays out. Either way it lasts as long as its sample.
             length = h["length"]?.long() ?: OrbitHit.WHOLE_SAMPLE,
+            // Absent before version 6, and absent since wherever a hit is
+            // certain and strikes once. Either way it sounds every lap.
+            chance = h["chance"]?.int() ?: OrbitHit.ALWAYS,
+            everyLaps = h["everyLaps"]?.int() ?: OrbitHit.EVERY_LAP,
+            // The pair together on the way in as on the way out. A stray
+            // `onLap` with no `everyLaps` says nothing - the writer never
+            // makes one - and reading it anyway refused the whole file by
+            // name over a field that could not have meant anything.
+            onLap = (if (h["everyLaps"] != null) h["onLap"]?.int() else null) ?: 0,
+            ratchet = h["ratchet"]?.int() ?: OrbitHit.ONCE,
         )
     }
 }

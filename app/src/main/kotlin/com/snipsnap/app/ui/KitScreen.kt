@@ -58,7 +58,9 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -75,15 +77,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The KIT screen: bank A as the 4×4 grid, physically laid out — A13–A16
- * across the top, A01 bottom-left, exactly the MPC's own geometry (and
- * the geometry `Copy.KONAMI_PADS` assumes).
- */
-private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
-
-/**
- * [GRID_ROWS] moved onto one bank: bank 0 is the grid as written, bank 1
- * the same sixteen positions starting at slot 17.
+ * The KIT screen's grid: one bank as the 4×4, physically laid out — A13–A16
+ * across the top, A01 bottom-left, exactly the MPC's own geometry. Bank 0
+ * is the grid as written, bank 1 the same sixteen positions starting at
+ * slot 17. The rows are PadGrid's [windowRows], the one definition every
+ * portrait grid in the app draws from, so KIT cannot drift from PLAY,
+ * GROOVE or CATCH.
  *
  * Until the September UAT's finding 11 this screen only ever drew bank A,
  * which meant EVIL TWINS' sixteen pads on slots 17..32 were playable on
@@ -91,10 +90,7 @@ private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
  * renamed or cleared - ever. PAD SHEET opens from this grid and nowhere
  * else, so a pad this grid could not draw was a pad with no door.
  */
-private fun gridRows(bank: Int): List<IntRange> {
-    val base = PadBanks.slots(bank).first - 1
-    return GRID_ROWS.map { (it.first + base)..(it.last + base) }
-}
+private fun gridRows(bank: Int): List<IntRange> = windowRows(bank)
 
 @Composable
 fun KitScreen(
@@ -106,8 +102,16 @@ fun KitScreen(
     onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
     onInKey: () -> Unit,
     onTwins: () -> Unit,
-    /** BANK B tapped while nothing is on it: say what fills it (`Copy.BANK_B_EMPTY`) rather than flip to blanks. */
-    onBankEmpty: () -> Unit = {},
+    /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
+    onBankEmpty: (Int) -> Unit = {},
+    /**
+     * A one-shot ask to open on this bank (0-based) — a chop landed ONTO
+     * bank B wants B on screen, not A. Consumed through
+     * [onBankRequestConsumed] the moment it is honoured, so a later flip
+     * by hand is never fought, and a stale ask never re-fires.
+     */
+    bankRequest: Int? = null,
+    onBankRequestConsumed: () -> Unit = {},
     /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off (`App.kt`'s
      * `pendingBreedWith`) and sends the user to the shelf to tap kit B —
@@ -122,21 +126,17 @@ fun KitScreen(
     onShare: () -> Unit,
     /** SPLIT: a pad taken apart into sines, transient and air, on three faders. */
     onSplit: () -> Unit,
+    /** DUST ALL: every pad under the kit's own tape's hiss and room (`docs/DUST.md`), the per-pad chip at one amount. */
+    onDustAll: () -> Unit = {},
     onEmptyLongPress: (Int) -> Unit = {},
     onEmptyTapHint: (Int) -> Unit = {},
+    /** NO_TAPE_IN_DECK's own route: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateKits: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .lcdPanel(scheme)
-                .padding(14.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("NO TAPE IN THE DECK. OPEN ONE ON THE SHELF.", TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-        }
+        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
         return
     }
 
@@ -232,13 +232,20 @@ fun KitScreen(
     /** Which bank the grid is drawing, 0-based. Bank A until asked otherwise. */
     var bank by remember(entry.dir) { mutableIntStateOf(0) }
     val bankCount = PadBanks.banksUsed(kit.pads.map { it.slot })
-    // A kit can lose its upper bank while this screen is open - clearing the
-    // twins, or an UNDO. Fall back rather than draw sixteen empty pads the
-    // user cannot fill from here.
-    LaunchedEffect(bankCount) {
-        if (bank >= bankCount) bank = 0
+    // Two banks are always reachable, filled or not: an empty B is a page
+    // the user fills the same three ways A is filled (hold a pad to
+    // capture, SNIPS → PAD, a chop landed ONTO it) plus the twins. A kit
+    // that loses a bank above B (an UNDO past a third bank) falls back.
+    val reachable = maxOf(bankCount, 2)
+    LaunchedEffect(reachable) {
+        if (bank >= reachable) bank = 0
     }
-    val showing = bank.coerceAtMost(bankCount - 1)
+    LaunchedEffect(bankRequest) {
+        val asked = bankRequest ?: return@LaunchedEffect
+        bank = asked.coerceIn(0, reachable - 1)
+        onBankRequestConsumed()
+    }
+    val showing = bank.coerceAtMost(reachable - 1)
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -253,8 +260,8 @@ fun KitScreen(
             TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
             val keyed = kit.key?.let { "${KeyPicker.label(it)}  " } ?: ""
-            val banks = if (bankCount > 1) "${PadBanks.letter(showing)}  " else ""
-            TapeText("$keyed$tempo$banks${kit.pads.size} PADS", TapeType.lcdSmall, scheme.amber.tape)
+            val banks = if (bankCount > 1 || showing > 0) "${PadBanks.letter(showing)}  " else ""
+            TapeText("$keyed$tempo$banks${Copy.countOf(kit.pads.size, "PAD", "PADS")}", TapeType.lcdSmall, scheme.amber.tape)
         }
 
         if (kit.pads.isEmpty()) {
@@ -272,14 +279,14 @@ fun KitScreen(
         // The door onto bank B (September UAT, finding 11). Always drawn,
         // even with only bank A filled: a second page that only appears
         // once something is on it is a page nobody finds, and the BREED /
-        // bank B round found exactly that. An empty bank reads EMPTY and
-        // its tap says what fills it (REMIX BANK B ▸ deals the twins)
-        // rather than flipping to sixteen blanks the grid cannot fill.
+        // bank B round found exactly that. An empty bank reads EMPTY, and
+        // flips like a full one — its blanks take a capture, a SNIPS → PAD
+        // landing or a chop, the same as A's — with a toast saying so.
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            for (b in 0 until maxOf(bankCount, 2)) {
+            for (b in 0 until reachable) {
                 val here = b == showing
                 val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
                 // Empty by its count, not by `bankCount`: a sparse kit with
@@ -293,7 +300,12 @@ fun KitScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
-                        .tapeClick(label = null, onClick = { if (empty) onBankEmpty() else bank = b }),
+                        // Same text the TapeText below shows — it already
+                        // reads as a state ("BANK B · EMPTY"/"BANK A · 12").
+                        .tapeClick(label = "BANK ${PadBanks.letter(b)} · ${if (empty) "EMPTY" else filled.toString()}", onClick = {
+                            bank = b
+                            if (empty && !here) onBankEmpty(b)
+                        }),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText(
@@ -370,14 +382,32 @@ fun KitScreen(
                 // followups) — matches TakesBinScreen.kt's own renamed
                 // header; the destination screen and its Kotlin symbol are
                 // unchanged, only this entry-point label.
-                ActionButton("VERSIONS + BIN ▸ ROLL BACK OR RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onTakesBin)
-                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a second press rerolls.
-                val twinned = kit.pads.any { it.slot > 16 }
+                //
+                // Weighted 3:2:1 against REMIX BANK B and KEY ▸ below
+                // (name-and-find followups, truncation pass): three equal
+                // weights on labels of 37/21/5 characters rendered as
+                // "VERSIONS + BIN …" on a device — the worst truncation in
+                // the app. "ROLL BACK OR RESTORE" also dropped to
+                // "RESTORE": RESTORE alone says the same thing the longer
+                // phrase did, and no truncation-proof width exists for 37
+                // characters in a one-third share of any phone this wide.
+                ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a
+                // second press rerolls. REROLL means twins are there — not
+                // merely something on B, which since bank B round 2 can be
+                // the user's own pads (and then the press is refused).
+                //
+                // No ▸: `onTwins` (`App.kt`'s `evilTwins`) fills bank B and
+                // toasts from right here — it never navigates and never
+                // opens a panel, so the "opens something" glyph doesn't
+                // apply (▸ rule, truncation pass). "·" replaces it as the
+                // same plain separator "KEY · <label>" already uses below.
+                val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
                 ActionButton(
-                    if (twinned) "REMIX BANK B ▸ REROLL" else "REMIX BANK B ▸",
+                    if (twinned) "REMIX BANK B · REROLL" else "REMIX BANK B",
                     scheme,
                     enabled = !busy && kit.pads.any { it.slot in 1..16 },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(2f),
                     onClick = onTwins,
                 )
                 // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
@@ -387,11 +417,16 @@ fun KitScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick(label = null) { panelKind = if (keyOpen) null else KEY_PANEL } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped: a screen reader is told this control is
+                        // temporarily unavailable instead of it silently
+                        // vanishing from the tree (accessibility audit
+                        // finding 12 — see ActionButton in PadSheetScreen.kt).
+                        .tapeClick(label = if (keyOpen) "CLOSE KEY" else "OPEN KEY", enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("KEY ▸", TapeType.pixel, if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText("KEY ▸", TapeType.pixel, if (busy) scheme.ink3.tape else if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -407,43 +442,81 @@ fun KitScreen(
                     onClick = onSplit,
                 )
             }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // DUST ALL: the per-pad DUST chip on every pad at one amount,
+                // from the tape each pad came off (else the kit's), so the
+                // kit shares one room and one floor (docs/DUST.md). Only
+                // offered when the kit came off a tape at all.
+                ActionButton(
+                    "DUST ALL · THE TAPE'S OWN HISS AND ROOM",
+                    scheme,
+                    enabled = !busy && DustPrints.kitTape(kit) != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onDustAll,
+                )
+            }
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 // BREED: this kit's own recipes crossed with a second kit's
                 // into a new child, kept beside this one — the shelf-level
                 // "pick a kit" hand-off (App.kt's pendingBreedWith) runs
                 // next, the same shape SNIPS → PAD already uses to pick a
-                // kit for a snip. The label counts the pads with a recipe
-                // to cross (`Breed.recipePads`) and the line under it says
-                // what comes out, so "0 PADS CROSSED" is never the first
-                // word of the explanation. Still enabled at zero: the other
-                // kit's racks can cross over this one's audio.
+                // kit for a snip. The button always opens that picker, so
+                // its label is constant; the line under it counts the pads
+                // with a recipe to cross (`Breed.recipePads`), so "0 PADS
+                // CROSSED" is never the first word of the explanation.
+                // Still enabled at zero: the other kit's racks can cross
+                // over this one's audio.
                 ActionButton(
-                    Copy.breedButton(Breed.recipePads(kit).size, kit.pads.size),
+                    Copy.BREED_BUTTON,
                     scheme,
                     enabled = !busy && kit.pads.isNotEmpty() && canBreed,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onBreed,
                 )
-                TapeText(Copy.BREED_SUBTITLE, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth(), maxLines = 1)
+                TapeText(
+                    Copy.breedSubtitle(Breed.recipePads(kit).size, kit.pads.size),
+                    TapeType.pixelSmall,
+                    scheme.ink3.tape,
+                    Modifier.fillMaxWidth(),
+                    maxLines = 1,
+                )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (kind in TextureKits.KINDS) {
                     val open = panelKind == kind
+                    val doorEnabled = !busy && kit.pads.isNotEmpty()
                     Box(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (open) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            .let { if (!busy && kit.pads.isNotEmpty()) it.tapeClick(label = null) { panelKind = if (open) null else kind } else it }
+                            // Always clickable, `doorEnabled` forwarded
+                            // rather than dropped: a screen reader is told
+                            // this door is temporarily unavailable instead
+                            // of it silently vanishing from the tree
+                            // (accessibility audit finding 12).
+                            .tapeClick(label = if (open) "CLOSE $kind" else "OPEN $kind", enabled = doorEnabled) { panelKind = if (open) null else kind }
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
+                        // TEXTURES dropped from SCULPT's own subtitle
+                        // (truncation pass): equal 26/23-character weights
+                        // on this even split were marginal at 411dp and
+                        // truncated at 360dp, and "TEXTURES" was the padded
+                        // half — GRANULAR already names the technique.
+                        // STRETCH's two words are untouched: SLOW and
+                        // FREEZE are its own two modes (`modesFor`), not
+                        // padding.
                         val doorSubtitle = when (kind) {
-                            "SCULPT" -> "GRANULAR TEXTURES"
+                            "SCULPT" -> "GRANULAR"
                             "STRETCH" -> "SLOW & FREEZE"
                             else -> ""
                         }
-                        TapeText("$kind ▸ $doorSubtitle", TapeType.pixel, if (open) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(
+                            "$kind ▸ $doorSubtitle",
+                            TapeType.pixel,
+                            if (!doorEnabled) scheme.ink3.tape else if (open) scheme.titleInk.tape else scheme.ink2.tape,
+                        )
                     }
                 }
             }
@@ -530,11 +603,15 @@ private fun KeyPanel(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onSetKey(KeyPicker.key(r, scaleLabel)) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped — see ActionButton's own note in
+                            // PadSheetScreen.kt (accessibility audit finding
+                            // 12).
+                            .tapeClick(label = KeyPicker.ROOTS[r], enabled = !busy) { onSetKey(KeyPicker.key(r, scaleLabel)) }
                             .padding(horizontal = 2.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
             }
@@ -547,11 +624,18 @@ private fun KeyPanel(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick(label = null) { onSetKey(KeyPicker.key(root, s)) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = s, enabled = !busy) { onSetKey(KeyPicker.key(root, s)) }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(s, TapeType.pixelSmall, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 2)
+                    TapeText(
+                        s,
+                        TapeType.pixelSmall,
+                        if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                        maxLines = 2,
+                    )
                 }
             }
         }
@@ -562,7 +646,7 @@ private fun KeyPanel(
         }
 
         if (readouts.isEmpty()) {
-            TapeText("NO TONAL PADS. DRUMS LAND AS CAPTURED.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         } else {
             for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
         }
@@ -597,9 +681,9 @@ private fun TexturePanel(
         TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            ActionButton("◄", scheme, enabled = !busy, onClick = { onSourceStep(-1) })
+            ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
             TapeText("SOURCE  $sourceLabel", TapeType.pixel, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
-            ActionButton("►", scheme, enabled = !busy, onClick = { onSourceStep(1) })
+            ActionButton("►", scheme, enabled = !busy, accessibilityLabel = "NEXT SOURCE", onClick = { onSourceStep(1) })
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -610,11 +694,13 @@ private fun TexturePanel(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick(label = null) { onMode(m) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = m, enabled = !busy) { onMode(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
         }

@@ -40,7 +40,7 @@ object GrooveVariations {
         // division here used to truncate 76.8 to 76 while the ring's
         // frame maths rounded it to 77.
         val push = Mpc3Clip.swingPush(percent)
-        val limit = clip.bars * Mpc3Clip.PULSES_PER_BAR
+        val limit = clip.lengthPulses
         val tight = quantize(clip, s16, suffix = "Swing $percent")
         return tight.copy(
             notes = tight.notes.map { n ->
@@ -74,8 +74,8 @@ object GrooveVariations {
         // Made explicit rather than assumed: every caller passes
         // PULSES_PER_16TH, and `step * grid` is only provably in range when
         // the grid divides a bar evenly.
-        require(Mpc3Clip.PULSES_PER_BAR % grid == 0L) { "grid must divide a bar evenly: $grid" }
-        val stepsInClip = clip.bars * Mpc3Clip.PULSES_PER_BAR / grid
+        require(clip.pulsesPerBar % grid == 0L) { "grid must divide a bar evenly: $grid" }
+        val stepsInClip = clip.lengthPulses / grid
         return clip.copy(
             name = variantName(clip.name, suffix),
             notes = GrooveEdit.dedupeLouder(
@@ -90,10 +90,11 @@ object GrooveVariations {
     /** Times and lengths doubled — the same feel at half speed. */
     fun halfTime(clip: Mpc3Clip): Mpc3Clip {
         val bars = (clip.bars * 2).coerceAtMost(64)
-        val limit = bars * Mpc3Clip.PULSES_PER_BAR
+        val limit = bars * clip.pulsesPerBar
         return Mpc3Clip(
             name = variantName(clip.name, "Half"),
             bars = bars,
+            pulsesPerBar = clip.pulsesPerBar,
             notes = clip.notes.mapNotNull { n ->
                 val time = n.timePulses * 2
                 if (time >= limit) null

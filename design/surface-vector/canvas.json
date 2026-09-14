@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",   "x": 0,   "y": 0, "w": 390, "h": 970, "title": "Two blends, one touch" },
+    { "file": "Signal.dc.html", "x": 480, "y": 0, "w": 390, "h": 760, "title": "How it actually mixes" }
+  ],
+  "annotations": [
+    { "id": "n-main", "x": 0, "y": -190, "w": 390,
+      "text": "TWO BLENDS, ONE TOUCH\n\nThe outer square's 4 corners are swappable FX-preset slots, blended bilinearly against the puck — the exact math MORPH already runs today. The inner triangle's 3 vertices are swappable sample slots, blended barycentrically against the SAME puck position, entirely independently. No dead zones: both blends are always live, everywhere on the pad." },
+    { "id": "n-signal", "x": 480, "y": -190, "w": 390,
+      "text": "HOW IT ACTUALLY MIXES\n\nThe blend weights are cheap - that formula already exists in TouchSurface.morphWeights. The real, new work is the engine reading and weighting several live samples every sample, before summing them into the one signal the FX chain (the OTHER blend) then colors. Today's SurfaceEngine holds exactly one sample (current_); this is the actual lift." }
+  ],
+  "launch": { "view": "canvas" }
+}

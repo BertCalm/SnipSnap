@@ -201,4 +201,57 @@ class BouncerTest {
             "second close must not truncate the file to a 0-sample WAV",
         )
     }
+
+    // ---- intervalsWithin: what a bounce is allowed to be ----
+
+    @Test
+    fun `a cycle that fits is bounced whole`() {
+        // 2 and 3 blocks meet every 6 intervals; at 200 BPM and one bar each
+        // that is 7.2 seconds, well inside any sane ceiling.
+        val s = session(2, 3, 1, 1, 1, 1)
+        assertEquals(6, Arrangement.cycleIntervals(s))
+        assertEquals(6, Bouncer.intervalsWithin(s, maxSeconds = 180f))
+    }
+
+    @Test
+    fun `a cycle too long for the ceiling is cut to whole intervals`() {
+        val s = session(5, 7, 8, 3, 1, 1)
+        val cycle = Arrangement.cycleIntervals(s)
+        assertEquals(840, cycle, "the KDoc's own example, so this test is about the case it describes")
+
+        val intervalSeconds = s.intervalFrames.toDouble() / s.sampleRate
+        val n = Bouncer.intervalsWithin(s, maxSeconds = 180f)
+
+        assertTrue(n < cycle, "840 intervals is far past three minutes")
+        assertTrue(n * intervalSeconds <= 180.0, "$n intervals is ${n * intervalSeconds}s, over the ceiling")
+        assertTrue((n + 1) * intervalSeconds > 180.0, "one more interval should not have fitted")
+    }
+
+    @Test
+    fun `never fewer than one interval, even under a ceiling shorter than one`() {
+        val s = session(1, 1, 1, 1, 1, 1)
+        val intervalSeconds = s.intervalFrames.toDouble() / s.sampleRate
+        assertTrue(intervalSeconds > 0.1, "this test needs an interval longer than the ceiling it passes")
+
+        // A bounce of nothing is not an answer: the caller gets one whole
+        // interval and the snip store's own cap decides the rest.
+        assertEquals(1, Bouncer.intervalsWithin(s, maxSeconds = 0.1f))
+    }
+
+    @Test
+    fun `a ceiling must be a real length`() {
+        assertFailsWith<IllegalArgumentException> { Bouncer.intervalsWithin(session(1, 1, 1, 1, 1, 1), 0f) }
+    }
+
+    @Test
+    fun `what intervalsWithin allows is what render will actually take`() {
+        val s = session(2, 3, 1, 1, 1, 1)
+        val n = Bouncer.intervalsWithin(s, maxSeconds = 180f)
+
+        val rendered = Bouncer.render(s, sourceFor(s, 0.5f), n)
+
+        // The bounce is exactly the intervals it said, to the frame — the
+        // number the screen prints as bars is this same n.
+        assertEquals(s.intervalFrames * n, rendered.frameCount)
+    }
 }

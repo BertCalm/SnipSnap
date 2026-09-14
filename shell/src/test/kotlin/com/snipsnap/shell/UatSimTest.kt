@@ -117,7 +117,7 @@ class UatSimTest {
         val root = tmp("j1")
         var taps = 0
 
-        step(++taps, "App opens on THE SHELF. Kits on disk: ${KitStore.list(root).size}")
+        step(++taps, "App opens on KITS. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
         note("the only primary button reads: NEW KIT ▸ STARTERS")
 
@@ -189,7 +189,7 @@ class UatSimTest {
         val root = tmp("j2")
         var taps = 0
 
-        step(++taps, "Shelf: two primary buttons — LISTEN | LISTEN INSIDE ▸ OTHER APPS' AUDIO")
+        step(++taps, "Shelf: two primary buttons, stacked — LISTEN · MIC / APP AUDIO ▸ RECORD AN APP")
         note("LISTEN raises RECORD_AUDIO (+POST_NOTIFICATIONS on 33+). One system dialog.")
         note("armed toast: \"${Copy.SESSION_ARMED}\"")
         note("armed UI = level meter + mm:ss + STOP | SNIP ▸ UP TO 60s")
@@ -357,7 +357,11 @@ class UatSimTest {
         PadSheet.ALL_SEGMENTS.forEach { seg ->
             val t = runCatching { PadSheet.treatmentFor(seg) }.getOrNull()
             if (t == null) {
-                note("%-8s → not a treatment (%s)".format(seg, if (seg == PadSheet.SMEAR) "SMEAR is special-cased by the screen" else "the OFF chip"))
+                note("%-8s → not a treatment (%s)".format(seg, when (seg) {
+                    PadSheet.SMEAR -> "SMEAR is special-cased by the screen"
+                    PadSheet.DUST -> "DUST is special-cased by the screen: it needs a tape"
+                    else -> "the OFF chip"
+                }))
                 return@forEach
             }
             val t0 = System.currentTimeMillis()
@@ -547,7 +551,15 @@ class UatSimTest {
     private fun j10ChromeAndCopy() {
         say("")
         say("── J10: CHROME · the frame the whole app is read through ──")
-        val tabs = listOf("KITS", "KIT", "TAPE", "CHOP", "PLAY", "GROOVE", "SYNTH", "SURFACE", "EXPORT", "SETUP", "HELP")
+        // Twelve tabs, in `Chrome.kt`'s own `MENU_ITEMS` order — this list
+        // was missing ORBIT (September UAT never added it here after it
+        // shipped) and had EXPORT last, both stale: `MENU_ITEMS` reordered
+        // EXPORT up beside TAPE/CHOP/KIT so step four of the app's own
+        // stated loop ("TAPE ▸ CHOP ▸ KIT ▸ EXPORT") lands inside the
+        // visible run instead of past the row's fold (truncation pass), and
+        // KIT then moved after CHOP so the four flow tabs read in exactly
+        // that order rather than KIT ▸ TAPE ▸ CHOP ▸ EXPORT.
+        val tabs = listOf("KITS", "TAPE", "CHOP", "KIT", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
         val width = tabs.sumOf { it.length * perChar + 8 }
@@ -570,16 +582,15 @@ class UatSimTest {
                 "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
                 "while there are tabs that way (finding 10, fixed)",
         )
-        note("status bar cells: WHERE YOU ARE | KITS: n | a rotating quip (FULL personality only)")
+        note("status bar cells: WHERE YOU ARE | KITS: n | a busy line, or the open kit's name")
         note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
-
-        say("")
-        say("  personality gates:")
-        Personality.entries.forEach { p ->
-            note("%-5s toasts=%-5s quips=%-5s deckSounds(idle)=%s".format(
-                p, Delight.toastsEnabled(p), Delight.quipsEnabled(p), Delight.deckSoundsEnabled(p, false)))
-        }
-        note("at OFF the toast bubble is still composed for TalkBack but drawn at alpha 0 — sighted users lose every confirmation")
+        // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
+        // toasts/quips/deckSounds) are gone — deleted rather than fixed,
+        // since once every toast states fact there is nothing left for a
+        // tone slider to gate, and the gate had a real bug: OFF silenced
+        // every toast, including failures like DUB FAILED. See
+        // `Personality.kt`'s own KDoc.
+        note("the toast bubble is unconditionally composed and drawn — no personality gate to silence a failure toast")
 
         say("")
         say("  the ${SchemeId.entries.size} schemes a user can pick in SETUP: ${SchemeId.entries.joinToString(", ")}")

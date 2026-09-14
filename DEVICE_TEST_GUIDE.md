@@ -1,11 +1,12 @@
-# SnipSnap device-test guide — the nine-screen wave
+# SnipSnap device-test guide
 
-Everything in this build passed compile, 1002 JVM tests, and code review — but
-zero seconds on real hardware. This guide is keyed to exactly what desk review
+Everything in this build passed compile, 1971 JVM tests, and code review. The
+`:app` module has NO unit tests at all, so every UI change in it is verified by
+compilation, diff review and screenshots only — never by a test. This guide is keyed to exactly what desk review
 could NOT verify. Test in this order; each item names what "wrong" looks like.
 
 ## First five minutes
-1. **FRESH TAPE → any starter → tap pads.** Do hits feel instant? SoundPool
+1. **NEW KIT ▸ STARTERS → any starter → tap pads.** Do hits feel instant? SoundPool
    latency varies wildly per device; if taps feel spongy everywhere, say so —
    that's an engine-swap conversation, not a bug fix.
 2. **KIT → tap the closed hat, then the open hat, then closed again.**
@@ -56,31 +57,72 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 19. EDIT STEPS: toggle cells (each auditions), CLEAR BAR, DONE, re-enter —
     your edits must persist. Kill the app, reopen: still there.
 20. MIDI ▸ → check Files app: Android/data/com.snipsnap.app/files/exports/.
+21. GROOVE's own BOUNCE (TRANSPORT, not LOOP's): tap it on a stopped
+    loop — it should stay tappable, toasting BOUNCE PRINTS THE LOOP AS
+    IT PLAYS. PRESS ► PLAY FIRST. rather than just dim. PLAY, then
+    BOUNCE: the label reads WAITING… then BOUNCING…, and the toast on
+    landing names the seconds bounced to SNIPS. Mid-bounce, switch PROG
+    to any other one: it should cancel with GROOVE CHANGED. BOUNCE
+    CANCELLED. rather than splice two different takes together. (SWING
+    only reaches PROG B and FEEL only reaches A/C/D — nudging the one
+    that doesn't touch the program you're on leaves the clip alone and
+    won't cancel; that is correct, not a bug.)
 
 ## PLAY
-21. Mash pads fast with several fingers. Watch VOICES n/16 — it should track
+22. Mash pads fast with several fingers. Watch VOICES n/16 — it should track
     reality. Choke test again here at speed.
-22. Top-of-pad taps should sound SOFTER (darker) than bottom taps.
-23. ⟳ → landscape 8×2. **Then exit. Then leave PLAY. The app must return to
+23. Top-of-pad taps should sound SOFTER (darker) than bottom taps.
+24. ⟳ → landscape 8×2. **Then exit. Then leave PLAY. The app must return to
     portrait and STAY portrait.** (This was the wave's one Critical — verify
     the fix on hardware.) Also: back-gesture inside fullscreen should exit
     fullscreen only.
-24. Background the app mid-mash: all sound stops.
+25. Background the app mid-mash: all sound stops.
 
 ## EXPORT
-25. DUB a kit in a couple of formats; DONE shows the path; find the files in
+26. DUB a kit in a couple of formats; DONE shows the path; find the files in
     the Files app. Switch tabs mid-dub, come back: DONE state + toast must
     have survived.
 
 ## TAKES + BIN
-26. Save-ish actions (treatments, edits) accumulate takes; RESTORE an old one
+27. Save-ish actions (treatments, edits) accumulate takes; RESTORE an old one
     and confirm the kit audibly reverts. EJECT a pad, find it in the bin,
     BACK restores it. EMPTY THE BIN NOW needs a second tap (armed confirm).
 
+## LOOP
+28. From SNIPS, → LOOP on a few snips of DIFFERENT lengths — the toast names
+    the track and how many blocks it became. The shelf then shows LOOP ▸ n OF
+    6 TRACKS; open it. Listen for the tracks pulling apart and coming back
+    together rather than repeating in lockstep; that only happens when the
+    block counts differ. Tap a track name to mute it, HOLD a block to clear
+    that track, then send a snip again: it fills the leftmost empty track, so
+    with one track cleared that is the one it lands on.
+29. BOUNCE (bottom right) says how many bars it will render — that is the
+    grid's full cycle when the cycle is short enough to be a snip, and a
+    stated part of it when it isn't. Press it: the button reads BOUNCING…
+    while it works, then the toast names the bars and the result is waiting in
+    SNIPS. Mute a track first and confirm the bounce is missing it — what is
+    heard is what is rendered. Then → LOOP the bounce back onto a free track:
+    the grid can eat what it makes.
+30. The bounce outlives the screen, so check both halves of that. Press BOUNCE,
+    press Back immediately, and open SNIPS while it is still rendering: the new
+    snip has to appear in the list on its own when the render lands, with no
+    leaving and re-entering. Then reopen LOOP mid-render — the button reads
+    BOUNCING… there too, and pressing it says one is already running rather
+    than starting a second.
+
 ## Known blind spots (listen for these specifically)
 - One-shot samples LONGER than ~6s stop responding to chokes after 6s (ledgered).
-- LOOP screen still launches via adb only: `adb shell am start -n com.snipsnap.app/.LoopActivity`.
-- SYNTH and HELP are stubs; capture doesn't exist yet.
+- LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears on
+  the shelf), but it is still the least walked in the app: a TEMPO −/+ stepper
+  and a block tap (WHAT IS THIS BLOCK) shipped since, both worth a device pass.
+- **Screen readers are the biggest blind spot.** 105 controls now carry
+  accessibility labels (up from 14), and a disabled control correctly reports as
+  disabled rather than vanishing. But an emulator tree dump shows those labels on
+  nodes marked non-focusable, beside the clickable ones — Compose may merge them
+  at runtime, or may not, and `uiautomator` cannot tell the two apart. **Turn
+  TalkBack on and swipe through a screen.** If it names each control, this is
+  solved; if it says nothing useful, it is not. Nothing short of listening
+  answers it.
 
 Report anything that feels wrong even if you can't name why — "the tape drag
 feels floaty" is a fully actionable bug report here.

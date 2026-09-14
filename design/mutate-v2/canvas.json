@@ -1,0 +1,22 @@
+{
+  "artboards": [
+    { "file": "AsBuilt.dc.html", "x": 0,    "y": 0, "w": 390, "h": 844, "title": "As built today" },
+    { "file": "Main.dc.html",    "x": 480,  "y": 0, "w": 390, "h": 844, "title": "Proposal · at rest" },
+    { "file": "Heard.dc.html",   "x": 960,  "y": 0, "w": 390, "h": 844, "title": "Proposal · heard" },
+    { "file": "Drift.dc.html",   "x": 1440, "y": 0, "w": 390, "h": 844, "title": "Proposal · the way in" },
+    { "file": "Moves.dc.html",   "x": 1920, "y": 0, "w": 390, "h": 844, "title": "The six moves" }
+  ],
+  "annotations": [
+    { "id": "n-asbuilt", "x": 0, "y": -150, "w": 390,
+      "text": "AS BUILT\n\nNine rows of chips, one knob whose meaning changes silently, and MUTATE.\n\nNothing on this card makes a sound. You pick a word you don't know and a tag you can't hear, then commit a file write to find out." },
+    { "id": "n-main", "x": 480, "y": -150, "w": 390,
+      "text": "PROPOSAL · AT REST\n\nThe pairing is the hero: both parents named, drawn, and audible before anything happens.\n\nThe partner picker collapses to one line — that's the room the waveforms live in. The move carries a result-line; the knob carries its meaning." },
+    { "id": "n-heard", "x": 960, "y": -150, "w": 390,
+      "text": "PROPOSAL · HEARD\n\nHEAR renders the result and plays it — no write. The third waveform is what you'd be keeping.\n\nKEEP IT only lights once you've heard it. The destructive step is now the last one, not the first." },
+    { "id": "n-drift", "x": 1440, "y": -150, "w": 390,
+      "text": "PROPOSAL · THE WAY IN\n\nOpened on a pad with no partner chosen. DRIFT is the whole card: the crate picks, you say how far.\n\nChoosing a partner by hand is still there, folded under one line." },
+    { "id": "n-moves", "x": 1920, "y": -150, "w": 390,
+      "text": "THE SIX MOVES\n\nThe copy, as a sheet. Each line says what you get, not what the DSP does — and names the knob in the same breath.\n\nThe words themselves don't change: they're in the CLI, the recipe and the lineage." }
+  ],
+  "launch": { "view": "canvas" }
+}

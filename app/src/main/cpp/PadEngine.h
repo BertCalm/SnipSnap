@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "PrintBuffer.h"
 #include "SpscRing.h"
 
 namespace snipsnap {
@@ -137,6 +138,29 @@ public:
     /** UI thread: the ids of voices that ended since the last drain. */
     size_t drainEnded(int32_t* out, size_t max);
 
+    /**
+     * The resample tap, the one the surface has had since it was built
+     * (see PrintBuffer for the ownership rules). Two channels, not the
+     * surface's one: the pads mix every voice under its own left and
+     * right gain, so a mono print would be a record of a performance
+     * nobody heard.
+     *
+     * This is what a BOUNCE of the pads is made of. It prints the bus as
+     * it plays rather than rendering the kit again offline, which means
+     * it cannot disagree with what came out of the speaker - the clamp,
+     * the voice stealing, the fades are all already in it - and it reuses
+     * the state machine the surface's print has been tested on since the
+     * first round.
+     */
+    bool armPrint(size_t maxFrames) { return print_.arm(maxFrames, 2); }
+    void requestStopPrint() { print_.requestStop(); }
+    PrintBuffer::State printState() const { return print_.state(); }
+    size_t printFrames() const { return print_.framesWritten(); }
+    /** The length of [printData] - twice [printFrames], the print being stereo. */
+    size_t printSamples() const { return print_.samplesWritten(); }
+    const float* printData() const { return print_.data(); }
+    bool clearPrint() { return print_.clear(); }
+
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream* stream, void* audioData, int32_t numFrames) override;
     void onErrorAfterClose(oboe::AudioStream* stream, oboe::Result error) override;
 
@@ -185,6 +209,8 @@ private:
 
     SpscRing<PadCommand, 256> commands_;
     SpscRing<int32_t, 256> ended_;
+
+    PrintBuffer print_;
 };
 
 }  // namespace snipsnap

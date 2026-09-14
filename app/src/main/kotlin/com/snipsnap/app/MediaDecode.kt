@@ -2,6 +2,7 @@ package com.snipsnap.app
 
 import android.content.Context
 import android.media.AudioFormat
+import android.util.Log
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
@@ -39,6 +40,8 @@ import java.nio.ByteBuffer
  * shows them as they are.
  */
 object MediaDecode {
+
+    private const val TAG = "MediaDecode"
 
     /**
      * The most WAV the reader is handed, in bytes: 96 MB is three minutes
@@ -101,7 +104,8 @@ object MediaDecode {
             try {
                 extractor.setDataSource(context, uri, null)
             } catch (e: Exception) {
-                throw IllegalArgumentException("the shared file could not be opened: ${e.message ?: e.javaClass.simpleName}", e)
+                Log.e(TAG, "setDataSource: failed", e)
+                throw IllegalArgumentException("the shared file could not be opened: ${e.message ?: "the codec refused it"}", e)
             }
             var track = -1
             var format: MediaFormat? = null

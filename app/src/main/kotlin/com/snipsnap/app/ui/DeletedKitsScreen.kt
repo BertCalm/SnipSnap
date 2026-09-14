@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -99,7 +100,8 @@ fun DeletedKitsScreen(
     }
 
     fun failure(action: String, e: Exception) {
-        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+        Log.e("DeletedKitsScreen", "$action: failed", e)
+        onToast(Copy.actionFailed(action))
     }
 
     fun doRestore(target: KitShelf.BinnedKit) {
@@ -179,7 +181,7 @@ fun DeletedKitsScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), enabled = !busy, onClick = onBack)
+            HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), enabled = !busy, onClick = onBack)
             Spacer(Modifier.weight(1f))
             TapeText("DELETED KITS", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
@@ -198,7 +200,7 @@ fun DeletedKitsScreen(
                 // Plain, not the tape-metaphor voice — SNIPS's own locked
                 // tone (`SnipsScreen.kt`'s "NO SNIPS YET"), not the tape
                 // shelf's usual quips.
-                TapeText("NOTHING DELETED.", TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.NOTHING_DELETED, TapeType.lcdSmall, scheme.lcdInk.tape)
             }
         } else {
             LazyColumn(
@@ -281,7 +283,9 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                .let { if (!busy) it.tapeClick(label = null, onClick = onRestore) else it }
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = "RESTORE ${row.name.uppercase()}", enabled = !busy, onClick = onRestore)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -292,19 +296,25 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
+    // Same text the TapeText below shows — it already follows `armed`.
+    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
     Box(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(
             // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
-            if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS",
+            label,
             TapeType.pixel,
             if (enabled) BinRedGlow else scheme.ink3.tape,
             maxLines = 1,
@@ -325,7 +335,10 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // `enabled` goes through `tapeClick`, not around it: a dimmed
+            // chip stays in the semantics tree instead of silently
+            // vanishing from it (accessibility audit finding 12).
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

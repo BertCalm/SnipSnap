@@ -61,7 +61,7 @@ class TapeDeckTest {
 
         // At zoom x2 the same pixels cover half the tape-time.
         d.cycleZoom()
-        assertEquals(180, d.pxPerSec)
+        assertEquals(180f, d.pxPerSec)
         d.dragBy(-90.0, 100.0)
         d.step(rate * 3)
         assertTrue(abs(d.position - rate * 1.5) < rate * 0.03)
@@ -207,6 +207,26 @@ class TapeDeckTest {
             "position ${d.position} escaped the loop [${d.inFrame}, ${d.outFrame})",
         )
         assertTrue(d.playing)
+    }
+
+    @Test
+    fun `loop preview reports every wrap so the voice can restart at IN`() {
+        val d = deck()
+        d.snapToOnset = false
+        d.select(rate, rate * 2)
+        d.loopPreview = true
+        d.play()
+        val events = mutableListOf<TapeDeckModel.Event>()
+        repeat(4) { events += d.step(rate) }
+        // Spin-up eases toward 1x, so four seconds of stepping cross a one
+        // second loop at least twice and no more than four times.
+        val wraps = events.count { it == TapeDeckModel.Event.Looped }
+        assertTrue(wraps in 2..4, "wrapped $wraps times")
+        assertTrue(d.position >= d.inFrame && d.position < d.outFrame)
+        d.loopPreview = false
+        val after = mutableListOf<TapeDeckModel.Event>()
+        repeat(3) { after += d.step(rate) }
+        assertTrue(after.none { it == TapeDeckModel.Event.Looped }, "no loop, no wrap")
     }
 
     @Test

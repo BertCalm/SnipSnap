@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -75,6 +76,8 @@ import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
+import com.snipsnap.loop.OrbitBrush
+import com.snipsnap.loop.OrbitBrushes
 import com.snipsnap.loop.OrbitClip
 import com.snipsnap.loop.OrbitClock
 import com.snipsnap.loop.OrbitEngine
@@ -82,11 +85,13 @@ import com.snipsnap.loop.OrbitHit
 import com.snipsnap.loop.OrbitImport
 import com.snipsnap.loop.OrbitPatterns
 import com.snipsnap.loop.OrbitPresets
+import com.snipsnap.loop.OrbitSection
 import com.snipsnap.loop.OrbitSet
 import com.snipsnap.loop.OrbitSpan
 import com.snipsnap.loop.OrbitStore
 import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.SnipOrbit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -102,7 +107,6 @@ import kotlinx.coroutines.withContext
 import kotlin.concurrent.thread
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -138,9 +142,14 @@ import kotlin.math.sin
  * it. The picked ring unrolls into the strip below — the tape untaped —
  * with one row per pad in its voice, so a bass ring is a small piano roll
  * and a kick ring is a single row; tap a cell to place or lift a hit, and
- * hear it. The panel changes the ring's step count, its span (free, or
- * ½, 1, 2 or 4 bars of the set's lap), which pads it plays, and whether
- * it is heard. Tapping the header's readout opens THE SET: the bar every
+ * hear it; long-press one to move whatever the strip's brush names — its
+ * weight, its chance, its every-N-laps conditional or its ratchet — the
+ * chip above the strip saying which. The panel changes the ring's step
+ * count, its span (free, or ½, 1, 2 or 4 bars of the set's lap), which
+ * pads it plays, and whether it is heard. Tapping the header's readout
+ * opens THE SET, and SECTIONS ▸ inside it opens the arrangement — which
+ * rings play, and for how long, each section starting its rings over so
+ * it repeats the same every time. THE SET also holds the bar every
  * spanned ring is measured in (12 to 32 steps, 3/4 to 8/4). REC arms the
  * strip's pad rail so a tap while playing writes a hit on the nearest
  * step, the way a groove gets played into an MPC; ◀ ▶ turn a ring a step
@@ -154,6 +163,63 @@ fun OrbitScreen(
     kitsRoot: File,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
+    /**
+     * Bug fix (GROOVE staleness): `clipIntoKit` (CLIP ▸ KIT, below) writes
+     * straight into the open kit's `groove.json` via [OrbitClip.save] — the
+     * same file TAPE's READ AS GROOVE / STEAL THE FEEL rewrite, which is
+     * why App.kt bumps `grooveReload` after those. This screen's own KDoc
+     * (below, on the staleness pass) named this door and left it reported
+     * rather than fixed, since closing it belongs to GROOVE's own reload
+     * wiring, not this screen. No default: both call sites in App.kt must
+     * wire this to `grooveReload++`, or a GROOVE screen that survives a tab
+     * switch through here can end up keyed to a clip that's no longer at
+     * position 0. Called only on [OrbitClip.save] SUCCESS — a failed write
+     * changed nothing on disk for GROOVE to be stale about.
+     */
+    onGrooveWritten: () -> Unit,
+    /**
+     * Bug fix (tab-switch data loss): App.kt renders screens with a bare
+     * `when (screen)` — no `SaveableStateHolder`, no `rememberSaveable` —
+     * so this whole composable used to be torn down, and every
+     * `remember(kitDir)` value inside it destroyed, on every tab switch.
+     * That's the same defect `27542b6c`/`3cfe60cb` fixed for GROOVE's
+     * FEEL/SWING/PROG/seed/justLanded/preTake, applied here to ORBIT's own
+     * user's-work values: [history] (the undo stack — the headline, a
+     * whole stack lost rather than one snapshot), [selected] (which ring
+     * is being edited — losing it is like losing your cursor), [solo],
+     * [set] (the rings themselves, so a fast tab switch mid-edit can't
+     * even momentarily show the ring as blank while `orbits.json`
+     * reloads), [scrambleSeed] (what SCRAMBLE rolled) and [brush] (what
+     * the user dialled in for long-press). All six hoisted into App.kt,
+     * same value+onChange shape as GrooveScreen's own parameters, keyed
+     * on the open kit's own dir so App (which never leaves composition)
+     * is what survives the tab switch, while a KIT CHANGE still resets
+     * them — a `history` entry or a `set` from one kit must never be
+     * applicable to another, which would be worse than the bug being
+     * fixed.
+     *
+     * `bank` and `engine` were also named as candidates by the brief that
+     * asked for this fix, but are deliberately NOT among these six: both
+     * are live transport machinery (decoded/resampled audio buffers and
+     * the audio-thread engine, respectively — see [OrbitBank] and
+     * [OrbitEngine]'s own KDoc), not settings, in the same family as
+     * `sink`/`audioThread` below which nobody proposed hoisting. Hoisting
+     * them would fight the existing `DisposableEffect(kitDir) { onDispose
+     * { stopPlayback() } }` teardown below, which already (and correctly)
+     * nulls them out on every unmount.
+     */
+    history: List<OrbitStep> = emptyList(),
+    onHistoryChange: (List<OrbitStep>) -> Unit = {},
+    selected: Int = 0,
+    onSelectedChange: (Int) -> Unit = {},
+    solo: Int? = null,
+    onSoloChange: (Int?) -> Unit = {},
+    set: OrbitSet? = null,
+    onSetChange: (OrbitSet?) -> Unit = {},
+    scrambleSeed: Int = 1,
+    onScrambleSeedChange: (Int) -> Unit = {},
+    brush: OrbitBrush = OrbitBrush.WEIGHT,
+    onBrushChange: (OrbitBrush) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -164,10 +230,18 @@ fun OrbitScreen(
     val rate = remember(context) { deviceSampleRate(context) }
     val source = remember(kitDir) { OrbitSampleSource(kitsRoot, filesDir) }
 
-    var set by remember(kitDir) { mutableStateOf<OrbitSet?>(null) }
+    // `set`/`selected`/`solo` shadow this composable's own parameters of the
+    // same name — App's hoisted, per-kit-dir state (see this function's own
+    // KDoc on those parameters) — so every existing read/write site below
+    // keeps working unmodified. `remember(kitDir)` still resets each to the
+    // passed-in value whenever the KIT changes; the push-up `LaunchedEffect`s
+    // further down (right after `history`) are what keep App's copies in
+    // sync so a tab switch (which tears this whole composable down) doesn't
+    // lose them.
+    var set by remember(kitDir) { mutableStateOf(set) }
     var refusal by remember(kitDir) { mutableStateOf<String?>(null) }
-    var selected by remember(kitDir) { mutableIntStateOf(0) }
-    var solo by remember(kitDir) { mutableStateOf<Int?>(null) }
+    var selected by remember(kitDir) { mutableIntStateOf(selected) }
+    var solo by remember(kitDir) { mutableStateOf(solo) }
     var snips by remember(kitDir) { mutableStateOf<List<File>>(emptyList()) }
     /** + SNIP RING opens the shelf as a list to pick from — no arrow-cycling through a long shelf. */
     var snipPickerOpen by remember(kitDir) { mutableStateOf(false) }
@@ -178,11 +252,19 @@ fun OrbitScreen(
     /** SPREAD asks how many hits before it fills the ring. */
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
-    var scrambleSeed by remember(kitDir) { mutableIntStateOf(1) }
+    var scrambleSeed by remember(kitDir) { mutableIntStateOf(scrambleSeed) }
+    // What a long-press on a square writes. [OrbitBrush.WEIGHT] is what it
+    // always wrote, so the strip behaves exactly as it did until the chip
+    // above it is touched. Shadows the incoming `brush` parameter — see
+    // this function's own KDoc — so a from-scratch screen (App's hoisted
+    // copy still at its default) shows exactly what it always showed.
+    var brush by remember(kitDir) { mutableStateOf(brush) }
     /** OUT ▸ swaps the panel for the two ways a set leaves the screen: onto TAPE, or into the kit as a clip. */
     var outOpen by remember(kitDir) { mutableStateOf(false) }
     /** Tapping the header's readout swaps the panel for THE SET: the bar, and the tempo it already shows. */
     var setPanelOpen by remember(kitDir) { mutableStateOf(false) }
+    /** SECTIONS ▸ swaps the panel for the arrangement: what plays, and for how long. */
+    var sectionsOpen by remember(kitDir) { mutableStateOf(false) }
     /** REC: while armed and playing, a rail tap writes a hit on the ring's nearest step. A listening choice, never saved. */
     var recording by remember(kitDir) { mutableStateOf(false) }
     var bouncing by remember(kitDir) { mutableStateOf(false) }
@@ -191,8 +273,28 @@ fun OrbitScreen(
     /** BPM taps settle before the snips refit: the job that fires the commit after a quiet [BPM_SETTLE_MS]. */
     var bpmJob by remember(kitDir) { mutableStateOf<Job?>(null) }
     var bpmPending by remember(kitDir) { mutableStateOf(false) }
-    /** The sets before each edit, newest last: one UNDO steps back one edit. Not saved; a screen's worth. */
-    var history by remember(kitDir) { mutableStateOf<List<OrbitSet>>(emptyList()) }
+    /**
+     * The sets before each edit, newest last: one UNDO steps back one edit.
+     * Not saved to disk; a screen's worth — but no longer just a screen's
+     * lifetime either. Shadows the incoming `history` parameter (App's
+     * hoisted copy) the same way `set`/`selected`/`solo` above do.
+     */
+    var history by remember(kitDir) { mutableStateOf(history) }
+    // Bug fix (tab-switch data loss) — see this function's own KDoc on the
+    // `history`/`selected`/`solo`/`set`/`scrambleSeed`/`brush` parameters:
+    // these six effects are the ONLY thing keeping App's hoisted copies in
+    // sync with whatever this screen's many mutation sites do to the
+    // locals of the same name, so a tab switch mid-session (App tears this
+    // whole composable down, `remember(kitDir)` and all) restores exactly
+    // what was on the rings instead of quietly resetting to an empty undo
+    // stack, ring 0 picked, nothing soloed, seed 1, the weight brush — or,
+    // for `set`, a flash of "no rings" while `orbits.json` reloads.
+    LaunchedEffect(history) { onHistoryChange(history) }
+    LaunchedEffect(selected) { onSelectedChange(selected) }
+    LaunchedEffect(solo) { onSoloChange(solo) }
+    LaunchedEffect(set) { onSetChange(set) }
+    LaunchedEffect(scrambleSeed) { onScrambleSeedChange(scrambleSeed) }
+    LaunchedEffect(brush) { onBrushChange(brush) }
 
     // The transport: null until PLAY. Bank and engine live across edits;
     // each edit prepares a new bank (reusing the old one's buffers) and
@@ -224,7 +326,116 @@ fun OrbitScreen(
         auditionId = auditionId % 1_000_000 + 1
     }
 
+    /**
+     * Staleness pass (the hoist's follow-up): making `history`/`selected`/
+     * `solo`/`set`/`scrambleSeed`/`brush` outlive a single mount means they
+     * can now be invalidated by things that happen OUTSIDE this screen
+     * while it's torn down — the same class of door `3cfe60cb` found and
+     * closed for GROOVE's `justLanded`. Worked through every one asked
+     * about, plus one this screen's own code raised:
+     *
+     * - **A groove rewritten (`grooveReload`'s own path).** Doesn't apply
+     *   here at all: `OrbitStore` — the only reader or writer of this
+     *   kit's `orbits.json` anywhere in the app — is used exclusively from
+     *   inside this file. Nothing outside ORBIT ever rewrites the file
+     *   `set`/`history` are keyed to, unlike `groove.json`, which TAPE's
+     *   READ AS GROOVE / STEAL THE FEEL also rewrite. No `grooveReload`-
+     *   style counter is needed because there is no second writer to race.
+     *
+     * - **A pad ejected, or a kit edit from PAD SHEET/KIT.** A `history`
+     *   entry or the live `set` can reference a pad slot (a `PatternOrbit`
+     *   hit's `slot`) that's since been emptied or reassigned elsewhere.
+     *   This was already true before this hoist — leaving ORBIT open while
+     *   a kit edit landed elsewhere always risked it — and `OrbitBank`'s
+     *   own contract is to tolerate it: `pad()`/`muteGroup()` return a
+     *   default for a missing slot, and `loop()`/`fit()`/`peaks()` return
+     *   null for a missing sample, all documented as "the hit is skipped,
+     *   not thrown." The ring-drawing code already consumes that null
+     *   safely (`bank?.peaks(...)?.let { ... }`). Hoisting only widens the
+     *   window this can be true in; it doesn't change what happens when it
+     *   is, so no new clearing is needed.
+     *
+     * - **A snip deleted.** Same shape and same answer as the pad case: a
+     *   `SnipOrbit` naming a file that's gone renders silent, not broken.
+     *
+     * - **`undo()` restoring a `set` with fewer rings than `selected`/
+     *   `solo` currently point at.** Already handled, unchanged by this
+     *   fix: `undo()` clamps `selected` and re-checks `solo` against the
+     *   restored set's own ring indices before committing (see its own
+     *   KDoc). That guard runs on every UNDO regardless of whether the
+     *   step came from this mount's own history or one carried in from
+     *   App.
+     *
+     * - **A kit renamed.** `KitShelf.renameKit` moves the directory, so
+     *   `entry.dir` — and therefore `open?.dir`, the hoist's own key —
+     *   changes; the same trust GROOVE's hoist already places in this.
+     *
+     * - **The device's own sample rate moving between mounts** (a route
+     *   change — headset, Bluetooth — with no kit change at all). This one
+     *   DOES need code, immediately below: seeded here, not folded into
+     *   the hoist commit, because it belongs with the staleness pass this
+     *   KDoc is describing.
+     *
+     * One door found here now IS closed: `CLIP ▸ KIT` (`clipIntoKit` below,
+     * via `OrbitClip.save`) writes straight into the open kit's
+     * `groove.json`, replacing every previous ORBIT-authored clip — the
+     * same file TAPE's actions rewrite. GROOVE's own hoisted `progIndex`
+     * selects among fixed transforms of `GrooveStore.load(kitDir)
+     * .firstOrNull()` ("the base"), so in the ordinary case (a real
+     * captured base already at position 0) a stale reload would be
+     * harmless — `clipIntoKit` appends after every non-ORBIT clip, never
+     * displacing it. But a kit whose ONLY clip is itself ORBIT-authored has
+     * no such base to protect: a second `CLIP ▸ KIT` replaces it, and a
+     * GROOVE screen whose hoisted `progIndex` survived a round trip through
+     * here would silently describe a transform of a DIFFERENT clip than
+     * what's on screen — `3cfe60cb`'s fixed defect, running the other
+     * direction. `clipIntoKit` now calls [onGrooveWritten] on
+     * `OrbitClip.save` success (see that parameter's own KDoc), which App.kt
+     * wires to the same `grooveReload++` TAPE's two groove-writing actions
+     * already use.
+     */
     LaunchedEffect(kitDir) {
+        // `snips` is a directory listing, not user work — always worth a
+        // fresh read, so a shelf that gained or lost a snip since the last
+        // mount shows it rather than the stale list this mount would
+        // otherwise inherit from nowhere (it isn't hoisted).
+        snips = withContext(Dispatchers.IO) { SnipStore.list(filesDir) }
+        // Follow-up to the hoist above: `set` carries its own `sampleRate`,
+        // stamped in from `rate` the moment it was ever (re)loaded. `rate`
+        // itself is `remember(context) { deviceSampleRate(context) }` —
+        // read fresh on every mount, and Android can hand back a DIFFERENT
+        // answer between two mounts of the same kitDir (a headset plugged
+        // in, a Bluetooth route taking over) without this screen, or its
+        // kit, changing at all. That is exactly the kind of outside-ORBIT
+        // invalidation this fix's staleness pass went looking for: a
+        // hoisted `set` whose own sampleRate no longer matches the device
+        // is stale in a way `kitDir` keying can't catch, because the KIT
+        // didn't change — the device did. `takeIf` here is what refuses to
+        // trust it: a mismatch falls through to the reload path below,
+        // which already re-applies `copy(sampleRate = rate)` to whatever it
+        // reads. Every fit/period calculation downstream (`OrbitClock`,
+        // `OrbitBank.prepare`) is against this field, so trusting a stale
+        // one would be silently wrong at the sample level, not just the UI.
+        val existing = set?.takeIf { it.sampleRate == rate }
+        if (existing != null) {
+            // Bug fix (tab-switch data loss): `set` is now hoisted (see
+            // this function's own KDoc on the `set`/`onSetChange`
+            // parameters), so a remount with the SAME kitDir already
+            // carries the rings the player left on screen. Reloading
+            // `orbits.json` here unconditionally, as this effect always
+            // used to, would race `commit`'s own async save — a fast tab
+            // switch right after an edit could read the file before that
+            // write lands and silently roll the rings back to what disk
+            // still says, reintroducing the exact bug this hoist exists
+            // to fix. `bank` is deliberately NOT hoisted (a live
+            // decoded-audio cache tied to this mount's own `source` —
+            // see the KDoc on this function's parameters), so it always
+            // needs rebuilding from whatever `set` already is.
+            preparing = true
+            bank = withContext(Dispatchers.IO) { runCatching { OrbitBank.prepare(existing, source) }.getOrNull() }
+            preparing = false
+            return@LaunchedEffect
+        }
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 val loaded = if (OrbitStore.exists(kitDir)) {
@@ -233,12 +444,11 @@ fun OrbitScreen(
                     val bpm = (kit.tempoBpm ?: 92f).coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)
                     OrbitPresets.fromKit(kitDir.name, kit, bpm, rate)
                 }
-                loaded.copy(sampleRate = rate) to SnipStore.list(filesDir)
+                loaded.copy(sampleRate = rate)
             }
         }
-        result.onSuccess { (loaded, files) ->
+        result.onSuccess { loaded ->
             set = loaded
-            snips = files
             refusal = null
             // Prepare before PLAY: a snip ring's waveform and fit report
             // are worth seeing the moment the screen opens, not after.
@@ -277,11 +487,18 @@ fun OrbitScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    /** What the engine plays: the set, with every ring but the soloed one silenced while a solo holds. */
-    fun heard(s: OrbitSet): OrbitSet {
-        val only = solo ?: return s
-        return s.copy(orbits = s.orbits.mapIndexed { i, o -> o.copy(engaged = i == only && o.engaged) })
-    }
+    /**
+     * What the OFFLINE bounce renders: the set, with every ring but the
+     * soloed one silenced.
+     *
+     * Live playback does not go through this. The engine is handed the
+     * solo alongside the set (`OrbitEngine.Prepared`), so no ring is
+     * copied and no sounding voice loses the ring that struck it — which
+     * is what a copied set did, leaving tails that answered to no section
+     * and slipped past `hush`. A bounce has no voices in flight, so there
+     * it costs nothing.
+     */
+    fun heard(s: OrbitSet): OrbitSet = s.soloing(solo)
 
     /**
      * Persist and, if the transport is up, hand the edit to the engine at
@@ -291,16 +508,32 @@ fun OrbitScreen(
      */
     fun commit(next: OrbitSet, record: Boolean = true) {
         val before = set
-        if (record && before != null && before != next) history = (history + before).takeLast(UNDO_DEPTH)
+        // The solo is recorded WITH the set, because an edit that moves
+        // the rings moves it too: undoing a delete brought the rings back
+        // and left the index pointing at whichever ring is that number
+        // now, so UNDO soloed a different ring than the one the player was
+        // listening to. Read here, before any caller re-points it.
+        if (record && before != null && before != next) {
+            history = (history + OrbitStep(before, solo)).takeLast(UNDO_DEPTH)
+        }
         set = next
         scope.launch {
             preparing = true
-            val prepared = withContext(Dispatchers.IO) {
-                runCatching { OrbitStore.save(next, kitDir) }
-                OrbitBank.prepare(next, source, previous = bank)
+            val saved = withContext(Dispatchers.IO) {
+                val wrote = runCatching { OrbitStore.save(next, kitDir) }
+                wrote to OrbitBank.prepare(next, source, previous = bank)
+            }
+            val (wrote, prepared) = saved
+            // A save that failed is not a detail to swallow: the screen
+            // would go on showing an arrangement the next launch will not
+            // have. The edit still reaches the engine — what is on screen
+            // is what should be heard — but the player is told.
+            wrote.onFailure { e ->
+                Log.e("OrbitScreen", "commit: could not save the set", e)
+                onToast(Copy.ORBIT_SAVE_FAILED)
             }
             bank = prepared
-            engine?.apply(OrbitEngine.Prepared(heard(next), prepared))
+            engine?.apply(OrbitEngine.Prepared(next, prepared, solo))
             preparing = false
         }
     }
@@ -313,7 +546,7 @@ fun OrbitScreen(
             val prepared = withContext(Dispatchers.IO) { OrbitBank.prepare(s, source, previous = bank) }
             bank = prepared
             val audioSink = AndroidAudioSink(s.sampleRate)
-            val e = OrbitEngine(heard(s), prepared, audioSink)
+            val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo)
             sink = audioSink
             engine = e
             audioThread = thread(name = "snipsnap-orbit", isDaemon = true) { e.run() }
@@ -322,12 +555,18 @@ fun OrbitScreen(
         }
     }
 
-    /** Solo is a listening choice, not part of the set: applied to the engine, never saved. */
+    /**
+     * Solo is a listening choice, not part of the set: applied to the
+     * engine, never saved — and handed to it AS ITSELF, beside the set
+     * rather than baked into a copy of every ring. A copied ring is a
+     * different ring to `OrbitEngine.hush`, which matches a sounding
+     * voice to the ring that struck it by identity.
+     */
     fun toggleSolo(index: Int) {
         solo = if (solo == index) null else index
         val s = set ?: return
         val b = bank ?: return
-        engine?.apply(OrbitEngine.Prepared(heard(s), b))
+        engine?.apply(OrbitEngine.Prepared(s, b, solo))
     }
 
     // The needle: read the engine's own frame count every display frame.
@@ -364,7 +603,15 @@ fun OrbitScreen(
         if (placed) audition(slot)
     }
 
-    /** Long-press on a cell: an existing hit cycles soft → normal → accent; an empty cell takes an accent. */
+    /**
+     * Long-press on a cell: [brush]'s property moves one rung on.
+     *
+     * With the weight brush that is soft → normal → accent, which is what
+     * a long-press did before there was anything else to write. An empty
+     * cell takes an accent as it always did, and then the brush is applied
+     * to it, so one long-press with CHANCE picked leaves a hit that is
+     * actually chancy rather than a certain one to press again.
+     */
     fun cycleHit(index: Int, slot: Int, step: Int) {
         updateRing(index) { ring ->
             val content = ring.content as? PatternOrbit ?: return@updateRing ring
@@ -373,14 +620,67 @@ fun OrbitScreen(
                 // Every hit on the square, moved together and read off the
                 // loudest — which is the one the square is drawn at, so the
                 // cycle follows what the player can actually see.
-                val next = OrbitPatterns.nextVelocity(existing.maxOf { it.velocity })
-                content.hits - existing.toSet() + existing.map { it.copy(velocity = next) }
+                val next = OrbitBrushes.cycle(existing.maxBy { it.velocity }, brush)
+                content.hits - existing.toSet() + existing.map { OrbitBrushes.adopt(it, next, brush) }
             } else {
-                content.hits + OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+                val placed = OrbitHit(step, slot, OrbitPatterns.ACCENT_VELOCITY)
+                content.hits + if (brush == OrbitBrush.WEIGHT) placed else OrbitBrushes.cycle(placed, brush)
             }
             ring.copy(content = content.copy(hits = hits.sortedWith(compareBy({ it.step }, { it.slot }))))
         }
         audition(slot)
+    }
+
+    /**
+     * Add a section at the end, playing whatever the last one played.
+     *
+     * Copying the last section rather than starting empty, because an
+     * empty section is a break and a player reaching for "+ SECTION"
+     * almost always wants a variation of what they have — the first
+     * section of a new arrangement takes every ring, which is what the
+     * set was doing a moment ago.
+     */
+    fun addSection() {
+        val s = set ?: return
+        if (s.sections.size >= OrbitSection.MAX_SECTIONS) {
+            onToast("AN ARRANGEMENT HOLDS ${OrbitSection.MAX_SECTIONS} SECTIONS.")
+            return
+        }
+        val plays = s.sections.lastOrNull()?.plays ?: s.orbits.indices.toSet()
+        // The first unused letter, not the count. Deleting A from [A, B]
+        // leaves [B], and naming the next one by the count made a second
+        // B - two clips called ORBIT B on the hardware, where the name is
+        // the only thing left saying which section is which.
+        val taken = s.sections.map { it.name }.toSet()
+        val name = ('A'..'Z').first { it.toString() !in taken }.toString()
+        commit(s.copy(sections = s.sections + OrbitSection(name, DEFAULT_SECTION_BARS, plays)))
+    }
+
+    fun deleteSection(index: Int) {
+        val s = set ?: return
+        if (index !in s.sections.indices) return
+        commit(s.copy(sections = s.sections.filterIndexed { i, _ -> i != index }))
+    }
+
+    fun editSection(index: Int, edit: (OrbitSection) -> OrbitSection) {
+        val s = set ?: return
+        if (index !in s.sections.indices) return
+        val next = runCatching {
+            s.copy(sections = s.sections.mapIndexed { i, sec -> if (i == index) edit(sec) else sec })
+        }
+        next.onSuccess { commit(it) }.onFailure { e -> onToast(e.message ?: "NO") }
+    }
+
+    /**
+     * Take the arrangement away, leaving the rings exactly as they are.
+     *
+     * The way back to a set that simply turns forever, and the reason the
+     * empty list means that rather than needing a flag: dropping the
+     * sections IS dropping the arrangement.
+     */
+    fun clearSections() {
+        val s = set ?: return
+        commit(s.copy(sections = emptyList()))
     }
 
     fun spreadRing(index: Int, k: Int) {
@@ -421,8 +721,8 @@ fun OrbitScreen(
 
     fun addPatternRing() {
         val s = set ?: return
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
-        val firstPad = kit.pads.minOfOrNull { it.slot } ?: run { onToast("NO PADS ON THIS KIT"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
+        val firstPad = kit.pads.minOfOrNull { it.slot } ?: run { onToast(Copy.ORBIT_NO_PADS); return }
         val name = "RING ${s.orbits.size + 1}"
         commit(s.copy(orbits = s.orbits + OrbitPresets.emptyPattern(kitDir.name, name, listOf(firstPad))))
         selected = s.orbits.size
@@ -431,13 +731,13 @@ fun OrbitScreen(
     fun addSnipRing(file: File) {
         val s = set ?: return
         snipPickerOpen = false
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         scope.launch {
             // The header alone says how long the snip is — no decode, no
             // size ceiling to worry about. The bank decodes (capped) when
             // the ring is actually prepared for playback.
             val info = withContext(Dispatchers.IO) { runCatching { WavInfo.read(file) }.getOrNull() }
-            if (info == null) { onToast("COULD NOT READ ${file.name}"); return@launch }
+            if (info == null) { onToast(Copy.orbitFileUnreadable(file.name)); return@launch }
             val current = set ?: return@launch
             // Frames at the set's rate, since the bank resamples before it fits.
             val frames = (info.frameCount.toDouble() / info.sampleRate * current.sampleRate).roundToInt()
@@ -458,13 +758,16 @@ fun OrbitScreen(
 
     /** Step back one edit: the set before it, saved and handed to the engine like any other change. */
     fun undo() {
-        val previous = history.lastOrNull() ?: run { onToast("NOTHING TO UNDO"); return }
+        val step = history.lastOrNull() ?: run { onToast(Copy.ORBIT_NOTHING_TO_UNDO); return }
         history = history.dropLast(1)
         bpmJob?.cancel()
         bpmPending = false
         tempoOffer = null
-        val soloed = solo
-        if (soloed != null && soloed >= previous.orbits.size) solo = null
+        val previous = step.set
+        // The solo that went WITH that set, not the one this edit left
+        // behind. Clearing only an out-of-range index put the solo on a
+        // ring the player never soloed.
+        solo = step.solo?.takeIf { it in previous.orbits.indices }
         selected = selected.coerceIn(0, (previous.orbits.size - 1).coerceAtLeast(0))
         commit(previous, record = false)
     }
@@ -499,7 +802,11 @@ fun OrbitScreen(
         // Clamped at 0: in the first buffer after PLAY nothing has reached
         // the ear yet, and a negative frame would wrap to the ring's end.
         val heardAt = ((engine?.position() ?: return) - s.sampleRate.toLong() * (AndroidAudioSink.BUFFER_MILLIS + REC_TOUCH_MS) / 1000).coerceAtLeast(0L)
-        val step = OrbitClock.nearestStep(s, ring, heardAt)
+        // In the section's own frames, because that is where the ring was
+        // when the tap was heard. Against the transport's, a hit recorded
+        // in the second section landed on whatever step the ring would
+        // have been on had it never restarted.
+        val step = OrbitClock.nearestStep(s, ring, OrbitClock.localFrame(s, heardAt))
         updateRing(index) { OrbitPatterns.place(it, slot, step) }
     }
 
@@ -507,18 +814,33 @@ fun OrbitScreen(
     fun duplicateRing(index: Int) {
         val s = set ?: return
         val ring = s.orbits.getOrNull(index) ?: return
-        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast("EIGHT RINGS IS THE SKY"); return }
+        if (s.orbits.size >= OrbitSet.MAX_ORBITS) { onToast(Copy.ORBIT_RINGS_FULL); return }
         val copy = ring.copy(name = OrbitPatterns.copyName(ring.name))
-        commit(s.copy(orbits = s.orbits.take(index + 1) + copy + s.orbits.drop(index + 1)))
+        // Through the set, so the arrangement moves with the rings: a
+        // section names them by index, and an insert shifts every index
+        // past it.
+        commit(s.withOrbitAfter(index, copy))
+        // The same index arithmetic the sections get, for the same reason.
+        solo = solo?.let { if (it > index) it + 1 else it }
         selected = index + 1
     }
 
     fun deleteRing(index: Int) {
         val s = set ?: return
         if (index !in s.orbits.indices) return
-        if (solo == index) solo = null
         tempoOffer = null
-        commit(s.copy(orbits = s.orbits.filterIndexed { i, _ -> i != index }))
+        // Through the set, so the arrangement is re-pointed rather than
+        // left naming a ring that moved or one that is gone.
+        commit(s.withoutOrbit(index))
+        // `solo` is an index into the same list, so a delete moves it just
+        // as it moves a section's rings: without this, deleting an EARLIER
+        // ring left solo pointing at its neighbour and the wrong ring
+        // played alone. Pre-existing, and in the two lines above it.
+        //
+        // AFTER the commit, as in `duplicateRing`: the step UNDO records
+        // is the solo the player was listening to, and the engine reads
+        // this one when the prepared set reaches it a moment later.
+        solo = solo?.let { at -> if (at == index) null else if (at > index) at - 1 else at }
         selected = (index - 1).coerceAtLeast(0)
     }
 
@@ -534,11 +856,11 @@ fun OrbitScreen(
         val next = s.copy(bpm = bpm.coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM))
         if (next == s) return
         // One UNDO steps back the whole run of taps, not one tap of it.
-        if (!bpmPending) history = (history + s).takeLast(UNDO_DEPTH)
+        if (!bpmPending) history = (history + OrbitStep(s, solo)).takeLast(UNDO_DEPTH)
         set = next
         val b = bank
         if (b != null && next.orbits.none { it.content is SnipOrbit }) {
-            engine?.apply(OrbitEngine.Prepared(heard(next), b))
+            engine?.apply(OrbitEngine.Prepared(next, b, solo))
         }
         bpmJob?.cancel()
         bpmPending = true
@@ -565,7 +887,13 @@ fun OrbitScreen(
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val prepared = OrbitBank.prepare(what, source, previous = bank)
-                    val frames = OrbitClock.cycleFrames(what).toInt()
+                    // One turn of the TRANSPORT, which for an arranged
+                    // set is its plan rather than the rings' meeting - a
+                    // meeting an arranged set never reaches, so rendering
+                    // the cycle would bounce minutes of audio for a
+                    // three-bar plan. `refusal` above caps this same
+                    // number, so the Int conversion is inside a ceiling.
+                    val frames = OrbitClock.transportFrames(what).toInt()
                     val rendered = OrbitEngine.render(what, prepared, frames)
                     SnipStore.import(rendered, filesDir, System.currentTimeMillis())
                 }
@@ -573,8 +901,11 @@ fun OrbitScreen(
             bouncing = false
             result.onSuccess { imported ->
                 snips = SnipStore.list(filesDir)
-                onToast("ON TAPE: ${cycleLabel(what)}. TRIM IT, CHOP IT, KIT IT.")
-            }.onFailure { e -> onToast("BOUNCE FAILED: ${e.message ?: e.javaClass.simpleName}") }
+                onToast(Copy.orbitBounced(transportLabel(what)))
+            }.onFailure { e ->
+                Log.e("OrbitScreen", "bounceToTape: failed", e)
+                onToast(Copy.ORBIT_BOUNCE_FAILED)
+            }
         }
     }
 
@@ -667,7 +998,7 @@ fun OrbitScreen(
         }
     }
 
-    /** One cycle as a clip in the kit's grooves, so it rides to the MPC with the kit. */
+    /** One clip in the kit's grooves, or one per section, so it rides to the MPC with the kit. */
     fun clipIntoKit() {
         val s = set ?: return
         OrbitClip.clipRefusal(s)?.let { onToast(it); return }
@@ -675,6 +1006,14 @@ fun OrbitScreen(
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
             result.onSuccess { clip ->
+                // GROOVE staleness fix — see [onGrooveWritten]'s own KDoc
+                // and this function's own KDoc above (on the staleness
+                // pass): the write just landed on disk, so any GROOVE
+                // screen that survived a tab switch through here needs to
+                // know its `progIndex` may now describe a different clip.
+                // Success only — a failed `OrbitClip.save` changed nothing
+                // on disk for GROOVE to be stale about.
+                onGrooveWritten()
                 // Snips are audio and a clip holds notes, so a snip ring
                 // cannot ride along. Say how many stayed behind rather than
                 // leave it to be discovered on the hardware.
@@ -699,14 +1038,30 @@ fun OrbitScreen(
                 // but it is where the player just was, since CLIP ▸ KIT is
                 // a button inside it, and OUT ▸ reopens it.
                 val behind = OrbitClip.snipRings(s)
+                // One clip, or one per section. The count is the clips
+                // actually written rather than the sections asked for: a
+                // section that plays no rings is a break and writes none,
+                // so the line says what is in the kit, not what was meant.
+                val bars = clip.sumOf { it.bars }
+                val notes = clip.sumOf { it.notes.size }
                 onToast(
-                    if (behind.isEmpty()) {
-                        "${clip.name} IS IN THE KIT'S GROOVES — ${clip.bars} BARS, ${clip.notes.size} NOTES. IT RIDES TO THE MPC."
+                    if (clip.size == 1) {
+                        Copy.clippedIntoKit(clip[0].name, bars, notes, behind.size)
                     } else {
-                        "${clip.name} IN THE GROOVES: ${clip.bars} BARS, ${clip.notes.size} NOTES. ${behind.size} SNIP RING${if (behind.size == 1) "" else "S"} STAYED OUT."
+                        Copy.clippedSectionsIntoKit(clip.size, bars, notes, behind.size)
                     },
                 )
-            }.onFailure { e -> onToast("CLIP FAILED: ${e.message ?: e.javaClass.simpleName}") }
+            }.onFailure { e ->
+                Log.e("OrbitScreen", "clipIntoKit: failed", e)
+                // Our own refusals arrive as IllegalArgumentException and
+                // are written to be read - the sequence-capacity one names
+                // the two remedies. Swallowing them into the generic line
+                // left a player told only "TRY AGAIN" for a condition that
+                // trying again cannot change. Anything else is a fault
+                // rather than a refusal and keeps the generic line.
+                val why = (e as? IllegalArgumentException)?.message
+                onToast(if (why.isNullOrBlank()) Copy.ORBIT_CLIP_FAILED else why)
+            }
         }
     }
 
@@ -738,19 +1093,23 @@ fun OrbitScreen(
                 // The readout is THE SET's door: tap it for the bar. Past the
                 // clip's 64-bar ceiling the cycle line turns warn-coloured,
                 // so OUT's refusal is never the first anyone hears of it.
-                // No label of its own: a label here would replace the two
-                // lines' text for a screen reader, and the readout's values
-                // are the point. The footer names the tap.
+                // Named for what the tap does, not the live numbers it
+                // shows (an accessibility-tree dump showed the two
+                // TapeText lines below don't merge into this clickable
+                // Column's name for free, and re-reading a live playhead
+                // position on every swipe would be noise, not signal
+                // anyway) — follows setPanelOpen the way a toggle should.
                 Column(
-                    Modifier.tapeClick(label = null) {
+                    Modifier.tapeClick(label = if (setPanelOpen) "CLOSE THE SET" else "OPEN THE SET") {
                         setPanelOpen = !setPanelOpen
                         snipPickerOpen = false
                         outOpen = false
+                        sectionsOpen = false
                     },
                     horizontalAlignment = Alignment.End,
                 ) {
                     TapeText(
-                        "${OrbitClock.ratioLabel(current).replace(" : ", ":")} · ${cycleLabel(current)}",
+                        "${OrbitClock.ratioLabel(current).replace(" : ", ":")} · ${transportLabel(current)}",
                         TapeType.lcd(14),
                         if (OrbitClip.refusal(current) != null) scheme.warn.tape else scheme.amber.tape,
                     )
@@ -767,6 +1126,14 @@ fun OrbitScreen(
         }
 
         val stripRows = ring?.pads?.size ?: 0
+        // The frame the PICTURE is drawn from: the section's own, so the
+        // needle, the comet tail, the strike flares and the strip's
+        // playhead all restart where the audio restarts. Against the
+        // transport's frame the rings went on turning through a section
+        // change that had already reset what could be heard. One
+        // localisation, here, because everything below is handed a frame
+        // and none of it should have to know about sections.
+        val localFrame = OrbitClock.localFrame(current, frame)
         val hasSnips = current.orbits.any { it.content is SnipOrbit }
         // A snip ring is being cut to a new length: the picture says so
         // rather than going quietly stale while the tempo settles.
@@ -779,7 +1146,8 @@ fun OrbitScreen(
             RingsCanvas(
                 set = current,
                 kit = kit,
-                frame = frame,
+                frame = localFrame,
+                transportFrame = frame,
                 playing = playing,
                 selected = selected,
                 solo = solo,
@@ -797,12 +1165,14 @@ fun OrbitScreen(
                     set = current,
                     ring = ring,
                     kit = kit,
-                    frame = frame,
+                    frame = localFrame,
                     playing = playing,
                     scheme = scheme,
                     onToggle = { slot, step -> toggleHit(selected, slot, step) },
                     onCycle = { slot, step -> cycleHit(selected, slot, step) },
                     onAudition = { slot -> railTap(selected, slot) },
+                    brush = brush,
+                    onBrush = { brush = brush.next },
                     recording = recording,
                 )
             }
@@ -822,7 +1192,7 @@ fun OrbitScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("SET ${offer.bpm.roundToInt()}", scheme, accent = true) { acceptTempo(offer) }
                         SmallChip("KEEP ${current.bpm.roundToInt()}", scheme) { tempoOffer = null }
-                        TapeText("SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
+                        TapeText(Copy.ORBIT_SET_TEMPO_HINT, TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 2)
                     }
                 }
             }
@@ -848,7 +1218,7 @@ fun OrbitScreen(
                                     .height(40.dp)
                                     .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
                                     .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-                                    .tapeClick(label = null) { addSnipRing(file) }
+                                    .tapeClick(label = "ADD RING ${SnipStore.displayName(file).uppercase()}") { addSnipRing(file) }
                                     .padding(horizontal = 10.dp),
                                 contentAlignment = Alignment.CenterStart,
                             ) {
@@ -885,6 +1255,61 @@ fun OrbitScreen(
                             }
                         }
                     }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TapeText("PLAN", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                        SmallChip(
+                            if (current.sections.isEmpty()) "SECTIONS ▸" else "SECTIONS ▸ ${current.sections.size}",
+                            scheme,
+                            accent = current.sections.isNotEmpty(),
+                            description = "THE ARRANGEMENT — WHICH RINGS PLAY, AND FOR HOW LONG",
+                        ) {
+                            sectionsOpen = true
+                            setPanelOpen = false
+                        }
+                        TapeText(
+                            if (current.sections.isEmpty()) {
+                                "NO ARRANGEMENT — EVERY RING TURNS FOREVER."
+                            } else {
+                                "${OrbitClock.arrangementFrames(current) / OrbitClock.lapFrames(current)} BARS ROUND THE PLAN."
+                            },
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.weight(1f),
+                            maxLines = 2,
+                        )
+                    }
+                    // The take. A set with a rolled hit on it sounds the
+                    // same every time it is played, bounced or clipped;
+                    // this is the one control that makes it a different
+                    // arrangement of the same hits. Only offered where
+                    // something the seed decides actually exists —
+                    // `rolled`, not `!certain`: a hit at 100% on one lap in
+                    // two is not certain and no seed changes it, and nor is
+                    // one at 0%, so gating on certainty offered a button
+                    // that could do nothing.
+                    if (current.orbits.any { o -> (o.content as? PatternOrbit)?.hits?.any { it.rolled } == true }) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TapeText("TAKE", TapeType.pixelSmall, scheme.ink3.tape, Modifier.width(36.dp))
+                            SmallChip("ROLL · ${current.seed}", scheme, description = "ROLL A NEW TAKE OF THE SAME HITS") {
+                                commit(current.copy(seed = current.seed + 1))
+                            }
+                            TapeText(
+                                "THE SAME TAKE PLAYS, BOUNCES AND CLIPS THE SAME EVERY TIME. ROLL FOR A NEW ONE — NO HIT MOVES.",
+                                TapeType.pixelSmall,
+                                scheme.ink3.tape,
+                                Modifier.weight(1f),
+                                maxLines = 2,
+                            )
+                        }
+                    }
                     TapeText(
                         "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — HOLD BPM − / + BELOW TO RUN IT.",
                         TapeType.pixelSmall,
@@ -892,47 +1317,178 @@ fun OrbitScreen(
                         Modifier.fillMaxWidth(),
                         maxLines = 4,
                     )
-                } else if (outOpen) {
+                } else if (sectionsOpen) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TapeText("ONE CYCLE OUT — ${cycleLabel(current)}", TapeType.pixel, scheme.ink.tape)
-                        SmallChip("CLOSE", scheme) { outOpen = false }
+                        TapeText("SECTIONS", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { sectionsOpen = false }
                     }
-                    val refusal = OrbitClip.refusal(current)
-                    // A reason the clip alone cannot go: the snips, the
-                    // mutes, the ring with no hits on it yet. BOUNCE is
-                    // unaffected by all of them, so it stays on the row.
-                    val clipOnly = if (refusal == null) OrbitClip.clipRefusal(current) else null
-                    if (OrbitClip.countsDifferently(current)) {
-                        // The MPC clip has no time signature: its bar is sixteen 16ths whatever the set's is.
-                        TapeText("THE MPC COUNTS 4/4 BARS: ${OrbitClip.bars(current)}.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
-                    }
-                    if (refusal != null) {
-                        TapeText(refusal, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
+                    if (current.sections.isEmpty()) {
+                        TapeText(
+                            "NO ARRANGEMENT — EVERY RING TURNS FOREVER. ADD A SECTION TO SAY \"THESE RINGS FOR EIGHT BARS, THEN THOSE\".",
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                        )
                     } else {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE ▸ TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
-                            if (clipOnly == null) {
-                                ActionButton("CLIP ▸ KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
+                        for ((index, section) in current.sections.withIndex()) {
+                            val here = playing && OrbitClock.sectionAt(current, frame) == index
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // The section playing right now wears the
+                                // accent, so the panel says where the set is
+                                // rather than only what it is made of.
+                                TapeText(
+                                    section.name,
+                                    TapeType.pixel,
+                                    if (here) scheme.accent.tape else scheme.ink.tape,
+                                    Modifier.width(28.dp),
+                                )
+                                SmallChip("−", scheme, enabled = section.bars > 1, description = "SECTION ${section.name}: ONE BAR SHORTER") {
+                                    editSection(index) { it.copy(bars = it.bars - 1) }
+                                }
+                                TapeText("${section.bars} BAR${if (section.bars == 1) "" else "S"}", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
+                                SmallChip("+", scheme, enabled = section.bars < OrbitClip.MAX_BARS, description = "SECTION ${section.name}: ONE BAR LONGER") {
+                                    editSection(index) { it.copy(bars = it.bars + 1) }
+                                }
+                                for ((ringIndex, ring) in current.orbits.withIndex()) {
+                                    val plays = ringIndex in section.plays
+                                    SmallChip(
+                                        ring.name.ifBlank { "RING ${ringIndex + 1}" },
+                                        scheme,
+                                        accent = plays,
+                                        // `SmallChip` passes this as the click
+                                        // label, which REPLACES the visible text
+                                        // rather than adding to it - so the ring's
+                                        // name has to be in here or a screen reader
+                                        // never hears which ring the chip changes.
+                                        description = "${if (plays) "TAKE" else "PUT"} ${ring.name.ifBlank { "RING ${ringIndex + 1}" }} " +
+                                            "${if (plays) "OUT OF" else "INTO"} SECTION ${section.name}",
+                                    ) {
+                                        editSection(index) {
+                                            it.copy(plays = if (plays) it.plays - ringIndex else it.plays + ringIndex)
+                                        }
+                                    }
+                                }
+                                SmallChip("DEL", scheme, description = "DELETE SECTION ${section.name}") { deleteSection(index) }
                             }
                         }
-                        if (clipOnly != null) {
-                            TapeText(clipOnly, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2)
-                        } else {
-                            TapeText(
-                                "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
-                                TapeType.pixelSmall,
-                                scheme.ink3.tape,
-                                Modifier.fillMaxWidth(),
-                                maxLines = 3,
-                            )
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SmallChip("+ SECTION", scheme, accent = current.sections.isEmpty()) { addSection() }
+                        if (current.sections.isNotEmpty()) {
+                            SmallChip("NO ARRANGEMENT", scheme, description = "DROP THE SECTIONS, KEEP THE RINGS") { clearSections() }
                         }
+                    }
+                    TapeText(
+                        "A SECTION STARTS ITS RINGS OVER, SO IT REPEATS THE SAME EVERY TIME AND CLIPS AS ITS OWN SEQUENCE. " +
+                            "A SECTION WITH NO RINGS IS A BREAK, AND WRITES NO GROOVE. CLIP ▸ KIT WRITES ONE FOR EVERY OTHER — FLIP THEM ON THE MPC.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 4,
+                    )
+                } else if (outOpen) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("ONE TURN OUT — ${transportLabel(current)}", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { outOpen = false }
+                    }
+                    // The two ways out are asked SEPARATELY, because
+                    // they no longer refuse together. A clip has reasons a
+                    // bounce has not - the snips, the mutes, the ring with
+                    // no hits on it yet - and since sections, a bounce has
+                    // one a clip has not: eight sections of 32 bars are
+                    // eight legal sequences and one impossible bounce.
+                    // Gating both on `refusal` hid CLIP ▸ KIT in exactly
+                    // the case an arrangement exists to make exportable.
+                    val bounceWhy = OrbitClip.refusal(current)
+                    val clipWhy = OrbitClip.clipRefusal(current)
+                    if (OrbitClip.countsDifferently(current)) {
+                        // The MPC clip has no time signature: its bar is
+                        // sixteen 16ths whatever the set's is, and this
+                        // line is what tells the player what that will
+                        // make of their bars.
+                        //
+                        // So it counts what is WRITTEN. With an
+                        // arrangement that is one clip per section, each
+                        // rounded up to its own whole bars — and their
+                        // total is not the plan's: three of a 3/4 set's
+                        // bars twice over is two clips of three, where the
+                        // plan's 72 steps round to five. One number would
+                        // have been none of the lengths the player is
+                        // about to see on the hardware, so each section
+                        // says its own, by name, as the sequences will.
+                        val mpcBars = if (current.sections.isEmpty()) {
+                            "${OrbitClip.barsFor(OrbitClock.transportSteps(current))}"
+                        } else {
+                            current.sections.indices
+                                .filter { current.sections[it].plays.isNotEmpty() }
+                                .joinToString(", ") {
+                                    "${current.sections[it].name} ${OrbitClip.barsFor(OrbitClip.sectionSteps(current, it))}"
+                                }
+                        }
+                        // Two exports, two answers, since YYY10. A PROJECT
+                        // declares the set's meter and its sequences are as
+                        // long as the music; a TRACK cannot say anything but
+                        // 4/4 (its clips are version 1 and `timeSignatureList`
+                        // is a version-3 field) and still pads. The label comes
+                        // from `OrbitClip` rather than from `lapSteps / 4`
+                        // because a lap the format cannot spell writes 4/4 too.
+                        val keeps = OrbitClip.declaredMeterLabel(current)
+                        TapeText(
+                            if (keeps != null) {
+                                "A PROJECT KEEPS $keeps. A TRACK COUNTS 4/4 BARS: $mpcBars."
+                            } else {
+                                "THE MPC COUNTS 4/4 BARS: $mpcBars."
+                            },
+                            TapeType.pixelSmall,
+                            scheme.ink2.tape,
+                            Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (bounceWhy == null || clipWhy == null) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Their per-button guards (each shows only when
+                            // its OWN reason is clear), with Batch 3's label
+                            // rule: no ▸ on either. Both write in place — a
+                            // snip on the shelf, a clip in this kit's grooves —
+                            // and leave the player on ORBIT; neither navigates
+                            // nor opens a panel.
+                            if (bounceWhy == null) {
+                                ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE TO TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
+                            }
+                            if (clipWhy == null) {
+                                ActionButton("CLIP TO KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }
+                            }
+                        }
+                    }
+                    // Each reason once. The clip's ceiling is part of the
+                    // bounce's, so when a length is what refuses them both
+                    // it is literally the same sentence twice.
+                    val why = listOfNotNull(bounceWhy, clipWhy).distinct()
+                    why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2) }
+                    if (why.isEmpty()) {
+                        TapeText(
+                            "TAPE: WHAT YOU HEAR, AS A SNIP ON THE SHELF — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+                            TapeType.pixelSmall,
+                            scheme.ink3.tape,
+                            Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                        )
                     }
                     // The way back in. It sits under the two ways out
                     // because this is where the route between ORBIT and
                     // the kit's grooves is already explained, and a player
-                    // who has just read what CLIP ▸ KIT does is the one
+                    // who has just read what CLIP TO KIT does is the one
                     // who wants to know the grooves can come back.
-                    ActionButton("GROOVE ▸ RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
+                    //
+                    // Batch 3, Task 4: no ▸ — this reads the kit's groove
+                    // and rebuilds the rings in place, on this same screen;
+                    // it doesn't navigate anywhere.
+                    ActionButton("GROOVE TO RINGS", scheme, Modifier.fillMaxWidth()) { ringsFromGroove() }
                     TapeText(
                         "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
                         TapeType.pixelSmall,
@@ -973,7 +1529,7 @@ fun OrbitScreen(
                     TapeText("FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
                 } else if (spreadOpen && ring != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TapeText("SPREAD HOW MANY HITS ROUND ${ring.steps} STEPS?", TapeType.pixel, scheme.ink.tape)
+                        TapeText("SPREAD HOW MANY HITS ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")}?", TapeType.pixel, scheme.ink.tape)
                         SmallChip("CLOSE", scheme) { spreadOpen = false }
                     }
                     Row(
@@ -1010,11 +1566,15 @@ fun OrbitScreen(
                             Modifier
                                 .weight(1f)
                                 .heightIn(min = 36.dp)
-                                .tapeClick(label = null) { stepsPickerOpen = true },
+                                // Names the action the chevron draws, not the
+                                // live count it opens onto (an accessibility-
+                                // tree dump showed the TapeText below doesn't
+                                // merge into this clickable Box for free).
+                                .tapeClick(label = "EDIT STEPS") { stepsPickerOpen = true },
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             TapeText(
-                                "${ring.steps} STEPS · ${OrbitClock.lengthLabel(current, ring)} ▾",
+                                "${Copy.countOf(ring.steps, "STEP", "STEPS")} · ${OrbitClock.lengthLabel(current, ring)} ▾",
                                 TapeType.pixel,
                                 scheme.ink.tape,
                             )
@@ -1051,13 +1611,15 @@ fun OrbitScreen(
                         }
                     }
                     // The ring's place in the mix: level in tenths, pan in quarters.
-                    // Tap the readout to put it back — 100, or centre. The readouts
-                    // are unlabelled so a screen reader hears their values, not a
-                    // label in place of them; the − + ◀ ▶ chips carry the names.
+                    // Tap the readout to put it back — 100, or centre. Named
+                    // for that reset action rather than left to a descendant
+                    // merge (an accessibility-tree dump showed Compose does
+                    // not fold the TapeText below into this clickable Box
+                    // for free); the − + ◀ ▶ chips carry their own names.
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallChip("−", scheme, description = "QUIETER") { updateRing(selected) { it.copy(level = (it.level - LEVEL_STEP).coerceAtLeast(0f)) } }
                         Box(
-                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = null) {
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET LEVEL TO 100") {
                                 updateRing(selected) { it.copy(level = 1f) }
                             },
                             contentAlignment = Alignment.Center,
@@ -1067,7 +1629,7 @@ fun OrbitScreen(
                         SmallChip("+", scheme, description = "LOUDER") { updateRing(selected) { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
                         SmallChip("◀", scheme, description = "PAN LEFT") { updateRing(selected) { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
                         Box(
-                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = null) {
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET PAN TO CENTRE") {
                                 updateRing(selected) { it.copy(pan = 0f) }
                             },
                             contentAlignment = Alignment.Center,
@@ -1106,7 +1668,7 @@ fun OrbitScreen(
                                 else -> "FILE MISSING — NOTHING TO WRAP"
                             }
                             TapeText(
-                                "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${ring.steps} STEPS · $what",
+                                "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")} · $what",
                                 TapeType.pixelSmall,
                                 if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.amber.tape else scheme.ink2.tape,
                                 maxLines = 3,
@@ -1127,40 +1689,72 @@ fun OrbitScreen(
                     snipPickerOpen = !snipPickerOpen
                     outOpen = false
                     setPanelOpen = false
+                    sectionsOpen = false
                 }
                 ActionButton("OUT ▸", scheme, Modifier.weight(1f), accent = outOpen) {
                     outOpen = !outOpen
                     snipPickerOpen = false
                     setPanelOpen = false
+                    sectionsOpen = false
                 }
             }
+            // Batch 3, Task 3: this is ORBIT's only documentation for ~30
+            // controls, and at 173 characters (the `hasSnips` variant) it
+            // was ellipsized after roughly three screen-widths' worth of
+            // text — everything from "HOLD" on (that holding a ring solos
+            // it, that holding BPM runs the set, how ring ordering resolves
+            // ties) was unreadable. `maxLines = 3` wasn't a deliberate
+            // clamp, just the value that happened to survive whatever this
+            // TapeText started as; raised here rather than restructuring
+            // the rest of ORBIT (a separate piece of work per the brief) —
+            // this row already lives inside the screen's own scrollable
+            // region (the `Column(weight(1f).verticalScroll(...))` this sits
+            // in, opened above at the rings), so a taller block only means
+            // more to scroll past, never anything clipped off the bottom.
             TapeText(
-                if (snips.isEmpty()) {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · NO SNIPS ON THE SHELF YET FOR + SNIP."
-                } else {
-                    "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
-                },
+                Copy.orbitLegend(hasSnips = snips.isNotEmpty()),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
-                maxLines = 3,
+                maxLines = 8,
             )
         }
     }
 }
 
+/**
+ * How long one turn of the transport is, in words — the plan's length
+ * where there is an arrangement, else the rings' meeting.
+ *
+ * What BOUNCE renders and what the OUT panel and the header are talking
+ * about. [cycleLabel] stays for the sentences that really are about the
+ * rings meeting, which an arranged set never does.
+ */
+private fun transportLabel(set: OrbitSet): String =
+    if (set.sections.isEmpty()) {
+        cycleLabel(set)
+    } else {
+        Copy.countOf(OrbitClock.transportBars(set), "BAR", "BARS")
+    }
+
 /** "15 BARS", or "1 BAR" — the realignment length the loop grid's bounce also reports. */
 private fun cycleLabel(set: OrbitSet): String {
     val bars = OrbitClock.cycleBars(set)
     val whole = bars.roundToInt()
-    return if (abs(bars - whole) < 1e-9) (if (whole == 1) "1 BAR" else "$whole BARS") else "${"%.1f".format(java.util.Locale.ROOT, bars)} BARS"
+    return if (abs(bars - whole) < 1e-9) Copy.countOf(whole, "BAR", "BARS") else "${"%.1f".format(java.util.Locale.ROOT, bars)} BARS"
 }
 
-/** "BAR 7 / 15": where in the cycle the transport is. Stopped, it is at the top. */
+/**
+ * "BAR 7 / 15": where in the transport's own turn it is. Stopped, it is at
+ * the top.
+ *
+ * Round the arrangement where there is one, rather than round the rings'
+ * cycle — which an arranged set may never reach, so the readout would
+ * climb towards a total the player never arrives at.
+ */
 private fun barLabel(set: OrbitSet, frame: Long, playing: Boolean): String {
-    val total = ceil(OrbitClock.cycleBars(set)).toInt().coerceAtLeast(1)
-    val lap = OrbitClock.lapFrames(set)
-    val bar = if (playing && lap > 0) ((frame / lap) % total + 1).toInt() else 1
+    val total = OrbitClock.transportBars(set)
+    val bar = if (playing) OrbitClock.transportBar(set, frame) else 1
     return "BAR $bar/$total"
 }
 
@@ -1196,7 +1790,10 @@ private fun padColor(kit: Kit, slot: Int, fallback: Color): Color =
 private fun RingsCanvas(
     set: OrbitSet,
     kit: Kit,
+    /** The SECTION's own frame: where every ring is drawn from. */
     frame: Long,
+    /** The transport's, for the questions that are about the arrangement itself. */
+    transportFrame: Long,
     playing: Boolean,
     selected: Int,
     solo: Int?,
@@ -1223,6 +1820,30 @@ private fun RingsCanvas(
     val inkColor = scheme.lcdInk.tape
     val amber = scheme.amber.tape
     val dim = scheme.ink3.tape.copy(alpha = 0.6f)
+    // One definition of "this ring is being heard right now": its own
+    // mute, its level, another ring's solo, and the section playing at
+    // this instant — the same four the engine asks before it strikes.
+    // The picture says it in two places — the ring's own colour and the
+    // meeting pulse — and two copies of a predicate is how they come to
+    // disagree, which they did: the pulse asked only about the section, so
+    // it flashed "every ring on its downbeat" over a section whose rings
+    // are all muted, or over one the solo leaves out.
+    fun heardRing(i: Int): Boolean =
+        set.orbits[i].engaged && set.orbits[i].level > 0f && (solo == null || solo == i) &&
+            OrbitClock.playsAt(set, i, transportFrame)
+
+    // The rings actually being HEARD, which is what "they meet" is a
+    // question about. Not the set's rings: one the section leaves out is
+    // not meeting anything. Not the section's either, which was the first
+    // fix and only half of one — a muted 20-step ring beside an audible
+    // 16-step one made the pulse wait five bars for a meeting only the
+    // silent ring was party to.
+    val here = OrbitClock.sectionAt(set, transportFrame)
+    val heardSet = remember(set, here, solo) {
+        val rings = set.orbits.filterIndexed { i, _ -> heardRing(i) }
+        if (rings.size == set.orbits.size) set else set.copy(orbits = rings, sections = emptyList())
+    }
+
     // Display order: shortest period innermost, then fewer steps, then as added.
     val order = remember(set) {
         set.orbits.indices.sortedWith(
@@ -1232,7 +1853,14 @@ private fun RingsCanvas(
 
     // The picture in words, for a screen reader: every ring in display
     // order, its length, and whether it is picked, muted or soloed.
-    val description = remember(set, selected, solo) {
+    //
+    // Keyed by the SECTION rather than by the frame: what this says
+    // changes at a boundary and nowhere else, so the frame would rebuild
+    // it forty-seven times a second to say the same sentence, and leaving
+    // it out left a screen reader on the first section's words for the
+    // whole arrangement. `sectionAt` is NO_SECTION for a set with no
+    // arrangement, which never changes, so such a set rebuilds as it did.
+    val description = remember(set, selected, solo, OrbitClock.sectionAt(set, transportFrame)) {
         val rings = order.joinToString(", ") { i ->
             val ring = set.orbits[i]
             val state = listOfNotNull(
@@ -1242,7 +1870,21 @@ private fun RingsCanvas(
             ).joinToString(" ")
             "${ring.name}, ${OrbitClock.lengthLabel(set, ring)}${if (state.isEmpty()) "" else ", $state"}"
         }
-        if (set.orbits.isEmpty()) "RINGS: NONE" else "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+        if (set.orbits.isEmpty()) {
+            "RINGS: NONE"
+        } else if (set.sections.isEmpty()) {
+            "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+        } else {
+            // With an arrangement the rings' meeting is not what the
+            // transport goes round, and which rings are even sounding
+            // changes with the section - a screen reader was told neither.
+            val here = OrbitClock.sectionAt(set, transportFrame)
+            val playing = set.sections.getOrNull(here)?.plays.orEmpty()
+                .mapNotNull { set.orbits.getOrNull(it)?.name?.ifBlank { "RING ${it + 1}" } }
+            "RINGS, SHORTEST INSIDE: $rings. SECTION ${set.sections.getOrNull(here)?.name ?: "?"} OF " +
+                "${set.sections.size}, ${transportLabel(set)} ROUND THE PLAN. " +
+                if (playing.isEmpty()) "IT PLAYS NOTHING — A BREAK." else "IT PLAYS ${playing.joinToString(", ")}."
+        }
     }
 
     Box(modifier.lcdPanel(scheme).semantics { contentDescription = description }) {
@@ -1269,7 +1911,13 @@ private fun RingsCanvas(
                 val ring = set.orbits[i]
                 val r = geometry.radius(slot)
                 val picked = i == selected
-                val heard = ring.engaged && (solo == null || solo == i)
+                // A section's choice is the third thing that silences a
+                // ring, beside its own mute and another ring's solo, and
+                // the picture has to say so: a ring left out of the
+                // section playing now is not being heard, however engaged
+                // it is. Asked of the TRANSPORT's frame, since which
+                // section it is is a question about the arrangement.
+                val heard = heardRing(i)
                 val ringInk = when (val content = ring.content) {
                     is PatternOrbit -> padColor(kit, ring.pads.first(), inkColor)
                     is SnipOrbit -> Schemes.classColor(com.snipsnap.audio.DrumClass.LOOP).tape
@@ -1383,9 +2031,21 @@ private fun RingsCanvas(
                     style = labelStyle.copy(color = amber),
                 )
             }
-            // The meeting: every ring on its downbeat together, once a cycle.
-            if (playing && set.orbits.isNotEmpty()) {
-                val cycle = OrbitClock.cycleFrames(set)
+            // The meeting: every ring on its downbeat together, once a
+            // cycle - and only where there is something to meet. The local
+            // frame is zero at the start of EVERY section, a break
+            // included, so without asking whether the section plays
+            // anything the panel flashed "every ring on its downbeat"
+            // into silence.
+            if (playing && set.orbits.indices.any(::heardRing)) {
+                // Over the rings being HEARD, not the whole set's. The
+                // set's cycle is when EVERY ring meets, including ones the
+                // section leaves out and ones a mute or a solo silences, so
+                // two audible 16-step rings met every bar while the pulse
+                // waited five - the length of a meeting that is not
+                // happening. A set where everything is heard gets its own
+                // cycle back, which is what it always had.
+                val cycle = OrbitClock.cycleFrames(heardSet)
                 val since = Math.floorMod(frame, cycle)
                 val pulse = (1f - since.toFloat() / (set.sampleRate * MEET_SECONDS)).coerceIn(0f, 1f)
                 if (pulse > 0f) {
@@ -1419,6 +2079,8 @@ private fun StripEditor(
     onToggle: (slot: Int, step: Int) -> Unit,
     onCycle: (slot: Int, step: Int) -> Unit,
     onAudition: (slot: Int) -> Unit,
+    brush: OrbitBrush,
+    onBrush: () -> Unit,
     recording: Boolean = false,
 ) {
     val content = ring.content as? PatternOrbit ?: return
@@ -1444,6 +2106,23 @@ private fun StripEditor(
         val cellW = maxOf(CELL_MIN_DP.dp, (available - gap * (ring.steps - 1)) / ring.steps)
         val scroll = rememberScrollState()
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            // What a long-press writes. The grid has two gestures and a hit
+            // has four things to say, so the chip is the third gesture -
+            // one tap to change what the next long-press means, rather than
+            // a panel over the strip the player is trying to hear.
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Batch 3, Task 4: "·", not "▸" — one tap cycles the brush
+                // in place (the KDoc above), it doesn't navigate or open a
+                // panel. "·" is the house separator for a label-plus-detail
+                // pair that isn't either of those (`PROG A · THE BREAK`,
+                // GrooveScreen.kt).
+                SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
@@ -1468,8 +2147,15 @@ private fun StripEditor(
                                 else -> scheme.field.tape
                             }
                             val accent = hit != null && hit.velocity >= OrbitPatterns.ACCENT_VELOCITY
+                            // What the hit says beyond its weight, if
+                            // anything: "50%", "2:4", "×3". A square is one
+                            // cell and cannot draw three numbers, so the
+                            // amber edge says "this one is not plain" and
+                            // the accessibility state says which.
+                            val mark = hit?.let { OrbitBrushes.mark(it) }.orEmpty()
                             val edge = when {
                                 step == playheadStep -> inkColor
+                                mark.isNotEmpty() -> scheme.amber.tape
                                 accent -> color
                                 else -> scheme.grayEdge.tape
                             }
@@ -1477,14 +2163,15 @@ private fun StripEditor(
                                 width = cellW,
                                 fill = fill,
                                 edge = edge,
-                                edgeWidth = if (step == playheadStep || accent) 2.dp else 1.dp,
+                                edgeWidth = if (step == playheadStep || accent || mark.isNotEmpty()) 2.dp else 1.dp,
                                 label = "STEP ${step + 1} PAD ${padLabel(slot)}",
                                 state = when {
                                     hit == null -> "EMPTY"
                                     accent -> "ACCENT"
                                     hit.velocity < OrbitPatterns.HIT_VELOCITY -> "SOFT HIT"
                                     else -> "HIT"
-                                },
+                                }.let { if (mark.isEmpty()) it else "$it $mark" },
+                                longPressLabel = brush.action,
                                 onTap = { onToggle(slot, step) },
                                 onLongPress = { onCycle(slot, step) },
                             )
@@ -1497,10 +2184,13 @@ private fun StripEditor(
 }
 
 /**
- * One strip cell. A tap places or lifts the hit; a long-press cycles its
- * weight (soft, normal, accent) or places an accent on an empty cell.
+ * One strip cell. A tap places or lifts the hit; a long-press moves
+ * whatever the strip's brush names — its weight, its chance, its
+ * conditional or its ratchet — or places an accent on an empty cell.
  * `combinedClickable` rather than a raw pointerInput so both gestures are
- * real accessibility actions, as the CHOP chips do it.
+ * real accessibility actions, as the CHOP chips do it; [longPressLabel] is
+ * the brush's own word, so what a screen reader announces is what the
+ * press is about to do rather than what it used to do.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1511,6 +2201,7 @@ private fun StripCell(
     edgeWidth: androidx.compose.ui.unit.Dp,
     label: String,
     state: String,
+    longPressLabel: String,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
 ) {
@@ -1525,12 +2216,28 @@ private fun StripCell(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = label,
-                onLongClickLabel = "ACCENT",
+                onLongClickLabel = longPressLabel,
                 onLongClick = onLongPress,
                 onClick = onTap,
             ),
     )
 }
+
+/**
+ * How long a new section is, in the set's own bars.
+ *
+ * Four, because an arrangement is written in fours far more often than in
+ * ones, and a section is quicker to shorten than to lengthen four times.
+ */
+private const val DEFAULT_SECTION_BARS = 4
+
+/** What each brush writes, said once under the chip rather than in a manual. */
+private val BRUSH_SAYS: Map<OrbitBrush, String> = mapOf(
+    OrbitBrush.WEIGHT to "SOFT → NORMAL → ACCENT",
+    OrbitBrush.CHANCE to "HOW OFTEN IT SOUNDS — 100 → 75 → 50 → 25%",
+    OrbitBrush.EVERY to "WHICH LAP IT SOUNDS ON — EVERY → 1:2 → 2:2 → 1:4 → 4:4",
+    OrbitBrush.RATCHET to "STRIKES ACROSS THE STEP — 1 → 2 → 3 → 4",
+)
 
 /** A strip cell's least width, in dp: GROOVE's step editor at 16 across, and still a thumb-sized target with a gap. */
 private const val CELL_MIN_DP = 22
@@ -1540,6 +2247,20 @@ private const val CELL_H_DP = 26
 
 /** How long a struck hit glows. About a 16th at 150 BPM; shorter than a 16th at anything slower. */
 private const val FLARE_SECONDS = 0.1f
+
+/**
+ * One step of UNDO: the set as it was, and the ring soloed while it was.
+ *
+ * The solo is not part of the set and is never saved, but it is an INDEX
+ * into the set's rings — so an edit that moves the rings moves it, and
+ * stepping back has to move it back. Keeping the two together is the only
+ * way the pair can stay true to each other.
+ *
+ * NOT `private` — App.kt's own hoisted `orbitHistory` (the tab-switch
+ * data-loss fix) needs this type for its own `remember`/parameter, the
+ * same reason `GROOVE_SWING_DEFAULT` had to lose its own `private`.
+ */
+data class OrbitStep(val set: OrbitSet, val solo: Int?)
 
 /** How long the panel's frame glows when every ring meets on its downbeat. */
 private const val MEET_SECONDS = 0.35f
@@ -1715,6 +2436,7 @@ private fun ActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     accent: Boolean = false,
+    /** What a screen reader says instead of [label], for a glyph-only button ("↺"). */
     description: String? = null,
     onClick: () -> Unit,
 ) {
@@ -1723,7 +2445,10 @@ private fun ActionButton(
             .height(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
-            .tapeClick(label = description, enabled = enabled, onClick = onClick),
+            // Falls back to label itself (matches HeaderChip/SmallChip in
+            // this file) rather than to a descendant merge that Compose's
+            // clickable semantics do not actually perform.
+            .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)

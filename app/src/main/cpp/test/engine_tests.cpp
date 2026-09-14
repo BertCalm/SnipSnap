@@ -181,6 +181,57 @@ TEST(print_buffer_stop_lands_on_the_callback_and_rearm_is_refused_meanwhile) {
     p.clear();
 }
 
+TEST(print_buffer_stereo_counts_frames_and_cuts_on_a_frame_boundary) {
+    // Two channels: the ceiling is in frames, the storage is interleaved,
+    // and a copy that does not fit is cut between frames - never between
+    // a frame's left and right, which would swap the channels for the
+    // rest of the print.
+    PrintBuffer p;
+    CHECK(p.arm(3, 2));
+    CHECK_EQ(p.channels(), 2);
+    const float two[4] = {1.0f, -1.0f, 2.0f, -2.0f};
+    CHECK(p.record(two, 2));
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 2);
+    CHECK_EQ(static_cast<int>(p.samplesWritten()), 4);
+    // Two more frames offered, one frame of room: the odd frame is dropped whole.
+    CHECK(!p.record(two, 2));
+    CHECK(p.state() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 3);
+    CHECK_EQ(static_cast<int>(p.samplesWritten()), 6);
+    CHECK_NEAR(p.data()[4], 1.0f, 1e-6);
+    CHECK_NEAR(p.data()[5], -1.0f, 1e-6);
+    p.clear();
+    // Back to one channel by default, so the surface's print is untouched.
+    CHECK(p.arm(4));
+    CHECK_EQ(p.channels(), 1);
+    p.requestStop();
+    p.record(two, 1);
+    CHECK_EQ(static_cast<int>(p.framesWritten()), 0);
+    p.clear();
+}
+
+TEST(print_buffer_arm_throws_rather_than_silently_truncating_an_impossible_reservation) {
+    // What jni.cpp's armPrint try/catch actually guards against: `arm`
+    // takes a plain size_t, unlike the bridge's jint-bounded parameter,
+    // so it can be asked for more frames than a vector<float> can ever
+    // hold. Proving the throw is real here is what makes that catch
+    // load-bearing rather than defensive dead code - a JNI entry point
+    // this jint-bounded can't itself manufacture the request, but
+    // `PrintBuffer::arm` has no such ceiling, and nothing stops a future
+    // caller (or an ABI change) from reaching it directly with one.
+    PrintBuffer p;
+    const size_t impossible = std::vector<float>().max_size() + 1;
+    bool threw = false;
+    try {
+        p.arm(impossible, 2);
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    CHECK(threw);
+    // Refused, not half-armed: still Idle, nothing to clear or leak.
+    CHECK(p.state() == PrintBuffer::State::Idle);
+}
+
 // ---- PadEngine -----------------------------------------------------------------
 
 TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {
@@ -352,6 +403,69 @@ TEST(latency_is_minus_one_with_no_stream) {
     CHECK(surface.latencyMillis() < 0.0);
 }
 
+TEST(pad_engine_prints_the_stereo_bus_it_just_played) {
+    // The point of printing the bus rather than rendering the kit again:
+    // the print cannot disagree with what was heard. So the assertion is
+    // literally that - the frames the callback wrote and the frames the
+    // print kept are the same frames, both channels of them.
+    PadEngine& e = seeded();
+    CHECK(e.armPrint(200));
+    CHECK(!e.armPrint(200));  // not while recording
+    e.pushCommand(noteOn(1, 0, 0, 900, 1.0f, 0.25f));
+    const std::vector<float> heard = callback(e, 128);
+    CHECK(e.printState() == PrintBuffer::State::Recording);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 128);
+    CHECK_EQ(static_cast<int>(e.printSamples()), 256);
+    CHECK(peak(heard) > 0.01f);  // something was actually playing
+    for (size_t i = 0; i < heard.size(); ++i) CHECK_NEAR(e.printData()[i], heard[i], 1e-6);
+    // Stereo, not a mono copy: the note was panned four to one, so the
+    // print's left carries plainly more than its right. Measured over the
+    // whole print rather than one frame, because the first frames of the
+    // ramp are near silence and a gain glide is still settling there.
+    float left = 0.0f, right = 0.0f;
+    for (int f = 0; f < 128; ++f) {
+        left += std::fabs(e.printData()[2 * f]);
+        right += std::fabs(e.printData()[2 * f + 1]);
+    }
+    CHECK(left > right * 2.0f);
+
+    e.requestStopPrint();
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 128);  // the stop pass added nothing
+    CHECK(e.clearPrint());
+    CHECK(e.printState() == PrintBuffer::State::Idle);
+}
+
+TEST(pad_engine_with_no_print_armed_records_nothing) {
+    // The tap sits in the callback of every kit hit anyone ever plays, so
+    // an unarmed engine must stay at Idle no matter how much runs through
+    // it - that is what makes it free when nobody is bouncing.
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(1, 0, 0, 900));
+    for (int i = 0; i < 20; ++i) callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Idle);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 0);
+}
+
+TEST(pad_engine_print_stops_at_its_ceiling_mid_callback) {
+    // A bounce asks for a fixed number of frames; the callback that
+    // crosses the ceiling keeps the frames that fit and finishes there,
+    // rather than running past the buffer.
+    PadEngine& e = seeded();
+    CHECK(e.armPrint(100));
+    e.pushCommand(noteOn(1, 0, 0, 900));
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Recording);
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 100);
+    CHECK_EQ(static_cast<int>(e.printSamples()), 200);
+    callback(e, 64);  // and stays there
+    CHECK_EQ(static_cast<int>(e.printFrames()), 100);
+    e.clearPrint();
+}
+
 // ---- SurfaceEngine -------------------------------------------------------------
 
 TEST(surface_engine_is_silent_until_gated_and_loops_its_sample) {
@@ -399,6 +513,253 @@ TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
     CHECK(e.printState() == PrintBuffer::State::Idle);
 }
 
+TEST(surface_engine_blends_samples_at_each_vertex_by_weight) {
+    // Three constant sources, deliberately at different signs *and*
+    // magnitudes - loud positive, loud negative, quiet negative - so a
+    // weight wired to the wrong slot (B and C swapped, say) shows up as
+    // the wrong magnitude, not just the wrong sign. A lowpass's DC gain
+    // and tanh's odd symmetry both preserve sign, so this is still a
+    // magnitude/sign check, not an exact-value one - except at an even
+    // A/B split, which is an exact +0.9/-0.9 average computed before the
+    // filter ever sees it and must land on exactly zero.
+    auto settle = [](float a, float b, float c) {
+        SurfaceEngine e(kRate);
+        std::vector<float> hi(100, 0.9f), lo(100, -0.9f), quiet(100, -0.3f);
+        e.loadSample(hi.data(), hi.size(), kRate, 0);
+        e.loadSample(lo.data(), lo.size(), kRate, 1);
+        e.loadSample(quiet.data(), quiet.size(), kRate, 2);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = a; f.sampleB = b; f.sampleC = c;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    CHECK(settle(1.0f, 0.0f, 0.0f) > 0.5f);              // slot 0 alone: loud positive
+    CHECK(settle(0.0f, 1.0f, 0.0f) < -0.5f);              // slot 1 alone: loud negative
+    const float thirdAlone = settle(0.0f, 0.0f, 1.0f);    // slot 2 alone: quiet negative
+    CHECK(thirdAlone < -0.02f && thirdAlone > -0.35f);
+    CHECK(std::fabs(settle(0.5f, 0.5f, 0.0f)) < 0.01f);   // slot 0/1 even split cancels exactly
+}
+
+TEST(surface_engine_blends_the_fourth_vertex_too_and_renormalises_over_all_four) {
+    // Same idea as the three-vertex test above, extended to slot 3
+    // (sampleD, the pad's base-mid vertex) - proving the fourth slot is
+    // actually wired into renderMono's blend and its renormalisation,
+    // not just accepted by applyControl and then dropped on the floor.
+    SurfaceEngine e(kRate);
+    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+    e.loadSample(hi.data(), hi.size(), kRate, 0);
+    e.loadSample(lo.data(), lo.size(), kRate, 3);
+    ControlFrame f;
+    f.mode = 0;
+    f.gate = true;
+    f.x = 0.5f;
+    f.y = 1.0f;  // cutoff wide open
+    f.sampleA = 0.0f; f.sampleD = 1.0f;  // slot 3 alone
+    e.pushControl(f);
+    std::vector<float> out;
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    float sum = 0.0f;
+    for (float v : out) sum += v;
+    CHECK(sum / static_cast<float>(out.size()) < -0.5f);  // loud negative, full level
+
+    // All four loaded, all four weighted evenly: a loud positive (slot 0)
+    // and a loud negative (slot 3) at equal weight cancel toward zero the
+    // same way the three-vertex even split does above.
+    SurfaceEngine four(kRate);
+    std::vector<float> quietA(100, 0.3f), quietB(100, -0.3f);
+    four.loadSample(hi.data(), hi.size(), kRate, 0);
+    four.loadSample(quietA.data(), quietA.size(), kRate, 1);
+    four.loadSample(quietB.data(), quietB.size(), kRate, 2);
+    four.loadSample(lo.data(), lo.size(), kRate, 3);
+    ControlFrame even;
+    even.mode = 0;
+    even.gate = true;
+    even.x = 0.5f;
+    even.y = 1.0f;
+    even.sampleA = even.sampleB = even.sampleC = even.sampleD = 1.0f;  // a quarter each
+    four.pushControl(even);
+    std::vector<float> evenOut;
+    for (int i = 0; i < 400; ++i) evenOut = callback(four, 64);
+    float evenSum = 0.0f;
+    for (float v : evenOut) evenSum += v;
+    // 0.9 + 0.3 - 0.3 - 0.9, each at a quarter weight, is exactly zero.
+    CHECK(std::fabs(evenSum / static_cast<float>(evenOut.size())) < 0.01f);
+}
+
+TEST(surface_engine_treats_sample_weights_as_a_ratio_not_absolute_level) {
+    // renderMono renormalises sampleA/B/C every frame, so a caller sending
+    // {2, 0, 0} must sound identical to {1, 0, 0} - the blend is a ratio
+    // between slots, never an absolute level a UI has to keep under 1.
+    // With only one weight nonzero the ratio is 1.0 from the very first
+    // sample (nothing else to divide by), so the two runs are
+    // bit-identical from frame one, not just once a glide has settled.
+    auto run = [](float weight) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.9f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;
+        f.sampleA = weight;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 200; ++i) out = callback(e, 64);
+        return out;
+    };
+
+    CHECK(run(1.0f) == run(5.0f));
+}
+
+TEST(surface_engine_one_loaded_slot_plays_full_level_at_any_touch_weight) {
+    // With only slot 0 loaded, the other two vertices' touch weight is
+    // never really "requesting" anything - there is nothing there to
+    // read. Before this fix, wSum summed every weight the touch sent
+    // regardless of what was loaded, so a touch anywhere but the exact
+    // apex (weights 0.25/0.25 on the unloaded base vertices at the pad's
+    // own centre, say - TouchSurface.sampleWeights(0.5, 0.5)) silently
+    // halved the one loaded sample's level: the opposite of the "no dead
+    // zone" the vertex blend exists for. Settling at the apex and at the
+    // pad's centre must sound the same.
+    auto settle = [](float a, float b, float c) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.9f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = a; f.sampleB = b; f.sampleC = c;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    const float atApex = settle(1.0f, 0.0f, 0.0f);
+    const float atCentre = settle(0.5f, 0.25f, 0.25f);  // weight split across two unloaded vertices too
+    CHECK_NEAR(atApex, atCentre, 0.02f);
+}
+
+TEST(surface_engine_unloaded_pad4_falls_back_to_the_pad2_pad3_blend_at_the_seam) {
+    // Copilot review finding on PR #192: TouchSurface.sampleWeights splits
+    // the pad into two half-triangles meeting at PAD4's own vertex, so
+    // PAD2 and PAD3's raw weights both collapse toward zero approaching
+    // it - unlike an ordinary unloaded slot, there is no third loaded
+    // neighbour left there for the plain renormalisation to fall back on,
+    // so without this fallback an unloaded PAD4 (the common case - it is
+    // brand new) leaves a real hole at the bottom-centre of the pad, not
+    // just the single point PAD4's own vertex sits at. At that exact
+    // point (TouchSurface.sampleWeights(0.5, 0) = {0, 0, 0, 1}), the fix
+    // must recover the even PAD2/PAD3 split this seam gave before PAD4
+    // existed, at full level - not near silence.
+    //
+    // Two different *same-sign* DC levels, not a cancelling +/- pair: a
+    // constant source has no peak distinct from its average, so an evenly
+    // *cancelling* pair would read back at 0 whether the fallback fired or
+    // the point were genuinely silent - indistinguishable, and no test at
+    // all. Rather than predict the exact level through the drive stage's
+    // tanh and the filter (both nonlinear/dynamic), this compares against
+    // each source played alone: monotonic, DC-preserving stages keep an
+    // even blend of the two strictly between them - nowhere near the 0.0
+    // true silence would settle to.
+    // loadPad2/loadPad3 name which of PAD2 (always sourced from the 0.8
+    // buffer, slot 1) and PAD3 (always the 0.2 buffer, slot 2) is loaded -
+    // rather than generic slot-index arguments, so a transposed call can't
+    // quietly load the wrong level into the wrong slot the way it did the
+    // first time this test was written (caught by CI, not by this file).
+    auto settle = [](float sampleA, float sampleB, float sampleC, float sampleD, bool loadPad2, bool loadPad3) {
+        SurfaceEngine e(kRate);
+        std::vector<float> hi(100, 0.8f), lo(100, 0.2f);
+        if (loadPad2) e.loadSample(hi.data(), hi.size(), kRate, 1);
+        if (loadPad3) e.loadSample(lo.data(), lo.size(), kRate, 2);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;  // cutoff wide open
+        f.sampleA = sampleA; f.sampleB = sampleB; f.sampleC = sampleC; f.sampleD = sampleD;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    // PAD2 (0.8) and PAD3 (0.2) each alone, slot 0/3 unloaded either way -
+    // the same door every other case in this file already plays through.
+    const float pad2Alone = settle(0.0f, 1.0f, 0.0f, 0.0f, true, false);
+    const float pad3Alone = settle(0.0f, 0.0f, 1.0f, 0.0f, false, true);
+    CHECK(pad2Alone > pad3Alone + 0.05f);  // sanity: the levels are actually different
+
+    // At the seam (per sampleWeights(0.5, 0) = {0, 0, 0, 1}), with slot 3
+    // unloaded: the fallback must land strictly between the two, not at
+    // the 0.0 a broken (or missing) fallback would settle to.
+    const float atSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, true, true);
+    CHECK(atSeam > pad3Alone + 0.02f);
+    CHECK(atSeam < pad2Alone - 0.02f);
+
+    // With only PAD2 loaded (PAD3 also empty), the whole fallback share
+    // goes to PAD2 alone - the same level as PAD2 played directly.
+    const float onlyPad2AtSeam = settle(0.0f, 0.0f, 0.0f, 1.0f, true, false);
+    CHECK_NEAR(onlyPad2AtSeam, pad2Alone, 0.02f);
+}
+
+TEST(surface_engine_unloaded_slots_are_silent_until_loaded) {
+    // A weight aimed entirely at a slot nothing was ever loaded into must
+    // settle to honest silence, not NaN. "Settle" matters here as much as
+    // anywhere else in this file: sampleWeight_ glides toward its target
+    // exactly like every other control, so right after gate=true the
+    // still-audible slot 0 legitimately leaks through the transient - that
+    // is the de-zippering working as intended, not a bug, and the
+    // finiteness check (never NaN) has to hold all through it. Silence is
+    // the claim only once the glide has actually arrived. Checked for both
+    // slot 1 and slot 2, since each is its own weight and its own bug to have.
+    auto checkSlotSilentUntilLoaded = [](float ControlFrame::*weight) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.5f);
+        e.loadSample(tone.data(), tone.size(), kRate, 0);
+        ControlFrame f;
+        f.mode = 0;
+        f.gate = true;
+        f.x = 0.5f;
+        f.y = 1.0f;
+        f.sampleA = 0.0f;  // ControlFrame defaults sampleA to 1 - clear it so *weight alone carries the blend
+        f.*weight = 1.0f;
+        e.pushControl(f);
+        for (int i = 0; i < 300; ++i) {
+            auto out = callback(e, 64);
+            for (float v : out) CHECK(std::isfinite(v));
+        }  // let sampleWeight_ (and the gain envelope) glide all the way to their targets
+        float p = 0.0f;
+        for (int i = 0; i < 100; ++i) p = std::max(p, peak(callback(e, 64)));
+        // A one-pole glide never reaches its target bit-exactly in finite time
+        // (CI measured a ~2e-6 residual against a 1e-6 tolerance here) - 1e-4
+        // is still four orders of magnitude tighter than the ~0.14 this test
+        // catches when the glide hasn't happened at all, so it stays a real
+        // assertion without depending on exactly how many samples a given
+        // compiler's float rounding takes to underflow the rest of the way.
+        CHECK_NEAR(p, 0.0f, 1e-4f);
+    };
+    checkSlotSilentUntilLoaded(&ControlFrame::sampleB);
+    checkSlotSilentUntilLoaded(&ControlFrame::sampleC);
+    checkSlotSilentUntilLoaded(&ControlFrame::sampleD);
+}
+
 TEST(surface_engine_morph_blends_the_corners) {
     SurfaceEngine e(kRate);
     // Corner A = full cutoff and no drive, corner D = no cutoff (dark): the
@@ -418,6 +779,484 @@ TEST(surface_engine_morph_blends_the_corners) {
     for (int i = 0; i < 400; ++i) callback(e, 64);  // let the cutoff glide
     for (int i = 0; i < 100; ++i) pd = std::max(pd, peak(callback(e, 64)));
     CHECK(pa > pd);
+}
+
+TEST(surface_engine_vector_mode_uses_morphs_exact_corner_blend) {
+    // VECTOR shares MORPH's formula exactly (see applyControl's switch) -
+    // the same corner state, the same tilt nudge, at the same touch
+    // reading, must produce byte-identical output whichever of the two
+    // mode numbers is sent.
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+
+    auto run = [&](int32_t mode) {
+        SurfaceEngine engine(kRate);
+        engine.setCorner(0, MacroState{0.5f, 0.6f, 0.5f, 0.0f});
+        engine.loadSample(square.data(), square.size(), kRate);
+        ControlFrame f;
+        f.mode = mode;
+        f.gate = true;
+        f.a = 1; f.b = f.c = f.d = 0;
+        f.tilt = 0.75f;
+        engine.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(engine, 64);
+        return out;
+    };
+
+    CHECK(run(2) == run(3));  // MORPH and VECTOR
+}
+
+TEST(surface_engine_vector_mode_also_drives_the_sample_blend) {
+    // VECTOR is the one mode where the sample vertices and the corner
+    // blend both matter at once - proving the sample side still reaches
+    // the DSP under mode 3, not just under mode 0 (XY) as every other
+    // sample-blend test in this file uses. Corner A (clean: cutoff wide
+    // open, no drive) keeps the filter out of the way of the sign check.
+    SurfaceEngine e(kRate);
+    std::vector<float> hi(100, 0.9f), lo(100, -0.9f);
+    e.loadSample(hi.data(), hi.size(), kRate, 0);
+    e.loadSample(lo.data(), lo.size(), kRate, 1);
+    ControlFrame f;
+    f.mode = 3;
+    f.gate = true;
+    f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+    f.sampleA = 0.0f; f.sampleB = 1.0f; f.sampleC = 0.0f;
+    e.pushControl(f);
+    std::vector<float> out;
+    for (int i = 0; i < 400; ++i) out = callback(e, 64);
+    float sum = 0.0f;
+    for (float v : out) sum += v;
+    CHECK(sum / static_cast<float>(out.size()) < -0.5f);  // slot 1 alone: negative, full level
+}
+
+TEST(surface_engine_retriggers_the_loop_on_touch_down) {
+    // Without a reset, phase_ keeps advancing even while ungated - the loop
+    // is muted, not paused - so a second touch lands wherever it would
+    // naturally have drifted to by then, not at the loop's head. Two runs
+    // that differ only in how many samples the pad sat released before the
+    // second touch must land at the exact same output once retriggered and
+    // settled: if phase_ actually resets on touch-down, both runs read the
+    // ramp from the same starting point and every later control frame lines
+    // up the same way, so the two waveforms are bit-identical. A ramp
+    // (not a short repeating wave) makes any leftover drift visible - it
+    // has no periodicity shorter than its own length for a coincidental
+    // match to hide behind.
+    auto run = [](int32_t releaseCallbacks) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);  // hold for an arbitrary stretch
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < releaseCallbacks; ++i) callback(e, 64);  // sit released, drifting if unfixed
+
+        e.pushControl(on);  // touch down again
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);  // let the envelope and filter settle
+        return tail;
+    };
+
+    CHECK(run(50) == run(311));
+}
+
+TEST(surface_engine_retriggers_even_when_release_and_touch_share_one_drain) {
+    // onAudioReady used to drain the ring straight to its newest frame,
+    // treating the control stream as a position and nothing else. But the
+    // gate's *edge* is an event: if a lift and a fast retouch both land in
+    // the ring before the next audio callback (entirely possible - it
+    // holds up to 64 frames, and the UI can push faster than one callback
+    // drains), jumping to "newest" collapses them into a single gate=true
+    // apply against a gated_ that was never told about the intervening
+    // false, and the retrigger is missed. Forcing the release into its own
+    // drain (a plain callback() in between) must land on the exact same
+    // settled output as leaving them queued together.
+    auto run = [](bool sameDrain) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        if (!sameDrain) callback(e, 64);  // force the release into a drain of its own
+        e.pushControl(on);
+
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(true) == run(false));
+}
+
+TEST(surface_engine_does_not_retrigger_while_the_touch_is_only_held) {
+    // The edge, not the level: a second gate=true frame while already
+    // gated - a moved finger re-sending its position, say - must not yank
+    // phase_ back to the head mid-note. An implementation that reset on
+    // every true frame instead of the false -> true edge would still pass
+    // the touch-down tests above (they only ever push one true frame per
+    // touch) but would fail this one.
+    auto run = [](bool resendWhileHeld) {
+        SurfaceEngine e(kRate);
+        std::vector<float> ramp(1000);
+        for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+        e.loadSample(ramp.data(), ramp.size(), kRate);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+        if (resendWhileHeld) e.pushControl(on);  // still gate=true - a level, not an edge
+
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(true) == run(false));
+}
+
+TEST(surface_engine_retrigger_resets_every_loaded_slot) {
+    // A touch-down must restart every loaded source, not just whichever
+    // ones currently dominate the blend - otherwise moving the puck after
+    // a retrigger could reveal a source that quietly kept drifting the
+    // whole time it sat inaudible. Four different ramps (not copies of
+    // one) so a bug that only resets some of the slots still shows up
+    // even though a drifting slot's own weight is small - the two runs'
+    // tails just fail to match.
+    auto run = [](int32_t releaseCallbacks) {
+        SurfaceEngine e(kRate);
+        std::vector<float> rampA(1000), rampB(1000), rampC(1000), rampD(1000);
+        for (size_t i = 0; i < rampA.size(); ++i) {
+            rampA[i] = static_cast<float>(i) / 1000.0f - 0.5f;
+            rampB[i] = 0.5f - static_cast<float>(i) / 1000.0f;
+            rampC[i] = std::fmod(static_cast<float>(i) / 333.0f, 1.0f) - 0.5f;
+            rampD[i] = std::fmod(static_cast<float>(i) / 177.0f, 1.0f) - 0.5f;
+        }
+        e.loadSample(rampA.data(), rampA.size(), kRate, 0);
+        e.loadSample(rampB.data(), rampB.size(), kRate, 1);
+        e.loadSample(rampC.data(), rampC.size(), kRate, 2);
+        e.loadSample(rampD.data(), rampD.size(), kRate, 3);
+
+        ControlFrame on;
+        on.mode = 0;
+        on.gate = true;
+        on.x = 0.5f;
+        on.y = 1.0f;
+        on.sampleA = on.sampleB = on.sampleC = on.sampleD = 1.0f;  // renormalised to a quarter each
+        e.pushControl(on);
+        for (int i = 0; i < 137; ++i) callback(e, 64);
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < releaseCallbacks; ++i) callback(e, 64);
+
+        e.pushControl(on);
+        std::vector<float> tail;
+        for (int i = 0; i < 400; ++i) tail = callback(e, 64);
+        return tail;
+    };
+
+    CHECK(run(50) == run(311));
+}
+
+TEST(surface_engine_morph_tilt_reaches_the_filter) {
+    // Two frames identical but for tilt, both weighted fully onto corner A:
+    // if the tilt nudge in morphed() reaches applyControl (as it should -
+    // SurfaceStore.Corner.from mirrors the same arithmetic in Kotlin, and
+    // that side already proves the numbers), the two tilts land on
+    // different resonance targets, which land on different SVF
+    // coefficients, which cannot produce byte-identical output over
+    // hundreds of callbacks. This does not re-derive the filter's theory,
+    // only that the wire from tilt to the DSP is actually connected.
+    SurfaceEngine e(kRate);
+    e.setCorner(0, MacroState{0.5f, 0.6f, 0.5f, 0.0f});
+    std::vector<float> square(100);
+    for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+    e.loadSample(square.data(), square.size(), kRate);
+
+    ControlFrame lowTilt;
+    lowTilt.mode = 2;
+    lowTilt.gate = true;
+    lowTilt.a = 1;
+    lowTilt.b = lowTilt.c = lowTilt.d = 0;
+    lowTilt.tilt = 0.0f;
+    e.pushControl(lowTilt);
+    std::vector<float> lo;
+    for (int i = 0; i < 400; ++i) lo = callback(e, 64);  // let the coefficients settle
+
+    ControlFrame hiTilt = lowTilt;
+    hiTilt.tilt = 1.0f;
+    e.pushControl(hiTilt);
+    std::vector<float> hi;
+    for (int i = 0; i < 400; ++i) hi = callback(e, 64);
+
+    CHECK(lo != hi);
+}
+
+TEST(surface_engine_crush_quantises_a_dc_level_the_more_it_is_turned_up) {
+    // A DC level that is not a "nice" fraction at a coarse quantisation
+    // step, so crush moving it is measurable rather than a coincidence.
+    // A flat, unchanging signal isolates CRUSH's *quantisation* half from
+    // its sample-and-hold half - sample-and-hold has nothing to do to a
+    // signal that never changes anyway (see renderMono's own comment).
+    auto settle = [](float crush) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(100, 0.33f);
+        e.loadSample(tone.data(), tone.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, crush, 0.0f});
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        e.pushControl(f);
+        std::vector<float> out;
+        for (int i = 0; i < 400; ++i) out = callback(e, 64);
+        float sum = 0.0f;
+        for (float v : out) sum += v;
+        return sum / static_cast<float>(out.size());
+    };
+
+    const float transparent = settle(0.0f);
+    const float crushed = settle(1.0f);
+    // crush=1's ~8-level step is coarse enough to snap 0.33 measurably;
+    // crush=0 bypasses quantisation entirely (see renderMono), so
+    // `transparent` is exactly 0.33 run through drive/filter/gain, not
+    // merely close to it.
+    CHECK(std::fabs(crushed - transparent) > 0.005f);
+}
+
+TEST(surface_engine_crush_holds_samples_and_kills_alternation_above_the_hold_rate) {
+    // The quantisation test above deliberately uses a signal that never
+    // changes, so it cannot see CRUSH's *other* half - sample-and-hold.
+    // A square wave that flips sign every 10 samples does: at crush = 1
+    // each hold spans ~25 samples, more than two full periods of the
+    // wave, so most of its sign flips get eaten inside a single held
+    // value and never reach the filter at all. Counting sign changes in
+    // the settled output - not amplitude, which a pure hold does not
+    // change - isolates exactly that effect: an implementation that
+    // dropped crushPhase_ and only quantised would still flip on every
+    // sample and fail this test even while passing the one above.
+    auto countCrossings = [](const std::vector<float>& v) {
+        int crossings = 0;
+        for (size_t i = 1; i < v.size(); ++i) {
+            if ((v[i] > 0.0f) != (v[i - 1] > 0.0f)) ++crossings;
+        }
+        return crossings;
+    };
+    auto settle = [](float crush) {
+        SurfaceEngine e(kRate);
+        std::vector<float> square(100);
+        for (int i = 0; i < 100; ++i) square[i] = (i % 10 < 5) ? 0.5f : -0.5f;
+        e.loadSample(square.data(), square.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, crush, 0.0f});
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        e.pushControl(f);
+        for (int i = 0; i < 300; ++i) callback(e, 64);  // let gain/filter settle
+        // Accumulate the left channel only across every callback in the
+        // measurement window - callback's own output is stereo
+        // interleaved, and both a bare `out = callback(...)` (keeping
+        // only the last 64-frame chunk) and a raw walk through L,R,L,R
+        // (comparing each frame's duplicated pair against itself, never
+        // a crossing) would silently starve this count.
+        std::vector<float> mono;
+        for (int i = 0; i < 100; ++i) {
+            auto out = callback(e, 64);
+            for (size_t j = 0; j < out.size(); j += 2) mono.push_back(out[j]);
+        }
+        return mono;
+    };
+
+    const int transparentCrossings = countCrossings(settle(0.0f));
+    const int crushedCrossings = countCrossings(settle(1.0f));
+    CHECK(transparentCrossings > 500);              // the wave's own ~5-sample half-period, largely intact
+    CHECK(crushedCrossings < transparentCrossings / 2);  // most flips eaten by the ~25-sample hold
+}
+
+TEST(surface_engine_echo_repeats_after_the_delay_and_only_when_wet) {
+    // A tone held open, then released - once truly silent (the gate fully
+    // closed), anything still audible can only be the delay line's own
+    // stored tail, fed by the *gated* signal while the note was actually
+    // sounding (see renderMono's own reasoning: this is why a released
+    // touch's echoes keep ringing instead of cutting off with the gate,
+    // and also why an unplayed pad never bleeds a phantom loop into it).
+    // 400 callbacks (25600 samples) comfortably exceeds one full delay
+    // length (220 ms => 10560 samples at kRate) so the ring buffer's
+    // write pointer is guaranteed to wrap back through the loud segment
+    // it recorded at least once inside the window this test checks.
+    auto run = [](float echo) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(2000, 0.5f);
+        e.loadSample(tone.data(), tone.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, echo});
+        ControlFrame on;
+        on.mode = 2;
+        on.gate = true;
+        on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 20; ++i) callback(e, 64);  // long enough for the gain envelope to fully open
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < 40; ++i) callback(e, 64);  // and fully close again
+
+        float peakAfterRelease = 0.0f;
+        for (int i = 0; i < 400; ++i) peakAfterRelease = std::max(peakAfterRelease, peak(callback(e, 64)));
+        return peakAfterRelease;
+    };
+
+    CHECK(run(0.0f) < 1e-4f);   // dry: released is released, nothing left to hear
+    CHECK(run(1.0f) > 0.01f);   // wet: the tail is still there, ringing on its own
+}
+
+TEST(surface_engine_echo_repeats_specifically_after_the_fixed_delay_time) {
+    // The test above only proves *something* is audible somewhere in a
+    // wide window - a materially different delay length would still
+    // pass it. This one finds exactly where the repeat lands: a brief
+    // blip (gate open a handful of callbacks, then fully released)
+    // rather than a long tone gives one localised feature to look for a
+    // delayed copy of.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(200, 0.9f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});  // fully wet
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    for (int i = 0; i < 10; ++i) callback(e, 64);  // a short, mostly gain-open blip
+
+    ControlFrame off = on;
+    off.gate = false;
+    e.pushControl(off);
+
+    // Render continuously from here (elapsed = 0 at the moment of
+    // release) far enough to bracket the expected repeat at 10560
+    // samples (220 ms at kRate); extract the left channel only -
+    // callback's own output is stereo-interleaved.
+    std::vector<float> elapsed;
+    while (elapsed.size() < 16000) {
+        auto chunk = callback(e, 64);
+        for (size_t i = 0; i < chunk.size(); i += 2) elapsed.push_back(chunk[i]);
+    }
+
+    // Skip the first 1500 samples (~31 ms) - the blip's own release
+    // tail, not its echo - before looking for the repeat's peak. Between
+    // there and the repeat the delay line is reading back pure silence
+    // (this is the first note this engine has ever played, so a full
+    // 220 ms ago is still the buffer's original zero-fill), so there is
+    // nothing else in this window for the search to mistake for it.
+    size_t peakIndex = 1500;
+    float peakValue = 0.0f;
+    for (size_t i = 1500; i < elapsed.size(); ++i) {
+        if (std::fabs(elapsed[i]) > peakValue) { peakValue = std::fabs(elapsed[i]); peakIndex = i; }
+    }
+    CHECK(peakValue > 0.01f);  // the repeat is actually audible
+    // ±1500 samples (~31 ms) absorbs the gain envelope's own
+    // attack/release shaping the blip, while still failing on a
+    // materially different delay length.
+    CHECK(peakIndex > 10560 - 1500);
+    CHECK(peakIndex < 10560 + 1500);
+}
+
+TEST(surface_engine_spring_rings_a_tail_and_only_when_wet) {
+    // Exactly ECHO's own transparency test, above, but for the reverb:
+    // once the gate is fully closed, anything still audible can only be
+    // the comb/allpass network's own stored energy, fed by the *gated*
+    // signal while the note was sounding (see renderMono's own reasoning -
+    // spring shares ECHO's exact logic here, right down to why a released
+    // touch's tail keeps ringing instead of cutting off with the gate).
+    // The network runs every sample regardless of `spring`'s own value
+    // (see renderMono); multiplying its output by spring = 0 in the final
+    // sum is what must silence it completely, not the network switching
+    // off - so this doubles as spring's own bit-exact-at-zero proof.
+    auto run = [](float spring) {
+        SurfaceEngine e(kRate);
+        std::vector<float> tone(2000, 0.5f);
+        e.loadSample(tone.data(), tone.size(), kRate);
+        e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, spring});
+        ControlFrame on;
+        on.mode = 2;
+        on.gate = true;
+        on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+        e.pushControl(on);
+        for (int i = 0; i < 20; ++i) callback(e, 64);  // long enough for the gain envelope to fully open
+
+        ControlFrame off = on;
+        off.gate = false;
+        e.pushControl(off);
+        for (int i = 0; i < 40; ++i) callback(e, 64);  // and fully close again
+
+        float peakAfterRelease = 0.0f;
+        for (int i = 0; i < 400; ++i) peakAfterRelease = std::max(peakAfterRelease, peak(callback(e, 64)));
+        return peakAfterRelease;
+    };
+
+    CHECK(run(0.0f) < 1e-4f);   // dry: released is released, nothing left to hear
+    CHECK(run(1.0f) > 0.01f);   // wet: the room is still ringing on its own
+}
+
+TEST(surface_engine_spring_tail_decays_rather_than_looping_forever) {
+    // Every comb's own feedback gain is under 1 (derived from
+    // kSpringRt60Seconds - see configureSpring), so the tail must
+    // actually die down rather than ringing at a fixed level or growing -
+    // unlike ECHO's single repeat, there is no one moment to look for,
+    // only whether the energy
+    // shrinks between an early window and a much later one.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(2000, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f});  // fully wet
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    for (int i = 0; i < 20; ++i) callback(e, 64);
+    ControlFrame off = on;
+    off.gate = false;
+    e.pushControl(off);
+    for (int i = 0; i < 40; ++i) callback(e, 64);
+
+    float peakEarly = 0.0f;
+    for (int i = 0; i < 100; ++i) peakEarly = std::max(peakEarly, peak(callback(e, 64)));  // the first ~130 ms of tail
+    // Several RT60s further on (kSpringRt60Seconds ~= 0.457 s): skip ahead
+    // without measuring, then measure a late window.
+    for (int i = 0; i < 2000; ++i) callback(e, 64);  // ~2.7 s of silence into the room
+    float peakLate = 0.0f;
+    for (int i = 0; i < 100; ++i) peakLate = std::max(peakLate, peak(callback(e, 64)));
+
+    CHECK(peakEarly > 0.01f);        // the room was actually excited
+    CHECK(peakLate < peakEarly / 4);  // and has decayed well down by ~2.7 s later, not sustained or growing
 }
 
 TEST(surface_engine_survives_a_reading_that_is_not_a_number) {
@@ -462,7 +1301,7 @@ TEST(surface_engine_corner_that_is_not_a_number_falls_back) {
     std::vector<float> tone(100, 0.5f);
     e.loadSample(tone.data(), tone.size(), kRate);
     const float nan = std::nanf("");
-    e.setCorner(0, MacroState{nan, nan, nan, nan});
+    e.setCorner(0, MacroState{nan, nan, nan, nan, nan, nan, nan});
     ControlFrame f;
     f.mode = 2;
     f.gate = true;

@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -236,7 +237,8 @@ fun StackTakesScreen(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                onToast("STACK FAILED: ${e.message ?: e.javaClass.simpleName}")
+                Log.e("StackTakesScreen", "stack: failed", e)
+                onToast(Copy.STACK_FAILED)
             } finally {
                 busy = false
             }
@@ -305,10 +307,15 @@ fun StackTakesScreen(
         TapeText(Copy.STACK_NO_GAIN, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
         TapeText(Copy.STACK_LOCKS, TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 3)
         ActionButton(
+            // Batch 3, Task 4: no ▸ — this button commits the picked takes
+            // in place; it doesn't navigate anywhere or open a panel, so it
+            // doesn't get the glyph. "·" is the house separator for a
+            // label-plus-detail pair that isn't one of those two things
+            // (`PROG A · THE BREAK`, GrooveScreen.kt).
             when {
                 busy -> "STACKING…"
-                picked.isEmpty() -> "STACK ▸ PICK A TAKE FIRST"
-                else -> "STACK ▸ COMMIT ${picked.size} UNDER LIVE"
+                picked.isEmpty() -> "STACK · PICK A TAKE FIRST"
+                else -> "STACK · COMMIT ${picked.size} UNDER LIVE"
             },
             scheme,
             enabled = !busy && picked.isNotEmpty(),

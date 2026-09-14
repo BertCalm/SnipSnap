@@ -86,19 +86,15 @@ private fun Context.findActivity(): Activity? {
  * their row/velocity constants) lives in `PadGrid.kt`, shared with GROOVE.
  */
 @Composable
-fun PlayScreen(entry: KitShelf.Entry?) {
+fun PlayScreen(
+    entry: KitShelf.Entry?,
+    /** NO_TAPE_IN_DECK's own route: KITS is where a kit gets opened. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateKits: () -> Unit,
+) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .lcdPanel(scheme)
-                .padding(14.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("NO TAPE IN THE DECK. OPEN ONE ON THE SHELF.", TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-        }
+        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
         return
     }
 
@@ -299,7 +295,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .tapeClick(label = null, onClick = ::panic)
+                    .tapeClick(label = "PANIC", onClick = ::panic)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -309,7 +305,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .tapeClick(label = null) { fullscreen = true }
+                    .tapeClick(label = "FULLSCREEN") { fullscreen = true }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -347,7 +343,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                             // the touch timestamp is GROOVE's concern, not
                             // this screen's, so it's simply dropped here.
                             onHit = { s, v, _ -> hit(s, v) },
-                            onRelease = ::release,
+                            onRelease = { s, _ -> release(s) },
                             modifier = Modifier.weight(1f).height(Layout.PAD_H.dp),
                         )
                     }
@@ -370,7 +366,7 @@ fun PlayScreen(entry: KitShelf.Entry?) {
                 glow = glow,
                 status = status,
                 onHit = { s, v, _ -> hit(s, v) },
-                onRelease = ::release,
+                onRelease = { s, _ -> release(s) },
                 onExit = exitFullscreen,
             )
         }
@@ -383,7 +379,7 @@ private fun FullscreenPlayGrid(
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
     status: String,
     onHit: (Int, Float, Long) -> Unit,
-    onRelease: (Int) -> Unit,
+    onRelease: (Int, Long) -> Unit,
     onExit: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -415,7 +411,7 @@ private fun FullscreenPlayGrid(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .tapeClick(label = null, onClick = onExit)
+                    .tapeClick(label = "EXIT FULLSCREEN", onClick = onExit)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {

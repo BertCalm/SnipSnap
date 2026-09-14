@@ -1,40 +1,16 @@
 package com.snipsnap.shell
 
 /**
- * The delight system as data and rules — `docs/PERSONALITY.md` in
- * executable form, so law compliance is a unit test instead of a hope.
- *
- * The four laws:
- * 1. Plausible in 1996.
- * 2. Delight lives in the chrome, never in the signal path.
- * 3. Jokes never gate function.
- * 4. One visible gag per screen; the rest are hidden.
- *
- * The PERSONALITY slider (OFF / MILD / FULL, default FULL) gates
- * everything here; OFF is respected everywhere without argument.
- */
-enum class Personality { OFF, MILD, FULL }
-
-object Delight {
-
-    /** Toasts show at MILD and FULL; quips and gags need FULL; OFF is silent. */
-    fun toastsEnabled(level: Personality): Boolean = level != Personality.OFF
-
-    fun quipsEnabled(level: Personality): Boolean = level == Personality.FULL
-
-    /**
-     * Law 2: UI sounds are hard-muted while a capture session is armed —
-     * a deck thunk must never end up inside somebody's snip.
-     */
-    fun deckSoundsEnabled(level: Personality, captureArmed: Boolean): Boolean =
-        level != Personality.OFF && !captureArmed
-}
-
-/**
- * Shipped copy. Everything the UI says lives here, in voice: a 90s
- * shareware program crossed with a mixtape-obsessed friend — confident,
- * terse, a little smug, never cutesy-apologetic. Funny copy still says
- * exactly what happened (law 3).
+ * Shipped copy. Everything the UI says lives here, stated as fact: what
+ * happened, what to do next, what is true right now. The app's
+ * personality lives in its visual design — the neon/tape aesthetic — not
+ * in these words; voice in text only hides inaccuracy and competes with
+ * what the screen already says visually. (This file used to also hold a
+ * PERSONALITY slider and an `object Delight` gating toasts and quips by
+ * it — removed once the copy itself no longer needed a tone knob, and
+ * because the gate had a real bug: `Delight.toastsEnabled` folded OFF
+ * into "no toasts at all," which meant a failure toast like DUB FAILED
+ * silently never appeared for a user who'd turned personality off.)
  */
 object Copy {
 
@@ -49,7 +25,7 @@ object Copy {
     )
 
     // Empty states.
-    const val EMPTY_SHELF = "NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY)."
+    const val EMPTY_SHELF = "NOTHING TAPED YET."
 
     /**
      * The product loop, named once, on the only screen a new user is
@@ -95,11 +71,19 @@ object Copy {
      * (NEW KIT, right below this panel) rather than denying the snip exists.
      */
     const val EMPTY_SHELF_FOR_ASSIGN = "THIS SNIP NEEDS A KIT TO LAND ON. TAP NEW KIT BELOW TO MAKE ONE."
-    const val EMPTY_KIT = "16 EMPTY PADS. TERRIFYING."
+    const val EMPTY_KIT = "16 EMPTY PADS."
     /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
     const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
     /** ORBIT from the menu row with no kit open. */
     const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM KITS FIRST."
+    /**
+     * EXPORT with no kit open — distinct from [EMPTY_SHELF], which this
+     * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
+     * but EXPORT dubs a *kit*, and STARTERS makes one without taping
+     * anything at all, so a user with kits and no tape was told nothing
+     * existed. Same shape as [NO_KIT_FOR_ORBIT].
+     */
+    const val NO_KIT_FOR_EXPORT = "EXPORT DUBS A KIT FOR THE MPC. OPEN ONE FROM KITS FIRST."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
     /**
@@ -111,11 +95,50 @@ object Copy {
      * is unreadable rather than be told they never made one.
      */
     const val CHOP_SOURCE_GONE = "THAT TAPE WON'T READ. IT MAY BE CHEWED."
+    /**
+     * CHOP SHOP's own empty face with no source at all — no TAPE commit
+     * exists yet and no open kit has a sample to fall back on. Reusing
+     * EMPTY_SHELF here used to be TAPE's own "NOTHING TAPED YET." said on a
+     * screen that isn't TAPE, the exact wrong-screen bug EMPTY_GROOVE was
+     * already written to fix elsewhere — this is CHOP's own copy of that
+     * fix. Names both real doors in: TAPE's own KEEP button (the button's
+     * actual on-screen label; `TapeCommit`/`onCommit` are this app's
+     * internal name for the same action, never shown to a user), and the
+     * kit-fallback (`ChopScreen.loadLongestSample`) for anyone who already
+     * has a sample-bearing kit open. A shared-in file and CHOP ALL are
+     * deliberately not named: both land elsewhere (TAPE's own deck, or a
+     * new kit built directly) rather than putting anything CHOP itself can
+     * read.
+     */
+    const val EMPTY_CHOP = "NOTHING TO CHOP YET. TAPE SOMETHING AND KEEP IT, OR OPEN A KIT WITH SAMPLES ON IT."
+    /**
+     * Said when a source loaded fine but the detector found zero onsets
+     * (silence, or nothing loud enough to register) —
+     * `ChopReviewModel.sliceCount == 0`, which still draws a full 16-pad
+     * grid and a "0 SLICES" header. Distinct from [EMPTY_CHOP] (nothing
+     * was ever loaded) and [CHOP_SOURCE_GONE] (the file wouldn't read at
+     * all): this file read and decoded perfectly, it simply had nothing in
+     * it CHOP's detector could find.
+     *
+     * Names GRID first because GRID actually works here — it cuts equal
+     * parts without asking the detector anything, so it is the near way
+     * out, and a fresh source is the far one. RE-CHOP is not offered: it
+     * re-runs the same deterministic detector over the same source and
+     * mode. Agrees with [CHOP_AUTO_NONE], which points AUTO's own
+     * no-onset refusal at the same door.
+     *
+     * "OPEN CUT AND": GRID is a segment inside the CUT box, which is
+     * closed by default, so a toast that said only "TRY GRID" pointed at
+     * a control the screen was not showing (September wiring review,
+     * finding 14). [CHOP_AUTO_NONE] does not need the phrase: AUTO is in
+     * the same box, so the box is open when that toast fires.
+     */
+    const val CHOP_NO_HITS = "NO HITS IN THIS SOURCE. OPEN CUT AND TRY GRID, OR TAPE SOMETHING ELSE."
     /** CHOP SHOP's empty face when the classic (non-melodic) layout itself fails — agrees with the toast `ChopScreen` fires alongside it, whose own fallback is this same "couldn't lay out the slices". */
     const val CHOP_LAYOUT_FAILED = "CHOP FAILED. COULDN'T LAY OUT THE SLICES."
 
     // Capture.
-    const val SESSION_ARMED = "TAPE ROLLING. GO STEAL A SOUND (LEGALLY)."
+    const val SESSION_ARMED = "TAPE ROLLING."
     /**
      * SNIP's own toast — the arm-then-capture promise, stated honestly:
      * LISTEN is what starts the ring; this only ever holds what's been
@@ -127,7 +150,7 @@ object Copy {
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "STOPPED. TAPE IS KEPT."
     const val CAPTURE_BLOCKED =
-        "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT."
+        "TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER; THE AUDIO PULLS OUT OF THAT."
     const val CAPTURE_BLOCKED_BUTTON = "FINE"
     /**
      * RECORD_AUDIO denied by the user (or the system, permanently) —
@@ -138,12 +161,26 @@ object Copy {
      */
     const val MIC_PERMISSION_DENIED =
         "SNIPSNAP NEEDS THE MIC TO LISTEN. TURN IT ON IN YOUR PHONE'S SETTINGS, THEN HIT LISTEN AGAIN."
-    // INSIDE: another app's audio, from inside it (M1's second source).
-    const val INSIDE_ARMED = "TAPE ROLLING ON THE INSIDE. GO PLAY THE THING."
-    /** The projection consent dialog was dismissed: nothing armed, nothing lost; LISTEN is still there. */
-    const val INSIDE_REFUSED = "NO NOD, NO TAPE. NOTHING ARMED. LISTEN STILL WORKS."
-    /** The platform ended the session — the lock screen or the status-bar stop chip, never us. */
-    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS LISTEN AGAIN."
+    // APP AUDIO (renamed from INSIDE, oilslick followups): another app's
+    // audio, from inside it (M1's second source). "INSIDE" alone never
+    // told anyone this arms a recording of another app's audio rather than,
+    // say, a screen recording — the button's own KDoc in KitsScreen.kt's
+    // ArmControl has the full reasoning.
+    const val APP_AUDIO_ARMED = "TAPE ROLLING ON APP AUDIO."
+    /** The projection consent dialog was dismissed: nothing armed, nothing lost; the mic still works. */
+    const val APP_AUDIO_REFUSED = "PERMISSION DECLINED. NOTHING ARMED. THE MIC STILL WORKS."
+    /**
+     * The platform ended the session — the lock screen or the status-bar
+     * stop chip, never us.
+     *
+     * Names APP AUDIO, not LISTEN, because this can only ever be an APP
+     * AUDIO session: `phoneStops` ticks from one place, `MicSessionService`'s
+     * `projectionCallback.onStop()`, and a mic-only session has no
+     * projection to stop. It said "PRESS LISTEN AGAIN" until the rename,
+     * which sent the user to the other button — the mic — to restart
+     * something the mic was never running.
+     */
+    const val PHONE_STOPPED_TAPE = "THE PHONE STOPPED THE TAPE. LOCK SCREEN OR THE STOP CHIP. PRESS APP AUDIO AGAIN."
 
     /**
      * The mic session died on its own — a dead `AudioRecord`, the OS
@@ -208,20 +245,20 @@ object Copy {
     /** COMMIT toasts, rotated in order per commit. */
     val COMMIT_LINES = listOf(
         "TAPED. NO TAKEBACKS.",
-        "IT'S OURS NOW.",
-        "CLEAN CUT. NICE EARS.",
-        "SHELF +1. LABEL IT LATER.",
+        "COMMITTED TO TAPE.",
+        "CLEAN CUT.",
+        "ON THE SHELF. RENAME IT LATER.",
     )
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
     /** The deck glided onto an onset after a coast. */
-    const val SNAPPED = "SNAPPED TO THE HIT. THE MACHINE HAS EARS."
+    const val SNAPPED = "SNAPPED TO THE HIT."
     const val PENCIL_STARTED = "PENCIL REWIND. OLD SCHOOL."
-    const val PENCIL_DONE = "REWOUND. YOU'RE WELCOME."
+    const val PENCIL_DONE = "REWOUND."
     const val PENCIL_AT_TOP = "ALREADY AT THE TOP."
     const val ODOMETER_ON = "TAPE COUNTER. LIKE THE OLD DAYS."
     const val ODOMETER_OFF = "BACK TO REAL TIME."
     /** PAD SHEET's own DELETE → BIN, on a pad — a real delete, distinct from EJECT (stop listening) or the export wizard's reset. */
-    const val DELETE_SNIP = "DELETED. THE BIN KEEPS IT 30 DAYS."
+    const val DELETE_SNIP = "DELETED. ${Reversal.BIN}"
     /**
      * A source file TAPE loaded (a kit pad or the last COMMIT's source —
      * the two ingest paths with no length cap of their own) ran past
@@ -393,13 +430,22 @@ object Copy {
     val HELP_MORE = listOf(
         "· HOLD A PAD: SHAPE, TUNE, TREAT, MUTATE, LAYERS, TAKES, GRAIN.",
         "· HOLD A ROW ON THE SHELF TO RENAME IT, OR TO BIN IT.",
-        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Rooms.BIN_DAYS} DAYS.",
+        "· THE BIN KEEPS WHAT YOU THREW OUT FOR ${Reversal.DAYS} DAYS.",
         "· PLAY IS THE ONE THAT FEELS LIKE DRUMS. SURFACE IS THE ONE THAT PRINTS.",
+        "· TILT THE PHONE ON SURFACE FOR RESONANCE, EVEN IN MORPH.",
         "· ORBIT PUTS THE KIT ON RINGS: 5 AGAINST 4 IN ONE TAP.",
         "· EMPTY GROOVE? RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
         "· HOLD A PAD, RE-TRIM ▸: TAPE OPENS ON ITS CUT. BACK ONTO LANDS IT.",
-        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO BANK B. THEN TAP B TO FLIP.",
-        "· BREED ▸ MIXES TWO KITS' RECIPES INTO A NEW KIT. PARENTS STAY.",
+        "· TAP BANK B: A SECOND PAGE. HOLD A PAD, OR SEND A CHOP ONTO IT.",
+        "· REMIX BANK B ▸ DEALS EVIL TWINS ONTO AN EMPTY BANK B.",
+        "· BREED ▸ PICK A KIT TO CROSS RECIPES INTO A NEW KIT. PARENTS STAY.",
+        "· DUST: THE TAPE'S OWN HISS, ROOM AND CRACKLE UNDER A PAD. OR ANOTHER'S.",
+        "· CHOP'S CUT BENCH: HITS, EAR, GRID. MERGE OR SPLIT UNDER A CHIP.",
+        "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
+        "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
+        "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
+        "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
+        "· ZOOM ON CHOP: 16TH, BEAT, BAR OR PHRASE PADS. ◀ ▶ MOVES THE ONE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -421,6 +467,22 @@ object Copy {
      * progress indicator.
      */
     fun treatmentBusy(label: String): String = "TREATMENT · $label…"
+
+    // ---- SYNTH: SEND TO PAD (a rendered patch lands on a pad) ----
+    /**
+     * SEND TO PAD's own landing toast: [name] the patch's own display name.
+     * REPLACE bins the pad's old sample ([replaced] true, the same fact
+     * [treated]'s "ORIGINAL SLEEPS IN THE BIN" states for a treatment); ADD
+     * has no original to bin.
+     */
+    fun synthSent(pad: String, name: String, replaced: Boolean): String =
+        if (replaced) {
+            "PAD $pad REPLACED WITH ${name.uppercase(java.util.Locale.ROOT)}. ORIGINAL SLEEPS IN THE BIN."
+        } else {
+            "PAD $pad ADDED: ${name.uppercase(java.util.Locale.ROOT)}."
+        }
+    /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
+    const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
@@ -444,14 +506,37 @@ object Copy {
     // ---- BANK B: evil twins (W4.3) ----
     /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
     const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
-    const val TWINS_REROLLED = "BANK B REROLLED. SAME SEED, DIFFERENT SINS."
+    const val TWINS_REROLLED = "BANK B REROLLED."
     /**
-     * Tapping BANK B on the KIT screen while it is empty. The row is
-     * always drawn now (a second page nobody can see is a page nobody
-     * finds), so the empty tap has to say what fills it rather than
-     * flip to sixteen blanks the grid can't fill.
+     * Flipping to an empty bank on the KIT screen. The row is always
+     * drawn (a second page nobody can see is a page nobody finds) and an
+     * empty bank flips like a full one, since its pads fill the same
+     * three ways bank A's do — hold a pad to capture, the same hold to
+     * place a snip SNIPS → PAD armed, a chop sent ONTO it; the toast
+     * names them, plus the twins for bank B (REMIX BANK B fills B only,
+     * so a sparse kit's empty C is not told to press it). A function:
+     * the bank letter rides in, so the laws leave it be.
      */
-    const val BANK_B_EMPTY = "BANK B IS EMPTY. REMIX BANK B ▸ FILLS IT WITH EVIL TWINS."
+    fun bankEmpty(bank: Char): String {
+        val twins = if (bank == 'B') " REMIX BANK B ▸ DEALS TWINS HERE TOO." else ""
+        return "BANK $bank: EMPTY. HOLD A PAD TO CAPTURE ONTO IT, OR TO PLACE A SNIP FROM SNIPS. A CHOP CAN LAND HERE.$twins"
+    }
+    /**
+     * REMIX BANK B pressed while bank B holds pads the user put there: a
+     * refusal, and it says so in the reversal law's terms — the pads stay
+     * untouched; nothing here destroyed anything (`ReversalTest`).
+     */
+    const val TWINS_KEEP_OWN = "BANK B HOLDS YOUR OWN PADS. THEY STAY UNTOUCHED — REMIX ONLY DEALS ONTO AN EMPTY B. CLEAR THEM FIRST, OR KEEP THE PAGE."
+    /**
+     * CHOP's ONTO <kit> · BANK X: the slices landed on an existing kit's
+     * empty bank, and how many did not fit when the chop was wider than
+     * sixteen (a bank is a bank; the rest is one more chop away).
+     */
+    fun landedOnto(kitName: String, bank: Char, landed: Int, left: Int): String {
+        val slices = "$landed ${if (landed == 1) "SLICE" else "SLICES"}"
+        val tail = if (left > 0) " $left DIDN'T FIT — A BANK HOLDS 16." else ""
+        return "'$kitName' BANK $bank: $slices LANDED.$tail"
+    }
 
     // ---- BREED: two kits crossed into a child (XX2 wired in) ----
     /** BREED's busy line while `KitShelf.breed` renders every crossed pad offline — same DUBBING…/TWINNING… shape as EVIL TWINS. */
@@ -480,19 +565,33 @@ object Copy {
      * engine to render it through. The fix is the same in every case.
      */
     const val BREED_NOTHING_TO_CROSS = "NOTHING WOULD CROSS: NO PAD HERE HAS A PATCH OR TREATMENT, OR A PARTNER THERE WITH ONE TO BORROW. TREAT A PAD FIRST."
-    /** The line under the BREED button: what comes out, before the tap. */
-    const val BREED_SUBTITLE = "MIXES THE TWO KITS' RECIPES INTO A NEW KIT. BOTH PARENTS STAY."
     /**
-     * The BREED button's own readout: how many of this kit's pads carry
-     * a recipe the cross can use (`Breed.recipePads`), so "0 PADS
-     * CROSSED" is never the first time the user hears the word. A
-     * function, so the singular reads right and the laws leave it be.
+     * The BREED button's own label. BREED always opens the kit picker
+     * (`App.kt`'s `pendingBreedWith`), so `▸` is earned — but the
+     * destination is constant, so the label just names it. What used to
+     * vary here (the recipe-pad count) now lives in [breedSubtitle].
      */
-    fun breedButton(recipePads: Int, pads: Int): String = when {
-        recipePads == 0 -> "BREED ▸ NO RECIPES HERE YET"
-        pads == 1 -> "BREED ▸ ITS ONE PAD HAS A RECIPE"
-        recipePads == 1 -> "BREED ▸ 1 OF $pads PADS HAS A RECIPE"
-        else -> "BREED ▸ $recipePads OF $pads PADS HAVE RECIPES"
+    const val BREED_BUTTON = "BREED ▸ MIX TWO KITS"
+
+    /**
+     * The line under the BREED button: how many of this kit's pads carry
+     * a recipe the cross can use (`Breed.recipePads`), so "0 PADS
+     * CROSSED" is never the first time the user hears the word — and,
+     * since [BREED_BUTTON] no longer says what comes out, the reminder
+     * that both parents survive the cross. A function, so the singular
+     * reads right and the laws leave it be.
+     *
+     * **The zero case is not a dead end.** At `recipePads == 0` the button
+     * stays enabled: the *other* kit's own racks can still cross over
+     * this one's audio (`Breed.crossable`, "B's rack over A's audio" in
+     * `BreedTest`) — so this line says the other kit can still cross
+     * rather than implying the tap goes nowhere.
+     */
+    fun breedSubtitle(recipePads: Int, pads: Int): String = when {
+        recipePads == 0 -> "NO RECIPES HERE YET. THE OTHER KIT'S CAN CROSS. PARENTS STAY."
+        pads == 1 -> "ITS ONE PAD HAS A RECIPE TO CROSS. BOTH PARENTS STAY."
+        recipePads == 1 -> "1 OF $pads PADS HAS A RECIPE. BOTH PARENTS STAY."
+        else -> "$recipePads OF $pads PADS HAVE RECIPES. BOTH PARENTS STAY."
     }
     /**
      * BREED's own toast: the child kit's name, how many pads actually
@@ -512,15 +611,15 @@ object Copy {
     }
 
     // ---- TAKES + BIN (X2.3) ----
-    fun takeRestored(take: String): String = "$take RESTORED. THE PAST, REPLAYED."
-    const val BACK_FROM_BIN = "BACK FROM THE BIN. NO QUESTIONS ASKED."
-    const val BIN_EMPTIED = "BIN EMPTIED. THE MACHINE FORGETS, AS ASKED."
+    fun takeRestored(take: String): String = "$take RESTORED."
+    const val BACK_FROM_BIN = "BACK FROM THE BIN."
+    const val BIN_EMPTIED = "BIN EMPTIED."
     /** No archived takes yet — the TAKES card holds only the current (NOW) state. */
     const val TAKES_EMPTY = "NOTHING TO ROLL BACK TO YET."
     /** The bin's own empty state (the artboard's literal copy — `binEmpty` in `TapeOS Oilslick.dc.html`). */
-    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY. NOTHING TO REGRET."
+    const val BIN_EMPTY_STATE = "THE BIN IS EMPTY."
     /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
-    const val BIN_ITEM_GONE = "ALREADY GONE. SOMEONE BEAT YOU TO IT."
+    const val BIN_ITEM_GONE = "ALREADY GONE."
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =
@@ -541,10 +640,8 @@ object Copy {
     const val READ_GROOVE_BUSY = "LISTENING…"
     const val READ_GROOVE_NEEDS_KIT = "OPEN A KIT FIRST. THE EAR NEEDS PADS TO PLAY ON."
     /** The reading landed: how much was heard, and where it plays. */
-    fun grooveRead(hits: Int, bars: Int, bpm: Int): String {
-        val barWord = if (bars == 1) "BAR" else "BARS"
-        return "HEARD $hits HITS OVER $bars $barWord AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
-    }
+    fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
+        "HEARD ${countOf(hits, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")} AT ~$bpm BPM. THEY PLAY ON YOUR PADS NOW."
     /** The Ear's refusal, [reason] in its own words ("no confident tempo - the ear needs a grid"). */
     fun grooveRefused(reason: String): String = "NO GROOVE: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val DIG_BUSY = "DIGGING…"
@@ -559,7 +656,18 @@ object Copy {
     const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
     const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
-    const val BAR_WIPED = "BAR WIPED. THE MACHINE FORGIVES."
+    /**
+     * The step editor's WIPE BAR, said honestly.
+     *
+     * It read "THE MACHINE FORGIVES" until the September undo-labelling
+     * pass, which is an offer of forgiveness the machine does not make:
+     * `clearEditorBar` bumps `editorSaveTick`, the autosave writes the
+     * wiped bar to the sidecar, and no control on that screen steps it
+     * back — UNDO TAKE is about recorded takes, not editor edits. A user
+     * who trusted the old line lost steps they believed were recoverable.
+     * So this names the recourse that actually exists: tap them in again.
+     */
+    val BAR_WIPED: String = Reversal.goneBut("TAP THE STEPS BACK IN")
     /** RECORD tapped before `PadEngine.load` has committed the bank (`clickSampleIndex == -1` until then, so the count-in clicks would be silent and give no feedback at all) — told instead of armed. */
     const val KIT_STILL_LOADING = "KIT'S STILL LOADING. GIVE IT A SECOND."
 
@@ -570,10 +678,15 @@ object Copy {
     const val FEEL_RECENTRED = "BACK TO AS PLAYED."
 
     // ---- GROOVE: RECORD landing and UNDO TAKE (live-record plan, Task 5) ----
-    /** RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape, but names what was PLAYED, not what was heard. */
-    fun takeLanded(notes: Int, bars: Int): String {
-        val barWord = if (bars == 1) "BAR" else "BARS"
-        return "TOOK $notes HITS OVER $bars $barWord. PLAYING ON PROG A NOW."
+    /**
+     * RECORD landed a take as the new PROG A; echoes [grooveRead]'s shape,
+     * but names what was PLAYED, not what was heard. [meter] is the clip's
+     * meter when it is not 4/4 (`GrooveEdit.meterLabel`), so a player who
+     * overdubbed a 3/4 ORBIT clip is told the bar they played in.
+     */
+    fun takeLanded(notes: Int, bars: Int, meter: String? = null): String {
+        val of = meter?.let { " OF $it" } ?: ""
+        return "TOOK ${countOf(notes, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")}$of. PLAYING ON PROG A NOW."
     }
     /** UNDO TAKE's existing-base branch: whatever was captured before this take plays again. */
     const val TAKE_UNDONE = "TAKE UNDONE. BACK TO WHAT WAS THERE BEFORE."
@@ -645,11 +758,136 @@ object Copy {
     fun retrimLanded(pad: String, treatment: String?): String =
         "$pad RE-CUT." + (treatment?.let { " THE ${it.uppercase()} STAYED WITH THE OLD ONE - IT'S IN THE BIN." } ?: "")
 
+    // ---- THE ZOOM LADDER: a pad per sixteenth, beat, bar or phrase (docs/CHOP_CONTROLS.md §11) ----
+    /** The ladder row's caption: where the one sits on the source, and how long a phrase runs. */
+    fun ladderOne(oneSec: Float, phraseBars: Int): String =
+        String.format(java.util.Locale.ROOT, "THE ONE AT %.2fs · %s A PHRASE", oneSec, countOf(phraseBars, "BAR", "BARS"))
+    /** The ladder row's caption with no pulse to climb. */
+    const val LADDER_NO_TEMPO = "NO TEMPO HEARD. THE LADDER NEEDS A PULSE."
+
+    // ---- HUM THE CHOP: your mouth places and names the cuts (docs/CHOP_CONTROLS.md §10) ----
+    /**
+     * HUM with the mic not armed: the hum comes off the same ring GRAB and
+     * HOLD use, and the one door that starts that ring is the `LISTEN ·
+     * MIC` button on KITS. Named exactly as the button reads, tab and all:
+     * this toast used to say "ARM THE MIC" and nothing on any screen is
+     * called ARM, so a first-time user was stopped two tabs from the door
+     * with no route to it (September wiring review, finding 4).
+     */
+    const val HUM_NOT_LISTENING = "THE MIC ISN'T LISTENING. LISTEN · MIC ON KITS, THEN HUM."
+    /**
+     * HUM with APP AUDIO armed (renamed from HUM_INSIDE, oilslick
+     * followups): that ring holds other apps' playback, not a mouth. The
+     * route has a step the not-listening one lacks: while a session runs,
+     * KITS shows STOP where `LISTEN · MIC` was, and arming again only
+     * re-enters the running session (`MicSessionService`'s ACTION_ARM on an
+     * existing ring), so APP AUDIO has to be stopped before the mic can be
+     * started.
+     */
+    const val HUM_APP_AUDIO = "APP AUDIO IS LISTENING, NOT THE MIC. STOP ON KITS, THEN LISTEN · MIC, THEN HUM."
+    /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
+    const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
+    /** The bench's readout while the hum runs. */
+    const val HUM_BUSY = "HUMMING…"
+    /** The ring gave nothing back: it stopped listening while the hum ran, so the way back is the same button. */
+    const val HUM_NOTHING = "THE MIC HEARD NOTHING. LISTEN · MIC ON KITS, THEN HUM AGAIN."
+    /** Every mouth sound missed every hit (or none was heard). */
+    const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
+    /** SEND of a hummed chop: the beat you sang went onto the new kit as its groove. */
+    fun sungGroove(bars: Int): String =
+        "SENT. THE BEAT YOU SANG IS ON THE GRID: ${countOf(bars, "BAR", "BARS")}. GROOVE HAS IT."
+    /** The hum landed: how many cuts, and how many sounds found no hit. */
+    fun hummed(cuts: Int, missed: Int): String {
+        val head = if (cuts == 1) "HUMMED: 1 CUT, YOUR MOUTH'S WORD ON IT." else "HUMMED: $cuts CUTS, YOUR MOUTH'S WORDS ON THEM."
+        return when (missed) {
+            0 -> head
+            1 -> "$head 1 SOUND FOUND NO HIT."
+            else -> "$head $missed SOUNDS FOUND NO HIT."
+        }
+    }
+
+    // ---- CATCH A HIT: the pad grid is the chopper (docs/CATCH.md) ----
+    /** CATCH A HIT with no kit open: the grid it lands on is the open kit's. */
+    const val CATCH_NEEDS_KIT = "OPEN A KIT FIRST. CATCH LANDS ON ITS PADS."
+    /** The busy line while the tape's hits are found, before the grid comes up. */
+    const val CATCH_BUSY = "LISTENING FOR HITS…"
+    /** CATCH A HIT on a tape the detector heard nothing on. */
+    const val CATCH_NO_HITS = "NO HITS ON THIS TAPE TO CATCH. KEEP, OR INSTANT KIT, INSTEAD."
+    /** Over the grid while catching. */
+    const val CATCH_HEADER = "HOLD A PAD AS THE HIT GOES BY. LET GO, IT'S CAUGHT."
+    /** The grid's bank switch: a bank is worth flipping to for the pads still free on it, since catches land only on those. */
+    fun catchBank(letter: Char, free: Int): String = "BANK $letter · $free FREE"
+    /** CATCH A HIT with no empty pad on either bank: nothing could land, so the loop never starts. */
+    const val CATCH_NO_ROOM = "NO EMPTY PAD ON A OR B. CATCH LANDS ON EMPTY PADS ONLY."
+    /** The grid's own button while catching: leave, and go play what landed. */
+    const val CATCH_DONE_BUTTON = "DONE"
+    /** A pad caught a hit, classed by ear. */
+    fun caught(pad: String, name: String): String = "$name CAUGHT ONTO $pad."
+    /** A pad held between hits: it took the tape from the press to the lift. */
+    fun caughtBetween(pad: String): String = "NO HIT WENT BY. $pad TOOK THE TAPE YOU HELD."
+    /** A tap between hits: nothing to take. */
+    const val CATCH_NOTHING = "NOTHING WENT BY. HOLD THE PAD AS THE HIT PASSES."
+    /** A pad that had a sound before CATCH began is never replaced. */
+    fun catchTaken(pad: String, name: String): String = "$pad IS $name ALREADY. CATCH ONTO AN EMPTY PAD INSTEAD."
+    /** DONE: what landed, and where to go. */
+    fun catchDone(count: Int, kit: String): String = when (count) {
+        0 -> "NOTHING CAUGHT. THE KIT IS AS IT WAS."
+        1 -> "1 HIT CAUGHT ONTO $kit. GO PLAY IT."
+        else -> "$count HITS CAUGHT ONTO $kit. GO PLAY THEM."
+    }
+    /** The write behind a catch failed; the pad is untouched (Law 3: say what happened). */
+    const val CATCH_FAILED = "THAT CATCH DIDN'T LAND. THE PAD IS AS IT WAS."
+
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
-    const val INSTRUMENT_MADE = "ONE NOTE IN, WHOLE KEYBOARD OUT. INSTRUMENT ON THE SHELF."
-    const val NO_PITCH = "NO CONFIDENT PITCH. THE MACHINE REFUSES POLITELY."
+    /**
+     * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
+     * pad carried a treatment with no original in the bin behind it (a
+     * bank-B twin, a CLI treat, a bin since emptied), so the new one went
+     * on top of the old rather than in its place. Said, since the card
+     * lights one segment while the sound carries two; the fix is named.
+     */
+    fun treatedStacked(segment: String, pad: String): String =
+        "$segment ON $pad, OVER THE LAST ONE — NO ORIGINAL IN THE BIN TO SWAP FROM. VERSIONS ▸ ROLLS BACK."
+    /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
+    const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
+
+    // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
+    /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
+    const val DUSTING_BUSY = "DUSTING…"
+    /** No tape to take dust from: neither the pad nor the kit came off one (a synth kit, a mic kit). */
+    const val DUST_NO_TAPE = "NO TAPE TO TAKE DUST FROM: THIS PAD, AND THIS KIT, NEVER CAME OFF ONE."
+    /** The tape is there but `Dust.print` found no room between its hits (a tight, gated break). */
+    const val DUST_NO_GHOSTS = "NOTHING BETWEEN THE HITS ON THAT TAPE. NO DUST TO TAKE."
+    /** DUST at AMT 0 on a pad that isn't dusted: `dustPad` writes nothing, so nothing landed. */
+    const val DUST_ZERO = "AMT 0: NOTHING TO DUST. THE PAD STAYS AS IT IS."
+    /** The tape a dust recipe names is no longer on the shelf — DO IT AGAIN, or DUST on a pad whose tape went. */
+    fun dustTapeGone(tape: String): String = "THE TAPE '$tape' IS GONE FROM THE SHELF. NO DUST TO TAKE."
+    /** DUST FROM ▸ with nothing on the SNIPS shelf to pick: no tape anywhere to borrow dust off. */
+    const val DUST_FROM_EMPTY = "NO TAPES ON THE SHELF TO TAKE DUST FROM. RECORD OR IMPORT ONE FIRST."
+    /** DUST FROM ▸'s bench heading, over the shelf's tapes: pick one and its dust goes under this pad. */
+    const val DUST_FROM_PICK = "DUST FROM: PICK A TAPE. ITS DUST GOES UNDER THIS PAD AT AMT."
+    /**
+     * DUST FROM ▸'s landing: the treatment's own line ([treated] /
+     * [treatedStacked]) with the borrowed tape named in the segment's
+     * place, so "DUST FROM 'KITCHEN' ON A02. ORIGINAL SLEEPS IN THE BIN."
+     * says where the dust came from without a second toast.
+     */
+    fun dustFromLabel(tape: String): String = "DUST FROM '$tape'"
+    /**
+     * DUST ALL's landing: how many pads took the dust, and how many were
+     * left as they were (layered or chained pads, which every audio
+     * rewrite refuses; nothing was destroyed on them).
+     */
+    fun dustedAll(dusted: Int, left: Int, noDust: Int = 0): String {
+        val pads = "$dusted ${if (dusted == 1) "PAD" else "PADS"} DUSTED FROM THE KIT'S OWN TAPE."
+        val rest = if (left > 0) " $left LEFT AS ${if (left == 1) "IT WAS" else "THEY WERE"} (LAYERED OR CHAINED)." else ""
+        val bare = if (noDust > 0) " $noDust LEFT AS ${if (noDust == 1) "IT WAS" else "THEY WERE"}: NOTHING BETWEEN THE HITS ON ${if (noDust == 1) "ITS" else "THEIR"} TAPE." else ""
+        return pads + rest + bare
+    }
+    const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
+    const val NO_PITCH = "NO CONFIDENT PITCH."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
     /** NONE, when it lands: the pad's earlier take is back out of the bin and the recipe is off. */
     fun unTreated(pad: String): String = "$pad IS ITSELF AGAIN. THE BIN GAVE THE ORIGINAL BACK."
@@ -736,9 +974,9 @@ object Copy {
         }
 
     // ---- KIT: textures ----
-    const val SCULPTED = "SCULPTED. THE HIT IS WEATHER NOW. NEW TAPE ON THE SHELF."
-    const val STRETCHED = "STRETCHED. A BLINK BECAME A LANDSCAPE. NEW TAPE ON THE SHELF."
-    const val FROZEN = "FROZEN. ONE INSTANT, HELD. NEW TAPE ON THE SHELF."
+    const val SCULPTED = "SCULPTED. NEW TAPE ON THE SHELF."
+    const val STRETCHED = "STRETCHED. NEW TAPE ON THE SHELF."
+    const val FROZEN = "FROZEN. NEW TAPE ON THE SHELF."
 
     // ---- PAD SHEET: outside ----
     /** OUTSIDE: the pad went out the jack and came back; [lagMs] the trip, [confidence] how surely the return was found. */
@@ -756,9 +994,9 @@ object Copy {
     fun roomKept(name: String): String = "$name IS ON THE SHELF. ANY PAD CAN PLAY IN IT - MUTATE ▸ ROOM."
     const val ROOM_NONE_TO_KEEP = "NO ROOM MEASURED YET. SEND A SWEEP OUT FIRST - ROOM ▸ SEND."
     /** FORGET → BIN on the shelf: the room sleeps in the bin, like every delete. */
-    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Rooms.BIN_DAYS} DAYS TO CHANGE YOUR MIND."
+    fun roomForgotten(name: String): String = "$name IS IN THE BIN. ${Reversal.MIND}"
     /** RESTORE on a binned room: back on the shelf under [name]. */
-    fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
+    fun roomRestored(name: String): String = "$name IS BACK ON THE SHELF."
     const val ROOM_FORGET_BUSY = "FORGETTING…"
     const val ROOM_RESTORE_BUSY = "RESTORING…"
     const val ROOM_BIN_EMPTY_BUSY = "EMPTYING…"
@@ -779,7 +1017,7 @@ object Copy {
      * old "gone for good" wording, which was only ever true because that
      * screen didn't exist yet.
      */
-    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. 30 DAYS TO CHANGE YOUR MIND."
+    fun kitDeleted(name: String): String = "$name IS OFF THE SHELF. ${Reversal.MIND}"
     const val KIT_DELETE_BUSY = "DELETING…"
     const val KIT_DELETE_FAILED = "DELETE FAILED. THE KIT MAY ALREADY BE GONE."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
@@ -789,7 +1027,7 @@ object Copy {
 
     // ---- DELETED KITS (Task 2 of the bin-restore plan): restore or empty early ----
     /** RESTORE on a binned kit; [name] is what it actually landed under — `KitShelf.restoreKit`'s own collision fallback may have freshened it, never the name that was tapped. */
-    fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF. AS IF NOTHING HAPPENED."
+    fun kitRestored(name: String): String = "$name IS BACK ON THE SHELF."
     /**
      * EMPTY THE BIN NOW on DELETED KITS, confirmed. Deliberately carries no
      * count: `KitShelf.emptyKitBin` reports every child it removed, but the
@@ -810,20 +1048,20 @@ object Copy {
      * `SnipStore.Info.displayName`, so a never-confidently-classified snip
      * reads "SNIP", never a guess.
      */
-    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. 30 DAYS TO CHANGE YOUR MIND."
+    fun snipDeleted(name: String): String = "$name IS OFF THE LIST. ${Reversal.MIND}"
     const val SNIP_DELETE_FAILED = "DELETE FAILED. THE FILE MAY ALREADY BE GONE."
 
     // ---- DELETED SNIPS: restore or empty early ----
     /** RESTORE on a binned snip; [name] is what it actually landed under — `SnipStore.restore`'s own collision fallback may have freshened it, never the name the row showed. */
-    fun snipRestored(name: String): String = "$name IS BACK IN SNIPS. AS IF NOTHING HAPPENED."
+    fun snipRestored(name: String): String = "$name IS BACK IN SNIPS."
     /** EMPTY THE BIN NOW on DELETED SNIPS, confirmed — `kitBinEmptied`'s own no-count reasoning applies here too. */
     val snipBinEmptied: String = "THE BIN IS EMPTY. GONE FOR GOOD."
 
     // ---- SHELF SORT (name-and-find followups): the KitsScreen header toggle ----
     /** The shelf's own header chip while sorted `KitShelf.ShelfSort.RECENT` — tapping switches to [SHELF_SORT_ALPHA]. */
-    const val SHELF_SORT_RECENT = "SORT ▸ RECENT"
+    const val SHELF_SORT_RECENT = "SORT · RECENT"
     /** The shelf's own header chip while sorted `KitShelf.ShelfSort.ALPHA` — tapping switches back to [SHELF_SORT_RECENT]. */
-    const val SHELF_SORT_ALPHA = "SORT ▸ A–Z"
+    const val SHELF_SORT_ALPHA = "SORT · A–Z"
 
     // ---- SHELF FILTER (September UAT, finding 16): the tap-only find ----
 
@@ -836,14 +1074,14 @@ object Copy {
      * all of them, which is the fact; the absence of a filter is an
      * implementation detail.
      */
-    const val SHELF_FILTER_ALL = "SHOW ▸ ALL"
+    const val SHELF_FILTER_ALL = "SHOW · ALL"
 
     /**
      * The same chip narrowed to one dub state, named with [dubChip] so the
      * chip on the row and the chip in the header cannot drift apart.
      */
     fun shelfFilter(status: DubStamp.Status?): String =
-        if (status == null) SHELF_FILTER_ALL else "SHOW ▸ ${dubChip(status)}"
+        if (status == null) SHELF_FILTER_ALL else "SHOW · ${dubChip(status)}"
 
     /**
      * What the shelf says when a filter has hidden every kit on it.
@@ -858,16 +1096,65 @@ object Copy {
         "NO KITS ARE ${dubChip(status)}. ALL $total ARE STILL THERE — TAP SHOW."
 
     // ---- PAD SHEET: pad from anything ----
-    const val PAD_MADE = "ONE HIT IN, A PAD FOREVER. INSTRUMENT ON THE SHELF."
+    const val PAD_MADE = "PAD MADE. ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
 
     // Chop shop.
-    const val RECHOPPED = "RE-CHOPPED. THE MACHINE APOLOGIZES FOR SLICE 3."
+    /**
+     * RE-CHOP's own toast. Used to always name "SLICE 3" regardless of
+     * which slice, or even how many slices, were actually involved —
+     * `ChopScreen.kt`'s RE-CHOP button calls `ChopReviewModel.rechop`,
+     * which redoes the *whole* chop from the tape, not one numbered
+     * slice, so there is no real "which slice" for this toast to name.
+     * States what actually happened instead of inventing a slice number.
+     */
+    const val RECHOPPED = "RE-CHOPPED."
+
+    // ---- CHOP's CUT bench (docs/CHOP_CONTROLS.md) ----
+    /** HITS ▶ asked for one more than the detector can hear at this ear: the count did not move, and the ear is the way to more. */
+    fun chopOnlyHits(heard: Int): String =
+        "ONLY $heard ${if (heard == 1) "HIT" else "HITS"} HEARD AT THIS EAR. FINE HEARS MORE."
+    /** AUTO's landing: the knee, in words. */
+    fun chopAuto(hits: Int): String = "AUTO: $hits ${if (hits == 1) "HIT" else "HITS"}, WHERE THE REAL ONES END AND THE SCRAPS BEGIN."
+    /** AUTO on a tape the detector hears nothing in: no count to find. */
+    const val CHOP_AUTO_NONE = "NO HITS ON THIS TAPE TO COUNT. TRY GRID, OR TRIM CLOSER TO THE SOUND."
+    /** MERGE landed: the two slices are one. */
+    fun chopMerged(n: Int): String = "SLICES $n AND ${n + 1} ARE ONE NOW."
+    /** MERGE on the last slice: nothing after it. */
+    const val CHOP_MERGE_LAST = "NOTHING AFTER THE LAST SLICE TO MERGE IT WITH."
+    /** SPLIT landed: the slice is two. */
+    fun chopSplit(n: Int): String = "SLICE $n IS TWO NOW."
+    /** SPLIT found no second hit inside the slice. */
+    fun chopNoSplit(n: Int): String = "NO SECOND HIT INSIDE SLICE $n. NOTHING TO SPLIT."
+    /** The CUT bench's readout for the count while a chop is running. */
+    const val CHOP_BENCH_BUSY = "CUTTING…"
+
+    // ---- CHOP round two: ON THE GRID and FOLD DOUBLES (docs/CHOP_CONTROLS.md §8) ----
+    /** ON THE GRID asked for on a tape the tempo estimator hears no pulse in. */
+    const val CHOP_NO_TEMPO = "NO TEMPO HEARD ON THIS TAPE. THE GRID NEEDS A PULSE."
+    /** FOLD's segment toast: what the layout is now. */
+    const val FOLD_ON = "FOLDED. ONE PAD PER SOUND; THE REPEATS CYCLE UNDER IT."
+    /** FOLD's strip: how many slices became how many pads. */
+    fun folded(slices: Int, pads: Int): String =
+        "FOLD: $slices ${if (slices == 1) "SLICE" else "SLICES"} → $pads ${if (pads == 1) "PAD" else "PADS"}. TAP A PAD, HEAR ITS TAKES IN TURN."
+    // ---- GHOST CHOP (docs/CHOP_CONTROLS.md §9) ----
+    /** The GHOSTS segment's toast: what the rows are now. */
+    const val CHOP_GHOSTS_ON = "GHOSTS: THE SPACES BETWEEN THE HITS, EACH NAMED FOR THE HIT BEFORE IT. HOLD A PAD, HOLD THE ROOM."
+    /** GHOSTS on a tape with nothing between its hits: the strip says so instead of showing an empty grid in silence. */
+    const val CHOP_GHOSTS_NONE = "NOTHING BETWEEN THE HITS ON THIS TAPE. A GATED BREAK HAS NO GHOSTS."
+    /** SEND TO GRID's toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
+    fun foldedToGrid(slices: Int, pads: Int, chokeSet: Boolean): String =
+        "$slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""
+    /** ONTO <kit> · BANK X when the layout was FOLD: [landedOnto]'s shape with both numbers. */
+    fun foldedOnto(kitName: String, bank: Char, slices: Int, pads: Int, left: Int): String {
+        val tail = if (left > 0) " $left DIDN'T FIT — A BANK HOLDS 16." else ""
+        return "'$kitName' BANK $bank: $slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}.$tail"
+    }
 
     /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
     fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
-        "$sliceCount SLICES ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
+        "${countOf(sliceCount, "SLICE", "SLICES")} ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
     /**
      * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
      * GRID says.
@@ -906,7 +1193,7 @@ object Copy {
             if (skipped > 0) add("$skipped SKIPPED (NOT .WAV)")
         }
         val tail = if (extra.isEmpty()) "" else " — ${extra.joinToString(", ")}"
-        return "CHOPPED $made OF $wavCount FILES INTO $made ${if (made == 1) "KIT" else "KITS"}$tail."
+        return "CHOPPED $made OF ${countOf(wavCount, "FILE", "FILES")} INTO $made ${if (made == 1) "KIT" else "KITS"}$tail."
     }
 
     // ---- X-RAY: read any MPC file, never import it ----
@@ -928,6 +1215,8 @@ object Copy {
         "$extracted ${if (extracted == 1) "PAD" else "PADS"} MEASURED, $fromCache FROM THE CRATE INDEX."
     /** A GO ▸ on a kit the shelf's own listing doesn't hold (a kit in a subfolder, say) — the number stays, the door doesn't. */
     const val DOUBLES_KIT_NOT_ON_SHELF = "THAT KIT ISN'T ON THE SHELF'S OWN LIST. THE NUMBER STANDS - THE DOOR DOESN'T."
+    /** The measuring pass itself threw — a folder that vanished mid-scan, an unreadable `kit.json`. [reason] in the exception's own words when it has one; the exception's detail goes to `Log.e`, never a Java class name here. */
+    fun doublesFailed(reason: String): String = "COULDN'T MEASURE THE SHELF: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
 
     // ---- CHOP: the chip itself (HANDOFF.md — "chip tap = cycle class label, 'YOU ✓'") ----
     /** A chip under the confidence threshold, in its own words. */
@@ -937,8 +1226,15 @@ object Copy {
     const val CHIP_OVERRIDDEN = "YOU ✓"
 
     // Export.
-    const val EXPORT_DONE = "DUBBED. GO MAKE SOMETHING."
-    const val DUB_DONE = "DUB DONE. SOUNDS 3% WARMER NOW."
+    const val EXPORT_DONE = "DUBBED."
+    /**
+     * WRITE KIT landed with no card picked, so the file is on the phone
+     * only. Used to claim "SOUNDS 3% WARMER NOW" — a fabricated
+     * measurement attached to every successful export, nothing actually
+     * measured. States what really happened: the file is on the phone,
+     * the same fact [DUB_DONE_CARD] states for the card.
+     */
+    const val DUB_DONE = "DUB DONE. IT'S ON THE PHONE."
     /**
      * WRITE ANOTHER ✓ (`ExportWizardModel.writeLabel`'s COMPLETE-stage
      * label — no longer "EJECT CARD ✓", which claimed an eject that never
@@ -1008,7 +1304,7 @@ object Copy {
     const val EXPORT_CARD_LEGEND = "HOLD TO FORGET THIS CARD"
 
     // Kits.
-    const val FRESH_TAPE = "FRESH TAPE. SMELLS LIKE FERRIC OXIDE."
+    const val FRESH_TAPE = "NEW TAPE."
 
     /**
      * What to say when a kit opens with a SNIPS → PAD hand-off still armed.
@@ -1027,41 +1323,517 @@ object Copy {
     fun snipLanding(hasEmptyPad: Boolean): String =
         if (hasEmptyPad) "LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP." else "THIS KIT IS FULL — PICK ANOTHER."
 
-    /** Shown when a kit could not be created, at every personality level. */
+    /**
+     * `App.kt`'s `fresh()` when `KitShelf.render` throws mid-render (a
+     * starter kit fails to write). Its KDoc used to claim this fired "at
+     * every personality level," a leftover from the deleted PERSONALITY
+     * system — but `fresh()`'s catch block never actually called it; it
+     * built its own literal, `"DUB FAILED: ${e.message ?: e.javaClass
+     * .simpleName}"`, quoting the raw exception at the user. Wired to
+     * this constant now: the exception's own message goes to logcat
+     * instead, same reasoning as [DUB_FAILED]'s own KDoc on why law 3
+     * means saying what happened, not quoting Java at somebody.
+     */
     const val CREATE_FAILED = "COULDN'T MAKE THAT TAPE."
 
-    /** Status-bar deck mutterings, rotated slowly (FULL only). */
-    val STATUS_QUIPS = listOf(
-        "NO DOLBY. WE LIKE HISS.",
-        "REWIND IS FREE.",
-        "CHROME BIAS: ON",
-        "HAND-WOUND SINCE 1996",
-        "AZIMUTH: VIBES",
-    )
+    /**
+     * `StatusBar`'s third cell (`Chrome.kt`) when no kit is open — its own
+     * resting label, not the empty string `open?.kit?.name.orEmpty()` used
+     * to leave there. An empty bordered box next to the populated `KITS: n`
+     * cell read as a rendering gap, not a state: the same "is this broken
+     * or just empty" confusion [EMPTY_GROOVE]'s own KDoc names for a blank
+     * screen. No full stop, same register as [CARD_NONE]: this is a
+     * standing label the row wears until a kit opens, not a line the app
+     * says once.
+     */
+    const val NO_KIT_STATUS = "NO KIT OPEN"
 
-    /** Rotation helper: line [n] of a rotating list (n counts from 0). */
-    fun rotating(lines: List<String>, n: Int): String = lines[n % lines.size]
-
-    // ---------- hidden eggs ----------
+    // ==================== Escaped strings, brought in (name-and-find follow-ups, Part C) ====================
+    //
+    // 78 strings across `:app`'s newer screens lived as inline literals
+    // passed straight to `onToast(...)`/`toast = "..."`, invisible to every
+    // law in `PersonalityTest` because they were never `Copy` fields — this
+    // KDoc's own claim that "everything the UI says lives here" was false
+    // for all of them. Moved in here, screen by screen, rewritten to the
+    // same plain register as the rest of this file.
+    //
+    // The single biggest repeated shape, across `App.kt` and a dozen other
+    // screens, was `"$VERB FAILED: ${e.message ?: e.javaClass.simpleName}"` —
+    // an unexpected exception quoted straight at the user, sometimes as
+    // nothing more than a bare Java class name. [CREATE_FAILED]'s and
+    // [DUB_FAILED]'s own KDocs already refuse to do this. The exception's own
+    // detail now goes to `Log.e` at every one of those call sites instead of
+    // the toast, and the toast itself is one of the `*_FAILED` constants
+    // below — a `const val`, like every other field in this file, so the
+    // reflective shout/full-stop laws actually check it (the whole reason
+    // this section exists: a string that only lives in a function argument
+    // is invisible to them, same as it was invisible entirely before this
+    // pass). [actionFailed] is the one exception: it exists only for the
+    // handful of call sites where the verb itself is a runtime value
+    // (`TextureKits.Spec.verb`, or a `failure(action, e)` helper shared by
+    // several buttons on one screen) and a fixed constant genuinely cannot
+    // name it in advance.
+    const val KEY_FAILED = "KEY FAILED. TRY AGAIN."
+    const val TWINS_FAILED = "EVIL TWINS FAILED. TRY AGAIN."
+    const val BREED_FAILED = "BREED FAILED. TRY AGAIN."
+    const val PLACE_FAILED = "PLACE FAILED. TRY AGAIN."
+    const val RETRIM_FAILED = "RE-TRIM FAILED. TRY AGAIN."
+    const val READ_GROOVE_FAILED = "READ FAILED. TRY AGAIN."
+    const val FEEL_FAILED = "FEEL FAILED. TRY AGAIN."
+    const val INSTANT_KIT_FAILED = "INSTANT KIT FAILED. TRY AGAIN."
+    /** SHARE's own generic failure — both a kit's SHARE and a room's SHARE in `App.kt` use this one line. */
+    const val SHARE_FAILED = "SHARE FAILED. TRY AGAIN."
+    const val ROOM_FORGET_FAILED = "FORGET FAILED. TRY AGAIN."
+    const val ROOM_RESTORE_FAILED = "RESTORE FAILED. TRY AGAIN."
+    const val ROOM_BIN_EMPTY_FAILED = "EMPTY BIN FAILED. TRY AGAIN."
+    const val BACKUP_FAILED = "BACKUP FAILED. TRY AGAIN."
+    const val IN_KEY_FAILED = "IN KEY FAILED. TRY AGAIN."
+    const val RECHOP_FAILED = "RE-CHOP FAILED. TRY AGAIN."
+    /** SEND's own generic failure — CHOP's send-to-grid and SYNTH's send-to-pad both use this one line. */
+    const val SEND_FAILED = "SEND FAILED. TRY AGAIN."
+    const val SPLICE_FAILED = "SPLICE FAILED. TRY AGAIN."
+    const val PREVIEW_FAILED = "PREVIEW FAILED. TRY AGAIN."
+    const val RENDER_FAILED = "RENDER FAILED. TRY AGAIN."
+    const val DIG_FAILED = "DIG FAILED. TRY AGAIN."
+    const val STACK_FAILED = "STACK FAILED. TRY AGAIN."
+    const val MIX_FAILED = "MIX FAILED. TRY AGAIN."
+    const val ORBIT_BOUNCE_FAILED = "BOUNCE FAILED. TRY AGAIN."
+    const val ORBIT_CLIP_FAILED = "CLIP FAILED. TRY AGAIN."
 
     /**
-     * The Konami code on the pads, as 1-based pad slots:
-     * up up down down left right left right — on a 4×4 grid where A13 is
-     * the top row and A01 the bottom-left.
+     * The set could not be written to the kit's folder.
+     *
+     * Not "try again", because the edit is not lost — it is on screen and
+     * it is playing, and the thing that failed is the writing down. What
+     * the player needs to know is that leaving now costs them the edit,
+     * which is why this names the consequence rather than the operation.
      */
-    val KONAMI_PADS = listOf(13, 13, 5, 5, 2, 4, 2, 4)
+    const val ORBIT_SAVE_FAILED = "THE RINGS DID NOT SAVE. THEY PLAY, BUT THIS EDIT WILL NOT BE HERE NEXT TIME."
 
-    /** What the Konami code unlocks: the hidden SLIME scheme. */
-    const val KONAMI_UNLOCK = "SLIME"
+    /**
+     * The generic "X failed, try again" toast for the handful of call sites
+     * where [action] is a runtime value, not a fixed verb — `App.kt`'s
+     * `texture` (`TextureKits.Spec.verb`: SCULPT, STRETCH or FREEZE) and the
+     * `failure(action, e)` helpers several screens share across more than
+     * one of their own buttons. A function, not a field, so the reflective
+     * laws don't reach it - written in register by hand for exactly that
+     * reason. Every call site whose verb is fixed at compile time gets its
+     * own `*_FAILED` constant above instead, so the law actually checks it.
+     */
+    fun actionFailed(action: String): String = "$action FAILED. TRY AGAIN."
 
-    const val ELITE_BPM = 133.7f
-    const val ELITE = "ELITE."
+    /** PLACE (SNIPS → PAD): the snip landed on [slot], `App.kt`'s `assignPendingSnip`'s success line, moved out of an inline literal. */
+    fun snipPlaced(slot: Int): String = "SNIP PLACED ON PAD ${PadBanks.tag(slot)}."
 
-    /** Naming a kit TEST earns exactly this. */
-    fun kitNameResponse(name: String): String? =
-        if (name.trim().uppercase() == "TEST") "VERY CREATIVE." else null
+    // ---- SURFACE + SPLIT: the two printing screens share one shape ----
+    //
+    // Both SURFACE (the tactile pad) and SPLIT (stems) print a live
+    // performance to TAPE or onto a pad, through the same `SnipStore.import`/
+    // `KitBuilderModel.assign`-or-`replaceAudio` pair - so the failures they
+    // can hit are the same failures, and now say the same thing.
+    /** Neither screen's engine could open a low-latency audio stream. */
+    fun noLowLatencyStream(screen: String): String = "NO LOW-LATENCY STREAM. $screen IS SILENT."
+    const val SURFACE_SHARED_STREAM = "SHARED STREAM. A LITTLE MORE LATENCY."
+    /** A kit pad's own sample wouldn't decode - SURFACE loading a voice, SPLIT loading a source. */
+    fun sourceUnreadable(name: String): String = "${name.uppercase(java.util.Locale.ROOT)} WOULD NOT READ."
+    /** `SnipStore.import` threw on the way to TAPE - an unexpected write failure, not a refusal with words of its own. */
+    const val PRINT_LOST = "PRINT LOST. TRY AGAIN."
+    /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it (a layered or chained pad) - the exception's own message is `KitBuilder`'s internal "no pad on slot N", not user copy, so it stays out of the toast. */
+    const val PRINT_PAD_REFUSED = "THAT PAD WON'T TAKE THE PRINT. PICK ANOTHER."
+    /** Disk or decode trouble landing a print on a pad - the print itself is not lost, so this says so, unlike [PRINT_LOST]. */
+    const val PRINT_LANDING_FAILED = "LANDING FAILED. THE PRINT IS STILL HERE."
+    /** SPLIT's own → PAD landing: [replaced] is true when a taken slot's old sample went to the bin; false when the split landed fresh on an empty one. */
+    fun splitPrintedToPad(pad: String, replaced: Boolean): String =
+        if (replaced) "PAD $pad REPLACED WITH THE SPLIT. ORIGINAL SLEEPS IN THE BIN." else "SPLIT PRINTED TO PAD $pad."
+    /** SURFACE's own → PAD landing - same shape as [splitPrintedToPad], SURFACE's own words. */
+    fun surfacePrintedToPad(pad: String, replaced: Boolean): String =
+        if (replaced) "PAD $pad REPLACED WITH THE PRINT. ORIGINAL SLEEPS IN THE BIN." else "PRINTED TO PAD $pad."
 
-    /** BPM readout egg: `ELITE.` flashes at 133.7. */
-    fun bpmResponse(bpm: Float): String? =
-        if (bpm == ELITE_BPM) ELITE else null
+    // ---- SURFACE ----
+    const val SURFACE_SETTINGS_NOT_SAVED = "SURFACE SETTINGS NOT SAVED. TRY AGAIN."
+    const val SURFACE_SETTINGS_UNREADABLE = "SURFACE SETTINGS UNREADABLE. USING THE DEFAULTS."
+    const val SURFACE_SET_NEEDS_TOUCH = "TOUCH THE PAD FIRST. SET KEEPS WHAT WAS UNDER THE FINGER."
+    fun surfaceCornerSet(letter: Char): String = "CORNER $letter SET."
+    fun surfacePrinted(seconds: Float): String = "PRINTED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO TAPE."
+    const val SURFACE_NOTHING_PRINTED = "NOTHING PRINTED. HOLD THE SURFACE WHILE IT PRINTS."
+    const val SURFACE_STILL_LANDING = "STILL LANDING THE LAST PRINT."
+    /** PRINT armed with no tempo to count bars against - a `const val` (not folded into [surfacePrintingStarted]'s own fixed text) so the reflective shout/full-stop laws actually check it. */
+    const val SURFACE_PRINTING_NO_TEMPO = "PRINTING. PLAY THE SURFACE."
+    /** PRINT armed: names the bar count and tempo when the kit has one to count against, or falls back to [SURFACE_PRINTING_NO_TEMPO] when it doesn't. */
+    fun surfacePrintingStarted(bars: Int, bpm: Int?): String =
+        if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
+
+    // ---- GROOVE: BOUNCE ----
+    /** BOUNCE tapped on a stopped loop - it prints the pattern as it plays, so there is nothing yet to start it against. Named on tap rather than a dimmed button, same as [KIT_STILL_LOADING] for RECORD. */
+    const val GROOVE_BOUNCE_NEEDS_PLAY = "BOUNCE PRINTS THE LOOP AS IT PLAYS. PRESS ► PLAY FIRST."
+    /** BOUNCE landed - [SnipStore.Imported.seconds]'s own count, [surfacePrinted]'s twin for the pads' print. */
+    fun groovePrinted(seconds: Float): String = "BOUNCED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO SNIPS."
+    /** The armed print's own buffer never reached a captured frame worth keeping - the same near-nothing guard [SURFACE_NOTHING_PRINTED] states for the other engine's print. */
+    const val GROOVE_NOTHING_BOUNCED = "NOTHING BOUNCED. TRY AGAIN."
+    /** `PadEngine.armPrint` refused - no stream running, one already recording, or the reservation itself failed. */
+    const val GROOVE_BOUNCE_FAILED = "BOUNCE FAILED. TRY AGAIN."
+    /** PROG, SWING, FEEL, or a new take landing moved the pattern out from under an armed or running bounce - it is cancelled rather than landing a splice of two different takes. */
+    const val GROOVE_BOUNCE_PATTERN_CHANGED = "GROOVE CHANGED. BOUNCE CANCELLED."
+
+    // ---- SPLIT ----
+    const val SPLIT_ALL_FADERS_DOWN = "EVERY FADER IS DOWN. NOTHING TO HEAR."
+    /** SPLIT's engine refused to arm playback - not an exception, just `false` back from `armPrint`/its own start call. */
+    const val SPLIT_START_FAILED = "SPLIT WOULD NOT START. TRY AGAIN."
+    const val SPLIT_PAD_EMPTY = "THAT PAD HAS NOTHING ON IT."
+    /** `Separate.stn`'s own unexpected failure - no domain refusal words of its own, so nothing worth quoting. */
+    const val SPLIT_REFUSED = "SPLIT REFUSED. TRY AGAIN."
+    /** [hotPeak] over 1.0 when the split's own mix clipped; null when it did not, matching `SPLIT PRINTED`'s own optional "HOT" note. */
+    fun splitPrinted(seconds: Float, hotPeak: Float?): String {
+        val note = if (hotPeak != null) " HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, hotPeak)}." else ""
+        return "SPLIT PRINTED ${"%.1f".format(java.util.Locale.ROOT, seconds)} S TO TAPE.$note"
+    }
+    const val SPLIT_NOTHING_TO_PRINT = "EVERY FADER IS DOWN. THERE IS NOTHING TO PRINT."
+    fun splitMixHot(peak: Float): String = "THE MIX IS HOT: PEAK ${"%.2f".format(java.util.Locale.ROOT, peak)}. PICK A PAD, OR PULL A FADER DOWN."
+
+    // ---- ORBIT ----
+    /** ADD RING x3 (a pad ring, a snip ring, DUPLICATE) - `OrbitSet.MAX_ORBITS` is 8; a settled fact worth stating outright, not "THE SKY". */
+    const val ORBIT_RINGS_FULL = "8 RINGS ALREADY. ORBIT HOLDS NO MORE."
+    const val ORBIT_NO_PADS = "NO PADS ON THIS KIT."
+    fun orbitFileUnreadable(name: String): String = "COULD NOT READ $name."
+    const val ORBIT_NOTHING_TO_UNDO = "NOTHING TO UNDO."
+    /** BOUNCE landed: [label] is `cycleLabel`'s own name for what was heard. */
+    fun orbitBounced(label: String): String = "ON TAPE: $label. TRIM IT, CHOP IT, KIT IT."
+    /**
+     * CLIP ▸ KIT landed: [name] the clip's own name, [bars]/[notes] what it
+     * holds, [snipRingsLeftOut] how many snip rings (audio, which a
+     * note-only clip can never carry) stayed out of it. Leads with the
+     * confirmation, not the omission - a player who just tapped CLIP ▸ KIT
+     * wants to hear that it worked first.
+     */
+    fun clippedIntoKit(name: String, bars: Int, notes: Int, snipRingsLeftOut: Int): String =
+        if (snipRingsLeftOut == 0) {
+            "$name IS IN THE KIT'S GROOVES — ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}. IT RIDES TO THE MPC."
+        } else {
+            "$name IN THE GROOVES: ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}. ${countOf(snipRingsLeftOut, "SNIP RING", "SNIP RINGS")} STAYED OUT."
+        }
+
+    /**
+     * CLIP ▸ KIT landed for a set with an arrangement: [sections] clips
+     * rather than one, each becoming a sequence the hardware's switcher
+     * flips between.
+     *
+     * [sections] is the clips actually WRITTEN, not the sections asked
+     * for — a section that plays no rings is a break and writes none, so
+     * the line says what is in the kit rather than what was intended.
+     */
+    fun clippedSectionsIntoKit(sections: Int, bars: Int, notes: Int, snipRingsLeftOut: Int): String {
+        // One section is a sentence, not a count with an S on it — and
+        // [countOf] is what makes that true of BARS and NOTES here too:
+        // this function used to get SECTIONS right and leave those two
+        // plural regardless, "1 SECTION IS IN THE KIT'S GROOVES — 1 BARS,
+        // 1 NOTES" being exactly the bug the singular word for SECTIONS
+        // was written to rule out.
+        //
+        // This function IS the multi-section path from CLIP ▸ KIT; what
+        // has no caller today is the [sections] == 1 case, because a save
+        // that wrote one clip goes to [clippedIntoKit] and names it. But a
+        // line that reads "1 SECTIONS ARE" the first time anything calls
+        // it that way is a trap left lying about, and the plural is two
+        // words.
+        val many = sections != 1
+        val subject = countOf(sections, "SECTION IS", "SECTIONS ARE")
+        val them = if (many) "THEY RIDE" else "IT RIDES"
+        return if (snipRingsLeftOut == 0) {
+            "$subject IN THE KIT'S GROOVES — ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}, ONE SEQUENCE EACH. $them TO THE MPC."
+        } else {
+            "${countOf(sections, "SECTION", "SECTIONS")} IN THE GROOVES: ${countOf(bars, "BAR", "BARS")}, ${countOf(notes, "NOTE", "NOTES")}. " +
+                "${countOf(snipRingsLeftOut, "SNIP RING", "SNIP RINGS")} STAYED OUT."
+        }
+    }
+
+    // ---- GRAIN FIELD ----
+    const val GRAIN_FIELD_TOO_SHORT = "TOO SHORT TO MAP. THE FIELD NEEDS MORE TAPE."
+    /** `GrainVoice.start()` threw - the platform rejected the format; a caught, retryable condition. */
+    const val GRAIN_FIELD_START_FAILED = "GRAIN VOICE WON'T START."
+    /** The render thread died on its own, or a live gesture threw against it - DUET turns itself off either way. */
+    const val GRAIN_FIELD_DUET_STOPPED = "DUET STOPPED — OFF."
+    /** The field's own busy line while the tape is read into its grid - furniture, like every other `…`-suffixed busy line, so it carries no full stop. */
+    const val GRAIN_FIELD_LISTENING = "LISTENING TO THE GRAIN…"
+    /** DUET on: the mic plays the field live, said once so headphones are a choice, not a surprise. */
+    const val GRAIN_FIELD_DUET_HINT = "THE MIC PLAYS THE FIELD. HEADPHONES RECOMMENDED."
+    /** DUET off: the field's ordinary touch-to-play hint. */
+    const val GRAIN_FIELD_DRAG_HINT = "DRAG TO PLAY THE GRAIN FIELD."
+
+    // ---- GROOVE: MIDI EXPORT's own success line ----
+    fun midiFilesWritten(count: Int): String =
+        "$count MIDI FILES WRITTEN — ANY DAW OPENS THE RHYTHM. THE MPC PLAYS IT TOO."
+
+    // ---- PAD CAPTURE: GRAB/HOLD's own too-short guard ----
+    const val PAD_CAPTURE_HOLD_TOO_SHORT = "HOLD TO RECORD."
+    /** GRAB/HOLD attempted before LISTEN was ever pressed - `MicSessionService.armed` is false, so there is no ring to snapshot at all. */
+    const val PAD_CAPTURE_NOT_LISTENING = "NOT LISTENING YET."
+    /** GRAB's own empty snapshot - the ring had nothing in it to cut. */
+    const val GRAB_NOTHING_YET = "NOTHING TO GRAB YET."
+    /** HOLD's own empty snapshot - released before a single frame landed. */
+    const val HOLD_NOTHING_RECORDED = "NOTHING RECORDED."
+    /** GRAB/HOLD's own landing toast: [verb] the gesture's own past-tense word ("GRABBED"/"RECORDED"), [pad] the pad it landed on. */
+    fun padGestureLanded(verb: String, pad: String): String = "$verb → PAD $pad."
+    /**
+     * GRAB/HOLD's own idle panel once armed: what each gesture actually
+     * captures - [grabSeconds] interpolated so this can't drift from the
+     * real ring window. [SNIPPED]'s own shape ("KEPT WHAT IT'S HEARD SINCE
+     * LISTEN, UP TO 60s") rather than "THE LAST ${grabSeconds}s HEARD" -
+     * naming the start point (SINCE LISTEN), not just the cap, is what
+     * makes "UP TO" true: `CaptureRing.snapshot` returns a SHORT array when
+     * the ring holds fewer frames than asked for, so in the first couple
+     * seconds after LISTEN a GRAB genuinely gets less than this. (The
+     * reflective ceiling law now catches a bare "LAST Ns" here the way it
+     * always could for a `const val` - moving this out of
+     * `PadCaptureScreen.kt` and into a function here is what let it reach
+     * this line at all, and it caught exactly that shape on the first
+     * draft of this fn.)
+     */
+    fun padCaptureReady(grabSeconds: Int): String =
+        "GRAB KEEPS WHAT'S BEEN HEARD SINCE LISTEN, UP TO ${grabSeconds}s. HOLD RECORDS WHILE YOU HOLD."
+    /** GRAB/HOLD's own idle panel before LISTEN has ever been pressed. */
+    const val PAD_CAPTURE_NEEDS_MIC = "NOT LISTENING YET. START THE MIC, THEN HIT SOMETHING."
+
+    // ---- SNIPS: a row that will not decode ----
+    const val SNIP_CANT_PLAY = "CAN'T PLAY THIS SNIP."
+
+    // ---- LOOP: a snip sent to the six-track grid ----
+    //
+    // Plain labels, per the September decision to say what happened rather
+    // than say it in character. Every count here is passed in rather than
+    // typed: the numbers belong to `Session.TRACK_COUNT` and
+    // `Session.MAX_CHAIN` in `:loop`, which `:shell` does not depend on, and
+    // a retyped number is how a line ends up promising something the code
+    // stopped doing.
+    /**
+     * A snip landed on a track. [track] is 1-based, the column the player
+     * counts on screen; [blocks] is how many intervals of the snip are on
+     * the grid.
+     *
+     * The block count is said out loud because it is the number that decides
+     * how this track drifts against the others — two blocks against three is
+     * the whole feature — and nothing on the grid spells it.
+     */
+    fun loopTrackFilled(name: String, track: Int, blocks: Int): String =
+        "$name IS ON TRACK $track, ${countOf(blocks, "BLOCK", "BLOCKS")} LONG."
+
+    /**
+     * The track header's spoken name. The header is a mute toggle, and its
+     * visible text is the track's name alone — the state lives in the ink
+     * colour, which a screen reader cannot read. Says the state and what a
+     * tap does, the same shape as ORBIT's own ring chip ("RING ON — TAP TO
+     * MUTE"), because the two controls do the same job on the two grids.
+     */
+    fun loopTrackToggle(name: String, engaged: Boolean): String =
+        if (engaged) "$name ON — TAP TO MUTE" else "$name OFF — TAP TO HEAR"
+    /**
+     * The same landing, for a snip that ran past what a chain holds: it is on
+     * the grid, but only its first [blocks] intervals are. Its own line
+     * rather than a clause on [loopTrackFilled] — a tail left off is not a
+     * detail to bury.
+     */
+    fun loopTrackTruncated(name: String, track: Int, blocks: Int): String =
+        "$name IS ON TRACK $track. ONLY ITS FIRST ${countOf(blocks, "BLOCK", "BLOCKS")} FIT."
+    /** Every track already holds something. [tracks] is the grid's own track count. */
+    fun loopFull(tracks: Int): String = "ALL $tracks TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST."
+    /** The snip decoded to nothing — empty, or not readable as audio. */
+    const val LOOP_NOTHING_TO_SEND = "THAT SNIP HAS NO AUDIO TO SEND."
+    /**
+     * A send that could not be written. Nothing is on the grid that was not
+     * there before — so it says so, rather than leaving the player to guess
+     * whether half of it landed.
+     */
+    const val LOOP_SEND_FAILED = "COULDN'T SAVE THE LOOP. THE GRID IS AS IT WAS."
+    /**
+     * A clear that could not be written — the other half of the same failure,
+     * and it needs its own words: the track IS clear on screen, because the
+     * engine took the edit, and it is the disk that refused. [ORBIT_SAVE_FAILED]
+     * says the same shape of thing for the rings.
+     */
+    const val LOOP_CLEAR_NOT_SAVED = "THE TRACK IS CLEAR NOW, BUT IT DID NOT SAVE. IT WILL BE BACK NEXT TIME."
+    /**
+     * A `loop.json` that exists but will not parse. The send stops rather than
+     * starting a fresh session over the top of it — six tracks someone built
+     * are not something to overwrite quietly — so the line says that nothing
+     * moved.
+     */
+    const val LOOP_UNREADABLE = "THE LOOP FILE WON'T READ. NOTHING WAS CHANGED."
+    /**
+     * A track taken back to empty.
+     *
+     * The way back is real and is named: nothing is deleted by this — the
+     * snip is where it always was, and sending it again rebuilds the track.
+     * What does not come back is the arrangement itself, which is one tap to
+     * redo, so this is not a [Reversal.goneBut] site.
+     */
+    const val LOOP_TRACK_CLEARED = "TRACK CLEARED. THE SNIP STAYS IN SNIPS."
+    /**
+     * A tempo change, once the taps have stopped and it is on the grid.
+     *
+     * The new number is already on screen by then — this says it reached the
+     * disk, which is the half the screen cannot show. The BPM itself is not
+     * repeated here: it is three inches away in the control the player just
+     * used, and a toast that quotes it would be the same number in two places
+     * on one screen.
+     */
+    const val LOOP_TEMPO_SET = "TEMPO SAVED."
+
+    /**
+     * The tempo's own failure line.
+     *
+     * It exists because the clear's line was being used for both, and that
+     * line says the track is clear and will be back — true of a clear, and
+     * three kinds of wrong about a tempo: nothing was cleared, nothing is
+     * coming back, and the number on screen is the one thing that did not
+     * survive. A toast that describes the wrong action is worse than no
+     * toast, because the player goes looking for a track they never touched.
+     */
+    const val LOOP_TEMPO_NOT_SAVED = "TEMPO DID NOT SAVE. THE OLD ONE IS WHAT COMES BACK NEXT TIME."
+    /** LOOP opened with nothing sent to it yet — the grid's own empty state. */
+    const val LOOP_EMPTY = "NO TRACKS YET. SEND A SNIP FROM SNIPS."
+    /**
+     * The grid, rendered offline and landed in SNIPS — the same door ORBIT's
+     * own bounce uses, so what the loop grid makes can be chopped, padded and
+     * sent back to a track. [bars] is what was actually rendered.
+     */
+    fun loopBounced(bars: Int): String = "${barsOf(bars)} BOUNCED. IT IS IN SNIPS NOW."
+    /**
+     * The same landing, when the grid's full cycle is longer than a snip can
+     * hold. Both numbers, because the difference is the point: the cycle is
+     * the least common multiple of the chain lengths and can run for half an
+     * hour, and a player who is told only the first number would think that
+     * was the whole loop.
+     */
+    fun loopBouncedPart(bars: Int, cycleBars: Int): String =
+        "${barsOf(bars)} BOUNCED, OUT OF A $cycleBars BAR CYCLE. IT IS IN SNIPS NOW."
+
+    /**
+     * "N <singular>" or "N <plural>" — the one place every counted noun in
+     * `Copy` picks its own word, because "1 BARS BOUNCED" is the kind of
+     * sentence a player reads as a bug in everything else too, and that bug
+     * shipped independently in enough different toasts (bars, notes,
+     * sections, pads, hits, slices, blocks, files) that hand-writing the
+     * `if (n == 1)` at each call site was never going to hold. `n == 1`,
+     * not `n <= 1`: a count can't go negative, and 0 is its own plural
+     * ("0 BARS", not "0 BAR").
+     */
+    fun countOf(n: Int, singular: String, plural: String): String = "$n ${if (n == 1) singular else plural}"
+
+    /**
+     * "1 BAR" or "N BARS" — one place, because both bounce lines count the
+     * same thing and "1 BARS BOUNCED" is the kind of sentence a player reads
+     * as a bug in everything else too. The cycle length beside it stays a bare
+     * number: it is already followed by the singular "BAR CYCLE". A thin call
+     * through [countOf] now — the general form this function's own KDoc
+     * argued for before [countOf] existed to be argued for.
+     */
+    private fun barsOf(bars: Int): String = countOf(bars, "BAR", "BARS")
+    /** Every track is still empty — there is nothing to render. */
+    const val LOOP_BOUNCE_EMPTY = "NOTHING ON THE GRID TO BOUNCE YET."
+    /** The render or the write failed. Law 3: say what did not happen. */
+    const val LOOP_BOUNCE_FAILED = "THE BOUNCE DIDN'T SAVE. NOTHING WAS ADDED TO SNIPS."
+    /**
+     * BOUNCE pressed while one is already running — which can happen from a
+     * second visit to the screen, since a render outlives the screen that
+     * started it.
+     */
+    const val LOOP_BOUNCE_ALREADY = "A BOUNCE IS ALREADY RUNNING. IT LANDS IN SNIPS WHEN IT IS DONE."
+    /** The button while the render runs — a bounce is seconds of work, not instant. */
+    const val LOOP_BOUNCE_BUSY = "BOUNCING…"
+
+    /**
+     * The BOUNCE button at rest, naming what it is about to render. Lives
+     * here rather than inline in `LoopGrid` so it counts bars through
+     * [barsOf] like the two toasts above: the button said "1 BARS" at a
+     * one-bar bounce, the exact sentence [barsOf]'s own KDoc exists to
+     * prevent, because it was a raw string outside this file and so out of
+     * that rule's reach. `·`, not `▸`: BOUNCE renders in place and leaves
+     * LOOP open.
+     */
+    fun loopBounceButton(bars: Int): String = "BOUNCE · ${barsOf(bars)}"
+
+    /**
+     * LOOP's own legend. Both of the grid's gestures are invisible — a track
+     * name is not obviously a mute button and a block is not obviously
+     * clearable — and the hold is the one nobody can guess.
+     */
+    const val LOOP_LEGEND = "TAP A NAME TO MUTE. TAP A BLOCK TO SEE IT. HOLD ONE TO CLEAR THE TRACK."
+    /**
+     * What a tapped block is, in the line the legend usually occupies.
+     *
+     * [track] and [block] are 1-based, the numbers on screen. [what] is the
+     * snip's own filename, or the kit a pattern plays, or null for a track
+     * nothing has been sent to — the grid always holds six tracks, so an empty
+     * one is a real thing to tap and has to answer.
+     *
+     * A function rather than a constant because every part of it is data; the
+     * only word this owns is the one for nothing.
+     */
+    fun loopBlock(track: Int, block: Int, what: String?): String =
+        "TRACK $track · BLOCK $block · ${what ?: "NOTHING SENT HERE YET"}"
+
+    // ==================== Escaped strings, brought in (copy-consolidation follow-ups) ====================
+    //
+    // The count-driven pass above stopped once it hit its own tally of 78.
+    // These were the residue: inline literals a `grep 'onToast("'` never
+    // saw (a multi-line call, a `TapeText` argument, a parameter carrying a
+    // literal from its call site) but a user reads all the same, so the
+    // property this file's own KDoc claims - "everything the UI says lives
+    // here" - was still false for every one of them.
+    /** DELETED KITS'/DELETED SNIPS' own empty state - plain, not the tape-metaphor voice, matching SNIPS' own locked tone ([SNIPS_EMPTY]). */
+    const val NOTHING_DELETED = "NOTHING DELETED."
+    /** SNIPS' own empty state. */
+    const val SNIPS_EMPTY = "NO SNIPS YET."
+    /** KIT/PLAY with no tape ever committed to this kit - both screens' own empty deck. */
+    const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM KITS."
+    /** IN KEY's row when the kit holds no tonal pad at all. */
+    const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
+    /** SNIPS → PAD's own header hint once the shelf has a kit to tap - [EMPTY_SHELF_FOR_ASSIGN] carries the instruction when it doesn't. */
+    const val ASSIGN_PICK_HINT = "TAP A KIT, THEN LONG-PRESS AN EMPTY PAD."
+    /**
+     * The kit shelf's ROOMS legend (September UAT, finding 4/5's own shape
+     * applied here): HOLD is the only door to FORGET on a room row, so this
+     * stays on screen rather than riding on a toast that can be dismissed
+     * forever. A `val`, not `const val`, only because [Rooms.BIN_DAYS]
+     * rides in the template - reflection over `Copy`'s declared fields
+     * finds it either way.
+     */
+    val ROOMS_LEGEND: String = "HOLD A ROOM TO FORGET IT · THE BIN KEEPS IT ${Rooms.BIN_DAYS} DAYS"
+    /** ORBIT's SET ▸ TEMPO confirm row: what accepting the offered tempo actually does to the ring, since SET is otherwise silent about it. */
+    const val ORBIT_SET_TEMPO_HINT = "SET MOVES THE WHOLE SET AND RE-SIZES THE RING TO FIT."
+    /**
+     * ORBIT's own on-screen legend: the ring/cell gestures, permanent
+     * furniture under the deck, plus one of two closing clauses depending
+     * on whether the shelf actually holds a snip for + SNIP to reach for. A
+     * function, not a `_LEGEND` field, because of that branch - the
+     * reflective legend law only walks fields, same reasoning as
+     * `breedPickHeader`'s own KDoc.
+     */
+    fun orbitLegend(hasSnips: Boolean): String =
+        "TAP A RING TO PICK IT · HOLD TO SOLO · TAP A CELL FOR A HIT, HOLD IT FOR AN ACCENT · " +
+            if (hasSnips) {
+                "HOLD BPM TO RUN IT · TAP THE READOUT FOR THE BAR · SHORTEST RING INSIDE COMES ROUND FIRST."
+            } else {
+                "NO SNIPS ON THE SHELF YET FOR + SNIP."
+            }
+    /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
+    const val SURFACE_NEEDS_KIT = "OPEN A KIT. THE SURFACE PLAYS ITS FIRST PAD."
+    /** SPLICE's own picker hint before a head and a tail are chosen. */
+    const val SPLICE_PICK_HINT = "PICK A HEAD AND A TAIL - TWO DIFFERENT TAKES OF THIS PAD."
+    /** X-RAY on a JSON file that isn't an MPC program at all - [topKeys] the top-level field count when the tree parsed as an object, null when it didn't even parse that far. */
+    fun xrayNotAProgram(topKeys: Int?): String =
+        if (topKeys != null) "JSON, NOT AN MPC PROGRAM. $topKeys TOP-LEVEL FIELDS." else XRAY_NOTHING_TO_SHOW
+    /** [xrayNotAProgram]'s own fallback, pulled out as a `const val` so the reflective laws reach it. */
+    const val XRAY_NOTHING_TO_SHOW = "NOTHING TO SHOW."
+    /** X-RAY's own footnote: fields the reading found but doesn't yet have a label for. */
+    fun xrayUnlabeledFields(count: Int): String =
+        "$count FIELD${if (count == 1) "" else "S"} PRESENT IN THIS FILE, NOT YET LABELED HERE."
+    /** `App.kt`'s `fresh()`: the busy overlay while a starter kit renders offline, named so the wait is attributable - same shape as [treatmentBusy]. */
+    fun dubbingBusy(name: String): String = "DUBBING $name…"
+    /** EVIL TWINS' own busy overlay while every twin renders offline. */
+    const val EVIL_TWINS_BUSY = "TWINNING…"
+    /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
+    const val INSTANT_KIT_BUSY = "CHOPPING…"
+
+    /** Rotation helper: line [n] of a rotating list (n counts from 0) — [COMMIT_LINES]'s own rotation. */
+    fun rotating(lines: List<String>, n: Int): String = lines[n % lines.size]
 }

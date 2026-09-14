@@ -1,11 +1,15 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +44,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -52,6 +57,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
+import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -61,6 +67,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -69,9 +76,13 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Fathom
+import com.snipsnap.synth.FathomPatch
+import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
@@ -113,10 +124,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the six-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the seven-engine drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all six
+ * Compose surface plus the SEND TO PAD action, multiplexed over all seven
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -124,19 +135,17 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and five more engines
- * (TINES, VELVET, VOX, PLUCK, TONEWHEEL) join it here. GRAINS is out of
- * scope — it has no voice enum, a different shape entirely.
+ * only; reality wins: THUMP alone ships eight voices, and six more engines
+ * (TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM) join it here. GRAINS is
+ * out of scope — it has no voice enum, a different shape entirely.
  *
- * Two copy carve-outs, both because `Personality.kt`'s `Copy` object has no
- * matching line and the brief says not to invent one this wave:
- * - SCRAMBLE has no toast (the prototype's `SCRAMBLE_LINES` are prototype-
- *   only flavour, never ported to `Copy`).
- * - SEND TO PAD's success toast is a plain inline sentence, for both of its
- *   branches (REPLACE an assigned pad's audio, or ADD to an empty slot) —
- *   `Copy.treated` and `Copy.INSTRUMENT_MADE` both exist but neither is
- *   semantically a "a synth patch landed on this pad" line, so nothing in
- *   the TREATED/INSTRUMENT family fits either shape.
+ * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
+ * `SCRAMBLE_LINES` are prototype-only flavour, never ported to `Copy`).
+ * SEND TO PAD's own landing line used to be a second carve-out — a plain
+ * inline sentence, because neither `Copy.treated` nor `Copy.INSTRUMENT_MADE`
+ * is semantically "a synth patch landed on this pad" — but a copy-
+ * consolidation pass gave it its own line, `Copy.synthSent`, rather than
+ * leaving it outside every law in `PersonalityTest`.
  */
 @Composable
 fun SynthScreen(
@@ -172,6 +181,14 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
+    // Which preset (if any) the current macro values for this (engine,
+    // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
+    // "a starting point to wreck, not a locked sound", so this clears the
+    // moment a slider or SCRAMBLE moves the macros away from what was
+    // loaded, rather than keep highlighting a name that no longer
+    // describes the sound. Not pre-seeded like [macrosByVoice] — nothing
+    // is "loaded" until a tap picks one.
+    val currentPresetByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, String>() }
     // The prototype gates its very first sound behind a "TAP TO POWER ON"
     // veil — a Web Audio autoplay-policy workaround, not part of the actual
     // interaction — and only *after* that makes every move retrigger. This
@@ -182,7 +199,20 @@ fun SynthScreen(
     var touched by remember { mutableStateOf(false) }
     fun updateMacro(name: String, value: Float) {
         touched = true
+        currentPresetByVoice.remove(engine to voice)
         macrosByVoice[engine to voice] = macrosByVoice.getValue(engine to voice) + (name to value)
+    }
+    fun loadPreset(patch: Patch) {
+        touched = true
+        // Merged over the engine's own defaults, same as macrosByVoice's own
+        // seeding above: a preset only has to name the macros it cares
+        // about (PUNCH, added after every existing THUMP preset was
+        // written, names none of them), and every read site here relies on
+        // that "no missing key" invariant - a bare `patch.macros` would
+        // otherwise leave PUNCH's slider crashing on getValue the moment
+        // someone loaded a pre-PUNCH preset.
+        macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
+        currentPresetByVoice[engine to voice] = patch.name
     }
 
     var snip by remember { mutableStateOf<Snip?>(null) }
@@ -236,7 +266,8 @@ fun SynthScreen(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            onToast("RENDER FAILED: ${e.message ?: e.javaClass.simpleName}")
+            Log.e("SynthScreen", "render: failed", e)
+            onToast(Copy.RENDER_FAILED)
         } finally {
             shimmerJob.cancel()
             rendering = false
@@ -300,27 +331,25 @@ fun SynthScreen(
                 }
                 showChooser = false
                 onKitUpdated(updatedKit)
-                // No Copy line fits a synth patch landing on a pad (see the
-                // file KDoc's carve-out) — the simplest honest sentence,
-                // said plainly. Only the REPLACE branch bins anything —
+                // Copy.synthSent: only the REPLACE branch bins anything —
                 // `replaceAudio` moves the displaced WAV to the bin
                 // (`moveToBin`), the same fact `Copy.treated`'s "ORIGINAL
                 // SLEEPS IN THE BIN" states for TREATMENT — `assign`'s own
                 // `deleteIfUnreferenced` is a no-op on an empty slot (there
                 // was no original), so the ADD branch doesn't claim it.
-                onToast(
-                    if (existed) {
-                        "PAD ${padTag(slot)} REPLACED WITH ${name.uppercase()}. ORIGINAL SLEEPS IN THE BIN."
-                    } else {
-                        "PAD ${padTag(slot)} ADDED: ${name.uppercase()}."
-                    },
-                )
+                onToast(Copy.synthSent(padTag(slot), name, replaced = existed))
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 if (ex is IllegalStateException || ex is IllegalArgumentException) {
-                    onToast(ex.message ?: "SEND REFUSED.")
+                    // Same race as SPLIT/SURFACE's own → PAD landing (the kit
+                    // changed under the chooser - a layered or chained pad):
+                    // the exception's own text is KitBuilder's internal "no
+                    // pad on slot N", not user copy, so it stays out of the
+                    // toast, same as Copy.PRINT_PAD_REFUSED's own reasoning.
+                    onToast(Copy.SYNTH_PAD_REFUSED)
                 } else {
-                    onToast("SEND FAILED: ${ex.message ?: ex.javaClass.simpleName}")
+                    Log.e("SynthScreen", "sendToSlot: failed", ex)
+                    onToast(Copy.SEND_FAILED)
                 }
             } finally {
                 sendBusy = false
@@ -363,7 +392,12 @@ fun SynthScreen(
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .tapeClick(label = null) {
+                        // States which engine is current and what the tap
+                        // does, the same shape as KitsScreen's SORT/SHOW
+                        // cyclers (a real word name, not a glyph, but the
+                        // TapeText below still doesn't merge into this
+                        // node for free).
+                        .tapeClick(label = "ENGINE ${engine.name} · TAP FOR NEXT") {
                             touched = true
                             val next = engine.next()
                             engine = next
@@ -371,7 +405,10 @@ fun SynthScreen(
                         },
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    TapeText("${engine.name} ▸", TapeType.lcdHeader, scheme.lcdInk.tape)
+                    // Batch 3, Task 4: no ▸ — the tap cycles to the next
+                    // engine in place, same as the cyclers below; it doesn't
+                    // navigate or open a panel.
+                    TapeText(engine.name, TapeType.lcdHeader, scheme.lcdInk.tape)
                 }
                 TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
             }
@@ -383,6 +420,14 @@ fun SynthScreen(
                 ScopeLcd(snip, rendering, scheme, Modifier.fillMaxWidth().height(104.dp))
 
                 VoicePicker(engine, voice, scheme, onSelect = { touched = true; voice = it })
+
+                PresetList(
+                    engine = engine,
+                    voice = voice,
+                    current = currentPresetByVoice[engine to voice],
+                    scheme = scheme,
+                    onSelect = ::loadPreset,
+                )
 
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -405,6 +450,7 @@ fun SynthScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         touched = true
+                        currentPresetByVoice.remove(engine to voice)
                         macrosByVoice[engine to voice] = engine.scramble(voice, Random(System.nanoTime()))
                     }
                     LabButton(
@@ -412,6 +458,7 @@ fun SynthScreen(
                         scheme,
                         enabled = kit != null && !sendBusy,
                         modifier = Modifier.weight(1f),
+                        accessibilityLabel = "SEND TO PAD",
                     ) {
                         showChooser = true
                     }
@@ -423,7 +470,7 @@ fun SynthScreen(
                     .fillMaxWidth()
                     .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                     .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                    .tapeClick(label = null) { snip?.let { audition(it) } }
+                    .tapeClick(label = "AUDITION") { snip?.let { audition(it) } }
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -453,10 +500,10 @@ fun SynthScreen(
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). All six registered engines already converge on one shape (an
+ * change"). All seven registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of six near-
+ * this just gives the screen one dispatch point instead of seven near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
@@ -466,9 +513,9 @@ fun SynthScreen(
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, TINES, VELVET, VOX, PLUCK, TONEWHEEL;
+    THUMP, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM;
 
-    /** THUMP → TINES → VELVET → VOX → PLUCK → TONEWHEEL → THUMP, per the brief. */
+    /** THUMP → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -478,6 +525,7 @@ private enum class Engine {
         VOX -> VoxVoice.entries
         PLUCK -> PluckVoice.entries
         TONEWHEEL -> TonewheelVoice.entries
+        FATHOM -> FathomVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -487,6 +535,7 @@ private enum class Engine {
         VOX -> Vox.macrosFor(voice as VoxVoice)
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
+        FATHOM -> Fathom.macrosFor(voice as FathomVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -496,6 +545,7 @@ private enum class Engine {
         VOX -> Vox.defaults(voice as VoxVoice)
         PLUCK -> Pluck.defaults(voice as PluckVoice)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
+        FATHOM -> Fathom.defaults(voice as FathomVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -505,6 +555,7 @@ private enum class Engine {
         VOX -> Vox.scramble(voice as VoxVoice, random)
         PLUCK -> Pluck.scramble(voice as PluckVoice, random)
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
+        FATHOM -> Fathom.scramble(voice as FathomVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -519,6 +570,7 @@ private enum class Engine {
         VOX -> Vox.render(voice as VoxVoice, macros)
         PLUCK -> Pluck.render(voice as PluckVoice, macros)
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
+        FATHOM -> Fathom.render(voice as FathomVoice, macros)
     }
 
     fun drumClass(voice: Enum<*>): DrumClass = when (this) {
@@ -528,6 +580,7 @@ private enum class Engine {
         VOX -> (voice as VoxVoice).drumClass
         PLUCK -> (voice as PluckVoice).drumClass
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
+        FATHOM -> (voice as FathomVoice).drumClass
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -537,6 +590,7 @@ private enum class Engine {
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
+        FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -564,6 +618,13 @@ private enum class Engine {
 // BASS/BRASS/SQUELCH, PLUCK's KOTO) — so per the brief's fallback rule
 // ("tonal-pitched voices -> TONAL, percussive -> PERC"), all four engines
 // are TONAL across the board.
+//
+// FATHOM is the one engine here that isn't: `FathomTest`'s own factory-
+// defaults classifier check (and now `FathomPresetsTest`'s identity check
+// over its presets) already establishes DEEP and GRIND as DrumClass.KICK
+// and GLASS as PERC — real classifier judgments, not a fallback guess, so
+// this mirrors them rather than defaulting FATHOM to TONAL the way the
+// other four engines are.
 
 private val ThumpVoice.drumClass: DrumClass
     get() = when (this) {
@@ -587,6 +648,12 @@ private val VelvetVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val VoxVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val PluckVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val TonewheelVoice.drumClass: DrumClass get() = DrumClass.TONAL
+
+private val FathomVoice.drumClass: DrumClass
+    get() = when (this) {
+        FathomVoice.DEEP, FathomVoice.GRIND -> DrumClass.KICK
+        FathomVoice.GLASS -> DrumClass.PERC
+    }
 
 /**
  * Chip/header label. THUMP keeps its prototype-verbatim abbreviations
@@ -616,6 +683,22 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 // ---------- voice picker ----------
 
+/**
+ * Batch 3, Task 5: bright border + sub-label, not a solid fill — SETUP's
+ * own selected-state treatment (`PropertiesScreen.kt`'s `SchemeRow`,
+ * [pressedBevel] vs [raisedBevel]), applied here so this picker agrees with
+ * every other one in the app. [pressedBevel]'s own KDoc already makes the
+ * colourblindness case for a border over a fill (a thicker, distinctly-hued
+ * ring reads even to someone who can't use the hue at all); this call site
+ * is citing that, not re-deriving it. The move matters more here than on
+ * CHOP: this screen's solid fill already carries THREE meanings at once —
+ * selected voice (this fill), a macro slider's value ([MacroSlider]'s own
+ * fill), and AUDITION's primary-action fill — and the same fill standing
+ * for "selected engine" too is exactly why it couldn't also mean that.
+ * [Schemes.classColor] moves onto the label text instead of the
+ * background, so the kick/snare/hat colour coding survives the swap rather
+ * than disappearing with the fill.
+ */
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
@@ -634,23 +717,89 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                 for (v in row) {
                     val selected = v == current
                     val color = Schemes.classColor(engine.drumClass(v)).tape
-                    Box(
+                    Column(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) color.copy(alpha = 0.85f) else null)
-                            .tapeClick(label = null) { onSelect(v) }
-                            .padding(horizontal = 2.dp),
-                        contentAlignment = Alignment.Center,
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
+                            .tapeClick(label = chipLabel(engine, v)) { onSelect(v) }
+                            .padding(horizontal = 2.dp, vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText(
                             chipLabel(engine, v),
                             TapeType.pixelSmall,
-                            if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                            color,
                             maxLines = 1,
                         )
+                        // Reserved on every chip, not just the selected one
+                        // (blank when not selected) — so one selection
+                        // doesn't grow only its own cell and leave the row
+                        // jagged against its neighbours.
+                        TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
                     }
                 }
+            }
+        }
+    }
+}
+
+// ---------- preset list ----------
+
+/**
+ * U1's preset library (`docs/SYNTH_UPGRADE.md`), by voice — rule 1's other
+ * half, "preset-first, knobs-second": sits between the voice picker and the
+ * macro sliders it fills in. [Presets] returns an empty list for a voice
+ * with no roster yet (every engine but THUMP, until their own U1 passes
+ * land), and an empty row draws nothing rather than a blank sunken strip —
+ * this screen already omits controls this way (SEND TO PAD's own `kit ==
+ * null` case has no placeholder either).
+ *
+ * A horizontally-scrolling strip of chips inside one [sunkenField], not a
+ * vertical list: sixteen names have to fit next to a voice picker and five
+ * sliders on one phone screen, and a horizontal strip is what "tap it, hear
+ * it, tap the next one" (the roadmap's own browsing-speed framing) wants
+ * anyway — no per-row height cost as the roster grows. [current] is `null`
+ * once any slider or SCRAMBLE has moved the macros away from what a tap
+ * loaded (`SynthScreen`'s own `currentPresetByVoice`), so the highlight
+ * never claims a name for a sound that no longer matches it.
+ */
+@Composable
+private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
+    val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
+    if (presets.isEmpty()) return
+    // Keyed on (engine, voice), not the plain `rememberScrollState()` every
+    // other scroll in this file uses: those all sit inside a screen-level
+    // Column that never itself changes identity, but this strip is rebuilt
+    // fresh per voice. Unkeyed, a scroll position picked up browsing one
+    // voice's roster would carry into the next voice's — Copilot's own
+    // finding — and could open a shorter roster already scrolled past its
+    // first presets.
+    val scrollState = remember(engine, voice) { ScrollState(0) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .sunkenField(scheme)
+            .horizontalScroll(scrollState)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (p in presets) {
+            val selected = p.name == current
+            Box(
+                Modifier
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                    .semantics { this.selected = selected }
+                    .tapeClick(label = "PRESET ${p.name}") { onSelect(p) }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
             }
         }
     }
@@ -777,13 +926,25 @@ private fun LabButton(
     scheme: Scheme,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    /**
+     * Override for [label] as the accessible name — for the one call site
+     * (SEND TO PAD ▸) whose visible [label] itself turns into "…" while
+     * busy: `enabled` already carries that busy state to a screen reader,
+     * so the name stays stable instead of briefly becoming an ellipsis.
+     * `null` (every other call site) falls back to [label] alone.
+     */
+    accessibilityLabel: String? = null,
     onClick: () -> Unit,
 ) {
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -809,9 +970,15 @@ internal fun SlotChooserOverlay(
     // here, a tap in any gap this overlay doesn't fully cover (the grid's
     // leftover space, the header row's empty middle) would fall through to
     // whatever SynthScreen composable sits underneath (SCRAMBLE, SEND TO
-    // PAD, the AUDITION pad). `tapeClick {}` makes the backdrop itself the
-    // catch-all, same as any other TapeOS surface that means to block input.
-    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).tapeClick(label = null) {}.padding(10.dp)) {
+    // PAD, the AUDITION pad). A raw pointerInput, not tapeClick: this Box
+    // wraps the whole overlay (CANCEL + the slot grid below), each with
+    // its own accessible name — tapeClick's clickable() would add a
+    // second, nameless actionable node wrapping all of them, exactly the
+    // regression the KitsScreen/MessageBox dialog cards had to be
+    // corrected out of. A bare gesture detector registers no semantics
+    // node at all, so it's still a catch-all for touch without touching
+    // the accessibility tree.
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -823,7 +990,14 @@ internal fun SlotChooserOverlay(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                        .let { if (!busy) it.tapeClick(label = null, onClick = onCancel) else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12) — the
+                        // "…" label swap below is this control's visual
+                        // distinction, so no separate colour dim is needed.
+                        // Name stays "CANCEL" through the swap: `enabled`
+                        // already tells a screen reader this is busy, and
+                        // a spoken "…" would name nothing.
+                        .tapeClick(label = "CANCEL", enabled = !busy, onClick = onCancel)
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -875,16 +1049,24 @@ private fun SlotCell(
     val tag = padTag(slot)
 
     if (pad == null) {
+        // Disabled dims the same amount branch two's locked cells do
+        // (0.35×) — one "can't drop here right now" look shared by empty
+        // and occupied slots, rather than a third treatment invented here.
+        val fade = if (enabled) 1f else 0.35f
         Box(
             modifier
                 .height(Layout.PAD_H.dp)
                 .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                .border(2.dp, previewColor.copy(alpha = 0.55f), shape)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onTap) else it }
+                .border(2.dp, previewColor.copy(alpha = 0.55f * fade), shape)
+                // Always clickable, `enabled` forwarded rather than dropped:
+                // a screen reader is told this cell is temporarily
+                // unavailable instead of it silently vanishing from the
+                // tree (accessibility audit finding 12).
+                .tapeClick(label = "$tag, EMPTY", enabled = enabled, onClick = onTap)
                 .padding(5.dp),
             contentAlignment = Alignment.TopEnd,
         ) {
-            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f))
+            TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade))
         }
         return
     }
@@ -892,13 +1074,21 @@ private fun SlotCell(
     val locked = pad.velocityLayers.isNotEmpty() || pad.chain != null
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
-    val fade = if (locked) 0.35f else 1f
+    // Locked (chained/layered, refused by replaceAudio) and explicitly
+    // disabled (SlotChooserOverlay's `busy`) read as the same "can't tap
+    // this" state — one fade, not a distinct look per reason.
+    val fade = if (tappable) 1f else 0.35f
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
             .border(2.dp, cls.tape.copy(alpha = fade), shape)
-            .let { if (tappable) it.tapeClick(label = null, onClick = onTap) else it }
+            // Always clickable, `tappable` forwarded rather than dropped so
+            // a locked or disabled cell still announces itself instead of
+            // vanishing from the accessibility tree (finding 12). Names
+            // which pad and what's on it (task convention), plus LOCKED
+            // when a velocity-layered/chained pad refuses replaceAudio.
+            .tapeClick(label = "$tag, ${pad.displayName}" + if (locked) ", LOCKED" else "", enabled = tappable, onClick = onTap)
             .padding(5.dp),
     ) {
         TapeText(tag, TapeType.pixelSmall, scheme.ink2.tape.copy(alpha = 0.7f * fade), Modifier.align(Alignment.TopEnd))

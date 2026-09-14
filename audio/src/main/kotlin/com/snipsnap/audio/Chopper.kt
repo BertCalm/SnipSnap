@@ -12,6 +12,9 @@ data class Slice(
     val onset: Onset? = null,
 )
 
+/** The space after a hit: [slice] runs from where the hit has died down to the next cut; [afterHit] indexes the hit it follows. */
+data class Ghost(val afterHit: Int, val slice: Slice)
+
 /**
  * Cuts a captured snip into pad-sized pieces.
  *
@@ -104,6 +107,58 @@ object Chopper {
             val end = if (i + 1 < boundaries.size) boundaries[i + 1].first else snip.frameCount
             slice(snip, start, end, onset, cleanup)
         }.filter { it.snip.frameCount > 0 }
+    }
+
+    /** A ghost starts where the hit's envelope has fallen this far below its peak. */
+    const val GHOST_DROP_DB = -18f
+
+    /** A ghost shorter than this is a scrap between two close hits, not a space. */
+    const val GHOST_MIN_SEC = 0.06f
+
+    /**
+     * GHOST CHOP: the spaces between [hits] — the material every chop
+     * throws away. For each hit, its peak in the first 50 ms; then the
+     * first 5 ms window whose RMS has fallen [GHOST_DROP_DB] below that
+     * peak is where the ghost starts, and it runs to the next hit's cut
+     * (the last to the end of [snip]). A ghost shorter than
+     * [GHOST_MIN_SEC] is skipped — a tight, gated break has none, and
+     * that is the honest answer rather than sixteen pads of scraps. Cut
+     * with [cleanup] like any slice.
+     */
+    fun ghosts(
+        snip: Snip,
+        hits: List<Slice>,
+        cleanup: CleanupConfig? = SLICE_CLEANUP,
+    ): List<Ghost> {
+        if (hits.isEmpty() || snip.frameCount == 0) return emptyList()
+        val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
+        val rate = snip.sampleRate
+        val peakWindow = (0.05f * rate).toInt().coerceAtLeast(1)
+        val rmsWindow = (0.005f * rate).toInt().coerceAtLeast(1)
+        val minFrames = (GHOST_MIN_SEC * rate).toInt()
+        val drop = Math.pow(10.0, GHOST_DROP_DB / 20.0).toFloat()
+        val out = ArrayList<Ghost>()
+        for ((i, hit) in hits.withIndex()) {
+            val start = hit.sourceFrame
+            val next = if (i + 1 < hits.size) hits[i + 1].sourceFrame else snip.frameCount
+            var peak = 0f
+            for (f in start until min(next, start + peakWindow)) peak = max(peak, kotlin.math.abs(mono.samples[f]))
+            if (peak <= 0f) continue
+            var ghostStart = -1
+            var f = start + peakWindow
+            while (f + rmsWindow <= next) {
+                var acc = 0.0
+                for (k in f until f + rmsWindow) acc += mono.samples[k].toDouble() * mono.samples[k]
+                if (Math.sqrt(acc / rmsWindow) < peak * drop) {
+                    ghostStart = f
+                    break
+                }
+                f += rmsWindow
+            }
+            if (ghostStart < 0 || next - ghostStart < minFrames) continue
+            out += Ghost(i, slice(snip, ghostStart, next, onset = null, cleanup = cleanup))
+        }
+        return out
     }
 
     /**

@@ -37,19 +37,82 @@ class TonewheelTest {
     }
 
     @Test
-    fun `scrambles are reproducible and never garbage`() {
+    fun `render actually dispatches through the oversampled path, not directly at RATE`() {
+        // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
+        // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
+        // calling synthesize(voice, macros, gateSeconds, RATE) directly.
+        // Same mean-abs-diff proof as VELVET/FATHOM (see VelvetTest) - a
+        // full-spectrum band-energy comparison is unreliable here too,
+        // since DIRT's Dsp.drive is a self-saturating nonlinearity riding
+        // an additive stack, not a clean single tone.
+        for (voice in TonewheelVoice.entries) {
+            val actual = Tonewheel.render(voice, mapOf("DIRT" to 1f))
+            val direct = Tonewheel.synthesize(voice, mapOf("DIRT" to 1f), Tonewheel.GATE_SECONDS, Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            val avgDiff = diff / n
+            assertTrue(
+                avgDiff > 0.0005,
+                "$voice: Tonewheel.render should differ meaningfully from a direct native-rate " +
+                    "synthesize() - got avgDiff=$avgDiff, which would happen if render() stopped " +
+                    "dispatching through the oversampled path",
+            )
+        }
+    }
+
+    @Test
+    fun `scrambles are reproducible and stay in range`() {
         for (voice in TonewheelVoice.entries) {
             assertEquals(Tonewheel.scramble(voice, Random(6)), Tonewheel.scramble(voice, Random(6)))
             repeat(8) { seed ->
                 val snip = Tonewheel.render(voice, Tonewheel.scramble(voice, Random(seed)))
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $seed broke")
-                val c = Classifier.classify(snip)
-                assertTrue(
-                    c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.LOOP &&
-                        c.drumClass != DrumClass.UNKNOWN,
-                    "$voice roll $seed classified ${c.drumClass}",
-                )
             }
+        }
+    }
+
+    @Test
+    fun `scrambled hits usually still read as playable percussion`() {
+        // SCRAMBLE now rolls near a preset (docs/SYNTH_UPGRADE.md, U2), so a
+        // roll can land close to a classifier boundary the same way a
+        // preset itself can. "Most of the time", not "always", is the
+        // contract the doc itself sets for a scrambled roll.
+        for (voice in TonewheelVoice.entries) {
+            var misses = 0
+            val rolls = 30
+            repeat(rolls) { seed ->
+                val c = Classifier.classify(Tonewheel.render(voice, Tonewheel.scramble(voice, Random(seed))))
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+            }
+            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Tonewheel's own wiring: see DspTest for the central proof.
+        for (voice in TonewheelVoice.entries) {
+            val preset = TonewheelPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Tonewheel.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Tonewheel.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - see ThumpTest's own version of this test.
+            assertEquals(
+                Dsp.scrambleNear(Tonewheel.defaults(voice), 1f, Random(2)),
+                Tonewheel.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
         }
     }
 

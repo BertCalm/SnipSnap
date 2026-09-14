@@ -128,9 +128,71 @@ logcat tag to grab when something is wrong.
   the print destination to → PAD: STOP PRINT opens the slot chooser;
   an empty pad gets the print, a taken pad is replaced with the
   original in the bin, CANCEL sends the print to TAPE instead. LATCH,
-  lift: the loop should hold where the finger left it. With a kit that
-  has a tempo, BARS to 2 and PRINT: the print should stop itself on the
-  bar (5.2 s at 92 BPM) and the toast should say so.
+  lift: the loop should hold where the finger left it. With LATCH off,
+  lift fully and tap again after a pause: the loop should retrigger
+  from its head, like a drum hit, not continue from wherever it had
+  drifted to while released. With a kit that has a tempo, BARS to 2
+  and PRINT: the print should stop itself on the bar (5.2 s at 92 BPM)
+  and the toast should say so. Then PAD2 ►, PAD3 ► and PAD4 ► to pick
+  three more pads: the finger should now blend all four continuously by
+  its own position - PAD loudest near the top, PAD2 near the bottom-left,
+  PAD3 near the bottom-right, PAD4 near the bottom-centre (directly under
+  PAD), with no dead spot anywhere on the pad - while pitch/filter/mode
+  keep moving exactly as PAD alone did. With only PAD2 loaded, the
+  bottom-right corner should still sound (PAD/PAD2 blended, no PAD3
+  silence-hole); with nothing but PAD loaded, the whole pad should sound
+  exactly like before PAD2/PAD3/PAD4 existed. Sweep the finger slowly
+  across the bottom-centre seam (where the pad's two half-triangles
+  meet, directly under PAD) - PAD4 should fade in and out smoothly with
+  no click at the seam. This is stage 2 of `design/surface-vector`'s
+  concept - the sample side of the sketch, now actually touch-driven.
+  Then switch to VECTOR (stage 3, the effects side): the corner bars
+  should appear exactly as they do in MORPH - SET A..D still works, and
+  morphing the corners should sound the same as it does in MORPH - while
+  the readout's SMPL line (with PAD2/PAD3/PAD4 loaded) keeps moving too:
+  one finger, two independent blends, neither one visibly affecting the
+  other's numbers. Then stage 4b, the named preset library: ARM B (it
+  should dim in and the others stay lit), then PRESET ► - the readout
+  should read "LBP +", then "ECHO +" on the next press, continuing through
+  "ECHO -"/"LBP -"/"CRUSH +"/"CRUSH -"/"GLITCH +"/"GLITCH -"/"SPRING +"/
+  "SPRING -" and wrapping back to "LBP +"; morph toward B and it should
+  sound like whichever preset is showing. PRESET ◄ ► with no corner armed should do
+  nothing and the row should read "ARM A CORNER". Leave the screen and
+  come back - a stepped corner is stored exactly like a captured one (the
+  same `corners` field in `surface.json`), so it is still there, though
+  the PRESET row itself starts unarmed again (arming doesn't persist).
+  Then stage 5, a real CRUSH and ECHO in the engine itself: PRESET ►
+  through to "ECHO +" or "ECHO -" (now genuinely wet) and morph a corner
+  toward it - repeats should be audible roughly a fifth of a second
+  behind the dry sound, and should keep ringing on their own for a
+  moment after you lift off the pad, fading rather than cutting off
+  with the touch. SET A..D still captures crush/echo the same way it
+  captures pitch/cutoff/resonance/drive when the mode is MORPH or
+  VECTOR - blend toward a crushed/echoing corner, SET a fresh one, and
+  the fresh capture should carry the same crush/echo the blend was
+  playing. CLEAN/DARK/LOW/HOT and LBP +/LBP - stay untouched (no crush,
+  no echo) - the whole pad should sound exactly as before this stage
+  existed until a corner actually carries a nonzero crush or echo.
+  Then stage 6, two more library pairs built on the same crush/echo:
+  PRESET ► on to "CRUSH +" should sound audibly gritty with no repeats,
+  "CRUSH -" grittier still (more of the sample-and-hold texture, darker);
+  neither should have any echo tail after release. "GLITCH +" and
+  "GLITCH -" should sound like CRUSH's grit *and* ECHO's repeats at once -
+  "GLITCH -" the more extreme, chaotic end of the pair (pitched down
+  slightly, heavier on both macros) - a texture neither LBP nor ECHO nor
+  CRUSH alone can reach.
+  Then stage 7, a real SPRING (reverb) in the engine itself: PRESET ►
+  through to "SPRING +" and morph a corner toward it - a diffuse, smeared
+  tail should bloom after the dry sound rather than a single discrete
+  repeat, and should keep decaying on its own for roughly half a second
+  or so after you lift off the pad, fading smoothly to silence rather
+  than looping or cutting off with the touch. "SPRING -" should sound
+  darker and further stacked than "SPRING +", with neither carrying any
+  crush or echo. SET A..D still captures spring the same way it captures
+  the other macros when the mode is MORPH or VECTOR. CLEAN/DARK/LOW/HOT
+  and every corner from stages 4b/5/6 stay untouched (no spring) - the
+  whole pad should sound exactly as before this stage existed until a
+  corner actually carries a nonzero spring.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

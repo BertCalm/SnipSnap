@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.ShareOut
@@ -138,7 +139,7 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
  * cycler and the dub write all live in `:shell`/`:kit`; this file renders
  * the checklist, forwards taps, paces the dub-progress animation on its
  * own clock (the model exposes labels, not a live byte count — see the
- * model's own KDoc), and always writes to `getExternalFilesDir("exports")`
+ * model's own KDoc), and always writes to `Exports.dir`
  * first — no permission needed. When the user has picked a card (the
  * `CardRow` below, SAF `ACTION_OPEN_DOCUMENT_TREE`, a persistable grant),
  * `startWrite` also copies the outcome onto it through [CardWriter] —
@@ -168,11 +169,13 @@ fun ExportScreen(
     onSessionChange: (ExportSession?) -> Unit,
     appScope: CoroutineScope,
     onToast: (String) -> Unit,
+    /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
+    onNavigateKits: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyExport(scheme)
+        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
         return
     }
 
@@ -207,7 +210,7 @@ fun ExportScreen(
         // waiting on (or holding) the mutex throws `CancellationException`
         // through this block, and `runCatching` catches `Throwable` — it
         // would otherwise swallow the cancellation as an ordinary load
-        // failure (`loadFailed = true`, EMPTY_SHELF on a perfectly good
+        // failure (`loadFailed = true`, KIT_WONT_OPEN on a perfectly good
         // kit) instead of letting it propagate.
         val loaded = withContext(Dispatchers.IO) {
             KitWrites.mutex.withLock {
@@ -226,24 +229,23 @@ fun ExportScreen(
         // session on hand belongs to a different kit and a fresh one is
         // being built — same "still decoding vs. genuinely broken" split
         // ChopScreen/PadSheetScreen use; a blank LCD covers the former.
-        if (loadFailed) EmptyExport(scheme) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        //
+        // KIT_WONT_OPEN, not EMPTY_SHELF: a kit IS open here (`entry` is
+        // non-null in this branch), it just wouldn't parse — same
+        // reasoning as TakesBinScreen's own load-failure shell. No route
+        // offered: same precedent, a folder that won't parse isn't fixed
+        // by anything this screen can do.
+        if (loadFailed) {
+            Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
+                TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            }
+        } else {
+            Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        }
         return
     }
 
     ExportContent(activeSession, context, appScope, scheme, onToast)
-}
-
-@Composable
-private fun EmptyExport(scheme: Scheme) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .lcdPanel(scheme)
-            .padding(14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-    }
 }
 
 @Composable
@@ -427,7 +429,7 @@ private fun ExportContent(
                     // the directory if absent, can return null if external
                     // storage isn't mounted) — resolved here, on IO, not in
                     // the composable body.
-                    val root = context.getExternalFilesDir("exports")
+                    val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     // A self-nesting format (see ExportFormat.selfNesting's
                     // KDoc) already nests the kit's own name inside
@@ -549,7 +551,7 @@ private fun ExportContent(
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 TapeText(kit.name, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
-                TapeText("${model.fileCount} FILES", TapeType.lcdSmall, scheme.lcdInk.tape)
+                TapeText(Copy.countOf(model.fileCount, "FILE", "FILES"), TapeType.lcdSmall, scheme.lcdInk.tape)
             }
         }
 
@@ -800,19 +802,19 @@ private fun CardRow(
                 // long press and tapeClick has only the one gesture — the
                 // same pair ChopScreen's class chip uses, and the same
                 // reason: it registers real accessibility actions for both.
-                .let {
-                    if (enabled) {
-                        it.combinedClickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
-                            onLongClick = if (tree != null) onForget else null,
-                            onClick = onPick,
-                        )
-                    } else {
-                        it
-                    }
-                }
+                // `enabled` is forwarded into combinedClickable itself
+                // rather than gating the call — the same principle as
+                // tapeClick's own `enabled` param: dropping the call
+                // entirely would remove this row from the accessibility
+                // tree instead of announcing it as unavailable (finding 12).
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = enabled,
+                    onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
+                    onLongClick = if (tree != null) onForget else null,
+                    onClick = onPick,
+                )
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -869,7 +871,11 @@ private fun FormatPickerRow(
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
-                .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
+                // Always clickable, `enabled` forwarded rather than
+                // dropped: a screen reader is told this control is
+                // temporarily unavailable instead of it silently vanishing
+                // from the tree (accessibility audit finding 12).
+                .tapeClick(label = "FORMAT: ${current.cyclerLabel}, ${if (open) "CLOSE" else "OPEN"}", enabled = enabled, onClick = onToggle)
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -895,15 +901,11 @@ private fun FormatPickerRow(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            // label = null, not the cycler label: this row
-                            // has TWO TapeText children - the name and the
-                            // reason finding 8 added - and an explicit label
-                            // *replaces* merged descendant semantics rather
-                            // than adding to it (see tapeClick's KDoc). With
-                            // the name here, a TalkBack user heard the format
-                            // and never the reason, which is the one thing
-                            // finding 8 existed to give them. Mine, from #77.
-                            .tapeClick(label = null, onClick = { onPick(f) })
+                            // Names both the format and the reason finding
+                            // 8 added below (f.why) — the whole point of
+                            // that finding was that TalkBack (and everyone
+                            // else) should hear why, not just which.
+                            .tapeClick(label = "${f.cyclerLabel}: ${f.why}", onClick = { onPick(f) })
                             .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {

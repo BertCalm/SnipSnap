@@ -3,6 +3,7 @@ package com.snipsnap.app.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -85,6 +86,7 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mutate
@@ -101,6 +103,7 @@ import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
+import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.exp
@@ -111,6 +114,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -162,6 +166,23 @@ fun PadSheetScreen(
     /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
     onRecipeCopied: (RecipeReplay.Clip) -> Unit = {},
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
+    /**
+     * Bug fix (shelf staleness): [onKeepRoom] (`OutsideSheet.keep`),
+     * [onMakeInstrument] (`OneNote.export`) and [onMakePad]
+     * (`PadFromAnything.export`) all write a real file to the shelf — a
+     * room or an instrument package, beside the kits — the same
+     * directories `App`'s own `rooms`/`instruments` lists (see `App.kt`)
+     * are read from. All three now run on [appScope] (see this file's own
+     * KDoc), so the write can land on disk AFTER `App`'s KITS-keyed
+     * refresh effect already ran for this visit, leaving that visit
+     * showing a list without the asset just made; it self-heals the next
+     * time KITS reloads, but nothing forces that here. Call on SUCCESS
+     * ONLY, from each of the three doors, once the write is confirmed on
+     * disk — a refused or failed write changed nothing on the shelf to be
+     * stale about. No default: `App.kt` has exactly one call site, and a
+     * default would let a future second one silently skip the wiring.
+     */
+    onShelfAssetWritten: () -> Unit,
     appScope: CoroutineScope,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
     openBox: String? = null,
@@ -170,6 +191,17 @@ fun PadSheetScreen(
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // The SNIPS shelf: where a pad's tape, and the dust print cached beside it, live.
+    val snipsDir = File(context.filesDir, SnipStore.DIR)
+
+    // [onEject]'s own guard against a late `onBack()`, nothing else: a
+    // closure formed during one recomposition captures that recomposition's
+    // `slot` (a plain parameter, frozen at the value it had when EJECT was
+    // tapped); this tracks the *live* one instead, so a coroutine that
+    // finishes later can tell whether the pad-nav arrows (`onSlotChange`,
+    // not gated on `busy`) already moved the user to a different pad on
+    // this same still-mounted sheet before the delete's confirmation lands.
+    val liveSlot by rememberUpdatedState(slot)
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -200,9 +232,14 @@ fun PadSheetScreen(
         // Still opening the model, the open failed, or (mid-EJECT) this
         // slot just emptied — the header's own back arrow is the one piece
         // of chrome that must work regardless, so it renders alone. A load
-        // failure reuses EMPTY_SHELF rather than a one-off sentence, the
-        // same "nothing to show here" line ChopScreen's own EmptyChop
-        // reuses for its unreadable-source case — zero copy literals.
+        // failure uses KIT_WONT_OPEN, not EMPTY_SHELF: `entry` here is a
+        // specific, already-open kit's folder — KitBuilderModel.open just
+        // failed to parse it — which is false to claim as an empty shelf.
+        // Same reasoning (and same constant) as TakesBinScreen's own
+        // load-failure shell and ExportScreen's KIT_WONT_OPEN branch — zero
+        // copy literals. No route offered, same precedent as both: a
+        // folder that won't parse isn't fixed by anything this screen can
+        // do.
         // Still opening/failed/mid-EJECT — nothing dirty to flush yet, so
         // Back matches the header's own bare `onBack()` here, not the full
         // `requestBack()` below (which needs a live `model` to check).
@@ -210,7 +247,7 @@ fun PadSheetScreen(
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
             HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
             if (loadFailed) {
-                TapeText(Copy.EMPTY_SHELF, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
+                TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
         }
         return
@@ -285,13 +322,25 @@ fun PadSheetScreen(
      * from metadata), so an unshaped pad plays its bytes and a shaped one
      * plays `ShapeAudition`'s approximation, the same one `KitPreview`
      * renders; a preview must not claim the card will sound like the file.
+     *
+     * Folded to mono at this door, whatever [target] arrived as. The
+     * voice is a `CHANNEL_OUT_MONO` track over a bare `FloatArray`, so
+     * interleaved stereo handed to it plays every frame twice: an octave
+     * down at half speed. The pad's own file is folded where it is read
+     * (`refreshPadAudio`, `playBefore`), but `Mutate.render` always
+     * returns two channels, and HEAR on the MUTATE card handed them
+     * straight here — the September wiring review's first finding. The
+     * fold lives here rather than at each caller so the next play path
+     * cannot forget it; it is a no-op on mono, which every other caller
+     * already sends.
      */
     fun audition(target: Snip, level: Float, shape: KitPad? = null) {
         // Release synchronously at the swap site — a composition-scoped
         // coroutine can't guarantee the previous voice actually stopped
         // before this one starts (ChopScreen's `audition()` comment).
         voice?.release()
-        val rendered = shape?.let { ShapeAudition.render(target, it) } ?: target
+        val mono = Cleanup.toMono(target)
+        val rendered = shape?.let { ShapeAudition.render(mono, it) } ?: mono
         val gained = if (level == 1f) rendered.samples else FloatArray(rendered.samples.size) { rendered.samples[it] * level }
         val v = TapeVoice(gained, rendered.sampleRate)
         voice = v
@@ -363,7 +412,8 @@ fun PadSheetScreen(
     }
 
     fun failure(action: String, e: Exception) {
-        onToast("$action FAILED: ${e.message ?: e.javaClass.simpleName}")
+        Log.e("PadSheetScreen", "$action: failed", e)
+        onToast(Copy.actionFailed(action))
     }
 
     // `save()` is deliberately NOT called per stepper nudge: see
@@ -457,6 +507,23 @@ fun PadSheetScreen(
      * teardown flush already checks, not just null-ness, is the point:
      * a reassigned slot is non-null and would otherwise let this action
      * land on somebody else's sound.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope` — same fix, same reason, as [applySmear]'s
+     * own KDoc: this is a real audio-rewriting op (GHOSTS/EJECT/UNDO/
+     * MUTATE/DRIFT/DESAMPLE/OUTSIDE undo/PASTE), so a cancelled `scope`
+     * could abandon the write before it starts, or let it land on disk
+     * while losing `onKitUpdated`/the toast — this function's own opening
+     * line. [onSuccess] is a generic callback most callers only use to
+     * toast; [onEject] is the one exception (it also navigates via
+     * `onBack()`) and guards that call itself rather than this shared
+     * helper trying to guess which callbacks are safe to run late — see
+     * [onEject]'s own comment for why. A dispose-then-remount while this
+     * write is still in flight also means a second commit can now start
+     * against the same kit before the first lands (impossible before,
+     * since disposal used to cancel the first) — benign: [withFreshKit]
+     * serialises both under `KitWrites.mutex`, and the `sampleFile`
+     * identity check above already refuses whichever one loses the race.
      */
     fun commitPadEditNow(action: String, onSuccess: (() -> Unit)? = null, mutate: (KitBuilderModel) -> Unit) {
         if (busy) return
@@ -464,7 +531,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val staleSampleFile = m.kit.pad(slot)?.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
@@ -534,15 +601,40 @@ fun PadSheetScreen(
      * would then release a voice the new one never knew about. The play
      * rides [auditionOnRefresh] instead — `LaunchedEffect(model, slot)`
      * decodes the new file, and the effect under `audition` plays it.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope` — see [appScope]'s own KDoc and the teardown
+     * `DisposableEffect` (~1552) this mirrors. `withFreshKit`'s `block` is a
+     * plain (non-`suspend`) lambda, so the WAV rewrite and `fresh.save()`
+     * inside it already run to completion once entered — cancelling
+     * `scope` could never tear a WAV file in half. What it *could* do is
+     * abandon the write before it starts (cancelled while waiting on
+     * `KitWrites.mutex`, before anything touched disk — the tap silently
+     * never happens) or let the write land on disk but lose the app-level
+     * confirmation of it (cancelled at the `withContext` return boundary,
+     * after `WavWriter.write`/`fresh.save()` already ran — `model`,
+     * `onKitUpdated`, and the toast never fire, so `App`'s in-memory `Kit`
+     * goes stale against what's actually on disk until the pad is reopened
+     * fresh). `appScope` closes both: the write always finishes and always
+     * reaches `onKitUpdated`/`onToast`, which are `App`'s own stable
+     * callbacks and outlive this screen regardless. The local writes below
+     * (`model =`, `busy =`, `pendingMetadataSlots =`, `auditionOnRefresh =`)
+     * are harmless no-ops if this composable has since been disposed — a
+     * torn-down composition's `remember` holders are simply never read
+     * again, and a remount gets its own fresh ones — so nothing here needs
+     * to skip them for a dead composable the way the teardown effect skips
+     * saving a stale `m`.
      */
     fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
+                var stacked = false
+                var noop = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
@@ -550,6 +642,19 @@ fun PadSheetScreen(
                         check(freshPad.velocityLayers.isEmpty()) {
                             "pad $slot is velocity-layered - clear GHOSTS before smearing"
                         }
+                        // AMT 0 on a pad that isn't smeared: `smearPad`
+                        // touches nothing (its own KDoc — a slider must not
+                        // take an era off on the way past zero), so this is
+                        // not a landing: no toast claiming one, no audition.
+                        if (amount <= 0f && PadSheet.readSmear(freshPad.recipe) == null) {
+                            noop = true
+                            return@withFreshKit
+                        }
+                        // `smearPad` restores first when it can; when the
+                        // original is not in the bin it stacks (amount 0 is
+                        // a no-op, never a stack), and the toast says so.
+                        stacked = amount > 0f &&
+                            PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
                         // The rewrite itself lives in the model now
                         // (`smearPad`: restore-first, then replaceAudio,
                         // stereo kept stereo) so DO IT AGAIN can replay it.
@@ -562,7 +667,10 @@ fun PadSheetScreen(
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 if (applied) {
-                    onToast(Copy.treated(PadSheet.displayLabel(PadSheet.SMEAR), padName))
+                    val label = PadSheet.displayLabel(PadSheet.SMEAR)
+                    onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
+                } else if (noop) {
+                    onToast(Copy.SMEAR_ZERO)
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
@@ -571,6 +679,93 @@ fun PadSheetScreen(
                 // Same in-voice-copy split as the era branch: the
                 // ghosts-before-smearing refusal above is expected user
                 // copy, not a diagnostic.
+                if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
+     * DUST: the tape's own hiss and room under this pad (`docs/DUST.md`) —
+     * `KitBuilderModel.dustPad`, the same door shape as [applySmear] with
+     * one step in front: which tape, and its print. The tape is the pad's
+     * own, else the kit's (`DustPrints.tapeFor`); none at all is refused
+     * in the app's words, a tape gone from the shelf says so, and a tape
+     * with nothing between its hits says that. The print is made, or
+     * read off the shelf's cache, on IO before the kit is opened, so the
+     * write under the lock is only the convolution.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc above.
+     */
+    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
+        // Which tape: the one asked for (DUST FROM ▸); else the one the pad
+        // already dusts from, so moving AMT on a borrowed dust keeps the
+        // borrowed tape — and when that tape has left the shelf, says so
+        // by name below rather than quietly dusting from another; else
+        // the pad's own or the kit's.
+        val riding = PadSheet.readDust(p.recipe)?.tape?.takeIf { DustPrints.isBare(it) }
+        val tape = from ?: riding ?: DustPrints.tapeFor(m.kit, p)
+        if (tape == null) {
+            onToast(Copy.DUST_NO_TAPE)
+            return
+        }
+        val kitDir = m.kitDir
+        val staleSampleFile = p.sampleFile
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        appScope.launch {
+            busy = true
+            try {
+                val tapeFile = File(snipsDir, tape)
+                // AMT 0 takes dust off and needs no print; anything above needs the tape's.
+                val print = if (amount > 0f) withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) } else null
+                if (amount > 0f && print == null) {
+                    onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(tape))
+                    return@launch
+                }
+                var applied = false
+                var stacked = false
+                var noop = false
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    // The tape was read off the pad before the lock; a DUST
+                    // rewrite keeps the sample file's name and changes only
+                    // the recipe, so the sample-file guard alone would let a
+                    // print made for one tape land under a recipe that now
+                    // names another. The pad has to still ride the same tape.
+                    val ridingNow = freshPad?.let { PadSheet.readDust(it.recipe)?.tape?.takeIf { t -> DustPrints.isBare(t) } }
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && (from != null || ridingNow == riding)) {
+                        check(freshPad.velocityLayers.isEmpty()) {
+                            "pad $slot is velocity-layered - clear GHOSTS before dusting"
+                        }
+                        // AMT 0 on a pad that isn't dusted: `dustPad` touches
+                        // nothing, so this is not a landing.
+                        if (amount <= 0f && PadSheet.readDust(freshPad.recipe) == null) {
+                            noop = true
+                            return@withFreshKit
+                        }
+                        stacked = amount > 0f &&
+                            PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
+                        f.dustPad(slot, amount, tape, print)
+                        applied = true
+                    }
+                }
+                if (applied) auditionOnRefresh = true
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                if (applied) {
+                    val label = if (from != null) Copy.dustFromLabel(SnipStore.displayName(tapeFile)) else PadSheet.displayLabel(PadSheet.DUST)
+                    onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
+                } else if (noop) {
+                    onToast(Copy.DUST_ZERO)
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
             } finally {
                 busy = false
@@ -618,6 +813,10 @@ fun PadSheetScreen(
      * treatment applied, consumed by the effect under `audition` once
      * `LaunchedEffect(model, slot)` has decoded the fresh file — so the
      * treated pad is heard the moment the toast says it landed.
+     *
+     * Bug fix (tab-switch data loss): the era/character/keyed branch below
+     * is launched into [appScope], not this composable's own `scope` — same
+     * fix, same reason, as [applySmear]'s own KDoc.
      */
     // Set on a treatment tap, shown only while `busy`, cleared whenever any
     // operation on this sheet finishes. One effect rather than a clear in
@@ -638,15 +837,20 @@ fun PadSheetScreen(
             applySmear(m, p, amount, padName)
             return
         }
+        if (segment == PadSheet.DUST) {
+            applyDust(m, p, amount, padName)
+            return
+        }
         val treatment = PadSheet.treatmentFor(segment) ?: return
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
+                var stacked = false
                 var keyLabel = ""
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
@@ -669,8 +873,10 @@ fun PadSheetScreen(
                             // A recipe with nothing in the bin behind it (a
                             // bank-B twin, a CLI treat, a bin since emptied)
                             // is a sound the sheet can name but not undo: the
-                            // new treatment stacks, the way `treat` always has.
-                            PadSheet.UnTreat.NOT_BINNED -> Unit
+                            // new treatment stacks, the way `treat` always has
+                            // — and the toast says so, since the card will
+                            // light one segment while the sound carries two.
+                            PadSheet.UnTreat.NOT_BINNED -> stacked = amount > 0f
                             PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
@@ -691,8 +897,11 @@ fun PadSheetScreen(
                 onKitUpdated(fresh.kit)
                 if (applied) {
                     onToast(
-                        if (treatment is PadSheet.Treatment.Keyed) Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
-                        else Copy.treated(PadSheet.displayLabel(segment), padName),
+                        when {
+                            stacked -> Copy.treatedStacked(PadSheet.displayLabel(segment), padName)
+                            treatment is PadSheet.Treatment.Keyed -> Copy.keyed(PadSheet.displayLabel(segment), padName, keyLabel)
+                            else -> Copy.treated(PadSheet.displayLabel(segment), padName)
+                        },
                     )
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
@@ -738,6 +947,12 @@ fun PadSheetScreen(
      * [applyTreatment] — see its KDoc. A round-robin pad refuses from
      * [KitBuilderModel.unEraPad]'s own `require`, exactly as treating one
      * does today; that is the card's existing gap, not this action's.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. [KitBuilderModel.unEraPad]
+     * is a real audio rewrite (restores the bin's prior take over the
+     * live sample) exactly like [applyTreatment]'s own doors, so it shares
+     * the same exposure to a scope cancelled mid-flight.
      */
     fun unTreat() {
         if (busy) return
@@ -747,7 +962,7 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 // null = the slot changed underneath us; BIN_ITEM_GONE says so.
@@ -822,6 +1037,37 @@ fun PadSheetScreen(
         }
         val padName = model?.kit?.pad(slot)?.displayName?.uppercase() ?: return
         var said: String? = null
+        if (plan is RecipeReplay.Plan.Dust) {
+            // A dust recipe needs its tape's print. Resolved here, on IO and
+            // before the lock, so the refusals are the app's own words
+            // (the tape gone, or nothing between its hits) rather than a
+            // PASTE FAILED, and the extraction never runs under the mutex.
+            // `busy` is held from here: the button is enabled on `!busy`,
+            // and a second tap during the extraction must not start a
+            // second commit. It is let go right before `commitPadEditNow`
+            // takes it back, on the same main-thread turn.
+            busy = true
+            scope.launch {
+                val tapeFile = File(snipsDir, plan.tape)
+                val print = try {
+                    withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    busy = false
+                    failure("PASTE", e)
+                    return@launch
+                }
+                busy = false
+                if (print == null) {
+                    onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(plan.tape))
+                    return@launch
+                }
+                commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
+                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName) { print }.toast
+                }
+            }
+            return
+        }
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
                 RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
@@ -841,12 +1087,68 @@ fun PadSheetScreen(
         }
     }
 
+    /**
+     * "DELETE", not "EJECT" — EJECT means "stop listening" on the shelf's
+     * own ArmControl; this clears the pad into the bin, a different action
+     * entirely, and a failure here must read "DELETE FAILED", not
+     * "EJECT FAILED".
+     *
+     * `onSuccess` both toasts AND navigates via [onBack] — unlike every
+     * other [commitPadEditNow] caller, which only toasts. [commitPadEditNow]
+     * now runs on [appScope] (see its own KDoc), so this callback can fire
+     * well after the tap that triggered it; a toast landing late is fine
+     * (App's own callback, harmless whenever it arrives — the existing
+     * [appScope] KDoc already reasons about that), but [onBack] pops
+     * whatever pad-sheet session `padSheetSlot` currently names in `App` —
+     * which, by the time this fires, might not be this one any more. The
+     * pad-nav ◄/► arrows (`onSlotChange`) are not gated on `busy`, so a tap
+     * on either while this delete is still in flight leaves the sheet
+     * mounted but showing a *different* [slot] — an unguarded late
+     * `onBack()` would then yank the user off a pad they're actively
+     * looking at, which is worse than the stale-write bug this is fixing.
+     *
+     * Guarded on two independent conditions, not one — each closes a
+     * different door:
+     *
+     * 1. [liveSlot] == the [slot] this delete actually targeted (captured
+     * by this closure at the moment EJECT was tapped): catches an in-place
+     * slot change on a sheet that's still mounted (the pad-nav case above).
+     *
+     * 2. `scope.isActive`: catches the sheet being *disposed and later
+     * remounted* — e.g. the user leaves this pad entirely, then long-
+     * presses a different pad from KIT, mounting a fresh `PadSheetScreen`.
+     * [liveSlot] alone does NOT catch this: this `onSuccess` closure and
+     * the [liveSlot] it reads both belong to the OLD, disposed instance,
+     * not the new one. [rememberUpdatedState] is `remember`-scoped to
+     * that instance's own slot table — once disposed, nothing writes to
+     * it again, so it simply holds its last value (the slot EJECT
+     * targeted) forever after; it does NOT start reflecting some other,
+     * newer screen's `slot`. So [liveSlot] == `targetSlot` would still
+     * hold, and an unguarded `onBack()` would fire against the NEW
+     * screen's `App`-level `padSheetSlot`, closing a sheet the user just
+     * opened, for a delete that has nothing to do with it. `scope` (line
+     * ~174, `rememberCoroutineScope()`) is cancelled the moment the OLD
+     * composable is disposed, and this closure still holds a reference to
+     * that same, now-cancelled `scope` — so `scope.isActive` is false
+     * exactly when this hazard applies, independent of what [liveSlot]
+     * says. (On a plain exit with no remount yet, a late `onBack()` would
+     * be a harmless second `padSheetSlot = null` regardless; the guard
+     * still skips it, which is fine — nothing depends on it firing.)
+     *
+     * `onKitUpdated`/the toast are unconditional either way: `App`'s copy
+     * of the kit is correct as soon as they run, regardless of whether
+     * `onBack()` also fires. If the guard skips `onBack()` and this exact
+     * slot is ever shown again, the pre-existing `pad == null` branch near
+     * this file's top (already documented for "mid-EJECT this slot just
+     * emptied") renders a working ◄ KIT header — not a broken screen, the
+     * same fallback this file already relies on elsewhere.
+     */
     fun onEject() {
-        // "DELETE", not "EJECT" — EJECT means "stop listening" on the
-        // shelf's own ArmControl; this clears the pad into the bin, a
-        // different action entirely, and a failure here must read
-        // "DELETE FAILED", not "EJECT FAILED".
-        commitPadEditNow("DELETE", onSuccess = { onToast(Copy.DELETE_SNIP); onBack() }) { mm -> mm.clear(slot) }
+        val targetSlot = slot
+        commitPadEditNow("DELETE", onSuccess = {
+            onToast(Copy.DELETE_SNIP)
+            if (scope.isActive && liveSlot == targetSlot) onBack()
+        }) { mm -> mm.clear(slot) }
     }
 
     // ---- MUTATE: one hit from two parents (MutateSheet over Mutate) ----
@@ -916,6 +1218,11 @@ fun PadSheetScreen(
      * (like [applySmear]/[applyTreatment]) this does not audition the
      * result immediately — see [applySmear]'s KDoc for why that write would
      * target an already-orphaned `remember(model)` state slot.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. `MutateSheet.apply` is a
+     * real audio rewrite under [withFreshKit]'s lock, same shape as every
+     * other converted sibling.
      */
     fun onMutate() {
         if (busy) return
@@ -932,7 +1239,7 @@ fun PadSheetScreen(
         val fraction = pendingMutateKnob
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var applied = false
@@ -955,6 +1262,53 @@ fun PadSheetScreen(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("MUTATE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
+     * HEAR: what MUTATE would write, played without writing it — through
+     * [MutateSheet.preview], which reads [slot] and [partner] exactly as
+     * [onMutate] does and refuses exactly what it refuses (own-parent,
+     * GHOSTS, chained — `MutateSheetTest` asserts the SAME words), so
+     * nothing a player hears here is a promise KEEP can't keep.
+     *
+     * Runs against the live [model], not a fresh one under [withFreshKit]:
+     * nothing is written, so there is nothing to serialise against a
+     * concurrent save — the same posture [onRoulette] takes. The GHOSTS
+     * pre-check is copied from [onMutate] rather than left to
+     * [MutateSheet.preview]'s own refusal, so a thumb sees the same
+     * friendly line before AND after committing, not a generic failure
+     * toast on the way there.
+     *
+     * Auditioned through [audition]'s own `shape` parameter, like every
+     * other play on this screen — a mutate replaces the pad's AUDIO, not
+     * its SHAPE, so previewing the bytes alone would promise a sound the
+     * pad's own attack/decay/cutoff would then change.
+     */
+    fun onHear() {
+        if (busy) return
+        val m = model ?: return
+        val who = partner ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val move = MutateSheet.modeFor(mutateMode)
+        val fraction = pendingMutateKnob
+        scope.launch {
+            busy = true
+            try {
+                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction) }
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                    audition(rendered, p.level, p)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("HEAR", e)
             } finally {
                 busy = false
             }
@@ -1000,6 +1354,11 @@ fun PadSheetScreen(
      * — nothing was applied, nothing to save, same refusal as before. On
      * success [model] swaps to the fresh instance; no immediate audition,
      * same trade as [applySmear]/[onMutate] for the same reason.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. `MutateSheet.drift`'s write
+     * is a real audio rewrite under [withFreshKit]'s lock, same shape as
+     * [onMutate].
      */
     fun onDrift() {
         if (busy) return
@@ -1017,7 +1376,7 @@ fun PadSheetScreen(
         val fraction = pendingMutateKnob
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var drifted: Mutate.Drifted? = null
@@ -1079,6 +1438,25 @@ fun PadSheetScreen(
         if (uri != null) onFilePicked(uri)
     }
 
+    /**
+     * MAKE INSTRUMENT: writes a real instrument package (`.xty` + WAV/`.xpm`
+     * twin, [OneNote.export]) beside the kits, into the same
+     * `KitShelf.INSTRUMENTS_DIR` `App`'s own `instruments` list is read
+     * from.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope` — same reasoning as [commitPadEditNow]'s
+     * KDoc, even though this doesn't touch `kit.json`: cancelling `scope`
+     * mid-export could abandon the write before `OneNote.export` starts,
+     * or let the package land on disk while losing the one signal the user
+     * gets that it worked ([Copy.INSTRUMENT_MADE]).
+     *
+     * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
+     * `OneNote.export` success — see that parameter's own KDoc. `App`'s
+     * `instruments` list isn't reactive to this screen otherwise; without
+     * this, a visit to KITS that raced this write on [appScope] would show
+     * a list one instrument short until KITS reloaded again.
+     */
     fun onMakeInstrument() {
         if (busy) return
         val m = model
@@ -1086,13 +1464,14 @@ fun PadSheetScreen(
         if (m == null || currentSnip == null) return
         val p = m.kit.pad(slot) ?: return
         val instrumentName = Names.sanitizeStem("${m.kit.name}_${p.displayName}")
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
                 withContext(Dispatchers.IO) {
                     OneNote.export(instrumentName, currentSnip, destRoot, overwrite = true)
                 }
+                onShelfAssetWritten()
                 onToast(Copy.INSTRUMENT_MADE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -1139,6 +1518,28 @@ fun PadSheetScreen(
      * is abandoned rather than landing the return on somebody else's pad.
      * [model] swaps to the fresh instance on success; no immediate
      * audition, same trade as the other converted siblings.
+     *
+     * Bug fix (tab-switch data loss), split rather than moved wholesale:
+     * unlike [applySmear]'s siblings, this function holds the mic open for
+     * seconds ([OutsideSession.run], a live recording that also plays out
+     * the speaker/line). Moving the whole thing to [appScope] would fix
+     * the write but break something else — a tab switch would no longer
+     * stop the mic, and a background capture racing the user going to ARM
+     * a tape (`tapeArmed`, this function's own pre-check) is a new bug
+     * worse than the one this is closing. So the capture stays on `scope`
+     * (cancelling it on dispose is correct: a mic session dying with the
+     * screen is the point, not a bug), and only the write that follows it
+     * — `withFreshKit`'s rewrite, the `model` swap, `onKitUpdated`, the
+     * toast — hands off to [appScope] once the return is actually in. A
+     * cancelled capture then writes nothing (nothing to abandon mid-write:
+     * the handoff below never runs), and a capture that finishes always
+     * gets its write and confirmation regardless of what the screen does
+     * next — the same guarantee [applySmear] gives its own write, just
+     * drawn around the write alone instead of the whole function. This
+     * also keeps the nested `scope.launch { outsideStage = … }` a few
+     * lines below honest: its own comment says it hops back to "the
+     * composition's own (main) scope," which a wholesale move to
+     * [appScope] would have quietly made untrue.
      */
     fun onOutside() {
         if (busy) return
@@ -1167,10 +1568,18 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             outsideStage = Copy.OUTSIDE_LISTENING
+            // Set once the capture below lands and the write is handed off
+            // to `appScope`; the outer `finally` only tidies `busy`/
+            // `outsideStage` itself when this stays false, since past that
+            // point the handoff's own `finally` owns them instead — see
+            // this function's own KDoc for why the write, not the capture,
+            // is what needs to outlive a cancelled `scope`.
+            var handedOff = false
             try {
                 // Unlocked: reading the send off `m` (still the screen-mount
                 // model — fine, this only READS the pad's current audio) and
-                // the mic capture itself, which can run for seconds.
+                // the mic capture itself, which can run for seconds. Stays on
+                // `scope`, not `appScope`: see this function's own KDoc.
                 val returned = withContext(Dispatchers.IO) {
                     val send = OutsideSheet.send(m, slot, move)
                     val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
@@ -1182,39 +1591,56 @@ fun PadSheetScreen(
                     } to preRoll
                 }
                 val (returnedSnip, preRoll) = returned
-                var applied = false
-                var outcome: OutsideSheet.Outcome? = null
-                val (fresh, _) = withFreshKit(kitDir) { f ->
-                    reapplyPendingMetadataFields(f, stalePads)
-                    val freshPad = f.kit.pad(slot)
-                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
-                        outcome = OutsideSheet.apply(f, slot, move, returnedSnip, fraction, preRoll)
-                        applied = true
+                handedOff = true
+                appScope.launch {
+                    try {
+                        var applied = false
+                        var outcome: OutsideSheet.Outcome? = null
+                        val (fresh, _) = withFreshKit(kitDir) { f ->
+                            reapplyPendingMetadataFields(f, stalePads)
+                            val freshPad = f.kit.pad(slot)
+                            if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                                outcome = OutsideSheet.apply(f, slot, move, returnedSnip, fraction, preRoll)
+                                applied = true
+                            }
+                        }
+                        model = fresh
+                        pendingMetadataSlots = emptySet()
+                        onKitUpdated(fresh.kit)
+                        val o = outcome
+                        if (applied && o != null) {
+                            // The last trip's room, or none: a REAMP measures no
+                            // room, so KEEP ROOM dims until the next ROOM trip.
+                            measuredRoom = o.takeIf { it.impulse != null }
+                            onToast(Copy.outside(outsideMove, padName, o.lagMs, o.confidence))
+                        } else {
+                            // Not `measuredRoom = null` here: this trip abandoned
+                            // without applying anything, so an earlier ROOM trip's
+                            // still-unkept measurement (measuredRoom is
+                            // remember(slot)-keyed, so it survives this model swap)
+                            // is exactly as keepable as it was before this tap.
+                            onToast(Copy.BIN_ITEM_GONE)
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
+                    } finally {
+                        outsideStage = null
+                        busy = false
                     }
                 }
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
-                val o = outcome
-                if (applied && o != null) {
-                    // The last trip's room, or none: a REAMP measures no
-                    // room, so KEEP ROOM dims until the next ROOM trip.
-                    measuredRoom = o.takeIf { it.impulse != null }
-                    onToast(Copy.outside(outsideMove, padName, o.lagMs, o.confidence))
-                } else {
-                    // Not `measuredRoom = null` here: this trip abandoned
-                    // without applying anything, so an earlier ROOM trip's
-                    // still-unkept measurement (measuredRoom is
-                    // remember(slot)-keyed, so it survives this model swap)
-                    // is exactly as keepable as it was before this tap.
-                    onToast(Copy.BIN_ITEM_GONE)
-                }
             } catch (e: Exception) {
+                // `Outside.Refused` is only ever thrown from `OutsideSheet.apply`
+                // (its own KDoc: "Refusals... come before any byte is touched"),
+                // which now runs inside the `appScope` handoff above, not here —
+                // this capture-phase catch only ever sees a mic/IO failure.
                 if (e is CancellationException) throw e
-                if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("OUTSIDE", e)
+                failure("OUTSIDE", e)
             } finally {
-                outsideStage = null
-                busy = false
+                if (!handedOff) {
+                    outsideStage = null
+                    busy = false
+                }
             }
         }
     }
@@ -1229,6 +1655,22 @@ fun PadSheetScreen(
      * and becomes this card's MUTATE partner at once - so the next pad can
      * take it without a trip. Kept once: the button dims until the next
      * ROOM trip measures another.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope], not this
+     * composable's own `scope`. `OutsideSheet.keep` writes a real room file
+     * to the shelf's ROOMS directory — the same one `App`'s own `rooms`
+     * list (see `App.kt`) is read from — so cancelling `scope` mid-write
+     * could abandon it before it starts, or land it on disk while losing
+     * this screen's own toast/`partner` confirmation, same reasoning as
+     * [commitPadEditNow]'s KDoc.
+     *
+     * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
+     * `OutsideSheet.keep` success — see that parameter's own KDoc. Note
+     * `roomsRevision++` right below is THIS screen's own local counter
+     * (declared with `rooms` above, for this sheet's own MUTATE partner
+     * picker) — a different variable from `App.kt`'s `roomsRevision` that
+     * [onShelfAssetWritten] is wired to; both need bumping, for two
+     * different lists.
      */
     fun onKeepRoom() {
         if (busy) return
@@ -1242,11 +1684,12 @@ fun PadSheetScreen(
         // Busy before the launch, not inside it: a second tap in the gap
         // before the coroutine starts must not keep the same room twice.
         busy = true
-        scope.launch {
+        appScope.launch {
             try {
                 val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
                 measuredRoom = null
                 roomsRevision++
+                onShelfAssetWritten()
                 partner = Rooms.partner(kept)
                 onToast(Copy.roomKept(kept.name))
             } catch (e: Exception) {
@@ -1267,6 +1710,15 @@ fun PadSheetScreen(
      * kits), but any pad qualifies — a drum lands as a drone. Seconds of
      * stretching, so it runs on IO under the busy flag; a fresh seed every
      * press, like every other door that renders.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [onMakeInstrument]'s own KDoc: `PadFromAnything.export`
+     * writes into the same `KitShelf.INSTRUMENTS_DIR` `App`'s `instruments`
+     * list reads from.
+     *
+     * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
+     * `PadFromAnything.export` success, same as [onMakeInstrument] — see
+     * that parameter's own KDoc.
      */
     fun onMakePad() {
         if (busy) return
@@ -1286,13 +1738,14 @@ fun PadSheetScreen(
         }
         val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
                 withContext(Dispatchers.IO) {
                     PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
                 }
+                onShelfAssetWritten()
                 onToast(Copy.PAD_MADE)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -1313,6 +1766,11 @@ fun PadSheetScreen(
      * pad's audio) but nothing was written, so there's nothing to save
      * either way. On success [model] swaps to the fresh instance; no
      * immediate audition, same trade as the other converted siblings.
+     *
+     * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
+     * same reason, as [applySmear]'s own KDoc. `desamplePad`'s write is a
+     * real audio rewrite under [withFreshKit]'s lock, same shape as
+     * [onMutate]/[onDrift].
      */
     fun onDesample() {
         if (busy) return
@@ -1326,7 +1784,7 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        scope.launch {
+        appScope.launch {
             busy = true
             try {
                 var match: com.snipsnap.synth.Desample.Match? = null
@@ -1502,9 +1960,15 @@ fun PadSheetScreen(
     // and checked first: it always draws its own row-one segment, so it
     // never needs the phone-ruling fallback below.
     val smearAmount = readSmearRecipe(pad.recipe)
-    val applied = if (smearAmount != null) null else PadSheet.read(pad.recipe)
-    val activeSegment = if (smearAmount != null) PadSheet.SMEAR else applied?.segment
-    val isNoneState = smearAmount == null && applied == null
+    // DUST rides its own shape too (`{"verb":"dust","amount","tape"}`), read the same way.
+    val dustAmount = PadSheet.readDust(pad.recipe)?.amount
+    val applied = if (smearAmount != null || dustAmount != null) null else PadSheet.read(pad.recipe)
+    val activeSegment = when {
+        smearAmount != null -> PadSheet.SMEAR
+        dustAmount != null -> PadSheet.DUST
+        else -> applied?.segment
+    }
+    val isNoneState = smearAmount == null && dustAmount == null && applied == null
     // The phone ruling, whichever row: a treatment no segment draws is
     // named on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
@@ -1514,7 +1978,7 @@ fun PadSheetScreen(
             is PadSheet.Treatment.Keyed -> "IN KEY: ${a.treatment.name.uppercase()}"
         }
     }
-    val amount = smearAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
+    val amount = smearAmount ?: dustAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
 
     val assignedSlots = kit.pads.map { it.slot }.sorted()
     val idx = assignedSlots.indexOf(slot)
@@ -1548,6 +2012,32 @@ fun PadSheetScreen(
     val boxes = PadSheetBoxes.summaries(pad, outsideStage)
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
     fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+
+    // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
+    // tapes open inline on the TREATMENT bench, newest first; a pick runs
+    // the DUST door at the card's AMT with that tape, and since the recipe
+    // carries the tape, AMT moves after that keep the borrowed dust.
+    var dustFromOpen by remember(slot) { mutableStateOf(false) }
+    var dustFromTapes by remember { mutableStateOf<List<File>>(emptyList()) }
+    fun openDustFrom() {
+        if (busy) return
+        scope.launch {
+            val tapes = withContext(Dispatchers.IO) { SnipStore.list(context.filesDir) }
+            if (tapes.isEmpty()) {
+                onToast(Copy.DUST_FROM_EMPTY)
+                return@launch
+            }
+            dustFromTapes = tapes
+            dustFromOpen = true
+        }
+    }
+    fun applyDustFrom(tape: String) {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        applyingSegment = PadSheet.DUST
+        applyDust(m, p, pendingAmt, p.displayName, from = tape)
+    }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
@@ -1694,10 +2184,36 @@ fun PadSheetScreen(
                     }
                 },
             )
+            // The tape this pad's dust comes from — or would come from — and
+            // the door to borrow another's.
+            DustFromRow(
+                tape = PadSheet.readDust(pad.recipe)?.tape ?: model?.kit?.let { DustPrints.tapeFor(it, pad) },
+                open = dustFromOpen,
+                tapes = dustFromTapes,
+                scheme = scheme,
+                busy = busy,
+                onOpen = ::openDustFrom,
+                onClose = { dustFromOpen = false },
+                onPick = { file ->
+                    dustFromOpen = false
+                    applyDustFrom(file.name)
+                },
+            )
             // DO IT AGAIN: the recipe as a thing you can carry to another
             // pad. Dimmed, not disabled, when there's nothing to copy or
             // nothing copied yet - the toast explains, same convention as
             // SPLICE ▸ / STACK ▸ below.
+            //
+            // "COPY LAST TREATMENT" keeps its exact wording — it's quoted
+            // verbatim inside `Copy.REPLAY_CLIPBOARD_EMPTY`
+            // ("NOTHING COPIED YET. COPY LAST TREATMENT OFF A PAD FIRST."),
+            // so shortening it here would desync the toast from the button
+            // it's pointing at. PASTE's ▸ dropped instead (truncation
+            // pass): `onPasteRecipe` replays the recipe on THIS pad right
+            // here via `commitPadEditNow` — an in-place mutation, not a
+            // navigation or a panel — so the "opens something" glyph never
+            // applied; "·" is the same neutral separator ROULETTE/DRIFT use
+            // above for the same reason.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(
                     "COPY LAST TREATMENT",
@@ -1708,7 +2224,7 @@ fun PadSheetScreen(
                     onClick = ::onCopyRecipe,
                 )
                 ActionButton(
-                    clipboard?.let { "PASTE ▸ ${it.word}" } ?: "PASTE ▸",
+                    clipboard?.let { "PASTE · ${it.word}" } ?: "PASTE",
                     scheme,
                     enabled = !busy,
                     dimmed = clipboard == null,
@@ -1805,6 +2321,7 @@ fun PadSheetScreen(
                 onKnobChange = { f -> pendingMutateKnob = (f * 40f).roundToInt() / 40f },
                 mutated = MutateSheet.read(pad.recipe),
                 canUndo = binDaysLeft != null,
+                onHear = ::onHear,
                 onMutate = ::onMutate,
                 onUndo = ::onUnmutate,
                 padColor = classColor,
@@ -1900,11 +2417,18 @@ fun PadSheetScreen(
             )
         }
 
+            // fillMaxWidth, never weight: this sits in the MAKE box's
+            // Column, inside the sheet's verticalScroll column, and a
+            // weighted child of a Column whose height is unbounded is
+            // measured at zero — heightIn(min) cannot exceed an incoming
+            // max of 0. The weight was a leftover from a Row, and this is
+            // the only door into GRAIN FIELD, so the door was drawn at no
+            // height at all (September wiring review, finding 5).
             ActionButton(
                 "GRAIN ▸",
                 scheme,
                 enabled = !busy,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 onClick = { onGrainField(slot) },
             )
             ActionButton(
@@ -2075,6 +2599,22 @@ private fun provenanceOrigin(source: Map<String, String>): String? = when {
     else -> null
 }
 
+/**
+ * How the pad came to be, when a door made it from other pads: a twin
+ * (`KitBuilderModel.TWIN_OF`, the bank-A pad it was dealt from) and/or a
+ * bred child (`Breed`'s `bredFrom`, "Mother x Father"). Both doors copy
+ * the parent's source keys, so [provenanceOrigin] alone would read a
+ * twin as its parent's tape — this goes first on the line, so BREED and
+ * REMIX BANK B are answered for on the one screen that inspects a pad.
+ * Both stamps show when both are there (a bred kit whose parent had
+ * twins carries a twin's `twinOf` under BREED's `bredFrom`): neither
+ * derivation is the whole story alone.
+ */
+private fun lineage(source: Map<String, String>): List<String> = listOfNotNull(
+    source[KitBuilderModel.TWIN_OF]?.let { "twin of $it" },
+    source["bredFrom"]?.let { "bred from ${it.replace(" x ", " × ")}" },
+)
+
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
     val origin = provenanceOrigin(pad.source) ?: pad.sampleFile
     // The cut in the tape (`BASS 5.WAV @ 1.20–1.62s`, docs/RETRIM.md §5):
@@ -2082,7 +2622,11 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     // land before it is tapped. Frames sit at the tape's rate, which is
     // the pad's own — neither CHOP nor BACK ONTO resamples.
     val cut = Retrim.cutOf(pad)
-    val parts = mutableListOf(if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin)
+    val parts = mutableListOf<String>()
+    parts += lineage(pad.source)
+    // DUST names the tape it borrowed from, which may not be the pad's own.
+    PadSheet.readDust(pad.recipe)?.let { parts += "dusted from ${it.tape}" }
+    parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     binDaysLeft?.let { parts += "original in bin, ${it}d left" }
     return parts.joinToString(" · ")
@@ -2206,7 +2750,7 @@ private fun HeaderChip(
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree, so TalkBack finds ◀ BEFORE
             // (and ◄ KIT) during the same busy spell sighted users see it.
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -2350,11 +2894,22 @@ private fun ToggleChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme, fill = if (engaged) color.copy(alpha = 0.85f) else null)
-            .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
+            // Always clickable, `enabled` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 — see ActionButton, above in this file).
+            // State follows `engaged` (ON/OFF), the same as the visible
+            // fill this chip already carries.
+            .tapeClick(label = "$label, ${if (engaged) "ON" else "OFF"}", enabled = enabled, onClick = onToggle)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+        TapeText(
+            label,
+            TapeType.pixel,
+            if (!enabled) scheme.ink3.tape else if (engaged) scheme.titleInk.tape else scheme.ink2.tape,
+            maxLines = 1,
+        )
     }
 }
 
@@ -2418,7 +2973,11 @@ private fun TreatmentCard(
                                     else -> null
                                 },
                             )
-                            .let { if (tappable) it.tapeClick(label = null) { onSegmentTap(seg) } else it }
+                            // Always clickable, `tappable` forwarded rather
+                            // than dropped so a non-tappable segment still
+                            // announces itself instead of vanishing from the
+                            // accessibility tree (finding 12).
+                            .tapeClick(label = PadSheet.displayLabel(seg), enabled = tappable) { onSegmentTap(seg) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2450,6 +3009,62 @@ private fun TreatmentCard(
             onFractionChange = onAmountChange,
             onFractionCommit = onAmountCommit,
         )
+    }
+}
+
+/** DUST FROM ▸ shows this many of the shelf's tapes, newest first; the bench is a column, not a browser. */
+private const val DUST_FROM_SHOWN = 24
+
+/**
+ * DUST FROM ▸: the tape this pad's dust comes from, or would come from
+ * ([tape], lit in the list so the label and the list agree), and the
+ * shelf's tapes inline when [open] — the bench's own convention over a
+ * dialog, since a pick is one tap and the column already scrolls.
+ */
+@Composable
+private fun DustFromRow(
+    tape: String?,
+    open: Boolean,
+    tapes: List<File>,
+    scheme: Scheme,
+    busy: Boolean,
+    onOpen: () -> Unit,
+    onClose: () -> Unit,
+    onPick: (File) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            ActionButton(
+                if (open) "DUST FROM ▾" else "DUST FROM ▸",
+                scheme,
+                enabled = !busy,
+                modifier = Modifier.weight(1f),
+                onClick = { if (open) onClose() else onOpen() },
+            )
+            TapeText(
+                tape?.let { "FROM ${SnipStore.displayName(File(it))}" } ?: "NO TAPE YET",
+                TapeType.pixelSmall,
+                scheme.ink3.tape,
+                Modifier.weight(1f),
+                maxLines = 1,
+            )
+        }
+        if (open) {
+            TapeText(Copy.DUST_FROM_PICK, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            for (file in tapes.take(DUST_FROM_SHOWN)) {
+                ActionButton(
+                    SnipStore.displayName(file),
+                    scheme,
+                    enabled = !busy,
+                    lit = file.name == tape,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onPick(file) },
+                )
+            }
+            if (tapes.size > DUST_FROM_SHOWN) {
+                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -2507,11 +3122,16 @@ private fun ShapeCard(
  * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
  * MORPH), a partner — a pad on this kit from the mini grid, or the deal
  * ROULETTE spins off the shelf — the move's one knob when it has one,
- * then MUTATE. The line under the title says what the pad already is
- * ("SPLICE: Kit:A02") so a mutated pad never reads as an original; UNDO
- * pulls the pre-mutation sound back out of the bin. Everything behind it
- * is `MutateSheet` over the CLI's own `Mutate` — same recipe, same
- * provenance, same bin.
+ * then HEAR or MUTATE. The line under the title says what the pad
+ * already is ("SPLICE: Kit:A02") so a mutated pad never reads as an
+ * original; UNDO pulls the pre-mutation sound back out of the bin.
+ * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
+ * same recipe, same provenance, same bin.
+ *
+ * HEAR plays [MutateSheet.preview] — exactly what MUTATE would write,
+ * heard without writing it. Before it existed, using this card was pick
+ * a move, pick a partner, commit a file write, listen, undo: every
+ * iteration cost a rewrite (design/mutate-v2 has the argument in full).
  */
 @Composable
 private fun MutateCard(
@@ -2537,6 +3157,7 @@ private fun MutateCard(
     onKnobChange: (Float) -> Unit,
     mutated: MutateSheet.Applied?,
     canUndo: Boolean,
+    onHear: () -> Unit,
     onMutate: () -> Unit,
     onUndo: () -> Unit,
     padColor: Color,
@@ -2565,11 +3186,13 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onMode(m) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped (accessibility audit finding 12).
+                            .tapeClick(label = m, enabled = !busy) { onMode(m) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2587,11 +3210,17 @@ private fun MutateCard(
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                            .let { if (!busy) it.tapeClick(label = null) { onPartner(p) } else it }
+                            // Always clickable, `!busy` forwarded rather
+                            // than dropped (accessibility audit finding 12).
+                            .tapeClick(label = MutateSheet.padTag(p), enabled = !busy) { onPartner(p) }
                             .padding(horizontal = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(
+                            MutateSheet.padTag(p),
+                            TapeType.pixel,
+                            if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                        )
                     }
                 }
                 // A short last row keeps the same chip width as a full one.
@@ -2612,11 +3241,19 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick(label = null) { onRoom(r) } else it }
+                                // Always clickable, `!busy` forwarded
+                                // rather than dropped (accessibility audit
+                                // finding 12).
+                                .tapeClick(label = r, enabled = !busy) { onRoom(r) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(r, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                            TapeText(
+                                r,
+                                TapeType.pixel,
+                                if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                maxLines = 1,
+                            )
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2637,11 +3274,19 @@ private fun MutateCard(
                                 .weight(1f)
                                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                 .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                .let { if (!busy) it.tapeClick(label = null) { onPickKit(k) } else it }
+                                // Always clickable, `!busy` forwarded
+                                // rather than dropped (accessibility audit
+                                // finding 12).
+                                .tapeClick(label = k, enabled = !busy) { onPickKit(k) }
                                 .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(k, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 1)
+                            TapeText(
+                                k,
+                                TapeType.pixel,
+                                if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                maxLines = 1,
+                            )
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2658,11 +3303,18 @@ private fun MutateCard(
                                     .weight(1f)
                                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                                     .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                                    .let { if (!busy) it.tapeClick(label = null) { onOtherPad(p) } else it }
+                                    // Always clickable, `!busy` forwarded
+                                    // rather than dropped (accessibility
+                                    // audit finding 12).
+                                    .tapeClick(label = MutateSheet.padTag(p), enabled = !busy) { onOtherPad(p) }
                                     .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                TapeText(MutateSheet.padTag(p), TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                                TapeText(
+                                    MutateSheet.padTag(p),
+                                    TapeType.pixel,
+                                    if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                                )
                             }
                         }
                         repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -2682,17 +3334,37 @@ private fun MutateCard(
             onClick = onPickFile,
         )
         val deal = partner as? MutateSheet.Partner.Deal
+        // Both labels were 29 characters at rest ("ROULETTE ▸ LET THE CRATE
+        // DEAL" / "DRIFT ▸ DEALS & SAVES A BLEND"), so ROULETTE's old
+        // weight(2f) against DRIFT's weight(1f) gave the wider share to no
+        // more text — backwards, not proportional (truncation pass).
+        // Equalizing the weight wasn't enough on its own — confirmed by
+        // screenshot inside this MUTATE box's own 10dp side padding
+        // (`GroupBox`'s content `Column`), both halves still ellipsized —
+        // so both are shortened too: "LET THE" and the article "A" were
+        // pure filler around the words that carry meaning (CRATE DEAL,
+        // DEALS & SAVES). Neither keeps its ▸: `onRoulette` deals a
+        // partner and `onDrift` deals AND mutates, both right here on this
+        // card with a toast, never navigating or opening a panel — the
+        // same "no ▸" rule RESET/UNDO on this same screen already follow.
+        // "·" replaces it, same neutral separator "REMIX BANK B · REROLL"
+        // (`KitScreen.kt`) uses for the same reason.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
-                deal?.let { "ROULETTE ▸ ${it.label}" } ?: "ROULETTE ▸ LET THE CRATE DEAL",
+                deal?.let { "ROULETTE · ${it.label}" } ?: "ROULETTE · CRATE DEAL",
                 scheme,
                 enabled = !busy,
                 dimmed = deal == null,
-                modifier = Modifier.weight(2f),
+                modifier = Modifier.weight(1f),
                 onClick = onRoulette,
             )
             // DRIFT: the deal and the morph in one tap, MIX how far.
-            ActionButton("DRIFT ▸ DEALS & SAVES A BLEND", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
+            // "SAVES" stays — it's the one word that says DRIFT commits
+            // the blend, unlike ROULETTE's preview-only deal — but the
+            // article "A" and "BLEND" (already this GroupBox's own legend,
+            // "MUTATE · ONE HIT FROM TWO", right above) don't need to be
+            // said again in a label that must also fit half this row.
+            ActionButton("DRIFT · DEALS & SAVES", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onDrift)
         }
 
         // The move's knob, when it has one; STACK's row stays so the card never jumps.
@@ -2707,6 +3379,18 @@ private fun MutateCard(
             onFractionCommit = {},
         )
 
+        // What MUTATE would write, played without writing it — the
+        // whole reason the card kept feeling like a gamble (design/
+        // mutate-v2): every move used to be pick, commit, listen, undo.
+        // Same enablement as MUTATE, since nothing to preview is nothing
+        // to keep either.
+        ActionButton(
+            "▶ HEAR",
+            scheme,
+            enabled = !busy && partner != null,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onHear,
+        )
         ActionButton(
             "MUTATE ▸",
             scheme,
@@ -2785,11 +3469,13 @@ private fun OutsideCard(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
-                        .let { if (!busy) it.tapeClick(label = null) { onMove(m) } else it }
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12).
+                        .tapeClick(label = m, enabled = !busy) { onMove(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
         }
@@ -2843,11 +3529,18 @@ internal fun ActionButton(
      */
     lit: Boolean = false,
     /**
-     * Override for [label] as the accessible name — for the rare button
-     * whose visible glyph is too short/acronym-shaped to trust TalkBack
-     * to read as a word (e.g. SplitScreen's "M"/"S" mute/solo chips).
-     * `null` (the default, and every call site but those two) lets
-     * [label] serve as its own name via `tapeClick`'s merge.
+     * Override for [label] as the accessible name — for the button whose
+     * visible glyph is too short/acronym-shaped to trust TalkBack to read
+     * as a word (e.g. SplitScreen's "M"/"S" mute/solo chips, or "▶"/"▲"
+     * transport glyphs elsewhere). `null` (the default) falls back to
+     * [label] itself below — *not* to a descendant-merge, which an
+     * accessibility-tree dump showed [tapeClick]'s clickable node does
+     * not actually receive (compose's semantics tree does not fold a
+     * sibling `TapeText` into a `clickable` ancestor for free; that was
+     * this constant's founding bug, audit finding: every plain-glyph
+     * `ActionButton` across ~14 screens spoke as unnamed). Deriving from
+     * [label] here fixes every one of those call sites at once, since
+     * [label] is real word-shaped text at all but the handful above.
      */
     accessibilityLabel: String? = null,
     modifier: Modifier = Modifier,
@@ -2863,7 +3556,7 @@ internal fun ActionButton(
             // a screen reader is told this control is temporarily
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
-            .tapeClick(label = accessibilityLabel, enabled = enabled, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -2903,10 +3596,16 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
             // enabled forwarded, not dropped — see ActionButton's own note.
-            .tapeClick(label = null, enabled = enabled, onClick = onClick)
+            .tapeClick(label = "DELETE → BIN", enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE → BIN", TapeType.pixel, BinRedGlow)
+        // The glow was fixed regardless of `enabled` — a dead DELETE button
+        // that still glows red reads as live. Falling back to `ink3` (not a
+        // dimmed BinRedGlow) matches the convention already used by every
+        // sibling BIN-red button (EmptyBinButton × 3, EmptyRoomsBinButton):
+        // BinRedGlow at reduced alpha risks failing contrast against the
+        // dark LCD fill, where ink3 is a scheme token already tuned for it.
+        TapeText("DELETE → BIN", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
     }
 }

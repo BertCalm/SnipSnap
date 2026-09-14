@@ -36,9 +36,19 @@ data class ArrangedPad(
      * should remember its origins.
      */
     val source: Map<String, String> = emptyMap(),
+    /**
+     * More takes of the same hit, cycling under [snip] as a round-robin
+     * chain ([ChainInfo]): CHOP's FOLD DOUBLES lands the repeats of one
+     * sound here. The pad's WAV becomes every take end to end, [snip]
+     * first. A chain pad is single-zone, so no [softVariants] with it.
+     */
+    val takes: List<Snip> = emptyList(),
+    /** The pad's own name when the chop has one (a ghost's AFTER SNARE 2); null = the class and a counter. */
+    val displayName: String? = null,
 ) {
     init {
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
+        require(takes.isEmpty() || softVariants.isEmpty()) { "a chain pad is single-zone: takes or soft variants, not both" }
     }
 }
 
@@ -96,7 +106,15 @@ object KitAssembler {
             }
             val stem = String.format(Locale.ROOT, "%s_%s_%02d", label, stemClass, n)
 
-            WavWriter.write(File(dir, "$stem.wav"), pad.snip)
+            // A folded pad: every take end to end, the lead first, and the
+            // chain that steps through them a hit at a time.
+            val chain = if (pad.takes.isEmpty()) null else {
+                val all = listOf(pad.snip) + pad.takes
+                var at = 0L
+                val boundaries = all.map { t -> at.also { at += t.frameCount } }
+                ChainInfo(boundaries, cycle = all.size)
+            }
+            WavWriter.write(File(dir, "$stem.wav"), if (chain == null) pad.snip else concat(listOf(pad.snip) + pad.takes))
 
             // Soft variants become velocity zones: the band 1..127 splits
             // evenly, softest zone first, the main sample on top. The first
@@ -122,7 +140,7 @@ object KitAssembler {
             pads += KitPad(
                 slot = slot,
                 sampleFile = "$stem.wav",
-                displayName = String.format(Locale.ROOT, "%s %02d", className, n),
+                displayName = pad.displayName ?: String.format(Locale.ROOT, "%s %02d", className, n),
                 drumClass = pad.drumClass,
                 colorHex = AutoPlace.colorFor(pad.drumClass),
                 level = pad.level ?: 0.707946f,
@@ -133,11 +151,26 @@ object KitAssembler {
                 source = pad.source,
                 recipe = pad.recipe,
                 velocityLayers = layers,
+                chain = chain,
             )
         }
 
         val kit = Kit(name, pads, key, tempoBpm)
         KitStore.save(kit, dir)
         return kit
+    }
+
+    /** [takes] end to end, one snip; all share the first's channels and rate. */
+    private fun concat(takes: List<Snip>): Snip {
+        val channels = takes.first().channels
+        val rate = takes.first().sampleRate
+        require(takes.all { it.channels == channels && it.sampleRate == rate }) { "takes share one channel count and rate" }
+        val out = FloatArray(takes.sumOf { it.samples.size })
+        var at = 0
+        for (t in takes) {
+            t.samples.copyInto(out, at)
+            at += t.samples.size
+        }
+        return Snip(out, channels, rate)
     }
 }

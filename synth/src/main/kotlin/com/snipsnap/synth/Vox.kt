@@ -53,8 +53,16 @@ object Vox {
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    fun scramble(voice: VoxVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
+    fun scramble(voice: VoxVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + VoxPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     fun frequencyFor(voice: VoxVoice, tune: Float): Float {
         val root = when (voice) {
@@ -89,6 +97,7 @@ object Vox {
         }
         val noise = Dsp.Noise(17)
         val noiseLp = Dsp.OnePole()
+        val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = t60) // vocal onsets are soft
 
         var p1 = 0.0
         var p2 = 0.0
@@ -111,8 +120,7 @@ object Vox {
             var s = 0f
             for (f in 0 until 3) s += FORMANT_GAINS[f] * filters[f].process(source)
 
-            val attack = (t / 0.02f).coerceAtMost(1f) // vocal onsets are soft
-            out[i] = s * attack * Dsp.envAt(t, t60)
+            out[i] = s * env.at(t)
         }
 
         Dsp.normalize(out)

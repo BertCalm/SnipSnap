@@ -16,7 +16,11 @@ import com.snipsnap.loop.AudioSink
  */
 fun deviceSampleRate(context: Context): Int {
     val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    return am.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull() ?: 48_000
+    // takeIf, not just toIntOrNull: a property that parses to 0 (or anything
+    // absurd) would be carried straight into AudioTrack and into Session's own
+    // `sampleRate > 0` require, both of which throw. The fallback is for any
+    // answer that isn't a rate, not only for a missing one.
+    return am.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull()?.takeIf { it > 0 } ?: 48_000
 }
 
 /**

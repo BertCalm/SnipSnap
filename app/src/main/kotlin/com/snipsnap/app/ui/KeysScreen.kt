@@ -58,7 +58,7 @@ import kotlinx.coroutines.withContext
  * release: a looped pad holds while the finger does. Over
  * `InstrumentPlayer`, `:shell`'s `InstrumentEngine` on the device.
  */
-private val GRID_ROWS = listOf(13..16, 9..12, 5..8, 1..4)
+private val GRID_ROWS = WINDOW_GRID_ROWS
 
 @Composable
 fun KeysScreen(
@@ -81,7 +81,7 @@ fun KeysScreen(
     var octave by remember(sidecar) { mutableIntStateOf(0) }
     val root = instrument.rootNote
 
-    // ◄ SHELF's own path — shared by the chip and system Back so both
+    // ◄ KITS's own path — shared by the chip and system Back so both
     // silence the instrument before leaving.
     fun requestBack() {
         player.allOff()
@@ -131,7 +131,7 @@ fun KeysScreen(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("◄ SHELF", scheme, enabled = true, onClick = ::requestBack)
+            ActionButton("◄ KITS", scheme, enabled = true, onClick = ::requestBack)
             ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave-- })
             ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave++ })
         }
@@ -144,7 +144,7 @@ fun KeysScreen(
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                        .tapeClick(label = null) { player.allOff(); layout = l }
+                        .tapeClick(label = l) { player.allOff(); layout = l }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +23,6 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,24 +39,27 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.snipsnap.app.theme.LocalPersonality
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
-import com.snipsnap.shell.Copy
-import com.snipsnap.shell.Delight
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.SchemeId
-import kotlinx.coroutines.delay
 
 /**
- * Every place the menu row can land. M0 builds KITS, KIT and PROPERTIES
- * for real; the rest render an honest stub naming their milestone.
+ * Every place the menu row can land. Every entry routes to a real,
+ * shipped screen — `App.kt`'s `when (screen)` has no catch-all branch, so
+ * a new entry added here without a matching branch there fails to
+ * compile instead of silently falling through to a stub. (There used to
+ * be a `StubScreen` and an `else ->` branch for milestones that hadn't
+ * shipped yet; every one of them had shipped long before the stub was
+ * finally deleted, which is exactly the failure mode the missing
+ * catch-all now prevents from recurring.)
  */
 enum class AppScreen(val label: String) {
     KITS("KITS"),
@@ -73,7 +76,7 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's ten: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ KITS. */
     KEYS("KEYS"),
 
     /**
@@ -110,20 +113,46 @@ fun TapeText(
  * default: every call site has to make an explicit choice, so a new
  * control can't silently ship without one the way all 97 of this app's
  * pre-existing interactive sites did (see the 2026-09-08 accessibility
- * audit). Pass `null` when a descendant `TapeText`/`TapeText`-bearing
- * child already says what the control does — `clickable` merges
- * descendant semantics into this node automatically, so a real
- * [label] here would *replace* that text in what TalkBack announces,
- * not add to it. Reserve an explicit [label] for controls with no
- * text child (scrim dismissers, glyph-only chips, colour swatches) or
- * whose visible glyph is itself an accessibility risk (single-letter
- * chips TalkBack may spell out instead of reading as a word).
+ * audit). Pass a real [label] always — including when a descendant
+ * `TapeText` already shows the same words on screen. This modifier used
+ * to say `clickable` merges descendant semantics into this node
+ * automatically, so `null` was "fine" whenever visible text was nearby;
+ * an accessibility-tree dump (2026-09 followup) proved that claim false
+ * for the unlabelled case: `clickable`'s own semantics node did not
+ * fold sibling text into itself, so every call site relying on it
+ * shipped a clickable node with an empty name.
+ *
+ * What that same followup could NOT settle: whether an explicit
+ * [label] here lands on the same accessibility node `clickable` makes
+ * actionable, or on an adjacent one. `uiautomator dump` (the only tool
+ * this pass was permitted — TalkBack itself destabilised the test
+ * emulator in an earlier session) shows both `clickable().semantics {
+ * contentDescription = label }` and the same call with
+ * `mergeDescendants = true` added producing byte-identical trees, and
+ * this file's own KNOWN-GOOD reference (`KitRow` in KitsScreen.kt,
+ * explicit `mergeDescendants = true`, reviewed and shipped) shows that
+ * same shape too — an outer node with an empty raw `content-desc` and
+ * separate child text nodes beneath it. That means the dump cannot
+ * distinguish "TalkBack speaks [label] once, correctly" from "TalkBack
+ * speaks it as a second, adjacent, non-actionable node": both render
+ * the same way to this tool. Left at the pre-existing, reviewed shape
+ * (`clickable(...).semantics { contentDescription = label }`, no merge
+ * flag) rather than shipping an unverified change across the ~113
+ * call sites that route through this one function. Flagged for
+ * adjudication with real TalkBack, not re-guessed here.
+ *
+ * `null` is for controls that genuinely have no accessible name to
+ * give — not a shorthand for "the text nearby covers it." (A control
+ * whose `onClick` is genuinely empty, e.g. a tap-absorbing scrim card,
+ * isn't reachable through `tapeClick` at all for that purpose — see
+ * call sites using a raw `Modifier.pointerInput { detectTapGestures {}
+ * }` instead, which registers no semantics node.)
  *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
- * its semantics node (and its merged/explicit name) but exposes
- * Compose's `disabled()` state instead of an actionable one, so a
- * screen-reader user is told "temporarily unavailable" instead of the
- * control silently vanishing from the tree (audit finding 12).
+ * its semantics node (and its name) but exposes Compose's `disabled()`
+ * state instead of an actionable one, so a screen-reader user is told
+ * "temporarily unavailable" instead of the control silently vanishing
+ * from the tree (audit finding 12).
  */
 @Composable
 fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
@@ -166,17 +195,36 @@ fun TitleBar(modifier: Modifier = Modifier) {
 /** One menu entry: its label and the screen it lands on. */
 data class MenuItem(val label: String, val screen: AppScreen)
 
+// EXPORT moved up beside TAPE/CHOP/KIT (name-and-find followups,
+// truncation pass): the cold-open screen states the app's own primary
+// flow as "TAPE ▸ CHOP ▸ KIT ▸ EXPORT — four tabs, in order," but at
+// twelve items EXPORT sat at position 10 — past the ~8-9 tabs that fit
+// on screen at every width tested (390dp/411dp/360dp), so step four of
+// the app's own stated loop was never visible without a drag the row
+// gives no other cue to try beyond its ◂/▸ edges. Reordering (not
+// shortening, not wrapping) is the smallest change that puts it back in
+// the visible run — total row width is unchanged, only which items land
+// in the first ~9 slots. `ConventionTest`'s "first-run loop names real
+// menu tabs" law only checks membership, not order, so this is safe
+// against it.
+//
+// KIT then moved after CHOP (same followups): KITS is the shelf you
+// arrive at, not one of the four steps, so it stays first — but KIT had
+// landed second, ahead of TAPE and CHOP, which put the strip out of step
+// with the loop it was just fixed to make visible. The four flow tabs
+// now read TAPE ▸ CHOP ▸ KIT ▸ EXPORT, matching the stated order exactly,
+// still inside the same visible run.
 val MENU_ITEMS = listOf(
     MenuItem("KITS", AppScreen.KITS),
-    MenuItem("KIT", AppScreen.KIT),
     MenuItem("TAPE", AppScreen.TAPE),
     MenuItem("CHOP", AppScreen.CHOP),
+    MenuItem("KIT", AppScreen.KIT),
+    MenuItem("EXPORT", AppScreen.EXPORT),
     MenuItem("PLAY", AppScreen.PLAY),
     MenuItem("GROOVE", AppScreen.GROOVE),
     MenuItem("ORBIT", AppScreen.ORBIT),
     MenuItem("SYNTH", AppScreen.SYNTH),
     MenuItem("SURFACE", AppScreen.SURFACE),
-    MenuItem("EXPORT", AppScreen.EXPORT),
     MenuItem("SETUP", AppScreen.PROPERTIES),
     MenuItem("HELP", AppScreen.HELP),
 )
@@ -209,7 +257,7 @@ private fun MenuEdge(glyph: String, showing: Boolean) {
 }
 
 /**
- * The eleven tabs, and the two things September UAT found wrong with
+ * The twelve tabs, and the two things September UAT found wrong with
  * them.
  *
  * Finding 9: the row was 26dp tall and each tab's tap area was its text
@@ -262,12 +310,16 @@ fun MenuRow(
                         .fillMaxHeight()
                         .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
                         // The tab's own name (item.label) is the accessible
-                        // name via the merged descendant TapeText below;
-                        // selection is the one thing that text can't say on
+                        // name, passed explicitly — an accessibility-tree
+                        // dump showed the descendant TapeText below does
+                        // NOT merge into this clickable node for free (that
+                        // was the assumption this comment used to make; all
+                        // 11 tabs spoke as unnamed nodes with it). Selection
+                        // is the one thing the label text still can't say on
                         // its own (audit finding 7 — selection state had no
                         // programmatic exposure anywhere in the app).
                         .semantics { selected = isSelected }
-                        .tapeClick(label = null) { onSelect(item.screen) }
+                        .tapeClick(label = item.label) { onSelect(item.screen) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -284,29 +336,29 @@ fun MenuRow(
 }
 
 /**
- * Three cells: where you are, what's on the shelf, and the deck
- * muttering to itself (FULL personality only; a busy line preempts the
- * quip because status is function, not joke).
+ * Three cells: where you are, what's on the shelf, and either a busy
+ * line or the open kit's name. The third cell used to carry a rotating
+ * quip instead (gated behind the now-deleted PERSONALITY slider — see
+ * `Personality.kt`'s own KDoc on why that gate was removed); this is
+ * real state in a slot shaped for state, so it names the kit that is
+ * actually open instead of the machine talking to itself.
+ *
+ * With no kit open, [kitName] is `Copy.NO_KIT_STATUS`, not the empty
+ * string — an empty cell sat there as a bordered box with nothing in it,
+ * reading as a rendering gap next to the populated `KITS: n` cell beside
+ * it rather than a state. The caller (`App.kt`) is the one that decides
+ * this, not this composable: it already owns `open?.kit?.name`.
  */
 @Composable
 fun StatusBar(
     screenLabel: String,
     shelfLabel: String,
     busy: String?,
+    kitName: String,
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
-    val personality = LocalPersonality.current
-
-    var quipIndex by remember { mutableIntStateOf(0) }
-    LaunchedEffect(personality) {
-        while (Delight.quipsEnabled(personality)) {
-            delay(Motion.QUIP_ROTATE_MS.toLong())
-            quipIndex++
-        }
-    }
-    val tail = busy
-        ?: if (Delight.quipsEnabled(personality)) Copy.rotating(Copy.STATUS_QUIPS, quipIndex) else ""
+    val tail = busy ?: kitName
 
     Row(
         modifier = modifier
@@ -338,18 +390,17 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The toast: rises 8dp and fades in over 250ms, dwells, and is cleared by
- * the state holder (see `App`). Whether the *visible* bubble shows at all
- * is the personality slider's call — but PERSONALITY is a tone preference
- * (Law 2/3 territory: no quips, no flourish at OFF), not a permission to
- * withhold function. A toast is a screen-reader user's only channel for
- * "did DELETE/SHARE/RENAME work" (audit finding 3); OFF silencing that
- * entirely, with no fallback, would cost that user information a sighted
- * user still gets from watching the operation resolve. So the bubble is
- * always composed while a message is live, carrying [liveRegion]
- * semantics regardless of PERSONALITY — only its *drawn* alpha is gated
- * (`t` never animates past 0 at OFF, since the `LaunchedEffect` below
- * skips it), which keeps the visible result identical to before this fix
- * for a sighted user. The semantics node lives on the bubble itself, not
+ * the state holder (see `App`). Always composed and always drawn while a
+ * message is live, carrying [liveRegion] semantics so a screen-reader
+ * user gets the same "did DELETE/SHARE/RENAME work" channel a sighted
+ * user gets from watching the operation resolve (audit finding 3).
+ *
+ * This used to be gated by the PERSONALITY slider: OFF drew the bubble at
+ * alpha 0 while still composing it for TalkBack, which meant a *failure*
+ * toast like DUB FAILED silently never appeared for a sighted user who'd
+ * turned personality off — a real bug this removal fixes by construction.
+ * See `Personality.kt`'s own KDoc for why the gate is gone rather than
+ * patched in place. The semantics node lives on the bubble itself, not
  * a screen-sized wrapper around it — a full-screen node would sit in
  * TalkBack's touch-exploration path for the whole `TOAST_DWELL_MS`
  * dwell, intercepting an explore-by-touch anywhere on screen instead of
@@ -364,12 +415,10 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
-    val personality = LocalPersonality.current
     if (message == null) return
-    val visible = Delight.toastsEnabled(personality)
 
     val t = remember(message) { Animatable(0f) }
-    LaunchedEffect(message) { if (visible) t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
+    LaunchedEffect(message) { t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(
@@ -391,6 +440,57 @@ fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+        }
+    }
+}
+
+/**
+ * One door out of an [EmptyStatePanel] — a [label] and the [onClick] it
+ * fires. The label carries its own "▸" when it opens another screen, the
+ * same convention `KitsScreen.kt`'s `ArmControl` KDoc already documents
+ * (▸ for "opens a screen or panel," none for an in-place action).
+ */
+data class EmptyStateRoute(val label: String, val onClick: () -> Unit)
+
+/**
+ * The shape behind every screen's own "nothing here" face: a message plus
+ * the real controls that get a user out of it, not just words naming
+ * them. Pulled out once GROOVE's `loadedBase == null` branch (RECORD /
+ * STEPS / ORBIT ▸, right under its own message) turned out to be the
+ * template seven *other* empty states should have followed all along —
+ * KIT, PLAY, ORBIT (menu-row door), GROOVE-with-no-kit, TAPE, EXPORT and
+ * CHOP each used to draw [message] alone and leave the route it named for
+ * the user to find by hand (September UAT follow-up).
+ *
+ * [routes] is usually one door, sometimes two (CHOP's own EMPTY_CHOP names
+ * both TAPE and KITS, since its own sentence promises both) — deliberately
+ * never validated non-empty here: a screen with no honest route to offer
+ * (EXPORT's own "kit won't parse" face, `KIT_WONT_OPEN`, same reasoning as
+ * `TakesBinScreen`'s) simply doesn't call this at all, and stays a bare
+ * message the way it always was.
+ */
+@Composable
+fun EmptyStatePanel(
+    message: String,
+    routes: List<EmptyStateRoute>,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = LocalScheme.current
+    Box(
+        modifier
+            .fillMaxSize()
+            .lcdPanel(scheme)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+            routes.forEach { route ->
+                ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
+            }
         }
     }
 }

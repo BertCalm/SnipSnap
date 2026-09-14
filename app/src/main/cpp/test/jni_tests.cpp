@@ -15,7 +15,12 @@
 // ours - that the bridge does not write into a null array before it
 // returns - and not what Kotlin then sees. `jni.cpp` never calls
 // ExceptionCheck, so the stub has no exception machinery to model.
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cmath>
 #include <cstring>
+#include <thread>
 #include <vector>
 
 #include "PadEngine.h"
@@ -35,9 +40,13 @@ void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint);
+jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
+jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
-void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint);
+void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
+void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
@@ -157,6 +166,47 @@ std::vector<float> pull(PadEngine* e, int32_t frames) {
     e->onAudioReady(nullptr, out.data(), frames);
     return out;
 }
+std::vector<float> pull(SurfaceEngine* e, int32_t frames) {
+    std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
+    e->onAudioReady(nullptr, out.data(), frames);
+    return out;
+}
+
+/**
+ * A stand-in for the real audio thread, for exactly one reason: the
+ * bridge's own `stopPrinting` (jni.cpp) does not read or free a print
+ * until `state() == Done`, and `Done` is only ever set from INSIDE a
+ * callback - `record` seeing `Stopping` and flipping it. A synchronous
+ * host test has no such thread of its own, so a JNI-level stopPrint call
+ * here would time out and return null every time, whatever the state
+ * genuinely would have reached with a live stream still running under
+ * it. This keeps calling `onAudioReady` on a background thread for as
+ * long as it's alive, the same way a real audio callback would keep
+ * arriving during the bridge's wait - safe by the same atomics
+ * `PrintBuffer` and the engines already rely on for the real thing.
+ */
+template <typename Engine>
+class CallbackDriver {
+public:
+    CallbackDriver(Engine* engine, int32_t frames)
+        : block_(static_cast<size_t>(frames) * 2, 0.0f),
+          thread_([this, engine, frames] {
+              while (!stop_.load(std::memory_order_acquire)) {
+                  engine->onAudioReady(nullptr, block_.data(), frames);
+                  std::this_thread::sleep_for(std::chrono::milliseconds(2));
+              }
+          }) {}
+
+    ~CallbackDriver() {
+        stop_.store(true, std::memory_order_release);
+        thread_.join();
+    }
+
+private:
+    std::atomic<bool> stop_{false};
+    std::vector<float> block_;
+    std::thread thread_;
+};
 
 }  // namespace
 
@@ -294,8 +344,109 @@ TEST(jni_surface_refuses_a_sample_it_cannot_copy) {
     const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
     // Nothing to assert but survival: the point is that this returns at
     // all rather than terminating on an exception crossing the bridge.
-    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floatsClaiming(-1000, ramp(16)), 48000);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floatsClaiming(-1000, ramp(16)), 48000, 0);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_set_corner_forwards_crush_and_echo_without_swapping_them) {
+    // setCorner gained two more floats this stage - crush and echo. A
+    // swapped or dropped argument in the bridge (jni.cpp) would pass
+    // every SurfaceEngine-level test, since none of those go through
+    // this JNI entry point at all - they all call setCorner directly in
+    // C++ (see SurfaceEngine.h). Toggling the two macros individually
+    // (1,0 then 0,1) and checking echo's own observable effect - a tail
+    // that keeps ringing after release, see engine_tests.cpp - catches
+    // both a swap (crush's "1" landing in echo's slot would produce a
+    // tail where none is asserted) and a drop (echo's "1" never
+    // reaching the engine would produce no tail where one is asserted).
+    JNIEnv* e = env();
+    std::vector<float> tone(100, 0.33f);
+
+    auto tailPeakAfterRelease = [&](float crush, float echo) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        surf->loadSample(tone.data(), tone.size(), 48000);
+        Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, crush, echo, 0.0f);
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        surf->pushControl(f);
+        for (int i = 0; i < 20; ++i) pull(surf, 64);
+        ControlFrame off = f;
+        off.gate = false;
+        surf->pushControl(off);
+        for (int i = 0; i < 40; ++i) pull(surf, 64);
+        float peak = 0.0f;
+        for (int i = 0; i < 400; ++i) {
+            auto out = pull(surf, 64);
+            for (float v : out) peak = std::max(peak, std::fabs(v));
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return peak;
+    };
+
+    CHECK(tailPeakAfterRelease(1.0f, 0.0f) < 1e-4f);  // crush on, echo off: no tail
+    CHECK(tailPeakAfterRelease(0.0f, 1.0f) > 0.01f);  // echo on, crush off: a real tail
+}
+
+TEST(jni_surface_set_corner_forwards_spring_without_swapping_it_with_echo) {
+    // setCorner gained a seventh float this stage - spring, appended right
+    // after echo. The same swap/drop risk the crush/echo test above
+    // guards against applies to this new neighbouring pair, but spring
+    // and echo both ring after release (unlike crush), so telling them
+    // apart needs a different signature than "has a tail at all": spring
+    // is diffuse and immediate - no built-in delay, so it is already at
+    // its loudest in the instant the gate closes - while echo is silent
+    // for its own fixed 220 ms round trip before its first repeat lands.
+    // Measuring right at release (well under 220 ms) isolates spring;
+    // measuring a window straddling 220-430 ms isolates echo's first
+    // repeat, by which point spring's own short default room (SIZE/TONE
+    // baked in - see SurfaceEngine.h's own comment) has already decayed
+    // well down. A swap lands one macro's value in the other's slot,
+    // which flips which of the two windows lights up; a drop leaves both
+    // windows reading whatever the *other*, untouched macro alone
+    // produces - either mistake fails at least one of the four checks
+    // below.
+    JNIEnv* e = env();
+    std::vector<float> tone(2000, 0.5f);
+
+    auto peakInWindow = [&](float echo, float spring, int extraCallbacksBeforeWindow) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        surf->loadSample(tone.data(), tone.size(), 48000);
+        Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, echo, spring);
+        ControlFrame f;
+        f.mode = 2;
+        f.gate = true;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;
+        surf->pushControl(f);
+        for (int i = 0; i < 20; ++i) pull(surf, 64);
+        ControlFrame off = f;
+        off.gate = false;
+        surf->pushControl(off);
+        for (int i = 0; i < 40; ++i) pull(surf, 64);
+        for (int i = 0; i < extraCallbacksBeforeWindow; ++i) pull(surf, 64);
+        float peak = 0.0f;
+        for (int i = 0; i < 100; ++i) {
+            auto out = pull(surf, 64);
+            for (float v : out) peak = std::max(peak, std::fabs(v));
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return peak;
+    };
+
+    // Right at release (window ends ~133 ms in, comfortably under echo's
+    // 220 ms trip): spring's immediate diffuse energy shows; echo cannot
+    // have produced a repeat yet.
+    CHECK(peakInWindow(0.0f, 1.0f, 0) > 0.05f);   // spring on, echo off: rings immediately
+    CHECK(peakInWindow(1.0f, 0.0f, 0) < 0.01f);   // echo on, spring off: too early for a repeat
+
+    // 185 more callbacks (~247 ms) later, the window sits at 300-433 ms:
+    // echo's first repeat lands squarely inside it, while spring's own
+    // short room has already decayed well below its immediate peak.
+    CHECK(peakInWindow(1.0f, 0.0f, 185) > 0.05f);  // echo on, spring off: the repeat has landed
+    CHECK(peakInWindow(0.0f, 1.0f, 185) < 0.03f);  // spring on, echo off: mostly decayed by now
 }
 
 TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {
@@ -329,7 +480,7 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     JNIEnv* e = env();
     const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
     auto* surf = reinterpret_cast<SurfaceEngine*>(h);
-    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(ramp(500)), 48000);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(ramp(500)), 48000, 0);
     CHECK(Java_com_snipsnap_app_NativeSurface_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
 
     // Play a little so there is something captured to hand back.
@@ -337,8 +488,154 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
     for (int i = 0; i < 8; ++i) surf->onAudioReady(nullptr, block.data(), 256);
     CHECK(surf->printFrames() > 0);
 
+    // Drive Stopping -> Done ourselves before the bridge call: the fix for
+    // the review's use-after-free finding means stopPrint's own bounded
+    // wait now requires Done, which nothing reaches on its own in a
+    // synchronous host test (Done is only ever set from inside a
+    // callback). Without this the null below would come from the wait
+    // timing out, not from the allocation failure this test means to
+    // exercise - a real assertion turned into an accidental one.
+    surf->requestStopPrint();
+    surf->onAudioReady(nullptr, block.data(), 256);
+    CHECK(surf->printState() == PrintBuffer::State::Done);
+
     failAllocations = true;
     CHECK(Java_com_snipsnap_app_NativeSurface_stopPrint(e, nullptr, h) == nullptr);
 
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_the_pads_print_crosses_as_stereo_at_its_full_length) {
+    // The bridge's own arithmetic, and the mistake this one invites: the
+    // surface's print is mono, so there frames and floats are the same
+    // number and either reads correctly. The pads' is not. An array sized
+    // in frames would hand back the first half of the take at half its
+    // length - a bounce that ends early and plays at the wrong speed -
+    // and nothing above this line would notice, because the engine's
+    // buffer would be perfectly correct.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+
+    pull(pads, 256);  // adopt the bank
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Recording));
+    CHECK(Java_com_snipsnap_app_NativePads_noteOn(
+              e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 0.25f, 1.0, JNI_FALSE) == JNI_TRUE);
+    for (int i = 0; i < 3; ++i) pull(pads, 256);
+
+    const size_t frames = pads->printFrames();
+    CHECK_EQ(static_cast<int>(frames), 768);
+    // Read the engine's own copy before stopPrint clears it, to compare against.
+    const std::vector<float> kept(pads->printData(), pads->printData() + frames * 2);
+
+    // Drive Stopping -> Done ourselves, deterministically, before calling
+    // the bridge: see the surface OOM test above for why this is
+    // necessary now. The call that performs the transition writes
+    // nothing further - record() takes no samples once it sees Stopping
+    // - so the captured length stays exactly 768.
+    pads->requestStopPrint();
+    pull(pads, 256);
+    CHECK(pads->printState() == PrintBuffer::State::Done);
+
+    jfloatArray got = Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h);
+    CHECK(got != nullptr);
+    CHECK_EQ(static_cast<int>(impl(got)->length), static_cast<int>(frames * 2));
+    for (size_t i = 0; i < kept.size(); ++i) CHECK_NEAR(impl(got)->f[i], kept[i], 1e-6);
+    // Stopping hands the buffer back and lets go of it, ready for the next take.
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Idle));
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_a_pad_print_the_jvm_cannot_hold_comes_back_empty_handed) {
+    // The surface's case, for the engine whose prints are twice the size.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 256);
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 1.0f, 1.0, JNI_FALSE);
+    pull(pads, 256);
+    CHECK(pads->printFrames() > 0);
+
+    // See the surface OOM test above: drive Stopping -> Done ourselves so
+    // the null this test checks for is the allocation failure, not the
+    // bridge's own wait timing out for lack of a live audio thread.
+    pads->requestStopPrint();
+    pull(pads, 256);
+    CHECK(pads->printState() == PrintBuffer::State::Done);
+
+    failAllocations = true;
+    CHECK(Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h) == nullptr);
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_stop_print_times_out_rather_than_reading_a_print_still_stopping) {
+    // The fix itself, isolated from both cases above: nothing at all
+    // drives a further callback here, so `record` never observes
+    // Stopping and the state never reaches Done. Before review's finding
+    // this returned whatever had been captured regardless; now the wait
+    // gives up and stopPrint reports nothing, the honest answer when it
+    // cannot prove the buffer is safe to touch.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 256);
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 1.0f, 1.0, JNI_FALSE);
+    pull(pads, 256);
+    CHECK(pads->printFrames() > 0);
+
+    CHECK(Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h) == nullptr);
+    // Left alone, not cleared: the buffer is still there for whenever a
+    // callback (or a later stopPrint, once one does land) actually
+    // finishes it, rather than freed on the strength of a guess.
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Stopping));
+    CHECK(pads->printFrames() > 0);
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_stop_print_reaches_a_real_callback_still_arriving_concurrently) {
+    // The shape this whole fix is for: a genuinely live audio thread
+    // still calling `onAudioReady` while the UI thread's stopPrint waits
+    // on it, raced for real rather than driven by hand on one thread.
+    // `PrintBuffer`'s atomics are what make this safe; this is what
+    // proves it rather than assuming it.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 256);
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 4096) == JNI_TRUE);
+    Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 0, 900, -1, 1.0f, 1.0f, 1.0, JNI_FALSE);
+    pull(pads, 256);
+    CHECK(pads->printFrames() > 0);
+
+    jfloatArray got;
+    {
+        CallbackDriver<PadEngine> driver(pads, 256);
+        got = Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h);
+    }
+    CHECK(got != nullptr);
+    CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
+          static_cast<jint>(PrintBuffer::State::Idle));
+
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }

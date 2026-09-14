@@ -116,7 +116,7 @@ object GrooveFeel {
      */
     fun apply(template: Template, clip: Mpc3Clip, suffix: String = "Feel"): Mpc3Clip {
         val s16 = Mpc3Clip.PULSES_PER_16TH
-        val limit = clip.bars * Mpc3Clip.PULSES_PER_BAR
+        val limit = clip.lengthPulses
         return clip.copy(
             name = GrooveVariations.variantName(clip.name, suffix),
             notes = clip.notes.map { n ->
@@ -168,6 +168,10 @@ object GrooveFeel {
         // round-tripping Long pulses through Float.
         if (t == 0f) return clip
         val grid = Mpc3Clip.PULSES_PER_16TH
+        // The clip's own length, not `bars * 3840`: an ORBIT clip declares
+        // its bar, and wrapping a 3/4 clip against a 4/4 one would put a
+        // note past the end that `Mpc3Clip` then refuses to hold.
+        val limit = clip.lengthPulses
         return clip.copy(
             notes = GrooveEdit.dedupeLouder(
                 clip.notes.map { n ->
@@ -193,7 +197,7 @@ object GrooveFeel {
                     } else {
                         n.velocity
                     }
-                    n.copy(timePulses = LiveRecord.wrapped(withPocket, clip.bars), velocity = velocity)
+                    n.copy(timePulses = LiveRecord.wrappedInto(withPocket, limit), velocity = velocity)
                 },
             ),
         )

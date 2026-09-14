@@ -8,10 +8,12 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -33,12 +36,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.tape
@@ -48,8 +51,11 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.DoublesScreen
+import com.snipsnap.app.ui.EmptyStatePanel
+import com.snipsnap.app.ui.EmptyStateRoute
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
+import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
 import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
@@ -59,6 +65,7 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.MenuRow
 import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.OrbitScreen
+import com.snipsnap.app.ui.OrbitStep
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.PlayScreen
@@ -69,7 +76,6 @@ import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
 import com.snipsnap.app.ui.SplitScreen
 import com.snipsnap.app.ui.StatusBar
-import com.snipsnap.app.ui.StubScreen
 import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
@@ -84,20 +90,32 @@ import com.snipsnap.app.ui.XRayScreen
 import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.Dust
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.loop.OrbitBrush
+import com.snipsnap.loop.OrbitSet
+import com.snipsnap.loop.Session
+import com.snipsnap.loop.SessionBuilder
+import com.snipsnap.loop.SessionStore
+import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
-import com.snipsnap.shell.Personality
+import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.ReadGroove
 import com.snipsnap.shell.RecipeReplay
+import com.snipsnap.shell.CatchModel
 import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.RoomPackager
 import com.snipsnap.shell.Rooms
@@ -111,15 +129,17 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
+private const val TAG = "App"
+
 internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
-private const val PREF_PERSONALITY = "personality"
 private const val PREF_TEACH = "teach"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
 private const val PREF_SHELF_SORT = "shelf_sort"
@@ -187,6 +207,31 @@ data class RetrimRequest(
     val drumClass: com.snipsnap.audio.DrumClass = com.snipsnap.audio.DrumClass.UNKNOWN,
 )
 
+/**
+ * CATCH A HIT (docs/CATCH.md): one caught cut, ready to land on [kitDir]'s
+ * pad — [cut] is `Retrim.cut` of [caught]'s range, cut by TAPE off the
+ * tape it already holds so App never re-reads the file per catch.
+ */
+data class CatchLanding(
+    val kitDir: File,
+    val tape: File,
+    val cut: com.snipsnap.audio.Snip,
+    val caught: com.snipsnap.shell.CatchModel.Caught,
+)
+
+/**
+ * One CATCH A HIT session's bookkeeping, App-side: the writes are queued
+ * on [chain] in release order (each landing joins the one before it, so
+ * two quick passes on one slot land in the order they were let go, and
+ * `open` is published in that order too), and [landed] is the slots that
+ * actually landed — the count DONE speaks from, since a write can fail
+ * after the screen's model counted the catch.
+ */
+private class CatchSession {
+    var chain: Job? = null
+    val landed = LinkedHashSet<Int>()
+}
+
 /** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
@@ -211,7 +256,7 @@ fun App(shelf: KitShelf) {
     var exportsWhere by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         exportsWhere = withContext(Dispatchers.IO) {
-            (context.getExternalFilesDir("exports") ?: context.filesDir).absolutePath
+            (Exports.dir(context) ?: context.filesDir).absolutePath
         }
     }
 
@@ -222,17 +267,10 @@ fun App(shelf: KitShelf) {
                 ?: Schemes.DEFAULT.id,
         )
     }
-    var personality by remember {
-        mutableStateOf(
-            prefs.getString(PREF_PERSONALITY, null)
-                ?.let { saved -> Personality.entries.firstOrNull { it.name == saved } }
-                ?: Personality.FULL,
-        )
-    }
     val scheme = Schemes[schemeId]
 
     // SHELF SORT (name-and-find followups): RECENT by default — persisted
-    // like scheme/personality above. `setShelfSort` both writes the pref
+    // like scheme above. `setShelfSort` both writes the pref
     // and re-fetches `kits` under the new order immediately, the same
     // "flip it, see it" shape STARTER/SCHEME's own toggles already have.
     var shelfSort by remember {
@@ -320,13 +358,103 @@ fun App(shelf: KitShelf) {
     var arrangeSwing by remember { mutableStateOf<Int?>(null) }
     var arrangeFeel by remember { mutableFloatStateOf(0f) }
     var arrangeFeelTemplate by remember { mutableStateOf<GrooveFeel.Template?>(null) }
+    // Bug fix (tab-switch data loss): GROOVE's FEEL, SWING and selected
+    // program used to be `remember(kitDir)` locals INSIDE GrooveScreen, so
+    // this screen's bare `when (screen)` below — no `SaveableStateHolder`,
+    // no `rememberSaveable` — tore the whole composable down on every tab
+    // switch and silently reset all three. Hoisted here instead, same
+    // value+setter shape as `exportSession`/`onSessionChange` below, keyed
+    // on `open?.dir` so App (which never leaves composition) is what
+    // actually survives the tab switch. Keying on the dir — not a bare
+    // `remember { }` — is the other half of the fix: these are
+    // per-kit-SESSION settings, not per-kit-persisted ones, so opening a
+    // DIFFERENT kit must still reset them; a forgotten FEEL must never
+    // quietly alter a different kit's export. GrooveScreen's own defaults
+    // (`GROOVE_SWING_DEFAULT`, 0, 0) are mirrored here rather than left
+    // nullable, matching what a from-scratch GROOVE screen already showed
+    // before this fix.
+    var grooveFeel by remember(open?.dir) { mutableIntStateOf(0) }
+    var grooveSwingPercent by remember(open?.dir) { mutableIntStateOf(GROOVE_SWING_DEFAULT) }
+    var grooveProgIndex by remember(open?.dir) { mutableIntStateOf(0) }
+    // Follow-up to the three above: `seed` is one setting split across two
+    // variables with `grooveFeel`, not a separate one — GrooveScreen's own
+    // FeelRow label reads `FEEL · LOOSE 40% · #$seed`, and its feelTemplate
+    // is derived from `seed` alone. Leaving `seed` behind meant a tab switch
+    // could restore the FEEL percentage while silently rerolling the
+    // template underneath it — the readout would show a stale `#n` for a
+    // groove that no longer matched what was on screen. `grooveJustLanded`/
+    // `groovePreTake` are the post-take EDIT THIS TAKE / UNDO TAKE row and
+    // its restore snapshot — the SAME data-loss bug `9a0a9772` fixed for the
+    // FEEL stepper, reached through a second door: recording a take,
+    // switching tabs, and coming back used to lose the row (and the only
+    // way back to the pre-take state) exactly as FEEL used to reset. All
+    // three keyed identically to the block above — a KIT CHANGE must still
+    // reset them, so a `preTake` snapshot captured under one kit can never
+    // be restored onto a different kit that's since been opened.
+    var grooveSeed by remember(open?.dir) { mutableIntStateOf(1) }
+    var grooveJustLanded by remember(open?.dir) { mutableStateOf(false) }
+    var groovePreTake by remember(open?.dir) { mutableStateOf<Mpc3Clip?>(null) }
     /** ORBIT: GROOVE's other overlay, the circular sequencer — same lifecycle as [arrangeOpen]. */
     var orbitOpen by remember { mutableStateOf(false) }
+    // Bug fix (tab-switch data loss), ORBIT's own version of the fix above:
+    // this screen is reachable through TWO doors — GROOVE's own "ORBIT ▸"
+    // (the `orbitOpen` overlay just above) and the menu row's own ORBIT tab
+    // (`AppScreen.ORBIT` further down) — and both used to tear the whole
+    // composable down on every tab switch, taking ~30 `remember(kitDir)`
+    // values with it. Six of those are the player's actual work rather than
+    // in-flight machinery or an open panel, so they're hoisted here exactly
+    // like GROOVE's own six above: same value+onChange shape, threaded into
+    // BOTH `OrbitScreen` call sites so either door leads to the same
+    // session, keyed on `open?.dir` so a KIT CHANGE still resets every one
+    // of them — a `history` entry (an undo snapshot) or a `set` (the rings
+    // themselves) from one kit must never be reachable from a different
+    // one, which would be worse than the data loss this fixes.
+    // - `orbitHistory`: the undo stack. The headline — this used to lose a
+    //   whole stack of edits on a tab switch, not just one snapshot the way
+    //   GROOVE's post-take row did.
+    // - `orbitSelected`/`orbitSolo`: which ring is being edited and which
+    //   is soloed — losing either reads as losing your cursor mid-edit.
+    // - `orbitSet`: the rings and bar configuration themselves. Hoisting
+    //   this isn't only about avoiding a reload from `orbits.json` on every
+    //   remount — a fast tab switch right after an edit could otherwise
+    //   read the file before `commit`'s own async save lands and silently
+    //   roll the rings back. See `OrbitScreen`'s own KDoc on its `set`
+    //   parameter for how the reload guard closes that specific race.
+    // - `orbitScrambleSeed`: what SCRAMBLE rolled.
+    // - `orbitBrush`: what the user dialled in for long-press writes.
+    //
+    // `bank` and `engine` — named as candidates alongside these by the
+    // brief that asked for this fix — are deliberately NOT hoisted: reading
+    // their own definitions (`OrbitBank`/`OrbitEngine`) shows both are live
+    // transport machinery (decoded/resampled audio buffers, and the
+    // audio-thread engine that plays them), the same family as `sink`/
+    // `audioThread`, which nobody proposed hoisting either. Hoisting them
+    // would fight OrbitScreen's own `DisposableEffect(kitDir) { onDispose {
+    // stopPlayback() } }`, which already (and correctly) nulls both out on
+    // every unmount — a stale audio handle surviving a tab switch would be
+    // a bug, not a feature, exactly as the brief that asked for this fix
+    // itself warned.
+    var orbitHistory by remember(open?.dir) { mutableStateOf<List<OrbitStep>>(emptyList()) }
+    var orbitSelected by remember(open?.dir) { mutableIntStateOf(0) }
+    var orbitSolo by remember(open?.dir) { mutableStateOf<Int?>(null) }
+    var orbitSet by remember(open?.dir) { mutableStateOf<OrbitSet?>(null) }
+    var orbitScrambleSeed by remember(open?.dir) { mutableIntStateOf(1) }
+    var orbitBrush by remember(open?.dir) { mutableStateOf(OrbitBrush.WEIGHT) }
     // SNIPS (Task 3): a shelf-level overlay, not KIT-scoped like PAD SHEET/
     // TAKES+BIN/PAD CAPTURE/GRAIN FIELD above — reachable from KitsScreen at
     // AppScreen.KITS (the shelf), one level up from those, so it's its own
     // boolean at this scope rather than sharing theirs.
     var snipsOpen by remember { mutableStateOf(false) }
+    // LOOP (plan-03's front door): the six-track grid lives in its own
+    // activity, and its session lives in this one folder. Held here rather
+    // than inside SNIPS because two screens read it — SNIPS' own → LOOP fills
+    // it, and the shelf's LOOP row is only shown once something is in it.
+    val loopDir = remember(context) { LoopWrites.dir(context) }
+    // How many of the six tracks hold a snip. Read once on mount and then
+    // maintained by `sendSnipToLoop`'s own result — re-read on every return
+    // from LOOP as well, since clearing a track there changes it behind this
+    // screen's back.
+    var loopTracks by remember { mutableStateOf(0) }
     // X-RAY: same shelf-level shape as snipsOpen above, reached from
     // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
     // it could belong to even in principle (the file picked is never
@@ -361,6 +489,11 @@ fun App(shelf: KitShelf) {
     // by the MenuRow tab-switch reset below if the user gives up on the
     // pick without ever tapping a second kit.
     var pendingBreedWith by remember { mutableStateOf<KitShelf.Entry?>(null) }
+    // A chop landed ONTO a bank asks KIT to open on that bank, once
+    // (KitScreen's `bankRequest`); null again the moment KIT honours it.
+    var kitBankRequest by remember { mutableStateOf<Int?>(null) }
+    // CATCH A HIT's write queue and tally for the live session (docs/CATCH.md).
+    val catchSession = remember { CatchSession() }
     // DO IT AGAIN: what COPY LAST TREATMENT last lifted off a pad. A
     // clipboard, not a hand-off — deliberately NOT cleared by the tab-
     // switch reset below: pasting onto a pad in ANOTHER kit means going
@@ -474,8 +607,8 @@ fun App(shelf: KitShelf) {
             toast = Copy.PHONE_STOPPED_TAPE
         }
     }
-    // Sessions the reader thread itself ended — the mic (or, for ARM
-    // INSIDE, the playback-capture stream) going silent for good, a
+    // Sessions the reader thread itself ended — the mic (or, for APP
+    // AUDIO, the playback-capture stream) going silent for good, a
     // permission pulled mid-session, or any other read failure — as
     // opposed to `phoneStops` above, which is only the platform stopping
     // a MediaProjection. This used to announce nothing: the notification
@@ -495,7 +628,7 @@ fun App(shelf: KitShelf) {
             toast = Copy.TAPE_STOPPED_ITSELF
         }
     }
-    // ARM INSIDE runs through the same RECORD_AUDIO request as ARM TAPE
+    // ARM APP AUDIO runs through the same RECORD_AUDIO request as ARM TAPE
     // (playback capture needs it too); this remembers which button asked,
     // so the permission callback below knows whether to arm the mic or
     // go on to the projection consent.
@@ -532,7 +665,7 @@ fun App(shelf: KitShelf) {
     }
 
     // The projection consent (INSIDE): the system's own dialog, asked
-    // afresh on every ARM INSIDE — Android 14+ honours each consent for
+    // afresh on every ARM APP AUDIO — Android 14+ honours each consent for
     // exactly one projection, so the result is never cached. Dismissed
     // is a refusal in words, not a failure; the mic path stays open.
     val projectionLauncher = rememberLauncherForActivityResult(
@@ -541,10 +674,10 @@ fun App(shelf: KitShelf) {
         val data = result.data
         if (result.resultCode == Activity.RESULT_OK && data != null) {
             MicSessionService.armInside(context, result.resultCode, data)
-            toast = Copy.INSIDE_ARMED
+            toast = Copy.APP_AUDIO_ARMED
             offerBubbleOnce()
         } else {
-            toast = Copy.INSIDE_REFUSED
+            toast = Copy.APP_AUDIO_REFUSED
         }
     }
 
@@ -570,7 +703,7 @@ fun App(shelf: KitShelf) {
             if (inside) {
                 val manager = context.getSystemService(MediaProjectionManager::class.java)
                 if (manager == null) {
-                    toast = Copy.INSIDE_REFUSED
+                    toast = Copy.APP_AUDIO_REFUSED
                 } else {
                     projectionLauncher.launch(manager.createScreenCaptureIntent())
                 }
@@ -585,6 +718,25 @@ fun App(shelf: KitShelf) {
             // never fall into [captureBlocked].
             micPermissionDenied = true
         }
+    }
+
+    /**
+     * LOOP's own door, launched for a result only so there is a callback when
+     * it closes: clearing a track happens over there, so the shelf's count
+     * would otherwise keep showing what was true before the trip. Nothing is
+     * read from the result itself — the session on disk is the answer.
+     */
+    val loopLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        scope.launch { loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) } }
+        // The one thing the result does carry: the empty grid's SNIPS door,
+        // so leaving through it lands where the line promised instead of on
+        // the shelf the trip started from.
+        if (result.data?.getBooleanExtra(LoopActivity.EXTRA_OPEN_SNIPS, false) == true) snipsOpen = true
+    }
+    LaunchedEffect(Unit) {
+        loopTracks = withContext(Dispatchers.IO) { filledLoopTracks(loopDir) }
     }
 
     fun requestArm() {
@@ -624,7 +776,9 @@ fun App(shelf: KitShelf) {
         // Same promise, for deleted snips (name-and-find task): SNIPS's own
         // bin empties itself of whatever DELETE put there more than 30 days
         // ago — no kit write involved, so no KitWrites.mutex needed here.
-        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(shelf.root) } }
+        // context.filesDir, not shelf.root: snips live at `<files>/snips`, and
+        // the shelf is `<files>/Kits`. This swept a bin that never existed.
+        withContext(Dispatchers.IO) { runCatching { SnipStore.sweepBin(context.filesDir) } }
         // Orphaned import-staging left by a crashed/killed import, and
         // regenerable derived output (share-sheet temp copies) — never a
         // live kit or snip. Exports are deliberately NOT swept here: see
@@ -634,7 +788,7 @@ fun App(shelf: KitShelf) {
 
     /**
      * The shelf's sort toggle (name-and-find followups): persists the
-     * choice like [PREF_SCHEME]/[PREF_PERSONALITY] above, then re-fetches
+     * choice like [PREF_SCHEME] above, then re-fetches
      * [kits] under the new order right away — every OTHER refresh in this
      * file already passes [shelfSort] into its own `shelf.list` call, so
      * this is only needed for the toggle's own immediate refresh, not to
@@ -661,8 +815,33 @@ fun App(shelf: KitShelf) {
     val shared by ShareInbox.pending.collectAsState()
     var importCount by remember { mutableStateOf(0) }
     // GROOVE's reload request: bumped when TAPE rewrites the open kit's
-    // groove (READ AS GROOVE, STEAL THE FEEL) so a GROOVE already up reloads.
+    // groove (READ AS GROOVE, STEAL THE FEEL), or ORBIT's CLIP ▸ KIT does
+    // (OrbitScreen's `onGrooveWritten`), so a GROOVE already up reloads.
     var grooveReload by remember { mutableStateOf(0) }
+    // Follow-up, a door the hoist above opened: `grooveJustLanded`/
+    // `groovePreTake` surviving a tab switch means they can now ALSO survive
+    // a trip through TAPE (or ORBIT) and back — READ AS GROOVE / STEAL THE
+    // FEEL below, and OrbitScreen's `clipIntoKit` (CLIP ▸ KIT), all rewrite
+    // the open kit's groove.json out from under GROOVE and bump
+    // `grooveReload` for exactly that reason, but none of them ever touches
+    // `justLanded`. Before this hoist that never mattered: leaving GROOVE
+    // for TAPE (or ORBIT) tore the whole composable (and `justLanded` with
+    // it) down regardless. Now it doesn't, so without this: land a take,
+    // hop to TAPE, steal a different feel into the SAME kit (or hop to
+    // ORBIT and CLIP ▸ KIT), hop back — GROOVE would show a stale UNDO TAKE
+    // row over a base that isn't this take's own pre-state at all. Tapping
+    // it would clobber the other screen's rewrite with an unrelated
+    // snapshot and toast [Copy.TAKE_UNDONE], a claim about what happened
+    // that wouldn't be true. `grooveReload` only ever increments from those
+    // three groove-writing actions — never from GROOVE's own writes, which
+    // deliberately avoid bumping it (see `GrooveScreen.stopRecording`'s own
+    // KDoc) — so keying on it alone here, not `open?.dir` too, is
+    // deliberate: a KIT CHANGE is already covered by the
+    // `remember(open?.dir)` block above. `groovePreTake` is left alone,
+    // same as `clearJustLanded` itself never nulls `preTake` — `justLanded`
+    // alone gates whether the row (and the snapshot it would restore) is
+    // ever reachable.
+    LaunchedEffect(grooveReload) { grooveJustLanded = false }
     LaunchedEffect(shared) {
         val uri = shared ?: return@LaunchedEffect
         // The status line is borrowed only when nothing else holds it: a
@@ -759,16 +938,28 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * Whether a SNIPS → PAD landing has somewhere to go: an empty pad on
+     * bank A or B — both are pages the long-press fills (bank B round 2).
+     * One predicate for every hint that says so, so a full bank A with
+     * an empty B never reads as "THIS KIT IS FULL".
+     */
+    fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
+        (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
+
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
-        busy = "DUBBING ${starter.displayName}…"
+        busy = Copy.dubbingBusy(starter.displayName)
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
             } catch (e: Exception) {
                 busy = null
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "DUB FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3 in practice, matching ExportScreen's own dub-failed
+                // catch: the user gets what failed, not a Java exception's
+                // `message` quoted at them — that detail stays in logcat.
+                Log.e(TAG, "fresh: kit render failed", e)
+                toast = Copy.CREATE_FAILED
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
@@ -780,7 +971,7 @@ fun App(shelf: KitShelf) {
             // copy points at, while every other way into a kit with a snip
             // armed says what to do next (September UAT, finding 12).
             toast = if (pendingSnipAssign != null) {
-                Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                Copy.snipLanding(hasLandingPad(entry.kit))
             } else {
                 Copy.FRESH_TAPE
             }
@@ -808,8 +999,10 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { shelf.texture(source, slot, spec) }
             } catch (e: Exception) {
                 busy = null
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "${spec.verb} FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "texture: ${spec.verb} failed", e)
+                toast = Copy.actionFailed(spec.verb)
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
@@ -838,7 +1031,8 @@ fun App(shelf: KitShelf) {
                 // write, so it goes through the same KitWrites lock they do.
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
             } catch (e: Exception) {
-                toast = "KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "setKey: failed", e)
+                toast = Copy.KEY_FAILED
                 return@launch
             }
             // Same identity guard as the KIT branch's onKitUpdated closures
@@ -859,8 +1053,16 @@ fun App(shelf: KitShelf) {
     fun evilTwins() {
         val source = open ?: return
         if (busy != null) return
+        // A remix replaces bank B. The user's own pads there (capture,
+        // SNIPS → PAD, a chop landed ONTO it) are not the remix's to
+        // replace: `remixBankB` refuses, and this says so first, in the
+        // app's words, instead of a TWINS FAILED with the model's.
+        if (KitBuilderModel.ownPadsOnBankB(source.kit).isNotEmpty()) {
+            toast = Copy.TWINS_KEEP_OWN
+            return
+        }
         val hadTwins = source.kit.pads.any { it.slot > 16 }
-        busy = "TWINNING…"
+        busy = Copy.EVIL_TWINS_BUSY
         scope.launch {
             val (entry, _) = try {
                 // Same reasoning as setKey above: evilTwins is an
@@ -868,7 +1070,8 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.evilTwins(source, Random.nextInt()) } }
             } catch (e: Exception) {
                 busy = null
-                toast = "TWINS FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "evilTwins: failed", e)
+                toast = Copy.TWINS_FAILED
                 return@launch
             }
             // Same identity guard as setKey above — `busy` blocks a second
@@ -877,6 +1080,103 @@ fun App(shelf: KitShelf) {
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
             busy = null
             toast = if (hadTwins) Copy.TWINS_REROLLED else Copy.BANK_B_LIT
+        }
+    }
+
+    /**
+     * DUST ALL: every pad of the open kit dusted at `PadSheet.DUST_ALL_AMOUNT`
+     * from its own tape, else the kit's (`DustPrints.tapeFor`) — the
+     * per-pad door `KitBuilderModel.dustPad` once per pad under one
+     * `KitWrites.mutex`, each tape's print read once. Layered and chained
+     * pads are left as they are and counted, since every audio rewrite
+     * refuses them. The same DUBBING…-shaped busy line as EVIL TWINS: the
+     * prints and sixteen convolutions run offline.
+     */
+    fun dustAll() {
+        val source = open ?: return
+        if (busy != null) return
+        val kitTape = DustPrints.kitTape(source.kit)
+        if (kitTape == null) {
+            toast = Copy.DUST_NO_TAPE
+            return
+        }
+        val snipsDir = File(context.filesDir, SnipStore.DIR)
+        if (!File(snipsDir, kitTape).isFile) {
+            toast = Copy.dustTapeGone(kitTape)
+            return
+        }
+        busy = Copy.DUSTING_BUSY
+        scope.launch {
+            // What landed before a failure, if one comes: saved and shown,
+            // never left as audio in the bin with no recipe in kit.json.
+            var partial: KitShelf.Entry? = null
+            val result = try {
+                withContext(Dispatchers.IO) {
+                    // Which tape each pad dusts from: its own when that tape is
+                    // still on the shelf, else the kit's. Every print is made
+                    // (or read off the cache) here, before the lock — the one
+                    // expensive step, and a null answer is remembered too, so
+                    // a gated tape is asked once, not once per pad.
+                    fun tapeOf(kit: Kit, pad: KitPad): String =
+                        DustPrints.tapeFor(kit, pad)?.takeIf { File(snipsDir, it).isFile } ?: kitTape
+                    val prints = HashMap<String, Dust.Print?>()
+                    for (tape in source.kit.pads.map { tapeOf(source.kit, it) }.toSet()) {
+                        prints[tape] = DustPrints.forTape(File(snipsDir, tape))
+                    }
+                    KitWrites.mutex.withLock {
+                        val m = KitBuilderModel.open(source.dir)
+                        var dusted = 0
+                        var left = 0
+                        var noDust = 0
+                        try {
+                            for (pad in m.kit.pads.toList()) {
+                                // Layers and chains are what every audio rewrite
+                                // refuses: counted, not attempted. Anything else
+                                // that fails is a real failure and says so.
+                                if (pad.velocityLayers.isNotEmpty() || pad.chain != null) {
+                                    left++
+                                    continue
+                                }
+                                // The tape is read off the kit as it is now, not
+                                // the one shown when DUST ALL was tapped: a pad
+                                // re-trimmed in between dusts from its new tape.
+                                // A tape the plan above never saw is printed
+                                // here, under the lock — the rare case.
+                                val tape = tapeOf(m.kit, pad)
+                                val print = prints.getOrPut(tape) { DustPrints.forTape(File(snipsDir, tape)) }
+                                if (print == null) {
+                                    noDust++
+                                    continue
+                                }
+                                m.dustPad(pad.slot, PadSheet.DUST_ALL_AMOUNT, tape, print)
+                                dusted++
+                            }
+                        } finally {
+                            if (dusted > 0) {
+                                m.save()
+                                partial = KitShelf.Entry(source.dir, m.kit)
+                            }
+                        }
+                        Triple(KitShelf.Entry(source.dir, m.kit), dusted, left to noDust)
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                busy = null
+                partial?.let { if (open?.dir == source.dir) open = it }
+                toast = "DUST FAILED: ${e.message ?: e.javaClass.simpleName}"
+                return@launch
+            }
+            busy = null
+            val (entry, dusted, counts) = result
+            val (left, noDust) = counts
+            if (dusted == 0 && left == 0) {
+                toast = Copy.DUST_NO_GHOSTS
+                return@launch
+            }
+            if (open?.dir == source.dir) open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+            toast = Copy.dustedAll(dusted, left, noDust)
         }
     }
 
@@ -916,7 +1216,8 @@ fun App(shelf: KitShelf) {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.breed(source, partner, Random.nextInt()) } }
             } catch (e: Exception) {
                 busy = null
-                toast = "BREED FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "finishBreed: failed", e)
+                toast = Copy.BREED_FAILED
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
@@ -1043,7 +1344,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = Copy.xrayFailed(e.message ?: e.javaClass.simpleName)
+                Log.e(TAG, "xray: failed", e)
+                toast = Copy.xrayFailed(e.message ?: "the file wouldn't read")
             } finally {
                 busy = null
             }
@@ -1104,13 +1406,102 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                toast = "SNIP PLACED ON PAD A%02d".format(java.util.Locale.ROOT, slot)
+                toast = Copy.snipPlaced(slot)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "PLACE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "assignPendingSnip: place failed", e)
+                toast = Copy.PLACE_FAILED
             }
+        }
+    }
+
+    /**
+     * SNIPS → LOOP: this snip becomes one track of the six-track grid.
+     *
+     * The work lives here rather than in `SnipsScreen` because it is IO — a
+     * decode, up to eight WAV writes and a sidecar, none of which belongs on
+     * the main thread — and because the count it changes is read by the shelf
+     * too.
+     *
+     * The session is re-read from disk on every send rather than kept in
+     * memory: LOOP is a separate activity with its own copy, and a track
+     * cleared over there has to be what the next send builds on.
+     */
+    fun sendSnipToLoop(info: SnipStore.Info) {
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                // Decoded BEFORE the lock: this is the slow part (a whole snip
+                // to float32) and it needs nothing from the session. Holding
+                // the grid's one writer through it would make a second tap
+                // wait for the first tap's decode for no reason.
+                //
+                // `info.file` is a SNIP, already bounded by
+                // SnipStore.IMPORT_MAX_SEC (180s) or real-time capture —
+                // readCapped's ceiling is defense in depth, per ConventionTest
+                // Law 4, which also requires it over the unbounded read.
+                val audio = runCatching { WavReader.readCapped(info.file, TAPE_LOAD_MAX_SEC).snip }
+                    .onFailure { e -> Log.e(TAG, "sendSnipToLoop: decode failed", e) }
+                    .getOrNull()
+                if (audio == null || audio.frameCount <= 0) {
+                    return@withContext LoopSend(Copy.LOOP_NOTHING_TO_SEND, null)
+                }
+
+                // Read-modify-write, so the whole of it is one writer's turn.
+                // Two quick taps otherwise both read the same session, both
+                // pick the same empty track, and the second save drops the
+                // first snip while its toast says it landed. See LoopWrites.
+                LoopWrites.writing {
+                    // A missing sidecar is a first send; a sidecar that will
+                    // not parse is not. Starting fresh in that second case
+                    // would put a one-track session on top of six tracks
+                    // someone built, which is a silent delete — so the two are
+                    // told apart here rather than collapsed into one getOrNull.
+                    val sidecar = File(loopDir, SessionStore.FILE_NAME)
+                    val session = if (sidecar.isFile) {
+                        runCatching { SessionStore.load(loopDir) }
+                            .onFailure { e -> Log.e(TAG, "sendSnipToLoop: session unreadable", e) }
+                            .getOrNull()
+                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE, null)
+                    } else {
+                        SessionBuilder.empty(deviceSampleRate(context))
+                    }
+                    val at = SessionBuilder.nextEmpty(session)
+                    // Said in words rather than by a dead button on the row: a
+                    // disabled → LOOP would not say WHICH of its reasons applied.
+                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
+
+                    // Past the decode, the only way this fails is a write — so
+                    // it reports a write failure, never "no audio", which would
+                    // send someone looking at the wrong thing.
+                    val sent = runCatching {
+                        SessionBuilder.send(session, at, info.displayName, info.file.nameWithoutExtension, audio, loopDir)
+                    }
+                        .onFailure { e -> Log.e(TAG, "sendSnipToLoop: cut failed", e) }
+                        .getOrNull()
+                        ?: return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                    val saved = runCatching { SessionStore.save(sent.session, loopDir) }
+                        .onFailure { e -> Log.e(TAG, "sendSnipToLoop: save failed", e) }
+                        .isSuccess
+                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                    // 1-based: the column a player counts across the grid.
+                    val track = sent.trackIndex + 1
+                    LoopSend(
+                        if (sent.truncated) {
+                            Copy.loopTrackTruncated(info.displayName, track, sent.blocks)
+                        } else {
+                            Copy.loopTrackFilled(info.displayName, track, sent.blocks)
+                        },
+                        SessionBuilder.filled(sent.session),
+                    )
+                }
+            }
+            toast = outcome.toast
+            outcome.filled?.let { loopTracks = it }
         }
     }
 
@@ -1157,10 +1548,85 @@ fun App(shelf: KitShelf) {
             } catch (e: OutOfMemoryError) {
                 toast = Copy.TAPE_TOO_BIG
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "RE-TRIM FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "backOnto: failed", e)
+                toast = Copy.RETRIM_FAILED
             } finally {
                 busy = null
+            }
+        }
+    }
+
+    /**
+     * CATCH A HIT's landing (docs/CATCH.md): the caught cut onto the open
+     * kit's pad through the same assign door SNIPS → PAD uses
+     * (`CatchModel.land`), under `KitWrites.mutex` like every kit write
+     * here. No busy line: catches arrive one after another while the loop
+     * runs and each is one short write; the pad's name lighting on the
+     * grid is the landing's own signal. The tape is tagged for RE-TRIM
+     * only when it is a snip on the shelf — a kit sample TAPE fell back
+     * to is no tape to go back to (the same rule `TapeRef.ofSnip` keeps).
+     */
+    fun catchOnto(landing: CatchLanding) {
+        val before = catchSession.chain
+        catchSession.chain = scope.launch {
+            // Release order is landing order: the write before this one
+            // finishes first, whatever the IO dispatcher made of them.
+            before?.join()
+            try {
+                val snipsDir = File(context.filesDir, SnipStore.DIR)
+                val tapeName = landing.tape.takeIf { it.parentFile == snipsDir }?.name
+                val (updated, pad) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(landing.kitDir)
+                        // Null: the slot took a pad through another door
+                        // since the press — the user's, kept (CatchModel.land).
+                        val pad = CatchModel.land(model, tapeName, landing.cut, landing.caught)
+                        if (pad != null) model.save()
+                        model.kit to pad
+                    }
+                }
+                val tag = PadBanks.tag(landing.caught.slot)
+                if (pad == null) {
+                    toast = Copy.catchTaken(tag, updated.pad(landing.caught.slot)?.displayName ?: "TAKEN")
+                    return@launch
+                }
+                // Same identity guard as backOnto: the write must not weld
+                // itself onto whichever kit is open now.
+                if (open?.dir == landing.kitDir) open = open?.copy(kit = updated)
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                catchSession.landed += pad.slot
+                toast = if (landing.caught.hit == null) Copy.caughtBetween(tag) else Copy.caught(tag, pad.displayName)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "catchOnto: failed", e)
+                toast = Copy.CATCH_FAILED
+            }
+        }
+    }
+
+    /**
+     * DONE on the catch grid: once every queued landing has finished,
+     * what actually landed — and, with anything caught, KIT opened on the
+     * first catch's bank, the way ONTO opens it after a chop lands
+     * (`kitBankRequest`). Waiting on the chain is what keeps DONE honest:
+     * a catch whose write failed is not announced, and KIT never opens a
+     * beat before the pads it promises are there.
+     */
+    fun catchDone() {
+        val target = open ?: return
+        scope.launch {
+            catchSession.chain?.join()
+            val landed = catchSession.landed.toList()
+            catchSession.landed.clear()
+            toast = Copy.catchDone(landed.size, target.kit.name)
+            if (landed.isNotEmpty() && open?.dir == target.dir) {
+                kitBankRequest = PadBanks.bankOf(landed.first())
+                screen = AppScreen.KIT
             }
         }
     }
@@ -1207,8 +1673,10 @@ fun App(shelf: KitShelf) {
             } catch (e: IllegalArgumentException) {
                 toast = Copy.grooveRefused(e.message ?: "the ear refused")
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "READ FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "readGroove: failed", e)
+                toast = Copy.READ_GROOVE_FAILED
             } finally {
                 busy = null
             }
@@ -1251,7 +1719,8 @@ fun App(shelf: KitShelf) {
             } catch (e: IllegalArgumentException) {
                 toast = Copy.feelRefused(e.message ?: "the ear refused")
             } catch (e: Exception) {
-                toast = "FEEL FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "stealFeel: failed", e)
+                toast = Copy.FEEL_FAILED
             } finally {
                 busy = null
             }
@@ -1271,7 +1740,7 @@ fun App(shelf: KitShelf) {
      */
     fun instantKit(file: File, range: IntRange, hadSelection: Boolean) {
         if (busy != null) return
-        busy = "CHOPPING…"
+        busy = Copy.INSTANT_KIT_BUSY
         scope.launch {
             // `finally` owns the busy overlay: whichever way this leaves
             // (built, refused, or the scope cancelled underneath it), the
@@ -1294,8 +1763,10 @@ fun App(shelf: KitShelf) {
                 // own catch — same as TapeScreen's readMono.
                 toast = Copy.TAPE_TOO_BIG
             } catch (e: Exception) {
-                // Law 3: when it breaks, say exactly what happened.
-                toast = "INSTANT KIT FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Law 3: when it breaks, say exactly what happened - the
+                // exception's own detail goes to logcat, not the toast.
+                Log.e(TAG, "instantKit: failed", e)
+                toast = Copy.INSTANT_KIT_FAILED
             } finally {
                 busy = null
             }
@@ -1323,7 +1794,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "SHARE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "shareKit: failed", e)
+                toast = Copy.SHARE_FAILED
             } finally {
                 busy = null
             }
@@ -1345,7 +1817,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "FORGET FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "forgetRoom: failed", e)
+                toast = Copy.ROOM_FORGET_FAILED
             } finally {
                 busy = null
             }
@@ -1372,7 +1845,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "SHARE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "shareRoom: failed", e)
+                toast = Copy.SHARE_FAILED
             } finally {
                 busy = null
             }
@@ -1391,7 +1865,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "RESTORE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "restoreRoom: failed", e)
+                toast = Copy.ROOM_RESTORE_FAILED
             } finally {
                 busy = null
             }
@@ -1418,7 +1893,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "EMPTY BIN FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "emptyRoomsBin: failed", e)
+                toast = Copy.ROOM_BIN_EMPTY_FAILED
             } finally {
                 busy = null
             }
@@ -1475,7 +1951,10 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "DELETE FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Same failure `ok == false` already reports above - one
+                // word for both, whether the write refused or threw.
+                Log.e(TAG, "deleteKit: failed", e)
+                toast = Copy.KIT_DELETE_FAILED
             } finally {
                 busy = null
             }
@@ -1512,7 +1991,10 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "RENAME FAILED: ${e.message ?: e.javaClass.simpleName}"
+                // Same failure `renamed == null` already reports above - one
+                // word for both, whether the write refused or threw.
+                Log.e(TAG, "renameKit: failed", e)
+                toast = Copy.KIT_RENAME_FAILED
             } finally {
                 busy = null
             }
@@ -1547,7 +2029,8 @@ fun App(shelf: KitShelf) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                toast = "BACKUP FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "backupShelf: failed", e)
+                toast = Copy.BACKUP_FAILED
             } finally {
                 busy = null
             }
@@ -1569,7 +2052,8 @@ fun App(shelf: KitShelf) {
                 // open→mutate→save on kit.json.
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
             } catch (e: Exception) {
-                toast = "IN KEY FAILED: ${e.message ?: e.javaClass.simpleName}"
+                Log.e(TAG, "inKey: failed", e)
+                toast = Copy.IN_KEY_FAILED
                 return@launch
             }
             // Same identity guard as setKey above — inKey sets no `busy`
@@ -1608,6 +2092,10 @@ fun App(shelf: KitShelf) {
         // a tab switch away from KITS mid-pick abandons the hand-off rather
         // than leaving KitsScreen stuck naming a cross partner forever.
         pendingBreedWith = null
+        // ONTO's ask to open KIT on its bank is for the KIT that follows
+        // it; a tab switch abandons it rather than letting it fire on
+        // some later visit to some other kit.
+        kitBankRequest = null
         tapeOpenOverride = null
         // DELETED KITS is shelf-level too — same reasoning
         // as SNIPS above: a tab switch away from KITS must
@@ -1630,7 +2118,7 @@ fun App(shelf: KitShelf) {
     // Back must fall through to the system default, which finishes the
     // Activity, the normal Android expectation for a root screen), SPLIT
     // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
-    // "◄ SHELF" chip, via `onBack`, which also silences the instrument
+    // "◄ KITS" chip, via `onBack`, which also silences the instrument
     // before leaving — this generic reset does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
         padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null
@@ -1640,7 +2128,7 @@ fun App(shelf: KitShelf) {
             note == null && !captureBlocked && !micPermissionDenied,
     ) { goToScreen(AppScreen.KITS) }
 
-    TapeTheme(scheme, personality) {
+    TapeTheme(scheme) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -1681,6 +2169,7 @@ fun App(shelf: KitShelf) {
                         } else if (snipsOpen) {
                             SnipsScreen(
                                 shelf = shelf,
+                                snipsRoot = context.filesDir,
                                 onBack = { snipsOpen = false },
                                 onToast = { toast = it },
                                 onOpenInTape = { file ->
@@ -1701,6 +2190,7 @@ fun App(shelf: KitShelf) {
                                     snipsOpen = false
                                     pendingSnipAssign = file
                                 },
+                                onSendToLoop = ::sendSnipToLoop,
                             )
                         } else if (deletedKitsOpen) {
                             DeletedKitsScreen(
@@ -1782,7 +2272,7 @@ fun App(shelf: KitShelf) {
                                         // instead of pointing at a pad that
                                         // doesn't exist.
                                         if (pendingSnipAssign != null) {
-                                            toast = Copy.snipLanding((1..16).any { entry.kit.pad(it) == null })
+                                            toast = Copy.snipLanding(hasLandingPad(entry.kit))
                                         } else {
                                             // Teach the one gesture that opens PAD
                                             // SHEET, while it's still undiscovered.
@@ -1793,7 +2283,7 @@ fun App(shelf: KitShelf) {
                                             // pending-snip hint above rather than
                                             // fighting it for the one toast slot.
                                             val shown = prefs.getInt(PREF_PAD_SHEET_HINTS, 0)
-                                            val hasFilledPad = (1..16).any { entry.kit.pad(it) != null }
+                                            val hasFilledPad = entry.kit.pads.isNotEmpty()
                                             // No showing limit any more (September UAT,
                                             // finding 5): it used to stop after three, so
                                             // three dismissals while busy with something
@@ -1827,6 +2317,8 @@ fun App(shelf: KitShelf) {
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
                                 onDoubles = { doublesOpen = true },
                                 onSnips = { snipsOpen = true },
+                                loopTracks = loopTracks,
+                                onLoop = { loopLauncher.launch(Intent(context, LoopActivity::class.java)) },
                                 assigningSnip = pendingSnipAssign != null,
                                 breedingFrom = pendingBreedWith,
                                 rooms = rooms,
@@ -1973,6 +2465,16 @@ fun App(shelf: KitShelf) {
                                     // completes instead of being cancelled by
                                     // the very navigation that triggers it.
                                     appScope = scope,
+                                    // KEEP ROOM / MAKE INSTRUMENT / MAKE PAD
+                                    // all write straight to the shelf
+                                    // (rooms/instruments), the same three
+                                    // doors `instruments`/`rooms`/
+                                    // `binnedRooms`/`binnedKitsCount`'s own
+                                    // refresh effect (above, keyed on
+                                    // `roomsRevision` among others) already
+                                    // reloads for. Bumping the same counter
+                                    // here covers all three with one wire.
+                                    onShelfAssetWritten = { roomsRevision++ },
                                 )
                                 takesBinOpen && sheetEntry != null -> TakesBinScreen(
                                     entry = sheetEntry,
@@ -2047,7 +2549,9 @@ fun App(shelf: KitShelf) {
                                     onSetKey = ::setKey,
                                     onInKey = ::inKey,
                                     onTwins = ::evilTwins,
-                                    onBankEmpty = { toast = Copy.BANK_B_EMPTY },
+                                    onBankEmpty = { toast = Copy.bankEmpty(PadBanks.letter(it)) },
+                                    bankRequest = kitBankRequest,
+                                    onBankRequestConsumed = { kitBankRequest = null },
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't
@@ -2055,6 +2559,7 @@ fun App(shelf: KitShelf) {
                                     canBreed = kits.size > 1,
                                     onShare = ::shareKit,
                                     onSplit = { screen = AppScreen.SPLIT },
+                                    onDustAll = ::dustAll,
                                     onEmptyLongPress = { slot ->
                                         // SNIPS → PAD's landing: a pick still
                                         // armed intercepts the press here,
@@ -2075,6 +2580,7 @@ fun App(shelf: KitShelf) {
                                             "LONG-PRESS TO CAPTURE"
                                         }
                                     },
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 )
                             }
                         }
@@ -2122,17 +2628,15 @@ fun App(shelf: KitShelf) {
                             retrim = retrim,
                             onBackOnto = ::backOnto,
                             onCaptureLanded = { retrim = null },
+                            onCatch = ::catchOnto,
+                            onCatchDone = ::catchDone,
+                            onNavigateKits = { goToScreen(AppScreen.KITS) },
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,
                             onScheme = {
                                 schemeId = it
                                 prefs.edit().putString(PREF_SCHEME, it.name).apply()
-                            },
-                            personality = personality,
-                            onPersonality = {
-                                personality = it
-                                prefs.edit().putString(PREF_PERSONALITY, it.name).apply()
                             },
                             teachEnabled = teachEnabled,
                             onTeach = { on ->
@@ -2163,6 +2667,16 @@ fun App(shelf: KitShelf) {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
+                            onLandedOnto = { updated, bank ->
+                                open = updated
+                                kitBankRequest = bank
+                                screen = AppScreen.KIT
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                }
+                            },
+                            onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                            onNavigateKits = { goToScreen(AppScreen.KITS) },
                         )
                         AppScreen.EXPORT -> ExportScreen(
                             entry = open,
@@ -2174,6 +2688,7 @@ fun App(shelf: KitShelf) {
                             // switch instead of being cancelled by it.
                             appScope = scope,
                             onToast = { toast = it },
+                            onNavigateKits = { goToScreen(AppScreen.KITS) },
                         )
                         AppScreen.SYNTH -> {
                             // Captured here, at this composition, so a SEND TO PAD write that
@@ -2229,7 +2744,7 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
-                        AppScreen.PLAY -> PlayScreen(entry = open)
+                        AppScreen.PLAY -> PlayScreen(entry = open, onNavigateKits = { goToScreen(AppScreen.KITS) })
                         AppScreen.HELP -> HelpScreen()
                         AppScreen.GROOVE -> {
                             val songEntry = open
@@ -2239,6 +2754,24 @@ fun App(shelf: KitShelf) {
                                     kitsRoot = shelf.root,
                                     onBack = { orbitOpen = false },
                                     onToast = { toast = it },
+                                    // CLIP ▸ KIT rewrites the open kit's
+                                    // groove.json (OrbitClip.save) the same
+                                    // way TAPE's READ AS GROOVE / STEAL THE
+                                    // FEEL do — so it bumps the same reload
+                                    // request they do.
+                                    onGrooveWritten = { grooveReload++ },
+                                    history = orbitHistory,
+                                    onHistoryChange = { orbitHistory = it },
+                                    selected = orbitSelected,
+                                    onSelectedChange = { orbitSelected = it },
+                                    solo = orbitSolo,
+                                    onSoloChange = { orbitSolo = it },
+                                    set = orbitSet,
+                                    onSetChange = { orbitSet = it },
+                                    scrambleSeed = orbitScrambleSeed,
+                                    onScrambleSeedChange = { orbitScrambleSeed = it },
+                                    brush = orbitBrush,
+                                    onBrushChange = { orbitBrush = it },
                                 )
                             } else if (arrangeOpen && songEntry != null) {
                                 ArrangeScreen(
@@ -2261,6 +2794,19 @@ fun App(shelf: KitShelf) {
                                     reloadRequest = grooveReload,
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { orbitOpen = true },
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    feel = grooveFeel,
+                                    onFeelChange = { grooveFeel = it },
+                                    swingPercent = grooveSwingPercent,
+                                    onSwingPercentChange = { grooveSwingPercent = it },
+                                    progIndex = grooveProgIndex,
+                                    onProgIndexChange = { grooveProgIndex = it },
+                                    seed = grooveSeed,
+                                    onSeedChange = { grooveSeed = it },
+                                    justLanded = grooveJustLanded,
+                                    onJustLandedChange = { grooveJustLanded = it },
+                                    preTake = groovePreTake,
+                                    onPreTakeChange = { groovePreTake = it },
                                 )
                             }
                         }
@@ -2270,15 +2816,36 @@ fun App(shelf: KitShelf) {
                             // this one needs no groove and no scrolling, only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
-                                Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
-                                    TapeText(Copy.NO_KIT_FOR_ORBIT, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-                                }
+                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("KITS ▸", { goToScreen(AppScreen.KITS) })))
                             } else {
                                 OrbitScreen(
                                     entry = orbitEntry,
                                     kitsRoot = shelf.root,
                                     onBack = { screen = AppScreen.GROOVE },
                                     onToast = { toast = it },
+                                    // Same reload request as the `orbitOpen`
+                                    // overlay call above — this is the menu
+                                    // row's own door to the same groove.json,
+                                    // not a second one.
+                                    onGrooveWritten = { grooveReload++ },
+                                    // Same six as the `orbitOpen` overlay call
+                                    // above — this is the menu row's own door
+                                    // to the exact same session, not a second
+                                    // one, so both must read/write the same
+                                    // App-level state or the two doors would
+                                    // disagree about what's on the rings.
+                                    history = orbitHistory,
+                                    onHistoryChange = { orbitHistory = it },
+                                    selected = orbitSelected,
+                                    onSelectedChange = { orbitSelected = it },
+                                    solo = orbitSolo,
+                                    onSoloChange = { orbitSolo = it },
+                                    set = orbitSet,
+                                    onSetChange = { orbitSet = it },
+                                    scrambleSeed = orbitScrambleSeed,
+                                    onScrambleSeedChange = { orbitScrambleSeed = it },
+                                    brush = orbitBrush,
+                                    onBrushChange = { orbitBrush = it },
                                 )
                             }
                         }
@@ -2294,13 +2861,13 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        else -> StubScreen(screen)
                     }
                 }
                 StatusBar(
                     screenLabel = screen.label,
                     shelfLabel = "KITS: ${kits.size}",
                     busy = busy,
+                    kitName = open?.kit?.name ?: Copy.NO_KIT_STATUS,
                 )
             }
             // A toast raised while the box is up (a share landing behind it)
@@ -2358,7 +2925,18 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null) { }
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's dismiss handler below. A raw pointerInput, not
+                // tapeClick: this Column's real children (the message,
+                // PrimaryAction) carry their own accessible names below,
+                // and clickable()'s own semantics would add a second,
+                // nameless actionable node wrapping all of them — worse
+                // than the thing this pass is fixing, not better. A bare
+                // gesture detector registers no semantics node at all, so
+                // it consumes the touch without touching the accessibility
+                // tree (KitScreen.kt's PadCell uses the same "pointerInput
+                // registers no click action" idiom).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -2367,3 +2945,24 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
         }
     }
 }
+
+/**
+ * What one SNIPS → LOOP send came to: the line to show, and the new filled-track
+ * count when a track was actually filled (null when nothing changed — a full
+ * grid, an unreadable snip, a failed write).
+ *
+ * A tiny type rather than a Pair so the null half cannot be read as "zero
+ * tracks", which is what a bare Int would have let it mean on every failure.
+ */
+private data class LoopSend(val toast: String, val filled: Int?)
+
+/**
+ * How many of the loop grid's tracks hold a snip, straight off disk.
+ *
+ * Zero for every reason a session might not be readable — none written yet,
+ * a sidecar that will not parse — because the count's only job is to decide
+ * whether the shelf shows a door at all, and a door onto an unreadable
+ * session is the same mistake as a door onto an empty one.
+ */
+private fun filledLoopTracks(dir: File): Int =
+    runCatching { SessionBuilder.filled(SessionStore.load(dir)) }.getOrDefault(0)

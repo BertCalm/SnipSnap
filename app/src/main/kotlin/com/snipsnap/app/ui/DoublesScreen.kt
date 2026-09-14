@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +38,8 @@ import com.snipsnap.shell.Scheme
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val TAG = "DoublesScreen"
 
 /**
  * DOUBLES: pads across the shelf's kits inside a "same sound" distance,
@@ -93,7 +96,8 @@ fun DoublesScreen(
             onShelf = byKitDir
             onToast(Copy.doublesMeasured(pairs.index.extracted, pairs.index.fromCache))
         }.onFailure { e ->
-            failed = "COULDN'T MEASURE THE SHELF: ${(e.message ?: e.javaClass.simpleName).uppercase()}"
+            Log.e(TAG, "measure: failed", e)
+            failed = Copy.doublesFailed(e.message ?: "the shelf wouldn't read")
         }
     }
 
@@ -110,11 +114,11 @@ fun DoublesScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 TapeText("DOUBLES", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(
-                    idx?.let { "${it.entries.size} PADS MEASURED" } ?: Copy.DOUBLES_BUSY,
+                    idx?.let { "${Copy.countOf(it.entries.size, "PAD", "PADS")} MEASURED" } ?: Copy.DOUBLES_BUSY,
                     TapeType.pixelSmall,
                     scheme.ink3.tape,
                     maxLines = 1,
@@ -229,7 +233,10 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .let { if (enabled) it.tapeClick(label = null, onClick = onClick) else it }
+            // `enabled` goes through `tapeClick`, not around it: a dimmed
+            // chip stays in the semantics tree instead of silently
+            // vanishing from it (accessibility audit finding 12).
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

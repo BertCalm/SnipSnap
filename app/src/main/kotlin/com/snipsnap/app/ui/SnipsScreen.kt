@@ -3,6 +3,7 @@ package com.snipsnap.app.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,9 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.LoopBounce
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
@@ -79,6 +83,12 @@ import kotlinx.coroutines.withContext
  * comment on `tapeOpenOverride` for the honest limit of what that actually
  * guarantees (TAPE's newest-snip-first priority usually wins regardless).
  *
+ * **→ LOOP.** [onSendToLoop] hands the file to `App`, which cuts it into
+ * interval-length pieces and gives one of the six loop-grid tracks the chain
+ * that plays them (`SessionBuilder`). Unlike → PAD and → TAPE this does not
+ * close SNIPS: filling a grid means picking several snips, and bouncing out to
+ * another screen after each one would make that six round trips.
+ *
  * **Playback** reuses [TapeVoice] — the same unity-speed one-shot voice
  * `TapeScreen` already streams a decoded WAV through — rather than building
  * a second audio path for what's still just "play one file, stop it on a
@@ -87,18 +97,47 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun SnipsScreen(
+    /**
+     * The kits, for the USED badge alone — that badge asks which pads across
+     * the shelf came from a snip, which is a question about kits.
+     */
     shelf: KitShelf,
+    /**
+     * Where snips live: the app's own files directory, NOT [shelf]'s root.
+     *
+     * Every writer in the app passes `filesDir`, so a snip is at
+     * `<files>/snips/`. This screen read `shelf.root` instead, which
+     * `MainActivity` builds as `<files>/Kits` — so it listed
+     * `<files>/Kits/snips`, a directory nothing has ever written, and showed
+     * NO SNIPS YET however many the phone held. `ConventionTest`'s own law
+     * over `SnipStore` call sites is what stops the two drifting apart again.
+     */
+    snipsRoot: File,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onOpenInTape: (File) -> Unit,
     onPickPadFor: (File) -> Unit,
+    /** → LOOP: this snip becomes one track of the six-track grid. The screen stays open. */
+    onSendToLoop: (SnipStore.Info) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
     var snips by remember { mutableStateOf<List<SnipStore.Info>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+    // Keyed on LOOP's landing count rather than on `Unit`: a bounce is the one
+    // thing that writes a snip while this list is on screen — it outlives the
+    // screen that started it, so it can land seconds after the player has
+    // walked back here — and its own toast says IT IS IN SNIPS NOW. A one-shot
+    // load would make that sentence false for exactly the person reading it.
+    //
+    // The count, not [LoopBounce.busy]'s false edge: a StateFlow conflates, so
+    // a render that finishes between two frames would publish true and false
+    // with nothing observing the true, leaving the key unchanged and the list
+    // stale — see that property's own note. On mount this is the load it
+    // always was; every landing after that runs it again.
+    val landed by LoopBounce.landed.collectAsState()
+    LaunchedEffect(landed) {
+        snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
     }
 
     // DELETED SNIPS (name-and-find task): the SNIPS-level equivalent of
@@ -116,7 +155,7 @@ fun SnipsScreen(
     var deletedSnipsOpen by remember { mutableStateOf(false) }
     var binnedCount by remember { mutableStateOf(0) }
     LaunchedEffect(deletedSnipsOpen) {
-        binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(shelf.root).size }
+        binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot).size }
     }
 
     // USED badge: null until the cheap gate below resolves, and the list
@@ -170,7 +209,7 @@ fun SnipsScreen(
         voice = null
         playingFile = null
     }
-    // Leaving the screen (◄ SHELF, or SNIPS closing under a → PAD/→ TAPE
+    // Leaving the screen (◄ KITS, or SNIPS closing under a → PAD/→ TAPE
     // navigation) must not leave a voice streaming into a screen that's
     // gone — the same contract TapeScreen's own DisposableEffect(voice)
     // keeps for its one long-lived voice.
@@ -195,7 +234,7 @@ fun SnipsScreen(
             // `playToken`'s own KDoc above.
             if (playToken != myToken) return@launch
             if (mono == null || mono.frameCount <= 0) {
-                onToast("CAN'T PLAY THIS SNIP")
+                onToast(Copy.SNIP_CANT_PLAY)
                 return@launch
             }
             val v = TapeVoice(mono.samples, mono.sampleRate)
@@ -232,13 +271,13 @@ fun SnipsScreen(
         // `enabled =` gate to keep in sync.
         stopPlayback()
         DeletedSnipsScreen(
-            shelf = shelf,
+            snipsRoot = snipsRoot,
             onBack = { deletedSnipsOpen = false },
             onToast = onToast,
             onRestored = {
                 binnedCount = (binnedCount - 1).coerceAtLeast(0)
                 scope.launch {
-                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
                 }
             },
         )
@@ -247,7 +286,7 @@ fun SnipsScreen(
 
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
     var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
-    // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
+    // Mirrors the header's own ◄ KITS chip — disabled while either dialog
     // is up so that dialog's own BackHandler below (composed only while
     // it's showing) is the one Back reaches first. Paired the same way
     // ConventionTest.kt's own law documents: while confirmDelete OR
@@ -276,7 +315,7 @@ fun SnipsScreen(
         scope.launch {
             val renamed = withContext(Dispatchers.IO) { SnipStore.rename(info.file, newName) }
             if (renamed != null) {
-                snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(shelf.root) }
+                snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
                 // The name it actually landed under, read straight off the
                 // returned file rather than echoing `newName` — the same
                 // "never trust the typed string, trust the result" posture
@@ -299,7 +338,7 @@ fun SnipsScreen(
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+                HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 TapeText("SNIPS", TapeType.lcdHeader, scheme.lcdInk.tape)
                 Spacer(Modifier.weight(1f))
@@ -335,7 +374,7 @@ fun SnipsScreen(
                 ) {
                     // Plain, not the tape-metaphor voice (`Copy`'s own quips) —
                     // this screen's own locked tone, per the task brief.
-                    TapeText("NO SNIPS YET", TapeType.lcdSmall, scheme.lcdInk.tape)
+                    TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
                 }
             } else {
                 LazyColumn(
@@ -354,6 +393,7 @@ fun SnipsScreen(
                             onTogglePlay = { togglePlay(info) },
                             onPickPad = { onPickPadFor(info.file) },
                             onOpenTape = { onOpenInTape(info.file) },
+                            onSendLoop = { onSendToLoop(info) },
                             onRename = { renameTarget = info },
                             onDelete = { confirmDelete = info },
                         )
@@ -404,6 +444,7 @@ private fun SnipRow(
     onTogglePlay: () -> Unit,
     onPickPad: () -> Unit,
     onOpenTape: () -> Unit,
+    onSendLoop: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -455,6 +496,11 @@ private fun SnipRow(
             // file's own KDoc and App.kt's `pendingSnipAssign` for why.
             ActionButton("→ PAD", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onPickPad)
             ActionButton("→ TAPE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onOpenTape)
+            // Always enabled, like its two neighbours. A full grid is the one
+            // state that could dim this, and it is answered in words instead
+            // (Copy.loopFull, which also says how to make room) — a dead
+            // button would only say "no".
+            ActionButton("→ LOOP", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onSendLoop)
         }
         // RENAME paired with DELETE — KitsScreen's own KitRow shape for the
         // same two actions.
@@ -495,7 +541,13 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null) { }
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL below. A raw pointerInput, not tapeClick:
+                // this Column's real children below carry their own
+                // accessible names, and clickable()'s own semantics would
+                // add a second, nameless actionable node wrapping all of
+                // them (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -535,7 +587,13 @@ private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfir
                 .fillMaxWidth()
                 .padding(24.dp)
                 .raisedBevel(scheme)
-                .tapeClick(label = null) { }
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL below. A raw pointerInput, not tapeClick:
+                // this Column's real children below carry their own
+                // accessible names, and clickable()'s own semantics would
+                // add a second, nameless actionable node wrapping all of
+                // them (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -578,7 +636,7 @@ private fun DeleteButton(scheme: Scheme, modifier: Modifier = Modifier, onClick:
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
             .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = "DELETE", onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -598,7 +656,7 @@ private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modif
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

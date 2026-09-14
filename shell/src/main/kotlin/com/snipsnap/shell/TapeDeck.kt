@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.floor
 
 /**
@@ -38,6 +39,8 @@ class TapeDeckModel(
     sealed interface Event {
         /** Coast died near an onset; the deck is gliding onto it. */
         data class SnappingToOnset(val frame: Int) : Event
+        /** Loop preview wrapped from OUT back to IN: whatever plays the tape restarts there. */
+        object Looped : Event
         /** Play ran off the end of the tape and stopped. */
         data object HitEnd : Event
         /** Pencil rewind reached the top of the tape. */
@@ -80,12 +83,33 @@ class TapeDeckModel(
 
     val hasSelection: Boolean get() = inFrame >= 0 && outFrame > inFrame
 
-    // Zoom — the px-per-second ladder the drag gesture converts through.
-    private var zoomIdx = 0
-    val pxPerSec: Int get() = ZOOM_PX_PER_SEC[zoomIdx]
-    val zoomLabel: String get() = "ZOOM x${1 shl zoomIdx}"
+    // Px-per-second is continuous, not a three-rung
+    // ladder. The ladder survives as the ZOOM button's snap points so the
+    // button still steps x1 -> x2 -> x4 and stays the accessible path.
+    private var zoomPx: Float = ZOOM_PX_PER_SEC[0].toFloat()
+    val pxPerSec: Float get() = zoomPx
+    val zoomLabel: String get() {
+        val x = zoomPx / ZOOM_PX_PER_SEC[0]
+        return if (abs(x - x.roundToInt()) < 0.05f) "ZOOM x${x.roundToInt()}" else "ZOOM x%.1f".format(java.util.Locale.ROOT, x)
+    }
+
+    /** The button: step to the next ladder rung above where the pinch left it. */
     fun cycleZoom() {
-        zoomIdx = (zoomIdx + 1) % ZOOM_PX_PER_SEC.size
+        val next = ZOOM_PX_PER_SEC.firstOrNull { it > zoomPx + 1f } ?: ZOOM_PX_PER_SEC[0]
+        zoomPx = next.toFloat()
+    }
+
+    /**
+     * Pinch. `factor` is the ratio between this frame's two-finger
+     * span and the last one, so a steady spread multiplies up smoothly.
+     * Clamped to the ladder's own ends — past x4 the waveform is drawing
+     * more columns than the peaks pyramid has detail for, and below x1 the
+     * whole tape already fits.
+     */
+    fun zoomBy(factor: Float) {
+        val lo = ZOOM_PX_PER_SEC.first().toFloat()
+        val hi = ZOOM_PX_PER_SEC.last().toFloat()
+        zoomPx = (zoomPx * factor).coerceIn(lo, hi)
     }
 
     /** Triple-tapping the position LCD flips it to the mechanical counter. */
@@ -140,6 +164,7 @@ class TapeDeckModel(
                 position >= outFrame
             ) {
                 position = inFrame + (position - outFrame)
+                events += Event.Looped
             }
 
             if (position < 0) {

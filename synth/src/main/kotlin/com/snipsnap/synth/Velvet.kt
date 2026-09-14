@@ -49,8 +49,16 @@ object Velvet {
     fun defaults(voice: VelvetVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    fun scramble(voice: VelvetVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
+    fun scramble(voice: VelvetVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + VelvetPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     fun frequencyFor(voice: VelvetVoice, tune: Float): Float {
         val root = when (voice) {
@@ -70,7 +78,13 @@ object Velvet {
     private fun pulse(phase: Double, width: Float): Float =
         if (phase - Math.floor(phase) < width) 1f else -1f
 
-    fun render(voice: VelvetVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * The raw synth loop, at whatever [rate] the caller wants - split out of
+     * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
+     * tested directly against a native-rate render, rather than trusting
+     * that reading [render]'s own source matches what it actually does.
+     */
+    internal fun synthesize(voice: VelvetVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -101,16 +115,20 @@ object Velvet {
         val floorHz = Dsp.expMap(cutoff, 180f, 12_000f)
         val peakHz = (floorHz * Dsp.lin(envAmount, 1.5f, 6f)).coerceAtMost(16_000f)
 
-        val out = FloatArray((t60 * 1.4f * RATE).toInt().coerceAtLeast(64))
-        val svf = Dsp.TptSvf()
+        val raw = FloatArray((t60 * 1.4f * rate).toInt().coerceAtLeast(64))
+        // The SVF's own cutoff/damping math is rate-relative (Dsp.TptSvf's
+        // trapezoidal coefficient depends on fc/rate), so it needs the same
+        // rate passed in, not just the oscillators.
+        val svf = Dsp.TptSvf(rate)
+        val env = Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
         var p1 = 0.0
         var p2 = 0.0
         var pSub = 0.0
-        for (i in out.indices) {
-            val t = i.toFloat() / RATE
-            p1 += base / RATE
-            p2 += base * detune / RATE
-            pSub += base * 0.5 / RATE
+        for (i in raw.indices) {
+            val t = i.toFloat() / rate
+            p1 += base / rate
+            p2 += base * detune / rate
+            pSub += base * 0.5 / rate
 
             fun osc(phase: Double): Float =
                 (1f - pulseMix) * saw(phase) + pulseMix * pulse(phase, width)
@@ -121,12 +139,23 @@ object Velvet {
             // "wow" is the cutoff falling while the note still sounds.
             val fEnv = Dsp.envAt(t, t60 * 0.5f)
             val fc = floorHz + (peakHz - floorHz) * fEnv
-            svf.process(stack, fc, damp)
+            // SQUEEZE is the acid knob, so the filter self-limits instead
+            // of ringing cleanly at the top of its own travel (U5).
+            svf.process(stack, fc, damp, saturate = true)
 
-            val attack = (t / 0.003f).coerceAtMost(1f)
-            out[i] = svf.low * attack * Dsp.envAt(t, t60)
+            raw[i] = svf.low * env.at(t)
         }
+        return raw
+    }
 
+    fun render(voice: VelvetVoice, macros: Map<String, Float> = emptyMap()): Snip {
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the naive saw/
+        // pulse oscillators' own aliasing folds down above 22.05kHz instead
+        // of into the audible band, then Dsp.decimate brings it back to
+        // RATE.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = synthesize(voice, macros, renderRate)
+        val out = Dsp.decimate(raw, RATE)
         Dsp.normalize(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)

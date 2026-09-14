@@ -125,7 +125,7 @@ object KitPreview {
         }
         require(voices.isNotEmpty()) { "no clip note lands on a pad this kit has" }
 
-        val totalFrames = ((groove.bars * Mpc3Clip.PULSES_PER_BAR * framesPerPulse).roundToInt() +
+        val totalFrames = ((groove.lengthPulses * framesPerPulse).roundToInt() +
             (TAIL_SEC * RATE).toInt()).coerceAtLeast(voices.maxOf { min(it.end, it.start + it.samples.frameCount) })
         val out = FloatArray(totalFrames * 2)
 

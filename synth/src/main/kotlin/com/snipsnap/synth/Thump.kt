@@ -17,7 +17,9 @@ import kotlin.random.Random
  * The playability rules from docs/SYNTH_ROADMAP.md are enforced by
  * construction here: macros are 0..1 and mapped internally onto bounded
  * musical ranges, so the worst any knob position can sound is "not for me" —
- * never broken. SCRAMBLE is just a uniform roll of that same space.
+ * never broken. SCRAMBLE rolls near a factory preset (docs/SYNTH_UPGRADE.md,
+ * U2); a flat uniform roll of the whole space is still reachable at
+ * `temperature = 1` (see [scramble]).
  */
 enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM }
 
@@ -34,29 +36,33 @@ object Thump {
     fun macrosFor(voice: ThumpVoice): List<MacroSpec> = when (voice) {
         ThumpVoice.KICK -> listOf(
             MacroSpec("TUNE", 0.35f), MacroSpec("SWEEP", 0.5f), MacroSpec("DECAY", 0.45f),
-            MacroSpec("CLICK", 0.35f), MacroSpec("DRIVE", 0.25f),
+            MacroSpec("CLICK", 0.35f), MacroSpec("DRIVE", 0.25f), MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.SNARE -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("SNAP", 0.55f), MacroSpec("DECAY", 0.4f),
-            MacroSpec("TONE", 0.55f),
+            MacroSpec("TONE", 0.55f), MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.HAT_CLOSED -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("METAL", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.HAT_OPEN -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.55f), MacroSpec("METAL", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.CLAP -> listOf(
             MacroSpec("SPREAD", 0.5f), MacroSpec("DECAY", 0.45f), MacroSpec("TONE", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.TOM -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("SWEEP", 0.4f), MacroSpec("DECAY", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.COWBELL -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.4f),
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.4f), MacroSpec("PUNCH", 0.5f),
         )
         ThumpVoice.RIM -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f),
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("PUNCH", 0.5f),
         )
     }
 
@@ -65,36 +71,78 @@ object Thump {
         macrosFor(voice).associate { it.name to it.default }
 
     /**
-     * SCRAMBLE: a uniform roll of the macro space. Bounded ranges mean any
-     * roll is playable; a seeded [random] makes rolls reproducible.
+     * SCRAMBLE: rolls near a seed instead of flat across the macro box
+     * (docs/SYNTH_UPGRADE.md, U2) — [near] picks the seed, defaulting to a
+     * random factory preset for [voice]; [temperature] scales the gaussian
+     * perturbation, clamped to 0..1. `temperature = 0` returns the seed
+     * untouched; `temperature = 1` discards it and rolls every macro
+     * flat-uniform, the pre-U2 behaviour, still reachable. Bounded ranges
+     * mean any roll is playable; a seeded [random] makes rolls reproducible.
      */
-    fun scramble(voice: ThumpVoice, random: Random): Map<String, Float> =
-        macrosFor(voice).associate { it.name to random.nextFloat() }
+    fun scramble(voice: ThumpVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice)
+        // At temperature >= 1, Dsp.scrambleNear ignores the seed's values
+        // (only its keys matter) - so skip picking a preset there. Copilot
+        // caught this: picking one anyway spent a random draw before the
+        // per-macro rolls, shifting a seeded/shared Random's downstream
+        // sequence away from the pre-U2 behaviour temperature = 1 promises.
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + ThumpPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     /** Render [voice] with [macros]; missing macros fall back to defaults. */
     fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
-        val buf = when (voice) {
-            ThumpVoice.KICK -> kick(m)
-            ThumpVoice.SNARE -> snare(m)
-            ThumpVoice.HAT_CLOSED -> hat(m, open = false)
-            ThumpVoice.HAT_OPEN -> hat(m, open = true)
-            ThumpVoice.CLAP -> clap(m)
-            ThumpVoice.TOM -> tom(m)
-            ThumpVoice.COWBELL -> cowbell(m)
-            ThumpVoice.RIM -> rim(m)
+        // U6 (docs/SYNTH_UPGRADE.md): every voice synthesizes at 4x RATE, so
+        // its own oscillators' aliasing folds down above 22.05kHz instead of
+        // into the audible band, then Dsp.decimate brings it back to RATE.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = when (voice) {
+            ThumpVoice.KICK -> kick(m, renderRate)
+            ThumpVoice.SNARE -> snare(m, renderRate)
+            ThumpVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate)
+            ThumpVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate)
+            ThumpVoice.CLAP -> clap(m, renderRate)
+            ThumpVoice.TOM -> tom(m, renderRate)
+            ThumpVoice.COWBELL -> cowbell(m, renderRate)
+            ThumpVoice.RIM -> rim(m, renderRate)
         }
-        Dsp.normalize(buf)
+        val punch = m.getValue("PUNCH")
+        // Punch (U3, docs/SYNTH_UPGRADE.md) swaps the peak target below for a
+        // perceived-level one, so normalize has to set the reference loudness
+        // BEFORE Punch reshapes the hit, not after: normalizing again
+        // afterward would silently rescale Punch's own loudness-matched
+        // result right back to a fixed peak, undoing the "more PUNCH reshapes
+        // the hit, it doesn't just make it louder" guarantee PunchTest
+        // proves for Punch.apply in isolation.
+        Dsp.normalize(raw)
+        // Punch.applyOversampled runs saturate and the boost envelope on
+        // `raw` here, still at renderRate, before its own internal
+        // Dsp.decimate call - both are nonlinear or fast-changing enough to
+        // mint content outside the buffer's own band wherever they run, so
+        // applying either after decimation would hand U6's whole
+        // anti-aliasing story right back to a raw oscillator's problem.
+        // PunchTest exercises this exact function, so that ordering is
+        // proven there, not just trusted here.
+        val buf = Punch.applyOversampled(raw, punch, RATE)
+        // The actual clipping safety net, run last: only steps in if the
+        // transient boost pushed a sample past what's safe, same as
+        // normalize always did for PUNCH amount 0.
+        Dsp.limitPeak(buf)
         Dsp.fadeTail(buf)
         return Snip(buf, channels = 1, sampleRate = RATE)
     }
 
     // ---------- voices ----------
 
-    private fun frames(seconds: Float) = (seconds * RATE).toInt().coerceAtLeast(64)
+    private fun frames(seconds: Float, rate: Int) = (seconds * rate).toInt().coerceAtLeast(64)
 
-    private fun kick(m: Map<String, Float>): FloatArray {
+    private fun kick(m: Map<String, Float>, rate: Int): FloatArray {
         // Ranges stay in kick territory on purpose: the playability contract
         // says a scrambled kick still reads as a kick, and spectral centroid
         // is merciless - a whisper of broadband click outweighs a wall of
@@ -106,41 +154,53 @@ object Thump {
         val click = m.getValue("CLICK")
         val driveAmt = m.getValue("DRIVE")
 
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         var phase = 0.0
         val noise = Dsp.Noise(7)
-        val clickLp = Dsp.OnePole()
+        val clickLp = Dsp.OnePole(rate)
+        // A 1ms attack ramp (U5, docs/SYNTH_UPGRADE.md) - short enough to
+        // leave the punch alone, long enough to declick the instant onset
+        // every THUMP voice used to jump straight into.
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             // The defining kick shape: frequency falls fast onto the base.
             val f = base * (1f + (sweepMult - 1f) * exp((-90.0 * t)).toFloat())
-            phase += f / RATE
-            var s = Dsp.envAt(t, t60) * sin(2.0 * PI * phase).toFloat()
+            phase += f / rate
+            var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
             if (t < 0.005f) {
-                s += click * 0.6f * clickLp.lp(noise.next(), 1000f) * (1f - t / 0.005f) * 2f
+                // Copilot's review of this PR: the click burst had its own
+                // 5ms linear fade-out but no fade-in, so it still jumped to
+                // full level at t=0 even after the sine body was declicked.
+                // Its own attack, independent of the body's decay-bearing
+                // env above - stacking t60's decay onto a 5ms burst would
+                // also quietly change the click's shape, not just declick it.
+                val clickAttack = (t / 0.001f).coerceAtMost(1f)
+                s += click * 0.6f * clickLp.lp(noise.next(), 1000f) * (1f - t / 0.005f) * clickAttack * 2f
             }
             out[i] = Dsp.drive(s, driveAmt)
         }
         return out
     }
 
-    private fun snare(m: Map<String, Float>): FloatArray {
+    private fun snare(m: Map<String, Float>, rate: Int): FloatArray {
         val tune = Dsp.expMap(m.getValue("TUNE"), 140f, 260f)
         val snap = m.getValue("SNAP")
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 0.5f)
         val toneHz = Dsp.expMap(m.getValue("TONE"), 2200f, 9000f)
 
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         val noise = Dsp.Noise(3)
-        val lp = Dsp.OnePole()
+        val lp = Dsp.OnePole(rate)
+        val bodyEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60 * 0.45f)
+        val rattleEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         var p1 = 0.0; var p2 = 0.0
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
-            p1 += tune / RATE
-            p2 += tune * 1.83 / RATE
-            val body = (0.6f * sin(2.0 * PI * p1) + 0.4f * sin(2.0 * PI * p2)).toFloat() *
-                Dsp.envAt(t, t60 * 0.45f)
-            val rattle = lp.lp(noise.next(), toneHz) * 2.4f * Dsp.envAt(t, t60)
+            val t = i.toFloat() / rate
+            p1 += tune / rate
+            p2 += tune * 1.83 / rate
+            val body = (0.6f * sin(2.0 * PI * p1) + 0.4f * sin(2.0 * PI * p2)).toFloat() * bodyEnv.at(t)
+            val rattle = lp.lp(noise.next(), toneHz) * 2.4f * rattleEnv.at(t)
             out[i] = (1f - snap) * body + snap * rattle
         }
         return out
@@ -150,7 +210,7 @@ object Thump {
      * The classic metallic recipe: a cluster of six inharmonic squares,
      * high-passed hard so only the shimmer survives.
      */
-    private fun hat(m: Map<String, Float>, open: Boolean): FloatArray {
+    private fun hat(m: Map<String, Float>, open: Boolean, rate: Int): FloatArray {
         val base = Dsp.expMap(m.getValue("TUNE"), 320f, 620f)
         val t60 = if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
         else Dsp.expMap(m.getValue("DECAY"), 0.04f, 0.16f)
@@ -158,37 +218,45 @@ object Thump {
         val ratios = floatArrayOf(1f, 1.342f, 1.681f, 1.940f, 2.318f, 2.703f)
         val spread = Dsp.lin(metal, 0.9f, 1.25f)
 
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         val phases = DoubleArray(6)
-        val lp1 = Dsp.OnePole(); val lp2 = Dsp.OnePole()
-        val hpHz = Dsp.lin(metal, 6800f, 9200f)
+        val lp1 = Dsp.OnePole(rate); val lp2 = Dsp.OnePole(rate)
+        // Raised from 6800-9200Hz: U6's oversampling (docs/SYNTH_UPGRADE.md)
+        // properly band-limits these square waves' harmonics instead of
+        // letting them alias, and the aliased version happened to be
+        // brighter by the classifier's own measure - its spectral centroid
+        // no longer cleared HAT_MIN_CENTROID_HZ once the alias content was
+        // gone. Retuned against the classifier the same way the rest of
+        // THUMP's ranges already are, not chosen for any other reason.
+        val hpHz = Dsp.lin(metal, 11000f, 14000f)
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             var s = 0f
             for (k in 0 until 6) {
-                phases[k] += base * Math.pow(ratios[k].toDouble(), spread.toDouble()) / RATE
+                phases[k] += base * Math.pow(ratios[k].toDouble(), spread.toDouble()) / rate
                 s += Dsp.square(phases[k])
             }
             s /= 6f
             // Two cascaded one-pole high-passes: keep the sizzle, dump the body.
             val hp = s - lp1.lp(s, hpHz)
             val hp2 = hp - lp2.lp(hp, hpHz)
-            out[i] = hp2 * 2.2f * Dsp.envAt(t, t60)
+            out[i] = hp2 * 2.2f * env.at(t)
         }
         return out
     }
 
-    private fun clap(m: Map<String, Float>): FloatArray {
+    private fun clap(m: Map<String, Float>, rate: Int): FloatArray {
         val spreadS = Dsp.lin(m.getValue("SPREAD"), 0.007f, 0.016f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.15f, 0.5f)
         val toneHz = Dsp.expMap(m.getValue("TONE"), 1600f, 5200f)
 
-        val out = FloatArray(frames(t60 * 1.4f + 3 * spreadS))
+        val out = FloatArray(frames(t60 * 1.4f + 3 * spreadS, rate))
         val noise = Dsp.Noise(4)
-        val lp = Dsp.OnePole()
+        val lp = Dsp.OnePole(rate)
         val bursts = floatArrayOf(0f, spreadS, 2 * spreadS, 3 * spreadS)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             val n = lp.lp(noise.next(), toneHz) * 2.4f
             var env = 0f
             // A hand clap is several impacts a few ms apart, then a tail.
@@ -199,49 +267,51 @@ object Thump {
         return out
     }
 
-    private fun tom(m: Map<String, Float>): FloatArray {
+    private fun tom(m: Map<String, Float>, rate: Int): FloatArray {
         val base = Dsp.expMap(m.getValue("TUNE"), 82f, 240f)
         val sweep = Dsp.lin(m.getValue("SWEEP"), 1.05f, 1.6f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.18f, 0.7f)
 
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         var phase = 0.0
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             val f = base * (1f + (sweep - 1f) * exp((-30.0 * t)).toFloat())
-            phase += f / RATE
-            out[i] = Dsp.envAt(t, t60) * sin(2.0 * PI * phase).toFloat()
+            phase += f / rate
+            out[i] = env.at(t) * sin(2.0 * PI * phase).toFloat()
         }
         return out
     }
 
-    private fun cowbell(m: Map<String, Float>): FloatArray {
+    private fun cowbell(m: Map<String, Float>, rate: Int): FloatArray {
         val base = Dsp.expMap(m.getValue("TUNE"), 420f, 700f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.45f)
 
-        val out = FloatArray(frames(t60 * 1.4f))
+        val out = FloatArray(frames(t60 * 1.4f, rate))
         var p1 = 0.0; var p2 = 0.0
-        val svf = Dsp.Svf()
+        val svf = Dsp.Svf(rate)
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
-            p1 += base / RATE
-            p2 += base * 1.48 / RATE
+            val t = i.toFloat() / rate
+            p1 += base / rate
+            p2 += base * 1.48 / rate
             val s = (Dsp.square(p1) + Dsp.square(p2)) * 0.5f
             svf.process(s, base * 1.2f, 0.6f)
-            out[i] = svf.band * 1.6f * Dsp.envAt(t, t60)
+            out[i] = svf.band * 1.6f * env.at(t)
         }
         return out
     }
 
-    private fun rim(m: Map<String, Float>): FloatArray {
+    private fun rim(m: Map<String, Float>, rate: Int): FloatArray {
         val freq = Dsp.expMap(m.getValue("TUNE"), 1200f, 2400f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.03f, 0.12f)
 
-        val out = FloatArray(frames(maxOf(t60 * 1.6f, 0.05f)))
-        val svf = Dsp.Svf()
+        val out = FloatArray(frames(maxOf(t60 * 1.6f, 0.05f), rate))
+        val svf = Dsp.Svf(rate)
         val noise = Dsp.Noise(9)
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
+            val t = i.toFloat() / rate
             // A damped resonator struck by a 1 ms excitation: the tick.
             val excite = if (t < 0.001f) noise.next() + 1.5f else 0f
             svf.process(excite, freq, 0.12f)

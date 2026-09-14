@@ -258,6 +258,31 @@ class FathomTest {
     }
 
     @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Fathom's own wiring: see DspTest for the central proof.
+        for (voice in FathomVoice.entries) {
+            val preset = FathomPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Fathom.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Fathom.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - see ThumpTest's own version of this test.
+            assertEquals(
+                Dsp.scrambleNear(Fathom.defaults(voice), 1f, Random(2)),
+                Fathom.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
+        }
+    }
+
+    @Test
     fun `factory defaults classify consistently`() {
         // Labels observed, not predicted — see `a bass note is harmonic, not
         // noise` for why we don't guess them.
@@ -329,6 +354,37 @@ class FathomTest {
             val a = Fathom.render(voice, mapOf("DRIVE" to 0.7f))
             val b = Fathom.render(voice, mapOf("DRIVE" to 0.7f))
             assertTrue(a.samples.contentEquals(b.samples), "$voice: same macros must render the same bytes")
+        }
+    }
+
+    @Test
+    fun `render actually dispatches through the oversampled path, not directly at RATE`() {
+        // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
+        // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
+        // calling synthesize(voice, macros, RATE) directly. Reverting that
+        // dispatch would leave every other FATHOM test in this file green
+        // (they only check generic playability/macro properties) - this
+        // proves render()'s actual output is not the same as a naive
+        // native-rate synthesize() call reaching the same normalize/
+        // fadeTail finish. A stable metric (mean absolute sample
+        // difference), not a spectral one: see VelvetTest's own version of
+        // this test for why a band-energy comparison proved ambiguous for
+        // a resonant, self-limiting filter like the one FATHOM shares.
+        for (voice in FathomVoice.entries) {
+            val actual = Fathom.render(voice)
+            val direct = Fathom.synthesize(voice, emptyMap(), Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            val avgDiff = diff / n
+            assertTrue(
+                avgDiff > 0.0002,
+                "$voice: Fathom.render should differ meaningfully from a direct native-rate " +
+                    "synthesize() - got avgDiff=$avgDiff, which would happen if render() stopped " +
+                    "dispatching through the oversampled path",
+            )
         }
     }
 

@@ -69,13 +69,36 @@ fun GroupBox(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .let { if (enabled) it.tapeClick(label = null, onClick = onToggle) else it }
+                    // Always clickable, `enabled` forwarded rather than
+                    // dropped: a screen reader is told this control is
+                    // temporarily unavailable instead of it silently
+                    // vanishing from the tree (accessibility audit finding
+                    // 12 — see ActionButton in PadSheetScreen.kt). No call
+                    // site disables a GroupBox today, but the component
+                    // shouldn't wait for one to be correct.
+                    //
+                    // Named from what this row already carries — [legend]
+                    // (what section this is) and the toggle's own effect,
+                    // which follows [open] the same way OrbitScreen's
+                    // PLAY/■ STOP button names its current action rather
+                    // than a fixed "PLAY/STOP" (accessibility audit).
+                    .tapeClick(
+                        label = "${if (open) "COLLAPSE" else "EXPAND"} $legend",
+                        enabled = enabled,
+                        onClick = onToggle,
+                    )
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TapeText(summary, TapeType.pixelSmall, summaryColor, Modifier.weight(1f), maxLines = 1)
-                Chevron(open, scheme.ink2.tape)
+                TapeText(
+                    summary,
+                    TapeType.pixelSmall,
+                    if (!enabled) scheme.ink3.tape else summaryColor,
+                    Modifier.weight(1f),
+                    maxLines = 1,
+                )
+                Chevron(open, if (!enabled) scheme.ink3.tape else scheme.ink2.tape)
             }
             if (open) {
                 Column(

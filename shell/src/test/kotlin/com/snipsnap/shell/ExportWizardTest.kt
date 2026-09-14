@@ -62,6 +62,22 @@ class ExportWizardTest {
         assertFailsWith<IllegalStateException> { w.eject() }
     }
 
+    /**
+     * `fileCount` is `pads.sumOf { layers } + 1` (the program) — a kit
+     * with no pads still queues that one file, and the caption used to say
+     * "1 FILES QUEUED" / "ALL 1 FILES ON TAPE" for it.
+     */
+    @Test
+    fun `dubFilesLine sings FILE singular when fileCount is exactly one`() {
+        val dir = File(temp, "Empty")
+        val m = KitBuilderModel.create("Empty", dir)
+        m.save()
+        val w = ExportWizardModel(m.kit, dir)
+        assertEquals(1, w.fileCount, "no pads, just the program")
+        assertTrue("1 FILE QUEUED" in w.dubFilesLine(0), w.dubFilesLine(0))
+        assertFalse("1 FILES" in w.dubFilesLine(0), w.dubFilesLine(0))
+    }
+
     @Test
     fun `the format cycler walks every format and each writes for real`() {
         val (kit, dir) = makeKit("Cycler")

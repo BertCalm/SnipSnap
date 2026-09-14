@@ -15,6 +15,13 @@ namespace snipsnap {
 namespace {
 constexpr float kPi = 3.14159265358979f;
 
+// ECHO's fixed delay line: 220 ms (a short-to-medium slapback-to-echo
+// range) at 35% feedback (several audible repeats before it fades under
+// the noise floor, not a runaway loop). Only the corner-blended `echo`
+// macro ever changes what you hear of it (the wet mix) - see renderMono.
+constexpr float kDelayTimeMs = 220.0f;
+constexpr float kDelayFeedback = 0.35f;
+
 /**
  * 0..1, and NaN-safe: the test is written `!(v > 0)` rather than `v < 0`
  * so a NaN lands on 0 instead of sailing through - `NaN < 0` and
@@ -46,24 +53,63 @@ inline float pitchRatio(float macro) { return std::exp2((clamp01(macro) - 0.5f) 
 
 SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     : preferredRate_(preferredSampleRate), scratch_(kScratchFrames, 0.0f) {
+    // Sized here too, not only in start(), at the member's own default
+    // sampleRate_ (48000) - renderMono indexes delayBuffer_[delayWrite_]
+    // unconditionally on every sample, so onAudioReady must never see it
+    // empty. start() resizes it again once the device's real rate is
+    // known; nothing here needs to survive that (delayWrite_ is 0 in
+    // both places). The host test suite calls onAudioReady directly and
+    // never start() at all, which is exactly the case this guards.
+    delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kDelayTimeMs * 0.001f * static_cast<float>(sampleRate_)), 1), 0.0f);
+    // Same reasoning, same place - see configureSpring's own comment.
+    configureSpring(static_cast<float>(sampleRate_));
+    // std::atomic's default constructor is trivial in C++17 and does not
+    // reliably value-initialize the contained pointer - set every slot to
+    // nullptr explicitly rather than trust an array member initializer.
+    for (int32_t i = 0; i < kMaxSources; ++i) {
+        pending_[i].store(nullptr, std::memory_order_relaxed);
+        retired_[i].store(nullptr, std::memory_order_relaxed);
+    }
     // The four corners of the morph pad, before the UI says otherwise:
-    // A clean, B dark, C low and thick, D hot.
+    // A clean, B dark, C low and thick, D hot - none crushed, echoed or sprung.
     const MacroState defaults[4] = {
-        {0.5f, 1.0f, 0.0f, 0.0f},
-        {0.5f, 0.25f, 0.3f, 0.1f},
-        {0.25f, 0.6f, 0.5f, 0.4f},
-        {0.75f, 0.85f, 0.2f, 0.9f},
+        {0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
+        {0.5f, 0.25f, 0.3f, 0.1f, 0.0f, 0.0f, 0.0f},
+        {0.25f, 0.6f, 0.5f, 0.4f, 0.0f, 0.0f, 0.0f},
+        {0.75f, 0.85f, 0.2f, 0.9f, 0.0f, 0.0f, 0.0f},
     };
     for (int i = 0; i < 4; ++i) setCorner(i, defaults[i]);
+}
+
+void SurfaceEngine::configureSpring(float fs) {
+    for (int32_t c = 0; c < kSpringCombCount; ++c) {
+        springCombBuf_[c].assign(std::max<size_t>(static_cast<size_t>(kSpringCombMs[c] * 0.001f * fs), 1), 0.0f);
+        springCombWrite_[c] = 0;
+        springCombLp_[c] = 0.0f;
+        // -60 dB at kSpringRt60Seconds, whatever this comb's own length -
+        // synth/Spring.kt's own combFb formula is `10^(-3d/(rt60*fs))`,
+        // where d is the comb's length in samples; d/fs is this comb's
+        // delay in *seconds* (kSpringCombMs[c] * 0.001), which the sample
+        // rate cancels out of entirely, so the same feedback gain applies
+        // whatever fs turns out to be.
+        springCombFb_[c] = std::pow(10.0f, -3.0f * (kSpringCombMs[c] * 0.001f) / kSpringRt60Seconds);
+    }
+    for (int32_t a = 0; a < kSpringAllpassCount; ++a) {
+        springApBuf_[a].assign(std::max<size_t>(static_cast<size_t>(kSpringAllpassMs[a] * 0.001f * fs), 1), 0.0f);
+        springApWrite_[a] = 0;
+    }
+    springLpA_ = 1.0f - std::exp(-2.0f * kPi * std::min(kSpringToneHz, 0.45f * fs) / fs);
 }
 
 SurfaceEngine::~SurfaceEngine() {
     stop();
     // With the stream closed the audio thread is gone; every slot is ours.
-    delete pending_.exchange(nullptr);
-    delete retired_.exchange(nullptr);
-    delete current_;
-    current_ = nullptr;
+    for (int32_t i = 0; i < kMaxSources; ++i) {
+        delete pending_[i].exchange(nullptr);
+        delete retired_[i].exchange(nullptr);
+        delete current_[i];
+        current_[i] = nullptr;
+    }
 }
 
 bool SurfaceEngine::start() {
@@ -84,10 +130,23 @@ bool SurfaceEngine::start() {
     cutoff_.configure(10.0f, fs);
     resonance_.configure(10.0f, fs);
     drive_.configure(10.0f, fs);
+    crush_.configure(10.0f, fs);
+    echo_.configure(10.0f, fs);
+    spring_.configure(10.0f, fs);
+    for (auto& w : sampleWeight_) w.configure(10.0f, fs);
     gain_.configure(50.0f, fs);
     gain_.snap(0.0f);
     untilCoefficients_ = 0;
     ic1eq_ = ic2eq_ = 0.0f;
+    crushPhase_ = 0.0f;
+    heldCrush_ = 0.0f;
+    // Sized to the rate the device actually gave us, not preferredRate_ -
+    // resized (and zeroed, so a restart never plays back the previous
+    // session's tail) every time start() runs, same as the filter state above.
+    const size_t delaySamples = static_cast<size_t>(kDelayTimeMs * 0.001f * fs);
+    delayBuffer_.assign(std::max<size_t>(delaySamples, 1), 0.0f);
+    delayWrite_ = 0;
+    configureSpring(fs);
 
     const oboe::Result started = stream_->requestStart();
     if (started != oboe::Result::OK) {
@@ -118,14 +177,15 @@ void SurfaceEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
     restartNeeded_.store(true, std::memory_order_release);
 }
 
-void SurfaceEngine::loadSample(const float* mono, size_t frames, int32_t sourceRate) {
+void SurfaceEngine::loadSample(const float* mono, size_t frames, int32_t sourceRate, int32_t slot) {
+    if (slot < 0 || slot >= kMaxSources) return;
     auto* sample = new Sample();
     sample->frames.assign(mono, mono + frames);
     sample->rate = sourceRate > 0 ? sourceRate : 44100;
     // A sample the callback never got round to adopting is ours to free.
-    delete pending_.exchange(sample, std::memory_order_acq_rel);
+    delete pending_[slot].exchange(sample, std::memory_order_acq_rel);
     // And the one it retired last time.
-    delete retired_.exchange(nullptr, std::memory_order_acq_rel);
+    delete retired_[slot].exchange(nullptr, std::memory_order_acq_rel);
 }
 
 void SurfaceEngine::setCorner(int index, const MacroState& state) {
@@ -134,42 +194,60 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
     corners_[index][1].store(control01(state.cutoff, 1.0f), std::memory_order_relaxed);
     corners_[index][2].store(control01(state.resonance, 0.0f), std::memory_order_relaxed);
     corners_[index][3].store(control01(state.drive, 0.0f), std::memory_order_relaxed);
+    corners_[index][4].store(control01(state.crush, 0.0f), std::memory_order_relaxed);
+    corners_[index][5].store(control01(state.echo, 0.0f), std::memory_order_relaxed);
+    corners_[index][6].store(control01(state.spring, 0.0f), std::memory_order_relaxed);
 }
 
 // ---- audio thread from here down ---------------------------------------------
 
-void SurfaceEngine::adoptPendingSample() {
+void SurfaceEngine::adoptPendingSample(int32_t slot) {
     // Only take a pending sample when there is room to retire the current
     // one. Checking first means nothing is ever handed *back* to pending_ -
     // a store there could overwrite a newer sample the UI parked meanwhile
     // and leak it. retired_ only goes null -> non-null on this thread, so
     // the check-then-store below cannot race the UI, which only ever
     // exchanges it to null.
-    if (pending_.load(std::memory_order_acquire) == nullptr) return;
-    if (retired_.load(std::memory_order_acquire) != nullptr) return;  // next callback
-    Sample* incoming = pending_.exchange(nullptr, std::memory_order_acq_rel);
+    if (pending_[slot].load(std::memory_order_acquire) == nullptr) return;
+    if (retired_[slot].load(std::memory_order_acquire) != nullptr) return;  // next callback
+    Sample* incoming = pending_[slot].exchange(nullptr, std::memory_order_acq_rel);
     if (!incoming) return;
-    retired_.store(current_, std::memory_order_release);
-    current_ = incoming;
-    phase_ = 0.0;
+    retired_[slot].store(current_[slot], std::memory_order_release);
+    current_[slot] = incoming;
+    phase_[slot] = 0.0;
 }
 
 MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
     const float w[4] = {f.a, f.b, f.c, f.d};
-    MacroState out{0.0f, 0.0f, 0.0f, 0.0f};
+    MacroState out{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     for (int i = 0; i < 4; ++i) {
         out.pitch += w[i] * corners_[i][0].load(std::memory_order_relaxed);
         out.cutoff += w[i] * corners_[i][1].load(std::memory_order_relaxed);
         out.resonance += w[i] * corners_[i][2].load(std::memory_order_relaxed);
         out.drive += w[i] * corners_[i][3].load(std::memory_order_relaxed);
+        out.crush += w[i] * corners_[i][4].load(std::memory_order_relaxed);
+        out.echo += w[i] * corners_[i][5].load(std::memory_order_relaxed);
+        out.spring += w[i] * corners_[i][6].load(std::memory_order_relaxed);
     }
+    // Tilt nudges resonance on top of the blend, the same half-weighted
+    // amount XY gives it (see the XY case below) - a flat phone (tilt
+    // 0.5) is a no-op, so every corner the pad already saved still sounds
+    // exactly as captured. A non-finite f.tilt carries into out.resonance
+    // and out through the door in applyControl below, same as everywhere
+    // else a reading arrives; SurfaceStore.Corner.from's MORPH branch
+    // mirrors this exactly, so SET A..D captures what you'd actually hear.
+    out.resonance += (f.tilt - 0.5f) * 0.5f;
     return out;
 }
 
 void SurfaceEngine::applyControl(const ControlFrame& f) {
     MacroState target;
     switch (f.mode) {
-        case 2:  // MORPH: the puck weights four states
+        case 2:   // MORPH: the puck weights four states, tilt nudges resonance
+        case 3:   // VECTOR: MORPH's exact corner blend - the sample triangle
+                  // (sampleA/B/C, applied below) reads the same touch at
+                  // once, independently; there is no separate VECTOR macro
+                  // formula to have.
             target = morphed(f);
             break;
         case 1:  // XYZ: X pitch, Y cutoff, Z drive, tilt resonance
@@ -186,11 +264,47 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     cutoff_.setTarget(control01(target.cutoff, 1.0f));
     resonance_.setTarget(control01(target.resonance, 0.0f));
     drive_.setTarget(control01(target.drive, 0.0f));
+    crush_.setTarget(control01(target.crush, 0.0f));
+    echo_.setTarget(control01(target.echo, 0.0f));
+    spring_.setTarget(control01(target.spring, 0.0f));
+    sampleWeight_[0].setTarget(control01(f.sampleA, 1.0f));
+    sampleWeight_[1].setTarget(control01(f.sampleB, 0.0f));
+    sampleWeight_[2].setTarget(control01(f.sampleC, 0.0f));
+    sampleWeight_[3].setTarget(control01(f.sampleD, 0.0f));
+    // A touch-down restarts every loaded source from its head, so a tapped
+    // rhythm triggers like a drum hit regardless of where the crossfade
+    // sits; a held note still rides wherever each loop has turned to
+    // since. Without this, phase_ keeps advancing even while ungated (the
+    // loop is muted, not paused - renderMono reads and advances it
+    // regardless of gain), so the next touch would land wherever the loop
+    // happened to drift to, not at its head.
+    if (f.gate && !gated_) {
+        for (int32_t i = 0; i < kMaxSources; ++i) phase_[i] = 0.0;
+        crushRetrigger_ = true;
+    }
+    gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
 }
 
+bool SurfaceEngine::slotLoaded(int32_t slot) const {
+    const Sample* s = current_[slot];
+    return s && s->frames.size() >= 2;
+}
+
+float SurfaceEngine::readSlot(int32_t slot, double fs, float pitchRatioValue) {
+    const Sample* s = current_[slot];
+    if (!s || s->frames.size() < 2) return 0.0f;
+    const size_t n = s->frames.size();
+    const size_t i0 = static_cast<size_t>(phase_[slot]);
+    const size_t i1 = (i0 + 1) % n;
+    const float frac = static_cast<float>(phase_[slot] - static_cast<double>(i0));
+    const float v = s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
+    phase_[slot] += (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatioValue);
+    while (phase_[slot] >= static_cast<double>(n)) phase_[slot] -= static_cast<double>(n);
+    return v;
+}
+
 void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
-    const Sample* s = current_;
     const double fs = static_cast<double>(sampleRate_);
     for (int32_t i = 0; i < numFrames; ++i) {
         // Control-rate work: the filter's trig once per 32 samples, the
@@ -208,24 +322,98 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         cutoff_.next();
         resonance_.next();
         const float drive = drive_.next();
+        const float crush = crush_.next();
+        const float echo = echo_.next();
+        const float spring = spring_.next();
         const float gain = gain_.next();
+        const float w0 = sampleWeight_[0].next();
+        const float w1 = sampleWeight_[1].next();
+        const float w2 = sampleWeight_[2].next();
 
-        // The source: a looping read with linear interpolation, repitched by
-        // the file rate over the stream rate times the pitch macro.
-        float v0 = 0.0f;
-        if (s && s->frames.size() >= 2) {
-            const size_t n = s->frames.size();
-            const size_t i0 = static_cast<size_t>(phase_);
-            const size_t i1 = (i0 + 1) % n;
-            const float frac = static_cast<float>(phase_ - static_cast<double>(i0));
-            v0 = s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
-            phase_ += (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatio(pitch));
-            while (phase_ >= static_cast<double>(n)) phase_ -= static_cast<double>(n);
+        const float w3 = sampleWeight_[3].next();
+
+        // The source: slots 0/1/2/3 each loop independently (their own
+        // phase_[slot], the same linear-interpolation read as always),
+        // then blend by sampleA/B/C/D before drive/filter ever sees the
+        // result. Each weight glides on its own smoother, so their sum can
+        // drift a little off 1 mid-glide (unlike stage 1's paired
+        // mix/1-mix) - renormalising here keeps the blend from ever
+        // spiking or dipping in loudness while a weight is still catching
+        // up. Normalising is over the *loaded* slots only, not every
+        // weight the touch position sends: an empty vertex's share of the
+        // blend would otherwise just vanish rather than fall to whichever
+        // slots are actually loaded, quietly halving a single loaded
+        // sample's level anywhere the puck sits closer to an empty vertex
+        // than a full one - exactly the dead zone the vertex blend exists
+        // to avoid. Reads as silence, rather than dividing by ~0, only
+        // when every loaded slot's weight is near zero at once.
+        const float w0Loaded = slotLoaded(0) ? w0 : 0.0f;
+        const bool loaded1 = slotLoaded(1);
+        const bool loaded2 = slotLoaded(2);
+        const bool loaded3 = slotLoaded(3);
+        float w1Loaded = loaded1 ? w1 : 0.0f;
+        float w2Loaded = loaded2 ? w2 : 0.0f;
+        const float w3Loaded = loaded3 ? w3 : 0.0f;
+        if (!loaded3) {
+            // PAD4 (slot 3) is not just another vertex: TouchSurface.
+            // sampleWeights splits the pad into two half-triangles that
+            // meet at PAD4's own vertex, so PAD2 and PAD3's raw weights
+            // *both* fall to zero approaching it, the same way any single
+            // vertex's neighbours do near it - but here there is no third
+            // loaded neighbour left for the ordinary renormalisation above
+            // to fall back on, so an unloaded PAD4 would otherwise leave a
+            // real hole at the bottom-centre of the pad, not just the one
+            // infinitesimal point its own vertex sits at. Handing its raw
+            // share to whichever of PAD2/PAD3 are actually loaded recovers
+            // the continuous PAD2/PAD3 crossfade this seam was before PAD4
+            // existed.
+            const int32_t sides = (loaded1 ? 1 : 0) + (loaded2 ? 1 : 0);
+            if (sides > 0) {
+                const float share = w3 / static_cast<float>(sides);
+                if (loaded1) w1Loaded += share;
+                if (loaded2) w2Loaded += share;
+            }
+        }
+        const float wSum = w0Loaded + w1Loaded + w2Loaded + w3Loaded;
+        const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
+        const float pr = pitchRatio(pitch);
+        const float v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
+                         (w1Loaded * wInv) * readSlot(1, fs, pr) +
+                         (w2Loaded * wInv) * readSlot(2, fs, pr) +
+                         (w3Loaded * wInv) * readSlot(3, fs, pr);
+
+        // CRUSH: sample-and-hold downsampling plus shrinking quantisation
+        // levels, both continuous functions of the macro rather than an
+        // integer downsample count - crushPhase_ crosses a threshold that
+        // itself glides with crush, so there is no added snap on top of
+        // the crush's own stair-stepped texture as a corner blend moves
+        // through it. crush = 0 bypasses the hold/quantise entirely
+        // (exactly transparent, not just close to it - a corner that has
+        // never touched this macro must reproduce the legacy waveform
+        // bit-for-bit, since quantising even at "off" would quietly
+        // change every corner shipped before crush existed); crush = 1
+        // holds for 25 samples at as few as ~8 levels. crushRetrigger_
+        // (see its own declaration) forces an immediate re-latch on a
+        // fresh touch-down rather than carrying a hold in from whatever
+        // the previous note last latched.
+        if (crush <= 0.0f) {
+            heldCrush_ = v0;
+            crushPhase_ = 0.0f;
+            crushRetrigger_ = false;
+        } else {
+            crushPhase_ += 1.0f;
+            const float holdSamples = 1.0f + crush * 24.0f;
+            if (crushRetrigger_ || crushPhase_ >= holdSamples) {
+                crushPhase_ = crushRetrigger_ ? 0.0f : std::fmod(crushPhase_, holdSamples);
+                crushRetrigger_ = false;
+                const float levels = std::exp2(14.0f - crush * 11.0f);
+                heldCrush_ = std::round(v0 * levels) / levels;
+            }
         }
 
         // Drive: a soft clip with its make-up baked in, so DRIVE is a colour and not a volume knob.
         const float pre = 1.0f + drive * 15.0f;
-        const float driven = std::tanh(v0 * pre) / std::tanh(pre * 0.5f + 0.5f);
+        const float driven = std::tanh(heldCrush_ * pre) / std::tanh(pre * 0.5f + 0.5f);
 
         // The lowpass.
         const float v3 = driven - ic2eq_;
@@ -234,22 +422,82 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         ic1eq_ = 2.0f * v1 - ic1eq_;
         ic2eq_ = 2.0f * v2 - ic2eq_;
 
-        out[i] = v2 * gain * 0.8f;
+        // ECHO: a fixed-length ring buffer read and written through the
+        // same rotating index, delayBuffer_.size() samples apart - that
+        // length *is* the delay time, so there is no separate offset to
+        // keep in sync with it (see delayBuffer_'s own declaration). Fed
+        // with `gated`, not v2 directly: silence must stay silence going
+        // in, so a released touch lets an already-ringing tail decay on
+        // its own via kDelayFeedback rather than the loop echoing into
+        // itself for ever while nobody is touching the pad. `echo` is
+        // only ever the wet MIX read out here, never the time or
+        // feedback - see kDelayTimeMs/kDelayFeedback's own comment.
+        const float gated = v2 * gain;
+        const float wet = delayBuffer_[delayWrite_];
+        delayBuffer_[delayWrite_] = gated + wet * kDelayFeedback;
+        delayWrite_ = (delayWrite_ + 1) % delayBuffer_.size();
+
+        // SPRING: SIZE and TONE are fixed (see kSpringCombMs's own
+        // comment), so only the wet MIX - this macro - is ever
+        // corner-blended, the same reasoning ECHO's own comment gives.
+        // Four parallel combs (each summing its own delayed, TONE-
+        // lowpassed feedback back into the loop) build the density; two
+        // series allpasses smear it into a tail - synth/Spring.kt's
+        // offline network, ported to run one sample at a time instead of
+        // baking a whole buffer at once. Fed with `gated`, not v2
+        // directly, for the same reason ECHO is: silence in stays silence,
+        // and a released touch's tail rings down on its own via each
+        // comb's own feedback rather than cutting off with the gate. The
+        // network runs unconditionally every sample regardless of
+        // `spring`'s own value (like the delay line above) - multiplying
+        // its output by `spring` in the final sum is what makes spring = 0
+        // exactly silent, not the network itself switching off, so a
+        // corner that has never touched this macro reproduces the legacy
+        // waveform bit-for-bit.
+        float springWet = 0.0f;
+        for (int32_t c = 0; c < kSpringCombCount; ++c) {
+            const size_t idx = springCombWrite_[c];
+            const float fed = springCombBuf_[c][idx];
+            springWet += fed;
+            springCombLp_[c] += springLpA_ * (fed - springCombLp_[c]);
+            springCombBuf_[c][idx] = gated + springCombFb_[c] * springCombLp_[c];
+            springCombWrite_[c] = (idx + 1) % springCombBuf_[c].size();
+        }
+        springWet *= 0.25f;
+        for (int32_t a = 0; a < kSpringAllpassCount; ++a) {
+            const size_t idx = springApWrite_[a];
+            const float delayed = springApBuf_[a][idx];
+            const float fedIn = springWet + kSpringAllpassGain * delayed;
+            springApBuf_[a][idx] = fedIn;
+            springWet = delayed - kSpringAllpassGain * fedIn;
+            springApWrite_[a] = (idx + 1) % springApBuf_[a].size();
+        }
+
+        out[i] = (gated + wet * echo + springWet * spring) * 0.8f;
     }
 }
 
 oboe::DataCallbackResult SurfaceEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
-    adoptPendingSample();
+    for (int32_t slot = 0; slot < kMaxSources; ++slot) adoptPendingSample(slot);
 
-    // Drain the ring to the newest frame: a control stream is a position,
-    // not a history, and the smoothers glide toward wherever it is now.
+    // Drain the ring, applying every frame in the order it arrived: the
+    // continuous macros (pitch/cutoff/...) are a position, not a history,
+    // so applying several before rendering a sample is harmless - only the
+    // last setTarget before renderMono's next() calls sticks. But the
+    // gate's *edge* is an event, and a lift-then-retouch that lands in the
+    // same drain (the ring holds up to 64 frames, and the UI can push
+    // faster than one audio callback drains) is a real sequence, not a
+    // single level: jumping straight to the newest frame would apply
+    // gate=true against a gated_ that was never told about the
+    // intervening false, and applyControl's touch-down check would miss
+    // the retrigger entirely.
     ControlFrame frame;
     bool any = false;
-    while (controls_.pop(frame)) any = true;
-    if (any) {
-        latest_ = frame;
-        applyControl(latest_);
+    while (controls_.pop(frame)) {
+        any = true;
+        applyControl(frame);
     }
+    if (any) latest_ = frame;
 
     auto* out = static_cast<float*>(audioData);
     int32_t done = 0;

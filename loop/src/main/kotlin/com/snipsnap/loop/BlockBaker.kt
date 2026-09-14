@@ -45,6 +45,7 @@ object BlockBaker {
     fun bake(block: Block, session: Session, source: SampleSource): Snip = when (block) {
         is LoopBlock -> bakeLoop(block, session, source)
         is PatternBlock -> bakePattern(block, session, source)
+        is SilenceBlock -> silence(session)
     }
 
     private fun bakeLoop(block: LoopBlock, session: Session, source: SampleSource): Snip {

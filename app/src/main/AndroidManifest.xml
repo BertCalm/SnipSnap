@@ -85,8 +85,11 @@
         </provider>
 
         <!-- The six-track phasing loop grid (plan-03). No launcher filter:
-             one front door. Reachable in dev via
-             adb shell am start -n com.snipsnap.app/.LoopActivity -->
+             one front door, MainActivity's. Reached from the shelf's own
+             LOOP row once a snip has been sent to a track (App.kt's
+             loopLauncher); still startable in dev via
+             adb shell am start -n com.snipsnap.app/.LoopActivity, which is
+             why it says so in words when there is no session to draw. -->
         <activity
             android:name=".LoopActivity"
             android:exported="true"

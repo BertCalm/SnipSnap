@@ -234,8 +234,12 @@ class KitBuilderModel private constructor(
      * EVIL TWINS: bank B becomes seeded FX re-treatments of bank A, one
      * twin per pad — [com.snipsnap.synth.Shuffle.withRemixBank] over the
      * kit's own audio. Twins keep their source's colour and mute group
-     * (so the hats still choke in bank B) and carry fx-only recipes.
-     * Rerolling with a new seed replaces the bank. Returns bank-B slots.
+     * (so the hats still choke in bank B), carry fx-only recipes, and are
+     * stamped [TWIN_OF] with the pad they twin, so a later remix knows
+     * which bank-B pads are its own to replace. Rerolling with a new seed
+     * replaces the bank — but never a pad the user put there themselves
+     * (capture, SNIPS → PAD or a chop landed on B): [ownPadsOnBankB]
+     * non-empty refuses, with the pads named. Returns bank-B slots.
      */
     fun remixBankB(seed: Int): List<Int> {
         val bankA = (1..16).map { slot ->
@@ -247,6 +251,8 @@ class KitBuilderModel private constructor(
             }
         }
         require(bankA.any { it != null }) { "bank A is empty - nothing to remix" }
+        val own = ownPadsOnBankB()
+        check(own.isEmpty()) { "bank B holds your own pads (${own.joinToString { PadBanks.tag(it) }}) - a remix would wipe them" }
 
         (17..32).forEach { clear(it) }
         val remixed = com.snipsnap.synth.Shuffle.withRemixBank(bankA, seed)
@@ -264,12 +270,73 @@ class KitBuilderModel private constructor(
                     displayName = "${source.displayName} B",
                     recipe = twin.recipe,
                     velocityLayers = emptyList(),
+                    source = source.source + (TWIN_OF to PadBanks.tag(slot - 16)),
                 ),
             )
             added += slot
         }
         dirty = true
         return added
+    }
+
+    /**
+     * Whether [pad] is one of EVIL TWINS' own: stamped [TWIN_OF], or — for
+     * a twin dealt before the stamp existed — the shape a twin has and
+     * nothing else on bank B did until now: the bank-A pad's name plus
+     * " B", with a recipe, sixteen slots up from a pad that exists.
+     */
+    fun isTwin(pad: KitPad): Boolean = isTwin(kit, pad)
+
+    /**
+     * Bank-B slots holding a pad that is not a twin — the user's own,
+     * landed by capture, SNIPS → PAD or a chop — which [remixBankB]
+     * refuses to wipe and the KIT screen warns about before trying.
+     */
+    fun ownPadsOnBankB(): List<Int> = ownPadsOnBankB(kit)
+
+    /**
+     * A chop's arrangement landed onto one [bank] of THIS kit, in the
+     * order SEND TO GRID would have laid it, instead of into a new kit:
+     * the second page a user builds by hand rather than the twins tray.
+     * The bank must be empty (nothing here decides which of two sounds
+     * a slot keeps), and a bank holds sixteen, so an arrangement wider
+     * than that lands its first sixteen entries and the caller says how
+     * many did not fit ([arranged] entries past the bank, non-null).
+     * Each pad lands through [assign] — the same door capture and
+     * SNIPS → PAD use — so its class name, provenance (`origin=chop`,
+     * the tape keys) and in-key retune are the ones any pad gets.
+     * Returns the slots landed on, in order.
+     */
+    fun landArranged(arranged: List<ArrangedPad?>, bank: Int): List<Int> {
+        val slots = PadBanks.slots(bank)
+        val taken = kit.pads.filter { it.slot in slots }
+        require(taken.isEmpty()) { "bank ${PadBanks.letter(bank)} is not empty: ${taken.joinToString { PadBanks.tag(it.slot) }}" }
+        val landed = mutableListOf<Int>()
+        arranged.take(PadBanks.SIZE).forEachIndexed { i, entry ->
+            val pad = entry ?: return@forEachIndexed
+            if (pad.snip.frameCount == 0) return@forEachIndexed
+            val slot = slots.first + i
+            if (pad.takes.isEmpty()) {
+                assign(slot, pad.snip, pad.drumClass, pad.displayName ?: pad.drumClass.name.replace('_', ' '), source = pad.source)
+            } else {
+                // A folded pad (CHOP's FOLD DOUBLES): every take end to end
+                // through the same door, then the chain that steps through
+                // them — what KitAssembler does for SEND TO GRID.
+                val all = listOf(pad.snip) + pad.takes
+                var at = 0L
+                val boundaries = all.map { t -> at.also { at += t.frameCount } }
+                assign(slot, Robin.concat(all), pad.drumClass, pad.displayName ?: pad.drumClass.name.replace('_', ' '), source = pad.source)
+                update(slot) { it.copy(chain = com.snipsnap.kit.ChainInfo(boundaries, cycle = all.size)) }
+            }
+            // A gate pad (a ghost: hold the pad, hold the room) stays a gate
+            // through this door too, and a balanced pad keeps the mixer level
+            // the balancer set — both as they do through KitAssembler's.
+            if (!pad.oneShot || pad.level != null) {
+                update(slot) { it.copy(oneShot = pad.oneShot, level = pad.level ?: it.level) }
+            }
+            landed += slot
+        }
+        return landed
     }
 
     /**
@@ -395,17 +462,46 @@ class KitBuilderModel private constructor(
         recipe: com.snipsnap.json.JsonValue.Obj?,
         transform: (Snip) -> Snip,
     ): KitPad {
-        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.velocityLayers.isEmpty()) {
-            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
-        }
-        requireNotChained(pad, "rewriting")
+        val pad = requireRewritable(slot)
         val original = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         val processed = transform(original)
         require(processed.frameCount > 0) { "a rewrite must leave audio behind" }
         moveToBin(pad.sampleFile)
         WavWriter.write(File(kitDir, pad.sampleFile), processed)
         return update(slot) { it.copy(recipe = recipe ?: it.recipe) }
+    }
+
+    /**
+     * DUST: the tape's own hiss and room under one pad (`docs/DUST.md`),
+     * [amount] 0..1 through `com.snipsnap.audio.Dust.apply` with [print],
+     * the dust of [tape] (a bare file name on the SNIPS shelf, recorded
+     * in the recipe so DO IT AGAIN and the pad sheet can name it). The
+     * same shape as [smearPad] in every rule: restore-first when the bin
+     * holds the original (so re-dusting, or dusting an aged pad, never
+     * stacks), amount 0 takes an existing dust off and touches an
+     * undusted pad not at all, layers and chains refused, bin-backed
+     * through [replaceAudio].
+     */
+    fun dustPad(slot: Int, amount: Float, tape: String, print: com.snipsnap.audio.Dust.Print?): KitPad {
+        require(amount in 0f..1f) { "amount is 0..1, got $amount" }
+        require(amount <= 0f || print != null) { "dusting at $amount needs the tape's print" }
+        require('/' !in tape && '\\' !in tape) { "tape is a bare file name: '$tape'" }
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) { "pad $slot is velocity-layered - `clearGhostLayers($slot)` before dusting" }
+        requireNotChained(pad, "dusting")
+        val dustedNow = PadSheet.readDust(pad.recipe) != null
+        val restorable =
+            PadSheet.unTreatState(pad, binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.READY
+        val current = if (restorable && (amount > 0f || dustedNow)) untreatPad(slot) else pad
+        if (amount <= 0f) return current
+        val recipe = com.snipsnap.json.JsonValue.Obj(
+            linkedMapOf<String, com.snipsnap.json.JsonValue>(
+                "verb" to com.snipsnap.json.JsonValue.Str("dust"),
+                "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
+                "tape" to com.snipsnap.json.JsonValue.Str(tape),
+            ),
+        )
+        return replaceAudio(slot, recipe) { snip -> com.snipsnap.audio.Dust.apply(snip, print!!, amount) }
     }
 
     /**
@@ -900,7 +996,7 @@ class KitBuilderModel private constructor(
     }
 
     private fun archiveTake() {
-        val current = File(kitDir, "kit.json")
+        val current = File(kitDir, KitStore.FILE_NAME)
         // A clean save changes nothing; archiving it would duplicate takes.
         if (!current.isFile || !dirty) return
         val takesDir = File(kitDir, TAKES_DIR).apply { mkdirs() }
@@ -981,8 +1077,27 @@ class KitBuilderModel private constructor(
         return children.count { it.delete() }
     }
 
-    /** The kit-name easter egg, for the rename dialog to surface. */
-    fun nameResponse(proposed: String): String? = Copy.kitNameResponse(proposed)
+    /**
+     * The pad on [slot], refused in words when its audio cannot be
+     * rewritten: a velocity-layered pad has more than one sound to
+     * replace, and a round-robin chain is several files pretending to be
+     * one pad.
+     *
+     * Public because [replaceAudio] is not the only caller that needs the
+     * answer. A door that renders a preview of a rewrite has to refuse
+     * exactly what the rewrite will refuse — `MutateSheet.preview` plays a
+     * mutate before it exists, and a preview of a move the keep would then
+     * decline is worse than no preview. One gate, asked twice, rather than
+     * two copies that can drift apart.
+     */
+    fun requireRewritable(slot: Int): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        require(pad.velocityLayers.isEmpty()) {
+            "pad $slot is velocity-layered - clear the layers before rewriting its audio"
+        }
+        requireNotChained(pad, "rewriting")
+        return pad
+    }
 
     /**
      * A chain pad's slice boundaries index into its WAV frame-for-frame;
@@ -1080,6 +1195,21 @@ class KitBuilderModel private constructor(
         /** Open an existing kit folder. */
         fun open(kitDir: File): KitBuilderModel =
             KitBuilderModel(kitDir, KitStore.load(kitDir))
+
+        /** The source key a twin carries: the bank-A tag it was dealt from. */
+        const val TWIN_OF = "twinOf"
+
+        /** [isTwin] on a loaded [kit], for a screen that holds the kit but not the model. */
+        fun isTwin(kit: Kit, pad: KitPad): Boolean {
+            if (pad.source[TWIN_OF] != null) return true
+            if (pad.slot !in 17..32 || pad.recipe == null) return false
+            val a = kit.pad(pad.slot - 16) ?: return false
+            return pad.displayName == "${a.displayName} B"
+        }
+
+        /** [ownPadsOnBankB] on a loaded [kit]: the KIT screen's pre-check before REMIX BANK B runs. */
+        fun ownPadsOnBankB(kit: Kit): List<Int> =
+            kit.pads.filter { it.slot in 17..32 && !isTwin(kit, it) }.map { it.slot }.sorted()
 
         /** FRESH TAPE: a new, empty kit. */
         fun create(name: String, kitDir: File): KitBuilderModel {

@@ -185,6 +185,45 @@ class ChopperTest {
         )
     }
 
+    /**
+     * A hit whose envelope is known to the sample: [peak] for 50 ms, then
+     * [shoulder] until [dropAtSec], then [floor] to the end — alternating
+     * sign so every 5 ms RMS is exactly the amplitude.
+     */
+    private fun envelope(seconds: Float, peak: Float, shoulder: Float, dropAtSec: Float, floor: Float): Snip {
+        val n = (seconds * rate).toInt()
+        val dropAt = (dropAtSec * rate).toInt()
+        val peakEnd = (0.05f * rate).toInt()
+        return Snip(FloatArray(n) { i -> (if (i < peakEnd) peak else if (i < dropAt) shoulder else floor) * (if (i % 2 == 0) 1f else -1f) }, 1, rate)
+    }
+
+    @Test
+    fun `a ghost starts at the first 5 ms window under GHOST_DROP_DB of the hit's peak, and a window just above it is not one`() {
+        val threshold = Math.pow(10.0, Chopper.GHOST_DROP_DB / 20.0).toFloat() // 0.126 of the peak
+        val hit = Slice(Snip(FloatArray(1), 1, rate), sourceFrame = 0)
+        // 0.13 of the peak is above the bar; 0.12 is under it: the ghost starts exactly where 0.12 begins.
+        val snip = envelope(1f, 1f, 0.13f, 0.4f, 0.12f)
+        val ghosts = Chopper.ghosts(snip, listOf(hit), cleanup = null)
+        assertEquals(1, ghosts.size)
+        assertEquals(0, ghosts[0].afterHit)
+        // The first 5 ms window whose RMS is under the bar: it can begin a
+        // few frames before the drop (a window straddling it already
+        // averages under), never after it, and never back at the peak's 50 ms.
+        val dropAt = (0.4f * rate).toInt()
+        val window = (0.005f * rate).toInt()
+        assertTrue(ghosts[0].slice.sourceFrame in (dropAt - window)..dropAt, "the first window under the bar: ${ghosts[0].slice.sourceFrame} vs the drop at $dropAt")
+        assertEquals(snip.frameCount, ghosts[0].slice.sourceFrame + ghosts[0].slice.snip.frameCount, "and runs to the end")
+        assertTrue(0.13f > threshold && 0.12f < threshold, "the fixture straddles the bar: $threshold")
+        // Never under the bar: no ghost.
+        assertTrue(Chopper.ghosts(envelope(1f, 1f, 0.13f, 0.4f, 0.13f), listOf(hit), cleanup = null).isEmpty(), "a shoulder that never drops is no ghost")
+        // Under the bar too late to be GHOST_MIN_SEC long: no ghost.
+        assertTrue(Chopper.ghosts(envelope(0.44f, 1f, 0.13f, 0.4f, 0.12f), listOf(hit), cleanup = null).isEmpty(), "40 ms of room is a scrap")
+        // Two hits: the first's ghost ends where the second's cut begins.
+        val second = Slice(Snip(FloatArray(1), 1, rate), sourceFrame = (0.7f * rate).toInt())
+        val two = Chopper.ghosts(snip, listOf(hit, second), cleanup = null)
+        assertEquals((0.7f * rate).toInt(), two[0].slice.sourceFrame + two[0].slice.snip.frameCount)
+    }
+
     @Test
     fun `chopped break becomes a loadable kit`() {
         // The full auto-chop path: capture a break, chop it, write each piece as

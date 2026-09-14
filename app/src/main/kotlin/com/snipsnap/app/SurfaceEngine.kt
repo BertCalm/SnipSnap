@@ -54,35 +54,80 @@ class SurfaceEngine(preferredSampleRate: Int) {
     @Synchronized
     fun needsRestart(): Boolean = open && NativeSurface.needsRestart(handle)
 
-    /** Load a snip as the voice; stereo is folded to mono, the file's own rate is kept (the engine repitches). */
+    /**
+     * Load a snip as one of the engine's source slots; stereo is folded to
+     * mono, the file's own rate is kept (the engine repitches). Slots
+     * 0/1/2/3 are the four vertices [control]'s `sampleA/B/C/D` blend
+     * between. See [MAX_SOURCES] (kept in sync with SurfaceEngine.h's
+     * kMaxSources by hand, not by any shared build-time constant).
+     */
     @Synchronized
-    fun load(snip: Snip) {
+    fun load(snip: Snip, slot: Int = 0) {
         if (!open) return
+        require(slot in 0 until MAX_SOURCES) { "slot is 0..${MAX_SOURCES - 1}, got $slot" }
         val mono = if (snip.channels == 1) {
             snip.samples
         } else {
             FloatArray(snip.samples.size / 2) { i -> (snip.samples[2 * i] + snip.samples[2 * i + 1]) * 0.5f }
         }
-        NativeSurface.loadSample(handle, mono, snip.sampleRate)
+        NativeSurface.loadSample(handle, mono, snip.sampleRate, slot)
     }
 
-    /** One control frame; call at screen rate with the smoothed reading. */
+    /**
+     * Clears a source slot back to silence - call this when the pad that
+     * used to live there is no longer chosen (a load failed, or a new kit
+     * has none), so a stale sample from before cannot keep sounding at
+     * that vertex once the caller's own state says the slot is empty. A
+     * zero-length load, through the same handshake [load] uses: the
+     * engine already treats a too-short sample as silence and excludes it
+     * from the blend's renormalisation (see readSlot/slotLoaded in
+     * SurfaceEngine.cpp), so there is no separate native "unload" to keep
+     * in sync with this one.
+     */
     @Synchronized
-    fun control(mode: TouchSurface.Mode, reading: TouchSurface.Reading, tilt: Float, gate: Boolean) {
+    fun clearSlot(slot: Int) {
+        if (!open) return
+        require(slot in 0 until MAX_SOURCES) { "slot is 0..${MAX_SOURCES - 1}, got $slot" }
+        NativeSurface.loadSample(handle, FloatArray(0), 0, slot)
+    }
+
+    /**
+     * One control frame; call at screen rate with the smoothed reading.
+     * [sampleA]/[sampleB]/[sampleC]/[sampleD] weight slots 0/1/2/3 - a
+     * barycentric blend across the pad, independent of [mode]. Not
+     * required to sum to 1 - the engine renormalises every sample, over
+     * whichever slots are actually loaded. An unloaded slot's own weight
+     * is silence, but only once it is genuinely empty - see [clearSlot].
+     */
+    @Synchronized
+    fun control(
+        mode: TouchSurface.Mode,
+        reading: TouchSurface.Reading,
+        tilt: Float,
+        sampleA: Float = 1f,
+        sampleB: Float = 0f,
+        sampleC: Float = 0f,
+        sampleD: Float = 0f,
+        gate: Boolean,
+    ) {
         if (!open) return
         NativeSurface.control(
             handle, mode.ordinal,
             reading.x, reading.y, reading.z, tilt,
             reading.a, reading.b, reading.c, reading.d,
-            gate,
+            sampleA, sampleB, sampleC, sampleD, gate,
         )
     }
 
-    /** Corner 0..3 = A, B, C, D of the morph pad; every macro 0..1. */
+    /**
+     * Corner 0..3 = A, B, C, D of the morph pad; every macro 0..1. [crush],
+     * [echo] and [spring] default to 0 (transparent, dry) so a caller that
+     * never sets them plays exactly as before those macros existed.
+     */
     @Synchronized
-    fun setCorner(index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float) {
+    fun setCorner(index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float, crush: Float = 0f, echo: Float = 0f, spring: Float = 0f) {
         require(index in 0..3) { "corner is 0..3, got $index" }
-        if (open) NativeSurface.setCorner(handle, index, pitch, cutoff, resonance, drive)
+        if (open) NativeSurface.setCorner(handle, index, pitch, cutoff, resonance, drive, crush, echo, spring)
     }
 
     // ---- the resample tap -----------------------------------------------------
@@ -126,5 +171,8 @@ class SurfaceEngine(preferredSampleRate: Int) {
     companion object {
         /** The print ceiling: a minute at 48 kHz is 11.5 MB of floats, reserved up front. */
         const val MAX_PRINT_SECONDS = 60f
+
+        /** Source slots the engine holds - must match SurfaceEngine.h's kMaxSources. */
+        const val MAX_SOURCES = 4
     }
 }

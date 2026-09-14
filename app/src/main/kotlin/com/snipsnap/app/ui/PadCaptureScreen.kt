@@ -1,6 +1,7 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -50,6 +51,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.PadCapture
 import com.snipsnap.kit.Kit
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -62,6 +64,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -139,6 +142,24 @@ fun PadCaptureScreen(
     var holding by remember { mutableStateOf(false) }
     var holdStart by remember { mutableStateOf(0L) }
 
+    // Liveness signal ONLY — nothing is launched into this scope. It exists
+    // purely so `commitToPad`'s onSuccess closure (below) has something to
+    // read that is cancelled the instant THIS composable instance is
+    // disposed: `rememberCoroutineScope()` is `remember`-scoped exactly like
+    // any other `remember { ... }` value here, so a fresh `PadCaptureScreen`
+    // (a different slot's capture, mounted after this one is torn down) gets
+    // its own new `scope`, not this one. Same idiom as PadSheetScreen's own
+    // `onEject` guard (`scope.isActive`) — see its KDoc for the disposal
+    // hazard this closes: a GRAB's write outlives this screen on [appScope]
+    // (by design, so a MenuRow tab switch can't cancel a WAV partway onto
+    // disk), so the write can complete, and this closure run, after the user
+    // has already left this screen and possibly opened pad capture on a
+    // DIFFERENT slot. An unconditional `onBack()` in that case would fire
+    // against `App`'s CURRENT `padCaptureSlot` — the new slot the user is
+    // now looking at — not the one this GRAB targeted, closing a screen the
+    // user just opened for no reason they can see.
+    val scope = rememberCoroutineScope()
+
     // Mirrors the header's own ◄ KIT chip, which is unconditionally
     // enabled here (unlike PAD SHEET's — nothing on this screen debounces
     // a save to flush, so there's nothing extra for Back to await).
@@ -163,7 +184,7 @@ fun PadCaptureScreen(
         gesture: Gesture,
         successLabel: String,
         nothingLabel: String,
-        failurePrefix: String,
+        failureAction: String,
         producer: suspend () -> PadTape.Landing?,
     ) {
         if (!armed || committing != null) return
@@ -188,16 +209,40 @@ fun PadCaptureScreen(
                     // mid-commit (EJECT from the notification, most likely),
                     // and this read is what keeps the toast honest about
                     // which of the two actually happened.
-                    onToast(if (!MicSessionService.armed.value) "NOT LISTENING YET" else nothingLabel)
+                    onToast(if (!MicSessionService.armed.value) Copy.PAD_CAPTURE_NOT_LISTENING else nothingLabel)
                 } else {
                     onKitUpdated(updated)
                     onToast(successLabel)
-                    onBack()
+                    // `scope.isActive` guards ONLY this navigation — see the
+                    // KDoc on `scope`'s declaration above for the disposed-
+                    // and-remounted hazard this closes (GRAB pad 3, leave,
+                    // open pad 7's capture, pad 3's write lands late and
+                    // would otherwise close pad 7's screen). `onKitUpdated`
+                    // and the toast stay unconditional: both are App-level
+                    // state with no screen identity, so a late arrival is
+                    // harmless there — same split PadSheetScreen's `onEject`
+                    // guard makes.
+                    //
+                    // No `liveSlot == targetSlot` half, unlike `onEject`'s
+                    // guard: this screen has no pad-nav ◄/► that can
+                    // reassign `slot` on a live, still-mounted instance the
+                    // way PadSheetScreen's can. `App.kt` only ever sets
+                    // `padCaptureSlot` from null (KitScreen's own
+                    // `onEmptyLongPress`, reachable only while this screen
+                    // is NOT showing, since the `when` branch that renders
+                    // it requires `padCaptureSlot != null`) or back to null
+                    // (this `onBack`, `goToScreen`, `deleteKit`) — never
+                    // from one non-null slot straight to another. So a
+                    // slot-identity check here would be dead code, not
+                    // defense in depth; `scope.isActive` alone is the whole
+                    // guard.
+                    if (scope.isActive) onBack()
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                onToast("$failurePrefix: ${e.message ?: e.javaClass.simpleName}")
+                Log.e("PadCaptureScreen", "commitToPad ($gesture): failed", e)
+                onToast(Copy.actionFailed(failureAction))
             } finally {
                 committing = null
             }
@@ -207,9 +252,9 @@ fun PadCaptureScreen(
     fun grab() {
         commitToPad(
             gesture = Gesture.GRAB,
-            successLabel = "GRABBED → PAD ${padTag(slot)}",
-            nothingLabel = "NOTHING TO GRAB YET",
-            failurePrefix = "GRAB FAILED",
+            successLabel = Copy.padGestureLanded("GRABBED", padTag(slot)),
+            nothingLabel = Copy.GRAB_NOTHING_YET,
+            failureAction = "GRAB",
         ) {
             val raw = MicSessionService.snapshotTail(GRAB_FRAMES) ?: return@commitToPad null
             PadTape.grab(raw, MicSessionService.SAMPLE_RATE)
@@ -225,7 +270,7 @@ fun PadCaptureScreen(
         holding = false
         val heldMs = SystemClock.elapsedRealtime() - holdStart
         if (heldMs < MIN_HOLD_MS) {
-            onToast("HOLD TO RECORD")
+            onToast(Copy.PAD_CAPTURE_HOLD_TOO_SHORT)
             return
         }
         // The ring was recording the whole time this control was held down —
@@ -238,9 +283,9 @@ fun PadCaptureScreen(
             .coerceIn(1, PadCapture.MAX_HOLD_FRAMES)
         commitToPad(
             gesture = Gesture.HOLD,
-            successLabel = "RECORDED → PAD ${padTag(slot)}",
-            nothingLabel = "NOTHING RECORDED",
-            failurePrefix = "RECORD FAILED",
+            successLabel = Copy.padGestureLanded("RECORDED", padTag(slot)),
+            nothingLabel = Copy.HOLD_NOTHING_RECORDED,
+            failureAction = "RECORD",
         ) {
             MicSessionService.snapshotTail(frames)?.let { PadTape.hold(it, MicSessionService.SAMPLE_RATE) }
         }
@@ -295,14 +340,14 @@ fun PadCaptureScreen(
                     // GRAB genuinely gets less than this. Same reason SNIP
                     // says "UP TO 60s" rather than "LAST 60s".
                     TapeText(
-                        "GRAB KEEPS UP TO THE LAST ${GRAB_SECONDS}s HEARD. HOLD RECORDS WHILE YOU HOLD.",
+                        Copy.padCaptureReady(GRAB_SECONDS),
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,
                     )
                 } else {
                     TapeText(
-                        "NOT LISTENING YET. START THE MIC, THEN HIT SOMETHING.",
+                        Copy.PAD_CAPTURE_NEEDS_MIC,
                         TapeType.lcdSmall,
                         scheme.lcdInk.tape,
                         maxLines = 3,
@@ -315,7 +360,7 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB ▸ UP TO ${GRAB_SECONDS}s",
+            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB · UP TO ${GRAB_SECONDS}s",
             enabled = armed && committing == null,
             onClick = ::grab,
         )
@@ -343,7 +388,7 @@ private fun HeaderChip(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = null, onClick = onClick)
+            .tapeClick(label = label, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

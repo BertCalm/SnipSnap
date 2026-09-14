@@ -36,6 +36,14 @@ tasks.test {
     useJUnitPlatform()
     testLogging {
         events("passed", "failed", "skipped")
+        // FULL, because this module's tests are mostly LAWS, and a law's whole
+        // value is the sentence it prints when it fires. Without this Gradle
+        // shows "AssertionFailedError at SomeTest.kt:164" and swallows the
+        // message, so a failure that does not reproduce locally - a different
+        // JDK on CI, say - costs a round trip to read text the runner already
+        // had. ReversalTest's laws name the exact Copy constant at fault; that
+        // is the point of them.
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 
     // ConventionTest's source-scanning laws (BackHandler registration, the

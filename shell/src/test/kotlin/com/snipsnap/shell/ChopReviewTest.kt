@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
+import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,6 +32,315 @@ class ChopReviewTest {
             }
         }
         return Snip(total, 1, rate)
+    }
+
+    /**
+     * The same four hits with a quiet ghost hat 125 ms after each of the
+     * first three, inside their decay — what the ear controls are for.
+     * (Hits in silence all clear every ear: the detector's bar is set
+     * against the local novelty, and silence has none. A ghost inside a
+     * decay is the case that separates them.)
+     */
+    private fun busyBreak(ghost: Float = 0.06f): Snip {
+        val base = breakSnip()
+        val out = base.samples.copyOf()
+        val hat = DrumSynth.closedHat()
+        val step = rate / 2
+        for (s in 1..3) {
+            val at = s * step + step / 4
+            for (i in hat.samples.indices) if (at + i < out.size) out[at + i] += hat.samples[i] * ghost
+        }
+        return Snip(out, 1, rate)
+    }
+
+    private fun byHits(hits: Int = 8, ear: ChopReviewModel.Ear = ChopReviewModel.Ear.NORMAL, cut: ChopReviewModel.Cut = ChopReviewModel.Cut.ON) =
+        ChopReviewModel.ChopMode.ByHits(hits, ear, cut)
+
+    @Test
+    fun `the ear hears more at FINE than at COARSE, and CUT moves every cut against the attack`() {
+        val coarse = ChopReviewModel.chop(busyBreak(), byHits(16, ChopReviewModel.Ear.COARSE))
+        val normal = ChopReviewModel.chop(busyBreak(), byHits(16, ChopReviewModel.Ear.NORMAL))
+        val fine = ChopReviewModel.chop(busyBreak(), byHits(16, ChopReviewModel.Ear.FINE))
+        assertTrue(coarse.sliceCount <= normal.sliceCount && normal.sliceCount <= fine.sliceCount, "${coarse.sliceCount} ≤ ${normal.sliceCount} ≤ ${fine.sliceCount}")
+        assertTrue(fine.sliceCount > coarse.sliceCount, "FINE hears a ghost COARSE does not: ${fine.sliceCount} vs ${coarse.sliceCount}")
+        assertTrue(coarse.sliceCount >= 4, "COARSE still hears the four that carry the beat")
+        // CUT: the same hits, each cut earlier at EARLY and later at LATE.
+        val early = ChopReviewModel.chop(breakSnip(), byHits(8, cut = ChopReviewModel.Cut.EARLY))
+        val on = ChopReviewModel.chop(breakSnip(), byHits(8))
+        val late = ChopReviewModel.chop(breakSnip(), byHits(8, cut = ChopReviewModel.Cut.LATE))
+        assertEquals(on.sliceCount, early.sliceCount)
+        assertEquals(on.sliceCount, late.sliceCount)
+        for (i in on.rows.indices) {
+            assertTrue(early.cutFrames()[i] <= on.cutFrames()[i], "EARLY cuts no later than ON at $i")
+            assertTrue(on.cutFrames()[i] <= late.cutFrames()[i], "LATE cuts no earlier than ON at $i")
+        }
+        assertTrue(early.cutFrames()[1] < late.cutFrames()[1], "and the nudge is real")
+        // The header says only what is off its default.
+        assertEquals("BY HITS", on.modeLabel())
+        assertEquals("BY HITS · FINE", fine.modeLabel())
+        assertEquals("BY HITS · CUT EARLY", early.modeLabel())
+        assertEquals("GRID ×8", ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.Grid(8)).modeLabel())
+        assertEquals(on.rows.map { it.slice.sourceFrame }, on.cutFrames())
+        assertEquals(on.cutFrames(), on.cutFrames().sorted())
+        // The stepper's bounds are the mode's own law.
+        kotlin.test.assertFailsWith<IllegalArgumentException> { ChopReviewModel.ChopMode.ByHits(0) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { ChopReviewModel.ChopMode.ByHits(ChopReviewModel.MAX_HITS + 1) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { ChopReviewModel.ChopMode.Grid(0) }
+    }
+
+    @Test
+    fun `AUTO finds the knee, and a bench re-chop carries corrected chips onto the slices that stayed`() {
+        val model = ChopReviewModel.chop(breakSnip(), byHits(8))
+        assertEquals(4, model.autoCount(), "four hits of a kind: all four")
+        assertEquals(null, ChopReviewModel.chop(Snip(FloatArray(rate * 2), 1, rate), byHits(8)).autoCount(), "no hits: no count, not one")
+        model.setLabel(0, DrumClass.TOM)
+        model.setLabel(2, DrumClass.CLAP)
+        val nudged = model.rechopKeeping(byHits(8, cut = ChopReviewModel.Cut.EARLY))
+        assertEquals(DrumClass.TOM, nudged.rows[0].override, "the chip followed its slice across the nudge")
+        assertEquals(DrumClass.CLAP, nudged.rows[2].override)
+        assertEquals(null, nudged.rows[1].override)
+        assertFalse(nudged.edited)
+        // Fewer hits: the chips of the slices that stayed stay.
+        val fewer = model.rechopKeeping(byHits(2))
+        assertEquals(2, fewer.sliceCount)
+        for (row in fewer.rows) {
+            val was = model.rows.firstOrNull { abs(it.slice.sourceFrame - row.slice.sourceFrame) <= ChopReviewModel.CARRY_TOLERANCE_FRAMES }
+            assertEquals(was?.override, row.override, "row ${row.n}")
+        }
+        // Plain RE-CHOP still clears them.
+        assertTrue(model.rechop().rows.all { it.override == null })
+        // One to one: two fresh slices within the tolerance of one corrected
+        // chip (a grid of 500-frame parts under a one-part grid) inherit it
+        // once, on the nearest, never both.
+        val short = Snip(DrumSynth.kick().samples.copyOf(16_000), 1, rate)
+        val one = ChopReviewModel.chop(short, ChopReviewModel.ChopMode.Grid(1))
+        one.setLabel(0, DrumClass.TOM)
+        val many = one.rechopKeeping(ChopReviewModel.ChopMode.Grid(32))
+        assertTrue(many.rows[1].slice.sourceFrame <= ChopReviewModel.CARRY_TOLERANCE_FRAMES, "the second part is within the tolerance too: ${many.rows[1].slice.sourceFrame}")
+        assertEquals(listOf(0), many.rows.withIndex().filter { it.value.override == DrumClass.TOM }.map { it.index }, "the chip lands once, on the nearest")
+    }
+
+    @Test
+    fun `MERGE joins two slices and keeps the other chips, SPLIT cuts a slice at its inner hit, and both refuse honestly`() {
+        val model = ChopReviewModel.chop(breakSnip(), byHits(8))
+        assertEquals(4, model.sliceCount)
+        model.setLabel(2, DrumClass.CLAP)
+        val lengths = model.rows.map { it.slice.snip.frameCount }
+        val merged = assertNotNull(model.merged(0))
+        assertEquals(3, merged.sliceCount)
+        assertEquals(lengths[0] + lengths[1], merged.rows[0].slice.snip.frameCount, "the joined slice is both, end to end")
+        assertEquals(model.rows[0].slice.sourceFrame, merged.rows[0].slice.sourceFrame)
+        assertEquals(DrumClass.CLAP, merged.rows[1].override, "the chip after the join is still the human's")
+        assertTrue(merged.edited)
+        assertTrue("EDITED" in merged.modeLabel(), merged.modeLabel())
+        assertEquals(null, model.merged(3), "nothing after the last slice")
+        assertEquals(null, model.merged(-1))
+        // SPLIT the joined slice: its inner hit is the hat, so the cut lands where it was.
+        val split = assertNotNull(merged.split(0))
+        assertEquals(4, split.sliceCount)
+        assertTrue(abs(split.rows[1].slice.sourceFrame - model.rows[1].slice.sourceFrame) <= ChopReviewModel.CARRY_TOLERANCE_FRAMES, "the cut is back near the hat: ${split.rows[1].slice.sourceFrame} vs ${model.rows[1].slice.sourceFrame}")
+        assertEquals(lengths[0] + lengths[1], split.rows[0].slice.snip.frameCount + split.rows[1].slice.snip.frameCount, "nothing lost in the split")
+        assertEquals(DrumClass.CLAP, split.rows[2].override, "the chip after the split is still the human's")
+        assertEquals(null, split.rows[1].override, "the new half takes the classifier's word")
+        // A slice with one hit in it has nothing to split at.
+        assertEquals(null, model.split(3), "one hit, no second")
+        assertEquals(null, model.split(9))
+        // The tape reference rides through both.
+        val taped = ChopReviewModel.chop(breakSnip(), byHits(8), ChopReviewModel.TapeRef("snip_1_X.wav", 100))
+        assertEquals(taped.tape, assertNotNull(taped.merged(0)).tape)
+        assertEquals(taped.tape, assertNotNull(assertNotNull(taped.merged(0)).split(0)).tape)
+    }
+
+    /**
+     * A break at 120 BPM (a hit every half second, 22050 frames), eight
+     * bars of it so the tempo is unmistakable, with [nudges] moving named
+     * hits off the pulse by that many frames (negative = early).
+     */
+    private fun pulsed(nudges: Map<Int, Int> = emptyMap(), extra: List<Int> = emptyList()): Snip {
+        val step = rate / 2
+        val total = FloatArray(step * 10)
+        val kit = listOf(DrumSynth.kick(), DrumSynth.closedHat(), DrumSynth.snare(), DrumSynth.closedHat())
+        fun put(at: Int, hit: Snip, gain: Float) { for (i in hit.samples.indices) if (at + i < total.size) total[at + i] += hit.samples[i] * gain }
+        for (s in 1..8) put(s * step + (nudges[s] ?: 0), kit[(s - 1) % 4], 0.8f)
+        for (at in extra) put(at, DrumSynth.snare(), 0.5f)
+        return Snip(total, 1, rate)
+    }
+
+    @Test
+    fun `ON THE GRID snaps late cuts to the pulse, never cuts after an attack, and folds two hits on one line`() {
+        val nudges = mapOf(2 to 441, 3 to -441, 5 to 882)
+        val off = ChopReviewModel.chop(pulsed(nudges), byHits(16))
+        val tempo = assertNotNull(off.tempo, "eight bars at 120 have a tempo")
+        assertTrue(Math.abs(tempo.bpm - 120f) < 3f, "heard ~120: ${tempo.bpm}")
+        val on = ChopReviewModel.chop(pulsed(nudges), byHits(16, cut = ChopReviewModel.Cut.ON).copy(grid = ChopReviewModel.GridSnap.SIXTEENTH))
+        assertEquals(off.sliceCount, on.sliceCount, "no hit lost to the grid")
+        assertEquals("BY HITS · ON THE 16TH", on.modeLabel())
+        // The grid's spacing is fitted to the hits, not read off the estimate: the true 16th here is 5512.5 frames.
+        val step = assertNotNull(on.gridStep)
+        assertTrue(Math.abs(step - rate / 8.0) < 40, "the grid fits the hits' own pulse: $step")
+        assertEquals(null, off.gridStep)
+        val anchor = on.cutFrames().first()
+        var moved = 0
+        for (i in on.rows.indices) {
+            val was = off.cutFrames()[i]
+            val now = on.cutFrames()[i]
+            assertTrue(now <= was, "a cut never lands after the one the detector made: slice ${i + 1} $now vs $was")
+            val phase = ((now - anchor) / step) % 1.0
+            val onLine = Math.min(phase, 1.0 - phase) < 0.02
+            assertTrue(onLine || now == was, "slice ${i + 1} is on the pulse or where the hit was: phase $phase")
+            if (now != was) moved++
+        }
+        assertTrue(moved >= 2, "the late hits moved onto the pulse: $moved")
+        // The early hit (3) keeps its own cut: the click is never shaved.
+        assertEquals(off.cutFrames()[2], on.cutFrames()[2])
+        // A flam — a second hit 60 ms after the sixth, its own hit to the ear (past the 30 ms gap) — on an 8th grid is one slice, the stronger's.
+        val flam = ChopReviewModel.chop(pulsed(extra = listOf(6 * (rate / 2) + 2646)), byHits(16))
+        assertEquals(9, flam.sliceCount, "the ear hears the flam as its own hit")
+        val flamOn = ChopReviewModel.chop(pulsed(extra = listOf(6 * (rate / 2) + 2646)), byHits(16).copy(grid = ChopReviewModel.GridSnap.EIGHTH))
+        assertEquals(8, flamOn.sliceCount, "the flam folds onto one line")
+        // The grid rides the bench like everything else: the tempo is measured once and shared.
+        val again = on.rechopKeeping(byHits(16).copy(grid = ChopReviewModel.GridSnap.OFF))
+        assertEquals(off.cutFrames(), again.cutFrames())
+        assertTrue(again.tempo === on.tempo, "one measurement per source")
+    }
+
+    /** Two kicks, two snares (one soft), a hat — five slices, three sounds. */
+    private fun repeats(): Snip {
+        val step = rate / 2
+        val total = FloatArray(step * 7)
+        fun put(at: Int, hit: Snip, gain: Float) { for (i in hit.samples.indices) if (at + i < total.size) total[at + i] += hit.samples[i] * gain }
+        put(1 * step, DrumSynth.kick(), 0.8f)
+        put(2 * step, DrumSynth.kick(), 0.7f)
+        put(3 * step, DrumSynth.snare(), 0.8f)
+        put(4 * step, DrumSynth.snare(), 0.5f)
+        put(5 * step, DrumSynth.closedHat(), 0.8f)
+        return Snip(total, 1, rate)
+    }
+
+    @Test
+    fun `FOLD groups the same sound, never across classes, and lands a chain pad`() {
+        val model = ChopReviewModel.chop(repeats(), byHits(8))
+        assertEquals(5, model.sliceCount)
+        val folds = model.folds()
+        assertEquals(listOf(2, 2, 1), folds.map { it.size }, "kicks, snares, the hat")
+        assertEquals(listOf(1, 3, 5), folds.map { it.lead.n }, "folds in capture order, led by their first slice")
+        assertEquals(listOf("×2 TAKES", "TAKE 2 OF 2 · = 1", "×2 TAKES", "TAKE 2 OF 2 · = 3", null), model.foldTags())
+        val placed = model.foldedPreview()
+        assertEquals(3, placed.count { it != null })
+        assertEquals(DrumClass.KICK, placed[0]?.lead?.effectiveClass)
+        assertEquals(DrumClass.SNARE, placed[1]?.lead?.effectiveClass)
+        // A relabelled chip is a different sound: the second kick as a TOM folds with nothing.
+        model.setLabel(1, DrumClass.TOM)
+        assertEquals(4, model.folds().size, "never across classes")
+        model.clearOverride(1)
+        // Landing: one chain pad per fold of many, the lead first, the takes cycling under it.
+        val send = model.sendToGridFolded()
+        assertEquals(3, send.sliceCount, "pads, not slices")
+        val kickPad = assertNotNull(send.arranged[0])
+        assertEquals(1, kickPad.takes.size)
+        assertEquals("2", kickPad.source["folded"])
+        assertEquals(model.rows[0].slice.sourceFrame.toString(), kickPad.source["sourceFrame"], "the lead's provenance")
+        val dir = java.nio.file.Files.createTempDirectory("fold").toFile()
+        try {
+            val kit = KitBuilderModel.fromChop("Folded", send.arranged, dir).kit
+            val kick = assertNotNull(kit.pad(1))
+            val chain = assertNotNull(kick.chain, "a folded pad is a chain")
+            assertEquals(2, chain.sliceCount)
+            assertEquals(listOf(0L, model.rows[0].slice.snip.frameCount.toLong()), chain.boundaries)
+            assertEquals(2, chain.cycle)
+            val wav = com.snipsnap.audio.WavReader.read(File(dir, kick.sampleFile))
+            assertEquals(model.rows[0].slice.snip.frameCount + model.rows[1].slice.snip.frameCount, wav.frameCount, "both takes end to end")
+            assertEquals(null, assertNotNull(kit.pad(3)).chain, "a fold of one is a plain pad")
+            // ONTO an existing kit's bank carries the takes too: the same chain, through `assign`.
+            val onto = KitBuilderModel.create("Onto", File(dir, "onto"))
+            val landed = onto.landArranged(send.arranged, 1)
+            assertEquals(3, landed.size)
+            val ontoKick = assertNotNull(onto.pad(landed[0]))
+            assertEquals(chain.boundaries, assertNotNull(ontoKick.chain, "ONTO lands the chain").boundaries)
+            assertEquals(wav.frameCount, com.snipsnap.audio.WavReader.read(File(File(dir, "onto"), ontoKick.sampleFile)).frameCount)
+            assertEquals(null, assertNotNull(onto.pad(landed[2])).chain)
+        } finally {
+            dir.deleteRecursively()
+        }
+        assertEquals("5 SLICES FOLDED ONTO 3 PADS. CHOKE GROUP SET.", Copy.foldedToGrid(5, 3, true))
+        assertEquals("1 SLICE FOLDED ONTO 1 PAD.", Copy.foldedToGrid(1, 1, false))
+        assertEquals("'K' BANK B: 5 SLICES FOLDED ONTO 3 PADS.", Copy.foldedOnto("K", 'B', 5, 3, 0))
+    }
+
+    /** Eight hits 100 ms apart, each an 80 ms burst, the tape ending on the last: the ear hears every hit, and there is nothing between them. */
+    private fun gated(): Snip {
+        val step = rate / 10
+        val total = FloatArray(step * 9)
+        val burst = (0.08f * rate).toInt()
+        for (h in 1..8) {
+            val at = h * step
+            for (i in 0 until burst) if (at + i < total.size) total[at + i] += 0.8f * Math.sin(2.0 * Math.PI * 180.0 * i / rate).toFloat() * Math.exp(-i / (0.04 * rate)).toFloat()
+        }
+        return Snip(total, 1, rate)
+    }
+
+    @Test
+    fun `GHOSTS are the spaces between the hits, named for the hit before, landed as gate pads, and a gated break has none`() {
+        val hits = ChopReviewModel.chop(breakSnip(), byHits(8))
+        val ghosts = ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.Ghosts(byHits(8)))
+        assertTrue(ghosts.ghosts)
+        assertEquals(4, ghosts.sliceCount, "a space after every hit")
+        assertEquals(4, ghosts.hitsHeard, "and the bench steps from the hits underneath")
+        assertEquals(4, hits.hitsHeard)
+        assertEquals("GHOSTS", ghosts.modeLabel())
+        assertEquals(listOf("AFTER KICK 1", "AFTER HAT CL 2", "AFTER SNARE 3", "AFTER HAT OP 4"), ghosts.rows.map { it.ghostOf })
+        assertTrue(ghosts.rows.all { it.effectiveClass == DrumClass.LOOP && !it.unsure }, "a ghost is texture, never NOT SURE")
+        for (i in 0 until 4) {
+            val hit = hits.rows[i].slice
+            val ghost = ghosts.rows[i].slice
+            assertTrue(ghost.sourceFrame > hit.sourceFrame, "the ghost starts after its hit's attack: ${ghost.sourceFrame} vs ${hit.sourceFrame}")
+            val end = if (i + 1 < 4) hits.rows[i + 1].slice.sourceFrame else breakSnip().frameCount
+            assertEquals(end, ghost.sourceFrame + ghost.snip.frameCount, "and runs to the next cut")
+            assertTrue(ghost.snip.frameCount >= (com.snipsnap.audio.Chopper.GHOST_MIN_SEC * rate).toInt())
+        }
+        // The bench reaches the hits underneath: one hit fewer, one ghost fewer; the header carries the hits' extras.
+        val fewer = ghosts.rechopKeeping(ChopReviewModel.withHits(ghosts.mode, byHits(3, cut = ChopReviewModel.Cut.EARLY)))
+        assertEquals(3, fewer.sliceCount)
+        assertEquals("GHOSTS · CUT EARLY", fewer.modeLabel())
+        assertEquals(byHits(3, cut = ChopReviewModel.Cut.EARLY), ChopReviewModel.hitsOf(fewer.mode))
+        assertEquals(byHits(8), ChopReviewModel.withHits(ChopReviewModel.ChopMode.Grid(4), byHits(8)), "a grid becomes the hits")
+        // Landing: gate pads named for their hit, balanced, RE-TRIM keys on every one.
+        val taped = ChopReviewModel.chop(breakSnip(), ChopReviewModel.ChopMode.Ghosts(byHits(8)), ChopReviewModel.TapeRef("snip_1_X.wav", 0))
+        val send = taped.sendToGrid()
+        val pads = send.arranged.filterNotNull()
+        assertEquals(4, pads.size)
+        assertTrue(pads.all { !it.oneShot }, "hold the pad, hold the room")
+        assertTrue(pads.all { it.level != null }, "through the balancer")
+        assertEquals(setOf("AFTER KICK 1", "AFTER HAT CL 2", "AFTER SNARE 3", "AFTER HAT OP 4"), pads.map { it.displayName }.toSet())
+        assertTrue(pads.all { Retrim.FILE_KEY in it.source && it.source["ghost"] == it.displayName })
+        val dir = java.nio.file.Files.createTempDirectory("ghost").toFile()
+        try {
+            val kit = KitBuilderModel.fromChop("Ghosts", send.arranged, dir).kit
+            assertTrue(kit.pads.all { !it.oneShot && it.displayName.startsWith("AFTER ") }, "the assembler keeps the name and the gate")
+            val onto = KitBuilderModel.create("Onto", File(dir, "onto"))
+            val landed = onto.landArranged(send.arranged, 1)
+            assertTrue(landed.map { onto.pad(it)!! }.all { !it.oneShot && it.displayName.startsWith("AFTER ") }, "and so does ONTO")
+            // AutoPlace scatters LOOP pads across the bank, so the landed
+            // slots are read against the arranged entries that are there,
+            // not against 0..3.
+            val placed = send.arranged.withIndex().filter { it.value != null }
+            assertEquals(placed.size, landed.size, "every arranged ghost lands")
+            for ((entry, slot) in placed.zip(landed)) {
+                assertEquals(entry.value!!.level, onto.pad(slot)!!.level, "ONTO keeps the balancer's level on pad ${entry.index + 1}")
+                assertEquals(kit.pad(entry.index + 1)!!.level, onto.pad(slot)!!.level, "the same level SEND landed")
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+        // A tight, gated break: the hits are heard, the spaces are not.
+        val gatedHits = ChopReviewModel.chop(gated(), byHits(16))
+        assertTrue(gatedHits.sliceCount >= 6, "the ear hears the gated hits: ${gatedHits.sliceCount}")
+        assertEquals(0, ChopReviewModel.chop(gated(), ChopReviewModel.ChopMode.Ghosts(byHits(16))).sliceCount, "nothing between the hits")
+        // MERGE and SPLIT keep the names: a split ghost is still the space after the same hit.
+        val merged = assertNotNull(ghosts.merged(0))
+        assertEquals(listOf("AFTER KICK 1", "AFTER SNARE 3", "AFTER HAT OP 4"), merged.rows.map { it.ghostOf })
+        val split = merged.split(0)
+        if (split != null) assertEquals("AFTER KICK 1", split.rows[1].ghostOf)
     }
 
     @Test

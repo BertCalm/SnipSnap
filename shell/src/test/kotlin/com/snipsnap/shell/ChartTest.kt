@@ -225,4 +225,22 @@ class ChartTest {
         assertEquals(2, ls.count { it.startsWith("A01 KICK") }, "one grid per section, not per repeat")
         assertEquals(1, ls.count { it.startsWith("A02 SNARE") }, "the intro has no snare row - only pads the clip plays")
     }
+
+    /**
+     * A one-section arrangement's own header used to say "1 SECTIONS" even
+     * though the header's BARS and NOTES right beside it already sang
+     * singular through `bars()`/`notes()` — the title built the count for
+     * SECTIONS by hand instead of through the same helper.
+     */
+    @Test
+    fun `a one-section arrangement's header reads 1 SECTION, not 1 SECTIONS`() {
+        val k = kit()
+        val solo = Mpc3Clip("Solo", 1, listOf(Mpc3Note(36, 0, 0.9f)))
+        val arrangement = Arranger.Arrangement(
+            "Solo Song", 1,
+            listOf(Arranger.Section("Verse", solo, 1, "the only section there is")),
+        )
+        val text = Chart.render(arrangement, k, 92f, bpmIsDefault = false)
+        assertEquals("SOLO SONG · SEED 1 · 92 BPM · 1 BAR · 1 SECTION", lines(text)[0])
+    }
 }

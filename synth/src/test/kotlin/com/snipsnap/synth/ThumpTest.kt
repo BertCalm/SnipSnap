@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Loudness
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -80,6 +81,31 @@ class ThumpTest {
     }
 
     @Test
+    fun `voices ramp in over the first millisecond instead of jumping to full level`() {
+        // Regression for the U5 attack ramp (Dsp.Env, 1ms): proves the
+        // ramped voices actually start at zero and rise, not just that
+        // they're clean - reverting to the old instant onset would still
+        // pass every other THUMP test in this file. CLAP and RIM are the
+        // documented exceptions (their own envelopes don't fit the
+        // primitive), so they're excluded here rather than asserted false.
+        val ramped = ThumpVoice.entries - ThumpVoice.CLAP - ThumpVoice.RIM
+        for (voice in ramped) {
+            // Max CLICK so KICK's own click burst - which needed its own
+            // fix for this same bug - is exercised too, not just its sine.
+            val snip = Thump.render(voice, mapOf("CLICK" to 1f))
+            // A small tolerance, not exact zero: U6's oversample/decimate
+            // (docs/SYNTH_UPGRADE.md) runs every render through a linear-
+            // phase resample filter, which pre-rings a hair ahead of any
+            // sharp edge - including this envelope's own onset. That's an
+            // unavoidable property of a band-limited filter, not a revival
+            // of the instant-onset bug this test exists to catch.
+            assertEquals(0f, snip.samples[0], 0.02f, "$voice: first sample should start at zero, not jump to full level")
+            val earlyPeak = snip.samples.take((Dsp.RATE * 0.02f).toInt()).maxOf { kotlin.math.abs(it) }
+            assertTrue(earlyPeak > 0.1f, "$voice: should audibly ramp up within the first 20ms, peaked at $earlyPeak")
+        }
+    }
+
+    @Test
     fun `scramble is reproducible and always playable`() {
         for (voice in ThumpVoice.entries) {
             val a = Thump.scramble(voice, Random(42))
@@ -93,6 +119,39 @@ class ThumpTest {
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $roll broke")
                 assertTrue(snip.peak() > 0.5f, "$voice roll $roll too quiet")
             }
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Thump's own wiring: see DspTest for the central proof.
+        for (voice in ThumpVoice.entries) {
+            val preset = ThumpPresets.forVoice(voice).first()
+            assertEquals(
+                // A preset doesn't have to name every macro Thump knows about
+                // (PUNCH, added after these presets were written, is exactly
+                // such a gap) - `near`'s seed is always the full default
+                // macro map with the preset's explicit values layered on
+                // top, same as Thump.scramble's own seed construction.
+                Thump.defaults(voice) + preset.macros,
+                Thump.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Thump.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - Dsp.scrambleNear ignores the seed's values
+            // there anyway, and a spent draw would shift a shared
+            // Random's downstream sequence from the pre-U2 behaviour
+            // this boundary promises.
+            assertEquals(
+                Dsp.scrambleNear(Thump.defaults(voice), 1f, Random(2)),
+                Thump.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
         }
     }
 
@@ -147,5 +206,28 @@ class ThumpTest {
         assertFailsWith<IllegalArgumentException> { ThumpPatch("x", ThumpVoice.KICK, mapOf("CUTOFF" to 0.5f)) }
         assertFailsWith<IllegalArgumentException> { ThumpPatch("x", ThumpVoice.KICK, mapOf("TUNE" to 2f)) }
         assertFailsWith<com.snipsnap.json.JsonException> { ThumpPatch.fromJsonText("""{"engine":"VELVET"}""") }
+    }
+
+    @Test
+    fun `PUNCH at its factory default roughly preserves loudness through the full render`() {
+        // PunchTest proves Punch.apply's own loudness match in isolation;
+        // this proves the ordering contract survives contact with render()'s
+        // own Dsp.normalize/Dsp.limitPeak either side of it. Getting that
+        // ordering backwards (normalize running again *after* Punch, silently
+        // overwriting the level Punch just matched) would go uncaught by
+        // PunchTest alone, since it never touches Thump.render at all.
+        for (voice in ThumpVoice.entries) {
+            val off = Loudness.of(Thump.render(voice, mapOf("PUNCH" to 0f)))
+            val default = Loudness.of(Thump.render(voice))
+            // 25%, not the 20% first measured: U6's oversample/decimate
+            // (docs/SYNTH_UPGRADE.md) nudges every voice's exact sample
+            // values a little, and CLAP - already the peakiest, most
+            // safety-limiter-sensitive voice in the PUNCH design notes -
+            // lands right at that new margin's edge.
+            assertTrue(
+                kotlin.math.abs(default - off) < off * 0.25f,
+                "$voice: PUNCH off vs its factory default should stay close: $off -> $default",
+            )
+        }
     }
 }

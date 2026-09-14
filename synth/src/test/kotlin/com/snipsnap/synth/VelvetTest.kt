@@ -31,19 +31,90 @@ class VelvetTest {
     }
 
     @Test
-    fun `scrambles are reproducible and never garbage`() {
+    fun `render actually dispatches through the oversampled path, not directly at RATE`() {
+        // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
+        // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
+        // calling synthesize(voice, macros, RATE) directly. Reverting that
+        // dispatch would leave every other VELVET test in this file green
+        // (they only check generic playability/macro properties) - this
+        // proves render()'s actual output is not the same as a naive
+        // native-rate synthesize() call reaching the same normalize/
+        // fadeTail finish. Not a spectral aliasing measurement (VELVET's
+        // resonant, self-limiting SVF makes a clean band-energy comparison
+        // ambiguous - measured and discarded, see this PR's own notes):
+        // just a stable, direct proof that render() is actually taking the
+        // oversample-then-decimate detour Dsp.decimate's own resampling
+        // kernel leaves a real fingerprint on, not the "same as before"
+        // path a regression would silently fall back to.
+        for (voice in VelvetVoice.entries) {
+            val actual = Velvet.render(voice)
+            val direct = Velvet.synthesize(voice, emptyMap(), Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            val avgDiff = diff / n
+            assertTrue(
+                avgDiff > 0.002,
+                "$voice: Velvet.render should differ meaningfully from a direct native-rate " +
+                    "synthesize() - got avgDiff=$avgDiff, which would happen if render() stopped " +
+                    "dispatching through the oversampled path",
+            )
+        }
+    }
+
+    @Test
+    fun `scrambles are reproducible and stay in range`() {
         for (voice in VelvetVoice.entries) {
             assertEquals(Velvet.scramble(voice, Random(3)), Velvet.scramble(voice, Random(3)))
             repeat(8) { seed ->
                 val snip = Velvet.render(voice, Velvet.scramble(voice, Random(seed)))
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $seed broke")
-                val c = Classifier.classify(snip)
-                assertTrue(
-                    c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.LOOP &&
-                        c.drumClass != DrumClass.UNKNOWN,
-                    "$voice roll $seed classified ${c.drumClass}",
-                )
             }
+        }
+    }
+
+    @Test
+    fun `scrambled hits usually still read as playable percussion`() {
+        // SCRAMBLE now rolls near a preset (docs/SYNTH_UPGRADE.md, U2), so a
+        // roll can land close to a classifier boundary the same way a
+        // preset itself can - BASS's darkest presets (low TUNE, low CUTOFF)
+        // measured ~17% of rolls landing on KICK there. "Most of the time",
+        // not "always", is the contract the doc itself sets for a roll.
+        for (voice in VelvetVoice.entries) {
+            var misses = 0
+            val rolls = 30
+            repeat(rolls) { seed ->
+                val c = Classifier.classify(Velvet.render(voice, Velvet.scramble(voice, Random(seed))))
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+            }
+            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        // The Dsp.scrambleNear boundary contract, proven end-to-end through
+        // Velvet's own wiring: see DspTest for the central proof.
+        for (voice in VelvetVoice.entries) {
+            val preset = VelvetPresets.forVoice(voice).first()
+            assertEquals(
+                preset.macros,
+                Velvet.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
+            )
+            val flat = Velvet.scramble(voice, Random(1), temperature = 1f, near = preset)
+            assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+
+            // Copilot's review of this PR: at temperature >= 1 with no
+            // `near`, scramble must not spend a random draw picking a
+            // preset first - see ThumpTest's own version of this test.
+            assertEquals(
+                Dsp.scrambleNear(Velvet.defaults(voice), 1f, Random(2)),
+                Velvet.scramble(voice, Random(2), temperature = 1f),
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
+            )
         }
     }
 

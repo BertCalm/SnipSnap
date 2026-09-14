@@ -167,7 +167,10 @@ class ExportWizardModel(
     private fun readBack(outcome: ExportOutcome): List<Finding> = try {
         ExportReadBack.verify(kit, outcome)
     } catch (e: Exception) {
-        listOf(Finding(Severity.FAIL, "read back fell over: ${e.message ?: e.javaClass.simpleName}"))
+        // FindingRow shows this row's own message verbatim (ExportScreen.kt)
+        // - the reader's own words when it has them, a domain phrase when it
+        // doesn't, never the raw exception class.
+        listOf(Finding(Severity.FAIL, "read back fell over: ${e.message ?: "the reader itself refused"}"))
     }
 
     /**
@@ -207,8 +210,8 @@ class ExportWizardModel(
      * (0..[fileCount]); the queued and done lines bracket it.
      */
     fun dubFilesLine(filesShown: Int): String = when (stage) {
-        Stage.READY -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · $fileCount FILES QUEUED"
-        Stage.WRITING -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${filesShown.coerceIn(0, fileCount)} OF $fileCount FILES"
-        Stage.COMPLETE -> "ALL $fileCount FILES ON TAPE. GO MAKE THE THING."
+        Stage.READY -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${Copy.countOf(fileCount, "FILE", "FILES")} QUEUED"
+        Stage.WRITING -> "SIDE A: PROGRAMS · SIDE B: SAMPLES · ${filesShown.coerceIn(0, fileCount)} OF ${Copy.countOf(fileCount, "FILE", "FILES")}"
+        Stage.COMPLETE -> "ALL ${Copy.countOf(fileCount, "FILE", "FILES")} ON TAPE. GO MAKE THE THING."
     }
 }

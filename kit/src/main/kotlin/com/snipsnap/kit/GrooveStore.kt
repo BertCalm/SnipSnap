@@ -27,7 +27,26 @@ import java.io.File
 object GrooveStore {
 
     const val FILE_NAME = "groove.json"
-    const val VERSION = 1
+
+    /**
+     * 2 since clips can declare a meter.
+     *
+     * The bump is not decoration. A clip's `bars` changed meaning for
+     * anything that is not 4/4: a one-bar 5/4 ORBIT clip is `bars: 1`
+     * where the same music used to be written as `bars: 2` of 4/4, and a
+     * 3/4 48-step cycle went from 3 to 4. A build that predates
+     * `pulsesPerBar` would read those numbers as 4/4 bars and play music
+     * of the wrong length — shorter in the first case, longer in the
+     * second — so it has to refuse the file instead, which a version it
+     * does not know is exactly how it does.
+     *
+     * Version 1 is still READ: those files only ever held 4/4 clips, so
+     * the absent key means 4/4 and means it correctly.
+     */
+    const val VERSION = 2
+
+    /** The oldest sidecar this build understands. */
+    const val MIN_VERSION = 1
 
     fun save(kitDir: File, clips: List<Mpc3Clip>): File {
         require(clips.isNotEmpty()) { "no clips - use delete() to clear the grooves" }
@@ -56,8 +75,8 @@ object GrooveStore {
     private fun fromJson(root: JsonValue): List<Mpc3Clip> {
         val obj = root.obj()
         val version = obj["version"]?.int() ?: throw JsonException("groove.json has no version")
-        if (version != VERSION) {
-            throw JsonException("groove.json version $version is not supported (this build reads $VERSION)")
+        if (version !in MIN_VERSION..VERSION) {
+            throw JsonException("groove.json version $version is not supported (this build reads $MIN_VERSION..$VERSION)")
         }
         return obj["clips"]?.arr().orEmpty().map { clipFromJson(it) }
     }
@@ -67,6 +86,19 @@ object GrooveStore {
         linkedMapOf(
             "name" to JsonValue.Str(clip.name),
             "bars" to JsonValue.Num(clip.bars.toDouble()),
+            // Written only when the clip is not in 4/4, so the clip objects
+            // in a 4/4 groove.json are byte-identical to the ones already
+            // on cards. The file's VERSION still moves, because `bars`
+            // changed meaning for the clips that DO carry this - see the
+            // constant. Omitting the key is not a compatibility promise;
+            // the version is.
+            *(
+                if (clip.pulsesPerBar != Mpc3Clip.PULSES_PER_BAR) {
+                    arrayOf("pulsesPerBar" to JsonValue.Num(clip.pulsesPerBar.toDouble()))
+                } else {
+                    emptyArray()
+                }
+                ),
             "notes" to JsonValue.Arr(
                 clip.notes.map { n ->
                     JsonValue.Obj(
@@ -92,6 +124,7 @@ object GrooveStore {
         return Mpc3Clip(
             name = c["name"]?.str() ?: throw JsonException("clip has no name"),
             bars = c["bars"]?.int() ?: throw JsonException("clip has no bars"),
+            pulsesPerBar = c["pulsesPerBar"]?.long() ?: Mpc3Clip.PULSES_PER_BAR,
             notes = c["notes"]?.arr().orEmpty().map { noteJson ->
                 val n = noteJson.obj()
                 Mpc3Note(

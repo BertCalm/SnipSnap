@@ -5,9 +5,17 @@ import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * Despite the name, this no longer tests a PERSONALITY slider — that
+ * enum and its `Delight` gate are gone (see `Personality.kt`'s own
+ * KDoc). What survives, and what this class actually holds to the
+ * app: the copy laws — every shipped `Copy` string shouts, lands on a
+ * full stop, and never states an unfilled buffer as settled fact.
+ * File not renamed per the ask that added this note; the laws below
+ * are the reason it still lives in `Personality.kt`'s test file.
+ */
 class PersonalityTest {
 
     // ==================== Reflective Copy scan (shared by the laws below) ====================
@@ -45,35 +53,9 @@ class PersonalityTest {
     }
 
     @Test
-    fun `OFF is respected everywhere without argument`() {
-        assertFalse(Delight.toastsEnabled(Personality.OFF))
-        assertFalse(Delight.quipsEnabled(Personality.OFF))
-        assertFalse(Delight.deckSoundsEnabled(Personality.OFF, captureArmed = false))
-    }
-
-    @Test
-    fun `quips need FULL, toasts settle for MILD`() {
-        assertTrue(Delight.toastsEnabled(Personality.MILD))
-        assertFalse(Delight.quipsEnabled(Personality.MILD))
-        assertTrue(Delight.toastsEnabled(Personality.FULL))
-        assertTrue(Delight.quipsEnabled(Personality.FULL))
-    }
-
-    @Test
-    fun `law 2 - deck sounds hard-mute while capture is armed, at any level`() {
-        for (level in Personality.entries) {
-            assertFalse(
-                Delight.deckSoundsEnabled(level, captureArmed = true),
-                "$level: a deck thunk must never land inside a snip",
-            )
-        }
-        assertTrue(Delight.deckSoundsEnabled(Personality.FULL, captureArmed = false))
-    }
-
-    @Test
     fun `commit lines rotate in order and wrap`() {
         assertEquals("TAPED. NO TAKEBACKS.", Copy.rotating(Copy.COMMIT_LINES, 0))
-        assertEquals("IT'S OURS NOW.", Copy.rotating(Copy.COMMIT_LINES, 1))
+        assertEquals("COMMITTED TO TAPE.", Copy.rotating(Copy.COMMIT_LINES, 1))
         assertEquals(
             Copy.rotating(Copy.COMMIT_LINES, 0),
             Copy.rotating(Copy.COMMIT_LINES, Copy.COMMIT_LINES.size),
@@ -88,33 +70,66 @@ class PersonalityTest {
         assertTrue("LOCK SCREEN" in Copy.PHONE_STOPPED_TAPE)
         assertTrue("STOP CHIP" in Copy.PHONE_STOPPED_TAPE)
         // A refused consent must not claim anything is armed.
-        assertTrue("NOTHING ARMED" in Copy.INSIDE_REFUSED)
+        assertTrue("NOTHING ARMED" in Copy.APP_AUDIO_REFUSED)
         // The Ear reports what it heard, in real numbers.
         assertEquals("HEARD 12 HITS OVER 2 BARS AT ~93 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(12, 2, 93))
         assertEquals("HEARD 4 HITS OVER 1 BAR AT ~120 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(4, 1, 120))
+        // A single hit over a single bar is singular in both counts at once —
+        // the shape that would have caught `grooveRead` counting BAR/BARS
+        // right while leaving HITS always plural.
+        assertEquals("HEARD 1 HIT OVER 1 BAR AT ~90 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(1, 1, 90))
+        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON PROG A NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
+        // Was "TOOK 1 HITS OVER 1 BAR OF 3/4." — takeLanded sang BAR/BARS
+        // right (it shares grooveRead's shape) and left HITS always plural,
+        // the same asymmetry inside one sentence that the general helper
+        // below exists to rule out everywhere at once.
+        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON PROG A NOW.", Copy.takeLanded(1, 1, "3/4"))
+        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON PROG A NOW.", Copy.takeLanded(5, 2, "5/4"))
+        assertEquals("BANK A · 0 FREE", Copy.catchBank('A', 0))
+        // A refusal names the control as it reads and the tab it is on
+        // (September wiring review, findings 4 and 14): the reflective
+        // laws below hold shape, not route, so a slide back to "ARM THE
+        // MIC" or a bare "TRY GRID" would pass them.
+        for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_APP_AUDIO, Copy.HUM_NOTHING)) {
+            assertTrue("LISTEN · MIC ON KITS" in line || ("LISTEN · MIC" in line && "KITS" in line), "HUM's route is the button on KITS: $line")
+            assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
+        }
+        assertTrue("STOP ON KITS" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
+        assertTrue("OPEN CUT" in Copy.CHOP_NO_HITS, "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
+        // BOUNCE on a stopped GROOVE used to just dim with no reason
+        // (wiring review finding 8) - tapping it now names the control
+        // that actually resolves it, the same PLAY button GROOVE draws.
+        assertTrue("PLAY" in Copy.GROOVE_BOUNCE_NEEDS_PLAY, "names the control that unblocks BOUNCE: ${Copy.GROOVE_BOUNCE_NEEDS_PLAY}")
+        assertEquals("BANK B · 16 FREE", Copy.catchBank('B', 16))
         assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
         assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
         // Send-to-grid reports the real slice count.
         assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
         assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))
+        // A single slice sent to the grid is singular too — sentToGrid used
+        // to say "1 SLICES" (and so did instantKit, which routes through it).
+        assertEquals("1 SLICE ON THE GRID.", Copy.sentToGrid(1, chokeSet = false))
+        assertEquals("ONE TAP, THE WHOLE TAPE. 1 SLICE ON THE GRID.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
     }
 
+    /**
+     * [Copy.countOf] itself: the general form every counted-noun toast in
+     * this file now routes through. `n == 1` is the only case that picks
+     * the singular; `n == 0` reads as plural, same as English ("0 BARS",
+     * never "0 BAR") — asserted here so a future "simplification" to
+     * `n <= 1` doesn't sneak back in.
+     */
     @Test
-    fun `hidden eggs answer only their triggers`() {
-        assertEquals("VERY CREATIVE.", Copy.kitNameResponse("TEST"))
-        assertEquals("VERY CREATIVE.", Copy.kitNameResponse("  test "))
-        assertNull(Copy.kitNameResponse("Regroove"))
-        assertEquals("ELITE.", Copy.bpmResponse(133.7f))
-        assertNull(Copy.bpmResponse(120f))
-        // Konami: 8 steps, all on the 4x4 grid.
-        assertEquals(8, Copy.KONAMI_PADS.size)
-        assertTrue(Copy.KONAMI_PADS.all { it in 1..16 })
+    fun `countOf picks the singular only at exactly one`() {
+        assertEquals("1 BAR", Copy.countOf(1, "BAR", "BARS"))
+        assertEquals("2 BARS", Copy.countOf(2, "BAR", "BARS"))
+        assertEquals("0 BARS", Copy.countOf(0, "BAR", "BARS"), "zero is plural, same as English")
+        assertEquals("-1 BARS", Copy.countOf(-1, "BAR", "BARS"), "a count can't go negative, but this is not the guard for that")
     }
 
     @Test
     fun `boot sequence ends ready`() {
         assertEquals("READY.", Copy.BOOT_LINES.last())
-        assertTrue(Copy.STATUS_QUIPS.isNotEmpty())
     }
 
     /**
@@ -373,15 +388,30 @@ class PersonalityTest {
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BREEDING_BUSY",
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
+        // DUST ALL's busy overlay line, like every other *_BUSY above.
+        "DUSTING_BUSY", "CHOP_BENCH_BUSY",
+        // LOOP's bounce, while the render runs — same shape as every other
+        // *_BUSY above: a button's label, not a landing.
+        "LOOP_BOUNCE_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
+        // CATCH A HIT's busy line while the hits are found, and its grid's
+        // one-word button — a label, not a landing.
+        "CATCH_BUSY", "CATCH_DONE_BUTTON",
+        // HUM THE CHOP's readout while the hum runs.
+        "HUM_BUSY",
         // The HITS stepper's own busy readout.
         "HITS_BUSY",
         "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
         "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
         "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_NONE", "CARD_PICKED",
-        "KONAMI_UNLOCK",
         "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
+        // BREED's button label (glyph sweep): now a constant destination
+        // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
+        // a button, not a line the app says once. The pad-count readout
+        // that used to live here moved to Copy.breedSubtitle, a function,
+        // which this reflective law doesn't reach either.
+        "BREED_BUTTON",
         // The shelf filter's chip (finding 16) is the sort chip's twin and
         // sits beside it, so it is furniture under the same rule. The
         // filtered labels come from Copy.shelfFilter(), a function, which
@@ -390,13 +420,14 @@ class PersonalityTest {
         // Permanent on-screen furniture, not toasts: the two legends that sit
         // under KIT's grid and the kit shelf's own list for as long as those
         // screens are open, and HELP's two section headings. ROOMS' third
-        // legend ("HOLD A ROOM TO FORGET IT · THE BIN KEEPS 30 DAYS") reads
-        // without a full stop for the same reason, and is still written inline
-        // in `:app` rather than living here. A label on the furniture is not a
-        // line the app says to you once and takes away, so it does not end in
-        // a full stop - and every legend must be added here when it is written,
-        // or the shouting law will ask it to become a sentence.
-        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER",
+        // legend, Copy.ROOMS_LEGEND ("HOLD A ROOM TO FORGET IT · THE BIN
+        // KEEPS IT 30 DAYS"), reads without a full stop for the same reason -
+        // a copy-consolidation pass brought it in from `:app`, where it used
+        // to live inline. A label on the furniture is not a line the app
+        // says to you once and takes away, so it does not end in a full stop
+        // - and every legend must be added here when it is written, or the
+        // shouting law will ask it to become a sentence.
+        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
         // The empty shelf's loop line (finding 3) is a row of tab names,
         // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
         // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
@@ -411,6 +442,15 @@ class PersonalityTest {
         // SETUP_CARD_NONE are NOT here: both are sentences the screen says
         // to you, and both keep their full stops.
         "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
+        // GRAIN FIELD's own busy line while the tape is read into its grid -
+        // furniture, like every other `…`-suffixed busy line above.
+        "GRAIN_FIELD_LISTENING",
+        // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
+        // `…`-suffixed shape as every other *_BUSY constant above.
+        "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
+        // The status bar's third cell resting label with no kit open - a
+        // standing chip value like CARD_NONE above, not a toast said once.
+        "NO_KIT_STATUS",
     )
 
     /**
@@ -530,6 +570,12 @@ class PersonalityTest {
             "the treatment and the pad both lead their own toast",
         )
         assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
+        // The stacked landing: same opening, then the honest difference and the way back.
+        val stacked = Copy.treatedStacked("CRUSH", "A02")
+        assertTrue(stacked.startsWith("CRUSH ON A02,"), stacked)
+        assertTrue("NO ORIGINAL IN THE BIN" in stacked && "VERSIONS" in stacked, stacked)
+        assertEquals(stacked.uppercase(), stacked, "shouts")
+        assertTrue(stacked.endsWith("."))
         assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE BIN.", Copy.keyed("TUNE", "A02", "C MAJOR"))
         assertEquals("A02 DRIFTED TOWARD Other:B03. ORIGINAL SLEEPS IN THE BIN.", Copy.drifted("A02", "Other:B03"))
         assertEquals("A03 IS A HAT CLOSED PATCH NOW, 0.12 AWAY. ORIGINAL SLEEPS IN THE BIN.", Copy.desampled("A03", "HAT_CLOSED", 0.123f))
@@ -547,6 +593,33 @@ class PersonalityTest {
         // not a relaxation of the law itself.
         assertEquals("+3 OFF-LANE — HEARD, EXPORTED, DRAWN UNDER OTHER", Copy.offLane(3), "the count leads its own line")
         assertTrue(Copy.offLane(1).uppercase() == Copy.offLane(1), "TapeOS shouts here too")
+        // LOOP: the snip, the track it landed on, and the block count that
+        // decides how it drifts — all three named, and the counts passed in
+        // rather than typed into the line (`:shell` cannot import `:loop`).
+        assertEquals("BREAK IS ON TRACK 2, 3 BLOCKS LONG.", Copy.loopTrackFilled("BREAK", 2, 3))
+        assertEquals("HIT IS ON TRACK 1, 1 BLOCK LONG.", Copy.loopTrackFilled("HIT", 1, 1))
+        assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 8 BLOCKS FIT.", Copy.loopTrackTruncated("LONG", 4, 8))
+        // loopTrackFilled beside it already sang "1 BLOCK LONG" — truncated
+        // said "1 BLOCKS FIT" regardless, the same one-sided fix as the rest.
+        assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 1 BLOCK FIT.", Copy.loopTrackTruncated("LONG", 4, 1))
+        assertEquals("ALL 6 TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST.", Copy.loopFull(6))
+        // The bounce names what it rendered, and names the cycle too when the
+        // two differ — a player told only "12 BARS" would read that as the
+        // whole loop.
+        assertEquals("12 BARS BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(12))
+        assertEquals("64 BARS BOUNCED, OUT OF A 840 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(64, 840))
+        // One bar is a legal bounce — the grid's default interval is one bar,
+        // so a six-track grid of one-block chains bounces exactly this. Both
+        // lines count the same thing and both have to say BAR for it.
+        assertEquals("1 BAR BOUNCED. IT IS IN SNIPS NOW.", Copy.loopBounced(1))
+        assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SNIPS NOW.", Copy.loopBouncedPart(1, 6))
+        // The block readout: 1-based like everything else on the grid, and
+        // its own line for a track nothing has been sent to — an app that
+        // counts tracks and blocks from zero anywhere on screen is the one
+        // thing this line exists to rule out.
+        assertEquals("TRACK 1 · BLOCK 1 · KICK", Copy.loopBlock(1, 1, "KICK"))
+        assertEquals("TRACK 6 · BLOCK 8 · KICK · PIECE 2/3", Copy.loopBlock(6, 8, "KICK · PIECE 2/3"))
+        assertEquals("TRACK 2 · BLOCK 1 · NOTHING SENT HERE YET", Copy.loopBlock(2, 1, null))
     }
 
     @Test
@@ -663,5 +736,56 @@ class PersonalityTest {
         assertEquals("HIT 3/7", Copy.hitReadout(2, 7))
         assertEquals("HIT -/7", Copy.hitReadout(-1, 7))
         assertEquals("NO HITS", Copy.hitReadout(-1, 0), "known the moment the search comes back empty, not on a tap")
+    }
+
+    @Test
+    fun `one section clipped is a sentence, not a count with an S on it`() {
+        val one = Copy.clippedSectionsIntoKit(1, 2, 8, 0)
+        assertTrue(one.startsWith("1 SECTION IS"), "said: $one")
+        assertTrue(one.contains("IT RIDES TO THE MPC"), "said: $one")
+        val many = Copy.clippedSectionsIntoKit(3, 6, 24, 0)
+        assertTrue(many.startsWith("3 SECTIONS ARE") && many.contains("THEY RIDE"), "said: $many")
+        // And the same on the branch that counts what stayed behind.
+        assertTrue(Copy.clippedSectionsIntoKit(1, 2, 8, 1).startsWith("1 SECTION IN"))
+        assertTrue(Copy.clippedSectionsIntoKit(2, 2, 8, 2).startsWith("2 SECTIONS IN"))
+        // BARS and NOTES used to stay plural in this same sentence even
+        // though SECTIONS was already singular right beside them — this
+        // function's own KDoc bragged about fixing the count-with-an-S-on-it
+        // bug for SECTIONS while leaving exactly that bug alive for its two
+        // neighbors. One bar, one note, one section, one snip ring, all at
+        // once: the sentence that would have caught it.
+        assertEquals(
+            "1 SECTION IS IN THE KIT'S GROOVES — 1 BAR, 1 NOTE, ONE SEQUENCE EACH. IT RIDES TO THE MPC.",
+            Copy.clippedSectionsIntoKit(1, 1, 1, 0),
+        )
+        assertEquals(
+            "1 SECTION IN THE GROOVES: 1 BAR, 1 NOTE. 1 SNIP RING STAYED OUT.",
+            Copy.clippedSectionsIntoKit(1, 1, 1, 1),
+        )
+    }
+
+    /**
+     * `clippedIntoKit` is `clippedSectionsIntoKit`'s single-section sibling
+     * (CLIP ▸ KIT's own path for a set with no arrangement) and had the same
+     * BARS/NOTES-always-plural bug, with no test pinning it at all before
+     * this one.
+     */
+    @Test
+    fun `clippedIntoKit sings BARS and NOTES singular at one, same as its multi-section sibling`() {
+        assertEquals(
+            "GROOVE IS IN THE KIT'S GROOVES — 1 BAR, 1 NOTE. IT RIDES TO THE MPC.",
+            Copy.clippedIntoKit("GROOVE", 1, 1, 0),
+        )
+        assertEquals(
+            "GROOVE IN THE GROOVES: 2 BARS, 8 NOTES. 1 SNIP RING STAYED OUT.",
+            Copy.clippedIntoKit("GROOVE", 2, 8, 1),
+        )
+    }
+
+    /** CHOP ALL's own singular: one .wav file chopped, not "1 FILES". */
+    @Test
+    fun `choppedAll counts its files singular at one`() {
+        assertEquals("CHOPPED 1 OF 1 FILE INTO 1 KIT.", Copy.choppedAll(made = 1, wavCount = 1, skipped = 0, failed = 0))
+        assertEquals("CHOPPED 2 OF 3 FILES INTO 2 KITS.", Copy.choppedAll(made = 2, wavCount = 3, skipped = 0, failed = 0))
     }
 }
