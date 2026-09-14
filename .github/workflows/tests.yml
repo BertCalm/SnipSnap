@@ -55,7 +55,18 @@ jobs:
       # at configuration time, so without it every module fails to configure and
       # all the pure-JVM tests go red for a reason that has nothing to do with
       # them.
+      #
+      # packages: '' skips this action's own default install (`tools
+      # platform-tools`) — Google removed the legacy `tools` package from
+      # the live SDK repository, so that default now fails every run with
+      # "Failed to find package 'tools'" before a single test executes.
+      # The action still stands up ANDROID_HOME and accepts the SDK
+      # licenses with an empty package list; AGP downloads the specific
+      # platform/build-tools app/build.gradle.kts's compileSdk actually
+      # needs on its own the moment Gradle configures :app.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
       # Everything except :app, by exclusion rather than by list — a module added
       # later must not be silently untested because nobody updated this line.
       - name: Run JVM test suites
@@ -70,7 +81,10 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      # See jvm-tests' identical step for why packages is empty.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
       - name: Assemble the app
         run: ./gradlew --no-daemon :app:assembleDebug
       # The job already builds a working APK and then throws it away with
