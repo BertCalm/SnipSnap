@@ -218,23 +218,38 @@ atmosphere kit both of them make together.
 
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
-WAV like it's 1993 — you sampled the reverb, you didn't rack it. EQ (three
+WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH
+(the transport itself: a varispeed head snapped to semitones, native at
+the centre, running before everything else so the whole rack — SWELL's
+stretched head and REVERSE's flip included — sees the pitched sound), EQ
+(three
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), TAPE (the
 cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
-physics-lite nod to ChowDSP's AnalogTapeModel), ECHO (one delay line and
+physics-lite nod to ChowDSP's AnalogTapeModel), PHASE (four allpasses
+swept by one slow sine and summed back with the dry, the notches sliding
+up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,
 1962), REVERSE, SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
-breath alone), DUB (generation loss: a dub of a dub, twelve deep), SWELL
+breath alone), SPIKE (the attack leaned into instead of taken away: two
+envelope followers at different speeds, their gap gained as the
+transient), RING (the sound multiplied by a sine — metal, bells, radio;
+deliberately no longer the hit it was, the exemption GHOST already
+carries), DUB (generation loss: a dub of a dub, twelve deep), DUST (the
+record under the hit, as TAPE is the cassette: rumble, groove hiss and
+clicks, scaled to the hit's own peak, seeded once per pad), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
 tape start, baked); beside the rack, WOBBLE sweeps the same filter on
-the kit's own grid, a note division at its tempo. `FxChain` fixes the order — swell → reverse → smear →
-ghost → eq → squash → crunch → dub → tape → echo → spring → motion — owns
+the kit's own grid, a note division at its tempo — ROLL (the hit's own
+head struck again) and GATE (the hit chopped into a square envelope)
+share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
+spike → eq → squash → crunch → ring → dub → dust → tape → phase → echo →
+spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies

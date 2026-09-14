@@ -342,14 +342,30 @@ not merely left) — `ghosted` (the tone and the attack taken out too, the
 breath alone), `stopped` (the tape stop: pitch and level fall away over
 the last stretch), `started` (the reel spinning up into the sound),
 `skimmed` (the banded smear: the click goes, the thump stays), `dubbed`
-(generation loss: a dub of a dub of a dub, twelve deep at most) and
-`swelled` (the sound arrives before it strikes). `--amount 0..1` scales the character's macros; the
+(generation loss: a dub of a dub of a dub, twelve deep at most), `swelled`
+(the sound arrives before it strikes), `spiked` (the attack leaned into
+rather than taken away: two envelope followers at different speeds, the
+gap between them gained as the transient), `ringed` (the sound multiplied
+by a sine — metal, bells, radio; deliberately no longer the hit it was,
+the same exemption `ghosted` carries), `dusted` (the record under the
+hit: rumble, groove hiss and the crackle of every play before this one,
+scaled to the hit's own peak and seeded once per pad), `phased` (four
+allpasses swept by one slow sine and summed back with the dry, the
+notches sliding up and down the spectrum) and `pitched` (the transport
+itself: the same hit, played slower or faster, snapped to semitones).
+`--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
-phone the same characters sit on the PAD SHEET's TREATMENT card, rows
-two to four (TAIL · SLAP · WASH · PUNCH, GHOST · STOP · START · FLIP,
-SKIM · DUB · SWELL · TUNE — the last being `retune`, below), where they
-change every file the pad references, velocity layers included.
+phone the same characters sit on the PAD SHEET's TREATMENT card, six
+rows grouped by what an effect *does* rather than which family implements
+it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
+the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
+character once it is itself (PUNCH · RING · DUB · DUST · PHASE), row
+four what happens to it in time (SLAP · WASH · ROLL · GATE), row five
+the machine's own transport (FLIP · STOP · START · PITCH), and row six
+the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
+ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
+of them changes every file the pad references, velocity layers included.
 
 ### `era <kit-dir> <machine>` — the Time Machine
 
@@ -649,8 +665,8 @@ IN KEY draws — tune an 808 with the pad's own tune field), and a sound
 whose energy lives between its peaks rather than in them (a hat, hiss)
 has nothing to snap. Bin-backed through the same door as every
 treatment; `--undo` restores byte-identical; the recipe (key, amount,
-seed) rides the pad. On the phone it is TUNE, the last word on the PAD
-SHEET's fourth TREATMENT row, AMT how far.
+seed) rides the pad. On the phone it is TUNE, the first word on the PAD
+SHEET's sixth TREATMENT row, AMT how far.
 
 ### `body <kit-dir> <pad>` — a bank of tuned resonators
 
@@ -665,7 +681,7 @@ matched. `--key Am` sets the kit's key first; with no key the body
 rings at the hit's own note when it has one, else at C — never a
 refusal, since a drum with a body is the point. Bin-backed, `--undo`
 byte-identical, the recipe (key, amount, decay) riding the pad. On the
-phone it is BODY on the PAD SHEET's fifth TREATMENT row, the keyed
+phone it is BODY on the PAD SHEET's sixth TREATMENT row, the keyed
 family: the treatments that read the kit's own key and tempo.
 
 ### `wobble <kit-dir> <pad>` — a filter sweep on the kit's grid
@@ -679,7 +695,38 @@ kit's tempo — so the wobble lands on the grid the moment the kit does.
 `--amount` is the sweep's depth over 120 Hz..6 kHz; peak matched, the
 hit's own length. Bin-backed, `--undo` byte-identical, the recipe
 (division, tempo, amount) riding the pad. On the phone it is WOBBLE on
-the PAD SHEET's fifth row, at `1/8` of the kit's tempo, AMT the depth.
+the PAD SHEET's sixth row, at `1/8` of the kit's tempo, AMT the depth.
+
+### `roll <kit-dir> <pad>` — the hit's own head, struck again
+
+The sampler's signature edit, on the grid: the hit's own head laid back
+over its own body on repeat, each repeat a little quieter than the last
+(`DECAY` 0.82 per repeat), at a note division (`--rate`, same ladder as
+WOBBLE — `1/1`, `1/2`, `1/4`, `1/8` default, `1/16`) of the kit's tempo
+(`--bpm` sets it first, without one the preview's 92). `--amount 0..1`
+is how much of the hit the roll replaces — 0 leaves it alone, 1 rolls
+the whole thing; length is unchanged, a roll fills the hit rather than
+extending it. A hit shorter than two divisions is refused, in words. Peak
+matched, deterministic, no seed; bin-backed, `--undo` byte-identical, the
+recipe (division, tempo, amount) riding the pad. A keyed treatment
+rather than a rack section, because it reads the kit's tempo where the
+rack reads nothing but the sound — it shares WOBBLE's own grid so the
+two land on the same beats. On the phone it is ROLL on the PAD SHEET's
+fourth row, the same row as WASH, at `1/8` of the kit's tempo.
+
+### `gate <kit-dir> <pad>` — the hit chopped on the grid
+
+The same grid as ROLL, a different edit: a square envelope open for the
+first half of each division and closed for the second (`DUTY` 0.5), a
+short fade on both edges so the chop reads as rhythm rather than a row
+of clicks, at a note division (`--rate`, WOBBLE's ladder, `1/8` default)
+of the kit's tempo (`--bpm` sets it first). `--amount 0..1` is depth, not
+speed — 0 leaves the gate open, 1 closes it all the way; length
+unchanged. A hit shorter than two divisions is refused, in words. Peak
+matched, deterministic; bin-backed, `--undo` byte-identical, the recipe
+(division, tempo, amount) riding the pad. Keyed rather than racked for
+the same reason as ROLL, and sharing its grid for the same reason too.
+On the phone it is GATE on the PAD SHEET's fourth row, beside ROLL.
 
 ### `eternal <kit-dir> <pad>` — attack kept, tail eternal
 
@@ -695,7 +742,7 @@ already longer than the knob is refused rather than sped up, and a hit
 that ends inside the knee has nothing to slow. `--seed` picks the
 phases; bin-backed, `--undo` byte-identical, the recipe (tail, knee,
 seed) riding the pad. On the phone it is ETERNAL on the PAD SHEET's
-fifth row, AMT the tail (half a second to thirty, exponentially).
+sixth row, AMT the tail (half a second to thirty, exponentially).
 
 ### `drift <kit-dir> <pad>` — drift toward the crate
 
