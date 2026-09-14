@@ -24,6 +24,7 @@ class PadRecipeTest {
 
     private fun onePatchPerEngine(): List<Patch> = listOf(
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
+        SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),
         TinesPatch("Bell Test", TinesVoice.BELL, mapOf("RATIO" to 0.9f)),
         PluckPatch("Nylon Test", PluckVoice.NYLON, mapOf("DAMP" to 0.2f)),
         TonewheelPatch("Stab Test", TonewheelVoice.STAB, mapOf("BAR8" to 1f)),
