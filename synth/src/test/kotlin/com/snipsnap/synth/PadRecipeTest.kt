@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitStore
 import java.io.File
@@ -174,7 +175,11 @@ class PadRecipeTest {
         // own recommendation is a hard break, not a silent reinterpretation
         // - this is that break, proven.
         val v1 = """{"recipe":1,"fx":{"fx":1,"reverse":true}}"""
-        assertFailsWith<JsonException> { PadRecipe.fromJsonText(v1) }
+        val thrown = assertFailsWith<JsonException> { PadRecipe.fromJsonText(v1) }
+        assertTrue(
+            "unsupported recipe version 1" in (thrown.message ?: ""),
+            "should name the actual guard that fired, not just any rejection: ${thrown.message}",
+        )
     }
 
     @Test
@@ -204,6 +209,31 @@ class PadRecipeTest {
 
         val forcedAliased = PadRecipe(patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()), alias = true)
         assertTrue(forcedAliased.alias, "an explicit alias must override the clean default")
+    }
+
+    @Test
+    fun `fromJsonValue infers alias when the key is absent from an otherwise-valid v2 recipe`() {
+        // toJsonValue always writes "alias" explicitly, so the round-trip
+        // tests above never touch the obj["alias"]?.bool() ?: impliesAlias(..)
+        // fallback in fromJsonValue - strip the key back out to exercise it
+        // directly, the same way a hand-built or older-tooling v2 document
+        // that simply omitted the field would arrive.
+        val chip = PadRecipe(patch = VelvetPatch("Chip", VelvetVoice.CHIP, emptyMap()))
+        val stripped = JsonValue.Obj(chip.toJsonValue().entries - "alias")
+        assertTrue(
+            PadRecipe.fromJsonValue(stripped).alias,
+            "an omitted alias key on a CHIP recipe should still infer true",
+        )
+
+        val crunched = PadRecipe(
+            patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()),
+            fx = FxChain(crunch = mapOf("BITS" to 0.5f)),
+        )
+        val strippedCrunched = JsonValue.Obj(crunched.toJsonValue().entries - "alias")
+        assertTrue(
+            PadRecipe.fromJsonValue(strippedCrunched).alias,
+            "an omitted alias key on a CRUNCH-feeding recipe should still infer true",
+        )
     }
 
     @Test
