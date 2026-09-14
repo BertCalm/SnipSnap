@@ -39,4 +39,17 @@ class DspResampleTest {
         val out = Dsp.readAt(ramp, ramp.frameCount) { k -> k.toDouble() to 0.5f }
         assertTrue(abs(out.samples[500] - ramp.samples[500] * 0.5f) < 1e-5f, "gain was not applied")
     }
+
+    @Test
+    fun `a stereo read at a non-identity rate keeps both channels identical`() {
+        // Both callers (MOTION at STOP 0/START 0, SPEED at SEMITONES 0.5) take
+        // identity paths at their defaults, so the shared "stereo stays
+        // stereo" contract test never actually drives the interpolator at
+        // stereo. This exercises it directly, off the identity path.
+        val stereo = Snip(FloatArray(ramp.frameCount * 2) { ramp.samples[it / 2] }, 2, 44_100)
+        val out = Dsp.readAt(stereo, stereo.frameCount * 2) { k -> k * 0.5 to 1f }
+        for (f in 0 until out.frameCount) {
+            assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "channels diverged at frame $f")
+        }
+    }
 }

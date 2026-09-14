@@ -20,7 +20,10 @@ class FxTest {
      * list this test replaced. Each is a bug to fix on its own, not here.
      * Stale check: if a section's DSP changes, delete its entry and rerun
      * `every effect is deterministic, clean and peak-matched everywhere` -
-     * if it now passes, the exclusion is no longer needed.
+     * if it now passes, the exclusion is no longer needed. Self-checked too:
+     * `contract-excluded sections still fail the clause they are excused
+     * from` fails loudly the day an entry here stops failing on its own,
+     * so a fixed section cannot sit here forgotten.
      */
     private val contractExcluded: Map<String, String> = mapOf(
         "smear" to "peak-match: falls under the source peak instead of matching it " +
@@ -37,7 +40,10 @@ class FxTest {
      * the observed divergence. Pre-existing bugs, each its own fix. Stale
      * check: if a section's DSP changes, delete its entry and rerun
      * `stereo stays stereo with identical channels intact` - if it now
-     * passes, the exclusion is no longer needed.
+     * passes, the exclusion is no longer needed. Self-checked too:
+     * `stereo-excluded sections still fail the clause they are excused
+     * from` fails loudly the day an entry here stops failing on its own,
+     * so a fixed section cannot sit here forgotten.
      */
     private val stereoExcluded: Map<String, String> = mapOf(
         "swell" to "left/right diverge starting at frame 1 of 48337 (L=0.0, R=-0.0 - a " +
@@ -219,6 +225,46 @@ class FxTest {
                     assertEquals(out.samples[f * 2], out.samples[f * 2 + 1], "${sec.name}: channels diverged at $f")
                 }
             }
+        }
+    }
+
+    @Test
+    fun `contract-excluded sections still fail the clause they are excused from`() {
+        for ((name, reason) in contractExcluded) {
+            val sec = FxChain.SECTIONS.first { it.name == name }
+            var sawFailure = false
+            for (seed in 0 until 6) {
+                val rng = Random(seed)
+                val macros = sec.macros.associate { it.name to rng.nextFloat() }
+                val out = sec.run(snare, macros)
+                if (abs(out.peak() - snare.peak()) >= 0.05f) sawFailure = true
+            }
+            assertTrue(
+                sawFailure,
+                "$name no longer fails the peak-match clause it is excused from (recorded reason: $reason) " +
+                    "- delete its contractExcluded entry",
+            )
+        }
+    }
+
+    @Test
+    fun `stereo-excluded sections still fail the clause they are excused from`() {
+        val stereo = Snip(FloatArray(kick.frameCount * 2) { kick.samples[it / 2] }, 2, 44_100)
+        for ((name, reason) in stereoExcluded) {
+            val sec = FxChain.SECTIONS.first { it.name == name }
+            val out = sec.run(stereo, sec.macros.associate { it.name to it.default })
+            var diverged = false
+            for (f in 0 until out.frameCount) {
+                if (out.samples[f * 2] != out.samples[f * 2 + 1]) {
+                    diverged = true
+                    break
+                }
+            }
+            assertTrue(
+                diverged,
+                "$name no longer fails the stereo-identity clause it is excused from (recorded reason: $reason) " +
+                    "- delete its stereoExcluded entry",
+            )
         }
     }
 
@@ -457,7 +503,10 @@ class FxTest {
         // The GHOST exemption: ring mod destroys pitch identity by design.
         val wet = Ring.process(kick, mapOf("FREQ" to 0.6f, "MIX" to 1f))
         val ringLikeness = likeness(kick, wet)
-        assertTrue(ringLikeness < 0.9, "RING at full MIX barely changed the sound: likeness $ringLikeness")
+        // Observed 0.0035; 0.3 keeps roughly 3x headroom over the measurement
+        // rather than pinning to it, so a legitimate voicing tweak does not
+        // false-fail this.
+        assertTrue(ringLikeness < 0.3, "RING at full MIX barely changed the sound: likeness $ringLikeness")
     }
 
     // ---------- PHASE ----------
@@ -467,8 +516,11 @@ class FxTest {
         val dry = Phase.process(tone, mapOf("DEPTH" to 0f))
         assertTrue(dry.samples.contentEquals(tone.samples), "PHASE at DEPTH 0 is not a copy")
         val wet = Phase.process(tone, mapOf("RATE" to 0.5f, "DEPTH" to 1f, "FEEDBACK" to 0.5f))
+        // Observed 0.068; 0.02 keeps roughly 3x headroom over the
+        // measurement rather than pinning to it, so a legitimate voicing
+        // tweak does not false-fail this.
         assertTrue(
-            abs(peakIn(wet, 0.1f, 0.2f) - peakIn(wet, 0.5f, 0.6f)) > 0.001f,
+            abs(peakIn(wet, 0.1f, 0.2f) - peakIn(wet, 0.5f, 0.6f)) > 0.02f,
             "PHASE swept nothing - the notches are not moving",
         )
     }
@@ -619,6 +671,16 @@ class FxTest {
             assertEquals(macros, chain.section(name), "$name: withSection and section disagree")
             assertEquals(null, FxChain().section(name), "$name: an empty chain is not bypassed there")
         }
+        // The reverse direction: a Map<String, Float>? field added to the data
+        // class but left out of SECTIONS is invisible to init validation,
+        // isBypass, processRest, and json in/out alike - nothing above would
+        // ever see it. Compared as sets: declaredFields order is unspecified,
+        // and order is already pinned by the json-order and speed-first tests.
+        assertEquals(
+            FxChain.SECTION_NAMES.toSet(),
+            FxChain::class.java.declaredFields.filter { it.type == Map::class.java }.map { it.name }.toSet(),
+            "a section field exists that the table does not drive",
+        )
     }
 
     @Test
@@ -664,6 +726,9 @@ class FxTest {
                     // "Moved", not "smaller": once macros have neutrals, a centered
                     // macro below its neutral rises as AMT falls. Task 6's own test
                     // pins the exact rule; this one only proves the section is seen.
+                    // Hazard for the next author: a treatment that sets a macro to
+                    // exactly its neutral would false-fail this (v == neutral means
+                    // AMT 0.5 leaves it at v too), but no current treatment does.
                     assertTrue(
                         b.getValue(macro) != v,
                         "$name: AMT 0.5 left $section.$macro at $v - the section is not scaled",
