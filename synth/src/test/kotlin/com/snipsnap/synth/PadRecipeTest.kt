@@ -245,6 +245,21 @@ class PadRecipeTest {
     }
 
     @Test
+    fun `an explicit alias overriding its computed default survives the JSON round trip`() {
+        // The test above only overrides a plain patch's false default *up*
+        // to true - it never proves the opposite direction (a true default
+        // pinned *down*) survives toJsonValue/fromJsonValue, which a bug
+        // that silently re-derived alias from patch/fx on write or read,
+        // instead of respecting the stored/serialized value, would still
+        // pass without.
+        val forcedClean = PadRecipe(patch = VelvetPatch("Chip", VelvetVoice.CHIP, emptyMap()), alias = false)
+        assertEquals(false, PadRecipe.fromJsonText(forcedClean.toJsonText()).alias, "CHIP forced clean should stay clean")
+
+        val forcedAliased = PadRecipe(patch = ThumpPatch("Kick", ThumpVoice.KICK, emptyMap()), alias = true)
+        assertEquals(true, PadRecipe.fromJsonText(forcedAliased.toJsonText()).alias, "a plain patch forced aliased should stay aliased")
+    }
+
+    @Test
     fun `Treatments-apply records both the name and the amount it used`() {
         val snip = Thump.render(ThumpVoice.SNARE)
         val treated = Treatments.apply("crushed", snip, 0.4f)
