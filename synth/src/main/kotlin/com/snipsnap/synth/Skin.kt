@@ -11,19 +11,21 @@ import kotlin.random.Random
  * shaped by envelopes, SKIN is modal: KICK/SNARE/TOM sum a few decaying sine
  * partials at inharmonic ratios (the textbook "physically-modeled hit"
  * recipe — a struck membrane rings at several modes that decay
- * independently, faster at higher partials), while HAT/RIDE/SHAKER run
+ * independently, faster at higher partials), HAT/RIDE/SHAKER run
  * continuous noise through a bank of resonant [Dsp.TptSvf] filters instead
- * (see [hat]'s own doc comment for why continuous, not impulse-excited).
+ * (see [hat]'s own doc comment for why continuous, not impulse-excited), and
+ * STICK is the one voice short enough to just excite a single [Dsp.TptSvf]
+ * mode once, the same way [Thump.rim] does.
  *
  * Same contract as every other engine: macros are 0..1 mapped onto bounded
  * musical ranges so SCRAMBLE can't land on garbage, renders happen at
  * `RATE * Dsp.OVERSAMPLE` and decimate (U6, docs/SYNTH_UPGRADE.md), and
  * PUNCH runs on every voice (U3) exactly as THUMP's does.
  *
- * Voices are split across two PRs: KICK/SNARE/HAT_CLOSED/HAT_OPEN here,
- * TOM/RIDE/SHAKER/STICK to follow.
+ * Voices are split across two PRs: KICK/SNARE/HAT_CLOSED/HAT_OPEN landed
+ * first; TOM/RIDE/SHAKER/STICK finish the 8-voice set here.
  */
-enum class SkinVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN }
+enum class SkinVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, TOM, RIDE, SHAKER, STICK }
 
 object Skin {
 
@@ -43,6 +45,20 @@ object Skin {
         SkinVoice.HAT_OPEN -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.55f), MacroSpec("TONE", 0.5f),
             MacroSpec("PUNCH", 0.5f),
+        )
+        SkinVoice.TOM -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.5f), MacroSpec("TONE", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
+        )
+        SkinVoice.RIDE -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.5f), MacroSpec("TONE", 0.5f),
+            MacroSpec("PUNCH", 0.5f),
+        )
+        SkinVoice.SHAKER -> listOf(
+            MacroSpec("TONE", 0.5f), MacroSpec("DECAY", 0.4f), MacroSpec("PUNCH", 0.5f),
+        )
+        SkinVoice.STICK -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.4f), MacroSpec("PUNCH", 0.5f),
         )
     }
 
@@ -75,6 +91,10 @@ object Skin {
             SkinVoice.SNARE -> snare(m, renderRate)
             SkinVoice.HAT_CLOSED -> hat(m, open = false, rate = renderRate)
             SkinVoice.HAT_OPEN -> hat(m, open = true, rate = renderRate)
+            SkinVoice.TOM -> tom(m, renderRate)
+            SkinVoice.RIDE -> ride(m, renderRate)
+            SkinVoice.SHAKER -> shaker(m, renderRate)
+            SkinVoice.STICK -> stick(m, renderRate)
         }
         val punch = m.getValue("PUNCH")
         // Punch (U3) needs its loudness reference set before it reshapes
@@ -228,6 +248,94 @@ object Skin {
                 s += filters[idx].band
             }
             out[i] = (s / filters.size) * env.at(t)
+        }
+        return out
+    }
+
+    private fun tom(m: Map<String, Float>, rate: Int): FloatArray {
+        val fundamental = Dsp.expMap(m.getValue("TUNE"), 90f, 220f)
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.15f, 0.7f)
+        val tone = m.getValue("TONE")
+        // Same shell-plus-overtone shape as KICK, just pitched into tom
+        // territory and with no mallet click — a tom reads as the shell
+        // resonance alone.
+        return modalBody(
+            listOf(
+                Partial(fundamental, 1f, t60),
+                Partial(fundamental * 1.5f, 0.1f + 0.4f * tone, t60 * 0.4f),
+            ),
+            seconds = t60 * 1.4f,
+            rate = rate,
+        )
+    }
+
+    private val RIDE_RATIOS = floatArrayOf(1f, 1.19f, 1.57f, 2.14f, 2.63f, 3.08f, 3.55f, 4.11f)
+
+    private fun ride(m: Map<String, Float>, rate: Int): FloatArray {
+        val base = Dsp.expMap(m.getValue("TUNE"), 3200f, 5200f)
+        // Capped well under Classifier.LOOP_MIN_SECONDS (1.5s): at t60=1.0
+        // this renders 1.4s (`seconds = t60 * 1.4f` below), same margin
+        // Thump.hat's own HAT_OPEN keeps (t60 tops out at 1.0 there too) -
+        // a longer ceiling here classified RIDE as a LOOP, not a drum hit.
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.35f, 1.0f)
+        val tone = m.getValue("TONE")
+        val spread = Dsp.lin(tone, 0.9f, 1.3f)
+        // Same continuous-noise-through-a-bank recipe as hat(), but denser
+        // (8 modes, not 6) and tuned for a long bell-like sustain rather
+        // than a short shimmer — the wash a ride is defined by.
+        val noise = Dsp.Noise(29)
+        val filters = RIDE_RATIOS.map { Dsp.TptSvf(rate) }
+        val freqs = RIDE_RATIOS.map { ratio -> (base * Math.pow(ratio.toDouble(), spread.toDouble())).toFloat() }
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
+        val out = FloatArray(frames(t60 * 1.4f, rate))
+        for (i in out.indices) {
+            val t = i.toFloat() / rate
+            val n = noise.next()
+            var s = 0f
+            for (idx in filters.indices) {
+                filters[idx].process(n, freqs[idx], 0.1f)
+                s += filters[idx].band
+            }
+            out[i] = (s / filters.size) * env.at(t)
+        }
+        return out
+    }
+
+    private fun shaker(m: Map<String, Float>, rate: Int): FloatArray {
+        val bandHz = Dsp.expMap(m.getValue("TONE"), 3500f, 9000f)
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.08f, 0.5f)
+        // Broadband noise, not a resonant bank: a shaker has no tonal
+        // partials to speak of, just beads rattling in a broad high band.
+        // k=1.2 is well clear of resonance (2 = none), wide enough to
+        // pass a band rather than ring a peak.
+        val noise = Dsp.Noise(31)
+        val svf = Dsp.TptSvf(rate)
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
+        val out = FloatArray(frames(t60 * 1.4f, rate))
+        for (i in out.indices) {
+            val t = i.toFloat() / rate
+            svf.process(noise.next(), bandHz, 1.2f)
+            out[i] = svf.band * env.at(t) * 2f
+        }
+        return out
+    }
+
+    private fun stick(m: Map<String, Float>, rate: Int): FloatArray {
+        // The rimshot/stick click: one very short, high-Q mode excited by
+        // a single noise burst, same shape as Thump.rim() — its own decay
+        // (20-90ms) sits well inside Dsp.TptSvf's damping-floor ceiling
+        // (see modalBody's doc comment), so there's no need for the
+        // sine-partial workaround here.
+        val freq = Dsp.expMap(m.getValue("TUNE"), 1800f, 3400f)
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.02f, 0.09f)
+        val svf = Dsp.TptSvf(rate)
+        val noise = Dsp.Noise(37)
+        val out = FloatArray(frames(maxOf(t60 * 1.6f, 0.05f), rate))
+        for (i in out.indices) {
+            val t = i.toFloat() / rate
+            val excite = if (t < 0.001f) noise.next() + 1.5f else 0f
+            svf.process(excite, freq, 0.15f)
+            out[i] = svf.band * Dsp.envAt(t, t60)
         }
         return out
     }

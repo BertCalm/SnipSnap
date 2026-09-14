@@ -24,6 +24,17 @@ class SkinTest {
         assertEquals(DrumClass.HAT_CLOSED, classOf(SkinVoice.HAT_CLOSED))
     @Test fun `factory open hat is an open hat`() =
         assertEquals(DrumClass.HAT_OPEN, classOf(SkinVoice.HAT_OPEN))
+    @Test fun `factory tom is a tom`() = assertEquals(DrumClass.TOM, classOf(SkinVoice.TOM))
+
+    // RIDE measures as HAT_OPEN, not a guess: it's built from hat()'s exact
+    // recipe (continuous noise through a resonant bank), just denser and
+    // longer - the same sonic category, so this is a real structural
+    // kinship, not a coincidence. SHAKER and STICK have no dedicated
+    // DrumClass the way COWBELL/RIM don't for THUMP - see their own
+    // SynthScreen.kt mapping comment for why they're PERC by the same
+    // established convention, untested here for the identical reason
+    // ThumpTest carries no COWBELL/RIM classifier assertions.
+    @Test fun `factory ride is an open hat`() = assertEquals(DrumClass.HAT_OPEN, classOf(SkinVoice.RIDE))
 
     // ---------- macros are audible and bounded ----------
 
@@ -70,6 +81,86 @@ class SkinTest {
     }
 
     @Test
+    fun `tom TUNE moves the pitch`() {
+        val low = FeatureExtractor.extract(Skin.render(SkinVoice.TOM, mapOf("TUNE" to 0f)))
+        val high = FeatureExtractor.extract(Skin.render(SkinVoice.TOM, mapOf("TUNE" to 1f)))
+        assertTrue(high.centroidHz > low.centroidHz, "TUNE up should raise the centroid: ${low.centroidHz} -> ${high.centroidHz}")
+    }
+
+    @Test
+    fun `tom DECAY moves the decay`() {
+        val short = FeatureExtractor.extract(Skin.render(SkinVoice.TOM, mapOf("DECAY" to 0f)))
+        val long = FeatureExtractor.extract(Skin.render(SkinVoice.TOM, mapOf("DECAY" to 1f)))
+        assertTrue(long.decayMs > short.decayMs * 2, "DECAY should stretch: ${short.decayMs} -> ${long.decayMs}")
+    }
+
+    @Test
+    fun `tom is lower-pitched than kick at defaults`() {
+        // The whole reason TOM and KICK are separate voices: proves the two
+        // frequency ranges don't overlap into "the same shell renamed".
+        val kick = FeatureExtractor.extract(Skin.render(SkinVoice.KICK))
+        val tom = FeatureExtractor.extract(Skin.render(SkinVoice.TOM))
+        assertTrue(tom.centroidHz > kick.centroidHz, "TOM should sit above KICK: kick ${kick.centroidHz}Hz, tom ${tom.centroidHz}Hz")
+    }
+
+    @Test
+    fun `ride DECAY moves the decay`() {
+        val short = FeatureExtractor.extract(Skin.render(SkinVoice.RIDE, mapOf("DECAY" to 0f)))
+        val long = FeatureExtractor.extract(Skin.render(SkinVoice.RIDE, mapOf("DECAY" to 1f)))
+        assertTrue(long.decayMs > short.decayMs * 1.5f, "DECAY should stretch: ${short.decayMs} -> ${long.decayMs}")
+    }
+
+    @Test
+    fun `ride TONE brightens`() {
+        val dull = FeatureExtractor.extract(Skin.render(SkinVoice.RIDE, mapOf("TONE" to 0f)))
+        val bright = FeatureExtractor.extract(Skin.render(SkinVoice.RIDE, mapOf("TONE" to 1f)))
+        assertTrue(bright.centroidHz > dull.centroidHz, "TONE up should raise the centroid: ${dull.centroidHz} -> ${bright.centroidHz}")
+    }
+
+    @Test
+    fun `ride rings longer than either hat at defaults`() {
+        val open = FeatureExtractor.extract(Skin.render(SkinVoice.HAT_OPEN))
+        val ride = FeatureExtractor.extract(Skin.render(SkinVoice.RIDE))
+        assertTrue(ride.decayMs > open.decayMs, "RIDE should outlast HAT_OPEN: hat ${open.decayMs}ms, ride ${ride.decayMs}ms")
+    }
+
+    @Test
+    fun `shaker TONE brightens`() {
+        val dull = FeatureExtractor.extract(Skin.render(SkinVoice.SHAKER, mapOf("TONE" to 0f)))
+        val bright = FeatureExtractor.extract(Skin.render(SkinVoice.SHAKER, mapOf("TONE" to 1f)))
+        assertTrue(bright.centroidHz > dull.centroidHz, "TONE up should raise the centroid: ${dull.centroidHz} -> ${bright.centroidHz}")
+    }
+
+    @Test
+    fun `shaker DECAY moves the decay`() {
+        val short = FeatureExtractor.extract(Skin.render(SkinVoice.SHAKER, mapOf("DECAY" to 0f)))
+        val long = FeatureExtractor.extract(Skin.render(SkinVoice.SHAKER, mapOf("DECAY" to 1f)))
+        assertTrue(long.decayMs > short.decayMs * 1.5f, "DECAY should stretch: ${short.decayMs} -> ${long.decayMs}")
+    }
+
+    @Test
+    fun `shaker is noisier than a tonal voice`() {
+        // Confirms "no tonal modes" by measurement, not just by design intent.
+        val shaker = FeatureExtractor.extract(Skin.render(SkinVoice.SHAKER))
+        val kick = FeatureExtractor.extract(Skin.render(SkinVoice.KICK))
+        assertTrue(shaker.flatness > kick.flatness * 3, "SHAKER should measure far noisier than a modal voice: shaker ${shaker.flatness}, kick ${kick.flatness}")
+    }
+
+    @Test
+    fun `stick TUNE moves the pitch`() {
+        val low = FeatureExtractor.extract(Skin.render(SkinVoice.STICK, mapOf("TUNE" to 0f)))
+        val high = FeatureExtractor.extract(Skin.render(SkinVoice.STICK, mapOf("TUNE" to 1f)))
+        assertTrue(high.centroidHz > low.centroidHz, "TUNE up should raise the centroid: ${low.centroidHz} -> ${high.centroidHz}")
+    }
+
+    @Test
+    fun `stick is the shortest voice at defaults`() {
+        val stick = FeatureExtractor.extract(Skin.render(SkinVoice.STICK))
+        val snare = FeatureExtractor.extract(Skin.render(SkinVoice.SNARE))
+        assertTrue(stick.decayMs < snare.decayMs, "STICK should be shorter than SNARE: stick ${stick.decayMs}ms, snare ${snare.decayMs}ms")
+    }
+
+    @Test
     fun `every corner of every macro space renders clean audio`() {
         for (voice in SkinVoice.entries) {
             for (value in floatArrayOf(0f, 1f)) {
@@ -90,8 +181,10 @@ class SkinTest {
         // ramped voices actually start at zero and rise, not just that
         // they're clean — reverting to an instant onset would still pass
         // every other SkinTest in this file. Same shape as ThumpTest's own
-        // regression for the identical bug.
-        for (voice in SkinVoice.entries) {
+        // regression for the identical bug. STICK is excluded the same way
+        // ThumpTest excludes CLAP/RIM: a single-impulse click's own onset
+        // doesn't fit this primitive (see Skin.stick's doc comment).
+        for (voice in SkinVoice.entries - SkinVoice.STICK) {
             val snip = Skin.render(voice)
             // A small tolerance, not exact zero: U6's oversample/decimate
             // runs every render through a linear-phase resample filter,
