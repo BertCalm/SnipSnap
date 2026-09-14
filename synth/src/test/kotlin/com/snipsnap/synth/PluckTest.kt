@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Snip
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,6 +76,38 @@ class PluckTest {
                 measured > expected * 0.9f && measured < expected * 1.1f,
                 "$voice: expected ~${expected}Hz, measured ${measured}Hz - two octaves sharp (4x) " +
                     "would mean the delay line reverted to sizing off the native RATE",
+            )
+        }
+    }
+
+    @Test
+    fun `the oversampled render's decay time matches a direct native-rate render`() {
+        // The pitch test above proves n scales correctly, but not that fb
+        // (applied once per generated sample) still produces the same
+        // real-time decay at 4x rate as at native rate - a rate/feedback
+        // change could preserve pitch while still shortening or lengthening
+        // the tail, and DAMP damps (same render path both sides) wouldn't
+        // catch that. It doesn't need correcting for rate: the delay line
+        // closes its feedback path once per full n-sample traversal (one
+        // period, at any rate), so decay per real second is fb^(periods
+        // elapsed) - a function of freq and elapsed time only. Measured
+        // ratios across the four voices: 0.67-1.22, nowhere near the ~0.25
+        // (or ~4.0) a genuine 4x-per-second feedback error would produce -
+        // wide tolerance here is deliberate headroom for that normal
+        // rate-dependent variation (filter coefficient warping, the delay
+        // line's integer rounding), not an admission of a real effect.
+        for (voice in PluckVoice.entries) {
+            val actual = Pluck.render(voice, mapOf("DAMP" to 0.3f))
+            val direct = Pluck.synthesize(voice, mapOf("DAMP" to 0.3f), Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            val directSnip = Snip(direct, channels = 1, sampleRate = Dsp.RATE)
+            val actualDecay = FeatureExtractor.extract(actual).decayMs
+            val directDecay = FeatureExtractor.extract(directSnip).decayMs
+            assertTrue(
+                actualDecay > directDecay * 0.4f && actualDecay < directDecay * 2.5f,
+                "$voice: oversampled decay ${actualDecay}ms vs native-rate decay ${directDecay}ms - " +
+                    "a ~4x compression would mean fb needs rate-correcting after all",
             )
         }
     }
