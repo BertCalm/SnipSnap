@@ -15,9 +15,10 @@ import kotlin.test.assertTrue
 class FxTest {
 
     /**
-     * Sections not yet held to the peak-match clause, with why each
-     * fails. These are pre-existing: they were never in the three-section
-     * list this test replaced. Each is a bug to fix on its own, not here.
+     * Sections not held to the peak-match clause, with why each fails.
+     * These are pre-existing: they were never in the three-section list
+     * this test replaced. Some are bugs to fix on their own, not here;
+     * some are sections the clause simply does not fit, and say so.
      * Stale check: if a section's DSP changes, delete its entry and rerun
      * `every effect is deterministic, clean and peak-matched everywhere` -
      * if it now passes, the exclusion is no longer needed. Self-checked too:
@@ -26,9 +27,6 @@ class FxTest {
      * so a fixed section cannot sit here forgotten.
      */
     private val contractExcluded: Map<String, String> = mapOf(
-        "smear" to "peak-match: falls under the source peak instead of matching it " +
-            "(roll 0: out 0.8939 vs snare 0.9500, diff 0.0561; roll 2: out 0.8637 vs " +
-            "snare 0.9500, diff 0.0863 - tolerance is 0.05)",
         "motion" to "peak-match: by design, STOP/START fade the level toward silence; at " +
             "random macro values this lands far outside the 0.05 tolerance meant for " +
             "level-preserving effects (roll 0: out 0.2681 vs snare 0.9500, diff 0.6819; " +
