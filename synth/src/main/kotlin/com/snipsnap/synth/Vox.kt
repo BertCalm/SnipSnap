@@ -82,7 +82,13 @@ object Vox {
         return FloatArray(3) { f -> VOWELS[i][f] + (VOWELS[i + 1][f] - VOWELS[i][f]) * frac }
     }
 
-    fun render(voice: VoxVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * The raw synth loop, at whatever [rate] the caller wants - split out of
+     * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
+     * tested directly against a native-rate render, rather than trusting
+     * that reading [render]'s own source matches what it actually does.
+     */
+    internal fun synthesize(voice: VoxVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -91,21 +97,21 @@ object Vox {
         val breath = m.getValue("BREATH")
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.1f)
 
-        val out = FloatArray((t60 * 1.3f * RATE).toInt().coerceAtLeast(64))
+        val out = FloatArray((t60 * 1.3f * rate).toInt().coerceAtLeast(64))
         val filters = Array(3) { f ->
-            Dsp.Biquad().apply { bandpass(formants[f], FORMANT_Q) }
+            Dsp.Biquad().apply { bandpass(formants[f], FORMANT_Q, rate) }
         }
         val noise = Dsp.Noise(17)
-        val noiseLp = Dsp.OnePole()
+        val noiseLp = Dsp.OnePole(rate)
         val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = t60) // vocal onsets are soft
 
         var p1 = 0.0
         var p2 = 0.0
         val detune = if (voice == VoxVoice.CHOIR) 1.007f else 1.0f
         for (i in out.indices) {
-            val t = i.toFloat() / RATE
-            p1 += base / RATE
-            p2 += base * detune / RATE
+            val t = i.toFloat() / rate
+            p1 += base / rate
+            p2 += base * detune / rate
 
             // The throat: a buzzing source with the character per voice.
             val buzz = when (voice) {
@@ -122,7 +128,19 @@ object Vox {
 
             out[i] = s * env.at(t)
         }
+        return out
+    }
 
+    fun render(voice: VoxVoice, macros: Map<String, Float> = emptyMap()): Snip {
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the naive saw/
+        // square source oscillators' harmonics fold down above 22.05kHz
+        // instead of into the audible band, then Dsp.decimate brings it
+        // back to RATE. The formant bandpasses and noise lowpass are
+        // rate-aware (Dsp.Biquad/Dsp.OnePole default to RATE), so they're
+        // threaded the renderRate explicitly here.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = synthesize(voice, macros, renderRate)
+        val out = Dsp.decimate(raw, RATE)
         Dsp.normalize(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)

@@ -35,6 +35,33 @@ class VoxGrainsTest {
     }
 
     @Test
+    fun `vox render actually dispatches through the oversampled path, not directly at RATE`() {
+        // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
+        // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
+        // calling synthesize(voice, macros, RATE) directly. Same mean-abs-
+        // diff proof as VELVET/FATHOM/TONEWHEEL (see VelvetTest) - the
+        // formant bandpasses ringing on a naive saw/square source make a
+        // clean band-energy comparison as unreliable here as it was for
+        // VELVET's resonant filter.
+        for (voice in VoxVoice.entries) {
+            val actual = Vox.render(voice)
+            val direct = Vox.synthesize(voice, emptyMap(), Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            val avgDiff = diff / n
+            assertTrue(
+                avgDiff > 0.0005,
+                "$voice: Vox.render should differ meaningfully from a direct native-rate " +
+                    "synthesize() - got avgDiff=$avgDiff, which would happen if render() stopped " +
+                    "dispatching through the oversampled path",
+            )
+        }
+    }
+
+    @Test
     fun `vox scrambles are reproducible`() {
         for (voice in VoxVoice.entries) {
             assertEquals(Vox.scramble(voice, Random(5)), Vox.scramble(voice, Random(5)))
