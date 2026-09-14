@@ -155,11 +155,16 @@ object TapeWear {
         val amp = hissAmp(w)
         if (amp <= 0f) return snip
         val rnd = kotlin.random.Random(seed * 31 + 0x4155)
-        return Snip(
-            FloatArray(snip.samples.size) { i ->
-                snip.samples[i] + (rnd.nextFloat() * 2 - 1) * amp
-            },
-            snip.channels, snip.sampleRate,
-        )
+        val out = FloatArray(snip.samples.size)
+        for (f in 0 until snip.frameCount) {
+            // One hiss value per frame, shared across channels: a tape has
+            // one noise floor, not one per channel.
+            val n = (rnd.nextFloat() * 2 - 1) * amp
+            for (c in 0 until snip.channels) {
+                val i = f * snip.channels + c
+                out[i] = snip.samples[i] + n
+            }
+        }
+        return Snip(out, snip.channels, snip.sampleRate)
     }
 }
