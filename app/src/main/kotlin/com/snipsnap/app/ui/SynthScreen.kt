@@ -678,14 +678,19 @@ private val FathomVoice.drumClass: DrumClass
     }
 
 /**
- * Chip/header label. THUMP keeps its prototype-verbatim abbreviations
+ * Chip/header label. THUMP and SKIN keep prototype-verbatim abbreviations
  * (`HAT_CLOSED` → "HAT CL", `HAT_OPEN` → "HAT OP" — the rest are already
  * short enough as-is); every other engine's voice names are already one
  * short word (BELL, SQUELCH, KALIMBA, …) with no underscore to break up, so
- * the raw enum name reads fine unmodified.
+ * the raw enum name reads fine unmodified. Without this, this picker's
+ * one-line visible label and TalkBack announcement both fall back to the
+ * raw enum name — underscores and all, and liable to be ellipsized.
  */
-private fun chipLabel(engine: Engine, voice: Enum<*>): String =
-    if (engine == Engine.THUMP) thumpChipLabel(voice as ThumpVoice) else voice.name
+private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
+    Engine.THUMP -> thumpChipLabel(voice as ThumpVoice)
+    Engine.SKIN -> skinChipLabel(voice as SkinVoice)
+    else -> voice.name
+}
 
 private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.KICK -> "KICK"
@@ -696,6 +701,13 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.TOM -> "TOM"
     ThumpVoice.COWBELL -> "COWBELL"
     ThumpVoice.RIM -> "RIM"
+}
+
+private fun skinChipLabel(voice: SkinVoice): String = when (voice) {
+    SkinVoice.KICK -> "KICK"
+    SkinVoice.SNARE -> "SNARE"
+    SkinVoice.HAT_CLOSED -> "HAT CL"
+    SkinVoice.HAT_OPEN -> "HAT OP"
 }
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until

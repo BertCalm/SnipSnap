@@ -84,6 +84,26 @@ class SkinTest {
     }
 
     @Test
+    fun `voices ramp in over the first millisecond instead of jumping to full level`() {
+        // Regression for the 1ms Dsp.Env attack ramp every SKIN voice
+        // carries (Skin.kt's own modalBody/hat doc comments): proves the
+        // ramped voices actually start at zero and rise, not just that
+        // they're clean — reverting to an instant onset would still pass
+        // every other SkinTest in this file. Same shape as ThumpTest's own
+        // regression for the identical bug.
+        for (voice in SkinVoice.entries) {
+            val snip = Skin.render(voice)
+            // A small tolerance, not exact zero: U6's oversample/decimate
+            // runs every render through a linear-phase resample filter,
+            // which pre-rings a hair ahead of any sharp edge — the same
+            // tolerance ThumpTest's own version of this test uses.
+            assertEquals(0f, snip.samples[0], 0.02f, "$voice: first sample should start at zero, not jump to full level")
+            val earlyPeak = snip.samples.take((Dsp.RATE * 0.02f).toInt()).maxOf { kotlin.math.abs(it) }
+            assertTrue(earlyPeak > 0.1f, "$voice: should audibly ramp up within the first 20ms, peaked at $earlyPeak")
+        }
+    }
+
+    @Test
     fun `no voice has a DC offset`() {
         for (voice in SkinVoice.entries) {
             val snip = Skin.render(voice)
