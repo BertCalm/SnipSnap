@@ -41,6 +41,18 @@ data class PadRecipe(
      * "amount"}` recipe.
      */
     val amount: Float? = null,
+    /**
+     * Whether this pad's aliasing is deliberate (docs/SYNTH_UPGRADE.md, U6).
+     *
+     * Every engine already renders through the U6 oversample/decimate path
+     * regardless of this flag - it changes nothing about [render]. It is
+     * pure metadata: a record of whether the grit in this pad's sound is
+     * the point (VELVET `CHIP`, anything feeding [Crunch]) rather than an
+     * artifact nobody chose. Defaults to that computation so kit generators
+     * get it right without having to say so explicitly at every call site;
+     * pass it directly to override.
+     */
+    val alias: Boolean = impliesAlias(patch, fx),
 ) {
     init {
         require(patch != null || fx != null) { "an empty recipe records nothing" }
@@ -63,23 +75,45 @@ data class PadRecipe(
         fx?.let { obj["fx"] = it.toJsonValue() }
         treatment?.let { obj["treatment"] = JsonValue.Str(it) }
         amount?.let { obj["amount"] = JsonValue.Num(it.toDouble()) }
+        obj["alias"] = JsonValue.Bool(alias)
         return JsonValue.Obj(obj)
     }
 
     fun toJsonText(): String = Json.write(toJsonValue())
 
     companion object {
-        const val VERSION = 1
+        /**
+         * U3+U5+U6 (docs/SYNTH_UPGRADE.md): Punch, `Dsp.Env`, filter
+         * saturation and 4x oversampling all change what every engine
+         * renders for the same patch, and [alias] is new — there is no
+         * migration path for a v1 recipe, by design (see the doc's own
+         * "take the clean break now" recommendation). `testkit/`'s 376
+         * WAVs were regenerated alongside this bump.
+         */
+        const val VERSION = 2
+
+        /**
+         * The [alias] default: true where grit is deliberately the point
+         * (docs/SYNTH_UPGRADE.md's U6 alias-flag section) - VELVET `CHIP`,
+         * or any chain feeding [Crunch]. `Eras`-produced audio keeps its
+         * own separate `{"era","amount"}` recipe (see [amount]'s doc), so
+         * it never reaches this shape at all.
+         */
+        private fun impliesAlias(patch: Patch?, fx: FxChain?): Boolean =
+            (patch is VelvetPatch && patch.voice == VelvetVoice.CHIP) || fx?.crunch != null
 
         fun fromJsonValue(value: JsonValue): PadRecipe {
             val obj = value.obj()
             val version = obj["recipe"]?.int() ?: throw JsonException("not a pad recipe: no recipe version")
             if (version != VERSION) throw JsonException("unsupported recipe version $version")
+            val patch = obj["patch"]?.let { Patches.fromJsonValue(it) }
+            val fx = obj["fx"]?.let { FxChain.fromJsonValue(it) }
             return PadRecipe(
-                patch = obj["patch"]?.let { Patches.fromJsonValue(it) },
-                fx = obj["fx"]?.let { FxChain.fromJsonValue(it) },
+                patch = patch,
+                fx = fx,
                 treatment = obj["treatment"]?.str(),
                 amount = obj["amount"]?.num()?.toFloat(),
+                alias = obj["alias"]?.bool() ?: impliesAlias(patch, fx),
             )
         }
 
