@@ -37,6 +37,33 @@ class TonewheelTest {
     }
 
     @Test
+    fun `render actually dispatches through the oversampled path, not directly at RATE`() {
+        // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
+        // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
+        // calling synthesize(voice, macros, gateSeconds, RATE) directly.
+        // Same mean-abs-diff proof as VELVET/FATHOM (see VelvetTest) - a
+        // full-spectrum band-energy comparison is unreliable here too,
+        // since DIRT's Dsp.drive is a self-saturating nonlinearity riding
+        // an additive stack, not a clean single tone.
+        for (voice in TonewheelVoice.entries) {
+            val actual = Tonewheel.render(voice, mapOf("DIRT" to 1f))
+            val direct = Tonewheel.synthesize(voice, mapOf("DIRT" to 1f), Tonewheel.GATE_SECONDS, Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            val avgDiff = diff / n
+            assertTrue(
+                avgDiff > 0.0005,
+                "$voice: Tonewheel.render should differ meaningfully from a direct native-rate " +
+                    "synthesize() - got avgDiff=$avgDiff, which would happen if render() stopped " +
+                    "dispatching through the oversampled path",
+            )
+        }
+    }
+
+    @Test
     fun `scrambles are reproducible and stay in range`() {
         for (voice in TonewheelVoice.entries) {
             assertEquals(Tonewheel.scramble(voice, Random(6)), Tonewheel.scramble(voice, Random(6)))
