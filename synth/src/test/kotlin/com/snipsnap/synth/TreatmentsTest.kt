@@ -30,6 +30,7 @@ class TreatmentsTest {
             listOf(
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
+                "spiked", "ringed", "vinyl", "phased", "pitched",
             ),
             Treatments.names,
         )

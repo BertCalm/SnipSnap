@@ -200,6 +200,20 @@ internal object Dsp {
             set(alpha, 0f, -alpha, 1 + alpha, -2 * cw, 1 - alpha)
         }
 
+        /**
+         * An allpass: every magnitude passes through untouched, the phase
+         * rotated through 180 degrees around [f0]. The RBJ cookbook's
+         * form — the numerator is the denominator reversed, which is what
+         * makes the magnitude flat at every frequency.
+         */
+        fun allpass(f0: Float, q: Float, rate: Int = RATE) {
+            val w0 = (2.0 * PI * f0 / rate)
+            val cw = kotlin.math.cos(w0).toFloat()
+            val sw = kotlin.math.sin(w0).toFloat()
+            val alpha = sw / (2f * q)
+            set(1 - alpha, -2 * cw, 1 + alpha, 1 + alpha, -2 * cw, 1 - alpha)
+        }
+
         fun peaking(f0: Float, gainDb: Float, q: Float, rate: Int = RATE) {
             val a = Math.pow(10.0, gainDb / 40.0).toFloat()
             val w0 = (2.0 * PI * f0 / rate)
@@ -318,5 +332,35 @@ internal object Dsp {
         for (i in 0 until n) {
             buf[buf.size - 1 - i] *= i.toFloat() / n
         }
+    }
+
+    /**
+     * A variable-speed head: for each output frame, [headAt] says where to
+     * read (fractional) and how loud. Linearly interpolated between
+     * neighbours; a position at or past the last source frame, or a zero
+     * gain, leaves that output frame silent — a stop that outruns its
+     * material simply runs out.
+     *
+     * The rack's two varispeed stages read through here — MOTION's capstan,
+     * where the position is the integral of a speed ramp, and SPEED's pitch,
+     * where it is a straight line — so they cannot drift apart in quality.
+     */
+    inline fun readAt(snip: Snip, outFrames: Int, headAt: (Int) -> Pair<Double, Float>): Snip {
+        val ch = snip.channels
+        val src = snip.samples
+        val last = snip.frameCount - 1
+        val out = FloatArray(outFrames * ch)
+        for (k in 0 until outFrames) {
+            val (pos, gain) = headAt(k)
+            if (pos >= last || gain <= 0f) continue
+            val i = pos.toInt()
+            val frac = (pos - i).toFloat()
+            for (c in 0 until ch) {
+                val a = src[i * ch + c]
+                val b = src[(i + 1) * ch + c]
+                out[k * ch + c] = (a + (b - a) * frac) * gain
+            }
+        }
+        return Snip(out, ch, snip.sampleRate)
     }
 }

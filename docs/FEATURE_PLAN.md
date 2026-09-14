@@ -1623,6 +1623,55 @@ an interval — and a unification would touch everything for nothing the
 user could hear. The cheap 80% is one shared PPQ constant and one
 conversion helper, worth folding into whichever row above lands first.
 
+## Wave ZZZ — five more voices, two that keep time (CORE + APP)
+
+The rack was eleven sections and one boolean; this wave takes it to
+sixteen sections and one boolean, one of them — PITCH — a new transport stage running in front
+of everything else, and gives the keyed family its first pair that
+shares a grid with WOBBLE instead of reading the kit's key. Same
+discipline as VV: a few passes in a new order, each landing as a named
+character (or, for the two that read tempo, a keyed treatment) and a
+place on the pad sheet — the card grows a second time, past its one
+extra row, to six.
+
+| # | Work | Owner | Size | Exit test |
+|---|---|---|---|---|
+| ZZZ1 | ✓ done: SPIKE — `Spike`, a rack section after GHOST and before EQ: two envelope followers at different speeds (`FAST_HZ` 700, `SLOW_HZ` 18), the gap between them gained as the transient (ATTACK) and what's left gained bipolar around 0.5 (SUSTAIN), peak matched; the `spiked` character | CORE | S | a kick and a snare through SPIKE still classify as themselves; ATTACK 0 and SUSTAIN 0.5 is the input object; SUSTAIN's two halves each move the body, one drier and one fuller |
+| ZZZ2 | ✓ done: RING — `Ring`, a rack section between CRUNCH and DUB: the signal multiplied by a sine (FREQ 30 Hz..3 kHz exponential), MIX 0 transparent, peak matched, no seed; the `ringed` character. **Deliberately exempt from "a treated kick is still a kick"**, the same exemption GHOST carries — ring modulation destroys pitch identity by design | CORE | S | MIX 0 is a copy; a rung tone's zero-crossings change under FREQ; a ringed kick is no longer the kick it was (likeness < 0.9) |
+| ZZZ3 | ✓ done: VINYL — `Vinyl`, a rack section between DUB and TAPE: rumble, groove hiss and seeded clicks (CRACKLE, RUMBLE, HISS), each bed scaled to the input's own peak before summing and capped like `TapeWear`'s own ceilings, then peak matched; the `vinyl` character | CORE | S | all-zero macros return the input bit for bit; the same seed crackles the same way twice; a kick and a snare through VINYL still classify; silence in stays silence, never a bed with nothing to scale against |
+| ZZZ4 | ✓ done: PHASE — `Phase`, a rack section after TAPE and before ECHO: four allpasses swept by one slow LFO (RATE 0.15..4 Hz, corner 250 Hz..4 kHz) and summed back with the dry, FEEDBACK sharpening the notches (capped at 0.7); DEPTH 0 transparent, no seed; the `phased` character | CORE | S | DEPTH 0 is a copy; a swept tone's peak differs window to window as the notches travel; a kick and a snare through PHASE still classify |
+| ZZZ5 | ✓ done: PITCH — `Speed`, first in the rack, a new TRANSPORT stage ahead of SWELL's ARRIVAL: a varispeed read (`Dsp.readAt`) snapped to semitones (±12, 0.5 native — the macro's own neutral, so AMT fades a pitched treatment back toward the original note rather than toward an octave down), no length cap of its own since capping a varispeed truncates the note; the `pitched` character. Runs before everything else, including REVERSE, so the tail budget is now measured from the pitched, swelled sound | CORE | S | SEMITONES 0.5 is the input object; 0 (an octave down) is about twice the frame count and 1 (an octave up) shorter, raising a tone's zero-crossing rate; peak matched both ways |
+| ZZZ6 | ✓ done: ROLL — `Roll`, a keyed treatment rather than a rack section, because it reads the kit's tempo and the rack reads nothing but the sound: the hit's own head struck again on a note division (`Wobble.DIVISIONS`, sharing WOBBLE's own default and grid so the two land on the same beats), each repeat a little quieter (DECAY 0.82); AMOUNT how much of the hit the roll replaces, length unchanged; the `rolled` keyed name, `snipsnap roll` | CORE | S | a hit shorter than two divisions refuses in words, naming the division; AMOUNT 0 is the input object; length unchanged; each repeat's level against the last matches DECAY, compounding on the second; the same roll twice is byte-identical |
+| ZZZ7 | ✓ done: GATE — `Gate`, keyed for the same reason as ROLL and sharing its grid: a trapezoidal square envelope open for the first half of each division and closed for the second (DUTY 0.5, a 3 ms edge fade so the chop reads as rhythm rather than clicks); AMOUNT is depth, not speed; the `gated` keyed name, `snipsnap gate` | CORE | S | a hit shorter than two divisions refuses in words, naming the division; AMOUNT 0 is the input object; length unchanged; AMOUNT 1 opens and closes without ever stepping hard enough to click |
+| ZZZ8 | ✓ done: the pad sheet regrouped — six rows in place of five, grouped by what an effect *does* rather than which family implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its character once it is itself (PUNCH · RING · DUB · VINYL · PHASE), row four what happens to it in time (SLAP · WASH · ROLL · GATE — ROLL and GATE keyed treatments sitting here because that's what they sound like, the way TUNE has always sat among the characters), row five the machine's transport (FLIP · STOP · START · PITCH), row six the keyed family (TUNE · BODY · WOBBLE · ETERNAL) | APP | S | 27 chips across six rows, no duplicates; every segment names a real treatment; the inverse mappings hold |
+
+### Known gaps in the FX rack (deliberately deferred)
+
+Four pre-existing bugs the fx-rack-expansion review found and deliberately
+left alone — each is real, each is its own fix, and none blocks a merge.
+They live as exclusion-map entries in `FxTest.kt` (`contractExcluded`,
+`stereoExcluded`), which is the only place they were previously written
+down; recorded here too so they are findable without reading the test
+that skips them.
+
+- **`swell` — stereo decorrelation.** Fails `stereo stays stereo with
+  identical channels intact`: left/right diverge starting at frame 1 of
+  48337 (33073 of 48337 frames fail, 33072 of those genuinely, not just a
+  signed-zero artifact) — the stretch wash randomizes its phase
+  independently per channel instead of sharing one computation across
+  channels.
+- **`dub` — stereo decorrelation.** Fails the same clause: 15256 of 15262
+  frames differ by audible amounts starting at frame 0 — the per-channel
+  dub processing does not keep identical input channels identical.
+- **`smear` — capped peak-match.** Fails `every effect is deterministic,
+  clean and peak-matched everywhere`: falls under the source peak instead
+  of matching it (observed diffs of 0.056–0.086 against a 0.05 tolerance)
+  — its makeup gain is capped and the cap can undershoot.
+- **`motion` — clause-vs-design mismatch.** Fails the same peak-match
+  clause by design, not by bug: STOP/START deliberately fade the level
+  toward silence, which the level-preserving clause was never written to
+  allow. The fix here is likely to the clause (an exemption, as GHOST and
+  RING already have for the "still the same drum" clause), not the DSP.
 
 ## Sequence
 

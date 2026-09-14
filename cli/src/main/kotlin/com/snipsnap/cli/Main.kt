@@ -118,6 +118,10 @@ object Cli {
         |  eternal <kit-dir> <pad>
         |                        the attack kept bit for bit, the tail slowed
         |                        toward forever (--tail s, --knee ms, --undo)
+        |  roll <kit-dir> <pad>  the hit's own head struck again on the grid
+        |                        (--rate 1/16, --bpm, --amount, --undo)
+        |  gate <kit-dir> <pad>  the hit chopped on the grid
+        |                        (--rate 1/8, --bpm, --amount, --undo)
         |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
         |                        blends toward it (--amount, --seed, --root)
         |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
@@ -350,6 +354,8 @@ object Cli {
                 "body" -> BodyCommand.run(args.drop(1), out)
                 "wobble" -> WobbleCommand.run(args.drop(1), out)
                 "eternal" -> EternalCommand.run(args.drop(1), out)
+                "roll" -> RollCommand.run(args.drop(1), out)
+                "gate" -> GateCommand.run(args.drop(1), out)
                 "drift" -> DriftCommand.run(args.drop(1), out)
                 "breed" -> BreedCommand.run(args.drop(1), out)
                 "desample" -> DesampleCommand.run(args.drop(1), out)

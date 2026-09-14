@@ -54,7 +54,7 @@ object Motion {
     private fun start(snip: Snip, frames: Int): Snip {
         val ramp = frames.coerceAtLeast(1)
         val outFrames = snip.frameCount + ramp / 2
-        return read(snip, outFrames) { k ->
+        return Dsp.readAt(snip, outFrames) { k ->
             if (k < ramp) {
                 val u = k.toDouble() / ramp
                 // position = ∫ speed = k²/(2·ramp); level follows the speed.
@@ -74,7 +74,7 @@ object Motion {
     private fun stop(snip: Snip, frames: Int): Snip {
         val ramp = frames.coerceIn(1, snip.frameCount.coerceAtLeast(1))
         val k0 = snip.frameCount - ramp
-        return read(snip, snip.frameCount) { k ->
+        return Dsp.readAt(snip, snip.frameCount) { k ->
             if (k < k0) {
                 k.toDouble() to 1f
             } else {
@@ -83,25 +83,5 @@ object Motion {
                 (k0 + (k - k0) * (1.0 - u / 2.0)) to sqrt(1.0 - u).toFloat()
             }
         }
-    }
-
-    /** A variable-speed head: for each output frame, where to read (fractional) and how loud. */
-    private inline fun read(snip: Snip, outFrames: Int, headAt: (Int) -> Pair<Double, Float>): Snip {
-        val ch = snip.channels
-        val src = snip.samples
-        val last = snip.frameCount - 1
-        val out = FloatArray(outFrames * ch)
-        for (k in 0 until outFrames) {
-            val (pos, gain) = headAt(k)
-            if (pos >= last || gain <= 0f) continue
-            val i = pos.toInt()
-            val frac = (pos - i).toFloat()
-            for (c in 0 until ch) {
-                val a = src[i * ch + c]
-                val b = src[(i + 1) * ch + c]
-                out[k * ch + c] = (a + (b - a) * frac) * gain
-            }
-        }
-        return Snip(out, ch, snip.sampleRate)
     }
 }

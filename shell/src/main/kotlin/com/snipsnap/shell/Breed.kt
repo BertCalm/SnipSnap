@@ -181,20 +181,17 @@ object Breed {
         val fx = if (fa == null && fb == null) {
             null
         } else {
-            FxChain(
-                reverse = if (fa != null && fb != null) (if (rng.nextBoolean()) fa.reverse else fb.reverse) else (fa?.reverse ?: fb!!.reverse),
-                eq = crossMacros(fa?.eq, fb?.eq, rng),
-                squash = crossMacros(fa?.squash, fb?.squash, rng),
-                crunch = crossMacros(fa?.crunch, fb?.crunch, rng),
-                tape = crossMacros(fa?.tape, fb?.tape, rng),
-                echo = crossMacros(fa?.echo, fb?.echo, rng),
-                spring = crossMacros(fa?.spring, fb?.spring, rng),
-                smear = crossMacros(fa?.smear, fb?.smear, rng),
-                ghost = crossMacros(fa?.ghost, fb?.ghost, rng),
-                motion = crossMacros(fa?.motion, fb?.motion, rng),
-                dub = crossMacros(fa?.dub, fb?.dub, rng),
-                swell = crossMacros(fa?.swell, fb?.swell, rng),
+            var chain = FxChain(
+                reverse = if (fa != null && fb != null) {
+                    if (rng.nextBoolean()) fa.reverse else fb.reverse
+                } else {
+                    fa?.reverse ?: fb!!.reverse
+                },
             )
+            for (name in FxChain.SECTION_NAMES) {
+                chain = chain.withSection(name, crossMacros(fa?.section(name), fb?.section(name), rng))
+            }
+            chain
         }
         return PadRecipe(patch = patch, fx = fx ?: if (patch == null) FxChain() else null)
     }

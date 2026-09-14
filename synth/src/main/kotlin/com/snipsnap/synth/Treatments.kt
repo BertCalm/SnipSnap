@@ -7,9 +7,13 @@ import com.snipsnap.json.JsonValue
  * The rack's named characters, available one pad at a time — the remix
  * bank's five (reversed, crushed, slapback, washed, punched) and the
  * ones that arrived after the bank's table was pinned ([EXTRA]).
- * [amount] scales the chain's macros linearly (1 = the character's own
- * settings, lower = subtler); structure switches like reverse stay
- * switched.
+ * [amount] fades every macro toward its own neutral (1 = the character's
+ * own settings, 0 = every macro at the point where it does nothing) — see
+ * [fade]. A macro whose neutral is 0 fades to silence like a plain scale
+ * always did, but a centered one (EQ's flat, PITCH's native) fades toward
+ * its centre instead of being dragged off it, so a centered macro sitting
+ * below its neutral actually *rises* as [amount] falls; structure switches
+ * like reverse stay switched.
  *
  * Every application returns the fx-only recipe that made it, so a treated
  * pad remains re-treatable and undoable like everything else in a kit.
@@ -38,6 +42,16 @@ object Treatments {
         "dubbed" to FxChain(dub = mapOf("GENERATIONS" to 0.6f)),
         // The sound arrives before it strikes.
         "swelled" to FxChain(swell = mapOf("RISE" to 0.6f)),
+        // The attack leaned on rather than taken away.
+        "spiked" to FxChain(spike = mapOf("ATTACK" to 0.7f, "SUSTAIN" to 0.45f)),
+        // Multiplied by a sine: metal, bells, radio.
+        "ringed" to FxChain(ring = mapOf("FREQ" to 0.45f, "MIX" to 0.5f)),
+        // The record under the hit: rumble, groove, and every play before this one.
+        "vinyl" to FxChain(vinyl = mapOf("CRACKLE" to 0.5f, "RUMBLE" to 0.3f, "HISS" to 0.35f)),
+        // Four allpasses, swept.
+        "phased" to FxChain(phase = mapOf("RATE" to 0.3f, "DEPTH" to 0.7f, "FEEDBACK" to 0.4f)),
+        // The transport: the same hit, played slower.
+        "pitched" to FxChain(speed = mapOf("SEMITONES" to 0.25f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
@@ -54,21 +68,30 @@ object Treatments {
         // silently become "no treatment". Checked above, before bypass.
         if (amount <= 0f) return FxChain()
         if (amount >= 0.999f) return base
-        fun scale(params: Map<String, Float>?): Map<String, Float>? =
-            params?.mapValues { (_, v) -> (v * amount).coerceIn(0f, 1f) }
-        return base.copy(
-            smear = scale(base.smear),
-            ghost = scale(base.ghost),
-            motion = scale(base.motion),
-            dub = scale(base.dub),
-            swell = scale(base.swell),
-            eq = scale(base.eq),
-            squash = scale(base.squash),
-            crunch = scale(base.crunch),
-            tape = scale(base.tape),
-            echo = scale(base.echo),
-            spring = scale(base.spring),
-        )
+        return fade(base, amount)
+    }
+
+    /**
+     * [chain]'s macros faded toward their neutrals by [amount] — 1 leaves the
+     * chain alone, 0 lands every macro where it does nothing. A macro whose
+     * neutral is 0 fades to silence, exactly as `v * amount` always did; a
+     * centered one (EQ's flat, PITCH's native) fades to its centre instead of
+     * being dragged off it.
+     */
+    fun fade(chain: FxChain, amount: Float): FxChain {
+        var out = chain
+        for (name in FxChain.SECTION_NAMES) {
+            val macros = chain.section(name) ?: continue
+            val neutrals = FxChain.macrosOf(name).associate { it.name to it.neutral }
+            out = out.withSection(
+                name,
+                macros.mapValues { (macro, v) ->
+                    val neutral = neutrals[macro] ?: 0f
+                    (neutral + (v - neutral) * amount).coerceIn(0f, 1f)
+                },
+            )
+        }
+        return out
     }
 
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)

@@ -1969,8 +1969,8 @@ fun PadSheetScreen(
         else -> applied?.segment
     }
     val isNoneState = smearAmount == null && dustAmount == null && applied == null
-    // The phone ruling, both rows: a treatment no segment draws is named
-    // on the provenance line, never shown as NONE.
+    // The phone ruling, whichever row: a treatment no segment draws is
+    // named on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
         when (a.treatment) {
             is PadSheet.Treatment.Era -> "AGED: ${a.treatment.name.uppercase()}"
@@ -2943,8 +2943,11 @@ private fun TreatmentCard(
             if (applying != null) scheme.amber.tape else scheme.ink3.tape,
             maxLines = 1,
         )
-        // Row one is the eras, the rest the rack's characters (PadSheet.ROWS);
-        // one segment lights across every row, since a pad carries one recipe.
+        // Row one is the eras; most of the rest are the rack's characters,
+        // but row four also carries ROLL and GATE, which are keyed rather
+        // than racked (PadSheet.ROWS groups by what a segment sounds like,
+        // not by which family implements it). One segment lights across
+        // every row, since a pad carries one recipe.
         val widest = rows.maxOf { it.size }
         for (row in rows) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

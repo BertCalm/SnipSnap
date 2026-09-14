@@ -8,83 +8,80 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    SWELL → REVERSE → SMEAR → GHOST → EQ → SQUASH → CRUNCH → DUB → TAPE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → VINYL → TAPE → PHASE → ECHO → SPRING → MOTION
  *
- * Swell before everything, so the rack sees the arrival and the hit as
- * one sound; reverse next because you effect the flipped sample, not
- * flip the effected one (the sampling-era way); smear and ghost after
- * that because they decide what the hit *is* before anything decides
- * how it sounds (anatomy before tone); dynamics before character (dub
- * beside crunch: both are the converter's own damage) before time, space
- * always last — echoes belong *in* the room — and motion after even
- * that, because the tape stops with the reverb still on it. A fixed order is
- * a playability rule wearing an architecture hat: no routing screen, no
- * wrong answers.
+ * Pitch before everything, because in a sampler pitch *is* the transport:
+ * SWELL's stretched head, REVERSE's flip and the whole rack all see the
+ * pitched sound, since that is what a sampler plays. Swell next, so the
+ * rack sees the arrival and the hit as one sound; reverse after that
+ * because you effect the flipped sample, not flip the effected one (the
+ * sampling-era way); smear and ghost after that because they decide what
+ * the hit *is* before anything decides how it sounds (anatomy before
+ * tone); dynamics before character (crunch and dub are the converter's
+ * own damage, quantized and honest; ring sits between them as damage of
+ * a different species, inharmonic rather than coarse); then vinyl,
+ * because a record dubbed to tape needs its surface noise to exist
+ * before tape can process it along with everything else; then time,
+ * space always last — echoes belong *in* the room — and motion after
+ * even that, because the tape stops with the reverb still on it. A fixed
+ * order is a playability rule wearing an architecture hat: no routing
+ * screen, no wrong answers.
  *
  * A `null` section is a hard bypass. Serializes next to the pad's WAV in
  * `kit.json` so the recipe stays editable forever, same as synth patches.
  */
 data class FxChain(
+    /** The transport: pitch is speed, and it runs before everything. */
+    val speed: Map<String, Float>? = null,
     val reverse: Boolean = false,
     val eq: Map<String, Float>? = null,
     val squash: Map<String, Float>? = null,
     val crunch: Map<String, Float>? = null,
+    val ring: Map<String, Float>? = null,
     val tape: Map<String, Float>? = null,
+    val phase: Map<String, Float>? = null,
     val echo: Map<String, Float>? = null,
     val spring: Map<String, Float>? = null,
     /** Later in the parameter list (they arrived later) than in the rack: see the order above. */
     val smear: Map<String, Float>? = null,
     val ghost: Map<String, Float>? = null,
+    val spike: Map<String, Float>? = null,
     val motion: Map<String, Float>? = null,
     val dub: Map<String, Float>? = null,
+    val vinyl: Map<String, Float>? = null,
     val swell: Map<String, Float>? = null,
 ) {
     init {
-        for ((name, macros, known) in listOf(
-            Triple("smear", smear, Smear.MACROS),
-            Triple("ghost", ghost, Ghost.MACROS),
-            Triple("motion", motion, Motion.MACROS),
-            Triple("dub", dub, Dub.MACROS),
-            Triple("swell", swell, Swell.MACROS),
-            Triple("eq", eq, Eq.MACROS),
-            Triple("squash", squash, Squash.MACROS),
-            Triple("crunch", crunch, Crunch.MACROS),
-            Triple("tape", tape, Tape.MACROS),
-            Triple("echo", echo, Echo.MACROS),
-            Triple("spring", spring, Spring.MACROS),
-        )) {
-            if (macros == null) continue
-            val names = known.map { it.name }.toSet()
+        for (s in SECTIONS) {
+            val macros = s.get(this) ?: continue
+            val names = s.macros.map { it.name }.toSet()
             for ((k, v) in macros) {
-                require(k in names) { "unknown $name macro $k (knows $names)" }
-                require(v in 0f..1f) { "$name macro $k out of 0..1: $v" }
+                require(k in names) { "unknown ${s.name} macro $k (knows $names)" }
+                require(v in 0f..1f) { "${s.name} macro $k out of 0..1: $v" }
             }
         }
     }
 
     val isBypass: Boolean
-        get() = !reverse && swell == null && smear == null && ghost == null && eq == null && squash == null &&
-            crunch == null && dub == null && tape == null && echo == null && spring == null && motion == null
+        get() = !reverse && SECTIONS.all { it.get(this) == null }
 
     fun process(snip: Snip): Snip {
-        // The swell is an arrival, not a tail: the tail budget is measured from the swelled sound.
-        val swelled = swell?.let { Swell.process(snip, it) } ?: snip
-        return capTail(swelled, processRest(swelled))
+        // TRANSPORT then ARRIVAL: the tail budget is measured from what they leave behind.
+        var head = snip
+        for (sec in SECTIONS) {
+            if (sec.stage == Stage.RACK) continue
+            sec.get(this)?.let { head = sec.run(head, it) }
+        }
+        return capTail(head, processRest(head))
     }
 
     private fun processRest(snip: Snip): Snip {
         var s = snip
         if (reverse) s = reversed(s)
-        smear?.let { s = Smear.process(s, it) }
-        ghost?.let { s = Ghost.process(s, it) }
-        eq?.let { s = Eq.process(s, it) }
-        squash?.let { s = Squash.process(s, it) }
-        crunch?.let { s = Crunch.process(s, it) }
-        dub?.let { s = Dub.process(s, it) }
-        tape?.let { s = Tape.process(s, it) }
-        echo?.let { s = Echo.process(s, it) }
-        spring?.let { s = Spring.process(s, it) }
-        motion?.let { s = Motion.process(s, it) }
+        for (sec in SECTIONS) {
+            if (sec.stage != Stage.RACK) continue
+            sec.get(this)?.let { s = sec.run(s, it) }
+        }
         return s
     }
 
@@ -121,47 +118,100 @@ data class FxChain(
         val obj = LinkedHashMap<String, JsonValue>()
         obj["fx"] = JsonValue.Num(VERSION.toDouble())
         obj["reverse"] = JsonValue.Bool(reverse)
-        for ((name, macros) in listOf(
-            "swell" to swell, "smear" to smear, "ghost" to ghost, "eq" to eq, "squash" to squash, "crunch" to crunch,
-            "dub" to dub, "tape" to tape, "echo" to echo, "spring" to spring, "motion" to motion,
-        )) {
-            if (macros != null) {
-                obj[name] = JsonValue.Obj(
-                    macros.entries.associateTo(LinkedHashMap()) { (k, v) -> k to JsonValue.Num(v.toDouble()) },
-                )
-            }
+        for (sec in SECTIONS) {
+            val macros = sec.get(this) ?: continue
+            obj[sec.name] = JsonValue.Obj(
+                macros.entries.associateTo(LinkedHashMap()) { (k, v) -> k to JsonValue.Num(v.toDouble()) },
+            )
         }
         return JsonValue.Obj(obj)
     }
 
     fun toJsonText(): String = Json.write(toJsonValue())
 
+    /** [name]'s macros on this chain, or null when the section is bypassed. */
+    fun section(name: String): Map<String, Float>? = sectionOf(name).get(this)
+
+    /** This chain with [name] set to [macros]; null bypasses the section. */
+    fun withSection(name: String, macros: Map<String, Float>?): FxChain = sectionOf(name).with(this, macros)
+
     companion object {
         const val VERSION = 1
 
-        /** Most tail the whole rack may add over its input, seconds. */
+        /**
+         * Most tail the whole rack may add over its input, seconds —
+         * measured from the *pitched, swelled* sound, not the original. A
+         * hit pitched down an octave is twice as long by instruction, and
+         * that length is not tail; the budget exists to stop ECHO and
+         * SPRING running away, not to truncate a note.
+         */
         const val MAX_CHAIN_TAIL_SECONDS = 1.0f
+
+        /** Which pass a section belongs to: the two before the tail budget is measured, and the rack. */
+        enum class Stage { TRANSPORT, ARRIVAL, RACK }
+
+        /**
+         * One rack section, described rather than hand-written. The list below
+         * IS the order — in the signal path and in JSON alike — so the two can
+         * no longer drift apart. `process()` follows this declaration order
+         * for the pre-[Stage.RACK] stages too, so a [Stage.TRANSPORT] entry
+         * must be declared ahead of the [Stage.ARRIVAL] one.
+         */
+        internal class Section(
+            val name: String,
+            val macros: List<MacroSpec>,
+            val get: (FxChain) -> Map<String, Float>?,
+            val with: (FxChain, Map<String, Float>?) -> FxChain,
+            val run: (Snip, Map<String, Float>) -> Snip,
+            val stage: Stage = Stage.RACK,
+        )
+
+        internal val SECTIONS: List<Section> = listOf(
+            Section("speed", Speed.MACROS, { it.speed }, { c, m -> c.copy(speed = m) }, Speed::process, Stage.TRANSPORT),
+            Section("swell", Swell.MACROS, { it.swell }, { c, m -> c.copy(swell = m) }, Swell::process, Stage.ARRIVAL),
+            Section("smear", Smear.MACROS, { it.smear }, { c, m -> c.copy(smear = m) }, Smear::process),
+            Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
+            Section("spike", Spike.MACROS, { it.spike }, { c, m -> c.copy(spike = m) }, Spike::process),
+            Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
+            Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
+            Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
+            Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
+            Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
+            Section("vinyl", Vinyl.MACROS, { it.vinyl }, { c, m -> c.copy(vinyl = m) }, Vinyl::process),
+            Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
+            Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
+            Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
+            Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
+            Section("motion", Motion.MACROS, { it.motion }, { c, m -> c.copy(motion = m) }, Motion::process),
+        )
+
+        /**
+         * Every section's name, in rack order — the door other modules use.
+         * [Section] itself stays internal: `internal` is module-scoped, and
+         * `:shell`'s Treatments and Breed live outside this one.
+         */
+        val SECTION_NAMES: List<String> get() = SECTIONS.map { it.name }
+
+        /** [name]'s macro specs, or an error naming the sections there are. */
+        fun macrosOf(name: String): List<MacroSpec> = sectionOf(name).macros
+
+        internal fun sectionOf(name: String): Section =
+            SECTIONS.firstOrNull { it.name == name }
+                ?: throw IllegalArgumentException(
+                    "unknown fx section '$name' - the rack has: ${SECTION_NAMES.joinToString(", ")}",
+                )
 
         fun fromJsonValue(value: JsonValue): FxChain {
             val obj = value.obj()
             val version = obj["fx"]?.int() ?: throw JsonException("not an fx chain: no fx version")
             if (version != VERSION) throw JsonException("unsupported fx version $version")
-            fun section(name: String): Map<String, Float>? =
-                (obj[name] as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
-            return FxChain(
-                reverse = (obj["reverse"] as? JsonValue.Bool)?.value ?: false,
-                eq = section("eq"),
-                squash = section("squash"),
-                crunch = section("crunch"),
-                tape = section("tape"),
-                echo = section("echo"),
-                spring = section("spring"),
-                smear = section("smear"),
-                ghost = section("ghost"),
-                motion = section("motion"),
-                dub = section("dub"),
-                swell = section("swell"),
-            )
+            var chain = FxChain(reverse = (obj["reverse"] as? JsonValue.Bool)?.value ?: false)
+            for (sec in SECTIONS) {
+                val macros = (obj[sec.name] as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
+                    ?: continue
+                chain = sec.with(chain, macros)
+            }
+            return chain
         }
 
         fun fromJsonText(text: String): FxChain = fromJsonValue(Json.parse(text))

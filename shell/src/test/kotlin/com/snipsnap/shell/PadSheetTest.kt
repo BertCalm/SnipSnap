@@ -72,9 +72,9 @@ class PadSheetTest {
         assertTrue(PadSheet.DUST in PadSheet.SEGMENTS, "DUST is row one too")
         assertNull(PadSheet.eraFor(PadSheet.DUST), "DUST names no era, like SMEAR")
         assertNull(PadSheet.treatmentFor(PadSheet.DUST))
-        assertTrue(PadSheet.TAIL in PadSheet.CHARACTER_SEGMENTS, "TAIL is row two")
+        assertTrue(PadSheet.TAIL in PadSheet.ANATOMY_SEGMENTS, "TAIL is row two")
         assertFalse(PadSheet.TAIL in PadSheet.SEGMENTS)
-        assertFalse(PadSheet.SMEAR in PadSheet.CHARACTER_SEGMENTS)
+        assertFalse(PadSheet.SMEAR in PadSheet.ANATOMY_SEGMENTS)
 
         // And the card never draws one word for both.
         assertTrue(
@@ -106,36 +106,83 @@ class PadSheetTest {
         assertNull(PadSheet.segmentFor("phone"))
     }
 
-    // ---- row two: the characters ----
+    // ---- rows two through six: the regroup ----
 
     @Test
-    fun `rows two and three draw four characters each and all rows read in order`() {
-        assertEquals(listOf("TAIL", "SLAP", "WASH", "PUNCH"), PadSheet.CHARACTER_SEGMENTS)
-        assertEquals(listOf("GHOST", "STOP", "START", "FLIP"), PadSheet.MORE_SEGMENTS)
-        assertEquals(listOf("SKIM", "DUB", "SWELL", "TUNE"), PadSheet.EXTRA_SEGMENTS)
-        assertEquals(listOf("BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf(PadSheet.SEGMENTS, PadSheet.CHARACTER_SEGMENTS, PadSheet.MORE_SEGMENTS, PadSheet.EXTRA_SEGMENTS, PadSheet.KEYED_SEGMENTS), PadSheet.ROWS)
-        assertEquals(PadSheet.ALL_SEGMENTS.size, PadSheet.ALL_SEGMENTS.toSet().size, "no word on two rows")
+    fun `the card reads in zones, and holds every chip`() {
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR", "DUST"), PadSheet.SEGMENTS)
+        assertEquals(listOf("SWELL", "TAIL", "SKIM", "GHOST", "SPIKE"), PadSheet.ANATOMY_SEGMENTS)
+        assertEquals(listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE"), PadSheet.CHARACTER_SEGMENTS)
+        assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE"), PadSheet.TIME_SEGMENTS)
+        assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
+        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(28, PadSheet.ALL_SEGMENTS.size, "the card should draw 28 chips")
+    }
+
+    /**
+     * The regroup moves every chip but row one. A chip silently dropped
+     * during the rearrangement would not be caught by the duplicate/width/
+     * registry checks below — a deleted segment is simply never iterated —
+     * so this test checks the inventory itself, independent of which row
+     * anything ended up on.
+     */
+    @Test
+    fun `the regroup keeps every chip the card already drew, adds its seven, and the merge's DUST makes twenty-eight`() {
+        val expected = setOf(
+            // the twenty that existed before the regroup, plus the row-one
+            // DUST chip a separate branch merged in later (`readDust`,
+            // `com.snipsnap.audio.Dust`) - unrelated to this plan's own
+            // character of the same rendered name, which lives below as VINYL.
+            "NONE", "CRUSH", "TAPE", "DIRT", "SMEAR", "DUST",
+            "TAIL", "SLAP", "WASH", "PUNCH",
+            "GHOST", "STOP", "START", "FLIP",
+            "SKIM", "DUB", "SWELL", "TUNE",
+            "BODY", "WOBBLE", "ETERNAL",
+            // the seven this plan adds
+            "SPIKE", "RING", "VINYL", "PHASE", "PITCH", "ROLL", "GATE",
+        )
+        assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
+        assertEquals(28, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
-    fun `every character segment names a real rack character, and the keyed segments a real keyed treatment`() {
-        assertEquals(PadSheet.Treatment.Keyed("retuned"), PadSheet.treatmentFor(PadSheet.TUNE))
-        assertEquals(PadSheet.TUNE, PadSheet.segmentFor(PadSheet.Treatment.Keyed("retuned")))
-        for (segment in listOf(PadSheet.TUNE) + PadSheet.KEYED_SEGMENTS) {
+    fun `every segment names something real, whatever row it sits on`() {
+        for (segment in PadSheet.ALL_SEGMENTS) {
+            // NONE means "no treatment"; SMEAR and DUST (row one) each ride
+            // their own recipe shape ({"verb":"smear",...} / {"verb":"dust",
+            // "amount","tape"}) and deliberately dispatch through none of the
+            // three doors (see the dedicated SMEAR-vs-TAIL test above, and
+            // readDust's KDoc) — all three are real "no Treatment" answers,
+            // not gaps, on any row.
+            if (segment == PadSheet.NONE || segment == PadSheet.SMEAR || segment == PadSheet.DUST) {
+                assertNull(PadSheet.treatmentFor(segment), "$segment must resolve to no Treatment")
+                continue
+            }
             val t = PadSheet.treatmentFor(segment)
-            assertTrue(t is PadSheet.Treatment.Keyed, "$segment is keyed")
-            assertTrue(t!!.name in Keyed.NAMES, "$segment maps to '${t.name}', which Keyed does not know")
-            assertEquals(segment, PadSheet.segmentFor(t))
+                ?: throw AssertionError("$segment draws a chip but does nothing")
+            when (t) {
+                is PadSheet.Treatment.Era -> {}
+                is PadSheet.Treatment.Character ->
+                    assertTrue(t.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")
+                is PadSheet.Treatment.Keyed ->
+                    assertTrue(t.name in Keyed.NAMES, "$segment maps to '${t.name}', which Keyed does not know")
+            }
+            assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is not treatmentFor's inverse for $segment")
         }
         assertNull(PadSheet.segmentForKeyed("frozen"), "a keyed name no segment draws lights nothing")
-        for (segment in PadSheet.ROWS.drop(1).dropLast(1).flatten()) {
-            if (segment == PadSheet.TUNE) continue
-            val t = PadSheet.treatmentFor(segment)
-            assertTrue(t is PadSheet.Treatment.Character, "$segment is a character")
-            assertTrue(t!!.name in Treatments.names, "$segment maps to '${t.name}', which Treatments does not know")
-            assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is treatmentFor's inverse")
-        }
+    }
+
+    @Test
+    fun `the card draws every chip once and only once`() {
+        assertEquals(
+            PadSheet.ALL_SEGMENTS.size,
+            PadSheet.ALL_SEGMENTS.toSet().size,
+            "a word is drawn on two rows: ${PadSheet.ALL_SEGMENTS.groupBy { it }.filterValues { it.size > 1 }.keys}",
+        )
+        assertEquals(PadSheet.ROWS, PadSheet.ROWS.filter { it.isNotEmpty() }, "an empty row would draw nothing")
+        // Row one earned a sixth chip (DUST) from the merged branch, so the
+        // ceiling moved from 5 to 6 rather than the regroup's rows growing.
+        assertTrue(PadSheet.ROWS.maxOf { it.size } <= 6, "a row wider than 6 makes every chip narrower")
     }
 
     @Test
