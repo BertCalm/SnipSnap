@@ -32,10 +32,11 @@ class PluckTest {
         // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
         // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
         // calling synthesize(voice, macros, RATE) directly. Same mean-abs-
-        // diff proof as the other engines (see VelvetTest) - PLUCK's
-        // Karplus-Strong delay line is *sized* by the rate (n = rate /
-        // freq), not just incrementally rate-aware, so this also guards
-        // against that sizing silently reverting to the bare RATE constant.
+        // diff proof as the other engines (see VelvetTest). Does not by
+        // itself guard the delay line's n being sized off rate rather than
+        // the native RATE - OnePole(rate) and Dsp.decimate alone would
+        // still make this pass even if n regressed; the next test covers
+        // that specifically.
         for (voice in PluckVoice.entries) {
             val actual = Pluck.render(voice)
             val direct = Pluck.synthesize(voice, emptyMap(), Dsp.RATE)
