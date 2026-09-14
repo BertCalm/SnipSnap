@@ -127,10 +127,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the seven-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the eight-engine drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all seven
+ * Compose surface plus the SEND TO PAD action, multiplexed over all eight
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -138,9 +138,9 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and six more engines
- * (TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM) join it here. GRAINS is
- * out of scope — it has no voice enum, a different shape entirely.
+ * only; reality wins: THUMP alone ships eight voices, and seven more engines
+ * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM) join it here. GRAINS
+ * is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
  * `SCRAMBLE_LINES` are prototype-only flavour, never ported to `Copy`).
@@ -503,10 +503,10 @@ fun SynthScreen(
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). All seven registered engines already converge on one shape (an
+ * change"). All eight registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of seven near-
+ * this just gives the screen one dispatch point instead of eight near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
