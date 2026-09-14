@@ -28,6 +28,33 @@ class PluckTest {
     }
 
     @Test
+    fun `render actually dispatches through the oversampled path, not directly at RATE`() {
+        // U6 (docs/SYNTH_UPGRADE.md): render() computes at RATE *
+        // Dsp.OVERSAMPLE via synthesize() and decimates, rather than
+        // calling synthesize(voice, macros, RATE) directly. Same mean-abs-
+        // diff proof as the other engines (see VelvetTest) - PLUCK's
+        // Karplus-Strong delay line is *sized* by the rate (n = rate /
+        // freq), not just incrementally rate-aware, so this also guards
+        // against that sizing silently reverting to the bare RATE constant.
+        for (voice in PluckVoice.entries) {
+            val actual = Pluck.render(voice)
+            val direct = Pluck.synthesize(voice, emptyMap(), Dsp.RATE)
+            Dsp.normalize(direct)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            val avgDiff = diff / n
+            assertTrue(
+                avgDiff > 0.0005,
+                "$voice: Pluck.render should differ meaningfully from a direct native-rate " +
+                    "synthesize() - got avgDiff=$avgDiff, which would happen if render() stopped " +
+                    "dispatching through the oversampled path",
+            )
+        }
+    }
+
+    @Test
     fun `scrambles are reproducible and stay in range`() {
         for (voice in PluckVoice.entries) {
             assertEquals(Pluck.scramble(voice, Random(2)), Pluck.scramble(voice, Random(2)))

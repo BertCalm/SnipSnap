@@ -69,7 +69,21 @@ object Pluck {
         return root * 2f.pow(semis / 12f)
     }
 
-    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * The raw synth loop, at whatever [rate] the caller wants - split out of
+     * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
+     * tested directly against a native-rate render, rather than trusting
+     * that reading [render]'s own source matches what it actually does.
+     *
+     * Karplus-Strong's delay line is *sized* by the rate (`n = rate / freq`
+     * inside [ks]), not just incrementally rate-aware the way a phase
+     * accumulator is - a structural dependency, not just a constant to
+     * thread through. It falls out naturally here: at 4x rate, [ks] builds
+     * a 4x-longer delay line over 4x as many samples covering the *same*
+     * real-time duration, so the string's pitch and decay are unaffected -
+     * only the resolution of the loop and its exciter's low-pass changes.
+     */
+    internal fun synthesize(voice: PluckVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -93,18 +107,32 @@ object Pluck {
         }
 
         val seconds = (ring * Dsp.lin(1f - damp, 0.35f, 1f)).coerceAtMost(1.35f)
-        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = rate)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
             // first. Detune grows with the macro so it goes chorus -> honky.
             val det = ks(
                 freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = 23,
+                Dsp.expMap(pick, pickLo, pickHi), seed = 23, rate = rate,
             )
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
         }
+        return out
+    }
 
+    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
+        // consistency with the other 6 engines and because the exciter's
+        // one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
+        // saturation stage generating fresh above-Nyquist harmonics the way
+        // THUMP/TONEWHEEL/VOX do, so the audible effect here is smaller -
+        // but it is still real plumbing, not a no-op: Dsp.decimate's own
+        // low-pass changes what a keygroup sounds like near the top of its
+        // range, same as every other engine.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = synthesize(voice, macros, renderRate)
+        val out = Dsp.decimate(raw, RATE)
         Dsp.normalize(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
@@ -123,12 +151,13 @@ object Pluck {
         bodyLoopHz: Float,
         pickHz: Float,
         seed: Int,
+        rate: Int,
     ): FloatArray {
-        val n = (RATE / freq).toInt().coerceAtLeast(2)
-        val out = FloatArray((seconds * RATE).toInt().coerceAtLeast(n + 2))
+        val n = (rate / freq).toInt().coerceAtLeast(2)
+        val out = FloatArray((seconds * rate).toInt().coerceAtLeast(n + 2))
 
         val noise = Dsp.Noise(seed)
-        val pickLp = Dsp.OnePole()
+        val pickLp = Dsp.OnePole(rate)
         val head = minOf(n, out.size)
         for (i in 0 until head) out[i] = pickLp.lp(noise.next(), pickHz)
         // Zero-mean the exciter: the loop filter passes DC untouched, so any
@@ -140,7 +169,7 @@ object Pluck {
         mean /= head
         for (i in 0 until head) out[i] -= mean
 
-        val loopLp = Dsp.OnePole()
+        val loopLp = Dsp.OnePole(rate)
         val loopHz = bodyLoopHz * Dsp.lin(1f - damp, 0.35f, 1.6f)
         val fb = Dsp.lin(1f - damp, 0.94f, 0.998f)
         for (i in n + 1 until out.size) {
