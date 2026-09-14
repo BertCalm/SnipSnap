@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -9,6 +10,14 @@ import kotlin.test.assertTrue
 class GateTest {
 
     private val steady = Snip(FloatArray(44_100) { 0.5f }, 1, 44_100)
+
+    private fun peakIn(s: Snip, fromSec: Float, toSec: Float): Float {
+        var p = 0f
+        val from = (fromSec * s.sampleRate).toInt().coerceIn(0, s.frameCount)
+        val to = (toSec * s.sampleRate).toInt().coerceIn(from, s.frameCount)
+        for (i in from * s.channels until to * s.channels) p = maxOf(p, abs(s.samples[i]))
+        return p
+    }
 
     @Test
     fun `AMOUNT zero is a copy`() {
@@ -33,6 +42,25 @@ class GateTest {
                 "a step of ${out.samples[i] - out.samples[i - 1]} at $i is a click",
             )
         }
+    }
+
+    @Test
+    fun `the gate does not fade the hit's own attack`() {
+        // A DC fixture is blind to this: phase 0's ramp-up only shows up
+        // against a real transient, whose peak sits inside the first edge.
+        val kick = Thump.render(ThumpVoice.KICK)
+        val out = Gate.chop(kick, 300f, "1/16", 1f)
+        // Deep inside the edge fade (well short of EDGE_SEC itself, where the
+        // old ramp would already have climbed back near 1) - peak-match
+        // rescales the whole buffer, so compare against each buffer's own
+        // peak rather than the raw levels.
+        val window = Gate.EDGE_SEC / 6f
+        val inRatio = peakIn(kick, 0f, window) / kick.peak()
+        val outRatio = peakIn(out, 0f, window) / out.peak()
+        assertTrue(
+            outRatio > inRatio * 0.8f,
+            "the gate faded the hit's own attack: source's early/peak ratio $inRatio, gated $outRatio",
+        )
     }
 
     @Test

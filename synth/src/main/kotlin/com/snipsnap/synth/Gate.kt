@@ -52,6 +52,9 @@ object Gate {
             val phase = f % period
             // A trapezoid, not a square: the ramps are what keep it from clicking.
             val gate = when {
+                // The hit's own attack: there is nothing before frame 0 to be
+                // discontinuous with, so the first division opens already open.
+                f < edge -> 1f
                 phase < edge -> phase.toFloat() / edge
                 phase < open - edge -> 1f
                 phase < open -> (open - phase).toFloat() / edge
