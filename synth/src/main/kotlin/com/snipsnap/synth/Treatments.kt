@@ -47,7 +47,7 @@ object Treatments {
         // Multiplied by a sine: metal, bells, radio.
         "ringed" to FxChain(ring = mapOf("FREQ" to 0.45f, "MIX" to 0.5f)),
         // The record under the hit: rumble, groove, and every play before this one.
-        "dusted" to FxChain(dust = mapOf("CRACKLE" to 0.5f, "RUMBLE" to 0.3f, "HISS" to 0.35f)),
+        "vinyl" to FxChain(vinyl = mapOf("CRACKLE" to 0.5f, "RUMBLE" to 0.3f, "HISS" to 0.35f)),
         // Four allpasses, swept.
         "phased" to FxChain(phase = mapOf("RATE" to 0.3f, "DEPTH" to 0.7f, "FEEDBACK" to 0.4f)),
         // The transport: the same hit, played slower.

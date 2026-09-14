@@ -4,7 +4,7 @@ import com.snipsnap.audio.Snip
 import kotlin.math.abs
 
 /**
- * DUST — the record, as TAPE is the cassette. A sampling app's source
+ * VINYL — the record, as TAPE is the cassette. A sampling app's source
  * medium is vinyl, and vinyl is never silent: a low rumble off the
  * platter, a hiss in the groove, and the crackle of every play before
  * this one.
@@ -21,7 +21,7 @@ import kotlin.math.abs
  * forever. Ceilings follow `TapeWear`'s: earned noise is capped, and the
  * cap is the feature.
  */
-object Dust {
+object Vinyl {
 
     val MACROS: List<MacroSpec> = listOf(
         MacroSpec("CRACKLE", 0.4f),  // how busy the surface is

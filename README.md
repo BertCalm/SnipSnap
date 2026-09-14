@@ -240,7 +240,7 @@ breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
 transient), RING (the sound multiplied by a sine — metal, bells, radio;
 deliberately no longer the hit it was, the exemption GHOST already
-carries), DUB (generation loss: a dub of a dub, twelve deep), DUST (the
+carries), DUB (generation loss: a dub of a dub, twelve deep), VINYL (the
 record under the hit, as TAPE is the cassette: rumble, groove hiss and
 clicks, scaled to the hit's own peak, seeded once per pad), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
@@ -248,7 +248,7 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → squash → crunch → ring → dub → dust → tape → phase → echo →
+spike → eq → squash → crunch → ring → dub → vinyl → tape → phase → echo →
 spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.

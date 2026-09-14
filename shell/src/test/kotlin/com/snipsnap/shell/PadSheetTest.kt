@@ -110,13 +110,13 @@ class PadSheetTest {
 
     @Test
     fun `the card reads in zones, and holds every chip`() {
-        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR"), PadSheet.SEGMENTS)
+        assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR", "DUST"), PadSheet.SEGMENTS)
         assertEquals(listOf("SWELL", "TAIL", "SKIM", "GHOST", "SPIKE"), PadSheet.ANATOMY_SEGMENTS)
-        assertEquals(listOf("PUNCH", "RING", "DUB", "DUST", "PHASE"), PadSheet.CHARACTER_SEGMENTS)
+        assertEquals(listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(27, PadSheet.ALL_SEGMENTS.size, "the card should draw 27 chips")
+        assertEquals(28, PadSheet.ALL_SEGMENTS.size, "the card should draw 28 chips")
     }
 
     /**
@@ -127,29 +127,34 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew and adds the seven new ones`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, and the merge's DUST makes twenty-eight`() {
         val expected = setOf(
-            // the twenty that existed before the regroup
-            "NONE", "CRUSH", "TAPE", "DIRT", "SMEAR",
+            // the twenty that existed before the regroup, plus the row-one
+            // DUST chip a separate branch merged in later (`readDust`,
+            // `com.snipsnap.audio.Dust`) - unrelated to this plan's own
+            // character of the same rendered name, which lives below as VINYL.
+            "NONE", "CRUSH", "TAPE", "DIRT", "SMEAR", "DUST",
             "TAIL", "SLAP", "WASH", "PUNCH",
             "GHOST", "STOP", "START", "FLIP",
             "SKIM", "DUB", "SWELL", "TUNE",
             "BODY", "WOBBLE", "ETERNAL",
             // the seven this plan adds
-            "SPIKE", "RING", "DUST", "PHASE", "PITCH", "ROLL", "GATE",
+            "SPIKE", "RING", "VINYL", "PHASE", "PITCH", "ROLL", "GATE",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(27, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(28, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
     fun `every segment names something real, whatever row it sits on`() {
         for (segment in PadSheet.ALL_SEGMENTS) {
-            // NONE means "no treatment"; SMEAR rides its own recipe shape
-            // and deliberately dispatches through none of the three doors
-            // (see the dedicated SMEAR-vs-TAIL test above) — both are real
-            // "no Treatment" answers, not gaps, on any row.
-            if (segment == PadSheet.NONE || segment == PadSheet.SMEAR) {
+            // NONE means "no treatment"; SMEAR and DUST (row one) each ride
+            // their own recipe shape ({"verb":"smear",...} / {"verb":"dust",
+            // "amount","tape"}) and deliberately dispatch through none of the
+            // three doors (see the dedicated SMEAR-vs-TAIL test above, and
+            // readDust's KDoc) — all three are real "no Treatment" answers,
+            // not gaps, on any row.
+            if (segment == PadSheet.NONE || segment == PadSheet.SMEAR || segment == PadSheet.DUST) {
                 assertNull(PadSheet.treatmentFor(segment), "$segment must resolve to no Treatment")
                 continue
             }
@@ -175,7 +180,9 @@ class PadSheetTest {
             "a word is drawn on two rows: ${PadSheet.ALL_SEGMENTS.groupBy { it }.filterValues { it.size > 1 }.keys}",
         )
         assertEquals(PadSheet.ROWS, PadSheet.ROWS.filter { it.isNotEmpty() }, "an empty row would draw nothing")
-        assertTrue(PadSheet.ROWS.maxOf { it.size } <= 5, "a row wider than 5 makes every chip narrower")
+        // Row one earned a sixth chip (DUST) from the merged branch, so the
+        // ceiling moved from 5 to 6 rather than the regroup's rows growing.
+        assertTrue(PadSheet.ROWS.maxOf { it.size } <= 6, "a row wider than 6 makes every chip narrower")
     }
 
     @Test

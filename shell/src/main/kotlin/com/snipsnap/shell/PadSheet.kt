@@ -74,7 +74,7 @@ object PadSheet {
     val ANATOMY_SEGMENTS: List<String> = listOf("SWELL", TAIL, "SKIM", "GHOST", "SPIKE")
 
     /** Row three — what the hit sounds like once it is itself: the damage. */
-    val CHARACTER_SEGMENTS: List<String> = listOf("PUNCH", "RING", "DUB", "DUST", "PHASE")
+    val CHARACTER_SEGMENTS: List<String> = listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE")
 
     /** Row four — what happens to it in time: repeats, rooms, the grid. */
     val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE")
@@ -190,7 +190,7 @@ object PadSheet {
         // Multiplied by a sine: metal, bells, radio.
         "RING" to "ringed",
         // The record under the hit.
-        "DUST" to "dusted",
+        "VINYL" to "vinyl",
         // Four allpasses, swept.
         "PHASE" to "phased",
         // The transport: pitch is speed. AMT fades it back toward native, not toward silence.

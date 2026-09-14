@@ -568,33 +568,33 @@ class FxTest {
         assertTrue(Dub.process(bright, mapOf("GENERATIONS" to 1f)).samples.contentEquals(g12.samples), "deterministic")
     }
 
-    // ---------- DUST ----------
+    // ---------- VINYL ----------
 
     @Test
-    fun `DUST at all zeros is bit-identical, not merely quiet`() {
-        val out = Dust.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 0f))
-        assertTrue(out.samples.contentEquals(kick.samples), "DUST at zero added something")
+    fun `VINYL at all zeros is bit-identical, not merely quiet`() {
+        val out = Vinyl.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 0f))
+        assertTrue(out.samples.contentEquals(kick.samples), "VINYL at zero added something")
     }
 
     @Test
-    fun `DUST is the same record every time`() {
-        val a = Dust.process(kick, mapOf("CRACKLE" to 0.8f, "RUMBLE" to 0.5f, "HISS" to 0.5f))
-        val b = Dust.process(kick, mapOf("CRACKLE" to 0.8f, "RUMBLE" to 0.5f, "HISS" to 0.5f))
-        assertTrue(a.samples.contentEquals(b.samples), "DUST is not deterministic")
+    fun `VINYL is the same record every time`() {
+        val a = Vinyl.process(kick, mapOf("CRACKLE" to 0.8f, "RUMBLE" to 0.5f, "HISS" to 0.5f))
+        val b = Vinyl.process(kick, mapOf("CRACKLE" to 0.8f, "RUMBLE" to 0.5f, "HISS" to 0.5f))
+        assertTrue(a.samples.contentEquals(b.samples), "VINYL is not deterministic")
     }
 
     @Test
-    fun `DUST puts noise in the silence after the hit`() {
+    fun `VINYL puts noise in the silence after the hit`() {
         val quiet = Snip(FloatArray(44_100), 1, 44_100)
-        val dusty = Dust.process(quiet, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
+        val dusty = Vinyl.process(quiet, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
         // Silence in, silence out: there is no peak to scale the beds
         // against. `.all { it == 0f }` cannot fail here - Kotlin's
         // -0.0f == 0f is true, so a bed that computed something and was
         // then zeroed by peak-match's k = 0f / outPeak would pass unnoticed.
         // contentEquals delegates to Arrays.equals(float[], float[]), which
         // compares floatToIntBits and so does distinguish -0.0f.
-        assertTrue(dusty.samples.contentEquals(quiet.samples), "DUST made noise out of pure silence")
-        val over = Dust.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
+        assertTrue(dusty.samples.contentEquals(quiet.samples), "VINYL made noise out of pure silence")
+        val over = Vinyl.process(kick, mapOf("CRACKLE" to 0f, "RUMBLE" to 0f, "HISS" to 1f))
         // sustainRms's 80 ms mark still sits inside the kick's own decay (its
         // envelope is only ~-19 dB down there), which swamps an honest -48
         // dBFS hiss bed - the natural tail moved as much as the hiss did, in
@@ -608,9 +608,9 @@ class FxTest {
     }
 
     @Test
-    fun `a dusted kick is still a kick`() {
-        assertEquals(DrumClass.KICK, Classifier.classify(Dust.process(kick)).drumClass)
-        assertEquals(DrumClass.SNARE, Classifier.classify(Dust.process(snare)).drumClass)
+    fun `a vinyled kick is still a kick`() {
+        assertEquals(DrumClass.KICK, Classifier.classify(Vinyl.process(kick)).drumClass)
+        assertEquals(DrumClass.SNARE, Classifier.classify(Vinyl.process(snare)).drumClass)
     }
 
     @Test
@@ -767,7 +767,7 @@ class FxTest {
     @Test
     fun `the four new characters exist and each sets its own section`() {
         for ((name, section) in listOf(
-            "spiked" to "spike", "ringed" to "ring", "dusted" to "dust", "phased" to "phase",
+            "spiked" to "spike", "ringed" to "ring", "vinyl" to "vinyl", "phased" to "phase",
         )) {
             assertTrue(name in Treatments.names, "'$name' is not a treatment")
             assertTrue(Treatments.chain(name, 1f).section(section) != null, "'$name' does not set $section")

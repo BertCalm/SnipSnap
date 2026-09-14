@@ -347,7 +347,7 @@ the last stretch), `started` (the reel spinning up into the sound),
 rather than taken away: two envelope followers at different speeds, the
 gap between them gained as the transient), `ringed` (the sound multiplied
 by a sine — metal, bells, radio; deliberately no longer the hit it was,
-the same exemption `ghosted` carries), `dusted` (the record under the
+the same exemption `ghosted` carries), `vinyl` (the record under the
 hit: rumble, groove hiss and the crackle of every play before this one,
 scaled to the hit's own peak and seeded once per pad), `phased` (four
 allpasses swept by one slow sine and summed back with the dry, the
@@ -360,7 +360,7 @@ phone the same characters sit on the PAD SHEET's TREATMENT card, six
 rows grouped by what an effect *does* rather than which family implements
 it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
 the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
-character once it is itself (PUNCH · RING · DUB · DUST · PHASE), row
+character once it is itself (PUNCH · RING · DUB · VINYL · PHASE), row
 four what happens to it in time (SLAP · WASH · ROLL · GATE), row five
 the machine's own transport (FLIP · STOP · START · PITCH), and row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·

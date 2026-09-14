@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → DUST → TAPE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → VINYL → TAPE → PHASE → ECHO → SPRING → MOTION
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -19,7 +19,7 @@ import com.snipsnap.json.JsonValue
  * the hit *is* before anything decides how it sounds (anatomy before
  * tone); dynamics before character (crunch and dub are the converter's
  * own damage, quantized and honest; ring sits between them as damage of
- * a different species, inharmonic rather than coarse); then dust,
+ * a different species, inharmonic rather than coarse); then vinyl,
  * because a record dubbed to tape needs its surface noise to exist
  * before tape can process it along with everything else; then time,
  * space always last — echoes belong *in* the room — and motion after
@@ -48,7 +48,7 @@ data class FxChain(
     val spike: Map<String, Float>? = null,
     val motion: Map<String, Float>? = null,
     val dub: Map<String, Float>? = null,
-    val dust: Map<String, Float>? = null,
+    val vinyl: Map<String, Float>? = null,
     val swell: Map<String, Float>? = null,
 ) {
     init {
@@ -177,7 +177,7 @@ data class FxChain(
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
-            Section("dust", Dust.MACROS, { it.dust }, { c, m -> c.copy(dust = m) }, Dust::process),
+            Section("vinyl", Vinyl.MACROS, { it.vinyl }, { c, m -> c.copy(vinyl = m) }, Vinyl::process),
             Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
