@@ -21,8 +21,8 @@ internal object Dsp {
      * U6 (docs/SYNTH_UPGRADE.md): an engine's per-voice synthesis runs at
      * `RATE * OVERSAMPLE` internally (see [decimate]) so naive oscillators'
      * own aliasing folds down above audible range instead of into it.
-     * [Thump] is the first engine wired to this contract; the rest still
-     * render at plain `RATE` until they're migrated the same way.
+     * All 7 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel],
+     * [Vox], [Pluck] - are wired to this contract.
      */
     const val OVERSAMPLE = 4
 

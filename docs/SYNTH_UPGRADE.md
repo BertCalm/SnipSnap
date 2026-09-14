@@ -313,9 +313,16 @@ fold back as dirt unless the render is oversampled.
 **Deliberately ranked low as a headline, and required as a foundation.**
 
 The oscillators are naive: `Velvet.kt:67` (saw), `:71` (pulse), `Dsp.kt:35`
-(square), and FATHOM's saw pair. There is no oversampling anywhere in `:synth`
-— the only anti-aliasing mentions in the module are `Eras.kt` deliberately
-*not* doing it, which is character by design.
+(square), and FATHOM's saw pair. Before the fix below landed, there was no
+oversampling anywhere in `:synth` — the only anti-aliasing mentions in the
+module were `Eras.kt` deliberately *not* doing it, which is character by
+design.
+
+**Status: implemented.** All 7 engines (THUMP, TINES, VELVET, FATHOM,
+TONEWHEEL, VOX, PLUCK) render at `RATE * Dsp.OVERSAMPLE` and decimate — see
+`Dsp.OVERSAMPLE`'s KDoc. What remains of this section is the migration work
+below (`alias` flag, `PadRecipe.VERSION` bump, `testkit/` regen), which has
+not shipped yet.
 
 The target user will rarely hear this directly. Where it does bite is the S5
 multisampled instruments: a keygroup rendered every minor third across four
