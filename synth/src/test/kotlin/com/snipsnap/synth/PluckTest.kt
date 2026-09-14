@@ -57,9 +57,9 @@ class PluckTest {
 
     @Test
     fun `the oversampled delay line still lands on pitch, not just on some different render`() {
-        // Copilot's review of this PR: the mean-abs-diff test above only
-        // proves render() differs from a native-rate synthesize() call - it
-        // would still pass if ks()'s delay line n were silently pinned back
+        // The mean-abs-diff test above only proves render() differs from a
+        // native-rate synthesize() call - it would still pass if ks()'s
+        // delay line n were silently pinned back
         // to RATE (rather than the threaded rate param) while OnePole(rate)
         // and Dsp.decimate stayed correct, since those alone would still
         // make render() differ. n being wrong at the oversampled rate would
