@@ -347,10 +347,13 @@ that is a standing advantage this codebase has never spent.
 
 Grit stays available where it is the point — VELVET `CHIP`, and anything
 feeding CRUNCH. Landed as `PadRecipe.alias: Boolean` (`PadRecipe.kt`), not a
-`Patch` field: no `Patch` subtype had a non-macro field before this, and
-adding one would have touched every engine's patch class plus its own
-`Patches.VERSION` bump, where `PadRecipe` already had the exact optional-field
-shape (`treatment`/`amount`) to extend.
+`Patch` field: every `Patch` subtype already carries `name`/`engine`/
+`voiceName` (`Patches.kt:14-18`), but those are required identity fields
+every subtype has always had, not an *additional* per-patch semantic field.
+Adding a genuinely new one would have touched the shared codec plus all 7
+patch data classes' constructors and their own `Patches.VERSION` bump, where
+`PadRecipe` already had the exact optional-field shape (`treatment`/`amount`)
+to extend instead.
 
 It is pure metadata — every engine already always renders through the U6
 oversample/decimate path regardless of this flag; it only records whether a
@@ -384,13 +387,19 @@ recipe degrades those specific features gracefully rather than crashing -
 confirmed by reading both call sites, not assumed.
 
 FX-only treatment recipes (`RecipeReplay.plan`'s `PadSheet.read` branch -
-COPY LAST TREATMENT replaying an `Era`/`Character`) are a different,
-unversioned shape entirely: `Treatments.chain`/`Eras.process` look a
-treatment up by name and rebuild its `FxChain` fresh every replay, and
-neither was touched by U1-U6. Replaying one carries no stale-*audio* risk
-that a version gate would need to catch - the whole point of COPY LAST
-TREATMENT is that it re-derives the chain from the current code, not from
-anything frozen in the recipe.
+COPY LAST TREATMENT replaying an `Era`/`Character`) don't share one shape:
+`Treatments.apply` builds its recipe via `PadRecipe(fx = ..., treatment =
+..., amount = ...).toJsonValue()` (`Treatments.kt:101`), so a `Character`
+treatment recipe *does* carry `"recipe": 2` like any other `PadRecipe`;
+`Eras.apply` writes its own literal `{"era", "amount"}` `JsonValue.Obj`
+with no `"recipe"` key at all. Either way, `PadSheet.read` (`PadSheet.kt:310`)
+never looks at that field - it reads `"treatment"`/`"era"`/`"amount"`
+directly regardless of what version tag (or none) rides along, and
+`Treatments.chain`/`Eras.process` (neither touched by U1-U6) rebuild the
+`FxChain` fresh from the name every replay. So a stale recipe's version tag,
+where one exists, is inert here, not ignored by a gap in gating - the whole
+point of COPY LAST TREATMENT is that it re-derives the chain from the
+current code, not from anything frozen in the recipe.
 
 ---
 
