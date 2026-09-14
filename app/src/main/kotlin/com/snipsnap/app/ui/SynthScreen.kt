@@ -83,6 +83,9 @@ import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.Skin
+import com.snipsnap.synth.SkinPatch
+import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
@@ -513,13 +516,14 @@ fun SynthScreen(
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM;
 
-    /** THUMP → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
         THUMP -> ThumpVoice.entries
+        SKIN -> SkinVoice.entries
         TINES -> TinesVoice.entries
         VELVET -> VelvetVoice.entries
         VOX -> VoxVoice.entries
@@ -530,6 +534,7 @@ private enum class Engine {
 
     fun macrosFor(voice: Enum<*>) = when (this) {
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
+        SKIN -> Skin.macrosFor(voice as SkinVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
         VOX -> Vox.macrosFor(voice as VoxVoice)
@@ -540,6 +545,7 @@ private enum class Engine {
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
         THUMP -> Thump.defaults(voice as ThumpVoice)
+        SKIN -> Skin.defaults(voice as SkinVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
         VOX -> Vox.defaults(voice as VoxVoice)
@@ -550,6 +556,7 @@ private enum class Engine {
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
+        SKIN -> Skin.scramble(voice as SkinVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
         VOX -> Vox.scramble(voice as VoxVoice, random)
@@ -565,6 +572,7 @@ private enum class Engine {
     // this screen wants, so the uniform two-arg call reaches it fine.
     fun render(voice: Enum<*>, macros: Map<String, Float>): Snip = when (this) {
         THUMP -> Thump.render(voice as ThumpVoice, macros)
+        SKIN -> Skin.render(voice as SkinVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
         VOX -> Vox.render(voice as VoxVoice, macros)
@@ -575,6 +583,7 @@ private enum class Engine {
 
     fun drumClass(voice: Enum<*>): DrumClass = when (this) {
         THUMP -> (voice as ThumpVoice).drumClass
+        SKIN -> (voice as SkinVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> (voice as VelvetVoice).drumClass
         VOX -> (voice as VoxVoice).drumClass
@@ -585,6 +594,7 @@ private enum class Engine {
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
+        SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
@@ -636,6 +646,18 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.TOM -> DrumClass.TOM
         ThumpVoice.COWBELL -> DrumClass.PERC
         ThumpVoice.RIM -> DrumClass.PERC
+    }
+
+// SKIN's four shipped voices are built to hit the same classifier gates
+// THUMP's do (SkinTest's own `factory X is a X` set proves it), so they
+// mirror THUMP's labels directly rather than falling back to TONAL/PERC
+// the way an engine with no dedicated drum shape would.
+private val SkinVoice.drumClass: DrumClass
+    get() = when (this) {
+        SkinVoice.KICK -> DrumClass.KICK
+        SkinVoice.SNARE -> DrumClass.SNARE
+        SkinVoice.HAT_CLOSED -> DrumClass.HAT_CLOSED
+        SkinVoice.HAT_OPEN -> DrumClass.HAT_OPEN
     }
 
 private val TinesVoice.drumClass: DrumClass
