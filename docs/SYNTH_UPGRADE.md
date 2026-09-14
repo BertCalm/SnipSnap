@@ -376,11 +376,21 @@ both sides in the same run, so it stayed green throughout; and the goldens in
 `reference/golden/` are XPM/XML format files, not audio hashes, so export
 tests were unaffected.
 
-The two production call sites that parse a loaded kit's recipe
-(`Breed.recipeOf`, `RecipeReplay.plan`) already treated a parse failure as "no
-recipe here" rather than propagating the exception, so a stale v1 recipe
-degrades those specific features gracefully rather than crashing - confirmed
-by reading both call sites, not assumed.
+The two production call sites that parse a loaded kit's recipe as a
+`PadRecipe` (`Breed.recipeOf` unconditionally; `RecipeReplay.plan` only for
+its `"patch"`-shaped branch) already treated a parse failure as "no recipe
+here" rather than propagating the exception, so a stale v1 *synth-patch*
+recipe degrades those specific features gracefully rather than crashing -
+confirmed by reading both call sites, not assumed.
+
+FX-only treatment recipes (`RecipeReplay.plan`'s `PadSheet.read` branch -
+COPY LAST TREATMENT replaying an `Era`/`Character`) are a different,
+unversioned shape entirely: `Treatments.chain`/`Eras.process` look a
+treatment up by name and rebuild its `FxChain` fresh every replay, and
+neither was touched by U1-U6. Replaying one carries no stale-*audio* risk
+that a version gate would need to catch - the whole point of COPY LAST
+TREATMENT is that it re-derives the chain from the current code, not from
+anything frozen in the recipe.
 
 ---
 
