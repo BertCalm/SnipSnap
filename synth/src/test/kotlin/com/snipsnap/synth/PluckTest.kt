@@ -55,6 +55,30 @@ class PluckTest {
     }
 
     @Test
+    fun `the oversampled delay line still lands on pitch, not just on some different render`() {
+        // Copilot's review of this PR: the mean-abs-diff test above only
+        // proves render() differs from a native-rate synthesize() call - it
+        // would still pass if ks()'s delay line n were silently pinned back
+        // to RATE (rather than the threaded rate param) while OnePole(rate)
+        // and Dsp.decimate stayed correct, since those alone would still
+        // make render() differ. n being wrong at the oversampled rate would
+        // be dramatic and specific: at 4x rate with n computed from the
+        // native RATE instead, the delay line would be 4x too short for
+        // that rate, so the string would ring exactly two octaves sharp
+        // once decimated back down. Pin TUNE's pitch directly against
+        // frequencyFor to catch that regression.
+        for (voice in PluckVoice.entries) {
+            val expected = Pluck.frequencyFor(voice, 0.5f)
+            val measured = TestPitch.estimate(Pluck.render(voice, mapOf("TUNE" to 0.5f, "DAMP" to 0.2f)))
+            assertTrue(
+                measured > expected * 0.9f && measured < expected * 1.1f,
+                "$voice: expected ~${expected}Hz, measured ${measured}Hz - two octaves sharp (4x) " +
+                    "would mean the delay line reverted to sizing off the native RATE",
+            )
+        }
+    }
+
+    @Test
     fun `scrambles are reproducible and stay in range`() {
         for (voice in PluckVoice.entries) {
             assertEquals(Pluck.scramble(voice, Random(2)), Pluck.scramble(voice, Random(2)))
