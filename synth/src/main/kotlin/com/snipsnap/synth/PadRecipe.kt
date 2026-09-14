@@ -87,7 +87,7 @@ data class PadRecipe(
          * saturation and 4x oversampling all change what every engine
          * renders for the same patch, and [alias] is new — there is no
          * migration path for a v1 recipe, by design (see the doc's own
-         * "take the clean break now" recommendation). `testkit/`'s 376
+         * "take the clean break now" recommendation). `testkit/`'s 369
          * WAVs were regenerated alongside this bump.
          */
         const val VERSION = 2

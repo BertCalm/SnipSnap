@@ -320,9 +320,9 @@ design.
 
 **Status: implemented.** All 7 engines (THUMP, TINES, VELVET, FATHOM,
 TONEWHEEL, VOX, PLUCK) render at `RATE * Dsp.OVERSAMPLE` and decimate — see
-`Dsp.OVERSAMPLE`'s KDoc. What remains of this section is the migration work
-below (`alias` flag, `PadRecipe.VERSION` bump, `testkit/` regen), which has
-not shipped yet.
+`Dsp.OVERSAMPLE`'s KDoc. The migration work below (`alias` flag,
+`PadRecipe.VERSION` bump, `testkit/` regen) has shipped too — see that
+section's own "done" status.
 
 The target user will rarely hear this directly. Where it does bite is the S5
 multisampled instruments: a keygroup rendered every minor third across four
