@@ -18,7 +18,7 @@ object GateCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(args, valued = setOf("--bpm", "--rate", "--amount"), boolean = setOf("--undo"))
         val dirArg = opts.positional.getOrNull(0)
-            ?: throw CliError("gate wants a kit and a pad: snipsnap gate <kit-dir> A02 [--rate 1/16] [--bpm 92] [--amount 0..1]")
+            ?: throw CliError("gate wants a kit and a pad: snipsnap gate <kit-dir> A02 [--rate 1/8] [--bpm 92] [--amount 0..1]")
         val kitDir = File(dirArg)
         if (!File(kitDir, "kit.json").isFile) throw CliError("not a kit folder (no kit.json): $dirArg")
         val padArg = opts.positional.getOrNull(1)

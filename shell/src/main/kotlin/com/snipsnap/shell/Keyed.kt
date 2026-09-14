@@ -17,7 +17,7 @@ import java.util.Locale
 /**
  * The keyed family: treatments that read the kit itself — its key, its
  * tempo — where the rack's characters read nothing but the sound. One
- * door for the pad sheet's fifth row and the CLI verbs alike:
+ * door for every keyed segment on the pad sheet and the CLI verbs alike:
  *
  * - **retuned** — every partial talked into the key ([Retune]); a drum
  *   is refused as unpitched;

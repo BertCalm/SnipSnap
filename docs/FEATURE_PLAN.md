@@ -1626,7 +1626,7 @@ conversion helper, worth folding into whichever row above lands first.
 ## Wave ZZZ — five more voices, two that keep time (CORE + APP)
 
 The rack was eleven sections and one boolean; this wave takes it to
-sixteen, one of them — PITCH — a new transport stage running in front
+sixteen sections and one boolean, one of them — PITCH — a new transport stage running in front
 of everything else, and gives the keyed family its first pair that
 shares a grid with WOBBLE instead of reading the kit's key. Same
 discipline as VV: a few passes in a new order, each landing as a named
@@ -1644,6 +1644,34 @@ extra row, to six.
 | ZZZ6 | ✓ done: ROLL — `Roll`, a keyed treatment rather than a rack section, because it reads the kit's tempo and the rack reads nothing but the sound: the hit's own head struck again on a note division (`Wobble.DIVISIONS`, sharing WOBBLE's own default and grid so the two land on the same beats), each repeat a little quieter (DECAY 0.82); AMOUNT how much of the hit the roll replaces, length unchanged; the `rolled` keyed name, `snipsnap roll` | CORE | S | a hit shorter than two divisions refuses in words, naming the division; AMOUNT 0 is the input object; length unchanged; each repeat's level against the last matches DECAY, compounding on the second; the same roll twice is byte-identical |
 | ZZZ7 | ✓ done: GATE — `Gate`, keyed for the same reason as ROLL and sharing its grid: a trapezoidal square envelope open for the first half of each division and closed for the second (DUTY 0.5, a 3 ms edge fade so the chop reads as rhythm rather than clicks); AMOUNT is depth, not speed; the `gated` keyed name, `snipsnap gate` | CORE | S | a hit shorter than two divisions refuses in words, naming the division; AMOUNT 0 is the input object; length unchanged; AMOUNT 1 opens and closes without ever stepping hard enough to click |
 | ZZZ8 | ✓ done: the pad sheet regrouped — six rows in place of five, grouped by what an effect *does* rather than which family implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its character once it is itself (PUNCH · RING · DUB · DUST · PHASE), row four what happens to it in time (SLAP · WASH · ROLL · GATE — ROLL and GATE keyed treatments sitting here because that's what they sound like, the way TUNE has always sat among the characters), row five the machine's transport (FLIP · STOP · START · PITCH), row six the keyed family (TUNE · BODY · WOBBLE · ETERNAL) | APP | S | 27 chips across six rows, no duplicates; every segment names a real treatment; the inverse mappings hold |
+
+### Known gaps in the FX rack (deliberately deferred)
+
+Four pre-existing bugs the fx-rack-expansion review found and deliberately
+left alone — each is real, each is its own fix, and none blocks a merge.
+They live as exclusion-map entries in `FxTest.kt` (`contractExcluded`,
+`stereoExcluded`), which is the only place they were previously written
+down; recorded here too so they are findable without reading the test
+that skips them.
+
+- **`swell` — stereo decorrelation.** Fails `stereo stays stereo with
+  identical channels intact`: left/right diverge starting at frame 1 of
+  48337 (33073 of 48337 frames fail, 33072 of those genuinely, not just a
+  signed-zero artifact) — the stretch wash randomizes its phase
+  independently per channel instead of sharing one computation across
+  channels.
+- **`dub` — stereo decorrelation.** Fails the same clause: 15256 of 15262
+  frames differ by audible amounts starting at frame 0 — the per-channel
+  dub processing does not keep identical input channels identical.
+- **`smear` — capped peak-match.** Fails `every effect is deterministic,
+  clean and peak-matched everywhere`: falls under the source peak instead
+  of matching it (observed diffs of 0.056–0.086 against a 0.05 tolerance)
+  — its makeup gain is capped and the cap can undershoot.
+- **`motion` — clause-vs-design mismatch.** Fails the same peak-match
+  clause by design, not by bug: STOP/START deliberately fade the level
+  toward silence, which the level-preserving clause was never written to
+  allow. The fix here is likely to the clause (an exemption, as GHOST and
+  RING already have for the "still the same drum" clause), not the DSP.
 
 ## Sequence
 
