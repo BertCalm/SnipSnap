@@ -3,7 +3,9 @@
 `docs/SYNTH_ROADMAP.md` is done: S1–S5 all shipped, eight engines, thirty
 voices, the FX rack, keygroup export, the instrument suite. This document is
 what comes after, and it starts from a different question than the roadmap
-did.
+did. (The roadmap itself grew one more phase since: S6/SKIN, a ninth engine
+and eight more voices, shipped after this document's own U3/U5/U6 work — see
+this document's own U6 section and `SYNTH_ROADMAP.md`'s S6 row.)
 
 The roadmap asked *what should we build*. This asks *what does a seventeen-
 year-old with a phone and no money actually experience when they open SYNTH* —
