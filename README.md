@@ -212,7 +212,8 @@ filter's own damping floor at these frequencies, so the noise has to keep
 feeding it); SHAKER runs noise through one deliberately wide, non-resonant
 filter — a band, not a tone. Eight voices, classifier-verified against
 THUMP's own `DrumClass` gates wherever a dedicated class exists, PUNCH on
-every voice like any other engine.
+every voice — SKIN shares that stage with THUMP alone; it isn't a
+cross-engine macro.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
