@@ -8,14 +8,22 @@ import kotlin.random.Random
  * SKIN — the acoustic-style drum voice engine.
  *
  * Where THUMP is built from oscillators (swept sines, square-wave clusters)
- * shaped by envelopes, SKIN is modal: KICK/SNARE/TOM sum a few decaying sine
- * partials at inharmonic ratios (the textbook "physically-modeled hit"
- * recipe — a struck membrane rings at several modes that decay
- * independently, faster at higher partials), HAT/RIDE/SHAKER run
- * continuous noise through a bank of resonant [Dsp.TptSvf] filters instead
- * (see [hat]'s own doc comment for why continuous, not impulse-excited), and
- * STICK is the one voice short enough to just excite a single [Dsp.TptSvf]
- * mode once, the same way [Thump.rim] does.
+ * shaped by envelopes, SKIN is modal: KICK/SNARE/TOM/STICK sum decaying
+ * sine partials at inharmonic ratios (the textbook "physically-modeled
+ * hit" recipe — a struck membrane rings at several modes that decay
+ * independently, faster at higher partials; STICK is just one partial,
+ * the shortest and highest-pitched of the four). HAT/RIDE run continuous
+ * noise through a bank of resonant [Dsp.TptSvf] filters instead (see
+ * [hat]'s own doc comment for why continuous, not impulse-excited).
+ * SHAKER also runs continuous noise through one [Dsp.TptSvf], but tuned
+ * wide and non-resonant (`k=1.2`, nowhere near ringing) rather than as a
+ * bank of tuned modes — a broad band, not a tonal partial.
+ *
+ * An impulse-excited [Dsp.TptSvf] mode (the same shape [Thump.rim] uses)
+ * was tried first for STICK and was wrong: even at the filter's own
+ * loosest legal damping, its natural ring at STICK's frequency range
+ * finishes in a few ms regardless of what DECAY asks for — see [stick]'s
+ * own doc comment for the numbers.
  *
  * Same contract as every other engine: macros are 0..1 mapped onto bounded
  * musical ranges so SCRAMBLE can't land on garbage, renders happen at
@@ -321,22 +329,18 @@ object Skin {
     }
 
     private fun stick(m: Map<String, Float>, rate: Int): FloatArray {
-        // The rimshot/stick click: one very short, high-Q mode excited by
-        // a single noise burst, same shape as Thump.rim() — its own decay
-        // (20-90ms) sits well inside Dsp.TptSvf's damping-floor ceiling
-        // (see modalBody's doc comment), so there's no need for the
-        // sine-partial workaround here.
+        // The rimshot/stick click: one tuned sine partial, decay set
+        // directly by Dsp.Env. An impulse-excited Dsp.TptSvf mode (Thump.
+        // rim()'s own shape, but with the newer filter) was tried first
+        // and was wrong: even at TptSvf's own loosest legal damping
+        // (k=0.1, the floor modalBody's doc comment already describes),
+        // the filter's OWN natural ring at STICK's 1.8-3.4kHz range caps
+        // out around 3-6ms - nowhere near the 20-90ms DECAY asks for, so
+        // the macro had no real effect once the filter's own decay had
+        // already finished. modalBody's explicit envelope isn't bound by
+        // that ceiling at all.
         val freq = Dsp.expMap(m.getValue("TUNE"), 1800f, 3400f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.02f, 0.09f)
-        val svf = Dsp.TptSvf(rate)
-        val noise = Dsp.Noise(37)
-        val out = FloatArray(frames(maxOf(t60 * 1.6f, 0.05f), rate))
-        for (i in out.indices) {
-            val t = i.toFloat() / rate
-            val excite = if (t < 0.001f) noise.next() + 1.5f else 0f
-            svf.process(excite, freq, 0.15f)
-            out[i] = svf.band * Dsp.envAt(t, t60)
-        }
-        return out
+        return modalBody(listOf(Partial(freq, 1f, t60)), seconds = maxOf(t60 * 1.6f, 0.05f), rate = rate)
     }
 }

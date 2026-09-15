@@ -95,7 +95,7 @@ class SkinTest {
     }
 
     @Test
-    fun `tom is lower-pitched than kick at defaults`() {
+    fun `tom is higher-pitched than kick at defaults`() {
         // The whole reason TOM and KICK are separate voices: proves the two
         // frequency ranges don't overlap into "the same shell renamed".
         val kick = FeatureExtractor.extract(Skin.render(SkinVoice.KICK))
@@ -154,6 +154,18 @@ class SkinTest {
     }
 
     @Test
+    fun `stick DECAY moves the decay`() {
+        // The exact regression an impulse-excited Dsp.TptSvf mode would
+        // fail silently: the filter's own natural ring at STICK's
+        // frequency range finishes in a few ms regardless of what DECAY
+        // asks for, so this is the test that actually catches it (Copilot's
+        // review of this PR caught the bug itself; this closes the gap).
+        val short = FeatureExtractor.extract(Skin.render(SkinVoice.STICK, mapOf("DECAY" to 0f)))
+        val long = FeatureExtractor.extract(Skin.render(SkinVoice.STICK, mapOf("DECAY" to 1f)))
+        assertTrue(long.decayMs > short.decayMs * 1.5f, "DECAY should stretch: ${short.decayMs} -> ${long.decayMs}")
+    }
+
+    @Test
     fun `stick is the shortest voice at defaults`() {
         val stick = FeatureExtractor.extract(Skin.render(SkinVoice.STICK))
         val snare = FeatureExtractor.extract(Skin.render(SkinVoice.SNARE))
@@ -181,10 +193,10 @@ class SkinTest {
         // ramped voices actually start at zero and rise, not just that
         // they're clean — reverting to an instant onset would still pass
         // every other SkinTest in this file. Same shape as ThumpTest's own
-        // regression for the identical bug. STICK is excluded the same way
-        // ThumpTest excludes CLAP/RIM: a single-impulse click's own onset
-        // doesn't fit this primitive (see Skin.stick's doc comment).
-        for (voice in SkinVoice.entries - SkinVoice.STICK) {
+        // regression for the identical bug. Every SKIN voice (STICK
+        // included, unlike THUMP's CLAP/RIM) goes through modalBody or an
+        // explicit Dsp.Env, so none needs excluding here.
+        for (voice in SkinVoice.entries) {
             val snip = Skin.render(voice)
             // A small tolerance, not exact zero: U6's oversample/decimate
             // runs every render through a linear-phase resample filter,
