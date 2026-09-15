@@ -77,7 +77,7 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 ## F4 — Synth starter kits
 
-**Done:** the most finished feature. Seven engines + FX, `SynthKits` /
+**Done:** the most finished feature. Eight engines + FX, `SynthKits` /
 `ThumpKits` / `Shuffle` are **main-source** (the app can call them
 directly), recipes rebuild kits bit-for-bit from `kit.json`, SCRAMBLE is
 bounded macro rolls, and two generated kits are hardware-verified.

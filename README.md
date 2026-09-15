@@ -6,7 +6,7 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, seven
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, eight
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
 play). No Android layer yet.
@@ -181,7 +181,7 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
 
-VELVET closes the engine lineup: subtractive, the playability king — a naive
+VELVET is subtractive, the playability king — a naive
 saw/pulse unison pair over a sub, into a resonant SVF swept by its own
 envelope. SHAPE walks saw → square → PWM on one knob; SQUEEZE is resonance
 and envelope amount together, so the top of the knob is instant acid. Four
@@ -201,16 +201,18 @@ has to be downstream to shape them, which is why bass through an FX rack
 distortion sounds like a blanket.
 
 SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
-oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, TOM, and STICK
-sum decaying sine partials at inharmonic ratios, the textbook recipe for a
-struck membrane ringing at a few independent modes; HAT_CLOSED, HAT_OPEN, and
-RIDE run continuous noise through a bank of tuned resonant filters instead of
-an impulse (a single-hit excitation can't outlast a filter's own damping
-floor at these frequencies, so the noise has to keep feeding it); SHAKER runs
-noise through one deliberately wide, non-resonant filter — a band, not a
-tone. Eight voices, classifier-verified against THUMP's own `DrumClass`
-gates wherever a dedicated class exists, PUNCH on every voice like any other
-engine.
+oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
+decaying sine partials at inharmonic ratios, the textbook recipe for a
+struck membrane ringing at a few independent modes, while STICK is the
+single-partial limit of that same
+idea, one short high mode standing in for a rimshot click; HAT_CLOSED,
+HAT_OPEN, and RIDE run continuous noise through a bank of tuned resonant
+filters instead of an impulse (a single-hit excitation can't outlast a
+filter's own damping floor at these frequencies, so the noise has to keep
+feeding it); SHAKER runs noise through one deliberately wide, non-resonant
+filter — a band, not a tone. Eight voices, classifier-verified against
+THUMP's own `DrumClass` gates wherever a dedicated class exists, PUNCH on
+every voice like any other engine.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
@@ -219,7 +221,10 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup at seven. VOX is three-formant vocal
+VOX and GRAINS round out the lineup — eight engines in the `Engine` picker
+counting SKIN; GRAINS is a ninth thing entirely, out of the picker's scope
+since it has no voice enum and works on a source snip instead of picking
+one. VOX is three-formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
