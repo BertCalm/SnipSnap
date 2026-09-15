@@ -648,16 +648,27 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.RIM -> DrumClass.PERC
     }
 
-// SKIN's four shipped voices are built to hit the same classifier gates
-// THUMP's do (SkinTest's own `factory X is a X` set proves it), so they
-// mirror THUMP's labels directly rather than falling back to TONAL/PERC
-// the way an engine with no dedicated drum shape would.
+// SKIN's voices are built to hit the same classifier gates THUMP's do
+// (SkinTest's own `factory X is a X` set proves it for KICK/SNARE/
+// HAT_CLOSED/HAT_OPEN/TOM), so those mirror THUMP's labels directly.
+// RIDE is built from hat()'s exact recipe (denser, longer) and genuinely
+// measures HAT_OPEN too - real structural kinship, not a fallback guess,
+// same as FATHOM's DEEP/GRIND mirroring a real KICK verdict. SHAKER and
+// STICK have no dedicated DrumClass to aim for at all (there's no
+// "shaker" or "rimshot" class the way there's no "cowbell" or "rim" one)
+// so, like THUMP's own COWBELL/RIM, they land on PERC by the same
+// no-better-bucket convention rather than a classifier assertion neither
+// SkinTest nor ThumpTest makes for their counterparts.
 private val SkinVoice.drumClass: DrumClass
     get() = when (this) {
         SkinVoice.KICK -> DrumClass.KICK
         SkinVoice.SNARE -> DrumClass.SNARE
         SkinVoice.HAT_CLOSED -> DrumClass.HAT_CLOSED
         SkinVoice.HAT_OPEN -> DrumClass.HAT_OPEN
+        SkinVoice.TOM -> DrumClass.TOM
+        SkinVoice.RIDE -> DrumClass.HAT_OPEN
+        SkinVoice.SHAKER -> DrumClass.PERC
+        SkinVoice.STICK -> DrumClass.PERC
     }
 
 private val TinesVoice.drumClass: DrumClass
@@ -708,6 +719,10 @@ private fun skinChipLabel(voice: SkinVoice): String = when (voice) {
     SkinVoice.SNARE -> "SNARE"
     SkinVoice.HAT_CLOSED -> "HAT CL"
     SkinVoice.HAT_OPEN -> "HAT OP"
+    SkinVoice.TOM -> "TOM"
+    SkinVoice.RIDE -> "RIDE"
+    SkinVoice.SHAKER -> "SHAKER"
+    SkinVoice.STICK -> "STICK"
 }
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
@@ -736,8 +751,8 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
-    // THUMP's eight voices split into two even rows of four, same as
-    // before; every other engine has four or fewer, so one row fits them
+    // THUMP's and SKIN's eight voices each split into two even rows of
+    // four; every other engine has four or fewer, so one row fits them
     // all without inventing a lonely single-chip second row.
     val rows = if (voices.size <= 4) {
         listOf(voices)
