@@ -318,11 +318,14 @@ oversampling anywhere in `:synth` — the only anti-aliasing mentions in the
 module were `Eras.kt` deliberately *not* doing it, which is character by
 design.
 
-**Status: implemented.** All 7 engines (THUMP, TINES, VELVET, FATHOM,
-TONEWHEEL, VOX, PLUCK) render at `RATE * Dsp.OVERSAMPLE` and decimate — see
-`Dsp.OVERSAMPLE`'s KDoc. The migration work below (`alias` flag,
-`PadRecipe.VERSION` bump, `testkit/` regen) has shipped too — see that
-section's own "done" status.
+**Status: implemented.** All 7 engines that existed at the time (THUMP, TINES,
+VELVET, FATHOM, TONEWHEEL, VOX, PLUCK) render at `RATE * Dsp.OVERSAMPLE` and
+decimate — see `Dsp.OVERSAMPLE`'s KDoc. The migration work below (`alias`
+flag, `PadRecipe.VERSION` bump, `testkit/` regen) has shipped too — see that
+section's own "done" status. SKIN (`SYNTH_ROADMAP.md`'s S6, shipped after
+this section) is an eighth engine that was never migrated because it was
+never naive — it renders oversampled from its very first commit, following
+the convention this section establishes rather than needing to catch up to it.
 
 The target user will rarely hear this directly. Where it does bite is the S5
 multisampled instruments: a keygroup rendered every minor third across four
@@ -445,7 +448,9 @@ and **one** `testkit/` regeneration rather than three.
 # Non-goals
 
 - **No new engines.** Eight is plenty; thirty voices with no presets is the
-  problem, and a ninth engine would make it worse.
+  problem, and a ninth engine would make it worse. Scoped to this upgrade,
+  not permanent — revisited afterward as its own deliberate decision and
+  shipped as SKIN (`SYNTH_ROADMAP.md`'s S6).
 - **No patchbay.** Roadmap rule 1 stands — macros, never modular.
 - **No piano keyboard UI.** Settled in `SYNTH_ROADMAP.md:147`; the 4×4 grid is
   the instrument.
