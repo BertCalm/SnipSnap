@@ -203,6 +203,7 @@ What follows from it:
 | S3.8 | **shipped** — FATHOM bass voices (DEEP/GRIND/GLASS: sine with a SWEEP attack blip, a SPREAD-detuned saw pair, low-tuned 2-op FM with a snapped RATIO), engine-owned DRIVE before the filter, and GLIDE on every voice | S1 |
 | S4 | **shipped** — keygroup export in both generations: `KeygroupWriter` (`.xpm`, corrected line-by-line against commercial programs) and `Mpc3TrackWriter.writeKeygroup` (`.xty`, corpus-guarded); hardware load check pending | reference corpus (done) |
 | S5 | **shipped** — the instrument suite: `Keys` renders engines at exact MIDI pitch (EP from TINES with velocity-true soft/hard renders, Organ from TONEWHEEL with mathematically-cut sustain loops, Harp from PLUCK, Music Box from TINES), multisampled every minor third, packaged dual-generation (`.xty` + `.xpm` twin in one `_[TrackData]/`) | S3 + S4 |
+| S6 | **shipped** — SKIN, a second drum engine alongside THUMP: modal synthesis rather than THUMP's oscillators (KICK/SNARE/TOM/STICK sum decaying sine partials at inharmonic ratios — a struck membrane's own recipe; HAT_CLOSED/HAT_OPEN/RIDE run continuous noise through a bank of resonant filters; SHAKER runs continuous noise through one deliberately wide, non-resonant filter), eight voices classifier-verified against THUMP's own `DrumClass` gates where a dedicated class exists, PUNCH on every voice | S1 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -215,8 +216,11 @@ queue-jumper: it improves captured kits, which is MVP territory.
 
 ## What comes after S5
 
-S1–S5 are shipped, so this roadmap is finished — but it built thirty voices
+S1–S5 shipped this roadmap's original scope — but it built thirty voices
 and no presets, and rule 1 above ("preset-first, knobs-second") is therefore
 only half true. [`docs/SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) picks up there:
 the preset library, a SCRAMBLE that lands, punch, stereo, and MATCH — the
-capture-aware preset pick that no standalone synth can copy.
+capture-aware preset pick that no standalone synth can copy. That upgrade's
+own non-goals parked "a second drum engine" as scoped-out, not permanent;
+S6 is that decision revisited and shipped, once presets and punch existed
+to keep a ninth-voice-bank engine from repeating the "no presets" problem.

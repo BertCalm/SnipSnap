@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 1310 tests across nine modules
+./gradlew test    # 2260 tests across nine modules
 ```
 
 ### `:audio`
@@ -199,6 +199,18 @@ RATIO snapped so the knob can't land on a mistuning. DRIVE is owned by the
 engine and sits before the filter — saturation makes harmonics and the filter
 has to be downstream to shape them, which is why bass through an FX rack
 distortion sounds like a blanket.
+
+SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
+oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, TOM, and STICK
+sum decaying sine partials at inharmonic ratios, the textbook recipe for a
+struck membrane ringing at a few independent modes; HAT_CLOSED, HAT_OPEN, and
+RIDE run continuous noise through a bank of tuned resonant filters instead of
+an impulse (a single-hit excitation can't outlast a filter's own damping
+floor at these frequencies, so the noise has to keep feeding it); SHAKER runs
+noise through one deliberately wide, non-resonant filter — a band, not a
+tone. Eight voices, classifier-verified against THUMP's own `DrumClass`
+gates wherever a dedicated class exists, PUNCH on every voice like any other
+engine.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit

@@ -445,7 +445,9 @@ and **one** `testkit/` regeneration rather than three.
 # Non-goals
 
 - **No new engines.** Eight is plenty; thirty voices with no presets is the
-  problem, and a ninth engine would make it worse.
+  problem, and a ninth engine would make it worse. Scoped to this upgrade,
+  not permanent — revisited afterward as its own deliberate decision and
+  shipped as SKIN (`SYNTH_ROADMAP.md`'s S6).
 - **No patchbay.** Roadmap rule 1 stands — macros, never modular.
 - **No piano keyboard UI.** Settled in `SYNTH_ROADMAP.md:147`; the 4×4 grid is
   the instrument.
