@@ -16,8 +16,8 @@ answered well. This review asks a different question on a different axis:
 The two overlap in one place: several of the earlier review's still-open
 findings turn out to be structural problems wearing feature clothes. They
 are carried forward with that reading, and **re-verified line by line** —
-see the appendix. Two of its findings are confirmed fixed and are not
-repeated here.
+see the appendix. Four of its findings (#1, #3, #5, #14) are confirmed
+fixed and are not repeated here.
 
 ## Method, and its honest limit
 
@@ -86,15 +86,20 @@ by seven different actions; `remember(slot)` on a pinned navigation button
 that isn't gated; `remember(tapeData)` where `tapeData` is replaced by a
 background file arrival.
 
-Fifteen instances are catalogued below (J20–J26). None of them toast.
+**Eighteen** distinct pieces of user-facing state are catalogued below
+across J20–J26 (nine in CHOP alone, keyed to a `model` that seven
+different actions reassign). None of them toast. The count is of named
+state in those seven findings, not an exhaustive sweep of the codebase.
 
 ### 3. The seam is cut and nothing is attached to it
 
 Repeatedly the model supports a capability, the screen declares a variable
 for it, and no control ever writes it. `recordBars` is the clearest:
-`GrooveScreen.kt:569`, a `var`, read three times, **assigned nowhere**.
-This is invisible on a feature checklist, because the capability genuinely
-exists everywhere except under a finger.
+`GrooveScreen.kt:569`, a `var` initialised to `2`, read three times, and
+**never reassigned anywhere in the file** — so it is a mutable variable
+that can only ever hold its initial value. This is invisible on a feature
+checklist, because the capability genuinely exists everywhere except
+under a finger.
 
 ### And one thing that is not a UX finding at all
 
@@ -106,7 +111,14 @@ document.
 
 *(A correction to this review's own first draft: it initially recorded "no
 new S1s" on the strength of the navigation pass alone. That was wrong. The
-per-screen passes found nine, three of which destroy user data.)*
+per-screen passes found nine.)*
+
+Of those nine, **five destroy work the user has already done** (J2, J3,
+J5, J6, J7), and of those five, **three are irreversible writes to disk
+with no confirm and no bin** — J2 and J3, the two halves of the export
+overwrite, plus `MAKE PAD ▸` in the irreversibility section below. The
+other two (J5, J6) destroy in-memory work: corrected chips, and a hum in
+flight.
 
 ---
 
@@ -117,8 +129,8 @@ per-screen passes found nine, three of which destroy user data.)*
 | # | Finding | Evidence |
 |---|---|---|
 | **J1** | **DRIFT writes one number and shows you another.** `onDrift` sets `mutateMode = MORPH` at `:1375`, then reads `pendingMutateKnob` at `:1376` — but that value is `remember(slot, mutateMode)`, which does not re-evaluate on a synchronous state write, so it still holds the **previous** mode's fraction. That stale value is what performs the write (`:1387`). In the default case it is worse than stale: `MODES.first()` is `STACK` (`Mutate.kt:38`), `KNOBS` has no STACK entry (`MutateSheet.kt:43-47`), so the fraction is `0f`. **Open MUTATE, tap DRIFT — the common path — and the pad's WAV is rewritten with a 0% blend, after which the card recomposes and draws MIX 50%.** From other moves, SPLICE's `AT` (5–2000 ms) or TRANSPLANT's `BANDS` is reinterpreted as a 0..1 mix. The toast names a neighbour it blended none of. *Verified end to end against source.* | `PadSheetScreen.kt:1375-1376`, `:1387`, `:1203-1205`, `:1155`; `MutateSheet.kt:37,43-47,58`; `Mutate.kt:38` |
-| **J2** | **EXPORT's overwrite arm is invisible and never expires.** `session.overwriting` is the armed state in which the next tap destroys an existing export. `grep` shows it is **never read by any composable** — the only read is inside the write handler (`:452`). So `WRITE KIT` reads identically armed and unarmed; the sole warning is a transient toast. The session is hoisted into `App` (`:106`), so the arm survives tab switches and remounts indefinitely. Tap, read the toast, come back an hour later, tap again — the export is replaced with no further warning. | `ExportScreen.kt:133`, `:452`, `:459-460`, `:463`, `:495`, `:617`, `:629` |
-| **J3** | **The card copy always overwrites, and never warns — not even once.** The confirm in J2 governs only the phone leg (`model.write(destRoot, overwrite = …)`, `:452`). The card leg is unconditional (`CardWriter.copy(…)`, `:481-487`) and resolves through `replaceExisting` (`CardWriter.kt:142`), which deletes the same-named child before writing. On a first-ever export for a kit there is no phone copy, so no arm, so no toast — and a same-named folder already on the user's SD card is deleted with no prompt at any point. For PROGRAM_FOLDER / EXPANSION that is a whole directory. | `ExportScreen.kt:452`, `:481-487`; `CardWriter.kt:96`, `:142-155` |
+| **J2** | **EXPORT's overwrite arm is invisible and never expires.** `session.overwriting` is the armed state in which the next tap destroys an existing export. `grep` shows it is **never read by any composable** — the only read is inside the write handler (`:452`). So `WRITE KIT` reads identically armed and unarmed; the sole warning is a transient toast. The session is hoisted into `App` (`App.kt:535`), so the arm survives tab switches and remounts indefinitely. Tap, read the toast, come back an hour later, tap again — the export is replaced with no further warning. | `ExportScreen.kt:133`, `:452`, `:459-460`, `:463`, `:495`, `:617`, `:629` |
+| **J3** | **The card copy always overwrites, and never warns — not even once.** The confirm in J2 governs only the phone leg (`model.write(destRoot, overwrite = …)`, `:452`). The card leg is unconditional (`CardWriter.copy(…)`, `:481-487`) and resolves through `replaceExisting` (`CardWriter.kt:142-155`), which *attempts* to delete the same-named child before writing. On a first-ever export for a kit there is no phone copy, so no arm, so no toast — and a same-named folder already on the user's SD card is replaced with no prompt at any point. For PROGRAM_FOLDER / EXPANSION that is a whole directory. **Precision, since it matters for the fix:** `replaceExisting` wraps its lookup and `deleteDocument` in `runCatching` and swallows failures, and the caller proceeds to `createDocument` regardless — so this is a best-effort replacement whose outcome is provider-dependent. Where deletion succeeds the user loses the old export silently; where it fails they may instead get a duplicate. Neither outcome was chosen by the user, and neither is announced. | `ExportScreen.kt:452`, `:481-487`; `CardWriter.kt:96`, `:142-155` |
 | **J4** | **One pinned button turns PAD SHEET into a dead grey screen with no explanation.** The pad-nav arrows (`:2476-2492`) are not gated on `busy`. Tap `►` during a treatment and: `busy` is `remember(model)` so it stays `true` on the new pad (every control greys out); `applyingSegment` is `remember(slot)` so the "working on X" header resets to plain `TREATMENT`; `outsideStage` is `remember(slot)` so SEND drops `LISTENING…`. Result: everything disabled, nothing saying why — and unlike the prior review's #19, the user never left the screen, so "I navigated away" isn't even available as an explanation. | `PadSheetScreen.kt:2476-2492` vs `:257`, `:826`, `:1491` |
 | **J5** | **RE-CHOP silently destroys every chip the user corrected.** `:955` calls `current.rechop()`, not the bench's own `rechopKeeping` (`ChopReview.kt:497`) that every segment and stepper uses (`:437`). Relabel sixteen slices — thirty-two taps — then tap RE-CHOP, which sits immediately left of SEND TO GRID in the same row, same component family, no confirm. The toast is `"RE-CHOPPED."` No undo. The destructive semantics are documented only in `docs/CHOP_CONTROLS.md:48`. | `ChopScreen.kt:944-956`; `Personality.kt:1112` |
 | **J6** | **RE-CHOP during a hum destroys the take in flight.** Its gate (`:944`) omits `humming`, so it is bright and live while the user is performing. It reassigns `model`, which flips `humming` false (`remember(model)`, `:407`), cancels the `LaunchedEffect(humming)` auto-stop that would have *read* the hum (`:644-648`), and releases the voice (`:529-531`). `stopHum` is never reached; the mic tail is never read. Toast: `"RE-CHOPPED."` | `ChopScreen.kt:944`, `:956`, `:407`, `:644-648` |
@@ -134,10 +146,10 @@ per-screen passes found nine, three of which destroy user data.)*
 | **J11** | **Back is "go to the shelf," not "go back."** One root `BackHandler` fires `goToScreen(AppScreen.KITS)` from every tab but KITS/SPLIT/KEYS. KIT → GROOVE → Back lands on KITS. *(Credit: overlays each own a correct `BackHandler`, LIFO layering is right, SPLIT and KEYS have real back chips. The root policy is the problem, not the plumbing.)* | `App.kt:2111-2129` |
 | **J12** | **The menu row presents twelve peers that are not peers.** A library, a four-step sequence the app insists is ordered, five parallel instruments, two utilities — one flat scrolling strip, no grouping, no separator. | `Chrome.kt:217-230` |
 | **J13** | **"PLAY IT" names a tab that is not that step.** The first-run note glosses step 3 (KIT) as "PLAY IT"; PLAY is a real tab at position 6. The guarded law covers the four stage names, not the sentence under them. | `Personality.kt:64`; `Chrome.kt:223`; `ConventionTest.kt:1086-1101` |
-| **J14** | **KIT is the app's hub dressed as step 3 of 4.** 11 of ~23 programmatic navigations land there — more than every other destination combined — yet it sits 4th in the strip and is named one letter from KITS, the screen Back always returns to. | `App.kt` (11 sites); `Chrome.kt:218,221` |
+| **J14** | **KIT is the app's hub dressed as step 3 of 4.** 11 of 24 programmatic navigations land there — nearly half, and almost three times the next destination (KITS, 4) — yet it sits 4th in the strip and is named one letter from KITS, the screen Back always returns to. | `App.kt` (11 sites); `Chrome.kt:218,221` |
 | **J15** | **PAD SHEET: the largest surface in the app costs one invisible gesture plus up to five taps.** 3,611 lines behind a 480 ms hold with **no press-and-hold feedback of any kind** — the only press animation is the hit glow, which *decays*, so the pad visibly darkens as the sheet opens. All five boxes are collapsed on arrival and only one may be open at once. Deepest useful control (MUTATE with another kit's pad) is hold + 5 taps + a scroll. Box state resets per kit. | entry `KitScreen.kt:861-864`, `:739`; boxes `PadSheetBoxes.kt:25-31`; `App.kt:329`; toggle `PadSheetScreen.kt:2014` |
 | **J16** | **Two of PAD SHEET's three doors fail to retire its own hint.** The hint is cleared only inside `KitScreen`'s `onLongPress` (`App.kt:2545`). Users who found the sheet via DOUBLES' `GO ▸` (`:2214-2228`) or the RE-TRIM return (`:1544`) are told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit open, forever. The hint's own KDoc claims opening the sheet is "the only event that proves they found it" — two of the three events that open it don't count. | `App.kt:2545`, `:2214-2228`, `:1544`; `Personality.kt:300-311` |
-| **J17** | **GROOVE's bar count: the seam is cut, nothing is attached.** `recordBars` is a `var` read three times and assigned nowhere; `startEmpty`'s `bars` parameter is never passed by its one caller; and `halfTime` doubles pattern length as a side effect of a control labelled as a *feel*. The model supports any bar count. | `GrooveScreen.kt:569`, `:900`, `:1369`, `:1001`; `GrooveEdit.kt:153`; `kit/GrooveVariations.kt:92` |
+| **J17** | **GROOVE's bar count: the seam is cut, nothing is attached.** `recordBars` is a `var` initialised to `2` and read three times, which no control ever reassigns — a mutable variable that can only hold its initial value; `startEmpty`'s `bars` parameter is never passed by its one caller; and `halfTime` doubles pattern length as a side effect of a control labelled as a *feel*. The model supports any bar count. | `GrooveScreen.kt:569`, `:900`, `:1369`, `:1001`; `GrooveEdit.kt:153`; `kit/GrooveVariations.kt:92` |
 | **J18** | **PROG A–E is a carousel over a set the user never sees whole, labelled index-first.** Prev/next only; four taps to learn the options; `PROG A · THE BREAK` leads with the MPC clip-slot index and buries the meaning. The A–D/E editability split appears nowhere on screen. CHOP already owns the right control (`SegmentButton` rows, all options visible, `selected` semantics). | `GrooveScreen.kt:174-188`, `:1756-1768`, `:2122-2158` |
 | **J19** | **GROOVE's only hand-editing door is mid-scroll under the third heading.** `EDIT STEPS` is the sole route to PROG E, inside the scrolling region below the swing stepper and feel row — while `RECORD` is correctly anchored below it. | `GrooveScreen.kt:1989`, `:1871-1876`, `:2084-2088` |
 | **J20** | **CHOP: seven actions reassign `model`, and nine pieces of user state are keyed to it.** Lost on any bench nudge: the layout row (snaps to CLASSIC — prior #12), the melodic placement and its pitch DSP, the `A2`/`C#4` labels, an **open class picker closing under the user's finger**, and the hum. A KEEP on TAPE or a kit switch discards the *entire* chop — every relabelled chip, merge, split, mode and ear — with no warning. | `ChopScreen.kt:388`, `:395-396`, `:378`, `:407-408`, `:127-134`; reassigned at `:438`, `:515`, `:625`, `:787`, `:956` |
@@ -167,7 +179,7 @@ per-screen passes found nine, three of which destroy user data.)*
 | # | Finding | Evidence |
 |---|---|---|
 | **J41** | **`GRID` now names five things on CHOP, and `16TH` names two.** The segment, the snap row, the `GRID ×N` readout, `SEND TO GRID`, and the landing toast "N SLICES ON THE GRID" (the pads). The two `16TH`s — a `GridSnap` and a `Ladder.Rung` — mean different things and sit in mutually exclusive rows, so the collision is never visible to learn from. Prior #24, now worse. | `ChopScreen.kt:1279`, `:1300`, `:1363-1367`, `:969`; `Ladder.kt:40`; `ChopReview.kt:196` |
-| **J42** | **HELP says ZOOM; CHOP has no control called ZOOM.** The word appears only as a caption; the segment is `COUNT`, which appears in no toast, no HELP line and no caption. Prior #13, intact. | `Personality.kt:448`; `ChopScreen.kt:1336`, `:1338` |
+| **J42** | **HELP says ZOOM; CHOP has no control called ZOOM.** The word appears on CHOP only inside a caption; the control a user must press is `COUNT`, which appears in no HELP line and in no caption naming it as the control. *(It does appear once in a toast — `CHOP_AUTO_NONE`, "NO HITS ON THIS TAPE TO COUNT" — but as a verb, not as the name of the segment, which if anything compounds the collision.)* Prior #13, intact. | `Personality.kt:448`, `:1121`; `ChopScreen.kt:1336`, `:1338` |
 | **J43** | **`ONE PART FEWER` on a chop that has no parts.** On a hummed chop the stepper says PART while the readout beside it says `6 HUMMED`, and the handler returns on line one. Prior #11, intact. | `ChopScreen.kt:1286-1290`, `:1310-1317`, `:452` |
 | **J44** | **`TAPED. NO TAKEBACKS.` is the first thing KEEP says, and it is false.** `commitSelection()` is a pure read that writes nothing and clears nothing; the same selection can be committed again immediately. Line 4 of the rotation promises a shelf entry the call does not create. *(Related: the source comment at `:1097-1098` asserting `commitSelection` clears the selection is also false — INSTANT KIT is built on that belief.)* | `Personality.kt:247`; `TapeDeck.kt:418`; `TapeScreen.kt:1075`, `:1097-1098` |
 | **J45** | **`HITS…` — a readout string — is fired as a toast.** Its own KDoc calls it "the HITS stepper's readout." Its sibling refusal is a proper sentence with a next step. | `TapeScreen.kt:1023`; `Personality.kt:743-744` |
@@ -216,14 +228,20 @@ The design's stated bargain is: act immediately, pay for it with a 30-day
 bin and per-bench undo. That is a good bargain **when the bin has the
 take**. Four places where it does not hold:
 
-1. **`MAKE PAD ▸` and `MAKE INSTRUMENT` hard-code `overwrite = true` with a
-   deterministic name and a *fresh random seed each press*.** Make a pad
-   you like, press again to hear a variation, and the one you liked is
-   gone. Both presses toast the same words. These write to
-   `INSTRUMENTS_DIR`, not into the kit's take history — so no bin, no
-   versions. The contrast is damning: EXPORT arms a named confirm before
-   overwriting; PAD SHEET, writing to the same physical shelf, does not
-   ask. (`PadSheetScreen.kt:1466`, `:1472`, `:1739-1746`)
+1. **`MAKE PAD ▸` and `MAKE INSTRUMENT` both hard-code `overwrite = true`
+   against a deterministic name — and `MAKE PAD ▸` also reseeds every
+   press.** The two differ and the difference matters for the fix.
+   `MAKE INSTRUMENT` calls `OneNote.export(...)`, whose signature takes no
+   seed (`OneNote.kt:96-101`), so a second press reproduces the same
+   output for the same snip: it overwrites, but with an identical file.
+   `MAKE PAD ▸` builds `PadMaker.spec(..., Random.nextLong(0, 1_000_000))`
+   fresh on every press (`:1740`), so **make a pad you like, press again
+   to hear a variation, and the one you liked is gone.** Both toast the
+   same words either way. Both write to `INSTRUMENTS_DIR`, not the kit's
+   take history — no bin, no versions. The contrast is damning: EXPORT
+   arms a named confirm before overwriting; PAD SHEET, writing to the same
+   physical shelf, does not ask. (`PadSheetScreen.kt:1466`, `:1472`,
+   `:1739-1746`; `OneNote.kt:96-101`)
 2. **DE-SAMPLE is the one destructive bench with no undo control.**
    TREATMENT has `NONE`, MUTATE has `UNDO`, OUTSIDE has `UNDO`; the MAKE
    box has none, and there is no `unDesamplePad` call site. The only route
