@@ -119,11 +119,16 @@ that actually honours the rule as written.
 
 ### PR 3 — the three irreversible writes *(S1: J2, J3, and `MAKE PAD ▸`)*
 
-Three disk writes that destroy user work with no confirm and no bin.
+Three disk writes that destroy user work with no *durable* warning and no
+bin. J2 does have a two-tap confirm; the other two have nothing.
 
-- **J2** — `session.overwriting` is armed state that no composable reads.
-  Give the armed state its own button label (`REPLACE KIT`, not `WRITE
-  KIT`) and an expiry, so the arm cannot survive an hour and a tab switch.
+- **J2** — the confirm exists and is invisible. The first tap writes with
+  `overwrite = false`, gets `WouldOverwrite`, arms `session.overwriting`
+  and toasts the doomed path by name; the second tap replaces. So the fix
+  is **not** "add a confirm" — it is to make the arm *renderable and
+  perishable*: give the armed state its own button label (`REPLACE KIT`,
+  not `WRITE KIT`) and an expiry, so the arm cannot survive an hour and a
+  tab switch behind an identical-looking button.
 - **J3** — the card leg has no confirm *at any point*. Put it behind the
   same arm as the phone leg. Note that `CardWriter.replaceExisting`
   swallows its own failures (`CardWriter.kt:142-155`), so the honest fix
