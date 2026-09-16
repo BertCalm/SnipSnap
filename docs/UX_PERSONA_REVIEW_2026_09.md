@@ -48,46 +48,60 @@ this is checkable in an afternoon."
 
 ---
 
-## The headline: the app has no ending for four of the five
+## The headline: your *beat* cannot leave the app, only your *sounds*
 
-**Verified, and it is the finding of this pass.** Every path by which audio
-or data leaves SnipSnap:
+**Corrected after review — the first draft of this section overstated the
+claim, and the correction matters.** I originally wrote "you cannot get an
+audio file out of this app." That is false, and the string that disproves it
+is one I quoted myself: `PROGRAM_FOLDER` is "THE SAFE ONE. A FOLDER OF WAVS
+ANY MPC CAN OPEN" (`ExportFormats.kt:37`). Individual pad WAVs leave freely,
+in several formats.
+
+The accurate finding is narrower and still the finding of this pass:
+
+> **There is no way to export the thing you made — the loop, as a piece of
+> music. Only the instrument you made it with.**
+
+Every outbound path, corrected and completed:
 
 | Path | What leaves | Source |
 |---|---|---|
-| EXPORT, 8 formats | a **sampler instrument** (MPC program folder, Expansion, XPN, XTD, XPJ, SFZ, DecentSampler) or **MIDI notes with no sound** | `ExportFormats.kt:35-69` |
-| SHARE ▸ THIS KIT AS ONE FILE | a packed kit archive only SnipSnap reads | `App.kt:1787` |
-| SHARE on a room row | a `.snip-room` only SnipSnap reads | `KitsScreen.kt:138`; `KitShelf.kt:115` |
+| EXPORT, 8 formats | a sampler **instrument** (program folder of WAVs, Expansion, XPN, XTD, SFZ, DecentSampler), a **session** (XPJ, kits + grooves), or **MIDI notes with no sound** | `ExportFormats.kt:35-69` |
+| SHARE ▸ THIS KIT AS ONE FILE | an `.xpn` — **which the MPC unpacks**, not a SnipSnap-only format | `App.kt:1787`; `KitShelf.kt:317-323` |
+| BACKUP | a ZIP of every kit as `.xpn` | `App.kt:2005-2020`; `KitShelf.kt:326-333` |
+| SHARE on a room row | a `.snip-room` | `KitsScreen.kt:138`; `KitShelf.kt:115` |
 | CHART | `text/plain` | `GrooveScreen.kt:1235` |
 
-GROOVE's **BOUNCE** does render the pads' bus — into **SNIPS**, the in-app
-list, where a snip can be "played, assigned to a pad, opened in TAPE, or
-deleted" (`KitsScreen.kt:105`). There is no share on that row.
+*(The BACKUP row was missing from the first draft, in a table that claimed
+to list every path. Flagging that specifically: it was the one claim I said
+I had checked hardest, and it was incomplete.)*
 
-**So: you cannot get an audio file of your finished beat out of this app.**
-Not to send a friend, not to post, not to drop in a video, not to import to
-a DAW as audio. The MIDI export is explicitly "THE GROOVES ONLY, NO SOUNDS"
-(`ExportFormats.kt:60`).
+GROOVE's **BOUNCE** does render the pads' bus as audio — into **SNIPS**, the
+in-app list, where a snip can be "played, assigned to a pad, opened in TAPE,
+or deleted" (`KitsScreen.kt:105`). **There is no share on that row.** That
+one missing control is the whole finding: the render already exists, the
+share mechanism already exists (`ShareOut.send`, five callers), and they are
+not connected.
 
-For **P2** that is fine and possibly correct — they want a program to load
-on the MPC, and they'll record the audio off the MPC. For **P1, P3 and P5**
-it is the end of the road at the exact moment they have something they like.
-A fourteen-year-old who makes a beat they're proud of wants to send it to
-someone within about nine seconds. **P4** straddles it: fine for the MPC
-half of their life, dead end for the Koala half.
+So the shape of the gap is: you can hand someone **the instrument** — and
+they can load it on an MPC, in DecentSampler, in almost any sampler. You
+cannot hand them **the track**. MIDI comes closest and is explicitly "THE
+GROOVES ONLY, NO SOUNDS" (`ExportFormats.kt:60`), so it needs the instrument
+alongside it and a DAW to put them together.
 
-I want to be careful about *why* this is worth flagging so strongly: it is
-not merely a missing feature. It is that the app's own advertised four-step
-loop (`Personality.kt:64`) terminates in **DUB IT** — write to a card — and
-four of five personas own no card and have no MPC to put it in. **The app
-tells every new user, on the empty shelf, that the last thing they will do
-is the one thing most of them cannot do.**
+For **P2** this is fine and probably correct — they want a program to load on
+the MPC and they will record audio off the MPC. For **P1 and P3** it is the
+end of the road at the moment they have something they like: a fourteen-year-
+old who makes a beat they are proud of wants to send it to someone within
+about nine seconds, and "here's a folder of WAVs and a MIDI file" is not
+that. **P5** can at least put WAVs on a card their hardware reads. **P4**
+straddles it — fine for the MPC half of their life, a dead end for the Koala
+half.
 
-Two previous reviews could not find this, because from inside the app's own
-logic the export pipeline is complete and correct. It only appears when you
-ask what the user wanted to walk away holding.
-
----
+Two previous reviews could not find even the narrowed version of this,
+because from inside the app's own logic the export pipeline is complete and
+correct. It only appears when you ask what the user wanted to walk away
+holding.
 
 ## The second headline: the advertised loop omits the thing most people mean by "making a beat"
 
@@ -123,7 +137,10 @@ deserves saying before the criticism:
   bad kit."* · *"Everything through a ~9-bit converter. 1987 in a kit."* ·
   *"Choirs and grain clouds. Atmosphere, not drums."* (`StarterKits.kt:62-105`)
 - Pick one → KIT → sixteen pads → **tap, it makes a sound.** Reward in
-  under a minute, no configuration.
+  under a minute, no configuration. *(Seven of the eight. `EMPTY GRID`
+  returns `emptyList()` (`StarterKits.kt:62-66`) and is deliberately the
+  one that doesn't — it's the "capture straight onto the pads" option. A
+  novice who picks the first item in the list gets silence.)*
 - **LUCKY DIP with `TAPS REROLL`** is the single most legible control in the
   app for this persona. It is a slot machine. No one needs it explained.
 
@@ -135,9 +152,17 @@ a coincidence; it is what makes them work.
 ### P1.1 — "DUB IT" is the last word of the tutorial and it means nothing
 
 `"RECORD IT, CUT IT, PLAY IT, DUB IT."` To this persona "dub" is dubbed
-anime, or a genre their dad likes. The app means "copy onto a card". They
-own no card. *(Source: `Personality.kt:64`; export destination
-`ExportScreen.kt` card leg.)*
+anime, or a genre their dad likes.
+
+*Corrected after review: I first wrote that DUB means "copy onto a card" and
+that P1 therefore cannot do it. Both halves were wrong.* The export writes
+to the phone whether or not a card is chosen, and says so —
+`DUB_DONE = "DUB DONE. IT'S ON THE PHONE."` (`Personality.kt:1237`), against
+`DUB_DONE_CARD` for the card leg (`:1277`). So the step is **available** to
+P1; it is the *word* that is opaque, and what it produces (an instrument,
+per the headline) that isn't what they wanted. A weaker finding than I first
+stated, and worth keeping only at that weight. *(Source: `Personality.kt:64`,
+`:1237`, `:1277`.)*
 
 ### P1.2 — the exit does not exist (see headline)
 
@@ -154,10 +179,11 @@ they never make a beat, and the tutorial never told them to.
 Words a beginner meets in normal use, none of which the app defines
 on screen: CHOP, HITS, EAR, GRID, GHOSTS, ONE-SHOT, CHOKE, KEYGROUP, ZONE,
 PROG, BANK, SNIP, TAKE, RE-TRIM, DE-SAMPLE, DUB, TRANSIENT, XPM, SFZ,
-EXPANSION, DECENTSAMPLER. HELP is a flat list of 20 bullets
-(`Personality.kt:430-450`) written in the same compressed voice as the UI —
-it names features rather than teaching concepts, and it is 12th of twelve in
-the menu.
+EXPANSION, DECENTSAMPLER. HELP is two lists — a
+four-item `THE LOOP` (`Personality.kt:421-426`) and a twenty-item `WORTH
+KNOWING` (`:430-450`) — both written in the same compressed voice as the UI.
+The second names features rather than teaching concepts, and HELP is 12th of
+twelve in the menu.
 
 ### P1.5 — ALL CAPS at length
 
@@ -393,21 +419,33 @@ That is worth knowing before anyone "fixes" it.
 ### P5.1 — they expect pattern *slots*, and PROG A–E is not that
 
 On a PO you have sixteen pattern slots you fill and chain. On KO II you have
-banked patterns. SnipSnap's PROG A–E is **four algorithmically generated
-read-only variations plus one editable fork** (`GrooveProgram.kt`,
-`PROG_NAMES` `GrooveScreen.kt:174-187`). Five slots, of which **one** is
-yours.
+banked patterns. SnipSnap's PROG A–E is, precisely
+(`GrooveProgram.compute`, `GrooveProgram.kt:43-49`): **A** is the captured
+clip itself with FEEL applied (`0 -> felt`), **B–D** are generated
+transforms of it (swing, half-time, sparse), and **E** is the one stateful,
+hand-editable fork. Five entries, of which **one** is yours to write and
+one is what you played. *(Corrected after review: I first called all of
+A–D "generated variations", which misstates A.)*
 
 This will read as broken rather than different: they will tap PROG B, make
 an edit, and discover it isn't a slot. Prior finding J18 flagged that A–D
 aren't marked read-only; **for this persona that's not a labelling nit, it's
 the core interaction model failing to match.**
 
-### P5.2 — no pattern chaining, no song mode in the expected place
+### P5.2 — song mode exists and is named something else, in the wrong row
 
-Chaining patterns into an arrangement is the PO's whole second half. GROOVE
-has `SONG ▸` in its SEND row (`GrooveScreen.kt:2007`) (prior J46 notes that row mixes navigation with
-file writes), but nothing that reads as "chain these patterns".
+*Corrected after review: I first wrote that there is no pattern chaining or
+song mode. That is false.* `SONG ▸` (`GrooveScreen.kt:2007`) opens
+**ArrangeScreen**, which lays GROOVE's own variations into a real song
+structure — intro → theme → variation → the turn → reprise → outro
+(`ArrangeScreen.kt:51-55`). That is exactly the second half of the PO's
+workflow, and it is genuinely well built.
+
+The finding that survives is **discoverability and naming, not absence**:
+it is one button in the `SEND IT SOMEWHERE` row — a row that prior finding
+J46 already flags for mixing file-writes with navigation — and "SONG" does
+not read as "chain these patterns" to someone whose word is *pattern chain*.
+A P5 user is likely to conclude the app cannot do the thing it does well.
 
 ### P5.3 — punch-in FX vs macros-and-print
 
@@ -442,11 +480,11 @@ year-old *and* an MPC veteran *and* a TE owner, it is simply a defect.
 | # | Unanimous friction | Verified at |
 |---|---|---|
 | **X1** | **No audio file of your work can leave the app.** | `ExportFormats.kt:35-69`; `KitsScreen.kt:105`; every `ShareOut` caller |
-| **X2** | The advertised loop ends in **DUB IT / EXPORT to a card**, which only P2 and P4 can use. | `Personality.kt:46,64` |
+| **X2** | The advertised loop ends in **DUB IT**, an opaque word for a step whose *output* is an instrument rather than a track. Available to everyone (it writes to the phone, `Personality.kt:1237`); useful as an ending mainly to P2/P4. | `Personality.kt:46,64,1237` |
 | **X3** | **Sequencing is absent from the advertised loop** and GROOVE is 7th of twelve in a scrolling strip. | `Personality.kt:46`; `Chrome.kt:217-230` |
-| **X4** | Twelve flat, unordered menu peers; the four "in order" steps are not visually grouped as a sequence. | `Chrome.kt:217-230` (prior J12) |
+| **X4** | Twelve flat menu peers with no grouping marker. The four loop steps *are* contiguous and in the advertised order (`Chrome.kt:218-222`) — nothing on screen says they are a sequence rather than four more tabs. | `Chrome.kt:217-230` (prior J12) |
 | **X5** | Destructive writes with no durable warning. Worst for P2/P4, but it destroys P1's work identically. | prior J2, J3, J5, J20 |
-| **X6** | HELP is a flat 20-bullet feature list, in the same compressed voice as the UI, 12th in the menu. | `Personality.kt:428-450` |
+| **X6** | HELP's twenty-item `WORTH KNOWING` list names features rather than teaching concepts, in the same compressed voice as the UI, 12th in the menu. | `Personality.kt:430-450` |
 
 **X1, X2 and X3 are one problem wearing three hats**: the app has a clear
 idea of what finishing looks like, and it is an MPC owner's idea of
@@ -530,7 +568,7 @@ Every invented or reused term, against what each persona would call it.
 | **CHOP** | slice into pads | — | **chop** ✓ | **chop** ✓ | slice |
 | **GROOVE** | the sequencer | "the beat" | **sequence** | **sequencer** | pattern |
 | **PROG A–E** | *pattern variations* | — | **program (WRONG OBJECT)** | sequence | **pattern slot (WRONG MODEL)** |
-| **DUB** | write to card | — | export/copy | export | save to card |
+| **DUB** | write the kit out — phone, or card if one is chosen | — | export/copy | export | save to card |
 | **SURFACE** | macro pad + print | — | Q-Links | FX pads | punch-in FX |
 | **ORBIT** | polymetric ring sequencer | — | — | — | — |
 | **PLAY** | the drum-pad performance view | "play" | pads | pads | keys |
@@ -542,8 +580,8 @@ Two observations fall out of this table:
 1. **CHOP is the only term shared with both P2 and P3.** It's the app's one
    piece of common ground with the sampling world, and it's the third step
    in a four-step loop, which is right.
-2. **The bottom row is the interesting one.** "Resample" is the word three
-   of five personas use, the app performs the operation in two places, and
+2. **The bottom row is the interesting one.** "Resample" is the word four
+   of the five personas use (P2 and P4 share a column), the app performs the operation in two places, and
    it is not on screen anywhere.
 
 ---
@@ -559,13 +597,13 @@ first — a correctness bug outranks all of this.
 1. **An audio bounce that leaves the app (X1).** BOUNCE already renders the
    bus into SNIPS; a SNIPS row needs a SHARE, and EXPORT arguably needs a
    ninth format that is just "the loop, as audio". This is the smallest
-   change in this document with the largest reach: it is the difference
-   between a dead end and a finished product for three of five personas, and
-   `ShareOut.send` already exists and is used by four other callers.
+   change in this document with the largest reach, and it is *nearly wired
+   already*: the render exists, the share mechanism exists
+   (`ShareOut.send`, five callers), and nothing connects them.
 2. **Reword the loop (X2/X3).** Four steps that end in "DUB IT" describe one
-   persona's journey. Whether the fix is a fifth step, a different fourth
-   step, or two named paths is a positioning decision — but as written, the
-   app's own tutorial is wrong for most of its users.
+   persona's *destination* — an instrument — and omit sequencing entirely.
+   Whether the fix is a fifth step, a different fourth step, or two named
+   paths is a positioning decision.
 3. **Retire "PROG" (S5).** The only finding here that is friction for all
    five personas and is a deliberate choice.
 
@@ -595,6 +633,31 @@ Everything in the persona columns above is a hypothesis. Five sessions, one
 person per persona, twenty minutes each, one task: **"make something and
 send it to me."**
 
-That task alone tests X1, X2, X3 and S4 simultaneously, and it is the task
-the app currently cannot complete for four of the five. If nothing else in
-this document gets acted on, that sentence is the test worth running.
+That task alone tests X1, X2, X3 and X4 simultaneously, and — if "something"
+means a beat rather than a kit — it is the task the app currently cannot
+complete for anyone. If nothing else in this document gets acted on, that
+sentence is the test worth running.
+
+---
+
+## Postscript: this document's own error rate
+
+Sixteen accuracy defects were found in the first draft on review, and unlike
+the previous pass's rounds, **three of them attacked the headline**:
+
+- I wrote "you cannot get an audio file out of this app" while quoting, in
+  my own evidence table, the string "A FOLDER OF WAVS ANY MPC CAN OPEN".
+- I listed "every path by which data leaves" and omitted BACKUP.
+- I wrote that there is no song mode, when `SONG ▸` opens a real arranger.
+
+Each is the same failure: I inferred an absence from the shape of the
+argument I was building, instead of from a search. **A claim of absence is
+the most expensive kind to get wrong in a review**, because it sends someone
+to build a thing that already exists — and recommendation 1 below would have
+been partly redundant had nobody caught the third one.
+
+The narrowed findings survive and are, as in every prior round, sharper than
+what they replaced. But the pattern is now three passes long and worth
+naming as a standing caution: **claims about what this app does are
+reliable; claims about what it does not do should be treated as unverified
+until someone greps for them.**
