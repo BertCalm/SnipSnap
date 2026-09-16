@@ -168,13 +168,18 @@ object Skin {
         val fundamental = Dsp.expMap(m.getValue("TUNE"), 45f, 75f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 0.9f)
         val tone = m.getValue("TONE")
-        // TONE balances the shell's fundamental against an inharmonic
-        // overtone (1.59x, a circular-membrane ratio) — up, and the hit
-        // reads as a smaller, rattlier shell rather than a bigger one.
+        // TONE balances the shell's fundamental against two inharmonic
+        // overtones (1.59x/2.14x, circular-membrane ratios) — up, and the
+        // hit reads as a smaller, rattlier shell rather than a bigger one.
+        // Loud enough to be audible as a ring, not just measurable as a
+        // centroid nudge: at the old 0.1-0.6 range the overtone was there
+        // in the numbers but inaudible next to the fundamental, which is
+        // most of why a factory KICK read as close kin to THUMP's own.
         val body = modalBody(
             listOf(
                 Partial(fundamental, 1f, t60),
-                Partial(fundamental * 1.59f, 0.1f + 0.5f * tone, t60 * 0.35f),
+                Partial(fundamental * 1.59f, 0.25f + 0.65f * tone, t60 * 0.35f),
+                Partial(fundamental * 2.14f, 0.08f + 0.22f * tone, t60 * 0.18f),
             ),
             seconds = t60 * 1.4f,
             rate = rate,
@@ -266,11 +271,12 @@ object Skin {
         val tone = m.getValue("TONE")
         // Same shell-plus-overtone shape as KICK, just pitched into tom
         // territory and with no mallet click — a tom reads as the shell
-        // resonance alone.
+        // resonance alone. Same louder-overtone rationale as KICK's own
+        // comment: the ring needs to be audible, not just measurable.
         return modalBody(
             listOf(
                 Partial(fundamental, 1f, t60),
-                Partial(fundamental * 1.5f, 0.1f + 0.4f * tone, t60 * 0.4f),
+                Partial(fundamental * 1.63f, 0.25f + 0.55f * tone, t60 * 0.4f),
             ),
             seconds = t60 * 1.4f,
             rate = rate,
