@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Loudness
 import kotlin.random.Random
 import kotlin.test.Test
@@ -53,6 +54,35 @@ class SkinTest {
     }
 
     @Test
+    fun `kick's overtone partials register as real spectral energy, not just a color`() {
+        // Regression for the KICK partial-level boost: TONE-monotonicity,
+        // classifier, and clean-audio checks all still pass if the boosted
+        // 1.59x/2.14x partials (0.25-0.9, was 0.1-0.6) are reverted back to
+        // their old, too-quiet-to-hear levels - confirmed by temporarily
+        // reverting kick() to the old formula and rerunning this exact
+        // measurement, which read 0.0122 there and 0.0251 here. Centroid
+        // alone can't tell the two apart (both overtones sit under 130Hz,
+        // the same low neighbourhood as the fundamental), so this measures
+        // spectral energy above the fundamental directly instead: the
+        // fraction of all under-200Hz energy that sits above 65Hz, which
+        // only the overtones - not the fundamental itself - contribute to.
+        val snip = Skin.render(SkinVoice.KICK)
+        val head = snip.samples.copyOfRange(0, minOf(snip.samples.size, 4096))
+        val spectrum = Fft.magnitudeSpectrum(head, 4096)
+        var above65 = 0f
+        var under200 = 0f
+        for (bin in spectrum.indices) {
+            val hz = Fft.binToHz(bin, 4096, snip.sampleRate)
+            if (hz < 200f) {
+                under200 += spectrum[bin] * spectrum[bin]
+                if (hz >= 65f) above65 += spectrum[bin] * spectrum[bin]
+            }
+        }
+        val ratio = above65 / under200
+        assertTrue(ratio > 0.017f, "KICK's overtone energy above 65Hz should be a real share of its low-band total: $ratio")
+    }
+
+    @Test
     fun `kick TONE brightens`() {
         val dark = FeatureExtractor.extract(Skin.render(SkinVoice.KICK, mapOf("TONE" to 0f)))
         val bright = FeatureExtractor.extract(Skin.render(SkinVoice.KICK, mapOf("TONE" to 1f)))
@@ -92,6 +122,19 @@ class SkinTest {
         val short = FeatureExtractor.extract(Skin.render(SkinVoice.TOM, mapOf("DECAY" to 0f)))
         val long = FeatureExtractor.extract(Skin.render(SkinVoice.TOM, mapOf("DECAY" to 1f)))
         assertTrue(long.decayMs > short.decayMs * 2, "DECAY should stretch: ${short.decayMs} -> ${long.decayMs}")
+    }
+
+    @Test
+    fun `tom's overtone reaches into the mid band, not just the low band`() {
+        // Regression for the TOM partial-level boost (1.5x/0.1-0.5 to
+        // 1.63x/0.25-0.8): unlike KICK's overtones, TOM's sit above 200Hz
+        // at defaults, so the shift shows up directly in FeatureExtractor's
+        // own midRatio - measured 0.089 with the old formula, 0.163 with
+        // this one (confirmed the same way as KICK's own regression test,
+        // by temporarily reverting tom() and rerunning this exact
+        // assertion; 0.12 sits with real margin on both sides of that gap).
+        val f = FeatureExtractor.extract(Skin.render(SkinVoice.TOM))
+        assertTrue(f.midRatio > 0.12f, "TOM's overtone should read as real mid-band energy: midRatio=${f.midRatio}")
     }
 
     @Test
