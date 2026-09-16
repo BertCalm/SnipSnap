@@ -267,8 +267,13 @@ reasonable; I still think the calls are wrong.
 
 **"Dimmed, not disabled; the toast explains."** (`ChopScreen.kt:1136-1137`)
 The right rule, stated by the right file. But `SegmentButton` and
-`DeckButton` have no `enabled` parameter, so up to nineteen controls in
-that screen's own CUT box have nothing to dim *with* and no toast. The rule was written as a
+`DeckButton` never pass `tapeClick`'s `enabled` flag, so up to nineteen
+controls in that screen's own CUT box cannot enter Compose's `disabled()`
+state, and none of them toast. `DeckButton` is the sharper case, and a
+correction to how this review first framed it: it *does* have a dimming
+axis (`active`, `:1290-1297`), but that axis only swaps label ink — the
+control stays clickable and stays announced as actionable. A control that
+looks refused and fires anyway is worse than one that never dims. The rule was written as a
 convention when it needed to be a **component contract** — a button that
 cannot express refusal should not be the base class for controls that
 need to refuse.
