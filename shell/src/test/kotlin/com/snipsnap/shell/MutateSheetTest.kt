@@ -13,6 +13,44 @@ import kotlin.test.assertTrue
 
 class MutateSheetTest {
 
+    /**
+     * DRIFT's blend, pinned.
+     *
+     * The card used to hand DRIFT whatever fraction the stepper held for
+     * the move it was *currently* on. That move is [MutateSheet.MODES]'s
+     * first entry until the user picks another, and it has no knob at all,
+     * so the fraction was `0f`: the common DRIFT tap rewrote the pad's WAV
+     * blending none of the neighbour in, then drew MIX at 50%.
+     *
+     * Each assertion below fails on a different way of reintroducing that:
+     * the first if the opening move ever gains a knob (which would hide the
+     * `0f`), the second and fourth if [MutateSheet.DRIFT_FRACTION] stops
+     * tracking MORPH's own default, the third on a literal `0f`.
+     */
+    @Test
+    fun `DRIFT blends by MORPH's own knob, never by the move the card opened on`() {
+        val opening = MutateSheet.modeFor(MutateSheet.MODES.first())
+        assertNull(
+            MutateSheet.knobFor(opening),
+            "the card opens on $opening, which has no knob - a fraction inherited from it is 0f",
+        )
+
+        val mix = MutateSheet.knobFor(Mutate.Mode.MORPH)
+            ?: error("MORPH must have a knob: it is the one DRIFT blends with")
+
+        assertEquals(mix.defaultFraction, MutateSheet.DRIFT_FRACTION, 1e-6f)
+        assertTrue(
+            MutateSheet.DRIFT_FRACTION > 0f,
+            "a 0 fraction blends none of the neighbour in, which is the bug this pins",
+        )
+        assertEquals(
+            mix.default,
+            MutateSheet.value(mix, MutateSheet.DRIFT_FRACTION),
+            1e-6f,
+            "DRIFT's fraction must land on MIX's own default",
+        )
+    }
+
     private val temp: File = java.nio.file.Files.createTempDirectory("mutate-sheet").toFile()
 
     @AfterTest
