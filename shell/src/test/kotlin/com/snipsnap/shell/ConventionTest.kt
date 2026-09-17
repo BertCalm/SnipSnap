@@ -140,7 +140,14 @@ class ConventionTest {
         }
 
         assertTrue(
-            Regex("""selected\s*=\s*active\s*$""", RegexOption.MULTILINE).containsMatchIn(segment),
+            // `\b` then a negative lookahead for a boolean operator, rather
+            // than anchoring to end-of-line: the call sits inside a
+            // `semantics { ... }` lambda, so the line ends in ` }` and an
+            // `$` anchor never matches it. That anchor was the first shape
+            // written here, and it failed against correct source - the law
+            // was proven red against the wrong shape but never run green
+            // against the right one.
+            Regex("""selected\s*=\s*active\b(?!\s*(&&|\|\|))""").containsMatchIn(segment),
             "SegmentButton's `selected` is not keyed on `active` alone. Selection and " +
                 "availability are orthogonal: gating `selected` on `enabled` reports nothing " +
                 "selected while busy, and contradicts `pressedBevel`, which uses `active`.",
