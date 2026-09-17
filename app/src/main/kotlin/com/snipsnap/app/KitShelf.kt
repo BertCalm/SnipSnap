@@ -205,16 +205,8 @@ class KitShelf(val root: File) {
      * An MPC-safe kit name from [base] that no shelf folder holds yet:
      * "FACTORY", then "FACTORY 2", "FACTORY 3"…
      */
-    fun freshName(base: String): String {
-        val stem = Names.sanitizeStem(base.uppercase())
-        var name = stem
-        var n = 2
-        while (File(root, name).exists()) {
-            name = "$stem $n"
-            n++
-        }
-        return name
-    }
+    fun freshName(base: String): String =
+        Names.freshStem(Names.sanitizeStem(base.uppercase())) { File(root, it).exists() }
 
     /**
      * Render a starter onto the shelf — the FRESH TAPE menu's action.

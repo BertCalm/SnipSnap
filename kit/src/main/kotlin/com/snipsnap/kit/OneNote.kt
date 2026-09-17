@@ -209,6 +209,42 @@ object OneNote {
         return result
     }
 
+    /**
+     * The two paths a package called [name] takes up under [destRoot]: its
+     * program file and its track-data folder.
+     *
+     * One function because both of this file's readers of that fact have to
+     * agree. [writePackage] refuses to write when *either* exists, and then
+     * `deleteRecursively()`s the folder - so a [freshName] that probed only
+     * the `.xty` would hand back a name whose data folder is destroyed a
+     * moment later. That is the same data loss one step along, and the kind
+     * of disagreement this codebase keeps finding between two copies of one
+     * rule.
+     */
+    private fun occupies(destRoot: File, name: String): Pair<File, File> =
+        File(destRoot, "$name.xty") to File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
+
+    /**
+     * [base], or the next free name after it, for a package under
+     * [destRoot] - so a caller can take [export]'s `overwrite = false`
+     * default instead of insisting past it.
+     *
+     * MAKE PAD is why this exists. It renders from a fresh random seed every
+     * press, and wrote to a name derived only from the kit and pad, with
+     * `overwrite = true`: so the second press destroyed the first, and
+     * because the seed was never kept, what it destroyed could not be made
+     * again. The refusal to clobber was already the library's default; the
+     * screen was overriding it.
+     *
+     * A directory that does not exist yet holds nothing, which is the
+     * ordinary first-export case - [writePackage] creates it.
+     */
+    fun freshName(destRoot: File, base: String): String =
+        Names.freshStem(Names.sanitizeStem(base)) { candidate ->
+            val (xty, dataDir) = occupies(destRoot, candidate)
+            xty.exists() || dataDir.exists()
+        }
+
     internal fun writePackage(
         name: String,
         program: KeygroupProgram,
@@ -217,8 +253,7 @@ object OneNote {
         overwrite: Boolean,
     ) {
         destRoot.mkdirs()
-        val xty = File(destRoot, "$name.xty")
-        val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
+        val (xty, dataDir) = occupies(destRoot, name)
         if ((xty.exists() || dataDir.exists()) && !overwrite) {
             throw DestinationExists.firstOf(xty, dataDir)
         }

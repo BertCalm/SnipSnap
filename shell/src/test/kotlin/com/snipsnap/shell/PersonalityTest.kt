@@ -476,11 +476,26 @@ class PersonalityTest {
         // the control it described being removed, not a relaxation of the
         // law itself.
         "FORKED_TO_E", "BAR_WIPED", "GHOSTS_ON",
-        "INSTRUMENT_MADE", "NO_PITCH", "RETREAT_REFUSED",
+        // "INSTRUMENT_MADE" and "PAD_MADE" dropped (MAKE PAD fresh names):
+        // both said "ON THE SHELF." with no name, which was fine while a
+        // second press overwrote the first and there was only ever one thing
+        // to point at. Presses now land beside each other, so the line names
+        // what landed and is built per call - `Copy.madeNamed(what, made)`.
+        //
+        // NOT a relaxation, and worth being precise about why, because it
+        // looks like one: this law reflects over `declaredFields`, so a `fun`
+        // is invisible to it and deleting these two really would have taken
+        // their text out of coverage. The shout and full-stop checks moved
+        // with the text, into the explicit assertions on `madeNamed` in
+        // `the interpolated lines name what they acted on` - which is this
+        // file's established mechanism for templated copy, the same one
+        // `treated`, `keyed` and `loopBounced` are held by. Delete those
+        // assertions and the text is unchecked again.
+        "NO_PITCH", "RETREAT_REFUSED",
         "TAKES_BIN_RULE", "TEACH_CONSENT", "SNAPPED",
         "TAKES_EMPTY", "BIN_EMPTY_STATE", "BIN_ITEM_GONE", "KIT_WONT_OPEN",
         "UNMUTATED", "MUTATE_NEEDS_ONE", "CRATE_EMPTY",
-        "SCULPTED", "STRETCHED", "FROZEN", "PAD_MADE", "PAD_TOO_SHORT", "PAD_TOO_LONG",
+        "SCULPTED", "STRETCHED", "FROZEN", "PAD_TOO_SHORT", "PAD_TOO_LONG",
         "IN_KEY_NONE", "IN_KEY_NEEDS_KEY", "TAPE_TOO_BIG",
     )
 
@@ -620,6 +635,17 @@ class PersonalityTest {
         assertEquals("TRACK 1 · BLOCK 1 · KICK", Copy.loopBlock(1, 1, "KICK"))
         assertEquals("TRACK 6 · BLOCK 8 · KICK · PIECE 2/3", Copy.loopBlock(6, 8, "KICK · PIECE 2/3"))
         assertEquals("TRACK 2 · BLOCK 1 · NOTHING SENT HERE YET", Copy.loopBlock(2, 1, null))
+        // MAKE PAD / MAKE INSTRUMENT: what landed, by name. These carry the
+        // shout and full-stop checks that `Copy.PAD_MADE`/`INSTRUMENT_MADE`
+        // used to get from the reflective law - see the note in
+        // `legacyHandListedToasts`. The name matters: press three times and
+        // three pads pile up, so a line that reads the same each time cannot
+        // say which one is new.
+        assertEquals("PAD MADE — DRONE 2. ON THE SHELF.", Copy.madeNamed("PAD", "DRONE 2"))
+        assertEquals("INSTRUMENT MADE — BELL. ON THE SHELF.", Copy.madeNamed("INSTRUMENT", "BELL"))
+        assertTrue(Copy.madeNamed("PAD", "DRONE").endsWith("."), "and still lands on a full stop")
+        val made = Copy.madeNamed("PAD", "DRONE 2")
+        assertEquals(made.uppercase(), made, "TapeOS shouts here too")
     }
 
     @Test
