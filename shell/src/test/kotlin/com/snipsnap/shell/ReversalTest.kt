@@ -176,6 +176,19 @@ class ReversalTest {
             why = "a warning before the act, not a landing",
             stillTrue = "IS ALREADY THERE",
         ),
+        // The same moment as `dubWouldOverwrite`, rendered on the button
+        // instead of in a toast: it is the WRITE control's own label while
+        // the dub is armed, so it is what you read BEFORE deciding to tap a
+        // second time. Nothing has been written when it appears.
+        //
+        // The question mark is what makes it a question rather than a
+        // report, exactly as "IS ALREADY THERE" does for the toast above.
+        // A rewrite to "REPLACED X" would be a landing and would lose it,
+        // and the guard below fires.
+        "replaceWhat" to NotALanding(
+            why = "the armed button's own label, asked before the act",
+            stillTrue = "?",
+        ),
     )
 
     /**

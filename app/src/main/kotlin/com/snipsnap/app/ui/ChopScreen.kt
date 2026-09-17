@@ -1296,9 +1296,9 @@ private fun CutBench(
         scheme = scheme,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), onClick = onByHits)
-            SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder, modifier = Modifier.weight(1f), onClick = onGrid)
-            SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), onClick = onGhosts)
+            SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onByHits)
+            SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGrid)
+            SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGhosts)
             SegmentButton(
                 if (humming) "STOP" else "HUM",
                 active = humming || model.mode is ChopReviewModel.ChopMode.Hummed,
@@ -1335,9 +1335,9 @@ private fun CutBench(
             }
             TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                SegmentButton("COUNT", active = ladder == null, modifier = Modifier.weight(1f)) { if (!busy) onRung(null) }
+                SegmentButton("COUNT", active = ladder == null, modifier = Modifier.weight(1f), enabled = !busy) { onRung(null) }
                 for (rung in Ladder.Rung.entries) {
-                    SegmentButton(rung.label, active = ladder?.rung == rung, modifier = Modifier.weight(1f)) { if (!busy) onRung(rung) }
+                    SegmentButton(rung.label, active = ladder?.rung == rung, modifier = Modifier.weight(1f), enabled = !busy) { onRung(rung) }
                 }
             }
         }
@@ -1345,13 +1345,13 @@ private fun CutBench(
             TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
-                    SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f)) { if (!busy) onEar(ear) }
+                    SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
             TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
-                    SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f)) { if (!busy) onCut(cut) }
+                    SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }
                 }
             }
             val (measured, t) = tempo
@@ -1363,7 +1363,7 @@ private fun CutBench(
             TapeText("ON THE GRID · CUTS ON THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (grid in ChopReviewModel.GridSnap.entries) {
-                    SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f)) { if (!busy) onSnap(grid) }
+                    SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f), enabled = !busy) { onSnap(grid) }
                 }
             }
         }
@@ -1523,6 +1523,15 @@ private fun SegmentButton(
     label: String,
     active: Boolean,
     modifier: Modifier = Modifier,
+    /**
+     * Whether the segment can be tapped, forwarded to `tapeClick` so a
+     * refusal reaches BOTH the touch layer and TalkBack (Compose's
+     * `disabled()` state) rather than being a silent `return` inside the
+     * caller's lambda. This is the screen's own stated rule - "dimmed, not
+     * disabled; the toast explains" - made expressible: before this
+     * parameter existed the rule could not be followed here at all.
+     */
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -1530,12 +1539,29 @@ private fun SegmentButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+            // `selected` and `disabled()` are orthogonal, and both are
+            // true of a chosen segment during a chop: it IS the mode you
+            // are in, and it cannot be tapped right now. `tapeClick` below
+            // carries the second. Gating `selected` on `enabled` too would
+            // report NOTHING selected while busy - losing the answer to
+            // "which mode am I in" exactly when tapping cannot reveal it.
             .semantics { this.selected = active }
-            .tapeClick(label = label, onClick = onClick)
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        TapeText(label, TapeType.pixel, if (active) scheme.ink.tape else scheme.ink2.tape)
+        TapeText(
+            label,
+            TapeType.pixel,
+            when {
+                !enabled -> scheme.ink3.tape
+                active -> scheme.ink.tape
+                else -> scheme.ink2.tape
+            },
+        )
+        // Same reason, and `pressedBevel` above is keyed on `active` alone:
+        // blanking this while busy left the bevel saying selected and the
+        // caption saying nothing.
         TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }

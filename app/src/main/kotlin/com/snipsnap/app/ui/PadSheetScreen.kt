@@ -773,6 +773,16 @@ fun PadSheetScreen(
         }
     }
 
+    // Set on a treatment tap, shown only while `busy`, cleared whenever any
+    // operation on this sheet finishes. One effect rather than a clear in
+    // each coroutine's `finally`: `busy` is shared by fourteen call sites in
+    // this file, and gating the display on it makes a stale value invisible
+    // rather than wrong.
+    var applyingSegment by remember(slot) { mutableStateOf<String?>(null) }
+    LaunchedEffect(busy) {
+        if (!busy) applyingSegment = null
+    }
+
     /**
      * TREATMENT: picking a segment on either row, or moving AMT (SMEAR is
      * handled separately — see [applySmear] above). Both whole-pad doors
@@ -818,16 +828,6 @@ fun PadSheetScreen(
      * is launched into [appScope], not this composable's own `scope` — same
      * fix, same reason, as [applySmear]'s own KDoc.
      */
-    // Set on a treatment tap, shown only while `busy`, cleared whenever any
-    // operation on this sheet finishes. One effect rather than a clear in
-    // each coroutine's `finally`: `busy` is shared by fourteen call sites in
-    // this file, and gating the display on it makes a stale value invisible
-    // rather than wrong.
-    var applyingSegment by remember(slot) { mutableStateOf<String?>(null) }
-    LaunchedEffect(busy) {
-        if (!busy) applyingSegment = null
-    }
-
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
         val m = model ?: return
@@ -2743,7 +2743,7 @@ private fun PadSheetHeader(
             HeaderChip("◀ BEFORE", scheme, Modifier.width(92.dp), enabled = !busy, onClick = it)
             Spacer(Modifier.width(4.dp))
         }
-        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), onClick = onHit)
+        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onHit)
     }
 }
 

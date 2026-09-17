@@ -39,6 +39,121 @@ import kotlin.test.fail
  */
 class ConventionTest {
 
+    // ---- Law: a control that can refuse refuses through `enabled` ----
+
+    private val chopScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/ChopScreen.kt")
+    private val tapeScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/TapeScreen.kt")
+
+    /** The body of a top-level `private fun <name>(` through its closing brace at column 0. */
+    private fun topLevelFun(file: File, name: String): String {
+        val src = file.readText(Charsets.UTF_8)
+        val start = src.indexOf("private fun $name(")
+        assertTrue(start >= 0, "expected to find `private fun $name(` in ${file.name}")
+        val end = src.indexOf("\n}\n", start)
+        assertTrue(end > start, "expected `private fun $name(` in ${file.name} to close at column 0")
+        return src.substring(start, end)
+    }
+
+    /**
+     * `ChopScreen.kt`'s own stated rule is "dimmed, not disabled; the toast
+     * explains" — and for a long time neither [SegmentButton] nor
+     * [DeckButton] could express refusal at all, because neither passed
+     * `tapeClick`'s `enabled` flag. Authors who needed to refuse were left
+     * with a silent early `return` inside the lambda, which leaves the
+     * control lit, tappable, and announced as actionable to TalkBack while
+     * doing nothing.
+     *
+     * This is the class KDoc's shape exactly: the same refusal written one
+     * way at some sites and another way at a sibling site. So rather than
+     * demand `enabled =` at *every* call site — plenty are unconditional
+     * on purpose (CLASSIC/FOLD/MELODIC set a layout; IN/OUT/zoom are cheap
+     * model edits) and `enabled = true` everywhere would be noise that
+     * teaches nothing — this asserts the negative: **no call site refuses
+     * silently inside its own lambda.**
+     *
+     * The two patterns are the ones actually used: a `return@` out of the
+     * lambda, and an `if (!busy)` wrapper around the whole body.
+     */
+    @Test
+    fun `SegmentButton and DeckButton call sites never refuse with a silent return`() {
+        for (file in listOf(chopScreen, tapeScreen)) {
+            assertTrue(file.isFile, "expected to find ${file.absolutePath}")
+            val code = stripCommentsAndStrings(file.readText(Charsets.UTF_8))
+            for (component in listOf("SegmentButton", "DeckButton")) {
+                val escapes = Regex("""return@$component""").findAll(code).count()
+                assertTrue(
+                    escapes == 0,
+                    "${file.name}: $escapes call site(s) bail out with `return@$component`. " +
+                        "A control that can refuse must say so with `enabled = ...` so it dims " +
+                        "and reads as disabled, rather than staying lit and doing nothing.",
+                )
+            }
+            val guarded = Regex("""\{\s*if\s*\(!busy\)""").findAll(code).count()
+            assertTrue(
+                guarded == 0,
+                "${file.name}: $guarded lambda(s) open with `if (!busy)`. That is `enabled = !busy` " +
+                    "written where the user cannot see it.",
+            )
+        }
+    }
+
+    /**
+     * The other half of the same law: the components have to be *able* to
+     * refuse, or every call site is forced back into the silent `return`
+     * the law above bans.
+     *
+     * `Chrome.kt`'s `tapeClick(label, enabled = true, onClick)` already
+     * does the right thing — a disabled control keeps its semantics node
+     * and its name but exposes Compose's `disabled()` state instead of an
+     * actionable one. These two components simply have to pass it through.
+     *
+     * `SegmentButton` additionally announces `selected`, which must stay
+     * keyed on `active` **alone**.
+     *
+     * This half of the law was first written backwards - demanding that
+     * `selected` reference `enabled`, on the reasoning that a refused
+     * segment should not read as SELECTED. That is the wrong model.
+     * `selected` and `disabled()` are orthogonal in Compose, and both are
+     * true of the chosen segment during a chop: it is the mode you are in,
+     * and it cannot be tapped right now. `tapeClick(enabled = false)`
+     * already carries the second. Conflating them makes every segment
+     * report NOTHING selected while busy, which loses the answer to "which
+     * mode am I in" at the one moment tapping cannot reveal it - and it
+     * disagrees with `pressedBevel`, which is keyed on `active` alone.
+     */
+    @Test
+    fun `SegmentButton and DeckButton pass enabled through to tapeClick`() {
+        val segment = topLevelFun(chopScreen, "SegmentButton")
+        val deck = topLevelFun(tapeScreen, "DeckButton")
+
+        for ((name, body) in listOf("SegmentButton" to segment, "DeckButton" to deck)) {
+            assertTrue(
+                Regex("""enabled:\s*Boolean""").containsMatchIn(body),
+                "$name takes no `enabled: Boolean` parameter, so no call site can refuse " +
+                    "except by a silent return.",
+            )
+            assertTrue(
+                Regex("""tapeClick\([^)]*enabled""", RegexOption.DOT_MATCHES_ALL).containsMatchIn(body),
+                "$name never passes `enabled` to `tapeClick`, so the flag it accepts changes " +
+                    "nothing about whether the control is actionable.",
+            )
+        }
+
+        assertTrue(
+            // `\b` then a negative lookahead for a boolean operator, rather
+            // than anchoring to end-of-line: the call sits inside a
+            // `semantics { ... }` lambda, so the line ends in ` }` and an
+            // `$` anchor never matches it. That anchor was the first shape
+            // written here, and it failed against correct source - the law
+            // was proven red against the wrong shape but never run green
+            // against the right one.
+            Regex("""selected\s*=\s*active\b(?!\s*(&&|\|\|))""").containsMatchIn(segment),
+            "SegmentButton's `selected` is not keyed on `active` alone. Selection and " +
+                "availability are orthogonal: gating `selected` on `enabled` reports nothing " +
+                "selected while busy, and contradicts `pressedBevel`, which uses `active`.",
+        )
+    }
+
     private val appSrcRoot = File("../app/src/main/kotlin/com/snipsnap/app")
 
     private fun requireAppKotlinFiles(): List<File> {

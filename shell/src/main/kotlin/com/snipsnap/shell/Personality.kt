@@ -1268,6 +1268,42 @@ object Copy {
      * rather than a dare: nothing has been written when this appears.
      */
     fun dubWouldOverwrite(what: String): String = "$what IS ALREADY THERE. DUB AGAIN TO WRITE OVER IT."
+
+    /**
+     * The WRITE button's own label once a dub is armed to replace
+     * something.
+     *
+     * [dubWouldOverwrite] is a toast, and a toast is gone in seconds while
+     * the arm was not - it survived tab switches and remounts, so the
+     * button that would destroy an export read exactly like the button
+     * that would create one. This puts the arm on the control itself, and
+     * names the same thing the toast named.
+     */
+    fun replaceWhat(what: String): String = "REPLACE $what?"
+
+    /**
+     * The card copy landed over files that were already there, and says so
+     * — including that they are not coming back.
+     *
+     * The card has no bin. `CardWriter` deletes the same-named document and
+     * creates a new one in its place, so what was there is gone off the
+     * card entirely, not shelved anywhere the app could reach. Saying only
+     * that a replacement happened would leave the reader to guess at that,
+     * which is the whole defect this line exists to close.
+     */
+    fun dubDoneCardReplaced(n: Int): String =
+        if (n == 1) "DUB DONE. 1 FILE ON THE CARD WAS REPLACED — THE OLD ONE IS GONE FOR GOOD."
+        else "DUB DONE. $n FILES ON THE CARD WERE REPLACED — THE OLD ONES ARE GONE FOR GOOD."
+
+    /**
+     * The card held same-named files the provider would not let go of, so
+     * what is on the card now is whatever it decided to do with a second
+     * file of the same name. Said plainly rather than reported as a clean
+     * write: the whole point of this line is that the app does not know.
+     */
+    fun dubDoneCardContested(n: Int): String =
+        if (n == 1) "DUB DONE, BUT 1 FILE ON THE CARD WOULD NOT BUDGE. CHECK FOR DOUBLES."
+        else "DUB DONE, BUT $n FILES ON THE CARD WOULD NOT BUDGE. CHECK FOR DOUBLES."
     /**
      * The dub landed *and* went onto the card the user picked. Said apart
      * from [DUB_DONE] because it is a different promise: that one means

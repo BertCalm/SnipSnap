@@ -1053,7 +1053,7 @@ private fun TapeDeckContent(
                     Modifier
                         .weight(1f)
                         .height(Layout.PRIMARY_ACTION_H.dp),
-                    active = model.hasSelection,
+                    enabled = model.hasSelection,
                 ) {
                     val range = model.commitSelection()
                     touch()
@@ -1088,7 +1088,6 @@ private fun TapeDeckContent(
                     Modifier
                         .weight(1f)
                         .height(Layout.PRIMARY_ACTION_H.dp),
-                    active = true,
                 ) {
                     // Stop the transport as well as the voice: the deck would
                     // otherwise keep rolling silently under the busy overlay.
@@ -1111,13 +1110,17 @@ private fun TapeDeckContent(
             // CATCH A HIT (docs/CATCH.md): the pad grid as the chopper. In
             // place, no ▸ (Task 4) — the grid comes up under the waveform.
             // Not offered at all while a RE-TRIM is live (that request
-            // owns the deck): `active` only dims a DeckButton, it doesn't
-            // disable it, so the button is simply not there.
+            // owns the deck). This used to be forced: `active` only dimmed a
+            // DeckButton without disabling it, so deleting the control from
+            // the tree was the only way to refuse. `enabled` works now, so
+            // vanishing here is a choice rather than a workaround - left as
+            // it was on purpose, since a RE-TRIM owning the deck is a mode
+            // rather than a passing busy state.
             if (retrim == null) {
                 DeckButton(
                     if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
                     Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
-                    active = !catchBusy,
+                    enabled = !catchBusy,
                 ) {
                     startCatch()
                 }
@@ -1131,8 +1134,7 @@ private fun TapeDeckContent(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Batch 3, Task 4: no ▸ — DIG runs in place on this deck; it
                 // moves IN/OUT, it doesn't navigate or open a panel.
-                DeckButton("FIND BREAK", Modifier.weight(1f), active = !digging) {
-                    if (digging) return@DeckButton
+                DeckButton("FIND BREAK", Modifier.weight(1f), enabled = !digging) {
                     if (model.playing) model.togglePlay()
                     stopVoice()
                     touch()
@@ -1256,10 +1258,20 @@ private const val CATCH_BANKS = 2
 private fun DeckButton(
     label: String,
     modifier: Modifier = Modifier,
-    active: Boolean = true,
-    // Orthogonal to `active` — `active` only dims/brightens the label
-    // (an enabled-ish axis); `engaged` is "this control is currently set,"
-    // a separate latched/lit look (accent fill + inverted ink), wired only
+    /**
+     * Whether the button can be tapped.
+     *
+     * This was `active`, and it only dimmed the label — the control stayed
+     * clickable and stayed announced to TalkBack as actionable, so a button
+     * that looked refused fired anyway. Every one of its four call sites
+     * already meant exactly "enabled" (`model.hasSelection`, `!catchBusy`,
+     * `!digging`), so this is the same axis, renamed and now actually
+     * forwarded to `tapeClick`.
+     */
+    enabled: Boolean = true,
+    // Orthogonal to `enabled` — that one says whether the control can be
+    // tapped at all; `engaged` is "this control is currently set," a
+    // separate latched/lit look (accent fill + inverted ink), wired only
     // for IN/OUT (`model.inFrame`/`outFrame >= 0`). Every other DeckButton
     // call leaves this at the default and renders exactly as before.
     engaged: Boolean = false,
@@ -1280,7 +1292,7 @@ private fun DeckButton(
             // this is what makes `engaged` a strict overlay on the normal
             // look rather than a different component.
             .raisedBevel(scheme, fill = if (engaged) scheme.accent.tape else null)
-            .tapeClick(label = accessibilityLabel ?: label, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1292,7 +1304,7 @@ private fun DeckButton(
                 // the same dark-on-accent ink the selection markers' flag
                 // labels use below, so "lit" reads the same everywhere.
                 engaged -> scheme.lcd.tape
-                active -> scheme.ink.tape
+                enabled -> scheme.ink.tape
                 else -> scheme.ink2.tape
             },
         )

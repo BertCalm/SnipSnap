@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -86,6 +87,19 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val TAG = "ExportScreen"
+
+/**
+ * How long the overwrite arm stays live.
+ *
+ * Deliberately longer than the app's other armed confirms
+ * (`EMPTY_BIN_ARM_MS` and `EMPTY_ROOMS_BIN_ARM_MS` are both 3s): those are
+ * a reflex double-tap on a button whose whole job is destruction, while
+ * this one asks you to read a path, recognise whether it is yours, and
+ * decide. Three seconds is not long enough to do that, and an arm that
+ * expires while you are still reading teaches the user to tap twice
+ * quickly - which is the opposite of what a confirm is for.
+ */
+private const val EXPORT_ARM_MS = 15_000L
 
 /**
  * A dub's live state, hoisted to `App()` (see `App.kt`'s `exportSession`)
@@ -283,6 +297,29 @@ private fun ExportContent(
         if (session.busy) formatPickerOpen = false
     }
 
+    // THE OVERWRITE ARM, and the two ways it now goes out.
+    //
+    // `session.overwriting` is the state in which the next tap replaces an
+    // export that already exists. It is hoisted into `App`, so it used to
+    // survive tab switches and remounts indefinitely: arm it, read the
+    // toast, walk away, come back an hour later, tap once - and the export
+    // was replaced with no further warning, because nothing cleared it and
+    // nothing rendered it.
+    //
+    // Two separate mechanisms because they answer two separate risks. The
+    // timer handles "sat here and forgot"; the dispose handles "went
+    // somewhere else and came back", which the timer cannot, since a
+    // LaunchedEffect is cancelled on the way out rather than completing.
+    // Keyed on `session.dir` so a different kit never inherits an arm.
+    LaunchedEffect(session.overwriting) {
+        if (session.overwriting == null) return@LaunchedEffect
+        delay(EXPORT_ARM_MS)
+        session.overwriting = null
+    }
+    DisposableEffect(session.dir) {
+        onDispose { session.overwriting = null }
+    }
+
     // Elapsed-time clock, not an incrementing counter: `SystemClock.
     // elapsedRealtime()` is monotonic (unlike a wall clock, which can jump)
     // and, because `filesShown` below is a pure function of "how long has
@@ -478,7 +515,7 @@ private fun ExportContent(
                             // Only the outcome's own items — handing over
                             // the folder they sit in would carry every
                             // earlier export along with them.
-                            withContext(Dispatchers.IO) {
+                            val copied = withContext(Dispatchers.IO) {
                                 CardWriter.copy(
                                     context,
                                     card,
@@ -488,7 +525,20 @@ private fun ExportContent(
                             // Only now is it really on the card, so only now
                             // does the stamp name one.
                             stampDub(session.dir, card = card.toString())
-                            onToast(Copy.DUB_DONE_CARD)
+                            // The card leg has no arm of its own - the phone
+                            // leg's confirm is about the phone copy, and a
+                            // card can hold a kit the phone does not - so it
+                            // reports afterwards instead. CONTESTED is the
+                            // case worth naming: the provider refused the
+                            // delete, and what is on the card now is not
+                            // knowable from here.
+                            onToast(
+                                when {
+                                    copied.contested > 0 -> Copy.dubDoneCardContested(copied.contested)
+                                    copied.replaced > 0 -> Copy.dubDoneCardReplaced(copied.replaced)
+                                    else -> Copy.DUB_DONE_CARD
+                                },
+                            )
                         }
                     }
                     is ExportWizardModel.WriteResult.Blocked -> {
@@ -626,7 +676,10 @@ private fun ExportContent(
                 DubProgressCard(model, filesShown, session.busy, scheme)
             }
             PrimaryAction(
-                label = model.writeLabel,
+                // Armed, the button names what it would destroy. Unarmed it
+                // reads exactly as before. Until this, the two were the same
+                // words and the only warning was a toast already gone.
+                label = session.overwriting?.let { Copy.replaceWhat(it.name) } ?: model.writeLabel,
                 enabled = !session.busy && !model.blocked && model.stage == ExportWizardModel.Stage.READY,
                 onClick = ::startWrite,
             )
