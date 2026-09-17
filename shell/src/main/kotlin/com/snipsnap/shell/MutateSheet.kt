@@ -57,6 +57,19 @@ object MutateSheet {
     /** STACK has no knob: layering is transient-aligned, nothing to dial. */
     fun knobFor(mode: Mutate.Mode): Knob? = KNOBS[mode]
 
+    /**
+     * The blend DRIFT uses when the card is not already on MORPH — MORPH's
+     * own knob default, matching [knobs]'s `morphAmount` fallback for the
+     * same situation.
+     *
+     * This exists so the decision lives here rather than in the card, which
+     * had been reading whatever fraction the *previous* move's stepper
+     * happened to hold: [MODES] opens on STACK, STACK has no knob at all,
+     * so that fraction was `0f` and the common DRIFT tap blended none of
+     * the neighbour in while the card then redrew MIX at 50%.
+     */
+    val DRIFT_FRACTION: Float = KNOBS.getValue(Mutate.Mode.MORPH).defaultFraction
+
     /** Stepper fraction 0..1 → the knob's value. */
     fun value(knob: Knob, fraction: Float): Float = knob.value(fraction)
 

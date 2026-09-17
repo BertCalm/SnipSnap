@@ -1372,8 +1372,20 @@ fun PadSheetScreen(
         val seed = spins
         val padName = p.displayName
         val staleSampleFile = p.sampleFile
-        if (mutateMode != Mutate.Mode.MORPH.name) mutateMode = Mutate.Mode.MORPH.name
-        val fraction = pendingMutateKnob
+        // DRIFT is MORPH's one-tap form, so the blend has to come from
+        // MORPH's own knob. `pendingMutateKnob` is `remember(slot,
+        // mutateMode)`, and writing `mutateMode` does not re-run that block
+        // synchronously - so reading it afterwards took the fraction
+        // belonging to the move the card was *previously* on. From the
+        // card's opening move that is 0f (STACK has no knob), which wrote a
+        // 0% blend and then drew MIX 50% once recomposition re-keyed the
+        // stepper; from SPLICE or TRANSPLANT it was that stepper's position
+        // read as a mix. Already on MORPH, the dialled MIX is the user's
+        // own and is kept - which is why a *second* DRIFT tap always
+        // behaved correctly and only the first one from another move did not.
+        val onMorph = mutateMode == Mutate.Mode.MORPH.name
+        val fraction = if (onMorph) pendingMutateKnob else MutateSheet.DRIFT_FRACTION
+        if (!onMorph) mutateMode = Mutate.Mode.MORPH.name
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
