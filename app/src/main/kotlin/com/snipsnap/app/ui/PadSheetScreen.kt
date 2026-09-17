@@ -2743,7 +2743,7 @@ private fun PadSheetHeader(
             HeaderChip("◀ BEFORE", scheme, Modifier.width(92.dp), enabled = !busy, onClick = it)
             Spacer(Modifier.width(4.dp))
         }
-        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), onClick = onHit)
+        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onHit)
     }
 }
 

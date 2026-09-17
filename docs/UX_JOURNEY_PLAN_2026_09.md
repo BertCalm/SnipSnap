@@ -12,14 +12,32 @@ instances one at a time re-opens the class on the next screen built.
 
 ## Two facts that constrain everything below
 
-**1. `:app` has no tests. At all.** `app/src/` contains `main` and nothing
-else, and `settings.gradle.kts` only includes `:app` where an Android SDK
-exists — which is not CI's JVM job and not this environment. Every fix in
-this plan is therefore verified by **compilation plus reading**, not by a
-test, unless the logic can be pushed down into `:shell`/`:kit` where tests
-do run. That is a real and uncomfortable limit, and it is why **PR 0
-exists** and why several PRs below are shaped around "move the decision
-into a testable module, then have the composable read it."
+**1. `:app` has no *behavioural* tests — but its source is already under
+test.** *(Corrected: this section first said ":app has no tests. At all."
+That is wrong, and it was steering the plan badly.)* `app/src/` does
+contain `main` and nothing else, and `settings.gradle.kts` includes `:app`
+only where an Android SDK exists — so nothing **runs** a composable in CI.
+But `:shell`'s `ConventionTest` reads `../app/src/main/kotlin` as text and
+asserts laws over it: ten of them, walking every `.kt` file, with a
+`stripCommentsAndStrings` helper so they don't match prose. Its own class
+KDoc names the bug shape it exists for — "a pattern applied correctly at
+some call sites and incorrectly (or not at all) at a sibling site a few
+lines or one file away", four of which shipped in a single day.
+
+So there are two kinds of coverage available, and the distinction decides
+how each PR below is verified:
+
+- **Behavioural** — does this composable do the right thing? Not available
+  without a Compose harness (Robolectric or instrumented), which needs
+  `:app` in the build for tests. Genuinely out of reach right now.
+- **Structural** — does every site of this shape agree? Already available,
+  already in CI, and the right tool for a wide mechanical migration, where
+  human review is weakest precisely because the hunks look alike.
+
+Pushing a decision down into `:shell`/`:kit` (as the DRIFT fix did with
+`MutateSheet.DRIFT_FRACTION`) remains the way to get a *behavioural*
+assertion. A convention law is how to hold a *contract* across call
+sites."
 
 **2. The `enabled` fix is much cheaper than the review implied.**
 `Chrome.kt:158` — `fun Modifier.tapeClick(label: String?, enabled: Boolean
