@@ -293,6 +293,10 @@ private fun ExportContent(
      * showing ▴, claiming a state the screen was not in, until the write
      * finished. Shut it when the write starts instead.
      */
+    LaunchedEffect(session.busy) {
+        if (session.busy) formatPickerOpen = false
+    }
+
     // THE OVERWRITE ARM, and the two ways it now goes out.
     //
     // `session.overwriting` is the state in which the next tap replaces an
@@ -314,10 +318,6 @@ private fun ExportContent(
     }
     DisposableEffect(session.dir) {
         onDispose { session.overwriting = null }
-    }
-
-    LaunchedEffect(session.busy) {
-        if (session.busy) formatPickerOpen = false
     }
 
     // Elapsed-time clock, not an incrementing counter: `SystemClock.

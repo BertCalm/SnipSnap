@@ -107,8 +107,19 @@ class ConventionTest {
      * and its name but exposes Compose's `disabled()` state instead of an
      * actionable one. These two components simply have to pass it through.
      *
-     * `SegmentButton` additionally announces `selected`, which must not
-     * keep claiming "SELECTED" on a control the same frame has disabled.
+     * `SegmentButton` additionally announces `selected`, which must stay
+     * keyed on `active` **alone**.
+     *
+     * This half of the law was first written backwards - demanding that
+     * `selected` reference `enabled`, on the reasoning that a refused
+     * segment should not read as SELECTED. That is the wrong model.
+     * `selected` and `disabled()` are orthogonal in Compose, and both are
+     * true of the chosen segment during a chop: it is the mode you are in,
+     * and it cannot be tapped right now. `tapeClick(enabled = false)`
+     * already carries the second. Conflating them makes every segment
+     * report NOTHING selected while busy, which loses the answer to "which
+     * mode am I in" at the one moment tapping cannot reveal it - and it
+     * disagrees with `pressedBevel`, which is keyed on `active` alone.
      */
     @Test
     fun `SegmentButton and DeckButton pass enabled through to tapeClick`() {
@@ -129,9 +140,10 @@ class ConventionTest {
         }
 
         assertTrue(
-            Regex("""selected\s*=\s*[^\n]*enabled""").containsMatchIn(segment),
-            "SegmentButton announces `selected` without reference to `enabled`: a disabled " +
-                "segment would still read as SELECTED to a screen reader.",
+            Regex("""selected\s*=\s*active\s*$""", RegexOption.MULTILINE).containsMatchIn(segment),
+            "SegmentButton's `selected` is not keyed on `active` alone. Selection and " +
+                "availability are orthogonal: gating `selected` on `enabled` reports nothing " +
+                "selected while busy, and contradicts `pressedBevel`, which uses `active`.",
         )
     }
 

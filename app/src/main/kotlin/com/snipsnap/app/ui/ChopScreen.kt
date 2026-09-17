@@ -1539,10 +1539,13 @@ private fun SegmentButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-            // A refused segment is not a selected one. Announcing
-            // `selected` regardless would have a screen reader say SELECTED
-            // about a control this same frame is refusing.
-            .semantics { this.selected = active && enabled }
+            // `selected` and `disabled()` are orthogonal, and both are
+            // true of a chosen segment during a chop: it IS the mode you
+            // are in, and it cannot be tapped right now. `tapeClick` below
+            // carries the second. Gating `selected` on `enabled` too would
+            // report NOTHING selected while busy - losing the answer to
+            // "which mode am I in" exactly when tapping cannot reveal it.
+            .semantics { this.selected = active }
             .tapeClick(label = label, enabled = enabled, onClick = onClick)
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1556,7 +1559,10 @@ private fun SegmentButton(
                 else -> scheme.ink2.tape
             },
         )
-        TapeText(if (active && enabled) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
+        // Same reason, and `pressedBevel` above is keyed on `active` alone:
+        // blanking this while busy left the bevel saying selected and the
+        // caption saying nothing.
+        TapeText(if (active) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 
