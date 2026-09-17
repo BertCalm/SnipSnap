@@ -886,7 +886,6 @@ object Copy {
         val bare = if (noDust > 0) " $noDust LEFT AS ${if (noDust == 1) "IT WAS" else "THEY WERE"}: NOTHING BETWEEN THE HITS ON ${if (noDust == 1) "ITS" else "THEIR"} TAPE." else ""
         return pads + rest + bare
     }
-    const val INSTRUMENT_MADE = "INSTRUMENT MADE. ON THE SHELF."
     const val NO_PITCH = "NO CONFIDENT PITCH."
     const val RETREAT_REFUSED = "GHOSTS CAME AFTER THE TREATMENT. CLEAR THEM FIRST."
     /** NONE, when it lands: the pad's earlier take is back out of the bin and the recipe is off. */
@@ -1096,7 +1095,24 @@ object Copy {
         "NO KITS ARE ${dubChip(status)}. ALL $total ARE STILL THERE — TAP SHOW."
 
     // ---- PAD SHEET: pad from anything ----
-    const val PAD_MADE = "PAD MADE. ON THE SHELF."
+
+    /**
+     * What a press of MAKE PAD / MAKE INSTRUMENT actually left behind, by
+     * name.
+     *
+     * Both doors used to write to one name derived from the kit and pad and
+     * pass `overwrite = true`, so a second press replaced the first and
+     * there was only ever one thing to point at. MAKE PAD reseeds every
+     * press, so that press destroyed audio no later press could reproduce.
+     * Now each press lands beside the last - which means the flat "PAD MADE.
+     * ON THE SHELF." can no longer say *which*: press three times and it
+     * reads identically three times while three different pads pile up.
+     *
+     * So the name is in the line. [made] is the name as written, after the
+     * counting - "DRONE", then "DRONE 2" - which is also what the shelf
+     * shows, so the user has something to match against.
+     */
+    fun madeNamed(what: String, made: String): String = "$what MADE — $made. ON THE SHELF."
     const val PAD_TOO_SHORT = "TOO SHORT TO STRETCH INTO A PAD. FEED IT MORE THAN A BLINK."
     const val PAD_TOO_LONG = "TOO LONG TO SLOW INSIDE A MINUTE. TRIM IT UNDER THIRTY SECONDS."
 

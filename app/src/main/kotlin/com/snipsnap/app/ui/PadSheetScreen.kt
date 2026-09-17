@@ -81,7 +81,6 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
-import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.ChopReviewModel
@@ -1468,6 +1467,14 @@ fun PadSheetScreen(
      * `instruments` list isn't reactive to this screen otherwise; without
      * this, a visit to KITS that raced this write on [appScope] would show
      * a list one instrument short until KITS reloaded again.
+     *
+     * Bug fix (silent replacement): the name came from the kit and pad
+     * alone and the write passed `overwrite = true`, so a second press
+     * replaced the first package without asking or saying so. `:kit` already
+     * refused to clobber — `overwrite = false` is `export`'s own default and
+     * `writePackage` throws `DestinationExists` — and this screen was
+     * insisting past it. It now asks `OneNote.freshName` for a name nothing
+     * holds and takes the default, so presses land beside each other.
      */
     fun onMakeInstrument() {
         if (busy) return
@@ -1475,16 +1482,22 @@ fun PadSheetScreen(
         val currentSnip = snip
         if (m == null || currentSnip == null) return
         val p = m.kit.pad(slot) ?: return
-        val instrumentName = Names.sanitizeStem("${m.kit.name}_${p.displayName}")
+        val instrumentBase = "${m.kit.name}_${p.displayName}"
         appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
-                withContext(Dispatchers.IO) {
-                    OneNote.export(instrumentName, currentSnip, destRoot, overwrite = true)
+                // Named and written on IO, in that order and in one hop: the
+                // name is decided by reading the folder, which is not work
+                // for the main thread, and deciding it any earlier widens the
+                // window in which something else could take it.
+                val made = withContext(Dispatchers.IO) {
+                    val name = OneNote.freshName(destRoot, instrumentBase)
+                    OneNote.export(name, currentSnip, destRoot, overwrite = false)
+                    name
                 }
                 onShelfAssetWritten()
-                onToast(Copy.INSTRUMENT_MADE)
+                onToast(Copy.madeNamed("INSTRUMENT", made))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (e is IllegalArgumentException) onToast(Copy.NO_PITCH) else failure("INSTRUMENT", e)
@@ -1731,6 +1744,16 @@ fun PadSheetScreen(
      * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
      * `PadFromAnything.export` success, same as [onMakeInstrument] — see
      * that parameter's own KDoc.
+     *
+     * Bug fix (silent replacement of an unrepeatable render): same fix as
+     * [onMakeInstrument], and this is the door it was written for. "A fresh
+     * seed every press" above is literal — `PadMaker.spec` takes a new
+     * `Random.nextLong` each time and the seed is never stored — so every
+     * press rendered *different* audio to the *same* name with
+     * `overwrite = true`. The second press destroyed the first, and since
+     * the seed was gone the first could never be made again. Pressing this
+     * button repeatedly is how the feature is meant to be used, which made
+     * the loss routine rather than rare.
      */
     fun onMakePad() {
         if (busy) return
@@ -1748,17 +1771,23 @@ fun PadSheetScreen(
             onToast(Copy.PAD_TOO_LONG)
             return
         }
-        val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
+        val padBase = "${m.kit.name}_${p.displayName}_Pad"
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
         appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
-                withContext(Dispatchers.IO) {
-                    PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
+                // See [onMakeInstrument] for why the naming happens here.
+                // It matters more on this door: the seed above is fresh every
+                // press and is never kept, so a press that wrote over the
+                // last one destroyed a render nothing could make again.
+                val made = withContext(Dispatchers.IO) {
+                    val name = OneNote.freshName(destRoot, padBase)
+                    PadFromAnything.export(name, currentSnip, destRoot, spec, overwrite = false)
+                    name
                 }
                 onShelfAssetWritten()
-                onToast(Copy.PAD_MADE)
+                onToast(Copy.madeNamed("PAD", made))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("PAD", e)

@@ -345,4 +345,36 @@ object Names {
             .trim(' ', '_', '.')
         return cleaned.ifBlank { "Sample" }
     }
+
+    /**
+     * [base], or the first of "[base] 2", "[base] 3"… that [taken] says
+     * nothing holds.
+     *
+     * The counting rule, in one place. Three callers needed it and each had
+     * written its own: a shelf folder (`KitShelf`), a `.wav`/`.json` pair
+     * (`Rooms`), and an instrument package ([OneNote.freshName]). The rule is
+     * identical in all three; only *what counts as taken* differs, which is
+     * why that is the parameter rather than a directory. Passing a directory
+     * instead would have forced a fourth copy the moment a caller's occupancy
+     * was not "a file of this name exists" - and none of these three is.
+     *
+     * Starts at 2 because "[base] 1" reads as the first of a set the user did
+     * not ask to be numbered; the unsuffixed name is the first one.
+     *
+     * Fills a gap rather than appending past the highest: with "FACTORY" and
+     * "FACTORY 3" held, this returns "FACTORY 2". These names are shown to
+     * the user, and a counter that only ever climbs turns a tidied-up folder
+     * into ever-longer numbers.
+     *
+     * [base] is used as given. Sanitizing is the caller's business because
+     * only the caller knows which rules its destination has - `KitShelf`
+     * upper-cases as well, `Rooms` does neither - and a suffix of " 2" keeps
+     * an already-safe stem safe.
+     */
+    fun freshStem(base: String, taken: (String) -> Boolean): String {
+        if (!taken(base)) return base
+        var n = 2
+        while (taken("$base $n")) n++
+        return "$base $n"
+    }
 }

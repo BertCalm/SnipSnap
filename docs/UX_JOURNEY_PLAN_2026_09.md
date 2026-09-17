@@ -156,11 +156,29 @@ bin. J2 does have a two-tap confirm; the other two have nothing.
   liked. `MAKE INSTRUMENT` is deterministic and only needs the confirm;
   `MAKE PAD` needs the confirm **and** a way to keep a result you like.
 
-**Decision needed:** for `MAKE PAD`, is the answer a confirm, a
-non-overwriting fresh name per press, or an explicit "KEEP THIS ONE"
-before the next roll? I lean **fresh name per press** — it matches
-`shelf.freshName` used elsewhere in the app, and it removes the
-destruction rather than asking about it.
+**Decided: fresh name per press.** It removes the destruction rather than
+asking about it, which is the right shape for a button whose whole purpose
+is to be pressed repeatedly — a confirm on every press of an explore-by-
+rolling control is a dialog you learn to dismiss without reading.
+
+**Shipped, and smaller than expected.** `:kit` already refused to clobber:
+`OneNote.export`/`PadFromAnything.export` default to `overwrite = false`
+and `writePackage` throws `DestinationExists` when either the `.xty` **or**
+its `_[TrackData]` folder is present. Both screens were passing
+`overwrite = true` and insisting past a guard that was already there. So
+the fix is to ask for a free name and take the default.
+
+The counting rule now lives once, as `Names.freshStem(base) { taken }`, and
+takes its occupancy test as an argument rather than a directory — there
+were three callers and all three define "taken" differently (a shelf
+folder; a `.wav`/`.json` pair; a program file *or* its data folder), so a
+directory-shaped helper would have forced a fourth copy immediately.
+`KitShelf.freshName` and `Rooms.freshName` were folded onto it unchanged.
+
+One knock-on: `Copy.PAD_MADE`/`INSTRUMENT_MADE` said "ON THE SHELF." with
+no name, which was fine when there was only ever one. Press three times now
+and three different pads pile up, so the toast names what landed
+(`Copy.madeNamed`), matching what the shelf shows.
 
 ---
 
@@ -284,8 +302,8 @@ Everything from PR 5 onward is real but is improvement, not repair.
 1. **PR 0** — build the `:app` test seam first, or accept
    compile-and-read as the bar for this wave?
 2. **PR 2** — disabled controls: dim only, or dim *and* toast the reason?
-3. **PR 3** — `MAKE PAD ▸`: confirm, fresh name per press, or an explicit
-   keep step?
+3. ~~**PR 3** — `MAKE PAD ▸`: confirm, fresh name per press, or an explicit
+   keep step?~~ **Answered: fresh name per press.** Shipped; see PR 3 above.
 4. **Sequence** — is "correctness → contract → data loss → everything
    else" the right weighting, or do you want the journey work (PR 7,
    which is what you originally asked about) pulled forward?
