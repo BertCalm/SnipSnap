@@ -1281,9 +1281,19 @@ object Copy {
      */
     fun replaceWhat(what: String): String = "REPLACE $what?"
 
-    /** The card copy landed over files that were already there, and said so. */
+    /**
+     * The card copy landed over files that were already there, and says so
+     * — including that they are not coming back.
+     *
+     * The card has no bin. `CardWriter` deletes the same-named document and
+     * creates a new one in its place, so what was there is gone off the
+     * card entirely, not shelved anywhere the app could reach. Saying only
+     * that a replacement happened would leave the reader to guess at that,
+     * which is the whole defect this line exists to close.
+     */
     fun dubDoneCardReplaced(n: Int): String =
-        if (n == 1) "DUB DONE. 1 FILE ON THE CARD REPLACED." else "DUB DONE. $n FILES ON THE CARD REPLACED."
+        if (n == 1) "DUB DONE. 1 FILE ON THE CARD WAS REPLACED — THE OLD ONE IS GONE FOR GOOD."
+        else "DUB DONE. $n FILES ON THE CARD WERE REPLACED — THE OLD ONES ARE GONE FOR GOOD."
 
     /**
      * The card held same-named files the provider would not let go of, so
