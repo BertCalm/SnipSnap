@@ -228,6 +228,21 @@ object Copy {
         "$packed ${if (packed == 1) "KIT" else "KITS"} ON ONE FILE." + (if (skipped > 0) " $skipped SKIPPED." else "") + " PICK WHERE IT GOES."
     const val BACKUP_EMPTY = "NOTHING TO BACK UP. THE SHELF IS BARE."
     const val SHARE_NOWHERE = "NOWHERE TO SEND IT. NO APP ON THIS PHONE TAKES A FILE."
+
+    /** Staging a snip for the chooser: a copy under a readable name, which is real work on a long tape jam. */
+    const val SHARE_BUSY = "GETTING IT READY…"
+
+    /**
+     * A snip is staged and the chooser is opening.
+     *
+     * Ends on the same "PICK WHERE IT GOES." as [kitPacked], [roomPacked]
+     * and [backedUp], because it is the same moment: the file is ready and
+     * the choosing has not happened yet. Deliberately does NOT say it was
+     * sent - `ShareOut.send` returns true when the chooser *opened*, not
+     * when anything left the phone, and a line claiming otherwise would be
+     * exactly the kind of string this file's laws exist to catch.
+     */
+    fun snipReady(name: String): String = "$name IS READY TO SEND. PICK WHERE IT GOES."
     /** A kit file landed: [landed] kits on the shelf, [skipped] refused - the box ([LandingNote]) names them when there are any. */
     fun landed(landed: Int, skipped: Int): String =
         "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." + if (skipped > 0) " $skipped SKIPPED." else ""
