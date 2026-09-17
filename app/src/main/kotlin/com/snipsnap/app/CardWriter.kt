@@ -59,7 +59,7 @@ object CardWriter {
         treeUri: Uri,
         items: List<File>,
         onProgress: (Long) -> Unit = {},
-    ): Int {
+    ): Copied {
         val resolver = context.contentResolver
         val rootDoc = DocumentsContract.buildDocumentUriUsingTree(
             treeUri,
@@ -89,11 +89,17 @@ object CardWriter {
         val listings = HashMap<String, MutableMap<String, String>>()
 
         var files = 0
+        var replaced = 0
+        var contested = 0
         var moved = 0L
         for (entry in plan) {
             val parent = made[entry.parents]
                 ?: throw IOException("could not put ${entry.name} on the card - its folder is missing")
-            replaceExisting(context, treeUri, DocumentsContract.getDocumentId(parent), entry.name, listings)
+            when (replaceExisting(context, treeUri, DocumentsContract.getDocumentId(parent), entry.name, listings)) {
+                Replace.REPLACED -> replaced++
+                Replace.CONTESTED -> contested++
+                Replace.NONE -> Unit
+            }
             if (entry.isDirectory) {
                 val dir = create(resolver, parent, DocumentsContract.Document.MIME_TYPE_DIR, entry.name)
                 made[entry.segments] = dir
@@ -121,8 +127,23 @@ object CardWriter {
                 files++
             }
         }
-        return files
+        return Copied(files, replaced, contested)
     }
+
+    /**
+     * What one card copy did.
+     *
+     * [replaced] and [contested] exist because the copy always writes over
+     * a same-named file and used to say nothing about it: a caller could
+     * not tell a clean write from one that landed on top of somebody's
+     * earlier export, nor either of those from a provider that refused the
+     * delete and left the create to do whatever it does. The information
+     * was already being computed here and thrown away.
+     */
+    data class Copied(val files: Int, val replaced: Int, val contested: Int)
+
+    /** What [replaceExisting] found, and whether it could clear it. */
+    private enum class Replace { NONE, REPLACED, CONTESTED }
 
     private fun create(
         resolver: android.content.ContentResolver,
@@ -145,14 +166,20 @@ object CardWriter {
         parentId: String,
         name: String,
         listings: HashMap<String, MutableMap<String, String>>,
-    ) {
-        runCatching {
-            val existing = listings.getOrPut(parentId) { childNames(context, treeUri, parentId) }
-            val docId = existing.remove(name) ?: return@runCatching
-            val doc = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-            DocumentsContract.deleteDocument(context.contentResolver, doc)
+    ): Replace = runCatching {
+        val existing = listings.getOrPut(parentId) { childNames(context, treeUri, parentId) }
+        val docId = existing.remove(name) ?: return@runCatching Replace.NONE
+        val doc = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+        if (DocumentsContract.deleteDocument(context.contentResolver, doc)) {
+            Replace.REPLACED
+        } else {
+            Replace.CONTESTED
         }
-    }
+        // A throw here means the listing or the delete failed and there is
+        // no way to know what was on the card - reported as CONTESTED
+        // rather than NONE on purpose, because "there may be doubles" is
+        // the answer that is safe to be wrong about.
+    }.getOrDefault(Replace.CONTESTED)
 
     /** What the folder held when the copy reached it: display name to document id. */
     private fun childNames(context: Context, treeUri: Uri, parentId: String): MutableMap<String, String> {
