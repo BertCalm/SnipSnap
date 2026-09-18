@@ -348,6 +348,13 @@ fun App(shelf: KitShelf) {
     var spliceSlot by remember { mutableStateOf<Int?>(null) }
     // STACK THE TAKES: same shape as SPLICE, over the same pad history.
     var stackSlot by remember { mutableStateOf<Int?>(null) }
+    // AUDITION (spec decision 2): PAD SHEET's own AUDITION ▸ arms a
+    // comparison for a slot and switches to GROOVE, where the pattern to
+    // audition inside actually lives (spec rule 2). Unlike GRAIN/SPLICE/
+    // STACK above, this is consumed once GrooveScreen has built the session
+    // from it (its own `onAuditionArmed`), not read continuously — a plain
+    // `Int?` one-shot request, same shape as `kitBankRequest` below.
+    var auditionArmSlot by remember { mutableStateOf<Int?>(null) }
     // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
     // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
     // fixed ten, so a boolean here rather than its own AppScreen entry.
@@ -2127,6 +2134,12 @@ fun App(shelf: KitShelf) {
         grainFieldSlot = null
         spliceSlot = null
         stackSlot = null
+        // A tab switch away from GROOVE before GrooveScreen's own
+        // LaunchedEffect consumed the arm (should never be observable — that
+        // effect runs the same composition pass this sets `screen` in — but
+        // matching every other one-shot request's own defensive reset here
+        // costs nothing and rules it out structurally rather than by timing.
+        auditionArmSlot = null
         arrangeOpen = false
         orbitOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
@@ -2493,6 +2506,22 @@ fun App(shelf: KitShelf) {
                                         padSheetSlot = null
                                         stackSlot = slot
                                     },
+                                    onAudition = { slot ->
+                                        // AUDITION ▸ (spec decision 2): unlike
+                                        // GRAIN/SPLICE/STACK, which stay
+                                        // KIT-scoped overlays, this one
+                                        // actually switches tabs — the
+                                        // comparison plays inside the pattern
+                                        // (spec rule 2), which lives on
+                                        // GROOVE, not on KIT. `screen =`
+                                        // directly, not `goToScreen`, which
+                                        // would immediately clear the arm this
+                                        // same line sets - same precedent as
+                                        // RE-TRIM ▸'s own `onNavigateTape` above.
+                                        padSheetSlot = null
+                                        auditionArmSlot = slot
+                                        screen = AppScreen.GROOVE
+                                    },
                                     clipboard = recipeClip,
                                     onRecipeCopied = { recipeClip = it },
                                     onKitUpdated = { updatedKit ->
@@ -2857,6 +2886,29 @@ fun App(shelf: KitShelf) {
                                     onJustLandedChange = { grooveJustLanded = it },
                                     preTake = groovePreTake,
                                     onPreTakeChange = { groovePreTake = it },
+                                    // AUDITION (spec decision 2): the arm PAD
+                                    // SHEET's own AUDITION ▸ set, consumed
+                                    // once GrooveScreen has built a session
+                                    // from it.
+                                    auditionArmSlot = auditionArmSlot,
+                                    onAuditionArmed = { auditionArmSlot = null },
+                                    // Same shape as PAD SHEET's own
+                                    // onKitUpdated above: AUDITION's own
+                                    // choose-a-winner write lands through
+                                    // this same door.
+                                    onKitUpdated = { updatedKit ->
+                                        // Same "Frankenstein entry" guard as PAD
+                                        // SHEET's own onKitUpdated: this write is
+                                        // async (appScope), so by the time it
+                                        // lands the user may have switched to a
+                                        // different kit - `songEntry` is this
+                                        // composition's own stable snapshot, not
+                                        // `open` re-read live.
+                                        if (open?.dir == songEntry?.dir) open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                        }
+                                    },
                                 )
                             }
                         }
