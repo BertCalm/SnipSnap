@@ -289,6 +289,16 @@ fun App(shelf: KitShelf) {
     // null for the ordinary one-line toast. Cleared with the toast itself
     // by the dwell effect below, so a door can never outlive its message.
     var toastDoor by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    // The honest little message box (wave FFF): what a landing, a backup
+    // or a refusal has to say beyond a toast's one line. Stays until read.
+    var note by remember { mutableStateOf<LandingNote.Note?>(null) }
+    /** The box in place of the toast, never beside it: opening one puts any toast down. */
+    fun openNote(n: LandingNote.Note) {
+        toast = null
+        toastDoor = null
+        note = n
+    }
+
     /**
      * An offer: a line, and a door out of it (J10).
      *
@@ -298,20 +308,15 @@ fun App(shelf: KitShelf) {
      * how both ends get offered without either being forced: the screen
      * does not move, the line says what happened, and going nowhere is a
      * perfectly good answer.
+     *
+     * Declared after [note] rather than beside `toast`, because it puts the
+     * note down the way [openNote] puts the toast down, and a local
+     * function cannot reach a local declared below it.
      */
     fun offer(message: String, label: String, open: () -> Unit) {
         note = null
         toast = message
         toastDoor = label to open
-    }
-    // The honest little message box (wave FFF): what a landing, a backup
-    // or a refusal has to say beyond a toast's one line. Stays until read.
-    var note by remember { mutableStateOf<LandingNote.Note?>(null) }
-    /** The box in place of the toast, never beside it: opening one puts any toast down. */
-    fun openNote(n: LandingNote.Note) {
-        toast = null
-        toastDoor = null
-        note = n
     }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
