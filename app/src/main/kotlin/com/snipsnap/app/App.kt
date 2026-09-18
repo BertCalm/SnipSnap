@@ -820,6 +820,17 @@ fun App(shelf: KitShelf) {
     // needs a kit for one. `importCount` is TAPE's reload request, for a
     // share that arrives while TAPE is already on screen.
     val shared by ShareInbox.pending.collectAsState()
+    /**
+     * True while TAPE has a CATCH live (J7).
+     *
+     * A share landing bumps the deck's reload and forces `AppScreen.TAPE`,
+     * which replaces the model a catch is running against - `catchBusy` and
+     * `catching` are both `remember(model)`, so the in-flight catch is
+     * orphaned and its results vanish. The import path below already
+     * reasons about a dub in flight and explicitly outranks a RE-TRIM; a
+     * catch was never in that list.
+     */
+    var catchInFlight by remember { mutableStateOf(false) }
     var importCount by remember { mutableStateOf(0) }
     // GROOVE's reload request: bumped when TAPE rewrites the open kit's
     // groove (READ AS GROOVE, STEAL THE FEEL), or ORBIT's CLIP ▸ KIT does
@@ -849,8 +860,15 @@ fun App(shelf: KitShelf) {
     // alone gates whether the row (and the snapshot it would restore) is
     // ever reachable.
     LaunchedEffect(grooveReload) { grooveJustLanded = false }
-    LaunchedEffect(shared) {
+    LaunchedEffect(shared, catchInFlight) {
         val uri = shared ?: return@LaunchedEffect
+        // DEFERRED, NOT DROPPED. `ShareInbox.consume()` is deliberately not
+        // called here: the share stays pending, and because `catchInFlight`
+        // is one of this effect's own keys, finishing the catch re-runs it
+        // and the import lands then. Nothing is lost and nothing has to be
+        // explained to the player - which beats both silently reloading the
+        // deck out from under a live catch and refusing the share outright.
+        if (catchInFlight) return@LaunchedEffect
         // The status line is borrowed only when nothing else holds it: a
         // sound import writes to the snips dir, and a kit file lands as
         // *new* folders on the shelf under names nothing there holds -
@@ -2710,6 +2728,7 @@ fun App(shelf: KitShelf) {
                             onCatch = ::catchOnto,
                             onCatchDone = ::catchDone,
                             onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            onCatchInFlight = { catchInFlight = it },
                         )
                         AppScreen.PROPERTIES -> PropertiesScreen(
                             currentScheme = schemeId,

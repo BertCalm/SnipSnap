@@ -941,9 +941,15 @@ private fun ChopContent(
                 // Symmetric with SEND's own guard below — RE-CHOP swapping
                 // `model` out from under an in-flight SEND would re-key the
                 // arrangement the write is reading.
-                enabled = !rechopBusy && !sendBusy,
+                //
+                // J6: `humming` belongs here too, and its absence made this
+                // the one control on the bench without it. Every sibling
+                // route — `rechopTo`, and the two guards below it — refuses
+                // while a hum is being read, because a hum resolves into a
+                // fresh `model` of its own and the two would race for it.
+                enabled = !rechopBusy && !sendBusy && !humming,
             ) {
-                if (rechopBusy || sendBusy) return@SecondaryButton
+                if (rechopBusy || sendBusy || humming) return@SecondaryButton
                 rechopBusy = true
                 val current = model
                 scope.launch {
@@ -952,7 +958,17 @@ private fun ChopContent(
                     // failure can't leave the button permanently disabled
                     // and silent — it says exactly what happened instead.
                     try {
-                        val fresh = withContext(Dispatchers.IO) { current.rechop() }
+                        // J5: `rechopKeeping`, not bare `rechop`. Every other
+                        // control on this bench carries the player's own
+                        // per-slice overrides across a re-chop; this one
+                        // silently dropped them, so the single button named
+                        // RE-CHOP was the only one that also meant "and
+                        // forget what I changed". Carrying is both the
+                        // smaller change and the less surprising one. If a
+                        // deliberately clean re-chop is ever wanted it
+                        // deserves its own named control rather than living
+                        // on as a side effect nothing announces.
+                        val fresh = withContext(Dispatchers.IO) { current.rechopKeeping(current.mode) }
                         model = fresh
                         onToast(Copy.RECHOPPED)
                     } catch (e: Exception) {

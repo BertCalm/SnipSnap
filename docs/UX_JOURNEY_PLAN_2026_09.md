@@ -200,6 +200,40 @@ work in flight."
 **Why grouped:** all four are a missing term in a boolean, they are all
 S1, and they all become one-liners *after* PR 2 exists.
 
+**Audited and fixed, September 2026.** Every line number above is stale —
+the files moved 10-600 lines after the earlier PRs — so the audit walked
+each finding against the code rather than the reference. All five were
+still live; none had been fixed incidentally. Recorded because the
+speculation went both ways first, and only the reading settled it.
+
+| finding | the site as of the fix | what was wrong |
+|---|---|---|
+| J5 | `ChopScreen.kt:961` | bare `current.rechop()` |
+| J6 | `ChopScreen.kt:950` | gate lacked `humming` |
+| J4 + J23 | `PadSheetScreen.kt:2560`, `:2571` | arrows gated only on a slot existing |
+| J7 | `App.kt:863`, `TapeScreen.kt:625` | import reload had no catch guard |
+
+Two were more than a missing term:
+
+- **J6 nearly got cleared by mistake.** `rechopTo` *does* carry `humming`,
+  and a reader who checks it concludes the bench is covered. The RE-CHOP
+  button is a different function and was the only control on the bench
+  without the term.
+- **J5 was a behaviour fork, not a typo.** RE-CHOP was also the only way to
+  get a *clean* re-chop that drops per-slice overrides. Fixed by carrying
+  them, as the plan preferred: it is the smaller change and it makes the
+  button behave like its neighbours. If a deliberately clean re-chop turns
+  out to be wanted it should be its own named control, not an unannounced
+  side effect of the one button that behaved differently.
+
+**J7's fix is a deferral, not a refusal.** The share is left unconsumed and
+`catchInFlight` is a key of the import effect, so finishing the catch
+re-runs it and the import lands then. Nothing is dropped and nothing has to
+be explained. The flag is cleared by a `DisposableEffect` because a
+`LaunchedEffect` is cancelled rather than completed on the way out, and a
+flag stuck true would defer every later import forever - the same lesson
+EXPORT's overwrite arm produced.
+
 ---
 
 ### PR 5+ — `remember(key)` as storage *(J20–J26, J22, and the J24 half of J1)*
