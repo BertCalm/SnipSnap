@@ -385,7 +385,18 @@ private fun ChopContent(
     // CLASSIC, MELODIC or FOLD (docs/CHOP_CONTROLS.md §8): which layout
     // the grid preview and SEND use. `melodic` and `fold` are the two
     // reads the rest of this function makes of it.
-    var layout by remember(model) { mutableStateOf(ChopLayout.CLASSIC) }
+    //
+    // Keyed on `initialModel`, NOT on `model` (J20, and prior finding #12).
+    // This is the player saying how they want to see the chop, not a
+    // property of the chop: `model` is reassigned by five sites — two of
+    // them helpers most of the bench calls through — so keying it there
+    // meant picking MELODIC and nudging HITS once put the screen back on
+    // CLASSIC, with no toast and nothing to undo. `cutOpen` below was
+    // always unkeyed for exactly this reason, which is what made this
+    // one's keying an inconsistency rather than a policy. `initialModel`
+    // rather than no key at all because a genuinely new source is a
+    // different job and should start on CLASSIC.
+    var layout by remember(initialModel) { mutableStateOf(ChopLayout.CLASSIC) }
     val melodic = layout == ChopLayout.MELODIC
     val fold = layout == ChopLayout.FOLD
     // MELODIC's placement runs pitch detection over every row on first
@@ -395,6 +406,46 @@ private fun ChopContent(
     var melodicPlaced by remember(model) { mutableStateOf<List<ChopReviewModel.Row?>?>(null) }
     var pitchLabels by remember(model) { mutableStateOf<List<String?>?>(null) }
     var melodicBusy by remember(model) { mutableStateOf(false) }
+
+    // The placement is an effect of the two things it depends on, not of
+    // the tap that first asked for it.
+    //
+    // While `layout` was keyed on `model` the two always died together, so
+    // computing this inside the MELODIC button's own click handler was
+    // enough — the only route back to MELODIC was tapping it again. Now
+    // that the layout survives a re-chop, a re-chop *while MELODIC is
+    // showing* clears `melodicPlaced` (correctly: it describes rows that no
+    // longer exist) and no tap follows, so a click-handler computation
+    // would leave `melodicPlaced ?: emptyList()` reading empty forever.
+    //
+    // Keyed on both: on `melodic` alone a re-chop would leave a stale
+    // placement drawn over new rows, and on `model` alone the pitch pass —
+    // real DSP over every row — would run for players who never opened
+    // MELODIC at all.
+    LaunchedEffect(model, melodic) {
+        if (!melodic || melodicPlaced != null) return@LaunchedEffect
+        // Read once, into a local, the way every other off-thread pass on
+        // this screen does: `model` is Compose state, and reading it again
+        // across the suspension below could pick up a newer chop than the
+        // one this effect was keyed on and label rows that no longer match.
+        val current = model
+        melodicBusy = true
+        try {
+            val (placedList, labels) = withContext(Dispatchers.IO) {
+                val p = current.melodicPreview()
+                val l = current.rows.indices.map { i -> current.pitchOf(i)?.let(::pitchLabel) }
+                p to l
+            }
+            melodicPlaced = placedList
+            pitchLabels = labels
+        } finally {
+            // Cleared even on cancellation: a LaunchedEffect leaving
+            // composition is cancelled rather than completed, and a busy
+            // flag stuck true would print "…" over a placement that is
+            // never coming — the lesson EXPORT's overwrite arm produced.
+            melodicBusy = false
+        }
+    }
 
     var rechopBusy by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
@@ -832,26 +883,14 @@ private fun ChopContent(
                 layout = ChopLayout.FOLD
                 onToast(Copy.FOLD_ON)
             }
+            // The button says what the player wants to see and nothing
+            // else. The placement it needs is rebuilt by the effect above,
+            // because a tap is no longer the only way to arrive here: now
+            // that `layout` outlives a re-chop, the chop can change while
+            // MELODIC is already showing and no tap accompanies it.
             SegmentButton("MELODIC", active = melodic, modifier = Modifier.weight(1f)) {
                 layout = ChopLayout.MELODIC
                 onToast(Copy.MELODIC_ON)
-                if (melodicPlaced == null) {
-                    melodicBusy = true
-                    val current = model
-                    scope.launch {
-                        try {
-                            val (placedList, labels) = withContext(Dispatchers.IO) {
-                                val p = current.melodicPreview()
-                                val l = current.rows.indices.map { i -> current.pitchOf(i)?.let(::pitchLabel) }
-                                p to l
-                            }
-                            melodicPlaced = placedList
-                            pitchLabels = labels
-                        } finally {
-                            melodicBusy = false
-                        }
-                    }
-                }
             }
         }
 

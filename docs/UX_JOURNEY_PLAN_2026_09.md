@@ -244,8 +244,9 @@ user state keyed to something that changes during ordinary use. It does
 
 Split by screen, in this order (most destructive first):
 
-1. **CHOP** (J20, J21) — nine pieces keyed to `model`, reassigned at five
+1. **CHOP** (J20, J21) — ten pieces keyed to `model`, reassigned at five
    sites, two of which are helpers the whole bench calls through.
+   **Done — see the audit below; one of the ten was the bug.**
 2. **PAD SHEET** (J23, J24, J26) — knobs that reset on move switch, and
    DEPTH/BLOOM which never persist at all while looking identical to three
    sliders above them that do.
@@ -257,6 +258,54 @@ The mechanical fix is the same each time: hoist the state above the thing
 that re-keys it, or key it on something stable (a slot id, not a model
 instance). The judgement each time is *which* — and that is per-screen,
 which is why this is several PRs.
+
+#### CHOP, audited (step 1)
+
+The count was right and the reading was not. All ten `remember(model)` in
+`ChopContent` were examined one at a time against a single question: does
+this **describe the chop**, or does it **record what the player chose**?
+
+| State | Verdict |
+|---|---|
+| `revision` | Describes. A recompose counter for row overrides mutated in place; new rows, new count. |
+| `pickerFor` | Describes. The open picker names a slice by its 1-based `n`, and a re-chop renumbers what that `n` means, so closing it is correct rather than rude. Its own MERGE and SPLIT close it explicitly; every *other* model swap (RE-CHOP, HITS, EAR, CUT, GRID, AUTO, the hum's landing) relies on the re-key, which is why the allowlist entry matters — unkey this and the picker survives onto a slice that is no longer the one it was opened on. |
+| `melodicPlaced`, `pitchLabels`, `melodicBusy` | Describe. MELODIC's placement is pitch detection over *these* rows. |
+| `humming`, `humStart` | Describe. A hum is sung against one model's source; `stopHum` clears the flag itself, so the key is belt-and-braces. |
+| `voice` | Describes. Plays this model's audio; the `DisposableEffect` on the same key releases it. |
+| `classicError` | Describes. The failure of a derivation over this model. |
+| **`layout`** | **Records. The bug.** |
+
+So nine of ten were already right, and the review's wider list (the
+melodic placement, the `A2`/`C#4` labels, the picker closing) named
+*symptoms of the tenth* rather than ten separate faults: with `layout`
+snapping back to CLASSIC, the placement it had reset alongside was never
+noticed as lost.
+
+`layout` is now keyed on `initialModel` — a genuinely new source is a
+different job and should start on CLASSIC; a re-chop of the same source is
+not. `cutOpen` was always unkeyed, which is what makes this an
+inconsistency rather than a policy.
+
+**The fix had a second half that the finding did not mention.** MELODIC's
+placement was computed *only inside the MELODIC button's own click
+handler*, which was sufficient exactly as long as `layout` died with the
+model — the only route back to MELODIC was tapping it. Once the layout
+survives a re-chop, a re-chop while MELODIC is showing clears the
+placement and no tap follows, so `melodicPlaced ?: emptyList()` would read
+empty *forever*. Persisting the layout alone would have replaced a visible
+annoyance with a silent one. The placement is now a `LaunchedEffect(model,
+melodic)` — keyed on both, because on `melodic` alone a re-chop leaves a
+stale placement drawn over new rows, and on `model` alone the pitch pass
+runs for players who never opened MELODIC.
+
+Three laws in `:shell`'s `ConventionTest` hold this: an allowlist naming
+each of the nine with its reason (so the *next* `remember(model)` is a
+decision rather than a default), one that `layout` is not among them, and
+one that the placement is rebuilt by an effect rather than by a tap.
+
+**J21 is untouched and still open** — it is a different mechanism
+(`hitsOf` returning null for GRID/HUMMED/ladder modes, so `onByHits`
+constructs fresh defaults) and belongs with the CHOP mode work, not here.
 
 ---
 

@@ -1370,4 +1370,149 @@ class ConventionTest {
                 "SNIPS spent five days reading a directory nothing wrote:\n  " + strays.joinToString("\n  "),
         )
     }
+    // ---- Law: what the player chose outlives the chop it was chosen on ----
+
+    /**
+     * Every `remember(model)` in `ChopContent`, and the reason each one is
+     * right to be thrown away when `model` is reassigned.
+     *
+     * `model` is reassigned by five sites (`rechopTo`, `editSlices`, the hum's
+     * landing, AUTO, and RE-CHOP), two of which are helpers most of the bench
+     * calls through — so "the model changed" is not a rare event, it is what
+     * using the screen *is*. Keying state on it therefore splits cleanly in
+     * two: state that **describes** the chop must go when the chop does, and
+     * state that **records what the player chose** must not. Getting a piece
+     * on the wrong side of that line is invisible until someone nudges HITS
+     * and watches their view snap back.
+     *
+     * Every entry below is the first kind, with its reason. The law's job is
+     * to make the *next* one a decision rather than a default: a new
+     * `remember(model)` fails this test until whoever adds it says which kind
+     * it is. `cutOpen`, `rechopBusy`, `sendBusy` and `layout` are the second
+     * kind and are deliberately unkeyed — `cutOpen` always was, which is what
+     * made `layout`'s keying visible as an inconsistency rather than a policy.
+     */
+    private val modelKeyedChopState = mapOf(
+        "revision" to "a recompose counter for row overrides mutated in place; a new model has new rows, so the count starts again",
+        "pickerFor" to "the open picker names a slice by its 1-based `n`, and a re-chop renumbers what that `n` means",
+        "melodicPlaced" to "MELODIC's placement is derived from this model's own rows",
+        "pitchLabels" to "the A2/C#4 labels are pitch detection over this model's own rows",
+        "melodicBusy" to "guards the placement pass above, so it shares that pass's lifetime",
+        "humming" to "a hum is sung against one model's source",
+        "humStart" to "the instant that hum began",
+        "voice" to "plays this model's audio; the DisposableEffect on the same key is what releases it",
+        "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
+    )
+
+    /** The `{ ... }` block following [marker] in [src], brace-matched. */
+    private fun blockAfter(src: String, marker: String): String {
+        val at = src.indexOf(marker)
+        assertTrue(at >= 0, "expected to find `$marker` in ChopContent")
+        val start = src.indexOf('{', at)
+        assertTrue(start >= 0, "expected a `{` block after `$marker`")
+        var depth = 0
+        var i = start
+        while (i < src.length) {
+            val c = src[i]
+            if (c == '{') depth++
+            if (c == '}') {
+                depth--
+                if (depth == 0) return src.substring(start, i + 1)
+            }
+            i++
+        }
+        fail("unbalanced braces after `$marker`")
+    }
+
+    @Test
+    fun `law - every CHOP state keyed on the model is one that describes the model`() {
+        val body = topLevelFun(chopScreen, "ChopContent")
+        val found = Regex("""var\s+(\w+)\s+by\s+remember\(model\)""")
+            .findAll(body).map { it.groupValues[1] }.toList()
+        require(found.size > 4) { "found only ${found.size} `remember(model)` in ChopContent — the scan is broken, not the screen." }
+
+        val undeclared = found.filterNot { it in modelKeyedChopState }
+        assertTrue(
+            undeclared.isEmpty(),
+            "these are keyed on `model`, so every re-chop, merge, split, hum, AUTO and HITS nudge resets " +
+                "them — and nothing here says that is intended: ${undeclared.joinToString(", ")}.\n" +
+                "Decide which kind each one is. State that DESCRIBES the chop (a derivation over its rows, a " +
+                "voice playing its audio) belongs keyed on `model`, and goes in `modelKeyedChopState` with " +
+                "its reason. State that RECORDS WHAT THE PLAYER CHOSE (a layout, an open bench, a mode) must " +
+                "not be keyed on it — `model` is reassigned by ordinary use of the bench, and none of those " +
+                "reassignments is the player asking to be put back to a default. Key those on `initialModel` " +
+                "instead, the way `layout` is, so a genuinely new source still starts fresh.",
+        )
+
+        val stale = modelKeyedChopState.keys.filterNot { it in found }
+        assertTrue(
+            stale.isEmpty(),
+            "`modelKeyedChopState` still lists ${stale.joinToString(", ")}, which no longer appear as " +
+                "`remember(model)` in ChopContent. An allowlist that outlives what it allows guards nothing " +
+                "— drop the entry, or point it at the name the state now has.",
+        )
+    }
+
+    /**
+     * Prior finding #12, and J20 in `docs/UX_JOURNEY_PLAN_2026_09.md`.
+     *
+     * CLASSIC/FOLD/MELODIC is the player saying how they want to *see* the
+     * chop. It is not a property of the chop, so re-chopping must not undo
+     * it: picking MELODIC and then nudging HITS once put the screen back on
+     * CLASSIC with no toast and nothing to undo.
+     */
+    @Test
+    fun `law - the CHOP layout the player picked survives a re-chop`() {
+        val body = topLevelFun(chopScreen, "ChopContent")
+        assertTrue(
+            !Regex("""var\s+layout\s+by\s+remember\(model\)""").containsMatchIn(body),
+            "`layout` is keyed on `model` again. Every re-chop, merge, split, hum and HITS nudge reassigns " +
+                "`model`, so this silently returns the player to CLASSIC mid-edit — the same class of bug as " +
+                "the four PR 4 controls, except it destroys a view choice rather than a file.",
+        )
+        assertTrue(
+            Regex("""var\s+layout\s+by\s+remember\(initialModel\)""").containsMatchIn(body),
+            "`layout` should be remembered against `initialModel`: a genuinely new source (a different tape " +
+                "or kit) is a different job and should start on CLASSIC, but a re-chop of the same source is " +
+                "not. Unkeyed `remember { }` would carry a layout across sources; `remember(model)` throws it " +
+                "away on every bench nudge. `initialModel` is the one key that means what this state means.",
+        )
+    }
+
+    /**
+     * The coupling that makes the law above safe.
+     *
+     * MELODIC's placement is real pitch DSP over every row, so it is computed
+     * off the main thread and cached in `melodicPlaced` — which is keyed on
+     * `model`, correctly, because it describes the model's rows. While
+     * `layout` was *also* keyed on `model` the two always died together and a
+     * computation that ran only inside the MELODIC button's own click handler
+     * was sufficient: the only way back to MELODIC was to tap it again.
+     *
+     * Once `layout` survives a re-chop that stops being true. A re-chop while
+     * MELODIC is showing clears the placement and the click that would have
+     * rebuilt it never comes, so the grid preview reads `melodicPlaced ?:
+     * emptyList()` forever — a permanently empty MELODIC. The placement has
+     * to be an effect of the state it derives from, not of the tap that first
+     * asked for it.
+     */
+    @Test
+    fun `law - MELODIC's placement is recomputed when the chop changes, not only when the button is tapped`() {
+        val body = topLevelFun(chopScreen, "ChopContent")
+        assertTrue(
+            Regex("""LaunchedEffect\(\s*(model\s*,\s*melodic|melodic\s*,\s*model)\s*\)""").containsMatchIn(body),
+            "MELODIC's placement must be rebuilt by a LaunchedEffect keyed on both `model` and `melodic`. " +
+                "Keyed on only one of them it is wrong in one direction or the other: on `melodic` alone a " +
+                "re-chop leaves a stale placement, and on `model` alone the DSP runs for players who never " +
+                "opened MELODIC at all.",
+        )
+        val melodicButton = blockAfter(body, """SegmentButton("MELODIC"""")
+        assertTrue(
+            "melodicPlaced =" !in melodicButton && "melodicBusy = true" !in melodicButton,
+            "the MELODIC button is computing the placement itself again. A click handler cannot be the only " +
+                "way the placement is built, because `layout` now outlives the model the placement was built " +
+                "from — the re-chop that clears it is not accompanied by a tap. The button should set " +
+                "`layout` and say so; the effect above owns the rebuilding.",
+        )
+    }
 }
