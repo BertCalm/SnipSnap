@@ -251,6 +251,7 @@ Split by screen, in this order (most destructive first):
    DEPTH/BLOOM which never persist at all while looking identical to three
    sliders above them that do. **Done — see the audit below.**
 3. **TAPE** (J22) — a snip landing replaces the tape under the finger.
+   **Done — see the audit below; the first of these testable for real.**
 4. **KIT / TEXTURE** (J25) — the source pad jumps when the kit's lowest
    slot changes, because the key is *the value of the lowest slot*.
 
@@ -349,6 +350,51 @@ class as DEPTH/BLOOM — tool selections, not pad properties, so landing back
 on the first move for every pad is the same annoyance. No finding names
 them, and fixing them would widen the PR on our own initiative. Recorded
 here so the next pass can decide rather than rediscover.
+
+#### TAPE, audited (step 3)
+
+**The one that could be tested for real.** Zoom and odometer are not
+separate `remember`s — they live inside `TapeDeckModel`, which is itself
+`remember(tapeData)`, so a reload replaces all of it at once. And
+`TapeDeckModel` lives in **`:shell`**, which has a real test source set. The
+first two steps could only be held by source-scanning laws; this one has ten
+actual behavioural tests.
+
+The existing idle guard (`!model.playing && !model.hasSelection`) already
+refuses a reload *mid-edit*. Widening it to cover zoom would have been the
+wrong fix twice over: it would refuse the reload forever because somebody
+once pinched, and it treats a view preference as if it were unfinished work.
+The reload is allowed to happen; what has to survive it is the view.
+
+`TapeDeckModel` gained three things, all in `:shell` and all tested:
+
+- **`View(pxPerSec, odometer)`** — deliberately those two and nothing else.
+- **`restoreView`** — clamped to the zoom ladder's own ends, with a
+  non-finite or non-positive value falling back to the first rung rather
+  than being honoured. `coerceIn` *propagates* NaN instead of clamping it,
+  and px-per-second reaches the waveform as a column count, so that one bad
+  value would draw nothing at all with no exception to say why.
+- **`ViewCarrier`** — holds the previous *deck*, not a snapshot of its view.
+  That is what makes it correct without hooking every control: zoom changes
+  by button, by pinch and by ladder-snap, and the pinch runs in a gesture
+  loop that does not report every frame to the screen. Reading the view at
+  the moment of replacement cannot miss one. The first deck a carrier sees
+  is left exactly as it opened — there is nothing yet to carry, and imposing
+  a default would be inventing a view the player never set.
+
+**The line the tests actually defend** is which half carries. `position`,
+`inFrame` and `outFrame` are frame offsets into *one particular recording*;
+carried onto a different tape they would put the playhead and the IN/OUT
+marks somewhere nobody chose, or past its end. That test was proved live by
+temporarily making `restoreView` carry them, and it failed naming the
+playhead.
+
+One convention law remains necessary despite the real tests, and the reason
+is worth stating: `TapeDeckViewTest` proves the carrier *carries*, not that
+TAPE *uses* it. Deleting `.also(viewCarrier::adopt)` from `:app` compiles
+cleanly and no `:shell` test notices. That gap between "the mechanism is
+correct" and "the screen calls it" is exactly what the source-scanning laws
+are for.
 
 ---
 

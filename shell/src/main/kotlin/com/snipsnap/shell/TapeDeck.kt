@@ -119,6 +119,67 @@ class TapeDeckModel(
         odometer = !odometer
     }
 
+    /**
+     * How the player set up their view of the tape: how far in they are
+     * zoomed, and which readout they picked.
+     *
+     * Deliberately only those two. `position`, `inFrame` and `outFrame` are
+     * frame offsets into *one particular recording* — carried onto a
+     * different tape they would put the playhead and the IN/OUT marks
+     * somewhere nobody chose, or past its end. The view belongs to the
+     * player; the marks belong to the tape.
+     */
+    data class View(val pxPerSec: Float, val odometer: Boolean)
+
+    /** The view as it stands, to hand to the deck that replaces this one. */
+    val view: View get() = View(zoomPx, odometer)
+
+    /**
+     * Take [view] on — the deck this one replaced was being looked at this
+     * way, and a reload is not the player asking to be zoomed back out.
+     *
+     * The zoom is clamped to the ladder's own ends, and a non-finite or
+     * non-positive one falls back to the first rung rather than being
+     * honoured: `coerceIn` propagates NaN instead of clamping it, and
+     * px-per-second reaches the waveform as a column count — so that one
+     * bad value would draw nothing at all, with no exception to say why.
+     */
+    fun restoreView(view: View) {
+        val lo = ZOOM_PX_PER_SEC.first().toFloat()
+        val hi = ZOOM_PX_PER_SEC.last().toFloat()
+        zoomPx = if (view.pxPerSec.isFinite() && view.pxPerSec > 0f) view.pxPerSec.coerceIn(lo, hi) else lo
+        odometer = view.odometer
+    }
+
+    /**
+     * Carries the player's view from one deck onto the next (J22).
+     *
+     * TAPE rebuilds its [TapeDeckModel] whenever the audio under it
+     * changes, and a snip landing anywhere in the app — including from the
+     * quick-settings tile, without leaving the screen — is one of those
+     * times. Before this, the rebuild silently returned the zoom and the
+     * readout to their defaults under the player's finger.
+     *
+     * Holding the previous *deck* rather than a snapshot of its view is
+     * what makes this correct without hooking every control: zoom changes
+     * by button, by pinch and by ladder-snap, and the pinch runs in a
+     * gesture loop that does not report each frame to the screen. Reading
+     * the view at the moment of replacement cannot miss one.
+     *
+     * The first deck a carrier sees is left exactly as it opened — there is
+     * nothing yet to carry, and imposing a default here would be inventing
+     * a view the player never set.
+     */
+    class ViewCarrier {
+        private var following: TapeDeckModel? = null
+
+        /** Give [fresh] the view of the deck it replaces, then follow it. */
+        fun adopt(fresh: TapeDeckModel) {
+            following?.let { fresh.restoreView(it.view) }
+            following = fresh
+        }
+    }
+
     private var dragTarget = 0.0
     private var glideTarget = 0.0
     private var dragVelocity = 0.0 // tape-seconds per wall second, EMA

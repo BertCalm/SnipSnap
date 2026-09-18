@@ -544,8 +544,27 @@ private fun TapeDeckContent(
         }
     }
 
+    // The player's own view of the tape - how far in they pinched, and
+    // whether the LCD reads real time or the counter - carried onto the
+    // deck that replaces this one (J22).
+    //
+    // A snip landing anywhere in the app swaps `tapeData`, and the quick-
+    // settings SNIP tile makes that reachable without ever leaving this
+    // screen. The idle guard below already refuses the reload while the
+    // deck is playing or holding a selection; this is for the reload that
+    // is allowed to happen, which used to return the zoom and the readout
+    // to their defaults under the player's finger with only OOM and
+    // truncation ever toasted on that path.
+    //
+    // Unkeyed `remember`, because outliving `tapeData` is the entire job.
+    // It holds the previous *deck* rather than a snapshot: zoom changes by
+    // button, by pinch and by ladder-snap, and the pinch runs in a gesture
+    // loop that does not report every frame to the screen, so reading the
+    // view at the moment of replacement is what cannot miss one.
+    val viewCarrier = remember { TapeDeckModel.ViewCarrier() }
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
+            .also(viewCarrier::adopt)
     }
     val voice = remember(tapeData) { TapeVoice(tapeData.samples, tapeData.sampleRate) }
     DisposableEffect(voice) {
