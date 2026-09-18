@@ -114,14 +114,31 @@ class PadEngine(preferredSampleRate: Int) {
         if (open && running) NativePads.latencyMillis(handle).takeIf { it > 0.0 } else null
 
     /**
-     * Read every sample the kit's pads and layers name and hand the bank to
-     * the engine. Blocking disk IO: call it from an IO dispatcher. A WAV
-     * that will not read is left out, and its pad plays nothing (a hit
-     * resolves to null) rather than something else.
+     * Read every sample the kit's pads and layers name, plus any [extras],
+     * and hand the bank to the engine. Blocking disk IO: call it from an IO
+     * dispatcher. A WAV that will not read is left out, and its pad plays
+     * nothing (a hit resolves to null) rather than something else.
+     *
+     * [extras] are sounds from outside this kit - AUDITION's candidates -
+     * that no pad names. They go into this same bank build for the reason
+     * the count-in clicks do, and are addressed by [extraKey].
      */
-    fun load(entry: KitShelf.Entry) = synchronized(bankLock) { loadLocked(entry) }
+    fun load(entry: KitShelf.Entry, extras: List<File> = emptyList()) =
+        synchronized(bankLock) { loadLocked(entry, extras) }
 
-    private fun loadLocked(entry: KitShelf.Entry) {
+    /**
+     * The bank key an [extras] file is loaded under — what to put in a
+     * `PadHit.Hit.sampleFile` to sound it.
+     *
+     * Prefixed and absolute so it can never collide with a kit pad's own
+     * `sampleFile`, which is always a bare name relative to the kit folder.
+     * A collision would be the worst kind: an audition candidate silently
+     * resolving to the pad's own sample, so the comparison would be between
+     * a sound and itself and nothing on screen would say so.
+     */
+    fun extraKey(file: File): String = "extra:${file.absolutePath}"
+
+    private fun loadLocked(entry: KitShelf.Entry, extras: List<File>) {
         val files = LinkedHashSet<String>()
         for (pad in entry.kit.pads) {
             files += pad.sampleFile
@@ -146,6 +163,24 @@ class PadEngine(preferredSampleRate: Int) {
             index[file] = i
             frames[file] = snip.frameCount.toLong()
         }
+        // AUDITION's candidates, when a comparison is running: sounds from
+        // elsewhere on the shelf that this kit's pads do not name. Appended
+        // here, inside this same bank build, for exactly the reason the
+        // clicks below are - `loadSnips` would replace the whole bank and
+        // silence every pad just added. Because they share the bank with
+        // the kit, swapping a pad to a candidate is choosing a different
+        // index at trigger time: no rebuild, no gap, nothing to make
+        // sample-accurate by hand.
+        for (file in extras) {
+            val snip = runCatching { WavReader.readCapped(file, TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
+            val i = synchronized(this) {
+                if (!open) return
+                NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
+            }
+            index[extraKey(file)] = i
+            frames[extraKey(file)] = snip.frameCount.toLong()
+        }
+
         // The count-in click, synthesized (never a bundled asset) and
         // appended last, inside this same bank build — not a second
         // beginBank/commitBank pair, and never loadSnips, which replaces
@@ -230,13 +265,31 @@ class PadEngine(preferredSampleRate: Int) {
      * running, the pad has nothing loaded to play, or the command ring was
      * full - so the caller can tell its allocator the voice never sounded
      * and nothing counts a voice that no callback will ever end.
+     *
+     * [swap] is AUDITION's seam: the pad resolves exactly as it always
+     * does, and only then is the resolved hit offered for substitution.
+     * Returning null from it declines, and the pad's own hit plays.
+     *
+     * **It runs while this monitor is held**, because the whole method is
+     * `@Synchronized`. So it must be cheap and must not call back into this
+     * engine - `Audition.Live.swapInto` is pure arithmetic over the hit it
+     * is given, which is the shape to keep. Anything that reads a file or
+     * takes a lock of its own belongs on the caller's side of this call.
      */
     @Synchronized
-    fun hit(pad: KitPad, velocity: Float, voiceId: Int): Boolean {
+    fun hit(pad: KitPad, velocity: Float, voiceId: Int, swap: ((PadHit.Hit) -> PadHit.Hit?)? = null): Boolean {
         if (!isUp()) return false
         val n = hits[pad.slot] ?: 0
         hits[pad.slot] = n + 1
-        val hit = PadHit.resolve(pad, velocity, n) { framesOf[it] } ?: return false
+        // Resolved as the pad always resolves - round-robin counter, velocity
+        // layers, window, gains, tuning - and only THEN offered to [swap].
+        // AUDITION is a decorator on the pad's own hit rather than a second
+        // way of resolving one, so a candidate inherits the role it is
+        // auditioning for instead of a default. A swap that declines (its
+        // audio never loaded) leaves the pad's own hit untouched, which is
+        // the right fallback: the kit still plays.
+        val resolved = PadHit.resolve(pad, velocity, n) { framesOf[it] } ?: return false
+        val hit = swap?.invoke(resolved) ?: resolved
         val sample = sampleIndex[hit.sampleFile] ?: return false
         return NativePads.noteOn(
             handle, voiceId, sample,
