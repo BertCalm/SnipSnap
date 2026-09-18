@@ -57,6 +57,48 @@ object LiveRecord {
     }
 
     /**
+     * The loop lengths RECORD offers when there is nothing to record
+     * against (J17).
+     *
+     * [Take] accepts anything in 1..64 and the model has always supported
+     * it, but four rungs is what a thumb can step through on a phone
+     * without the control becoming a number pad. One bar for a fill, two
+     * for the normal case, four and eight for something with a shape to it.
+     *
+     * Every rung is inside [Take]'s own bounds by construction rather than
+     * by coincidence — see [barsAfter], and `RecordBarsTest`, which arms a
+     * real [Take] on each one instead of restating the range.
+     */
+    val BARS = listOf(1, 2, 4, 8)
+
+    /**
+     * What RECORD opens on: "the normal case", and the value `recordBars`
+     * held as a constant for as long as nothing could change it.
+     */
+    const val DEFAULT_BARS = 2
+
+    /**
+     * One rung along [BARS] from [bars], wrapping at both ends.
+     *
+     * **Wrapping rather than clamping** because the ladder is four rungs on
+     * a phone: a thumb that reaches the end and finds a dead button has to
+     * work out which way to go back, where a wrap lets one control reach
+     * every value.
+     *
+     * **A [bars] that is not on the ladder steps onto it** rather than away
+     * — a length from somewhere else (a loaded clip, a stale setting) must
+     * not strand the control. That matters more than it looks: [Take]
+     * refuses a bar count outside 1..64 *at the arm*, so a stepper able to
+     * walk off the ladder would turn a tap into a throw at the instant the
+     * count-in starts, which is not where anyone should learn about it.
+     */
+    fun barsAfter(bars: Int, step: Int): Int {
+        val at = BARS.indexOf(bars)
+        if (at < 0) return BARS.minByOrNull { kotlin.math.abs(it - bars) } ?: DEFAULT_BARS
+        return BARS[Math.floorMod(at + step, BARS.size)]
+    }
+
+    /**
      * The same wrap against a clip's own length rather than a count of 4/4
      * bars — what a caller holding an [Mpc3Clip] should ask, since a clip
      * may declare its own bar ([Mpc3Clip.pulsesPerBar]) and `bars * 3840`
