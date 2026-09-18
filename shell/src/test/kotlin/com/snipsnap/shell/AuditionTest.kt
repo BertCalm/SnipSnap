@@ -1,5 +1,7 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.kit.KitPad
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -172,5 +174,46 @@ class AuditionTest {
     @Test
     fun `a round starts blind`() {
         assertTrue(!Audition.Round(listOf("DRONE", "DRONE 2")).revealed)
+    }
+
+    // ---- finding a comparison from PAD SHEET (spec decision 2) ----
+
+    private fun pad(slot: Int, name: String) =
+        KitPad(slot = slot, sampleFile = "${name.lowercase().replace(' ', '_')}.wav", displayName = name, drumClass = DrumClass.TONAL)
+
+    @Test
+    fun `baseNameOf strips the freshStem counting suffix, not the word itself`() {
+        assertEquals("DRONE", Audition.baseNameOf("DRONE"))
+        assertEquals("DRONE", Audition.baseNameOf("DRONE 2"))
+        assertEquals("DRONE", Audition.baseNameOf("DRONE 3"))
+        // No trailing number: nothing to strip.
+        assertEquals("KICK ROOM", Audition.baseNameOf("KICK ROOM"))
+    }
+
+    @Test
+    fun `siblings share a base name and never include the pad asked about`() {
+        val pads = listOf(pad(1, "DRONE"), pad(2, "DRONE 2"), pad(3, "DRONE 3"), pad(4, "SNARE"))
+        val siblings = Audition.siblingsOf(pads, 1)
+        assertEquals(setOf(2, 3), siblings.map { it.slot }.toSet())
+        assertTrue(siblings.none { it.slot == 1 })
+    }
+
+    @Test
+    fun `siblingsOf is symmetric - either sibling finds the other`() {
+        val pads = listOf(pad(1, "DRONE"), pad(2, "DRONE 2"))
+        assertEquals(listOf(2), Audition.siblingsOf(pads, 1).map { it.slot })
+        assertEquals(listOf(1), Audition.siblingsOf(pads, 2).map { it.slot })
+    }
+
+    @Test
+    fun `a pad with no matching base name has nothing to audition against`() {
+        val pads = listOf(pad(1, "DRONE"), pad(2, "SNARE"))
+        assertTrue(Audition.siblingsOf(pads, 1).isEmpty())
+    }
+
+    @Test
+    fun `an empty or unknown slot offers nothing`() {
+        assertTrue(Audition.siblingsOf(emptyList(), 1).isEmpty())
+        assertTrue(Audition.siblingsOf(listOf(pad(1, "DRONE")), 99).isEmpty())
     }
 }

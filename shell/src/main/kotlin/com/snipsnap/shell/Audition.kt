@@ -1,5 +1,7 @@
 package com.snipsnap.shell
 
+import com.snipsnap.kit.KitPad
+
 /**
  * Choosing between two versions of a sound by hearing them where the sound
  * will actually live.
@@ -140,6 +142,34 @@ object Audition {
     }
 
     private val LETTERS = listOf("A", "B", "C", "D")
+
+    /**
+     * [name] with any `Names.freshStem` counting suffix stripped - "DRONE 2"
+     * and "DRONE 3" both answer "DRONE".
+     *
+     * The approximate inverse of `Names.freshStem`, not a full parse of it:
+     * this only has to find pads to OFFER a comparison against, never to
+     * allocate a fresh name, so a name that happens to end in a number for
+     * some other reason produces a merely-imperfect sibling list rather than
+     * a wrong file write - the actual write is still keyed on `KitPad.slot`
+     * and `sampleFile` identity, never on this string.
+     */
+    fun baseNameOf(displayName: String): String = displayName.replace(Regex(""" \d+$"""), "")
+
+    /**
+     * Other pads in [pads] sharing [slot]'s own base name - PAD SHEET's own
+     * entry point into AUDITION (spec decision 2). These are exactly the
+     * siblings `MAKE PAD ▸`'s fresh-name fix leaves side by side ("DRONE",
+     * "DRONE 2", "DRONE 3") rather than destroying in turn: the seed spec
+     * decision 1 grows the whole feature from. Empty when [slot] has no pad,
+     * or no other pad shares its base name - the caller's cue that PAD
+     * SHEET's own AUDITION ▸ has nothing to offer here.
+     */
+    fun siblingsOf(pads: List<KitPad>, slot: Int): List<KitPad> {
+        val target = pads.firstOrNull { it.slot == slot } ?: return emptyList()
+        val base = baseNameOf(target.displayName)
+        return pads.filter { it.slot != slot && baseNameOf(it.displayName) == base }
+    }
 
     /**
      * One candidate for a pad's role: what to call it, which sample it is,

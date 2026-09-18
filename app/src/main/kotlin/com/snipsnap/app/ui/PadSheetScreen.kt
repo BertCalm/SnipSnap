@@ -83,6 +83,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
 import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
+import com.snipsnap.shell.Audition
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -160,6 +161,15 @@ fun PadSheetScreen(
     onSplice: (Int) -> Unit,
     /** STACK ▸: opens STACK THE TAKES scoped to this pad - its real prior takes as soft velocity zones, over the same history SPLICE reads. */
     onStack: (Int) -> Unit,
+    /**
+     * AUDITION ▸ (`docs/AUDITION_SPEC_2026_09.md`, decision 2): opens GROOVE
+     * with a comparison armed for this slot against its nearest `MAKE PAD ▸`
+     * sibling (`Audition.siblingsOf`) - the moment of indecision happens here,
+     * seconds after the second version was made, so this is one more button
+     * on the sheet rather than a navigation trip away from the work. Only
+     * offered when a sibling actually exists; see the card's own dimming.
+     */
+    onAudition: (Int) -> Unit = {},
     /** DO IT AGAIN: what COPY LAST TREATMENT last lifted, held by the caller so it survives a kit switch - PASTE reads it. */
     clipboard: RecipeReplay.Clip? = null,
     /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
@@ -256,6 +266,14 @@ fun PadSheetScreen(
     var busy by remember(model) { mutableStateOf(false) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
+
+    // AUDITION ▸'s own gate: the nearest MAKE PAD ▸ sibling, if this pad has
+    // one - `minByOrNull { it.slot }` just picks a deterministic one when
+    // there are several ("DRONE 2" over "DRONE 3"); more than two candidates
+    // at a time is a knockout bracket (spec decision 3, v3), not this screen's
+    // job. Pure and cheap (an in-memory pad list), so it's read straight in
+    // composition rather than behind a LaunchedEffect.
+    val auditionSibling = remember(builtModel.kit, slot) { Audition.siblingsOf(builtModel.kit.pads, slot).minByOrNull { it.slot } }
 
     var voice by remember(model) { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(model) { onDispose { voice?.release() } }
@@ -2506,6 +2524,19 @@ fun PadSheetScreen(
                 dimmed = binDaysLeft == null || pad.velocityLayers.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onStack(slot) },
+            )
+            // AUDITION ▸ (spec decision 2): offered whenever a MAKE PAD ▸
+            // sibling exists to compare against - dimmed rather than hidden,
+            // same "still tappable, the destination explains why" convention
+            // as MAKE INSTRUMENT above, so the card never rearranges itself
+            // pad to pad.
+            ActionButton(
+                "AUDITION ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = auditionSibling == null,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onAudition(slot) },
             )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
         }
