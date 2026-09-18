@@ -45,6 +45,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -173,11 +174,18 @@ fun KeysScreen(
     }
 }
 
-/** Touch-Y velocity, like PLAY's pads: the top of the pad is softest. */
-private const val MIN_VELOCITY = 0.35f
+/**
+ * Touch-Y velocity, like PLAY's pads: the top of the pad is softest.
+ *
+ * The floor comes from `PadHit.SOFTEST` rather than being written here.
+ * It used to be a second `0.35f` with the ramp retyped beside it, which is
+ * how KIT later came to disagree with PLAY about which end of a pad is
+ * loud.
+ */
+private const val MIN_VELOCITY = PadHit.SOFTEST
 
 /** The velocity a synthesized TalkBack click uses — see PlayScreen.kt's own CENTER_VELOCITY. */
-private val CENTER_VELOCITY = MIN_VELOCITY + (1f - MIN_VELOCITY) * 0.5f
+private val CENTER_VELOCITY = PadHit.CENTER
 
 @Composable
 private fun KeyPad(
@@ -219,7 +227,7 @@ private fun KeyPad(
                         val height = size.height.toFloat().coerceAtLeast(1f)
                         val t = (first.position.y / height).coerceIn(0f, 1f)
                         down = true
-                        onPress(MIN_VELOCITY + (1f - MIN_VELOCITY) * t)
+                        onPress(PadHit.velocityAt(t, 1f))
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()

@@ -1754,14 +1754,18 @@ class ConventionTest {
         )
         /*
          * The accessible path is the one place a constant is right, and it
-         * must stay right: a synthesized click carries no position, so
-         * reading one would hand TalkBack users an arbitrary velocity
-         * instead of the pad's plain whole sound.
+         * must be the constant the REST of the app uses. This asserted full
+         * velocity at first, on the reasoning that a synthesized click
+         * should give the pad's whole sound — but PLAY and KEYS had long
+         * since settled on the centre, and full velocity was one of three
+         * ways KIT's wiring disagreed with them. The shared rule now owns
+         * it; see `law - every pad grid reads touch-Y velocity through the
+         * one shared rule`.
          */
         assertTrue(
-            Regex("""onClick\(label = "PLAY"\)\s*\{\s*onTap\(slot,\s*1f\)""").containsMatchIn(src),
-            "the synthesized PLAY click should pass full velocity. It has no position to read, and guessing " +
-                "one would make the accessible path quieter than the pad actually is.",
+            Regex("""onClick\(label = "PLAY"\)\s*\{\s*onTap\(slot,\s*PadHit\.CENTER\)""").containsMatchIn(src),
+            "the synthesized PLAY click should pass `PadHit.CENTER` — what a tap at the pad's vertical middle " +
+                "would have produced, which is what every other grid gives it.",
         )
     }
     private val grooveScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt")
@@ -1901,6 +1905,80 @@ class ConventionTest {
                 "pads.isNotEmpty()" in above,
                 "the EXPORT offer at line ${at + 1} is not guarded by the kit actually having pads:" +
                     "\n  ${line.trim()}\nA door onto an empty EXPORT is a worse answer than no door.",
+            )
+        }
+    }
+    /**
+     * One touch-Y velocity rule, in one place.
+     *
+     * This is the repo's own recurring defect shape — one quantity in two
+     * places — caught in the field rather than by a test. `MIN_VELOCITY =
+     * 0.35f` was declared in **two** files, the ramp around it was retyped
+     * in **three**, and J37 then gave KIT a fourth copy with a different
+     * floor, a different accessibility value, **and the axis inverted**,
+     * plus a permanent on-screen legend advertising the wrong direction.
+     * Nothing noticed until a pad was tapped on a phone.
+     *
+     * The rule now lives in `PadHit` (`:shell`), where `PadTouchTest` pins
+     * its direction and its floor. This keeps the screens delegating.
+     */
+    @Test
+    fun `law - every pad grid reads touch-Y velocity through the one shared rule`() {
+        val ui = File("../app/src/main/kotlin/com/snipsnap/app/ui")
+        val sources = ui.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        require(sources.size > 10) { "found only ${sources.size} ui sources — the scan is broken, not the tree." }
+
+        val floors = mutableListOf<String>()
+        val ramps = mutableListOf<String>()
+        for (file in sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                if (isCommentLine(line.trim())) return@forEachIndexed
+                if (Regex("""MIN_VELOCITY\s*=\s*[0-9.]+f""").containsMatchIn(line)) {
+                    floors += "${file.name}:${i + 1}  ${line.trim()}"
+                }
+                if (Regex("""MIN_VELOCITY\s*\+\s*\(\s*1f\s*-\s*MIN_VELOCITY\s*\)""").containsMatchIn(line)) {
+                    ramps += "${file.name}:${i + 1}  ${line.trim()}"
+                }
+            }
+        }
+        assertTrue(
+            floors.isEmpty(),
+            "a touch-Y velocity floor is written as a number again, instead of taken from `PadHit.SOFTEST`:\n  " +
+                floors.joinToString("\n  ") +
+                "\nTwo copies of this constant is how KIT came to disagree with PLAY about which end of a pad " +
+                "is loud.",
+        )
+        assertTrue(
+            ramps.isEmpty(),
+            "the touch-Y ramp is retyped instead of calling `PadHit.velocityAt`:\n  " + ramps.joinToString("\n  "),
+        )
+
+        // And the screens that read a touch position do go through it.
+        for (name in listOf("PadGrid.kt", "KitScreen.kt", "KeysScreen.kt")) {
+            val file = sources.single { it.name == name }
+            assertTrue(
+                "PadHit.velocityAt(" in file.readText(Charsets.UTF_8),
+                "$name plays pads but never calls `PadHit.velocityAt` — if it grew its own rule, that is the " +
+                    "fork this law exists to stop.",
+            )
+        }
+
+        // The accessible path is the one place a constant is right, and it
+        // has to be the SAME constant everywhere: full velocity here (KIT's
+        // first answer) is louder than what every other grid gives.
+        // Read the whole `onClick { ... }` block, not the line the `onClick`
+        // sits on: PadGrid's spans several lines, and a single-line match
+        // failed it for being correct.
+        val synthesized = sources.filter { """onClick(label = "PLAY")""" in it.readText(Charsets.UTF_8) }
+        assertTrue(synthesized.isNotEmpty(), "no synthesized PLAY clicks found — the scan is broken")
+        for (file in synthesized) {
+            val block = blockAfter(file.readText(Charsets.UTF_8), """onClick(label = "PLAY")""")
+            assertTrue(
+                "CENTER" in block,
+                "${file.name}'s synthesized PLAY click passes something other than the centre velocity:\n  " +
+                    block.lines().first().trim() +
+                    "\nIt has no position to read, so it gets what a tap at the pad's vertical middle would " +
+                    "have produced — not the loudest hit available.",
             )
         }
     }

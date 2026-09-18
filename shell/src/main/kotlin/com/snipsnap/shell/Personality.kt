@@ -343,9 +343,15 @@ object Copy {
      * pressure-sensitive pad by looking at it, and a hint that can be
      * dismissed is a feature that can be lost. Says the direction rather
      * than the rule, because "lower is softer" is something a thumb can act
-     * on and "velocity ramps from 0.2 to 1.0" is not.
+     * on and "velocity ramps from 0.35 to 1.0" is not.
+     *
+     * Said LOW at first, which was backwards: PLAY, GROOVE and KEYS have
+     * always read the bottom of a pad as the hardest hit, and KIT shipped
+     * the axis inverted with this line advertising it. A legend that
+     * teaches the wrong direction is worse than none — it is the one thing
+     * a player will trust.
      */
-    const val PAD_VELOCITY_LEGEND = "TAP LOW ON A PAD FOR A SOFTER HIT"
+    const val PAD_VELOCITY_LEGEND = "TAP HIGH ON A PAD FOR A SOFTER HIT"
 
     /**
      * The handoff at the end of a capture (J10).

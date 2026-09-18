@@ -31,43 +31,58 @@ object PadHit {
     fun midiVelocity(velocity: Float): Int = (velocity.coerceIn(0f, 1f) * 127f).roundToInt()
 
     /**
-     * The softest a tap can be: quiet, and deliberately not silent.
+     * The softest a touch-Y velocity can be: quiet, and deliberately not
+     * silent — a pad that makes no sound reads as broken rather than soft.
      *
-     * A pad that makes no sound reads as broken rather than as soft, so the
-     * bottom edge of a cell still speaks. `midiVelocity` rounds this to 25,
-     * which is inside the softest zone `StackTakes.windows` lays out for
-     * either one soft zone (MIDI 1..63) or two (1..41) — the floor has to
-     * clear the tighter of those, or SOFT HITS stays inaudible on exactly
-     * the pads that have the most layers.
+     * 0.35 because that is what PLAY, GROOVE and KEYS have always used. It
+     * was `private const val MIN_VELOCITY` in **two** files, with the
+     * formula around it retyped in **three** places, which is how J37
+     * managed to ship a fourth copy with a different floor *and* the axis
+     * inverted without anything noticing. One quantity, one place.
+     *
+     * `midiVelocity` rounds it to 44, inside the softest zone
+     * `StackTakes.windows` lays out for one soft zone (MIDI 1..63) and for
+     * two (1..41) — so SOFT HITS is reachable on either.
      */
-    const val SOFTEST = 0.2f
+    const val SOFTEST = 0.35f
 
     /**
      * Velocity from where in a pad the finger landed: [y] down from the top
-     * of a cell [height] tall. Top is the hardest hit, bottom the softest.
+     * of a cell [height] tall. **The bottom is the hardest hit, the top the
+     * softest.**
      *
      * **Why position at all.** SOFT HITS builds real velocity-layer WAVs
      * and [resolve] has always chosen a layer by velocity, but a tap on
-     * glass carries no force — so the grid had nothing to pass and passed
-     * `1f`, and the layers could be built and never heard. Position is the
-     * one thing a tap does carry.
+     * glass carries no force — so a grid had nothing to pass. Position is
+     * the one thing a tap does carry.
      *
-     * **Where the soft/live line falls depends on the pad**, and
-     * deliberately is not tuned to any one of them: with one soft zone the
-     * boundary is MIDI 63, with two it is 41, so no single split point is
-     * right for both. The map is a plain ramp from [SOFTEST] to full, and
-     * where it crosses is whatever that pad's own zones say.
+     * **Why this direction.** Not a judgement: it is the one PLAY, GROOVE
+     * and KEYS already had ("top of the pad is softest, bottom is full
+     * velocity"). J37 gave KIT the opposite and printed a legend saying so,
+     * and the two conventions contradicted each other until someone tapped
+     * a pad on a phone. A grid that disagrees with the grid on the next
+     * screen is worse than either choice.
      *
-     * A non-positive or non-finite [height] cannot divide, and answers a
-     * full hit — the pad then plays exactly as it did before any of this
-     * existed, which is the safe direction for a degenerate input on its
-     * way to an audio callback.
+     * A non-positive or non-finite [height] answers [CENTER] rather than
+     * guessing an end: it means the caller does not know where the finger
+     * was, which is the same thing a synthesized click means.
      */
     fun velocityAt(y: Float, height: Float, floor: Float = SOFTEST): Float {
-        if (!height.isFinite() || height <= 0f || !y.isFinite()) return 1f
+        if (!height.isFinite() || height <= 0f || !y.isFinite()) return floor + (1f - floor) * 0.5f
         val down = (y / height).coerceIn(0f, 1f)
-        return floor + (1f - floor) * (1f - down)
+        return floor + (1f - floor) * down
     }
+
+    /**
+     * What a tap at the pad's vertical centre would have produced.
+     *
+     * The velocity a synthesized TalkBack click uses: [velocityAt] needs a
+     * real touch Y, which a semantics `onClick` action does not have —
+     * neither the softest nor the hardest hit available to a sighted
+     * finger. J37's KIT wiring used full velocity instead, which was a
+     * third disagreement with the rest of the app.
+     */
+    val CENTER: Float = velocityAt(0.5f, 1f)
 
     /**
      * Level and pan into left/right gains, scaled by velocity: the pad's
