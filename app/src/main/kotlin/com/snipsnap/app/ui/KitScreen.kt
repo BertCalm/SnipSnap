@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -363,10 +364,45 @@ fun KitScreen(
         // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
         var panelKind by remember(entry.dir) { mutableStateOf<String?>(null) }
         val sources = kit.pads.map { it.slot }.sorted()
-        var sourceSlot by remember(entry.dir, sources.firstOrNull()) { mutableStateOf(sources.firstOrNull()) }
-        var mode by remember(panelKind) { mutableStateOf(panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.modesFor(it).first() } ?: "") }
+
+        // SOURCE: the pad the player picked, remembered against the kit
+        // alone (J25).
+        //
+        // This was keyed on `sources.firstOrNull()` — the *value* of the
+        // kit's lowest assigned slot — so any chop landing or capture that
+        // filled a lower pad silently re-pointed the stepper at the new
+        // arrival. SCULPT's NEW TAPE has no per-pad confirm, so the next GO
+        // rendered over a pad nobody chose: pick A07, a capture lands on
+        // A01, GO renders A01.
+        //
+        // That key was doing two jobs, which is why this is a replacement
+        // and not a deletion. Re-pointing on a kit change was the bug;
+        // taking a first value once the kit has pads at all was not, since
+        // `sources` is empty on the first composition. The fallback below
+        // does the second without the first — the player's pick stands
+        // while its pad exists, and the lowest slot is used only when there
+        // is no pick to honour: none made yet, or one whose pad has since
+        // been removed.
+        var pickedSource by remember(entry.dir) { mutableStateOf<Int?>(null) }
+        val sourceSlot = pickedSource?.takeIf { it in sources } ?: sources.firstOrNull()
+
+        // One mode per panel, one knob value per panel-and-mode (J25, and
+        // the same bug J24 had on PAD SHEET's move knobs). Each panel has
+        // its own modes and each mode its own knob, so neither can simply
+        // carry across — but keying them on the panel and the mode threw
+        // the player's setting away by the act of looking at the other one,
+        // which is what the chips are for. Untouched, each still opens on
+        // its own default.
+        val textureModes = remember(entry.dir) { mutableStateMapOf<String, String>() }
+        val mode = panelKind?.takeIf { it != KEY_PANEL }
+            ?.let { textureModes[it] ?: TextureKits.modesFor(it).first() } ?: ""
         val knob = panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.knobFor(it, mode) }
-        var fraction by remember(panelKind, mode) { mutableFloatStateOf(knob?.defaultFraction ?: 0f) }
+        val textureKnobs = remember(entry.dir) { mutableStateMapOf<Pair<String, String>, Float>() }
+        // Dialled value first, then this mode's own default; 0f only when
+        // no panel is open and there is no knob to have a default.
+        val fraction = panelKind?.let { textureKnobs[it to mode] }
+            ?: knob?.defaultFraction
+            ?: 0f
 
         // X2.3 KIT action rows: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
@@ -549,16 +585,16 @@ fun KitScreen(
                     kind = kind,
                     modes = TextureKits.modesFor(kind),
                     mode = mode,
-                    onMode = { mode = it },
+                    onMode = { picked -> textureModes[kind] = picked },
                     sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
                     onSourceStep = { step ->
                         val i = sources.indexOf(src)
-                        if (i >= 0 && sources.size > 1) sourceSlot = sources[(i + step).mod(sources.size)]
+                        if (i >= 0 && sources.size > 1) pickedSource = sources[(i + step).mod(sources.size)]
                     },
                     knobLabel = knob.label,
                     knobFraction = fraction,
                     knobText = TextureKits.knobLabel(knob, knob.value(fraction)),
-                    onKnob = { f -> fraction = (f * 40f).let { Math.round(it) / 40f } },
+                    onKnob = { f -> textureKnobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
                     busy = busy,
                     onGo = {
                         val seed = Random.nextLong(0L, 1_000_000L)

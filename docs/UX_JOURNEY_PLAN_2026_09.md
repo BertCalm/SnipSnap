@@ -254,6 +254,7 @@ Split by screen, in this order (most destructive first):
    **Done — see the audit below; the first of these testable for real.**
 4. **KIT / TEXTURE** (J25) — the source pad jumps when the kit's lowest
    slot changes, because the key is *the value of the lowest slot*.
+   **Done — see the audit below. PR 5 is complete.**
 
 The mechanical fix is the same each time: hoist the state above the thing
 that re-keys it, or key it on something stable (a slot id, not a model
@@ -395,6 +396,66 @@ TAPE *uses* it. Deleting `.also(viewCarrier::adopt)` from `:app` compiles
 cleanly and no `:shell` test notices. That gap between "the mechanism is
 correct" and "the screen calls it" is exactly what the source-scanning laws
 are for.
+
+#### KIT / TEXTURE, audited (step 4) — PR 5 complete
+
+Three sub-findings in four adjacent lines. Two are **J24's exact shape** and
+took J24's exact fix; the third is the worst single bug in the whole of
+PR 5.
+
+**The bad one: a destructive action's target moving on its own.** SOURCE
+names the pad SCULPT and STRETCH will turn into a tape, and `SCULPT ▸ NEW
+TAPE` has no per-pad confirm — so whatever SOURCE points at when GO is
+pressed is what gets rendered over. It was keyed on `sources.firstOrNull()`,
+**the value of the kit's lowest assigned slot**. Pick A07, let a capture or
+a chop land on A01, press GO: it renders A01. Nothing in between said the
+target had moved.
+
+**That key was doing two jobs, which is why this is a replacement and not a
+deletion** — the standing question from steps 1 and 2, arriving for the
+third time. Re-pointing on a kit change was the bug. Taking a first value
+once the kit has pads at all was *not*: `sources` is empty on the first
+composition, so a plain `remember(entry.dir)` would leave SOURCE stuck at
+null forever. A remembered pick with a fallback does the second job without
+the first:
+
+```kotlin
+var pickedSource by remember(entry.dir) { mutableStateOf<Int?>(null) }
+val sourceSlot = pickedSource?.takeIf { it in sources } ?: sources.firstOrNull()
+```
+
+The `in sources` test is load-bearing in its own right: without it, picking
+a pad and then deleting it leaves SOURCE naming a pad that is gone.
+
+**The other two** — `mode` keyed on the panel, `fraction` keyed on the panel
+and mode — are PAD SHEET's move knobs again, down to the reasoning: each
+panel has its own modes and each mode its own knob, so neither can simply
+carry across, but keying them that way threw the player's setting away by
+the act of looking at the other one, which is what the chips are *for*. Same
+fix: a value per panel, and a value per panel-and-mode.
+
+That J24's fix transferred unchanged to a different screen is the useful
+result here. The shape — *a control keyed on the very selection the control
+exists to let you compare* — is now worth grepping for directly rather than
+waiting for a review to name it.
+
+---
+
+### PR 5 as a whole
+
+| Step | States examined | Real bugs | What the finding did not say |
+|---|---|---|---|
+| CHOP | 10 | 1 | The placement was computed only in a click handler, correct *only because* `layout` died with the model |
+| PAD SHEET | 20 | 3 | `DRIFT_FRACTION`'s display was honest *only because* the knob reset on move-switch |
+| TAPE | 1 model, 2 fields | 1 | Nothing hidden — but the obvious fix (widen the idle guard) was wrong |
+| KIT / TEXTURE | 4 | 3 | The old key was also doing a legitimate second job |
+
+**Three times in four, the fix opened a second hole the finding never
+mentioned**, and every time the tell was a KDoc explaining why some existing
+constant or effect was written the way it was. Reading those, not just the
+code, is what caught them. The standing question this leaves for the
+remaining PRs: not "should this key change" but **"what was relying on it
+not changing"**.
 
 ---
 
