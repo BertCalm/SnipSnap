@@ -1654,4 +1654,77 @@ class ConventionTest {
                 "this: `:app` has no test source set, and dropping the call still compiles.",
         )
     }
+    // ---- Law: KIT / TEXTURE keeps what the player picked ----
+
+    private val kitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/KitScreen.kt")
+
+    /**
+     * J25's worst half: the target of a destructive action moving on its own.
+     *
+     * SOURCE names the pad SCULPT and STRETCH will turn into a tape, and
+     * `SCULPT ▸ NEW TAPE` has no per-pad confirm — so whatever SOURCE points
+     * at when GO is pressed is what gets rendered over. It was keyed on
+     * **the value of the kit's lowest assigned slot**, so any chop landing or
+     * capture that filled a lower pad silently re-pointed the stepper at the
+     * new arrival. The player picks A07, a capture lands on A01, and the next
+     * GO renders A01.
+     *
+     * The key was doing two jobs, which is why this is not simply a deletion:
+     * re-pointing on a kit change (the bug) *and* picking up a first value
+     * once the kit has pads at all (legitimate — `sources` is empty on the
+     * first composition). A remembered pick with a fallback does the second
+     * without the first: the player's choice stands while the pad still
+     * exists, and the lowest slot is used only when there is no choice to
+     * honour — no pick yet, or a pick whose pad has since gone.
+     */
+    @Test
+    fun `law - the TEXTURE source pad is the one the player picked, not the kit's lowest`() {
+        val src = kitScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            "remember(entry.dir, sources.firstOrNull())" !in src,
+            "SOURCE is keyed on the value of the kit's lowest assigned slot again, so a chop landing or a " +
+                "capture on a lower pad silently re-points it — and SCULPT's NEW TAPE has no per-pad confirm, " +
+                "so the next GO renders over a pad nobody chose.",
+        )
+        assertTrue(
+            Regex("""var\s+pickedSource\s+by\s+remember\(entry\.dir\)""").containsMatchIn(src),
+            "expected the player's pick to be remembered against the kit alone.",
+        )
+        assertTrue(
+            Regex("""val\s+sourceSlot\s*=\s*pickedSource\?\.takeIf\s*\{\s*it\s+in\s+sources\s*\}\s*\?:\s*sources\.firstOrNull\(\)""")
+                .containsMatchIn(src),
+            "expected SOURCE to fall back to the lowest slot only when there is no pick to honour — none yet " +
+                "(`sources` is empty on the first composition), or one whose pad has since been removed. " +
+                "Without the fallback a picked-then-deleted pad leaves SOURCE naming nothing; without the " +
+                "`in sources` test it would name a pad that is gone.",
+        )
+    }
+
+    /**
+     * The other half of J25, and the same bug J24 had on PAD SHEET.
+     *
+     * Each texture panel has its own modes and each mode its own knob, so
+     * neither can simply carry across — but keying them on the panel and the
+     * mode meant looking at the other one threw the dialled value away.
+     * Comparing is what the chips are for.
+     */
+    @Test
+    fun `law - TEXTURE remembers a mode per panel and a knob per mode`() {
+        val src = kitScreen.readText(Charsets.UTF_8)
+        for (bad in listOf("remember(panelKind) { mutableStateOf(", "remember(panelKind, mode)")) {
+            assertTrue(
+                bad !in src,
+                "`$bad` throws away what the player set by the act of looking at another panel or mode. " +
+                    "Keep a value per panel (and per panel-and-mode for the knob), the way PAD SHEET's own " +
+                    "move knobs do — an untouched one still opens on its default.",
+            )
+        }
+        for (map in listOf("textureModes", "textureKnobs")) {
+            assertTrue(
+                Regex("""val\s+$map\s*=\s*remember\(entry\.dir\)\s*\{\s*mutableStateMapOf""").containsMatchIn(src),
+                "expected `$map` to be a `remember(entry.dir) { mutableStateMapOf... }` — kept for as long as " +
+                    "the kit is open, reset when a different kit is.",
+            )
+        }
+    }
 }
