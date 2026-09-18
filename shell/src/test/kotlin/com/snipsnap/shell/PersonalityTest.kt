@@ -431,7 +431,10 @@ class PersonalityTest {
         // says to you once and takes away, so it does not end in a full stop
         // - and every legend must be added here when it is written, or the
         // shouting law will ask it to become a sentence.
-        "PAD_SHEET_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
+        // PAD_VELOCITY_LEGEND rides with PAD_SHEET_LEGEND: it is the second
+        // line of the same furniture under KIT's grid, on screen
+        // permanently, not a sentence the app says once.
+        "PAD_SHEET_LEGEND", "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
         // The empty shelf's loop line (finding 3) is a row of tab names,
         // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
         // FIRST_RUN_LOOP_NOTE, the sentence under it that says what the
@@ -524,11 +527,26 @@ class PersonalityTest {
             legends.size >= 3,
             "expected at least the three legends this law was written for, found ${legends.keys}",
         )
+        // The gestures a legend can be teaching.
+        //
+        // This law read `"HOLD" in value` until a legend arrived for a
+        // gesture that is not a hold. That was not the law being wrong — its
+        // own message says the point is naming *the gesture*, and HOLD was
+        // simply the only invisible one the app had. TAP joined it when the
+        // pad grid started reading *where* it was tapped (J37): equally
+        // unguessable by looking, and taught the same way.
+        //
+        // A list rather than dropping the check: a legend that names no
+        // gesture at all is still the failure this law exists to catch, and
+        // widening the list stays a deliberate act.
+        val gestures = listOf("HOLD", "TAP")
         for ((name, value) in legends) {
             assertTrue(
-                "HOLD" in value,
-                "Copy.$name is a legend for a long press but never says HOLD: '$value' — " +
-                    "a legend that does not name the gesture teaches nobody the thing they cannot guess.",
+                gestures.any { it in value },
+                "Copy.$name is a legend but names none of $gestures: '$value' — " +
+                    "a legend that does not name the gesture teaches nobody the thing they cannot guess. " +
+                    "If it teaches a genuinely new gesture, add that verb to the list above rather than " +
+                    "removing the check.",
             )
         }
     }
