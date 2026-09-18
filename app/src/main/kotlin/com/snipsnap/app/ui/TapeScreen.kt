@@ -257,6 +257,17 @@ fun TapeScreen(
      * to wire this fails the compile, not the user.
      */
     onNavigateKits: () -> Unit,
+    /**
+     * True while a CATCH is live — reported up so `App` can hold a
+     * share-sheet import back instead of reloading the deck out from under
+     * it (J7).
+     *
+     * `App` already reasons about two other operations that a landing
+     * must not trample: a dub in flight keeps its own busy line, and a
+     * RE-TRIM is explicitly outranked. A catch was simply never in that
+     * list, so the import fired regardless and took the tape with it.
+     */
+    onCatchInFlight: (Boolean) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -361,6 +372,7 @@ fun TapeScreen(
         onCaptureLanded = onCaptureLanded,
         onCatch = onCatch,
         onCatchDone = onCatchDone,
+        onCatchInFlight = onCatchInFlight,
     )
 }
 
@@ -516,6 +528,8 @@ private fun TapeDeckContent(
     onCaptureLanded: () -> Unit = {},
     onCatch: (CatchLanding) -> Unit = {},
     onCatchDone: () -> Unit = {},
+    /** Forwarded from [TapeScreen]; the catch state it reports lives in this composable, not that one. */
+    onCatchInFlight: (Boolean) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val digScope = rememberCoroutineScope()
@@ -623,6 +637,16 @@ private fun TapeDeckContent(
     // comes back as `entry.kit`, which is what lights the pad's name.
     var catching by remember(model) { mutableStateOf<CatchModel?>(null) }
     var catchBusy by remember(model) { mutableStateOf(false) }
+    // Both halves, because both are "a catch the player would lose": the
+    // listening pass (`catchBusy`) and the grid left open on its results
+    // (`catching`). Reported through an effect rather than at each of the
+    // several places either one is written, so no future site can forget.
+    LaunchedEffect(catching, catchBusy) { onCatchInFlight(catching != null || catchBusy) }
+    // A LaunchedEffect is CANCELLED on the way out rather than completing,
+    // so it cannot clear the flag when this screen leaves - and a flag left
+    // true would defer every later import forever. Same lesson, same shape,
+    // as EXPORT's own overwrite arm.
+    DisposableEffect(Unit) { onDispose { onCatchInFlight(false) } }
     // Which bank the 4×4 grid shows (0 is A). TAPE is a portrait screen,
     // so both banks abreast never fit (PadGrid's `windowRows`); the grid
     // opens on the first bank with a free pad and a switch flips it.

@@ -2544,11 +2544,20 @@ fun PadSheetScreen(
         // Pinned under the scroll: a 2dp rule, then the pad nav, so the
         // next pad is always one tap away whatever box is open.
         Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.grayEdge.tape))
+        // J4 + J23: gated on `busy` as well as on there being somewhere to
+        // go. These two were the only controls on this sheet that stayed
+        // live while an operation was in flight, and being pinned under the
+        // scroll made them the easiest to reach by accident. Moving pad
+        // mid-flight re-keys everything on the sheet that is
+        // `remember(slot)`: the screen goes grey with the work still
+        // running, and a measured room the player was about to keep is
+        // discarded without a word. Every other action here already refuses
+        // while busy - see `DeleteButton` one line above.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton(
                 prevSlot?.let { "◄ ${padTag(it)}" } ?: "◄",
                 scheme,
-                enabled = prevSlot != null,
+                enabled = prevSlot != null && !busy,
                 onClick = { prevSlot?.let(onSlotChange) },
             )
             // No swipe gesture is wired here — the buttons on either side are
@@ -2559,7 +2568,7 @@ fun PadSheetScreen(
             ActionButton(
                 nextSlot?.let { "${padTag(it)} ►" } ?: "►",
                 scheme,
-                enabled = nextSlot != null,
+                enabled = nextSlot != null && !busy,
                 onClick = { nextSlot?.let(onSlotChange) },
             )
         }
