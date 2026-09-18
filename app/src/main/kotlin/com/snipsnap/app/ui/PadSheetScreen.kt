@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -1217,9 +1218,17 @@ fun PadSheetScreen(
         }
     }
     val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
-    var pendingMutateKnob by remember(slot, mutateMode) {
-        mutableFloatStateOf(mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
-    }
+    // One dialled value per move, not one shared value wiped by switching
+    // move (J24). Each move's knob means its own thing — SPLICE's `AT` is a
+    // time in milliseconds, MORPH's is a blend — so the value cannot simply
+    // carry across; but keying it on the selected move destroyed it on the
+    // way to the comparison the move row exists to invite. Dial SPLICE's
+    // `AT` to 400 ms, tap MORPH to hear the difference, tap back: 40 ms.
+    // A map keyed on the move's own name gives each one its own memory, and
+    // a move never touched still opens on its own default.
+    val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val pendingMutateKnob =
+        mutateKnobs[mutateMode] ?: (mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
 
     /**
      * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
@@ -1390,8 +1399,10 @@ fun PadSheetScreen(
         val padName = p.displayName
         val staleSampleFile = p.sampleFile
         // DRIFT is MORPH's one-tap form, so the blend has to come from
-        // MORPH's own knob. `pendingMutateKnob` is `remember(slot,
-        // mutateMode)`, and writing `mutateMode` does not re-run that block
+        // MORPH's own knob, and the card must then show that same number.
+        //
+        // The original bug: `pendingMutateKnob` was keyed on `mutateMode`,
+        // and writing `mutateMode` does not re-run that block
         // synchronously - so reading it afterwards took the fraction
         // belonging to the move the card was *previously* on. From the
         // card's opening move that is 0f (STACK has no knob), which wrote a
@@ -1400,9 +1411,27 @@ fun PadSheetScreen(
         // read as a mix. Already on MORPH, the dialled MIX is the user's
         // own and is kept - which is why a *second* DRIFT tap always
         // behaved correctly and only the first one from another move did not.
+        //
+        // Reading `MutateSheet.DRIFT_FRACTION` fixed the value written. The
+        // *display* is the other half, and J24's per-move memory put it back
+        // in play: MORPH now has a remembered value to land on, so the write
+        // below is what keeps the knob honest about what just ran.
         val onMorph = mutateMode == Mutate.Mode.MORPH.name
         val fraction = if (onMorph) pendingMutateKnob else MutateSheet.DRIFT_FRACTION
-        if (!onMorph) mutateMode = Mutate.Mode.MORPH.name
+        if (!onMorph) {
+            mutateMode = Mutate.Mode.MORPH.name
+            // ...and the card has to redraw MIX at the fraction DRIFT just
+            // used, not at whatever MORPH was last dialled to. Now that each
+            // move keeps its own dialled value (J24), landing on MORPH shows
+            // MORPH's memory — which would be a display saying one thing
+            // while the drift that just ran did another. That is the exact
+            // divergence `MutateSheet.DRIFT_FRACTION`'s own KDoc exists to
+            // prevent: the card once read the previous move's stepper, blended
+            // none of the neighbour in, "while the card then redrew MIX at
+            // 50%". Writing it into the move's own memory keeps the knob a
+            // true readout of the last thing that happened.
+            mutateKnobs[Mutate.Mode.MORPH.name] = MutateSheet.DRIFT_FRACTION
+        }
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
@@ -1528,13 +1557,25 @@ fun PadSheetScreen(
     // ---- OUTSIDE: the world as an effect (OutsideSheet over Outside) ----
     var outsideMove by remember(slot) { mutableStateOf(OutsideSheet.MOVES.first()) }
     val outsideKnob = OutsideSheet.knobFor(OutsideSheet.moveFor(outsideMove))
-    var pendingOutsideKnob by remember(slot, outsideMove) { mutableFloatStateOf(outsideKnob.defaultFraction) }
+    // One dialled value per move (J24), for the same reason as MUTATE's
+    // knob above: REAMP and ROOM are compared by switching between them.
+    val outsideKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val pendingOutsideKnob = outsideKnobs[outsideMove] ?: outsideKnob.defaultFraction
     // What the trip is doing right now — LISTENING…, SENDING… — for the
     // SEND button's own label; null when nothing is out.
     var outsideStage by remember(slot) { mutableStateOf<String?>(null) }
     // The last ROOM trip's outcome, the room as measured riding it, until
     // KEEP ROOM puts it on the shelf; a REAMP measures none.
-    var measuredRoom by remember(slot) { mutableStateOf<OutsideSheet.Outcome?>(null) }
+    //
+    // Keyed on the kit, NOT on `slot` (J23). A ROOM trip is a multi-second
+    // live mic capture of the physical room, and KEEP ROOM shelves it
+    // kit-level, named after the kit, as a reusable parent — the pad that
+    // happened to be open while it ran is incidental to every part of that.
+    // Keyed on `slot`, one tap of the pad-nav arrow discarded it with no
+    // warning, and recovery meant doing the trip again. Not unkeyed either:
+    // carrying a measurement across a kit switch would let KEEP ROOM name
+    // it after a kit it was not measured for.
+    var measuredRoom by remember(entry.dir) { mutableStateOf<OutsideSheet.Outcome?>(null) }
     // The armed mic session holds the mic; OUTSIDE wants it to itself.
     val tapeArmed by MicSessionService.armed.collectAsState()
 
@@ -1745,8 +1786,19 @@ fun PadSheetScreen(
     }
 
     // ---- PAD FROM ANYTHING: one hit, a pad forever (PadMaker over PadFromAnything) ----
-    var pendingDepth by remember(slot) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
-    var pendingBloom by remember(slot) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
+    // Keyed on the kit, not on `slot` (J26). These are settings for MAKE
+    // PAD, a door that makes a *new* pad out of one hit — a tool's
+    // settings, not a property of whatever pad the tool was last pointed
+    // at. Keyed on `slot` they reset on every pad-nav arrow, so making a
+    // run of pads at the same DEPTH meant dialling it again for each one.
+    //
+    // They still do not write to the pad, and cannot: the pad has no DEPTH
+    // or BLOOM field to hold. That half of J26 — that they look identical
+    // to LEVEL/PAN/TUNE two rows above, which do write — is a question
+    // about what the control should *say* it is, and belongs with the words
+    // and IA work, not here.
+    var pendingDepth by remember(entry.dir) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
+    var pendingBloom by remember(entry.dir) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
 
     /**
      * MAKE PAD: the same door as MAKE INSTRUMENT (an instrument beside the
@@ -2377,7 +2429,7 @@ fun PadSheetScreen(
                 knobLabel = mutateKnob?.label,
                 knobFraction = pendingMutateKnob,
                 knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
-                onKnobChange = { f -> pendingMutateKnob = (f * 40f).roundToInt() / 40f },
+                onKnobChange = { f -> mutateKnobs[mutateMode] = (f * 40f).roundToInt() / 40f },
                 mutated = MutateSheet.read(pad.recipe),
                 canUndo = binDaysLeft != null,
                 onHear = ::onHear,
@@ -2405,7 +2457,7 @@ fun PadSheetScreen(
             knobLabel = outsideKnob.label,
             knobFraction = pendingOutsideKnob,
             knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
-            onKnobChange = { f -> pendingOutsideKnob = (f * 40f).roundToInt() / 40f },
+            onKnobChange = { f -> outsideKnobs[outsideMove] = (f * 40f).roundToInt() / 40f },
             applied = OutsideSheet.read(pad.recipe),
             stage = outsideStage,
             canUndo = binDaysLeft != null,

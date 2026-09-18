@@ -249,7 +249,7 @@ Split by screen, in this order (most destructive first):
    **Done — see the audit below; one of the ten was the bug.**
 2. **PAD SHEET** (J23, J24, J26) — knobs that reset on move switch, and
    DEPTH/BLOOM which never persist at all while looking identical to three
-   sliders above them that do.
+   sliders above them that do. **Done — see the audit below.**
 3. **TAPE** (J22) — a snip landing replaces the tape under the finger.
 4. **KIT / TEXTURE** (J25) — the source pad jumps when the kit's lowest
    slot changes, because the key is *the value of the lowest slot*.
@@ -306,6 +306,49 @@ one that the placement is rebuilt by an effect rather than by a tap.
 **J21 is untouched and still open** — it is a different mechanism
 (`hitsOf` returning null for GRID/HUMMED/ladder modes, so `onByHits`
 constructs fresh defaults) and belongs with the CHOP mode work, not here.
+
+#### PAD SHEET, audited (step 2)
+
+Twenty `remember(slot…)` here, and unlike CHOP most of them are **right**:
+`slot` changes when the pad-nav arrows move to another pad, and a pad sheet
+resetting per-pad state is what a per-pad sheet *is*. The three findings are
+about the pieces that are not per-pad, and the audit confirms all three.
+
+| Finding | What was wrong | Fix |
+|---|---|---|
+| **J24** | `pendingMutateKnob` keyed on `mutateMode`, `pendingOutsideKnob` on `outsideMove`. Each move's knob means its own thing, so the value cannot simply carry across — but keying it on the *selected move* destroyed it on the way to the comparison the move row exists to invite. | One value per move, in a `mutableStateMapOf` keyed on `slot`. Untouched moves still open on their own default. |
+| **J23** | `measuredRoom` keyed on `slot`, so one tap of `►` discarded a multi-second live mic capture. | Keyed on `entry.dir`. **KEEP ROOM shelves the measurement kit-level, named after the kit** — the pad that happened to be open is incidental to every part of that. Not unkeyed: carrying it across a kit switch would let KEEP ROOM name it after a kit it was not measured for. |
+| **J26** | `pendingDepth`/`pendingBloom` keyed on `slot`, so making a run of pads at one DEPTH meant dialling it again for each. | Keyed on `entry.dir`. They are settings for MAKE PAD — a tool's settings, not a property of whatever the tool was last pointed at. |
+
+**Half of J26 is deliberately not fixed here.** The finding's other
+complaint is that DEPTH/BLOOM *look identical* to LEVEL/PAN/TUNE two rows
+above, which write to the pad. They cannot be made to write: the pad has no
+DEPTH or BLOOM field to hold. Making the difference legible is a question
+about what the control should say it is — words and IA, PR 8, not storage.
+
+**The near-miss worth recording.** `MutateSheet.DRIFT_FRACTION` is MORPH's
+own knob default, and its KDoc exists to stop the value *written* and the
+value *shown* from diverging — the card "had been reading whatever fraction
+the previous move's stepper happened to hold", so a DRIFT tap "blended none
+of the neighbour in while the card then redrew MIX at 50%". Per-move memory
+put that divergence back within reach from the other side: DRIFT uses
+`DRIFT_FRACTION`, then switches the card to MORPH, which now has a
+remembered value to land on. The knob would have read one number while the
+drift that just ran used another. DRIFT now writes the fraction it used into
+MORPH's own memory, and a law holds it.
+
+This is the second time in two steps that **a piece of state was correct
+only because of a bug beside it** — in CHOP it was the click-handler
+placement, here it was the knob's display. Worth treating as the standing
+question for steps 3 and 4: not just "should this key change", but "what
+was relying on it not changing".
+
+**Observed but not fixed, deliberately.** `mutateMode`, `outsideMove`,
+`partner` and `pickedKit` are all `remember(slot)` and are arguably the same
+class as DEPTH/BLOOM — tool selections, not pad properties, so landing back
+on the first move for every pad is the same annoyance. No finding names
+them, and fixing them would widen the PR on our own initiative. Recorded
+here so the next pass can decide rather than rediscover.
 
 ---
 

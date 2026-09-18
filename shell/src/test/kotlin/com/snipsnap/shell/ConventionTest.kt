@@ -1515,4 +1515,114 @@ class ConventionTest {
                 "`layout` and say so; the effect above owns the rebuilding.",
         )
     }
+    // ---- Law: PAD SHEET keeps what the player dialled ----
+
+    private val padSheetScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/PadSheetScreen.kt")
+
+    /**
+     * J24 in `docs/UX_JOURNEY_PLAN_2026_09.md`.
+     *
+     * MUTATE and OUTSIDE each offer a row of moves, and each move has its
+     * own knob meaning its own thing — SPLICE's `AT` is a time in
+     * milliseconds, MORPH's is a blend. Keying the dialled value on the
+     * *selected move* meant the value was destroyed by the act of looking
+     * at another move: dial SPLICE's `AT` to 400 ms, tap MORPH to hear the
+     * difference, tap back, and it reads 40 ms again.
+     *
+     * Comparing two moves is the entire reason the row exists, so the one
+     * gesture the design invites was the one that threw work away. A value
+     * per move fixes it without inventing anything: each move keeps what it
+     * was last dialled to, and a move never touched still opens on its own
+     * default.
+     */
+    @Test
+    fun `law - a move's dialled knob is remembered per move, not reset by switching move`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for (bad in listOf("remember(slot, mutateMode)", "remember(slot, outsideMove)")) {
+            assertTrue(
+                bad !in src,
+                "`$bad` keys a dialled knob on the selected move, so switching move to compare — the one " +
+                    "gesture the move row exists to invite — silently resets it to that move's default. Keep " +
+                    "a value per move (a state map keyed on the move's name) instead, so each move remembers " +
+                    "what it was dialled to and an untouched move still opens on its default.",
+            )
+        }
+        for (map in listOf("mutateKnobs", "outsideKnobs")) {
+            assertTrue(
+                Regex("""val\s+$map\s*=\s*remember\(slot\)\s*\{\s*mutableStateMapOf""").containsMatchIn(src),
+                "expected `$map` to be a `remember(slot) { mutableStateMapOf<String, Float>() }` — one dialled " +
+                    "value per move, reset only when the pad itself changes.",
+            )
+        }
+    }
+
+    /**
+     * J23 and J26.
+     *
+     * `slot` changes every time the pad-nav arrows move to the next pad, so
+     * keying state on it says "this belongs to one pad". Three pieces said
+     * that and were not true:
+     *
+     * - `measuredRoom` holds a **multi-second live mic capture of the
+     *   physical room**, and `KEEP ROOM ▸` shelves it kit-level, named after
+     *   the kit, as a reusable parent. The pad that happened to be open when
+     *   the trip ran is incidental to all of that — but one tap of `►`
+     *   discarded it, and recovery meant doing the trip again.
+     * - `pendingDepth` / `pendingBloom` are settings for `MAKE PAD ▸`, a
+     *   door that makes a *new* pad. A tool's settings are not a property of
+     *   whatever it was last pointed at, and dialling DEPTH again for every
+     *   pad in a row is the workflow the reset imposes.
+     *
+     * All three are keyed on the kit instead, which is the scope they
+     * actually belong to: a different kit is a different room to name and a
+     * different job, the same reasoning `openBox` already uses one file up.
+     */
+    @Test
+    fun `law - PAD SHEET state that is not a property of one pad is not keyed on the slot`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for (name in listOf("measuredRoom", "pendingDepth", "pendingBloom")) {
+            assertTrue(
+                !Regex("""var\s+$name\s+by\s+remember\(slot\)""").containsMatchIn(src),
+                "`$name` is keyed on `slot` again, so moving to the next pad destroys it. It is not a " +
+                    "property of one pad: a measured room is the room (and KEEP ROOM shelves it named after " +
+                    "the *kit*), and MAKE PAD's DEPTH/BLOOM are a tool's settings. Key it on `entry.dir`.",
+            )
+            assertTrue(
+                Regex("""var\s+$name\s+by\s+remember\(entry\.dir\)""").containsMatchIn(src),
+                "expected `$name` to be keyed on `entry.dir` — the kit, which is the scope it belongs to. " +
+                    "Unkeyed would carry a measured room across a kit switch and let KEEP ROOM name it after " +
+                    "the wrong kit; keyed on `slot` it dies on the pad-nav arrows.",
+            )
+        }
+    }
+    /**
+     * The half of J24 that nearly shipped a regression.
+     *
+     * `MutateSheet.DRIFT_FRACTION` is MORPH's own knob default, and its
+     * KDoc says why it exists: the card "had been reading whatever fraction
+     * the *previous* move's stepper happened to hold", so a DRIFT tap "blended
+     * none of the neighbour in while the card then redrew MIX at 50%". The
+     * value written and the value shown had diverged.
+     *
+     * Giving each move its own memory puts that divergence back within reach
+     * from the other side: DRIFT from another move uses `DRIFT_FRACTION`,
+     * then switches the card to MORPH — which now has a remembered value to
+     * land on, so the knob would read whatever MORPH was last dialled to
+     * while the drift that just ran used something else. Writing the
+     * fraction DRIFT used into MORPH's own memory keeps the knob a true
+     * readout of the last thing that happened.
+     */
+    @Test
+    fun `law - DRIFT leaves the knob showing the blend it actually used`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        val drift = blockAfter(src, "if (!onMorph) {")
+        assertTrue(
+            Regex("""mutateKnobs\[Mutate\.Mode\.MORPH\.name\]\s*=\s*MutateSheet\.DRIFT_FRACTION""")
+                .containsMatchIn(drift),
+            "DRIFT switches the card to MORPH without telling MORPH's knob what blend it used, so the card " +
+                "shows whatever MORPH was last dialled to while the drift that just ran used " +
+                "`DRIFT_FRACTION`. That is the same value-shown/value-used divergence `DRIFT_FRACTION`'s own " +
+                "KDoc was written to end. Write it into the move's memory alongside the switch.",
+        )
+    }
 }
