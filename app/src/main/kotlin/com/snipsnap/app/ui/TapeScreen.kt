@@ -372,6 +372,7 @@ fun TapeScreen(
         onCaptureLanded = onCaptureLanded,
         onCatch = onCatch,
         onCatchDone = onCatchDone,
+        onCatchInFlight = onCatchInFlight,
     )
 }
 
@@ -527,6 +528,8 @@ private fun TapeDeckContent(
     onCaptureLanded: () -> Unit = {},
     onCatch: (CatchLanding) -> Unit = {},
     onCatchDone: () -> Unit = {},
+    /** Forwarded from [TapeScreen]; the catch state it reports lives in this composable, not that one. */
+    onCatchInFlight: (Boolean) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val digScope = rememberCoroutineScope()
