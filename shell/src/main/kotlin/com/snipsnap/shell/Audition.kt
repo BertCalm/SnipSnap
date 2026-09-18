@@ -140,4 +140,102 @@ object Audition {
     }
 
     private val LETTERS = listOf("A", "B", "C", "D")
+
+    /**
+     * One candidate for a pad's role: what to call it, which sample it is,
+     * and how loud it measured (`Loudness.of`).
+     *
+     * [sampleFile] is the key the engine's own bank index is written
+     * against, so a candidate can only be played once its file has been
+     * appended to the kit's bank build — the way `PadEngine.load` already
+     * appends the count-in clicks, never via `loadSnips`, which replaces the
+     * whole bank and would silence every pad in it.
+     */
+    data class Candidate(val name: String, val sampleFile: String, val loudness: Float)
+
+    /**
+     * A comparison in progress on one pad.
+     *
+     * Holds what is being compared and answers the only question the audio
+     * path asks: on this bar, for this slot, what should actually sound.
+     * Everything about *how* it sounds - the window, the gains, the tuning -
+     * comes out of [Live.swapInto], which is here rather than in `:app`
+     * because it is where the sharp edges are and `:app` has nothing to
+     * test them with.
+     */
+    class Session(
+        val slot: Int,
+        val candidates: List<Candidate>,
+    ) {
+        /** Loudness-matched gains, one per candidate. Spec rule 4. */
+        val gains: List<Float> = matchGains(candidates.map { it.loudness })
+
+        /** Blind until the player asks; see [Round.reveal]. */
+        var round: Round = Round(candidates.map { it.name })
+            private set
+
+        fun reveal() { round = round.reveal() }
+
+        /**
+         * What sounds on [slot] at [posSteps], or null when this slot is not
+         * the one under audition — which is the common case, and the caller's
+         * cue to play the pad exactly as it always did.
+         *
+         * [stepsPerBar] comes from the clip rather than a constant: an ORBIT
+         * clip declares its own meter, and assuming 16 would put the swap in
+         * the wrong place for a 3/4 pattern.
+         */
+        fun liveFor(slot: Int, posSteps: Float, stepsPerBar: Int): Live? {
+            if (slot != this.slot || candidates.isEmpty()) return null
+            val i = liveAt(barOf(posSteps, stepsPerBar), candidates.size)
+            return Live(candidates[i], gains.getOrElse(i) { 1f })
+        }
+
+        /**
+         * The player's choice. Returns the chosen index, clamped - a screen
+         * should not be able to crash the audio path with an off-by-one.
+         *
+         * Nothing happens to the others (spec decision 1): the candidates
+         * are already separate named siblings on the shelf, so choosing is
+         * only assignment. There is nothing here to delete and nothing to
+         * hide.
+         */
+        fun chose(index: Int): Int = index.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
+    }
+
+    /** The candidate sounding right now, and the gain that makes it comparable. */
+    data class Live(val candidate: Candidate, val gain: Float) {
+        /**
+         * The pad's own hit, rewritten to play this candidate instead.
+         *
+         * **The window becomes the candidate's own**, which is the whole
+         * reason this is a function rather than a field copy. `PadHit.Hit`'s
+         * window was measured against the *pad's* sample: a longer candidate
+         * played through it would be cut off, a shorter one would have the
+         * engine reading past its end, and neither is something a listener
+         * could attribute to the right cause - it would simply sound like
+         * the worse take.
+         *
+         * **Everything else about the role is kept.** Level, pan and
+         * velocity survive as the pad's own gains, with [gain] multiplied
+         * in; the pad's tuning survives as `pitchRatio`. A candidate is
+         * auditioning for a place in a kit, so it is heard in that place -
+         * only the loudness match is new.
+         *
+         * Null when the candidate has no frames - its audio never loaded.
+         * `Hit` requires a window that advances, and finding that out by
+         * throwing inside an audio callback is not the way to find it out;
+         * the caller falls back to the pad's own sound instead.
+         */
+        fun swapInto(hit: PadHit.Hit, candidateFrames: Long): PadHit.Hit? {
+            if (candidateFrames <= 0L) return null
+            return hit.copy(
+                sampleFile = candidate.sampleFile,
+                startFrame = 0L,
+                endFrameExclusive = candidateFrames,
+                gainLeft = hit.gainLeft * gain,
+                gainRight = hit.gainRight * gain,
+            )
+        }
+    }
 }
