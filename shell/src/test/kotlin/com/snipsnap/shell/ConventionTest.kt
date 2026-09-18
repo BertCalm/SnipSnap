@@ -1727,4 +1727,41 @@ class ConventionTest {
             )
         }
     }
+    /**
+     * J37, the wiring half. `PadTouchTest` proves the mapping and proves it
+     * reaches the zones; only this proves KIT still asks for it.
+     *
+     * The hard-coded `1f` was the whole bug — SOFT HITS built real velocity
+     * layers, `PadHit.resolve` has always chosen one by velocity, and the
+     * grid threw that away at the last step. Putting a constant back
+     * compiles cleanly and silently un-ships the feature again.
+     */
+    @Test
+    fun `law - KIT hits a pad at the velocity the touch asked for`() {
+        val src = kitScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            Regex("""onTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
+                .containsMatchIn(src),
+            "the pad grid is not reading velocity from where the finger landed. A tap on glass carries no " +
+                "force, so position is the only thing it does carry - without it the grid has nothing to pass " +
+                "and SOFT HITS goes back to being audible nowhere.",
+        )
+        assertTrue(
+            !Regex("""player\.hit\(pad,\s*1f""").containsMatchIn(src) &&
+                !Regex("""allocator\.noteOn\(slot,\s*1f""").containsMatchIn(src),
+            "a hard-coded velocity is back in KIT's `hit`. That is the original J37 bug exactly: the layers " +
+                "are still built, still chosen by velocity, and still never heard.",
+        )
+        /*
+         * The accessible path is the one place a constant is right, and it
+         * must stay right: a synthesized click carries no position, so
+         * reading one would hand TalkBack users an arbitrary velocity
+         * instead of the pad's plain whole sound.
+         */
+        assertTrue(
+            Regex("""onClick\(label = "PLAY"\)\s*\{\s*onTap\(slot,\s*1f\)""").containsMatchIn(src),
+            "the synthesized PLAY click should pass full velocity. It has no position to read, and guessing " +
+                "one would make the accessible path quieter than the pad actually is.",
+        )
+    }
 }

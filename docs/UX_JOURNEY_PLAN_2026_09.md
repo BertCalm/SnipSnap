@@ -470,7 +470,38 @@ Capabilities that exist in the model with no control attached.
 - **J17** — attach a bar-length control to the `recordBars` seam that
   already exists, and say somewhere that PROG C changes pattern length.
 - **J37** — velocity is hard-coded to `1f`, so `SOFT HITS` can be switched
-  on and never heard.
+  on and never heard. **Done.**
+
+  Decided with the user: **tap position on the pad**. The audio path was
+  never the missing piece — `PadHit.resolve` has always chosen a layer by
+  velocity. What was missing is that *a tap on glass carries no force*, so
+  the grid had nothing to pass and passed `1f`. Position is the one thing a
+  tap does carry.
+
+  `PadHit.velocityAt(y, height)` is in `:shell` and tested: top is a full
+  hit, the bottom is `SOFTEST` and deliberately **not** silent (a pad that
+  makes no sound reads as broken, not as soft), a touch reported outside the
+  cell is clamped rather than extrapolated, and a zero or non-finite height
+  answers a full hit rather than dividing — the same lesson as
+  `restoreView`'s NaN zoom and `Audition.barOf`'s zero `stepsPerBar`.
+
+  **The floor is not a number chosen by eye.** `StackTakes.windows` puts the
+  soft/live boundary at MIDI 63 with one soft zone and at 41 with two, so a
+  floor that cleared one could still miss the other. `SOFTEST = 0.2f` rounds
+  to MIDI 25, inside the softest zone of both, and the tests assert that by
+  resolving real layered pads through `PadHit.resolve` rather than by
+  restating the constant.
+
+  Where the soft/live line falls on screen is therefore *the pad's own*, not
+  a tuned split point — with one soft zone it is about the bottom third of
+  the cell, with two it is higher. The legend says the direction ("TAP LOW
+  ON A PAD FOR A SOFTER HIT") rather than the rule, because a direction is
+  something a thumb can act on.
+
+  The accessible path keeps full velocity on purpose: a synthesized click
+  has no position, and guessing one would hand TalkBack users an arbitrary
+  velocity instead of the pad's plain whole sound. A law holds both halves
+  and was proved to fire on each.
 
 ---
 

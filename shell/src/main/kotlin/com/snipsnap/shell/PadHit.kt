@@ -31,6 +31,45 @@ object PadHit {
     fun midiVelocity(velocity: Float): Int = (velocity.coerceIn(0f, 1f) * 127f).roundToInt()
 
     /**
+     * The softest a tap can be: quiet, and deliberately not silent.
+     *
+     * A pad that makes no sound reads as broken rather than as soft, so the
+     * bottom edge of a cell still speaks. `midiVelocity` rounds this to 25,
+     * which is inside the softest zone `StackTakes.windows` lays out for
+     * either one soft zone (MIDI 1..63) or two (1..41) — the floor has to
+     * clear the tighter of those, or SOFT HITS stays inaudible on exactly
+     * the pads that have the most layers.
+     */
+    const val SOFTEST = 0.2f
+
+    /**
+     * Velocity from where in a pad the finger landed: [y] down from the top
+     * of a cell [height] tall. Top is the hardest hit, bottom the softest.
+     *
+     * **Why position at all.** SOFT HITS builds real velocity-layer WAVs
+     * and [resolve] has always chosen a layer by velocity, but a tap on
+     * glass carries no force — so the grid had nothing to pass and passed
+     * `1f`, and the layers could be built and never heard. Position is the
+     * one thing a tap does carry.
+     *
+     * **Where the soft/live line falls depends on the pad**, and
+     * deliberately is not tuned to any one of them: with one soft zone the
+     * boundary is MIDI 63, with two it is 41, so no single split point is
+     * right for both. The map is a plain ramp from [SOFTEST] to full, and
+     * where it crosses is whatever that pad's own zones say.
+     *
+     * A non-positive or non-finite [height] cannot divide, and answers a
+     * full hit — the pad then plays exactly as it did before any of this
+     * existed, which is the safe direction for a degenerate input on its
+     * way to an audio callback.
+     */
+    fun velocityAt(y: Float, height: Float, floor: Float = SOFTEST): Float {
+        if (!height.isFinite() || height <= 0f || !y.isFinite()) return 1f
+        val down = (y / height).coerceIn(0f, 1f)
+        return floor + (1f - floor) * (1f - down)
+    }
+
+    /**
      * Level and pan into left/right gains, scaled by velocity: the pad's
      * own level, the far side fading as pan leaves it (constant-ish power,
      * the same map the SoundPool player used, so a kit sounds as it did).
