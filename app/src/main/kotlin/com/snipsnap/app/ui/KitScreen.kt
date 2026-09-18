@@ -888,10 +888,13 @@ private fun PadCell(
             // one cell three times instead of once.
             .semantics(mergeDescendants = true) {
                 contentDescription = "PAD $tag: ${pad.displayName}"
-                // Full velocity, deliberately: a synthesized click has no
-                // position to read, and the accessible path must give the
-                // pad's plain, whole sound rather than an arbitrary one.
-                onClick(label = "PLAY") { onTap(slot, 1f); true }
+                // The centre, deliberately: a synthesized click has no
+                // position to read, so it gets what a tap at the pad's
+                // vertical middle would have produced — the same answer
+                // PLAY and KEYS have always given. Full velocity, which
+                // this used at first, was a third disagreement with the
+                // rest of the app.
+                onClick(label = "PLAY") { onTap(slot, PadHit.CENTER); true }
                 onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for

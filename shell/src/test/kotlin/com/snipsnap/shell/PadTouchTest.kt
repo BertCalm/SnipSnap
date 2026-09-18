@@ -28,25 +28,46 @@ class PadTouchTest {
     // ---- the mapping ----
 
     @Test
-    fun `the top of a pad is the hardest hit`() {
-        assertEquals(1f, PadHit.velocityAt(0f, 100f))
+    fun `the bottom of a pad is the hardest hit`() {
+        assertEquals(1f, PadHit.velocityAt(100f, 100f))
     }
 
     @Test
-    fun `the bottom is the softest, and never silent`() {
-        val v = PadHit.velocityAt(100f, 100f)
+    fun `the top is the softest, and never silent`() {
+        val v = PadHit.velocityAt(0f, 100f)
         assertEquals(PadHit.SOFTEST, v)
         assertTrue(v > 0f, "a pad that makes no sound reads as broken, not as soft")
     }
 
     @Test
-    fun `lower is always softer`() {
-        var previous = Float.MAX_VALUE
+    fun `lower is always harder`() {
+        var previous = -1f
         for (y in 0..100 step 5) {
             val v = PadHit.velocityAt(y.toFloat(), 100f)
-            assertTrue(v < previous, "velocity rose going down the pad at y=$y")
+            assertTrue(v > previous, "velocity fell going down the pad at y=$y")
             previous = v
         }
+    }
+
+    /**
+     * The convention PLAY, GROOVE and KEYS already used, pinned here so the
+     * next screen to grow a pad grid cannot quietly pick the other one.
+     */
+    @Test
+    fun `the floor is the one the other grids have always used`() {
+        assertEquals(0.35f, PadHit.SOFTEST)
+    }
+
+    /**
+     * What a tap at the pad's vertical centre would have produced — the
+     * velocity a synthesized TalkBack click uses, because it has no
+     * position to read. Neither the softest nor the hardest hit available
+     * to a sighted finger, which is the honest answer for "somewhere".
+     */
+    @Test
+    fun `the centre velocity is the middle of the range, not full`() {
+        assertEquals(PadHit.velocityAt(0.5f, 1f), PadHit.CENTER)
+        assertTrue(PadHit.CENTER > PadHit.SOFTEST && PadHit.CENTER < 1f)
     }
 
     /**
@@ -57,8 +78,8 @@ class PadTouchTest {
      */
     @Test
     fun `a touch reported outside the cell is clamped, not extrapolated`() {
-        assertEquals(1f, PadHit.velocityAt(-20f, 100f))
-        assertEquals(PadHit.SOFTEST, PadHit.velocityAt(150f, 100f))
+        assertEquals(PadHit.SOFTEST, PadHit.velocityAt(-20f, 100f))
+        assertEquals(1f, PadHit.velocityAt(150f, 100f))
     }
 
     /**
@@ -69,11 +90,11 @@ class PadTouchTest {
      * reach the audio path as NaN.
      */
     @Test
-    fun `a cell with no height plays at full velocity rather than dividing by zero`() {
+    fun `a cell with no height plays at the centre rather than dividing by zero`() {
         for (h in listOf(0f, -10f, Float.NaN)) {
             val v = PadHit.velocityAt(50f, h)
             assertTrue(v.isFinite(), "height $h produced $v")
-            assertEquals(1f, v, "height $h should fall back to a full hit")
+            assertEquals(PadHit.CENTER, v, "height $h should fall back to the centre, not to a guess")
         }
     }
 
@@ -89,21 +110,54 @@ class PadTouchTest {
         PadHit.resolve(pad, PadHit.velocityAt(y, height), hitIndex = 0) { 1_000L }?.sampleFile
 
     /**
-     * The point of the whole change: the bottom of the pad has to land in
-     * the softest zone, and the top in the live one. Checked against
-     * `StackTakes.windows`'s real boundaries — with one soft zone the split
-     * is at MIDI 63, with two it is at 41, so a floor chosen by eye could
-     * easily clear one and miss the other.
+     * The point of the whole change, for the pad SOFT HITS actually makes.
+     *
+     * `addGhostLayers(slot)` defaults to **one** soft zone, and that is the
+     * only way the SOFT HITS button builds layers — so this is the case a
+     * player meets. One soft zone splits at MIDI 63, and the floor (44)
+     * sits inside it.
      */
     @Test
-    fun `the bottom of a ghosted pad plays the softest take and the top plays the live one`() {
-        for (softZones in 1..2) {
+    fun `the top of a ghosted pad plays the softest take and the bottom plays the live one`() {
+        val pad = ghosted(softZones = 1)
+        val soft = fileAt(pad, y = 0f, height = 100f)
+        val hard = fileAt(pad, y = 100f, height = 100f)
+        assertEquals("layer0.wav", soft, "the top of the pad missed the softest take")
+        assertEquals("layer1.wav", hard, "the bottom of the pad missed the live take")
+        assertNotEquals(soft, hard, "SOFT HITS is still inaudible from the grid")
+    }
+
+    /**
+     * A limitation, pinned so it is a fact rather than a surprise.
+     *
+     * STACK THE TAKES stacks up to `StackTakes.MAX_SOFT` (3) soft zones,
+     * and their windows get narrower as they multiply: two zones split at
+     * MIDI 41, three at 31. The touch floor is 0.35 → **MIDI 44**, which is
+     * above both — so on a stacked pad the softest take cannot be reached
+     * by touch at all, however high on the pad the finger lands.
+     *
+     * This is not new to J37; it is a property of `MIN_VELOCITY = 0.35f`,
+     * which PLAY, GROOVE and KEYS have shipped all along. Lowering the
+     * floor would reach those zones and would change how three screens feel
+     * to play, so it is a decision rather than a fix, and this test states
+     * the current answer rather than asserting a wish.
+     */
+    @Test
+    fun `a stacked pad's softest take sits below the touch floor - a known limit`() {
+        for (softZones in 2..3) {
             val pad = ghosted(softZones)
-            val soft = fileAt(pad, y = 100f, height = 100f)
-            val hard = fileAt(pad, y = 0f, height = 100f)
-            assertEquals("layer0.wav", soft, "$softZones soft zone(s): the bottom of the pad missed the softest take")
-            assertEquals("layer$softZones.wav", hard, "$softZones soft zone(s): the top of the pad missed the live take")
-            assertNotEquals(soft, hard, "$softZones soft zone(s): SOFT HITS is still inaudible from the grid")
+            val softestReachable = fileAt(pad, y = 0f, height = 100f)
+            assertNotEquals(
+                "layer0.wav",
+                softestReachable,
+                "$softZones soft zones: the softest take became reachable by touch. That is an improvement, " +
+                    "not a failure — but it means the floor moved, so update this test and say so.",
+            )
+            assertEquals(
+                "layer1.wav",
+                softestReachable,
+                "$softZones soft zones: the softest a touch can reach should be the second zone (MIDI 44)",
+            )
         }
     }
 
@@ -113,10 +167,10 @@ class PadTouchTest {
      * gesture consistent rather than a special case for ghosted pads.
      */
     @Test
-    fun `an unlayered pad still plays quieter from the bottom of the cell`() {
+    fun `an unlayered pad still plays quieter from the top of the cell`() {
         val pad = KitPad(slot = 1, sampleFile = "one.wav", displayName = "KICK", drumClass = DrumClass.KICK)
-        val soft = PadHit.resolve(pad, PadHit.velocityAt(100f, 100f), 0) { 1_000L }!!
-        val hard = PadHit.resolve(pad, PadHit.velocityAt(0f, 100f), 0) { 1_000L }!!
+        val soft = PadHit.resolve(pad, PadHit.velocityAt(0f, 100f), 0) { 1_000L }!!
+        val hard = PadHit.resolve(pad, PadHit.velocityAt(100f, 100f), 0) { 1_000L }!!
         assertEquals(hard.sampleFile, soft.sampleFile)
         assertTrue(soft.gainLeft < hard.gainLeft, "a soft tap was not quieter")
         assertTrue(soft.gainRight < hard.gainRight, "a soft tap was not quieter")

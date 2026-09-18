@@ -38,6 +38,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
 
 /**
@@ -79,13 +80,15 @@ internal val WINDOW_GRID_ROWS = windowRows(0)
 internal val BANK_A_ROWS = listOf(9..16, 1..8)
 internal val BANK_B_ROWS = listOf(25..32, 17..24)
 
-/** Touch-Y velocity: top of the pad is softest, bottom is full velocity. */
-private const val MIN_VELOCITY = 0.35f
-
-internal fun velocityFromY(y: Float, height: Float): Float {
-    val t = (y / height).coerceIn(0f, 1f)
-    return MIN_VELOCITY + (1f - MIN_VELOCITY) * t
-}
+/**
+ * Touch-Y velocity: top of the pad is softest, bottom is full velocity.
+ *
+ * The rule itself now lives in `PadHit` (`:shell`), where it can be tested
+ * — it was `private` here and retyped, with its floor, in KeysScreen too,
+ * and KIT later grew a fourth copy with the axis inverted. One quantity,
+ * one place.
+ */
+internal fun velocityFromY(y: Float, height: Float): Float = PadHit.velocityAt(y, height)
 
 /**
  * The velocity a synthesized TalkBack click uses: `velocityFromY` needs a
@@ -94,7 +97,7 @@ internal fun velocityFromY(y: Float, height: Float): Float {
  * center would have produced, i.e. neither the softest nor the hardest
  * hit available to a sighted finger.
  */
-private val CENTER_VELOCITY = velocityFromY(0.5f, 1f)
+private val CENTER_VELOCITY = PadHit.CENTER
 
 /**
  * Bank-aware pad tag ("A01".."A16", "B01".."B16"), over [PadBanks].
