@@ -188,7 +188,12 @@ private val PROG_NAMES = listOf(
 private val PROG_SUBS = listOf(
     "THE CAPTURED CLIP",
     "ON THE GRID, PUSHED LATE",
-    "ROOM TO BREATHE",
+    // Says the length change out loud (J17). `GrooveVariations.halfTime`
+    // doubles `bars`, and this file already knew — the comment on the PROG
+    // carousel's own lock explains that switching mid-take would desync the
+    // clock "(HALF-TIME doubles `bars`)". The app knew and the player did
+    // not, which is the whole of the finding.
+    "ROOM TO BREATHE · TWICE AS LONG",
     "THE SKELETON",
     "FORKED — YOUR STEPS",
 )
@@ -659,7 +664,7 @@ fun GrooveScreen(
     // alongside feel/swingPercent/progIndex/seed.
     var preTake by remember(kitDir) { mutableStateOf<Mpc3Clip?>(preTake) }
     LaunchedEffect(preTake) { onPreTakeChange(preTake) }
-    var recordBars by remember(kitDir) { mutableIntStateOf(2) }
+    var recordBars by remember(kitDir) { mutableIntStateOf(LiveRecord.DEFAULT_BARS) }
     var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
 
     // Fix 2 (live-record follow-ups): the count-in previously said only
@@ -1879,6 +1884,40 @@ fun GrooveScreen(
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
                         }
                     } else {
+                        // BARS: how long a from-scratch take runs (J17).
+                        //
+                        // `recordBars` was a `var` nothing could reassign —
+                        // the seam was cut and nothing attached. It belongs
+                        // here and nowhere else: an overdub records against
+                        // its base's own bar count, never this one, so this
+                        // branch (no base yet) is the only place the number
+                        // means anything. No `enabled` gymnastics needed for
+                        // that reason — the whole branch is the from-scratch
+                        // case by construction.
+                        //
+                        // The stepper cannot leave `LiveRecord.BARS`, which
+                        // matters because `Take` refuses a bar count outside
+                        // 1..64 at the arm: a control able to walk off the
+                        // ladder would turn this tap into a throw the moment
+                        // the count-in starts.
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            GrooveActionButton("◀", scheme, Modifier.weight(1f), enabled = !busy) {
+                                recordBars = LiveRecord.barsAfter(recordBars, -1)
+                            }
+                            TapeText(
+                                if (recordBars == 1) "1 BAR" else "$recordBars BARS",
+                                TapeType.pixel,
+                                scheme.lcdInk.tape,
+                                Modifier.weight(2f),
+                            )
+                            GrooveActionButton("▶", scheme, Modifier.weight(1f), enabled = !busy) {
+                                recordBars = LiveRecord.barsAfter(recordBars, 1)
+                            }
+                        }
                         // Three ways in, side by side: play it, tap it, or ring it.
                         // ORBIT needs no groove at all, so it belongs here as much
                         // as on the full screen's action row.

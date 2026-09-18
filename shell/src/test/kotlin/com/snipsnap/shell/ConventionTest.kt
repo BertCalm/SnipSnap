@@ -1764,4 +1764,87 @@ class ConventionTest {
                 "one would make the accessible path quieter than the pad actually is.",
         )
     }
+    private val grooveScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt")
+
+    /**
+     * J17, both halves.
+     *
+     * The seam: `recordBars` was a `var` initialised to 2 that no control
+     * ever reassigned — a mutable variable able to hold only its initial
+     * value, while the model accepted anything in 1..64.
+     *
+     * The silence: selecting PROG C doubles the pattern length through
+     * `GrooveVariations.halfTime`, and nothing on screen said so. The file
+     * already *knew* — the comment locking the PROG carousel during RECORD
+     * explains the desync risk "(HALF-TIME doubles `bars`)". The app knew
+     * and the player did not.
+     */
+    @Test
+    fun `law - GROOVE has a control for the take length, and says when a program changes it`() {
+        val src = grooveScreen.readText(Charsets.UTF_8)
+
+        // EVERY assignment, not merely one of them.
+        //
+        // This first read `containsMatchIn(...barsAfter...)`, which is a
+        // existence check wearing an invariant's clothes: replacing one of
+        // the two steppers with plain arithmetic left the other matching
+        // and the law green. The property is that `recordBars` is never
+        // assigned anything else, so that is what it asks.
+        // `=(?!=)` so a `recordBars == 1` comparison is not read as an
+        // assignment — it was, the first time this ran.
+        val assignments = Regex("""recordBars\s*=(?!=)\s*([^\n]*)""").findAll(src)
+            .map { it.groupValues[1].trim() }
+            .filterNot { it.startsWith("LiveRecord.barsAfter(recordBars,") }
+            .filterNot { it.startsWith("recordBars,") } // `bars = recordBars,` style named arguments
+            .toList()
+        assertTrue(
+            assignments.isEmpty(),
+            "`recordBars` is assigned something other than a `LiveRecord.barsAfter` step: $assignments. " +
+                "Plain arithmetic is not the same thing: `Take` refuses a bar count outside 1..64 *at the " +
+                "arm*, so a control able to walk off the ladder turns a tap into a throw the instant the " +
+                "count-in starts.",
+        )
+        assertTrue(
+            Regex("""LiveRecord\.barsAfter\(recordBars,\s*-1\)""").containsMatchIn(src) &&
+                Regex("""LiveRecord\.barsAfter\(recordBars,\s*1\)""").containsMatchIn(src),
+            "the take length needs a control that steps both ways; one direction alone cannot reach every " +
+                "rung on a ladder that wraps.",
+        )
+        assertTrue(
+            Regex("""mutableIntStateOf\(LiveRecord\.DEFAULT_BARS\)""").containsMatchIn(src),
+            "RECORD's opening length should come from `LiveRecord.DEFAULT_BARS`, not a literal — a default " +
+                "the stepper's own ladder does not contain is one the control can never return to.",
+        )
+
+        // The program that changes the length has to say so, wherever it
+        // sits in the carousel: keyed on the name, not on an index, so
+        // reordering the programs cannot silently un-say it.
+        //
+        // Read line by line to the list's own closing `)` rather than with
+        // a `[^)]*` regex, and with comment lines dropped before the
+        // strings are collected. Both matter: a `)` inside an explanatory
+        // comment truncated the list the first time this law ran, and a
+        // quoted phrase inside one would otherwise be counted as an entry.
+        fun entriesOf(declaration: String): List<String> {
+            val lines = src.lineSequence().dropWhile { declaration !in it }
+            assertTrue(lines.any(), "could not find `$declaration`")
+            val body = lines.drop(1).takeWhile { it.trim() != ")" }
+            return body.filterNot { isCommentLine(it.trim()) }
+                .flatMap { line -> Regex(""""([^"]*)"""").findAll(line).map { it.groupValues[1] } }
+                .toList()
+        }
+        val nameList = entriesOf("private val PROG_NAMES = listOf(")
+        val subList = entriesOf("private val PROG_SUBS = listOf(")
+        assertTrue(nameList.size == subList.size && nameList.isNotEmpty(), "PROG_NAMES and PROG_SUBS disagree: $nameList vs $subList")
+
+        val halfTimeAt = nameList.indexOfFirst { "HALF-TIME" in it }
+        assertTrue(halfTimeAt >= 0, "no program named HALF-TIME in $nameList — if it was renamed, point this law at the new name.")
+        assertTrue(
+            "LONG" in subList[halfTimeAt],
+            "the HALF-TIME program doubles the pattern length (`GrooveVariations.halfTime`: `bars * 2`) and " +
+                "its own line does not say so: '${subList[halfTimeAt]}'. A length change reached through a " +
+                "carousel of five options, with nothing on screen mentioning it, is the half of J17 a player " +
+                "actually trips over.",
+        )
+    }
 }
