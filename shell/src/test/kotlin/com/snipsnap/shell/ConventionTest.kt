@@ -1847,4 +1847,61 @@ class ConventionTest {
                 "actually trips over.",
         )
     }
+    private val appKt = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+
+    /**
+     * J10, measured the way the finding measured it.
+     *
+     * Counting navigations across `App.kt`, the review found KIT 11, KITS
+     * 4, TAPE 3, GROOVE 3 — and **CHOP 0, EXPORT 0**. Those are steps 2 and
+     * 4 of the loop the app advertises: the app automated the one join in
+     * the middle (CHOP → KIT) and left the two at the ends to the user.
+     *
+     * Counts both forms, because the screen is reached both ways: a direct
+     * `screen = AppScreen.X` and the `goToScreen(AppScreen.X)` helper. A
+     * law that knew only the form the review happened to grep for would go
+     * green on a navigation that does not exist, or red on one that does.
+     */
+    @Test
+    fun `law - every step of the advertised loop can be reached from the one before it`() {
+        val src = appKt.readText(Charsets.UTF_8)
+        fun navigationsTo(screen: String): Int =
+            Regex("""(screen\s*=\s*AppScreen\.$screen\b|goToScreen\(AppScreen\.$screen\))""")
+                .findAll(src).count()
+
+        for (step in listOf("CHOP", "EXPORT")) {
+            assertTrue(
+                navigationsTo(step) > 0,
+                "$step is step ${if (step == "CHOP") 2 else 4} of the loop the app advertises and nothing in " +
+                    "App.kt ever navigates to it. Finishing a capture has to offer CHOP; finishing a kit has " +
+                    "to offer EXPORT. Without it the app automates the one join in the middle and leaves both " +
+                    "ends to a user who has to already know the loop exists.",
+            )
+        }
+
+        // The offers are offers. A door the player can ignore, not a screen
+        // that moves under them — being moved without asking is the same
+        // complaint as a control that changes its own target.
+        assertTrue(
+            Regex("""offer\(Copy\.CAPTURE_OFFER,\s*Copy\.CAPTURE_OFFER_DOOR\)""").containsMatchIn(src) &&
+                Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR\)""").containsMatchIn(src),
+            "both handoffs should go through `offer(...)`, which puts a door on a toast and leaves the screen " +
+                "where it is. Navigating outright would be a stronger handoff and the wrong one.",
+        )
+        // The guard has to be ON the offer, not merely somewhere in the
+        // file. `containsMatchIn` passed with the guard deleted, because
+        // `pads.isNotEmpty()` appears elsewhere in App.kt — an existence
+        // check where a locality check was needed.
+        val lines = src.lines()
+        val offers = lines.withIndex().filter { (_, line) -> "offer(Copy.KIT_OFFER" in line }
+        assertTrue(offers.isNotEmpty(), "no EXPORT offer found at all")
+        for ((at, line) in offers) {
+            val above = lines.subList((at - 3).coerceAtLeast(0), at).joinToString("\n")
+            assertTrue(
+                "pads.isNotEmpty()" in above,
+                "the EXPORT offer at line ${at + 1} is not guarded by the kit actually having pads:" +
+                    "\n  ${line.trim()}\nA door onto an empty EXPORT is a worse answer than no door.",
+            )
+        }
+    }
 }

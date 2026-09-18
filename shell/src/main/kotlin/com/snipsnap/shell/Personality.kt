@@ -348,6 +348,45 @@ object Copy {
     const val PAD_VELOCITY_LEGEND = "TAP LOW ON A PAD FOR A SOFTER HIT"
 
     /**
+     * The handoff at the end of a capture (J10).
+     *
+     * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and
+     * received **zero** programmatic navigations between them: the app
+     * automated the one join in the middle (CHOP → KIT) and left the two at
+     * the ends to the user. This is the first of the two.
+     *
+     * An offer, not a handoff: it names what just happened and what can be
+     * done with it, and going nowhere is a perfectly good answer. That is
+     * why it rides a toast rather than moving the screen — being moved
+     * without asking is the same complaint as a destructive control
+     * changing its own target.
+     *
+     * States rather than asks. Both of these were written as questions
+     * first and the full-stop law refused them — correctly: they were the
+     * only two question marks in the whole of [Copy]. The house voice does
+     * not ask, it says what happened and what to do next ("CLEAR SOFT HITS
+     * FIRST, THEN STACK."), and the door beside it is what makes it an
+     * offer rather than an instruction.
+     */
+    const val CAPTURE_OFFER = "THAT IS ON TAPE. CHOP IT INTO PADS."
+
+    /** The door out of [CAPTURE_OFFER]; "▸" because it opens another screen, the convention `KitsScreen.kt`'s `ArmControl` documents. */
+    const val CAPTURE_OFFER_DOOR = "CHOP ▸"
+
+    /**
+     * The handoff at the end of a kit (J10), the other end of the loop.
+     *
+     * Offered when slices land on the grid, because that is the moment the
+     * kit becomes a thing worth taking out of the app — and only when the
+     * kit actually has pads, since a door onto an empty EXPORT is a worse
+     * answer than no door.
+     */
+    const val KIT_OFFER = "PADS ON THE GRID. TAKE THE KIT OUT."
+
+    /** The door out of [KIT_OFFER]. */
+    const val KIT_OFFER_DOOR = "EXPORT ▸"
+
+    /**
      * The kit shelf's own legend (September UAT, finding 17). Every creation
      * door auto-names, so RENAME is the only place a user ever types a kit
      * name — and it sits behind a hold on the row that nothing on screen

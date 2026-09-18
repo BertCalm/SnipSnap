@@ -285,13 +285,38 @@ fun App(shelf: KitShelf) {
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
+    // The door a toast can carry (J10): its label and what it opens, or
+    // null for the ordinary one-line toast. Cleared with the toast itself
+    // by the dwell effect below, so a door can never outlive its message.
+    var toastDoor by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond a toast's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
     /** The box in place of the toast, never beside it: opening one puts any toast down. */
     fun openNote(n: LandingNote.Note) {
         toast = null
+        toastDoor = null
         note = n
+    }
+
+    /**
+     * An offer: a line, and a door out of it (J10).
+     *
+     * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and
+     * received zero programmatic navigations — the app automated the one
+     * join in the middle and left the two at the ends to the user. This is
+     * how both ends get offered without either being forced: the screen
+     * does not move, the line says what happened, and going nowhere is a
+     * perfectly good answer.
+     *
+     * Declared after [note] rather than beside `toast`, because it puts the
+     * note down the way [openNote] puts the toast down, and a local
+     * function cannot reach a local declared below it.
+     */
+    fun offer(message: String, label: String, open: () -> Unit) {
+        note = null
+        toast = message
+        toastDoor = label to open
     }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
@@ -958,8 +983,14 @@ fun App(shelf: KitShelf) {
     }
     LaunchedEffect(toast) {
         if (toast != null) {
-            delay(Motion.TOAST_DWELL_MS.toLong())
+            // A line you only have to read gets the ordinary dwell; one you
+            // have to *reach* gets longer. An offer that vanished at 2.6
+            // seconds would be a target that sometimes catches the thumb
+            // and sometimes does not, which teaches nobody where the door
+            // is — see `Motion.TOAST_OFFER_DWELL_MS`.
+            delay((if (toastDoor != null) Motion.TOAST_OFFER_DWELL_MS else Motion.TOAST_DWELL_MS).toLong())
             toast = null
+            toastDoor = null
         }
     }
 
@@ -2707,6 +2738,10 @@ fun App(shelf: KitShelf) {
                             // a snip. Synchronous now — no IO re-read needed.
                             onCommit = { file, range ->
                                 lastCommit = TapeCommit(file, range)
+                                // Step 1 → step 2 (J10). CHOP reads
+                                // `lastCommit`, which is what was just set,
+                                // so the door always has something to open.
+                                offer(Copy.CAPTURE_OFFER, Copy.CAPTURE_OFFER_DOOR) { goToScreen(AppScreen.CHOP) }
                                 // A real COMMIT is genuine, fresher intent than
                                 // whatever SNIPS → TAPE request (if any) is
                                 // still sitting in `tapeOpenOverride` — clearing
@@ -2761,6 +2796,12 @@ fun App(shelf: KitShelf) {
                             onSentToGrid = { newEntry ->
                                 open = newEntry
                                 screen = AppScreen.KIT
+                                // Step 3 → step 4 (J10), and only when the
+                                // kit has pads: a door onto an empty EXPORT
+                                // is a worse answer than no door.
+                                if (newEntry.kit.pads.isNotEmpty()) {
+                                    offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR) { goToScreen(AppScreen.EXPORT) }
+                                }
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
@@ -2769,6 +2810,9 @@ fun App(shelf: KitShelf) {
                                 open = updated
                                 kitBankRequest = bank
                                 screen = AppScreen.KIT
+                                if (updated.kit.pads.isNotEmpty()) {
+                                    offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR) { goToScreen(AppScreen.EXPORT) }
+                                }
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
@@ -2993,7 +3037,7 @@ fun App(shelf: KitShelf) {
             }
             // A toast raised while the box is up (a share landing behind it)
             // is not drawn beside it; its dwell runs out unseen.
-            ToastOverlay(if (note == null) toast else null)
+            ToastOverlay(if (note == null) toast else null, door = if (note == null) toastDoor else null)
             note?.let { n ->
                 val dismissNote = { note = null }
                 MessageBox(n, onDismiss = dismissNote)

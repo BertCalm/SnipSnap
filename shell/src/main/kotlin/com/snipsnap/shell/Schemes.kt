@@ -440,6 +440,21 @@ object Motion {
     const val TOAST_IN_MS = 250
     /** Toast dwell before dismissing itself, ms. */
     const val TOAST_DWELL_MS = 2600
+
+    /**
+     * How long a toast that carries a door stays up (J10).
+     *
+     * [TOAST_DWELL_MS] is right for a line you only have to read. It is
+     * wrong for one you have to *reach*: an offer that vanishes at 2.6
+     * seconds is a target that sometimes catches the thumb and sometimes
+     * does not, which is worse than no offer at all — a control that works
+     * intermittently teaches nobody where the door is.
+     *
+     * Still a dwell rather than a box that waits: the offer comes after
+     * every capture and every kit, so one that had to be dismissed would
+     * be a toll on the loop it is trying to help.
+     */
+    const val TOAST_OFFER_DWELL_MS = 7000
     /** Pad hit glow decay, ms. */
     const val PAD_GLOW_MS = 180
     /** Export dub progress, ms per file. */
