@@ -1853,6 +1853,55 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * SHARE on a snip row: the snip leaves the app.
+     *
+     * The gap this closes: a loop-grid bounce lands in SNIPS - its own
+     * toast says "IT IS IN SNIPS NOW" - and SNIPS' only outbound action was
+     * → LOOP, back into the app it came from. Sounds could leave five ways
+     * (EXPORT, a packed kit, a packed room, BACKUP, GROOVE's chart); the
+     * thing the user actually made could not leave at all.
+     *
+     * Staged into the share cache rather than sent where it lies, which is
+     * not a preference: `res/xml/share_paths.xml` covers that cache and
+     * EXPORT's output and deliberately nothing else, so
+     * `FileProvider.getUriForFile` would throw on a path under the files
+     * directory - which is exactly where `SnipStore` keeps snips. The copy
+     * is also what lets [SnipStore.shareName] give it a readable name
+     * instead of the internal `snip_<millis>_<name>.wav`.
+     *
+     * `overwrite = false` on purpose, with the free name asked for first: a
+     * same-named copy already in the cache may still be being read by the
+     * app the user sent it to a moment ago, and overwriting it corrupts
+     * that transfer with no sign on this end.
+     */
+    fun shareSnip(info: SnipStore.Info) {
+        if (busy != null) return
+        busy = Copy.SHARE_BUSY
+        scope.launch {
+            try {
+                val staged = withContext(Dispatchers.IO) {
+                    val dir = ShareOut.shareDir(context)
+                    val name = SnipStore.shareName(info.displayName) { File(dir, it).exists() }
+                    info.file.copyTo(File(dir, name), overwrite = false)
+                }
+                busy = null
+                toast = if (ShareOut.send(context, staged, ShareOut.WAV_MIME, info.displayName)) {
+                    Copy.snipReady(info.displayName)
+                } else {
+                    Copy.SHARE_NOWHERE
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "shareSnip: failed", e)
+                toast = Copy.SHARE_FAILED
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     /** RESTORE on a binned room: back onto the shelf, the toast names it. */
     fun restoreRoom(binned: Rooms.Binned) {
         if (busy != null) return
@@ -2191,6 +2240,7 @@ fun App(shelf: KitShelf) {
                                     pendingSnipAssign = file
                                 },
                                 onSendToLoop = ::sendSnipToLoop,
+                                onShare = ::shareSnip,
                             )
                         } else if (deletedKitsOpen) {
                             DeletedKitsScreen(

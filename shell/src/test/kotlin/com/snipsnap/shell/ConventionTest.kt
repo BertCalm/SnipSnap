@@ -1251,8 +1251,9 @@ class ConventionTest {
         require(sources.size > 20) { "found only ${sources.size} :app sources — the scan is broken, not the tree." }
 
         // The calls that take a root: everything else on SnipStore (DIR,
-        // Info, displayName, rename, delete, provenanceTag) is handed a file
-        // or nothing at all and cannot name the wrong folder.
+        // Info, displayName, shareName, rename, delete, provenanceTag) is
+        // handed a file, a name, or nothing at all, and cannot name the
+        // wrong folder.
         val rooted = Regex("""SnipStore\.(commit|commitPrepared|import|list|listWithInfo|newest|binned|restore|emptyBin|sweepBin)\s*\(([^)]*)""")
         // What a root is allowed to be: the files directory under any of the
         // names this app gives it.

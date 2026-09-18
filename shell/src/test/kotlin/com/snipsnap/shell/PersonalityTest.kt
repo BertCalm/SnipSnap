@@ -386,6 +386,10 @@ class PersonalityTest {
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BREEDING_BUSY",
+        // SNIPS' SHARE, while the snip is copied into the share cache under
+        // a readable name — like every other *_BUSY here, an overlay line
+        // rather than a landing.
+        "SHARE_BUSY",
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
         // DUST ALL's busy overlay line, like every other *_BUSY above.
@@ -641,6 +645,13 @@ class PersonalityTest {
         // `legacyHandListedToasts`. The name matters: press three times and
         // three pads pile up, so a line that reads the same each time cannot
         // say which one is new.
+        // SNIPS' SHARE. Ends on the same "PICK WHERE IT GOES." as kitPacked,
+        // roomPacked and backedUp because it is the same moment, and says
+        // READY rather than SENT because `ShareOut.send` only reports that
+        // the chooser opened.
+        assertEquals("BREAK IS READY TO SEND. PICK WHERE IT GOES.", Copy.snipReady("BREAK"))
+        assertTrue(Copy.snipReady("BREAK").endsWith("."), "and still lands on a full stop")
+        assertFalse("SENT" in Copy.snipReady("BREAK"), "the chooser opening is not the file leaving")
         assertEquals("PAD MADE — DRONE 2. ON THE SHELF.", Copy.madeNamed("PAD", "DRONE 2"))
         assertEquals("INSTRUMENT MADE — BELL. ON THE SHELF.", Copy.madeNamed("INSTRUMENT", "BELL"))
         assertTrue(Copy.madeNamed("PAD", "DRONE").endsWith("."), "and still lands on a full stop")

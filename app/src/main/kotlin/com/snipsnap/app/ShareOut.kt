@@ -72,4 +72,14 @@ object ShareOut {
 
     /** The MIME EXPORT's MIDI-groove format travels as. */
     const val MIDI_MIME = "audio/midi"
+
+    /**
+     * The MIME a snip travels as.
+     *
+     * `audio/wav` and not `audio/x-wav` or `audio/wave`: all three are in
+     * the wild, but `audio/wav` is what Android's own `MimeTypeMap` maps
+     * `.wav` to, so it is the one a receiving app's intent filter is most
+     * likely to have been written against.
+     */
+    const val WAV_MIME = "audio/wav"
 }
