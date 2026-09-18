@@ -1625,4 +1625,33 @@ class ConventionTest {
                 "KDoc was written to end. Write it into the move's memory alongside the switch.",
         )
     }
+    /**
+     * J22. `TapeDeckViewTest` proves the carrier carries; this proves TAPE
+     * still uses it.
+     *
+     * That gap is the whole reason these source-scanning laws exist. A
+     * perfectly correct, fully tested `ViewCarrier` in `:shell` says nothing
+     * about whether `:app` calls it — and `:app` has no Kotlin test source
+     * set to notice if the call is dropped in a later edit. Only the
+     * compiler sees this file, and a deleted `.also(viewCarrier::adopt)`
+     * compiles cleanly.
+     */
+    @Test
+    fun `law - TAPE hands each fresh deck the view the player had set up`() {
+        val src = tapeScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            Regex("""val\s+viewCarrier\s*=\s*remember\s*\{\s*TapeDeckModel\.ViewCarrier\(\)\s*\}""")
+                .containsMatchIn(src),
+            "TAPE needs an unkeyed `remember { TapeDeckModel.ViewCarrier() }`. Keyed on anything that moves " +
+                "with the tape it would die exactly when it is needed — outliving `tapeData` is its only job.",
+        )
+        val built = Regex("""remember\(tapeData\)\s*\{\s*\n\s*TapeDeckModel\([^)]*\)\s*\n\s*\.also\(viewCarrier::adopt\)""")
+        assertTrue(
+            built.containsMatchIn(src),
+            "the fresh `TapeDeckModel` is built without `.also(viewCarrier::adopt)`, so a snip landing — " +
+                "reachable from the quick-settings tile without leaving this screen — silently returns the " +
+                "zoom and the readout to their defaults under the player's finger. Nothing else catches " +
+                "this: `:app` has no test source set, and dropping the call still compiles.",
+        )
+    }
 }
