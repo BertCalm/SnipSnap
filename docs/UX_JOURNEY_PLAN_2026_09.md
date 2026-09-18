@@ -457,6 +457,23 @@ code, is what caught them. The standing question this leaves for the
 remaining PRs: not "should this key change" but **"what was relying on it
 not changing"**.
 
+### A second standing question, for the laws rather than the code
+
+Three laws written during PR 5 and PR 6 were **vacuous when first run**, and
+all three failed the same way: they asked whether something *correct*
+existed, when the property was that nothing *incorrect* did.
+
+| Law | What it asked | What it missed |
+|---|---|---|
+| The `onCatchInFlight` check (PR 4) | the parameter exists, a use exists | that they were in different functions — CI caught it |
+| The `barsAfter` law (J17) | a `barsAfter` call exists | the *other* stepper using plain arithmetic |
+| The EXPORT-guard law (J10) | `pads.isNotEmpty()` appears in the file | that it was nowhere near the offer |
+
+Two of the three were caught only by deliberately breaking the code and
+watching the law stay green. So: **write the regression first, then the
+law**, and for anything of the form "X always goes through Y", enumerate
+every X rather than searching for one good one.
+
 ---
 
 ### PR 6 — the cut seams *(J10, J17, J37)*
@@ -466,7 +483,42 @@ Capabilities that exist in the model with no control attached.
 - **J10** — CHOP and EXPORT receive **zero** programmatic navigations,
   though they are steps 2 and 4 of the loop the app advertises. Offer CHOP
   when a capture lands; offer EXPORT when a kit is ready. The review calls
-  this the cheapest change in the document and I agree.
+  this the cheapest change in the document and I agree. **Done.**
+
+  Decided with the user: **a toast with an action**, on both — non-blocking
+  and ignorable, rather than navigating outright. Being moved without asking
+  is the same complaint as a destructive control changing its own target.
+
+  It was not quite the cheapest change, because **the app had no actionable
+  toast**. `LandingNote` looked like the answer and is the wrong weight — it
+  *stays until read*, and an offer after every capture and every kit would
+  become a toll on the loop it is trying to help. So `ToastOverlay` gained
+  an optional door, sharing the message's merged semantics node so TalkBack
+  announces the line and offers the action together.
+
+  **The dwell had to change with it.** `TOAST_DWELL_MS` is 2600 — right for
+  a line you only have to read, wrong for one you have to *reach*: an offer
+  that vanishes at 2.6 seconds is a target that sometimes catches the thumb
+  and sometimes does not, which teaches nobody where the door is. A toast
+  carrying a door gets `TOAST_OFFER_DWELL_MS` instead. Still a dwell, not a
+  box that waits.
+
+  EXPORT is offered only when the kit actually has pads — a door onto an
+  empty EXPORT is a worse answer than no door.
+
+  **The copy was off-voice and the suite said so.** Both offers were written
+  as questions first ("CHOP IT INTO PADS?") and the full-stop law refused
+  them. Checking before widening the law was the right move: they were the
+  only two question marks in the whole of `Copy`. The house voice does not
+  ask — it states what happened and what to do next ("CLEAR SOFT HITS
+  FIRST, THEN STACK."), and the door beside the line is what makes it an
+  offer rather than an instruction.
+
+  **A known limitation, for the IA work.** The offer is time-limited, and
+  seven seconds is tight for a TalkBack user to find and activate the door.
+  The offer is a nudge, not the only route — both screens remain reachable
+  from the menu — but if the handoffs matter, a non-timed route to "the next
+  step" belongs in the IA pass rather than in a longer and longer toast.
 - **J17** — attach a bar-length control to the `recordBars` seam that
   already exists, and say somewhere that PROG C changes pattern length.
 - **J37** — velocity is hard-coded to `1f`, so `SOFT HITS` can be switched

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -413,7 +414,20 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
  * a uniformly polite announcement.
  */
 @Composable
-fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
+fun ToastOverlay(
+    message: String?,
+    modifier: Modifier = Modifier,
+    /**
+     * An optional door out of the toast (J10): its label, and what it
+     * opens. Null for the ordinary one-line toast, which is most of them.
+     *
+     * The door is part of the same merged semantics node as the message,
+     * so TalkBack announces the line and offers the action together rather
+     * than as two separately-focusable things saying overlapping words —
+     * the same reasoning `mergeDescendants` already carries below.
+     */
+    door: Pair<String, () -> Unit>? = null,
+) {
     val scheme = LocalScheme.current
     if (message == null) return
 
@@ -439,7 +453,23 @@ fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
                 }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+            if (door == null) {
+                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+            } else {
+                val (label, open) = door
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
+                    Spacer(Modifier.width(10.dp))
+                    Box(
+                        Modifier
+                            .raisedBevel(scheme, 3.dp)
+                            .tapeClick(label = label) { open() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        TapeText(label, TapeType.pixel, scheme.amber.tape, maxLines = 1)
+                    }
+                }
+            }
         }
     }
 }

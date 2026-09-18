@@ -434,6 +434,9 @@ class PersonalityTest {
         // PAD_VELOCITY_LEGEND rides with PAD_SHEET_LEGEND: it is the second
         // line of the same furniture under KIT's grid, on screen
         // permanently, not a sentence the app says once.
+        // The two J10 door labels are buttons, not sentences - "CHOP ▸"
+        // carries its own arrow the way every other door label does.
+        "CAPTURE_OFFER_DOOR", "KIT_OFFER_DOOR",
         "PAD_SHEET_LEGEND", "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
         // The empty shelf's loop line (finding 3) is a row of tab names,
         // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
