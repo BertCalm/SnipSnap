@@ -61,6 +61,7 @@ import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
+import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -187,16 +188,20 @@ fun KitScreen(
 
     val kit = entry.kit
 
-    fun hit(slot: Int) {
+    fun hit(slot: Int, velocity: Float = 1f) {
         val pad = kit.pad(slot) ?: return
         if (!engineUp || !player.isUp()) return
         // oneShot forced true, not read off the pad: this screen has no
         // release gesture to call noteOff with, so a gate pad's own
         // metadata would otherwise sit unused - forcing it here says so,
         // rather than leaving a future release gesture to discover it.
-        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, oneShot = true)
+        // The velocity is the grid's, not a constant (J37): SOFT HITS
+        // builds real velocity layers and `PadHit.resolve` has always
+        // picked one by velocity, so a hard-coded 1f meant the layers could
+        // be built and never heard.
+        val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, 1f, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
     }
 
     fun panic() {
@@ -359,6 +364,11 @@ fun KitScreen(
         // be forgotten. The hold stays exactly as it was — this explains it,
         // it does not replace it.
         TapeText(Copy.PAD_SHEET_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        // The second gesture with nothing to see (J37). Same reasoning as
+        // the line above it: a pad that answers to where it is tapped is
+        // not discoverable by looking, and a hint that can be dismissed is
+        // a feature that can be lost.
+        TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
         // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
@@ -779,7 +789,8 @@ private fun PadCell(
     slot: Int,
     pad: KitPad?,
     peaks: List<PeaksPyramid.Column>?,
-    onTap: (Int) -> Unit,
+    /** The pad, and how hard: [PadHit.velocityAt] over where in the cell the finger landed. */
+    onTap: (Int, Float) -> Unit,
     onLongPress: (Int) -> Unit,
     onEmptyLongPress: (Int) -> Unit,
     onEmptyTapHint: (Int) -> Unit,
@@ -877,7 +888,10 @@ private fun PadCell(
             // one cell three times instead of once.
             .semantics(mergeDescendants = true) {
                 contentDescription = "PAD $tag: ${pad.displayName}"
-                onClick(label = "PLAY") { onTap(slot); true }
+                // Full velocity, deliberately: a synthesized click has no
+                // position to read, and the accessible path must give the
+                // pad's plain, whole sound rather than an arbitrary one.
+                onClick(label = "PLAY") { onTap(slot, 1f); true }
                 onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for
@@ -889,7 +903,7 @@ private fun PadCell(
             .pointerInput(slot) {
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                    onTap(slot)
+                    onTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
                     scope.launch {
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))

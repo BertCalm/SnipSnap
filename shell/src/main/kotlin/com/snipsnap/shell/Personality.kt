@@ -330,6 +330,24 @@ object Copy {
     const val PAD_SHEET_LEGEND = "HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"
 
     /**
+     * The second line under KIT's grid: where you tap a pad is how hard you
+     * hit it (J37).
+     *
+     * SOFT HITS builds real velocity-layer WAVs and the audio path has
+     * always chosen a layer by velocity, but the grid hit everything at
+     * full — so the feature could be switched on and never heard. Tap
+     * position supplies the velocity a tap on glass otherwise has none of.
+     *
+     * A gesture with no visible affordance needs a legend for the same
+     * reason the hold does ([PAD_SHEET_LEGEND]): nobody discovers a
+     * pressure-sensitive pad by looking at it, and a hint that can be
+     * dismissed is a feature that can be lost. Says the direction rather
+     * than the rule, because "lower is softer" is something a thumb can act
+     * on and "velocity ramps from 0.2 to 1.0" is not.
+     */
+    const val PAD_VELOCITY_LEGEND = "TAP LOW ON A PAD FOR A SOFTER HIT"
+
+    /**
      * The kit shelf's own legend (September UAT, finding 17). Every creation
      * door auto-names, so RENAME is the only place a user ever types a kit
      * name — and it sits behind a hold on the row that nothing on screen
