@@ -75,6 +75,7 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     // plays a chromatic mid-sized cloud rather than reading garbage.
     setGrain(GrainSettings{});
     setKey(KeySnap{});
+    setKeySnap(false);  // the loop plays as recorded until KEY is turned on
     setModulation(nullptr, 0);  // every target at 0: nothing moves until a slot has depth
     // The one Hann window every grain reads through, whatever its length.
     // kGrainWindowTable + 1 points so a grain at its very last frame
@@ -233,6 +234,10 @@ void SurfaceEngine::setKey(const KeySnap& key) {
     const uint32_t mask = key.scaleMask & grain::kChromaticMask;
     keyMask_.store(mask == 0u ? grain::kChromaticMask : mask, std::memory_order_relaxed);
     keySourceMidi_.store(std::isfinite(key.sourceMidi) ? key.sourceMidi : 0.0f, std::memory_order_relaxed);
+}
+
+void SurfaceEngine::setKeySnap(bool on) {
+    keySnapLoop_.store(on, std::memory_order_relaxed);
 }
 
 void SurfaceEngine::setModulation(const float* offsets, int32_t count) {
@@ -500,6 +505,12 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             svfA1_ = 1.0f / (1.0f + g * (g + k));
             svfA2_ = g * svfA1_;
             svfA3_ = g * svfA2_;
+            // KEY for the loop, and the key it snaps to, read here at
+            // control rate (see keySnapLoop_'s own declaration).
+            keySnapOn_ = keySnapLoop_.load(std::memory_order_relaxed);
+            keyRootC_ = keyRoot_.load(std::memory_order_relaxed);
+            keyMaskC_ = keyMask_.load(std::memory_order_relaxed);
+            keySourceC_ = keySourceMidi_.load(std::memory_order_relaxed);
         }
         const float pitch = pitch_.next();
         cutoff_.next();
@@ -559,7 +570,12 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         }
         const float wSum = w0Loaded + w1Loaded + w2Loaded + w3Loaded;
         const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
-        const float pr = pitchRatio(pitch);
+        // KEY on: the loop's pitch is snapped to the key after the glide,
+        // exactly as a grain's is - so a slide across the pad steps through
+        // the key's notes rather than sweeping between them, and a note the
+        // loop lands on is a note the cloud would land on (one snap, in
+        // Grain.h). Off: as recorded, ±1 octave across the pad, as always.
+        const float pr = keySnapOn_ ? grain::pitchRatio(pitch, keySourceC_, keyRootC_, keyMaskC_) : pitchRatio(pitch);
         // GRAIN swaps the source and nothing else: the same four slots at
         // the same renormalised weights, read as a cloud of windowed grains
         // rather than four loops. The loops' phases simply hold while the

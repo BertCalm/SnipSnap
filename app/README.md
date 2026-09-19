@@ -193,7 +193,13 @@ logcat tag to grab when something is wrong.
   and every corner from stages 4b/5/6 stay untouched (no spring) - the
   whole pad should sound exactly as before this stage existed until a
   corner actually carries a nonzero spring.
-  Then GRAIN, a fifth mode: tap it and a SIZE/DENSITY/SPRAY row appears
+  Then KEY, on the SET row: with a pitched pad and a kit in a key, XY
+  with KEY off should slide the pitch smoothly across the pad; KEY on
+  (lit, and the readout now names the key) should step through the
+  key's notes instead, holding each until the next - the same notes
+  GRAIN's pitch axis lands on. A kit with no key should step semitones.
+  Leave and come back: KEY is in `surface.json`. Then GRAIN, a fifth
+  mode: tap it and a SIZE/DENSITY/SPRAY row appears
   under PAD ◄ ►. A held finger should give a cloud of short grains rather
   than the loop - sliding left and right scrubs *where* in the pad's
   sample they come from (POSITION), and sliding up and down steps the

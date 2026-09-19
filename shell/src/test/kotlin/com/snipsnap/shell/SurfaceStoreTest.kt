@@ -423,4 +423,31 @@ class SurfaceStoreTest {
         near(0.45f, Corner.from(Mode.MORPH, atD, 1f, Corner.DEFAULTS).resonance)
         near(1f, Corner.from(Mode.MORPH, atD, 1f, listOf(Corner(0.5f, 0.5f, 0.9f, 0f), Corner.DARK, Corner.LOW, Corner(0.5f, 0.5f, 0.9f, 0f))).resonance)
     }
+
+    @Test
+    fun `KEY round-trips, a file from before it loads off, and a torn value is refused`() {
+        SurfaceStore.save(temp, Settings(padSlot = 1, keySnap = true))
+        assertTrue(SurfaceStore.load(temp).keySnap)
+        SurfaceStore.save(temp, Settings(padSlot = 1, keySnap = false))
+        assertTrue(!SurfaceStore.load(temp).keySnap)
+        assertTrue(!Settings.DEFAULT.keySnap)
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertTrue(!SurfaceStore.load(temp).keySnap, "a file from before KEY existed plays as it did")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"keySnap":"yes","corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+    }
 }

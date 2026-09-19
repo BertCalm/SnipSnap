@@ -139,6 +139,17 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) NativeSurface.setGrain(handle, grain.size, grain.density, grain.spray)
     }
 
+    /**
+     * KEY: snap the loop's pitch (every mode but GRAIN, which always
+     * snaps) to the key [setKey] holds, through the cloud's own snap, so
+     * the two agree note for note. Off, the surface plays exactly as it
+     * did before KEY existed.
+     */
+    @Synchronized
+    fun setKeySnap(on: Boolean) {
+        if (open) NativeSurface.setKeySnap(handle, on)
+    }
+
     /** The key GRAIN snaps each grain's pitch to - see [SurfaceKey] for what goes in. */
     @Synchronized
     fun setKey(snap: SurfaceKey.Snap) {

@@ -51,6 +51,7 @@ void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint
 void Java_com_snipsnap_app_NativeSurface_control(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jboolean);
 void Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong, jfloat, jfloat, jfloat);
 void Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong, jint, jint, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong, jboolean);
 void Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv*, jobject, jlong, jfloatArray);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
@@ -487,6 +488,38 @@ TEST(jni_surface_grain_knobs_and_key_cross_the_bridge_in_order) {
     const double b4 = 440.0 * std::exp2(2.0 / 12.0);
     CHECK_NEAR(heard, b4, b4 * 0.01);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_key_snap_crosses_the_bridge) {
+    // setKeySnap is a jboolean: JNI_TRUE must reach the engine as on and
+    // JNI_FALSE as off. Driven through the bridge end to end - a pad at
+    // MIDI 70.4 in XY under a chromatic key comes out on A# (70) with KEY
+    // on and a little sharp of it, as recorded, with KEY off.
+    JNIEnv* e = env();
+    auto heardWith = [&](jboolean on) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        const float sourceMidi = 70.4f;
+        const float sourceHz = 440.0f * std::exp2((sourceMidi - 69.0f) / 12.0f);
+        Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(measure::sine(sourceHz, 48000, 48000)), 48000, 0);
+        Java_com_snipsnap_app_NativeSurface_setKey(e, nullptr, h, 0, 0xFFF, sourceMidi);
+        Java_com_snipsnap_app_NativeSurface_setKeySnap(e, nullptr, h, on);
+        Java_com_snipsnap_app_NativeSurface_control(
+            e, nullptr, h, 0,
+            0.5f, 1.0f, 0.0f, 0.5f,
+            0.25f, 0.25f, 0.25f, 0.25f,
+            1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+        std::vector<float> mono;
+        for (int i = 0; i < 24000 / 64 + 1; ++i) {
+            for (float v : measure::left(pull(surf, 64))) mono.push_back(v);
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return measure::hz(mono, 14000, 22000, 48000);
+    };
+    const double aSharp = 440.0 * std::exp2(1.0 / 12.0);
+    const double asRecorded = 440.0 * std::exp2(1.4 / 12.0);
+    CHECK_NEAR(heardWith(JNI_TRUE), aSharp, aSharp * 0.01);
+    CHECK_NEAR(heardWith(JNI_FALSE), asRecorded, asRecorded * 0.01);
 }
 
 TEST(jni_surface_modulation_crosses_the_bridge_by_index_and_a_short_array_is_zeros) {

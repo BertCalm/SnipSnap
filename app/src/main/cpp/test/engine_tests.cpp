@@ -1972,6 +1972,58 @@ TEST(surface_engine_grain_survives_knobs_a_key_and_a_finger_that_are_not_numbers
 
 // ---- modulation ---------------------------------------------------------------
 
+/**
+ * The loop (XY, not GRAIN) of a pad whose own note is MIDI 70.4, with the
+ * finger at [x] across the pad and KEY on or off, after the pitch smoother
+ * has long settled: what the loop is heard playing. The window sits
+ * before the one-second source wraps at any ratio the tests ask for.
+ */
+double loopHzUnderKey(int32_t root, uint32_t mask, float x, bool keySnap) {
+    SurfaceEngine e(kRate);
+    const float sourceMidi = 70.4f;
+    const float sourceHz = 440.0f * std::exp2((sourceMidi - 69.0f) / 12.0f);
+    auto tone = measure::sine(sourceHz, kRate, kRate);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setKey(KeySnap{root, mask, sourceMidi});
+    e.setKeySnap(keySnap);
+    ControlFrame f;
+    f.mode = 0;
+    f.x = x;
+    f.y = 1.0f;
+    f.tilt = 0.5f;
+    f.gate = true;
+    e.pushControl(f);
+    const auto mono = render(e, 24000);
+    return measure::hz(mono, 14000, 22000, kRate);
+}
+
+TEST(surface_engine_key_snaps_the_loop_pitch_and_off_plays_as_recorded) {
+    // KEY off: the pad's own note, a little sharp, exactly as recorded.
+    // KEY on with no key (chromatic): the nearest semitone, A# (70). Under
+    // C major: B (71), the same answer the cloud gives (see
+    // surface_engine_grain_pitch_follows_the_key) - one snap, in Grain.h.
+    const double asRecorded = midiHz(70.4);
+    CHECK_NEAR(loopHzUnderKey(0, grain::kChromaticMask, 0.5f, false), asRecorded, asRecorded * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f, false), asRecorded, asRecorded * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, grain::kChromaticMask, 0.5f, true), midiHz(70), midiHz(70) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f, true), midiHz(71), midiHz(71) * 0.01);
+    // A semitone across the pad (1/24 of it) with KEY on: chromatic steps
+    // to B (71); C major pentatonic has no B and lands on C (72), the
+    // nearer of A (69) and C. KEY off just slides 71.4.
+    const float upOne = 0.5f + 1.0f / 24.0f;
+    CHECK_NEAR(loopHzUnderKey(0, grain::kChromaticMask, upOne, true), midiHz(71), midiHz(71) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajorPentatonic, upOne, true), midiHz(72), midiHz(72) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajorPentatonic, upOne, false), midiHz(71.4), midiHz(71.4) * 0.01);
+}
+
+TEST(surface_engine_key_snap_holds_a_note_across_the_pad_until_the_next_degree) {
+    // Between two degrees the loop holds the lower one rather than sweeping:
+    // a third of a semitone up from A# under C major is still B (the
+    // nearest degree), a full step up is C# (73) - the ladder, not a slide.
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f + 0.33f / 24.0f, true), midiHz(71), midiHz(71) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f + 2.0f / 24.0f, true), midiHz(72), midiHz(72) * 0.01);
+}
+
 TEST(surface_engine_modulation_nudges_a_macro_in_every_mode_and_clamps_at_the_rail) {
     // A 2 kHz sine through XY with the finger at cutoff 1.0 (16 kHz: it
     // passes untouched): a -1 offset on CUTOFF (index 1) closes the filter

@@ -134,6 +134,17 @@ public:
     void setKey(const KeySnap& key);
 
     /**
+     * UI thread. KEY: snap the *loop's* pitch - every mode but GRAIN,
+     * which always snaps - to the key setKey holds, through the very same
+     * grain::pitchRatio the cloud uses, so a note the loop lands on is a
+     * note the cloud would land on. With no key that is a semitone ladder
+     * around the pad's own note; with no known note, the key's intervals
+     * from the pad itself. Off by default: the surface plays exactly as it
+     * did until this is turned on. Takes effect within a control interval.
+     */
+    void setKeySnap(bool on);
+
+    /**
      * How many things a modulator can move: the seven macros in MacroState
      * order, then GRAIN's SIZE, DENSITY, SPRAY and POSITION - the order
      * `Modulator.Target` in :shell declares, by ordinal.
@@ -319,6 +330,15 @@ private:
     std::atomic<int32_t> keyRoot_;
     std::atomic<uint32_t> keyMask_;
     std::atomic<float> keySourceMidi_;
+    // KEY for the loop (see setKeySnap). The atomic crosses from the UI;
+    // the audio thread copies it and the key's own three atomics into
+    // plain fields once per kControlInterval, alongside the filter's
+    // coefficients, rather than reading four atomics per sample.
+    std::atomic<bool> keySnapLoop_;
+    bool keySnapOn_ = false;
+    int32_t keyRootC_ = 0;
+    uint32_t keyMaskC_ = grain::kChromaticMask;
+    float keySourceC_ = 0.0f;
     ParameterSmoother grainPosition_, grainPitchAxis_;
     // The modulators' offsets, UI -> audio as atomics like the corners and
     // the knobs; applyControl reads them into `mod_` once per control frame

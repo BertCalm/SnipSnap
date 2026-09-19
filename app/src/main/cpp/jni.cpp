@@ -150,6 +150,12 @@ Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong handle, jint 
     engine(handle)->setKey(KeySnap{rootSemitone, static_cast<uint32_t>(scaleMask), sourceMidi});
 }
 
+/** KEY for the loop: snap the loop's pitch to the key setKey holds (see SurfaceEngine::setKeySnap). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong handle, jboolean on) {
+    engine(handle)->setKeySnap(on == JNI_TRUE);
+}
+
 /**
  * The modulators' offsets, one per target in `Modulator.Target`'s own
  * ordinal order (SurfaceEngine::kModTargets of them). An array rather

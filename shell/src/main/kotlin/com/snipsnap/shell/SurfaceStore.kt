@@ -188,6 +188,13 @@ object SurfaceStore {
         val grain: Grain = Grain.DEFAULT,
         /** The two modulator slots ([Modulator]); every slot at depth 0 until the MOD row has been stepped. */
         val mods: List<Modulator.Slot> = Modulator.OFF,
+        /**
+         * KEY: the loop's pitch snapped to the kit's key (a semitone ladder
+         * with no key), the way GRAIN's always is - see `SurfaceEngine.
+         * setKeySnap`. Off until KEY is tapped, so a kit from before plays
+         * as it did.
+         */
+        val keySnap: Boolean = false,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
@@ -243,6 +250,7 @@ object SurfaceStore {
                     )
                 },
             ),
+            "keySnap" to JsonValue.Bool(s.keySnap),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
                     JsonValue.Obj(
@@ -317,6 +325,9 @@ object SurfaceStore {
             Modulator.Slot(target, shape, rate, depth)
         } ?: Modulator.OFF
         if (mods.size != Modulator.SLOTS) throw JsonException("surface.json has ${mods.size} modulators, not ${Modulator.SLOTS}")
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods)
+        // Absent is a file from before KEY: off. Present, it is a boolean or
+        // the file is torn - the same rule as every field above.
+        val keySnap = obj["keySnap"]?.bool() ?: false
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap)
     }
 }

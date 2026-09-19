@@ -126,6 +126,12 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  *    source - crush, drive, filter, echo, spring - is the same chain at
  *    XY's rest, so tilt still sets resonance here (`f.tilt * 0.5`).
  *
+ * KEY snaps the loop's pitch to the kit's key in every mode but GRAIN,
+ * where it always is - the same snap, in the engine (`Grain.h`), so a
+ * note the loop lands on is a note the cloud would land on; with no key
+ * it is a semitone ladder around the pad's own note. Off by default and
+ * kept in `surface.json`, so a kit from before plays as it did.
+ *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
  * captures the sound under the last touch as a morph corner (MORPH and
  * VECTOR alike - it is the same corner blend). Both live in
@@ -556,6 +562,7 @@ fun SurfaceScreen(
         }
         pushCorners(settings.corners)
         engine.setGrain(settings.grain)
+        engine.setKeySnap(settings.keySnap)
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
@@ -651,6 +658,18 @@ fun SurfaceScreen(
         }
         engine.setGrain(next)
         persist(dir, settings.copy(grain = next))
+    }
+
+    // KEY: the loop's pitch snapped to the kit's key, the way GRAIN's
+    // always is - the same snap, in the engine, so a note the loop lands
+    // on is a note the cloud would. Remembered in surface.json. Refused
+    // while `settings` is still the outgoing kit's, like SET and PRESET.
+    fun toggleKeySnap() {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val next = !settings.keySnap
+        engine.setKeySnap(next)
+        persist(dir, settings.copy(keySnap = next))
     }
 
     // MOD ◄ ►: steps the picked field of the picked modulator - TARGET
@@ -1202,6 +1221,16 @@ fun SurfaceScreen(
                         modifier = Modifier.weight(1f),
                     ) { setCorner(i) }
                 }
+                // KEY, on the row about what the sound under the finger
+                // is held to: lit while the loop's pitch snaps to the key
+                // (see toggleKeySnap), dimmed while it slides as recorded.
+                ActionButton(
+                    "KEY",
+                    scheme,
+                    enabled = padName != null,
+                    dimmed = !settings.keySnap,
+                    modifier = Modifier.weight(1f).semantics { selected = settings.keySnap },
+                ) { toggleKeySnap() }
             }
 
             Spacer(Modifier.height(6.dp))
@@ -1397,7 +1426,7 @@ fun SurfaceScreen(
                 // note actually landed on is the engine's to know
                 // (Grain.h); this line names the rule, not a second copy
                 // of its answer.
-                if (mode == Mode.GRAIN) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
+                if (mode == Mode.GRAIN || settings.keySnap) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
                 // `tiltReading`, not `tilt.tilt` directly - see its own
                 // declaration for why (Copilot review): this line is only
                 // ever redrawn when something the enclosing recomposition
