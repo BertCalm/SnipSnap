@@ -200,7 +200,7 @@ fun ExportScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
         return
     }
 

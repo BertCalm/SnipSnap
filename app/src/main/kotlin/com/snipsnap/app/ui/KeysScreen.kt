@@ -82,7 +82,7 @@ fun KeysScreen(
     var octave by remember(sidecar) { mutableIntStateOf(0) }
     val root = instrument.rootNote
 
-    // ◄ KITS's own path — shared by the chip and system Back so both
+    // ◄ SHELF's own path — shared by the chip and system Back so both
     // silence the instrument before leaving.
     fun requestBack() {
         player.allOff()
@@ -132,7 +132,7 @@ fun KeysScreen(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("◄ KITS", scheme, enabled = true, onClick = ::requestBack)
+            ActionButton("◄ SHELF", scheme, enabled = true, onClick = ::requestBack)
             ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave-- })
             ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { player.allOff(); octave++ })
         }

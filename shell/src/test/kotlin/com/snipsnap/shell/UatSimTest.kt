@@ -559,7 +559,11 @@ class UatSimTest {
         // visible run instead of past the row's fold (truncation pass), and
         // KIT then moved after CHOP so the four flow tabs read in exactly
         // that order rather than KIT ▸ TAPE ▸ CHOP ▸ EXPORT.
-        val tabs = listOf("KITS", "TAPE", "CHOP", "KIT", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
+        // SHELF, not KITS (J14): the shelf's tab was one letter from KIT,
+        // which takes 11 of App.kt's 24 direct navigations. Five glyphs
+        // rather than four, so this row is 6dp wider than it was - which
+        // is exactly what this simulation is here to keep honest.
+        val tabs = listOf("SHELF", "TAPE", "CHOP", "KIT", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
         val width = tabs.sumOf { it.length * perChar + 8 }

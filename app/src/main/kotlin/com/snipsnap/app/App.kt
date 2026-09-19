@@ -2312,7 +2312,7 @@ fun App(shelf: KitShelf) {
     // [screenHistory] — see its KDoc for why the old "always go to the
     // shelf" policy was wrong. Two exclusions remain, for screens that own
     // their own one-level back door: SPLIT (its own "◄ KIT" chip below,
-    // via `onExit`) and KEYS (its own "◄ KITS" chip, via `onBack`, which
+    // via `onExit`) and KEYS (its own "◄ SHELF" chip, via `onBack`, which
     // also silences the instrument before leaving — this generic reset
     // does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
@@ -3082,7 +3082,7 @@ fun App(shelf: KitShelf) {
                             // this one needs no groove and no scrolling, only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
-                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("KITS ▸", { goToScreen(AppScreen.KITS) })))
+                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("SHELF ▸", { goToScreen(AppScreen.KITS) })))
                             } else {
                                 OrbitScreen(
                                     entry = orbitEntry,
@@ -3131,7 +3131,7 @@ fun App(shelf: KitShelf) {
                 }
                 StatusBar(
                     screenLabel = screen.label,
-                    shelfLabel = "KITS: ${kits.size}",
+                    shelfLabel = "SHELF: ${kits.size}",
                     busy = busy,
                     kitName = open?.kit?.name ?: Copy.NO_KIT_STATUS,
                 )

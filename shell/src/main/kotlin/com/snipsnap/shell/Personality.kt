@@ -83,7 +83,7 @@ object Copy {
     /** GROOVE with a kit open and nothing in it yet: the three ways in, named. TAPE's [EMPTY_SHELF] sent people to the wrong screen. */
     const val EMPTY_GROOVE = "NOTHING HERE YET. PLAY A TAKE IN, TAP STEPS IN, OR PUT THE KIT ON RINGS."
     /** ORBIT from the menu row with no kit open. */
-    const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM KITS FIRST."
+    const val NO_KIT_FOR_ORBIT = "ORBIT PUTS A KIT ON RINGS. OPEN ONE FROM SHELF FIRST."
     /**
      * EXPORT with no kit open — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
@@ -91,7 +91,7 @@ object Copy {
      * anything at all, so a user with kits and no tape was told nothing
      * existed. Same shape as [NO_KIT_FOR_ORBIT].
      */
-    const val NO_KIT_FOR_EXPORT = "EXPORT DUBS A KIT FOR THE MPC. OPEN ONE FROM KITS FIRST."
+    const val NO_KIT_FOR_EXPORT = "EXPORT DUBS A KIT FOR THE MPC. OPEN ONE FROM SHELF FIRST."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "THIS KIT WON'T OPEN. THE TAPE MAY BE CHEWED."
     /**
@@ -953,28 +953,28 @@ object Copy {
     /**
      * HUM with the mic not armed: the hum comes off the same ring GRAB and
      * HOLD use, and the one door that starts that ring is the `LISTEN ·
-     * MIC` button on KITS. Named exactly as the button reads, tab and all:
+     * MIC` button on SHELF. Named exactly as the button reads, tab and all:
      * this toast used to say "ARM THE MIC" and nothing on any screen is
      * called ARM, so a first-time user was stopped two tabs from the door
      * with no route to it (September wiring review, finding 4).
      */
-    const val HUM_NOT_LISTENING = "THE MIC ISN'T LISTENING. LISTEN · MIC ON KITS, THEN HUM."
+    const val HUM_NOT_LISTENING = "THE MIC ISN'T LISTENING. LISTEN · MIC ON SHELF, THEN HUM."
     /**
      * HUM with APP AUDIO armed (renamed from HUM_INSIDE, oilslick
      * followups): that ring holds other apps' playback, not a mouth. The
      * route has a step the not-listening one lacks: while a session runs,
-     * KITS shows STOP where `LISTEN · MIC` was, and arming again only
+     * SHELF shows STOP where `LISTEN · MIC` was, and arming again only
      * re-enters the running session (`MicSessionService`'s ACTION_ARM on an
      * existing ring), so APP AUDIO has to be stopped before the mic can be
      * started.
      */
-    const val HUM_APP_AUDIO = "APP AUDIO IS LISTENING, NOT THE MIC. STOP ON KITS, THEN LISTEN · MIC, THEN HUM."
+    const val HUM_APP_AUDIO = "APP AUDIO IS LISTENING, NOT THE MIC. STOP ON SHELF, THEN LISTEN · MIC, THEN HUM."
     /** HUM began: the tape is playing, the mic is on. Headphones, or the mic hears the tape and every hit matches. */
     const val HUM_START = "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO. TAP HUM AGAIN TO STOP."
     /** The bench's readout while the hum runs. */
     const val HUM_BUSY = "HUMMING…"
     /** The ring gave nothing back: it stopped listening while the hum ran, so the way back is the same button. */
-    const val HUM_NOTHING = "THE MIC HEARD NOTHING. LISTEN · MIC ON KITS, THEN HUM AGAIN."
+    const val HUM_NOTHING = "THE MIC HEARD NOTHING. LISTEN · MIC ON SHELF, THEN HUM AGAIN."
     /** Every mouth sound missed every hit (or none was heard). */
     const val HUM_NO_MATCH = "NOTHING YOU HUMMED LANDED ON A HIT. HEADPHONES ON, AND HUM WITH THE BEAT."
     /** SEND of a hummed chop: the beat you sang went onto the new kit as its groove. */
@@ -1168,7 +1168,7 @@ object Copy {
     /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
     fun outsideRefused(reason: String): String = "OUTSIDE REFUSED: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val OUTSIDE_UNDONE = "BACK INSIDE. THE ORIGINAL IS BACK FROM THE BIN."
-    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. PRESS LISTEN ONCE ON KITS TO GRANT IT."
+    const val OUTSIDE_NEEDS_MIC = "OUTSIDE NEEDS THE MIC. PRESS LISTEN ONCE ON SHELF TO GRANT IT."
     const val OUTSIDE_TAPE_ROLLING = "THE TAPE IS ROLLING. STOP LISTENING FIRST - OUTSIDE WANTS THE MIC TO ITSELF."
     const val OUTSIDE_NEEDS_ONE = "GHOSTS ON. OUTSIDE WANTS ONE SAMPLE - CLEAR THEM FIRST."
     const val OUTSIDE_SENDING = "SENDING… TURN IT UP."
@@ -1590,7 +1590,7 @@ object Copy {
     /**
      * `StatusBar`'s third cell (`Chrome.kt`) when no kit is open — its own
      * resting label, not the empty string `open?.kit?.name.orEmpty()` used
-     * to leave there. An empty bordered box next to the populated `KITS: n`
+     * to leave there. An empty bordered box next to the populated `SHELF: n`
      * cell read as a rendering gap, not a state: the same "is this broken
      * or just empty" confusion [EMPTY_GROOVE]'s own KDoc names for a blank
      * screen. No full stop, same register as [CARD_NONE]: this is a
@@ -2049,7 +2049,7 @@ object Copy {
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "NO SNIPS YET."
     /** KIT/PLAY with no tape ever committed to this kit - both screens' own empty deck. */
-    const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM KITS."
+    const val NO_TAPE_IN_DECK = "NO TAPE IN THE DECK. OPEN ONE FROM SHELF."
     /** IN KEY's row when the kit holds no tonal pad at all. */
     const val NO_TONAL_PADS = "NO TONAL PADS. DRUMS LAND AS CAPTURED."
     /** SNIPS → PAD's own header hint once the shelf has a kit to tap - [EMPTY_SHELF_FOR_ASSIGN] carries the instruction when it doesn't. */

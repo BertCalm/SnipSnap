@@ -81,10 +81,10 @@ class PersonalityTest {
         // laws below hold shape, not route, so a slide back to "ARM THE
         // MIC" or a bare "TRY GRID" would pass them.
         for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_APP_AUDIO, Copy.HUM_NOTHING)) {
-            assertTrue("LISTEN · MIC ON KITS" in line || ("LISTEN · MIC" in line && "KITS" in line), "HUM's route is the button on KITS: $line")
+            assertTrue("LISTEN · MIC ON SHELF" in line || ("LISTEN · MIC" in line && "SHELF" in line), "HUM's route is the button on SHELF: $line")
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
-        assertTrue("STOP ON KITS" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
+        assertTrue("STOP ON SHELF" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
         assertTrue("OPEN CUT" in Copy.CHOP_NO_HITS, "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
         // BOUNCE on a stopped GROOVE used to just dim with no reason
         // (wiring review finding 8) - tapping it now names the control
