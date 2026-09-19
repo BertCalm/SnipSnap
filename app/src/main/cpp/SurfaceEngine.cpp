@@ -75,6 +75,7 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     // plays a chromatic mid-sized cloud rather than reading garbage.
     setGrain(GrainSettings{});
     setKey(KeySnap{});
+    setModulation(nullptr, 0);  // every target at 0: nothing moves until a slot has depth
     // The one Hann window every grain reads through, whatever its length.
     // kGrainWindowTable + 1 points so a grain at its very last frame
     // (pos/length just under 1) still lands inside the table.
@@ -234,6 +235,19 @@ void SurfaceEngine::setKey(const KeySnap& key) {
     keySourceMidi_.store(std::isfinite(key.sourceMidi) ? key.sourceMidi : 0.0f, std::memory_order_relaxed);
 }
 
+void SurfaceEngine::setModulation(const float* offsets, int32_t count) {
+    for (int32_t i = 0; i < kModTargets; ++i) {
+        float v = 0.0f;
+        if (offsets != nullptr && i < count) {
+            const float raw = offsets[i];
+            // Signed, so control01's 0..1 door is the wrong shape: -1..1,
+            // and a NaN is 0 - "no offset" - rather than either rail.
+            v = std::isfinite(raw) ? (raw < -1.0f ? -1.0f : (raw > 1.0f ? 1.0f : raw)) : 0.0f;
+        }
+        modulation_[i].store(v, std::memory_order_relaxed);
+    }
+}
+
 // ---- audio thread from here down ---------------------------------------------
 
 void SurfaceEngine::adoptPendingSample(int32_t slot) {
@@ -298,13 +312,34 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
             target = {f.x, f.y, f.tilt * 0.5f, 0.0f};
             break;
     }
+    // The modulators, on top of whatever the mode just decided: a signed
+    // nudge per macro, read once here so one frame sees one consistent
+    // set. Added *before* the door below, so a swing past a rail clamps
+    // there rather than wrapping or escaping - and a NaN macro plus a
+    // finite offset is still a NaN, still caught below, since NaN + x is
+    // NaN. GRAIN's four ride into grainMod_ for triggerGrain and the
+    // position target just below - read here, ahead of that block, so
+    // POSITION's nudge is this frame's, not last frame's.
+    float mod[kModTargets];
+    for (int32_t i = 0; i < kModTargets; ++i) mod[i] = modulation_[i].load(std::memory_order_relaxed);
+    target.pitch += mod[0];
+    target.cutoff += mod[1];
+    target.resonance += mod[2];
+    target.drive += mod[3];
+    target.crush += mod[4];
+    target.echo += mod[5];
+    target.spring += mod[6];
+    for (int32_t i = 0; i < 4; ++i) grainMod_[i] = mod[7 + i];
     // GRAIN's own two axes, through the same door. Entering or leaving the
     // mode empties the pool and snaps both axes: a mode change is a
     // different instrument, not a glide between two (the UI snaps its own
     // smoother on the same event), and a grain triggered under the old
     // mode has no business finishing under the new one.
     const bool grainMode = f.mode == 4;
-    const float position = control01(f.x, 0.5f);
+    // POSITION's own modulator lands here, before the door, the same way
+    // the macros' do above: a ramp on POSITION walks the cloud through the
+    // sample, gliding through the same smoother the finger does.
+    const float position = control01(f.x + grainMod_[3], 0.5f);
     const float pitchAxis = control01(f.y, 0.5f);
     if (grainMode != grainMode_) {
         for (auto& g : grains_) g.active = false;
@@ -361,10 +396,12 @@ float SurfaceEngine::readSlotAt(int32_t slot, double frameIndex) const {
 }
 
 void SurfaceEngine::triggerGrain(double fs) {
-    // The knobs as they are *now*: a grain is shaped once, at birth.
-    const float size = grainSize_.load(std::memory_order_relaxed);
-    const float density = grainDensity_.load(std::memory_order_relaxed);
-    const float spray = grainSpray_.load(std::memory_order_relaxed);
+    // The knobs as they are *now*, plus their modulators' nudges, each
+    // through the same clamp the knob itself went through: a grain is
+    // shaped once, at birth.
+    const float size = clamp01(grainSize_.load(std::memory_order_relaxed) + grainMod_[0]);
+    const float density = clamp01(grainDensity_.load(std::memory_order_relaxed) + grainMod_[1]);
+    const float spray = clamp01(grainSpray_.load(std::memory_order_relaxed) + grainMod_[2]);
     const float lengthFrames = grain::lengthMs(size) * 0.001f * static_cast<float>(fs);
     const int32_t length = std::max<int32_t>(2, static_cast<int32_t>(lengthFrames));
     Grain* slot = nullptr;
@@ -404,7 +441,7 @@ float SurfaceEngine::grainSample(double fs, const float* weights) {
     // The clock: DENSITY in grains per second, as a phase toward the next
     // trigger. Read every sample so turning the knob changes the cadence
     // at once, not at the next grain.
-    grainClock_ += static_cast<double>(grain::rateHz(grainDensity_.load(std::memory_order_relaxed))) / fs;
+    grainClock_ += static_cast<double>(grain::rateHz(clamp01(grainDensity_.load(std::memory_order_relaxed) + grainMod_[1]))) / fs;
     if (grainClock_ >= 1.0) {
         // One trigger per sample at most: a clock that somehow got ahead
         // (a touch-down arms it to exactly 1) does not fire twice.

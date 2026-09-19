@@ -186,9 +186,12 @@ object SurfaceStore {
         val fourthPadSlot: Int? = null,
         /** GRAIN mode's knobs; the defaults until the GRAIN row has been stepped. */
         val grain: Grain = Grain.DEFAULT,
+        /** The two modulator slots ([Modulator]); every slot at depth 0 until the MOD row has been stepped. */
+        val mods: List<Modulator.Slot> = Modulator.OFF,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
+            require(mods.size == Modulator.SLOTS) { "${Modulator.SLOTS} modulator slots, got ${mods.size}" }
             padSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
             secondPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
             thirdPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
@@ -227,6 +230,18 @@ object SurfaceStore {
                     "density" to JsonValue.Num(s.grain.density.toDouble()),
                     "spray" to JsonValue.Num(s.grain.spray.toDouble()),
                 ),
+            ),
+            "mods" to JsonValue.Arr(
+                s.mods.map { m ->
+                    JsonValue.Obj(
+                        linkedMapOf(
+                            "target" to JsonValue.Str(m.target.name),
+                            "shape" to JsonValue.Str(m.shape.name),
+                            "rate" to JsonValue.Num(m.rateIndex.toDouble()),
+                            "depth" to JsonValue.Num(m.depth.toDouble()),
+                        ),
+                    )
+                },
             ),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
@@ -286,6 +301,22 @@ object SurfaceStore {
             fun knob(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("grain has no $name")
             Grain(knob("size"), knob("density"), knob("spray"))
         } ?: Grain.DEFAULT
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain)
+        // Same rule as grain: absent is a file from before the MOD row,
+        // present has to be whole - the right count, names this build
+        // knows (a target from a newer build is refused in words, not
+        // quietly re-aimed at something else), numbers where numbers go.
+        val mods = obj["mods"]?.arr()?.map { m ->
+            val o = m.obj()
+            fun word(name: String) = o[name]?.str() ?: throw JsonException("modulator has no $name")
+            val target = Modulator.Target.entries.firstOrNull { it.name == word("target") }
+                ?: throw JsonException("modulator target '${word("target")}' is not one this build knows")
+            val shape = Modulator.Shape.entries.firstOrNull { it.name == word("shape") }
+                ?: throw JsonException("modulator shape '${word("shape")}' is not one this build knows")
+            val rate = o["rate"]?.int() ?: throw JsonException("modulator has no rate")
+            val depth = o["depth"]?.num()?.toFloat() ?: throw JsonException("modulator has no depth")
+            Modulator.Slot(target, shape, rate, depth)
+        } ?: Modulator.OFF
+        if (mods.size != Modulator.SLOTS) throw JsonException("surface.json has ${mods.size} modulators, not ${Modulator.SLOTS}")
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods)
     }
 }

@@ -133,6 +133,23 @@ public:
     /** UI thread. The key GRAIN snaps to (see KeySnap). A root outside 0..11 wraps, an empty mask reads as chromatic, a non-finite source note as 0. */
     void setKey(const KeySnap& key);
 
+    /**
+     * How many things a modulator can move: the seven macros in MacroState
+     * order, then GRAIN's SIZE, DENSITY, SPRAY and POSITION - the order
+     * `Modulator.Target` in :shell declares, by ordinal.
+     */
+    static constexpr int32_t kModTargets = 11;
+
+    /**
+     * UI thread. The modulators' signed offsets, one per target (see
+     * kModTargets), added to whatever the mode and the finger say for that
+     * target before its own 0..1 door in applyControl - so a modulator
+     * nudges the finger rather than replacing it, in every mode. Fewer than
+     * kModTargets values leaves the rest at 0; a non-finite one reads as 0;
+     * each is clamped to -1..1. Takes effect on the next control frame.
+     */
+    void setModulation(const float* offsets, int32_t count);
+
     /** How many grains can sound at once; a new one past this steals the oldest. */
     static constexpr int32_t kMaxGrains = 16;
 
@@ -303,6 +320,14 @@ private:
     std::atomic<uint32_t> keyMask_;
     std::atomic<float> keySourceMidi_;
     ParameterSmoother grainPosition_, grainPitchAxis_;
+    // The modulators' offsets, UI -> audio as atomics like the corners and
+    // the knobs; applyControl reads them into `mod_` once per control frame
+    // so a frame sees one consistent set. The last four are GRAIN's, held
+    // in grainMod_ for triggerGrain (SIZE, DENSITY, SPRAY) and folded into
+    // grainPosition_'s target (POSITION) - a modulated position glides
+    // through the same smoother the finger does.
+    std::atomic<float> modulation_[kModTargets];
+    float grainMod_[4] = {};  // audio thread only: size, density, spray, position offsets as of the last frame
     // 0..1 toward the next trigger. Starts (and is reset on every touch-
     // down) at 1 so the first grain fires on the very next sample rather
     // than a full period later - at DENSITY's floor that would be half a

@@ -51,6 +51,7 @@ void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint
 void Java_com_snipsnap_app_NativeSurface_control(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jboolean);
 void Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong, jfloat, jfloat, jfloat);
 void Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong, jint, jint, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv*, jobject, jlong, jfloatArray);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
@@ -486,6 +487,45 @@ TEST(jni_surface_grain_knobs_and_key_cross_the_bridge_in_order) {
     const double b4 = 440.0 * std::exp2(2.0 / 12.0);
     CHECK_NEAR(heard, b4, b4 * 0.01);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_modulation_crosses_the_bridge_by_index_and_a_short_array_is_zeros) {
+    // Eleven offsets in an array, by Modulator.Target's ordinal: index 1
+    // is CUTOFF. Sending -1 there through the bridge must darken a bright
+    // source in XY (cutoff 1.0 + -1 = closed), and sending the same -1 at
+    // index 0 (PITCH) must not - an off-by-one in the marshalling would
+    // swap those two outcomes. A short array (one value) leaves cutoff
+    // untouched, so it reads exactly like no modulation at all.
+    JNIEnv* e = env();
+    auto peakWith = [&](std::vector<float> offsets) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        // A 2 kHz sine: through a wide-open filter untouched, through an
+        // 80 Hz one all but gone (see engine_tests' own cutoff test).
+        const auto bright = measure::sine(2000.0f, 240, 48000);
+        surf->loadSample(bright.data(), bright.size(), 48000);
+        Java_com_snipsnap_app_NativeSurface_setModulation(e, nullptr, h, floats(std::move(offsets)));
+        Java_com_snipsnap_app_NativeSurface_control(
+            e, nullptr, h, 0,
+            0.5f, 1.0f, 0.0f, 0.5f,
+            0.25f, 0.25f, 0.25f, 0.25f,
+            1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+        for (int i = 0; i < 400; ++i) pull(surf, 64);
+        float peak = 0.0f;
+        for (int i = 0; i < 50; ++i) {
+            for (float v : pull(surf, 64)) peak = std::max(peak, std::fabs(v));
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return peak;
+    };
+    const float open = peakWith({});
+    const float closed = peakWith({0.0f, -1.0f});
+    const float pitchOnly = peakWith({-1.0f, 0.0f});
+    const float shortArray = peakWith({0.0f});
+    CHECK(open > 0.1f);
+    CHECK(closed < open * 0.2f);   // CUTOFF's slot reached the filter
+    CHECK(pitchOnly > open * 0.5f);  // PITCH's slot did not
+    CHECK_NEAR(shortArray, open, 1e-3);
 }
 
 TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {

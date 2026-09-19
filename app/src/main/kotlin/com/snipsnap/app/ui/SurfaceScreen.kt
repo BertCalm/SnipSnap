@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -55,6 +56,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.SnipStore
@@ -77,6 +79,15 @@ private val GRAIN_KNOBS = listOf("SIZE", "DENSITY", "SPRAY")
 
 /** One ◄ ► press on a GRAIN knob: a twentieth of its travel, so an end-to-end sweep is twenty presses - the FEEL stepper's own grain of control. */
 private const val GRAIN_STEP = 0.05f
+
+/** The MOD row's four fields, in the order its own button cycles them. */
+private val MOD_FIELDS = listOf("TARGET", "SHAPE", "RATE", "DEPTH")
+
+/** One ◄ ► press on a modulator's DEPTH - the same twentieth GRAIN's knobs step by. */
+private const val MOD_DEPTH_STEP = 0.05f
+
+/** A knob as the rows print it: whole percent, no units - the units live in the engine (see GRAIN's row). */
+private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
 
 /**
  * SURFACE — the tactile pad. The open kit's first pad loops under a
@@ -139,6 +150,16 @@ private const val GRAIN_STEP = 0.05f
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
  * number of bars at the kit's tempo, so it drops onto the groove grid.
+ *
+ * MOD A/B are two modulators (`Modulator` in `:shell`): each a SHAPE at a
+ * tempo-snapped RATE with a DEPTH, aimed at a TARGET - one of the seven
+ * macros or one of GRAIN's knobs - and added to whatever the mode and the
+ * finger already say for it, in every mode. They are what lets a sound
+ * keep moving while the finger is elsewhere, and what makes a print a
+ * performance; the frame loop below evaluates them at screen rate from
+ * one origin and the engine glides the steps like any other target. SET
+ * A..D captures the finger, not the modulators' nudge - a corner is a
+ * place, and the modulator moves around it.
  *
  * A print goes → TAPE (the deck's shelf) or → PAD: the SP-404 move
  * proper, the performance landing on a pad of the kit you are holding
@@ -223,6 +244,9 @@ fun SurfaceScreen(
     var barsIndex by remember { mutableStateOf(0) }
     /** Which of [GRAIN_KNOBS] the GRAIN row's ◄ ► currently step; a pick, not a sound, so not persisted - same as armedCorner. */
     var grainKnob by remember { mutableStateOf(0) }
+    /** Which modulator (0 = MOD A) and which of its [MOD_FIELDS] the MOD row's ◄ ► step; picks, not sounds, so not persisted either. */
+    var modSlot by remember { mutableStateOf(0) }
+    var modField by remember { mutableStateOf(0) }
     /** A finished print waiting for a pad to be chosen; the chooser shows while it is set. */
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
@@ -510,6 +534,25 @@ fun SurfaceScreen(
         persist(dir, settings.copy(grain = next))
     }
 
+    // MOD ◄ ►: steps the picked field of the picked modulator - TARGET
+    // and SHAPE cycle their lists, RATE walks Modulator.RATES and stops
+    // at the ends, DEPTH moves a twentieth. Nothing is sent to the engine
+    // here: the frame loop reads `settings.mods` every frame and sends the
+    // offsets it works out, so a change is heard on the next frame.
+    fun stepMod(delta: Int) {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val slot = settings.mods[modSlot]
+        val next = when (modField) {
+            0 -> slot.copy(target = Modulator.Target.entries[(slot.target.ordinal + delta).mod(Modulator.Target.entries.size)])
+            1 -> slot.copy(shape = Modulator.Shape.entries[(slot.shape.ordinal + delta).mod(Modulator.Shape.entries.size)])
+            2 -> slot.copy(rateIndex = (slot.rateIndex + delta).coerceIn(Modulator.RATES.indices))
+            else -> slot.copy(depth = (slot.depth + delta * MOD_DEPTH_STEP).coerceIn(0f, 1f))
+        }
+        val mods = settings.mods.toMutableList().also { it[modSlot] = next }
+        persist(dir, settings.copy(mods = mods))
+    }
+
     // PAD2 ◄ ►: same stepping, over the second source slot.
     fun stepPad2(delta: Int) {
         val dir = entry?.dir ?: return
@@ -704,16 +747,38 @@ fun SurfaceScreen(
         }
     }
 
+    // The kit's tempo as the frame loop below must see it: that loop is
+    // keyed on `engine` alone and runs for the screen's whole life, so a
+    // plain `entry` read inside it would be the kit open when the loop
+    // started, for ever - a kit change would leave the modulators counting
+    // bars at the old tempo. Read through state instead, live.
+    val kitBpm by rememberUpdatedState(entry?.kit?.tempoBpm)
+
     // Screen-rate loop: smooth toward the target, paint, feed the engine.
     LaunchedEffect(engine) {
         val smoother = TouchSurface.SmoothedReading(TouchSurface.Smoother.coefficient(cutoffHz = 12f, rateHz = 60f))
         var lastMode = mode
         var lastLatencyAt = 0L
+        // The modulators' origin: the loop's first frame, so every slot
+        // counts bars from the same instant and two slots at related
+        // rates stay locked. `modsWereOn` sends one last all-zero frame
+        // when every depth returns to 0, so the engine is left exactly as
+        // it was before any modulator existed - and nothing is sent at all
+        // while none is on, which keeps the untouched path free of a JNI
+        // call a frame.
+        var modOrigin = -1L
+        var modsWereOn = false
         while (true) {
             val now = withFrameNanos { it }
             if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
+            }
+            if (modOrigin < 0L) modOrigin = now
+            val modsOn = settings.mods.any { it.depth > 0f }
+            if (modsOn || modsWereOn) {
+                engine.setModulation(Modulator.offsets(settings.mods, (now - modOrigin) / 1_000_000_000.0, kitBpm))
+                modsWereOn = modsOn
             }
             // Every frame, touch or none: tilt moves on its own, and this
             // is the only thing that keeps `tiltReading` fresh once the
@@ -844,7 +909,6 @@ fun SurfaceScreen(
                     ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
                     ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
                     val g = settings.grain
-                    fun pct(v: Float) = "${(v * 100f).roundToInt()}%"
                     TapeText(
                         "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
                         TapeType.pixel,
@@ -853,6 +917,37 @@ fun SurfaceScreen(
                     )
                     ActionButton("►", scheme, enabled = padName != null) { stepGrain(+1) }
                 }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            // MOD A/B: the first button picks the modulator, the second which
+            // of its fields ◄ ► step, and the readout shows the picked slot
+            // whole - TARGET SHAPE RATE DEPTH - so what is about to be
+            // stepped is never a guess. A slot at 0% is listed, not hidden:
+            // the row is how you find out it is there to turn up.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                val slot = settings.mods[modSlot]
+                ActionButton(
+                    "MOD ${'A' + modSlot}",
+                    scheme,
+                    enabled = padName != null,
+                    modifier = Modifier.weight(1f).semantics { selected = slot.depth > 0f },
+                ) { modSlot = (modSlot + 1) % Modulator.SLOTS }
+                ActionButton(
+                    MOD_FIELDS[modField],
+                    scheme,
+                    enabled = padName != null,
+                    modifier = Modifier.weight(1.1f),
+                ) { modField = (modField + 1) % MOD_FIELDS.size }
+                ActionButton("◄", scheme, enabled = padName != null) { stepMod(-1) }
+                TapeText(
+                    "${slot.target} ${slot.shape} ${Modulator.rateLabel(slot.rateIndex)} ${pct(slot.depth)}",
+                    TapeType.pixel,
+                    scheme.ink.tape,
+                    Modifier.weight(1.6f).padding(horizontal = 4.dp),
+                )
+                ActionButton("►", scheme, enabled = padName != null) { stepMod(+1) }
             }
 
             Spacer(Modifier.height(6.dp))
