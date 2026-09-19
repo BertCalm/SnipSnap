@@ -41,6 +41,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.SurfaceEngine
 import com.snipsnap.app.TiltSource
 import com.snipsnap.app.deviceSampleRate
@@ -59,6 +60,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
+import com.snipsnap.shell.RingSlot
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.SurfaceKey
@@ -147,6 +149,15 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * the mode's own macros drives this too, independently. A slot nobody
  * has loaded is just silence at its vertex, not a hole in the pad.
  *
+ * RING freezes the last few seconds of whatever the phone is hearing -
+ * the mic, or another app through APP AUDIO - into PAD's own slot
+ * (`RingSlot` in `:shell`; `MicSessionService.snapshotTail` is the ring):
+ * a snapshot on the tap, the ring rolling on underneath, the next tap a
+ * fresh one. The frozen voice plays under every mode exactly as a pad
+ * would, GRAIN's key snap included (its note is found the way a pad's
+ * is). It is a moment, not a setting: nothing lands in `surface.json`,
+ * and PAD ◄ ► - or reopening the kit - brings the pad back.
+ *
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
  * number of bars at the kit's tempo, so it drops onto the groove grid.
@@ -199,6 +210,17 @@ fun SurfaceScreen(
     var tiltReading by remember { mutableStateOf(0.5f) }
     var padName by remember { mutableStateOf<String?>(null) }
     var padSlot by remember { mutableStateOf<Int?>(null) }
+    // True while slot 0 holds a RING freeze rather than the pad padSlot
+    // names: padName then wears RingSlot.label() (so everything gated on
+    // "a voice is loaded" keeps working), and the readout skips the pad
+    // tag. padSlot is left alone on purpose - PAD ◄ ► steps on from the
+    // pad the ring replaced, not from nowhere.
+    var ringVoice by remember { mutableStateOf(false) }
+    // Bumped by every press that loads slot 0 (PAD ◄ ►, RING) before its
+    // IO starts, and checked after - the same discipline pad2Generation
+    // keeps for slot 1, so a RING tap and a PAD press close together
+    // land whichever was pressed last, not whichever read finished last.
+    var voiceGeneration by remember { mutableStateOf(0) }
     // Slots 1, 2 and 3 of the engine's source array - the sample area's
     // base-left, base-right and base-mid vertices (TouchSurface.sampleWeights);
     // the apex is padName/padSlot above. Independent of mode or corners.
@@ -310,7 +332,7 @@ fun SurfaceScreen(
     // to the kit's [key] from wherever this pad actually sits - see
     // SurfaceKey) and handed over with the sample, so the key the engine
     // holds is never for a pad other than the one it is playing.
-    suspend fun loadPad(dir: File, pad: KitPad, key: KeySpec?) {
+    suspend fun loadPad(dir: File, pad: KitPad, key: KeySpec?, generation: Int) {
         val loaded = withContext(Dispatchers.IO) {
             // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
@@ -318,8 +340,10 @@ fun SurfaceScreen(
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
                 ?.let { it to SurfaceKey.sourceMidi(it) }
         }
+        if (generation != voiceGeneration) return  // a later PAD or RING press already superseded this one
         if (loaded == null) {
             padName = null
+            ringVoice = false
             onToast(Copy.sourceUnreadable(pad.displayName))
         } else {
             val (snip, sourceMidi) = loaded
@@ -327,6 +351,41 @@ fun SurfaceScreen(
             engine.setKey(SurfaceKey.of(key, sourceMidi))
             padName = pad.displayName
             padSlot = pad.slot
+            ringVoice = false
+        }
+    }
+
+    // RING: the ring's last few seconds become the voice, once, now. The
+    // snapshot and the cleaning run off the main thread (the ring's own
+    // contract for readers), and the key is told this voice's note the
+    // way loadPad tells it a pad's. Refusals are said, not dimmed: the
+    // button is live whenever a kit is open, and a tap with nothing
+    // listening names the route (HUM's own discipline).
+    fun freezeRing() {
+        val key = (entry ?: return).kit.key
+        if (!MicSessionService.armed.value) {
+            onToast(Copy.RING_NOT_LISTENING)
+            return
+        }
+        val appAudio = MicSessionService.source.value == MicSessionService.Source.INSIDE
+        val generation = ++voiceGeneration
+        scope.launch {
+            val loaded = withContext(Dispatchers.IO) {
+                MicSessionService.snapshotTail(RingSlot.frames(MicSessionService.SAMPLE_RATE))
+                    ?.let { RingSlot.freeze(it, MicSessionService.SAMPLE_RATE) }
+                    ?.let { it to SurfaceKey.sourceMidi(it) }
+            }
+            if (generation != voiceGeneration) return@launch
+            if (loaded == null) {
+                onToast(Copy.RING_NOTHING)
+                return@launch
+            }
+            val (snip, sourceMidi) = loaded
+            engine.load(snip)
+            engine.setKey(SurfaceKey.of(key, sourceMidi))
+            padName = RingSlot.label(snip.durationSeconds)
+            ringVoice = true
+            onToast(Copy.ringFrozen(snip.durationSeconds, appAudio))
         }
     }
 
@@ -427,6 +486,7 @@ fun SurfaceScreen(
         if (entry == null) {
             padName = null
             padSlot = null
+            ringVoice = false
             padName2 = null
             padSlot2 = null
             padName3 = null
@@ -437,6 +497,7 @@ fun SurfaceScreen(
             engine.clearSlot(2)
             engine.clearSlot(3)
             // Orphan any in-flight load from before the kit closed.
+            voiceGeneration++
             pad2Generation++
             pad3Generation++
             pad4Generation++
@@ -457,8 +518,15 @@ fun SurfaceScreen(
         if (pad == null) {
             padName = null
             padSlot = null
+            ringVoice = false
+            // Orphan a RING or PAD load from the previous entry, as
+            // pad2Generation is below - and clear the slot itself: with no
+            // pad to load over it, a freeze from the last kit would
+            // otherwise keep sounding under a readout that says NO PAD.
+            voiceGeneration++
+            engine.clearSlot(0)
         } else {
-            loadPad(entry.dir, pad, entry.kit.key)
+            loadPad(entry.dir, pad, entry.kit.key, ++voiceGeneration)
         }
         // The second and third slots are optional - null unless a kit was
         // saved with one chosen, and never fall back to the kit's lowest
@@ -511,7 +579,8 @@ fun SurfaceScreen(
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
         persist(dir, settings.copy(padSlot = pad.slot))
-        scope.launch { loadPad(dir, pad, entry.kit.key) }
+        val generation = ++voiceGeneration
+        scope.launch { loadPad(dir, pad, entry.kit.key, generation) }
     }
 
     // GRAIN ◄ ►: steps whichever of SIZE/DENSITY/SPRAY the row's own knob
@@ -873,12 +942,23 @@ fun SurfaceScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 ActionButton("◄ PAD", scheme, enabled = padName != null) { stepPad(-1) }
                 TapeText(
-                    padName?.let { "${padLabel(padSlot)} ${it.uppercase()}" } ?: "NO PAD",
+                    padName?.let { if (ringVoice) it else "${padLabel(padSlot)} ${it.uppercase()}" } ?: "NO PAD",
                     TapeType.pixel,
                     scheme.ink.tape,
                     Modifier.weight(1f).padding(horizontal = 4.dp),
                 )
                 ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
+                // Live whenever a kit is open (a kit with no pads can still
+                // have a voice this way) - a tap with nothing listening says
+                // where to go rather than sitting disabled. Lit while the
+                // voice is the ring, the way LATCH is lit while it holds.
+                ActionButton(
+                    "RING",
+                    scheme,
+                    enabled = entry != null,
+                    dimmed = !ringVoice,
+                    modifier = Modifier.semantics { selected = ringVoice },
+                ) { freezeRing() }
                 ActionButton("LATCH", scheme, enabled = padName != null, dimmed = !latched) { latched = !latched }
                 // BARS needs a tempo; a kit without one prints free.
                 val bpm = entry?.kit?.tempoBpm
