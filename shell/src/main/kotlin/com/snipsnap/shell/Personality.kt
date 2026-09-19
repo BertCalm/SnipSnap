@@ -390,6 +390,7 @@ object Copy {
      * pads they use and how the classes group - not which rectangle is
      * which. [classes] is one entry per slot, null for an empty one.
      */
+
     fun layoutPreview(classes: List<String?>): String {
         val filled = classes.count { it != null }
         if (filled == 0) return "NOTHING ON THE PADS YET."
@@ -401,6 +402,21 @@ object Copy {
             .joinToString(" · ") { "${it.value} ${it.key}" }
         return "${countOf(filled, "PAD", "PADS")} OF ${classes.size} · $tally"
     }
+
+    /**
+     * What CHOP is about to slice, when it is not what you just taped (J30).
+     *
+     * CHOP's load is a silent three-tier fallback: the last TAPE commit,
+     * else **the open kit's longest sample**, else nothing. So a player
+     * who opens CHOP without taping first is about to cut up whichever pad
+     * happens to be longest, and nothing on the screen said so - the
+     * filename was read, used to derive a kit name, and never shown.
+     *
+     * Said only on the fallback, deliberately. Arriving from a COMMIT, you
+     * just chose the thing on the previous screen and being told again is
+     * noise; arriving on the fallback, the app picked for you.
+     */
+    fun chopFromKit(name: String): String = "FROM $name"
 
     /**
      * The handoff at the end of a capture (J10).

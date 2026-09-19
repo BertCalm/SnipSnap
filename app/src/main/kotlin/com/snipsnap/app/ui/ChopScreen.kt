@@ -202,6 +202,10 @@ fun ChopScreen(
         entry = entry,
         shelf = shelf,
         sourceFile = file,
+        // J30: whether the app picked this source rather than the player.
+        // Computed here because this is where both halves are in scope;
+        // it is the same test the RE-TRIM reference makes above.
+        sourceFromKit = lastCommit?.sourceFile != file,
         initialModel = loadedModel,
         teachEnabled = teachEnabled,
         onToast = onToast,
@@ -354,6 +358,8 @@ private fun ChopContent(
     entry: KitShelf.Entry?,
     shelf: KitShelf,
     sourceFile: File,
+    /** J30: true when the source is the open kit's longest sample rather than a TAPE commit. */
+    sourceFromKit: Boolean,
     initialModel: ChopReviewModel,
     teachEnabled: Boolean,
     onToast: (String) -> Unit,
@@ -783,11 +789,29 @@ private fun ChopContent(
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            TapeText(
-                "${Copy.countOf(model.sliceCount, "SLICE", "SLICES")} — ${model.modeLabel()}",
-                TapeType.lcdHeader,
-                scheme.lcdInk.tape,
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                TapeText(
+                    "${Copy.countOf(model.sliceCount, "SLICE", "SLICES")} — ${model.modeLabel()}",
+                    TapeType.lcdHeader,
+                    scheme.lcdInk.tape,
+                )
+                // J30: name the source when the app picked it rather than
+                // the player. The load falls back to the open kit's
+                // LONGEST SAMPLE when there is no commit, so someone who
+                // opened CHOP without taping is about to slice a pad they
+                // never chose, untold - the filename was read, used to
+                // derive a kit name, and never shown. Only on the
+                // fallback: arriving from a COMMIT you chose the thing on
+                // the previous screen, and being told again is noise.
+                if (sourceFromKit) {
+                    TapeText(
+                        Copy.chopFromKit(sourceFile.nameWithoutExtension.uppercase(java.util.Locale.ROOT)),
+                        TapeType.lcdSmall,
+                        scheme.ink.tape,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
 
         // The whole tape with every cut drawn on it, live: as the bench

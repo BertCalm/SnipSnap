@@ -964,6 +964,27 @@ private fun FormatPickerRow(
                 maxLines = 2,
             )
         }
+        if (!open) {
+            // The reason for the format you are ON, with the list shut
+            // (J34). All eight `why` strings are real UI and genuinely
+            // good, and every one of them was behind a closed picker that
+            // already showed a format name - which reads as "this is
+            // set", so there was no reason to open it. `why`'s own KDoc
+            // says it exists because "the user was choosing between eight
+            // names and no reasons"; shut by default put them back there.
+            //
+            // The row stays a combo rather than opening by default, which
+            // `UI_DESIGN.md` asks for ("format + destination combos" in
+            // the InstallShield-style wizard) - so this shows one reason
+            // rather than eight.
+            TapeText(
+                current.why,
+                TapeType.pixelSmall,
+                if (enabled) scheme.ink2.tape else scheme.ink3.tape,
+                Modifier.fillMaxWidth(),
+                maxLines = 2,
+            )
+        }
         if (open && enabled) {
             Column(
                 Modifier.fillMaxWidth().lcdPanel(scheme).padding(6.dp),

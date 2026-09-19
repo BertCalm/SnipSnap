@@ -907,4 +907,11 @@ class PersonalityTest {
         )
     }
 
+
+    /** J30: CHOP's fallback source, named only when the app picked it rather than the player. */
+    @Test
+    fun `chop names the kit sample it fell back to`() {
+        assertEquals("FROM A03_SNARE", Copy.chopFromKit("A03_SNARE"))
+    }
+
 }
