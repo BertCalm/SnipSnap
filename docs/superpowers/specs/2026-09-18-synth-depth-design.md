@@ -176,17 +176,29 @@ which are inharmonic:
 |---|---|
 | Free–free metal bar | 1 : 2.756 : 5.404 : 8.933 |
 | Circular membrane | 1 : 1.593 : 2.135 : 2.295 : 2.917 |
-| Church bell | 0.5 : 1 : 1.2 : 1.5 : 2 |
-| Stiff string | `fₙ = n·f₀·√(1 + B·n²)` |
+| Tuned bar — xylophone | 1 : 3 : 6 |
+| Tuned bar — marimba | 1 : 4 : 10 |
+| Church bell | 0.5 : 1 : 1.19–1.2 : 1.5 : 2 |
+| Stiff string | `fₙ = n·f₀·√(1 + B·n²)`, B measured |
 
-> **Unverified — must be sourced before Phase 1 implementation.** These four
-> ratio sets were written from recall. The DSP catalog at
-> `~/.claude/skills/_shared/dsp-knowledge/INDEX.md` has no modal or
-> physical-modeling entry (its Bessel references are *filters*, unrelated to the
-> Bessel-function zeros that set membrane modes), so nothing in the toolchain
-> currently verifies them. Source them — Fletcher & Rossing, *The Physics of
-> Musical Instruments*, is the standard reference — or measure them, before any
-> mode table reaches code.
+> **Sourced 2026-09-19.** The table above was written from recall and is now
+> verified against the literature; research notes and citations are in the
+> plan workspace as `mode-ratios-research.md`. Verdicts: the free-free bar set
+> is **confirmed** (independently re-derived from the Euler-Bernoulli
+> free-free eigenvalues 4.730 / 7.853 / 10.996 / 14.137 — Fletcher & Rossing,
+> Blevins). The membrane set is **confirmed** and its modes are
+> (0,1):(1,1):(2,1):(0,2):(1,2), the Bessel zeros. The bell set is **confirmed**
+> as the idealised true-harmonic tuning target — hum 0.5 : prime 1 : tierce
+> 1.19–1.2 : quint 1.5 : nominal 2, which real bells meet within 1–2%
+> (Perrin et al. 1982). The stiff-string **formula** is confirmed
+> (Fletcher 1964); its **B coefficient is not** — sources disagree by orders of
+> magnitude, so B is a measured input, never a recalled constant. Working
+> default 0.0003–0.025, from measurements of a Steinway D.
+>
+> One row was missing entirely: a **tuned bar with undercut** is not a free
+> bar. Undercutting pulls its partials onto near-harmonics — xylophone to
+> 1 : 3 : 6, marimba to 1 : 4 : 10. That distinction is the difference between
+> "struck metal" and "tuned wood" and the table needs both.
 
 Those irrational ratios are the character. A 2-op FM core cannot produce them
 at any macro setting, which is the precise reason the engines sound
@@ -202,12 +214,19 @@ from metal bar through membrane to tuned wood, passing through bodies that do
 not exist physically. One macro, a large range of genuinely different sounds,
 over a table that has to be built anyway.
 
-It is not quite plain arithmetic, and Phase 1 settles this first: the ratio
-sets have *different lengths* (four for a bar, five for a membrane, three for
-tuned wood), so the morph is undefined at the boundaries until the bank is
-given a fixed mode count with a defined mapping — padded with silent modes,
-or resampled onto a common index. Choose that before any mode table is
-authored, because the choice determines how the tables are written.
+**How MATERIAL morphs between sets — settled by the research, not by Phase 1.**
+The sets have different lengths (4 for a bar, 5 for a membrane, 3 for tuned
+wood), so the morph needed a defined mapping. **Do not pad short sets with
+silent modes.** The length differences are structural — a sparse set against a
+dense one against a small fixed one — not amplitude gaps, so padding would
+crossfade real partials against silence and thin the sound mid-sweep.
+
+Instead, resample every material onto a common ordinal index: slot *k* is each
+material's *k*-th ascending partial. Where a material runs out of measured
+partials, extrapolate its own ratio-growth trend into the remaining slots
+rather than muting them, and crossfade **both ratio and amplitude** per slot.
+Every slot then always carries a real partial from both endpoints, so the morph
+stays dense throughout.
 
 **Cost is the point.** A 200-mode bank is unthinkable in a realtime mobile
 synth and free in an offline baker. `SYNTH_UPGRADE.md` names offline rendering
