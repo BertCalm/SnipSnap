@@ -2963,6 +2963,7 @@ fun App(shelf: KitShelf) {
                             lastCommit = lastCommit,
                             shelf = shelf,
                             teachEnabled = teachEnabled,
+                            workshopOpen = workshopOpen,
                             onToast = { toast = it },
                             onSentToGrid = { newEntry ->
                                 open = newEntry

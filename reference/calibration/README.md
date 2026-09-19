@@ -47,13 +47,30 @@ The app appends it only behind a consent switch; `TeachLog` (`:shell`)
 is the reader/writer, and `TeachLogTest` scores every logged correction
 against the current rules on each test run.
 
-It gets here by **SEND TO BENCH** in the app's WORKSHOP
+Since CONFIRM ALL (`docs/WORKSHOP.md`, WS2) the same file also holds
+**confirmations** — a chip the human vouched for, written as the same
+line with the label equal to what the machine said — so `TeachLogTest`
+counts the two apart and its agreement line reads as accuracy, not only
+as misses fixed.
+
+## The cut ratings
+
+`cuts.jsonl` beside it is **RATE THE CUTS**: one line per rated chop —
+the stars, the CUT bench's settings that made the cuts (mode, HITS,
+EAR, CUT, SNAP), the slice count, how many chops ran before it, how many
+cuts were then moved by hand, how many chips were corrected or
+confirmed, and the source's length and tempo. No audio, no features.
+`CutRatings` (`:shell`) is the reader/writer; `CutRatingsTest` sums the
+file by setting on each test run, best first.
+
+Both get here by **SEND TO BENCH** in the app's WORKSHOP
 (`docs/WORKSHOP.md`: seven taps on SETUP's title open it). The button
 packs every log on the phone — each kit's, and the bin's — into
-`SnipSnap Bench <date>.zip`; unzip it and copy its `overrides.jsonl`
-straight into this folder, over the last one. The zip is cumulative
-(every log still on the phone), so the newest file supersedes rather
-than appends. Its `manifest.txt` says which kit gave how many lines.
+`SnipSnap Bench <date>.zip`; unzip it and copy its `overrides.jsonl` and
+`cuts.jsonl` straight into this folder, over the last ones. The zip is
+cumulative (every log still on the phone), so the newest files supersede
+rather than append. Its `manifest.txt` says which kit gave how many
+lines.
 
 Threshold changes motivated by this corpus belong in `Classifier` with a
 comment naming the file(s) or log line(s) that motivated them.

@@ -1550,6 +1550,12 @@ class ConventionTest {
         "humStart" to "the instant that hum began",
         "voice" to "plays this model's audio; the DisposableEffect on the same key is what releases it",
         "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
+        // RATE THE CUTS (docs/WORKSHOP.md, WS2). A star is a verdict on THIS
+        // model's cuts, not a preference: a re-chop, a MERGE or a SPLIT is
+        // different cuts, and a rating of the old ones riding onto the new
+        // would be logged against a setting that never earned it - the
+        // same reason `ChopReviewModel.confirmed` does not follow a re-chop.
+        "stars" to "a star rates this model's own cuts; a re-chop, a MERGE or a SPLIT is different cuts, and a verdict on the old ones must not ride onto them",
     )
 
     /**

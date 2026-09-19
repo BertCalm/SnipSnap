@@ -334,6 +334,20 @@ logcat tag to grab when something is wrong.
   `TeachLogTest` print the correction. If the chooser never appears, the
   `FileProvider` note under SHARE / BACKUP above applies here too — it
   is the same cache folder.
+- **The BENCH row on CHOP** (`docs/WORKSHOP.md`, WS2): with the WORKSHOP
+  open, CHOP shows CONFIRM ALL and five digits above the slices, under
+  CLASSIC / FOLD / MELODIC — check six segments fit one row at 390dp
+  without the SELECTED caption wrapping. With TEACH THE MACHINE off the
+  row is dim and the note under it names SETUP. With it on: correct one
+  chip, CONFIRM ALL (the toast counts the rest and the button stays
+  pressed), tap a star (the toast names it), step HITS once (the star
+  clears; CONFIRM ALL releases), CONFIRM ALL and a star again, SEND TO
+  PADS. Then SEND TO BENCH and unzip on a laptop: `overrides.jsonl` holds
+  the correction plus one line per confirmed chip with `label` equal to
+  `machineSaid`, and `cuts.jsonl` one line naming the mode, HITS, EAR,
+  CUT, SNAP and a `tries` of 1. Dropped into `reference/calibration/`,
+  `TeachLogTest` prints corrections and confirmations apart and
+  `CutRatingsTest` prints the setting's line.
 
 ## Fonts / licensing
 

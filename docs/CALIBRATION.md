@@ -34,21 +34,27 @@ threshold *fitting*.
 
 The other on-ramp is the app's own teach log. With TEACH THE MACHINE on
 (SETUP), every chip corrected on CHOP is logged as a feature vector plus
-the human's label into that kit's folder — never audio. Until the
-WORKSHOP existed (`docs/WORKSHOP.md`) those lines never left the phone.
-Now they do, on purpose: open the workshop (seven taps on SETUP's title),
+the human's label into that kit's folder — never audio — and, since the
+WORKSHOP's CONFIRM ALL, so is every chip the human vouched for: the same
+line, its label the machine's own verdict. Beside it, a star given to the
+cuts lands as a rating with the bench's settings (`cuts.jsonl`). Until
+the WORKSHOP existed (`docs/WORKSHOP.md`) none of it left the phone. Now
+it does, on purpose: open the workshop (seven taps on SETUP's title),
 press **SEND TO BENCH**, and the chooser hands you
-`SnipSnap Bench <date>.zip`. Inside is `overrides.jsonl`, every log on
-the shelf merged (the bin included, torn lines dropped), and a
-`manifest.txt` naming which kit gave what. Drop the log into
-`reference/calibration/` and run
+`SnipSnap Bench <date>.zip`. Inside are `overrides.jsonl` and
+`cuts.jsonl`, every log on the shelf merged (the bin included, torn lines
+dropped), and a `manifest.txt` naming which kit gave what. Drop the two
+files into `reference/calibration/` and run
 
 ```
-./gradlew :shell:test --tests '*TeachLogTest*'
+./gradlew :shell:test --tests '*TeachLogTest*' --tests '*CutRatingsTest*'
 ```
 
-It prints every correction the current rules still disagree with, with
-the features behind each, and counts how many they now agree with.
+The first prints every label the current rules still disagree with, with
+the features behind each, and counts corrections and confirmations apart
+— so with confirmations in the file the agreement line is the rules'
+accuracy on real material. The second sums the cut ratings by setting,
+best first, with what each setting cost in tries and hand edits.
 
 ## The capture profile: context, not thresholds
 

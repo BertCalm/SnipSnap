@@ -11,20 +11,27 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** SEND TO BENCH (`docs/WORKSHOP.md`): every teach log on the shelf, merged, as one file for the calibration folder. */
+/** SEND TO BENCH (`docs/WORKSHOP.md`): every teach log and cut rating on the shelf, merged, as one file for the calibration folder. */
 class BenchExportTest {
 
     private val kick = TeachLog.Example(DrumClass.KICK, FeatureExtractor.extract(DrumSynth.kick()), machineSaid = DrumClass.TOM)
     private val hat = TeachLog.Example(DrumClass.HAT_CLOSED, FeatureExtractor.extract(DrumSynth.closedHat()), machineSaid = DrumClass.HAT_OPEN)
     private val snare = TeachLog.Example(DrumClass.SNARE, FeatureExtractor.extract(DrumSynth.snare()), machineSaid = DrumClass.CLAP)
+    /** CONFIRM ALL's line: the label is the machine's own verdict. */
+    private val confirmedKick = TeachLog.Example(DrumClass.KICK, FeatureExtractor.extract(DrumSynth.kick()), machineSaid = DrumClass.KICK)
+    private val rated = CutRatings.Rating(
+        stars = 4, mode = "HITS", count = 16, ear = "NORMAL", cut = "ON", grid = "OFF",
+        rows = 12, tries = 1, merges = 0, splits = 1, corrected = 1, confirmed = 11, seconds = 8.2f, bpm = 92.3f,
+    )
 
     private fun shelf(): File = java.nio.file.Files.createTempDirectory("bench").toFile()
 
-    /** A kit folder under [root] at [path], with [examples] logged the way CHOP logs them. */
-    private fun kitWithLog(root: File, path: String, examples: List<TeachLog.Example>): File {
+    /** A kit folder under [root] at [path], with [examples] and [ratings] logged the way CHOP logs them. */
+    private fun kitWithLog(root: File, path: String, examples: List<TeachLog.Example>, ratings: List<CutRatings.Rating> = emptyList()): File {
         val dir = File(root, path).apply { mkdirs() }
         File(dir, "kit.json").writeText("{}")
         TeachLog.append(File(dir, TeachLog.FILE_NAME), examples)
+        CutRatings.append(File(dir, CutRatings.FILE_NAME), ratings)
         return dir
     }
 
@@ -37,7 +44,7 @@ class BenchExportTest {
         val root = shelf()
         try {
             assertEquals(emptyList(), BenchExport.gather(File(root, "never made")))
-            kitWithLog(root, "Quiet Kit", emptyList()).also { File(it, TeachLog.FILE_NAME).delete() }
+            kitWithLog(root, "Quiet Kit", emptyList())
             assertEquals(emptyList(), BenchExport.gather(root), "a kit that never logged is not a contribution")
             assertTrue(runCatching { BenchExport.pack(root, File(root, "out"), "2026-09-19 1735") }.isFailure, "pack refuses rather than writing an empty zip")
             assertFalse(File(root, "out").exists(), "and leaves nothing behind")
@@ -50,50 +57,72 @@ class BenchExportTest {
     fun `every log under the shelf is gathered in path order, the bin included`() {
         val root = shelf()
         try {
-            kitWithLog(root, "Funk Kit", listOf(kick, hat))
+            kitWithLog(root, "Funk Kit", listOf(kick, hat), listOf(rated))
             kitWithLog(root, "Break Kit", listOf(snare))
             kitWithLog(root, "Silent Kit", emptyList())
-            // A kit DELETE > BIN moved under `.bin/<name>-<stamp>/`, its log with it.
+            // A kit with nothing but a rating still gave something.
+            kitWithLog(root, "Rated Kit", emptyList(), listOf(rated.copy(stars = 2)))
+            // A kit DELETE > BIN moved under `.bin/<name>-<stamp>/`, its logs with it.
             kitWithLog(root, ".bin/Old Kit-1726000000000", listOf(hat, hat))
 
             val logs = BenchExport.gather(root)
-            assertEquals(listOf(".bin/Old Kit-1726000000000", "Break Kit", "Funk Kit"), logs.map { it.path }, "path order, the bin's dot sorting first")
-            assertEquals(listOf(2, 1, 2), logs.map { it.examples.size })
+            assertEquals(listOf(".bin/Old Kit-1726000000000", "Break Kit", "Funk Kit", "Rated Kit"), logs.map { it.path }, "path order, the bin's dot sorting first")
+            assertEquals(listOf(2, 1, 2, 0), logs.map { it.examples.size })
+            assertEquals(listOf(0, 0, 1, 1), logs.map { it.ratings.size })
             assertEquals(listOf(hat, hat), logs[0].examples, "what the bin kept is what leaves")
+            assertEquals(listOf(rated), logs[2].ratings)
         } finally {
             root.deleteRecursively()
         }
     }
 
     @Test
-    fun `the zip holds the merged log the harness reads and a manifest that names each kit`() {
+    fun `the zip holds the merged logs the harnesses read and a manifest that names each kit's share`() {
         val root = shelf()
         try {
-            kitWithLog(root, "Funk Kit", listOf(kick, hat))
+            kitWithLog(root, "Funk Kit", listOf(kick, hat, confirmedKick), listOf(rated))
             kitWithLog(root, "Break Kit", listOf(snare))
             val out = File(root, "share")
 
             val result = BenchExport.pack(root, out, "2026-09-19 1735")
             assertEquals(File(out, "SnipSnap Bench 2026-09-19 1735.zip"), result.file)
             assertTrue(result.file.isFile)
+            assertEquals(4, result.labels)
             assertEquals(3, result.corrections)
+            assertEquals(1, result.confirmations)
+            assertEquals(1, result.ratings)
             assertEquals(2, result.kits)
 
             val inside = entries(result.file)
-            assertEquals(listOf(BenchExport.MANIFEST_NAME, BenchExport.LOG_NAME), inside.keys.toList(), "two entries, the manifest first")
+            assertEquals(listOf(BenchExport.MANIFEST_NAME, BenchExport.LOG_NAME, BenchExport.RATINGS_NAME), inside.keys.toList(), "three entries, the manifest first")
 
-            // The log is exactly what TeachLog would have written for the
-            // merged list, in path order - drop it in and the harness reads it.
-            val back = TeachLog.fromJsonl(inside.getValue(BenchExport.LOG_NAME))
-            assertEquals(listOf(snare, kick, hat), back)
+            // The logs are exactly what their own writers would have written
+            // for the merged lists, in path order - drop them in and the
+            // harnesses read them.
+            assertEquals(listOf(snare, kick, hat, confirmedKick), TeachLog.fromJsonl(inside.getValue(BenchExport.LOG_NAME)))
+            assertEquals(listOf(rated), CutRatings.fromJsonl(inside.getValue(BenchExport.RATINGS_NAME)))
 
             val manifest = inside.getValue(BenchExport.MANIFEST_NAME)
             assertTrue(manifest.startsWith("SnipSnap Bench 2026-09-19 1735\n"), manifest)
-            assertTrue("3 corrections from 2 kits" in manifest, manifest)
-            assertTrue("     1  Break Kit\n" in manifest, manifest)
-            assertTrue("     2  Funk Kit\n" in manifest, manifest)
+            assertTrue("4 labels (3 corrections, 1 confirmation) and 1 cut rating from 2 kits" in manifest, manifest)
+            assertTrue("     1       0  Break Kit\n" in manifest, manifest)
+            assertTrue("     3       1  Funk Kit\n" in manifest, manifest)
             assertTrue("never audio" in manifest, "the consent line's promise, restated where the file lands: $manifest")
             assertTrue(BenchExport.CALIBRATION_DIR in manifest && BenchExport.HARNESS_COMMAND in manifest, manifest)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a file with nothing to hold is not in the zip`() {
+        val root = shelf()
+        try {
+            kitWithLog(root, "Rated Kit", emptyList(), listOf(rated))
+            val result = BenchExport.pack(root, File(root, "share"), "2026-09-19 1735")
+            assertEquals(0, result.labels)
+            assertEquals(1, result.ratings)
+            assertEquals(listOf(BenchExport.MANIFEST_NAME, BenchExport.RATINGS_NAME), entries(result.file).keys.toList(), "no empty overrides.jsonl")
         } finally {
             root.deleteRecursively()
         }
@@ -107,6 +136,7 @@ class BenchExportTest {
             File(torn, TeachLog.FILE_NAME).appendText("{\"label\":\"KICK\",\"mach")
             val onlyTorn = kitWithLog(root, "Worse Kit", emptyList())
             File(onlyTorn, TeachLog.FILE_NAME).writeText("{\"label\":\"SNA")
+            File(onlyTorn, CutRatings.FILE_NAME).writeText("{\"stars\":4,\"mo")
 
             val logs = BenchExport.gather(root)
             assertEquals(listOf("Killed Kit"), logs.map { it.path })
@@ -125,7 +155,7 @@ class BenchExportTest {
     fun `the same shelf and the same stamp pack to the same bytes`() {
         val root = shelf()
         try {
-            kitWithLog(root, "Funk Kit", listOf(kick, hat))
+            kitWithLog(root, "Funk Kit", listOf(kick, hat), listOf(rated))
             val a = BenchExport.pack(root, File(root, "a"), "2026-09-19 1735").file.readBytes()
             val b = BenchExport.pack(root, File(root, "b"), "2026-09-19 1735").file.readBytes()
             assertTrue(a.contentEquals(b), "a fixed entry time and a fixed order: nothing in the zip depends on the clock")
@@ -137,42 +167,66 @@ class BenchExportTest {
     @Test
     fun `the manifest counts one of something in the singular`() {
         val one = BenchExport.manifest("2026-09-19 1735", listOf(BenchExport.Log("Break Kit", listOf(kick))))
-        assertTrue("1 correction from 1 kit." in one, one)
-        val many = BenchExport.manifest("2026-09-19 1735", listOf(BenchExport.Log("Break Kit", listOf(kick, hat)), BenchExport.Log("Funk Kit", listOf(snare))))
-        assertTrue("3 corrections from 2 kits." in many, many)
+        assertTrue("1 label (1 correction, 0 confirmations) and 0 cut ratings from 1 kit." in one, one)
+        val many = BenchExport.manifest(
+            "2026-09-19 1735",
+            listOf(BenchExport.Log("Break Kit", listOf(kick, confirmedKick), listOf(rated)), BenchExport.Log("Funk Kit", listOf(snare))),
+        )
+        assertTrue("3 labels (2 corrections, 1 confirmation) and 1 cut rating from 2 kits." in many, many)
     }
 
     /**
-     * The manifest tells a person where to drop the file and what to run.
+     * The manifest tells a person where to drop the files and what to run.
      * Both have to exist, or the instruction is a lie the moment it is
      * unzipped: the folder is read from `:shell`'s own project dir the way
-     * `TeachLogTest` reaches it, and the harness it names is that test.
+     * `TeachLogTest` reaches it, and the harnesses it names are those tests.
      */
     @Test
-    fun `the manifest's instructions point at a folder and a harness that exist`() {
-        assertTrue(File("../${BenchExport.CALIBRATION_DIR}").isDirectory, "reference/calibration/ is where TeachLogTest reads ${TeachLog.FILE_NAME} from")
-        assertTrue("TeachLogTest" in BenchExport.HARNESS_COMMAND)
-        assertTrue(File("../shell/src/test/kotlin/com/snipsnap/shell/TeachLogTest.kt").isFile, "the harness the manifest names")
-        // And that harness reads the very file name the zip carries.
-        val harness = File("../shell/src/test/kotlin/com/snipsnap/shell/TeachLogTest.kt").readText(Charsets.UTF_8)
-        assertTrue("reference/calibration/\${TeachLog.FILE_NAME}" in harness, "TeachLogTest reads the calibration folder's ${TeachLog.FILE_NAME}")
+    fun `the manifest's instructions point at a folder and harnesses that exist`() {
+        assertTrue(File("../${BenchExport.CALIBRATION_DIR}").isDirectory, "reference/calibration/ is where the harnesses read from")
+        for ((harness, store) in listOf("TeachLogTest" to "TeachLog", "CutRatingsTest" to "CutRatings")) {
+            assertTrue(harness in BenchExport.HARNESS_COMMAND, "the manifest names $harness")
+            val source = File("../shell/src/test/kotlin/com/snipsnap/shell/$harness.kt")
+            assertTrue(source.isFile, "the harness the manifest names: $harness")
+            // And each harness reads the very file the zip carries: the
+            // store's own FILE_NAME, under the folder the manifest names,
+            // spelled in the source the way the harness spells it.
+            val text = source.readText(Charsets.UTF_8)
+            assertTrue("reference/calibration/\$" + "{$store.FILE_NAME}" in text, "$harness reads the calibration folder's $store.FILE_NAME")
+        }
+        assertEquals(TeachLog.FILE_NAME, BenchExport.LOG_NAME)
+        assertEquals(CutRatings.FILE_NAME, BenchExport.RATINGS_NAME)
     }
 
     @Test
     fun `the toasts say what left and what did not`() {
-        assertEquals("3 CORRECTIONS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(3, 2))
-        assertEquals("1 CORRECTION FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(1, 1))
-        assertFalse("SENT" in Copy.benchPacked(3, 2), "the chooser opening is not the file leaving")
+        assertEquals("14 LABELS AND 3 CUT RATINGS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(14, 3, 2))
+        assertEquals("1 LABEL FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(1, 0, 1), "names only what the file holds")
+        assertEquals("1 CUT RATING FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 1, 1))
+        assertFalse("SENT" in Copy.benchPacked(3, 1, 2), "the chooser opening is not the file leaving")
         // The two refusals are two different answers, and the TEACH-off one
         // names the switch that fixes it.
         assertTrue(Copy.BENCH_EMPTY != Copy.BENCH_EMPTY_TEACH_OFF)
         assertTrue("TEACH THE MACHINE" in Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_EMPTY_TEACH_OFF)
-        assertTrue("CHOP" in Copy.BENCH_EMPTY, "with TEACH on, the remedy is a correction: ${Copy.BENCH_EMPTY}")
+        assertTrue("CHOP" in Copy.BENCH_EMPTY, "with TEACH on, the remedy is a chip: ${Copy.BENCH_EMPTY}")
         // The note under the button keeps the consent line true in so many
         // words: TEACH never sends, the button is the only way out.
         assertTrue("NEVER AUDIO" in Copy.SEND_TO_BENCH_NOTE, Copy.SEND_TO_BENCH_NOTE)
         assertTrue("NEVER SENDS ANYTHING BY ITSELF" in Copy.SEND_TO_BENCH_NOTE, Copy.SEND_TO_BENCH_NOTE)
-        for (line in listOf(Copy.benchPacked(3, 2), Copy.BENCH_EMPTY, Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_FAILED, Copy.SEND_TO_BENCH_NOTE)) {
+        for (line in listOf(Copy.benchPacked(3, 1, 2), Copy.BENCH_EMPTY, Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_FAILED, Copy.SEND_TO_BENCH_NOTE)) {
+            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.endsWith("."), "lands on a full stop: $line")
+        }
+    }
+
+    @Test
+    fun `the BENCH row's lines say what they log and when`() {
+        assertEquals("3 CHIPS CONFIRMED: THE MACHINE HAD THEM RIGHT. LOGGED WHEN YOU SEND.", Copy.confirmedAll(3))
+        assertEquals("1 CHIP CONFIRMED: THE MACHINE HAD IT RIGHT. LOGGED WHEN YOU SEND.", Copy.confirmedAll(1))
+        assertEquals("CUTS RATED 4 OF 5. LOGGED WHEN YOU SEND, WITH THE BENCH'S SETTINGS.", Copy.cutsRated(4))
+        assertTrue("WHEN YOU SEND" in Copy.BENCH_ROW_NOTE, "the note says when the log is written: ${Copy.BENCH_ROW_NOTE}")
+        assertTrue("SETUP" in Copy.BENCH_ROW_TEACH_OFF, "the dim row names the switch: ${Copy.BENCH_ROW_TEACH_OFF}")
+        for (line in listOf(Copy.confirmedAll(2), Copy.cutsRated(1), Copy.BENCH_ROW_NOTE, Copy.BENCH_ROW_TEACH_OFF)) {
             assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
             assertTrue(line.endsWith("."), "lands on a full stop: $line")
         }

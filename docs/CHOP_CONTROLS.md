@@ -571,3 +571,75 @@ out. The chop model cuts and names the slices (`ChopMode.Ladder`).
 - Whether the pickup wants to be a pad after all (`PICKUP`, before
   BAR 1) for breaks that start on the and.
 
+
+## 12. The BENCH row: CONFIRM ALL and the stars
+
+Round six is not a chop; it is the bench learning from every chop. The
+spec is `docs/WORKSHOP.md` (WS2); this section is the CHOP side of it.
+
+### In the hand
+
+With the WORKSHOP open (seven taps on SETUP's title) one row appears
+above the slices, under CLASSIC / FOLD / MELODIC: **CONFIRM ALL**, then
+**1 2 3 4 5**, with a note under it saying what they do and when they
+are written.
+
+- **CONFIRM ALL** vouches, in one tap, for every chip the classifier
+  named and you left alone: `12 CHIPS CONFIRMED: THE MACHINE HAD THEM
+  RIGHT. LOGGED WHEN YOU SEND.` It presses in and reads SELECTED until
+  the chop changes; a second press is refused, dim.
+- **A star** rates the cuts: `CUTS RATED 4 OF 5. LOGGED WHEN YOU SEND,
+  WITH THE BENCH'S SETTINGS.` Another star replaces it. RE-CHOP, AUTO,
+  any EAR / CUT / SNAP / HITS step, MERGE and SPLIT all clear it: those
+  are different cuts.
+- **Both write at SEND** — SEND TO PADS and ONTO alike — beside the
+  corrections, into the kit the chop became. Leave CHOP without sending
+  and nothing is written.
+- **TEACH THE MACHINE off**: the row is dim and the note reads `TEACH
+  THE MACHINE IS OFF, SO NOTHING HERE IS LOGGED. TURN IT ON IN SETUP.`
+
+### Underneath (`shell/ChopReview.kt`, `shell/CutRatings.kt`)
+
+- `confirmAll()` sets `confirmed` on *this* model and returns how many
+  chips it vouched for. `labeledConfirmations()` is every chip the
+  classifier named (`Row.label == null` — a ghost's and a rung's LOOP are
+  given by construction and never confirmed), not corrected, and either
+  blanket-confirmed or agreed with through the picker (`override` set to
+  the machine's own class, which `overridden` already reads as
+  agreement). `teachHarvest()` is corrections then confirmations, and is
+  what both SEND sites now log.
+- A confirmation is a `TeachLog.Example` whose label equals
+  `machineSaid` — `Example.confirmation`. Same line format; the harness
+  counts the two apart.
+- `tries`, `merges`, `splits`: the bench's record. `rechop` (and so
+  `rechopKeeping`, AUTO, every stepper) counts a try and starts the hand
+  count over; `merged` and `split` count themselves through `rebuilt`.
+  `carryingOverrides` carries chips, never the confirmation.
+- `CutRatings.of(model, stars)` snapshots the mode, HITS or parts, EAR,
+  CUT, SNAP, the slice count, the record above, the corrected and
+  confirmed counts, the source's length and its trusted tempo.
+  `cuts.jsonl` is torn-line tolerant like `overrides.jsonl`; a star off
+  the scale is dropped on read.
+
+### Laws the tests hold (`CutRatingsTest`)
+
+- CONFIRM ALL vouches for exactly the chips left alone; a picker
+  agreement counts on its own; corrections come first in the harvest;
+  a re-chop does not inherit the confirmation, only carried agreements.
+- A GHOSTS chop confirms nothing.
+- Tries count every chop after the first; MERGE and SPLIT count
+  themselves; a re-chop zeroes the hand count.
+- A rating names its setting in full (`HITS ×8 · FINE · CUT EARLY · SNAP
+  OFF`, `GRID ×4`); stars outside 1..5 are refused.
+- The jsonl round-trips with its nulls; the summary sums by setting,
+  best first.
+
+### What the phone should judge
+
+- Six segments on one row at 390dp: CONFIRM ALL at double width beside
+  five single digits — does it fit without the caption wrapping?
+- After CONFIRM ALL, correct one more chip: the button should stay
+  pressed (the confirmation stands for what was left alone at SEND, and
+  the new correction is a correction), and the SEND should log both.
+- Tap a star, then step HITS: the star should clear and the toast for
+  the step should still say what it always said.
