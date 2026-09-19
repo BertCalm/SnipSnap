@@ -1758,6 +1758,13 @@ object Copy {
     /** The ring gave back nothing worth a voice - a quiet room, or a session that only just started. */
     const val RING_NOTHING = "THE RING HEARD NOTHING YET. GIVE IT A MOMENT, THEN RING AGAIN."
     /**
+     * EVERY BAR came round to a ring that is no longer listening (STOP on
+     * SHELF, or the session died): the mode switches itself off rather than
+     * toasting every bar, the last freeze stays as the voice, and the way
+     * back is the same two doors.
+     */
+    const val RING_BAR_STOPPED = "EVERY BAR STOPPED. NOTHING IS LISTENING. LISTEN · MIC OR APP AUDIO ON SHELF, THEN EVERY BAR AGAIN."
+    /**
      * A MOD slot stepped onto FOLLOW or DUCK with nothing listening: those
      * shapes are the room's level, and a ring that is not listening reports
      * silence, so the slot would move nothing. Said on the step, not dimmed

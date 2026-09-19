@@ -156,7 +156,12 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * fresh one. The frozen voice plays under every mode exactly as a pad
  * would, GRAIN's key snap included (its note is found the way a pad's
  * is). It is a moment, not a setting: nothing lands in `surface.json`,
- * and PAD ◄ ► - or reopening the kit - brings the pad back.
+ * and PAD ◄ ► - or reopening the kit - brings the pad back. EVERY BAR,
+ * on the row that appears while the ring is the voice, takes the freeze
+ * again on every bar line - the modulators' own bar, from the same origin
+ * (`RingSlot.barIndex`) - so the voice tracks the track in the next app a
+ * bar behind; it switches itself off, in words, if the ring stops
+ * listening, and PAD ◄ ► ends it the way it ends a freeze.
  *
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
@@ -226,6 +231,9 @@ fun SurfaceScreen(
     // tag. padSlot is left alone on purpose - PAD ◄ ► steps on from the
     // pad the ring replaced, not from nowhere.
     var ringVoice by remember { mutableStateOf(false) }
+    // EVERY BAR: the frame loop re-freezes on each bar line while this is
+    // on. Not persisted, like the freeze itself - it needs a live session.
+    var ringOnBar by remember { mutableStateOf(false) }
     // Bumped by every press that loads slot 0 (PAD ◄ ►, RING) before its
     // IO starts, and checked after - the same discipline pad2Generation
     // keeps for slot 1, so a RING tap and a PAD press close together
@@ -371,10 +379,19 @@ fun SurfaceScreen(
     // way loadPad tells it a pad's. Refusals are said, not dimmed: the
     // button is live whenever a kit is open, and a tap with nothing
     // listening names the route (HUM's own discipline).
-    fun freezeRing() {
+    // [onBar] is EVERY BAR's own call from the frame loop: quiet on
+    // success and on a silent bar (the last freeze stays), and a ring that
+    // has stopped listening switches the mode off once, in words, rather
+    // than saying so every bar.
+    fun freezeRing(onBar: Boolean = false) {
         val key = (entry ?: return).kit.key
         if (!MicSessionService.armed.value) {
-            onToast(Copy.RING_NOT_LISTENING)
+            if (onBar) {
+                ringOnBar = false
+                onToast(Copy.RING_BAR_STOPPED)
+            } else {
+                onToast(Copy.RING_NOT_LISTENING)
+            }
             return
         }
         val appAudio = MicSessionService.source.value == MicSessionService.Source.INSIDE
@@ -387,7 +404,7 @@ fun SurfaceScreen(
             }
             if (generation != voiceGeneration) return@launch
             if (loaded == null) {
-                onToast(Copy.RING_NOTHING)
+                if (!onBar) onToast(Copy.RING_NOTHING)
                 return@launch
             }
             val (snip, sourceMidi) = loaded
@@ -395,8 +412,24 @@ fun SurfaceScreen(
             engine.setKey(SurfaceKey.of(key, sourceMidi))
             padName = RingSlot.label(snip.durationSeconds)
             ringVoice = true
-            onToast(Copy.ringFrozen(snip.durationSeconds, appAudio))
+            if (!onBar) onToast(Copy.ringFrozen(snip.durationSeconds, appAudio))
         }
+    }
+
+    // EVERY BAR on: a freeze now, and the frame loop takes the next on the
+    // bar line. Off: the last freeze stays as the voice. With nothing
+    // listening it stays off and the tap says the route, as RING does.
+    fun toggleRingOnBar() {
+        if (ringOnBar) {
+            ringOnBar = false
+            return
+        }
+        if (!MicSessionService.armed.value) {
+            onToast(Copy.RING_NOT_LISTENING)
+            return
+        }
+        ringOnBar = true
+        freezeRing()
     }
 
     // The engine's second source slot - the sample area's base-left
@@ -497,6 +530,7 @@ fun SurfaceScreen(
             padName = null
             padSlot = null
             ringVoice = false
+            ringOnBar = false
             padName2 = null
             padSlot2 = null
             padName3 = null
@@ -525,6 +559,9 @@ fun SurfaceScreen(
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
+        // A kit opening is the pad becoming the voice by choice: EVERY BAR
+        // ends here the way it ends on PAD ◄ ►.
+        ringOnBar = false
         if (pad == null) {
             padName = null
             padSlot = null
@@ -589,6 +626,9 @@ fun SurfaceScreen(
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
         persist(dir, settings.copy(padSlot = pad.slot))
+        // Choosing a pad ends EVERY BAR: the next bar would only take the
+        // voice straight back.
+        ringOnBar = false
         val generation = ++voiceGeneration
         scope.launch { loadPad(dir, pad, entry.kit.key, generation) }
     }
@@ -855,6 +895,10 @@ fun SurfaceScreen(
         var modOrigin = -1L
         var modsWereOn = false
         var lastFrame = -1L
+        // EVERY BAR's last bar line, -1 while it is off: the first frame
+        // after it turns on only notes the bar (the toggle froze already),
+        // and each change of bar after that is a freeze.
+        var lastRingBar = -1L
         while (true) {
             val now = withFrameNanos { it }
             // The frame's own length for the follower - capped, so a stalled
@@ -868,6 +912,13 @@ fun SurfaceScreen(
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
             if (modOrigin < 0L) modOrigin = now
+            if (ringOnBar) {
+                val bar = RingSlot.barIndex((now - modOrigin) / 1_000_000_000.0, RingSlot.barSeconds(kitBpm))
+                if (lastRingBar >= 0L && bar != lastRingBar) freezeRing(onBar = true)
+                lastRingBar = bar
+            } else {
+                lastRingBar = -1L
+            }
             val modsOn = settings.mods.any { it.depth > 0f }
             // The finger's own two targets stay on this side of the bridge
             // and are applied to `play` below; the engine gets its slice.
@@ -1002,6 +1053,35 @@ fun SurfaceScreen(
                     enabled = bpm != null && !printing,
                     dimmed = barsIndex == 0,
                 ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
+            }
+
+            if (ringVoice || ringOnBar) {
+                Spacer(Modifier.height(6.dp))
+
+                // The ring's own row, only while the ring is the voice (the
+                // GRAIN row's pattern): EVERY BAR, and a readout that says
+                // which clock it is on. ONCE is the plain tap; EVERY BAR is
+                // lit while it runs, the way LATCH is.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton(
+                        "EVERY BAR",
+                        scheme,
+                        enabled = entry != null,
+                        dimmed = !ringOnBar,
+                        modifier = Modifier.weight(1.2f).semantics { selected = ringOnBar },
+                    ) { toggleRingOnBar() }
+                    val ringBpm = entry?.kit?.tempoBpm
+                    TapeText(
+                        when {
+                            !ringOnBar -> "RING ONCE, ON THE TAP"
+                            ringBpm == null -> "RING AGAIN EVERY BAR AT THE DEFAULT TEMPO"
+                            else -> "RING AGAIN EVERY BAR AT ${ringBpm.toInt()} BPM"
+                        },
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(2.4f).padding(horizontal = 4.dp),
+                    )
+                }
             }
 
             if (mode == Mode.GRAIN) {

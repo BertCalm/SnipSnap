@@ -254,7 +254,16 @@ logcat tag to grab when something is wrong.
   should loop those seconds with pitch across and filter up exactly as a
   pad would - GRAIN over them too, and if the freeze was a held note the
   pitch axis should snap it into the kit's key. RING again should take a
-  fresh few seconds (say something different first). Then STOP on SHELF,
+  fresh few seconds (say something different first). While the ring is
+  the voice a row appears under PAD: EVERY BAR. Tap it with a track
+  playing through APP AUDIO (or the mic hearing a speaker): the readout
+  should name the kit's tempo, and with LATCH on the voice should change
+  on every bar line without a tap - the track going by, a bar behind -
+  with the bar lines landing where a MOD RANDOM's do (both count from
+  the same origin). PAD ► should end it and unlight EVERY BAR; STOP on
+  SHELF mid-run should stop it in words on the next bar and leave the
+  last freeze playing; a silent bar should leave the last freeze playing
+  too, with no toast. Then STOP on SHELF,
   APP AUDIO ▸ RECORD AN APP, play a video in another app, back to SURFACE,
   RING: the video's last 4 s under the finger - the toast names APP
   AUDIO this time. PAD ► should bring a pad back and unlight RING; so
