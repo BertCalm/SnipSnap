@@ -83,7 +83,7 @@ private const val EMPTY_ROOMS_BIN_ARM_MS = 3_000L
 /**
  * The tape shelf: every kit folder on the device, plus the NEW KIT ▸ PICK
  * A STARTER menu (the cold-start answer — the shelf is never uselessly
- * empty when eight starters are one tap away).
+ * empty when nine starters are one tap away).
  */
 @Composable
 fun KitsScreen(
@@ -1193,6 +1193,15 @@ private fun StarterMenu(onPick: (StarterKits.Starter) -> Unit, onDismiss: () -> 
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText("PICK A STARTER", TapeType.display, scheme.ink.tape)
+            // This Column does NOT scroll, so the roster has a ceiling
+            // rather than merely a length: a row past the bottom of the
+            // frame is a starter nobody can reach, with nothing on screen
+            // to say it is there. Measured when SKIN made it nine: a row
+            // is ~39dp with a one-line blurb and ~49dp with two, so nine
+            // rows plus the heading and padding come to ~554dp of
+            // Layout.FRAME_H's 844 at the worst case - about five rows of
+            // headroom left.
+            // Whoever spends them adds a verticalScroll here first.
             for (starter in StarterKits.ALL) {
                 Column(
                     Modifier
