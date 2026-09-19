@@ -48,6 +48,27 @@ this is checkable in an afternoon."
 
 ---
 
+> **2026-09-19 — this review has not been worked, and its headline is
+> already out of date.** Read the note below before acting on anything
+> here.
+>
+> The headline finding immediately following is **closed**. GROOVE's
+> BOUNCE renders the loop to SNIPS, and SNIPS has a SHARE that hands the
+> file to the system chooser (`SnipsScreen.kt:123`, *"the snip leaves the
+> app, through the system chooser"*). The bounce doors on LOOP, GROOVE
+> and ORBIT all name SNIPS before the tap and after it. So a beat can
+> leave the app as audio, by the route this section says does not exist.
+>
+> **Only the headline was re-checked.** The other findings below have not
+> been verified against the app as it now stands. This review was written
+> on 2026-09-16, the same day as `UX_JOURNEY_PLAN_2026_09.md` and so
+> before any of that plan ran — PR 0 through PR 8 have all landed since.
+> (The wiring review's fixes, 2026-09-13, do predate it and are already
+> accounted for here.) Treat every item below as a claim about the build
+> of 2026-09-16 until it is read at source again. The journey plan's own
+> "still to do" list turned out eight-for-eight already done when it was
+> finally checked; there is no reason to expect this one to be different.
+
 ## The headline: your *beat* cannot leave the app, only your *sounds*
 
 **Corrected after review — the first draft of this section overstated the

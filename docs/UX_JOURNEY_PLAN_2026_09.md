@@ -722,7 +722,27 @@ in the code, and the Android platform contract.
   Changing it to per-pad would contradict a settled decision. The rest of
   J15 (no press feedback on the 480 ms hold) stands and is below.
 
-#### Settled, still to do — in the order the evidence is strongest
+#### Settled — all done
+
+Written as "still to do, in the order the evidence is strongest". Every
+item in it has since shipped, and each was re-checked at source before
+this heading was changed rather than ticked from memory:
+
+| | Where it landed |
+|---|---|
+| J15's press feedback | `KitScreen.kt:909` — `held` sets a floor under the decaying glow, and a 3dp border where a raised pad has 2 |
+| J16 | `App.kt`'s `openPadSheet`, which every door now goes through; held by `ConventionTest:2414` |
+| J33 | `ChopScreen.kt:1645` — `GridPreview` carries a merged `contentDescription` |
+| J36 | `KitScreen.kt:1015` — the dog-eared corner, and the benches named in the pad's spoken description |
+| J11 | `App.kt`'s `screenHistory` — a real back stack |
+| J12 + J14 | #258 (the tab reads SHELF) and #259 (the four groups get seams) |
+| J30 | `ChopScreen.kt:806` — `sourceFromKit` names the source when the app picked it |
+| J34 | `ExportScreen.kt:981` — the reason for the format you are on, with the picker shut |
+
+The evidence that settled each one is kept below, because the reasoning is
+the point of this section and the tick is not. **It is written in the
+present tense of the finding** — each bullet describes the app as it was
+when the evidence was gathered, not as it is now.
 
 - **J15's press feedback.** `UI_DESIGN.md`'s rules of the language:
   *"Every control is RAISED, PRESSED or SUNKEN — pressing a control flips
@@ -908,19 +928,47 @@ Everything from PR 5 onward is real but is improvement, not repair.
 
 ---
 
-## Decisions I need from you before starting
+## Decisions I needed before starting — all four answered
 
-1. **PR 0** — build the `:app` test seam first, or accept
-   compile-and-read as the bar for this wave?
-2. **PR 2** — disabled controls: dim only, or dim *and* toast the reason?
+Kept because what was asked, and how it was settled, is worth more than a
+deleted list. **The whole sequence, PR 0 through PR 8, has shipped.**
+
+1. ~~**PR 0** — build the `:app` test seam first, or accept
+   compile-and-read as the bar for this wave?~~ **Answered by practice:
+   compile-and-read, plus source-scanning laws in `:shell`.** No `:app`
+   test source set was added. Instead `ConventionTest` grew laws that read
+   `../app/src/main/kotlin/...` as text and hold it to rules — the back
+   handler, the toast door, the pad-sheet doors, the velocity rule, the
+   menu tabs. It is not the seam that was offered, and its limit is real:
+   `android-build` in CI remains the only thing that compiles `:app`.
+2. ~~**PR 2** — disabled controls: dim only, or dim *and* toast the
+   reason?~~ **Answered (b), but per control rather than as a blanket
+   rule** — and the answer is narrower than the question. What PR 2
+   actually fixed is that refusal became *expressible*: `enabled` now
+   forwards through `SegmentButton` and `DeckButton`, so a control can be
+   visibly refused instead of lit and inert. The law that guards it
+   (`ConventionTest`, "call sites never refuse with a silent return")
+   asserts the **negative** — no site refuses silently inside its own
+   lambda — rather than demanding a toast everywhere. Where the reason
+   is not obvious from the screen, the control stays tappable and says
+   it: `GROOVE_BOUNCE_NEEDS_PLAY` names the button that unblocks it,
+   HUM's three refusals name the door and the tab. Where it is obvious,
+   the dim is the whole message. The silent middle is what is banned.
 3. ~~**PR 3** — `MAKE PAD ▸`: confirm, fresh name per press, or an explicit
    keep step?~~ **Answered: fresh name per press.** Shipped; see PR 3 above.
-4. **Sequence** — is "correctness → contract → data loss → everything
-   else" the right weighting, or do you want the journey work (PR 7,
-   which is what you originally asked about) pulled forward?
+4. ~~**Sequence** — is "correctness → contract → data loss → everything
+   else" the right weighting, or do you want the journey work pulled
+   forward?~~ **Answered by running it: the recommended order, unchanged.**
+   PR 7 stayed late and was worth the wait — asked as questions, then
+   researched rather than chosen by taste, which is what the section above
+   records.
 
-On 4 specifically: your original ask was GROOVE and the between-screens
-flow, which is PR 7. I have put it late because it is the part that needs
-your design judgement rather than mine, and because the PRs before it
-stop the app losing people's work. That ordering is a recommendation, not
-a constraint — say the word and PR 7 goes first.
+### What is left in this document
+
+Nothing. The four items that ended PR 7 as design calls were put back as
+choices with pros, cons and a recommendation; all four recommendations
+were taken and all four have shipped.
+
+Work that remains on this app is not here: `FEATURE_PLAN.md` holds it, and
+what is unticked there needs an MPC Live III and a pair of ears rather
+than a session like this one.
