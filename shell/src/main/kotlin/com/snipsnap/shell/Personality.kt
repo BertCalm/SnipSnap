@@ -366,6 +366,17 @@ object Copy {
     const val PAD_VELOCITY_LEGEND = "TAP HIGH ON A PAD FOR A SOFTER HIT"
 
     /**
+     * A pad's accessible name, when the pad carries something (J36).
+     *
+     * KIT's grid distinguished a treated pad from a raw one in no way at
+     * all, so sixteen treated pads could be told apart only by holding
+     * each in turn — and TalkBack had no way to tell them apart even
+     * then, since the grid's own names are identical. [benches] are the
+     * legends of the boxes [PadSheetBoxes.touched] reports.
+     */
+    fun padTreated(benches: List<String>): String = benches.joinToString(", ")
+
+    /**
      * The handoff at the end of a capture (J10).
      *
      * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and

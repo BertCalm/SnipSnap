@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -68,6 +69,7 @@ import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadPeaks
+import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TextureKits
@@ -793,6 +795,9 @@ private const val LONG_PRESS_MS = 480L
  */
 private const val PAD_HELD_ALPHA = 0.20f
 
+/** The treated-pad corner mark's side, in dp (J36). Small enough to read as a mark, not a control. */
+private const val PAD_TREATED_MARK_DP = 7
+
 @Composable
 private fun PadCell(
     slot: Int,
@@ -894,6 +899,10 @@ private fun PadCell(
      * an animation.
      */
     var held by remember(slot) { mutableStateOf(false) }
+    // What this pad carries, read out of the same strips the pad sheet
+    // draws (J36) rather than re-derived here - so the grid and the sheet
+    // cannot disagree about what "treated" means.
+    val touchedBenches = remember(pad) { PadSheetBoxes.touched(pad).map { it.legend } }
     // The hit's own flash still decays; the held floor is what stays.
     // maxOf, not a sum: a tap on an already-held pad must not stack into
     // a brighter fill than a fresh hit produces.
@@ -917,7 +926,14 @@ private fun PadCell(
             // below stay separate nodes — TalkBack would land on this
             // one cell three times instead of once.
             .semantics(mergeDescendants = true) {
-                contentDescription = "PAD $tag: ${pad.displayName}"
+                // Names the benches the pad carries (J36). Without it,
+                // sixteen treated pads read identically to sixteen raw
+                // ones and the only way to tell them apart is to open
+                // each pad sheet in turn - which is worse for a TalkBack
+                // user than for a sighted one, since the corner marker
+                // below is not available to them at all.
+                contentDescription = "PAD $tag: ${pad.displayName}" +
+                    if (touchedBenches.isEmpty()) "" else ", ${Copy.padTreated(touchedBenches)}"
                 // The centre, deliberately: a synthesized click has no
                 // position to read, so it gets what a tap at the pad's
                 // vertical middle would have produced — the same answer
@@ -996,6 +1012,19 @@ private fun PadCell(
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )
+        // The treated marker (J36): a dog-eared corner in the pad's own
+        // class colour. A corner rather than a rim, because the rim is
+        // already spoken for - its width is the held state (J15) and its
+        // hue is the drum class. A drawn shape rather than a glyph, per
+        // `UI_DESIGN.md`: "Icons are drawn... never emoji."
+        if (touchedBenches.isNotEmpty()) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(PAD_TREATED_MARK_DP.dp)
+                    .background(cls.tape),
+            )
+        }
     }
 }
 

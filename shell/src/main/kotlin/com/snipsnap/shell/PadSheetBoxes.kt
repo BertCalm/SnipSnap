@@ -84,6 +84,35 @@ object PadSheetBoxes {
     fun make(pad: KitPad): String =
         pad.source["desampled"]?.let { "A PATCH NOW, ${it.uppercase(Locale.ROOT)} AWAY" } ?: "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT"
 
+    /**
+     * Which benches this pad actually carries something from (J36).
+     *
+     * KIT's grid showed nothing to tell a treated pad from a raw one,
+     * though every summary above already knows — sixteen treated pads
+     * could only be told apart by holding each in turn. This is the one
+     * predicate the grid asks, derived from the same strips the sheet
+     * draws, so the two can never disagree about what "treated" means.
+     *
+     * **[Box.MAKE] is not a bench in this sense and is deliberately
+     * excluded.** Its strip is never [UNTOUCHED]: with nothing applied it
+     * still reads "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT", because
+     * it advertises what the box can do rather than reporting what the
+     * pad carries. A plain "any strip that is not UNTOUCHED" test would
+     * therefore call every pad in every kit treated — which is the same
+     * answer as marking none of them, arrived at more expensively.
+     * DE-SAMPLE is the one thing MAKE leaves on a pad, so that, and only
+     * that, counts.
+     */
+    fun touched(pad: KitPad, outsideStage: String? = null): Set<Box> {
+        val strips = summaries(pad, outsideStage)
+        val benches = ORDER.filter { it != Box.MAKE && strips[it] != UNTOUCHED }
+        val desampled = if (pad.source["desampled"] != null) listOf(Box.MAKE) else emptyList()
+        return (benches + desampled).toSet()
+    }
+
+    /** Whether anything has been done to [pad] at all — the grid's marker. */
+    fun isTouched(pad: KitPad, outsideStage: String? = null): Boolean = touched(pad, outsideStage).isNotEmpty()
+
     /** Every strip at once, in [ORDER]. */
     fun summaries(pad: KitPad, outsideStage: String?): Map<Box, String> = linkedMapOf(
         Box.TREATMENT to treatment(PadSheet.read(pad.recipe)),
