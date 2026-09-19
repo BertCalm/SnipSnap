@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -166,6 +167,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * pad — so the hint rides kit-open instead, and only while undiscovered.
  */
 private const val PREF_PAD_SHEET_HINTS = "pad_sheet_hints"
+
+/** How many screens back [BackHandler] can walk before the stack bottoms out (J11). */
+private const val SCREEN_HISTORY_MAX = 64
 
 /** Sentinel for [PREF_PAD_SHEET_HINTS]: PAD SHEET has been opened, so never hint again. */
 private const val PAD_SHEET_FOUND = -1
@@ -1343,8 +1347,8 @@ fun App(shelf: KitShelf) {
     fun chopAll(uris: List<Uri>) {
         // A CHOP ALL tap answers "which files", not "which kit" — any
         // BREED pick still armed must not survive it. Cleared here, not
-        // only in goToScreen's tab-switch reset, because launching (or
-        // cancelling) the picker never goes through goToScreen at all;
+        // only in clearTransientState's screen-change reset, because
+        // launching (or cancelling) the picker never changes screen at all;
         // without this, the shelf stays stuck reading "PICK A KIT TO
         // CROSS WITH X" and every kit row stays in pick mode after this
         // run finishes, for a hand-off the user has already moved past.
@@ -2205,8 +2209,52 @@ fun App(shelf: KitShelf) {
     // Shared by MenuRow's own tab switch and the system Back fallback below —
     // one reset, one navigation, so the two can never drift apart on which
     // overlay/hand-off state a screen change must clear.
-    fun goToScreen(target: AppScreen) {
-        screen = target
+    /**
+     * Every screen the user has been on, oldest first — the back stack
+     * (J11).
+     *
+     * Back used to fire `goToScreen(AppScreen.KITS)` from every tab, so
+     * KIT ▸ GROOVE ▸ Back landed on the shelf rather than on KIT. That is
+     * not what Back means on Android: the platform's own guidance is that
+     * it moves *"in reverse chronological order through the history of
+     * screens the user has recently worked with"*, popping a stack — a
+     * temporal relationship, not a fixed hierarchical destination.
+     *
+     * Recorded by observing `screen` rather than by pushing inside
+     * [goToScreen], because roughly two dozen sites in this file set
+     * `screen` directly — a chop landing on KIT, a RE-TRIM opening TAPE,
+     * EXPORT's own doors. Those are navigations the user experienced just
+     * as much as a tab tap is, and a stack that recorded only the tab taps
+     * would send Back past them. Watching the value catches every one
+     * without threading a push through all of them.
+     */
+    val screenHistory = remember { mutableStateListOf<AppScreen>() }
+    var lastScreen by remember { mutableStateOf(screen) }
+    /** True while Back is popping, so the pop does not record itself and ping-pong. */
+    var poppingBack by remember { mutableStateOf(false) }
+    LaunchedEffect(screen) {
+        if (screen != lastScreen) {
+            if (!poppingBack) {
+                screenHistory.add(lastScreen)
+                // Capped: a long session tabbing around would otherwise
+                // grow this without bound, and nobody presses Back
+                // fifty times. The oldest entries go first, so Back keeps
+                // working and simply bottoms out sooner.
+                if (screenHistory.size > SCREEN_HISTORY_MAX) screenHistory.removeAt(0)
+            }
+            poppingBack = false
+            lastScreen = screen
+        }
+    }
+
+    /**
+     * The transient state a screen change must abandon — overlays, armed
+     * hand-offs, one-shot requests. Extracted from [goToScreen] so Back
+     * runs exactly the same resets: returning to KIT with a pad sheet
+     * still armed from two screens ago would be a worse bug than the one
+     * the back stack fixes.
+     */
+    fun clearTransientState() {
         // Leaving KIT for another tab must not leave the
         // sheet armed to reopen on the same slot next time
         // KIT comes back into view.
@@ -2252,25 +2300,44 @@ fun App(shelf: KitShelf) {
         doublesOpen = false
     }
 
+    fun goToScreen(target: AppScreen) {
+        screen = target
+        clearTransientState()
+    }
+
     // System Back, root policy: with no KIT-scoped or shelf-level overlay
     // open (every such overlay owns its own BackHandler, mounted only while
     // it's on screen, which always wins over this one — Compose's back
-    // dispatcher is LIFO and those are registered deeper/later), Back acts
-    // like a tab switch to the shelf. Three exclusions keep this from
-    // overshooting a screen that owns its own one-level back door instead
-    // of MenuRow's fixed tab set: AppScreen.KITS itself (nothing above it —
-    // Back must fall through to the system default, which finishes the
-    // Activity, the normal Android expectation for a root screen), SPLIT
-    // (its own "◄ KIT" chip below, via `onExit`), and KEYS (its own
-    // "◄ KITS" chip, via `onBack`, which also silences the instrument
-    // before leaving — this generic reset does not).
+    // dispatcher is LIFO and those are registered deeper/later), Back pops
+    // [screenHistory] — see its KDoc for why the old "always go to the
+    // shelf" policy was wrong. Two exclusions remain, for screens that own
+    // their own one-level back door: SPLIT (its own "◄ KIT" chip below,
+    // via `onExit`) and KEYS (its own "◄ KITS" chip, via `onBack`, which
+    // also silences the instrument before leaving — this generic reset
+    // does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
         padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null
+    //
+    // KITS is no longer among the exclusions (J11): with a real stack
+    // there is nothing special about the shelf except that it is usually
+    // where the stack bottoms out, and `screenHistory.isNotEmpty()` is
+    // what decides that now. An empty stack leaves Back to the system
+    // default, which finishes the Activity — still the normal Android
+    // expectation for a root screen, but reached by being at the bottom
+    // of the history rather than by being a particular tab. The comment
+    // sits here rather than inside the argument list because
+    // `law - BackHandler is registered unconditionally except at
+    // allowlisted, self-checked sites` matches the call's argument text
+    // against its allowlist verbatim.
     BackHandler(
-        enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
+        enabled = !anyOverlayOpen && screenHistory.isNotEmpty() &&
             screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
             note == null && !captureBlocked && !micPermissionDenied,
-    ) { goToScreen(AppScreen.KITS) }
+    ) {
+        poppingBack = true
+        screen = screenHistory.removeAt(screenHistory.lastIndex)
+        clearTransientState()
+    }
 
     TapeTheme(scheme) {
         Box(

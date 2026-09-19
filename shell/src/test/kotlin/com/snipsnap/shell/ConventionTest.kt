@@ -351,17 +351,20 @@ class ConventionTest {
             file = "App.kt",
             args = normalizeSpan(
                 """
-                enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
+                enabled = !anyOverlayOpen && screenHistory.isNotEmpty() &&
                     screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
                     note == null && !captureBlocked && !micPermissionDenied,
                 """,
             ),
             justification = "the app-level ROOT handler, not a busy-guard: its entire job is to defer. " +
                 "anyOverlayOpen, SPLIT, and KEYS each already have their own unconditional handler or their own " +
-                "back door (the KDoc directly above this call enumerates all three); the remaining case, " +
-                "AppScreen.KITS, is the true root screen, where falling through to Activity.finish() is the " +
-                "correct, intended Android behavior, not an accident. This is the one site that is SUPPOSED to " +
-                "read as a fallback, never as a mid-operation guard.",
+                "back door (the KDoc directly above this call enumerates them); the remaining case is an EMPTY " +
+                "screenHistory, which is the true root of the session - falling through to Activity.finish() " +
+                "there is the correct, intended Android behavior, not an accident. This used to read " +
+                "`screen != AppScreen.KITS` and said the same thing a weaker way (J11): with a back stack, being " +
+                "the root is a property of having nowhere to go back to, not of being one particular tab, and a " +
+                "non-empty history always has somewhere to pop to. This is the one site that is SUPPOSED to read " +
+                "as a fallback, never as a mid-operation guard.",
         ),
         BackHandlerAllow(
             file = "ui/SnipsScreen.kt",
