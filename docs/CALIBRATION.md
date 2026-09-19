@@ -30,6 +30,26 @@ playing just its kick, just its snare, and so on — once close to the
 phone and once across the room. That turns threshold *reasoning* into
 threshold *fitting*.
 
+## From the phone: SEND TO BENCH
+
+The other on-ramp is the app's own teach log. With TEACH THE MACHINE on
+(SETUP), every chip corrected on CHOP is logged as a feature vector plus
+the human's label into that kit's folder — never audio. Until the
+WORKSHOP existed (`docs/WORKSHOP.md`) those lines never left the phone.
+Now they do, on purpose: open the workshop (seven taps on SETUP's title),
+press **SEND TO BENCH**, and the chooser hands you
+`SnipSnap Bench <date>.zip`. Inside is `overrides.jsonl`, every log on
+the shelf merged (the bin included, torn lines dropped), and a
+`manifest.txt` naming which kit gave what. Drop the log into
+`reference/calibration/` and run
+
+```
+./gradlew :shell:test --tests '*TeachLogTest*'
+```
+
+It prints every correction the current rules still disagree with, with
+the features behind each, and counts how many they now agree with.
+
 ## The capture profile: context, not thresholds
 
 The first real capture (`reference/live3 room take.wav`) taught the

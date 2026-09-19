@@ -41,6 +41,17 @@ object ShareOut {
     fun shareDir(context: Context): File = File(context.cacheDir, DIR).apply { mkdirs() }
 
     /**
+     * The stamp a file the app hands out carries in its name — `SnipSnap
+     * Shelf 2026-09-19 1735.zip`, `SnipSnap Bench 2026-09-19 1735.zip` — so
+     * the two sort together wherever they land. Local time on purpose: it is
+     * the moment the button was pressed, as the person would write it down.
+     * One home for the format; it used to be typed inline in
+     * [KitShelf.backup], and SEND TO BENCH would have been the second copy.
+     */
+    fun stamp(nowMillis: Long): String =
+        java.text.SimpleDateFormat("yyyy-MM-dd HHmm", java.util.Locale.ROOT).format(java.util.Date(nowMillis))
+
+    /**
      * Offer [file] through the system chooser as [mime]. [title] heads
      * the chooser. Returns false when no app on the phone would take it.
      */

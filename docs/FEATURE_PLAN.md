@@ -276,6 +276,7 @@ calibration harness eat them.
 | X4.2 | ✓ done: `TeachLog` (`:shell`) — jsonl of {features, label} from `ChopReviewModel`'s overridden rows; reader for the harness side | CORE | S | overrides round-trip; a log line re-classifies |
 | X4.3 | ✓ done: harness ingestion — overrides.jsonl in `reference/calibration/` scored alongside the WAVs | CORE | S | logged corrections show up in the confusion report |
 | X4.4 | ✓ done: Consent switch + wiring in the app — SETUP's TEACH THE MACHINE row (OFF / ON, off by default, remembered like the scheme), the consent line under it in the copy's own words plus what ON actually logs; CHOP reads the boolean, the toasts are TEACHING ON / OFF | APP | S | off by default; nothing leaves the device either way |
+| X4.5 | ✓ done: the last mile — SEND TO BENCH in the WORKSHOP (`docs/WORKSHOP.md`, behind seven taps on SETUP's title): `BenchExport` walks the shelf and the bin for every `overrides.jsonl`, merges them through `TeachLog` (torn lines dropped), and hands `SnipSnap Bench <stamp>.zip` — the log the harness reads as-is plus a manifest naming each kit's share — to BACKUP's chooser. Refuses in words with nothing logged (TEACH on or off, two different lines); the consent line stays true because TEACH itself still sends nothing | CORE + APP | S | a phone's corrections land in `TeachLogTest`'s report by drop-in; the zip is byte-stable per shelf and stamp |
 
 ## X5 — Multisample keys (new)
 

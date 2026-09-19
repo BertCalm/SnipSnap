@@ -47,5 +47,13 @@ The app appends it only behind a consent switch; `TeachLog` (`:shell`)
 is the reader/writer, and `TeachLogTest` scores every logged correction
 against the current rules on each test run.
 
+It gets here by **SEND TO BENCH** in the app's WORKSHOP
+(`docs/WORKSHOP.md`: seven taps on SETUP's title open it). The button
+packs every log on the phone — each kit's, and the bin's — into
+`SnipSnap Bench <date>.zip`; unzip it and copy its `overrides.jsonl`
+straight into this folder, over the last one. The zip is cumulative
+(every log still on the phone), so the newest file supersedes rather
+than appends. Its `manifest.txt` says which kit gave how many lines.
+
 Threshold changes motivated by this corpus belong in `Classifier` with a
 comment naming the file(s) or log line(s) that motivated them.
