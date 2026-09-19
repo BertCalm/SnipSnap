@@ -54,6 +54,19 @@ struct GrainSettings {
 };
 
 /**
+ * SWARM: the loop voice thickened into a detuned unison, the S-4's
+ * "detuned swarm". `voices` copies of every slot's loop (1..kMaxSwarm)
+ * read at once, spread evenly across ±`detune` × kMaxDetuneCents and
+ * summed at 1/sqrt(voices). One voice at any detune is the plain loop,
+ * sample for sample. Mono, like the loop: a print is the mono bus, so a
+ * stereo spread would be lost where it mattered most.
+ */
+struct SwarmSettings {
+    int32_t voices = 1;
+    float detune = 0.0f;  // 0..1 of kMaxDetuneCents, the outermost voice's own detune
+};
+
+/**
  * The kit's key as GRAIN snaps to it: a root pitch class (0..11 above C),
  * a 12-bit mask of the scale's degrees above that root, and the loaded
  * pad's own note as a (possibly fractional) MIDI number, so the snap is
@@ -144,6 +157,20 @@ public:
      */
     void setKeySnap(bool on);
 
+    /** How many unison voices a swarm can have; `SurfaceStore.Swarm` in :shell holds the same ceiling by hand. */
+    static constexpr int32_t kMaxSwarm = 4;
+
+    /** The outermost swarm voice's detune at full DETUNE, in cents - a quarter tone either way at most, a chorus rather than a chord. */
+    static constexpr float kMaxDetuneCents = 50.0f;
+
+    /**
+     * UI thread. SWARM (see SwarmSettings): voices outside 1..kMaxSwarm
+     * clamp, a non-finite detune reads as 0. Takes effect within a control
+     * interval; a voice that joins starts from the loop's head on the next
+     * touch-down, like the others.
+     */
+    void setSwarm(const SwarmSettings& settings);
+
     /**
      * How many things a modulator can move: the seven macros in MacroState
      * order, then GRAIN's SIZE, DENSITY, SPRAY and POSITION - the order
@@ -186,7 +213,7 @@ private:
     void applyControl(const ControlFrame& frame);
     MacroState morphed(const ControlFrame& frame) const;
     void renderMono(float* out, int32_t numFrames);
-    /** Audio thread. One source's interpolated read, advancing its own phase_[slot]. Silence if slot is empty. */
+    /** Audio thread. One source's interpolated read - every swarm voice of it, each advancing its own phase_[slot][voice], summed at the swarm's gain. Silence if slot is empty. */
     float readSlot(int32_t slot, double fs, float pitchRatioValue);
     /** Audio thread. Whether slot has an adopted sample worth reading - the same test readSlot itself applies. */
     bool slotLoaded(int32_t slot) const;
@@ -218,7 +245,18 @@ private:
     std::atomic<Sample*> pending_[kMaxSources];
     std::atomic<Sample*> retired_[kMaxSources];
     Sample* current_[kMaxSources] = {};  // audio thread only; plain pointers zero-init fine
-    double phase_[kMaxSources] = {};
+    // One read position per slot per swarm voice; [slot][0] is the loop
+    // as it always was, and with one voice nothing else is ever read.
+    double phase_[kMaxSources][kMaxSwarm] = {};
+
+    // SWARM (see setSwarm). The atomics cross from the UI; the audio
+    // thread turns them into per-voice ratio multipliers and one gain
+    // once per kControlInterval, alongside the filter's coefficients.
+    std::atomic<int32_t> swarmVoices_;
+    std::atomic<float> swarmDetune_;
+    int32_t swarmVoicesC_ = 1;
+    float swarmMult_[kMaxSwarm] = {1.0f, 1.0f, 1.0f, 1.0f};
+    float swarmGain_ = 1.0f;
 
     // Controls.
     SpscRing<ControlFrame, 64> controls_;

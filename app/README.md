@@ -198,7 +198,15 @@ logcat tag to grab when something is wrong.
   (lit, and the readout now names the key) should step through the
   key's notes instead, holding each until the next - the same notes
   GRAIN's pitch axis lands on. A kit with no key should step semitones.
-  Leave and come back: KEY is in `surface.json`. Then GRAIN, a fifth
+  Leave and come back: KEY is in `surface.json`. Then SWARM, the row
+  under PAD in every mode but GRAIN: VOICES ► to 2 and DETUNE at 15%
+  should thicken the loop into a chorus that slowly beats; DETUNE up to
+  100% is a quarter tone either way and beats fast; VOICES at 3 or 4 is
+  a swarm; DETUNE at 0% with 3 voices is just louder (a coherent
+  unison); back at 1 voice the surface should sound exactly as before
+  the row existed, at any DETUNE. A tap restarts every voice from the
+  head, so a swarm blooms out of a clean attack. Leave and come back:
+  SWARM is in `surface.json`. Then GRAIN, a fifth
   mode: tap it and a SIZE/DENSITY/SPRAY row appears
   under PAD ◄ ►. A held finger should give a cloud of short grains rather
   than the loop - sliding left and right scrubs *where* in the pad's

@@ -2024,6 +2024,80 @@ TEST(surface_engine_key_snap_holds_a_note_across_the_pad_until_the_next_degree) 
     CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f + 2.0f / 24.0f, true), midiHz(72), midiHz(72) * 0.01);
 }
 
+/** A quiet A# sine as the loop in XY, wide open, held: what SWARM renders after the smoothers settle. */
+std::vector<float> swarmRender(const SwarmSettings& swarm, int32_t frames) {
+    SurfaceEngine e(kRate);
+    auto tone = measure::sine(466.16f, kRate, kRate);
+    for (float& v : tone) v *= 0.1f;
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setSwarm(swarm);
+    ControlFrame f;
+    f.mode = 0;
+    f.x = 0.5f;
+    f.y = 1.0f;
+    f.tilt = 0.5f;
+    f.gate = true;
+    e.pushControl(f);
+    return render(e, frames);
+}
+
+/** The quietest and loudest RMS over 480-frame windows of [mono] between [from] and [to], as a ratio quiet/loud. */
+double envelopeRatio(const std::vector<float>& mono, size_t from, size_t to) {
+    double lo = 1e9, hi = 0.0;
+    for (size_t start = from; start + 480 <= to; start += 480) {
+        double acc = 0.0;
+        for (size_t i = start; i < start + 480; ++i) acc += static_cast<double>(mono[i]) * static_cast<double>(mono[i]);
+        const double rms = std::sqrt(acc / 480.0);
+        lo = std::min(lo, rms);
+        hi = std::max(hi, rms);
+    }
+    return hi > 0.0 ? lo / hi : 0.0;
+}
+
+TEST(surface_engine_swarm_of_one_is_the_plain_loop_sample_for_sample) {
+    // One voice at any DETUNE is the loop as it always was - the untouched
+    // surface must not change by a bit when SWARM exists but is off.
+    const auto plain = swarmRender(SwarmSettings{}, 12000);
+    const auto one = swarmRender(SwarmSettings{1, 0.7f}, 12000);
+    CHECK_EQ(plain.size(), one.size());
+    bool same = true;
+    for (size_t i = 0; i < plain.size(); ++i) same = same && plain[i] == one[i];
+    CHECK(same);
+    // And a swarm that asks for more voices than exist clamps to the most.
+    const auto many = swarmRender(SwarmSettings{99, 0.0f}, 12000);
+    const auto four = swarmRender(SwarmSettings{4, 0.0f}, 12000);
+    bool clamped = true;
+    for (size_t i = 0; i < many.size(); ++i) clamped = clamped && many[i] == four[i];
+    CHECK(clamped);
+}
+
+TEST(surface_engine_swarm_detune_beats_and_a_coherent_swarm_is_louder) {
+    // Two voices a quarter tone apart at full DETUNE (±25 cents around
+    // 466 Hz, 13.5 Hz apart) beat: the envelope swings from full to near
+    // nothing every 74 ms. One voice holds a flat envelope. Three voices
+    // at DETUNE 0 are coherent and sum to sqrt(3) the single's level - a
+    // unison is louder, and the gain is 1/sqrt(n), not 1/n.
+    const auto single = swarmRender(SwarmSettings{1, 0.0f}, 30000);
+    const auto pair = swarmRender(SwarmSettings{2, 1.0f}, 30000);
+    const auto trio = swarmRender(SwarmSettings{3, 0.0f}, 30000);
+    CHECK(envelopeRatio(single, 6000, 30000) > 0.9);
+    CHECK(envelopeRatio(pair, 6000, 30000) < 0.5);
+    float peakSingle = 0.0f, peakTrio = 0.0f;
+    for (size_t i = 6000; i < 30000; ++i) {
+        peakSingle = std::max(peakSingle, std::fabs(single[i]));
+        peakTrio = std::max(peakTrio, std::fabs(trio[i]));
+    }
+    CHECK_NEAR(peakTrio / peakSingle, std::sqrt(3.0f), 0.1);
+}
+
+TEST(surface_engine_swarm_survives_a_detune_that_is_not_a_number) {
+    const auto plain = swarmRender(SwarmSettings{2, 0.0f}, 12000);
+    const auto nan = swarmRender(SwarmSettings{2, std::nanf("")}, 12000);
+    bool same = true;
+    for (size_t i = 0; i < plain.size(); ++i) same = same && plain[i] == nan[i];
+    CHECK(same);
+}
+
 TEST(surface_engine_modulation_nudges_a_macro_in_every_mode_and_clamps_at_the_rail) {
     // A 2 kHz sine through XY with the finger at cutoff 1.0 (16 kHz: it
     // passes untouched): a -1 offset on CUTOFF (index 1) closes the filter

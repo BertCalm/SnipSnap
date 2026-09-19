@@ -76,6 +76,7 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     setGrain(GrainSettings{});
     setKey(KeySnap{});
     setKeySnap(false);  // the loop plays as recorded until KEY is turned on
+    setSwarm(SwarmSettings{});  // one voice: the plain loop until SWARM is turned up
     setModulation(nullptr, 0);  // every target at 0: nothing moves until a slot has depth
     // The one Hann window every grain reads through, whatever its length.
     // kGrainWindowTable + 1 points so a grain at its very last frame
@@ -240,6 +241,12 @@ void SurfaceEngine::setKeySnap(bool on) {
     keySnapLoop_.store(on, std::memory_order_relaxed);
 }
 
+void SurfaceEngine::setSwarm(const SwarmSettings& settings) {
+    const int32_t voices = settings.voices < 1 ? 1 : (settings.voices > kMaxSwarm ? kMaxSwarm : settings.voices);
+    swarmVoices_.store(voices, std::memory_order_relaxed);
+    swarmDetune_.store(control01(settings.detune, 0.0f), std::memory_order_relaxed);
+}
+
 void SurfaceEngine::setModulation(const float* offsets, int32_t count) {
     for (int32_t i = 0; i < kModTargets; ++i) {
         float v = 0.0f;
@@ -268,7 +275,7 @@ void SurfaceEngine::adoptPendingSample(int32_t slot) {
     if (!incoming) return;
     retired_[slot].store(current_[slot], std::memory_order_release);
     current_[slot] = incoming;
-    phase_[slot] = 0.0;
+    for (int32_t v = 0; v < kMaxSwarm; ++v) phase_[slot][v] = 0.0;
 }
 
 MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
@@ -377,7 +384,9 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     // regardless of gain), so the next touch would land wherever the loop
     // happened to drift to, not at its head.
     if (f.gate && !gated_) {
-        for (int32_t i = 0; i < kMaxSources; ++i) phase_[i] = 0.0;
+        for (int32_t i = 0; i < kMaxSources; ++i) {
+            for (int32_t v = 0; v < kMaxSwarm; ++v) phase_[i][v] = 0.0;
+        }
         crushRetrigger_ = true;
         // And GRAIN's first grain fires on the next sample, for the same
         // reason the loops restart from their head: a tap is a hit, not
@@ -483,13 +492,20 @@ float SurfaceEngine::readSlot(int32_t slot, double fs, float pitchRatioValue) {
     const Sample* s = current_[slot];
     if (!s || s->frames.size() < 2) return 0.0f;
     const size_t n = s->frames.size();
-    const size_t i0 = static_cast<size_t>(phase_[slot]);
-    const size_t i1 = (i0 + 1) % n;
-    const float frac = static_cast<float>(phase_[slot] - static_cast<double>(i0));
-    const float v = s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
-    phase_[slot] += (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatioValue);
-    while (phase_[slot] >= static_cast<double>(n)) phase_[slot] -= static_cast<double>(n);
-    return v;
+    const double step = (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatioValue);
+    // With one voice this is the read it always was - voice 0 at the
+    // ratio, gain 1 - so an untouched SWARM changes nothing, bit for bit.
+    float sum = 0.0f;
+    for (int32_t voice = 0; voice < swarmVoicesC_; ++voice) {
+        double& phase = phase_[slot][voice];
+        const size_t i0 = static_cast<size_t>(phase);
+        const size_t i1 = (i0 + 1) % n;
+        const float frac = static_cast<float>(phase - static_cast<double>(i0));
+        sum += s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
+        phase += step * static_cast<double>(swarmMult_[voice]);
+        while (phase >= static_cast<double>(n)) phase -= static_cast<double>(n);
+    }
+    return sum * swarmGain_;
 }
 
 void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
@@ -511,6 +527,20 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             keyRootC_ = keyRoot_.load(std::memory_order_relaxed);
             keyMaskC_ = keyMask_.load(std::memory_order_relaxed);
             keySourceC_ = keySourceMidi_.load(std::memory_order_relaxed);
+            // SWARM: n voices spread evenly over ±detune × kMaxDetuneCents
+            // (one voice sits at 0, two at ±half, three at -1/0/+1, four at
+            // -1/-1/3/+1/3/+1), summed at 1/sqrt(n) so a detuned swarm of
+            // uncorrelated voices holds its level; a coherent one (detune
+            // 0) is sqrt(n) louder, which is what a unison is.
+            swarmVoicesC_ = swarmVoices_.load(std::memory_order_relaxed);
+            const float cents = swarmDetune_.load(std::memory_order_relaxed) * kMaxDetuneCents;
+            for (int32_t v = 0; v < kMaxSwarm; ++v) {
+                const float spread = swarmVoicesC_ > 1
+                    ? 2.0f * static_cast<float>(v) / static_cast<float>(swarmVoicesC_ - 1) - 1.0f
+                    : 0.0f;
+                swarmMult_[v] = std::exp2(cents * spread / 1200.0f);
+            }
+            swarmGain_ = 1.0f / std::sqrt(static_cast<float>(swarmVoicesC_));
         }
         const float pitch = pitch_.next();
         cutoff_.next();

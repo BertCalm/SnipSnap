@@ -450,4 +450,45 @@ class SurfaceStoreTest {
         )
         assertFailsWith<JsonException> { SurfaceStore.load(temp) }
     }
+
+    @Test
+    fun `SWARM round-trips, a file from before it loads as one voice, and a torn or out-of-range one is refused`() {
+        val swarm = SurfaceStore.Swarm(voices = 3, detune = 0.4f)
+        SurfaceStore.save(temp, Settings(padSlot = 1, swarm = swarm))
+        val loaded = SurfaceStore.load(temp).swarm
+        assertEquals(3, loaded.voices)
+        near(0.4f, loaded.detune)
+        assertEquals(SurfaceStore.Swarm.DEFAULT, Settings.DEFAULT.swarm)
+        assertEquals(1, SurfaceStore.Swarm.DEFAULT.voices, "one voice is the plain loop")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(SurfaceStore.Swarm.DEFAULT, SurfaceStore.load(temp).swarm)
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"swarm":{"voices":2},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"swarm":{"voices":9,"detune":0.1},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.load(temp) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(voices = 0) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(detune = Float.NaN) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(detune = 1.5f) }
+    }
 }

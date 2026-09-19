@@ -150,6 +150,12 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) NativeSurface.setKeySnap(handle, on)
     }
 
+    /** SWARM: the loop thickened into a detuned unison - see [SurfaceStore.Swarm]; one voice is the plain loop, sample for sample. */
+    @Synchronized
+    fun setSwarm(swarm: SurfaceStore.Swarm) {
+        if (open) NativeSurface.setSwarm(handle, swarm.voices, swarm.detune)
+    }
+
     /** The key GRAIN snaps each grain's pitch to - see [SurfaceKey] for what goes in. */
     @Synchronized
     fun setKey(snap: SurfaceKey.Snap) {
