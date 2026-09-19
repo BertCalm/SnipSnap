@@ -452,10 +452,19 @@ class FathomTest {
         // difference), not a spectral one: see VelvetTest's own version of
         // this test for why a band-energy comparison proved ambiguous for
         // a resonant, self-limiting filter like the one FATHOM shares.
+        //
+        // `direct` has to finish through the same Dsp.levelTo render() now
+        // does (Task 4), at the same target - voice offsets are all 0 today,
+        // so Dsp.MELODIC_LOUDNESS_TARGET alone matches what render() uses.
+        // Finishing `direct` with the old Dsp.normalize(0.95) instead left
+        // this assertion passing even with render()'s own decimate step
+        // deleted (checked directly) - the gain gap between a loudness
+        // target and a peak target was enough to clear avgDiff on its own,
+        // silently defeating the one thing this test is for.
         for (voice in FathomVoice.entries) {
             val actual = Fathom.render(voice)
             val direct = Fathom.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.normalize(direct)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)

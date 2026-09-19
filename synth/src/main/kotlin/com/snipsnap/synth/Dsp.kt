@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
@@ -322,6 +323,36 @@ internal object Dsp {
         }
     }
 
+    /**
+     * Shared [levelTo] target for every melodic engine - VELVET, FATHOM,
+     * VOX, TONEWHEEL, PLUCK. Measured, not chosen: the median of
+     * `Loudness.of` across all 17 factory-default voices as they rendered
+     * before this change, peak-normalized at 0.95 (task-4-report.md has the
+     * full before-table). Median rather than mean because it keeps overall
+     * kit level roughly where it already sat - nothing that was already
+     * loud suddenly clips, nothing already quiet suddenly vanishes - while
+     * collapsing the spread between voices, which was the actual defect: a
+     * sine-heavy pad and a buzzy one used to land at the same *peak* and
+     * very different loudness.
+     *
+     * Per-voice offsets deliberately stay at zero: each melodic engine
+     * keeps its own `LOUDNESS_OFFSET` map (all zero right now) that this
+     * constant is added to, so a future listening pass - whether a kick
+     * should sit above a hat, and by how much - is a table edit there, not
+     * a refactor here.
+     *
+     * Not every voice actually lands here. [levelTo]'s ceiling still caps
+     * the old peak at 0.95 * (0.99 / 0.95); a voice whose crest factor is
+     * high enough that reaching this target would need more than that -
+     * PLUCK's Karplus-Strong pluck, sharpest of the five engines - gets
+     * capped short instead (task-4-report.md has the exact numbers, e.g.
+     * KALIMBA settling at ~0.064). That is [levelTo] working as designed,
+     * not a bug: a shared target across five different crest factors can
+     * move a peaky voice's loudness *down* to match the rest freely, but
+     * can only move it *up* as far as digital full scale allows.
+     */
+    const val MELODIC_LOUDNESS_TARGET = 0.1834f
+
     /** Peak-normalize in place to [target]; silence is left alone. */
     fun normalize(buf: FloatArray, target: Float = 0.95f) {
         var peak = 0f
@@ -329,6 +360,37 @@ internal object Dsp {
         if (peak <= 1e-9f) return
         val g = target / peak
         for (i in buf.indices) buf[i] *= g
+    }
+
+    /**
+     * Scale [buf] so its measured loudness ([Loudness.of]) hits [target],
+     * then hold a true-peak [ceiling] with [limitPeak].
+     *
+     * Peak normalisation makes a sine-heavy patch sit quieter than a saw at
+     * the same target number - crest factor, not perceived level, decides
+     * where the peak lands. That's why THUMP alone used to read as "loud
+     * enough": [Punch.rescaleToLoudness] happens to be a loudness rescale
+     * too, but for a different reason - it *preserves* THUMP's pre-Punch
+     * level across the transient shaping, it does not *choose* one. This is
+     * the first function in the codebase that picks an absolute loudness
+     * target on purpose, which is why callers (see each melodic engine's
+     * `render`) derive [target] from a measurement instead of a guess.
+     *
+     * The [ceiling] pass matters because a loudness match and a peak limit
+     * are different constraints: a signal with almost no crest factor (a
+     * square-ish wave, or several engines' voices stacked) can hit the
+     * loudness target while its peak is already near or past digital full
+     * scale. Rescaling for loudness alone would let that clip on export;
+     * [limitPeak] afterward only steps in for the voices that actually reach
+     * it, exactly like it does downstream of [Punch].
+     */
+    fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f) {
+        if (buf.isEmpty()) return
+        val measured = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
+        if (measured <= 1e-6f) return
+        val gain = target / measured
+        for (i in buf.indices) buf[i] *= gain
+        limitPeak(buf, ceiling)
     }
 
     /**

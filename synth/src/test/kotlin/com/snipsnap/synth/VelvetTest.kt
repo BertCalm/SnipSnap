@@ -46,10 +46,21 @@ class VelvetTest {
         // oversample-then-decimate detour Dsp.decimate's own resampling
         // kernel leaves a real fingerprint on, not the "same as before"
         // path a regression would silently fall back to.
+        //
+        // `direct` has to finish through the same Dsp.levelTo render() now
+        // does (Task 4), at the same target - voice offsets are all 0 today,
+        // so Dsp.MELODIC_LOUDNESS_TARGET alone matches what render() uses.
+        // Finishing `direct` with the old Dsp.normalize(0.95) instead leaves
+        // `actual` and `direct` at two different gains regardless of
+        // whether render() is actually oversampling - on FATHOM, TONEWHEEL
+        // and VOX's copy of this same test, that gain gap alone was enough
+        // to clear avgDiff even with render()'s own decimate step deleted
+        // (checked directly), which silently defeats the one thing this
+        // test is for.
         for (voice in VelvetVoice.entries) {
             val actual = Velvet.render(voice)
             val direct = Velvet.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.normalize(direct)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)

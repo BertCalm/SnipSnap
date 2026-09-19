@@ -24,6 +24,13 @@ object Pluck {
     /** Semitone span of the TUNE macro. Root at 0, two octaves up at 1. */
     const val TUNE_SEMITONES = 24
 
+    /**
+     * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
+     * awaiting a listening pass (task-4-report.md) - a table edit here, not
+     * a refactor of [render].
+     */
+    private val LOUDNESS_OFFSET: Map<PluckVoice, Float> = PluckVoice.entries.associateWith { 0f }
+
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.KALIMBA -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.6f), MacroSpec("PICK", 0.55f),
@@ -105,7 +112,9 @@ object Pluck {
             for (i in out.indices) out[i] += det[i] * g
         }
 
-        Dsp.normalize(out)
+        // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
+        // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }

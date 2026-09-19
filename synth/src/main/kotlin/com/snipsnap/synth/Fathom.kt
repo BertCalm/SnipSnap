@@ -33,6 +33,13 @@ object Fathom {
     const val TUNE_SEMITONES = 24
 
     /**
+     * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
+     * awaiting a listening pass (task-4-report.md) - a table edit here, not
+     * a refactor of [render].
+     */
+    private val LOUDNESS_OFFSET: Map<FathomVoice, Float> = FathomVoice.entries.associateWith { 0f }
+
+    /**
      * The FM ratios RATIO snaps to, chosen for low end: sub-octave, unison, a
      * hollow fifth-ish, octave, and a metallic twelfth. Snapping is the same
      * guarantee TINES makes — the knob cannot land on a mistuning.
@@ -208,7 +215,9 @@ object Fathom {
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, renderRate)
         val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
+        // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }

@@ -26,7 +26,13 @@ class TonewheelPresetsTest {
                 assertTrue(snip.frameCount > 0, "${preset.name} rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() }, "${preset.name} produced non-finite samples")
                 assertTrue(snip.samples.all { it in -1f..1f }, "${preset.name} clipped")
-                assertTrue(snip.peak() > 0.5f, "${preset.name} is too quiet: ${snip.peak()}")
+                // 0.5 assumed render() still peak-normalized to 0.95. Task 4
+                // swapped that for Dsp.levelTo, a loudness target - every
+                // preset here measures within noise of the same 0.1834
+                // loudness now (confirmed directly), landing peaks around
+                // 0.22-0.49 depending on registration. This floor only needs
+                // to catch a genuinely silent render.
+                assertTrue(snip.peak() > 0.1f, "${preset.name} is too quiet: ${snip.peak()}")
             }
         }
     }

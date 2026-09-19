@@ -27,6 +27,14 @@ object Velvet {
 
     const val TUNE_SEMITONES = 24
 
+    /**
+     * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
+     * awaiting a listening pass (task-4-report.md) - a table edit here, not
+     * a refactor of [render], whenever that pass decides BASS should sit
+     * under BRASS or the like.
+     */
+    private val LOUDNESS_OFFSET: Map<VelvetVoice, Float> = VelvetVoice.entries.associateWith { 0f }
+
     fun macrosFor(voice: VelvetVoice): List<MacroSpec> = when (voice) {
         VelvetVoice.BASS -> listOf(
             MacroSpec("TUNE", 0.3f), MacroSpec("SHAPE", 0.2f), MacroSpec("FAT", 0.3f),
@@ -188,7 +196,9 @@ object Velvet {
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, renderRate)
         val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
+        // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
