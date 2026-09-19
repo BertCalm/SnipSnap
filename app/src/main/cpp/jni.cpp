@@ -16,6 +16,7 @@
 using snipsnap::ControlFrame;
 using snipsnap::GrainSettings;
 using snipsnap::KeySnap;
+using snipsnap::SwarmSettings;
 using snipsnap::MacroState;
 using snipsnap::PrintBuffer;
 using snipsnap::SurfaceEngine;
@@ -148,6 +149,18 @@ Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong handle, jfl
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong handle, jint rootSemitone, jint scaleMask, jfloat sourceMidi) {
     engine(handle)->setKey(KeySnap{rootSemitone, static_cast<uint32_t>(scaleMask), sourceMidi});
+}
+
+/** SWARM, in the order SurfaceEngine.kt names them: VOICES then DETUNE (see SurfaceEngine::setSwarm). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setSwarm(JNIEnv*, jobject, jlong handle, jint voices, jfloat detune) {
+    engine(handle)->setSwarm(SwarmSettings{voices, detune});
+}
+
+/** KEY for the loop: snap the loop's pitch to the key setKey holds (see SurfaceEngine::setKeySnap). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong handle, jboolean on) {
+    engine(handle)->setKeySnap(on == JNI_TRUE);
 }
 
 /**

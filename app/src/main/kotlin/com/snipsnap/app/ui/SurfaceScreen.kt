@@ -82,6 +82,12 @@ private val GRAIN_KNOBS = listOf("SIZE", "DENSITY", "SPRAY")
 /** One ◄ ► press on a GRAIN knob: a twentieth of its travel, so an end-to-end sweep is twenty presses - the FEEL stepper's own grain of control. */
 private const val GRAIN_STEP = 0.05f
 
+/** SWARM's two knobs, in the order its row's own button cycles them. */
+private val SWARM_KNOBS = listOf("VOICES", "DETUNE")
+
+/** One ◄ ► press on DETUNE - GRAIN's own twentieth; VOICES steps by one. */
+private const val SWARM_DETUNE_STEP = 0.05f
+
 /** The MOD row's four fields, in the order its own button cycles them. */
 private val MOD_FIELDS = listOf("TARGET", "SHAPE", "RATE", "DEPTH")
 
@@ -125,6 +131,18 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  *    `surface.json` with the pad and the corners. Everything after the
  *    source - crush, drive, filter, echo, spring - is the same chain at
  *    XY's rest, so tilt still sets resonance here (`f.tilt * 0.5`).
+ *
+ * KEY snaps the loop's pitch to the kit's key in every mode but GRAIN,
+ * where it always is - the same snap, in the engine (`Grain.h`), so a
+ * note the loop lands on is a note the cloud would land on; with no key
+ * it is a semitone ladder around the pad's own note. Off by default and
+ * kept in `surface.json`, so a kit from before plays as it did.
+ *
+ * SWARM, on its own row in every mode but GRAIN (the GRAIN row's twin),
+ * thickens the loop into a detuned unison - VOICES copies of every slot's
+ * loop, spread across ±DETUNE of a quarter tone and summed at
+ * 1/sqrt(VOICES) (`SurfaceEngine::setSwarm`) - the S-4's detuned swarm.
+ * One voice is the plain loop, sample for sample; kept in `surface.json`.
  *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
  * captures the sound under the last touch as a morph corner (MORPH and
@@ -284,6 +302,8 @@ fun SurfaceScreen(
     var barsIndex by remember { mutableStateOf(0) }
     /** Which of [GRAIN_KNOBS] the GRAIN row's ◄ ► currently step; a pick, not a sound, so not persisted - same as armedCorner. */
     var grainKnob by remember { mutableStateOf(0) }
+    /** Which of [SWARM_KNOBS] the SWARM row's ◄ ► step; a pick, like grainKnob. */
+    var swarmKnob by remember { mutableStateOf(0) }
     /** Which modulator (0 = MOD A) and which of its [MOD_FIELDS] the MOD row's ◄ ► step; picks, not sounds, so not persisted either. */
     var modSlot by remember { mutableStateOf(0) }
     var modField by remember { mutableStateOf(0) }
@@ -556,6 +576,8 @@ fun SurfaceScreen(
         }
         pushCorners(settings.corners)
         engine.setGrain(settings.grain)
+        engine.setKeySnap(settings.keySnap)
+        engine.setSwarm(settings.swarm)
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
@@ -651,6 +673,33 @@ fun SurfaceScreen(
         }
         engine.setGrain(next)
         persist(dir, settings.copy(grain = next))
+    }
+
+    // SWARM ◄ ►: VOICES by one, DETUNE by a twentieth - GRAIN's row's own
+    // discipline, remembered in surface.json and heard within a control
+    // interval (a voice that joins starts from the head on the next tap).
+    fun stepSwarm(delta: Int) {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val w = settings.swarm
+        val next = when (swarmKnob) {
+            0 -> w.copy(voices = (w.voices + delta).coerceIn(1, SurfaceStore.Swarm.MAX_VOICES))
+            else -> w.copy(detune = (w.detune + delta * SWARM_DETUNE_STEP).coerceIn(0f, 1f))
+        }
+        engine.setSwarm(next)
+        persist(dir, settings.copy(swarm = next))
+    }
+
+    // KEY: the loop's pitch snapped to the kit's key, the way GRAIN's
+    // always is - the same snap, in the engine, so a note the loop lands
+    // on is a note the cloud would. Remembered in surface.json. Refused
+    // while `settings` is still the outgoing kit's, like SET and PRESET.
+    fun toggleKeySnap() {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val next = !settings.keySnap
+        engine.setKeySnap(next)
+        persist(dir, settings.copy(keySnap = next))
     }
 
     // MOD ◄ ►: steps the picked field of the picked modulator - TARGET
@@ -1113,6 +1162,33 @@ fun SurfaceScreen(
                 }
             }
 
+            if (mode != Mode.GRAIN) {
+                Spacer(Modifier.height(6.dp))
+
+                // SWARM's row, the GRAIN row's twin for the loop modes: the
+                // first button picks which knob ◄ ► step (VOICES or DETUNE),
+                // the readout shows both. DETUNE as a percentage: what it
+                // means in cents is SurfaceEngine.h's number, not a second
+                // copy here.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton(
+                        SWARM_KNOBS[swarmKnob],
+                        scheme,
+                        enabled = padName != null,
+                        modifier = Modifier.weight(1.1f),
+                    ) { swarmKnob = (swarmKnob + 1) % SWARM_KNOBS.size }
+                    ActionButton("◄", scheme, enabled = padName != null) { stepSwarm(-1) }
+                    val w = settings.swarm
+                    TapeText(
+                        "SWARM ${w.voices} ${if (w.voices == 1) "VOICE" else "VOICES"}  DETUNE ${pct(w.detune)}",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(1.8f).padding(horizontal = 4.dp),
+                    )
+                    ActionButton("►", scheme, enabled = padName != null) { stepSwarm(+1) }
+                }
+            }
+
             Spacer(Modifier.height(6.dp))
 
             // MOD A/B: the first button picks the modulator, the second which
@@ -1202,6 +1278,16 @@ fun SurfaceScreen(
                         modifier = Modifier.weight(1f),
                     ) { setCorner(i) }
                 }
+                // KEY, on the row about what the sound under the finger
+                // is held to: lit while the loop's pitch snaps to the key
+                // (see toggleKeySnap), dimmed while it slides as recorded.
+                ActionButton(
+                    "KEY",
+                    scheme,
+                    enabled = padName != null,
+                    dimmed = !settings.keySnap,
+                    modifier = Modifier.weight(1f).semantics { selected = settings.keySnap },
+                ) { toggleKeySnap() }
             }
 
             Spacer(Modifier.height(6.dp))
@@ -1397,7 +1483,7 @@ fun SurfaceScreen(
                 // note actually landed on is the engine's to know
                 // (Grain.h); this line names the rule, not a second copy
                 // of its answer.
-                if (mode == Mode.GRAIN) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
+                if (mode == Mode.GRAIN || settings.keySnap) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
                 // `tiltReading`, not `tilt.tilt` directly - see its own
                 // declaration for why (Copilot review): this line is only
                 // ever redrawn when something the enclosing recomposition

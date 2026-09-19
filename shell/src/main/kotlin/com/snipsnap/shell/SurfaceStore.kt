@@ -174,6 +174,34 @@ object SurfaceStore {
         }
     }
 
+    /**
+     * SWARM: the loop voice as a detuned unison, the S-4's "detuned
+     * swarm" - [voices] copies of every slot's loop spread evenly across
+     * ±[detune] of the engine's widest detune (a quarter tone either way
+     * at most - `kMaxDetuneCents` in `SurfaceEngine.h`), summed at
+     * 1/sqrt(voices). One voice is the plain loop whatever the detune.
+     * [MAX_VOICES] is `SurfaceEngine::kMaxSwarm` by hand. Shown as a
+     * count and a percentage: the cents are the engine's arithmetic, not
+     * a second copy here.
+     */
+    data class Swarm(
+        val voices: Int = 1,
+        val detune: Float = 0.15f,
+    ) {
+        init {
+            require(voices in 1..MAX_VOICES) { "voices is 1..$MAX_VOICES, got $voices" }
+            require(detune.isFinite() && detune in 0f..1f) { "detune is 0..1, got $detune" }
+        }
+
+        companion object {
+            /** How many voices a swarm can have - `SurfaceEngine::kMaxSwarm`, kept in step by hand. */
+            const val MAX_VOICES = 4
+
+            /** One voice, a little detune ready for when a second is added: the plain loop until VOICES is stepped up. */
+            val DEFAULT = Swarm()
+        }
+    }
+
     data class Settings(
         /** The pad the surface plays, by slot; null = the kit's lowest. */
         val padSlot: Int?,
@@ -188,6 +216,15 @@ object SurfaceStore {
         val grain: Grain = Grain.DEFAULT,
         /** The two modulator slots ([Modulator]); every slot at depth 0 until the MOD row has been stepped. */
         val mods: List<Modulator.Slot> = Modulator.OFF,
+        /**
+         * KEY: the loop's pitch snapped to the kit's key (a semitone ladder
+         * with no key), the way GRAIN's always is - see `SurfaceEngine.
+         * setKeySnap`. Off until KEY is tapped, so a kit from before plays
+         * as it did.
+         */
+        val keySnap: Boolean = false,
+        /** SWARM's voices and detune; one voice - the plain loop - until the SWARM row has been stepped. */
+        val swarm: Swarm = Swarm.DEFAULT,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
@@ -242,6 +279,13 @@ object SurfaceStore {
                         ),
                     )
                 },
+            ),
+            "keySnap" to JsonValue.Bool(s.keySnap),
+            "swarm" to JsonValue.Obj(
+                linkedMapOf(
+                    "voices" to JsonValue.Num(s.swarm.voices.toDouble()),
+                    "detune" to JsonValue.Num(s.swarm.detune.toDouble()),
+                ),
             ),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
@@ -317,6 +361,17 @@ object SurfaceStore {
             Modulator.Slot(target, shape, rate, depth)
         } ?: Modulator.OFF
         if (mods.size != Modulator.SLOTS) throw JsonException("surface.json has ${mods.size} modulators, not ${Modulator.SLOTS}")
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods)
+        // Absent is a file from before KEY: off. Present, it is a boolean or
+        // the file is torn - the same rule as every field above.
+        val keySnap = obj["keySnap"]?.bool() ?: false
+        // The grain rule once more: absent is a file from before SWARM,
+        // present has to be whole and in range (Swarm's own init refuses).
+        val swarm = obj["swarm"]?.let { w ->
+            val o = w.obj()
+            val voices = o["voices"]?.int() ?: throw JsonException("swarm has no voices")
+            val detune = o["detune"]?.num()?.toFloat() ?: throw JsonException("swarm has no detune")
+            Swarm(voices, detune)
+        } ?: Swarm.DEFAULT
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm)
     }
 }
