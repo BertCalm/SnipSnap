@@ -93,6 +93,10 @@ class PersonalityTest {
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
         assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "SHELF" in Copy.RING_NOT_LISTENING, "RING's route is either button on SHELF: ${Copy.RING_NOT_LISTENING}")
+        // FOLLOW and DUCK read the same ring RING does, so the same two doors.
+        assertTrue("FOLLOW" in Copy.FOLLOW_NOT_LISTENING && "DUCK" in Copy.FOLLOW_NOT_LISTENING, "names the shapes as the MOD row reads them: ${Copy.FOLLOW_NOT_LISTENING}")
+        assertTrue("LISTEN · MIC" in Copy.FOLLOW_NOT_LISTENING && "APP AUDIO" in Copy.FOLLOW_NOT_LISTENING && "SHELF" in Copy.FOLLOW_NOT_LISTENING, "FOLLOW's route is either button on SHELF: ${Copy.FOLLOW_NOT_LISTENING}")
+        assertTrue("ARM" !in Copy.FOLLOW_NOT_LISTENING, "nothing on any screen is called ARM: ${Copy.FOLLOW_NOT_LISTENING}")
         // The length is the voice's own, not RING's four-second ask: a ring
         // that only just started gives less, and the ceiling law below holds
         // this line to what was kept.

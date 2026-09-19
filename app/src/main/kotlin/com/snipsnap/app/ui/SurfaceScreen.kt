@@ -173,9 +173,14 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * (`TouchSurface.nudged`): the nudged position is what the engine, the
  * sample blend and the painted puck all see, so a RANDOM on X in XY lands
  * the loop on a new pitch every bar and on both axes in MORPH jumps
- * between corners on the bar, visibly. SET A..D captures the finger, not
- * the modulators' nudge - a corner is a place, and the modulator moves
- * around it.
+ * between corners on the bar, visibly. FOLLOW and DUCK are shapes that
+ * run on the room instead of the bar - the live input level from
+ * whichever ring is listening (`MicSessionService.level`), through a
+ * `Modulator.Follower` stepped once a frame here - so CUTOFF opens when
+ * you clap and DRIVE ducks under the kick of the track in the next app: a
+ * sidechain from the room. SET A..D captures the finger, not the
+ * modulators' nudge - a corner is a place, and the modulator moves around
+ * it.
  *
  * A print goes → TAPE (the deck's shelf) or → PAD: the SP-404 move
  * proper, the performance landing on a pad of the kit you are holding
@@ -625,6 +630,9 @@ fun SurfaceScreen(
         }
         val mods = settings.mods.toMutableList().also { it[modSlot] = next }
         persist(dir, settings.copy(mods = mods))
+        // Stepping onto a shape that listens, with nothing to listen to:
+        // the shape is kept and the route is said, RING's own discipline.
+        if (next.shape.followsRoom && !slot.shape.followsRoom && !MicSessionService.armed.value) onToast(Copy.FOLLOW_NOT_LISTENING)
     }
 
     // PAD2 ◄ ►: same stepping, over the second source slot.
@@ -827,6 +835,10 @@ fun SurfaceScreen(
     // started, for ever - a kit change would leave the modulators counting
     // bars at the old tempo. Read through state instead, live.
     val kitBpm by rememberUpdatedState(entry?.kit?.tempoBpm)
+    // The room as FOLLOW and DUCK hear it; stepped every frame below whether
+    // or not a slot listens, so a slot turned up mid-phrase finds it already
+    // tracking rather than starting from silence.
+    val follower = remember { Modulator.Follower() }
 
     // Screen-rate loop: smooth toward the target, paint, feed the engine.
     LaunchedEffect(engine) {
@@ -842,8 +854,15 @@ fun SurfaceScreen(
         // call a frame.
         var modOrigin = -1L
         var modsWereOn = false
+        var lastFrame = -1L
         while (true) {
             val now = withFrameNanos { it }
+            // The frame's own length for the follower - capped, so a stalled
+            // frame (the screen off, a long GC) is a short step, not a jump
+            // straight to the level.
+            val dt = if (lastFrame < 0L) 0f else ((now - lastFrame) / 1_000_000_000.0).toFloat().coerceAtMost(0.1f)
+            lastFrame = now
+            val room = follower.step(MicSessionService.level.value, dt)
             if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
@@ -855,7 +874,7 @@ fun SurfaceScreen(
             var nudgeX = 0f
             var nudgeY = 0f
             if (modsOn || modsWereOn) {
-                val offsets = Modulator.offsets(settings.mods, (now - modOrigin) / 1_000_000_000.0, kitBpm)
+                val offsets = Modulator.offsets(settings.mods, (now - modOrigin) / 1_000_000_000.0, kitBpm, follow = room)
                 engine.setModulation(Modulator.engineOffsets(offsets))
                 nudgeX = offsets[Modulator.Target.X.ordinal]
                 nudgeY = offsets[Modulator.Target.Y.ordinal]
@@ -1037,7 +1056,7 @@ fun SurfaceScreen(
                 ) { modField = (modField + 1) % MOD_FIELDS.size }
                 ActionButton("◄", scheme, enabled = padName != null) { stepMod(-1) }
                 TapeText(
-                    "${slot.target} ${slot.shape} ${Modulator.rateLabel(slot.rateIndex)} ${pct(slot.depth)}",
+                    "${slot.target} ${slot.shape} ${if (slot.shape.followsRoom) "ROOM" else Modulator.rateLabel(slot.rateIndex)} ${pct(slot.depth)}",
                     TapeType.pixel,
                     scheme.ink.tape,
                     Modifier.weight(1.6f).padding(horizontal = 4.dp),

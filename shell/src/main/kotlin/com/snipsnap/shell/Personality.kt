@@ -1723,6 +1723,13 @@ object Copy {
     /** The ring gave back nothing worth a voice - a quiet room, or a session that only just started. */
     const val RING_NOTHING = "THE RING HEARD NOTHING YET. GIVE IT A MOMENT, THEN RING AGAIN."
     /**
+     * A MOD slot stepped onto FOLLOW or DUCK with nothing listening: those
+     * shapes are the room's level, and a ring that is not listening reports
+     * silence, so the slot would move nothing. Said on the step, not dimmed
+     * - the shape is still chosen, and either door on SHELF makes it live.
+     */
+    const val FOLLOW_NOT_LISTENING = "FOLLOW AND DUCK MOVE WITH THE ROOM. LISTEN · MIC OR APP AUDIO ON SHELF, THEN COME BACK."
+    /**
      * RING landed: which ring it froze and how much, and the way back to
      * the pad - a freeze is not in `surface.json`, so PAD ◄ ► is the only
      * door. [seconds] is the voice's own length after the trim, never the

@@ -235,8 +235,15 @@ logcat tag to grab when something is wrong.
   bar - a sequencer without a sequencer; SET A while the puck is being
   nudged should capture where your finger actually is (touch, hold, SET
   A, then morph to A: the corner is the finger's sound, not the wobble's).
-  Back at DEPTH 0% the surface should sound exactly as before the MOD row
-  existed. Five buttons and a readout on one row is the densest line on
+  Then SHAPE to FOLLOW with nothing listening: the toast should name both
+  doors on SHELF and the readout should read ROOM where the rate was.
+  LISTEN · MIC on SHELF, back to SURFACE, MOD A on CUTOFF, FOLLOW, DEPTH
+  60%, a finger held low on the pad: a clap should open the filter at
+  once and it should close again over about a quarter of a second, and a
+  quiet room should sound exactly like DEPTH 0%. Then APP AUDIO with a
+  track playing in another app, DUCK on CUTOFF at 60%: the surface should
+  dip under every kick like a sidechain. Back at DEPTH 0% the surface
+  should sound exactly as before the MOD row existed. Five buttons and a readout on one row is the densest line on
   this screen - check it fits at 390dp.
   Then RING, the capture ring as a voice: with nothing listening, a tap
   on RING should name both doors on SHELF (LISTEN · MIC, APP AUDIO) and
