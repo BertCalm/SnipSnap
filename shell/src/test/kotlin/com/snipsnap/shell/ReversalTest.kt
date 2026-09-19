@@ -229,6 +229,7 @@ class ReversalTest {
         "kitBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "snipBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "roomBinEmptied" to "emptying a bin is the one delete the app promises is final",
+        "GESTURE_CLEARED" to "SURFACE's CLEAR writes the kit's recorded gesture out of surface.json; no control there steps it back",
     )
 
     private fun soundsDestructive(line: String) = destructive.any { it in line }
@@ -467,15 +468,16 @@ class ReversalTest {
 
     /**
      * The count, asserted so it cannot drift without someone deciding to
-     * let it. Five is not yet an argument for a command history: three of
-     * them are bin-emptying, which is *supposed* to be final. The two that
-     * genuinely hurt are the bar wipe and the PROG E replace — both on one
-     * screen, inside one feature.
+     * let it. Six is not yet an argument for a command history: three of
+     * them are bin-emptying, which is *supposed* to be final. The three
+     * that genuinely hurt are the bar wipe and the PROG E replace - both
+     * on one screen, inside one feature - and, since 2026-09-19, SURFACE's
+     * gesture CLEAR, the first on a second screen.
      *
-     * The takes bin is a sixth irreversible site and is deliberately NOT
+     * The takes bin is a seventh irreversible site and is deliberately NOT
      * counted here: its line does not yet say so, which puts it in
      * [awaitingWords] until the copy rewrite gives it words. When it gets
-     * them it moves into [noWayBack] and this number becomes six.
+     * them it moves into [noWayBack] and this number becomes seven.
      *
      * Raise this number only alongside a note in `docs/SPECS_2026_09.md`
      * §3 — that document is where the stack decision is recorded, and a
@@ -484,7 +486,7 @@ class ReversalTest {
     @Test
     fun `the count of you-cannot sites is the stack evidence`() {
         assertEquals(
-            5, noWayBack.size,
+            6, noWayBack.size,
             "the number of destructive sites with no way back changed. That is the recorded test for " +
                 "the deferred undo stack, so update docs/SPECS_2026_09.md §3 in the same change.",
         )
@@ -492,7 +494,7 @@ class ReversalTest {
             "kitBinEmptied", "snipBinEmptied", "roomBinEmptied",
         )
         assertEquals(
-            setOf("BAR_WIPED", "FORKED_TO_E_REPLACED"), reallyHurts,
+            setOf("BAR_WIPED", "FORKED_TO_E_REPLACED", "GESTURE_CLEARED"), reallyHurts,
             "the sites that lose work with no way back changed. Emptying a bin is meant to be final; " +
                 "these are not, and they are what a stack would buy.",
         )

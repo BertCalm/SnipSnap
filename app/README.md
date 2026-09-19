@@ -266,7 +266,8 @@ logcat tag to grab when something is wrong.
   every two bars, the puck tracing it; a finger held down should add to
   it rather than stop it; MOD B on Y with GESTURE should replay the
   vertical half too. Leave and come back: the gesture is in
-  `surface.json`. CLEAR should empty it and the readout should say so.
+  `surface.json`. CLEAR should empty it, the toast should say it cannot
+  be undone, and the readout should say there is no gesture.
   Back at DEPTH 0% the surface should sound exactly as before the MOD
   row existed. Five buttons and a readout on one row is the densest line on
   this screen - check it fits at 390dp.

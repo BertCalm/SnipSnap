@@ -1793,7 +1793,14 @@ object Copy {
     fun gestureArmed(bars: Int): String = "REC ARMED. TOUCH THE PAD AND PLAY FOR ${countOf(bars, "BAR", "BARS")}."
     /** The recording ran its length and the kit keeps it; how to hear it back, since a gesture only plays through a MOD slot. */
     fun gestureKept(bars: Int): String = "GESTURE KEPT, ${countOf(bars, "BAR", "BARS")}. SHAPE GESTURE ON A MOD SLOT PLAYS IT."
-    const val GESTURE_CLEARED = "GESTURE CLEARED."
+    /**
+     * CLEAR on the GESTURE row. The kit's gesture is written out of
+     * `surface.json` and no control on SURFACE steps it back, so this is
+     * a [Reversal.goneBut] site like [BAR_WIPED]: it says so, and names
+     * the recourse that does exist - the hand that made it can make it
+     * again. `ReversalTest.noWayBack` counts it.
+     */
+    val GESTURE_CLEARED: String = Reversal.goneBut("REC AND PLAY IT AGAIN")
     /** SHAPE stepped onto GESTURE with none recorded: the shape is kept and the way to fill it is said. */
     const val GESTURE_NONE = "NO GESTURE YET. REC ON THE GESTURE ROW, THEN TOUCH THE PAD."
     /**
