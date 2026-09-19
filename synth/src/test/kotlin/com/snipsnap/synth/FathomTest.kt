@@ -143,6 +143,31 @@ class FathomTest {
     }
 
     /**
+     * Halves [hz] by octaves until it is within [reference]'s octave, never
+     * the reverse (Task 2 fix round 1,
+     * docs/.superpowers/sdd/2026-09-19-synth-depth-phase-0/task-2-report.md).
+     * GRIND's near-unison saw pair (`phaseLow`, `phase2`) can start close
+     * enough to half a cycle apart that their shared odd harmonics -
+     * including the fundamental - partly cancel right at note-on while the
+     * second harmonic reinforces; spectrally verified real energy at 2x the
+     * true pitch (110 Hz, the true f/2, sat at the noise floor at every
+     * time point checked; 220/440 Hz carried real, substantial energy).
+     * `Pitch.detect` correctly reports whichever harmonic dominates a given
+     * window, so an early reading can land on the fundamental's octave
+     * rather than the fundamental itself - always the octave *above*, never
+     * below, which is why this only ever divides. Halving unconditionally
+     * would corrupt a legitimately low reading (DEEP mid-GLIDE, well below
+     * its target with no harmonic-cancellation mechanism at all) into a
+     * false failure; this only intervenes on readings that are actually too
+     * high for the physically expected pitch passed as [reference].
+     */
+    private fun foldDownToOctave(hz: Float, reference: Float): Float {
+        var folded = hz
+        while (folded > reference * kotlin.math.sqrt(2f)) folded /= 2f
+        return folded
+    }
+
+    /**
      * The macro value to pin each voice's own confound to so [TestPitch] gets
      * a clean, unambiguous fundamental: DEEP's SWEEP blip, GRIND's detuned
      * beating pair, and GLASS's FM sidebands can each otherwise be mistaken
@@ -326,15 +351,27 @@ class FathomTest {
                 voice,
                 mapOf(confoundName to confoundValue, "GLIDE" to 1f, "DECAY" to 0.9f, "TUNE" to 1f),
             )
+            val target = Fathom.frequencyFor(voice, 1f)
             val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
             val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
             assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
-            assertTrue(end > start * 1.3f, "$voice GLIDE should rise into the target: $start Hz -> $end Hz")
+            // GRIND's near-unison saw pair can read as its own second
+            // harmonic right at note-on (see [foldDownToOctave]). A full
+            // GLIDE (glideSemis = 12, always) starts exactly one octave
+            // below target, so target/2 is the physically expected early
+            // pitch - fold the raw reading down toward it before checking
+            // the rise, so a genuine octave misread of a real fundamental
+            // doesn't read as a failed glide.
+            val foldedStart = foldDownToOctave(start, target / 2f)
+            assertTrue(
+                end > foldedStart * 1.3f,
+                "$voice GLIDE should rise into the target: $start Hz (folded $foldedStart) -> $end Hz",
+            )
 
             // The slide must LAND, not merely travel — a glide still moving when
             // the note ends is the one way this can sound broken, so the clamp
-            // that prevents it needs a test rather than a comment.
-            val target = Fathom.frequencyFor(voice, 1f)
+            // that prevents it needs a test rather than a comment. Unfolded:
+            // end always measured correctly in every case checked.
             assertTrue(
                 kotlin.math.abs(end - target) < target * 0.05f,
                 "$voice GLIDE should land on target: $end Hz vs $target Hz",
@@ -350,12 +387,27 @@ class FathomTest {
                 voice,
                 mapOf(confoundName to confoundValue, "GLIDE" to 0f, "DECAY" to 0.9f, "TUNE" to 1f),
             )
+            val target = Fathom.frequencyFor(voice, 1f)
             val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
             val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
             assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
+            // Same fold as `GLIDE actually glides` - GRIND's early reading
+            // can land on its own second harmonic (see [foldDownToOctave]).
+            // GLIDE 0 means no bend, so the expected pitch throughout is
+            // just target itself.
+            val foldedStart = foldDownToOctave(start, target)
             assertTrue(
-                kotlin.math.abs(end - start) < start * 0.1f,
-                "$voice GLIDE 0 should hold steady: $start Hz -> $end Hz",
+                kotlin.math.abs(end - foldedStart) < foldedStart * 0.1f,
+                "$voice GLIDE 0 should hold steady: $start Hz (folded $foldedStart) -> $end Hz",
+            )
+
+            // Folding alone would let a genuine octave error slip through
+            // unnoticed - anchor the held pitch to the voice's actual
+            // target too, the same absolute check `GLIDE actually glides`
+            // already makes for its landing point.
+            assertTrue(
+                kotlin.math.abs(end - target) < target * 0.05f,
+                "$voice GLIDE 0 should hold at its target: $end Hz vs $target Hz",
             )
         }
     }
