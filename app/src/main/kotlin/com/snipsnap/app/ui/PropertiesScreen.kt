@@ -65,6 +65,9 @@ import com.snipsnap.shell.Schemes
  * @param onCloseWorkshop CLOSE THE WORKSHOP.
  * @param onSendToBench SEND TO BENCH: every teach log on the phone, packed
  *   for the chooser.
+ * @param onSendHitsToBench SEND HITS TO BENCH: the hits labelled on pad
+ *   sheets, as audio - the one button that sends sound, under its own
+ *   note, so SEND TO BENCH's never-audio promise stays whole.
  */
 @Composable
 fun PropertiesScreen(
@@ -80,6 +83,7 @@ fun PropertiesScreen(
     onKnock: () -> Unit,
     onCloseWorkshop: () -> Unit,
     onSendToBench: () -> Unit,
+    onSendHitsToBench: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Column(
@@ -203,6 +207,20 @@ fun PropertiesScreen(
                 TapeText("SEND TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
             }
             TapeText(Copy.SEND_TO_BENCH_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5)
+            // The one button that sends audio (docs/WORKSHOP.md, WS3), its
+            // own note under it every time, never folded into the button
+            // above: two zips, two promises.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .raisedBevel(scheme)
+                    .tapeClick(label = "SEND HITS TO BENCH", onClick = onSendHitsToBench),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("SEND HITS TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
+            }
+            TapeText(Copy.SEND_HITS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
             Box(
                 Modifier
                     .fillMaxWidth()

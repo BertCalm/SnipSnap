@@ -362,6 +362,21 @@ logcat tag to grab when something is wrong.
   CUT, SNAP and a `tries` of 1. Dropped into `reference/calibration/`,
   `TeachLogTest` prints corrections and confirmations apart and
   `CutRatingsTest` prints the setting's line.
+- **LABEL THIS HIT** (`docs/WORKSHOP.md`, WS3): with the WORKSHOP open,
+  hold a captured pad and scroll to the foot of its sheet: a sixth box,
+  BENCH, its strip reading NOT LABELLED. Open it (the other boxes close),
+  tap KICK: the toast names the pad and the label, the chip lights in the
+  pad's colour, the strip reads LABELLED KICK, and `Calibration/` beside
+  the kits holds `kick_<kit>_A01.wav`. Tap SNARE: one file, renamed. Tap
+  SNARE again: the file is gone, the strip is back to NOT LABELLED, and
+  the pad still plays. Open a starter kit's pad or a SYNTH pad: the note
+  is amber, the chips dim, and a tap refuses naming the render. Leave and
+  come back: the lit chip is still lit. Then SETUP ▸ SEND HITS TO BENCH:
+  the chooser opens on `SnipSnap Hits <date>.zip`, its manifest counts by
+  class, and the WAVs dropped into `reference/calibration/` make
+  `CalibrationCorpusTest` print them in its confusion matrix. With nothing
+  labelled it refuses naming the pad sheet. SEND TO BENCH's own zip must
+  still carry no WAV.
 
 ## Fonts / licensing
 

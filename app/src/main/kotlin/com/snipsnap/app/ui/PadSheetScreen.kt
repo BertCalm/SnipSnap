@@ -96,6 +96,7 @@ import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
+import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.RecipeReplay
@@ -105,6 +106,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.exp
@@ -194,7 +196,14 @@ fun PadSheetScreen(
      */
     onShelfAssetWritten: () -> Unit,
     appScope: CoroutineScope,
-    /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
+    /**
+     * The WORKSHOP is open (docs/WORKSHOP.md, WS3): the BENCH box - LABEL
+     * THIS HIT - draws at the foot of the sheet. No default, for the same
+     * reason [onShelfAssetWritten] has none: one call site, and a default
+     * would let a second one silently ship the box closed forever.
+     */
+    workshopOpen: Boolean,
+    /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name, or [HIT_BOX]), remembered per kit by the caller. */
     openBox: String? = null,
     onOpenBox: (String?) -> Unit = {},
 ) {
@@ -2124,6 +2133,52 @@ fun PadSheetScreen(
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
     fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
 
+    // LABEL THIS HIT (docs/WORKSHOP.md, WS3): what the Calibration folder
+    // beside the kits holds for this pad - the BENCH box's strip and its
+    // lit chip. Read off the main thread once per pad, and only while the
+    // WORKSHOP is open, since the box is not drawn otherwise. The folder
+    // is a sibling of the kit folders, the same place INSTRUMENTS and
+    // Rooms live.
+    val shelfRoot = entry.dir.parentFile ?: entry.dir
+    val padLabel = PadNoteMap.labelForPad(slot)
+    var hitLabel by remember(entry.dir, slot) { mutableStateOf<DrumClass?>(null) }
+    LaunchedEffect(entry.dir, slot, workshopOpen) {
+        if (!workshopOpen) return@LaunchedEffect
+        hitLabel = withContext(Dispatchers.IO) { LabelledHits.labelOf(shelfRoot, entry.kit.name, padLabel) }
+    }
+
+    /**
+     * A tap on a BENCH chip: the pad's WAV copied into the Calibration
+     * folder as [dc]'s hit, or - on the chip already lit - the copy taken
+     * back out. A file copy beside the kits, never a kit write, so no
+     * `withFreshKit` and no lock: the pad's own file is not touched. A
+     * render refuses in words before anything runs; the chips are dimmed
+     * for it, not disabled, the sheet's own convention (MAKE INSTRUMENT).
+     */
+    fun labelHit(dc: DrumClass) {
+        if (busy) return
+        if (LabelledHits.isRender(pad)) {
+            onToast(Copy.HIT_IS_A_RENDER)
+            return
+        }
+        val wav = File(entry.dir, pad.sampleFile)
+        val kitName = entry.kit.name
+        val taking = hitLabel == dc
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    if (taking) LabelledHits.unlabel(shelfRoot, kitName, padLabel)
+                    else LabelledHits.label(shelfRoot, wav, kitName, padLabel, dc)
+                }
+                hitLabel = if (taking) null else dc
+                onToast(if (taking) Copy.hitUnlabelled(padLabel) else Copy.hitLabelled(padLabel, ChopReviewModel.chipName(dc)))
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                failure("LABEL THIS HIT", e)
+            }
+        }
+    }
+
     // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
     // tapes open inline on the TREATMENT bench, newest first; a pick runs
     // the DUST door at the card's AMT with that tape, and since the recipe
@@ -2550,6 +2605,33 @@ fun PadSheetScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakeInstrument,
             )
+            }
+
+            // The BENCH box (docs/WORKSHOP.md, WS3): LABEL THIS HIT, drawn
+            // only while the WORKSHOP is open, and after MAKE on purpose -
+            // a player never needs it. Not one of PadSheetBoxes' five (its
+            // strip reads the Calibration folder, not the pad's recipe, and
+            // `touched` must never count it), but it shares the
+            // one-open-at-a-time slot: HIT_BOX is a name `boxFor` does not
+            // know, so opening this closes the rest, and opening any of
+            // the rest closes this.
+            if (workshopOpen) {
+                GroupBox(
+                    legend = "BENCH",
+                    summary = Copy.hitStrip(hitLabel?.let { ChopReviewModel.chipName(it) }),
+                    open = openBox == HIT_BOX,
+                    onToggle = { onOpenBox(if (openBox == HIT_BOX) null else HIT_BOX) },
+                    scheme = scheme,
+                ) {
+                    HitLabelCard(
+                        current = hitLabel,
+                        render = LabelledHits.isRender(pad),
+                        padColor = classColor,
+                        scheme = scheme,
+                        busy = busy,
+                        onTap = ::labelHit,
+                    )
+                }
             }
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
             // Dimmed, not disabled, when there's no prior take yet - same
@@ -3047,6 +3129,65 @@ private fun ToggleChip(
 }
 
 // ---------- treatment card ----------
+
+/** The BENCH box's name in `openBox`: not a `PadSheetBoxes.Box`, on purpose - see the box's own comment on the sheet. */
+private const val HIT_BOX = "BENCH"
+
+/**
+ * LABEL THIS HIT's chips (docs/WORKSHOP.md, WS3): the corpus's nine
+ * classes on two rows, the pad's current label lit in its colour -
+ * [TreatmentCard]'s own chip, without the AMT. For a render the chips
+ * dim and the note turns amber and says why, and a tap still answers in
+ * words: dimmed, not disabled, the sheet's rule.
+ */
+@Composable
+private fun HitLabelCard(
+    current: DrumClass?,
+    render: Boolean,
+    padColor: Color,
+    scheme: Scheme,
+    busy: Boolean,
+    onTap: (DrumClass) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText(
+            if (render) Copy.HIT_IS_A_RENDER else Copy.HITS_BOX_NOTE,
+            TapeType.pixelSmall,
+            if (render) scheme.amber.tape else scheme.ink3.tape,
+            maxLines = 3,
+        )
+        val widest = LabelledHits.ROWS.maxOf { it.size }
+        for (row in LabelledHits.ROWS) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (dc in row) {
+                    val selected = dc == current
+                    val name = ChopReviewModel.chipName(dc)
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .tapeClick(label = name, enabled = !busy) { onTap(dc) }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            name,
+                            TapeType.pixel,
+                            when {
+                                selected -> scheme.titleInk.tape
+                                busy || render -> scheme.ink3.tape
+                                else -> scheme.ink2.tape
+                            },
+                        )
+                    }
+                }
+                // A short row keeps the same chip width as a full one.
+                repeat(widest - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
 
 @Composable
 private fun TreatmentCard(

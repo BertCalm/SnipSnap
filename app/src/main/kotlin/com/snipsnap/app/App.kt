@@ -110,6 +110,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
@@ -2231,6 +2232,43 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * SEND HITS TO BENCH (docs/WORKSHOP.md, WS3): the hits labelled on pad
+     * sheets, as audio - the one button in the app that sends sound, on
+     * purpose, under its own note. [sendToBench]'s own shape, its own zip:
+     * the two never share a file, so the bench zip's never-audio promise
+     * is kept by construction rather than by care.
+     */
+    fun sendHitsToBench() {
+        if (busy != null) return
+        busy = Copy.PACKING_BUSY
+        scope.launch {
+            try {
+                val hits = withContext(Dispatchers.IO) { LabelledHits.list(shelf.root) }
+                if (hits.isEmpty()) {
+                    toast = Copy.HITS_EMPTY
+                    return@launch
+                }
+                val result = withContext(Dispatchers.IO) {
+                    LabelledHits.pack(shelf.root, ShareOut.shareDir(context), ShareOut.stamp(System.currentTimeMillis()))
+                }
+                busy = null
+                if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
+                    toast = Copy.SHARE_NOWHERE
+                } else {
+                    toast = Copy.hitsPacked(result.hits.size)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "sendHitsToBench: failed", e)
+                toast = Copy.HITS_FAILED
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -2665,6 +2703,7 @@ fun App(shelf: KitShelf) {
                                     onToast = { toast = it },
                                     openBox = padSheetBox,
                                     onOpenBox = { padSheetBox = it },
+                                    workshopOpen = workshopOpen,
                                     onNavigateTape = {
                                         // RE-TRIM ▸ (docs/RETRIM.md §3): resolve
                                         // the pad's own tape first. A refusal
@@ -2957,6 +2996,7 @@ fun App(shelf: KitShelf) {
                                 toast = Copy.WORKSHOP_CLOSED
                             },
                             onSendToBench = ::sendToBench,
+                            onSendHitsToBench = ::sendHitsToBench,
                         )
                         AppScreen.CHOP -> ChopScreen(
                             entry = open,
