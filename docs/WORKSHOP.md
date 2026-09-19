@@ -1,9 +1,9 @@
 # WORKSHOP — the developer's bench, inside the app
 
-*The spec for the admin mode. Status: the door, its first tool SEND TO
-BENCH, and WS2 — CONFIRM ALL and the cut rating — are built; the rest is
-the list at the end, in value order. One tester today — the phone's owner
-— and the decisions below are shaped by that.*
+*The spec for the admin mode. Status: the door, SEND TO BENCH, WS2 —
+CONFIRM ALL and the cut rating — and WS3 — LABEL THIS HIT — are built;
+the rest is the list at the end, in value order. One tester today — the
+phone's owner — and the decisions below are shaped by that.*
 
 ## Why this exists
 
@@ -150,7 +150,10 @@ is never quietly widened.
 **What it deliberately does not do.** It does not upload anywhere, ever;
 the chooser is the whole of its reach. It does not include per-kit raw
 copies of the logs — provenance is in the manifest, and a second copy of
-the same lines is a second thing to keep in step.
+the same lines is a second thing to keep in step. And it never carries
+audio: the labelled hits (WS3, below) leave by their own button, under
+their own note, so this one's promise is never widened by a tool beside
+it.
 
 Code: `BenchExport` in `:shell` (`gather` walks, `pack` writes, `manifest`
 says), held by `BenchExportTest` — which also checks that the folder and
@@ -230,6 +233,77 @@ the copy in `Copy`, held by `CutRatingsTest`; the row and the two SEND
 sites in `ChopScreen`, the switch's fuller consent line in
 `PropertiesScreen`.
 
+## LABEL THIS HIT — built
+
+WS3, and the one tool in the WORKSHOP that carries audio.
+`reference/calibration/` scores the classifier against real captures
+labelled by ear (`CalibrationCorpusTest`: per-file verdicts, the
+confusion matrix, a 60% floor), and had held a README and no data since
+the corpus was named. BENCH A5 has asked for a dozen real hits from the
+start. Nothing on the phone could put a labelled hit anywhere a desk
+could reach.
+
+**In the hand.** With the WORKSHOP open, every pad's sheet grows a sixth
+group box at its foot, **BENCH**, its strip reading `NOT LABELLED` or
+`LABELLED KICK`. Open it: a note, and the corpus's nine classes as chips
+on two rows — the same chips CHOP uses, without NOT SURE.
+
+- **Tap a class** and a copy of the pad's WAV lands in `Calibration/`
+  beside the kits, named the way the corpus reads names — the label
+  before the first underscore, then the provenance:
+  `kick_Break Kit_A01.wav`. *A01 LABELLED KICK. IN THE CALIBRATION
+  FOLDER; SEND HITS TO BENCH CARRIES IT.* The chip lights in the pad's
+  colour and stays lit on the next visit.
+- **Tap another class** and the pad is relabelled: one file per pad,
+  the old one gone, so two labels never contradict each other.
+- **Tap the lit class** and the copy comes back out: *A01 UNLABELLED. ITS
+  COPY IN THE CALIBRATION FOLDER IS GONE; THE PAD ITSELF IS UNTOUCHED.*
+  A copy, never a move — the pad keeps its file whatever happens here.
+- **A render refuses.** A pad whose recipe carries a synth patch — SYNTH's
+  SEND TO PAD, a starter, a DE-SAMPLEd capture — dims the chips, the
+  note turns amber, and a tap says why: *THAT PAD IS A RENDER, NOT A
+  CAPTURE. THE BENCH KNOWS ITS RENDERS ALREADY.* Every threshold was
+  tuned on renders; the corpus README asks for captures.
+- **Treated captures are captures.** CRUSH on a snip is still the snip
+  the ear heard; the WAV on disk is what gets labelled, as it sounds.
+
+**SEND HITS TO BENCH** sits under SEND TO BENCH on SETUP, with its own
+note: *THE HITS YOU LABELLED ON THEIR PAD SHEETS, AS AUDIO, THEIR LABELS
+IN THEIR NAMES. YOUR OWN CAPTURES AND NOTHING ELSE ON THE PHONE. THIS IS
+THE ONLY BUTTON THAT SENDS SOUND.* It packs the folder as `SnipSnap Hits
+<stamp>.zip` — the WAVs under `Calibration/`, a manifest counting them by
+class — for the same chooser. The landing toast says AUDIO because this
+one is: *3 HITS ON ONE FILE, AS AUDIO. PICK WHERE IT GOES.* Byte-stable
+per folder and stamp, like the other hand-outs.
+
+**At the desk.** Unzip, copy the WAVs into `reference/calibration/`, run
+
+```
+./gradlew :audio:test --tests '*CalibrationCorpusTest*'
+```
+
+and read the report: every hit classified against its label, the
+features behind every miss, the confusion matrix, and the accuracy line
+that fails under 60%. A threshold moved because of it is moved in
+`Classifier` with a comment naming the file.
+
+**Two promises, kept apart.** SEND TO BENCH's note still reads *FEATURES,
+LABELS AND RATINGS ONLY, NEVER AUDIO*, and it is still true: the hits
+never ride in that zip. They have their own button because they are the
+one thing here that could be played back, and a person pressing it should
+be told so in the words under it, every time.
+
+**The names agree with the harness by law.** `LabelledHitsTest` reads
+`CalibrationCorpusTest`'s source and holds that every word this door
+writes is one the harness maps, that both hat spellings are, and that the
+harness still reads the label before the first underscore — so a renamed
+label fails a test before the corpus fills with files nothing scores.
+
+Code: `LabelledHits` in `:shell` (`label` / `unlabel` / `labelOf` /
+`list`, `isRender`, `pack` and the manifest), the copy in `Copy`, held
+by `LabelledHitsTest`; the BENCH box and its chips in `PadSheetScreen`,
+the second button in `PropertiesScreen`, `sendHitsToBench` in `App.kt`.
+
 ## The list — next tools, in value order
 
 Sizes as `docs/APP_PLAN.md` uses them (S under a day, M a few days).
@@ -242,13 +316,11 @@ it.
 |---|---|---|---|---|
 | WS1 | ✓ **SEND TO BENCH** — above | S | gets the teach log to the harness | a phone's corrections show up in `TeachLogTest`'s report |
 | WS2 | ✓ **CONFIRM ALL and the cut rating** — above | S–M | the log held errors only, so it could measure misses but never accuracy; nothing measured the *cuts* | a confirmed-and-corrected chop replays through the feature path with its accuracy counted; a rating line names the setting that earned it |
-| WS3 | **LABEL THIS HIT** on the pad sheet — writes the pad's WAV as `<class>_<kit>_<pad>.wav` into a `Calibration/` folder beside the kits, and SEND TO BENCH packs that folder too, **behind its own button and its own note**, because this one carries audio | S | `reference/calibration/` has zero real captures; BENCH A5 has asked for a dozen since the corpus was named | a labelled hit from the phone lands in `CalibrationCorpusTest`'s confusion matrix |
+| WS3 | ✓ **LABEL THIS HIT** — above | S | `reference/calibration/` had zero real captures; BENCH A5 has asked for a dozen since the corpus was named | a labelled hit from the phone lands in `CalibrationCorpusTest`'s confusion matrix |
 | WS4 | **BENCH NOTES** — a free-text note stamped with the screen, the open kit and the time, packed with the zip | S | `docs/BENCH.md` is answered on a laptop from memory; the phone knows the context the note is about | a note taken on PLAY names PLAY, the kit, and the time, in the manifest |
 | WS5 | **SAVE AS PRESET on SYNTH** — a user preset store (`presets.json` beside the kits), listed under the factory rows; promotion into the Kotlin roster stays a code change guarded by the spread, blocklist and identity tests | M | fast authoring on the phone, honest shipping on the desk — and this is the one that is really a product feature, so it should land *outside* the workshop once it works | a saved preset survives a restart and re-renders the same bytes; a promoted one passes `ThumpPresetsTest` unchanged |
 
-WS3 before WS4 because a dozen real kicks is the single most valuable
-file this repo could receive; WS5 last because it is the one that should
-not stay here.
+WS5 last because it is the one that should not stay here.
 
 ## Decisions
 
@@ -277,6 +349,12 @@ not stay here.
   the number it produces is worth less than the gesture it saved.
 - **Both write at SEND**, not at the tap, so the log is tied to the kit
   the chop became and a chop that was abandoned logs nothing.
+- **A hit is labelled at the tap, not at SEND**, unlike the chips: there
+  is no send to wait for on a pad sheet, and the file it writes is a copy
+  the pad never depends on. One label per pad; a render is refused.
+- **Audio leaves only by its own button.** The hits zip and the bench
+  zip are two files with two notes, never one, so the promise under SEND
+  TO BENCH stays literally true.
 
 ## Open
 

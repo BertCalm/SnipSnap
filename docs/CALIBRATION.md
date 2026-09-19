@@ -10,15 +10,18 @@ arrive. This file names the two on-ramps.
 Drop isolated one-shot recordings here, named by what they are:
 
 ```
-reference/calibration/kick 01.wav
-reference/calibration/kick phone far.wav
-reference/calibration/snare 01.wav
-reference/calibration/hatclosed 01.wav
+reference/calibration/kick_01.wav
+reference/calibration/kick_phone far.wav
+reference/calibration/snare_01.wav
+reference/calibration/hatclosed_01.wav
 ```
 
-The first word of the filename is the label — one of `kick`, `snare`,
-`clap`, `hatclosed`/`closedhat`, `hatopen`/`openhat`, `tom`, `perc`,
-`tonal`, `loop`. The calibration harness
+The word before the first underscore is the label — one of `kick`,
+`snare`, `clap`, `hatclosed`/`closedhat`, `hatopen`/`openhat`, `tom`,
+`perc`, `tonal`, `loop`. (An underscore, not a space: the harness reads
+`substringBefore('_')`, so `kick 01.wav` is one long unknown word and
+fails the run as unlabeled. This file used to show spaces.) The
+calibration harness
 (`CalibrationCorpusTest`) classifies every file, prints a per-file
 report with the feature numbers a threshold gets moved by, a confusion
 matrix, and an accuracy line — and fails under 60%, the "broken on
@@ -55,6 +58,19 @@ the features behind each, and counts corrections and confirmations apart
 — so with confirmations in the file the agreement line is the rules'
 accuracy on real material. The second sums the cut ratings by setting,
 best first, with what each setting cost in tries and hand edits.
+
+## From the phone: LABEL THIS HIT
+
+The WAVs themselves come the same way, by their own door. On any pad's
+sheet with the WORKSHOP open, the BENCH box offers the nine classes as
+chips; a tap copies the pad's WAV into `Calibration/` beside the kits,
+named by the rule above — `kick_Break Kit_A01.wav` — and **SEND HITS TO
+BENCH** on SETUP hands that folder to the chooser as
+`SnipSnap Hits <date>.zip`. It is the only button in the app that sends
+audio, and its note says so. Unzip, copy the WAVs into this folder, and
+`CalibrationCorpusTest` scores them on the next run. A render (a pad
+whose recipe is a synth patch) is refused at the tap: the thresholds
+already know the renders.
 
 ## The capture profile: context, not thresholds
 

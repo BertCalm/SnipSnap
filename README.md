@@ -384,12 +384,13 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `BenchExport` / `CutRatings`** — the developer's bench
-  inside the app (`docs/WORKSHOP.md`): the knock that opens it, CHOP's
-  CONFIRM ALL and cut rating (the teach log learns when the machine was
-  *right*, and which bench settings cut well), and SEND TO BENCH, which
-  packs every log on the phone into one file for
-  `reference/calibration/`.
+- **`Workshop` / `BenchExport` / `CutRatings` / `LabelledHits`** — the
+  developer's bench inside the app (`docs/WORKSHOP.md`): the knock that
+  opens it, CHOP's CONFIRM ALL and cut rating (the teach log learns when
+  the machine was *right*, and which bench settings cut well), the pad
+  sheet's LABEL THIS HIT (a capture into the calibration corpus, by ear),
+  and the two hand-outs — SEND TO BENCH for the logs, SEND HITS TO BENCH
+  for the audio — for `reference/calibration/`.
 
 ### `:loop` — ORBIT
 

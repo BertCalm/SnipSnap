@@ -28,6 +28,14 @@ A dozen files is enough to start; more is better. `snipsnap classify` on
 a capture prints the features next to the verdict, which is a fast way to
 pre-check a label.
 
+**From the phone**, the same files come by **LABEL THIS HIT**
+(`docs/WORKSHOP.md`, WS3): with the WORKSHOP open, a pad sheet's BENCH
+box copies the pad's WAV into `Calibration/` beside the kits under this
+folder's own naming rule, and **SEND HITS TO BENCH** on SETUP packs that
+folder as `SnipSnap Hits <date>.zip`. Unzip it and copy the WAVs in
+`Calibration/` straight in here. Renders are refused at the tap; what
+arrives is captures, labelled by ear.
+
 ## What runs against it
 
 `CalibrationCorpusTest` in `:audio` scans this folder on every test run:

@@ -171,6 +171,9 @@ Open a kit, tap SURFACE.
   Does silence trip the watch and stop the tape?
 - A dozen real captured hits, labelled by ear, into the calibration
   corpus — the classifier has never been fed anything but renders. [F2.4]
+  The door is LABEL THIS HIT now: with the WORKSHOP open, each pad's
+  BENCH box; then SEND HITS TO BENCH on SETUP, and the zip's WAVs into
+  `reference/calibration/`. [X4.7]
 - With TEACH THE MACHINE on, correct a few chips on CHOP, then open the
   WORKSHOP (seven taps on SETUP's title) and SEND TO BENCH: the chooser
   should offer `SnipSnap Bench <date>.zip`, and its `overrides.jsonl`

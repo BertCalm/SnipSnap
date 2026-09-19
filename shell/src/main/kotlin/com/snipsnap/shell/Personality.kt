@@ -709,6 +709,26 @@ object Copy {
     /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
     const val BENCH_FAILED = "SEND TO BENCH FAILED. TRY AGAIN."
 
+    // ---- LABEL THIS HIT and SEND HITS TO BENCH (docs/WORKSHOP.md, WS3) ----
+    /** Under the BENCH box's legend on a pad sheet: what a tap does, where the copy goes, and what the corpus wants. */
+    const val HITS_BOX_NOTE = "LABEL THIS HIT BY EAR. A COPY OF ITS WAV GOES TO THE CALIBRATION FOLDER WITH THE LABEL IN ITS NAME. CAPTURES ONLY: THE BENCH KNOWS ITS RENDERS ALREADY."
+    /** A tap on a pad whose recipe is a synth patch: the refusal, and the reason the corpus README gives. */
+    const val HIT_IS_A_RENDER = "THAT PAD IS A RENDER, NOT A CAPTURE. THE BENCH KNOWS ITS RENDERS ALREADY."
+    /** The copy landed: which pad, as what, and the button that carries it off the phone. */
+    fun hitLabelled(pad: String, label: String): String = "$pad LABELLED $label. IN THE CALIBRATION FOLDER; SEND HITS TO BENCH CARRIES IT."
+    /** The current label tapped again: the copy is out of the folder, and the pad's own file is not what went. */
+    fun hitUnlabelled(pad: String): String = "$pad UNLABELLED. ITS COPY IN THE CALIBRATION FOLDER IS GONE; THE PAD ITSELF IS UNTOUCHED."
+    /** The BENCH box's strip: what the folder holds for this pad — furniture, no full stop, like every strip on the sheet. */
+    fun hitStrip(label: String?): String = label?.let { "LABELLED $it" } ?: "NOT LABELLED"
+    /** Under SEND HITS TO BENCH on SETUP: what it packs, whose it is, and that it is the one button that sends sound. */
+    const val SEND_HITS_NOTE = "THE HITS YOU LABELLED ON THEIR PAD SHEETS, AS AUDIO, THEIR LABELS IN THEIR NAMES. YOUR OWN CAPTURES AND NOTHING ELSE ON THE PHONE. THIS IS THE ONLY BUTTON THAT SENDS SOUND."
+    /** SEND HITS TO BENCH with an empty folder: the remedy is a pad sheet. */
+    const val HITS_EMPTY = "NOTHING TO SEND. NO HIT IS LABELLED YET. LABEL ONE ON ITS PAD SHEET FIRST."
+    /** SEND HITS TO BENCH: the zip is packed and the chooser is up — the same moment as [benchPacked], and it says AUDIO because this one is. */
+    fun hitsPacked(n: Int): String = "${countOf(n, "HIT", "HITS")} ON ONE FILE, AS AUDIO. PICK WHERE IT GOES."
+    /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
+    const val HITS_FAILED = "SEND HITS TO BENCH FAILED. TRY AGAIN."
+
     // ---- BANK B: evil twins (W4.3) ----
     /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
     const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."
