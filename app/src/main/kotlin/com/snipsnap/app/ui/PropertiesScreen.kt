@@ -206,7 +206,7 @@ fun PropertiesScreen(
             ) {
                 TapeText("SEND TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
             }
-            TapeText(Copy.SEND_TO_BENCH_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5)
+            TapeText(Copy.SEND_TO_BENCH_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 6)
             // The one button that sends audio (docs/WORKSHOP.md, WS3), its
             // own note under it every time, never folded into the button
             // above: two zips, two promises.

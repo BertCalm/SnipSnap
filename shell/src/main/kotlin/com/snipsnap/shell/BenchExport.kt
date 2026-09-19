@@ -20,7 +20,10 @@ import java.util.zip.ZipOutputStream
  * Since WS2 the same walk carries the cut ratings ([CutRatings],
  * `cuts.jsonl`) beside the labels, into a second file the same way, and
  * the confirmations CONFIRM ALL adds travel inside the first: they are
- * [TeachLog] lines like any other.
+ * [TeachLog] lines like any other. Since WS4 the bench notes
+ * ([BenchNotes], `Bench/notes.jsonl` beside the kits rather than in one)
+ * ride along too, as a third file and as `→` lines in the manifest, ready
+ * to paste under the `docs/BENCH.md` row each answers.
  *
  * Features, labels and ratings only, exactly as they were written: nothing
  * here opens a WAV, so what SETUP's consent line promises about the log
@@ -43,6 +46,9 @@ object BenchExport {
     /** The merged cut ratings inside the zip: [CutRatings.FILE_NAME], likewise. */
     const val RATINGS_NAME = CutRatings.FILE_NAME
 
+    /** The bench notes inside the zip: [BenchNotes.FILE_NAME], as the phone kept them. */
+    const val NOTES_NAME = BenchNotes.FILE_NAME
+
     /** The manifest inside the zip: which kit gave how many lines, and what to do with the files. */
     const val MANIFEST_NAME = "manifest.txt"
 
@@ -63,8 +69,8 @@ object BenchExport {
         val confirmations: Int get() = examples.count { it.confirmation }
     }
 
-    /** What one pack wrote: the zip, and each kit's share of it. */
-    data class Result(val file: File, val logs: List<Log>) {
+    /** What one pack wrote: the zip, each kit's share of it, and the notes. */
+    data class Result(val file: File, val logs: List<Log>, val notes: List<BenchNotes.Note> = emptyList()) {
         /** Every teach-log line: corrections and confirmations together. */
         val labels: Int get() = logs.sumOf { it.examples.size }
         val corrections: Int get() = logs.sumOf { it.corrections }
@@ -95,18 +101,23 @@ object BenchExport {
             .toList()
     }
 
+    /** The bench notes under [kitsRoot] (`Bench/notes.jsonl`), in the order they were taken; none without the file. */
+    fun notes(kitsRoot: File): List<BenchNotes.Note> = BenchNotes.read(BenchNotes.file(kitsRoot))
+
     /**
-     * Pack every log [gather] finds under [kitsRoot] into
-     * `<outDir>/SnipSnap Bench <stamp>.zip`. [stamp] is the caller's — the
-     * app passes the same date stamp BACKUP puts on its zip (`ShareOut.stamp`),
-     * handed in rather than read from the clock here so a test can name the
-     * file it expects. A file that would be empty is left out of the zip
-     * rather than written empty. Requires at least one line to send; the
-     * app asks [gather] first, so the refusal can say why there is none.
+     * Pack every log [gather] finds under [kitsRoot], and every note
+     * [notes] finds, into `<outDir>/SnipSnap Bench <stamp>.zip`. [stamp] is
+     * the caller's — the app passes the same date stamp BACKUP puts on its
+     * zip (`ShareOut.stamp`), handed in rather than read from the clock
+     * here so a test can name the file it expects. A file that would be
+     * empty is left out of the zip rather than written empty. Requires at
+     * least one line to send; the app asks [gather] and [notes] first, so
+     * the refusal can say why there is none.
      */
     fun pack(kitsRoot: File, outDir: File, stamp: String): Result {
         val logs = gather(kitsRoot)
-        require(logs.isNotEmpty()) { "nothing to send: no label or rating is logged under $kitsRoot" }
+        val notes = notes(kitsRoot)
+        require(logs.isNotEmpty() || notes.isNotEmpty()) { "nothing to send: no label, rating or note is logged under $kitsRoot" }
         outDir.mkdirs()
         val file = File(outDir, "$STEM $stamp.zip")
         val examples = logs.flatMap { it.examples }
@@ -119,11 +130,12 @@ object BenchExport {
                 zip.write(text.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
             }
-            put(MANIFEST_NAME, manifest(stamp, logs))
+            put(MANIFEST_NAME, manifest(stamp, logs, notes))
             if (examples.isNotEmpty()) put(LOG_NAME, TeachLog.toJsonl(examples))
             if (ratings.isNotEmpty()) put(RATINGS_NAME, CutRatings.toJsonl(ratings))
+            if (notes.isNotEmpty()) put(NOTES_NAME, BenchNotes.toJsonl(notes))
         }
-        return Result(file, logs)
+        return Result(file, logs, notes)
     }
 
     /**
@@ -132,7 +144,7 @@ object BenchExport {
      * not for a parser. Plain prose in its own case, not TapeOS copy: it is
      * read off a laptop, never off the phone.
      */
-    fun manifest(stamp: String, logs: List<Log>): String {
+    fun manifest(stamp: String, logs: List<Log>, notes: List<BenchNotes.Note> = emptyList()): String {
         val labels = logs.sumOf { it.examples.size }
         val corrections = logs.sumOf { it.corrections }
         val confirmations = logs.sumOf { it.confirmations }
@@ -144,15 +156,21 @@ object BenchExport {
             .append(", ").append(count(confirmations, "confirmation", "confirmations")).append(")")
             .append(" and ").append(count(ratings, "cut rating", "cut ratings"))
             .append(" from ").append(count(logs.size, "kit", "kits"))
-            .append(". Feature vectors, labels and ratings only, never audio.\n\n")
+            .append(". ").append(count(notes.size, "bench note", "bench notes"))
+            .append(". Feature vectors, labels, ratings and the tester's own words only, never audio.\n\n")
         sb.append("labels ratings\n")
         for (log in logs) {
             sb.append(String.format(Locale.ROOT, "%6d %7d  %s\n", log.examples.size, log.ratings.size, log.path))
         }
         sb.append('\n')
+        if (notes.isNotEmpty()) {
+            sb.append("bench notes, ready to paste under the docs/BENCH.md row each answers:\n")
+            sb.append(BenchNotes.renderAll(notes))
+            sb.append('\n')
+        }
         sb.append(LOG_NAME).append(" is every label above merged into one file, ")
-            .append(RATINGS_NAME).append(" every rating; a torn line is dropped, and a file with nothing to hold is not in the zip.\n")
-        sb.append("Drop them into ").append(CALIBRATION_DIR).append(" and run\n")
+            .append(RATINGS_NAME).append(" every rating, ").append(NOTES_NAME).append(" every note; a torn line is dropped, and a file with nothing to hold is not in the zip.\n")
+        sb.append("Drop the first two into ").append(CALIBRATION_DIR).append(" and run\n")
         sb.append("  ").append(HARNESS_COMMAND).append('\n')
         sb.append("which scores every label against the rules as they stand and sums the ratings by the bench's settings.\n")
         return sb.toString()

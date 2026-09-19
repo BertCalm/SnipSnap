@@ -1,9 +1,9 @@
 # WORKSHOP — the developer's bench, inside the app
 
-*The spec for the admin mode. Status: the door, SEND TO BENCH, WS2 —
-CONFIRM ALL and the cut rating — and WS3 — LABEL THIS HIT — are built;
-the rest is the list at the end, in value order. One tester today — the
-phone's owner — and the decisions below are shaped by that.*
+*The spec for the admin mode. Status: the door and WS1–WS4 — SEND TO
+BENCH, CONFIRM ALL and the cut rating, LABEL THIS HIT, BENCH NOTES — are
+built; what is left is the list at the end, in value order. One tester
+today — the phone's owner — and the decisions below are shaped by that.*
 
 ## Why this exists
 
@@ -103,11 +103,14 @@ puts on its own:
 - `cuts.jsonl` — every cut rating (WS2, below) merged the same way, when
   any exist; a file that would be empty is left out rather than written
   empty.
+- `notes.jsonl` — every bench note (WS4, below) as the phone kept it,
+  when any exist. The one file in the zip a person typed.
 - `manifest.txt` — the stamp, the totals (labels split into corrections
-  and confirmations, and ratings), one row per kit with its share (a
-  binned kit shows as `.bin/<name>-<stamp>`), and the two lines a person
-  at a desk needs: where to drop the files and what to run. Plain prose
-  in its own case; it is read off a laptop, never off the phone.
+  and confirmations, ratings, and notes), one row per kit with its share
+  (a binned kit shows as `.bin/<name>-<stamp>`), every note as a `→` line
+  ready to paste into `docs/BENCH.md`, and the two lines a person at a
+  desk needs: where to drop the files and what to run. Plain prose in
+  its own case; it is read off a laptop, never off the phone.
 
 Two packs of an unchanged shelf are the same bytes (fixed entry time,
 fixed order — `XpnPackager`'s trick), so a re-send is a re-send and not a
@@ -129,19 +132,21 @@ settings, best first. The folder's own README says the rest: a threshold
 moved because of this corpus is moved in `Classifier` with a comment
 naming the line that motivated it.
 
-**Refusals, in words.** Nothing logged and TEACH on: *NO CORRECTION IS
-LOGGED YET. CORRECT A CHIP ON CHOP FIRST.* Nothing logged and TEACH off:
-*TEACH THE MACHINE IS OFF, SO NO CORRECTION IS LOGGED. TURN IT ON ABOVE.*
-No app on the phone takes a zip: the same NOWHERE TO SEND IT BACKUP says.
-The landing toast counts what is in the file — *14 LABELS AND 3 CUT
-RATINGS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.*, naming only what
-the file holds — and never says SENT, because the chooser opening is not
-the file leaving.
+**Refusals, in words.** Nothing logged and TEACH on: *NOTHING TO SEND.
+NOTHING IS LOGGED YET. CORRECT OR CONFIRM A CHIP ON CHOP, OR TAKE A NOTE,
+FIRST.* Nothing logged and TEACH off: *NOTHING TO SEND. TEACH THE MACHINE
+IS OFF, SO NO CHIP IS LOGGED. TURN IT ON ABOVE, OR TAKE A NOTE.* No app on
+the phone takes a zip: the same NOWHERE TO SEND IT BACKUP says. The
+landing toast counts what is in the file — *14 LABELS, 3 CUT RATINGS AND
+2 NOTES FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.*, naming only what
+the file holds, and the kits only when something came from one — and
+never says SENT, because the chooser opening is not the file leaving.
 
 **The consent line stays true.** SETUP's consent row promises *FEATURES
 ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE.* Both halves hold: the zip
-carries feature vectors and labels and nothing that can be played back,
-and TEACH THE MACHINE itself still sends nothing — this button, pressed
+carries feature vectors, labels, ratings and the tester's own typed words,
+and nothing that can be played back, and TEACH THE MACHINE itself still
+sends nothing — this button, pressed
 on purpose behind a knock, is the only way a log leaves, and the note
 under it says exactly that. Any future tool that carries audio (LABEL
 THIS HIT, below) gets its own button and its own words, so this promise
@@ -304,6 +309,68 @@ Code: `LabelledHits` in `:shell` (`label` / `unlabel` / `labelOf` /
 by `LabelledHitsTest`; the BENCH box and its chips in `PadSheetScreen`,
 the second button in `PropertiesScreen`, `sendHitsToBench` in `App.kt`.
 
+## BENCH NOTES — built
+
+WS4. `docs/BENCH.md` is the list of everything only a phone in a hand
+can answer, and every answer on it was written on a laptop from memory,
+hours later — which is how one session answered three rows and forgot
+the rest. The phone knows the context a note is about: which screen,
+which kit, which pad, and when. Now it writes that part itself.
+
+**In the hand.** With the WORKSHOP open, the title bar — the one row
+every screen shares — ends in a **NOTE** chip. Tap it and a slip drops
+from the bar: BENCH NOTE, the context line (`PLAY · Break Kit`, or
+`KIT · Break Kit · A03` with a pad sheet up, or just `SHELF`), a field
+with the keyboard already up, and CANCEL beside KEEP. Type what you
+heard, KEEP: *NOTED ON PLAY. SEND TO BENCH CARRIES IT.* KEEP is dim
+until there is a word to keep; Back or the scrim is CANCEL. The chip is
+on the title bar rather than on each screen because a note is about
+whatever is under it, and a chip per screen would be one more thing per
+screen to keep in step.
+
+**The stamp is read at the tap**, not at KEEP: the tap is the moment the
+note is about, and the typing takes a while. It is read once, into one
+value the slip shows and KEEP writes, so the line you see and the line
+that lands can never disagree. The time is the same `yyyy-MM-dd HHmm`
+stamp the hand-outs carry in their names.
+
+**On disk.** One line per note, appended to `Bench/notes.jsonl` beside
+the kits — a folder with no `kit.json`, so the shelf never lists it, and
+not inside any kit, because a note on the shelf has no kit and a note on
+PLAY is not the kit's business. Whitespace typed into the field, a
+newline included, folds to one space on the way in: the `→` line it
+becomes at the desk is one line too. Never audio, and never a log the
+machine wrote — these are the tester's words, and the only thing in the
+bench zip a person typed.
+
+**SEND TO BENCH carries it.** The notes ride in the same zip as a third
+file, and the manifest renders every one as a line ready to paste under
+the `docs/BENCH.md` row it answers:
+
+```
+bench notes, ready to paste under the docs/BENCH.md row each answers:
+→ 2026-09-19 2107 · PLAY · Break Kit: hats feel late at 92, maybe the choke fade
+→ 2026-09-19 2112 · KIT · Break Kit · A03: the open hat rings past the bar
+```
+
+A shelf with nothing logged but a note is still something to send; the
+landing toast counts the notes beside the labels and the ratings, and
+names the kits only when something came from one (*1 NOTE ON ONE FILE.
+PICK WHERE IT GOES.*). The refusals name the note as the other remedy:
+*…CORRECT OR CONFIRM A CHIP ON CHOP, OR TAKE A NOTE, FIRST.*
+
+**At the desk.** Open the manifest, paste. That is the whole of it, and
+it settles the question this spec left open: the notes are not a file
+beside the corpus, because nothing scores them — they are answers, and
+`docs/BENCH.md` is where the answers go. `notes.jsonl` is in the zip so
+nothing is lost between two sends, not for a reader.
+
+Code: `BenchNotes` in `:shell` (`Note`, `Stamp`, `oneLine`, the jsonl
+round trip, `render`), the third file and the manifest lines in
+`BenchExport`, the copy in `Copy`, held by `BenchNotesTest` and
+`BenchExportTest`; the chip on `TitleBar`, the slip in `BenchNoteDialog`,
+`openBenchNote` / `keepBenchNote` and the `sendToBench` change in `App.kt`.
+
 ## The list — next tools, in value order
 
 Sizes as `docs/APP_PLAN.md` uses them (S under a day, M a few days).
@@ -317,10 +384,10 @@ it.
 | WS1 | ✓ **SEND TO BENCH** — above | S | gets the teach log to the harness | a phone's corrections show up in `TeachLogTest`'s report |
 | WS2 | ✓ **CONFIRM ALL and the cut rating** — above | S–M | the log held errors only, so it could measure misses but never accuracy; nothing measured the *cuts* | a confirmed-and-corrected chop replays through the feature path with its accuracy counted; a rating line names the setting that earned it |
 | WS3 | ✓ **LABEL THIS HIT** — above | S | `reference/calibration/` had zero real captures; BENCH A5 has asked for a dozen since the corpus was named | a labelled hit from the phone lands in `CalibrationCorpusTest`'s confusion matrix |
-| WS4 | **BENCH NOTES** — a free-text note stamped with the screen, the open kit and the time, packed with the zip | S | `docs/BENCH.md` is answered on a laptop from memory; the phone knows the context the note is about | a note taken on PLAY names PLAY, the kit, and the time, in the manifest |
+| WS4 | ✓ **BENCH NOTES** — above | S | `docs/BENCH.md` is answered on a laptop from memory; the phone knows the context the note is about | a note taken on PLAY names PLAY, the kit, and the time, in the manifest |
 | WS5 | **SAVE AS PRESET on SYNTH** — a user preset store (`presets.json` beside the kits), listed under the factory rows; promotion into the Kotlin roster stays a code change guarded by the spread, blocklist and identity tests | M | fast authoring on the phone, honest shipping on the desk — and this is the one that is really a product feature, so it should land *outside* the workshop once it works | a saved preset survives a restart and re-renders the same bytes; a promoted one passes `ThumpPresetsTest` unchanged |
 
-WS5 last because it is the one that should not stay here.
+WS5 is what is left, and the one that should not stay here.
 
 ## Decisions
 
@@ -355,9 +422,20 @@ WS5 last because it is the one that should not stay here.
 - **Audio leaves only by its own button.** The hits zip and the bench
   zip are two files with two notes, never one, so the promise under SEND
   TO BENCH stays literally true.
+- **A note's stamp is read at the tap**, once, and shown before a word
+  is typed: the tap is the moment the note is about, and one read means
+  the line shown and the line written cannot disagree.
+- **Notes are pasted, not filed.** The manifest renders every note as a
+  `→` line for `docs/BENCH.md`, and that is where they land; there is no
+  notes file beside the corpus because nothing scores a note. The zip
+  carries `notes.jsonl` so nothing is lost between sends, not for a
+  reader.
+- **The NOTE chip is on the title bar**, the one row every screen
+  shares, and only while the WORKSHOP is open: a note is about whatever
+  is under it, and a chip per screen is one more thing per screen to
+  keep in step.
 
 ## Open
 
-- Where WS4's notes should land at the desk — appended to
-  `docs/BENCH.md`'s `→` lines by hand, or kept as their own file beside
-  the corpus. Undecided until there are notes.
+- Nothing today. WS4 closed the last one (where notes land: pasted into
+  `docs/BENCH.md` from the manifest, above).

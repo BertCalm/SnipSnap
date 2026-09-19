@@ -49,6 +49,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
+import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.DeletedKitsScreen
 import com.snipsnap.app.ui.DoublesScreen
@@ -105,6 +106,7 @@ import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.BenchExport
+import com.snipsnap.shell.BenchNotes
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -604,6 +606,13 @@ fun App(shelf: KitShelf) {
     // gesture, not a setting, so it is not remembered across a restart.
     var workshopOpen by remember { mutableStateOf(prefs.getBoolean(PREF_WORKSHOP, false)) }
     val workshopKnock = remember { Workshop.Knock() }
+    // A BENCH NOTE in progress (docs/WORKSHOP.md, WS4): the stamp the
+    // title bar's NOTE chip read at the tap — screen, open kit, open pad
+    // sheet, time — while its dialog is up; null otherwise. The stamp is
+    // read at the tap and not at KEEP because the tap is the moment the
+    // note is about, and read once so the context line the dialog shows
+    // and the line KEEP writes can never disagree.
+    var benchNote by remember { mutableStateOf<BenchNotes.Stamp?>(null) }
     // EXPORT: hoisted here, not local to ExportScreen's own composition —
     // its write runs on `scope` below (App's own, handed down as
     // `appScope`) so it survives a MenuRow tab switch; the session object
@@ -2207,8 +2216,8 @@ fun App(shelf: KitShelf) {
         busy = Copy.PACKING_BUSY
         scope.launch {
             try {
-                val logs = withContext(Dispatchers.IO) { BenchExport.gather(shelf.root) }
-                if (logs.isEmpty()) {
+                val (logs, notes) = withContext(Dispatchers.IO) { BenchExport.gather(shelf.root) to BenchExport.notes(shelf.root) }
+                if (logs.isEmpty() && notes.isEmpty()) {
                     toast = if (teachEnabled) Copy.BENCH_EMPTY else Copy.BENCH_EMPTY_TEACH_OFF
                     return@launch
                 }
@@ -2219,7 +2228,7 @@ fun App(shelf: KitShelf) {
                 if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
                     toast = Copy.SHARE_NOWHERE
                 } else {
-                    toast = Copy.benchPacked(result.labels, result.ratings, result.kits)
+                    toast = Copy.benchPacked(result.labels, result.ratings, result.notes.size, result.kits)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -2265,6 +2274,44 @@ fun App(shelf: KitShelf) {
                 toast = Copy.HITS_FAILED
             } finally {
                 busy = null
+            }
+        }
+    }
+
+    /**
+     * The title bar's NOTE chip (docs/WORKSHOP.md, WS4): reads where the
+     * phone is — the screen as the menu row names it, the open kit, the
+     * pad whose sheet is up — and when, into the stamp the dialog shows
+     * and KEEP writes. The same date stamp BACKUP puts on its zip, so a
+     * note and the hand-out it rides in read the same clock.
+     */
+    fun openBenchNote() {
+        benchNote = BenchNotes.Stamp(
+            at = ShareOut.stamp(System.currentTimeMillis()),
+            screen = screen.label,
+            kit = open?.kit?.name,
+            pad = padSheetSlot?.let { PadNoteMap.labelForPad(it) },
+        )
+    }
+
+    /**
+     * KEEP on the BENCH NOTE slip: the stamp and the words, appended to
+     * `Bench/notes.jsonl` beside the kits — a folder with no `kit.json`,
+     * so the shelf never lists it — on IO like every other write. The
+     * toast names the screen the note was taken on and the button that
+     * carries it off the phone; SEND TO BENCH reads the file and renders
+     * every note in its manifest as a line for `docs/BENCH.md`.
+     */
+    fun keepBenchNote(entry: BenchNotes.Note) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { BenchNotes.append(BenchNotes.file(shelf.root), listOf(entry)) }
+                toast = Copy.noted(entry.screen)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "keepBenchNote: failed", e)
+                toast = Copy.NOTE_FAILED
             }
         }
     }
@@ -2406,7 +2453,8 @@ fun App(shelf: KitShelf) {
     // also silences the instrument before leaving — this generic reset
     // does not).
     val anyOverlayOpen = padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
-        padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null
+        padCaptureSlot != null || snipsOpen || deletedKitsOpen || doublesOpen || arrangeOpen || orbitOpen || xray != null ||
+        benchNote != null
     //
     // KITS is no longer among the exclusions (J11): with a real stack
     // there is nothing special about the shelf except that it is usually
@@ -2449,7 +2497,9 @@ fun App(shelf: KitShelf) {
                     .padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                TitleBar()
+                // The NOTE chip only while the WORKSHOP is open; a phone
+                // that never knocked draws the bar exactly as before.
+                TitleBar(onNote = if (workshopOpen) ::openBenchNote else null)
                 MenuRow(
                     current = screen,
                     onSelect = ::goToScreen,
@@ -3255,6 +3305,22 @@ fun App(shelf: KitShelf) {
             // A toast raised while the box is up (a share landing behind it)
             // is not drawn beside it; its dwell runs out unseen.
             ToastOverlay(if (note == null) toast else null, door = if (note == null) toastDoor else null)
+            benchNote?.let { stamp ->
+                val closeBenchNote = { benchNote = null }
+                BenchNoteDialog(
+                    context = stamp.context,
+                    onCancel = closeBenchNote,
+                    onKeep = { text ->
+                        keepBenchNote(stamp.note(text))
+                        closeBenchNote()
+                    },
+                )
+                // Registered after every screen-level handler above, so
+                // Back closes the slip and nothing under it (the
+                // MessageBox below is drawn on top of this and registers
+                // later still, so it wins when both are up).
+                BackHandler(onBack = closeBenchNote)
+            }
             note?.let { n ->
                 val dismissNote = { note = null }
                 MessageBox(n, onDismiss = dismissNote)

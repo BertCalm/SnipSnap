@@ -46,8 +46,12 @@ it does, on purpose: open the workshop (seven taps on SETUP's title),
 press **SEND TO BENCH**, and the chooser hands you
 `SnipSnap Bench <date>.zip`. Inside are `overrides.jsonl` and
 `cuts.jsonl`, every log on the shelf merged (the bin included, torn lines
-dropped), and a `manifest.txt` naming which kit gave what. Drop the two
-files into `reference/calibration/` and run
+dropped), `notes.jsonl` when the title bar's NOTE chip was used (the
+tester's own words, stamped with the screen, the kit, the pad and the
+time — for a person, never for a harness: the manifest renders each as a
+`→` line to paste into `docs/BENCH.md`), and a `manifest.txt` naming
+which kit gave what. Drop the first two files into `reference/calibration/`
+and run
 
 ```
 ./gradlew :shell:test --tests '*TeachLogTest*' --tests '*CutRatingsTest*'
