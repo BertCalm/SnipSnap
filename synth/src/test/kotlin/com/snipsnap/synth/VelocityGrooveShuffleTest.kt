@@ -69,6 +69,90 @@ class VelocityGrooveShuffleTest {
         assertTrue("<VelEnd>127</VelEnd>" in xml)
     }
 
+    @Test
+    fun `velocity re-renders rather than filtering the same waveform`() {
+        val patch = TinesPresets.forVoice(TinesVoice.BELL).first()
+        val soft = Velocity.atVelocity(patch, 0.25f)
+        val hard = Velocity.atVelocity(patch, 1.0f)
+        // A low-pass on one render leaves the onset sample-aligned; a real
+        // re-render at a different index does not.
+        val n = minOf(soft.samples.size, hard.samples.size)
+        val differing = (0 until minOf(n, 400)).count {
+            kotlin.math.abs(soft.samples[it] - hard.samples[it]) > 1e-4f
+        }
+        assertTrue(differing > 50, "onset should differ between velocities, only $differing samples did")
+    }
+
+    @Test
+    fun `atVelocity never asks a macro past what the preset itself set`() {
+        // BELL's BRIGHT default is 0.5 (Tines.kt) - struck at full velocity
+        // the macro must land at exactly that ceiling, not above it.
+        val patch = TinesPresets.forVoice(TinesVoice.BELL).first()
+        val loud = Velocity.atVelocity(patch, 1.0f)
+        val direct = patch.render()
+        assertTrue(loud.samples.contentEquals(direct.samples), "full velocity should equal the preset's own render")
+    }
+
+    @Test
+    fun `atVelocity is actually darker at low velocity, not merely different`() {
+        // "Differs" (the brief's given test) isn't "duller" - a re-render
+        // could in principle differ in a direction that isn't a brightness
+        // change at all. One patch per BRIGHTNESS_MACROS entry, spectral
+        // centroid must step down as velocity drops, same measure
+        // `soft variants are darker, not different` already trusts.
+        val cases = listOf(
+            "TINES BELL (BRIGHT)" to TinesPresets.forVoice(TinesVoice.BELL).first(),
+            "VELVET BASS (CUTOFF)" to VelvetPresets.forVoice(VelvetVoice.BASS).first(),
+            "FATHOM DEEP (CUTOFF)" to FathomPresets.forVoice(FathomVoice.DEEP).first(),
+            "THUMP SNARE (TONE)" to ThumpPresets.forVoice(ThumpVoice.SNARE).first(),
+            "THUMP HAT_CLOSED (METAL)" to ThumpPresets.forVoice(ThumpVoice.HAT_CLOSED).first(),
+            "TONEWHEEL FULL (DIRT)" to TonewheelPresets.forVoice(TonewheelVoice.FULL).first(),
+        )
+        for ((label, patch) in cases) {
+            val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
+            val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1.0f)).centroidHz
+            assertTrue(soft < hard, "$label: soft centroid $soft should be below hard centroid $hard")
+        }
+    }
+
+    @Test
+    fun `atVelocity falls back to soften for voices with no brightness macro`() {
+        // PLUCK's macros (TUNE, DAMP, PICK, DOUBLE) contain nothing in
+        // Velocity's BRIGHTNESS_MACROS list, so atVelocity must fall back
+        // to the same soften() path soft-variant zones already use -
+        // proven here by requiring byte-identical output, not just "still
+        // works".
+        val patch = PluckPresets.forVoice(PluckVoice.KALIMBA).first()
+        val velocity = 0.3f
+        val viaFallback = Velocity.atVelocity(patch, velocity)
+        val viaSoftenDirect = Velocity.soften(patch.render(), 1f - velocity)
+        assertTrue(
+            viaFallback.samples.contentEquals(viaSoftenDirect.samples),
+            "PLUCK has no brightness macro; atVelocity should match soften(render(), 1 - velocity) exactly",
+        )
+        // And it should actually be darker than the un-softened render -
+        // the fallback isn't a silent no-op.
+        val untouched = patch.render()
+        assertTrue(!viaFallback.samples.contentEquals(untouched.samples), "the fallback should still soften something")
+    }
+
+    @Test
+    fun `THUMP KICK falls back to soften too - DRIVE measured out, not assumed`() {
+        // KICK's only other macro (DRIVE) was excluded from BRIGHTNESS_MACROS
+        // after measuring it: spectral centroid vs. DRIVE is U-shaped around
+        // shipped presets' own settings, not monotonic, so scaling it down
+        // for a soft hit does not reliably read as darker. KICK must fall
+        // back to soften like PLUCK/VOX do.
+        val patch = ThumpPresets.forVoice(ThumpVoice.KICK).first()
+        val velocity = 0.3f
+        val viaFallback = Velocity.atVelocity(patch, velocity)
+        val viaSoftenDirect = Velocity.soften(patch.render(), 1f - velocity)
+        assertTrue(
+            viaFallback.samples.contentEquals(viaSoftenDirect.samples),
+            "KICK's DRIVE was measured non-monotonic and excluded; atVelocity should match soften() exactly",
+        )
+    }
+
     // ---------- the groove ----------
 
     @Test

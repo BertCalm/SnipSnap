@@ -20,6 +20,7 @@ data class TinesPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Tines.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "TINES"

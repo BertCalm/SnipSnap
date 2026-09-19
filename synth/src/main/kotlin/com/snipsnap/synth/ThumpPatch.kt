@@ -23,6 +23,7 @@ data class ThumpPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Thump.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "THUMP"
