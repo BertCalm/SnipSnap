@@ -277,20 +277,42 @@ class SkinTest {
         }
     }
 
+    /**
+     * The [Dsp.scrambleNear] boundary contract through SKIN's own wiring,
+     * worded as [ThumpTest]'s is because SKIN's `scramble` now has the
+     * same shape.
+     *
+     * This used to assert that `temperature = 0` returns the **defaults**
+     * untouched, and that was true only while SKIN had no presets: with
+     * no pool to pick from, the seed could only ever be the default map.
+     * [SkinPresets] gave it a pool, so at any temperature below 1 the
+     * seed is now a preset — which is the feature, not a regression, and
+     * is why the assertion moved to `near` the way THUMP's already had.
+     */
     @Test
-    fun `scramble honors temperature`() {
+    fun `scramble honors temperature and near`() {
         for (voice in SkinVoice.entries) {
+            val preset = SkinPresets.forVoice(voice).first()
             assertEquals(
-                Skin.defaults(voice),
-                Skin.scramble(voice, Random(1), temperature = 0f),
-                "$voice: temperature 0 should return the default untouched",
+                // A preset need not name every macro the voice has, so the
+                // seed is always the full default map with the preset's
+                // explicit values layered over it - `scramble`'s own seed
+                // construction, asserted rather than restated.
+                Skin.defaults(voice) + preset.macros,
+                Skin.scramble(voice, Random(1), temperature = 0f, near = preset),
+                "$voice: temperature 0 should return the seed untouched",
             )
-            val flat = Skin.scramble(voice, Random(1), temperature = 1f)
+            val flat = Skin.scramble(voice, Random(1), temperature = 1f, near = preset)
             assertTrue(flat.values.all { it in 0f..1f }, "$voice: temperature 1 left the 0..1 range")
+            // At temperature >= 1 with no `near`, scramble must not spend a
+            // draw picking a preset: Dsp.scrambleNear ignores the seed's
+            // values there anyway, and a spent draw shifts a shared
+            // Random's downstream sequence away from the pre-U2 behaviour
+            // this boundary promises.
             assertEquals(
                 Dsp.scrambleNear(Skin.defaults(voice), 1f, Random(2)),
                 Skin.scramble(voice, Random(2), temperature = 1f),
-                "$voice: temperature 1 must match Dsp.scrambleNear's own flat-uniform contract",
+                "$voice: temperature 1 with no near must not consume a preset-selection draw",
             )
         }
     }
