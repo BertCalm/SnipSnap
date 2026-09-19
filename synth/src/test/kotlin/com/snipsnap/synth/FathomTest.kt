@@ -143,9 +143,9 @@ class FathomTest {
     }
 
     /**
-     * Halves [hz] by octaves until it is within [reference]'s octave, never
-     * the reverse (Task 2 fix round 1,
-     * docs/.superpowers/sdd/2026-09-19-synth-depth-phase-0/task-2-report.md).
+     * GRIND-only, single-step halving of [hz] toward [reference] (Task 2 fix
+     * round 2, docs/.superpowers/sdd/2026-09-19-synth-depth-phase-0/task-2-report.md).
+     *
      * GRIND's near-unison saw pair (`phaseLow`, `phase2`) can start close
      * enough to half a cycle apart that their shared odd harmonics -
      * including the fundamental - partly cancel right at note-on while the
@@ -154,17 +154,25 @@ class FathomTest {
      * time point checked; 220/440 Hz carried real, substantial energy).
      * `Pitch.detect` correctly reports whichever harmonic dominates a given
      * window, so an early reading can land on the fundamental's octave
-     * rather than the fundamental itself - always the octave *above*, never
-     * below, which is why this only ever divides. Halving unconditionally
-     * would corrupt a legitimately low reading (DEEP mid-GLIDE, well below
-     * its target with no harmonic-cancellation mechanism at all) into a
-     * false failure; this only intervenes on readings that are actually too
-     * high for the physically expected pitch passed as [reference].
+     * rather than the fundamental itself.
+     *
+     * Two guards, both load-bearing:
+     * - **Voice-gated.** This mechanism is specific to GRIND's saw pair - it
+     *   has no analogue for DEEP (single sine) or GLASS (FM, no cancelling
+     *   pair). For any other voice this returns [hz] completely untouched,
+     *   so an octave-doubling regression on DEEP or GLASS is never silently
+     *   folded away; both call sites additionally assert the untouched
+     *   value equals the raw reading for those voices, so a future change
+     *   to this guard fails loudly rather than silently re-opening the
+     *   path.
+     * - **Single conditional halving, not a loop.** The verified artifact
+     *   is exactly one octave (the second harmonic, not the fourth or
+     *   eighth) - `while` would accept 4x, 8x, 16x as if evidence existed
+     *   for any of them. It doesn't; this only ever removes one octave.
      */
-    private fun foldDownToOctave(hz: Float, reference: Float): Float {
-        var folded = hz
-        while (folded > reference * kotlin.math.sqrt(2f)) folded /= 2f
-        return folded
+    private fun foldGrindOctave(voice: FathomVoice, hz: Float, reference: Float): Float {
+        if (voice != FathomVoice.GRIND) return hz
+        return if (hz > reference * kotlin.math.sqrt(2f)) hz / 2f else hz
     }
 
     /**
@@ -356,13 +364,18 @@ class FathomTest {
             val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
             assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
             // GRIND's near-unison saw pair can read as its own second
-            // harmonic right at note-on (see [foldDownToOctave]). A full
+            // harmonic right at note-on (see [foldGrindOctave]). A full
             // GLIDE (glideSemis = 12, always) starts exactly one octave
             // below target, so target/2 is the physically expected early
             // pitch - fold the raw reading down toward it before checking
             // the rise, so a genuine octave misread of a real fundamental
-            // doesn't read as a failed glide.
-            val foldedStart = foldDownToOctave(start, target / 2f)
+            // doesn't read as a failed glide. GRIND-only and single-step:
+            // for DEEP/GLASS this is a no-op by construction, and the
+            // assertEquals below makes that loud rather than implicit.
+            val foldedStart = foldGrindOctave(voice, start, target / 2f)
+            if (voice != FathomVoice.GRIND) {
+                assertEquals(start, foldedStart, "$voice: fold must be a no-op outside GRIND")
+            }
             assertTrue(
                 end > foldedStart * 1.3f,
                 "$voice GLIDE should rise into the target: $start Hz (folded $foldedStart) -> $end Hz",
@@ -392,10 +405,15 @@ class FathomTest {
             val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
             assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
             // Same fold as `GLIDE actually glides` - GRIND's early reading
-            // can land on its own second harmonic (see [foldDownToOctave]).
+            // can land on its own second harmonic (see [foldGrindOctave]).
             // GLIDE 0 means no bend, so the expected pitch throughout is
-            // just target itself.
-            val foldedStart = foldDownToOctave(start, target)
+            // just target itself. GRIND-only and single-step, same as
+            // above; the assertEquals makes the DEEP/GLASS no-op explicit
+            // rather than relying on the helper's own guard alone.
+            val foldedStart = foldGrindOctave(voice, start, target)
+            if (voice != FathomVoice.GRIND) {
+                assertEquals(start, foldedStart, "$voice: fold must be a no-op outside GRIND")
+            }
             assertTrue(
                 kotlin.math.abs(end - foldedStart) < foldedStart * 0.1f,
                 "$voice GLIDE 0 should hold steady: $start Hz (folded $foldedStart) -> $end Hz",
