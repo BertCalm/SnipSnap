@@ -637,6 +637,49 @@ git commit -m "Re-render at velocity instead of low-passing one frozen take"
 
 ---
 
+### Task 5b: Wire `atVelocity` into the velocity-layer call sites
+
+Task 5 built `Velocity.atVelocity` and left it with **zero production callers**.
+`Robin.kt:102` and `KitBuilder.kt:361` — the two places velocity layers are
+actually generated — both still call `soften()`. Shipping it unwired would add
+an eighth entry to the governing finding's table of techniques implemented once
+and never generalized, in the very branch written to close that table.
+
+**Files:**
+- Modify: `shell/src/main/kotlin/com/snipsnap/shell/Robin.kt:102`
+- Modify: `shell/src/main/kotlin/com/snipsnap/shell/KitBuilder.kt:361`
+- Test: the corresponding `:shell` tests
+
+**The complication that makes this its own task:** `soften(snip, amount)` takes
+rendered audio; `atVelocity(patch, velocity)` takes a `Patch`. A pad built from
+a **captured sample has no patch** — there is nothing to re-render. Both call
+sites therefore need a branch: re-render via `atVelocity` when the pad carries a
+synth recipe, fall back to `soften` when it is captured audio. The fallback is
+not a degraded path, it is the only correct behaviour for captured material.
+
+- [ ] **Step 1: Establish which call sites can reach a Patch**
+
+Read both sites and determine what each actually holds. `KitBuilder` may have
+the `PadRecipe` (which carries `patch`); `Robin` may only have a rendered
+`Snip`. Report what you find before writing code — if neither can reach a
+Patch without a signature change, say so rather than inventing a path.
+
+- [ ] **Step 2: Write the failing test**
+
+For each site that can reach a Patch: assert that a synth-backed pad's velocity
+layers are genuinely re-rendered (differing in the onset, not merely low-passed)
+while a captured-audio pad still round-trips through `soften` unchanged.
+
+- [ ] **Step 3: Run it to verify it fails**
+
+- [ ] **Step 4: Wire the branch at both sites**
+
+- [ ] **Step 5: Run `:shell` tests, then hand the full suite to the controller**
+
+- [ ] **Step 6: Commit**
+
+---
+
 ### Task 6: Key-track the filter cutoff
 
 `Velvet.kt:115` and `Fathom.kt:120` map cutoff to an absolute Hz independent of note pitch, so brightness drifts across a kit's pentatonic run instead of staying proportional.
