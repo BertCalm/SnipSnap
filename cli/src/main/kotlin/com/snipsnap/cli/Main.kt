@@ -70,6 +70,8 @@ object Cli {
         |                        needs --into <kit-dir> and becomes that
         |                        kit's groove
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
+        |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
+        |                        render factory presets to wav, to hear them
         |  pad <wav|kit pad>    one hit -> a pad held forever in every note
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  resample <kit-dir>    the ritual: bounce the kit playing its own
@@ -353,6 +355,7 @@ object Cli {
                 "retune" -> RetuneCommand.run(args.drop(1), out)
                 "body" -> BodyCommand.run(args.drop(1), out)
                 "wobble" -> WobbleCommand.run(args.drop(1), out)
+                "synth" -> SynthCommand.run(args.drop(1), out)
                 "eternal" -> EternalCommand.run(args.drop(1), out)
                 "roll" -> RollCommand.run(args.drop(1), out)
                 "gate" -> GateCommand.run(args.drop(1), out)
