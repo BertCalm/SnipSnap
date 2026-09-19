@@ -24,13 +24,39 @@ import kotlin.test.assertTrue
  * that boundary silently, so this needs the same identity check THUMP's
  * own preset suite has, not the "no ambiguity" claim this file used to
  * make.
+ *
+ * GRIND was re-pinned again, from KICK to TOM, for the synth-depth phase-0
+ * start-phase seeding (Task 2): its saw pair no longer starts phase-locked,
+ * so the two oscillators' discontinuities land at different points in the
+ * cycle instead of the same instant, roughly doubling the edge rate and
+ * lifting spectral centroid across the board (see `FathomTest`'s "factory
+ * defaults classify consistently" for the full explanation). That shift is
+ * large enough that GRIND itself is no longer classifier-uniform: four of
+ * its twelve presets now land off TOM. [presetOverrides] below pins each of
+ * those explicitly, by measured centroid, rather than pretending the voice
+ * still has one answer. GLASS mostly held PERC, but two presets crossed
+ * into TOM by the same mechanism and are pinned the same way.
  */
 class FathomPresetsTest {
 
     private val classifiedVoices = mapOf(
         FathomVoice.DEEP to DrumClass.KICK,
-        FathomVoice.GRIND to DrumClass.KICK,
+        FathomVoice.GRIND to DrumClass.TOM,
         FathomVoice.GLASS to DrumClass.PERC,
+    )
+
+    /**
+     * Presets whose classification no longer matches [classifiedVoices]'
+     * per-voice default, post start-phase seeding. Centroid noted for each
+     * so a reviewer can see how far it moved, not just where it landed.
+     */
+    private val presetOverrides = mapOf(
+        (FathomVoice.GRIND to "DIRTY GROWL") to DrumClass.KICK,  // centroid ~126 Hz, still under the stretch shelf
+        (FathomVoice.GRIND to "LOUD GRIND") to DrumClass.KICK,   // centroid ~125 Hz, same shelf
+        (FathomVoice.GRIND to "WIDE GRIND") to DrumClass.PERC,   // centroid ~214 Hz, low ratio ~0.21 - already the widest detune of the set
+        (FathomVoice.GRIND to "GRAVEL BASS") to DrumClass.PERC,  // centroid ~204 Hz, low ratio ~0.34
+        (FathomVoice.GLASS to "GLASSY LOW") to DrumClass.TOM,    // centroid ~155 Hz
+        (FathomVoice.GLASS to "GLIDE BELL") to DrumClass.TOM,    // centroid ~145 Hz
     )
 
     @Test
@@ -38,8 +64,9 @@ class FathomPresetsTest {
         val failures = mutableListOf<String>()
         for ((voice, expected) in classifiedVoices) {
             for (preset in FathomPresets.forVoice(voice)) {
+                val want = presetOverrides[voice to preset.name] ?: expected
                 val got = Classifier.classify(preset.render()).drumClass
-                if (got != expected) failures += "${voice.name}/${preset.name}: expected $expected, got $got"
+                if (got != want) failures += "${voice.name}/${preset.name}: expected $want, got $got"
             }
         }
         assertTrue(failures.isEmpty(), "presets that don't classify as their own voice:\n${failures.joinToString("\n")}")

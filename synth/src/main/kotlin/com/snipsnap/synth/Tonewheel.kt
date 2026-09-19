@@ -90,7 +90,9 @@ object Tonewheel {
 
         val total = gateSeconds + RELEASE_SECONDS
         val out = FloatArray((total * rate).toInt())
-        val phases = DoubleArray(8)
+        // Seeded per voice so the eight wheels no longer start coherent —
+        // a real generator has no moment where every partial peaks together.
+        val phases = Dsp.phases(8, Dsp.seedFor("TONEWHEEL", voice.name))
         var percPhase = 0.0
         val vibHz = 6.4f
         val vibDepth = Dsp.lin(warble, 0f, 0.011f)

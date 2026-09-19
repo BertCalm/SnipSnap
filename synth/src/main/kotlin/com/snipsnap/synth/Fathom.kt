@@ -150,10 +150,14 @@ object Fathom {
         val out = FloatArray((t60 * 1.4f * rate).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf(rate)
         val env = Dsp.Env(attackSeconds = 0.004f, decay2T60 = t60)
-        var phase = 0.0
-        var phaseLow = 0.0
-        var phase2 = 0.0
-        var phaseMod = 0.0
+        // Seeded per voice: GRIND's saw pair no longer starts locked, and
+        // GLASS's carrier/modulator no longer starts at the same coherent
+        // transient every note.
+        val ph = Dsp.phases(4, Dsp.seedFor("FATHOM", voice.name))
+        var phase = ph[0]
+        var phaseLow = ph[1]
+        var phase2 = ph[2]
+        var phaseMod = ph[3]
         for (i in out.indices) {
             val t = i.toFloat() / rate
             val blip = 2f.pow(sweepSemis * Dsp.envAt(t, sweepT60) / 12f)

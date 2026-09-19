@@ -105,8 +105,10 @@ object Vox {
         val noiseLp = Dsp.OnePole(rate)
         val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = t60) // vocal onsets are soft
 
-        var p1 = 0.0
-        var p2 = 0.0
+        // Seeded per voice so CHOIR's detuned pair no longer opens locked.
+        val ph = Dsp.phases(2, Dsp.seedFor("VOX", voice.name))
+        var p1 = ph[0]
+        var p2 = ph[1]
         val detune = if (voice == VoxVoice.CHOIR) 1.007f else 1.0f
         for (i in out.indices) {
             val t = i.toFloat() / rate

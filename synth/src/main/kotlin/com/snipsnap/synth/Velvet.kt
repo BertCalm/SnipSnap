@@ -121,9 +121,12 @@ object Velvet {
         // rate passed in, not just the oscillators.
         val svf = Dsp.TptSvf(rate)
         val env = Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
-        var p1 = 0.0
-        var p2 = 0.0
-        var pSub = 0.0
+        // Seeded per voice so the detuned pair no longer opens phase-locked
+        // — every attack used to be the same coherent transient.
+        val ph = Dsp.phases(3, Dsp.seedFor("VELVET", voice.name))
+        var p1 = ph[0]
+        var p2 = ph[1]
+        var pSub = ph[2]
         for (i in raw.indices) {
             val t = i.toFloat() / rate
             p1 += base / rate

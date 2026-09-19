@@ -295,8 +295,20 @@ class FathomTest {
         // sidebands FM adds are exactly the kind of high-frequency energy
         // that pushes the classifier off TOM and onto PERC — the same shelf
         // VelvetTest found for harmonic stabs in general.
+        //
+        // GRIND was re-pinned again for the synth-depth phase-0 start-phase
+        // seeding (Task 2, docs/.superpowers/sdd/2026-09-19-synth-depth-phase-0):
+        // phaseLow and phase2 used to both start at 0.0, so their sawtooth
+        // discontinuities landed on the same instant every cycle - one edge
+        // per period, same as a single saw. Independently seeded start phases
+        // put those two edges at different points in the cycle instead,
+        // roughly doubling the edge rate and lifting the measured spectral
+        // centroid from ~80 Hz to ~170 Hz - enough to clear the classifier's
+        // KICK_MAX_CENTROID_HZ (100 Hz) shelf. DEEP's single sine has no
+        // second edge to offset and stays put, which is the tell that this is
+        // the phase change and not a hunt-and-peck fixture edit.
         assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.DEEP)).drumClass)
-        assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
+        assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
         assertEquals(DrumClass.PERC, Classifier.classify(Fathom.render(FathomVoice.GLASS)).drumClass)
     }
 

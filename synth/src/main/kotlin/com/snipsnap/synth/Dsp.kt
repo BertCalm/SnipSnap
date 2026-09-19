@@ -52,6 +52,27 @@ internal object Dsp {
         }
     }
 
+    /**
+     * A stable seed for a render. Derived from the patch's own identity, so
+     * two different voices decorrelate while one voice stays reproducible —
+     * golden files and `--undo` byte-identity need the second half.
+     */
+    fun seedFor(vararg parts: Any): Int {
+        var h = 17
+        for (p in parts) h = h * 31 + p.toString().hashCode()
+        return h
+    }
+
+    /**
+     * [count] start phases in [0, 1), spread from [seed]. Every oscillator in
+     * every engine used to start at exactly 0.0, so detuned pairs began locked
+     * and each attack was the same coherent transient.
+     */
+    fun phases(count: Int, seed: Int): DoubleArray {
+        val random = Random(seed)
+        return DoubleArray(count) { random.nextDouble() }
+    }
+
     /** Standard-normal sample via Box-Muller; `kotlin.random.Random` has no `nextGaussian()`. */
     private fun gaussian(random: Random): Float {
         val u1 = 1f - random.nextFloat() // (0, 1], never 0, so ln() stays finite
