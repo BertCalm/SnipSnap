@@ -305,7 +305,7 @@ before Phase 3 rather than alongside it.
 |---|---|---|
 | 0 | `synth` CLI render verb; macro range audit; phase randomization; detune scaled to note length; velocity→timbre; key tracking; TAPE WOBBLE default for melodic voices; `saturate=true` where a resonant filter is driven; loudness normalize on melodic engines | Yes |
 | 0b | PLUCK fractional delay + oversampling retrofit | Yes |
-| 1 | `Dsp.Modes` with per-mode t60; physical mode tables; MATERIAL morph; STRIKE position; MOTION stage; per-mode stereo; FX-rack stereo audit; TINES rebuilt on the spine | Yes |
+| 1 | **`PadRecipe.VERSION` 1→2 with migration**; `Dsp.Modes` with per-mode t60; physical mode tables; MATERIAL morph; STRIKE position; MOTION stage; per-mode stereo; FX-rack stereo audit; TINES rebuilt on the spine | Yes |
 | 2 | Spine across remaining struck engines, then the sustained group (VOX, FATHOM, TONEWHEEL) as a separate gate | Yes |
 | 3 | STRIKE engine; presets re-authored by ear | Yes |
 
@@ -336,19 +336,40 @@ the plan, not a convenience inside it. It ships first.
 
 ### When the version bumps
 
-`PadRecipe.VERSION` bumps on **the first phase that reaches users after a
-rendered-audio change** — not once at the end. Phase 0 changes rendered audio,
-so if Phase 0 ships, Phase 0 carries the bump and regenerates `testkit/`.
+**Phases 0 and 0b do not bump. Phase 1 bumps, and migrates rather than
+throwing.**
 
-This matters because `PadRecipe.kt:77` throws only on a version *mismatch*: if
-Phase 0 lands while `VERSION` stays at 1, old kits are accepted and silently
-re-rendered as different sounds. A silent change to saved user work is the one
-failure mode here that is not a matter of taste.
+> **Correction to an earlier draft.** This document previously claimed that
+> leaving `VERSION` at 1 through Phase 0 would cause old kits to be "silently
+> re-rendered as different sounds." That is wrong. `KitStore` carries no
+> `render()`, no `Snip` and no WAV handling — it is JSON metadata over audio
+> already baked to disk. **Nothing re-renders a kit on load**, so saved kits
+> sound identical regardless of any DSP change here.
 
-If Phases 0–3 all land before a release, they share one 1→2 bump and one
-regeneration of the 369 `testkit/` WAVs. If a release falls between them, each
-released phase bumps again — the rule above governs, not the convenience of a
-single bump.
+The risk runs the other way. `RecipeReplay.kt:85` parses recipes as
+`runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()`, so
+`PadRecipe.kt:77`'s throw is swallowed. A premature bump does not protect
+anything — it makes every pre-bump recipe evaluate to `null`, and breed,
+replay and remix report "carries no recipe" on pads that visibly have one.
+**Bumping is the silent failure, not the guard against one.**
+
+`PadRecipe.VERSION` is a *schema* version. Phase 0 changes rendering, not
+schema: same fields, same macro names. Phase 1 changes the schema for real —
+STRIKE, MATERIAL, SIZE, DAMP, MOVE and WIDTH are macros a v1 recipe does not
+carry — and that is where 1→2 belongs.
+
+At that bump, `if (version != VERSION) throw` becomes a migration: v1 recipes
+parse, and the new macros fill from each voice's defaults. Old pads stay
+breedable. A format version that rejects rather than migrates is what made
+this decision costly in the first place.
+
+`testkit/` regeneration is independent of the version number — golden files
+regenerate whenever rendered output changes, which is every phase.
+
+The one accepted consequence: after Phase 0, re-rendering an old recipe through
+breed or replay yields audio that differs from the baked WAV beside it. That
+inconsistency is strictly preferable to losing the recipe, and the re-render is
+the improved one.
 
 The existing 392 presets are treated as disposable — they were authored blind
 and never heard, so they have no proven value to protect.
