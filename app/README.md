@@ -227,10 +227,17 @@ logcat tag to grab when something is wrong.
   as a 4-bar RAMP at 100% should walk the cloud through the sample with
   no finger movement at all. PRINT while a modulator runs: the print
   moves the way the surface did. Both slots are in `surface.json`; a kit
-  with no tempo runs them at GROOVE's own default. Back at DEPTH 0% the
-  surface should sound exactly as before the MOD row existed. Five
-  buttons and a readout on one row is the densest line on this screen -
-  check it fits at 390dp.
+  with no tempo runs them at GROOVE's own default. TARGET also lists X
+  and Y, the finger itself: in XY, RANDOM on X at 50% with LATCH on
+  should land the loop on a new pitch every bar with no finger on the
+  pad, and the puck should jump to show where; in MORPH, RANDOM on X
+  (MOD A) and Y (MOD B) at 100% should hop between the corners on the
+  bar - a sequencer without a sequencer; SET A while the puck is being
+  nudged should capture where your finger actually is (touch, hold, SET
+  A, then morph to A: the corner is the finger's sound, not the wobble's).
+  Back at DEPTH 0% the surface should sound exactly as before the MOD row
+  existed. Five buttons and a readout on one row is the densest line on
+  this screen - check it fits at 390dp.
   Then RING, the capture ring as a voice: with nothing listening, a tap
   on RING should name both doors on SHELF (LISTEN · MIC, APP AUDIO) and
   load nothing. LISTEN · MIC on SHELF, talk or clap for a few seconds,

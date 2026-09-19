@@ -164,13 +164,18 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  *
  * MOD A/B are two modulators (`Modulator` in `:shell`): each a SHAPE at a
  * tempo-snapped RATE with a DEPTH, aimed at a TARGET - one of the seven
- * macros or one of GRAIN's knobs - and added to whatever the mode and the
- * finger already say for it, in every mode. They are what lets a sound
- * keep moving while the finger is elsewhere, and what makes a print a
- * performance; the frame loop below evaluates them at screen rate from
- * one origin and the engine glides the steps like any other target. SET
- * A..D captures the finger, not the modulators' nudge - a corner is a
- * place, and the modulator moves around it.
+ * macros, one of GRAIN's knobs, or the finger itself (X, Y) - and added to
+ * whatever the mode and the finger already say for it, in every mode. They
+ * are what lets a sound keep moving while the finger is elsewhere, and
+ * what makes a print a performance; the frame loop below evaluates them at
+ * screen rate from one origin and the engine glides the steps like any
+ * other target. X and Y are applied here rather than in the engine
+ * (`TouchSurface.nudged`): the nudged position is what the engine, the
+ * sample blend and the painted puck all see, so a RANDOM on X in XY lands
+ * the loop on a new pitch every bar and on both axes in MORPH jumps
+ * between corners on the bar, visibly. SET A..D captures the finger, not
+ * the modulators' nudge - a corner is a place, and the modulator moves
+ * around it.
  *
  * A print goes → TAPE (the deck's shelf) or → PAD: the SP-404 move
  * proper, the performance landing on a pad of the kit you are holding
@@ -845,8 +850,15 @@ fun SurfaceScreen(
             }
             if (modOrigin < 0L) modOrigin = now
             val modsOn = settings.mods.any { it.depth > 0f }
+            // The finger's own two targets stay on this side of the bridge
+            // and are applied to `play` below; the engine gets its slice.
+            var nudgeX = 0f
+            var nudgeY = 0f
             if (modsOn || modsWereOn) {
-                engine.setModulation(Modulator.offsets(settings.mods, (now - modOrigin) / 1_000_000_000.0, kitBpm))
+                val offsets = Modulator.offsets(settings.mods, (now - modOrigin) / 1_000_000_000.0, kitBpm)
+                engine.setModulation(Modulator.engineOffsets(offsets))
+                nudgeX = offsets[Modulator.Target.X.ordinal]
+                nudgeY = offsets[Modulator.Target.Y.ordinal]
                 modsWereOn = modsOn
             }
             // Every frame, touch or none: tilt moves on its own, and this
@@ -873,7 +885,10 @@ fun SurfaceScreen(
             // Latched with no finger down: the sound stays where the finger
             // left it, and so does the puck.
             val held = lastHeld
-            val play = if (latched && !target.touching && held != null) held else smooth
+            // X/Y modulators move the finger the engine, the blend and the
+            // puck see. `lastHeld` above was taken before this, so SET A..D
+            // keeps the finger's own place, not where the nudge had it.
+            val play = TouchSurface.nudged(mode, if (latched && !target.touching && held != null) held else smooth, nudgeX, nudgeY)
             painted = play
             // The sample blend reads the same position as the mode's own
             // macros, but independently - see the class doc on PAD2/PAD3/PAD4.
