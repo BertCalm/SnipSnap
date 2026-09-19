@@ -12,12 +12,16 @@ class SynthCommandTest {
     @Test
     fun `renders every preset of a voice to wav`() {
         val dir = File.createTempFile("synthcmd", "").let { it.delete(); it.mkdirs(); it }
-        val out = PrintStream(ByteArrayOutputStream())
-        val code = SynthCommand.run(listOf("TINES", "BELL", "--all", "--out", dir.path), out)
-        assertEquals(0, code)
-        val wavs = dir.listFiles { f -> f.name.endsWith(".wav") }!!
-        assertTrue(wavs.size >= 12, "expected a wav per BELL preset, got ${wavs.size}")
-        assertTrue(wavs.all { it.length() > 1000 }, "every wav should carry audio")
+        try {
+            val out = PrintStream(ByteArrayOutputStream())
+            val code = SynthCommand.run(listOf("TINES", "BELL", "--all", "--out", dir.path), out)
+            assertEquals(0, code)
+            val wavs = dir.listFiles { f -> f.name.endsWith(".wav") }!!
+            assertTrue(wavs.size >= 12, "expected a wav per BELL preset, got ${wavs.size}")
+            assertTrue(wavs.all { it.length() > 1000 }, "every wav should carry audio")
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test
@@ -27,5 +31,9 @@ class SynthCommandTest {
             SynthCommand.run(listOf("THEREMIN", "AIR", "--out", "/tmp"), out)
         }.exceptionOrNull()
         assertTrue(e is CliError, "unknown engine should raise CliError, got $e")
+        assertTrue(
+            e.message?.contains("THEREMIN") == true,
+            "expected the unknown engine name in the refusal, got: ${e.message}",
+        )
     }
 }
