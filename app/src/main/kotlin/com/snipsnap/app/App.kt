@@ -2218,7 +2218,7 @@ fun App(shelf: KitShelf) {
                 if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
                     toast = Copy.SHARE_NOWHERE
                 } else {
-                    toast = Copy.benchPacked(result.corrections, result.kits)
+                    toast = Copy.benchPacked(result.labels, result.ratings, result.kits)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -2963,6 +2963,7 @@ fun App(shelf: KitShelf) {
                             lastCommit = lastCommit,
                             shelf = shelf,
                             teachEnabled = teachEnabled,
+                            workshopOpen = workshopOpen,
                             onToast = { toast = it },
                             onSentToGrid = { newEntry ->
                                 open = newEntry

@@ -384,9 +384,11 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `BenchExport`** — the developer's bench inside the app
-  (`docs/WORKSHOP.md`): the knock that opens it, and SEND TO BENCH, which
-  packs every teach log on the phone into one file for
+- **`Workshop` / `BenchExport` / `CutRatings`** — the developer's bench
+  inside the app (`docs/WORKSHOP.md`): the knock that opens it, CHOP's
+  CONFIRM ALL and cut rating (the teach log learns when the machine was
+  *right*, and which bench settings cut well), and SEND TO BENCH, which
+  packs every log on the phone into one file for
   `reference/calibration/`.
 
 ### `:loop` — ORBIT

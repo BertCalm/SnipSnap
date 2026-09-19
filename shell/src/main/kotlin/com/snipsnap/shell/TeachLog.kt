@@ -17,6 +17,15 @@ import java.io.File
  * the harness replays it through [Classifier.classify]'s feature path —
  * so a correction made on a phone becomes a data point a threshold gets
  * moved by.
+ *
+ * Since the WORKSHOP's CONFIRM ALL (`docs/WORKSHOP.md`) a line can also be
+ * a *confirmation* — a chip the human vouched for — and it is the same
+ * line with [Example.label] equal to [Example.machineSaid]. No extra
+ * field: what the machine said and what the human said is the whole
+ * record either way, and a reader that predates confirmations simply
+ * sees a correction the rules already agree with. The harness counts the
+ * two apart, so the log can finally say how often the machine was *right*
+ * on real material, not only how it was wrong.
  */
 object TeachLog {
 
@@ -27,9 +36,12 @@ object TeachLog {
         val label: DrumClass,
         /** What the machine measured. */
         val features: Features,
-        /** What the machine wrongly said (context for the report). */
+        /** What the machine said at the time — wrongly, for a correction; the same as [label], for a confirmation. */
         val machineSaid: DrumClass,
-    )
+    ) {
+        /** A chip the human vouched for rather than corrected: the label is the machine's own verdict. */
+        val confirmation: Boolean get() = label == machineSaid
+    }
 
     /** One line per example; append-friendly. */
     fun toJsonl(examples: List<Example>): String =

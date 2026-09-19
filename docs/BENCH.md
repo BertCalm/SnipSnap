@@ -177,6 +177,12 @@ Open a kit, tap SURFACE.
   should drop into `reference/calibration/` and show up in
   `TeachLogTest`'s report. First time a phone's corrections reach the
   harness. [X4.5]
+- With the WORKSHOP open, CHOP shows the BENCH row above the slices.
+  Correct one chip, CONFIRM ALL (the toast counts the rest), tap a star,
+  SEND TO PADS, then SEND TO BENCH: `TeachLogTest` should now print
+  corrections and confirmations apart, and `CutRatingsTest` one line
+  naming the bench's settings. With TEACH off the row should be dim and
+  its note name the switch. [X4.6]
 
 →
 

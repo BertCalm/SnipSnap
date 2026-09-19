@@ -133,10 +133,10 @@ fun PropertiesScreen(
         }
         TapeText(Copy.TEACH_CONSENT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText(
-            "WITH IT ON, EVERY CHIP YOU CORRECT ON CHOP IS LOGGED AS A FEATURE VECTOR AND A LABEL IN THAT KIT'S FOLDER.",
+            "WITH IT ON, EVERY CHIP YOU CORRECT OR CONFIRM ON CHOP IS LOGGED AS A FEATURE VECTOR AND A LABEL IN THAT KIT'S FOLDER, AND A STAR YOU GIVE THE CUTS AS A RATING WITH THE BENCH'S SETTINGS.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
-            maxLines = 3,
+            maxLines = 4,
         )
 
         // ---- What the app already knew and never said (finding 23) ----

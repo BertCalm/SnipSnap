@@ -686,19 +686,26 @@ object Copy {
      * [TEACH_CONSENT] true — TEACH itself never sends; this button, pressed
      * on purpose, is the only way a log leaves.
      */
-    const val SEND_TO_BENCH_NOTE = "EVERY CORRECTION LOGGED ON THIS PHONE, MERGED INTO ONE FILE FOR THE CALIBRATION FOLDER. FEATURES AND LABELS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
-    /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedy is a correction. */
-    const val BENCH_EMPTY = "NOTHING TO SEND. NO CORRECTION IS LOGGED YET. CORRECT A CHIP ON CHOP FIRST."
+    const val SEND_TO_BENCH_NOTE = "EVERY LABEL AND CUT RATING LOGGED ON THIS PHONE, MERGED INTO ONE FILE FOR THE CALIBRATION FOLDER. FEATURES, LABELS AND RATINGS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
+    /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedy is a chip. */
+    const val BENCH_EMPTY = "NOTHING TO SEND. NOTHING IS LOGGED YET. CORRECT OR CONFIRM A CHIP ON CHOP FIRST."
     /** SEND TO BENCH with nothing logged and TEACH off: the reason before the remedy. */
-    const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NO CORRECTION IS LOGGED. TURN IT ON ABOVE."
+    const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NOTHING IS LOGGED. TURN IT ON ABOVE."
     /**
-     * SEND TO BENCH: the zip is packed and the chooser is up. Ends on the
-     * same "PICK WHERE IT GOES." as [backedUp] and [kitPacked] because it is
-     * the same moment, and never says SENT: `ShareOut.send` only reports
-     * that the chooser opened.
+     * SEND TO BENCH: the zip is packed and the chooser is up. Counts the
+     * labels (corrections and confirmations alike) and the cut ratings,
+     * naming only what the file holds. Ends on the same "PICK WHERE IT
+     * GOES." as [backedUp] and [kitPacked] because it is the same moment,
+     * and never says SENT: `ShareOut.send` only reports that the chooser
+     * opened.
      */
-    fun benchPacked(corrections: Int, kits: Int): String =
-        "${countOf(corrections, "CORRECTION", "CORRECTIONS")} FROM ${countOf(kits, "KIT", "KITS")} ON ONE FILE. PICK WHERE IT GOES."
+    fun benchPacked(labels: Int, ratings: Int, kits: Int): String {
+        val what = listOfNotNull(
+            countOf(labels, "LABEL", "LABELS").takeIf { labels > 0 },
+            countOf(ratings, "CUT RATING", "CUT RATINGS").takeIf { ratings > 0 },
+        ).joinToString(" AND ")
+        return "$what FROM ${countOf(kits, "KIT", "KITS")} ON ONE FILE. PICK WHERE IT GOES."
+    }
     /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
     const val BENCH_FAILED = "SEND TO BENCH FAILED. TRY AGAIN."
 
@@ -1364,6 +1371,17 @@ object Copy {
     fun chopNoSplit(n: Int): String = "NO SECOND HIT INSIDE SLICE $n. NOTHING TO SPLIT."
     /** The CUT bench's readout for the count while a chop is running. */
     const val CHOP_BENCH_BUSY = "CUTTING…"
+
+    // ---- CHOP's BENCH row: CONFIRM ALL and the cut rating (docs/WORKSHOP.md) ----
+    /** Under the row with TEACH on: what the two controls do, and when it is written. */
+    const val BENCH_ROW_NOTE = "CONFIRM ALL VOUCHES FOR EVERY CHIP YOU LEFT ALONE. THE STARS RATE THE CUTS. BOTH LOG WHEN YOU SEND."
+    /** Under the row with TEACH off: why the row is dim, and the switch that lights it. */
+    const val BENCH_ROW_TEACH_OFF = "TEACH THE MACHINE IS OFF, SO NOTHING HERE IS LOGGED. TURN IT ON IN SETUP."
+    /** CONFIRM ALL landed: [n] chips the machine named and the human left alone are the human's word now. */
+    fun confirmedAll(n: Int): String =
+        "${countOf(n, "CHIP", "CHIPS")} CONFIRMED: THE MACHINE HAD ${if (n == 1) "IT" else "THEM"} RIGHT. LOGGED WHEN YOU SEND."
+    /** A star tapped: the cuts rated [stars] of [CutRatings.STARS], to be written with the bench's settings. */
+    fun cutsRated(stars: Int): String = "CUTS RATED $stars OF ${CutRatings.STARS}. LOGGED WHEN YOU SEND, WITH THE BENCH'S SETTINGS."
 
     // ---- CHOP round two: SNAP and FOLD DOUBLES (docs/CHOP_CONTROLS.md §8) ----
     /**

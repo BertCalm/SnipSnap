@@ -1,9 +1,9 @@
 # WORKSHOP — the developer's bench, inside the app
 
-*The spec for the admin mode. Status: the door and its first tool, SEND TO
-BENCH, are built; the rest is the list at the end, in value order. One
-tester today — the phone's owner — and the decisions below are shaped by
-that.*
+*The spec for the admin mode. Status: the door, its first tool SEND TO
+BENCH, and WS2 — CONFIRM ALL and the cut rating — are built; the rest is
+the list at the end, in value order. One tester today — the phone's owner
+— and the decisions below are shaped by that.*
 
 ## Why this exists
 
@@ -100,36 +100,43 @@ puts on its own:
   through `TeachLog` so a torn last line from a killed append is dropped
   on the way out. It is byte-for-byte the shape the harness reads, so it
   drops straight into `reference/calibration/` with no editing.
-- `manifest.txt` — the stamp, the total, one row per kit with how many
-  corrections it gave (a binned kit shows as `.bin/<name>-<stamp>`), and
-  the two lines a person at a desk needs: where to drop the log and what
-  to run. Plain prose in its own case; it is read off a laptop, never off
-  the phone.
+- `cuts.jsonl` — every cut rating (WS2, below) merged the same way, when
+  any exist; a file that would be empty is left out rather than written
+  empty.
+- `manifest.txt` — the stamp, the totals (labels split into corrections
+  and confirmations, and ratings), one row per kit with its share (a
+  binned kit shows as `.bin/<name>-<stamp>`), and the two lines a person
+  at a desk needs: where to drop the files and what to run. Plain prose
+  in its own case; it is read off a laptop, never off the phone.
 
 Two packs of an unchanged shelf are the same bytes (fixed entry time,
 fixed order — `XpnPackager`'s trick), so a re-send is a re-send and not a
 new file to diff.
 
-**At the desk.** Unzip, copy `overrides.jsonl` into
+**At the desk.** Unzip, copy `overrides.jsonl` (and `cuts.jsonl`) into
 `reference/calibration/`, run
 
 ```
-./gradlew :shell:test --tests '*TeachLogTest*'
+./gradlew :shell:test --tests '*TeachLogTest*' --tests '*CutRatingsTest*'
 ```
 
-and read what it prints: every correction the current rules still get
-wrong, with the feature numbers a threshold gets moved by, and a line
-counting how many corrections the rules now agree with. The folder's own
-README says the rest: a threshold moved because of this corpus is moved
-in `Classifier` with a comment naming the line that motivated it.
+and read what they print: every label the current rules still disagree
+with, with the feature numbers a threshold gets moved by; a line counting
+corrections and confirmations apart and how many of both the rules now
+agree with — which, with confirmations in the file, is the rules'
+accuracy on real material; and the cut ratings summed by the bench's
+settings, best first. The folder's own README says the rest: a threshold
+moved because of this corpus is moved in `Classifier` with a comment
+naming the line that motivated it.
 
 **Refusals, in words.** Nothing logged and TEACH on: *NO CORRECTION IS
 LOGGED YET. CORRECT A CHIP ON CHOP FIRST.* Nothing logged and TEACH off:
 *TEACH THE MACHINE IS OFF, SO NO CORRECTION IS LOGGED. TURN IT ON ABOVE.*
 No app on the phone takes a zip: the same NOWHERE TO SEND IT BACKUP says.
-The landing toast counts what is in the file — *3 CORRECTIONS FROM 2 KITS
-ON ONE FILE. PICK WHERE IT GOES.* — and never says SENT, because the
-chooser opening is not the file leaving.
+The landing toast counts what is in the file — *14 LABELS AND 3 CUT
+RATINGS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.*, naming only what
+the file holds — and never says SENT, because the chooser opening is not
+the file leaving.
 
 **The consent line stays true.** SETUP's consent row promises *FEATURES
 ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE.* Both halves hold: the zip
@@ -143,9 +150,7 @@ is never quietly widened.
 **What it deliberately does not do.** It does not upload anywhere, ever;
 the chooser is the whole of its reach. It does not include per-kit raw
 copies of the logs — provenance is in the manifest, and a second copy of
-the same lines is a second thing to keep in step. It does not carry
-confirmations: a chip left alone on CHOP is not logged today, which is the
-first gap on the list below.
+the same lines is a second thing to keep in step.
 
 Code: `BenchExport` in `:shell` (`gather` walks, `pack` writes, `manifest`
 says), held by `BenchExportTest` — which also checks that the folder and
@@ -153,6 +158,77 @@ the harness the manifest names actually exist, so the instruction inside
 the zip cannot go stale without a test saying so. The button and the
 `sendToBench` action mirror BACKUP's shape in `PropertiesScreen` and
 `App.kt`.
+
+## CONFIRM ALL and the cut rating — built
+
+WS2. Before it, the teach log held errors only: a chip the human
+corrected was a line, a chip the human left alone was nothing, so the
+file could count misses and never accuracy. And nothing anywhere measured
+the *cuts* — where the detector found the hits and how many — even though
+the CUT bench's every knob (HITS, EAR, CUT, SNAP) moves exactly that.
+
+**In the hand.** With the WORKSHOP open, CHOP grows one row above the
+slices, under the CLASSIC / FOLD / MELODIC row: **CONFIRM ALL**, and five
+stars. A note under the row says what they do and when they are written.
+
+- **CONFIRM ALL** vouches for every chip the classifier named and the
+  human left alone, in one tap. It presses in and reads SELECTED, the
+  toast counts what it vouched for — *12 CHIPS CONFIRMED: THE MACHINE HAD
+  THEM RIGHT. LOGGED WHEN YOU SEND.* — and it stays pressed until the
+  chop changes. It refuses, dim, when there is nothing left alone to
+  vouch for, and when TEACH THE MACHINE is off.
+- **The stars** rate the cuts, one to five. *CUTS RATED 4 OF 5. LOGGED
+  WHEN YOU SEND, WITH THE BENCH'S SETTINGS.* A second star replaces the
+  first; a re-chop or a MERGE or SPLIT clears it, because those are
+  different cuts.
+- **Both write at SEND**, beside the corrections, into the kit the chop
+  became — SEND TO PADS and ONTO alike. A chop confirmed and never sent
+  logs nothing: a line is something a human decided *and kept*.
+- **With TEACH THE MACHINE off** the whole row is dim and the note names
+  the switch. The consent on SETUP now says what ON logs in full: the
+  chips you correct *or confirm*, and the star you give the cuts.
+
+**A confirmation is the same line.** `TeachLog` did not grow a field: a
+confirmation is an example whose label *is* the machine's verdict
+(`Example.confirmation`), so every reader that predates it still reads
+the file, and the harness counts the two apart. The picker's own
+agreement — choosing the class the machine already chose, which the model
+already reads as agreement rather than correction — is now logged the
+same way without CONFIRM ALL: a human decided it.
+
+**What is never confirmed.** A ghost's LOOP and a rung's LOOP are given
+by construction, not by the classifier. CONFIRM ALL skips them, because
+vouching for a verdict the classifier never gave would teach it a lie.
+
+**The rating line** (`CutRatings`, `cuts.jsonl` beside `overrides.jsonl`):
+the stars; the bench's settings that produced the cuts — mode, HITS or
+parts, EAR, CUT, SNAP; the slice count; and what it took to get there —
+how many chops ran on the source before this one (every RE-CHOP, AUTO,
+EAR, CUT, SNAP and HITS step counts a try), how many cuts were then moved
+by hand (MERGE and SPLIT count themselves; a re-chop starts that count
+over), how many chips were corrected and how many confirmed; the source's
+length and, when the bench trusts it, its tempo. No audio and no
+features: a rating is a verdict on a configuration, and the configuration
+is the whole of the record.
+
+**At the desk**, `CutRatingsTest` sums the file by setting, best first:
+
+```
+cut ratings: 5 chops rated, 3.6 stars on average
+  4.0 stars  n=3   HITS ×16 · FINE · CUT ON · SNAP OFF     tries 1.3  hand edits 0.7  corrected 1.0 of 14.0 chips
+  3.0 stars  n=2   GRID ×16                                tries 0.0  hand edits 2.0  corrected 3.0 of 16.0 chips
+```
+
+A setting that rates well after many tries says the *defaults* are
+wrong even when the destination is right; one that rates well with hand
+edits says the detector is close and the cut placement is not. Those are
+the two numbers `Transients.Config` and `Ear` get moved by.
+
+Code: `ChopReviewModel.confirmAll` / `labeledConfirmations` /
+`teachHarvest` and the `tries` / `merges` / `splits` record, `CutRatings`,
+the copy in `Copy`, held by `CutRatingsTest`; the row and the two SEND
+sites in `ChopScreen`, the switch's fuller consent line in
+`PropertiesScreen`.
 
 ## The list — next tools, in value order
 
@@ -165,15 +241,14 @@ it.
 | # | Tool | Size | What it answers | Exit test |
 |---|---|---|---|---|
 | WS1 | ✓ **SEND TO BENCH** — above | S | gets the teach log to the harness | a phone's corrections show up in `TeachLogTest`'s report |
-| WS2 | **CONFIRM ALL on CHOP** — with TEACH on, one tap logs every chip the user *left alone* as a confirmed example; plus a **CHOP RATING** row (1–5) logged with the bench's own settings (hits, ear, cut, grid, merges, splits) | S–M | today the log holds errors only, so it can measure misses but never accuracy; nothing at all measures the *cuts* | a confirmed-and-corrected chop replays through the feature path with the right accuracy; a rating line names the detector config that earned it |
+| WS2 | ✓ **CONFIRM ALL and the cut rating** — above | S–M | the log held errors only, so it could measure misses but never accuracy; nothing measured the *cuts* | a confirmed-and-corrected chop replays through the feature path with its accuracy counted; a rating line names the setting that earned it |
 | WS3 | **LABEL THIS HIT** on the pad sheet — writes the pad's WAV as `<class>_<kit>_<pad>.wav` into a `Calibration/` folder beside the kits, and SEND TO BENCH packs that folder too, **behind its own button and its own note**, because this one carries audio | S | `reference/calibration/` has zero real captures; BENCH A5 has asked for a dozen since the corpus was named | a labelled hit from the phone lands in `CalibrationCorpusTest`'s confusion matrix |
 | WS4 | **BENCH NOTES** — a free-text note stamped with the screen, the open kit and the time, packed with the zip | S | `docs/BENCH.md` is answered on a laptop from memory; the phone knows the context the note is about | a note taken on PLAY names PLAY, the kit, and the time, in the manifest |
 | WS5 | **SAVE AS PRESET on SYNTH** — a user preset store (`presets.json` beside the kits), listed under the factory rows; promotion into the Kotlin roster stays a code change guarded by the spread, blocklist and identity tests | M | fast authoring on the phone, honest shipping on the desk — and this is the one that is really a product feature, so it should land *outside* the workshop once it works | a saved preset survives a restart and re-renders the same bytes; a promoted one passes `ThumpPresetsTest` unchanged |
 
-WS2 before WS3 because it costs nothing in rights and doubles the value of
-every line already logged; WS3 before WS4 because a dozen real kicks is
-the single most valuable file this repo could receive; WS5 last because it
-is the one that should not stay here.
+WS3 before WS4 because a dozen real kicks is the single most valuable
+file this repo could receive; WS5 last because it is the one that should
+not stay here.
 
 ## Decisions
 
@@ -194,13 +269,17 @@ is the one that should not stay here.
   would close that, and is not worth doing until WS2 makes the log worth
   more.
 - **The knock is on SETUP's title**, not HELP's, for the reason above.
+- **Confirmations are explicit.** A chip left alone is logged only when
+  CONFIRM ALL is pressed (or when the picker was used to agree), never by
+  default whenever TEACH is on. Default logging would have made the
+  accuracy number arrive with no extra gesture, but every line in the log
+  is something a human decided, and that has to stay literally true or
+  the number it produces is worth less than the gesture it saved.
+- **Both write at SEND**, not at the tap, so the log is tied to the kit
+  the chop became and a chop that was abandoned logs nothing.
 
 ## Open
 
-- Whether WS2's confirmations should be logged by default whenever TEACH
-  is on, or only on the explicit tap. Default logging makes the accuracy
-  number honest with no extra gesture; the explicit tap keeps "every line
-  is something a human decided" literally true. Leaning explicit.
 - Where WS4's notes should land at the desk — appended to
   `docs/BENCH.md`'s `→` lines by hand, or kept as their own file beside
   the corpus. Undecided until there are notes.

@@ -70,6 +70,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.CutRatings
 import com.snipsnap.shell.Hum
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Ladder
@@ -103,6 +104,8 @@ fun ChopScreen(
     lastCommit: TapeCommit?,
     shelf: KitShelf,
     teachEnabled: Boolean,
+    /** The WORKSHOP is open (docs/WORKSHOP.md, WS2): the BENCH row — CONFIRM ALL and the stars — shows above the slices. */
+    workshopOpen: Boolean,
     onToast: (String) -> Unit,
     onSentToGrid: (KitShelf.Entry) -> Unit,
     /** ONTO <kit> · BANK X landed: the kit as it is now, and the bank (0-based) to open KIT on. */
@@ -208,6 +211,7 @@ fun ChopScreen(
         sourceFromKit = lastCommit?.sourceFile != file,
         initialModel = loadedModel,
         teachEnabled = teachEnabled,
+        workshopOpen = workshopOpen,
         onToast = onToast,
         onSentToGrid = onSentToGrid,
         onLandedOnto = onLandedOnto,
@@ -362,6 +366,7 @@ private fun ChopContent(
     sourceFromKit: Boolean,
     initialModel: ChopReviewModel,
     teachEnabled: Boolean,
+    workshopOpen: Boolean,
     onToast: (String) -> Unit,
     onSentToGrid: (KitShelf.Entry) -> Unit,
     onLandedOnto: (KitShelf.Entry, Int) -> Unit,
@@ -383,6 +388,12 @@ private fun ChopContent(
      * the row you were looking at off screen.
      */
     var pickerFor by remember(model) { mutableStateOf<Int?>(null) }
+    // RATE THE CUTS (docs/WORKSHOP.md, WS2): the star tapped for this chop,
+    // or none. Keyed on `model` like `pickerFor`: a re-chop or a hand edit
+    // is different cuts, and a rating of the old ones must not ride onto
+    // them - the same reason `ChopReviewModel.confirmed` does not follow a
+    // re-chop either.
+    var stars by remember(model) { mutableStateOf<Int?>(null) }
     // Row overrides mutate outside Compose's snapshot system (see above);
     // this read is what makes the whole function's composition scope —
     // slice list included — depend on `revision`, so a chip mutation
@@ -929,6 +940,50 @@ private fun ChopContent(
             }
         }
 
+        // The BENCH row (docs/WORKSHOP.md, WS2): CONFIRM ALL and the stars,
+        // shown only while the WORKSHOP is open. Both write at SEND, beside
+        // the corrections, and only with TEACH on - with it off the row is
+        // dim and its note names the switch, rather than tapping into
+        // nothing. Every refusal here goes through `enabled`, the screen's
+        // own rule for a control that can refuse.
+        if (workshopOpen) {
+            val benchBusy = rechopBusy || sendBusy || humming
+            TapeText(
+                if (teachEnabled) Copy.BENCH_ROW_NOTE else Copy.BENCH_ROW_TEACH_OFF,
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 3,
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // `active` once pressed: the pressed bevel and SELECTED are
+                // the record that this chop is vouched for, until the chop
+                // changes (`confirmed` lives on the model, and a re-chop or
+                // a hand edit is a new one). `revision` is what recomposes
+                // the row after the model's own flag flips.
+                SegmentButton(
+                    "CONFIRM ALL",
+                    active = model.confirmed,
+                    modifier = Modifier.weight(2f),
+                    enabled = teachEnabled && !benchBusy && !model.confirmed && model.confirmable() > 0,
+                ) {
+                    val n = model.confirmAll()
+                    revision++
+                    onToast(Copy.confirmedAll(n))
+                }
+                for (star in 1..CutRatings.STARS) {
+                    SegmentButton(
+                        "$star",
+                        active = stars == star,
+                        modifier = Modifier.weight(1f),
+                        enabled = teachEnabled && !benchBusy,
+                    ) {
+                        stars = star
+                        onToast(Copy.cutsRated(star))
+                    }
+                }
+            }
+        }
+
         LazyColumn(
             Modifier
                 .weight(1f)
@@ -1085,6 +1140,7 @@ private fun ChopContent(
                     val isMelodic = melodic
                     val isFold = fold
                     val planned = plannedName
+                    val rated = stars
                     scope.launch {
                         try {
                             val send = withContext(Dispatchers.IO) {
@@ -1107,10 +1163,15 @@ private fun ChopContent(
                                 val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
                                 if (teachEnabled) {
-                                    val examples = current.labeledOverrides()
+                                    // The harvest (docs/WORKSHOP.md, WS2): the
+                                    // corrections, the confirmations, and the
+                                    // cut rating if a star was tapped - all
+                                    // into the kit this chop became.
+                                    val examples = current.teachHarvest()
                                     if (examples.isNotEmpty()) {
                                         TeachLog.append(File(kitDir, TeachLog.FILE_NAME), examples)
                                     }
+                                    rated?.let { CutRatings.append(File(kitDir, CutRatings.FILE_NAME), listOf(CutRatings.of(current, it))) }
                                 }
                                 // THE BEAT YOU SANG (docs/CHOP_CONTROLS.md §10): a
                                 // hummed chop's own timing goes on as the new
@@ -1176,6 +1237,7 @@ private fun ChopContent(
                 val isMelodic = melodic
                 val isFold = fold
                 val target = entry
+                val rated = stars
                 scope.launch {
                     try {
                         val send = withContext(Dispatchers.IO) {
@@ -1193,10 +1255,13 @@ private fun ChopContent(
                                 val slots = m.landArranged(send.arranged, landBank)
                                 m.save()
                                 if (teachEnabled) {
-                                    val examples = current.labeledOverrides()
+                                    // The same harvest SEND TO PADS logs, into
+                                    // the kit the slices landed on.
+                                    val examples = current.teachHarvest()
                                     if (examples.isNotEmpty()) {
                                         TeachLog.append(File(target.dir, TeachLog.FILE_NAME), examples)
                                     }
+                                    rated?.let { CutRatings.append(File(target.dir, CutRatings.FILE_NAME), listOf(CutRatings.of(current, it))) }
                                 }
                                 KitShelf.Entry(target.dir, m.kit) to slots
                             }
