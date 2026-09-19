@@ -2385,4 +2385,71 @@ class ConventionTest {
         )
     }
 
+
+    // ==================== Law: every pad sheet door retires its own hint ====================
+
+    /**
+     * PAD SHEET has three doors — KIT's long press, DOUBLES' `GO`, and the
+     * RE-TRIM return — and its discovery hint was retired inside exactly
+     * one of them (J16). A user who found the sheet either of the other
+     * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
+     * open, forever.
+     *
+     * `Copy.PAD_SHEET_HINT`'s own KDoc says opening the sheet is "the only
+     * event that proves they found it". That was true of the intent and
+     * false of the code, which is the shape this wave keeps finding: a
+     * comment asserting a behaviour the code does not have.
+     *
+     * `openPadSheet` is the one door now. Opening is assigning a slot;
+     * closing is assigning null, and closing has nothing to retire — so
+     * this refuses a non-null assignment made anywhere else.
+     */
+    @Test
+    fun `every pad sheet door retires its own hint`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = codeOnly(app.readText(Charsets.UTF_8))
+
+        assertTrue(
+            "fun openPadSheet(" in src,
+            "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
+                "function, or the hint gets retired by some of them and not others — see J16.",
+        )
+        val opener = src.substringAfter("fun openPadSheet(")
+        assertTrue(
+            "PAD_SHEET_FOUND" in opener.take(400),
+            "`openPadSheet` no longer retires the hint (PAD_SHEET_FOUND). It is the one place that does; " +
+                "without it every door nags forever.",
+        )
+
+        // Assigning a slot is opening. Assigning null is closing, and a
+        // close has no hint to retire.
+        //
+        // The assigned token is CAPTURED and compared, not asserted around
+        // with a lookahead: `padSheetSlot\s*=\s*(?!null)` reads as "an
+        // assignment of something other than null" and is not one. `\s*`
+        // backtracks to zero width, so the lookahead runs against the
+        // space before `null`, is satisfied that a space is not `null`,
+        // and the pattern matches every close in the file. It flagged all
+        // ten of them on correct code.
+        val outside = src.substringBefore("fun openPadSheet(") + opener.substringAfter("}", "")
+        val assigned = Regex("""padSheetSlot\s*=\s*([A-Za-z0-9_.]+)""")
+            .findAll(outside)
+            .map { it.groupValues[1] }
+            .toList()
+        assertTrue(
+            assigned.isNotEmpty(),
+            "found no `padSheetSlot =` assignments at all outside openPadSheet — App.kt must still close " +
+                "the sheet somewhere, so this scan is broken rather than the code being clean.",
+        )
+        val bad = assigned.filterNot { it == "null" }
+        assertEquals(
+            emptyList(),
+            bad,
+            "App.kt opens PAD SHEET by assigning `padSheetSlot` directly, outside `openPadSheet`: $bad. " +
+                "That is how J16 happened — the hint is retired in one place and the other doors walk " +
+                "past it. Call openPadSheet(slot) instead.",
+        )
+    }
+
 }
