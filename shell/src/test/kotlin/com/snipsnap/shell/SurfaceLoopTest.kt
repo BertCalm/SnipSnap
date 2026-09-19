@@ -146,17 +146,23 @@ class SurfaceLoopTest {
         assertNull(armed.recordingBars)
         assertFalse(loop.recording)
         near(0.9f, armed.play.x)
-        // The touch-down starts it; the old gesture is muted from this frame - the hand plays where it is.
+        // The touch-down starts it. The modulators are read before the
+        // recorder starts, as the screen's loop always did, so this one
+        // frame still hears the old gesture (0.2 + 0.4); what is recorded
+        // is the hand, so the recording does not.
         val down = loop.step(inputs(0.5, target = finger(0.2f, 0.3f), mods = plays, gesture = old, recordBars = 1))
         assertTrue(down.recordingStarted)
         assertTrue(loop.recording)
         near(0f, assertNotNull(down.recordingBars))
-        near(0.2f, down.play.x, eps = 1e-6f)
-        // Half a bar in (1 s at 120 BPM), the finger has moved; the readout counts bars.
+        near(0.6f, down.play.x)
+        // From the next frame the old gesture is muted: the hand plays
+        // where it is. Half a bar in (1 s at 120 BPM) the finger has
+        // moved, and the readout counts bars.
         val half = loop.step(inputs(1.5, target = finger(0.7f, 0.3f), mods = plays, gesture = old))
         assertFalse(half.recordingStarted)
         near(0.5f, assertNotNull(half.recordingBars))
         assertNull(half.keptGesture)
+        near(0.7f, half.play.x, eps = 1e-6f)
         // A whole bar: kept, over.
         val done = loop.step(inputs(2.5, target = finger(0.7f, 0.3f), mods = plays, gesture = old))
         val kept = assertNotNull(done.keptGesture)
