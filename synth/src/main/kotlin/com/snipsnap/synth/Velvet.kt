@@ -102,7 +102,12 @@ object Velvet {
 
         // FAT spreads the unison pair; a fixed sub square an octave down
         // grounds the stack. Detune is in cents-ish territory, never soup.
-        val detune = Dsp.lin(fat, 1.0005f, 1.012f)
+        // But cents-ish is a static comb tint if the beat period outlasts
+        // the note - width is supposed to move, so the floor is scaled to
+        // this note's own buffer length (t60 * 1.4, same span as `raw`
+        // below), and the macro's own ask wins whenever it's already wider.
+        val asked = Dsp.lin(fat, 1.0005f, 1.012f)
+        val detune = maxOf(asked, Dsp.minBeatDetune(baseHz = base, seconds = t60 * 1.4f))
         val subGain = Dsp.lin(fat, 0.15f, 0.45f)
 
         // SQUEEZE is resonance and filter-envelope amount together: at the

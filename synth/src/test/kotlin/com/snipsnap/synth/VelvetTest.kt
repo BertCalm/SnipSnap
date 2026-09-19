@@ -185,6 +185,20 @@ class VelvetTest {
     }
 
     @Test
+    fun `the detuned pair completes at least one beat cycle in the buffer`() {
+        // 82.4 Hz over a 0.47 s note: the old 1.00395 gave a 3.07 s beat period.
+        val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 0.47f)
+        val beatHz = 82.4f * (d - 1f)
+        assertTrue(beatHz * 0.47f >= 1f, "expected >=1 beat cycle in the note, got ${beatHz * 0.47f}")
+    }
+
+    @Test
+    fun `a long note does not get forced wider than asked`() {
+        val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 8f)
+        assertTrue(d < 1.005f, "a long note needs no detune floor, got $d")
+    }
+
+    @Test
     fun `DECAY lengthens`() {
         val short = FeatureExtractor.extract(Velvet.render(VelvetVoice.SQUELCH, mapOf("DECAY" to 0.1f)))
         val long = FeatureExtractor.extract(Velvet.render(VelvetVoice.SQUELCH, mapOf("DECAY" to 0.9f)))

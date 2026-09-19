@@ -37,6 +37,17 @@ internal object Dsp {
         (lo * exp(ln((hi / lo).toDouble()) * macro.coerceIn(0f, 1f))).toFloat()
 
     /**
+     * The smallest detune ratio whose beating completes [cycles] cycles inside
+     * a note of [seconds]. Two oscillators a ratio r apart beat at
+     * baseHz*(r-1); below this floor a "FAT" macro is a static comb tint
+     * rather than movement, which is what it was.
+     */
+    fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 1.5f): Float {
+        if (baseHz <= 0f || seconds <= 0f) return 1f
+        return 1f + (cycles / seconds) / baseHz
+    }
+
+    /**
      * SCRAMBLE near a seed: perturb each of [seed]'s macros by a gaussian
      * scaled by [temperature], clamped back to 0..1. `temperature = 0`
      * returns [seed] untouched; `temperature = 1` discards it and rolls
