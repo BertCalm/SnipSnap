@@ -222,7 +222,11 @@ class SurfaceStoreTest {
         val r = Reading(0.2f, 0.9f, 0.6f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
         val captured = Corner.from(Mode.GRAIN, r, tilt = 0.8f, corners = Corner.DEFAULTS)
         assertEquals(Corner(0.5f, 1f, 0.4f, 0f), captured)
-        assertEquals(Corner.CLEAN, Corner.from(Mode.GRAIN, r, tilt = 0.5f, corners = Corner.DEFAULTS))
+        // The roll is XY's half-scaled resonance, so a flat phone (0.5)
+        // reads 0.25 here exactly as it does in XY - it is MORPH's *nudge*
+        // where 0.5 is the no-op, not this. Only no roll at all is CLEAN.
+        assertEquals(Corner(0.5f, 1f, 0.25f, 0f), Corner.from(Mode.GRAIN, r, tilt = 0.5f, corners = Corner.DEFAULTS))
+        assertEquals(Corner.CLEAN, Corner.from(Mode.GRAIN, r, tilt = 0f, corners = Corner.DEFAULTS))
     }
 
     @Test
