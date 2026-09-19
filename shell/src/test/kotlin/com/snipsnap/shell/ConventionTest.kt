@@ -1245,13 +1245,16 @@ class ConventionTest {
      * `Copy` and `MenuRow` live in different modules and neither reads the
      * other.
      *
-     * So this reads `MENU_ITEMS` out of `Chrome.kt` by source, the same way
-     * the roster law above reads prose, and holds every stage to it.
+     * So this reads the tab labels out of `Chrome.kt` by source, the same
+     * way the roster law above reads prose, and holds every stage to it.
+     * It matches `MenuItem("...")` rather than any one declaration, which
+     * is why J12 could regroup the row into `MENU_GROUPS` underneath it
+     * without this law noticing or needing to be told.
      */
     @Test
     fun `the first-run loop names real menu tabs`() {
         val chrome = File("../app/src/main/kotlin/com/snipsnap/app/ui/Chrome.kt")
-        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read MENU_ITEMS from")
+        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read the menu tabs from")
         val labels = Regex("""MenuItem\("([^"]+)"""")
             .findAll(chrome.readText(Charsets.UTF_8))
             .map { it.groupValues[1] }

@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -95,6 +96,28 @@ fun Modifier.sunkenField(
 ): Modifier = this
     .background(scheme.field.tape, RoundedCornerShape(radius))
     .border(1.dp, bevelBrush(scheme, raised = false), RoundedCornerShape(radius))
+
+/**
+ * The rule a Win9x toolbar draws between two groups of buttons: a 1dp
+ * shadow line with a 1dp highlight to its right, so the same top-left
+ * light that raises a button reads this as a notch cut into the strip
+ * rather than a bar laid on top of it. Dark-then-light is [bevelBrush]'s
+ * own sunken order, for the same reason.
+ *
+ * Two flat rects rather than a two-stop gradient across 2dp: a gradient
+ * would interpolate, and what makes a groove read at this width is that
+ * the two lines are flat and adjacent.
+ *
+ * It draws behind, and emits no semantics of its own - grouping is a
+ * thing the eye does with a strip it can see all of at once, and a
+ * screen reader walking the row tab by tab is not helped by being told
+ * about a line between two of them.
+ */
+fun Modifier.etchedGroove(scheme: Scheme): Modifier = this.drawBehind {
+    val line = 1.dp.toPx()
+    drawRect(scheme.grayDark.tape, topLeft = Offset(0f, 0f), size = Size(line, size.height))
+    drawRect(scheme.grayHi.tape, topLeft = Offset(line, 0f), size = Size(line, size.height))
+}
 
 /**
  * The dark surface where sound lives, scanlines included: a 1px line of
