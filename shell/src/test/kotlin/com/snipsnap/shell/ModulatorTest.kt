@@ -85,8 +85,14 @@ class ModulatorTest {
         val position = Slot(Target.POSITION, Shape.RAMP, 4, depth = 1f)
         val at = Modulator.offsets(listOf(cutoff, position), 0.5, 120f)
         near(Modulator.HALF_SWING, at[Target.CUTOFF.ordinal])
-        near(0f, at[Target.POSITION.ordinal])  // a quarter bar into a ramp: the middle
+        // A quarter bar into a ramp is a quarter of the way up from the
+        // trough (-1 + 0.5 = -0.5 of the wave, so -0.25 at full depth);
+        // the ramp's own zero is the half bar, checked below.
+        near(-0.25f, at[Target.POSITION.ordinal])
         for (t in Target.entries) if (t != Target.CUTOFF && t != Target.POSITION) near(0f, at[t.ordinal])
+        val half = Modulator.offsets(listOf(cutoff, position), 1.0, 120f)
+        near(0f, half[Target.POSITION.ordinal], 1e-4f)
+        near(0f, half[Target.CUTOFF.ordinal], 1e-4f)  // and the sine is at its own zero crossing there
         // Two full-depth sines on one target reach a whole unit at the crest,
         // and never past it.
         val both = Modulator.offsets(listOf(cutoff, cutoff), 0.5, 120f)
