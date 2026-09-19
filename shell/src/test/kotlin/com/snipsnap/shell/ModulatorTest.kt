@@ -145,7 +145,7 @@ class ModulatorTest {
     fun `follow and duck run on the room, not the bar, and a silent room is exactly the finger`() {
         assertTrue(Shape.FOLLOW.followsRoom && Shape.DUCK.followsRoom)
         assertTrue(listOf(Shape.SINE, Shape.RAMP, Shape.RANDOM).none { it.followsRoom })
-        assertEquals(listOf(Shape.FOLLOW, Shape.DUCK), Shape.entries.takeLast(2), "appended last: the MOD row cycles shapes by ordinal")
+        assertEquals(listOf(Shape.FOLLOW, Shape.DUCK), Shape.entries.subList(3, 5), "appended after the clocked three: the MOD row cycles shapes by ordinal")
 
         val follow = Slot(Target.CUTOFF, Shape.FOLLOW, 4, depth = 1f)
         val duck = Slot(Target.CUTOFF, Shape.DUCK, 4, depth = 1f)

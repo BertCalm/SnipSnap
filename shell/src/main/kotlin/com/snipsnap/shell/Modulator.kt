@@ -219,6 +219,8 @@ object Modulator {
      * ([Follower.value]): FOLLOW is the level itself, DUCK its negative -
      * one-sided, so a silent room is exactly the finger. A [follow] that
      * is not a number, or a shape that does not listen, reads it as 0.
+     * GESTURE has no wave: it plays the kit's [Gesture], which only
+     * [offset] is handed, so here it is silence - 0, the same as no gesture.
      */
     fun wave(shape: Shape, phase: Float, cycle: Long, seed: Int = 0, follow: Float = 0f): Float {
         val p = phase.coerceIn(0f, 1f)
@@ -229,6 +231,7 @@ object Modulator {
             Shape.RANDOM -> hash01(cycle, seed) * 2f - 1f
             Shape.FOLLOW -> room
             Shape.DUCK -> -room
+            Shape.GESTURE -> 0f
         }
     }
 
