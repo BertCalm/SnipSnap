@@ -784,6 +784,15 @@ private fun classTint(rgb: Int): Color {
 /** A long press that opens PAD SHEET, timed from the design's own 480ms. */
 private const val LONG_PRESS_MS = 480L
 
+/**
+ * How lit a pad sits while a finger is on it (J15).
+ *
+ * Below the 0.35 a fresh hit flashes to, so a hold reads as "held" rather
+ * than as a hit that never ended, and well above zero, which is what the
+ * pad showed for the last 300 ms of every 480 ms hold.
+ */
+private const val PAD_HELD_ALPHA = 0.20f
+
 @Composable
 private fun PadCell(
     slot: Int,
@@ -868,13 +877,34 @@ private fun PadCell(
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16)
         ?: Schemes.classColor(pad.drumClass)
     val glow = remember(slot) { Animatable(0f) }
+    /**
+     * Whether a finger is down on this pad right now (J15).
+     *
+     * The hold that opens PAD SHEET runs for [LONG_PRESS_MS] = 480 ms and
+     * the only feedback the pad had was [glow], which *decays* over
+     * `Motion.PAD_GLOW_MS` = 180 ms. So the pad brightened, went dark
+     * again, and then sat doing nothing for the remaining 300 ms — the
+     * majority of the wait — before the largest surface in the app
+     * appeared. A hit is a moment and should fade; a hold is a state and
+     * should show for as long as it lasts.
+     *
+     * A steady lit floor rather than a growing bar, per `UI_DESIGN.md`:
+     * "One signature animation: the snip's cassette flying onto the
+     * shelf... Everything else is instant." This is a state flipping, not
+     * an animation.
+     */
+    var held by remember(slot) { mutableStateOf(false) }
+    // The hit's own flash still decays; the held floor is what stays.
+    // maxOf, not a sum: a tap on an already-held pad must not stack into
+    // a brighter fill than a fresh hit produces.
+    val lit = maxOf(0.35f * glow.value, if (held) PAD_HELD_ALPHA else 0f)
 
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-            .border(2.dp, cls.tape, shape)
-            .background(cls.tape.copy(alpha = 0.35f * glow.value), shape)
+            .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+            .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably
@@ -906,6 +936,7 @@ private fun PadCell(
             .pointerInput(slot) {
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+                    held = true
                     onTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
                     scope.launch {
                         glow.snapTo(1f)
@@ -915,12 +946,21 @@ private fun PadCell(
                         delay(LONG_PRESS_MS)
                         onLongPress(slot)
                     }
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) break
+                    try {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                            }
                         }
+                    } finally {
+                        // `finally`, because this pointerInput is cancelled
+                        // outright when the sheet opens over the grid — and a
+                        // pad left `held` would come back lit when the user
+                        // returns to KIT, which is worse than the missing
+                        // feedback this fixes.
+                        held = false
                     }
                     longPressJob.cancel()
                 }

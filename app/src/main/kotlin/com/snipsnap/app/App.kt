@@ -335,6 +335,26 @@ fun App(shelf: KitShelf) {
     // one of them; it's KIT-scoped overlay state instead, cleared whenever
     // the user navigates to another tab (see `MenuRow`'s `onSelect` below).
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
+
+    /**
+     * Open PAD SHEET on [slot], and retire its discovery hint.
+     *
+     * One function because the hint was retired at exactly one of the
+     * three doors that open this sheet (J16). KIT's long press cleared
+     * it; DOUBLES' `GO ▸` and the RE-TRIM return did not — so a user who
+     * found the sheet either of those ways was told "HOLD A PAD TO OPEN
+     * ITS PAD SHEET" on every kit open, forever. [Copy.PAD_SHEET_HINT]'s
+     * own KDoc says opening the sheet is "the only event that proves they
+     * found it", which was true of the intent and false of the code.
+     *
+     * A fourth door cannot miss it now, and `every pad sheet door retires
+     * its own hint` refuses a bare assignment that would bring the split
+     * back.
+     */
+    fun openPadSheet(slot: Int) {
+        padSheetSlot = slot
+        prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
+    }
     // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
     var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
@@ -1607,7 +1627,10 @@ fun App(shelf: KitShelf) {
                 retrim = null
                 if (open?.dir == request.kitDir) {
                     screen = AppScreen.KIT
-                    padSheetSlot = request.slot
+                    // Through openPadSheet, not a bare assignment: a
+                    // RE-TRIM landing back on its pad is one of the three
+                    // doors that used to leave the hint nagging (J16).
+                    openPadSheet(request.slot)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -2345,7 +2368,10 @@ fun App(shelf: KitShelf) {
                                     doublesOpen = false
                                     open = entry
                                     screen = AppScreen.KIT
-                                    padSheetSlot = slot
+                                    // Through openPadSheet (J16): DOUBLES' GO was
+                                    // the second of the three doors that opened
+                                    // the sheet without retiring its hint.
+                                    openPadSheet(slot)
                                 },
                             )
                         } else {
@@ -2515,7 +2541,7 @@ fun App(shelf: KitShelf) {
                                 sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
-                                    onSlotChange = { padSheetSlot = it },
+                                    onSlotChange = ::openPadSheet,
                                     onBack = { padSheetSlot = null },
                                     onToast = { toast = it },
                                     openBox = padSheetBox,
@@ -2674,14 +2700,7 @@ fun App(shelf: KitShelf) {
                                 else -> KitScreen(
                                     open,
                                     busy = busy != null,
-                                    onLongPress = { slot ->
-                                        padSheetSlot = slot
-                                        // Found it — the hint has done its job and
-                                        // retires for good. This is the only event
-                                        // that proves discovery, which is why it is
-                                        // now the only thing that stops the nudge.
-                                        prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
-                                    },
+                                    onLongPress = ::openPadSheet,
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,
                                     onSetKey = ::setKey,
