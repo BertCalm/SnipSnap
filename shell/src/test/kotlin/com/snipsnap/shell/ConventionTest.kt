@@ -1404,6 +1404,19 @@ class ConventionTest {
         "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
     )
 
+    /**
+     * [block] with its comment lines dropped.
+     *
+     * Every law that asks "does this text appear, and where" needs this:
+     * an explanation of a rule quotes the code the rule is about, so a
+     * comment saying "said after `v.start(0)`" is indistinguishable from
+     * the call itself to a plain `indexOf`. That has now cost two laws —
+     * one truncated a list at a `)` inside a comment, one read a quoted
+     * call as the real one.
+     */
+    private fun codeOnly(block: String): String =
+        block.lines().filterNot { isCommentLine(it.trim()) }.joinToString("\n")
+
     /** The `{ ... }` block following [marker] in [src], brace-matched. */
     private fun blockAfter(src: String, marker: String): String {
         val at = src.indexOf(marker)
@@ -1981,5 +1994,63 @@ class ConventionTest {
                     "have produced — not the loudest hit available.",
             )
         }
+    }
+    /**
+     * J35: EXPORT refused to write and said nothing.
+     *
+     * The justification was reasonable and wrong: "the refreshed checklist
+     * below is the message". The checklist is the first card in a
+     * `verticalScroll` and the write button is pinned at the bottom, so on
+     * a phone the row that changed is very likely off-screen at the moment
+     * of the tap — and a refusal you have to go looking for is one you
+     * experience as the button doing nothing.
+     *
+     * `LandingNote` already existed for exactly this; its own KDoc lists "a
+     * backup preflight refused part of" among the things it is for. EXPORT's
+     * own preflight refusal did not use it.
+     */
+    @Test
+    fun `law - a refused EXPORT says what blocked it`() {
+        val src = File("../app/src/main/kotlin/com/snipsnap/app/ui/ExportScreen.kt").readText(Charsets.UTF_8)
+        val blocked = blockAfter(src, "is ExportWizardModel.WriteResult.Blocked ->")
+        val speaks = "onNote(" in blocked || "onToast(" in blocked
+        assertTrue(
+            speaks,
+            "the Blocked branch neither raises the message box nor toasts, so a refused write is silent:\n" +
+                blocked.lines().filterNot { it.trim().startsWith("//") }.joinToString("\n").take(400),
+        )
+        assertTrue(
+            "LandingNote.exportBlocked(" in blocked,
+            "a blocked write can name several failing pads at once and has to stay until read — that is what " +
+                "`LandingNote.exportBlocked` is for. A bare toast drops all but one reason and takes it away " +
+                "again in a couple of seconds.",
+        )
+    }
+    /**
+     * J32: HUM stated its one rule after the tape was already audible.
+     *
+     * `HUM_START` is "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE
+     * TOO." — advice about a take that the armed ring is already capturing.
+     * In source order it sat *after* `v.start(0)`, so it arrived at the one
+     * moment acting on it meant wrecking the take it was warning about.
+     *
+     * It is the only rule on this screen whose value depends on arriving
+     * before the thing it governs, which is why the order is a law rather
+     * than a preference.
+     */
+    @Test
+    fun `law - HUM says its rule before it starts the tape`() {
+        // `startHum` is nested inside `ChopContent`, so the top-level
+        // helper cannot see it; brace-match from its own head instead.
+        val body = codeOnly(blockAfter(chopScreen.readText(Charsets.UTF_8), "fun startHum()"))
+        val says = body.indexOf("onToast(Copy.HUM_START)")
+        val starts = body.indexOf("v.start(0)")
+        assertTrue(says >= 0, "startHum no longer says HUM_START at all")
+        assertTrue(starts >= 0, "startHum no longer starts the voice")
+        assertTrue(
+            says < starts,
+            "HUM starts the tape before stating the rule that makes the take usable. The armed ring is " +
+                "already capturing by then, so the advice arrives exactly when acting on it costs the take.",
+        )
     }
 }

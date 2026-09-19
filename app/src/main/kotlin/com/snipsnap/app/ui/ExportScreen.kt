@@ -71,6 +71,7 @@ import com.snipsnap.kit.Severity
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
@@ -183,6 +184,16 @@ fun ExportScreen(
     onSessionChange: (ExportSession?) -> Unit,
     appScope: CoroutineScope,
     onToast: (String) -> Unit,
+    /**
+     * The honest little message box, for what a line cannot hold (J35).
+     *
+     * EXPORT is the first *screen* to need it — the share landing, the
+     * refusal and BACKUP all raise it from `App` itself. A blocked write
+     * can name several failing pads at once, and it has to stay until read:
+     * the checklist that used to be "the message" is the first card in a
+     * scroll, with this screen's button pinned at the bottom.
+     */
+    onNote: (LandingNote.Note) -> Unit,
     /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
 ) {
@@ -259,7 +270,7 @@ fun ExportScreen(
         return
     }
 
-    ExportContent(activeSession, context, appScope, scheme, onToast)
+    ExportContent(activeSession, context, appScope, scheme, onToast, onNote)
 }
 
 @Composable
@@ -269,6 +280,8 @@ private fun ExportContent(
     appScope: CoroutineScope,
     scheme: Scheme,
     onToast: (String) -> Unit,
+    /** See [ExportScreen]'s own `onNote`: the `Blocked` branch below is what needs it. */
+    onNote: (LandingNote.Note) -> Unit,
 ) {
     val model = session.model
     val kit = session.kit
@@ -544,9 +557,17 @@ private fun ExportContent(
                     is ExportWizardModel.WriteResult.Blocked -> {
                         session.overwriting = null
                         // Preflight flipped between render and tap (a file
-                        // vanished, say) — write() already reset the model
-                        // to READY and the refreshed checklist below is the
-                        // message per the model's own KDoc; no extra toast.
+                        // vanished, say). This used to say nothing at all,
+                        // on the reasoning that the refreshed checklist
+                        // below is the message — but that checklist is the
+                        // first card in a `verticalScroll` and this button
+                        // is pinned at the bottom, so on a phone the row
+                        // that changed is very likely off-screen at the
+                        // moment of the tap. A refusal you have to go
+                        // looking for is one you experience as the button
+                        // doing nothing (J35).
+                        val boxed = LandingNote.exportBlocked(result.findings)
+                        if (boxed != null) onNote(boxed) else onToast(Copy.EXPORT_BLOCKED)
                     }
                 }
             } catch (e: Exception) {

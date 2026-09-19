@@ -560,7 +560,40 @@ Capabilities that exist in the model with no control attached.
 ### PR 7+ — journeys and information architecture *(J11–J19, J30–J36, J39)*
 
 Everything left that requires a **product decision rather than a fix**. I
-am deliberately not proposing solutions here, because these are yours:
+am deliberately not proposing solutions here, because these are yours.
+
+**Audited first, and three of them turned out not to be decisions at all.**
+The section was written as one band; it is really two. These three are bugs
+in the same family as PRs 3–6 — the app doing something and not saying so —
+with no design choice inside them, and are **done**:
+
+- **J35 — a refused EXPORT said nothing.** Not a missing feature: the box
+  for this already existed, and `LandingNote`'s own KDoc lists "a backup
+  preflight refused part of" among the things it is for. EXPORT's own
+  preflight refusal did not use it. The old justification ("the refreshed
+  checklist below is the message") is defeated by the checklist being the
+  first card in a scroll with the button pinned at the bottom — on a phone
+  the row that changed is very likely off-screen at the moment of the tap.
+  `LandingNote.exportBlocked` now names every FAIL, folded like every other
+  note. EXPORT is the first *screen* to raise the box; the share landing,
+  the refusal and BACKUP all raise it from `App`.
+
+- **J32 — HUM stated its one rule after the tape was already audible.** A
+  one-line reorder, held by a law, because it is the only rule on that
+  screen whose worth depends on arriving before the thing it governs.
+  Honest about the limit: this makes the rule readable in time to stop and
+  start again, not in time to have had headphones on already. Saying it
+  before the press is a question about the button's affordance, and that
+  one *is* a decision.
+
+- **J30 — CHOP never names the tape it is about to slice.** Held back
+  deliberately: it adds a visible row, and the velocity bug is a fresh
+  reminder that UI added without seeing the screen is how two conventions
+  came to disagree. TAPE already names its source in the cassette row, so
+  there is a pattern to copy rather than invent — it needs eyes, not a
+  design.
+
+**What is left here really is yours:**
 
 - **J11** — Back means "go to the shelf," not "go back." Real back stack,
   or keep the policy and stop calling the button Back?

@@ -44,6 +44,34 @@ object LandingNote {
         return Note(Copy.backedUp(packed.size, skipped.size), fold(lines))
     }
 
+    /**
+     * EXPORT refused the write (J35): the box naming every FAIL that
+     * blocked it.
+     *
+     * Null when nothing blocks — only `Severity.FAIL` does. A WARN exports
+     * anyway (`Preflight`'s own rule: "WARNs export anyway; FAILs block,
+     * because 'it exported but the kit is broken' is the worst outcome a
+     * tool that writes to someone's SD card can produce"), so a box raised
+     * on warnings would tell the user their export failed when it did not.
+     *
+     * The box rather than a toast, and rather than nothing at all. Nothing
+     * at all is what this was: the justification was that the refreshed
+     * checklist is the message, but the checklist is the first card in a
+     * scroll and the button is pinned at the bottom, so on a phone the row
+     * that changed is very likely off-screen at the moment of the tap — and
+     * a refusal you have to go looking for is a refusal you experience as
+     * the button doing nothing. This box already listed what a *backup*
+     * preflight refused ([backedUp]); EXPORT's own refusal did not use it.
+     */
+    fun exportBlocked(findings: List<com.snipsnap.kit.Finding>): Note? {
+        val blocking = findings.filter { it.severity == com.snipsnap.kit.Severity.FAIL }
+        if (blocking.isEmpty()) return null
+        return Note(
+            Copy.EXPORT_BLOCKED,
+            fold(blocking.map { Line("BLOCKED · ${shout(it.message)}", trouble = true) }),
+        )
+    }
+
     /** A share the shelf refused: the file's name and the refuser's own words, kept until read rather than gone in two seconds. */
     fun refused(displayName: String, reason: String): Note =
         Note(

@@ -393,6 +393,16 @@ object Copy {
     const val KIT_OFFER_DOOR = "EXPORT ▸"
 
     /**
+     * EXPORT refused to write (J35), and the box under it says what
+     * blocked it.
+     *
+     * The title names the outcome the way `NOTHING_LANDED` does for a
+     * refused share: nothing was written, and that is the first thing to
+     * know. The reasons follow, each one a real `Preflight` FAIL.
+     */
+    const val EXPORT_BLOCKED = "NOTHING WAS WRITTEN."
+
+    /**
      * The kit shelf's own legend (September UAT, finding 17). Every creation
      * door auto-names, so RENAME is the only place a user ever types a kit
      * name — and it sits behind a hold on the row that nothing on screen
