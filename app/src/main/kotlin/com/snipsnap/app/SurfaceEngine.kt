@@ -146,11 +146,13 @@ class SurfaceEngine(preferredSampleRate: Int) {
     }
 
     /**
-     * The modulators' offsets this frame - [Modulator.offsets]'s own array,
-     * one per [Modulator.Target] in ordinal order (see [MOD_TARGETS]). Sent
-     * at screen rate like [control]; the engine adds each to its target
-     * before the macro's own 0..1 door, so a modulator nudges the finger
-     * rather than replacing it.
+     * The modulators' offsets this frame - the engine's slice of
+     * [Modulator.offsets]'s array ([Modulator.engineOffsets]), one per
+     * engine target in ordinal order (see [MOD_TARGETS]). Sent at screen
+     * rate like [control]; the engine adds each to its target before the
+     * macro's own 0..1 door, so a modulator nudges the finger rather than
+     * replacing it. The finger's own X and Y are nudged before [control]
+     * is called, not here.
      */
     @Synchronized
     fun setModulation(offsets: FloatArray) {
@@ -203,7 +205,11 @@ class SurfaceEngine(preferredSampleRate: Int) {
         /** Source slots the engine holds - must match SurfaceEngine.h's kMaxSources. */
         const val MAX_SOURCES = 4
 
-        /** Modulation targets the engine takes - must match SurfaceEngine.h's kModTargets and `Modulator.Target.entries.size`. */
+        /**
+         * Modulation targets the engine takes - must match SurfaceEngine.h's
+         * kModTargets and `Modulator.ENGINE_TARGETS` (the first eleven of
+         * `Modulator.Target`; the finger's X and Y never cross the bridge).
+         */
         const val MOD_TARGETS = 11
     }
 }

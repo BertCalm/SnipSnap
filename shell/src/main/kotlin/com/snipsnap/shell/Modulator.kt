@@ -10,14 +10,18 @@ import kotlin.math.sin
  * elsewhere, and what makes a print a performance rather than a loop.
  *
  * Two slots ([SLOTS]), each a [Shape] at a tempo-snapped rate with a depth,
- * aimed at one [Target] - one of the seven macros, or one of GRAIN's own
- * knobs. Both may aim at the same target, which is how a macro gets two.
- * A slot's output is a signed offset the engine adds to whatever the mode
- * and the finger already say for that target, before its own 0..1 door
- * (`SurfaceEngine::applyControl`) - so a sine on CUTOFF swings around the
- * finger's cutoff in XY, around the corner blend's in MORPH, and around
- * "wide open" in GRAIN, and a ramp on POSITION walks the cloud through the
- * sample on its own. The finger is never overridden, only nudged.
+ * aimed at one [Target] - one of the seven macros, one of GRAIN's own
+ * knobs, or the finger itself ([Target.X], [Target.Y]). Both may aim at
+ * the same target, which is how a macro gets two. A slot's output is a
+ * signed offset added to whatever the mode and the finger already say for
+ * that target, before its own 0..1 door - the engine's for the macros and
+ * the knobs (`SurfaceEngine::applyControl`), [TouchSurface.nudged] for the
+ * finger - so a sine on CUTOFF swings around the finger's cutoff in XY,
+ * around the corner blend's in MORPH, and around "wide open" in GRAIN; a
+ * ramp on POSITION walks the cloud through the sample on its own; and a
+ * RANDOM on X lands the loop on a new pitch every bar, or on both X and Y
+ * in MORPH jumps between corners on the bar - a sequencer without a
+ * sequencer. The finger is never overridden, only nudged.
  *
  * Everything here is pure and runs at screen rate in the surface's frame
  * loop; the engine's own per-sample smoother (`ParameterSmoother`) turns
@@ -33,8 +37,47 @@ import kotlin.math.sin
  */
 object Modulator {
 
-    /** What a slot moves. The first seven are the engine's macros in `MacroState` order; the rest are GRAIN's, live only in that mode. */
-    enum class Target { PITCH, CUTOFF, RESONANCE, DRIVE, CRUSH, ECHO, SPRING, SIZE, DENSITY, SPRAY, POSITION }
+    /**
+     * What a slot moves. The first seven are the engine's macros in
+     * `MacroState` order and the next four GRAIN's knobs, live only in that
+     * mode: those eleven cross the bridge as one array, by ordinal
+     * ([ENGINE_TARGETS], [engineOffsets]). [X] and [Y] are the finger
+     * itself - the position every mode reads, and the sample blend with it
+     * - nudged on this side of the bridge ([TouchSurface.nudged]) before the
+     * engine ever sees it, so they never cross at all. Appended last on
+     * purpose: the engine takes its eleven by ordinal, and a new target in
+     * front of POSITION would silently retarget every slot ever saved.
+     */
+    enum class Target(
+        /** Crosses the bridge as one of the engine's offsets ([engineOffsets]); false for the two the surface applies itself. */
+        val onEngine: Boolean = true,
+    ) {
+        PITCH, CUTOFF, RESONANCE, DRIVE, CRUSH, ECHO, SPRING, SIZE, DENSITY, SPRAY, POSITION,
+
+        /** The finger's own X, in every mode: pitch in XY, POSITION in GRAIN, the corner blend and the sample blend in MORPH and VECTOR. */
+        X(onEngine = false),
+
+        /** The finger's own Y: cutoff in XY, the pitch axis in GRAIN, the corner blend in MORPH and VECTOR. */
+        Y(onEngine = false),
+    }
+
+    /**
+     * How many of [Target]'s entries the engine takes, and that they are
+     * the first ones: `SurfaceEngine.MOD_TARGETS` (Kotlin) and
+     * `kModTargets` (`SurfaceEngine.h`) are this number by hand, and a test
+     * holds it at eleven so a change here cannot drift from them unnoticed.
+     */
+    val ENGINE_TARGETS: Int = Target.entries.count { it.onEngine }
+
+    /**
+     * The engine's slice of [offsets]'s array: the first [ENGINE_TARGETS],
+     * by ordinal. What `SurfaceEngine.setModulation` is handed; the finger's
+     * two stay behind for [TouchSurface.nudged].
+     */
+    fun engineOffsets(offsets: FloatArray): FloatArray {
+        require(offsets.size == Target.entries.size) { "one offset per target (${Target.entries.size}), got ${offsets.size}" }
+        return offsets.copyOf(ENGINE_TARGETS)
+    }
 
     enum class Shape { SINE, RAMP, RANDOM }
 

@@ -115,4 +115,29 @@ class ModulatorTest {
         assertFailsWith<IllegalArgumentException> { Slot(depth = Float.NaN) }
         assertEquals(Modulator.SLOTS, Modulator.OFF.size)
     }
+
+    @Test
+    fun `X and Y are the finger's own targets - last, off the engine, and the engine's slice is the first eleven`() {
+        // Eleven is also SurfaceEngine.MOD_TARGETS and SurfaceEngine.h's
+        // kModTargets, by hand: change all three together or the bridge
+        // will read a POSITION offset as something else.
+        assertEquals(11, Modulator.ENGINE_TARGETS)
+        assertTrue(Target.entries.take(Modulator.ENGINE_TARGETS).all { it.onEngine }, "the engine's targets come first, by ordinal")
+        assertTrue(Target.entries.drop(Modulator.ENGINE_TARGETS).none { it.onEngine }, "and the finger's come after")
+        assertEquals(Modulator.ENGINE_TARGETS, Target.X.ordinal)
+        assertEquals(Modulator.ENGINE_TARGETS + 1, Target.Y.ordinal)
+        assertEquals(Target.POSITION, Target.entries[Modulator.ENGINE_TARGETS - 1], "POSITION is the engine's last")
+
+        val x = Slot(Target.X, Shape.RAMP, 4, depth = 1f)
+        val cutoff = Slot(Target.CUTOFF, Shape.SINE, 4, depth = 1f)
+        val all = Modulator.offsets(listOf(x, cutoff), 0.5, 120f)
+        assertEquals(Target.entries.size, all.size)
+        near(-0.25f, all[Target.X.ordinal])
+        near(Modulator.HALF_SWING, all[Target.CUTOFF.ordinal])
+        val engine = Modulator.engineOffsets(all)
+        assertEquals(Modulator.ENGINE_TARGETS, engine.size)
+        near(Modulator.HALF_SWING, engine[Target.CUTOFF.ordinal])
+        assertTrue(engine.indices.all { engine[it] == all[it] }, "the slice is a prefix, value for value")
+        assertFailsWith<IllegalArgumentException> { Modulator.engineOffsets(FloatArray(Modulator.ENGINE_TARGETS)) }
+    }
 }
