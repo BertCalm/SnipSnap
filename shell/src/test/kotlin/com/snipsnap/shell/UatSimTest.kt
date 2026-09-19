@@ -117,7 +117,7 @@ class UatSimTest {
         val root = tmp("j1")
         var taps = 0
 
-        step(++taps, "App opens on KITS. Kits on disk: ${KitStore.list(root).size}")
+        step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
         note("the only primary button reads: NEW KIT ▸ STARTERS")
 
@@ -586,7 +586,7 @@ class UatSimTest {
                 "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
                 "while there are tabs that way (finding 10, fixed)",
         )
-        note("status bar cells: WHERE YOU ARE | KITS: n | a busy line, or the open kit's name")
+        note("status bar cells: WHERE YOU ARE | SHELF: n | a busy line, or the open kit's name")
         note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,

@@ -1713,6 +1713,25 @@ object Copy {
     /** PRINT armed: names the bar count and tempo when the kit has one to count against, or falls back to [SURFACE_PRINTING_NO_TEMPO] when it doesn't. */
     fun surfacePrintingStarted(bars: Int, bpm: Int?): String =
         if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
+    /**
+     * RING with nothing armed: the freeze comes off the same ring GRAB,
+     * HOLD and HUM use, so the mic has to be listening already - and
+     * unlike HUM, APP AUDIO's ring is welcome here (it is the whole point:
+     * the video that is playing, as a voice), so the line names both doors.
+     */
+    const val RING_NOT_LISTENING = "NOTHING IS LISTENING. LISTEN · MIC OR APP AUDIO ON SHELF, THEN RING."
+    /** The ring gave back nothing worth a voice - a quiet room, or a session that only just started. */
+    const val RING_NOTHING = "THE RING HEARD NOTHING YET. GIVE IT A MOMENT, THEN RING AGAIN."
+    /**
+     * RING landed: which ring it froze and how much, and the way back to
+     * the pad - a freeze is not in `surface.json`, so PAD ◄ ► is the only
+     * door. [seconds] is the voice's own length after the trim, never the
+     * four RING asked the ring for: a session that only just started holds
+     * less, and the toast says what was kept, not the ceiling (the same
+     * law [SNIPPED] and the pad grabs keep).
+     */
+    fun ringFrozen(seconds: Float, appAudio: Boolean): String =
+        "FROZE ${"%.1f".format(java.util.Locale.ROOT, seconds)} S OF ${if (appAudio) "APP AUDIO" else "THE MIC"} ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK."
 
     // ---- GROOVE: BOUNCE ----
     /**

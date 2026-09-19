@@ -41,7 +41,7 @@ shelf useful before capture (M1) exists.
 | Scaffold | `build.gradle.kts` (AGP 8.7.3, Kotlin 2.0.21 + Compose plugin, minSdk 29, foundation-only Compose — no Material; TapeOS draws itself) |
 | Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers; OILSLICK sweep |
 | Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
-| Screens | KITS (shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
+| Screens | SHELF (the shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
 | Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
@@ -72,7 +72,7 @@ logcat tag to grab when something is wrong.
   for all six — that is F3.3's exit test, and the first proof the codec
   loop reads the output format correctly on this phone.
 - **SHARE / BACKUP / a kit landing**: on KIT, SHARE should open the
-  chooser with `<Kit>.xpn`; on KITS, BACKUP with `SnipSnap Shelf <date>
+  chooser with `<Kit>.xpn`; on SHELF, BACKUP with `SnipSnap Shelf <date>
   .zip`. Send either to yourself (Drive, a messenger) and share it back
   into SnipSnap: the kit lands beside the original as "NAME 2" (a backup
   lands every kit) and KIT opens on it. Then zip an MPC-saved `.xtd`
@@ -231,6 +231,23 @@ logcat tag to grab when something is wrong.
   surface should sound exactly as before the MOD row existed. Five
   buttons and a readout on one row is the densest line on this screen -
   check it fits at 390dp.
+  Then RING, the capture ring as a voice: with nothing listening, a tap
+  on RING should name both doors on SHELF (LISTEN · MIC, APP AUDIO) and
+  load nothing. LISTEN · MIC on SHELF, talk or clap for a few seconds,
+  back to SURFACE, RING: the toast says how many seconds of the mic it
+  froze (up to 4, less if the ring has held less), the PAD readout reads
+  "RING" with that length, RING is lit, and a finger on the pad
+  should loop those seconds with pitch across and filter up exactly as a
+  pad would - GRAIN over them too, and if the freeze was a held note the
+  pitch axis should snap it into the kit's key. RING again should take a
+  fresh few seconds (say something different first). Then STOP on SHELF,
+  APP AUDIO ▸ RECORD AN APP, play a video in another app, back to SURFACE,
+  RING: the video's last 4 s under the finger - the toast names APP
+  AUDIO this time. PAD ► should bring a pad back and unlight RING; so
+  should leaving the kit and coming back (a freeze is not in
+  `surface.json`). RING in the first moment after LISTEN, before the ring
+  holds anything, should say "HEARD NOTHING YET" rather than load
+  silence. Six buttons on the PAD row now - check that one at 390dp too.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

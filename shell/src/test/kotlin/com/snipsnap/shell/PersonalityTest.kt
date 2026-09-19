@@ -85,6 +85,19 @@ class PersonalityTest {
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
         assertTrue("STOP ON SHELF" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
+        // RING takes either ring, so its refusal names both doors on SHELF
+        // (a slide back to the mic alone would send an APP AUDIO user to
+        // stop the very session RING wanted).
+        for (line in listOf(Copy.RING_NOT_LISTENING, Copy.RING_NOTHING)) {
+            assertTrue("RING" in line, "the refusal names the button as it reads: $line")
+            assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
+        }
+        assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "SHELF" in Copy.RING_NOT_LISTENING, "RING's route is either button on SHELF: ${Copy.RING_NOT_LISTENING}")
+        // The length is the voice's own, not RING's four-second ask: a ring
+        // that only just started gives less, and the ceiling law below holds
+        // this line to what was kept.
+        assertEquals("FROZE 4.0 S OF THE MIC ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK.", Copy.ringFrozen(4f, appAudio = false))
+        assertEquals("FROZE 1.5 S OF APP AUDIO ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK.", Copy.ringFrozen(1.5f, appAudio = true))
         assertTrue("OPEN CUT" in Copy.CHOP_NO_HITS, "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
         // BOUNCE on a stopped GROOVE used to just dim with no reason
         // (wiring review finding 8) - tapping it now names the control
