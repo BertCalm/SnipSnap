@@ -559,9 +559,27 @@ Capabilities that exist in the model with no control attached.
   Where the soft/live line falls on screen is therefore *the pad's own*, not
   a tuned split point. The legend says the direction ("TAP HIGH ON A PAD FOR
   A SOFTER HIT") rather than the rule, because a direction is something a
-  thumb can act on. Still open: whether to lower the floor so a stacked
-  pad's softest take is reachable at all — it would change how PLAY, GROOVE
-  and KEYS feel, which is a decision rather than a fix.
+  thumb can act on.
+
+  **The floor was 0.35 and is now 0.20, because 0.35 was a defect rather
+  than a preference.** `PadHit.SOFTEST`'s own KDoc claimed MIDI 44 sat
+  "inside the softest zone `StackTakes.windows` lays out for one soft zone
+  (MIDI 1..63) and for two (1..41)". 44 is not inside 1..41. On a pad
+  stacked two or three deep the softest layer could not be reached from
+  the grid at all, so SOFT HITS built layers nothing could trigger — and
+  0.20 is the value this floor held before the inversion fix moved it,
+  picked at the time for exactly this reason and never re-argued after.
+
+  Two tests were involved and only one of them was any good. The bad one
+  was `assertEquals(0.35f, PadHit.SOFTEST)` — a test that restates the
+  constant, so it passed throughout. The good one pinned the limitation
+  deliberately (`a stacked pad's softest take sits below the touch floor -
+  a known limit`) and its failure message asked whoever moved the floor to
+  come and say so, which is exactly what happened. The codebase knew; the
+  KDoc beside the constant was the thing that was wrong.
+
+  The cost is accepted rather than dodged: PLAY, GROOVE and KEYS share
+  this curve, so their softest touch is quieter than it was.
 
   The accessible path keeps full velocity on purpose: a synthesized click
   has no position, and guessing one would hand TalkBack users an arbitrary

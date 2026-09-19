@@ -34,17 +34,35 @@ object PadHit {
      * The softest a touch-Y velocity can be: quiet, and deliberately not
      * silent — a pad that makes no sound reads as broken rather than soft.
      *
-     * 0.35 because that is what PLAY, GROOVE and KEYS have always used. It
-     * was `private const val MIN_VELOCITY` in **two** files, with the
-     * formula around it retyped in **three** places, which is how J37
-     * managed to ship a fourth copy with a different floor *and* the axis
-     * inverted without anything noticing. One quantity, one place.
+     * One quantity, one place: this was `private const val MIN_VELOCITY`
+     * in **two** files, with the formula around it retyped in **three**
+     * more, which is how J37 managed to ship a fourth copy with a
+     * different floor *and* the axis inverted without anything noticing.
      *
-     * `midiVelocity` rounds it to 44, inside the softest zone
-     * `StackTakes.windows` lays out for one soft zone (MIDI 1..63) and for
-     * two (1..41) — so SOFT HITS is reachable on either.
+     * **0.20, chosen so SOFT HITS is actually playable.** `midiVelocity`
+     * rounds it to 25, inside the softest window `StackTakes.windows` lays
+     * out at every depth it allows — 1..63 for one soft zone, 1..41 for
+     * two, 1..31 for three.
+     *
+     * It read 0.35 (MIDI 44) until this was measured, with a comment
+     * claiming 44 sat inside "one soft zone (MIDI 1..63) and two (1..41)".
+     * 44 is not inside 1..41. On any pad stacked two or three deep the
+     * softest layer could not be reached from the grid at all, so the
+     * feature built velocity layers nothing could trigger. 0.20 is also
+     * what this floor was before the J37 inversion fix moved it, where it
+     * was picked for exactly this reason; the move was never re-argued
+     * against the zone maths.
+     *
+     * The cost is real and deliberate: PLAY, GROOVE and KEYS share this
+     * curve, so their softest touch is quieter than it was. A floor that
+     * cannot reach the layer it exists to reach is the worse of the two.
+     *
+     * `the floor reaches the softest take at every stack depth` holds this
+     * to [StackTakes.windows] rather than to a number, which is why the
+     * old assertion — a plain `assertEquals(0.35f, SOFTEST)` — could never
+     * have caught it.
      */
-    const val SOFTEST = 0.35f
+    const val SOFTEST = 0.20f
 
     /**
      * Velocity from where in a pad the finger landed: [y] down from the top

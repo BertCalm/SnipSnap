@@ -50,12 +50,32 @@ class PadTouchTest {
     }
 
     /**
-     * The convention PLAY, GROOVE and KEYS already used, pinned here so the
-     * next screen to grow a pad grid cannot quietly pick the other one.
+     * The floor exists so SOFT HITS can be played, so this holds it to the
+     * zones `StackTakes` actually lays out rather than to a number.
+     *
+     * It used to read `assertEquals(0.35f, PadHit.SOFTEST)` — a test that
+     * restates the constant and therefore cannot fail for any reason worth
+     * knowing about. It passed the whole time MIDI 44 sat *outside* the
+     * softest window at two and three soft zones, which is to say the
+     * whole time the softest layer was unreachable from the grid.
+     *
+     * The "one floor, not two" intent that assertion was reaching for is
+     * covered properly by `ConventionTest`'s own law against retyping a
+     * velocity floor as a literal.
      */
     @Test
-    fun `the floor is the one the other grids have always used`() {
-        assertEquals(0.35f, PadHit.SOFTEST)
+    fun `the floor reaches the softest take at every stack depth`() {
+        val floor = PadHit.midiVelocity(PadHit.SOFTEST)
+        for (soft in 1..StackTakes.MAX_SOFT) {
+            val zones = StackTakes.windows(soft)
+            val softest = zones.first()
+            assertTrue(
+                floor in softest,
+                "the softest touch is MIDI $floor, outside the softest window $softest that " +
+                    "StackTakes.windows($soft) lays out (zones: $zones). A pad stacked $soft deep " +
+                    "would build a layer the grid can never trigger.",
+            )
+        }
     }
 
     /**
@@ -114,7 +134,7 @@ class PadTouchTest {
      *
      * `addGhostLayers(slot)` defaults to **one** soft zone, and that is the
      * only way the SOFT HITS button builds layers — so this is the case a
-     * player meets. One soft zone splits at MIDI 63, and the floor (44)
+     * player meets. One soft zone splits at MIDI 63, and the floor (25)
      * sits inside it.
      */
     @Test
@@ -128,35 +148,37 @@ class PadTouchTest {
     }
 
     /**
-     * A limitation, pinned so it is a fact rather than a surprise.
+     * The limitation this used to pin is **gone**, and the decision it
+     * asked for was taken.
      *
-     * STACK THE TAKES stacks up to `StackTakes.MAX_SOFT` (3) soft zones,
-     * and their windows get narrower as they multiply: two zones split at
-     * MIDI 41, three at 31. The touch floor is 0.35 → **MIDI 44**, which is
-     * above both — so on a stacked pad the softest take cannot be reached
-     * by touch at all, however high on the pad the finger lands.
+     * It read: two soft zones split at MIDI 41 and three at 31, the touch
+     * floor was 0.35 → MIDI 44, above both, so on a stacked pad the
+     * softest take could not be reached by touch at all. It called that a
+     * decision rather than a fix — lowering the floor changes how PLAY,
+     * GROOVE and KEYS feel — and stated the current answer instead of
+     * asserting a wish. That was the right thing to write, and its failure
+     * message asked whoever moved the floor to come here and say so.
      *
-     * This is not new to J37; it is a property of `MIN_VELOCITY = 0.35f`,
-     * which PLAY, GROOVE and KEYS have shipped all along. Lowering the
-     * floor would reach those zones and would change how three screens feel
-     * to play, so it is a decision rather than a fix, and this test states
-     * the current answer rather than asserting a wish.
+     * So: the floor is 0.20 → MIDI 25, inside the softest window at one,
+     * two and three soft zones. STACK THE TAKES builds no layer the grid
+     * cannot trigger any more. The quieter softest touch on three screens
+     * is the accepted cost, taken deliberately.
+     *
+     * Kept as the same walk over the same depths, inverted, so the
+     * property has a home rather than the coverage disappearing with the
+     * limitation.
      */
     @Test
-    fun `a stacked pad's softest take sits below the touch floor - a known limit`() {
-        for (softZones in 2..3) {
+    fun `every soft take a stacked pad builds can be reached by touch`() {
+        for (softZones in 2..StackTakes.MAX_SOFT) {
             val pad = ghosted(softZones)
             val softestReachable = fileAt(pad, y = 0f, height = 100f)
-            assertNotEquals(
+            assertEquals(
                 "layer0.wav",
                 softestReachable,
-                "$softZones soft zones: the softest take became reachable by touch. That is an improvement, " +
-                    "not a failure — but it means the floor moved, so update this test and say so.",
-            )
-            assertEquals(
-                "layer1.wav",
-                softestReachable,
-                "$softZones soft zones: the softest a touch can reach should be the second zone (MIDI 44)",
+                "$softZones soft zones: the top of the pad does not reach the softest take, so SOFT HITS " +
+                    "built a layer nothing can play. The floor (PadHit.SOFTEST) has to land inside " +
+                    "StackTakes.windows($softZones).first().",
             )
         }
     }
