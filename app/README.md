@@ -231,6 +231,23 @@ logcat tag to grab when something is wrong.
   surface should sound exactly as before the MOD row existed. Five
   buttons and a readout on one row is the densest line on this screen -
   check it fits at 390dp.
+  Then RING, the capture ring as a voice: with nothing listening, a tap
+  on RING should name both doors on KITS (LISTEN · MIC, APP AUDIO) and
+  load nothing. LISTEN · MIC on KITS, talk or clap for a few seconds,
+  back to SURFACE, RING: the toast says how many seconds of the mic it
+  froze (up to 4, less if the ring has held less), the PAD readout reads
+  "RING" with that length, RING is lit, and a finger on the pad
+  should loop those seconds with pitch across and filter up exactly as a
+  pad would - GRAIN over them too, and if the freeze was a held note the
+  pitch axis should snap it into the kit's key. RING again should take a
+  fresh few seconds (say something different first). Then STOP on KITS,
+  APP AUDIO ▸ RECORD AN APP, play a video in another app, back to SURFACE,
+  RING: the video's last 4 s under the finger - the toast names APP
+  AUDIO this time. PAD ► should bring a pad back and unlight RING; so
+  should leaving the kit and coming back (a freeze is not in
+  `surface.json`). RING in the first moment after LISTEN, before the ring
+  holds anything, should say "HEARD NOTHING YET" rather than load
+  silence. Six buttons on the PAD row now - check that one at 390dp too.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
