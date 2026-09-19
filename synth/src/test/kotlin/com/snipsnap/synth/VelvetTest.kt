@@ -185,17 +185,49 @@ class VelvetTest {
     }
 
     @Test
-    fun `the detuned pair completes at least one beat cycle in the buffer`() {
-        // 82.4 Hz over a 0.47 s note: the old 1.00395 gave a 3.07 s beat period.
-        val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 0.47f)
+    fun `minBeatDetune delivers the number of beat cycles it is asked for`() {
+        // 82.4 Hz over a 0.47 s note: the old fixed 1.00395 gave a 3.07 s
+        // beat period, under a sixth of a cycle in the note. That's the
+        // primitive's general contract - ask it for cycles and it delivers
+        // them. Velvet itself asks for far less (see the two tests below):
+        // completing a FULL cycle in a short note takes more detune than
+        // the FAT macro is allowed to grant, which is why this test passes
+        // cycles explicitly instead of relying on Velvet's own default.
+        val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 0.47f, cycles = 1f)
         val beatHz = 82.4f * (d - 1f)
-        assertTrue(beatHz * 0.47f >= 1f, "expected >=1 beat cycle in the note, got ${beatHz * 0.47f}")
+        // cycles=1f makes this an exact-boundary check (beatHz * seconds ==
+        // cycles algebraically); Float rounding lands a hair under 1.0, so
+        // the assertion allows that epsilon rather than the beat itself.
+        assertTrue(beatHz * 0.47f >= 0.999f, "expected ~1 beat cycle in the note, got ${beatHz * 0.47f}")
     }
 
     @Test
     fun `a long note does not get forced wider than asked`() {
         val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 8f)
         assertTrue(d < 1.005f, "a long note needs no detune floor, got $d")
+    }
+
+    @Test
+    fun `the beat floor never swallows FAT - the macro still has its own range`() {
+        // Round 1 shipped cycles=1.5f, which forced BASS's detune floor
+        // above the FAT macro's own maximum ask (1.012) at every DECAY
+        // setting - FAT stopped doing anything. Deleting `asked` from
+        // Velvet.detuneFor's maxOf left every OTHER test in this file
+        // green, which is exactly how that got past round 1: nothing
+        // asserted the macro's own contribution survives the floor. This
+        // does, against the real production function, not a
+        // reimplementation of its formula.
+        for (voice in listOf(VelvetVoice.BASS, VelvetVoice.BRASS)) {
+            val defaults = Velvet.defaults(voice)
+            val base = Velvet.frequencyFor(voice, defaults.getValue("TUNE"))
+            val t60 = Dsp.expMap(defaults.getValue("DECAY"), 0.15f, 0.9f)
+            val atZero = Velvet.detuneFor(base, fat = 0f, t60 = t60)
+            val atOne = Velvet.detuneFor(base, fat = 1f, t60 = t60)
+            assertTrue(
+                atOne > atZero * 1.005f,
+                "$voice: FAT=1 ($atOne) should meaningfully out-detune FAT=0 ($atZero) at its factory DECAY",
+            )
+        }
     }
 
     @Test

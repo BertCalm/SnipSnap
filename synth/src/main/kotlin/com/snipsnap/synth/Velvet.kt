@@ -79,6 +79,24 @@ object Velvet {
         if (phase - Math.floor(phase) < width) 1f else -1f
 
     /**
+     * FAT's actual detune ratio for a note of fundamental [baseHz], macro
+     * value [fat], and [t60] decay. [Dsp.minBeatDetune] raises a too-slow
+     * beat toward audibility, but it is clamped to the macro's own ceiling
+     * ([askedHi]) here: completing even a fraction of a beat cycle inside
+     * a short bass note already takes more detune than FAT is ever allowed
+     * to ask for on its own, and beyond that ceiling it reads as an
+     * out-of-tune interval, not width. The floor can lift FAT's bottom; it
+     * must never be able to override FAT's top.
+     */
+    internal fun detuneFor(baseHz: Float, fat: Float, t60: Float): Float {
+        val askedLo = 1.0005f
+        val askedHi = 1.012f
+        val asked = Dsp.lin(fat, askedLo, askedHi)
+        val floor = Dsp.minBeatDetune(baseHz = baseHz, seconds = t60 * 1.4f).coerceAtMost(askedHi)
+        return maxOf(asked, floor)
+    }
+
+    /**
      * The raw synth loop, at whatever [rate] the caller wants - split out of
      * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
      * tested directly against a native-rate render, rather than trusting
@@ -101,13 +119,11 @@ object Velvet {
         val width = Dsp.lin(((shape - 0.75f) * 4f).coerceIn(0f, 1f), 0.5f, 0.12f)
 
         // FAT spreads the unison pair; a fixed sub square an octave down
-        // grounds the stack. Detune is in cents-ish territory, never soup.
-        // But cents-ish is a static comb tint if the beat period outlasts
-        // the note - width is supposed to move, so the floor is scaled to
-        // this note's own buffer length (t60 * 1.4, same span as `raw`
-        // below), and the macro's own ask wins whenever it's already wider.
-        val asked = Dsp.lin(fat, 1.0005f, 1.012f)
-        val detune = maxOf(asked, Dsp.minBeatDetune(baseHz = base, seconds = t60 * 1.4f))
+        // grounds the stack. detuneFor is split out of this function so a
+        // test can assert the macro's own range survives the beat floor
+        // (mirrors why synthesize itself is internal, above: test the code
+        // that actually runs, not a reimplementation of it).
+        val detune = detuneFor(base, fat, t60)
         val subGain = Dsp.lin(fat, 0.15f, 0.45f)
 
         // SQUEEZE is resonance and filter-envelope amount together: at the

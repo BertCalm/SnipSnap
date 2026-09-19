@@ -37,12 +37,18 @@ internal object Dsp {
         (lo * exp(ln((hi / lo).toDouble()) * macro.coerceIn(0f, 1f))).toFloat()
 
     /**
-     * The smallest detune ratio whose beating completes [cycles] cycles inside
-     * a note of [seconds]. Two oscillators a ratio r apart beat at
-     * baseHz*(r-1); below this floor a "FAT" macro is a static comb tint
-     * rather than movement, which is what it was.
+     * Raises a too-slow beat toward audibility - it does not complete one.
+     * Two oscillators a ratio r apart beat at baseHz*(r-1); below this
+     * floor a "FAT" macro is a static comb tint rather than movement.
+     * [cycles] stays a small fraction on purpose: forcing a *full* beat
+     * cycle inside a short note (the original ask) takes far more detune
+     * than any macro should grant - tens of cents at typical bass notes -
+     * and that reads as an out-of-tune interval, not width. This function
+     * only raises the floor; it has no idea what the caller's macro is
+     * allowed to ask for, so callers must still clamp the result to their
+     * own ceiling (see [Velvet.detuneFor]).
      */
-    fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 1.5f): Float {
+    fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 0.25f): Float {
         if (baseHz <= 0f || seconds <= 0f) return 1f
         return 1f + (cycles / seconds) / baseHz
     }
