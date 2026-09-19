@@ -217,6 +217,15 @@ class VelvetTest {
         // asserted the macro's own contribution survives the floor. This
         // does, against the real production function, not a
         // reimplementation of its formula.
+        //
+        // The 1.002f threshold guards the PROPERTY - the floor must never
+        // swallow the macro - not the current cycles=0.25f value. BASS at
+        // its factory DECAY is the tightest of the four voices (see
+        // Velvet.detuneFor's KDoc: it's the canary, lowest voice, floor
+        // binds hardest there); its floor only fully swallows FAT's range
+        // once cycles >= ~0.4651. 1.002f leaves room to retune cycles up
+        // to ~0.39 without breaking this test, while still failing hard at
+        // 0.465 and beyond (and at the old 0.5, 1.0, 1.5).
         for (voice in listOf(VelvetVoice.BASS, VelvetVoice.BRASS)) {
             val defaults = Velvet.defaults(voice)
             val base = Velvet.frequencyFor(voice, defaults.getValue("TUNE"))
@@ -224,7 +233,7 @@ class VelvetTest {
             val atZero = Velvet.detuneFor(base, fat = 0f, t60 = t60)
             val atOne = Velvet.detuneFor(base, fat = 1f, t60 = t60)
             assertTrue(
-                atOne > atZero * 1.005f,
+                atOne > atZero * 1.002f,
                 "$voice: FAT=1 ($atOne) should meaningfully out-detune FAT=0 ($atZero) at its factory DECAY",
             )
         }

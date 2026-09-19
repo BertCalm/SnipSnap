@@ -87,6 +87,14 @@ object Velvet {
      * to ask for on its own, and beyond that ceiling it reads as an
      * out-of-tune interval, not width. The floor can lift FAT's bottom; it
      * must never be able to override FAT's top.
+     *
+     * BASS is the canary for this: it's the lowest voice, so the same
+     * [Dsp.minBeatDetune] floor sits closest to [askedHi] there of all four
+     * VELVET voices (low baseHz means a given `cycles` needs proportionally
+     * more detune to cover). At its factory DECAY, BASS's floor only fully
+     * swallows FAT's own range around `cycles >= ~0.465` - see the
+     * regression test in VelvetTest for the exact number. If `cycles` ever
+     * moves, BASS is where the macro goes quiet first.
      */
     internal fun detuneFor(baseHz: Float, fat: Float, t60: Float): Float {
         val askedLo = 1.0005f
