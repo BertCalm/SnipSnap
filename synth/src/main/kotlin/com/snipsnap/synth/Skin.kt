@@ -75,17 +75,35 @@ object Skin {
         macrosFor(voice).associate { it.name to it.default }
 
     /**
-     * SCRAMBLE near the factory default. SKIN has no preset library yet
-     * (a follow-up, same as every other engine's own presets shipped after
-     * its engine did) so unlike THUMP/FATHOM's `scramble` there's no preset
-     * to seed near — this perturbs the plain default instead, which is
-     * still honest: `temperature = 1` still discards the seed entirely and
-     * rolls every macro flat-uniform (`Dsp.scrambleNear`'s own contract),
-     * so the pre-U2 behaviour stays reachable. Once `SkinPresets` exists,
-     * this should pick a random preset the way `Thump.scramble` does.
+     * SCRAMBLE near a preset — U2 of `docs/SYNTH_UPGRADE.md`, and now the
+     * same shape as every sibling engine.
+     *
+     * This used to perturb the plain default, because [SkinPresets] did
+     * not exist and there was no pool to pick from. It was honest about
+     * that and named its own fix; this is that fix. SCRAMBLE on SKIN now
+     * wanders around sixteen hand-placed points per voice rather than
+     * around one, which is the whole difference U2 bought the other seven.
+     *
+     * The `temperature >= 1` carve-out is [Thump.scramble]'s, kept for its
+     * reason rather than by imitation: at that temperature
+     * `Dsp.scrambleNear` ignores the seed's *values* and keeps only its
+     * keys, so picking a preset would spend a draw on a seeded [Random]
+     * and shift every roll after it for no audible gain.
      */
-    fun scramble(voice: SkinVoice, random: Random, temperature: Float = 0.35f): Map<String, Float> =
-        Dsp.scrambleNear(defaults(voice), temperature, random)
+    fun scramble(
+        voice: SkinVoice,
+        random: Random,
+        temperature: Float = 0.35f,
+        near: Patch? = null,
+    ): Map<String, Float> {
+        val base = defaults(voice)
+        val seed = when {
+            near != null -> base + near.macros.filterKeys { it in base }
+            temperature >= 1f -> base
+            else -> base + SkinPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+        }
+        return Dsp.scrambleNear(seed, temperature, random)
+    }
 
     /** Render [voice] with [macros]; missing macros fall back to defaults. */
     fun render(voice: SkinVoice, macros: Map<String, Float> = emptyMap()): Snip {

@@ -4,10 +4,13 @@ package com.snipsnap.synth
  * The cross-engine preset roster.
  *
  * Authored engine by engine, not all at once — THUMP was first (U1 of
- * `docs/SYNTH_UPGRADE.md`, PR #189); this dispatcher now covers all seven
- * registered engines. An unregistered engine name (or a future one with no
- * roster yet) returns an empty list rather than throwing, so the UI can
- * ask before checking what exists.
+ * `docs/SYNTH_UPGRADE.md`, PR #189) and SKIN was last, a whole wave after
+ * the engine itself shipped. This dispatcher now covers all eight
+ * registered engines.
+ *
+ * An unregistered engine name (or a future one with no roster yet)
+ * returns an empty list rather than throwing, so the UI can ask before
+ * checking what exists.
  */
 object Presets {
 
@@ -40,6 +43,10 @@ object Presets {
             val v = VoxVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             VoxPresets.forVoice(v)
         }
+        SkinPatch.ENGINE -> {
+            val v = SkinVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            SkinPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -48,5 +55,5 @@ object Presets {
 
     fun all(): List<Patch> =
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
-            FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all()
+            FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all()
 }

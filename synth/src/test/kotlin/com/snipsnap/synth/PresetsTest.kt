@@ -22,6 +22,7 @@ class PresetsTest {
         assertEquals(FathomPresets.forVoice(FathomVoice.DEEP), Presets.forVoice("FATHOM", "DEEP"))
         assertEquals(TonewheelPresets.forVoice(TonewheelVoice.STAB), Presets.forVoice("TONEWHEEL", "STAB"))
         assertEquals(VoxPresets.forVoice(VoxVoice.GHOST), Presets.forVoice("VOX", "GHOST"))
+        assertEquals(SkinPresets.forVoice(SkinVoice.KICK), Presets.forVoice("SKIN", "KICK"))
     }
 
     @Test
@@ -39,7 +40,8 @@ class PresetsTest {
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
         val expected = ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() +
-            VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all()
+            VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
+            SkinPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

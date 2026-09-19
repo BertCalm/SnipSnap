@@ -288,8 +288,10 @@ the FX rack needs a stereo-safety audit. Opt-in per patch.
 
 # U5 — Envelopes and filter saturation
 
-Two DSP items that are genuinely audible and improve all ~392 presets at once,
-which is why they come *after* the presets exist to benefit from them.
+Two DSP items that are genuinely audible and improve all ~520 presets at once,
+which is why they come *after* the presets exist to benefit from them. (Was
+~392 when this was written; SKIN's own 128 arrived a wave later, in the U1
+pass that engine had never had.)
 
 ### `Dsp.Env`
 
