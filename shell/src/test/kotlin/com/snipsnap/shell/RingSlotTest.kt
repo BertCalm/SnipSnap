@@ -65,4 +65,24 @@ class RingSlotTest {
         assertFailsWith<IllegalArgumentException> { RingSlot.frames(0) }
         assertFailsWith<IllegalArgumentException> { RingSlot.freeze(FloatArray(10), 0) }
     }
+
+    @Test
+    fun `every bar counts the modulators' own bar from the same origin`() {
+        // 120 BPM, 4/4: one bar is two seconds - PrintLength's arithmetic,
+        // Modulator's arithmetic, and now RING's, one place.
+        assertEquals(Modulator.periodSeconds(Modulator.DEFAULT_RATE_INDEX, 120f), RingSlot.barSeconds(120f))
+        assertEquals(PrintLength.seconds(1, 120f), RingSlot.barSeconds(120f))
+        assertEquals(PrintLength.seconds(1, com.snipsnap.kit.KitPreview.DEFAULT_BPM), RingSlot.barSeconds(null), "no tempo runs at GROOVE's default")
+        val bar = RingSlot.barSeconds(120f)
+        assertEquals(0L, RingSlot.barIndex(0.0, bar))
+        assertEquals(0L, RingSlot.barIndex(1.99, bar))
+        assertEquals(1L, RingSlot.barIndex(2.0, bar))
+        assertEquals(3L, RingSlot.barIndex(7.5, bar))
+        // Time before the origin, or none at all, is the first bar.
+        assertEquals(0L, RingSlot.barIndex(-5.0, bar))
+        assertEquals(0L, RingSlot.barIndex(Double.NaN, bar))
+        assertEquals(listOf(RingSlot.Refresh.ONCE, RingSlot.Refresh.EVERY_BAR), RingSlot.Refresh.entries)
+        assertFailsWith<IllegalArgumentException> { RingSlot.barIndex(1.0, 0f) }
+        assertFailsWith<IllegalArgumentException> { RingSlot.barIndex(1.0, Float.NaN) }
+    }
 }

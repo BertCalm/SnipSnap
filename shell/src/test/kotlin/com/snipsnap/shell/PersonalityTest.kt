@@ -92,6 +92,10 @@ class PersonalityTest {
             assertTrue("RING" in line, "the refusal names the button as it reads: $line")
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
+        // EVERY BAR switching itself off names the button as it reads and
+        // the same two doors, since either ring feeds it.
+        assertTrue("EVERY BAR" in Copy.RING_BAR_STOPPED && "LISTEN · MIC" in Copy.RING_BAR_STOPPED && "APP AUDIO" in Copy.RING_BAR_STOPPED && "SHELF" in Copy.RING_BAR_STOPPED, Copy.RING_BAR_STOPPED)
+        assertTrue("ARM" !in Copy.RING_BAR_STOPPED, "nothing on any screen is called ARM: ${Copy.RING_BAR_STOPPED}")
         assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "SHELF" in Copy.RING_NOT_LISTENING, "RING's route is either button on SHELF: ${Copy.RING_NOT_LISTENING}")
         // FOLLOW and DUCK read the same ring RING does, so the same two doors.
         assertTrue("FOLLOW" in Copy.FOLLOW_NOT_LISTENING && "DUCK" in Copy.FOLLOW_NOT_LISTENING, "names the shapes as the MOD row reads them: ${Copy.FOLLOW_NOT_LISTENING}")

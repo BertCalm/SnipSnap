@@ -19,8 +19,36 @@ import com.snipsnap.audio.Snip
  * written anywhere: a freeze is a moment in RAM, not a tape on the shelf,
  * so it is not in `surface.json` either. Reopening the kit brings the
  * pad back.
+ *
+ * EVERY BAR takes the freeze again on every bar line ([Refresh.EVERY_BAR],
+ * [barIndex]): the voice tracks whatever is playing, a bar behind, so a
+ * finger on the pad plays the track in the next app as it goes by. The
+ * bar is the modulators' own bar ([barSeconds]), counted from the same
+ * origin, so a RANDOM on X and the re-freeze land on the same line.
  */
 object RingSlot {
+
+    /** How the ring becomes the voice: once, on the tap, or again on every bar line. */
+    enum class Refresh { ONCE, EVERY_BAR }
+
+    /**
+     * One bar at [bpm], in seconds - [Modulator]'s own one bar, which is
+     * [PrintLength]'s, so BARS on PRINT, RATE on MOD and EVERY BAR here
+     * cannot disagree about how long a bar is. No tempo runs at GROOVE's
+     * default, as they do.
+     */
+    fun barSeconds(bpm: Float?): Float = Modulator.periodSeconds(Modulator.DEFAULT_RATE_INDEX, bpm)
+
+    /**
+     * Which bar [seconds] from the origin falls in, for a bar of
+     * [barSeconds]: the freeze fires when this changes between two frames.
+     * Time before the origin, or none at all, is the first bar.
+     */
+    fun barIndex(seconds: Double, barSeconds: Float): Long {
+        require(barSeconds.isFinite() && barSeconds > 0f) { "a bar is a positive number of seconds, got $barSeconds" }
+        val t = if (seconds.isFinite() && seconds > 0.0) seconds else 0.0
+        return kotlin.math.floor(t / barSeconds).toLong()
+    }
 
     /** How much of the ring a freeze takes: a phrase, not the whole minute the ring holds. */
     const val SECONDS = 4
