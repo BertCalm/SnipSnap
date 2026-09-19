@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -1568,7 +1569,19 @@ private fun MiniWaveform(snip: Snip, scheme: Scheme, modifier: Modifier = Modifi
 /** The 4×4 placement preview: one cell per pad slot, tinted its landing class. */
 @Composable
 private fun GridPreview(placed: List<ChopReviewModel.Row?>, scheme: Scheme) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    // One merged node for the whole preview (J33). These sixteen boxes
+    // carry no text, no pad tag and, until now, no semantics at all - so
+    // the layout decision's only feedback was invisible to TalkBack
+    // entirely, on a screen where every other picker announces itself.
+    // Merged rather than one node per cell: sixteen focus stops that each
+    // say a colour is worse than one that says what the layout does.
+    val spoken = Copy.layoutPreview(placed.map { it?.effectiveClass?.name })
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = spoken },
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
         for (slots in CHOP_GRID_ROWS) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (slot in slots) {

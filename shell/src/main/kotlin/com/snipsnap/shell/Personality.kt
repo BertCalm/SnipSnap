@@ -366,6 +366,43 @@ object Copy {
     const val PAD_VELOCITY_LEGEND = "TAP HIGH ON A PAD FOR A SOFTER HIT"
 
     /**
+     * A pad's accessible name, when the pad carries something (J36).
+     *
+     * KIT's grid distinguished a treated pad from a raw one in no way at
+     * all, so sixteen treated pads could be told apart only by holding
+     * each in turn — and TalkBack had no way to tell them apart even
+     * then, since the grid's own names are identical. [benches] are the
+     * legends of the boxes [PadSheetBoxes.touched] reports.
+     */
+    fun padTreated(benches: List<String>): String = benches.joinToString(", ")
+
+    /**
+     * What CHOP's layout preview says, for anyone who cannot see it (J33).
+     *
+     * CLASSIC / FOLD / MELODIC is a real decision - it picks between three
+     * different `sendToGrid*` methods - and its only feedback was sixteen
+     * coloured rectangles with no text, no pad tag and no semantics node
+     * at all. A sighted player at least gets the class colours; a TalkBack
+     * user got silence, on the one thing that shows what the choice does.
+     *
+     * Counts rather than a cell-by-cell reading: sixteen items is a long
+     * thing to listen to, and what separates the three layouts is how many
+     * pads they use and how the classes group - not which rectangle is
+     * which. [classes] is one entry per slot, null for an empty one.
+     */
+    fun layoutPreview(classes: List<String?>): String {
+        val filled = classes.count { it != null }
+        if (filled == 0) return "NOTHING ON THE PADS YET."
+        val tally = classes.filterNotNull()
+            .groupingBy { it.uppercase(java.util.Locale.ROOT).replace('_', ' ') }
+            .eachCount()
+            .entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .joinToString(" · ") { "${it.value} ${it.key}" }
+        return "${countOf(filled, "PAD", "PADS")} OF ${classes.size} · $tally"
+    }
+
+    /**
      * The handoff at the end of a capture (J10).
      *
      * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and

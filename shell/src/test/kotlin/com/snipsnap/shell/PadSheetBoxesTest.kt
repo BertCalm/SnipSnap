@@ -59,4 +59,46 @@ class PadSheetBoxesTest {
             assertTrue(line.length <= PadSheetBoxes.SUMMARY_CHARS, "a stage must fit the strip: '$line'")
         }
     }
+
+    /**
+     * J36: KIT's grid showed nothing to tell a treated pad from a raw one,
+     * so sixteen treated pads could only be told apart by holding each in
+     * turn — while every strip the sheet draws already knew.
+     *
+     * The trap this pins is [PadSheetBoxes.Box.MAKE]. Its strip is never
+     * UNTOUCHED, because it advertises what the box can do rather than
+     * reporting what the pad carries. "Any strip that is not UNTOUCHED"
+     * would call every pad in every kit treated, which is the same answer
+     * as marking none of them.
+     */
+    @Test
+    fun `touched names the benches a pad carries, and MAKE's advert is not one`() {
+        assertEquals(emptySet(), PadSheetBoxes.touched(bare), "a bare pad carries nothing")
+        assertTrue(!PadSheetBoxes.isTouched(bare))
+        // The bare pad's MAKE strip is non-UNTOUCHED, which is exactly what
+        // would make a naive predicate say "treated" here.
+        assertTrue(
+            PadSheetBoxes.summaries(bare, null)[PadSheetBoxes.Box.MAKE] != PadSheetBoxes.UNTOUCHED,
+            "if MAKE ever starts reading UNTOUCHED this test stops proving anything — the point is that " +
+                "it does not, and touched() excludes it anyway.",
+        )
+
+        val shaped = bare.copy(attack = 0.5f)
+        assertEquals(setOf(PadSheetBoxes.Box.SHAPE), PadSheetBoxes.touched(shaped))
+        assertTrue(PadSheetBoxes.isTouched(shaped))
+
+        // An OUTSIDE trip in flight counts while it is out.
+        assertEquals(setOf(PadSheetBoxes.Box.OUTSIDE), PadSheetBoxes.touched(bare, outsideStage = "OUT THERE"))
+
+        // DE-SAMPLE is the one thing MAKE leaves behind, so it does count.
+        val desampled = bare.copy(source = bare.source + ("desampled" to "2 steps"))
+        assertEquals(setOf(PadSheetBoxes.Box.MAKE), PadSheetBoxes.touched(desampled))
+
+        // Benches accumulate rather than replacing one another.
+        assertEquals(
+            setOf(PadSheetBoxes.Box.SHAPE, PadSheetBoxes.Box.MAKE),
+            PadSheetBoxes.touched(shaped.copy(source = shaped.source + ("desampled" to "2 steps"))),
+        )
+    }
+
 }

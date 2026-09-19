@@ -881,4 +881,30 @@ class PersonalityTest {
         }
     }
 
+
+    /**
+     * J33: CHOP's layout preview is sixteen coloured rectangles with no
+     * text and no semantics node, and it is the only feedback CLASSIC /
+     * FOLD / MELODIC has. A sighted player at least gets the class
+     * colours; TalkBack got silence.
+     */
+    @Test
+    fun `the layout preview counts the pads and tallies the classes`() {
+        assertEquals("NOTHING ON THE PADS YET.", Copy.layoutPreview(List(16) { null }))
+        assertEquals(
+            "1 PAD OF 16 · 1 KICK",
+            Copy.layoutPreview(listOf("KICK") + List(15) { null }),
+            "singular at one, like every other count in this file",
+        )
+        // Sorted by count, then alphabetically, so the same layout always
+        // reads the same way rather than following slot order.
+        assertEquals(
+            "5 PADS OF 16 · 3 HAT CLOSED · 1 KICK · 1 SNARE",
+            Copy.layoutPreview(
+                listOf("HAT_CLOSED", "KICK", "HAT_CLOSED", "SNARE", "HAT_CLOSED") + List(11) { null },
+            ),
+            "underscores read as spaces - HAT_CLOSED is not a word anyone says",
+        )
+    }
+
 }
