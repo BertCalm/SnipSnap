@@ -619,8 +619,18 @@ private fun ChopContent(
         voice = v
         humStart = SystemClock.elapsedRealtime()
         humming = true
-        v.start(0)
+        // The rule before the tape, not after it (J32). HUM_START says
+        // "HEADPHONES ON, OR THE MIC HEARS THE TAPE TOO" — advice about a
+        // take that is already being captured by the time the tape is
+        // audible. Said after `v.start(0)` it arrived when acting on it
+        // meant wrecking the take it was warning about.
+        //
+        // Honest about what this does and does not fix: it makes the rule
+        // readable in time to stop and start again, not in time to have
+        // had headphones on already. Saying it before the press is a
+        // question about the button's own affordance, not about ordering.
         onToast(Copy.HUM_START)
+        v.start(0)
     }
 
     /**

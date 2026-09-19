@@ -2824,6 +2824,11 @@ fun App(shelf: KitShelf) {
                             entry = open,
                             session = exportSession,
                             onSessionChange = { exportSession = it },
+                            // A blocked write is a refusal with reasons, and
+                            // the box is what the app already uses for those
+                            // (J35). EXPORT is the first screen to raise it
+                            // rather than App doing so on a screen's behalf.
+                            onNote = ::openNote,
                             // App's own scope — the same one `fresh()`
                             // launches into and `PadSheetScreen`'s teardown
                             // save uses — so a dub survives a MenuRow tab
