@@ -68,13 +68,13 @@ class PersonalityTest {
         // the shape that would have caught `grooveRead` counting BAR/BARS
         // right while leaving HITS always plural.
         assertEquals("HEARD 1 HIT OVER 1 BAR AT ~90 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(1, 1, 90))
-        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON PROG A NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
+        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON CAPTURED NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
         // Was "TOOK 1 HITS OVER 1 BAR OF 3/4." — takeLanded sang BAR/BARS
         // right (it shares grooveRead's shape) and left HITS always plural,
         // the same asymmetry inside one sentence that the general helper
         // below exists to rule out everywhere at once.
-        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON PROG A NOW.", Copy.takeLanded(1, 1, "3/4"))
-        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON PROG A NOW.", Copy.takeLanded(5, 2, "5/4"))
+        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON CAPTURED NOW.", Copy.takeLanded(1, 1, "3/4"))
+        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON CAPTURED NOW.", Copy.takeLanded(5, 2, "5/4"))
         assertEquals("BANK A · 0 FREE", Copy.catchBank('A', 0))
         // A refusal names the control as it reads and the tab it is on
         // (September wiring review, findings 4 and 14): the reflective

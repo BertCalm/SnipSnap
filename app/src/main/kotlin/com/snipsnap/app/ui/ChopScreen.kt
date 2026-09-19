@@ -1587,6 +1587,13 @@ private fun GridPreview(placed: List<ChopReviewModel.Row?>, scheme: Scheme) {
 }
 
 /**
+ * The app's segment picker. `internal`, not `private`, since J18:
+ * GROOVE's program row draws its five segments with this rather than
+ * inventing a sixth picker treatment, which is the argument this KDoc
+ * already makes below. It still lives in this file because
+ * `ConventionTest` reads it out of `ChopScreen.kt` by name — moving it is
+ * a tidy-up for its own change, not a rider on a UI one.
+ *
  * Batch 3, Task 5: bright border + sub-label, not a solid fill — SETUP's
  * own selected-state treatment (`PropertiesScreen.kt`'s `SchemeRow`,
  * [pressedBevel] vs [raisedBevel]), applied here so CLASSIC/MELODIC agrees
@@ -1601,7 +1608,7 @@ private fun GridPreview(placed: List<ChopReviewModel.Row?>, scheme: Scheme) {
  * neighbour.
  */
 @Composable
-private fun SegmentButton(
+internal fun SegmentButton(
     label: String,
     active: Boolean,
     modifier: Modifier = Modifier,
