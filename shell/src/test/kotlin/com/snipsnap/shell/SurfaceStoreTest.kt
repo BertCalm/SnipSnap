@@ -491,4 +491,48 @@ class SurfaceStoreTest {
         assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(detune = Float.NaN) }
         assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(detune = 1.5f) }
     }
+
+    @Test
+    fun `a gesture round-trips to the thousandth, none is none, and a torn one is refused`() {
+        val n = Gesture.POINTS_PER_BAR
+        val g = Gesture(2, FloatArray(2 * n) { (it % 8) / 8f }, FloatArray(2 * n) { 0.125f })
+        SurfaceStore.save(temp, Settings(padSlot = 1, gesture = g))
+        assertEquals(g, SurfaceStore.load(temp).gesture)
+        // A point that is not on the thousandth grid lands on it - and the
+        // file is then byte-stable, which the round-trip test above holds
+        // for the rest of the settings.
+        val fine = Gesture(1, FloatArray(n) { 0.12345f }, FloatArray(n) { 0.5f })
+        SurfaceStore.save(temp, Settings(padSlot = 1, gesture = fine))
+        near(0.123f, SurfaceStore.load(temp).gesture!!.x(0f))
+        SurfaceStore.save(temp, Settings(padSlot = 1, gesture = null))
+        assertEquals(null, SurfaceStore.load(temp).gesture)
+        assertEquals(null, Settings.DEFAULT.gesture)
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(null, SurfaceStore.load(temp).gesture, "a file from before GESTURE existed has none")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"gesture":{"bars":1,"x":[0.5]},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"gesture":{"bars":1,"x":[0.5],"y":[0.5]},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.load(temp) }
+    }
 }

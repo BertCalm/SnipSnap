@@ -198,4 +198,36 @@ class ModulatorTest {
         assertFailsWith<IllegalArgumentException> { Modulator.Follower(attackSeconds = 0f) }
         assertFailsWith<IllegalArgumentException> { Modulator.Follower(releaseSeconds = Float.NaN) }
     }
+
+    @Test
+    fun `gesture plays the recorded finger over its own bars, and at full depth from rest it is the finger itself`() {
+        assertTrue(Shape.GESTURE.playsGesture)
+        assertTrue(Shape.entries.filter { it != Shape.GESTURE }.none { it.playsGesture })
+        assertEquals(Shape.GESTURE, Shape.entries.last(), "appended last: the MOD row cycles shapes by ordinal")
+        val n = Gesture.POINTS_PER_BAR
+        // Two bars: X sweeps 0..1 across the two bars, Y holds 0.75.
+        val g = Gesture(2, FloatArray(2 * n) { it.toFloat() / (2 * n) }, FloatArray(2 * n) { 0.75f })
+        val onX = Slot(Target.X, Shape.GESTURE, rateIndex = 0, depth = 1f)  // RATE is ignored
+        val onY = Slot(Target.Y, Shape.GESTURE, 4, depth = 1f)
+        val onCutoff = Slot(Target.CUTOFF, Shape.GESTURE, 4, depth = 1f)
+        // 120 BPM: a bar is 2 s, the gesture 4 s. Halfway (2 s) X is 0.5, so
+        // the offset is 0; a quarter in (1 s) X is 0.25, offset -0.25 -
+        // rest (0.5) plus that is 0.25, the finger's own place.
+        near(0f, Modulator.offset(onX, 2.0, 120f, gesture = g))
+        near(-0.25f, Modulator.offset(onX, 1.0, 120f, gesture = g))
+        near(0.25f, Modulator.offset(onX, 3.0, 120f, gesture = g))
+        // It loops on its own length: 5 s is 1 s into the second time round.
+        near(-0.25f, Modulator.offset(onX, 5.0, 120f, gesture = g))
+        // Y and any other target read the Y track: 0.75 is +0.25 at full depth, half that at half.
+        near(0.25f, Modulator.offset(onY, 0.7, 120f, gesture = g))
+        near(0.25f, Modulator.offset(onCutoff, 0.7, 120f, gesture = g))
+        near(0.125f, Modulator.offset(onCutoff.copy(depth = 0.5f), 0.7, 120f, gesture = g))
+        // No gesture recorded is nothing; the clocked shapes ignore the gesture.
+        assertEquals(0f, Modulator.offset(onX, 1.0, 120f, gesture = null))
+        near(0f, Modulator.offset(Slot(Target.X, Shape.SINE, 4, depth = 1f), 0.0, 120f, gesture = g))
+        // Through offsets, by index.
+        val all = Modulator.offsets(listOf(onX, onY), 1.0, 120f, gesture = g)
+        near(-0.25f, all[Target.X.ordinal])
+        near(0.25f, all[Target.Y.ordinal])
+    }
 }

@@ -256,8 +256,19 @@ logcat tag to grab when something is wrong.
   once and it should close again over about a quarter of a second, and a
   quiet room should sound exactly like DEPTH 0%. Then APP AUDIO with a
   track playing in another app, DUCK on CUTOFF at 60%: the surface should
-  dip under every kick like a sidechain. Back at DEPTH 0% the surface
-  should sound exactly as before the MOD row existed. Five buttons and a readout on one row is the densest line on
+  dip under every kick like a sidechain. Then GESTURE: SHAPE to GESTURE
+  on MOD A with TARGET X - the toast should say there is no gesture yet
+  and a GESTURE row should appear under MOD. BARS to 2, REC (the toast
+  names two bars), touch the pad and sweep left to right over two bars:
+  the readout should count the bars up and the toast should say the
+  gesture is kept. DEPTH to 100%, lift off, LATCH on: the loop should
+  replay your sweep on its own, starting on the bar line and looping
+  every two bars, the puck tracing it; a finger held down should add to
+  it rather than stop it; MOD B on Y with GESTURE should replay the
+  vertical half too. Leave and come back: the gesture is in
+  `surface.json`. CLEAR should empty it and the readout should say so.
+  Back at DEPTH 0% the surface should sound exactly as before the MOD
+  row existed. Five buttons and a readout on one row is the densest line on
   this screen - check it fits at 390dp.
   Then RING, the capture ring as a voice: with nothing listening, a tap
   on RING should name both doors on SHELF (LISTEN · MIC, APP AUDIO) and

@@ -1789,6 +1789,13 @@ object Copy {
      * - the shape is still chosen, and either door on SHELF makes it live.
      */
     const val FOLLOW_NOT_LISTENING = "FOLLOW AND DUCK MOVE WITH THE ROOM. LISTEN · MIC OR APP AUDIO ON SHELF, THEN COME BACK."
+    /** REC on the GESTURE row: the next touch starts the recording, for BARS' own length. */
+    fun gestureArmed(bars: Int): String = "REC ARMED. TOUCH THE PAD AND PLAY FOR ${countOf(bars, "BAR", "BARS")}."
+    /** The recording ran its length and the kit keeps it; how to hear it back, since a gesture only plays through a MOD slot. */
+    fun gestureKept(bars: Int): String = "GESTURE KEPT, ${countOf(bars, "BAR", "BARS")}. SHAPE GESTURE ON A MOD SLOT PLAYS IT."
+    const val GESTURE_CLEARED = "GESTURE CLEARED."
+    /** SHAPE stepped onto GESTURE with none recorded: the shape is kept and the way to fill it is said. */
+    const val GESTURE_NONE = "NO GESTURE YET. REC ON THE GESTURE ROW, THEN TOUCH THE PAD."
     /**
      * RING landed: which ring it froze and how much, and the way back to
      * the pad - a freeze is not in `surface.json`, so PAD ◄ ► is the only
