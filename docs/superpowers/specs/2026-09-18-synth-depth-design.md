@@ -112,6 +112,17 @@ inharmonic:
 | Church bell | 0.5 : 1 : 1.2 : 1.5 : 2 |
 | Stiff string | `fₙ = n·f₀·√(1 + B·n²)` |
 
+> **Unverified — must be sourced before Phase 1 implementation.** These four
+> ratio sets were written from recall. The DSP catalog at
+> `~/.claude/skills/_shared/dsp-knowledge/INDEX.md` has no modal or
+> physical-modeling entry (its Bessel references are *filters*, unrelated to the
+> Bessel-function zeros that set membrane modes), so nothing in the toolchain
+> currently verifies them. Shipping them unchecked would reproduce, at the
+> centre of this document, precisely the blind-authoring failure the document
+> exists to correct. Source them — Fletcher & Rossing, *The Physics of Musical
+> Instruments*, is the standard reference — or measure them, before any mode
+> table reaches code.
+
 Those irrational ratios are the character. A 2-op FM core cannot produce them
 at any macro setting, which is the precise reason the engines sound
 uninteresting.
@@ -126,7 +137,15 @@ as the structural advantage; this is the first thing that actually spends it.
 ### DRIVE
 
 Saturation with amplitude-dependent brightness — loud hits get brighter, not
-merely louder. Wires `TptSvf(saturate = true)` fleet-wide. Also the home of
+merely louder.
+
+`TptSvf(saturate = true)` goes to the engines that actually drive a resonant
+filter, which is a smaller set than "everywhere". Tonewheel already ends in a
+post-sum `tanh` (`Tonewheel.kt:121`) and would double-saturate; Vox is naive
+waves through fixed-Q formants with no resonance to self-limit, so the flag
+buys nothing audible there. Per-engine judgement, not a blanket policy.
+
+Also the home of
 *deliberate* grit (bit/rate reduction, noise floor) replacing the accidental
 aliasing that U6's oversampling removed; the engines currently sit between
 clean and lo-fi, committed to neither.
@@ -152,7 +171,7 @@ design, followed by a true-peak ceiling so 24-bit export cannot clip.
 
 | Phase | Ships | Audio changes |
 |---|---|---|
-| 0 | Phase randomization; detune scaled to note length; PLUCK fractional delay + oversampling; `saturate=true` fleet-wide; loudness normalize on melodic engines | Yes |
+| 0 | **`synth` CLI render verb** (the audition path); phase randomization; detune scaled to note length; PLUCK fractional delay + oversampling; `saturate=true` where a resonant filter is driven; loudness normalize on melodic engines | Yes |
 | 1 | `Dsp.Modes` + physical mode tables; per-mode stereo; TINES rebuilt on the spine | Yes |
 | 2 | Spine rolled across the remaining engines | Yes |
 | 3 | STRIKE (ninth engine); presets re-authored by ear | Yes |
@@ -166,10 +185,35 @@ get their own plans, written after the audition gate — because what the
 audition reveals should shape them, and writing them now would be guessing at
 the answer to the question the gate exists to ask.
 
-All rendered-audio changes fuse into a single `PadRecipe.VERSION` 1→2 bump with
-one regeneration of the 369 `testkit/` WAVs. The existing 392 presets are
-treated as disposable — they were authored blind and never heard, so they have
-no proven value to protect.
+### The audition path is Phase 0's first deliverable
+
+Nothing in the CLI renders a synth voice to a WAV today — it imports only the
+synth's *effects* (`Wobble`, `Treatments`, `Eras`, `TapeWear`, `Desample`).
+Auditioning currently means building and running the Android app. Since every
+phase gate in this document is "stop and have him hear it", a
+`synth <engine> <voice> [--preset N] --out <dir>` verb is a prerequisite for
+the plan, not a convenience inside it. It ships first.
+
+### When the version bumps
+
+`PadRecipe.VERSION` bumps on **the first phase that reaches users after a
+rendered-audio change** — not once at the end. Phase 0 changes rendered audio,
+so if Phase 0 ships, Phase 0 carries the bump and regenerates `testkit/`.
+
+This matters because `PadRecipe.kt:77` throws only on a version *mismatch*: if
+Phase 0 lands while `VERSION` stays at 1, old kits are accepted and silently
+re-rendered as different sounds. A silent change to saved user work is the one
+failure mode here that is not a matter of taste.
+
+Phases that land between releases accumulate under the same version number.
+
+If Phases 0–3 all land before a release, they share one 1→2 bump and one
+regeneration of the 369 `testkit/` WAVs. If a release falls between them, each
+released phase bumps again — the rule above governs, not the convenience of a
+single bump.
+
+The existing 392 presets are treated as disposable — they were authored blind
+and never heard, so they have no proven value to protect.
 
 ## The ninth engine — STRIKE
 
