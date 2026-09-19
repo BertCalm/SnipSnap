@@ -193,6 +193,28 @@ logcat tag to grab when something is wrong.
   and every corner from stages 4b/5/6 stay untouched (no spring) - the
   whole pad should sound exactly as before this stage existed until a
   corner actually carries a nonzero spring.
+  Then GRAIN, a fifth mode: tap it and a SIZE/DENSITY/SPRAY row appears
+  under PAD ◄ ►. A held finger should give a cloud of short grains rather
+  than the loop - sliding left and right scrubs *where* in the pad's
+  sample they come from (POSITION), and sliding up and down steps the
+  pitch through the kit's key, in discrete notes, never a glide (the
+  readout's KEY names the key; a kit with none steps in semitones). With
+  a tonal pad (a sustained note) at the middle of the pad, the cloud
+  should sound *in tune* even if the pad itself was a little flat or
+  sharp - the snap retunes as well as quantises. Tap the row's first
+  button to cycle SIZE → DENSITY → SPRAY and ◄ ► to step the one showing:
+  SIZE down to 0% is a buzz of clicks, up to 100% a smear of
+  quarter-second grains; DENSITY down to 0% is two grains a second with
+  silence between, up to 100% a continuous wash; SPRAY at 0% freezes the
+  cloud on the exact spot under the finger, at 100% it scatters across
+  the whole sample. Loudness should stay roughly level as SIZE and
+  DENSITY move (each grain is scaled by its overlap), and a tap should
+  sound at once, not after a wait, even at DENSITY 0%. Tilt still sets
+  resonance here. Switch back to XY: the loop should be back, the cloud
+  gone. Leave and return: the three knobs are in `surface.json` with the
+  pad and the corners. The host harness proves the arithmetic
+  (`grain_*` and `surface_engine_grain_*` in `test/engine_tests.cpp`,
+  the bridge in `jni_tests.cpp`); what it cannot prove is how it feels.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad

@@ -37,6 +37,18 @@ object TouchSurface {
          * touch position, two blends, neither aware of the other.
          */
         VECTOR(4),
+
+        /**
+         * A cloud of short grains instead of a loop: X is POSITION (where
+         * in the pad's sample the grains are read from), Y is pitch, snapped
+         * to the kit's key by the engine (`Grain.h` in `app/src/main/cpp`).
+         * SIZE, DENSITY and SPRAY are the mode's own knobs, held in
+         * `surface.json` ([SurfaceStore.Grain]) rather than swept by the
+         * finger. Reads exactly as [XY] does here - two axes, no depth, flat
+         * corners; what differs is what the engine makes of them. Appended
+         * last on purpose: the native side takes the mode by ordinal.
+         */
+        GRAIN(2),
     }
 
     /** A finger on the pad, in pixels of the pad's own rectangle. */

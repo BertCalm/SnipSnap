@@ -14,6 +14,8 @@
 #include "SurfaceEngine.h"
 
 using snipsnap::ControlFrame;
+using snipsnap::GrainSettings;
+using snipsnap::KeySnap;
 using snipsnap::MacroState;
 using snipsnap::PrintBuffer;
 using snipsnap::SurfaceEngine;
@@ -129,6 +131,23 @@ Java_com_snipsnap_app_NativeSurface_setCorner(
     JNIEnv*, jobject, jlong handle, jint index,
     jfloat pitch, jfloat cutoff, jfloat resonance, jfloat drive, jfloat crush, jfloat echo, jfloat spring) {
     engine(handle)->setCorner(index, MacroState{pitch, cutoff, resonance, drive, crush, echo, spring});
+}
+
+/** GRAIN's three knobs, in the order SurfaceEngine.kt names them: SIZE, DENSITY, SPRAY. */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong handle, jfloat size, jfloat density, jfloat spray) {
+    engine(handle)->setGrain(GrainSettings{size, density, spray});
+}
+
+/**
+ * The key GRAIN snaps to: the root pitch class, the scale as a 12-bit
+ * mask of degrees above it, and the loaded pad's own note - a jint mask
+ * because Kotlin has no unsigned type to hand over; the engine masks it
+ * to twelve bits either way.
+ */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong handle, jint rootSemitone, jint scaleMask, jfloat sourceMidi) {
+    engine(handle)->setKey(KeySnap{rootSemitone, static_cast<uint32_t>(scaleMask), sourceMidi});
 }
 
 /**

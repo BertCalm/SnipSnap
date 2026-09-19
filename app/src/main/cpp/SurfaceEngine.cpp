@@ -70,6 +70,20 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
         pending_[i].store(nullptr, std::memory_order_relaxed);
         retired_[i].store(nullptr, std::memory_order_relaxed);
     }
+    // GRAIN's atomics, for the same reason; the defaults are GrainSettings'
+    // and KeySnap's own, so an engine nobody has called setGrain/setKey on
+    // plays a chromatic mid-sized cloud rather than reading garbage.
+    setGrain(GrainSettings{});
+    setKey(KeySnap{});
+    // The one Hann window every grain reads through, whatever its length.
+    // kGrainWindowTable + 1 points so a grain at its very last frame
+    // (pos/length just under 1) still lands inside the table.
+    hann_.resize(static_cast<size_t>(kGrainWindowTable) + 1);
+    for (int32_t i = 0; i <= kGrainWindowTable; ++i) {
+        hann_[static_cast<size_t>(i)] = 0.5f - 0.5f * std::cos(2.0f * kPi * static_cast<float>(i) / static_cast<float>(kGrainWindowTable));
+    }
+    grainPosition_.snap(0.5f);
+    grainPitchAxis_.snap(0.5f);
     // The four corners of the morph pad, before the UI says otherwise:
     // A clean, B dark, C low and thick, D hot - none crushed, echoed or sprung.
     const MacroState defaults[4] = {
@@ -140,6 +154,13 @@ bool SurfaceEngine::start() {
     ic1eq_ = ic2eq_ = 0.0f;
     crushPhase_ = 0.0f;
     heldCrush_ = 0.0f;
+    // GRAIN: the finger's two axes glide like the other macros; the pool
+    // starts empty and the clock armed, so a restart never carries a
+    // previous session's grains (or its wait-for-the-next-trigger) over.
+    grainPosition_.configure(10.0f, fs);
+    grainPitchAxis_.configure(10.0f, fs);
+    for (auto& g : grains_) g.active = false;
+    grainClock_ = 1.0;
     // Sized to the rate the device actually gave us, not preferredRate_ -
     // resized (and zeroed, so a restart never plays back the previous
     // session's tail) every time start() runs, same as the filter state above.
@@ -199,6 +220,20 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
     corners_[index][6].store(control01(state.spring, 0.0f), std::memory_order_relaxed);
 }
 
+void SurfaceEngine::setGrain(const GrainSettings& settings) {
+    const GrainSettings defaults;
+    grainSize_.store(control01(settings.size, defaults.size), std::memory_order_relaxed);
+    grainDensity_.store(control01(settings.density, defaults.density), std::memory_order_relaxed);
+    grainSpray_.store(control01(settings.spray, defaults.spray), std::memory_order_relaxed);
+}
+
+void SurfaceEngine::setKey(const KeySnap& key) {
+    keyRoot_.store(((key.rootSemitone % 12) + 12) % 12, std::memory_order_relaxed);
+    const uint32_t mask = key.scaleMask & grain::kChromaticMask;
+    keyMask_.store(mask == 0u ? grain::kChromaticMask : mask, std::memory_order_relaxed);
+    keySourceMidi_.store(std::isfinite(key.sourceMidi) ? key.sourceMidi : 0.0f, std::memory_order_relaxed);
+}
+
 // ---- audio thread from here down ---------------------------------------------
 
 void SurfaceEngine::adoptPendingSample(int32_t slot) {
@@ -253,10 +288,33 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
         case 1:  // XYZ: X pitch, Y cutoff, Z drive, tilt resonance
             target = {f.x, f.y, f.tilt, f.z};
             break;
+        case 4:  // GRAIN: the finger is the cloud's POSITION and pitch (see
+                 // below), not these macros - the chain sits at XY's
+                 // defaults, as recorded and wide open, with the roll as
+                 // resonance so tilt still does here what it does everywhere.
+            target = {0.5f, 1.0f, f.tilt * 0.5f, 0.0f};
+            break;
         default:  // XY: X pitch, Y cutoff, tilt a little resonance
             target = {f.x, f.y, f.tilt * 0.5f, 0.0f};
             break;
     }
+    // GRAIN's own two axes, through the same door. Entering or leaving the
+    // mode empties the pool and snaps both axes: a mode change is a
+    // different instrument, not a glide between two (the UI snaps its own
+    // smoother on the same event), and a grain triggered under the old
+    // mode has no business finishing under the new one.
+    const bool grainMode = f.mode == 4;
+    const float position = control01(f.x, 0.5f);
+    const float pitchAxis = control01(f.y, 0.5f);
+    if (grainMode != grainMode_) {
+        for (auto& g : grains_) g.active = false;
+        grainMode_ = grainMode;
+        grainPosition_.snap(position);
+        grainPitchAxis_.snap(pitchAxis);
+        grainClock_ = 1.0;
+    }
+    grainPosition_.setTarget(position);
+    grainPitchAxis_.setTarget(pitchAxis);
     // Through the door before the DSP sees any of it: the defaults are
     // "as recorded, wide open, dry", so a reading that is not a number
     // leaves the surface playing rather than stuck.
@@ -281,9 +339,97 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     if (f.gate && !gated_) {
         for (int32_t i = 0; i < kMaxSources; ++i) phase_[i] = 0.0;
         crushRetrigger_ = true;
+        // And GRAIN's first grain fires on the next sample, for the same
+        // reason the loops restart from their head: a tap is a hit, not
+        // the start of a wait (see grainClock_'s own declaration).
+        grainClock_ = 1.0;
     }
     gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
+}
+
+float SurfaceEngine::readSlotAt(int32_t slot, double frameIndex) const {
+    const Sample* s = current_[slot];
+    if (!s || s->frames.size() < 2) return 0.0f;
+    const size_t n = s->frames.size();
+    double idx = std::fmod(frameIndex, static_cast<double>(n));
+    if (idx < 0.0) idx += static_cast<double>(n);
+    const size_t i0 = static_cast<size_t>(idx) % n;
+    const size_t i1 = (i0 + 1) % n;
+    const float frac = static_cast<float>(idx - static_cast<double>(static_cast<size_t>(idx)));
+    return s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
+}
+
+void SurfaceEngine::triggerGrain(double fs) {
+    // The knobs as they are *now*: a grain is shaped once, at birth.
+    const float size = grainSize_.load(std::memory_order_relaxed);
+    const float density = grainDensity_.load(std::memory_order_relaxed);
+    const float spray = grainSpray_.load(std::memory_order_relaxed);
+    const float lengthFrames = grain::lengthMs(size) * 0.001f * static_cast<float>(fs);
+    const int32_t length = std::max<int32_t>(2, static_cast<int32_t>(lengthFrames));
+    Grain* slot = nullptr;
+    for (auto& g : grains_) {
+        if (!g.active) {
+            slot = &g;
+            break;
+        }
+    }
+    if (!slot) {
+        // Every voice busy: the oldest gives way. `order` wraps after four
+        // billion grains, which at 64 a second is about two years of
+        // continuous touch - if it does, one steal picks the wrong grain.
+        slot = &grains_[0];
+        for (auto& g : grains_) {
+            if (g.order < slot->order) slot = &g;
+        }
+    }
+    slot->active = true;
+    slot->startFraction = grain::startFraction(grainPosition_.value(), spray, grain::random01(grainRng_));
+    slot->length = length;
+    slot->pos = 0;
+    slot->pitch = grain::pitchRatio(
+        grainPitchAxis_.value(),
+        keySourceMidi_.load(std::memory_order_relaxed),
+        keyRoot_.load(std::memory_order_relaxed),
+        keyMask_.load(std::memory_order_relaxed));
+    slot->gain = grain::gainFor(static_cast<float>(length) * grain::rateHz(density) / static_cast<float>(fs));
+    slot->order = ++grainOrder_;
+}
+
+float SurfaceEngine::grainSample(double fs, const float* weights) {
+    // The finger glides every sample whether or not a grain is born on
+    // it, so a grain triggered later starts from where the finger *is*.
+    grainPosition_.next();
+    grainPitchAxis_.next();
+    // The clock: DENSITY in grains per second, as a phase toward the next
+    // trigger. Read every sample so turning the knob changes the cadence
+    // at once, not at the next grain.
+    grainClock_ += static_cast<double>(grain::rateHz(grainDensity_.load(std::memory_order_relaxed))) / fs;
+    if (grainClock_ >= 1.0) {
+        // One trigger per sample at most: a clock that somehow got ahead
+        // (a touch-down arms it to exactly 1) does not fire twice.
+        grainClock_ = std::min(grainClock_ - 1.0, 0.999);
+        if (gated_) triggerGrain(fs);
+    }
+    float sum = 0.0f;
+    for (auto& g : grains_) {
+        if (!g.active) continue;
+        const float window = hann_[static_cast<size_t>((static_cast<float>(g.pos) / static_cast<float>(g.length)) * static_cast<float>(kGrainWindowTable))];
+        const float envelope = window * g.gain;
+        for (int32_t slot = 0; slot < kMaxSources; ++slot) {
+            if (weights[slot] <= 0.0f) continue;
+            const Sample* s = current_[slot];
+            if (!s || s->frames.size() < 2) continue;
+            // This slot's own head: the grain's start as a fraction of *its*
+            // length, advanced at the slot's own rate against ours and the
+            // snapped pitch - the same arithmetic readSlot applies to a loop.
+            const double head = static_cast<double>(g.startFraction) * static_cast<double>(s->frames.size()) +
+                                static_cast<double>(g.pos) * (static_cast<double>(s->rate) / fs) * static_cast<double>(g.pitch);
+            sum += weights[slot] * envelope * readSlotAt(slot, head);
+        }
+        if (++g.pos >= g.length) g.active = false;
+    }
+    return sum;
 }
 
 bool SurfaceEngine::slotLoaded(int32_t slot) const {
@@ -377,10 +523,20 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         const float wSum = w0Loaded + w1Loaded + w2Loaded + w3Loaded;
         const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
         const float pr = pitchRatio(pitch);
-        const float v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
-                         (w1Loaded * wInv) * readSlot(1, fs, pr) +
-                         (w2Loaded * wInv) * readSlot(2, fs, pr) +
-                         (w3Loaded * wInv) * readSlot(3, fs, pr);
+        // GRAIN swaps the source and nothing else: the same four slots at
+        // the same renormalised weights, read as a cloud of windowed grains
+        // rather than four loops. The loops' phases simply hold while the
+        // cloud plays; a touch-down still resets them for when it ends.
+        float v0;
+        if (grainMode_) {
+            const float weights[kMaxSources] = {w0Loaded * wInv, w1Loaded * wInv, w2Loaded * wInv, w3Loaded * wInv};
+            v0 = grainSample(fs, weights);
+        } else {
+            v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
+                 (w1Loaded * wInv) * readSlot(1, fs, pr) +
+                 (w2Loaded * wInv) * readSlot(2, fs, pr) +
+                 (w3Loaded * wInv) * readSlot(3, fs, pr);
+        }
 
         // CRUSH: sample-and-hold downsampling plus shrinking quantisation
         // levels, both continuous functions of the macro rather than an
