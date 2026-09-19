@@ -186,7 +186,7 @@ private const val GROOVE_SCROLL_EDGE_DP = 20
  * A–E is an argument to [GrooveProgram.compute] and no more — it is not an
  * MPC clip slot, and the app's own exporter never writes it. What the
  * exporter writes is the word: `GrooveVariations` suffixes a clip's name
- * with **Swing**/**Tight**, **Half** and **Sparse**, and leaves the base
+ * with `Swing` (or `Tight`), `Half` and `Sparse`, and leaves the base
  * clip's own name alone. So the letters were the one set of names in the
  * app that reached nothing outside this file, and the screen and the SD
  * card disagreed about what these things are called.

@@ -2334,4 +2334,55 @@ class ConventionTest {
         )
     }
 
+
+    // ==================== Law: no comment closes itself by accident ====================
+
+    /**
+     * An asterisk followed by a slash ends a block comment, so writing
+     * markdown-ish emphasis around a slash inside a KDoc terminates it
+     * mid-sentence. Everything after it becomes code, and the compiler
+     * reports a cascade of "Expecting a top level declaration" at a column
+     * that looks like ordinary English.
+     *
+     * This cost a CI cycle. `:app` has no Kotlin test source set, so
+     * `android-build` is the only thing that compiles it — a syntax error
+     * there is invisible to `./gradlew test` and shows up only after a
+     * push. The same mistake had been made and fixed in this very file an
+     * hour earlier; fixing that instance without sweeping for the shape is
+     * what let the second one through, in `GrooveScreen.kt`.
+     *
+     * A line that is nothing but a closer is legitimate (if unusual), so
+     * only an occurrence with prose around it is refused. The sequence is
+     * assembled at runtime rather than written out, because a law that
+     * names the thing it forbids would flag its own source — which is how
+     * the first draft of this law failed.
+     */
+    @Test
+    fun `no Kotlin source ends a doc comment by accident`() {
+        val closer = "*".repeat(2) + "/"
+        val roots = listOf("../app/src", "../shell/src", "../kit/src", "../audio/src", "../loop/src", "../synth/src", "../cli/src")
+            .map { File(it) }
+            .filter { it.isDirectory }
+        assertTrue(roots.size >= 5, "only found ${roots.size} source roots — the scan is broken, not the tree.")
+        val sources = roots.flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        assertTrue(sources.size > 100, "found only ${sources.size} .kt files — the scan is broken, not the tree.")
+
+        val bad = mutableListOf<String>()
+        for (file in sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                if (closer in line && line.trim() != closer) {
+                    bad += "${file.path}:${i + 1}: ${line.trim()}"
+                }
+            }
+        }
+        assertTrue(
+            bad.isEmpty(),
+            "these lines close the enclosing doc comment where they stand, turning the rest of the " +
+                "comment into code:\n  " + bad.joinToString("\n  ") +
+                "\nUse backticks rather than double-asterisk emphasis next to a slash. This is checked " +
+                "here because :app has no test source set — a syntax error in it is invisible to the " +
+                "JVM suite and only surfaces when CI compiles the app.",
+        )
+    }
+
 }
