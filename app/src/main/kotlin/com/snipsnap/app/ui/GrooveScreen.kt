@@ -178,15 +178,42 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  */
 private const val GROOVE_SCROLL_EDGE_DP = 20
 
+/**
+ * The five programs, named for what they are.
+ *
+ * They read `PROG A · THE BREAK` … `PROG E · EDITED` until J18: an index
+ * first and the meaning second, on a screen where the index means nothing.
+ * A–E is an argument to [GrooveProgram.compute] and no more — it is not an
+ * MPC clip slot, and the app's own exporter never writes it. What the
+ * exporter writes is the word: `GrooveVariations` suffixes a clip's name
+ * with **Swing**/**Tight**, **Half** and **Sparse**, and leaves the base
+ * clip's own name alone. So the letters were the one set of names in the
+ * app that reached nothing outside this file, and the screen and the SD
+ * card disagreed about what these things are called.
+ *
+ * `the GROOVE programs are named for what the exporter writes` holds B, C
+ * and D to those suffixes. A is the captured clip, which carries no suffix
+ * and so is the app's own word to choose; E is the user's own.
+ *
+ * One token each, no spaces: five of these sit in one segment row, and a
+ * label that wraps would make its segment taller than the other four.
+ */
 private val PROG_NAMES = listOf(
-    "PROG A · THE BREAK",
-    "PROG B · SWUNG",
-    "PROG C · HALF-TIME",
-    "PROG D · SPARSE",
-    "PROG E · EDITED",
+    "CAPTURED",
+    // SWING, not SWUNG: `the GROOVE programs are named for what the
+    // exporter writes` refused the adjective, and it was right to - the
+    // clip that lands on the MPC is named `<take> Swing 60`. It is also
+    // the same word as the stepper two rows down, which is correct
+    // rather than a collision: that stepper sets the percent this
+    // program applies.
+    "SWING",
+    "HALF",
+    "SPARSE",
+    "YOURS",
 )
+/** What the selected program is, in one line under the row. */
 private val PROG_SUBS = listOf(
-    "THE CAPTURED CLIP",
+    "THE TAKE, AS PLAYED",
     "ON THE GRID, PUSHED LATE",
     // Says the length change out loud (J17). `GrooveVariations.halfTime`
     // doubles `bars`, and this file already knew — the comment on the PROG
@@ -195,9 +222,13 @@ private val PROG_SUBS = listOf(
     // not, which is the whole of the finding.
     "ROOM TO BREATHE · TWICE AS LONG",
     "THE SKELETON",
-    "FORKED — YOUR STEPS",
+    // Says the split out loud (J18). The first four are recomputed live
+    // and never stored - `GrooveProgram`'s own KDoc - so YOURS is the only
+    // one a hand can change, and nothing on screen used to say so.
+    "YOUR STEPS · THE ONLY ONE YOU CAN EDIT",
 )
-private val PROG_LETTERS = listOf("PROG A", "PROG B", "PROG C", "PROG D")
+/** What a fork says it came from - [PROG_NAMES] for the four derived programs. */
+private val PROG_SOURCES = PROG_NAMES.take(4)
 
 /** Lane display order, straight from [GrooveEdit.Lane]'s own declaration order. */
 private val LANE_ORDER: List<GrooveEdit.Lane> = GrooveEdit.Lane.entries
@@ -711,12 +742,12 @@ fun GrooveScreen(
     // with no feedback at all — the same announces-success-does-nothing
     // failure class this session already fixed twice (HOLD, WIND). So an
     // existing E arms this flag instead of forking blind: the button's
-    // own label swaps to "REPLACE E?", and only a SECOND tap actually
+    // own label swaps to "REPLACE YOURS?", and only a SECOND tap actually
     // overwrites. See [forkTakeToE].
     var forkArmed by remember(kitDir) { mutableStateOf(false) }
 
     // Quietly stands down if the second tap never comes — a stale
-    // "REPLACE E?" still armed a minute later would be a trap, not a
+    // "REPLACE YOURS?" still armed a minute later would be a trap, not a
     // safety net (same reasoning as TakesBinScreen's own EMPTY_BIN_ARM_MS
     // effect).
     LaunchedEffect(forkArmed) {
@@ -745,7 +776,7 @@ fun GrooveScreen(
     // state, so there's no separate copy to keep in sync.
     var isEditing by remember(kitDir) { mutableStateOf(false) }
     var editorBar by remember(kitDir) { mutableIntStateOf(0) }
-    var editorSourceLabel by remember(kitDir) { mutableStateOf(PROG_LETTERS[0]) }
+    var editorSourceLabel by remember(kitDir) { mutableStateOf(PROG_SOURCES[0]) }
     var editorDirty by remember(kitDir) { mutableStateOf(false) }
     var editorSaveTick by remember(kitDir) { mutableIntStateOf(0) }
 
@@ -839,7 +870,7 @@ fun GrooveScreen(
      * through here, so `forkArmed` can never outlive the row it belongs
      * to: switching programs, RESEED, EDIT STEPS, MIDI, CHART, SONG ▸,
      * ORBIT ▸, or arming another RECORD must all cancel a pending
-     * "REPLACE E?" confirm exactly as they already cancel the just-landed
+     * "REPLACE YOURS?" confirm exactly as they already cancel the just-landed
      * row itself — otherwise the NEXT take's row could render already
      * armed, skipping the first tap its own confirm exists for. FEEL and
      * `► PLAY` are deliberately absent from this list — see `justLanded`'s
@@ -1171,7 +1202,7 @@ fun GrooveScreen(
                 val (b, e) = withContext(Dispatchers.IO) { GrooveEdit.startEmpty(kitDir, kit.name) }
                 base = b
                 eClip = e
-                editorSourceLabel = PROG_LETTERS[0]
+                editorSourceLabel = PROG_SOURCES[0]
                 editorBar = 0
                 editorDirty = false
                 progIndex = 4
@@ -1197,7 +1228,7 @@ fun GrooveScreen(
         val source = currentClip ?: return
         clearJustLanded()
         busy = true
-        val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
+        val sourceLetter = if (progIndex < 4) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
                 val (hadE, forked) = withContext(Dispatchers.IO) {
@@ -1228,7 +1259,7 @@ fun GrooveScreen(
      * doesn't deliver. Neither silently replacing a hand-edited E nor
      * silently doing nothing is acceptable, so an existing E arms
      * [forkArmed] instead of forking blind — the button's own label swaps
-     * to "REPLACE E?" — and only a second tap actually overwrites.
+     * to "REPLACE YOURS?" — and only a second tap actually overwrites.
      *
      * `eClip != null` (not a fresh `GrooveEdit.hasUserProgram(kitDir)` disk
      * read) decides whether to arm: this is a plain click handler, called
@@ -1251,7 +1282,7 @@ fun GrooveScreen(
         }
         clearJustLanded()
         busy = true
-        val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
+        val sourceLetter = if (progIndex < 4) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
                 val forked = withContext(Dispatchers.IO) { GrooveEdit.fork(kitDir, source, replace = existingE) }
@@ -1384,7 +1415,7 @@ fun GrooveScreen(
         scope.launch {
             try {
                 val tempo = kit.tempoBpm
-                val program = PROG_NAMES[progIndex].substringBefore(" ·")
+                val program = PROG_NAMES[progIndex]
                 val text = Chart.render(
                     clip, kit,
                     bpm = tempo ?: KitPreview.DEFAULT_BPM,
@@ -1923,7 +1954,14 @@ fun GrooveScreen(
                         // as on the full screen's action row.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             GrooveActionButton("● RECORD", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startRecording() }
-                            GrooveActionButton("STEPS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
+                            // One name for one editor (J19). This, EDIT STEPS and EDIT
+                            // THIS TAKE were three doors into the same step
+                            // editor, named three different ways, none of them
+                            // naming the program they land on — and the toast
+                            // that follows all three says YOURS. They now say
+                            // where they go: this one starts it from nothing,
+                            // the other two fork into it.
+                            GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
                             GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
                                 clearJustLanded()
                                 onOrbit()
@@ -1958,15 +1996,20 @@ fun GrooveScreen(
                 }
 
                 ProgramSelector(
-                    name = PROG_NAMES[progIndex],
+                    names = PROG_NAMES,
                     sub = PROG_SUBS[progIndex],
-                    // Locked to PROG A while RECORD is armed or counting
-                    // in: switching to a derived program mid-take (HALF-
-                    // TIME doubles `bars`) would desync the clock's own
-                    // wrap point from `take.bars`, set once at arm time —
-                    // see startRecording's own KDoc.
-                    onPrev = { if (!recording && !countingIn) { clearJustLanded(); progIndex = (progIndex - 1 + progCount) % progCount } },
-                    onNext = { if (!recording && !countingIn) { clearJustLanded(); progIndex = (progIndex + 1) % progCount } },
+                    selected = progIndex,
+                    count = progCount,
+                    // Locked to the captured program while RECORD is armed
+                    // or counting in: switching to a derived program
+                    // mid-take (HALF doubles `bars`) would desync the
+                    // clock's own wrap point from `take.bars`, set once at
+                    // arm time — see startRecording's own KDoc. As
+                    // `enabled`, not a silent return: the refusal reaches
+                    // TalkBack as well as the touch layer, which is the
+                    // contract PR 2 established for every picker.
+                    enabled = !recording && !countingIn,
+                    onPick = { clearJustLanded(); progIndex = it },
                     scheme = scheme,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -2039,12 +2082,12 @@ fun GrooveScreen(
                         // The take just landed — a transient, one-shot pair
                         // of actions (Task 5): EDIT THIS TAKE calls [forkTakeToE],
                         // NOT the plain [forkToE] EDIT STEPS below uses — an
-                        // existing E arms a "REPLACE E?" confirm instead of
+                        // existing E arms a "REPLACE YOURS?" confirm instead of
                         // silently handing back stale steps (Task 6 bug fix;
                         // see [forkTakeToE]'s own KDoc). UNDO TAKE reaches
                         // for `preTake`, snapshotted once at arm time. Both
                         // — and anything else that moves the program on —
-                        // clear this row (and any pending "REPLACE E?" arm)
+                        // clear this row (and any pending "REPLACE YOURS?" arm)
                         // via `clearJustLanded`; see `justLanded`'s own KDoc.
                         //
                         // Batch 3, Task 1: kept above the grouped controls
@@ -2060,7 +2103,10 @@ fun GrooveScreen(
                                 // axis carrying quantize now, this button's job is
                                 // "make this editable", not "make this tight" — the
                                 // armed confirm and the handler underneath are unchanged.
-                                if (forkArmed) "REPLACE E?" else "EDIT THIS TAKE",
+                                // J19: the same words as FORK TO YOURS above -
+                                // it is the same fork, from the take rather than
+                                // from the program on screen.
+                                if (forkArmed) "REPLACE YOURS?" else "FORK TO YOURS",
                                 scheme,
                                 Modifier.weight(1f),
                                 enabled = !busy,
@@ -2166,7 +2212,7 @@ fun GrooveScreen(
                                 SwingStepper("−", scheme, description = "SWING DOWN") { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                    TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
+                                    TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink3.tape)
                                 }
                                 SwingStepper("+", scheme, description = "SWING UP") { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
                             }
@@ -2207,7 +2253,8 @@ fun GrooveScreen(
                                     seed++
                                     onToast(Copy.feelRolled(seed))
                                 }
-                                GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+                                // J19: see START YOURS' comment in the record row.
+                                GrooveActionButton("FORK TO YOURS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
                             }
 
                             // "SEND IT SOMEWHERE" until J46, which is true of
@@ -2351,41 +2398,43 @@ private fun EmptyGroove(onNavigateKits: () -> Unit) {
     EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
 }
 
+/**
+ * The five programs, all of them on screen at once (J18).
+ *
+ * It was a prev/next carousel over a set the user never saw whole: four
+ * taps to learn what the options were, and no way to tell at a glance
+ * which one you were on relative to the rest. A row of segments is the
+ * app's own answer to this shape everywhere else — CHOP's CUT bench, EAR
+ * and SNAP rows, SETUP's scheme list — so this is the existing
+ * convention arriving here, not a new one.
+ *
+ * [SegmentButton] is ChopScreen's, deliberately: its KDoc argues a picker
+ * should "agree with every other picker in the app rather than invent its
+ * own third convention", and it already carries the `selected` semantics
+ * and the `enabled`-reaches-TalkBack contract that PR 2 established.
+ */
 @Composable
 private fun ProgramSelector(
-    name: String,
+    names: List<String>,
     sub: String,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
+    selected: Int,
+    count: Int,
+    enabled: Boolean,
+    onPick: (Int) -> Unit,
     scheme: Scheme,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
-            // No fillMaxHeight here. A Row sizes to its tallest child, so a
-            // child filling the incoming max height makes this whole Row
-            // claim the Column's remaining space — which starved NeedleRoll's
-            // weight(1.6f) to nothing and pushed the action rows and RECORD
-            // clean off the screen. The ► button never had it, which is why
-            // only ◄ stretched. Both are a plain 48dp square.
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = "PREVIOUS PROGRAM", onClick = onPrev),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("◄", TapeType.lcd(19), scheme.ink.tape)
-        }
-        Column(
-            Modifier.weight(1f).height(Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme).padding(vertical = 5.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            TapeText(name, TapeType.lcd(19), scheme.amber.tape)
-            TapeText(sub, TapeType.pixelSmall, scheme.ink3.tape)
-        }
-        Box(
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = "NEXT PROGRAM", onClick = onNext),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("►", TapeType.lcd(19), scheme.ink.tape)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (i in 0 until count) {
+                SegmentButton(
+                    names[i],
+                    active = i == selected,
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled,
+                ) { onPick(i) }
+            }
         }
     }
 }
@@ -2396,7 +2445,7 @@ private fun ProgramSelector(
  * to 40dp (was 32dp), not the full 48: this stepper shares a
  * `SpaceBetween` row (the swing container in `GrooveScreen`, roughly
  * 1.6/2.8 of the frame width after margins - about 200dp) with a
- * two-line text readout ("SWING NN%" / "RIDES PROG B") that has no
+ * two-line text readout ("SWING NN%" / "RIDES SWING") that has no
  * `weight()` of its own. Two 48dp-wide steppers (+32dp total over the old
  * 32dp) leave that readout markedly less room on a narrower-than-390dp
  * phone; two 40dp steppers (+16dp total) is the width this control
@@ -2465,7 +2514,13 @@ private fun FeelRow(
                 TapeType.pixel,
                 scheme.amber.tape,
             )
-            TapeText("RIDES A · C · D", TapeType.pixelSmall, scheme.ink3.tape)
+            // "RIDES A · C · D" until J18. The feel is applied to the
+            // take and every program derived from it inherits it —
+            // `GrooveProgram.compute` applies it to `base` first — so
+            // naming the mechanism is both shorter and exactly true:
+            // SWING is handed the UNFELT take and YOURS is hand-placed,
+            // which is why neither moves.
+            TapeText("RIDES THE TAKE", TapeType.pixelSmall, scheme.ink3.tape)
         }
         SwingStepper("+", scheme, description = "FEEL LOOSER") { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
     }

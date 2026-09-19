@@ -47,12 +47,20 @@ class ConventionTest {
     private val tapeScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/TapeScreen.kt")
 
     /** The body of a top-level `private fun <name>(` through its closing brace at column 0. */
+    /**
+     * A top-level `fun` by name, whatever its visibility. It matched
+     * `private fun` alone until J18, when `SegmentButton` became
+     * `internal` so GROOVE's program row could draw its five segments
+     * with the app's existing picker instead of a sixth one. A law about
+     * what a component *does* should not fail over who can call it.
+     */
     private fun topLevelFun(file: File, name: String): String {
         val src = file.readText(Charsets.UTF_8)
-        val start = src.indexOf("private fun $name(")
-        assertTrue(start >= 0, "expected to find `private fun $name(` in ${file.name}")
+        val decl = Regex("""^(?:private |internal |public )?fun $name\(""", RegexOption.MULTILINE).find(src)
+        assertTrue(decl != null, "expected to find a top-level `fun $name(` in ${file.name}")
+        val start = decl!!.range.first
         val end = src.indexOf("\n}\n", start)
-        assertTrue(end > start, "expected `private fun $name(` in ${file.name} to close at column 0")
+        assertTrue(end > start, "expected `fun $name(` in ${file.name} to close at column 0")
         return src.substring(start, end)
     }
 
@@ -159,6 +167,10 @@ class ConventionTest {
      */
     @Test
     fun `SegmentButton and DeckButton pass enabled through to tapeClick`() {
+        // `internal fun`, not `private fun`, since J18: GROOVE's program
+        // row draws its five segments with this one rather than inventing
+        // a sixth picker. The visibility is not what this law is about,
+        // so it reads the function whichever it is.
         val segment = topLevelFun(chopScreen, "SegmentButton")
         val deck = topLevelFun(tapeScreen, "DeckButton")
 
@@ -1547,6 +1559,27 @@ class ConventionTest {
     private fun codeOnly(block: String): String =
         block.lines().filterNot { isCommentLine(it.trim()) }.joinToString("\n")
 
+    /** The `( ... )` list following [marker] in [src], paren-matched and comment-stripped. */
+    private fun blockAfterList(src: String, marker: String): String {
+        val code = codeOnly(src)
+        val at = code.indexOf(marker)
+        assertTrue(at >= 0, "expected to find `$marker`")
+        val start = code.indexOf('(', at)
+        assertTrue(start >= 0, "expected a `(` after `$marker`")
+        var depth = 0
+        var i = start
+        while (i < code.length) {
+            val c = code[i]
+            if (c == '(') depth++
+            if (c == ')') {
+                depth--
+                if (depth == 0) return code.substring(start, i + 1)
+            }
+            i++
+        }
+        fail("unbalanced parentheses after `$marker`")
+    }
+
     /** The `{ ... }` block following [marker] in [src], brace-matched. */
     private fun blockAfter(src: String, marker: String): String {
         val at = src.indexOf(marker)
@@ -1984,7 +2017,7 @@ class ConventionTest {
         val subList = entriesOf("private val PROG_SUBS = listOf(")
         assertTrue(nameList.size == subList.size && nameList.isNotEmpty(), "PROG_NAMES and PROG_SUBS disagree: $nameList vs $subList")
 
-        val halfTimeAt = nameList.indexOfFirst { "HALF-TIME" in it }
+        val halfTimeAt = nameList.indexOfFirst { "HALF" in it }
         assertTrue(halfTimeAt >= 0, "no program named HALF-TIME in $nameList — if it was renamed, point this law at the new name.")
         assertTrue(
             "LONG" in subList[halfTimeAt],
@@ -2220,4 +2253,85 @@ class ConventionTest {
             )
         }
     }
+
+    // ==================== Law: GROOVE's programs are named for what the exporter writes ====================
+
+    /**
+     * The five GROOVE programs read `PROG A · THE BREAK` … `PROG E ·
+     * EDITED` until J18 — index first, meaning second, on a screen where
+     * the index means nothing. A–E is an argument to
+     * `GrooveProgram.compute` and nothing else: it is not an MPC clip
+     * slot, and no exporter in the app has ever written it.
+     *
+     * What the exporter *does* write is the word. `GrooveVariations`
+     * suffixes each derived clip's name — `Swing` (or `Tight`), `Half`,
+     * `Sparse` — and those strings go into `groove.json` and out to the
+     * MPC's clip list. So the letters were the one set of names in the
+     * app that reached nothing outside `GrooveScreen.kt`, and the screen
+     * and the SD card disagreed about what these things are called.
+     *
+     * This law reads the names off the screen's own source and the
+     * suffixes out of the exporter, so the two cannot drift apart again.
+     *
+     * **Two programs are exempt, for reasons that are facts rather than
+     * taste.** The captured program is the base clip: it carries no
+     * suffix at all, so there is no exporter word to match and the app
+     * picks its own. The user's own program is stored and found again by
+     * `GrooveEdit.NAME_SUFFIX`, which is `" E"` — a marker in
+     * `groove.json`, not a name a player would recognise, and not
+     * renameable without migrating every kit already on disk. The screen
+     * calls it YOURS and the marker stays where it is.
+     */
+    @Test
+    fun `the GROOVE programs are named for what the exporter writes`() {
+        val groove = File("../app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt")
+        assertTrue(groove.isFile, "expected to find ${groove.absolutePath}")
+        val block = blockAfterList(groove.readText(Charsets.UTF_8), "private val PROG_NAMES = listOf")
+        val names = Regex("\"([^\"]+)\"").findAll(block).map { it.groupValues[1] }.toList()
+        assertEquals(
+            5,
+            names.size,
+            "expected five program names in GrooveScreen's PROG_NAMES, found $names — the pattern this " +
+                "law reads must have changed, which would make it pass by checking nothing.",
+        )
+
+        // The exporter's own words, taken from the exporter rather than retyped.
+        val base = com.snipsnap.mpc3.Mpc3Clip(
+            name = "BASE",
+            bars = 1,
+            notes = listOf(com.snipsnap.mpc3.Mpc3Note(note = 36, timePulses = 0L, velocity = 1.0f)),
+        )
+        val written = com.snipsnap.kit.GrooveVariations.standard(base, swingPercent = 60)
+        // standard() returns base, swung, half, sparse — in the same order
+        // the screen lists them, which is the order `GrooveProgram.compute`
+        // indexes. Index 0 is the base and carries no suffix.
+        val suffixes = written.drop(1).map { it.name.removePrefix("BASE").trim().substringBefore(' ') }
+        assertEquals(
+            3,
+            suffixes.count { it.isNotBlank() },
+            "GrooveVariations.standard no longer suffixes its three derived clips (got $suffixes) — " +
+                "this law reads the exporter's vocabulary out of it, so an unsuffixed variation would " +
+                "make the check vacuous rather than failing.",
+        )
+        for ((i, suffix) in suffixes.withIndex()) {
+            val onScreen = names[i + 1]
+            assertTrue(
+                onScreen.startsWith(suffix.uppercase(), ignoreCase = true) ||
+                    suffix.startsWith(onScreen, ignoreCase = true),
+                "GROOVE's program ${i + 1} is called '$onScreen' on screen, but the exporter writes " +
+                    "'$suffix' into the clip name that lands on the MPC. A player who picks a program here " +
+                    "and then looks for it on the hardware has to recognise it — that is the whole reason " +
+                    "the A–E letters went (J18). Screen names: $names; exporter suffixes: $suffixes.",
+            )
+        }
+
+        // The letters are gone from the screen's own labels.
+        val letters = names.filter { Regex("""^PROG [A-E]\b""").containsMatchIn(it) }
+        assertTrue(
+            letters.isEmpty(),
+            "GrooveScreen's PROG_NAMES is index-first again: $letters. A–E is an argument to " +
+                "GrooveProgram.compute, not an MPC clip slot — see this law's KDoc.",
+        )
+    }
+
 }

@@ -225,7 +225,7 @@ class ReversalTest {
      */
     private val noWayBack = mapOf(
         "BAR_WIPED" to "the step editor autosaves the wipe; no control steps it back",
-        "FORKED_TO_E_REPLACED" to "the old PROG E steps are overwritten in place",
+        "FORKED_TO_E_REPLACED" to "the user's own steps are overwritten in place",
         "kitBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "snipBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "roomBinEmptied" to "emptying a bin is the one delete the app promises is final",

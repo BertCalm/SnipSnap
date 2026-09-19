@@ -760,13 +760,23 @@ object Copy {
     fun dug(from: String, to: String): String = "BREAK FOUND AT $from-$to. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY."
     const val NO_BREAK = "NO BREAK HEARD IN THAT. DIG BY HAND WITH IN AND OUT."
     const val FEEL_BUSY = "STEALING THE FEEL…"
-    /** The feel poured over the kit's pattern as PROG E; [covered] of 16 positions the record actually played. */
-    fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON PROG E. A–D STAY UNTOUCHED."
+    /**
+     * The feel poured over the kit's pattern as the user's own program;
+     * [covered] of 16 positions the record actually played.
+     *
+     * Says YOURS, not PROG E (J18): the GROOVE screen names its five
+     * programs for what they are now, and a toast still saying a letter
+     * would name a thing the screen no longer shows. `GrooveEdit`'s own
+     * `NAME_SUFFIX` is still `" E"` — that letter is how a stored clip is
+     * found again in `groove.json`, so it stays on disk and leaves the
+     * words alone.
+     */
+    fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON YOURS. THE REST STAY UNTOUCHED."
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
-    const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
+    const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
-    const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
+    const val FORKED_TO_E_REPLACED = "YOURS REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
     /**
      * The step editor's WIPE BAR, said honestly.
      *
@@ -797,14 +807,14 @@ object Copy {
      */
     fun takeLanded(notes: Int, bars: Int, meter: String? = null): String {
         val of = meter?.let { " OF $it" } ?: ""
-        return "TOOK ${countOf(notes, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")}$of. PLAYING ON PROG A NOW."
+        return "TOOK ${countOf(notes, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")}$of. PLAYING ON CAPTURED NOW."
     }
     /** UNDO TAKE's existing-base branch: whatever was captured before this take plays again. */
     const val TAKE_UNDONE = "TAKE UNDONE. BACK TO WHAT WAS THERE BEFORE."
     /** UNDO TAKE's from-scratch-with-nothing branch: said honestly as a delete, never as a "restore" to a base that never existed. */
     const val TAKE_UNDONE_EMPTY = "TAKE UNDONE. NO GROOVE LEFT - SAME AS BEFORE RECORD."
     /** UNDO TAKE's from-scratch-with-E branch: the take is gone, PROG E rides through untouched. */
-    const val TAKE_UNDONE_TO_E = "TAKE UNDONE. PROG E RIDES THROUGH, UNTOUCHED."
+    const val TAKE_UNDONE_TO_E = "TAKE UNDONE. YOURS RIDES THROUGH, UNTOUCHED."
     /** STOP RECORDING with nothing captured — armed, counted in, played nothing, tapped STOP. Previously a bare no-op: no toast, no message at all (live-record follow-ups, Fix 4). See `GrooveScreen.kt`'s `stopRecording` for the guard this backs. */
     const val TAKE_SILENT = "NOTHING PLAYED — NO TAKE LANDED."
 

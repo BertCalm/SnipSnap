@@ -632,6 +632,123 @@ with no design choice inside them, and are **done**:
 
 ---
 
+### PR 7 — researched, not chosen by taste
+
+You asked for the questions, then asked me to research them and do what is
+provably best. This records what the evidence said, including the two places
+it said **don't**.
+
+The sources, in the order they settled things: the repo's own written law
+(`UI_DESIGN.md`, `PERSONALITY.md`), the app's own exporter, measurable facts
+in the code, and the Android platform contract.
+
+#### Settled by the exporter — done
+
+- **J18 + J19 — PROG A–E.** The decisive fact is not a design opinion: the
+  letters are an argument to `GrooveProgram.compute` and **nothing else**.
+  They are not MPC clip slots, and no exporter in the app has ever written
+  one. What the exporter *does* write is the word — `GrooveVariations`
+  suffixes each derived clip with `Swing`, `Half`, `Sparse`. So the screen
+  and the SD card disagreed about what these things are called, and the
+  screen was the one making it up.
+
+  The five programs are now `CAPTURED · SWING · HALF · SPARSE · YOURS`, all
+  visible at once in a segment row — CHOP's own control, whose KDoc already
+  argues a picker should "agree with every other picker in the app rather
+  than invent its own third convention".
+
+  **The law caught my first attempt.** I wrote `SWUNG`, because it reads
+  better. The exporter writes `Swing`, the law refused it, and the law was
+  right: a player who picks a program here and then looks for it on the
+  hardware has to recognise it. `SWING` is also what the stepper two rows
+  down is called, which is correct rather than a collision — that stepper
+  sets the percent this program applies.
+
+  **Two programs are exempt, on facts rather than taste.** `CAPTURED` is the
+  base clip and carries no suffix, so there is no exporter word to match.
+  `YOURS` is found again on disk by `GrooveEdit.NAME_SUFFIX`, which is
+  `" E"` — a marker inside `groove.json`, not a name, and not renameable
+  without migrating every kit already saved. The letter stays on disk and
+  the screen stops showing it.
+
+  J19's three doors — `STEPS`, `EDIT STEPS`, `EDIT THIS TAKE` — all fork
+  into the same program, and the toast that follows all three now says
+  YOURS. They say where they go: `START YOURS` from nothing, `FORK TO
+  YOURS` from either of the other two.
+
+#### Settled *against* changing — evidence says the finding is wrong
+
+- **J39 — the "invisible" tape counter and pencil rewind.** Not a
+  discoverability bug. `PERSONALITY.md` catalogs both as **hidden eggs**
+  under law 4: *"One visible gag per screen; the rest are hidden. Discovered
+  delight beats displayed delight."* Making them visible would break the
+  written law, not serve it.
+
+  The review's sharper point — that TalkBack announces `REWIND PENCIL` and
+  `SPIN BACK BY EAR` while a sighted user gets nothing — is real but is not
+  fixable in the direction it implies. An interactive element must carry an
+  accessible name (WCAG 2.2 §4.1.2); removing the label to even the score
+  would trade a working control for a broken one. Law 4 governs the *visual*
+  surface, and that asymmetry is the correct trade, not a defect.
+
+  Recorded while checking: both gestures have drifted from the doc — it
+  specifies a tap on the cassette and a triple-tap on the readout; the app
+  has a hold on the left reel and a single tap. Noted in `PERSONALITY.md`,
+  not "fixed", because which gesture is right is a design call and both work
+  today.
+
+- **J15's box-state complaint.** "Box state resets per kit" is the
+  *designed* behaviour, settled on a canvas in wave DDD and written down:
+  `UI_DESIGN.md`, "the pad sheet folds" — *"One box open at a time; the open
+  box is remembered per kit, so the next pad opens on the same bench."*
+  Changing it to per-pad would contradict a settled decision. The rest of
+  J15 (no press feedback on the 480 ms hold) stands and is below.
+
+#### Settled, still to do — in the order the evidence is strongest
+
+- **J15's press feedback.** `UI_DESIGN.md`'s rules of the language:
+  *"Every control is RAISED, PRESSED or SUNKEN — pressing a control flips
+  its light source."* The pad does not; its only press animation *decays*,
+  so it darkens as the sheet opens. A written rule the code breaks.
+- **J16.** The hint is retired only inside `KitScreen`'s `onLongPress`,
+  though two other doors open the sheet — and the hint's own KDoc claims
+  opening the sheet is *"the only event that proves they found it"*. The
+  KDoc and the code disagree; the KDoc is right.
+- **J33.** `GridPreview` draws sixteen `Box`es with no text and **no
+  semantics node**. An informative element with no accessible name (WCAG 2.2
+  §4.1.2), on a screen where every other picker has one.
+- **J36.** `UI_DESIGN.md` already establishes the language for encoding pad
+  state in a line treatment — *"dashed shell = unclassified"*. A treated pad
+  gets a rim in that same language rather than a new badge.
+- **J11 — Back.** Android's contract is explicit and external: Back moves
+  *"in reverse chronological order through the history of screens the user
+  has recently worked with"*, popping a back stack. One root handler sending
+  Back to KITS from every tab is not that.
+- **J12 + J14 — KIT vs KITS.** Measured: **11 of 24** direct navigations land
+  on KIT, next is 4. And `Copy` says SHELF 41 times against KITS 22. The tab
+  is the only place the shelf is called KITS, one letter from the hub. The
+  *grouping* half of J12 stays open — `UI_DESIGN.md` explicitly lists the
+  shelf's form as still undecided, so regrouping the strip would pre-empt a
+  decision that is the user's.
+- **J30.** CHOP's three-tier fallback can slice the open kit's longest
+  sample without ever naming it. Acting on an unstated assumption, not a
+  layout preference.
+- **J34.** `why`'s own KDoc says it exists because *"the user was choosing
+  between eight names and no reasons"*; shut by default returns them to
+  exactly that.
+
+#### Not settled by evidence — still yours
+
+- **J12's grouping**, above.
+- **J31** — offering the new kit's name before the write. The sibling button
+  one row down does name its destination first, which is a real internal
+  inconsistency; but adding a naming step to the primary action changes the
+  flow, and that is a design call.
+- **The velocity floor** — needs ears on a phone, not a rule.
+- **KIT's two legend lines** — taste.
+
+---
+
 ### PR 8 — words *(J13, J41–J46, and J47's three carried items)*
 
 The S3 band, one pass. **Done**, in two PRs: J43 turned out to be a dead
