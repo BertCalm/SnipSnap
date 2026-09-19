@@ -225,6 +225,8 @@ object SurfaceStore {
         val keySnap: Boolean = false,
         /** SWARM's voices and detune; one voice - the plain loop - until the SWARM row has been stepped. */
         val swarm: Swarm = Swarm.DEFAULT,
+        /** The kit's recorded finger ([Gesture]), or none; a MOD slot on SHAPE GESTURE plays it. */
+        val gesture: Gesture? = null,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
@@ -253,6 +255,9 @@ object SurfaceStore {
         if (!file.isFile) return Settings.DEFAULT
         return fromJson(Json.parse(file.readText(Charsets.UTF_8)))
     }
+
+    /** A pad coordinate to three decimals, as the file keeps a gesture's points. */
+    private fun thousandth(v: Float): Double = kotlin.math.round(v * 1000.0) / 1000.0
 
     private fun toJson(s: Settings): JsonValue = JsonValue.Obj(
         linkedMapOf(
@@ -287,6 +292,19 @@ object SurfaceStore {
                     "detune" to JsonValue.Num(s.swarm.detune.toDouble()),
                 ),
             ),
+            // Each point to a thousandth of the pad: a bar is under a
+            // kilobyte, and a thousandth is far below a finger's own jitter.
+            "gesture" to (
+                s.gesture?.let { g ->
+                    JsonValue.Obj(
+                        linkedMapOf(
+                            "bars" to JsonValue.Num(g.bars.toDouble()),
+                            "x" to JsonValue.Arr(g.xs.map { JsonValue.Num(thousandth(it)) }),
+                            "y" to JsonValue.Arr(g.ys.map { JsonValue.Num(thousandth(it)) }),
+                        ),
+                    )
+                } ?: JsonValue.Null
+                ),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
                     JsonValue.Obj(
@@ -372,6 +390,16 @@ object SurfaceStore {
             val detune = o["detune"]?.num()?.toFloat() ?: throw JsonException("swarm has no detune")
             Swarm(voices, detune)
         } ?: Swarm.DEFAULT
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm)
+        // Absent or null is no gesture; present, it has to be whole - the
+        // bar count and both tracks - and Gesture's own door holds the
+        // sizes and the points to the pad.
+        val gesture = obj["gesture"]?.takeIf { it !is JsonValue.Null }?.let { g ->
+            val o = g.obj()
+            val bars = o["bars"]?.int() ?: throw JsonException("gesture has no bars")
+            val xs = o["x"]?.arr()?.map { it.num().toFloat() }?.toFloatArray() ?: throw JsonException("gesture has no x")
+            val ys = o["y"]?.arr()?.map { it.num().toFloat() }?.toFloatArray() ?: throw JsonException("gesture has no y")
+            Gesture(bars, xs, ys)
+        }
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm, gesture = gesture)
     }
 }

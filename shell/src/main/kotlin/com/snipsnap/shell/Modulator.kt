@@ -97,6 +97,8 @@ object Modulator {
     enum class Shape(
         /** Reads the room's level ([Follower]) instead of the bar clock. */
         val followsRoom: Boolean = false,
+        /** Plays the kit's recorded [Gesture] over its own bars instead of RATE's cycle. */
+        val playsGesture: Boolean = false,
     ) {
         SINE, RAMP, RANDOM,
 
@@ -105,6 +107,15 @@ object Modulator {
 
         /** [FOLLOW] downwards: the target closes as the room gets loud. */
         DUCK(followsRoom = true),
+
+        /**
+         * The kit's recorded finger ([Gesture]), looping over its own bars
+         * from the shared origin: aimed at X it is the finger's X, at Y its
+         * Y, at anything else its Y. Bipolar around the pad's centre, so at
+         * full depth and rest it reproduces the finger exactly; with no
+         * gesture recorded it is nothing.
+         */
+        GESTURE(playsGesture = true),
     }
 
     /** [Follower]'s attack: a clap is heard within a frame or two. */
@@ -208,6 +219,8 @@ object Modulator {
      * ([Follower.value]): FOLLOW is the level itself, DUCK its negative -
      * one-sided, so a silent room is exactly the finger. A [follow] that
      * is not a number, or a shape that does not listen, reads it as 0.
+     * GESTURE has no wave: it plays the kit's [Gesture], which only
+     * [offset] is handed, so here it is silence - 0, the same as no gesture.
      */
     fun wave(shape: Shape, phase: Float, cycle: Long, seed: Int = 0, follow: Float = 0f): Float {
         val p = phase.coerceIn(0f, 1f)
@@ -218,6 +231,7 @@ object Modulator {
             Shape.RANDOM -> hash01(cycle, seed) * 2f - 1f
             Shape.FOLLOW -> room
             Shape.DUCK -> -room
+            Shape.GESTURE -> 0f
         }
     }
 
@@ -226,10 +240,22 @@ object Modulator {
      * rate, scaled by depth and [HALF_SWING]. Exactly 0 at depth 0 whatever
      * the time, so an unused slot changes nothing - not even by float dust.
      */
-    fun offset(slot: Slot, seconds: Double, bpm: Float?, seed: Int = 0, follow: Float = 0f): Float {
+    fun offset(slot: Slot, seconds: Double, bpm: Float?, seed: Int = 0, follow: Float = 0f, gesture: Gesture? = null): Float {
         if (slot.depth <= 0f) return 0f
+        val t = if (seconds.isFinite() && seconds > 0.0) seconds else 0.0
+        if (slot.shape.playsGesture) {
+            // The gesture's own length, not RATE's: [Gesture.bars] bars at
+            // this tempo, from the same origin every slot counts from, so
+            // it loops on the bar line. (x - 0.5) * 2 is the wave, so at
+            // full depth the offset is x - 0.5: rest plus that is x itself.
+            val g = gesture ?: return 0f
+            val length = periodSeconds(DEFAULT_RATE_INDEX, bpm).toDouble() * g.bars
+            val phase = ((t / length) - floor(t / length)).toFloat()
+            val v = if (slot.target == Target.X) g.x(phase) else g.y(phase)
+            return (v - 0.5f) * 2f * slot.depth * HALF_SWING
+        }
         val period = periodSeconds(slot.rateIndex, bpm).toDouble()
-        val cycles = (if (seconds.isFinite() && seconds > 0.0) seconds else 0.0) / period
+        val cycles = t / period
         val cycle = floor(cycles)
         val phase = (cycles - cycle).toFloat()
         return wave(slot.shape, phase, cycle.toLong(), seed, follow) * slot.depth * HALF_SWING
@@ -241,11 +267,11 @@ object Modulator {
      * A slot's own index is its RANDOM seed, so two RANDOM slots on one
      * target throw two dice rather than the same one twice.
      */
-    fun offsets(slots: List<Slot>, seconds: Double, bpm: Float?, follow: Float = 0f): FloatArray {
+    fun offsets(slots: List<Slot>, seconds: Double, bpm: Float?, follow: Float = 0f, gesture: Gesture? = null): FloatArray {
         val out = FloatArray(Target.entries.size)
         slots.forEachIndexed { i, slot ->
             val t = slot.target.ordinal
-            out[t] = (out[t] + offset(slot, seconds, bpm, seed = i, follow = follow)).coerceIn(-1f, 1f)
+            out[t] = (out[t] + offset(slot, seconds, bpm, seed = i, follow = follow, gesture = gesture)).coerceIn(-1f, 1f)
         }
         return out
     }
