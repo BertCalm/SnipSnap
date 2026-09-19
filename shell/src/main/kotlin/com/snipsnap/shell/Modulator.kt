@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.kit.KitPreview
 import kotlin.math.PI
+import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.sin
 
@@ -34,6 +35,13 @@ import kotlin.math.sin
  * sample-and-hold, one value per cycle, drawn from the cycle's own index -
  * deterministic, so the same bar always throws the same die, and a print
  * made twice moves the same way.
+ *
+ * FOLLOW and DUCK run on the room instead of the bar: the live input
+ * level, whatever the phone is hearing through the mic or APP AUDIO,
+ * smoothed by a [Follower] so a clap opens a target at once and lets it
+ * back down over a quarter of a second. FOLLOW pushes the target up with
+ * the room and DUCK pushes it down - a sidechain from the room, the
+ * surface breathing under the kick of the track playing in the next app.
  */
 object Modulator {
 
@@ -79,7 +87,71 @@ object Modulator {
         return offsets.copyOf(ENGINE_TARGETS)
     }
 
-    enum class Shape { SINE, RAMP, RANDOM }
+    /**
+     * What a slot runs on. SINE, RAMP and RANDOM run on the bar clock;
+     * [FOLLOW] and [DUCK] run on the room ([followsRoom]) - the live input
+     * level, up with it or down with it - and RATE means nothing to them.
+     * Appended last: a shape is stored by name, but the MOD row cycles
+     * them by ordinal and a build from before should step the same way.
+     */
+    enum class Shape(
+        /** Reads the room's level ([Follower]) instead of the bar clock. */
+        val followsRoom: Boolean = false,
+    ) {
+        SINE, RAMP, RANDOM,
+
+        /** The room's level, one-sided: silence is exactly the finger, a loud room pushes up to a whole [HALF_SWING] at full depth. */
+        FOLLOW(followsRoom = true),
+
+        /** [FOLLOW] downwards: the target closes as the room gets loud. */
+        DUCK(followsRoom = true),
+    }
+
+    /** [Follower]'s attack: a clap is heard within a frame or two. */
+    const val ATTACK_SECONDS = 0.01f
+
+    /** [Follower]'s release: the target lets go over about a quarter of a second, a sidechain's own feel. */
+    const val RELEASE_SECONDS = 0.25f
+
+    /**
+     * The room's level as [Shape.FOLLOW] and [Shape.DUCK] hear it:
+     * `MicSessionService.level`'s per-block peak, smoothed with a fast
+     * [attackSeconds] and a slower [releaseSeconds] (one pole each way), so
+     * a hit opens a target at once and the target lets go gradually rather
+     * than flickering with the raw peak. Stepped once a frame from the
+     * surface's loop with the frame's own length. A level that is not a
+     * number is ignored and the last value held; a frame of no length, or
+     * one that is not a number, changes nothing; the value never leaves
+     * 0..1. A ring that is not listening reports a level of 0, so with
+     * nothing armed this sits at rest and the shapes are exactly nothing.
+     */
+    class Follower(
+        private val attackSeconds: Float = ATTACK_SECONDS,
+        private val releaseSeconds: Float = RELEASE_SECONDS,
+    ) {
+        init {
+            require(attackSeconds.isFinite() && attackSeconds > 0f) { "attack is a positive number of seconds, got $attackSeconds" }
+            require(releaseSeconds.isFinite() && releaseSeconds > 0f) { "release is a positive number of seconds, got $releaseSeconds" }
+        }
+
+        /** The room as heard now, 0..1. */
+        var value: Float = 0f
+            private set
+
+        /** One frame of [dtSeconds] hearing [level]; returns the new [value]. */
+        fun step(level: Float, dtSeconds: Float): Float {
+            if (!level.isFinite() || !dtSeconds.isFinite() || dtSeconds <= 0f) return value
+            val x = level.coerceIn(0f, 1f)
+            val tau = if (x > value) attackSeconds else releaseSeconds
+            val k = 1f - exp(-dtSeconds / tau)
+            value = (value + k * (x - value)).coerceIn(0f, 1f)
+            return value
+        }
+
+        fun reset() {
+            value = 0f
+        }
+    }
 
     /** How many slots the surface has; a fixed pool, not one per macro - two aimed at one target is "two per macro". */
     const val SLOTS = 2
@@ -131,14 +203,21 @@ object Modulator {
      * The wave, -1..1, at [phase] 0..1 of cycle number [cycle]. SINE starts
      * at zero and rises; RAMP rises from -1 to 1 and drops back; RANDOM
      * holds one value for the whole cycle, drawn from [cycle] and [seed]
-     * so it is the same value every time that cycle comes round.
+     * so it is the same value every time that cycle comes round. FOLLOW
+     * and DUCK ignore the clock and read [follow], the room's level 0..1
+     * ([Follower.value]): FOLLOW is the level itself, DUCK its negative -
+     * one-sided, so a silent room is exactly the finger. A [follow] that
+     * is not a number, or a shape that does not listen, reads it as 0.
      */
-    fun wave(shape: Shape, phase: Float, cycle: Long, seed: Int = 0): Float {
+    fun wave(shape: Shape, phase: Float, cycle: Long, seed: Int = 0, follow: Float = 0f): Float {
         val p = phase.coerceIn(0f, 1f)
+        val room = if (follow.isFinite()) follow.coerceIn(0f, 1f) else 0f
         return when (shape) {
             Shape.SINE -> sin(2.0 * PI * p).toFloat()
             Shape.RAMP -> 2f * p - 1f
             Shape.RANDOM -> hash01(cycle, seed) * 2f - 1f
+            Shape.FOLLOW -> room
+            Shape.DUCK -> -room
         }
     }
 
@@ -147,13 +226,13 @@ object Modulator {
      * rate, scaled by depth and [HALF_SWING]. Exactly 0 at depth 0 whatever
      * the time, so an unused slot changes nothing - not even by float dust.
      */
-    fun offset(slot: Slot, seconds: Double, bpm: Float?, seed: Int = 0): Float {
+    fun offset(slot: Slot, seconds: Double, bpm: Float?, seed: Int = 0, follow: Float = 0f): Float {
         if (slot.depth <= 0f) return 0f
         val period = periodSeconds(slot.rateIndex, bpm).toDouble()
         val cycles = (if (seconds.isFinite() && seconds > 0.0) seconds else 0.0) / period
         val cycle = floor(cycles)
         val phase = (cycles - cycle).toFloat()
-        return wave(slot.shape, phase, cycle.toLong(), seed) * slot.depth * HALF_SWING
+        return wave(slot.shape, phase, cycle.toLong(), seed, follow) * slot.depth * HALF_SWING
     }
 
     /**
@@ -162,11 +241,11 @@ object Modulator {
      * A slot's own index is its RANDOM seed, so two RANDOM slots on one
      * target throw two dice rather than the same one twice.
      */
-    fun offsets(slots: List<Slot>, seconds: Double, bpm: Float?): FloatArray {
+    fun offsets(slots: List<Slot>, seconds: Double, bpm: Float?, follow: Float = 0f): FloatArray {
         val out = FloatArray(Target.entries.size)
         slots.forEachIndexed { i, slot ->
             val t = slot.target.ordinal
-            out[t] = (out[t] + offset(slot, seconds, bpm, seed = i)).coerceIn(-1f, 1f)
+            out[t] = (out[t] + offset(slot, seconds, bpm, seed = i, follow = follow)).coerceIn(-1f, 1f)
         }
         return out
     }

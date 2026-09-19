@@ -140,4 +140,62 @@ class ModulatorTest {
         assertTrue(engine.indices.all { engine[it] == all[it] }, "the slice is a prefix, value for value")
         assertFailsWith<IllegalArgumentException> { Modulator.engineOffsets(FloatArray(Modulator.ENGINE_TARGETS)) }
     }
+
+    @Test
+    fun `follow and duck run on the room, not the bar, and a silent room is exactly the finger`() {
+        assertTrue(Shape.FOLLOW.followsRoom && Shape.DUCK.followsRoom)
+        assertTrue(listOf(Shape.SINE, Shape.RAMP, Shape.RANDOM).none { it.followsRoom })
+        assertEquals(listOf(Shape.FOLLOW, Shape.DUCK), Shape.entries.takeLast(2), "appended last: the MOD row cycles shapes by ordinal")
+
+        val follow = Slot(Target.CUTOFF, Shape.FOLLOW, 4, depth = 1f)
+        val duck = Slot(Target.CUTOFF, Shape.DUCK, 4, depth = 1f)
+        // Half the travel at a full room, one-sided, and the clock is not consulted.
+        near(Modulator.HALF_SWING, Modulator.offset(follow, 0.0, 120f, follow = 1f))
+        near(0.3f, Modulator.offset(follow, 0.0, 120f, follow = 0.6f))
+        near(0.3f, Modulator.offset(follow, 17.3, 120f, follow = 0.6f))
+        near(0.3f, Modulator.offset(follow.copy(rateIndex = 0), 17.3, 92f, follow = 0.6f))
+        near(-0.3f, Modulator.offset(duck, 0.0, 120f, follow = 0.6f))
+        near(0.15f, Modulator.offset(follow.copy(depth = 0.5f), 0.0, 120f, follow = 0.6f))
+        // Silence, a room that is not a number, and a room past full.
+        assertEquals(0f, Modulator.offset(follow, 0.0, 120f, follow = 0f))
+        assertEquals(0f, Modulator.offset(follow, 0.0, 120f, follow = Float.NaN))
+        near(Modulator.HALF_SWING, Modulator.offset(follow, 0.0, 120f, follow = 3f))
+        // The clocked shapes do not hear the room.
+        near(0f, Modulator.offset(Slot(Target.PITCH, Shape.SINE, 4, depth = 1f), 0.0, 120f, follow = 1f))
+        // Through offsets: FOLLOW and DUCK on one target cancel at any level.
+        val both = Modulator.offsets(listOf(follow, duck), 4.2, 120f, follow = 0.8f)
+        near(0f, both[Target.CUTOFF.ordinal])
+        val one = Modulator.offsets(listOf(follow), 4.2, 120f, follow = 0.8f)
+        near(0.4f, one[Target.CUTOFF.ordinal])
+    }
+
+    @Test
+    fun `the follower opens at once and lets go over a quarter of a second`() {
+        val f = Modulator.Follower()
+        assertEquals(0f, f.value)
+        val frame = 1f / 60f
+        f.step(1f, frame)
+        f.step(1f, frame)
+        assertTrue(f.value > 0.9f, "two frames of a clap should be nearly all the way up, got ${f.value}")
+        val top = f.value
+        // One release constant later it has fallen to about a third...
+        val third = f.step(0f, Modulator.RELEASE_SECONDS)
+        assertTrue(third > top * 0.3f && third < top * 0.45f, "one release constant should leave about 1/e, got $third of $top")
+        // ...and a second later it is gone.
+        assertTrue(f.step(0f, 1f) < 0.02f)
+        // A level that is not a number holds; a frame of no length, or of
+        // nonsense length, holds; a level past full stays inside 0..1.
+        f.step(1f, frame)
+        val held = f.value
+        assertEquals(held, f.step(Float.NaN, frame))
+        assertEquals(held, f.step(0f, 0f))
+        assertEquals(held, f.step(0f, -1f))
+        assertEquals(held, f.step(0f, Float.NaN))
+        f.step(5f, 1f)
+        assertTrue(f.value <= 1f)
+        f.reset()
+        assertEquals(0f, f.value)
+        assertFailsWith<IllegalArgumentException> { Modulator.Follower(attackSeconds = 0f) }
+        assertFailsWith<IllegalArgumentException> { Modulator.Follower(releaseSeconds = Float.NaN) }
+    }
 }
