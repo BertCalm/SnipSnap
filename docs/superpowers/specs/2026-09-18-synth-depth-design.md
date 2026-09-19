@@ -24,7 +24,7 @@ implemented correctly, exactly once, and never generalized.
 | Technique | Implemented at | Missing from |
 |---|---|---|
 | Filter saturation | `Velvet.kt:144` | the other seven engines |
-| Loudness-matched level | `Punch.kt:147` ← `Thump.kt:132` | all five melodic engines |
+| Loudness-*preserving* rescale | `Punch.kt:147` ← `Thump.kt:132` | all five melodic engines |
 | Velocity → timbre | `Keys.kt:48` (FM index) | everywhere else |
 | 4× oversampling | eight engines | `Pluck.kt:96` |
 | Modal resonator bank | `audio/Body.kt` | all of `:synth` |
@@ -61,7 +61,16 @@ decorrelate it.
 
 **3. Cheap — every pad hits with identical weight.** `Dsp.normalize(target =
 0.95f)` is the final stage for Velvet, Fathom, Vox, Tonewheel and Pluck: peak
-only. THUMP alone is loudness-matched. A sine-heavy patch has a far higher
+only.
+
+> **Correction to an earlier draft.** This document claimed "THUMP alone is
+> loudness-matched." It is not. `Punch.applyOversampled` (`Punch.kt:209-224`)
+> measures the loudness of the *peak-normalised* un-punched signal and rescales
+> back to it, so PUNCH cannot change perceived level. That is loudness
+> *preservation across one stage*, not loudness *targeting*. THUMP's absolute
+> level still comes from `Dsp.normalize` at 0.95 peak like everything else.
+> **No absolute loudness anchor exists anywhere in the codebase**, so Phase 0
+> chooses one from scratch rather than matching an existing scale. A sine-heavy patch has a far higher
 crest factor than a saw or noise patch, so at equal peak it is meaningfully
 quieter in perception — and `SynthKits.melodic()` puts these on the same grid
 as the loudness-matched drums, so tonal pads sit under the kit by construction.
