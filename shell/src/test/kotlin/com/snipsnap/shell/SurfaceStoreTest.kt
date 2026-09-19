@@ -167,6 +167,69 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `grain knobs round-trip, and a file saved before GRAIN existed loads with the defaults`() {
+        val knobs = SurfaceStore.Grain(size = 0.2f, density = 0.9f, spray = 0.35f)
+        SurfaceStore.save(temp, Settings(padSlot = 1, grain = knobs))
+        val loaded = SurfaceStore.load(temp).grain
+        near(0.2f, loaded.size); near(0.9f, loaded.density); near(0.35f, loaded.spray)
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(SurfaceStore.Grain.DEFAULT, SurfaceStore.load(temp).grain)
+        assertEquals(SurfaceStore.Grain.DEFAULT, Settings.DEFAULT.grain)
+    }
+
+    @Test
+    fun `a present but malformed grain knob is refused, not silently read as its default`() {
+        // The crush/echo rule again: absent means "before this existed",
+        // present-and-wrong means a torn file, and those are different.
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"grain":{"size":0.5,"density":"lots","spray":0},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"grain":{"size":0.5,"density":0.5},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Grain(size = 1.5f) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Grain(density = Float.NaN) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Grain(spray = -0.1f) }
+    }
+
+    @Test
+    fun `a corner captured in GRAIN is the chain the cloud ran through, not the finger`() {
+        // GRAIN's finger is position and pitch, which a corner cannot hold;
+        // what SET keeps is XY's rest with the roll's resonance - the
+        // macros the engine actually applies in mode 4 - so morphing toward
+        // it later sounds like the cloud's *chain* did, not like some
+        // arbitrary pitch/cutoff the x/y happened to spell.
+        val r = Reading(0.2f, 0.9f, 0.6f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        val captured = Corner.from(Mode.GRAIN, r, tilt = 0.8f, corners = Corner.DEFAULTS)
+        assertEquals(Corner(0.5f, 1f, 0.4f, 0f), captured)
+        // The roll is XY's half-scaled resonance, so a flat phone (0.5)
+        // reads 0.25 here exactly as it does in XY - it is MORPH's *nudge*
+        // where 0.5 is the no-op, not this. Only no roll at all is CLEAN.
+        assertEquals(Corner(0.5f, 1f, 0.25f, 0f), Corner.from(Mode.GRAIN, r, tilt = 0.5f, corners = Corner.DEFAULTS))
+        assertEquals(Corner.CLEAN, Corner.from(Mode.GRAIN, r, tilt = 0f, corners = Corner.DEFAULTS))
+    }
+
+    @Test
     fun `refusals are in words`() {
         assertFailsWith<IllegalArgumentException> { Corner(1.2f, 0f, 0f, 0f) }
         assertFailsWith<IllegalArgumentException> { Corner(Float.NaN, 0f, 0f, 0f) }

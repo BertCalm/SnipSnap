@@ -1,6 +1,8 @@
 package com.snipsnap.app
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.shell.SurfaceKey
+import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 
 /**
@@ -128,6 +130,18 @@ class SurfaceEngine(preferredSampleRate: Int) {
     fun setCorner(index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float, crush: Float = 0f, echo: Float = 0f, spring: Float = 0f) {
         require(index in 0..3) { "corner is 0..3, got $index" }
         if (open) NativeSurface.setCorner(handle, index, pitch, cutoff, resonance, drive, crush, echo, spring)
+    }
+
+    /** GRAIN's three knobs; they shape the next grain triggered, never one already sounding. */
+    @Synchronized
+    fun setGrain(grain: SurfaceStore.Grain) {
+        if (open) NativeSurface.setGrain(handle, grain.size, grain.density, grain.spray)
+    }
+
+    /** The key GRAIN snaps each grain's pitch to - see [SurfaceKey] for what goes in. */
+    @Synchronized
+    fun setKey(snap: SurfaceKey.Snap) {
+        if (open) NativeSurface.setKey(handle, snap.rootSemitone, snap.scaleMask, snap.sourceMidi)
     }
 
     // ---- the resample tap -----------------------------------------------------

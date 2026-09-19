@@ -48,6 +48,7 @@ import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
@@ -58,16 +59,24 @@ import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StreamFacts
+import com.snipsnap.shell.SurfaceKey
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
 import com.snipsnap.shell.TouchSurface.Reading
 import java.io.File
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+/** GRAIN's three knobs, in the order its row's own button cycles them - each an index into `SurfaceStore.Grain`'s fields below. */
+private val GRAIN_KNOBS = listOf("SIZE", "DENSITY", "SPRAY")
+
+/** One ◄ ► press on a GRAIN knob: a twentieth of its travel, so an end-to-end sweep is twenty presses - the FEEL stepper's own grain of control. */
+private const val GRAIN_STEP = 0.05f
 
 /**
  * SURFACE — the tactile pad. The open kit's first pad loops under a
@@ -76,7 +85,7 @@ import kotlinx.coroutines.withContext
  * writes the performance to TAPE as a new sample the way an SP-404
  * resamples: what you played is now one pad, no DSP to run later.
  *
- * Four modes, one pad. The phone's tilt always feeds resonance
+ * Five modes, one pad. The phone's tilt always feeds resonance
  * (`SurfaceEngine::applyControl`), not just in XYZ, but the mapping
  * differs per mode:
  *  - XY: one finger, X pitch, Y filter; tilt sets resonance directly,
@@ -93,6 +102,16 @@ import kotlinx.coroutines.withContext
  *    those change: one touch position, two blends, neither aware of the
  *    other. `applyControl`'s switch falls VECTOR through to MORPH's own
  *    case, so tilt behaves exactly as it does there.
+ *  - GRAIN: a cloud of short grains instead of the loop. X is POSITION
+ *    (where in the sample the grains read from), Y is pitch, snapped by
+ *    the engine to the kit's key (`Grain.h`; `SurfaceKey` decides what
+ *    the engine is told - the key, and the pad's own note when the
+ *    detector is confident of one, so the snap is to real notes and a
+ *    slightly flat pad is pulled into tune). SIZE, DENSITY and SPRAY are
+ *    the mode's own row, stepped rather than swept, and kept in
+ *    `surface.json` with the pad and the corners. Everything after the
+ *    source - crush, drive, filter, echo, spring - is the same chain at
+ *    XY's rest, so tilt still sets resonance here (`f.tilt * 0.5`).
  *
  * PAD ◄ ► picks which of the kit's pads the surface plays; SET A..D
  * captures the sound under the last touch as a morph corner (MORPH and
@@ -202,6 +221,8 @@ fun SurfaceScreen(
     var latched by remember { mutableStateOf(false) }
     /** Index into PrintLength.BARS; 0 = FREE. */
     var barsIndex by remember { mutableStateOf(0) }
+    /** Which of [GRAIN_KNOBS] the GRAIN row's ◄ ► currently step; a pick, not a sound, so not persisted - same as armedCorner. */
+    var grainKnob by remember { mutableStateOf(0) }
     /** A finished print waiting for a pad to be chosen; the chooser shows while it is set. */
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
@@ -260,19 +281,26 @@ fun SurfaceScreen(
         }
     }
 
-    // The voice: one of the kit's pads, read off the shelf, folded to mono in the engine.
-    suspend fun loadPad(dir: File, pad: KitPad) {
-        val snip = withContext(Dispatchers.IO) {
+    // The voice: one of the kit's pads, read off the shelf, folded to mono
+    // in the engine. Its own note is found on the same IO pass (GRAIN snaps
+    // to the kit's [key] from wherever this pad actually sits - see
+    // SurfaceKey) and handed over with the sample, so the key the engine
+    // holds is never for a pad other than the one it is playing.
+    suspend fun loadPad(dir: File, pad: KitPad, key: KeySpec?) {
+        val loaded = withContext(Dispatchers.IO) {
             // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+                ?.let { it to SurfaceKey.sourceMidi(it) }
         }
-        if (snip == null) {
+        if (loaded == null) {
             padName = null
             onToast(Copy.sourceUnreadable(pad.displayName))
         } else {
+            val (snip, sourceMidi) = loaded
             engine.load(snip)
+            engine.setKey(SurfaceKey.of(key, sourceMidi))
             padName = pad.displayName
             padSlot = pad.slot
         }
@@ -398,6 +426,7 @@ fun SurfaceScreen(
             SurfaceStore.Settings.DEFAULT
         }
         pushCorners(settings.corners)
+        engine.setGrain(settings.grain)
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
@@ -405,7 +434,7 @@ fun SurfaceScreen(
             padName = null
             padSlot = null
         } else {
-            loadPad(entry.dir, pad)
+            loadPad(entry.dir, pad, entry.kit.key)
         }
         // The second and third slots are optional - null unless a kit was
         // saved with one chosen, and never fall back to the kit's lowest
@@ -458,7 +487,27 @@ fun SurfaceScreen(
         val at = pads.indexOfFirst { it.slot == chosen }.let { if (it < 0) 0 else it }
         val pad = pads[((at + delta) % pads.size + pads.size) % pads.size]
         persist(dir, settings.copy(padSlot = pad.slot))
-        scope.launch { loadPad(dir, pad) }
+        scope.launch { loadPad(dir, pad, entry.kit.key) }
+    }
+
+    // GRAIN ◄ ►: steps whichever of SIZE/DENSITY/SPRAY the row's own knob
+    // button has picked, a twentieth at a time. Remembered in surface.json
+    // like the pad and the corners, and shaping the very next grain - the
+    // engine reads its knobs at trigger time, so there is nothing to wait
+    // for. Refused while `settings` is still the outgoing kit's, for the
+    // same reason SET and PRESET are (see settingsLoadedFor).
+    fun stepGrain(delta: Int) {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val g = settings.grain
+        fun nudged(v: Float) = (v + delta * GRAIN_STEP).coerceIn(0f, 1f)
+        val next = when (grainKnob) {
+            0 -> g.copy(size = nudged(g.size))
+            1 -> g.copy(density = nudged(g.density))
+            else -> g.copy(spray = nudged(g.spray))
+        }
+        engine.setGrain(next)
+        persist(dir, settings.copy(grain = next))
     }
 
     // PAD2 ◄ ►: same stepping, over the second source slot.
@@ -776,6 +825,36 @@ fun SurfaceScreen(
                 ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
             }
 
+            if (mode == Mode.GRAIN) {
+                Spacer(Modifier.height(6.dp))
+
+                // GRAIN's own row, only while the mode is on: the first
+                // button picks which knob ◄ ► step (it cycles SIZE →
+                // DENSITY → SPRAY, its label saying which), and the readout
+                // shows all three. As percentages, deliberately: what a
+                // percentage means in milliseconds or grains a second is
+                // Grain.h's arithmetic, and printing those units here would
+                // be a second copy of it that nothing keeps in step.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton(
+                        GRAIN_KNOBS[grainKnob],
+                        scheme,
+                        enabled = padName != null,
+                        modifier = Modifier.weight(1.1f),
+                    ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
+                    ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
+                    val g = settings.grain
+                    fun pct(v: Float) = "${(v * 100f).roundToInt()}%"
+                    TapeText(
+                        "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(1.8f).padding(horizontal = 4.dp),
+                    )
+                    ActionButton("►", scheme, enabled = padName != null) { stepGrain(+1) }
+                }
+            }
+
             Spacer(Modifier.height(6.dp))
 
             // PAD2/PAD3/PAD4 ◄ name ►: the sample area's other three
@@ -1024,6 +1103,12 @@ fun SurfaceScreen(
                     val (wA, wB, wC, wD) = TouchSurface.sampleWeights(painted.x, painted.y)
                     append("  SMPL %.2f/%.2f/%.2f/%.2f".format(java.util.Locale.ROOT, wA, wB, wC, wD))
                 }
+                // GRAIN: the key the pitch axis snaps to - the kit's, or
+                // none, in which case the axis is a semitone ladder. The
+                // note actually landed on is the engine's to know
+                // (Grain.h); this line names the rule, not a second copy
+                // of its answer.
+                if (mode == Mode.GRAIN) append("  KEY ").append(entry?.kit?.key?.label?.uppercase() ?: "NONE")
                 // `tiltReading`, not `tilt.tilt` directly - see its own
                 // declaration for why (Copilot review): this line is only
                 // ever redrawn when something the enclosing recomposition

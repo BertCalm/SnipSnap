@@ -108,6 +108,27 @@ class TouchSurfaceTest {
     }
 
     @Test
+    fun `grain reads the finger exactly as XY does - two axes, no depth, flat corners`() {
+        // The engine takes GRAIN's x as POSITION and y as pitch; this side
+        // only has to hand it the same clean axes XY gets, with none of
+        // XYZ's pinch or MORPH's corner arithmetic leaking in.
+        for (x in listOf(0f, 100f, 300f, 400f)) {
+            for (y in listOf(0f, 50f, 200f)) {
+                val xy = TouchSurface.read(Mode.XY, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                val grain = TouchSurface.read(Mode.GRAIN, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                assertEquals(xy, grain)
+            }
+        }
+        val pinched = TouchSurface.read(Mode.GRAIN, listOf(Touch(1, 0f, 0f), Touch(2, 400f, 200f)), w, h, Reading.REST)
+        near(0f, pinched.z)
+        near(0.25f, pinched.a)
+        assertEquals(2, Mode.GRAIN.axes)
+        // The native side takes the mode by ordinal, so GRAIN stays where
+        // it was appended - after the four modes that existed before it.
+        assertEquals(4, Mode.GRAIN.ordinal)
+    }
+
+    @Test
     fun `sample weights are one at each of the four vertices`() {
         val (apex, baseLeft, baseRight, baseMid) = TouchSurface.sampleWeights(0.5f, 1f)
         near(1f, apex); near(0f, baseLeft); near(0f, baseRight); near(0f, baseMid)

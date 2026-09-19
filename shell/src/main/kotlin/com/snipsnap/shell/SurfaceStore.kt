@@ -124,6 +124,13 @@ object SurfaceStore {
                 return when (mode) {
                     TouchSurface.Mode.XY -> Corner(reading.x, reading.y, t * 0.5f, 0f)
                     TouchSurface.Mode.XYZ -> Corner(reading.x, reading.y, t, reading.z)
+                    // A corner is the seven macros, and GRAIN's finger drives
+                    // none of them - it is the cloud's position and pitch,
+                    // which no corner can hold. What the chain under the
+                    // cloud actually runs is XY's rest: as recorded, wide
+                    // open, the roll's half-resonance (`SurfaceEngine.cpp`'s
+                    // `applyControl`, case 4), so that is what SET captures.
+                    TouchSurface.Mode.GRAIN -> Corner(0.5f, 1f, t * 0.5f, 0f)
                     TouchSurface.Mode.MORPH, TouchSurface.Mode.VECTOR -> {
                         require(corners.size == 4) { "a morph or vector blends four corners, got ${corners.size}" }
                         val w = listOf(reading.a, reading.b, reading.c, reading.d)
@@ -140,6 +147,33 @@ object SurfaceStore {
         }
     }
 
+    /**
+     * GRAIN mode's three knobs, each 0..1, the mode's texture rather than
+     * its performance: SIZE is each grain's length (10 ms to a quarter
+     * second), DENSITY how many start a second (2 to 64), SPRAY how far
+     * each one's start wanders from the finger's POSITION (none, to half
+     * the sample either way). What each value means in the engine's own
+     * units lives in `app/src/main/cpp/Grain.h` and nowhere else - the
+     * screen shows these as percentages rather than carry a second copy
+     * of that arithmetic.
+     */
+    data class Grain(
+        val size: Float = 0.5f,
+        val density: Float = 0.5f,
+        val spray: Float = 0.15f,
+    ) {
+        init {
+            for ((name, v) in listOf("size" to size, "density" to density, "spray" to spray)) {
+                require(v.isFinite() && v in 0f..1f) { "$name is 0..1, got $v" }
+            }
+        }
+
+        companion object {
+            /** Mid-length, mid-rate, a little scatter: a cloud, not a buzz, before any knob is touched. */
+            val DEFAULT = Grain()
+        }
+    }
+
     data class Settings(
         /** The pad the surface plays, by slot; null = the kit's lowest. */
         val padSlot: Int?,
@@ -150,6 +184,8 @@ object SurfaceStore {
         val thirdPadSlot: Int? = null,
         /** The pad in the engine's fourth source slot (the sample area's base-mid vertex); null = none loaded. */
         val fourthPadSlot: Int? = null,
+        /** GRAIN mode's knobs; the defaults until the GRAIN row has been stepped. */
+        val grain: Grain = Grain.DEFAULT,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
@@ -185,6 +221,13 @@ object SurfaceStore {
             "secondPad" to (s.secondPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "thirdPad" to (s.thirdPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "fourthPad" to (s.fourthPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
+            "grain" to JsonValue.Obj(
+                linkedMapOf(
+                    "size" to JsonValue.Num(s.grain.size.toDouble()),
+                    "density" to JsonValue.Num(s.grain.density.toDouble()),
+                    "spray" to JsonValue.Num(s.grain.spray.toDouble()),
+                ),
+            ),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
                     JsonValue.Obj(
@@ -234,6 +277,15 @@ object SurfaceStore {
             )
         } ?: Corner.DEFAULTS
         if (corners.size != 4) throw JsonException("surface.json has ${corners.size} corners, not 4")
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad)
+        // Absent on a file saved before GRAIN existed: the defaults, the
+        // same backward-compatible shape as secondPad and crush. Present,
+        // it has to be whole - a knob that is there but not a number is
+        // refused, not read as its default (the crush/echo rule).
+        val grain = obj["grain"]?.let { g ->
+            val o = g.obj()
+            fun knob(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("grain has no $name")
+            Grain(knob("size"), knob("density"), knob("spray"))
+        } ?: Grain.DEFAULT
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain)
     }
 }
