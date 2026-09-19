@@ -191,7 +191,14 @@ tilt as a macro.
 numbers, so they interpolate. Sweeping MATERIAL morphs the body continuously
 from metal bar through membrane to tuned wood, passing through bodies that do
 not exist physically. One macro, a large range of genuinely different sounds,
-and it is arithmetic over a table that has to be built anyway.
+over a table that has to be built anyway.
+
+It is not quite plain arithmetic, and Phase 1 settles this first: the ratio
+sets have *different lengths* (four for a bar, five for a membrane, three for
+tuned wood), so the morph is undefined at the boundaries until the bank is
+given a fixed mode count with a defined mapping — padded with silent modes,
+or resampled onto a common index. Choose that before any mode table is
+authored, because the choice determines how the tables are written.
 
 **Cost is the point.** A 200-mode bank is unthinkable in a realtime mobile
 synth and free in an offline baker. `SYNTH_UPGRADE.md` names offline rendering
@@ -380,7 +387,11 @@ They are replaced by assertions on properties that correlate with *interest*:
 - **Inharmonicity** — modal voices show partials off the harmonic series
 - **Decay spread** — per-partial t60 variance is non-zero
 - **Macro reach** — each macro's extremes differ by a stated minimum in a
-  measurable dimension (pitch, centroid, length), so defect 1 cannot return
+  measurable dimension (pitch, centroid, length), so defect 1 cannot return.
+  **The threshold table is an output of Phase 0's range audit, not an input:**
+  the minimums are a by-ear judgement made while widening the ranges, and
+  cannot be derived from the current code. The implementation plan should
+  expect to write this test last
 - **Stereo width** — a *bounded* measure, not merely correlation < 1.0, which
   is true of almost any non-degenerate stereo signal and would not catch the
   Squash collapse described under SPACE. Assert a minimum side-to-mid energy
