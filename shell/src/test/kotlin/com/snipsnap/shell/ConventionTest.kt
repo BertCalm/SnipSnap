@@ -2,6 +2,8 @@ package com.snipsnap.shell
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -1253,6 +1255,100 @@ class ConventionTest {
                     "Tabs are: ${labels.sorted()}",
             )
         }
+
+        // ...and the sentence under those four words is held to the same
+        // rule, which is where J13 got in: the law above passed while
+        // FIRST_RUN_LOOP_NOTE glossed step three, KIT, as "PLAY IT" — and
+        // PLAY is a real tab six places along the same menu row. A tab name
+        // in the note is a promise about where to tap, so the only tab
+        // names allowed in it are the four stages it is explaining.
+        val strays = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_LOOP_NOTE)
+            .map { it.value }
+            .filter { it in labels && it !in Copy.FIRST_RUN_LOOP_STAGES }
+            .toSet()
+        assertTrue(
+            strays.isEmpty(),
+            "Copy.FIRST_RUN_LOOP_NOTE (\"${Copy.FIRST_RUN_LOOP_NOTE}\") names ${strays.sorted()}, " +
+                "which ${if (strays.size == 1) "is a menu tab" else "are menu tabs"} but not one of the four " +
+                "stages it explains (${Copy.FIRST_RUN_LOOP_STAGES}). The note sits directly under the stage " +
+                "row and reads as a gloss of it, so a tab name in it points a new user at a screen that is " +
+                "not the step being described. Use a verb that is not a tab, or the stage's own name.",
+        )
+    }
+
+    // ==================== Law: the ladder row's chips are named once ====================
+
+    /**
+     * THE ZOOM LADDER's first chip is COUNT — no rung at all, the plain
+     * GRID by count, and the state the row is in by default. It lived as a
+     * literal on `ChopScreen` while HELP's ZOOM line listed the four real
+     * rungs, so the one state a new user is actually in was the one state
+     * HELP never mentioned (J42).
+     *
+     * `Ladder.ROW_LABELS` is now the row, and HELP builds its line from it.
+     * That only holds while the screen draws the row out of the same list,
+     * so this reads the screen's own source and refuses the literal back.
+     */
+    @Test
+    fun `the ladder row's COUNT chip is named in Ladder, not typed on the screen`() {
+        val chop = File("../app/src/main/kotlin/com/snipsnap/app/ui/ChopScreen.kt")
+        assertTrue(chop.isFile, "expected to find ${chop.absolutePath}")
+        val src = codeOnly(chop.readText(Charsets.UTF_8))
+        assertTrue(
+            "SegmentButton(Ladder.COUNT_LABEL" in src,
+            "ChopScreen no longer draws the ladder row's first chip from Ladder.COUNT_LABEL. HELP's ZOOM " +
+                "line is built from Ladder.ROW_LABELS; if the screen types its own label the two can say " +
+                "different things again, which is exactly J42.",
+        )
+        assertFalse(
+            "\"COUNT\"" in src,
+            "ChopScreen.kt contains the literal \"COUNT\". The ladder row's first chip is Ladder.COUNT_LABEL " +
+                "so that HELP and the screen read one string out of one place — see J42.",
+        )
+        // HELP names every chip of the row, not four of the five.
+        for (label in Ladder.ROW_LABELS) {
+            assertTrue(
+                Copy.HELP_MORE.any { label in it && "ZOOM ON CHOP" in it },
+                "HELP's ZOOM line does not name the ladder chip '$label'. It is built from " +
+                    "Ladder.ROW_LABELS precisely so it cannot miss one; something has retyped it.",
+            )
+        }
+    }
+
+    // ==================== Law: a toast's door belongs to that toast ====================
+
+    /**
+     * An offer is a toast with a door (J10). The first cut of it held the
+     * message in `toast` and the door in `toastDoor` and wrote them
+     * independently, so a plain `onToast` landing afterwards — TAPE's KEEP
+     * fired one on the very next line — swapped the sentence and left the
+     * door under someone else's words, on the offer's longer dwell. The
+     * comment beside the two vars claimed a door "can never outlive its
+     * message"; nothing made that true.
+     *
+     * It is true now because `toastDoor` is derived: `offered` carries the
+     * sentence it was made with, and the door shows only while the toast on
+     * screen is that sentence. This law keeps it derived — the moment
+     * anything assigns `toastDoor` again, the two can disagree again.
+     */
+    @Test
+    fun `the toast door is derived from the toast, never assigned beside it`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = codeOnly(app.readText(Charsets.UTF_8))
+        assertTrue(
+            "val toastDoor" in src,
+            "App.kt no longer declares `val toastDoor`. The door has to be computed from the toast on " +
+                "screen, not stored beside it — see J10/J44.",
+        )
+        val assigned = Regex("""\btoastDoor\s*=(?!=)""").findAll(src).count()
+        assertEquals(
+            0,
+            assigned,
+            "App.kt assigns `toastDoor` $assigned time(s). A door held in its own var can outlive the " +
+                "sentence it was offered with: any plain `toast = ...` replaces the words and leaves the " +
+                "button. Set `offered` instead and let `toastDoor` be derived from it.",
+        )
     }
 
     // ==================== Law: every snip call agrees on where snips live ====================

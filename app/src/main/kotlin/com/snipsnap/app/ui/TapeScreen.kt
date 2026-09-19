@@ -648,8 +648,6 @@ private fun TapeDeckContent(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var commitIndex by remember(model) { mutableStateOf(0) }
-
     // CATCH A HIT (docs/CATCH.md): the live catch, null while this is a
     // plain deck. The grid under the waveform is the open kit's own; every
     // catch goes to App to land (the same kit write every door makes) and
@@ -1063,7 +1061,7 @@ private fun TapeDeckContent(
                 fun stepHit(delta: Int) {
                     val list = hits
                     if (list.isNullOrEmpty()) {
-                        onToast(if (list == null) Copy.HITS_BUSY else Copy.HITS_NONE)
+                        onToast(if (list == null) Copy.HITS_NOT_YET else Copy.HITS_NONE)
                         return
                     }
                     val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
@@ -1114,9 +1112,14 @@ private fun TapeDeckContent(
                         // frames only mean something against the exact file TAPE
                         // was scrubbing when COMMIT fired, and under the new
                         // source priority that's frequently a snip, not a pad WAV.
+                        // No toast here (J44): `onCommit` itself raises the
+                        // CHOP offer, which says what a KEEP actually did and
+                        // carries the door to the step that uses it. The
+                        // rotating COMMIT lines this used to fire described a
+                        // write KEEP does not perform, and - being a plain
+                        // toast landing on the same frame - replaced the
+                        // offer's sentence while leaving its door on screen.
                         onCommit(tapeData.sourceFile, range)
-                        onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
-                        commitIndex++
                     } else {
                         onToast(Copy.COMMIT_NEEDS_SELECTION)
                     }
@@ -1136,10 +1139,13 @@ private fun TapeDeckContent(
                     // otherwise keep rolling silently under the busy overlay.
                     if (model.playing) model.togglePlay()
                     stopVoice()
-                    // Read before commitSelection(), which clears it — and passed
-                    // on rather than left to be inferred from `range`, since an
-                    // IN/OUT the user dragged across the whole tape arrives in
-                    // App.kt looking exactly like no selection at all.
+                    // Passed on rather than left to be inferred from `range`,
+                    // since an IN/OUT the user dragged across the whole tape
+                    // arrives in App.kt looking exactly like no selection at
+                    // all. The order is not load-bearing: commitSelection() is
+                    // a pure read that clears nothing (J44) — this comment
+                    // used to say it did, and INSTANT KIT was written as if
+                    // the read had to come first.
                     val hadSelection = model.hasSelection
                     val range = if (hadSelection) model.commitSelection() else null
                     // togglePlay and commitSelection both change what the
