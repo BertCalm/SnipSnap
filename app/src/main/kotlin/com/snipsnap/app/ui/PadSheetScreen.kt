@@ -3071,7 +3071,12 @@ private fun TreatmentCard(
         // phone, and chips going quietly untappable read as a dead screen
         // rather than a busy one.
         TapeText(
-            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "TREATMENT",
+            // Not "TREATMENT" (prior #30): the group box's legend directly
+            // above this line already says that word, and the other three
+            // cards' lines have been cut back to their gloss alone for the
+            // same reason. The busy branch is unchanged - it names the
+            // segment in flight, which no legend can.
+            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "ERAS AND CHARACTERS · ONE PER PAD",
             TapeType.pixelSmall,
             if (applying != null) scheme.amber.tape else scheme.ink3.tape,
             maxLines = 1,
@@ -3231,7 +3236,13 @@ private fun ShapeCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("SHAPE · CARD RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            // "SHAPE · CARD RENDERS IT" until prior #30: the box around
+            // this card already has SHAPE on its legend, and `UI_DESIGN.md`
+            // has group boxes REPLACE card titles rather than repeat them.
+            // What the line is for is the thing the legend cannot say -
+            // that these four are metadata the hardware applies, not edits
+            // to the audio on disk - so that is all it says now.
+            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -3299,7 +3310,7 @@ private fun MutateCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("MUTATE · ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
         }
         TapeText(
@@ -3567,7 +3578,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("OUTSIDE · THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {

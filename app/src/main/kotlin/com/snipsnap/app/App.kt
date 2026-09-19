@@ -285,17 +285,27 @@ fun App(shelf: KitShelf) {
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
-    // The door a toast can carry (J10): its label and what it opens, or
-    // null for the ordinary one-line toast. Cleared with the toast itself
-    // by the dwell effect below, so a door can never outlive its message.
-    var toastDoor by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    // The door a toast can carry (J10): the sentence it was offered with,
+    // its label, and what it opens.
+    //
+    // The sentence is stored WITH the door, and `toastDoor` below is
+    // derived by comparing the two, because the first cut of this held the
+    // message and the door in two vars and set them independently - so any
+    // plain `onToast` landing after an offer (TAPE's KEEP fired one on the
+    // very next line) replaced the offer's sentence and left its door
+    // under someone else's words, on the offer's longer dwell. A door that
+    // is only shown while the toast on screen IS the offer's own sentence
+    // cannot be stranded by construction, which is what the old comment
+    // here claimed and the old code did not do.
+    var offered by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
+    val toastDoor: Pair<String, () -> Unit>? =
+        offered?.takeIf { it.first == toast }?.let { it.second to it.third }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond a toast's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
     /** The box in place of the toast, never beside it: opening one puts any toast down. */
     fun openNote(n: LandingNote.Note) {
         toast = null
-        toastDoor = null
         note = n
     }
 
@@ -316,7 +326,7 @@ fun App(shelf: KitShelf) {
     fun offer(message: String, label: String, open: () -> Unit) {
         note = null
         toast = message
-        toastDoor = label to open
+        offered = Triple(message, label, open)
     }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
@@ -990,7 +1000,7 @@ fun App(shelf: KitShelf) {
             // is — see `Motion.TOAST_OFFER_DWELL_MS`.
             delay((if (toastDoor != null) Motion.TOAST_OFFER_DWELL_MS else Motion.TOAST_DWELL_MS).toLong())
             toast = null
-            toastDoor = null
+            offered = null
         }
     }
 
@@ -1291,7 +1301,7 @@ fun App(shelf: KitShelf) {
      * CHOP ALL (XX3 wired in): every picked `.wav` through the same
      * auto-chop pipeline INSTANT KIT already uses (`InstantKit.build` —
      * `ChopReviewModel.chop` → `sendToGrid()` → `KitBuilderModel.fromChop`,
-     * the exact chain SEND TO GRID and INSTANT KIT both already run), one
+     * the exact chain SEND TO PADS and INSTANT KIT both already run), one
      * new kit per file, named after the file. Deliberately NOT
      * `ChopAllCommand.run`/`ChopCommand.chop` (`:cli`) themselves: that
      * pipeline decodes with the unbounded `WavReader.read`

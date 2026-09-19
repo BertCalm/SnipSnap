@@ -296,7 +296,7 @@ class KitBuilderModel private constructor(
 
     /**
      * A chop's arrangement landed onto one [bank] of THIS kit, in the
-     * order SEND TO GRID would have laid it, instead of into a new kit:
+     * order SEND TO PADS would have laid it, instead of into a new kit:
      * the second page a user builds by hand rather than the twins tray.
      * The bank must be empty (nothing here decides which of two sounds
      * a slot keeps), and a bank holds sixteen, so an arrangement wider
@@ -321,7 +321,7 @@ class KitBuilderModel private constructor(
             } else {
                 // A folded pad (CHOP's FOLD DOUBLES): every take end to end
                 // through the same door, then the chain that steps through
-                // them — what KitAssembler does for SEND TO GRID.
+                // them — what KitAssembler does for SEND TO PADS.
                 val all = listOf(pad.snip) + pad.takes
                 var at = 0L
                 val boundaries = all.map { t -> at.also { at += t.frameCount } }
@@ -1221,7 +1221,7 @@ class KitBuilderModel private constructor(
         }
 
         /**
-         * SEND TO GRID lands here: the chop screen's arrangement becomes a
+         * SEND TO PADS lands here: the chop screen's arrangement becomes a
          * whole kit folder in one step, via the same [KitAssembler] the CLI
          * and the generators use.
          */

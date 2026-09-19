@@ -873,10 +873,15 @@ fun OrbitScreen(
 
     /**
      * One full cycle of what is heard, rendered offline and dropped on the
-     * TAPE shelf as a snip — so rings feed the app's own loop: tape, chop,
-     * kit, MPC. What is heard: a solo bounces alone, a muted ring stays out.
+     * SNIPS shelf — so rings feed the app's own loop: tape, chop, kit, MPC.
+     * What is heard: a solo bounces alone, a muted ring stays out.
+     *
+     * Called `bounceToTape` until prior #25: it writes through
+     * `SnipStore.import`, the same door LOOP's and GROOVE's bounces use,
+     * and TAPE is a different screen. The button, the landing line and
+     * the function now all say the one place the audio goes.
      */
-    fun bounceToTape() {
+    fun bounceToSnips() {
         val s = set ?: return
         OrbitClip.refusal(s)?.let { onToast(it); return }
         if (bouncing) return
@@ -903,7 +908,7 @@ fun OrbitScreen(
                 snips = SnipStore.list(filesDir)
                 onToast(Copy.orbitBounced(transportLabel(what)))
             }.onFailure { e ->
-                Log.e("OrbitScreen", "bounceToTape: failed", e)
+                Log.e("OrbitScreen", "bounceToSnips: failed", e)
                 onToast(Copy.ORBIT_BOUNCE_FAILED)
             }
         }
@@ -1458,7 +1463,7 @@ fun OrbitScreen(
                             // and leave the player on ORBIT; neither navigates
                             // nor opens a panel.
                             if (bounceWhy == null) {
-                                ActionButton(if (bouncing) "BOUNCING…" else "BOUNCE TO TAPE", scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToTape() }
+                                ActionButton(if (bouncing) "BOUNCING…" else Copy.ORBIT_BOUNCE_BUTTON, scheme, Modifier.weight(1f), enabled = !bouncing, accent = true) { bounceToSnips() }
                             }
                             if (clipWhy == null) {
                                 ActionButton("CLIP TO KIT", scheme, Modifier.weight(1f), accent = true) { clipIntoKit() }

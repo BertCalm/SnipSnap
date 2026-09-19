@@ -167,7 +167,7 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  * content living at the edge to protect: the row is padded in from
  * [Layout.MENU_EDGE_W] on both sides, so the cue never overlaps a tab.
  * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
- * GROOVE / SEND IT SOMEWHERE run edge to edge, so whichever control the
+ * GROOVE / the write-and-doors row run edge to edge, so whichever control the
  * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
  * repro) is bisected by the same hard clip a gutter would have avoided.
  * A fade reads as "this continues" where a hard clip reads as "this
@@ -2135,7 +2135,7 @@ fun GrooveScreen(
                                 label = when {
                                     bounceArmed -> "WAITING…"
                                     bouncing || landingBounce -> "BOUNCING…"
-                                    else -> "BOUNCE"
+                                    else -> Copy.GROOVE_BOUNCE_BUTTON
                                 },
                                 scheme = scheme,
                                 modifier = Modifier.fillMaxWidth(),
@@ -2210,18 +2210,40 @@ fun GrooveScreen(
                                 GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
                             }
 
-                            TapeText("SEND IT SOMEWHERE", TapeType.pixelSmall, scheme.ink3.tape)
+                            // "SEND IT SOMEWHERE" until J46, which is true of
+                            // two of these four: SONG ▸ and ORBIT ▸ leave the
+                            // screen, while MIDI and CHART write a file where
+                            // you stand and leave you on GROOVE. One legend
+                            // over both, with the two kinds interleaved
+                            // (MIDI, SONG ▸, ORBIT ▸, CHART), left the ▸ glyph
+                            // as the only thing telling a player which was
+                            // which. The row is now sorted by what the button
+                            // does, and the legend names both halves in the
+                            // order they sit.
+                            TapeText("WRITE IT OUT · OR TAKE IT FURTHER", TapeType.pixelSmall, scheme.ink3.tape)
                             // Batch 3, Task 1: one row of four rather than a
                             // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
                             // label here is five characters or fewer at 9sp, so
                             // a single row reads fine and costs this column one
                             // fewer row than any split would, which is the row
-                            // NeedleRoll actually needed back.
+                            // NeedleRoll actually needed back. J46 keeps the one
+                            // row and sorts it rather than splitting it, for the
+                            // same reason.
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 // Batch 3, Task 4: MIDI writes files in place —
                                 // no navigation, no panel — so it lost the ▸ a
                                 // navigate/panel-opener keeps.
                                 GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
+                                // CHART writes a text file in place — no
+                                // navigation, no panel — so it lost its ▸ too
+                                // (Task 4).
+                                GrooveActionButton(
+                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
+                                    scheme,
+                                    Modifier.weight(1f),
+                                    enabled = !chartBusy,
+                                    accent = true,
+                                ) { exportChart() }
                                 // SONG ▸ — the same four programs laid into a structure, not
                                 // just cycled: intro/theme/variation/the turn/reprise/outro,
                                 // one tap away from what this screen already has loaded.
@@ -2236,16 +2258,6 @@ fun GrooveScreen(
                                     clearJustLanded()
                                     onOrbit()
                                 }
-                                // CHART writes a text file in place — no
-                                // navigation, no panel — so it lost its ▸ too
-                                // (Task 4).
-                                GrooveActionButton(
-                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
-                                    scheme,
-                                    Modifier.weight(1f),
-                                    enabled = !chartBusy,
-                                    accent = true,
-                                ) { exportChart() }
                             }
 
                             TapeText(
@@ -2261,7 +2273,7 @@ fun GrooveScreen(
 
                             // Trailing clearance, sized to match the scrim
                             // below: without it the last control (the off-lane
-                            // note, or SEND IT SOMEWHERE's row above it on a kit
+                            // note, or the write-and-doors row above it on a kit
                             // with nothing off-lane) rests permanently half
                             // behind the fade rather than scrolling fully past
                             // it — the same "always cuts something somewhere"
