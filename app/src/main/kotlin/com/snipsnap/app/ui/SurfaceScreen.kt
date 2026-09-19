@@ -65,6 +65,7 @@ import com.snipsnap.shell.RingSlot
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.SurfaceKey
+import com.snipsnap.shell.SurfaceLoop
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
@@ -200,7 +201,7 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * between corners on the bar, visibly. FOLLOW and DUCK are shapes that
  * run on the room instead of the bar - the live input level from
  * whichever ring is listening (`MicSessionService.level`), through a
- * `Modulator.Follower` stepped once a frame here - so CUTOFF opens when
+ * `Modulator.Follower` stepped once a frame - so CUTOFF opens when
  * you clap and DRIVE ducks under the kick of the track in the next app: a
  * sidechain from the room. GESTURE is a shape that plays the kit's
  * recorded finger (`Gesture` in `:shell`): REC on the GESTURE row arms
@@ -220,7 +221,11 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * Polling: every pointer event updates the *target* reading; a frame
  * loop steps a screen-rate smoother toward it, paints the puck from the
  * smoothed value and sends that same value to the engine, which glides
- * again per sample. Two smoothers, two rates, one equation.
+ * again per sample. Two smoothers, two rates, one equation. Everything
+ * the loop works out between frames - the smoother, the modulators'
+ * origin, EVERY BAR's bar, the gesture recorder, what LATCH holds - is
+ * `SurfaceLoop` in `:shell`, tested there; the loop here reads the clock
+ * and the engine, hands it a frame, and paints and sends what comes back.
  */
 @Composable
 fun SurfaceScreen(
@@ -301,7 +306,12 @@ fun SurfaceScreen(
     // incoming kit's surface.json (Copilot review, PR #195) - `settings`
     // itself, not just armedCorner/presetIndex*, is stale until this is set.
     var settingsLoadedFor by remember { mutableStateOf<File?>(null) }
-    var lastHeld by remember { mutableStateOf<Reading?>(null) }
+    // The frame loop's arithmetic lives in `SurfaceLoop` (`:shell`, tested):
+    // the smoother, the modulators' origin, EVERY BAR's bar, the gesture
+    // recorder and the finger LATCH holds and SET A..D captures (`held`).
+    // The loop below reads the clock and the engine and hands it a frame;
+    // it hands back what to play and what happened.
+    val loop = remember { SurfaceLoop() }
     var printing by remember { mutableStateOf(false) }
     var printToPad by remember { mutableStateOf(false) }
     var latched by remember { mutableStateOf(false) }
@@ -311,13 +321,14 @@ fun SurfaceScreen(
     var grainKnob by remember { mutableStateOf(0) }
     /** Which of [SWARM_KNOBS] the SWARM row's ◄ ► step; a pick, like grainKnob. */
     var swarmKnob by remember { mutableStateOf(0) }
-    // GESTURE's recording: REC arms, the next touch-down starts a Recorder
-    // of gestureLength bars (BARS' own length when armed; FREE is one),
-    // fed every frame by the loop and kept when it has run. recordingBars
-    // mirrors the recorder's progress for the readout.
+    // GESTURE's recording: REC arms, the next touch-down starts a recording
+    // of gestureLength bars (BARS' own length when armed; FREE is one) in
+    // the loop, which feeds it every frame and hands the gesture back when
+    // it has run. `recording` and `recordingBars` mirror the loop's
+    // recorder as Compose state, for the GESTURE row.
     var gestureArmed by remember { mutableStateOf(false) }
     var gestureLength by remember { mutableStateOf(1) }
-    var gestureRecorder by remember { mutableStateOf<Gesture.Recorder?>(null) }
+    var recording by remember { mutableStateOf(false) }
     var recordingBars by remember { mutableStateOf(0f) }
     /** Which modulator (0 = MOD A) and which of its [MOD_FIELDS] the MOD row's ◄ ► step; picks, not sounds, so not persisted either. */
     var modSlot by remember { mutableStateOf(0) }
@@ -355,7 +366,7 @@ fun SurfaceScreen(
     // PlayScreen's own copy of this pattern for the full reasoning.
     fun silenceSurface() {
         target = Reading.REST
-        lastHeld = null
+        loop.letGo()
         latched = false
         engine.control(mode, Reading.REST, tilt.tilt, gate = false)
     }
@@ -567,7 +578,8 @@ fun SurfaceScreen(
             ringVoice = false
             ringOnBar = false
             gestureArmed = false
-            gestureRecorder = null
+            loop.dropRecording()
+            recording = false
             padName2 = null
             padSlot2 = null
             padName3 = null
@@ -603,7 +615,8 @@ fun SurfaceScreen(
         // for the old kit, so it is dropped rather than kept on this one.
         ringOnBar = false
         gestureArmed = false
-        gestureRecorder = null
+        loop.dropRecording()
+        recording = false
         if (pad == null) {
             padName = null
             padSlot = null
@@ -754,7 +767,7 @@ fun SurfaceScreen(
     fun armGesture() {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
-        if (gestureRecorder != null) return
+        if (recording) return
         if (gestureArmed) {
             gestureArmed = false
             return
@@ -840,7 +853,7 @@ fun SurfaceScreen(
     fun setCorner(index: Int) {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return  // settings.corners is still the outgoing kit's - see settingsLoadedFor
-        val held = lastHeld ?: run {
+        val held = loop.held ?: run {
             onToast(Copy.SURFACE_SET_NEEDS_TOUCH)
             return
         }
@@ -981,10 +994,6 @@ fun SurfaceScreen(
     // started, for ever - a kit change would leave the modulators counting
     // bars at the old tempo. Read through state instead, live.
     val kitBpm by rememberUpdatedState(entry?.kit?.tempoBpm)
-    // The room as FOLLOW and DUCK hear it; stepped every frame below whether
-    // or not a slot listens, so a slot turned up mid-phrase finds it already
-    // tracking rather than starting from silence.
-    val follower = remember { Modulator.Follower() }
     // The frame loop below is one LaunchedEffect, so a local function it
     // calls is the one captured at first composition, with that
     // composition's `entry` - stale the moment the kit changes (or null,
@@ -994,118 +1003,52 @@ fun SurfaceScreen(
     val freezeOnBar by rememberUpdatedState({ freezeRing(onBar = true) })
     val keepGestureNow by rememberUpdatedState({ gesture: Gesture -> keepGesture(gesture) })
 
-    // Screen-rate loop: smooth toward the target, paint, feed the engine.
+    // Screen-rate loop: read the clock and the room, hand the frame to
+    // `SurfaceLoop`, then do what only this side can - poll the engine,
+    // mirror state for the rows, paint, send. The arithmetic between
+    // (the smoother, the modulators' origin, EVERY BAR, the recorder,
+    // LATCH) is the loop object's, tested in `:shell`.
     LaunchedEffect(engine) {
-        val smoother = TouchSurface.SmoothedReading(TouchSurface.Smoother.coefficient(cutoffHz = 12f, rateHz = 60f))
-        var lastMode = mode
         var lastLatencyAt = 0L
-        // The modulators' origin: the loop's first frame, so every slot
-        // counts bars from the same instant and two slots at related
-        // rates stay locked. `modsWereOn` sends one last all-zero frame
-        // when every depth returns to 0, so the engine is left exactly as
-        // it was before any modulator existed - and nothing is sent at all
-        // while none is on, which keeps the untouched path free of a JNI
-        // call a frame.
-        var modOrigin = -1L
-        var modsWereOn = false
-        var lastFrame = -1L
-        // EVERY BAR's last bar line, -1 while it is off: the first frame
-        // after it turns on only notes the bar (the toggle froze already),
-        // and each change of bar after that is a freeze.
-        var lastRingBar = -1L
-        // GESTURE's recording clock and the touch edge that starts it.
-        var recordStart = -1L
-        var wasTouching = false
         while (true) {
             val now = withFrameNanos { it }
-            // The frame's own length for the follower - capped, so a stalled
-            // frame (the screen off, a long GC) is a short step, not a jump
-            // straight to the level.
-            val dt = if (lastFrame < 0L) 0f else ((now - lastFrame) / 1_000_000_000.0).toFloat().coerceAtMost(0.1f)
-            lastFrame = now
-            val room = follower.step(MicSessionService.level.value, dt)
             if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
-            if (modOrigin < 0L) modOrigin = now
-            if (ringOnBar) {
-                val bar = RingSlot.barIndex((now - modOrigin) / 1_000_000_000.0, RingSlot.barSeconds(kitBpm))
-                if (lastRingBar >= 0L && bar != lastRingBar) freezeOnBar()
-                lastRingBar = bar
-            } else {
-                lastRingBar = -1L
+            val frame = loop.step(
+                SurfaceLoop.Inputs(
+                    nowNanos = now,
+                    mode = mode,
+                    target = target,
+                    latched = latched,
+                    mods = settings.mods,
+                    gesture = settings.gesture,
+                    bpm = kitBpm,
+                    room = MicSessionService.level.value,
+                    ringOnBar = ringOnBar,
+                    recordBars = if (gestureArmed) gestureLength else null,
+                ),
+            )
+            if (frame.freezeRing) freezeOnBar()
+            frame.engineOffsets?.let { engine.setModulation(it) }
+            if (frame.recordingStarted) {
+                gestureArmed = false
+                recording = true
+                recordingBars = 0f
             }
-            val modsOn = settings.mods.any { it.depth > 0f }
-            // The finger's own two targets stay on this side of the bridge
-            // and are applied to `play` below; the engine gets its slice.
-            var nudgeX = 0f
-            var nudgeY = 0f
-            if (modsOn || modsWereOn) {
-                // The kit's gesture plays unless one is being recorded: the
-                // old one is muted while the new one is taken, or the hand
-                // would be recorded fighting it.
-                val offsets = Modulator.offsets(
-                    settings.mods, (now - modOrigin) / 1_000_000_000.0, kitBpm,
-                    follow = room,
-                    gesture = if (gestureRecorder == null) settings.gesture else null,
-                )
-                engine.setModulation(Modulator.engineOffsets(offsets))
-                nudgeX = offsets[Modulator.Target.X.ordinal]
-                nudgeY = offsets[Modulator.Target.Y.ordinal]
-                modsWereOn = modsOn
+            frame.recordingBars?.let { recordingBars = it }
+            frame.keptGesture?.let { kept ->
+                recording = false
+                keepGestureNow(kept)
             }
+            if (recording && !loop.recording) recording = false
             // Every frame, touch or none: tilt moves on its own, and this
             // is the only thing that keeps `tiltReading` fresh once the
             // puck itself stops moving. Compose's own equality check on
             // the `mutableStateOf` write skips the no-op case for free.
             tiltReading = tilt.tilt
-            if (mode != lastMode) {
-                // A mode change is a different instrument, not a glide
-                // between two: the painted puck and the engine both jump.
-                smoother.snap(target)
-                lastMode = mode
-                // lastHeld's a/b/c/d were smoothed under the *old* mode -
-                // XY/XYZ never compute morph weights at all (TouchSurface.
-                // read leaves them at a flat 0.25 each), so carrying it
-                // into MORPH/VECTOR's SET A..D would capture that flat
-                // blend, not a corner, no matter where the finger was.
-                // Clearing it means SET asks for a fresh touch instead of
-                // capturing a reading that doesn't belong to this mode.
-                lastHeld = null
-            }
-            val smooth = smoother.step(target)
-            if (target.touching) lastHeld = smooth
-            // GESTURE: REC armed, the touch-down starts the recorder, which
-            // is then fed the finger every frame against the bar clock
-            // (the modulators' own bar) and kept when it has run its
-            // length. What is recorded is `smooth` - the hand - not the
-            // nudged `play` below: a gesture is what the hand did, not
-            // what the modulators were doing under it.
-            val touchDown = target.touching && !wasTouching
-            wasTouching = target.touching
-            if (gestureArmed && touchDown) {
-                gestureRecorder = Gesture.Recorder(gestureLength)
-                recordStart = now
-                recordingBars = 0f
-                gestureArmed = false
-            }
-            gestureRecorder?.let { rec ->
-                val elapsed = ((now - recordStart) / 1_000_000_000.0 / RingSlot.barSeconds(kitBpm)).toFloat()
-                rec.add(elapsed, smooth.x, smooth.y, target.touching)
-                recordingBars = elapsed
-                if (rec.done) {
-                    gestureRecorder = null
-                    rec.finish()?.let { keepGestureNow(it) }
-                }
-            }
-            // Latched with no finger down: the sound stays where the finger
-            // left it, and so does the puck.
-            val held = lastHeld
-            // X/Y modulators move the finger the engine, the blend and the
-            // puck see. `lastHeld` above was taken before this, so SET A..D
-            // keeps the finger's own place, not where the nudge had it.
-            val play = TouchSurface.nudged(mode, if (latched && !target.touching && held != null) held else smooth, nudgeX, nudgeY)
+            val play = frame.play
             painted = play
             // The sample blend reads the same position as the mode's own
             // macros, but independently - see the class doc on PAD2/PAD3/PAD4.
@@ -1329,7 +1272,6 @@ fun SurfaceScreen(
             // GESTURE's row, while a slot is on the shape, REC is armed or a
             // recording runs (the ring row's pattern): REC, what the kit has
             // or what is happening, CLEAR.
-            val recording = gestureRecorder != null
             if (recording || gestureArmed || settings.mods.any { it.shape.playsGesture }) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     ActionButton(
