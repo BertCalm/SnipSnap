@@ -1008,6 +1008,22 @@ private fun ChopContent(
             TapeText(stripText, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 2)
         }
 
+        // J31: what SEND TO PADS will call the kit, worked out before the
+        // tap rather than inside the coroutine after it. Its sibling one
+        // row down has always read `ONTO <kit> · BANK B` - it names where
+        // it lands - while the primary committed a whole kit to the shelf
+        // without ever saying what it would be called. The review found
+        // the asymmetry, not the omission: one of these two buttons was
+        // already doing it.
+        //
+        // `freshName` is a `File.exists()` walk - one stat, plus one more
+        // per kit already holding the name. It runs once per visit to
+        // this screen rather than per recomposition, which is also the
+        // honest granularity: a name that changed under a chip tap would
+        // be a readout, not a promise.
+        val base = "${sourceFile.nameWithoutExtension} CHOP"
+        val plannedName = remember(shelf, base) { shelf.freshName(base) }
+
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             SecondaryButton(
                 if (rechopBusy) "…" else "RE-CHOP",
@@ -1068,7 +1084,7 @@ private fun ChopContent(
                     val current = model
                     val isMelodic = melodic
                     val isFold = fold
-                    val base = "${sourceFile.nameWithoutExtension} CHOP"
+                    val planned = plannedName
                     scope.launch {
                         try {
                             val send = withContext(Dispatchers.IO) {
@@ -1079,7 +1095,15 @@ private fun ChopContent(
                                 }
                             }
                             val (newEntry, sungBars) = withContext(Dispatchers.IO) {
-                                val kitName = shelf.freshName(base)
+                                // The name the button said, unless the shelf
+                                // took it since - another writer landing a
+                                // kit of the same name while CHOP sat open.
+                                // Re-deriving then is what keeps this a
+                                // write to a fresh kit rather than a merge
+                                // into somebody else's; showing the planned
+                                // name is not a licence to write over
+                                // whatever now holds it.
+                                val kitName = if (File(shelf.root, planned).exists()) shelf.freshName(base) else planned
                                 val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
                                 if (teachEnabled) {
@@ -1114,6 +1138,21 @@ private fun ChopContent(
                 }
             }
         }
+
+        // Where SEND lands, under the button that does it. Not *on* it:
+        // `PrimaryAction` draws one centred `displayBig` line with no
+        // `maxLines` and no overflow, in a box `weight(2f)` of a shared
+        // row, so a kit name appended to "SEND TO PADS" would run out of
+        // the rim rather than tell anyone anything. The sibling below can
+        // carry its own destination because it is a full-width secondary
+        // in smaller type - which is the whole reason this one needed a
+        // line instead of the same treatment.
+        TapeText(
+            "LANDS AS $plannedName",
+            TapeType.pixelSmall,
+            scheme.ink2.tape,
+            maxLines = 1,
+        )
 
         // ONTO <kit> · BANK X (bank B round 2): the same arrangement, landed
         // on the open kit's first empty bank instead of into a new kit —

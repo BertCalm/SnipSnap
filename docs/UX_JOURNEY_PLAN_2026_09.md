@@ -745,9 +745,12 @@ in the code, and the Android platform contract.
 - **J12 + J14 — KIT vs KITS.** Measured: **11 of 24** direct navigations land
   on KIT, next is 4. And `Copy` says SHELF 41 times against KITS 22. The tab
   is the only place the shelf is called KITS, one letter from the hub. The
-  *grouping* half of J12 stays open — `UI_DESIGN.md` explicitly lists the
-  shelf's form as still undecided, so regrouping the strip would pre-empt a
-  decision that is the user's.
+  *grouping* half of J12 stayed open at the time of writing — `UI_DESIGN.md`
+  lists the shelf's **form** as still undecided, so regrouping the strip
+  looked like pre-empting a decision that is the user's. **Taken since**,
+  and the worry was misplaced: drawing seams at boundaries the tab order
+  already had settles nothing about whether the shelf becomes a file
+  manager. That question stays open.
 - **J30.** CHOP's three-tier fallback can slice the open kit's longest
   sample without ever naming it. Acting on an unstated assumption, not a
   layout preference.
@@ -755,15 +758,33 @@ in the code, and the Android platform contract.
   between eight names and no reasons"*; shut by default returns them to
   exactly that.
 
-#### Not settled by evidence — still yours
+#### Not settled by evidence — were yours, and were taken
 
-- **J12's grouping**, above.
-- **J31** — offering the new kit's name before the write. The sibling button
-  one row down does name its destination first, which is a real internal
-  inconsistency; but adding a naming step to the primary action changes the
-  flow, and that is a design call.
-- **The velocity floor** — needs ears on a phone, not a rule.
-- **KIT's two legend lines** — taste.
+All four were put back as choices with pros, cons and a recommendation;
+all four recommendations were taken.
+
+- **J12's grouping** — **done.** A 2dp Win9x groove at each of the three
+  seams the tab order already had: the shelf, the four flow tabs, the five
+  instruments, the two utilities. The width was not chosen by eye. The
+  order above the tab list was arranged so EXPORT lands in the run that
+  shows without a drag, so a separator wide enough to push it back out
+  would undo that silently — the sim's own arithmetic says 2dp changes
+  nothing and 4dp costs a tab, and it now recomputes that on every run
+  rather than taking the note's word for it.
+- **J31** — **done.** The worry recorded here was that naming the kit first
+  "adds a naming step to the primary action", and that is the one thing it
+  must not do: the fix is a line under the button reading `LANDS AS <NAME>`,
+  no extra tap and no field to fill. It could not go *on* the button, which
+  was the first thing tried: `PrimaryAction` draws one centred `displayBig`
+  line with no overflow handling inside a `weight(2f)` box, so an appended
+  kit name would have run out of the rim. The sibling can carry its own
+  destination only because it is a full-width secondary in smaller type.
+- **The velocity floor** — **done**, and it was not taste after all.
+  Classified here as needing ears, then found to be arithmetic: the KDoc
+  claimed MIDI 44 sat inside the softest zone at one and two soft zones,
+  and at two the zone ends at 41. The floor is 0.20 (MIDI 25), inside the
+  softest window at every depth `StackTakes` builds.
+- **KIT's two legend lines** — taste, and left alone.
 
 ---
 
