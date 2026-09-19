@@ -140,7 +140,7 @@ fun KitScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
         return
     }
 

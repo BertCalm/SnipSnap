@@ -63,7 +63,25 @@ import com.snipsnap.shell.SchemeId
  * catch-all now prevents from recurring.)
  */
 enum class AppScreen(val label: String) {
-    KITS("KITS"),
+    /**
+     * The shelf. Its label reads SHELF, not KITS (J14).
+     *
+     * KIT receives 11 of the 24 direct navigations in `App.kt` — nearly
+     * half, and almost three times the next destination — while this
+     * screen sat one letter away from it in the menu row. The app's own
+     * voice had already picked a side: `Copy` says SHELF 41 times against
+     * KITS 22, and `Copy.landed` reads "KITS LANDED ON **THE SHELF**".
+     * The tab was the last place still calling it the other thing.
+     *
+     * The enum constant stays `KITS`, like `ChopReviewModel.GridSnap` and
+     * `GrooveEdit.NAME_SUFFIX` before it: it is an identity the code
+     * navigates by, not a word a player reads. Only [label] is the word.
+     *
+     * This settles the screen's NAME, not its form. `UI_DESIGN.md` still
+     * lists "whether the desktop metaphor extends to a 'My Kits'
+     * file-manager screen or kits stay a menu" as open, and it stays open.
+     */
+    KITS("SHELF"),
     KIT("KIT"),
     TAPE("TAPE"),
     CHOP("CHOP"),
@@ -77,7 +95,7 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ KITS. */
+    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
     KEYS("KEYS"),
 
     /**
@@ -216,7 +234,7 @@ data class MenuItem(val label: String, val screen: AppScreen)
 // now read TAPE ▸ CHOP ▸ KIT ▸ EXPORT, matching the stated order exactly,
 // still inside the same visible run.
 val MENU_ITEMS = listOf(
-    MenuItem("KITS", AppScreen.KITS),
+    MenuItem("SHELF", AppScreen.KITS),
     MenuItem("TAPE", AppScreen.TAPE),
     MenuItem("CHOP", AppScreen.CHOP),
     MenuItem("KIT", AppScreen.KIT),

@@ -81,18 +81,18 @@ class PersonalityTest {
         // laws below hold shape, not route, so a slide back to "ARM THE
         // MIC" or a bare "TRY GRID" would pass them.
         for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_APP_AUDIO, Copy.HUM_NOTHING)) {
-            assertTrue("LISTEN · MIC ON KITS" in line || ("LISTEN · MIC" in line && "KITS" in line), "HUM's route is the button on KITS: $line")
+            assertTrue("LISTEN · MIC ON SHELF" in line || ("LISTEN · MIC" in line && "SHELF" in line), "HUM's route is the button on SHELF: $line")
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
-        assertTrue("STOP ON KITS" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
-        // RING takes either ring, so its refusal names both doors on KITS
+        assertTrue("STOP ON SHELF" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
+        // RING takes either ring, so its refusal names both doors on SHELF
         // (a slide back to the mic alone would send an APP AUDIO user to
         // stop the very session RING wanted).
         for (line in listOf(Copy.RING_NOT_LISTENING, Copy.RING_NOTHING)) {
             assertTrue("RING" in line, "the refusal names the button as it reads: $line")
             assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
         }
-        assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "KITS" in Copy.RING_NOT_LISTENING, "RING's route is either button on KITS: ${Copy.RING_NOT_LISTENING}")
+        assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "SHELF" in Copy.RING_NOT_LISTENING, "RING's route is either button on SHELF: ${Copy.RING_NOT_LISTENING}")
         // The length is the voice's own, not RING's four-second ask: a ring
         // that only just started gives less, and the ceiling law below holds
         // this line to what was kept.

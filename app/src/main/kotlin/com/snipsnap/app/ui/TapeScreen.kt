@@ -383,7 +383,7 @@ private fun EmptyDeck(onNavigateKits: () -> Unit) {
     // of the same string. The route: ARM/SNIP and a kit's own fallback
     // sample both live on the shelf (KitsScreen) — see this file's own
     // TapeScreen KDoc on why `entry` is nullable.
-    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
 }
 
 /** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */

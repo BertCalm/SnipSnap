@@ -2395,7 +2395,7 @@ fun GrooveScreen(
 
 @Composable
 private fun EmptyGroove(onNavigateKits: () -> Unit) {
-    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
 }
 
 /**

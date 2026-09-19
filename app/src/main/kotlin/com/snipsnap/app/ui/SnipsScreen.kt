@@ -217,7 +217,7 @@ fun SnipsScreen(
         voice = null
         playingFile = null
     }
-    // Leaving the screen (◄ KITS, or SNIPS closing under a → PAD/→ TAPE
+    // Leaving the screen (◄ SHELF, or SNIPS closing under a → PAD/→ TAPE
     // navigation) must not leave a voice streaming into a screen that's
     // gone — the same contract TapeScreen's own DisposableEffect(voice)
     // keeps for its one long-lived voice.
@@ -294,7 +294,7 @@ fun SnipsScreen(
 
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
     var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
-    // Mirrors the header's own ◄ KITS chip — disabled while either dialog
+    // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
     // is up so that dialog's own BackHandler below (composed only while
     // it's showing) is the one Back reaches first. Paired the same way
     // ConventionTest.kt's own law documents: while confirmDelete OR
@@ -346,7 +346,7 @@ fun SnipsScreen(
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), onClick = onBack)
+                HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 TapeText("SNIPS", TapeType.lcdHeader, scheme.lcdInk.tape)
                 Spacer(Modifier.weight(1f))

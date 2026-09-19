@@ -117,7 +117,7 @@ class UatSimTest {
         val root = tmp("j1")
         var taps = 0
 
-        step(++taps, "App opens on KITS. Kits on disk: ${KitStore.list(root).size}")
+        step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
         note("the only primary button reads: NEW KIT ▸ STARTERS")
 
@@ -559,7 +559,11 @@ class UatSimTest {
         // visible run instead of past the row's fold (truncation pass), and
         // KIT then moved after CHOP so the four flow tabs read in exactly
         // that order rather than KIT ▸ TAPE ▸ CHOP ▸ EXPORT.
-        val tabs = listOf("KITS", "TAPE", "CHOP", "KIT", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
+        // SHELF, not KITS (J14): the shelf's tab was one letter from KIT,
+        // which takes 11 of App.kt's 24 direct navigations. Five glyphs
+        // rather than four, so this row is 6dp wider than it was - which
+        // is exactly what this simulation is here to keep honest.
+        val tabs = listOf("SHELF", "TAPE", "CHOP", "KIT", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
         val width = tabs.sumOf { it.length * perChar + 8 }
@@ -582,7 +586,7 @@ class UatSimTest {
                 "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
                 "while there are tabs that way (finding 10, fixed)",
         )
-        note("status bar cells: WHERE YOU ARE | KITS: n | a busy line, or the open kit's name")
+        note("status bar cells: WHERE YOU ARE | SHELF: n | a busy line, or the open kit's name")
         note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,
