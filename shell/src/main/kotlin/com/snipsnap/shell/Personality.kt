@@ -667,6 +667,41 @@ object Copy {
     // ---- Settings: what TEACH THE MACHINE actually sends (X4.4) ----
     const val TEACH_CONSENT = "FEATURES ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE."
 
+    // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
+    /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
+    const val WORKSHOP_NOTE = "TOOLS FOR THE BENCH, NOT FOR PLAYING. NOTHING HERE CHANGES HOW THE APP SOUNDS."
+    /** The knock landed. Says where the section is, since nothing else on screen does. */
+    const val WORKSHOP_OPENED = "WORKSHOP OPEN. IT IS AT THE FOOT OF SETUP."
+    /**
+     * CLOSE THE WORKSHOP: says how to get back in, because a door that
+     * closes without saying so is a door lost (law 3). The number is
+     * [Workshop.KNOCKS] itself, not a second copy of it — a `val` rather
+     * than a `const` so the reflective copy laws still find it.
+     */
+    val WORKSHOP_CLOSED: String = "WORKSHOP CLOSED. ${countOf(Workshop.KNOCKS, "TAP", "TAPS")} ON THE TITLE OPEN IT AGAIN."
+    /** The knock counting down from [Workshop.HINT_FROM]: [remaining] taps still to go. */
+    fun workshopKnock(remaining: Int): String = "${countOf(remaining, "MORE TAP", "MORE TAPS")} FOR THE WORKSHOP."
+    /**
+     * Under SEND TO BENCH: what the button packs, and the fact that keeps
+     * [TEACH_CONSENT] true — TEACH itself never sends; this button, pressed
+     * on purpose, is the only way a log leaves.
+     */
+    const val SEND_TO_BENCH_NOTE = "EVERY CORRECTION LOGGED ON THIS PHONE, MERGED INTO ONE FILE FOR THE CALIBRATION FOLDER. FEATURES AND LABELS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
+    /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedy is a correction. */
+    const val BENCH_EMPTY = "NOTHING TO SEND. NO CORRECTION IS LOGGED YET. CORRECT A CHIP ON CHOP FIRST."
+    /** SEND TO BENCH with nothing logged and TEACH off: the reason before the remedy. */
+    const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NO CORRECTION IS LOGGED. TURN IT ON ABOVE."
+    /**
+     * SEND TO BENCH: the zip is packed and the chooser is up. Ends on the
+     * same "PICK WHERE IT GOES." as [backedUp] and [kitPacked] because it is
+     * the same moment, and never says SENT: `ShareOut.send` only reports
+     * that the chooser opened.
+     */
+    fun benchPacked(corrections: Int, kits: Int): String =
+        "${countOf(corrections, "CORRECTION", "CORRECTIONS")} FROM ${countOf(kits, "KIT", "KITS")} ON ONE FILE. PICK WHERE IT GOES."
+    /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
+    const val BENCH_FAILED = "SEND TO BENCH FAILED. TRY AGAIN."
+
     // ---- BANK B: evil twins (W4.3) ----
     /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */
     const val BANK_B_LIT = "BANK B REMIXED: EVERY PAD'S EVIL TWIN. RECIPES KEPT."

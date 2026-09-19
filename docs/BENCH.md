@@ -171,6 +171,12 @@ Open a kit, tap SURFACE.
   Does silence trip the watch and stop the tape?
 - A dozen real captured hits, labelled by ear, into the calibration
   corpus — the classifier has never been fed anything but renders. [F2.4]
+- With TEACH THE MACHINE on, correct a few chips on CHOP, then open the
+  WORKSHOP (seven taps on SETUP's title) and SEND TO BENCH: the chooser
+  should offer `SnipSnap Bench <date>.zip`, and its `overrides.jsonl`
+  should drop into `reference/calibration/` and show up in
+  `TeachLogTest`'s report. First time a phone's corrections reach the
+  harness. [X4.5]
 
 →
 

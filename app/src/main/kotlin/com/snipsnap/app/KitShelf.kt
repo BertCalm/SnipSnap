@@ -321,7 +321,7 @@ class KitShelf(val root: File) {
      */
     fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
         outDir.mkdirs()
-        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd HHmm", java.util.Locale.ROOT).format(java.util.Date(nowMillis))
+        val stamp = ShareOut.stamp(nowMillis)
         return com.snipsnap.kit.KitBackup.backup(root, File(outDir, "SnipSnap Shelf $stamp.zip"), overwrite = true)
     }
 

@@ -104,6 +104,7 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.mpc3.Mpc3Clip
+import com.snipsnap.shell.BenchExport
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -126,6 +127,7 @@ import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
+import com.snipsnap.shell.Workshop
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -142,6 +144,8 @@ private const val TAG = "App"
 internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
 private const val PREF_TEACH = "teach"
+/** The WORKSHOP (`docs/WORKSHOP.md`): open once the knock on SETUP's title lands, remembered like the scheme until its own CLOSE. */
+private const val PREF_WORKSHOP = "workshop"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
 private const val PREF_SHELF_SORT = "shelf_sort"
 /** The Bubble's overlay-permission offer (Task 5) — asked once, ever. */
@@ -592,6 +596,13 @@ fun App(shelf: KitShelf) {
     // feature vectors and labels into the kit's own folder, never audio,
     // and nothing leaves the phone either way (Copy.TEACH_CONSENT).
     var teachEnabled by remember { mutableStateOf(prefs.getBoolean(PREF_TEACH, false)) }
+    // The WORKSHOP (docs/WORKSHOP.md): the developer's tools at the foot of
+    // SETUP, open once seven taps on that screen's title land inside two
+    // seconds of each other, remembered like the scheme until the section's
+    // own CLOSE. One knock counter for the app's life — a knock is a
+    // gesture, not a setting, so it is not remembered across a restart.
+    var workshopOpen by remember { mutableStateOf(prefs.getBoolean(PREF_WORKSHOP, false)) }
+    val workshopKnock = remember { Workshop.Knock() }
     // EXPORT: hoisted here, not local to ExportScreen's own composition —
     // its write runs on `scope` below (App's own, handed down as
     // `appScope`) so it survives a MenuRow tab switch; the session object
@@ -2179,6 +2190,47 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    /**
+     * SEND TO BENCH (docs/WORKSHOP.md): every teach log on the shelf, the
+     * bin included, merged into one zip and handed to the chooser - the
+     * last mile TEACH THE MACHINE never had. [backupShelf]'s own shape:
+     * pack under the share cache on IO, then the chooser, then a toast
+     * that counts what is in the file and never says SENT.
+     *
+     * Features and labels only, as SETUP's consent line promises; nothing
+     * here opens a WAV. Asks `gather` before `pack` so an empty shelf is
+     * refused in words that say why - and which of the two reasons it is.
+     */
+    fun sendToBench() {
+        if (busy != null) return
+        busy = Copy.PACKING_BUSY
+        scope.launch {
+            try {
+                val logs = withContext(Dispatchers.IO) { BenchExport.gather(shelf.root) }
+                if (logs.isEmpty()) {
+                    toast = if (teachEnabled) Copy.BENCH_EMPTY else Copy.BENCH_EMPTY_TEACH_OFF
+                    return@launch
+                }
+                val result = withContext(Dispatchers.IO) {
+                    BenchExport.pack(shelf.root, ShareOut.shareDir(context), ShareOut.stamp(System.currentTimeMillis()))
+                }
+                busy = null
+                if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
+                    toast = Copy.SHARE_NOWHERE
+                } else {
+                    toast = Copy.benchPacked(result.corrections, result.kits)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "sendToBench: failed", e)
+                toast = Copy.BENCH_FAILED
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     /** IN KEY: every tonal pad into the kit's key by its tune fields; the toast counts what moved. */
     fun inKey() {
         val source = open ?: return
@@ -2882,6 +2934,29 @@ fun App(shelf: KitShelf) {
                             cardName = prefs.getString(PREF_CARD_TREE, null)
                                 ?.let { Copy.cardName(Uri.parse(it).lastPathSegment) },
                             onHelp = { screen = AppScreen.HELP },
+                            workshopOpen = workshopOpen,
+                            // The knock: only counted while the workshop is
+                            // closed - an open one has nothing to open.
+                            // From three to go the toast counts down; the
+                            // seventh says where the section is.
+                            onKnock = {
+                                if (!workshopOpen) {
+                                    val remaining = workshopKnock.tap(System.currentTimeMillis())
+                                    if (remaining == 0) {
+                                        workshopOpen = true
+                                        prefs.edit().putBoolean(PREF_WORKSHOP, true).apply()
+                                        toast = Copy.WORKSHOP_OPENED
+                                    } else if (Workshop.hints(remaining)) {
+                                        toast = Copy.workshopKnock(remaining)
+                                    }
+                                }
+                            },
+                            onCloseWorkshop = {
+                                workshopOpen = false
+                                prefs.edit().putBoolean(PREF_WORKSHOP, false).apply()
+                                toast = Copy.WORKSHOP_CLOSED
+                            },
+                            onSendToBench = ::sendToBench,
                         )
                         AppScreen.CHOP -> ChopScreen(
                             entry = open,

@@ -310,6 +310,22 @@ logcat tag to grab when something is wrong.
   the partner. Open another kit's pad, pick the room, MUTATE ▸ ROOM: the
   pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
+- **WORKSHOP / SEND TO BENCH** (`docs/WORKSHOP.md`): on SETUP, tap the
+  TAPE PROPERTIES title seven times inside two seconds — the last three
+  taps count down in a toast, the seventh says WORKSHOP OPEN, and a
+  WORKSHOP section appears under HELP; it should still be there after a
+  relaunch, and CLOSE THE WORKSHOP should take it away with a toast
+  naming the seven taps. SEND TO BENCH with TEACH THE MACHINE off should
+  refuse naming the switch; with it on and nothing corrected yet, refuse
+  naming CHOP. Correct a chip on CHOP with TEACH on, SEND TO PADS, then
+  SEND TO BENCH: the chooser opens on `SnipSnap Bench <date>.zip` and
+  the toast counts the corrections and kits. Send it to yourself, unzip
+  on a laptop: `manifest.txt` names the kit and the count, and
+  `overrides.jsonl` dropped into `reference/calibration/` makes
+  `TeachLogTest` print the correction. If the chooser never appears, the
+  `FileProvider` note under SHARE / BACKUP above applies here too — it
+  is the same cache folder.
+
 ## Fonts / licensing
 
 The four faces were fetched from Google Fonts (open licenses — OFL /
