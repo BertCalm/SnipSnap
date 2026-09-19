@@ -3,15 +3,20 @@ package com.snipsnap.kit
 import com.snipsnap.mpc3.Mpc3Clip
 
 /**
- * A–E as a pure function of the loaded state. Lives here, not in
+ * The five GROOVE programs as a pure function of the loaded state.
+ *
+ * Called A–E on screen until J18; the screen names them for what they are
+ * now (CAPTURED, SWING, HALF, SPARSE, YOURS), and the index below is what
+ * A–E always actually was — an argument to this function, never an MPC
+ * clip slot. Lives here, not in
  * `GrooveScreen.kt`, for two reasons: the app module has no unit-test source
  * set, so A–E's semantics could not be asserted anywhere while this was a
  * private UI function; and both the needle roll and the playback clock call
  * it, so it has to be one implementation or audio and display can disagree
  * about what is on screen.
  *
- * A–D are recomputed live and never stored. E is the one stateful program,
- * passed in.
+ * The first four are recomputed live and never stored. The user's own is
+ * the one stateful program, passed in.
  */
 object GrooveProgram {
 
@@ -21,15 +26,17 @@ object GrooveProgram {
      *
      * The feel applies to [base] FIRST, so A, C and D all inherit it.
      *
-     * **PROG B is deliberately exempt** — it is handed the UNFELT [base].
+     * **The swung program is deliberately exempt** — it is handed the UNFELT [base].
      * [GrooveVariations.swing] quantizes internally, and B is the
      * on-the-grid program by design ("ON THE GRID, PUSHED LATE"). Handing it
      * a felt clip would not leave it unchanged, it would shift whichever
      * notes the lean pushed across swing's rounding boundary — so the
      * exemption is implemented by what B is given, not by swing being immune.
-     * The screen discloses this as "RIDES A · C · D".
+     * The screen discloses this as "RIDES THE TAKE" — the feel is
+     * applied to [base] and every program derived from it inherits it, so
+     * naming the mechanism covers both exemptions at once.
      *
-     * **PROG E is exempt too**: hand-placed steps, already on the grid, and
+     * **The user's own program is exempt too**: hand-placed steps, already on the grid, and
      * the user's own. Returned exactly as passed in.
      */
     fun compute(

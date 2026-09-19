@@ -60,8 +60,16 @@ object Copy {
      * panel as the screen's primary action, and TAPE is a tab on the row
      * above it - a line pointing at either would be a third copy of a
      * control already twice on screen.
+     *
+     * The verb for step three is KIT IT, not PLAY IT (J13). PLAY is a real
+     * tab six places along the menu row, and the app's only explanation of
+     * its own loop was glossing a different screen with its name - the
+     * exact failure `the first-run loop names real menu tabs` exists to
+     * stop, one line below where that law was looking. KIT IT is the
+     * app's own verb for the step already ([orbitBounced] says "TRIM IT,
+     * CHOP IT, KIT IT"), so the sentence now names the tab it means.
      */
-    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, PLAY IT, DUB IT. FOUR TABS, IN ORDER."
+    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, DUB IT. FOUR TABS, IN ORDER."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
@@ -257,13 +265,17 @@ object Copy {
     const val TILE_SUBTITLE_ARMED = "KEEPS UP TO 60s"
 
     // Tape deck.
-    /** COMMIT toasts, rotated in order per commit. */
-    val COMMIT_LINES = listOf(
-        "TAPED. NO TAKEBACKS.",
-        "COMMITTED TO TAPE.",
-        "CLEAN CUT.",
-        "ON THE SHELF. RENAME IT LATER.",
-    )
+    /*
+     * KEEP's rotating COMMIT toasts are gone (J44). All four lines claimed
+     * a write that never happens: `TapeDeck.commitSelection` is a pure read
+     * (`if (hasSelection) inFrame until outFrame else null`) and `App.kt`'s
+     * `onCommit` puts the range in a `remember`ed `lastCommit` for CHOP to
+     * pick up - nothing is taped, nothing is cut, nothing lands on a shelf
+     * to be renamed, and the same selection can be kept again a second
+     * later. The line KEEP says now is [CAPTURE_OFFER], set by that same
+     * `onCommit`, which says what did happen and carries the door to the
+     * step that acts on it.
+     */
     const val COMMIT_NEEDS_SELECTION = "SET IN + OUT FIRST"
     /** The deck glided onto an onset after a coast. */
     const val SNAPPED = "SNAPPED TO THE HIT."
@@ -387,7 +399,7 @@ object Copy {
      * kit actually has pads, since a door onto an empty EXPORT is a worse
      * answer than no door.
      */
-    const val KIT_OFFER = "PADS ON THE GRID. TAKE THE KIT OUT."
+    const val KIT_OFFER = "THE PADS ARE LOADED. TAKE THE KIT OUT."
 
     /** The door out of [KIT_OFFER]. */
     const val KIT_OFFER_DOOR = "EXPORT ▸"
@@ -507,7 +519,12 @@ object Copy {
     const val HELP_LOOP_HEADER = "THE LOOP:"
 
     val HELP_LOOP = listOf(
-        "· TAPE — CATCH A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
+        // RECORD, not CATCH (prior #27): CATCH is the name of a feature on
+        // this very screen - CATCH A HIT, seventeen lines below in
+        // HELP_MORE - so HELP's first line was using the app's own feature
+        // name as a generic verb for something else. RECORD is the verb
+        // FIRST_RUN_LOOP_NOTE already uses for this step.
+        "· TAPE — RECORD A SOUND. THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
         "· CHOP — CUT IT ON THE HITS. THE MACHINE GUESSES; ARGUE WITH IT.",
         "· KIT — 16 PADS. TAP TO HEAR, HOLD FOR THE PAD SHEET.",
         "· EXPORT — ONTO THE CARD, EIGHT WAYS. THE MPC IS ONE OF THEM.",
@@ -533,7 +550,13 @@ object Copy {
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
         "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
-        "· ZOOM ON CHOP: 16TH, BEAT, BAR OR PHRASE PADS. ◀ ▶ MOVES THE ONE.",
+        // Every chip of the ladder row, read out of the row itself
+        // (J42): the line used to name the four rungs and not COUNT,
+        // which is the chip the row sits on by default - so the one
+        // state a new user is actually in was the one state HELP never
+        // mentioned. Built from [Ladder.ROW_LABELS] rather than retyped,
+        // so a rung added to the ladder cannot go unlisted here.
+        "· ZOOM ON CHOP: ${Ladder.ROW_LABELS.joinToString(", ")}. ◀ ▶ MOVES THE ONE.",
         "· KEYS PLAYS WHATEVER YOU MAKE AN INSTRUMENT FROM.",
         "· THE MENU ROW SCROLLS — SETUP AND HELP SIT OFF ITS RIGHT EDGE.",
     )
@@ -737,13 +760,23 @@ object Copy {
     fun dug(from: String, to: String): String = "BREAK FOUND AT $from-$to. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY."
     const val NO_BREAK = "NO BREAK HEARD IN THAT. DIG BY HAND WITH IN AND OUT."
     const val FEEL_BUSY = "STEALING THE FEEL…"
-    /** The feel poured over the kit's pattern as PROG E; [covered] of 16 positions the record actually played. */
-    fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON PROG E. A–D STAY UNTOUCHED."
+    /**
+     * The feel poured over the kit's pattern as the user's own program;
+     * [covered] of 16 positions the record actually played.
+     *
+     * Says YOURS, not PROG E (J18): the GROOVE screen names its five
+     * programs for what they are now, and a toast still saying a letter
+     * would name a thing the screen no longer shows. `GrooveEdit`'s own
+     * `NAME_SUFFIX` is still `" E"` — that letter is how a stored clip is
+     * found again in `groove.json`, so it stays on disk and leaves the
+     * words alone.
+     */
+    fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON YOURS. THE REST STAY UNTOUCHED."
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
-    const val FORKED_TO_E = "FORKED TO PROG E. A–D STAY UNTOUCHED."
+    const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
     /** The post-take FORK TO E row's confirmed-replace branch (live-record plan Task 6 bug fix): an E already existed and the user tapped "REPLACE E?" a second time — says the old steps are gone, never claims a plain "forked" like [FORKED_TO_E] does for a from-nothing fork. */
-    const val FORKED_TO_E_REPLACED = "PROG E REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
+    const val FORKED_TO_E_REPLACED = "YOURS REPLACED WITH THIS TAKE. THE OLD STEPS ARE GONE."
     /**
      * The step editor's WIPE BAR, said honestly.
      *
@@ -774,14 +807,14 @@ object Copy {
      */
     fun takeLanded(notes: Int, bars: Int, meter: String? = null): String {
         val of = meter?.let { " OF $it" } ?: ""
-        return "TOOK ${countOf(notes, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")}$of. PLAYING ON PROG A NOW."
+        return "TOOK ${countOf(notes, "HIT", "HITS")} OVER ${countOf(bars, "BAR", "BARS")}$of. PLAYING ON CAPTURED NOW."
     }
     /** UNDO TAKE's existing-base branch: whatever was captured before this take plays again. */
     const val TAKE_UNDONE = "TAKE UNDONE. BACK TO WHAT WAS THERE BEFORE."
     /** UNDO TAKE's from-scratch-with-nothing branch: said honestly as a delete, never as a "restore" to a base that never existed. */
     const val TAKE_UNDONE_EMPTY = "TAKE UNDONE. NO GROOVE LEFT - SAME AS BEFORE RECORD."
     /** UNDO TAKE's from-scratch-with-E branch: the take is gone, PROG E rides through untouched. */
-    const val TAKE_UNDONE_TO_E = "TAKE UNDONE. PROG E RIDES THROUGH, UNTOUCHED."
+    const val TAKE_UNDONE_TO_E = "TAKE UNDONE. YOURS RIDES THROUGH, UNTOUCHED."
     /** STOP RECORDING with nothing captured — armed, counted in, played nothing, tapped STOP. Previously a bare no-op: no toast, no message at all (live-record follow-ups, Fix 4). See `GrooveScreen.kt`'s `stopRecording` for the guard this backs. */
     const val TAKE_SILENT = "NOTHING PLAYED — NO TAKE LANDED."
 
@@ -830,6 +863,16 @@ object Copy {
     const val RETRIM_BUSY = "RE-CUTTING…"
     /** The HITS stepper's readout while the hits are still being found. */
     const val HITS_BUSY = "HITS…"
+    /**
+     * Stepping the HITS stepper before the hits are found.
+     *
+     * A readout and a toast are different jobs (J45): [HITS_BUSY] is the
+     * word sitting on the button while the finder runs, and pressing ◀ HIT
+     * used to fire that same word as the app's answer - a label, thrown at
+     * someone who had just asked a question. Its sibling refusal
+     * [HITS_NONE] is a sentence with a next step, and so is this.
+     */
+    const val HITS_NOT_YET = "STILL FINDING THE HITS. TRY AGAIN IN A MOMENT."
     /** Stepping the HITS stepper on a tape with no hit in it. */
     const val HITS_NONE = "NO HITS ON THIS TAPE. DRAG IN AND OUT INSTEAD."
     /** The HITS stepper's readout: which of the tape's hits the selection sits on, none, or a tape with no hits at all. */
@@ -1234,9 +1277,16 @@ object Copy {
     /** The CUT bench's readout for the count while a chop is running. */
     const val CHOP_BENCH_BUSY = "CUTTING…"
 
-    // ---- CHOP round two: ON THE GRID and FOLD DOUBLES (docs/CHOP_CONTROLS.md §8) ----
-    /** ON THE GRID asked for on a tape the tempo estimator hears no pulse in. */
-    const val CHOP_NO_TEMPO = "NO TEMPO HEARD ON THIS TAPE. THE GRID NEEDS A PULSE."
+    // ---- CHOP round two: SNAP and FOLD DOUBLES (docs/CHOP_CONTROLS.md §8) ----
+    /**
+     * SNAP asked for on a tape the tempo estimator hears no pulse in.
+     *
+     * The row this refuses for used to be called ON THE GRID, three rows
+     * under a CUT segment called GRID that means something else entirely
+     * (J41) - one cuts equal parts, the other pulls cuts onto the beat.
+     * SNAP is what the row does and collides with nothing.
+     */
+    const val CHOP_NO_TEMPO = "NO TEMPO HEARD ON THIS TAPE. SNAP NEEDS A PULSE."
     /** FOLD's segment toast: what the layout is now. */
     const val FOLD_ON = "FOLDED. ONE PAD PER SOUND; THE REPEATS CYCLE UNDER IT."
     /** FOLD's strip: how many slices became how many pads. */
@@ -1247,8 +1297,8 @@ object Copy {
     const val CHOP_GHOSTS_ON = "GHOSTS: THE SPACES BETWEEN THE HITS, EACH NAMED FOR THE HIT BEFORE IT. HOLD A PAD, HOLD THE ROOM."
     /** GHOSTS on a tape with nothing between its hits: the strip says so instead of showing an empty grid in silence. */
     const val CHOP_GHOSTS_NONE = "NOTHING BETWEEN THE HITS ON THIS TAPE. A GATED BREAK HAS NO GHOSTS."
-    /** SEND TO GRID's toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
-    fun foldedToGrid(slices: Int, pads: Int, chokeSet: Boolean): String =
+    /** SEND TO PADS' toast when the layout was FOLD: both numbers, then the choke word SEND's own toast uses. */
+    fun foldedToPads(slices: Int, pads: Int, chokeSet: Boolean): String =
         "$slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}." + if (chokeSet) " CHOKE GROUP SET." else ""
     /** ONTO <kit> · BANK X when the layout was FOLD: [landedOnto]'s shape with both numbers. */
     fun foldedOnto(kitName: String, bank: Char, slices: Int, pads: Int, left: Int): String {
@@ -1256,12 +1306,20 @@ object Copy {
         return "'$kitName' BANK $bank: $slices ${if (slices == 1) "SLICE" else "SLICES"} FOLDED ONTO $pads ${if (pads == 1) "PAD" else "PADS"}.$tail"
     }
 
-    /** "N SLICES ON THE GRID. CHOKE GROUP SET." — the send-to-grid toast. */
-    fun sentToGrid(sliceCount: Int, chokeSet: Boolean): String =
-        "${countOf(sliceCount, "SLICE", "SLICES")} ON THE GRID." + if (chokeSet) " CHOKE GROUP SET." else ""
+    /**
+     * "N SLICES ON THE PADS. CHOKE GROUP SET." — SEND TO PADS' own toast.
+     *
+     * PADS, not GRID (J41): on CHOP the word GRID is already the CUT
+     * bench's equal-parts segment and its `GRID ×N` readout, and a
+     * landing line that borrowed it for the sixteen pads made the same
+     * word mean the cut and the destination on one screen. PADS is what
+     * the app calls them everywhere else ([EMPTY_KIT], HELP's KIT line).
+     */
+    fun sentToPads(sliceCount: Int, chokeSet: Boolean): String =
+        "${countOf(sliceCount, "SLICE", "SLICES")} ON THE PADS." + if (chokeSet) " CHOKE GROUP SET." else ""
     /**
      * INSTANT KIT: the one tap, what it chopped, then the same words SEND TO
-     * GRID says.
+     * PADS says.
      *
      * [wholeTape] is the September UAT's finding 19. INSTANT KIT sits beside
      * COMMIT under the deck, and with nothing selected the two disagree:
@@ -1276,7 +1334,7 @@ object Copy {
      * being fixed.
      */
     fun instantKit(sliceCount: Int, chokeSet: Boolean, wholeTape: Boolean): String =
-        (if (wholeTape) "ONE TAP, THE WHOLE TAPE. " else "ONE TAP, YOUR IN + OUT. ") + sentToGrid(sliceCount, chokeSet)
+        (if (wholeTape) "ONE TAP, THE WHOLE TAPE. " else "ONE TAP, YOUR IN + OUT. ") + sentToPads(sliceCount, chokeSet)
 
     // ---- CHOP ALL: the crate-digging verb, wired in ----
     /** CHOP ALL's busy line while every picked .wav chops in turn — same DUBBING…/BREEDING… shape. */
@@ -1604,6 +1662,17 @@ object Copy {
         if (bars > 0 && bpm != null) "PRINTING ${PrintLength.label(bars)} AT $bpm BPM." else SURFACE_PRINTING_NO_TEMPO
 
     // ---- GROOVE: BOUNCE ----
+    /**
+     * GROOVE's BOUNCE button.
+     *
+     * One destination, one name (prior #25): LOOP, GROOVE and ORBIT all
+     * write through `SnipStore.import` into the folder SNIPS lists, and
+     * between them they called it three things - GROOVE's button said only
+     * BOUNCE, LOOP's said BOUNCE and a bar count, and ORBIT's said TAPE,
+     * which is a different screen. Every one of them now says SNIPS before
+     * the tap, not only in the line after it.
+     */
+    const val GROOVE_BOUNCE_BUTTON = "BOUNCE TO SNIPS"
     /** BOUNCE tapped on a stopped loop - it prints the pattern as it plays, so there is nothing yet to start it against. Named on tap rather than a dimmed button, same as [KIT_STILL_LOADING] for RECORD. */
     const val GROOVE_BOUNCE_NEEDS_PLAY = "BOUNCE PRINTS THE LOOP AS IT PLAYS. PRESS ► PLAY FIRST."
     /** BOUNCE landed - [SnipStore.Imported.seconds]'s own count, [surfacePrinted]'s twin for the pads' print. */
@@ -1636,8 +1705,10 @@ object Copy {
     const val ORBIT_NO_PADS = "NO PADS ON THIS KIT."
     fun orbitFileUnreadable(name: String): String = "COULD NOT READ $name."
     const val ORBIT_NOTHING_TO_UNDO = "NOTHING TO UNDO."
-    /** BOUNCE landed: [label] is `cycleLabel`'s own name for what was heard. */
-    fun orbitBounced(label: String): String = "ON TAPE: $label. TRIM IT, CHOP IT, KIT IT."
+    /** ORBIT's BOUNCE button - the same destination word as [GROOVE_BOUNCE_BUTTON]; see its KDoc. */
+    const val ORBIT_BOUNCE_BUTTON = "BOUNCE TO SNIPS"
+    /** BOUNCE landed: [label] is `cycleLabel`'s own name for what was heard. Names SNIPS, not TAPE (prior #25). */
+    fun orbitBounced(label: String): String = "IN SNIPS: $label. TRIM IT, CHOP IT, KIT IT."
     /**
      * CLIP ▸ KIT landed: [name] the clip's own name, [bars]/[notes] what it
      * holds, [snipRingsLeftOut] how many snip rings (audio, which a
@@ -1886,10 +1957,11 @@ object Copy {
      * [barsOf] like the two toasts above: the button said "1 BARS" at a
      * one-bar bounce, the exact sentence [barsOf]'s own KDoc exists to
      * prevent, because it was a raw string outside this file and so out of
-     * that rule's reach. `·`, not `▸`: BOUNCE renders in place and leaves
-     * LOOP open.
+     * that rule's reach. No `▸`: BOUNCE renders in place and leaves LOOP
+     * open. It names SNIPS before the tap for the reason
+     * [GROOVE_BOUNCE_BUTTON]'s KDoc gives.
      */
-    fun loopBounceButton(bars: Int): String = "BOUNCE · ${barsOf(bars)}"
+    fun loopBounceButton(bars: Int): String = "BOUNCE ${barsOf(bars)} TO SNIPS"
 
     /**
      * LOOP's own legend. Both of the grid's gestures are invisible — a track
@@ -1974,6 +2046,4 @@ object Copy {
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
 
-    /** Rotation helper: line [n] of a rotating list (n counts from 0) — [COMMIT_LINES]'s own rotation. */
-    fun rotating(lines: List<String>, n: Int): String = lines[n % lines.size]
 }

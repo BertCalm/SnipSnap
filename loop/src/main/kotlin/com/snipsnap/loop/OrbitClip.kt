@@ -207,7 +207,7 @@ object OrbitClip {
         // One turn of the TRANSPORT, which for an arranged set is its plan
         // rather than the rings' meeting. The first cut of sections
         // relaxed this for arranged sets altogether, which left
-        // `bounceToTape` rendering `cycleFrames` with nothing to stop it -
+        // `bounceToSnips` rendering `cycleFrames` with nothing to stop it -
         // minutes of audio for a three-bar plan on coprime rings, through
         // a `Long` the renderer's `Int` cannot hold.
         //
@@ -312,7 +312,7 @@ object OrbitClip {
      * [MAX_BARS] is a musical ceiling and not a bound on frames: a set's
      * `sampleRate` is only required to be positive, so a perfectly legal
      * 64-bar turn at 6 MHz and 40 BPM is 2,304,000,000 frames - and
-     * `bounceToTape` narrows that to the `Int` [OrbitEngine.render]
+     * `bounceToSnips` narrows that to the `Int` [OrbitEngine.render]
      * counts in, where it wraps NEGATIVE. Verified: `refusal` answered
      * null and the conversion gave -1,990,967,296.
      *

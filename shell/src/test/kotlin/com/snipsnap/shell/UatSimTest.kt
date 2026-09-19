@@ -275,7 +275,7 @@ class UatSimTest {
         }
 
         val send = review.sendToGrid()
-        say("  SEND TO GRID → ${send.sliceCount} pads, choke=${send.chokeSet}")
+        say("  SEND TO PADS → ${send.sliceCount} pads, choke=${send.chokeSet}")
 
         // melodic door
         val mel = review.melodicPreview()

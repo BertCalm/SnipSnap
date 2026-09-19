@@ -440,7 +440,7 @@ class ChopReviewModel private constructor(
         return "AUTO-PLACE: " + parts.joinToString(" ") + if (choke) " + CHOKE" else ""
     }
 
-    /** What SEND TO GRID hands the kit builder. */
+    /** What SEND TO PADS hands the kit builder. */
     data class SendResult(
         /** Index i = pad i+1; ready for KitAssembler. */
         val arranged: List<ArrangedPad?>,
@@ -538,7 +538,7 @@ class ChopReviewModel private constructor(
         return ordered.take(padCount) + List(padCount - ordered.size.coerceAtMost(padCount)) { null }
     }
 
-    /** SEND TO GRID, melodic layout. */
+    /** SEND TO PADS, melodic layout. */
     fun sendToGridMelodic(): SendResult {
         val placed = melodicPreview()
         val arranged = balanced(placed.map { row -> row?.let(::arrangedPad) })
@@ -622,7 +622,7 @@ class ChopReviewModel private constructor(
     }
 
     /**
-     * SEND TO GRID, folded: each pad the fold's lead with the other takes
+     * SEND TO PADS, folded: each pad the fold's lead with the other takes
      * cycling under it (`ArrangedPad.takes` → a chain pad), the lead's
      * provenance plus how many folded. [SendResult.sliceCount] is the
      * pad count here; the toast says both numbers.

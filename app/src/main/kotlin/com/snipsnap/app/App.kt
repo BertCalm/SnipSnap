@@ -285,17 +285,27 @@ fun App(shelf: KitShelf) {
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     var toast by remember { mutableStateOf<String?>(null) }
-    // The door a toast can carry (J10): its label and what it opens, or
-    // null for the ordinary one-line toast. Cleared with the toast itself
-    // by the dwell effect below, so a door can never outlive its message.
-    var toastDoor by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    // The door a toast can carry (J10): the sentence it was offered with,
+    // its label, and what it opens.
+    //
+    // The sentence is stored WITH the door, and `toastDoor` below is
+    // derived by comparing the two, because the first cut of this held the
+    // message and the door in two vars and set them independently - so any
+    // plain `onToast` landing after an offer (TAPE's KEEP fired one on the
+    // very next line) replaced the offer's sentence and left its door
+    // under someone else's words, on the offer's longer dwell. A door that
+    // is only shown while the toast on screen IS the offer's own sentence
+    // cannot be stranded by construction, which is what the old comment
+    // here claimed and the old code did not do.
+    var offered by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
+    val toastDoor: Pair<String, () -> Unit>? =
+        offered?.takeIf { it.first == toast }?.let { it.second to it.third }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond a toast's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
     /** The box in place of the toast, never beside it: opening one puts any toast down. */
     fun openNote(n: LandingNote.Note) {
         toast = null
-        toastDoor = null
         note = n
     }
 
@@ -316,7 +326,7 @@ fun App(shelf: KitShelf) {
     fun offer(message: String, label: String, open: () -> Unit) {
         note = null
         toast = message
-        toastDoor = label to open
+        offered = Triple(message, label, open)
     }
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
@@ -325,6 +335,26 @@ fun App(shelf: KitShelf) {
     // one of them; it's KIT-scoped overlay state instead, cleared whenever
     // the user navigates to another tab (see `MenuRow`'s `onSelect` below).
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
+
+    /**
+     * Open PAD SHEET on [slot], and retire its discovery hint.
+     *
+     * One function because the hint was retired at exactly one of the
+     * three doors that open this sheet (J16). KIT's long press cleared
+     * it; DOUBLES' `GO ▸` and the RE-TRIM return did not — so a user who
+     * found the sheet either of those ways was told "HOLD A PAD TO OPEN
+     * ITS PAD SHEET" on every kit open, forever. [Copy.PAD_SHEET_HINT]'s
+     * own KDoc says opening the sheet is "the only event that proves they
+     * found it", which was true of the intent and false of the code.
+     *
+     * A fourth door cannot miss it now, and `every pad sheet door retires
+     * its own hint` refuses a bare assignment that would bring the split
+     * back.
+     */
+    fun openPadSheet(slot: Int) {
+        padSheetSlot = slot
+        prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
+    }
     // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
     var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
@@ -990,7 +1020,7 @@ fun App(shelf: KitShelf) {
             // is — see `Motion.TOAST_OFFER_DWELL_MS`.
             delay((if (toastDoor != null) Motion.TOAST_OFFER_DWELL_MS else Motion.TOAST_DWELL_MS).toLong())
             toast = null
-            toastDoor = null
+            offered = null
         }
     }
 
@@ -1291,7 +1321,7 @@ fun App(shelf: KitShelf) {
      * CHOP ALL (XX3 wired in): every picked `.wav` through the same
      * auto-chop pipeline INSTANT KIT already uses (`InstantKit.build` —
      * `ChopReviewModel.chop` → `sendToGrid()` → `KitBuilderModel.fromChop`,
-     * the exact chain SEND TO GRID and INSTANT KIT both already run), one
+     * the exact chain SEND TO PADS and INSTANT KIT both already run), one
      * new kit per file, named after the file. Deliberately NOT
      * `ChopAllCommand.run`/`ChopCommand.chop` (`:cli`) themselves: that
      * pipeline decodes with the unbounded `WavReader.read`
@@ -1597,7 +1627,10 @@ fun App(shelf: KitShelf) {
                 retrim = null
                 if (open?.dir == request.kitDir) {
                     screen = AppScreen.KIT
-                    padSheetSlot = request.slot
+                    // Through openPadSheet, not a bare assignment: a
+                    // RE-TRIM landing back on its pad is one of the three
+                    // doors that used to leave the hint nagging (J16).
+                    openPadSheet(request.slot)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -2335,7 +2368,10 @@ fun App(shelf: KitShelf) {
                                     doublesOpen = false
                                     open = entry
                                     screen = AppScreen.KIT
-                                    padSheetSlot = slot
+                                    // Through openPadSheet (J16): DOUBLES' GO was
+                                    // the second of the three doors that opened
+                                    // the sheet without retiring its hint.
+                                    openPadSheet(slot)
                                 },
                             )
                         } else {
@@ -2505,7 +2541,7 @@ fun App(shelf: KitShelf) {
                                 sheetSlot != null && sheetEntry != null -> PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
-                                    onSlotChange = { padSheetSlot = it },
+                                    onSlotChange = ::openPadSheet,
                                     onBack = { padSheetSlot = null },
                                     onToast = { toast = it },
                                     openBox = padSheetBox,
@@ -2664,14 +2700,7 @@ fun App(shelf: KitShelf) {
                                 else -> KitScreen(
                                     open,
                                     busy = busy != null,
-                                    onLongPress = { slot ->
-                                        padSheetSlot = slot
-                                        // Found it — the hint has done its job and
-                                        // retires for good. This is the only event
-                                        // that proves discovery, which is why it is
-                                        // now the only thing that stops the nudge.
-                                        prefs.edit().putInt(PREF_PAD_SHEET_HINTS, PAD_SHEET_FOUND).apply()
-                                    },
+                                    onLongPress = ::openPadSheet,
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,
                                     onSetKey = ::setKey,

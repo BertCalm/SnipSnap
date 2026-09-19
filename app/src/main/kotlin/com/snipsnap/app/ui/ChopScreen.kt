@@ -89,7 +89,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * The CHOP SHOP screen: `ChopReviewModel` review + `SEND TO GRID`, over
+ * The CHOP SHOP screen: `ChopReviewModel` review + `SEND TO PADS`, over
  * whatever `TAPE` last committed (or, with no commit yet, the open kit's
  * longest sample — the same fallback `TapeScreen` uses). All the slicing
  * and classification lives in `:shell`'s tested `ChopReviewModel`; this
@@ -458,7 +458,7 @@ private fun ChopContent(
     var humming by remember(model) { mutableStateOf(false) }
     var humStart by remember(model) { mutableStateOf(0L) }
 
-    // The source's tempo, for ON THE GRID's row: measured once on IO off
+    // The source's tempo, for SNAP's row: measured once on IO off
     // the first model (every later model cut from this source shares the
     // measurement), null while measuring or when the tape has no pulse.
     val tempoMeasured by produceState<Pair<Boolean, com.snipsnap.audio.TempoEstimate?>>(initialValue = false to null, initialModel) {
@@ -1031,7 +1031,7 @@ private fun ChopContent(
             }
             Box(Modifier.weight(2f)) {
                 PrimaryAction(
-                    label = if (sendBusy) "…" else "SEND TO GRID",
+                    label = if (sendBusy) "…" else "SEND TO PADS",
                     enabled = !sendBusy && !rechopBusy && !humming,
                 ) {
                     if (sendBusy || rechopBusy || humming) return@PrimaryAction
@@ -1073,8 +1073,8 @@ private fun ChopContent(
                             onToast(
                                 when {
                                     sungBars != null -> Copy.sungGroove(sungBars)
-                                    isFold -> Copy.foldedToGrid(current.sliceCount, send.sliceCount, send.chokeSet)
-                                    else -> Copy.sentToGrid(send.sliceCount, send.chokeSet)
+                                    isFold -> Copy.foldedToPads(current.sliceCount, send.sliceCount, send.chokeSet)
+                                    else -> Copy.sentToPads(send.sliceCount, send.chokeSet)
                                 },
                             )
                             onSentToGrid(newEntry)
@@ -1325,9 +1325,9 @@ private fun CutBench(
     onAuto: () -> Unit,
     onEar: (ChopReviewModel.Ear) -> Unit,
     onCut: (ChopReviewModel.Cut) -> Unit,
-    /** (measured yet, the tempo): ON THE GRID's row reads the pulse it would snap to, or that none was heard. */
+    /** (measured yet, the tempo): SNAP's row reads the pulse it would snap to, or that none was heard. */
     tempo: Pair<Boolean, com.snipsnap.audio.TempoEstimate?>,
-    /** ON THE GRID's row: the snap picked. (`onGrid` above is the BY HITS / GRID segment; the two are different things.) */
+    /** SNAP's row: the snap picked. (`onGrid` above is the BY HITS / GRID segment; the two are different things - which is why this row no longer says GRID either, J41.) */
     onSnap: (ChopReviewModel.GridSnap) -> Unit,
     /** HUM (§10): start the hum, or stop it and read it. */
     onHum: () -> Unit,
@@ -1417,7 +1417,7 @@ private fun CutBench(
             }
             TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                SegmentButton("COUNT", active = ladder == null, modifier = Modifier.weight(1f), enabled = !busy) { onRung(null) }
+                SegmentButton(Ladder.COUNT_LABEL, active = ladder == null, modifier = Modifier.weight(1f), enabled = !busy) { onRung(null) }
                 for (rung in Ladder.Rung.entries) {
                     SegmentButton(rung.label, active = ladder?.rung == rung, modifier = Modifier.weight(1f), enabled = !busy) { onRung(rung) }
                 }
@@ -1442,7 +1442,7 @@ private fun CutBench(
                 t == null -> "NO TEMPO HEARD"
                 else -> "${t.bpm.roundToInt()} BPM"
             }
-            TapeText("ON THE GRID · CUTS ON THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            TapeText("SNAP · CUTS ONTO THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (grid in ChopReviewModel.GridSnap.entries) {
                     SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f), enabled = !busy) { onSnap(grid) }
@@ -1587,6 +1587,13 @@ private fun GridPreview(placed: List<ChopReviewModel.Row?>, scheme: Scheme) {
 }
 
 /**
+ * The app's segment picker. `internal`, not `private`, since J18:
+ * GROOVE's program row draws its five segments with this rather than
+ * inventing a sixth picker treatment, which is the argument this KDoc
+ * already makes below. It still lives in this file because
+ * `ConventionTest` reads it out of `ChopScreen.kt` by name — moving it is
+ * a tidy-up for its own change, not a rider on a UI one.
+ *
  * Batch 3, Task 5: bright border + sub-label, not a solid fill — SETUP's
  * own selected-state treatment (`PropertiesScreen.kt`'s `SchemeRow`,
  * [pressedBevel] vs [raisedBevel]), applied here so CLASSIC/MELODIC agrees
@@ -1601,7 +1608,7 @@ private fun GridPreview(placed: List<ChopReviewModel.Row?>, scheme: Scheme) {
  * neighbour.
  */
 @Composable
-private fun SegmentButton(
+internal fun SegmentButton(
     label: String,
     active: Boolean,
     modifier: Modifier = Modifier,

@@ -530,25 +530,38 @@ Capabilities that exist in the model with no control attached.
   the grid had nothing to pass and passed `1f`. Position is the one thing a
   tap does carry.
 
-  `PadHit.velocityAt(y, height)` is in `:shell` and tested: top is a full
-  hit, the bottom is `SOFTEST` and deliberately **not** silent (a pad that
-  makes no sound reads as broken, not as soft), a touch reported outside the
-  cell is clamped rather than extrapolated, and a zero or non-finite height
-  answers a full hit rather than dividing — the same lesson as
-  `restoreView`'s NaN zoom and `Audition.barOf`'s zero `stepsPerBar`.
+  `PadHit.velocityAt(y, height)` is in `:shell` and tested: **the bottom of
+  the pad is the full hit and the top is `SOFTEST`**, which is deliberately
+  **not** silent (a pad that makes no sound reads as broken, not as soft), a
+  touch reported outside the cell is clamped rather than extrapolated, and a
+  zero or non-finite height answers a *centre* hit rather than dividing —
+  the same lesson as `restoreView`'s NaN zoom and `Audition.barOf`'s zero
+  `stepsPerBar`.
+
+  **The direction was wrong when this paragraph was first written, and the
+  user found it on a phone before any test did.** "Seems to work, but is
+  louder at the bottom of the pad?" — it was, because `PadGrid.kt` had
+  carried the opposite convention since long before this work ("top of the
+  pad is softest, bottom is full velocity"), used by PLAY, GROOVE and KEYS,
+  and KIT had been built inverted beside it with a different floor, a
+  different accessible value and a legend advertising the wrong way round.
+  Four copies of one quantity. **The app had already answered the question I
+  put to the user; I should have grepped for the existing convention before
+  asking which gesture to use.** `PadHit` now owns it and the other three
+  read it.
 
   **The floor is not a number chosen by eye.** `StackTakes.windows` puts the
   soft/live boundary at MIDI 63 with one soft zone and at 41 with two, so a
-  floor that cleared one could still miss the other. `SOFTEST = 0.2f` rounds
-  to MIDI 25, inside the softest zone of both, and the tests assert that by
-  resolving real layered pads through `PadHit.resolve` rather than by
-  restating the constant.
+  floor that cleared one could still miss the other. The tests assert the
+  floor lands in the softest zone by resolving real layered pads through
+  `PadHit.resolve` rather than by restating the constant.
 
   Where the soft/live line falls on screen is therefore *the pad's own*, not
-  a tuned split point — with one soft zone it is about the bottom third of
-  the cell, with two it is higher. The legend says the direction ("TAP LOW
-  ON A PAD FOR A SOFTER HIT") rather than the rule, because a direction is
-  something a thumb can act on.
+  a tuned split point. The legend says the direction ("TAP HIGH ON A PAD FOR
+  A SOFTER HIT") rather than the rule, because a direction is something a
+  thumb can act on. Still open: whether to lower the floor so a stacked
+  pad's softest take is reachable at all — it would change how PLAY, GROOVE
+  and KEYS feel, which is a decision rather than a fix.
 
   The accessible path keeps full velocity on purpose: a synthesized click
   has no position, and guessing one would hand TalkBack users an arbitrary
@@ -619,17 +632,227 @@ with no design choice inside them, and are **done**:
 
 ---
 
+### PR 7 — researched, not chosen by taste
+
+You asked for the questions, then asked me to research them and do what is
+provably best. This records what the evidence said, including the two places
+it said **don't**.
+
+The sources, in the order they settled things: the repo's own written law
+(`UI_DESIGN.md`, `PERSONALITY.md`), the app's own exporter, measurable facts
+in the code, and the Android platform contract.
+
+#### Settled by the exporter — done
+
+- **J18 + J19 — PROG A–E.** The decisive fact is not a design opinion: the
+  letters are an argument to `GrooveProgram.compute` and **nothing else**.
+  They are not MPC clip slots, and no exporter in the app has ever written
+  one. What the exporter *does* write is the word — `GrooveVariations`
+  suffixes each derived clip with `Swing`, `Half`, `Sparse`. So the screen
+  and the SD card disagreed about what these things are called, and the
+  screen was the one making it up.
+
+  The five programs are now `CAPTURED · SWING · HALF · SPARSE · YOURS`, all
+  visible at once in a segment row — CHOP's own control, whose KDoc already
+  argues a picker should "agree with every other picker in the app rather
+  than invent its own third convention".
+
+  **The law caught my first attempt.** I wrote `SWUNG`, because it reads
+  better. The exporter writes `Swing`, the law refused it, and the law was
+  right: a player who picks a program here and then looks for it on the
+  hardware has to recognise it. `SWING` is also what the stepper two rows
+  down is called, which is correct rather than a collision — that stepper
+  sets the percent this program applies.
+
+  **Two programs are exempt, on facts rather than taste.** `CAPTURED` is the
+  base clip and carries no suffix, so there is no exporter word to match.
+  `YOURS` is found again on disk by `GrooveEdit.NAME_SUFFIX`, which is
+  `" E"` — a marker inside `groove.json`, not a name, and not renameable
+  without migrating every kit already saved. The letter stays on disk and
+  the screen stops showing it.
+
+  J19's three doors — `STEPS`, `EDIT STEPS`, `EDIT THIS TAKE` — all fork
+  into the same program, and the toast that follows all three now says
+  YOURS. They say where they go: `START YOURS` from nothing, `FORK TO
+  YOURS` from either of the other two.
+
+#### Settled *against* changing — evidence says the finding is wrong
+
+- **J39 — the "invisible" tape counter and pencil rewind.** Not a
+  discoverability bug. `PERSONALITY.md` catalogs both as **hidden eggs**
+  under law 4: *"One visible gag per screen; the rest are hidden. Discovered
+  delight beats displayed delight."* Making them visible would break the
+  written law, not serve it.
+
+  The review's sharper point — that TalkBack announces `REWIND PENCIL` and
+  `SPIN BACK BY EAR` while a sighted user gets nothing — is real but is not
+  fixable in the direction it implies. An interactive element must carry an
+  accessible name (WCAG 2.2 §4.1.2); removing the label to even the score
+  would trade a working control for a broken one. Law 4 governs the *visual*
+  surface, and that asymmetry is the correct trade, not a defect.
+
+  Recorded while checking: both gestures have drifted from the doc — it
+  specifies a tap on the cassette and a triple-tap on the readout; the app
+  has a hold on the left reel and a single tap. Noted in `PERSONALITY.md`,
+  not "fixed", because which gesture is right is a design call and both work
+  today.
+
+- **J15's box-state complaint.** "Box state resets per kit" is the
+  *designed* behaviour, settled on a canvas in wave DDD and written down:
+  `UI_DESIGN.md`, "the pad sheet folds" — *"One box open at a time; the open
+  box is remembered per kit, so the next pad opens on the same bench."*
+  Changing it to per-pad would contradict a settled decision. The rest of
+  J15 (no press feedback on the 480 ms hold) stands and is below.
+
+#### Settled, still to do — in the order the evidence is strongest
+
+- **J15's press feedback.** `UI_DESIGN.md`'s rules of the language:
+  *"Every control is RAISED, PRESSED or SUNKEN — pressing a control flips
+  its light source."* The pad does not; its only press animation *decays*,
+  so it darkens as the sheet opens. A written rule the code breaks.
+- **J16.** The hint is retired only inside `KitScreen`'s `onLongPress`,
+  though two other doors open the sheet — and the hint's own KDoc claims
+  opening the sheet is *"the only event that proves they found it"*. The
+  KDoc and the code disagree; the KDoc is right.
+- **J33.** `GridPreview` draws sixteen `Box`es with no text and **no
+  semantics node**. An informative element with no accessible name (WCAG 2.2
+  §4.1.2), on a screen where every other picker has one.
+- **J36.** `UI_DESIGN.md` already establishes the language for encoding pad
+  state in a line treatment — *"dashed shell = unclassified"*. A treated pad
+  gets a rim in that same language rather than a new badge.
+- **J11 — Back.** Android's contract is explicit and external: Back moves
+  *"in reverse chronological order through the history of screens the user
+  has recently worked with"*, popping a back stack. One root handler sending
+  Back to KITS from every tab is not that.
+- **J12 + J14 — KIT vs KITS.** Measured: **11 of 24** direct navigations land
+  on KIT, next is 4. And `Copy` says SHELF 41 times against KITS 22. The tab
+  is the only place the shelf is called KITS, one letter from the hub. The
+  *grouping* half of J12 stays open — `UI_DESIGN.md` explicitly lists the
+  shelf's form as still undecided, so regrouping the strip would pre-empt a
+  decision that is the user's.
+- **J30.** CHOP's three-tier fallback can slice the open kit's longest
+  sample without ever naming it. Acting on an unstated assumption, not a
+  layout preference.
+- **J34.** `why`'s own KDoc says it exists because *"the user was choosing
+  between eight names and no reasons"*; shut by default returns them to
+  exactly that.
+
+#### Not settled by evidence — still yours
+
+- **J12's grouping**, above.
+- **J31** — offering the new kit's name before the write. The sibling button
+  one row down does name its destination first, which is a real internal
+  inconsistency; but adding a naming step to the primary action changes the
+  flow, and that is a design call.
+- **The velocity floor** — needs ears on a phone, not a rule.
+- **KIT's two legend lines** — taste.
+
+---
+
 ### PR 8 — words *(J13, J41–J46, and J47's three carried items)*
 
-The S3 band, one pass: `GRID` naming five things, `16TH` naming two,
-`ZOOM` naming a control that is called `COUNT`, `TAPED. NO TAKEBACKS.`
-being false, a readout string fired as a toast, and `SEND IT SOMEWHERE`
-grouping file-writes with navigation.
+The S3 band, one pass. **Done**, in two PRs: J43 turned out to be a dead
+control rather than a wording bug and went first, on its own; everything
+else is the words pass.
 
-Cheap, and worth doing last so it isn't re-churned by PRs 5–7.
+Every item here was re-verified at source before it was touched,
+**including J47's three**, which the review explicitly flagged as carried
+on the prior review's word. All three were still true, and one was worse
+than stated.
 
-**Note:** J47's three items are carried on the prior review's word and
-were not re-verified. Re-check them at source before acting.
+- **J13** — the first-run note glossed step 3 (KIT) as "PLAY IT", and PLAY
+  is a real tab six places along the same menu row. It now reads **"RECORD
+  IT, CUT IT, KIT IT, DUB IT"**, which is the app's own verb for that step
+  (`orbitBounced` already said "TRIM IT, CHOP IT, KIT IT").
+
+  The law that exists for exactly this was looking one line too high: it
+  held `FIRST_RUN_LOOP_STAGES` — the four tab names — to `MENU_ITEMS`, and
+  never read the sentence underneath that glosses them. It now refuses any
+  menu-tab name in the note that is not one of the four stages.
+
+- **J41** — `GRID` named the CUT bench's equal-parts segment, its `GRID ×N`
+  readout, the snap-to-pulse row (`ON THE GRID`), the send button, and the
+  landing toast. Three different meanings on one screen.
+
+  The snap row is now **`SNAP · CUTS ONTO THE PULSE`** and the destination
+  is now **`SEND TO PADS`** / "N SLICES ON THE PADS" — PADS being what the
+  app calls the sixteen everywhere else. `GRID` is left meaning one thing on
+  CHOP: cut into equal parts.
+
+  The `16TH` half is **not** renamed. A `Ladder.Rung` and a `GridSnap` both
+  legitimately mean a sixteenth; what made the collision unlearnable was
+  that the two rows shared a word in their legends as well. With one row
+  called SNAP and the other ZOOM, the same chip name under two different
+  legends is a distinction a player can actually see.
+
+- **J42** — HELP's ZOOM line listed the four rungs and not `COUNT`, which is
+  the chip the row sits on **by default**. So the one state a new user is
+  actually in was the one state HELP never mentioned. `COUNT` is now
+  `Ladder.COUNT_LABEL`, the row is `Ladder.ROW_LABELS`, and HELP's line is
+  built from it — one quantity, one place. A law refuses the literal back
+  onto the screen and checks HELP names every chip.
+
+- **J44** — bigger than the wording. `TAPED. NO TAKEBACKS.` is false, and so
+  are the other three lines of the rotation: `commitSelection()` is a pure
+  read and `onCommit` puts the range in a `remember`ed `lastCommit`.
+  **Nothing is taped, nothing is cut, and nothing lands on a shelf to be
+  renamed.** The rotation is gone rather than rewritten, because the J10
+  offer fires on the same event and already says the true thing.
+
+  **Which surfaced a defect of my own from PR 6.** The offer's door lived in
+  its own `var` beside the message, and TAPE's KEEP fired a plain toast on
+  the very next line — so the offer's sentence was replaced and its door
+  left on screen under the COMMIT line, on the offer's longer dwell. The
+  comment beside the two vars claimed "a door can never outlive its
+  message"; nothing made that true. The door is now **derived** — it shows
+  only while the toast on screen is the sentence it was offered with — and a
+  law keeps it derived.
+
+  Same shape as the three finds in PR 5, arriving from the other side: there
+  the tell was a KDoc explaining why a constant was written as it was; here
+  it was a comment asserting a behaviour the function does not have. Two of
+  those in this one PR — the other is INSTANT KIT's "Read before
+  `commitSelection()`, which clears it", also corrected.
+
+- **J45** — `HITS…` is the stepper's *readout*, and pressing ◀ HIT before
+  the finder had run threw that same label back as the app's answer. Its
+  sibling refusal is a sentence with a next step; so is this now.
+
+- **J46** — `SEND IT SOMEWHERE` is true of two of the four buttons under it.
+  MIDI and CHART write a file where you stand; SONG ▸ and ORBIT ▸ leave the
+  screen — and they were interleaved, leaving the `▸` glyph as the only
+  signal. The row is sorted by what the button does and the legend names
+  both halves in the order they sit: **`WRITE IT OUT · OR TAKE IT
+  FURTHER`**. One row still, because the comment there records why a single
+  row was chosen and that reasoning is unchanged.
+
+- **J47 · prior #25** — confirmed and worse than the row says. ORBIT's
+  `bounceToTape` writes through `SnipStore.import`, the same door LOOP's and
+  GROOVE's bounces use, and **TAPE is a different screen**. All three
+  buttons now name SNIPS *before* the tap, all three landing lines name it
+  after, the function is `bounceToSnips`, and a law holds all six strings to
+  one destination word and refuses `TAPE` in any of them.
+
+- **J47 · prior #27** — confirmed. HELP's first line used `CATCH` as a
+  generic verb for capture while `CATCH A HIT` is a named feature on that
+  same screen, described seventeen lines further down the same HELP. It
+  reads `RECORD A SOUND` now, which is also the verb J13's note uses.
+
+- **J47 · prior #30** — confirmed, but only one of the four boxes was a
+  verbatim repeat. TREATMENT's card said "TREATMENT" under a legend reading
+  TREATMENT; the other three prefixed the legend to a gloss ("MUTATE · ONE
+  HIT FROM TWO"). All four now carry the gloss alone. SHAPE's needed
+  rewriting rather than trimming: "SHAPE · CARD RENDERS IT" used CARD to
+  mean the exported program, on a screen where card means the thing the
+  words are printed on.
+
+**One thing checked and deliberately left.** The names behind the screen —
+`ChopReviewModel.GridSnap`, `ChopReview.sendToGrid()`, `ChopScreen`'s
+`onSentToGrid` callback — still say Grid. None of them reaches a player,
+and renaming them would put a large mechanical diff in a PR whose whole
+claim is that it only changed words. `bounceToTape` was renamed because it
+was *wrong*, not merely old: it named a screen the function never writes
+to.
 
 ---
 

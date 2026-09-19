@@ -2,6 +2,8 @@ package com.snipsnap.shell
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -45,12 +47,20 @@ class ConventionTest {
     private val tapeScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/TapeScreen.kt")
 
     /** The body of a top-level `private fun <name>(` through its closing brace at column 0. */
+    /**
+     * A top-level `fun` by name, whatever its visibility. It matched
+     * `private fun` alone until J18, when `SegmentButton` became
+     * `internal` so GROOVE's program row could draw its five segments
+     * with the app's existing picker instead of a sixth one. A law about
+     * what a component *does* should not fail over who can call it.
+     */
     private fun topLevelFun(file: File, name: String): String {
         val src = file.readText(Charsets.UTF_8)
-        val start = src.indexOf("private fun $name(")
-        assertTrue(start >= 0, "expected to find `private fun $name(` in ${file.name}")
+        val decl = Regex("""^(?:private |internal |public )?fun $name\(""", RegexOption.MULTILINE).find(src)
+        assertTrue(decl != null, "expected to find a top-level `fun $name(` in ${file.name}")
+        val start = decl!!.range.first
         val end = src.indexOf("\n}\n", start)
-        assertTrue(end > start, "expected `private fun $name(` in ${file.name} to close at column 0")
+        assertTrue(end > start, "expected `fun $name(` in ${file.name} to close at column 0")
         return src.substring(start, end)
     }
 
@@ -157,6 +167,10 @@ class ConventionTest {
      */
     @Test
     fun `SegmentButton and DeckButton pass enabled through to tapeClick`() {
+        // `internal fun`, not `private fun`, since J18: GROOVE's program
+        // row draws its five segments with this one rather than inventing
+        // a sixth picker. The visibility is not what this law is about,
+        // so it reads the function whichever it is.
         val segment = topLevelFun(chopScreen, "SegmentButton")
         val deck = topLevelFun(tapeScreen, "DeckButton")
 
@@ -1253,6 +1267,100 @@ class ConventionTest {
                     "Tabs are: ${labels.sorted()}",
             )
         }
+
+        // ...and the sentence under those four words is held to the same
+        // rule, which is where J13 got in: the law above passed while
+        // FIRST_RUN_LOOP_NOTE glossed step three, KIT, as "PLAY IT" — and
+        // PLAY is a real tab six places along the same menu row. A tab name
+        // in the note is a promise about where to tap, so the only tab
+        // names allowed in it are the four stages it is explaining.
+        val strays = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_LOOP_NOTE)
+            .map { it.value }
+            .filter { it in labels && it !in Copy.FIRST_RUN_LOOP_STAGES }
+            .toSet()
+        assertTrue(
+            strays.isEmpty(),
+            "Copy.FIRST_RUN_LOOP_NOTE (\"${Copy.FIRST_RUN_LOOP_NOTE}\") names ${strays.sorted()}, " +
+                "which ${if (strays.size == 1) "is a menu tab" else "are menu tabs"} but not one of the four " +
+                "stages it explains (${Copy.FIRST_RUN_LOOP_STAGES}). The note sits directly under the stage " +
+                "row and reads as a gloss of it, so a tab name in it points a new user at a screen that is " +
+                "not the step being described. Use a verb that is not a tab, or the stage's own name.",
+        )
+    }
+
+    // ==================== Law: the ladder row's chips are named once ====================
+
+    /**
+     * THE ZOOM LADDER's first chip is COUNT — no rung at all, the plain
+     * GRID by count, and the state the row is in by default. It lived as a
+     * literal on `ChopScreen` while HELP's ZOOM line listed the four real
+     * rungs, so the one state a new user is actually in was the one state
+     * HELP never mentioned (J42).
+     *
+     * `Ladder.ROW_LABELS` is now the row, and HELP builds its line from it.
+     * That only holds while the screen draws the row out of the same list,
+     * so this reads the screen's own source and refuses the literal back.
+     */
+    @Test
+    fun `the ladder row's COUNT chip is named in Ladder, not typed on the screen`() {
+        val chop = File("../app/src/main/kotlin/com/snipsnap/app/ui/ChopScreen.kt")
+        assertTrue(chop.isFile, "expected to find ${chop.absolutePath}")
+        val src = codeOnly(chop.readText(Charsets.UTF_8))
+        assertTrue(
+            "SegmentButton(Ladder.COUNT_LABEL" in src,
+            "ChopScreen no longer draws the ladder row's first chip from Ladder.COUNT_LABEL. HELP's ZOOM " +
+                "line is built from Ladder.ROW_LABELS; if the screen types its own label the two can say " +
+                "different things again, which is exactly J42.",
+        )
+        assertFalse(
+            "\"COUNT\"" in src,
+            "ChopScreen.kt contains the literal \"COUNT\". The ladder row's first chip is Ladder.COUNT_LABEL " +
+                "so that HELP and the screen read one string out of one place — see J42.",
+        )
+        // HELP names every chip of the row, not four of the five.
+        for (label in Ladder.ROW_LABELS) {
+            assertTrue(
+                Copy.HELP_MORE.any { label in it && "ZOOM ON CHOP" in it },
+                "HELP's ZOOM line does not name the ladder chip '$label'. It is built from " +
+                    "Ladder.ROW_LABELS precisely so it cannot miss one; something has retyped it.",
+            )
+        }
+    }
+
+    // ==================== Law: a toast's door belongs to that toast ====================
+
+    /**
+     * An offer is a toast with a door (J10). The first cut of it held the
+     * message in `toast` and the door in `toastDoor` and wrote them
+     * independently, so a plain `onToast` landing afterwards — TAPE's KEEP
+     * fired one on the very next line — swapped the sentence and left the
+     * door under someone else's words, on the offer's longer dwell. The
+     * comment beside the two vars claimed a door "can never outlive its
+     * message"; nothing made that true.
+     *
+     * It is true now because `toastDoor` is derived: `offered` carries the
+     * sentence it was made with, and the door shows only while the toast on
+     * screen is that sentence. This law keeps it derived — the moment
+     * anything assigns `toastDoor` again, the two can disagree again.
+     */
+    @Test
+    fun `the toast door is derived from the toast, never assigned beside it`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = codeOnly(app.readText(Charsets.UTF_8))
+        assertTrue(
+            "val toastDoor" in src,
+            "App.kt no longer declares `val toastDoor`. The door has to be computed from the toast on " +
+                "screen, not stored beside it — see J10/J44.",
+        )
+        val assigned = Regex("""\btoastDoor\s*=(?!=)""").findAll(src).count()
+        assertEquals(
+            0,
+            assigned,
+            "App.kt assigns `toastDoor` $assigned time(s). A door held in its own var can outlive the " +
+                "sentence it was offered with: any plain `toast = ...` replaces the words and leaves the " +
+                "button. Set `offered` instead and let `toastDoor` be derived from it.",
+        )
     }
 
     // ==================== Law: every snip call agrees on where snips live ====================
@@ -1450,6 +1558,27 @@ class ConventionTest {
      */
     private fun codeOnly(block: String): String =
         block.lines().filterNot { isCommentLine(it.trim()) }.joinToString("\n")
+
+    /** The `( ... )` list following [marker] in [src], paren-matched and comment-stripped. */
+    private fun blockAfterList(src: String, marker: String): String {
+        val code = codeOnly(src)
+        val at = code.indexOf(marker)
+        assertTrue(at >= 0, "expected to find `$marker`")
+        val start = code.indexOf('(', at)
+        assertTrue(start >= 0, "expected a `(` after `$marker`")
+        var depth = 0
+        var i = start
+        while (i < code.length) {
+            val c = code[i]
+            if (c == '(') depth++
+            if (c == ')') {
+                depth--
+                if (depth == 0) return code.substring(start, i + 1)
+            }
+            i++
+        }
+        fail("unbalanced parentheses after `$marker`")
+    }
 
     /** The `{ ... }` block following [marker] in [src], brace-matched. */
     private fun blockAfter(src: String, marker: String): String {
@@ -1888,7 +2017,7 @@ class ConventionTest {
         val subList = entriesOf("private val PROG_SUBS = listOf(")
         assertTrue(nameList.size == subList.size && nameList.isNotEmpty(), "PROG_NAMES and PROG_SUBS disagree: $nameList vs $subList")
 
-        val halfTimeAt = nameList.indexOfFirst { "HALF-TIME" in it }
+        val halfTimeAt = nameList.indexOfFirst { "HALF" in it }
         assertTrue(halfTimeAt >= 0, "no program named HALF-TIME in $nameList — if it was renamed, point this law at the new name.")
         assertTrue(
             "LONG" in subList[halfTimeAt],
@@ -2124,4 +2253,203 @@ class ConventionTest {
             )
         }
     }
+
+    // ==================== Law: GROOVE's programs are named for what the exporter writes ====================
+
+    /**
+     * The five GROOVE programs read `PROG A · THE BREAK` … `PROG E ·
+     * EDITED` until J18 — index first, meaning second, on a screen where
+     * the index means nothing. A–E is an argument to
+     * `GrooveProgram.compute` and nothing else: it is not an MPC clip
+     * slot, and no exporter in the app has ever written it.
+     *
+     * What the exporter *does* write is the word. `GrooveVariations`
+     * suffixes each derived clip's name — `Swing` (or `Tight`), `Half`,
+     * `Sparse` — and those strings go into `groove.json` and out to the
+     * MPC's clip list. So the letters were the one set of names in the
+     * app that reached nothing outside `GrooveScreen.kt`, and the screen
+     * and the SD card disagreed about what these things are called.
+     *
+     * This law reads the names off the screen's own source and the
+     * suffixes out of the exporter, so the two cannot drift apart again.
+     *
+     * **Two programs are exempt, for reasons that are facts rather than
+     * taste.** The captured program is the base clip: it carries no
+     * suffix at all, so there is no exporter word to match and the app
+     * picks its own. The user's own program is stored and found again by
+     * `GrooveEdit.NAME_SUFFIX`, which is `" E"` — a marker in
+     * `groove.json`, not a name a player would recognise, and not
+     * renameable without migrating every kit already on disk. The screen
+     * calls it YOURS and the marker stays where it is.
+     */
+    @Test
+    fun `the GROOVE programs are named for what the exporter writes`() {
+        val groove = File("../app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt")
+        assertTrue(groove.isFile, "expected to find ${groove.absolutePath}")
+        val block = blockAfterList(groove.readText(Charsets.UTF_8), "private val PROG_NAMES = listOf")
+        val names = Regex("\"([^\"]+)\"").findAll(block).map { it.groupValues[1] }.toList()
+        assertEquals(
+            5,
+            names.size,
+            "expected five program names in GrooveScreen's PROG_NAMES, found $names — the pattern this " +
+                "law reads must have changed, which would make it pass by checking nothing.",
+        )
+
+        // The exporter's own words, taken from the exporter rather than retyped.
+        val base = com.snipsnap.mpc3.Mpc3Clip(
+            name = "BASE",
+            bars = 1,
+            notes = listOf(com.snipsnap.mpc3.Mpc3Note(note = 36, timePulses = 0L, velocity = 1.0f)),
+        )
+        val written = com.snipsnap.kit.GrooveVariations.standard(base, swingPercent = 60)
+        // standard() returns base, swung, half, sparse — in the same order
+        // the screen lists them, which is the order `GrooveProgram.compute`
+        // indexes. Index 0 is the base and carries no suffix.
+        val suffixes = written.drop(1).map { it.name.removePrefix("BASE").trim().substringBefore(' ') }
+        assertEquals(
+            3,
+            suffixes.count { it.isNotBlank() },
+            "GrooveVariations.standard no longer suffixes its three derived clips (got $suffixes) — " +
+                "this law reads the exporter's vocabulary out of it, so an unsuffixed variation would " +
+                "make the check vacuous rather than failing.",
+        )
+        for ((i, suffix) in suffixes.withIndex()) {
+            val onScreen = names[i + 1]
+            assertTrue(
+                onScreen.startsWith(suffix.uppercase(), ignoreCase = true) ||
+                    suffix.startsWith(onScreen, ignoreCase = true),
+                "GROOVE's program ${i + 1} is called '$onScreen' on screen, but the exporter writes " +
+                    "'$suffix' into the clip name that lands on the MPC. A player who picks a program here " +
+                    "and then looks for it on the hardware has to recognise it — that is the whole reason " +
+                    "the A–E letters went (J18). Screen names: $names; exporter suffixes: $suffixes.",
+            )
+        }
+
+        // The letters are gone from the screen's own labels.
+        val letters = names.filter { Regex("""^PROG [A-E]\b""").containsMatchIn(it) }
+        assertTrue(
+            letters.isEmpty(),
+            "GrooveScreen's PROG_NAMES is index-first again: $letters. A–E is an argument to " +
+                "GrooveProgram.compute, not an MPC clip slot — see this law's KDoc.",
+        )
+    }
+
+
+    // ==================== Law: no comment closes itself by accident ====================
+
+    /**
+     * An asterisk followed by a slash ends a block comment, so writing
+     * markdown-ish emphasis around a slash inside a KDoc terminates it
+     * mid-sentence. Everything after it becomes code, and the compiler
+     * reports a cascade of "Expecting a top level declaration" at a column
+     * that looks like ordinary English.
+     *
+     * This cost a CI cycle. `:app` has no Kotlin test source set, so
+     * `android-build` is the only thing that compiles it — a syntax error
+     * there is invisible to `./gradlew test` and shows up only after a
+     * push. The same mistake had been made and fixed in this very file an
+     * hour earlier; fixing that instance without sweeping for the shape is
+     * what let the second one through, in `GrooveScreen.kt`.
+     *
+     * A line that is nothing but a closer is legitimate (if unusual), so
+     * only an occurrence with prose around it is refused. The sequence is
+     * assembled at runtime rather than written out, because a law that
+     * names the thing it forbids would flag its own source — which is how
+     * the first draft of this law failed.
+     */
+    @Test
+    fun `no Kotlin source ends a doc comment by accident`() {
+        val closer = "*".repeat(2) + "/"
+        val roots = listOf("../app/src", "../shell/src", "../kit/src", "../audio/src", "../loop/src", "../synth/src", "../cli/src")
+            .map { File(it) }
+            .filter { it.isDirectory }
+        assertTrue(roots.size >= 5, "only found ${roots.size} source roots — the scan is broken, not the tree.")
+        val sources = roots.flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        assertTrue(sources.size > 100, "found only ${sources.size} .kt files — the scan is broken, not the tree.")
+
+        val bad = mutableListOf<String>()
+        for (file in sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                if (closer in line && line.trim() != closer) {
+                    bad += "${file.path}:${i + 1}: ${line.trim()}"
+                }
+            }
+        }
+        assertTrue(
+            bad.isEmpty(),
+            "these lines close the enclosing doc comment where they stand, turning the rest of the " +
+                "comment into code:\n  " + bad.joinToString("\n  ") +
+                "\nUse backticks rather than double-asterisk emphasis next to a slash. This is checked " +
+                "here because :app has no test source set — a syntax error in it is invisible to the " +
+                "JVM suite and only surfaces when CI compiles the app.",
+        )
+    }
+
+
+    // ==================== Law: every pad sheet door retires its own hint ====================
+
+    /**
+     * PAD SHEET has three doors — KIT's long press, DOUBLES' `GO`, and the
+     * RE-TRIM return — and its discovery hint was retired inside exactly
+     * one of them (J16). A user who found the sheet either of the other
+     * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
+     * open, forever.
+     *
+     * `Copy.PAD_SHEET_HINT`'s own KDoc says opening the sheet is "the only
+     * event that proves they found it". That was true of the intent and
+     * false of the code, which is the shape this wave keeps finding: a
+     * comment asserting a behaviour the code does not have.
+     *
+     * `openPadSheet` is the one door now. Opening is assigning a slot;
+     * closing is assigning null, and closing has nothing to retire — so
+     * this refuses a non-null assignment made anywhere else.
+     */
+    @Test
+    fun `every pad sheet door retires its own hint`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = codeOnly(app.readText(Charsets.UTF_8))
+
+        assertTrue(
+            "fun openPadSheet(" in src,
+            "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
+                "function, or the hint gets retired by some of them and not others — see J16.",
+        )
+        val opener = src.substringAfter("fun openPadSheet(")
+        assertTrue(
+            "PAD_SHEET_FOUND" in opener.take(400),
+            "`openPadSheet` no longer retires the hint (PAD_SHEET_FOUND). It is the one place that does; " +
+                "without it every door nags forever.",
+        )
+
+        // Assigning a slot is opening. Assigning null is closing, and a
+        // close has no hint to retire.
+        //
+        // The assigned token is CAPTURED and compared, not asserted around
+        // with a lookahead: `padSheetSlot\s*=\s*(?!null)` reads as "an
+        // assignment of something other than null" and is not one. `\s*`
+        // backtracks to zero width, so the lookahead runs against the
+        // space before `null`, is satisfied that a space is not `null`,
+        // and the pattern matches every close in the file. It flagged all
+        // ten of them on correct code.
+        val outside = src.substringBefore("fun openPadSheet(") + opener.substringAfter("}", "")
+        val assigned = Regex("""padSheetSlot\s*=\s*([A-Za-z0-9_.]+)""")
+            .findAll(outside)
+            .map { it.groupValues[1] }
+            .toList()
+        assertTrue(
+            assigned.isNotEmpty(),
+            "found no `padSheetSlot =` assignments at all outside openPadSheet — App.kt must still close " +
+                "the sheet somewhere, so this scan is broken rather than the code being clean.",
+        )
+        val bad = assigned.filterNot { it == "null" }
+        assertEquals(
+            emptyList(),
+            bad,
+            "App.kt opens PAD SHEET by assigning `padSheetSlot` directly, outside `openPadSheet`: $bad. " +
+                "That is how J16 happened — the hint is retired in one place and the other doors walk " +
+                "past it. Call openPadSheet(slot) instead.",
+        )
+    }
+
 }

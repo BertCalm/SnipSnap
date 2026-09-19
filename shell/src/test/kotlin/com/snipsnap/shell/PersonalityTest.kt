@@ -53,16 +53,6 @@ class PersonalityTest {
     }
 
     @Test
-    fun `commit lines rotate in order and wrap`() {
-        assertEquals("TAPED. NO TAKEBACKS.", Copy.rotating(Copy.COMMIT_LINES, 0))
-        assertEquals("COMMITTED TO TAPE.", Copy.rotating(Copy.COMMIT_LINES, 1))
-        assertEquals(
-            Copy.rotating(Copy.COMMIT_LINES, 0),
-            Copy.rotating(Copy.COMMIT_LINES, Copy.COMMIT_LINES.size),
-        )
-    }
-
-    @Test
     fun `law 3 - funny copy still says exactly what happened`() {
         // The capture-blocked box names the problem and the way out.
         assertTrue("SCREEN RECORDER" in Copy.CAPTURE_BLOCKED)
@@ -78,13 +68,13 @@ class PersonalityTest {
         // the shape that would have caught `grooveRead` counting BAR/BARS
         // right while leaving HITS always plural.
         assertEquals("HEARD 1 HIT OVER 1 BAR AT ~90 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(1, 1, 90))
-        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON PROG A NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
+        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON CAPTURED NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
         // Was "TOOK 1 HITS OVER 1 BAR OF 3/4." — takeLanded sang BAR/BARS
         // right (it shares grooveRead's shape) and left HITS always plural,
         // the same asymmetry inside one sentence that the general helper
         // below exists to rule out everywhere at once.
-        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON PROG A NOW.", Copy.takeLanded(1, 1, "3/4"))
-        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON PROG A NOW.", Copy.takeLanded(5, 2, "5/4"))
+        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON CAPTURED NOW.", Copy.takeLanded(1, 1, "3/4"))
+        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON CAPTURED NOW.", Copy.takeLanded(5, 2, "5/4"))
         assertEquals("BANK A · 0 FREE", Copy.catchBank('A', 0))
         // A refusal names the control as it reads and the tab it is on
         // (September wiring review, findings 4 and 14): the reflective
@@ -103,13 +93,13 @@ class PersonalityTest {
         assertEquals("BANK B · 16 FREE", Copy.catchBank('B', 16))
         assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
         assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
-        // Send-to-grid reports the real slice count.
-        assertEquals("7 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(7, chokeSet = true))
-        assertEquals("3 SLICES ON THE GRID.", Copy.sentToGrid(3, chokeSet = false))
-        // A single slice sent to the grid is singular too — sentToGrid used
+        // SEND TO PADS reports the real slice count.
+        assertEquals("7 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(7, chokeSet = true))
+        assertEquals("3 SLICES ON THE PADS.", Copy.sentToPads(3, chokeSet = false))
+        // A single slice sent to the pads is singular too — sentToPads used
         // to say "1 SLICES" (and so did instantKit, which routes through it).
-        assertEquals("1 SLICE ON THE GRID.", Copy.sentToGrid(1, chokeSet = false))
-        assertEquals("ONE TAP, THE WHOLE TAPE. 1 SLICE ON THE GRID.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
+        assertEquals("1 SLICE ON THE PADS.", Copy.sentToPads(1, chokeSet = false))
+        assertEquals("ONE TAP, THE WHOLE TAPE. 1 SLICE ON THE PADS.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
     }
 
     /**
@@ -437,6 +427,10 @@ class PersonalityTest {
         // The two J10 door labels are buttons, not sentences - "CHOP ▸"
         // carries its own arrow the way every other door label does.
         "CAPTURE_OFFER_DOOR", "KIT_OFFER_DOOR",
+        // GROOVE's and ORBIT's BOUNCE buttons, moved out of inline
+        // literals so one law can hold all three bounces to one
+        // destination word (prior #25). Labels on buttons, not sentences.
+        "GROOVE_BOUNCE_BUTTON", "ORBIT_BOUNCE_BUTTON",
         "PAD_SHEET_LEGEND", "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "HELP_LOOP_HEADER", "HELP_MORE_HEADER", "ROOMS_LEGEND",
         // The empty shelf's loop line (finding 3) is a row of tab names,
         // not a line the app says - it reads TAPE > CHOP > KIT > EXPORT.
@@ -597,10 +591,10 @@ class PersonalityTest {
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
         assertEquals("1 PAD RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(1, "A MINOR"))
         assertEquals(
-            "ONE TAP, YOUR IN + OUT. 8 SLICES ON THE GRID. CHOKE GROUP SET.",
+            "ONE TAP, YOUR IN + OUT. 8 SLICES ON THE PADS. CHOKE GROUP SET.",
             Copy.instantKit(8, chokeSet = true, wholeTape = false),
         )
-        assertEquals("ONE TAP, THE WHOLE TAPE. 5 SLICES ON THE GRID.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
+        assertEquals("ONE TAP, THE WHOLE TAPE. 5 SLICES ON THE PADS.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
         assertTrue(Copy.feelRolled(4).startsWith("FEEL #4 ROLLED."), "the seed leads its own toast")
@@ -846,4 +840,45 @@ class PersonalityTest {
         assertEquals("CHOPPED 1 OF 1 FILE INTO 1 KIT.", Copy.choppedAll(made = 1, wavCount = 1, skipped = 0, failed = 0))
         assertEquals("CHOPPED 2 OF 3 FILES INTO 2 KITS.", Copy.choppedAll(made = 2, wavCount = 3, skipped = 0, failed = 0))
     }
+
+    /**
+     * LOOP, GROOVE and ORBIT all bounce through `SnipStore.import` into the
+     * one folder SNIPS lists — and between them they had three names for it
+     * (prior #25). ORBIT's button said BOUNCE TO TAPE and its landing line
+     * said "ON TAPE", which is a different screen entirely; LOOP's and
+     * GROOVE's buttons said nothing at all about where the audio goes, so
+     * the destination was first mentioned in the toast *after* the tap.
+     *
+     * Both halves are held here: the button says it before, the line says
+     * it after, and all six say the same word.
+     */
+    @Test
+    fun `every bounce names the one shelf its audio lands on`() {
+        val before = mapOf(
+            "LOOP's BOUNCE button" to Copy.loopBounceButton(2),
+            "GROOVE's BOUNCE button" to Copy.GROOVE_BOUNCE_BUTTON,
+            "ORBIT's BOUNCE button" to Copy.ORBIT_BOUNCE_BUTTON,
+        )
+        val after = mapOf(
+            "LOOP's landing line" to Copy.loopBounced(2),
+            "LOOP's part-cycle landing line" to Copy.loopBouncedPart(2, 4),
+            "GROOVE's landing line" to Copy.groovePrinted(1.5f),
+            "ORBIT's landing line" to Copy.orbitBounced("5 AGAINST 4"),
+        )
+        for ((who, line) in before + after) {
+            assertTrue(
+                "SNIPS" in line,
+                "$who reads \"$line\", which does not name SNIPS. Every bounce in the app writes through " +
+                    "SnipStore.import into the folder SNIPS lists — three names for one destination is what " +
+                    "prior #25 was, and TAPE (ORBIT's old word) is a different screen.",
+            )
+        }
+        for ((who, line) in before + after) {
+            assertFalse(
+                Regex("""\bTAPE\b""").containsMatchIn(line),
+                "$who reads \"$line\" and says TAPE. A bounce does not land on TAPE; it lands in SNIPS.",
+            )
+        }
+    }
+
 }

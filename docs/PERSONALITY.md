@@ -35,7 +35,7 @@ terse, a little smug, never cutesy-apologetic.
 | Capture blocked | message box: `TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT.` + [FINE] |
 | Landing trouble | message box: the toast's line as title (`1 KIT LANDED ON THE SHELF. 1 SKIPPED.` / `NOTHING LANDED.`), then `SKIPPED · BROKEN: NO KIT.JSON` lines in warn, `LANDED · FUNK` after + [FINE]. A clean landing keeps its toast. |
 | Export done | `DUBBED. GO MAKE SOMETHING.` |
-| Commit | rotates: `TAPED. NO TAKEBACKS.` · `IT'S OURS NOW.` · `CLEAN CUT. NICE EARS.` |
+| Commit | `THAT IS ON TAPE. CHOP IT INTO PADS.` + a `CHOP ▸` door — see the note under the catalog |
 | Delete snip | `EJECTED. THE BIN KEEPS IT 30 DAYS.` |
 
 ## Catalog
@@ -46,7 +46,14 @@ terse, a little smug, never cutesy-apologetic.
   mutterings (`NO DOLBY. WE LIKE HISS.` · `REWIND IS FREE.` · `CHROME BIAS: ON`).
 - **Commit ka-chunk** — mechanical deck-button thunk + heavy haptic on
   commit. The one sound that earns being on by default.
-- **Rotating commit toasts** (above).
+- ~~**Rotating commit toasts**~~ — **cut, 2026-09 (J44).** All four lines
+  described a write that does not happen: `TapeDeck.commitSelection` is a
+  pure read, and KEEP puts the range in memory for CHOP to pick up. Nothing
+  is taped, nothing is cut, and nothing lands on a shelf to be renamed.
+  Law 3 is what removed them — *"funny copy still says exactly what
+  happened"* — and the line KEEP says now is the offer that replaced them,
+  which says what did happen and carries a door to the step that uses it.
+  Kept here, struck through, so the gag is not re-added from this list.
 - **Pencil rewind** — tap the cassette: a pencil appears in the left hub and
   winds the tape back to zero, wind sound included. The single most
   cassette-native gag that exists.
@@ -95,5 +102,12 @@ terse, a little smug, never cutesy-apologetic.
 
 ## Already live in the tape deck prototype
 
-Pencil rewind · screensaver · commit ka-chunk + rotating toasts · status-bar
-quips · triple-tap tape counter. Try tapping the cassette.
+Pencil rewind · screensaver · commit ka-chunk · status-bar quips · tape
+counter. Try tapping the cassette.
+
+**The two gestures drifted from this page.** The catalog above says the
+pencil rewind is a *tap on the cassette* and the tape counter a
+*triple-tap*; in the app the rewind is a **hold on the left reel** and the
+counter a **single tap** on the position readout. Recorded rather than
+"fixed" in either direction: which gesture is right is a design call, and
+both are working eggs under law 4 today.
