@@ -1353,6 +1353,23 @@ private fun CutBench(
         model.mode is ChopReviewModel.ChopMode.Ladder -> "BEAT"
         else -> "PART"
     }
+    // What ◀ ▶ can actually step (J43).
+    //
+    // `onStep` routes GRID to `stepGrid` and the ladder to `stepLadder`;
+    // everything else goes to `stepHits`, which opens with
+    // `hitsOf(model.mode) ?: return`. HUMMED is the one mode that reaches
+    // it that way, so on a hummed chop these buttons were lit, announced
+    // "ONE PART FEWER" to TalkBack, and did nothing — a refusal written as
+    // a silent return, which is the thing the `enabled` contract exists to
+    // stop. It escaped that contract's law because the refusal is inside a
+    // named function rather than inline in the lambda.
+    //
+    // A hummed chop has no count to step: its cuts came from the mouth, not
+    // from a number. So the honest answer is that the control is not
+    // available, said the way every other unavailable control says it.
+    val canStep = hits != null ||
+        model.mode is ChopReviewModel.ChopMode.Grid ||
+        model.mode is ChopReviewModel.ChopMode.Ladder
     GroupBox(
         legend = "CUT",
         summary = summary,
@@ -1372,16 +1389,16 @@ private fun CutBench(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = if (unit == "BEAT") "THE ONE A BEAT EARLIER" else "ONE $unit FEWER") { onStep(-1) }
+            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming && canStep, spoken = if (unit == "BEAT") "THE ONE A BEAT EARLIER" else "ONE $unit FEWER") { onStep(-1) }
             Box(
                 Modifier.weight(1.6f).heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText(if (humming) Copy.HUM_BUSY else if (busy) Copy.CHOP_BENCH_BUSY else readout, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
             }
-            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, spoken = if (unit == "BEAT") "THE ONE A BEAT LATER" else "ONE $unit MORE") { onStep(1) }
+            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming && canStep, spoken = if (unit == "BEAT") "THE ONE A BEAT LATER" else "ONE $unit MORE") { onStep(1) }
             if (hits != null) {
-                SecondaryButton("AUTO", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy, onClick = onAuto)
+                SecondaryButton("AUTO", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming, onClick = onAuto)
             }
         }
         if (model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder) {

@@ -88,6 +88,40 @@ class ConventionTest {
                         "and reads as disabled, rather than staying lit and doing nothing.",
                 )
             }
+            // `SecondaryButton` and `PrimaryAction` are held to a different
+            // rule, on purpose.
+            //
+            // The zero-returns rule above is calibrated for two components
+            // that historically had no `enabled` at all: forbidding the
+            // early return outright is what forced them to grow one. These
+            // two always had `enabled`, and their call sites legitimately
+            // re-check it inside the lambda — a tap already in flight when
+            // the state changes is a real race, and PR 4's RE-CHOP guard is
+            // exactly that.
+            //
+            // So the rule here is not "never return" but "never let the
+            // return BE the refusal": a guard is fine when the control also
+            // dims, and is a bug when it is the only thing saying no. That
+            // is the shape J43 had — CHOP's ◀ ▶ refused a hummed chop with
+            // a `?: return` inside `stepHits` while staying lit.
+            for (component in listOf("SecondaryButton", "PrimaryAction")) {
+                var from = 0
+                while (true) {
+                    val at = code.indexOf("return@$component", from)
+                    if (at < 0) break
+                    from = at + 1
+                    val callAt = code.lastIndexOf("$component(", at)
+                    assertTrue(callAt >= 0, "${file.name}: a `return@$component` with no call site above it")
+                    val call = code.substring(callAt, at)
+                    assertTrue(
+                        "enabled" in call,
+                        "${file.name}: a `$component` refuses with a bare `return@$component` and never says " +
+                            "so through `enabled`, so it stays lit and does nothing:\n  " +
+                            call.lines().first().trim().take(140),
+                    )
+                }
+            }
+
             val guarded = Regex("""\{\s*if\s*\(!busy\)""").findAll(code).count()
             assertTrue(
                 guarded == 0,
@@ -2052,5 +2086,42 @@ class ConventionTest {
             "HUM starts the tape before stating the rule that makes the take usable. The armed ring is " +
                 "already capturing by then, so the advice arrives exactly when acting on it costs the take.",
         )
+    }
+    /**
+     * J43: a control that cannot act says so, even when the refusal is in a
+     * function rather than in its own lambda.
+     *
+     * `onStep` routes GRID to `stepGrid` and the ladder to `stepLadder`;
+     * every other mode goes to `stepHits`, which opens with
+     * `hitsOf(model.mode) ?: return`. HUMMED is the mode that reaches it
+     * that way, so CHOP's ◀ ▶ were lit, announced "ONE PART FEWER" to
+     * TalkBack, and did nothing.
+     *
+     * The `enabled`-contract law above could not catch it: that one looks
+     * for `return@Component` written inline, and this refusal lives one
+     * call away. So this law checks the other end — that the stepper's own
+     * `enabled` is mode-aware rather than merely "not busy".
+     */
+    @Test
+    fun `law - the CUT stepper refuses a mode it cannot step`() {
+        val src = codeOnly(chopScreen.readText(Charsets.UTF_8))
+        assertTrue(
+            Regex("""val\s+canStep\s*=""").containsMatchIn(src),
+            "the CUT bench no longer works out which modes ◀ ▶ can actually step. `stepHits` returns on its " +
+                "first line for a hummed chop, so without this the buttons stay lit and do nothing.",
+        )
+        val steppers = src.lines().filter { """SecondaryButton("◀"""" in it || """SecondaryButton("▶"""" in it }
+        assertTrue(steppers.size == 2, "expected two stepper buttons in the CUT bench, found ${steppers.size}")
+        for (line in steppers) {
+            assertTrue(
+                "canStep" in line,
+                "a CUT stepper is gated without `canStep`, so it stays lit on a mode it cannot step:\n  " +
+                    line.trim(),
+            )
+            assertTrue(
+                "!humming" in line,
+                "a CUT stepper can fire while a hum is capturing:\n  " + line.trim(),
+            )
+        }
     }
 }
