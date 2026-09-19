@@ -1970,4 +1970,109 @@ TEST(surface_engine_grain_survives_knobs_a_key_and_a_finger_that_are_not_numbers
     CHECK(p > 0.02f);
 }
 
+// ---- modulation ---------------------------------------------------------------
+
+TEST(surface_engine_modulation_nudges_a_macro_in_every_mode_and_clamps_at_the_rail) {
+    // A 2 kHz sine through XY with the finger at cutoff 1.0 (16 kHz: it
+    // passes untouched): a -1 offset on CUTOFF (index 1) closes the filter
+    // to 80 Hz, twenty-five times below the tone, and the output all but
+    // vanishes; +1 past an already-open cutoff clamps at the rail and
+    // changes nothing. The same offset reaches MORPH, where the macro came
+    // from a corner rather than the finger. Ten whole periods, so the
+    // loop's seam is silent.
+    const auto bright = measure::sine(2000.0f, 240, kRate);
+    auto peakIn = [&](int32_t mode, float cutoffOffset) {
+        SurfaceEngine e(kRate);
+        e.loadSample(bright.data(), bright.size(), kRate);
+        float offsets[SurfaceEngine::kModTargets] = {};
+        offsets[1] = cutoffOffset;
+        e.setModulation(offsets, SurfaceEngine::kModTargets);
+        ControlFrame f;
+        f.mode = mode;
+        f.x = 0.5f; f.y = 1.0f; f.tilt = 0.5f;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;  // MORPH: corner A alone, which is CLEAN - cutoff 1.0
+        f.gate = true;
+        e.pushControl(f);
+        render(e, 400 * 64);
+        float p = 0.0f;
+        for (float v : render(e, 50 * 64)) p = std::max(p, std::fabs(v));
+        return p;
+    };
+    const float xyOpen = peakIn(0, 0.0f);
+    CHECK(xyOpen > 0.1f);
+    CHECK(peakIn(0, -1.0f) < xyOpen * 0.2f);
+    CHECK_NEAR(peakIn(0, 1.0f), xyOpen, 1e-3);
+    const float morphOpen = peakIn(2, 0.0f);
+    CHECK(morphOpen > 0.1f);
+    CHECK(peakIn(2, -1.0f) < morphOpen * 0.2f);
+}
+
+TEST(surface_engine_modulation_moves_the_cloud_and_a_nan_offset_is_nothing) {
+    // A ramp source names its frame by its value, and a frozen cloud
+    // (SPRAY 0) at POSITION 0.25 reads there; +0.5 on POSITION (index 10)
+    // moves every grain to 0.75, so the per-period peaks (see the SPRAY
+    // test) roughly triple. A NaN offset reads as 0 and leaves the cloud
+    // where the finger put it.
+    auto peakAt = [](float positionOffset) {
+        SurfaceEngine e(kRate);
+        auto src = ramp(kRate);
+        for (float& v : src) v *= 1000.0f / static_cast<float>(kRate);
+        e.loadSample(src.data(), src.size(), kRate);
+        e.setGrain(GrainSettings{0.0f, 1.0f, 0.0f});
+        float offsets[SurfaceEngine::kModTargets] = {};
+        offsets[10] = positionOffset;
+        e.setModulation(offsets, SurfaceEngine::kModTargets);
+        e.pushControl(grainFrame(0.25f, 0.5f, true));
+        render(e, 750 * 8);  // the position smoother and the gate settle
+        float m = 0.0f;
+        for (float v : render(e, 750 * 4)) m = std::max(m, v);
+        return m;
+    };
+    const float here = peakAt(0.0f);
+    const float moved = peakAt(0.5f);
+    const float nan = peakAt(std::nanf(""));
+    CHECK(here > 0.05f);
+    CHECK(moved > here * 2.0f);
+    CHECK_NEAR(nan, here, 1e-3);
+}
+
+TEST(surface_engine_modulation_reaches_grain_size_density_and_spray) {
+    // DENSITY at its floor with +1 on DENSITY (index 8) is DENSITY at its
+    // ceiling: the gaps between grains close (see the density test).
+    std::vector<float> dc(1000, 0.5f);
+    SurfaceEngine e(kRate);
+    e.loadSample(dc.data(), dc.size(), kRate);
+    e.setGrain(GrainSettings{0.0f, 0.0f, 0.0f});
+    float offsets[SurfaceEngine::kModTargets] = {};
+    offsets[7] = 1.0f;  // SIZE to its ceiling too, so sixteen overlap
+    offsets[8] = 1.0f;
+    e.setModulation(offsets, SurfaceEngine::kModTargets);
+    e.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(e, 20000);
+    float lo = 10.0f;
+    for (float v : render(e, 20000)) lo = std::min(lo, v);
+    CHECK(lo > 0.3f);
+    // And SPRAY (index 9) from 0 to 1 scatters a frozen cloud: on a ramp,
+    // the per-period peaks stop agreeing.
+    SurfaceEngine s(kRate);
+    auto src = ramp(kRate);
+    for (float& v : src) v *= 1000.0f / static_cast<float>(kRate);
+    s.loadSample(src.data(), src.size(), kRate);
+    s.setGrain(GrainSettings{0.0f, 1.0f, 0.0f});
+    float sprayOnly[SurfaceEngine::kModTargets] = {};
+    sprayOnly[9] = 1.0f;
+    s.setModulation(sprayOnly, SurfaceEngine::kModTargets);
+    s.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(s, 750 * 6);
+    const auto mono = render(s, 750 * 12);
+    float pLo = 1.0f, pHi = 0.0f;
+    for (size_t p = 0; p + 750 <= mono.size(); p += 750) {
+        float m = 0.0f;
+        for (size_t i = p; i < p + 750; ++i) m = std::max(m, mono[i]);
+        pLo = std::min(pLo, m);
+        pHi = std::max(pHi, m);
+    }
+    CHECK(pHi - pLo > 0.05f);
+}
+
 int main() { return check::runAll(); }

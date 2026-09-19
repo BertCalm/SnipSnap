@@ -151,6 +151,22 @@ Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong handle, jint 
 }
 
 /**
+ * The modulators' offsets, one per target in `Modulator.Target`'s own
+ * ordinal order (SurfaceEngine::kModTargets of them). An array rather
+ * than eleven jfloats: the surface sends this every screen frame, and a
+ * signature that long is a swap waiting to happen. A short array leaves
+ * the rest at 0, a long one is read up to the engine's count.
+ */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv* env, jobject, jlong handle, jfloatArray offsets) {
+    jfloat buf[SurfaceEngine::kModTargets];
+    const jsize n = env->GetArrayLength(offsets);
+    const jsize count = n < 0 ? 0 : (n > SurfaceEngine::kModTargets ? SurfaceEngine::kModTargets : n);
+    if (count > 0) env->GetFloatArrayRegion(offsets, 0, count, buf);
+    engine(handle)->setModulation(buf, count);
+}
+
+/**
  * `PrintBuffer::arm`'s reservation is a print's worth of seconds of
  * audio, the largest single allocation this bridge makes on a caller's
  * own request - review found it was the one such allocation here with

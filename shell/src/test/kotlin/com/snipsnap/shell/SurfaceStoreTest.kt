@@ -213,6 +213,49 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `modulators round-trip, a file from before the MOD row loads silent, and a torn one is refused`() {
+        val mods = listOf(
+            Modulator.Slot(Modulator.Target.CUTOFF, Modulator.Shape.SINE, rateIndex = 4, depth = 0.4f),
+            Modulator.Slot(Modulator.Target.POSITION, Modulator.Shape.RAMP, rateIndex = 6, depth = 1f),
+        )
+        SurfaceStore.save(temp, Settings(padSlot = 1, mods = mods))
+        assertEquals(mods, SurfaceStore.load(temp).mods)
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(Modulator.OFF, SurfaceStore.load(temp).mods)
+        assertEquals(Modulator.OFF, Settings.DEFAULT.mods)
+
+        // A target this build does not know is refused by name, never
+        // re-aimed; a wrong count is refused; a depth that is not a number
+        // goes through Slot's own door.
+        val corners = """"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}]"""
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"mods":[{"target":"WOBBLE","shape":"SINE","rate":4,"depth":0.5},{"target":"CUTOFF","shape":"SINE","rate":4,"depth":0}],$corners}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"mods":[{"target":"CUTOFF","shape":"SINE","rate":4,"depth":0.5}],$corners}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"mods":[{"target":"CUTOFF","shape":"SINE","rate":4,"depth":"lots"},{"target":"CUTOFF","shape":"SINE","rate":4,"depth":0}],$corners}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, mods = Modulator.OFF.take(1)) }
+    }
+
+    @Test
     fun `a corner captured in GRAIN is the chain the cloud ran through, not the finger`() {
         // GRAIN's finger is position and pitch, which a corner cannot hold;
         // what SET keeps is XY's rest with the roll's resonance - the

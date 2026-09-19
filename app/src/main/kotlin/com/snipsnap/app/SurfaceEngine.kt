@@ -1,6 +1,7 @@
 package com.snipsnap.app
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.SurfaceKey
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
@@ -144,6 +145,19 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) NativeSurface.setKey(handle, snap.rootSemitone, snap.scaleMask, snap.sourceMidi)
     }
 
+    /**
+     * The modulators' offsets this frame - [Modulator.offsets]'s own array,
+     * one per [Modulator.Target] in ordinal order (see [MOD_TARGETS]). Sent
+     * at screen rate like [control]; the engine adds each to its target
+     * before the macro's own 0..1 door, so a modulator nudges the finger
+     * rather than replacing it.
+     */
+    @Synchronized
+    fun setModulation(offsets: FloatArray) {
+        require(offsets.size == MOD_TARGETS) { "one offset per target (${MOD_TARGETS}), got ${offsets.size}" }
+        if (open) NativeSurface.setModulation(handle, offsets)
+    }
+
     // ---- the resample tap -----------------------------------------------------
 
     enum class PrintState { IDLE, RECORDING, STOPPING, DONE }
@@ -188,5 +202,8 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
         /** Source slots the engine holds - must match SurfaceEngine.h's kMaxSources. */
         const val MAX_SOURCES = 4
+
+        /** Modulation targets the engine takes - must match SurfaceEngine.h's kModTargets and `Modulator.Target.entries.size`. */
+        const val MOD_TARGETS = 11
     }
 }

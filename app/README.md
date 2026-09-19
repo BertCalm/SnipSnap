@@ -215,6 +215,22 @@ logcat tag to grab when something is wrong.
   pad and the corners. The host harness proves the arithmetic
   (`grain_*` and `surface_engine_grain_*` in `test/engine_tests.cpp`,
   the bridge in `jni_tests.cpp`); what it cannot prove is how it feels.
+  Then MOD, the modulators: on the MOD row (any mode), with MOD A showing
+  and the field button reading TARGET, ◄ ► should walk through the seven
+  macros and then SIZE/DENSITY/SPRAY/POSITION; tap the field button to
+  DEPTH and ► up to 40% or so with CUTOFF as the target and SINE the
+  shape - a held finger (or LATCH) should now breathe open and shut once
+  a bar at the kit's tempo, around wherever the finger holds the filter,
+  in XY and in MORPH alike. RATE at 1/16 BAR is a flutter, 4 BARS a slow
+  tide; RAMP climbs and drops, RANDOM jumps once a bar and holds - the
+  same jumps every time the bar comes round. In GRAIN, MOD B on POSITION
+  as a 4-bar RAMP at 100% should walk the cloud through the sample with
+  no finger movement at all. PRINT while a modulator runs: the print
+  moves the way the surface did. Both slots are in `surface.json`; a kit
+  with no tempo runs them at GROOVE's own default. Back at DEPTH 0% the
+  surface should sound exactly as before the MOD row existed. Five
+  buttons and a readout on one row is the densest line on this screen -
+  check it fits at 390dp.
 - **OUTSIDE (pad sheet)**: `OutsideSession` records and plays at once —
   a `MODE_STATIC` float `AudioTrack` against a float `AudioRecord` at the
   pad's rate. Verify on a phone: the speaker into the room reamps a pad
