@@ -368,7 +368,7 @@ object Layout {
      * cue — the arrow that says there are more tabs that way (September
      * UAT, finding 10).
      *
-     * Narrow on purpose. The eleven tabs already run past the usable width
+     * Narrow on purpose. The twelve tabs already run past the usable width
      * at the design frame, so every dp spent here hides a little more of
      * what it is pointing at.
      *
@@ -377,6 +377,28 @@ object Layout {
      * and a gutter width with two homes is a gutter width that drifts.
      */
     const val MENU_EDGE_W = 12
+
+    /**
+     * The vertical rule between two groups of menu tabs (J12): the shelf,
+     * the four flow tabs, the five instruments, the two utilities.
+     *
+     * Two dp, because that is what a Win9x toolbar separator is - a shadow
+     * line and a highlight line, one dp each - and because the row cannot
+     * afford more. The tabs do not fit at the design frame and the order
+     * above `MENU_GROUPS` was chosen so EXPORT, step four of the app's own
+     * stated loop, lands inside the run that shows without a drag. Running
+     * the UAT sim's own arithmetic over the three boundaries: at 2 the
+     * visible run is unchanged, at 4 it loses its last tab. So this is not
+     * a taste number with room to grow - it is the width at which the
+     * separators cost nothing. `UatSimTest` walks the row twice, with the
+     * rules and without, and raises a J12 finding if raising this ever
+     * costs a tab, so the claim is recomputed rather than remembered.
+     *
+     * It lives here for the same reason [MENU_EDGE_W] does: `MenuRow`
+     * draws it and `UatSimTest` measures around it, and a width with two
+     * homes is a width that drifts.
+     */
+    const val MENU_GROOVE_W = 2
 
     const val STATUS_BAR_H = 26
     const val LCD_HEADER_H = 40
