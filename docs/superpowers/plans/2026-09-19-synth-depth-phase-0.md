@@ -20,6 +20,34 @@
 - **`Snip` already permits stereo** (`Cleanup.kt:18` requires `channels in 1..2`), but **this plan ships no stereo.** SPACE is Phase 1.
 - **Test command:** `./gradlew :synth:test` and `./gradlew :cli:test`. Full check: `./gradlew check`.
 
+## Standing policy: measure, never guess (added 2026-09-19)
+
+Adopted after four planning defects in Tasks 1-3, every one of them a claim
+about *sound* asserted from reasoning rather than measurement — `cycles = 1.5`
+(unsatisfiable), `target = 0.12f` (arbitrary), "THUMP is loudness-matched"
+(false), and an octave-direction call made without a spectrum. That is the same
+failure this project exists to correct: 392 presets authored "from that DSP,
+not by ear."
+
+**Therefore, for every task in this plan:**
+
+1. **No invented values.** A number that determines how something *sounds* is
+   either derived from a measurement the report shows, or it is a documented
+   placeholder. There is no third category.
+2. **Placeholders are explicit.** A deferred value is marked in code as
+   awaiting the audition gate, with the measured data beside it, so nobody
+   later mistakes a placeholder for a decision.
+3. **Acoustic claims need evidence.** Any assertion about what a signal does
+   spectrally is backed by an actual spectrum (`Fft` is in `:audio`), never by
+   autocorrelation alone and never by reasoning from the code.
+4. **Bounded parameters get a reachability test.** Any floor, clamp, default or
+   `maxOf` must be proven not to swallow the parameter it guards. A floor can
+   override a macro across its entire range while every test stays green — that
+   is exactly how `cycles = 1.5` shipped.
+5. **Long test runs are handed to the controller**, not waited on. `:synth:test`
+   takes minutes; two implementers lost most of a turn to it and one died
+   mid-wait.
+
 ---
 
 ## File Structure
