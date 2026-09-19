@@ -71,6 +71,28 @@ object Velocity {
     private const val VELOCITY_FLOOR_RATIO = 0.9f / 3.2f
 
     /**
+     * [patch]'s own macro specs, straight from the engine that owns its
+     * voice — an exhaustive `when` over [Patch]'s seven sealed subtypes, the
+     * same shape `Patches.fromJsonValue` already dispatches on by engine
+     * string. This is deliberately **not** `patch.macros.keys`: a `Patch`
+     * carrying a partial macro map (a hand-built one, or one rebuilt from a
+     * stored recipe — see Task 5b) still renders every unset macro at its
+     * voice default (every `synthesize()` starts from
+     * `defaults(voice).toMutableMap()` and overlays what the patch sets), so
+     * whether a voice *has* a brightness macro is a question about the
+     * voice, never about which keys happen to be present on one instance.
+     */
+    private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is ThumpPatch -> Thump.macrosFor(patch.voice)
+        is TinesPatch -> Tines.macrosFor(patch.voice)
+        is PluckPatch -> Pluck.macrosFor(patch.voice)
+        is VelvetPatch -> Velvet.macrosFor(patch.voice)
+        is FathomPatch -> Fathom.macrosFor(patch.voice)
+        is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
+        is VoxPatch -> Vox.macrosFor(patch.voice)
+    }
+
+    /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
      * the voice is synthesized again, rather than one render being low-passed.
      * A quiet strike on a real instrument excites fewer partials; it is not a
@@ -79,9 +101,14 @@ object Velocity {
      */
     fun atVelocity(patch: Patch, velocity: Float): Snip {
         val v = velocity.coerceIn(0f, 1f)
-        val key = BRIGHTNESS_MACROS.firstOrNull { it in patch.macros }
+        val specs = macroSpecsFor(patch)
+        // Ask the voice, not the instance: BRIGHTNESS_MACROS.firstOrNull {
+        // it in patch.macros } would miss a partial macro map where the
+        // brightness macro is unset and rendering at its voice default -
+        // exactly the frozen-waveform case this function exists to replace.
+        val spec = BRIGHTNESS_MACROS.firstNotNullOfOrNull { name -> specs.firstOrNull { it.name == name } }
             ?: return soften(patch.render(), 1f - v)
-        val asked = patch.macros.getValue(key)
+        val asked = patch.macros[spec.name] ?: spec.default
         // A macro parked at (or near) 0 has no ceiling to scale down from -
         // multiplying it by anything still gives 0, so every velocity would
         // render identically and the parameter would silently stop guarding
@@ -92,12 +119,13 @@ object Velocity {
         // Velocity scales the macro toward its floor, never above what the
         // preset asked for: a preset's brightest is still its own ceiling.
         val scaled = asked * Dsp.lin(v, VELOCITY_FLOOR_RATIO, 1f)
-        return patch.withMacros(patch.macros + (key to scaled)).render()
+        return patch.withMacros(patch.macros + (spec.name to scaled)).render()
     }
 
     /**
      * Macros that mean "how hard was this struck", in preference order
-     * (first match in a patch's own macro map wins).
+     * (first match on the voice's own macro spec wins - see
+     * [macroSpecsFor]).
      *
      * - BRIGHT (TINES, all voices) — directly scales the FM modulation
      *   index (`Tines.kt` bell/chime/block/zap/toy), the exact shape of
@@ -119,18 +147,30 @@ object Velocity {
      *
      * DRIVE was in an earlier draft of this list — THUMP KICK's only other
      * macro option and, on paper, "pre-filter saturation adds harmonics"
-     * read as brightness-shaped. Measuring it (spectral centroid across a
-     * DRIVE sweep on KICK's DUSTY BOOM preset) found a *U-shaped* response,
-     * not a monotonic one: centroid falls from 45.99Hz at DRIVE=0 to a
-     * minimum of 45.48Hz around DRIVE=0.35, then climbs to 46.91Hz at
-     * DRIVE=1. Every shipped KICK preset's own DRIVE setting sits at or
-     * past that valley, so scaling *down* from it by velocity walks back
-     * up the falling side of the curve and comes out *brighter*, not
-     * darker — the opposite of what a soft hit should do. FATHOM's DRIVE
-     * (which was never reachable anyway — CUTOFF is on every FATHOM voice)
-     * is excluded for the same reason: nothing here justifies trusting
-     * DRIVE's direction without re-measuring it per engine. THUMP KICK
-     * falls back to [soften].
+     * read as brightness-shaped. Measuring it disqualified it, and the
+     * measurement is reproducible in a couple of minutes: render
+     * `Thump.kick`'s DUSTY BOOM preset (`ThumpPresets.forVoice(ThumpVoice.KICK).first()`,
+     * i.e. `TUNE=0.34, SWEEP=0.45, DECAY=0.37, CLICK=0.32`) with `DRIVE` swept
+     * over `0f, 0.1f, 0.2f, 0.35f, 0.5f, 0.7f, 1.0f` (`patch.withMacros(patch.macros
+     * + ("DRIVE" to d)).render()` per step) and read
+     * `com.snipsnap.audio.FeatureExtractor.extract(render).centroidHz` (an
+     * FFT-magnitude-weighted spectral centroid, `Fft`/`Features.kt`) at each
+     * step. The result is *U-shaped*, not monotonic: 45.99Hz at DRIVE=0,
+     * falling to a minimum of 45.48Hz around DRIVE=0.35, then climbing to
+     * 46.91Hz at DRIVE=1. Every shipped KICK preset's own DRIVE setting
+     * (0.28..0.78 across all 16) sits at or past that valley, so scaling
+     * *down* from it by velocity walks back up the falling side of the
+     * curve and comes out *brighter*, not darker — the opposite of what a
+     * soft hit should do. This is a property of THUMP's current kick
+     * tuning, not a law - a future retune could well make DRIVE monotonic,
+     * so nothing here pins the U-shape as an invariant; re-run the sweep
+     * above before trusting DRIVE again. FATHOM's DRIVE (never reachable
+     * anyway - CUTOFF is on every FATHOM voice) is excluded for the same
+     * reason: nothing here justifies trusting DRIVE's direction without
+     * re-measuring it per engine. THUMP KICK falls back to [soften]; that
+     * consequence is what
+     * `VelocityGrooveShuffleTest`'s "THUMP KICK falls back to soften too"
+     * test locks down.
      *
      * PLUCK (DAMP) and VOX (no candidate macro at all) are deliberately
      * absent: DAMP is Karplus-Strong loop damping, and *raising* it makes

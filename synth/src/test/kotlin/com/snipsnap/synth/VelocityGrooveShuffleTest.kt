@@ -84,9 +84,38 @@ class VelocityGrooveShuffleTest {
     }
 
     @Test
+    fun `atVelocity finds the brightness macro even when the patch's own map leaves it unset`() {
+        // TINES BELL's BRIGHT (and RATIO, DECAY) are left unset here -
+        // Tines.render() still applies BRIGHT at its voice default
+        // (defaults(voice).toMutableMap(), overlaid by whatever macros are
+        // actually present), so atVelocity has to find BRIGHT via the
+        // voice's own macro spec (Tines.macrosFor), not via a literal
+        // `"BRIGHT" in patch.macros` check. The literal-key check would see
+        // no BRIGHT key at all on this patch and silently fall back to
+        // soften() - the exact frozen-waveform bug this task exists to fix,
+        // and the shape Task 5b's recipe-rebuilt patches are expected to hit.
+        val partial = TinesPatch("PARTIAL", TinesVoice.BELL, mapOf("TUNE" to 0.5f))
+        val soft = Velocity.atVelocity(partial, 0.25f)
+        val hard = Velocity.atVelocity(partial, 1.0f)
+        val n = minOf(soft.samples.size, hard.samples.size)
+        val differing = (0 until minOf(n, 400)).count {
+            kotlin.math.abs(soft.samples[it] - hard.samples[it]) > 1e-4f
+        }
+        assertTrue(differing > 50, "a partial macro map should still re-render at velocity, only $differing samples did")
+        // If atVelocity had fallen back, soft would be byte-identical to
+        // soften()'s output over the unmodified render - assert it isn't.
+        val fallbackWouldGive = Velocity.soften(partial.render(), 0.75f)
+        assertTrue(
+            !soft.samples.contentEquals(fallbackWouldGive.samples),
+            "should re-render via the voice's BRIGHT default, not fall back to soften()",
+        )
+    }
+
+    @Test
     fun `atVelocity never asks a macro past what the preset itself set`() {
-        // BELL's BRIGHT default is 0.5 (Tines.kt) - struck at full velocity
-        // the macro must land at exactly that ceiling, not above it.
+        // BELL.first() is VESPER, whose BRIGHT is 0.25 (TinesPresets.kt:33,
+        // not Tines.kt's voice default of 0.5) - struck at full velocity the
+        // macro must land at exactly that preset's own ceiling, not above it.
         val patch = TinesPresets.forVoice(TinesVoice.BELL).first()
         val loud = Velocity.atVelocity(patch, 1.0f)
         val direct = patch.render()
