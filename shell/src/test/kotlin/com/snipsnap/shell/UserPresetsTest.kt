@@ -214,6 +214,12 @@ class UserPresetsTest {
             assertEquals("FOURTEEN LET 2", UserPresets.freshName(long) { it == long })
             assertEquals("FOURTEEN LET 3", UserPresets.freshName(long) { it == long || it == "FOURTEEN LET 2" })
             assertEquals("MY KICK", UserPresets.freshName("MY KICK") { false })
+            // And the merge's reading of a fresh name, which must agree with freshName exactly.
+            assertTrue(UserPresets.freshened("MY KICK 2", "MY KICK") && UserPresets.freshened("MY KICK 10", "MY KICK"))
+            assertTrue(UserPresets.freshened("FOURTEEN LET 2", long), "the trimmed base counts")
+            assertFalse(UserPresets.freshened("MY KICK", "MY KICK"), "the name itself is not a fresh name")
+            assertFalse(UserPresets.freshened("MY KICK 1", "MY KICK") || UserPresets.freshened("MY KICK 05", "MY KICK"), "numbers freshName never makes")
+            assertFalse(UserPresets.freshened("KICK 2", "KICK 1"), "a numbered base is not the base of its neighbour")
         } finally {
             root.deleteRecursively()
         }
@@ -276,5 +282,94 @@ class UserPresetsTest {
         assertTrue("${UserPresets.MAX_NAME} LETTERS" in Copy.PRESET_NAME_NOTE, "the note says the one number the rule has: ${Copy.PRESET_NAME_NOTE}")
         assertTrue(Copy.PRESET_NAME_BLANK.endsWith("."))
         assertTrue(Copy.PRESET_SAVE_FAILED.endsWith("."))
+    }
+
+
+    @Test
+    fun `a backup's presets merge in - the shelf's own stay, twins are skipped, namesakes land fresh, the bin rides minus what expired`() {
+        val old = shelf()
+        val new = shelf()
+        val mine = shelf()
+        try {
+            val day = 24L * 60 * 60 * 1000
+            val now = 1_700_000_000_000L
+            // The old phone: two presets kept, two forgotten - one long expired, one with days left.
+            UserPresets.save(old, wrecked, 1L)
+            UserPresets.save(old, snare, 2L)
+            UserPresets.save(old, ThumpPatch("CLAP 1", ThumpVoice.CLAP, Thump.defaults(ThumpVoice.CLAP)), 3L)
+            UserPresets.save(old, ThumpPatch("HAT 1", ThumpVoice.HAT_CLOSED, Thump.defaults(ThumpVoice.HAT_CLOSED)), 4L)
+            val expired = UserPresets.forget(old, "THUMP", "CLAP", "CLAP 1", now - 40 * day)!!
+            val waiting = UserPresets.forget(old, "THUMP", "HAT_CLOSED", "HAT 1", now - 5 * day)!!
+            val carried = UserPresets.file(old).readText(Charsets.UTF_8)
+
+            // The new phone, bare: everything lands as it was; the expired one never gets out of the zip.
+            val first = UserPresets.merge(new, carried, now)
+            assertEquals(listOf(UserPresets.Saved(wrecked, 1L), UserPresets.Saved(snare, 2L)), first.landed)
+            assertEquals(0, first.identical)
+            assertEquals(1, first.binned)
+            assertEquals(first.landed, UserPresets.read(new))
+            assertEquals(listOf(waiting), UserPresets.bin(new), "the one with days left rides, with its own stamp; the expired one does not: $expired")
+
+            // The same backup again: nothing lands, nothing is written.
+            val file = UserPresets.file(new)
+            file.setLastModified(1_000_000L)
+            val again = UserPresets.merge(new, carried, now)
+            assertEquals(emptyList(), again.landed)
+            assertEquals(2, again.identical)
+            assertEquals(0, again.binned, "a bin entry the shelf holds is not carried twice")
+            assertEquals(1_000_000L, file.lastModified(), "nothing to land, nothing written")
+            assertEquals(listOf(waiting), UserPresets.bin(new))
+
+            // A shelf that saved its own MY KICK meanwhile, newer and different: it keeps the name and its place;
+            // the backup's lands fresh, at the end, still the sound the backup held.
+            val newer = UserPresets.save(mine, ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK)), 9L)
+            val third = UserPresets.merge(mine, carried, now)
+            assertEquals(listOf("MY KICK 2" to "KICK", "MY KICK" to "SNARE"), third.landed.map { it.name to it.voice })
+            assertEquals(wrecked.macros, third.landed.first().patch.macros)
+            assertEquals(listOf(newer) + third.landed, UserPresets.read(mine), "the shelf's own first and untouched; the backup's after")
+            assertEquals(0, third.identical)
+            // And that backup a second time: MY KICK 2 is the backup's MY KICK already, so nothing sprouts a MY KICK 3.
+            val fourth = UserPresets.merge(mine, carried, now)
+            assertEquals(emptyList(), fourth.landed)
+            assertEquals(2, fourth.identical)
+            assertEquals(listOf("MY KICK", "MY KICK 2"), UserPresets.forVoice(UserPresets.read(mine), "THUMP", "KICK").map { it.name })
+        } finally {
+            old.deleteRecursively()
+            new.deleteRecursively()
+            mine.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a backup whose presets file is not one merges nothing, and an entry neither build reads rides once`() {
+        val root = shelf()
+        try {
+            UserPresets.save(root, wrecked, 1L)
+            val file = UserPresets.file(root)
+            file.setLastModified(1_000_000L)
+            assertTrue(runCatching { UserPresets.merge(root, "not json at all", 5L) }.exceptionOrNull() is JsonException)
+            assertTrue(runCatching { UserPresets.merge(root, "{\"version\": 2, \"presets\": []}", 5L) }.exceptionOrNull() is JsonException, "a version this build does not know")
+            assertEquals(1_000_000L, file.lastModified(), "a refusal writes nothing")
+            assertEquals(listOf(UserPresets.Saved(wrecked, 1L)), UserPresets.read(root))
+
+            val future = "{\"version\": 1, \"presets\": [{\"savedAt\": 5, \"patch\": {\"engine\": \"FUTURE\", \"version\": 1, \"name\": \"X\", \"voice\": \"Y\", \"macros\": {}}}]}"
+            assertEquals(UserPresets.Merged(emptyList(), 0, 0), UserPresets.merge(root, future, 5L))
+            assertEquals(1, Regex("\"FUTURE\"").findAll(file.readText()).count(), "carried for the build that can read it")
+            UserPresets.merge(root, future, 6L)
+            assertEquals(1, Regex("\"FUTURE\"").findAll(file.readText()).count(), "and never twice")
+            assertEquals(listOf(UserPresets.Saved(wrecked, 1L)), UserPresets.read(root), "the shelf's own untouched")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `the backup and landing lines count the presets beside the kits, and read as they always did without them`() {
+        assertEquals("2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(2, 0))
+        assertEquals("3 KITS AND 2 PRESETS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(3, 0, 2))
+        assertEquals("1 KIT AND 1 PRESET ON ONE FILE. 1 SKIPPED. PICK WHERE IT GOES.", Copy.backedUp(1, 1, 1))
+        assertEquals("1 KIT LANDED ON THE SHELF.", Copy.landed(1, 0))
+        assertEquals("1 KIT LANDED ON THE SHELF. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
+        assertEquals("2 KITS LANDED ON THE SHELF. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
     }
 }

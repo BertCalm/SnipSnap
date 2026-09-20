@@ -30,18 +30,18 @@ object LandingNote {
      * toast's one line says it all; else that line as the title, the
      * skips first.
      */
-    fun landed(displayName: String, kits: List<String>, skipped: List<String>): Note? {
+    fun landed(displayName: String, kits: List<String>, skipped: List<String>, presets: Int = 0): Note? {
         if (skipped.isEmpty()) return null
         val lines = skipped.map { Line("SKIPPED · ${shout(it)}", trouble = true) } + kits.map { Line("LANDED · ${shout(it)}") }
-        return Note(Copy.landed(kits.size, skipped.size), fold(lines))
+        return Note(Copy.landed(kits.size, skipped.size, presets), fold(lines))
     }
 
-    /** BACKUP: null when every kit made it; else the box naming each kit preflight refused and its reason, the packed ones after. */
-    fun backedUp(packed: List<String>, skipped: Map<String, String>): Note? {
+    /** BACKUP: null when every kit made it; else the box naming each kit preflight refused and its reason, the packed ones after. [presets] rode along beside them. */
+    fun backedUp(packed: List<String>, skipped: Map<String, String>, presets: Int = 0): Note? {
         if (skipped.isEmpty()) return null
         val lines = skipped.map { (kit, why) -> Line("SKIPPED · ${shout(kit)}: ${shout(why)}", trouble = true) } +
             packed.map { Line("PACKED · ${shout(it)}") }
-        return Note(Copy.backedUp(packed.size, skipped.size), fold(lines))
+        return Note(Copy.backedUp(packed.size, skipped.size, presets), fold(lines))
     }
 
     /**

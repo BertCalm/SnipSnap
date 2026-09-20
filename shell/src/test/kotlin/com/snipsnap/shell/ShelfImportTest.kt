@@ -19,6 +19,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import com.snipsnap.synth.Thump
+import com.snipsnap.synth.ThumpPatch
+import com.snipsnap.synth.ThumpVoice
+import kotlin.random.Random
 
 class ShelfImportTest {
 
@@ -315,5 +319,96 @@ class ShelfImportTest {
         assertTrue(esc.message!!.contains("escapes"), esc.message)
         assertEquals(10L, File(win, "b/three.bin").length(), "b\\three.bin landed as b/three.bin")
         assertTrue(!File(win, "b\\three.bin").exists() && !File(temp, "four.bin").exists() && !File(win, "four.bin").exists())
+    }
+
+
+    /** A kick the player kept (`UserPresets`) at [root], for a backup to carry. */
+    private fun keepPreset(root: File, name: String, at: Long, seed: Int = 1): UserPresets.Saved =
+        UserPresets.save(root, ThumpPatch(name, ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK) + Thump.scramble(ThumpVoice.KICK, Random(seed))), at)
+
+    @Test
+    fun `a backup brings the presets home, merged under the shelf's own, and one without them lands as it always did`() {
+        val source = File(temp, "src8")
+        makeKit(source, "ALPHA")
+        val kept = keepPreset(source, "MY KICK", 1L)
+        val backup = File(temp, "shelf8.zip")
+        KitBackup.backup(source, backup, extras = mapOf(UserPresets.FILE_NAME to UserPresets.file(source)))
+
+        // The new phone: the kit, and the preset under YOURS.
+        val shelf = File(temp, "shelf8")
+        val first = ShelfImport.land(backup, "shelf8.zip", shelf)
+        assertEquals(listOf("ALPHA"), first.kits.map { it.first })
+        assertEquals(1, first.presets)
+        assertTrue(first.skipped.isEmpty(), first.skipped.joinToString())
+        assertEquals(listOf(kept), UserPresets.read(shelf))
+
+        // The same backup again: the kit lands beside itself, the preset is already there and lands nowhere.
+        val again = ShelfImport.land(backup, "shelf8.zip", shelf)
+        assertEquals(listOf("ALPHA 2"), again.kits.map { it.first })
+        assertEquals(0, again.presets)
+        assertEquals(listOf(kept), UserPresets.read(shelf))
+
+        // A shelf that saved its own MY KICK meanwhile keeps it; the backup's lands fresh.
+        val mine = File(temp, "shelf8b")
+        val own = keepPreset(mine, "MY KICK", 7L, seed = 2)
+        val merged = ShelfImport.land(backup, "shelf8.zip", mine)
+        assertEquals(1, merged.presets)
+        assertEquals(listOf("MY KICK", "MY KICK 2"), UserPresets.read(mine).map { it.name }, "the shelf's own keeps the name")
+        assertEquals(own, UserPresets.read(mine).first())
+        assertEquals(kept.patch.macros, UserPresets.read(mine).last().patch.macros, "the backup's, under the fresh name")
+
+        // A backup with no presets file: what it always was.
+        val bare = File(temp, "src8c")
+        makeKit(bare, "BETA")
+        val plain = File(temp, "plain8.zip")
+        KitBackup.backup(bare, plain, extras = mapOf(UserPresets.FILE_NAME to UserPresets.file(bare)))
+        val shelf2 = File(temp, "shelf8c")
+        val landed = ShelfImport.land(plain, "plain8.zip", shelf2)
+        assertEquals(listOf("BETA"), landed.kits.map { it.first })
+        assertEquals(0, landed.presets)
+        assertTrue(!UserPresets.file(shelf2).exists(), "no presets file is written for none")
+    }
+
+    @Test
+    fun `a backup whose presets file is not one, or weighs too much, still lands every kit and names the file`() {
+        val source = File(temp, "src9")
+        val kitDir = makeKit(source, "GAMMA")
+        val kit = KitStore.load(kitDir)
+        val xpn = File(temp, "GAMMA.xpn")
+        XpnPackager.write(kit, kitDir, xpn, Exporters.defaultMeta(kit))
+        val bytes = xpn.readBytes()
+
+        val garbage = File(temp, "garbage-backup.zip")
+        rawZip(garbage, listOf("GAMMA.xpn" to bytes, UserPresets.FILE_NAME to "not a presets file".toByteArray()))
+        val shelf = File(temp, "shelf9")
+        val landed = ShelfImport.land(garbage, "garbage-backup.zip", shelf)
+        assertEquals(listOf("GAMMA"), landed.kits.map { it.first }, "the kit lands whatever the presets file is")
+        assertEquals(0, landed.presets)
+        assertEquals(1, landed.skipped.size, landed.skipped.joinToString())
+        assertTrue(landed.skipped.single().startsWith(UserPresets.FILE_NAME + ":"), landed.skipped.single())
+        assertTrue(!UserPresets.file(shelf).exists(), "nothing was written for a file that could not be read")
+
+        // Past the ceiling: never read whole, and named the same way.
+        val heavy = File(temp, "heavy-backup.zip")
+        ZipOutputStream(heavy.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("GAMMA.xpn"))
+            zip.write(bytes)
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry(UserPresets.FILE_NAME))
+            val chunk = ByteArray(64 * 1024)
+            var left = KitBackup.MAX_EXTRA_BYTES + 1
+            while (left > 0) {
+                val n = minOf(left, chunk.size.toLong()).toInt()
+                zip.write(chunk, 0, n)
+                left -= n
+            }
+            zip.closeEntry()
+        }
+        val shelf2 = File(temp, "shelf9b")
+        val weighed = ShelfImport.land(heavy, "heavy-backup.zip", shelf2)
+        assertEquals(listOf("GAMMA"), weighed.kits.map { it.first })
+        assertEquals(0, weighed.presets)
+        assertTrue(weighed.skipped.single().startsWith(UserPresets.FILE_NAME + ":") && "inflates past" in weighed.skipped.single(), weighed.skipped.single())
+        assertTrue(!UserPresets.file(shelf2).exists())
     }
 }

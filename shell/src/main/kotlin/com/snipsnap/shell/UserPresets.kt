@@ -41,6 +41,12 @@ import java.util.Locale
  * hold WAVs and kits: a preset is a few hundred bytes, so nothing is
  * bought by emptying early, and every site that cannot be undone is one
  * `ReversalTest` counts as evidence for an undo stack.
+ *
+ * BACKUP carries the file at the archive's root, and a backup shared back
+ * in [merge]s it into whatever the shelf holds by then: the shelf's own
+ * presets stay, a preset the shelf already has by the same name and
+ * settings is skipped, one it has by name but not by settings lands under
+ * a fresh name, and the bin rides along minus what has already expired.
  */
 object UserPresets {
 
@@ -175,6 +181,57 @@ object UserPresets {
     /** Every preset in the bin, the most recently forgotten first. */
     fun bin(shelfRoot: File): List<Binned> = readStore(file(shelfRoot)).binned.sortedByDescending { it.binnedAt }
 
+    // ---- a backup coming home ----
+
+    /** What [merge] did with an incoming file: the presets that landed (under the names they landed under), the ones the shelf already had, and the bin entries carried. */
+    data class Merged(val landed: List<Saved>, val identical: Int, val binned: Int)
+
+    /**
+     * A presets file from a backup ([incoming], the file's text), merged
+     * into the shelf's own: nothing the shelf holds is written over. An
+     * incoming preset the shelf has by the same engine, voice and
+     * settings — under the same name, or under the fresh name an earlier
+     * landing of this very backup gave it — is already there and skipped,
+     * so a backup shared in twice lands its presets once; one the shelf
+     * has by name only lands under the first fresh name ([freshName]),
+     * since a restored sound must never silently replace a newer one;
+     * the rest land as they are, at the end of the strip. Incoming bin
+     * entries ride along unless the shelf already holds them or their
+     * days have run out by [nowMillis], and entries neither build can
+     * read are carried the way [save] carries them. A file that is not a
+     * presets file throws; the caller says so in words.
+     */
+    fun merge(shelfRoot: File, incoming: String, nowMillis: Long): Merged {
+        val target = file(shelfRoot)
+        val store = readStore(target)
+        val theirs = parseStore(incoming)
+        val saved = store.saved.toMutableList()
+        val landed = mutableListOf<Saved>()
+        var identical = 0
+        for (s in theirs.saved) {
+            val there = saved.any {
+                it.engine == s.engine && it.voice == s.voice && (it.name == s.name || freshened(it.name, s.name)) && sameSound(it.patch, s.patch)
+            }
+            if (there) {
+                identical++
+                continue
+            }
+            val taken = { n: String -> saved.any { it.engine == s.engine && it.voice == s.voice && it.name == n } }
+            val name = freshName(s.name, taken)
+            val back = if (name == s.name) s else Saved(renamed(s.patch, name), s.savedAt)
+            saved += back
+            landed += back
+        }
+        val binned = theirs.binned.filter { b ->
+            b !in store.binned && nowMillis - b.binnedAt < BIN_DAYS * DAY_MS
+        }
+        val unread = theirs.unread.filter { it !in store.unread }
+        if (landed.isNotEmpty() || binned.isNotEmpty() || unread.isNotEmpty()) {
+            write(target, Store(saved, store.binned + binned, store.unread + unread))
+        }
+        return Merged(landed, identical, binned.size)
+    }
+
     /**
      * FORGET → BIN: the preset on [engine]/[voice] named [name] moves from
      * the strip to the bin, stamped with when; null when nothing by that
@@ -236,6 +293,16 @@ object UserPresets {
         }
     }
 
+    /** Whether [name] is what [freshName] would have made of [base]: `MY KICK 2`, `MY KICK 3`… `MY KICK 10`, the base trimmed when it filled the strip. */
+    internal fun freshened(name: String, base: String): Boolean {
+        // A whole number from 2 up, as freshName counts: never " 1", never " 05".
+        val suffix = Regex(" (?:[2-9]|[1-9]\\d+)$").find(name)?.value ?: return false
+        return name == base.take(MAX_NAME - suffix.length).trimEnd() + suffix
+    }
+
+    /** The same recipe under whatever name: everything a patch writes but its name, so every engine's own fields count. */
+    private fun sameSound(a: Patch, b: Patch): Boolean = a.toJsonValue().entries - "name" == b.toJsonValue().entries - "name"
+
     /** [patch] under another name: the same engine, voice and macros, through the patch's own JSON so every engine's type comes back as itself. */
     private fun renamed(patch: Patch, name: String): Patch {
         val json = patch.toJsonValue()
@@ -283,9 +350,11 @@ object UserPresets {
      */
     internal data class Store(val saved: List<Saved>, val binned: List<Binned>, val unread: List<JsonValue>)
 
-    internal fun readStore(file: File): Store {
-        if (!file.isFile) return Store(emptyList(), emptyList(), emptyList())
-        val root = Json.parse(file.readText(Charsets.UTF_8)).obj()
+    internal fun readStore(file: File): Store =
+        if (file.isFile) parseStore(file.readText(Charsets.UTF_8)) else Store(emptyList(), emptyList(), emptyList())
+
+    internal fun parseStore(text: String): Store {
+        val root = Json.parse(text).obj()
         val version = root["version"]?.int() ?: throw JsonException("$FILE_NAME has no version")
         if (version != VERSION) throw JsonException("unsupported $FILE_NAME version $version")
         val items = root["presets"]?.arr() ?: throw JsonException("$FILE_NAME has no presets")

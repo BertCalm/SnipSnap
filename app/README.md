@@ -480,6 +480,17 @@ logcat tag to grab when something is wrong.
   with the second sounding like the forgotten one. Kill and relaunch:
   both are still there. Forget one, relaunch: it is still waiting, with
   its days counting down.
+- **BACKUP carries your presets** (`docs/WORKSHOP.md`, WS5's last
+  follow-up): with MY KICK under YOURS on SYNTH, go to SHELF and BACKUP:
+  the toast reads N KITS AND 1 PRESET ON ONE FILE, and on a laptop the
+  zip holds `presets.json` beside the `.xpn` kits. Forget MY KICK, save a
+  different MY KICK, then share the zip back in: every kit lands as
+  "NAME 2", the toast ends in 1 PRESET UNDER YOURS, and SYNTH's YOURS
+  strip holds your new MY KICK first and the backup's as MY KICK 2,
+  sounding like the one you forgot; DELETED PRESETS still waits with the
+  forgotten one. Share the same zip in once more: the kits land again as
+  "NAME 3", the toast counts no preset, and YOURS is unchanged. A backup
+  made before this build lands as it always did, presets untouched.
 
 ## Fonts / licensing
 
