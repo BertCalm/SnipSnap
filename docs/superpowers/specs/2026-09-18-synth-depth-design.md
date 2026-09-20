@@ -457,6 +457,52 @@ dimensionless and therefore rate-independent, and `MPC_EXPORT.md` requires
 scattered through the engines. Thread a rate parameter where the new code
 touches them; do not treat it as a blocking refactor.
 
+## The audition gate's findings — 2026-09-20
+
+The gate ran. It overturned the flagship assumption, corrected the intended
+architecture, and produced a design rule. All four findings came from listening,
+not from measurement, and none of them were reachable any other way.
+
+**1. The flagship is THUMP's SNARE, not TINES.** This document assumed TINES
+and said the gate existed to confirm or overturn that. Played the full set, the
+sound that failed was the snare: *"they all have a very burst-of-static feel."*
+That is a precise diagnosis. `Thump.snare` is two detuned sines for the body
+plus lowpassed white noise for the wires, crossfaded — and shipped presets set
+SNAP between 0.30 and 0.93, so the noise dominates. Two sines cannot read as a
+drum head; a real one is a circular membrane, whose Bessel-zero ratios are
+already sourced and built as `Modes.Material.MEMBRANE`.
+
+**2. Membrane body AND free wires — not either.** The first prototype replaced
+the body and folded the wire noise into the modal excitation, so the wires were
+filtered *through* the head and every variant sounded alike. The correction was
+the listener's: *"we would want the intersection of these sounds."* A snare is a
+membrane **with wires resting on it** — the head rings, the wires rattle freely,
+neither is the other's filter.
+
+**3. The static burst is a palette sound, not a defect.** *"Would want to be
+able to get close to the static burst with settings as well."* The engines'
+own comments already say lo-fi is on-brand. So the requirement is not to replace
+the old sound but to make the axis **span** from a real drum to a static burst,
+with today's character reachable at one end.
+
+**4. The design rule that follows, and it generalises past the snare.** Three
+times in this project a range was narrowed to the region its author judged good
+— `cycles = 1.5`, the prototype's wire ceiling at 0.85, and the original macro
+ranges Task 9 exists to widen. Each time the wanted territory lay *past* where
+the author stopped.
+
+> **A macro's extremes should be extreme, including the ugly end.** A range
+> curated to only tasteful settings has already made the user's decisions for
+> them. Task 9 is therefore not "widen until it sounds bad" but "widen until the
+> extremes are *useful*" — and unusable-by-most is not the same as useless.
+
+**Also found, and separable:** `PUNCH` is declared on SNARE, fully wired
+(`Thump.kt:115,132`), and set by **one preset out of 128**. Every drum in the
+library renders at its default. Because `Punch.apply` is loudness-preserving it
+changes attack character without changing level — a pure timbre control, frozen.
+That is a preset-authoring gap, not a DSP one, and it is most of why the snares
+read as samey even before the body problem.
+
 ## The ninth engine — STRIKE
 
 `SYNTH_UPGRADE.md` lists "no new engines" as a non-goal. That non-goal was
