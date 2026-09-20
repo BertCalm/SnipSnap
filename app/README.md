@@ -120,9 +120,16 @@ logcat tag to grab when something is wrong.
   should each sound different on the same photo; a photo of a plain wall
   read PLUMB should toast the flat-line refusal and grey SEND out; a red
   thing should land low and a blue thing high. SEND TO PAD then plays on
-  KIT, and `kit.json` carries a `table` of 256 digits on that pad. If the
-  camera never opens, logcat `SnapScreen` first; a phone with no camera
-  app toasts NO CAMERA APP ANSWERED.
+  KIT, and `kit.json` carries a `table` of 256 digits on that pad. Tap
+  PLUMB and SEND straight after: the pad that lands must be named Snap
+  Plumb and sound like the PLUMB line, never HORIZON's table under
+  PLUMB's name. Two red things (a 355° rose and a 5° scarlet) should
+  land on neighbouring low notes, not two octaves apart. If the camera
+  never opens, logcat `SnapScreen` first; a phone with no camera app
+  toasts NO CAMERA APP ANSWERED, and a camera app that hands back a
+  full-size frame is shrunk to 512 px before reading — a toast saying
+  TOO BIG TO READ means even that ran out of memory, which is worth a
+  logcat line.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

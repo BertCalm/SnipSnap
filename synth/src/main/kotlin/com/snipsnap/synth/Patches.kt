@@ -217,18 +217,28 @@ data class VoxPatch(
  * it that sounds, and it is small enough to live in `kit.json` beside
  * every other recipe. The one patch with a field beyond the common four,
  * so it writes and reads that field itself around [Patches]' shared shape.
+ *
+ * The table is copied in and never handed out for writing: a caller
+ * editing its own array after building the patch would otherwise change
+ * the sound (and the hash) behind the 0..255 check.
  */
 class SnapPatch(
     override val name: String,
     val voice: SnapVoice,
     override val macros: Map<String, Float>,
-    /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them. */
-    val table: IntArray,
+    table: IntArray,
 ) : Patch {
+    /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them. */
+    val table: IntArray = table.copyOf()
+
     init {
         Patches.validateMacros(this, Snap.macrosFor(voice))
         require(table.size == Snap.TABLE_SIZE) { "a SNAP table has ${Snap.TABLE_SIZE} points, got ${table.size}" }
         for ((i, v) in table.withIndex()) require(v in 0..255) { "table[$i] is not a brightness 0..255: $v" }
+        // The same refusal Snap.read makes, held here too, so a table
+        // typed into kit.json by hand cannot land a silent pad that
+        // nothing refused in words.
+        require(!Snap.isFlat(table)) { "a SNAP table with no swing in it has no waveform to play" }
     }
 
     override val engine get() = ENGINE
@@ -261,13 +271,28 @@ class SnapPatch(
 
     companion object {
         const val ENGINE = "SNAP"
-        fun fromJsonValue(value: JsonValue): Patch {
-            val raw = value.obj()["table"] ?: throw JsonException("SNAP patch has no table")
-            val table = IntArray(raw.arr().size) { raw.arr()[it].int() }
-            return Patches.decode(value, ENGINE, { n -> SnapVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+
+        /**
+         * Engine and version are checked first, through the shared
+         * [Patches.decode], so a file from a later version says
+         * "unsupported version" rather than something about its table;
+         * the table is read inside the build step, and a wrong-length,
+         * out-of-range or flat one is a [JsonException] like every other
+         * malformed recipe, never a bare [IllegalArgumentException].
+         */
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> SnapVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                val raw = value.obj()["table"] ?: throw JsonException("SNAP patch has no table")
+                val items = raw.arr()
+                if (items.size != Snap.TABLE_SIZE) throw JsonException("SNAP table has ${items.size} points, not ${Snap.TABLE_SIZE}")
+                val table = IntArray(items.size) { i ->
+                    val v = items[i].int()
+                    if (v !in 0..255) throw JsonException("SNAP table[$i] is not a brightness 0..255: $v")
+                    v
+                }
+                if (Snap.isFlat(table)) throw JsonException("SNAP table has no swing in it: nothing to play")
                 SnapPatch(name, voice, macros, table)
             }
-        }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }
 }
