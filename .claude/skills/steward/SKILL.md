@@ -63,6 +63,21 @@ needs `:app` to be *in* the graph, and without an SDK
 `settings.gradle.kts` leaves it out. Drop the `-x` there; the exclusion has
 nothing to exclude.
 
+**A cloud session can run both blocks as written.** The SessionStart hook
+(`.claude/hooks/session-start.sh`, registered in `.claude/settings.json`)
+warms Gradle - wrapper, dependencies, every JVM module and its tests
+compiled - so the first `./gradlew --no-daemon test` is the tests, not
+the downloads. It also fetches Oboe's headers for the native harness by
+`git clone` of the pinned tag into `~/.cache/snipsnap` (the harness's own
+CMake fetches the GitHub *archive* URL, which the session proxy refuses
+with 403; git over the same proxy is fine) and configures
+`build/native-tests` with `SNIPSNAP_OBOE_INCLUDE` pointing at it. That is
+a CMake cache variable, so the `cmake -S ... -B build/native-tests` line
+above keeps it on every re-run; the hook also exports it for a build tree
+made by hand. Run the JVM suite before every push, not just when CI has
+already said no - the two extra CI cycles that motivated the hook were
+both failures the suite finds in ninety seconds here.
+
 Run the native block whenever the change touches anything under
 `app/src/main/cpp` — the engine sources, the JNI bridge, or the test
 tree's own `CMakeLists.txt` and stubs (`oboe_stubs.cpp`, `stub/jni.h`). A

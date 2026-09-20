@@ -56,6 +56,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Modulator
@@ -77,6 +78,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+/**
+ * The three panels of controls above the pad, in strip order - one shows
+ * at a time (see the strip's own comment in [SurfaceScreen]).
+ */
+private enum class Panel { VOICE, SHAPE, MOD }
 
 /** GRAIN's three knobs, in the order its row's own button cycles them - each an index into `SurfaceStore.Grain`'s fields below. */
 private val GRAIN_KNOBS = listOf("SIZE", "DENSITY", "SPRAY")
@@ -186,6 +193,10 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
  * number of bars at the kit's tempo, so it drops onto the groove grid.
+ * ECHO on the SET row locks the echo's time to a division of that bar
+ * (`EchoTime` in `:shell` - FREE, a sixteenth, an eighth, the dotted
+ * eighth, a quarter, a half), so the repeats land on the grid too; the
+ * engine only ever gets the seconds, and the wet MIX stays the macro.
  *
  * MOD A/B are two modulators (`Modulator` in `:shell`): each a SHAPE at a
  * tempo-snapped RATE with a DEPTH, aimed at a TARGET - one of the seven
@@ -217,6 +228,13 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * proper, the performance landing on a pad of the kit you are holding
  * through the same door SYNTH's SEND TO PAD uses (`assign` on an empty
  * slot, `replaceAudio` on a taken one, the original in the bin).
+ *
+ * The controls above the pad are three panels behind a strip - VOICE
+ * (the pad, the ring, the sample triangle's other three), SHAPE (the
+ * mode's knobs, the corners with what they are held to, the presets),
+ * MOD (the modulators, the gesture) - one showing at a time, so the pad
+ * keeps its height however many rows the panels hold. The mode row and
+ * PRINT stay above the strip in every panel.
  *
  * Polling: every pointer event updates the *target* reading; a frame
  * loop steps a screen-rate smoother toward it, paints the puck from the
@@ -317,6 +335,8 @@ fun SurfaceScreen(
     var latched by remember { mutableStateOf(false) }
     /** Index into PrintLength.BARS; 0 = FREE. */
     var barsIndex by remember { mutableStateOf(0) }
+    /** Which [Panel] of controls is showing above the pad; a pick, not a sound, so not persisted - same as armedCorner. */
+    var panel by remember { mutableStateOf(Panel.VOICE) }
     /** Which of [GRAIN_KNOBS] the GRAIN row's ◄ ► currently step; a pick, not a sound, so not persisted - same as armedCorner. */
     var grainKnob by remember { mutableStateOf(0) }
     /** Which of [SWARM_KNOBS] the SWARM row's ◄ ► step; a pick, like grainKnob. */
@@ -607,6 +627,7 @@ fun SurfaceScreen(
         engine.setGrain(settings.grain)
         engine.setKeySnap(settings.keySnap)
         engine.setSwarm(settings.swarm)
+        engine.setEchoTime(EchoTime.seconds(settings.echoTime, entry.kit.tempoBpm))
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
@@ -733,6 +754,19 @@ fun SurfaceScreen(
         val next = !settings.keySnap
         engine.setKeySnap(next)
         persist(dir, settings.copy(keySnap = next))
+    }
+
+    // ECHO: the echo's time stepped round EchoTime's divisions - FREE,
+    // then the note values - at the kit's tempo (no tempo runs at the
+    // stand-in the modulators use). Remembered in surface.json, heard
+    // within a control interval as a crossfade between the two times.
+    // Refused while `settings` is still the outgoing kit's, like KEY.
+    fun stepEchoTime() {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val next = EchoTime.next(settings.echoTime)
+        engine.setEchoTime(EchoTime.seconds(next, entry?.kit?.tempoBpm))
+        persist(dir, settings.copy(echoTime = next))
     }
 
     // MOD ◄ ►: steps the picked field of the picked modulator - TARGET
@@ -1113,295 +1147,336 @@ fun SurfaceScreen(
 
             Spacer(Modifier.height(6.dp))
 
-            // PAD ◄ name ► and the four corner captures.
+            // The panel strip. SURFACE's controls grew a row at a time until
+            // a dozen sat above the pad and the pad was what was left; three
+            // panels show one group at a time and give the pad its height
+            // back. VOICE is what plays (the pad, the ring, the sample
+            // triangle's other three); SHAPE is what the finger does to it
+            // (the mode's knobs, the corners with what they are held to,
+            // the presets); MOD is what moves on its own (the modulators,
+            // the gesture). A pick, not a sound, so not persisted - like
+            // grainKnob - and a mutually-exclusive row for TalkBack, like
+            // the mode row above.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                ActionButton("◄ PAD", scheme, enabled = padName != null) { stepPad(-1) }
-                TapeText(
-                    padName?.let { if (ringVoice) it else "${padLabel(padSlot)} ${it.uppercase()}" } ?: "NO PAD",
-                    TapeType.pixel,
-                    scheme.ink.tape,
-                    Modifier.weight(1f).padding(horizontal = 4.dp),
-                )
-                ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
-                // Live whenever a kit is open (a kit with no pads can still
-                // have a voice this way) - a tap with nothing listening says
-                // where to go rather than sitting disabled. Lit while the
-                // voice is the ring, the way LATCH is lit while it holds.
-                ActionButton(
-                    "RING",
-                    scheme,
-                    enabled = entry != null,
-                    dimmed = !ringVoice,
-                    modifier = Modifier.semantics { selected = ringVoice },
-                ) { freezeRing() }
-                ActionButton("LATCH", scheme, enabled = padName != null, dimmed = !latched) { latched = !latched }
-                // BARS needs a tempo; a kit without one prints free.
-                val bpm = entry?.kit?.tempoBpm
-                ActionButton(
-                    if (bpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
-                    scheme,
-                    enabled = bpm != null && !printing,
-                    dimmed = barsIndex == 0,
-                ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
+                for (p in Panel.entries) {
+                    ActionButton(
+                        p.name,
+                        scheme,
+                        enabled = true,
+                        dimmed = p != panel,
+                        modifier = Modifier.weight(1f).semantics { selected = p == panel },
+                    ) { panel = p }
+                }
             }
 
-            if (ringVoice || ringOnBar) {
+            if (panel == Panel.VOICE) {
                 Spacer(Modifier.height(6.dp))
 
-                // The ring's own row, only while the ring is the voice (the
-                // GRAIN row's pattern): EVERY BAR, and a readout that says
-                // which clock it is on. ONCE is the plain tap; EVERY BAR is
-                // lit while it runs, the way LATCH is.
+                // PAD ◄ name ► and the four corner captures.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton("◄ PAD", scheme, enabled = padName != null) { stepPad(-1) }
+                    TapeText(
+                        padName?.let { if (ringVoice) it else "${padLabel(padSlot)} ${it.uppercase()}" } ?: "NO PAD",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(1f).padding(horizontal = 4.dp),
+                    )
+                    ActionButton("PAD ►", scheme, enabled = padName != null) { stepPad(+1) }
+                    // Live whenever a kit is open (a kit with no pads can still
+                    // have a voice this way) - a tap with nothing listening says
+                    // where to go rather than sitting disabled. Lit while the
+                    // voice is the ring, the way LATCH is lit while it holds.
                     ActionButton(
-                        "EVERY BAR",
+                        "RING",
                         scheme,
                         enabled = entry != null,
-                        dimmed = !ringOnBar,
-                        modifier = Modifier.weight(1.2f).semantics { selected = ringOnBar },
-                    ) { toggleRingOnBar() }
-                    val ringBpm = entry?.kit?.tempoBpm
+                        dimmed = !ringVoice,
+                        modifier = Modifier.semantics { selected = ringVoice },
+                    ) { freezeRing() }
+                    ActionButton("LATCH", scheme, enabled = padName != null, dimmed = !latched) { latched = !latched }
+                    // BARS needs a tempo; a kit without one prints free.
+                    val bpm = entry?.kit?.tempoBpm
+                    ActionButton(
+                        if (bpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
+                        scheme,
+                        enabled = bpm != null && !printing,
+                        dimmed = barsIndex == 0,
+                    ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
+                }
+
+                if (ringVoice || ringOnBar) {
+                    Spacer(Modifier.height(6.dp))
+
+                    // The ring's own row, only while the ring is the voice (the
+                    // GRAIN row's pattern): EVERY BAR, and a readout that says
+                    // which clock it is on. ONCE is the plain tap; EVERY BAR is
+                    // lit while it runs, the way LATCH is.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ActionButton(
+                            "EVERY BAR",
+                            scheme,
+                            enabled = entry != null,
+                            dimmed = !ringOnBar,
+                            modifier = Modifier.weight(1.2f).semantics { selected = ringOnBar },
+                        ) { toggleRingOnBar() }
+                        val ringBpm = entry?.kit?.tempoBpm
+                        TapeText(
+                            when {
+                                !ringOnBar -> "RING ONCE, ON THE TAP"
+                                ringBpm == null -> "RING AGAIN EVERY BAR AT THE DEFAULT TEMPO"
+                                else -> "RING AGAIN EVERY BAR AT ${ringBpm.toInt()} BPM"
+                            },
+                            TapeType.pixel,
+                            scheme.ink.tape,
+                            Modifier.weight(2.4f).padding(horizontal = 4.dp),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // PAD2/PAD3/PAD4 ◄ name ►: the sample area's other three
+                // vertices, blended in by the finger's own position - see the
+                // class doc.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Unlike PAD's enabled = padName != null: a pad always
+                    // auto-loads on entry, but slots 2/3/4 start empty and only
+                    // these buttons ever fill them, so gating on entry alone
+                    // (not padName2/3/4) is what lets the first press work at all.
+                    ActionButton("◄ PAD2", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(-1) }
                     TapeText(
-                        when {
-                            !ringOnBar -> "RING ONCE, ON THE TAP"
-                            ringBpm == null -> "RING AGAIN EVERY BAR AT THE DEFAULT TEMPO"
-                            else -> "RING AGAIN EVERY BAR AT ${ringBpm.toInt()} BPM"
-                        },
+                        padName2?.let { "${padLabel(padSlot2)} ${it.uppercase()}" } ?: "NO PAD2",
                         TapeType.pixel,
                         scheme.ink.tape,
-                        Modifier.weight(2.4f).padding(horizontal = 4.dp),
+                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
                     )
+                    ActionButton("PAD2 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(+1) }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton("◄ PAD3", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(-1) }
+                    TapeText(
+                        padName3?.let { "${padLabel(padSlot3)} ${it.uppercase()}" } ?: "NO PAD3",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
+                    )
+                    ActionButton("PAD3 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(+1) }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton("◄ PAD4", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad4(-1) }
+                    TapeText(
+                        padName4?.let { "${padLabel(padSlot4)} ${it.uppercase()}" } ?: "NO PAD4",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
+                    )
+                    ActionButton("PAD4 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad4(+1) }
                 }
             }
 
-            if (mode == Mode.GRAIN) {
+            if (panel == Panel.SHAPE) {
+                if (mode == Mode.GRAIN) {
+                    Spacer(Modifier.height(6.dp))
+
+                    // GRAIN's own row, only while the mode is on: the first
+                    // button picks which knob ◄ ► step (it cycles SIZE →
+                    // DENSITY → SPRAY, its label saying which), and the readout
+                    // shows all three. As percentages, deliberately: what a
+                    // percentage means in milliseconds or grains a second is
+                    // Grain.h's arithmetic, and printing those units here would
+                    // be a second copy of it that nothing keeps in step.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ActionButton(
+                            GRAIN_KNOBS[grainKnob],
+                            scheme,
+                            enabled = padName != null,
+                            modifier = Modifier.weight(1.1f),
+                        ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
+                        ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
+                        val g = settings.grain
+                        TapeText(
+                            "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
+                            TapeType.pixel,
+                            scheme.ink.tape,
+                            Modifier.weight(1.8f).padding(horizontal = 4.dp),
+                        )
+                        ActionButton("►", scheme, enabled = padName != null) { stepGrain(+1) }
+                    }
+                }
+
+                if (mode != Mode.GRAIN) {
+                    Spacer(Modifier.height(6.dp))
+
+                    // SWARM's row, the GRAIN row's twin for the loop modes: the
+                    // first button picks which knob ◄ ► step (VOICES or DETUNE),
+                    // the readout shows both. DETUNE as a percentage: what it
+                    // means in cents is SurfaceEngine.h's number, not a second
+                    // copy here.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ActionButton(
+                            SWARM_KNOBS[swarmKnob],
+                            scheme,
+                            enabled = padName != null,
+                            modifier = Modifier.weight(1.1f),
+                        ) { swarmKnob = (swarmKnob + 1) % SWARM_KNOBS.size }
+                        ActionButton("◄", scheme, enabled = padName != null) { stepSwarm(-1) }
+                        val w = settings.swarm
+                        TapeText(
+                            "SWARM ${w.voices} ${if (w.voices == 1) "VOICE" else "VOICES"}  DETUNE ${pct(w.detune)}",
+                            TapeType.pixel,
+                            scheme.ink.tape,
+                            Modifier.weight(1.8f).padding(horizontal = 4.dp),
+                        )
+                        ActionButton("►", scheme, enabled = padName != null) { stepSwarm(+1) }
+                    }
+                }
+
                 Spacer(Modifier.height(6.dp))
 
-                // GRAIN's own row, only while the mode is on: the first
-                // button picks which knob ◄ ► step (it cycles SIZE →
-                // DENSITY → SPRAY, its label saying which), and the readout
-                // shows all three. As percentages, deliberately: what a
-                // percentage means in milliseconds or grains a second is
-                // Grain.h's arithmetic, and printing those units here would
-                // be a second copy of it that nothing keeps in step.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (i in 0 until 4) {
+                        ActionButton(
+                            "SET ${'A' + i}",
+                            scheme,
+                            enabled = padName != null,
+                            dimmed = mode != Mode.MORPH && mode != Mode.VECTOR,
+                            modifier = Modifier.weight(1f),
+                        ) { setCorner(i) }
+                    }
+                    // KEY, on the row about what the sound under the finger
+                    // is held to: lit while the loop's pitch snaps to the key
+                    // (see toggleKeySnap), dimmed while it slides as recorded.
                     ActionButton(
-                        GRAIN_KNOBS[grainKnob],
+                        "KEY",
+                        scheme,
+                        enabled = padName != null,
+                        dimmed = !settings.keySnap,
+                        modifier = Modifier.weight(1f).semantics { selected = settings.keySnap },
+                    ) { toggleKeySnap() }
+                    // ECHO, on the same row for the same reason: the echo's
+                    // time held to the kit's bar (see stepEchoTime), lit and
+                    // naming the note value while it is, dimmed while free.
+                    val echoSynced = settings.echoTime != EchoTime.FREE_INDEX
+                    ActionButton(
+                        "ECHO ${EchoTime.label(settings.echoTime)}",
+                        scheme,
+                        enabled = padName != null,
+                        dimmed = !echoSynced,
+                        modifier = Modifier.weight(1.4f).semantics { selected = echoSynced },
+                    ) { stepEchoTime() }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // ARM A..D: picks which corner PRESET ◄ ► targets - see armedCorner.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (i in 0 until 4) {
+                        ActionButton(
+                            "ARM ${'A' + i}",
+                            scheme,
+                            enabled = padName != null,
+                            dimmed = armedCorner != i,
+                            // A mutually-exclusive row, same as the mode row
+                            // above - TalkBack otherwise has no way to tell
+                            // which corner is armed or when it changes
+                            // (Copilot review, PR #195).
+                            modifier = Modifier.weight(1f).semantics { selected = armedCorner == i },
+                        ) { armedCorner = if (armedCorner == i) null else i }
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // PRESET ◄ ►: design/surface-vector's LBP+/ECHO+/ECHO-/LBP-
+                // idea (plus CRUSH+/-/GLITCH+/-/SPRING+/-), a named library
+                // stepped onto the armed corner - see SurfaceStore.Corner.
+                // LIBRARY and the class doc.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val armed = armedCorner
+                    ActionButton("◄ PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
+                    TapeText(
+                        armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "◄ ► TO STEP" } ?: "ARM A CORNER",
+                        TapeType.pixel,
+                        scheme.ink.tape,
+                        Modifier.weight(1.2f).padding(horizontal = 4.dp),
+                    )
+                    ActionButton("PRESET ►", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
+                }
+            }
+
+            if (panel == Panel.MOD) {
+                Spacer(Modifier.height(6.dp))
+
+                // MOD A/B: the first button picks the modulator, the second which
+                // of its fields ◄ ► step, and the readout shows the picked slot
+                // whole - TARGET SHAPE RATE DEPTH - so what is about to be
+                // stepped is never a guess. A slot at 0% is listed, not hidden:
+                // the row is how you find out it is there to turn up.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val slot = settings.mods[modSlot]
+                    ActionButton(
+                        "MOD ${'A' + modSlot}",
+                        scheme,
+                        enabled = padName != null,
+                        modifier = Modifier.weight(1f).semantics { selected = slot.depth > 0f },
+                    ) { modSlot = (modSlot + 1) % Modulator.SLOTS }
+                    ActionButton(
+                        MOD_FIELDS[modField],
                         scheme,
                         enabled = padName != null,
                         modifier = Modifier.weight(1.1f),
-                    ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
-                    ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
-                    val g = settings.grain
+                    ) { modField = (modField + 1) % MOD_FIELDS.size }
+                    ActionButton("◄", scheme, enabled = padName != null) { stepMod(-1) }
                     TapeText(
-                        "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
+                        "${slot.target} ${slot.shape} ${
+                            when {
+                                slot.shape.followsRoom -> "ROOM"
+                                slot.shape.playsGesture -> settings.gesture?.let { PrintLength.label(it.bars) } ?: "NONE"
+                                else -> Modulator.rateLabel(slot.rateIndex)
+                            }
+                        } ${pct(slot.depth)}",
                         TapeType.pixel,
                         scheme.ink.tape,
-                        Modifier.weight(1.8f).padding(horizontal = 4.dp),
+                        Modifier.weight(1.6f).padding(horizontal = 4.dp),
                     )
-                    ActionButton("►", scheme, enabled = padName != null) { stepGrain(+1) }
-                }
-            }
-
-            if (mode != Mode.GRAIN) {
-                Spacer(Modifier.height(6.dp))
-
-                // SWARM's row, the GRAIN row's twin for the loop modes: the
-                // first button picks which knob ◄ ► step (VOICES or DETUNE),
-                // the readout shows both. DETUNE as a percentage: what it
-                // means in cents is SurfaceEngine.h's number, not a second
-                // copy here.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ActionButton(
-                        SWARM_KNOBS[swarmKnob],
-                        scheme,
-                        enabled = padName != null,
-                        modifier = Modifier.weight(1.1f),
-                    ) { swarmKnob = (swarmKnob + 1) % SWARM_KNOBS.size }
-                    ActionButton("◄", scheme, enabled = padName != null) { stepSwarm(-1) }
-                    val w = settings.swarm
-                    TapeText(
-                        "SWARM ${w.voices} ${if (w.voices == 1) "VOICE" else "VOICES"}  DETUNE ${pct(w.detune)}",
-                        TapeType.pixel,
-                        scheme.ink.tape,
-                        Modifier.weight(1.8f).padding(horizontal = 4.dp),
-                    )
-                    ActionButton("►", scheme, enabled = padName != null) { stepSwarm(+1) }
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // MOD A/B: the first button picks the modulator, the second which
-            // of its fields ◄ ► step, and the readout shows the picked slot
-            // whole - TARGET SHAPE RATE DEPTH - so what is about to be
-            // stepped is never a guess. A slot at 0% is listed, not hidden:
-            // the row is how you find out it is there to turn up.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                val slot = settings.mods[modSlot]
-                ActionButton(
-                    "MOD ${'A' + modSlot}",
-                    scheme,
-                    enabled = padName != null,
-                    modifier = Modifier.weight(1f).semantics { selected = slot.depth > 0f },
-                ) { modSlot = (modSlot + 1) % Modulator.SLOTS }
-                ActionButton(
-                    MOD_FIELDS[modField],
-                    scheme,
-                    enabled = padName != null,
-                    modifier = Modifier.weight(1.1f),
-                ) { modField = (modField + 1) % MOD_FIELDS.size }
-                ActionButton("◄", scheme, enabled = padName != null) { stepMod(-1) }
-                TapeText(
-                    "${slot.target} ${slot.shape} ${
-                        when {
-                            slot.shape.followsRoom -> "ROOM"
-                            slot.shape.playsGesture -> settings.gesture?.let { PrintLength.label(it.bars) } ?: "NONE"
-                            else -> Modulator.rateLabel(slot.rateIndex)
-                        }
-                    } ${pct(slot.depth)}",
-                    TapeType.pixel,
-                    scheme.ink.tape,
-                    Modifier.weight(1.6f).padding(horizontal = 4.dp),
-                )
-                ActionButton("►", scheme, enabled = padName != null) { stepMod(+1) }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // GESTURE's row, while a slot is on the shape, REC is armed or a
-            // recording runs (the ring row's pattern): REC, what the kit has
-            // or what is happening, CLEAR.
-            if (recording || gestureArmed || settings.mods.any { it.shape.playsGesture }) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ActionButton(
-                        "REC",
-                        scheme,
-                        enabled = padName != null && !recording,
-                        dimmed = !(gestureArmed || recording),
-                        modifier = Modifier.weight(1f).semantics { selected = gestureArmed || recording },
-                    ) { armGesture() }
-                    val kept = settings.gesture
-                    TapeText(
-                        when {
-                            recording -> "RECORDING %.1f OF %d BARS".format(java.util.Locale.ROOT, recordingBars.coerceIn(0f, gestureLength.toFloat()), gestureLength)
-                            gestureArmed -> "ARMED. TOUCH THE PAD FOR ${PrintLength.label(gestureLength)}"
-                            kept != null -> "GESTURE ${PrintLength.label(kept.bars)} · ${kept.points} POINTS"
-                            else -> "NO GESTURE. REC, THEN TOUCH THE PAD"
-                        },
-                        TapeType.pixel,
-                        scheme.ink.tape,
-                        Modifier.weight(2.2f).padding(horizontal = 4.dp),
-                    )
-                    ActionButton("CLEAR", scheme, enabled = settings.gesture != null && !recording, modifier = Modifier.weight(1f)) { clearGesture() }
+                    ActionButton("►", scheme, enabled = padName != null) { stepMod(+1) }
                 }
 
-                Spacer(Modifier.height(6.dp))
-            }
+                // GESTURE's row, while a slot is on the shape, REC is armed or a
+                // recording runs (the ring row's pattern): REC, what the kit has
+                // or what is happening, CLEAR.
+                if (recording || gestureArmed || settings.mods.any { it.shape.playsGesture }) {
+                    Spacer(Modifier.height(6.dp))
 
-            // PAD2/PAD3/PAD4 ◄ name ►: the sample area's other three
-            // vertices, blended in by the finger's own position - see the
-            // class doc.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Unlike PAD's enabled = padName != null: a pad always
-                // auto-loads on entry, but slots 2/3/4 start empty and only
-                // these buttons ever fill them, so gating on entry alone
-                // (not padName2/3/4) is what lets the first press work at all.
-                ActionButton("◄ PAD2", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(-1) }
-                TapeText(
-                    padName2?.let { "${padLabel(padSlot2)} ${it.uppercase()}" } ?: "NO PAD2",
-                    TapeType.pixel,
-                    scheme.ink.tape,
-                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                )
-                ActionButton("PAD2 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad2(+1) }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                ActionButton("◄ PAD3", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(-1) }
-                TapeText(
-                    padName3?.let { "${padLabel(padSlot3)} ${it.uppercase()}" } ?: "NO PAD3",
-                    TapeType.pixel,
-                    scheme.ink.tape,
-                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                )
-                ActionButton("PAD3 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad3(+1) }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                ActionButton("◄ PAD4", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad4(-1) }
-                TapeText(
-                    padName4?.let { "${padLabel(padSlot4)} ${it.uppercase()}" } ?: "NO PAD4",
-                    TapeType.pixel,
-                    scheme.ink.tape,
-                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                )
-                ActionButton("PAD4 ►", scheme, enabled = entry != null, modifier = Modifier.weight(1f)) { stepPad4(+1) }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                for (i in 0 until 4) {
-                    ActionButton(
-                        "SET ${'A' + i}",
-                        scheme,
-                        enabled = padName != null,
-                        dimmed = mode != Mode.MORPH && mode != Mode.VECTOR,
-                        modifier = Modifier.weight(1f),
-                    ) { setCorner(i) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ActionButton(
+                            "REC",
+                            scheme,
+                            enabled = padName != null && !recording,
+                            dimmed = !(gestureArmed || recording),
+                            modifier = Modifier.weight(1f).semantics { selected = gestureArmed || recording },
+                        ) { armGesture() }
+                        val kept = settings.gesture
+                        TapeText(
+                            when {
+                                recording -> "RECORDING %.1f OF %d BARS".format(java.util.Locale.ROOT, recordingBars.coerceIn(0f, gestureLength.toFloat()), gestureLength)
+                                gestureArmed -> "ARMED. TOUCH THE PAD FOR ${PrintLength.label(gestureLength)}"
+                                kept != null -> "GESTURE ${PrintLength.label(kept.bars)} · ${kept.points} POINTS"
+                                else -> "NO GESTURE. REC, THEN TOUCH THE PAD"
+                            },
+                            TapeType.pixel,
+                            scheme.ink.tape,
+                            Modifier.weight(2.2f).padding(horizontal = 4.dp),
+                        )
+                        ActionButton("CLEAR", scheme, enabled = settings.gesture != null && !recording, modifier = Modifier.weight(1f)) { clearGesture() }
+                    }
                 }
-                // KEY, on the row about what the sound under the finger
-                // is held to: lit while the loop's pitch snaps to the key
-                // (see toggleKeySnap), dimmed while it slides as recorded.
-                ActionButton(
-                    "KEY",
-                    scheme,
-                    enabled = padName != null,
-                    dimmed = !settings.keySnap,
-                    modifier = Modifier.weight(1f).semantics { selected = settings.keySnap },
-                ) { toggleKeySnap() }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // ARM A..D: picks which corner PRESET ◄ ► targets - see armedCorner.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                for (i in 0 until 4) {
-                    ActionButton(
-                        "ARM ${'A' + i}",
-                        scheme,
-                        enabled = padName != null,
-                        dimmed = armedCorner != i,
-                        // A mutually-exclusive row, same as the mode row
-                        // above - TalkBack otherwise has no way to tell
-                        // which corner is armed or when it changes
-                        // (Copilot review, PR #195).
-                        modifier = Modifier.weight(1f).semantics { selected = armedCorner == i },
-                    ) { armedCorner = if (armedCorner == i) null else i }
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // PRESET ◄ ►: design/surface-vector's LBP+/ECHO+/ECHO-/LBP-
-            // idea (plus CRUSH+/-/GLITCH+/-/SPRING+/-), a named library
-            // stepped onto the armed corner - see SurfaceStore.Corner.
-            // LIBRARY and the class doc.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                val armed = armedCorner
-                ActionButton("◄ PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
-                TapeText(
-                    armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "◄ ► TO STEP" } ?: "ARM A CORNER",
-                    TapeType.pixel,
-                    scheme.ink.tape,
-                    Modifier.weight(1.2f).padding(horizontal = 4.dp),
-                )
-                ActionButton("PRESET ►", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
             }
 
             Spacer(Modifier.height(8.dp))

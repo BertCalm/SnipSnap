@@ -1190,6 +1190,104 @@ TEST(surface_engine_echo_repeats_specifically_after_the_fixed_delay_time) {
     CHECK(peakIndex < 10560 + 1500);
 }
 
+// Where a fully wet ECHO's repeat of a short blip lands, in samples after
+// the release - the search surface_engine_echo_repeats_specifically_after_
+// the_fixed_delay_time does, as a function of the time asked for, so the
+// synced times can be checked against the same yardstick.
+static size_t echoRepeatAt(float seconds, size_t renderSamples) {
+    SurfaceEngine e(kRate);
+    e.setEchoTime(seconds);
+    std::vector<float> tone(200, 0.9f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    for (int i = 0; i < 10; ++i) callback(e, 64);
+    ControlFrame off = on;
+    off.gate = false;
+    e.pushControl(off);
+    std::vector<float> elapsed;
+    while (elapsed.size() < renderSamples) {
+        auto chunk = callback(e, 64);
+        for (size_t i = 0; i < chunk.size(); i += 2) elapsed.push_back(chunk[i]);
+    }
+    size_t peakIndex = 1500;
+    float peakValue = 0.0f;
+    for (size_t i = 1500; i < elapsed.size(); ++i) {
+        if (std::fabs(elapsed[i]) > peakValue) { peakValue = std::fabs(elapsed[i]); peakIndex = i; }
+    }
+    CHECK(peakValue > 0.01f);
+    return peakIndex;
+}
+
+TEST(surface_engine_echo_time_moves_the_repeat_to_the_time_asked_for) {
+    // A tenth of a second is 4800 samples at kRate: the repeat lands there,
+    // not at the free 10560. The ±1500 window is the fixed-time test's own.
+    const size_t at = echoRepeatAt(0.1f, 12000);
+    CHECK(at > 4800 - 1500);
+    CHECK(at < 4800 + 1500);
+    // A quarter of a bar at 120 BPM (0.5 s) - the sort of time EchoTime in
+    // :shell hands over - lands at 24000.
+    const size_t quarter = echoRepeatAt(0.5f, 30000);
+    CHECK(quarter > 24000 - 1500);
+    CHECK(quarter < 24000 + 1500);
+}
+
+TEST(surface_engine_echo_time_that_is_not_a_time_is_the_free_time) {
+    // Zero, negative, NaN and more than the line holds are all the 220 ms
+    // ECHO always had - a kit asking for the impossible keeps its echo.
+    for (float bad : {0.0f, -1.0f, std::nanf(""), SurfaceEngine::kMaxEchoSeconds * 1.5f}) {
+        const size_t at = echoRepeatAt(bad, 16000);
+        CHECK(at > 10560 - 1500);
+        CHECK(at < 10560 + 1500);
+    }
+    // And the ceiling itself is honoured: six seconds is 288000 samples.
+    const size_t ceiling = static_cast<size_t>(SurfaceEngine::kMaxEchoSeconds * kRate);
+    const size_t longest = echoRepeatAt(SurfaceEngine::kMaxEchoSeconds, ceiling + 12000);
+    CHECK(longest > ceiling - 1500);
+    CHECK(longest < ceiling + 1500);
+}
+
+TEST(surface_engine_echo_time_change_crossfades_rather_than_cutting) {
+    // A steady tone through a fully wet echo, then the time changed under
+    // it: the output's largest sample-to-sample step after the change is
+    // no larger than the tone's own, because the old tap fades into the
+    // new over kEchoFadeMs. A hard cut between two taps of a sine at
+    // different phases would step by up to the whole amplitude at once.
+    SurfaceEngine e(kRate);
+    e.setEchoTime(0.1f);
+    const auto tone = measure::sine(100.0f, kRate, kRate);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    auto maxStep = [&](int callbacks) {
+        float worst = 0.0f;
+        float last = 0.0f;
+        bool have = false;
+        for (int i = 0; i < callbacks; ++i) {
+            for (float v : measure::left(callback(e, 64))) {
+                if (have) worst = std::max(worst, std::fabs(v - last));
+                last = v;
+                have = true;
+            }
+        }
+        return worst;
+    };
+    maxStep(750);                       // a second: the gain open, the line full of repeats
+    const float steady = maxStep(225);  // 0.3 s of steady state
+    e.setEchoTime(0.15f);
+    const float changed = maxStep(375); // 0.5 s spanning the change and its fade
+    CHECK(steady > 1e-4f);              // there is a tone to measure
+    CHECK(changed < steady * 1.5f);
+}
+
 TEST(surface_engine_spring_rings_a_tail_and_only_when_wet) {
     // Exactly ECHO's own transparency test, above, but for the reverb:
     // once the gate is fully closed, anything still audible can only be

@@ -53,6 +53,7 @@ void Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong, jfloa
 void Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong, jint, jint, jfloat);
 void Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong, jboolean);
 void Java_com_snipsnap_app_NativeSurface_setSwarm(JNIEnv*, jobject, jlong, jint, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setEchoTime(JNIEnv*, jobject, jlong, jfloat);
 void Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv*, jobject, jlong, jfloatArray);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
@@ -489,6 +490,43 @@ TEST(jni_surface_grain_knobs_and_key_cross_the_bridge_in_order) {
     const double b4 = 440.0 * std::exp2(2.0 / 12.0);
     CHECK_NEAR(heard, b4, b4 * 0.01);
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_echo_time_crosses_the_bridge) {
+    // setEchoTime is a jfloat in seconds: a tenth of a second through the
+    // bridge lands a fully wet echo's repeat of a blip at 4800 samples,
+    // not at the free 10560 (the engine test's own yardstick, ±1500).
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+    std::vector<float> tone(200, 0.9f);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(tone), 48000, 0);
+    Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    Java_com_snipsnap_app_NativeSurface_setEchoTime(e, nullptr, h, 0.1f);
+    Java_com_snipsnap_app_NativeSurface_control(
+        e, nullptr, h, 2,
+        0.5f, 0.5f, 0.0f, 0.5f,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+    for (int i = 0; i < 10; ++i) pull(surf, 64);
+    Java_com_snipsnap_app_NativeSurface_control(
+        e, nullptr, h, 2,
+        0.5f, 0.5f, 0.0f, 0.5f,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, JNI_FALSE);
+    std::vector<float> mono;
+    while (mono.size() < 12000) {
+        for (float v : measure::left(pull(surf, 64))) mono.push_back(v);
+    }
+    size_t peakIndex = 1500;
+    float peakValue = 0.0f;
+    for (size_t i = 1500; i < mono.size(); ++i) {
+        if (std::fabs(mono[i]) > peakValue) { peakValue = std::fabs(mono[i]); peakIndex = i; }
+    }
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+    CHECK(peakValue > 0.01f);
+    CHECK(peakIndex > 4800 - 1500);
+    CHECK(peakIndex < 4800 + 1500);
 }
 
 TEST(jni_surface_key_snap_crosses_the_bridge) {

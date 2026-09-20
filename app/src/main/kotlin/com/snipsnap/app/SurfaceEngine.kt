@@ -150,6 +150,16 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) NativeSurface.setKeySnap(handle, on)
     }
 
+    /**
+     * ECHO's time in seconds - a division of the kit's bar from
+     * [com.snipsnap.shell.EchoTime], or null for FREE, the engine's own
+     * fixed time. The engine never learns a tempo; only the seconds cross.
+     */
+    @Synchronized
+    fun setEchoTime(seconds: Float?) {
+        if (open) NativeSurface.setEchoTime(handle, seconds ?: 0f)
+    }
+
     /** SWARM: the loop thickened into a detuned unison - see [SurfaceStore.Swarm]; one voice is the plain loop, sample for sample. */
     @Synchronized
     fun setSwarm(swarm: SurfaceStore.Swarm) {

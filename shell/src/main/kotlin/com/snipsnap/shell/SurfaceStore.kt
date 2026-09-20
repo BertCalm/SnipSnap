@@ -227,9 +227,12 @@ object SurfaceStore {
         val swarm: Swarm = Swarm.DEFAULT,
         /** The kit's recorded finger ([Gesture]), or none; a MOD slot on SHAPE GESTURE plays it. */
         val gesture: Gesture? = null,
+        /** ECHO's time as an index into [EchoTime.DIVISIONS]; FREE - the engine's own fixed time - until the ECHO button is tapped. */
+        val echoTime: Int = EchoTime.FREE_INDEX,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
+            require(echoTime in EchoTime.DIVISIONS.indices) { "ECHO's time is an index into EchoTime.DIVISIONS (0..${EchoTime.DIVISIONS.lastIndex}), got $echoTime" }
             require(mods.size == Modulator.SLOTS) { "${Modulator.SLOTS} modulator slots, got ${mods.size}" }
             padSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
             secondPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
@@ -286,6 +289,7 @@ object SurfaceStore {
                 },
             ),
             "keySnap" to JsonValue.Bool(s.keySnap),
+            "echoTime" to JsonValue.Num(s.echoTime.toDouble()),
             "swarm" to JsonValue.Obj(
                 linkedMapOf(
                     "voices" to JsonValue.Num(s.swarm.voices.toDouble()),
@@ -382,6 +386,10 @@ object SurfaceStore {
         // Absent is a file from before KEY: off. Present, it is a boolean or
         // the file is torn - the same rule as every field above.
         val keySnap = obj["keySnap"]?.bool() ?: false
+        // Absent is a file from before ECHO had a clock: FREE. Present, it
+        // is a whole number or the file is torn; Settings' own door holds
+        // it to the divisions there are.
+        val echoTime = obj["echoTime"]?.int() ?: EchoTime.FREE_INDEX
         // The grain rule once more: absent is a file from before SWARM,
         // present has to be whole and in range (Swarm's own init refuses).
         val swarm = obj["swarm"]?.let { w ->
@@ -400,6 +408,6 @@ object SurfaceStore {
             val ys = o["y"]?.arr()?.map { it.num().toFloat() }?.toFloatArray() ?: throw JsonException("gesture has no y")
             Gesture(bars, xs, ys)
         }
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm, gesture = gesture)
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm, gesture = gesture, echoTime = echoTime)
     }
 }

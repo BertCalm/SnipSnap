@@ -452,6 +452,41 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `ECHO's time round-trips, a file from before it loads free, and a torn or out-of-range one is refused`() {
+        val eighth = EchoTime.DIVISIONS.indexOf(EchoTime.Division(1, 8))
+        SurfaceStore.save(temp, Settings(padSlot = 1, echoTime = eighth))
+        assertEquals(eighth, SurfaceStore.load(temp).echoTime)
+        assertEquals(EchoTime.FREE_INDEX, Settings.DEFAULT.echoTime, "a fresh kit echoes as it always did")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(EchoTime.FREE_INDEX, SurfaceStore.load(temp).echoTime, "a file from before ECHO had a clock is free")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"echoTime":"eighth","corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"echoTime":${EchoTime.DIVISIONS.size},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.load(temp) }
+    }
+
+    @Test
     fun `SWARM round-trips, a file from before it loads as one voice, and a torn or out-of-range one is refused`() {
         val swarm = SurfaceStore.Swarm(voices = 3, detune = 0.4f)
         SurfaceStore.save(temp, Settings(padSlot = 1, swarm = swarm))

@@ -122,7 +122,11 @@ logcat tag to grab when something is wrong.
   and watch logcat's `SurfaceEngine` line: "exclusive openStream
   failed - trying shared" means the device refused the exclusive
   path and the shared fallback is playing (the toast says so too).
-  Then PAD ◄ ► through the kit, find a sound in XYZ, SET A, three more,
+  The controls above the pad are three panels behind a strip under the
+  mode row - VOICE, SHAPE, MOD - one showing at a time; every row named
+  below is on one of them, and the pad should be visibly taller than it
+  was with every row stacked. Then, on VOICE, PAD ◄ ► through the kit,
+  find a sound in XYZ, SET A on SHAPE, three more,
   switch to MORPH and morph; leave the screen and come back - the
   corners and the pad are in `surface.json` beside the kit. Then flip
   the print destination to → PAD: STOP PRINT opens the slot chooser;
@@ -193,13 +197,21 @@ logcat tag to grab when something is wrong.
   and every corner from stages 4b/5/6 stay untouched (no spring) - the
   whole pad should sound exactly as before this stage existed until a
   corner actually carries a nonzero spring.
-  Then KEY, on the SET row: with a pitched pad and a kit in a key, XY
+  Then KEY, on SHAPE's SET row: with a pitched pad and a kit in a key, XY
   with KEY off should slide the pitch smoothly across the pad; KEY on
   (lit, and the readout now names the key) should step through the
   key's notes instead, holding each until the next - the same notes
   GRAIN's pitch axis lands on. A kit with no key should step semitones.
-  Leave and come back: KEY is in `surface.json`. Then SWARM, the row
-  under PAD in every mode but GRAIN: VOICES ► to 2 and DETUNE at 15%
+  Leave and come back: KEY is in `surface.json`. Then ECHO, beside KEY:
+  with a corner whose echo is up (ECHO + from PRESET, or a MOD slot on
+  ECHO) and a kit with a tempo, ECHO FREE should repeat every 220 ms as
+  it always has; tap it to 1/8 and the repeats should land on eighth
+  notes of the kit's tempo, 1/4 on quarters, 3/16 the dotted-eighth
+  bounce every delay pedal has; each tap should switch between the two
+  times cleanly - no warble, no click. Leave and come back: ECHO's time
+  is in `surface.json`. Six buttons on the SET row now - check it fits
+  at 390dp. Then SWARM, SHAPE's first row
+  in every mode but GRAIN: VOICES ► to 2 and DETUNE at 15%
   should thicken the loop into a chorus that slowly beats; DETUNE up to
   100% is a quarter tone either way and beats fast; VOICES at 3 or 4 is
   a swarm; DETUNE at 0% with 3 voices is just louder (a coherent
@@ -207,8 +219,8 @@ logcat tag to grab when something is wrong.
   the row existed, at any DETUNE. A tap restarts every voice from the
   head, so a swarm blooms out of a clean attack. Leave and come back:
   SWARM is in `surface.json`. Then GRAIN, a fifth
-  mode: tap it and a SIZE/DENSITY/SPRAY row appears
-  under PAD ◄ ►. A held finger should give a cloud of short grains rather
+  mode: tap it and a SIZE/DENSITY/SPRAY row takes SWARM's place
+  on SHAPE. A held finger should give a cloud of short grains rather
   than the loop - sliding left and right scrubs *where* in the pad's
   sample they come from (POSITION), and sliding up and down steps the
   pitch through the kit's key, in discrete notes, never a glide (the
@@ -229,7 +241,7 @@ logcat tag to grab when something is wrong.
   pad and the corners. The host harness proves the arithmetic
   (`grain_*` and `surface_engine_grain_*` in `test/engine_tests.cpp`,
   the bridge in `jni_tests.cpp`); what it cannot prove is how it feels.
-  Then MOD, the modulators: on the MOD row (any mode), with MOD A showing
+  Then MOD, the modulators: on the MOD panel (any mode), with MOD A showing
   and the field button reading TARGET, ◄ ► should walk through the seven
   macros and then SIZE/DENSITY/SPRAY/POSITION; tap the field button to
   DEPTH and ► up to 40% or so with CUTOFF as the target and SINE the
@@ -271,7 +283,7 @@ logcat tag to grab when something is wrong.
   Back at DEPTH 0% the surface should sound exactly as before the MOD
   row existed. Five buttons and a readout on one row is the densest line on
   this screen - check it fits at 390dp.
-  Then RING, the capture ring as a voice: with nothing listening, a tap
+  Then RING, the capture ring as a voice, on VOICE: with nothing listening, a tap
   on RING should name both doors on SHELF (LISTEN · MIC, APP AUDIO) and
   load nothing. LISTEN · MIC on SHELF, talk or clap for a few seconds,
   back to SURFACE, RING: the toast says how many seconds of the mic it

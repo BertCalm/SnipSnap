@@ -5,13 +5,18 @@ local.properties
 .idea/
 .DS_Store
 .kotlin/
-# Claude Code's per-checkout state stays out of the repo, with one
-# exception: .claude/skills/ holds skills written *for* this repo and
-# shared with everyone working in it. A directory that is excluded is
-# never descended into, so the contents have to be excluded rather than
-# the directory itself for the negation below to be reachable.
+# Claude Code's per-checkout state stays out of the repo, with three
+# exceptions written *for* this repo and shared with everyone working in
+# it: .claude/skills/ (the skills), .claude/hooks/ (the SessionStart hook
+# that warms the build in a cloud session) and .claude/settings.json (the
+# project settings that register it). settings.local.json and the rest
+# stay personal. A directory that is excluded is never descended into, so
+# the contents have to be excluded rather than the directory itself for
+# the negations below to be reachable.
 .claude/*
 !.claude/skills/
+!.claude/hooks/
+!.claude/settings.json
 .superpowers/
 
 # The native build tree of :app (CMake/NDK intermediates).
