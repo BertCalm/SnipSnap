@@ -255,28 +255,41 @@ class VelvetTest {
         // setting - FAT stopped doing anything. Deleting `asked` from
         // Velvet.detuneFor's maxOf left every OTHER test in this file
         // green, which is exactly how that got past round 1: nothing
-        // asserted the macro's own contribution survives the floor. This
-        // does, against the real production function, not a
-        // reimplementation of its formula.
+        // asserted the macro's own contribution survives the floor.
         //
-        // The 1.002f threshold guards the PROPERTY - the floor must never
-        // swallow the macro - not the current cycles=0.25f value. BASS at
-        // its factory DECAY is the tightest of the four voices (see
-        // Velvet.detuneFor's KDoc: it's the canary, lowest voice, floor
-        // binds hardest there); its floor only fully swallows FAT's range
-        // once cycles >= ~0.4651. 1.002f leaves room to retune cycles up
-        // to ~0.39 without breaking this test, while still failing hard at
-        // 0.465 and beyond (and at the old 0.5, 1.0, 1.5).
-        for (voice in listOf(VelvetVoice.BASS, VelvetVoice.BRASS)) {
-            val defaults = Velvet.defaults(voice)
-            val base = Velvet.frequencyFor(voice, defaults.getValue("TUNE"))
-            val t60 = Dsp.expMap(defaults.getValue("DECAY"), 0.15f, 0.9f)
-            val atZero = Velvet.detuneFor(base, fat = 0f, t60 = t60)
-            val atOne = Velvet.detuneFor(base, fat = 1f, t60 = t60)
-            assertTrue(
-                atOne > atZero * 1.002f,
-                "$voice: FAT=1 ($atOne) should meaningfully out-detune FAT=0 ($atZero) at its factory DECAY",
-            )
+        // Round 2 fixed that with `coerceAtMost(askedHi)`, which only
+        // guarantees the OUTPUT never exceeds askedHi - not that FAT keeps
+        // any authority over it. Testing only factory DECAY on BASS/BRASS
+        // hid the gap: at TUNE=0, DECAY=0 on BASS (both ordinary settings)
+        // the floor clamped to exactly askedHi and swallowed FAT whole,
+        // same on SQUELCH, with BRASS/CHIP partially compressed - and
+        // every one of those corners sits outside what this test used to
+        // check. So this sweeps DECAY x TUNE corners {0, 0.5, 1} x
+        // {0, 0.5, 1} across all four voices - 36 corners - against the
+        // real production function, not a reimplementation of its formula.
+        //
+        // Velvet.MIN_AUTHORITY_RATIO is the invariant this asserts, and
+        // it's the SAME constant the fix's clamp uses
+        // (askedHi / MIN_AUTHORITY_RATIO) - so the test and the code
+        // cannot drift apart the way askedHi and a hand-typed 1.002f did
+        // last time. BASS/SQUELCH at TUNE=0, DECAY=0 bind the clamp
+        // exactly, landing on a ratio of precisely MIN_AUTHORITY_RATIO -
+        // that corner is the guarantee itself, not headroom above it, so
+        // the comparison is >= with a hair of float slack, not a strict >.
+        for (voice in VelvetVoice.entries) {
+            for (tune in listOf(0f, 0.5f, 1f)) {
+                for (decay in listOf(0f, 0.5f, 1f)) {
+                    val base = Velvet.frequencyFor(voice, tune)
+                    val t60 = Dsp.expMap(decay, 0.15f, 0.9f)
+                    val atZero = Velvet.detuneFor(base, fat = 0f, t60 = t60)
+                    val atOne = Velvet.detuneFor(base, fat = 1f, t60 = t60)
+                    assertTrue(
+                        atOne >= atZero * Velvet.MIN_AUTHORITY_RATIO - 1e-4f,
+                        "$voice TUNE=$tune DECAY=$decay: FAT=1 ($atOne) should out-detune FAT=0 " +
+                            "($atZero) by at least ${Velvet.MIN_AUTHORITY_RATIO}x, got ${atOne / atZero}",
+                    )
+                }
+            }
         }
     }
 

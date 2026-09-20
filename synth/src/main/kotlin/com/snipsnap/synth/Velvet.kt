@@ -122,28 +122,54 @@ object Velvet {
         if (phase - Math.floor(phase) < width) 1f else -1f
 
     /**
+     * The floor's own ceiling is not "never exceed [askedHi]" -
+     * `coerceAtMost(askedHi)` alone guarantees that and nothing more, which
+     * is exactly the bug this constant fixes: at BASS/SQUELCH TUNE=0
+     * DECAY=0 (ordinary settings, not edge cases) the uncapped floor came
+     * out to ~1.02165, got clamped to precisely [askedHi], and then
+     * `maxOf(asked, floor)` returned [askedHi] for every value of FAT -
+     * the knob was inert, and `coerceAtMost(askedHi)` alone can never
+     * catch this because "output never exceeds the ceiling" and "the
+     * macro retains authority over its own range" are different
+     * properties. This constant IS the second property, made explicit:
+     * the floor may rise no higher than `askedHi / MIN_AUTHORITY_RATIO`,
+     * so `asked` (which reaches exactly [askedHi] at FAT=1) is
+     * guaranteed to out-detune the floor's own ceiling by at least this
+     * ratio - FAT always has at least this much room to move, at every
+     * voice, TUNE, and DECAY. The regression test in VelvetTest sweeps
+     * DECAY x TUNE corners across all four voices and asserts against
+     * this exact same constant, so the clamp and the test cannot drift
+     * apart the way `askedHi` and a hand-typed `1.002f` did the first
+     * time around.
+     */
+    internal const val MIN_AUTHORITY_RATIO = 1.002f
+
+    /**
      * FAT's actual detune ratio for a note of fundamental [baseHz], macro
      * value [fat], and [t60] decay. [Dsp.minBeatDetune] raises a too-slow
-     * beat toward audibility, but it is clamped to the macro's own ceiling
-     * ([askedHi]) here: completing even a fraction of a beat cycle inside
-     * a short bass note already takes more detune than FAT is ever allowed
-     * to ask for on its own, and beyond that ceiling it reads as an
-     * out-of-tune interval, not width. The floor can lift FAT's bottom; it
-     * must never be able to override FAT's top.
+     * beat toward audibility, but it is clamped here so the macro keeps
+     * [MIN_AUTHORITY_RATIO] of headroom over the floor: completing even a
+     * fraction of a beat cycle inside a short bass note already takes more
+     * detune than FAT is ever allowed to ask for on its own, and beyond
+     * that ceiling it reads as an out-of-tune interval, not width. The
+     * floor can lift FAT's bottom; it must never be able to swallow FAT's
+     * top.
      *
      * BASS is the canary for this: it's the lowest voice, so the same
-     * [Dsp.minBeatDetune] floor sits closest to [askedHi] there of all four
-     * VELVET voices (low baseHz means a given `cycles` needs proportionally
-     * more detune to cover). At its factory DECAY, BASS's floor only fully
-     * swallows FAT's own range around `cycles >= ~0.465` - see the
-     * regression test in VelvetTest for the exact number. If `cycles` ever
-     * moves, BASS is where the macro goes quiet first.
+     * [Dsp.minBeatDetune] floor sits closest to its own cap there of all
+     * four VELVET voices (low baseHz means a given `cycles` needs
+     * proportionally more detune to cover). At TUNE=0, DECAY=0 - BASS's
+     * tightest corner - the floor's clamp binds exactly, and FAT's
+     * authority ratio comes out to precisely [MIN_AUTHORITY_RATIO]: the
+     * guarantee, not headroom above it. See VelvetTest's swept regression
+     * for the full per-voice table.
      */
     internal fun detuneFor(baseHz: Float, fat: Float, t60: Float): Float {
         val askedLo = 1.0005f
         val askedHi = 1.012f
         val asked = Dsp.lin(fat, askedLo, askedHi)
-        val floor = Dsp.minBeatDetune(baseHz = baseHz, seconds = t60 * 1.4f).coerceAtMost(askedHi)
+        val floor = Dsp.minBeatDetune(baseHz = baseHz, seconds = t60 * 1.4f)
+            .coerceAtMost(askedHi / MIN_AUTHORITY_RATIO)
         return maxOf(asked, floor)
     }
 
