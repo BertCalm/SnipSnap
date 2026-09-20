@@ -138,8 +138,29 @@ class ExportWizardModel(
                 ?.takeIf { format == ExportFormat.EXPANSION || format == ExportFormat.XPN }
                 ?.let { KitArt.png(kit, kitDir, it) }
             val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)
+            // The expansion's own paper, the same pair `snipsnap export`
+            // has always put there (`Inserts`). Until this, the CLI wrote
+            // them and the phone did not, so a kit that went to the card
+            // from a laptop carried its liner notes and the same kit sent
+            // from the phone arrived with nothing saying where it came
+            // from — which is the half of the persona review's P4.4 that
+            // reaches the person actually holding the MPC.
+            //
+            // Inside the same `try`, so an insert that cannot be written
+            // is a failed dub rather than a quiet omission — the rest of
+            // this method refuses in words and so does this.
+            //
+            // After READ BACK, though, and that ordering is deliberate:
+            // READ BACK re-reads the export through X-Ray and diffs it
+            // against the kit, and what it is checking is the program.
+            // The inserts are paper. Writing them into the folder first
+            // would put two files the verifier never asked about inside
+            // the thing it verifies, and its own failure mode is a FAIL
+            // row rather than a throw — so it would have degraded quietly.
+            val verified = outcome.copy(readBack = readBack(outcome))
+            if (format == ExportFormat.EXPANSION) Inserts.write(kit, kitDir, outcome.primary)
             stage = Stage.COMPLETE
-            WriteResult.Done(outcome.copy(readBack = readBack(outcome)))
+            WriteResult.Done(verified)
         } catch (e: ExportBlockedException) {
             stage = Stage.READY
             WriteResult.Blocked(e.findings)
