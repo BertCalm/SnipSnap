@@ -124,7 +124,14 @@ class SurfaceScreenTest {
         return Regex("""Z (\d+\.\d+)""").find(state)?.groupValues?.get(1)?.toFloat()
     }
 
-    /** The text is drawn whole: no ellipsis, nothing past the edge of its button. */
+    /**
+     * The text is drawn whole, on one line, with no ellipsis. Every label
+     * here is a single line that ellipsises when it does not fit, so the
+     * ellipsis is the whole question. `didOverflowWidth` is not asked: the
+     * layout the semantics hand back is measured at the button's width,
+     * not the text's, and answers yes for any label narrower than its
+     * button - "XY" first of all.
+     */
     private fun assertReadsInFull(text: String) {
         val node = compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode("nothing on screen reads \"$text\"")
         val action = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action
@@ -132,8 +139,8 @@ class SurfaceScreenTest {
         val results = mutableListOf<TextLayoutResult>()
         assertTrue(action!!.invoke(results))
         val layout = results.single()
+        assertEquals("\"$text\" is more than one line at $PHONE_WIDTH_DP dp", 1, layout.lineCount)
         assertFalse("\"$text\" is cut short with an ellipsis at $PHONE_WIDTH_DP dp", layout.isLineEllipsized(0))
-        assertFalse("\"$text\" runs past its button at $PHONE_WIDTH_DP dp", layout.didOverflowWidth)
     }
 
     @Test
