@@ -239,6 +239,37 @@ class ModesTest {
     }
 
     @Test
+    fun `WOOD_MARIMBA's Nyquist ceiling is the lowest of any material, and low enough to matter`() {
+        // A real physical ceiling, not a bug: 1:4:10 grows faster than any
+        // other table, so WOOD_MARIMBA's extrapolated top slot is the first
+        // to cross Nyquist as the fundamental rises - documented in
+        // resample()'s KDoc as ~619 Hz, which is D#5, an entirely ordinary
+        // pitch for a struck one-shot. Pinned on DIRECTION (still the
+        // outlier, still low enough to be reachable) rather than an exact
+        // frequency, so a legitimate future tweak to the extrapolation
+        // curve, the slot count, or the table doesn't require touching a
+        // magic number here - but a change that quietly stops WOOD_MARIMBA
+        // being the outlier, or pushes its ceiling comfortably out of
+        // playable range, should fail this and force the KDoc table to be
+        // re-checked instead of going stale.
+        val nyquist = Dsp.RATE / 2f
+        val ceilings = Modes.Material.entries.associateWith { material ->
+            nyquist / Modes.resample(material, slots = 6).last().ratio
+        }
+        val marimba = ceilings.getValue(Modes.Material.WOOD_MARIMBA)
+        val others = ceilings.filterKeys { it != Modes.Material.WOOD_MARIMBA }.values
+        assertTrue(
+            marimba < others.min(),
+            "WOOD_MARIMBA should have the lowest Nyquist ceiling of any material: $ceilings",
+        )
+        assertTrue(
+            marimba < 1000f,
+            "WOOD_MARIMBA's ceiling should sit at an ordinary percussion pitch, not somewhere " +
+                "safely out of reach: ${marimba}Hz",
+        )
+    }
+
+    @Test
     fun `morphing between different bodies actually changes the spectrum`() {
         // Reachability, checked PER SLOT: a maxOf across all six slots would
         // pass if only one sourced slot moved and every extrapolated slot

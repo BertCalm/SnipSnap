@@ -218,6 +218,33 @@ internal object Modes {
      * 5-partial membrane is structural, not an amplitude gap, and
      * crossfading real partials against silence would thin the sound
      * halfway through a sweep.
+     *
+     * **High-fundamental ceiling, at 6 slots and [Dsp.RATE] (44.1 kHz,
+     * Nyquist 22.05 kHz).** `ring()` skips a mode once its frequency clears
+     * Nyquist rather than aliasing it (see `ring`'s KDoc), so above these
+     * fundamentals the affected slot(s) simply stop sounding — the body
+     * thins by losing its top partial(s), not by artifacting. Recomputed
+     * directly from this function's own output, not copied from a review:
+     *
+     * ```
+     * Material        Fundamental above which a slot is lost
+     * WOOD_MARIMBA    ~619 Hz (slot 6), ~806 Hz (slot 5 too)
+     * METAL_BAR       ~1282 Hz (slot 6)
+     * WOOD_XYLO       ~1513 Hz (slot 6)
+     * MEMBRANE        ~5948 Hz (slot 6)
+     * BELL            ~8269 Hz (slot 6)
+     * ```
+     *
+     * WOOD_MARIMBA is the outlier by roughly 2x, because 1:4:10 grows
+     * faster than any other table and its extrapolated slots reach Nyquist
+     * soonest. ~619 Hz is D#5 — an entirely ordinary pitch for a struck
+     * one-shot, not a theoretical edge case, so a small high marimba WILL
+     * render with a thinner top end than the same body played lower.
+     *
+     * Adaptive slot count (fewer slots at high fundamentals, so the top
+     * never gets silently amputated) is deliberately deferred to whichever
+     * Phase 1B engine adopts this bank and can make that call with a real
+     * voice's CPU and pitch range in view — not guessed at here.
      */
     internal fun resample(material: Material, slots: Int): List<Mode> {
         val sourced = tableFor(material)
