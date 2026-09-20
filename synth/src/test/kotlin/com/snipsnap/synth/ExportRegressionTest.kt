@@ -26,16 +26,27 @@ import kotlin.test.assertTrue
  * docs/MPC_EXPORT.md states.
  *
  * Why this exists now: docs/SYNTH_UPGRADE.md's U4 (Stereo) is next, and it
- * is the first time any engine will return `channels = 2`. Nothing
- * upstream of this test would fail if a voice did that today — [KitPad],
- * [com.snipsnap.xpm.Pad] and [com.snipsnap.xpm.DrumProgram] carry no
- * channel field at all, and `XpmWriter`'s per-instrument `<Mono>` is a
- * hardcoded literal, never read from the sample it describes. The channel
- * check below reads the WAV that's actually on disk and cross-checks it
- * against what the program declares, which is the one thing that would
- * catch that regression on the day it lands — see `channel count the
- * program declares matches the pad on disk` for what "declares" means
- * today and why.
+ * is the first time any engine will return `channels = 2`.
+ *
+ * **Correction to an earlier reading of this test.** `XpmWriter`'s
+ * per-instrument and program-level `<Mono>` (`XpmWriter.kt:114` and `:159`)
+ * is not a channel count — it is the monophonic-versus-polyphonic
+ * voice-allocation flag, sitting among `Pitch`, `TuneCoarse`, `TuneFine`,
+ * `Polyphony` (docs/XPM_STRUCTURE.md's program-level params cluster). The
+ * corpus confirms it: `Bass-TAB Deep Resonance.xpm` also carries
+ * `<MonoRetrigger>` beside `<Mono>` at program level — "retrigger" is a
+ * note concept, not a channel one — and its instrument declares
+ * `Mono=False`/`Polyphony=0` (polyphonic bass) where the drum kit declares
+ * `Mono=True`/`Polyphony=1` per pad (one voice per drum hit), independent
+ * of what's in either WAV. Nothing in this codebase reads `<Mono>` back
+ * on import, so it cannot desync from a sample's channel count in a way
+ * that matters. [KitPad], [com.snipsnap.xpm.Pad] and
+ * [com.snipsnap.xpm.DrumProgram] carry no channel field because the
+ * program file doesn't need one — the MPC reads channel count from the
+ * WAV's own `fmt` chunk, same as every vendor pack in `reference/golden/`.
+ * The real, still-live invariant is docs/MPC_EXPORT.md's format
+ * constraint — every exported WAV is mono or stereo, nothing wider — which
+ * is what `every exported WAV has 1 or 2 channels` below checks.
  *
  * Five pads, not sixteen: enough engines to be a real spread (THUMP twice —
  * KICK and the just-rebuilt modal SNARE — plus PLUCK, VELVET and TONEWHEEL,
@@ -104,43 +115,31 @@ class ExportRegressionTest {
         }
     }
 
-    // ---------- invariant 2: channel count the program declares matches the pad on disk ----------
+    // ---------- invariant 2: channel count ----------
 
     /**
-     * The regression this whole test exists to catch. Today every voice
-     * renders `channels = 1` and `XpmWriter` hardcodes `<Mono>True</Mono>`
-     * on every instrument, so this holds trivially - but it holds by
-     * construction of the *test*, not by anything upstream enforcing it.
-     * If U4 lands a stereo voice without also teaching `XpmWriter` to read
-     * the sample it is describing, this is the assertion that goes red:
-     * the WAV on disk will say `channels = 2`, the program will still say
-     * `<Mono>True</Mono>`, and a mismatch here is exactly what plays back
-     * wrong (or not at all) on a device with no console to explain why.
+     * The real format constraint from docs/MPC_EXPORT.md: every exported
+     * WAV is mono or stereo, nothing wider. `Preflight` already fails a
+     * >2-channel sample before export (`Preflight.kt:85`); this confirms
+     * the invariant still holds on what actually lands on disk, past the
+     * full render -> level -> FX -> write path, not just at the preflight
+     * check that runs before it.
+     *
+     * This is not a cross-check against the program's `<Mono>` declaration
+     * — that element is monophonic-versus-polyphonic voice allocation, not
+     * a channel count, and nothing reads it back on import. See the class
+     * KDoc above for how an earlier version of this test got that wrong.
+     * Every occupied pad's samples are checked here, velocity-layer WAVs
+     * included, not just one WAV per pad.
      */
     @Test
-    fun `channel count is 1 or 2, and the program's declaration matches the WAV on disk`() {
+    fun `every exported WAV has 1 or 2 channels`() {
         val result = exportedKit()
-        val instruments = parseInstruments(result.program)
-        assertTrue(instruments.isNotEmpty(), "the program parsed but has no instruments")
-
-        val byStem = result.samples.associateBy { it.nameWithoutExtension }
-        var checked = 0
-        for (inst in instruments) {
-            val layer = inst.layers.firstOrNull { it.sampleName.isNotBlank() } ?: continue
-            val wav = byStem.getValue(layer.sampleName)
+        assertTrue(result.samples.isNotEmpty(), "nothing was exported")
+        for (wav in result.samples) {
             val info = WavInfo.read(wav)
-
             assertTrue(info.channels == 1 || info.channels == 2, "${wav.name} has ${info.channels} channels")
-            val declaredMono = inst.mono
-            val actuallyMono = info.channels == 1
-            assertEquals(
-                actuallyMono,
-                declaredMono,
-                "instrument ${inst.number}: <Mono>$declaredMono</Mono> but ${wav.name} on disk has ${info.channels} channel(s)",
-            )
-            checked++
         }
-        assertEquals(5, checked, "expected to check all 5 occupied pads")
     }
 
     // ---------- invariant 3: frame counts agree ----------
@@ -213,7 +212,7 @@ class ExportRegressionTest {
     // ---------- shared: parse the .xpm back into the fields this test needs ----------
 
     private data class ParsedLayer(val sampleName: String, val sliceEnd: Long)
-    private data class ParsedInstrument(val number: Int, val mono: Boolean, val layers: List<ParsedLayer>)
+    private data class ParsedInstrument(val number: Int, val layers: List<ParsedLayer>)
 
     /**
      * Parses `.xpm` XML with the same hardened, DOCTYPE-refusing factory
@@ -230,14 +229,13 @@ class ExportRegressionTest {
         val instrumentEls = elements(doc.documentElement, "Instrument")
         return instrumentEls.map { inst ->
             val number = inst.getAttribute("number").trim().toInt()
-            val mono = directText(inst, "Mono")?.trim() == "True"
             val layers = elements(inst, "Layer").map { layer ->
                 ParsedLayer(
                     sampleName = firstText(layer, "SampleName")?.trim().orEmpty(),
                     sliceEnd = firstText(layer, "SliceEnd")?.trim()?.toLongOrNull() ?: 0L,
                 )
             }
-            ParsedInstrument(number, mono, layers)
+            ParsedInstrument(number, layers)
         }
     }
 
@@ -248,14 +246,4 @@ class ExportRegressionTest {
 
     private fun firstText(parent: Element, tag: String): String? =
         (parent.getElementsByTagName(tag).item(0) as? Element)?.textContent
-
-    /** Text of a **direct** child, so an instrument's own `<Mono>` is never confused with a nested one. */
-    private fun directText(parent: Element, tag: String): String? {
-        val kids = parent.childNodes
-        for (i in 0 until kids.length) {
-            val n = kids.item(i)
-            if (n is Element && n.tagName == tag) return n.textContent
-        }
-        return null
-    }
 }
