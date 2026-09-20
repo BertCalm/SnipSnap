@@ -41,6 +41,7 @@ object Patches {
             VelvetPatch.ENGINE -> VelvetPatch.fromJsonValue(value)
             FathomPatch.ENGINE -> FathomPatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
+            SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
@@ -206,6 +207,67 @@ data class VoxPatch(
             Patches.decode(value, ENGINE, { n -> VoxVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 VoxPatch(name, voice, macros)
             }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/**
+ * A saved SNAP sound: the line read off a photo, as its own 256 numbers,
+ * plus the knobs. The photo itself is not kept — the table is the part of
+ * it that sounds, and it is small enough to live in `kit.json` beside
+ * every other recipe. The one patch with a field beyond the common four,
+ * so it writes and reads that field itself around [Patches]' shared shape.
+ */
+class SnapPatch(
+    override val name: String,
+    val voice: SnapVoice,
+    override val macros: Map<String, Float>,
+    /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them. */
+    val table: IntArray,
+) : Patch {
+    init {
+        Patches.validateMacros(this, Snap.macrosFor(voice))
+        require(table.size == Snap.TABLE_SIZE) { "a SNAP table has ${Snap.TABLE_SIZE} points, got ${table.size}" }
+        for ((i, v) in table.withIndex()) require(v in 0..255) { "table[$i] is not a brightness 0..255: $v" }
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Snap.render(table, macros)
+
+    override fun toJsonValue(): JsonValue.Obj {
+        val base = Patches.toJsonValue(this)
+        val obj = LinkedHashMap(base.entries)
+        obj["table"] = JsonValue.Arr(table.map { JsonValue.Num(it.toDouble()) })
+        return JsonValue.Obj(obj)
+    }
+
+    fun copy(
+        name: String = this.name,
+        voice: SnapVoice = this.voice,
+        macros: Map<String, Float> = this.macros,
+        table: IntArray = this.table,
+    ): SnapPatch = SnapPatch(name, voice, macros, table)
+
+    // Not a data class: an array member would compare by identity there,
+    // and a recipe round-trip test has to compare the numbers.
+    override fun equals(other: Any?): Boolean =
+        other is SnapPatch && name == other.name && voice == other.voice &&
+            macros == other.macros && table.contentEquals(other.table)
+
+    override fun hashCode(): Int = ((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + table.contentHashCode()
+
+    override fun toString(): String = "SnapPatch(name=$name, voice=$voice, macros=$macros, table=[${table.size} points])"
+
+    companion object {
+        const val ENGINE = "SNAP"
+        fun fromJsonValue(value: JsonValue): Patch {
+            val raw = value.obj()["table"] ?: throw JsonException("SNAP patch has no table")
+            val table = IntArray(raw.arr().size) { raw.arr()[it].int() }
+            return Patches.decode(value, ENGINE, { n -> SnapVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                SnapPatch(name, voice, macros, table)
+            }
+        }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }
 }

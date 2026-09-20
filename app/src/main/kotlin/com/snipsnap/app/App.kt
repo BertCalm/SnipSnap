@@ -77,6 +77,7 @@ import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
 import com.snipsnap.app.ui.SplitScreen
 import com.snipsnap.app.ui.StatusBar
+import com.snipsnap.app.ui.SnapScreen
 import com.snipsnap.app.ui.SurfaceScreen
 import com.snipsnap.app.ui.SynthScreen
 import com.snipsnap.app.ui.TakesBinScreen
@@ -3088,6 +3089,24 @@ fun App(shelf: KitShelf) {
                             },
                             onExit = { screen = AppScreen.KIT },
                         )
+                        AppScreen.SNAP -> {
+                            // Same identity guard as SYNTH above: a SEND TO PAD
+                            // write that outlives this screen lands on the kit
+                            // that was open when it started, not whichever is
+                            // open when it finishes.
+                            val snapEntry = open
+                            SnapScreen(
+                                entry = snapEntry,
+                                onToast = { toast = it },
+                                onKitUpdated = { updatedKit ->
+                                    if (open?.dir == snapEntry?.dir) open = open?.copy(kit = updatedKit)
+                                    scope.launch {
+                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                    }
+                                },
+                                appScope = scope,
+                            )
+                        }
                         AppScreen.SURFACE -> SurfaceScreen(
                             entry = open,
                             onToast = { toast = it },

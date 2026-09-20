@@ -93,6 +93,8 @@ enum class AppScreen(val label: String) {
     SYNTH("SYNTH"),
     /** The tactile pad: macros under a finger, PRINT to resample the gesture onto TAPE. */
     SURFACE("SURFACE"),
+    /** A photo becomes a pad: the camera's line read as a wavetable, its colours as the knobs. */
+    SNAP("SNAP"),
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
@@ -274,6 +276,7 @@ val MENU_GROUPS = listOf(
         MenuItem("ORBIT", AppScreen.ORBIT),
         MenuItem("SYNTH", AppScreen.SYNTH),
         MenuItem("SURFACE", AppScreen.SURFACE),
+        MenuItem("SNAP", AppScreen.SNAP),
     ),
     // Not about a sound at all.
     listOf(

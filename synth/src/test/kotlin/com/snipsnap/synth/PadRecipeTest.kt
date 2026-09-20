@@ -29,6 +29,7 @@ class PadRecipeTest {
         PluckPatch("Nylon Test", PluckVoice.NYLON, mapOf("DAMP" to 0.2f)),
         TonewheelPatch("Stab Test", TonewheelVoice.STAB, mapOf("BAR8" to 1f)),
         VelvetPatch("Acid Test", VelvetVoice.SQUELCH, mapOf("SQUEEZE" to 0.9f)),
+        SnapPatch("Photo Test", SnapVoice.ORBIT, mapOf("GRIT" to 0.4f), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
     )
 
     @Test
