@@ -56,6 +56,26 @@ internal object Modes {
      * avoid, just relocated rather than removed. Leaving `g` as plain
      * [Mode.gain] keeps onset level flat (<1.2x drift end to end) and lets
      * t60 govern only how long the ring lasts, which is what DAMP should do.
+     *
+     * That same closed form has a second hazard, orthogonal to the one
+     * above and NOT fixed by anything here: peak amplitude also carries a
+     * `1/sin(theta)` term, and `theta = 2*pi*hz/rate` shrinks both as `hz`
+     * falls and as `rate` rises — so a low-fundamental mode rings far
+     * louder than a high one for the identical [Mode.gain], and rendering
+     * at an oversampled rate compounds it further: a 4x-oversampled engine
+     * sees roughly 4x the `1/sin(theta)` a 1x engine would at the same
+     * pitch. Measured, not estimated: at SNARE's ~180 Hz fundamental
+     * rendered at THUMP's 4x-oversampled 176,400 Hz, `1/sin(theta)` for the
+     * fundamental mode alone is ~156, and a bare bank render came out
+     * ~250x louder than the snare's non-modal wire layer before either was
+     * gain-staged. This is not something [ring] should correct — a fixed
+     * per-call fudge factor would be wrong at every other pitch and rate —
+     * it is a property of the resonator every caller mixing this output
+     * against a non-modal layer (noise, a sample, another synthesis path)
+     * needs to plan for: peak-normalize (or otherwise scale) the modal
+     * output before balancing it against anything else. `Thump.snare`'s
+     * `bodyPeak` normalization, right after its `Modes.ring` call, is a
+     * worked example.
      */
     fun ring(
         excitation: FloatArray,
