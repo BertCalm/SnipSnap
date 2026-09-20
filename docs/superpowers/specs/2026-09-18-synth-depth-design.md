@@ -317,6 +317,25 @@ pumped or partially collapsed downstream by dynamics that never see it as one
 image. Phase 1 owes a rack audit: which of the sixteen sections process
 channels independently, and which must be linked once stereo content exists.
 
+> **Prerequisite found 2026-09-20, before SPACE was built.** An end-to-end
+> export regression test (`ExportRegressionTest`, `:synth` test sources) found
+> that **`XpmWriter` hardcodes the channel count**: `XpmWriter.kt:114` and
+> `:159` write the Mono element as string literals, and `Pad`
+> (`DrumProgram.kt:105`) has no channel field at all — it carries
+> `sampleName`, `frameCount`, `level`, `pan`, `tuneCoarse` and nothing about
+> channels.
+>
+> Harmless today, because every engine returns `channels = 1` and the literal
+> happens to be right. The moment a voice emits stereo, the program would
+> declare mono over a stereo WAV and an MPC would refuse the file or play it
+> wrong — on a device the user cannot debug, while the app itself sounds
+> correct and the golden test stays green, since that fixture is hand-built
+> and never touches a synth engine.
+>
+> **So threading a channel count through `Pad` and `DrumProgram` is a
+> prerequisite of SPACE, not a follow-up.** It is a schema change to the
+> export layer and wants doing deliberately rather than mid-rollout.
+
 Per-voice opt-in. Kick and sub stay mono; hats, bells, pads, VOX and TONEWHEEL
 take width. WAV size doubles only where it buys something.
 
