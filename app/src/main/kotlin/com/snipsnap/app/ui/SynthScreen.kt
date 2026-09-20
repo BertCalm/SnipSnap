@@ -3,13 +3,16 @@ package com.snipsnap.app.ui
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +25,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -63,6 +68,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeVoice
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -76,6 +82,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
@@ -239,9 +246,15 @@ fun SynthScreen(
     // this build cannot read lists nothing here, and its save refuses in
     // words rather than writing over it (UserPresets.save's own rule).
     var userPresets by remember { mutableStateOf<List<UserPresets.Saved>>(emptyList()) }
+    // FORGET → BIN, and the bin it waits in (the WS5 follow-up): read
+    // beside the strip, since a held chip and DELETED PRESETS both need
+    // it, and refreshed with the strip after every move.
+    var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
     LaunchedEffect(Unit) {
         try {
-            userPresets = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) }
+            val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+            userPresets = live
+            binnedPresets = bin
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -250,6 +263,65 @@ fun SynthScreen(
     }
     var namingPreset by remember { mutableStateOf(false) }
     var saveBusy by remember { mutableStateOf(false) }
+    // The chip being held, while its FORGET slip asks; the bin's door; and
+    // one busy flag for both moves, so a second tap never races the file.
+    var forgetTarget by remember { mutableStateOf<Patch?>(null) }
+    var binOpen by remember { mutableStateOf(false) }
+    var binBusy by remember { mutableStateOf(false) }
+    fun forgetPreset(patch: Patch) {
+        if (binBusy) return
+        binBusy = true
+        // The strip the chip was held on, captured now: the highlight there
+        // must not keep naming a chip that is gone, whatever voice is
+        // showing by the time the write lands.
+        val held = engine to voice
+        appScope.launch {
+            try {
+                val gone = withContext(Dispatchers.IO) {
+                    UserPresets.forget(shelfRoot, patch.engine, patch.voiceName, patch.name, System.currentTimeMillis())
+                }
+                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                userPresets = live
+                binnedPresets = bin
+                if (gone == null) {
+                    // A row that outran the tap: nothing by that name was there.
+                    onToast(Copy.BIN_ITEM_GONE)
+                } else {
+                    if (currentPresetByVoice[held] == patch.name) currentPresetByVoice.remove(held)
+                    onToast(Copy.presetForgotten(gone.saved.name))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "forgetPreset: failed", e)
+                onToast(Copy.PRESET_FORGET_FAILED)
+            } finally {
+                binBusy = false
+            }
+        }
+    }
+    fun restorePreset(binned: UserPresets.Binned) {
+        if (binBusy) return
+        binBusy = true
+        appScope.launch {
+            try {
+                val back = withContext(Dispatchers.IO) { UserPresets.unforget(shelfRoot, binned) }
+                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                userPresets = live
+                binnedPresets = bin
+                // The name it actually landed under — a clash with a preset
+                // saved since may have freshened it — never the row's own.
+                onToast(if (back == null) Copy.BIN_ITEM_GONE else Copy.presetRestored(back.name))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "restorePreset: failed", e)
+                onToast(Copy.PRESET_RESTORE_FAILED)
+            } finally {
+                binBusy = false
+            }
+        }
+    }
     fun savePreset(check: UserPresets.Check) {
         val name = when (check) {
             is UserPresets.Check.Fresh -> check.name
@@ -497,7 +569,22 @@ fun SynthScreen(
                     current = currentPresetByVoice[engine to voice],
                     scheme = scheme,
                     onSelect = ::loadPreset,
+                    onHold = { forgetTarget = it },
                 )
+                // The door back, gated on the bin holding something, the way
+                // the shelf's DELETED KITS row is: never a door onto an empty
+                // room. Every engine's bin, not only this voice's — a preset
+                // forgotten on SNARE is found from KICK.
+                if (binnedPresets.isNotEmpty()) {
+                    LabButton(
+                        "DELETED PRESETS ▸ ${binnedPresets.size} WAITING",
+                        scheme,
+                        enabled = !binBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        binOpen = true
+                    }
+                }
 
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -587,8 +674,193 @@ fun SynthScreen(
             )
             BackHandler(onBack = cancelNaming)
         }
+
+        forgetTarget?.let { target ->
+            val cancelForget = { forgetTarget = null }
+            PresetForgetDialog(
+                name = target.name,
+                scheme = scheme,
+                onCancel = cancelForget,
+                onForget = {
+                    forgetTarget = null
+                    forgetPreset(target)
+                },
+            )
+            BackHandler(onBack = cancelForget)
+        }
+
+        if (binOpen) {
+            // Same self-guarded close as the chooser's CANCEL: a move in
+            // flight makes both no-ops, and the handler stays registered.
+            val closeBin = { if (!binBusy) binOpen = false }
+            DeletedPresetsOverlay(
+                binned = binnedPresets,
+                scheme = scheme,
+                busy = binBusy,
+                onRestore = ::restorePreset,
+                onClose = closeBin,
+            )
+            BackHandler(onBack = closeBin)
+        }
     }
 }
+
+// ---------- FORGET → BIN: the ask, and the bin's door ----------
+
+/**
+ * A held YOURS chip asks before anything moves — `KitDeleteConfirmDialog`'s
+ * shape, its line [Copy.presetForgetAsk]: what goes, where it waits, for how
+ * long. CANCEL beside FORGET → BIN in the bin's red, the same dress every
+ * delete in the app wears.
+ */
+@Composable
+private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Unit, onForget: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL — a bare gesture detector, which registers
+                // no semantics node (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(Copy.presetForgetAsk(name), TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
+                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .tapeClick(label = "FORGET $name", onClick = onForget)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("FORGET → BIN", TapeType.pixel, BinRedGlow)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * DELETED PRESETS: the bin's own listing, `DeletedKitsScreen`'s shape as an
+ * overlay of this screen (the `SlotChooserOverlay` frame): one row per
+ * forgotten preset — its name, its engine and voice, when it went, the days
+ * it has left (the last two in `warn`, as every bin counts down) — and
+ * RESTORE. No EMPTY THE BIN NOW, unlike the bins that hold WAVs and kits:
+ * a preset is a few hundred bytes, so nothing is bought by emptying early,
+ * and every site that cannot be undone is one `ReversalTest` counts. The
+ * sweep takes each row when its days run out.
+ */
+@Composable
+private fun DeletedPresetsOverlay(
+    binned: List<UserPresets.Binned>,
+    scheme: Scheme,
+    busy: Boolean,
+    onRestore: (UserPresets.Binned) -> Unit,
+    onClose: () -> Unit,
+) {
+    // The same catch-all for touch the chooser uses, and for the same
+    // reason: a tap in a gap must not reach the strip underneath.
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TapeText("DELETED PRESETS", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
+                TapeText("${binned.size}", TapeType.lcdSmall, scheme.amber.tape)
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12); the name
+                        // stays put through the "…" swap, as the chooser's does.
+                        .tapeClick(label = "BACK TO SYNTH", enabled = !busy, onClick = onClose)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(if (busy) "…" else "◄ SYNTH", TapeType.pixel, scheme.amber.tape)
+                }
+            }
+            if (binned.isEmpty()) {
+                // The last RESTORE empties the list under the reader; the
+                // door itself is gone by the time this closes.
+                Box(Modifier.fillMaxWidth().weight(1f).padding(14.dp), contentAlignment = Alignment.Center) {
+                    TapeText(Copy.NOTHING_DELETED, TapeType.lcdSmall, scheme.lcdInk.tape)
+                }
+            } else {
+                LazyColumn(
+                    Modifier.fillMaxWidth().weight(1f).sunkenField(scheme).padding(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    // A name forgotten twice is two rows; the stamp tells them apart.
+                    items(binned, key = { "${it.saved.engine}/${it.saved.voice}/${it.saved.name}/${it.binnedAt}" }) { row ->
+                        BinnedPresetRow(row, scheme, busy, onRestore = { onRestore(row) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boolean, onRestore: () -> Unit) {
+    val now = System.currentTimeMillis()
+    val daysLeft = row.daysLeft(now)
+    // ≤2 days left renders in `scheme.warn`, the threshold every other bin's row uses.
+    val dayColor = if (daysLeft <= 2) scheme.warn.tape else scheme.amber.tape
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
+            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(5.dp))
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            TapeText(row.saved.name, TapeType.marker, scheme.ink.tape, maxLines = 1)
+            TapeText(
+                "${row.saved.engine} · ${row.saved.voice.replace('_', ' ')} · ${Ages.ago(row.binnedAt, now)}",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+        }
+        TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = "RESTORE ${row.saved.name}", enabled = !busy, onClick = onRestore)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("RESTORE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+        }
+    }
+}
+
+// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsScreen.kt`'s
+// own `BIN_RED_BORDER`, deliberately constant across every scheme so a
+// delete reads as "red" even in a scheme with no red anywhere else in it.
+private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 // ---------- SAVE AS PRESET: the name ----------
 
@@ -668,7 +940,7 @@ private fun PresetNameDialog(
                     modifier = Modifier.fillMaxWidth().focusRequester(focus),
                 )
             }
-            TapeText(caption, TapeType.pixelSmall, captionColor, maxLines = 3)
+            TapeText(caption, TapeType.pixelSmall, captionColor, maxLines = 4)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 ActionButton(
@@ -1001,21 +1273,33 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
  * never claims a name for a sound that no longer matches it.
  */
 @Composable
-private fun PresetList(engine: Engine, voice: Enum<*>, yours: List<Patch>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
+private fun PresetList(
+    engine: Engine,
+    voice: Enum<*>,
+    yours: List<Patch>,
+    current: String?,
+    scheme: Scheme,
+    onSelect: (Patch) -> Unit,
+    onHold: (Patch) -> Unit,
+) {
     val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
     PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
     // The player's own, under the factory row (docs/WORKSHOP.md, WS5):
     // a second strip that exists only once this voice has one, with the
     // same chips and the same highlight rule, and YOURS in the slider
-    // label column below it so the two rows read as two rows.
-    PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect)
+    // label column below it so the two rows read as two rows. A hold on
+    // one of these asks to forget it; the factory's chips have no hold.
+    PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
 }
 
 /**
  * One horizontally-scrolling strip of preset chips inside a [sunkenField];
  * nothing at all when [presets] is empty. [label] is the column word to its
- * left, or none; [spoken] prefixes each chip's accessible name.
+ * left, or none; [spoken] prefixes each chip's accessible name. With
+ * [onHold], a long press on a chip is the FORGET gesture (the rooms row's
+ * own hold), and the tap still loads.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PresetStrip(
     engine: Engine,
@@ -1026,6 +1310,7 @@ private fun PresetStrip(
     label: String?,
     spoken: String,
     onSelect: (Patch) -> Unit,
+    onHold: ((Patch) -> Unit)? = null,
 ) {
     if (presets.isEmpty()) return
     // Keyed on (engine, voice), not the plain `rememberScrollState()` every
@@ -1056,7 +1341,23 @@ private fun PresetStrip(
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                         .semantics { this.selected = selected }
-                        .tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
+                        .let { chip ->
+                            if (onHold == null) {
+                                chip.tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
+                            } else {
+                                // A plain tap/long-press with no drag —
+                                // combinedClickable registers both as real
+                                // accessibility actions (KitsScreen's RoomRow).
+                                chip.combinedClickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClickLabel = "$spoken ${p.name}",
+                                    onLongClickLabel = "FORGET ${p.name}",
+                                    onLongClick = { onHold(p) },
+                                    onClick = { onSelect(p) },
+                                )
+                            }
+                        }
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {

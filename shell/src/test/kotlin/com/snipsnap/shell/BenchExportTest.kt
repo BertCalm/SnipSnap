@@ -146,6 +146,10 @@ class BenchExportTest {
             kitWithLog(root, "Break Kit", listOf(kick))
             val mine = com.snipsnap.synth.ThumpPatch("MY KICK", com.snipsnap.synth.ThumpVoice.KICK, linkedMapOf("TUNE" to 0.34f, "SWEEP" to 0.45f))
             UserPresets.save(root, mine, 1L)
+            // A forgotten preset is in the file but not on the strip, so it
+            // rides in the zip and stays out of the roster lines.
+            UserPresets.save(root, com.snipsnap.synth.ThumpPatch("OLD KICK", com.snipsnap.synth.ThumpVoice.KICK, emptyMap()), 2L)
+            UserPresets.forget(root, "THUMP", "KICK", "OLD KICK", 3L)
             val result = BenchExport.pack(root, File(root, "out"), "2026-09-20 0930")
             assertEquals(listOf(UserPresets.Saved(mine, 1L)), result.presets)
             val inside = entries(result.file)
@@ -155,6 +159,8 @@ class BenchExportTest {
             assertTrue("1 label (1 correction, 0 confirmations) and 0 cut ratings from 1 kit. 0 bench notes. 1 saved preset." in manifest, manifest)
             assertTrue("saved presets, as roster lines for ${UserPresets.ROSTER_DIR}" in manifest, manifest)
             assertTrue("ThumpPresets.kt\n  p(ThumpVoice.KICK, \"MY KICK\", \"TUNE\" to 0.34f, \"SWEEP\" to 0.45f),\n" in manifest, manifest)
+            assertFalse("OLD KICK" in manifest, "a binned preset is not a roster line: $manifest")
+            assertTrue("OLD KICK" in inside.getValue(BenchExport.PRESETS_NAME), "but the file carries it, bin and all")
             assertTrue("PresetsTest judges it" in manifest, "the manifest names the judge: $manifest")
             assertTrue(File("../" + UserPresets.ROSTER_DIR).isDirectory, "the folder the manifest names exists")
         } finally {

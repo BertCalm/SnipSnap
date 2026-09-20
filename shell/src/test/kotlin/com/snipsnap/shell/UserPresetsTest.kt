@@ -169,6 +169,105 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `forget moves a preset to the bin, restore brings it back, and a save in between carries the bin`() {
+        val root = shelf()
+        try {
+            UserPresets.save(root, wrecked, 1L)
+            UserPresets.save(root, snare, 2L)
+            assertEquals(null, UserPresets.forget(root, "THUMP", "KICK", "NOT MINE", 5L), "nothing by that name is there to forget")
+            val binned = UserPresets.forget(root, "THUMP", "KICK", "MY KICK", 5L)
+            assertEquals(UserPresets.Binned(UserPresets.Saved(wrecked, 1L), 5L), binned)
+            assertEquals(listOf(UserPresets.Saved(snare, 2L)), UserPresets.read(root), "off the strip")
+            assertEquals(listOf(binned), UserPresets.bin(root), "and in the bin")
+            assertEquals(null, UserPresets.forget(root, "THUMP", "KICK", "MY KICK", 6L), "forgotten once is forgotten")
+            // A save while it sleeps must not lose it: the bin rides every write.
+            val clap = ThumpPatch("CLAP 1", ThumpVoice.CLAP, Thump.defaults(ThumpVoice.CLAP))
+            UserPresets.save(root, clap, 7L)
+            assertEquals(listOf(binned), UserPresets.bin(root))
+            val back = UserPresets.unforget(root, binned!!)
+            assertEquals(UserPresets.Saved(wrecked, 1L), back, "back under its own name, with its own savedAt")
+            assertEquals(listOf(UserPresets.Saved(snare, 2L), UserPresets.Saved(clap, 7L), back), UserPresets.read(root), "at the end of the strip")
+            assertEquals(emptyList(), UserPresets.bin(root))
+            assertEquals(null, UserPresets.unforget(root, binned), "a row that outran the tap restores nothing")
+            assertFalse("\"binned\"" in UserPresets.file(root).readText(), "an empty bin is not written")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a forgotten name can be saved again, and the restore then lands under a fresh name that fits`() {
+        val root = shelf()
+        try {
+            UserPresets.save(root, wrecked, 1L)
+            val binned = UserPresets.forget(root, "THUMP", "KICK", "MY KICK", 2L)!!
+            val newer = ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK))
+            UserPresets.save(root, newer, 3L)
+            val back = UserPresets.unforget(root, binned)!!
+            assertEquals("MY KICK 2", back.name, "the newer one keeps the name; the restored one is freshened")
+            assertEquals(wrecked.macros, back.patch.macros, "and is still the sound that was forgotten")
+            assertEquals(ThumpVoice.KICK, (back.patch as ThumpPatch).voice)
+            assertEquals(listOf("MY KICK", "MY KICK 2"), UserPresets.forVoice(UserPresets.read(root), "THUMP", "KICK").map { it.name })
+            // The fresh name fits the strip's rule even when the base fills it.
+            val long = "FOURTEEN LETTE"
+            assertEquals(UserPresets.MAX_NAME, long.length)
+            assertEquals("FOURTEEN LET 2", UserPresets.freshName(long) { it == long })
+            assertEquals("FOURTEEN LET 3", UserPresets.freshName(long) { it == long || it == "FOURTEEN LET 2" })
+            assertEquals("MY KICK", UserPresets.freshName("MY KICK") { false })
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `the bin sweeps at the boundary, and the readout counts down to agree`() {
+        val root = shelf()
+        try {
+            val day = 24L * 60 * 60 * 1000
+            UserPresets.save(root, wrecked, 1L)
+            UserPresets.save(root, snare, 2L)
+            val old = UserPresets.forget(root, "THUMP", "KICK", "MY KICK", 10L)!!
+            val young = UserPresets.forget(root, "THUMP", "SNARE", "MY KICK", 10L + 5 * day)!!
+            assertEquals(UserPresets.BIN_DAYS, old.daysLeft(10L))
+            assertEquals(1, old.daysLeft(10L + UserPresets.BIN_DAYS * day - 1), "a partial day still reads 1")
+            assertEquals(0, old.daysLeft(10L + UserPresets.BIN_DAYS * day), "0 exactly where the sweep goes")
+            assertEquals(0, old.daysLeft(10L + 40 * day), "never below zero")
+            assertEquals(0, UserPresets.sweepBin(root, 10L + UserPresets.BIN_DAYS * day - 1), "not yet")
+            assertEquals(1, UserPresets.sweepBin(root, 10L + UserPresets.BIN_DAYS * day), "the old one goes at the boundary")
+            assertEquals(listOf(young), UserPresets.bin(root))
+            assertEquals(0, UserPresets.sweepBin(root, 10L + UserPresets.BIN_DAYS * day), "and nothing is written for nothing")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a file from before the bin reads as an empty bin, and a binned entry this build cannot read is let go`() {
+        val root = shelf()
+        try {
+            val file = UserPresets.file(root)
+            val patch = wrecked.toJsonText().replace("\n", "")
+            file.writeText("{\"version\": 1, \"presets\": [{\"savedAt\": 1, \"patch\": $patch}]}")
+            assertEquals(listOf(UserPresets.Saved(wrecked, 1L)), UserPresets.read(root))
+            assertEquals(emptyList(), UserPresets.bin(root))
+            file.writeText("{\"version\": 1, \"presets\": [], \"binned\": [{\"savedAt\": 1, \"binnedAt\": 2, \"patch\": {\"engine\": \"FUTURE\"}}]}")
+            assertEquals(emptyList(), UserPresets.bin(root), "not this build's to keep")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `the forget lines ask first, then say where it went and how it comes back`() {
+        assertEquals("FORGET MY KICK? IT WAITS IN DELETED PRESETS FOR ${Reversal.DAYS} DAYS.", Copy.presetForgetAsk("MY KICK"))
+        assertEquals("MY KICK IS OFF THE STRIP. ${Reversal.MIND}", Copy.presetForgotten("MY KICK"))
+        assertEquals("MY KICK 2 IS BACK UNDER YOURS.", Copy.presetRestored("MY KICK 2"))
+        assertTrue("HOLD ITS CHIP TO FORGET IT" in Copy.PRESET_NAME_NOTE, "the save note says how a preset leaves: ${Copy.PRESET_NAME_NOTE}")
+        assertTrue(Reversal.BIN in Copy.PRESET_NAME_NOTE, "and for how long the bin keeps it")
+        assertTrue("STAYS" in Copy.PRESET_FORGET_FAILED && "BIN" in Copy.PRESET_RESTORE_FAILED)
+    }
+
+    @Test
     fun `the copy lines say what happened and what is not kept`() {
         assertEquals("MY KICK SAVED. IT IS UNDER THE FACTORY ROW ON EVERY KIT.", Copy.presetSaved("MY KICK"))
         assertEquals("MY KICK REPLACED. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaced("MY KICK"))

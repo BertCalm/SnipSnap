@@ -649,8 +649,13 @@ object Copy {
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
     // ---- SYNTH: SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
-    /** Under the name field: the one rule with a number in it, and where the preset will show. Reads the limit off the store, so the rule has one home. */
-    val PRESET_NAME_NOTE: String = "UP TO ${UserPresets.MAX_NAME} LETTERS. IT LISTS UNDER THE FACTORY ROW FOR THIS VOICE, ON EVERY KIT."
+    /**
+     * Under the name field: the one rule with a number in it, where the
+     * preset will show, and how it leaves again — the moment a sound is
+     * kept is the moment to learn how to let it go. Reads the limit off the
+     * store and the bin's days off [Reversal], so each rule has one home.
+     */
+    val PRESET_NAME_NOTE: String = "UP TO ${UserPresets.MAX_NAME} LETTERS. IT LISTS UNDER THE FACTORY ROW FOR THIS VOICE, ON EVERY KIT. HOLD ITS CHIP TO FORGET IT. ${Reversal.BIN}"
     /** The field is blank: SAVE is dim and this says why. */
     const val PRESET_NAME_BLANK = "A PRESET NEEDS A NAME."
     /** The typed name is one the factory ships on this voice: a chip must never mean two things. */
@@ -663,6 +668,18 @@ object Copy {
     fun presetReplaced(name: String): String = "$name REPLACED. THE OLD SETTINGS ARE NOT KEPT."
     /** The write threw; the file is as it was. */
     const val PRESET_SAVE_FAILED = "THE PRESET DID NOT SAVE. TRY AGAIN."
+
+    // ---- SYNTH: FORGET a preset, and the bin it waits in ----
+    /** Holding one of your chips asks before anything moves: what goes, where it waits, and for how long. Nothing has happened when this shows. */
+    fun presetForgetAsk(name: String): String = "FORGET $name? IT WAITS IN DELETED PRESETS FOR ${Reversal.DAYS} DAYS."
+    /** FORGET → BIN landed: off the YOURS strip and into the bin, with the days every bin promises. */
+    fun presetForgotten(name: String): String = "$name IS OFF THE STRIP. ${Reversal.MIND}"
+    /** RESTORE on a binned preset: back under YOURS, under [name] — the name it actually landed under, which a clash may have freshened. */
+    fun presetRestored(name: String): String = "$name IS BACK UNDER YOURS."
+    /** The forget threw; the preset is where it was. */
+    const val PRESET_FORGET_FAILED = "FORGET FAILED. THE PRESET STAYS IN YOUR STRIP."
+    /** The restore threw; the preset is where it was. */
+    const val PRESET_RESTORE_FAILED = "RESTORE FAILED. IT IS STILL IN THE BIN."
 
     // ---- SNAP: a photo lands on a pad ----
     /**

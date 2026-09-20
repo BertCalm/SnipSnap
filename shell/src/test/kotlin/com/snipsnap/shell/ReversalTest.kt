@@ -514,6 +514,9 @@ class ReversalTest {
         assertEquals(promised, KitBuilderModel.BIN_KEEP_DAYS, 0.0, "kit takes bin")
         assertEquals(promised, SnipStore.BIN_DAYS, 0.0, "snips bin")
         assertEquals(promised, Rooms.BIN_DAYS.toDouble(), 0.0, "rooms bin")
+        // The fifth, for forgotten presets (docs/WORKSHOP.md, WS5's
+        // follow-up): the same sentence, the same sweep.
+        assertEquals(promised, UserPresets.BIN_DAYS.toDouble(), 0.0, "presets bin")
 
         // The fourth sweeps from `:app`, which `:shell` cannot import, so it is
         // pinned by reading its source - the same way ConventionTest reaches
