@@ -223,6 +223,38 @@ class ModesTest {
     }
 
     @Test
+    fun `striking a node silences that mode`() {
+        val modes = Modes.tableFor(Modes.Material.METAL_BAR)
+        // Mode 2 has a node at position 0.5 — sin(2*pi*0.5) = 0.
+        val atCentre = Modes.atPosition(modes, 0.5f)
+        assertTrue(atCentre[1].gain < modes[1].gain * 0.05f, "mode 2 should be near-silenced at its node")
+        // Mode 1 is at its maximum there.
+        assertTrue(atCentre[0].gain > modes[0].gain * 0.9f, "mode 1 should be near-full at centre")
+    }
+
+    @Test
+    fun `strike position changes the spectrum across its travel`() {
+        // Reachability: STRIKE must do something everywhere it can be set.
+        val modes = Modes.tableFor(Modes.Material.METAL_BAR)
+        val positions = listOf(0.05f, 0.25f, 0.5f, 0.75f, 0.95f)
+        val profiles = positions.map { p -> Modes.atPosition(modes, p).map { it.gain } }
+        for (i in 0 until profiles.size - 1) {
+            val diff = profiles[i].indices.maxOf { abs(profiles[i][it] - profiles[i + 1][it]) }
+            assertTrue(diff > 0.01f, "positions ${positions[i]} and ${positions[i + 1]} give near-identical gains")
+        }
+    }
+
+    @Test
+    fun `strike position never produces negative or non-finite gain`() {
+        val modes = Modes.tableFor(Modes.Material.BELL)
+        for (step in 0..100) {
+            for (m in Modes.atPosition(modes, step / 100f)) {
+                assertTrue(m.gain >= 0f && m.gain.isFinite(), "gain ${m.gain} at position ${step / 100f}")
+            }
+        }
+    }
+
+    @Test
     fun `a mode above Nyquist is skipped, not aliased`() {
         val rate = Dsp.RATE
         val out = Modes.ring(

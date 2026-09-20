@@ -234,4 +234,22 @@ internal object Modes {
             )
         }
     }
+
+    /**
+     * [modes] as excited by a strike at [position] along the body, 0 to 1.
+     *
+     * Hit a bar at the centre and the even modes, which have a node there,
+     * barely sound; hit it near the end and everything wakes up. That is
+     * `|sin(n*pi*position)|` — the mode shape sampled at the striking point —
+     * and it is the cheapest large timbral range in this whole document,
+     * available only because there are individual modes to address.
+     */
+    fun atPosition(modes: List<Mode>, position: Float): List<Mode> {
+        val p = position.coerceIn(0f, 1f)
+        return modes.mapIndexed { i, mode ->
+            val n = i + 1
+            val weight = kotlin.math.abs(kotlin.math.sin(n * Math.PI * p)).toFloat()
+            mode.copy(gain = mode.gain * weight)
+        }
+    }
 }
