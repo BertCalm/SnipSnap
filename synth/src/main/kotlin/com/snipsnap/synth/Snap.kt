@@ -48,7 +48,17 @@ import kotlin.random.Random
  * bounded the way SCRAMBLE's are. The one refusal comes in words — a flat
  * photo ([read]) has no waveform in it.
  */
-enum class SnapVoice { HORIZON, PLUMB, ORBIT }
+/**
+ * Which line the pad's cycle is: three read off a photo, and [DRAWN], the
+ * one a finger drew on the DRAW surface ([Draw]) — no photo behind it,
+ * so [Snap.table] and [Snap.read] refuse it and the screen never asks.
+ */
+enum class SnapVoice {
+    HORIZON, PLUMB, ORBIT, DRAWN;
+
+    /** True for the lines a photo can be read along. */
+    val readsPhoto: Boolean get() = this != DRAWN
+}
 
 object Snap {
 
@@ -256,6 +266,7 @@ object Snap {
      * picture's own. The voice picks the line; see the class doc.
      */
     fun table(photo: Photo, voice: SnapVoice): IntArray {
+        require(voice.readsPhoto) { "a ${voice.name} line is not read off a photo; it is drawn (Draw)" }
         val w = photo.width
         val h = photo.height
         val out = IntArray(TABLE_SIZE)
@@ -278,6 +289,7 @@ object Snap {
                 for (y in y0 until min(y1, h)) for (x in 0 until w) { sum += photo.luminance(x, y); count++ }
                 out[i] = toByte(sum / count)
             }
+            SnapVoice.DRAWN -> error("unreachable: refused above")
             SnapVoice.ORBIT -> {
                 // A ring at a third of the short side, three radii deep so
                 // one stray pixel does not own a sample. Clockwise from
@@ -353,11 +365,31 @@ object Snap {
     }
 
     /**
+     * The level at [x] (0 start, 1 end of the note) of a drawn volume
+     * shape, 0..1, linearly interpolated between its points and held at
+     * the last one. See [Draw.shape].
+     */
+    internal fun envelopeAt(envelope: IntArray, x: Float): Float {
+        val last = envelope.size - 1
+        val pos = (x.coerceIn(0f, 1f) * last)
+        val i = pos.toInt().coerceIn(0, last)
+        val j = min(i + 1, last)
+        val frac = pos - i
+        return (envelope[i] + (envelope[j] - envelope[i]) * frac) / 255f
+    }
+
+    /**
      * The raw synth loop, at whatever [rate] the caller wants — split out of
      * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
      * tested against a native-rate render, like the other engines.
      */
-    internal fun synthesize(table: IntArray, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(
+        table: IntArray,
+        macros: Map<String, Float>,
+        rate: Int,
+        /** A drawn volume shape ([Draw.ENVELOPE_SIZE] points, 0..255) in place of the DECAY exponential; DECAY then sets only the length. */
+        envelope: IntArray? = null,
+    ): FloatArray {
         val m = defaults(SnapVoice.HORIZON).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -382,9 +414,16 @@ object Snap {
         val out = FloatArray((seconds * rate).toInt())
         var phase = 0.0
         val step = freq.toDouble() * n / rate
+        val attack = 0.003f
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            val e = env.at(t)
+            // A drawn shape is stretched over the note's whole length,
+            // under the same 3 ms ramp that keeps a HOLD from clicking on.
+            val e = if (envelope == null) {
+                env.at(t)
+            } else {
+                (t / attack).coerceAtMost(1f) * envelopeAt(envelope, t / seconds)
+            }
             // Linear interpolation into the cycle; the table is small, the
             // oversampled render (U6) is what keeps the top clean.
             val idx = phase.toInt()
@@ -402,14 +441,17 @@ object Snap {
         return out
     }
 
-    fun render(table: IntArray, macros: Map<String, Float> = emptyMap()): Snip {
+    fun render(table: IntArray, macros: Map<String, Float> = emptyMap(), envelope: IntArray? = null): Snip {
         require(table.size == TABLE_SIZE) { "a SNAP table has $TABLE_SIZE points, got ${table.size}" }
+        if (envelope != null) {
+            require(envelope.size == Draw.ENVELOPE_SIZE) { "a drawn shape has ${Draw.ENVELOPE_SIZE} points, got ${envelope.size}" }
+        }
         // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate. This
         // engine has two reasons to: the GRIT drive makes fresh harmonics,
         // and a 256-point table read at 440 Hz has plenty of its own above
         // the audible band.
         val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = synthesize(table, macros, renderRate)
+        val raw = synthesize(table, macros, renderRate, envelope)
         val out = Dsp.decimate(raw, RATE)
         Dsp.normalize(out)
         Dsp.fadeTail(out)

@@ -129,7 +129,16 @@ logcat tag to grab when something is wrong.
   toasts NO CAMERA APP ANSWERED, and a camera app that hands back a
   full-size frame is shrunk to 512 px before reading — a toast saying
   TOO BIG TO READ means even that ran out of memory, which is worth a
-  logcat line.
+  logcat line. Then DRAW: the fourth chip opens the surface on the line
+  that is playing; a finger across the WAVE panel should change the sound
+  as it moves (a fast swipe leaves a line, not dots), SINE should sound
+  clean and SQUARE buzzy, SMOOTH should soften a scribble, and DONE
+  should land back on SNAP with the header reading LINE DRAWN and the
+  DRAW chip SELECTED. On the SHAPE tab, HOLD should ring to the end and
+  SWELL arrive late; DONE with a drawn shape adds SHAPE DRAWN to the
+  header and `kit.json` gains an `envelope` of 64 digits beside the
+  `table`. DONE on a blank WAVE toasts THAT LINE IS FLAT and stays;
+  CANCEL leaves the pad as it was.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

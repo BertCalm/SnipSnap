@@ -681,6 +681,10 @@ object Copy {
      * the screen stays as it was.
      */
     const val SNAP_TOO_BIG = "THAT PHOTO WAS TOO BIG TO READ. NOTHING WAS TAKEN."
+    /** DRAW's DONE on a wave with no swing in it: the same refusal as a flat photo line, said for a pen. */
+    const val SNAP_DRAW_FLAT = "THAT LINE IS FLAT. DRAW SOME UP AND DOWN INTO IT."
+    /** DRAW's DONE on a volume shape that stays at zero the whole way: a pad that would land silent. */
+    const val SNAP_SHAPE_SILENT = "THAT SHAPE NEVER OPENS. DRAW IT UP SOMEWHERE."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
