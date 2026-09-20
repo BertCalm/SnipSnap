@@ -167,8 +167,10 @@ public:
     /**
      * UI thread. SWARM (see SwarmSettings): voices outside 1..kMaxSwarm
      * clamp, a non-finite detune reads as 0. Takes effect within a control
-     * interval; a voice that joins starts from the loop's head on the next
-     * touch-down, like the others.
+     * interval; a voice that joins under a held note starts where voice 0
+     * is, so the swarm is a unison from its first sample rather than two
+     * copies of the loop offset in time until the next touch-down, which
+     * restarts every voice from the head as it always did.
      */
     void setSwarm(const SwarmSettings& settings);
 
@@ -267,11 +269,15 @@ private:
     // as it always was, and with one voice nothing else is ever read.
     double phase_[kMaxSources][kMaxSwarm] = {};
 
-    // SWARM (see setSwarm). The atomics cross from the UI; the audio
-    // thread turns them into per-voice ratio multipliers and one gain
-    // once per kControlInterval, alongside the filter's coefficients.
-    std::atomic<int32_t> swarmVoices_;
-    std::atomic<float> swarmDetune_;
+    // SWARM (see setSwarm) as one 64-bit word - the voice count in the
+    // low byte, DETUNE's float bits in the high 32 - so the audio thread
+    // never turns a new count into multipliers at the old spread. It
+    // turns the word into per-voice ratio multipliers and one gain once
+    // per kControlInterval, alongside the filter's coefficients, and a
+    // voice that joins there takes voice 0's phase (see setSwarm).
+    std::atomic<uint64_t> swarm_;
+    static uint64_t packSwarm(int32_t voices, float detune);
+    static void unpackSwarm(uint64_t word, int32_t& voices, float& detune);
     int32_t swarmVoicesC_ = 1;
     float swarmMult_[kMaxSwarm] = {1.0f, 1.0f, 1.0f, 1.0f};
     float swarmGain_ = 1.0f;
@@ -394,13 +400,18 @@ private:
     std::atomic<float> grainSize_;
     std::atomic<float> grainDensity_;
     std::atomic<float> grainSpray_;
-    std::atomic<int32_t> keyRoot_;
-    std::atomic<uint32_t> keyMask_;
-    std::atomic<float> keySourceMidi_;
+    // The key (see setKey) as one 64-bit word: root in bits 44..47, the
+    // scale mask in 32..43, the source note's float bits in 0..31. One
+    // atomic, not three, so a grain triggered - or the control-rate copy
+    // taken - while setKey is mid-way never sees the new note under the
+    // old root and mask; a 64-bit atomic is lock-free where this runs.
+    std::atomic<uint64_t> key_;
+    static uint64_t packKey(int32_t root, uint32_t mask, float sourceMidi);
+    static void unpackKey(uint64_t word, int32_t& root, uint32_t& mask, float& sourceMidi);
     // KEY for the loop (see setKeySnap). The atomic crosses from the UI;
-    // the audio thread copies it and the key's own three atomics into
-    // plain fields once per kControlInterval, alongside the filter's
-    // coefficients, rather than reading four atomics per sample.
+    // the audio thread copies it and the key's word into plain fields
+    // once per kControlInterval, alongside the filter's coefficients,
+    // rather than reading two atomics per sample.
     std::atomic<bool> keySnapLoop_;
     bool keySnapOn_ = false;
     int32_t keyRootC_ = 0;

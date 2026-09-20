@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #define LOG_TAG "SurfaceEngine"
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
@@ -232,21 +233,46 @@ void SurfaceEngine::setGrain(const GrainSettings& settings) {
     grainSpray_.store(control01(settings.spray, defaults.spray), std::memory_order_relaxed);
 }
 
+uint64_t SurfaceEngine::packKey(int32_t root, uint32_t mask, float sourceMidi) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &sourceMidi, sizeof bits);
+    return (static_cast<uint64_t>(root & 0xF) << 44) | (static_cast<uint64_t>(mask & grain::kChromaticMask) << 32) | bits;
+}
+
+void SurfaceEngine::unpackKey(uint64_t word, int32_t& root, uint32_t& mask, float& sourceMidi) {
+    root = static_cast<int32_t>((word >> 44) & 0xF);
+    mask = static_cast<uint32_t>((word >> 32) & grain::kChromaticMask);
+    const uint32_t bits = static_cast<uint32_t>(word & 0xFFFFFFFFu);
+    std::memcpy(&sourceMidi, &bits, sizeof sourceMidi);
+}
+
 void SurfaceEngine::setKey(const KeySnap& key) {
-    keyRoot_.store(((key.rootSemitone % 12) + 12) % 12, std::memory_order_relaxed);
-    const uint32_t mask = key.scaleMask & grain::kChromaticMask;
-    keyMask_.store(mask == 0u ? grain::kChromaticMask : mask, std::memory_order_relaxed);
-    keySourceMidi_.store(std::isfinite(key.sourceMidi) ? key.sourceMidi : 0.0f, std::memory_order_relaxed);
+    const int32_t root = ((key.rootSemitone % 12) + 12) % 12;
+    const uint32_t masked = key.scaleMask & grain::kChromaticMask;
+    const uint32_t mask = masked == 0u ? grain::kChromaticMask : masked;
+    const float source = std::isfinite(key.sourceMidi) ? key.sourceMidi : 0.0f;
+    key_.store(packKey(root, mask, source), std::memory_order_relaxed);
 }
 
 void SurfaceEngine::setKeySnap(bool on) {
     keySnapLoop_.store(on, std::memory_order_relaxed);
 }
 
+uint64_t SurfaceEngine::packSwarm(int32_t voices, float detune) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &detune, sizeof bits);
+    return (static_cast<uint64_t>(bits) << 32) | static_cast<uint64_t>(voices & 0xFF);
+}
+
+void SurfaceEngine::unpackSwarm(uint64_t word, int32_t& voices, float& detune) {
+    voices = static_cast<int32_t>(word & 0xFF);
+    const uint32_t bits = static_cast<uint32_t>(word >> 32);
+    std::memcpy(&detune, &bits, sizeof detune);
+}
+
 void SurfaceEngine::setSwarm(const SwarmSettings& settings) {
     const int32_t voices = settings.voices < 1 ? 1 : (settings.voices > kMaxSwarm ? kMaxSwarm : settings.voices);
-    swarmVoices_.store(voices, std::memory_order_relaxed);
-    swarmDetune_.store(control01(settings.detune, 0.0f), std::memory_order_relaxed);
+    swarm_.store(packSwarm(voices, control01(settings.detune, 0.0f)), std::memory_order_relaxed);
 }
 
 void SurfaceEngine::setEchoTime(float seconds) {
@@ -465,11 +491,13 @@ void SurfaceEngine::triggerGrain(double fs) {
     slot->startFraction = grain::startFraction(grainPosition_.value(), spray, grain::random01(grainRng_));
     slot->length = length;
     slot->pos = 0;
-    slot->pitch = grain::pitchRatio(
-        grainPitchAxis_.value(),
-        keySourceMidi_.load(std::memory_order_relaxed),
-        keyRoot_.load(std::memory_order_relaxed),
-        keyMask_.load(std::memory_order_relaxed));
+    // The key as one word (see key_): a grain never carries the new
+    // note under the old root and mask.
+    int32_t keyRoot = 0;
+    uint32_t keyMask = grain::kChromaticMask;
+    float keySource = 0.0f;
+    unpackKey(key_.load(std::memory_order_relaxed), keyRoot, keyMask, keySource);
+    slot->pitch = grain::pitchRatio(grainPitchAxis_.value(), keySource, keyRoot, keyMask);
     slot->gain = grain::gainFor(static_cast<float>(length) * grain::rateHz(density) / static_cast<float>(fs));
     slot->order = ++grainOrder_;
 }
@@ -551,16 +579,25 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             // KEY for the loop, and the key it snaps to, read here at
             // control rate (see keySnapLoop_'s own declaration).
             keySnapOn_ = keySnapLoop_.load(std::memory_order_relaxed);
-            keyRootC_ = keyRoot_.load(std::memory_order_relaxed);
-            keyMaskC_ = keyMask_.load(std::memory_order_relaxed);
-            keySourceC_ = keySourceMidi_.load(std::memory_order_relaxed);
+            unpackKey(key_.load(std::memory_order_relaxed), keyRootC_, keyMaskC_, keySourceC_);
             // SWARM: n voices spread evenly over ±detune × kMaxDetuneCents
             // (one voice sits at 0, two at ±half, three at -1/0/+1, four at
             // -1/-1/3/+1/3/+1), summed at 1/sqrt(n) so a detuned swarm of
             // uncorrelated voices holds its level; a coherent one (detune
-            // 0) is sqrt(n) louder, which is what a unison is.
-            swarmVoicesC_ = swarmVoices_.load(std::memory_order_relaxed);
-            const float cents = swarmDetune_.load(std::memory_order_relaxed) * kMaxDetuneCents;
+            // 0) is sqrt(n) louder, which is what a unison is. A voice that
+            // joins takes voice 0's phase: the swarm is a unison from its
+            // first sample, not a copy of the loop from its head (or from
+            // wherever that voice was parked when it last dropped out)
+            // offset in time until the next touch-down (see setSwarm).
+            const int32_t wereVoices = swarmVoicesC_;
+            float detune = 0.0f;
+            unpackSwarm(swarm_.load(std::memory_order_relaxed), swarmVoicesC_, detune);
+            if (swarmVoicesC_ > wereVoices) {
+                for (int32_t s = 0; s < kMaxSources; ++s) {
+                    for (int32_t v = wereVoices; v < swarmVoicesC_; ++v) phase_[s][v] = phase_[s][0];
+                }
+            }
+            const float cents = detune * kMaxDetuneCents;
             for (int32_t v = 0; v < kMaxSwarm; ++v) {
                 const float spread = swarmVoicesC_ > 1
                     ? 2.0f * static_cast<float>(v) / static_cast<float>(swarmVoicesC_ - 1) - 1.0f

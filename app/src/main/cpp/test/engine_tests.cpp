@@ -2169,6 +2169,65 @@ TEST(surface_engine_swarm_of_one_is_the_plain_loop_sample_for_sample) {
     CHECK(clamped);
 }
 
+TEST(surface_engine_swarm_voice_joining_under_a_held_note_starts_where_the_loop_is) {
+    // Two engines on the same one-second noise loop, run in lockstep: A
+    // keeps one voice, B steps VOICES to 2 at DETUNE 0 a quarter second
+    // into a held note. A joining voice that takes voice 0's phase reads
+    // the same frames as voice 0, so B is sqrt(2) times A sample for
+    // sample from the next control interval on. One that started from
+    // the loop's head, or resumed from wherever it was parked, reads
+    // frames from elsewhere in the loop, and noise from elsewhere is
+    // uncorrelated - the residual against sqrt(2) A is then of the order
+    // of the signal itself. Noise, not a tone: a tone cannot tell "the
+    // same phase" from "any whole number of cycles apart", and the
+    // offset a head-start gives is whatever the pitch glide left it.
+    std::vector<float> noise(static_cast<size_t>(kRate));
+    uint32_t lcg = 12345u;
+    for (float& v : noise) {
+        lcg = lcg * 1664525u + 1013904223u;
+        v = (static_cast<float>(lcg >> 8) / 16777216.0f - 0.5f) * 0.2f;
+    }
+    auto held = [&]() {
+        auto e = std::make_unique<SurfaceEngine>(kRate);
+        e->loadSample(noise.data(), noise.size(), kRate);
+        ControlFrame f;
+        f.mode = 0;
+        f.x = 0.5f;
+        f.y = 1.0f;
+        f.tilt = 0.5f;
+        f.gate = true;
+        e->pushControl(f);
+        return e;
+    };
+    auto a = held();
+    auto b = held();
+    auto residual = [&](const std::vector<float>& one, const std::vector<float>& two, size_t from) {
+        double num = 0.0, den = 0.0;
+        for (size_t i = from; i < one.size() && i < two.size(); ++i) {
+            const double ref = std::sqrt(2.0) * static_cast<double>(one[i]);
+            const double d = static_cast<double>(two[i]) - ref;
+            num += d * d;
+            den += ref * ref;
+        }
+        return den > 0.0 ? std::sqrt(num / den) : 1.0;
+    };
+    render(*a, 12000);
+    render(*b, 12000);
+    b->setSwarm(SwarmSettings{2, 0.0f});
+    const auto a1 = render(*a, 4800);
+    const auto b1 = render(*b, 4800);
+    CHECK(residual(a1, b1, 2400) < 0.1);
+    // Dropped to one and re-joined a while later: the re-joining voice
+    // takes voice 0's phase again rather than the phase it was parked at.
+    b->setSwarm(SwarmSettings{1, 0.0f});
+    render(*a, 7000);
+    render(*b, 7000);
+    b->setSwarm(SwarmSettings{2, 0.0f});
+    const auto a2 = render(*a, 4800);
+    const auto b2 = render(*b, 4800);
+    CHECK(residual(a2, b2, 2400) < 0.1);
+}
+
 TEST(surface_engine_swarm_detune_beats_and_a_coherent_swarm_is_louder) {
     // Two voices a quarter tone apart at full DETUNE (±25 cents around
     // 466 Hz, 13.5 Hz apart) beat: the envelope swings from full to near
