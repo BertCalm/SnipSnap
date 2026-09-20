@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.pow
 
 /**
  * MODES — a bank of tuned resonators, each with its own decay.
@@ -90,4 +91,80 @@ internal object Modes {
         }
         return out
     }
+
+    /**
+     * The bodies. Ratios are sourced, not recalled — see
+     * `mode-ratios-research.md` in the Phase 0 plan workspace for citations.
+     * An earlier draft of the spec carried a table written from memory,
+     * which is the exact failure this project exists to correct; do not
+     * adjust a value here without a source.
+     *
+     * Two of these are the same object treated differently, and the
+     * difference is the point: a free bar rings inharmonically (METAL_BAR),
+     * while undercutting its belly pulls the partials onto near-harmonics
+     * (WOOD_XYLO, WOOD_MARIMBA). That is most of what separates struck metal
+     * from tuned wood.
+     */
+    enum class Material { METAL_BAR, MEMBRANE, WOOD_XYLO, WOOD_MARIMBA, BELL }
+
+    /**
+     * Gains and decays here are the *shape* of a strike, not measured
+     * physics: every struck body excites its high partials less and lets
+     * them die sooner than its low ones, and that is a defensible starting
+     * point — but it is a shape, picked to sound plausible, and a candidate
+     * for revision at the audition gate. The RATIOS passed in are the
+     * sourced part; this function only dresses them.
+     */
+    private fun body(vararg ratios: Float): List<Mode> =
+        ratios.mapIndexed { i, ratio ->
+            // -6 dB per partial in gain; each partial rings about 30%
+            // shorter than the one below it.
+            Mode(
+                ratio = ratio,
+                gain = 0.5f.pow(i.toFloat() * 0.5f),
+                t60 = 1.2f * 0.7f.pow(i.toFloat()),
+            )
+        }
+
+    /** [Mode] tables for each [Material] — see the KDoc on [Material] and [body]. */
+    fun tableFor(material: Material): List<Mode> = when (material) {
+        // Euler-Bernoulli free-free eigenvalues 4.730/7.853/10.996/14.137
+        // squared and normalized — Fletcher & Rossing, Blevins.
+        Material.METAL_BAR -> body(1f, 2.756f, 5.404f, 8.933f)
+        // Bessel zeros for modes (0,1)(1,1)(2,1)(0,2)(1,2), normalized to
+        // (0,1). A circular membrane's modes are a 2D lattice, not a single
+        // ascending series, so this ordering is "by ascending zero," not
+        // "by mode number."
+        Material.MEMBRANE -> body(1f, 1.5933f, 2.1354f, 2.2954f, 2.9172f)
+        // Undercutting a bar's belly tunes the first overtone toward a
+        // musical twelfth — Fletcher & Rossing.
+        Material.WOOD_XYLO -> body(1f, 3f, 6f)
+        // Deeper undercut tunes the first overtone two octaves up.
+        Material.WOOD_MARIMBA -> body(1f, 4f, 10f)
+        // Hum/prime/tierce/quint/nominal. Real bells land within 1-2% of
+        // these idealized "true-harmonic" targets — Perrin et al. 1982.
+        Material.BELL -> body(0.5f, 1f, 1.19f, 1.5f, 2f)
+    }
+
+    /**
+     * A stiff string: `fn = n * f0 * sqrt(1 + B*n^2)` (Fletcher 1964). The
+     * formula is settled; **B is not**. Sources disagree on its range by
+     * orders of magnitude, so it is a parameter here and never a literal.
+     * [B_MIN] and [B_MAX] bound a working range measured on a Steinway D —
+     * a real instrument's bass-to-treble spread, not a guess at the
+     * theoretical extremes. A caller reaching outside that range is making
+     * a deliberate choice, not citing physics.
+     */
+    const val B_MIN = 0.0003f
+    const val B_MAX = 0.025f
+
+    fun stiffString(partials: Int, b: Float, rootT60: Float = 1.2f): List<Mode> =
+        (1..partials).map { n ->
+            val nf = n.toFloat()
+            Mode(
+                ratio = nf * kotlin.math.sqrt(1f + b * nf * nf),
+                gain = 0.5f.pow((n - 1).toFloat() * 0.5f),
+                t60 = rootT60 * 0.7f.pow((n - 1).toFloat()),
+            )
+        }
 }

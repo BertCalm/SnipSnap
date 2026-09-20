@@ -121,6 +121,51 @@ class ModesTest {
     }
 
     @Test
+    fun `every material's ratios ascend and start at or below the fundamental`() {
+        for (material in Modes.Material.entries) {
+            val table = Modes.tableFor(material)
+            assertTrue(table.isNotEmpty(), "$material has no modes")
+            val ratios = table.map { it.ratio }
+            assertTrue(
+                ratios.zipWithNext().all { (a, b) -> b > a },
+                "$material ratios must strictly ascend: $ratios",
+            )
+            assertTrue(ratios.first() > 0f, "$material has a non-positive first ratio")
+        }
+    }
+
+    @Test
+    fun `the metal bar is genuinely inharmonic`() {
+        // 2.756 is the whole point: it is not 2, 3, or any integer, and that
+        // is why a glockenspiel sounds like metal rather than a filtered saw.
+        val ratios = Modes.tableFor(Modes.Material.METAL_BAR).map { it.ratio }
+        assertTrue(abs(ratios[1] - 2.756f) < 0.001f, "second mode should be 2.756, got ${ratios[1]}")
+        for (r in ratios.drop(1)) {
+            val nearestInt = kotlin.math.round(r)
+            assertTrue(abs(r - nearestInt) > 0.05f, "$r is suspiciously close to a harmonic")
+        }
+    }
+
+    @Test
+    fun `the bell's hum mode sits below its prime`() {
+        val ratios = Modes.tableFor(Modes.Material.BELL).map { it.ratio }
+        assertTrue(ratios.first() < 1f, "a bell's hum mode is an octave below the prime: ${ratios.first()}")
+    }
+
+    @Test
+    fun `stiff string inharmonicity grows with mode index and with B`() {
+        val low = Modes.stiffString(partials = 6, b = 0.0003f)
+        val high = Modes.stiffString(partials = 6, b = 0.025f)
+        // Mode n sits at n*sqrt(1+B*n^2) — stretched upward, more so for
+        // higher n and higher B. Mode 1 barely moves; mode 6 moves a lot.
+        assertTrue(low[0].ratio < low[5].ratio, "ratios must ascend")
+        val lowStretch = low[5].ratio / 6f
+        val highStretch = high[5].ratio / 6f
+        assertTrue(highStretch > lowStretch, "larger B must stretch further: $lowStretch vs $highStretch")
+        assertTrue(lowStretch > 1f, "any positive B stretches above the harmonic series")
+    }
+
+    @Test
     fun `a mode above Nyquist is skipped, not aliased`() {
         val rate = Dsp.RATE
         val out = Modes.ring(
