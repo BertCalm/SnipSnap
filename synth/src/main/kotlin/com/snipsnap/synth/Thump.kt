@@ -254,43 +254,7 @@ object Thump {
             val sizzle = raw - dull.lp(raw, Dsp.expMap(air, 900f, 5000f))
             out[i] = bodyGain * body[i] + wireGain * sizzle * wireEnv.at(t) * 1.8f
         }
-        return trimSnareTail(out, rate)
-    }
-
-    /**
-     * Trims [out]'s trailing near-silence (-60 dB of its own peak, plus a
-     * short release margin) rather than returning the full fixed 0.6 s
-     * buffer every time.
-     *
-     * The buffer is allocated at a constant 0.6 s so the slowest DECAY
-     * setting has room to ring out - but unlike every other THUMP voice
-     * (`frames(t60 * 1.4f, rate)` for kick/hat/tom/etc.), SNARE's own
-     * allocation doesn't scale with DECAY at all, so a fast, short-decay
-     * snare used to come back exactly as long as a slow one. The
-     * pre-rebuild snare didn't have this problem: its buffer WAS
-     * `frames(t60 * 1.4f, rate)`, so it was already whatever length its own
-     * DECAY implied (0.168-0.7s at that engine's range). Fixed at 0.6s
-     * regardless, this snare's [Snip.durationSeconds] no longer tracks how
-     * long the hit actually is - measured: `Thump.render(SNARE)` at
-     * default DECAY (0.4) is 0.6s here versus 0.297s on the pre-rebuild
-     * engine at the same DECAY. Stacked with one FX section's own tail
-     * (ECHO's defaults add ~0.97s), that fixed 0.6s pushed the combined
-     * length to 1.57s - over Classifier's 1.5s LOOP_MIN_SECONDS - so
-     * `FxTest`'s "an echoed kick is still a kick" and "the full default
-     * rack..." both misclassified a snare through ECHO as [DrumClass.LOOP]
-     * (the old engine's 0.297s + the same tail landed at 1.27s, well
-     * under). Trimming the true tail restores that duration-tracks-decay
-     * property without touching [Modes.ring]'s own fixed-size math.
-     */
-    private fun trimSnareTail(out: FloatArray, rate: Int, marginSeconds: Float = 0.03f): FloatArray {
-        var peak = 0f
-        for (v in out) { val a = kotlin.math.abs(v); if (a > peak) peak = a }
-        if (peak <= 1e-9f) return out
-        val threshold = peak * 0.001f // -60 dB
-        var last = 0
-        for (i in out.indices) if (kotlin.math.abs(out[i]) > threshold) last = i
-        val end = (last + (marginSeconds * rate).toInt() + 1).coerceAtMost(out.size)
-        return if (end >= out.size) out else out.copyOf(end)
+        return out
     }
 
     /** The head's fundamental: drum size, from piccolo to a deep 14-inch. */
