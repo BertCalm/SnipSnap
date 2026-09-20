@@ -575,7 +575,7 @@ class UatSimTest {
         val groups = listOf(
             listOf("SHELF"),
             listOf("TAPE", "CHOP", "KIT", "EXPORT"),
-            listOf("PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE"),
+            listOf("PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP"),
             listOf("SETUP", "HELP"),
         )
         val tabs = groups.flatten()

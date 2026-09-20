@@ -648,6 +648,17 @@ object Copy {
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
+    // ---- SNAP: a photo lands on a pad ----
+    /**
+     * The one refusal SNAP makes (`Snap.read`): the line the voice reads
+     * through the photo has no swing in it — a plain wall read top to
+     * bottom, a clear sky read left to right — so there is no waveform to
+     * play. Names both ways out, since either one fixes it.
+     */
+    const val SNAP_FLAT = "THAT LINE THROUGH THE PHOTO IS ONE FLAT COLOUR. TRY ANOTHER LINE, OR ANOTHER PHOTO."
+    /** TAKE PHOTO asks the system camera; a phone with no camera app to answer says so instead of crashing. */
+    const val SNAP_NO_CAMERA = "NO CAMERA APP ANSWERED. NOTHING WAS TAKEN."
+
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
 

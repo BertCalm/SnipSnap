@@ -226,3 +226,59 @@ S6 is that decision revisited and shipped. SKIN itself still has no preset
 roster of its own — `Presets.kt` has no SKIN branch — so it inherits, not
 solves, the "no presets" gap above; a `SkinPresets.kt` is follow-up work,
 same as it was for THUMP before U1.
+
+## S7 — SNAP: the photo engine
+
+The app's name has two halves and until S7 only one of them was cashed.
+SNAP (`synth/Snap.kt`, `Photo.kt`, `SnapPatch` in `Patches.kt`) turns a
+picture from the phone's camera into a pad, two ways at once, both chosen
+because they land on a *one-shot* the pipeline already knows how to trim,
+place and export — not on a minute of spectrogram texture:
+
+1. **Wavetable.** One line read through the photo is one cycle of a
+   waveform: 256 brightness values, looped at a pitch. The voice picks the
+   line — HORIZON reads left to right (each column averaged top to bottom,
+   so it is the picture's silhouette, not one noisy row of pixels), PLUMB
+   reads top to bottom the same way, ORBIT walks a ring around the centre.
+   A ring closes on itself, so that cycle wraps with no seam; the other two
+   get a 16-sample blend at the seam so an unrelated pair of end pixels does
+   not click once per period. A skyline is buzzy, a gradient is soft,
+   stripes are harmonic.
+
+2. **Feature mapping.** The photo's summary numbers (`Snap.look`: mean
+   brightness, contrast, mean saturation, saturation-weighted circular mean
+   hue, mean neighbour-pixel step) set the four macros (`Snap.macrosFrom`):
+   hue → TUNE across two octaves from A2, red low and violet high, a grey
+   photo on the centre detent; brightness → BRIGHT (the filter, floored so a
+   night shot is dark, not inaudible); colourfulness → DECAY; detail → GRIT.
+   Every mapped value is bounded the way SCRAMBLE's are, so no photo lands
+   on garbage. They are starting points to wreck: the sliders stay live and
+   AS SHOT puts them back.
+
+The voice is a wavetable oscillator (linear interpolation, rendered through
+U6's 4x oversample and decimate because a 256-point table read at 440 Hz has
+plenty above the band of its own and GRIT's drive makes more), into the
+`TptSvf` low-pass that follows the envelope a little, into `Dsp.drive`,
+under a 3 ms attack and a DECAY-set exponential tail. Renders are capped at
+1.45 s so a pad stays under the classifier's 1.5 s LOOP line; at the top of
+DECAY the tail outlasts its 500 ms TONAL line, and on a smooth line the
+classifier calls the note a note (a square-wave stripe photo it hears as a
+bright PERC — which it is).
+
+What a pad stores is the 256 numbers and the macros, never the photo:
+`SnapPatch` writes a `table` field beside `Patches`' common four, and the
+WAV rebuilds from it bit for bit like every other synth recipe. The photo's
+line is in the sidecar as plain digits.
+
+Placement: like GRAINS, SNAP is outside SYNTH's `Engine` picker (it needs a
+`Photo`, not a voice enum) and has its own tab. TAKE PHOTO uses the system
+camera's `TakePicturePreview` contract — the small bitmap the camera app
+hands back, no file, no storage permission, no CAMERA permission of our own.
+The one refusal comes in words (`Copy.SNAP_FLAT`): a line with no swing in
+it — a plain wall read top to bottom, a clear sky read left to right — has
+no waveform to play, and the screen says so instead of landing a silent
+pad.
+
+Not done, deliberately: a spectrogram scan (the Aphex trick) would need an
+inverse FFT and produce textures, not hits; a preset roster (SNAP's presets
+are photos); stereo.
