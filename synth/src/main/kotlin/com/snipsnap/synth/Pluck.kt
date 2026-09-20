@@ -32,6 +32,15 @@ object Pluck {
     const val TUNE_SEMITONES = 24
 
     /**
+     * The smallest Karplus-Strong loop length [ks] will accept, in
+     * samples. Below this, splitting the loop into an integer delay [n]
+     * plus a fractional allpass remainder stops being meaningful - see
+     * [ks]'s `require` for why going below it used to produce a silently
+     * unstable filter instead of a clear failure.
+     */
+    private const val MIN_LOOP_SAMPLES = 2.0
+
+    /**
      * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
      * awaiting a listening pass (task-4-report.md) - a table edit here, not
      * a refactor of [render].
@@ -148,7 +157,12 @@ object Pluck {
      * pulls the feedback gain down together — one knob, two parameters,
      * always musical.
      */
-    private fun ks(
+    /** Internal, not private, so PluckTest can drive it with a synthetic
+     * freq/rate pair and pin the loop-length invariant below directly -
+     * the real voice table never reaches it (smallest `exact` measured
+     * across all voices x TUNE x DAMP is ~176), so there is no reachable
+     * call site to assert against otherwise. */
+    internal fun ks(
         freq: Float,
         seconds: Float,
         damp: Float,
@@ -210,7 +224,31 @@ object Pluck {
         val filterDelay = -filterPhase / w
 
         val exact = (rate / freq) - filterDelay - 0.5
-        val n = floor(exact).toInt().coerceAtLeast(2)
+        // n and frac must come from the SAME exact - splitting them and
+        // then independently coercing n up (the old `.coerceAtLeast(2)`)
+        // decouples them: frac keeps whatever floor(exact) - n produced,
+        // which goes negative the moment exact < n. A negative frac drives
+        // `a` above 1 - |a|>1 is an unconditionally unstable feedback
+        // allpass, not a degraded one. Guaranteeing frac stays in [0,1) by
+        // construction means never separating n from exact after this
+        // require: as long as exact clears MIN_LOOP_SAMPLES, floor(exact)
+        // >= MIN_LOOP_SAMPLES and frac = exact - floor(exact) is safe by
+        // definition, no clamp needed. Unreachable today at ~176 samples
+        // and the closest voice/TUNE/DAMP corner - this is a require, not
+        // a silent coerce, so raising a voice root, widening
+        // TUNE_SEMITONES, or adding a high-pitched voice fails loudly
+        // here, naming the real cause, instead of surfacing later as a
+        // distant isFinite() failure with no trail back to this loop.
+        require(exact >= MIN_LOOP_SAMPLES) {
+            "Pluck loop length ($exact samples, freq=$freq Hz at rate=$rate) fell " +
+                "below the Karplus-Strong minimum of $MIN_LOOP_SAMPLES samples - a " +
+                "note this high (or a filter delay this large) needs either a lower " +
+                "root, a narrower TUNE_SEMITONES span, or this allpass revisited; " +
+                "coercing the loop length up here without also correcting the " +
+                "fractional remainder used to produce an unconditionally unstable " +
+                "feedback allpass."
+        }
+        val n = floor(exact).toInt()
         val frac = (exact - n).toFloat()
         val a = (1f - frac) / (1f + frac)
         var apX1 = 0f
