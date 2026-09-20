@@ -61,8 +61,8 @@ since, plus a SKIN wave. This section is the at-source check of what
 survived, done the way the journey plan's own findings were checked —
 read in the code, not ticked from memory.
 
-**Twelve findings are closed, three are decided, three are half-closed,
-and eleven stand.** The counts below are of the 22 numbered persona
+**Twelve findings are closed, three are decided, four are half-closed,
+and ten stand.** The counts below are of the 22 numbered persona
 findings, 5 synthesis items and 2 headlines; the "Outside expectation"
 tables are positioning judgements rather than findings and are not
 counted.
@@ -89,7 +89,8 @@ a fix.
 | Finding | What changed | What stands |
 |---|---|---|
 | **P3.4, S3** — treatments are a render job, not a live effect | The *felt* problem is addressed: `Copy.treatmentBusy(label)` names which treatment is working, so a 1.77-second ETERNAL no longer reads as a dead button. | The model is unchanged — which is what S3 recommended. P3's expectation gap is architectural and stays. |
-| **P5.1** — PROG A–E is not a slot model | The word is gone and the editor doors now say `START YOURS` / `FORK TO YOURS`, so "tap B, edit, discover it isn't a slot" is much harder to walk into. | **The structure is unchanged**: four derived programs plus one editable fork, not five slots. That is the open half, and it is a design call. |
+| **P4.4** — provenance is good and half-hidden | The export half is fixed (#291): a phone-made expansion now carries its J-Card and liner notes, as a CLI-made one always did. Until then the same kit in the same format reached the card with its story or without it depending on which machine sent it. | Per-pad provenance (`provenanceOrigin`/`provenanceLine`) is still reachable only by holding a pad. Naming it in `PAD_SHEET_LEGEND` was looked at and rejected — that legend is a sample rather than an inventory, and does not name layers or takes either. A design call, not a bug. |
+| **P5.1** — PROG A–E is not a slot model | The word is gone and the editor doors say `START YOURS` / `FORK TO YOURS`. **And the structure did change** (#289): a kit now holds up to eight programs of your own, reached by cycling the YOURS segment, and they chain into a song as their own sections. "One editable fork" — what this row said until 2026-09-20 — is no longer true. | The *shape* is still not a wall of sixteen buttons you can see at once, and the measured reason is that the program row holds six segments before `CAPTURED` wraps. Underneath that sits a bigger mismatch this finding never names: a PO user thinks in a **project** of sixteen patterns, and SnipSnap's unit is a **kit** of one groove. That is an initiative, not a follow-up. |
 
 ## Decided — answered, with nothing built
 
@@ -114,7 +115,6 @@ of keeping them out of *Closed*.
 | **P3.1** — twelve destinations against roughly one | Still twelve. X4's remedy landed, but grouping twelve is not reducing twelve. |
 | **P3.2** — record-to-pad is not the advertised path | `INSTANT KIT` and `CATCH A HIT` are both still there, still not in the loop note. |
 | **P3.3** — the app never says "resample" | Confirmed by search: only `Resampler` in code and one refusal string (*"SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT"*). Never as a control. |
-| **P4.4** — provenance is good and half-hidden | Stands **in the app**, and the obvious remedy was looked at and rejected: adding a word to `PAD_SHEET_LEGEND` would not help, because that legend is a sample rather than an inventory — the sheet also holds layers, takes and twenty treatments it does not name either (`KitScreen.kt:356-359`). **But a second half was found while checking it, and that one was a defect:** the phone's EXPANSION export wrote neither `J-Card.png` nor `liner-notes.txt`, while `snipsnap export --expansion` wrote both. The same kit in the same format reached the card with its story or without it depending on which machine made it — and for this persona, who lives at the export, that was the half that mattered. Fixed: both writers now go through `Inserts` (`:shell`, tested). What remains is the in-app half, which is a placement judgement rather than a bug. |
 | **P5.3** — punch-in FX vs macros-and-print | Architectural. Unchanged. |
 | **S1** — keep the cassette metaphor | Standing as a recommendation, and independently settled the same way by J39: `PERSONALITY.md` catalogs the reels as hidden eggs under its own law 4. |
 
