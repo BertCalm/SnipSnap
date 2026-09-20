@@ -99,7 +99,21 @@ object Pluck {
     internal fun frequencyFor(voice: PluckVoice, semitone: Int): Float =
         rootFor(voice) * 2f.pow(semitone / 12f)
 
-    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * The raw synth loop, at whatever [rate] the caller wants - split out of
+     * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
+     * tested directly against a native-rate render, rather than trusting
+     * that reading [render]'s own source matches what it actually does.
+     *
+     * Karplus-Strong's delay line is *sized* by the rate (`n = rate / freq`
+     * inside [ks]), not just incrementally rate-aware the way a phase
+     * accumulator is - a structural dependency, not just a constant to
+     * thread through. It falls out naturally here: at 4x rate, [ks] builds
+     * a 4x-longer delay line over 4x as many samples covering the *same*
+     * real-time duration, so the string's pitch and decay are unaffected -
+     * only the resolution of the loop and its exciter's low-pass changes.
+     */
+    internal fun synthesize(voice: PluckVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -123,25 +137,31 @@ object Pluck {
         }
 
         val seconds = (ring * Dsp.lin(1f - damp, 0.35f, 1f)).coerceAtMost(1.35f)
-
-        // PLUCK was the one engine left rendering the noise burst and the
-        // loop's own nonlinear feedback at bare RATE - both alias, and at
-        // 4x that aliasing folds down above 22.05kHz instead of into the
-        // audible band. Every rate-dependent quantity inside ks() (delay
-        // length, loop-filter cutoff, feedback gain) takes renderRate;
-        // Dsp.decimate is what brings the result back down.
-        val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = renderRate)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = rate)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
             // first. Detune grows with the macro so it goes chorus -> honky.
             val det = ks(
                 freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = 23, rate = renderRate,
+                Dsp.expMap(pick, pickLo, pickHi), seed = 23, rate = rate,
             )
             val g = double * 0.7f
-            for (i in raw.indices) raw[i] += det[i] * g
+            for (i in out.indices) out[i] += det[i] * g
         }
+        return out
+    }
+
+    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
+        // consistency with the other 6 engines and because the exciter's
+        // one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
+        // saturation stage generating fresh above-Nyquist harmonics the way
+        // THUMP/TONEWHEEL/VOX do, so the audible effect here is smaller -
+        // but it is still real plumbing, not a no-op: Dsp.decimate's own
+        // low-pass changes what a keygroup sounds like near the top of its
+        // range, same as every other engine.
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = synthesize(voice, macros, renderRate)
         val out = Dsp.decimate(raw, RATE)
 
         // Loudness, not peak: a sine-heavy voice at equal peak reads quieter

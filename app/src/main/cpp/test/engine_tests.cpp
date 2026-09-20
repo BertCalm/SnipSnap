@@ -5,12 +5,14 @@
 #include <thread>
 #include <vector>
 
+#include "Grain.h"
 #include "PadEngine.h"
 #include "ParameterSmoother.h"
 #include "PrintBuffer.h"
 #include "SpscRing.h"
 #include "SurfaceEngine.h"
 #include "check.h"
+#include "measure.h"
 
 using namespace snipsnap;
 
@@ -1188,6 +1190,104 @@ TEST(surface_engine_echo_repeats_specifically_after_the_fixed_delay_time) {
     CHECK(peakIndex < 10560 + 1500);
 }
 
+// Where a fully wet ECHO's repeat of a short blip lands, in samples after
+// the release - the search surface_engine_echo_repeats_specifically_after_
+// the_fixed_delay_time does, as a function of the time asked for, so the
+// synced times can be checked against the same yardstick.
+static size_t echoRepeatAt(float seconds, size_t renderSamples) {
+    SurfaceEngine e(kRate);
+    e.setEchoTime(seconds);
+    std::vector<float> tone(200, 0.9f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    for (int i = 0; i < 10; ++i) callback(e, 64);
+    ControlFrame off = on;
+    off.gate = false;
+    e.pushControl(off);
+    std::vector<float> elapsed;
+    while (elapsed.size() < renderSamples) {
+        auto chunk = callback(e, 64);
+        for (size_t i = 0; i < chunk.size(); i += 2) elapsed.push_back(chunk[i]);
+    }
+    size_t peakIndex = 1500;
+    float peakValue = 0.0f;
+    for (size_t i = 1500; i < elapsed.size(); ++i) {
+        if (std::fabs(elapsed[i]) > peakValue) { peakValue = std::fabs(elapsed[i]); peakIndex = i; }
+    }
+    CHECK(peakValue > 0.01f);
+    return peakIndex;
+}
+
+TEST(surface_engine_echo_time_moves_the_repeat_to_the_time_asked_for) {
+    // A tenth of a second is 4800 samples at kRate: the repeat lands there,
+    // not at the free 10560. The ±1500 window is the fixed-time test's own.
+    const size_t at = echoRepeatAt(0.1f, 12000);
+    CHECK(at > 4800 - 1500);
+    CHECK(at < 4800 + 1500);
+    // A quarter of a bar at 120 BPM (0.5 s) - the sort of time EchoTime in
+    // :shell hands over - lands at 24000.
+    const size_t quarter = echoRepeatAt(0.5f, 30000);
+    CHECK(quarter > 24000 - 1500);
+    CHECK(quarter < 24000 + 1500);
+}
+
+TEST(surface_engine_echo_time_that_is_not_a_time_is_the_free_time) {
+    // Zero, negative, NaN and more than the line holds are all the 220 ms
+    // ECHO always had - a kit asking for the impossible keeps its echo.
+    for (float bad : {0.0f, -1.0f, std::nanf(""), SurfaceEngine::kMaxEchoSeconds * 1.5f}) {
+        const size_t at = echoRepeatAt(bad, 16000);
+        CHECK(at > 10560 - 1500);
+        CHECK(at < 10560 + 1500);
+    }
+    // And the ceiling itself is honoured: six seconds is 288000 samples.
+    const size_t ceiling = static_cast<size_t>(SurfaceEngine::kMaxEchoSeconds * kRate);
+    const size_t longest = echoRepeatAt(SurfaceEngine::kMaxEchoSeconds, ceiling + 12000);
+    CHECK(longest > ceiling - 1500);
+    CHECK(longest < ceiling + 1500);
+}
+
+TEST(surface_engine_echo_time_change_crossfades_rather_than_cutting) {
+    // A steady tone through a fully wet echo, then the time changed under
+    // it: the output's largest sample-to-sample step after the change is
+    // no larger than the tone's own, because the old tap fades into the
+    // new over kEchoFadeMs. A hard cut between two taps of a sine at
+    // different phases would step by up to the whole amplitude at once.
+    SurfaceEngine e(kRate);
+    e.setEchoTime(0.1f);
+    const auto tone = measure::sine(100.0f, kRate, kRate);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setCorner(0, MacroState{0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f});
+    ControlFrame on;
+    on.mode = 2;
+    on.gate = true;
+    on.a = 1.0f; on.b = on.c = on.d = 0.0f;
+    e.pushControl(on);
+    auto maxStep = [&](int callbacks) {
+        float worst = 0.0f;
+        float last = 0.0f;
+        bool have = false;
+        for (int i = 0; i < callbacks; ++i) {
+            for (float v : measure::left(callback(e, 64))) {
+                if (have) worst = std::max(worst, std::fabs(v - last));
+                last = v;
+                have = true;
+            }
+        }
+        return worst;
+    };
+    maxStep(750);                       // a second: the gain open, the line full of repeats
+    const float steady = maxStep(225);  // 0.3 s of steady state
+    e.setEchoTime(0.15f);
+    const float changed = maxStep(375); // 0.5 s spanning the change and its fade
+    CHECK(steady > 1e-4f);              // there is a tone to measure
+    CHECK(changed < steady * 1.5f);
+}
+
 TEST(surface_engine_spring_rings_a_tail_and_only_when_wet) {
     // Exactly ECHO's own transparency test, above, but for the reverb:
     // once the gate is fully closed, anything still audible can only be
@@ -1640,6 +1740,622 @@ TEST(ring_never_hands_a_consumer_half_a_group) {
     CHECK_EQ(split, 0);
     CHECK_EQ(static_cast<int>(taken), kGroups * kGroup);
     CHECK_EQ(value, kGroups - 1);  // and in order, to the last group
+}
+
+// ---- GRAIN -------------------------------------------------------------------
+
+namespace {
+
+// C major, A minor and C minor pentatonic as 12-bit degree masks - bit d
+// set means d semitones above the root is in the scale. Spelled out as
+// the degrees rather than as hex so a reader can check them against
+// Scales.kt in :audio, which is where the app's own copy lives.
+uint32_t maskOf(std::initializer_list<int> degrees) {
+    uint32_t m = 0;
+    for (int d : degrees) m |= 1u << d;
+    return m;
+}
+const uint32_t kMajor = maskOf({0, 2, 4, 5, 7, 9, 11});
+const uint32_t kMinor = maskOf({0, 2, 3, 5, 7, 8, 10});
+const uint32_t kMajorPentatonic = maskOf({0, 2, 4, 7, 9});
+const uint32_t kMinorPentatonic = maskOf({0, 3, 5, 7, 10});
+
+/** A GRAIN control frame: finger at (x, y), phone flat, gate as given. */
+ControlFrame grainFrame(float x, float y, bool gate) {
+    ControlFrame f;
+    f.mode = 4;
+    f.x = x;
+    f.y = y;
+    f.tilt = 0.5f;
+    f.gate = gate;
+    return f;
+}
+
+/** The left channel of `frames` frames of callbacks, 64 at a time, appended in order. */
+std::vector<float> render(SurfaceEngine& e, int32_t frames) {
+    std::vector<float> mono;
+    mono.reserve(static_cast<size_t>(frames));
+    int32_t done = 0;
+    while (done < frames) {
+        const int32_t n = std::min(64, frames - done);
+        for (float v : measure::left(callback(e, n))) mono.push_back(v);
+        done += n;
+    }
+    return mono;
+}
+
+/**
+ * One 250 ms grain, alone, of a pad whose own note is MIDI 70.4 (an A#
+ * forty cents sharp), read at the pitch axis's centre - so the only thing
+ * deciding the pitch heard is what the key snaps 70.4 to. DENSITY at its
+ * floor keeps the next grain half a second away, SPRAY 0 starts it at
+ * frame 0, and the measurement window sits in the middle of the window
+ * where the Hann envelope is healthy and the gate and filter have long
+ * settled.
+ */
+double grainHzUnderKey(int32_t root, uint32_t mask) {
+    SurfaceEngine e(kRate);
+    const float sourceMidi = 70.4f;
+    const float sourceHz = 440.0f * std::exp2((sourceMidi - 69.0f) / 12.0f);
+    auto tone = measure::sine(sourceHz, kRate, kRate);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setGrain(GrainSettings{1.0f, 0.0f, 0.0f});
+    e.setKey(KeySnap{root, mask, sourceMidi});
+    e.pushControl(grainFrame(0.0f, 0.5f, true));
+    const auto mono = render(e, 12000);
+    return measure::hz(mono, 3000, 9000, kRate);
+}
+
+double midiHz(double midi) { return 440.0 * std::exp2((midi - 69.0) / 12.0); }
+
+}  // namespace
+
+TEST(grain_knobs_read_as_lengths_and_rates) {
+    CHECK_NEAR(grain::lengthMs(0.0f), grain::kMinLengthMs, 1e-4);
+    CHECK_NEAR(grain::lengthMs(1.0f), grain::kMaxLengthMs, 1e-3);
+    CHECK(grain::lengthMs(0.5f) > grain::lengthMs(0.25f));
+    CHECK_NEAR(grain::rateHz(0.0f), grain::kMinRateHz, 1e-4);
+    CHECK_NEAR(grain::rateHz(1.0f), grain::kMaxRateHz, 1e-3);
+    CHECK(grain::rateHz(0.75f) > grain::rateHz(0.5f));
+    // Exponential, not linear: the middle of the knob is the geometric
+    // middle of the range, the way a length or a rate is heard.
+    CHECK_NEAR(grain::lengthMs(0.5f), std::sqrt(grain::kMinLengthMs * grain::kMaxLengthMs), 1e-3);
+    // A knob that is not a number is its floor, never a NaN length.
+    CHECK_NEAR(grain::lengthMs(std::nanf("")), grain::kMinLengthMs, 1e-4);
+    CHECK_NEAR(grain::rateHz(std::nanf("")), grain::kMinRateHz, 1e-4);
+}
+
+TEST(grain_snap_lands_on_the_nearest_degree_and_holds_the_lower_note_on_a_tie) {
+    // C major: C# sits exactly between C and D, and the lower note wins
+    // the tie every time rather than depending on float noise.
+    CHECK_EQ(grain::snapToKey(61.0f, 0, kMajor), 60);
+    CHECK_EQ(grain::snapToKey(61.4f, 0, kMajor), 62);
+    CHECK_EQ(grain::snapToKey(60.6f, 0, kMajor), 60);
+    CHECK_EQ(grain::snapToKey(59.9f, 0, kMajor), 60);
+    CHECK_EQ(grain::snapToKey(66.0f, 0, kMajor), 65);  // F# to F: 65 and 67 tie, lower wins
+    // A minor, root 9: A# (70) is a semitone from both A and B, so the
+    // tie goes to A - degree 0 of the *root*, which is what makes the
+    // root matter at all.
+    CHECK_EQ(grain::snapToKey(70.0f, 9, kMinor), 69);
+    CHECK_EQ(grain::snapToKey(70.3f, 9, kMinor), 71);
+    // A pentatonic has three-semitone gaps; the middle of one still finds
+    // a note, and the lower one on the tie.
+    CHECK_EQ(grain::snapToKey(61.5f, 0, kMinorPentatonic), 60);
+    CHECK_EQ(grain::snapToKey(62.0f, 0, kMinorPentatonic), 63);
+    // No mask is no key: every note allowed, so this is plain rounding.
+    CHECK_EQ(grain::snapToKey(61.4f, 0, 0u), 61);
+    CHECK_EQ(grain::snapToKey(61.4f, 0, grain::kChromaticMask), 61);
+    // A root outside 0..11 wraps rather than shifting the scale off the
+    // pitch classes: 21 is A.
+    CHECK_EQ(grain::snapToKey(70.0f, 21, kMinor), grain::snapToKey(70.0f, 9, kMinor));
+    CHECK_EQ(grain::snapToKey(70.0f, -3, kMinor), grain::snapToKey(70.0f, 9, kMinor));
+    // A target that is not a number does not throw the search off: it
+    // reads as 0 and snaps to a real note near it.
+    CHECK(std::abs(grain::snapToKey(std::nanf(""), 0, kMajor)) <= 12);
+}
+
+TEST(grain_pitch_ratio_retunes_the_source_onto_the_key) {
+    // A pad 40 cents flat of C, at the axis's centre in C major: it comes
+    // out *on* C, which is a ratio a little above one - the snap retunes,
+    // it does not only quantise the transposition.
+    CHECK_NEAR(grain::pitchRatio(0.5f, 59.6f, 0, kMajor), std::exp2(0.4f / 12.0f), 1e-5);
+    // No key, no known source: the centre is exactly as recorded, and the
+    // ends of the axis are exactly an octave either way.
+    CHECK_NEAR(grain::pitchRatio(0.5f, 0.0f, 0, grain::kChromaticMask), 1.0f, 1e-6);
+    CHECK_NEAR(grain::pitchRatio(1.0f, 0.0f, 0, grain::kChromaticMask), 2.0f, 1e-5);
+    CHECK_NEAR(grain::pitchRatio(0.0f, 0.0f, 0, grain::kChromaticMask), 0.5f, 1e-5);
+    // Between two semitones the axis holds the nearer one: a semitone
+    // quantiser, not a glide.
+    CHECK_NEAR(grain::pitchRatio(0.5f + 1.4f / 24.0f, 0.0f, 0, grain::kChromaticMask), std::exp2(1.0f / 12.0f), 1e-5);
+    // In key, from a known source: A4 nudged up 1.6 semitones asks for
+    // 70.6, and C major answers B (71) - two semitones up, not 1.6.
+    CHECK_NEAR(grain::pitchRatio(0.5f + 1.6f / 24.0f, 69.0f, 0, kMajor), std::exp2(2.0f / 12.0f), 1e-5);
+    // A source note that is not a number reads as 0 rather than poisoning the ratio.
+    CHECK(std::isfinite(grain::pitchRatio(0.5f, std::nanf(""), 0, kMajor)));
+}
+
+TEST(grain_start_is_position_at_zero_spray_and_wraps_at_full) {
+    // SPRAY 0 is exactly POSITION whatever the die says - the cloud can be
+    // frozen on one spot, and the engine test below holds it to that.
+    CHECK_NEAR(grain::startFraction(0.3f, 0.0f, 0.9f), 0.3f, 1e-6);
+    CHECK_NEAR(grain::startFraction(0.3f, 0.0f, 0.1f), 0.3f, 1e-6);
+    // Full SPRAY reaches half the source either way, and comes round the
+    // loop rather than piling up at the ends.
+    CHECK_NEAR(grain::startFraction(0.9f, 1.0f, 1.0f), 0.4f, 1e-5);
+    CHECK_NEAR(grain::startFraction(0.1f, 1.0f, 0.0f), 0.6f, 1e-5);
+    CHECK_NEAR(grain::startFraction(0.5f, 1.0f, 0.5f), 0.5f, 1e-5);
+    // Always inside the source, never on its far edge.
+    for (int i = 0; i <= 20; ++i) {
+        for (int r = 0; r <= 10; ++r) {
+            const float s = grain::startFraction(static_cast<float>(i) / 20.0f, 1.0f, static_cast<float>(r) / 10.0f);
+            CHECK(s >= 0.0f && s < 1.0f);
+        }
+    }
+    // The die itself: 0..1, and a state of 0 does not stick there.
+    uint32_t state = 0;
+    for (int i = 0; i < 1000; ++i) {
+        const float r = grain::random01(state);
+        CHECK(r >= 0.0f && r < 1.0f);
+        CHECK(state != 0u);
+    }
+}
+
+TEST(surface_engine_grain_mode_is_silent_until_gated_and_fires_on_the_touch) {
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(1000, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    // DENSITY at its floor: two grains a second, so a cloud that only
+    // fired on the clock would leave the first half second of a touch
+    // silent. SIZE at its floor keeps each grain to 10 ms.
+    e.setGrain(GrainSettings{0.0f, 0.0f, 0.0f});
+    e.pushControl(grainFrame(0.5f, 0.5f, false));
+    CHECK_NEAR(peak(callback(e, 512)), 0.0f, 1e-7);  // ungated: nothing, not even a first grain
+    e.pushControl(grainFrame(0.5f, 0.5f, true));
+    // The touch-down arms the clock: the first grain is in the first 512
+    // frames (10 ms of grain, the gate gliding open over it), not 24000
+    // frames later.
+    CHECK(peak(callback(e, 512)) > 0.02f);
+    // And between grains the cloud is genuinely quiet - the source is DC,
+    // so anything left here would be a grain that failed to end.
+    render(e, 2000);
+    CHECK(peak(callback(e, 4096)) < 1e-4f);
+}
+
+TEST(surface_engine_grain_pitch_follows_the_key) {
+    // The same pad, the same touch, three keys: the note heard is the one
+    // the key snaps the pad's own note to. 70.4 is A# forty cents sharp,
+    // so no key rounds it to A# (466 Hz); C major has no A#, and pulls it
+    // up to B (494 Hz, 0.6 away, against A at 1.4); C major pentatonic
+    // has neither A# nor B, and falls back to A (440 Hz, 1.4 away against
+    // C at 1.6). Three answers six percent apart, each read to well under
+    // one.
+    const double chromatic = grainHzUnderKey(0, grain::kChromaticMask);
+    const double major = grainHzUnderKey(0, kMajor);
+    const double pentatonic = grainHzUnderKey(0, kMajorPentatonic);
+    CHECK_NEAR(chromatic, midiHz(70), midiHz(70) * 0.01);
+    CHECK_NEAR(major, midiHz(71), midiHz(71) * 0.01);
+    CHECK_NEAR(pentatonic, midiHz(69), midiHz(69) * 0.01);
+    // And none of them is the pad as recorded: the snap always moved it.
+    const double asRecorded = midiHz(70.4);
+    CHECK(std::fabs(chromatic - asRecorded) > asRecorded * 0.015);
+    CHECK(std::fabs(major - asRecorded) > asRecorded * 0.015);
+}
+
+TEST(surface_engine_grain_spray_zero_freezes_one_spot_and_spray_scatters) {
+    // A ramp source names its own frame by its value, so a grain's peak
+    // says where it started. SIZE at its floor (480 frames) under DENSITY
+    // at its ceiling (one grain per 750 frames) gives one grain per
+    // period with clear air between - each period's own peak is that
+    // grain's start, in the source's own units.
+    auto periodPeaks = [](float spray) {
+        SurfaceEngine e(kRate);
+        auto src = ramp(kRate);
+        for (float& v : src) v *= 1000.0f / static_cast<float>(kRate);  // 0..1 over the whole source
+        e.loadSample(src.data(), src.size(), kRate);
+        e.setGrain(GrainSettings{0.0f, 1.0f, spray});
+        e.pushControl(grainFrame(0.5f, 0.5f, true));
+        render(e, 750 * 6);  // the gate and filter settle, the first grains go by
+        const auto mono = render(e, 750 * 12);
+        std::vector<float> peaks;
+        for (size_t p = 0; p + 750 <= mono.size(); p += 750) {
+            float m = 0.0f;
+            for (size_t i = p; i < p + 750; ++i) m = std::max(m, mono[i]);
+            peaks.push_back(m);
+        }
+        return peaks;
+    };
+    const auto frozen = periodPeaks(0.0f);
+    CHECK_EQ(static_cast<int>(frozen.size()), 12);
+    for (float p : frozen) {
+        CHECK(p > 0.05f);                        // every period has its grain
+        CHECK_NEAR(p, frozen.front(), 1e-3);     // and every grain read the same spot
+    }
+    const auto scattered = periodPeaks(1.0f);
+    float lo = 1.0f, hi = 0.0f;
+    for (float p : scattered) {
+        lo = std::min(lo, p);
+        hi = std::max(hi, p);
+    }
+    CHECK(hi - lo > 0.05f);  // the starts wander; the peaks with them
+}
+
+TEST(surface_engine_grain_density_and_size_fill_or_thin_the_cloud) {
+    std::vector<float> dc(1000, 0.5f);
+    // Both knobs at their floor: a 10 ms grain every half second, and
+    // silence between - the filter's ringdown at a wide-open cutoff is
+    // gone within a few samples of the grain ending.
+    SurfaceEngine sparse(kRate);
+    sparse.loadSample(dc.data(), dc.size(), kRate);
+    sparse.setGrain(GrainSettings{0.0f, 0.0f, 0.0f});
+    sparse.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(sparse, 2000);
+    const auto gap = render(sparse, 18000);
+    float gapPeak = 0.0f;
+    for (float v : gap) gapPeak = std::max(gapPeak, std::fabs(v));
+    CHECK(gapPeak < 1e-4f);
+    // Both at their ceiling: 250 ms grains, 64 a second, sixteen sounding
+    // at once - Hann windows at a sixteenth of their length apart sum to
+    // a constant, so the cloud never dips, and each grain's own gain
+    // (1/sqrt(16)) keeps the sum from piling up as the overlap grows.
+    SurfaceEngine dense(kRate);
+    dense.loadSample(dc.data(), dc.size(), kRate);
+    dense.setGrain(GrainSettings{1.0f, 1.0f, 0.0f});
+    dense.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(dense, 20000);
+    const auto steady = render(dense, 20000);
+    float lo = 10.0f, hi = 0.0f;
+    for (float v : steady) {
+        lo = std::min(lo, v);
+        hi = std::max(hi, v);
+    }
+    CHECK(lo > 0.3f);
+    CHECK(hi < 1.0f);
+}
+
+TEST(surface_engine_leaving_grain_mode_returns_to_the_loop) {
+    std::vector<float> dc(1000, 0.5f);
+    SurfaceEngine e(kRate);
+    e.loadSample(dc.data(), dc.size(), kRate);
+    e.setGrain(GrainSettings{1.0f, 1.0f, 1.0f});
+    e.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(e, 20000);
+    // Back to XY at the centre of the pad, still gated: the loop reads
+    // its DC through the same chain, so after the macros glide the output
+    // is what a fresh XY engine settles to - the cloud has gone.
+    ControlFrame xy;
+    xy.mode = 0;
+    xy.x = 0.5f;
+    xy.y = 1.0f;
+    xy.tilt = 0.5f;
+    xy.gate = true;
+    e.pushControl(xy);
+    render(e, 20000);
+    const auto after = render(e, 4096);
+    SurfaceEngine fresh(kRate);
+    fresh.loadSample(dc.data(), dc.size(), kRate);
+    fresh.pushControl(xy);
+    render(fresh, 40000);
+    const auto reference = render(fresh, 4096);
+    double meanAfter = 0.0, meanReference = 0.0;
+    for (float v : after) meanAfter += v;
+    for (float v : reference) meanReference += v;
+    meanAfter /= static_cast<double>(after.size());
+    meanReference /= static_cast<double>(reference.size());
+    CHECK(meanReference > 0.3);
+    CHECK_NEAR(meanAfter, meanReference, 0.02);
+}
+
+TEST(surface_engine_grain_survives_knobs_a_key_and_a_finger_that_are_not_numbers) {
+    // The same door the corners and the other macros have: a NaN knob is
+    // its default, a NaN source note is 0, an empty mask is chromatic, a
+    // root off the wheel wraps - and a NaN finger neither latches nor
+    // silences the cloud.
+    SurfaceEngine e(kRate);
+    std::vector<float> tone(1000, 0.5f);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    const float nan = std::nanf("");
+    e.setGrain(GrainSettings{nan, nan, nan});
+    e.setKey(KeySnap{-7, 0u, nan});
+    ControlFrame bad = grainFrame(nan, std::numeric_limits<float>::infinity(), true);
+    bad.tilt = nan;
+    e.pushControl(bad);
+    float p = 0.0f;
+    for (int i = 0; i < 400; ++i) {
+        auto out = callback(e, 64);
+        for (float v : out) CHECK(std::isfinite(v));
+        p = std::max(p, peak(out));
+    }
+    CHECK(p > 0.02f);
+}
+
+// ---- modulation ---------------------------------------------------------------
+
+/**
+ * The loop (XY, not GRAIN) of a pad whose own note is MIDI 70.4, with the
+ * finger at [x] across the pad and KEY on or off, after the pitch smoother
+ * has long settled: what the loop is heard playing. The window sits
+ * before the one-second source wraps at any ratio the tests ask for.
+ */
+double loopHzUnderKey(int32_t root, uint32_t mask, float x, bool keySnap) {
+    SurfaceEngine e(kRate);
+    const float sourceMidi = 70.4f;
+    const float sourceHz = 440.0f * std::exp2((sourceMidi - 69.0f) / 12.0f);
+    auto tone = measure::sine(sourceHz, kRate, kRate);
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setKey(KeySnap{root, mask, sourceMidi});
+    e.setKeySnap(keySnap);
+    ControlFrame f;
+    f.mode = 0;
+    f.x = x;
+    f.y = 1.0f;
+    f.tilt = 0.5f;
+    f.gate = true;
+    e.pushControl(f);
+    const auto mono = render(e, 24000);
+    return measure::hz(mono, 14000, 22000, kRate);
+}
+
+TEST(surface_engine_key_snaps_the_loop_pitch_and_off_plays_as_recorded) {
+    // KEY off: the pad's own note, a little sharp, exactly as recorded.
+    // KEY on with no key (chromatic): the nearest semitone, A# (70). Under
+    // C major: B (71), the same answer the cloud gives (see
+    // surface_engine_grain_pitch_follows_the_key) - one snap, in Grain.h.
+    const double asRecorded = midiHz(70.4);
+    CHECK_NEAR(loopHzUnderKey(0, grain::kChromaticMask, 0.5f, false), asRecorded, asRecorded * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f, false), asRecorded, asRecorded * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, grain::kChromaticMask, 0.5f, true), midiHz(70), midiHz(70) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f, true), midiHz(71), midiHz(71) * 0.01);
+    // A semitone across the pad (1/24 of it) with KEY on: chromatic steps
+    // to B (71); C major pentatonic has no B and lands on C (72), the
+    // nearer of A (69) and C. KEY off just slides 71.4.
+    const float upOne = 0.5f + 1.0f / 24.0f;
+    CHECK_NEAR(loopHzUnderKey(0, grain::kChromaticMask, upOne, true), midiHz(71), midiHz(71) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajorPentatonic, upOne, true), midiHz(72), midiHz(72) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajorPentatonic, upOne, false), midiHz(71.4), midiHz(71.4) * 0.01);
+}
+
+TEST(surface_engine_key_snap_holds_a_note_across_the_pad_until_the_next_degree) {
+    // Between two degrees the loop holds the lower one rather than sweeping:
+    // a third of a semitone up from A# under C major is still B (the
+    // nearest degree), a full step up is C# (73) - the ladder, not a slide.
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f + 0.33f / 24.0f, true), midiHz(71), midiHz(71) * 0.01);
+    CHECK_NEAR(loopHzUnderKey(0, kMajor, 0.5f + 2.0f / 24.0f, true), midiHz(72), midiHz(72) * 0.01);
+}
+
+/** A quiet A# sine as the loop in XY, wide open, held: what SWARM renders after the smoothers settle. */
+std::vector<float> swarmRender(const SwarmSettings& swarm, int32_t frames) {
+    SurfaceEngine e(kRate);
+    auto tone = measure::sine(466.16f, kRate, kRate);
+    for (float& v : tone) v *= 0.1f;
+    e.loadSample(tone.data(), tone.size(), kRate);
+    e.setSwarm(swarm);
+    ControlFrame f;
+    f.mode = 0;
+    f.x = 0.5f;
+    f.y = 1.0f;
+    f.tilt = 0.5f;
+    f.gate = true;
+    e.pushControl(f);
+    return render(e, frames);
+}
+
+/** The quietest and loudest RMS over 480-frame windows of [mono] between [from] and [to], as a ratio quiet/loud. */
+double envelopeRatio(const std::vector<float>& mono, size_t from, size_t to) {
+    double lo = 1e9, hi = 0.0;
+    for (size_t start = from; start + 480 <= to; start += 480) {
+        double acc = 0.0;
+        for (size_t i = start; i < start + 480; ++i) acc += static_cast<double>(mono[i]) * static_cast<double>(mono[i]);
+        const double rms = std::sqrt(acc / 480.0);
+        lo = std::min(lo, rms);
+        hi = std::max(hi, rms);
+    }
+    return hi > 0.0 ? lo / hi : 0.0;
+}
+
+TEST(surface_engine_swarm_of_one_is_the_plain_loop_sample_for_sample) {
+    // One voice at any DETUNE is the loop as it always was - the untouched
+    // surface must not change by a bit when SWARM exists but is off.
+    const auto plain = swarmRender(SwarmSettings{}, 12000);
+    const auto one = swarmRender(SwarmSettings{1, 0.7f}, 12000);
+    CHECK_EQ(plain.size(), one.size());
+    bool same = true;
+    for (size_t i = 0; i < plain.size(); ++i) same = same && plain[i] == one[i];
+    CHECK(same);
+    // And a swarm that asks for more voices than exist clamps to the most.
+    const auto many = swarmRender(SwarmSettings{99, 0.0f}, 12000);
+    const auto four = swarmRender(SwarmSettings{4, 0.0f}, 12000);
+    bool clamped = true;
+    for (size_t i = 0; i < many.size(); ++i) clamped = clamped && many[i] == four[i];
+    CHECK(clamped);
+}
+
+TEST(surface_engine_swarm_voice_joining_under_a_held_note_starts_where_the_loop_is) {
+    // Two engines on the same one-second noise loop, run in lockstep: A
+    // keeps one voice, B steps VOICES to 2 at DETUNE 0 a quarter second
+    // into a held note. A joining voice that takes voice 0's phase reads
+    // the same frames as voice 0, so B is sqrt(2) times A sample for
+    // sample from the next control interval on. One that started from
+    // the loop's head, or resumed from wherever it was parked, reads
+    // frames from elsewhere in the loop, and noise from elsewhere is
+    // uncorrelated - the residual against sqrt(2) A is then of the order
+    // of the signal itself. Noise, not a tone: a tone cannot tell "the
+    // same phase" from "any whole number of cycles apart", and the
+    // offset a head-start gives is whatever the pitch glide left it.
+    std::vector<float> noise(static_cast<size_t>(kRate));
+    uint32_t lcg = 12345u;
+    for (float& v : noise) {
+        lcg = lcg * 1664525u + 1013904223u;
+        v = (static_cast<float>(lcg >> 8) / 16777216.0f - 0.5f) * 0.2f;
+    }
+    auto held = [&]() {
+        auto e = std::make_unique<SurfaceEngine>(kRate);
+        e->loadSample(noise.data(), noise.size(), kRate);
+        ControlFrame f;
+        f.mode = 0;
+        f.x = 0.5f;
+        f.y = 1.0f;
+        f.tilt = 0.5f;
+        f.gate = true;
+        e->pushControl(f);
+        return e;
+    };
+    auto a = held();
+    auto b = held();
+    auto residual = [&](const std::vector<float>& one, const std::vector<float>& two, size_t from) {
+        double num = 0.0, den = 0.0;
+        for (size_t i = from; i < one.size() && i < two.size(); ++i) {
+            const double ref = std::sqrt(2.0) * static_cast<double>(one[i]);
+            const double d = static_cast<double>(two[i]) - ref;
+            num += d * d;
+            den += ref * ref;
+        }
+        return den > 0.0 ? std::sqrt(num / den) : 1.0;
+    };
+    render(*a, 12000);
+    render(*b, 12000);
+    b->setSwarm(SwarmSettings{2, 0.0f});
+    const auto a1 = render(*a, 4800);
+    const auto b1 = render(*b, 4800);
+    CHECK(residual(a1, b1, 2400) < 0.1);
+    // Dropped to one and re-joined a while later: the re-joining voice
+    // takes voice 0's phase again rather than the phase it was parked at.
+    b->setSwarm(SwarmSettings{1, 0.0f});
+    render(*a, 7000);
+    render(*b, 7000);
+    b->setSwarm(SwarmSettings{2, 0.0f});
+    const auto a2 = render(*a, 4800);
+    const auto b2 = render(*b, 4800);
+    CHECK(residual(a2, b2, 2400) < 0.1);
+}
+
+TEST(surface_engine_swarm_detune_beats_and_a_coherent_swarm_is_louder) {
+    // Two voices a quarter tone apart at full DETUNE (±25 cents around
+    // 466 Hz, 13.5 Hz apart) beat: the envelope swings from full to near
+    // nothing every 74 ms. One voice holds a flat envelope. Three voices
+    // at DETUNE 0 are coherent and sum to sqrt(3) the single's level - a
+    // unison is louder, and the gain is 1/sqrt(n), not 1/n.
+    const auto single = swarmRender(SwarmSettings{1, 0.0f}, 30000);
+    const auto pair = swarmRender(SwarmSettings{2, 1.0f}, 30000);
+    const auto trio = swarmRender(SwarmSettings{3, 0.0f}, 30000);
+    CHECK(envelopeRatio(single, 6000, 30000) > 0.9);
+    CHECK(envelopeRatio(pair, 6000, 30000) < 0.5);
+    float peakSingle = 0.0f, peakTrio = 0.0f;
+    for (size_t i = 6000; i < 30000; ++i) {
+        peakSingle = std::max(peakSingle, std::fabs(single[i]));
+        peakTrio = std::max(peakTrio, std::fabs(trio[i]));
+    }
+    CHECK_NEAR(peakTrio / peakSingle, std::sqrt(3.0f), 0.1);
+}
+
+TEST(surface_engine_swarm_survives_a_detune_that_is_not_a_number) {
+    const auto plain = swarmRender(SwarmSettings{2, 0.0f}, 12000);
+    const auto nan = swarmRender(SwarmSettings{2, std::nanf("")}, 12000);
+    bool same = true;
+    for (size_t i = 0; i < plain.size(); ++i) same = same && plain[i] == nan[i];
+    CHECK(same);
+}
+
+TEST(surface_engine_modulation_nudges_a_macro_in_every_mode_and_clamps_at_the_rail) {
+    // A 2 kHz sine through XY with the finger at cutoff 1.0 (16 kHz: it
+    // passes untouched): a -1 offset on CUTOFF (index 1) closes the filter
+    // to 80 Hz, twenty-five times below the tone, and the output all but
+    // vanishes; +1 past an already-open cutoff clamps at the rail and
+    // changes nothing. The same offset reaches MORPH, where the macro came
+    // from a corner rather than the finger. Ten whole periods, so the
+    // loop's seam is silent.
+    const auto bright = measure::sine(2000.0f, 240, kRate);
+    auto peakIn = [&](int32_t mode, float cutoffOffset) {
+        SurfaceEngine e(kRate);
+        e.loadSample(bright.data(), bright.size(), kRate);
+        float offsets[SurfaceEngine::kModTargets] = {};
+        offsets[1] = cutoffOffset;
+        e.setModulation(offsets, SurfaceEngine::kModTargets);
+        ControlFrame f;
+        f.mode = mode;
+        f.x = 0.5f; f.y = 1.0f; f.tilt = 0.5f;
+        f.a = 1.0f; f.b = f.c = f.d = 0.0f;  // MORPH: corner A alone, which is CLEAN - cutoff 1.0
+        f.gate = true;
+        e.pushControl(f);
+        render(e, 400 * 64);
+        float p = 0.0f;
+        for (float v : render(e, 50 * 64)) p = std::max(p, std::fabs(v));
+        return p;
+    };
+    const float xyOpen = peakIn(0, 0.0f);
+    CHECK(xyOpen > 0.1f);
+    CHECK(peakIn(0, -1.0f) < xyOpen * 0.2f);
+    CHECK_NEAR(peakIn(0, 1.0f), xyOpen, 1e-3);
+    const float morphOpen = peakIn(2, 0.0f);
+    CHECK(morphOpen > 0.1f);
+    CHECK(peakIn(2, -1.0f) < morphOpen * 0.2f);
+}
+
+TEST(surface_engine_modulation_moves_the_cloud_and_a_nan_offset_is_nothing) {
+    // A ramp source names its frame by its value, and a frozen cloud
+    // (SPRAY 0) at POSITION 0.25 reads there; +0.5 on POSITION (index 10)
+    // moves every grain to 0.75, so the per-period peaks (see the SPRAY
+    // test) roughly triple. A NaN offset reads as 0 and leaves the cloud
+    // where the finger put it.
+    auto peakAt = [](float positionOffset) {
+        SurfaceEngine e(kRate);
+        auto src = ramp(kRate);
+        for (float& v : src) v *= 1000.0f / static_cast<float>(kRate);
+        e.loadSample(src.data(), src.size(), kRate);
+        e.setGrain(GrainSettings{0.0f, 1.0f, 0.0f});
+        float offsets[SurfaceEngine::kModTargets] = {};
+        offsets[10] = positionOffset;
+        e.setModulation(offsets, SurfaceEngine::kModTargets);
+        e.pushControl(grainFrame(0.25f, 0.5f, true));
+        render(e, 750 * 8);  // the position smoother and the gate settle
+        float m = 0.0f;
+        for (float v : render(e, 750 * 4)) m = std::max(m, v);
+        return m;
+    };
+    const float here = peakAt(0.0f);
+    const float moved = peakAt(0.5f);
+    const float nan = peakAt(std::nanf(""));
+    CHECK(here > 0.05f);
+    CHECK(moved > here * 2.0f);
+    CHECK_NEAR(nan, here, 1e-3);
+}
+
+TEST(surface_engine_modulation_reaches_grain_size_density_and_spray) {
+    // DENSITY at its floor with +1 on DENSITY (index 8) is DENSITY at its
+    // ceiling: the gaps between grains close (see the density test).
+    std::vector<float> dc(1000, 0.5f);
+    SurfaceEngine e(kRate);
+    e.loadSample(dc.data(), dc.size(), kRate);
+    e.setGrain(GrainSettings{0.0f, 0.0f, 0.0f});
+    float offsets[SurfaceEngine::kModTargets] = {};
+    offsets[7] = 1.0f;  // SIZE to its ceiling too, so sixteen overlap
+    offsets[8] = 1.0f;
+    e.setModulation(offsets, SurfaceEngine::kModTargets);
+    e.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(e, 20000);
+    float lo = 10.0f;
+    for (float v : render(e, 20000)) lo = std::min(lo, v);
+    CHECK(lo > 0.3f);
+    // And SPRAY (index 9) from 0 to 1 scatters a frozen cloud: on a ramp,
+    // the per-period peaks stop agreeing.
+    SurfaceEngine s(kRate);
+    auto src = ramp(kRate);
+    for (float& v : src) v *= 1000.0f / static_cast<float>(kRate);
+    s.loadSample(src.data(), src.size(), kRate);
+    s.setGrain(GrainSettings{0.0f, 1.0f, 0.0f});
+    float sprayOnly[SurfaceEngine::kModTargets] = {};
+    sprayOnly[9] = 1.0f;
+    s.setModulation(sprayOnly, SurfaceEngine::kModTargets);
+    s.pushControl(grainFrame(0.5f, 0.5f, true));
+    render(s, 750 * 6);
+    const auto mono = render(s, 750 * 12);
+    float pLo = 1.0f, pHi = 0.0f;
+    for (size_t p = 0; p + 750 <= mono.size(); p += 750) {
+        float m = 0.0f;
+        for (size_t i = p; i < p + 750; ++i) m = std::max(m, mono[i]);
+        pLo = std::min(pLo, m);
+        pHi = std::max(pHi, m);
+    }
+    CHECK(pHi - pLo > 0.05f);
 }
 
 int main() { return check::runAll(); }

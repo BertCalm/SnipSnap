@@ -37,12 +37,14 @@ object Patches {
         val engine = value.obj()["engine"]?.str() ?: throw JsonException("patch has no engine")
         return when (engine) {
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
+            SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
             TinesPatch.ENGINE -> TinesPatch.fromJsonValue(value)
             PluckPatch.ENGINE -> PluckPatch.fromJsonValue(value)
             TonewheelPatch.ENGINE -> TonewheelPatch.fromJsonValue(value)
             VelvetPatch.ENGINE -> VelvetPatch.fromJsonValue(value)
             FathomPatch.ENGINE -> FathomPatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
+            SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
@@ -212,6 +214,126 @@ data class VoxPatch(
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> VoxVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 VoxPatch(name, voice, macros)
+            }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/**
+ * A saved SNAP sound: the line read off a photo, as its own 256 numbers,
+ * plus the knobs. The photo itself is not kept — the table is the part of
+ * it that sounds, and it is small enough to live in `kit.json` beside
+ * every other recipe. The one patch with a field beyond the common four,
+ * so it writes and reads that field itself around [Patches]' shared shape.
+ *
+ * The table is copied in and never handed out for writing: a caller
+ * editing its own array after building the patch would otherwise change
+ * the sound (and the hash) behind the 0..255 check.
+ */
+class SnapPatch(
+    override val name: String,
+    val voice: SnapVoice,
+    override val macros: Map<String, Float>,
+    table: IntArray,
+    envelope: IntArray? = null,
+) : Patch {
+    /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them or [Draw] drew them. */
+    val table: IntArray = table.copyOf()
+
+    /**
+     * A drawn volume shape, [Draw.ENVELOPE_SIZE] points 0..255 across the
+     * note, or null for SNAP's own DECAY exponential. Optional in the
+     * sidecar too: a recipe without one reads as it always did.
+     */
+    val envelope: IntArray? = envelope?.copyOf()
+
+    init {
+        Patches.validateMacros(this, Snap.macrosFor(voice))
+        require(table.size == Snap.TABLE_SIZE) { "a SNAP table has ${Snap.TABLE_SIZE} points, got ${table.size}" }
+        for ((i, v) in table.withIndex()) require(v in 0..255) { "table[$i] is not a brightness 0..255: $v" }
+        // The same refusal Snap.read makes, held here too, so a table
+        // typed into kit.json by hand cannot land a silent pad that
+        // nothing refused in words.
+        require(!Snap.isFlat(table)) { "a SNAP table with no swing in it has no waveform to play" }
+        if (envelope != null) {
+            require(envelope.size == Draw.ENVELOPE_SIZE) { "a drawn shape has ${Draw.ENVELOPE_SIZE} points, got ${envelope.size}" }
+            for ((i, v) in envelope.withIndex()) require(v in 0..255) { "envelope[$i] is not a level 0..255: $v" }
+            require(Draw.opens(envelope)) { "a drawn shape that never opens is silence" }
+        }
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Snap.render(table, macros, envelope)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    override fun toJsonValue(): JsonValue.Obj {
+        val base = Patches.toJsonValue(this)
+        val obj = LinkedHashMap(base.entries)
+        obj["table"] = JsonValue.Arr(table.map { JsonValue.Num(it.toDouble()) })
+        envelope?.let { obj["envelope"] = JsonValue.Arr(it.map { v -> JsonValue.Num(v.toDouble()) }) }
+        return JsonValue.Obj(obj)
+    }
+
+    fun copy(
+        name: String = this.name,
+        voice: SnapVoice = this.voice,
+        macros: Map<String, Float> = this.macros,
+        table: IntArray = this.table,
+        envelope: IntArray? = this.envelope,
+    ): SnapPatch = SnapPatch(name, voice, macros, table, envelope)
+
+    // Not a data class: an array member would compare by identity there,
+    // and a recipe round-trip test has to compare the numbers.
+    override fun equals(other: Any?): Boolean =
+        other is SnapPatch && name == other.name && voice == other.voice &&
+            macros == other.macros && table.contentEquals(other.table) &&
+            (envelope?.contentEquals(other.envelope ?: IntArray(0)) ?: (other.envelope == null))
+
+    override fun hashCode(): Int =
+        (((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + table.contentHashCode()) * 31 +
+            (envelope?.contentHashCode() ?: 0)
+
+    override fun toString(): String =
+        "SnapPatch(name=$name, voice=$voice, macros=$macros, table=[${table.size} points]" +
+            (envelope?.let { ", envelope=[${it.size} points]" } ?: "") + ")"
+
+    companion object {
+        const val ENGINE = "SNAP"
+
+        /**
+         * Engine and version are checked first, through the shared
+         * [Patches.decode], so a file from a later version says
+         * "unsupported version" rather than something about its table;
+         * the table is read inside the build step, and a wrong-length,
+         * out-of-range or flat one is a [JsonException] like every other
+         * malformed recipe, never a bare [IllegalArgumentException].
+         */
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> SnapVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                val raw = value.obj()["table"] ?: throw JsonException("SNAP patch has no table")
+                val items = raw.arr()
+                if (items.size != Snap.TABLE_SIZE) throw JsonException("SNAP table has ${items.size} points, not ${Snap.TABLE_SIZE}")
+                val table = IntArray(items.size) { i ->
+                    val v = items[i].int()
+                    if (v !in 0..255) throw JsonException("SNAP table[$i] is not a brightness 0..255: $v")
+                    v
+                }
+                if (Snap.isFlat(table)) throw JsonException("SNAP table has no swing in it: nothing to play")
+                // An explicit null is the natural way to write "no shape";
+                // it reads as the field being absent, not as a malformed one.
+                val envelope = value.obj()["envelope"]?.takeUnless { it is JsonValue.Null }?.let { rawEnv ->
+                    val points = rawEnv.arr()
+                    if (points.size != Draw.ENVELOPE_SIZE) throw JsonException("SNAP envelope has ${points.size} points, not ${Draw.ENVELOPE_SIZE}")
+                    val env = IntArray(points.size) { i ->
+                        val v = points[i].int()
+                        if (v !in 0..255) throw JsonException("SNAP envelope[$i] is not a level 0..255: $v")
+                        v
+                    }
+                    if (!Draw.opens(env)) throw JsonException("SNAP envelope never opens: silence")
+                    env
+                }
+                SnapPatch(name, voice, macros, table, envelope)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

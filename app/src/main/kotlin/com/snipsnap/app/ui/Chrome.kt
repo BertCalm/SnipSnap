@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.etchedGroove
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.pressedBevel
@@ -62,7 +64,25 @@ import com.snipsnap.shell.SchemeId
  * catch-all now prevents from recurring.)
  */
 enum class AppScreen(val label: String) {
-    KITS("KITS"),
+    /**
+     * The shelf. Its label reads SHELF, not KITS (J14).
+     *
+     * KIT receives 11 of the 24 direct navigations in `App.kt` — nearly
+     * half, and almost three times the next destination — while this
+     * screen sat one letter away from it in the menu row. The app's own
+     * voice had already picked a side: `Copy` says SHELF 41 times against
+     * KITS 22, and `Copy.landed` reads "KITS LANDED ON **THE SHELF**".
+     * The tab was the last place still calling it the other thing.
+     *
+     * The enum constant stays `KITS`, like `ChopReviewModel.GridSnap` and
+     * `GrooveEdit.NAME_SUFFIX` before it: it is an identity the code
+     * navigates by, not a word a player reads. Only [label] is the word.
+     *
+     * This settles the screen's NAME, not its form. `UI_DESIGN.md` still
+     * lists "whether the desktop metaphor extends to a 'My Kits'
+     * file-manager screen or kits stay a menu" as open, and it stays open.
+     */
+    KITS("SHELF"),
     KIT("KIT"),
     TAPE("TAPE"),
     CHOP("CHOP"),
@@ -73,10 +93,12 @@ enum class AppScreen(val label: String) {
     SYNTH("SYNTH"),
     /** The tactile pad: macros under a finger, PRINT to resample the gesture onto TAPE. */
     SURFACE("SURFACE"),
+    /** A photo becomes a pad: the camera's line read as a wavetable, its colours as the knobs. */
+    SNAP("SNAP"),
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ KITS. */
+    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
     KEYS("KEYS"),
 
     /**
@@ -165,8 +187,17 @@ fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> U
         if (label != null) base.semantics { contentDescription = label } else base
     }
 
+/**
+ * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,
+ * WS4): non-null only while the workshop is open, so a phone that never
+ * knocked draws the bar exactly as before. It lives here, on the one row
+ * every screen shares, because a bench note is about whatever screen is
+ * under it - PLAY, CHOP, a pad sheet - and a chip per screen would be one
+ * more thing per screen to keep in step. A raised bevel at the bar's right
+ * end: the Win9x button-on-a-title-bar, which is what this is.
+ */
 @Composable
-fun TitleBar(modifier: Modifier = Modifier) {
+fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null) {
     val scheme = LocalScheme.current
     val brush =
         if (scheme.id == SchemeId.OILSLICK) {
@@ -189,6 +220,23 @@ fun TitleBar(modifier: Modifier = Modifier) {
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
         TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+        if (onNote != null) {
+            // The whole 34dp height is the tap target; the bevel sits
+            // inside a vertical inset so it reads as a button on the bar
+            // rather than the bar's own edge. `tapeClick` before the inset,
+            // so the inset is inside the target and not taken out of it.
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .tapeClick(label = "NOTE", onClick = onNote)
+                    .padding(vertical = 5.dp)
+                    .raisedBevel(scheme)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("NOTE", TapeType.pixel, scheme.ink.tape)
+            }
+        }
     }
 }
 
@@ -208,25 +256,59 @@ data class MenuItem(val label: String, val screen: AppScreen)
 // menu tabs" law only checks membership, not order, so this is safe
 // against it.
 //
-// KIT then moved after CHOP (same followups): KITS is the shelf you
-// arrive at, not one of the four steps, so it stays first — but KIT had
+// KIT then moved after CHOP (same followups): the shelf is where you
+// arrive, not one of the four steps, so it stays first — but KIT had
 // landed second, ahead of TAPE and CHOP, which put the strip out of step
 // with the loop it was just fixed to make visible. The four flow tabs
 // now read TAPE ▸ CHOP ▸ KIT ▸ EXPORT, matching the stated order exactly,
 // still inside the same visible run.
-val MENU_ITEMS = listOf(
-    MenuItem("KITS", AppScreen.KITS),
-    MenuItem("TAPE", AppScreen.TAPE),
-    MenuItem("CHOP", AppScreen.CHOP),
-    MenuItem("KIT", AppScreen.KIT),
-    MenuItem("EXPORT", AppScreen.EXPORT),
-    MenuItem("PLAY", AppScreen.PLAY),
-    MenuItem("GROOVE", AppScreen.GROOVE),
-    MenuItem("ORBIT", AppScreen.ORBIT),
-    MenuItem("SYNTH", AppScreen.SYNTH),
-    MenuItem("SURFACE", AppScreen.SURFACE),
-    MenuItem("SETUP", AppScreen.PROPERTIES),
-    MenuItem("HELP", AppScreen.HELP),
+//
+// J12: the twelve tabs are four groups, and the row now says so with a
+// [Layout.MENU_GROOVE_W] rule between them. The order above was already
+// doing the grouping's work - the four flow tabs in their stated order,
+// then the instruments, then the two utilities - but nothing drew the
+// seams, so a strip of twelve equal words read as one undifferentiated
+// run and the reordering's whole point was legible only to someone who
+// already knew the loop.
+//
+// The groups are nested here rather than marked by a boundary index or a
+// `groupStart` flag on [MenuItem], because either of those is the order
+// written down a second time: move a tab and the index still points at
+// the old seam, silently. Nesting makes the order and the grouping the
+// same declaration, so they cannot disagree. `ConventionTest`'s
+// "first-run loop names real menu tabs" law reads `MenuItem("...")` by
+// regex, so it sees all twelve through the nesting unchanged.
+//
+// There is no flattened `MENU_ITEMS` beside this any more: `MenuRow` was
+// its only reader, and a second spelling of the same twelve tabs kept
+// only for tidiness is the shape this file has just finished removing.
+val MENU_GROUPS = listOf(
+    // Where you arrive, and the only tab that is a place rather than a
+    // thing you do to a sound.
+    listOf(
+        MenuItem("SHELF", AppScreen.KITS),
+    ),
+    // The loop the empty shelf states in words, in its stated order.
+    listOf(
+        MenuItem("TAPE", AppScreen.TAPE),
+        MenuItem("CHOP", AppScreen.CHOP),
+        MenuItem("KIT", AppScreen.KIT),
+        MenuItem("EXPORT", AppScreen.EXPORT),
+    ),
+    // Ways to play what the loop made.
+    listOf(
+        MenuItem("PLAY", AppScreen.PLAY),
+        MenuItem("GROOVE", AppScreen.GROOVE),
+        MenuItem("ORBIT", AppScreen.ORBIT),
+        MenuItem("SYNTH", AppScreen.SYNTH),
+        MenuItem("SURFACE", AppScreen.SURFACE),
+        MenuItem("SNAP", AppScreen.SNAP),
+    ),
+    // Not about a sound at all.
+    listOf(
+        MenuItem("SETUP", AppScreen.PROPERTIES),
+        MenuItem("HELP", AppScreen.HELP),
+    ),
 )
 
 /**
@@ -298,36 +380,53 @@ fun MenuRow(
                 .horizontalScroll(scroll),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            for (item in MENU_ITEMS) {
-                val isSelected = item.screen == current
-                Box(
-                    Modifier
-                        // The row's height is fixed, so this is a bounded
-                        // parent and fillMaxHeight resolves to 48dp rather
-                        // than collapsing (the trap MIN_HIT_TARGET's own
-                        // KDoc records). It is what makes the whole tab
-                        // tappable instead of just the word in it.
-                        .fillMaxHeight()
-                        .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
-                        // The tab's own name (item.label) is the accessible
-                        // name, passed explicitly — an accessibility-tree
-                        // dump showed the descendant TapeText below does
-                        // NOT merge into this clickable node for free (that
-                        // was the assumption this comment used to make; all
-                        // 11 tabs spoke as unnamed nodes with it). Selection
-                        // is the one thing the label text still can't say on
-                        // its own (audit finding 7 — selection state had no
-                        // programmatic exposure anywhere in the app).
-                        .semantics { selected = isSelected }
-                        .tapeClick(label = item.label) { onSelect(item.screen) }
-                        .padding(horizontal = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(
-                        item.label,
-                        TapeType.pixel,
-                        if (isSelected) scheme.ink.tape else scheme.ink2.tape,
+            for ((groupIndex, group) in MENU_GROUPS.withIndex()) {
+                if (groupIndex > 0) {
+                    // The rule sits in the 8dp the two neighbouring tabs'
+                    // own padding already leaves, so it reads as spaced
+                    // without any padding of its own - and 4dp of clear
+                    // gray each side is what a Win9x toolbar gives one.
+                    // It is also why the row only grows by
+                    // MENU_GROOVE_W per seam: see that constant on why
+                    // the third dp would start costing a tab.
+                    Box(
+                        Modifier
+                            .width(Layout.MENU_GROOVE_W.dp)
+                            .fillMaxHeight(0.5f)
+                            .etchedGroove(scheme),
                     )
+                }
+                for (item in group) {
+                    val isSelected = item.screen == current
+                    Box(
+                        Modifier
+                            // The row's height is fixed, so this is a bounded
+                            // parent and fillMaxHeight resolves to 48dp rather
+                            // than collapsing (the trap MIN_HIT_TARGET's own
+                            // KDoc records). It is what makes the whole tab
+                            // tappable instead of just the word in it.
+                            .fillMaxHeight()
+                            .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
+                            // The tab's own name (item.label) is the accessible
+                            // name, passed explicitly — an accessibility-tree
+                            // dump showed the descendant TapeText below does
+                            // NOT merge into this clickable node for free (that
+                            // was the assumption this comment used to make; all
+                            // 12 tabs spoke as unnamed nodes with it). Selection
+                            // is the one thing the label text still can't say on
+                            // its own (audit finding 7 — selection state had no
+                            // programmatic exposure anywhere in the app).
+                            .semantics { selected = isSelected }
+                            .tapeClick(label = item.label) { onSelect(item.screen) }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            item.label,
+                            TapeType.pixel,
+                            if (isSelected) scheme.ink.tape else scheme.ink2.tape,
+                        )
+                    }
                 }
             }
         }
@@ -345,7 +444,7 @@ fun MenuRow(
  *
  * With no kit open, [kitName] is `Copy.NO_KIT_STATUS`, not the empty
  * string — an empty cell sat there as a bordered box with nothing in it,
- * reading as a rendering gap next to the populated `KITS: n` cell beside
+ * reading as a rendering gap next to the populated `SHELF: n` cell beside
  * it rather than a state. The caller (`App.kt`) is the one that decides
  * this, not this composable: it already owns `open?.kit?.name`.
  */
@@ -413,7 +512,20 @@ private fun StatusCell(text: String, modifier: Modifier = Modifier) {
  * a uniformly polite announcement.
  */
 @Composable
-fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
+fun ToastOverlay(
+    message: String?,
+    modifier: Modifier = Modifier,
+    /**
+     * An optional door out of the toast (J10): its label, and what it
+     * opens. Null for the ordinary one-line toast, which is most of them.
+     *
+     * The door is part of the same merged semantics node as the message,
+     * so TalkBack announces the line and offers the action together rather
+     * than as two separately-focusable things saying overlapping words —
+     * the same reasoning `mergeDescendants` already carries below.
+     */
+    door: Pair<String, () -> Unit>? = null,
+) {
     val scheme = LocalScheme.current
     if (message == null) return
 
@@ -439,7 +551,23 @@ fun ToastOverlay(message: String?, modifier: Modifier = Modifier) {
                 }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+            if (door == null) {
+                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2)
+            } else {
+                val (label, open) = door
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 2, modifier = Modifier.weight(1f, fill = false))
+                    Spacer(Modifier.width(10.dp))
+                    Box(
+                        Modifier
+                            .raisedBevel(scheme, 3.dp)
+                            .tapeClick(label = label) { open() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        TapeText(label, TapeType.pixel, scheme.amber.tape, maxLines = 1)
+                    }
+                }
+            }
         }
     }
 }
@@ -463,7 +591,7 @@ data class EmptyStateRoute(val label: String, val onClick: () -> Unit)
  * the user to find by hand (September UAT follow-up).
  *
  * [routes] is usually one door, sometimes two (CHOP's own EMPTY_CHOP names
- * both TAPE and KITS, since its own sentence promises both) — deliberately
+ * both TAPE and SHELF, since its own sentence promises both) — deliberately
  * never validated non-empty here: a screen with no honest route to offer
  * (EXPORT's own "kit won't parse" face, `KIT_WONT_OPEN`, same reasoning as
  * `TakesBinScreen`'s) simply doesn't call this at all, and stays a bare

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,12 +62,14 @@ import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
+import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadPeaks
+import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TextureKits
@@ -136,7 +140,7 @@ fun KitScreen(
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+        EmptyStatePanel(Copy.NO_TAPE_IN_DECK, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
         return
     }
 
@@ -186,16 +190,20 @@ fun KitScreen(
 
     val kit = entry.kit
 
-    fun hit(slot: Int) {
+    fun hit(slot: Int, velocity: Float = 1f) {
         val pad = kit.pad(slot) ?: return
         if (!engineUp || !player.isUp()) return
         // oneShot forced true, not read off the pad: this screen has no
         // release gesture to call noteOff with, so a gate pad's own
         // metadata would otherwise sit unused - forcing it here says so,
         // rather than leaving a future release gesture to discover it.
-        val allocation = allocator.noteOn(slot, 1f, pad.muteGroup, oneShot = true)
+        // The velocity is the grid's, not a constant (J37): SOFT HITS
+        // builds real velocity layers and `PadHit.resolve` has always
+        // picked one by velocity, so a hard-coded 1f meant the layers could
+        // be built and never heard.
+        val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, 1f, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
     }
 
     fun panic() {
@@ -358,15 +366,55 @@ fun KitScreen(
         // be forgotten. The hold stays exactly as it was — this explains it,
         // it does not replace it.
         TapeText(Copy.PAD_SHEET_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        // The second gesture with nothing to see (J37). Same reasoning as
+        // the line above it: a pad that answers to where it is tapped is
+        // not discoverable by looking, and a hint that can be dismissed is
+        // a feature that can be lost.
+        TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
         // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
         var panelKind by remember(entry.dir) { mutableStateOf<String?>(null) }
         val sources = kit.pads.map { it.slot }.sorted()
-        var sourceSlot by remember(entry.dir, sources.firstOrNull()) { mutableStateOf(sources.firstOrNull()) }
-        var mode by remember(panelKind) { mutableStateOf(panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.modesFor(it).first() } ?: "") }
+
+        // SOURCE: the pad the player picked, remembered against the kit
+        // alone (J25).
+        //
+        // This was keyed on `sources.firstOrNull()` — the *value* of the
+        // kit's lowest assigned slot — so any chop landing or capture that
+        // filled a lower pad silently re-pointed the stepper at the new
+        // arrival. SCULPT's NEW TAPE has no per-pad confirm, so the next GO
+        // rendered over a pad nobody chose: pick A07, a capture lands on
+        // A01, GO renders A01.
+        //
+        // That key was doing two jobs, which is why this is a replacement
+        // and not a deletion. Re-pointing on a kit change was the bug;
+        // taking a first value once the kit has pads at all was not, since
+        // `sources` is empty on the first composition. The fallback below
+        // does the second without the first — the player's pick stands
+        // while its pad exists, and the lowest slot is used only when there
+        // is no pick to honour: none made yet, or one whose pad has since
+        // been removed.
+        var pickedSource by remember(entry.dir) { mutableStateOf<Int?>(null) }
+        val sourceSlot = pickedSource?.takeIf { it in sources } ?: sources.firstOrNull()
+
+        // One mode per panel, one knob value per panel-and-mode (J25, and
+        // the same bug J24 had on PAD SHEET's move knobs). Each panel has
+        // its own modes and each mode its own knob, so neither can simply
+        // carry across — but keying them on the panel and the mode threw
+        // the player's setting away by the act of looking at the other one,
+        // which is what the chips are for. Untouched, each still opens on
+        // its own default.
+        val textureModes = remember(entry.dir) { mutableStateMapOf<String, String>() }
+        val mode = panelKind?.takeIf { it != KEY_PANEL }
+            ?.let { textureModes[it] ?: TextureKits.modesFor(it).first() } ?: ""
         val knob = panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.knobFor(it, mode) }
-        var fraction by remember(panelKind, mode) { mutableFloatStateOf(knob?.defaultFraction ?: 0f) }
+        val textureKnobs = remember(entry.dir) { mutableStateMapOf<Pair<String, String>, Float>() }
+        // Dialled value first, then this mode's own default; 0f only when
+        // no panel is open and there is no knob to have a default.
+        val fraction = panelKind?.let { textureKnobs[it to mode] }
+            ?: knob?.defaultFraction
+            ?: 0f
 
         // X2.3 KIT action rows: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
@@ -549,16 +597,16 @@ fun KitScreen(
                     kind = kind,
                     modes = TextureKits.modesFor(kind),
                     mode = mode,
-                    onMode = { mode = it },
+                    onMode = { picked -> textureModes[kind] = picked },
                     sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
                     onSourceStep = { step ->
                         val i = sources.indexOf(src)
-                        if (i >= 0 && sources.size > 1) sourceSlot = sources[(i + step).mod(sources.size)]
+                        if (i >= 0 && sources.size > 1) pickedSource = sources[(i + step).mod(sources.size)]
                     },
                     knobLabel = knob.label,
                     knobFraction = fraction,
                     knobText = TextureKits.knobLabel(knob, knob.value(fraction)),
-                    onKnob = { f -> fraction = (f * 40f).let { Math.round(it) / 40f } },
+                    onKnob = { f -> textureKnobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
                     busy = busy,
                     onGo = {
                         val seed = Random.nextLong(0L, 1_000_000L)
@@ -738,12 +786,25 @@ private fun classTint(rgb: Int): Color {
 /** A long press that opens PAD SHEET, timed from the design's own 480ms. */
 private const val LONG_PRESS_MS = 480L
 
+/**
+ * How lit a pad sits while a finger is on it (J15).
+ *
+ * Below the 0.35 a fresh hit flashes to, so a hold reads as "held" rather
+ * than as a hit that never ended, and well above zero, which is what the
+ * pad showed for the last 300 ms of every 480 ms hold.
+ */
+private const val PAD_HELD_ALPHA = 0.20f
+
+/** The treated-pad corner mark's side, in dp (J36). Small enough to read as a mark, not a control. */
+private const val PAD_TREATED_MARK_DP = 7
+
 @Composable
 private fun PadCell(
     slot: Int,
     pad: KitPad?,
     peaks: List<PeaksPyramid.Column>?,
-    onTap: (Int) -> Unit,
+    /** The pad, and how hard: [PadHit.velocityAt] over where in the cell the finger landed. */
+    onTap: (Int, Float) -> Unit,
     onLongPress: (Int) -> Unit,
     onEmptyLongPress: (Int) -> Unit,
     onEmptyTapHint: (Int) -> Unit,
@@ -821,13 +882,38 @@ private fun PadCell(
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16)
         ?: Schemes.classColor(pad.drumClass)
     val glow = remember(slot) { Animatable(0f) }
+    /**
+     * Whether a finger is down on this pad right now (J15).
+     *
+     * The hold that opens PAD SHEET runs for [LONG_PRESS_MS] = 480 ms and
+     * the only feedback the pad had was [glow], which *decays* over
+     * `Motion.PAD_GLOW_MS` = 180 ms. So the pad brightened, went dark
+     * again, and then sat doing nothing for the remaining 300 ms — the
+     * majority of the wait — before the largest surface in the app
+     * appeared. A hit is a moment and should fade; a hold is a state and
+     * should show for as long as it lasts.
+     *
+     * A steady lit floor rather than a growing bar, per `UI_DESIGN.md`:
+     * "One signature animation: the snip's cassette flying onto the
+     * shelf... Everything else is instant." This is a state flipping, not
+     * an animation.
+     */
+    var held by remember(slot) { mutableStateOf(false) }
+    // What this pad carries, read out of the same strips the pad sheet
+    // draws (J36) rather than re-derived here - so the grid and the sheet
+    // cannot disagree about what "treated" means.
+    val touchedBenches = remember(pad) { PadSheetBoxes.touched(pad).map { it.legend } }
+    // The hit's own flash still decays; the held floor is what stays.
+    // maxOf, not a sum: a tap on an already-held pad must not stack into
+    // a brighter fill than a fresh hit produces.
+    val lit = maxOf(0.35f * glow.value, if (held) PAD_HELD_ALPHA else 0f)
 
     Box(
         modifier
             .height(Layout.PAD_H.dp)
             .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-            .border(2.dp, cls.tape, shape)
-            .background(cls.tape.copy(alpha = 0.35f * glow.value), shape)
+            .border(if (held) 3.dp else 2.dp, cls.tape, shape)
+            .background(cls.tape.copy(alpha = lit), shape)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably
@@ -840,8 +926,21 @@ private fun PadCell(
             // below stay separate nodes — TalkBack would land on this
             // one cell three times instead of once.
             .semantics(mergeDescendants = true) {
-                contentDescription = "PAD $tag: ${pad.displayName}"
-                onClick(label = "PLAY") { onTap(slot); true }
+                // Names the benches the pad carries (J36). Without it,
+                // sixteen treated pads read identically to sixteen raw
+                // ones and the only way to tell them apart is to open
+                // each pad sheet in turn - which is worse for a TalkBack
+                // user than for a sighted one, since the corner marker
+                // below is not available to them at all.
+                contentDescription = "PAD $tag: ${pad.displayName}" +
+                    if (touchedBenches.isEmpty()) "" else ", ${Copy.padTreated(touchedBenches)}"
+                // The centre, deliberately: a synthesized click has no
+                // position to read, so it gets what a tap at the pad's
+                // vertical middle would have produced — the same answer
+                // PLAY and KEYS have always given. Full velocity, which
+                // this used at first, was a third disagreement with the
+                // rest of the app.
+                onClick(label = "PLAY") { onTap(slot, PadHit.CENTER); true }
                 onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for
@@ -853,7 +952,8 @@ private fun PadCell(
             .pointerInput(slot) {
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                    onTap(slot)
+                    held = true
+                    onTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
                     scope.launch {
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
@@ -862,12 +962,21 @@ private fun PadCell(
                         delay(LONG_PRESS_MS)
                         onLongPress(slot)
                     }
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) break
+                    try {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                            }
                         }
+                    } finally {
+                        // `finally`, because this pointerInput is cancelled
+                        // outright when the sheet opens over the grid — and a
+                        // pad left `held` would come back lit when the user
+                        // returns to KIT, which is worse than the missing
+                        // feedback this fixes.
+                        held = false
                     }
                     longPressJob.cancel()
                 }
@@ -903,6 +1012,19 @@ private fun PadCell(
             Modifier.align(Alignment.BottomStart),
             maxLines = 2,
         )
+        // The treated marker (J36): a dog-eared corner in the pad's own
+        // class colour. A corner rather than a rim, because the rim is
+        // already spoken for - its width is the held state (J15) and its
+        // hue is the drum class. A drawn shape rather than a glyph, per
+        // `UI_DESIGN.md`: "Icons are drawn... never emoji."
+        if (touchedBenches.isNotEmpty()) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(PAD_TREATED_MARK_DP.dp)
+                    .background(cls.tape),
+            )
+        }
     }
 }
 

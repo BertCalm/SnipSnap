@@ -124,6 +124,13 @@ object SurfaceStore {
                 return when (mode) {
                     TouchSurface.Mode.XY -> Corner(reading.x, reading.y, t * 0.5f, 0f)
                     TouchSurface.Mode.XYZ -> Corner(reading.x, reading.y, t, reading.z)
+                    // A corner is the seven macros, and GRAIN's finger drives
+                    // none of them - it is the cloud's position and pitch,
+                    // which no corner can hold. What the chain under the
+                    // cloud actually runs is XY's rest: as recorded, wide
+                    // open, the roll's half-resonance (`SurfaceEngine.cpp`'s
+                    // `applyControl`, case 4), so that is what SET captures.
+                    TouchSurface.Mode.GRAIN -> Corner(0.5f, 1f, t * 0.5f, 0f)
                     TouchSurface.Mode.MORPH, TouchSurface.Mode.VECTOR -> {
                         require(corners.size == 4) { "a morph or vector blends four corners, got ${corners.size}" }
                         val w = listOf(reading.a, reading.b, reading.c, reading.d)
@@ -140,6 +147,61 @@ object SurfaceStore {
         }
     }
 
+    /**
+     * GRAIN mode's three knobs, each 0..1, the mode's texture rather than
+     * its performance: SIZE is each grain's length (10 ms to a quarter
+     * second), DENSITY how many start a second (2 to 64), SPRAY how far
+     * each one's start wanders from the finger's POSITION (none, to half
+     * the sample either way). What each value means in the engine's own
+     * units lives in `app/src/main/cpp/Grain.h` and nowhere else - the
+     * screen shows these as percentages rather than carry a second copy
+     * of that arithmetic.
+     */
+    data class Grain(
+        val size: Float = 0.5f,
+        val density: Float = 0.5f,
+        val spray: Float = 0.15f,
+    ) {
+        init {
+            for ((name, v) in listOf("size" to size, "density" to density, "spray" to spray)) {
+                require(v.isFinite() && v in 0f..1f) { "$name is 0..1, got $v" }
+            }
+        }
+
+        companion object {
+            /** Mid-length, mid-rate, a little scatter: a cloud, not a buzz, before any knob is touched. */
+            val DEFAULT = Grain()
+        }
+    }
+
+    /**
+     * SWARM: the loop voice as a detuned unison, the S-4's "detuned
+     * swarm" - [voices] copies of every slot's loop spread evenly across
+     * ±[detune] of the engine's widest detune (a quarter tone either way
+     * at most - `kMaxDetuneCents` in `SurfaceEngine.h`), summed at
+     * 1/sqrt(voices). One voice is the plain loop whatever the detune.
+     * [MAX_VOICES] is `SurfaceEngine::kMaxSwarm` by hand. Shown as a
+     * count and a percentage: the cents are the engine's arithmetic, not
+     * a second copy here.
+     */
+    data class Swarm(
+        val voices: Int = 1,
+        val detune: Float = 0.15f,
+    ) {
+        init {
+            require(voices in 1..MAX_VOICES) { "voices is 1..$MAX_VOICES, got $voices" }
+            require(detune.isFinite() && detune in 0f..1f) { "detune is 0..1, got $detune" }
+        }
+
+        companion object {
+            /** How many voices a swarm can have - `SurfaceEngine::kMaxSwarm`, kept in step by hand. */
+            const val MAX_VOICES = 4
+
+            /** One voice, a little detune ready for when a second is added: the plain loop until VOICES is stepped up. */
+            val DEFAULT = Swarm()
+        }
+    }
+
     data class Settings(
         /** The pad the surface plays, by slot; null = the kit's lowest. */
         val padSlot: Int?,
@@ -150,9 +212,28 @@ object SurfaceStore {
         val thirdPadSlot: Int? = null,
         /** The pad in the engine's fourth source slot (the sample area's base-mid vertex); null = none loaded. */
         val fourthPadSlot: Int? = null,
+        /** GRAIN mode's knobs; the defaults until the GRAIN row has been stepped. */
+        val grain: Grain = Grain.DEFAULT,
+        /** The two modulator slots ([Modulator]); every slot at depth 0 until the MOD row has been stepped. */
+        val mods: List<Modulator.Slot> = Modulator.OFF,
+        /**
+         * KEY: the loop's pitch snapped to the kit's key (a semitone ladder
+         * with no key), the way GRAIN's always is - see `SurfaceEngine.
+         * setKeySnap`. Off until KEY is tapped, so a kit from before plays
+         * as it did.
+         */
+        val keySnap: Boolean = false,
+        /** SWARM's voices and detune; one voice - the plain loop - until the SWARM row has been stepped. */
+        val swarm: Swarm = Swarm.DEFAULT,
+        /** The kit's recorded finger ([Gesture]), or none; a MOD slot on SHAPE GESTURE plays it. */
+        val gesture: Gesture? = null,
+        /** ECHO's time as an index into [EchoTime.DIVISIONS]; FREE - the engine's own fixed time - until the ECHO button is tapped. */
+        val echoTime: Int = EchoTime.FREE_INDEX,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
+            require(echoTime in EchoTime.DIVISIONS.indices) { "ECHO's time is an index into EchoTime.DIVISIONS (0..${EchoTime.DIVISIONS.lastIndex}), got $echoTime" }
+            require(mods.size == Modulator.SLOTS) { "${Modulator.SLOTS} modulator slots, got ${mods.size}" }
             padSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
             secondPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
             thirdPadSlot?.let { require(it in 1..128) { "slot out of range: $it" } }
@@ -178,6 +259,9 @@ object SurfaceStore {
         return fromJson(Json.parse(file.readText(Charsets.UTF_8)))
     }
 
+    /** A pad coordinate to three decimals, as the file keeps a gesture's points. */
+    private fun thousandth(v: Float): Double = kotlin.math.round(v * 1000.0) / 1000.0
+
     private fun toJson(s: Settings): JsonValue = JsonValue.Obj(
         linkedMapOf(
             "version" to JsonValue.Num(VERSION.toDouble()),
@@ -185,6 +269,46 @@ object SurfaceStore {
             "secondPad" to (s.secondPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "thirdPad" to (s.thirdPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "fourthPad" to (s.fourthPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
+            "grain" to JsonValue.Obj(
+                linkedMapOf(
+                    "size" to JsonValue.Num(s.grain.size.toDouble()),
+                    "density" to JsonValue.Num(s.grain.density.toDouble()),
+                    "spray" to JsonValue.Num(s.grain.spray.toDouble()),
+                ),
+            ),
+            "mods" to JsonValue.Arr(
+                s.mods.map { m ->
+                    JsonValue.Obj(
+                        linkedMapOf(
+                            "target" to JsonValue.Str(m.target.name),
+                            "shape" to JsonValue.Str(m.shape.name),
+                            "rate" to JsonValue.Num(m.rateIndex.toDouble()),
+                            "depth" to JsonValue.Num(m.depth.toDouble()),
+                        ),
+                    )
+                },
+            ),
+            "keySnap" to JsonValue.Bool(s.keySnap),
+            "echoTime" to JsonValue.Num(s.echoTime.toDouble()),
+            "swarm" to JsonValue.Obj(
+                linkedMapOf(
+                    "voices" to JsonValue.Num(s.swarm.voices.toDouble()),
+                    "detune" to JsonValue.Num(s.swarm.detune.toDouble()),
+                ),
+            ),
+            // Each point to a thousandth of the pad: a bar is under a
+            // kilobyte, and a thousandth is far below a finger's own jitter.
+            "gesture" to (
+                s.gesture?.let { g ->
+                    JsonValue.Obj(
+                        linkedMapOf(
+                            "bars" to JsonValue.Num(g.bars.toDouble()),
+                            "x" to JsonValue.Arr(g.xs.map { JsonValue.Num(thousandth(it)) }),
+                            "y" to JsonValue.Arr(g.ys.map { JsonValue.Num(thousandth(it)) }),
+                        ),
+                    )
+                } ?: JsonValue.Null
+                ),
             "corners" to JsonValue.Arr(
                 s.corners.map { c ->
                     JsonValue.Obj(
@@ -234,6 +358,56 @@ object SurfaceStore {
             )
         } ?: Corner.DEFAULTS
         if (corners.size != 4) throw JsonException("surface.json has ${corners.size} corners, not 4")
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad)
+        // Absent on a file saved before GRAIN existed: the defaults, the
+        // same backward-compatible shape as secondPad and crush. Present,
+        // it has to be whole - a knob that is there but not a number is
+        // refused, not read as its default (the crush/echo rule).
+        val grain = obj["grain"]?.let { g ->
+            val o = g.obj()
+            fun knob(name: String) = o[name]?.num()?.toFloat() ?: throw JsonException("grain has no $name")
+            Grain(knob("size"), knob("density"), knob("spray"))
+        } ?: Grain.DEFAULT
+        // Same rule as grain: absent is a file from before the MOD row,
+        // present has to be whole - the right count, names this build
+        // knows (a target from a newer build is refused in words, not
+        // quietly re-aimed at something else), numbers where numbers go.
+        val mods = obj["mods"]?.arr()?.map { m ->
+            val o = m.obj()
+            fun word(name: String) = o[name]?.str() ?: throw JsonException("modulator has no $name")
+            val target = Modulator.Target.entries.firstOrNull { it.name == word("target") }
+                ?: throw JsonException("modulator target '${word("target")}' is not one this build knows")
+            val shape = Modulator.Shape.entries.firstOrNull { it.name == word("shape") }
+                ?: throw JsonException("modulator shape '${word("shape")}' is not one this build knows")
+            val rate = o["rate"]?.int() ?: throw JsonException("modulator has no rate")
+            val depth = o["depth"]?.num()?.toFloat() ?: throw JsonException("modulator has no depth")
+            Modulator.Slot(target, shape, rate, depth)
+        } ?: Modulator.OFF
+        if (mods.size != Modulator.SLOTS) throw JsonException("surface.json has ${mods.size} modulators, not ${Modulator.SLOTS}")
+        // Absent is a file from before KEY: off. Present, it is a boolean or
+        // the file is torn - the same rule as every field above.
+        val keySnap = obj["keySnap"]?.bool() ?: false
+        // Absent is a file from before ECHO had a clock: FREE. Present, it
+        // is a whole number or the file is torn; Settings' own door holds
+        // it to the divisions there are.
+        val echoTime = obj["echoTime"]?.int() ?: EchoTime.FREE_INDEX
+        // The grain rule once more: absent is a file from before SWARM,
+        // present has to be whole and in range (Swarm's own init refuses).
+        val swarm = obj["swarm"]?.let { w ->
+            val o = w.obj()
+            val voices = o["voices"]?.int() ?: throw JsonException("swarm has no voices")
+            val detune = o["detune"]?.num()?.toFloat() ?: throw JsonException("swarm has no detune")
+            Swarm(voices, detune)
+        } ?: Swarm.DEFAULT
+        // Absent or null is no gesture; present, it has to be whole - the
+        // bar count and both tracks - and Gesture's own door holds the
+        // sizes and the points to the pad.
+        val gesture = obj["gesture"]?.takeIf { it !is JsonValue.Null }?.let { g ->
+            val o = g.obj()
+            val bars = o["bars"]?.int() ?: throw JsonException("gesture has no bars")
+            val xs = o["x"]?.arr()?.map { it.num().toFloat() }?.toFloatArray() ?: throw JsonException("gesture has no x")
+            val ys = o["y"]?.arr()?.map { it.num().toFloat() }?.toFloatArray() ?: throw JsonException("gesture has no y")
+            Gesture(bars, xs, ys)
+        }
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm, gesture = gesture, echoTime = echoTime)
     }
 }

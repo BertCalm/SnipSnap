@@ -168,8 +168,7 @@ object Arranger {
      * way; an undetectable root skips the bed honestly).
      */
     fun mixdown(kit: Kit, kitDir: File, plan: Arrangement): Mix {
-        val bpm = (kit.tempoBpm ?: KitPreview.DEFAULT_BPM)
-            .coerceIn(KitPreview.MIN_BPM, KitPreview.MAX_BPM)
+        val bpm = KitPreview.playedBpm(kit.tempoBpm)
         val bed = answerBed(kitDir)
 
         val segments = plan.sections.mapIndexed { i, s ->

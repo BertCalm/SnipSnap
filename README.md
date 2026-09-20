@@ -6,7 +6,7 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, seven
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, eight
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
 play). No Android layer yet.
@@ -33,7 +33,7 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 1310 tests across nine modules
+./gradlew test    # 2403 tests across nine modules
 ```
 
 ### `:audio`
@@ -181,7 +181,7 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
 
-VELVET closes the engine lineup: subtractive, the playability king — a naive
+VELVET is subtractive, the playability king — a naive
 saw/pulse unison pair over a sub, into a resonant SVF swept by its own
 envelope. SHAPE walks saw → square → PWM on one knob; SQUEEZE is resonance
 and envelope amount together, so the top of the knob is instant acid. Four
@@ -200,6 +200,21 @@ engine and sits before the filter — saturation makes harmonics and the filter
 has to be downstream to shape them, which is why bass through an FX rack
 distortion sounds like a blanket.
 
+SKIN is a second drum engine, S6 of the roadmap: where THUMP is built from
+oscillators shaped by envelopes, SKIN is modal — KICK, SNARE, and TOM sum
+decaying sine partials at inharmonic ratios, the textbook recipe for a
+struck membrane ringing at a few independent modes, while STICK is the
+single-partial limit of that same
+idea, one short high mode standing in for a rimshot click; HAT_CLOSED,
+HAT_OPEN, and RIDE run continuous noise through a bank of tuned resonant
+filters instead of an impulse (a single-hit excitation can't outlast a
+filter's own damping floor at these frequencies, so the noise has to keep
+feeding it); SHAKER runs noise through one deliberately wide, non-resonant
+filter — a band, not a tone. Eight voices, classifier-verified against
+THUMP's own `DrumClass` gates wherever a dedicated class exists, PUNCH on
+every voice — SKIN shares that stage with THUMP alone; it isn't a
+cross-engine macro.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -207,7 +222,10 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup at seven. VOX is three-formant vocal
+VOX and GRAINS round out the lineup — eight engines in the `Engine` picker
+counting SKIN; GRAINS is a ninth thing entirely, out of the picker's scope
+since it has no voice enum and works on a source snip instead of picking
+one. VOX is three-formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
@@ -215,6 +233,34 @@ source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a
 texture classifies as the LOOP it is. `SynthKits.cloud()` is the
 atmosphere kit both of them make together.
+
+SNAP is the tenth thing, and the other half of the name: a photo becomes
+a pad. A picture is already mathematical data — three numbers per pixel —
+so the engine only decides which numbers to read and in what order. One
+line through the photo is one cycle of a wavetable (HORIZON reads across,
+each column averaged so it is the picture's silhouette rather than one
+noisy row; PLUMB reads down; ORBIT walks a circle round the centre, which
+closes on itself so that cycle has no seam), and the photo's summary
+numbers set the knobs: dominant hue → TUNE (red low, violet high, a grey
+photo on the centre detent), brightness → BRIGHT, colourfulness → DECAY,
+fine detail → GRIT. The pad stores the line's 256 brightness values and
+the macros — never the photo — so it regenerates from `kit.json` like any
+synth pad, with the picture's line in the sidecar as plain digits. Like
+GRAINS it is outside the `Engine` picker (it needs a `Photo`, not a
+voice), and has its own tab, SNAP, where TAKE PHOTO asks the system
+camera. The one refusal comes in words: a line with no swing in it — a
+plain wall read top to bottom — has no waveform to play.
+
+DRAW is the same engine with a finger for a pen (the Fairlight's Page 6,
+1982): a fourth chip beside the three photo lines opens a surface where
+the cycle is drawn — over the photo's line, over a starting SINE, TRIANGLE,
+SAW, SQUARE or PULSE, or from a blank — and heard as it is drawn. A second
+tab draws the note's volume the same way (HOLD, FALL, PLUCK, SWELL, BOUNCE
+to start from), which a pad carries as an optional `envelope` beside its
+`table`; DECAY then sets only the length. `Draw` is the pen — strokes onto
+a table, the starting shapes, a SMOOTH for a shaky hand — and every
+function returns a new array, so a draft and a committed line never share
+storage.
 
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
@@ -366,6 +412,26 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
+- **`Workshop` / `BenchExport` / `CutRatings` / `LabelledHits` /
+  `BenchNotes`** — the developer's bench inside the app
+  (`docs/WORKSHOP.md`): the knock that opens it, CHOP's CONFIRM ALL and
+  cut rating (the teach log learns when the machine was *right*, and
+  which bench settings cut well), the pad sheet's LABEL THIS HIT (a
+  capture into the calibration corpus, by ear), the title bar's NOTE (a
+  bench note stamped with the screen, the kit, the pad and the time,
+  rendered by the manifest as a line for `docs/BENCH.md`), and the two
+  hand-outs — SEND TO BENCH for the logs, the notes and the saved
+  presets, SEND HITS TO BENCH for the audio — for `reference/calibration/`.
+- **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
+  the one tool on that list that is for every player): the player's own
+  presets in `presets.json` beside the kits, the name rules (fourteen
+  letters, never a factory name, a saved name replaces in place), the bin
+  a held chip forgets one into (the same thirty days every bin promises,
+  DELETED PRESETS on SYNTH as the way back), and the roster line that
+  promotes one into `:synth`'s tables by hand — a code change the spread,
+  blocklist and identity tests still judge; and the merge a backup's
+  presets go through when the zip comes home (the shelf's own stay, a
+  twin is skipped, a namesake lands under a fresh name).
 
 ### `:loop` — ORBIT
 
@@ -396,6 +462,7 @@ follow-up.
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
+- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the developer's tools behind a knock on SETUP, SEND TO BENCH first, and the list after it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 

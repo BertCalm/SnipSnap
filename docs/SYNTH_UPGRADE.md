@@ -3,7 +3,12 @@
 `docs/SYNTH_ROADMAP.md` is done: S1–S5 all shipped, eight engines, thirty
 voices, the FX rack, keygroup export, the instrument suite. This document is
 what comes after, and it starts from a different question than the roadmap
-did.
+did. (The roadmap itself grew one more phase since: S6/SKIN, one more engine
+and eight more voices in the roadmap-wide count above — which, like "eight"
+there, counts GRAINS — shipped after this document's own U3/U5/U6 work. The
+U6 section below counts differently: eight engines on the `OVERSAMPLE`
+contract, a roster that excludes GRAINS by construction. See that section
+and `SYNTH_ROADMAP.md`'s S6 row.)
 
 The roadmap asked *what should we build*. This asks *what does a seventeen-
 year-old with a phone and no money actually experience when they open SYNTH* —
@@ -283,8 +288,10 @@ the FX rack needs a stereo-safety audit. Opt-in per patch.
 
 # U5 — Envelopes and filter saturation
 
-Two DSP items that are genuinely audible and improve all ~392 presets at once,
-which is why they come *after* the presets exist to benefit from them.
+Two DSP items that are genuinely audible and improve all ~520 presets at once,
+which is why they come *after* the presets exist to benefit from them. (Was
+~392 when this was written; SKIN's own 128 arrived a wave later, in the U1
+pass that engine had never had.)
 
 ### `Dsp.Env`
 
@@ -313,9 +320,19 @@ fold back as dirt unless the render is oversampled.
 **Deliberately ranked low as a headline, and required as a foundation.**
 
 The oscillators are naive: `Velvet.kt:67` (saw), `:71` (pulse), `Dsp.kt:35`
-(square), and FATHOM's saw pair. There is no oversampling anywhere in `:synth`
-— the only anti-aliasing mentions in the module are `Eras.kt` deliberately
-*not* doing it, which is character by design.
+(square), and FATHOM's saw pair. Before the fix below landed, there was no
+oversampling anywhere in `:synth` — the only anti-aliasing mentions in the
+module were `Eras.kt` deliberately *not* doing it, which is character by
+design.
+
+**Status: implemented.** All 7 engines that existed at the time (THUMP, TINES,
+VELVET, FATHOM, TONEWHEEL, VOX, PLUCK) render at `RATE * Dsp.OVERSAMPLE` and
+decimate — see `Dsp.OVERSAMPLE`'s KDoc. The migration work below (`alias`
+flag, `PadRecipe.VERSION` bump, `testkit/` regen) has shipped too — see that
+section's own "done" status. SKIN (`SYNTH_ROADMAP.md`'s S6, shipped after
+this section) is an eighth engine that was never migrated because it was
+never naive — it renders oversampled from its very first commit, following
+the convention this section establishes rather than needing to catch up to it.
 
 The target user will rarely hear this directly. Where it does bite is the S5
 multisampled instruments: a keygroup rendered every minor third across four
@@ -336,31 +353,63 @@ path at once.
 milliseconds; nobody hears the CPU. A live synth could not make this trade, and
 that is a standing advantage this codebase has never spent.
 
-### The per-voice `alias` flag
+### The per-voice `alias` flag — implemented
 
 Grit stays available where it is the point — VELVET `CHIP`, and anything
-feeding CRUNCH or `Eras`. A patch field, defaulting to *clean* for new patches
-and *aliased* for anything authored before the change.
+feeding CRUNCH. Landed as `PadRecipe.alias: Boolean` (`PadRecipe.kt`), not a
+`Patch` field: every `Patch` subtype already carries `name`/`engine`/
+`voiceName` (`Patches.kt:14-18`), but those are required identity fields
+every subtype has always had, not an *additional* per-patch semantic field.
+Adding a genuinely new one would have touched the shared codec plus all 7
+patch data classes' constructors and their own `Patches.VERSION` bump, where
+`PadRecipe` already had the exact optional-field shape (`treatment`/`amount`)
+to extend instead.
 
-### Migration — and the window that is closing
+It is pure metadata — every engine already always renders through the U6
+oversample/decimate path regardless of this flag; it only records whether a
+pad's grit is deliberate. The default is computed from the patch/fx already on
+hand (`true` for VELVET `CHIP` or any chain feeding `Crunch`, `false`
+otherwise) rather than requiring every call site to say so explicitly, and is
+always written explicitly on `toJsonValue` - so the "clean for new, aliased
+for old" framing this section originally had doesn't apply: there is no old
+recipe to read a default for, since v1 is now rejected outright (below), and
+`Eras`-produced audio keeps its own separate `{"era","amount"}` recipe shape,
+never reaching `PadRecipe` at all.
 
-`PadRecipe.VERSION = 1` hard-rejects anything else (`PadRecipe.kt:77`); there
-is no migration path. U3, U5 and U6 all change rendered output, so a kit
-already on someone's SD card would regenerate differently after an update.
+### Migration — done
 
-What is *not* at risk: `PadRecipeTest.kt:78` re-renders both sides in the same
-run, so it is a self-consistency check and will still pass; and the goldens in
+`PadRecipe.VERSION` is now 2; `fromJsonValue` rejects anything else
+(`PadRecipe.kt`) with no migration path, as recommended below. The **369
+committed WAVs** under `testkit/` (this section's original count of 376 was
+off) were regenerated via the existing gradle generator tasks alongside the
+bump.
+
+What was *not* at risk: `PadRecipeTest.kt`'s self-consistency test re-renders
+both sides in the same run, so it stayed green throughout; and the goldens in
 `reference/golden/` are XPM/XML format files, not audio hashes, so export
-tests are unaffected. The mechanical cost is regenerating the **376 committed
-WAVs** under `testkit/`, which the existing gradle generator tasks do.
+tests were unaffected.
 
-**Recommendation: take the clean break now.** Bump `PadRecipe.VERSION` to 2,
-regenerate `testkit/`, ship no back-compat path. With no kits in the field the
-migration cost is close to zero — and it is only close to zero *before launch*.
-The alternative is preserving every pre-U3 render path inside each engine
-forever, which is a permanent tax paid for users who do not exist yet. If kits
-are already in the wild when this is picked up, this decision must be revisited
-rather than assumed.
+The two production call sites that parse a loaded kit's recipe as a
+`PadRecipe` (`Breed.recipeOf` unconditionally; `RecipeReplay.plan` only for
+its `"patch"`-shaped branch) already treated a parse failure as "no recipe
+here" rather than propagating the exception, so a stale v1 *synth-patch*
+recipe degrades those specific features gracefully rather than crashing -
+confirmed by reading both call sites, not assumed.
+
+FX-only treatment recipes (`RecipeReplay.plan`'s `PadSheet.read` branch -
+COPY LAST TREATMENT replaying an `Era`/`Character`) don't share one shape:
+`Treatments.apply` builds its recipe via `PadRecipe(fx = ..., treatment =
+..., amount = ...).toJsonValue()` (`Treatments.kt:101`), so a `Character`
+treatment recipe *does* carry `"recipe": 2` like any other `PadRecipe`;
+`Eras.apply` writes its own literal `{"era", "amount"}` `JsonValue.Obj`
+with no `"recipe"` key at all. Either way, `PadSheet.read` (`PadSheet.kt:310`)
+never looks at that field - it reads `"treatment"`/`"era"`/`"amount"`
+directly regardless of what version tag (or none) rides along, and
+`Treatments.chain`/`Eras.process` (neither touched by U1-U6) rebuild the
+`FxChain` fresh from the name every replay. So a stale recipe's version tag,
+where one exists, is inert here, not ignored by a gap in gating - the whole
+point of COPY LAST TREATMENT is that it re-derives the chain from the
+current code, not from anything frozen in the recipe.
 
 ---
 
@@ -398,15 +447,40 @@ your other fifteen pads. That is the argument for the whole feature.
 | U3 + U5 + U6 | Punch, `Dsp.Env`, filter saturation, 4× oversampling, `alias` flag | — | **Yes** — one `PadRecipe.VERSION = 2` bump, regenerate `testkit/` |
 | U4 | Per-voice stereo width, FX rack stereo audit | U3+U5+U6 | Yes, for the voices that opt in |
 | U7 | MATCH and FILL KIT over the preset library | U1 | No — selection, not synthesis |
+| U8 | **shipped** — SAVE AS PRESET: the player's own presets in `presets.json` beside the kits, a YOURS strip under the factory row, promotion by roster line through SEND TO BENCH (`docs/WORKSHOP.md`, WS5) | U1 | No — the same `Patch` JSON, stored |
 
 U1 and U2 ship alone, touch no rendered audio, and deliver most of the
 perceived improvement. U3/U5/U6 are deliberately fused into **one** version bump
 and **one** `testkit/` regeneration rather than three.
 
+# U8 — SAVE AS PRESET
+
+**Depends on U1. Shipped** (`docs/WORKSHOP.md`, WS5, which holds the full
+account). U1 made a preset a named `Patch` and gave SYNTH a strip of them;
+U8 lets the player put their own in it. SAVE PRESET ▸ on SYNTH names the
+current macros and keeps them in one file at the shelf root, and the
+strip grows a second row, YOURS, for the voice. The naming rule is U1's
+own — uppercase, at most fourteen letters, unique within a voice — with
+one addition: a factory name is refused, so a chip never means two
+things. Saving under one of your own names replaces it in place.
+
+The roster stays a code change. Nothing on the phone can add to the
+tables above; SEND TO BENCH carries `presets.json` and renders each
+preset as the `p(...)` line its engine's table is written in, exact
+floats and all, and the six test classes judge it there. A promoted
+preset either replaces a factory row or raises the count law on purpose.
+
+A held chip forgets a preset into a bin in the same file, thirty days
+like every bin in the app, with DELETED PRESETS under the strips as the
+door back; there is no EMPTY THE BIN NOW, since a preset costs nothing
+to keep.
+
 # Non-goals
 
 - **No new engines.** Eight is plenty; thirty voices with no presets is the
-  problem, and a ninth engine would make it worse.
+  problem, and a ninth engine would make it worse. Scoped to this upgrade,
+  not permanent — revisited afterward as its own deliberate decision and
+  shipped as SKIN (`SYNTH_ROADMAP.md`'s S6).
 - **No patchbay.** Roadmap rule 1 stands — macros, never modular.
 - **No piano keyboard UI.** Settled in `SYNTH_ROADMAP.md:147`; the 4×4 grid is
   the instrument.

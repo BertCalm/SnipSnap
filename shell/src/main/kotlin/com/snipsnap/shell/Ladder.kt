@@ -43,6 +43,19 @@ object Ladder {
         PHRASE("PHRASE", 1, 0),
     }
 
+    /**
+     * The ladder row's first chip: no rung at all, the plain GRID by
+     * count. It is a rung of the row without being a [Rung], so it lived
+     * as a literal on `ChopScreen` and HELP's ZOOM line listed the four
+     * real rungs and not this one - the state the row is in by default
+     * (J42). Named here so the screen and the HELP line read the same
+     * string out of one place.
+     */
+    const val COUNT_LABEL = "COUNT"
+
+    /** Every chip of the ladder row, left to right, as the screen draws them. */
+    val ROW_LABELS: List<String> = listOf(COUNT_LABEL) + Rung.entries.map { it.label }
+
     const val BEATS_PER_BAR = 4
 
     /** A line's weight is the loudest sample from this much of a beat before it (the detector's backoff) to [ONE_LOOK_AFTER] after. */

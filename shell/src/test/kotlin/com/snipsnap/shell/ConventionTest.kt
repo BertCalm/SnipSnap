@@ -2,6 +2,8 @@ package com.snipsnap.shell
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -38,6 +40,167 @@ import kotlin.test.fail
  * site's own shape actually changes.
  */
 class ConventionTest {
+
+    // ---- Law: a control that can refuse refuses through `enabled` ----
+
+    private val chopScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/ChopScreen.kt")
+    private val tapeScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/TapeScreen.kt")
+
+    /** The body of a top-level `private fun <name>(` through its closing brace at column 0. */
+    /**
+     * A top-level `fun` by name, whatever its visibility. It matched
+     * `private fun` alone until J18, when `SegmentButton` became
+     * `internal` so GROOVE's program row could draw its five segments
+     * with the app's existing picker instead of a sixth one. A law about
+     * what a component *does* should not fail over who can call it.
+     */
+    private fun topLevelFun(file: File, name: String): String {
+        val src = file.readText(Charsets.UTF_8)
+        val decl = Regex("""^(?:private |internal |public )?fun $name\(""", RegexOption.MULTILINE).find(src)
+        assertTrue(decl != null, "expected to find a top-level `fun $name(` in ${file.name}")
+        val start = decl!!.range.first
+        val end = src.indexOf("\n}\n", start)
+        assertTrue(end > start, "expected `fun $name(` in ${file.name} to close at column 0")
+        return src.substring(start, end)
+    }
+
+    /**
+     * `ChopScreen.kt`'s own stated rule is "dimmed, not disabled; the toast
+     * explains" — and for a long time neither [SegmentButton] nor
+     * [DeckButton] could express refusal at all, because neither passed
+     * `tapeClick`'s `enabled` flag. Authors who needed to refuse were left
+     * with a silent early `return` inside the lambda, which leaves the
+     * control lit, tappable, and announced as actionable to TalkBack while
+     * doing nothing.
+     *
+     * This is the class KDoc's shape exactly: the same refusal written one
+     * way at some sites and another way at a sibling site. So rather than
+     * demand `enabled =` at *every* call site — plenty are unconditional
+     * on purpose (CLASSIC/FOLD/MELODIC set a layout; IN/OUT/zoom are cheap
+     * model edits) and `enabled = true` everywhere would be noise that
+     * teaches nothing — this asserts the negative: **no call site refuses
+     * silently inside its own lambda.**
+     *
+     * The two patterns are the ones actually used: a `return@` out of the
+     * lambda, and an `if (!busy)` wrapper around the whole body.
+     */
+    @Test
+    fun `SegmentButton and DeckButton call sites never refuse with a silent return`() {
+        for (file in listOf(chopScreen, tapeScreen)) {
+            assertTrue(file.isFile, "expected to find ${file.absolutePath}")
+            val code = stripCommentsAndStrings(file.readText(Charsets.UTF_8))
+            for (component in listOf("SegmentButton", "DeckButton")) {
+                val escapes = Regex("""return@$component""").findAll(code).count()
+                assertTrue(
+                    escapes == 0,
+                    "${file.name}: $escapes call site(s) bail out with `return@$component`. " +
+                        "A control that can refuse must say so with `enabled = ...` so it dims " +
+                        "and reads as disabled, rather than staying lit and doing nothing.",
+                )
+            }
+            // `SecondaryButton` and `PrimaryAction` are held to a different
+            // rule, on purpose.
+            //
+            // The zero-returns rule above is calibrated for two components
+            // that historically had no `enabled` at all: forbidding the
+            // early return outright is what forced them to grow one. These
+            // two always had `enabled`, and their call sites legitimately
+            // re-check it inside the lambda — a tap already in flight when
+            // the state changes is a real race, and PR 4's RE-CHOP guard is
+            // exactly that.
+            //
+            // So the rule here is not "never return" but "never let the
+            // return BE the refusal": a guard is fine when the control also
+            // dims, and is a bug when it is the only thing saying no. That
+            // is the shape J43 had — CHOP's ◀ ▶ refused a hummed chop with
+            // a `?: return` inside `stepHits` while staying lit.
+            for (component in listOf("SecondaryButton", "PrimaryAction")) {
+                var from = 0
+                while (true) {
+                    val at = code.indexOf("return@$component", from)
+                    if (at < 0) break
+                    from = at + 1
+                    val callAt = code.lastIndexOf("$component(", at)
+                    assertTrue(callAt >= 0, "${file.name}: a `return@$component` with no call site above it")
+                    val call = code.substring(callAt, at)
+                    assertTrue(
+                        "enabled" in call,
+                        "${file.name}: a `$component` refuses with a bare `return@$component` and never says " +
+                            "so through `enabled`, so it stays lit and does nothing:\n  " +
+                            call.lines().first().trim().take(140),
+                    )
+                }
+            }
+
+            val guarded = Regex("""\{\s*if\s*\(!busy\)""").findAll(code).count()
+            assertTrue(
+                guarded == 0,
+                "${file.name}: $guarded lambda(s) open with `if (!busy)`. That is `enabled = !busy` " +
+                    "written where the user cannot see it.",
+            )
+        }
+    }
+
+    /**
+     * The other half of the same law: the components have to be *able* to
+     * refuse, or every call site is forced back into the silent `return`
+     * the law above bans.
+     *
+     * `Chrome.kt`'s `tapeClick(label, enabled = true, onClick)` already
+     * does the right thing — a disabled control keeps its semantics node
+     * and its name but exposes Compose's `disabled()` state instead of an
+     * actionable one. These two components simply have to pass it through.
+     *
+     * `SegmentButton` additionally announces `selected`, which must stay
+     * keyed on `active` **alone**.
+     *
+     * This half of the law was first written backwards - demanding that
+     * `selected` reference `enabled`, on the reasoning that a refused
+     * segment should not read as SELECTED. That is the wrong model.
+     * `selected` and `disabled()` are orthogonal in Compose, and both are
+     * true of the chosen segment during a chop: it is the mode you are in,
+     * and it cannot be tapped right now. `tapeClick(enabled = false)`
+     * already carries the second. Conflating them makes every segment
+     * report NOTHING selected while busy, which loses the answer to "which
+     * mode am I in" at the one moment tapping cannot reveal it - and it
+     * disagrees with `pressedBevel`, which is keyed on `active` alone.
+     */
+    @Test
+    fun `SegmentButton and DeckButton pass enabled through to tapeClick`() {
+        // `internal fun`, not `private fun`, since J18: GROOVE's program
+        // row draws its five segments with this one rather than inventing
+        // a sixth picker. The visibility is not what this law is about,
+        // so it reads the function whichever it is.
+        val segment = topLevelFun(chopScreen, "SegmentButton")
+        val deck = topLevelFun(tapeScreen, "DeckButton")
+
+        for ((name, body) in listOf("SegmentButton" to segment, "DeckButton" to deck)) {
+            assertTrue(
+                Regex("""enabled:\s*Boolean""").containsMatchIn(body),
+                "$name takes no `enabled: Boolean` parameter, so no call site can refuse " +
+                    "except by a silent return.",
+            )
+            assertTrue(
+                Regex("""tapeClick\([^)]*enabled""", RegexOption.DOT_MATCHES_ALL).containsMatchIn(body),
+                "$name never passes `enabled` to `tapeClick`, so the flag it accepts changes " +
+                    "nothing about whether the control is actionable.",
+            )
+        }
+
+        assertTrue(
+            // `\b` then a negative lookahead for a boolean operator, rather
+            // than anchoring to end-of-line: the call sits inside a
+            // `semantics { ... }` lambda, so the line ends in ` }` and an
+            // `$` anchor never matches it. That anchor was the first shape
+            // written here, and it failed against correct source - the law
+            // was proven red against the wrong shape but never run green
+            // against the right one.
+            Regex("""selected\s*=\s*active\b(?!\s*(&&|\|\|))""").containsMatchIn(segment),
+            "SegmentButton's `selected` is not keyed on `active` alone. Selection and " +
+                "availability are orthogonal: gating `selected` on `enabled` reports nothing " +
+                "selected while busy, and contradicts `pressedBevel`, which uses `active`.",
+        )
+    }
 
     private val appSrcRoot = File("../app/src/main/kotlin/com/snipsnap/app")
 
@@ -188,17 +351,20 @@ class ConventionTest {
             file = "App.kt",
             args = normalizeSpan(
                 """
-                enabled = !anyOverlayOpen && screen != AppScreen.KITS &&
+                enabled = !anyOverlayOpen && screenHistory.isNotEmpty() &&
                     screen != AppScreen.SPLIT && screen != AppScreen.KEYS &&
                     note == null && !captureBlocked && !micPermissionDenied,
                 """,
             ),
             justification = "the app-level ROOT handler, not a busy-guard: its entire job is to defer. " +
                 "anyOverlayOpen, SPLIT, and KEYS each already have their own unconditional handler or their own " +
-                "back door (the KDoc directly above this call enumerates all three); the remaining case, " +
-                "AppScreen.KITS, is the true root screen, where falling through to Activity.finish() is the " +
-                "correct, intended Android behavior, not an accident. This is the one site that is SUPPOSED to " +
-                "read as a fallback, never as a mid-operation guard.",
+                "back door (the KDoc directly above this call enumerates them); the remaining case is an EMPTY " +
+                "screenHistory, which is the true root of the session - falling through to Activity.finish() " +
+                "there is the correct, intended Android behavior, not an accident. This used to read " +
+                "`screen != AppScreen.KITS` and said the same thing a weaker way (J11): with a back stack, being " +
+                "the root is a property of having nowhere to go back to, not of being one particular tab, and a " +
+                "non-empty history always has somewhere to pop to. This is the one site that is SUPPOSED to read " +
+                "as a fallback, never as a mid-operation guard.",
         ),
         BackHandlerAllow(
             file = "ui/SnipsScreen.kt",
@@ -1079,13 +1245,16 @@ class ConventionTest {
      * `Copy` and `MenuRow` live in different modules and neither reads the
      * other.
      *
-     * So this reads `MENU_ITEMS` out of `Chrome.kt` by source, the same way
-     * the roster law above reads prose, and holds every stage to it.
+     * So this reads the tab labels out of `Chrome.kt` by source, the same
+     * way the roster law above reads prose, and holds every stage to it.
+     * It matches `MenuItem("...")` rather than any one declaration, which
+     * is why J12 could regroup the row into `MENU_GROUPS` underneath it
+     * without this law noticing or needing to be told.
      */
     @Test
     fun `the first-run loop names real menu tabs`() {
         val chrome = File("../app/src/main/kotlin/com/snipsnap/app/ui/Chrome.kt")
-        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read MENU_ITEMS from")
+        assertTrue(chrome.isFile, "expected to find ${chrome.absolutePath} to read the menu tabs from")
         val labels = Regex("""MenuItem\("([^"]+)"""")
             .findAll(chrome.readText(Charsets.UTF_8))
             .map { it.groupValues[1] }
@@ -1104,6 +1273,100 @@ class ConventionTest {
                     "Tabs are: ${labels.sorted()}",
             )
         }
+
+        // ...and the sentence under those four words is held to the same
+        // rule, which is where J13 got in: the law above passed while
+        // FIRST_RUN_LOOP_NOTE glossed step three, KIT, as "PLAY IT" — and
+        // PLAY is a real tab six places along the same menu row. A tab name
+        // in the note is a promise about where to tap, so the only tab
+        // names allowed in it are the four stages it is explaining.
+        val strays = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_LOOP_NOTE)
+            .map { it.value }
+            .filter { it in labels && it !in Copy.FIRST_RUN_LOOP_STAGES }
+            .toSet()
+        assertTrue(
+            strays.isEmpty(),
+            "Copy.FIRST_RUN_LOOP_NOTE (\"${Copy.FIRST_RUN_LOOP_NOTE}\") names ${strays.sorted()}, " +
+                "which ${if (strays.size == 1) "is a menu tab" else "are menu tabs"} but not one of the four " +
+                "stages it explains (${Copy.FIRST_RUN_LOOP_STAGES}). The note sits directly under the stage " +
+                "row and reads as a gloss of it, so a tab name in it points a new user at a screen that is " +
+                "not the step being described. Use a verb that is not a tab, or the stage's own name.",
+        )
+    }
+
+    // ==================== Law: the ladder row's chips are named once ====================
+
+    /**
+     * THE ZOOM LADDER's first chip is COUNT — no rung at all, the plain
+     * GRID by count, and the state the row is in by default. It lived as a
+     * literal on `ChopScreen` while HELP's ZOOM line listed the four real
+     * rungs, so the one state a new user is actually in was the one state
+     * HELP never mentioned (J42).
+     *
+     * `Ladder.ROW_LABELS` is now the row, and HELP builds its line from it.
+     * That only holds while the screen draws the row out of the same list,
+     * so this reads the screen's own source and refuses the literal back.
+     */
+    @Test
+    fun `the ladder row's COUNT chip is named in Ladder, not typed on the screen`() {
+        val chop = File("../app/src/main/kotlin/com/snipsnap/app/ui/ChopScreen.kt")
+        assertTrue(chop.isFile, "expected to find ${chop.absolutePath}")
+        val src = codeOnly(chop.readText(Charsets.UTF_8))
+        assertTrue(
+            "SegmentButton(Ladder.COUNT_LABEL" in src,
+            "ChopScreen no longer draws the ladder row's first chip from Ladder.COUNT_LABEL. HELP's ZOOM " +
+                "line is built from Ladder.ROW_LABELS; if the screen types its own label the two can say " +
+                "different things again, which is exactly J42.",
+        )
+        assertFalse(
+            "\"COUNT\"" in src,
+            "ChopScreen.kt contains the literal \"COUNT\". The ladder row's first chip is Ladder.COUNT_LABEL " +
+                "so that HELP and the screen read one string out of one place — see J42.",
+        )
+        // HELP names every chip of the row, not four of the five.
+        for (label in Ladder.ROW_LABELS) {
+            assertTrue(
+                Copy.HELP_MORE.any { label in it && "ZOOM ON CHOP" in it },
+                "HELP's ZOOM line does not name the ladder chip '$label'. It is built from " +
+                    "Ladder.ROW_LABELS precisely so it cannot miss one; something has retyped it.",
+            )
+        }
+    }
+
+    // ==================== Law: a toast's door belongs to that toast ====================
+
+    /**
+     * An offer is a toast with a door (J10). The first cut of it held the
+     * message in `toast` and the door in `toastDoor` and wrote them
+     * independently, so a plain `onToast` landing afterwards — TAPE's KEEP
+     * fired one on the very next line — swapped the sentence and left the
+     * door under someone else's words, on the offer's longer dwell. The
+     * comment beside the two vars claimed a door "can never outlive its
+     * message"; nothing made that true.
+     *
+     * It is true now because `toastDoor` is derived: `offered` carries the
+     * sentence it was made with, and the door shows only while the toast on
+     * screen is that sentence. This law keeps it derived — the moment
+     * anything assigns `toastDoor` again, the two can disagree again.
+     */
+    @Test
+    fun `the toast door is derived from the toast, never assigned beside it`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = codeOnly(app.readText(Charsets.UTF_8))
+        assertTrue(
+            "val toastDoor" in src,
+            "App.kt no longer declares `val toastDoor`. The door has to be computed from the toast on " +
+                "screen, not stored beside it — see J10/J44.",
+        )
+        val assigned = Regex("""\btoastDoor\s*=(?!=)""").findAll(src).count()
+        assertEquals(
+            0,
+            assigned,
+            "App.kt assigns `toastDoor` $assigned time(s). A door held in its own var can outlive the " +
+                "sentence it was offered with: any plain `toast = ...` replaces the words and leaves the " +
+                "button. Set `offered` instead and let `toastDoor` be derived from it.",
+        )
     }
 
     // ==================== Law: every snip call agrees on where snips live ====================
@@ -1136,8 +1399,9 @@ class ConventionTest {
         require(sources.size > 20) { "found only ${sources.size} :app sources — the scan is broken, not the tree." }
 
         // The calls that take a root: everything else on SnipStore (DIR,
-        // Info, displayName, rename, delete, provenanceTag) is handed a file
-        // or nothing at all and cannot name the wrong folder.
+        // Info, displayName, shareName, rename, delete, provenanceTag) is
+        // handed a file, a name, or nothing at all, and cannot name the
+        // wrong folder.
         val rooted = Regex("""SnipStore\.(commit|commitPrepared|import|list|listWithInfo|newest|binned|restore|emptyBin|sweepBin)\s*\(([^)]*)""")
         // What a root is allowed to be: the files directory under any of the
         // names this app gives it.
@@ -1207,6 +1471,10 @@ class ConventionTest {
         // paid five days for, just not yet triggered by a rename.
         "share" to "ShareOut.kt",
         "landing" to "ShareInbox.kt",
+        // The player's presets (docs/WORKSHOP.md, WS5): one file at the
+        // shelf root, named by its store and nowhere else — SYNTH and
+        // SEND TO BENCH both reach it through UserPresets.file.
+        "presets.json" to "UserPresets.kt",
     )
 
     @Test
@@ -1254,4 +1522,950 @@ class ConventionTest {
                 "SNIPS spent five days reading a directory nothing wrote:\n  " + strays.joinToString("\n  "),
         )
     }
+    // ---- Law: what the player chose outlives the chop it was chosen on ----
+
+    /**
+     * Every `remember(model)` in `ChopContent`, and the reason each one is
+     * right to be thrown away when `model` is reassigned.
+     *
+     * `model` is reassigned by five sites (`rechopTo`, `editSlices`, the hum's
+     * landing, AUTO, and RE-CHOP), two of which are helpers most of the bench
+     * calls through — so "the model changed" is not a rare event, it is what
+     * using the screen *is*. Keying state on it therefore splits cleanly in
+     * two: state that **describes** the chop must go when the chop does, and
+     * state that **records what the player chose** must not. Getting a piece
+     * on the wrong side of that line is invisible until someone nudges HITS
+     * and watches their view snap back.
+     *
+     * Every entry below is the first kind, with its reason. The law's job is
+     * to make the *next* one a decision rather than a default: a new
+     * `remember(model)` fails this test until whoever adds it says which kind
+     * it is. `cutOpen`, `rechopBusy`, `sendBusy` and `layout` are the second
+     * kind and are deliberately unkeyed — `cutOpen` always was, which is what
+     * made `layout`'s keying visible as an inconsistency rather than a policy.
+     */
+    private val modelKeyedChopState = mapOf(
+        "revision" to "a recompose counter for row overrides mutated in place; a new model has new rows, so the count starts again",
+        "pickerFor" to "the open picker names a slice by its 1-based `n`, and a re-chop renumbers what that `n` means",
+        "melodicPlaced" to "MELODIC's placement is derived from this model's own rows",
+        "pitchLabels" to "the A2/C#4 labels are pitch detection over this model's own rows",
+        "melodicBusy" to "guards the placement pass above, so it shares that pass's lifetime",
+        "humming" to "a hum is sung against one model's source",
+        "humStart" to "the instant that hum began",
+        "voice" to "plays this model's audio; the DisposableEffect on the same key is what releases it",
+        "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
+        // RATE THE CUTS (docs/WORKSHOP.md, WS2). A star is a verdict on THIS
+        // model's cuts, not a preference: a re-chop, a MERGE or a SPLIT is
+        // different cuts, and a rating of the old ones riding onto the new
+        // would be logged against a setting that never earned it - the
+        // same reason `ChopReviewModel.confirmed` does not follow a re-chop.
+        "stars" to "a star rates this model's own cuts; a re-chop, a MERGE or a SPLIT is different cuts, and a verdict on the old ones must not ride onto them",
+    )
+
+    /**
+     * [block] with its comment lines dropped.
+     *
+     * Every law that asks "does this text appear, and where" needs this:
+     * an explanation of a rule quotes the code the rule is about, so a
+     * comment saying "said after `v.start(0)`" is indistinguishable from
+     * the call itself to a plain `indexOf`. That has now cost two laws —
+     * one truncated a list at a `)` inside a comment, one read a quoted
+     * call as the real one.
+     */
+    private fun codeOnly(block: String): String =
+        block.lines().filterNot { isCommentLine(it.trim()) }.joinToString("\n")
+
+    /** The `( ... )` list following [marker] in [src], paren-matched and comment-stripped. */
+    private fun blockAfterList(src: String, marker: String): String {
+        val code = codeOnly(src)
+        val at = code.indexOf(marker)
+        assertTrue(at >= 0, "expected to find `$marker`")
+        val start = code.indexOf('(', at)
+        assertTrue(start >= 0, "expected a `(` after `$marker`")
+        var depth = 0
+        var i = start
+        while (i < code.length) {
+            val c = code[i]
+            if (c == '(') depth++
+            if (c == ')') {
+                depth--
+                if (depth == 0) return code.substring(start, i + 1)
+            }
+            i++
+        }
+        fail("unbalanced parentheses after `$marker`")
+    }
+
+    /** The `{ ... }` block following [marker] in [src], brace-matched. */
+    private fun blockAfter(src: String, marker: String): String {
+        val at = src.indexOf(marker)
+        assertTrue(at >= 0, "expected to find `$marker` in ChopContent")
+        val start = src.indexOf('{', at)
+        assertTrue(start >= 0, "expected a `{` block after `$marker`")
+        var depth = 0
+        var i = start
+        while (i < src.length) {
+            val c = src[i]
+            if (c == '{') depth++
+            if (c == '}') {
+                depth--
+                if (depth == 0) return src.substring(start, i + 1)
+            }
+            i++
+        }
+        fail("unbalanced braces after `$marker`")
+    }
+
+    @Test
+    fun `law - every CHOP state keyed on the model is one that describes the model`() {
+        val body = topLevelFun(chopScreen, "ChopContent")
+        val found = Regex("""var\s+(\w+)\s+by\s+remember\(model\)""")
+            .findAll(body).map { it.groupValues[1] }.toList()
+        require(found.size > 4) { "found only ${found.size} `remember(model)` in ChopContent — the scan is broken, not the screen." }
+
+        val undeclared = found.filterNot { it in modelKeyedChopState }
+        assertTrue(
+            undeclared.isEmpty(),
+            "these are keyed on `model`, so every re-chop, merge, split, hum, AUTO and HITS nudge resets " +
+                "them — and nothing here says that is intended: ${undeclared.joinToString(", ")}.\n" +
+                "Decide which kind each one is. State that DESCRIBES the chop (a derivation over its rows, a " +
+                "voice playing its audio) belongs keyed on `model`, and goes in `modelKeyedChopState` with " +
+                "its reason. State that RECORDS WHAT THE PLAYER CHOSE (a layout, an open bench, a mode) must " +
+                "not be keyed on it — `model` is reassigned by ordinary use of the bench, and none of those " +
+                "reassignments is the player asking to be put back to a default. Key those on `initialModel` " +
+                "instead, the way `layout` is, so a genuinely new source still starts fresh.",
+        )
+
+        val stale = modelKeyedChopState.keys.filterNot { it in found }
+        assertTrue(
+            stale.isEmpty(),
+            "`modelKeyedChopState` still lists ${stale.joinToString(", ")}, which no longer appear as " +
+                "`remember(model)` in ChopContent. An allowlist that outlives what it allows guards nothing " +
+                "— drop the entry, or point it at the name the state now has.",
+        )
+    }
+
+    /**
+     * Prior finding #12, and J20 in `docs/UX_JOURNEY_PLAN_2026_09.md`.
+     *
+     * CLASSIC/FOLD/MELODIC is the player saying how they want to *see* the
+     * chop. It is not a property of the chop, so re-chopping must not undo
+     * it: picking MELODIC and then nudging HITS once put the screen back on
+     * CLASSIC with no toast and nothing to undo.
+     */
+    @Test
+    fun `law - the CHOP layout the player picked survives a re-chop`() {
+        val body = topLevelFun(chopScreen, "ChopContent")
+        assertTrue(
+            !Regex("""var\s+layout\s+by\s+remember\(model\)""").containsMatchIn(body),
+            "`layout` is keyed on `model` again. Every re-chop, merge, split, hum and HITS nudge reassigns " +
+                "`model`, so this silently returns the player to CLASSIC mid-edit — the same class of bug as " +
+                "the four PR 4 controls, except it destroys a view choice rather than a file.",
+        )
+        assertTrue(
+            Regex("""var\s+layout\s+by\s+remember\(initialModel\)""").containsMatchIn(body),
+            "`layout` should be remembered against `initialModel`: a genuinely new source (a different tape " +
+                "or kit) is a different job and should start on CLASSIC, but a re-chop of the same source is " +
+                "not. Unkeyed `remember { }` would carry a layout across sources; `remember(model)` throws it " +
+                "away on every bench nudge. `initialModel` is the one key that means what this state means.",
+        )
+    }
+
+    /**
+     * The coupling that makes the law above safe.
+     *
+     * MELODIC's placement is real pitch DSP over every row, so it is computed
+     * off the main thread and cached in `melodicPlaced` — which is keyed on
+     * `model`, correctly, because it describes the model's rows. While
+     * `layout` was *also* keyed on `model` the two always died together and a
+     * computation that ran only inside the MELODIC button's own click handler
+     * was sufficient: the only way back to MELODIC was to tap it again.
+     *
+     * Once `layout` survives a re-chop that stops being true. A re-chop while
+     * MELODIC is showing clears the placement and the click that would have
+     * rebuilt it never comes, so the grid preview reads `melodicPlaced ?:
+     * emptyList()` forever — a permanently empty MELODIC. The placement has
+     * to be an effect of the state it derives from, not of the tap that first
+     * asked for it.
+     */
+    @Test
+    fun `law - MELODIC's placement is recomputed when the chop changes, not only when the button is tapped`() {
+        val body = topLevelFun(chopScreen, "ChopContent")
+        assertTrue(
+            Regex("""LaunchedEffect\(\s*(model\s*,\s*melodic|melodic\s*,\s*model)\s*\)""").containsMatchIn(body),
+            "MELODIC's placement must be rebuilt by a LaunchedEffect keyed on both `model` and `melodic`. " +
+                "Keyed on only one of them it is wrong in one direction or the other: on `melodic` alone a " +
+                "re-chop leaves a stale placement, and on `model` alone the DSP runs for players who never " +
+                "opened MELODIC at all.",
+        )
+        val melodicButton = blockAfter(body, """SegmentButton("MELODIC"""")
+        assertTrue(
+            "melodicPlaced =" !in melodicButton && "melodicBusy = true" !in melodicButton,
+            "the MELODIC button is computing the placement itself again. A click handler cannot be the only " +
+                "way the placement is built, because `layout` now outlives the model the placement was built " +
+                "from — the re-chop that clears it is not accompanied by a tap. The button should set " +
+                "`layout` and say so; the effect above owns the rebuilding.",
+        )
+    }
+    // ---- Law: PAD SHEET keeps what the player dialled ----
+
+    private val padSheetScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/PadSheetScreen.kt")
+
+    /**
+     * J24 in `docs/UX_JOURNEY_PLAN_2026_09.md`.
+     *
+     * MUTATE and OUTSIDE each offer a row of moves, and each move has its
+     * own knob meaning its own thing — SPLICE's `AT` is a time in
+     * milliseconds, MORPH's is a blend. Keying the dialled value on the
+     * *selected move* meant the value was destroyed by the act of looking
+     * at another move: dial SPLICE's `AT` to 400 ms, tap MORPH to hear the
+     * difference, tap back, and it reads 40 ms again.
+     *
+     * Comparing two moves is the entire reason the row exists, so the one
+     * gesture the design invites was the one that threw work away. A value
+     * per move fixes it without inventing anything: each move keeps what it
+     * was last dialled to, and a move never touched still opens on its own
+     * default.
+     */
+    @Test
+    fun `law - a move's dialled knob is remembered per move, not reset by switching move`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for (bad in listOf("remember(slot, mutateMode)", "remember(slot, outsideMove)")) {
+            assertTrue(
+                bad !in src,
+                "`$bad` keys a dialled knob on the selected move, so switching move to compare — the one " +
+                    "gesture the move row exists to invite — silently resets it to that move's default. Keep " +
+                    "a value per move (a state map keyed on the move's name) instead, so each move remembers " +
+                    "what it was dialled to and an untouched move still opens on its default.",
+            )
+        }
+        for (map in listOf("mutateKnobs", "outsideKnobs")) {
+            assertTrue(
+                Regex("""val\s+$map\s*=\s*remember\(slot\)\s*\{\s*mutableStateMapOf""").containsMatchIn(src),
+                "expected `$map` to be a `remember(slot) { mutableStateMapOf<String, Float>() }` — one dialled " +
+                    "value per move, reset only when the pad itself changes.",
+            )
+        }
+    }
+
+    /**
+     * J23 and J26.
+     *
+     * `slot` changes every time the pad-nav arrows move to the next pad, so
+     * keying state on it says "this belongs to one pad". Three pieces said
+     * that and were not true:
+     *
+     * - `measuredRoom` holds a **multi-second live mic capture of the
+     *   physical room**, and `KEEP ROOM ▸` shelves it kit-level, named after
+     *   the kit, as a reusable parent. The pad that happened to be open when
+     *   the trip ran is incidental to all of that — but one tap of `►`
+     *   discarded it, and recovery meant doing the trip again.
+     * - `pendingDepth` / `pendingBloom` are settings for `MAKE PAD ▸`, a
+     *   door that makes a *new* pad. A tool's settings are not a property of
+     *   whatever it was last pointed at, and dialling DEPTH again for every
+     *   pad in a row is the workflow the reset imposes.
+     *
+     * All three are keyed on the kit instead, which is the scope they
+     * actually belong to: a different kit is a different room to name and a
+     * different job, the same reasoning `openBox` already uses one file up.
+     */
+    @Test
+    fun `law - PAD SHEET state that is not a property of one pad is not keyed on the slot`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        for (name in listOf("measuredRoom", "pendingDepth", "pendingBloom")) {
+            assertTrue(
+                !Regex("""var\s+$name\s+by\s+remember\(slot\)""").containsMatchIn(src),
+                "`$name` is keyed on `slot` again, so moving to the next pad destroys it. It is not a " +
+                    "property of one pad: a measured room is the room (and KEEP ROOM shelves it named after " +
+                    "the *kit*), and MAKE PAD's DEPTH/BLOOM are a tool's settings. Key it on `entry.dir`.",
+            )
+            assertTrue(
+                Regex("""var\s+$name\s+by\s+remember\(entry\.dir\)""").containsMatchIn(src),
+                "expected `$name` to be keyed on `entry.dir` — the kit, which is the scope it belongs to. " +
+                    "Unkeyed would carry a measured room across a kit switch and let KEEP ROOM name it after " +
+                    "the wrong kit; keyed on `slot` it dies on the pad-nav arrows.",
+            )
+        }
+    }
+    /**
+     * The half of J24 that nearly shipped a regression.
+     *
+     * `MutateSheet.DRIFT_FRACTION` is MORPH's own knob default, and its
+     * KDoc says why it exists: the card "had been reading whatever fraction
+     * the *previous* move's stepper happened to hold", so a DRIFT tap "blended
+     * none of the neighbour in while the card then redrew MIX at 50%". The
+     * value written and the value shown had diverged.
+     *
+     * Giving each move its own memory puts that divergence back within reach
+     * from the other side: DRIFT from another move uses `DRIFT_FRACTION`,
+     * then switches the card to MORPH — which now has a remembered value to
+     * land on, so the knob would read whatever MORPH was last dialled to
+     * while the drift that just ran used something else. Writing the
+     * fraction DRIFT used into MORPH's own memory keeps the knob a true
+     * readout of the last thing that happened.
+     */
+    @Test
+    fun `law - DRIFT leaves the knob showing the blend it actually used`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        val drift = blockAfter(src, "if (!onMorph) {")
+        assertTrue(
+            Regex("""mutateKnobs\[Mutate\.Mode\.MORPH\.name\]\s*=\s*MutateSheet\.DRIFT_FRACTION""")
+                .containsMatchIn(drift),
+            "DRIFT switches the card to MORPH without telling MORPH's knob what blend it used, so the card " +
+                "shows whatever MORPH was last dialled to while the drift that just ran used " +
+                "`DRIFT_FRACTION`. That is the same value-shown/value-used divergence `DRIFT_FRACTION`'s own " +
+                "KDoc was written to end. Write it into the move's memory alongside the switch.",
+        )
+    }
+    /**
+     * J22. `TapeDeckViewTest` proves the carrier carries; this proves TAPE
+     * still uses it.
+     *
+     * That gap is the whole reason these source-scanning laws exist. A
+     * perfectly correct, fully tested `ViewCarrier` in `:shell` says nothing
+     * about whether `:app` calls it — and `:app` has no Kotlin test source
+     * set to notice if the call is dropped in a later edit. Only the
+     * compiler sees this file, and a deleted `.also(viewCarrier::adopt)`
+     * compiles cleanly.
+     */
+    @Test
+    fun `law - TAPE hands each fresh deck the view the player had set up`() {
+        val src = tapeScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            Regex("""val\s+viewCarrier\s*=\s*remember\s*\{\s*TapeDeckModel\.ViewCarrier\(\)\s*\}""")
+                .containsMatchIn(src),
+            "TAPE needs an unkeyed `remember { TapeDeckModel.ViewCarrier() }`. Keyed on anything that moves " +
+                "with the tape it would die exactly when it is needed — outliving `tapeData` is its only job.",
+        )
+        val built = Regex("""remember\(tapeData\)\s*\{\s*\n\s*TapeDeckModel\([^)]*\)\s*\n\s*\.also\(viewCarrier::adopt\)""")
+        assertTrue(
+            built.containsMatchIn(src),
+            "the fresh `TapeDeckModel` is built without `.also(viewCarrier::adopt)`, so a snip landing — " +
+                "reachable from the quick-settings tile without leaving this screen — silently returns the " +
+                "zoom and the readout to their defaults under the player's finger. Nothing else catches " +
+                "this: `:app` has no test source set, and dropping the call still compiles.",
+        )
+    }
+    // ---- Law: KIT / TEXTURE keeps what the player picked ----
+
+    private val kitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/KitScreen.kt")
+
+    /**
+     * J25's worst half: the target of a destructive action moving on its own.
+     *
+     * SOURCE names the pad SCULPT and STRETCH will turn into a tape, and
+     * `SCULPT ▸ NEW TAPE` has no per-pad confirm — so whatever SOURCE points
+     * at when GO is pressed is what gets rendered over. It was keyed on
+     * **the value of the kit's lowest assigned slot**, so any chop landing or
+     * capture that filled a lower pad silently re-pointed the stepper at the
+     * new arrival. The player picks A07, a capture lands on A01, and the next
+     * GO renders A01.
+     *
+     * The key was doing two jobs, which is why this is not simply a deletion:
+     * re-pointing on a kit change (the bug) *and* picking up a first value
+     * once the kit has pads at all (legitimate — `sources` is empty on the
+     * first composition). A remembered pick with a fallback does the second
+     * without the first: the player's choice stands while the pad still
+     * exists, and the lowest slot is used only when there is no choice to
+     * honour — no pick yet, or a pick whose pad has since gone.
+     */
+    @Test
+    fun `law - the TEXTURE source pad is the one the player picked, not the kit's lowest`() {
+        val src = kitScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            "remember(entry.dir, sources.firstOrNull())" !in src,
+            "SOURCE is keyed on the value of the kit's lowest assigned slot again, so a chop landing or a " +
+                "capture on a lower pad silently re-points it — and SCULPT's NEW TAPE has no per-pad confirm, " +
+                "so the next GO renders over a pad nobody chose.",
+        )
+        assertTrue(
+            Regex("""var\s+pickedSource\s+by\s+remember\(entry\.dir\)""").containsMatchIn(src),
+            "expected the player's pick to be remembered against the kit alone.",
+        )
+        assertTrue(
+            Regex("""val\s+sourceSlot\s*=\s*pickedSource\?\.takeIf\s*\{\s*it\s+in\s+sources\s*\}\s*\?:\s*sources\.firstOrNull\(\)""")
+                .containsMatchIn(src),
+            "expected SOURCE to fall back to the lowest slot only when there is no pick to honour — none yet " +
+                "(`sources` is empty on the first composition), or one whose pad has since been removed. " +
+                "Without the fallback a picked-then-deleted pad leaves SOURCE naming nothing; without the " +
+                "`in sources` test it would name a pad that is gone.",
+        )
+    }
+
+    /**
+     * The other half of J25, and the same bug J24 had on PAD SHEET.
+     *
+     * Each texture panel has its own modes and each mode its own knob, so
+     * neither can simply carry across — but keying them on the panel and the
+     * mode meant looking at the other one threw the dialled value away.
+     * Comparing is what the chips are for.
+     */
+    @Test
+    fun `law - TEXTURE remembers a mode per panel and a knob per mode`() {
+        val src = kitScreen.readText(Charsets.UTF_8)
+        for (bad in listOf("remember(panelKind) { mutableStateOf(", "remember(panelKind, mode)")) {
+            assertTrue(
+                bad !in src,
+                "`$bad` throws away what the player set by the act of looking at another panel or mode. " +
+                    "Keep a value per panel (and per panel-and-mode for the knob), the way PAD SHEET's own " +
+                    "move knobs do — an untouched one still opens on its default.",
+            )
+        }
+        for (map in listOf("textureModes", "textureKnobs")) {
+            assertTrue(
+                Regex("""val\s+$map\s*=\s*remember\(entry\.dir\)\s*\{\s*mutableStateMapOf""").containsMatchIn(src),
+                "expected `$map` to be a `remember(entry.dir) { mutableStateMapOf... }` — kept for as long as " +
+                    "the kit is open, reset when a different kit is.",
+            )
+        }
+    }
+    /**
+     * J37, the wiring half. `PadTouchTest` proves the mapping and proves it
+     * reaches the zones; only this proves KIT still asks for it.
+     *
+     * The hard-coded `1f` was the whole bug — SOFT HITS built real velocity
+     * layers, `PadHit.resolve` has always chosen one by velocity, and the
+     * grid threw that away at the last step. Putting a constant back
+     * compiles cleanly and silently un-ships the feature again.
+     */
+    @Test
+    fun `law - KIT hits a pad at the velocity the touch asked for`() {
+        val src = kitScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            Regex("""onTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
+                .containsMatchIn(src),
+            "the pad grid is not reading velocity from where the finger landed. A tap on glass carries no " +
+                "force, so position is the only thing it does carry - without it the grid has nothing to pass " +
+                "and SOFT HITS goes back to being audible nowhere.",
+        )
+        assertTrue(
+            !Regex("""player\.hit\(pad,\s*1f""").containsMatchIn(src) &&
+                !Regex("""allocator\.noteOn\(slot,\s*1f""").containsMatchIn(src),
+            "a hard-coded velocity is back in KIT's `hit`. That is the original J37 bug exactly: the layers " +
+                "are still built, still chosen by velocity, and still never heard.",
+        )
+        /*
+         * The accessible path is the one place a constant is right, and it
+         * must be the constant the REST of the app uses. This asserted full
+         * velocity at first, on the reasoning that a synthesized click
+         * should give the pad's whole sound — but PLAY and KEYS had long
+         * since settled on the centre, and full velocity was one of three
+         * ways KIT's wiring disagreed with them. The shared rule now owns
+         * it; see `law - every pad grid reads touch-Y velocity through the
+         * one shared rule`.
+         */
+        assertTrue(
+            Regex("""onClick\(label = "PLAY"\)\s*\{\s*onTap\(slot,\s*PadHit\.CENTER\)""").containsMatchIn(src),
+            "the synthesized PLAY click should pass `PadHit.CENTER` — what a tap at the pad's vertical middle " +
+                "would have produced, which is what every other grid gives it.",
+        )
+    }
+    private val grooveScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt")
+
+    /**
+     * J17, both halves.
+     *
+     * The seam: `recordBars` was a `var` initialised to 2 that no control
+     * ever reassigned — a mutable variable able to hold only its initial
+     * value, while the model accepted anything in 1..64.
+     *
+     * The silence: selecting PROG C doubles the pattern length through
+     * `GrooveVariations.halfTime`, and nothing on screen said so. The file
+     * already *knew* — the comment locking the PROG carousel during RECORD
+     * explains the desync risk "(HALF-TIME doubles `bars`)". The app knew
+     * and the player did not.
+     */
+    @Test
+    fun `law - GROOVE has a control for the take length, and says when a program changes it`() {
+        val src = grooveScreen.readText(Charsets.UTF_8)
+
+        // EVERY assignment, not merely one of them.
+        //
+        // This first read `containsMatchIn(...barsAfter...)`, which is a
+        // existence check wearing an invariant's clothes: replacing one of
+        // the two steppers with plain arithmetic left the other matching
+        // and the law green. The property is that `recordBars` is never
+        // assigned anything else, so that is what it asks.
+        // `=(?!=)` so a `recordBars == 1` comparison is not read as an
+        // assignment — it was, the first time this ran.
+        val assignments = Regex("""recordBars\s*=(?!=)\s*([^\n]*)""").findAll(src)
+            .map { it.groupValues[1].trim() }
+            .filterNot { it.startsWith("LiveRecord.barsAfter(recordBars,") }
+            .filterNot { it.startsWith("recordBars,") } // `bars = recordBars,` style named arguments
+            .toList()
+        assertTrue(
+            assignments.isEmpty(),
+            "`recordBars` is assigned something other than a `LiveRecord.barsAfter` step: $assignments. " +
+                "Plain arithmetic is not the same thing: `Take` refuses a bar count outside 1..64 *at the " +
+                "arm*, so a control able to walk off the ladder turns a tap into a throw the instant the " +
+                "count-in starts.",
+        )
+        assertTrue(
+            Regex("""LiveRecord\.barsAfter\(recordBars,\s*-1\)""").containsMatchIn(src) &&
+                Regex("""LiveRecord\.barsAfter\(recordBars,\s*1\)""").containsMatchIn(src),
+            "the take length needs a control that steps both ways; one direction alone cannot reach every " +
+                "rung on a ladder that wraps.",
+        )
+        assertTrue(
+            Regex("""mutableIntStateOf\(LiveRecord\.DEFAULT_BARS\)""").containsMatchIn(src),
+            "RECORD's opening length should come from `LiveRecord.DEFAULT_BARS`, not a literal — a default " +
+                "the stepper's own ladder does not contain is one the control can never return to.",
+        )
+
+        // The program that changes the length has to say so, wherever it
+        // sits in the carousel: keyed on the name, not on an index, so
+        // reordering the programs cannot silently un-say it.
+        //
+        // Read line by line to the list's own closing `)` rather than with
+        // a `[^)]*` regex, and with comment lines dropped before the
+        // strings are collected. Both matter: a `)` inside an explanatory
+        // comment truncated the list the first time this law ran, and a
+        // quoted phrase inside one would otherwise be counted as an entry.
+        fun entriesOf(declaration: String): List<String> {
+            val lines = src.lineSequence().dropWhile { declaration !in it }
+            assertTrue(lines.any(), "could not find `$declaration`")
+            val body = lines.drop(1).takeWhile { it.trim() != ")" }
+            return body.filterNot { isCommentLine(it.trim()) }
+                .flatMap { line -> Regex(""""([^"]*)"""").findAll(line).map { it.groupValues[1] } }
+                .toList()
+        }
+        val nameList = entriesOf("private val PROG_NAMES = listOf(")
+        val subList = entriesOf("private val PROG_SUBS = listOf(")
+        assertTrue(nameList.size == subList.size && nameList.isNotEmpty(), "PROG_NAMES and PROG_SUBS disagree: $nameList vs $subList")
+
+        val halfTimeAt = nameList.indexOfFirst { "HALF" in it }
+        assertTrue(halfTimeAt >= 0, "no program named HALF-TIME in $nameList — if it was renamed, point this law at the new name.")
+        assertTrue(
+            "LONG" in subList[halfTimeAt],
+            "the HALF-TIME program doubles the pattern length (`GrooveVariations.halfTime`: `bars * 2`) and " +
+                "its own line does not say so: '${subList[halfTimeAt]}'. A length change reached through a " +
+                "carousel of five options, with nothing on screen mentioning it, is the half of J17 a player " +
+                "actually trips over.",
+        )
+    }
+    private val appKt = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+
+    /**
+     * J10, measured the way the finding measured it.
+     *
+     * Counting navigations across `App.kt`, the review found KIT 11, KITS
+     * 4, TAPE 3, GROOVE 3 — and **CHOP 0, EXPORT 0**. Those are steps 2 and
+     * 4 of the loop the app advertises: the app automated the one join in
+     * the middle (CHOP → KIT) and left the two at the ends to the user.
+     *
+     * Counts both forms, because the screen is reached both ways: a direct
+     * `screen = AppScreen.X` and the `goToScreen(AppScreen.X)` helper. A
+     * law that knew only the form the review happened to grep for would go
+     * green on a navigation that does not exist, or red on one that does.
+     */
+    @Test
+    fun `law - every step of the advertised loop can be reached from the one before it`() {
+        val src = appKt.readText(Charsets.UTF_8)
+        fun navigationsTo(screen: String): Int =
+            Regex("""(screen\s*=\s*AppScreen\.$screen\b|goToScreen\(AppScreen\.$screen\))""")
+                .findAll(src).count()
+
+        for (step in listOf("CHOP", "EXPORT")) {
+            assertTrue(
+                navigationsTo(step) > 0,
+                "$step is step ${if (step == "CHOP") 2 else 4} of the loop the app advertises and nothing in " +
+                    "App.kt ever navigates to it. Finishing a capture has to offer CHOP; finishing a kit has " +
+                    "to offer EXPORT. Without it the app automates the one join in the middle and leaves both " +
+                    "ends to a user who has to already know the loop exists.",
+            )
+        }
+
+        // The offers are offers. A door the player can ignore, not a screen
+        // that moves under them — being moved without asking is the same
+        // complaint as a control that changes its own target.
+        assertTrue(
+            Regex("""offer\(Copy\.CAPTURE_OFFER,\s*Copy\.CAPTURE_OFFER_DOOR\)""").containsMatchIn(src) &&
+                Regex("""offer\(Copy\.KIT_OFFER,\s*Copy\.KIT_OFFER_DOOR\)""").containsMatchIn(src),
+            "both handoffs should go through `offer(...)`, which puts a door on a toast and leaves the screen " +
+                "where it is. Navigating outright would be a stronger handoff and the wrong one.",
+        )
+        // The guard has to be ON the offer, not merely somewhere in the
+        // file. `containsMatchIn` passed with the guard deleted, because
+        // `pads.isNotEmpty()` appears elsewhere in App.kt — an existence
+        // check where a locality check was needed.
+        val lines = src.lines()
+        val offers = lines.withIndex().filter { (_, line) -> "offer(Copy.KIT_OFFER" in line }
+        assertTrue(offers.isNotEmpty(), "no EXPORT offer found at all")
+        for ((at, line) in offers) {
+            val above = lines.subList((at - 3).coerceAtLeast(0), at).joinToString("\n")
+            assertTrue(
+                "pads.isNotEmpty()" in above,
+                "the EXPORT offer at line ${at + 1} is not guarded by the kit actually having pads:" +
+                    "\n  ${line.trim()}\nA door onto an empty EXPORT is a worse answer than no door.",
+            )
+        }
+    }
+    /**
+     * One touch-Y velocity rule, in one place.
+     *
+     * This is the repo's own recurring defect shape — one quantity in two
+     * places — caught in the field rather than by a test. `MIN_VELOCITY =
+     * 0.35f` was declared in **two** files, the ramp around it was retyped
+     * in **three**, and J37 then gave KIT a fourth copy with a different
+     * floor, a different accessibility value, **and the axis inverted**,
+     * plus a permanent on-screen legend advertising the wrong direction.
+     * Nothing noticed until a pad was tapped on a phone.
+     *
+     * The rule now lives in `PadHit` (`:shell`), where `PadTouchTest` pins
+     * its direction and its floor. This keeps the screens delegating.
+     */
+    @Test
+    fun `law - every pad grid reads touch-Y velocity through the one shared rule`() {
+        val ui = File("../app/src/main/kotlin/com/snipsnap/app/ui")
+        val sources = ui.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        require(sources.size > 10) { "found only ${sources.size} ui sources — the scan is broken, not the tree." }
+
+        val floors = mutableListOf<String>()
+        val ramps = mutableListOf<String>()
+        for (file in sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                if (isCommentLine(line.trim())) return@forEachIndexed
+                if (Regex("""MIN_VELOCITY\s*=\s*[0-9.]+f""").containsMatchIn(line)) {
+                    floors += "${file.name}:${i + 1}  ${line.trim()}"
+                }
+                if (Regex("""MIN_VELOCITY\s*\+\s*\(\s*1f\s*-\s*MIN_VELOCITY\s*\)""").containsMatchIn(line)) {
+                    ramps += "${file.name}:${i + 1}  ${line.trim()}"
+                }
+            }
+        }
+        assertTrue(
+            floors.isEmpty(),
+            "a touch-Y velocity floor is written as a number again, instead of taken from `PadHit.SOFTEST`:\n  " +
+                floors.joinToString("\n  ") +
+                "\nTwo copies of this constant is how KIT came to disagree with PLAY about which end of a pad " +
+                "is loud.",
+        )
+        assertTrue(
+            ramps.isEmpty(),
+            "the touch-Y ramp is retyped instead of calling `PadHit.velocityAt`:\n  " + ramps.joinToString("\n  "),
+        )
+
+        // And the screens that read a touch position do go through it.
+        for (name in listOf("PadGrid.kt", "KitScreen.kt", "KeysScreen.kt")) {
+            val file = sources.single { it.name == name }
+            assertTrue(
+                "PadHit.velocityAt(" in file.readText(Charsets.UTF_8),
+                "$name plays pads but never calls `PadHit.velocityAt` — if it grew its own rule, that is the " +
+                    "fork this law exists to stop.",
+            )
+        }
+
+        // The accessible path is the one place a constant is right, and it
+        // has to be the SAME constant everywhere: full velocity here (KIT's
+        // first answer) is louder than what every other grid gives.
+        // Read the whole `onClick { ... }` block, not the line the `onClick`
+        // sits on: PadGrid's spans several lines, and a single-line match
+        // failed it for being correct.
+        val synthesized = sources.filter { """onClick(label = "PLAY")""" in it.readText(Charsets.UTF_8) }
+        assertTrue(synthesized.isNotEmpty(), "no synthesized PLAY clicks found — the scan is broken")
+        for (file in synthesized) {
+            val block = blockAfter(file.readText(Charsets.UTF_8), """onClick(label = "PLAY")""")
+            assertTrue(
+                "CENTER" in block,
+                "${file.name}'s synthesized PLAY click passes something other than the centre velocity:\n  " +
+                    block.lines().first().trim() +
+                    "\nIt has no position to read, so it gets what a tap at the pad's vertical middle would " +
+                    "have produced — not the loudest hit available.",
+            )
+        }
+    }
+    /**
+     * J35: EXPORT refused to write and said nothing.
+     *
+     * The justification was reasonable and wrong: "the refreshed checklist
+     * below is the message". The checklist is the first card in a
+     * `verticalScroll` and the write button is pinned at the bottom, so on
+     * a phone the row that changed is very likely off-screen at the moment
+     * of the tap — and a refusal you have to go looking for is one you
+     * experience as the button doing nothing.
+     *
+     * `LandingNote` already existed for exactly this; its own KDoc lists "a
+     * backup preflight refused part of" among the things it is for. EXPORT's
+     * own preflight refusal did not use it.
+     */
+    @Test
+    fun `law - a refused EXPORT says what blocked it`() {
+        val src = File("../app/src/main/kotlin/com/snipsnap/app/ui/ExportScreen.kt").readText(Charsets.UTF_8)
+        val blocked = blockAfter(src, "is ExportWizardModel.WriteResult.Blocked ->")
+        val speaks = "onNote(" in blocked || "onToast(" in blocked
+        assertTrue(
+            speaks,
+            "the Blocked branch neither raises the message box nor toasts, so a refused write is silent:\n" +
+                blocked.lines().filterNot { it.trim().startsWith("//") }.joinToString("\n").take(400),
+        )
+        assertTrue(
+            "LandingNote.exportBlocked(" in blocked,
+            "a blocked write can name several failing pads at once and has to stay until read — that is what " +
+                "`LandingNote.exportBlocked` is for. A bare toast drops all but one reason and takes it away " +
+                "again in a couple of seconds.",
+        )
+    }
+    /**
+     * J32: HUM stated its one rule after the tape was already audible.
+     *
+     * `HUM_START` is "HUM ALONG. HEADPHONES ON, OR THE MIC HEARS THE TAPE
+     * TOO." — advice about a take that the armed ring is already capturing.
+     * In source order it sat *after* `v.start(0)`, so it arrived at the one
+     * moment acting on it meant wrecking the take it was warning about.
+     *
+     * It is the only rule on this screen whose value depends on arriving
+     * before the thing it governs, which is why the order is a law rather
+     * than a preference.
+     */
+    @Test
+    fun `law - HUM says its rule before it starts the tape`() {
+        // `startHum` is nested inside `ChopContent`, so the top-level
+        // helper cannot see it; brace-match from its own head instead.
+        val body = codeOnly(blockAfter(chopScreen.readText(Charsets.UTF_8), "fun startHum()"))
+        val says = body.indexOf("onToast(Copy.HUM_START)")
+        val starts = body.indexOf("v.start(0)")
+        assertTrue(says >= 0, "startHum no longer says HUM_START at all")
+        assertTrue(starts >= 0, "startHum no longer starts the voice")
+        assertTrue(
+            says < starts,
+            "HUM starts the tape before stating the rule that makes the take usable. The armed ring is " +
+                "already capturing by then, so the advice arrives exactly when acting on it costs the take.",
+        )
+    }
+    /**
+     * J43: a control that cannot act says so, even when the refusal is in a
+     * function rather than in its own lambda.
+     *
+     * `onStep` routes GRID to `stepGrid` and the ladder to `stepLadder`;
+     * every other mode goes to `stepHits`, which opens with
+     * `hitsOf(model.mode) ?: return`. HUMMED is the mode that reaches it
+     * that way, so CHOP's ◀ ▶ were lit, announced "ONE PART FEWER" to
+     * TalkBack, and did nothing.
+     *
+     * The `enabled`-contract law above could not catch it: that one looks
+     * for `return@Component` written inline, and this refusal lives one
+     * call away. So this law checks the other end — that the stepper's own
+     * `enabled` is mode-aware rather than merely "not busy".
+     */
+    @Test
+    fun `law - the CUT stepper refuses a mode it cannot step`() {
+        val src = codeOnly(chopScreen.readText(Charsets.UTF_8))
+        assertTrue(
+            Regex("""val\s+canStep\s*=""").containsMatchIn(src),
+            "the CUT bench no longer works out which modes ◀ ▶ can actually step. `stepHits` returns on its " +
+                "first line for a hummed chop, so without this the buttons stay lit and do nothing.",
+        )
+        val steppers = src.lines().filter { """SecondaryButton("◀"""" in it || """SecondaryButton("▶"""" in it }
+        assertTrue(steppers.size == 2, "expected two stepper buttons in the CUT bench, found ${steppers.size}")
+        for (line in steppers) {
+            assertTrue(
+                "canStep" in line,
+                "a CUT stepper is gated without `canStep`, so it stays lit on a mode it cannot step:\n  " +
+                    line.trim(),
+            )
+            assertTrue(
+                "!humming" in line,
+                "a CUT stepper can fire while a hum is capturing:\n  " + line.trim(),
+            )
+        }
+    }
+
+    // ==================== Law: GROOVE's programs are named for what the exporter writes ====================
+
+    /**
+     * The five GROOVE programs read `PROG A · THE BREAK` … `PROG E ·
+     * EDITED` until J18 — index first, meaning second, on a screen where
+     * the index means nothing. A–E is an argument to
+     * `GrooveProgram.compute` and nothing else: it is not an MPC clip
+     * slot, and no exporter in the app has ever written it.
+     *
+     * What the exporter *does* write is the word. `GrooveVariations`
+     * suffixes each derived clip's name — `Swing` (or `Tight`), `Half`,
+     * `Sparse` — and those strings go into `groove.json` and out to the
+     * MPC's clip list. So the letters were the one set of names in the
+     * app that reached nothing outside `GrooveScreen.kt`, and the screen
+     * and the SD card disagreed about what these things are called.
+     *
+     * This law reads the names off the screen's own source and the
+     * suffixes out of the exporter, so the two cannot drift apart again.
+     *
+     * **Two programs are exempt, for reasons that are facts rather than
+     * taste.** The captured program is the base clip: it carries no
+     * suffix at all, so there is no exporter word to match and the app
+     * picks its own. The user's own program is stored and found again by
+     * `GrooveEdit.NAME_SUFFIX`, which is `" E"` — a marker in
+     * `groove.json`, not a name a player would recognise, and not
+     * renameable without migrating every kit already on disk. The screen
+     * calls it YOURS and the marker stays where it is.
+     */
+    @Test
+    fun `the GROOVE programs are named for what the exporter writes`() {
+        val groove = File("../app/src/main/kotlin/com/snipsnap/app/ui/GrooveScreen.kt")
+        assertTrue(groove.isFile, "expected to find ${groove.absolutePath}")
+        val block = blockAfterList(groove.readText(Charsets.UTF_8), "private val PROG_NAMES = listOf")
+        val names = Regex("\"([^\"]+)\"").findAll(block).map { it.groupValues[1] }.toList()
+        assertEquals(
+            5,
+            names.size,
+            "expected five program names in GrooveScreen's PROG_NAMES, found $names — the pattern this " +
+                "law reads must have changed, which would make it pass by checking nothing.",
+        )
+
+        // The exporter's own words, taken from the exporter rather than retyped.
+        val base = com.snipsnap.mpc3.Mpc3Clip(
+            name = "BASE",
+            bars = 1,
+            notes = listOf(com.snipsnap.mpc3.Mpc3Note(note = 36, timePulses = 0L, velocity = 1.0f)),
+        )
+        val written = com.snipsnap.kit.GrooveVariations.standard(base, swingPercent = 60)
+        // standard() returns base, swung, half, sparse — in the same order
+        // the screen lists them, which is the order `GrooveProgram.compute`
+        // indexes. Index 0 is the base and carries no suffix.
+        val suffixes = written.drop(1).map { it.name.removePrefix("BASE").trim().substringBefore(' ') }
+        assertEquals(
+            3,
+            suffixes.count { it.isNotBlank() },
+            "GrooveVariations.standard no longer suffixes its three derived clips (got $suffixes) — " +
+                "this law reads the exporter's vocabulary out of it, so an unsuffixed variation would " +
+                "make the check vacuous rather than failing.",
+        )
+        for ((i, suffix) in suffixes.withIndex()) {
+            val onScreen = names[i + 1]
+            assertTrue(
+                onScreen.startsWith(suffix.uppercase(), ignoreCase = true) ||
+                    suffix.startsWith(onScreen, ignoreCase = true),
+                "GROOVE's program ${i + 1} is called '$onScreen' on screen, but the exporter writes " +
+                    "'$suffix' into the clip name that lands on the MPC. A player who picks a program here " +
+                    "and then looks for it on the hardware has to recognise it — that is the whole reason " +
+                    "the A–E letters went (J18). Screen names: $names; exporter suffixes: $suffixes.",
+            )
+        }
+
+        // The letters are gone from the screen's own labels.
+        val letters = names.filter { Regex("""^PROG [A-E]\b""").containsMatchIn(it) }
+        assertTrue(
+            letters.isEmpty(),
+            "GrooveScreen's PROG_NAMES is index-first again: $letters. A–E is an argument to " +
+                "GrooveProgram.compute, not an MPC clip slot — see this law's KDoc.",
+        )
+    }
+
+
+    // ==================== Law: no comment closes itself by accident ====================
+
+    /**
+     * An asterisk followed by a slash ends a block comment, so writing
+     * markdown-ish emphasis around a slash inside a KDoc terminates it
+     * mid-sentence. Everything after it becomes code, and the compiler
+     * reports a cascade of "Expecting a top level declaration" at a column
+     * that looks like ordinary English.
+     *
+     * This cost a CI cycle. `:app` has no Kotlin test source set, so
+     * `android-build` is the only thing that compiles it — a syntax error
+     * there is invisible to `./gradlew test` and shows up only after a
+     * push. The same mistake had been made and fixed in this very file an
+     * hour earlier; fixing that instance without sweeping for the shape is
+     * what let the second one through, in `GrooveScreen.kt`.
+     *
+     * A line that is nothing but a closer is legitimate (if unusual), so
+     * only an occurrence with prose around it is refused. The sequence is
+     * assembled at runtime rather than written out, because a law that
+     * names the thing it forbids would flag its own source — which is how
+     * the first draft of this law failed.
+     */
+    @Test
+    fun `no Kotlin source ends a doc comment by accident`() {
+        val closer = "*".repeat(2) + "/"
+        val roots = listOf("../app/src", "../shell/src", "../kit/src", "../audio/src", "../loop/src", "../synth/src", "../cli/src")
+            .map { File(it) }
+            .filter { it.isDirectory }
+        assertTrue(roots.size >= 5, "only found ${roots.size} source roots — the scan is broken, not the tree.")
+        val sources = roots.flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        assertTrue(sources.size > 100, "found only ${sources.size} .kt files — the scan is broken, not the tree.")
+
+        val bad = mutableListOf<String>()
+        for (file in sources) {
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                if (closer in line && line.trim() != closer) {
+                    bad += "${file.path}:${i + 1}: ${line.trim()}"
+                }
+            }
+        }
+        assertTrue(
+            bad.isEmpty(),
+            "these lines close the enclosing doc comment where they stand, turning the rest of the " +
+                "comment into code:\n  " + bad.joinToString("\n  ") +
+                "\nUse backticks rather than double-asterisk emphasis next to a slash. This is checked " +
+                "here because :app has no test source set — a syntax error in it is invisible to the " +
+                "JVM suite and only surfaces when CI compiles the app.",
+        )
+    }
+
+
+    // ==================== Law: every pad sheet door retires its own hint ====================
+
+    /**
+     * PAD SHEET has three doors — KIT's long press, DOUBLES' `GO`, and the
+     * RE-TRIM return — and its discovery hint was retired inside exactly
+     * one of them (J16). A user who found the sheet either of the other
+     * two ways was told "HOLD A PAD TO OPEN ITS PAD SHEET" on every kit
+     * open, forever.
+     *
+     * `Copy.PAD_SHEET_HINT`'s own KDoc says opening the sheet is "the only
+     * event that proves they found it". That was true of the intent and
+     * false of the code, which is the shape this wave keeps finding: a
+     * comment asserting a behaviour the code does not have.
+     *
+     * `openPadSheet` is the one door now. Opening is assigning a slot;
+     * closing is assigning null, and closing has nothing to retire — so
+     * this refuses a non-null assignment made anywhere else.
+     */
+    @Test
+    fun `every pad sheet door retires its own hint`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = codeOnly(app.readText(Charsets.UTF_8))
+
+        assertTrue(
+            "fun openPadSheet(" in src,
+            "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
+                "function, or the hint gets retired by some of them and not others — see J16.",
+        )
+        val opener = src.substringAfter("fun openPadSheet(")
+        assertTrue(
+            "PAD_SHEET_FOUND" in opener.take(400),
+            "`openPadSheet` no longer retires the hint (PAD_SHEET_FOUND). It is the one place that does; " +
+                "without it every door nags forever.",
+        )
+
+        // Assigning a slot is opening. Assigning null is closing, and a
+        // close has no hint to retire.
+        //
+        // The assigned token is CAPTURED and compared, not asserted around
+        // with a lookahead: `padSheetSlot\s*=\s*(?!null)` reads as "an
+        // assignment of something other than null" and is not one. `\s*`
+        // backtracks to zero width, so the lookahead runs against the
+        // space before `null`, is satisfied that a space is not `null`,
+        // and the pattern matches every close in the file. It flagged all
+        // ten of them on correct code.
+        val outside = src.substringBefore("fun openPadSheet(") + opener.substringAfter("}", "")
+        val assigned = Regex("""padSheetSlot\s*=\s*([A-Za-z0-9_.]+)""")
+            .findAll(outside)
+            .map { it.groupValues[1] }
+            .toList()
+        assertTrue(
+            assigned.isNotEmpty(),
+            "found no `padSheetSlot =` assignments at all outside openPadSheet — App.kt must still close " +
+                "the sheet somewhere, so this scan is broken rather than the code being clean.",
+        )
+        val bad = assigned.filterNot { it == "null" }
+        assertEquals(
+            emptyList(),
+            bad,
+            "App.kt opens PAD SHEET by assigning `padSheetSlot` directly, outside `openPadSheet`: $bad. " +
+                "That is how J16 happened — the hint is retired in one place and the other doors walk " +
+                "past it. Call openPadSheet(slot) instead.",
+        )
+    }
+
 }

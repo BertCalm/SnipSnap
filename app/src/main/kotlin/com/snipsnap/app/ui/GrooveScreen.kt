@@ -55,6 +55,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.deviceSampleRate
@@ -66,7 +67,9 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveProgram
@@ -78,10 +81,13 @@ import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.Names
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
+import com.snipsnap.shell.Audition
 import com.snipsnap.shell.Chart
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
@@ -94,6 +100,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -160,7 +167,7 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  * content living at the edge to protect: the row is padded in from
  * [Layout.MENU_EDGE_W] on both sides, so the cue never overlaps a tab.
  * This screen's scroll region has no such margin — TRANSPORT / SHAPE THE
- * GROOVE / SEND IT SOMEWHERE run edge to edge, so whichever control the
+ * GROOVE / the write-and-doors row run edge to edge, so whichever control the
  * viewport happens to end on (the FEEL stepper, at the 1080x2400/420dpi
  * repro) is bisected by the same hard clip a gutter would have avoided.
  * A fade reads as "this continues" where a hard clip reads as "this
@@ -171,21 +178,57 @@ private const val GROOVE_LIT_WINDOW = 0.7f
  */
 private const val GROOVE_SCROLL_EDGE_DP = 20
 
+/**
+ * The five programs, named for what they are.
+ *
+ * They read `PROG A · THE BREAK` … `PROG E · EDITED` until J18: an index
+ * first and the meaning second, on a screen where the index means nothing.
+ * A–E is an argument to [GrooveProgram.compute] and no more — it is not an
+ * MPC clip slot, and the app's own exporter never writes it. What the
+ * exporter writes is the word: `GrooveVariations` suffixes a clip's name
+ * with `Swing` (or `Tight`), `Half` and `Sparse`, and leaves the base
+ * clip's own name alone. So the letters were the one set of names in the
+ * app that reached nothing outside this file, and the screen and the SD
+ * card disagreed about what these things are called.
+ *
+ * `the GROOVE programs are named for what the exporter writes` holds B, C
+ * and D to those suffixes. A is the captured clip, which carries no suffix
+ * and so is the app's own word to choose; E is the user's own.
+ *
+ * One token each, no spaces: five of these sit in one segment row, and a
+ * label that wraps would make its segment taller than the other four.
+ */
 private val PROG_NAMES = listOf(
-    "PROG A · THE BREAK",
-    "PROG B · SWUNG",
-    "PROG C · HALF-TIME",
-    "PROG D · SPARSE",
-    "PROG E · EDITED",
+    "CAPTURED",
+    // SWING, not SWUNG: `the GROOVE programs are named for what the
+    // exporter writes` refused the adjective, and it was right to - the
+    // clip that lands on the MPC is named `<take> Swing 60`. It is also
+    // the same word as the stepper two rows down, which is correct
+    // rather than a collision: that stepper sets the percent this
+    // program applies.
+    "SWING",
+    "HALF",
+    "SPARSE",
+    "YOURS",
 )
+/** What the selected program is, in one line under the row. */
 private val PROG_SUBS = listOf(
-    "THE CAPTURED CLIP",
+    "THE TAKE, AS PLAYED",
     "ON THE GRID, PUSHED LATE",
-    "ROOM TO BREATHE",
+    // Says the length change out loud (J17). `GrooveVariations.halfTime`
+    // doubles `bars`, and this file already knew — the comment on the PROG
+    // carousel's own lock explains that switching mid-take would desync the
+    // clock "(HALF-TIME doubles `bars`)". The app knew and the player did
+    // not, which is the whole of the finding.
+    "ROOM TO BREATHE · TWICE AS LONG",
     "THE SKELETON",
-    "FORKED — YOUR STEPS",
+    // Says the split out loud (J18). The first four are recomputed live
+    // and never stored - `GrooveProgram`'s own KDoc - so YOURS is the only
+    // one a hand can change, and nothing on screen used to say so.
+    "YOUR STEPS · THE ONLY ONE YOU CAN EDIT",
 )
-private val PROG_LETTERS = listOf("PROG A", "PROG B", "PROG C", "PROG D")
+/** What a fork says it came from - [PROG_NAMES] for the four derived programs. */
+private val PROG_SOURCES = PROG_NAMES.take(4)
 
 /** Lane display order, straight from [GrooveEdit.Lane]'s own declaration order. */
 private val LANE_ORDER: List<GrooveEdit.Lane> = GrooveEdit.Lane.entries
@@ -284,6 +327,18 @@ fun GrooveScreen(
     onJustLandedChange: (Boolean) -> Unit = {},
     preTake: Mpc3Clip? = null,
     onPreTakeChange: (Mpc3Clip?) -> Unit = {},
+    /**
+     * AUDITION (`docs/AUDITION_SPEC_2026_09.md`, decision 2): PAD SHEET's own
+     * AUDITION ▸ arms a comparison for this slot, then switches here — the
+     * pattern to audition inside is this screen's, not PAD SHEET's (spec
+     * rule 2). Consumed once via [onAuditionArmed] the moment this screen
+     * has built a session from it; see the effect that reads it below for
+     * why re-arming on every recomposition would be wrong.
+     */
+    auditionArmSlot: Int? = null,
+    onAuditionArmed: () -> Unit = {},
+    /** AUDITION's own choose-a-winner write — same shape as every other screen's `onKitUpdated`. */
+    onKitUpdated: (com.snipsnap.kit.Kit) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -357,6 +412,59 @@ fun GrooveScreen(
         }
     }
 
+    // AUDITION (spec decision 2): armed by PAD SHEET's own AUDITION ▸,
+    // consumed below the moment this screen has read it. Deliberately
+    // `remember(kitDir)`-local rather than hoisted through App the way
+    // feel/swing/prog are (see this file's own KDoc on those three) — an
+    // in-progress comparison is exactly the ephemeral, resumable-nothing
+    // state this screen already drops on teardown for the same reason an
+    // armed take or an in-flight bounce is (`silenceGroove`, `discardBounce`
+    // below): leaving GROOVE mid-comparison abandons it rather than carrying
+    // blind/revealed state across a tab switch nothing asked it to survive.
+    var auditionSession by remember(kitDir) { mutableStateOf<Audition.Session?>(null) }
+    var auditionRevealed by remember(kitDir) { mutableStateOf(false) }
+
+    // Builds the session off the armed slot's own current sample and its
+    // nearest sibling's (`Audition.siblingsOf`, the same call PAD SHEET's own
+    // AUDITION ▸ used to decide whether to offer this at all) — re-read here
+    // rather than trusted from the sheet, since a kit reload could have
+    // moved the goalposts between the tap and this screen composing.
+    // `onAuditionArmed` fires whether or not a session actually got built,
+    // which is what makes this a ONE-SHOT read of `auditionArmSlot` rather
+    // than a retry loop: a slot that lost its sibling (or whose audio won't
+    // decode) between the tap and here says so once and stops asking.
+    LaunchedEffect(auditionArmSlot, entry.kit) {
+        val armSlot = auditionArmSlot ?: return@LaunchedEffect
+        val target = entry.kit.pad(armSlot)
+        val sibling = target?.let { Audition.siblingsOf(entry.kit.pads, armSlot).minByOrNull { s -> s.slot } }
+        if (target == null || sibling == null) {
+            onAuditionArmed()
+            return@LaunchedEffect
+        }
+        val built = withContext(Dispatchers.IO) {
+            val a = runCatching { WavReader.readCapped(File(entry.dir, target.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+            val b = runCatching { WavReader.readCapped(File(entry.dir, sibling.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+            if (a == null || b == null) {
+                null
+            } else {
+                Audition.Session(
+                    slot = armSlot,
+                    candidates = listOf(
+                        Audition.Candidate(target.displayName, target.sampleFile, Loudness.of(a)),
+                        Audition.Candidate(sibling.displayName, sibling.sampleFile, Loudness.of(b)),
+                    ),
+                )
+            }
+        }
+        if (built == null) {
+            onToast(Copy.actionFailed("AUDITION"))
+        } else {
+            auditionSession = built
+            auditionRevealed = false
+        }
+        onAuditionArmed()
+    }
+
     /**
      * One pad, one voice. Forced one-shot: neither the roll nor a cell tap
      * has a release gesture to end a gate pad with, which is how the
@@ -369,12 +477,33 @@ fun GrooveScreen(
     // velocity from — keep sounding exactly as they did before. A future
     // touch caller (a rendered pad grid, per the live-record plan) supplies
     // a real value instead.
-    fun hit(slot: Int, velocity: Float = 1f) {
+    //
+    // AUDITION's own seam: [auditionPos]/[auditionBarSteps], non-null only
+    // from the playback clock's own note dispatch below - the ONE caller
+    // actually playing "the pattern" spec rule 2 means. The step editor's
+    // toggle preview and RECORD's touch input both call this too, but a
+    // manual tap is not the automatic bar-line swap the spec describes, so
+    // they get the pad's plain sound, same as before this feature existed.
+    fun hit(slot: Int, velocity: Float = 1f, auditionPos: Float? = null, auditionBarSteps: Int = GrooveEdit.STEPS_PER_BAR) {
         val pad = entry.kit.pad(slot) ?: return
         if (!engineUp || !player.isUp()) return
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        // Resolved here, on the caller's side of `PadEngine.hit`'s own
+        // monitor — `live`'s frame count is looked up BEFORE the swap
+        // lambda is built, never inside it. `hit`'s own KDoc is explicit
+        // that the lambda runs while its monitor is held and must not call
+        // back into the engine; capturing the already-resolved Long instead
+        // of a `player.frames(...)` call keeps the lambda pure arithmetic,
+        // exactly the shape `Audition.Live.swapInto` is written to have.
+        val live = auditionPos?.let { pos -> auditionSession?.liveFor(slot, pos, auditionBarSteps) }
+        val candidateFrames = live?.let { player.frames(it.candidate.sampleFile) ?: 0L }
+        val swap: ((PadHit.Hit) -> PadHit.Hit?)? = if (live != null) {
+            { resolved: PadHit.Hit -> live.swapInto(resolved, candidateFrames ?: 0L) }
+        } else {
+            null
+        }
+        if (!player.hit(pad, velocity, allocation.started.id, swap)) allocator.voiceEnded(allocation.started.id)
     }
 
     // RECORD's own pad grid — PLAY's glow shape (PadGrid.kt's own KDoc
@@ -566,7 +695,7 @@ fun GrooveScreen(
     // alongside feel/swingPercent/progIndex/seed.
     var preTake by remember(kitDir) { mutableStateOf<Mpc3Clip?>(preTake) }
     LaunchedEffect(preTake) { onPreTakeChange(preTake) }
-    var recordBars by remember(kitDir) { mutableIntStateOf(2) }
+    var recordBars by remember(kitDir) { mutableIntStateOf(LiveRecord.DEFAULT_BARS) }
     var take by remember(kitDir) { mutableStateOf<LiveRecord.Take?>(null) }
 
     // Fix 2 (live-record follow-ups): the count-in previously said only
@@ -613,12 +742,12 @@ fun GrooveScreen(
     // with no feedback at all — the same announces-success-does-nothing
     // failure class this session already fixed twice (HOLD, WIND). So an
     // existing E arms this flag instead of forking blind: the button's
-    // own label swaps to "REPLACE E?", and only a SECOND tap actually
+    // own label swaps to "REPLACE YOURS?", and only a SECOND tap actually
     // overwrites. See [forkTakeToE].
     var forkArmed by remember(kitDir) { mutableStateOf(false) }
 
     // Quietly stands down if the second tap never comes — a stale
-    // "REPLACE E?" still armed a minute later would be a trap, not a
+    // "REPLACE YOURS?" still armed a minute later would be a trap, not a
     // safety net (same reasoning as TakesBinScreen's own EMPTY_BIN_ARM_MS
     // effect).
     LaunchedEffect(forkArmed) {
@@ -647,7 +776,7 @@ fun GrooveScreen(
     // state, so there's no separate copy to keep in sync.
     var isEditing by remember(kitDir) { mutableStateOf(false) }
     var editorBar by remember(kitDir) { mutableIntStateOf(0) }
-    var editorSourceLabel by remember(kitDir) { mutableStateOf(PROG_LETTERS[0]) }
+    var editorSourceLabel by remember(kitDir) { mutableStateOf(PROG_SOURCES[0]) }
     var editorDirty by remember(kitDir) { mutableStateOf(false) }
     var editorSaveTick by remember(kitDir) { mutableIntStateOf(0) }
 
@@ -673,11 +802,75 @@ fun GrooveScreen(
     }
 
     /**
+     * AUDITION's own kit-mutating write: the winner's audio becomes what
+     * [slot] plays. Goes through [KitBuilderModel.assign], the same door
+     * GRAB/SEND TO PAD/RE-TRIM already use — never a plain `update` (which
+     * refuses to change `sampleFile` at all) and never a raw file copy that
+     * would bypass the bin. The candidate that loses is never touched
+     * directly: when it was the sibling's own sample, that pad is a
+     * different slot `assign` never writes to, so it stays exactly where it
+     * was, named and playable (spec decision 1, "keep every candidate").
+     * When it was this slot's OWN prior sound, `assign`'s existing
+     * unreferenced-file handling sends it to the 30-day bin, same as every
+     * other pad reassignment in this app — recoverable, not destroyed,
+     * which is this codebase's own standing definition of "kept" (see
+     * `KitBuilderModel`'s own `DELETED. THE BIN KEEPS IT 30 DAYS`).
+     */
+    fun chooseAuditionCandidate(index: Int) {
+        if (busy) return
+        val session = auditionSession ?: return
+        val winner = session.candidates.getOrNull(session.chose(index)) ?: return
+        val target = entry.kit.pad(session.slot)
+        auditionSession = null
+        auditionRevealed = false
+        // Chose its own current sound, or the pad vanished underneath the
+        // comparison (ejected, reassigned elsewhere) — nothing to write.
+        if (target == null || winner.sampleFile == target.sampleFile) return
+        val slot = session.slot
+        val staleSampleFile = target.sampleFile
+        val padName = target.displayName
+        val drumClass = target.drumClass
+        val source = target.source
+        val winnerName = winner.name
+        busy = true
+        appScope.launch {
+            try {
+                val winnerSnip = withContext(Dispatchers.IO) {
+                    runCatching { WavReader.readCapped(File(entry.dir, winner.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+                }
+                if (winnerSnip == null) {
+                    onToast(Copy.BIN_ITEM_GONE)
+                    return@launch
+                }
+                var applied = false
+                val fresh = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val f = KitBuilderModel.open(entry.dir)
+                        if (f.kit.pad(slot)?.sampleFile == staleSampleFile) {
+                            f.assign(slot, winnerSnip, drumClass, padName, source)
+                            applied = true
+                        }
+                        if (f.dirty) f.save()
+                        f
+                    }
+                }
+                onKitUpdated(fresh.kit)
+                onToast(if (applied) Copy.treated(winnerName, padName) else Copy.BIN_ITEM_GONE)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("AUDITION", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /**
      * Every place that used to write `justLanded = false` bare now goes
      * through here, so `forkArmed` can never outlive the row it belongs
      * to: switching programs, RESEED, EDIT STEPS, MIDI, CHART, SONG ▸,
      * ORBIT ▸, or arming another RECORD must all cancel a pending
-     * "REPLACE E?" confirm exactly as they already cancel the just-landed
+     * "REPLACE YOURS?" confirm exactly as they already cancel the just-landed
      * row itself — otherwise the NEXT take's row could render already
      * armed, skipping the first tap its own confirm exists for. FEEL and
      * `► PLAY` are deliberately absent from this list — see `justLanded`'s
@@ -941,7 +1134,15 @@ fun GrooveScreen(
                             // notes 0..35 are pads 93..128 and subtracting alone
                             // gives them a slot no kit has. A clip that plays on
                             // the MPC would be silent in this roll.
-                            if (crossed) hit(Mpc3Note.slotFor(n.note))
+                            //
+                            // AUDITION's own seam: `np`, the playhead THIS
+                            // frame is advancing to, not `p` (the note's own
+                            // position within the clip, which the wrap clause
+                            // above can offset by a full `totalSteps`) - `np`
+                            // is what `posSteps` is about to become, so it's
+                            // the same "which bar is this" the screen itself
+                            // will show a moment later.
+                            if (crossed) hit(Mpc3Note.slotFor(n.note), auditionPos = np, auditionBarSteps = barSteps)
                         }
                     }
                     // Fix 1 — the metronome through the WHOLE take, not just the
@@ -1001,7 +1202,7 @@ fun GrooveScreen(
                 val (b, e) = withContext(Dispatchers.IO) { GrooveEdit.startEmpty(kitDir, kit.name) }
                 base = b
                 eClip = e
-                editorSourceLabel = PROG_LETTERS[0]
+                editorSourceLabel = PROG_SOURCES[0]
                 editorBar = 0
                 editorDirty = false
                 progIndex = 4
@@ -1027,7 +1228,7 @@ fun GrooveScreen(
         val source = currentClip ?: return
         clearJustLanded()
         busy = true
-        val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
+        val sourceLetter = if (progIndex < 4) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
                 val (hadE, forked) = withContext(Dispatchers.IO) {
@@ -1058,7 +1259,7 @@ fun GrooveScreen(
      * doesn't deliver. Neither silently replacing a hand-edited E nor
      * silently doing nothing is acceptable, so an existing E arms
      * [forkArmed] instead of forking blind — the button's own label swaps
-     * to "REPLACE E?" — and only a second tap actually overwrites.
+     * to "REPLACE YOURS?" — and only a second tap actually overwrites.
      *
      * `eClip != null` (not a fresh `GrooveEdit.hasUserProgram(kitDir)` disk
      * read) decides whether to arm: this is a plain click handler, called
@@ -1081,7 +1282,7 @@ fun GrooveScreen(
         }
         clearJustLanded()
         busy = true
-        val sourceLetter = if (progIndex < 4) PROG_LETTERS[progIndex] else editorSourceLabel
+        val sourceLetter = if (progIndex < 4) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
                 val forked = withContext(Dispatchers.IO) { GrooveEdit.fork(kitDir, source, replace = existingE) }
@@ -1214,7 +1415,7 @@ fun GrooveScreen(
         scope.launch {
             try {
                 val tempo = kit.tempoBpm
-                val program = PROG_NAMES[progIndex].substringBefore(" ·")
+                val program = PROG_NAMES[progIndex]
                 val text = Chart.render(
                     clip, kit,
                     bpm = tempo ?: KitPreview.DEFAULT_BPM,
@@ -1714,12 +1915,53 @@ fun GrooveScreen(
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
                         }
                     } else {
+                        // BARS: how long a from-scratch take runs (J17).
+                        //
+                        // `recordBars` was a `var` nothing could reassign —
+                        // the seam was cut and nothing attached. It belongs
+                        // here and nowhere else: an overdub records against
+                        // its base's own bar count, never this one, so this
+                        // branch (no base yet) is the only place the number
+                        // means anything. No `enabled` gymnastics needed for
+                        // that reason — the whole branch is the from-scratch
+                        // case by construction.
+                        //
+                        // The stepper cannot leave `LiveRecord.BARS`, which
+                        // matters because `Take` refuses a bar count outside
+                        // 1..64 at the arm: a control able to walk off the
+                        // ladder would turn this tap into a throw the moment
+                        // the count-in starts.
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            GrooveActionButton("◀", scheme, Modifier.weight(1f), enabled = !busy) {
+                                recordBars = LiveRecord.barsAfter(recordBars, -1)
+                            }
+                            TapeText(
+                                if (recordBars == 1) "1 BAR" else "$recordBars BARS",
+                                TapeType.pixel,
+                                scheme.lcdInk.tape,
+                                Modifier.weight(2f),
+                            )
+                            GrooveActionButton("▶", scheme, Modifier.weight(1f), enabled = !busy) {
+                                recordBars = LiveRecord.barsAfter(recordBars, 1)
+                            }
+                        }
                         // Three ways in, side by side: play it, tap it, or ring it.
                         // ORBIT needs no groove at all, so it belongs here as much
                         // as on the full screen's action row.
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             GrooveActionButton("● RECORD", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startRecording() }
-                            GrooveActionButton("STEPS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
+                            // One name for one editor (J19). This, EDIT STEPS and EDIT
+                            // THIS TAKE were three doors into the same step
+                            // editor, named three different ways, none of them
+                            // naming the program they land on — and the toast
+                            // that follows all three says YOURS. They now say
+                            // where they go: this one starts it from nothing,
+                            // the other two fork into it.
+                            GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
                             GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
                                 clearJustLanded()
                                 onOrbit()
@@ -1754,15 +1996,20 @@ fun GrooveScreen(
                 }
 
                 ProgramSelector(
-                    name = PROG_NAMES[progIndex],
+                    names = PROG_NAMES,
                     sub = PROG_SUBS[progIndex],
-                    // Locked to PROG A while RECORD is armed or counting
-                    // in: switching to a derived program mid-take (HALF-
-                    // TIME doubles `bars`) would desync the clock's own
-                    // wrap point from `take.bars`, set once at arm time —
-                    // see startRecording's own KDoc.
-                    onPrev = { if (!recording && !countingIn) { clearJustLanded(); progIndex = (progIndex - 1 + progCount) % progCount } },
-                    onNext = { if (!recording && !countingIn) { clearJustLanded(); progIndex = (progIndex + 1) % progCount } },
+                    selected = progIndex,
+                    count = progCount,
+                    // Locked to the captured program while RECORD is armed
+                    // or counting in: switching to a derived program
+                    // mid-take (HALF doubles `bars`) would desync the
+                    // clock's own wrap point from `take.bars`, set once at
+                    // arm time — see startRecording's own KDoc. As
+                    // `enabled`, not a silent return: the refusal reaches
+                    // TalkBack as well as the touch layer, which is the
+                    // contract PR 2 established for every picker.
+                    enabled = !recording && !countingIn,
+                    onPick = { clearJustLanded(); progIndex = it },
                     scheme = scheme,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1786,6 +2033,23 @@ fun GrooveScreen(
                     // picks up whatever the take has accumulated since.
                     liveNotes = if (recording) take?.notes().orEmpty() else emptyList(),
                 )
+
+                // AUDITION: sits right under the roll it's about, above
+                // every other control - the comparison is the thing on
+                // screen right now, not one more row to scroll to. Absent
+                // whenever there's nothing armed, which is the common case.
+                auditionSession?.let { session ->
+                    AuditionBar(
+                        session = session,
+                        revealed = auditionRevealed,
+                        busy = busy,
+                        scheme = scheme,
+                        onReveal = { auditionRevealed = true },
+                        onChoose = ::chooseAuditionCandidate,
+                        onCancel = { auditionSession = null; auditionRevealed = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
                 if (recording || countingIn) {
                     // RECORD's own surface, in place of the controls
@@ -1818,12 +2082,12 @@ fun GrooveScreen(
                         // The take just landed — a transient, one-shot pair
                         // of actions (Task 5): EDIT THIS TAKE calls [forkTakeToE],
                         // NOT the plain [forkToE] EDIT STEPS below uses — an
-                        // existing E arms a "REPLACE E?" confirm instead of
+                        // existing E arms a "REPLACE YOURS?" confirm instead of
                         // silently handing back stale steps (Task 6 bug fix;
                         // see [forkTakeToE]'s own KDoc). UNDO TAKE reaches
                         // for `preTake`, snapshotted once at arm time. Both
                         // — and anything else that moves the program on —
-                        // clear this row (and any pending "REPLACE E?" arm)
+                        // clear this row (and any pending "REPLACE YOURS?" arm)
                         // via `clearJustLanded`; see `justLanded`'s own KDoc.
                         //
                         // Batch 3, Task 1: kept above the grouped controls
@@ -1839,7 +2103,10 @@ fun GrooveScreen(
                                 // axis carrying quantize now, this button's job is
                                 // "make this editable", not "make this tight" — the
                                 // armed confirm and the handler underneath are unchanged.
-                                if (forkArmed) "REPLACE E?" else "EDIT THIS TAKE",
+                                // J19: the same words as FORK TO YOURS above -
+                                // it is the same fork, from the take rather than
+                                // from the program on screen.
+                                if (forkArmed) "REPLACE YOURS?" else "FORK TO YOURS",
                                 scheme,
                                 Modifier.weight(1f),
                                 enabled = !busy,
@@ -1914,7 +2181,7 @@ fun GrooveScreen(
                                 label = when {
                                     bounceArmed -> "WAITING…"
                                     bouncing || landingBounce -> "BOUNCING…"
-                                    else -> "BOUNCE"
+                                    else -> Copy.GROOVE_BOUNCE_BUTTON
                                 },
                                 scheme = scheme,
                                 modifier = Modifier.fillMaxWidth(),
@@ -1945,7 +2212,7 @@ fun GrooveScreen(
                                 SwingStepper("−", scheme, description = "SWING DOWN") { swingPercent = (swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN) }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
-                                    TapeText("RIDES PROG B", TapeType.pixelSmall, scheme.ink3.tape)
+                                    TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink3.tape)
                                 }
                                 SwingStepper("+", scheme, description = "SWING UP") { swingPercent = (swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX) }
                             }
@@ -1986,21 +2253,44 @@ fun GrooveScreen(
                                     seed++
                                     onToast(Copy.feelRolled(seed))
                                 }
-                                GrooveActionButton("EDIT STEPS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+                                // J19: see START YOURS' comment in the record row.
+                                GrooveActionButton("FORK TO YOURS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
                             }
 
-                            TapeText("SEND IT SOMEWHERE", TapeType.pixelSmall, scheme.ink3.tape)
+                            // "SEND IT SOMEWHERE" until J46, which is true of
+                            // two of these four: SONG ▸ and ORBIT ▸ leave the
+                            // screen, while MIDI and CHART write a file where
+                            // you stand and leave you on GROOVE. One legend
+                            // over both, with the two kinds interleaved
+                            // (MIDI, SONG ▸, ORBIT ▸, CHART), left the ▸ glyph
+                            // as the only thing telling a player which was
+                            // which. The row is now sorted by what the button
+                            // does, and the legend names both halves in the
+                            // order they sit.
+                            TapeText("WRITE IT OUT · OR TAKE IT FURTHER", TapeType.pixelSmall, scheme.ink3.tape)
                             // Batch 3, Task 1: one row of four rather than a
                             // 3-plus-1 or 2x2 split — post Task 4's ▸ sweep every
                             // label here is five characters or fewer at 9sp, so
                             // a single row reads fine and costs this column one
                             // fewer row than any split would, which is the row
-                            // NeedleRoll actually needed back.
+                            // NeedleRoll actually needed back. J46 keeps the one
+                            // row and sorts it rather than splitting it, for the
+                            // same reason.
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 // Batch 3, Task 4: MIDI writes files in place —
                                 // no navigation, no panel — so it lost the ▸ a
                                 // navigate/panel-opener keeps.
                                 GrooveActionButton("MIDI", scheme, Modifier.weight(1f), enabled = !midiBusy, accent = true) { exportMidi() }
+                                // CHART writes a text file in place — no
+                                // navigation, no panel — so it lost its ▸ too
+                                // (Task 4).
+                                GrooveActionButton(
+                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
+                                    scheme,
+                                    Modifier.weight(1f),
+                                    enabled = !chartBusy,
+                                    accent = true,
+                                ) { exportChart() }
                                 // SONG ▸ — the same four programs laid into a structure, not
                                 // just cycled: intro/theme/variation/the turn/reprise/outro,
                                 // one tap away from what this screen already has loaded.
@@ -2015,16 +2305,6 @@ fun GrooveScreen(
                                     clearJustLanded()
                                     onOrbit()
                                 }
-                                // CHART writes a text file in place — no
-                                // navigation, no panel — so it lost its ▸ too
-                                // (Task 4).
-                                GrooveActionButton(
-                                    if (chartBusy) Copy.CHART_BUSY else "CHART",
-                                    scheme,
-                                    Modifier.weight(1f),
-                                    enabled = !chartBusy,
-                                    accent = true,
-                                ) { exportChart() }
                             }
 
                             TapeText(
@@ -2040,7 +2320,7 @@ fun GrooveScreen(
 
                             // Trailing clearance, sized to match the scrim
                             // below: without it the last control (the off-lane
-                            // note, or SEND IT SOMEWHERE's row above it on a kit
+                            // note, or the write-and-doors row above it on a kit
                             // with nothing off-lane) rests permanently half
                             // behind the fade rather than scrolling fully past
                             // it — the same "always cuts something somewhere"
@@ -2115,44 +2395,46 @@ fun GrooveScreen(
 
 @Composable
 private fun EmptyGroove(onNavigateKits: () -> Unit) {
-    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+    EmptyStatePanel(Copy.READ_GROOVE_NEEDS_KIT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
 }
 
+/**
+ * The five programs, all of them on screen at once (J18).
+ *
+ * It was a prev/next carousel over a set the user never saw whole: four
+ * taps to learn what the options were, and no way to tell at a glance
+ * which one you were on relative to the rest. A row of segments is the
+ * app's own answer to this shape everywhere else — CHOP's CUT bench, EAR
+ * and SNAP rows, SETUP's scheme list — so this is the existing
+ * convention arriving here, not a new one.
+ *
+ * [SegmentButton] is ChopScreen's, deliberately: its KDoc argues a picker
+ * should "agree with every other picker in the app rather than invent its
+ * own third convention", and it already carries the `selected` semantics
+ * and the `enabled`-reaches-TalkBack contract that PR 2 established.
+ */
 @Composable
 private fun ProgramSelector(
-    name: String,
+    names: List<String>,
     sub: String,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
+    selected: Int,
+    count: Int,
+    enabled: Boolean,
+    onPick: (Int) -> Unit,
     scheme: Scheme,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
-            // No fillMaxHeight here. A Row sizes to its tallest child, so a
-            // child filling the incoming max height makes this whole Row
-            // claim the Column's remaining space — which starved NeedleRoll's
-            // weight(1.6f) to nothing and pushed the action rows and RECORD
-            // clean off the screen. The ► button never had it, which is why
-            // only ◄ stretched. Both are a plain 48dp square.
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = "PREVIOUS PROGRAM", onClick = onPrev),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("◄", TapeType.lcd(19), scheme.ink.tape)
-        }
-        Column(
-            Modifier.weight(1f).height(Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme).padding(vertical = 5.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            TapeText(name, TapeType.lcd(19), scheme.amber.tape)
-            TapeText(sub, TapeType.pixelSmall, scheme.ink3.tape)
-        }
-        Box(
-            Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme, 6.dp).tapeClick(label = "NEXT PROGRAM", onClick = onNext),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("►", TapeType.lcd(19), scheme.ink.tape)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (i in 0 until count) {
+                SegmentButton(
+                    names[i],
+                    active = i == selected,
+                    modifier = Modifier.weight(1f),
+                    enabled = enabled,
+                ) { onPick(i) }
+            }
         }
     }
 }
@@ -2163,7 +2445,7 @@ private fun ProgramSelector(
  * to 40dp (was 32dp), not the full 48: this stepper shares a
  * `SpaceBetween` row (the swing container in `GrooveScreen`, roughly
  * 1.6/2.8 of the frame width after margins - about 200dp) with a
- * two-line text readout ("SWING NN%" / "RIDES PROG B") that has no
+ * two-line text readout ("SWING NN%" / "RIDES SWING") that has no
  * `weight()` of its own. Two 48dp-wide steppers (+32dp total over the old
  * 32dp) leave that readout markedly less room on a narrower-than-390dp
  * phone; two 40dp steppers (+16dp total) is the width this control
@@ -2232,7 +2514,13 @@ private fun FeelRow(
                 TapeType.pixel,
                 scheme.amber.tape,
             )
-            TapeText("RIDES A · C · D", TapeType.pixelSmall, scheme.ink3.tape)
+            // "RIDES A · C · D" until J18. The feel is applied to the
+            // take and every program derived from it inherits it —
+            // `GrooveProgram.compute` applies it to `base` first — so
+            // naming the mechanism is both shorter and exactly true:
+            // SWING is handed the UNFELT take and YOURS is hand-placed,
+            // which is why neither moves.
+            TapeText("RIDES THE TAKE", TapeType.pixelSmall, scheme.ink3.tape)
         }
         SwingStepper("+", scheme, description = "FEEL LOOSER") { onChange((feel + GROOVE_FEEL_STEP).coerceAtMost(GROOVE_FEEL_MAX)) }
     }
@@ -2260,6 +2548,65 @@ private fun GrooveActionButton(
         contentAlignment = Alignment.Center,
     ) {
         TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+    }
+}
+
+/**
+ * AUDITION's own bar (`docs/AUDITION_SPEC_2026_09.md`): two candidates
+ * alternating on the bar line while the pattern plays, blind until a
+ * deliberate REVEAL, then two named choices. Nothing here drives playback —
+ * that's [Audition.Session.liveFor] through [PadEngine.hit]'s own `swap`
+ * seam, already running by the time a comparison exists to show — this is
+ * purely "what does the player see and tap."
+ *
+ * The letters (not the names) are what's tappable while blind: revealing
+ * which is which and THEN choosing would let the label itself bias the
+ * choice for the split second between the two taps, the exact contamination
+ * blind-first exists to prevent. Once revealed, the same buttons relabel
+ * to the real names - the loop keeps running either way (spec rule 5,
+ * "the loop does not stop at the reveal").
+ */
+@Composable
+private fun AuditionBar(
+    session: Audition.Session,
+    revealed: Boolean,
+    busy: Boolean,
+    scheme: Scheme,
+    onReveal: () -> Unit,
+    onChoose: (Int) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Built from [revealed] (this composable's own parameter, backed by
+    // GrooveScreen's Compose state) rather than read off `session.round` —
+    // `Session.round` is a plain, unobserved `var` on a non-`@Stable` class,
+    // so mutating it in place (`session.reveal()`) would never trigger a
+    // recomposition here; `revealed` flipping is what already does, and
+    // `Round` is a public data class built the identical way either side
+    // would build it.
+    val round = Audition.Round(session.candidates.map { it.name }, revealed)
+    Column(
+        modifier.sunkenField(scheme, 6.dp).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            TapeText("AUDITION · SWAPS EVERY BAR", TapeType.pixelSmall, scheme.ink3.tape)
+            Box(
+                Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp)
+                    .tapeClick(label = "CANCEL AUDITION", enabled = !busy, onClick = onCancel),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("✕", TapeType.pixel, scheme.ink3.tape)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            session.candidates.indices.forEach { i ->
+                GrooveActionButton(round.labelFor(i), scheme, Modifier.weight(1f), enabled = !busy) { onChoose(i) }
+            }
+        }
+        if (!revealed) {
+            GrooveActionButton("REVEAL", scheme, Modifier.fillMaxWidth(), enabled = !busy, accent = true, onClick = onReveal)
+        }
     }
 }
 

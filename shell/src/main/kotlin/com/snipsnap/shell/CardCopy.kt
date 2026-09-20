@@ -96,6 +96,76 @@ object CardCopy {
         entries.filter { !it.isDirectory }.sumOf { it.source.length() }
 
     /**
+     * Which of [entries] would land on something the card already holds —
+     * the question a confirm has to answer *before* any of it is written.
+     *
+     * [held] answers "what names does the folder at this path already
+     * hold", by the entry's [Entry.parents] path from the copy's root. A
+     * path it answers null for is a folder the card does not have, and
+     * nothing in a folder that does not exist yet can be collided with, so
+     * everything under it is clear by construction. That is also the
+     * honest fallback for a provider that will not list: unknown reads as
+     * no collision, so this can never invent one, and a card that refuses
+     * to be read falls back to the after-the-fact report rather than
+     * arming against a guess.
+     *
+     * **Pruned at the topmost collision.** The copy overwrites by deleting
+     * the same-named document and creating a new one, so a *folder* that
+     * collides is removed whole and its contents were never separately at
+     * risk — counting them as well would report a hundred losses for one
+     * folder. The returned list therefore holds no entry beneath another
+     * entry in it.
+     *
+     * Returned in [plan]'s own order, which is parents-first, so the head
+     * of the list is the shallowest thing in the way — the one worth
+     * naming to whoever is deciding.
+     *
+     * **In practice that is always a root entry**, and `CardCopyTest`
+     * sweeps every describable card for this to hold: a nested entry can
+     * only collide if its folder was listable, which means the card holds
+     * that folder, which means the folder collided first and pruned it.
+     * So the answer is some subset of what was handed to [plan] — an
+     * export's primary and its companion — never a sample somewhere
+     * inside. That is what lets a confirm name one thing rather than
+     * counting files.
+     */
+    fun collisions(entries: List<Entry>, held: (List<String>) -> Set<String>?): List<Entry> {
+        val out = ArrayList<Entry>()
+        // Paths already accounted for by a collision above them.
+        val pruned = HashSet<List<String>>()
+        // Paths the card is known not to have. Parents-first order is what
+        // makes this pay: a folder found absent is recorded before any of
+        // its contents come up, so they are skipped without [held] being
+        // asked at all. On the calling side each ask is a directory query
+        // over a card reader, and a kit is a hundred-odd samples.
+        val absent = HashSet<List<String>>()
+        for (entry in entries) {
+            if (entry.parents.indices.any { pruned.contains(entry.segments.subList(0, it + 1)) }) continue
+            if (entry.parents in absent) {
+                absent += entry.segments
+                continue
+            }
+            val names = held(entry.parents)
+            when {
+                // The folder itself is not there to be read. Everything in
+                // it is new by construction - siblings, and this entry's
+                // own contents, which are unreachable through a folder
+                // that could not be listed.
+                names == null -> {
+                    absent += entry.parents
+                    absent += entry.segments
+                }
+                entry.name in names -> {
+                    out += entry
+                    pruned += entry.segments
+                }
+                else -> absent += entry.segments
+            }
+        }
+        return out
+    }
+
+    /**
      * The MIME type to create a document with. The platform wants one,
      * and gets it wrong from the extension often enough to matter: an
      * `.xpm` guessed as text arrives on the card with `.txt` stuck on the

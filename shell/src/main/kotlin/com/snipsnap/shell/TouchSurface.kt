@@ -37,6 +37,18 @@ object TouchSurface {
          * touch position, two blends, neither aware of the other.
          */
         VECTOR(4),
+
+        /**
+         * A cloud of short grains instead of a loop: X is POSITION (where
+         * in the pad's sample the grains are read from), Y is pitch, snapped
+         * to the kit's key by the engine (`Grain.h` in `app/src/main/cpp`).
+         * SIZE, DENSITY and SPRAY are the mode's own knobs, held in
+         * `surface.json` ([SurfaceStore.Grain]) rather than swept by the
+         * finger. Reads exactly as [XY] does here - two axes, no depth, flat
+         * corners; what differs is what the engine makes of them. Appended
+         * last on purpose: the native side takes the mode by ordinal.
+         */
+        GRAIN(2),
     }
 
     /** A finger on the pad, in pixels of the pad's own rectangle. */
@@ -101,6 +113,36 @@ object TouchSurface {
         }
         val (a, b, c, d) = if (mode == Mode.MORPH || mode == Mode.VECTOR) morphWeights(x, y) else listOf(0.25f, 0.25f, 0.25f, 0.25f)
         return Reading(x, y, z, a, b, c, d, touching = true)
+    }
+
+    /**
+     * [reading] with the finger moved by ([dx], [dy]) - a modulator aimed
+     * at [Modulator.Target.X] or [Modulator.Target.Y] nudging the position
+     * every mode reads, on this side of the bridge. The nudged point stops
+     * at the pad's rails, the way a finger does; in [Mode.MORPH] and
+     * [Mode.VECTOR] the corner weights are read again from where it
+     * landed, exactly as [read] would have read them there, and in every
+     * other mode they stay the flat quarter [read] left them. Z and
+     * whether anyone is touching are the finger's own and are not moved.
+     *
+     * A nudge of nothing returns [reading] itself, so an untouched MOD row
+     * changes not one bit of what the engine is sent; a nudge that is not
+     * a number is nothing, the same door every other control input has.
+     * SET A..D captures the finger, not this: a corner is a place, and the
+     * modulator moves around it.
+     */
+    fun nudged(mode: Mode, reading: Reading, dx: Float, dy: Float): Reading {
+        val ddx = if (dx.isFinite()) dx else 0f
+        val ddy = if (dy.isFinite()) dy else 0f
+        if (ddx == 0f && ddy == 0f) return reading
+        val x = (reading.x + ddx).coerceIn(0f, 1f)
+        val y = (reading.y + ddy).coerceIn(0f, 1f)
+        return if (mode == Mode.MORPH || mode == Mode.VECTOR) {
+            val (a, b, c, d) = morphWeights(x, y)
+            reading.copy(x = x, y = y, a = a, b = b, c = c, d = d)
+        } else {
+            reading.copy(x = x, y = y)
+        }
     }
 
     /** Bilinear corner weights for a puck at ([x], [y]), both `0..1`, y up. Sum to 1. */

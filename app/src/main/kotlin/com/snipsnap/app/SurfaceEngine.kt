@@ -1,6 +1,9 @@
 package com.snipsnap.app
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.shell.Modulator
+import com.snipsnap.shell.SurfaceKey
+import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.TouchSurface
 
 /**
@@ -130,6 +133,60 @@ class SurfaceEngine(preferredSampleRate: Int) {
         if (open) NativeSurface.setCorner(handle, index, pitch, cutoff, resonance, drive, crush, echo, spring)
     }
 
+    /** GRAIN's three knobs; they shape the next grain triggered, never one already sounding. */
+    @Synchronized
+    fun setGrain(grain: SurfaceStore.Grain) {
+        if (open) NativeSurface.setGrain(handle, grain.size, grain.density, grain.spray)
+    }
+
+    /**
+     * KEY: snap the loop's pitch (every mode but GRAIN, which always
+     * snaps) to the key [setKey] holds, through the cloud's own snap, so
+     * the two agree note for note. Off, the surface plays exactly as it
+     * did before KEY existed.
+     */
+    @Synchronized
+    fun setKeySnap(on: Boolean) {
+        if (open) NativeSurface.setKeySnap(handle, on)
+    }
+
+    /**
+     * ECHO's time in seconds - a division of the kit's bar from
+     * [com.snipsnap.shell.EchoTime], or null for FREE, the engine's own
+     * fixed time. The engine never learns a tempo; only the seconds cross.
+     */
+    @Synchronized
+    fun setEchoTime(seconds: Float?) {
+        if (open) NativeSurface.setEchoTime(handle, seconds ?: 0f)
+    }
+
+    /** SWARM: the loop thickened into a detuned unison - see [SurfaceStore.Swarm]; one voice is the plain loop, sample for sample. */
+    @Synchronized
+    fun setSwarm(swarm: SurfaceStore.Swarm) {
+        if (open) NativeSurface.setSwarm(handle, swarm.voices, swarm.detune)
+    }
+
+    /** The key GRAIN snaps each grain's pitch to - see [SurfaceKey] for what goes in. */
+    @Synchronized
+    fun setKey(snap: SurfaceKey.Snap) {
+        if (open) NativeSurface.setKey(handle, snap.rootSemitone, snap.scaleMask, snap.sourceMidi)
+    }
+
+    /**
+     * The modulators' offsets this frame - the engine's slice of
+     * [Modulator.offsets]'s array ([Modulator.engineOffsets]), one per
+     * engine target in ordinal order (see [MOD_TARGETS]). Sent at screen
+     * rate like [control]; the engine adds each to its target before the
+     * macro's own 0..1 door, so a modulator nudges the finger rather than
+     * replacing it. The finger's own X and Y are nudged before [control]
+     * is called, not here.
+     */
+    @Synchronized
+    fun setModulation(offsets: FloatArray) {
+        require(offsets.size == MOD_TARGETS) { "one offset per target (${MOD_TARGETS}), got ${offsets.size}" }
+        if (open) NativeSurface.setModulation(handle, offsets)
+    }
+
     // ---- the resample tap -----------------------------------------------------
 
     enum class PrintState { IDLE, RECORDING, STOPPING, DONE }
@@ -174,5 +231,12 @@ class SurfaceEngine(preferredSampleRate: Int) {
 
         /** Source slots the engine holds - must match SurfaceEngine.h's kMaxSources. */
         const val MAX_SOURCES = 4
+
+        /**
+         * Modulation targets the engine takes - must match SurfaceEngine.h's
+         * kModTargets and `Modulator.ENGINE_TARGETS` (the first eleven of
+         * `Modulator.Target`; the finger's X and Y never cross the bridge).
+         */
+        const val MOD_TARGETS = 11
     }
 }

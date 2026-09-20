@@ -257,6 +257,17 @@ fun TapeScreen(
      * to wire this fails the compile, not the user.
      */
     onNavigateKits: () -> Unit,
+    /**
+     * True while a CATCH is live — reported up so `App` can hold a
+     * share-sheet import back instead of reloading the deck out from under
+     * it (J7).
+     *
+     * `App` already reasons about two other operations that a landing
+     * must not trample: a dub in flight keeps its own busy line, and a
+     * RE-TRIM is explicitly outranked. A catch was simply never in that
+     * list, so the import fired regardless and took the tape with it.
+     */
+    onCatchInFlight: (Boolean) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
@@ -361,6 +372,7 @@ fun TapeScreen(
         onCaptureLanded = onCaptureLanded,
         onCatch = onCatch,
         onCatchDone = onCatchDone,
+        onCatchInFlight = onCatchInFlight,
     )
 }
 
@@ -371,7 +383,7 @@ private fun EmptyDeck(onNavigateKits: () -> Unit) {
     // of the same string. The route: ARM/SNIP and a kit's own fallback
     // sample both live on the shelf (KitsScreen) — see this file's own
     // TapeScreen KDoc on why `entry` is nullable.
-    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+    EmptyStatePanel(Copy.EMPTY_SHELF, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
 }
 
 /** [loadLongestTape]'s answer: the tape it settled on (if any), and whether [readMono] hit [TAPE_LOAD_MAX_SEC]'s OOM safety net along the way. */
@@ -516,6 +528,8 @@ private fun TapeDeckContent(
     onCaptureLanded: () -> Unit = {},
     onCatch: (CatchLanding) -> Unit = {},
     onCatchDone: () -> Unit = {},
+    /** Forwarded from [TapeScreen]; the catch state it reports lives in this composable, not that one. */
+    onCatchInFlight: (Boolean) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val digScope = rememberCoroutineScope()
@@ -530,8 +544,27 @@ private fun TapeDeckContent(
         }
     }
 
+    // The player's own view of the tape - how far in they pinched, and
+    // whether the LCD reads real time or the counter - carried onto the
+    // deck that replaces this one (J22).
+    //
+    // A snip landing anywhere in the app swaps `tapeData`, and the quick-
+    // settings SNIP tile makes that reachable without ever leaving this
+    // screen. The idle guard below already refuses the reload while the
+    // deck is playing or holding a selection; this is for the reload that
+    // is allowed to happen, which used to return the zoom and the readout
+    // to their defaults under the player's finger with only OOM and
+    // truncation ever toasted on that path.
+    //
+    // Unkeyed `remember`, because outliving `tapeData` is the entire job.
+    // It holds the previous *deck* rather than a snapshot: zoom changes by
+    // button, by pinch and by ladder-snap, and the pinch runs in a gesture
+    // loop that does not report every frame to the screen, so reading the
+    // view at the moment of replacement is what cannot miss one.
+    val viewCarrier = remember { TapeDeckModel.ViewCarrier() }
     val model = remember(tapeData) {
         TapeDeckModel(tapeData.samples, tapeData.sampleRate, tapeData.onsets)
+            .also(viewCarrier::adopt)
     }
     val voice = remember(tapeData) { TapeVoice(tapeData.samples, tapeData.sampleRate) }
     DisposableEffect(voice) {
@@ -615,14 +648,22 @@ private fun TapeDeckContent(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var commitIndex by remember(model) { mutableStateOf(0) }
-
     // CATCH A HIT (docs/CATCH.md): the live catch, null while this is a
     // plain deck. The grid under the waveform is the open kit's own; every
     // catch goes to App to land (the same kit write every door makes) and
     // comes back as `entry.kit`, which is what lights the pad's name.
     var catching by remember(model) { mutableStateOf<CatchModel?>(null) }
     var catchBusy by remember(model) { mutableStateOf(false) }
+    // Both halves, because both are "a catch the player would lose": the
+    // listening pass (`catchBusy`) and the grid left open on its results
+    // (`catching`). Reported through an effect rather than at each of the
+    // several places either one is written, so no future site can forget.
+    LaunchedEffect(catching, catchBusy) { onCatchInFlight(catching != null || catchBusy) }
+    // A LaunchedEffect is CANCELLED on the way out rather than completing,
+    // so it cannot clear the flag when this screen leaves - and a flag left
+    // true would defer every later import forever. Same lesson, same shape,
+    // as EXPORT's own overwrite arm.
+    DisposableEffect(Unit) { onDispose { onCatchInFlight(false) } }
     // Which bank the 4×4 grid shows (0 is A). TAPE is a portrait screen,
     // so both banks abreast never fit (PadGrid's `windowRows`); the grid
     // opens on the first bank with a free pad and a switch flips it.
@@ -1020,7 +1061,7 @@ private fun TapeDeckContent(
                 fun stepHit(delta: Int) {
                     val list = hits
                     if (list.isNullOrEmpty()) {
-                        onToast(if (list == null) Copy.HITS_BUSY else Copy.HITS_NONE)
+                        onToast(if (list == null) Copy.HITS_NOT_YET else Copy.HITS_NONE)
                         return
                     }
                     val next = if (current < 0) (if (delta > 0) 0 else list.size - 1) else (current + delta).mod(list.size)
@@ -1053,7 +1094,7 @@ private fun TapeDeckContent(
                     Modifier
                         .weight(1f)
                         .height(Layout.PRIMARY_ACTION_H.dp),
-                    active = model.hasSelection,
+                    enabled = model.hasSelection,
                 ) {
                     val range = model.commitSelection()
                     touch()
@@ -1071,9 +1112,14 @@ private fun TapeDeckContent(
                         // frames only mean something against the exact file TAPE
                         // was scrubbing when COMMIT fired, and under the new
                         // source priority that's frequently a snip, not a pad WAV.
+                        // No toast here (J44): `onCommit` itself raises the
+                        // CHOP offer, which says what a KEEP actually did and
+                        // carries the door to the step that uses it. The
+                        // rotating COMMIT lines this used to fire described a
+                        // write KEEP does not perform, and - being a plain
+                        // toast landing on the same frame - replaced the
+                        // offer's sentence while leaving its door on screen.
                         onCommit(tapeData.sourceFile, range)
-                        onToast(Copy.rotating(Copy.COMMIT_LINES, commitIndex))
-                        commitIndex++
                     } else {
                         onToast(Copy.COMMIT_NEEDS_SELECTION)
                     }
@@ -1088,16 +1134,18 @@ private fun TapeDeckContent(
                     Modifier
                         .weight(1f)
                         .height(Layout.PRIMARY_ACTION_H.dp),
-                    active = true,
                 ) {
                     // Stop the transport as well as the voice: the deck would
                     // otherwise keep rolling silently under the busy overlay.
                     if (model.playing) model.togglePlay()
                     stopVoice()
-                    // Read before commitSelection(), which clears it — and passed
-                    // on rather than left to be inferred from `range`, since an
-                    // IN/OUT the user dragged across the whole tape arrives in
-                    // App.kt looking exactly like no selection at all.
+                    // Passed on rather than left to be inferred from `range`,
+                    // since an IN/OUT the user dragged across the whole tape
+                    // arrives in App.kt looking exactly like no selection at
+                    // all. The order is not load-bearing: commitSelection() is
+                    // a pure read that clears nothing (J44) — this comment
+                    // used to say it did, and INSTANT KIT was written as if
+                    // the read had to come first.
                     val hadSelection = model.hasSelection
                     val range = if (hadSelection) model.commitSelection() else null
                     // togglePlay and commitSelection both change what the
@@ -1111,13 +1159,17 @@ private fun TapeDeckContent(
             // CATCH A HIT (docs/CATCH.md): the pad grid as the chopper. In
             // place, no ▸ (Task 4) — the grid comes up under the waveform.
             // Not offered at all while a RE-TRIM is live (that request
-            // owns the deck): `active` only dims a DeckButton, it doesn't
-            // disable it, so the button is simply not there.
+            // owns the deck). This used to be forced: `active` only dimmed a
+            // DeckButton without disabling it, so deleting the control from
+            // the tree was the only way to refuse. `enabled` works now, so
+            // vanishing here is a choice rather than a workaround - left as
+            // it was on purpose, since a RE-TRIM owning the deck is a mode
+            // rather than a passing busy state.
             if (retrim == null) {
                 DeckButton(
                     if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
                     Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
-                    active = !catchBusy,
+                    enabled = !catchBusy,
                 ) {
                     startCatch()
                 }
@@ -1131,8 +1183,7 @@ private fun TapeDeckContent(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Batch 3, Task 4: no ▸ — DIG runs in place on this deck; it
                 // moves IN/OUT, it doesn't navigate or open a panel.
-                DeckButton("FIND BREAK", Modifier.weight(1f), active = !digging) {
-                    if (digging) return@DeckButton
+                DeckButton("FIND BREAK", Modifier.weight(1f), enabled = !digging) {
                     if (model.playing) model.togglePlay()
                     stopVoice()
                     touch()
@@ -1256,10 +1307,20 @@ private const val CATCH_BANKS = 2
 private fun DeckButton(
     label: String,
     modifier: Modifier = Modifier,
-    active: Boolean = true,
-    // Orthogonal to `active` — `active` only dims/brightens the label
-    // (an enabled-ish axis); `engaged` is "this control is currently set,"
-    // a separate latched/lit look (accent fill + inverted ink), wired only
+    /**
+     * Whether the button can be tapped.
+     *
+     * This was `active`, and it only dimmed the label — the control stayed
+     * clickable and stayed announced to TalkBack as actionable, so a button
+     * that looked refused fired anyway. Every one of its four call sites
+     * already meant exactly "enabled" (`model.hasSelection`, `!catchBusy`,
+     * `!digging`), so this is the same axis, renamed and now actually
+     * forwarded to `tapeClick`.
+     */
+    enabled: Boolean = true,
+    // Orthogonal to `enabled` — that one says whether the control can be
+    // tapped at all; `engaged` is "this control is currently set," a
+    // separate latched/lit look (accent fill + inverted ink), wired only
     // for IN/OUT (`model.inFrame`/`outFrame >= 0`). Every other DeckButton
     // call leaves this at the default and renders exactly as before.
     engaged: Boolean = false,
@@ -1280,7 +1341,7 @@ private fun DeckButton(
             // this is what makes `engaged` a strict overlay on the normal
             // look rather than a different component.
             .raisedBevel(scheme, fill = if (engaged) scheme.accent.tape else null)
-            .tapeClick(label = accessibilityLabel ?: label, onClick = onClick)
+            .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1292,7 +1353,7 @@ private fun DeckButton(
                 // the same dark-on-accent ink the selection markers' flag
                 // labels use below, so "lit" reads the same everywhere.
                 engaged -> scheme.lcd.tape
-                active -> scheme.ink.tape
+                enabled -> scheme.ink.tape
                 else -> scheme.ink2.tape
             },
         )

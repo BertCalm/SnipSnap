@@ -27,6 +27,7 @@
 #include "SurfaceEngine.h"
 #include "check.h"
 #include "jni.h"
+#include "measure.h"
 
 using namespace snipsnap;
 
@@ -47,6 +48,13 @@ jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
 void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat);
+void Java_com_snipsnap_app_NativeSurface_control(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jboolean);
+void Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong, jfloat, jfloat, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong, jint, jint, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong, jboolean);
+void Java_com_snipsnap_app_NativeSurface_setSwarm(JNIEnv*, jobject, jlong, jint, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setEchoTime(JNIEnv*, jobject, jlong, jfloat);
+void Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv*, jobject, jlong, jfloatArray);
 jboolean Java_com_snipsnap_app_NativeSurface_armPrint(JNIEnv*, jobject, jlong, jint);
 jfloatArray Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv*, jobject, jlong);
 }
@@ -447,6 +455,187 @@ TEST(jni_surface_set_corner_forwards_spring_without_swapping_it_with_echo) {
     // short room has already decayed well below its immediate peak.
     CHECK(peakInWindow(1.0f, 0.0f, 185) > 0.05f);  // echo on, spring off: the repeat has landed
     CHECK(peakInWindow(0.0f, 1.0f, 185) < 0.03f);  // spring on, echo off: mostly decayed by now
+}
+
+TEST(jni_surface_grain_knobs_and_key_cross_the_bridge_in_order) {
+    // setGrain and setKey are new entry points, and setKey's first two
+    // arguments are both jints - a root and a mask swapped in jni.cpp
+    // would pass every SurfaceEngine-level test (those call setKey
+    // directly) and only show up as the wrong note on a phone. So the
+    // whole GRAIN path is driven through the bridge here - the sample,
+    // the knobs, the key, the control frame - and the pitch read back:
+    // a pad at MIDI 70.4 under C major must come out on B (71). A
+    // swapped root/mask reads as root 5 with an empty (so chromatic)
+    // mask and lands on A# instead; a dropped source note snaps toward
+    // MIDI 0 and lands nowhere near either.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+    const float sourceMidi = 70.4f;
+    const float sourceHz = 440.0f * std::exp2((sourceMidi - 69.0f) / 12.0f);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(measure::sine(sourceHz, 48000, 48000)), 48000, 0);
+    Java_com_snipsnap_app_NativeSurface_setGrain(e, nullptr, h, 1.0f, 0.0f, 0.0f);  // one long grain, alone, from POSITION exactly
+    const jint cMajor = (1 << 0) | (1 << 2) | (1 << 4) | (1 << 5) | (1 << 7) | (1 << 9) | (1 << 11);
+    Java_com_snipsnap_app_NativeSurface_setKey(e, nullptr, h, 0, cMajor, sourceMidi);
+    Java_com_snipsnap_app_NativeSurface_control(
+        e, nullptr, h, 4,
+        0.0f, 0.5f, 0.0f, 0.5f,
+        0.25f, 0.25f, 0.25f, 0.25f,
+        1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+    std::vector<float> mono;
+    for (int i = 0; i < 12000 / 64 + 1; ++i) {
+        for (float v : measure::left(pull(surf, 64))) mono.push_back(v);
+    }
+    const double heard = measure::hz(mono, 3000, 9000, 48000);
+    const double b4 = 440.0 * std::exp2(2.0 / 12.0);
+    CHECK_NEAR(heard, b4, b4 * 0.01);
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_echo_time_crosses_the_bridge) {
+    // setEchoTime is a jfloat in seconds: a tenth of a second through the
+    // bridge lands a fully wet echo's repeat of a blip at 4800 samples,
+    // not at the free 10560 (the engine test's own yardstick, ±1500).
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+    std::vector<float> tone(200, 0.9f);
+    Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(tone), 48000, 0);
+    Java_com_snipsnap_app_NativeSurface_setCorner(e, nullptr, h, 0, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    Java_com_snipsnap_app_NativeSurface_setEchoTime(e, nullptr, h, 0.1f);
+    Java_com_snipsnap_app_NativeSurface_control(
+        e, nullptr, h, 2,
+        0.5f, 0.5f, 0.0f, 0.5f,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+    for (int i = 0; i < 10; ++i) pull(surf, 64);
+    Java_com_snipsnap_app_NativeSurface_control(
+        e, nullptr, h, 2,
+        0.5f, 0.5f, 0.0f, 0.5f,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, JNI_FALSE);
+    std::vector<float> mono;
+    while (mono.size() < 12000) {
+        for (float v : measure::left(pull(surf, 64))) mono.push_back(v);
+    }
+    size_t peakIndex = 1500;
+    float peakValue = 0.0f;
+    for (size_t i = 1500; i < mono.size(); ++i) {
+        if (std::fabs(mono[i]) > peakValue) { peakValue = std::fabs(mono[i]); peakIndex = i; }
+    }
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+    CHECK(peakValue > 0.01f);
+    CHECK(peakIndex > 4800 - 1500);
+    CHECK(peakIndex < 4800 + 1500);
+}
+
+TEST(jni_surface_key_snap_crosses_the_bridge) {
+    // setKeySnap is a jboolean: JNI_TRUE must reach the engine as on and
+    // JNI_FALSE as off. Driven through the bridge end to end - a pad at
+    // MIDI 70.4 in XY under a chromatic key comes out on A# (70) with KEY
+    // on and a little sharp of it, as recorded, with KEY off.
+    JNIEnv* e = env();
+    auto heardWith = [&](jboolean on) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        const float sourceMidi = 70.4f;
+        const float sourceHz = 440.0f * std::exp2((sourceMidi - 69.0f) / 12.0f);
+        Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(measure::sine(sourceHz, 48000, 48000)), 48000, 0);
+        Java_com_snipsnap_app_NativeSurface_setKey(e, nullptr, h, 0, 0xFFF, sourceMidi);
+        Java_com_snipsnap_app_NativeSurface_setKeySnap(e, nullptr, h, on);
+        Java_com_snipsnap_app_NativeSurface_control(
+            e, nullptr, h, 0,
+            0.5f, 1.0f, 0.0f, 0.5f,
+            0.25f, 0.25f, 0.25f, 0.25f,
+            1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+        std::vector<float> mono;
+        for (int i = 0; i < 24000 / 64 + 1; ++i) {
+            for (float v : measure::left(pull(surf, 64))) mono.push_back(v);
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return measure::hz(mono, 14000, 22000, 48000);
+    };
+    const double aSharp = 440.0 * std::exp2(1.0 / 12.0);
+    const double asRecorded = 440.0 * std::exp2(1.4 / 12.0);
+    CHECK_NEAR(heardWith(JNI_TRUE), aSharp, aSharp * 0.01);
+    CHECK_NEAR(heardWith(JNI_FALSE), asRecorded, asRecorded * 0.01);
+}
+
+TEST(jni_surface_swarm_crosses_the_bridge_in_order) {
+    // setSwarm takes a jint and a jfloat, VOICES then DETUNE. Two voices at
+    // full detune beat (the envelope dips below half); one voice at any
+    // detune is flat. A swapped pair in jni.cpp would read (1, 2.0) for
+    // (2, 1.0) - one voice, clamped detune - and stay flat, so the order
+    // is held through the bridge, not just the engine.
+    JNIEnv* e = env();
+    auto ratioWith = [&](jint voices, jfloat detune) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        auto tone = measure::sine(466.16f, 48000, 48000);
+        for (float& v : tone) v *= 0.1f;
+        Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, h, floats(std::move(tone)), 48000, 0);
+        Java_com_snipsnap_app_NativeSurface_setSwarm(e, nullptr, h, voices, detune);
+        Java_com_snipsnap_app_NativeSurface_control(
+            e, nullptr, h, 0,
+            0.5f, 1.0f, 0.0f, 0.5f,
+            0.25f, 0.25f, 0.25f, 0.25f,
+            1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+        std::vector<float> mono;
+        for (int i = 0; i < 30000 / 64 + 1; ++i) {
+            for (float v : measure::left(pull(surf, 64))) mono.push_back(v);
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        double lo = 1e9, hi = 0.0;
+        for (size_t start = 6000; start + 480 <= 30000; start += 480) {
+            double acc = 0.0;
+            for (size_t i = start; i < start + 480; ++i) acc += static_cast<double>(mono[i]) * static_cast<double>(mono[i]);
+            const double rms = std::sqrt(acc / 480.0);
+            lo = std::min(lo, rms);
+            hi = std::max(hi, rms);
+        }
+        return hi > 0.0 ? lo / hi : 0.0;
+    };
+    CHECK(ratioWith(2, 1.0f) < 0.5);
+    CHECK(ratioWith(1, 2.0f) > 0.9);
+}
+
+TEST(jni_surface_modulation_crosses_the_bridge_by_index_and_a_short_array_is_zeros) {
+    // Eleven offsets in an array, by Modulator.Target's ordinal: index 1
+    // is CUTOFF. Sending -1 there through the bridge must darken a bright
+    // source in XY (cutoff 1.0 + -1 = closed), and sending the same -1 at
+    // index 0 (PITCH) must not - an off-by-one in the marshalling would
+    // swap those two outcomes. A short array (one value) leaves cutoff
+    // untouched, so it reads exactly like no modulation at all.
+    JNIEnv* e = env();
+    auto peakWith = [&](std::vector<float> offsets) {
+        const jlong h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+        auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+        // A 2 kHz sine: through a wide-open filter untouched, through an
+        // 80 Hz one all but gone (see engine_tests' own cutoff test).
+        const auto bright = measure::sine(2000.0f, 240, 48000);
+        surf->loadSample(bright.data(), bright.size(), 48000);
+        Java_com_snipsnap_app_NativeSurface_setModulation(e, nullptr, h, floats(std::move(offsets)));
+        Java_com_snipsnap_app_NativeSurface_control(
+            e, nullptr, h, 0,
+            0.5f, 1.0f, 0.0f, 0.5f,
+            0.25f, 0.25f, 0.25f, 0.25f,
+            1.0f, 0.0f, 0.0f, 0.0f, JNI_TRUE);
+        for (int i = 0; i < 400; ++i) pull(surf, 64);
+        float peak = 0.0f;
+        for (int i = 0; i < 50; ++i) {
+            for (float v : pull(surf, 64)) peak = std::max(peak, std::fabs(v));
+        }
+        Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+        return peak;
+    };
+    const float open = peakWith({});
+    const float closed = peakWith({0.0f, -1.0f});
+    const float pitchOnly = peakWith({-1.0f, 0.0f});
+    const float shortArray = peakWith({0.0f});
+    CHECK(open > 0.1f);
+    CHECK(closed < open * 0.2f);   // CUTOFF's slot reached the filter
+    CHECK(pitchOnly > open * 0.5f);  // PITCH's slot did not
+    CHECK_NEAR(shortArray, open, 1e-3);
 }
 
 TEST(jni_drain_survives_a_jvm_that_cannot_allocate) {

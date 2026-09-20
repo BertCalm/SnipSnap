@@ -16,7 +16,7 @@ L ≈ a week-plus of sessions).
 | Capture/conditioning core (`:audio`) | done, tested — ring buffer, cleanup, transients, chopper, classifier, auto-place, pitch/scales/tuner, loudness, resampler + bake path |
 | Kit pipeline (`:kit`) | done, tested — kit folders, preflight, balance, in-key, velocity layers, recipes, every export driver |
 | Formats (`:xpm`, `:mpc3`) | done, tested, corpus-guarded — `.xpm`, keygroups, expansions, `.xpn`, `.xtd`, `.xty`, clips, `.xpj` projects; drums hardware-verified |
-| Synthesis (`:synth`) | done, tested — seven engines, FX rack, recipes, groove, S5 instrument suite with loop points |
+| Synthesis (`:synth`) | done, tested — eight engines, FX rack, recipes, groove, S5 instrument suite with loop points |
 | Design | done — TapeOS system, eight schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |

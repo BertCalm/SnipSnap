@@ -3,13 +3,16 @@ package com.snipsnap.app.ui
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +22,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,9 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
@@ -48,12 +59,16 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.TapeVoice
+import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -67,6 +82,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
@@ -74,6 +90,7 @@ import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
@@ -83,6 +100,9 @@ import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.Skin
+import com.snipsnap.synth.SkinPatch
+import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
@@ -98,6 +118,7 @@ import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.Vox
 import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
+import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -124,10 +145,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the seven-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the eight-engine drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all seven
+ * Compose surface plus the SEND TO PAD action, multiplexed over all eight
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -135,9 +156,9 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and six more engines
- * (TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM) join it here. GRAINS is
- * out of scope — it has no voice enum, a different shape entirely.
+ * only; reality wins: THUMP alone ships eight voices, and seven more engines
+ * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM) join it here. GRAINS
+ * is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
  * `SCRAMBLE_LINES` are prototype-only flavour, never ported to `Copy`).
@@ -150,6 +171,10 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
 @Composable
 fun SynthScreen(
     entry: KitShelf.Entry?,
+    // The shelf's own root: SAVE AS PRESET (docs/WORKSHOP.md, WS5) keeps
+    // the player's presets in one file beside the kits, not in the open
+    // kit — a preset is for every kit, and it is saved with no kit open.
+    shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
@@ -213,6 +238,122 @@ fun SynthScreen(
         // someone loaded a pre-PUNCH preset.
         macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
         currentPresetByVoice[engine to voice] = patch.name
+    }
+
+    // ---- SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
+    // The player's own presets, every engine and voice at once, read off
+    // the shelf when the screen opens and again after every save. A file
+    // this build cannot read lists nothing here, and its save refuses in
+    // words rather than writing over it (UserPresets.save's own rule).
+    var userPresets by remember { mutableStateOf<List<UserPresets.Saved>>(emptyList()) }
+    // FORGET → BIN, and the bin it waits in (the WS5 follow-up): read
+    // beside the strip, since a held chip and DELETED PRESETS both need
+    // it, and refreshed with the strip after every move.
+    var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        try {
+            val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+            userPresets = live
+            binnedPresets = bin
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SynthScreen", "presets: unreadable", e)
+        }
+    }
+    var namingPreset by remember { mutableStateOf(false) }
+    var saveBusy by remember { mutableStateOf(false) }
+    // The chip being held, while its FORGET slip asks; the bin's door; and
+    // one busy flag for both moves, so a second tap never races the file.
+    var forgetTarget by remember { mutableStateOf<Patch?>(null) }
+    var binOpen by remember { mutableStateOf(false) }
+    var binBusy by remember { mutableStateOf(false) }
+    fun forgetPreset(patch: Patch) {
+        if (binBusy) return
+        binBusy = true
+        // The strip the chip was held on, captured now: the highlight there
+        // must not keep naming a chip that is gone, whatever voice is
+        // showing by the time the write lands.
+        val held = engine to voice
+        appScope.launch {
+            try {
+                val gone = withContext(Dispatchers.IO) {
+                    UserPresets.forget(shelfRoot, patch.engine, patch.voiceName, patch.name, System.currentTimeMillis())
+                }
+                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                userPresets = live
+                binnedPresets = bin
+                if (gone == null) {
+                    // A row that outran the tap: nothing by that name was there.
+                    onToast(Copy.BIN_ITEM_GONE)
+                } else {
+                    if (currentPresetByVoice[held] == patch.name) currentPresetByVoice.remove(held)
+                    onToast(Copy.presetForgotten(gone.saved.name))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "forgetPreset: failed", e)
+                onToast(Copy.PRESET_FORGET_FAILED)
+            } finally {
+                binBusy = false
+            }
+        }
+    }
+    fun restorePreset(binned: UserPresets.Binned) {
+        if (binBusy) return
+        binBusy = true
+        appScope.launch {
+            try {
+                val back = withContext(Dispatchers.IO) { UserPresets.unforget(shelfRoot, binned) }
+                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                userPresets = live
+                binnedPresets = bin
+                // The name it actually landed under — a clash with a preset
+                // saved since may have freshened it — never the row's own.
+                onToast(if (back == null) Copy.BIN_ITEM_GONE else Copy.presetRestored(back.name))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "restorePreset: failed", e)
+                onToast(Copy.PRESET_RESTORE_FAILED)
+            } finally {
+                binBusy = false
+            }
+        }
+    }
+    fun savePreset(check: UserPresets.Check) {
+        val name = when (check) {
+            is UserPresets.Check.Fresh -> check.name
+            is UserPresets.Check.Replaces -> check.name
+            else -> return
+        }
+        if (saveBusy) return
+        saveBusy = true
+        namingPreset = false
+        // Captured now: the dialog's own engine/voice/macros, before an
+        // engine cycle or a slider drag can move them under the write.
+        val savedEngine = engine
+        val savedVoice = voice
+        val patch = engine.buildPatch(name, voice, macros)
+        appScope.launch {
+            try {
+                val (saved, all) = withContext(Dispatchers.IO) {
+                    val s = UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
+                    s to UserPresets.read(shelfRoot)
+                }
+                userPresets = all
+                currentPresetByVoice[savedEngine to savedVoice] = saved.name
+                onToast(if (check is UserPresets.Check.Replaces) Copy.presetReplaced(name) else Copy.presetSaved(name))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "savePreset: failed", e)
+                onToast(Copy.PRESET_SAVE_FAILED)
+            } finally {
+                saveBusy = false
+            }
+        }
     }
 
     var snip by remember { mutableStateOf<Snip?>(null) }
@@ -424,10 +565,26 @@ fun SynthScreen(
                 PresetList(
                     engine = engine,
                     voice = voice,
+                    yours = UserPresets.forVoice(userPresets, engine.name, voice.name).map { it.patch },
                     current = currentPresetByVoice[engine to voice],
                     scheme = scheme,
                     onSelect = ::loadPreset,
+                    onHold = { forgetTarget = it },
                 )
+                // The door back, gated on the bin holding something, the way
+                // the shelf's DELETED KITS row is: never a door onto an empty
+                // room. Every engine's bin, not only this voice's — a preset
+                // forgotten on SNARE is found from KICK.
+                if (binnedPresets.isNotEmpty()) {
+                    LabButton(
+                        "DELETED PRESETS ▸ ${binnedPresets.size} WAITING",
+                        scheme,
+                        enabled = !binBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        binOpen = true
+                    }
+                }
 
                 val macroSpecs = remember(engine, voice) { engine.macrosFor(voice) }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -452,6 +609,18 @@ fun SynthScreen(
                         touched = true
                         currentPresetByVoice.remove(engine to voice)
                         macrosByVoice[engine to voice] = engine.scramble(voice, Random(System.nanoTime()))
+                    }
+                    // Between SCRAMBLE and SEND TO PAD: the sound is kept
+                    // before it is placed. No kit is needed — a preset is
+                    // the shelf's, not the open kit's.
+                    LabButton(
+                        if (saveBusy) "…" else "SAVE PRESET ▸",
+                        scheme,
+                        enabled = !saveBusy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "SAVE PRESET",
+                    ) {
+                        namingPreset = true
                     }
                     LabButton(
                         if (sendBusy) "…" else "SEND TO PAD ▸",
@@ -492,6 +661,298 @@ fun SynthScreen(
             // CANCEL — a send in flight (sendBusy) makes both no-ops.
             BackHandler(onBack = cancelChooser)
         }
+
+        if (namingPreset) {
+            val cancelNaming = { namingPreset = false }
+            PresetNameDialog(
+                engine = engine,
+                voice = voice,
+                yours = userPresets,
+                scheme = scheme,
+                onCancel = cancelNaming,
+                onSave = ::savePreset,
+            )
+            BackHandler(onBack = cancelNaming)
+        }
+
+        forgetTarget?.let { target ->
+            val cancelForget = { forgetTarget = null }
+            PresetForgetDialog(
+                name = target.name,
+                scheme = scheme,
+                onCancel = cancelForget,
+                onForget = {
+                    forgetTarget = null
+                    forgetPreset(target)
+                },
+            )
+            BackHandler(onBack = cancelForget)
+        }
+
+        if (binOpen) {
+            // Same self-guarded close as the chooser's CANCEL: a move in
+            // flight makes both no-ops, and the handler stays registered.
+            val closeBin = { if (!binBusy) binOpen = false }
+            DeletedPresetsOverlay(
+                binned = binnedPresets,
+                scheme = scheme,
+                busy = binBusy,
+                onRestore = ::restorePreset,
+                onClose = closeBin,
+            )
+            BackHandler(onBack = closeBin)
+        }
+    }
+}
+
+// ---------- FORGET → BIN: the ask, and the bin's door ----------
+
+/**
+ * A held YOURS chip asks before anything moves — `KitDeleteConfirmDialog`'s
+ * shape, its line [Copy.presetForgetAsk]: what goes, where it waits, for how
+ * long. CANCEL beside FORGET → BIN in the bin's red, the same dress every
+ * delete in the app wears.
+ */
+@Composable
+private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Unit, onForget: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL — a bare gesture detector, which registers
+                // no semantics node (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(Copy.presetForgetAsk(name), TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
+                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .tapeClick(label = "FORGET $name", onClick = onForget)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("FORGET → BIN", TapeType.pixel, BinRedGlow)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * DELETED PRESETS: the bin's own listing, `DeletedKitsScreen`'s shape as an
+ * overlay of this screen (the `SlotChooserOverlay` frame): one row per
+ * forgotten preset — its name, its engine and voice, when it went, the days
+ * it has left (the last two in `warn`, as every bin counts down) — and
+ * RESTORE. No EMPTY THE BIN NOW, unlike the bins that hold WAVs and kits:
+ * a preset is a few hundred bytes, so nothing is bought by emptying early,
+ * and every site that cannot be undone is one `ReversalTest` counts. The
+ * sweep takes each row when its days run out.
+ */
+@Composable
+private fun DeletedPresetsOverlay(
+    binned: List<UserPresets.Binned>,
+    scheme: Scheme,
+    busy: Boolean,
+    onRestore: (UserPresets.Binned) -> Unit,
+    onClose: () -> Unit,
+) {
+    // The same catch-all for touch the chooser uses, and for the same
+    // reason: a tap in a gap must not reach the strip underneath.
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TapeText("DELETED PRESETS", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
+                TapeText("${binned.size}", TapeType.lcdSmall, scheme.amber.tape)
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                        // Always clickable, `!busy` forwarded rather than
+                        // dropped (accessibility audit finding 12); the name
+                        // stays put through the "…" swap, as the chooser's does.
+                        .tapeClick(label = "BACK TO SYNTH", enabled = !busy, onClick = onClose)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(if (busy) "…" else "◄ SYNTH", TapeType.pixel, scheme.amber.tape)
+                }
+            }
+            if (binned.isEmpty()) {
+                // The last RESTORE empties the list under the reader; the
+                // door itself is gone by the time this closes.
+                Box(Modifier.fillMaxWidth().weight(1f).padding(14.dp), contentAlignment = Alignment.Center) {
+                    TapeText(Copy.NOTHING_DELETED, TapeType.lcdSmall, scheme.lcdInk.tape)
+                }
+            } else {
+                LazyColumn(
+                    Modifier.fillMaxWidth().weight(1f).sunkenField(scheme).padding(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    // A name forgotten twice is two rows; the stamp tells them apart.
+                    items(binned, key = { "${it.saved.engine}/${it.saved.voice}/${it.saved.name}/${it.binnedAt}" }) { row ->
+                        BinnedPresetRow(row, scheme, busy, onRestore = { onRestore(row) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boolean, onRestore: () -> Unit) {
+    val now = System.currentTimeMillis()
+    val daysLeft = row.daysLeft(now)
+    // ≤2 days left renders in `scheme.warn`, the threshold every other bin's row uses.
+    val dayColor = if (daysLeft <= 2) scheme.warn.tape else scheme.amber.tape
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
+            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(5.dp))
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            TapeText(row.saved.name, TapeType.marker, scheme.ink.tape, maxLines = 1)
+            TapeText(
+                "${row.saved.engine} · ${row.saved.voice.replace('_', ' ')} · ${Ages.ago(row.binnedAt, now)}",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+        }
+        TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                // Always clickable, `!busy` forwarded rather than dropped
+                // (accessibility audit finding 12).
+                .tapeClick(label = "RESTORE ${row.saved.name}", enabled = !busy, onClick = onRestore)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("RESTORE", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+        }
+    }
+}
+
+// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsScreen.kt`'s
+// own `BIN_RED_BORDER`, deliberately constant across every scheme so a
+// delete reads as "red" even in a scheme with no red anywhere else in it.
+private val BIN_RED_BORDER = Color(0xFF6A2020)
+
+// ---------- SAVE AS PRESET: the name ----------
+
+/**
+ * The slip SAVE PRESET ▸ drops (`docs/WORKSHOP.md`, WS5): `KitRenameDialog`'s
+ * shape — scrim, raised bevel, a `BasicTextField` in a sunken field,
+ * CANCEL beside the one real button — hung from the top with the keyboard
+ * already up, the way `BenchNoteDialog` is and for the same reason.
+ *
+ * The field opens on [UserPresets.suggest]'s placeholder, selected to its
+ * end so typing continues it and a swipe replaces it. Every keystroke is
+ * judged by [UserPresets.check], the one home of the name rules: the
+ * caption under the field says which rule a name fails, or what saving
+ * under one of your own names costs, and the button reads SAVE or
+ * REPLACE accordingly — the same word the toast will use. A refusal is
+ * dim with its reason, never a silent no.
+ */
+@Composable
+private fun PresetNameDialog(
+    engine: Engine,
+    voice: Enum<*>,
+    yours: List<UserPresets.Saved>,
+    scheme: Scheme,
+    onCancel: () -> Unit,
+    onSave: (UserPresets.Check) -> Unit,
+) {
+    val suggestion = remember(engine, voice) { UserPresets.suggest(engine.name, voice.name, yours) }
+    var field by remember { mutableStateOf(TextFieldValue(suggestion, TextRange(suggestion.length))) }
+    val check = UserPresets.check(field.text, engine.name, voice.name, yours)
+    val (caption, captionColor) = when (check) {
+        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warn.tape
+        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warn.tape
+        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warn.tape
+        is UserPresets.Check.Fresh -> Copy.PRESET_NAME_NOTE to scheme.ink2.tape
+        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.amber.tape
+    }
+    val canSave = check is UserPresets.Check.Fresh || check is UserPresets.Check.Replaces
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .imePadding()
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL — a bare gesture detector, which registers
+                // no semantics node (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("SAVE AS PRESET", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText("${engine.name} · ${chipLabel(engine, voice)}", TapeType.pixel, scheme.ink2.tape)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .sunkenField(scheme)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                BasicTextField(
+                    value = field,
+                    onValueChange = { field = it },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                    cursorBrush = SolidColor(scheme.ink.tape),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                )
+            }
+            TapeText(caption, TapeType.pixelSmall, captionColor, maxLines = 4)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton(
+                    if (check is UserPresets.Check.Replaces) "REPLACE" else "SAVE",
+                    scheme,
+                    enabled = canSave,
+                    dimmed = !canSave,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onSave(check) },
+                )
+            }
+        }
     }
 }
 
@@ -500,10 +961,10 @@ fun SynthScreen(
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). All seven registered engines already converge on one shape (an
+ * change"). All eight registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of seven near-
+ * this just gives the screen one dispatch point instead of eight near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
@@ -513,13 +974,14 @@ fun SynthScreen(
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM;
 
-    /** THUMP → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
         THUMP -> ThumpVoice.entries
+        SKIN -> SkinVoice.entries
         TINES -> TinesVoice.entries
         VELVET -> VelvetVoice.entries
         VOX -> VoxVoice.entries
@@ -530,6 +992,7 @@ private enum class Engine {
 
     fun macrosFor(voice: Enum<*>) = when (this) {
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
+        SKIN -> Skin.macrosFor(voice as SkinVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
         VOX -> Vox.macrosFor(voice as VoxVoice)
@@ -540,6 +1003,7 @@ private enum class Engine {
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
         THUMP -> Thump.defaults(voice as ThumpVoice)
+        SKIN -> Skin.defaults(voice as SkinVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
         VOX -> Vox.defaults(voice as VoxVoice)
@@ -550,6 +1014,7 @@ private enum class Engine {
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
+        SKIN -> Skin.scramble(voice as SkinVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
         VOX -> Vox.scramble(voice as VoxVoice, random)
@@ -565,6 +1030,7 @@ private enum class Engine {
     // this screen wants, so the uniform two-arg call reaches it fine.
     fun render(voice: Enum<*>, macros: Map<String, Float>): Snip = when (this) {
         THUMP -> Thump.render(voice as ThumpVoice, macros)
+        SKIN -> Skin.render(voice as SkinVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
         VOX -> Vox.render(voice as VoxVoice, macros)
@@ -575,6 +1041,7 @@ private enum class Engine {
 
     fun drumClass(voice: Enum<*>): DrumClass = when (this) {
         THUMP -> (voice as ThumpVoice).drumClass
+        SKIN -> (voice as SkinVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> (voice as VelvetVoice).drumClass
         VOX -> (voice as VoxVoice).drumClass
@@ -585,6 +1052,7 @@ private enum class Engine {
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
+        SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
@@ -638,6 +1106,29 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.RIM -> DrumClass.PERC
     }
 
+// SKIN's voices are built to hit the same classifier gates THUMP's do
+// (SkinTest's own `factory X is a X` set proves it for KICK/SNARE/
+// HAT_CLOSED/HAT_OPEN/TOM), so those mirror THUMP's labels directly.
+// RIDE is built from hat()'s exact recipe (denser, longer) and genuinely
+// measures HAT_OPEN too - real structural kinship, not a fallback guess,
+// same as FATHOM's DEEP/GRIND mirroring a real KICK verdict. SHAKER and
+// STICK have no dedicated DrumClass to aim for at all (there's no
+// "shaker" or "rimshot" class the way there's no "cowbell" or "rim" one)
+// so, like THUMP's own COWBELL/RIM, they land on PERC by the same
+// no-better-bucket convention rather than a classifier assertion neither
+// SkinTest nor ThumpTest makes for their counterparts.
+private val SkinVoice.drumClass: DrumClass
+    get() = when (this) {
+        SkinVoice.KICK -> DrumClass.KICK
+        SkinVoice.SNARE -> DrumClass.SNARE
+        SkinVoice.HAT_CLOSED -> DrumClass.HAT_CLOSED
+        SkinVoice.HAT_OPEN -> DrumClass.HAT_OPEN
+        SkinVoice.TOM -> DrumClass.TOM
+        SkinVoice.RIDE -> DrumClass.HAT_OPEN
+        SkinVoice.SHAKER -> DrumClass.PERC
+        SkinVoice.STICK -> DrumClass.PERC
+    }
+
 private val TinesVoice.drumClass: DrumClass
     get() = when (this) {
         TinesVoice.BELL, TinesVoice.CHIME -> DrumClass.TONAL
@@ -656,14 +1147,19 @@ private val FathomVoice.drumClass: DrumClass
     }
 
 /**
- * Chip/header label. THUMP keeps its prototype-verbatim abbreviations
+ * Chip/header label. THUMP and SKIN keep prototype-verbatim abbreviations
  * (`HAT_CLOSED` → "HAT CL", `HAT_OPEN` → "HAT OP" — the rest are already
  * short enough as-is); every other engine's voice names are already one
  * short word (BELL, SQUELCH, KALIMBA, …) with no underscore to break up, so
- * the raw enum name reads fine unmodified.
+ * the raw enum name reads fine unmodified. Without this, this picker's
+ * one-line visible label and TalkBack announcement both fall back to the
+ * raw enum name — underscores and all, and liable to be ellipsized.
  */
-private fun chipLabel(engine: Engine, voice: Enum<*>): String =
-    if (engine == Engine.THUMP) thumpChipLabel(voice as ThumpVoice) else voice.name
+private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
+    Engine.THUMP -> thumpChipLabel(voice as ThumpVoice)
+    Engine.SKIN -> skinChipLabel(voice as SkinVoice)
+    else -> voice.name
+}
 
 private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.KICK -> "KICK"
@@ -674,6 +1170,17 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.TOM -> "TOM"
     ThumpVoice.COWBELL -> "COWBELL"
     ThumpVoice.RIM -> "RIM"
+}
+
+private fun skinChipLabel(voice: SkinVoice): String = when (voice) {
+    SkinVoice.KICK -> "KICK"
+    SkinVoice.SNARE -> "SNARE"
+    SkinVoice.HAT_CLOSED -> "HAT CL"
+    SkinVoice.HAT_OPEN -> "HAT OP"
+    SkinVoice.TOM -> "TOM"
+    SkinVoice.RIDE -> "RIDE"
+    SkinVoice.SHAKER -> "SHAKER"
+    SkinVoice.STICK -> "STICK"
 }
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
@@ -702,8 +1209,8 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
-    // THUMP's eight voices split into two even rows of four, same as
-    // before; every other engine has four or fewer, so one row fits them
+    // THUMP's and SKIN's eight voices each split into two even rows of
+    // four; every other engine has four or fewer, so one row fits them
     // all without inventing a lonely single-chip second row.
     val rows = if (voices.size <= 4) {
         listOf(voices)
@@ -766,8 +1273,45 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
  * never claims a name for a sound that no longer matches it.
  */
 @Composable
-private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
+private fun PresetList(
+    engine: Engine,
+    voice: Enum<*>,
+    yours: List<Patch>,
+    current: String?,
+    scheme: Scheme,
+    onSelect: (Patch) -> Unit,
+    onHold: (Patch) -> Unit,
+) {
     val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
+    PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
+    // The player's own, under the factory row (docs/WORKSHOP.md, WS5):
+    // a second strip that exists only once this voice has one, with the
+    // same chips and the same highlight rule, and YOURS in the slider
+    // label column below it so the two rows read as two rows. A hold on
+    // one of these asks to forget it; the factory's chips have no hold.
+    PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
+}
+
+/**
+ * One horizontally-scrolling strip of preset chips inside a [sunkenField];
+ * nothing at all when [presets] is empty. [label] is the column word to its
+ * left, or none; [spoken] prefixes each chip's accessible name. With
+ * [onHold], a long press on a chip is the FORGET gesture (the rooms row's
+ * own hold), and the tap still loads.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PresetStrip(
+    engine: Engine,
+    voice: Enum<*>,
+    presets: List<Patch>,
+    current: String?,
+    scheme: Scheme,
+    label: String?,
+    spoken: String,
+    onSelect: (Patch) -> Unit,
+    onHold: ((Patch) -> Unit)? = null,
+) {
     if (presets.isEmpty()) return
     // Keyed on (engine, voice), not the plain `rememberScrollState()` every
     // other scroll in this file uses: those all sit inside a screen-level
@@ -777,29 +1321,48 @@ private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme:
     // finding — and could open a shorter roster already scrolled past its
     // first presets.
     val scrollState = remember(engine, voice) { ScrollState(0) }
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .sunkenField(scheme)
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (p in presets) {
-            val selected = p.name == current
-            Box(
-                Modifier
-                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                    .semantics { this.selected = selected }
-                    .tapeClick(label = "PRESET ${p.name}") { onSelect(p) }
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (label != null) TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
+        Row(
+            Modifier
+                .weight(1f)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .sunkenField(scheme)
+                .horizontalScroll(scrollState)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (p in presets) {
+                val selected = p.name == current
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                        .semantics { this.selected = selected }
+                        .let { chip ->
+                            if (onHold == null) {
+                                chip.tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
+                            } else {
+                                // A plain tap/long-press with no drag —
+                                // combinedClickable registers both as real
+                                // accessibility actions (KitsScreen's RoomRow).
+                                chip.combinedClickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClickLabel = "$spoken ${p.name}",
+                                    onLongClickLabel = "FORGET ${p.name}",
+                                    onLongClick = { onHold(p) },
+                                    onClick = { onSelect(p) },
+                                )
+                            }
+                        }
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                }
             }
         }
     }
@@ -818,7 +1381,7 @@ private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme:
  * feeds the render loop above directly, same as the prototype's slider.
  */
 @Composable
-private fun MacroSlider(
+internal fun MacroSlider(
     label: String,
     value: Float,
     fillColor: Color,
@@ -885,7 +1448,7 @@ private fun MacroSlider(
  * time — rather than PadSheetScreen's fixed-count amplitude-only bars.
  */
 @Composable
-private fun ScopeLcd(snip: Snip?, rendering: Boolean, scheme: Scheme, modifier: Modifier = Modifier) {
+internal fun ScopeLcd(snip: Snip?, rendering: Boolean, scheme: Scheme, modifier: Modifier = Modifier) {
     Box(modifier.lcdPanel(scheme)) {
         val peaks = remember(snip) { snip?.let { PeaksPyramid.fromSnip(it) } }
         if (peaks != null && snip != null && snip.frameCount > 0) {
@@ -921,7 +1484,7 @@ private fun ScopeLcd(snip: Snip?, rendering: Boolean, scheme: Scheme, modifier: 
 // ---------- buttons ----------
 
 @Composable
-private fun LabButton(
+internal fun LabButton(
     label: String,
     scheme: Scheme,
     enabled: Boolean,

@@ -262,8 +262,8 @@ class ChopReviewTest {
         } finally {
             dir.deleteRecursively()
         }
-        assertEquals("5 SLICES FOLDED ONTO 3 PADS. CHOKE GROUP SET.", Copy.foldedToGrid(5, 3, true))
-        assertEquals("1 SLICE FOLDED ONTO 1 PAD.", Copy.foldedToGrid(1, 1, false))
+        assertEquals("5 SLICES FOLDED ONTO 3 PADS. CHOKE GROUP SET.", Copy.foldedToPads(5, 3, true))
+        assertEquals("1 SLICE FOLDED ONTO 1 PAD.", Copy.foldedToPads(1, 1, false))
         assertEquals("'K' BANK B: 5 SLICES FOLDED ONTO 3 PADS.", Copy.foldedOnto("K", 'B', 5, 3, 0))
     }
 
@@ -471,7 +471,7 @@ class ChopReviewTest {
         assertTrue(sent.chokeSet)
         assertEquals(16, sent.arranged.size)
         assertEquals(DrumClass.KICK, sent.arranged[0]?.drumClass)
-        assertEquals("4 SLICES ON THE GRID. CHOKE GROUP SET.", Copy.sentToGrid(sent.sliceCount, sent.chokeSet))
+        assertEquals("4 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(sent.sliceCount, sent.chokeSet))
     }
 
     @Test

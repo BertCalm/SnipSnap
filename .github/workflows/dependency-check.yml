@@ -28,7 +28,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # dependencyCheckAggregate configures :app to see its Android/AndroidX
       # dependencies too - same reason jvm-tests needs this in tests.yml.
+      # packages: '' for the same reason as tests.yml's two setup-android
+      # steps - the action's own default ("tools platform-tools") requests
+      # a package Google has removed from the live SDK repository.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
       # The plugin downloads and caches the NVD/CISA-KEV feeds under the
       # Gradle user home; without this every run re-fetches gigabytes of
       # CVE data from scratch instead of just the delta since last week.

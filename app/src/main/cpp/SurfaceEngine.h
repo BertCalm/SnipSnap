@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "Grain.h"
 #include "ParameterSmoother.h"
 #include "PrintBuffer.h"
 #include "SpscRing.h"
@@ -16,7 +17,7 @@ namespace snipsnap {
 
 /** What the UI sends, one per screen frame: which mode, where the fingers are, is a finger down. */
 struct ControlFrame {
-    int32_t mode = 0;  // 0 XY, 1 XYZ, 2 MORPH, 3 VECTOR - TouchSurface.Mode.ordinal
+    int32_t mode = 0;  // 0 XY, 1 XYZ, 2 MORPH, 3 VECTOR, 4 GRAIN - TouchSurface.Mode.ordinal
     float x = 0.5f, y = 0.5f, z = 0.0f, tilt = 0.5f;
     float a = 0.25f, b = 0.25f, c = 0.25f, d = 0.25f;
     // Weights for source slots 0/1/2/3 - a barycentric blend across the
@@ -41,18 +42,68 @@ struct MacroState {
 };
 
 /**
+ * GRAIN mode's own three knobs, each 0..1: the cloud's texture, set from
+ * the UI the way a corner is and held there, not swept by the finger -
+ * the finger is POSITION (x) and the pitch axis (y). See Grain.h for what
+ * each maps to.
+ */
+struct GrainSettings {
+    float size = 0.5f;     // grain length, grain::lengthMs
+    float density = 0.5f;  // grains per second, grain::rateHz
+    float spray = 0.15f;   // scatter of each grain's start around POSITION, grain::startFraction
+};
+
+/**
+ * SWARM: the loop voice thickened into a detuned unison, the S-4's
+ * "detuned swarm". `voices` copies of every slot's loop (1..kMaxSwarm)
+ * read at once, spread evenly across ±`detune` × kMaxDetuneCents and
+ * summed at 1/sqrt(voices). One voice at any detune is the plain loop,
+ * sample for sample. Mono, like the loop: a print is the mono bus, so a
+ * stereo spread would be lost where it mattered most.
+ */
+struct SwarmSettings {
+    int32_t voices = 1;
+    float detune = 0.0f;  // 0..1 of kMaxDetuneCents, the outermost voice's own detune
+};
+
+/**
+ * The kit's key as GRAIN snaps to it: a root pitch class (0..11 above C),
+ * a 12-bit mask of the scale's degrees above that root, and the loaded
+ * pad's own note as a (possibly fractional) MIDI number, so the snap is
+ * to real notes in the key rather than to intervals from wherever the pad
+ * happens to sit. No key is a chromatic mask; no known source note is
+ * root 0 and source 0, which turns the degrees into intervals from the
+ * pad itself - see grain::pitchRatio.
+ */
+struct KeySnap {
+    int32_t rootSemitone = 0;
+    uint32_t scaleMask = grain::kChromaticMask;
+    float sourceMidi = 0.0f;
+};
+
+/**
  * The tactile surface's voice: one looping sample through pitch, a
- * bitcrusher, a drive stage, a state-variable lowpass, a fixed-time echo
- * and a fixed-room spring reverb, every macro fed from the UI through a
+ * bitcrusher, a drive stage, a state-variable lowpass, an echo whose time
+ * is free or a division of the kit's bar (see setEchoTime) and a
+ * fixed-room spring reverb, every macro fed from the UI through a
  * lock-free ring and de-zippered per sample. Oboe owns the thread; this
  * class owns nothing that allocates on it.
  *
+ * GRAIN (mode 4) swaps the *source* only: instead of the four loops
+ * reading through at pitch, a cloud of short windowed grains is
+ * retriggered around the finger's POSITION, each at a pitch snapped to
+ * the kit's key, and blended across the same four sample slots by the
+ * same vertex weights. Everything downstream - crush, drive, the filter,
+ * echo, spring, the gate - is the chain the loops already run through,
+ * with the macros at XY's defaults (as recorded, wide open, the roll as
+ * resonance), so tilt still does on GRAIN what it does everywhere else.
+ *
  * Threading, in one place:
  *  - UI thread: `start`/`stop`, `loadSample`, `pushControl`, `setCorner`,
- *    the print arm/stop/take calls.
- *  - Audio thread: `onAudioReady` only. It reads the ring, the corner
- *    atomics, the pending-sample pointers and the print state; it never
- *    calls anything that can block or allocate.
+ *    `setGrain`, `setKey`, the print arm/stop/take calls.
+ *  - Audio thread: `onAudioReady` only. It reads the ring, the corner,
+ *    grain and key atomics, the pending-sample pointers and the print
+ *    state; it never calls anything that can block or allocate.
  *  - A sample swap is a pointer handshake, one per source slot: the UI
  *    parks the new buffer in `pending_[slot]`, the callback adopts it and
  *    parks the old one in `retired_[slot]`, and the UI frees
@@ -90,6 +141,76 @@ public:
     /** UI thread. Corner 0..3 = A, B, C, D of the morph pad. */
     void setCorner(int index, const MacroState& state);
 
+    /** UI thread. GRAIN's three knobs; a non-finite one reads as its default, the same door the corners have. Takes effect on the next grain triggered. */
+    void setGrain(const GrainSettings& settings);
+
+    /** UI thread. The key GRAIN snaps to (see KeySnap). A root outside 0..11 wraps, an empty mask reads as chromatic, a non-finite source note as 0. */
+    void setKey(const KeySnap& key);
+
+    /**
+     * UI thread. KEY: snap the *loop's* pitch - every mode but GRAIN,
+     * which always snaps - to the key setKey holds, through the very same
+     * grain::pitchRatio the cloud uses, so a note the loop lands on is a
+     * note the cloud would land on. With no key that is a semitone ladder
+     * around the pad's own note; with no known note, the key's intervals
+     * from the pad itself. Off by default: the surface plays exactly as it
+     * did until this is turned on. Takes effect within a control interval.
+     */
+    void setKeySnap(bool on);
+
+    /** How many unison voices a swarm can have; `SurfaceStore.Swarm` in :shell holds the same ceiling by hand. */
+    static constexpr int32_t kMaxSwarm = 4;
+
+    /** The outermost swarm voice's detune at full DETUNE, in cents - a quarter tone either way at most, a chorus rather than a chord. */
+    static constexpr float kMaxDetuneCents = 50.0f;
+
+    /**
+     * UI thread. SWARM (see SwarmSettings): voices outside 1..kMaxSwarm
+     * clamp, a non-finite detune reads as 0. Takes effect within a control
+     * interval; a voice that joins under a held note starts where voice 0
+     * is, so the swarm is a unison from its first sample rather than two
+     * copies of the loop offset in time until the next touch-down, which
+     * restarts every voice from the head as it always did.
+     */
+    void setSwarm(const SwarmSettings& settings);
+
+    /** The longest ECHO time a kit can ask for: half a bar at the slowest tempo GROOVE plays (20 BPM), exactly; `EchoTimeTest` in :shell holds every division under it by hand. */
+    static constexpr float kMaxEchoSeconds = 6.0f;
+
+    /**
+     * UI thread. ECHO's delay time in seconds - a division of the kit's
+     * bar, worked out on the Kotlin side (`EchoTime` in :shell) so the
+     * engine never learns a tempo; anything that is not a positive number
+     * is the free time, the fixed 220 ms ECHO always had, and more than
+     * kMaxEchoSeconds is that. The wet MIX stays the `echo` macro, corner-
+     * blended and modulated; the time is never either, because a time
+     * that glides pitch-warbles every repeat. A change lands within a
+     * control interval as a short crossfade from the old tap to the new
+     * (kEchoFadeMs), so a tempo or division change is a clean cut between
+     * two echoes rather than a warble or a click.
+     */
+    void setEchoTime(float seconds);
+
+    /**
+     * How many things a modulator can move: the seven macros in MacroState
+     * order, then GRAIN's SIZE, DENSITY, SPRAY and POSITION - the order
+     * `Modulator.Target` in :shell declares, by ordinal.
+     */
+    static constexpr int32_t kModTargets = 11;
+
+    /**
+     * UI thread. The modulators' signed offsets, one per target (see
+     * kModTargets), added to whatever the mode and the finger say for that
+     * target before its own 0..1 door in applyControl - so a modulator
+     * nudges the finger rather than replacing it, in every mode. Fewer than
+     * kModTargets values leaves the rest at 0; a non-finite one reads as 0;
+     * each is clamped to -1..1. Takes effect on the next control frame.
+     */
+    void setModulation(const float* offsets, int32_t count);
+
+    /** How many grains can sound at once; a new one past this steals the oldest. */
+    static constexpr int32_t kMaxGrains = 16;
+
     // The resample tap (see PrintBuffer for the ownership rules).
     bool armPrint(size_t maxFrames) { return print_.arm(maxFrames); }
     void requestStopPrint() { print_.requestStop(); }
@@ -112,10 +233,23 @@ private:
     void applyControl(const ControlFrame& frame);
     MacroState morphed(const ControlFrame& frame) const;
     void renderMono(float* out, int32_t numFrames);
-    /** Audio thread. One source's interpolated read, advancing its own phase_[slot]. Silence if slot is empty. */
+    /** Audio thread. One source's interpolated read - every swarm voice of it, each advancing its own phase_[slot][voice], summed at the swarm's gain. Silence if slot is empty. */
     float readSlot(int32_t slot, double fs, float pitchRatioValue);
     /** Audio thread. Whether slot has an adopted sample worth reading - the same test readSlot itself applies. */
     bool slotLoaded(int32_t slot) const;
+
+    /**
+     * Audio thread. GRAIN's source for one output sample: advances the
+     * trigger clock (starting a grain when it is time and a finger is
+     * down), then sums every sounding grain across the loaded slots by
+     * [weights] (already renormalised, one per slot, as renderMono has
+     * them). Plays the part readSlot's blend plays in the other modes.
+     */
+    float grainSample(double fs, const float* weights);
+    /** Audio thread. Start one grain at the current POSITION/pitch/knobs, stealing the oldest when all kMaxGrains are sounding. */
+    void triggerGrain(double fs);
+    /** Audio thread. One slot read at a fractional frame index, wrapping; silence if the slot is empty. Does not advance anything - grains keep their own position. */
+    float readSlotAt(int32_t slot, double frameIndex) const;
 
     std::shared_ptr<oboe::AudioStream> stream_;
     int32_t preferredRate_;
@@ -131,7 +265,22 @@ private:
     std::atomic<Sample*> pending_[kMaxSources];
     std::atomic<Sample*> retired_[kMaxSources];
     Sample* current_[kMaxSources] = {};  // audio thread only; plain pointers zero-init fine
-    double phase_[kMaxSources] = {};
+    // One read position per slot per swarm voice; [slot][0] is the loop
+    // as it always was, and with one voice nothing else is ever read.
+    double phase_[kMaxSources][kMaxSwarm] = {};
+
+    // SWARM (see setSwarm) as one 64-bit word - the voice count in the
+    // low byte, DETUNE's float bits in the high 32 - so the audio thread
+    // never turns a new count into multipliers at the old spread. It
+    // turns the word into per-voice ratio multipliers and one gain once
+    // per kControlInterval, alongside the filter's coefficients, and a
+    // voice that joins there takes voice 0's phase (see setSwarm).
+    std::atomic<uint64_t> swarm_;
+    static uint64_t packSwarm(int32_t voices, float detune);
+    static void unpackSwarm(uint64_t word, int32_t& voices, float& detune);
+    int32_t swarmVoicesC_ = 1;
+    float swarmMult_[kMaxSwarm] = {1.0f, 1.0f, 1.0f, 1.0f};
+    float swarmGain_ = 1.0f;
 
     // Controls.
     SpscRing<ControlFrame, 64> controls_;
@@ -168,16 +317,27 @@ private:
     float heldCrush_ = 0.0f;
     bool crushRetrigger_ = false;
 
-    // ECHO's delay line: a fixed-length ring buffer, sized to kDelayTimeMs
-    // in the constructor (at the default sampleRate_, so it is never empty
-    // for a caller that renders without ever starting a real stream - see
-    // the constructor's own comment) and again in start() once the device's
-    // real rate is known. Reading and writing through the same rotating
-    // index is the whole delay - the buffer's own length is the time, so
-    // there is no separate "how far back" offset to keep in sync with it.
-    // See renderMono.
+    // ECHO's delay line: a ring buffer sized to kMaxEchoSeconds in the
+    // constructor (at the default sampleRate_, so it is never empty for a
+    // caller that renders without ever starting a real stream - see the
+    // constructor's own comment) and again in start() once the device's
+    // real rate is known. The time is a read tap echoDelayC_ samples
+    // behind the write index (see setEchoTime); echoSeconds_ crosses from
+    // the UI and is copied once per kControlInterval, where a new time
+    // starts a crossfade of kEchoFadeMs from the old tap (echoDelayFrom_)
+    // to the new. See renderMono.
+    static constexpr float kEchoFadeMs = 30.0f;
     std::vector<float> delayBuffer_;
     size_t delayWrite_ = 0;
+    std::atomic<float> echoSeconds_;
+    size_t echoDelayC_ = 1;
+    size_t echoDelayFrom_ = 1;
+    int32_t echoFadeLeft_ = 0;
+    int32_t echoFadeSamples_ = 1;
+    /** How many samples behind the write index [seconds] is at [fs], held to the buffer. */
+    size_t echoDelaySamples(float seconds, float fs) const;
+    /** Sizes and clears the delay line for [fs] and sets the tap for the current time with no fade - the constructor and start() both call it. */
+    void configureEcho(float fs);
 
     // SPRING's fixed room: a Schroeder (1962) network ported straight from
     // synth/Spring.kt's offline design - four parallel combs (mutually
@@ -214,6 +374,66 @@ private:
     std::vector<float> springApBuf_[kSpringAllpassCount];
     size_t springApWrite_[kSpringAllpassCount] = {};
     float springLpA_ = 0.0f;  // the one-pole coefficient every comb's feedback path filters through
+
+    // GRAIN. The knobs and the key cross from the UI as atomics, read at
+    // trigger time only (a knob turned mid-grain changes the *next* grain,
+    // never one already sounding - the window is what keeps the cloud
+    // click-free, and re-sizing a grain under its window would break it).
+    // POSITION and the pitch axis are the finger, so they glide like the
+    // other macros; the pitch is snapped per grain *after* the glide, so a
+    // slide up the pad steps through the key's notes rather than sweeping
+    // between them - a glide would undo the snap. The window is a Hann
+    // table, sized once in the constructor; a grain's own position is
+    // scaled onto it, so every length shares the one table.
+    struct Grain {
+        bool active = false;
+        float startFraction = 0.0f;  // 0..1 of the source, per slot × that slot's own length
+        int32_t length = 0;          // output frames
+        int32_t pos = 0;             // output frames elapsed
+        float pitch = 1.0f;          // playback ratio, already snapped
+        float gain = 0.0f;           // grain::gainFor at trigger time
+        uint32_t order = 0;          // trigger sequence, for stealing the oldest
+    };
+    Grain grains_[kMaxGrains];
+    static constexpr int32_t kGrainWindowTable = 1024;
+    std::vector<float> hann_;  // kGrainWindowTable + 1 points, so index kGrainWindowTable is valid
+    std::atomic<float> grainSize_;
+    std::atomic<float> grainDensity_;
+    std::atomic<float> grainSpray_;
+    // The key (see setKey) as one 64-bit word: root in bits 44..47, the
+    // scale mask in 32..43, the source note's float bits in 0..31. One
+    // atomic, not three, so a grain triggered - or the control-rate copy
+    // taken - while setKey is mid-way never sees the new note under the
+    // old root and mask; a 64-bit atomic is lock-free where this runs.
+    std::atomic<uint64_t> key_;
+    static uint64_t packKey(int32_t root, uint32_t mask, float sourceMidi);
+    static void unpackKey(uint64_t word, int32_t& root, uint32_t& mask, float& sourceMidi);
+    // KEY for the loop (see setKeySnap). The atomic crosses from the UI;
+    // the audio thread copies it and the key's word into plain fields
+    // once per kControlInterval, alongside the filter's coefficients,
+    // rather than reading two atomics per sample.
+    std::atomic<bool> keySnapLoop_;
+    bool keySnapOn_ = false;
+    int32_t keyRootC_ = 0;
+    uint32_t keyMaskC_ = grain::kChromaticMask;
+    float keySourceC_ = 0.0f;
+    ParameterSmoother grainPosition_, grainPitchAxis_;
+    // The modulators' offsets, UI -> audio as atomics like the corners and
+    // the knobs; applyControl reads them into `mod_` once per control frame
+    // so a frame sees one consistent set. The last four are GRAIN's, held
+    // in grainMod_ for triggerGrain (SIZE, DENSITY, SPRAY) and folded into
+    // grainPosition_'s target (POSITION) - a modulated position glides
+    // through the same smoother the finger does.
+    std::atomic<float> modulation_[kModTargets];
+    float grainMod_[4] = {};  // audio thread only: size, density, spray, position offsets as of the last frame
+    // 0..1 toward the next trigger. Starts (and is reset on every touch-
+    // down) at 1 so the first grain fires on the very next sample rather
+    // than a full period later - at DENSITY's floor that would be half a
+    // second of silence after a tap, which is a drum pad that does not hit.
+    double grainClock_ = 1.0;
+    uint32_t grainRng_ = 0x67721A1Eu;  // GrainVoice.kt's own seed: reproducible scatter, nothing secret
+    uint32_t grainOrder_ = 0;
+    bool grainMode_ = false;  // audio thread's view of latest_.mode == 4; a change empties the pool
 
     // Pre-sized scratch so the callback never allocates; larger bursts render in chunks.
     static constexpr size_t kScratchFrames = 4096;

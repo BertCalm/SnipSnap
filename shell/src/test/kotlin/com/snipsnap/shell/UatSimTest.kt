@@ -117,7 +117,7 @@ class UatSimTest {
         val root = tmp("j1")
         var taps = 0
 
-        step(++taps, "App opens on KITS. Kits on disk: ${KitStore.list(root).size}")
+        step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
         note("the only primary button reads: NEW KIT ▸ STARTERS")
 
@@ -275,7 +275,7 @@ class UatSimTest {
         }
 
         val send = review.sendToGrid()
-        say("  SEND TO GRID → ${send.sliceCount} pads, choke=${send.chokeSet}")
+        say("  SEND TO PADS → ${send.sliceCount} pads, choke=${send.chokeSet}")
 
         // melodic door
         val mel = review.melodicPreview()
@@ -551,18 +551,45 @@ class UatSimTest {
     private fun j10ChromeAndCopy() {
         say("")
         say("── J10: CHROME · the frame the whole app is read through ──")
-        // Twelve tabs, in `Chrome.kt`'s own `MENU_ITEMS` order — this list
+        // Twelve tabs, in `Chrome.kt`'s own menu order — this list
         // was missing ORBIT (September UAT never added it here after it
-        // shipped) and had EXPORT last, both stale: `MENU_ITEMS` reordered
+        // shipped) and had EXPORT last, both stale: that order put
         // EXPORT up beside TAPE/CHOP/KIT so step four of the app's own
         // stated loop ("TAPE ▸ CHOP ▸ KIT ▸ EXPORT") lands inside the
         // visible run instead of past the row's fold (truncation pass), and
         // KIT then moved after CHOP so the four flow tabs read in exactly
         // that order rather than KIT ▸ TAPE ▸ CHOP ▸ EXPORT.
-        val tabs = listOf("KITS", "TAPE", "CHOP", "KIT", "EXPORT", "PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SETUP", "HELP")
+        // SHELF, not KITS (J14): the shelf's tab was one letter from KIT,
+        // which takes 11 of App.kt's 24 direct navigations. Five glyphs
+        // rather than four, so this row is 6dp wider than it was - which
+        // is exactly what this simulation is here to keep honest.
+        //
+        // J12: the tabs are written out in their four groups because the
+        // row now draws a `Layout.MENU_GROOVE_W` rule at each of the three
+        // seams between them, and a seam costs width like anything else. A
+        // simulation that kept one flat list would go on reporting a row
+        // that fits more than it does - which is the one thing this whole
+        // function exists not to do. (Still a hand-copy of `Chrome.kt`'s
+        // `MENU_GROUPS`: `:shell` cannot see `:app`, so nothing but a
+        // reader holds the two together.)
+        val groups = listOf(
+            listOf("SHELF"),
+            listOf("TAPE", "CHOP", "KIT", "EXPORT"),
+            listOf("PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP"),
+            listOf("SETUP", "HELP"),
+        )
+        val tabs = groups.flatten()
         // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
-        val width = tabs.sumOf { it.length * perChar + 8 }
+        // Each tab costs its own width, and the first tab of each group
+        // after the first also carries the rule in front of it - so one
+        // walk over this answers what fits, seams included.
+        val costs = groups.flatMapIndexed { g, group ->
+            group.mapIndexed { i, tab ->
+                tab to (tab.length * perChar + 8 + if (g > 0 && i == 0) Layout.MENU_GROOVE_W.toDouble() else 0.0)
+            }
+        }
+        val width = costs.sumOf { it.second }
         // What the row actually has to draw in: the frame's outer margin,
         // the window frame's own 6dp border each side, and - since finding
         // 10 - the gutter MenuRow keeps clear at each end for its arrows.
@@ -573,16 +600,40 @@ class UatSimTest {
         val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - windowFrame - gutters
         say("  menu row: ${tabs.size} tabs, estimated ${"%.0f".format(width)}dp wide")
         say("  usable width at the ${Layout.FRAME_W}dp design frame: ${usable}dp")
-        var run = 0.0
-        val visible = tabs.takeWhile { run += it.length * perChar + 8; run <= usable }
+        fun fitting(widths: List<Pair<String, Double>>): List<String> {
+            var run = 0.0
+            return widths.takeWhile { (_, cost) -> run += cost; run <= usable }.map { it.first }
+        }
+        val visible = fitting(costs)
         note("fits on screen: ${visible.joinToString(" ")}")
+        // What the seams cost, walked rather than claimed. `MENU_GROOVE_W`'s
+        // own note says 2dp buys the grouping for nothing and 4dp would
+        // start spending tabs; a number picked on that argument is only
+        // worth the argument if something recomputes it. So the row is
+        // walked a second time with the rules taken out, and if the answer
+        // moved that is a finding - this harness never asserts (see the
+        // class KDoc: a journey that ends badly is reported, not thrown),
+        // and a tab that stopped fitting is exactly what it reports.
+        val seamless = fitting(tabs.map { it to it.length * perChar + 8 })
+        val seamCost = (groups.size - 1) * Layout.MENU_GROOVE_W
+        if (seamless == visible) {
+            note("the ${groups.size - 1} group rules (J12) cost ${seamCost}dp and change nothing about what fits - the grouping is drawn for free")
+        } else {
+            finding(
+                "J12",
+                "the ${groups.size - 1} group rules cost ${seamCost}dp and a tab fell off the visible run: " +
+                    "the row shows ${visible.joinToString(" ")} where without them it showed " +
+                    "${seamless.joinToString(" ")}. MENU_GROOVE_W was chosen at the width where the " +
+                    "separators are free; either the tabs grew or that width did.",
+            )
+        }
         note("reached by dragging the row, with a ▸ saying so: ${(tabs - visible.toSet()).joinToString(" ")}")
         note(
             "the row is ${Layout.MENU_ROW_H}dp and each tab fills it, against " +
                 "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
                 "while there are tabs that way (finding 10, fixed)",
         )
-        note("status bar cells: WHERE YOU ARE | KITS: n | a busy line, or the open kit's name")
+        note("status bar cells: WHERE YOU ARE | SHELF: n | a busy line, or the open kit's name")
         note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,

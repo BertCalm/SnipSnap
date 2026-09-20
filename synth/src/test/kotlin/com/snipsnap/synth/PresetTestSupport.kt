@@ -1,12 +1,14 @@
 package com.snipsnap.synth
 
+import kotlin.math.sqrt
+
 /**
  * Shared machinery for every `<Engine>PresetsTest` — one copy, not seven.
  * Originally lived duplicated inside `ThumpPresetsTest`; pulled out here
- * once six more engines needed the same blocklist, so the naming rule is
- * defined in exactly one place (`docs/SYNTH_UPGRADE.md`'s own
- * recurring-defect shape is one quantity computed twice — this is that
- * shape, avoided).
+ * once six more engines needed the same blocklist and spread check, so the
+ * naming rule and the distance metric are each defined in exactly one
+ * place (`docs/SYNTH_UPGRADE.md`'s own recurring-defect shape is one
+ * quantity computed twice — this is that shape, avoided).
  */
 internal object PresetTestSupport {
 
@@ -28,4 +30,16 @@ internal object PresetTestSupport {
             """|linn(drum)?|oberheim|simmons|emu|e-mu|fairlight""" +
             """|tr-?\d{3}|cr-?78|sp-?1200|sp-?12|dmx|acid""",
     )
+
+    /**
+     * RMS distance over the macro vector (every voice's macros are 0..1, so
+     * this is dimension-agnostic). A list that clusters — twelve names for
+     * one sound — is the likeliest way a preset pass goes bad quietly: it
+     * looks complete and plays dull.
+     */
+    fun rmsDistance(a: Map<String, Float>, b: Map<String, Float>): Float {
+        val keys = a.keys
+        val sumSq = keys.sumOf { k -> val d = (a.getValue(k) - b.getValue(k)).toDouble(); d * d }
+        return sqrt(sumSq / keys.size).toFloat()
+    }
 }

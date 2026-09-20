@@ -28,6 +28,12 @@ object NativeSurface {
         sampleA: Float, sampleB: Float, sampleC: Float, sampleD: Float, gate: Boolean,
     )
     external fun setCorner(handle: Long, index: Int, pitch: Float, cutoff: Float, resonance: Float, drive: Float, crush: Float, echo: Float, spring: Float)
+    external fun setGrain(handle: Long, size: Float, density: Float, spray: Float)
+    external fun setKey(handle: Long, rootSemitone: Int, scaleMask: Int, sourceMidi: Float)
+    external fun setKeySnap(handle: Long, on: Boolean)
+    external fun setEchoTime(handle: Long, seconds: Float)
+    external fun setSwarm(handle: Long, voices: Int, detune: Float)
+    external fun setModulation(handle: Long, offsets: FloatArray)
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
     external fun stopPrint(handle: Long): FloatArray?

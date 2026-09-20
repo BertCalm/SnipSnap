@@ -296,7 +296,7 @@ class KitBuilderModel private constructor(
 
     /**
      * A chop's arrangement landed onto one [bank] of THIS kit, in the
-     * order SEND TO GRID would have laid it, instead of into a new kit:
+     * order SEND TO PADS would have laid it, instead of into a new kit:
      * the second page a user builds by hand rather than the twins tray.
      * The bank must be empty (nothing here decides which of two sounds
      * a slot keeps), and a bank holds sixteen, so an arrangement wider
@@ -321,7 +321,7 @@ class KitBuilderModel private constructor(
             } else {
                 // A folded pad (CHOP's FOLD DOUBLES): every take end to end
                 // through the same door, then the chain that steps through
-                // them — what KitAssembler does for SEND TO GRID.
+                // them — what KitAssembler does for SEND TO PADS.
                 val all = listOf(pad.snip) + pad.takes
                 var at = 0L
                 val boundaries = all.map { t -> at.also { at += t.frameCount } }
@@ -632,10 +632,13 @@ class KitBuilderModel private constructor(
 
     /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
     class Far(val match: com.snipsnap.synth.Desample.Match) :
-        IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))
+        IllegalArgumentException(
+            "no patch is near: the nearest is ${match.patch.engine.lowercase()}/${match.patch.voiceName.lowercase()} " +
+                "at distance %.2f".format(java.util.Locale.ROOT, match.distance),
+        )
 
     /**
-     * DE-SAMPLE: the pad replaced by the nearest THUMP patch's own render,
+     * DE-SAMPLE: the pad replaced by the nearest synth patch's own render,
      * the patch riding the pad as its recipe so the sound is a synth pad
      * from here on - bin-backed like every rewrite. The search starts on
      * the voices kindred to the pad's class. A far match ([Far]) is
@@ -1253,7 +1256,7 @@ class KitBuilderModel private constructor(
         }
 
         /**
-         * SEND TO GRID lands here: the chop screen's arrangement becomes a
+         * SEND TO PADS lands here: the chop screen's arrangement becomes a
          * whole kit folder in one step, via the same [KitAssembler] the CLI
          * and the generators use.
          */

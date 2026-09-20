@@ -10,15 +10,18 @@ arrive. This file names the two on-ramps.
 Drop isolated one-shot recordings here, named by what they are:
 
 ```
-reference/calibration/kick 01.wav
-reference/calibration/kick phone far.wav
-reference/calibration/snare 01.wav
-reference/calibration/hatclosed 01.wav
+reference/calibration/kick_01.wav
+reference/calibration/kick_phone far.wav
+reference/calibration/snare_01.wav
+reference/calibration/hatclosed_01.wav
 ```
 
-The first word of the filename is the label — one of `kick`, `snare`,
-`clap`, `hatclosed`/`closedhat`, `hatopen`/`openhat`, `tom`, `perc`,
-`tonal`, `loop`. The calibration harness
+The word before the first underscore is the label — one of `kick`,
+`snare`, `clap`, `hatclosed`/`closedhat`, `hatopen`/`openhat`, `tom`,
+`perc`, `tonal`, `loop`. (An underscore, not a space: the harness reads
+`substringBefore('_')`, so `kick 01.wav` is one long unknown word and
+fails the run as unlabeled. This file used to show spaces.) The
+calibration harness
 (`CalibrationCorpusTest`) classifies every file, prints a per-file
 report with the feature numbers a threshold gets moved by, a confusion
 matrix, and an accuracy line — and fails under 60%, the "broken on
@@ -29,6 +32,52 @@ The most valuable recordings are **each drum alone**: the Live III
 playing just its kick, just its snare, and so on — once close to the
 phone and once across the room. That turns threshold *reasoning* into
 threshold *fitting*.
+
+## From the phone: SEND TO BENCH
+
+The other on-ramp is the app's own teach log. With TEACH THE MACHINE on
+(SETUP), every chip corrected on CHOP is logged as a feature vector plus
+the human's label into that kit's folder — never audio — and, since the
+WORKSHOP's CONFIRM ALL, so is every chip the human vouched for: the same
+line, its label the machine's own verdict. Beside it, a star given to the
+cuts lands as a rating with the bench's settings (`cuts.jsonl`). Until
+the WORKSHOP existed (`docs/WORKSHOP.md`) none of it left the phone. Now
+it does, on purpose: open the workshop (seven taps on SETUP's title),
+press **SEND TO BENCH**, and the chooser hands you
+`SnipSnap Bench <date>.zip`. Inside are `overrides.jsonl` and
+`cuts.jsonl`, every log on the shelf merged (the bin included, torn lines
+dropped), `notes.jsonl` when the title bar's NOTE chip was used (the
+tester's own words, stamped with the screen, the kit, the pad and the
+time — for a person, never for a harness: the manifest renders each as a
+`→` line to paste into `docs/BENCH.md`), `presets.json` when SYNTH's
+SAVE PRESET was used (the player's saved patches, rendered in the
+manifest as roster lines for `synth/`'s tables — for the roster's own
+tests to judge, nothing here reads them), and a `manifest.txt` naming
+which kit gave what. Drop the first two files into `reference/calibration/`
+and run
+
+```
+./gradlew :shell:test --tests '*TeachLogTest*' --tests '*CutRatingsTest*'
+```
+
+The first prints every label the current rules still disagree with, with
+the features behind each, and counts corrections and confirmations apart
+— so with confirmations in the file the agreement line is the rules'
+accuracy on real material. The second sums the cut ratings by setting,
+best first, with what each setting cost in tries and hand edits.
+
+## From the phone: LABEL THIS HIT
+
+The WAVs themselves come the same way, by their own door. On any pad's
+sheet with the WORKSHOP open, the BENCH box offers the nine classes as
+chips; a tap copies the pad's WAV into `Calibration/` beside the kits,
+named by the rule above — `kick_Break Kit_A01.wav` — and **SEND HITS TO
+BENCH** on SETUP hands that folder to the chooser as
+`SnipSnap Hits <date>.zip`. It is the only button in the app that sends
+audio, and its note says so. Unzip, copy the WAVs into this folder, and
+`CalibrationCorpusTest` scores them on the next run. A render (a pad
+whose recipe is a synth patch) is refused at the tap: the thresholds
+already know the renders.
 
 ## The capture profile: context, not thresholds
 

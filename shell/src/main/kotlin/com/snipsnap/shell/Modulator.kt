@@ -1,0 +1,290 @@
+package com.snipsnap.shell
+
+import com.snipsnap.kit.KitPreview
+import kotlin.math.PI
+import kotlin.math.exp
+import kotlin.math.floor
+import kotlin.math.sin
+
+/**
+ * SURFACE's modulators: what lets a sound keep moving while the finger is
+ * elsewhere, and what makes a print a performance rather than a loop.
+ *
+ * Two slots ([SLOTS]), each a [Shape] at a tempo-snapped rate with a depth,
+ * aimed at one [Target] - one of the seven macros, one of GRAIN's own
+ * knobs, or the finger itself ([Target.X], [Target.Y]). Both may aim at
+ * the same target, which is how a macro gets two. A slot's output is a
+ * signed offset added to whatever the mode and the finger already say for
+ * that target, before its own 0..1 door - the engine's for the macros and
+ * the knobs (`SurfaceEngine::applyControl`), [TouchSurface.nudged] for the
+ * finger - so a sine on CUTOFF swings around the finger's cutoff in XY,
+ * around the corner blend's in MORPH, and around "wide open" in GRAIN; a
+ * ramp on POSITION walks the cloud through the sample on its own; and a
+ * RANDOM on X lands the loop on a new pitch every bar, or on both X and Y
+ * in MORPH jumps between corners on the bar - a sequencer without a
+ * sequencer. The finger is never overridden, only nudged.
+ *
+ * Everything here is pure and runs at screen rate in the surface's frame
+ * loop; the engine's own per-sample smoother (`ParameterSmoother`) turns
+ * the 60 Hz steps into a glide, exactly as it does for the finger - a
+ * modulator is just one more writer of targets, which is why this costs
+ * the engine nothing new.
+ *
+ * Time is seconds from one origin shared by every slot, so two slots at
+ * related rates stay locked to each other and to the bar. RANDOM is a
+ * sample-and-hold, one value per cycle, drawn from the cycle's own index -
+ * deterministic, so the same bar always throws the same die, and a print
+ * made twice moves the same way.
+ *
+ * FOLLOW and DUCK run on the room instead of the bar: the live input
+ * level, whatever the phone is hearing through the mic or APP AUDIO,
+ * smoothed by a [Follower] so a clap opens a target at once and lets it
+ * back down over a quarter of a second. FOLLOW pushes the target up with
+ * the room and DUCK pushes it down - a sidechain from the room, the
+ * surface breathing under the kick of the track playing in the next app.
+ */
+object Modulator {
+
+    /**
+     * What a slot moves. The first seven are the engine's macros in
+     * `MacroState` order and the next four GRAIN's knobs, live only in that
+     * mode: those eleven cross the bridge as one array, by ordinal
+     * ([ENGINE_TARGETS], [engineOffsets]). [X] and [Y] are the finger
+     * itself - the position every mode reads, and the sample blend with it
+     * - nudged on this side of the bridge ([TouchSurface.nudged]) before the
+     * engine ever sees it, so they never cross at all. Appended last on
+     * purpose: the engine takes its eleven by ordinal, and a new target in
+     * front of POSITION would silently retarget every slot ever saved.
+     */
+    enum class Target(
+        /** Crosses the bridge as one of the engine's offsets ([engineOffsets]); false for the two the surface applies itself. */
+        val onEngine: Boolean = true,
+    ) {
+        PITCH, CUTOFF, RESONANCE, DRIVE, CRUSH, ECHO, SPRING, SIZE, DENSITY, SPRAY, POSITION,
+
+        /** The finger's own X, in every mode: pitch in XY, POSITION in GRAIN, the corner blend and the sample blend in MORPH and VECTOR. */
+        X(onEngine = false),
+
+        /** The finger's own Y: cutoff in XY, the pitch axis in GRAIN, the corner blend in MORPH and VECTOR. */
+        Y(onEngine = false),
+    }
+
+    /**
+     * How many of [Target]'s entries the engine takes, and that they are
+     * the first ones: `SurfaceEngine.MOD_TARGETS` (Kotlin) and
+     * `kModTargets` (`SurfaceEngine.h`) are this number by hand, and a test
+     * holds it at eleven so a change here cannot drift from them unnoticed.
+     */
+    val ENGINE_TARGETS: Int = Target.entries.count { it.onEngine }
+
+    /**
+     * The engine's slice of [offsets]'s array: the first [ENGINE_TARGETS],
+     * by ordinal. What `SurfaceEngine.setModulation` is handed; the finger's
+     * two stay behind for [TouchSurface.nudged].
+     */
+    fun engineOffsets(offsets: FloatArray): FloatArray {
+        require(offsets.size == Target.entries.size) { "one offset per target (${Target.entries.size}), got ${offsets.size}" }
+        return offsets.copyOf(ENGINE_TARGETS)
+    }
+
+    /**
+     * What a slot runs on. SINE, RAMP and RANDOM run on the bar clock;
+     * [FOLLOW] and [DUCK] run on the room ([followsRoom]) - the live input
+     * level, up with it or down with it - and RATE means nothing to them.
+     * Appended last: a shape is stored by name, but the MOD row cycles
+     * them by ordinal and a build from before should step the same way.
+     */
+    enum class Shape(
+        /** Reads the room's level ([Follower]) instead of the bar clock. */
+        val followsRoom: Boolean = false,
+        /** Plays the kit's recorded [Gesture] over its own bars instead of RATE's cycle. */
+        val playsGesture: Boolean = false,
+    ) {
+        SINE, RAMP, RANDOM,
+
+        /** The room's level, one-sided: silence is exactly the finger, a loud room pushes up to a whole [HALF_SWING] at full depth. */
+        FOLLOW(followsRoom = true),
+
+        /** [FOLLOW] downwards: the target closes as the room gets loud. */
+        DUCK(followsRoom = true),
+
+        /**
+         * The kit's recorded finger ([Gesture]), looping over its own bars
+         * from the shared origin: aimed at X it is the finger's X, at Y its
+         * Y, at anything else its Y. Bipolar around the pad's centre, so at
+         * full depth and rest it reproduces the finger exactly; with no
+         * gesture recorded it is nothing.
+         */
+        GESTURE(playsGesture = true),
+    }
+
+    /** [Follower]'s attack: a clap is heard within a frame or two. */
+    const val ATTACK_SECONDS = 0.01f
+
+    /** [Follower]'s release: the target lets go over about a quarter of a second, a sidechain's own feel. */
+    const val RELEASE_SECONDS = 0.25f
+
+    /**
+     * The room's level as [Shape.FOLLOW] and [Shape.DUCK] hear it:
+     * `MicSessionService.level`'s per-block peak, smoothed with a fast
+     * [attackSeconds] and a slower [releaseSeconds] (one pole each way), so
+     * a hit opens a target at once and the target lets go gradually rather
+     * than flickering with the raw peak. Stepped once a frame from the
+     * surface's loop with the frame's own length. A level that is not a
+     * number is ignored and the last value held; a frame of no length, or
+     * one that is not a number, changes nothing; the value never leaves
+     * 0..1. A ring that is not listening reports a level of 0, so with
+     * nothing armed this sits at rest and the shapes are exactly nothing.
+     */
+    class Follower(
+        private val attackSeconds: Float = ATTACK_SECONDS,
+        private val releaseSeconds: Float = RELEASE_SECONDS,
+    ) {
+        init {
+            require(attackSeconds.isFinite() && attackSeconds > 0f) { "attack is a positive number of seconds, got $attackSeconds" }
+            require(releaseSeconds.isFinite() && releaseSeconds > 0f) { "release is a positive number of seconds, got $releaseSeconds" }
+        }
+
+        /** The room as heard now, 0..1. */
+        var value: Float = 0f
+            private set
+
+        /** One frame of [dtSeconds] hearing [level]; returns the new [value]. */
+        fun step(level: Float, dtSeconds: Float): Float {
+            if (!level.isFinite() || !dtSeconds.isFinite() || dtSeconds <= 0f) return value
+            val x = level.coerceIn(0f, 1f)
+            val tau = if (x > value) attackSeconds else releaseSeconds
+            val k = 1f - exp(-dtSeconds / tau)
+            value = (value + k * (x - value)).coerceIn(0f, 1f)
+            return value
+        }
+
+        fun reset() {
+            value = 0f
+        }
+    }
+
+    /** How many slots the surface has; a fixed pool, not one per macro - two aimed at one target is "two per macro". */
+    const val SLOTS = 2
+
+    /** RATE's choices, as a fraction of a bar at the kit's tempo. */
+    val RATES: List<Float> = listOf(1f / 16f, 1f / 8f, 1f / 4f, 1f / 2f, 1f, 2f, 4f)
+
+    /** The index into [RATES] a fresh slot starts at: one bar. */
+    const val DEFAULT_RATE_INDEX = 4
+
+    /**
+     * DEPTH 1 swings half the target's whole travel either way - the finger
+     * in the middle of the pad then reaches both rails. Bipolar rather than
+     * one-sided so a modulator at rest sits *on* the finger, not above it.
+     */
+    const val HALF_SWING = 0.5f
+
+    data class Slot(
+        val target: Target = Target.CUTOFF,
+        val shape: Shape = Shape.SINE,
+        val rateIndex: Int = DEFAULT_RATE_INDEX,
+        /** 0 is off - the slot exists but moves nothing. */
+        val depth: Float = 0f,
+    ) {
+        init {
+            require(rateIndex in RATES.indices) { "rate is an index into RATES (0..${RATES.lastIndex}), got $rateIndex" }
+            require(depth.isFinite() && depth in 0f..1f) { "depth is 0..1, got $depth" }
+        }
+    }
+
+    /** Every slot present and silent: what a kit has before the MOD row is touched. */
+    val OFF: List<Slot> = List(SLOTS) { Slot() }
+
+    fun rateLabel(rateIndex: Int): String {
+        val bars = RATES[rateIndex]
+        return if (bars >= 1f) Copy.countOf(bars.toInt(), "BAR", "BARS") else "1/${(1f / bars).toInt()} BAR"
+    }
+
+    /**
+     * One cycle of [RATES] at [bpm], in seconds - one bar of [PrintLength]'s
+     * own arithmetic, scaled by the fraction, so BARS on PRINT and RATE here
+     * cannot disagree about how long a bar is. The tempo is the one the
+     * kit is played at ([KitPreview.playedBpm]): the stand-in GROOVE uses
+     * with none, and held to GROOVE's own range, so a file that says 1 BPM
+     * counts bars here the way GROOVE would play them, not an hour long.
+     */
+    fun periodSeconds(rateIndex: Int, bpm: Float?): Float =
+        PrintLength.seconds(1, KitPreview.playedBpm(bpm)) * RATES[rateIndex]
+
+    /**
+     * The wave, -1..1, at [phase] 0..1 of cycle number [cycle]. SINE starts
+     * at zero and rises; RAMP rises from -1 to 1 and drops back; RANDOM
+     * holds one value for the whole cycle, drawn from [cycle] and [seed]
+     * so it is the same value every time that cycle comes round. FOLLOW
+     * and DUCK ignore the clock and read [follow], the room's level 0..1
+     * ([Follower.value]): FOLLOW is the level itself, DUCK its negative -
+     * one-sided, so a silent room is exactly the finger. A [follow] that
+     * is not a number, or a shape that does not listen, reads it as 0.
+     * GESTURE has no wave: it plays the kit's [Gesture], which only
+     * [offset] is handed, so here it is silence - 0, the same as no gesture.
+     */
+    fun wave(shape: Shape, phase: Float, cycle: Long, seed: Int = 0, follow: Float = 0f): Float {
+        val p = phase.coerceIn(0f, 1f)
+        val room = if (follow.isFinite()) follow.coerceIn(0f, 1f) else 0f
+        return when (shape) {
+            Shape.SINE -> sin(2.0 * PI * p).toFloat()
+            Shape.RAMP -> 2f * p - 1f
+            Shape.RANDOM -> hash01(cycle, seed) * 2f - 1f
+            Shape.FOLLOW -> room
+            Shape.DUCK -> -room
+            Shape.GESTURE -> 0f
+        }
+    }
+
+    /**
+     * [slot]'s offset at [seconds] from the shared origin: the wave at its
+     * rate, scaled by depth and [HALF_SWING]. Exactly 0 at depth 0 whatever
+     * the time, so an unused slot changes nothing - not even by float dust.
+     */
+    fun offset(slot: Slot, seconds: Double, bpm: Float?, seed: Int = 0, follow: Float = 0f, gesture: Gesture? = null): Float {
+        if (slot.depth <= 0f) return 0f
+        val t = if (seconds.isFinite() && seconds > 0.0) seconds else 0.0
+        if (slot.shape.playsGesture) {
+            // The gesture's own length, not RATE's: [Gesture.bars] bars at
+            // this tempo, from the same origin every slot counts from, so
+            // it loops on the bar line. (x - 0.5) * 2 is the wave, so at
+            // full depth the offset is x - 0.5: rest plus that is x itself.
+            val g = gesture ?: return 0f
+            val length = periodSeconds(DEFAULT_RATE_INDEX, bpm).toDouble() * g.bars
+            val phase = ((t / length) - floor(t / length)).toFloat()
+            val v = if (slot.target == Target.X) g.x(phase) else g.y(phase)
+            return (v - 0.5f) * 2f * slot.depth * HALF_SWING
+        }
+        val period = periodSeconds(slot.rateIndex, bpm).toDouble()
+        val cycles = t / period
+        val cycle = floor(cycles)
+        val phase = (cycles - cycle).toFloat()
+        return wave(slot.shape, phase, cycle.toLong(), seed, follow) * slot.depth * HALF_SWING
+    }
+
+    /**
+     * Every slot summed onto its target, one float per [Target] in ordinal
+     * order, clamped to -1..1 - the array the engine adds to its macros.
+     * A slot's own index is its RANDOM seed, so two RANDOM slots on one
+     * target throw two dice rather than the same one twice.
+     */
+    fun offsets(slots: List<Slot>, seconds: Double, bpm: Float?, follow: Float = 0f, gesture: Gesture? = null): FloatArray {
+        val out = FloatArray(Target.entries.size)
+        slots.forEachIndexed { i, slot ->
+            val t = slot.target.ordinal
+            out[t] = (out[t] + offset(slot, seconds, bpm, seed = i, follow = follow, gesture = gesture)).coerceIn(-1f, 1f)
+        }
+        return out
+    }
+
+    /** A 0..1 value from (cycle, seed), spread well enough that neighbouring cycles do not walk. */
+    private fun hash01(cycle: Long, seed: Int): Float {
+        var x = cycle * -7046029254386353131L + seed * 0x9E3779B97F4A7C15uL.toLong() + 0x2545F4914F6CDD1DL
+        x = x xor (x ushr 33)
+        x *= -49064778989728563L
+        x = x xor (x ushr 29)
+        // 24 bits: exact in a float, and never quite 1.
+        return ((x ushr 40) and 0xFFFFFF).toFloat() / 16777216f
+    }
+}

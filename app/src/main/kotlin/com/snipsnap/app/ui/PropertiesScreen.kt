@@ -53,6 +53,21 @@ import com.snipsnap.shell.Schemes
  *   filesystem (see `App`'s own note), so the heading and the path are
  *   drawn together once it is known rather than a heading over a guess.
  * @param cardName the card currently held, or null when none is.
+ *
+ * The WORKSHOP (`docs/WORKSHOP.md`) sits at the very foot, below HELP, and
+ * only while [workshopOpen]: HELP is the door a player must find; this is
+ * the one a player never needs. [onKnock] is every tap on the title —
+ * `App` counts them and decides when the seventh opens it, so this screen
+ * holds no knock state of its own.
+ *
+ * @param workshopOpen whether the WORKSHOP section shows.
+ * @param onKnock a tap on the TAPE PROPERTIES title.
+ * @param onCloseWorkshop CLOSE THE WORKSHOP.
+ * @param onSendToBench SEND TO BENCH: every teach log on the phone, packed
+ *   for the chooser.
+ * @param onSendHitsToBench SEND HITS TO BENCH: the hits labelled on pad
+ *   sheets, as audio - the one button that sends sound, under its own
+ *   note, so SEND TO BENCH's never-audio promise stays whole.
  */
 @Composable
 fun PropertiesScreen(
@@ -64,6 +79,11 @@ fun PropertiesScreen(
     filesWhere: String?,
     cardName: String?,
     onHelp: () -> Unit,
+    workshopOpen: Boolean,
+    onKnock: () -> Unit,
+    onCloseWorkshop: () -> Unit,
+    onSendToBench: () -> Unit,
+    onSendHitsToBench: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Column(
@@ -72,7 +92,14 @@ fun PropertiesScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText("TAPE PROPERTIES", TapeType.display, scheme.ink.tape)
+        // The knock (docs/WORKSHOP.md): seven taps here, inside two seconds
+        // of each other, open the WORKSHOP at the foot of this screen. The
+        // node is labelled with its own text, never null — LoopGrid's note
+        // on `tapeClick(label = null)` says why a nameless clickable is a
+        // defect, and a hidden door is not an excuse for one.
+        Box(Modifier.tapeClick(label = "TAPE PROPERTIES", onClick = onKnock)) {
+            TapeText("TAPE PROPERTIES", TapeType.display, scheme.ink.tape)
+        }
 
         Column(
             Modifier
@@ -110,10 +137,10 @@ fun PropertiesScreen(
         }
         TapeText(Copy.TEACH_CONSENT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText(
-            "WITH IT ON, EVERY CHIP YOU CORRECT ON CHOP IS LOGGED AS A FEATURE VECTOR AND A LABEL IN THAT KIT'S FOLDER.",
+            "WITH IT ON, EVERY CHIP YOU CORRECT OR CONFIRM ON CHOP IS LOGGED AS A FEATURE VECTOR AND A LABEL IN THAT KIT'S FOLDER, AND A STAR YOU GIVE THE CUTS AS A RATING WITH THE BENCH'S SETTINGS.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
-            maxLines = 3,
+            maxLines = 4,
         )
 
         // ---- What the app already knew and never said (finding 23) ----
@@ -161,6 +188,49 @@ fun PropertiesScreen(
             contentAlignment = Alignment.Center,
         ) {
             TapeText("HELP ▸", TapeType.pixel, scheme.amber.tape)
+        }
+
+        // The WORKSHOP (docs/WORKSHOP.md): the developer's tools, shown only
+        // once the knock on the title has opened it, and below HELP on
+        // purpose. Everything here adds a control; nothing here hides one.
+        if (workshopOpen) {
+            TapeText("WORKSHOP", TapeType.display, scheme.ink.tape)
+            TapeText(Copy.WORKSHOP_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .raisedBevel(scheme)
+                    .tapeClick(label = "SEND TO BENCH", onClick = onSendToBench),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("SEND TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
+            }
+            TapeText(Copy.SEND_TO_BENCH_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 7)
+            // The one button that sends audio (docs/WORKSHOP.md, WS3), its
+            // own note under it every time, never folded into the button
+            // above: two zips, two promises.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .raisedBevel(scheme)
+                    .tapeClick(label = "SEND HITS TO BENCH", onClick = onSendHitsToBench),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("SEND HITS TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
+            }
+            TapeText(Copy.SEND_HITS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .raisedBevel(scheme)
+                    .tapeClick(label = "CLOSE THE WORKSHOP", onClick = onCloseWorkshop),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("CLOSE THE WORKSHOP", TapeType.pixel, scheme.ink2.tape)
+            }
         }
     }
 }

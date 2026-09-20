@@ -119,6 +119,14 @@ fun SnipsScreen(
     onPickPadFor: (File) -> Unit,
     /** → LOOP: this snip becomes one track of the six-track grid. The screen stays open. */
     onSendToLoop: (SnipStore.Info) -> Unit,
+    /**
+     * SHARE: the snip leaves the app, through the system chooser.
+     *
+     * The one outbound route from this screen. Everything else here sends a
+     * snip further into the app - a pad, the tape, a loop track - which is
+     * what made a bounce that landed in SNIPS a dead end.
+     */
+    onShare: (SnipStore.Info) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -209,7 +217,7 @@ fun SnipsScreen(
         voice = null
         playingFile = null
     }
-    // Leaving the screen (◄ KITS, or SNIPS closing under a → PAD/→ TAPE
+    // Leaving the screen (◄ SHELF, or SNIPS closing under a → PAD/→ TAPE
     // navigation) must not leave a voice streaming into a screen that's
     // gone — the same contract TapeScreen's own DisposableEffect(voice)
     // keeps for its one long-lived voice.
@@ -286,7 +294,7 @@ fun SnipsScreen(
 
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
     var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
-    // Mirrors the header's own ◄ KITS chip — disabled while either dialog
+    // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
     // is up so that dialog's own BackHandler below (composed only while
     // it's showing) is the one Back reaches first. Paired the same way
     // ConventionTest.kt's own law documents: while confirmDelete OR
@@ -338,7 +346,7 @@ fun SnipsScreen(
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), onClick = onBack)
+                HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 TapeText("SNIPS", TapeType.lcdHeader, scheme.lcdInk.tape)
                 Spacer(Modifier.weight(1f))
@@ -394,6 +402,7 @@ fun SnipsScreen(
                             onPickPad = { onPickPadFor(info.file) },
                             onOpenTape = { onOpenInTape(info.file) },
                             onSendLoop = { onSendToLoop(info) },
+                            onShare = { onShare(info) },
                             onRename = { renameTarget = info },
                             onDelete = { confirmDelete = info },
                         )
@@ -445,6 +454,7 @@ private fun SnipRow(
     onPickPad: () -> Unit,
     onOpenTape: () -> Unit,
     onSendLoop: () -> Unit,
+    onShare: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -504,7 +514,14 @@ private fun SnipRow(
         }
         // RENAME paired with DELETE — KitsScreen's own KitRow shape for the
         // same two actions.
+        // SHARE sits here rather than in the row above, which is already
+        // four buttons wide on a phone, and it sits at the FAR END from
+        // DELETE on purpose: the two are neighbours only by layout, and a
+        // mis-tap between "send this to someone" and "bin it" is the one
+        // slip on this row worth designing against. DELETE keeps the
+        // rightmost slot it has always had.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton("SHARE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onShare)
             ActionButton("RENAME", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onRename)
             DeleteButton(scheme, Modifier.weight(1f), onClick = onDelete)
         }

@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -81,9 +82,9 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.PadShape
-import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
+import com.snipsnap.shell.Audition
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
@@ -95,6 +96,7 @@ import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
+import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.RecipeReplay
@@ -104,6 +106,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.exp
@@ -161,6 +164,15 @@ fun PadSheetScreen(
     onSplice: (Int) -> Unit,
     /** STACK ▸: opens STACK THE TAKES scoped to this pad - its real prior takes as soft velocity zones, over the same history SPLICE reads. */
     onStack: (Int) -> Unit,
+    /**
+     * AUDITION ▸ (`docs/AUDITION_SPEC_2026_09.md`, decision 2): opens GROOVE
+     * with a comparison armed for this slot against its nearest `MAKE PAD ▸`
+     * sibling (`Audition.siblingsOf`) - the moment of indecision happens here,
+     * seconds after the second version was made, so this is one more button
+     * on the sheet rather than a navigation trip away from the work. Only
+     * offered when a sibling actually exists; see the card's own dimming.
+     */
+    onAudition: (Int) -> Unit = {},
     /** DO IT AGAIN: what COPY LAST TREATMENT last lifted, held by the caller so it survives a kit switch - PASTE reads it. */
     clipboard: RecipeReplay.Clip? = null,
     /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
@@ -184,7 +196,14 @@ fun PadSheetScreen(
      */
     onShelfAssetWritten: () -> Unit,
     appScope: CoroutineScope,
-    /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name), remembered per kit by the caller. */
+    /**
+     * The WORKSHOP is open (docs/WORKSHOP.md, WS3): the BENCH box - LABEL
+     * THIS HIT - draws at the foot of the sheet. No default, for the same
+     * reason [onShelfAssetWritten] has none: one call site, and a default
+     * would let a second one silently ship the box closed forever.
+     */
+    workshopOpen: Boolean,
+    /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name, or [HIT_BOX]), remembered per kit by the caller. */
     openBox: String? = null,
     onOpenBox: (String?) -> Unit = {},
 ) {
@@ -257,6 +276,14 @@ fun PadSheetScreen(
     var busy by remember(model) { mutableStateOf(false) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
+
+    // AUDITION ▸'s own gate: the nearest MAKE PAD ▸ sibling, if this pad has
+    // one - `minByOrNull { it.slot }` just picks a deterministic one when
+    // there are several ("DRONE 2" over "DRONE 3"); more than two candidates
+    // at a time is a knockout bracket (spec decision 3, v3), not this screen's
+    // job. Pure and cheap (an in-memory pad list), so it's read straight in
+    // composition rather than behind a LaunchedEffect.
+    val auditionSibling = remember(builtModel.kit, slot) { Audition.siblingsOf(builtModel.kit.pads, slot).minByOrNull { it.slot } }
 
     var voice by remember(model) { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(model) { onDispose { voice?.release() } }
@@ -773,6 +800,16 @@ fun PadSheetScreen(
         }
     }
 
+    // Set on a treatment tap, shown only while `busy`, cleared whenever any
+    // operation on this sheet finishes. One effect rather than a clear in
+    // each coroutine's `finally`: `busy` is shared by fourteen call sites in
+    // this file, and gating the display on it makes a stale value invisible
+    // rather than wrong.
+    var applyingSegment by remember(slot) { mutableStateOf<String?>(null) }
+    LaunchedEffect(busy) {
+        if (!busy) applyingSegment = null
+    }
+
     /**
      * TREATMENT: picking a segment on either row, or moving AMT (SMEAR is
      * handled separately — see [applySmear] above). Both whole-pad doors
@@ -818,16 +855,6 @@ fun PadSheetScreen(
      * is launched into [appScope], not this composable's own `scope` — same
      * fix, same reason, as [applySmear]'s own KDoc.
      */
-    // Set on a treatment tap, shown only while `busy`, cleared whenever any
-    // operation on this sheet finishes. One effect rather than a clear in
-    // each coroutine's `finally`: `busy` is shared by fourteen call sites in
-    // this file, and gating the display on it makes a stale value invisible
-    // rather than wrong.
-    var applyingSegment by remember(slot) { mutableStateOf<String?>(null) }
-    LaunchedEffect(busy) {
-        if (!busy) applyingSegment = null
-    }
-
     fun applyTreatment(segment: String, amount: Float) {
         if (busy) return
         val m = model ?: return
@@ -1200,9 +1227,17 @@ fun PadSheetScreen(
         }
     }
     val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
-    var pendingMutateKnob by remember(slot, mutateMode) {
-        mutableFloatStateOf(mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
-    }
+    // One dialled value per move, not one shared value wiped by switching
+    // move (J24). Each move's knob means its own thing — SPLICE's `AT` is a
+    // time in milliseconds, MORPH's is a blend — so the value cannot simply
+    // carry across; but keying it on the selected move destroyed it on the
+    // way to the comparison the move row exists to invite. Dial SPLICE's
+    // `AT` to 400 ms, tap MORPH to hear the difference, tap back: 40 ms.
+    // A map keyed on the move's own name gives each one its own memory, and
+    // a move never touched still opens on its own default.
+    val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val pendingMutateKnob =
+        mutateKnobs[mutateMode] ?: (mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
 
     /**
      * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
@@ -1372,8 +1407,40 @@ fun PadSheetScreen(
         val seed = spins
         val padName = p.displayName
         val staleSampleFile = p.sampleFile
-        if (mutateMode != Mutate.Mode.MORPH.name) mutateMode = Mutate.Mode.MORPH.name
-        val fraction = pendingMutateKnob
+        // DRIFT is MORPH's one-tap form, so the blend has to come from
+        // MORPH's own knob, and the card must then show that same number.
+        //
+        // The original bug: `pendingMutateKnob` was keyed on `mutateMode`,
+        // and writing `mutateMode` does not re-run that block
+        // synchronously - so reading it afterwards took the fraction
+        // belonging to the move the card was *previously* on. From the
+        // card's opening move that is 0f (STACK has no knob), which wrote a
+        // 0% blend and then drew MIX 50% once recomposition re-keyed the
+        // stepper; from SPLICE or TRANSPLANT it was that stepper's position
+        // read as a mix. Already on MORPH, the dialled MIX is the user's
+        // own and is kept - which is why a *second* DRIFT tap always
+        // behaved correctly and only the first one from another move did not.
+        //
+        // Reading `MutateSheet.DRIFT_FRACTION` fixed the value written. The
+        // *display* is the other half, and J24's per-move memory put it back
+        // in play: MORPH now has a remembered value to land on, so the write
+        // below is what keeps the knob honest about what just ran.
+        val onMorph = mutateMode == Mutate.Mode.MORPH.name
+        val fraction = if (onMorph) pendingMutateKnob else MutateSheet.DRIFT_FRACTION
+        if (!onMorph) {
+            mutateMode = Mutate.Mode.MORPH.name
+            // ...and the card has to redraw MIX at the fraction DRIFT just
+            // used, not at whatever MORPH was last dialled to. Now that each
+            // move keeps its own dialled value (J24), landing on MORPH shows
+            // MORPH's memory — which would be a display saying one thing
+            // while the drift that just ran did another. That is the exact
+            // divergence `MutateSheet.DRIFT_FRACTION`'s own KDoc exists to
+            // prevent: the card once read the previous move's stepper, blended
+            // none of the neighbour in, "while the card then redrew MIX at
+            // 50%". Writing it into the move's own memory keeps the knob a
+            // true readout of the last thing that happened.
+            mutateKnobs[Mutate.Mode.MORPH.name] = MutateSheet.DRIFT_FRACTION
+        }
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
@@ -1456,6 +1523,14 @@ fun PadSheetScreen(
      * `instruments` list isn't reactive to this screen otherwise; without
      * this, a visit to KITS that raced this write on [appScope] would show
      * a list one instrument short until KITS reloaded again.
+     *
+     * Bug fix (silent replacement): the name came from the kit and pad
+     * alone and the write passed `overwrite = true`, so a second press
+     * replaced the first package without asking or saying so. `:kit` already
+     * refused to clobber — `overwrite = false` is `export`'s own default and
+     * `writePackage` throws `DestinationExists` — and this screen was
+     * insisting past it. It now asks `OneNote.freshName` for a name nothing
+     * holds and takes the default, so presses land beside each other.
      */
     fun onMakeInstrument() {
         if (busy) return
@@ -1463,16 +1538,22 @@ fun PadSheetScreen(
         val currentSnip = snip
         if (m == null || currentSnip == null) return
         val p = m.kit.pad(slot) ?: return
-        val instrumentName = Names.sanitizeStem("${m.kit.name}_${p.displayName}")
+        val instrumentBase = "${m.kit.name}_${p.displayName}"
         appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
-                withContext(Dispatchers.IO) {
-                    OneNote.export(instrumentName, currentSnip, destRoot, overwrite = true)
+                // Named and written on IO, in that order and in one hop: the
+                // name is decided by reading the folder, which is not work
+                // for the main thread, and deciding it any earlier widens the
+                // window in which something else could take it.
+                val made = withContext(Dispatchers.IO) {
+                    val name = OneNote.freshName(destRoot, instrumentBase)
+                    OneNote.export(name, currentSnip, destRoot, overwrite = false)
+                    name
                 }
                 onShelfAssetWritten()
-                onToast(Copy.INSTRUMENT_MADE)
+                onToast(Copy.madeNamed("INSTRUMENT", made))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (e is IllegalArgumentException) onToast(Copy.NO_PITCH) else failure("INSTRUMENT", e)
@@ -1485,13 +1566,25 @@ fun PadSheetScreen(
     // ---- OUTSIDE: the world as an effect (OutsideSheet over Outside) ----
     var outsideMove by remember(slot) { mutableStateOf(OutsideSheet.MOVES.first()) }
     val outsideKnob = OutsideSheet.knobFor(OutsideSheet.moveFor(outsideMove))
-    var pendingOutsideKnob by remember(slot, outsideMove) { mutableFloatStateOf(outsideKnob.defaultFraction) }
+    // One dialled value per move (J24), for the same reason as MUTATE's
+    // knob above: REAMP and ROOM are compared by switching between them.
+    val outsideKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val pendingOutsideKnob = outsideKnobs[outsideMove] ?: outsideKnob.defaultFraction
     // What the trip is doing right now — LISTENING…, SENDING… — for the
     // SEND button's own label; null when nothing is out.
     var outsideStage by remember(slot) { mutableStateOf<String?>(null) }
     // The last ROOM trip's outcome, the room as measured riding it, until
     // KEEP ROOM puts it on the shelf; a REAMP measures none.
-    var measuredRoom by remember(slot) { mutableStateOf<OutsideSheet.Outcome?>(null) }
+    //
+    // Keyed on the kit, NOT on `slot` (J23). A ROOM trip is a multi-second
+    // live mic capture of the physical room, and KEEP ROOM shelves it
+    // kit-level, named after the kit, as a reusable parent — the pad that
+    // happened to be open while it ran is incidental to every part of that.
+    // Keyed on `slot`, one tap of the pad-nav arrow discarded it with no
+    // warning, and recovery meant doing the trip again. Not unkeyed either:
+    // carrying a measurement across a kit switch would let KEEP ROOM name
+    // it after a kit it was not measured for.
+    var measuredRoom by remember(entry.dir) { mutableStateOf<OutsideSheet.Outcome?>(null) }
     // The armed mic session holds the mic; OUTSIDE wants it to itself.
     val tapeArmed by MicSessionService.armed.collectAsState()
 
@@ -1702,8 +1795,19 @@ fun PadSheetScreen(
     }
 
     // ---- PAD FROM ANYTHING: one hit, a pad forever (PadMaker over PadFromAnything) ----
-    var pendingDepth by remember(slot) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
-    var pendingBloom by remember(slot) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
+    // Keyed on the kit, not on `slot` (J26). These are settings for MAKE
+    // PAD, a door that makes a *new* pad out of one hit — a tool's
+    // settings, not a property of whatever pad the tool was last pointed
+    // at. Keyed on `slot` they reset on every pad-nav arrow, so making a
+    // run of pads at the same DEPTH meant dialling it again for each one.
+    //
+    // They still do not write to the pad, and cannot: the pad has no DEPTH
+    // or BLOOM field to hold. That half of J26 — that they look identical
+    // to LEVEL/PAN/TUNE two rows above, which do write — is a question
+    // about what the control should *say* it is, and belongs with the words
+    // and IA work, not here.
+    var pendingDepth by remember(entry.dir) { mutableFloatStateOf(PadMaker.DEPTH.defaultFraction) }
+    var pendingBloom by remember(entry.dir) { mutableFloatStateOf(PadMaker.BLOOM.defaultFraction) }
 
     /**
      * MAKE PAD: the same door as MAKE INSTRUMENT (an instrument beside the
@@ -1719,6 +1823,16 @@ fun PadSheetScreen(
      * Bug fix (shelf staleness): calls [onShelfAssetWritten] on
      * `PadFromAnything.export` success, same as [onMakeInstrument] — see
      * that parameter's own KDoc.
+     *
+     * Bug fix (silent replacement of an unrepeatable render): same fix as
+     * [onMakeInstrument], and this is the door it was written for. "A fresh
+     * seed every press" above is literal — `PadMaker.spec` takes a new
+     * `Random.nextLong` each time and the seed is never stored — so every
+     * press rendered *different* audio to the *same* name with
+     * `overwrite = true`. The second press destroyed the first, and since
+     * the seed was gone the first could never be made again. Pressing this
+     * button repeatedly is how the feature is meant to be used, which made
+     * the loss routine rather than rare.
      */
     fun onMakePad() {
         if (busy) return
@@ -1736,17 +1850,23 @@ fun PadSheetScreen(
             onToast(Copy.PAD_TOO_LONG)
             return
         }
-        val padName = Names.sanitizeStem("${m.kit.name}_${p.displayName}_Pad")
+        val padBase = "${m.kit.name}_${p.displayName}_Pad"
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
         appScope.launch {
             busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
-                withContext(Dispatchers.IO) {
-                    PadFromAnything.export(padName, currentSnip, destRoot, spec, overwrite = true)
+                // See [onMakeInstrument] for why the naming happens here.
+                // It matters more on this door: the seed above is fresh every
+                // press and is never kept, so a press that wrote over the
+                // last one destroyed a render nothing could make again.
+                val made = withContext(Dispatchers.IO) {
+                    val name = OneNote.freshName(destRoot, padBase)
+                    PadFromAnything.export(name, currentSnip, destRoot, spec, overwrite = false)
+                    name
                 }
                 onShelfAssetWritten()
-                onToast(Copy.PAD_MADE)
+                onToast(Copy.madeNamed("PAD", made))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("PAD", e)
@@ -1800,13 +1920,17 @@ fun PadSheetScreen(
                 onKitUpdated(fresh.kit)
                 val found = match
                 if (found != null) {
-                    onToast(Copy.desampled(padName, found.patch.voice.name, found.distance))
+                    onToast(Copy.desampled(padName, found.patch.engine, found.patch.voiceName, found.distance))
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("MAKE SYNTH", e)
+                if (e is KitBuilderModel.Far) {
+                    onToast(Copy.desampleFar(e.match.patch.engine, e.match.patch.voiceName, e.match.distance))
+                } else {
+                    failure("MAKE SYNTH", e)
+                }
             } finally {
                 busy = false
             }
@@ -2012,6 +2136,52 @@ fun PadSheetScreen(
     val boxes = PadSheetBoxes.summaries(pad, outsideStage)
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
     fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+
+    // LABEL THIS HIT (docs/WORKSHOP.md, WS3): what the Calibration folder
+    // beside the kits holds for this pad - the BENCH box's strip and its
+    // lit chip. Read off the main thread once per pad, and only while the
+    // WORKSHOP is open, since the box is not drawn otherwise. The folder
+    // is a sibling of the kit folders, the same place INSTRUMENTS and
+    // Rooms live.
+    val shelfRoot = entry.dir.parentFile ?: entry.dir
+    val padLabel = PadNoteMap.labelForPad(slot)
+    var hitLabel by remember(entry.dir, slot) { mutableStateOf<DrumClass?>(null) }
+    LaunchedEffect(entry.dir, slot, workshopOpen) {
+        if (!workshopOpen) return@LaunchedEffect
+        hitLabel = withContext(Dispatchers.IO) { LabelledHits.labelOf(shelfRoot, entry.kit.name, padLabel) }
+    }
+
+    /**
+     * A tap on a BENCH chip: the pad's WAV copied into the Calibration
+     * folder as [dc]'s hit, or - on the chip already lit - the copy taken
+     * back out. A file copy beside the kits, never a kit write, so no
+     * `withFreshKit` and no lock: the pad's own file is not touched. A
+     * render refuses in words before anything runs; the chips are dimmed
+     * for it, not disabled, the sheet's own convention (MAKE INSTRUMENT).
+     */
+    fun labelHit(dc: DrumClass) {
+        if (busy) return
+        if (LabelledHits.isRender(pad)) {
+            onToast(Copy.HIT_IS_A_RENDER)
+            return
+        }
+        val wav = File(entry.dir, pad.sampleFile)
+        val kitName = entry.kit.name
+        val taking = hitLabel == dc
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    if (taking) LabelledHits.unlabel(shelfRoot, kitName, padLabel)
+                    else LabelledHits.label(shelfRoot, wav, kitName, padLabel, dc)
+                }
+                hitLabel = if (taking) null else dc
+                onToast(if (taking) Copy.hitUnlabelled(padLabel) else Copy.hitLabelled(padLabel, ChopReviewModel.chipName(dc)))
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                failure("LABEL THIS HIT", e)
+            }
+        }
+    }
 
     // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
     // tapes open inline on the TREATMENT bench, newest first; a pick runs
@@ -2318,7 +2488,7 @@ fun PadSheetScreen(
                 knobLabel = mutateKnob?.label,
                 knobFraction = pendingMutateKnob,
                 knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
-                onKnobChange = { f -> pendingMutateKnob = (f * 40f).roundToInt() / 40f },
+                onKnobChange = { f -> mutateKnobs[mutateMode] = (f * 40f).roundToInt() / 40f },
                 mutated = MutateSheet.read(pad.recipe),
                 canUndo = binDaysLeft != null,
                 onHear = ::onHear,
@@ -2346,7 +2516,7 @@ fun PadSheetScreen(
             knobLabel = outsideKnob.label,
             knobFraction = pendingOutsideKnob,
             knobText = OutsideSheet.label(outsideKnob, OutsideSheet.value(outsideKnob, pendingOutsideKnob)),
-            onKnobChange = { f -> pendingOutsideKnob = (f * 40f).roundToInt() / 40f },
+            onKnobChange = { f -> outsideKnobs[outsideMove] = (f * 40f).roundToInt() / 40f },
             applied = OutsideSheet.read(pad.recipe),
             stage = outsideStage,
             canUndo = binDaysLeft != null,
@@ -2440,6 +2610,33 @@ fun PadSheetScreen(
                 onClick = ::onMakeInstrument,
             )
             }
+
+            // The BENCH box (docs/WORKSHOP.md, WS3): LABEL THIS HIT, drawn
+            // only while the WORKSHOP is open, and after MAKE on purpose -
+            // a player never needs it. Not one of PadSheetBoxes' five (its
+            // strip reads the Calibration folder, not the pad's recipe, and
+            // `touched` must never count it), but it shares the
+            // one-open-at-a-time slot: HIT_BOX is a name `boxFor` does not
+            // know, so opening this closes the rest, and opening any of
+            // the rest closes this.
+            if (workshopOpen) {
+                GroupBox(
+                    legend = "BENCH",
+                    summary = Copy.hitStrip(hitLabel?.let { ChopReviewModel.chipName(it) }),
+                    open = openBox == HIT_BOX,
+                    onToggle = { onOpenBox(if (openBox == HIT_BOX) null else HIT_BOX) },
+                    scheme = scheme,
+                ) {
+                    HitLabelCard(
+                        current = hitLabel,
+                        render = LabelledHits.isRender(pad),
+                        padColor = classColor,
+                        scheme = scheme,
+                        busy = busy,
+                        onTap = ::labelHit,
+                    )
+                }
+            }
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
             // Dimmed, not disabled, when there's no prior take yet - same
             // "still tappable, the destination explains why" convention as
@@ -2466,17 +2663,39 @@ fun PadSheetScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onStack(slot) },
             )
+            // AUDITION ▸ (spec decision 2): offered whenever a MAKE PAD ▸
+            // sibling exists to compare against - dimmed rather than hidden,
+            // same "still tappable, the destination explains why" convention
+            // as MAKE INSTRUMENT above, so the card never rearranges itself
+            // pad to pad.
+            ActionButton(
+                "AUDITION ▸",
+                scheme,
+                enabled = !busy,
+                dimmed = auditionSibling == null,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onAudition(slot) },
+            )
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
         }
 
         // Pinned under the scroll: a 2dp rule, then the pad nav, so the
         // next pad is always one tap away whatever box is open.
         Box(Modifier.fillMaxWidth().height(2.dp).background(scheme.grayEdge.tape))
+        // J4 + J23: gated on `busy` as well as on there being somewhere to
+        // go. These two were the only controls on this sheet that stayed
+        // live while an operation was in flight, and being pinned under the
+        // scroll made them the easiest to reach by accident. Moving pad
+        // mid-flight re-keys everything on the sheet that is
+        // `remember(slot)`: the screen goes grey with the work still
+        // running, and a measured room the player was about to keep is
+        // discarded without a word. Every other action here already refuses
+        // while busy - see `DeleteButton` one line above.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton(
                 prevSlot?.let { "◄ ${padTag(it)}" } ?: "◄",
                 scheme,
-                enabled = prevSlot != null,
+                enabled = prevSlot != null && !busy,
                 onClick = { prevSlot?.let(onSlotChange) },
             )
             // No swipe gesture is wired here — the buttons on either side are
@@ -2487,7 +2706,7 @@ fun PadSheetScreen(
             ActionButton(
                 nextSlot?.let { "${padTag(it)} ►" } ?: "►",
                 scheme,
-                enabled = nextSlot != null,
+                enabled = nextSlot != null && !busy,
                 onClick = { nextSlot?.let(onSlotChange) },
             )
         }
@@ -2731,7 +2950,7 @@ private fun PadSheetHeader(
             HeaderChip("◀ BEFORE", scheme, Modifier.width(92.dp), enabled = !busy, onClick = it)
             Spacer(Modifier.width(4.dp))
         }
-        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), onClick = onHit)
+        HeaderChip("▶ HIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onHit)
     }
 }
 
@@ -2915,6 +3134,65 @@ private fun ToggleChip(
 
 // ---------- treatment card ----------
 
+/** The BENCH box's name in `openBox`: not a `PadSheetBoxes.Box`, on purpose - see the box's own comment on the sheet. */
+private const val HIT_BOX = "BENCH"
+
+/**
+ * LABEL THIS HIT's chips (docs/WORKSHOP.md, WS3): the corpus's nine
+ * classes on two rows, the pad's current label lit in its colour -
+ * [TreatmentCard]'s own chip, without the AMT. For a render the chips
+ * dim and the note turns amber and says why, and a tap still answers in
+ * words: dimmed, not disabled, the sheet's rule.
+ */
+@Composable
+private fun HitLabelCard(
+    current: DrumClass?,
+    render: Boolean,
+    padColor: Color,
+    scheme: Scheme,
+    busy: Boolean,
+    onTap: (DrumClass) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText(
+            if (render) Copy.HIT_IS_A_RENDER else Copy.HITS_BOX_NOTE,
+            TapeType.pixelSmall,
+            if (render) scheme.amber.tape else scheme.ink3.tape,
+            maxLines = 3,
+        )
+        val widest = LabelledHits.ROWS.maxOf { it.size }
+        for (row in LabelledHits.ROWS) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (dc in row) {
+                    val selected = dc == current
+                    val name = ChopReviewModel.chipName(dc)
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
+                            .tapeClick(label = name, enabled = !busy) { onTap(dc) }
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            name,
+                            TapeType.pixel,
+                            when {
+                                selected -> scheme.titleInk.tape
+                                busy || render -> scheme.ink3.tape
+                                else -> scheme.ink2.tape
+                            },
+                        )
+                    }
+                }
+                // A short row keeps the same chip width as a full one.
+                repeat(widest - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
 @Composable
 private fun TreatmentCard(
     rows: List<List<String>>,
@@ -2938,7 +3216,12 @@ private fun TreatmentCard(
         // phone, and chips going quietly untappable read as a dead screen
         // rather than a busy one.
         TapeText(
-            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "TREATMENT",
+            // Not "TREATMENT" (prior #30): the group box's legend directly
+            // above this line already says that word, and the other three
+            // cards' lines have been cut back to their gloss alone for the
+            // same reason. The busy branch is unchanged - it names the
+            // segment in flight, which no legend can.
+            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "ERAS AND CHARACTERS · ONE PER PAD",
             TapeType.pixelSmall,
             if (applying != null) scheme.amber.tape else scheme.ink3.tape,
             maxLines = 1,
@@ -3098,7 +3381,13 @@ private fun ShapeCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("SHAPE · CARD RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            // "SHAPE · CARD RENDERS IT" until prior #30: the box around
+            // this card already has SHAPE on its legend, and `UI_DESIGN.md`
+            // has group boxes REPLACE card titles rather than repeat them.
+            // What the line is for is the thing the legend cannot say -
+            // that these four are metadata the hardware applies, not edits
+            // to the audio on disk - so that is all it says now.
+            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -3166,7 +3455,7 @@ private fun MutateCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("MUTATE · ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && mutated != null && canUndo, onClick = onUndo)
         }
         TapeText(
@@ -3434,7 +3723,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("OUTSIDE · THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink3.tape, Modifier.weight(1f), maxLines = 1)
             ActionButton("UNDO", scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {

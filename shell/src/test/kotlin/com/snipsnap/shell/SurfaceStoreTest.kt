@@ -167,6 +167,112 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `grain knobs round-trip, and a file saved before GRAIN existed loads with the defaults`() {
+        val knobs = SurfaceStore.Grain(size = 0.2f, density = 0.9f, spray = 0.35f)
+        SurfaceStore.save(temp, Settings(padSlot = 1, grain = knobs))
+        val loaded = SurfaceStore.load(temp).grain
+        near(0.2f, loaded.size); near(0.9f, loaded.density); near(0.35f, loaded.spray)
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(SurfaceStore.Grain.DEFAULT, SurfaceStore.load(temp).grain)
+        assertEquals(SurfaceStore.Grain.DEFAULT, Settings.DEFAULT.grain)
+    }
+
+    @Test
+    fun `a present but malformed grain knob is refused, not silently read as its default`() {
+        // The crush/echo rule again: absent means "before this existed",
+        // present-and-wrong means a torn file, and those are different.
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"grain":{"size":0.5,"density":"lots","spray":0},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"grain":{"size":0.5,"density":0.5},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Grain(size = 1.5f) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Grain(density = Float.NaN) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Grain(spray = -0.1f) }
+    }
+
+    @Test
+    fun `modulators round-trip, a file from before the MOD row loads silent, and a torn one is refused`() {
+        val mods = listOf(
+            Modulator.Slot(Modulator.Target.CUTOFF, Modulator.Shape.SINE, rateIndex = 4, depth = 0.4f),
+            Modulator.Slot(Modulator.Target.POSITION, Modulator.Shape.RAMP, rateIndex = 6, depth = 1f),
+        )
+        SurfaceStore.save(temp, Settings(padSlot = 1, mods = mods))
+        assertEquals(mods, SurfaceStore.load(temp).mods)
+
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(Modulator.OFF, SurfaceStore.load(temp).mods)
+        assertEquals(Modulator.OFF, Settings.DEFAULT.mods)
+
+        // A target this build does not know is refused by name, never
+        // re-aimed; a wrong count is refused; a depth that is not a number
+        // goes through Slot's own door.
+        val corners = """"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}]"""
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"mods":[{"target":"WOBBLE","shape":"SINE","rate":4,"depth":0.5},{"target":"CUTOFF","shape":"SINE","rate":4,"depth":0}],$corners}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"mods":[{"target":"CUTOFF","shape":"SINE","rate":4,"depth":0.5}],$corners}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"mods":[{"target":"CUTOFF","shape":"SINE","rate":4,"depth":"lots"},{"target":"CUTOFF","shape":"SINE","rate":4,"depth":0}],$corners}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        assertFailsWith<IllegalArgumentException> { Settings(padSlot = 1, mods = Modulator.OFF.take(1)) }
+    }
+
+    @Test
+    fun `a corner captured in GRAIN is the chain the cloud ran through, not the finger`() {
+        // GRAIN's finger is position and pitch, which a corner cannot hold;
+        // what SET keeps is XY's rest with the roll's resonance - the
+        // macros the engine actually applies in mode 4 - so morphing toward
+        // it later sounds like the cloud's *chain* did, not like some
+        // arbitrary pitch/cutoff the x/y happened to spell.
+        val r = Reading(0.2f, 0.9f, 0.6f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        val captured = Corner.from(Mode.GRAIN, r, tilt = 0.8f, corners = Corner.DEFAULTS)
+        assertEquals(Corner(0.5f, 1f, 0.4f, 0f), captured)
+        // The roll is XY's half-scaled resonance, so a flat phone (0.5)
+        // reads 0.25 here exactly as it does in XY - it is MORPH's *nudge*
+        // where 0.5 is the no-op, not this. Only no roll at all is CLEAN.
+        assertEquals(Corner(0.5f, 1f, 0.25f, 0f), Corner.from(Mode.GRAIN, r, tilt = 0.5f, corners = Corner.DEFAULTS))
+        assertEquals(Corner.CLEAN, Corner.from(Mode.GRAIN, r, tilt = 0f, corners = Corner.DEFAULTS))
+    }
+
+    @Test
     fun `refusals are in words`() {
         assertFailsWith<IllegalArgumentException> { Corner(1.2f, 0f, 0f, 0f) }
         assertFailsWith<IllegalArgumentException> { Corner(Float.NaN, 0f, 0f, 0f) }
@@ -316,5 +422,152 @@ class SurfaceStoreTest {
         val atD = Reading(1f, 0f, 0f, 0f, 0f, 0f, 1f, touching = true)
         near(0.45f, Corner.from(Mode.MORPH, atD, 1f, Corner.DEFAULTS).resonance)
         near(1f, Corner.from(Mode.MORPH, atD, 1f, listOf(Corner(0.5f, 0.5f, 0.9f, 0f), Corner.DARK, Corner.LOW, Corner(0.5f, 0.5f, 0.9f, 0f))).resonance)
+    }
+
+    @Test
+    fun `KEY round-trips, a file from before it loads off, and a torn value is refused`() {
+        SurfaceStore.save(temp, Settings(padSlot = 1, keySnap = true))
+        assertTrue(SurfaceStore.load(temp).keySnap)
+        SurfaceStore.save(temp, Settings(padSlot = 1, keySnap = false))
+        assertTrue(!SurfaceStore.load(temp).keySnap)
+        assertTrue(!Settings.DEFAULT.keySnap)
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertTrue(!SurfaceStore.load(temp).keySnap, "a file from before KEY existed plays as it did")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"keySnap":"yes","corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+    }
+
+    @Test
+    fun `ECHO's time round-trips, a file from before it loads free, and a torn or out-of-range one is refused`() {
+        val eighth = EchoTime.DIVISIONS.indexOf(EchoTime.Division(1, 8))
+        SurfaceStore.save(temp, Settings(padSlot = 1, echoTime = eighth))
+        assertEquals(eighth, SurfaceStore.load(temp).echoTime)
+        assertEquals(EchoTime.FREE_INDEX, Settings.DEFAULT.echoTime, "a fresh kit echoes as it always did")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(EchoTime.FREE_INDEX, SurfaceStore.load(temp).echoTime, "a file from before ECHO had a clock is free")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"echoTime":"eighth","corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"echoTime":${EchoTime.DIVISIONS.size},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.load(temp) }
+    }
+
+    @Test
+    fun `SWARM round-trips, a file from before it loads as one voice, and a torn or out-of-range one is refused`() {
+        val swarm = SurfaceStore.Swarm(voices = 3, detune = 0.4f)
+        SurfaceStore.save(temp, Settings(padSlot = 1, swarm = swarm))
+        val loaded = SurfaceStore.load(temp).swarm
+        assertEquals(3, loaded.voices)
+        near(0.4f, loaded.detune)
+        assertEquals(SurfaceStore.Swarm.DEFAULT, Settings.DEFAULT.swarm)
+        assertEquals(1, SurfaceStore.Swarm.DEFAULT.voices, "one voice is the plain loop")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(SurfaceStore.Swarm.DEFAULT, SurfaceStore.load(temp).swarm)
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"swarm":{"voices":2},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"swarm":{"voices":9,"detune":0.1},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.load(temp) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(voices = 0) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(detune = Float.NaN) }
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.Swarm(detune = 1.5f) }
+    }
+
+    @Test
+    fun `a gesture round-trips to the thousandth, none is none, and a torn one is refused`() {
+        val n = Gesture.POINTS_PER_BAR
+        val g = Gesture(2, FloatArray(2 * n) { (it % 8) / 8f }, FloatArray(2 * n) { 0.125f })
+        SurfaceStore.save(temp, Settings(padSlot = 1, gesture = g))
+        assertEquals(g, SurfaceStore.load(temp).gesture)
+        // A point that is not on the thousandth grid lands on it - and the
+        // file is then byte-stable, which the round-trip test above holds
+        // for the rest of the settings.
+        val fine = Gesture(1, FloatArray(n) { 0.12345f }, FloatArray(n) { 0.5f })
+        SurfaceStore.save(temp, Settings(padSlot = 1, gesture = fine))
+        near(0.123f, SurfaceStore.load(temp).gesture!!.x(0f))
+        SurfaceStore.save(temp, Settings(padSlot = 1, gesture = null))
+        assertEquals(null, SurfaceStore.load(temp).gesture)
+        assertEquals(null, Settings.DEFAULT.gesture)
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertEquals(null, SurfaceStore.load(temp).gesture, "a file from before GESTURE existed has none")
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"gesture":{"bars":1,"x":[0.5]},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<JsonException> { SurfaceStore.load(temp) }
+        File(temp, SurfaceStore.FILE_NAME).writeText(
+            """{"version":1,"pad":3,"gesture":{"bars":1,"x":[0.5],"y":[0.5]},"corners":[
+                {"pitch":0.5,"cutoff":1,"resonance":0,"drive":0},
+                {"pitch":0.5,"cutoff":0.25,"resonance":0.3,"drive":0.1},
+                {"pitch":0.25,"cutoff":0.6,"resonance":0.5,"drive":0.4},
+                {"pitch":0.75,"cutoff":0.85,"resonance":0.2,"drive":0.9}
+            ]}""",
+        )
+        assertFailsWith<IllegalArgumentException> { SurfaceStore.load(temp) }
     }
 }

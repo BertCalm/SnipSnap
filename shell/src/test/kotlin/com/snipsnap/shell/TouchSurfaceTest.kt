@@ -108,6 +108,27 @@ class TouchSurfaceTest {
     }
 
     @Test
+    fun `grain reads the finger exactly as XY does - two axes, no depth, flat corners`() {
+        // The engine takes GRAIN's x as POSITION and y as pitch; this side
+        // only has to hand it the same clean axes XY gets, with none of
+        // XYZ's pinch or MORPH's corner arithmetic leaking in.
+        for (x in listOf(0f, 100f, 300f, 400f)) {
+            for (y in listOf(0f, 50f, 200f)) {
+                val xy = TouchSurface.read(Mode.XY, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                val grain = TouchSurface.read(Mode.GRAIN, listOf(Touch(1, x, y)), w, h, Reading.REST)
+                assertEquals(xy, grain)
+            }
+        }
+        val pinched = TouchSurface.read(Mode.GRAIN, listOf(Touch(1, 0f, 0f), Touch(2, 400f, 200f)), w, h, Reading.REST)
+        near(0f, pinched.z)
+        near(0.25f, pinched.a)
+        assertEquals(2, Mode.GRAIN.axes)
+        // The native side takes the mode by ordinal, so GRAIN stays where
+        // it was appended - after the four modes that existed before it.
+        assertEquals(4, Mode.GRAIN.ordinal)
+    }
+
+    @Test
     fun `sample weights are one at each of the four vertices`() {
         val (apex, baseLeft, baseRight, baseMid) = TouchSurface.sampleWeights(0.5f, 1f)
         near(1f, apex); near(0f, baseLeft); near(0f, baseRight); near(0f, baseMid)
@@ -215,5 +236,48 @@ class TouchSurfaceTest {
         assertTrue(one.touching)
         sr.snap(Reading.REST)
         assertEquals(Reading.REST.x, sr.step(Reading.REST).x)
+    }
+
+    @Test
+    fun `a nudge moves the finger, stops at the rails, and re-reads the corners only where they are read`() {
+        val xy = TouchSurface.read(Mode.XY, listOf(Touch(1, 200f, 100f)), w, h, Reading.REST)  // the centre
+        val moved = TouchSurface.nudged(Mode.XY, xy, 0.3f, -0.2f)
+        near(0.8f, moved.x)
+        near(0.3f, moved.y)
+        // XY never reads the corners, so they stay the flat quarter read() left.
+        near(0.25f, moved.a)
+        near(0.25f, moved.d)
+        assertTrue(moved.touching)
+        near(xy.z, moved.z)
+        // The rails: a finger cannot leave the pad, and neither can a nudged one.
+        val railed = TouchSurface.nudged(Mode.XY, xy, 0.9f, -0.9f)
+        near(1f, railed.x)
+        near(0f, railed.y)
+        // MORPH and VECTOR read the corners again from where the nudge landed:
+        // pushed into the top-right, B is the whole blend.
+        for (mode in listOf(Mode.MORPH, Mode.VECTOR)) {
+            val centre = TouchSurface.read(mode, listOf(Touch(1, 200f, 100f)), w, h, Reading.REST)
+            val corner = TouchSurface.nudged(mode, centre, 0.5f, 0.5f)
+            near(1f, corner.x)
+            near(1f, corner.y)
+            near(1f, corner.b, 1e-3f)
+            near(0f, corner.a, 1e-3f)
+            near(0f, corner.c, 1e-3f)
+            near(0f, corner.d, 1e-3f)
+            assertEquals(TouchSurface.morphWeights(1f, 1f), listOf(corner.a, corner.b, corner.c, corner.d))
+        }
+        // XYZ keeps its depth: a nudge is a move on the pad, not a pinch.
+        val deep = Reading(0.5f, 0.5f, 0.7f, 0.25f, 0.25f, 0.25f, 0.25f, touching = true)
+        near(0.7f, TouchSurface.nudged(Mode.XYZ, deep, 0.1f, 0.1f).z)
+    }
+
+    @Test
+    fun `a nudge of nothing is the reading itself, and a nudge that is not a number is nothing`() {
+        val r = TouchSurface.read(Mode.MORPH, listOf(Touch(1, 100f, 50f)), w, h, Reading.REST)
+        assertTrue(TouchSurface.nudged(Mode.MORPH, r, 0f, 0f) === r, "an untouched MOD row changes not one bit")
+        assertTrue(TouchSurface.nudged(Mode.MORPH, r, Float.NaN, Float.NaN) === r)
+        val half = TouchSurface.nudged(Mode.MORPH, r, Float.POSITIVE_INFINITY, 0.1f)
+        near(r.x, half.x)  // the axis that was not a number stayed put...
+        near(r.y + 0.1f, half.y)  // ...and the other moved
     }
 }

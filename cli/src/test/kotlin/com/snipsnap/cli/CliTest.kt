@@ -21,6 +21,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import com.snipsnap.shell.UserPresets
+import com.snipsnap.synth.Thump
+import com.snipsnap.synth.ThumpPatch
+import com.snipsnap.synth.ThumpVoice
 
 /**
  * End-to-end runs of the CLI against synthesized material — the same
@@ -1479,7 +1483,8 @@ class CliTest {
         val patchOut = File(temp, "ds.json")
         val (code, stdout, stderr) = cli("desample", kickWav.path, "--out", patchOut.path)
         assertEquals(0, code, "stderr: $stderr")
-        assertContains(stdout, "nearest patch is kick at distance 0.00")
+        // Engine-qualified since SKIN joined the search: both engines own a KICK.
+        assertContains(stdout, "nearest patch is thump/kick at distance 0.00")
         assertContains(stdout, "SWEEP=0.85")
         val patch = com.snipsnap.synth.Patches.fromJsonText(patchOut.readText())
         assertEquals("THUMP", patch.engine)
@@ -1492,7 +1497,7 @@ class CliTest {
         val before = padFile.readBytes()
         val (padCode, padOut, padErr) = cli("desample", kitDir.path, "A01")
         assertEquals(0, padCode, "stderr: $padErr")
-        assertContains(padOut, "is a kick patch now")
+        assertContains(padOut, "is a thump/kick patch now")
         assertTrue(!before.contentEquals(padFile.readBytes()))
         assertTrue(KitStore.load(kitDir).pad(1)!!.recipe != null, "the patch rides the pad")
         assertEquals(0, cli("desample", kitDir.path, "A01", "--undo").first)
@@ -2025,20 +2030,56 @@ class CliTest {
         val out = File(temp, "bk-out")
         assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BK One").first)
         assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "BK Two").first)
+        // The player's presets file at the root rides along, and comes home merged.
+        val kept = UserPresets.save(out, ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK)), 1L)
 
         val zip = File(temp, "bk.zip")
         val (bCode, bOut, bErr) = cli("backup", out.path, "--out", zip.path)
         assertEquals(0, bCode, "stderr: $bErr")
         assertContains(bOut, "2 kit(s)")
+        assertContains(bOut, "+ ${UserPresets.FILE_NAME} (1 preset(s))")
 
         val fresh = File(temp, "bk-fresh")
         val (rCode, rOut, rErr) = cli("restore", zip.path, "--out", fresh.path)
         assertEquals(0, rCode, "stderr: $rErr")
         assertContains(rOut, "restored 2 kit(s)")
+        assertContains(rOut, "restored 1 preset(s) into")
         assertEquals(
             KitStore.load(File(out, "BK One")).pads.map { it.slot },
             KitStore.load(File(fresh, "BK One")).pads.map { it.slot },
         )
+        assertEquals(listOf(kept), UserPresets.read(fresh))
+
+        // The same backup over the same folder: the kits are written again, the preset is already there.
+        val (aCode, aOut, aErr) = cli("restore", zip.path, "--out", fresh.path, "--overwrite")
+        assertEquals(0, aCode, "stderr: $aErr")
+        assertContains(aOut, "restored 0 preset(s) into")
+        assertContains(aOut, "(1 already there)")
+        assertEquals(listOf(kept), UserPresets.read(fresh))
+
+        // A backup whose presets entry is not one: the kits land, the file is skipped and named, the exit is clean.
+        val garbage = File(temp, "bk-garbage.zip")
+        java.util.zip.ZipOutputStream(garbage.outputStream()).use { z ->
+            java.util.zip.ZipFile(zip).use { src ->
+                for (entry in src.entries().toList()) {
+                    z.putNextEntry(java.util.zip.ZipEntry(entry.name))
+                    if (entry.name == UserPresets.FILE_NAME) z.write("not a presets file".toByteArray()) else src.getInputStream(entry).use { it.copyTo(z) }
+                    z.closeEntry()
+                }
+            }
+        }
+        val garbageOut = File(temp, "bk-garbage-out")
+        val (gCode, gOut, gErr) = cli("restore", garbage.path, "--out", garbageOut.path)
+        assertEquals(0, gCode, "stderr: $gErr")
+        assertContains(gOut, "restored 2 kit(s)")
+        assertContains(gOut, "! skipped ${UserPresets.FILE_NAME}")
+        assertTrue(!UserPresets.file(garbageOut).exists(), "nothing written for a file that could not be read")
+
+        // A folder with no presets file backs up as it always did.
+        val bare = File(temp, "bk-bare")
+        assertEquals(0, cli("chop", wav.path, "--out", bare.path, "--name", "BK Bare").first)
+        val (_, plainOut, _) = cli("backup", bare.path, "--out", File(temp, "bk-bare.zip").path)
+        assertTrue(UserPresets.FILE_NAME !in plainOut, plainOut)
     }
 
     @Test

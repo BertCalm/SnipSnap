@@ -176,6 +176,36 @@ class ReversalTest {
             why = "a warning before the act, not a landing",
             stillTrue = "IS ALREADY THERE",
         ),
+        // The same moment as `dubWouldOverwrite`, rendered on the button
+        // instead of in a toast: it is the WRITE control's own label while
+        // the dub is armed, so it is what you read BEFORE deciding to tap a
+        // second time. Nothing has been written when it appears.
+        //
+        // The question mark is what makes it a question rather than a
+        // report, exactly as "IS ALREADY THERE" does for the toast above.
+        // A rewrite to "REPLACED X" would be a landing and would lose it,
+        // and the guard below fires.
+        "replaceWhat" to NotALanding(
+            why = "the armed button's own label, asked before the act",
+            stillTrue = "?",
+        ),
+        // The card leg's half of the same pair (persona review P2.3). The
+        // phone copy HAS landed when this appears and the line says so;
+        // the card has not been touched, which is what "ALREADY HOLDS"
+        // reports — the state of the card before anything is written to
+        // it. A rewrite to "REPLACED X ON THE CARD" would be a landing and
+        // would lose the clause, and the guard below fires.
+        "dubCardWouldReplace" to NotALanding(
+            why = "a warning before the card leg runs, not a landing",
+            stillTrue = "ALREADY HOLDS",
+        ),
+        // `replaceWhat` for the card, on the completion stage's own button,
+        // and exempt for the same reason with the same question mark
+        // carrying it: it is read before the tap that replaces anything.
+        "putOnCardOver" to NotALanding(
+            why = "the card button's own label, asked before the act",
+            stillTrue = "?",
+        ),
     )
 
     /**
@@ -212,10 +242,11 @@ class ReversalTest {
      */
     private val noWayBack = mapOf(
         "BAR_WIPED" to "the step editor autosaves the wipe; no control steps it back",
-        "FORKED_TO_E_REPLACED" to "the old PROG E steps are overwritten in place",
+        "FORKED_TO_E_REPLACED" to "the user's own steps are overwritten in place",
         "kitBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "snipBinEmptied" to "emptying a bin is the one delete the app promises is final",
         "roomBinEmptied" to "emptying a bin is the one delete the app promises is final",
+        "GESTURE_CLEARED" to "SURFACE's CLEAR writes the kit's recorded gesture out of surface.json; no control there steps it back",
     )
 
     private fun soundsDestructive(line: String) = destructive.any { it in line }
@@ -454,15 +485,16 @@ class ReversalTest {
 
     /**
      * The count, asserted so it cannot drift without someone deciding to
-     * let it. Five is not yet an argument for a command history: three of
-     * them are bin-emptying, which is *supposed* to be final. The two that
-     * genuinely hurt are the bar wipe and the PROG E replace — both on one
-     * screen, inside one feature.
+     * let it. Six is not yet an argument for a command history: three of
+     * them are bin-emptying, which is *supposed* to be final. The three
+     * that genuinely hurt are the bar wipe and the PROG E replace - both
+     * on one screen, inside one feature - and, since 2026-09-19, SURFACE's
+     * gesture CLEAR, the first on a second screen.
      *
-     * The takes bin is a sixth irreversible site and is deliberately NOT
+     * The takes bin is a seventh irreversible site and is deliberately NOT
      * counted here: its line does not yet say so, which puts it in
      * [awaitingWords] until the copy rewrite gives it words. When it gets
-     * them it moves into [noWayBack] and this number becomes six.
+     * them it moves into [noWayBack] and this number becomes seven.
      *
      * Raise this number only alongside a note in `docs/SPECS_2026_09.md`
      * §3 — that document is where the stack decision is recorded, and a
@@ -471,7 +503,7 @@ class ReversalTest {
     @Test
     fun `the count of you-cannot sites is the stack evidence`() {
         assertEquals(
-            5, noWayBack.size,
+            6, noWayBack.size,
             "the number of destructive sites with no way back changed. That is the recorded test for " +
                 "the deferred undo stack, so update docs/SPECS_2026_09.md §3 in the same change.",
         )
@@ -479,7 +511,7 @@ class ReversalTest {
             "kitBinEmptied", "snipBinEmptied", "roomBinEmptied",
         )
         assertEquals(
-            setOf("BAR_WIPED", "FORKED_TO_E_REPLACED"), reallyHurts,
+            setOf("BAR_WIPED", "FORKED_TO_E_REPLACED", "GESTURE_CLEARED"), reallyHurts,
             "the sites that lose work with no way back changed. Emptying a bin is meant to be final; " +
                 "these are not, and they are what a stack would buy.",
         )
@@ -499,6 +531,9 @@ class ReversalTest {
         assertEquals(promised, KitBuilderModel.BIN_KEEP_DAYS, 0.0, "kit takes bin")
         assertEquals(promised, SnipStore.BIN_DAYS, 0.0, "snips bin")
         assertEquals(promised, Rooms.BIN_DAYS.toDouble(), 0.0, "rooms bin")
+        // The fifth, for forgotten presets (docs/WORKSHOP.md, WS5's
+        // follow-up): the same sentence, the same sweep.
+        assertEquals(promised, UserPresets.BIN_DAYS.toDouble(), 0.0, "presets bin")
 
         // The fourth sweeps from `:app`, which `:shell` cannot import, so it is
         // pinned by reading its source - the same way ConventionTest reaches

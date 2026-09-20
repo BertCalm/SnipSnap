@@ -862,6 +862,11 @@ kit inside. A kit preflight refuses is skipped and named, backup-style.
 Every kit under a root packed as its own `.xpn` inside a single archive;
 restore feeds them back through the importer. A kit preflight refuses to
 pack is skipped **and named with the reason** — backups never pretend.
+The player's `presets.json` at the root (SAVE AS PRESET on the phone,
+`docs/WORKSHOP.md`) rides along when there is one, and `restore` merges
+it into the destination's own: nothing there is written over, a twin is
+skipped and counted as already there, a namesake with other settings
+lands under `NAME 2`, and the bin rides minus what has expired.
 
 ### `art <kit-dir>` — procedural cover tiles
 

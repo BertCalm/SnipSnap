@@ -181,7 +181,7 @@ fun DeletedKitsScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KITS", scheme, Modifier.width(72.dp), enabled = !busy, onClick = onBack)
+            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), enabled = !busy, onClick = onBack)
             Spacer(Modifier.weight(1f))
             TapeText("DELETED KITS", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))

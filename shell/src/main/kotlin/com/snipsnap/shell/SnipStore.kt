@@ -289,6 +289,38 @@ object SnipStore {
     fun displayName(file: File): String = parsedName(file) ?: "SNIP"
 
     /**
+     * The file name a snip leaves the app under, given its [displayName]
+     * and a [taken] test against wherever it is about to be staged.
+     *
+     * A snip on disk is `snip_<capturedMillis>[_<name>].wav`, a shape only
+     * this object should ever have to read. `ShareOut.send` puts the file's
+     * own name into `EXTRA_SUBJECT` and onto the `ClipData`, so without
+     * this a recipient gets `snip_1755700000000_BREAK.wav` in their
+     * downloads and the app's internal encoding along with it.
+     *
+     * The rename is possible at all because the file is copied into the
+     * share cache first rather than served where it lies, and that copy is
+     * not optional: `res/xml/share_paths.xml` covers the share cache and
+     * EXPORT's output and nothing else - deliberately, so the shelf is
+     * never exposed - and `FileProvider.getUriForFile` throws for a path
+     * outside it. A snip lives under the files directory, which is not in
+     * that list.
+     *
+     * [taken] counts up rather than overwriting, and that is about
+     * correctness rather than tidiness: the share cache hands a `content://`
+     * URI to another app which reads it on its own schedule, so a messenger
+     * may still be uploading the first BREAK when a second is staged.
+     * Overwriting it corrupts a transfer already in flight, and the only
+     * evidence is a broken attachment at the far end.
+     *
+     * Sanitised through [Names] because a snip's name is user-typed - SNIPS
+     * has a RENAME dialog - so it can hold separators that would make this
+     * a path rather than a file name.
+     */
+    fun shareName(displayName: String, taken: (String) -> Boolean): String =
+        Names.freshStem(Names.sanitizeStem(displayName)) { taken("$it.wav") } + ".wav"
+
+    /**
      * `root/[DIR]`'s non-empty files — the [list]/[listWithInfo] shared
      * starting point. `isFile` excludes [binDir] itself (a subdirectory
      * living inside `[DIR]`, the same way `Rooms/.bin` sits inside

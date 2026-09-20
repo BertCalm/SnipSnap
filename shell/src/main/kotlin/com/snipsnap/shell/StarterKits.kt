@@ -6,6 +6,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
 import com.snipsnap.synth.Shuffle
+import com.snipsnap.synth.SkinKits
 import com.snipsnap.synth.SynthKits
 import com.snipsnap.synth.ThumpKits
 import com.snipsnap.synth.Velocity
@@ -51,7 +52,7 @@ object StarterKits {
     }
 
     val ALL: List<Starter> = listOf(
-        // displayName is "EMPTY GRID", not "BLANK" — the other seven
+        // displayName is "EMPTY GRID", not "BLANK" — the other eight
         // entries are all pre-composed kits, and a plain "BLANK" reads as
         // just one more label in that list rather than the one option
         // that's actually empty. This has to work as both a menu entry
@@ -99,6 +100,11 @@ object StarterKits {
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,
         ) { SynthKits.cloud() },
+        Starter(
+            "skin", "SKIN",
+            "A room, not a circuit. Struck heads and brass, all eight SKIN voices.",
+            seeded = false,
+        ) { SkinKits.classic() },
         Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",

@@ -97,7 +97,28 @@ class TeachLogTest {
             if (got == e.label) agree++
             else println("MISS ${e.label} (machine said ${e.machineSaid}, rules now say $got) ${e.features}")
         }
-        println("teach log: $agree/${examples.size} corrections now agreed with")
+        // Confirmations counted apart from corrections (docs/WORKSHOP.md,
+        // CONFIRM ALL): with both in the log, agree/size is the rules'
+        // accuracy on real material, not only how often a miss was fixed.
+        val confirmations = examples.count { it.confirmation }
+        println("teach log: ${examples.size - confirmations} corrections, $confirmations confirmations; the rules now agree with $agree/${examples.size}")
         assertTrue(examples.isNotEmpty())
+    }
+
+    /**
+     * CONFIRM ALL's line is the same line: a confirmation is an example
+     * whose label is the machine's own verdict, and nothing else about the
+     * format changes. A reader that predates confirmations sees a
+     * correction the rules already agree with, which is true.
+     */
+    @Test
+    fun `a confirmation is a line whose label is the machine's own verdict`() {
+        val kick = FeatureExtractor.extract(DrumSynth.kick())
+        val confirmed = TeachLog.Example(DrumClass.KICK, kick, machineSaid = DrumClass.KICK)
+        val corrected = TeachLog.Example(DrumClass.KICK, kick, machineSaid = DrumClass.TOM)
+        assertTrue(confirmed.confirmation)
+        assertTrue(!corrected.confirmation)
+        val back = TeachLog.fromJsonl(TeachLog.toJsonl(listOf(confirmed, corrected)))
+        assertEquals(listOf(true, false), back.map { it.confirmation }, "the distinction survives the file")
     }
 }

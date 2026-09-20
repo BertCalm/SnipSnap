@@ -293,13 +293,10 @@ object Rooms {
         )
     }
 
-    private fun freshName(dir: File, base: String): String {
-        var name = base
-        var n = 2
-        while (File(dir, "$name.wav").exists() || File(dir, "$name.json").exists()) {
-            name = "$base $n"
-            n++
-        }
-        return name
-    }
+    // A room is its `.wav` and its `.json`, so either one alone makes the
+    // name taken. Unsanitised on purpose: a room's name comes from a stem
+    // this module already accepted, and upper-casing it the way the kit
+    // shelf does would rename rooms that are already on disk.
+    private fun freshName(dir: File, base: String): String =
+        Names.freshStem(base) { File(dir, "$it.wav").exists() || File(dir, "$it.json").exists() }
 }

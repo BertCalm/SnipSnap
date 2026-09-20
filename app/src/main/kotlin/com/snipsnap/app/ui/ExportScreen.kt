@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,6 +71,7 @@ import com.snipsnap.kit.Severity
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.ExportWizardModel
 import com.snipsnap.shell.Layout
@@ -86,6 +88,19 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private const val TAG = "ExportScreen"
+
+/**
+ * How long the overwrite arm stays live.
+ *
+ * Deliberately longer than the app's other armed confirms
+ * (`EMPTY_BIN_ARM_MS` and `EMPTY_ROOMS_BIN_ARM_MS` are both 3s): those are
+ * a reflex double-tap on a button whose whole job is destruction, while
+ * this one asks you to read a path, recognise whether it is yours, and
+ * decide. Three seconds is not long enough to do that, and an arm that
+ * expires while you are still reading teaches the user to tap twice
+ * quickly - which is the opposite of what a confirm is for.
+ */
+private const val EXPORT_ARM_MS = 15_000L
 
 /**
  * A dub's live state, hoisted to `App()` (see `App.kt`'s `exportSession`)
@@ -131,7 +146,37 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
      * user cannot escape.
      */
     var overwriting by mutableStateOf<File?>(null)
+
+    /**
+     * A card copy that has been held back because the card already holds
+     * what it would write, or null when there is nothing waiting (persona
+     * review P2.3).
+     *
+     * The phone leg's arm ([overwriting]) cannot speak for this one: it is
+     * about the app's own exports folder, and a card can hold a kit the
+     * phone does not. So the card gets its own, and it arms *after* the
+     * phone copy has landed rather than before — the two legs are one tap
+     * but not one write, and only the second one touches anything of the
+     * user's. `stampDub(card = null)` already treats that in-between as a
+     * real state.
+     *
+     * Hoisted here for the same reason [overwriting] is: the screen
+     * remounts on every tab switch, and an offer that forgot itself would
+     * put the export on the card with no confirm at all the next time
+     * round.
+     */
+    var cardPending by mutableStateOf<CardPending?>(null)
 }
+
+/**
+ * A card copy waiting on the user, and what it would cost: [what] is the
+ * topmost thing already on the card, which `CardCopy.collisions`
+ * guarantees is a whole export rather than a sample inside one.
+ *
+ * [card] is carried rather than re-read at the tap, so an offer made
+ * about one card can never be spent on another.
+ */
+data class CardPending(val outcome: ExportOutcome, val card: Uri, val what: String)
 
 /**
  * EXPORT: the wizard's Compose surface over `ExportWizardModel`'s tested
@@ -169,13 +214,23 @@ fun ExportScreen(
     onSessionChange: (ExportSession?) -> Unit,
     appScope: CoroutineScope,
     onToast: (String) -> Unit,
+    /**
+     * The honest little message box, for what a line cannot hold (J35).
+     *
+     * EXPORT is the first *screen* to need it — the share landing, the
+     * refusal and BACKUP all raise it from `App` itself. A blocked write
+     * can name several failing pads at once, and it has to stay until read:
+     * the checklist that used to be "the message" is the first card in a
+     * scroll, with this screen's button pinned at the bottom.
+     */
+    onNote: (LandingNote.Note) -> Unit,
     /** NO_KIT_FOR_EXPORT's own route. No default — a screen that forgets to wire this fails the compile, not the user. */
     onNavigateKits: () -> Unit,
 ) {
     val scheme = LocalScheme.current
 
     if (entry == null) {
-        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("KITS ▸", onNavigateKits)))
+        EmptyStatePanel(Copy.NO_KIT_FOR_EXPORT, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
         return
     }
 
@@ -245,7 +300,7 @@ fun ExportScreen(
         return
     }
 
-    ExportContent(activeSession, context, appScope, scheme, onToast)
+    ExportContent(activeSession, context, appScope, scheme, onToast, onNote)
 }
 
 @Composable
@@ -255,6 +310,8 @@ private fun ExportContent(
     appScope: CoroutineScope,
     scheme: Scheme,
     onToast: (String) -> Unit,
+    /** See [ExportScreen]'s own `onNote`: the `Blocked` branch below is what needs it. */
+    onNote: (LandingNote.Note) -> Unit,
 ) {
     val model = session.model
     val kit = session.kit
@@ -281,6 +338,29 @@ private fun ExportContent(
      */
     LaunchedEffect(session.busy) {
         if (session.busy) formatPickerOpen = false
+    }
+
+    // THE OVERWRITE ARM, and the two ways it now goes out.
+    //
+    // `session.overwriting` is the state in which the next tap replaces an
+    // export that already exists. It is hoisted into `App`, so it used to
+    // survive tab switches and remounts indefinitely: arm it, read the
+    // toast, walk away, come back an hour later, tap once - and the export
+    // was replaced with no further warning, because nothing cleared it and
+    // nothing rendered it.
+    //
+    // Two separate mechanisms because they answer two separate risks. The
+    // timer handles "sat here and forgot"; the dispose handles "went
+    // somewhere else and came back", which the timer cannot, since a
+    // LaunchedEffect is cancelled on the way out rather than completing.
+    // Keyed on `session.dir` so a different kit never inherits an arm.
+    LaunchedEffect(session.overwriting) {
+        if (session.overwriting == null) return@LaunchedEffect
+        delay(EXPORT_ARM_MS)
+        session.overwriting = null
+    }
+    DisposableEffect(session.dir) {
+        onDispose { session.overwriting = null }
     }
 
     // Elapsed-time clock, not an incrementing counter: `SystemClock.
@@ -392,6 +472,15 @@ private fun ExportContent(
         releaseCard(cardTree)
         cardTree = null
         prefs.edit().remove(PREF_CARD_TREE).apply()
+        // A held-back card copy names the card it was preflighted against
+        // and would write to it on the next tap - through a grant this
+        // just handed back. Cleared here, with the release, so the two
+        // cannot come apart: today the CARD row only renders on the READY
+        // stage and the offer only exists on the COMPLETE one, so nothing
+        // reaches this with an offer pending, but that is a fact about
+        // which stage draws which control, not something this function
+        // should have to rely on.
+        session.cardPending = null
     }
 
     /**
@@ -409,6 +498,59 @@ private fun ExportContent(
         withContext(Dispatchers.IO) {
             runCatching { DubStamp.write(kitDir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = card)) }
                 .onFailure { Log.w(TAG, "stampDub: the dub landed but its stamp did not", it) }
+        }
+    }
+
+    // The card leg itself, in one place because two callers reach it: the
+    // dub that found the card clear, and the confirm for the dub that did
+    // not. Suspends rather than launching its own coroutine so it inherits
+    // whichever caller's scope and `busy` handling already applies.
+    suspend fun copyToCard(outcome: ExportOutcome, card: Uri) {
+        // The drivers wrote a real File tree, byte for byte as the tests
+        // and the golden fixtures cover it; this puts that tree on the
+        // card. Only the outcome's own items — handing over the folder
+        // they sit in would carry every earlier export along with them.
+        val copied = withContext(Dispatchers.IO) {
+            CardWriter.copy(context, card, listOfNotNull(outcome.primary, outcome.companion))
+        }
+        // Only now is it really on the card, so only now does the stamp
+        // name one.
+        stampDub(session.dir, card = card.toString())
+        session.cardPending = null
+        // CONTESTED is the case worth naming: the provider refused the
+        // delete, and what is on the card now is not knowable from here.
+        // It outranks REPLACED because it is the one the reader has to act
+        // on, and it is still said after a confirm — agreeing to replace
+        // something is not a promise that the card will co-operate.
+        onToast(
+            when {
+                copied.contested > 0 -> Copy.dubDoneCardContested(copied.contested)
+                copied.replaced > 0 -> Copy.dubDoneCardReplaced(copied.replaced)
+                else -> Copy.DUB_DONE_CARD
+            },
+        )
+    }
+
+    // The offer `dubCardWouldReplace` held back, taken. Reads the pending
+    // copy live rather than closing over a captured one, same as `eject()`
+    // and `shareExport()` below.
+    fun putOnCard() {
+        val pending = session.cardPending ?: return
+        if (session.busy) return
+        session.busy = true
+        // `appScope` for the reason startWrite uses it: a card copy must
+        // survive a tab switch rather than be cancelled by it.
+        appScope.launch {
+            try {
+                copyToCard(pending.outcome, pending.card)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "putOnCard: card copy failed", e)
+                onToast(Copy.DUB_FAILED)
+            } finally {
+                session.busy = false
+                revision++
+            }
         }
     }
 
@@ -472,31 +614,47 @@ private fun ExportContent(
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
                         } else {
-                            // The drivers wrote a real File tree, byte for
-                            // byte as the tests and the golden fixtures
-                            // cover it; this puts that tree on the card.
-                            // Only the outcome's own items — handing over
-                            // the folder they sit in would carry every
-                            // earlier export along with them.
-                            withContext(Dispatchers.IO) {
-                                CardWriter.copy(
+                            // What the card already holds, asked before a
+                            // byte of it is written (persona review P2.3).
+                            // Listing only - `preflight`'s own KDoc has the
+                            // cost, and a card that will not be read comes
+                            // back empty, which is the old behaviour.
+                            val standing = withContext(Dispatchers.IO) {
+                                CardWriter.preflight(
                                     context,
                                     card,
                                     listOfNotNull(result.outcome.primary, result.outcome.companion),
                                 )
                             }
-                            // Only now is it really on the card, so only now
-                            // does the stamp name one.
-                            stampDub(session.dir, card = card.toString())
-                            onToast(Copy.DUB_DONE_CARD)
+                            if (standing.isEmpty()) {
+                                copyToCard(result.outcome, card)
+                            } else {
+                                // Held. The phone copy has landed and the
+                                // stamp above says so; the card is
+                                // untouched, and the completion stage now
+                                // carries the offer to finish the job.
+                                // Named after the shallowest thing in the
+                                // way, which `CardCopy.collisions` promises
+                                // is a whole export.
+                                session.cardPending = CardPending(result.outcome, card, standing.first().name)
+                                onToast(Copy.dubCardWouldReplace(standing.first().name))
+                            }
                         }
                     }
                     is ExportWizardModel.WriteResult.Blocked -> {
                         session.overwriting = null
                         // Preflight flipped between render and tap (a file
-                        // vanished, say) — write() already reset the model
-                        // to READY and the refreshed checklist below is the
-                        // message per the model's own KDoc; no extra toast.
+                        // vanished, say). This used to say nothing at all,
+                        // on the reasoning that the refreshed checklist
+                        // below is the message — but that checklist is the
+                        // first card in a `verticalScroll` and this button
+                        // is pinned at the bottom, so on a phone the row
+                        // that changed is very likely off-screen at the
+                        // moment of the tap. A refusal you have to go
+                        // looking for is one you experience as the button
+                        // doing nothing (J35).
+                        val boxed = LandingNote.exportBlocked(result.findings)
+                        if (boxed != null) onNote(boxed) else onToast(Copy.EXPORT_BLOCKED)
                     }
                 }
             } catch (e: Exception) {
@@ -516,6 +674,11 @@ private fun ExportContent(
     fun eject() {
         if (model.stage != ExportWizardModel.Stage.COMPLETE) return
         model.eject()
+        // WRITE ANOTHER ✓ leaves the completion stage, which is the only
+        // place the card offer is shown, so an offer not taken by now is
+        // declined. Left set, it would reappear on the next dub's
+        // completion stage naming a card copy that dub never preflighted.
+        session.cardPending = null
         revision++
         onToast(Copy.CARD_EJECTED)
     }
@@ -580,7 +743,30 @@ private fun ExportContent(
                     onClick = ::shareExport,
                 )
             }
-            PrimaryAction(label = model.writeLabel, enabled = true, onClick = ::eject)
+            // The card leg this dub held back (persona review P2.3). It
+            // sits here rather than in the toast that announced it for the
+            // reason `replaceWhat` exists on the phone side: a toast is
+            // gone in seconds and the decision is not. Absent entirely
+            // when nothing is waiting — the dub that found the card clear
+            // has already put it there, and a button offering to do it
+            // again would be a second way to lose the same files.
+            session.cardPending?.let { pending ->
+                ActionButton(
+                    Copy.putOnCardOver(pending.what),
+                    scheme,
+                    enabled = !session.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = ::putOnCard,
+                )
+            }
+            // `!session.busy`, not the `true` this was: until the card
+            // offer existed nothing ran asynchronously from this stage, so
+            // the reset was always safe to tap. A card copy in flight
+            // makes it unsafe — `eject` clears the pending offer and
+            // resets the wizard, and doing that underneath a running copy
+            // would leave the stamp and the toast landing on a wizard that
+            // had already moved on.
+            PrimaryAction(label = model.writeLabel, enabled = !session.busy, onClick = ::eject)
         } else {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -626,7 +812,10 @@ private fun ExportContent(
                 DubProgressCard(model, filesShown, session.busy, scheme)
             }
             PrimaryAction(
-                label = model.writeLabel,
+                // Armed, the button names what it would destroy. Unarmed it
+                // reads exactly as before. Until this, the two were the same
+                // words and the only warning was a toast already gone.
+                label = session.overwriting?.let { Copy.replaceWhat(it.name) } ?: model.writeLabel,
                 enabled = !session.busy && !model.blocked && model.stage == ExportWizardModel.Stage.READY,
                 onClick = ::startWrite,
             )
@@ -886,6 +1075,27 @@ private fun FormatPickerRow(
                 if (open) "${current.cyclerLabel} ▴" else "${current.cyclerLabel} ▾",
                 TapeType.pixel.copy(textAlign = TextAlign.Center),
                 if (enabled) scheme.ink.tape else scheme.ink3.tape,
+                Modifier.fillMaxWidth(),
+                maxLines = 2,
+            )
+        }
+        if (!open) {
+            // The reason for the format you are ON, with the list shut
+            // (J34). All eight `why` strings are real UI and genuinely
+            // good, and every one of them was behind a closed picker that
+            // already showed a format name - which reads as "this is
+            // set", so there was no reason to open it. `why`'s own KDoc
+            // says it exists because "the user was choosing between eight
+            // names and no reasons"; shut by default put them back there.
+            //
+            // The row stays a combo rather than opening by default, which
+            // `UI_DESIGN.md` asks for ("format + destination combos" in
+            // the InstallShield-style wizard) - so this shows one reason
+            // rather than eight.
+            TapeText(
+                current.why,
+                TapeType.pixelSmall,
+                if (enabled) scheme.ink2.tape else scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )

@@ -150,6 +150,14 @@ class KitPreviewTest {
     }
 
     @Test
+    fun `playedBpm is the one rule every clock reads a kit's tempo through`() {
+        assertEquals(KitPreview.DEFAULT_BPM, KitPreview.playedBpm(null), "no tempo is the stand-in")
+        assertEquals(120f, KitPreview.playedBpm(120f), "a sane tempo is itself")
+        assertEquals(KitPreview.MIN_BPM, KitPreview.playedBpm(0.001f), "a legal nonsense tempo is the floor")
+        assertEquals(KitPreview.MAX_BPM, KitPreview.playedBpm(999f), "and the ceiling")
+    }
+
+    @Test
     fun `renders the groove non-silent, stereo, deterministic, and the right length`() {
         val dir = File(temp, "kit")
         val kit = buildKit(dir)

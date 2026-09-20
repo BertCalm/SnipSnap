@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #define LOG_TAG "SurfaceEngine"
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
@@ -15,10 +16,12 @@ namespace snipsnap {
 namespace {
 constexpr float kPi = 3.14159265358979f;
 
-// ECHO's fixed delay line: 220 ms (a short-to-medium slapback-to-echo
+// ECHO's free delay time: 220 ms (a short-to-medium slapback-to-echo
 // range) at 35% feedback (several audible repeats before it fades under
-// the noise floor, not a runaway loop). Only the corner-blended `echo`
-// macro ever changes what you hear of it (the wet mix) - see renderMono.
+// the noise floor, not a runaway loop) - what ECHO always was, and what
+// it is until a kit asks for a division of its bar (see setEchoTime).
+// Only the corner-blended `echo` macro ever changes what you hear of it
+// (the wet mix) - see renderMono.
 constexpr float kDelayTimeMs = 220.0f;
 constexpr float kDelayFeedback = 0.35f;
 
@@ -54,13 +57,15 @@ inline float pitchRatio(float macro) { return std::exp2((clamp01(macro) - 0.5f) 
 SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     : preferredRate_(preferredSampleRate), scratch_(kScratchFrames, 0.0f) {
     // Sized here too, not only in start(), at the member's own default
-    // sampleRate_ (48000) - renderMono indexes delayBuffer_[delayWrite_]
+    // sampleRate_ (48000) - renderMono reads and writes delayBuffer_
     // unconditionally on every sample, so onAudioReady must never see it
-    // empty. start() resizes it again once the device's real rate is
-    // known; nothing here needs to survive that (delayWrite_ is 0 in
-    // both places). The host test suite calls onAudioReady directly and
-    // never start() at all, which is exactly the case this guards.
-    delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kDelayTimeMs * 0.001f * static_cast<float>(sampleRate_)), 1), 0.0f);
+    // empty. start() sizes it again once the device's real rate is
+    // known; nothing here needs to survive that. The host test suite
+    // calls onAudioReady directly and never start() at all, which is
+    // exactly the case this guards. The free time first, so the tap
+    // configureEcho sets is the 220 ms ECHO always had.
+    setEchoTime(0.0f);
+    configureEcho(static_cast<float>(sampleRate_));
     // Same reasoning, same place - see configureSpring's own comment.
     configureSpring(static_cast<float>(sampleRate_));
     // std::atomic's default constructor is trivial in C++17 and does not
@@ -70,6 +75,23 @@ SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
         pending_[i].store(nullptr, std::memory_order_relaxed);
         retired_[i].store(nullptr, std::memory_order_relaxed);
     }
+    // GRAIN's atomics, for the same reason; the defaults are GrainSettings'
+    // and KeySnap's own, so an engine nobody has called setGrain/setKey on
+    // plays a chromatic mid-sized cloud rather than reading garbage.
+    setGrain(GrainSettings{});
+    setKey(KeySnap{});
+    setKeySnap(false);  // the loop plays as recorded until KEY is turned on
+    setSwarm(SwarmSettings{});  // one voice: the plain loop until SWARM is turned up
+    setModulation(nullptr, 0);  // every target at 0: nothing moves until a slot has depth
+    // The one Hann window every grain reads through, whatever its length.
+    // kGrainWindowTable + 1 points so a grain at its very last frame
+    // (pos/length just under 1) still lands inside the table.
+    hann_.resize(static_cast<size_t>(kGrainWindowTable) + 1);
+    for (int32_t i = 0; i <= kGrainWindowTable; ++i) {
+        hann_[static_cast<size_t>(i)] = 0.5f - 0.5f * std::cos(2.0f * kPi * static_cast<float>(i) / static_cast<float>(kGrainWindowTable));
+    }
+    grainPosition_.snap(0.5f);
+    grainPitchAxis_.snap(0.5f);
     // The four corners of the morph pad, before the UI says otherwise:
     // A clean, B dark, C low and thick, D hot - none crushed, echoed or sprung.
     const MacroState defaults[4] = {
@@ -140,12 +162,17 @@ bool SurfaceEngine::start() {
     ic1eq_ = ic2eq_ = 0.0f;
     crushPhase_ = 0.0f;
     heldCrush_ = 0.0f;
+    // GRAIN: the finger's two axes glide like the other macros; the pool
+    // starts empty and the clock armed, so a restart never carries a
+    // previous session's grains (or its wait-for-the-next-trigger) over.
+    grainPosition_.configure(10.0f, fs);
+    grainPitchAxis_.configure(10.0f, fs);
+    for (auto& g : grains_) g.active = false;
+    grainClock_ = 1.0;
     // Sized to the rate the device actually gave us, not preferredRate_ -
     // resized (and zeroed, so a restart never plays back the previous
     // session's tail) every time start() runs, same as the filter state above.
-    const size_t delaySamples = static_cast<size_t>(kDelayTimeMs * 0.001f * fs);
-    delayBuffer_.assign(std::max<size_t>(delaySamples, 1), 0.0f);
-    delayWrite_ = 0;
+    configureEcho(fs);
     configureSpring(fs);
 
     const oboe::Result started = stream_->requestStart();
@@ -199,6 +226,93 @@ void SurfaceEngine::setCorner(int index, const MacroState& state) {
     corners_[index][6].store(control01(state.spring, 0.0f), std::memory_order_relaxed);
 }
 
+void SurfaceEngine::setGrain(const GrainSettings& settings) {
+    const GrainSettings defaults;
+    grainSize_.store(control01(settings.size, defaults.size), std::memory_order_relaxed);
+    grainDensity_.store(control01(settings.density, defaults.density), std::memory_order_relaxed);
+    grainSpray_.store(control01(settings.spray, defaults.spray), std::memory_order_relaxed);
+}
+
+uint64_t SurfaceEngine::packKey(int32_t root, uint32_t mask, float sourceMidi) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &sourceMidi, sizeof bits);
+    return (static_cast<uint64_t>(root & 0xF) << 44) | (static_cast<uint64_t>(mask & grain::kChromaticMask) << 32) | bits;
+}
+
+void SurfaceEngine::unpackKey(uint64_t word, int32_t& root, uint32_t& mask, float& sourceMidi) {
+    root = static_cast<int32_t>((word >> 44) & 0xF);
+    mask = static_cast<uint32_t>((word >> 32) & grain::kChromaticMask);
+    const uint32_t bits = static_cast<uint32_t>(word & 0xFFFFFFFFu);
+    std::memcpy(&sourceMidi, &bits, sizeof sourceMidi);
+}
+
+void SurfaceEngine::setKey(const KeySnap& key) {
+    const int32_t root = ((key.rootSemitone % 12) + 12) % 12;
+    const uint32_t masked = key.scaleMask & grain::kChromaticMask;
+    const uint32_t mask = masked == 0u ? grain::kChromaticMask : masked;
+    const float source = std::isfinite(key.sourceMidi) ? key.sourceMidi : 0.0f;
+    key_.store(packKey(root, mask, source), std::memory_order_relaxed);
+}
+
+void SurfaceEngine::setKeySnap(bool on) {
+    keySnapLoop_.store(on, std::memory_order_relaxed);
+}
+
+uint64_t SurfaceEngine::packSwarm(int32_t voices, float detune) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &detune, sizeof bits);
+    return (static_cast<uint64_t>(bits) << 32) | static_cast<uint64_t>(voices & 0xFF);
+}
+
+void SurfaceEngine::unpackSwarm(uint64_t word, int32_t& voices, float& detune) {
+    voices = static_cast<int32_t>(word & 0xFF);
+    const uint32_t bits = static_cast<uint32_t>(word >> 32);
+    std::memcpy(&detune, &bits, sizeof detune);
+}
+
+void SurfaceEngine::setSwarm(const SwarmSettings& settings) {
+    const int32_t voices = settings.voices < 1 ? 1 : (settings.voices > kMaxSwarm ? kMaxSwarm : settings.voices);
+    swarm_.store(packSwarm(voices, control01(settings.detune, 0.0f)), std::memory_order_relaxed);
+}
+
+void SurfaceEngine::setEchoTime(float seconds) {
+    // Not a positive number, or past the ceiling: the free time. The
+    // ceiling is not a clamp on purpose - a kit asking for more than the
+    // line holds gets the echo it always had, not a different sync.
+    const bool synced = std::isfinite(seconds) && seconds > 0.0f && seconds <= kMaxEchoSeconds;
+    echoSeconds_.store(synced ? seconds : kDelayTimeMs * 0.001f, std::memory_order_relaxed);
+}
+
+size_t SurfaceEngine::echoDelaySamples(float seconds, float fs) const {
+    // Truncated, not rounded: the free time at 48 kHz is the 10560 samples
+    // the fixed line always was, sample for sample.
+    const size_t n = static_cast<size_t>(seconds * fs);
+    const size_t most = delayBuffer_.empty() ? 1 : delayBuffer_.size() - 1;
+    return n < 1 ? 1 : (n > most ? most : n);
+}
+
+void SurfaceEngine::configureEcho(float fs) {
+    delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kMaxEchoSeconds * fs) + 1, 2), 0.0f);
+    delayWrite_ = 0;
+    echoDelayC_ = echoDelaySamples(echoSeconds_.load(std::memory_order_relaxed), fs);
+    echoDelayFrom_ = echoDelayC_;
+    echoFadeLeft_ = 0;
+    echoFadeSamples_ = std::max<int32_t>(static_cast<int32_t>(kEchoFadeMs * 0.001f * fs), 1);
+}
+
+void SurfaceEngine::setModulation(const float* offsets, int32_t count) {
+    for (int32_t i = 0; i < kModTargets; ++i) {
+        float v = 0.0f;
+        if (offsets != nullptr && i < count) {
+            const float raw = offsets[i];
+            // Signed, so control01's 0..1 door is the wrong shape: -1..1,
+            // and a NaN is 0 - "no offset" - rather than either rail.
+            v = std::isfinite(raw) ? (raw < -1.0f ? -1.0f : (raw > 1.0f ? 1.0f : raw)) : 0.0f;
+        }
+        modulation_[i].store(v, std::memory_order_relaxed);
+    }
+}
+
 // ---- audio thread from here down ---------------------------------------------
 
 void SurfaceEngine::adoptPendingSample(int32_t slot) {
@@ -214,7 +328,7 @@ void SurfaceEngine::adoptPendingSample(int32_t slot) {
     if (!incoming) return;
     retired_[slot].store(current_[slot], std::memory_order_release);
     current_[slot] = incoming;
-    phase_[slot] = 0.0;
+    for (int32_t v = 0; v < kMaxSwarm; ++v) phase_[slot][v] = 0.0;
 }
 
 MacroState SurfaceEngine::morphed(const ControlFrame& f) const {
@@ -253,10 +367,54 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
         case 1:  // XYZ: X pitch, Y cutoff, Z drive, tilt resonance
             target = {f.x, f.y, f.tilt, f.z};
             break;
+        case 4:  // GRAIN: the finger is the cloud's POSITION and pitch (see
+                 // below), not these macros - the chain sits at XY's
+                 // defaults, as recorded and wide open, with the roll as
+                 // resonance so tilt still does here what it does everywhere.
+            target = {0.5f, 1.0f, f.tilt * 0.5f, 0.0f};
+            break;
         default:  // XY: X pitch, Y cutoff, tilt a little resonance
             target = {f.x, f.y, f.tilt * 0.5f, 0.0f};
             break;
     }
+    // The modulators, on top of whatever the mode just decided: a signed
+    // nudge per macro, read once here so one frame sees one consistent
+    // set. Added *before* the door below, so a swing past a rail clamps
+    // there rather than wrapping or escaping - and a NaN macro plus a
+    // finite offset is still a NaN, still caught below, since NaN + x is
+    // NaN. GRAIN's four ride into grainMod_ for triggerGrain and the
+    // position target just below - read here, ahead of that block, so
+    // POSITION's nudge is this frame's, not last frame's.
+    float mod[kModTargets];
+    for (int32_t i = 0; i < kModTargets; ++i) mod[i] = modulation_[i].load(std::memory_order_relaxed);
+    target.pitch += mod[0];
+    target.cutoff += mod[1];
+    target.resonance += mod[2];
+    target.drive += mod[3];
+    target.crush += mod[4];
+    target.echo += mod[5];
+    target.spring += mod[6];
+    for (int32_t i = 0; i < 4; ++i) grainMod_[i] = mod[7 + i];
+    // GRAIN's own two axes, through the same door. Entering or leaving the
+    // mode empties the pool and snaps both axes: a mode change is a
+    // different instrument, not a glide between two (the UI snaps its own
+    // smoother on the same event), and a grain triggered under the old
+    // mode has no business finishing under the new one.
+    const bool grainMode = f.mode == 4;
+    // POSITION's own modulator lands here, before the door, the same way
+    // the macros' do above: a ramp on POSITION walks the cloud through the
+    // sample, gliding through the same smoother the finger does.
+    const float position = control01(f.x + grainMod_[3], 0.5f);
+    const float pitchAxis = control01(f.y, 0.5f);
+    if (grainMode != grainMode_) {
+        for (auto& g : grains_) g.active = false;
+        grainMode_ = grainMode;
+        grainPosition_.snap(position);
+        grainPitchAxis_.snap(pitchAxis);
+        grainClock_ = 1.0;
+    }
+    grainPosition_.setTarget(position);
+    grainPitchAxis_.setTarget(pitchAxis);
     // Through the door before the DSP sees any of it: the defaults are
     // "as recorded, wide open, dry", so a reading that is not a number
     // leaves the surface playing rather than stuck.
@@ -279,11 +437,105 @@ void SurfaceEngine::applyControl(const ControlFrame& f) {
     // regardless of gain), so the next touch would land wherever the loop
     // happened to drift to, not at its head.
     if (f.gate && !gated_) {
-        for (int32_t i = 0; i < kMaxSources; ++i) phase_[i] = 0.0;
+        for (int32_t i = 0; i < kMaxSources; ++i) {
+            for (int32_t v = 0; v < kMaxSwarm; ++v) phase_[i][v] = 0.0;
+        }
         crushRetrigger_ = true;
+        // And GRAIN's first grain fires on the next sample, for the same
+        // reason the loops restart from their head: a tap is a hit, not
+        // the start of a wait (see grainClock_'s own declaration).
+        grainClock_ = 1.0;
     }
     gated_ = f.gate;
     gain_.setTarget(f.gate ? 1.0f : 0.0f);
+}
+
+float SurfaceEngine::readSlotAt(int32_t slot, double frameIndex) const {
+    const Sample* s = current_[slot];
+    if (!s || s->frames.size() < 2) return 0.0f;
+    const size_t n = s->frames.size();
+    double idx = std::fmod(frameIndex, static_cast<double>(n));
+    if (idx < 0.0) idx += static_cast<double>(n);
+    const size_t i0 = static_cast<size_t>(idx) % n;
+    const size_t i1 = (i0 + 1) % n;
+    const float frac = static_cast<float>(idx - static_cast<double>(static_cast<size_t>(idx)));
+    return s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
+}
+
+void SurfaceEngine::triggerGrain(double fs) {
+    // The knobs as they are *now*, plus their modulators' nudges, each
+    // through the same clamp the knob itself went through: a grain is
+    // shaped once, at birth.
+    const float size = clamp01(grainSize_.load(std::memory_order_relaxed) + grainMod_[0]);
+    const float density = clamp01(grainDensity_.load(std::memory_order_relaxed) + grainMod_[1]);
+    const float spray = clamp01(grainSpray_.load(std::memory_order_relaxed) + grainMod_[2]);
+    const float lengthFrames = grain::lengthMs(size) * 0.001f * static_cast<float>(fs);
+    const int32_t length = std::max<int32_t>(2, static_cast<int32_t>(lengthFrames));
+    Grain* slot = nullptr;
+    for (auto& g : grains_) {
+        if (!g.active) {
+            slot = &g;
+            break;
+        }
+    }
+    if (!slot) {
+        // Every voice busy: the oldest gives way. `order` wraps after four
+        // billion grains, which at 64 a second is about two years of
+        // continuous touch - if it does, one steal picks the wrong grain.
+        slot = &grains_[0];
+        for (auto& g : grains_) {
+            if (g.order < slot->order) slot = &g;
+        }
+    }
+    slot->active = true;
+    slot->startFraction = grain::startFraction(grainPosition_.value(), spray, grain::random01(grainRng_));
+    slot->length = length;
+    slot->pos = 0;
+    // The key as one word (see key_): a grain never carries the new
+    // note under the old root and mask.
+    int32_t keyRoot = 0;
+    uint32_t keyMask = grain::kChromaticMask;
+    float keySource = 0.0f;
+    unpackKey(key_.load(std::memory_order_relaxed), keyRoot, keyMask, keySource);
+    slot->pitch = grain::pitchRatio(grainPitchAxis_.value(), keySource, keyRoot, keyMask);
+    slot->gain = grain::gainFor(static_cast<float>(length) * grain::rateHz(density) / static_cast<float>(fs));
+    slot->order = ++grainOrder_;
+}
+
+float SurfaceEngine::grainSample(double fs, const float* weights) {
+    // The finger glides every sample whether or not a grain is born on
+    // it, so a grain triggered later starts from where the finger *is*.
+    grainPosition_.next();
+    grainPitchAxis_.next();
+    // The clock: DENSITY in grains per second, as a phase toward the next
+    // trigger. Read every sample so turning the knob changes the cadence
+    // at once, not at the next grain.
+    grainClock_ += static_cast<double>(grain::rateHz(clamp01(grainDensity_.load(std::memory_order_relaxed) + grainMod_[1]))) / fs;
+    if (grainClock_ >= 1.0) {
+        // One trigger per sample at most: a clock that somehow got ahead
+        // (a touch-down arms it to exactly 1) does not fire twice.
+        grainClock_ = std::min(grainClock_ - 1.0, 0.999);
+        if (gated_) triggerGrain(fs);
+    }
+    float sum = 0.0f;
+    for (auto& g : grains_) {
+        if (!g.active) continue;
+        const float window = hann_[static_cast<size_t>((static_cast<float>(g.pos) / static_cast<float>(g.length)) * static_cast<float>(kGrainWindowTable))];
+        const float envelope = window * g.gain;
+        for (int32_t slot = 0; slot < kMaxSources; ++slot) {
+            if (weights[slot] <= 0.0f) continue;
+            const Sample* s = current_[slot];
+            if (!s || s->frames.size() < 2) continue;
+            // This slot's own head: the grain's start as a fraction of *its*
+            // length, advanced at the slot's own rate against ours and the
+            // snapped pitch - the same arithmetic readSlot applies to a loop.
+            const double head = static_cast<double>(g.startFraction) * static_cast<double>(s->frames.size()) +
+                                static_cast<double>(g.pos) * (static_cast<double>(s->rate) / fs) * static_cast<double>(g.pitch);
+            sum += weights[slot] * envelope * readSlotAt(slot, head);
+        }
+        if (++g.pos >= g.length) g.active = false;
+    }
+    return sum;
 }
 
 bool SurfaceEngine::slotLoaded(int32_t slot) const {
@@ -295,13 +547,20 @@ float SurfaceEngine::readSlot(int32_t slot, double fs, float pitchRatioValue) {
     const Sample* s = current_[slot];
     if (!s || s->frames.size() < 2) return 0.0f;
     const size_t n = s->frames.size();
-    const size_t i0 = static_cast<size_t>(phase_[slot]);
-    const size_t i1 = (i0 + 1) % n;
-    const float frac = static_cast<float>(phase_[slot] - static_cast<double>(i0));
-    const float v = s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
-    phase_[slot] += (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatioValue);
-    while (phase_[slot] >= static_cast<double>(n)) phase_[slot] -= static_cast<double>(n);
-    return v;
+    const double step = (static_cast<double>(s->rate) / fs) * static_cast<double>(pitchRatioValue);
+    // With one voice this is the read it always was - voice 0 at the
+    // ratio, gain 1 - so an untouched SWARM changes nothing, bit for bit.
+    float sum = 0.0f;
+    for (int32_t voice = 0; voice < swarmVoicesC_; ++voice) {
+        double& phase = phase_[slot][voice];
+        const size_t i0 = static_cast<size_t>(phase);
+        const size_t i1 = (i0 + 1) % n;
+        const float frac = static_cast<float>(phase - static_cast<double>(i0));
+        sum += s->frames[i0] + (s->frames[i1] - s->frames[i0]) * frac;
+        phase += step * static_cast<double>(swarmMult_[voice]);
+        while (phase >= static_cast<double>(n)) phase -= static_cast<double>(n);
+    }
+    return sum * swarmGain_;
 }
 
 void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
@@ -317,6 +576,46 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
             svfA1_ = 1.0f / (1.0f + g * (g + k));
             svfA2_ = g * svfA1_;
             svfA3_ = g * svfA2_;
+            // KEY for the loop, and the key it snaps to, read here at
+            // control rate (see keySnapLoop_'s own declaration).
+            keySnapOn_ = keySnapLoop_.load(std::memory_order_relaxed);
+            unpackKey(key_.load(std::memory_order_relaxed), keyRootC_, keyMaskC_, keySourceC_);
+            // SWARM: n voices spread evenly over ±detune × kMaxDetuneCents
+            // (one voice sits at 0, two at ±half, three at -1/0/+1, four at
+            // -1/-1/3/+1/3/+1), summed at 1/sqrt(n) so a detuned swarm of
+            // uncorrelated voices holds its level; a coherent one (detune
+            // 0) is sqrt(n) louder, which is what a unison is. A voice that
+            // joins takes voice 0's phase: the swarm is a unison from its
+            // first sample, not a copy of the loop from its head (or from
+            // wherever that voice was parked when it last dropped out)
+            // offset in time until the next touch-down (see setSwarm).
+            const int32_t wereVoices = swarmVoicesC_;
+            float detune = 0.0f;
+            unpackSwarm(swarm_.load(std::memory_order_relaxed), swarmVoicesC_, detune);
+            if (swarmVoicesC_ > wereVoices) {
+                for (int32_t s = 0; s < kMaxSources; ++s) {
+                    for (int32_t v = wereVoices; v < swarmVoicesC_; ++v) phase_[s][v] = phase_[s][0];
+                }
+            }
+            const float cents = detune * kMaxDetuneCents;
+            for (int32_t v = 0; v < kMaxSwarm; ++v) {
+                const float spread = swarmVoicesC_ > 1
+                    ? 2.0f * static_cast<float>(v) / static_cast<float>(swarmVoicesC_ - 1) - 1.0f
+                    : 0.0f;
+                swarmMult_[v] = std::exp2(cents * spread / 1200.0f);
+            }
+            swarmGain_ = 1.0f / std::sqrt(static_cast<float>(swarmVoicesC_));
+            // ECHO's time: a new one starts a crossfade from the tap in use
+            // to the new tap (see setEchoTime); one at a time, so a change
+            // that lands mid-fade waits for the next interval.
+            if (echoFadeLeft_ <= 0) {
+                const size_t want = echoDelaySamples(echoSeconds_.load(std::memory_order_relaxed), static_cast<float>(sampleRate_));
+                if (want != echoDelayC_) {
+                    echoDelayFrom_ = echoDelayC_;
+                    echoDelayC_ = want;
+                    echoFadeLeft_ = echoFadeSamples_;
+                }
+            }
         }
         const float pitch = pitch_.next();
         cutoff_.next();
@@ -376,11 +675,26 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         }
         const float wSum = w0Loaded + w1Loaded + w2Loaded + w3Loaded;
         const float wInv = wSum > 1e-6f ? 1.0f / wSum : 0.0f;
-        const float pr = pitchRatio(pitch);
-        const float v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
-                         (w1Loaded * wInv) * readSlot(1, fs, pr) +
-                         (w2Loaded * wInv) * readSlot(2, fs, pr) +
-                         (w3Loaded * wInv) * readSlot(3, fs, pr);
+        // KEY on: the loop's pitch is snapped to the key after the glide,
+        // exactly as a grain's is - so a slide across the pad steps through
+        // the key's notes rather than sweeping between them, and a note the
+        // loop lands on is a note the cloud would land on (one snap, in
+        // Grain.h). Off: as recorded, ±1 octave across the pad, as always.
+        const float pr = keySnapOn_ ? grain::pitchRatio(pitch, keySourceC_, keyRootC_, keyMaskC_) : pitchRatio(pitch);
+        // GRAIN swaps the source and nothing else: the same four slots at
+        // the same renormalised weights, read as a cloud of windowed grains
+        // rather than four loops. The loops' phases simply hold while the
+        // cloud plays; a touch-down still resets them for when it ends.
+        float v0;
+        if (grainMode_) {
+            const float weights[kMaxSources] = {w0Loaded * wInv, w1Loaded * wInv, w2Loaded * wInv, w3Loaded * wInv};
+            v0 = grainSample(fs, weights);
+        } else {
+            v0 = (w0Loaded * wInv) * readSlot(0, fs, pr) +
+                 (w1Loaded * wInv) * readSlot(1, fs, pr) +
+                 (w2Loaded * wInv) * readSlot(2, fs, pr) +
+                 (w3Loaded * wInv) * readSlot(3, fs, pr);
+        }
 
         // CRUSH: sample-and-hold downsampling plus shrinking quantisation
         // levels, both continuous functions of the macro rather than an
@@ -422,20 +736,29 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         ic1eq_ = 2.0f * v1 - ic1eq_;
         ic2eq_ = 2.0f * v2 - ic2eq_;
 
-        // ECHO: a fixed-length ring buffer read and written through the
-        // same rotating index, delayBuffer_.size() samples apart - that
-        // length *is* the delay time, so there is no separate offset to
-        // keep in sync with it (see delayBuffer_'s own declaration). Fed
-        // with `gated`, not v2 directly: silence must stay silence going
-        // in, so a released touch lets an already-ringing tail decay on
-        // its own via kDelayFeedback rather than the loop echoing into
-        // itself for ever while nobody is touching the pad. `echo` is
-        // only ever the wet MIX read out here, never the time or
-        // feedback - see kDelayTimeMs/kDelayFeedback's own comment.
+        // ECHO: a ring buffer written at delayWrite_ and read at the tap
+        // echoDelayC_ samples behind it - that distance *is* the delay
+        // time (see delayBuffer_'s own declaration and setEchoTime).
+        // While a time change is in flight the old tap fades out as the
+        // new fades in over echoFadeSamples_, and the mix of the two is
+        // what feeds back, so the line never hears a step. Fed with
+        // `gated`, not v2 directly: silence must stay silence going in,
+        // so a released touch lets an already-ringing tail decay on its
+        // own via kDelayFeedback rather than the loop echoing into itself
+        // for ever while nobody is touching the pad. `echo` is only ever
+        // the wet MIX read out here, never the time or feedback - see
+        // kDelayTimeMs/kDelayFeedback's own comment.
         const float gated = v2 * gain;
-        const float wet = delayBuffer_[delayWrite_];
+        const size_t ring = delayBuffer_.size();
+        float wet = delayBuffer_[(delayWrite_ + ring - echoDelayC_) % ring];
+        if (echoFadeLeft_ > 0) {
+            const float from = delayBuffer_[(delayWrite_ + ring - echoDelayFrom_) % ring];
+            const float mix = static_cast<float>(echoFadeLeft_) / static_cast<float>(echoFadeSamples_);
+            wet = wet + (from - wet) * mix;
+            --echoFadeLeft_;
+        }
         delayBuffer_[delayWrite_] = gated + wet * kDelayFeedback;
-        delayWrite_ = (delayWrite_ + 1) % delayBuffer_.size();
+        delayWrite_ = (delayWrite_ + 1) % ring;
 
         // SPRING: SIZE and TONE are fixed (see kSpringCombMs's own
         // comment), so only the wet MIX - this macro - is ever

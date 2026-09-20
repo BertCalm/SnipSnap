@@ -14,6 +14,9 @@
 #include "SurfaceEngine.h"
 
 using snipsnap::ControlFrame;
+using snipsnap::GrainSettings;
+using snipsnap::KeySnap;
+using snipsnap::SwarmSettings;
 using snipsnap::MacroState;
 using snipsnap::PrintBuffer;
 using snipsnap::SurfaceEngine;
@@ -129,6 +132,57 @@ Java_com_snipsnap_app_NativeSurface_setCorner(
     JNIEnv*, jobject, jlong handle, jint index,
     jfloat pitch, jfloat cutoff, jfloat resonance, jfloat drive, jfloat crush, jfloat echo, jfloat spring) {
     engine(handle)->setCorner(index, MacroState{pitch, cutoff, resonance, drive, crush, echo, spring});
+}
+
+/** GRAIN's three knobs, in the order SurfaceEngine.kt names them: SIZE, DENSITY, SPRAY. */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setGrain(JNIEnv*, jobject, jlong handle, jfloat size, jfloat density, jfloat spray) {
+    engine(handle)->setGrain(GrainSettings{size, density, spray});
+}
+
+/**
+ * The key GRAIN snaps to: the root pitch class, the scale as a 12-bit
+ * mask of degrees above it, and the loaded pad's own note - a jint mask
+ * because Kotlin has no unsigned type to hand over; the engine masks it
+ * to twelve bits either way.
+ */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setKey(JNIEnv*, jobject, jlong handle, jint rootSemitone, jint scaleMask, jfloat sourceMidi) {
+    engine(handle)->setKey(KeySnap{rootSemitone, static_cast<uint32_t>(scaleMask), sourceMidi});
+}
+
+/** SWARM, in the order SurfaceEngine.kt names them: VOICES then DETUNE (see SurfaceEngine::setSwarm). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setSwarm(JNIEnv*, jobject, jlong handle, jint voices, jfloat detune) {
+    engine(handle)->setSwarm(SwarmSettings{voices, detune});
+}
+
+/** KEY for the loop: snap the loop's pitch to the key setKey holds (see SurfaceEngine::setKeySnap). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong handle, jboolean on) {
+    engine(handle)->setKeySnap(on == JNI_TRUE);
+}
+
+/** ECHO's time in seconds, worked out from the kit's bar on the Kotlin side; anything not positive is the free time (see SurfaceEngine::setEchoTime). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setEchoTime(JNIEnv*, jobject, jlong handle, jfloat seconds) {
+    engine(handle)->setEchoTime(seconds);
+}
+
+/**
+ * The modulators' offsets, one per target in `Modulator.Target`'s own
+ * ordinal order (SurfaceEngine::kModTargets of them). An array rather
+ * than eleven jfloats: the surface sends this every screen frame, and a
+ * signature that long is a swap waiting to happen. A short array leaves
+ * the rest at 0, a long one is read up to the engine's count.
+ */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setModulation(JNIEnv* env, jobject, jlong handle, jfloatArray offsets) {
+    jfloat buf[SurfaceEngine::kModTargets];
+    const jsize n = env->GetArrayLength(offsets);
+    const jsize count = n < 0 ? 0 : (n > SurfaceEngine::kModTargets ? SurfaceEngine::kModTargets : n);
+    if (count > 0) env->GetFloatArrayRegion(offsets, 0, count, buf);
+    engine(handle)->setModulation(buf, count);
 }
 
 /**

@@ -13,8 +13,17 @@ import java.util.zip.ZipOutputStream
  *
  * A kit preflight refuses to pack isn't silently lost — it's skipped
  * **and named**, with the reason, in the result. Backups never pretend.
+ *
+ * A shelf holds more than kits: the caller may hand [backup] extra files
+ * to ride at the archive's root by name (the player's presets, kept by
+ * `:shell`, which this module does not know), and [extra] reads one back
+ * out, bounded. [restore] reads only the `.xpn` entries and leaves the
+ * extras to whoever packed them.
  */
 object KitBackup {
+
+    /** The most an extra entry may weigh when [extra] reads it back: a presets file is kilobytes; a stranger's archive may declare anything. */
+    const val MAX_EXTRA_BYTES = 8L * 1024 * 1024
 
     /**
      * The most `.xpn` entries a backup may hold before [restore] refuses
@@ -29,9 +38,22 @@ object KitBackup {
         val packed: List<String>,
         /** Kit name → the blocking reason, for kits that didn't. */
         val skipped: Map<String, String>,
+        /** The extra entries written at the root, by name; an extra whose file was not there is simply absent. */
+        val extras: List<String> = emptyList(),
     )
 
-    fun backup(kitsRoot: File, outFile: File, overwrite: Boolean = false): BackupResult {
+    /**
+     * [extras] are files to carry at the archive's root under the given
+     * entry names, after the kits; one that is not a file is left out
+     * rather than refused, so a shelf with no presets backs up as it
+     * always did.
+     */
+    fun backup(kitsRoot: File, outFile: File, overwrite: Boolean = false, extras: Map<String, File> = emptyMap()): BackupResult {
+        // Judged before anything is written: an extra that would read as a
+        // kit, or nest, is a programming error, not a shelf's fault.
+        for (name in extras.keys) {
+            require(name.isNotBlank() && !name.endsWith(".xpn", ignoreCase = true) && !name.contains('/')) { "an extra is a root file, never a kit: '$name'" }
+        }
         val kitDirs = KitStore.list(kitsRoot)
         require(kitDirs.isNotEmpty()) { "no kits under $kitsRoot" }
         if (outFile.exists() && !overwrite) {
@@ -41,6 +63,7 @@ object KitBackup {
 
         val packed = mutableListOf<String>()
         val skipped = linkedMapOf<String, String>()
+        val carried = mutableListOf<String>()
         val temp = java.nio.file.Files.createTempDirectory("kitbackup").toFile()
         try {
             ZipOutputStream(outFile.outputStream()).use { zip ->
@@ -58,6 +81,13 @@ object KitBackup {
                     zip.closeEntry()
                     packed += kit.name
                 }
+                for ((name, file) in extras) {
+                    if (!file.isFile) continue
+                    zip.putNextEntry(ZipEntry(name))
+                    file.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
+                    carried += name
+                }
             }
         } finally {
             temp.deleteRecursively()
@@ -65,7 +95,25 @@ object KitBackup {
         require(packed.isNotEmpty()) {
             "every kit was blocked by preflight: " + skipped.entries.joinToString("; ") { "${it.key}: ${it.value}" }
         }
-        return BackupResult(outFile, packed, skipped)
+        return BackupResult(outFile, packed, skipped, carried)
+    }
+
+    /**
+     * The extra entry named [name] at [backupFile]'s root, or null when the
+     * archive holds none; refused past [maxBytes] rather than read whole,
+     * since a backup shared in may come from a stranger.
+     */
+    fun extra(backupFile: File, name: String, maxBytes: Long = MAX_EXTRA_BYTES): ByteArray? {
+        require(backupFile.isFile) { "no such file: $backupFile" }
+        ZipFile(backupFile).use { zip ->
+            val entry = zip.getEntry(name) ?: return null
+            if (entry.isDirectory) return null
+            val out = java.io.ByteArrayOutputStream()
+            zip.getInputStream(entry).use { src ->
+                com.snipsnap.mpc3.LimitedRead.copy(src, out, limit = maxBytes, what = "backup entry $name")
+            }
+            return out.toByteArray()
+        }
     }
 
     fun restore(

@@ -30,6 +30,17 @@ object KitPreview {
     const val MIN_BPM = 20f
     const val MAX_BPM = 400f
 
+    /**
+     * The tempo a kit is played at, from what its file says: [DEFAULT_BPM]
+     * with none, and held to [MIN_BPM]..[MAX_BPM] either way. `Kit` only
+     * validates its tempo as positive and under a thousand, so a nonsense
+     * 0.001 is a legal file; every clock that plays a kit - the preview,
+     * the beat tape, the arranger, SURFACE's modulators and ECHO - reads
+     * the tempo through here, so they cannot disagree about what a bar is
+     * and none of them meets a bar an hour long.
+     */
+    fun playedBpm(tempoBpm: Float?): Float = (tempoBpm ?: DEFAULT_BPM).coerceIn(MIN_BPM, MAX_BPM)
+
     /** Ring-out tail after the last bar, seconds. */
     private const val TAIL_SEC = 0.6f
 
@@ -46,8 +57,8 @@ object KitPreview {
         // kit.tempoBpm is only validated >0 <1000, so a hostile or nonsense
         // 0.001 would blow framesPerPulse up until the frame math overflows to
         // a negative array size. A preview clamps to a musical range - it is
-        // cosmetic, not the place to honour an impossible tempo.
-        val bpm = (tempoBpm ?: kit.tempoBpm ?: DEFAULT_BPM).coerceIn(MIN_BPM, MAX_BPM)
+        // cosmetic, not the place to honour an impossible tempo (playedBpm).
+        val bpm = playedBpm(tempoBpm ?: kit.tempoBpm)
         val framesPerPulse = 60.0 / bpm * RATE / 960.0
 
         data class Voice(
