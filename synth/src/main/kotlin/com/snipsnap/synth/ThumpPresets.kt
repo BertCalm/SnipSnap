@@ -15,10 +15,18 @@ package com.snipsnap.synth
  * voice, not four separate guesses. HAT_CLOSED, HAT_OPEN and TOM are the
  * exception: their classifier boundaries turned out too chaotic for that
  * to be safe (see the comments above those tables), so their values are
- * points an exhaustive scan actually measured as safe. Either way,
- * [ThumpPresetsTest]'s spread check verifies the result rather than
- * assuming it: sixteen presets that all sound similar would be a list
- * that looks full and feels empty.
+ * points an exhaustive scan actually measured as safe. Either way, every
+ * one of KICK, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL and RIM below was
+ * authored by reasoning about the DSP — never rendered, never heard —
+ * and checked only by [ThumpPresetsTest]'s classifier and sanity checks.
+ *
+ * SNARE is the one exception, and the difference matters. Phase 1B
+ * rebuilt SNARE's body as a circular membrane with wires rattling
+ * against it, and the sixteen presets below were rendered on that new
+ * engine, listened to by a person, and kept because they sounded like
+ * the name says — not reasoned into existence from the macro math. Say
+ * so here rather than let this KDoc's silence imply every table below it
+ * was checked the same way; it wasn't.
  *
  * Names never reference a real drum machine or model number
  * (`docs/SYNTH_ROADMAP.md`'s naming rule) — not even a near-miss; the
@@ -64,23 +72,32 @@ object ThumpPresets {
         p(ThumpVoice.KICK, "ROOTS", "TUNE" to 0.17f, "SWEEP" to 0.12f, "DECAY" to 0.86f, "CLICK" to 0.00f, "DRIVE" to 0.28f),
     )
 
+    // Phase 1B rebuilt SNARE's body as a membrane with wires rattling
+    // against it, which broke every one of the sixteen presets above this
+    // comment in source control history: several sat at SNAP 0.77-0.80,
+    // which under the old two-sine body read as snare but under the new
+    // membrane is mostly wire noise, so the classifier correctly calls
+    // them hi-hats. These sixteen replace them and were rendered on the
+    // new engine and auditioned by a person before landing here — not
+    // reasoned into existence from the macro math like the rest of this
+    // file. See this file's KDoc.
     private val snarePresets = listOf(
-        p(ThumpVoice.SNARE, "DUSTY SNARE", "TUNE" to 0.40f, "SNAP" to 0.53f, "DECAY" to 0.39f, "TONE" to 0.24f),
-        p(ThumpVoice.SNARE, "VINYL CRACK", "TUNE" to 0.24f, "SNAP" to 0.53f, "DECAY" to 0.51f, "TONE" to 0.24f),
-        p(ThumpVoice.SNARE, "LOFI SNARE", "TUNE" to 0.40f, "SNAP" to 0.37f, "DECAY" to 0.39f, "TONE" to 0.40f),
-        p(ThumpVoice.SNARE, "SOUL SNARE", "TUNE" to 0.24f, "SNAP" to 0.37f, "DECAY" to 0.51f, "TONE" to 0.40f),
-        p(ThumpVoice.SNARE, "CLUB SNARE", "TUNE" to 0.47f, "SNAP" to 0.80f, "DECAY" to 0.28f, "TONE" to 0.60f),
-        p(ThumpVoice.SNARE, "DISCO SNAP", "TUNE" to 0.63f, "SNAP" to 0.64f, "DECAY" to 0.16f, "TONE" to 0.76f),
-        p(ThumpVoice.SNARE, "PEAK SNARE", "TUNE" to 0.47f, "SNAP" to 0.64f, "DECAY" to 0.28f, "TONE" to 0.76f),
-        p(ThumpVoice.SNARE, "TIGHT HOUSE", "TUNE" to 0.63f, "SNAP" to 0.80f, "DECAY" to 0.16f, "TONE" to 0.60f),
-        p(ThumpVoice.SNARE, "RAGGA SNARE", "TUNE" to 0.73f, "SNAP" to 0.77f, "DECAY" to 0.34f, "TONE" to 0.88f),
-        p(ThumpVoice.SNARE, "JUNGLE SNAP", "TUNE" to 0.57f, "SNAP" to 0.77f, "DECAY" to 0.46f, "TONE" to 0.88f),
-        p(ThumpVoice.SNARE, "BREAKBEAT", "TUNE" to 0.73f, "SNAP" to 0.93f, "DECAY" to 0.34f, "TONE" to 0.72f),
-        p(ThumpVoice.SNARE, "RUDE BWOY", "TUNE" to 0.57f, "SNAP" to 0.93f, "DECAY" to 0.46f, "TONE" to 0.72f),
-        p(ThumpVoice.SNARE, "DUB SNARE", "TUNE" to 0.22f, "SNAP" to 0.30f, "DECAY" to 0.68f, "TONE" to 0.32f),
-        p(ThumpVoice.SNARE, "ROOTS SNARE", "TUNE" to 0.38f, "SNAP" to 0.46f, "DECAY" to 0.56f, "TONE" to 0.18f),
-        p(ThumpVoice.SNARE, "SKANK SNARE", "TUNE" to 0.22f, "SNAP" to 0.46f, "DECAY" to 0.68f, "TONE" to 0.18f),
-        p(ThumpVoice.SNARE, "STEPPA SNARE", "TUNE" to 0.38f, "SNAP" to 0.30f, "DECAY" to 0.56f, "TONE" to 0.32f),
+        p(ThumpVoice.SNARE, "DEEP ROOM", "TUNE" to 0.15f, "SNAP" to 0.35f, "DECAY" to 0.70f, "TONE" to 0.35f, "STRIKE" to 0.22f, "PUNCH" to 0.45f),
+        p(ThumpVoice.SNARE, "DRY TIMBER", "TUNE" to 0.18f, "SNAP" to 0.30f, "DECAY" to 0.30f, "TONE" to 0.30f, "STRIKE" to 0.18f, "PUNCH" to 0.60f),
+        p(ThumpVoice.SNARE, "WIDE FLOOR", "TUNE" to 0.12f, "SNAP" to 0.55f, "DECAY" to 0.75f, "TONE" to 0.50f, "STRIKE" to 0.30f, "PUNCH" to 0.40f),
+        p(ThumpVoice.SNARE, "BACKBEAT", "TUNE" to 0.38f, "SNAP" to 0.45f, "DECAY" to 0.48f, "TONE" to 0.50f, "STRIKE" to 0.28f, "PUNCH" to 0.55f),
+        p(ThumpVoice.SNARE, "CRACKED CLAY", "TUNE" to 0.42f, "SNAP" to 0.52f, "DECAY" to 0.35f, "TONE" to 0.70f, "STRIKE" to 0.42f, "PUNCH" to 0.75f),
+        p(ThumpVoice.SNARE, "SOFT SHELL", "TUNE" to 0.35f, "SNAP" to 0.38f, "DECAY" to 0.55f, "TONE" to 0.40f, "STRIKE" to 0.20f, "PUNCH" to 0.30f),
+        p(ThumpVoice.SNARE, "TIGHT STEEL", "TUNE" to 0.62f, "SNAP" to 0.48f, "DECAY" to 0.22f, "TONE" to 0.65f, "STRIKE" to 0.35f, "PUNCH" to 0.70f),
+        p(ThumpVoice.SNARE, "PICCOLO", "TUNE" to 0.80f, "SNAP" to 0.42f, "DECAY" to 0.18f, "TONE" to 0.72f, "STRIKE" to 0.38f, "PUNCH" to 0.65f),
+        p(ThumpVoice.SNARE, "RIM EDGE", "TUNE" to 0.68f, "SNAP" to 0.55f, "DECAY" to 0.20f, "TONE" to 0.85f, "STRIKE" to 0.55f, "PUNCH" to 0.85f),
+        p(ThumpVoice.SNARE, "LOOSE WIRE", "TUNE" to 0.45f, "SNAP" to 0.72f, "DECAY" to 0.45f, "TONE" to 0.62f, "STRIKE" to 0.30f, "PUNCH" to 0.45f),
+        p(ThumpVoice.SNARE, "DARK RATTLE", "TUNE" to 0.40f, "SNAP" to 0.75f, "DECAY" to 0.50f, "TONE" to 0.28f, "STRIKE" to 0.25f, "PUNCH" to 0.40f),
+        p(ThumpVoice.SNARE, "DUST BURST", "TUNE" to 0.45f, "SNAP" to 0.92f, "DECAY" to 0.35f, "TONE" to 0.25f, "STRIKE" to 0.30f, "PUNCH" to 0.35f),
+        p(ThumpVoice.SNARE, "LONG HISS", "TUNE" to 0.38f, "SNAP" to 0.88f, "DECAY" to 0.62f, "TONE" to 0.45f, "STRIKE" to 0.28f, "PUNCH" to 0.30f),
+        p(ThumpVoice.SNARE, "FULL SWING", "TUNE" to 0.42f, "SNAP" to 0.50f, "DECAY" to 0.40f, "TONE" to 0.55f, "STRIKE" to 0.30f, "PUNCH" to 1.00f),
+        p(ThumpVoice.SNARE, "CENTRE HIT", "TUNE" to 0.45f, "SNAP" to 0.45f, "DECAY" to 0.42f, "TONE" to 0.55f, "STRIKE" to 0.05f, "PUNCH" to 0.55f),
+        p(ThumpVoice.SNARE, "RIM SHOT", "TUNE" to 0.45f, "SNAP" to 0.45f, "DECAY" to 0.42f, "TONE" to 0.55f, "STRIKE" to 0.85f, "PUNCH" to 0.55f),
     )
 
     // METAL is pinned at 0.30 on every hat preset. The classifier's
