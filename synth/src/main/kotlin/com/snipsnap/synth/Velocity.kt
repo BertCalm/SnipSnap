@@ -28,9 +28,6 @@ object Velocity {
         if (a <= 0.001f) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
 
         val cutoffHz = Dsp.expMap(1f - a, 700f, 14_000f)
-        var inPeak = 0f
-        for (v in snip.samples) { val x = if (v < 0) -v else v; if (x > inPeak) inPeak = x }
-
         val out = FloatArray(snip.samples.size)
         for (ch in 0 until snip.channels) {
             val lp = Dsp.OnePole(snip.sampleRate)
@@ -40,14 +37,30 @@ object Velocity {
                 i += snip.channels
             }
         }
+        return peakMatch(snip, Snip(out, snip.channels, snip.sampleRate))
+    }
 
-        var outPeak = 0f
-        for (v in out) { val x = if (v < 0) -v else v; if (x > outPeak) outPeak = x }
-        if (outPeak > 1e-9f && inPeak > 1e-9f) {
-            val g = inPeak / outPeak
-            for (i in out.indices) out[i] = (out[i] * g).coerceIn(-1f, 1f)
-        }
-        return Snip(out, snip.channels, snip.sampleRate)
+    /**
+     * [candidate] rescaled so its peak matches [reference]'s — the same
+     * normalization [soften] has always done internally, exposed for a
+     * caller that reaches for [atVelocity] instead: a lower BRIGHT/CUTOFF
+     * macro is naturally quieter as an emergent side effect of the engine,
+     * which [atVelocity] does not correct for (it only ever promises not to
+     * exceed the preset's own ceiling, not to hold the peak steady). Every
+     * velocity-zone call site depends on "peak-matched, timbre only" -
+     * level is the hardware's velocity curve's job - so a zone built from
+     * [atVelocity] owes it this rescale exactly as one built from [soften]
+     * already gets it for free.
+     */
+    fun peakMatch(reference: Snip, candidate: Snip): Snip {
+        var refPeak = 0f
+        for (v in reference.samples) { val x = if (v < 0) -v else v; if (x > refPeak) refPeak = x }
+        var candPeak = 0f
+        for (v in candidate.samples) { val x = if (v < 0) -v else v; if (x > candPeak) candPeak = x }
+        if (candPeak <= 1e-9f || refPeak <= 1e-9f) return candidate
+        val g = refPeak / candPeak
+        val out = FloatArray(candidate.samples.size) { (candidate.samples[it] * g).coerceIn(-1f, 1f) }
+        return Snip(out, candidate.channels, candidate.sampleRate)
     }
 
     /**
@@ -98,16 +111,19 @@ object Velocity {
      * A quiet strike on a real instrument excites fewer partials; it is not a
      * loud strike with a blanket over it. Falls back to [soften] for voices
      * that expose no brightness macro.
+     *
+     * Resolves [brightnessSpec] on every call. A caller rendering several
+     * velocities off the same unchanging [patch] — a round-robin grid, a
+     * ghost-layer stack — should resolve it once and use the three-argument
+     * overload below instead, so the scan happens once for the whole stack.
      */
-    fun atVelocity(patch: Patch, velocity: Float): Snip {
+    fun atVelocity(patch: Patch, velocity: Float): Snip =
+        atVelocity(patch, velocity, brightnessSpec(patch))
+
+    /** [atVelocity] with [spec] already resolved — see that function and [brightnessSpec]. */
+    fun atVelocity(patch: Patch, velocity: Float, spec: MacroSpec?): Snip {
         val v = velocity.coerceIn(0f, 1f)
-        val specs = macroSpecsFor(patch)
-        // Ask the voice, not the instance: BRIGHTNESS_MACROS.firstOrNull {
-        // it in patch.macros } would miss a partial macro map where the
-        // brightness macro is unset and rendering at its voice default -
-        // exactly the frozen-waveform case this function exists to replace.
-        val spec = BRIGHTNESS_MACROS.firstNotNullOfOrNull { name -> specs.firstOrNull { it.name == name } }
-            ?: return soften(patch.render(), 1f - v)
+        spec ?: return soften(patch.render(), 1f - v)
         val asked = patch.macros[spec.name] ?: spec.default
         // A macro parked at (or near) 0 has no ceiling to scale down from -
         // multiplying it by anything still gives 0, so every velocity would
@@ -120,6 +136,25 @@ object Velocity {
         // preset asked for: a preset's brightest is still its own ceiling.
         val scaled = asked * Dsp.lin(v, VELOCITY_FLOOR_RATIO, 1f)
         return patch.withMacros(patch.macros + (spec.name to scaled)).render()
+    }
+
+    /**
+     * [patch]'s brightness macro spec — first of [BRIGHTNESS_MACROS] that
+     * appears on the voice's own spec list, or null when it has none. This
+     * is [atVelocity]'s expensive half: [macroSpecsFor] allocates a fresh
+     * `List<MacroSpec>` and this scans it up to five times to find a match.
+     * Resolved once here so a caller re-rendering N velocities off one
+     * patch (Robin's zone grid, KitBuilder's ghost layers — Task 5b) pays
+     * that cost once instead of once per layer.
+     *
+     * Ask the voice, not the instance: `BRIGHTNESS_MACROS.firstOrNull { it
+     * in patch.macros }` would miss a partial macro map where the
+     * brightness macro is unset and rendering at its voice default -
+     * exactly the frozen-waveform case [atVelocity] exists to replace.
+     */
+    fun brightnessSpec(patch: Patch): MacroSpec? {
+        val specs = macroSpecsFor(patch)
+        return BRIGHTNESS_MACROS.firstNotNullOfOrNull { name -> specs.firstOrNull { it.name == name } }
     }
 
     /**

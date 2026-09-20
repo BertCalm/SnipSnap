@@ -341,15 +341,38 @@ class KitBuilderModel private constructor(
 
     /**
      * Ghost notes: soft velocity zones rendered darker (not just quieter)
-     * under the pad's main sample, via the same softening the velocity
-     * kit ships with. [softZones] 1 or 2. Reversible with
+     * under the pad's main sample. [softZones] 1 or 2. Reversible with
      * [clearGhostLayers].
+     *
+     * A synth pad (its recipe carries a [com.snipsnap.synth.Patch])
+     * re-renders each zone at velocity via `Velocity.atVelocity` — a soft
+     * ghost genuinely struck softer, not the main take low-passed. A
+     * captured pad has no patch to re-render, so it still reads
+     * `Velocity.soften` on the main take, the only thing there is to do
+     * with a frozen recording.
      */
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        // A patch riding alongside its own FX chain (a BREED cross can leave
+        // both) is excluded: atVelocity only re-renders the bare voice, not
+        // the rack on top of it, so it would quietly drop whatever the fx
+        // chain added. Those pads keep softening the fx-processed take they
+        // actually have.
+        val padRecipe = Breed.recipeOf(pad)
+        val patch = padRecipe?.patch?.takeIf { padRecipe.fx == null }
+        // Resolved once, not per zone - Velocity.atVelocity's own KDoc: the
+        // scan behind it is O(5×n), best paid once for the whole stack.
+        val brightnessSpec = patch?.let { com.snipsnap.synth.Velocity.brightnessSpec(it) }
+        // A render's channel count and sample rate are the engine's own,
+        // not the velocity's, so one probe settles every zone: a patch
+        // whose render doesn't match the pad's own audio - stereo-ified
+        // since, resampled since - falls back to softening that audio.
+        val useAtVelocity = patch != null && patch.render().let {
+            it.channels == main.channels && it.sampleRate == main.sampleRate
+        }
 
         val amounts = if (softZones == 1) listOf(0.55f) else listOf(0.7f, 0.4f) // softest first
         val windows = StackTakes.windows(softZones)
@@ -358,7 +381,21 @@ class KitBuilderModel private constructor(
         val names = freeLayerNames(pad.sampleStem, softZones)
         val layers = buildList {
             amounts.forEachIndexed { v, amount ->
-                WavWriter.write(File(kitDir, names[v]), com.snipsnap.synth.Velocity.soften(main, amount))
+                // amount is a softening depth (0 untouched, 1 softest);
+                // atVelocity speaks velocity (1 untouched, 0 softest).
+                val darker = if (useAtVelocity) {
+                    // atVelocity isn't peak-matched (a duller macro is
+                    // naturally quieter as a side effect) - peakMatch keeps
+                    // this zone "timbre only, level is the hardware's job",
+                    // the same contract soften() already met on its own.
+                    com.snipsnap.synth.Velocity.peakMatch(
+                        main,
+                        com.snipsnap.synth.Velocity.atVelocity(patch!!, 1f - amount, brightnessSpec),
+                    )
+                } else {
+                    com.snipsnap.synth.Velocity.soften(main, amount)
+                }
+                WavWriter.write(File(kitDir, names[v]), darker)
                 add(com.snipsnap.kit.KitLayer(names[v], windows[v].first, windows[v].last))
             }
             add(com.snipsnap.kit.KitLayer(pad.sampleFile, windows.last().first, windows.last().last))

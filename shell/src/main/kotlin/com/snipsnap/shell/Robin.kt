@@ -42,7 +42,11 @@ object Robin {
      * The grid's zone grading (II4): tone via the ghost layers' own
      * soften depths (softest zone first, top zone pristine), level from
      * [ZONE_LEVEL_FLOOR] up to unity — soft hits play takes that are
-     * both quieter and darker, the way real dynamics work.
+     * both quieter and darker, the way real dynamics work. A synth pad
+     * reads these as `Velocity.atVelocity` velocities (`1f - depth`) and
+     * re-renders; a captured pad still reads them as `Velocity.soften`
+     * depths, the only thing there is to do with a frozen take (see
+     * [apply]).
      */
     private val ZONE_SOFTEN = mapOf(
         2 to listOf(0.55f),
@@ -75,6 +79,26 @@ object Robin {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
 
+        // A synth pad's soft zones re-render at velocity (genuinely
+        // different onset, not the same take low-passed); a captured pad
+        // has no patch to re-render, so its zones still soften() the take
+        // it has, exactly as before. Read off `pad` now - `replaceAudio`
+        // below overwrites the recipe with the robin's own {"robin": ...}
+        // bookkeeping, so this is the last moment the patch is reachable.
+        //
+        // A patch riding alongside its own FX chain (a BREED cross can
+        // leave both - `Breed.cross`) is excluded: atVelocity only knows
+        // how to re-render the bare voice, not replay the rack on top, so
+        // re-rendering here would quietly drop whatever character the fx
+        // chain added. Those pads keep softening the fx-processed take
+        // they actually have, which is still correct for them.
+        //
+        // The spec is resolved once here, not per zone (Velocity.atVelocity's
+        // KDoc: macroSpecsFor is an O(5×n) scan best paid once per patch).
+        val padRecipe = Breed.recipeOf(pad)
+        val patch = padRecipe?.patch?.takeIf { padRecipe.fx == null }
+        val brightnessSpec = patch?.let { com.snipsnap.synth.Velocity.brightnessSpec(it) }
+
         var boundaries: List<Long> = emptyList()
         val recipe = JsonValue.Obj(
             linkedMapOf<String, JsonValue>(
@@ -95,11 +119,38 @@ object Robin {
                 }
             } else {
                 val soften = ZONE_SOFTEN.getValue(zones)
+                // A render's channel count and sample rate are the engine's
+                // own, not the velocity's, so one probe settles every zone.
+                // `concat` below trusts every take to share one format
+                // (it takes channels/rate from takes.first() alone), so a
+                // patch whose render doesn't already match the pad's own
+                // audio - stereo-ified since, resampled since, anything -
+                // falls back to softening that audio instead of mixing
+                // formats into one chain.
+                val useAtVelocity = patch != null && patch.render().let {
+                    it.channels == original.channels && it.sampleRate == original.sampleRate
+                }
                 buildList {
                     for (z in 0 until zones) {
                         val graded = if (z < zones - 1) {
                             val level = ZONE_LEVEL_FLOOR + (1f - ZONE_LEVEL_FLOOR) * z / (zones - 1)
-                            gain(com.snipsnap.synth.Velocity.soften(original, soften[z]), level)
+                            // soften[z] is a softening depth (0 untouched, 1 softest);
+                            // atVelocity speaks velocity (1 untouched, 0 softest) - see
+                            // atVelocity's own fallback for the same 1f - v identity.
+                            val darker = if (useAtVelocity) {
+                                // atVelocity isn't peak-matched (a duller macro is
+                                // naturally quieter as a side effect) - peakMatch
+                                // restores the "timbre only" contract soften()
+                                // already gave this grid, so ZONE_LEVEL_FLOOR's
+                                // gain below is the only thing setting level.
+                                com.snipsnap.synth.Velocity.peakMatch(
+                                    original,
+                                    com.snipsnap.synth.Velocity.atVelocity(patch!!, 1f - soften[z], brightnessSpec),
+                                )
+                            } else {
+                                com.snipsnap.synth.Velocity.soften(original, soften[z])
+                            }
+                            gain(darker, level)
                         } else {
                             original
                         }
