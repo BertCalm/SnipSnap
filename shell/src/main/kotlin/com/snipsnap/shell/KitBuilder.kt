@@ -360,10 +360,21 @@ class KitBuilderModel private constructor(
         // patch+fx-falls-back-too) call Robin's zone grid and StarterKits'
         // VELOCITY starter make - resolved here, not per zone, per
         // Velocity.atVelocity's own KDoc (the scan behind brightnessSpec
-        // is O(5×n), best paid once for the whole stack).
+        // is O(5×n), best paid once for the whole stack). Skipped
+        // entirely for a patch+fx pad: layerAt's fx gate discards
+        // whatever this resolves to anyway (Task 5b).
         val padRecipe = Breed.recipeOf(pad)
         val patch = padRecipe?.patch
-        val brightnessSpec = patch?.let { com.snipsnap.synth.Velocity.brightnessSpec(it) }
+        val patchFx = padRecipe?.fx
+        val brightnessSpec = if (patch != null && patchFx == null) {
+            com.snipsnap.synth.Velocity.brightnessSpec(patch)
+        } else {
+            null
+        }
+        // Also resolved once - this is layerAt's format probe (a full
+        // patch.render(), thrown away), the expensive half of the same
+        // hoist brightnessSpec just got (Task 5b).
+        val useAtVelocity = com.snipsnap.synth.Velocity.canUseAtVelocity(main, patch, patchFx)
 
         val amounts = if (softZones == 1) listOf(0.55f) else listOf(0.7f, 0.4f) // softest first
         val windows = StackTakes.windows(softZones)
@@ -376,7 +387,7 @@ class KitBuilderModel private constructor(
                 // layerAt (like atVelocity) speaks velocity (1 untouched,
                 // 0 softest).
                 val darker = com.snipsnap.synth.Velocity.layerAt(
-                    main, patch, padRecipe?.fx, 1f - amount, brightnessSpec,
+                    main, patch, patchFx, 1f - amount, brightnessSpec, useAtVelocity,
                 )
                 WavWriter.write(File(kitDir, names[v]), darker)
                 add(com.snipsnap.kit.KitLayer(names[v], windows[v].first, windows[v].last))

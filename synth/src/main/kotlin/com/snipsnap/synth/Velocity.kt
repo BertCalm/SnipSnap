@@ -87,9 +87,13 @@ object Velocity {
     fun variantsAt(snip: Snip, patch: Patch?, fx: FxChain? = null, count: Int = 2): List<Snip> {
         require(count in 1..3) { "1..3 soft variants (4 zones total), got $count" }
         val spec = patch?.let { brightnessSpec(it) }
+        // Resolved once for the whole stack - see canUseAtVelocity's KDoc
+        // (Task 5b: the format probe is a full patch.render(), the same
+        // cost brightnessSpec's scan already avoids paying per layer).
+        val useAtVelocity = canUseAtVelocity(snip, patch, fx)
         return List(count) { i ->
             val amount = (count - i).toFloat() / (count + 1)
-            layerAt(snip, patch, fx, 1f - amount, spec)
+            layerAt(snip, patch, fx, 1f - amount, spec, useAtVelocity)
         }
     }
 
@@ -118,11 +122,23 @@ object Velocity {
      * - [spec] is null and the raw macro is at/near zero — both of those
      *   are [atVelocity]'s own fallback conditions, applied here too so
      *   [layerAt] and a bare [atVelocity] call never disagree.
+     *
+     * [useAtVelocity] defaults to resolving [canUseAtVelocity] inline, so a
+     * one-off caller gets the old, self-contained behavior for free. A
+     * caller re-rendering N layers off one unchanging (reference, patch,
+     * fx) triple — every production call site — should resolve it once
+     * (alongside [spec]) and pass it in instead: Task 5b found the default
+     * path re-running [Patch.render] as a format probe on every single
+     * layer, undoing the exact hoist [spec] itself already got.
      */
-    fun layerAt(reference: Snip, patch: Patch?, fx: FxChain?, velocity: Float, spec: MacroSpec?): Snip {
-        val useAtVelocity = patch != null && fx == null && patch.render().let {
-            it.channels == reference.channels && it.sampleRate == reference.sampleRate
-        }
+    fun layerAt(
+        reference: Snip,
+        patch: Patch?,
+        fx: FxChain?,
+        velocity: Float,
+        spec: MacroSpec?,
+        useAtVelocity: Boolean = canUseAtVelocity(reference, patch, fx),
+    ): Snip {
         return if (useAtVelocity) {
             // atVelocity isn't peak-matched itself (a duller BRIGHT/CUTOFF
             // is naturally quieter as a side effect) - peakMatch restores
@@ -133,6 +149,22 @@ object Velocity {
             soften(reference, 1f - velocity.coerceIn(0f, 1f))
         }
     }
+
+    /**
+     * Whether [patch] (riding no [fx]) can stand in for [reference] via
+     * [atVelocity] — same channel count and sample rate. This is
+     * [layerAt]'s format probe, and it is not free: it means rendering
+     * [patch] once just to read its shape off the result and throw the
+     * audio away. A caller re-rendering N velocity layers off one
+     * unchanging (reference, patch, fx) triple — [variantsAt], Robin's
+     * zone grid, KitBuilder's ghost layers — should call this once and
+     * hand the result to every [layerAt] call, the same way [brightnessSpec]
+     * already gets resolved once per pad rather than once per layer.
+     */
+    fun canUseAtVelocity(reference: Snip, patch: Patch?, fx: FxChain?): Boolean =
+        patch != null && fx == null && patch.render().let {
+            it.channels == reference.channels && it.sampleRate == reference.sampleRate
+        }
 
     /**
      * The floor [BRIGHTNESS_MACROS] is scaled toward at velocity 0, as a

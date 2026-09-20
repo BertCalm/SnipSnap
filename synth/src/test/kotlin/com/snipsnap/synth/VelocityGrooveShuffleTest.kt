@@ -199,6 +199,43 @@ class VelocityGrooveShuffleTest {
     }
 
     @Test
+    fun `layerAt's hoisted useAtVelocity matches the inline probe it replaces - Task 5b`() {
+        // Task 5b: the probe behind canUseAtVelocity used to re-run inside
+        // layerAt on every single call (once per zone, once per ghost
+        // layer) instead of being resolved once per pad alongside
+        // brightnessSpec. Hoisting it must not change a single sample -
+        // this proves the two-argument-list forms agree exactly, for a
+        // patch-only pad, a patch+fx pad (falls back), and a captured
+        // (patch=null) pad.
+        val cases: List<Triple<String, Patch, FxChain?>> = listOf(
+            Triple("VELVET BASS, no fx", VelvetPresets.forVoice(VelvetVoice.BASS).first(), null),
+            Triple("THUMP KICK + fx", ThumpPresets.forVoice(ThumpVoice.KICK).first(), FxChain(reverse = false)),
+        )
+        for ((label, patch, fx) in cases) {
+            val reference = patch.render()
+            val spec = Velocity.brightnessSpec(patch)
+            for (velocity in listOf(0f, 0.3f, 0.7f, 1f)) {
+                val viaInlineProbe = Velocity.layerAt(reference, patch, fx, velocity, spec)
+                val hoisted = Velocity.canUseAtVelocity(reference, patch, fx)
+                val viaHoisted = Velocity.layerAt(reference, patch, fx, velocity, spec, hoisted)
+                assertTrue(
+                    viaInlineProbe.samples.contentEquals(viaHoisted.samples),
+                    "$label at velocity=$velocity: hoisted useAtVelocity should match the inline probe exactly",
+                )
+            }
+        }
+        // The captured-audio (patch=null) case: canUseAtVelocity must
+        // still short-circuit to false without touching patch.render() at
+        // all (there is no patch), and layerAt must agree with itself.
+        val snip = Thump.render(ThumpVoice.SNARE)
+        val viaInlineProbe = Velocity.layerAt(snip, null, null, 0.3f, null)
+        val hoisted = Velocity.canUseAtVelocity(snip, null, null)
+        assertTrue(!hoisted, "no patch at all should never resolve to useAtVelocity")
+        val viaHoisted = Velocity.layerAt(snip, null, null, 0.3f, null, hoisted)
+        assertTrue(viaInlineProbe.samples.contentEquals(viaHoisted.samples))
+    }
+
+    @Test
     fun `THUMP KICK falls back to soften too - DRIVE measured out, not assumed`() {
         // KICK's only other macro (DRIVE) was excluded from BRIGHTNESS_MACROS
         // after measuring it: spectral centroid vs. DRIVE is U-shaped around

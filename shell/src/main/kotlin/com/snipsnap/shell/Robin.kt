@@ -91,10 +91,17 @@ object Robin {
         //
         // The spec is resolved once here, not per zone (Velocity.atVelocity's
         // KDoc: macroSpecsFor is an O(5×n) scan best paid once per patch).
+        // Skipped entirely for a patch+fx pad: layerAt's fx gate discards
+        // it regardless of what it resolves to (Task 5b), so there's no
+        // point paying for the scan.
         val padRecipe = Breed.recipeOf(pad)
         val patch = padRecipe?.patch
         val patchFx = padRecipe?.fx
-        val brightnessSpec = patch?.let { com.snipsnap.synth.Velocity.brightnessSpec(it) }
+        val brightnessSpec = if (patch != null && patchFx == null) {
+            com.snipsnap.synth.Velocity.brightnessSpec(patch)
+        } else {
+            null
+        }
 
         var boundaries: List<Long> = emptyList()
         val recipe = JsonValue.Obj(
@@ -116,6 +123,11 @@ object Robin {
                 }
             } else {
                 val soften = ZONE_SOFTEN.getValue(zones)
+                // Resolved once for the whole grid, not once per zone -
+                // this is layerAt's format probe (a full patch.render(),
+                // thrown away), the expensive half of the same hoist
+                // brightnessSpec already got above (Task 5b).
+                val useAtVelocity = com.snipsnap.synth.Velocity.canUseAtVelocity(original, patch, patchFx)
                 buildList {
                     for (z in 0 until zones) {
                         val graded = if (z < zones - 1) {
@@ -124,7 +136,7 @@ object Robin {
                             // layerAt (like atVelocity) speaks velocity (1
                             // untouched, 0 softest) - hence 1f - soften[z].
                             val darker = com.snipsnap.synth.Velocity.layerAt(
-                                original, patch, patchFx, 1f - soften[z], brightnessSpec,
+                                original, patch, patchFx, 1f - soften[z], brightnessSpec, useAtVelocity,
                             )
                             gain(darker, level)
                         } else {
