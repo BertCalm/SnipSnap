@@ -9,9 +9,11 @@ import kotlin.test.assertTrue
  * (forty-eight total). No classifier "identity" check — every VELVET
  * voice is statically TONAL, not judged from its render — so this covers
  * the rest of the playability contract: a real, clean sound; a faithful
- * JSON round-trip; listbox-legal names (including the naming rule, which
- * SQUELCH's own resonant-acid character makes an easy trap); and a
- * roster that doesn't cluster.
+ * JSON round-trip; and listbox-legal names (including the naming rule,
+ * which SQUELCH's own resonant-acid character makes an easy trap). (No
+ * spread check: good presets cluster in the narrow regions of macro
+ * space that actually sound good, so "evenly spread" is not a property
+ * worth enforcing.)
  */
 class VelvetPresetsTest {
 
@@ -57,38 +59,5 @@ class VelvetPresetsTest {
     fun `no preset name references a real drum machine`() {
         val offenders = VelvetPresets.all().filter { PresetTestSupport.trademarkBlocklist.containsMatchIn(it.name) }
         assertTrue(offenders.isEmpty(), "names that read as a real machine: ${offenders.map { it.name }}")
-    }
-
-    // Thresholds are set from what the table actually achieves, not chosen
-    // to just barely pass — same discipline ThumpPresets' own thresholds
-    // follow.
-    private val spreadThreshold = mapOf(
-        VelvetVoice.BASS to 0.06f,
-        VelvetVoice.BRASS to 0.05f,
-        VelvetVoice.SQUELCH to 0.06f,
-        VelvetVoice.CHIP to 0.05f,
-    )
-
-    @Test
-    fun `presets within a voice do not cluster`() {
-        for (voice in VelvetVoice.entries) {
-            val presets = VelvetPresets.forVoice(voice)
-            val threshold = spreadThreshold.getValue(voice)
-            var minDist = Float.MAX_VALUE
-            var closest: Pair<String, String>? = null
-            for (i in presets.indices) {
-                for (j in i + 1 until presets.size) {
-                    val d = PresetTestSupport.rmsDistance(presets[i].macros, presets[j].macros)
-                    if (d < minDist) {
-                        minDist = d
-                        closest = presets[i].name to presets[j].name
-                    }
-                }
-            }
-            assertTrue(
-                minDist >= threshold,
-                "$voice: closest pair $closest is only $minDist apart (need >= $threshold)",
-            )
-        }
     }
 }

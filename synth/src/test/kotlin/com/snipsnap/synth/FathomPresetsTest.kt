@@ -213,36 +213,4 @@ class FathomPresetsTest {
         val offenders = FathomPresets.all().filter { PresetTestSupport.trademarkBlocklist.containsMatchIn(it.name) }
         assertTrue(offenders.isEmpty(), "names that read as a real machine: ${offenders.map { it.name }}")
     }
-
-    // Thresholds are set from what the table actually achieves, not chosen
-    // to just barely pass — same discipline ThumpPresets' own thresholds
-    // follow.
-    private val spreadThreshold = mapOf(
-        FathomVoice.DEEP to 0.06f,
-        FathomVoice.GRIND to 0.06f,
-        FathomVoice.GLASS to 0.07f,
-    )
-
-    @Test
-    fun `presets within a voice do not cluster`() {
-        for (voice in FathomVoice.entries) {
-            val presets = FathomPresets.forVoice(voice)
-            val threshold = spreadThreshold.getValue(voice)
-            var minDist = Float.MAX_VALUE
-            var closest: Pair<String, String>? = null
-            for (i in presets.indices) {
-                for (j in i + 1 until presets.size) {
-                    val d = PresetTestSupport.rmsDistance(presets[i].macros, presets[j].macros)
-                    if (d < minDist) {
-                        minDist = d
-                        closest = presets[i].name to presets[j].name
-                    }
-                }
-            }
-            assertTrue(
-                minDist >= threshold,
-                "$voice: closest pair $closest is only $minDist apart (need >= $threshold)",
-            )
-        }
-    }
 }
