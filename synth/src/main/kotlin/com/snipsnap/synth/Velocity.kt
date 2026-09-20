@@ -189,7 +189,17 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
-        is ThumpPatch -> Thump.macrosFor(patch.voice)
+        is ThumpPatch -> Thump.macrosFor(patch.voice).let { specs ->
+            // SNARE's TONE stopped being a brightness macro when the snare
+            // became a membrane-plus-wires voice - see [SNARE_TONE_EXCLUDED]
+            // for the measurement. CLAP's TONE is untouched by that rebuild
+            // (still a plain lowpass cutoff) and keeps working here, so the
+            // exclusion has to be scoped to the voice, not the macro name -
+            // filtering it out of SNARE's own spec list (rather than
+            // removing "TONE" from [BRIGHTNESS_MACROS] outright) is what
+            // keeps CLAP unaffected.
+            if (patch.voice == ThumpVoice.SNARE) specs.filterNot { it.name == "TONE" } else specs
+        }
         is TinesPatch -> Tines.macrosFor(patch.voice)
         is PluckPatch -> Pluck.macrosFor(patch.voice)
         is VelvetPatch -> Velvet.macrosFor(patch.voice)
@@ -265,8 +275,8 @@ object Velocity {
      *   KDoc calls filter+resonance "the most gratifying knob in
      *   synthesis"; `Fathom.kt`'s signal path is source → DRIVE → CUTOFF →
      *   envelope).
-     * - TONE (THUMP SNARE, CLAP) — maps straight to a low-pass cutoff in Hz
-     *   (`Thump.kt:190,252`, `toneHz`).
+     * - TONE (THUMP CLAP only — see `SNARE_TONE_EXCLUDED` below) — maps
+     *   straight to a low-pass cutoff in Hz (`Thump.kt`, `toneHz`).
      * - METAL (THUMP HAT_CLOSED, HAT_OPEN) — drives the cascaded
      *   high-pass cutoff that shapes the hats' sizzle (`Thump.kt:219`,
      *   `hpHz`).
@@ -308,6 +318,33 @@ object Velocity {
      * where raising the value brightens. Folding it in would need a
      * per-macro sign flip this list doesn't otherwise carry, so PLUCK and
      * VOX patches fall back to [soften] instead.
+     *
+     * `SNARE_TONE_EXCLUDED`: THUMP SNARE's own TONE used to belong on this
+     * list too, back when it meant "rattle lowpass cutoff" (the pre-rebuild
+     * two-sines-plus-noise snare). The membrane rebuild
+     * (`Thump.kt`'s `snare()`) repointed the same macro at a *highpass*
+     * corner on the wire layer only (`air`, 900-5000 Hz) — raising it
+     * still brightens the wires in isolation, but a one-pole highpass also
+     * sheds energy as its corner rises, so the wire layer gets quieter at
+     * the same time it gets brighter. [macroSpecsFor] excludes SNARE's
+     * TONE from matching here (CLAP's TONE is unaffected by the rebuild
+     * and stays eligible) rather than trying to make TONE level-neutral,
+     * because measuring confirmed compensating for it doesn't reliably fix
+     * the direction: gain-compensating the wire layer to hold its own RMS
+     * constant across TONE (boosting `wireGain` by the inverse of the
+     * highpass's own measured RMS loss, 1.0x at TONE=0 up to ~1.12x at
+     * TONE=1) cuts the overall mix's centroid *decline* from -345 Hz to
+     * -92 Hz across the full sweep, but never flips its sign — the
+     * one-pole highpass is too shallow for the wires' own brightening to
+     * out-pace the body's fixed low-frequency share even once the level
+     * is held even. In the range velocity actually uses (THUMP SNARE's
+     * shipped preset, TONE ceiling 0.35, floor-scaled to 0.161 for a soft
+     * hit), the compensated centroid still reads soft=1650.29 Hz >
+     * hard=1648.09 Hz — backwards, same as uncompensated (soft=1630.58 >
+     * hard=1597.54, the exact numbers `VelocityGrooveShuffleTest`'s
+     * "atVelocity is actually darker at low velocity" failure reported).
+     * THUMP SNARE falls back to [soften] instead, same as KICK/PLUCK/VOX;
+     * re-measure before ever putting SNARE's TONE back on this list.
      */
     private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "DIRT")
 }
