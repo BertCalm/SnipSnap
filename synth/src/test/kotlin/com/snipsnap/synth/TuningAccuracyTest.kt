@@ -11,7 +11,10 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Every pitched voice lands within five cents across its whole TUNE range.
+ * PLUCK lands within five cents across its whole TUNE range, every voice,
+ * every semitone. PLUCK only - this class name used to read as a
+ * fleet-wide guarantee it never measured; the other four melodic engines
+ * have no gate here and no claim is made about them.
  *
  * PLUCK's integer delay line used to render off-pitch by an amount that
  * depended on the fractional remainder at each frequency (see [Pluck]'s

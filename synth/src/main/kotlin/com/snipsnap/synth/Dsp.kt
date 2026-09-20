@@ -49,6 +49,18 @@ internal object Dsp {
      * only raises the floor; it has no idea what the caller's macro is
      * allowed to ask for, so callers must still clamp the result to their
      * own ceiling (see [Velvet.detuneFor]).
+     *
+     * [cycles]'s default of 0.25f is a PLACEHOLDER awaiting the audition
+     * gate, not a settled decision - MEASURE-NEVER-GUESS forbids shipping
+     * a taste call as if it were derived, and "how much beat movement is
+     * enough to hear" is exactly that: a listening judgment, not something
+     * a spectrum can answer. The controller's own ruling on it: "0.25 may
+     * be too little movement to hear. That is an audition-gate question."
+     * The one hard number that IS measured: [Velvet.detuneFor]'s BASS
+     * floor fully swallows FAT's own macro range once `cycles >= ~0.4651`
+     * (see the regression test in VelvetTest) - so 0.25 has headroom
+     * before it collides with FAT, but that headroom is not itself a
+     * defense of 0.25 sounding right.
      */
     fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 0.25f): Float {
         if (baseHz <= 0f || seconds <= 0f) return 1f
@@ -389,6 +401,19 @@ internal object Dsp {
      * not a bug: a shared target across five different crest factors can
      * move a peaky voice's loudness *down* to match the rest freely, but
      * can only move it *up* as far as digital full scale allows.
+     *
+     * STALE MEASUREMENT: the median above, task-4-report.md's 17-voice
+     * table, its 2.86x residual spread, and its "7 of 17 voices
+     * ceiling-pinned" count all describe renders from before Task 6 (key
+     * tracking, which moves VELVET/FATHOM preset brightness by -15.9% to
+     * +7.2%) and before Task 11 (PLUCK oversampling and retune, which
+     * changes its crest factor). This branch no longer produces the
+     * renders that number was measured from. [levelTo] still collapses
+     * the spread by construction regardless of the target's exact value,
+     * so nothing here is broken - but the median, the spread figure, and
+     * the ceiling-pinned count must be re-measured before anyone cites
+     * them again (Phase 1 plans to). Do not treat 0.1834f itself as wrong
+     * in the meantime; it just isn't re-derived yet.
      */
     const val MELODIC_LOUDNESS_TARGET = 0.1834f
 
