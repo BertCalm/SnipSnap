@@ -166,6 +166,39 @@ class VelocityGrooveShuffleTest {
     }
 
     @Test
+    fun `variantsAt with no patch is byte-identical to variants - the captured-audio branch StarterKits depends on`() {
+        // StarterKits' VELOCITY starter is always THUMP-backed in
+        // production, so there is no real captured pad reaching this
+        // function through that door - this proves the fallback branch the
+        // door WOULD take for one, the same guarantee layerAt gives Robin
+        // and KitBuilder for their own captured-pad cases.
+        val snip = Thump.render(ThumpVoice.SNARE)
+        val viaVariants = Velocity.variants(snip, count = 2)
+        val viaVariantsAt = Velocity.variantsAt(snip, patch = null, fx = null, count = 2)
+        assertEquals(viaVariants.size, viaVariantsAt.size)
+        for (i in viaVariants.indices) {
+            assertTrue(
+                viaVariants[i].samples.contentEquals(viaVariantsAt[i].samples),
+                "variant $i: variantsAt(patch=null) should exactly match variants()",
+            )
+        }
+    }
+
+    @Test
+    fun `variantsAt falls back for a patch+fx recipe too, and for voices with no brightness macro`() {
+        val patch = ThumpPresets.forVoice(ThumpVoice.KICK).first() // measured non-monotonic DRIVE, excluded
+        val fx = FxChain(reverse = false)
+        val viaVariantsWithFx = Velocity.variantsAt(patch.render(), patch, fx, count = 2)
+        val viaVariantsNoPatch = Velocity.variantsAt(patch.render(), null, null, count = 2)
+        for (i in viaVariantsWithFx.indices) {
+            assertTrue(
+                viaVariantsWithFx[i].samples.contentEquals(viaVariantsNoPatch[i].samples),
+                "variant $i: a patch+fx recipe should fall back exactly like no patch at all",
+            )
+        }
+    }
+
+    @Test
     fun `THUMP KICK falls back to soften too - DRIVE measured out, not assumed`() {
         // KICK's only other macro (DRIVE) was excluded from BRIGHTNESS_MACROS
         // after measuring it: spectral centroid vs. DRIVE is U-shaped around

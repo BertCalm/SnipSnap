@@ -134,8 +134,16 @@ object Breed {
             .map { it.slot }
 
     /** A pad's recipe as the synth's own shape, or null for anything else (an era, a mutate, a keyed treatment, none). */
-    fun recipeOf(pad: KitPad): PadRecipe? {
-        val r = pad.recipe ?: return null
+    fun recipeOf(pad: KitPad): PadRecipe? = recipeOf(pad.recipe)
+
+    /**
+     * Same parse, off the raw recipe JSON rather than a [KitPad] - shared
+     * with `ArrangedPad.recipe` (`StarterKits`' VELOCITY starter reads its
+     * patch from here too, Task 5b), which carries the identical opaque
+     * shape before a pad ever lands in a kit.
+     */
+    fun recipeOf(recipe: JsonValue.Obj?): PadRecipe? {
+        val r = recipe ?: return null
         return try {
             PadRecipe.fromJsonValue(r)
         } catch (e: JsonException) {

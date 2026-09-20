@@ -80,23 +80,20 @@ object Robin {
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
 
         // A synth pad's soft zones re-render at velocity (genuinely
-        // different onset, not the same take low-passed); a captured pad
-        // has no patch to re-render, so its zones still soften() the take
-        // it has, exactly as before. Read off `pad` now - `replaceAudio`
-        // below overwrites the recipe with the robin's own {"robin": ...}
-        // bookkeeping, so this is the last moment the patch is reachable.
-        //
-        // A patch riding alongside its own FX chain (a BREED cross can
-        // leave both - `Breed.cross`) is excluded: atVelocity only knows
-        // how to re-render the bare voice, not replay the rack on top, so
-        // re-rendering here would quietly drop whatever character the fx
-        // chain added. Those pads keep softening the fx-processed take
-        // they actually have, which is still correct for them.
+        // different onset, not the same take low-passed); a captured pad,
+        // or one whose recipe also carries an fx chain atVelocity can't
+        // replay, still softens the take it has - Velocity.layerAt makes
+        // that same call for KitBuilder's ghost layers and StarterKits'
+        // VELOCITY starter, so this door doesn't carry its own copy of the
+        // decision. Read off `pad` now - `replaceAudio` below overwrites
+        // the recipe with the robin's own {"robin": ...} bookkeeping, so
+        // this is the last moment the patch is reachable.
         //
         // The spec is resolved once here, not per zone (Velocity.atVelocity's
         // KDoc: macroSpecsFor is an O(5×n) scan best paid once per patch).
         val padRecipe = Breed.recipeOf(pad)
-        val patch = padRecipe?.patch?.takeIf { padRecipe.fx == null }
+        val patch = padRecipe?.patch
+        val patchFx = padRecipe?.fx
         val brightnessSpec = patch?.let { com.snipsnap.synth.Velocity.brightnessSpec(it) }
 
         var boundaries: List<Long> = emptyList()
@@ -119,37 +116,16 @@ object Robin {
                 }
             } else {
                 val soften = ZONE_SOFTEN.getValue(zones)
-                // A render's channel count and sample rate are the engine's
-                // own, not the velocity's, so one probe settles every zone.
-                // `concat` below trusts every take to share one format
-                // (it takes channels/rate from takes.first() alone), so a
-                // patch whose render doesn't already match the pad's own
-                // audio - stereo-ified since, resampled since, anything -
-                // falls back to softening that audio instead of mixing
-                // formats into one chain.
-                val useAtVelocity = patch != null && patch.render().let {
-                    it.channels == original.channels && it.sampleRate == original.sampleRate
-                }
                 buildList {
                     for (z in 0 until zones) {
                         val graded = if (z < zones - 1) {
                             val level = ZONE_LEVEL_FLOOR + (1f - ZONE_LEVEL_FLOOR) * z / (zones - 1)
                             // soften[z] is a softening depth (0 untouched, 1 softest);
-                            // atVelocity speaks velocity (1 untouched, 0 softest) - see
-                            // atVelocity's own fallback for the same 1f - v identity.
-                            val darker = if (useAtVelocity) {
-                                // atVelocity isn't peak-matched (a duller macro is
-                                // naturally quieter as a side effect) - peakMatch
-                                // restores the "timbre only" contract soften()
-                                // already gave this grid, so ZONE_LEVEL_FLOOR's
-                                // gain below is the only thing setting level.
-                                com.snipsnap.synth.Velocity.peakMatch(
-                                    original,
-                                    com.snipsnap.synth.Velocity.atVelocity(patch!!, 1f - soften[z], brightnessSpec),
-                                )
-                            } else {
-                                com.snipsnap.synth.Velocity.soften(original, soften[z])
-                            }
+                            // layerAt (like atVelocity) speaks velocity (1
+                            // untouched, 0 softest) - hence 1f - soften[z].
+                            val darker = com.snipsnap.synth.Velocity.layerAt(
+                                original, patch, patchFx, 1f - soften[z], brightnessSpec,
+                            )
                             gain(darker, level)
                         } else {
                             original

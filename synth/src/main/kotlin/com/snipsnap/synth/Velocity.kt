@@ -67,10 +67,71 @@ object Velocity {
      * [count] soft variants of [snip], softest first — ready for
      * `ArrangedPad.softVariants`. Depths are spaced so each zone is an
      * audible step: with two variants, soft ≈ closed-fist, mid ≈ relaxed.
+     *
+     * Always [soften]s [snip] itself — the fallback half of [variantsAt],
+     * pulled out so a caller with no patch at all (captured audio) never
+     * has to pass nulls through the patch-aware entry point.
      */
     fun variants(snip: Snip, count: Int = 2): List<Snip> {
         require(count in 1..3) { "1..3 soft variants (4 zones total), got $count" }
         return List(count) { i -> soften(snip, (count - i).toFloat() / (count + 1)) }
+    }
+
+    /**
+     * [variants], but re-rendered via [atVelocity] when [patch] is a plain
+     * synth patch riding no [fx] — the third production velocity-layer
+     * generator (`StarterKits`' VELOCITY starter), wired through the exact
+     * same decision [layerAt] makes for Robin's zone grid and KitBuilder's
+     * ghost layers, so this doesn't grow a fourth, divergent copy of it.
+     */
+    fun variantsAt(snip: Snip, patch: Patch?, fx: FxChain? = null, count: Int = 2): List<Snip> {
+        require(count in 1..3) { "1..3 soft variants (4 zones total), got $count" }
+        val spec = patch?.let { brightnessSpec(it) }
+        return List(count) { i ->
+            val amount = (count - i).toFloat() / (count + 1)
+            layerAt(snip, patch, fx, 1f - amount, spec)
+        }
+    }
+
+    /**
+     * One velocity layer of [reference]: re-rendered via [atVelocity] when
+     * [patch] is usable, [soften]ed otherwise. The shared decision behind
+     * every production velocity-layer door (Robin's zone grid,
+     * KitBuilder's ghost layers, `StarterKits`' VELOCITY starter) —
+     * written once here so the three sites can't drift into three
+     * slightly different answers to "does this pad get to re-render".
+     *
+     * Three reasons [patch] is set aside for the [soften] fallback even
+     * when it's non-null:
+     * - [fx] is non-null — a recipe carrying both a patch and its own FX
+     *   chain (a BREED cross can leave both) can't be re-rendered by
+     *   [atVelocity], which only knows the bare voice, not the rack on
+     *   top of it. Composing "atVelocity's render, then replay the rack"
+     *   is a real capability nothing here has been asked to build.
+     * - [patch]'s own render doesn't match [reference]'s channel count or
+     *   sample rate — an engine's output format is a property of the
+     *   engine, not the velocity, so one render settles it: something
+     *   (fx, an old export path, a hand-edited file) has made the pad's
+     *   actual audio disagree with what the patch would produce today,
+     *   and a caller building a chain out of these takes ([Robin]) needs
+     *   every take to share one format.
+     * - [spec] is null and the raw macro is at/near zero — both of those
+     *   are [atVelocity]'s own fallback conditions, applied here too so
+     *   [layerAt] and a bare [atVelocity] call never disagree.
+     */
+    fun layerAt(reference: Snip, patch: Patch?, fx: FxChain?, velocity: Float, spec: MacroSpec?): Snip {
+        val useAtVelocity = patch != null && fx == null && patch.render().let {
+            it.channels == reference.channels && it.sampleRate == reference.sampleRate
+        }
+        return if (useAtVelocity) {
+            // atVelocity isn't peak-matched itself (a duller BRIGHT/CUTOFF
+            // is naturally quieter as a side effect) - peakMatch restores
+            // "timbre only, level is the hardware's job" for whichever
+            // gain curve the caller applies on top.
+            peakMatch(reference, atVelocity(patch!!, velocity, spec))
+        } else {
+            soften(reference, 1f - velocity.coerceIn(0f, 1f))
+        }
     }
 
     /**
