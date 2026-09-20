@@ -227,9 +227,17 @@ class SnapPatch(
     val voice: SnapVoice,
     override val macros: Map<String, Float>,
     table: IntArray,
+    envelope: IntArray? = null,
 ) : Patch {
-    /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them. */
+    /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them or [Draw] drew them. */
     val table: IntArray = table.copyOf()
+
+    /**
+     * A drawn volume shape, [Draw.ENVELOPE_SIZE] points 0..255 across the
+     * note, or null for SNAP's own DECAY exponential. Optional in the
+     * sidecar too: a recipe without one reads as it always did.
+     */
+    val envelope: IntArray? = envelope?.copyOf()
 
     init {
         Patches.validateMacros(this, Snap.macrosFor(voice))
@@ -239,16 +247,22 @@ class SnapPatch(
         // typed into kit.json by hand cannot land a silent pad that
         // nothing refused in words.
         require(!Snap.isFlat(table)) { "a SNAP table with no swing in it has no waveform to play" }
+        if (envelope != null) {
+            require(envelope.size == Draw.ENVELOPE_SIZE) { "a drawn shape has ${Draw.ENVELOPE_SIZE} points, got ${envelope.size}" }
+            for ((i, v) in envelope.withIndex()) require(v in 0..255) { "envelope[$i] is not a level 0..255: $v" }
+            require(envelope.any { it > 0 }) { "a drawn shape that never opens is silence" }
+        }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Snap.render(table, macros)
+    override fun render() = Snap.render(table, macros, envelope)
 
     override fun toJsonValue(): JsonValue.Obj {
         val base = Patches.toJsonValue(this)
         val obj = LinkedHashMap(base.entries)
         obj["table"] = JsonValue.Arr(table.map { JsonValue.Num(it.toDouble()) })
+        envelope?.let { obj["envelope"] = JsonValue.Arr(it.map { v -> JsonValue.Num(v.toDouble()) }) }
         return JsonValue.Obj(obj)
     }
 
@@ -257,17 +271,23 @@ class SnapPatch(
         voice: SnapVoice = this.voice,
         macros: Map<String, Float> = this.macros,
         table: IntArray = this.table,
-    ): SnapPatch = SnapPatch(name, voice, macros, table)
+        envelope: IntArray? = this.envelope,
+    ): SnapPatch = SnapPatch(name, voice, macros, table, envelope)
 
     // Not a data class: an array member would compare by identity there,
     // and a recipe round-trip test has to compare the numbers.
     override fun equals(other: Any?): Boolean =
         other is SnapPatch && name == other.name && voice == other.voice &&
-            macros == other.macros && table.contentEquals(other.table)
+            macros == other.macros && table.contentEquals(other.table) &&
+            (envelope?.contentEquals(other.envelope ?: IntArray(0)) ?: (other.envelope == null))
 
-    override fun hashCode(): Int = ((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + table.contentHashCode()
+    override fun hashCode(): Int =
+        (((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + table.contentHashCode()) * 31 +
+            (envelope?.contentHashCode() ?: 0)
 
-    override fun toString(): String = "SnapPatch(name=$name, voice=$voice, macros=$macros, table=[${table.size} points])"
+    override fun toString(): String =
+        "SnapPatch(name=$name, voice=$voice, macros=$macros, table=[${table.size} points]" +
+            (envelope?.let { ", envelope=[${it.size} points]" } ?: "") + ")"
 
     companion object {
         const val ENGINE = "SNAP"
@@ -291,7 +311,18 @@ class SnapPatch(
                     v
                 }
                 if (Snap.isFlat(table)) throw JsonException("SNAP table has no swing in it: nothing to play")
-                SnapPatch(name, voice, macros, table)
+                val envelope = value.obj()["envelope"]?.let { rawEnv ->
+                    val points = rawEnv.arr()
+                    if (points.size != Draw.ENVELOPE_SIZE) throw JsonException("SNAP envelope has ${points.size} points, not ${Draw.ENVELOPE_SIZE}")
+                    val env = IntArray(points.size) { i ->
+                        val v = points[i].int()
+                        if (v !in 0..255) throw JsonException("SNAP envelope[$i] is not a level 0..255: $v")
+                        v
+                    }
+                    if (env.none { it > 0 }) throw JsonException("SNAP envelope never opens: silence")
+                    env
+                }
+                SnapPatch(name, voice, macros, table, envelope)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

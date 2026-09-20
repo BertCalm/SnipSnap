@@ -297,3 +297,42 @@ pad.
 Not done, deliberately: a spectrogram scan (the Aphex trick) would need an
 inverse FFT and produce textures, not hits; a preset roster (SNAP's presets
 are photos); stereo.
+
+### S7.1 — DRAW: the oscillator you draw
+
+The photo was the first pen; a finger is the second. A SNAP pad is 256
+numbers looped at a pitch and the engine never cared where they came from,
+so DRAW (`synth/Draw.kt`, the DRAW chip and overlay in `SnapScreen`) is
+only the pen:
+
+- **`Draw.stroke`** lays a segment onto a table: every point the segment
+  crosses takes its height there, the rest are untouched, either direction,
+  clamped at the panel's edge. The screen sends one stroke per touch move
+  from the previous position, so a fast finger that skips twenty points
+  draws a line through all of them rather than dots. Every function returns
+  a new array — a draft and a committed line never share storage.
+- **Starting shapes**: `Draw.wave` (SINE, TRIANGLE, SAW, SQUARE, PULSE) for
+  the cycle, `Draw.shape` (HOLD, FALL, PLUCK, SWELL, BOUNCE) for the volume.
+  The surface opens over the line that is playing — the photo's, or the
+  last drawing — so a photo line can be redrawn in part.
+- **`Draw.smooth`**: a three-point average, circular for a cycle (whose
+  last point neighbours its first), endpoints held for a shape (the note's
+  start and finish are where they were drawn).
+- **The volume shape** is `Draw.ENVELOPE_SIZE` (64) points across the
+  note, stored as an optional `envelope` field beside the patch's `table`,
+  read by `Snap.render` in place of the DECAY exponential under the same
+  3 ms ramp; DECAY then sets only the length. A recipe without the field
+  reads as it always did. A shape that never opens is refused at both doors
+  (`Copy.SNAP_SHAPE_SILENT` on the surface, a `JsonException` from a
+  sidecar), as a flat drawn wave is (`Copy.SNAP_DRAW_FLAT`).
+- **`SnapVoice.DRAWN`** is the fourth line, with no photo behind it:
+  `Snap.table` and `Snap.read` refuse it, `readsPhoto` says which lines a
+  photo can be read along, and the screen keeps a drawn line current for as
+  long as the DRAW chip is the selected one.
+
+The surface auditions on every change with the sliders' own debounce, and
+the main screen's render loop stands still while it is open so the two
+never fight. DONE commits the wave only if it was drawn on or a starting
+shape was picked (a visit to set the SHAPE alone leaves the photo's line
+the photo's), and the shape only if one was drawn; CANCEL and back leave
+everything as it was.

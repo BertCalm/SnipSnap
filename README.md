@@ -251,6 +251,17 @@ voice), and has its own tab, SNAP, where TAKE PHOTO asks the system
 camera. The one refusal comes in words: a line with no swing in it — a
 plain wall read top to bottom — has no waveform to play.
 
+DRAW is the same engine with a finger for a pen (the Fairlight's Page 6,
+1982): a fourth chip beside the three photo lines opens a surface where
+the cycle is drawn — over the photo's line, over a starting SINE, TRIANGLE,
+SAW, SQUARE or PULSE, or from a blank — and heard as it is drawn. A second
+tab draws the note's volume the same way (HOLD, FALL, PLUCK, SWELL, BOUNCE
+to start from), which a pad carries as an optional `envelope` beside its
+`table`; DECAY then sets only the length. `Draw` is the pen — strokes onto
+a table, the starting shapes, a SMOOTH for a shaky hand — and every
+function returns a new array, so a draft and a committed line never share
+storage.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH

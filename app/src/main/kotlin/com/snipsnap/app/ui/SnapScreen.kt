@@ -8,6 +8,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
@@ -60,6 +67,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.synth.Draw
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Photo
 import com.snipsnap.synth.Snap
@@ -95,7 +103,7 @@ private const val MAX_PHOTO_SIDE = 512
  * current chip's name (a tap on PLUMB followed by SEND before the read
  * lands used to do exactly that).
  */
-private class Line(val photo: Photo, val voice: SnapVoice, val table: IntArray, val flat: Boolean)
+private class Line(val photo: Photo?, val voice: SnapVoice, val table: IntArray, val flat: Boolean)
 
 private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
@@ -144,8 +152,17 @@ fun SnapScreen(
     // through. `line` is stale (and SEND off) from the moment the photo
     // or the chip changes until the read below replaces it.
     var line by remember { mutableStateOf<Line?>(null) }
-    val current = line?.takeIf { it.photo === photo && it.voice == voice }
+    // A drawn line has no photo behind it and is current for as long as
+    // the DRAW chip is the selected one; a photo line is current while it
+    // is the one read off this photo along this chip.
+    val current = line?.takeIf { (it.voice == SnapVoice.DRAWN && voice == SnapVoice.DRAWN) || (it.photo === photo && it.voice == voice) }
     var looking by remember { mutableStateOf(false) }
+    // The drawn volume shape, or null for SNAP's own decay. Independent of
+    // the line: a photo's line under a drawn shape is a fine pad.
+    var envelope by remember { mutableStateOf<IntArray?>(null) }
+    // The DRAW surface is open: it auditions on its own, so the main
+    // render loop below stands still while it is.
+    var drawing by remember { mutableStateOf(false) }
 
     // Nothing is heard until the first real touch, same as SYNTH: landing
     // on the tab never plays a note unasked. Taking a photo counts as one.
@@ -226,6 +243,8 @@ fun SnapScreen(
     // changes. Cheap (one pass over a thumbnail) but off the main thread
     // like every other piece of `:synth` work on a screen.
     LaunchedEffect(photo, voice) {
+        // The drawn line is not read off anything: DRAW's DONE sets it.
+        if (voice == SnapVoice.DRAWN) return@LaunchedEffect
         val p = photo
         if (p == null) {
             line = null
@@ -242,7 +261,8 @@ fun SnapScreen(
     // line as read, not on the chip: a new photo's knobs arrive with the
     // photo, a beat before its line does, and the old line under the new
     // knobs is not a sound anyone asked for.
-    LaunchedEffect(current, macros) {
+    LaunchedEffect(current, macros, envelope, drawing) {
+        if (drawing) return@LaunchedEffect
         val l = current
         if (l == null || l.flat) {
             snip = null
@@ -251,7 +271,7 @@ fun SnapScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { Snap.render(l.table, macros) }
+            val rendered = withContext(Dispatchers.Default) { Snap.render(l.table, macros, envelope) }
             snip = rendered
             if (touched) audition(rendered)
         } catch (e: CancellationException) {
@@ -285,7 +305,7 @@ fun SnapScreen(
         sendBusy = true
         appScope.launch {
             try {
-                val patch = SnapPatch(patchName, l.voice, macros, l.table)
+                val patch = SnapPatch(patchName, l.voice, macros, l.table, envelope)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
@@ -341,7 +361,16 @@ fun SnapScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 TapeText("SNAP", TapeType.lcdHeader, scheme.lcdInk.tape)
-                TapeText(if (photo == null) "NO PHOTO" else "LINE ${voice.name}", TapeType.lcdSmall, scheme.amber.tape)
+                val lineWord = when {
+                    voice == SnapVoice.DRAWN -> "LINE DRAWN"
+                    photo == null -> "NO PHOTO"
+                    else -> "LINE ${voice.name}"
+                }
+                TapeText(
+                    if (envelope != null) "$lineWord · SHAPE DRAWN" else lineWord,
+                    TapeType.lcdSmall,
+                    scheme.amber.tape,
+                )
             }
 
             Column(
@@ -352,7 +381,12 @@ fun SnapScreen(
 
                 ScopeLcd(snip, rendering, scheme, Modifier.fillMaxWidth().height(104.dp))
 
-                LinePicker(voice, scheme, onSelect = { touched = true; voice = it })
+                LinePicker(
+                    voice,
+                    scheme,
+                    onSelect = { touched = true; voice = it },
+                    onDraw = { touched = true; drawing = true },
+                )
 
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in Snap.macrosFor(voice)) {
@@ -405,6 +439,29 @@ fun SnapScreen(
             ) {
                 TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
             }
+        }
+
+        if (drawing) {
+            DrawOverlay(
+                // Draw over the line that is playing: the photo's, or the
+                // last drawing. Nothing yet is a blank line at rest.
+                startTable = current?.table ?: Draw.blank(),
+                startEnvelope = envelope,
+                macros = macros,
+                scheme = scheme,
+                onAudition = ::audition,
+                onToast = onToast,
+                onDone = { table, waveDrawn, shape ->
+                    if (waveDrawn) {
+                        line = Line(null, SnapVoice.DRAWN, table, Snap.isFlat(table))
+                        voice = SnapVoice.DRAWN
+                    }
+                    envelope = shape
+                    drawing = false
+                },
+                onCancel = { drawing = false },
+            )
+            BackHandler { drawing = false }
         }
 
         if (showChooser) {
@@ -507,29 +564,38 @@ private fun pct(v: Float): String = (v * 100).roundToInt().toString().padStart(2
 
 // ---------- the line ----------
 
-/** HORIZON / PLUMB / ORBIT: which line through the photo is read as the cycle. Same chip as SYNTH's voice picker. */
+/**
+ * HORIZON / PLUMB / ORBIT / DRAW: which line is the cycle. The three
+ * photo chips select; the DRAW chip opens the surface ([DrawOverlay])
+ * and reads SELECTED while the drawn line is the one playing. Same chip
+ * as SYNTH's voice picker.
+ */
 @Composable
-private fun LinePicker(current: SnapVoice, scheme: Scheme, onSelect: (SnapVoice) -> Unit) {
+private fun LinePicker(current: SnapVoice, scheme: Scheme, onSelect: (SnapVoice) -> Unit, onDraw: () -> Unit) {
     val color = Schemes.classColor(DrumClass.TONAL).tape
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         for (v in SnapVoice.entries) {
             val selected = v == current
+            val label = if (v == SnapVoice.DRAWN) "DRAW" else v.name
             Column(
                 Modifier
                     .weight(1f)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                     .semantics { this.selected = selected }
-                    .tapeClick(label = "LINE ${v.name}") { onSelect(v) }
+                    .tapeClick(label = if (v == SnapVoice.DRAWN) "DRAW THE LINE" else "LINE ${v.name}") {
+                        if (v == SnapVoice.DRAWN) onDraw() else onSelect(v)
+                    }
                     .padding(horizontal = 2.dp, vertical = 3.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                TapeText(v.name, TapeType.pixelSmall, color, maxLines = 1)
+                TapeText(label, TapeType.pixelSmall, color, maxLines = 1)
                 TapeText(
                     when (v) {
                         SnapVoice.HORIZON -> "ACROSS"
                         SnapVoice.PLUMB -> "DOWN"
                         SnapVoice.ORBIT -> "AROUND"
+                        SnapVoice.DRAWN -> "YOURS"
                     },
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
@@ -537,5 +603,239 @@ private fun LinePicker(current: SnapVoice, scheme: Scheme, onSelect: (SnapVoice)
                 )
             }
         }
+    }
+}
+
+// ---------- DRAW: the oscillator you draw ----------
+
+private enum class DrawTab { WAVE, SHAPE }
+
+/**
+ * The drawing surface, over the whole screen like the slot chooser: a
+ * WAVE tab for the cycle (256 points, the seam blended by the engine so a
+ * line that ends elsewhere than it started does not click) and a SHAPE
+ * tab for the volume over the note (64 points; DECAY then sets only the
+ * length). A finger draws, starting shapes are a tap away, SMOOTH takes
+ * the shake out, and every change re-renders and plays through
+ * [onAudition] so the shape is heard as it is drawn — the same debounce
+ * as the sliders.
+ *
+ * Drafts live here and are committed whole by DONE: the wave only if it
+ * was drawn on or a starting shape was picked (a visit to set the SHAPE
+ * alone leaves the photo's line as the photo's), the shape only if one
+ * was drawn (CLEAR on the SHAPE tab hands the volume back to SNAP's own
+ * decay). CANCEL and back leave everything as it was.
+ */
+@Composable
+private fun DrawOverlay(
+    startTable: IntArray,
+    startEnvelope: IntArray?,
+    macros: Map<String, Float>,
+    scheme: Scheme,
+    onAudition: (Snip) -> Unit,
+    onToast: (String) -> Unit,
+    onDone: (table: IntArray, waveDrawn: Boolean, envelope: IntArray?) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var tab by remember { mutableStateOf(DrawTab.WAVE) }
+    var table by remember { mutableStateOf(startTable) }
+    var waveDrawn by remember { mutableStateOf(false) }
+    // The SHAPE tab shows the plain fall SNAP's own decay makes until a
+    // shape is drawn; only a drawn one is committed.
+    var shape by remember { mutableStateOf(startEnvelope ?: Draw.shape(Draw.Shape.FALL)) }
+    var shapeDrawn by remember { mutableStateOf(startEnvelope != null) }
+    var rendering by remember { mutableStateOf(false) }
+    val color = Schemes.classColor(DrumClass.TONAL).tape
+
+    // Hear it as it is drawn.
+    LaunchedEffect(table, shape, shapeDrawn) {
+        delay(MACRO_DEBOUNCE_MS)
+        if (Snap.isFlat(table)) return@LaunchedEffect
+        val env = if (shapeDrawn && shape.any { it > 0 }) shape else null
+        val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
+        try {
+            val rendered = withContext(Dispatchers.Default) { Snap.render(table, macros, env) }
+            onAudition(rendered)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SnapScreen", "draw render: failed", e)
+            onToast(Copy.RENDER_FAILED)
+        } finally {
+            shimmerJob.cancel()
+            rendering = false
+        }
+    }
+
+    fun done() {
+        if (waveDrawn && Snap.isFlat(table)) {
+            onToast(Copy.SNAP_DRAW_FLAT)
+            return
+        }
+        if (shapeDrawn && shape.none { it > 0 }) {
+            onToast(Copy.SNAP_SHAPE_SILENT)
+            return
+        }
+        onDone(table, waveDrawn, if (shapeDrawn) shape else null)
+    }
+
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TapeText(
+                    if (tab == DrawTab.WAVE) "DRAW — THE WAVE, ONE CYCLE" else "DRAW — THE VOLUME, ONE NOTE",
+                    TapeType.lcdSmall,
+                    scheme.lcdInk.tape,
+                    Modifier.weight(1f),
+                )
+                if (rendering) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            }
+
+            // WAVE | SHAPE
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (t in DrawTab.entries) {
+                    val selected = t == tab
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
+                            .tapeClick(label = "DRAW ${t.name}") { tab = t },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(
+                            if (t == DrawTab.SHAPE && shapeDrawn) "SHAPE · DRAWN" else t.name,
+                            TapeType.pixel,
+                            if (selected) scheme.ink.tape else scheme.ink2.tape,
+                        )
+                    }
+                }
+            }
+
+            when (tab) {
+                DrawTab.WAVE -> DrawLcd(
+                    points = table,
+                    circular = true,
+                    color = color,
+                    scheme = scheme,
+                    description = "DRAW THE WAVE",
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { x0, y0, x1, y1 ->
+                    table = Draw.stroke(table, x0, y0, x1, y1)
+                    waveDrawn = true
+                }
+                DrawTab.SHAPE -> DrawLcd(
+                    points = shape,
+                    circular = false,
+                    color = color,
+                    scheme = scheme,
+                    description = "DRAW THE VOLUME",
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { x0, y0, x1, y1 ->
+                    shape = Draw.stroke(shape, x0, y0, x1, y1)
+                    shapeDrawn = true
+                }
+            }
+
+            // Starting shapes: draw over one rather than from nothing.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                when (tab) {
+                    DrawTab.WAVE -> for (w in Draw.Wave.entries) {
+                        LabButton(w.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                            table = Draw.wave(w)
+                            waveDrawn = true
+                        }
+                    }
+                    DrawTab.SHAPE -> for (sh in Draw.Shape.entries) {
+                        LabButton(sh.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                            shape = Draw.shape(sh)
+                            shapeDrawn = true
+                        }
+                    }
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LabButton("SMOOTH", scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                    when (tab) {
+                        DrawTab.WAVE -> { table = Draw.smooth(table, circular = true); waveDrawn = true }
+                        DrawTab.SHAPE -> { shape = Draw.smooth(shape, circular = false); shapeDrawn = true }
+                    }
+                }
+                LabButton("CLEAR", scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                    when (tab) {
+                        DrawTab.WAVE -> { table = Draw.blank(); waveDrawn = true }
+                        // Back to SNAP's own decay: shown as the fall it is,
+                        // committed as nothing.
+                        DrawTab.SHAPE -> { shape = Draw.shape(Draw.Shape.FALL); shapeDrawn = false }
+                    }
+                }
+                LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                LabButton("DONE", scheme, enabled = true, modifier = Modifier.weight(1f)) { done() }
+            }
+        }
+    }
+}
+
+/**
+ * The drawing panel: the points as a line, a rest line through the
+ * middle (WAVE) or along the floor (SHAPE), and a finger that draws.
+ * Touch positions become 0..1 across and 0..1 **up**, and each move is
+ * one [Draw.stroke] from the last position, so a fast finger leaves a
+ * line, not dots. Invisible to the accessibility tree except as a named
+ * canvas: a drawn waveform has no spoken equivalent, and the starting
+ * shapes beneath it are the reachable way to a sound.
+ */
+@Composable
+private fun DrawLcd(
+    points: IntArray,
+    circular: Boolean,
+    color: androidx.compose.ui.graphics.Color,
+    scheme: Scheme,
+    description: String,
+    modifier: Modifier = Modifier,
+    onStroke: (x0: Float, y0: Float, x1: Float, y1: Float) -> Unit,
+) {
+    val currentOnStroke by androidx.compose.runtime.rememberUpdatedState(onStroke)
+    Canvas(
+        modifier
+            .lcdPanel(scheme)
+            .semantics { contentDescription = description }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    fun norm(p: Offset) = (p.x / size.width.toFloat()) to (1f - p.y / size.height.toFloat())
+                    var (px, py) = norm(down.position)
+                    currentOnStroke(px, py, px, py)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val (nx, ny) = norm(change.position)
+                        currentOnStroke(px, py, nx, ny)
+                        px = nx
+                        py = ny
+                        change.consume()
+                        if (!change.pressed) break
+                    }
+                }
+            },
+    ) {
+        val w = size.width
+        val h = size.height
+        val rest = if (circular) h * (1f - Draw.REST / 255f) else h
+        drawLine(scheme.lcdInk.tape.copy(alpha = 0.3f), Offset(0f, rest), Offset(w, rest), 1.dp.toPx())
+        val path = Path()
+        val n = points.size
+        for (i in 0 until n) {
+            val x = if (n == 1) 0f else w * i / (n - 1)
+            val y = h * (1f - points[i] / 255f)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(path, color, style = Stroke(width = 2.dp.toPx()))
     }
 }

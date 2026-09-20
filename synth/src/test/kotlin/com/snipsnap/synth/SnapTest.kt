@@ -49,7 +49,7 @@ class SnapTest {
         // would leave PLUMB one colour, which is read()'s refusal, not a
         // render's job to rescue.
         val photo = Photo.grey(320, 240) { x, y -> 0.5f + 0.45f * sin(2.0 * PI * (x / 320.0 + y / 240.0)).toFloat() }
-        for (voice in SnapVoice.entries) {
+        for (voice in SnapVoice.entries.filter { it.readsPhoto }) {
             val table = Snap.table(photo, voice)
             for (macros in listOf(
                 emptyMap(),
@@ -163,7 +163,7 @@ class SnapTest {
     @Test
     fun `every voice on a real-shaped photo yields a playable table`() {
         val photo = Photo.of(300, 200) { x, y -> Photo.rgb((x * 255) / 299, (y * 255) / 199, 128) }
-        for (voice in SnapVoice.entries) {
+        for (voice in SnapVoice.entries.filter { it.readsPhoto }) {
             val patch = Snap.read(photo, voice, "Gradient")
             assertTrue(patch.render().peak() > 0.5f, "$voice")
         }
@@ -327,7 +327,7 @@ class SnapTest {
         )) {
             val reading = Snap.look(photo)
             assertTrue(reading.luminance in 0f..1f && reading.detail in 0f..1f && reading.hueStrength in 0f..1f, "$reading")
-            for (voice in SnapVoice.entries) {
+            for (voice in SnapVoice.entries.filter { it.readsPhoto }) {
                 val table = Snap.table(photo, voice)
                 assertEquals(Snap.TABLE_SIZE, table.size)
                 assertTrue(table.all { it in 0..255 })
@@ -341,7 +341,10 @@ class SnapTest {
             }
         }
         // A 1x1 photo has one flat line whichever way it is read.
-        assertTrue(SnapVoice.entries.all { Snap.isFlat(Snap.table(Photo.grey(1, 1) { _, _ -> 0.5f }, it)) })
+        assertTrue(SnapVoice.entries.filter { it.readsPhoto }.all { Snap.isFlat(Snap.table(Photo.grey(1, 1) { _, _ -> 0.5f }, it)) })
+        // And the drawn line has no photo to be read off at all.
+        assertFailsWith<IllegalArgumentException> { Snap.table(ramp(), SnapVoice.DRAWN) }
+        assertFailsWith<IllegalArgumentException> { Snap.read(ramp(), SnapVoice.DRAWN, "Pen") }
     }
 
     @Test
