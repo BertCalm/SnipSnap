@@ -159,9 +159,11 @@ object Pluck {
      */
     /** Internal, not private, so PluckTest can drive it with a synthetic
      * freq/rate pair and pin the loop-length invariant below directly -
-     * the real voice table never reaches it (smallest `exact` measured
-     * across all voices x TUNE x DAMP is ~176), so there is no reachable
-     * call site to assert against otherwise. */
+     * the real voice table never reaches it (measured minimum `exact`
+     * across every voice x TUNE semitone x DAMP is 175.93 samples, at
+     * KALIMBA TUNE=1/DAMP=1 - swept and printed against this function's
+     * own formula, not estimated), so there is no reachable call site to
+     * assert against otherwise. */
     internal fun ks(
         freq: Float,
         seconds: Float,
@@ -233,8 +235,9 @@ object Pluck {
         // construction means never separating n from exact after this
         // require: as long as exact clears MIN_LOOP_SAMPLES, floor(exact)
         // >= MIN_LOOP_SAMPLES and frac = exact - floor(exact) is safe by
-        // definition, no clamp needed. Unreachable today at ~176 samples
-        // and the closest voice/TUNE/DAMP corner - this is a require, not
+        // definition, no clamp needed. Unreachable today - the closest any
+        // voice/TUNE/DAMP corner comes is 175.93 samples (KALIMBA,
+        // TUNE=1, DAMP=1) - this is a require, not
         // a silent coerce, so raising a voice root, widening
         // TUNE_SEMITONES, or adding a high-pitched voice fails loudly
         // here, naming the real cause, instead of surfacing later as a

@@ -162,9 +162,10 @@ class PluckTest {
 
     @Test
     fun `a loop length below the KS minimum fails loudly instead of going unstable`() {
-        // The real voice table never gets close to this (smallest `exact`
-        // measured across all voices x TUNE x DAMP is ~176 samples), so
-        // this drives Pluck.ks directly with a synthetic freq/rate pair
+        // The real voice table never gets close to this (measured minimum
+        // `exact` across every voice x TUNE semitone x DAMP is 175.93
+        // samples, at KALIMBA TUNE=1/DAMP=1), so this drives Pluck.ks
+        // directly with a synthetic freq/rate pair
         // that pushes the loop length under 2 samples - the old
         // `.coerceAtLeast(2)` produced a negative `frac` here, and `a =
         // (1-frac)/(1+frac)` with frac=-0.7 comes out ~5.67, an
