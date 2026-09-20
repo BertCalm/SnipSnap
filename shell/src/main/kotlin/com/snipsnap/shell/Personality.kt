@@ -686,25 +686,33 @@ object Copy {
      * [TEACH_CONSENT] true — TEACH itself never sends; this button, pressed
      * on purpose, is the only way a log leaves.
      */
-    const val SEND_TO_BENCH_NOTE = "EVERY LABEL AND CUT RATING LOGGED ON THIS PHONE, MERGED INTO ONE FILE FOR THE CALIBRATION FOLDER. FEATURES, LABELS AND RATINGS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
-    /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedy is a chip. */
-    const val BENCH_EMPTY = "NOTHING TO SEND. NOTHING IS LOGGED YET. CORRECT OR CONFIRM A CHIP ON CHOP FIRST."
-    /** SEND TO BENCH with nothing logged and TEACH off: the reason before the remedy. */
-    const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NOTHING IS LOGGED. TURN IT ON ABOVE."
+    const val SEND_TO_BENCH_NOTE = "EVERY LABEL, CUT RATING AND NOTE LOGGED ON THIS PHONE, MERGED INTO ONE FILE FOR THE CALIBRATION FOLDER. FEATURES, LABELS, RATINGS AND YOUR OWN WORDS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
+    /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedies are a chip or a note. */
+    const val BENCH_EMPTY = "NOTHING TO SEND. NOTHING IS LOGGED YET. CORRECT OR CONFIRM A CHIP ON CHOP, OR TAKE A NOTE, FIRST."
+    /** SEND TO BENCH with nothing logged and TEACH off: the reason before the remedies. */
+    const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NO CHIP IS LOGGED. TURN IT ON ABOVE, OR TAKE A NOTE."
     /**
      * SEND TO BENCH: the zip is packed and the chooser is up. Counts the
-     * labels (corrections and confirmations alike) and the cut ratings,
-     * naming only what the file holds. Ends on the same "PICK WHERE IT
-     * GOES." as [backedUp] and [kitPacked] because it is the same moment,
-     * and never says SENT: `ShareOut.send` only reports that the chooser
+     * labels (corrections and confirmations alike), the cut ratings and
+     * the notes, naming only what the file holds, and names the kits only
+     * when something came from one. Ends on the same "PICK WHERE IT GOES."
+     * as [backedUp] and [kitPacked] because it is the same moment, and
+     * never says SENT: `ShareOut.send` only reports that the chooser
      * opened.
      */
-    fun benchPacked(labels: Int, ratings: Int, kits: Int): String {
+    fun benchPacked(labels: Int, ratings: Int, notes: Int, kits: Int): String {
         val what = listOfNotNull(
             countOf(labels, "LABEL", "LABELS").takeIf { labels > 0 },
             countOf(ratings, "CUT RATING", "CUT RATINGS").takeIf { ratings > 0 },
-        ).joinToString(" AND ")
-        return "$what FROM ${countOf(kits, "KIT", "KITS")} ON ONE FILE. PICK WHERE IT GOES."
+            countOf(notes, "NOTE", "NOTES").takeIf { notes > 0 },
+        )
+        val joined = when (what.size) {
+            0 -> "NOTHING"
+            1 -> what[0]
+            else -> what.dropLast(1).joinToString(", ") + " AND " + what.last()
+        }
+        val from = if (kits > 0) " FROM ${countOf(kits, "KIT", "KITS")}" else ""
+        return "$joined$from ON ONE FILE. PICK WHERE IT GOES."
     }
     /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
     const val BENCH_FAILED = "SEND TO BENCH FAILED. TRY AGAIN."
@@ -728,6 +736,14 @@ object Copy {
     fun hitsPacked(n: Int): String = "${countOf(n, "HIT", "HITS")} ON ONE FILE, AS AUDIO. PICK WHERE IT GOES."
     /** The pack or the chooser threw; nothing left the phone and nothing on it changed. */
     const val HITS_FAILED = "SEND HITS TO BENCH FAILED. TRY AGAIN."
+
+    // ---- BENCH NOTES (docs/WORKSHOP.md, WS4) ----
+    /** Under the note's field: what rides along with the words, and how it leaves. */
+    const val NOTE_PROMPT = "WHAT DID YOU HEAR? THE SCREEN, THE KIT, THE PAD AND THE TIME RIDE ALONG. SEND TO BENCH CARRIES IT."
+    /** KEEP landed: where the note was taken, and the button that carries it off the phone. */
+    fun noted(screen: String): String = "NOTED ON $screen. SEND TO BENCH CARRIES IT."
+    /** The append threw; the words are not on disk. */
+    const val NOTE_FAILED = "THE NOTE DID NOT SAVE. TRY AGAIN."
 
     // ---- BANK B: evil twins (W4.3) ----
     /** Named after the button that did it (REMIX BANK B ▸), so the toast, the button and HELP say one thing. */

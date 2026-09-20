@@ -389,6 +389,19 @@ logcat tag to grab when something is wrong.
   `CalibrationCorpusTest` print them in its confusion matrix. With nothing
   labelled it refuses naming the pad sheet. SEND TO BENCH's own zip must
   still carry no WAV.
+- **BENCH NOTES** (`docs/WORKSHOP.md`, WS4): with the WORKSHOP open,
+  every screen's title bar ends in a NOTE chip; close the workshop and it
+  is gone. On PLAY with a kit open, tap it: a slip drops from the bar
+  reading BENCH NOTE over `PLAY · <kit>`, with the keyboard already up
+  and KEEP dim. Type two lines, KEEP: the toast reads NOTED ON PLAY.
+  Hold a pad, tap NOTE on its sheet: the slip's line now ends in the pad
+  (`KIT · <kit> · A01`). Back on an open slip closes it and keeps
+  nothing. Then SEND TO BENCH — with nothing corrected it still packs,
+  and the toast counts the notes — and unzip on a laptop: `manifest.txt`
+  ends with both notes as `→` lines stamped with the screen, the kit,
+  the pad and the time, ready to paste under a `docs/BENCH.md` row, and
+  `notes.jsonl` holds the same two lines. With the keyboard up the
+  slip's KEEP row must stay above the keys.
 
 ## Fonts / licensing
 

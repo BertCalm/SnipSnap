@@ -21,6 +21,12 @@ a word is enough, and "no" with the exact error text is worth more than
 "yes". A pass ticks its plan row; a failure comes back here as a bug and
 the row stays open. Nothing here is blocked on anything else here.
 
+The phone can write the `→` line's stamp itself (`docs/WORKSHOP.md`,
+WS4): with the WORKSHOP open, NOTE on the title bar takes a note where
+you stand, and SEND TO BENCH's manifest hands every note back as a `→`
+line naming the screen, the kit, the pad and the time, ready to paste
+under the row it answers.
+
 Row IDs in brackets are `docs/FEATURE_PLAN.md` rows, so a result has
 somewhere to land.
 
@@ -186,6 +192,11 @@ Open a kit, tap SURFACE.
   corrections and confirmations apart, and `CutRatingsTest` one line
   naming the bench's settings. With TEACH off the row should be dim and
   its note name the switch. [X4.6]
+- With the WORKSHOP open, tap NOTE on the title bar on PLAY with a kit
+  open: the slip reads `PLAY · <kit>` before a word is typed. KEEP a
+  line, take another with a pad sheet up, then SEND TO BENCH: the
+  manifest should end with both as `→` lines naming the screen, the kit,
+  the pad and the time — paste them here. [X4.8]
 
 →
 

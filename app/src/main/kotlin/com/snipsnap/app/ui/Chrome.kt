@@ -185,8 +185,17 @@ fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> U
         if (label != null) base.semantics { contentDescription = label } else base
     }
 
+/**
+ * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,
+ * WS4): non-null only while the workshop is open, so a phone that never
+ * knocked draws the bar exactly as before. It lives here, on the one row
+ * every screen shares, because a bench note is about whatever screen is
+ * under it - PLAY, CHOP, a pad sheet - and a chip per screen would be one
+ * more thing per screen to keep in step. A raised bevel at the bar's right
+ * end: the Win9x button-on-a-title-bar, which is what this is.
+ */
 @Composable
-fun TitleBar(modifier: Modifier = Modifier) {
+fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null) {
     val scheme = LocalScheme.current
     val brush =
         if (scheme.id == SchemeId.OILSLICK) {
@@ -209,6 +218,23 @@ fun TitleBar(modifier: Modifier = Modifier) {
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
         TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+        if (onNote != null) {
+            // The whole 34dp height is the tap target; the bevel sits
+            // inside a vertical inset so it reads as a button on the bar
+            // rather than the bar's own edge. `tapeClick` before the inset,
+            // so the inset is inside the target and not taken out of it.
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .tapeClick(label = "NOTE", onClick = onNote)
+                    .padding(vertical = 5.dp)
+                    .raisedBevel(scheme)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("NOTE", TapeType.pixel, scheme.ink.tape)
+            }
+        }
     }
 }
 

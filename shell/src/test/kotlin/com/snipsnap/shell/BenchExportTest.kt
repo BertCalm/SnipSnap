@@ -115,6 +115,47 @@ class BenchExportTest {
     }
 
     @Test
+    fun `the notes ride along as a third file and as paste-ready lines in the manifest`() {
+        val root = shelf()
+        try {
+            kitWithLog(root, "Break Kit", listOf(snare))
+            val onPlay = BenchNotes.Note("2026-09-19 2107", "PLAY", "Break Kit", null, "hats feel late at 92")
+            val onShelf = BenchNotes.Note("2026-09-19 2115", "SHELF", null, null, "first dub took about eight seconds")
+            BenchNotes.append(BenchNotes.file(root), listOf(onPlay, onShelf))
+
+            assertEquals(listOf(onPlay, onShelf), BenchExport.notes(root))
+            val result = BenchExport.pack(root, File(root, "share"), "2026-09-19 1735")
+            assertEquals(2, result.notes.size)
+            val inside = entries(result.file)
+            assertEquals(listOf(BenchExport.MANIFEST_NAME, BenchExport.LOG_NAME, BenchExport.NOTES_NAME), inside.keys.toList(), "no ratings file; the notes after the log")
+            assertEquals(listOf(onPlay, onShelf), BenchNotes.fromJsonl(inside.getValue(BenchExport.NOTES_NAME)))
+            val manifest = inside.getValue(BenchExport.MANIFEST_NAME)
+            assertTrue("1 label (1 correction, 0 confirmations) and 0 cut ratings from 1 kit. 2 bench notes." in manifest, manifest)
+            assertTrue("→ 2026-09-19 2107 · PLAY · Break Kit: hats feel late at 92\n" in manifest, "the note as a BENCH.md line: $manifest")
+            assertTrue("docs/BENCH.md" in manifest, "says where the lines go: $manifest")
+            assertTrue("never audio" in manifest, manifest)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a shelf with nothing but notes still has something to send`() {
+        val root = shelf()
+        try {
+            BenchNotes.append(BenchNotes.file(root), listOf(BenchNotes.Note("2026-09-19 2107", "PLAY", null, null, "tight enough to play")))
+            assertEquals(emptyList(), BenchExport.gather(root), "no kit gave anything")
+            val result = BenchExport.pack(root, File(root, "share"), "2026-09-19 1735")
+            assertEquals(0, result.labels)
+            assertEquals(0, result.kits)
+            assertEquals(1, result.notes.size)
+            assertEquals(listOf(BenchExport.MANIFEST_NAME, BenchExport.NOTES_NAME), entries(result.file).keys.toList())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `a file with nothing to hold is not in the zip`() {
         val root = shelf()
         try {
@@ -200,10 +241,12 @@ class BenchExportTest {
 
     @Test
     fun `the toasts say what left and what did not`() {
-        assertEquals("14 LABELS AND 3 CUT RATINGS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(14, 3, 2))
-        assertEquals("1 LABEL FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(1, 0, 1), "names only what the file holds")
-        assertEquals("1 CUT RATING FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 1, 1))
-        assertFalse("SENT" in Copy.benchPacked(3, 1, 2), "the chooser opening is not the file leaving")
+        assertEquals("14 LABELS AND 3 CUT RATINGS FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(14, 3, 0, 2))
+        assertEquals("14 LABELS, 3 CUT RATINGS AND 2 NOTES FROM 2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(14, 3, 2, 2))
+        assertEquals("1 LABEL FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(1, 0, 0, 1), "names only what the file holds")
+        assertEquals("1 CUT RATING FROM 1 KIT ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 1, 0, 1))
+        assertEquals("1 NOTE ON ONE FILE. PICK WHERE IT GOES.", Copy.benchPacked(0, 0, 1, 0), "a note is nobody's kit")
+        assertFalse("SENT" in Copy.benchPacked(3, 1, 0, 2), "the chooser opening is not the file leaving")
         // The two refusals are two different answers, and the TEACH-off one
         // names the switch that fixes it.
         assertTrue(Copy.BENCH_EMPTY != Copy.BENCH_EMPTY_TEACH_OFF)
@@ -213,7 +256,8 @@ class BenchExportTest {
         // words: TEACH never sends, the button is the only way out.
         assertTrue("NEVER AUDIO" in Copy.SEND_TO_BENCH_NOTE, Copy.SEND_TO_BENCH_NOTE)
         assertTrue("NEVER SENDS ANYTHING BY ITSELF" in Copy.SEND_TO_BENCH_NOTE, Copy.SEND_TO_BENCH_NOTE)
-        for (line in listOf(Copy.benchPacked(3, 1, 2), Copy.BENCH_EMPTY, Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_FAILED, Copy.SEND_TO_BENCH_NOTE)) {
+        assertTrue("NOTE" in Copy.BENCH_EMPTY && "NOTE" in Copy.BENCH_EMPTY_TEACH_OFF, "both refusals name the remedy that needs no switch")
+        for (line in listOf(Copy.benchPacked(3, 1, 1, 2), Copy.BENCH_EMPTY, Copy.BENCH_EMPTY_TEACH_OFF, Copy.BENCH_FAILED, Copy.SEND_TO_BENCH_NOTE)) {
             assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
             assertTrue(line.endsWith("."), "lands on a full stop: $line")
         }
