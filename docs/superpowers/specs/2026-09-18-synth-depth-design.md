@@ -23,13 +23,29 @@ implemented correctly, exactly once, and never generalized.
 
 | Technique | Implemented at | Missing from |
 |---|---|---|
-| Filter saturation | `Velvet.kt:144` | the other seven engines |
+| Filter saturation | `Velvet.kt:159` | ~~the other seven engines~~ — see correction below |
 | Loudness-*preserving* rescale | `Punch.kt:147` ← `Thump.kt:132` | all five melodic engines |
 | Velocity → timbre | `Keys.kt:48` (FM index) | everywhere else |
 | 4× oversampling | eight engines | `Pluck.kt:96` |
 | Modal resonator bank | `audio/Body.kt` | all of `:synth` |
 | Grain drift / per-grain pitch motion | `Grains.kt` | not even in `FxChain.SECTIONS` |
 | Pitch LFO (wow + flutter) | `Tape.kt:18` | never applied to melodic voices |
+
+> **Corrected 2026-09-19, measured.** The saturation row above was wrong, and
+> wrong in the same way as the others: I asserted a technique was "missing from
+> seven engines" without checking which engines could physically call it. The
+> `saturate` flag exists only on `Dsp.TptSvf`, and there are exactly **four**
+> call sites in the whole codebase — `Velvet.kt:159` (already on),
+> `Fathom.kt:158`, `PadFilter.kt:17`, `Wobble.kt:62`. THUMP uses the older
+> `Dsp.Svf`, which has no such parameter; Tonewheel, Vox, Pluck and Tines use
+> no state-variable filter in that path at all.
+>
+> All three remaining sites were then measured and **rejected on evidence**:
+> enabling it in Fathom breaks its DRIVE-brightens contract, drifts GRIND's
+> classification, and drops a preset below the peak floor. So Phase 0 adds no
+> saturation anywhere — the real consequence being that the residual 2.9×
+> loudness spread from Task 4, which needs nonlinearity to close, now has only
+> Phase 1's DRIVE stage to close it.
 
 This is not seven DSP projects. It is one discipline problem: proofs of concept
 that never became policy. A large share of the complaint is recoverable by
