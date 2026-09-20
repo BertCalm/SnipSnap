@@ -87,6 +87,51 @@ class StarterKitsTest {
     }
 
     @Test
+    fun `the velocity starter genuinely re-renders soft layers, not the same take low-passed`() {
+        val dir = kotlin.io.path.createTempDirectory("velocity-rerender").toFile()
+        try {
+            val kit = StarterKits.byId("velocity")!!.render("VELOCITY RERENDER", dir)
+            // Factory Snare (A02, ThumpVoice.SNARE) exposes TONE - one of
+            // Velocity.BRIGHTNESS_MACROS' matches - so its soft layers must
+            // be genuinely re-rendered, the same proof KitBuilderTest and
+            // RobinTest use at their own doors. Read the patch back off the
+            // kit's own stored recipe rather than reconstructing ThumpKits'
+            // internals by hand.
+            val pad = kit.pad(2)!!
+            val patch = Breed.recipeOf(pad.recipe)!!.patch!!
+            val main = com.snipsnap.audio.WavReader.read(File(dir, pad.sampleFile))
+            val soft = com.snipsnap.audio.WavReader.read(File(dir, pad.velocityLayers[0].sampleFile))
+
+            // The exact call Velocity.variantsAt makes for the softest of
+            // two variants (i=0, count=2).
+            val expected = com.snipsnap.synth.Velocity.variantsAt(main, patch, null, count = 2)[0]
+            assertEquals(expected.samples.size, soft.samples.size, "a re-render has its own length")
+            for (i in soft.samples.indices) {
+                assertTrue(
+                    kotlin.math.abs(soft.samples[i] - expected.samples[i]) <= 2f / 32767f,
+                    "sample $i: starter soft ${soft.samples[i]} vs variantsAt ${expected.samples[i]}",
+                )
+            }
+            // Peak-matched to the main take (Velocity.layerAt's own
+            // contract) - "timbre only, level is the hardware's job" as a
+            // measurement, not a restatement of the formula above.
+            fun peak(x: FloatArray) = x.maxOf { kotlin.math.abs(it) }
+            assertTrue(
+                kotlin.math.abs(peak(soft.samples) - peak(main.samples)) <= 2f / 32767f,
+                "the soft layer should be peak-matched to the main take",
+            )
+            // And it must differ from what the old soften()-only path would
+            // have given at the same depth - proof the onset actually moved.
+            val viaSoften = com.snipsnap.synth.Velocity.soften(main, 2f / 3f)
+            val n = minOf(soft.samples.size, viaSoften.samples.size, 400)
+            val differing = (0 until n).count { kotlin.math.abs(soft.samples[it] - viaSoften.samples[it]) > 1e-3f }
+            assertTrue(differing > 50, "the starter's soft layer should differ from soften()'s; only $differing did")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `the A-B starter fills bank B and melodic remembers its key`() {
         val ab = StarterKits.byId("lucky-dip-ab")!!.render("DipAB", File(temp, "ab"), seed = 3)
         assertTrue(ab.pads.any { it.slot > 16 }, "bank B should be populated")

@@ -31,6 +31,13 @@ object Tonewheel {
     internal const val GATE_SECONDS = 0.55f
     private const val RELEASE_SECONDS = 0.1f
 
+    /**
+     * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
+     * awaiting a listening pass (task-4-report.md) - a table edit here, not
+     * a refactor of [render].
+     */
+    private val LOUDNESS_OFFSET: Map<TonewheelVoice, Float> = TonewheelVoice.entries.associateWith { 0f }
+
     private fun registration(voice: TonewheelVoice): FloatArray = when (voice) {
         // All bars out: the everything drawbar handful.
         TonewheelVoice.FULL -> floatArrayOf(0.9f, 1f, 0.8f, 0.75f, 0.6f, 0.55f, 0.4f, 0.5f)
@@ -90,7 +97,9 @@ object Tonewheel {
 
         val total = gateSeconds + RELEASE_SECONDS
         val out = FloatArray((total * rate).toInt())
-        val phases = DoubleArray(8)
+        // Seeded per voice so the eight wheels no longer start coherent —
+        // a real generator has no moment where every partial peaks together.
+        val phases = Dsp.phases(8, Dsp.seedFor("TONEWHEEL", voice.name))
         var percPhase = 0.0
         val vibHz = 6.4f
         val vibDepth = Dsp.lin(warble, 0f, 0.011f)
@@ -149,7 +158,9 @@ object Tonewheel {
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, gateSeconds, renderRate)
         val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
+        // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }

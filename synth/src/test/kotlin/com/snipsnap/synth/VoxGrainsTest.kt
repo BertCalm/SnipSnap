@@ -43,10 +43,19 @@ class VoxGrainsTest {
         // formant bandpasses ringing on a naive saw/square source make a
         // clean band-energy comparison as unreliable here as it was for
         // VELVET's resonant filter.
+        //
+        // `direct` has to finish through the same Dsp.levelTo render() now
+        // does (Task 4), at the same target - voice offsets are all 0 today,
+        // so Dsp.MELODIC_LOUDNESS_TARGET alone matches what render() uses.
+        // Finishing `direct` with the old Dsp.normalize(0.95) instead left
+        // this assertion passing even with render()'s own decimate step
+        // deleted (checked directly) - the gain gap between a loudness
+        // target and a peak target was enough to clear avgDiff on its own,
+        // silently defeating the one thing this test is for.
         for (voice in VoxVoice.entries) {
             val actual = Vox.render(voice)
             val direct = Vox.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.normalize(direct)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)

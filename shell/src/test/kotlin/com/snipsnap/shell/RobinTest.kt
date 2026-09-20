@@ -174,6 +174,106 @@ class RobinTest {
     }
 
     @Test
+    fun `the grid on a synth-backed pad re-renders zones via atVelocity - not soften on the original`() {
+        val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
+        val dir = File(temp, "SynthGrid")
+        val m = KitBuilderModel.create("SynthGrid", dir)
+        m.assign(1, patch.render(), DrumClass.TONAL)
+        m.update(1) { it.copy(recipe = com.snipsnap.synth.PadRecipe(patch = patch).toJsonValue()) }
+        val padFile = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val original = WavReader.read(padFile) // captured before replaceAudio overwrites both file and recipe
+
+        val pad = Robin.apply(m, 1, takes = 2, seed = 9, zones = 3)
+        val chain = pad.chain!!
+        val chained = WavReader.read(padFile)
+        fun slice(i: Int): FloatArray {
+            val w = chain.window(i, chained.frameCount.toLong())
+            return chained.samples.copyOfRange(w.first.toInt(), (w.last + 1).toInt())
+        }
+
+        // Zone 0 (softest, ZONE_SOFTEN[3][0] = 0.7 -> velocity 0.3) anchors
+        // at slice 0 - must match a fresh atVelocity render, peak-matched to
+        // the original (atVelocity isn't peak-matched itself; Robin must
+        // restore that or ZONE_LEVEL_FLOOR's own level curve is no longer
+        // the only thing setting level) then scaled by the zone's own level.
+        fun gain(x: FloatArray, level: Float) = FloatArray(x.size) { (x[it] * level).coerceIn(-1f, 1f) }
+        val level0 = 0.55f // ZONE_LEVEL_FLOOR at z=0
+        val matched0 = com.snipsnap.synth.Velocity.peakMatch(original, com.snipsnap.synth.Velocity.atVelocity(patch, 0.3f))
+        val viaAtVelocity = gain(matched0.samples, level0)
+        val anchor0 = slice(0)
+        assertEquals(viaAtVelocity.size, anchor0.size, "a re-render has its own length, not the original's")
+        for (i in anchor0.indices) {
+            assertTrue(
+                abs(anchor0[i] - viaAtVelocity[i]) <= 2f / 32767f,
+                "zone 0 sample $i: chained ${anchor0[i]} vs atVelocity ${viaAtVelocity[i]}",
+            )
+        }
+
+        // "Timbre only, level is the hardware's job" as a measurement: a
+        // duller BRIGHT/CUTOFF is naturally quieter as a side effect of the
+        // engine, so this only holds if Robin actually peak-matches before
+        // its own ZONE_LEVEL_FLOOR gain runs - checked pre-gain, against
+        // the original, the same reference peakMatch itself used.
+        fun peak(x: FloatArray) = x.maxOf { abs(it) }
+        assertTrue(
+            abs(peak(matched0.samples) - peak(original.samples)) <= 2f / 32767f,
+            "zone 0 should be peak-matched to the original before grading: ${peak(matched0.samples)} vs ${peak(original.samples)}",
+        )
+
+        // And it must differ from what the old soften()-on-the-original
+        // path would have given at the same depth and level - the onset
+        // actually moved, which a low-pass on one frozen take cannot do.
+        val viaSoften = gain(com.snipsnap.synth.Velocity.soften(original, 0.7f).samples, level0)
+        val n = minOf(anchor0.size, viaSoften.size, 400)
+        val differing = (0 until n).count { abs(anchor0[it] - viaSoften[it]) > 1e-3f }
+        assertTrue(differing > 50, "zone 0's onset should differ from soften()'s; only $differing samples did")
+
+        // The top zone's anchor is still the pristine original, untouched -
+        // atVelocity only replaces the softened zones, never the loudest one.
+        val top = slice(4)
+        assertEquals(original.frameCount, top.size)
+        for (i in top.indices) {
+            assertTrue(abs(top[i] - original.samples[i]) <= 2f / 32767f, "the hard anchor strays at $i")
+        }
+    }
+
+    @Test
+    fun `the grid on a patch+fx pad falls back to soften - atVelocity can't replay the rack`() {
+        val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
+        val fx = com.snipsnap.synth.FxChain(reverse = false)
+        val dir = File(temp, "SynthGridFx")
+        val m = KitBuilderModel.create("SynthGridFx", dir)
+        val recipe = com.snipsnap.synth.PadRecipe(patch = patch, fx = fx)
+        m.assign(1, recipe.render(), DrumClass.TONAL)
+        m.update(1) { it.copy(recipe = recipe.toJsonValue()) }
+        val padFile = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val original = WavReader.read(padFile)
+
+        val pad = Robin.apply(m, 1, takes = 2, seed = 9, zones = 3)
+        val chain = pad.chain!!
+        val chained = WavReader.read(padFile)
+        fun slice(i: Int): FloatArray {
+            val w = chain.window(i, chained.frameCount.toLong())
+            return chained.samples.copyOfRange(w.first.toInt(), (w.last + 1).toInt())
+        }
+
+        // Zone 0 must be exactly what soften() gives a captured pad - a
+        // patch carrying its own fx chain has no way for atVelocity to
+        // replay the rack on top of its re-render, so it takes the same
+        // path a captured pad does.
+        fun gain(x: FloatArray, level: Float) = FloatArray(x.size) { (x[it] * level).coerceIn(-1f, 1f) }
+        val expected = gain(com.snipsnap.synth.Velocity.soften(original, 0.7f).samples, 0.55f)
+        val anchor0 = slice(0)
+        assertEquals(expected.size, anchor0.size)
+        for (i in anchor0.indices) {
+            assertTrue(
+                abs(anchor0[i] - expected[i]) <= 2f / 32767f,
+                "sample $i: chained ${anchor0[i]} vs soften() ${expected[i]} - should fall back exactly",
+            )
+        }
+    }
+
+    @Test
     fun `a robin'd kit still saves, previews and exports`() {
         val m = model("Ship")
         Robin.apply(m, 1, takes = 3, seed = 3)

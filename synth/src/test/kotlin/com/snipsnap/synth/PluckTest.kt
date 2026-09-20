@@ -6,6 +6,7 @@ import com.snipsnap.audio.FeatureExtractor
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class PluckTest {
@@ -157,5 +158,31 @@ class PluckTest {
         // Relative to the note's own level - a pluck is mostly quiet tail,
         // so an absolute threshold would only ever measure the attack.
         assertTrue(diff > level * 0.3, "the second string should be audible: diff/level = ${diff / level}")
+    }
+
+    @Test
+    fun `a loop length below the KS minimum fails loudly instead of going unstable`() {
+        // The real voice table never gets close to this (measured minimum
+        // `exact` across every voice x TUNE semitone x DAMP is 175.93
+        // samples, at KALIMBA TUNE=1/DAMP=1), so this drives Pluck.ks
+        // directly with a synthetic freq/rate pair
+        // that pushes the loop length under 2 samples - the old
+        // `.coerceAtLeast(2)` produced a negative `frac` here, and `a =
+        // (1-frac)/(1+frac)` with frac=-0.7 comes out ~5.67, an
+        // unconditionally unstable feedback allpass. It must now fail the
+        // require instead of silently returning something that blows up.
+        assertFailsWith<IllegalArgumentException> {
+            Pluck.ks(freq = 70_000f, seconds = 0.2f, damp = 0f, bodyLoopHz = 2600f, pickHz = 3000f, seed = 1, rate = 176_400)
+        }
+    }
+
+    @Test
+    fun `a loop length safely above the KS minimum still renders`() {
+        // The boundary itself: exact ~2.68 samples here (comfortably above
+        // MIN_LOOP_SAMPLES) must NOT throw and must produce a finite,
+        // in-range buffer - the require must not be so conservative it
+        // rejects legitimate high notes.
+        val out = Pluck.ks(freq = 50_000f, seconds = 0.05f, damp = 0f, bodyLoopHz = 2600f, pickHz = 3000f, seed = 1, rate = 176_400)
+        assertTrue(out.isNotEmpty() && out.all { it.isFinite() }, "a valid near-boundary loop length should still render cleanly")
     }
 }

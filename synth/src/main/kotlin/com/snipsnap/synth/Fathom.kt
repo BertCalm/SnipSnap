@@ -33,6 +33,13 @@ object Fathom {
     const val TUNE_SEMITONES = 24
 
     /**
+     * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
+     * awaiting a listening pass (task-4-report.md) - a table edit here, not
+     * a refactor of [render].
+     */
+    private val LOUDNESS_OFFSET: Map<FathomVoice, Float> = FathomVoice.entries.associateWith { 0f }
+
+    /**
      * The FM ratios RATIO snaps to, chosen for low end: sub-octave, unison, a
      * hollow fifth-ish, octave, and a metallic twelfth. Snapping is the same
      * guarantee TINES makes — the knob cannot land on a mistuning.
@@ -71,6 +78,39 @@ object Fathom {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
+    /**
+     * PLACEHOLDER awaiting the audition gate — how hard CUTOFF tracks the
+     * note (see [Dsp.keyTrack]). Same taste call as VELVET's own constant
+     * of the same name (`Velvet.kt`); its KDoc has the general reasoning.
+     *
+     * Measured for this engine's own cutoff mapping (90..4000 Hz):
+     * because every FATHOM voice's TUNE also spans exactly
+     * [TUNE_SEMITONES] (2 octaves) centred on [keyTrackReferenceHz], the
+     * top-to-bottom ratio at this setting is the same voice-independent
+     * `4^0.6 ≈ 2.30x` (~1.2 octaves) VELVET gets. Concretely for DEEP at
+     * its factory CUTOFF (0.4 -> 410.6 Hz): 270.9 Hz at the bottom of
+     * TUNE, 622.3 Hz at the top, a swing of about 351 Hz. Every shipped
+     * preset's TUNE sits below the 0.5 centre (DEEP 0.25, GRIND 0.3, GLASS
+     * 0.35), so factory presets also come out a little darker than before
+     * this landed, not just proportional across a run - re-run the sweep
+     * in task-6-and-5b-fix-report.md before trusting 0.6 for real.
+     *
+     * `internal`, not `private`, only so `synthesize`'s own `cutoffKeyTrackAmount`
+     * default can be checked against it byte-for-byte from `FathomTest` (the
+     * permanent reachability proof this constant's tracking actually reaches
+     * the render - see `FathomTest`'s own KDoc on that test). Nothing outside
+     * this module ever sees it; production callers still only ever get the
+     * shipped 0.6.
+     */
+    internal const val CUTOFF_KEY_TRACK_AMOUNT = 0.6f
+
+    /**
+     * Key-tracking's reference pitch for [voice]: the tuning centre of its
+     * own TUNE range, not an arbitrary Hz - see [Velvet.keyTrackReferenceHz]
+     * for the full reasoning, identical here.
+     */
+    private fun keyTrackReferenceHz(voice: FathomVoice): Float = frequencyFor(voice, 0.5f)
+
     fun frequencyFor(voice: FathomVoice, tune: Float): Float {
         val root = when (voice) {
             FathomVoice.DEEP -> 41.2f    // E1 — low enough to feel
@@ -105,7 +145,19 @@ object Fathom {
      * tested directly against a native-rate render, rather than trusting
      * that reading [render]'s own source matches what it actually does.
      */
-    internal fun synthesize(voice: FathomVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(
+        voice: FathomVoice,
+        macros: Map<String, Float>,
+        rate: Int,
+        // Internal, default-valued, purely for testability - mirrors
+        // Dsp.TptSvf.process's own optional `saturate` param. Every
+        // production caller (render(), below) omits this and gets the
+        // shipped CUTOFF_KEY_TRACK_AMOUNT; FathomTest passes explicit
+        // values to prove key tracking actually reaches this function
+        // (a test that only called Dsp.keyTrack() directly could pass even
+        // if this line were never wired up).
+        cutoffKeyTrackAmount: Float = CUTOFF_KEY_TRACK_AMOUNT,
+    ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -117,7 +169,11 @@ object Fathom {
         // Bass wants a low, gently resonant filter. The 4 kHz ceiling is a
         // taste choice, not a stability one — TptSvf is stable to Nyquist,
         // as Velvet.kt documents — because nothing here needs air.
-        val fc = Dsp.expMap(cutoff, 90f, 4_000f)
+        // Tracked to the note so brightness is an interval, not a fixed
+        // Hz - a run up the pads used to get duller as it climbed (Task 6).
+        val fc = Dsp.keyTrack(
+            Dsp.expMap(cutoff, 90f, 4_000f), base, keyTrackReferenceHz(voice), cutoffKeyTrackAmount,
+        )
         val damp = 1.2f
 
         // SWEEP: a fast downward pitch blip at the attack. This is the thump,
@@ -150,10 +206,14 @@ object Fathom {
         val out = FloatArray((t60 * 1.4f * rate).toInt().coerceAtLeast(64))
         val svf = Dsp.TptSvf(rate)
         val env = Dsp.Env(attackSeconds = 0.004f, decay2T60 = t60)
-        var phase = 0.0
-        var phaseLow = 0.0
-        var phase2 = 0.0
-        var phaseMod = 0.0
+        // Seeded per voice: GRIND's saw pair no longer starts locked, and
+        // GLASS's carrier/modulator no longer starts at the same coherent
+        // transient every note.
+        val ph = Dsp.phases(4, Dsp.seedFor("FATHOM", voice.name))
+        var phase = ph[0]
+        var phaseLow = ph[1]
+        var phase2 = ph[2]
+        var phaseMod = ph[3]
         for (i in out.indices) {
             val t = i.toFloat() / rate
             val blip = 2f.pow(sweepSemis * Dsp.envAt(t, sweepT60) / 12f)
@@ -204,7 +264,9 @@ object Fathom {
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, renderRate)
         val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
+        // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }

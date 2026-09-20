@@ -19,6 +19,9 @@ sealed interface Patch {
 
     fun render(): Snip
 
+    /** [this] patch with its macro map replaced by [macros] — same voice, new settings. */
+    fun withMacros(macros: Map<String, Float>): Patch
+
     fun toJsonValue(): JsonValue.Obj = Patches.toJsonValue(this)
     fun toJsonText(): String = Json.write(toJsonValue())
 }
@@ -102,6 +105,7 @@ data class PluckPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Pluck.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "PLUCK"
@@ -126,6 +130,7 @@ data class TonewheelPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Tonewheel.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "TONEWHEEL"
@@ -150,6 +155,7 @@ data class VelvetPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Velvet.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "VELVET"
@@ -174,6 +180,7 @@ data class FathomPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Fathom.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "FATHOM"
@@ -198,6 +205,7 @@ data class VoxPatch(
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
     override fun render() = Vox.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
         const val ENGINE = "VOX"

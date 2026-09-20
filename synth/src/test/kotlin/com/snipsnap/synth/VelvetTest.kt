@@ -46,10 +46,21 @@ class VelvetTest {
         // oversample-then-decimate detour Dsp.decimate's own resampling
         // kernel leaves a real fingerprint on, not the "same as before"
         // path a regression would silently fall back to.
+        //
+        // `direct` has to finish through the same Dsp.levelTo render() now
+        // does (Task 4), at the same target - voice offsets are all 0 today,
+        // so Dsp.MELODIC_LOUDNESS_TARGET alone matches what render() uses.
+        // Finishing `direct` with the old Dsp.normalize(0.95) instead leaves
+        // `actual` and `direct` at two different gains regardless of
+        // whether render() is actually oversampling - on FATHOM, TONEWHEEL
+        // and VOX's copy of this same test, that gain gap alone was enough
+        // to clear avgDiff even with render()'s own decimate step deleted
+        // (checked directly), which silently defeats the one thing this
+        // test is for.
         for (voice in VelvetVoice.entries) {
             val actual = Velvet.render(voice)
             val direct = Velvet.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.normalize(direct)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)
@@ -158,6 +169,36 @@ class VelvetTest {
     }
 
     @Test
+    fun `CUTOFF's key tracking actually reaches the render, not just Dsp keyTrack in isolation`() {
+        // A test that only calls Dsp.keyTrack() would pass even if the
+        // engines ignored it entirely (Task 6 policy item 4). Proving it
+        // reaches synthesize() needs two renders at the SAME pitch but
+        // different key-tracking references, so any brightness gap can
+        // only be the filter tracking - not the fundamental moving.
+        //
+        // BASS at TUNE=1 and CHIP at TUNE=0 both land on 220 Hz
+        // (frequencyFor: 55 * 2^(24/12) = 220 = 220 * 2^0), but their
+        // reference pitches differ (BASS's tuning centre is 110 Hz, CHIP's
+        // is 440 Hz - see Velvet.keyTrackReferenceHz), so at the shared
+        // placeholder amount their tracking factors diverge: BASS scales
+        // its cutoff *up* from 220/110 (2x -> 2^0.6 ~= 1.52x), CHIP scales
+        // *down* from 220/440 (0.5x -> 0.5^0.6 ~= 0.66x) - a ~2.3x cutoff
+        // gap at an identical fundamental. Every other macro is pinned
+        // equal so the only thing that can move the spectrum is the
+        // tracked cutoff.
+        val shared = mapOf(
+            "SHAPE" to 0.5f, "FAT" to 0.3f, "CUTOFF" to 0.5f, "SQUEEZE" to 0.4f, "DECAY" to 0.45f,
+        )
+        val bassHigh = FeatureExtractor.extract(Velvet.render(VelvetVoice.BASS, shared + ("TUNE" to 1f)))
+        val chipLow = FeatureExtractor.extract(Velvet.render(VelvetVoice.CHIP, shared + ("TUNE" to 0f)))
+        assertTrue(
+            bassHigh.centroidHz > chipLow.centroidHz * 1.3f,
+            "same 220 Hz fundamental, opposite tracking direction - BASS (tracks up) should read " +
+                "noticeably brighter than CHIP (tracks down): ${bassHigh.centroidHz} vs ${chipLow.centroidHz}",
+        )
+    }
+
+    @Test
     fun `SHAPE walks saw to pulse audibly`() {
         val sawSide = Velvet.render(VelvetVoice.BRASS, mapOf("SHAPE" to 0f))
         val pulseSide = Velvet.render(VelvetVoice.BRASS, mapOf("SHAPE" to 1f))
@@ -182,6 +223,74 @@ class VelvetTest {
             level += Math.abs(thin.samples[i].toDouble())
         }
         assertTrue(diff > level * 0.3, "the unison spread should be audible")
+    }
+
+    @Test
+    fun `minBeatDetune delivers the number of beat cycles it is asked for`() {
+        // 82.4 Hz over a 0.47 s note: the old fixed 1.00395 gave a 3.07 s
+        // beat period, under a sixth of a cycle in the note. That's the
+        // primitive's general contract - ask it for cycles and it delivers
+        // them. Velvet itself asks for far less (see the two tests below):
+        // completing a FULL cycle in a short note takes more detune than
+        // the FAT macro is allowed to grant, which is why this test passes
+        // cycles explicitly instead of relying on Velvet's own default.
+        val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 0.47f, cycles = 1f)
+        val beatHz = 82.4f * (d - 1f)
+        // cycles=1f makes this an exact-boundary check (beatHz * seconds ==
+        // cycles algebraically); Float rounding lands a hair under 1.0, so
+        // the assertion allows that epsilon rather than the beat itself.
+        assertTrue(beatHz * 0.47f >= 0.999f, "expected ~1 beat cycle in the note, got ${beatHz * 0.47f}")
+    }
+
+    @Test
+    fun `a long note does not get forced wider than asked`() {
+        val d = Dsp.minBeatDetune(baseHz = 82.4f, seconds = 8f)
+        assertTrue(d < 1.005f, "a long note needs no detune floor, got $d")
+    }
+
+    @Test
+    fun `the beat floor never swallows FAT - the macro still has its own range`() {
+        // Round 1 shipped cycles=1.5f, which forced BASS's detune floor
+        // above the FAT macro's own maximum ask (1.012) at every DECAY
+        // setting - FAT stopped doing anything. Deleting `asked` from
+        // Velvet.detuneFor's maxOf left every OTHER test in this file
+        // green, which is exactly how that got past round 1: nothing
+        // asserted the macro's own contribution survives the floor.
+        //
+        // Round 2 fixed that with `coerceAtMost(askedHi)`, which only
+        // guarantees the OUTPUT never exceeds askedHi - not that FAT keeps
+        // any authority over it. Testing only factory DECAY on BASS/BRASS
+        // hid the gap: at TUNE=0, DECAY=0 on BASS (both ordinary settings)
+        // the floor clamped to exactly askedHi and swallowed FAT whole,
+        // same on SQUELCH, with BRASS/CHIP partially compressed - and
+        // every one of those corners sits outside what this test used to
+        // check. So this sweeps DECAY x TUNE corners {0, 0.5, 1} x
+        // {0, 0.5, 1} across all four voices - 36 corners - against the
+        // real production function, not a reimplementation of its formula.
+        //
+        // Velvet.MIN_AUTHORITY_RATIO is the invariant this asserts, and
+        // it's the SAME constant the fix's clamp uses
+        // (askedHi / MIN_AUTHORITY_RATIO) - so the test and the code
+        // cannot drift apart the way askedHi and a hand-typed 1.002f did
+        // last time. BASS/SQUELCH at TUNE=0, DECAY=0 bind the clamp
+        // exactly, landing on a ratio of precisely MIN_AUTHORITY_RATIO -
+        // that corner is the guarantee itself, not headroom above it, so
+        // the comparison is >= with a hair of float slack, not a strict >.
+        for (voice in VelvetVoice.entries) {
+            for (tune in listOf(0f, 0.5f, 1f)) {
+                for (decay in listOf(0f, 0.5f, 1f)) {
+                    val base = Velvet.frequencyFor(voice, tune)
+                    val t60 = Dsp.expMap(decay, 0.15f, 0.9f)
+                    val atZero = Velvet.detuneFor(base, fat = 0f, t60 = t60)
+                    val atOne = Velvet.detuneFor(base, fat = 1f, t60 = t60)
+                    assertTrue(
+                        atOne >= atZero * Velvet.MIN_AUTHORITY_RATIO - 1e-4f,
+                        "$voice TUNE=$tune DECAY=$decay: FAT=1 ($atOne) should out-detune FAT=0 " +
+                            "($atZero) by at least ${Velvet.MIN_AUTHORITY_RATIO}x, got ${atOne / atZero}",
+                    )
+                }
+            }
+        }
     }
 
     @Test

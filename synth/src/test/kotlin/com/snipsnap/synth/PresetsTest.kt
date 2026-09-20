@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
  * The cross-engine [Presets] dispatcher, now that all seven registered
  * engines sit behind it (THUMP first, PR #189; the other six join here).
  * Each `<Engine>PresetsTest` covers its own engine's content — identity/
- * sanity/round-trip/names/blocklist/spread; this file covers only the
+ * sanity/round-trip/names/blocklist; this file covers only the
  * dispatcher's own routing.
  */
 class PresetsTest {

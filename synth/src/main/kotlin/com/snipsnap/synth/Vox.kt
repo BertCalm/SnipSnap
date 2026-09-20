@@ -24,6 +24,13 @@ object Vox {
 
     const val TUNE_SEMITONES = 24
 
+    /**
+     * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
+     * awaiting a listening pass (task-4-report.md) - a table edit here, not
+     * a refactor of [render].
+     */
+    private val LOUDNESS_OFFSET: Map<VoxVoice, Float> = VoxVoice.entries.associateWith { 0f }
+
     /** F1/F2/F3 per vowel, the classic tables: A, E, I, O, U. */
     private val VOWELS = arrayOf(
         floatArrayOf(800f, 1150f, 2900f),  // A
@@ -105,8 +112,10 @@ object Vox {
         val noiseLp = Dsp.OnePole(rate)
         val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = t60) // vocal onsets are soft
 
-        var p1 = 0.0
-        var p2 = 0.0
+        // Seeded per voice so CHOIR's detuned pair no longer opens locked.
+        val ph = Dsp.phases(2, Dsp.seedFor("VOX", voice.name))
+        var p1 = ph[0]
+        var p2 = ph[1]
         val detune = if (voice == VoxVoice.CHOIR) 1.007f else 1.0f
         for (i in out.indices) {
             val t = i.toFloat() / rate
@@ -141,7 +150,9 @@ object Vox {
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, renderRate)
         val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
+        // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
