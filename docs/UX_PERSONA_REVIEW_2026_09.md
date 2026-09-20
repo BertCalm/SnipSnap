@@ -61,10 +61,16 @@ since, plus a SKIN wave. This section is the at-source check of what
 survived, done the way the journey plan's own findings were checked —
 read in the code, not ticked from memory.
 
-**Ten findings are closed, five are half-closed, and fourteen stand.**
-The counts below are of the 22 numbered persona findings, 5 synthesis
-items and 2 headlines; the "Outside expectation" tables are positioning
-judgements rather than findings and are not counted.
+**Twelve findings are closed, three are decided, three are half-closed,
+and eleven stand.** The counts below are of the 22 numbered persona
+findings, 5 synthesis items and 2 headlines; the "Outside expectation"
+tables are positioning judgements rather than findings and are not
+counted.
+
+*Closed* means the app changed. *Decided* is a separate bucket on
+purpose, added 2026-09-20: those findings are answered but nothing was
+built, and folding them in with the others would let a judgement read as
+a fix.
 
 ## Closed
 
@@ -74,22 +80,32 @@ judgements rather than findings and are not counted.
 | **P2.1, P4.3, S5** — the PROG collision | J18/J19. `PROG A · THE BREAK` … `PROG E · EDITED` are now `CAPTURED · SWING · HALF · SPARSE · YOURS` in a segment row. S5 asked "at minimum the word PROG should go"; it is gone from the screen. |
 | **X4, S4** — twelve flat peers, no grouping marker | J12. `MENU_GROUPS` draws a 2dp rule at each of the three seams: the shelf, the four flow tabs, the five instruments, the two utilities. S4's recommendation almost verbatim. |
 | **P5.2** — SONG ▸ in a row that mixes writes with navigation | J46. The row is sorted by what each button does and its legend reads `WRITE IT OUT · OR TAKE IT FURTHER`. |
+| **P2.3**, the J3 half of X5, and the card half of P4.1 — the card write | Closed 2026-09-20, and it is the only finding in this document closed *by* the pass that verified it. The card leg now has an arm of its own: `CardWriter.preflight` lists the card and writes nothing, `CardCopy.collisions` (`:shell`, tested) says what would be landed on, and a dub that finds the card occupied stops with the phone copy done and the card untouched — `Copy.dubCardWouldReplace` names what is in the way, and the completion stage carries `CARD ▸ REPLACE <it>?` until it is taken or the wizard is reset. "No confirm before an overwrite" is now false for both legs. |
+| **P4.1** — destructive defaults cost the expert most | The finding names five things and no others: RE-CHOP discarding corrected chips (J5), the CHOP re-keying that erases nine pieces of state (J20), the export overwrite arm no rendering path reads (J2), the card leg with no warning (J3), and `MAKE PAD ▸` reseeding per press. Four were fixed in PRs 3–4; J3 is the one closed above. With it, the list is empty. |
 | **S2** — "keep the gesture, add a visible second door" | Done, and before this review was read: `Copy.PAD_SHEET_LEGEND` — *"HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"* — sits permanently under KIT's grid (`KitScreen.kt:368`). The hold is unchanged; a legend that cannot be dismissed explains it. |
 
 ## Half-closed — the finding moved, it did not vanish
 
 | Finding | What changed | What stands |
 |---|---|---|
-| **P2.3**, the J3 half of X5 and P4.1 — the card write | It is no longer silent: the write reports afterwards, naming how many files it replaced (`Copy.dubDoneCardReplaced`) and calling out a provider that refused a delete (`dubDoneCardContested`). | **There is still no arm before the card leg**, by design — `ExportScreen.kt:541` says so outright. "No warning at any point" is now false; "no confirm before an overwrite" is still true, for the one persona with real data on the card. |
 | **P3.4, S3** — treatments are a render job, not a live effect | The *felt* problem is addressed: `Copy.treatmentBusy(label)` names which treatment is working, so a 1.77-second ETERNAL no longer reads as a dead button. | The model is unchanged — which is what S3 recommended. P3's expectation gap is architectural and stays. |
-| **P4.1** — destructive defaults | J5, J20, J2 and `MAKE PAD ▸` are all fixed (PRs 3–4). Armed, EXPORT's button now names what it would destroy (`Copy.replaceWhat`). | The card leg, as above. |
 | **P5.1** — PROG A–E is not a slot model | The word is gone and the editor doors now say `START YOURS` / `FORK TO YOURS`, so "tap B, edit, discover it isn't a slot" is much harder to walk into. | **The structure is unchanged**: four derived programs plus one editable fork, not five slots. That is the open half, and it is a design call. |
+
+## Decided — answered, with nothing built
+
+Added 2026-09-20. Each of these was read at source like the rest; the
+verdict is a judgement rather than a change, and saying so is the point
+of keeping them out of *Closed*.
+
+| Finding | The call, and what it rests on |
+|---|---|
+| **Headline 2**, P1.3 — sequencing is absent from the advertised loop | **Withdrawn: the finding no longer holds in the form it was argued.** Its case was two-part — the four-step loop note omits sequencing, *and* GROOVE is buried behind a drag — and the second half is false (see the corrections below). What remains is that `FIRST_RUN_LOOP_STAGES` reads `TAPE · CHOP · KIT · EXPORT`, which is a deliberately short first-run note, not a claim that the app cannot sequence. Lengthening the app's opening promise to answer a half-refuted argument is the worse trade. Re-open it if five real users read that note as the whole of what SnipSnap does. |
+| **P4.2** — they will notice what isn't there | The finding names **three** absences, and they have come apart. **The audio bounce is built** — GROOVE ▸ BOUNCE, as Headline 1 above records. **MIDI in/out and clock sync are accepted as a known gap:** `docs/MIDI_SYNC.md` opens with *"That decision unblocked this design pass. It does not unblock an implementation, and this document is the reason why,"* carries a section recording that three review rounds found 39 real errors in it — concentrated in its prescriptions, not its survey — and its last commit is titled *"Stop writing experiments for hardware I cannot touch."* Nothing needs marking as parked, because nothing there reads as a plan. **Sample-rate control is the limb nobody has ruled on**, and it is not decided by this row: a search finds it named only inside a refusal (*"SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT"*) and nowhere as a control. Recorded here so it does not disappear into a verdict about MIDI. |
 
 ## Standing
 
 | Finding | Checked |
 |---|---|
-| **Headline 2**, P1.3 — sequencing is absent from the advertised loop | `FIRST_RUN_LOOP_STAGES` is still `TAPE · CHOP · KIT · EXPORT`. **But half of X3 is now wrong** — see the corrections below. |
 | **P1.1**, X2 — "DUB IT" is the last word and it is opaque | `FIRST_RUN_LOOP_NOTE` still ends on it. |
 | **P1.4**, X6 — the vocabulary wall, and HELP | Counted: `HELP_LOOP` is 4 items, `HELP_MORE` is 20, HELP is 12th of twelve. Exactly as written. |
 | **P1.5** — all-caps sentences | Unchanged. |
@@ -98,7 +114,6 @@ judgements rather than findings and are not counted.
 | **P3.1** — twelve destinations against roughly one | Still twelve. X4's remedy landed, but grouping twelve is not reducing twelve. |
 | **P3.2** — record-to-pad is not the advertised path | `INSTANT KIT` and `CATCH A HIT` are both still there, still not in the loop note. |
 | **P3.3** — the app never says "resample" | Confirmed by search: only `Resampler` in code and one refusal string (*"SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT"*). Never as a control. |
-| **P4.2** — MIDI in/out and clock sync | `docs/MIDI_SYNC.md` exists; no `MidiSync` or clock code does. Unchanged. |
 | **P4.4** — provenance is good and half-hidden | `provenanceOrigin`/`provenanceLine` (`PadSheetScreen.kt:2797-2850`) are called from that file and nowhere else. S2's legend now advertises the sheet's door, but it names *SHAPE, TUNE, TREAT, MUTATE, GRAIN* — not where the sound came from. Still half-hidden. |
 | **P5.3** — punch-in FX vs macros-and-print | Architectural. Unchanged. |
 | **S1** — keep the cassette metaphor | Standing as a recommendation, and independently settled the same way by J39: `PERSONALITY.md` catalogs the reels as hidden eggs under its own law 4. |

@@ -146,7 +146,37 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
      * user cannot escape.
      */
     var overwriting by mutableStateOf<File?>(null)
+
+    /**
+     * A card copy that has been held back because the card already holds
+     * what it would write, or null when there is nothing waiting (persona
+     * review P2.3).
+     *
+     * The phone leg's arm ([overwriting]) cannot speak for this one: it is
+     * about the app's own exports folder, and a card can hold a kit the
+     * phone does not. So the card gets its own, and it arms *after* the
+     * phone copy has landed rather than before — the two legs are one tap
+     * but not one write, and only the second one touches anything of the
+     * user's. `stampDub(card = null)` already treats that in-between as a
+     * real state.
+     *
+     * Hoisted here for the same reason [overwriting] is: the screen
+     * remounts on every tab switch, and an offer that forgot itself would
+     * put the export on the card with no confirm at all the next time
+     * round.
+     */
+    var cardPending by mutableStateOf<CardPending?>(null)
 }
+
+/**
+ * A card copy waiting on the user, and what it would cost: [what] is the
+ * topmost thing already on the card, which `CardCopy.collisions`
+ * guarantees is a whole export rather than a sample inside one.
+ *
+ * [card] is carried rather than re-read at the tap, so an offer made
+ * about one card can never be spent on another.
+ */
+data class CardPending(val outcome: ExportOutcome, val card: Uri, val what: String)
 
 /**
  * EXPORT: the wizard's Compose surface over `ExportWizardModel`'s tested
@@ -442,6 +472,15 @@ private fun ExportContent(
         releaseCard(cardTree)
         cardTree = null
         prefs.edit().remove(PREF_CARD_TREE).apply()
+        // A held-back card copy names the card it was preflighted against
+        // and would write to it on the next tap - through a grant this
+        // just handed back. Cleared here, with the release, so the two
+        // cannot come apart: today the CARD row only renders on the READY
+        // stage and the offer only exists on the COMPLETE one, so nothing
+        // reaches this with an offer pending, but that is a fact about
+        // which stage draws which control, not something this function
+        // should have to rely on.
+        session.cardPending = null
     }
 
     /**
@@ -459,6 +498,59 @@ private fun ExportContent(
         withContext(Dispatchers.IO) {
             runCatching { DubStamp.write(kitDir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = card)) }
                 .onFailure { Log.w(TAG, "stampDub: the dub landed but its stamp did not", it) }
+        }
+    }
+
+    // The card leg itself, in one place because two callers reach it: the
+    // dub that found the card clear, and the confirm for the dub that did
+    // not. Suspends rather than launching its own coroutine so it inherits
+    // whichever caller's scope and `busy` handling already applies.
+    suspend fun copyToCard(outcome: ExportOutcome, card: Uri) {
+        // The drivers wrote a real File tree, byte for byte as the tests
+        // and the golden fixtures cover it; this puts that tree on the
+        // card. Only the outcome's own items — handing over the folder
+        // they sit in would carry every earlier export along with them.
+        val copied = withContext(Dispatchers.IO) {
+            CardWriter.copy(context, card, listOfNotNull(outcome.primary, outcome.companion))
+        }
+        // Only now is it really on the card, so only now does the stamp
+        // name one.
+        stampDub(session.dir, card = card.toString())
+        session.cardPending = null
+        // CONTESTED is the case worth naming: the provider refused the
+        // delete, and what is on the card now is not knowable from here.
+        // It outranks REPLACED because it is the one the reader has to act
+        // on, and it is still said after a confirm — agreeing to replace
+        // something is not a promise that the card will co-operate.
+        onToast(
+            when {
+                copied.contested > 0 -> Copy.dubDoneCardContested(copied.contested)
+                copied.replaced > 0 -> Copy.dubDoneCardReplaced(copied.replaced)
+                else -> Copy.DUB_DONE_CARD
+            },
+        )
+    }
+
+    // The offer `dubCardWouldReplace` held back, taken. Reads the pending
+    // copy live rather than closing over a captured one, same as `eject()`
+    // and `shareExport()` below.
+    fun putOnCard() {
+        val pending = session.cardPending ?: return
+        if (session.busy) return
+        session.busy = true
+        // `appScope` for the reason startWrite uses it: a card copy must
+        // survive a tab switch rather than be cancelled by it.
+        appScope.launch {
+            try {
+                copyToCard(pending.outcome, pending.card)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "putOnCard: card copy failed", e)
+                onToast(Copy.DUB_FAILED)
+            } finally {
+                session.busy = false
+                revision++
+            }
         }
     }
 
@@ -522,36 +614,31 @@ private fun ExportContent(
                         if (card == null) {
                             onToast(Copy.DUB_DONE)
                         } else {
-                            // The drivers wrote a real File tree, byte for
-                            // byte as the tests and the golden fixtures
-                            // cover it; this puts that tree on the card.
-                            // Only the outcome's own items — handing over
-                            // the folder they sit in would carry every
-                            // earlier export along with them.
-                            val copied = withContext(Dispatchers.IO) {
-                                CardWriter.copy(
+                            // What the card already holds, asked before a
+                            // byte of it is written (persona review P2.3).
+                            // Listing only - `preflight`'s own KDoc has the
+                            // cost, and a card that will not be read comes
+                            // back empty, which is the old behaviour.
+                            val standing = withContext(Dispatchers.IO) {
+                                CardWriter.preflight(
                                     context,
                                     card,
                                     listOfNotNull(result.outcome.primary, result.outcome.companion),
                                 )
                             }
-                            // Only now is it really on the card, so only now
-                            // does the stamp name one.
-                            stampDub(session.dir, card = card.toString())
-                            // The card leg has no arm of its own - the phone
-                            // leg's confirm is about the phone copy, and a
-                            // card can hold a kit the phone does not - so it
-                            // reports afterwards instead. CONTESTED is the
-                            // case worth naming: the provider refused the
-                            // delete, and what is on the card now is not
-                            // knowable from here.
-                            onToast(
-                                when {
-                                    copied.contested > 0 -> Copy.dubDoneCardContested(copied.contested)
-                                    copied.replaced > 0 -> Copy.dubDoneCardReplaced(copied.replaced)
-                                    else -> Copy.DUB_DONE_CARD
-                                },
-                            )
+                            if (standing.isEmpty()) {
+                                copyToCard(result.outcome, card)
+                            } else {
+                                // Held. The phone copy has landed and the
+                                // stamp above says so; the card is
+                                // untouched, and the completion stage now
+                                // carries the offer to finish the job.
+                                // Named after the shallowest thing in the
+                                // way, which `CardCopy.collisions` promises
+                                // is a whole export.
+                                session.cardPending = CardPending(result.outcome, card, standing.first().name)
+                                onToast(Copy.dubCardWouldReplace(standing.first().name))
+                            }
                         }
                     }
                     is ExportWizardModel.WriteResult.Blocked -> {
@@ -587,6 +674,11 @@ private fun ExportContent(
     fun eject() {
         if (model.stage != ExportWizardModel.Stage.COMPLETE) return
         model.eject()
+        // WRITE ANOTHER ✓ leaves the completion stage, which is the only
+        // place the card offer is shown, so an offer not taken by now is
+        // declined. Left set, it would reappear on the next dub's
+        // completion stage naming a card copy that dub never preflighted.
+        session.cardPending = null
         revision++
         onToast(Copy.CARD_EJECTED)
     }
@@ -651,7 +743,30 @@ private fun ExportContent(
                     onClick = ::shareExport,
                 )
             }
-            PrimaryAction(label = model.writeLabel, enabled = true, onClick = ::eject)
+            // The card leg this dub held back (persona review P2.3). It
+            // sits here rather than in the toast that announced it for the
+            // reason `replaceWhat` exists on the phone side: a toast is
+            // gone in seconds and the decision is not. Absent entirely
+            // when nothing is waiting — the dub that found the card clear
+            // has already put it there, and a button offering to do it
+            // again would be a second way to lose the same files.
+            session.cardPending?.let { pending ->
+                ActionButton(
+                    Copy.putOnCardOver(pending.what),
+                    scheme,
+                    enabled = !session.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = ::putOnCard,
+                )
+            }
+            // `!session.busy`, not the `true` this was: until the card
+            // offer existed nothing ran asynchronously from this stage, so
+            // the reset was always safe to tap. A card copy in flight
+            // makes it unsafe — `eject` clears the pending offer and
+            // resets the wizard, and doing that underneath a running copy
+            // would leave the stamp and the toast landing on a wizard that
+            // had already moved on.
+            PrimaryAction(label = model.writeLabel, enabled = !session.busy, onClick = ::eject)
         } else {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),

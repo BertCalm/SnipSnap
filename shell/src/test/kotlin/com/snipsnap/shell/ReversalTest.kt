@@ -189,6 +189,23 @@ class ReversalTest {
             why = "the armed button's own label, asked before the act",
             stillTrue = "?",
         ),
+        // The card leg's half of the same pair (persona review P2.3). The
+        // phone copy HAS landed when this appears and the line says so;
+        // the card has not been touched, which is what "ALREADY HOLDS"
+        // reports — the state of the card before anything is written to
+        // it. A rewrite to "REPLACED X ON THE CARD" would be a landing and
+        // would lose the clause, and the guard below fires.
+        "dubCardWouldReplace" to NotALanding(
+            why = "a warning before the card leg runs, not a landing",
+            stillTrue = "ALREADY HOLDS",
+        ),
+        // `replaceWhat` for the card, on the completion stage's own button,
+        // and exempt for the same reason with the same question mark
+        // carrying it: it is read before the tap that replaces anything.
+        "putOnCardOver" to NotALanding(
+            why = "the card button's own label, asked before the act",
+            stillTrue = "?",
+        ),
     )
 
     /**
