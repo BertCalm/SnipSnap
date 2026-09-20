@@ -1920,13 +1920,17 @@ fun PadSheetScreen(
                 onKitUpdated(fresh.kit)
                 val found = match
                 if (found != null) {
-                    onToast(Copy.desampled(padName, found.patch.voice.name, found.distance))
+                    onToast(Copy.desampled(padName, found.patch.engine, found.patch.voiceName, found.distance))
                 } else {
                     onToast(Copy.BIN_ITEM_GONE)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is KitBuilderModel.Far) onToast(Copy.desampleFar(e.match.patch.voice.name, e.match.distance)) else failure("MAKE SYNTH", e)
+                if (e is KitBuilderModel.Far) {
+                    onToast(Copy.desampleFar(e.match.patch.engine, e.match.patch.voiceName, e.match.distance))
+                } else {
+                    failure("MAKE SYNTH", e)
+                }
             } finally {
                 busy = false
             }

@@ -1159,12 +1159,21 @@ object Copy {
     /** The keyed family's honest refusal, [reason] in the treatment's own words ("a kick is a drum, not a note"). */
     fun notANote(reason: String): String = "NOT A NOTE: ${reason.uppercase().trimEnd('.')}."
     fun mutated(move: String, pad: String, parent: String): String = "$move: $pad × $parent. ONE HIT, TWO PARENTS."
-    /** DE-SAMPLE: the pad is a patch now; [voice] the engine's own word, [distance] the honest number. */
-    fun desampled(pad: String, voice: String, distance: Float): String =
-        "$pad IS A ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
-    /** DE-SAMPLE's refusal: no patch near enough. */
-    fun desampleFar(voice: String, distance: Float): String =
-        "NO PATCH IS NEAR. THE CLOSEST IS A ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
+    /**
+     * DE-SAMPLE: the pad is a patch now; [engine] and [voice] the two
+     * words that identify it, [distance] the honest number.
+     *
+     * [engine] is not decoration. DE-SAMPLE searched THUMP alone until
+     * SKIN joined it, and both engines own a KICK, a SNARE and two hats
+     * - different sounds, different macro names on the pad sheet the
+     * player opens next. A toast that said only "KICK" would name half
+     * the answer and read as complete.
+     */
+    fun desampled(pad: String, engine: String, voice: String, distance: Float): String =
+        "$pad IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL SLEEPS IN THE BIN.".format(java.util.Locale.ROOT, distance)
+    /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
+    fun desampleFar(engine: String, voice: String, distance: Float): String =
+        "NO PATCH IS NEAR. THE CLOSEST IS A ${engine.uppercase()} ${voice.uppercase().replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
     /** DRIFT: the pad drifted toward what the crate dealt. */
     fun drifted(pad: String, toward: String): String = "$pad DRIFTED TOWARD $toward. ORIGINAL SLEEPS IN THE BIN."
     const val UNMUTATED = "PARENTS SEPARATED. THE ORIGINAL IS BACK FROM THE BIN."

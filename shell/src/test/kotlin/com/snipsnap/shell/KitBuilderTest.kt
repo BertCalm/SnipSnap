@@ -754,13 +754,24 @@ class KitBuilderTest {
         val dir = File(temp, "Desample")
         val m = KitBuilderModel.create("Desample", dir)
         val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
-        val rnd = java.util.Random(4)
-        val hiss = m.assign(2, com.snipsnap.audio.Snip(FloatArray(44_100) { (rnd.nextFloat() * 2f - 1f) * 0.5f }, 1, 44_100), DrumClass.UNKNOWN)
+        // A slow sweep, not the second of hiss this used to use: hiss stopped
+        // being a stranger the moment SKIN's noise voices became searchable
+        // (it lands on SKIN/RIDE at 0.391, inside FAR). `DesampleTest` carries
+        // the reasoning and pins the change; this needs a source that is still
+        // genuinely far, so the refusal path below has something to refuse.
+        val sweep = com.snipsnap.audio.Snip(
+            FloatArray(88_200) { i ->
+                val f = 80.0 + 3000.0 * i / 88_200.0
+                kotlin.math.sin(2.0 * Math.PI * f * i / 44_100.0).toFloat() * 0.5f
+            },
+            1, 44_100,
+        )
+        m.assign(2, sweep, DrumClass.UNKNOWN)
         m.save()
         val before = File(dir, kick.sampleFile).readBytes()
 
         val match = m.desamplePad(1)
-        assertEquals(com.snipsnap.synth.ThumpVoice.KICK, match.patch.voice, "a kick's search starts on kicks")
+        assertEquals("KICK", match.patch.voiceName, "a kick's search starts on kicks")
         assertTrue(!match.far)
         val pad = m.pad(1)!!
         val recipe = com.snipsnap.synth.PadRecipe.fromJsonValue(pad.recipe!!)
