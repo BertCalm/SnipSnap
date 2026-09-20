@@ -88,8 +88,10 @@ class SurfaceScreenTest {
     private fun padState(mode: Mode): String? =
         pad(mode).fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription)
 
-    private fun zOf(state: String?): Float? =
-        Regex("""Z (\d+\.\d+)""").find(state ?: return null)?.groupValues?.get(1)?.toFloat()
+    private fun zOf(state: String?): Float? {
+        if (state == null) return null
+        return Regex("""Z (\d+\.\d+)""").find(state)?.groupValues?.get(1)?.toFloat()
+    }
 
     /** The text is drawn whole: no ellipsis, nothing past the edge of its button. */
     private fun assertReadsInFull(text: String) {
