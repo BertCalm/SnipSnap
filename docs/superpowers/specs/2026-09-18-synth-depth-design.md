@@ -363,7 +363,7 @@ before Phase 3 rather than alongside it.
 
 | Phase | Ships | Audio changes |
 |---|---|---|
-| 0 | `synth` CLI render verb; macro range audit; phase randomization; detune scaled to note length; velocity→timbre; key tracking; TAPE WOBBLE default for melodic voices; `saturate=true` where a resonant filter is driven; loudness normalize on melodic engines | Yes |
+| 0 | `synth` CLI render verb; phase randomization; detune scaled to note length; velocity→timbre; key tracking; TAPE WOBBLE default for melodic voices; loudness normalize on melodic engines *(macro range audit deferred; no saturation added — see note below)* | Yes |
 | 0b | PLUCK fractional delay + oversampling retrofit | Yes |
 | 1 | **`PadRecipe.VERSION` 1→2 with migration**; `Dsp.Modes` with per-mode t60; physical mode tables; MATERIAL morph; STRIKE position; MOTION stage; per-mode stereo; FX-rack stereo audit; TINES rebuilt on the spine | Yes |
 | 2 | Spine across remaining struck engines, then the sustained group (VOX, FATHOM, TONEWHEEL) as a separate gate | Yes |
