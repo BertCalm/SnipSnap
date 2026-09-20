@@ -658,6 +658,13 @@ object Copy {
     const val SNAP_FLAT = "THAT LINE THROUGH THE PHOTO IS ONE FLAT COLOUR. TRY ANOTHER LINE, OR ANOTHER PHOTO."
     /** TAKE PHOTO asks the system camera; a phone with no camera app to answer says so instead of crashing. */
     const val SNAP_NO_CAMERA = "NO CAMERA APP ANSWERED. NOTHING WAS TAKEN."
+    /**
+     * The camera app handed back more pixels than the phone had memory
+     * to read (an `OutOfMemoryError`, which is not an `Exception` and
+     * would otherwise take the process down). The photo is dropped and
+     * the screen stays as it was.
+     */
+    const val SNAP_TOO_BIG = "THAT PHOTO WAS TOO BIG TO READ. NOTHING WAS TAKEN."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

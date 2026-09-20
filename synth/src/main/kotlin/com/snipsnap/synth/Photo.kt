@@ -14,7 +14,9 @@ class Photo(val width: Int, val height: Int, val argb: IntArray) {
 
     init {
         require(width > 0 && height > 0) { "a photo needs a width and a height: ${width}x$height" }
-        require(argb.size == width * height) {
+        // Long arithmetic: 65536 x 65536 wraps to zero in Int and would
+        // let an empty array through to an index error later.
+        require(argb.size.toLong() == width.toLong() * height.toLong()) {
             "pixel count ${argb.size} is not ${width}x$height"
         }
     }

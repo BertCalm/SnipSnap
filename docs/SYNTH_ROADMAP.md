@@ -247,13 +247,19 @@ place and export — not on a minute of spectrogram texture:
 
 2. **Feature mapping.** The photo's summary numbers (`Snap.look`: mean
    brightness, contrast, mean saturation, saturation-weighted circular mean
-   hue, mean neighbour-pixel step) set the four macros (`Snap.macrosFrom`):
-   hue → TUNE across two octaves from A2, red low and violet high, a grey
-   photo on the centre detent; brightness → BRIGHT (the filter, floored so a
-   night shot is dark, not inaudible); colourfulness → DECAY; detail → GRIT.
-   Every mapped value is bounded the way SCRAMBLE's are, so no photo lands
-   on garbage. They are starting points to wreck: the sliders stay live and
-   AS SHOT puts them back.
+   hue and how strongly the photo agrees on it, and the mean brightness step
+   between points one cell apart on a 128-cell grid, across and down) set
+   the four macros (`Snap.macrosFrom`): hue → TUNE across two octaves from
+   A2, red low and violet high, the circle cut at rose (330°) so a 355° red
+   and a 5° red are neighbours at the bottom of the knob rather than two
+   octaves apart; a grey photo, or one whose colours cancel (half red, half
+   cyan has no dominant hue), lands on the centre detent; brightness →
+   BRIGHT (the filter, floored so a night shot is dark, not inaudible);
+   colourfulness → DECAY; detail → GRIT, measured on a grid so a 160 px
+   thumbnail and a 1024 px one of the same scene agree and a horizontal
+   stripe counts as much as a vertical one. Every mapped value is bounded
+   the way SCRAMBLE's are, so no photo lands on garbage. They are starting
+   points to wreck: the sliders stay live and AS SHOT puts them back.
 
 The voice is a wavetable oscillator (linear interpolation, rendered through
 U6's 4x oversample and decimate because a 256-point table read at 440 Hz has
@@ -268,12 +274,21 @@ bright PERC — which it is).
 What a pad stores is the 256 numbers and the macros, never the photo:
 `SnapPatch` writes a `table` field beside `Patches`' common four, and the
 WAV rebuilds from it bit for bit like every other synth recipe. The photo's
-line is in the sidecar as plain digits.
+line is in the sidecar as plain digits — and a sidecar edited by hand meets
+the same doors a photo does: a wrong-length, out-of-range or flat table is
+a `JsonException` like any other malformed recipe (BREED and the recipe
+replay already catch that), never a silent pad. The patch keeps its own
+copy of the table.
 
 Placement: like GRAINS, SNAP is outside SYNTH's `Engine` picker (it needs a
 `Photo`, not a voice enum) and has its own tab. TAKE PHOTO uses the system
 camera's `TakePicturePreview` contract — the small bitmap the camera app
 hands back, no file, no storage permission, no CAMERA permission of our own.
+"Small" is a promise some camera apps break, so the screen shrinks whatever
+arrives to 512 px on the long side before reading it and catches the
+`OutOfMemoryError` a 12 MP one would raise (`Copy.SNAP_TOO_BIG`), and it
+keeps the line it read together with the chip and photo that read it, so
+SEND TO PAD lands what was heard under the name of the chip that made it.
 The one refusal comes in words (`Copy.SNAP_FLAT`): a line with no swing in
 it — a plain wall read top to bottom, a clear sky read left to right — has
 no waveform to play, and the screen says so instead of landing a silent

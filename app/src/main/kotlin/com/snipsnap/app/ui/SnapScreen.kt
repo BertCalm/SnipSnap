@@ -78,6 +78,25 @@ import kotlinx.coroutines.withContext
 private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
+/**
+ * The longest side a photo is read at. `TakePicturePreview` is documented
+ * as a small bitmap, but it crosses from the camera app through shared
+ * memory and some camera apps fill it with the whole frame — a 12 MP one
+ * would want a 48 MB pixel array here. Everything `Snap` measures is
+ * grid-based (its own `DETAIL_GRID`) or a 256-point line, so 512 px
+ * loses it nothing.
+ */
+private const val MAX_PHOTO_SIDE = 512
+
+/**
+ * One line through one photo, read by one LINE chip: the table and
+ * whether it had any swing in it, kept together with what produced them
+ * so SEND TO PAD can never pair the previous line's table with the
+ * current chip's name (a tap on PLUMB followed by SEND before the read
+ * lands used to do exactly that).
+ */
+private class Line(val photo: Photo, val voice: SnapVoice, val table: IntArray, val flat: Boolean)
+
 private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
 /**
@@ -119,12 +138,13 @@ fun SnapScreen(
     var reading by remember { mutableStateOf<Snap.Reading?>(null) }
     var voice by remember { mutableStateOf(SnapVoice.HORIZON) }
     var macros by remember { mutableStateOf(Snap.defaults(SnapVoice.HORIZON)) }
-    // The line read for the current (photo, voice), and whether it had
-    // any swing in it. A flat line is `Snap.read`'s one refusal; it is
-    // toasted once when the line is read, and SEND stays off until a
-    // different line or photo reads through.
-    var table by remember { mutableStateOf<IntArray?>(null) }
-    var flat by remember { mutableStateOf(false) }
+    // The line read for the current (photo, voice) — see [Line]. A flat
+    // line is `Snap.read`'s one refusal; it is toasted once when the line
+    // is read, and SEND stays off until a different line or photo reads
+    // through. `line` is stale (and SEND off) from the moment the photo
+    // or the chip changes until the read below replaces it.
+    var line by remember { mutableStateOf<Line?>(null) }
+    val current = line?.takeIf { it.photo === photo && it.voice == voice }
     var looking by remember { mutableStateOf(false) }
 
     // Nothing is heard until the first real touch, same as SYNTH: landing
@@ -168,15 +188,23 @@ fun SnapScreen(
         looking = true
         scope.launch {
             try {
-                val (p, r) = withContext(Dispatchers.Default) {
-                    val p = bitmap.toPhoto()
-                    p to Snap.look(p)
+                val (small, p, r) = withContext(Dispatchers.Default) {
+                    val small = bitmap.shrunk()
+                    val p = small.toPhoto()
+                    Triple(small, p, Snap.look(p))
                 }
-                thumb = bitmap
+                thumb = small
                 photo = p
                 reading = r
                 macros = Snap.macrosFrom(r)
                 touched = true
+            } catch (ex: OutOfMemoryError) {
+                // Not an Exception: the catch below would let it through
+                // and the process would die reading a picture. TapeScreen
+                // and ChopScreen catch it on their own decodes for the
+                // same reason.
+                Log.e("SnapScreen", "look: out of memory", ex)
+                onToast(Copy.SNAP_TOO_BIG)
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 Log.e("SnapScreen", "look: failed", ex)
@@ -200,28 +228,30 @@ fun SnapScreen(
     LaunchedEffect(photo, voice) {
         val p = photo
         if (p == null) {
-            table = null
-            flat = false
+            line = null
             return@LaunchedEffect
         }
-        val t = withContext(Dispatchers.Default) { Snap.table(p, voice) }
+        val v = voice
+        val t = withContext(Dispatchers.Default) { Snap.table(p, v) }
         val isFlat = Snap.isFlat(t)
-        table = t
-        flat = isFlat
+        line = Line(p, v, t, isFlat)
         if (isFlat) onToast(Copy.SNAP_FLAT)
     }
 
-    // The debounced re-render + retrigger loop, SYNTH's own.
-    LaunchedEffect(table, macros, flat) {
-        val t = table
-        if (t == null || flat) {
+    // The debounced re-render + retrigger loop, SYNTH's own. Keyed on the
+    // line as read, not on the chip: a new photo's knobs arrive with the
+    // photo, a beat before its line does, and the old line under the new
+    // knobs is not a sound anyone asked for.
+    LaunchedEffect(current, macros) {
+        val l = current
+        if (l == null || l.flat) {
             snip = null
             return@LaunchedEffect
         }
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { Snap.render(t, macros) }
+            val rendered = withContext(Dispatchers.Default) { Snap.render(l.table, macros) }
             snip = rendered
             if (touched) audition(rendered)
         } catch (e: CancellationException) {
@@ -239,7 +269,7 @@ fun SnapScreen(
     var showChooser by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
     val kit = entry?.kit
-    val patchName = "Snap ${voice.name.lowercase().replaceFirstChar { it.uppercase() }}"
+    fun patchNameFor(v: SnapVoice) = "Snap ${v.name.lowercase().replaceFirstChar { it.uppercase() }}"
     // A note, like PLUCK's: the pad is tonal whatever the picture, and
     // AutoPlace's colour and (no) choke group follow from that.
     val cls = DrumClass.TONAL
@@ -247,12 +277,15 @@ fun SnapScreen(
 
     fun sendToSlot(slot: Int) {
         val e = entry ?: return
-        val t = table ?: return
-        if (sendBusy || flat) return
+        // The line as read, voice and table together (see [Line]): what
+        // lands is what was heard, named for the chip that read it.
+        val l = current ?: return
+        if (sendBusy || l.flat) return
+        val patchName = patchNameFor(l.voice)
         sendBusy = true
         appScope.launch {
             try {
-                val patch = SnapPatch(patchName, voice, macros, t)
+                val patch = SnapPatch(patchName, l.voice, macros, l.table)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
@@ -352,7 +385,7 @@ fun SnapScreen(
                     LabButton(
                         if (sendBusy) "…" else "SEND TO PAD ▸",
                         scheme,
-                        enabled = kit != null && table != null && !flat && !sendBusy,
+                        enabled = kit != null && current != null && !current.flat && !sendBusy,
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "SEND TO PAD",
                     ) {
@@ -390,17 +423,28 @@ fun SnapScreen(
 }
 
 /**
- * The camera's bitmap as `:synth`'s pixel grid. `getPixels` refuses a
- * HARDWARE bitmap (its pixels live on the GPU), so that one is copied to
- * software first; the preview the camera app hands back is a plain
- * ARGB_8888 thumbnail in practice, and the copy is the guard, not the
- * path.
+ * The camera's bitmap at no more than [MAX_PHOTO_SIDE] on its long side,
+ * in software memory. `getPixels` refuses a HARDWARE bitmap (its pixels
+ * live on the GPU), so that one is copied first; the preview the camera
+ * app hands back is a plain ARGB_8888 thumbnail in practice, and the
+ * copy is the guard, not the path. A bitmap already small enough is
+ * returned as it is.
  */
-private fun Bitmap.toPhoto(): Photo {
+private fun Bitmap.shrunk(): Bitmap {
     val soft = if (config == Bitmap.Config.HARDWARE) copy(Bitmap.Config.ARGB_8888, false) else this
-    val px = IntArray(soft.width * soft.height)
-    soft.getPixels(px, 0, soft.width, 0, 0, soft.width, soft.height)
-    return Photo(soft.width, soft.height, px)
+    val long = maxOf(soft.width, soft.height)
+    if (long <= MAX_PHOTO_SIDE) return soft
+    val scale = MAX_PHOTO_SIDE.toFloat() / long
+    val w = (soft.width * scale).roundToInt().coerceAtLeast(1)
+    val h = (soft.height * scale).roundToInt().coerceAtLeast(1)
+    return Bitmap.createScaledBitmap(soft, w, h, true)
+}
+
+/** A (small) bitmap as `:synth`'s pixel grid. */
+private fun Bitmap.toPhoto(): Photo {
+    val px = IntArray(width * height)
+    getPixels(px, 0, width, 0, 0, width, height)
+    return Photo(width, height, px)
 }
 
 // ---------- the photo and its numbers ----------

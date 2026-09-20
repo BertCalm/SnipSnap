@@ -177,7 +177,8 @@ class SnapTest {
         val blue = Snap.macrosFrom(Snap.look(tinted(40, 40, 200)))
         val grey = Snap.macrosFrom(Snap.look(tinted(120, 120, 120)))
         assertTrue(red.getValue("TUNE") < 0.1f, "red: ${red["TUNE"]}")
-        assertTrue(blue.getValue("TUNE") in 0.6f..0.72f, "blue: ${blue["TUNE"]}")
+        // 240° on a circle cut at 330°: three quarters of the way up.
+        assertTrue(blue.getValue("TUNE") in 0.7f..0.8f, "blue: ${blue["TUNE"]}")
         assertEquals(0.5f, grey.getValue("TUNE"), "grey has no hue to speak of")
         assertTrue(Snap.look(tinted(120, 120, 120)).saturation < Snap.GREY_SATURATION)
     }
@@ -211,6 +212,48 @@ class SnapTest {
         assertTrue(hue < 15f || hue > 345f, "hue $hue")
     }
 
+    @Test
+    fun `two reds either side of zero degrees land on the same low TUNE`() {
+        // The hue circle has to be cut somewhere to lie on a knob; cut at
+        // 0° it put a 355° red and a 5° red two octaves apart. The seam
+        // sits at rose now, so both reds are together at the bottom.
+        val rose = Snap.macrosFrom(Snap.look(tinted(230, 30, 60))).getValue("TUNE")   // ≈ 351°
+        val scarlet = Snap.macrosFrom(Snap.look(tinted(230, 60, 30))).getValue("TUNE") // ≈ 9°
+        assertTrue(rose < 0.15f && scarlet < 0.15f, "rose $rose, scarlet $scarlet")
+        assertTrue(abs(rose - scarlet) < 0.08f, "two reds $rose vs $scarlet should be neighbours")
+        // And the order of the spectrum is kept: violet is high.
+        val violet = Snap.macrosFrom(Snap.look(tinted(140, 30, 230))).getValue("TUNE")
+        assertTrue(violet > 0.75f, "violet $violet")
+    }
+
+    @Test
+    fun `colours that cancel have no dominant hue and land on the detent`() {
+        // Half pure red, half pure cyan: fully saturated, so the grey
+        // guard does not fire, but the hue vectors sum to nothing. Before
+        // hueStrength the TUNE came out of float noise.
+        val photo = Photo.of(80, 80) { x, _ -> if (x < 40) Photo.rgb(255, 0, 0) else Photo.rgb(0, 255, 255) }
+        val reading = Snap.look(photo)
+        assertTrue(reading.saturation > 0.9f)
+        assertTrue(reading.hueStrength < Snap.WEAK_HUE, "strength ${reading.hueStrength}")
+        assertEquals(0.5f, Snap.macrosFrom(reading).getValue("TUNE"))
+        // One colour, by contrast, is fully in agreement with itself.
+        assertTrue(Snap.look(tinted(230, 30, 30)).hueStrength > 0.95f)
+    }
+
+    @Test
+    fun `detail does not care which way the stripes run or how many pixels the camera sent`() {
+        val across = Snap.look(Photo.grey(240, 240) { x, _ -> if ((x * 8 / 240) % 2 == 0) 0.15f else 0.85f }).detail
+        val down = Snap.look(Photo.grey(240, 240) { _, y -> if ((y * 8 / 240) % 2 == 0) 0.15f else 0.85f }).detail
+        assertTrue(across > 0.01f, "stripes have detail: $across")
+        assertTrue(abs(across - down) < across * 0.2f, "across $across vs down $down")
+
+        // The same scene as a 128 px thumbnail and a 512 px one.
+        fun scene(side: Int) = Photo.grey(side, side) { x, y -> if (((x * 8 / side) + (y * 8 / side)) % 2 == 0) 0.2f else 0.8f }
+        val small = Snap.look(scene(128)).detail
+        val large = Snap.look(scene(512)).detail
+        assertTrue(abs(small - large) < small * 0.25f, "128px $small vs 512px $large")
+    }
+
     // ---------- the recipe ----------
 
     @Test
@@ -229,12 +272,76 @@ class SnapTest {
     fun `a table of the wrong shape is refused`() {
         assertFailsWith<IllegalArgumentException> { SnapPatch("X", SnapVoice.HORIZON, emptyMap(), IntArray(100)) }
         assertFailsWith<IllegalArgumentException> { SnapPatch("X", SnapVoice.HORIZON, emptyMap(), IntArray(Snap.TABLE_SIZE) { 300 }) }
+        // A flat table is refused at the door too, not only by Snap.read:
+        // a hand-typed sidecar cannot land a silent pad.
+        val flat = assertFailsWith<IllegalArgumentException> { SnapPatch("X", SnapVoice.HORIZON, emptyMap(), IntArray(Snap.TABLE_SIZE) { 128 }) }
+        assertTrue(flat.message!!.contains("no swing"), flat.message)
         assertFailsWith<JsonException> {
             Patches.fromJsonText("""{"engine":"SNAP","version":1,"name":"?","voice":"ORBIT","macros":{}}""")
         }
         assertFailsWith<JsonException> {
             Patches.fromJsonText("""{"engine":"SNAP","version":1,"name":"?","voice":"SPIRAL","macros":{},"table":[]}""")
         }
+    }
+
+    @Test
+    fun `a malformed table in a sidecar is a JsonException like any other bad recipe`() {
+        fun json(table: String, version: Int = 1) =
+            """{"engine":"SNAP","version":$version,"name":"?","voice":"ORBIT","macros":{},"table":$table}"""
+        val ramp = (0 until Snap.TABLE_SIZE).joinToString(",") { it.toString() }
+        // Wrong length, out of range, flat, not a number: all the same door.
+        for (bad in listOf("[1,2,3]", "[" + ramp.replaceFirst("0", "300") + "]", "[" + List(Snap.TABLE_SIZE) { "128" }.joinToString(",") + "]", "[" + ramp.replaceFirst("0", "\"x\"") + "]")) {
+            assertFailsWith<JsonException>(bad.take(24)) { Patches.fromJsonText(json(bad)) }
+        }
+        // A later version says so, before anything about its table.
+        val future = assertFailsWith<JsonException> { Patches.fromJsonText(json("[1,2,3]", version = 99)) }
+        assertTrue(future.message!!.contains("version"), future.message)
+        // And the good one still opens.
+        assertTrue(Patches.fromJsonText(json("[$ramp]")) is SnapPatch)
+    }
+
+    @Test
+    fun `the patch keeps its own copy of the table`() {
+        val table = IntArray(Snap.TABLE_SIZE) { it }
+        val patch = SnapPatch("Own", SnapVoice.PLUMB, emptyMap(), table)
+        val before = patch.hashCode()
+        table.fill(999)
+        assertEquals(before, patch.hashCode(), "a write to the caller's array reached the patch")
+        assertTrue(patch.table.all { it in 0..255 })
+    }
+
+    @Test
+    fun `a photo whose pixel count overflows Int is refused`() {
+        assertFailsWith<IllegalArgumentException> { Photo(65536, 65536, IntArray(0)) }
+        assertFailsWith<IllegalArgumentException> { Photo(0, 4, IntArray(0)) }
+        assertFailsWith<IllegalArgumentException> { Photo(3, 3, IntArray(8)) }
+    }
+
+    @Test
+    fun `degenerate photos read without crashing and refuse in words when flat`() {
+        for (photo in listOf(
+            Photo.grey(1, 1) { _, _ -> 0.5f },
+            Photo.grey(1, 40) { _, y -> y / 39f },
+            Photo.grey(40, 1) { x, _ -> x / 39f },
+            Photo.grey(3, 700) { x, y -> ((x + y) % 2).toFloat() },
+        )) {
+            val reading = Snap.look(photo)
+            assertTrue(reading.luminance in 0f..1f && reading.detail in 0f..1f && reading.hueStrength in 0f..1f, "$reading")
+            for (voice in SnapVoice.entries) {
+                val table = Snap.table(photo, voice)
+                assertEquals(Snap.TABLE_SIZE, table.size)
+                assertTrue(table.all { it in 0..255 })
+                if (Snap.isFlat(table)) {
+                    val refused = assertFailsWith<IllegalArgumentException> { Snap.read(photo, voice, "Tiny") }
+                    assertTrue(refused.message!!.contains("flat"), refused.message)
+                } else {
+                    val snip = Snap.read(photo, voice, "Tiny").render()
+                    assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f })
+                }
+            }
+        }
+        // A 1x1 photo has one flat line whichever way it is read.
+        assertTrue(SnapVoice.entries.all { Snap.isFlat(Snap.table(Photo.grey(1, 1) { _, _ -> 0.5f }, it)) })
     }
 
     @Test

@@ -112,15 +112,45 @@ object Snap {
         /**
          * Dominant hue in degrees, 0..360 — the circular mean weighted by
          * saturation, so grey pixels do not vote. Meaningless when
-         * [saturation] is near zero; [macrosFrom] treats it so.
+         * [saturation] is near zero or [hueStrength] is low; [macrosFrom]
+         * treats it so.
          */
         val hue: Float,
-        /** Mean brightness step between neighbouring pixels, 0..1. Fine texture scores high. */
+        /**
+         * How much the photo agrees on that hue, 0..1: the length of the
+         * mean hue vector. One colour scores 1; a photo half red and half
+         * cyan cancels to 0 and has no dominant hue at all, whatever its
+         * saturation says.
+         */
+        val hueStrength: Float,
+        /**
+         * Mean brightness step between points one grid cell apart, 0..1,
+         * measured across and down on a [DETAIL_GRID]-cell grid — so the
+         * number is about the picture, not about how many pixels the
+         * camera app happened to hand back, and a horizontal stripe scores
+         * the same as a vertical one.
+         */
         val detail: Float,
     )
 
     /** Below this mean saturation a photo counts as grey and its hue is not trusted. */
     internal const val GREY_SATURATION = 0.08f
+
+    /** Below this [Reading.hueStrength] the hue is a cancellation, not a colour, and is not trusted either. */
+    internal const val WEAK_HUE = 0.2f
+
+    /** Cells across the long side that [Reading.detail] is measured on. */
+    internal const val DETAIL_GRID = 128
+
+    /**
+     * Where the hue circle is cut to lay it on the TUNE knob. Any cut
+     * puts two near-identical hues at opposite ends; this one sits at
+     * rose, between magenta and red, so every red a photo is likely to
+     * hold (a sunset at 10°, a skin tone at 20°, a red door at 355°) is
+     * on the same low end of the knob rather than straddling the seam
+     * at 0°.
+     */
+    internal const val HUE_SEAM_DEGREES = 330f
 
     fun look(photo: Photo): Reading {
         val w = photo.width
@@ -131,10 +161,7 @@ object Snap {
         var satSum = 0.0
         var hx = 0.0
         var hy = 0.0
-        var stepSum = 0.0
-        var steps = 0
         for (y in 0 until h) {
-            var prev = -1f
             for (x in 0 until w) {
                 val p = photo.pixel(x, y)
                 val r = Photo.red(p) / 255f
@@ -160,19 +187,33 @@ object Snap {
                     hx += cos(rad) * sat
                     hy += sin(rad) * sat
                 }
-                if (prev >= 0f) { stepSum += abs(lum - prev); steps++ }
-                prev = lum
+            }
+        }
+        // Detail on a fixed grid, both ways: one step per cell across and
+        // one down, so a 160x120 thumbnail and a 1024x768 one of the same
+        // scene agree, and a horizontal stripe counts as much as a
+        // vertical one.
+        val stride = max(1, Math.round(max(w, h).toFloat() / DETAIL_GRID))
+        var stepSum = 0.0
+        var steps = 0
+        for (y in 0 until h step stride) {
+            for (x in 0 until w step stride) {
+                val here = photo.luminance(x, y)
+                if (x + stride < w) { stepSum += abs(photo.luminance(x + stride, y) - here); steps++ }
+                if (y + stride < h) { stepSum += abs(photo.luminance(x, y + stride) - here); steps++ }
             }
         }
         val mean = (lumSum / n).toFloat()
         val variance = (lumSq / n - mean.toDouble() * mean).coerceAtLeast(0.0)
         var hueDeg = (atan2(hy, hx) * 180.0 / PI).toFloat()
         if (hueDeg < 0f) hueDeg += 360f
+        val strength = if (satSum <= 1e-9) 0f else (sqrt(hx * hx + hy * hy) / satSum).toFloat().coerceIn(0f, 1f)
         return Reading(
             luminance = mean,
             contrast = sqrt(variance).toFloat(),
             saturation = (satSum / n).toFloat(),
             hue = hueDeg,
+            hueStrength = strength,
             detail = if (steps == 0) 0f else (stepSum / steps).toFloat(),
         )
     }
@@ -184,9 +225,16 @@ object Snap {
      */
     fun macrosFrom(reading: Reading): Map<String, Float> {
         // Hue walks the spectrum as TUNE walks two octaves: red at the
-        // bottom, violet at the top. A grey photo has no hue to speak of
-        // and lands on the root an octave up — the centre detent.
-        val tune = if (reading.saturation < GREY_SATURATION) 0.5f else (reading.hue / 360f).coerceIn(0f, 1f)
+        // bottom, violet at the top, the circle cut at [HUE_SEAM_DEGREES]
+        // so the reds stay together. A grey photo has no hue to speak of,
+        // and a photo whose colours cancel (half red, half cyan) has no
+        // dominant one; both land on the root an octave up — the centre
+        // detent — rather than on wherever float noise points.
+        val tune = if (reading.saturation < GREY_SATURATION || reading.hueStrength < WEAK_HUE) {
+            0.5f
+        } else {
+            (((reading.hue - HUE_SEAM_DEGREES + 720f) % 360f) / 360f).coerceIn(0f, 1f)
+        }
         // Brightness opens the filter. Floored so a night shot is dark,
         // not inaudible.
         val bright = Dsp.lin(reading.luminance, 0.15f, 0.95f)
