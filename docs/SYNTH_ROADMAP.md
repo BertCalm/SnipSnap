@@ -336,3 +336,20 @@ never fight. DONE commits the wave only if it was drawn on or a starting
 shape was picked (a visit to set the SHAPE alone leaves the photo's line
 the photo's), and the shape only if one was drawn; CANCEL and back leave
 everything as it was.
+
+A hardening pass over DRAW (an independent read plus this document's own)
+settled the following: the last drawing is kept across chip taps and new
+photos and comes back through the surface's LAST button (a photo chip's
+read used to replace it and DRAW reopened on blank); opening the surface
+plays nothing until the first stroke, and closing it does not replay what
+it just played; a new photo selects its own HORIZON line rather than
+landing the photo's knobs on a drawn one; a shape "opens" only if it
+reaches `Draw.OPENS` (8 of 255, -30 dB) — `any { it > 0 }` let a one-level
+bump through that `normalize` then lifted to a full-scale click — and every
+door uses that one check; `"envelope": null` in a sidecar reads as no
+shape; FALL is drawn to end where the undrawn note is cut
+(`Snap.LENGTH_OVER_T60`); the panel draws point i at the centre of the
+column the pen maps a touch onto, so the line and the finger agree; a
+touch with a NaN in it, or a table with no points, draws nothing; and a
+shape drawn over nothing is kept with a toast saying why it is not yet
+heard.

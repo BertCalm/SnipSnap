@@ -49,6 +49,52 @@ class DrawTest {
     }
 
     @Test
+    fun `a touch with no number in it, or a table with no points, draws nothing`() {
+        val blank = Draw.blank()
+        // A NaN slips through coerceIn; it used to land on point zero as a zero.
+        assertTrue(Draw.stroke(blank, Float.NaN, 0.5f, 0.7f, 0.5f).contentEquals(blank))
+        assertTrue(Draw.stroke(blank, 0.2f, Float.NaN, 0.7f, 0.5f).contentEquals(blank))
+        assertTrue(Draw.stroke(blank, 0.2f, 0.5f, Float.NaN, Float.NaN).contentEquals(blank))
+        assertEquals(0, Draw.stroke(IntArray(0), 0f, 0f, 1f, 1f).size)
+        assertEquals(0, Draw.smooth(IntArray(0), circular = true).size)
+        assertEquals(0, Draw.roughness(IntArray(0), circular = true))
+    }
+
+    @Test
+    fun `a shape opens only when it reaches the OPENS line, at every door`() {
+        // One level above the floor is under a pixel on the panel and 48 dB
+        // down in the render; normalize used to lift it to a full-scale
+        // click. Eight levels is a shape someone drew.
+        val whisper = IntArray(Draw.ENVELOPE_SIZE).also { it[3] = Draw.OPENS - 1 }
+        val quiet = IntArray(Draw.ENVELOPE_SIZE).also { it[3] = Draw.OPENS }
+        assertTrue(!Draw.opens(whisper))
+        assertTrue(Draw.opens(quiet))
+        for (shape in Draw.Shape.entries) assertTrue(Draw.opens(Draw.shape(shape)), "$shape")
+
+        val table = Draw.wave(Draw.Wave.SINE)
+        assertFailsWith<IllegalArgumentException> { SnapPatch("X", SnapVoice.DRAWN, emptyMap(), table, whisper) }
+        SnapPatch("X", SnapVoice.DRAWN, emptyMap(), table, quiet)
+        val ramp = (0 until Snap.TABLE_SIZE).joinToString(",")
+        fun json(env: String) = """{"engine":"SNAP","version":1,"name":"?","voice":"DRAWN","macros":{},"table":[$ramp],"envelope":$env}"""
+        assertFailsWith<JsonException> { Patches.fromJsonText(json(whisper.joinToString(",", "[", "]"))) }
+        assertTrue(Patches.fromJsonText(json(quiet.joinToString(",", "[", "]"))) is SnapPatch)
+        // And an explicit null is "no shape", not a malformed one.
+        assertNull((Patches.fromJsonText(json("null")) as SnapPatch).envelope)
+    }
+
+    @Test
+    fun `FALL is the fall the undrawn note makes`() {
+        // The note runs LENGTH_OVER_T60 times its T60 and is cut there, 66 dB
+        // down; the drawn FALL reaches the same place at its end, so the
+        // SHAPE panel shows what the DECAY knob does.
+        val fall = Draw.shape(Draw.Shape.FALL)
+        assertEquals(255, fall.first())
+        assertEquals(0, fall.last())
+        val mid = Math.round(255f * Dsp.envAt(0.5f, 1f / Snap.LENGTH_OVER_T60))
+        assertTrue(abs(fall[Draw.ENVELOPE_SIZE / 2] - mid) <= 2, "mid ${fall[Draw.ENVELOPE_SIZE / 2]} vs $mid")
+    }
+
+    @Test
     fun `the pen never writes into the array it was given`() {
         val before = Draw.blank()
         val copy = before.copyOf()

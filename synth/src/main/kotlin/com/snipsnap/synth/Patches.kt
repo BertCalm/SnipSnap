@@ -250,7 +250,7 @@ class SnapPatch(
         if (envelope != null) {
             require(envelope.size == Draw.ENVELOPE_SIZE) { "a drawn shape has ${Draw.ENVELOPE_SIZE} points, got ${envelope.size}" }
             for ((i, v) in envelope.withIndex()) require(v in 0..255) { "envelope[$i] is not a level 0..255: $v" }
-            require(envelope.any { it > 0 }) { "a drawn shape that never opens is silence" }
+            require(Draw.opens(envelope)) { "a drawn shape that never opens is silence" }
         }
     }
 
@@ -311,7 +311,9 @@ class SnapPatch(
                     v
                 }
                 if (Snap.isFlat(table)) throw JsonException("SNAP table has no swing in it: nothing to play")
-                val envelope = value.obj()["envelope"]?.let { rawEnv ->
+                // An explicit null is the natural way to write "no shape";
+                // it reads as the field being absent, not as a malformed one.
+                val envelope = value.obj()["envelope"]?.takeUnless { it is JsonValue.Null }?.let { rawEnv ->
                     val points = rawEnv.arr()
                     if (points.size != Draw.ENVELOPE_SIZE) throw JsonException("SNAP envelope has ${points.size} points, not ${Draw.ENVELOPE_SIZE}")
                     val env = IntArray(points.size) { i ->
@@ -319,7 +321,7 @@ class SnapPatch(
                         if (v !in 0..255) throw JsonException("SNAP envelope[$i] is not a level 0..255: $v")
                         v
                     }
-                    if (env.none { it > 0 }) throw JsonException("SNAP envelope never opens: silence")
+                    if (!Draw.opens(env)) throw JsonException("SNAP envelope never opens: silence")
                     env
                 }
                 SnapPatch(name, voice, macros, table, envelope)
