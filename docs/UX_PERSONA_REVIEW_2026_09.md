@@ -48,26 +48,85 @@ this is checkable in an afternoon."
 
 ---
 
-> **2026-09-19 — this review has not been worked, and its headline is
-> already out of date.** Read the note below before acting on anything
-> here.
->
-> The headline finding immediately following is **closed**. GROOVE's
-> BOUNCE renders the loop to SNIPS, and SNIPS has a SHARE that hands the
-> file to the system chooser (`SnipsScreen.kt:123`, *"the snip leaves the
-> app, through the system chooser"*). The bounce doors on LOOP, GROOVE
-> and ORBIT all name SNIPS before the tap and after it. So a beat can
-> leave the app as audio, by the route this section says does not exist.
->
-> **Only the headline was re-checked.** The other findings below have not
-> been verified against the app as it now stands. This review was written
-> on 2026-09-16, the same day as `UX_JOURNEY_PLAN_2026_09.md` and so
-> before any of that plan ran — PR 0 through PR 8 have all landed since.
-> (The wiring review's fixes, 2026-09-13, do predate it and are already
-> accounted for here.) Treat every item below as a claim about the build
-> of 2026-09-16 until it is read at source again. The journey plan's own
-> "still to do" list turned out eight-for-eight already done when it was
-> finally checked; there is no reason to expect this one to be different.
+> **2026-09-20 — every finding in this document has now been re-read at
+> source.** The verdicts are in the section immediately below. Nothing
+> under them has been rewritten: each finding stands as it was written on
+> 2026-09-16, and the table says what became of it.
+
+# Verification pass, 2026-09-20
+
+This review was written the same day as `UX_JOURNEY_PLAN_2026_09.md` and
+so **before any of that plan ran**. PR 0 through PR 8 have all landed
+since, plus a SKIN wave. This section is the at-source check of what
+survived, done the way the journey plan's own findings were checked —
+read in the code, not ticked from memory.
+
+**Ten findings are closed, five are half-closed, and fourteen stand.**
+The counts below are of the 22 numbered persona findings, 5 synthesis
+items and 2 headlines; the "Outside expectation" tables are positioning
+judgements rather than findings and are not counted.
+
+## Closed
+
+| Finding | What closed it |
+|---|---|
+| **Headline 1**, X1, P1.2, P3.5, P5.4 — *"your beat cannot leave the app"* | GROOVE ▸ BOUNCE renders the loop to SNIPS, and SNIPS has SHARE (`SnipsScreen.kt:123`). A beat leaves as audio. |
+| **P2.1, P4.3, S5** — the PROG collision | J18/J19. `PROG A · THE BREAK` … `PROG E · EDITED` are now `CAPTURED · SWING · HALF · SPARSE · YOURS` in a segment row. S5 asked "at minimum the word PROG should go"; it is gone from the screen. |
+| **X4, S4** — twelve flat peers, no grouping marker | J12. `MENU_GROUPS` draws a 2dp rule at each of the three seams: the shelf, the four flow tabs, the five instruments, the two utilities. S4's recommendation almost verbatim. |
+| **P5.2** — SONG ▸ in a row that mixes writes with navigation | J46. The row is sorted by what each button does and its legend reads `WRITE IT OUT · OR TAKE IT FURTHER`. |
+| **S2** — "keep the gesture, add a visible second door" | Done, and before this review was read: `Copy.PAD_SHEET_LEGEND` — *"HOLD A PAD · SHAPE, TUNE, TREAT, MUTATE, GRAIN"* — sits permanently under KIT's grid (`KitScreen.kt:368`). The hold is unchanged; a legend that cannot be dismissed explains it. |
+
+## Half-closed — the finding moved, it did not vanish
+
+| Finding | What changed | What stands |
+|---|---|---|
+| **P2.3**, the J3 half of X5 and P4.1 — the card write | It is no longer silent: the write reports afterwards, naming how many files it replaced (`Copy.dubDoneCardReplaced`) and calling out a provider that refused a delete (`dubDoneCardContested`). | **There is still no arm before the card leg**, by design — `ExportScreen.kt:541` says so outright. "No warning at any point" is now false; "no confirm before an overwrite" is still true, for the one persona with real data on the card. |
+| **P3.4, S3** — treatments are a render job, not a live effect | The *felt* problem is addressed: `Copy.treatmentBusy(label)` names which treatment is working, so a 1.77-second ETERNAL no longer reads as a dead button. | The model is unchanged — which is what S3 recommended. P3's expectation gap is architectural and stays. |
+| **P4.1** — destructive defaults | J5, J20, J2 and `MAKE PAD ▸` are all fixed (PRs 3–4). Armed, EXPORT's button now names what it would destroy (`Copy.replaceWhat`). | The card leg, as above. |
+| **P5.1** — PROG A–E is not a slot model | The word is gone and the editor doors now say `START YOURS` / `FORK TO YOURS`, so "tap B, edit, discover it isn't a slot" is much harder to walk into. | **The structure is unchanged**: four derived programs plus one editable fork, not five slots. That is the open half, and it is a design call. |
+
+## Standing
+
+| Finding | Checked |
+|---|---|
+| **Headline 2**, P1.3 — sequencing is absent from the advertised loop | `FIRST_RUN_LOOP_STAGES` is still `TAPE · CHOP · KIT · EXPORT`. **But half of X3 is now wrong** — see the corrections below. |
+| **P1.1**, X2 — "DUB IT" is the last word and it is opaque | `FIRST_RUN_LOOP_NOTE` still ends on it. |
+| **P1.4**, X6 — the vocabulary wall, and HELP | Counted: `HELP_LOOP` is 4 items, `HELP_MORE` is 20, HELP is 12th of twelve. Exactly as written. |
+| **P1.5** — all-caps sentences | Unchanged. |
+| **P2.2** — their vocabulary doesn't navigate | Stands, with two rows stale (below). |
+| **P2.4** — the loop starts at "record" | Unchanged. |
+| **P3.1** — twelve destinations against roughly one | Still twelve. X4's remedy landed, but grouping twelve is not reducing twelve. |
+| **P3.2** — record-to-pad is not the advertised path | `INSTANT KIT` and `CATCH A HIT` are both still there, still not in the loop note. |
+| **P3.3** — the app never says "resample" | Confirmed by search: only `Resampler` in code and one refusal string (*"SPLICE WON'T RESAMPLE OR FOLD ONE TO FIT"*). Never as a control. |
+| **P4.2** — MIDI in/out and clock sync | `docs/MIDI_SYNC.md` exists; no `MidiSync` or clock code does. Unchanged. |
+| **P4.4** — provenance is good and half-hidden | `provenanceOrigin`/`provenanceLine` (`PadSheetScreen.kt:2797-2850`) are called from that file and nowhere else. S2's legend now advertises the sheet's door, but it names *SHAPE, TUNE, TREAT, MUTATE, GRAIN* — not where the sound came from. Still half-hidden. |
+| **P5.3** — punch-in FX vs macros-and-print | Architectural. Unchanged. |
+| **S1** — keep the cassette metaphor | Standing as a recommendation, and independently settled the same way by J39: `PERSONALITY.md` catalogs the reels as hidden eggs under its own law 4. |
+
+## Facts in this document that have gone stale
+
+Not findings — statements that were true on 2026-09-16 and are not now.
+Left in place above, corrected here, because rewriting a review after the
+fact hides how it read when it was written.
+
+- *"eight starters"* and *"Seven of the eight"* in P1's opening — **nine**
+  since the SKIN starter, and eight of the nine make a sound.
+- `"RECORD IT, CUT IT, PLAY IT, DUB IT."` — J13 made step three **KIT
+  IT**, because PLAY is a real tab six places along the same row.
+- `PROG A · THE BREAK` … `PROG E · EDITED` — renamed, see above.
+- *"CHOP → SEND TO GRID"* in P2.2 — **SEND TO PADS** since J41.
+- *"KITS"* wherever P2.2 and the ledger name the shelf — the tab reads
+  **SHELF** since J14.
+- **`GROOVE` is not off-screen.** X3, P2.2 and P3.1 each say it is. The
+  UAT sim measures the visible run as `SHELF TAPE CHOP KIT EXPORT PLAY
+  GROOVE ORBIT SYNTH` — GROOVE is 7th *and visible*; only SURFACE, SETUP
+  and HELP need a drag. The position is right, the consequence is not,
+  and it matters: "buried behind a drag" was doing a lot of the work in
+  the second headline's argument.
+- `Chrome.kt:217-230` and the other line references in this document
+  predate two waves of edits and no longer point where they did.
+
+---
 
 ## The headline: your *beat* cannot leave the app, only your *sounds*
 
