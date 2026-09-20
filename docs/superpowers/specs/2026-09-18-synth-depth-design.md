@@ -108,10 +108,26 @@ therefore always start in lockstep, and the attack is identical every render.
 
 **PLUCK is out of tune with itself.** `Pluck.kt:127` uses
 `n = (RATE / freq).toInt()` — an integer delay line with no fractional-delay
-correction. HARP at maximum TUNE (660 Hz) renders ≈+21 cents; at its root
-(165 Hz), ≈+1.8 cents. The error is non-monotonic across semitones, so adjacent
-pads in a pentatonic `SynthKits.melodic()` run are out of tune *relative to each
-other*. PLUCK is also the only engine that never oversamples.
+correction.
+
+> **Corrected 2026-09-19, measured.** An earlier draft said "≈+21 cents sharp"
+> and had both the sign and the magnitude wrong. Measured pre-fix error is
+> **flat**, and far larger: KALIMBA runs −23.5 cents at its root, −50.1 at one
+> octave up, and **−99.6 cents at the top of its range** — essentially a full
+> semitone. NYLON, over the same span, drifts only −4.8 to −13.6.
+>
+> The sign was wrong because I counted one delay term of three. Truncating the
+> delay line does shorten the loop and sharpen it, but a Karplus-Strong loop's
+> period is *delay line + loop-filter phase delay + the 2-tap average's half
+> sample*, and those two lengthen it by more than truncation shortens it. A fix
+> correcting only the truncation would have left the string mistuned.
+>
+> The practical consequence is worse than "non-monotonic": the error grows with
+> pitch *within* a voice and differs by an order of magnitude *between* voices,
+> so a kit mixing KALIMBA and NYLON is out of tune with itself in two directions
+> at once.
+
+PLUCK is also the only engine that never oversamples.
 
 ## Architecture: the voice spine
 
