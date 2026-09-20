@@ -49,6 +49,13 @@ import java.io.File
  * label has to survive, whatever device the suite happens to run on:
  * the first pass came back with "TA..." for → TAPE on a phone this wide,
  * and a test on a tablet would never have seen it.
+ *
+ * The clock is driven by hand ([pump], [waitFor]). SURFACE runs a frame
+ * loop for its whole life, and Compose's test harness counts a loop
+ * waiting on the next frame as work still pending: with the clock
+ * advancing itself, every test sat in `waitForIdle` until it timed out.
+ * With auto-advance off the harness waits only for layout, and each
+ * frame the loop gets is one this file asked for.
  */
 @RunWith(AndroidJUnit4::class)
 class SurfaceScreenTest {
@@ -59,6 +66,7 @@ class SurfaceScreenTest {
     private val toasts = mutableListOf<String>()
 
     private fun show(entry: KitShelf.Entry?) {
+        compose.mainClock.autoAdvance = false
         compose.setContent {
             TapeTheme(Schemes.DEFAULT) {
                 Box(Modifier.width(PHONE_WIDTH_DP.dp).fillMaxHeight()) {
@@ -71,6 +79,29 @@ class SurfaceScreenTest {
                 }
             }
         }
+        pump()
+    }
+
+    /** Frames for the screen's loop, then layout: what a moment of real time gives it. */
+    private fun pump(millis: Long = 300) {
+        compose.mainClock.advanceTimeBy(millis)
+        compose.waitForIdle()
+    }
+
+    /** A frame at a time until [condition], or a failure naming what never came. */
+    private fun waitFor(what: String, timeoutMillis: Long = 5_000, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMillis
+        while (!condition()) {
+            if (System.currentTimeMillis() > deadline) throw AssertionError("waited $timeoutMillis ms and $what never came")
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+        }
+    }
+
+    /** A tap on the button named [label], and the frames for the screen to answer. */
+    private fun tap(label: String) {
+        button(label).performClick()
+        pump()
     }
 
     /** A one-pad kit with a tempo, on disk where the screen can read it. */
@@ -129,11 +160,11 @@ class SurfaceScreenTest {
         show(entry = tempoKit())
         // With a tempo the bars button is live and its longest word is on it
         // after two taps; → TAPE flipped is → PAD.
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        button("FREE").performClick()
-        button(PrintLength.label(PrintLength.BARS[1])).performClick()
+        waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        tap("FREE")
+        tap(PrintLength.label(PrintLength.BARS[1]))
         assertReadsInFull(PrintLength.label(PrintLength.BARS[2]))
-        button("→ TAPE").performClick()
+        tap("→ TAPE")
         assertReadsInFull("→ PAD")
     }
 
@@ -142,7 +173,7 @@ class SurfaceScreenTest {
         show(entry = null)
         pad(Mode.XY).assertExists()
         button("XY").assertIsSelected()
-        button("VECTOR").performClick()
+        tap("VECTOR")
         button("VECTOR").assertIsSelected()
         pad(Mode.VECTOR).assertExists()
         pad(Mode.XY).assertDoesNotExist()
@@ -153,10 +184,10 @@ class SurfaceScreenTest {
         show(entry = null)
         button("→ TAPE").assertExists()
         button("→ PAD").assertDoesNotExist()
-        button("→ TAPE").performClick()
+        tap("→ TAPE")
         button("→ PAD").assertExists()
         button("→ TAPE").assertDoesNotExist()
-        button("→ PAD").performClick()
+        tap("→ PAD")
         button("→ TAPE").assertExists()
     }
 
@@ -171,12 +202,12 @@ class SurfaceScreenTest {
     @Test
     fun with_a_tempo_the_bars_button_cycles_the_print_lengths() {
         show(entry = tempoKit())
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         val labels = PrintLength.BARS.map { PrintLength.label(it) }
         assertEquals("FREE", labels.first())
         for (i in labels.indices) {
             button(labels[i]).assertExists()
-            button(labels[i]).performClick()
+            tap(labels[i])
         }
         // Round the loop: back at FREE.
         button(labels.first()).assertExists()
@@ -188,12 +219,12 @@ class SurfaceScreenTest {
         button("VOICE").assertIsSelected()
         button("LATCH").assertExists()
         button("SET A").assertDoesNotExist()
-        button("SHAPE").performClick()
+        tap("SHAPE")
         button("SET A").assertExists()
         button("LATCH").assertDoesNotExist()
         button("→ TAPE").assertExists()
         button("PRINT").assertExists()
-        button("MOD").performClick()
+        tap("MOD")
         button("MOD A").assertExists()
         button("SET A").assertDoesNotExist()
         button("→ TAPE").assertExists()
@@ -203,12 +234,13 @@ class SurfaceScreenTest {
     @Test
     fun a_second_finger_in_xyz_raises_z_and_a_first_finger_alone_does_not() {
         show(entry = null)
-        button("XYZ").performClick()
-        compose.waitUntil(5_000) { zOf(padState(Mode.XYZ)) != null }
+        tap("XYZ")
+        waitFor("a Z in the pad's state") { zOf(padState(Mode.XYZ)) != null }
         assertEquals(0f, zOf(padState(Mode.XYZ)))
         // One finger down and held: Z stays where it was.
         pad(Mode.XYZ).performTouchInput { down(0, center) }
-        compose.waitUntil(2_000) { padState(Mode.XYZ)?.contains("X 0.50") == true }
+        pump()
+        waitFor("the first finger at the centre") { padState(Mode.XYZ)?.contains("X 0.50") == true }
         assertEquals(0f, zOf(padState(Mode.XYZ)))
         // A second finger, slid from beside the first to the far corner: Z
         // is the gap over the pad's diagonal, so this lands near a half.
@@ -216,14 +248,15 @@ class SurfaceScreenTest {
             down(1, center + Offset(width / 8f, 0f))
             moveTo(1, Offset(width * 0.98f, height * 0.98f))
         }
-        compose.waitUntil(5_000) { (zOf(padState(Mode.XYZ)) ?: 0f) > 0.3f }
+        waitFor("Z above 0.3") { (zOf(padState(Mode.XYZ)) ?: 0f) > 0.3f }
         pad(Mode.XYZ).performTouchInput { up(1); up(0) }
+        pump()
     }
 
     @Test
     fun outside_xyz_the_pad_reports_no_z() {
         show(entry = null)
-        compose.waitUntil(2_000) { padState(Mode.XY) != null }
+        waitFor("the pad's state") { padState(Mode.XY) != null }
         assertFalse(padState(Mode.XY)!!.contains("Z "))
     }
 
