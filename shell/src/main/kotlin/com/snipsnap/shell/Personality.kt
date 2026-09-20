@@ -1613,6 +1613,37 @@ object Copy {
     fun replaceWhat(what: String): String = "REPLACE $what?"
 
     /**
+     * The first DUB with a card picked, when the card already holds what
+     * this dub would put on it (persona review P2.3). Nothing has gone
+     * onto the card when this appears — the phone copy has landed, which
+     * is what [DUB_DONE] says, and the card leg is waiting.
+     *
+     * [what] is the thing in the way by name, the same promise
+     * [dubWouldOverwrite] makes for the phone leg: a person deciding
+     * whether to lose a particular kit is owed its name, not a count.
+     * `CardCopy.collisions` guarantees it is a whole export and never a
+     * sample buried inside one.
+     *
+     * Says *phone* out loud. The one thing worse than an un-armed card
+     * write is an armed one that leaves the reader thinking the dub
+     * failed outright.
+     */
+    fun dubCardWouldReplace(what: String): String = "DUB DONE, ON THE PHONE. THE CARD ALREADY HOLDS $what."
+
+    /**
+     * The completion stage's own button for the card leg that
+     * [dubCardWouldReplace] held back. Named for what it costs rather
+     * than what it does, the same way [replaceWhat] is — and it is on a
+     * button rather than only in a toast for the reason that one exists:
+     * a toast is gone in seconds and the decision is not.
+     */
+    fun putOnCardOver(what: String): String = "CARD ▸ REPLACE $what?"
+
+    /** The card leg went ahead after [dubCardWouldReplace] held it, and the old export is gone. */
+    fun dubCardReplacedOne(what: String): String =
+        "$what IS ON THE CARD. THE OLD ONE IS GONE FOR GOOD."
+
+    /**
      * The card copy landed over files that were already there, and says so
      * — including that they are not coming back.
      *

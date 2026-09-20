@@ -138,4 +138,97 @@ class CardCopyTest {
             CardCopy.Entry(emptyList(), isDirectory = false, source = File("x"))
         }
     }
+
+    // ---------- collisions: what a dub would land on ----------
+
+    /** A card that holds [names] at each listed path, and nothing anywhere else. */
+    private fun card(vararg at: Pair<List<String>, Set<String>>): (List<String>) -> Set<String>? {
+        val held = at.toMap()
+        return { path -> held[path] }
+    }
+
+    @Test
+    fun `an empty card is collided with nowhere`() {
+        val entries = CardCopy.plan(items(tree()))
+        assertEquals(emptyList(), CardCopy.collisions(entries, card(emptyList<String>() to emptySet())))
+    }
+
+    @Test
+    fun `a folder the card does not have clears everything under it`() {
+        // The property that keeps the preflight to one listing per folder
+        // that actually exists: `held` is never asked about a path below
+        // one it already answered null for, and nothing under it is
+        // reported.
+        val entries = CardCopy.plan(items(tree()))
+        val asked = ArrayList<List<String>>()
+        val found = CardCopy.collisions(entries) { path ->
+            asked += path
+            if (path.isEmpty()) emptySet() else null
+        }
+        assertEquals(emptyList(), found)
+        assertTrue(asked.all { it.isEmpty() || it == listOf("Kit") }, "asked below a folder the card lacks: $asked")
+    }
+
+    @Test
+    fun `a colliding folder is counted once, not once per file inside it`() {
+        // The copy overwrites by deleting the same-named document, so a
+        // folder that collides goes whole. Reporting its contents as well
+        // would tell someone they are about to lose four things when the
+        // decision in front of them is about one.
+        val entries = CardCopy.plan(items(tree()))
+        val found = CardCopy.collisions(entries, card(emptyList<String>() to setOf("Kit")))
+        assertEquals(listOf(listOf("Kit")), found.map { it.segments })
+    }
+
+    @Test
+    fun `what comes back is always root entries, never something nested`() {
+        // Not an arbitrary rule - it falls out of the other two, and it is
+        // why the confirm can name one thing. A nested entry can only
+        // collide if its folder was listable, which means the card holds
+        // that folder, which means the folder collided first and pruned
+        // it. So the answer is some subset of the copy's own root
+        // entries: the export's primary and its companion.
+        //
+        // Written as a sweep over every card that can be described for
+        // this tree, rather than one example, because the claim is that
+        // there is no arrangement where a deeper entry survives.
+        val entries = CardCopy.plan(items(tree()))
+        val folders = entries.filter { it.isDirectory }.map { it.segments } + listOf(emptyList())
+        val names = entries.map { it.name }.toSet()
+        for (mask in 0 until (1 shl folders.size)) {
+            val held = folders.filterIndexed { i, _ -> (mask shr i) and 1 == 1 }.associateWith { names }
+            val found = CardCopy.collisions(entries) { held[it] }
+            assertTrue(
+                found.all { it.segments.size == 1 },
+                "a nested entry survived for $mask: ${found.map { it.segments }}",
+            )
+        }
+    }
+
+    @Test
+    fun `both root entries can collide at once`() {
+        // The pruning is per-branch, not global: an export whose primary
+        // and companion are both already on the card has two things in
+        // the way, and neither hides the other.
+        val entries = CardCopy.plan(items(tree()))
+        val found = CardCopy.collisions(entries, card(emptyList<String>() to setOf("Kit", "top.json")))
+        assertEquals(listOf(listOf("Kit"), listOf("top.json")), found.map { it.segments })
+    }
+
+    @Test
+    fun `the head of the list is the shallowest thing in the way`() {
+        // What the confirm names. Parents come before their contents in
+        // the plan and collisions preserves that order, so the first
+        // entry is the one a person would recognise.
+        val entries = CardCopy.plan(items(tree()))
+        val found = CardCopy.collisions(
+            entries,
+            card(
+                emptyList<String>() to setOf("Kit"),
+                listOf("Kit", "Samples") to setOf("kick.wav"),
+            ),
+        )
+        assertEquals("Kit", found.first().name)
+        assertTrue(found.none { it.segments.size > 1 }, "a pruned child survived: ${found.map { it.segments }}")
+    }
 }

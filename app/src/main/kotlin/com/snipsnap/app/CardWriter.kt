@@ -131,6 +131,53 @@ object CardWriter {
     }
 
     /**
+     * What [copy] would land on if it ran now — the same question the
+     * phone leg answers with `WriteResult.WouldOverwrite`, asked of the
+     * card (persona review P2.3).
+     *
+     * **Writes nothing.** It lists folders and nothing else, so it is safe
+     * to call before the user has agreed to anything, which is the whole
+     * point: the copy's own overwrite is a delete, and until this existed
+     * the only report of one came after it had happened.
+     *
+     * Costs one directory query per folder of the plan **that the card
+     * actually has** — `CardCopy.collisions` stops descending the moment a
+     * folder is missing or collides, and this memoizes what it did read,
+     * so a card with none of the export on it costs a single query of the
+     * root.
+     *
+     * Returns empty on a provider that will not list, rather than
+     * throwing or guessing: unknown reads as nothing in the way, the dub
+     * proceeds exactly as it did before this existed, and
+     * [Copied.replaced]/[Copied.contested] report it afterwards. A card
+     * that cannot be read is a reason to fall back to the old behaviour,
+     * never to refuse a dub or to invent a warning.
+     */
+    fun preflight(context: Context, treeUri: Uri, items: List<File>): List<CardCopy.Entry> = runCatching {
+        val rootId = DocumentsContract.getTreeDocumentId(treeUri)
+        // Keyed by a path from the copy's root, so it answers the question
+        // `collisions` asks in its own terms rather than in document ids.
+        // A null value is a real answer - "the card does not have this
+        // folder" - and is memoized as one, which is why this reads
+        // `containsKey` rather than `getOrPut`: the latter treats a stored
+        // null as absent and would re-query a missing folder for every
+        // entry that asked about it.
+        val listed = HashMap<List<String>, Map<String, String>?>()
+
+        // Recursive on a strictly shorter path, bottoming out at the tree
+        // root, whose id is the one the grant itself names.
+        fun listing(path: List<String>): Map<String, String>? {
+            if (listed.containsKey(path)) return listed[path]
+            val id = if (path.isEmpty()) rootId else listing(path.dropLast(1))?.get(path.last())
+            val names = id?.let { childNames(context, treeUri, it) }
+            listed[path] = names
+            return names
+        }
+
+        CardCopy.collisions(CardCopy.plan(items)) { path -> listing(path)?.keys }
+    }.getOrDefault(emptyList())
+
+    /**
      * What one card copy did.
      *
      * [replaced] and [contested] exist because the copy always writes over
