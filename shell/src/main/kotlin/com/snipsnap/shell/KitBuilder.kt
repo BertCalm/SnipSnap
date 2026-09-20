@@ -364,6 +364,7 @@ class KitBuilderModel private constructor(
         // entirely for a patch+fx pad: layerAt's fx gate discards
         // whatever this resolves to anyway (Task 5b).
         val padRecipe = Breed.recipeOf(pad)
+        Breed.warnIfCorruptRecipe(pad, slot, "ghost layers")
         val patch = padRecipe?.patch
         val patchFx = padRecipe?.fx
         val brightnessSpec = if (patch != null && patchFx == null) {

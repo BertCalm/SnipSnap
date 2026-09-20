@@ -4,11 +4,14 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.WavReader
+import com.snipsnap.json.JsonValue
+import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BreedTest {
@@ -121,5 +124,53 @@ class BreedTest {
         assertEquals(Copy.breedSubtitle(1, 2), "1 OF 2 PADS HAS A RECIPE. BOTH PARENTS STAY.")
         assertEquals(Copy.breedSubtitle(1, 1), "ITS ONE PAD HAS A RECIPE TO CROSS. BOTH PARENTS STAY.", "a one-pad kit reads in the singular")
         assertEquals(Copy.breedSubtitle(2, 2), "2 OF 2 PADS HAVE RECIPES. BOTH PARENTS STAY.")
+    }
+
+    // ---------- corrupt recipe vs. genuinely captured (hardening audit item 5) ----------
+
+    private fun padWith(recipe: JsonValue.Obj?) = KitPad(slot = 1, sampleFile = "x.wav", recipe = recipe)
+
+    @Test
+    fun `hasCorruptRecipe is false for a genuinely captured pad - no recipe JSON at all`() {
+        assertFalse(Breed.hasCorruptRecipe(padWith(null)))
+    }
+
+    @Test
+    fun `hasCorruptRecipe is false for a valid, differently-shaped recipe - Mutate, Eras, treatment, robin`() {
+        // None of these carry PadRecipe's own "recipe" version key - by
+        // convention they nest under their own top-level key instead
+        // (see Mutate.kt, Robin.kt's "robin" bookkeeping). recipeOf
+        // correctly returns null for these (they aren't PadRecipe JSON),
+        // but that's an entirely ordinary pad, not a corrupt one - this
+        // must not fire on it, or it would fire on most treated pads.
+        val treatment = JsonValue.Obj(
+            mapOf("treatment" to JsonValue.Str("crush"), "amount" to JsonValue.Num(1.0)),
+        )
+        assertFalse(Breed.hasCorruptRecipe(padWith(treatment)))
+        val robinBookkeeping = JsonValue.Obj(
+            mapOf("robin" to JsonValue.Obj(mapOf("takes" to JsonValue.Num(3.0), "seed" to JsonValue.Num(0.0)))),
+        )
+        assertFalse(Breed.hasCorruptRecipe(padWith(robinBookkeeping)))
+    }
+
+    @Test
+    fun `hasCorruptRecipe is true only when the JSON declares itself a PadRecipe and still fails to parse`() {
+        // Declares the "recipe" version key (so it's unambiguously meant
+        // to be a PadRecipe) but the version is one this build doesn't
+        // support - genuinely corrupt, not a different recipe kind.
+        val badVersion = JsonValue.Obj(mapOf("recipe" to JsonValue.Num(2.0)))
+        assertTrue(Breed.hasCorruptRecipe(padWith(badVersion)))
+
+        // Same version key, but "patch" is the wrong JSON shape entirely.
+        val badPatchShape = JsonValue.Obj(
+            mapOf("recipe" to JsonValue.Num(1.0), "patch" to JsonValue.Str("not an object")),
+        )
+        assertTrue(Breed.hasCorruptRecipe(padWith(badPatchShape)))
+    }
+
+    @Test
+    fun `hasCorruptRecipe is false for a real, valid PadRecipe`() {
+        val captured = com.snipsnap.synth.PadRecipe(fx = com.snipsnap.synth.FxChain(crunch = mapOf("BITS" to 0.5f)))
+        assertFalse(Breed.hasCorruptRecipe(padWith(captured.toJsonValue())))
     }
 }

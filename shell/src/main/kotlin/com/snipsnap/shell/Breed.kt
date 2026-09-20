@@ -153,6 +153,45 @@ object Breed {
         }
     }
 
+    /**
+     * [recipeOf] collapses THREE different cases to the same null: no
+     * recipe JSON at all (a genuinely captured pad); recipe JSON of a
+     * different, perfectly valid kind ([Mutate], [Eras], the treatment
+     * card, this object's own `"robin"` bookkeeping - none of them carry
+     * PadRecipe's `"recipe"` version key, by convention); and recipe JSON
+     * that clearly WAS meant to be a PadRecipe (the `"recipe"` version
+     * key is present) but failed to parse - genuinely corrupt. All three
+     * are correct for [recipeOf]'s own callers (all mean "nothing to
+     * re-render from" alike), but a developer chasing "why didn't this
+     * pad re-render" needs to tell the third apart from the other two -
+     * conflating it with the entirely-ordinary second case would make
+     * this fire on most treated pads, which is worse than the silence it
+     * replaces. Checking for the `"recipe"` key specifically (rather
+     * than "any JSON at all") is what keeps it to the genuine case.
+     *
+     * Both Robin's zone grid and KitBuilder's ghost layers land on the
+     * identical `soften()` fallback regardless (safe and correct in
+     * every case here - this changes no behavior), so this is called at
+     * exactly that fork to log the corrupt case, once, without touching
+     * [recipeOf]'s signature or forcing every caller to handle a richer
+     * return type.
+     */
+    fun hasCorruptRecipe(pad: KitPad): Boolean {
+        val looksLikePadRecipe = pad.recipe?.entries?.containsKey("recipe") == true
+        return looksLikePadRecipe && recipeOf(pad) == null
+    }
+
+    /** Thin logging wrapper over [hasCorruptRecipe] - split out so a test
+     * can assert the predicate directly instead of scraping stderr. */
+    fun warnIfCorruptRecipe(pad: KitPad, slot: Int, context: String) {
+        if (hasCorruptRecipe(pad)) {
+            System.err.println(
+                "$context: pad $slot's recipe JSON declares itself a PadRecipe but failed to " +
+                    "parse - treating it as captured audio (soften, no re-render)",
+            )
+        }
+    }
+
     /** The coin: A's, B's, or the average. */
     private fun pick(x: Float?, y: Float?, rng: Random): Float? {
         if (x == null) return y

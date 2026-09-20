@@ -95,6 +95,7 @@ object Robin {
         // it regardless of what it resolves to (Task 5b), so there's no
         // point paying for the scan.
         val padRecipe = Breed.recipeOf(pad)
+        Breed.warnIfCorruptRecipe(pad, slot, "robin")
         val patch = padRecipe?.patch
         val patchFx = padRecipe?.fx
         val brightnessSpec = if (patch != null && patchFx == null) {
