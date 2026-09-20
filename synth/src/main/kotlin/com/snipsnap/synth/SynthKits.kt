@@ -11,6 +11,31 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /**
+     * PLACEHOLDER, not a tuned value — Phase 1's MOTION stage is the real
+     * answer to "melodic pads hold dead still"; until it lands, [Tape]'s own
+     * wow+flutter (already implemented, `Tape.kt`'s WOW_HZ/FLUTTER_HZ) is
+     * the cheapest motion sitting unused in the tree. This is a stopgap,
+     * not a decision, and wants a human audition pass before it ships as-is.
+     *
+     * Measured (not guessed) what this amount actually does: a 440Hz tone
+     * through `Tape.process(mapOf("WOBBLE" to 0.05f))`, tracked with a
+     * short-window FFT plus parabolic peak interpolation (never
+     * autocorrelation — [TuningAccuracyTest] already caught autocorrelation
+     * locking onto a harmonic and reporting 1047Hz for a real 523.93Hz
+     * fundamental), swings from -8.1 to +3.3 cents peak across the ~0.77s
+     * wow cycle. That is below "obviously detuned" (a semitone is 100
+     * cents) but well above the ~5-cent just-noticeable threshold, which is
+     * the point: felt as motion, not heard as pitch error. For scale, a
+     * real consumer cassette deck's wow+flutter spec (~0.1-0.3% RMS) works
+     * out to roughly 2-5 cents, so this sits at the rougher end of "cheap
+     * deck," not "broken" — a reasonable stopgap register, still
+     * provisional.
+     */
+    private const val MELODIC_WOBBLE_AMOUNT = 0.05f
+
+    private val melodicMotion = FxChain().withSection("tape", mapOf("WOBBLE" to MELODIC_WOBBLE_AMOUNT))
+
     private fun pad(patch: Patch, drumClass: DrumClass, fx: FxChain? = null): ArrangedPad {
         val recipe = PadRecipe(patch, fx)
         return ArrangedPad(recipe.render(), drumClass, recipe.toJsonValue())
@@ -20,12 +45,14 @@ object SynthKits {
         pad(
             PluckPatch(name, voice, mapOf("TUNE" to semitone / Pluck.TUNE_SEMITONES.toFloat()) + extra),
             DrumClass.TONAL,
+            melodicMotion,
         )
 
     private fun stab(name: String, voice: TonewheelVoice, semitone: Int) =
         pad(
             TonewheelPatch(name, voice, mapOf("TUNE" to semitone / Tonewheel.TUNE_SEMITONES.toFloat())),
             DrumClass.TONAL,
+            melodicMotion,
         )
 
     /** A minor pentatonic: 0 3 5 7 10, repeating up the octaves. */

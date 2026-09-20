@@ -29,6 +29,19 @@ class SynthKitTest {
     }
 
     @Test
+    fun `a melodic pad carries a little wow by default`() {
+        // FxChain nests a section's macros under its own lowercase JSON key
+        // (`FxChain.toJsonValue`, `SECTIONS`) - TAPE's own macro name is
+        // "WOBBLE" (`Tape.MACROS`), so the recipe's fx must carry a "tape"
+        // section with a "WOBBLE" entry, not a top-level "WOBBLE" key.
+        val kit = SynthKits.melodic()
+        val pad = kit.first { it != null }!!
+        val fx = PadRecipe.fromJsonValue(pad.recipe!!).fx
+        val tape = fx?.section("tape")
+        assertTrue(tape != null && tape.containsKey("WOBBLE") && tape.getValue("WOBBLE") > 0f, "melodic pads should default to a touch of tape motion, got $tape")
+    }
+
+    @Test
     fun `the pluck side ascends and the root is the lowest note`() {
         // Root bottom-left, ascending - the SCALE layout convention, measured
         // off the actual renders by autocorrelation.
