@@ -533,4 +533,92 @@ class FathomTest {
             FathomPatch("Bad", FathomVoice.DEEP, mapOf("SPREAD" to 0.5f))
         }
     }
+
+    // ---------- Task 6: key-tracking reachability ----------
+
+    /**
+     * [Fathom.render]'s own pipeline (oversampled synthesize -> decimate ->
+     * level -> fadeTail), reimplemented here only so a caller can reach
+     * [Fathom.synthesize]'s internal `cutoffKeyTrackAmount` parameter -
+     * [Fathom.render] itself deliberately doesn't expose it (see that
+     * param's own KDoc). LOUDNESS_OFFSET is skipped: every voice's is 0
+     * today, and this helper exists for spectral shape comparisons, not
+     * to be a second production render path.
+     */
+    private fun renderWithKeyTrackAmount(voice: FathomVoice, macros: Map<String, Float>, amount: Float): Snip {
+        val renderRate = Dsp.RATE * Dsp.OVERSAMPLE
+        val raw = Fathom.synthesize(voice, macros, renderRate, amount)
+        val out = Dsp.decimate(raw, Dsp.RATE)
+        Dsp.levelTo(out, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(out)
+        return Snip(out, channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    @Test
+    fun `synthesize's default cutoffKeyTrackAmount is byte-identical to omitting it - render() is untouched`() {
+        // Fathom.render() (and every other production caller) calls
+        // synthesize(voice, macros, rate) with no 4th argument. Adding
+        // cutoffKeyTrackAmount as an optional, defaulted parameter must not
+        // move a single sample for any of them - proven here by comparing
+        // the omitted-argument call against one that names the constant
+        // explicitly, for every voice.
+        for (voice in FathomVoice.entries) {
+            val omitted = Fathom.synthesize(voice, emptyMap(), Dsp.RATE)
+            val explicit = Fathom.synthesize(voice, emptyMap(), Dsp.RATE, Fathom.CUTOFF_KEY_TRACK_AMOUNT)
+            assertTrue(
+                omitted.contentEquals(explicit),
+                "$voice: omitting cutoffKeyTrackAmount should be byte-identical to passing " +
+                    "Fathom.CUTOFF_KEY_TRACK_AMOUNT explicitly",
+            )
+        }
+    }
+
+    @Test
+    fun `CUTOFF's key tracking reaches the render - ratio of ratios across two explicit amounts`() {
+        // Task 6 policy item 4: a test that only calls Dsp.keyTrack()
+        // directly would pass even if synthesize() never read the result.
+        // FATHOM has no same-pitch, opposite-direction voice pair the way
+        // VelvetTest's BASS/CHIP comparison does (its three roots - 41.2,
+        // 55, 55 - never satisfy root_B = 4 x root_A for any pair), and
+        // CUTOFF_KEY_TRACK_AMOUNT is a fixed private-turned-internal
+        // constant in shipped code, so there is no amount to vary through
+        // the public API. cutoffKeyTrackAmount's internal default param
+        // (see synthesize's own KDoc) exists for exactly this: it lets a
+        // test hold every macro fixed and vary ONLY the tracking amount.
+        //
+        // Within one amount, comparing TUNE=1's centroid to TUNE=0's is
+        // still confounded (fundamental and cutoff both move together) -
+        // exactly why a single amount=1-vs-amount=0-at-fixed-TUNE
+        // comparison isn't the proof. The ratio-of-ratios removes that
+        // confound: compare the SAME TUNE=1/TUNE=0 centroid ratio computed
+        // twice, once at amount=0 and once at amount=1. Any two engines
+        // that both merely "get brighter at higher TUNE" (true regardless
+        // of tracking, since a higher fundamental has more energy to
+        // offer) would show similar ratios at both amounts; only an engine
+        // whose filter genuinely widens its excursion as tracking
+        // increases will show ratio(amount=1) > ratio(amount=0).
+        //
+        // Measured for all three voices (ratio(amount=1) / ratio(amount=0)):
+        // DEEP 1.38x, GRIND 1.49x, GLASS 1.49x - the 1.15x margin below
+        // asserts on all three with comfortable headroom.
+        for (voice in FathomVoice.entries) {
+            val macros = mapOf("DRIVE" to 0.4f, "DECAY" to 0.5f)
+            fun ratioAt(amount: Float): Float {
+                val low = FeatureExtractor.extract(
+                    renderWithKeyTrackAmount(voice, macros + ("TUNE" to 0f), amount),
+                ).centroidHz
+                val high = FeatureExtractor.extract(
+                    renderWithKeyTrackAmount(voice, macros + ("TUNE" to 1f), amount),
+                ).centroidHz
+                return high / low
+            }
+            val ratioNoTracking = ratioAt(0f)
+            val ratioFullTracking = ratioAt(1f)
+            assertTrue(
+                ratioFullTracking > ratioNoTracking * 1.15f,
+                "$voice: full tracking should widen the TUNE=1/TUNE=0 centroid ratio well past no " +
+                    "tracking - got ratio(amount=0)=$ratioNoTracking, ratio(amount=1)=$ratioFullTracking",
+            )
+        }
+    }
 }

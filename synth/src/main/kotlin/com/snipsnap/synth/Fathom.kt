@@ -94,8 +94,15 @@ object Fathom {
      * 0.35), so factory presets also come out a little darker than before
      * this landed, not just proportional across a run - re-run the sweep
      * in task-6-and-5b-fix-report.md before trusting 0.6 for real.
+     *
+     * `internal`, not `private`, only so `synthesize`'s own `cutoffKeyTrackAmount`
+     * default can be checked against it byte-for-byte from `FathomTest` (the
+     * permanent reachability proof this constant's tracking actually reaches
+     * the render - see `FathomTest`'s own KDoc on that test). Nothing outside
+     * this module ever sees it; production callers still only ever get the
+     * shipped 0.6.
      */
-    private const val CUTOFF_KEY_TRACK_AMOUNT = 0.6f
+    internal const val CUTOFF_KEY_TRACK_AMOUNT = 0.6f
 
     /**
      * Key-tracking's reference pitch for [voice]: the tuning centre of its
@@ -138,7 +145,19 @@ object Fathom {
      * tested directly against a native-rate render, rather than trusting
      * that reading [render]'s own source matches what it actually does.
      */
-    internal fun synthesize(voice: FathomVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(
+        voice: FathomVoice,
+        macros: Map<String, Float>,
+        rate: Int,
+        // Internal, default-valued, purely for testability - mirrors
+        // Dsp.TptSvf.process's own optional `saturate` param. Every
+        // production caller (render(), below) omits this and gets the
+        // shipped CUTOFF_KEY_TRACK_AMOUNT; FathomTest passes explicit
+        // values to prove key tracking actually reaches this function
+        // (a test that only called Dsp.keyTrack() directly could pass even
+        // if this line were never wired up).
+        cutoffKeyTrackAmount: Float = CUTOFF_KEY_TRACK_AMOUNT,
+    ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -153,7 +172,7 @@ object Fathom {
         // Tracked to the note so brightness is an interval, not a fixed
         // Hz - a run up the pads used to get duller as it climbed (Task 6).
         val fc = Dsp.keyTrack(
-            Dsp.expMap(cutoff, 90f, 4_000f), base, keyTrackReferenceHz(voice), CUTOFF_KEY_TRACK_AMOUNT,
+            Dsp.expMap(cutoff, 90f, 4_000f), base, keyTrackReferenceHz(voice), cutoffKeyTrackAmount,
         )
         val damp = 1.2f
 

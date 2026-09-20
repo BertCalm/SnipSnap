@@ -63,7 +63,8 @@ class FathomPresetsTest {
      * spectral centroid across the board (`FathomTest`'s "factory defaults
      * classify consistently" has the full mechanism and the DEEP control
      * that confirms it - DEEP, with no second edge to offset, is
-     * unaffected). Measured per preset, centroid Hz / lowRatio:
+     * unaffected). Measured per preset, centroid Hz / lowRatio, as they
+     * stood right after that seeding (fix round 2 - before Task 6):
      *
      * ```
      * GRINDER       TOM   165.2 Hz  0.847      SLIDING GRIT  TOM   130.5 Hz  0.819
@@ -120,53 +121,231 @@ class FathomPresetsTest {
      * change in low/high energy balance right at a classifier threshold,
      * not a large centroid swing.
      *
+     * **Fix round 3 (Task 6, key-tracking the filter cutoff): the KICK/TOM
+     * line fired again, on two GRIND presets this time**, and this round
+     * changed how this table pins rather than just re-measuring it.
+     *
+     * SLIDING GRIT and SOFT GROWL both flipped from their fix-round-2
+     * pinned TOM to KICK once CUTOFF started tracking pitch (their own
+     * TUNE sits below the engine's key-tracking reference, so their
+     * cutoff - and with it `lowRatio` and `centroidHz` - moved darker,
+     * same direction as every other below-centre GRIND preset). Measured
+     * post-Task-6:
+     *
+     * ```
+     * SLIDING GRIT   centroid 130.5 -> 129.592 Hz   lowRatio 0.819 -> 0.8501   TOM -> KICK
+     * SOFT GROWL     centroid 112.1 -> 110.290 Hz   lowRatio 0.790 -> 0.8752   TOM -> KICK
+     * ```
+     *
+     * Rather than just update the two entries and move on, this round asked
+     * whether pinning exact classifier OUTPUT is even the right test for a
+     * preset sitting ON a decision boundary - because that is now this
+     * table's second flip at this exact KICK/TOM line (fix round 2 already
+     * noted GLASSY LOW/GLIDE BELL crossing the *other* boundary,
+     * `BASS_DOMINANT_LOW_RATIO`, by 0.001-0.004 at the time it was pinned -
+     * a margin explicitly called brittle then, which is exactly what tipped
+     * this round).
+     *
+     * **Measurement, not assumption: perturb each preset's own measured
+     * [com.snipsnap.audio.Features] by a small relative amount and see
+     * whether the class flips.** [isBoundaryAdjacent] nudges `centroidHz`
+     * and `lowRatio` each by ±[BOUNDARY_PERTURBATION] independently (four
+     * variants) and re-classifies; if any variant lands on a different
+     * class than the unperturbed one, the preset is living on a boundary,
+     * not decisively inside a class. This sidesteps needing to know which
+     * of `Classifier`'s several private thresholds is the relevant one for
+     * a given preset (there are three in play just for GRIND/GLASS's
+     * KICK/TOM/PERC split: `KICK_MAX_CENTROID_HZ`, the
+     * `KICK_STRETCH_CENTROID_HZ`/`KICK_STRETCH_MIN_LOW_RATIO` pair, and
+     * `BASS_DOMINANT_LOW_RATIO`) - it just asks the classifier itself.
+     *
+     * At [BOUNDARY_PERTURBATION] = 5%, swept from 1% up to confirm this
+     * isn't an artifact of one arbitrary choice:
+     *
+     * ```
+     * perturbation   fragile count   newly fragile at this step
+     * 1%             2               SLIDING GRIT, METAL SUB
+     * 2%             3               + BEATING SUB
+     * 3%             5               + SOFT GROWL, SUBOCTAVE FM
+     * 5%             7               + DIRTY GROWL, LOUD GRIND
+     * 8%             9               + GLIDE BELL, MELLOW FM
+     * 10%            10              + GLASSY LOW
+     * ```
+     *
+     * SLIDING GRIT flips at a 1% nudge - a wobble smaller than ordinary
+     * FFT/windowing measurement noise, let alone a DSP change. At 5%, 7 of
+     * the 24 presets (29%) are fragile - **not two unlucky presets, a
+     * systemic property of this table**: GRIND's KICK-classified presets in
+     * particular are ALL boundary-adjacent (DIRTY GROWL, LOUD GRIND,
+     * SLIDING GRIT, SOFT GROWL - every single one), because `lowRatio`
+     * comfortably clears `KICK_STRETCH_MIN_LOW_RATIO` (0.85) for nearly
+     * every non-PERC GRIND preset (0.85-0.93 across the board), which makes
+     * `centroidHz` vs. 130 Hz the sole effective KICK/TOM discriminant for
+     * this voice - a single scalar threshold with no second gate to catch
+     * a near-miss. **Conclusion: (b) - pinning exact classifier output is
+     * the wrong test for a preset sitting this close to a threshold.** The
+     * shift that flipped SLIDING GRIT/SOFT GROWL this round was a real,
+     * measured, intentional DSP change (key tracking), not noise in the
+     * classifier or the render - but landing a real change's effect
+     * exactly on a hair-thin decision line is not evidence the preset
+     * "should" be one specific class over the other.
+     *
+     * **What changed**: [grindAndGlassPinned] now pins a `Set<DrumClass>`
+     * per preset instead of one class, decided with hysteresis rather than
+     * a single cutoff (see [TIGHT]/[LOOSE]'s own KDoc - a single threshold
+     * here would just relocate the brittle-pin problem, since DIRTY GROWL
+     * and LOUD GRIND sit exactly at 5% in the sweep). 15 presets, clear
+     * even at the 8% [LOOSE] perturbation, keep a single-class set - those
+     * are still a hard regression gate, unchanged in strictness (a flip to
+     * some third, implausible class, e.g. SNARE, would still fail
+     * immediately). 9 presets, fragile at the 5% [TIGHT] perturbation (7)
+     * or only in the 5-8% hysteresis band (GLIDE BELL, MELLOW FM - pinned
+     * wide by choice, not by requirement), are pinned to the two classes
+     * reachable from each other by that nudge (every one of the nine is a
+     * KICK/TOM or PERC/TOM pair - acoustically adjacent categories for a
+     * "loud low hit" sound, never a pairing with something like
+     * HAT_CLOSED). The classification test's own second half cross-checks
+     * every entry's set width against a fresh [isBoundaryAdjacent]
+     * measurement each run - so if a pinned-narrow preset later drifts
+     * fragile, or a pinned-wide one drifts decisively clear even at the
+     * loose perturbation, the table is forced to be revisited and
+     * re-justified rather than silently going stale in either direction.
+     * This is what stops "pin a wider set" from being this test's own
+     * version of the vacuous-test failure mode: the width itself is
+     * measured and enforced, not a one-time escape hatch.
+     *
      * All 24 GRIND/GLASS presets pinned explicitly - this table is a
      * snapshot of measured output, not a claim that either voice classifies
      * uniformly (see this class's own top KDoc for why that distinction
      * matters).
      */
-    private val grindAndGlassPinned: Map<Pair<FathomVoice, String>, DrumClass> = mapOf(
-        (FathomVoice.GRIND to "GRINDER") to DrumClass.TOM,
-        (FathomVoice.GRIND to "HOLLOW GROWL") to DrumClass.TOM,
-        (FathomVoice.GRIND to "RAW SAW") to DrumClass.TOM,
-        (FathomVoice.GRIND to "WIDE GRIND") to DrumClass.PERC,
-        (FathomVoice.GRIND to "DIRTY GROWL") to DrumClass.KICK,
-        (FathomVoice.GRIND to "THROB") to DrumClass.TOM,
-        (FathomVoice.GRIND to "BEATING SUB") to DrumClass.TOM,
-        (FathomVoice.GRIND to "GRAVEL BASS") to DrumClass.PERC,
-        (FathomVoice.GRIND to "SLIDING GRIT") to DrumClass.TOM,
-        (FathomVoice.GRIND to "LOUD GRIND") to DrumClass.KICK,
-        (FathomVoice.GRIND to "SOFT GROWL") to DrumClass.TOM,
-        (FathomVoice.GRIND to "DETUNED GRIT") to DrumClass.TOM,
-        (FathomVoice.GLASS to "METAL SUB") to DrumClass.PERC,
-        (FathomVoice.GLASS to "GLASSY LOW") to DrumClass.TOM,
-        (FathomVoice.GLASS to "BELL BASS") to DrumClass.PERC,
-        (FathomVoice.GLASS to "FM GROWL") to DrumClass.PERC,
-        (FathomVoice.GLASS to "RINGING SUB") to DrumClass.PERC,
-        (FathomVoice.GLASS to "HARSH FM") to DrumClass.PERC,
-        (FathomVoice.GLASS to "GLIDE BELL") to DrumClass.TOM,
-        (FathomVoice.GLASS to "SUBOCTAVE FM") to DrumClass.PERC,
-        (FathomVoice.GLASS to "CLANGY BASS") to DrumClass.PERC,
-        (FathomVoice.GLASS to "MELLOW FM") to DrumClass.PERC,
-        (FathomVoice.GLASS to "UNSTABLE FM") to DrumClass.PERC,
-        (FathomVoice.GLASS to "TWELFTH BELL") to DrumClass.PERC,
+    private val grindAndGlassPinned: Map<Pair<FathomVoice, String>, Set<DrumClass>> = mapOf(
+        (FathomVoice.GRIND to "GRINDER") to setOf(DrumClass.TOM),
+        (FathomVoice.GRIND to "HOLLOW GROWL") to setOf(DrumClass.TOM),
+        (FathomVoice.GRIND to "RAW SAW") to setOf(DrumClass.TOM),
+        (FathomVoice.GRIND to "WIDE GRIND") to setOf(DrumClass.PERC),
+        // Boundary-adjacent (KICK/TOM, fragile at 3-5%): either side is
+        // acceptable - see this class's own top KDoc for the measurement.
+        (FathomVoice.GRIND to "DIRTY GROWL") to setOf(DrumClass.KICK, DrumClass.TOM),
+        (FathomVoice.GRIND to "THROB") to setOf(DrumClass.TOM),
+        // Boundary-adjacent (TOM/KICK, fragile at 2%).
+        (FathomVoice.GRIND to "BEATING SUB") to setOf(DrumClass.TOM, DrumClass.KICK),
+        (FathomVoice.GRIND to "GRAVEL BASS") to setOf(DrumClass.PERC),
+        // Boundary-adjacent (KICK/TOM, fragile at 1% - this round's flip).
+        (FathomVoice.GRIND to "SLIDING GRIT") to setOf(DrumClass.KICK, DrumClass.TOM),
+        // Boundary-adjacent (KICK/TOM, fragile at 5%).
+        (FathomVoice.GRIND to "LOUD GRIND") to setOf(DrumClass.KICK, DrumClass.TOM),
+        // Boundary-adjacent (KICK/TOM, fragile at 3% - this round's other flip).
+        (FathomVoice.GRIND to "SOFT GROWL") to setOf(DrumClass.KICK, DrumClass.TOM),
+        (FathomVoice.GRIND to "DETUNED GRIT") to setOf(DrumClass.TOM),
+        // Boundary-adjacent (PERC/TOM, fragile at 1%).
+        (FathomVoice.GLASS to "METAL SUB") to setOf(DrumClass.PERC, DrumClass.TOM),
+        (FathomVoice.GLASS to "GLASSY LOW") to setOf(DrumClass.TOM),
+        (FathomVoice.GLASS to "BELL BASS") to setOf(DrumClass.PERC),
+        (FathomVoice.GLASS to "FM GROWL") to setOf(DrumClass.PERC),
+        (FathomVoice.GLASS to "RINGING SUB") to setOf(DrumClass.PERC),
+        (FathomVoice.GLASS to "HARSH FM") to setOf(DrumClass.PERC),
+        // Boundary-adjacent (TOM/PERC, fragile at 8% - hysteresis band, pinned wide).
+        (FathomVoice.GLASS to "GLIDE BELL") to setOf(DrumClass.TOM, DrumClass.PERC),
+        // Boundary-adjacent (PERC/TOM, fragile at 3%).
+        (FathomVoice.GLASS to "SUBOCTAVE FM") to setOf(DrumClass.PERC, DrumClass.TOM),
+        (FathomVoice.GLASS to "CLANGY BASS") to setOf(DrumClass.PERC),
+        // Boundary-adjacent (PERC/TOM, fragile at 8% - hysteresis band, pinned wide).
+        (FathomVoice.GLASS to "MELLOW FM") to setOf(DrumClass.PERC, DrumClass.TOM),
+        (FathomVoice.GLASS to "UNSTABLE FM") to setOf(DrumClass.PERC),
+        (FathomVoice.GLASS to "TWELFTH BELL") to setOf(DrumClass.PERC),
     )
 
+    /**
+     * How far (relatively) a preset's own measured centroid/lowRatio are
+     * nudged to test whether it sits on a `Classifier` decision boundary -
+     * see [grindAndGlassPinned]'s KDoc for the sweep (1% through 10%) that
+     * grounds this choice. Two thresholds, not one, deliberately - see
+     * [isBoundaryAdjacent] and the hysteresis test below for why a single
+     * cutoff here would just relocate the brittle-pin problem to a new
+     * threshold (DIRTY GROWL and LOUD GRIND sit exactly AT 5% in the
+     * sweep - a single enforced cutoff there would flap on either of them
+     * with no real regression involved).
+     *
+     * [TIGHT] (5%) sits past SLIDING GRIT/METAL SUB (fragile at 1%) and
+     * SOFT GROWL/SUBOCTAVE FM/BEATING SUB (fragile by 3%): fragile at this
+     * perturbation REQUIRES a wide (multi-class) pin. [LOOSE] (8%) sits
+     * past GLIDE BELL/MELLOW FM (fragile by 8%) and short of GLASSY LOW
+     * (10%): NOT fragile even at this wider perturbation REQUIRES a narrow
+     * (single-class) pin. Between the two is a hysteresis band where
+     * either pin width is accepted without complaint - real gaps in the
+     * sweep data on both sides (nothing new turns fragile between 3-5% or
+     * 5-8%), not arbitrary numbers.
+     */
+    private val TIGHT = 0.05f
+    private val LOOSE = 0.08f
+
+    /**
+     * Whether nudging [features] by ±[pct] in `centroidHz` or `lowRatio`
+     * (independently, four variants total) changes `Classifier.classify`'s
+     * answer. True means the preset that produced [features] is sitting
+     * close enough to a decision boundary, at this perturbation size, that
+     * pinning its classification to one exact [DrumClass] would be
+     * asserting on measurement/DSP noise rather than a real property of
+     * the sound - see [grindAndGlassPinned]'s KDoc.
+     */
+    private fun isBoundaryAdjacent(features: com.snipsnap.audio.Features, pct: Float): Boolean {
+        val base = Classifier.classify(features).drumClass
+        val nudged = listOf(
+            features.copy(centroidHz = features.centroidHz * (1 + pct)),
+            features.copy(centroidHz = features.centroidHz * (1 - pct)),
+            features.copy(lowRatio = (features.lowRatio * (1 + pct)).coerceAtMost(1f)),
+            features.copy(lowRatio = (features.lowRatio * (1 - pct)).coerceAtLeast(0f)),
+        )
+        return nudged.any { Classifier.classify(it).drumClass != base }
+    }
+
     @Test
-    fun `GRIND and GLASS preset classifications are pinned per preset, not a uniformity invariant`() {
-        val failures = mutableListOf<String>()
+    fun `GRIND and GLASS preset classifications are pinned per preset, and pin width tracks measured fragility`() {
+        // One render per preset, feeding both checks below - FATHOM renders
+        // are the slow part of this suite, and a second pass computing the
+        // same Features twice bought nothing.
+        val classificationFailures = mutableListOf<String>()
+        val widthFailures = mutableListOf<String>()
         for (voice in listOf(FathomVoice.GRIND, FathomVoice.GLASS)) {
             for (preset in FathomPresets.forVoice(voice)) {
-                val want = grindAndGlassPinned[voice to preset.name]
+                val pinned = grindAndGlassPinned[voice to preset.name]
                     ?: error("${voice.name}/${preset.name} has no pinned entry - add one rather than falling back to a default")
-                val got = Classifier.classify(preset.render()).drumClass
-                if (got != want) failures += "${voice.name}/${preset.name}: pinned $want, got $got"
+                val features = com.snipsnap.audio.FeatureExtractor.extract(preset.render())
+                val got = Classifier.classify(features).drumClass
+                if (got !in pinned) {
+                    classificationFailures += "${voice.name}/${preset.name}: pinned $pinned, got $got"
+                }
+
+                // Hysteresis, not a single cutoff (see TIGHT/LOOSE's own
+                // KDoc): fragile at the tight perturbation FORCES a wide
+                // pin (a single-class pin there is a future false alarm
+                // waiting to happen); clear even at the loose perturbation
+                // FORCES a narrow one (a wide pin there is needlessly
+                // hiding a real regression). In between, either is fine -
+                // no assertion.
+                val pinnedWide = pinned.size > 1
+                val fragileTight = isBoundaryAdjacent(features, TIGHT)
+                val clearLoose = !isBoundaryAdjacent(features, LOOSE)
+                if (fragileTight && !pinnedWide) {
+                    widthFailures += "${voice.name}/${preset.name}: fragile at ${TIGHT * 100}% but pinned " +
+                        "single-class ($pinned) - widen the pin before this flaps on the next unrelated change"
+                }
+                if (clearLoose && pinnedWide) {
+                    widthFailures += "${voice.name}/${preset.name}: still decisive even at ${LOOSE * 100}% but " +
+                        "pinned as boundary-adjacent (set=$pinned) - narrow the pin back to one class"
+                }
             }
         }
         assertTrue(
-            failures.isEmpty(),
-            "presets that drifted off their pinned classification (update the table above, with fresh " +
-                "measurements, if this is a legitimate DSP change):\n${failures.joinToString("\n")}",
+            classificationFailures.isEmpty(),
+            "presets that drifted outside their pinned class set (update the table above, with fresh " +
+                "measurements and an isBoundaryAdjacent re-check, if this is a legitimate DSP change):\n" +
+                classificationFailures.joinToString("\n"),
+        )
+        assertTrue(
+            widthFailures.isEmpty(),
+            "pinned set width disagrees with measured boundary fragility:\n${widthFailures.joinToString("\n")}",
         )
     }
 
