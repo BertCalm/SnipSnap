@@ -78,6 +78,32 @@ object Fathom {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
+    /**
+     * PLACEHOLDER awaiting the audition gate — how hard CUTOFF tracks the
+     * note (see [Dsp.keyTrack]). Same taste call as VELVET's own constant
+     * of the same name (`Velvet.kt`); its KDoc has the general reasoning.
+     *
+     * Measured for this engine's own cutoff mapping (90..4000 Hz):
+     * because every FATHOM voice's TUNE also spans exactly
+     * [TUNE_SEMITONES] (2 octaves) centred on [keyTrackReferenceHz], the
+     * top-to-bottom ratio at this setting is the same voice-independent
+     * `4^0.6 ≈ 2.30x` (~1.2 octaves) VELVET gets. Concretely for DEEP at
+     * its factory CUTOFF (0.4 -> 410.6 Hz): 270.9 Hz at the bottom of
+     * TUNE, 622.3 Hz at the top, a swing of about 351 Hz. Every shipped
+     * preset's TUNE sits below the 0.5 centre (DEEP 0.25, GRIND 0.3, GLASS
+     * 0.35), so factory presets also come out a little darker than before
+     * this landed, not just proportional across a run - re-run the sweep
+     * in task-6-and-5b-fix-report.md before trusting 0.6 for real.
+     */
+    private const val CUTOFF_KEY_TRACK_AMOUNT = 0.6f
+
+    /**
+     * Key-tracking's reference pitch for [voice]: the tuning centre of its
+     * own TUNE range, not an arbitrary Hz - see [Velvet.keyTrackReferenceHz]
+     * for the full reasoning, identical here.
+     */
+    private fun keyTrackReferenceHz(voice: FathomVoice): Float = frequencyFor(voice, 0.5f)
+
     fun frequencyFor(voice: FathomVoice, tune: Float): Float {
         val root = when (voice) {
             FathomVoice.DEEP -> 41.2f    // E1 — low enough to feel
@@ -124,7 +150,11 @@ object Fathom {
         // Bass wants a low, gently resonant filter. The 4 kHz ceiling is a
         // taste choice, not a stability one — TptSvf is stable to Nyquist,
         // as Velvet.kt documents — because nothing here needs air.
-        val fc = Dsp.expMap(cutoff, 90f, 4_000f)
+        // Tracked to the note so brightness is an interval, not a fixed
+        // Hz - a run up the pads used to get duller as it climbed (Task 6).
+        val fc = Dsp.keyTrack(
+            Dsp.expMap(cutoff, 90f, 4_000f), base, keyTrackReferenceHz(voice), CUTOFF_KEY_TRACK_AMOUNT,
+        )
         val damp = 1.2f
 
         // SWEEP: a fast downward pitch blip at the attack. This is the thump,

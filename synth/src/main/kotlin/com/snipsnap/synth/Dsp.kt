@@ -8,6 +8,7 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tanh
@@ -52,6 +53,28 @@ internal object Dsp {
     fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 0.25f): Float {
         if (baseHz <= 0f || seconds <= 0f) return 1f
         return 1f + (cycles / seconds) / baseHz
+    }
+
+    /**
+     * [cutoffHz] scaled toward [baseHz]'s own pitch relative to
+     * [referenceHz] — the note an engine's cutoff mapping is voiced to be
+     * neutral at. Without this, a filter mapped to an absolute Hz gets
+     * proportionally duller as a voice climbs (the same cutoff covers
+     * fewer harmonics of a higher fundamental) and proportionally brighter
+     * as it descends — brightness drifts across a run instead of staying
+     * an interval above the note.
+     *
+     * [amount] 0 leaves [cutoffHz] untouched; [amount] 1 locks the cutoff
+     * to [baseHz]/[referenceHz]'s exact ratio above (or below) it, so every
+     * note in a run keeps precisely the interval [cutoffHz] had at
+     * [referenceHz]. In between, the scaling ratio is raised to [amount] -
+     * a log-domain blend, not a linear one, because "half tracking" should
+     * mean half the octaves of movement, not half the Hz.
+     */
+    fun keyTrack(cutoffHz: Float, baseHz: Float, referenceHz: Float, amount: Float): Float {
+        if (referenceHz <= 0f || baseHz <= 0f) return cutoffHz
+        val ratio = baseHz / referenceHz
+        return cutoffHz * ratio.pow(amount.coerceIn(0f, 1f))
     }
 
     /**

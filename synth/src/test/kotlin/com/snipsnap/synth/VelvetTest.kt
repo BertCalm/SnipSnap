@@ -169,6 +169,36 @@ class VelvetTest {
     }
 
     @Test
+    fun `CUTOFF's key tracking actually reaches the render, not just Dsp keyTrack in isolation`() {
+        // A test that only calls Dsp.keyTrack() would pass even if the
+        // engines ignored it entirely (Task 6 policy item 4). Proving it
+        // reaches synthesize() needs two renders at the SAME pitch but
+        // different key-tracking references, so any brightness gap can
+        // only be the filter tracking - not the fundamental moving.
+        //
+        // BASS at TUNE=1 and CHIP at TUNE=0 both land on 220 Hz
+        // (frequencyFor: 55 * 2^(24/12) = 220 = 220 * 2^0), but their
+        // reference pitches differ (BASS's tuning centre is 110 Hz, CHIP's
+        // is 440 Hz - see Velvet.keyTrackReferenceHz), so at the shared
+        // placeholder amount their tracking factors diverge: BASS scales
+        // its cutoff *up* from 220/110 (2x -> 2^0.6 ~= 1.52x), CHIP scales
+        // *down* from 220/440 (0.5x -> 0.5^0.6 ~= 0.66x) - a ~2.3x cutoff
+        // gap at an identical fundamental. Every other macro is pinned
+        // equal so the only thing that can move the spectrum is the
+        // tracked cutoff.
+        val shared = mapOf(
+            "SHAPE" to 0.5f, "FAT" to 0.3f, "CUTOFF" to 0.5f, "SQUEEZE" to 0.4f, "DECAY" to 0.45f,
+        )
+        val bassHigh = FeatureExtractor.extract(Velvet.render(VelvetVoice.BASS, shared + ("TUNE" to 1f)))
+        val chipLow = FeatureExtractor.extract(Velvet.render(VelvetVoice.CHIP, shared + ("TUNE" to 0f)))
+        assertTrue(
+            bassHigh.centroidHz > chipLow.centroidHz * 1.3f,
+            "same 220 Hz fundamental, opposite tracking direction - BASS (tracks up) should read " +
+                "noticeably brighter than CHIP (tracks down): ${bassHigh.centroidHz} vs ${chipLow.centroidHz}",
+        )
+    }
+
+    @Test
     fun `SHAPE walks saw to pulse audibly`() {
         val sawSide = Velvet.render(VelvetVoice.BRASS, mapOf("SHAPE" to 0f))
         val pulseSide = Velvet.render(VelvetVoice.BRASS, mapOf("SHAPE" to 1f))

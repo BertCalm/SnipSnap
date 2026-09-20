@@ -68,6 +68,41 @@ object Velvet {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
+    /**
+     * PLACEHOLDER awaiting the audition gate — how hard CUTOFF tracks the
+     * note (see [Dsp.keyTrack]). MEASURE-NEVER-GUESS forbids shipping a
+     * taste decision as settled, and "how much a filter should track
+     * pitch" is taste, not something a spectrum can derive.
+     *
+     * What 0.6 actually does, measured rather than guessed: because every
+     * voice's TUNE spans exactly [TUNE_SEMITONES] (2 octaves) centred on
+     * [keyTrackReferenceHz] (root..4x root, reference at 2x root), the
+     * ratio between the top and bottom of ANY voice's range is always
+     * `4^0.6 ≈ 2.30x` (~1.2 octaves) at this setting, vs. the full 4x (2
+     * octaves) at amount=1 and 1x (no movement) at amount=0 - independent
+     * of voice or CUTOFF's own setting. Concretely for BASS at its factory
+     * CUTOFF (0.35 -> 782.8 Hz): 516.4 Hz at the bottom of TUNE, 1186.5 Hz
+     * at the top, a swing of about 670 Hz. Factory TUNE isn't uniformly
+     * below the 0.5 centre, so this doesn't uniformly darken every preset:
+     * BASS (0.3) and SQUELCH (0.4) sit below it and come out darker
+     * (-15.9%, -6.7%), BRASS (0.5) sits exactly on it and is untouched,
+     * and CHIP (0.6) sits above it and comes out brighter (+7.2%) - see
+     * task-6-and-5b-fix-report.md for the full per-voice table and re-run
+     * it before trusting 0.6 for real.
+     */
+    private const val CUTOFF_KEY_TRACK_AMOUNT = 0.6f
+
+    /**
+     * Key-tracking's reference pitch for [voice]: the tuning centre of its
+     * own TUNE range, not an arbitrary Hz. TUNE spans [TUNE_SEMITONES]
+     * semitones (2 octaves) up from [voice]'s root (see [frequencyFor]),
+     * so tune=0.5 sits at the geometric middle of range - [Dsp.keyTrack]
+     * is neutral exactly there, tracking up above it and down below,
+     * rather than being anchored to a pitch the voice may never actually
+     * play.
+     */
+    private fun keyTrackReferenceHz(voice: VelvetVoice): Float = frequencyFor(voice, 0.5f)
+
     fun frequencyFor(voice: VelvetVoice, tune: Float): Float {
         val root = when (voice) {
             VelvetVoice.BASS -> 55f
@@ -149,7 +184,12 @@ object Velvet {
         // all the way.
         val damp = Dsp.lin(squeeze, 1.8f, 0.3f)
         val envAmount = Dsp.lin(squeeze, 0.3f, 1f)
-        val floorHz = Dsp.expMap(cutoff, 180f, 12_000f)
+        // Track the note so brightness is an interval above the
+        // fundamental instead of a fixed Hz - without this, a run up the
+        // pads gets duller as it climbs (Task 6).
+        val floorHz = Dsp.keyTrack(
+            Dsp.expMap(cutoff, 180f, 12_000f), base, keyTrackReferenceHz(voice), CUTOFF_KEY_TRACK_AMOUNT,
+        )
         val peakHz = (floorHz * Dsp.lin(envAmount, 1.5f, 6f)).coerceAtMost(16_000f)
 
         val raw = FloatArray((t60 * 1.4f * rate).toInt().coerceAtLeast(64))

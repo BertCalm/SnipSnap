@@ -298,4 +298,42 @@ class DspTest {
             "the ceiling should let the signal reach right up to it, not clamp conservatively short: peak=$peak",
         )
     }
+
+    // ---------- keyTrack (Task 6) ----------
+
+    @Test
+    fun `zero amount leaves cutoff exactly where it was, at any pitch`() {
+        assertEquals(1000f, Dsp.keyTrack(1000f, 440f, 110f, 0f), 0.01f)
+        assertEquals(1000f, Dsp.keyTrack(1000f, 55f, 110f, 0f), 0.01f)
+    }
+
+    @Test
+    fun `full tracking keeps cutoff proportional to pitch`() {
+        val low = Dsp.keyTrack(cutoffHz = 1000f, baseHz = 110f, referenceHz = 110f, amount = 1f)
+        val high = Dsp.keyTrack(cutoffHz = 1000f, baseHz = 220f, referenceHz = 110f, amount = 1f)
+        assertEquals(1000f, low, 0.01f, "at the reference pitch, full tracking is a no-op")
+        assertEquals(2f, high / low, 0.01f, "an octave up should double the cutoff at full tracking")
+    }
+
+    @Test
+    fun `partial amount is a log-domain blend, not a linear one`() {
+        // Half tracking across an octave should move the cutoff by half an
+        // octave (sqrt(2)x), not half the Hz distance to full tracking.
+        val half = Dsp.keyTrack(cutoffHz = 1000f, baseHz = 220f, referenceHz = 110f, amount = 0.5f)
+        assertEquals(kotlin.math.sqrt(2f), half / 1000f, 0.001f)
+    }
+
+    @Test
+    fun `amount clamps to 0 to 1`() {
+        val atOne = Dsp.keyTrack(1000f, 220f, 110f, 1f)
+        assertEquals(atOne, Dsp.keyTrack(1000f, 220f, 110f, 2f), 0.01f)
+        assertEquals(1000f, Dsp.keyTrack(1000f, 220f, 110f, -1f), 0.01f)
+    }
+
+    @Test
+    fun `a non-positive baseHz or referenceHz is refused, not divided by`() {
+        assertEquals(1000f, Dsp.keyTrack(1000f, 0f, 110f, 1f))
+        assertEquals(1000f, Dsp.keyTrack(1000f, 220f, 0f, 1f))
+        assertEquals(1000f, Dsp.keyTrack(1000f, -10f, 110f, 1f))
+    }
 }
