@@ -92,13 +92,14 @@ Add to `ThumpTest.kt`:
         // A membrane's partials sit at the Bessel ratios. Two sines at 1.83
         // cannot produce a peak near 2.135x the fundamental; a real head does.
         val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to 0.1f, "DECAY" to 0.8f, "TUNE" to 0.4f))
-        val spectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(snip.samples, Dsp.RATE)
+        val fftSize = 4096
+        val spectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(snip.samples, fftSize)
         val f0 = Thump.snareFundamental(0.4f)
         fun energyNear(hz: Float): Float {
-            val lo = (hz * 0.94f); val hi = (hz * 1.06f)
-            return spectrum.filterIndexed { i, _ ->
-                val f = i * Dsp.RATE.toFloat() / (2f * spectrum.size); f in lo..hi
-            }.maxOrNull() ?: 0f
+            val lo = hz * 0.94f; val hi = hz * 1.06f
+            return spectrum.indices.filter {
+                com.snipsnap.audio.Fft.binToHz(it, fftSize, Dsp.RATE) in lo..hi
+            }.maxOfOrNull { spectrum[it] } ?: 0f
         }
         // (2,1) at 2.1354 is the mode two sines at 1.83 cannot fake.
         assertTrue(
@@ -134,7 +135,9 @@ Add to `ThumpTest.kt`:
     }
 ```
 
-If `Fft.magnitudeSpectrum` or `FeatureExtractor.extract(...).centroidHz` have different names, use the real ones — grep `:audio` first. Do not invent an API.
+**API note, already checked for you:** `Fft.magnitudeSpectrum(samples, size = 4096)`
+takes an FFT SIZE (not a sample rate), and `Fft.binToHz(bin, fftSize, sampleRate)`
+converts. `FeatureExtractor.extract(snip).centroidHz` is real.
 
 Add `internal fun snareFundamental(tune: Float): Float` to `Thump` so the test asserts against the engine's intent rather than re-deriving the mapping.
 
@@ -251,14 +254,16 @@ A linear `(1-snap)` / `snap` crossfade does **not** achieve this: at SNAP 1 the 
         // Both ends must be REACHABLE - the static burst is a palette sound,
         // not a defect, and a range curated to only tasteful settings has
         // already made the user's decisions for them.
-        fun tonalityAt(snap: Float): Float {
+        // Spectral FLATNESS is the tonal-vs-noise measure :audio actually
+        // exposes: a flat spectrum is noise, a peaky one is pitched. So the
+        // drum end must be LOW and the static end HIGH - note the direction.
+        fun flatnessAt(snap: Float): Float {
             val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to snap, "DECAY" to 0.7f))
-            val f = com.snipsnap.audio.FeatureExtractor.extract(snip)
-            return f.tonality   // use whatever :audio actually exposes for tonal-vs-noise
+            return com.snipsnap.audio.FeatureExtractor.extract(snip).flatness
         }
-        val drum = tonalityAt(0f)
-        val static = tonalityAt(1f)
-        assertTrue(drum > static * 2f, "SNAP=0 should be clearly more tonal: $drum vs $static")
+        val drum = flatnessAt(0f)
+        val static = flatnessAt(1f)
+        assertTrue(static > drum * 2f, "SNAP=1 should be clearly noisier: drum=$drum static=$static")
     }
 
     @Test
@@ -279,7 +284,13 @@ A linear `(1-snap)` / `snap` crossfade does **not** achieve this: at SNAP 1 the 
     }
 ```
 
-Grep `:audio`'s `FeatureExtractor` for the real field names before writing this — use what exists, do not invent `tonality` if it is called something else.
+**API note, already checked for you:** `FeatureExtractor.extract(snip)` returns
+`Features` with `centroidHz, rolloffHz, flatness, zeroCrossingRate, lowRatio,
+midRatio, highRatio, durationSeconds, decayMs, peak`. There is **no** `tonality`
+field — `flatness` is the tonal-vs-noise measure, and it runs the opposite way
+(high = noisy). `Fft.magnitudeSpectrum(samples, size = 4096)` takes an FFT SIZE,
+not a sample rate, and `Fft.binToHz(bin, fftSize, sampleRate)` does the
+conversion.
 
 - [ ] **Step 2: Run it to make sure it fails**
 
