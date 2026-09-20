@@ -54,7 +54,17 @@ object Classifier {
 
     // Bright family
     private const val HAT_MIN_CENTROID_HZ = 12_000f
-    private const val HAT_MIN_HIGH_RATIO = 0.95f
+    // Raised from 0.95 (measured): the rebuilt THUMP SNARE's wire layer
+    // reads highRatio 0.9289 (centroid 9067Hz) bare - clearing neither
+    // AND-clause below - but 0.9576 (centroid 12202Hz) through PHASE's
+    // notch sweep, which scoops the body by design and leaves the
+    // broadband wires holding a bigger share. That clears both clauses at
+    // the old 0.95/12000Hz gate, by only 0.8% and 1.7%, misreading an
+    // ordinary FX'd snare as a hat. DrumSynth's closed/open hat fixtures -
+    // ClassifierTest's own calibration target - measure highRatio 0.9896,
+    // so the gate tightens without giving up real hats, though at less
+    // headroom on that side (4.1% at 0.95, 1.9% at 0.97).
+    private const val HAT_MIN_HIGH_RATIO = 0.97f
     private const val CLOSED_HAT_MAX_DECAY_MS = 120f
     private const val SNARE_MIN_HIGH_RATIO = 0.5f
 
