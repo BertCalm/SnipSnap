@@ -92,7 +92,11 @@ class Gesture(val bars: Int, xs: FloatArray, ys: FloatArray) {
             }
             if (lastX.isNaN() || done) return
             val elapsed = if (barsElapsed.isFinite() && barsElapsed > 0f) barsElapsed else 0f
-            val upTo = (floor(elapsed * POINTS_PER_BAR).toInt() + 1).coerceIn(0, xs.size)
+            // The +1 inside the float, not after toInt(): a frame absurdly
+            // late (the screen was off for a year) saturates to Int.MAX
+            // and coerces to the end, rather than wrapping past it to
+            // nothing and stalling the recording for ever.
+            val upTo = floor(elapsed * POINTS_PER_BAR + 1f).toInt().coerceIn(0, xs.size)
             while (filled < upTo) {
                 xs[filled] = lastX
                 ys[filled] = lastY

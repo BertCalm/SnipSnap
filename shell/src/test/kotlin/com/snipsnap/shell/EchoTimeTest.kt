@@ -62,6 +62,11 @@ class EchoTimeTest {
             assertTrue(s <= 6f, "${EchoTime.label(i)} at ${KitPreview.MIN_BPM} BPM is $s s")
         }
         near(6f, EchoTime.seconds(EchoTime.DIVISIONS.lastIndex, KitPreview.MIN_BPM)!!)
+        // A kit file may legally say 1 BPM (Kit only holds its tempo
+        // positive); SURFACE plays it at the floor, as GROOVE does, so the
+        // ceiling holds for every file and no sync silently is not one.
+        near(6f, EchoTime.seconds(EchoTime.DIVISIONS.lastIndex, 1f)!!)
+        near(EchoTime.seconds(1, KitPreview.MAX_BPM)!!, EchoTime.seconds(1, 5000f)!!)
     }
 
     @Test

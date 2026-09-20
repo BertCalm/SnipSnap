@@ -204,11 +204,13 @@ object Modulator {
     /**
      * One cycle of [RATES] at [bpm], in seconds - one bar of [PrintLength]'s
      * own arithmetic, scaled by the fraction, so BARS on PRINT and RATE here
-     * cannot disagree about how long a bar is. A kit with no tempo runs at
-     * [KitPreview.DEFAULT_BPM], the same stand-in GROOVE plays such a kit at.
+     * cannot disagree about how long a bar is. The tempo is the one the
+     * kit is played at ([KitPreview.playedBpm]): the stand-in GROOVE uses
+     * with none, and held to GROOVE's own range, so a file that says 1 BPM
+     * counts bars here the way GROOVE would play them, not an hour long.
      */
     fun periodSeconds(rateIndex: Int, bpm: Float?): Float =
-        PrintLength.seconds(1, bpm ?: KitPreview.DEFAULT_BPM) * RATES[rateIndex]
+        PrintLength.seconds(1, KitPreview.playedBpm(bpm)) * RATES[rateIndex]
 
     /**
      * The wave, -1..1, at [phase] 0..1 of cycle number [cycle]. SINE starts

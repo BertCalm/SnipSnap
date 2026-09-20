@@ -8,8 +8,9 @@ import com.snipsnap.kit.KitPreview
  * do. The engine never learns a tempo - it takes a time in seconds
  * (`SurfaceEngine.setEchoTime`) and this is where the seconds come from,
  * through [PrintLength]'s one bar so the three cannot disagree about how
- * long a bar is. A kit with no tempo runs at [KitPreview.DEFAULT_BPM],
- * the same stand-in GROOVE and the modulators use.
+ * long a bar is. The tempo is the one the kit is played at
+ * ([KitPreview.playedBpm]): the stand-in with none, and held to GROOVE's
+ * range, so the ceiling below holds for every kit file, not only sane ones.
  *
  * FREE is the engine's own fixed time, what ECHO always was, and the
  * first choice so a kit from before this existed sounds as it did. The
@@ -53,7 +54,7 @@ object EchoTime {
     fun seconds(index: Int, bpm: Float?): Float? {
         require(index in DIVISIONS.indices) { "ECHO's time is an index into DIVISIONS (0..${DIVISIONS.lastIndex}), got $index" }
         val d = DIVISIONS[index] ?: return null
-        return PrintLength.seconds(1, bpm ?: KitPreview.DEFAULT_BPM) * d.fraction
+        return PrintLength.seconds(1, KitPreview.playedBpm(bpm)) * d.fraction
     }
 
     /** The button's word for [index]: FREE, or the note value. */

@@ -388,6 +388,14 @@ fun SurfaceScreen(
         target = Reading.REST
         loop.letGo()
         latched = false
+        // A recording cannot span a stop: frames pause while the screen
+        // is away and the recorder would fill the rest with the last
+        // place when they resume, keeping a fragment and a long hold as
+        // the kit's gesture over whatever it had. Dropped instead, and
+        // disarmed - REC is a moment's intent, not a standing order.
+        loop.dropRecording()
+        recording = false
+        gestureArmed = false
         engine.control(mode, Reading.REST, tilt.tilt, gate = false)
     }
     val lifecycleOwner = LocalLifecycleOwner.current

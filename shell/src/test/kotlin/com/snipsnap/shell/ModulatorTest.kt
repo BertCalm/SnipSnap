@@ -200,6 +200,16 @@ class ModulatorTest {
     }
 
     @Test
+    fun `a kit's tempo is read through the one rule GROOVE plays it at`() {
+        // Kit holds its tempo only positive and under a thousand, so 1 BPM
+        // is a legal file; a bar here is GROOVE's bar for it - the floor's
+        // - not a four-minute one, and none is the stand-in.
+        near(Modulator.periodSeconds(4, KitPreview.MIN_BPM), Modulator.periodSeconds(4, 1f))
+        near(Modulator.periodSeconds(4, KitPreview.MAX_BPM), Modulator.periodSeconds(4, 999f))
+        near(Modulator.periodSeconds(4, KitPreview.DEFAULT_BPM), Modulator.periodSeconds(4, null))
+    }
+
+    @Test
     fun `gesture plays the recorded finger over its own bars, and at full depth from rest it is the finger itself`() {
         assertTrue(Shape.GESTURE.playsGesture)
         assertTrue(Shape.entries.filter { it != Shape.GESTURE }.none { it.playsGesture })
