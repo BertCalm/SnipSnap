@@ -156,14 +156,15 @@ object Pluck {
      * line feeding back through a low-pass. DAMP closes the loop filter and
      * pulls the feedback gain down together — one knob, two parameters,
      * always musical.
-     */
-    /** Internal, not private, so PluckTest can drive it with a synthetic
+     *
+     * Internal, not private, so PluckTest can drive it with a synthetic
      * freq/rate pair and pin the loop-length invariant below directly -
      * the real voice table never reaches it (measured minimum `exact`
      * across every voice x TUNE semitone x DAMP is 175.93 samples, at
      * KALIMBA TUNE=1/DAMP=1 - swept and printed against this function's
      * own formula, not estimated), so there is no reachable call site to
-     * assert against otherwise. */
+     * assert against otherwise.
+     */
     internal fun ks(
         freq: Float,
         seconds: Float,
