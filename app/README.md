@@ -27,6 +27,18 @@ Kotlin that has **never been through a compiler**. Treat it accordingly.
 4. Install: `adb install app/build/outputs/apk/debug/app-debug.apk`
    (or copy the APK to the phone and tap it).
 
+## The on-device suite
+
+`app/src/androidTest` holds Compose UI tests that run on an emulator or a
+plugged-in phone: `./gradlew :app:connectedDebugAndroidTest` with a device
+attached. CI runs them (`emulator-tests`, its own workflow) only when
+something under `app/` changes, because booting an emulator costs four
+or five app builds' worth of minutes. `SurfaceScreenTest` is the half of
+the SURFACE pass below a machine can see - every label on the top rows
+drawn whole at 360 dp, the mode row and the print row's buttons doing
+what they say, a second finger raising Z - laid out at a narrow phone's
+width whatever device runs it. What needs an ear stays in the pass.
+
 ## M0's exit test (from docs/APP_PLAN.md)
 
 Browse kits on a phone, tap pads, hear WAVs (interim `SoundPool`), flip
