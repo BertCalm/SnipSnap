@@ -1479,7 +1479,8 @@ class CliTest {
         val patchOut = File(temp, "ds.json")
         val (code, stdout, stderr) = cli("desample", kickWav.path, "--out", patchOut.path)
         assertEquals(0, code, "stderr: $stderr")
-        assertContains(stdout, "nearest patch is kick at distance 0.00")
+        // Engine-qualified since SKIN joined the search: both engines own a KICK.
+        assertContains(stdout, "nearest patch is thump/kick at distance 0.00")
         assertContains(stdout, "SWEEP=0.85")
         val patch = com.snipsnap.synth.Patches.fromJsonText(patchOut.readText())
         assertEquals("THUMP", patch.engine)
@@ -1492,7 +1493,7 @@ class CliTest {
         val before = padFile.readBytes()
         val (padCode, padOut, padErr) = cli("desample", kitDir.path, "A01")
         assertEquals(0, padCode, "stderr: $padErr")
-        assertContains(padOut, "is a kick patch now")
+        assertContains(padOut, "is a thump/kick patch now")
         assertTrue(!before.contentEquals(padFile.readBytes()))
         assertTrue(KitStore.load(kitDir).pad(1)!!.recipe != null, "the patch rides the pad")
         assertEquals(0, cli("desample", kitDir.path, "A01", "--undo").first)

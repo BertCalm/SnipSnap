@@ -234,6 +234,23 @@ snapped PITCH, SHINE), deterministic per seed, honest enough that a
 texture classifies as the LOOP it is. `SynthKits.cloud()` is the
 atmosphere kit both of them make together.
 
+SNAP is the tenth thing, and the other half of the name: a photo becomes
+a pad. A picture is already mathematical data — three numbers per pixel —
+so the engine only decides which numbers to read and in what order. One
+line through the photo is one cycle of a wavetable (HORIZON reads across,
+each column averaged so it is the picture's silhouette rather than one
+noisy row; PLUMB reads down; ORBIT walks a circle round the centre, which
+closes on itself so that cycle has no seam), and the photo's summary
+numbers set the knobs: dominant hue → TUNE (red low, violet high, a grey
+photo on the centre detent), brightness → BRIGHT, colourfulness → DECAY,
+fine detail → GRIT. The pad stores the line's 256 brightness values and
+the macros — never the photo — so it regenerates from `kit.json` like any
+synth pad, with the picture's line in the sidecar as plain digits. Like
+GRAINS it is outside the `Engine` picker (it needs a `Photo`, not a
+voice), and has its own tab, SNAP, where TAKE PHOTO asks the system
+camera. The one refusal comes in words: a line with no swing in it — a
+plain wall read top to bottom — has no waveform to play.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH

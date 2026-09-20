@@ -4,7 +4,7 @@
 
 ## The idea
 
-Rendering runs one way: a THUMP patch (a voice and a handful of 0..1
+Rendering runs one way: a drum patch (a voice and a handful of 0..1
 macros) becomes audio. DE-SAMPLE runs it the other way, approximately: a
 captured hit becomes the patch that sounds most like it — a recipe the
 engine can render again forever, edit knob by knob, and breed with. The
@@ -44,9 +44,18 @@ distance zero, and renders back the same bytes.
 
 The distance is always reported. Past `FAR` (0.45) the nearest patch is a
 stranger: the CLI says so, the builder refuses to replace the pad unless
-forced, and the phone's toast names the closest voice and how far it is
-instead of pretending. A capture of a real drum lands well inside the
-bound; a second of hiss lands outside it.
+forced, and the phone's toast names the closest voice — engine and
+voice both, since THUMP and SKIN each own a KICK, a SNARE and two hats —
+and how far it is, instead of pretending. A capture of a real drum lands well inside the
+bound; a slow two-second sweep lands outside it.
+
+**A second of hiss used to be the example here, and stopped being one
+when SKIN joined the search** — it now lands on SKIN's RIDE at 0.391,
+inside the bound. That is the roster getting better rather than the
+guard getting weaker: RIDE is noise through a dense resonant bank, so a
+noisy capture answered by a noise voice is a right answer. Hiss only
+looked like nobody's drum while nothing in the roster was made of
+noise.
 
 ## The doors
 
@@ -58,6 +67,16 @@ bound; a second of hiss lands outside it.
 
 ## Bounds
 
-Deterministic: no seed, all measurement. The grid is THUMP's only — the
-melodic engines are a different search (a note, then macros) and stay
-below the line.
+Deterministic: no seed, all measurement. The grid spans the two **drum**
+engines, THUMP and SKIN — the melodic engines are a different search (a
+note, then macros) and stay below the line.
+
+The grid is built **one voice at a time**, the first time that voice is
+actually searched, and kept. That is not tidiness: measured before SKIN
+was added, the THUMP-only grid was 450 points and took ~110 seconds to
+build on a desktop JVM, all of it charged to the first DE-SAMPLE tap.
+SKIN's 180 points would have made it ~150. Since `voicesFor` already
+narrows a kit pad's search to a handful of voices, building per voice
+turns that cost from a property of the roster into a property of the
+question — and the pad-sheet path, which is the one a player waits on,
+now renders only the voices it will actually compare against.

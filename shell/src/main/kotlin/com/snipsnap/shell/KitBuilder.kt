@@ -600,10 +600,13 @@ class KitBuilderModel private constructor(
 
     /** DE-SAMPLE's honest refusal: the nearest patch is a stranger; the match says how far. */
     class Far(val match: com.snipsnap.synth.Desample.Match) :
-        IllegalArgumentException("no patch is near: the nearest is ${match.patch.voice.name.lowercase()} at distance %.2f".format(java.util.Locale.ROOT, match.distance))
+        IllegalArgumentException(
+            "no patch is near: the nearest is ${match.patch.engine.lowercase()}/${match.patch.voiceName.lowercase()} " +
+                "at distance %.2f".format(java.util.Locale.ROOT, match.distance),
+        )
 
     /**
-     * DE-SAMPLE: the pad replaced by the nearest THUMP patch's own render,
+     * DE-SAMPLE: the pad replaced by the nearest synth patch's own render,
      * the patch riding the pad as its recipe so the sound is a synth pad
      * from here on - bin-backed like every rewrite. The search starts on
      * the voices kindred to the pad's class. A far match ([Far]) is

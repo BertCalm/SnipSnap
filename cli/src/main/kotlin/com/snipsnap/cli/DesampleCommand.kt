@@ -26,7 +26,7 @@ object DesampleCommand {
             val match = Desample.nearest(WavReader.read(target), name = target.nameWithoutExtension)
             out.println(
                 "%s: nearest patch is %s at distance %.2f%s".format(
-                    Locale.ROOT, target.name, match.patch.voice.name.lowercase(), match.distance,
+                    Locale.ROOT, target.name, "${match.patch.engine.lowercase()}/${match.patch.voiceName.lowercase()}", match.distance,
                     if (match.far) " - far: no patch is really near" else "",
                 ),
             )
@@ -59,7 +59,7 @@ object DesampleCommand {
         model.save()
         out.println(
             "pad $padArg is a %s patch now (distance %.2f%s) - the capture waits in the bin (undo: --undo)".format(
-                Locale.ROOT, match.patch.voice.name.lowercase(), match.distance, if (match.far) ", far" else "",
+                Locale.ROOT, "${match.patch.engine.lowercase()}/${match.patch.voiceName.lowercase()}", match.distance, if (match.far) ", far" else "",
             ),
         )
         out.println("  macros: " + match.patch.macros.entries.joinToString(" ") { (k, v) -> "%s=%.2f".format(Locale.ROOT, k, v) })

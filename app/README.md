@@ -113,6 +113,16 @@ logcat tag to grab when something is wrong.
   layout change mid-note should go silent, never stick. The zones load
   off the main thread, so the first key after opening may be silent for
   a moment on a big instrument.
+- **SNAP**: open a kit, tap SNAP, TAKE PHOTO. The system camera should
+  open and hand back a thumbnail; the LCD then shows the picture with its
+  LUM/SAT/HUE/DETAIL numbers, the sliders jump to what those numbers
+  say, and the scope draws a note that plays. HORIZON, PLUMB and ORBIT
+  should each sound different on the same photo; a photo of a plain wall
+  read PLUMB should toast the flat-line refusal and grey SEND out; a red
+  thing should land low and a blue thing high. SEND TO PAD then plays on
+  KIT, and `kit.json` carries a `table` of 256 digits on that pad. If the
+  camera never opens, logcat `SnapScreen` first; a phone with no camera
+  app toasts NO CAMERA APP ANSWERED.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

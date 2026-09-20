@@ -1080,7 +1080,7 @@ private fun PresetStrip(
  * feeds the render loop above directly, same as the prototype's slider.
  */
 @Composable
-private fun MacroSlider(
+internal fun MacroSlider(
     label: String,
     value: Float,
     fillColor: Color,
@@ -1147,7 +1147,7 @@ private fun MacroSlider(
  * time — rather than PadSheetScreen's fixed-count amplitude-only bars.
  */
 @Composable
-private fun ScopeLcd(snip: Snip?, rendering: Boolean, scheme: Scheme, modifier: Modifier = Modifier) {
+internal fun ScopeLcd(snip: Snip?, rendering: Boolean, scheme: Scheme, modifier: Modifier = Modifier) {
     Box(modifier.lcdPanel(scheme)) {
         val peaks = remember(snip) { snip?.let { PeaksPyramid.fromSnip(it) } }
         if (peaks != null && snip != null && snip.frameCount > 0) {
@@ -1183,7 +1183,7 @@ private fun ScopeLcd(snip: Snip?, rendering: Boolean, scheme: Scheme, modifier: 
 // ---------- buttons ----------
 
 @Composable
-private fun LabButton(
+internal fun LabButton(
     label: String,
     scheme: Scheme,
     enabled: Boolean,
