@@ -49,9 +49,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * ARRANGE: [Arranger] surfaced — GROOVE's own four variations laid into a
- * song structure (intro → theme → variation → the turn → reprise → outro)
- * instead of cycled one at a time. Reached from GROOVE's own "SONG ▸"
+ * ARRANGE: [Arranger] surfaced — GROOVE's own variations laid into a song
+ * structure (intro → theme → variation → the turn → reprise → outro)
+ * instead of cycled one at a time. When the kit has a user program the
+ * variation section is that, not a derived clip: `Arranger` reads it from
+ * the sidecar itself, so nothing here has to pass it in. Reached from GROOVE's own "SONG ▸"
  * button, not one of MenuRow's fixed ten — same GROOVE-scoped-overlay shape
  * as PAD SHEET's GRAIN FIELD (see `App.kt`'s `arrangeOpen`).
  *

@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.BeatTape
+import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
@@ -22,12 +23,23 @@ import java.io.File
  * the turn (fill) → reprise (captured) → outro (half)
  * ```
  *
- * Every section's clip is one of the kit's own variations, derived
- * fresh from the stored base groove so the plan never depends on what
- * happened to be saved. Seeded and deterministic: the same (kit, seed)
- * always plans the same song. Honest refusals and skips: no groove
- * refuses outright; a kit with nothing to roll on skips the turn; no
- * snare to whisper on means the variation falls back to tight.
+ * Every section's clip is derived fresh from the stored base groove so
+ * the plan never depends on what happened to be saved — **with one
+ * exception, and it is the point of the exception**: when the kit has a
+ * user program (`GrooveEdit`'s PROG E, the one hand-edited fork), the
+ * variation section plays that instead of a derived one. Until it did,
+ * a pattern someone had step-edited by hand could not appear in a song
+ * at all; SONG ▸ composed only from what the app had generated, which
+ * made the one screen where the user writes something a dead end.
+ *
+ * Read here rather than passed in, from the same [kitDir] the base
+ * comes from, so the phone and the CLI cannot disagree about whether a
+ * song includes your own work.
+ *
+ * Seeded and deterministic: the same (kit, seed) always plans the same
+ * song. Honest refusals and skips: no groove refuses outright; a kit
+ * with nothing to roll on skips the turn; no snare to whisper on means
+ * the variation falls back to tight.
  */
 object Arranger {
 
@@ -73,10 +85,24 @@ object Arranger {
         /** The rolled template [feel] scales. Null alongside a non-zero [feel] is a no-op, not an error: a caller with no template has no feel to apply. */
         feelTemplate: GrooveFeel.Template? = null,
     ): Arrangement {
-        val base = GrooveStore.load(kitDir).firstOrNull()
+        val stored = GrooveStore.load(kitDir)
+        // `firstOrNull { !isProgE }`, not a bare `firstOrNull()`. The two
+        // said the same thing only by luck: `GrooveEdit.save` appends the
+        // user program last, so the first stored clip happened to be the
+        // captured base. But `GrooveEdit.fork` already picks the base with
+        // the predicate, and two rules for "which clip is the base" is the
+        // shape of defect this repo keeps finding. Now there is one, and a
+        // sidecar that ever put the user program first would arrange the
+        // captured take rather than deriving swing and half from somebody's
+        // hand-edit.
+        val base = stored.firstOrNull { !GrooveEdit.isProgE(it) }
             ?: throw IllegalArgumentException(
                 "no groove to arrange - chop with --groove, or import a .mid",
             )
+        // The user's own program, when this kit has one. Not derived and
+        // never regenerated: it is whatever they last left in the step
+        // editor.
+        val yours = stored.firstOrNull { GrooveEdit.isProgE(it) }?.takeIf { it.notes.isNotEmpty() }
         // A stored groove with no notes is a real state, not a corrupt
         // one: GrooveEdit.startEmpty writes exactly this when GROOVE opens
         // on a kit that has recorded nothing yet. ORBIT used to be able to
@@ -120,8 +146,20 @@ object Arranger {
         } catch (e: IllegalArgumentException) {
             null
         }
-        val variation = if (preferGhosts && ghosted != null) ghosted else tight
+        val variation = yours ?: if (preferGhosts && ghosted != null) ghosted else tight
         val variationReason = when {
+            // Ahead of the measured rules below, and the only thing that
+            // outranks them: the variation section is where the song says
+            // "here is the same beat, different" — which is exactly what a
+            // hand-edit is. A measurement about ghost notes is a good way to
+            // invent a variation and a poor reason to ignore one.
+            //
+            // It is handed over as stored, not `felt`, while every other
+            // section carries the feel. Same exemption `GrooveProgram` makes
+            // for it on screen, for the same reason: these steps are already
+            // where somebody put them, and leaning on them would move hits
+            // that were placed by hand.
+            yours != null -> "yours — the program you stepped in, exactly as you left it"
             preferGhosts && ghosted != null ->
                 "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
             preferGhosts ->
