@@ -36,6 +36,18 @@ object PhotoField {
     /** How much quieter the darkest cell is than the brightest: a floor, so a night shot still speaks. */
     internal const val DARKEST_LEVEL = 0.25f
 
+    /**
+     * The brightness swing, 0..255, at which a cell's own line is heard
+     * whole. Below it the line is blended toward a sine in proportion:
+     * the cycle is normalized to full scale before it plays, so a cell
+     * with a swing of four levels — a patch of sky with a hint of
+     * gradient — would otherwise play as a full-scale four-step square,
+     * as loud and as harsh as the busiest cell, when to the eye it is
+     * nearly flat. Under [Snap.FLAT_SWING] the line is dropped for the
+     * sine outright.
+     */
+    internal const val SOFT_SWING = 24
+
     /** One cell of the grid: where it is, what it looked like, and the knobs that made its grain. */
     data class Cell(
         val column: Int,
@@ -44,7 +56,31 @@ object PhotoField {
         val macros: Map<String, Float>,
         /** True when the cell's own line had no swing and a sine stood in. */
         val flat: Boolean,
+        /** How much of the cell's own line is in its cycle, 0 (all sine) to 1 (all line); see [SOFT_SWING]. */
+        val lineWeight: Float,
     )
+
+    /**
+     * The cycle a cell plays: its line whole when its swing reaches
+     * [SOFT_SWING], a sine when it is flat, and a blend in between —
+     * the line stretched to full scale first, so the blend is of shapes
+     * and not of levels. Returns the table and the line's weight in it.
+     */
+    internal fun cellTable(line: IntArray): Pair<IntArray, Float> {
+        var lo = 255
+        var hi = 0
+        for (v in line) { if (v < lo) lo = v; if (v > hi) hi = v }
+        val swing = hi - lo
+        val sine = Draw.wave(Draw.Wave.SINE)
+        if (swing < Snap.FLAT_SWING) return sine to 0f
+        val weight = (swing.toFloat() / SOFT_SWING).coerceAtMost(1f)
+        if (weight >= 1f) return line to 1f
+        val out = IntArray(line.size) { i ->
+            val stretched = (line[i] - lo) * 255f / swing
+            Math.round(weight * stretched + (1f - weight) * sine[i]).coerceIn(0, 255)
+        }
+        return out to weight
+    }
 
     /**
      * The built field: every cell's grain end to end in [source], the
@@ -94,19 +130,21 @@ object PhotoField {
                 val macros = Snap.macrosFrom(reading)
                 val line = Snap.table(patch, SnapVoice.HORIZON)
                 val flat = Snap.isFlat(line)
-                val table = if (flat) Draw.wave(Draw.Wave.SINE) else line
+                val (table, lineWeight) = cellTable(line)
                 val grain = Snap.grain(table, macros, grainFrames)
                 val level = Dsp.lin(reading.luminance, DARKEST_LEVEL, 1f)
                 val index = r * columns + c
                 val start = index * grainFrames
                 for (i in 0 until grainFrames) source[start + i] = grain[i] * level
                 grains.add(GrainField.Grain(start, (c + 0.5f) / columns, (r + 0.5f) / rows))
-                cells.add(Cell(c, r, reading, macros, flat))
+                cells.add(Cell(c, r, reading, macros, flat, lineWeight))
             }
         }
         return Field(
             source = Snip(source, channels = 1, sampleRate = Dsp.RATE),
-            map = GrainField.GrainMap(grains, grainFrames, projector = null),
+            // Steady tones from phase zero: the voice must scatter its
+            // triggers or copies of one grain comb-filter each other.
+            map = GrainField.GrainMap(grains, grainFrames, projector = null, jitterTriggers = true),
             columns = columns,
             rows = rows,
             cells = cells,

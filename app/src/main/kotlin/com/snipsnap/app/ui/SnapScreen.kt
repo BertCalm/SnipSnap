@@ -228,7 +228,13 @@ fun SnapScreen(
                 }
                 thumb = small
                 photo = p
+                // The old picture's field is not this picture's: drop it
+                // and close the field if it is up, or the main loop below
+                // would stand still behind an overlay that is no longer
+                // shown. A build in flight for the old photo checks
+                // `photo` when it lands and drops itself.
                 field = null
+                showField = false
                 reading = r
                 macros = Snap.macrosFrom(r)
                 // A new photo is a new line: its knobs would otherwise
@@ -290,6 +296,9 @@ fun SnapScreen(
         val l = current
         if (l == null || l.flat) {
             snip = null
+            // A way back with nothing to render still consumes the quiet,
+            // or the next real change would play nothing.
+            quietResume = false
             return@LaunchedEffect
         }
         delay(MACRO_DEBOUNCE_MS)
@@ -389,6 +398,9 @@ fun SnapScreen(
         scope.launch {
             try {
                 val f = withContext(Dispatchers.Default) { PhotoField.build(p) }
+                // A newer photo arrived while this built: this field is
+                // the old picture's and lands nowhere.
+                if (photo !== p) return@launch
                 field = f
                 voicePlayer?.stop()
                 showField = true
@@ -422,6 +434,11 @@ fun SnapScreen(
                         val model = KitBuilderModel.open(e.dir)
                         val alreadyThere = model.pad(slot) != null
                         if (alreadyThere) {
+                            // replaceAudio keeps a pad's recipe when handed
+                            // null; a synth pad's recipe would then regenerate
+                            // the old note over the cloud's audio on the next
+                            // rebuild from the sidecar. The cloud has no
+                            // recipe, so the pad must not either.
                             model.replaceAudio(slot, null) { _ -> cloud }
                             model.update(slot) { p ->
                                 p.copy(
@@ -429,6 +446,7 @@ fun SnapScreen(
                                     drumClass = cloudClass,
                                     colorHex = AutoPlace.colorFor(cloudClass),
                                     muteGroup = AutoPlace.muteGroupFor(cloudClass),
+                                    recipe = null,
                                 )
                             }
                         } else {
@@ -515,7 +533,12 @@ fun SnapScreen(
                     LabButton(
                         if (looking) "…" else "TAKE PHOTO",
                         scheme,
-                        enabled = !looking,
+                        // Not while a field builds either: a photo landing
+                        // mid-build would open the old picture's field over
+                        // the new picture (the build checks, but the camera
+                        // app in front while a field opens behind it is no
+                        // better).
+                        enabled = !looking && !buildingField,
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "TAKE PHOTO",
                     ) { takePhoto() }
@@ -606,8 +629,17 @@ fun SnapScreen(
         if (showField) {
             field?.let { f ->
                 // The GRAIN FIELD screen over this one, on the picture: its
-                // own voice, its own back chip, its own BackHandler.
-                Box(Modifier.fillMaxSize().background(scheme.lcd.tape)) {
+                // own voice, its own back chip, its own BackHandler. The
+                // gesture catch-all is the slot chooser's own: a plain
+                // background does not hit-test, and a tap in a gap of the
+                // field's layout would otherwise reach the AUDITION bar
+                // beneath and play SNAP's voice over the field's.
+                // The prebuilt field is remembered: GrainFieldScreen keys
+                // its load and its voice on it, and a fresh instance per
+                // recomposition (a toast, a kit refresh) would tear the
+                // voice down mid-drag and start it again.
+                val prebuilt = remember(f, thumb) { PrebuiltField(f.source, f.map, thumb, "PHOTO FIELD", "◄ SNAP") }
+                Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }) {
                     GrainFieldScreen(
                         entry = null,
                         slot = null,
@@ -617,7 +649,7 @@ fun SnapScreen(
                         },
                         onToast = onToast,
                         onRequestArm = {},
-                        prebuilt = PrebuiltField(f.source, f.map, thumb, "PHOTO FIELD", "◄ SNAP"),
+                        prebuilt = prebuilt,
                     )
                 }
             }

@@ -214,6 +214,14 @@ class GrainVoice(
         // transient all-slots pileup (voice stealing) is what the [-1,1]
         // clamp below exists for.
         val grainGain = 2f / MAX_OVERLAP
+        // A photo field's map asks for it (GrainMap.jitterTriggers): its
+        // grains are steady tones from phase zero, and copies of one grain
+        // every TRIGGER_HOP frames comb-filter each other — near silence
+        // at the notes whose period divides the hop badly. A hop drawn
+        // between half and one-and-a-half of TRIGGER_HOP each time keeps
+        // the same average density and scatters the phases. An analyzed
+        // pad's grains all differ, so its map keeps the even clock.
+        val jitter = map.jitterTriggers
 
         runCatching { track.play() }
         while (running.get() && generation.get() == myGeneration) {
@@ -221,6 +229,11 @@ class GrainVoice(
 
             var offset = 0
             while (offset < BLOCK_FRAMES) {
+                val hop = if (jitter) {
+                    (TRIGGER_HOP / 2 + rng.nextInt(TRIGGER_HOP)).coerceAtMost(BLOCK_FRAMES - offset)
+                } else {
+                    TRIGGER_HOP
+                }
                 if (gated && grains.isNotEmpty()) {
                     triggerCounter++
                     triggerGrain(
@@ -231,11 +244,11 @@ class GrainVoice(
                     )
                 }
                 mixSubBlock(
-                    block, offset, TRIGGER_HOP,
+                    block, offset, hop,
                     slotActive, slotStart, slotPos, grainGain,
                     hann, grainFrames, source,
                 )
-                offset += TRIGGER_HOP
+                offset += hop
             }
 
             for (i in block.indices) block[i] = block[i].coerceIn(-1f, 1f)

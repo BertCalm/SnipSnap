@@ -89,6 +89,77 @@ class PhotoFieldTest {
     }
 
     @Test
+    fun `a field asks the voice to jitter its triggers, and here is why`() {
+        val field = PhotoField.build(scene(), columns = 2, rows = 2)
+        assertTrue(field.map.jitterTriggers, "steady tones from phase zero need scattered triggers")
+
+        // The voice overlap-adds one grain every hop under a Hann window.
+        // A steady tone whose period divides a fixed 512-frame hop badly
+        // cancels itself: at 311 Hz (TUNE 0.75) the sum is near silence.
+        // Random hops between half and one-and-a-half of that scatter the
+        // phases and the tone comes back.
+        val grain = Snap.grain(Draw.wave(Draw.Wave.SINE), mapOf("TUNE" to 0.75f, "BRIGHT" to 1f, "GRIT" to 0f), 4096)
+        fun rms(a: FloatArray, from: Int, to: Int): Double {
+            var sum = 0.0
+            for (i in from until to) sum += a[i].toDouble() * a[i]
+            return kotlin.math.sqrt(sum / (to - from))
+        }
+        fun overlapAdd(hops: List<Int>): FloatArray {
+            val out = FloatArray(hops.sum() + grain.size)
+            var t = 0
+            for (hop in hops) {
+                for (i in grain.indices) {
+                    val w = 0.5f * (1f - kotlin.math.cos(2.0 * Math.PI * i / grain.size).toFloat())
+                    out[t + i] += grain[i] * w
+                }
+                t += hop
+            }
+            return out
+        }
+        val fixed = overlapAdd(List(64) { 512 })
+        val rnd = java.util.Random(3)
+        val jittered = overlapAdd(List(64) { 256 + rnd.nextInt(512) })
+        // Measured in the steady middle, past the first eight overlaps.
+        val fixedRms = rms(fixed, 8192, 24576)
+        val jitteredRms = rms(jittered, 8192, 24576)
+        assertTrue(fixedRms < jitteredRms * 0.15, "fixed-hop comb $fixedRms should be far under jittered $jitteredRms")
+    }
+
+    @Test
+    fun `a nearly flat cell leans toward a sine instead of a full-scale staircase`() {
+        val sine = Draw.wave(Draw.Wave.SINE)
+        // Four levels of swing: over FLAT_SWING, well under SOFT_SWING.
+        val faint = IntArray(Snap.TABLE_SIZE) { 128 + (it * 4 / Snap.TABLE_SIZE) }
+        val (table, weight) = PhotoField.cellTable(faint)
+        assertTrue(weight > 0f && weight < 0.25f, "weight $weight")
+        // Mostly sine: the table tracks the sine far more than the stair.
+        var offSine = 0L
+        for (i in table.indices) offSine += kotlin.math.abs(table[i] - sine[i])
+        assertTrue(offSine / table.size < 40, "mean distance from the sine ${offSine / table.size}")
+        // A flat line is the sine outright; a full-swing line is itself.
+        assertEquals(0f, PhotoField.cellTable(IntArray(Snap.TABLE_SIZE) { 100 }).second)
+        val ramp = IntArray(Snap.TABLE_SIZE) { it }
+        val (whole, w1) = PhotoField.cellTable(ramp)
+        assertEquals(1f, w1)
+        assertTrue(whole.contentEquals(ramp))
+        // And the field records the weight per cell.
+        val field = PhotoField.build(Photo.grey(64, 48) { x, _ -> 0.5f + x / 64f * 0.03f }, columns = 4, rows = 3)
+        assertTrue(field.cells.all { it.lineWeight in 0f..1f })
+    }
+
+    @Test
+    fun `a field builds fast enough to wait for`() {
+        val photo = Photo.of(512, 384) { x, y -> Photo.rgb((x * 255) / 511, (y * 255) / 383, ((x + y) % 7) * 30) }
+        PhotoField.build(photo, columns = 2, rows = 2) // warm the JIT
+        val t0 = System.nanoTime()
+        PhotoField.build(photo)
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        // Four seconds here was ten on a phone; native-rate grains brought
+        // it under one. Generous so a slow CI runner does not fail it.
+        assertTrue(ms < 3000, "a 512 px field took ${ms}ms")
+    }
+
+    @Test
     fun `the same photo builds the same field`() {
         val a = PhotoField.build(scene(), columns = 4, rows = 3)
         val b = PhotoField.build(scene(), columns = 4, rows = 3)
