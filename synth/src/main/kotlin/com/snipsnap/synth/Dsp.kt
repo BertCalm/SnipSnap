@@ -147,12 +147,28 @@ internal object Dsp {
          * state genuinely runs toward and past unity (self-oscillation
          * territory). Defaults to off: every existing caller keeps today's
          * exact linear filter. It's opt-in per call, not a blanket switch,
-         * because it isn't free even at typical settings - FATHOM's states
-         * run hot enough even at its fixed, moderate damping that turning
-         * it on there shifted DEEP's own factory default off KICK entirely
-         * and drifted several GRIND presets toward TOM. Enable it only for
-         * a filter whose caller has actually checked its own tests stay
-         * green with it on.
+         * because it isn't free even at typical settings.
+         *
+         * Measured, not assumed (synth-depth phase-0, Task 7): flipping it
+         * on at FATHOM's call site (fixed `damp = 1.2f`, driven by a `tanh`
+         * pre-stage) broke four green tests. DEEP's own KICK classification
+         * held, but `DRIVE adds harmonics` did not - DEEP's DRIVE-driven
+         * centroid brighten fell to 68.96Hz -> 89.30Hz (1.295x), just under
+         * the 1.3x contract, because the saturator eats the harmonics DRIVE
+         * exists to add. GRIND's factory default drifted TOM -> PERC, its
+         * `DIRTY GROWL` preset drifted KICK -> TOM, and `HOLLOW GROWL` fell
+         * under the peak floor at 0.473. Same story at PadFilter's and
+         * Wobble's call sites, measured directly on `TptSvf`: at PadFilter's
+         * settings (cutoff 800Hz, k=0.3) peak dropped 0.570 -> 0.330 with
+         * centroid barely moving (704Hz -> 681Hz) - exactly backwards for a
+         * preview whose own contract is "the output's peak is held at the
+         * input's, so a resonant peak never reads as loudness"; at Wobble's
+         * (RESONANCE_K = 0.6, full sweep) peak dropped 0.789 -> 0.610 while
+         * centroid moved under 2% (2070Hz -> 2043Hz), a difference Wobble's
+         * own post-sweep makeup gain mostly erases anyway. Enable it only
+         * for a filter whose caller has actually checked its own tests stay
+         * green with it on - FATHOM, PadFilter, and Wobble all failed that
+         * check and stay off; VELVET is still the one exception.
          */
         fun process(input: Float, freqHz: Float, k: Float, saturate: Boolean = false) {
             val g = kotlin.math.tan(PI * (freqHz.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
