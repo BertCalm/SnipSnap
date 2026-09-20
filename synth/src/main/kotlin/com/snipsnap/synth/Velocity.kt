@@ -192,8 +192,9 @@ object Velocity {
         is ThumpPatch -> Thump.macrosFor(patch.voice).let { specs ->
             // SNARE's TONE stopped being a brightness macro when the snare
             // became a membrane-plus-wires voice - see [SNARE_TONE_EXCLUDED]
-            // for the measurement. CLAP's TONE is untouched by that rebuild
-            // (still a plain lowpass cutoff) and keeps working here, so the
+            // for the measurement, and [brightnessOverride] for what SNARE
+            // uses instead. CLAP's TONE is untouched by that rebuild (still
+            // a plain lowpass cutoff) and keeps working here, so the
             // exclusion has to be scoped to the voice, not the macro name -
             // filtering it out of SNARE's own spec list (rather than
             // removing "TONE" from [BRIGHTNESS_MACROS] outright) is what
@@ -209,6 +210,26 @@ object Velocity {
         is SkinPatch -> Skin.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
     }
+
+    /**
+     * Per-voice override of [brightnessSpec]'s answer, checked before the
+     * generic [BRIGHTNESS_MACROS] scan. THUMP SNARE is the only entry - see
+     * [SNARE_TONE_EXCLUDED] for the measurement backing it.
+     *
+     * This exists *instead of* adding "SNAP" to [BRIGHTNESS_MACROS]
+     * outright, on purpose: SKIN SNARE (`SkinVoice.SNARE`) exposes its own,
+     * unrelated macro also named "SNAP" (`Skin.kt`'s own body/wire mix, a
+     * different engine's DSP entirely). A flat name added to the shared
+     * list would match there too, silently switching SKIN SNARE off the
+     * [soften] fallback on nothing but a name coincidence - nothing in this
+     * task measured whether SKIN's SNAP is monotonic. Scoping the match to
+     * `(ThumpPatch, SNARE)` here, rather than teaching [BRIGHTNESS_MACROS]
+     * a new global name, means SKIN SNARE can't inherit this by accident:
+     * it stays on [soften] until someone runs SKIN's own sweep and adds its
+     * own override line.
+     */
+    private fun brightnessOverride(patch: Patch): String? =
+        if (patch is ThumpPatch && patch.voice == ThumpVoice.SNARE) "SNAP" else null
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -256,9 +277,14 @@ object Velocity {
      * in patch.macros }` would miss a partial macro map where the
      * brightness macro is unset and rendering at its voice default -
      * exactly the frozen-waveform case [atVelocity] exists to replace.
+     *
+     * [brightnessOverride] is checked first, ahead of the generic scan -
+     * see its own KDoc for why THUMP SNARE's match has to be scoped there
+     * rather than folded into [BRIGHTNESS_MACROS] itself.
      */
     fun brightnessSpec(patch: Patch): MacroSpec? {
         val specs = macroSpecsFor(patch)
+        brightnessOverride(patch)?.let { name -> return specs.firstOrNull { it.name == name } }
         return BRIGHTNESS_MACROS.firstNotNullOfOrNull { name -> specs.firstOrNull { it.name == name } }
     }
 
@@ -319,6 +345,11 @@ object Velocity {
      * per-macro sign flip this list doesn't otherwise carry, so PLUCK and
      * VOX patches fall back to [soften] instead.
      *
+     * SNAP (THUMP SNARE's own body↔wires balance) is deliberately **not**
+     * on this list, even though SNARE now uses it as its brightness macro —
+     * see [brightnessOverride] for the reachability mechanism and
+     * `SNARE_TONE_EXCLUDED` below for the reasoning and the measurement.
+     *
      * `SNARE_TONE_EXCLUDED`: THUMP SNARE's own TONE used to belong on this
      * list too, back when it meant "rattle lowpass cutoff" (the pre-rebuild
      * two-sines-plus-noise snare). The membrane rebuild
@@ -343,8 +374,25 @@ object Velocity {
      * hard=1648.09 Hz — backwards, same as uncompensated (soft=1630.58 >
      * hard=1597.54, the exact numbers `VelocityGrooveShuffleTest`'s
      * "atVelocity is actually darker at low velocity" failure reported).
-     * THUMP SNARE falls back to [soften] instead, same as KICK/PLUCK/VOX;
-     * re-measure before ever putting SNARE's TONE back on this list.
+     *
+     * SNAP (`Thump.kt`'s `snareBodyGain`/`snareWireGain`: `1 - SNAP` scales
+     * the membrane body down, `1.5·SNAP²` scales the wire layer up)
+     * replaces TONE via [brightnessOverride] rather than leaving SNARE on
+     * the [soften] fallback, because it isn't a patch-up of the same
+     * broken idea - it's a macro native to the rebuilt engine (a harder
+     * strike rattles the wires more relative to the head, the same
+     * polarity as every macro on this list), and it measures clean where
+     * TONE didn't. A direct SNAP sweep (`Thump.render(SNARE)`, SNAP 0→1 in
+     * eighths - nine points - `FeatureExtractor.extract(_).centroidHz`)
+     * rises at every single step, no reversal anywhere in the range: 185.8,
+     * 211.2, 715.0, 3193.2, 7592.7, 10559.6, 11639.8, 11929.1, 11976.0 Hz.
+     * Re-checked at the shipped preset's own ceiling (SNAP 0.35) against
+     * velocity's floor-scaled value (0.35 × 0.9/3.2 ≈ 0.0984, the same
+     * [VELOCITY_FLOOR_RATIO] every other macro on this list uses): soft
+     * centroid 156.1 Hz vs. hard 1597.5 Hz — genuinely darker, ~10x apart,
+     * nothing like TONE's ~1650-vs-1648 near-tie. Re-run the sweep above
+     * before trusting SNAP again if `snareBodyGain`/`snareWireGain` ever
+     * change.
      */
     private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "DIRT")
 }

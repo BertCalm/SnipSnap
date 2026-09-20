@@ -133,7 +133,7 @@ class VelocityGrooveShuffleTest {
             "TINES BELL (BRIGHT)" to TinesPresets.forVoice(TinesVoice.BELL).first(),
             "VELVET BASS (CUTOFF)" to VelvetPresets.forVoice(VelvetVoice.BASS).first(),
             "FATHOM DEEP (CUTOFF)" to FathomPresets.forVoice(FathomVoice.DEEP).first(),
-            "THUMP SNARE (TONE)" to ThumpPresets.forVoice(ThumpVoice.SNARE).first(),
+            "THUMP SNARE (SNAP)" to ThumpPresets.forVoice(ThumpVoice.SNARE).first(),
             "THUMP HAT_CLOSED (METAL)" to ThumpPresets.forVoice(ThumpVoice.HAT_CLOSED).first(),
             "TONEWHEEL FULL (DIRT)" to TonewheelPresets.forVoice(TonewheelVoice.FULL).first(),
         )

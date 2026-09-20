@@ -111,11 +111,12 @@ object StarterKits {
             seeded = false,
         ) {
             // THUMP's own patches, so ghost notes re-render at velocity
-            // (METAL on the hats, TONE on snare/clap) rather than
-            // low-passing the same take - Velocity.variantsAt makes the
-            // same patch-vs-captured call Robin and KitBuilder's velocity
-            // doors do (KICK/TOM/COWBELL/RIM still fall back inside it,
-            // same as everywhere else atVelocity has no macro to move).
+            // (METAL on the hats, TONE on clap, SNAP on snare - see
+            // Velocity.kt's SNARE_TONE_EXCLUDED) rather than low-passing
+            // the same take - Velocity.variantsAt makes the same
+            // patch-vs-captured call Robin and KitBuilder's velocity doors
+            // do (KICK/TOM/COWBELL/RIM still fall back inside it, same as
+            // everywhere else atVelocity has no macro to move).
             ThumpKits.classic().map { pad ->
                 if (pad == null) return@map null
                 val recipe = Breed.recipeOf(pad.recipe)

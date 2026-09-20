@@ -91,12 +91,13 @@ class StarterKitsTest {
         val dir = kotlin.io.path.createTempDirectory("velocity-rerender").toFile()
         try {
             val kit = StarterKits.byId("velocity")!!.render("VELOCITY RERENDER", dir)
-            // Factory Snare (A02, ThumpVoice.SNARE) exposes TONE - one of
-            // Velocity.BRIGHTNESS_MACROS' matches - so its soft layers must
-            // be genuinely re-rendered, the same proof KitBuilderTest and
-            // RobinTest use at their own doors. Read the patch back off the
-            // kit's own stored recipe rather than reconstructing ThumpKits'
-            // internals by hand.
+            // Factory Snare (A02, ThumpVoice.SNARE) exposes SNAP - one of
+            // Velocity.BRIGHTNESS_MACROS' matches, and (since the membrane
+            // rebuild) SNARE's own voice-scoped replacement for TONE - so
+            // its soft layers must be genuinely re-rendered, the same proof
+            // KitBuilderTest and RobinTest use at their own doors. Read the
+            // patch back off the kit's own stored recipe rather than
+            // reconstructing ThumpKits' internals by hand.
             val pad = kit.pad(2)!!
             val patch = Breed.recipeOf(pad.recipe)!!.patch!!
             val main = com.snipsnap.audio.WavReader.read(File(dir, pad.sampleFile))
