@@ -198,7 +198,15 @@ logcat tag to grab when something is wrong.
   (lit, and the readout now names the key) should step through the
   key's notes instead, holding each until the next - the same notes
   GRAIN's pitch axis lands on. A kit with no key should step semitones.
-  Leave and come back: KEY is in `surface.json`. Then SWARM, the row
+  Leave and come back: KEY is in `surface.json`. Then ECHO, beside KEY:
+  with a corner whose echo is up (ECHO + from PRESET, or a MOD slot on
+  ECHO) and a kit with a tempo, ECHO FREE should repeat every 220 ms as
+  it always has; tap it to 1/8 and the repeats should land on eighth
+  notes of the kit's tempo, 1/4 on quarters, 3/16 the dotted-eighth
+  bounce every delay pedal has; each tap should switch between the two
+  times cleanly - no warble, no click. Leave and come back: ECHO's time
+  is in `surface.json`. Six buttons on the SET row now - check it fits
+  at 390dp. Then SWARM, the row
   under PAD in every mode but GRAIN: VOICES ► to 2 and DETUNE at 15%
   should thicken the loop into a chorus that slowly beats; DETUNE up to
   100% is a quarter tone either way and beats fast; VOICES at 3 or 4 is

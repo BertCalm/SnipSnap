@@ -163,6 +163,12 @@ Java_com_snipsnap_app_NativeSurface_setKeySnap(JNIEnv*, jobject, jlong handle, j
     engine(handle)->setKeySnap(on == JNI_TRUE);
 }
 
+/** ECHO's time in seconds, worked out from the kit's bar on the Kotlin side; anything not positive is the free time (see SurfaceEngine::setEchoTime). */
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_setEchoTime(JNIEnv*, jobject, jlong handle, jfloat seconds) {
+    engine(handle)->setEchoTime(seconds);
+}
+
 /**
  * The modulators' offsets, one per target in `Modulator.Target`'s own
  * ordinal order (SurfaceEngine::kModTargets of them). An array rather

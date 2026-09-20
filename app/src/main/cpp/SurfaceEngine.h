@@ -83,8 +83,9 @@ struct KeySnap {
 
 /**
  * The tactile surface's voice: one looping sample through pitch, a
- * bitcrusher, a drive stage, a state-variable lowpass, a fixed-time echo
- * and a fixed-room spring reverb, every macro fed from the UI through a
+ * bitcrusher, a drive stage, a state-variable lowpass, an echo whose time
+ * is free or a division of the kit's bar (see setEchoTime) and a
+ * fixed-room spring reverb, every macro fed from the UI through a
  * lock-free ring and de-zippered per sample. Oboe owns the thread; this
  * class owns nothing that allocates on it.
  *
@@ -170,6 +171,23 @@ public:
      * touch-down, like the others.
      */
     void setSwarm(const SwarmSettings& settings);
+
+    /** The longest ECHO time a kit can ask for: half a bar at the slowest tempo GROOVE plays (20 BPM), exactly; `EchoTimeTest` in :shell holds every division under it by hand. */
+    static constexpr float kMaxEchoSeconds = 6.0f;
+
+    /**
+     * UI thread. ECHO's delay time in seconds - a division of the kit's
+     * bar, worked out on the Kotlin side (`EchoTime` in :shell) so the
+     * engine never learns a tempo; anything that is not a positive number
+     * is the free time, the fixed 220 ms ECHO always had, and more than
+     * kMaxEchoSeconds is that. The wet MIX stays the `echo` macro, corner-
+     * blended and modulated; the time is never either, because a time
+     * that glides pitch-warbles every repeat. A change lands within a
+     * control interval as a short crossfade from the old tap to the new
+     * (kEchoFadeMs), so a tempo or division change is a clean cut between
+     * two echoes rather than a warble or a click.
+     */
+    void setEchoTime(float seconds);
 
     /**
      * How many things a modulator can move: the seven macros in MacroState
@@ -293,16 +311,27 @@ private:
     float heldCrush_ = 0.0f;
     bool crushRetrigger_ = false;
 
-    // ECHO's delay line: a fixed-length ring buffer, sized to kDelayTimeMs
-    // in the constructor (at the default sampleRate_, so it is never empty
-    // for a caller that renders without ever starting a real stream - see
-    // the constructor's own comment) and again in start() once the device's
-    // real rate is known. Reading and writing through the same rotating
-    // index is the whole delay - the buffer's own length is the time, so
-    // there is no separate "how far back" offset to keep in sync with it.
-    // See renderMono.
+    // ECHO's delay line: a ring buffer sized to kMaxEchoSeconds in the
+    // constructor (at the default sampleRate_, so it is never empty for a
+    // caller that renders without ever starting a real stream - see the
+    // constructor's own comment) and again in start() once the device's
+    // real rate is known. The time is a read tap echoDelayC_ samples
+    // behind the write index (see setEchoTime); echoSeconds_ crosses from
+    // the UI and is copied once per kControlInterval, where a new time
+    // starts a crossfade of kEchoFadeMs from the old tap (echoDelayFrom_)
+    // to the new. See renderMono.
+    static constexpr float kEchoFadeMs = 30.0f;
     std::vector<float> delayBuffer_;
     size_t delayWrite_ = 0;
+    std::atomic<float> echoSeconds_;
+    size_t echoDelayC_ = 1;
+    size_t echoDelayFrom_ = 1;
+    int32_t echoFadeLeft_ = 0;
+    int32_t echoFadeSamples_ = 1;
+    /** How many samples behind the write index [seconds] is at [fs], held to the buffer. */
+    size_t echoDelaySamples(float seconds, float fs) const;
+    /** Sizes and clears the delay line for [fs] and sets the tap for the current time with no fade - the constructor and start() both call it. */
+    void configureEcho(float fs);
 
     // SPRING's fixed room: a Schroeder (1962) network ported straight from
     // synth/Spring.kt's offline design - four parallel combs (mutually

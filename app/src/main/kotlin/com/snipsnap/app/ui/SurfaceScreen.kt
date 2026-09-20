@@ -56,6 +56,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Modulator
@@ -186,6 +187,10 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * LATCH keeps the loop sounding where the finger left it, so one hand can
  * set corners while the other is free; BARS locks a print to a whole
  * number of bars at the kit's tempo, so it drops onto the groove grid.
+ * ECHO on the SET row locks the echo's time to a division of that bar
+ * (`EchoTime` in `:shell` - FREE, a sixteenth, an eighth, the dotted
+ * eighth, a quarter, a half), so the repeats land on the grid too; the
+ * engine only ever gets the seconds, and the wet MIX stays the macro.
  *
  * MOD A/B are two modulators (`Modulator` in `:shell`): each a SHAPE at a
  * tempo-snapped RATE with a DEPTH, aimed at a TARGET - one of the seven
@@ -607,6 +612,7 @@ fun SurfaceScreen(
         engine.setGrain(settings.grain)
         engine.setKeySnap(settings.keySnap)
         engine.setSwarm(settings.swarm)
+        engine.setEchoTime(EchoTime.seconds(settings.echoTime, entry.kit.tempoBpm))
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
@@ -733,6 +739,19 @@ fun SurfaceScreen(
         val next = !settings.keySnap
         engine.setKeySnap(next)
         persist(dir, settings.copy(keySnap = next))
+    }
+
+    // ECHO: the echo's time stepped round EchoTime's divisions - FREE,
+    // then the note values - at the kit's tempo (no tempo runs at the
+    // stand-in the modulators use). Remembered in surface.json, heard
+    // within a control interval as a crossfade between the two times.
+    // Refused while `settings` is still the outgoing kit's, like KEY.
+    fun stepEchoTime() {
+        val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return
+        val next = EchoTime.next(settings.echoTime)
+        engine.setEchoTime(EchoTime.seconds(next, entry?.kit?.tempoBpm))
+        persist(dir, settings.copy(echoTime = next))
     }
 
     // MOD ◄ ►: steps the picked field of the picked modulator - TARGET
@@ -1365,6 +1384,17 @@ fun SurfaceScreen(
                     dimmed = !settings.keySnap,
                     modifier = Modifier.weight(1f).semantics { selected = settings.keySnap },
                 ) { toggleKeySnap() }
+                // ECHO, on the same row for the same reason: the echo's
+                // time held to the kit's bar (see stepEchoTime), lit and
+                // naming the note value while it is, dimmed while free.
+                val echoSynced = settings.echoTime != EchoTime.FREE_INDEX
+                ActionButton(
+                    "ECHO ${EchoTime.label(settings.echoTime)}",
+                    scheme,
+                    enabled = padName != null,
+                    dimmed = !echoSynced,
+                    modifier = Modifier.weight(1.4f).semantics { selected = echoSynced },
+                ) { stepEchoTime() }
             }
 
             Spacer(Modifier.height(6.dp))

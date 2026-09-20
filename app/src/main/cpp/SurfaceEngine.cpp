@@ -15,10 +15,12 @@ namespace snipsnap {
 namespace {
 constexpr float kPi = 3.14159265358979f;
 
-// ECHO's fixed delay line: 220 ms (a short-to-medium slapback-to-echo
+// ECHO's free delay time: 220 ms (a short-to-medium slapback-to-echo
 // range) at 35% feedback (several audible repeats before it fades under
-// the noise floor, not a runaway loop). Only the corner-blended `echo`
-// macro ever changes what you hear of it (the wet mix) - see renderMono.
+// the noise floor, not a runaway loop) - what ECHO always was, and what
+// it is until a kit asks for a division of its bar (see setEchoTime).
+// Only the corner-blended `echo` macro ever changes what you hear of it
+// (the wet mix) - see renderMono.
 constexpr float kDelayTimeMs = 220.0f;
 constexpr float kDelayFeedback = 0.35f;
 
@@ -54,13 +56,15 @@ inline float pitchRatio(float macro) { return std::exp2((clamp01(macro) - 0.5f) 
 SurfaceEngine::SurfaceEngine(int32_t preferredSampleRate)
     : preferredRate_(preferredSampleRate), scratch_(kScratchFrames, 0.0f) {
     // Sized here too, not only in start(), at the member's own default
-    // sampleRate_ (48000) - renderMono indexes delayBuffer_[delayWrite_]
+    // sampleRate_ (48000) - renderMono reads and writes delayBuffer_
     // unconditionally on every sample, so onAudioReady must never see it
-    // empty. start() resizes it again once the device's real rate is
-    // known; nothing here needs to survive that (delayWrite_ is 0 in
-    // both places). The host test suite calls onAudioReady directly and
-    // never start() at all, which is exactly the case this guards.
-    delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kDelayTimeMs * 0.001f * static_cast<float>(sampleRate_)), 1), 0.0f);
+    // empty. start() sizes it again once the device's real rate is
+    // known; nothing here needs to survive that. The host test suite
+    // calls onAudioReady directly and never start() at all, which is
+    // exactly the case this guards. The free time first, so the tap
+    // configureEcho sets is the 220 ms ECHO always had.
+    setEchoTime(0.0f);
+    configureEcho(static_cast<float>(sampleRate_));
     // Same reasoning, same place - see configureSpring's own comment.
     configureSpring(static_cast<float>(sampleRate_));
     // std::atomic's default constructor is trivial in C++17 and does not
@@ -167,9 +171,7 @@ bool SurfaceEngine::start() {
     // Sized to the rate the device actually gave us, not preferredRate_ -
     // resized (and zeroed, so a restart never plays back the previous
     // session's tail) every time start() runs, same as the filter state above.
-    const size_t delaySamples = static_cast<size_t>(kDelayTimeMs * 0.001f * fs);
-    delayBuffer_.assign(std::max<size_t>(delaySamples, 1), 0.0f);
-    delayWrite_ = 0;
+    configureEcho(fs);
     configureSpring(fs);
 
     const oboe::Result started = stream_->requestStart();
@@ -245,6 +247,31 @@ void SurfaceEngine::setSwarm(const SwarmSettings& settings) {
     const int32_t voices = settings.voices < 1 ? 1 : (settings.voices > kMaxSwarm ? kMaxSwarm : settings.voices);
     swarmVoices_.store(voices, std::memory_order_relaxed);
     swarmDetune_.store(control01(settings.detune, 0.0f), std::memory_order_relaxed);
+}
+
+void SurfaceEngine::setEchoTime(float seconds) {
+    // Not a positive number, or past the ceiling: the free time. The
+    // ceiling is not a clamp on purpose - a kit asking for more than the
+    // line holds gets the echo it always had, not a different sync.
+    const bool synced = std::isfinite(seconds) && seconds > 0.0f && seconds <= kMaxEchoSeconds;
+    echoSeconds_.store(synced ? seconds : kDelayTimeMs * 0.001f, std::memory_order_relaxed);
+}
+
+size_t SurfaceEngine::echoDelaySamples(float seconds, float fs) const {
+    // Truncated, not rounded: the free time at 48 kHz is the 10560 samples
+    // the fixed line always was, sample for sample.
+    const size_t n = static_cast<size_t>(seconds * fs);
+    const size_t most = delayBuffer_.empty() ? 1 : delayBuffer_.size() - 1;
+    return n < 1 ? 1 : (n > most ? most : n);
+}
+
+void SurfaceEngine::configureEcho(float fs) {
+    delayBuffer_.assign(std::max<size_t>(static_cast<size_t>(kMaxEchoSeconds * fs) + 1, 2), 0.0f);
+    delayWrite_ = 0;
+    echoDelayC_ = echoDelaySamples(echoSeconds_.load(std::memory_order_relaxed), fs);
+    echoDelayFrom_ = echoDelayC_;
+    echoFadeLeft_ = 0;
+    echoFadeSamples_ = std::max<int32_t>(static_cast<int32_t>(kEchoFadeMs * 0.001f * fs), 1);
 }
 
 void SurfaceEngine::setModulation(const float* offsets, int32_t count) {
@@ -541,6 +568,17 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
                 swarmMult_[v] = std::exp2(cents * spread / 1200.0f);
             }
             swarmGain_ = 1.0f / std::sqrt(static_cast<float>(swarmVoicesC_));
+            // ECHO's time: a new one starts a crossfade from the tap in use
+            // to the new tap (see setEchoTime); one at a time, so a change
+            // that lands mid-fade waits for the next interval.
+            if (echoFadeLeft_ <= 0) {
+                const size_t want = echoDelaySamples(echoSeconds_.load(std::memory_order_relaxed), static_cast<float>(sampleRate_));
+                if (want != echoDelayC_) {
+                    echoDelayFrom_ = echoDelayC_;
+                    echoDelayC_ = want;
+                    echoFadeLeft_ = echoFadeSamples_;
+                }
+            }
         }
         const float pitch = pitch_.next();
         cutoff_.next();
@@ -661,20 +699,29 @@ void SurfaceEngine::renderMono(float* out, int32_t numFrames) {
         ic1eq_ = 2.0f * v1 - ic1eq_;
         ic2eq_ = 2.0f * v2 - ic2eq_;
 
-        // ECHO: a fixed-length ring buffer read and written through the
-        // same rotating index, delayBuffer_.size() samples apart - that
-        // length *is* the delay time, so there is no separate offset to
-        // keep in sync with it (see delayBuffer_'s own declaration). Fed
-        // with `gated`, not v2 directly: silence must stay silence going
-        // in, so a released touch lets an already-ringing tail decay on
-        // its own via kDelayFeedback rather than the loop echoing into
-        // itself for ever while nobody is touching the pad. `echo` is
-        // only ever the wet MIX read out here, never the time or
-        // feedback - see kDelayTimeMs/kDelayFeedback's own comment.
+        // ECHO: a ring buffer written at delayWrite_ and read at the tap
+        // echoDelayC_ samples behind it - that distance *is* the delay
+        // time (see delayBuffer_'s own declaration and setEchoTime).
+        // While a time change is in flight the old tap fades out as the
+        // new fades in over echoFadeSamples_, and the mix of the two is
+        // what feeds back, so the line never hears a step. Fed with
+        // `gated`, not v2 directly: silence must stay silence going in,
+        // so a released touch lets an already-ringing tail decay on its
+        // own via kDelayFeedback rather than the loop echoing into itself
+        // for ever while nobody is touching the pad. `echo` is only ever
+        // the wet MIX read out here, never the time or feedback - see
+        // kDelayTimeMs/kDelayFeedback's own comment.
         const float gated = v2 * gain;
-        const float wet = delayBuffer_[delayWrite_];
+        const size_t ring = delayBuffer_.size();
+        float wet = delayBuffer_[(delayWrite_ + ring - echoDelayC_) % ring];
+        if (echoFadeLeft_ > 0) {
+            const float from = delayBuffer_[(delayWrite_ + ring - echoDelayFrom_) % ring];
+            const float mix = static_cast<float>(echoFadeLeft_) / static_cast<float>(echoFadeSamples_);
+            wet = wet + (from - wet) * mix;
+            --echoFadeLeft_;
+        }
         delayBuffer_[delayWrite_] = gated + wet * kDelayFeedback;
-        delayWrite_ = (delayWrite_ + 1) % delayBuffer_.size();
+        delayWrite_ = (delayWrite_ + 1) % ring;
 
         // SPRING: SIZE and TONE are fixed (see kSpringCombMs's own
         // comment), so only the wet MIX - this macro - is ever
