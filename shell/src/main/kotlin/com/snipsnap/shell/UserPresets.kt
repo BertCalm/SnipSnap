@@ -32,6 +32,15 @@ import java.util.Locale
  * preset worth every player having is pasted into its engine's table by
  * hand ([rosterLine] renders the line), where the spread, blocklist and
  * identity tests judge it. SEND TO BENCH carries the file and the lines.
+ *
+ * FORGET follows the app's one rule for a delete: into the bin, not gone.
+ * A forgotten preset moves to a `binned` list in the same file ([forget]),
+ * waits [BIN_DAYS] days ([Binned.daysLeft], [sweepBin]) and comes back out
+ * under its own name, or a fresh one if that name was taken meanwhile
+ * ([unforget]). There is no EMPTY THE BIN NOW here, unlike the bins that
+ * hold WAVs and kits: a preset is a few hundred bytes, so nothing is
+ * bought by emptying early, and every site that cannot be undone is one
+ * `ReversalTest` counts as evidence for an undo stack.
  */
 object UserPresets {
 
@@ -46,11 +55,35 @@ object UserPresets {
     /** Where the roster tables live, relative to the repo root: `<Engine>Presets.kt`, one per engine. */
     const val ROSTER_DIR = "synth/src/main/kotlin/com/snipsnap/synth/"
 
+    /**
+     * How long the bin keeps a forgotten preset: the promise `Reversal.BIN`
+     * makes for every bin in the app, kept as this store's own constant the
+     * way `Rooms.BIN_DAYS` and `SnipStore.BIN_DAYS` are, and pinned to that
+     * promise by `ReversalTest`.
+     */
+    const val BIN_DAYS = 30
+
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
     /** A saved preset: the patch, and when it was saved. */
     data class Saved(val patch: Patch, val savedAt: Long) {
         val engine: String get() = patch.engine
         val voice: String get() = patch.voiceName
         val name: String get() = patch.name
+    }
+
+    /** A preset in the bin, and when it went there. */
+    data class Binned(val saved: Saved, val binnedAt: Long) {
+        /**
+         * Days left before [sweepBin] takes it, rounded up so the readout
+         * agrees with the sweep: a partial day left still reads 1, and 0
+         * only at the boundary where the sweep goes — `Rooms.Binned`'s own
+         * rule. Never below zero.
+         */
+        fun daysLeft(nowMillis: Long, keepDays: Int = BIN_DAYS): Int {
+            val left = (binnedAt + keepDays * DAY_MS - nowMillis).coerceAtLeast(0L)
+            return ((left + DAY_MS - 1) / DAY_MS).toInt()
+        }
     }
 
     /** What a typed name comes to, before it is saved. */
@@ -133,9 +166,82 @@ object UserPresets {
         val entry = Saved(patch, nowMillis)
         val same = { s: Saved -> s.engine == patch.engine && s.voice == patch.voiceName && s.name == name }
         val kept = if (store.saved.any(same)) store.saved.map { if (same(it)) entry else it } else store.saved + entry
-        target.parentFile?.mkdirs()
-        AtomicFile.writeText(target, Json.write(toJson(kept, store.unread)))
+        write(target, store.copy(saved = kept))
         return entry
+    }
+
+    // ---- the bin ----
+
+    /** Every preset in the bin, the most recently forgotten first. */
+    fun bin(shelfRoot: File): List<Binned> = readStore(file(shelfRoot)).binned.sortedByDescending { it.binnedAt }
+
+    /**
+     * FORGET → BIN: the preset on [engine]/[voice] named [name] moves from
+     * the strip to the bin, stamped with when; null when nothing by that
+     * name is there to forget (a row that outran the tap), and the file is
+     * untouched.
+     */
+    fun forget(shelfRoot: File, engine: String, voice: String, name: String, nowMillis: Long): Binned? {
+        val target = file(shelfRoot)
+        val store = readStore(target)
+        val gone = store.saved.firstOrNull { it.engine == engine && it.voice == voice && it.name == name } ?: return null
+        val binned = Binned(gone, nowMillis)
+        write(target, store.copy(saved = store.saved - gone, binned = store.binned + binned))
+        return binned
+    }
+
+    /**
+     * RESTORE: [binned] back onto the strip, at the end of it, under its
+     * own name — or, when that name was saved again meanwhile, under the
+     * first `NAME 2`, `NAME 3`… nothing on that voice holds, trimmed to
+     * fit [MAX_NAME]; the returned [Saved] says which. Null when it was
+     * already gone from the bin.
+     */
+    fun unforget(shelfRoot: File, binned: Binned): Saved? {
+        val target = file(shelfRoot)
+        val store = readStore(target)
+        if (binned !in store.binned) return null
+        val was = binned.saved
+        val taken = { n: String -> store.saved.any { it.engine == was.engine && it.voice == was.voice && it.name == n } }
+        val name = freshName(was.name, taken)
+        val back = if (name == was.name) was else Saved(renamed(was.patch, name), was.savedAt)
+        write(target, store.copy(saved = store.saved + back, binned = store.binned - binned))
+        return back
+    }
+
+    /** Empty the bin of presets forgotten more than [keepDays] ago; returns how many went. */
+    fun sweepBin(shelfRoot: File, nowMillis: Long = System.currentTimeMillis(), keepDays: Int = BIN_DAYS): Int {
+        val target = file(shelfRoot)
+        val store = readStore(target)
+        // At the boundary the preset goes: daysLeft reads 0 and the sweep agrees.
+        val gone = store.binned.filter { nowMillis - it.binnedAt >= keepDays * DAY_MS }
+        if (gone.isNotEmpty()) write(target, store.copy(binned = store.binned - gone.toSet()))
+        return gone.size
+    }
+
+    /**
+     * [base], or the first of `base 2`, `base 3`… that [taken] says nothing
+     * holds — `Names.freshStem`'s rule, with one addition: the result must
+     * fit [MAX_NAME], so a long base is trimmed to leave room for its
+     * number rather than refused.
+     */
+    fun freshName(base: String, taken: (String) -> Boolean): String {
+        if (!taken(base)) return base
+        var n = 2
+        while (true) {
+            val suffix = " $n"
+            val candidate = base.take(MAX_NAME - suffix.length).trimEnd() + suffix
+            if (!taken(candidate)) return candidate
+            n++
+        }
+    }
+
+    /** [patch] under another name: the same engine, voice and macros, through the patch's own JSON so every engine's type comes back as itself. */
+    private fun renamed(patch: Patch, name: String): Patch {
+        val json = patch.toJsonValue()
+        val entries = LinkedHashMap(json.entries)
+        entries["name"] = JsonValue.Str(name)
+        return Patches.fromJsonValue(JsonValue.Obj(entries))
     }
 
     // ---- the desk: promotion into the roster ----
@@ -170,11 +276,15 @@ object UserPresets {
 
     // ---- the file ----
 
-    /** What the file holds: the entries this build reads, and the raw ones it does not, kept for the next write. */
-    internal data class Store(val saved: List<Saved>, val unread: List<JsonValue>)
+    /**
+     * What the file holds: the entries this build reads, the bin, and the
+     * raw entries it does not read, kept for the next write. A file from
+     * before the bin existed has no `binned` key and reads as an empty bin.
+     */
+    internal data class Store(val saved: List<Saved>, val binned: List<Binned>, val unread: List<JsonValue>)
 
     internal fun readStore(file: File): Store {
-        if (!file.isFile) return Store(emptyList(), emptyList())
+        if (!file.isFile) return Store(emptyList(), emptyList(), emptyList())
         val root = Json.parse(file.readText(Charsets.UTF_8)).obj()
         val version = root["version"]?.int() ?: throw JsonException("$FILE_NAME has no version")
         if (version != VERSION) throw JsonException("unsupported $FILE_NAME version $version")
@@ -183,30 +293,49 @@ object UserPresets {
         val unread = mutableListOf<JsonValue>()
         for (item in items) {
             try {
-                val o = item.obj()
-                val patch = Patches.fromJsonValue(o["patch"] ?: throw JsonException("entry has no patch"))
-                val at = o["savedAt"]?.long() ?: throw JsonException("entry has no savedAt")
-                saved += Saved(patch, at)
+                saved += readSaved(item.obj())
             } catch (e: Exception) {
                 unread += item
             }
         }
-        return Store(saved, unread)
+        val binned = (root["binned"]?.arr() ?: emptyList()).mapNotNull { item ->
+            // A binned entry this build cannot read is dropped rather than
+            // carried: it is already on its way out, and the sweep would
+            // take it anyway.
+            runCatching {
+                val o = item.obj()
+                Binned(readSaved(o), o["binnedAt"]?.long() ?: throw JsonException("entry has no binnedAt"))
+            }.getOrNull()
+        }
+        return Store(saved, binned, unread)
     }
 
-    private fun toJson(saved: List<Saved>, unread: List<JsonValue>): JsonValue.Obj = JsonValue.Obj(
-        linkedMapOf(
+    private fun readSaved(o: Map<String, JsonValue>): Saved {
+        val patch = Patches.fromJsonValue(o["patch"] ?: throw JsonException("entry has no patch"))
+        val at = o["savedAt"]?.long() ?: throw JsonException("entry has no savedAt")
+        return Saved(patch, at)
+    }
+
+    private fun write(target: File, store: Store) {
+        target.parentFile?.mkdirs()
+        AtomicFile.writeText(target, Json.write(toJson(store)))
+    }
+
+    private fun entry(s: Saved, binnedAt: Long? = null): JsonValue.Obj {
+        val m = linkedMapOf<String, JsonValue>("savedAt" to JsonValue.Num(s.savedAt.toDouble()))
+        if (binnedAt != null) m["binnedAt"] = JsonValue.Num(binnedAt.toDouble())
+        m["patch"] = s.patch.toJsonValue()
+        return JsonValue.Obj(m)
+    }
+
+    private fun toJson(store: Store): JsonValue.Obj {
+        val root = linkedMapOf<String, JsonValue>(
             "version" to JsonValue.Num(VERSION.toDouble()),
-            "presets" to JsonValue.Arr(
-                saved.map { s ->
-                    JsonValue.Obj(
-                        linkedMapOf(
-                            "savedAt" to JsonValue.Num(s.savedAt.toDouble()),
-                            "patch" to s.patch.toJsonValue(),
-                        ),
-                    )
-                } + unread,
-            ),
-        ),
-    )
+            "presets" to JsonValue.Arr(store.saved.map { entry(it) } + store.unread),
+        )
+        // Written only when it holds something, so a shelf that never
+        // forgot a preset keeps the file it always had.
+        if (store.binned.isNotEmpty()) root["binned"] = JsonValue.Arr(store.binned.map { entry(it.saved, it.binnedAt) })
+        return JsonValue.Obj(root)
+    }
 }

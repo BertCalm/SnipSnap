@@ -470,6 +470,11 @@ preset as the `p(...)` line its engine's table is written in, exact
 floats and all, and the six test classes judge it there. A promoted
 preset either replaces a factory row or raises the count law on purpose.
 
+A held chip forgets a preset into a bin in the same file, thirty days
+like every bin in the app, with DELETED PRESETS under the strips as the
+door back; there is no EMPTY THE BIN NOW, since a preset costs nothing
+to keep.
+
 # Non-goals
 
 - **No new engines.** Eight is plenty; thirty voices with no presets is the

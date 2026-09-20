@@ -131,6 +131,7 @@ import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
+import com.snipsnap.shell.UserPresets
 import com.snipsnap.shell.Workshop
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
@@ -846,6 +847,9 @@ fun App(shelf: KitShelf) {
         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
         // The rooms' bin empties itself of what has slept past its days.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
+        // Same promise, for forgotten presets (docs/WORKSHOP.md, WS5's
+        // follow-up): the one file at the shelf root sweeps its own bin.
+        withContext(Dispatchers.IO) { runCatching { UserPresets.sweepBin(shelf.root) } }
         // Same promise, for deleted kits (Task 4): the shelf's own bin
         // empties itself of whatever DELETE put there more than 30 days ago.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepDeletedKits() } }

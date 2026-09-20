@@ -460,6 +460,20 @@ logcat tag to grab when something is wrong.
   laptop the zip holds `presets.json` and a manifest ending in a
   `p(ThumpVoice.KICK, "MY KICK", …)` line. Back on an open slip closes
   it and saves nothing.
+- **FORGET a preset** (`docs/WORKSHOP.md`, WS5's follow-up): on SYNTH,
+  THUMP · KICK with MY KICK under YOURS, hold the chip: a slip asks
+  FORGET MY KICK? and names DELETED PRESETS and 30 days, with CANCEL and
+  a red FORGET → BIN. CANCEL, then hold again and FORGET → BIN: the toast
+  reads MY KICK IS OFF THE STRIP, the YOURS strip is gone (it was the
+  only one), and a DELETED PRESETS ▸ 1 WAITING row sits under the
+  factory strip. A tap on a YOURS chip must still load it, never forget
+  it. Save a new MY KICK, then open DELETED PRESETS: one row, THUMP ·
+  KICK · TODAY · 30D LEFT, RESTORE. Tap RESTORE: the toast says MY KICK 2
+  IS BACK UNDER YOURS, the row list reads NOTHING DELETED, ◄ SYNTH
+  closes it, the door row is gone, and YOURS holds MY KICK and MY KICK 2
+  with the second sounding like the forgotten one. Kill and relaunch:
+  both are still there. Forget one, relaunch: it is still waiting, with
+  its days counting down.
 
 ## Fonts / licensing
 

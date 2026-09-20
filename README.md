@@ -425,9 +425,11 @@ UI layer. What lives here:
 - **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
   the one tool on that list that is for every player): the player's own
   presets in `presets.json` beside the kits, the name rules (fourteen
-  letters, never a factory name, a saved name replaces in place), and the
-  roster line that promotes one into `:synth`'s tables by hand — a code
-  change the spread, blocklist and identity tests still judge.
+  letters, never a factory name, a saved name replaces in place), the bin
+  a held chip forgets one into (the same thirty days every bin promises,
+  DELETED PRESETS on SYNTH as the way back), and the roster line that
+  promotes one into `:synth`'s tables by hand — a code change the spread,
+  blocklist and identity tests still judge.
 
 ### `:loop` — ORBIT
 

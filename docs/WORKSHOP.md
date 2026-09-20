@@ -426,15 +426,32 @@ rather than erase what it could not read. The exit test holds in
 `UserPresetsTest`: a saved preset read back after a restart is equal, and
 renders the same bytes.
 
-**What is not built, and why.** There is no FORGET. The app's rule for a
-delete is into the bin, not gone, and a bin needs a door to come back
-out of; a preset bin with no door would be a promise without a way to
-keep it (law 3), and REPLACE covers the mistake a single tester makes
-most — a sound saved a step too early. FORGET, its bin and its door are
-one piece, listed under Open. BACKUP does not carry the file either: it
-packs kits as `.xpn` archives, and a preset that was sent to a pad is in
-that pad's recipe already; the named chips are not. That is also under
-Open.
+**FORGET → BIN, and the way back.** Hold one of your chips and a slip
+asks first — *FORGET MY KICK? IT WAITS IN DELETED PRESETS FOR 30 DAYS.* —
+with CANCEL beside FORGET → BIN in the bin's red, the dress every delete
+in the app wears. The preset leaves the strip for a `binned` list in the
+same file, stamped with when: *MY KICK IS OFF THE STRIP. 30 DAYS TO
+CHANGE YOUR MIND.* — the same sentence every bin tells, pinned to the
+one promise by `ReversalTest`, and the same sweep on launch. The door
+back is **DELETED PRESETS ▸ N WAITING** under the strips, shown only
+while the bin holds something, the way the shelf's DELETED KITS row is:
+one row per forgotten preset with its engine, voice, when it went and
+the days it has left, and RESTORE. A restored preset lands at the end of
+YOURS under its own name, or — if that name was saved again meanwhile —
+under the first `MY KICK 2` nothing holds, trimmed to fit the fourteen
+letters; the toast says which. The save slip's note says how a preset
+leaves, so the moment a sound is kept is the moment you learn to let it
+go.
+
+There is no EMPTY THE BIN NOW here, unlike the bins that hold WAVs and
+kits. A preset is a few hundred bytes, so nothing is bought by emptying
+early, and every site that cannot be undone is one `ReversalTest` counts
+as evidence for an undo stack; this bin adds none. The sweep takes each
+row when its days run out.
+
+**What is not built.** BACKUP does not carry the file: it packs kits as
+`.xpn` archives, and a preset that was sent to a pad is in that pad's
+recipe already; the named chips are not. That is under Open.
 
 **Promotion stays a code change.** A preset worth every player having is
 pasted into its engine's table by hand, where `ThumpPresetsTest` and its
@@ -466,11 +483,13 @@ with nothing but a preset still sends. A presets file the build cannot
 read is left out of the zip rather than handed out as if it were read.
 
 Code: `UserPresets` in `:shell` (`Saved`, `Check`, `normalize`, `check`,
-`suggest`, `save`, `read`, `rosterLine`, `renderAll`), the fourth file
+`suggest`, `save`, `read`, `rosterLine`, `renderAll`; the bin's `Binned`,
+`forget`, `unforget`, `bin`, `sweepBin`, `freshName`), the fourth file
 and the manifest lines in `BenchExport`, the copy in `Copy`, held by
-`UserPresetsTest` and `BenchExportTest`; SAVE PRESET ▸, `PresetNameDialog`
-and the YOURS strip in `SynthScreen`, the shelf root and the
-`sendToBench` change in `App.kt`.
+`UserPresetsTest`, `BenchExportTest` and `ReversalTest`'s bin pin; SAVE
+PRESET ▸, `PresetNameDialog`, the YOURS strip and its hold,
+`PresetForgetDialog` and `DeletedPresetsOverlay` in `SynthScreen`, the
+shelf root, the `sendToBench` change and the launch sweep in `App.kt`.
 
 ## The list — next tools, in value order
 
@@ -547,14 +566,15 @@ business.
 - **A saved name replaces in place; a factory name is refused.** One
   chip, one meaning; and iterating on a sound is save, wreck, save again
   under the same name, not a trail of `KICK 1`…`KICK 9`.
+- **A forgotten preset goes to the bin, and the bin's door is on SYNTH.**
+  The same file, the same thirty days, the same sweep; DELETED PRESETS
+  sits under the strips rather than inside DELETED KITS, because a
+  preset is SYNTH's and the door belongs where the thing was lost. No
+  EMPTY THE BIN NOW: nothing to gain, and one fewer site with no way
+  back.
 
 ## Open
 
-- **FORGET for a preset**, with its bin and the door to bring one back
-  out — one piece, because a bin with no door is a promise without a way
-  to keep it. Until then REPLACE is the way to fix a preset saved too
-  early. Where the door goes (DELETED KITS growing a PRESETS section, or
-  a chip on the YOURS strip) is the design question.
 - **BACKUP carrying `presets.json`.** The restore side has to merge it
   into a shelf that may hold presets of its own, which is why it is not
   a one-line addition to the zip. Until then a preset sent to a pad is
