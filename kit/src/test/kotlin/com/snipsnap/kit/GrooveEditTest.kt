@@ -309,4 +309,120 @@ class GrooveEditTest {
         assertEquals(4, GrooveVariations.standard(empty).size)
     }
 
+    // ---------- more than one program of your own ----------
+
+    @Test
+    fun `the first slot is still the name every kit on disk already carries`() {
+        // The migration story, as a test. `" E"` is a marker in
+        // groove.json that ConventionTest and Personality both record as
+        // not renameable without rewriting every kit already saved. So
+        // slot one keeps it and the numbering starts at the second.
+        assertEquals("Break Groove E", GrooveEdit.progEName("Break Groove"))
+        assertEquals("Break Groove E", GrooveEdit.progEName("Break Groove", 0))
+        assertEquals("Break Groove E2", GrooveEdit.progEName("Break Groove", 1))
+
+        val onDisk = Mpc3Clip("Break Groove E", 1, base.notes)
+        assertTrue(GrooveEdit.isProgE(onDisk), "a kit saved before numbering is still found")
+        assertEquals(0, GrooveEdit.progIndexOf(onDisk), "and it is program one, not program none")
+    }
+
+    @Test
+    fun `a clip that merely contains the letter is not claimed`() {
+        // The suffix is anchored: " E" then digits then the end. Without
+        // that, a capture called "Kit Everything" would be read as a user
+        // program and the arranger would derive the song from it.
+        assertFalse(GrooveEdit.isProgE(Mpc3Clip("Kit Everything", 1, base.notes)))
+        assertNull(GrooveEdit.progIndexOf(Mpc3Clip("Kit Everything", 1, base.notes)))
+        assertFalse(GrooveEdit.isProgE(Mpc3Clip("Break Groove", 1, base.notes)))
+    }
+
+    @Test
+    fun `forkNew adds one without disturbing the programs already there`() {
+        val dir = dirWith(base)
+        val first = GrooveEdit.fork(dir, base)
+        val second = GrooveEdit.forkNew(dir, base)
+
+        assertEquals("Break Groove E", first.name)
+        assertEquals("Break Groove E2", second?.name)
+        assertEquals(listOf("Break Groove E", "Break Groove E2"), GrooveEdit.loadAll(dir).map { it.name })
+        assertEquals(first.name, GrooveEdit.load(dir)?.name, "`load` still means the first one")
+    }
+
+    @Test
+    fun `saving one program does not delete the others`() {
+        // The defect this whole change had to avoid. `save` used to filter
+        // every user program out and append one, which was correct while
+        // exactly one could exist and is data loss the moment two can.
+        val dir = dirWith(base)
+        GrooveEdit.fork(dir, base)
+        val second = GrooveEdit.forkNew(dir, base)!!
+
+        val edited = GrooveEdit.toggleStep(second, GrooveEdit.Lane.KICK, 5)
+        GrooveEdit.save(dir, edited)
+
+        val all = GrooveEdit.loadAll(dir)
+        assertEquals(listOf("Break Groove E", "Break Groove E2"), all.map { it.name }, "both survive")
+        assertEquals(edited.notes, all[1].notes, "and the edit landed on the one being edited")
+        assertTrue(all[0].notes.isNotEmpty(), "the first is untouched")
+    }
+
+    @Test
+    fun `loadAll is in slot order however the sidecar is arranged`() {
+        // A caller that says "your second program" has to mean the same
+        // clip whatever order the last save happened to leave behind.
+        val dir = dirWith(
+            Mpc3Clip("Break Groove E3", 1, base.notes),
+            base,
+            Mpc3Clip("Break Groove E", 1, base.notes),
+            Mpc3Clip("Break Groove E2", 1, base.notes),
+        )
+        assertEquals(
+            listOf("Break Groove E", "Break Groove E2", "Break Groove E3"),
+            GrooveEdit.loadAll(dir).map { it.name },
+        )
+    }
+
+    @Test
+    fun `a discarded slot is reused, and the ones left keep their numbers`() {
+        val dir = dirWith(base)
+        GrooveEdit.fork(dir, base)
+        GrooveEdit.forkNew(dir, base)
+        GrooveEdit.forkNew(dir, base)
+        assertEquals(3, GrooveEdit.loadAll(dir).size)
+
+        // Drop the middle one. The third does NOT renumber itself down —
+        // a program you can point at should not move because a different
+        // one went away.
+        assertTrue(GrooveEdit.deleteProgE(dir) { it == 1 })
+        assertEquals(listOf("Break Groove E", "Break Groove E3"), GrooveEdit.loadAll(dir).map { it.name })
+        assertEquals(1, GrooveEdit.freeSlot(dir), "the hole is what the next fork fills")
+
+        GrooveEdit.forkNew(dir, base)
+        assertEquals(
+            listOf("Break Groove E", "Break Groove E2", "Break Groove E3"),
+            GrooveEdit.loadAll(dir).map { it.name },
+        )
+    }
+
+    @Test
+    fun `the cap refuses rather than overflowing`() {
+        val dir = dirWith(base)
+        repeat(GrooveEdit.MAX_USER_PROGRAMS) { assertTrue(GrooveEdit.forkNew(dir, base) != null, "slot $it") }
+        assertEquals(GrooveEdit.MAX_USER_PROGRAMS, GrooveEdit.loadAll(dir).size)
+        assertNull(GrooveEdit.freeSlot(dir))
+        assertNull(GrooveEdit.forkNew(dir, base), "a full kit says no rather than writing a ninth")
+    }
+
+    @Test
+    fun `every program is named after the take, whichever one was forked from`() {
+        // Forking from your own third program still yields a name derived
+        // from the capture, so the numbering cannot compound into
+        // "Break Groove E3 E4".
+        val dir = dirWith(base)
+        GrooveEdit.fork(dir, base)
+        val third = GrooveEdit.forkNew(dir, GrooveEdit.loadAll(dir).first())!!
+        assertEquals("Break Groove E2", third.name)
+        assertTrue(GrooveEdit.loadAll(dir).all { it.name.startsWith("Break Groove E") })
+    }
+
 }

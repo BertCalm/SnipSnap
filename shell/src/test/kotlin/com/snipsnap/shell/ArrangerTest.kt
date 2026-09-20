@@ -162,6 +162,47 @@ class ArrangerTest {
     }
 
     @Test
+    fun `more than one program of your own chains into the song, in slot order`() {
+        // The chaining half of what a wall of pattern buttons is for.
+        val m = model("YoursChain")
+        val one = yoursClip()
+        val two = Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 1), 1, yoursClip().notes.drop(1))
+        val three = Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 2), 1, yoursClip().notes.take(2))
+        // Deliberately stored out of order: slot order is what decides.
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), three, one, two))
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals(
+            listOf("intro", "theme", "variation", "yours 2", "yours 3", "the turn", "reprise", "outro"),
+            plan.sections.map { it.name },
+            "they follow the variation rather than scattering through the structure",
+        )
+        assertEquals(one.notes, plan.sections[2].clip.notes)
+        assertEquals(two.notes, plan.sections[3].clip.notes)
+        assertEquals(three.notes, plan.sections[4].clip.notes)
+        assertTrue(plan.sections.all { it.reason.isNotBlank() }, "every section still explains itself")
+    }
+
+    @Test
+    fun `an empty program is skipped without shifting the ones after it`() {
+        val m = model("YoursGap")
+        val one = yoursClip()
+        val three = Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 2), 1, yoursClip().notes.take(2))
+        GrooveStore.save(
+            m.kitDir,
+            listOf(grooveClip(), one, Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 1), 1, emptyList()), three),
+        )
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals(
+            listOf("intro", "theme", "variation", "yours 2", "the turn", "reprise", "outro"),
+            plan.sections.map { it.name },
+            "the silent one is not a section",
+        )
+        assertEquals(three.notes, plan.sections[3].clip.notes, "and the one after it still plays")
+    }
+
+    @Test
     fun `the user's program outranks the measured ghost rule`() {
         // The dynamic fixture would pick `ghosted` on its own measurement.
         // A hand-edit is a variation somebody actually made, so it wins.

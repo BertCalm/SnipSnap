@@ -25,12 +25,22 @@ import java.io.File
  *
  * Every section's clip is derived fresh from the stored base groove so
  * the plan never depends on what happened to be saved — **with one
- * exception, and it is the point of the exception**: when the kit has a
- * user program (`GrooveEdit`'s PROG E, the one hand-edited fork), the
- * variation section plays that instead of a derived one. Until it did,
- * a pattern someone had step-edited by hand could not appear in a song
- * at all; SONG ▸ composed only from what the app had generated, which
- * made the one screen where the user writes something a dead end.
+ * exception, and it is the point of the exception**: the user's own
+ * programs (`GrooveEdit`'s hand-edited forks) play as themselves. The
+ * first takes the variation section; any others follow it, one section
+ * each, in slot order:
+ *
+ * ```
+ * intro → theme → variation (yours 1) → yours 2 → yours 3 → the turn →
+ * reprise → outro
+ * ```
+ *
+ * Until they did, a pattern someone had step-edited by hand could not
+ * appear in a song at all; SONG ▸ composed only from what the app had
+ * generated, which made the one screen where the user writes something
+ * a dead end. Filling several patterns and playing them in a row is the
+ * other half of what a wall of pattern buttons is for, and this is
+ * where that happens.
  *
  * Read here rather than passed in, from the same [kitDir] the base
  * comes from, so the phone and the CLI cannot disagree about whether a
@@ -99,10 +109,13 @@ object Arranger {
             ?: throw IllegalArgumentException(
                 "no groove to arrange - chop with --groove, or import a .mid",
             )
-        // The user's own program, when this kit has one. Not derived and
-        // never regenerated: it is whatever they last left in the step
-        // editor.
-        val yours = stored.firstOrNull { GrooveEdit.isProgE(it) }?.takeIf { it.notes.isNotEmpty() }
+        // The user's own programs, in slot order. Not derived and never
+        // regenerated: whatever they last left in the step editor. The
+        // note-less ones are dropped rather than played —
+        // `GrooveEdit.startEmpty` forks an empty program whenever GROOVE
+        // opens on a kit that has recorded nothing, so that is the common
+        // state, and a silent section is not a section.
+        val yours = GrooveEdit.loadAll(kitDir).filter { it.notes.isNotEmpty() }
         // A stored groove with no notes is a real state, not a corrupt
         // one: GrooveEdit.startEmpty writes exactly this when GROOVE opens
         // on a kit that has recorded nothing yet. ORBIT used to be able to
@@ -146,7 +159,7 @@ object Arranger {
         } catch (e: IllegalArgumentException) {
             null
         }
-        val variation = yours ?: if (preferGhosts && ghosted != null) ghosted else tight
+        val variation = yours.firstOrNull() ?: if (preferGhosts && ghosted != null) ghosted else tight
         val variationReason = when {
             // Ahead of the measured rules below, and the only thing that
             // outranks them: the variation section is where the song says
@@ -159,7 +172,7 @@ object Arranger {
             // for it on screen, for the same reason: these steps are already
             // where somebody put them, and leaning on them would move hits
             // that were placed by hand.
-            yours != null -> "yours — the program you stepped in, exactly as you left it"
+            yours.isNotEmpty() -> "yours — the program you stepped in, exactly as you left it"
             preferGhosts && ghosted != null ->
                 "ghosted — dynamic range %.1fx ≥ %.0fx threshold".format(java.util.Locale.ROOT, dynamicRange, VARIATION_GHOST_DYNAMIC_RANGE)
             preferGhosts ->
@@ -179,6 +192,21 @@ object Arranger {
             add(Section("intro", sparse, repeats(sparse, INTRO_BARS), "sparse — only the hits at or above the base groove's median velocity"))
             add(Section("theme", captured, repeats(captured, BODY_BARS), "captured — the break exactly as played"))
             add(Section("variation", variation, repeats(variation, BODY_BARS), variationReason))
+            // Your other programs, each its own section, in slot order and
+            // straight after the first. This is the chaining half of what a
+            // wall of pattern buttons is for: filling several and playing
+            // them in a row. They sit together rather than being scattered
+            // through the structure because they are the part of the song
+            // somebody wrote, and a song reads better when that part is
+            // continuous than when the app interleaves itself into it.
+            for ((i, extra) in yours.drop(1).withIndex()) {
+                add(
+                    Section(
+                        "yours ${i + 2}", extra, repeats(extra, BODY_BARS),
+                        "yours — your program ${i + 2}, exactly as you left it",
+                    ),
+                )
+            }
             turn?.let { add(Section("the turn", it, repeats(it, BODY_BARS), "fill — the last bar of every four rolls into the turn")) }
             add(Section("reprise", captured, repeats(captured, BODY_BARS), "captured — the theme repeats"))
             add(Section("outro", half, repeats(half, OUTRO_BARS), "half — the same feel, stretched to half time"))

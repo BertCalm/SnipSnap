@@ -93,11 +93,63 @@ object GrooveEdit {
     /** The naming convention that makes E findable among stored clips. */
     const val NAME_SUFFIX = " E"
 
-    /** PROG E's name, derived from the captured clip's own name. */
-    fun progEName(baseName: String): String = "$baseName$NAME_SUFFIX"
+    /**
+     * How many user programs one kit can hold.
+     *
+     * A cap rather than no limit because the screen reaches them by
+     * cycling one segment: the number of taps to get somewhere IS the
+     * count, so an unbounded list is a control that gets worse the more
+     * you use it. Eight is half a Pocket Operator's sixteen and well past
+     * what the ARRANGE grammar can place — it is a number to raise when
+     * something actually presses on it, not a law.
+     */
+    const val MAX_USER_PROGRAMS = 8
 
-    /** Whether [clip] is (named as) PROG E. */
-    fun isProgE(clip: Mpc3Clip): Boolean = clip.name.endsWith(NAME_SUFFIX)
+    /**
+     * The name of user program [index] (0-based), derived from the
+     * captured clip's own name.
+     *
+     * **Slot 0 is `"<base> E"`, exactly as it always was**, and the rest
+     * are `"<base> E2"`, `"<base> E3"` and so on. That asymmetry is
+     * deliberate and is the whole migration story: `ConventionTest` and
+     * `Personality` both already record that `" E"` is a marker in
+     * `groove.json` rather than a name anybody reads, and "not renameable
+     * without migrating every kit already on disk". So it is not renamed.
+     * Every kit that already carries one keeps it, and it is user program
+     * one; nothing has to be rewritten on first read.
+     *
+     * The number the screen shows is [index] + 1, and is not this. What a
+     * program is called on disk and what it is called in the hand have
+     * been separate since J18 — that is why the screen could be renamed to
+     * YOURS without touching a stored clip.
+     */
+    fun progEName(baseName: String, index: Int = 0): String {
+        require(index in 0 until MAX_USER_PROGRAMS) { "user program index out of range: $index" }
+        return if (index == 0) "$baseName$NAME_SUFFIX" else "$baseName$NAME_SUFFIX${index + 1}"
+    }
+
+    /**
+     * `" E"` at the end, optionally carrying a slot number.
+     *
+     * Anchored at the end so a clip merely containing the letter — a
+     * capture named "Kit Everything" — is not claimed: after `" E"` there
+     * may be digits and then nothing else.
+     */
+    private val E_SUFFIX = Regex(""" E\d*$""")
+
+    /** Whether [clip] is (named as) one of the user's own programs. */
+    fun isProgE(clip: Mpc3Clip): Boolean = E_SUFFIX.containsMatchIn(clip.name)
+
+    /**
+     * Which slot [clip] is, 0-based, or null when it is not a user
+     * program at all. `"<base> E"` is 0 — the bare suffix predates the
+     * numbering and means slot one, not slot none.
+     */
+    fun progIndexOf(clip: Mpc3Clip): Int? {
+        val match = E_SUFFIX.find(clip.name) ?: return null
+        val digits = match.value.removePrefix(NAME_SUFFIX)
+        return if (digits.isEmpty()) 0 else digits.toInt() - 1
+    }
 
     /**
      * Clone [source]'s notes, snapped to the 16th grid — the fork's core
@@ -153,27 +205,59 @@ object GrooveEdit {
     fun startEmpty(kitDir: File, kitName: String, bars: Int = 1): Pair<Mpc3Clip, Mpc3Clip> {
         require(bars >= 1) { "bars must be positive: $bars" }
         val base = Mpc3Clip(name = kitName.ifBlank { "Groove" }, bars = bars, notes = emptyList())
-        val existingE = load(kitDir)
-        GrooveStore.save(kitDir, GrooveVariations.standard(base) + listOfNotNull(existingE))
+        // Every user program rides along, not just the first: re-saving
+        // the standard variations rewrites the whole sidecar, so anything
+        // left out of this list is deleted.
+        val existing = loadAll(kitDir)
+        GrooveStore.save(kitDir, GrooveVariations.standard(base) + existing)
         val e = fork(kitDir, base)
         return base to e
     }
 
-    /** PROG E from a kit dir, or null when no fork has happened yet. */
-    fun load(kitDir: File): Mpc3Clip? = GrooveStore.load(kitDir).firstOrNull { isProgE(it) }
+    /**
+     * Every user program this kit holds, in slot order — the list the
+     * screen cycles and [Arranger] picks from. Empty when no fork has
+     * happened yet.
+     *
+     * Sorted by [progIndexOf] rather than by the order they sit in the
+     * sidecar: a caller that says "your second program" has to mean the
+     * same clip whatever order the last save happened to leave.
+     */
+    fun loadAll(kitDir: File): List<Mpc3Clip> =
+        GrooveStore.load(kitDir).filter { isProgE(it) }.sortedBy { progIndexOf(it) ?: 0 }
 
-    /** The A–E selector shows E only when it exists. */
-    fun hasUserProgram(kitDir: File): Boolean = load(kitDir) != null
+    /** The first user program, or null when no fork has happened yet. */
+    fun load(kitDir: File): Mpc3Clip? = loadAll(kitDir).firstOrNull()
+
+    /** The selector shows YOURS only when at least one exists. */
+    fun hasUserProgram(kitDir: File): Boolean = loadAll(kitDir).isNotEmpty()
 
     /**
-     * Persist an edited E, replacing whichever E was stored (if any).
-     * Every other stored clip — the captured base, any native-export
-     * variations already sitting in the sidecar — rides along untouched.
+     * Persist an edited user program, replacing **the one of the same
+     * name** and no other. Every other stored clip — the captured base,
+     * any native-export variations already sitting in the sidecar, and
+     * the user's other programs — rides along untouched.
+     *
+     * By name, not by `isProgE`: that predicate used to identify exactly
+     * one clip, so filtering all of them out and appending was the same
+     * thing. With more than one it is not, and saving an edit to your
+     * second program would have deleted your first.
      */
     fun save(kitDir: File, e: Mpc3Clip): File {
-        require(isProgE(e)) { "clip name doesn't carry PROG E's \"$NAME_SUFFIX\" suffix: ${e.name}" }
-        val others = GrooveStore.load(kitDir).filterNot { isProgE(it) }
+        require(isProgE(e)) { "clip name doesn't carry a user program's \"$NAME_SUFFIX\" suffix: ${e.name}" }
+        val others = GrooveStore.load(kitDir).filterNot { it.name == e.name }
         return GrooveStore.save(kitDir, others + e)
+    }
+
+    /**
+     * The lowest slot this kit has not filled, or null when it is full.
+     * Lowest rather than next-after-the-highest so a discarded program
+     * leaves a hole that the next fork reuses, instead of the numbering
+     * climbing past [MAX_USER_PROGRAMS] with slots standing empty.
+     */
+    fun freeSlot(kitDir: File): Int? {
+        val taken = loadAll(kitDir).mapNotNull { progIndexOf(it) }.toSet()
+        return (0 until MAX_USER_PROGRAMS).firstOrNull { it !in taken }
     }
 
     /**
@@ -188,21 +272,58 @@ object GrooveEdit {
      * yields the same stable "<base> E", no matter which program was on
      * screen when EDIT STEPS was tapped.
      */
-    fun fork(kitDir: File, source: Mpc3Clip, replace: Boolean = false): Mpc3Clip {
+    fun fork(kitDir: File, source: Mpc3Clip, replace: Boolean = false, index: Int = 0): Mpc3Clip {
         val stored = GrooveStore.load(kitDir)
-        val existing = stored.firstOrNull { isProgE(it) }
+        val existing = stored.firstOrNull { isProgE(it) && progIndexOf(it) == index }
         if (existing != null && !replace) return existing
 
-        val baseName = stored.firstOrNull { !isProgE(it) }?.name ?: source.name.removeSuffix(NAME_SUFFIX)
-        val e = quantized(source, progEName(baseName))
+        val baseName = baseNameFor(stored, source)
+        val e = quantized(source, progEName(baseName, index))
         save(kitDir, e)
         return e
     }
 
-    /** Discards E; every other stored clip stays. False when there was none to discard. */
-    fun deleteProgE(kitDir: File): Boolean {
+    /**
+     * Fork [source] into the next free slot, leaving every program
+     * already stored alone — the cycler's "and another one". Null when
+     * the kit already holds [MAX_USER_PROGRAMS].
+     *
+     * Separate from [fork] rather than a flag on it because the two
+     * answer different questions. [fork] is EDIT STEPS: "let me at the
+     * one I am looking at", and its early return handing back an
+     * existing program is the feature. This one is "give me a new one",
+     * where handing back an existing program would be the bug.
+     */
+    fun forkNew(kitDir: File, source: Mpc3Clip): Mpc3Clip? {
+        val slot = freeSlot(kitDir) ?: return null
         val stored = GrooveStore.load(kitDir)
-        val kept = stored.filterNot { isProgE(it) }
+        val e = quantized(source, progEName(baseNameFor(stored, source), slot))
+        save(kitDir, e)
+        return e
+    }
+
+    /**
+     * The captured clip's name, which every user program is named after
+     * however many there are and whichever one was forked from — so
+     * forking from SWING, or from your own third program, still yields a
+     * name derived from the take.
+     */
+    private fun baseNameFor(stored: List<Mpc3Clip>, source: Mpc3Clip): String =
+        stored.firstOrNull { !isProgE(it) }?.name
+            ?: source.name.replace(E_SUFFIX, "")
+
+    /** Discards every user program; every other stored clip stays. False when there was none to discard. */
+    fun deleteProgE(kitDir: File): Boolean = deleteProgE(kitDir) { true }
+
+    /**
+     * Discards the user programs [which] selects, by slot index. Every
+     * other stored clip stays, and the numbering is not closed up behind
+     * the hole — [freeSlot] fills it on the next fork, so your remaining
+     * programs do not renumber themselves under you.
+     */
+    fun deleteProgE(kitDir: File, which: (Int) -> Boolean): Boolean {
+        val stored = GrooveStore.load(kitDir)
+        val kept = stored.filterNot { isProgE(it) && which(progIndexOf(it) ?: 0) }
         if (kept.size == stored.size) return false
         if (kept.isEmpty()) GrooveStore.delete(kitDir) else GrooveStore.save(kitDir, kept)
         return true
