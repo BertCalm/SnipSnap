@@ -56,11 +56,18 @@ internal object Dsp {
      * enough to hear" is exactly that: a listening judgment, not something
      * a spectrum can answer. The controller's own ruling on it: "0.25 may
      * be too little movement to hear. That is an audition-gate question."
-     * The one hard number that IS measured: [Velvet.detuneFor]'s BASS
-     * floor fully swallows FAT's own macro range once `cycles >= ~0.4651`
-     * (see the regression test in VelvetTest) - so 0.25 has headroom
-     * before it collides with FAT, but that headroom is not itself a
-     * defense of 0.25 sounding right.
+     *
+     * There used to be a hard number here about how large [cycles] could
+     * go before this floor fully swallowed [Velvet.detuneFor]'s FAT macro
+     * (a `coerceAtMost(askedHi)` collision at `cycles >= ~0.4651`, BASS
+     * being the tightest voice). [Velvet.detuneFor]'s own clamp no longer
+     * has that failure mode - it caps the floor to
+     * `askedHi / Velvet.MIN_AUTHORITY_RATIO`, a ceiling FAT's own top
+     * always clears by construction, for any [cycles] this function is
+     * ever asked for. So raising [cycles] no longer has a boundary to
+     * collide with; how much beat movement is enough to hear is purely an
+     * audition-gate question now, with no DSP mechanism left to bound it
+     * for you.
      */
     fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 0.25f): Float {
         if (baseHz <= 0f || seconds <= 0f) return 1f
@@ -428,7 +435,12 @@ internal object Dsp {
 
     /**
      * Scale [buf] so its measured loudness ([Loudness.of]) hits [target],
-     * then hold a true-peak [ceiling] with [limitPeak].
+     * then hold a sample-peak [ceiling] with [limitPeak] - [limitPeak]
+     * scans raw sample magnitude, with no oversampling for inter-sample
+     * peaks, so it is not a true-peak ceiling. Not a live bug: every
+     * melodic engine already renders oversampled and Tape self-
+     * renormalises downstream, but the claim itself was broader than what
+     * the code does.
      *
      * Peak normalisation makes a sine-heavy patch sit quieter than a saw at
      * the same target number - crest factor, not perceived level, decides
