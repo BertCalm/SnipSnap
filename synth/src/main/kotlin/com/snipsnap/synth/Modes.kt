@@ -169,15 +169,49 @@ internal object Modes {
         }
 
     /**
+     * A floor on how fast the extrapolation in [resample] is allowed to
+     * decelerate per additional slot. Without it, two sourced steps that
+     * happen to be very close together (the membrane's dense Bessel-zero
+     * ordering produces this) would compute a near-zero decay ratio and
+     * collapse every slot past that point onto almost the same frequency.
+     * 0.3 is a judgment call, not a measurement — it keeps the trend
+     * decelerating without letting one noisy pair of steps freeze it.
+     */
+    private const val STEP_DECAY_FLOOR = 0.3
+
+    /**
      * [material]'s partials resampled onto [slots] ordinal positions.
      *
      * Slot k is "this body's k-th ascending partial." Where a body runs out
-     * of sourced partials, its own ratio-growth trend continues into the
-     * remaining slots, fitted in LOG-RATIO space because partial series grow
-     * geometrically — a linear continuation would flatten exactly the
-     * character that distinguishes one body from another. Extrapolated slots
-     * ring quieter than sourced ones, which is both true of real upper
-     * partials and an honest marker that they are inference rather than data.
+     * of sourced partials, this continues its trend in LOG-RATIO space
+     * (partial series grow geometrically, so a linear continuation would
+     * flatten exactly the character that distinguishes one body from
+     * another) — but "the trend" is read from the LAST TWO observed
+     * log-steps, not a global average across the whole table.
+     *
+     * That distinction mattered in practice: a global average is dragged
+     * upward by whichever transition happens to be biggest, almost always
+     * mode 1->2, while real partial spacing decelerates as index rises
+     * (METAL_BAR's own steps are 1.014, 0.673, 0.503 — each smaller than the
+     * last). Averaging those into one flat 0.730 stretched METAL_BAR's
+     * extrapolated slot 6 to ratio 38.5, more than double the free-free
+     * beam's own asymptote (βL ≈ (n+0.5)π gives ≈18.6). For WOOD_MARIMBA the
+     * same bug put slots 5 and 6 above 20 kHz at a 220 Hz fundamental —
+     * `ring()`'s Nyquist guard then dropped them, silently reintroducing
+     * the exact silent-slot thinning this whole scheme exists to avoid.
+     *
+     * Reading the slope from the last two steps and decaying it further by
+     * that same ratio (floored at [STEP_DECAY_FLOOR] so a noisy pair of
+     * steps can't collapse the series) keeps a decelerating body
+     * decelerating instead of running it out straight. It is still a
+     * generic heuristic, not per-material physics — the membrane's
+     * Bessel-zero ordering is a 2D lattice, not a smooth sequence, so its
+     * "trend" is noisier than the bar's — but it no longer manufactures
+     * frequencies a real body's own growth curve would never reach.
+     *
+     * Extrapolated slots ring quieter than sourced ones, which is both true
+     * of real upper partials and an honest marker that they are inference
+     * rather than data.
      *
      * The alternative — padding short tables with silent modes — was
      * rejected: the length difference between a 3-partial tuned bar and a
@@ -189,19 +223,35 @@ internal object Modes {
         val sourced = tableFor(material)
         if (slots <= sourced.size) return sourced.take(slots)
 
-        // Growth per index in log space, read off the sourced partials. With
-        // only one partial there is no trend to read, so fall back to the
-        // harmonic series — the least-assuming continuation available.
         val logs = sourced.map { kotlin.math.ln(it.ratio.toDouble()) }
-        val step = if (logs.size >= 2) (logs.last() - logs.first()) / (logs.size - 1) else kotlin.math.ln(2.0)
+
+        // The most recent observed step. With only one sourced step to read
+        // (two partials total) there's no deceleration to measure, so hold
+        // it steady; with none (one partial) fall back to the harmonic
+        // series, the least-assuming continuation available.
+        var step = if (logs.size >= 2) logs.last() - logs[logs.size - 2] else kotlin.math.ln(2.0)
+
+        // How much smaller each further step gets, read from the ratio of
+        // the last two observed steps and clamped to [FLOOR, 1.0] — never
+        // an acceleration (a body's spacing can occasionally widen locally,
+        // as the membrane's does, but extrapolating that as a trend would
+        // be inventing growth no sourced data showed) and never collapsed
+        // to near-zero by one noisy pair.
+        val decay = if (logs.size >= 3) {
+            (step / (logs[logs.size - 2] - logs[logs.size - 3])).coerceIn(STEP_DECAY_FLOOR, 1.0)
+        } else {
+            1.0
+        }
 
         val out = sourced.toMutableList()
+        var logRatio = logs.last()
         for (k in sourced.size until slots) {
-            val extrapolated = kotlin.math.exp(logs.last() + step * (k - sourced.size + 1)).toFloat()
+            step *= decay
+            logRatio += step
             val last = out.last()
             out.add(
                 Mode(
-                    ratio = extrapolated,
+                    ratio = kotlin.math.exp(logRatio).toFloat(),
                     // Quieter and shorter than the partial below it, and
                     // quieter again for being inferred rather than sourced.
                     gain = last.gain * 0.5f,
@@ -238,11 +288,16 @@ internal object Modes {
     /**
      * [modes] as excited by a strike at [position] along the body, 0 to 1.
      *
-     * Hit a bar at the centre and the even modes, which have a node there,
-     * barely sound; hit it near the end and everything wakes up. That is
-     * `|sin(n*pi*position)|` — the mode shape sampled at the striking point —
-     * and it is the cheapest large timbral range in this whole document,
-     * available only because there are individual modes to address.
+     * `|sin(n*pi*position)|` is the exact mode shape of a uniform bar or
+     * string, where mode n really is a sine with n antinodes — hit it at a
+     * node and that mode genuinely does not sound. It is NOT the true mode
+     * shape of the membrane or bell tables this is also applied to: the
+     * membrane's modes are a 2D Bessel pattern (slot 2 is (1,1), one nodal
+     * diameter, not a 1D sine), and a bell's named partials each have their
+     * own measured nodal geometry. Used here as a control law regardless —
+     * a physically-motivated, cheap, and audibly correct-shaped way to make
+     * strike position matter at all — not as a claim that any table but the
+     * bar's is being modeled exactly.
      */
     fun atPosition(modes: List<Mode>, position: Float): List<Mode> {
         val p = position.coerceIn(0f, 1f)

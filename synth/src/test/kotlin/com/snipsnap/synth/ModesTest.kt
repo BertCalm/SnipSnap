@@ -213,13 +213,46 @@ class ModesTest {
     }
 
     @Test
+    fun `every resampled slot survives rendering through ring(), not just the abstract table`() {
+        // The property that matters is not "the table says gain > 0" (that
+        // survives even a mode extrapolated straight past Nyquist, which
+        // ring() then silently drops) but "this slot actually makes sound
+        // once rung at a real fundamental." Checked at two fundamentals
+        // because a slot that fits under Nyquist at 220 Hz can still get
+        // pushed over it at 440 Hz.
+        val rate = Dsp.RATE
+        for (material in Modes.Material.entries) {
+            for (fundamental in listOf(220f, 440f)) {
+                val modes = Modes.resample(material, slots = 6)
+                for ((i, mode) in modes.withIndex()) {
+                    val out = Modes.ring(click(rate, 0.3f), fundamental, listOf(mode), rate)
+                    val peak = out.maxOf { abs(it) }
+                    assertTrue(
+                        peak > 1e-6f,
+                        "$material slot ${i + 1} is silent at ${fundamental}Hz fundamental " +
+                            "(ratio=${mode.ratio}, would ring at ${mode.ratio * fundamental}Hz) " +
+                            "— extrapolation overshot past Nyquist instead of thinning the trend",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     fun `morphing between different bodies actually changes the spectrum`() {
-        // Reachability: MATERIAL must do something across its travel, or it
-        // is a knob that does nothing — the exact defect Phase 0 shipped once.
-        val bar = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.MEMBRANE, 0f, 6)
-        val membrane = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.MEMBRANE, 1f, 6)
-        val spread = bar.indices.maxOf { abs(bar[it].ratio - membrane[it].ratio) / bar[it].ratio }
-        assertTrue(spread > 0.2f, "endpoints should differ meaningfully, max slot change was $spread")
+        // Reachability, checked PER SLOT: a maxOf across all six slots would
+        // pass if only one sourced slot moved and every extrapolated slot
+        // stayed frozen to `from`'s values — exactly the defect Phase 0
+        // shipped once, just relocated to slot granularity. METAL_BAR and
+        // BELL are used because they share no fixed point (BELL's hum sits
+        // below its own prime, unlike every other table's ratio-1
+        // fundamental), so a frozen slot has nowhere to hide.
+        val bar = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.BELL, 0f, 6)
+        val bell = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.BELL, 1f, 6)
+        for (k in bar.indices) {
+            val change = abs(bar[k].ratio - bell[k].ratio) / bar[k].ratio
+            assertTrue(change > 0.2f, "slot $k barely changed across the morph: $change")
+        }
     }
 
     @Test
