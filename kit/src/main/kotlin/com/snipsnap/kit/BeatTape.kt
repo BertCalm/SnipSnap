@@ -67,7 +67,7 @@ object BeatTape {
                 startFrame = cursor,
                 lengthFrames = segment.frameCount,
                 bars = arranged.bars,
-                bpm = (kit.tempoBpm ?: KitPreview.DEFAULT_BPM).coerceIn(KitPreview.MIN_BPM, KitPreview.MAX_BPM),
+                bpm = KitPreview.playedBpm(kit.tempoBpm),
                 transition = transition,
             )
             cursor += segment.frameCount

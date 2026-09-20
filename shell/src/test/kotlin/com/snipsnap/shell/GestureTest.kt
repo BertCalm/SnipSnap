@@ -88,6 +88,14 @@ class GestureTest {
         val untouched = Gesture.Recorder(1)
         untouched.add(0.5f, 0.5f, 0.5f, touching = false)
         assertNull(untouched.finish())
+        // A frame from the far future - the screen off for a year - fills
+        // to the end and is done, rather than the grid index wrapping past
+        // Int.MAX to nothing and the recording never finishing.
+        val late = Gesture.Recorder(1)
+        late.add(0f, 0.2f, 0.2f, touching = true)
+        late.add(1e9f, 0.4f, 0.4f, touching = true)
+        assertTrue(late.done)
+        near(0.4f, assertNotNull(late.finish()).x(0.5f))
     }
 
     @Test

@@ -388,6 +388,14 @@ fun SurfaceScreen(
         target = Reading.REST
         loop.letGo()
         latched = false
+        // A recording cannot span a stop: frames pause while the screen
+        // is away and the recorder would fill the rest with the last
+        // place when they resume, keeping a fragment and a long hold as
+        // the kit's gesture over whatever it had. Dropped instead, and
+        // disarmed - REC is a moment's intent, not a standing order.
+        loop.dropRecording()
+        recording = false
+        gestureArmed = false
         engine.control(mode, Reading.REST, tilt.tilt, gate = false)
     }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -588,6 +596,16 @@ fun SurfaceScreen(
         // the rest (see its own declaration).
         settingsLoadedFor = null
         armedCorner = null
+        // The old kit's live intents end now, before the load below
+        // suspends, not after it returns: EVERY BAR, an armed REC and a
+        // recording in flight were all for the kit that just closed, and
+        // a bar line or a touch-down in the load's window must not act
+        // on them for this one.
+        ringOnBar = false
+        gestureArmed = false
+        loop.dropRecording()
+        recording = false
+        recordingBars = 0f
         presetIndexA = null
         presetIndexB = null
         presetIndexC = null
@@ -596,10 +614,6 @@ fun SurfaceScreen(
             padName = null
             padSlot = null
             ringVoice = false
-            ringOnBar = false
-            gestureArmed = false
-            loop.dropRecording()
-            recording = false
             padName2 = null
             padSlot2 = null
             padName3 = null
@@ -631,13 +645,6 @@ fun SurfaceScreen(
         settingsLoadedFor = entry.dir
         val pads = entry.kit.pads.sortedBy { it.slot }
         val pad = pads.firstOrNull { it.slot == settings.padSlot } ?: pads.firstOrNull()
-        // A kit opening is the pad becoming the voice by choice: EVERY BAR
-        // ends here the way it ends on PAD ◄ ►. A recording in flight was
-        // for the old kit, so it is dropped rather than kept on this one.
-        ringOnBar = false
-        gestureArmed = false
-        loop.dropRecording()
-        recording = false
         if (pad == null) {
             padName = null
             padSlot = null
@@ -696,6 +703,11 @@ fun SurfaceScreen(
     // WAV has been read), so a run of quick taps advances once per tap.
     fun stepPad(delta: Int) {
         val dir = entry?.dir ?: return
+        // Refused while `settings` is still the outgoing kit's, like every
+        // other press that persists (see settingsLoadedFor): a tap in the
+        // reload window would write the chosen pad to disk and then be
+        // reverted in memory by the load landing after it.
+        if (settingsLoadedFor != dir) return
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
         val chosen = settings.padSlot ?: padSlot
@@ -731,7 +743,8 @@ fun SurfaceScreen(
 
     // SWARM ◄ ►: VOICES by one, DETUNE by a twentieth - GRAIN's row's own
     // discipline, remembered in surface.json and heard within a control
-    // interval (a voice that joins starts from the head on the next tap).
+    // interval (a voice that joins under a held note starts where the
+    // loop is, so the swarm is a unison at once; a tap restarts them all).
     fun stepSwarm(delta: Int) {
         val dir = entry?.dir ?: return
         if (settingsLoadedFor != dir) return
@@ -831,6 +844,7 @@ fun SurfaceScreen(
     // PAD2 ◄ ►: same stepping, over the second source slot.
     fun stepPad2(delta: Int) {
         val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // the outgoing kit's settings - see stepPad
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
         val chosen = settings.secondPadSlot ?: padSlot2
@@ -844,6 +858,7 @@ fun SurfaceScreen(
     // PAD3 ◄ ►: same stepping, over the third source slot.
     fun stepPad3(delta: Int) {
         val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // the outgoing kit's settings - see stepPad
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
         val chosen = settings.thirdPadSlot ?: padSlot3
@@ -857,6 +872,7 @@ fun SurfaceScreen(
     // PAD4 ◄ ►: same stepping, over the fourth source slot.
     fun stepPad4(delta: Int) {
         val dir = entry?.dir ?: return
+        if (settingsLoadedFor != dir) return  // the outgoing kit's settings - see stepPad
         val pads = entry.kit.pads.sortedBy { it.slot }
         if (pads.isEmpty()) return
         val chosen = settings.fourthPadSlot ?: padSlot4
@@ -1036,6 +1052,7 @@ fun SurfaceScreen(
     // rememberUpdatedState, so the call lands on the current kit.
     val freezeOnBar by rememberUpdatedState({ freezeRing(onBar = true) })
     val keepGestureNow by rememberUpdatedState({ gesture: Gesture -> keepGesture(gesture) })
+    val finishPrintNow by rememberUpdatedState({ finishPrint() })
 
     // Screen-rate loop: read the clock and the room, hand the frame to
     // `SurfaceLoop`, then do what only this side can - poll the engine,
@@ -1089,7 +1106,7 @@ fun SurfaceScreen(
             val (wA, wB, wC, wD) = TouchSurface.sampleWeights(play.x, play.y)
             engine.control(mode, play, tilt.tilt, sampleA = wA, sampleB = wB, sampleC = wC, sampleD = wD, gate = (target.touching || latched) && padName != null)
             if (engine.needsRestart()) started(engine.start())
-            if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrint()
+            if (printing && !finishing && engine.printState() == SurfaceEngine.PrintState.DONE) finishPrintNow()
         }
     }
 
