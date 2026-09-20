@@ -9,7 +9,9 @@ import kotlin.test.assertTrue
  * (thirty-six total). No classifier "identity" check — every VOX voice is
  * statically TONAL, not judged from its render — so this covers the rest
  * of the playability contract: a real, clean sound; a faithful JSON
- * round-trip; listbox-legal names; and a roster that doesn't cluster.
+ * round-trip; and listbox-legal names. (No spread check: good presets
+ * cluster in the narrow regions of macro space that actually sound
+ * good, so "evenly spread" is not a property worth enforcing.)
  */
 class VoxPresetsTest {
 
@@ -55,37 +57,5 @@ class VoxPresetsTest {
     fun `no preset name references a real drum machine`() {
         val offenders = VoxPresets.all().filter { PresetTestSupport.trademarkBlocklist.containsMatchIn(it.name) }
         assertTrue(offenders.isEmpty(), "names that read as a real machine: ${offenders.map { it.name }}")
-    }
-
-    // Thresholds are set from what the table actually achieves, not chosen
-    // to just barely pass — same discipline ThumpPresets' own thresholds
-    // follow.
-    private val spreadThreshold = mapOf(
-        VoxVoice.CHOIR to 0.06f,
-        VoxVoice.ROBOT to 0.05f,
-        VoxVoice.GHOST to 0.09f,
-    )
-
-    @Test
-    fun `presets within a voice do not cluster`() {
-        for (voice in VoxVoice.entries) {
-            val presets = VoxPresets.forVoice(voice)
-            val threshold = spreadThreshold.getValue(voice)
-            var minDist = Float.MAX_VALUE
-            var closest: Pair<String, String>? = null
-            for (i in presets.indices) {
-                for (j in i + 1 until presets.size) {
-                    val d = PresetTestSupport.rmsDistance(presets[i].macros, presets[j].macros)
-                    if (d < minDist) {
-                        minDist = d
-                        closest = presets[i].name to presets[j].name
-                    }
-                }
-            }
-            assertTrue(
-                minDist >= threshold,
-                "$voice: closest pair $closest is only $minDist apart (need >= $threshold)",
-            )
-        }
     }
 }

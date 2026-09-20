@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
@@ -7,6 +8,7 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tanh
@@ -39,6 +41,64 @@ internal object Dsp {
         (lo * exp(ln((hi / lo).toDouble()) * macro.coerceIn(0f, 1f))).toFloat()
 
     /**
+     * Raises a too-slow beat toward audibility - it does not complete one.
+     * Two oscillators a ratio r apart beat at baseHz*(r-1); below this
+     * floor a "FAT" macro is a static comb tint rather than movement.
+     * [cycles] stays a small fraction on purpose: forcing a *full* beat
+     * cycle inside a short note (the original ask) takes far more detune
+     * than any macro should grant - tens of cents at typical bass notes -
+     * and that reads as an out-of-tune interval, not width. This function
+     * only raises the floor; it has no idea what the caller's macro is
+     * allowed to ask for, so callers must still clamp the result to their
+     * own ceiling (see [Velvet.detuneFor]).
+     *
+     * [cycles]'s default of 0.25f is a PLACEHOLDER awaiting the audition
+     * gate, not a settled decision - MEASURE-NEVER-GUESS forbids shipping
+     * a taste call as if it were derived, and "how much beat movement is
+     * enough to hear" is exactly that: a listening judgment, not something
+     * a spectrum can answer. The controller's own ruling on it: "0.25 may
+     * be too little movement to hear. That is an audition-gate question."
+     *
+     * There used to be a hard number here about how large [cycles] could
+     * go before this floor fully swallowed [Velvet.detuneFor]'s FAT macro
+     * (a `coerceAtMost(askedHi)` collision at `cycles >= ~0.4651`, BASS
+     * being the tightest voice). [Velvet.detuneFor]'s own clamp no longer
+     * has that failure mode - it caps the floor to
+     * `askedHi / Velvet.MIN_AUTHORITY_RATIO`, a ceiling FAT's own top
+     * always clears by construction, for any [cycles] this function is
+     * ever asked for. So raising [cycles] no longer has a boundary to
+     * collide with; how much beat movement is enough to hear is purely an
+     * audition-gate question now, with no DSP mechanism left to bound it
+     * for you.
+     */
+    fun minBeatDetune(baseHz: Float, seconds: Float, cycles: Float = 0.25f): Float {
+        if (baseHz <= 0f || seconds <= 0f) return 1f
+        return 1f + (cycles / seconds) / baseHz
+    }
+
+    /**
+     * [cutoffHz] scaled toward [baseHz]'s own pitch relative to
+     * [referenceHz] — the note an engine's cutoff mapping is voiced to be
+     * neutral at. Without this, a filter mapped to an absolute Hz gets
+     * proportionally duller as a voice climbs (the same cutoff covers
+     * fewer harmonics of a higher fundamental) and proportionally brighter
+     * as it descends — brightness drifts across a run instead of staying
+     * an interval above the note.
+     *
+     * [amount] 0 leaves [cutoffHz] untouched; [amount] 1 locks the cutoff
+     * to [baseHz]/[referenceHz]'s exact ratio above (or below) it, so every
+     * note in a run keeps precisely the interval [cutoffHz] had at
+     * [referenceHz]. In between, the scaling ratio is raised to [amount] -
+     * a log-domain blend, not a linear one, because "half tracking" should
+     * mean half the octaves of movement, not half the Hz.
+     */
+    fun keyTrack(cutoffHz: Float, baseHz: Float, referenceHz: Float, amount: Float): Float {
+        if (referenceHz <= 0f || baseHz <= 0f) return cutoffHz
+        val ratio = baseHz / referenceHz
+        return cutoffHz * ratio.pow(amount.coerceIn(0f, 1f))
+    }
+
+    /**
      * SCRAMBLE near a seed: perturb each of [seed]'s macros by a gaussian
      * scaled by [temperature], clamped back to 0..1. `temperature = 0`
      * returns [seed] untouched; `temperature = 1` discards it and rolls
@@ -52,6 +112,27 @@ internal object Dsp {
             t >= 1f -> seed.mapValues { random.nextFloat() }
             else -> seed.mapValues { (_, v) -> (v + gaussian(random) * t).coerceIn(0f, 1f) }
         }
+    }
+
+    /**
+     * A stable seed for a render. Derived from the patch's own identity, so
+     * two different voices decorrelate while one voice stays reproducible —
+     * golden files and `--undo` byte-identity need the second half.
+     */
+    fun seedFor(vararg parts: Any): Int {
+        var h = 17
+        for (p in parts) h = h * 31 + p.toString().hashCode()
+        return h
+    }
+
+    /**
+     * [count] start phases in [0, 1), spread from [seed]. Every oscillator in
+     * every engine used to start at exactly 0.0, so detuned pairs began locked
+     * and each attack was the same coherent transient.
+     */
+    fun phases(count: Int, seed: Int): DoubleArray {
+        val random = Random(seed)
+        return DoubleArray(count) { random.nextDouble() }
     }
 
     /** Standard-normal sample via Box-Muller; `kotlin.random.Random` has no `nextGaussian()`. */
@@ -110,12 +191,28 @@ internal object Dsp {
          * state genuinely runs toward and past unity (self-oscillation
          * territory). Defaults to off: every existing caller keeps today's
          * exact linear filter. It's opt-in per call, not a blanket switch,
-         * because it isn't free even at typical settings - FATHOM's states
-         * run hot enough even at its fixed, moderate damping that turning
-         * it on there shifted DEEP's own factory default off KICK entirely
-         * and drifted several GRIND presets toward TOM. Enable it only for
-         * a filter whose caller has actually checked its own tests stay
-         * green with it on.
+         * because it isn't free even at typical settings.
+         *
+         * Measured, not assumed (synth-depth phase-0, Task 7): flipping it
+         * on at FATHOM's call site (fixed `damp = 1.2f`, driven by a `tanh`
+         * pre-stage) broke four green tests. DEEP's own KICK classification
+         * held, but `DRIVE adds harmonics` did not - DEEP's DRIVE-driven
+         * centroid brighten fell to 68.96Hz -> 89.30Hz (1.295x), just under
+         * the 1.3x contract, because the saturator eats the harmonics DRIVE
+         * exists to add. GRIND's factory default drifted TOM -> PERC, its
+         * `DIRTY GROWL` preset drifted KICK -> TOM, and `HOLLOW GROWL` fell
+         * under the peak floor at 0.473. Same story at PadFilter's and
+         * Wobble's call sites, measured directly on `TptSvf`: at PadFilter's
+         * settings (cutoff 800Hz, k=0.3) peak dropped 0.570 -> 0.330 with
+         * centroid barely moving (704Hz -> 681Hz) - exactly backwards for a
+         * preview whose own contract is "the output's peak is held at the
+         * input's, so a resonant peak never reads as loudness"; at Wobble's
+         * (RESONANCE_K = 0.6, full sweep) peak dropped 0.789 -> 0.610 while
+         * centroid moved under 2% (2070Hz -> 2043Hz), a difference Wobble's
+         * own post-sweep makeup gain mostly erases anyway. Enable it only
+         * for a filter whose caller has actually checked its own tests stay
+         * green with it on - FATHOM, PadFilter, and Wobble all failed that
+         * check and stay off; VELVET is still the one exception.
          */
         fun process(input: Float, freqHz: Float, k: Float, saturate: Boolean = false) {
             val g = kotlin.math.tan(PI * (freqHz.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
@@ -286,6 +383,49 @@ internal object Dsp {
         }
     }
 
+    /**
+     * Shared [levelTo] target for every melodic engine - VELVET, FATHOM,
+     * VOX, TONEWHEEL, PLUCK. Measured, not chosen: the median of
+     * `Loudness.of` across all 17 factory-default voices as they rendered
+     * before this change, peak-normalized at 0.95 (task-4-report.md has the
+     * full before-table). Median rather than mean because it keeps overall
+     * kit level roughly where it already sat - nothing that was already
+     * loud suddenly clips, nothing already quiet suddenly vanishes - while
+     * collapsing the spread between voices, which was the actual defect: a
+     * sine-heavy pad and a buzzy one used to land at the same *peak* and
+     * very different loudness.
+     *
+     * Per-voice offsets deliberately stay at zero: each melodic engine
+     * keeps its own `LOUDNESS_OFFSET` map (all zero right now) that this
+     * constant is added to, so a future listening pass - whether a kick
+     * should sit above a hat, and by how much - is a table edit there, not
+     * a refactor here.
+     *
+     * Not every voice actually lands here. [levelTo]'s ceiling still caps
+     * the old peak at 0.95 * (0.99 / 0.95); a voice whose crest factor is
+     * high enough that reaching this target would need more than that -
+     * PLUCK's Karplus-Strong pluck, sharpest of the five engines - gets
+     * capped short instead (task-4-report.md has the exact numbers, e.g.
+     * KALIMBA settling at ~0.064). That is [levelTo] working as designed,
+     * not a bug: a shared target across five different crest factors can
+     * move a peaky voice's loudness *down* to match the rest freely, but
+     * can only move it *up* as far as digital full scale allows.
+     *
+     * STALE MEASUREMENT: the median above, task-4-report.md's 17-voice
+     * table, its 2.86x residual spread, and its "7 of 17 voices
+     * ceiling-pinned" count all describe renders from before Task 6 (key
+     * tracking, which moves VELVET/FATHOM preset brightness by -15.9% to
+     * +7.2%) and before Task 11 (PLUCK oversampling and retune, which
+     * changes its crest factor). This branch no longer produces the
+     * renders that number was measured from. [levelTo] still collapses
+     * the spread by construction regardless of the target's exact value,
+     * so nothing here is broken - but the median, the spread figure, and
+     * the ceiling-pinned count must be re-measured before anyone cites
+     * them again (Phase 1 plans to). Do not treat 0.1834f itself as wrong
+     * in the meantime; it just isn't re-derived yet.
+     */
+    const val MELODIC_LOUDNESS_TARGET = 0.1834f
+
     /** Peak-normalize in place to [target]; silence is left alone. */
     fun normalize(buf: FloatArray, target: Float = 0.95f) {
         var peak = 0f
@@ -293,6 +433,42 @@ internal object Dsp {
         if (peak <= 1e-9f) return
         val g = target / peak
         for (i in buf.indices) buf[i] *= g
+    }
+
+    /**
+     * Scale [buf] so its measured loudness ([Loudness.of]) hits [target],
+     * then hold a sample-peak [ceiling] with [limitPeak] - [limitPeak]
+     * scans raw sample magnitude, with no oversampling for inter-sample
+     * peaks, so it is not a true-peak ceiling. Not a live bug: every
+     * melodic engine already renders oversampled and Tape self-
+     * renormalises downstream, but the claim itself was broader than what
+     * the code does.
+     *
+     * Peak normalisation makes a sine-heavy patch sit quieter than a saw at
+     * the same target number - crest factor, not perceived level, decides
+     * where the peak lands. That's why THUMP alone used to read as "loud
+     * enough": [Punch.rescaleToLoudness] happens to be a loudness rescale
+     * too, but for a different reason - it *preserves* THUMP's pre-Punch
+     * level across the transient shaping, it does not *choose* one. This is
+     * the first function in the codebase that picks an absolute loudness
+     * target on purpose, which is why callers (see each melodic engine's
+     * `render`) derive [target] from a measurement instead of a guess.
+     *
+     * The [ceiling] pass matters because a loudness match and a peak limit
+     * are different constraints: a signal with almost no crest factor (a
+     * square-ish wave, or several engines' voices stacked) can hit the
+     * loudness target while its peak is already near or past digital full
+     * scale. Rescaling for loudness alone would let that clip on export;
+     * [limitPeak] afterward only steps in for the voices that actually reach
+     * it, exactly like it does downstream of [Punch].
+     */
+    fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f) {
+        if (buf.isEmpty()) return
+        val measured = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
+        if (measured <= 1e-6f) return
+        val gain = target / measured
+        for (i in buf.indices) buf[i] *= gain
+        limitPeak(buf, ceiling)
     }
 
     /**

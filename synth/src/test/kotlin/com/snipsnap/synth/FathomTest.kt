@@ -143,6 +143,39 @@ class FathomTest {
     }
 
     /**
+     * GRIND-only, single-step halving of [hz] toward [reference] (Task 2 fix
+     * round 2, docs/.superpowers/sdd/2026-09-19-synth-depth-phase-0/task-2-report.md).
+     *
+     * GRIND's near-unison saw pair (`phaseLow`, `phase2`) can start close
+     * enough to half a cycle apart that their shared odd harmonics -
+     * including the fundamental - partly cancel right at note-on while the
+     * second harmonic reinforces; spectrally verified real energy at 2x the
+     * true pitch (110 Hz, the true f/2, sat at the noise floor at every
+     * time point checked; 220/440 Hz carried real, substantial energy).
+     * `Pitch.detect` correctly reports whichever harmonic dominates a given
+     * window, so an early reading can land on the fundamental's octave
+     * rather than the fundamental itself.
+     *
+     * Two guards, both load-bearing:
+     * - **Voice-gated.** This mechanism is specific to GRIND's saw pair - it
+     *   has no analogue for DEEP (single sine) or GLASS (FM, no cancelling
+     *   pair). For any other voice this returns [hz] completely untouched,
+     *   so an octave-doubling regression on DEEP or GLASS is never silently
+     *   folded away; both call sites additionally assert the untouched
+     *   value equals the raw reading for those voices, so a future change
+     *   to this guard fails loudly rather than silently re-opening the
+     *   path.
+     * - **Single conditional halving, not a loop.** The verified artifact
+     *   is exactly one octave (the second harmonic, not the fourth or
+     *   eighth) - `while` would accept 4x, 8x, 16x as if evidence existed
+     *   for any of them. It doesn't; this only ever removes one octave.
+     */
+    private fun foldGrindOctave(voice: FathomVoice, hz: Float, reference: Float): Float {
+        if (voice != FathomVoice.GRIND) return hz
+        return if (hz > reference * kotlin.math.sqrt(2f)) hz / 2f else hz
+    }
+
+    /**
      * The macro value to pin each voice's own confound to so [TestPitch] gets
      * a clean, unambiguous fundamental: DEEP's SWEEP blip, GRIND's detuned
      * beating pair, and GLASS's FM sidebands can each otherwise be mistaken
@@ -295,8 +328,20 @@ class FathomTest {
         // sidebands FM adds are exactly the kind of high-frequency energy
         // that pushes the classifier off TOM and onto PERC — the same shelf
         // VelvetTest found for harmonic stabs in general.
+        //
+        // GRIND was re-pinned again for the synth-depth phase-0 start-phase
+        // seeding (Task 2, docs/.superpowers/sdd/2026-09-19-synth-depth-phase-0):
+        // phaseLow and phase2 used to both start at 0.0, so their sawtooth
+        // discontinuities landed on the same instant every cycle - one edge
+        // per period, same as a single saw. Independently seeded start phases
+        // put those two edges at different points in the cycle instead,
+        // roughly doubling the edge rate and lifting the measured spectral
+        // centroid from ~80 Hz to ~170 Hz - enough to clear the classifier's
+        // KICK_MAX_CENTROID_HZ (100 Hz) shelf. DEEP's single sine has no
+        // second edge to offset and stays put, which is the tell that this is
+        // the phase change and not a hunt-and-peck fixture edit.
         assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.DEEP)).drumClass)
-        assertEquals(DrumClass.KICK, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
+        assertEquals(DrumClass.TOM, Classifier.classify(Fathom.render(FathomVoice.GRIND)).drumClass)
         assertEquals(DrumClass.PERC, Classifier.classify(Fathom.render(FathomVoice.GLASS)).drumClass)
     }
 
@@ -314,15 +359,32 @@ class FathomTest {
                 voice,
                 mapOf(confoundName to confoundValue, "GLIDE" to 1f, "DECAY" to 0.9f, "TUNE" to 1f),
             )
+            val target = Fathom.frequencyFor(voice, 1f)
             val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
             val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
             assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
-            assertTrue(end > start * 1.3f, "$voice GLIDE should rise into the target: $start Hz -> $end Hz")
+            // GRIND's near-unison saw pair can read as its own second
+            // harmonic right at note-on (see [foldGrindOctave]). A full
+            // GLIDE (glideSemis = 12, always) starts exactly one octave
+            // below target, so target/2 is the physically expected early
+            // pitch - fold the raw reading down toward it before checking
+            // the rise, so a genuine octave misread of a real fundamental
+            // doesn't read as a failed glide. GRIND-only and single-step:
+            // for DEEP/GLASS this is a no-op by construction, and the
+            // assertEquals below makes that loud rather than implicit.
+            val foldedStart = foldGrindOctave(voice, start, target / 2f)
+            if (voice != FathomVoice.GRIND) {
+                assertEquals(start, foldedStart, "$voice: fold must be a no-op outside GRIND")
+            }
+            assertTrue(
+                end > foldedStart * 1.3f,
+                "$voice GLIDE should rise into the target: $start Hz (folded $foldedStart) -> $end Hz",
+            )
 
             // The slide must LAND, not merely travel — a glide still moving when
             // the note ends is the one way this can sound broken, so the clamp
-            // that prevents it needs a test rather than a comment.
-            val target = Fathom.frequencyFor(voice, 1f)
+            // that prevents it needs a test rather than a comment. Unfolded:
+            // end always measured correctly in every case checked.
             assertTrue(
                 kotlin.math.abs(end - target) < target * 0.05f,
                 "$voice GLIDE should land on target: $end Hz vs $target Hz",
@@ -338,12 +400,32 @@ class FathomTest {
                 voice,
                 mapOf(confoundName to confoundValue, "GLIDE" to 0f, "DECAY" to 0.9f, "TUNE" to 1f),
             )
+            val target = Fathom.frequencyFor(voice, 1f)
             val start = TestPitch.estimate(snip, fromSec = 0.02f, windowSec = 0.12f)
             val end = TestPitch.estimate(snip, fromSec = 0.55f, windowSec = 0.25f)
             assertTrue(start > 0f && end > 0f, "$voice pitch detection failed: $start Hz -> $end Hz")
+            // Same fold as `GLIDE actually glides` - GRIND's early reading
+            // can land on its own second harmonic (see [foldGrindOctave]).
+            // GLIDE 0 means no bend, so the expected pitch throughout is
+            // just target itself. GRIND-only and single-step, same as
+            // above; the assertEquals makes the DEEP/GLASS no-op explicit
+            // rather than relying on the helper's own guard alone.
+            val foldedStart = foldGrindOctave(voice, start, target)
+            if (voice != FathomVoice.GRIND) {
+                assertEquals(start, foldedStart, "$voice: fold must be a no-op outside GRIND")
+            }
             assertTrue(
-                kotlin.math.abs(end - start) < start * 0.1f,
-                "$voice GLIDE 0 should hold steady: $start Hz -> $end Hz",
+                kotlin.math.abs(end - foldedStart) < foldedStart * 0.1f,
+                "$voice GLIDE 0 should hold steady: $start Hz (folded $foldedStart) -> $end Hz",
+            )
+
+            // Folding alone would let a genuine octave error slip through
+            // unnoticed - anchor the held pitch to the voice's actual
+            // target too, the same absolute check `GLIDE actually glides`
+            // already makes for its landing point.
+            assertTrue(
+                kotlin.math.abs(end - target) < target * 0.05f,
+                "$voice GLIDE 0 should hold at its target: $end Hz vs $target Hz",
             )
         }
     }
@@ -370,10 +452,19 @@ class FathomTest {
         // difference), not a spectral one: see VelvetTest's own version of
         // this test for why a band-energy comparison proved ambiguous for
         // a resonant, self-limiting filter like the one FATHOM shares.
+        //
+        // `direct` has to finish through the same Dsp.levelTo render() now
+        // does (Task 4), at the same target - voice offsets are all 0 today,
+        // so Dsp.MELODIC_LOUDNESS_TARGET alone matches what render() uses.
+        // Finishing `direct` with the old Dsp.normalize(0.95) instead left
+        // this assertion passing even with render()'s own decimate step
+        // deleted (checked directly) - the gain gap between a loudness
+        // target and a peak target was enough to clear avgDiff on its own,
+        // silently defeating the one thing this test is for.
         for (voice in FathomVoice.entries) {
             val actual = Fathom.render(voice)
             val direct = Fathom.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.normalize(direct)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)
@@ -440,6 +531,94 @@ class FathomTest {
     fun `a FATHOM patch rejects a macro the voice does not have`() {
         assertFailsWith<IllegalArgumentException> {
             FathomPatch("Bad", FathomVoice.DEEP, mapOf("SPREAD" to 0.5f))
+        }
+    }
+
+    // ---------- Task 6: key-tracking reachability ----------
+
+    /**
+     * [Fathom.render]'s own pipeline (oversampled synthesize -> decimate ->
+     * level -> fadeTail), reimplemented here only so a caller can reach
+     * [Fathom.synthesize]'s internal `cutoffKeyTrackAmount` parameter -
+     * [Fathom.render] itself deliberately doesn't expose it (see that
+     * param's own KDoc). LOUDNESS_OFFSET is skipped: every voice's is 0
+     * today, and this helper exists for spectral shape comparisons, not
+     * to be a second production render path.
+     */
+    private fun renderWithKeyTrackAmount(voice: FathomVoice, macros: Map<String, Float>, amount: Float): Snip {
+        val renderRate = Dsp.RATE * Dsp.OVERSAMPLE
+        val raw = Fathom.synthesize(voice, macros, renderRate, amount)
+        val out = Dsp.decimate(raw, Dsp.RATE)
+        Dsp.levelTo(out, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(out)
+        return Snip(out, channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    @Test
+    fun `synthesize's default cutoffKeyTrackAmount is byte-identical to omitting it - render() is untouched`() {
+        // Fathom.render() (and every other production caller) calls
+        // synthesize(voice, macros, rate) with no 4th argument. Adding
+        // cutoffKeyTrackAmount as an optional, defaulted parameter must not
+        // move a single sample for any of them - proven here by comparing
+        // the omitted-argument call against one that names the constant
+        // explicitly, for every voice.
+        for (voice in FathomVoice.entries) {
+            val omitted = Fathom.synthesize(voice, emptyMap(), Dsp.RATE)
+            val explicit = Fathom.synthesize(voice, emptyMap(), Dsp.RATE, Fathom.CUTOFF_KEY_TRACK_AMOUNT)
+            assertTrue(
+                omitted.contentEquals(explicit),
+                "$voice: omitting cutoffKeyTrackAmount should be byte-identical to passing " +
+                    "Fathom.CUTOFF_KEY_TRACK_AMOUNT explicitly",
+            )
+        }
+    }
+
+    @Test
+    fun `CUTOFF's key tracking reaches the render - ratio of ratios across two explicit amounts`() {
+        // Task 6 policy item 4: a test that only calls Dsp.keyTrack()
+        // directly would pass even if synthesize() never read the result.
+        // FATHOM has no same-pitch, opposite-direction voice pair the way
+        // VelvetTest's BASS/CHIP comparison does (its three roots - 41.2,
+        // 55, 55 - never satisfy root_B = 4 x root_A for any pair), and
+        // CUTOFF_KEY_TRACK_AMOUNT is a fixed private-turned-internal
+        // constant in shipped code, so there is no amount to vary through
+        // the public API. cutoffKeyTrackAmount's internal default param
+        // (see synthesize's own KDoc) exists for exactly this: it lets a
+        // test hold every macro fixed and vary ONLY the tracking amount.
+        //
+        // Within one amount, comparing TUNE=1's centroid to TUNE=0's is
+        // still confounded (fundamental and cutoff both move together) -
+        // exactly why a single amount=1-vs-amount=0-at-fixed-TUNE
+        // comparison isn't the proof. The ratio-of-ratios removes that
+        // confound: compare the SAME TUNE=1/TUNE=0 centroid ratio computed
+        // twice, once at amount=0 and once at amount=1. Any two engines
+        // that both merely "get brighter at higher TUNE" (true regardless
+        // of tracking, since a higher fundamental has more energy to
+        // offer) would show similar ratios at both amounts; only an engine
+        // whose filter genuinely widens its excursion as tracking
+        // increases will show ratio(amount=1) > ratio(amount=0).
+        //
+        // Measured for all three voices (ratio(amount=1) / ratio(amount=0)):
+        // DEEP 1.38x, GRIND 1.49x, GLASS 1.49x - the 1.15x margin below
+        // asserts on all three with comfortable headroom.
+        for (voice in FathomVoice.entries) {
+            val macros = mapOf("DRIVE" to 0.4f, "DECAY" to 0.5f)
+            fun ratioAt(amount: Float): Float {
+                val low = FeatureExtractor.extract(
+                    renderWithKeyTrackAmount(voice, macros + ("TUNE" to 0f), amount),
+                ).centroidHz
+                val high = FeatureExtractor.extract(
+                    renderWithKeyTrackAmount(voice, macros + ("TUNE" to 1f), amount),
+                ).centroidHz
+                return high / low
+            }
+            val ratioNoTracking = ratioAt(0f)
+            val ratioFullTracking = ratioAt(1f)
+            assertTrue(
+                ratioFullTracking > ratioNoTracking * 1.15f,
+                "$voice: full tracking should widen the TUNE=1/TUNE=0 centroid ratio well past no " +
+                    "tracking - got ratio(amount=0)=$ratioNoTracking, ratio(amount=1)=$ratioFullTracking",
+            )
         }
     }
 }

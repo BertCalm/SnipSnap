@@ -30,7 +30,14 @@ class TonewheelTest {
                 val snip = Tonewheel.render(voice, macros)
                 assertTrue(snip.frameCount > 0, "$voice rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke range")
-                assertTrue(snip.peak() > 0.5f, "$voice too quiet")
+                // 0.5 was the right floor when render() peak-normalized to
+                // 0.95 (any voice landed near there). Task 4 swapped that
+                // for Dsp.levelTo, a loudness target - TONEWHEEL's dense,
+                // low-crest-factor additive stack now peaks around
+                // 0.22-0.49 at every registration (measured directly), so
+                // this only needs to catch genuine silence, not chase a
+                // number levelTo was never trying to hit.
+                assertTrue(snip.peak() > 0.1f, "$voice too quiet: ${snip.peak()}")
                 assertTrue(snip.durationSeconds < 1.5f, "$voice must stay a one-shot stab")
             }
         }
@@ -45,10 +52,19 @@ class TonewheelTest {
         // full-spectrum band-energy comparison is unreliable here too,
         // since DIRT's Dsp.drive is a self-saturating nonlinearity riding
         // an additive stack, not a clean single tone.
+        //
+        // `direct` has to finish through the same Dsp.levelTo render() now
+        // does (Task 4), at the same target - voice offsets are all 0 today,
+        // so Dsp.MELODIC_LOUDNESS_TARGET alone matches what render() uses.
+        // Finishing `direct` with the old Dsp.normalize(0.95) instead left
+        // this assertion passing even with render()'s own decimate step
+        // deleted (checked directly) - the gain gap between a loudness
+        // target and a peak target was enough to clear avgDiff on its own,
+        // silently defeating the one thing this test is for.
         for (voice in TonewheelVoice.entries) {
             val actual = Tonewheel.render(voice, mapOf("DIRT" to 1f))
             val direct = Tonewheel.synthesize(voice, mapOf("DIRT" to 1f), Tonewheel.GATE_SECONDS, Dsp.RATE)
-            Dsp.normalize(direct)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)

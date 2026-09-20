@@ -10,9 +10,10 @@ import kotlin.test.assertTrue
  * U1 of `docs/SYNTH_UPGRADE.md`: THUMP shipped eight voices and zero
  * presets, so a beginner met sliders instead of a sound. These tests are
  * the same playability contract `ThumpTest` runs on the raw voices, plus
- * the two properties specific to a *library*: names that can't smuggle a
- * trademark past the roadmap's naming rule, and sixteen presets per voice
- * that actually differ rather than merely being sixteen names for one sound.
+ * the property specific to a *library*: names that can't smuggle a
+ * trademark past the roadmap's naming rule. (No spread check: good
+ * presets cluster in the narrow regions of macro space that actually
+ * sound good, so "evenly spread" is not a property worth enforcing.)
  */
 class ThumpPresetsTest {
 
@@ -108,45 +109,6 @@ class ThumpPresetsTest {
         }
         for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB")) {
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(clean), "blocklist wrongly flagged '$clean'")
-        }
-    }
-
-    // ---------- spread: sixteen presets must actually differ ----------
-
-    // Per-voice thresholds are set from what the factory table actually
-    // achieves (see the generation notes in [ThumpPresets]), not chosen to
-    // just barely pass. The RMS distance itself is PresetTestSupport's now.
-    private val spreadThreshold = mapOf(
-        ThumpVoice.KICK to 0.06f,
-        ThumpVoice.SNARE to 0.05f,
-        ThumpVoice.HAT_CLOSED to 0.10f,
-        ThumpVoice.HAT_OPEN to 0.09f,
-        ThumpVoice.CLAP to 0.08f,
-        ThumpVoice.TOM to 0.06f,
-        ThumpVoice.COWBELL to 0.08f,
-        ThumpVoice.RIM to 0.08f,
-    )
-
-    @Test
-    fun `presets within a voice do not cluster`() {
-        for (voice in ThumpVoice.entries) {
-            val presets = ThumpPresets.forVoice(voice)
-            val threshold = spreadThreshold.getValue(voice)
-            var minDist = Float.MAX_VALUE
-            var closest: Pair<String, String>? = null
-            for (i in presets.indices) {
-                for (j in i + 1 until presets.size) {
-                    val d = PresetTestSupport.rmsDistance(presets[i].macros, presets[j].macros)
-                    if (d < minDist) {
-                        minDist = d
-                        closest = presets[i].name to presets[j].name
-                    }
-                }
-            }
-            assertTrue(
-                minDist >= threshold,
-                "$voice: closest pair $closest is only $minDist apart (need >= $threshold)",
-            )
         }
     }
 

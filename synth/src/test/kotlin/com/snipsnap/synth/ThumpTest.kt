@@ -51,6 +51,87 @@ class ThumpTest {
     }
 
     @Test
+    fun `the snare body is a membrane, not two sines`() {
+        // A membrane's partials sit at the Bessel ratios. Two sines at 1.83
+        // cannot produce a peak near 2.135x the fundamental; a real head does.
+        val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to 0.1f, "DECAY" to 0.8f, "TUNE" to 0.4f))
+        val fftSize = 4096
+        val spectrum = com.snipsnap.audio.Fft.magnitudeSpectrum(snip.samples, fftSize)
+        val f0 = Thump.snareFundamental(0.4f)
+        fun energyNear(hz: Float): Float {
+            val lo = hz * 0.94f; val hi = hz * 1.06f
+            return spectrum.indices.filter {
+                com.snipsnap.audio.Fft.binToHz(it, fftSize, Dsp.RATE) in lo..hi
+            }.maxOfOrNull { spectrum[it] } ?: 0f
+        }
+        // (2,1) at 2.1354 is the mode two sines at 1.83 cannot fake.
+        assertTrue(
+            energyNear(f0 * 2.1354f) > energyNear(f0 * 1.83f) * 0.5f,
+            "expected real membrane structure, not a 1.83 sine pair",
+        )
+    }
+
+    @Test
+    fun `STRIKE changes the snare's spectrum across its whole travel`() {
+        // Swept, not spot-checked: a two-point test on this project once passed
+        // a wrong implementation. Hitting nearer the rim wakes higher modes.
+        val centroids = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { p ->
+            val snip = Thump.render(ThumpVoice.SNARE, mapOf("STRIKE" to p, "SNAP" to 0.15f))
+            com.snipsnap.audio.FeatureExtractor.extract(snip).centroidHz
+        }
+        for (i in 0 until centroids.size - 1) {
+            assertTrue(
+                kotlin.math.abs(centroids[i] - centroids[i + 1]) > 1f,
+                "STRIKE did nothing between step $i and ${i + 1}: $centroids",
+            )
+        }
+    }
+
+    @Test
+    fun `the snare still renders clean audio at every macro corner`() {
+        val names = Thump.macrosFor(ThumpVoice.SNARE).map { it.name }
+        for (corner in listOf(0f, 1f)) {
+            val snip = Thump.render(ThumpVoice.SNARE, names.associateWith { corner })
+            assertTrue(snip.samples.all { it.isFinite() }, "NaN/Inf at all-$corner")
+            assertTrue(snip.samples.any { kotlin.math.abs(it) > 0.1f }, "silence at all-$corner")
+        }
+    }
+
+    @Test
+    fun `SNAP spans a real drum to a static burst`() {
+        // Both ends must be REACHABLE - the static burst is a palette sound,
+        // not a defect, and a range curated to only tasteful settings has
+        // already made the user's decisions for them.
+        // Spectral FLATNESS is the tonal-vs-noise measure :audio actually
+        // exposes: a flat spectrum is noise, a peaky one is pitched. So the
+        // drum end must be LOW and the static end HIGH - note the direction.
+        fun flatnessAt(snap: Float): Float {
+            val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to snap, "DECAY" to 0.7f))
+            return com.snipsnap.audio.FeatureExtractor.extract(snip).flatness
+        }
+        val drum = flatnessAt(0f)
+        val static = flatnessAt(1f)
+        assertTrue(static > drum * 2f, "SNAP=1 should be clearly noisier: drum=$drum static=$static")
+    }
+
+    @Test
+    fun `SNAP moves at every step of its travel`() {
+        // Swept. A crossfade that saturates early leaves half the knob dead,
+        // which is this project's most-repeated defect.
+        val points = (0..8).map { it / 8f }
+        val measured = points.map { s ->
+            val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to s, "DECAY" to 0.7f))
+            com.snipsnap.audio.FeatureExtractor.extract(snip).centroidHz
+        }
+        for (i in 0 until measured.size - 1) {
+            assertTrue(
+                kotlin.math.abs(measured[i] - measured[i + 1]) > 1f,
+                "SNAP is dead between ${points[i]} and ${points[i + 1]}: $measured",
+            )
+        }
+    }
+
+    @Test
     fun `hat METAL brightens`() {
         val dull = FeatureExtractor.extract(Thump.render(ThumpVoice.HAT_CLOSED, mapOf("METAL" to 0f)))
         val bright = FeatureExtractor.extract(Thump.render(ThumpVoice.HAT_CLOSED, mapOf("METAL" to 1f)))

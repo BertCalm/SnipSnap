@@ -204,6 +204,84 @@ class KitBuilderTest {
     }
 
     @Test
+    fun `ghost layers on a synth-backed pad re-render via atVelocity - not soften on the frozen take`() {
+        val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
+        val dir = File(temp, "SynthGhosts")
+        val m = KitBuilderModel.create("SynthGhosts", dir)
+        m.assign(1, patch.render(), DrumClass.TONAL)
+        // Attach the patch after assigning its own render, the same shape
+        // `desamplePad` and every synth-kit builder leave on a pad: the
+        // recipe is what makes a pad "synth-backed", not the drum class.
+        m.update(1) { it.copy(recipe = com.snipsnap.synth.PadRecipe(patch = patch).toJsonValue()) }
+
+        val main = com.snipsnap.audio.WavReader.read(File(dir, m.pad(1)!!.sampleFile))
+        val layered = m.addGhostLayers(1)
+        val soft = com.snipsnap.audio.WavReader.read(File(dir, layered.velocityLayers[0].sampleFile))
+
+        // amount 0.55 (addGhostLayers' single-zone depth) is velocity 0.45
+        // (1f - amount) in atVelocity's terms, peak-matched to the pad's own
+        // audio (atVelocity isn't peak-matched itself; addGhostLayers must
+        // restore that or the "darker, not quieter" contract breaks) - the
+        // exact render the ghost layer must match, modulo 16-bit quantizing.
+        val expected = com.snipsnap.synth.Velocity.peakMatch(main, com.snipsnap.synth.Velocity.atVelocity(patch, 0.45f))
+        assertEquals(expected.samples.size, soft.samples.size, "a re-render, not a filtered copy, has its own length")
+        for (i in soft.samples.indices) {
+            assertTrue(
+                kotlin.math.abs(soft.samples[i] - expected.samples[i]) <= 2f / 32767f,
+                "sample $i: ghost ${soft.samples[i]} vs atVelocity render ${expected.samples[i]}",
+            )
+        }
+
+        // And it must NOT be what the old soften()-on-the-main-take path
+        // would have produced - proof the onset actually changed, the
+        // property a low-pass on one frozen render could never have.
+        val viaSoften = com.snipsnap.synth.Velocity.soften(main, 0.55f)
+        val n = minOf(soft.samples.size, viaSoften.samples.size, 400)
+        val differing = (0 until n).count { kotlin.math.abs(soft.samples[it] - viaSoften.samples[it]) > 1e-3f }
+        assertTrue(differing > 50, "onset should differ from soften()'s output; only $differing samples did")
+
+        // "Timbre only, level is the hardware's job" as a measurement, not a
+        // restatement of the production formula: a duller BRIGHT/CUTOFF is
+        // naturally quieter as a side effect of the engine, so this only
+        // holds if addGhostLayers actually peak-matches - it isn't free.
+        fun peak(x: FloatArray) = x.maxOf { kotlin.math.abs(it) }
+        assertTrue(
+            kotlin.math.abs(peak(soft.samples) - peak(main.samples)) <= 2f / 32767f,
+            "the ghost layer should be peak-matched to the main take: ${peak(soft.samples)} vs ${peak(main.samples)}",
+        )
+    }
+
+    @Test
+    fun `ghost layers on a synth-backed pad WITH an fx rack fall back to soften - atVelocity can't replay the rack`() {
+        val patch = com.snipsnap.synth.TinesPresets.forVoice(com.snipsnap.synth.TinesVoice.BELL).first()
+        val fx = com.snipsnap.synth.FxChain(reverse = false)
+        val dir = File(temp, "SynthGhostsFx")
+        val m = KitBuilderModel.create("SynthGhostsFx", dir)
+        val recipe = com.snipsnap.synth.PadRecipe(patch = patch, fx = fx)
+        m.assign(1, recipe.render(), DrumClass.TONAL)
+        m.update(1) { it.copy(recipe = recipe.toJsonValue()) }
+
+        val main = com.snipsnap.audio.WavReader.read(File(dir, m.pad(1)!!.sampleFile))
+        val layered = m.addGhostLayers(1)
+        val soft = com.snipsnap.audio.WavReader.read(File(dir, layered.velocityLayers[0].sampleFile))
+
+        // The same path a captured pad takes, not merely "different from
+        // atVelocity" - a patch riding its own fx chain has no way for
+        // atVelocity to replay the rack on top of its re-render, so it
+        // must soften() the fx-processed take exactly like a captured pad
+        // would (tolerance is the WAV's 16-bit quantizing on the way to
+        // and from disk, same as every other byte-match in this file).
+        val viaSoften = com.snipsnap.synth.Velocity.soften(main, 0.55f)
+        assertEquals(viaSoften.samples.size, soft.samples.size)
+        for (i in soft.samples.indices) {
+            assertTrue(
+                kotlin.math.abs(soft.samples[i] - viaSoften.samples[i]) <= 2f / 32767f,
+                "sample $i: ghost ${soft.samples[i]} vs soften() ${viaSoften.samples[i]} - should fall back exactly",
+            )
+        }
+    }
+
+    @Test
     fun `stack the takes - real prior takes become soft zones, copied out of the bin, and clear undoes it`() {
         val dir = File(temp, "Stack")
         val m = KitBuilderModel.create("Stack", dir)

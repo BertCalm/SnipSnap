@@ -41,6 +41,9 @@ object Thump {
         ThumpVoice.SNARE -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("SNAP", 0.55f), MacroSpec("DECAY", 0.4f),
             MacroSpec("TONE", 0.55f), MacroSpec("PUNCH", 0.5f),
+            // 0.28 is a placeholder - off-centre, where a snare is actually
+            // played - and belongs at the next audition (Task 3), not here.
+            MacroSpec("STRIKE", 0.28f),
         )
         ThumpVoice.HAT_CLOSED -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("METAL", 0.5f),
@@ -183,27 +186,146 @@ object Thump {
         return out
     }
 
+    /**
+     * SNARE — a membrane with wires resting on it.
+     *
+     * It used to be two detuned sines plus lowpassed noise, crossfaded, and
+     * the audition gate's verdict on that was "a very burst-of-static feel."
+     * Fair: at the shipped presets' SNAP values the noise ran 80% of the mix,
+     * over a body that two sines at ratio 1.83 could never make read as a
+     * drum. A real head is a circular membrane — the Bessel ratios in
+     * [Modes.Material.MEMBRANE].
+     *
+     * The wires stay their own layer rather than joining the modal
+     * excitation. A prototype that fed them through the head lost exactly
+     * what makes a snare a snare: the wires rattle AGAINST the drum, they are
+     * not filtered BY it.
+     */
     private fun snare(m: Map<String, Float>, rate: Int): FloatArray {
-        val tune = Dsp.expMap(m.getValue("TUNE"), 140f, 260f)
+        val tune = snareFundamental(m.getValue("TUNE"))
         val snap = m.getValue("SNAP")
-        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 0.5f)
-        val toneHz = Dsp.expMap(m.getValue("TONE"), 2200f, 9000f)
+        val damp = Dsp.expMap(m.getValue("DECAY"), 0.05f, 0.34f)
+        val air = m.getValue("TONE")
+        // Modes.atPosition's mode shape is |sin(n*pi*position)|, which is
+        // exactly zero at BOTH literal edges for every mode at once - the
+        // real physics of hitting precisely on a fixed boundary, but not a
+        // strike position any real hand plays, and not a place this macro's
+        // corners should go fully silent. Kept off the exact edges so
+        // STRIKE 0..1 stays reachable and audible end to end.
+        val strike = m.getValue("STRIKE").coerceIn(0.02f, 0.98f)
 
-        val out = FloatArray(frames(t60 * 1.4f, rate))
-        val noise = Dsp.Noise(3)
-        val lp = Dsp.OnePole(rate)
-        val bodyEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60 * 0.45f)
-        val rattleEnv = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
-        var p1 = 0.0; var p2 = 0.0
+        val frames = frames(0.6f, rate)
+
+        // The stick, plus a breath of noise so the head is struck rather than
+        // plucked. Short: this excites the membrane, it is not the wires.
+        val exc = FloatArray(frames)
+        exc[0] = 1f
+        val stickNoise = Dsp.Noise(3)
+        val stickEnv = Dsp.Env(attackSeconds = 0.0005f, decay2T60 = 0.02f)
+        for (i in exc.indices) exc[i] += 0.35f * stickNoise.next() * stickEnv.at(i.toFloat() / rate)
+
+        val head = Modes.atPosition(Modes.tableFor(Modes.Material.MEMBRANE), strike)
+            .map { it.copy(t60 = it.t60 * damp) }
+        val body = Modes.ring(exc, tune, head, rate)
+        // A resonator's impulse-response peak (Modes.ring's own KDoc gives the
+        // closed form: g * r^n * sin((n+1)*theta)/sin(theta)) grows as
+        // 1/sin(theta) for a low fundamental against a high sample rate -
+        // measured at THUMP's oversampled renderRate and SNARE's tuning
+        // range, a bare Modes.ring(...) here peaks around 180-490 while the
+        // wire layer below peaks around 2. That is theta shrinking, not a
+        // louder strike, and it would leave SNAP's crossfade fighting a
+        // 250x head start before it ever gets to choose a balance. Peak-
+        // normalizing the head here makes bodyGain/wireGain in
+        // [snareBodyGain]/[snareWireGain] mean what their numbers say.
+        val bodyPeak = body.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-9f)
+        for (i in body.indices) body[i] /= bodyPeak
+
+        // The wires: broadband, highpassed into sizzle, decaying on their own
+        // clock. Not routed through the head - see the KDoc above.
+        val out = FloatArray(frames)
+        val wireNoise = Dsp.Noise(11)
+        val dull = Dsp.OnePole(rate)
+        val wireEnv = Dsp.Env(attackSeconds = 0.0008f, decay2T60 = damp * 3f)
+        val bodyGain = snareBodyGain(snap)
+        val wireGain = snareWireGain(snap)
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            p1 += tune / rate
-            p2 += tune * 1.83 / rate
-            val body = (0.6f * sin(2.0 * PI * p1) + 0.4f * sin(2.0 * PI * p2)).toFloat() * bodyEnv.at(t)
-            val rattle = lp.lp(noise.next(), toneHz) * 2.4f * rattleEnv.at(t)
-            out[i] = (1f - snap) * body + snap * rattle
+            val raw = wireNoise.next()
+            val sizzle = raw - dull.lp(raw, Dsp.expMap(air, 900f, 5000f))
+            out[i] = bodyGain * body[i] + wireGain * sizzle * wireEnv.at(t) * 1.8f
         }
-        return out
+        return trimSnareTail(out, rate)
+    }
+
+    /**
+     * Trims [out]'s trailing near-silence (-60 dB of its own peak, plus a
+     * short release margin) rather than returning the full fixed 0.6 s
+     * buffer every time.
+     *
+     * The buffer is allocated at a constant 0.6 s so the slowest DECAY
+     * setting has room to ring out - but unlike every other THUMP voice
+     * (`frames(t60 * 1.4f, rate)` for kick/hat/tom/etc.), SNARE's own
+     * allocation doesn't scale with DECAY at all, so a fast, short-decay
+     * snare used to come back exactly as long as a slow one. The
+     * pre-rebuild snare didn't have this problem: its buffer WAS
+     * `frames(t60 * 1.4f, rate)`, so it was already whatever length its own
+     * DECAY implied (0.168-0.7s at that engine's range). Fixed at 0.6s
+     * regardless, this snare's [Snip.durationSeconds] no longer tracks how
+     * long the hit actually is - measured: `Thump.render(SNARE)` at
+     * default DECAY (0.4) is 0.6s here versus 0.297s on the pre-rebuild
+     * engine at the same DECAY. Stacked with one FX section's own tail
+     * (ECHO's defaults add ~0.97s), that fixed 0.6s pushed the combined
+     * length to 1.57s - over Classifier's 1.5s LOOP_MIN_SECONDS - so
+     * `FxTest`'s "an echoed kick is still a kick" and "the full default
+     * rack..." both misclassified a snare through ECHO as [DrumClass.LOOP]
+     * (the old engine's 0.297s + the same tail landed at 1.27s, well
+     * under). Trimming the true tail restores that duration-tracks-decay
+     * property without touching [Modes.ring]'s own fixed-size math.
+     */
+    private fun trimSnareTail(out: FloatArray, rate: Int, marginSeconds: Float = 0.03f): FloatArray {
+        var peak = 0f
+        for (v in out) { val a = kotlin.math.abs(v); if (a > peak) peak = a }
+        if (peak <= 1e-9f) return out
+        val threshold = peak * 0.001f // -60 dB
+        var last = 0
+        for (i in out.indices) if (kotlin.math.abs(out[i]) > threshold) last = i
+        val end = (last + (marginSeconds * rate).toInt() + 1).coerceAtMost(out.size)
+        return if (end >= out.size) out else out.copyOf(end)
+    }
+
+    /** The head's fundamental: drum size, from piccolo to a deep 14-inch. */
+    internal fun snareFundamental(tune: Float): Float = Dsp.expMap(tune, 120f, 330f)
+
+    /**
+     * SNAP's two halves. The wires climb past unity (1.5 at SNAP=1) so
+     * SNAP=1 is a genuine static burst rather than the body just turned
+     * down, and [snare]'s own body-peak normalization is what makes that
+     * multiplier meaningful instead of fighting a 250x head start.
+     *
+     * MEASURED, not the brief's starting quadratic/cubic pair — see
+     * `.superpowers/sdd/2026-09-20-synth-depth-phase-1b/task-1-2-report.md`
+     * for the swept table. A quadratic body ([1-s]^2) paired with a
+     * faster-than-linear wire rise sounds right on paper, but spectral
+     * centroid and flatness are both scale-invariant once one layer has
+     * swamped the other, so that pairing collapsed almost all of the knob's
+     * audible movement into SNAP 0.1-0.5 and left 0.75-1.0 reading as the
+     * same static burst repeated four times (measured last-step centroid
+     * delta 1.45 Hz, against `SNAP moves at every step of its travel`'s own
+     * 1 Hz floor - a live instance of the "narrowed past where the wanted
+     * territory started" failure this project has hit before). A LINEAR
+     * body fall paired with a QUADRATIC wire rise crosses over near SNAP
+     * 0.55 - body still audibly present past the middle of the knob, wire
+     * still visibly climbing after it - and keeps every consecutive step's
+     * centroid delta at least 13x that 1 Hz floor, all the way to both ends.
+     */
+    internal fun snareBodyGain(snap: Float): Float {
+        val s = snap.coerceIn(0f, 1f)
+        return 1f - s
+    }
+
+    internal fun snareWireGain(snap: Float): Float {
+        val s = snap.coerceIn(0f, 1f)
+        return 1.5f * s * s
     }
 
     /**

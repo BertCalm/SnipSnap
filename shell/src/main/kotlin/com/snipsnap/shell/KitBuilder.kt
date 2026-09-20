@@ -341,15 +341,41 @@ class KitBuilderModel private constructor(
 
     /**
      * Ghost notes: soft velocity zones rendered darker (not just quieter)
-     * under the pad's main sample, via the same softening the velocity
-     * kit ships with. [softZones] 1 or 2. Reversible with
+     * under the pad's main sample. [softZones] 1 or 2. Reversible with
      * [clearGhostLayers].
+     *
+     * A synth pad (its recipe carries a [com.snipsnap.synth.Patch])
+     * re-renders each zone at velocity via `Velocity.atVelocity` — a soft
+     * ghost genuinely struck softer, not the main take low-passed. A
+     * captured pad has no patch to re-render, so it still reads
+     * `Velocity.soften` on the main take, the only thing there is to do
+     * with a frozen recording.
      */
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        // Velocity.layerAt makes the same patch-vs-captured (and
+        // patch+fx-falls-back-too) call Robin's zone grid and StarterKits'
+        // VELOCITY starter make - resolved here, not per zone, per
+        // Velocity.atVelocity's own KDoc (the scan behind brightnessSpec
+        // is O(5×n), best paid once for the whole stack). Skipped
+        // entirely for a patch+fx pad: layerAt's fx gate discards
+        // whatever this resolves to anyway (Task 5b).
+        val padRecipe = Breed.recipeOf(pad)
+        if (padRecipe == null) Breed.warnIfCorruptRecipe(pad, slot, "ghost layers")
+        val patch = padRecipe?.patch
+        val patchFx = padRecipe?.fx
+        val brightnessSpec = if (patch != null && patchFx == null) {
+            com.snipsnap.synth.Velocity.brightnessSpec(patch)
+        } else {
+            null
+        }
+        // Also resolved once - this is layerAt's format probe (a full
+        // patch.render(), thrown away), the expensive half of the same
+        // hoist brightnessSpec just got (Task 5b).
+        val useAtVelocity = com.snipsnap.synth.Velocity.canUseAtVelocity(main, patch, patchFx)
 
         val amounts = if (softZones == 1) listOf(0.55f) else listOf(0.7f, 0.4f) // softest first
         val windows = StackTakes.windows(softZones)
@@ -358,7 +384,13 @@ class KitBuilderModel private constructor(
         val names = freeLayerNames(pad.sampleStem, softZones)
         val layers = buildList {
             amounts.forEachIndexed { v, amount ->
-                WavWriter.write(File(kitDir, names[v]), com.snipsnap.synth.Velocity.soften(main, amount))
+                // amount is a softening depth (0 untouched, 1 softest);
+                // layerAt (like atVelocity) speaks velocity (1 untouched,
+                // 0 softest).
+                val darker = com.snipsnap.synth.Velocity.layerAt(
+                    main, patch, patchFx, 1f - amount, brightnessSpec, useAtVelocity,
+                )
+                WavWriter.write(File(kitDir, names[v]), darker)
                 add(com.snipsnap.kit.KitLayer(names[v], windows[v].first, windows[v].last))
             }
             add(com.snipsnap.kit.KitLayer(pad.sampleFile, windows.last().first, windows.last().last))
