@@ -49,7 +49,10 @@ press **SEND TO BENCH**, and the chooser hands you
 dropped), `notes.jsonl` when the title bar's NOTE chip was used (the
 tester's own words, stamped with the screen, the kit, the pad and the
 time — for a person, never for a harness: the manifest renders each as a
-`→` line to paste into `docs/BENCH.md`), and a `manifest.txt` naming
+`→` line to paste into `docs/BENCH.md`), `presets.json` when SYNTH's
+SAVE PRESET was used (the player's saved patches, rendered in the
+manifest as roster lines for `synth/`'s tables — for the roster's own
+tests to judge, nothing here reads them), and a `manifest.txt` naming
 which kit gave what. Drop the first two files into `reference/calibration/`
 and run
 

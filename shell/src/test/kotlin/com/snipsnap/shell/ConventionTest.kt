@@ -1471,6 +1471,10 @@ class ConventionTest {
         // paid five days for, just not yet triggered by a rename.
         "share" to "ShareOut.kt",
         "landing" to "ShareInbox.kt",
+        // The player's presets (docs/WORKSHOP.md, WS5): one file at the
+        // shelf root, named by its store and nowhere else — SYNTH and
+        // SEND TO BENCH both reach it through UserPresets.file.
+        "presets.json" to "UserPresets.kt",
     )
 
     @Test

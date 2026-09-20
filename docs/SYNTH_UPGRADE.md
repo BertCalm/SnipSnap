@@ -447,10 +447,28 @@ your other fifteen pads. That is the argument for the whole feature.
 | U3 + U5 + U6 | Punch, `Dsp.Env`, filter saturation, 4× oversampling, `alias` flag | — | **Yes** — one `PadRecipe.VERSION = 2` bump, regenerate `testkit/` |
 | U4 | Per-voice stereo width, FX rack stereo audit | U3+U5+U6 | Yes, for the voices that opt in |
 | U7 | MATCH and FILL KIT over the preset library | U1 | No — selection, not synthesis |
+| U8 | **shipped** — SAVE AS PRESET: the player's own presets in `presets.json` beside the kits, a YOURS strip under the factory row, promotion by roster line through SEND TO BENCH (`docs/WORKSHOP.md`, WS5) | U1 | No — the same `Patch` JSON, stored |
 
 U1 and U2 ship alone, touch no rendered audio, and deliver most of the
 perceived improvement. U3/U5/U6 are deliberately fused into **one** version bump
 and **one** `testkit/` regeneration rather than three.
+
+# U8 — SAVE AS PRESET
+
+**Depends on U1. Shipped** (`docs/WORKSHOP.md`, WS5, which holds the full
+account). U1 made a preset a named `Patch` and gave SYNTH a strip of them;
+U8 lets the player put their own in it. SAVE PRESET ▸ on SYNTH names the
+current macros and keeps them in one file at the shelf root, and the
+strip grows a second row, YOURS, for the voice. The naming rule is U1's
+own — uppercase, at most fourteen letters, unique within a voice — with
+one addition: a factory name is refused, so a chip never means two
+things. Saving under one of your own names replaces it in place.
+
+The roster stays a code change. Nothing on the phone can add to the
+tables above; SEND TO BENCH carries `presets.json` and renders each
+preset as the `p(...)` line its engine's table is written in, exact
+floats and all, and the six test classes judge it there. A promoted
+preset either replaces a factory row or raises the count law on purpose.
 
 # Non-goals
 

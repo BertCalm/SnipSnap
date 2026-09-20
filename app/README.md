@@ -431,6 +431,26 @@ logcat tag to grab when something is wrong.
   the pad and the time, ready to paste under a `docs/BENCH.md` row, and
   `notes.jsonl` holds the same two lines. With the keyboard up the
   slip's KEEP row must stay above the keys.
+- **SAVE AS PRESET** (`docs/WORKSHOP.md`, WS5 — no workshop needed): on
+  SYNTH, THUMP · KICK, the action row reads SCRAMBLE / SAVE PRESET ▸ /
+  SEND TO PAD ▸ — check all three labels fit at 390dp without an
+  ellipsis. Load DUSTY BOOM, drag DRIVE up, tap SAVE PRESET ▸: a slip
+  reads SAVE AS PRESET over `THUMP · KICK`, the field holds `KICK 1`
+  with the keyboard up and SAVE lit. Clear it: SAVE dims and the caption
+  says a preset needs a name. Type `dusty boom`: it shows uppercase, the
+  caption says the factory has it, SAVE stays dim. Type `MY KICK`, SAVE:
+  the toast reads MY KICK SAVED, a second strip labelled YOURS appears
+  under the factory row with MY KICK lit, and the sliders are where you
+  left them. Drag a slider: the highlight lets go. Tap MY KICK: the
+  sliders come back. Switch to SNARE: no YOURS strip (it is per voice);
+  back to KICK: still there. SAVE PRESET ▸ again with `MY KICK`: the
+  caption says it replaces yours and the button reads REPLACE; tap it:
+  MY KICK REPLACED, one chip, the new settings. Kill and relaunch the
+  app, open SYNTH: MY KICK is still there and sounds the same. Then
+  SETUP ▸ WORKSHOP ▸ SEND TO BENCH: the toast counts 1 PRESET, and on a
+  laptop the zip holds `presets.json` and a manifest ending in a
+  `p(ThumpVoice.KICK, "MY KICK", …)` line. Back on an open slip closes
+  it and saves nothing.
 
 ## Fonts / licensing
 

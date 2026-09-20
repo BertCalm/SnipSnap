@@ -2217,8 +2217,10 @@ fun App(shelf: KitShelf) {
         busy = Copy.PACKING_BUSY
         scope.launch {
             try {
-                val (logs, notes) = withContext(Dispatchers.IO) { BenchExport.gather(shelf.root) to BenchExport.notes(shelf.root) }
-                if (logs.isEmpty() && notes.isEmpty()) {
+                val (logs, notes, presets) = withContext(Dispatchers.IO) {
+                    Triple(BenchExport.gather(shelf.root), BenchExport.notes(shelf.root), BenchExport.presets(shelf.root))
+                }
+                if (logs.isEmpty() && notes.isEmpty() && presets.isEmpty()) {
                     toast = if (teachEnabled) Copy.BENCH_EMPTY else Copy.BENCH_EMPTY_TEACH_OFF
                     return@launch
                 }
@@ -2229,7 +2231,7 @@ fun App(shelf: KitShelf) {
                 if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
                     toast = Copy.SHARE_NOWHERE
                 } else {
-                    toast = Copy.benchPacked(result.labels, result.ratings, result.notes.size, result.kits)
+                    toast = Copy.benchPacked(result.labels, result.ratings, result.notes.size, result.presets.size, result.kits)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -3108,6 +3110,7 @@ fun App(shelf: KitShelf) {
                             val synthEntry = open
                             SynthScreen(
                                 entry = synthEntry,
+                                shelfRoot = shelf.root,
                                 onToast = { toast = it },
                                 onKitUpdated = { updatedKit ->
                                     // Same shape as PAD SHEET/CHOP's own
