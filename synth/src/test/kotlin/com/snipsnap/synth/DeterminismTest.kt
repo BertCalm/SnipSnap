@@ -35,4 +35,37 @@ class DeterminismTest {
         val patch = TinesPresets.forVoice(TinesVoice.BELL).first()
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
+
+    // TINES above never touches Dsp.phases/seedFor at all - it's the wrong
+    // canary for this contract. FATHOM, VELVET, VOX and TONEWHEEL are the
+    // four engines that actually call Dsp.seedFor per voice (Fathom.kt:212,
+    // Velvet.kt:203, Vox.kt:116, Tonewheel.kt:102), and none of them had a
+    // byte-identity regression test before this - a seed collision or a
+    // stray Random() slipping into any one of them would have shipped
+    // silently. Same assertion, same real preset -> render() path, one per
+    // engine.
+
+    @Test
+    fun `FATHOM is byte-identical across renders`() {
+        val patch = FathomPresets.forVoice(FathomVoice.GRIND).first()
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `VELVET is byte-identical across renders`() {
+        val patch = VelvetPresets.forVoice(VelvetVoice.BASS).first()
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `VOX is byte-identical across renders`() {
+        val patch = VoxPresets.forVoice(VoxVoice.CHOIR).first()
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `TONEWHEEL is byte-identical across renders`() {
+        val patch = TonewheelPresets.forVoice(TonewheelVoice.FULL).first()
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
 }
