@@ -167,4 +167,71 @@ internal object Modes {
                 t60 = rootT60 * 0.7f.pow((n - 1).toFloat()),
             )
         }
+
+    /**
+     * [material]'s partials resampled onto [slots] ordinal positions.
+     *
+     * Slot k is "this body's k-th ascending partial." Where a body runs out
+     * of sourced partials, its own ratio-growth trend continues into the
+     * remaining slots, fitted in LOG-RATIO space because partial series grow
+     * geometrically — a linear continuation would flatten exactly the
+     * character that distinguishes one body from another. Extrapolated slots
+     * ring quieter than sourced ones, which is both true of real upper
+     * partials and an honest marker that they are inference rather than data.
+     *
+     * The alternative — padding short tables with silent modes — was
+     * rejected: the length difference between a 3-partial tuned bar and a
+     * 5-partial membrane is structural, not an amplitude gap, and
+     * crossfading real partials against silence would thin the sound
+     * halfway through a sweep.
+     */
+    internal fun resample(material: Material, slots: Int): List<Mode> {
+        val sourced = tableFor(material)
+        if (slots <= sourced.size) return sourced.take(slots)
+
+        // Growth per index in log space, read off the sourced partials. With
+        // only one partial there is no trend to read, so fall back to the
+        // harmonic series — the least-assuming continuation available.
+        val logs = sourced.map { kotlin.math.ln(it.ratio.toDouble()) }
+        val step = if (logs.size >= 2) (logs.last() - logs.first()) / (logs.size - 1) else kotlin.math.ln(2.0)
+
+        val out = sourced.toMutableList()
+        for (k in sourced.size until slots) {
+            val extrapolated = kotlin.math.exp(logs.last() + step * (k - sourced.size + 1)).toFloat()
+            val last = out.last()
+            out.add(
+                Mode(
+                    ratio = extrapolated,
+                    // Quieter and shorter than the partial below it, and
+                    // quieter again for being inferred rather than sourced.
+                    gain = last.gain * 0.5f,
+                    t60 = last.t60 * 0.7f,
+                ),
+            )
+        }
+        return out
+    }
+
+    /**
+     * The MATERIAL knob: [from] at amount 0, [to] at amount 1, and genuine
+     * bodies-that-do-not-exist in between. Both ratio and gain crossfade per
+     * slot, so every slot always carries a real partial from both endpoints
+     * and the morph stays dense the whole way across.
+     */
+    fun morph(from: Material, to: Material, amount: Float, slots: Int = 6): List<Mode> {
+        val a = resample(from, slots)
+        val b = resample(to, slots)
+        val t = amount.coerceIn(0f, 1f)
+        return (0 until slots).map { k ->
+            Mode(
+                // Interpolated in log space, for the same reason the
+                // extrapolation is: ratios are geometric, not linear.
+                ratio = kotlin.math.exp(
+                    kotlin.math.ln(a[k].ratio.toDouble()) * (1 - t) + kotlin.math.ln(b[k].ratio.toDouble()) * t,
+                ).toFloat(),
+                gain = a[k].gain * (1 - t) + b[k].gain * t,
+                t60 = a[k].t60 * (1 - t) + b[k].t60 * t,
+            )
+        }
+    }
 }

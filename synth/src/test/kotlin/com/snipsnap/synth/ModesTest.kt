@@ -166,6 +166,63 @@ class ModesTest {
     }
 
     @Test
+    fun `a morph endpoint reproduces its own table`() {
+        val slots = 6
+        val bar = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.MEMBRANE, amount = 0f, slots = slots)
+        val sourced = Modes.tableFor(Modes.Material.METAL_BAR)
+        for (i in sourced.indices) {
+            assertTrue(
+                abs(bar[i].ratio - sourced[i].ratio) < 0.001f,
+                "at amount=0 slot $i should be the bar's own ratio: ${bar[i].ratio} vs ${sourced[i].ratio}",
+            )
+        }
+    }
+
+    @Test
+    fun `every slot carries a real partial - no silent padding`() {
+        // The bar has 4 sourced partials, wood has 3, but a 6-slot bank must
+        // be dense for BOTH or the morph thins out halfway through.
+        for (material in Modes.Material.entries) {
+            val morphed = Modes.morph(material, material, amount = 0f, slots = 6)
+            assertTrue(morphed.size == 6, "$material should fill all 6 slots, got ${morphed.size}")
+            assertTrue(
+                morphed.all { it.gain > 0f },
+                "$material has a silent slot — extrapolate the trend, do not pad with silence",
+            )
+            assertTrue(
+                morphed.map { it.ratio }.zipWithNext().all { (a, b) -> b > a },
+                "$material extrapolated ratios must keep ascending: ${morphed.map { it.ratio }}",
+            )
+        }
+    }
+
+    @Test
+    fun `the morph is continuous - no jump at any step`() {
+        // Sweep MATERIAL and confirm no slot's ratio lurches. A discontinuity
+        // here would be audible as a click or a sudden change of body.
+        val slots = 6
+        var previous = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.BELL, 0f, slots)
+        for (step in 1..50) {
+            val current = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.BELL, step / 50f, slots)
+            for (i in 0 until slots) {
+                val jump = abs(current[i].ratio - previous[i].ratio) / previous[i].ratio
+                assertTrue(jump < 0.15f, "slot $i jumped ${jump * 100}% at step $step")
+            }
+            previous = current
+        }
+    }
+
+    @Test
+    fun `morphing between different bodies actually changes the spectrum`() {
+        // Reachability: MATERIAL must do something across its travel, or it
+        // is a knob that does nothing — the exact defect Phase 0 shipped once.
+        val bar = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.MEMBRANE, 0f, 6)
+        val membrane = Modes.morph(Modes.Material.METAL_BAR, Modes.Material.MEMBRANE, 1f, 6)
+        val spread = bar.indices.maxOf { abs(bar[it].ratio - membrane[it].ratio) / bar[it].ratio }
+        assertTrue(spread > 0.2f, "endpoints should differ meaningfully, max slot change was $spread")
+    }
+
+    @Test
     fun `a mode above Nyquist is skipped, not aliased`() {
         val rate = Dsp.RATE
         val out = Modes.ring(
