@@ -155,21 +155,23 @@ logcat tag to grab when something is wrong.
   failed - trying shared" means the device refused the exclusive
   path and the shared fallback is playing (the toast says so too).
   The controls above the pad are three panels behind a strip under the
-  mode row - VOICE, SHAPE, MOD - one showing at a time; every row named
-  below is on one of them, and the pad should be visibly taller than it
-  was with every row stacked. Then, on VOICE, PAD ◄ ► through the kit,
-  find a sound in XYZ, SET A on SHAPE, three more,
-  switch to MORPH and morph; leave the screen and come back - the
-  corners and the pad are in `surface.json` beside the kit. Then flip
-  the print destination to → PAD: STOP PRINT opens the slot chooser;
-  an empty pad gets the print, a taken pad is replaced with the
-  original in the bin, CANCEL sends the print to TAPE instead. LATCH,
-  lift: the loop should hold where the finger left it. With LATCH off,
-  lift fully and tap again after a pause: the loop should retrigger
-  from its head, like a drum hit, not continue from wherever it had
-  drifted to while released. With a kit that has a tempo, BARS to 2
-  and PRINT: the print should stop itself on the bar (5.2 s at 92 BPM)
-  and the toast should say so. Then PAD2 ►, PAD3 ► and PAD4 ► to pick
+  mode row and the print row (→ TAPE, BARS, PRINT) - VOICE, SHAPE, MOD -
+  one showing at a time; every row named below is on one of them, and
+  the pad should be visibly taller than it was with every row stacked.
+  On a phone every label on those two rows should read in full: the
+  mode row is the five modes alone, and → TAPE is a word, not "TA…".
+  Then, on VOICE, PAD ◄ ► through the kit, find a sound in XYZ, SET A
+  on SHAPE, three more, switch to MORPH and morph; leave the screen and
+  come back - the corners and the pad are in `surface.json` beside the
+  kit. Then flip the print destination on the print row to → PAD: STOP
+  PRINT opens the slot chooser; an empty pad gets the print, a taken
+  pad is replaced with the original in the bin, CANCEL sends the print
+  to TAPE instead. LATCH, lift: the loop should hold where the finger
+  left it. With LATCH off, lift fully and tap again after a pause: the
+  loop should retrigger from its head, like a drum hit, not continue
+  from wherever it had drifted to while released. With a kit that has a
+  tempo, BARS on the print row to 2 and PRINT: the print should stop
+  itself on the bar (5.2 s at 92 BPM) and the toast should say so. Then PAD2 ►, PAD3 ► and PAD4 ► to pick
   three more pads: the finger should now blend all four continuously by
   its own position - PAD loudest near the top, PAD2 near the bottom-left,
   PAD3 near the bottom-right, PAD4 near the bottom-centre (directly under

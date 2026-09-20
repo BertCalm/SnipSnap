@@ -234,7 +234,8 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * mode's knobs, the corners with what they are held to, the presets),
  * MOD (the modulators, the gesture) - one showing at a time, so the pad
  * keeps its height however many rows the panels hold. The mode row and
- * PRINT stay above the strip in every panel.
+ * the print row (→ TAPE or → PAD, BARS, PRINT) stay above the strip in
+ * every panel.
  *
  * Polling: every pointer event updates the *target* reading; a frame
  * loop steps a screen-rate smoother toward it, paints the puck from the
@@ -1129,13 +1130,34 @@ fun SurfaceScreen(
                         target = Reading.REST // the frame loop snaps to it on the mode change
                     }
                 }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            // The print row, under the modes and there whatever panel is
+            // showing: where the print lands, how long it runs, and PRINT
+            // itself. Its own row of three, not the tail of the mode row:
+            // seven buttons across a phone's width left every label past
+            // XYZ cut to two letters and an ellipsis, so a tester read the
+            // destination as "TA..." and never found → PAD. BARS sits here
+            // with the print it sizes, not on VOICE beside LATCH.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 ActionButton(
                     label = if (printToPad) "→ PAD" else "→ TAPE",
                     scheme = scheme,
                     enabled = !printing && !finishing,
                     dimmed = true,
-                    modifier = Modifier.weight(1.1f),
+                    modifier = Modifier.weight(1f),
                 ) { printToPad = !printToPad }
+                // BARS needs a tempo; a kit without one prints free.
+                val printBpm = entry?.kit?.tempoBpm
+                ActionButton(
+                    if (printBpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
+                    scheme,
+                    enabled = printBpm != null && !printing,
+                    dimmed = barsIndex == 0,
+                    modifier = Modifier.weight(1f),
+                ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
                 ActionButton(
                     label = if (printing) "STOP PRINT" else "PRINT",
                     scheme = scheme,
@@ -1189,7 +1211,7 @@ fun SurfaceScreen(
             if (panel == Panel.VOICE) {
                 Spacer(Modifier.height(6.dp))
 
-                // PAD ◄ name ► and the four corner captures.
+                // PAD ◄ name ►, RING and LATCH.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     ActionButton("◄ PAD", scheme, enabled = padName != null) { stepPad(-1) }
                     TapeText(
@@ -1211,14 +1233,6 @@ fun SurfaceScreen(
                         modifier = Modifier.semantics { selected = ringVoice },
                     ) { freezeRing() }
                     ActionButton("LATCH", scheme, enabled = padName != null, dimmed = !latched) { latched = !latched }
-                    // BARS needs a tempo; a kit without one prints free.
-                    val bpm = entry?.kit?.tempoBpm
-                    ActionButton(
-                        if (bpm == null) "NO TEMPO" else PrintLength.label(PrintLength.BARS[barsIndex]),
-                        scheme,
-                        enabled = bpm != null && !printing,
-                        dimmed = barsIndex == 0,
-                    ) { barsIndex = (barsIndex + 1) % PrintLength.BARS.size }
                 }
 
                 if (ringVoice || ringOnBar) {
