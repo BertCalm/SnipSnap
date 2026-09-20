@@ -70,6 +70,7 @@ import com.snipsnap.shell.Schemes
 import com.snipsnap.synth.Draw
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Photo
+import com.snipsnap.synth.PhotoField
 import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.SnapVoice
@@ -170,6 +171,14 @@ fun SnapScreen(
     // Set when the surface closes: it just played whatever it had, so the
     // main loop's re-render on its way back renders without a replay.
     var quietResume by remember { mutableStateOf(false) }
+    // PHOTO FIELD: the picture cut into grains (PhotoField.build), built
+    // once per photo on first FIELD and kept until the next photo; the
+    // GRAIN FIELD screen plays it over the picture, and CLOUD lands it.
+    var field by remember { mutableStateOf<PhotoField.Field?>(null) }
+    var buildingField by remember { mutableStateOf(false) }
+    var showField by remember { mutableStateOf(false) }
+    var cloudBusy by remember { mutableStateOf(false) }
+    var showCloudChooser by remember { mutableStateOf(false) }
 
     // Nothing is heard until the first real touch, same as SYNTH: landing
     // on the tab never plays a note unasked. Taking a photo counts as one.
@@ -219,6 +228,7 @@ fun SnapScreen(
                 }
                 thumb = small
                 photo = p
+                field = null
                 reading = r
                 macros = Snap.macrosFrom(r)
                 // A new photo is a new line: its knobs would otherwise
@@ -273,8 +283,10 @@ fun SnapScreen(
     // line as read, not on the chip: a new photo's knobs arrive with the
     // photo, a beat before its line does, and the old line under the new
     // knobs is not a sound anyone asked for.
-    LaunchedEffect(current, macros, envelope, drawing) {
-        if (drawing) return@LaunchedEffect
+    LaunchedEffect(current, macros, envelope, drawing, showField) {
+        // The DRAW surface and the PHOTO FIELD each have a voice of their
+        // own; this loop stands still while either is up.
+        if (drawing || showField) return@LaunchedEffect
         val l = current
         if (l == null || l.flat) {
             snip = null
@@ -362,6 +374,87 @@ fun SnapScreen(
         }
     }
 
+    // ---- PHOTO FIELD ----
+    fun openField() {
+        val p = photo ?: return
+        val built = field
+        if (built != null) {
+            // The SNAP audition and the field's voice must not overlap.
+            voicePlayer?.stop()
+            showField = true
+            return
+        }
+        if (buildingField) return
+        buildingField = true
+        scope.launch {
+            try {
+                val f = withContext(Dispatchers.Default) { PhotoField.build(p) }
+                field = f
+                voicePlayer?.stop()
+                showField = true
+            } catch (ex: OutOfMemoryError) {
+                Log.e("SnapScreen", "field: out of memory", ex)
+                onToast(Copy.SNAP_TOO_BIG)
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                Log.e("SnapScreen", "field: failed", ex)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                buildingField = false
+            }
+        }
+    }
+
+    // CLOUD: the whole field through GRAINS, landed as audio — no recipe,
+    // like every GRAINS pad; the picture's cloud is the truth of the pad.
+    val cloudName = "Snap Cloud"
+    val cloudClass = DrumClass.LOOP
+    fun sendCloudToSlot(slot: Int) {
+        val e = entry ?: return
+        val f = field ?: return
+        if (cloudBusy) return
+        cloudBusy = true
+        appScope.launch {
+            try {
+                val cloud = withContext(Dispatchers.Default) { PhotoField.cloud(f) }
+                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val alreadyThere = model.pad(slot) != null
+                        if (alreadyThere) {
+                            model.replaceAudio(slot, null) { _ -> cloud }
+                            model.update(slot) { p ->
+                                p.copy(
+                                    displayName = cloudName,
+                                    drumClass = cloudClass,
+                                    colorHex = AutoPlace.colorFor(cloudClass),
+                                    muteGroup = AutoPlace.muteGroupFor(cloudClass),
+                                )
+                            }
+                        } else {
+                            model.assign(slot, cloud, cloudClass, cloudName)
+                        }
+                        model.save()
+                        alreadyThere to model.kit
+                    }
+                }
+                showCloudChooser = false
+                onKitUpdated(updatedKit)
+                onToast(Copy.synthSent(padTag(slot), cloudName, replaced = existed))
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                if (ex is IllegalStateException || ex is IllegalArgumentException) {
+                    onToast(Copy.SYNTH_PAD_REFUSED)
+                } else {
+                    Log.e("SnapScreen", "sendCloudToSlot: failed", ex)
+                    onToast(Copy.SEND_FAILED)
+                }
+            } finally {
+                cloudBusy = false
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -380,7 +473,12 @@ fun SnapScreen(
                     else -> "LINE ${voice.name}"
                 }
                 TapeText(
-                    if (envelope != null) "$lineWord · SHAPE DRAWN" else lineWord,
+                    when {
+                        buildingField -> Copy.SNAP_FIELD_BUSY
+                        cloudBusy -> Copy.SNAP_CLOUD_BUSY
+                        envelope != null -> "$lineWord · SHAPE DRAWN"
+                        else -> lineWord
+                    },
                     TapeType.lcdSmall,
                     scheme.amber.tape,
                 )
@@ -439,6 +537,27 @@ fun SnapScreen(
                         showChooser = true
                     }
                 }
+
+                // The whole picture: FIELD to play it under a finger, CLOUD
+                // to land it on a pad as a texture.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton(
+                        if (buildingField) "…" else "FIELD ▸",
+                        scheme,
+                        enabled = photo != null && !buildingField,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PHOTO FIELD",
+                    ) { openField() }
+                    LabButton(
+                        if (cloudBusy) "…" else "CLOUD ▸",
+                        scheme,
+                        enabled = kit != null && field != null && !cloudBusy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "CLOUD TO PAD",
+                    ) {
+                        showCloudChooser = true
+                    }
+                }
             }
 
             Box(
@@ -482,6 +601,39 @@ fun SnapScreen(
                 onCancel = closeDrawing,
             )
             BackHandler(onBack = closeDrawing)
+        }
+
+        if (showField) {
+            field?.let { f ->
+                // The GRAIN FIELD screen over this one, on the picture: its
+                // own voice, its own back chip, its own BackHandler.
+                Box(Modifier.fillMaxSize().background(scheme.lcd.tape)) {
+                    GrainFieldScreen(
+                        entry = null,
+                        slot = null,
+                        onBack = {
+                            quietResume = true
+                            showField = false
+                        },
+                        onToast = onToast,
+                        onRequestArm = {},
+                        prebuilt = PrebuiltField(f.source, f.map, thumb, "PHOTO FIELD", "◄ SNAP"),
+                    )
+                }
+            }
+        }
+
+        if (showCloudChooser) {
+            val cancelCloud = { if (!cloudBusy) showCloudChooser = false }
+            SlotChooserOverlay(
+                kit = kit,
+                previewColor = Schemes.classColor(cloudClass).tape,
+                scheme = scheme,
+                busy = cloudBusy,
+                onPick = ::sendCloudToSlot,
+                onCancel = cancelCloud,
+            )
+            BackHandler(onBack = cancelCloud)
         }
 
         if (showChooser) {

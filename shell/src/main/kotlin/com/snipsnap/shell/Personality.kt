@@ -708,6 +708,10 @@ object Copy {
     const val SNAP_SHAPE_SILENT = "THAT SHAPE NEVER OPENS. DRAW IT UP SOMEWHERE."
     /** DRAW's DONE with a shape drawn but no line under it (no photo, blank wave): the shape is kept, and there is nothing yet to play it on. */
     const val SNAP_SHAPE_NO_LINE = "SHAPE KEPT. DRAW A LINE OR TAKE A PHOTO TO HEAR IT."
+    /** FIELD's busy line while every cell of the photo is rendered — an overlay line like every other *_BUSY, not a landing. */
+    const val SNAP_FIELD_BUSY = "CUTTING THE PHOTO INTO GRAINS…"
+    /** CLOUD's busy line while the field is granulated for a pad. */
+    const val SNAP_CLOUD_BUSY = "CLOUDING THE PICTURE…"
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

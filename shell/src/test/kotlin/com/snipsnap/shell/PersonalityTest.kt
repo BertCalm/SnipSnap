@@ -408,6 +408,10 @@ class PersonalityTest {
         // LOOP's bounce, while the render runs — same shape as every other
         // *_BUSY above: a button's label, not a landing.
         "LOOP_BOUNCE_BUSY",
+        // SNAP's FIELD and CLOUD, while the photo is cut into grains and
+        // while the field is granulated — the same shape as every other
+        // *_BUSY above: an overlay line, not a landing.
+        "SNAP_FIELD_BUSY", "SNAP_CLOUD_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // CATCH A HIT's busy line while the hits are found, and its grid's

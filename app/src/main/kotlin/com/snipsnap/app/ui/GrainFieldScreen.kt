@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -32,8 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.GrainVoice
 import com.snipsnap.app.KitShelf
@@ -82,6 +86,24 @@ private const val DUET_SILENCE_LEVEL = 0.02f
 private const val DUET_SMOOTHING = 0.5f
 
 /**
+ * A field built elsewhere and handed to [GrainFieldScreen] whole, in place
+ * of a pad's WAV and its analysis — SNAP's PHOTO FIELD (`PhotoField.build`
+ * in `:synth`), where the map's positions are the cells of a picture and
+ * [backdrop] is that picture, drawn under the dots so a finger sees what
+ * it hears. No [GrainField.Projector] comes with one, so DUET's chip stays
+ * hidden, exactly as it does for a degenerate analysis.
+ */
+class PrebuiltField(
+    val snip: Snip,
+    val map: GrainField.GrainMap,
+    val backdrop: Bitmap?,
+    /** The header's title in place of PAD A01. */
+    val title: String,
+    /** The back chip's label in place of ◄ KIT. */
+    val backLabel: String,
+)
+
+/**
  * GRAIN FIELD: drag across a pad's own timbre landscape and hear it play.
  *
  * [GrainField.analyze] dices the pad's sample into a few hundred short
@@ -116,18 +138,29 @@ private const val DUET_SMOOTHING = 0.5f
  */
 @Composable
 fun GrainFieldScreen(
-    entry: KitShelf.Entry,
-    slot: Int,
+    /** The kit and slot whose pad is analyzed into a field — or null when [prebuilt] brings one. */
+    entry: KitShelf.Entry?,
+    slot: Int?,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRequestArm: () -> Unit,
+    /** A field built elsewhere (SNAP's photo), in place of loading and analyzing a pad. */
+    prebuilt: PrebuiltField? = null,
 ) {
     val scheme = LocalScheme.current
 
-    var loaded by remember(entry.dir, slot) { mutableStateOf<Pair<Snip, GrainField.GrainMap>?>(null) }
-    var failed by remember(entry.dir, slot) { mutableStateOf(false) }
+    var loaded by remember(entry?.dir, slot, prebuilt) { mutableStateOf<Pair<Snip, GrainField.GrainMap>?>(null) }
+    var failed by remember(entry?.dir, slot, prebuilt) { mutableStateOf(false) }
 
-    LaunchedEffect(entry.dir, slot) {
+    LaunchedEffect(entry?.dir, slot, prebuilt) {
+        if (prebuilt != null) {
+            loaded = prebuilt.snip to prebuilt.map
+            return@LaunchedEffect
+        }
+        if (entry == null || slot == null) {
+            failed = true
+            return@LaunchedEffect
+        }
         val pad = entry.kit.pad(slot)
         val snip = pad?.let { p ->
             withContext(Dispatchers.IO) {
@@ -144,6 +177,8 @@ fun GrainFieldScreen(
         val map = withContext(Dispatchers.Default) { GrainField.analyze(snip) }
         if (map == null) failed = true else loaded = snip to map
     }
+    // The picture under the dots, converted once per field.
+    val backdrop = remember(prebuilt) { prebuilt?.backdrop?.asImageBitmap() }
 
     // Analyze-null (or the WAV itself missing/unreadable) — same shape as
     // every other "can't do this" path in the app: toast, then leave. Keyed
@@ -318,9 +353,9 @@ fun GrainFieldScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), onClick = ::requestBack)
+            HeaderChip(prebuilt?.backLabel ?: "◄ KIT", scheme, Modifier.width(64.dp), onClick = ::requestBack)
             Spacer(Modifier.weight(1f))
-            TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
+            TapeText(prebuilt?.title ?: "PAD ${padTag(slot ?: 0)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
             if (projector != null) {
                 HeaderChip(
@@ -344,7 +379,7 @@ fun GrainFieldScreen(
             }
         } else {
             val (_, map) = current
-            GrainFieldCanvas(map, voice!!, scheme, touching, autoPos, Modifier.fillMaxWidth().weight(1f))
+            GrainFieldCanvas(map, voice!!, scheme, touching, autoPos, backdrop, Modifier.fillMaxWidth().weight(1f))
             if (duetOn && !armed) {
                 PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
             }
@@ -387,6 +422,8 @@ private fun GrainFieldCanvas(
     scheme: Scheme,
     touching: MutableState<Boolean>,
     autoPos: MutableState<Offset?>,
+    /** The picture the grains were cut from, drawn under them; null for an analyzed pad. */
+    backdrop: ImageBitmap? = null,
     modifier: Modifier = Modifier,
 ) {
     val dots = remember(map) { map.grains.map { Offset(it.x, it.y) } }
@@ -455,6 +492,12 @@ private fun GrainFieldCanvas(
         val dotRadiusPx = DOT_RADIUS.toPx()
         val litRadiusPx = LIT_RADIUS.toPx()
         val litRadiusSqPx = litRadiusPx * litRadiusPx
+
+        // The picture first, dimmed so the dots and the cursor still read
+        // over it, stretched to the panel the way the cells were laid out.
+        if (backdrop != null && w > 0f && h > 0f) {
+            drawImage(backdrop, dstSize = IntSize(w.toInt(), h.toInt()), alpha = 0.6f)
+        }
 
         // The one deferred state read for this whole draw pass — see this
         // function's own KDoc for why it must happen here and nowhere else.

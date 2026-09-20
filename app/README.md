@@ -144,7 +144,15 @@ logcat tag to grab when something is wrong.
   play nothing until the first touch, and CANCEL should not replay.
   Taking a new photo while LINE DRAWN is up should switch the header to
   LINE HORIZON. A shape drawn as a single tiny bump near the floor is
-  refused as never opening.
+  refused as never opening. Then FIELD: with a photo up, the LCD should
+  read CUTTING THE PHOTO INTO GRAINS… for a moment and the GRAIN FIELD
+  should open with the photo dimmed under the dots and PHOTO FIELD in
+  the header; a finger on the sky should sound different from a finger
+  on the ground, a dark corner quieter than a bright one, and ◄ SNAP
+  should bring SNAP back without replaying its line. Then CLOUD: pick a
+  slot, and a Snap Cloud pad should land on KIT as a LOOP that sounds
+  like the whole picture smeared. A second FIELD on the same photo
+  should open at once (the field is kept); a new photo builds afresh.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound
