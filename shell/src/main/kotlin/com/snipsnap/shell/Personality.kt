@@ -557,6 +557,29 @@ object Copy {
             "FOR A RATE YOU CAN HEAR, THE TIME MACHINE ON A PAD."
 
     /**
+     * Where the kit came from, under its grid — the persona review's P4.4.
+     *
+     * The finding called provenance "good and half-hidden": good because
+     * every door stamps it, half-hidden because reaching any of it meant
+     * holding a pad. Naming it in [PAD_SHEET_LEGEND] was looked at and
+     * rejected — that legend is a sample of what the sheet holds, not an
+     * inventory, and does not name layers or takes either — and a third
+     * mark on the grid would crowd the treated dog-ear and the mini
+     * waveform for a fact a mark cannot actually state.
+     *
+     * So it is a line, in the same register and the same place as the two
+     * legends above it: always there, cannot be dismissed, says the thing
+     * rather than pointing at a gesture. [phrase] is `Provenance.ofKit`,
+     * so this line and the liner notes on the card cannot name different
+     * parents.
+     *
+     * Absent, not empty, for a kit built by hand: there is no honest
+     * sentence for "nowhere", and `MADE BY HAND` under a grid of pads a
+     * user just chopped would be a lie the app told about their work.
+     */
+    fun kitCameFrom(phrase: String): String = "THIS KIT: ${phrase.uppercase()}"
+
+    /**
      * The exports folder, said plainly. [where] is the real path, because a
      * user hunting for a file on a cable needs the actual thing to look for
      * and "your app's private storage" is not it.

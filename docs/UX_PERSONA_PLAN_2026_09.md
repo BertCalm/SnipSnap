@@ -3,11 +3,13 @@
 The plan for what survives `docs/UX_PERSONA_REVIEW_2026_09.md` after its
 verification pass (that document's own `# Verification pass, 2026-09-20`
 section), and after the four PRs that followed it. Of its 29 items — 22
-numbered findings, 5 synthesis items, 2 headlines — **12 are closed, 3 are
-decided, 4 are half-closed, and 10 stand.**
+numbered findings, 5 synthesis items, 2 headlines — **13 are closed, 3 are
+decided, 3 are half-closed, and 10 stand.**
 
-This plans the 10 standing, the open half of P4.4, and two things the pass
-turned up that no finding names.
+This plans the 10 standing and two things the pass turned up that no
+finding names. P4.4's open half and N2 were both closed on 2026-09-20 and
+are kept below with their rulings, since the reasoning is the part worth
+keeping.
 
 Written 2026-09-20, straight after the four PRs that closed the others
 (#279, #284, #289, #291).
@@ -27,9 +29,9 @@ defects at all. Sorted by what they actually need:
 | **A measurement first** | 2 | P1.4, P2.2 |
 | **Already settled, kept for the record** | 2 | P3.3, S1 |
 
-Plus **P4.4's open half** — the review files it as half-closed now that
-#291 fixed its export side, and what remains is a design call. Group D
-below.
+**P4.4 is no longer among them** — the design call it was waiting on was
+made on 2026-09-20, and making it turned up a defect underneath. Group D
+below keeps the reasoning.
 
 Nothing here is blocking anything. Nothing here is red. **The honest
 reading is that the app is past the point where this document's findings
@@ -206,28 +208,51 @@ persona claims are *"argued, not measured"*.
 **Neither needs work.** They are listed so a future reader does not
 mistake them for open.
 
-### Group D — the one small build (1)
+### Group D — P4.4's in-app half ▸ **decided and built, 2026-09-20**
 
-**P4.4 — provenance, the in-app half.**
+The export half was fixed by #291. What stood was that per-pad provenance
+was reachable only by holding a pad.
 
-The export half is fixed (#291): a phone-made expansion now carries its
-J-Card and liner notes, as a CLI-made one always did. What stands is that
-per-pad provenance — `provenanceOrigin`/`provenanceLine`,
-`PadSheetScreen.kt` — is reachable only by long-pressing a pad.
+**Two fixes were on the table and neither was taken.** Adding a word to
+`PAD_SHEET_LEGEND` fails not on width (`ORIGIN` leaves 66dp spare at the
+390dp frame; `WHERE IT CAME FROM` leaves 2dp) but on purpose: that legend
+is a **sample, not an inventory**, and a sixth word would make provenance
+no more discoverable than layers or takes, which are equally unnamed. A
+third mark on the KIT grid would crowd J36's treated dog-ear and W12's
+mini-waveform to state a fact — *which* parent — that a mark cannot state.
 
-**The obvious fix does not work, and this is worth writing down so nobody
-tries it twice.** Adding a word to `PAD_SHEET_LEGEND` fails not on width
-(`ORIGIN` leaves 66dp spare at the 390dp frame; `WHERE IT CAME FROM`
-leaves 2dp) but on purpose: that legend is a **sample, not an inventory**.
-Its own site says the sheet holds *"twenty treatments plus shape, tune,
-mutate, layers, takes and GRAIN FIELD"* — so a sixth word would make
-provenance no more discoverable than layers or takes, which are equally
-unnamed.
+**What was built instead: a line under the grid, and one author for it.**
 
-If this is wanted, the real options are a mark on the KIT grid (which
-already carries J36's treated dog-ear and W12's mini-waveform, so a third
-mark is a crowding question), or accepting the sheet as the right home.
-**Needs a design call before any code.**
+`Provenance.ofKit` phrases where the kit came from and KIT prints it as a
+third always-there line beside the two legends — the same move S2 already
+made for the hold itself: keep the gesture, add a line that cannot be
+dismissed. Per-pad detail stays on the sheet, which is the right home for
+per-pad detail.
+
+**And the design call turned up a defect underneath it.** The app had
+*three* readers of a pad's `source` map:
+
+| | keys | order |
+|---|---|---|
+| `PadSheetScreen.provenanceOrigin` (`:app`) | 10 | song → file → tapeFile → resampled → imported → … |
+| `LinerNotes.render` (`:shell`) | 4 | song → resampled → file → imported |
+| `Lineage.kitNode` (`:shell`) | 4 (different 4) | song → file → imported → app/title |
+
+The pad sheet's own KDoc claimed it read *"in the same priority order
+`LinerNotes.kt` uses"*. It had not for a long time. A pad captured from
+another app — a key only `Lineage` knew — showed as its bare filename on
+the pad sheet and as *"Built by hand, pad by pad."* in the liner notes
+that went on the card, and a sculpted or dissected kit came out of
+`snipsnap lineage` as *"made from scratch"*.
+
+`Provenance` (`:shell`) is the only reader now: eleven kinds in one
+declared order, one phrase each, checked exhaustively over the enum by
+`ProvenanceTest` so the next door added cannot reach two readers out of
+three.
+
+**Verified by:** JVM logic tests. Moving the order out of `:app` is half
+the point — `:app` has no unit test source set, so an order typed there
+could only ever be checked by re-reading it.
 
 ---
 
@@ -239,7 +264,9 @@ mark is a crowding question), or accepting the sheet as the right home.
 2. **N1** — the GROOVE on-device suite. Highest compounding value: it
    makes the next `:app` change verifiable instead of re-read.
 3. **P1.1 + P2.4 + P3.2** — one small copy PR, three findings.
-4. **P4.4's in-app half** — after a design call, if wanted.
+4. ~~**P4.4's in-app half** — after a design call, if wanted.~~ **Done
+   2026-09-20.** The call was made and the build was smaller than the
+   defect it uncovered; see Group D.
 5. **Mark Group A's remaining three and all of Group C as accepted**, so
    the review stops reading as ten open items when it is really four.
 

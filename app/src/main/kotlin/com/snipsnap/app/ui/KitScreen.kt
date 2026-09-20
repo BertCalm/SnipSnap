@@ -71,6 +71,7 @@ import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadPeaks
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.Provenance
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TextureKits
 import com.snipsnap.shell.VoiceAllocator
@@ -371,6 +372,19 @@ fun KitScreen(
         // not discoverable by looking, and a hint that can be dismissed is
         // a feature that can be lost.
         TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        // Where the kit came from (persona review, P4.4). The same move as
+        // the two lines above: always there, cannot be dismissed. The
+        // finding was that provenance is good and reachable only by
+        // holding a pad — this says the kit's half of it without a
+        // gesture, and `Provenance.ofKit` is the same reader the liner
+        // notes on the card use, so the screen and the paper agree.
+        //
+        // Absent, not blank, for a kit built by hand: there is no honest
+        // line for "nowhere".
+        val cameFrom = Provenance.ofKit(kit.pads)
+        if (cameFrom != null) {
+            TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+        }
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
         // panelKind is a texture kind, KEY_PANEL for the key picker, or null.

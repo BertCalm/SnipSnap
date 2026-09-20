@@ -36,25 +36,25 @@ object LinerNotes {
         appendLine(identity.joinToString(" - "))
         appendLine()
 
-        // Where it came from - dig beats chop beats import in specificity.
-        val dug = kit.pads.mapNotNull { p ->
-            p.source["song"]?.let { s -> s to (p.source["at"] ?: "?") }
-        }.distinct()
-        val resampled = kit.pads.mapNotNull { p ->
-            p.source["resampledFrom"]?.let { it to (p.source["generation"] ?: "2") }
-        }.distinct()
-        val chopped = kit.pads.mapNotNull { it.source["file"] }.distinct()
-        val imported = kit.pads.mapNotNull { it.source["importedFrom"] }.distinct()
-        when {
-            dug.isNotEmpty() -> dug.forEach { (song, at) ->
-                appendLine("Dug from \"$song\" at $at.")
-            }
-            resampled.isNotEmpty() -> resampled.forEach { (from, gen) ->
+        // Where it came from. Which stamp wins, and how it is worded, is
+        // [Provenance]'s call — this file used to make that call itself
+        // and so did the pad sheet and [Lineage], from three different
+        // key lists in two different orders, which meant a kit could
+        // arrive on the card with a parent its own screen never named.
+        //
+        // The one sentence [Provenance] cannot write is the resample
+        // generation: it reads a second key (`generation`) that a bare
+        // origin phrase has nowhere to put, and "generation 3" is the
+        // part a reader of a resampled kit actually wants.
+        val top = kit.pads.mapNotNull { Provenance.kindOf(it.source) }.minByOrNull { it.ordinal }
+        when (top) {
+            Provenance.Kind.RESAMPLED -> kit.pads.mapNotNull { p ->
+                p.source["resampledFrom"]?.let { it to (p.source["generation"] ?: "2") }
+            }.distinct().forEach { (from, gen) ->
                 appendLine("Generation $gen - bounced from \"$from\" and chopped again.")
             }
-            chopped.isNotEmpty() -> appendLine("Chopped from ${chopped.joinToString(", ") { "\"$it\"" }}.")
-            imported.isNotEmpty() -> appendLine("Imported from ${imported.joinToString(", ") { "\"$it\"" }}.")
-            else -> appendLine("Built by hand, pad by pad.")
+            null -> appendLine("Built by hand, pad by pad.")
+            else -> Provenance.allOfKit(kit.pads).forEach { appendLine(Provenance.asSentence(it)) }
         }
 
         kit.wear?.let { wear ->
