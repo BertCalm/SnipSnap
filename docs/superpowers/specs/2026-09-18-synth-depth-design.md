@@ -369,7 +369,21 @@ before Phase 3 rather than alongside it.
 | 2 | Spine across remaining struck engines, then the sustained group (VOX, FATHOM, TONEWHEEL) as a separate gate | Yes |
 | 3 | STRIKE engine; presets re-authored by ear | Yes |
 
-**Phase 0 is generalization and range work — cheap, low-risk, and the highest
+**> **What Phase 0 actually shipped, 2026-09-19.** Two items in the row above did
+> not land, and the row is corrected to match reality rather than left as a
+> promise.
+>
+> **The macro range audit is deferred to the audition session.** It is the
+> answer to "limited", and it is entirely by-ear: the method is widen, listen,
+> and pull back anything whose extreme stops sounding like the voice. Its
+> reach-test thresholds are an *output* of that listening. Under the
+> measure-never-guess policy it cannot ship a placeholder, because the
+> placeholder would be the widened range itself.
+>
+> **No saturation was added anywhere.** All three candidate sites were measured
+> and rejected — see the correction under the governing finding.
+
+Phase 0 is generalization and range work — cheap, low-risk, and the highest
 impact-per-line here.** It is *not* "no new DSP": that claim was wrong in an
 earlier draft, which bundled PLUCK's fractional-delay fix into it. Retrofitting
 a fractional-delay interpolator and 4× oversampling onto a feedback loop whose
