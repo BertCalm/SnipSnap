@@ -969,6 +969,23 @@ object Copy {
      * words alone.
      */
     fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON YOURS. THE REST STAY UNTOUCHED."
+
+    /**
+     * GROOVE's PROGRAM sub-line while YOURS is live and the kit holds more
+     * than one of them: which one is sounding, and that the segment steps
+     * to the next.
+     *
+     * It sits here rather than on the segment because the segment cannot
+     * hold it. The program row gives each of its five segments about 56dp
+     * at the 390dp design frame, and CAPTURED already needs 48 of them —
+     * the row's own note ("one token each, no spaces") is the rule, and a
+     * sixth segment would leave 47dp, under what CAPTURED needs. The
+     * sub-line has the whole row instead.
+     *
+     * Only shown when there is more than one, so a player who never makes
+     * a second program never reads a count.
+     */
+    fun yoursOf(n: Int, total: Int): String = "YOUR STEPS · $n OF $total · TAP AGAIN FOR THE NEXT"
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
