@@ -399,3 +399,31 @@ spectrogram reading of a photo (the image as a picture of sound, through
 the spectral door and `Pghi` the retune already uses) as a second field
 mode; a KEY lock that pins every cell to one note so the field varies only
 in timbre.
+
+A hardening pass over PHOTO FIELD (an independent read plus this
+document's own) settled the following. The voice re-triggers on a fixed
+512-frame clock and a photo cell's grain is a steady tone from phase zero,
+so copies of one grain overlap-added at a fixed period comb-filtered each
+other — near silence at the notes whose period divides the hop badly (a
+JVM overlap-add of a 311 Hz grain measured under a sixth of its jittered
+level); `GrainMap.jitterTriggers` asks the voice for hops drawn between
+half and one-and-a-half of the clock, which scatters the phases, and a
+photo field sets it while an analyzed pad's map keeps the even cadence.
+`Snap.grain` renders at native rate, the one place SNAP does, because two
+hundred oversampled-and-decimated grains took four seconds on a desktop
+and the voice windows and mixes them eight deep anyway. `Snap.table`
+interpolates between the pixels of a line narrower than the table instead
+of repeating each one, so a 32-pixel cell (or a thumbnail) is a curve and
+not a staircase buzzing at the pixel rate. A cell whose swing is under
+`SOFT_SWING` (24) is blended toward a sine in proportion, since the cycle
+is normalized to full scale before it plays and a four-level sky would
+otherwise be a full-scale four-step square. On the screen: a build that
+lands after a newer photo drops itself, a new photo closes a field that
+is up (the main loop stood still behind an overlay no longer shown), TAKE
+PHOTO waits for a build, the field overlay catches touches so a tap in a
+gap cannot reach AUDITION and play SNAP's voice over the field's, the
+prebuilt field is remembered so a recomposition does not tear the voice
+down mid-drag, the way back consumes its quiet even with nothing to
+render, and CLOUD onto a synth pad clears the pad's recipe (replaceAudio
+keeps one when handed null, and the old note would have regenerated over
+the cloud on the next rebuild from the sidecar).

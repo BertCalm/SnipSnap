@@ -149,6 +149,26 @@ class SnapTest {
     }
 
     @Test
+    fun `a line narrower than the table is a curve between its pixels, not a staircase`() {
+        // Eight columns, black to white: 256 points that climb through
+        // every level, not eight steps of 32 repeats each.
+        val eight = Photo.grey(8, 4) { x, _ -> x / 7f }
+        val table = Snap.table(eight, SnapVoice.HORIZON)
+        assertEquals(0, table.first())
+        assertEquals(255, table.last())
+        var steps = 0
+        for (i in 1 until table.size) {
+            assertTrue(table[i] >= table[i - 1], "not monotone at $i")
+            if (table[i] != table[i - 1]) steps++
+        }
+        assertTrue(steps > 200, "only $steps distinct steps: a staircase")
+        // The same photo read down is one colour per row: a flat line.
+        assertTrue(Snap.isFlat(Snap.table(eight, SnapVoice.PLUMB)))
+        // One column wide reads as one level everywhere.
+        assertTrue(Snap.table(Photo.grey(1, 9) { _, y -> y / 8f }, SnapVoice.HORIZON).distinct().size == 1)
+    }
+
+    @Test
     fun `ORBIT closes on itself`() {
         // A photo that is bright on the left and dark on the right: an
         // ORBIT line crosses that edge twice per turn, at twelve and six

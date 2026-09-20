@@ -165,6 +165,12 @@ logcat tag to grab when something is wrong.
   slot, and a Snap Cloud pad should land on KIT as a LOOP that sounds
   like the whole picture smeared. A second FIELD on the same photo
   should open at once (the field is kept); a new photo builds afresh.
+  Then the hardening checks: a photo of clear sky should sound the same
+  strength at every note (hold a finger still on one cell and listen
+  for a steady tone, not a thin or silent one); tapping the hint text
+  under the field must not play SNAP's own note; CLOUD onto a pad that
+  was a SNAP note should leave the pad sheet with no recipe card; and
+  while CUTTING THE PHOTO INTO GRAINS… is up, TAKE PHOTO is off.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound
