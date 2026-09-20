@@ -1,9 +1,11 @@
 # WORKSHOP — the developer's bench, inside the app
 
-*The spec for the admin mode. Status: the door and WS1–WS4 — SEND TO
-BENCH, CONFIRM ALL and the cut rating, LABEL THIS HIT, BENCH NOTES — are
-built; what is left is the list at the end, in value order. One tester
-today — the phone's owner — and the decisions below are shaped by that.*
+*The spec for the admin mode. Status: the door and every tool on the
+list are built — WS1–WS4 inside the workshop (SEND TO BENCH, CONFIRM ALL
+and the cut rating, LABEL THIS HIT, BENCH NOTES) and WS5, SAVE AS
+PRESET, outside it, where the spec said it belonged. What remains is in
+Open. One tester today — the phone's owner — and the decisions below are
+shaped by that.*
 
 ## Why this exists
 
@@ -105,12 +107,16 @@ puts on its own:
   empty.
 - `notes.jsonl` — every bench note (WS4, below) as the phone kept it,
   when any exist. The one file in the zip a person typed.
+- `presets.json` — the player's saved presets (WS5, below), byte for byte
+  as the phone keeps them, when any exist. Knob settings and names, never
+  audio.
 - `manifest.txt` — the stamp, the totals (labels split into corrections
-  and confirmations, ratings, and notes), one row per kit with its share
-  (a binned kit shows as `.bin/<name>-<stamp>`), every note as a `→` line
-  ready to paste into `docs/BENCH.md`, and the two lines a person at a
-  desk needs: where to drop the files and what to run. Plain prose in
-  its own case; it is read off a laptop, never off the phone.
+  and confirmations, ratings, notes, and presets), one row per kit with
+  its share (a binned kit shows as `.bin/<name>-<stamp>`), every note as
+  a `→` line ready to paste into `docs/BENCH.md`, every saved preset as
+  the roster line that promotes it, and the two lines a person at a desk
+  needs: where to drop the files and what to run. Plain prose in its own
+  case; it is read off a laptop, never off the phone.
 
 Two packs of an unchanged shelf are the same bytes (fixed entry time,
 fixed order — `XpnPackager`'s trick), so a re-send is a re-send and not a
@@ -144,9 +150,9 @@ never says SENT, because the chooser opening is not the file leaving.
 
 **The consent line stays true.** SETUP's consent row promises *FEATURES
 ONLY, NEVER AUDIO. NOTHING LEAVES THE PHONE.* Both halves hold: the zip
-carries feature vectors, labels, ratings and the tester's own typed words,
-and nothing that can be played back, and TEACH THE MACHINE itself still
-sends nothing — this button, pressed
+carries feature vectors, labels, ratings, knob settings and the tester's
+own typed words, and nothing that can be played back, and TEACH THE
+MACHINE itself still sends nothing — this button, pressed
 on purpose behind a knock, is the only way a log leaves, and the note
 under it says exactly that. Any future tool that carries audio (LABEL
 THIS HIT, below) gets its own button and its own words, so this promise
@@ -371,6 +377,101 @@ round trip, `render`), the third file and the manifest lines in
 `BenchExportTest`; the chip on `TitleBar`, the slip in `BenchNoteDialog`,
 `openBenchNote` / `keepBenchNote` and the `sendToBench` change in `App.kt`.
 
+## SAVE AS PRESET — built, outside the workshop
+
+WS5, and the one tool on the list that is not a bench tool. SYNTH loads a
+factory preset, the player wrecks it into something of their own, and
+until now the only place that sound could go was a pad: SEND TO PAD
+writes the recipe into one kit, and the next kit starts from the factory
+row again. Saving a preset is a thing every player would use, so there is
+no knock in front of it: it is on SYNTH for everyone, as the spec said it
+should be. Only the promotion path — getting a preset off the phone and
+into the shipped roster — is bench business, and that rides SEND TO
+BENCH.
+
+**In the hand.** SYNTH's action row is three buttons now: SCRAMBLE,
+**SAVE PRESET ▸**, SEND TO PAD ▸. The new one needs no kit open, because
+a preset is the shelf's, not a kit's. It drops a slip — SAVE AS PRESET,
+the engine and the voice, a field with the keyboard already up — opened
+on a placeholder to type over (`KICK 1`, `HAT CLOSED 2`: the voice and
+the first number nothing holds). The caption under the field is the
+rule the name fails, or what the save will cost, and the button reads
+SAVE or REPLACE to match:
+
+- blank → *A PRESET NEEDS A NAME.*, dim;
+- longer than fourteen letters (the factory rule the strip was built
+  for) → the note, in the warn colour, dim;
+- a name the factory ships on this voice → *THE FACTORY HAS DUSTY BOOM.
+  PICK ANOTHER NAME.*, dim — a chip must never mean two things;
+- one of your own on this voice → *REPLACES YOUR MY KICK. THE OLD
+  SETTINGS ARE NOT KEPT.*, and the button reads REPLACE;
+- anything else → SAVE.
+
+A save lands under the factory row as a second strip, **YOURS**, with the
+same chips and the same highlight rule: *MY KICK SAVED. IT IS UNDER THE
+FACTORY ROW ON EVERY KIT.* The strip exists only for a voice that has
+one. Tap a chip and it loads like a factory one; move a slider and the
+highlight lets go, as U1's own rule has it — a preset is a starting point
+to wreck. Saving under one of your names writes over it in place, which
+is how a sound is iterated: save, wreck, save again.
+
+**On disk.** One file, `presets.json` at the shelf root beside the kit
+folders, holding every saved patch as the same JSON a pad's recipe
+carries (a preset *is* a named patch — U1 built the format), with when
+it was saved. Written whole and atomically, so a killed save leaves the
+old file; an entry this build cannot read — a newer phone's engine — is
+skipped on read and carried through a save untouched; a file that is not
+the store's at all is never written over, so the save refuses in words
+rather than erase what it could not read. The exit test holds in
+`UserPresetsTest`: a saved preset read back after a restart is equal, and
+renders the same bytes.
+
+**What is not built, and why.** There is no FORGET. The app's rule for a
+delete is into the bin, not gone, and a bin needs a door to come back
+out of; a preset bin with no door would be a promise without a way to
+keep it (law 3), and REPLACE covers the mistake a single tester makes
+most — a sound saved a step too early. FORGET, its bin and its door are
+one piece, listed under Open. BACKUP does not carry the file either: it
+packs kits as `.xpn` archives, and a preset that was sent to a pad is in
+that pad's recipe already; the named chips are not. That is also under
+Open.
+
+**Promotion stays a code change.** A preset worth every player having is
+pasted into its engine's table by hand, where `ThumpPresetsTest` and its
+siblings judge it: identity (a kick still classifies as a kick), the
+trademark blocklist (no `808` on the phone's say-so), and spread (it is
+not a sixteenth name for one sound). No phone-side act can add to the
+roster, and none should: the tests are the point. SEND TO BENCH carries
+`presets.json` as a fourth file and renders every preset in the manifest
+as the line its table is written in, with every macro's exact value:
+
+```
+saved presets, as roster lines for synth/src/main/kotlin/com/snipsnap/synth/ - one worth every player having is pasted under its table's rows by hand, and that engine's PresetsTest judges it:
+ThumpPresets.kt
+  p(ThumpVoice.KICK, "MY KICK", "TUNE" to 0.3427f, "SWEEP" to 0.45f, "DECAY" to 0.37f, "CLICK" to 0.32f, "DRIVE" to 0.35f),
+```
+
+`UserPresetsTest` holds that the line names a table and a helper that
+exist for every registered engine, and that every factory preset's own
+line reads back to its exact floats. One thing to know at the desk: the
+count law (`ThumpPresetsTest` asks for sixteen a voice) means a promoted
+preset replaces a factory row or raises that number on purpose; the
+spec's exit line, "passes `ThumpPresetsTest` unchanged", is the former.
+
+**SEND TO BENCH's words grow by one noun.** Its note reads *EVERY LABEL,
+CUT RATING, NOTE AND SAVED PRESET ON THIS PHONE, IN ONE FILE FOR THE
+BENCH. FEATURES, LABELS, RATINGS, KNOB SETTINGS AND YOUR OWN WORDS ONLY,
+NEVER AUDIO…*; the landing toast counts presets beside the rest; a shelf
+with nothing but a preset still sends. A presets file the build cannot
+read is left out of the zip rather than handed out as if it were read.
+
+Code: `UserPresets` in `:shell` (`Saved`, `Check`, `normalize`, `check`,
+`suggest`, `save`, `read`, `rosterLine`, `renderAll`), the fourth file
+and the manifest lines in `BenchExport`, the copy in `Copy`, held by
+`UserPresetsTest` and `BenchExportTest`; SAVE PRESET ▸, `PresetNameDialog`
+and the YOURS strip in `SynthScreen`, the shelf root and the
+`sendToBench` change in `App.kt`.
+
 ## The list — next tools, in value order
 
 Sizes as `docs/APP_PLAN.md` uses them (S under a day, M a few days).
@@ -385,9 +486,11 @@ it.
 | WS2 | ✓ **CONFIRM ALL and the cut rating** — above | S–M | the log held errors only, so it could measure misses but never accuracy; nothing measured the *cuts* | a confirmed-and-corrected chop replays through the feature path with its accuracy counted; a rating line names the setting that earned it |
 | WS3 | ✓ **LABEL THIS HIT** — above | S | `reference/calibration/` had zero real captures; BENCH A5 has asked for a dozen since the corpus was named | a labelled hit from the phone lands in `CalibrationCorpusTest`'s confusion matrix |
 | WS4 | ✓ **BENCH NOTES** — above | S | `docs/BENCH.md` is answered on a laptop from memory; the phone knows the context the note is about | a note taken on PLAY names PLAY, the kit, and the time, in the manifest |
-| WS5 | **SAVE AS PRESET on SYNTH** — a user preset store (`presets.json` beside the kits), listed under the factory rows; promotion into the Kotlin roster stays a code change guarded by the spread, blocklist and identity tests | M | fast authoring on the phone, honest shipping on the desk — and this is the one that is really a product feature, so it should land *outside* the workshop once it works | a saved preset survives a restart and re-renders the same bytes; a promoted one passes `ThumpPresetsTest` unchanged |
+| WS5 | ✓ **SAVE AS PRESET on SYNTH** — above, outside the workshop | M | fast authoring on the phone, honest shipping on the desk — and this is the one that is really a product feature, so it should land *outside* the workshop once it works | a saved preset survives a restart and re-renders the same bytes; a promoted one passes `ThumpPresetsTest` unchanged |
 
-WS5 is what is left, and the one that should not stay here.
+The list is built. WS5 never lived in the workshop: it landed on SYNTH
+for every player from the start, and only its promotion path is bench
+business.
 
 ## Decisions
 
@@ -434,8 +537,25 @@ WS5 is what is left, and the one that should not stay here.
   shares, and only while the WORKSHOP is open: a note is about whatever
   is under it, and a chip per screen is one more thing per screen to
   keep in step.
+- **SAVE AS PRESET is not behind the knock.** Every player would use it,
+  and a thing every player would use does not belong behind a
+  developer's door; the workshop gets only the promotion path, in the
+  bench hand-out.
+- **Promotion is a code change, judged by tests.** A phone can never add
+  to the shipped roster; it can only hand the desk the line, and the
+  spread, blocklist and identity tests decide.
+- **A saved name replaces in place; a factory name is refused.** One
+  chip, one meaning; and iterating on a sound is save, wreck, save again
+  under the same name, not a trail of `KICK 1`…`KICK 9`.
 
 ## Open
 
-- Nothing today. WS4 closed the last one (where notes land: pasted into
-  `docs/BENCH.md` from the manifest, above).
+- **FORGET for a preset**, with its bin and the door to bring one back
+  out — one piece, because a bin with no door is a promise without a way
+  to keep it. Until then REPLACE is the way to fix a preset saved too
+  early. Where the door goes (DELETED KITS growing a PRESETS section, or
+  a chip on the YOURS strip) is the design question.
+- **BACKUP carrying `presets.json`.** The restore side has to merge it
+  into a shelf that may hold presets of its own, which is why it is not
+  a one-line addition to the zip. Until then a preset sent to a pad is
+  in that pad's recipe, which BACKUP does carry; the named chips are not.

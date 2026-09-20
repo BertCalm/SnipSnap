@@ -648,6 +648,22 @@ object Copy {
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
+    // ---- SYNTH: SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
+    /** Under the name field: the one rule with a number in it, and where the preset will show. Reads the limit off the store, so the rule has one home. */
+    val PRESET_NAME_NOTE: String = "UP TO ${UserPresets.MAX_NAME} LETTERS. IT LISTS UNDER THE FACTORY ROW FOR THIS VOICE, ON EVERY KIT."
+    /** The field is blank: SAVE is dim and this says why. */
+    const val PRESET_NAME_BLANK = "A PRESET NEEDS A NAME."
+    /** The typed name is one the factory ships on this voice: a chip must never mean two things. */
+    fun presetNameFactory(name: String): String = "THE FACTORY HAS $name. PICK ANOTHER NAME."
+    /** The typed name is one of the player's own on this voice: the button reads REPLACE, and this says what that costs. There is no bin for a preset. */
+    fun presetReplaces(name: String): String = "REPLACES YOUR $name. THE OLD SETTINGS ARE NOT KEPT."
+    /** SAVE landed under a fresh name: where to find it. */
+    fun presetSaved(name: String): String = "$name SAVED. IT IS UNDER THE FACTORY ROW ON EVERY KIT."
+    /** REPLACE landed: the old settings are written over, and nothing holds them. */
+    fun presetReplaced(name: String): String = "$name REPLACED. THE OLD SETTINGS ARE NOT KEPT."
+    /** The write threw; the file is as it was. */
+    const val PRESET_SAVE_FAILED = "THE PRESET DID NOT SAVE. TRY AGAIN."
+
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
 
@@ -686,25 +702,26 @@ object Copy {
      * [TEACH_CONSENT] true — TEACH itself never sends; this button, pressed
      * on purpose, is the only way a log leaves.
      */
-    const val SEND_TO_BENCH_NOTE = "EVERY LABEL, CUT RATING AND NOTE LOGGED ON THIS PHONE, MERGED INTO ONE FILE FOR THE CALIBRATION FOLDER. FEATURES, LABELS, RATINGS AND YOUR OWN WORDS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
+    const val SEND_TO_BENCH_NOTE = "EVERY LABEL, CUT RATING, NOTE AND SAVED PRESET ON THIS PHONE, IN ONE FILE FOR THE BENCH. FEATURES, LABELS, RATINGS, KNOB SETTINGS AND YOUR OWN WORDS ONLY, NEVER AUDIO. TEACH THE MACHINE NEVER SENDS ANYTHING BY ITSELF. THIS BUTTON IS THE ONLY WAY A LOG LEAVES."
     /** SEND TO BENCH with nothing logged anywhere on the shelf, TEACH on: the remedies are a chip or a note. */
     const val BENCH_EMPTY = "NOTHING TO SEND. NOTHING IS LOGGED YET. CORRECT OR CONFIRM A CHIP ON CHOP, OR TAKE A NOTE, FIRST."
     /** SEND TO BENCH with nothing logged and TEACH off: the reason before the remedies. */
     const val BENCH_EMPTY_TEACH_OFF = "NOTHING TO SEND. TEACH THE MACHINE IS OFF, SO NO CHIP IS LOGGED. TURN IT ON ABOVE, OR TAKE A NOTE."
     /**
      * SEND TO BENCH: the zip is packed and the chooser is up. Counts the
-     * labels (corrections and confirmations alike), the cut ratings and
-     * the notes, naming only what the file holds, and names the kits only
-     * when something came from one. Ends on the same "PICK WHERE IT GOES."
+     * labels (corrections and confirmations alike), the cut ratings, the
+     * notes and the saved presets, naming only what the file holds, and
+     * names the kits only when something came from one. Ends on the same "PICK WHERE IT GOES."
      * as [backedUp] and [kitPacked] because it is the same moment, and
      * never says SENT: `ShareOut.send` only reports that the chooser
      * opened.
      */
-    fun benchPacked(labels: Int, ratings: Int, notes: Int, kits: Int): String {
+    fun benchPacked(labels: Int, ratings: Int, notes: Int, presets: Int, kits: Int): String {
         val what = listOfNotNull(
             countOf(labels, "LABEL", "LABELS").takeIf { labels > 0 },
             countOf(ratings, "CUT RATING", "CUT RATINGS").takeIf { ratings > 0 },
             countOf(notes, "NOTE", "NOTES").takeIf { notes > 0 },
+            countOf(presets, "PRESET", "PRESETS").takeIf { presets > 0 },
         )
         val joined = when (what.size) {
             0 -> "NOTHING"

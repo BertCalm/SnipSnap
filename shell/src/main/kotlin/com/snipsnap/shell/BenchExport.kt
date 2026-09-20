@@ -23,7 +23,11 @@ import java.util.zip.ZipOutputStream
  * [TeachLog] lines like any other. Since WS4 the bench notes
  * ([BenchNotes], `Bench/notes.jsonl` beside the kits rather than in one)
  * ride along too, as a third file and as `→` lines in the manifest, ready
- * to paste under the `docs/BENCH.md` row each answers.
+ * to paste under the `docs/BENCH.md` row each answers. Since WS5 so do the
+ * player's saved presets ([UserPresets], `presets.json` at the shelf
+ * root): the file as a fourth entry, and every preset as the roster line
+ * that promotes it into its engine's table, because promotion is a code
+ * change judged by that engine's own tests, never a phone-side act.
  *
  * Features, labels and ratings only, exactly as they were written: nothing
  * here opens a WAV, so what SETUP's consent line promises about the log
@@ -49,6 +53,9 @@ object BenchExport {
     /** The bench notes inside the zip: [BenchNotes.FILE_NAME], as the phone kept them. */
     const val NOTES_NAME = BenchNotes.FILE_NAME
 
+    /** The saved presets inside the zip: [UserPresets.FILE_NAME], byte for byte as the phone keeps it. */
+    const val PRESETS_NAME = UserPresets.FILE_NAME
+
     /** The manifest inside the zip: which kit gave how many lines, and what to do with the files. */
     const val MANIFEST_NAME = "manifest.txt"
 
@@ -69,8 +76,13 @@ object BenchExport {
         val confirmations: Int get() = examples.count { it.confirmation }
     }
 
-    /** What one pack wrote: the zip, each kit's share of it, and the notes. */
-    data class Result(val file: File, val logs: List<Log>, val notes: List<BenchNotes.Note> = emptyList()) {
+    /** What one pack wrote: the zip, each kit's share of it, the notes and the presets. */
+    data class Result(
+        val file: File,
+        val logs: List<Log>,
+        val notes: List<BenchNotes.Note> = emptyList(),
+        val presets: List<UserPresets.Saved> = emptyList(),
+    ) {
         /** Every teach-log line: corrections and confirmations together. */
         val labels: Int get() = logs.sumOf { it.examples.size }
         val corrections: Int get() = logs.sumOf { it.corrections }
@@ -105,19 +117,29 @@ object BenchExport {
     fun notes(kitsRoot: File): List<BenchNotes.Note> = BenchNotes.read(BenchNotes.file(kitsRoot))
 
     /**
-     * Pack every log [gather] finds under [kitsRoot], and every note
-     * [notes] finds, into `<outDir>/SnipSnap Bench <stamp>.zip`. [stamp] is
+     * The player's saved presets under [kitsRoot] (`presets.json`), in the
+     * order saved; none without the file, and none from a file this build
+     * cannot read — the bench zip is the developer's hand-out, and a file
+     * SYNTH itself refuses is not something to hand out as if it were read.
+     */
+    fun presets(kitsRoot: File): List<UserPresets.Saved> = runCatching { UserPresets.read(kitsRoot) }.getOrDefault(emptyList())
+
+    /**
+     * Pack every log [gather] finds under [kitsRoot], every note [notes]
+     * finds and every preset [presets] finds, into
+     * `<outDir>/SnipSnap Bench <stamp>.zip`. [stamp] is
      * the caller's — the app passes the same date stamp BACKUP puts on its
      * zip (`ShareOut.stamp`), handed in rather than read from the clock
      * here so a test can name the file it expects. A file that would be
      * empty is left out of the zip rather than written empty. Requires at
-     * least one line to send; the app asks [gather] and [notes] first, so
-     * the refusal can say why there is none.
+     * least one line to send; the app asks [gather], [notes] and [presets]
+     * first, so the refusal can say why there is none.
      */
     fun pack(kitsRoot: File, outDir: File, stamp: String): Result {
         val logs = gather(kitsRoot)
         val notes = notes(kitsRoot)
-        require(logs.isNotEmpty() || notes.isNotEmpty()) { "nothing to send: no label, rating or note is logged under $kitsRoot" }
+        val presets = presets(kitsRoot)
+        require(logs.isNotEmpty() || notes.isNotEmpty() || presets.isNotEmpty()) { "nothing to send: no label, rating, note or preset is kept under $kitsRoot" }
         outDir.mkdirs()
         val file = File(outDir, "$STEM $stamp.zip")
         val examples = logs.flatMap { it.examples }
@@ -130,12 +152,15 @@ object BenchExport {
                 zip.write(text.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
             }
-            put(MANIFEST_NAME, manifest(stamp, logs, notes))
+            put(MANIFEST_NAME, manifest(stamp, logs, notes, presets))
             if (examples.isNotEmpty()) put(LOG_NAME, TeachLog.toJsonl(examples))
             if (ratings.isNotEmpty()) put(RATINGS_NAME, CutRatings.toJsonl(ratings))
             if (notes.isNotEmpty()) put(NOTES_NAME, BenchNotes.toJsonl(notes))
+            // The file itself, not a re-serialization: an entry this build
+            // could not read still reaches the desk that can.
+            if (presets.isNotEmpty()) put(PRESETS_NAME, UserPresets.file(kitsRoot).readText(Charsets.UTF_8))
         }
-        return Result(file, logs, notes)
+        return Result(file, logs, notes, presets)
     }
 
     /**
@@ -144,7 +169,12 @@ object BenchExport {
      * not for a parser. Plain prose in its own case, not TapeOS copy: it is
      * read off a laptop, never off the phone.
      */
-    fun manifest(stamp: String, logs: List<Log>, notes: List<BenchNotes.Note> = emptyList()): String {
+    fun manifest(
+        stamp: String,
+        logs: List<Log>,
+        notes: List<BenchNotes.Note> = emptyList(),
+        presets: List<UserPresets.Saved> = emptyList(),
+    ): String {
         val labels = logs.sumOf { it.examples.size }
         val corrections = logs.sumOf { it.corrections }
         val confirmations = logs.sumOf { it.confirmations }
@@ -157,7 +187,8 @@ object BenchExport {
             .append(" and ").append(count(ratings, "cut rating", "cut ratings"))
             .append(" from ").append(count(logs.size, "kit", "kits"))
             .append(". ").append(count(notes.size, "bench note", "bench notes"))
-            .append(". Feature vectors, labels, ratings and the tester's own words only, never audio.\n\n")
+            .append(". ").append(count(presets.size, "saved preset", "saved presets"))
+            .append(". Feature vectors, labels, ratings, knob settings and the tester's own words only, never audio.\n\n")
         sb.append("labels ratings\n")
         for (log in logs) {
             sb.append(String.format(Locale.ROOT, "%6d %7d  %s\n", log.examples.size, log.ratings.size, log.path))
@@ -168,8 +199,15 @@ object BenchExport {
             sb.append(BenchNotes.renderAll(notes))
             sb.append('\n')
         }
+        if (presets.isNotEmpty()) {
+            sb.append("saved presets, as roster lines for ").append(UserPresets.ROSTER_DIR)
+                .append(" - one worth every player having is pasted under its table's rows by hand, and that engine's PresetsTest judges it:\n")
+            sb.append(UserPresets.renderAll(presets))
+            sb.append('\n')
+        }
         sb.append(LOG_NAME).append(" is every label above merged into one file, ")
-            .append(RATINGS_NAME).append(" every rating, ").append(NOTES_NAME).append(" every note; a torn line is dropped, and a file with nothing to hold is not in the zip.\n")
+            .append(RATINGS_NAME).append(" every rating, ").append(NOTES_NAME).append(" every note, ")
+            .append(PRESETS_NAME).append(" every saved preset as the phone keeps it; a torn line is dropped, and a file with nothing to hold is not in the zip.\n")
         sb.append("Drop the first two into ").append(CALIBRATION_DIR).append(" and run\n")
         sb.append("  ").append(HARNESS_COMMAND).append('\n')
         sb.append("which scores every label against the rules as they stand and sums the ratings by the bench's settings.\n")

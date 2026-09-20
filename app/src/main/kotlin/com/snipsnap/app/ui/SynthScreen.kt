@@ -19,10 +19,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,9 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
@@ -48,6 +54,9 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -74,6 +83,7 @@ import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
@@ -101,6 +111,7 @@ import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.Vox
 import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
+import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -153,6 +164,10 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
 @Composable
 fun SynthScreen(
     entry: KitShelf.Entry?,
+    // The shelf's own root: SAVE AS PRESET (docs/WORKSHOP.md, WS5) keeps
+    // the player's presets in one file beside the kits, not in the open
+    // kit — a preset is for every kit, and it is saved with no kit open.
+    shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
@@ -216,6 +231,57 @@ fun SynthScreen(
         // someone loaded a pre-PUNCH preset.
         macrosByVoice[engine to voice] = engine.defaults(voice) + patch.macros
         currentPresetByVoice[engine to voice] = patch.name
+    }
+
+    // ---- SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
+    // The player's own presets, every engine and voice at once, read off
+    // the shelf when the screen opens and again after every save. A file
+    // this build cannot read lists nothing here, and its save refuses in
+    // words rather than writing over it (UserPresets.save's own rule).
+    var userPresets by remember { mutableStateOf<List<UserPresets.Saved>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        try {
+            userPresets = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SynthScreen", "presets: unreadable", e)
+        }
+    }
+    var namingPreset by remember { mutableStateOf(false) }
+    var saveBusy by remember { mutableStateOf(false) }
+    fun savePreset(check: UserPresets.Check) {
+        val name = when (check) {
+            is UserPresets.Check.Fresh -> check.name
+            is UserPresets.Check.Replaces -> check.name
+            else -> return
+        }
+        if (saveBusy) return
+        saveBusy = true
+        namingPreset = false
+        // Captured now: the dialog's own engine/voice/macros, before an
+        // engine cycle or a slider drag can move them under the write.
+        val savedEngine = engine
+        val savedVoice = voice
+        val patch = engine.buildPatch(name, voice, macros)
+        appScope.launch {
+            try {
+                val (saved, all) = withContext(Dispatchers.IO) {
+                    val s = UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
+                    s to UserPresets.read(shelfRoot)
+                }
+                userPresets = all
+                currentPresetByVoice[savedEngine to savedVoice] = saved.name
+                onToast(if (check is UserPresets.Check.Replaces) Copy.presetReplaced(name) else Copy.presetSaved(name))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "savePreset: failed", e)
+                onToast(Copy.PRESET_SAVE_FAILED)
+            } finally {
+                saveBusy = false
+            }
+        }
     }
 
     var snip by remember { mutableStateOf<Snip?>(null) }
@@ -427,6 +493,7 @@ fun SynthScreen(
                 PresetList(
                     engine = engine,
                     voice = voice,
+                    yours = UserPresets.forVoice(userPresets, engine.name, voice.name).map { it.patch },
                     current = currentPresetByVoice[engine to voice],
                     scheme = scheme,
                     onSelect = ::loadPreset,
@@ -455,6 +522,18 @@ fun SynthScreen(
                         touched = true
                         currentPresetByVoice.remove(engine to voice)
                         macrosByVoice[engine to voice] = engine.scramble(voice, Random(System.nanoTime()))
+                    }
+                    // Between SCRAMBLE and SEND TO PAD: the sound is kept
+                    // before it is placed. No kit is needed — a preset is
+                    // the shelf's, not the open kit's.
+                    LabButton(
+                        if (saveBusy) "…" else "SAVE PRESET ▸",
+                        scheme,
+                        enabled = !saveBusy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "SAVE PRESET",
+                    ) {
+                        namingPreset = true
                     }
                     LabButton(
                         if (sendBusy) "…" else "SEND TO PAD ▸",
@@ -494,6 +573,113 @@ fun SynthScreen(
             // Innermost: same self-guarded cancel as the overlay's own
             // CANCEL — a send in flight (sendBusy) makes both no-ops.
             BackHandler(onBack = cancelChooser)
+        }
+
+        if (namingPreset) {
+            val cancelNaming = { namingPreset = false }
+            PresetNameDialog(
+                engine = engine,
+                voice = voice,
+                yours = userPresets,
+                scheme = scheme,
+                onCancel = cancelNaming,
+                onSave = ::savePreset,
+            )
+            BackHandler(onBack = cancelNaming)
+        }
+    }
+}
+
+// ---------- SAVE AS PRESET: the name ----------
+
+/**
+ * The slip SAVE PRESET ▸ drops (`docs/WORKSHOP.md`, WS5): `KitRenameDialog`'s
+ * shape — scrim, raised bevel, a `BasicTextField` in a sunken field,
+ * CANCEL beside the one real button — hung from the top with the keyboard
+ * already up, the way `BenchNoteDialog` is and for the same reason.
+ *
+ * The field opens on [UserPresets.suggest]'s placeholder, selected to its
+ * end so typing continues it and a swipe replaces it. Every keystroke is
+ * judged by [UserPresets.check], the one home of the name rules: the
+ * caption under the field says which rule a name fails, or what saving
+ * under one of your own names costs, and the button reads SAVE or
+ * REPLACE accordingly — the same word the toast will use. A refusal is
+ * dim with its reason, never a silent no.
+ */
+@Composable
+private fun PresetNameDialog(
+    engine: Engine,
+    voice: Enum<*>,
+    yours: List<UserPresets.Saved>,
+    scheme: Scheme,
+    onCancel: () -> Unit,
+    onSave: (UserPresets.Check) -> Unit,
+) {
+    val suggestion = remember(engine, voice) { UserPresets.suggest(engine.name, voice.name, yours) }
+    var field by remember { mutableStateOf(TextFieldValue(suggestion, TextRange(suggestion.length))) }
+    val check = UserPresets.check(field.text, engine.name, voice.name, yours)
+    val (caption, captionColor) = when (check) {
+        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warn.tape
+        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warn.tape
+        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warn.tape
+        is UserPresets.Check.Fresh -> Copy.PRESET_NAME_NOTE to scheme.ink2.tape
+        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.amber.tape
+    }
+    val canSave = check is UserPresets.Check.Fresh || check is UserPresets.Check.Replaces
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .imePadding()
+            // No descendant text of its own — labelled with the same
+            // word the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the
+                // scrim's CANCEL — a bare gesture detector, which registers
+                // no semantics node (MessageBox.kt's pattern).
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("SAVE AS PRESET", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText("${engine.name} · ${chipLabel(engine, voice)}", TapeType.pixel, scheme.ink2.tape)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .sunkenField(scheme)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                BasicTextField(
+                    value = field,
+                    onValueChange = { field = it },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    textStyle = TapeType.marker.copy(color = scheme.ink.tape),
+                    cursorBrush = SolidColor(scheme.ink.tape),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                )
+            }
+            TapeText(caption, TapeType.pixelSmall, captionColor, maxLines = 3)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton(
+                    if (check is UserPresets.Check.Replaces) "REPLACE" else "SAVE",
+                    scheme,
+                    enabled = canSave,
+                    dimmed = !canSave,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onSave(check) },
+                )
+            }
         }
     }
 }
@@ -815,8 +1001,32 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
  * never claims a name for a sound that no longer matches it.
  */
 @Composable
-private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
+private fun PresetList(engine: Engine, voice: Enum<*>, yours: List<Patch>, current: String?, scheme: Scheme, onSelect: (Patch) -> Unit) {
     val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
+    PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
+    // The player's own, under the factory row (docs/WORKSHOP.md, WS5):
+    // a second strip that exists only once this voice has one, with the
+    // same chips and the same highlight rule, and YOURS in the slider
+    // label column below it so the two rows read as two rows.
+    PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect)
+}
+
+/**
+ * One horizontally-scrolling strip of preset chips inside a [sunkenField];
+ * nothing at all when [presets] is empty. [label] is the column word to its
+ * left, or none; [spoken] prefixes each chip's accessible name.
+ */
+@Composable
+private fun PresetStrip(
+    engine: Engine,
+    voice: Enum<*>,
+    presets: List<Patch>,
+    current: String?,
+    scheme: Scheme,
+    label: String?,
+    spoken: String,
+    onSelect: (Patch) -> Unit,
+) {
     if (presets.isEmpty()) return
     // Keyed on (engine, voice), not the plain `rememberScrollState()` every
     // other scroll in this file uses: those all sit inside a screen-level
@@ -826,29 +1036,32 @@ private fun PresetList(engine: Engine, voice: Enum<*>, current: String?, scheme:
     // finding — and could open a shorter roster already scrolled past its
     // first presets.
     val scrollState = remember(engine, voice) { ScrollState(0) }
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .sunkenField(scheme)
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (p in presets) {
-            val selected = p.name == current
-            Box(
-                Modifier
-                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                    .semantics { this.selected = selected }
-                    .tapeClick(label = "PRESET ${p.name}") { onSelect(p) }
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (label != null) TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
+        Row(
+            Modifier
+                .weight(1f)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .sunkenField(scheme)
+                .horizontalScroll(scrollState)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            for (p in presets) {
+                val selected = p.name == current
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                        .semantics { this.selected = selected }
+                        .tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                }
             }
         }
     }

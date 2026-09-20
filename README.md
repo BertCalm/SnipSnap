@@ -392,8 +392,14 @@ UI layer. What lives here:
   capture into the calibration corpus, by ear), the title bar's NOTE (a
   bench note stamped with the screen, the kit, the pad and the time,
   rendered by the manifest as a line for `docs/BENCH.md`), and the two
-  hand-outs — SEND TO BENCH for the logs and the notes, SEND HITS TO
-  BENCH for the audio — for `reference/calibration/`.
+  hand-outs — SEND TO BENCH for the logs, the notes and the saved
+  presets, SEND HITS TO BENCH for the audio — for `reference/calibration/`.
+- **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
+  the one tool on that list that is for every player): the player's own
+  presets in `presets.json` beside the kits, the name rules (fourteen
+  letters, never a factory name, a saved name replaces in place), and the
+  roster line that promotes one into `:synth`'s tables by hand — a code
+  change the spread, blocklist and identity tests still judge.
 
 ### `:loop` — ORBIT
 

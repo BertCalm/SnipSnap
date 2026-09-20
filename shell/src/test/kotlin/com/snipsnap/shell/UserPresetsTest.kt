@@ -1,0 +1,181 @@
+package com.snipsnap.shell
+
+import com.snipsnap.json.JsonException
+import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.Presets
+import com.snipsnap.synth.SkinVoice
+import com.snipsnap.synth.Thump
+import com.snipsnap.synth.ThumpPatch
+import com.snipsnap.synth.ThumpVoice
+import com.snipsnap.synth.TinesVoice
+import com.snipsnap.synth.TonewheelVoice
+import com.snipsnap.synth.VelvetVoice
+import com.snipsnap.synth.VoxVoice
+import java.io.File
+import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/** SAVE AS PRESET (`docs/WORKSHOP.md`, WS5): the player's own presets beside the kits, and the line that promotes one. */
+class UserPresetsTest {
+
+    private fun shelf(): File = java.nio.file.Files.createTempDirectory("presets").toFile()
+
+    /** A kick the player wrecked: SCRAMBLE's own odd floats, nothing a table would round. */
+    private val wrecked = ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK) + Thump.scramble(ThumpVoice.KICK, Random(7)))
+    private val snare = ThumpPatch("MY KICK", ThumpVoice.SNARE, Thump.defaults(ThumpVoice.SNARE))
+
+    @Test
+    fun `a saved preset survives a restart and re-renders the same bytes`() {
+        val root = shelf()
+        try {
+            assertEquals(emptyList(), UserPresets.read(root), "no file, no presets")
+            val saved = UserPresets.save(root, wrecked, nowMillis = 1_700_000_000_000L)
+            assertEquals(wrecked, saved.patch)
+            // A fresh read is the restart: nothing but the file.
+            val back = UserPresets.read(root)
+            assertEquals(listOf(saved), back)
+            assertEquals(wrecked, back.single().patch, "every macro's exact value, the name and the voice")
+            assertTrue(wrecked.render().samples.contentEquals(back.single().patch.render().samples), "the same bytes the phone heard")
+            assertEquals(File(root, "presets.json"), UserPresets.file(root), "one file at the shelf root, beside the kit folders")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `the name rules - blank, too long, the factory's, fresh, or one of yours`() {
+        val mine = listOf(UserPresets.Saved(wrecked, 1L))
+        assertEquals(UserPresets.Check.Blank, UserPresets.check("  \n ", "THUMP", "KICK", mine))
+        assertEquals(UserPresets.Check.TooLong("FIFTEEN LETTERSX"), UserPresets.check("fifteen lettersx", "THUMP", "KICK", mine))
+        assertEquals(UserPresets.Check.Factory("DUSTY BOOM"), UserPresets.check(" dusty   boom ", "THUMP", "KICK", mine), "a factory name is refused, whatever the case or spacing")
+        assertEquals(UserPresets.Check.Fresh("DUSTY BOOM"), UserPresets.check("dusty boom", "THUMP", "SNARE", mine), "the factory's names are per voice")
+        assertEquals(UserPresets.Check.Replaces("MY KICK"), UserPresets.check("my kick", "THUMP", "KICK", mine))
+        assertEquals(UserPresets.Check.Fresh("MY KICK"), UserPresets.check("my kick", "THUMP", "SNARE", mine), "yours are per voice too")
+        assertEquals("HAT CLOSED 2", UserPresets.normalize("  hat\tclosed   2 "))
+    }
+
+    @Test
+    fun `saving under one of your names replaces it in place, and never touches another voice's namesake`() {
+        val root = shelf()
+        try {
+            UserPresets.save(root, wrecked, 1L)
+            UserPresets.save(root, snare, 2L)
+            val rewrecked = ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK) + Thump.scramble(ThumpVoice.KICK, Random(8)))
+            val replaced = UserPresets.save(root, rewrecked, 3L)
+            val all = UserPresets.read(root)
+            assertEquals(listOf(replaced, UserPresets.Saved(snare, 2L)), all, "the kick keeps its place in the list; the snare is untouched")
+            assertEquals(rewrecked, all.first().patch)
+            assertEquals(listOf(replaced), UserPresets.forVoice(all, "THUMP", "KICK"))
+            assertEquals(listOf(UserPresets.Saved(snare, 2L)), UserPresets.forVoice(all, "THUMP", "SNARE"))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `save refuses a name check would refuse`() {
+        val root = shelf()
+        try {
+            assertTrue(runCatching { UserPresets.save(root, ThumpPatch("dusty boom", ThumpVoice.KICK, emptyMap()), 1L) }.isFailure, "not normalized")
+            assertTrue(runCatching { UserPresets.save(root, ThumpPatch("DUSTY BOOM", ThumpVoice.KICK, emptyMap()), 1L) }.isFailure, "the factory's")
+            assertTrue(runCatching { UserPresets.save(root, ThumpPatch("FIFTEEN LETTERSX", ThumpVoice.KICK, emptyMap()), 1L) }.isFailure, "too long")
+            assertFalse(UserPresets.file(root).exists(), "a refusal writes nothing")
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `the suggested name is the voice numbered from 1, skipping what is taken, and always fits`() {
+        val root = shelf()
+        try {
+            assertEquals("KICK 1", UserPresets.suggest("THUMP", "KICK", emptyList()))
+            assertEquals("HAT CLOSED 1", UserPresets.suggest("THUMP", "HAT_CLOSED", emptyList()))
+            val one = UserPresets.save(root, ThumpPatch("KICK 1", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK)), 1L)
+            assertEquals("KICK 2", UserPresets.suggest("THUMP", "KICK", listOf(one)))
+            assertEquals("SNARE 1", UserPresets.suggest("THUMP", "SNARE", listOf(one)), "numbered per voice")
+            // Every voice of every engine, at a number a phone will never reach.
+            val voices = listOf(
+                "THUMP" to ThumpVoice.entries.map { it.name }, "SKIN" to SkinVoice.entries.map { it.name },
+                "TINES" to TinesVoice.entries.map { it.name }, "VELVET" to VelvetVoice.entries.map { it.name },
+                "VOX" to VoxVoice.entries.map { it.name }, "PLUCK" to PluckVoice.entries.map { it.name },
+                "TONEWHEEL" to TonewheelVoice.entries.map { it.name }, "FATHOM" to FathomVoice.entries.map { it.name },
+            )
+            for ((engine, names) in voices) {
+                for (v in names) {
+                    val suggestion = UserPresets.suggest(engine, v, emptyList())
+                    assertTrue(suggestion.length + 2 <= UserPresets.MAX_NAME, "$engine $v: '$suggestion' leaves no room for a two-digit number")
+                    assertEquals(UserPresets.Check.Fresh(suggestion), UserPresets.check(suggestion, engine, v, emptyList()))
+                }
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a file this build cannot read is never written over, and an entry it cannot read rides through a save`() {
+        val root = shelf()
+        try {
+            val file = UserPresets.file(root)
+            file.writeText("{\"version\": 1, \"presets\": [{\"savedAt\": 5, \"patch\": {\"engine\": \"FUTURE\", \"version\": 1, \"name\": \"X\", \"voice\": \"Y\", \"macros\": {}}}]}")
+            assertEquals(emptyList(), UserPresets.read(root), "an engine this build does not know is skipped, not fatal")
+            UserPresets.save(root, wrecked, 9L)
+            assertEquals(listOf(UserPresets.Saved(wrecked, 9L)), UserPresets.read(root))
+            assertTrue("\"FUTURE\"" in file.readText(), "the unread entry is still in the file for the build that can read it")
+            file.writeText("not json at all")
+            assertTrue(runCatching { UserPresets.read(root) }.exceptionOrNull() is JsonException, "a file that is not this store's throws")
+            assertTrue(runCatching { UserPresets.save(root, wrecked, 10L) }.isFailure, "and a save refuses rather than writing over it")
+            assertEquals("not json at all", file.readText())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a roster line pastes into the engine's own table with every macro's exact value`() {
+        val line = UserPresets.rosterLine(ThumpPatch("MY KICK", ThumpVoice.KICK, linkedMapOf("TUNE" to 0.34f, "SWEEP" to 0.45f)))
+        assertEquals("p(ThumpVoice.KICK, \"MY KICK\", \"TUNE\" to 0.34f, \"SWEEP\" to 0.45f),", line)
+        // Every factory preset, back out of its own line to the float it holds.
+        val value = Regex("\"[^\"]+\" to ([-0-9.E]+)f")
+        for (preset in Presets.all()) {
+            val parsed = value.findAll(UserPresets.rosterLine(preset)).map { it.groupValues[1].toFloat() }.toList()
+            assertEquals(preset.macros.values.toList(), parsed, "${preset.engine}/${preset.name}: the line rounds a value")
+        }
+        val quoted = UserPresets.rosterLine(ThumpPatch("SAY \"HI\" \$X", ThumpVoice.KICK, emptyMap()))
+        assertTrue("\"SAY \\\"HI\\\" \\\$X\"" in quoted, quoted)
+        val two = listOf(UserPresets.Saved(wrecked, 1L), UserPresets.Saved(snare, 2L))
+        val rendered = UserPresets.renderAll(two)
+        assertTrue(rendered.startsWith("ThumpPresets.kt\n  p(ThumpVoice.KICK, \"MY KICK\", "), rendered)
+        assertTrue("\n  p(ThumpVoice.SNARE, \"MY KICK\", " in rendered, rendered)
+    }
+
+    @Test
+    fun `every roster line names a table and a helper that exist`() {
+        val engines = Presets.all().map { it.engine }.distinct()
+        assertTrue(engines.size >= 8, "every registered engine ships a roster: $engines")
+        for (engine in engines) {
+            val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
+            assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
+            val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
+            assertTrue(helper in table.readText(Charsets.UTF_8), "${table.name} is written with the helper the line uses: $helper")
+            val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
+            assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
+        }
+    }
+
+    @Test
+    fun `the copy lines say what happened and what is not kept`() {
+        assertEquals("MY KICK SAVED. IT IS UNDER THE FACTORY ROW ON EVERY KIT.", Copy.presetSaved("MY KICK"))
+        assertEquals("MY KICK REPLACED. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaced("MY KICK"))
+        assertEquals("REPLACES YOUR MY KICK. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaces("MY KICK"))
+        assertEquals("THE FACTORY HAS DUSTY BOOM. PICK ANOTHER NAME.", Copy.presetNameFactory("DUSTY BOOM"))
+        assertTrue("${UserPresets.MAX_NAME} LETTERS" in Copy.PRESET_NAME_NOTE, "the note says the one number the rule has: ${Copy.PRESET_NAME_NOTE}")
+        assertTrue(Copy.PRESET_NAME_BLANK.endsWith("."))
+        assertTrue(Copy.PRESET_SAVE_FAILED.endsWith("."))
+    }
+}
