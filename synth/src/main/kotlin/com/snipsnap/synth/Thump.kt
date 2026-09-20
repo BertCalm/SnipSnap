@@ -260,11 +260,37 @@ object Thump {
     /** The head's fundamental: drum size, from piccolo to a deep 14-inch. */
     internal fun snareFundamental(tune: Float): Float = Dsp.expMap(tune, 120f, 330f)
 
-    // Task 1 placeholders - Task 2 replaces both with a curve where the body
-    // falls away faster than the wires rise, so SNAP 1 is a genuine static
-    // burst rather than a drum with the volume down.
-    internal fun snareBodyGain(snap: Float): Float = 1f - snap.coerceIn(0f, 1f)
-    internal fun snareWireGain(snap: Float): Float = snap.coerceIn(0f, 1f)
+    /**
+     * SNAP's two halves. The wires climb past unity (1.5 at SNAP=1) so
+     * SNAP=1 is a genuine static burst rather than the body just turned
+     * down, and [snare]'s own body-peak normalization is what makes that
+     * multiplier meaningful instead of fighting a 250x head start.
+     *
+     * MEASURED, not the brief's starting quadratic/cubic pair — see
+     * `.superpowers/sdd/2026-09-20-synth-depth-phase-1b/task-1-2-report.md`
+     * for the swept table. A quadratic body ([1-s]^2) paired with a
+     * faster-than-linear wire rise sounds right on paper, but spectral
+     * centroid and flatness are both scale-invariant once one layer has
+     * swamped the other, so that pairing collapsed almost all of the knob's
+     * audible movement into SNAP 0.1-0.5 and left 0.75-1.0 reading as the
+     * same static burst repeated four times (measured last-step centroid
+     * delta 1.45 Hz, against `SNAP moves at every step of its travel`'s own
+     * 1 Hz floor - a live instance of the "narrowed past where the wanted
+     * territory started" failure this project has hit before). A LINEAR
+     * body fall paired with a QUADRATIC wire rise crosses over near SNAP
+     * 0.55 - body still audibly present past the middle of the knob, wire
+     * still visibly climbing after it - and keeps every consecutive step's
+     * centroid delta at least 13x that 1 Hz floor, all the way to both ends.
+     */
+    internal fun snareBodyGain(snap: Float): Float {
+        val s = snap.coerceIn(0f, 1f)
+        return 1f - s
+    }
+
+    internal fun snareWireGain(snap: Float): Float {
+        val s = snap.coerceIn(0f, 1f)
+        return 1.5f * s * s
+    }
 
     /**
      * The classic metallic recipe: a cluster of six inharmonic squares,

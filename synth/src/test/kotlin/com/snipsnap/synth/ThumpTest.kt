@@ -98,6 +98,40 @@ class ThumpTest {
     }
 
     @Test
+    fun `SNAP spans a real drum to a static burst`() {
+        // Both ends must be REACHABLE - the static burst is a palette sound,
+        // not a defect, and a range curated to only tasteful settings has
+        // already made the user's decisions for them.
+        // Spectral FLATNESS is the tonal-vs-noise measure :audio actually
+        // exposes: a flat spectrum is noise, a peaky one is pitched. So the
+        // drum end must be LOW and the static end HIGH - note the direction.
+        fun flatnessAt(snap: Float): Float {
+            val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to snap, "DECAY" to 0.7f))
+            return com.snipsnap.audio.FeatureExtractor.extract(snip).flatness
+        }
+        val drum = flatnessAt(0f)
+        val static = flatnessAt(1f)
+        assertTrue(static > drum * 2f, "SNAP=1 should be clearly noisier: drum=$drum static=$static")
+    }
+
+    @Test
+    fun `SNAP moves at every step of its travel`() {
+        // Swept. A crossfade that saturates early leaves half the knob dead,
+        // which is this project's most-repeated defect.
+        val points = (0..8).map { it / 8f }
+        val measured = points.map { s ->
+            val snip = Thump.render(ThumpVoice.SNARE, mapOf("SNAP" to s, "DECAY" to 0.7f))
+            com.snipsnap.audio.FeatureExtractor.extract(snip).centroidHz
+        }
+        for (i in 0 until measured.size - 1) {
+            assertTrue(
+                kotlin.math.abs(measured[i] - measured[i + 1]) > 1f,
+                "SNAP is dead between ${points[i]} and ${points[i + 1]}: $measured",
+            )
+        }
+    }
+
+    @Test
     fun `hat METAL brightens`() {
         val dull = FeatureExtractor.extract(Thump.render(ThumpVoice.HAT_CLOSED, mapOf("METAL" to 0f)))
         val bright = FeatureExtractor.extract(Thump.render(ThumpVoice.HAT_CLOSED, mapOf("METAL" to 1f)))
