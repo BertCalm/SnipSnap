@@ -13,6 +13,7 @@ import com.snipsnap.shell.ShelfImport
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
+import com.snipsnap.shell.UserPresets
 import java.io.File
 
 /**
@@ -317,13 +318,24 @@ class KitShelf(val root: File) {
 
     /**
      * BACKUP: every kit on the shelf as one file under [outDir], each its
-     * own `.xpn` inside; kits preflight refuses are skipped and named.
+     * own `.xpn` inside, and the player's presets file riding at the root
+     * when there is one (`UserPresets`, the WS5 follow-up: a backup that
+     * comes home merges them back); kits preflight refuses are skipped
+     * and named.
      */
     fun backup(outDir: File, nowMillis: Long): com.snipsnap.kit.KitBackup.BackupResult {
         outDir.mkdirs()
         val stamp = ShareOut.stamp(nowMillis)
-        return com.snipsnap.kit.KitBackup.backup(root, File(outDir, "SnipSnap Shelf $stamp.zip"), overwrite = true)
+        return com.snipsnap.kit.KitBackup.backup(
+            root,
+            File(outDir, "SnipSnap Shelf $stamp.zip"),
+            overwrite = true,
+            extras = mapOf(UserPresets.FILE_NAME to UserPresets.file(root)),
+        )
     }
+
+    /** What [land] brought home: the kits as shelf entries, what was skipped with the reason, and the presets a backup carried. */
+    data class Landing(val entries: List<Entry>, val skipped: List<String>, val presets: Int)
 
     /**
      * A kit file shared in - a `.xpn`, a backup, an MPC track zipped with
@@ -331,10 +343,10 @@ class KitShelf(val root: File) {
      * through `ShelfImport`'s staged door; the entries for what landed,
      * and what was skipped with the reason.
      */
-    fun land(file: File, displayName: String): Pair<List<Entry>, List<String>> {
+    fun land(file: File, displayName: String): Landing {
         root.mkdirs()
         val landed = com.snipsnap.shell.ShelfImport.land(file, displayName, root)
-        return landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) } to landed.skipped
+        return Landing(landed.kits.map { (_, dir) -> Entry(dir, KitStore.load(dir)) }, landed.skipped, landed.presets)
     }
 
     /**

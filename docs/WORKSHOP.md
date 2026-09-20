@@ -449,9 +449,28 @@ early, and every site that cannot be undone is one `ReversalTest` counts
 as evidence for an undo stack; this bin adds none. The sweep takes each
 row when its days run out.
 
-**What is not built.** BACKUP does not carry the file: it packs kits as
-`.xpn` archives, and a preset that was sent to a pad is in that pad's
-recipe already; the named chips are not. That is under Open.
+**BACKUP carries the file, and a backup coming home merges it.** The
+shelf's BACKUP zip holds `presets.json` at its root beside the `.xpn`
+kits whenever the shelf has one, and the toast counts it — *3 KITS AND
+2 PRESETS ON ONE FILE. PICK WHERE IT GOES.* Shared back in, the kits
+land first, as they always did, and then the presets merge into whatever
+the shelf holds by then (`UserPresets.merge`): nothing the shelf has is
+written over; a preset it already holds by the same voice, name and
+settings is skipped — and so is one it holds under the fresh name an
+earlier landing of that same backup gave it, so sharing a backup in
+twice lands its presets once; one the shelf has by name but not by
+settings lands under the first `MY KICK 2` nothing holds, since a
+restored sound must never silently replace a newer one; the rest land
+at the end of YOURS. The bin rides too, minus what the shelf already
+holds and what has expired, so a forgotten preset keeps its days across
+a phone. The landing toast says how many came home — *1 KIT LANDED ON
+THE SHELF. 1 PRESET UNDER YOURS.* A backup whose presets file cannot be
+read, or weighs more than a presets file ever could
+(`KitBackup.MAX_EXTRA_BYTES`, read bounded because a shared-in archive
+may come from a stranger), still lands every kit and names the file
+among the skips; a backup from before this holds no such file and lands
+as it always did. The CLI's `backup` and `restore` do the same on a
+folder.
 
 **Promotion stays a code change.** A preset worth every player having is
 pasted into its engine's table by hand, where `ThumpPresetsTest` and its
@@ -484,12 +503,16 @@ read is left out of the zip rather than handed out as if it were read.
 
 Code: `UserPresets` in `:shell` (`Saved`, `Check`, `normalize`, `check`,
 `suggest`, `save`, `read`, `rosterLine`, `renderAll`; the bin's `Binned`,
-`forget`, `unforget`, `bin`, `sweepBin`, `freshName`), the fourth file
-and the manifest lines in `BenchExport`, the copy in `Copy`, held by
-`UserPresetsTest`, `BenchExportTest` and `ReversalTest`'s bin pin; SAVE
-PRESET ▸, `PresetNameDialog`, the YOURS strip and its hold,
-`PresetForgetDialog` and `DeletedPresetsOverlay` in `SynthScreen`, the
-shelf root, the `sendToBench` change and the launch sweep in `App.kt`.
+`forget`, `unforget`, `bin`, `sweepBin`, `freshName`; the backup's
+`merge`), the fourth file and the manifest lines in `BenchExport`, the
+extras `KitBackup.backup` carries and `KitBackup.extra` reads back
+bounded, the merge after the kits in `ShelfImport.land`, the copy in
+`Copy`, held by `UserPresetsTest`, `BenchExportTest`, `KitBackupTest`,
+`ShelfImportTest` and `ReversalTest`'s bin pin; SAVE PRESET ▸,
+`PresetNameDialog`, the YOURS strip and its hold, `PresetForgetDialog`
+and `DeletedPresetsOverlay` in `SynthScreen`, the shelf root, the
+`sendToBench` change and the launch sweep in `App.kt`, the presets file
+handed to BACKUP in `KitShelf` and counted by both toasts.
 
 ## The list — next tools, in value order
 
@@ -572,10 +595,16 @@ business.
   preset is SYNTH's and the door belongs where the thing was lost. No
   EMPTY THE BIN NOW: nothing to gain, and one fewer site with no way
   back.
+- **A backup's presets merge; they never replace.** The shelf a backup
+  comes home to may have gone on saving since the backup was made, and
+  the newer sound is the one the player is using: the shelf's own stay
+  as they are, a twin is skipped, a namesake with other settings lands
+  under a fresh name, and the toast counts what came home. Kits from
+  the same backup land beside themselves as `NAME 2` every time, since a
+  folder of audio is not compared; a preset is a few hundred bytes and
+  is compared whole, so the same backup twice lands its presets once.
 
 ## Open
 
-- **BACKUP carrying `presets.json`.** The restore side has to merge it
-  into a shelf that may hold presets of its own, which is why it is not
-  a one-line addition to the zip. Until then a preset sent to a pad is
-  in that pad's recipe, which BACKUP does carry; the named chips are not.
+Nothing today. The last item, BACKUP carrying `presets.json`, is built
+above.

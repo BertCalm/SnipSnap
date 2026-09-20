@@ -115,4 +115,42 @@ class KitBackupTest {
         val restored = KitBackup.restore(backup.file, File(temp, "roomy-restore"), budget = XpnImporter.WriteBudget(10 * oneKitBytes))
         assertEquals(3, restored.size)
     }
+
+
+    @Test
+    fun `an extra rides at the archive's root, reads back bounded, and restore leaves it to whoever packed it`() {
+        val root = File(temp, "kits3")
+        makeKit(root, "Alpha")
+        val presets = File(root, "presets.json").apply { writeText("{\"version\": 1, \"presets\": []}") }
+        val backup = KitBackup.backup(
+            root,
+            File(temp, "backup3.zip"),
+            extras = mapOf("presets.json" to presets, "absent.json" to File(root, "absent.json")),
+        )
+        assertEquals(listOf("Alpha"), backup.packed)
+        assertEquals(listOf("presets.json"), backup.extras, "the file that was there rode; the one that was not is simply absent")
+
+        val back = KitBackup.extra(backup.file, "presets.json")
+        assertTrue(presets.readBytes().contentEquals(back!!), "byte for byte")
+        assertEquals(null, KitBackup.extra(backup.file, "absent.json"), "an archive without the entry reads as none")
+        val heavy = kotlin.test.assertFailsWith<com.snipsnap.mpc3.LimitedRead.TooLargeException> {
+            KitBackup.extra(backup.file, "presets.json", maxBytes = presets.length() - 1)
+        }
+        assertTrue(heavy.message!!.contains("presets.json"), heavy.message)
+
+        // Restore reads the .xpn entries only: the extra is not a kit and lands nowhere.
+        val fresh = File(temp, "fresh3")
+        assertEquals(listOf("Alpha"), KitBackup.restore(backup.file, fresh).map { it.kit.name })
+        assertTrue(!File(fresh, "presets.json").exists(), "restore leaves the extra to whoever packed it")
+
+        // Never an extra that would read as a kit, or one that would nest - refused before a byte is written.
+        kotlin.test.assertFails { KitBackup.backup(root, File(temp, "bad1.zip"), extras = mapOf("Sneaky.xpn" to presets)) }
+        kotlin.test.assertFails { KitBackup.backup(root, File(temp, "bad2.zip"), extras = mapOf("deep/presets.json" to presets)) }
+        assertTrue(!File(temp, "bad1.zip").exists() && !File(temp, "bad2.zip").exists())
+
+        // Without extras, the archive is what it always was: the kits and nothing else.
+        val plain = KitBackup.backup(root, File(temp, "plain3.zip"))
+        assertTrue(plain.extras.isEmpty())
+        java.util.zip.ZipFile(plain.file).use { zip -> assertEquals(listOf("Alpha.xpn"), zip.entries().toList().map { it.name }) }
+    }
 }

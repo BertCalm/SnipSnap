@@ -21,7 +21,9 @@ import java.util.zip.ZipFile
  * - a **`.xpn`** — any ZIP holding an `.xpm` program — through
  *   [XpnImporter.importAll], so a multi-kit pack lands every kit;
  * - a **backup** — a ZIP of `.xpn`s, what BACKUP writes — through
- *   [KitBackup.restore];
+ *   [KitBackup.restore]; the player's presets, when BACKUP carried them
+ *   at the archive's root, merge into the shelf's own through
+ *   [UserPresets.merge] once every kit has landed;
  * - an **MPC 3 track or project** (`.xtd` / `.xpj`, gzip + ACVS) through
  *   [Mpc3Importer]. A bare `.xtd` carries no samples — they live in the
  *   `_[TrackData]/` folder beside it, which a single shared file cannot
@@ -48,8 +50,11 @@ object ShelfImport {
         UNKNOWN,
     }
 
-    /** What landed: each kit's name and folder, and what was skipped with the reason. */
-    data class Landed(val kits: List<Pair<String, File>>, val skipped: List<String>)
+    /** What landed: each kit's name and folder, what was skipped with the reason, and how many presets a backup brought home. */
+    data class Landed(val kits: List<Pair<String, File>>, val skipped: List<String>, val presets: Int = 0)
+
+    /** What [landZip] found: the kit folders in staging, the skips, and a backup's presets file as text when it carried one. */
+    private data class ZipLanding(val dirs: List<File>, val skipped: List<String>, val presets: String?)
 
     /** The staging folder's name under the shelf — hidden from the shelf's own listing (no `kit.json` at its top). */
     const val STAGING_DIR = ".landing"
@@ -129,11 +134,13 @@ object ShelfImport {
         try {
             val kitDirs: List<File>
             val skipped = mutableListOf<String>()
+            var presetsText: String? = null
             when (sniff(head)) {
                 Kind.XPN -> {
-                    val (dirs, why) = landZip(file, displayName, staging, maxContainerBytes)
-                    kitDirs = dirs
-                    skipped += why
+                    val zipped = landZip(file, displayName, staging, maxContainerBytes)
+                    kitDirs = zipped.dirs
+                    skipped += zipped.skipped
+                    presetsText = zipped.presets
                 }
                 Kind.MPC3 -> {
                     requireContainerFits(file, displayName, maxContainerBytes)
@@ -155,7 +162,19 @@ object ShelfImport {
                 "'$displayName' held no kit" + if (skipped.isNotEmpty()) ": " + skipped.joinToString("; ") else ""
             }
             val landed = kitDirs.map { moveOntoShelf(it, shelfRoot) }
-            return Landed(landed, skipped)
+            // The presets after the kits, never before: a landing that
+            // fails on a kit brings nothing home, and one whose presets
+            // file is not a presets file still lands every kit, naming the
+            // file among the skips.
+            var presets = 0
+            if (presetsText != null) {
+                try {
+                    presets = UserPresets.merge(shelfRoot, presetsText, System.currentTimeMillis()).landed.size
+                } catch (e: Exception) {
+                    skipped += "${UserPresets.FILE_NAME}: ${e.message ?: "refused"}"
+                }
+            }
+            return Landed(landed, skipped, presets)
         } finally {
             staging.deleteRecursively()
         }
@@ -169,7 +188,7 @@ object ShelfImport {
     }
 
     /** What a ZIP is by its entries, then the matching importer into [staging]. */
-    private fun landZip(file: File, displayName: String, staging: File, maxContainerBytes: Long): Pair<List<File>, List<String>> {
+    private fun landZip(file: File, displayName: String, staging: File, maxContainerBytes: Long): ZipLanding {
         // One pass over the entries, three flags, no list: an archive may
         // declare any number of entries, and the names are not worth the heap.
         var xpn = false
@@ -189,10 +208,24 @@ object ShelfImport {
             }
         }
         return when {
-            xpn -> KitBackup.restore(file, staging).map { it.directory } to emptyList()
+            xpn -> {
+                val dirs = KitBackup.restore(file, staging).map { it.directory }
+                // Only a backup carries the presets file, and only at its root
+                // (KitBackup's own extras rule); read bounded, as a stranger's
+                // archive may declare anything, and one past the ceiling is
+                // named among the skips so the kits still land without it.
+                val skipped = mutableListOf<String>()
+                val presets = try {
+                    KitBackup.extra(file, UserPresets.FILE_NAME)?.toString(Charsets.UTF_8)
+                } catch (e: LimitedRead.TooLargeException) {
+                    skipped += "${UserPresets.FILE_NAME}: ${e.message}"
+                    null
+                }
+                ZipLanding(dirs, skipped, presets)
+            }
             xpm -> {
                 val r = XpnImporter.importAll(file, staging)
-                r.kits.map { it.directory } to r.skipped.map { "${it.first}: ${it.second}" }
+                ZipLanding(r.kits.map { it.directory }, r.skipped.map { "${it.first}: ${it.second}" }, null)
             }
             mpc -> {
                 val unpacked = File(staging, "unpacked").apply { mkdirs() }
@@ -222,7 +255,7 @@ object ShelfImport {
                         skipped += "${c.name}: ${e.message ?: "refused"}"
                     }
                 }
-                dirs to skipped
+                ZipLanding(dirs, skipped, null)
             }
             else -> throw IllegalArgumentException(
                 "'$displayName' is a ZIP with no kit inside - no .xpn, no .xpm program, no .xtd",

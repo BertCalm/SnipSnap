@@ -35,6 +35,14 @@ class LandingNoteTest {
     }
 
     @Test
+    fun `a backup's presets are counted in the title, on the way out and on the way home, and never open the box alone`() {
+        assertEquals(Copy.landed(2, 1, 3), LandingNote.landed("shelf.zip", listOf("Funk", "Soul"), listOf("Bad: why"), presets = 3)!!.title)
+        assertEquals(Copy.backedUp(1, 1, 2), LandingNote.backedUp(listOf("Funk"), linkedMapOf("Soul" to "why"), presets = 2)!!.title)
+        assertNull(LandingNote.landed("shelf.zip", listOf("Funk"), emptyList(), presets = 3))
+        assertNull(LandingNote.backedUp(listOf("Funk"), emptyMap(), presets = 3))
+    }
+
+    @Test
     fun `a refusal keeps the file's name and the refuser's words until read`() {
         val n = LandingNote.refused("holiday.mp4", "nothing to hear in that.")
         assertEquals(Copy.NOTHING_LANDED, n.title)

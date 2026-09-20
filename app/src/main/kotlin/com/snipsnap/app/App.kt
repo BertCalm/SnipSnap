@@ -988,13 +988,15 @@ fun App(shelf: KitShelf) {
                         toast = Copy.roomLanded(room.name)
                         return@LaunchedEffect
                     }
-                    val (entries, skipped) = withContext(Dispatchers.IO) { shelf.land(local, name) }
+                    val (entries, skipped, presets) = withContext(Dispatchers.IO) { shelf.land(local, name) }
                     ShareInbox.consume()
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     // A clean landing keeps its toast; one with skips opens the
                     // box, which names each skipped kit and the door's reason.
-                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped)
-                    if (boxed != null) openNote(boxed) else toast = Copy.landed(entries.size, skipped.size)
+                    // A backup's presets are counted in the same line: they
+                    // landed under YOURS on SYNTH, which is nowhere near here.
+                    val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets)
+                    if (boxed != null) openNote(boxed) else toast = Copy.landed(entries.size, skipped.size, presets)
                     entries.firstOrNull()?.let { first ->
                         open = first
                         padSheetSlot = null
@@ -2183,7 +2185,14 @@ fun App(shelf: KitShelf) {
         busy = Copy.PACKING_BUSY
         scope.launch {
             try {
-                val result = withContext(Dispatchers.IO) { shelf.backup(ShareOut.shareDir(context), System.currentTimeMillis()) }
+                val (result, presets) = withContext(Dispatchers.IO) {
+                    val r = shelf.backup(ShareOut.shareDir(context), System.currentTimeMillis())
+                    // How many presets rode along, for the toast: the file is
+                    // in the zip byte for byte, so this is the strip's own
+                    // count, and a file this build cannot read counts none.
+                    val n = if (r.extras.isEmpty()) 0 else runCatching { UserPresets.read(shelf.root).size }.getOrDefault(0)
+                    r to n
+                }
                 busy = null
                 if (!ShareOut.send(context, result.file, ShareOut.ZIP_MIME, result.file.nameWithoutExtension)) {
                     toast = Copy.SHARE_NOWHERE
@@ -2191,8 +2200,8 @@ fun App(shelf: KitShelf) {
                     // Every kit in: the toast. Preflight refused some: the box,
                     // naming each and why - it waits behind the chooser and is
                     // read on the way back.
-                    val boxed = LandingNote.backedUp(result.packed, result.skipped)
-                    if (boxed != null) openNote(boxed) else toast = Copy.backedUp(result.packed.size, result.skipped.size)
+                    val boxed = LandingNote.backedUp(result.packed, result.skipped, presets)
+                    if (boxed != null) openNote(boxed) else toast = Copy.backedUp(result.packed.size, result.skipped.size, presets)
                 }
             } catch (e: CancellationException) {
                 throw e

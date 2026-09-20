@@ -429,7 +429,9 @@ UI layer. What lives here:
   a held chip forgets one into (the same thirty days every bin promises,
   DELETED PRESETS on SYNTH as the way back), and the roster line that
   promotes one into `:synth`'s tables by hand — a code change the spread,
-  blocklist and identity tests still judge.
+  blocklist and identity tests still judge; and the merge a backup's
+  presets go through when the zip comes home (the shelf's own stay, a
+  twin is skipped, a namesake lands under a fresh name).
 
 ### `:loop` — ORBIT
 

@@ -231,9 +231,11 @@ object Copy {
     const val READ_BACK_CAVEAT = "THE FILE AGREES WITH OUR OWN READER. HARDWARE IS THE ONLY PROOF IT OPENS."
     /** SHARE: the kit is one file now and the chooser is up. */
     fun kitPacked(kit: String): String = "$kit PACKED AS ONE FILE. PICK WHERE IT GOES."
-    /** BACKUP: every kit on one file; [skipped] the ones preflight refused, named in the file's own report. */
-    fun backedUp(packed: Int, skipped: Int): String =
-        "$packed ${if (packed == 1) "KIT" else "KITS"} ON ONE FILE." + (if (skipped > 0) " $skipped SKIPPED." else "") + " PICK WHERE IT GOES."
+    /** BACKUP: every kit on one file, and the player's [presets] beside them when there are any; [skipped] the ones preflight refused, named in the file's own report. */
+    fun backedUp(packed: Int, skipped: Int, presets: Int = 0): String =
+        "$packed ${if (packed == 1) "KIT" else "KITS"}" +
+            (if (presets > 0) " AND ${countOf(presets, "PRESET", "PRESETS")}" else "") +
+            " ON ONE FILE." + (if (skipped > 0) " $skipped SKIPPED." else "") + " PICK WHERE IT GOES."
     const val BACKUP_EMPTY = "NOTHING TO BACK UP. THE SHELF IS BARE."
     const val SHARE_NOWHERE = "NOWHERE TO SEND IT. NO APP ON THIS PHONE TAKES A FILE."
 
@@ -251,9 +253,11 @@ object Copy {
      * exactly the kind of string this file's laws exist to catch.
      */
     fun snipReady(name: String): String = "$name IS READY TO SEND. PICK WHERE IT GOES."
-    /** A kit file landed: [landed] kits on the shelf, [skipped] refused - the box ([LandingNote]) names them when there are any. */
-    fun landed(landed: Int, skipped: Int): String =
-        "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." + if (skipped > 0) " $skipped SKIPPED." else ""
+    /** A kit file landed: [landed] kits on the shelf, [presets] under YOURS on SYNTH when a backup brought some home, [skipped] refused - the box ([LandingNote]) names them when there are any. */
+    fun landed(landed: Int, skipped: Int, presets: Int = 0): String =
+        "$landed ${if (landed == 1) "KIT" else "KITS"} LANDED ON THE SHELF." +
+            (if (presets > 0) " ${countOf(presets, "PRESET", "PRESETS")} UNDER YOURS." else "") +
+            if (skipped > 0) " $skipped SKIPPED." else ""
     /** The message box's title when a share landed nothing: the file's name and the refuser's words follow. */
     const val NOTHING_LANDED = "NOTHING LANDED."
     // The quick-settings tile: idle reads LISTEN (opens the app, arms
