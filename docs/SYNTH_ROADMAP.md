@@ -353,3 +353,49 @@ column the pen maps a touch onto, so the line and the finger agree; a
 touch with a NaN in it, or a table with no points, draws nothing; and a
 shape drawn over nothing is kept with a toast saying why it is not yet
 heard.
+
+### S7.2 — PHOTO FIELD: the whole picture under a finger
+
+SNAP reads one line through a photo and DRAW draws one; a photo has two
+dimensions and a million pixels. The GRAIN FIELD screen (`docs`: the pad
+sheet's scatter, `GrainField.analyze` in `:audio`) already plays a scatter
+of short grains from wherever a finger is, and all it needs is a sample and
+a list of positions — a `GrainField.GrainMap`. So the picture is the map.
+
+`PhotoField.build` (`synth/PhotoField.kt`) cuts the photo into a grid
+(16×12 by default, a cell at least a pixel each way so a photo smaller
+than the grid reads in overlapping cells rather than refusing), and for
+each cell: `Snap.look` for its reading and `Snap.macrosFrom` for its
+knobs, `Snap.table` for its HORIZON line — or a SINE from `Draw.wave` when
+the line is flat, because the field must sound everywhere and a patch of
+clear sky is a pure tone at its hue — then `Snap.grain` for a steady
+`GRAIN_FRAMES` (4096, ~93 ms) tone of it, HOLD-shaped under the usual ramp
+since the field's voice windows every grain itself, scaled by the cell's
+brightness between `DARKEST_LEVEL` (0.25) and 1 so a night shot still
+speaks. The grains sit end to end in one source and the map places grain
+i at the centre of cell i, y down as the canvas draws it. No
+`Projector` comes with a photo, so DUET's chip stays hidden.
+
+`Snap.grain` is `render` with a length of the caller's choosing
+(`synthesize`'s `lengthSeconds`), through the same oversampled path, cut to
+the exact frame count the field addresses by stride.
+
+On the screen, FIELD builds the field once per photo (off the main thread,
+`Copy.SNAP_FIELD_BUSY` on the LCD meanwhile) and opens `GrainFieldScreen`
+with a `PrebuiltField` — the field's sample and map, the photo as a
+backdrop drawn dimmed under the dots, PHOTO FIELD for a title and ◄ SNAP
+for the way back — in place of loading and analyzing a pad. SNAP's own
+audition stops when the field opens and its render loop stands still while
+it is up, so the two voices never overlap.
+
+CLOUD is `PhotoField.cloud`: the field's whole source through
+`Grains.render` (2.5 s, seeded), landed on a pad through the same slot
+chooser as SEND TO PAD, as audio with no recipe — every GRAINS pad is its
+own truth — classed LOOP, named Snap Cloud.
+
+Deliberately later: capturing a drag across the field as audio (GRAIN
+FIELD's own declared next phase, not built for pads either); the
+spectrogram reading of a photo (the image as a picture of sound, through
+the spectral door and `Pghi` the retune already uses) as a second field
+mode; a KEY lock that pins every cell to one note so the field varies only
+in timbre.

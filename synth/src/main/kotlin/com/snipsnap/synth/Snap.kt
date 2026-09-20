@@ -395,6 +395,8 @@ object Snap {
         rate: Int,
         /** A drawn volume shape ([Draw.ENVELOPE_SIZE] points, 0..255) in place of the DECAY exponential; DECAY then sets only the length. */
         envelope: IntArray? = null,
+        /** A length of the caller's choosing in place of DECAY's, for a grain; the shape, drawn or not, is stretched over it. */
+        lengthSeconds: Float? = null,
     ): FloatArray {
         val m = defaults(SnapVoice.HORIZON).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
@@ -411,7 +413,7 @@ object Snap {
         // long enough to be heard as a note (TONAL) and is cut, faded,
         // where the envelope is already 40 dB down.
         val t60 = Dsp.expMap(decay, 0.15f, 2f)
-        val seconds = (t60 * LENGTH_OVER_T60).coerceIn(0.25f, MAX_SECONDS)
+        val seconds = lengthSeconds ?: (t60 * LENGTH_OVER_T60).coerceIn(0.25f, MAX_SECONDS)
         val cutoff = Dsp.expMap(bright, 250f, 12_000f)
         val env = Dsp.Env(attackSeconds = ATTACK_SECONDS, decay2T60 = t60)
         val filter = Dsp.TptSvf(rate)
@@ -443,6 +445,30 @@ object Snap {
             filter.process(s, cutoff * Dsp.lin(e, 0.45f, 1f), k = 1.2f)
             out[i] = Dsp.drive(filter.low * gain, grit) * e
         }
+        return out
+    }
+
+    /**
+     * One grain of this line: a steady tone exactly [frames] long at
+     * [RATE], HOLD-shaped under the usual 3 ms ramp, for a grain field
+     * ([PhotoField]) whose voice windows every grain itself. Same
+     * oversampled path as [render], so a grain of a line is the line's
+     * own sound cut short, not a cheaper cousin of it.
+     */
+    fun grain(table: IntArray, macros: Map<String, Float>, frames: Int): FloatArray {
+        require(table.size == TABLE_SIZE) { "a SNAP table has $TABLE_SIZE points, got ${table.size}" }
+        require(frames > 0) { "a grain needs at least one frame" }
+        val raw = synthesize(
+            table, macros, RATE * Dsp.OVERSAMPLE,
+            envelope = Draw.shape(Draw.Shape.HOLD),
+            lengthSeconds = frames.toFloat() / RATE,
+        )
+        val decimated = Dsp.decimate(raw, RATE)
+        // The resampler lands within a frame or two of the asked length;
+        // the field addresses grains by a fixed stride, so make it exact.
+        val out = decimated.copyOf(frames)
+        Dsp.normalize(out)
+        Dsp.fadeTail(out)
         return out
     }
 

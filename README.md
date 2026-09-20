@@ -262,6 +262,18 @@ a table, the starting shapes, a SMOOTH for a shaky hand — and every
 function returns a new array, so a draft and a committed line never share
 storage.
 
+PHOTO FIELD is the whole picture under a finger. SNAP reads one line; a
+photo has two dimensions, and the GRAIN FIELD screen already plays a
+scatter of grains from wherever a finger is, off nothing more than a
+sample and a list of positions. `PhotoField.build` cuts the picture into a
+16×12 grid, renders each cell as its own short SNAP grain (its line as the
+cycle, its colours as the knobs, its brightness as the level, a flat cell a
+pure tone rather than a refusal), and lays the grains out where their
+cells are — so FIELD on the SNAP screen opens the grain field over the
+photo and sky and brick sound as different as they look, with no new
+real-time code. CLOUD hands the field to GRAINS and lands the picture on a
+pad as a texture, a LOOP by the classifier's measure.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH
