@@ -27,6 +27,7 @@ import android.util.Log
 import com.snipsnap.audio.BlockWatch
 import com.snipsnap.audio.CaptureRing
 import com.snipsnap.audio.SilenceWatch
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.shell.Copy
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -704,10 +705,15 @@ class MicSessionService : Service() {
 
         /**
          * Widened from `private` so other `:app` code can build a Snip at
-         * the session's real sample rate (Task 5's pad-grab path) — the
-         * value itself is unchanged (44_100).
+         * the session's real sample rate (Task 5's pad-grab path).
+         *
+         * Points at [WavWriter.MPC_SAMPLE_RATE] rather than repeating it:
+         * capture is at the MPC's rate *because* that is the only rate the
+         * writer will take, so the two are one quantity, and the law
+         * `no source retypes the rate the MPC reads` (`ConventionTest`)
+         * keeps them that way.
          */
-        internal const val SAMPLE_RATE = 44_100
+        internal const val SAMPLE_RATE = WavWriter.MPC_SAMPLE_RATE
         private const val READ_BLOCK_FRAMES = 2048
         private const val READER_JOIN_TIMEOUT_MS = 1_000L
 

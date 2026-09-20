@@ -154,6 +154,15 @@ fun PropertiesScreen(
         )
         TapeText(Copy.SETUP_FORMAT_NOTE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
 
+        // The fourth of the same kind, and the persona review's P4.2: the
+        // app has always been a 44.1 kHz machine and has never once said
+        // so on a screen. Static — there is nothing to read from disk and
+        // nothing to pick — because the rate genuinely cannot vary; the
+        // copy's own note says where a rate you can *hear* lives instead.
+        TapeText(Copy.SETUP_RATE_HEADING, TapeType.display, scheme.ink.tape)
+        TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+        TapeText(Copy.SETUP_RATE_NOTE, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
+
         // The real path, not a description of it: a user hunting for a file
         // over a cable needs the actual thing to look for. maxLines is
         // generous because a private-storage path is long and truncating it

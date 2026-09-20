@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.WavWriter
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -73,7 +74,7 @@ object SfzWriter {
             // The preview's own shape approximations (PadShape), in SFZ's units.
             p.attack?.let { sb.append("ampeg_attack=").append(num(PadShape.attackSeconds(it))).append('\n') }
             p.decay?.let {
-                val seconds = it * pad.frameCount / 44_100f
+                val seconds = it * pad.frameCount / WavWriter.MPC_SAMPLE_RATE
                 sb.append("ampeg_decay=").append(num(seconds)).append('\n')
                 sb.append("ampeg_sustain=0\n")
             }

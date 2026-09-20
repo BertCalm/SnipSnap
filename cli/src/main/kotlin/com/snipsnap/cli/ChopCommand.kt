@@ -10,6 +10,7 @@ import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Slice
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.kit.Balance
 import com.snipsnap.kit.CapturedGroove
@@ -30,7 +31,7 @@ import java.io.PrintStream
 object ChopCommand {
 
     /** Everything downstream — cleanup, writers, the MPC itself — expects this. */
-    const val TARGET_RATE = 44_100
+    const val TARGET_RATE = WavWriter.MPC_SAMPLE_RATE
 
     /**
      * Below this the UI draws the class dashed and says NOT SURE; the CLI

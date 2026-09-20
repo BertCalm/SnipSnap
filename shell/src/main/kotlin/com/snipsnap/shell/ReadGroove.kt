@@ -5,6 +5,7 @@ import com.snipsnap.audio.Ear
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Tempo
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
@@ -30,7 +31,7 @@ import java.io.File
  */
 object ReadGroove {
 
-    const val TARGET_RATE = 44_100
+    const val TARGET_RATE = WavWriter.MPC_SAMPLE_RATE
 
     /** A hit the classifier is at least this sure of gets a pad; the rest are counted, not invented. */
     const val SURE_CONFIDENCE = 0.5f

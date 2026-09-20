@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.xpm.WavInfo
 import java.io.File
 import java.io.IOException
@@ -147,7 +148,7 @@ object SfzImporter {
             oneShot = head["loop_mode"] != "no_loop",
             attack = head["ampeg_attack"]?.toFloatOrNull()?.let { (it / 0.4f).coerceIn(0f, 1f) },
             decay = head["ampeg_decay"]?.toFloatOrNull()?.let {
-                (it * 44_100f / mainFrames).coerceIn(0f, 1f)
+                (it * WavWriter.MPC_SAMPLE_RATE / mainFrames).coerceIn(0f, 1f)
             },
             cutoff = head["cutoff"]?.toFloatOrNull()?.let {
                 (Math.log10(it / 20.0) / 3.0).toFloat().coerceIn(0f, 1f)

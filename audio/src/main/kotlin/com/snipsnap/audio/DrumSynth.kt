@@ -17,7 +17,7 @@ import kotlin.random.Random
  */
 object DrumSynth {
 
-    const val RATE = 44_100
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
 
     private fun snip(samples: FloatArray) = Snip(samples, 1, RATE)
 

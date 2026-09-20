@@ -67,7 +67,8 @@ listing them.
 
 These are ranked first because they are the only two items here that are
 defects or near-defects rather than judgements, and because one of them
-compounds.
+compounds. **N2 is done** — it is kept here rather than deleted because
+its ruling is the reason the rest of this plan is unchanged.
 
 ### N1 — point the on-device suite at GROOVE ▸ **recommended first**
 
@@ -113,27 +114,51 @@ is the realistic expectation for iteration cost.
 
 **Size:** one PR, but budget for two or three CI cycles.
 
-### N2 — sample-rate control: no code, no decision
+### N2 — sample-rate control ▸ **ruled on and built, 2026-09-20**
 
 P4.2 names three absences. The audio bounce is built; MIDI and clock sync
-are accepted as a documented gap. **Sample-rate control is the third, and
-it is the one nobody has ruled on.**
+are accepted as a documented gap. **Sample-rate control was the third, and
+it was the one nobody had ruled on.**
 
-A search finds it named only inside a refusal — *"THOSE TWO TAKES DON'T
-MATCH - SAMPLE RATE OR CHANNELS. SPLICE WON'T RESAMPLE OR FOLD ONE TO
-FIT."* — and nowhere as a control.
+**What the ruling turned on: the question was two questions.** A producer
+asking a sampler for "sample-rate control" may mean a rate as a *sound*
+or a rate as a *format*, and those have opposite answers here.
 
-**This is a decision, not a task.** Three honest options:
+- **As a sound, it shipped long ago under a better name than a number.**
+  `Eras` is a rate control: SP1200 is 26.04 kHz at 12 bits, MPC60 is
+  40 kHz through a companding DAC, and both are on the pad sheet, in
+  `snipsnap era`, and inside `Dub`. The search that found the word only
+  in a refusal was searching for the wrong word.
+- **As a format it is fixed at 44.1 kHz, and should stay fixed.**
+  `WavWriter` refuses any other rate at the card's edge, `Preflight`
+  FAILs a pad that is not at it, `SnipStore.commitPrepared` requires it.
+  A picker offering a second setting the export would then refuse is a
+  trap, not a control — and the destination that makes this app worth
+  using is the one destination that will not take the second setting.
 
-- **Accept it**, the way P4.2's MIDI half was accepted, and record that in
-  the review so it stops reading as an open question.
-- **Build it**, which is a real feature touching capture, the WAV writer
-  and every export path.
-- **Test it first**, since P4's expectation here is argued rather than
-  measured, like every persona claim in that document.
+**So what was missing was neither: it was that the app never said so.**
+Three things, all built:
 
-**Nothing below should be started before this is answered**, because if
-the answer is "build it" it reorders everything.
+1. **SETUP says the rate.** A `THE RATE` row beside the three things
+   finding 23 already found the app knew and never said, and its note
+   points at the TIME MACHINE for the other half of the question.
+2. **IMPORT reports what it changed.** `SnipStore.import` has always
+   moved a 48 k or 22.05 k share onto the MPC's rate and said nothing.
+   `Imported.resampledFrom` carries it and the toast says it. This was
+   the only part of P4.2's third limb that was a defect rather than a
+   judgement: a conversion performed on somebody else's audio is theirs
+   to be told about.
+3. **The number has one owner.** `WavWriter.MPC_SAMPLE_RATE`, with
+   seventeen code lines across six modules pointed at it and a
+   `ConventionTest` law — `no source retypes the rate the MPC reads` —
+   keeping the next one honest. Its allowlist holds three files, each
+   with the reason the number there is a different quantity.
+
+**Verified by:** JVM logic tests (`SnipStoreTest`) and the structural law
+(`ConventionTest`). The SETUP row itself is three `TapeText` calls over
+static copy — no state, no IO — which is as close to unbreakable as an
+`:app` change gets.
+
 
 ---
 
@@ -208,8 +233,9 @@ mark is a crowding question), or accepting the sheet as the right home.
 
 ## Sequencing
 
-1. **N2** — answer the sample-rate question. It is the only item that
-   could reorder the rest.
+1. ~~**N2** — answer the sample-rate question.~~ **Done 2026-09-20.** It
+   was the only item that could have reordered the rest, and it did not:
+   the ruling was that the rate is fixed, so nothing below moves.
 2. **N1** — the GROOVE on-device suite. Highest compounding value: it
    makes the next `:app` change verifiable instead of re-read.
 3. **P1.1 + P2.4 + P3.2** — one small copy PR, three findings.
