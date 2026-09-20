@@ -163,6 +163,13 @@ fun SnapScreen(
     // The DRAW surface is open: it auditions on its own, so the main
     // render loop below stands still while it is.
     var drawing by remember { mutableStateOf(false) }
+    // The last line a finger drew, kept across chip taps and new photos:
+    // a photo chip used to throw it away (its read replaced `line`), and
+    // reopening DRAW started from blank. DRAW's LAST button brings it back.
+    var drawn by remember { mutableStateOf<IntArray?>(null) }
+    // Set when the surface closes: it just played whatever it had, so the
+    // main loop's re-render on its way back renders without a replay.
+    var quietResume by remember { mutableStateOf(false) }
 
     // Nothing is heard until the first real touch, same as SYNTH: landing
     // on the tab never plays a note unasked. Taking a photo counts as one.
@@ -214,6 +221,11 @@ fun SnapScreen(
                 photo = p
                 reading = r
                 macros = Snap.macrosFrom(r)
+                // A new photo is a new line: its knobs would otherwise
+                // land on a drawn line the photo has nothing to do with,
+                // with the picture on the LCD and its line unheard. The
+                // drawing stays reachable through DRAW's LAST.
+                if (voice == SnapVoice.DRAWN) voice = SnapVoice.HORIZON
                 touched = true
             } catch (ex: OutOfMemoryError) {
                 // Not an Exception: the catch below would let it through
@@ -273,7 +285,8 @@ fun SnapScreen(
         try {
             val rendered = withContext(Dispatchers.Default) { Snap.render(l.table, macros, envelope) }
             snip = rendered
-            if (touched) audition(rendered)
+            if (touched && !quietResume) audition(rendered)
+            quietResume = false
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -442,26 +455,33 @@ fun SnapScreen(
         }
 
         if (drawing) {
+            val closeDrawing = {
+                quietResume = true
+                drawing = false
+            }
             DrawOverlay(
                 // Draw over the line that is playing: the photo's, or the
-                // last drawing. Nothing yet is a blank line at rest.
-                startTable = current?.table ?: Draw.blank(),
+                // last drawing when nothing is. Nothing at all is a blank
+                // line at rest.
+                startTable = current?.table ?: drawn ?: Draw.blank(),
                 startEnvelope = envelope,
+                lastDrawn = drawn,
                 macros = macros,
                 scheme = scheme,
                 onAudition = ::audition,
                 onToast = onToast,
                 onDone = { table, waveDrawn, shape ->
                     if (waveDrawn) {
+                        drawn = table
                         line = Line(null, SnapVoice.DRAWN, table, Snap.isFlat(table))
                         voice = SnapVoice.DRAWN
                     }
                     envelope = shape
-                    drawing = false
+                    closeDrawing()
                 },
-                onCancel = { drawing = false },
+                onCancel = closeDrawing,
             )
-            BackHandler { drawing = false }
+            BackHandler(onBack = closeDrawing)
         }
 
         if (showChooser) {
@@ -630,6 +650,8 @@ private enum class DrawTab { WAVE, SHAPE }
 private fun DrawOverlay(
     startTable: IntArray,
     startEnvelope: IntArray?,
+    /** The last committed drawing, for LAST; null before any. */
+    lastDrawn: IntArray?,
     macros: Map<String, Float>,
     scheme: Scheme,
     onAudition: (Snip) -> Unit,
@@ -645,13 +667,19 @@ private fun DrawOverlay(
     var shape by remember { mutableStateOf(startEnvelope ?: Draw.shape(Draw.Shape.FALL)) }
     var shapeDrawn by remember { mutableStateOf(startEnvelope != null) }
     var rendering by remember { mutableStateOf(false) }
+    // Counts every change a hand makes here. The audition below keys on
+    // it rather than on the arrays, so opening the surface plays nothing
+    // (the main screen just played this very sound) and the first sound
+    // is the first stroke's.
+    var edits by remember { mutableStateOf(0) }
     val color = Schemes.classColor(DrumClass.TONAL).tape
 
     // Hear it as it is drawn.
-    LaunchedEffect(table, shape, shapeDrawn) {
+    LaunchedEffect(edits) {
+        if (edits == 0) return@LaunchedEffect
         delay(MACRO_DEBOUNCE_MS)
         if (Snap.isFlat(table)) return@LaunchedEffect
-        val env = if (shapeDrawn && shape.any { it > 0 }) shape else null
+        val env = if (shapeDrawn && Draw.opens(shape)) shape else null
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
             val rendered = withContext(Dispatchers.Default) { Snap.render(table, macros, env) }
@@ -672,10 +700,13 @@ private fun DrawOverlay(
             onToast(Copy.SNAP_DRAW_FLAT)
             return
         }
-        if (shapeDrawn && shape.none { it > 0 }) {
+        if (shapeDrawn && !Draw.opens(shape)) {
             onToast(Copy.SNAP_SHAPE_SILENT)
             return
         }
+        // A shape drawn over nothing (no photo, the blank line) is kept,
+        // and the screen says why it is not yet heard.
+        if (shapeDrawn && !waveDrawn && Snap.isFlat(table)) onToast(Copy.SNAP_SHAPE_NO_LINE)
         onDone(table, waveDrawn, if (shapeDrawn) shape else null)
     }
 
@@ -728,6 +759,7 @@ private fun DrawOverlay(
                 ) { x0, y0, x1, y1 ->
                     table = Draw.stroke(table, x0, y0, x1, y1)
                     waveDrawn = true
+                    edits++
                 }
                 DrawTab.SHAPE -> DrawLcd(
                     points = shape,
@@ -739,6 +771,7 @@ private fun DrawOverlay(
                 ) { x0, y0, x1, y1 ->
                     shape = Draw.stroke(shape, x0, y0, x1, y1)
                     shapeDrawn = true
+                    edits++
                 }
             }
 
@@ -749,12 +782,14 @@ private fun DrawOverlay(
                         LabButton(w.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
                             table = Draw.wave(w)
                             waveDrawn = true
+                            edits++
                         }
                     }
                     DrawTab.SHAPE -> for (sh in Draw.Shape.entries) {
                         LabButton(sh.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
                             shape = Draw.shape(sh)
                             shapeDrawn = true
+                            edits++
                         }
                     }
                 }
@@ -766,6 +801,7 @@ private fun DrawOverlay(
                         DrawTab.WAVE -> { table = Draw.smooth(table, circular = true); waveDrawn = true }
                         DrawTab.SHAPE -> { shape = Draw.smooth(shape, circular = false); shapeDrawn = true }
                     }
+                    edits++
                 }
                 LabButton("CLEAR", scheme, enabled = true, modifier = Modifier.weight(1f)) {
                     when (tab) {
@@ -773,6 +809,16 @@ private fun DrawOverlay(
                         // Back to SNAP's own decay: shown as the fall it is,
                         // committed as nothing.
                         DrawTab.SHAPE -> { shape = Draw.shape(Draw.Shape.FALL); shapeDrawn = false }
+                    }
+                    edits++
+                }
+                // The last drawing back on the WAVE panel — the way back
+                // to a line a photo chip replaced.
+                LabButton("LAST", scheme, enabled = tab == DrawTab.WAVE && lastDrawn != null, modifier = Modifier.weight(1f)) {
+                    lastDrawn?.let {
+                        table = it
+                        waveDrawn = true
+                        edits++
                     }
                 }
                 LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
@@ -809,6 +855,9 @@ private fun DrawLcd(
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    // A panel of no size has nowhere to draw: a touch
+                    // measured against it would be zero over zero.
+                    if (size.width <= 0 || size.height <= 0) return@awaitEachGesture
                     fun norm(p: Offset) = (p.x / size.width.toFloat()) to (1f - p.y / size.height.toFloat())
                     var (px, py) = norm(down.position)
                     currentOnStroke(px, py, px, py)
@@ -827,12 +876,17 @@ private fun DrawLcd(
     ) {
         val w = size.width
         val h = size.height
-        val rest = if (circular) h * (1f - Draw.REST / 255f) else h
-        drawLine(scheme.lcdInk.tape.copy(alpha = 0.3f), Offset(0f, rest), Offset(w, rest), 1.dp.toPx())
+        val restStroke = 1.dp.toPx()
+        // The floor line sits just inside the panel, not half off its edge.
+        val rest = if (circular) h * (1f - Draw.REST / 255f) else h - restStroke / 2f
+        drawLine(scheme.lcdInk.tape.copy(alpha = 0.3f), Offset(0f, rest), Offset(w, rest), restStroke)
         val path = Path()
         val n = points.size
         for (i in 0 until n) {
-            val x = if (n == 1) 0f else w * i / (n - 1)
+            // Point i is drawn where the pen would put it: the centre of
+            // the column Draw.stroke maps a touch at that x onto (floor of
+            // x times n), so the line and the finger agree to the pixel.
+            val x = w * (i + 0.5f) / n
             val y = h * (1f - points[i] / 255f)
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }

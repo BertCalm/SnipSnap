@@ -31,6 +31,18 @@ object Draw {
     /** The middle brightness: a blank line rests here, silent until drawn on. */
     const val REST = 128
 
+    /**
+     * The least a drawn volume shape has to reach, 0..255, to count as
+     * opening. `any { it > 0 }` let a one-level bump through — under a
+     * pixel tall on the SHAPE panel, -48 dB in the render, and then
+     * [Snap.render]'s normalize lifted it to full scale as a 10 ms click.
+     * Eight levels is -30 dB: still quiet, but a shape someone drew.
+     */
+    const val OPENS = 8
+
+    /** Whether a volume shape reaches [OPENS] anywhere: the one check every door uses. */
+    fun opens(envelope: IntArray): Boolean = envelope.any { it >= OPENS }
+
     /** Starting shapes for the cycle, the four an oscillator switch has had since 1970 plus a narrow pulse. */
     enum class Wave { SINE, TRIANGLE, SAW, SQUARE, PULSE }
 
@@ -60,8 +72,12 @@ object Draw {
         val x = i.toFloat() / (ENVELOPE_SIZE - 1)
         val v = when (shape) {
             Shape.HOLD -> 1f
-            // The exponential SNAP's own decay makes, -60 dB at the end.
-            Shape.FALL -> Dsp.envAt(x, 1f)
+            // The exponential SNAP's own decay makes: its note runs 1.1
+            // times its T60, so the end of the shape is 66 dB down, the
+            // same place the undrawn note is cut. (Where DECAY runs into
+            // the 0.25 s floor or the 1.45 s ceiling the real note differs;
+            // this is the fall at a length of its own.)
+            Shape.FALL -> Dsp.envAt(x, 1f / Snap.LENGTH_OVER_T60)
             Shape.PLUCK -> if (x < 0.08f) 1f - x / 0.08f * 0.7f else 0.3f * Dsp.envAt((x - 0.08f) / 0.92f, 1f)
             Shape.SWELL -> if (x < 0.6f) (x / 0.6f) * (x / 0.6f) else 1f - (x - 0.6f) / 0.4f
             Shape.BOUNCE -> if (x < 0.5f) Dsp.envAt(x / 0.5f, 0.8f) else 0.6f * Dsp.envAt((x - 0.5f) / 0.5f, 0.8f)
@@ -82,6 +98,10 @@ object Draw {
     fun stroke(table: IntArray, x0: Float, y0: Float, x1: Float, y1: Float): IntArray {
         val n = table.size
         val out = table.copyOf()
+        // Nothing to draw on, or nowhere to draw: a NaN (a touch measured
+        // against a panel of no size divides zero by zero) would slip
+        // through coerceIn and land on point zero as a zero.
+        if (n == 0 || x0.isNaN() || y0.isNaN() || x1.isNaN() || y1.isNaN()) return out
         val ax = x0.coerceIn(0f, 1f)
         val bx = x1.coerceIn(0f, 1f)
         val ay = y0.coerceIn(0f, 1f)

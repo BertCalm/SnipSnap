@@ -702,6 +702,8 @@ object Copy {
     const val SNAP_DRAW_FLAT = "THAT LINE IS FLAT. DRAW SOME UP AND DOWN INTO IT."
     /** DRAW's DONE on a volume shape that stays at zero the whole way: a pad that would land silent. */
     const val SNAP_SHAPE_SILENT = "THAT SHAPE NEVER OPENS. DRAW IT UP SOMEWHERE."
+    /** DRAW's DONE with a shape drawn but no line under it (no photo, blank wave): the shape is kept, and there is nothing yet to play it on. */
+    const val SNAP_SHAPE_NO_LINE = "SHAPE KEPT. DRAW A LINE OR TAKE A PHOTO TO HEAR IT."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

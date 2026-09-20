@@ -138,7 +138,13 @@ logcat tag to grab when something is wrong.
   SWELL arrive late; DONE with a drawn shape adds SHAPE DRAWN to the
   header and `kit.json` gains an `envelope` of 64 digits beside the
   `table`. DONE on a blank WAVE toasts THAT LINE IS FLAT and stays;
-  CANCEL leaves the pad as it was.
+  CANCEL leaves the pad as it was. Then the kept line: draw, DONE, tap
+  HORIZON, tap DRAW — the surface opens on the photo's line (or blank
+  with no photo) and LAST brings the drawing back. Opening DRAW should
+  play nothing until the first touch, and CANCEL should not replay.
+  Taking a new photo while LINE DRAWN is up should switch the header to
+  LINE HORIZON. A shape drawn as a single tiny bump near the floor is
+  refused as never opening.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

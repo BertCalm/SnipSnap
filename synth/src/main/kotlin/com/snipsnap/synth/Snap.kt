@@ -80,6 +80,12 @@ object Snap {
     /** The longest render: under the classifier's 1.5 s LOOP line, so a pad stays a hit. */
     internal const val MAX_SECONDS = 1.45f
 
+    /** How much longer than its T60 a note runs: cut where the tail is 66 dB down. [Draw.Shape.FALL] is drawn to match. */
+    const val LENGTH_OVER_T60 = 1.1f
+
+    /** The ramp every note comes on under, drawn shape or not: no click on the first sample. */
+    private const val ATTACK_SECONDS = 0.003f
+
     /** The macro set is the same for every voice: the voice picks the line, the knobs shape the sound. */
     val MACROS: List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f),
@@ -405,24 +411,23 @@ object Snap {
         // long enough to be heard as a note (TONAL) and is cut, faded,
         // where the envelope is already 40 dB down.
         val t60 = Dsp.expMap(decay, 0.15f, 2f)
-        val seconds = (t60 * 1.1f).coerceIn(0.25f, MAX_SECONDS)
+        val seconds = (t60 * LENGTH_OVER_T60).coerceIn(0.25f, MAX_SECONDS)
         val cutoff = Dsp.expMap(bright, 250f, 12_000f)
-        val env = Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
+        val env = Dsp.Env(attackSeconds = ATTACK_SECONDS, decay2T60 = t60)
         val filter = Dsp.TptSvf(rate)
         val gain = Dsp.lin(grit, 1f, 3f)
 
         val out = FloatArray((seconds * rate).toInt())
         var phase = 0.0
         val step = freq.toDouble() * n / rate
-        val attack = 0.003f
         for (i in out.indices) {
             val t = i.toFloat() / rate
             // A drawn shape is stretched over the note's whole length,
-            // under the same 3 ms ramp that keeps a HOLD from clicking on.
+            // under the same ramp that keeps a HOLD from clicking on.
             val e = if (envelope == null) {
                 env.at(t)
             } else {
-                (t / attack).coerceAtMost(1f) * envelopeAt(envelope, t / seconds)
+                (t / ATTACK_SECONDS).coerceAtMost(1f) * envelopeAt(envelope, t / seconds)
             }
             // Linear interpolation into the cycle; the table is small, the
             // oversampled render (U6) is what keeps the top clean.
