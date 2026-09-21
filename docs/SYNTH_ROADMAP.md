@@ -591,3 +591,49 @@ WAVE/SHAPE's `SMOOTH | CLEAR | LAST | CANCEL | DONE` — PATH commits
 nothing through DONE, since LOOP PAD ▸ and RING ▸ each land the walked
 cells directly, the same way KIT ▸ leaves through its own callback
 rather than a draft.
+
+### S7.7 — DUET on a photo field
+
+`docs/PHOTO_SPECS.md` §5, built as recommended (fixed at
+brightness/loudness), with one correction to the spec's own design
+sketch — see below. `GrainField.Projector` (`:audio`) is now an
+interface, one method, `project(vector: FloatArray): Pair<Float,
+Float>`; the hand-rolled PCA basis `analyze` fits from a sample's own
+grains kept its shape and its `internal constructor` under a new name,
+`PcaProjector`. Every call site outside `:audio` only ever called
+`.project(...)` on whatever `GrainMap.projector` held, so the rename
+touched nothing beyond `:audio` itself and two stale KDoc `[...]` links
+in `GrainFieldScreen.kt`; the one test that reached past the interface
+(`GrainFieldTest`'s degenerate-axis case, which reads `.degenerate1`/
+`.degenerate2` — fields the interface has no business declaring, since
+`AxesProjector` has no notion of a degenerate axis) now casts to
+`PcaProjector` for those two lines instead.
+
+`AxesProjector(x: Axis = Axis.CENTROID)` (`:audio`, new) is the other
+`Projector`: no grains to fit a PCA basis from, so it reads `x` straight
+off `Similar.vector`'s own named dimension (`Axis` enum, one entry per
+vector index) and leaves `y` at the map's own 0.5 centre. That is the
+one place this build deviates from the spec's own sketch of
+`AxesProjector(x: Axis, y: Axis)`: loudness is deliberately not one of
+`Similar.vector`'s nine dimensions (the class's own KDoc — "a quiet
+snare is still a snare"), so a second `Axis` for y would have to
+misname some other spectral feature as loudness instead of just not
+having one. `PhotoField.build` (`:synth`) sets `projector =
+AxesProjector()` on its map — the one-line change the spec priced — so
+a photo field carries a projector unconditionally, unlike an analyzed
+sample's, which is only ever present when `analyze` didn't hit the
+degenerate/too-few-grains cases `PcaProjector`'s own KDoc already
+documents.
+
+The spec's "the tick maps y itself" line (its own stated smaller
+option, next to threading level through the interface as a tenth
+dimension) is what actually wires loudness to y, and it needed a real
+few lines in `GrainFieldScreen.kt`'s DUET loop, not the "DUET's code
+changes not at all" the spec predicted for the interface-extraction
+bullet alone: after `p.project(vector)` returns, `y` is replaced with
+`MicSessionService.level.value` (already read once per tick for the
+silence gate, so no new mic read) whenever `p is AxesProjector`,
+leaving a `PcaProjector`-backed field's own second principal component
+untouched. DUET's chip visibility (`projector != null`) and every other
+line of that loop needed no change — the polymorphic `.project(...)`
+call was already the only thing DUET asked of a projector.

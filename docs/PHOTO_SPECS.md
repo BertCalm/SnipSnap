@@ -3,10 +3,11 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1–§4 are now built
+one list and priced as eight sections. §1–§5 are now built
 (`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`,
-`synth/PhotoPath.kt`; `docs/SYNTH_ROADMAP.md` S7.3–S7.6); §5–§8 are not.
-Each ends with the decision that is not mine to make.
+`synth/PhotoPath.kt`, `audio/AxesProjector.kt`; `docs/SYNTH_ROADMAP.md`
+S7.3–S7.7); §6–§8 are not. Each ends with the decision that is not mine
+to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -352,6 +353,21 @@ projector's existing tests unchanged after the interface extraction.
 
 Which two features, and whether they are fixed or a chip cycles them
 (recommended: fixed at brightness/loudness first).
+
+**Built as recommended, fixed at brightness/loudness, with one correction
+to this section's own design sketch.** `AxesProjector` ended up taking
+one `Axis` (x, defaulting to `CENTROID`) rather than two: `y` is left at
+the map's own 0.5 centre, because loudness — the one feature DUET wants
+there — is deliberately not part of `Similar.vector` ("a quiet snare is
+still a snare"), so a *second* `Axis` for y would have to name some
+other spectral feature and call it "loudness," which it isn't. The tick
+maps y itself, as this section already flagged as the smaller of its two
+options — but "smaller" still needed a few real lines in
+`GrainFieldScreen.kt`'s DUET loop (blend `MicSessionService.level` onto
+`y` when the field's projector is an `AxesProjector`, leaving a
+`PcaProjector`'s own second principal component alone), not the "DUET's
+code changes not at all" this section predicted for the interface
+extraction alone.
 
 ---
 

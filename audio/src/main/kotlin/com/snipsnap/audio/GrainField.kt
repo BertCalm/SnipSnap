@@ -56,6 +56,16 @@ object GrainField {
     )
 
     /**
+     * A [Similar.vector]-style 9-dim vector into a map's 0..1 (x, y) — DUET's
+     * own reading of whatever a finger would otherwise pick. [PcaProjector]
+     * is one implementation, fit from a sample's own grains; [AxesProjector]
+     * is another, fixed to named features rather than fit from anything.
+     */
+    interface Projector {
+        fun project(vector: FloatArray): Pair<Float, Float>
+    }
+
+    /**
      * Captures the PCA basis [analyze] fit to one sample's grains so it can
      * be reapplied to NEW audio — projecting foreign material into an
      * existing timbre map instead of building a brand-new one.
@@ -67,16 +77,16 @@ object GrainField {
      * variance to normalize) always returns 0.5 for new audio — the
      * index-spread fallback has no equivalent for a single incoming vector.
      */
-    class Projector internal constructor(
+    class PcaProjector internal constructor(
         internal val means: FloatArray,
         internal val axis1: FloatArray,
         internal val axis2: FloatArray,
         internal val min1: Float, internal val max1: Float,
         internal val min2: Float, internal val max2: Float,
         internal val degenerate1: Boolean, internal val degenerate2: Boolean,
-    ) {
+    ) : Projector {
         /** Projects a [Similar.vector]-style 9-dim vector into the map's 0..1 space. */
-        fun project(vector: FloatArray): Pair<Float, Float> {
+        override fun project(vector: FloatArray): Pair<Float, Float> {
             val centered = FloatArray(vector.size) { i -> vector[i] - means[i] }
             val x = axisCoordinate(dot(centered, axis1), min1, max1, degenerate1)
             val y = axisCoordinate(dot(centered, axis2), min2, max2, degenerate2)
@@ -134,7 +144,7 @@ object GrainField {
             .map { i -> Grain(starts[i], xs[i], ys[i]) }
             .sortedBy { it.startFrame }
 
-        val projector = Projector(
+        val projector = PcaProjector(
             means = means,
             axis1 = v1,
             axis2 = v2,
