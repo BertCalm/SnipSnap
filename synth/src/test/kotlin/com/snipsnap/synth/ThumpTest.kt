@@ -360,32 +360,63 @@ class ThumpTest {
 
     @Test
     fun `a wide SNARE folds down to the mono render, up to one gain`() {
-        val mono = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 0f))
-        val wide = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f))
-        val n = kotlin.math.min(mono.frameCount, wide.frameCount)
-        assertTrue(n > 1000, "not enough frames to judge: $n")
-        assertTrue(
-            kotlin.math.abs(mono.frameCount - wide.frameCount) <= 1,
-            "width changed the render length: ${mono.frameCount} vs ${wide.frameCount}",
-        )
-        val fold = FloatArray(n) { wide.samples[it * 2] + wide.samples[it * 2 + 1] }
-        // Best-fit single scalar between fold-down and mono. Linear panning
-        // means one gain should explain the whole difference; comb notching
-        // would leave a frequency-dependent residual that no gain can absorb.
-        var num = 0.0
-        var den = 0.0
-        for (i in 0 until n) { num += fold[i].toDouble() * mono.samples[i]; den += mono.samples[i].toDouble() * mono.samples[i] }
-        assertTrue(den > 1e-9, "mono render was silent")
-        val alpha = num / den
-        var resid = 0.0
-        var energy = 0.0
-        for (i in 0 until n) {
-            val d = fold[i] - alpha * mono.samples[i]
-            resid += d * d
-            energy += fold[i].toDouble() * fold[i]
+        // Swept across SNAP x DECAY, 11 steps each (121 pairs) - the same
+        // grid final-review.md measured. `abs(frameCount diff) <= 1` used
+        // to be asserted at the DEFAULT macros only, and it passed there
+        // only because trimSnareTail's lastFrame happens to coincide for
+        // mono and wide at exactly that one point. trimSnareTail thresholds
+        // off the per-sample peak (see its own KDoc): a stereo render's
+        // per-sample peak is a different fraction of its own signal than
+        // mono's, so the -60dB crossing moves by an amount that depends on
+        // SNAP/DECAY, not just WIDTH. MEASURED (this exact sweep, gradle
+        // exit 0): 42 of 121 pairs exceed a 1-frame difference; worst case
+        // 599 frames (SNAP 0.1, DECAY 0.9). The behaviour itself is
+        // inaudible - everything trimmed sits below -60dB and fadeTail runs
+        // after (finding 4, final-review.md) - so this bounds the true
+        // range instead of chasing trimSnareTail's own arithmetic. 600 is
+        // 599's measured worst plus one frame of slack, not a separate
+        // guess.
+        for (si in 0..10) {
+            val snap = si / 10f
+            for (di in 0..10) {
+                val decay = di / 10f
+                val macros = mapOf("SNAP" to snap, "DECAY" to decay)
+                val mono = Thump.render(ThumpVoice.SNARE, macros + ("WIDTH" to 0f))
+                val wide = Thump.render(ThumpVoice.SNARE, macros + ("WIDTH" to 1f))
+                val n = kotlin.math.min(mono.frameCount, wide.frameCount)
+                assertTrue(n > 1000, "SNAP=$snap DECAY=$decay: not enough frames to judge: $n")
+                assertTrue(
+                    kotlin.math.abs(mono.frameCount - wide.frameCount) <= 600,
+                    "SNAP=$snap DECAY=$decay: width changed the render length past the measured worst case: " +
+                        "${mono.frameCount} vs ${wide.frameCount}",
+                )
+                // Fold-down residual over the COMMON prefix only - stays as
+                // strong as it was, and is untouched by the length
+                // difference bounded above since it never compares past `n`.
+                val fold = FloatArray(n) { wide.samples[it * 2] + wide.samples[it * 2 + 1] }
+                // Best-fit single scalar between fold-down and mono. Linear
+                // panning means one gain should explain the whole
+                // difference; comb notching would leave a frequency-
+                // dependent residual that no gain can absorb.
+                var num = 0.0
+                var den = 0.0
+                for (i in 0 until n) { num += fold[i].toDouble() * mono.samples[i]; den += mono.samples[i].toDouble() * mono.samples[i] }
+                assertTrue(den > 1e-9, "SNAP=$snap DECAY=$decay: mono render was silent")
+                val alpha = num / den
+                var resid = 0.0
+                var energy = 0.0
+                for (i in 0 until n) {
+                    val d = fold[i] - alpha * mono.samples[i]
+                    resid += d * d
+                    energy += fold[i].toDouble() * fold[i]
+                }
+                val rel = kotlin.math.sqrt(resid / (energy + 1e-12))
+                assertTrue(
+                    rel < 1e-3,
+                    "SNAP=$snap DECAY=$decay: fold-down is not the mono signal scaled: relative residual $rel, alpha $alpha",
+                )
+            }
         }
-        val rel = kotlin.math.sqrt(resid / (energy + 1e-12))
-        assertTrue(rel < 1e-3, "fold-down is not the mono signal scaled: relative residual $rel, alpha $alpha")
     }
 
     @Test
@@ -411,10 +442,33 @@ class ThumpTest {
 
     @Test
     fun `left and right are not interchangeable`() {
-        // Anchors channel ORIENTATION. Every other stereo test here is
-        // symmetric - it sums L+R or squares L-R - so all of them pass with
-        // the channels swapped. trimSnareTail's old bug was exactly an L/R
-        // transposition, so this is the assertion that would have caught it.
+        // Anchors the COMPOSED render path's channel ORIENTATION - a real
+        // Thump.render(SNARE, WIDTH>0), not Modes.ringStereo in isolation
+        // (ModesTest's `a hard-panned mode lands on the side it was panned
+        // to` already pins ringStereo's own pan arithmetic, one layer
+        // below). The old version of this test asserted both channels
+        // non-empty plus render determinism - both survive an L/R swap
+        // unchanged: final-review.md's Mutation A swapped Thump.snare's
+        // rendered channels right after Modes.ringStereo and the ENTIRE
+        // repo-wide suite stayed green. It was a determinism test wearing
+        // an orientation test's name, on the exact hazard (an L/R
+        // transposition) trimSnareTail actually shipped once.
+        //
+        // Modes.spread assigns pan deterministically by mode index - side
+        // is -1 for even index, +1 for odd, and mode 0's reach is always 0
+        // so it never leaves centre - so for the snare's real MEMBRANE bank
+        // (5 modes) the odd-index modes (1, 3) land right and the even
+        // ones past 0 (2, 4) land left. That is a small, real asymmetry
+        // (mode 0's centred mass dominates), not a hard pan, so this
+        // measures the composed render's total per-channel energy rather
+        // than predicting an exact ratio from first principles.
+        //
+        // MEASURED (not invented), this exact render, this exact macro map,
+        // gradle exit 0: L=135.14056288461143 R=146.97442039787816,
+        // R/L=1.0875670284381675 - the right channel carries ~8.8% more
+        // energy than the left. 1.03 sits well clear of both that measured
+        // value and of 1.0 (a swapped render would measure R/L=1/1.0876
+        // =0.919, comfortably on the other side of this threshold).
         val wide = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f, "SNAP" to 0.2f))
         assertEquals(2, wide.channels)
         var l = 0.0
@@ -422,6 +476,11 @@ class ThumpTest {
         var f = 0
         while (f < wide.samples.size) { l += wide.samples[f] * wide.samples[f]; r += wide.samples[f + 1] * wide.samples[f + 1]; f += 2 }
         assertTrue(l > 0.0 && r > 0.0, "a channel was empty: L=$l R=$r")
+        val ratio = r / l
+        assertTrue(
+            ratio > 1.03,
+            "expected the right channel to carry measurably more energy than the left (R/L=$ratio, measured baseline 1.0876) - orientation may have flipped",
+        )
         val rendered = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f, "SNAP" to 0.2f))
         for (i in wide.samples.indices) {
             assertEquals(wide.samples[i], rendered.samples[i], 0f, "render is not deterministic at $i")
@@ -436,7 +495,11 @@ class ThumpTest {
         // wires, this test should be updated deliberately, not deleted.
         fun side(width: Float): Float {
             val s = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to width, "SNAP" to 1f))
-            if (s.channels != 2) return 0f
+            // Fails loudly, not vacuously: returning 0f here for a render
+            // that stopped being stereo would let `side(1f) < 1e-3f` pass
+            // while claiming to have verified an inertness it never
+            // actually measured.
+            assertEquals(2, s.channels, "WIDTH $width at SNAP 1 should still render stereo")
             var mid = 0.0; var sd = 0.0
             var f = 0
             while (f < s.samples.size) {

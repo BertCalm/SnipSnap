@@ -133,37 +133,17 @@ object Thump {
         // the hit, it doesn't just make it louder" guarantee PunchTest
         // proves for Punch.apply in isolation.
         //
-        // On the stereo path this is deliberately NOT Dsp.normalize itself.
-        // Dsp.normalize's peak scan is over every individual sample, so an
-        // interleaved buffer's peak is generally the FOLD's peak split
-        // across two channels - measured here, roughly half of it - and
-        // that is a fine, channel-agnostic gain for every LINEAR stage
-        // downstream (which is why Dsp.normalize itself stays untouched and
-        // is still exactly what channels == 1 uses below). It is fatal for
-        // Punch.saturate's Dsp.drive: a nonlinearity does not commute with
-        // an arbitrary rescale, so feeding it a signal at roughly double
-        // the level the mono path sees at the SAME macro settings shapes
-        // the onset differently by more than one gain - not the WIDTH
-        // macro's own panning, an artifact of which peak got measured.
-        // Normalizing by the FOLD's own peak instead keeps the pre-Punch
-        // reference level the stereo and mono paths hand to saturate
-        // matched (fold ~= mono pre-normalize, see snare()'s own KDoc),
-        // which is what the fold-down test below actually requires.
-        if (channels <= 1) {
-            Dsp.normalize(raw)
-        } else {
-            var foldPeak = 0f
-            for (f in 0 until raw.size / channels) {
-                var sum = 0f
-                for (c in 0 until channels) sum += raw[f * channels + c]
-                val a = kotlin.math.abs(sum)
-                if (a > foldPeak) foldPeak = a
-            }
-            if (foldPeak > 1e-9f) {
-                val g = 0.95f / foldPeak
-                for (i in raw.indices) raw[i] *= g
-            }
-        }
+        // Dsp.normalizeByFold, not Dsp.normalize: see its own KDoc for why a
+        // per-sample peak scan is the wrong level reference for a stereo
+        // buffer about to feed Punch.saturate's nonlinearity. This is Task
+        // 3b's original fix, now shared with Punch.applyOversampled's own
+        // two normalize calls (which do NOT need the fold - see their own
+        // comments) instead of duplicated at each site that has `channels`
+        // in hand - keeps the pre-Punch reference level the stereo and
+        // mono paths hand to saturate matched (fold ~= mono pre-normalize,
+        // see snare()'s own KDoc), which is what the fold-down test below
+        // actually requires.
+        Dsp.normalizeByFold(raw, channels)
         // Punch.applyOversampled runs saturate and the boost envelope on
         // `raw` here, still at renderRate, before its own internal
         // Dsp.decimate call - both are nonlinear or fast-changing enough to

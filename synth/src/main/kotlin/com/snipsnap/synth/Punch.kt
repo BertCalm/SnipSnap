@@ -138,6 +138,20 @@ internal object Punch {
             }
             var sum = 0f
             for (c in 0 until channels) sum += buf[f * channels + c]
+            // The guard below only exists for the exact-zero case (sum ==
+            // 0f), which would otherwise divide by zero - it is NOT what
+            // keeps `scale` numerically safe in general. scale =
+            // drive(sum, taper)/sum -> g/tanh(g) as sum -> 0, a BOUNDED
+            // constant: g = 1 + 6*taper and taper's satAmount is capped at
+            // punch^3 * 0.3 <= 0.3, so g <= 2.8 and scale <= g/tanh(g) =
+            // 2.8208. MEASURED (final-review.md): flat at 2.820785 - the
+            // analytic limit to 7 digits - from sum = 1e-4 down to
+            // 1.19e-7, so catastrophic cancellation in the L+R fold does
+            // not make this ill-conditioned. For any O(1) operand the
+            // float ULP is ~6e-8, so `sum` either lands at precisely 0.0
+            // (guard fires) or already sits where `scale` is pinned at its
+            // bounded limit - 1e-9 is not a meaningful magnitude here, the
+            // bound is what makes the guard sufficient.
             if (kotlin.math.abs(sum) <= 1e-9f) continue
             val shaped = Dsp.drive(sum, taper)
             val scale = shaped / sum
@@ -255,9 +269,35 @@ internal object Punch {
      */
     fun applyOversampled(raw: FloatArray, amount: Float, rate: Int, channels: Int = 1): FloatArray {
         val renderRate = rate * Dsp.OVERSAMPLE
+        // Both normalize calls below go through Dsp.normalizeByFold, but
+        // deliberately AT channels = 1 (per-sample), not `channels` -
+        // decided in writing here, not left as unused plumbing (that was
+        // finding 3 in final-review.md: `channels` sat in hand and unused,
+        // so the convention got re-chosen by accident). Neither buffer
+        // below feeds a nonlinearity: saturate/boostEnvelope already ran on
+        // `raw` at renderRate, before either decimate call in this
+        // function. Dsp.normalizeByFold's own KDoc has the one call site
+        // that DOES need channels - Thump.render's pre-Punch normalize -
+        // and this comment is the record for why these two are not it.
+        //
+        // `reference`'s only consumer is Loudness.of -> `before`, the
+        // target the final rescale below matches - not a nonlinearity.
+        // Fold-normalizing it MEASURABLY changes the shipped level: with
+        // channels threaded through here, `before` for a stereo buffer
+        // came out roughly half of the per-sample convention's (a centred
+        // stereo signal's fold peak is ~2x its own per-sample peak), and
+        // because `final = buf0 * before / Loudness.of(buf0)` in
+        // rescaleToLoudness, that halving reaches the exported audio
+        // directly - measured: SNARE roll 4 of `scramble is reproducible
+        // and always playable` (PUNCH=0.19062, WIDTH=0.04869324) went from
+        // peak 0.9353 to peak 0.4679, failing that test's own
+        // `peak() > 0.5f` playability floor. That is a real level
+        // regression, not an artifact of which peak got measured - the
+        // reviewer's own framing (finding 3) was written for a call site
+        // that feeds a nonlinearity; this one does not.
         val before = if (amount > 0f) {
             val reference = Dsp.decimate(raw.copyOf(), rate, channels)
-            Dsp.normalize(reference)
+            Dsp.normalizeByFold(reference, channels = 1)
             Loudness.of(Snip(reference, channels = channels, sampleRate = rate))
         } else {
             0f
@@ -265,7 +305,18 @@ internal object Punch {
         saturate(raw, amount, renderRate, channels)
         boostEnvelope(raw, amount, renderRate, channels)
         val buf = Dsp.decimate(raw, rate, channels)
-        Dsp.normalize(buf)
+        // `buf`'s own normalize gain is PROVABLY inert whenever amount > 0:
+        // rescaleToLoudness immediately below measures `current =
+        // Loudness.of(buf)` on the just-normalized buffer and rescales by
+        // `before / current` - whatever gain this normalize applied
+        // cancels exactly in that ratio (verified: reverting this one call
+        // alone to a fold reference left the roll-4 render's peak
+        // unchanged to 7 significant figures, 0.4678797 both ways). It
+        // only sets the final level directly at amount == 0f, where
+        // rescaleToLoudness itself early-returns and nothing nonlinear ran
+        // - the same "correct for clip safety, not a level-into-
+        // nonlinearity decision" case Dsp.normalize/limitPeak already are.
+        Dsp.normalizeByFold(buf, channels = 1)
         rescaleToLoudness(buf, amount, before, rate, channels)
         return buf
     }

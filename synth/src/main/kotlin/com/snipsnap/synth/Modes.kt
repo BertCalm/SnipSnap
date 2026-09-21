@@ -387,11 +387,18 @@ internal object Modes {
     /**
      * [modes] rung into an interleaved stereo buffer, each at its own [Mode.pan].
      *
-     * Panning is LINEAR — `L = (1-p)·x`, `R = p·x` — so L+R sums to exactly
-     * `x` for every position. A mono fold-down therefore returns every mode
-     * at full amplitude with no comb notching, which equal-power panning
-     * cannot promise (it sums to √2 at centre). These files end up on SD
-     * cards and club systems; the fold-down is not hypothetical.
+     * Panning is LINEAR — `L = (1-p)·x`, `R = p·x` — so, at THIS function's
+     * own output, L+R sums to exactly `x` for every position: a mono fold
+     * of the buffer [ringStereo] returns has no comb notching, which
+     * equal-power panning cannot promise (it sums to √2 at centre). That is
+     * a property of this function's output, not a promise about what a
+     * caller eventually exports — a caller's own level stages downstream
+     * (gain-staging, [Punch], export) can and do rescale the fold relative
+     * to a same-settings mono render; see [Thump.render]'s own KDoc (and
+     * its private `snare` helper) for what the shipped SNARE voice actually
+     * delivers end to end. These files end up on SD cards and club systems, so the
+     * no-comb-notching property this function itself guarantees is not
+     * hypothetical — it just isn't the whole story past this call.
      */
     fun ringStereo(
         excitation: FloatArray,
