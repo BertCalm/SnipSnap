@@ -575,7 +575,26 @@ content lands entirely in mid. A prediction made mid-phase that MEMBRANE would a
 wider than METAL_BAR was therefore wrong in its practical conclusion: the two land in the same
 place once the wires are mixed in.
 
-**AUDITIONED 2026-09-21 — the answer is yes.** The renders were played and passed. 0.083 side/mid
+**RETRACTED 2026-09-21 — this gate was recorded on a misreading.** The user said the renders
+"were good"; that was taken as "the width reads as space" and written up as a passed audition.
+It was an inference, not their words. Asked directly afterwards, per preset, they reported
+catching **no difference** between the mono and wide versions. The width as built is not audible
+on a snare one-shot.
+
+The measurements were never wrong — side/mid rises linearly with `WIDTH`, exactly as built. They
+measured energy the ear does not use to place a transient. A listener localises a percussive hit
+from its ONSET, and this snare's onset is mono: the wire layer is a single noise seed written
+equally to both channels, and `Modes.spread` pins the fundamental dead centre by design. So
+per-mode panning spreads the ringing TAIL of a sound whose ATTACK does the locating.
+
+The lesson is the one this project keeps relearning from the other direction: a metric agreeing
+with the mechanism does not mean the mechanism is audible. Both of this gate's readings — first
+"probably too subtle", then "passed" — were made without a direct question being asked and
+answered. Ask the question.
+
+The paragraph below is kept as the record of what was expected.
+
+**The superseded claim was that 0.083 is enough:** The renders were played and passed. 0.083 side/mid
 at full width reads as space, and the width ships as built with no retuning. Do not chase the
 number: this is the second time on this project that a metric suggested a problem the ears did
 not hear, and the ears are the gate. `Modes.spread`'s reach/jitter product and mode 0's centre
