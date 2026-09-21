@@ -133,6 +133,8 @@ import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.shell.Workshop
+import com.snipsnap.synth.Photo
+import com.snipsnap.synth.PhotoKit
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -1093,6 +1095,32 @@ fun App(shelf: KitShelf) {
             } else {
                 Copy.FRESH_TAPE
             }
+            open = entry
+            screen = AppScreen.KIT
+        }
+    }
+
+    /**
+     * KIT ▸ on SNAP: [photo] cut 4×4 and rendered as sixteen SNAP pads
+     * (`PhotoKit.build`), landed on the shelf as a brand-new kit — [fresh]'s
+     * own shape, off a picture instead of a starter's seed, never
+     * overwriting whatever kit is open.
+     */
+    fun buildPhotoKit(photo: Photo) {
+        if (busy != null) return
+        busy = Copy.SNAP_KIT_BUSY
+        scope.launch {
+            val entry = try {
+                withContext(Dispatchers.IO) { shelf.landPhotoKit("PHOTO KIT", PhotoKit.build(photo, "PHOTO KIT")) }
+            } catch (e: Exception) {
+                busy = null
+                Log.e(TAG, "buildPhotoKit: failed", e)
+                toast = Copy.CREATE_FAILED
+                return@launch
+            }
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+            busy = null
+            toast = Copy.photoKitMade(entry.kit.name)
             open = entry
             screen = AppScreen.KIT
         }
@@ -3163,6 +3191,7 @@ fun App(shelf: KitShelf) {
                             val snapEntry = open
                             SnapScreen(
                                 entry = snapEntry,
+                                busy = busy != null,
                                 onToast = { toast = it },
                                 onKitUpdated = { updatedKit ->
                                     if (open?.dir == snapEntry?.dir) open = open?.copy(kit = updatedKit)
@@ -3170,6 +3199,7 @@ fun App(shelf: KitShelf) {
                                         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
                                 },
+                                onBuildKit = ::buildPhotoKit,
                                 appScope = scope,
                             )
                         }

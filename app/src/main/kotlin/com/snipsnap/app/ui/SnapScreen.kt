@@ -133,8 +133,16 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 @Composable
 fun SnapScreen(
     entry: KitShelf.Entry?,
+    // App()'s own busy lock: KIT ▸ renders off-thread through it (the
+    // same DUBBING…-shaped overlay FRESH TAPE and BREED use), since it
+    // lands on the shelf and leaves this screen rather than staying on
+    // it the way FIELD/CLOUD's own local busy flags do.
+    busy: Boolean,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
+    // KIT ▸: build a whole kit off the current photo and land it on the
+    // shelf. App.kt owns the shelf write and the navigation to it.
+    onBuildKit: (Photo) -> Unit,
     // App()'s own scope, same as SynthScreen's: a SEND TO PAD write in
     // flight survives a MenuRow tab switch instead of being cancelled by it.
     appScope: CoroutineScope,
@@ -494,6 +502,7 @@ fun SnapScreen(
                     when {
                         buildingField -> Copy.SNAP_FIELD_BUSY
                         cloudBusy -> Copy.SNAP_CLOUD_BUSY
+                        busy -> Copy.SNAP_KIT_BUSY
                         envelope != null -> "$lineWord · SHAPE DRAWN"
                         else -> lineWord
                     },
@@ -562,7 +571,8 @@ fun SnapScreen(
                 }
 
                 // The whole picture: FIELD to play it under a finger, CLOUD
-                // to land it on a pad as a texture.
+                // to land it on a pad as a texture, KIT to cut it 4x4 and
+                // land all sixteen pads at once.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
                         if (buildingField) "…" else "FIELD ▸",
@@ -579,6 +589,15 @@ fun SnapScreen(
                         accessibilityLabel = "CLOUD TO PAD",
                     ) {
                         showCloudChooser = true
+                    }
+                    LabButton(
+                        if (busy) "…" else "KIT ▸",
+                        scheme,
+                        enabled = photo != null && !busy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PHOTO KIT",
+                    ) {
+                        photo?.let(onBuildKit)
                     }
                 }
             }

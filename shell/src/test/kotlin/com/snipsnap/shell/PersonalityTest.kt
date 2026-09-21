@@ -426,6 +426,10 @@ class PersonalityTest {
         // while the field is granulated — the same shape as every other
         // *_BUSY above: an overlay line, not a landing.
         "SNAP_FIELD_BUSY", "SNAP_CLOUD_BUSY",
+        // SNAP's KIT, while the photo renders as sixteen pads. The
+        // landing toast is `photoKitMade`, a function, which the
+        // reflection sweep below never sees in the first place.
+        "SNAP_KIT_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // CATCH A HIT's busy line while the hits are found, and its grid's
