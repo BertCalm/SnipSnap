@@ -347,4 +347,128 @@ class ThumpTest {
             "stereo kept a different number of frames than mono - the margin is in frames",
         )
     }
+
+    // ---------- SNARE WIDTH (Task 3b) ----------
+
+    @Test
+    fun `SNARE stays mono at WIDTH 0 and goes stereo above it`() {
+        val mono = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 0f))
+        assertEquals(1, mono.channels, "WIDTH 0 must stay mono - presets were auditioned there")
+        val wide = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 0.8f))
+        assertEquals(2, wide.channels, "WIDTH above zero should render stereo")
+    }
+
+    @Test
+    fun `a wide SNARE folds down to the mono render, up to one gain`() {
+        val mono = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 0f))
+        val wide = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f))
+        val n = kotlin.math.min(mono.frameCount, wide.frameCount)
+        assertTrue(n > 1000, "not enough frames to judge: $n")
+        assertTrue(
+            kotlin.math.abs(mono.frameCount - wide.frameCount) <= 1,
+            "width changed the render length: ${mono.frameCount} vs ${wide.frameCount}",
+        )
+        val fold = FloatArray(n) { wide.samples[it * 2] + wide.samples[it * 2 + 1] }
+        // Best-fit single scalar between fold-down and mono. Linear panning
+        // means one gain should explain the whole difference; comb notching
+        // would leave a frequency-dependent residual that no gain can absorb.
+        var num = 0.0
+        var den = 0.0
+        for (i in 0 until n) { num += fold[i].toDouble() * mono.samples[i]; den += mono.samples[i].toDouble() * mono.samples[i] }
+        assertTrue(den > 1e-9, "mono render was silent")
+        val alpha = num / den
+        var resid = 0.0
+        var energy = 0.0
+        for (i in 0 until n) {
+            val d = fold[i] - alpha * mono.samples[i]
+            resid += d * d
+            energy += fold[i].toDouble() * fold[i]
+        }
+        val rel = kotlin.math.sqrt(resid / (energy + 1e-12))
+        assertTrue(rel < 1e-3, "fold-down is not the mono signal scaled: relative residual $rel, alpha $alpha")
+    }
+
+    @Test
+    fun `a wide SNARE is actually wider than a narrow one`() {
+        fun sideRatio(width: Float): Float {
+            val s = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to width, "SNAP" to 0.2f))
+            if (s.channels != 2) return 0f
+            var mid = 0.0
+            var side = 0.0
+            var f = 0
+            while (f < s.samples.size) {
+                val m = (s.samples[f] + s.samples[f + 1]) * 0.5
+                val d = (s.samples[f] - s.samples[f + 1]) * 0.5
+                mid += m * m; side += d * d; f += 2
+            }
+            return kotlin.math.sqrt(side / (mid + 1e-12)).toFloat()
+        }
+        val points = listOf(0.25f, 0.5f, 0.75f, 1f).map { sideRatio(it) }
+        for (i in 0 until points.size - 1) {
+            assertTrue(points[i + 1] > points[i] * 1.15f, "WIDTH did nothing from step $i to ${i + 1}: $points")
+        }
+    }
+
+    @Test
+    fun `left and right are not interchangeable`() {
+        // Anchors channel ORIENTATION. Every other stereo test here is
+        // symmetric - it sums L+R or squares L-R - so all of them pass with
+        // the channels swapped. trimSnareTail's old bug was exactly an L/R
+        // transposition, so this is the assertion that would have caught it.
+        val wide = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f, "SNAP" to 0.2f))
+        assertEquals(2, wide.channels)
+        var l = 0.0
+        var r = 0.0
+        var f = 0
+        while (f < wide.samples.size) { l += wide.samples[f] * wide.samples[f]; r += wide.samples[f + 1] * wide.samples[f + 1]; f += 2 }
+        assertTrue(l > 0.0 && r > 0.0, "a channel was empty: L=$l R=$r")
+        val rendered = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f, "SNAP" to 0.2f))
+        for (i in wide.samples.indices) {
+            assertEquals(wide.samples[i], rendered.samples[i], 0f, "render is not deterministic at $i")
+        }
+    }
+
+    @Test
+    fun `WIDTH is inert at SNAP 1, because the body is gone there`() {
+        // snareBodyGain(1f) == 0, so the output is entirely the mono wire
+        // layer. This PINS a deliberate behaviour: SNAP=1 is the static
+        // burst the user asked to keep reaching. If someone later widens the
+        // wires, this test should be updated deliberately, not deleted.
+        fun side(width: Float): Float {
+            val s = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to width, "SNAP" to 1f))
+            if (s.channels != 2) return 0f
+            var mid = 0.0; var sd = 0.0
+            var f = 0
+            while (f < s.samples.size) {
+                val m = (s.samples[f] + s.samples[f + 1]) * 0.5
+                val d = (s.samples[f] - s.samples[f + 1]) * 0.5
+                mid += m * m; sd += d * d; f += 2
+            }
+            return kotlin.math.sqrt(sd / (mid + 1e-12)).toFloat()
+        }
+        assertTrue(side(1f) < 1e-3f, "SNAP 1 produced width ${side(1f)}; the body gain is zero there, so this is unexpected")
+    }
+
+    @Test
+    fun `every existing SNARE preset still renders mono and unchanged`() {
+        for (p in ThumpPresets.forVoice(ThumpVoice.SNARE)) {
+            assertEquals(1, p.render().channels, "${p.name} silently went stereo")
+        }
+    }
+
+    @Test
+    fun `PUNCH still renders clean, in-range audio when combined with WIDTH`() {
+        // Punch.applyOversampled's saturate/boostEnvelope stay image-safe on
+        // the stereo path (see their own KDoc: a per-frame linear gain for
+        // boostEnvelope, fold-then-redistribute for saturate's
+        // nonlinearity) rather than being skipped - this just proves the
+        // combination renders without going out of range or losing a
+        // channel, at PUNCH's full extent.
+        val s = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 0.8f, "PUNCH" to 1f))
+        assertEquals(2, s.channels)
+        for (v in s.samples) {
+            assertTrue(v.isFinite(), "PUNCH+WIDTH produced a non-finite sample")
+            assertTrue(v in -1f..1f, "PUNCH+WIDTH produced an out-of-range sample: $v")
+        }
+    }
 }

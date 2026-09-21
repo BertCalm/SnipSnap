@@ -463,7 +463,7 @@ internal object Dsp {
      * it, exactly like it does downstream of [Punch].
      */
     fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f, channels: Int = 1) {
-        if (buf.isEmpty()) return
+        if (buf.isEmpty() || channels < 1) return
         val measured = Loudness.of(Snip(buf.copyOf(), channels = channels, sampleRate = rate))
         if (measured <= 1e-6f) return
         val gain = target / measured
@@ -504,6 +504,7 @@ internal object Dsp {
      * would average left into right and destroy both.
      */
     fun decimate(buf: FloatArray, rate: Int, channels: Int = 1): FloatArray {
+        if (channels < 1) return buf
         if (channels <= 1) {
             val oversampled = Snip(buf, channels = 1, sampleRate = rate * OVERSAMPLE)
             val half = Resampler.resample(oversampled, rate * OVERSAMPLE / 2)

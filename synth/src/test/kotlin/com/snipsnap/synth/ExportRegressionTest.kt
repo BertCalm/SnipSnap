@@ -48,10 +48,22 @@ import kotlin.test.assertTrue
  * constraint — every exported WAV is mono or stereo, nothing wider — which
  * is what `every exported WAV has 1 or 2 channels` below checks.
  *
- * Five pads, not sixteen: enough engines to be a real spread (THUMP twice —
- * KICK and the just-rebuilt modal SNARE — plus PLUCK, VELVET and TONEWHEEL,
- * one through a named FX treatment) without paying to render and export a
- * full kit on every `:synth:test` run.
+ * Six pads, not sixteen: enough engines to be a real spread (THUMP three
+ * times — KICK, the just-rebuilt modal SNARE, and a WIDTH>0 SNARE — plus
+ * PLUCK, VELVET and TONEWHEEL, one through a named FX treatment) without
+ * paying to render and export a full kit on every `:synth:test` run.
+ *
+ * The WIDTH>0 SNARE pad exists because of a gap the class KDoc above
+ * already names: docs/SYNTH_UPGRADE.md's U4 (Stereo) is Task 3b, and until
+ * it landed no patch had ever produced a stereo `Snip` - so this suite's
+ * own "every exported WAV has 1 or 2 channels" and "frame counts agree"
+ * checks had a two-channel branch that had literally never executed. This
+ * pad is what exercises it: `SliceEnd` is written from a WAV read back off
+ * disk (`WavInfo.read(wav).frameCount`, itself `dataBytes / (channels *
+ * bytesPerSample)`), so any code on the render -> level -> FX -> write path
+ * that still computes frames as `samples.size` instead of `samples.size /
+ * channels` for a real stereo Snip would show up here as a wrong SliceEnd,
+ * not as a compile error.
  */
 class ExportRegressionTest {
 
@@ -68,6 +80,12 @@ class ExportRegressionTest {
     private fun buildArrangedKit(): List<ArrangedPad?> {
         val kick = ThumpPresets.forVoice(ThumpVoice.KICK).first()
         val snare = ThumpPresets.forVoice(ThumpVoice.SNARE).first() // the rebuilt modal membrane bank
+        // Same shipped preset, WIDTH pushed to 1 - the macro's own
+        // documented endpoint, not an invented value: no preset sets WIDTH
+        // (it defaults to 0, see MacroSpec("WIDTH", 0f) in Thump.kt), so
+        // there is no shipped stereo preset to reach for, and this is the
+        // one WIDTH value the macro's own contract already commits to.
+        val wideSnare = snare.withMacros(snare.macros + ("WIDTH" to 1f))
         val pluck = PluckPresets.forVoice(PluckVoice.KALIMBA).first() // loop arithmetic changed under this
         val velvet = VelvetPresets.forVoice(VelvetVoice.BASS).first()
         val tonewheel = TonewheelPresets.forVoice(TonewheelVoice.FULL).first()
@@ -75,6 +93,7 @@ class ExportRegressionTest {
         val arranged = listOf(
             ArrangedPad(kick.render(), DrumClass.KICK, PadRecipe(kick).toJsonValue()),
             ArrangedPad(snare.render(), DrumClass.SNARE, PadRecipe(snare).toJsonValue()),
+            ArrangedPad(wideSnare.render(), DrumClass.SNARE, PadRecipe(wideSnare).toJsonValue()),
             ArrangedPad(pluck.render(), DrumClass.TONAL, PadRecipe(pluck).toJsonValue()),
             // Routed through a shipped FX treatment, not a bare render - this
             // is the one pad that exercises the render -> FX half of the
@@ -163,7 +182,7 @@ class ExportRegressionTest {
             )
             checked++
         }
-        assertEquals(5, checked, "expected to check all 5 occupied pads")
+        assertEquals(6, checked, "expected to check all 6 occupied pads")
     }
 
     // ---------- invariant 4: filenames ----------
@@ -201,7 +220,7 @@ class ExportRegressionTest {
         val result = exportedKit()
         val instruments = parseInstruments(result.program)
         val occupied = instruments.count { inst -> inst.layers.any { it.sampleName.isNotBlank() } }
-        assertEquals(5, occupied, "expected all 5 pads to round-trip out of the parsed program")
+        assertEquals(6, occupied, "expected all 6 pads to round-trip out of the parsed program")
 
         val doc = SafeXml.newFactory().newDocumentBuilder()
             .parse(InputSource(StringReader(result.program.readText())))
