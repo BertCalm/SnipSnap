@@ -278,10 +278,18 @@ mixed lands on TAPE as a snip — `GrainVoice`'s own tap into the block it
 was about to write, preallocated once at `start()` and never in the
 render loop — so a drag across the field ends up on pads through the
 same door as a capture, for the pad sheet's own field as much as a
-photo's. TILT is a second automatic cursor beside DUET's: the phone's own
-roll and pitch, dead-banded and smoothed, stand in for a finger, so
-holding the phone up to the photo it was taken of and tilting plays the
-picture hands-free — exclusive with DUET, one automatic cursor at a time.
+photo's. DUET hands the cursor to the armed mic: a hum's brightness
+(spectral centroid) moves it right, its loudness moves it up, the same
+`GrainField.Projector` interface a sample field's own PCA fit already
+implements — a photo field has no grains to fit one from, so it carries
+a fixed `AxesProjector` instead, brightness read straight off the mic's
+own fingerprint and loudness mapped on by DUET's tick itself, since that
+one feature is deliberately left out of the fingerprint (`Similar.vector`
+— "a quiet snare is still a snare"). TILT is a second automatic cursor
+beside DUET's: the phone's own roll and pitch, dead-banded and smoothed,
+stand in for a finger, so holding the phone up to the photo it was taken
+of and tilting plays the picture hands-free — exclusive with DUET, one
+automatic cursor at a time.
 
 A KIT FROM ONE PHOTO turns the whole idea into a kit, not one pad.
 `PhotoKit.build` cuts the picture into the MPC's own 4×4 instead of PHOTO

@@ -117,7 +117,7 @@ class GrainFieldTest {
         val out = FloatArray(block.size * 20) { block[it % block.size] }
         val map = GrainField.analyze(Snip(out, 1, 44_100))
         assertNotNull(map)
-        val projector = map.projector!!
+        val projector = map.projector as GrainField.PcaProjector
         assertTrue(projector.degenerate1, "fixture failed to reach the degenerate branch on axis 1")
         assertTrue(projector.degenerate2, "fixture failed to reach the degenerate branch on axis 2")
         // The grains themselves still spread by index (never collapse onto one spot)...

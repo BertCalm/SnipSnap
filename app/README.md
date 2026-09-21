@@ -187,7 +187,15 @@ logcat tag to grab when something is wrong.
   STOP PRINT with no drag at all should toast NOTHING PRINTED rather
   than land an empty snip. PRINT is on both GRAIN FIELD callers, not
   only the photo's: the same check from PAD SHEET's own GRAIN FIELD
-  (reached off a pad, not a photo) should behave identically. Then TILT:
+  (reached off a pad, not a photo) should behave identically. Then DUET,
+  on the same photo field: the chip should now show (it used to stay
+  hidden on a photo field with nothing to project into) — tap it and, on
+  headphones, hum into the mic. A bright/hissy hum should pull the ring
+  toward the field's right, a dark/rounded one toward its left; humming
+  louder should pull the ring up, softer (but still audible) down. Below
+  room-noise level the voice should gate off rather than chase the room's
+  own hiss, and the ring should hold wherever it last was rather than
+  snap back to the centre. Then TILT:
   tap it, hold the phone level and tilt it left/right and up/down — the
   ring on the field should wander to follow, a hard left should read low
   X and a hard right high X (`SurfaceScreen`'s own TILT already settles

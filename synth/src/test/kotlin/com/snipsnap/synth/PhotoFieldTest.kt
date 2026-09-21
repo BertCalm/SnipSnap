@@ -1,8 +1,10 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.AxesProjector
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.GrainField
+import com.snipsnap.audio.Similar
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,8 +40,14 @@ class PhotoFieldTest {
         assertTrue(field.map.grains.last().x > 0.9f && field.map.grains.last().y > 0.9f)
         // Every cell sounds.
         for (cell in field.cells) assertTrue(peakOf(field.grainOf(cell.column, cell.row)) > 0.1f, "silent cell $cell")
-        // DUET has nothing to project into: no PCA basis behind a photo.
-        assertEquals(null, field.map.projector)
+    }
+
+    @Test
+    fun `a photo field carries an AxesProjector, not a PCA basis fit from grains it doesn't have`() {
+        val projector = PhotoField.build(scene()).map.projector
+        assertTrue(projector is AxesProjector, "a photo field has no grains of its own to fit a PCA basis from")
+        val (x, y) = projector.project(FloatArray(Similar.DIMENSIONS) { 0.5f })
+        assertTrue(x in 0f..1f && y in 0f..1f, "DUET's chip must find a usable 0..1 cursor here too")
     }
 
     @Test
