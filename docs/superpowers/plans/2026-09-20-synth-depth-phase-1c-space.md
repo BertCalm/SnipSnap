@@ -326,6 +326,16 @@ git commit -m "Pan each mode to its own position, linearly so a fold-down stays 
 
 ---
 
+> **Superseded — Task 3 was split by the controller into 3a and 3b.** The plan told the
+> implementer to "trace every downstream call and confirm each is channel-correct or make
+> it so." That trace was done before dispatch and found four functions that mis-index an
+> interleaved buffer at runtime with no compile error — `trimSnareTail` (which can cut at an
+> odd index and transpose L/R for the whole buffer), `fadeTail`, `decimate` and `levelTo`.
+> Making them channel-aware is now Task 3a; wiring SNARE's WIDTH on top is Task 3b. See
+> `.superpowers/sdd/2026-09-20-synth-depth-phase-1c-space/task-3-hazards.md`,
+> `task-3a-brief.md` and `task-3b-brief.md`. The Task 3 below is kept as the record of what
+> was originally planned.
+
 ### Task 3: SNARE takes width, per-voice
 
 **Files:**
