@@ -97,7 +97,7 @@ behavioural test of any kind**.
 **What landed.** `app/src/androidTest/.../GrooveScreenTest.kt`, in
 `SurfaceScreenTest`'s shape — laid out at 360dp, clock driven by hand
 (GROOVE runs a `withFrameNanos` loop for its whole life, so auto-advance
-makes every test time out in `waitForIdle`), seven tests:
+makes every test time out in `waitForIdle`), six tests:
 
 | | what it holds down |
 |---|---|
@@ -107,7 +107,23 @@ makes every test time out in `waitForIdle`), seven tests:
 | YOURS is absent until a kit holds one | the fifth segment is conditional and the other four are not |
 | tapping YOURS while live steps on, and wraps | **the cycler**, untested until now |
 | one program of your own gets no count and nowhere to step | the `> 1` gate |
-| the step editor opens the program the cycler is on | the #289 bug, as a regression test |
+
+**A seventh was written, ran once, and was taken out — and what it cost
+is the thing worth recording here.** It checked the #289 bug itself
+(FORK TO YOURS opens the program the cycler is on) and had to reach a
+button inside GROOVE's scrolling control region. `performScrollTo` drives
+`Modifier.verticalScroll`'s `ScrollBy` semantics action, which *animates*:
+it launches a coroutine on the frame clock and returns, and the
+`waitForIdle` inside `performScrollTo` then waits for work only the clock
+can finish. With the clock driven by hand it never arrives. The first CI
+run said so exactly — **four tests passed, the fifth hung, and the job
+was cancelled at its 45-minute cap with nothing failed.**
+
+So: a hand-driven clock and an animated scroll do not mix, and every
+assertion in that file now lives above the scroll region — which is where
+the cycler is anyway. The header the dropped test would have read exists
+and is JVM-tested; what is missing is a way to reach that button, and a
+slow drag on the container (no fling) is the untried candidate.
 
 **Writing it found two labels J18's rename had missed.** The step editor's
 header read `STEP EDIT — PROG E` and RECORD's status line read
