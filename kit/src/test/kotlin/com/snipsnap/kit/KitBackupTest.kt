@@ -224,7 +224,7 @@ class KitBackupTest {
 
         // Restore reads the .xpn entries only: the extra is not a kit and lands nowhere.
         val fresh = File(temp, "fresh3")
-        assertEquals(listOf("Alpha"), KitBackup.restore(backup.file, fresh).map { it.kit.name })
+        assertEquals(listOf("Alpha"), KitBackup.restore(backup.file, fresh).kits.map { it.kit.name })
         assertTrue(!File(fresh, "presets.json").exists(), "restore leaves the extra to whoever packed it")
 
         // Never an extra that would read as a kit, or one that would nest - refused before a byte is written.
