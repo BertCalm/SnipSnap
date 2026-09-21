@@ -74,8 +74,10 @@ class HighPadSlotTest {
         // this change reads differently.
         assertEquals(36, GrooveEdit.noteFor(GrooveEdit.Lane.KICK))
         assertEquals(37, GrooveEdit.noteFor(GrooveEdit.Lane.SNARE))
+        assertEquals(41, GrooveEdit.noteFor(GrooveEdit.Lane.CLAP))
         assertEquals(38, GrooveEdit.noteFor(GrooveEdit.Lane.HAT_CLOSED))
         assertEquals(39, GrooveEdit.noteFor(GrooveEdit.Lane.HAT_OPEN))
+        assertEquals(44, GrooveEdit.noteFor(GrooveEdit.Lane.TOM))
         assertEquals(47, GrooveEdit.noteFor(GrooveEdit.Lane.PERC))
     }
 }
