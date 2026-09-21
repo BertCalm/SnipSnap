@@ -811,6 +811,12 @@ object Copy {
     const val SNAP_KIT_BUSY = "CUTTING THE PHOTO INTO A KIT…"
     /** KIT's landing toast: named, and said plainly that the layout is the picture's own — AutoPlace never ran. */
     fun photoKitMade(name: String): String = "$name MADE. LAID OUT AS THE PHOTO — NOT AUTO-PLACED."
+    /** PATH's own RING ▸, while the walked cells become a ring and land on `orbits.json` — `App.kt`'s own whole-screen busy overlay, since RING leaves SNAP for ORBIT. */
+    const val SNAP_PATH_BUSY = "WALKING THE PATH INTO RINGS…"
+    /** RING ▸'s landing toast, named for the ring PATH just added. */
+    fun pathRingMade(name: String): String = "$name ON THE RINGS."
+    /** LOOP PAD ▸'s own busy line, while the walked cells render as one gapless loop — SNAP's own local busy, like FIELD's and CLOUD's, since LOOP PAD stays on this screen. */
+    const val SNAP_PATH_SEND_BUSY = "WALKING THE PATH INTO A LOOP…"
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

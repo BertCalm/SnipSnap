@@ -3,10 +3,10 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1–§3 are now built
-(`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`;
-`docs/SYNTH_ROADMAP.md` S7.3–S7.5); §4–§8 are not. Each ends with the
-decision that is not mine to make.
+one list and priced as eight sections. §1–§4 are now built
+(`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`,
+`synth/PhotoPath.kt`; `docs/SYNTH_ROADMAP.md` S7.3–S7.6); §5–§8 are not.
+Each ends with the decision that is not mine to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -291,6 +291,16 @@ its cell's TUNE.
 Whether the loop pad is enough on its own, or §1 is a prerequisite so
 the ring landing ships with it (recommended: build after §1, ship both
 landings).
+
+**Built as recommended:** both landings ship, after §1.
+`synth/PhotoPath.kt` resamples the drawn polyline by arc length
+(`sample`) and maps points to cells (`cellsFor`); a new `Snap.cut`
+(oversampled like `render`, exact-length and HOLD-shaped like `grain`)
+renders each step, concatenated gapless by `render`. DRAW's overlay
+gained the third tab, PATH, with STEPS chips (8/16/32/64) and its own
+`LOOP PAD ▸` / `RING ▸` buttons; the ring names the open kit's pads
+directly through `PhotoKit.slotFor`, the same geometry §1's kit was
+laid out with.
 
 ---
 

@@ -198,6 +198,23 @@ logcat tag to grab when something is wrong.
   it control at once, and TILT should resume the instant the finger
   lifts. Tapping DUET while TILT is on should turn TILT off, and tapping
   TILT while DUET is on should turn DUET off — never both lit together.
+  Then PATH, with a PHOTO KIT open on the photo drawn from: DRAW should
+  show a third tab, PATH, only when a photo is up; opening it should show
+  the photo dimmed under a blank panel, plain right-way-up (unlike WAVE's
+  y-flip), and a finger dragged across it should leave a line following
+  the touch, not the sound. STEPS should default to 16 with 8/16/32/64 as
+  chips; CLEAR should erase the line and grey out LOOP PAD ▸/RING ▸ again
+  (both start disabled with fewer than two points down). LOOP PAD ▸
+  should open the slot chooser and land a Snap Path pad that plays the
+  walked cells as one gapless loop — a path drawn back and forth over one
+  bright corner should sound like it lingers there, not evenly across the
+  whole picture. RING ▸ should leave SNAP for ORBIT with the LCD reading
+  WALKING THE PATH INTO RINGS… for a moment, land a new ring named PATH 1
+  (PATH 2 on a second path, and so on), and playing it should hit pads
+  that match the drawn line's own cells — a straight diagonal should walk
+  visibly across the MPC grid as it plays. CANCEL on the PATH tab should
+  leave SNAP with nothing changed. Without a kit open, LOOP PAD ▸ and
+  RING ▸ should both stay disabled even with a path drawn.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

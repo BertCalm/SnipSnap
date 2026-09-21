@@ -540,3 +540,54 @@ portrait. `SurfaceScreen`'s existing use of `TiltSource.tilt` already
 fixed the X axis's convention on a real device; pitch's sign (tip away =
 up or down) is an on-device check, named as such in `app/README.md`'s
 verify line.
+
+### S7.6 — PATH: walk a picture in time
+
+`docs/PHOTO_SPECS.md` §4, built as specced, both landings — §1 shipped
+first, so the ring landing had a kit to name pads on. `PhotoPath`
+(`synth/PhotoPath.kt`, new) is three pure functions: `sample` resamples a
+drawn polyline by arc length to a fixed step count (a fast stroke and a
+slow one over the same line give the same walk; a path that lingers over
+one stretch gives it no more points than a path that crossed it in a
+blink), `cellsFor` maps each resampled point to a `PhotoKit` grid cell
+(0..1 both ways, clamped, `PhotoKit.COLUMNS`/`ROWS` by default so a
+walked path always names the same cells a photo kit from the same
+picture would), and `render` walks the cells as one gapless loop.
+
+`render` needed a third `Snap` shape alongside `render` (full
+oversampled, decay-driven length) and `grain` (native-rate, exact
+length, for a grain field's hundreds-at-once cost): `Snap.cut`, new,
+oversampled like `render` but exact-length and HOLD-shaped like `grain`
+— a path is at most 64 steps, not a field's hundreds, so the
+oversampling cost stays affordable, and a walked path is one gapless
+line, not a run of separate hits, so each step must hold to its own end
+rather than decay away before the next starts. `PhotoKit.kt` itself
+picked up a small refactor first: `cellAt`/`slotFor` pulled out of
+`build`'s own inline loop, so `PhotoPath.render` reads a cell exactly
+the way a photo kit's own pad does — one function, not two readings that
+could drift.
+
+`PhotoPath` stays `:synth`-only; it never builds an `Orbit` or
+`PatternOrbit`, since `:synth` has no dependency on `:loop`. That glue —
+`App.kt`'s new `buildPathRing` — mirrors `OrbitScreen`'s own
+`addPatternRing`/`addSnipRing` shape from outside the screen: load
+`orbits.json` if one exists (else `OrbitPresets.fromKit`, the same
+tempo/rate fallback `OrbitScreen`'s own loader uses), refuse past
+`OrbitSet.MAX_ORBITS` with the existing `Copy.ORBIT_RINGS_FULL`, append
+a `PatternOrbit(kit, hits)` whose hits are `PhotoKit.slotFor(column,
+row)` per step, save, and hand the result back into `App.kt`'s own
+hoisted `orbitSet`/`orbitSelected` before navigating to `AppScreen.ORBIT`
+— the same whole-app busy overlay `buildPhotoKit` uses, since RING
+leaves SNAP the way KIT ▸ does. The loop-pad landing stays local to
+SNAP, `sendPathToSlot` mirroring `sendCloudToSlot` line for line
+(audio with no recipe, `DrumClass.LOOP`, the same `SlotChooserOverlay`).
+
+DRAW's own overlay gained a third tab, PATH — shown only over a photo —
+with a `PathLcd` panel (the photo dimmed underneath, `GrainFieldScreen`'s
+own backdrop convention, plain top-down coordinates rather than
+`DrawLcd`'s wave/shape y-up), a STEPS chip row (8/16/32/64), and its own
+bottom row (`CLEAR | CANCEL | LOOP PAD ▸ | RING ▸`) in place of
+WAVE/SHAPE's `SMOOTH | CLEAR | LAST | CANCEL | DONE` — PATH commits
+nothing through DONE, since LOOP PAD ▸ and RING ▸ each land the walked
+cells directly, the same way KIT ▸ leaves through its own callback
+rather than a draft.

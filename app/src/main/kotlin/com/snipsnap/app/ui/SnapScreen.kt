@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -44,6 +45,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -71,6 +73,8 @@ import com.snipsnap.synth.Draw
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Photo
 import com.snipsnap.synth.PhotoField
+import com.snipsnap.synth.PhotoKit
+import com.snipsnap.synth.PhotoPath
 import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.SnapVoice
@@ -143,6 +147,10 @@ fun SnapScreen(
     // KIT ▸: build a whole kit off the current photo and land it on the
     // shelf. App.kt owns the shelf write and the navigation to it.
     onBuildKit: (Photo) -> Unit,
+    // PATH's RING ▸: the walked cells as a fresh ORBIT ring, named for the
+    // open kit's own pads. App.kt owns the orbits.json write and the
+    // navigation to ORBIT — the same shape as onBuildKit above.
+    onBuildPathRing: (cells: List<Pair<Int, Int>>, bpm: Float) -> Unit,
     // FIELD's own PRINT, threaded down to GrainFieldScreen: a print landed
     // on TAPE, the same reload request a share-sheet import raises.
     onFieldPrinted: () -> Unit,
@@ -190,6 +198,13 @@ fun SnapScreen(
     var showField by remember { mutableStateOf(false) }
     var cloudBusy by remember { mutableStateOf(false) }
     var showCloudChooser by remember { mutableStateOf(false) }
+
+    // PATH's LOOP PAD ▸: the walked cells, held until a slot is picked and
+    // the render lands — the RING ▸ landing goes straight through
+    // onBuildPathRing instead, with nothing to hold here.
+    var pathBusy by remember { mutableStateOf(false) }
+    var showPathChooser by remember { mutableStateOf(false) }
+    var pendingPath by remember { mutableStateOf<Pair<List<Pair<Int, Int>>, Float>?>(null) }
 
     // Nothing is heard until the first real touch, same as SYNTH: landing
     // on the tab never plays a note unasked. Taking a photo counts as one.
@@ -484,6 +499,60 @@ fun SnapScreen(
         }
     }
 
+    // PATH's LOOP PAD ▸: the walked cells rendered as one gapless loop
+    // ([PhotoPath.render]) — landed the same way CLOUD's is, audio with
+    // no recipe, since a walked path has no per-cell knobs to regenerate.
+    val pathName = "Snap Path"
+    val pathClass = DrumClass.LOOP
+    fun sendPathToSlot(slot: Int) {
+        val e = entry ?: return
+        val p = photo ?: return
+        val pending = pendingPath ?: return
+        if (pathBusy) return
+        pathBusy = true
+        appScope.launch {
+            try {
+                val loop = withContext(Dispatchers.Default) { PhotoPath.render(p, pending.first, pending.second) }
+                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val alreadyThere = model.pad(slot) != null
+                        if (alreadyThere) {
+                            model.replaceAudio(slot, null) { _ -> loop }
+                            model.update(slot) { pd ->
+                                pd.copy(
+                                    displayName = pathName,
+                                    drumClass = pathClass,
+                                    colorHex = AutoPlace.colorFor(pathClass),
+                                    muteGroup = AutoPlace.muteGroupFor(pathClass),
+                                    recipe = null,
+                                )
+                            }
+                        } else {
+                            model.assign(slot, loop, pathClass, pathName)
+                        }
+                        model.save()
+                        alreadyThere to model.kit
+                    }
+                }
+                showPathChooser = false
+                pendingPath = null
+                onKitUpdated(updatedKit)
+                onToast(Copy.synthSent(padTag(slot), pathName, replaced = existed))
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                if (ex is IllegalStateException || ex is IllegalArgumentException) {
+                    onToast(Copy.SYNTH_PAD_REFUSED)
+                } else {
+                    Log.e("SnapScreen", "sendPathToSlot: failed", ex)
+                    onToast(Copy.SEND_FAILED)
+                }
+            } finally {
+                pathBusy = false
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -505,6 +574,7 @@ fun SnapScreen(
                     when {
                         buildingField -> Copy.SNAP_FIELD_BUSY
                         cloudBusy -> Copy.SNAP_CLOUD_BUSY
+                        pathBusy -> Copy.SNAP_PATH_SEND_BUSY
                         busy -> Copy.SNAP_KIT_BUSY
                         envelope != null -> "$lineWord · SHAPE DRAWN"
                         else -> lineWord
@@ -644,6 +714,19 @@ fun SnapScreen(
                     closeDrawing()
                 },
                 onCancel = closeDrawing,
+                photo = photo,
+                thumb = thumb,
+                bpm = kit?.tempoBpm ?: 92f,
+                kitOpen = kit != null,
+                onPathLoopPad = { cells, bpm ->
+                    pendingPath = cells to bpm
+                    showPathChooser = true
+                    closeDrawing()
+                },
+                onPathRing = { cells, bpm ->
+                    closeDrawing()
+                    onBuildPathRing(cells, bpm)
+                },
             )
             BackHandler(onBack = closeDrawing)
         }
@@ -702,6 +785,19 @@ fun SnapScreen(
                 onCancel = cancelChooser,
             )
             BackHandler(onBack = cancelChooser)
+        }
+
+        if (showPathChooser) {
+            val cancelPath = { if (!pathBusy) { showPathChooser = false; pendingPath = null } }
+            SlotChooserOverlay(
+                kit = kit,
+                previewColor = Schemes.classColor(pathClass).tape,
+                scheme = scheme,
+                busy = pathBusy,
+                onPick = ::sendPathToSlot,
+                onCancel = cancelPath,
+            )
+            BackHandler(onBack = cancelPath)
         }
     }
 }
@@ -835,23 +931,31 @@ private fun LinePicker(current: SnapVoice, scheme: Scheme, onSelect: (SnapVoice)
 
 // ---------- DRAW: the oscillator you draw ----------
 
-private enum class DrawTab { WAVE, SHAPE }
+private enum class DrawTab { WAVE, SHAPE, PATH }
+
+private val PATH_STEP_CHOICES = listOf(8, 16, 32, 64)
 
 /**
  * The drawing surface, over the whole screen like the slot chooser: a
  * WAVE tab for the cycle (256 points, the seam blended by the engine so a
- * line that ends elsewhere than it started does not click) and a SHAPE
- * tab for the volume over the note (64 points; DECAY then sets only the
- * length). A finger draws, starting shapes are a tap away, SMOOTH takes
- * the shake out, and every change re-renders and plays through
- * [onAudition] so the shape is heard as it is drawn — the same debounce
- * as the sliders.
+ * line that ends elsewhere than it started does not click), a SHAPE tab
+ * for the volume over the note (64 points; DECAY then sets only the
+ * length), and — over a photo — a PATH tab that walks the picture in
+ * time instead of drawing a sound directly. A finger draws, starting
+ * shapes are a tap away, SMOOTH takes the shake out, and every WAVE/SHAPE
+ * change re-renders and plays through [onAudition] so the shape is heard
+ * as it is drawn — the same debounce as the sliders.
  *
  * Drafts live here and are committed whole by DONE: the wave only if it
  * was drawn on or a starting shape was picked (a visit to set the SHAPE
  * alone leaves the photo's line as the photo's), the shape only if one
  * was drawn (CLEAR on the SHAPE tab hands the volume back to SNAP's own
  * decay). CANCEL and back leave everything as it was.
+ *
+ * PATH commits nothing through DONE: LOOP PAD ▸ and RING ▸ land the
+ * walked cells directly (see [onPathLoopPad]/[onPathRing]), the same way
+ * KIT ▸ on the main screen leaves through its own callback rather than a
+ * draft.
  */
 @Composable
 private fun DrawOverlay(
@@ -865,7 +969,19 @@ private fun DrawOverlay(
     onToast: (String) -> Unit,
     onDone: (table: IntArray, waveDrawn: Boolean, envelope: IntArray?) -> Unit,
     onCancel: () -> Unit,
+    /** PATH's own backdrop; the tab is hidden without one — a path walks a picture, never a blank line. */
+    photo: Photo?,
+    thumb: Bitmap?,
+    /** The open kit's tempo (or SNAP's own fallback): PATH's step grid. */
+    bpm: Float,
+    /** Whether a kit is open to land on — both PATH landings need pads to name or fill. */
+    kitOpen: Boolean,
+    /** LOOP PAD ▸: the walked cells and the tempo they were sampled at, for the caller's own slot chooser. */
+    onPathLoopPad: (cells: List<Pair<Int, Int>>, bpm: Float) -> Unit,
+    /** RING ▸: the walked cells and the tempo, landed as a fresh ORBIT ring. */
+    onPathRing: (cells: List<Pair<Int, Int>>, bpm: Float) -> Unit,
 ) {
+    val tabs = if (photo != null) DrawTab.entries.toList() else listOf(DrawTab.WAVE, DrawTab.SHAPE)
     var tab by remember { mutableStateOf(DrawTab.WAVE) }
     var table by remember { mutableStateOf(startTable) }
     var waveDrawn by remember { mutableStateOf(false) }
@@ -880,6 +996,14 @@ private fun DrawOverlay(
     // is the first stroke's.
     var edits by remember { mutableStateOf(0) }
     val color = Schemes.classColor(DrumClass.TONAL).tape
+
+    // PATH: the drawn polyline (0..1 both ways, plain top-down y — the
+    // photo's own, not the wave/shape panels' y-up) and the step count
+    // it is walked at.
+    var pathPoints by remember { mutableStateOf<List<Pair<Float, Float>>>(emptyList()) }
+    var pathSteps by remember { mutableStateOf(16) }
+    val backdrop = remember(thumb) { thumb?.asImageBitmap() }
+    fun pathCells() = PhotoPath.cellsFor(PhotoPath.sample(pathPoints, pathSteps))
 
     // Hear it as it is drawn.
     LaunchedEffect(edits) {
@@ -925,7 +1049,11 @@ private fun DrawOverlay(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TapeText(
-                    if (tab == DrawTab.WAVE) "DRAW — THE WAVE, ONE CYCLE" else "DRAW — THE VOLUME, ONE NOTE",
+                    when (tab) {
+                        DrawTab.WAVE -> "DRAW — THE WAVE, ONE CYCLE"
+                        DrawTab.SHAPE -> "DRAW — THE VOLUME, ONE NOTE"
+                        DrawTab.PATH -> "DRAW — A PATH THROUGH THE PICTURE"
+                    },
                     TapeType.lcdSmall,
                     scheme.lcdInk.tape,
                     Modifier.weight(1f),
@@ -933,9 +1061,9 @@ private fun DrawOverlay(
                 if (rendering) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
             }
 
-            // WAVE | SHAPE
+            // WAVE | SHAPE | PATH (the last only over a photo)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (t in DrawTab.entries) {
+                for (t in tabs) {
                     val selected = t == tab
                     Box(
                         Modifier
@@ -980,56 +1108,116 @@ private fun DrawOverlay(
                     shapeDrawn = true
                     edits++
                 }
+                DrawTab.PATH -> PathLcd(
+                    backdrop = backdrop,
+                    points = pathPoints,
+                    color = color,
+                    scheme = scheme,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    onStart = { pathPoints = emptyList() },
+                    onPoint = { x, y -> pathPoints = pathPoints + (x to y) },
+                )
             }
 
-            // Starting shapes: draw over one rather than from nothing.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                when (tab) {
-                    DrawTab.WAVE -> for (w in Draw.Wave.entries) {
-                        LabButton(w.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
-                            table = Draw.wave(w)
+            if (tab == DrawTab.PATH) {
+                // STEPS: how many points the walk resamples down to.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (n in PATH_STEP_CHOICES) {
+                        val selected = n == pathSteps
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                                .semantics { this.selected = selected }
+                                .tapeClick(label = "$n STEPS") { pathSteps = n },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText("$n", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
+                        }
+                    }
+                }
+            } else {
+                // Starting shapes: draw over one rather than from nothing.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    when (tab) {
+                        DrawTab.WAVE -> for (w in Draw.Wave.entries) {
+                            LabButton(w.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                                table = Draw.wave(w)
+                                waveDrawn = true
+                                edits++
+                            }
+                        }
+                        DrawTab.SHAPE -> for (sh in Draw.Shape.entries) {
+                            LabButton(sh.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                                shape = Draw.shape(sh)
+                                shapeDrawn = true
+                                edits++
+                            }
+                        }
+                        DrawTab.PATH -> {}
+                    }
+                }
+            }
+
+            if (tab == DrawTab.PATH) {
+                val hasPath = pathPoints.size >= 2
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton("CLEAR", scheme, enabled = pathPoints.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                        pathPoints = emptyList()
+                    }
+                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                    LabButton(
+                        "LOOP PAD ▸",
+                        scheme,
+                        enabled = kitOpen && hasPath,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PATH LOOP PAD",
+                    ) {
+                        onPathLoopPad(pathCells(), bpm)
+                    }
+                    LabButton(
+                        "RING ▸",
+                        scheme,
+                        enabled = kitOpen && hasPath,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PATH RING",
+                    ) {
+                        onPathRing(pathCells(), bpm)
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton("SMOOTH", scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                        when (tab) {
+                            DrawTab.WAVE -> { table = Draw.smooth(table, circular = true); waveDrawn = true }
+                            DrawTab.SHAPE -> { shape = Draw.smooth(shape, circular = false); shapeDrawn = true }
+                            DrawTab.PATH -> {}
+                        }
+                        edits++
+                    }
+                    LabButton("CLEAR", scheme, enabled = true, modifier = Modifier.weight(1f)) {
+                        when (tab) {
+                            DrawTab.WAVE -> { table = Draw.blank(); waveDrawn = true }
+                            // Back to SNAP's own decay: shown as the fall it is,
+                            // committed as nothing.
+                            DrawTab.SHAPE -> { shape = Draw.shape(Draw.Shape.FALL); shapeDrawn = false }
+                            DrawTab.PATH -> {}
+                        }
+                        edits++
+                    }
+                    // The last drawing back on the WAVE panel — the way back
+                    // to a line a photo chip replaced.
+                    LabButton("LAST", scheme, enabled = tab == DrawTab.WAVE && lastDrawn != null, modifier = Modifier.weight(1f)) {
+                        lastDrawn?.let {
+                            table = it
                             waveDrawn = true
                             edits++
                         }
                     }
-                    DrawTab.SHAPE -> for (sh in Draw.Shape.entries) {
-                        LabButton(sh.name, scheme, enabled = true, modifier = Modifier.weight(1f)) {
-                            shape = Draw.shape(sh)
-                            shapeDrawn = true
-                            edits++
-                        }
-                    }
+                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                    LabButton("DONE", scheme, enabled = true, modifier = Modifier.weight(1f)) { done() }
                 }
-            }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabButton("SMOOTH", scheme, enabled = true, modifier = Modifier.weight(1f)) {
-                    when (tab) {
-                        DrawTab.WAVE -> { table = Draw.smooth(table, circular = true); waveDrawn = true }
-                        DrawTab.SHAPE -> { shape = Draw.smooth(shape, circular = false); shapeDrawn = true }
-                    }
-                    edits++
-                }
-                LabButton("CLEAR", scheme, enabled = true, modifier = Modifier.weight(1f)) {
-                    when (tab) {
-                        DrawTab.WAVE -> { table = Draw.blank(); waveDrawn = true }
-                        // Back to SNAP's own decay: shown as the fall it is,
-                        // committed as nothing.
-                        DrawTab.SHAPE -> { shape = Draw.shape(Draw.Shape.FALL); shapeDrawn = false }
-                    }
-                    edits++
-                }
-                // The last drawing back on the WAVE panel — the way back
-                // to a line a photo chip replaced.
-                LabButton("LAST", scheme, enabled = tab == DrawTab.WAVE && lastDrawn != null, modifier = Modifier.weight(1f)) {
-                    lastDrawn?.let {
-                        table = it
-                        waveDrawn = true
-                        edits++
-                    }
-                }
-                LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
-                LabButton("DONE", scheme, enabled = true, modifier = Modifier.weight(1f)) { done() }
             }
         }
     }
@@ -1098,5 +1286,70 @@ private fun DrawLcd(
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         drawPath(path, color, style = Stroke(width = 2.dp.toPx()))
+    }
+}
+
+/**
+ * The PATH panel: the photo dimmed underneath ([GrainFieldScreen]'s own
+ * backdrop, `alpha = 0.6f`) and the drawn polyline over it, plain
+ * top-down 0..1 both ways — the picture's own coordinates, unlike
+ * [DrawLcd]'s y-up wave/shape convention, since a path is walked over a
+ * picture, not read as a signal. A touch-down starts a fresh path
+ * ([onStart]); every move afterwards is one more point ([onPoint]), so a
+ * lingering finger leaves many points close together — exactly the
+ * "lingers in one cell" case [PhotoPath.sample] is built to preserve.
+ */
+@Composable
+private fun PathLcd(
+    backdrop: ImageBitmap?,
+    points: List<Pair<Float, Float>>,
+    color: androidx.compose.ui.graphics.Color,
+    scheme: Scheme,
+    modifier: Modifier = Modifier,
+    onStart: () -> Unit,
+    onPoint: (x: Float, y: Float) -> Unit,
+) {
+    val currentOnStart by androidx.compose.runtime.rememberUpdatedState(onStart)
+    val currentOnPoint by androidx.compose.runtime.rememberUpdatedState(onPoint)
+    Canvas(
+        modifier
+            .lcdPanel(scheme)
+            .semantics { contentDescription = "DRAW THE PATH" }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (size.width <= 0 || size.height <= 0) return@awaitEachGesture
+                    fun norm(p: Offset) = (p.x / size.width.toFloat()).coerceIn(0f, 1f) to (p.y / size.height.toFloat()).coerceIn(0f, 1f)
+                    currentOnStart()
+                    val (x0, y0) = norm(down.position)
+                    currentOnPoint(x0, y0)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val (nx, ny) = norm(change.position)
+                        currentOnPoint(nx, ny)
+                        change.consume()
+                        if (!change.pressed) break
+                    }
+                }
+            },
+    ) {
+        val w = size.width
+        val h = size.height
+        if (backdrop != null && w > 0f && h > 0f) {
+            drawImage(backdrop, dstSize = IntSize(w.toInt(), h.toInt()), alpha = 0.6f)
+        }
+        if (points.size >= 2) {
+            val path = Path()
+            points.forEachIndexed { i, (x, y) ->
+                val px = w * x
+                val py = h * y
+                if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            }
+            drawPath(path, color, style = Stroke(width = 2.dp.toPx()))
+        } else if (points.size == 1) {
+            val (x, y) = points[0]
+            drawCircle(color, radius = 3.dp.toPx(), center = Offset(w * x, h * y))
+        }
     }
 }

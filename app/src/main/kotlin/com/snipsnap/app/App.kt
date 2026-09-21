@@ -100,8 +100,13 @@ import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBrush
+import com.snipsnap.loop.OrbitHit
+import com.snipsnap.loop.OrbitPresets
 import com.snipsnap.loop.OrbitSet
+import com.snipsnap.loop.OrbitStore
+import com.snipsnap.loop.PatternOrbit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
@@ -1123,6 +1128,58 @@ fun App(shelf: KitShelf) {
             toast = Copy.photoKitMade(entry.kit.name)
             open = entry
             screen = AppScreen.KIT
+        }
+    }
+
+    /**
+     * RING ▸ from SNAP's PATH: [cells] (a walked photo, one per step) as a
+     * fresh pattern ring, appended to whatever `orbits.json` the open kit
+     * already has — `OrbitScreen`'s own `addPatternRing`/`addSnipRing`
+     * shape (load-or-build, append, save), landed from outside that
+     * screen. `PhotoKit.slotFor` is what lets the ring name pads
+     * directly: a path only makes musical sense over a kit whose pads are
+     * this same picture's cells, which is on the player to arrange (KIT ▸
+     * first, then PATH on the same photo) — nothing here checks that a
+     * pad slot holds what the cell actually sounds like.
+     */
+    fun buildPathRing(cells: List<Pair<Int, Int>>, bpm: Float) {
+        val e = open ?: return
+        if (busy != null) return
+        busy = Copy.SNAP_PATH_BUSY
+        scope.launch {
+            try {
+                val current = withContext(Dispatchers.IO) {
+                    if (OrbitStore.exists(e.dir)) {
+                        OrbitStore.load(e.dir)
+                    } else {
+                        val startBpm = (e.kit.tempoBpm ?: bpm).coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)
+                        OrbitPresets.fromKit(e.dir.name, e.kit, startBpm, deviceSampleRate(context))
+                    }
+                }
+                if (current.orbits.size >= OrbitSet.MAX_ORBITS) {
+                    busy = null
+                    toast = Copy.ORBIT_RINGS_FULL
+                    return@launch
+                }
+                val hits = cells.mapIndexed { i, (column, row) -> OrbitHit(step = i, slot = PhotoKit.slotFor(column, row)) }
+                val ring = Orbit(
+                    name = "PATH ${current.orbits.size + 1}",
+                    steps = cells.size,
+                    content = PatternOrbit(kit = e.dir.name, hits = hits),
+                    voice = (1..PhotoKit.COLUMNS * PhotoKit.ROWS).toList(),
+                )
+                val merged = current.copy(orbits = current.orbits + ring)
+                withContext(Dispatchers.IO) { OrbitStore.save(merged, e.dir) }
+                orbitSet = merged
+                orbitSelected = merged.orbits.size - 1
+                busy = null
+                toast = Copy.pathRingMade(ring.name)
+                screen = AppScreen.ORBIT
+            } catch (ex: Exception) {
+                busy = null
+                Log.e(TAG, "buildPathRing: failed", ex)
+                toast = Copy.CREATE_FAILED
+            }
         }
     }
 
@@ -3203,6 +3260,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onBuildKit = ::buildPhotoKit,
+                                onBuildPathRing = ::buildPathRing,
                                 onFieldPrinted = { importCount++ },
                                 appScope = scope,
                             )
