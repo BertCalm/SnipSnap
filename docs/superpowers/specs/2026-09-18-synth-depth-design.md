@@ -317,6 +317,54 @@ pumped or partially collapsed downstream by dynamics that never see it as one
 image. Phase 1 owes a rack audit: which of the sixteen sections process
 channels independently, and which must be linked once stereo content exists.
 
+> **Prerequisite found 2026-09-20, before SPACE was built — retracted
+> 2026-09-20, same day, on verification.** The original entry here claimed
+> **`XpmWriter` hardcodes the channel count**: that `XpmWriter.kt:114` and
+> `:159`'s `<Mono>` string literals were a channel declaration, that `Pad`
+> (`DrumProgram.kt:105`) needed a channel field to match it, and that a
+> stereo voice would make the program "declare mono over a stereo WAV" and
+> get refused or misplayed on hardware. That claim was wrong, and it had
+> already been written into `ExportRegressionTest`'s KDoc and PR #295's
+> description before anyone checked it against the corpus.
+>
+> **What `<Mono>` actually is:** the monophonic-versus-polyphonic
+> voice-allocation flag, not a channel count. It sits among `Pitch`,
+> `TuneCoarse`, `TuneFine`, `Polyphony` in both the program-level and
+> per-instrument parameter clusters (docs/XPM_STRUCTURE.md's "Shape"
+> section). The harvested corpus settles it two ways at once:
+> `reference/golden/keygroup/Bass-TAB Deep Resonance.xpm` carries
+> `<MonoRetrigger>` right beside program-level `<Mono>` — retriggering is a
+> note concept, not a channel one — and that same file's instrument
+> declares `Mono=False`/`Polyphony=0` (a polyphonic bass) while
+> `reference/golden/drum/hiphop-Drum-kit-Mck4 01.xpm`'s instruments all
+> declare `Mono=True`/`Polyphony=1` (one voice per drum hit), a difference
+> that tracks playing style, not sample width. Nothing in this codebase —
+> not `XpnImporter`, not any production path — reads `<Mono>` back off a
+> `.xpm` at all; it is write-only. A hardcoded `<Mono>True</Mono>` per drum
+> instrument is correct, not a bug, and making it read a sample's channel
+> count would be the actual regression: it would silently switch drum pads
+> to polyphonic voice mode on real hardware the day a voice went stereo.
+>
+> **So SPACE has no export-layer prerequisite.** `Pad` and `DrumProgram`
+> carry no channel field because the program file doesn't need one — the
+> MPC reads channel count from the WAV's own `fmt` chunk, same as every
+> vendor pack in the corpus. Tracing the chain a stereo voice would actually
+> take: `Snip.channels` is already constrained to `1..2` at construction
+> (`Cleanup.kt`) and `Snip.frameCount` already divides by it; `WavWriter`
+> writes whatever `snip.channels` is handed, generically; `KitExporter`
+> derives every `Pad.frameCount` (and `SliceEnd`) from `WavInfo.read`,
+> which is channel-aware; and `Preflight` already fails anything over 2
+> channels before export (`Preflight.kt:85`). A stereo voice flows through
+> this path untouched. `ExportRegressionTest` was corrected the same day
+> (2026-09-20) to drop the false `<Mono>`-vs-channel-count assertion and
+> keep the real one: every exported WAV has 1 or 2 channels.
+>
+> **The prerequisite that survives is the one directly above this
+> retraction** — the FX rack's per-channel dynamics (`Squash.kt:58-74`) and
+> the owed audit of which of the sixteen sections process channels
+> independently. That one was never about the export layer and this
+> correction does not touch it.
+
 Per-voice opt-in. Kick and sub stay mono; hats, bells, pads, VOX and TONEWHEEL
 take width. WAV size doubles only where it buys something.
 
