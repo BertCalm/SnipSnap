@@ -189,7 +189,10 @@ object ShelfImport {
             }
         }
         return when {
-            xpn -> KitBackup.restore(file, staging).map { it.directory } to emptyList()
+            xpn -> {
+                val r = KitBackup.restore(file, staging)
+                r.kits.map { it.directory } to r.skipped.map { (name, why) -> "$name: $why" }
+            }
             xpm -> {
                 val r = XpnImporter.importAll(file, staging)
                 r.kits.map { it.directory } to r.skipped.map { "${it.first}: ${it.second}" }

@@ -34,9 +34,10 @@ object BackupCommand {
         val file = File(fileArg)
         if (!file.isFile) throw CliError("no such file: $fileArg")
 
-        val results = KitBackup.restore(file, File(opts["--out"] ?: "snipsnap-out"), opts.has("--overwrite"))
-        out.println("restored ${results.size} kit(s):")
-        results.forEach { out.println("  + ${it.kit.name} -> ${it.directory.path}") }
+        val result = KitBackup.restore(file, File(opts["--out"] ?: "snipsnap-out"), opts.has("--overwrite"))
+        out.println("restored ${result.kits.size} kit(s):")
+        result.kits.forEach { out.println("  + ${it.kit.name} -> ${it.directory.path}") }
+        result.skipped.forEach { (name, why) -> out.println("  ! skipped $name - $why") }
         return 0
     }
 }
