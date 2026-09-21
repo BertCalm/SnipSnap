@@ -99,6 +99,25 @@ class SnapTest {
     }
 
     @Test
+    fun `cut renders exactly the asked frame count, held through to the end`() {
+        val table = Snap.table(stripes(), SnapVoice.HORIZON)
+        for (frames in listOf(1, 512, 4410)) {
+            val out = Snap.cut(table, emptyMap(), frames)
+            assertEquals(frames, out.size, "cut($frames) returned ${out.size} frames")
+            assertTrue(out.all { it.isFinite() && it in -1f..1f }, "cut($frames) broke range")
+        }
+        // HOLD-shaped: unlike a plain render (which decays under DECAY), a
+        // cut step stays loud almost to its own end - only the last 4 ms
+        // (Dsp.fadeTail's own click guard) ramps down. Compare loudness
+        // just past the attack against loudness just before that fade.
+        val step = Snap.cut(table, emptyMap(), 4410)
+        val fadeSamples = (0.004f * Dsp.RATE).toInt()
+        val early = (500 until 600).sumOf { abs(step[it]).toDouble() } / 100
+        val late = (step.size - fadeSamples - 200 until step.size - fadeSamples - 100).sumOf { abs(step[it]).toDouble() } / 100
+        assertTrue(late > early * 0.5, "a HOLD-shaped step should stay loud right up to its own cut, before the click-guard fade: early=$early late=$late")
+    }
+
+    @Test
     fun `BRIGHT opens the filter and DECAY lengthens the tail`() {
         val table = Snap.table(stripes(), SnapVoice.HORIZON)
         val dark = FeatureExtractor.extract(Snap.render(table, mapOf("BRIGHT" to 0.05f)))

@@ -295,6 +295,19 @@ toast, since the layout is the picture's, not the drum convention's. KIT
 brand-new kit on the shelf, named PHOTO KIT, never overwriting whatever
 kit is open.
 
+PATH walks the picture in time instead of reading one line through it.
+DRAW's overlay gains a third tab over a photo: draw a path across it and
+`PhotoPath.sample` resamples the stroke by arc length to a fixed step
+count — a fast drag and a slow one over the same line give the same
+walk, and a line that lingers over one patch gives it no more steps than
+one that crossed it in a blink. Each step is the cell under it, the same
+grid `PhotoKit` cuts, so a melody follows where the line goes and a
+rhythm follows where it stays. Two landings: LOOP PAD ▸ renders the
+walked cells as one gapless loop, cut to the tempo's sixteenth grid, and
+lands it like CLOUD's texture; RING ▸ needs the kit above — the walked
+cells become a `PatternOrbit` naming its pads directly, a fresh ring on
+ORBIT that plays live and is editable afterwards like any other.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH

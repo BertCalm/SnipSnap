@@ -525,6 +525,33 @@ object Snap {
     /** The steady shape every grain is rendered under; built once, never written. */
     private val HOLD_SHAPE: IntArray = Draw.shape(Draw.Shape.HOLD)
 
+    /**
+     * One step of a walked path ([PhotoPath]): [table]/[macros] rendered
+     * exactly [frames] long at [RATE], HOLD-shaped so the note doesn't
+     * decay away before the next step starts — a walked path is one
+     * gapless line, not a run of separate hits. Same oversampled path as
+     * [render]; unlike [grain], which trades that away for speed at a
+     * grain field's hundreds-at-once cost — a path is at most 64 steps,
+     * so the full render stays cheap enough to keep.
+     */
+    fun cut(table: IntArray, macros: Map<String, Float>, frames: Int): FloatArray {
+        require(table.size == TABLE_SIZE) { "a SNAP table has $TABLE_SIZE points, got ${table.size}" }
+        require(frames > 0) { "a step needs at least one frame" }
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        val raw = synthesize(
+            table, macros, renderRate,
+            envelope = HOLD_SHAPE,
+            lengthSeconds = frames.toFloat() / RATE,
+        )
+        // Float length arithmetic, then oversample decimation, lands within
+        // a frame or two of the asked length; a walked path addresses
+        // steps by a fixed stride, so make it exact.
+        val out = Dsp.decimate(raw, RATE).copyOf(frames)
+        Dsp.normalize(out)
+        Dsp.fadeTail(out)
+        return out
+    }
+
     fun render(table: IntArray, macros: Map<String, Float> = emptyMap(), envelope: IntArray? = null): Snip {
         require(table.size == TABLE_SIZE) { "a SNAP table has $TABLE_SIZE points, got ${table.size}" }
         if (envelope != null) {

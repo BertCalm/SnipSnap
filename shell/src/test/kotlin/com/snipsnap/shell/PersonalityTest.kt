@@ -537,6 +537,11 @@ class PersonalityTest {
         // landing toast is `photoKitMade`, a function, which the
         // reflection sweep below never sees in the first place.
         "SNAP_KIT_BUSY",
+        // PATH's RING ▸ (leaves SNAP for ORBIT) and its own LOOP PAD ▸
+        // (stays on SNAP) — the same *_BUSY shape as FIELD/CLOUD/KIT
+        // above. The landing toasts are `pathRingMade` and `synthSent`,
+        // functions, which this reflective sweep never sees.
+        "SNAP_PATH_BUSY", "SNAP_PATH_SEND_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // CATCH A HIT's busy line while the hits are found, and its grid's

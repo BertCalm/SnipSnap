@@ -29,44 +29,54 @@ object PhotoKit {
     const val COLUMNS = 4
     const val ROWS = 4
 
+    /** One cell's patch, plus the colour its class-agnostic reading carries — [build]'s own per-cell read, [PhotoPath]'s too. */
+    data class CellPatch(val patch: SnapPatch, val meanRgb: Int)
+
     /**
-     * Sixteen pads off [photo], named [name]: cell (0, 0) — the photo's
-     * top-left — at slot 13 (A13), cell (0, 3) — the bottom-left — at
-     * slot 1 (A01), `PadBanks.tag`'s own top-row-first numbering. Every
-     * cell is read and rendered exactly as [PhotoField.build] reads one
-     * of its own — [Snap.look] for the macros, [Snap.table] plus
-     * [PhotoField.cellTable]'s blend for the line — so a photo kit and a
-     * photo field agree about what a patch of the same picture sounds
-     * like. The recipe is the patch's, so the kit regenerates from its
-     * `kit.json` sidecar like every other synth kit.
+     * The one cell at ([column], [row]) of [photo]'s grid, named [name]:
+     * [Snap.look] for its reading, [Snap.macrosFrom] for the knobs,
+     * [Snap.table] plus [PhotoField.cellTable]'s blend for the line — the
+     * exact read [PhotoField.build] performs on its own, finer grid. A
+     * cell is at least one pixel each way, so a photo smaller than the
+     * grid is read in overlapping cells rather than refusing — the same
+     * rule [PhotoField.build] follows.
      */
-    fun build(photo: Photo, name: String): List<ArrangedPad?> {
+    fun cellAt(photo: Photo, column: Int, row: Int, name: String): CellPatch {
         val w = photo.width
         val h = photo.height
+        val y0 = min(row * h / ROWS, h - 1)
+        val y1 = max(y0 + 1, min((row + 1) * h / ROWS, h))
+        val x0 = min(column * w / COLUMNS, w - 1)
+        val x1 = max(x0 + 1, min((column + 1) * w / COLUMNS, w))
+        val cell = photo.crop(x0, y0, x1 - x0, y1 - y0)
+        val reading = Snap.look(cell)
+        val macros = Snap.macrosFrom(reading)
+        val rawLine = Snap.table(cell, SnapVoice.HORIZON)
+        val (table, _) = PhotoField.cellTable(rawLine)
+        return CellPatch(SnapPatch(name, SnapVoice.HORIZON, macros, table), reading.meanRgb)
+    }
+
+    /** The pad slot a grid cell lands on: (0, 0), the photo's top-left, is A13 (slot 13); (0, [ROWS] - 1), the bottom-left, is A01. */
+    fun slotFor(column: Int, row: Int): Int = 13 - 4 * row + column
+
+    /**
+     * Sixteen pads off [photo], named [name], one [cellAt] per grid cell,
+     * landed at [slotFor]'s slot. The recipe is the patch's, so the kit
+     * regenerates from its `kit.json` sidecar like every other synth kit.
+     */
+    fun build(photo: Photo, name: String): List<ArrangedPad?> {
         val pads = arrayOfNulls<ArrangedPad>(COLUMNS * ROWS)
         for (row in 0 until ROWS) {
-            // A cell is at least one pixel each way, so a photo smaller
-            // than the grid is read in overlapping cells rather than
-            // refused — the same rule PhotoField.build follows.
-            val y0 = min(row * h / ROWS, h - 1)
-            val y1 = max(y0 + 1, min((row + 1) * h / ROWS, h))
             for (column in 0 until COLUMNS) {
-                val x0 = min(column * w / COLUMNS, w - 1)
-                val x1 = max(x0 + 1, min((column + 1) * w / COLUMNS, w))
-                val cell = photo.crop(x0, y0, x1 - x0, y1 - y0)
-                val reading = Snap.look(cell)
-                val macros = Snap.macrosFrom(reading)
-                val rawLine = Snap.table(cell, SnapVoice.HORIZON)
-                val (table, _) = PhotoField.cellTable(rawLine)
-                val patch = SnapPatch(name, SnapVoice.HORIZON, macros, table)
+                val (patch, meanRgb) = cellAt(photo, column, row, name)
                 val snip = patch.render()
                 val cls = Classifier.classify(snip).drumClass
-                val slot = 13 - 4 * row + column
+                val slot = slotFor(column, row)
                 pads[slot - 1] = ArrangedPad(
                     snip = snip,
                     drumClass = cls,
                     recipe = PadRecipe(patch = patch).toJsonValue(),
-                    colorHex = colorHex(reading.meanRgb),
+                    colorHex = colorHex(meanRgb),
                 )
             }
         }
