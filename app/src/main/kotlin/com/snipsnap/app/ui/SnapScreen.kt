@@ -143,6 +143,9 @@ fun SnapScreen(
     // KIT ▸: build a whole kit off the current photo and land it on the
     // shelf. App.kt owns the shelf write and the navigation to it.
     onBuildKit: (Photo) -> Unit,
+    // FIELD's own PRINT, threaded down to GrainFieldScreen: a print landed
+    // on TAPE, the same reload request a share-sheet import raises.
+    onFieldPrinted: () -> Unit,
     // App()'s own scope, same as SynthScreen's: a SEND TO PAD write in
     // flight survives a MenuRow tab switch instead of being cancelled by it.
     appScope: CoroutineScope,
@@ -668,6 +671,7 @@ fun SnapScreen(
                         },
                         onToast = onToast,
                         onRequestArm = {},
+                        onFieldPrinted = onFieldPrinted,
                         prebuilt = prebuilt,
                     )
                 }
