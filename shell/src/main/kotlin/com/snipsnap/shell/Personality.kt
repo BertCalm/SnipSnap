@@ -217,10 +217,27 @@ object Copy {
      */
     const val MIC_HEARING_NOTHING = "TAPE ROLLING, HEARING NOTHING. CHECK THE MIC ISN'T MUTED OR COVERED."
     // IMPORT: a file shared in from another app (F3).
-    /** A shared file landed as a snip; [seconds] how much, [truncated] whether the cap cut its tail. */
-    fun imported(seconds: Float, truncated: Boolean): String {
+    /**
+     * A shared file landed as a snip; [seconds] how much, [truncated]
+     * whether the cap cut its tail, [resampledFrom] the rate it arrived
+     * at when that was not the rate it is now.
+     *
+     * [resampledFrom] is the half of P4.2 that was a real defect rather
+     * than a missing feature. `SnipStore.import` has always moved a 48 k
+     * or 22.05 k share onto the MPC's rate — correctly, since nothing
+     * downstream takes any other — and said nothing, so the one user who
+     * would notice, and who is the only reason the finding exists, was
+     * the one the app kept it from. A conversion the app performs on
+     * somebody's audio is theirs to be told about. Null when the file
+     * already arrived at the rate, which is every bounce and most shares.
+     */
+    fun imported(seconds: Float, truncated: Boolean, resampledFrom: Int? = null): String {
         val length = if (seconds >= 60f) "${Math.round(seconds / 60f)} MIN" else "${Math.round(seconds)}s"
-        return if (truncated) "TAPED FROM OUTSIDE. FIRST $length KEPT - THE TAPE IS ONLY SO LONG." else "TAPED FROM OUTSIDE. $length ON THE DECK."
+        val head = if (truncated) "TAPED FROM OUTSIDE. FIRST $length KEPT - THE TAPE IS ONLY SO LONG." else "TAPED FROM OUTSIDE. $length ON THE DECK."
+        val rate = resampledFrom?.let {
+            " CAME IN AT ${rateLabel(it)}, ON THE DECK AT ${rateLabel(com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE)}."
+        } ?: ""
+        return head + rate
     }
     const val IMPORT_BUSY = "IMPORTING…"
     const val IMPORT_NOT_AUDIO = "NOTHING TO HEAR IN THAT. SHARE AUDIO OR A VIDEO WITH SOUND."
@@ -512,6 +529,55 @@ object Copy {
 
     /** No card has been granted, or the grant was forgotten. */
     const val SETUP_CARD_NONE = "NO CARD PICKED. EXPORT ASKS FOR ONE."
+
+    /**
+     * The fourth thing the app knew and never said: what rate everything
+     * it makes is at.
+     *
+     * The persona review (P4.2) named sample-rate control as the one
+     * absence nobody had ruled on. The ruling is that there is no knob,
+     * and this is where the app says so instead of leaving a user to
+     * infer it: [com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE] is the
+     * rate the writer refuses a file at any other, `Preflight` FAILs a
+     * pad that is not at it, and TAPE moves a 48 k or 22.05 k file onto
+     * it on the way in. A picker offering a second setting the export
+     * would then refuse is a trap, not a control.
+     *
+     * The other half of that question — a sample rate as a *sound* — has
+     * shipped for a long time under a better name than a number: the
+     * TIME MACHINE on the pad sheet is 26.04 kHz at 12 bits for SP1200
+     * and 40 kHz for MPC60, which is what somebody asking for a rate
+     * control on a sampler usually means. This note points at it, since
+     * the word "rate" is what they will have come here looking for.
+     */
+    const val SETUP_RATE_HEADING = "THE RATE"
+    val SETUP_RATE = rateLabel(com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE)
+    const val SETUP_RATE_NOTE =
+        "THE ONLY RATE THE MPC READS. ANYTHING YOU BRING IN IS MOVED ONTO IT. " +
+            "FOR A RATE YOU CAN HEAR, THE TIME MACHINE ON A PAD."
+
+    /**
+     * Where the kit came from, under its grid — the persona review's P4.4.
+     *
+     * The finding called provenance "good and half-hidden": good because
+     * every door stamps it, half-hidden because reaching any of it meant
+     * holding a pad. Naming it in [PAD_SHEET_LEGEND] was looked at and
+     * rejected — that legend is a sample of what the sheet holds, not an
+     * inventory, and does not name layers or takes either — and a third
+     * mark on the grid would crowd the treated dog-ear and the mini
+     * waveform for a fact a mark cannot actually state.
+     *
+     * So it is a line, in the same register and the same place as the two
+     * legends above it: always there, cannot be dismissed, says the thing
+     * rather than pointing at a gesture. [phrase] is `Provenance.ofKit`,
+     * so this line and the liner notes on the card cannot name different
+     * parents.
+     *
+     * Absent, not empty, for a kit built by hand: there is no honest
+     * sentence for "nowhere", and `MADE BY HAND` under a grid of pads a
+     * user just chopped would be a lie the app told about their work.
+     */
+    fun kitCameFrom(phrase: String): String = "THIS KIT: ${phrase.uppercase()}"
 
     /**
      * The exports folder, said plainly. [where] is the real path, because a
@@ -2240,6 +2306,30 @@ object Copy {
      * ("0 BARS", not "0 BAR").
      */
     fun countOf(n: Int, singular: String, plural: String): String = "$n ${if (n == 1) singular else plural}"
+
+    /**
+     * A sample rate the way a person says one: 44100 → `44.1 KHZ`, 48000
+     * → `48 KHZ`, 22050 → `22.05 KHZ`, 26040 → `26.04 KHZ`.
+     *
+     * Every line that states a rate goes through here, so the app cannot
+     * say "44.1 kHz" in one place and "44100 HZ" in another. Resolution
+     * is 10 Hz — no rate any of this app's doors can produce is finer
+     * than that, and a label is not the place to prove otherwise.
+     *
+     * `Locale.ROOT` on the one padded conversion, per `FormatLocaleTest`:
+     * a phone set to Persian would otherwise print the fraction in
+     * Eastern-Arabic digits.
+     */
+    fun rateLabel(hz: Int): String {
+        val whole = hz / 1000
+        val rest = hz % 1000
+        val fraction = when {
+            rest == 0 -> ""
+            rest % 100 == 0 -> ".${rest / 100}"
+            else -> ".%02d".format(java.util.Locale.ROOT, rest / 10)
+        }
+        return "$whole$fraction KHZ"
+    }
 
     /**
      * "1 BAR" or "N BARS" — one place, because both bounce lines count the

@@ -1018,7 +1018,7 @@ fun App(shelf: KitShelf) {
             if (open == null) {
                 open = withContext(Dispatchers.IO) { shelf.list(shelfSort) }.firstOrNull()
             }
-            toast = Copy.imported(landed.seconds, landed.truncated)
+            toast = Copy.imported(landed.seconds, landed.truncated, landed.resampledFrom)
             // A new capture landing outranks a RE-TRIM in flight (RetrimRequest).
             retrim = null
             importCount++

@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.WavWriter
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -68,12 +69,12 @@ object DecentSamplerWriter {
                 }
                 p.attack?.let { sb.append(" attack=\"").append(num(it * 0.4f)).append('"') }
                 p.decay?.let {
-                    sb.append(" decay=\"").append(num(it * pad.frameCount / 44_100f)).append('"')
+                    sb.append(" decay=\"").append(num(it * pad.frameCount / WavWriter.MPC_SAMPLE_RATE)).append('"')
                     sb.append(" sustain=\"0\"")
                 }
                 if (p.oneShot) {
                     // Ring out the whole hit whatever the note length.
-                    sb.append(" release=\"").append(num(pad.frameCount / 44_100f)).append('"')
+                    sb.append(" release=\"").append(num(pad.frameCount.toFloat() / WavWriter.MPC_SAMPLE_RATE)).append('"')
                 }
                 sb.append(">\n")
             }

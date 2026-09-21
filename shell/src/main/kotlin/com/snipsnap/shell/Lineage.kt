@@ -46,9 +46,14 @@ object Lineage {
         visited += kit.name
         val children = mutableListOf<Node>()
 
+        // The two stamps that name *another kit* rather than a source
+        // file, so they are the tree's own recursion and not an origin.
+        // Their key names come from [Provenance] like every other reader's.
         val kitRefs =
-            kit.pads.mapNotNull { it.source["resampledFrom"] }.distinct().sorted().map { "resampled from" to it } +
-                kit.pads.mapNotNull { it.source["mergedFrom"] }.distinct().sorted().map { "merged from" to it }
+            kit.pads.mapNotNull { it.source[Provenance.Kind.RESAMPLED.key] }.distinct().sorted()
+                .map { "resampled from" to it } +
+                kit.pads.mapNotNull { it.source[Provenance.Kind.MERGED.key] }.distinct().sorted()
+                    .map { "merged from" to it }
         for ((how, name) in kitRefs) {
             val dir = index[name]
             children += when {
@@ -74,17 +79,12 @@ object Lineage {
             // The chain bottoms out here: terminal origins. (Only here -
             // resample carries inherited stamps forward on every pad, so
             // showing them at every level would repeat the roots.)
-            val origins = kit.pads.mapNotNull { p ->
-                val s = p.source
-                when {
-                    s["song"] != null -> "dug from ${s["song"]}" + (s["at"]?.let { " at $it" } ?: "")
-                    s["file"] != null -> "chopped from ${s["file"]}"
-                    s["importedFrom"] != null -> "imported from ${s["importedFrom"]}"
-                    s["app"] != null || s["title"] != null ->
-                        "captured from " + listOfNotNull(s["app"], s["title"]?.let { "\"$it\"" }).joinToString(" ")
-                    else -> null
-                }
-            }.distinct().sorted()
+            // [Provenance] decides which stamp wins and how it reads.
+            // This used to be the third key list in the app (the pad
+            // sheet's and the liner notes' were the others) and knew four
+            // doors out of eleven, so a sculpted or dissected kit came
+            // out of the tree as "made from scratch".
+            val origins = kit.pads.mapNotNull { Provenance.phrase(it.source) }.distinct().sorted()
             // Mutation is extra parentage, not a replacement origin: a
             // chopped pad that was later mutated shows both lines.
             val mutations = kit.pads.mapNotNull { p ->

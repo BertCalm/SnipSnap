@@ -316,14 +316,28 @@ class PersonalityTest {
 
         // The headings are labels above a readout, so they do not end in a
         // full stop - the same register as the legends.
-        for (h in listOf(Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING)) {
+        val headings = listOf(
+            Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING, Copy.SETUP_RATE_HEADING,
+        )
+        for (h in headings) {
             assertFalse(h.endsWith("."), "furniture, not a sentence: $h")
             assertEquals(h.uppercase(Locale.ROOT), h, "TapeOS shouts: $h")
             assertTrue(h.length <= 24, "a heading on a narrow screen: $h")
         }
-        // Three different questions must read as three different questions.
-        val headings = listOf(Copy.SETUP_FORMAT_HEADING, Copy.SETUP_WHERE_HEADING, Copy.SETUP_CARD_HEADING)
+        // Four different questions must read as four different questions.
         assertEquals(headings.size, headings.toSet().size, "$headings")
+
+        // THE RATE is the one row here the app cannot be wrong about and
+        // had never said: the readout is derived from the writer's own
+        // constant (see SnipStoreTest), and the note points at the place a
+        // rate IS adjustable, since "sample rate" is the phrase somebody
+        // arrives with - the persona review's P4.2.
+        assertEquals("44.1 KHZ", Copy.SETUP_RATE)
+        assertTrue(Copy.SETUP_RATE_NOTE.endsWith("."), Copy.SETUP_RATE_NOTE)
+        assertTrue(
+            Copy.SETUP_RATE_NOTE.contains("TIME MACHINE"),
+            "the note sends a reader to the rate they can actually turn: ${Copy.SETUP_RATE_NOTE}",
+        )
 
         // The path is handed through unchanged: a user hunting on a cable
         // needs the real thing to look for, not a description of it.
@@ -471,6 +485,11 @@ class PersonalityTest {
         // SETUP_CARD_NONE are NOT here: both are sentences the screen says
         // to you, and both keep their full stops.
         "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
+        // THE RATE, the fourth of the same kind, and the readout under it -
+        // "44.1 KHZ" is a value, not a sentence, exactly as the format
+        // readout above it is. SETUP_RATE_NOTE is NOT here: it is a
+        // sentence the screen says, and it keeps its full stop.
+        "SETUP_RATE_HEADING", "SETUP_RATE",
         // GRAIN FIELD's own busy line while the tape is read into its grid -
         // furniture, like every other `…`-suffixed busy line above.
         "GRAIN_FIELD_LISTENING",

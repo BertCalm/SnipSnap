@@ -4,6 +4,7 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import java.io.File
@@ -23,7 +24,7 @@ import kotlin.math.sqrt
  */
 object KitPreview {
 
-    const val RATE = 44_100
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
     const val DEFAULT_BPM = 92f
 
     /** A preview clamps tempo to a musical range, so frame math can't overflow. */

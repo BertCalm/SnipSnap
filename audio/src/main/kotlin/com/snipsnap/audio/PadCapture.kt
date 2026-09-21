@@ -19,7 +19,7 @@ object PadCapture {
      * comparing against this fixed-rate constant.
      */
     @Deprecated("frame-rate-specific; derive from MIN_ONESHOT_MS at the actual sample rate instead")
-    const val MIN_ONESHOT_FRAMES = MIN_ONESHOT_MS * 44_100 / 1000
+    const val MIN_ONESHOT_FRAMES = MIN_ONESHOT_MS * WavWriter.MPC_SAMPLE_RATE / 1000
 
     /**
      * Deprecated 44.1kHz-baked alias of [MAX_HOLD_SECONDS] — kept because
@@ -29,7 +29,7 @@ object PadCapture {
      * threading a sample rate into a screen that has none to offer.
      */
     @Deprecated("frame-rate-specific; compute against the live sample rate where one is available")
-    const val MAX_HOLD_FRAMES = MAX_HOLD_SECONDS * 44_100
+    const val MAX_HOLD_FRAMES = MAX_HOLD_SECONDS * WavWriter.MPC_SAMPLE_RATE
 
     /** [MIN_ONESHOT_MS] at [sampleRate] — the honest, rate-aware form of [MIN_ONESHOT_FRAMES]. */
     private fun minOneshotFrames(sampleRate: Int): Int = (MIN_ONESHOT_MS.toLong() * sampleRate / 1000).toInt()
