@@ -593,6 +593,42 @@ mode 0 from centre is the last resort — that pin is what keeps the low end sol
 
 Renders for the gate: `~/Desktop/SnipSnap Audition/16 SNARE - width across its travel/`.
 
+### STRIKE is a hidden width control, and it outweighs WIDTH — measured 2026-09-21
+
+`Modes.atPosition` weights mode *n* by `|sin(n·pi·position)|`. Mode 0 is pinned dead centre by
+`Modes.spread` (its `reach` is always 0), so anything that BOOSTS the fundamental narrows the
+stereo image and anything that SUPPRESSES it widens one. Strike position therefore controls width
+more strongly than the `WIDTH` macro does.
+
+Measured across the sixteen SNARE presets:
+
+- CENTRE HIT (`STRIKE` 0.05, fundamental weighted 0.156) reaches 0.057 side/mid at `WIDTH` 0.45.
+- CRACKED CLAY (`STRIKE` 0.42, fundamental weighted 0.976) reaches only 0.017 at `WIDTH` 0.60.
+
+Higher width, a third the result.
+
+**side/mid is exactly linear in `WIDTH`** — verified to under 0.1% across six presets by predicting
+from one render and re-measuring. So each preset's ceiling is `measured / width` from a single
+render, no sweep needed. Ceilings at `WIDTH` 1.0, against the 0.083 that passed the ear:
+
+| CENTRE HIT 0.128 | DEEP ROOM 0.115 | DRY TIMBER 0.106 | SOFT SHELL 0.093 |
+|---|---|---|---|
+| RIM SHOT 0.087 | TIGHT STEEL 0.075 | PICCOLO 0.074 | BACKBEAT 0.073 |
+| WIDE FLOOR 0.064 | FULL SWING 0.059 | RIM EDGE 0.055 | CRACKED CLAY 0.029 |
+| LOOSE WIRE 0.028 | DARK RATTLE 0.024 | LONG HISS 0.008 | DUST BURST 0.005 |
+
+Five presets are capped below anything audible — CRACKED CLAY, LOOSE WIRE and DARK RATTLE at
+roughly a third of the approved width, plus the two inert high-SNAP ones. They should ship at
+`WIDTH` 0 rather than carrying a value that does nothing, which would only make the knob look
+broken.
+
+**Consequence for extending SPACE to other voices:** `WIDTH` is not a consistent unit across a
+kit. The same number means different amounts on different presets, because the mode weighting
+underneath it differs. That is physically right — where you strike a body changes how it radiates
+— but a kit author turning every voice to 0.5 will not get a uniform image. Normalising `WIDTH`
+against each bank's own ceiling would fix that at the cost of the physics; it is a real choice and
+should be made deliberately before hats and bells take width, not discovered afterwards.
+
 ### WIDTH is inert at high SNAP, by construction
 
 `snareBodyGain(snap) = 1 - snap`, so at SNAP 1 the modal body's gain is exactly 0 and the output
