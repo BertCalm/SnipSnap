@@ -31,6 +31,16 @@ import java.io.File
 class ExportWizardModel(
     private val kit: Kit,
     private val kitDir: File,
+    /**
+     * How the browser-tile artwork actually gets painted. Defaults to
+     * [KitArt.png] — the AWT/desktop renderer this class, the CLI, and
+     * every test here have always used. `:app` overrides this with an
+     * `android.graphics`-backed renderer: `KitArt.png` reaches into
+     * `java.awt`/`javax.imageio`, neither of which exists on Android at
+     * any API level, so calling it from the shipped app crashes with
+     * `NoClassDefFoundError` the instant EXPANSION or XPN gets written.
+     */
+    private val artRenderer: (Kit, File, KitArt.Style) -> ByteArray = { k, d, s -> KitArt.png(k, d, s) },
 ) {
 
     enum class Stage { READY, WRITING, COMPLETE }
@@ -136,7 +146,7 @@ class ExportWizardModel(
         return try {
             val artwork = artStyle
                 ?.takeIf { format == ExportFormat.EXPANSION || format == ExportFormat.XPN }
-                ?.let { KitArt.png(kit, kitDir, it) }
+                ?.let { artRenderer(kit, kitDir, it) }
             val outcome = Exporters.export(format, kit, kitDir, destRoot, overwrite, artworkPng = artwork)
             // The expansion's own paper, the same pair `snipsnap export`
             // has always put there (`Inserts`). Until this, the CLI wrote

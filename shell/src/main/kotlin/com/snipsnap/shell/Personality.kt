@@ -807,6 +807,10 @@ object Copy {
     const val SNAP_FIELD_BUSY = "CUTTING THE PHOTO INTO GRAINS…"
     /** CLOUD's busy line while the field is granulated for a pad. */
     const val SNAP_CLOUD_BUSY = "CLOUDING THE PICTURE…"
+    /** KIT's busy line while `PhotoKit.build` renders all sixteen cells of the photo off the main thread — `App.kt`'s own whole-screen busy overlay, since KIT lands on the shelf and leaves the screen. */
+    const val SNAP_KIT_BUSY = "CUTTING THE PHOTO INTO A KIT…"
+    /** KIT's landing toast: named, and said plainly that the layout is the picture's own — AutoPlace never ran. */
+    fun photoKitMade(name: String): String = "$name MADE. LAID OUT AS THE PHOTO — NOT AUTO-PLACED."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

@@ -170,7 +170,16 @@ logcat tag to grab when something is wrong.
   for a steady tone, not a thin or silent one); tapping the hint text
   under the field must not play SNAP's own note; CLOUD onto a pad that
   was a SNAP note should leave the pad sheet with no recipe card; and
-  while CUTTING THE PHOTO INTO GRAINS… is up, TAKE PHOTO is off.
+  while CUTTING THE PHOTO INTO GRAINS… is up, TAKE PHOTO is off. Then
+  KIT ▸: with a photo up, tap it and the LCD should read CUTTING THE
+  PHOTO INTO A KIT… for a moment before landing on KIT with a new kit
+  named PHOTO KIT — never the kit that was open before the tap. All
+  sixteen pads should be filled and lit in the photo's own colours (the
+  MPC grid's top row should read like the top of the picture, the
+  bottom row its bottom), and leaving KIT and coming back must sound
+  the same, since the pads regenerate from `kit.json` rather than a
+  live capture. A second KIT ▸ on the same photo should
+  land a second kit ("PHOTO KIT 2"), not overwrite the first.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

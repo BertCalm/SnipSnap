@@ -1,5 +1,6 @@
 package com.snipsnap.kit
 
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
@@ -35,5 +36,20 @@ class KitAssemblerTest {
         )
         assertEquals(false, kit.pad(1)?.oneShot, "explicit oneShot = false should carry through")
         assertEquals(true, kit.pad(2)?.oneShot, "default stays true for every existing caller")
+    }
+
+    @Test
+    fun `an explicit pad colour overrides AutoPlace, null falls back to it`() {
+        val dir = File(temp, "Colours")
+        val kit = KitAssembler.assembleArranged(
+            "Colour Kit",
+            listOf(
+                ArrangedPad(snip(), DrumClass.TONAL, colorHex = "#123abc"),
+                ArrangedPad(snip(), DrumClass.KICK),
+            ),
+            dir,
+        )
+        assertEquals("#123abc", kit.pad(1)?.colorHex, "an explicit colour must not be shadowed by the class default")
+        assertEquals(AutoPlace.colorFor(DrumClass.KICK), kit.pad(2)?.colorHex, "no explicit colour still falls back to the class colour, unchanged")
     }
 }

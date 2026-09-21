@@ -427,3 +427,38 @@ down mid-drag, the way back consumes its quiet even with nothing to
 render, and CLOUD onto a synth pad clears the pad's recipe (replaceAudio
 keeps one when handed null, and the old note would have regenerated over
 the cloud on the next rebuild from the sidecar).
+
+### S7.3 — A KIT FROM ONE PHOTO
+
+`docs/PHOTO_SPECS.md` §1, built as specced. `PhotoKit.build` (`synth/PhotoKit.kt`)
+is `PhotoField.build`'s own reading of a picture, cut 4×4 instead of 16×12,
+each cell landing as a full SNAP **pad** (`Snap.render`, a note) rather than
+a grain: `Snap.look` for the reading, `Snap.macrosFrom` for the knobs,
+`Snap.table(HORIZON)` plus `PhotoField.cellTable`'s own blend toward a sine
+for the line, so a flat cell never refuses here either — the kit must fill
+every pad, same as the field must sound everywhere. Cell (column, row),
+row 0 the photo's top row, lands at slot `13 - 4×row + column`: (0, 0) is
+A13, (0, 3) is A01 — `PadBanks`'s own top-row-first numbering, the same
+geometry `KitArt`'s GRID style and `KitScreen`'s own grid already draw.
+`AutoPlace` never runs: the layout is the picture's, not the drum
+convention's.
+
+Colour needed one seam: `Snap.Reading` gained `meanRgb` (a third pair of
+accumulators alongside `Snap.look`'s luminance and hue sums, packed through
+`Photo.rgb`), and `ArrangedPad` gained an optional `colorHex`, checked
+first in `KitAssembler.assembleArranged` ahead of `AutoPlace.colorFor` —
+every other caller passes none and gets the class colour exactly as
+before. The recipe is the pad's `SnapPatch` (`PadRecipe(patch =
+patch).toJsonValue()`), so a photo kit regenerates from its `kit.json`
+sidecar like every other synth kit; it is not a folder of anonymous WAVs.
+
+Landing is `KitShelf.landPhotoKit` (`:app`) — `render`'s own shape
+(`freshName`, `KitAssembler.assembleArranged`, a fresh `Entry`) off a
+photo's own cells instead of a starter's seed — called from `App.kt`'s
+`buildPhotoKit`, which mirrors `fresh` line for line: the same whole-app
+`busy` overlay (`Copy.SNAP_KIT_BUSY`), the same shelf-list refresh, the
+same `open`/`screen = AppScreen.KIT` landing. KIT ▸ sits beside FIELD ▸
+and CLOUD ▸ on the SNAP screen; unlike them it leaves the screen, which is
+why it rides the app's own busy lock rather than a local one the way
+`buildingField`/`cloudBusy` do — the same shape `fresh`/`finishBreed`/
+`texture` already use for "render offline, land on the shelf, open it."
