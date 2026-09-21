@@ -187,7 +187,17 @@ logcat tag to grab when something is wrong.
   STOP PRINT with no drag at all should toast NOTHING PRINTED rather
   than land an empty snip. PRINT is on both GRAIN FIELD callers, not
   only the photo's: the same check from PAD SHEET's own GRAIN FIELD
-  (reached off a pad, not a photo) should behave identically.
+  (reached off a pad, not a photo) should behave identically. Then TILT:
+  tap it, hold the phone level and tilt it left/right and up/down — the
+  ring on the field should wander to follow, a hard left should read low
+  X and a hard right high X (`SurfaceScreen`'s own TILT already settles
+  this axis), and tipping the top of the phone away/toward you should
+  move Y in one consistent direction — note which, since only a phone
+  settles the sign. A flat phone held still should not shimmer the
+  cursor. Touching the field with a finger while TILT is on should hand
+  it control at once, and TILT should resume the instant the finger
+  lifts. Tapping DUET while TILT is on should turn TILT off, and tapping
+  TILT while DUET is on should turn DUET off — never both lit together.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

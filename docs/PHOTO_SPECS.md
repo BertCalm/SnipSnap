@@ -3,10 +3,10 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1 and §2 are now built
-(`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`; `docs/SYNTH_ROADMAP.md`
-S7.3–S7.4); §3–§8 are not. Each ends with the decision that is not mine to
-make.
+one list and priced as eight sections. §1–§3 are now built
+(`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`;
+`docs/SYNTH_ROADMAP.md` S7.3–S7.5); §4–§8 are not. Each ends with the
+decision that is not mine to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -228,6 +228,9 @@ a pure function in `:shell` with a test; the sign on the phone.
 
 Whether TILT and DUET are exclusive chips (recommended: one automatic
 cursor at a time) or stack.
+
+**Built as recommended:** TILT and DUET are exclusive — turning one on
+turns the other off, since both drive the one cursor.
 
 ---
 

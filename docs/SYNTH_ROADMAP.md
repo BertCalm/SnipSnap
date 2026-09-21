@@ -505,3 +505,38 @@ own `onPrinted` already triggers. No PAD landing here: PRINT only ever
 lands on TAPE, the spec's own recommended reading ("it is what was
 heard"); a captured drag reaches pads afterward through the ordinary
 TAPE → CHOP door, same as any other capture.
+
+### S7.5 — TILT: tip the phone to play the picture
+
+`docs/PHOTO_SPECS.md` §3, built as specced. `TiltSource` (`:app`) read only
+roll (gravity along the device's X axis); it now reads pitch too (Y axis),
+guarded and set independently of roll so a NaN or a missing reading on one
+axis never holds the other back. Both are `@Volatile` floats, 0..1, flat at
+0.5, written from the sensor thread and read from the UI/control-rate loop
+— the same single-value contract `tilt` already had.
+
+The mapping from a raw (roll, pitch) reading to the field's cursor —
+dead-banded (`DEAD_ZONE`, 0.02: below this much change from the cursor's
+last position, a reading is a still hand's jitter, not a move, or the
+field would shimmer at rest) and smoothed (`SMOOTHING`, 0.5, DUET's own
+factor) — is `TiltCursor.step` (new, `:shell`), a pure function with its
+own JVM test, since `GrainFieldScreen`'s loops have none.
+
+`GrainFieldScreen` gained a TILT header chip and a control-rate
+`LaunchedEffect` in the exact shape DUET's own loop already has: every
+tick, if no finger is down, `TiltCursor.step` walks `autoPos` toward the
+phone's current tilt and calls `voice.setTarget`/`gate`, a finger always
+winning over either automatic cursor the same way. DUET and TILT are
+exclusive — the spec's own recommendation, "one automatic cursor at a
+time" — enforced where each chip is tapped on: turning one on turns the
+other off, since both drive the one `autoPos`/`voice` and nothing
+reconciles two live writers of it. Available on both `GrainFieldScreen`
+callers, the pad sheet's own field as much as PHOTO FIELD's, since
+nothing about TILT is photo-specific — the chip only shows when
+`TiltSource.available` (a gravity or accelerometer sensor exists).
+
+The one thing this environment cannot settle: the Y axis's sign in
+portrait. `SurfaceScreen`'s existing use of `TiltSource.tilt` already
+fixed the X axis's convention on a real device; pitch's sign (tip away =
+up or down) is an on-device check, named as such in `app/README.md`'s
+verify line.

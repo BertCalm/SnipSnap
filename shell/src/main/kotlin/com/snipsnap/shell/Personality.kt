@@ -2145,11 +2145,15 @@ object Copy {
     const val GRAIN_FIELD_START_FAILED = "GRAIN VOICE WON'T START."
     /** The render thread died on its own, or a live gesture threw against it - DUET turns itself off either way. */
     const val GRAIN_FIELD_DUET_STOPPED = "DUET STOPPED — OFF."
+    /** TILT's own version of [GRAIN_FIELD_DUET_STOPPED] - the render thread died, or the tick loop threw. */
+    const val GRAIN_FIELD_TILT_STOPPED = "TILT STOPPED — OFF."
     /** The field's own busy line while the tape is read into its grid - furniture, like every other `…`-suffixed busy line, so it carries no full stop. */
     const val GRAIN_FIELD_LISTENING = "LISTENING TO THE GRAIN…"
     /** DUET on: the mic plays the field live, said once so headphones are a choice, not a surprise. */
     const val GRAIN_FIELD_DUET_HINT = "THE MIC PLAYS THE FIELD. HEADPHONES RECOMMENDED."
-    /** DUET off: the field's ordinary touch-to-play hint. */
+    /** TILT on: the phone's own tilt plays the field, DUET's hint shape for the other automatic cursor. */
+    const val GRAIN_FIELD_TILT_HINT = "TIP THE PHONE TO PLAY THE FIELD."
+    /** DUET and TILT both off: the field's ordinary touch-to-play hint. */
     const val GRAIN_FIELD_DRAG_HINT = "DRAG TO PLAY THE GRAIN FIELD."
     /**
      * STOP PRINT with nothing captured - `GrainVoice.stopPrint()` found the

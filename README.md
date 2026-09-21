@@ -278,7 +278,10 @@ mixed lands on TAPE as a snip — `GrainVoice`'s own tap into the block it
 was about to write, preallocated once at `start()` and never in the
 render loop — so a drag across the field ends up on pads through the
 same door as a capture, for the pad sheet's own field as much as a
-photo's.
+photo's. TILT is a second automatic cursor beside DUET's: the phone's own
+roll and pitch, dead-banded and smoothed, stand in for a finger, so
+holding the phone up to the photo it was taken of and tilting plays the
+picture hands-free — exclusive with DUET, one automatic cursor at a time.
 
 A KIT FROM ONE PHOTO turns the whole idea into a kit, not one pad.
 `PhotoKit.build` cuts the picture into the MPC's own 4×4 instead of PHOTO
