@@ -436,6 +436,65 @@ class PersonalityTest {
         }
     }
 
+    /**
+     * The first-run note, which is the only sentence in the app whose
+     * whole job is to be understood by somebody who has not used it yet.
+     *
+     * Three persona findings land on it. P1.1: its last verb was DUB,
+     * which is the app's word for the write and not a word a beginner
+     * arrives with. P2.4 and P3.2: it ended "FOUR TABS, IN ORDER", which
+     * is stricter than the app — a starter kit begins at step three, and
+     * TAPE's own INSTANT KIT and CATCH A HIT land sounds on pads without
+     * CHOP.
+     *
+     * `ConventionTest`'s `the first-run loop names real menu tabs` already
+     * holds the harder half of this (no tab name but the four stages, so a
+     * verb cannot point a new user at the wrong screen). This holds what
+     * that law cannot see: that the words are the ones the screens
+     * actually use.
+     */
+    @Test
+    fun `the first-run note uses the words the screens use`() {
+        val note = Copy.FIRST_RUN_LOOP_NOTE
+
+        // One verb per stage, in the stage order, and step four is the
+        // word on EXPORT's own button rather than the one on its progress
+        // line. WRITE KIT is what a first-run user will tap.
+        assertTrue(note.startsWith("RECORD IT, CUT IT, KIT IT, WRITE IT."), note)
+        assertFalse(
+            Regex("""\bDUB\b""").containsMatchIn(note),
+            "DUB is the app's word for the write and stays everywhere else, but not in the one " +
+                "sentence written for somebody who has not used the app yet (P1.1): $note",
+        )
+
+        // ...and it no longer says the walk is compulsory, because it is
+        // not (P2.4, P3.2). Checked as "does not end on the bare claim"
+        // rather than by pinning the replacement, so the clause can be
+        // reworded without a test rewrite.
+        assertFalse(
+            note.endsWith("FOUR TABS, IN ORDER."),
+            "a starter kit begins at step three and TAPE's shortcuts skip CHOP, so the note must not " +
+                "end by claiming the four tabs are compulsory: $note",
+        )
+        assertTrue(note.endsWith("."), "still a sentence the screen says: $note")
+
+        // It names no door, which is the rule its own KDoc sets: NEW KIT ▸
+        // STARTERS is already the primary action directly under this
+        // panel, and naming it here would be a third copy of a control
+        // twice on screen.
+        for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH")) {
+            assertFalse(note.contains(door), "the note names a door it does not have to name: $note")
+        }
+
+        // The doors it declines to name are named where the inventory
+        // lives instead. CATCH has had a line since HELP was written;
+        // INSTANT KIT was in no list at all, which is the half of P3.2
+        // that was actually open.
+        val help = Copy.HELP_LOOP + Copy.HELP_MORE
+        assertTrue(help.any { it.contains("INSTANT KIT") }, "INSTANT KIT is in no HELP list")
+        assertTrue(help.any { it.contains("CATCH ON TAPE") }, "CATCH is in no HELP list")
+    }
+
     @Test
     fun `the pad sheet legend names the gesture`() {
         assertTrue(Copy.PAD_SHEET_LEGEND.contains("HOLD"), Copy.PAD_SHEET_LEGEND)

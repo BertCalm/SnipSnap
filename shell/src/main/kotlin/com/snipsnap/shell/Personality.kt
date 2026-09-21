@@ -68,8 +68,31 @@ object Copy {
      * stop, one line below where that law was looking. KIT IT is the
      * app's own verb for the step already ([orbitBounced] says "TRIM IT,
      * CHOP IT, KIT IT"), so the sentence now names the tab it means.
+     *
+     * **Step four is WRITE IT, not DUB IT** (persona review, P1.1). DUB is
+     * the app's word and it stays the app's word everywhere else - the
+     * dub is what EXPORT calls the write while it runs ("DUBBING…", "DUB
+     * COMPLETE") - but this is the one sentence whose whole job is to be
+     * understood by somebody who has not used the app yet, and a beginner
+     * does not arrive knowing it. The word it arrives at is the one on the
+     * button: EXPORT's primary action reads WRITE KIT. That is J13's own
+     * rule applied to the last step rather than the third - name what the
+     * screen names.
+     *
+     * **The last clause no longer claims the walk is compulsory** (P2.4,
+     * P3.2). Those two findings ask for a second entry point to be
+     * advertised here, and reading the screen says they are aimed slightly
+     * wrong: the second entry point is already the most prominent thing on
+     * it - NEW KIT ▸ STARTERS, directly below this panel - and the doors
+     * that skip the middle (INSTANT KIT, CATCH A HIT) are buttons on TAPE.
+     * Nothing is hidden. What was wrong is that this sentence ended "FOUR
+     * TABS, IN ORDER", which is stricter than the app: a starter kit
+     * begins at step three, and either TAPE shortcut lands sounds on pads
+     * without CHOP. Saying so costs a clause and keeps the note's own rule
+     * that it names no door - which is why a line pointing at STARTERS
+     * would have been a third copy of a control already twice on screen.
      */
-    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, DUB IT. FOUR TABS, IN ORDER."
+    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. FOUR TABS, IN ORDER — OR START FURTHER IN."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
@@ -672,6 +695,12 @@ object Copy {
         "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
+        // P3.2's real gap. The finding names INSTANT KIT and CATCH A HIT
+        // together as the unadvertised record-to-pad path; CATCH has had
+        // the line above since HELP was written and INSTANT KIT was in no
+        // list at all, so half the finding was already closed and the
+        // other half was invisible. This is the half that was missing.
+        "· INSTANT KIT ON TAPE: ONE TAP, AND THE CUTS LAND ON PADS.",
         "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
         // Every chip of the ladder row, read out of the row itself
         // (J42): the line used to name the four rungs and not COUNT,

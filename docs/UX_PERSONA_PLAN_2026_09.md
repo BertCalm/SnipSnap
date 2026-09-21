@@ -3,41 +3,45 @@
 The plan for what survives `docs/UX_PERSONA_REVIEW_2026_09.md` after its
 verification pass (that document's own `# Verification pass, 2026-09-20`
 section), and after the four PRs that followed it. Of its 29 items — 22
-numbered findings, 5 synthesis items, 2 headlines — **13 are closed, 3 are
-decided, 3 are half-closed, and 10 stand.**
+numbered findings, 5 synthesis items, 2 headlines — **16 are closed, 8 are
+decided, 3 are half-closed, and 2 stand.**
 
-This plans the 10 standing and two things the pass turned up that no
-finding names. P4.4's open half and N2 were both closed on 2026-09-20 and
-are kept below with their rulings, since the reasoning is the part worth
-keeping.
+Written 2026-09-20 to plan the 10 that were standing then, plus two things
+the pass turned up that no finding names. **All of that is now done.** The
+sections below are kept rather than deleted because the reasoning is the
+part worth keeping — three of them record a finding that turned out to be
+aimed wrong, which is not visible from a closed row.
 
-Written 2026-09-20, straight after the four PRs that closed the others
-(#279, #284, #289, #291).
+**What is actually left is two findings, and neither is code:** P1.4 (does
+a first-run user find HELP at all) and P2.2 (which words do they reach
+for). Both want five real users for an afternoon. The review says of its
+own persona claims that they are *"argued, not measured"* — building from
+its reasoning on these two would be guessing twice.
 
 ---
 
 ## The shape of what is left, and why it is not a backlog
 
 The journey review's 47 findings were mostly one bug wearing 47 hats, so
-its plan sequenced by root cause. **This is the opposite case.** The
-ten standing findings do not share a root cause and mostly are not
-defects at all. Sorted by what they actually need:
+its plan sequenced by root cause. **This was the opposite case.** The ten
+standing findings shared no root cause and mostly were not defects at
+all. Sorted by what they turned out to need:
 
-| | count | what they need |
-|---|---|---|
-| **A judgement about the product** | 6 | P1.1, P1.5, P2.4, P3.1, P3.2, P5.3 |
-| **A measurement first** | 2 | P1.4, P2.2 |
-| **Already settled, kept for the record** | 2 | P3.3, S1 |
+| | count | what they needed | where they went |
+|---|---|---|---|
+| **A judgement about the product** | 6 | P1.1, P1.5, P2.4, P3.1, P3.2, P5.3 | 3 built, 3 accepted |
+| **A measurement first** | 2 | P1.4, P2.2 | still standing — they want people |
+| **Already settled, kept for the record** | 2 | P3.3, S1 | accepted |
 
-**P4.4 is no longer among them** — the design call it was waiting on was
-made on 2026-09-20, and making it turned up a defect underneath. Group D
-below keeps the reasoning.
+**P4.4 is not among them** — the design call it was waiting on was made on
+2026-09-20, and making it turned up a defect underneath. Group D below
+keeps the reasoning.
 
-Nothing here is blocking anything. Nothing here is red. **The honest
-reading is that the app is past the point where this document's findings
-are the best guide to what to build next** — which is itself worth
-knowing, and is why the two items in "Found by the pass" below are ranked
-above most of the ten.
+Nothing here was blocking anything and nothing here was red. **The honest
+reading was that the app is past the point where this document's findings
+are the best guide to what to build next** — which is why the two items in
+"Found by the pass" were ranked above most of the ten, and both of those
+found real defects that no finding named.
 
 ## The constraint that changed, and it changes the plan
 
@@ -197,36 +201,41 @@ static copy — no state, no IO — which is as close to unbreakable as an
 
 ## The ten, grouped by what they need
 
-### Group A — a judgement about the product (6)
+### Group A — a judgement about the product (6) ▸ **all six answered, 2026-09-21**
 
-No code question is open in any of these. Each is a thing the app does on
-purpose that one persona would do differently.
+No code question was open in any of these. Each is a thing the app does on
+purpose that one persona would do differently. Three got the small copy
+PR; three were accepted as the app's own decisions and moved to the
+review's *Decided* bucket.
 
 | | the finding | what a fix would cost |
 |---|---|---|
-| **P1.1**, X2 | `FIRST_RUN_LOOP_NOTE` ends on "DUB IT", which is opaque to a beginner. Verified: it reads `RECORD IT, CUT IT, KIT IT, DUB IT. FOUR TABS, IN ORDER.` | A word. J13 already changed step three from `PLAY IT` to `KIT IT` for exactly this reason, so there is precedent and a shape to copy. The cheapest item in this document. |
-| **P1.5** | All-caps sentences throughout. | Everything. The caps are the app's voice — `PERSONALITY.md` is built on them. Not a bug; a house style one persona dislikes. |
-| **P2.4** | The advertised loop starts at "record", which assumes you have something to record. | A second entry point in the first-run note. Interacts with P3.2 below — they are the same complaint from two directions. |
-| **P3.1** | Too many destinations against roughly one for a rival app. **Stale as written: it says twelve, and the menu now holds thirteen** — `SHELF TAPE CHOP KIT EXPORT PLAY GROOVE ORBIT SYNTH SURFACE SNAP SETUP HELP`, since SNAP landed. J12's grouping rules shipped, but grouping thirteen is not reducing thirteen. | Large. It is a question about what the app is, not about the menu strip. |
-| **P3.2** | `INSTANT KIT` and `CATCH A HIT` both exist and neither is in the loop note, so the record-to-pad path is real but unadvertised. | Small, and it is the same edit as P2.4. Do them together or not at all. |
-| **P5.3** | SURFACE is a macro pad with `LATCH` and `PRINT`, not punch-in FX held live. | Architectural. Its output is a print, not a live effect on a master bus, and changing that is a different product. |
+| **P1.1**, X2 ✅ | `FIRST_RUN_LOOP_NOTE` ended on "DUB IT", which is opaque to a beginner. | **Built.** Step four is `WRITE IT` — the word on EXPORT's own button (`WRITE KIT`), not the one on its progress line. DUB stays the app's word everywhere else. J13's rule applied to the last step instead of the third. |
+| **P1.5** ▸ accepted | All-caps sentences throughout. | Everything. The caps are the app's voice — `PERSONALITY.md` is built on them. Not a bug; a house style one persona dislikes. |
+| **P2.4** ✅ | The advertised loop starts at "record", which assumes you have something to record. | **Built, and the finding was aimed wrong.** It asks for a second entry point in the note; the second entry point is already the screen's *primary action* (`NEW KIT ▸ STARTERS`, directly under that panel), and the note's KDoc argues against naming it — a third copy of a control twice on screen. What was actually wrong: the note claimed `FOUR TABS, IN ORDER`, and a starter kit begins at step three. The clause now says so. |
+| **P3.1** ▸ accepted | Too many destinations against roughly one for a rival app. **Stale as written: it says twelve, and the menu now holds thirteen** — `SHELF TAPE CHOP KIT EXPORT PLAY GROOVE ORBIT SYNTH SURFACE SNAP SETUP HELP`, since SNAP landed. J12's grouping rules shipped, but grouping thirteen is not reducing thirteen. | Large. It is a question about what the app is, not about the menu strip. |
+| **P3.2** ✅ | `INSTANT KIT` and `CATCH A HIT` both exist and neither is in the loop note, so the record-to-pad path is real but unadvertised. | **Built, and half of it was already closed.** Both are buttons on TAPE, so nothing is hidden — the same order clause as P2.4 covers the "unadvertised" part. The real gap was narrower and nobody had checked it: `CATCH` has had a `HELP_MORE` line since HELP was written, and `INSTANT KIT` was **in no list at all**. It has one now. |
+| **P5.3** ▸ accepted | SURFACE is a macro pad with `LATCH` and `PRINT`, not punch-in FX held live. | Architectural. Its output is a print, not a live effect on a master bus, and changing that is a different product. |
 
-**Recommendation:** P1.1 and P2.4+P3.2 are one small copy PR between them.
-The other three are not tasks, and should be marked as accepted rather
-than left looking open.
+**That recommendation — one small copy PR for three of them, the other
+three marked accepted — is what happened.** Worth keeping: two of the
+three that were "built" were built against a different problem than the
+one they named. Reading the screen before writing the copy is what found
+that, and it is the third time in this document a finding was worth less
+than the code it pointed at.
 
 ### Group B — measure before deciding (2)
 
 | | the finding | the measurement |
 |---|---|---|
-| **P1.4**, X6 | The vocabulary wall, and HELP's position. Counted during the pass: `HELP_LOOP` is 4 items, `HELP_MORE` is 20, HELP is the 12th tab of what was then twelve. **It is now 13th of thirteen.** | Whether a first-run user finds HELP at all. Five people, one afternoon. |
+| **P1.4**, X6 | The vocabulary wall, and HELP's position. Counted during the pass: `HELP_LOOP` is 4 items, `HELP_MORE` is 20, HELP is the 12th tab of what was then twelve. **It is now 21 items and 13th of thirteen** — P3.2's fix added the INSTANT KIT line, so the wall this finding describes got one row wider while the finding waited. | Whether a first-run user finds HELP at all. Five people, one afternoon. |
 | **P2.2** | Their vocabulary does not navigate — a user's word for a thing is not the tab's word. Two of its example rows are already stale (`SEND TO GRID` is `SEND TO PADS`, `KITS` is `SHELF`). | Which words real users reach for. Same afternoon, same five people. |
 
 Both are cheap to test and expensive to guess at. Neither should be built
 from the review's own reasoning, which that document says of itself: its
 persona claims are *"argued, not measured"*.
 
-### Group C — settled, kept for the record (2)
+### Group C — settled, kept for the record (2) ▸ **accepted, 2026-09-21**
 
 - **P3.3** — the app never says "resample". Confirmed: the word appears
   only as `Resampler` in code and in one refusal string, never as a
@@ -236,8 +245,9 @@ persona claims are *"argued, not measured"*.
   that the app already follows, and independently settled by J39, whose
   `PERSONALITY.md` catalogs the reels as hidden eggs under its own law 4.
 
-**Neither needs work.** They are listed so a future reader does not
-mistake them for open.
+**Neither needs work**, and the review now says so in its own *Decided*
+bucket rather than leaving them in *Standing*. They are listed here so a
+future reader does not mistake them for open.
 
 ### Group D — P4.4's in-app half ▸ **decided and built, 2026-09-20**
 
@@ -294,14 +304,23 @@ could only ever be checked by re-reading it.
    the ruling was that the rate is fixed, so nothing below moves.
 2. ~~**N1** — the GROOVE on-device suite.~~ **Done 2026-09-21.** It was
    ranked here for compounding value, and it compounded immediately: the
-   two stale labels above were found by writing it, not by reading the
+   three stale labels above were found by writing it, not by reading the
    screen.
-3. **P1.1 + P2.4 + P3.2** — one small copy PR, three findings.
+3. ~~**P1.1 + P2.4 + P3.2** — one small copy PR, three findings.~~ **Done
+   2026-09-21.** Step four of the first-run note is `WRITE IT`, the word
+   on EXPORT's own button. P2.4 and P3.2 turned out to be aimed slightly
+   wrong — the second entry point is already that screen's primary action
+   and the shortcuts are buttons on TAPE, so nothing was hidden; what was
+   wrong was the note ending `FOUR TABS, IN ORDER`, which is stricter than
+   the app. One further real gap under P3.2: `CATCH A HIT` had a HELP line
+   and `INSTANT KIT` was in no list at all. Both are named now.
 4. ~~**P4.4's in-app half** — after a design call, if wanted.~~ **Done
    2026-09-20.** The call was made and the build was smaller than the
    defect it uncovered; see Group D.
-5. **Mark Group A's remaining three and all of Group C as accepted**, so
-   the review stops reading as ten open items when it is really four.
+5. ~~**Mark Group A's remaining three and all of Group C as accepted.**~~
+   **Done 2026-09-21.** P1.5, P3.1, P5.3, P3.3 and S1 moved to the
+   review's *Decided* bucket with the reason each was accepted. The review
+   now reads as two open findings, which is what it has.
 
 ## What is deliberately not here
 
