@@ -179,7 +179,15 @@ logcat tag to grab when something is wrong.
   bottom row its bottom), and leaving KIT and coming back must sound
   the same, since the pads regenerate from `kit.json` rather than a
   live capture. A second KIT ▸ on the same photo should
-  land a second kit ("PHOTO KIT 2"), not overwrite the first.
+  land a second kit ("PHOTO KIT 2"), not overwrite the first. Then
+  PRINT, from the GRAIN FIELD screen's header: tap PRINT, drag a
+  finger across the field for a few seconds, tap STOP PRINT — the LCD
+  should show ● PRINTING while it runs, and the toast should name the
+  seconds printed to TAPE; TAPE should hold a snip of what was heard.
+  STOP PRINT with no drag at all should toast NOTHING PRINTED rather
+  than land an empty snip. PRINT is on both GRAIN FIELD callers, not
+  only the photo's: the same check from PAD SHEET's own GRAIN FIELD
+  (reached off a pad, not a photo) should behave identically.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

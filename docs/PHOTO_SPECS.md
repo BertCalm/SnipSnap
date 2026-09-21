@@ -3,9 +3,10 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1 is now built (`synth/PhotoKit.kt`,
-`docs/SYNTH_ROADMAP.md` S7.3); §2–§8 are not. Each ends with the decision
-that is not mine to make.
+one list and priced as eight sections. §1 and §2 are now built
+(`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`; `docs/SYNTH_ROADMAP.md`
+S7.3–S7.4); §3–§8 are not. Each ends with the decision that is not mine to
+make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -170,6 +171,9 @@ snip that CHOP cuts at the grains' onsets.
 Whether the print is the mixed output (recommended: it is what was
 heard) or a re-render of the cursor's path at higher quality (a
 different feature — see §4).
+
+**Built as recommended:** the print is `GrainVoice`'s own mixed block,
+tapped after the clamp and before the write — what was heard, exactly.
 
 ---
 

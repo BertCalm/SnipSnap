@@ -462,3 +462,46 @@ and CLOUD ▸ on the SNAP screen; unlike them it leaves the screen, which is
 why it rides the app's own busy lock rather than a local one the way
 `buildingField`/`cloudBusy` do — the same shape `fresh`/`finishBreed`/
 `texture` already use for "render offline, land on the shelf, open it."
+
+### S7.4 — PRINT: capturing a drag across the field
+
+`docs/PHOTO_SPECS.md` §2, built as specced. `GrainFieldScreen`'s own KDoc
+called this out as "v1 is play-only… capturing the performance is the
+declared next phase, not built yet"; PRINT is that phase, for the pad
+sheet's own field as much as PHOTO FIELD's, since both share the one
+`GrainFieldScreen` composable and the one `GrainVoice`.
+
+`GrainVoice` gained `startPrint(): Boolean` / `stopPrint(): FloatArray?`
+and three `@Volatile` fields in the same one-writer/one-reader shape
+`targetX`/`targetY`/`gated` already use: `printing` (the UI writes it,
+the render loop reads it once per block), `printed` (the render loop
+writes it, `stopPrint` reads it back), and `printBuffer` — `PRINT_SECONDS`
+(60, `SurfaceEngine.MAX_PRINT_SECONDS`'s own ceiling) worth of frames,
+preallocated once in `start()` so the render loop itself never allocates,
+the same discipline the mix block follows. The tap sits in `runLoop`
+right after the block is clamped to `[-1, 1]` and before it is written to
+the `AudioTrack` — a print holds exactly what the track was about to
+play. The arithmetic (how much of one block still fits, stopping dead at
+the ceiling) is `PrintTap` (`:shell`, new) — a pure function with its own
+JVM test, since `GrainVoice` is Kotlin over `AudioTrack` and has none.
+`stopPrint` waits one block's worth of wall-clock time before reading the
+buffer back: the loop reads `printing` once per block, so the block
+already in flight when STOP lands still has to land in the buffer first;
+a print that reached the ceiling on its own has already stopped and needs
+no such wait.
+
+`GrainFieldScreen` gained a PRINT / STOP PRINT header chip beside DUET's,
+an `● PRINTING` line over the field while one runs, and the landing:
+`stopPrint()` off `Dispatchers.Default` (never the UI thread — the sleep
+above would jank it), then `SnipStore.import` on IO, the exact shape
+`SurfaceScreen`'s own PRINT already uses (`Copy.surfacePrinted`,
+`Copy.PRINT_LOST` reused verbatim; a new `Copy.GRAIN_FIELD_NOTHING_PRINTED`
+in place of `SURFACE_NOTHING_PRINTED`, whose wording says "hold the
+surface" — true on SURFACE, not on a screen with no surface on it). A new
+`onFieldPrinted: () -> Unit` callback threads through both call sites —
+`App.kt`'s own GRAIN FIELD and, one level down, `SnapScreen`'s PHOTO
+FIELD overlay — to the same `{ importCount++ }` shelf-reload `SURFACE`'s
+own `onPrinted` already triggers. No PAD landing here: PRINT only ever
+lands on TAPE, the spec's own recommended reading ("it is what was
+heard"); a captured drag reaches pads afterward through the ordinary
+TAPE → CHOP door, same as any other capture.

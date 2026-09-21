@@ -2754,6 +2754,9 @@ fun App(shelf: KitShelf) {
                                     onBack = { grainFieldSlot = null },
                                     onToast = { toast = it },
                                     onRequestArm = ::requestArm,
+                                    // A print is a snip on the shelf: the same
+                                    // reload request a share-sheet import raises.
+                                    onFieldPrinted = { importCount++ },
                                 )
                                 // Checked before PAD SHEET below, same
                                 // reasoning as GRAIN FIELD above: opening
@@ -3200,6 +3203,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onBuildKit = ::buildPhotoKit,
+                                onFieldPrinted = { importCount++ },
                                 appScope = scope,
                             )
                         }

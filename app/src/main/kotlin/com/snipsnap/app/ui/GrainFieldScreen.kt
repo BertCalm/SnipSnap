@@ -27,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.GrainVoice
@@ -56,10 +58,12 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
@@ -124,9 +128,11 @@ class PrebuiltField(
  * wins — see [GrainFieldCanvas]'s `touching` flag — and DUET resumes the
  * instant it lifts.
  *
- * **v1 is play-only.** Nothing dragged here is ever written back to a pad or
- * into TAPE — capturing the performance (recording what a drag actually
- * played) is the declared next phase, not built yet.
+ * **PRINT** captures the performance: from the tap to STOP PRINT,
+ * everything [GrainVoice] mixed lands on TAPE as a snip ([GrainVoice.startPrint]/
+ * [GrainVoice.stopPrint]) — the app's own capture door, so a drag across a
+ * pad, or a photo, ends up on pads the same way a capture does (trim, chop,
+ * classify, kit).
  *
  * On open: the pad's WAV is read and analyzed off the main thread (a
  * "LISTENING TO THE GRAIN…" LCD covers the wait); a `null` analysis — too
@@ -144,10 +150,14 @@ fun GrainFieldScreen(
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRequestArm: () -> Unit,
+    /** PRINT landed on TAPE: the same reload request a share-sheet import raises. */
+    onFieldPrinted: () -> Unit,
     /** A field built elsewhere (SNAP's photo), in place of loading and analyzing a pad. */
     prebuilt: PrebuiltField? = null,
 ) {
     val scheme = LocalScheme.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var loaded by remember(entry?.dir, slot, prebuilt) { mutableStateOf<Pair<Snip, GrainField.GrainMap>?>(null) }
     var failed by remember(entry?.dir, slot, prebuilt) { mutableStateOf(false) }
@@ -233,6 +243,49 @@ fun GrainFieldScreen(
             Log.e("GrainFieldScreen", "voice failed to start", it)
             onToast(Copy.GRAIN_FIELD_START_FAILED)
             onBack()
+        }
+    }
+
+    // PRINT: everything the voice mixes from a tap to STOP PRINT lands on
+    // TAPE as a snip — the field's own declared next phase (its class KDoc,
+    // above), for the pad sheet's field as much as the photo's.
+    var printing by remember { mutableStateOf(false) }
+    // Guards the frame loop from calling finishPrint() again while the stop
+    // is already in flight — SurfaceScreen's own `finishing` shape.
+    var finishingPrint by remember { mutableStateOf(false) }
+
+    fun printToTape(snip: Snip) {
+        scope.launch {
+            val landed = withContext(Dispatchers.IO) {
+                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+            }
+            landed.onSuccess {
+                onToast(Copy.surfacePrinted(it.seconds))
+                onFieldPrinted()
+            }.onFailure {
+                Log.e("GrainFieldScreen", "printToTape: print lost", it)
+                onToast(Copy.PRINT_LOST)
+            }
+        }
+    }
+
+    fun finishPrint() {
+        if (finishingPrint) return
+        val v = voice ?: return
+        val rate = current?.first?.sampleRate ?: return
+        finishingPrint = true
+        printing = false
+        scope.launch {
+            try {
+                val samples = withContext(Dispatchers.Default) { v.stopPrint() }
+                if (samples == null || samples.size < rate / 10) {
+                    onToast(Copy.GRAIN_FIELD_NOTHING_PRINTED)
+                    return@launch
+                }
+                printToTape(Snip(samples, channels = 1, sampleRate = rate))
+            } finally {
+                finishingPrint = false
+            }
         }
     }
 
@@ -357,6 +410,20 @@ fun GrainFieldScreen(
             Spacer(Modifier.weight(1f))
             TapeText(prebuilt?.title ?: "PAD ${padTag(slot ?: 0)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
+            if (voice != null) {
+                HeaderChip(
+                    if (printing) "STOP PRINT" else "PRINT",
+                    scheme,
+                    Modifier.width(84.dp),
+                    engaged = printing,
+                    accessibilityLabel = if (printing) "STOP PRINT" else "PRINT TO TAPE",
+                ) {
+                    if (printing) finishPrint() else if (voice.startPrint()) printing = true
+                }
+            } else {
+                Spacer(Modifier.width(84.dp))
+            }
+            Spacer(Modifier.width(4.dp))
             if (projector != null) {
                 HeaderChip(
                     "DUET",
@@ -379,7 +446,17 @@ fun GrainFieldScreen(
             }
         } else {
             val (_, map) = current
-            GrainFieldCanvas(map, voice!!, scheme, touching, autoPos, backdrop, Modifier.fillMaxWidth().weight(1f))
+            Box(Modifier.fillMaxWidth().weight(1f)) {
+                GrainFieldCanvas(map, voice!!, scheme, touching, autoPos, backdrop, Modifier.fillMaxSize())
+                if (printing) {
+                    TapeText(
+                        "● PRINTING",
+                        TapeType.lcdSmall,
+                        scheme.amber.tape,
+                        Modifier.align(Alignment.TopCenter).padding(8.dp),
+                    )
+                }
+            }
             if (duetOn && !armed) {
                 PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
             }

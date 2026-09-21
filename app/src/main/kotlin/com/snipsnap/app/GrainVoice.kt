@@ -4,10 +4,12 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import com.snipsnap.audio.GrainField
+import com.snipsnap.shell.PrintTap
 import java.util.Random
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import kotlin.math.roundToInt
 
 /**
  * GRAIN FIELD's live voice: a finger-driven granular texture over [source],
@@ -41,6 +43,20 @@ import kotlin.concurrent.thread
  * (grain slots, the mix block, the RNG) directly — exactly the guard
  * `TapeVoice` uses to protect its own per-thread state from a racing
  * caller.
+ *
+ * **PRINT.** [startPrint] arms a capture into a buffer preallocated once
+ * in [start] — no allocation in the render loop, the same discipline the
+ * mix block itself follows — and [stopPrint] hands the filled part back,
+ * trimmed. [PrintTap] is the pure arithmetic (how much of one block
+ * still fits, and stopping dead at the ceiling); the render loop calls
+ * it once per iteration, right after the clamp and before the write, so
+ * a print holds exactly what the track was about to play. [printing] is
+ * a fourth `@Volatile` flag in the same one-writer (the UI, through
+ * [startPrint]/[stopPrint]), one-reader (the render loop) shape as
+ * [targetX]/[targetY]/[gated] above; [stopPrint] additionally waits one
+ * block's worth of time before it reads the buffer back, since the loop
+ * only reads the flag once per block and the block already in flight
+ * when STOP lands still has to land in the buffer first.
  *
  * **Render loop.** Every [TRIGGER_HOP] frames, while gated, one grain is
  * triggered: read the volatile target once, weighted-randomly choose among
@@ -76,6 +92,15 @@ class GrainVoice(
     @Volatile private var targetX: Float = 0.5f
     @Volatile private var targetY: Float = 0.5f
     @Volatile private var gated: Boolean = false
+
+    /** True while a PRINT is capturing; the render loop's own tap into [printBuffer]. See [startPrint]/[stopPrint]. */
+    @Volatile private var printing: Boolean = false
+
+    /** Frames captured into [printBuffer] so far — written only by the render loop, read back by [stopPrint]. */
+    @Volatile private var printed: Int = 0
+
+    /** Made once in [start], never in the render loop: [PRINT_SECONDS] worth of frames at [sampleRate]. */
+    @Volatile private var printBuffer: FloatArray? = null
 
     private val running = AtomicBoolean(false)
     private val released = AtomicBoolean(false)
@@ -121,6 +146,9 @@ class GrainVoice(
             throw e
         }
         track = t
+        // Made once, here, never inside runLoop: PRINT must not allocate on
+        // the render thread any more than the mix block does.
+        printBuffer = FloatArray((PRINT_SECONDS * sampleRate).roundToInt())
         renderThread = thread(name = "GrainVoice", isDaemon = true) { runLoop(t, myGeneration) }
     }
 
@@ -138,6 +166,41 @@ class GrainVoice(
     /** Finger down/up: sound only triggers new grains while [on] is true. */
     fun gate(on: Boolean) {
         gated = on
+    }
+
+    /**
+     * PRINT: arm a capture of everything the render loop mixes from now
+     * on. False, a no-op, when there's nothing to capture into ([start]
+     * never ran, or this voice died or was released) or a print is
+     * already running.
+     */
+    fun startPrint(): Boolean {
+        if (!running.get() || printBuffer == null || printing) return false
+        printed = 0
+        printing = true
+        return true
+    }
+
+    /**
+     * STOP PRINT: everything captured since [startPrint], trimmed to
+     * what was actually written — or null when nothing was (never
+     * started, or [PrintTap.take] found the buffer still empty). Blocks
+     * the calling thread briefly (one [BLOCK_FRAMES] block's worth of
+     * time): the render loop only reads [printing] once per block, so
+     * the block already in flight when this is called still has to land
+     * in [printBuffer] before it is safe to read [printed] back — call
+     * this off the UI thread. A print that reached its own ceiling (see
+     * [runLoop]) has already stopped itself and needs no such wait.
+     */
+    fun stopPrint(): FloatArray? {
+        if (printing) {
+            printing = false
+            Thread.sleep(BLOCK_FRAMES * 1000L / sampleRate + PRINT_STOP_SLACK_MILLIS)
+        }
+        val buffer = printBuffer ?: return null
+        val taken = PrintTap.take(buffer, printed)
+        printed = 0
+        return taken
     }
 
     /**
@@ -252,6 +315,18 @@ class GrainVoice(
             }
 
             for (i in block.indices) block[i] = block[i].coerceIn(-1f, 1f)
+
+            // PRINT taps the block right here: after the clamp, so a print
+            // holds exactly what the track is about to play, and before the
+            // write, so a stalled/slow track never holds a print back.
+            if (printing) {
+                val buffer = printBuffer
+                if (buffer != null) {
+                    val filled = PrintTap.append(buffer, printed, block)
+                    printed = filled
+                    if (filled >= buffer.size) printing = false
+                }
+            }
 
             var written = 0
             while (written < block.size) {
@@ -423,6 +498,12 @@ class GrainVoice(
 
         /** Bounded wait in [GrainVoice.release] — see its KDoc for why this can't be a guarantee. */
         const val RELEASE_JOIN_MILLIS = 200L
+
+        /** The longest a PRINT can run — `SurfaceEngine.MAX_PRINT_SECONDS`'s own ceiling, so PRINT means the same thing everywhere in the app. */
+        const val PRINT_SECONDS = 60f
+
+        /** [stopPrint]'s one-block wait, plus a little slack for the loop to actually land the in-flight block. */
+        const val PRINT_STOP_SLACK_MILLIS = 10L
 
         fun buildTrack(sampleRate: Int): AudioTrack = AudioTrack.Builder()
             .setAudioAttributes(
