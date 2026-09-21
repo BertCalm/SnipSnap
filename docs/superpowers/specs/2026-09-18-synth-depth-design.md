@@ -575,7 +575,16 @@ content lands entirely in mid. A prediction made mid-phase that MEMBRANE would a
 wider than METAL_BAR was therefore wrong in its practical conclusion: the two land in the same
 place once the wires are mixed in.
 
-**The open question is whether 0.083 is enough.** The mechanism is correct and swept-tested; the
+**AUDITIONED 2026-09-21 — the answer is yes.** The renders were played and passed. 0.083 side/mid
+at full width reads as space, and the width ships as built with no retuning. Do not chase the
+number: this is the second time on this project that a metric suggested a problem the ears did
+not hear, and the ears are the gate. `Modes.spread`'s reach/jitter product and mode 0's centre
+pin both stand as they are.
+
+The paragraph below is kept as the record of what was expected before the listening, and of the
+ceiling that still bounds any future change to the spread.
+
+**The question, before it was answered, was whether 0.083 is enough.** The mechanism is correct and swept-tested; the
 travel may be too narrow, which is the same "limited" complaint that opened this initiative. The
 ceiling is structural: mode 0 sits at `reach = 0`, always centred, and carries ~95% of a bar's
 energy (~81% of a membrane's), so `sqrt(1 - mode0_share)` caps what any spread can reach. If the
