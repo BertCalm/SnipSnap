@@ -336,4 +336,99 @@ class DspTest {
         assertEquals(1000f, Dsp.keyTrack(1000f, 220f, 0f, 1f))
         assertEquals(1000f, Dsp.keyTrack(1000f, -10f, 110f, 1f))
     }
+
+    // ---------- channel-aware buffer helpers (Task 3a) ----------
+
+    @Test
+    fun `fadeTail fades the same duration whether the buffer is mono or stereo`() {
+        val rate = Dsp.RATE
+        val frames = rate / 10
+        val mono = FloatArray(frames) { 1f }
+        val stereo = FloatArray(frames * 2) { 1f }
+        Dsp.fadeTail(mono, ms = 4f, rate = rate, channels = 1)
+        Dsp.fadeTail(stereo, ms = 4f, rate = rate, channels = 2)
+        // Count frames touched, not samples. A stereo buffer is twice as long
+        // in samples and must NOT therefore get half the fade.
+        val monoFaded = mono.count { it < 1f }
+        val stereoFaded = (0 until frames).count { stereo[it * 2] < 1f }
+        assertEquals(monoFaded, stereoFaded, "stereo fade covered a different number of frames")
+        assertTrue(monoFaded > 0, "nothing faded at all")
+    }
+
+    @Test
+    fun `fadeTail honours a rate it is given instead of assuming 44100`() {
+        // Pre-existing bug: fadeTail hardcoded RATE, so at 96 kHz it faded
+        // less than half the asked duration. Users have 48 and 96 kHz interfaces.
+        val hi = 96000
+        val buf = FloatArray(hi / 10) { 1f }
+        Dsp.fadeTail(buf, ms = 4f, rate = hi, channels = 1)
+        val faded = buf.count { it < 1f }
+        val expected = (4f / 1000f * hi).toInt()
+        assertTrue(
+            kotlin.math.abs(faded - expected) <= 1,
+            "at ${hi}Hz a 4ms fade should cover ~$expected frames, covered $faded",
+        )
+    }
+
+    @Test
+    fun `fadeTail applies the same gain to both channels of a frame`() {
+        val rate = Dsp.RATE
+        val frames = rate / 10
+        val stereo = FloatArray(frames * 2) { 1f }
+        Dsp.fadeTail(stereo, ms = 4f, rate = rate, channels = 2)
+        for (f in 0 until frames) {
+            assertEquals(
+                stereo[f * 2], stereo[f * 2 + 1], 1e-7f,
+                "frame $f faded unevenly across channels - that is a moving pan, not a fade",
+            )
+        }
+    }
+
+    @Test
+    fun `decimate keeps the channels separate instead of resampling across them`() {
+        // Interleaved stereo resampled as if mono interpolates across the L/R
+        // boundary and destroys both channels. Feed a buffer where L and R are
+        // plainly different and check they survive as different.
+        val rate = Dsp.RATE
+        val over = rate * Dsp.OVERSAMPLE
+        val frames = over / 20
+        val stereo = FloatArray(frames * 2)
+        for (f in 0 until frames) {
+            stereo[f * 2] = kotlin.math.sin(2.0 * Math.PI * 440.0 * f / over).toFloat()
+            stereo[f * 2 + 1] = 0f                      // right channel silent
+        }
+        val out = Dsp.decimate(stereo, rate, channels = 2)
+        assertEquals(0, out.size % 2, "a stereo decimation must return whole frames")
+        var lEnergy = 0.0
+        var rEnergy = 0.0
+        var f = 0
+        while (f < out.size) { lEnergy += out[f] * out[f]; rEnergy += out[f + 1] * out[f + 1]; f += 2 }
+        assertTrue(lEnergy > 1e-3, "left channel did not survive decimation: $lEnergy")
+        assertTrue(
+            rEnergy < lEnergy * 1e-3,
+            "a silent right channel picked up $rEnergy against left's $lEnergy - " +
+                "that is energy bleeding across the interleave",
+        )
+    }
+
+    @Test
+    fun `levelTo measures a stereo buffer as stereo`() {
+        // levelTo hardcoded channels = 1 into Loudness.of. On interleaved
+        // stereo that misreads the signal and therefore picks the wrong gain.
+        // A mono buffer and the same content duplicated to both channels are
+        // the same sound and must land on the same level.
+        val rate = Dsp.RATE
+        val frames = rate / 4
+        val mono = FloatArray(frames) { kotlin.math.sin(2.0 * Math.PI * 220.0 * it / rate).toFloat() * 0.3f }
+        val stereo = FloatArray(frames * 2)
+        for (i in 0 until frames) { stereo[i * 2] = mono[i]; stereo[i * 2 + 1] = mono[i] }
+        Dsp.levelTo(mono, rate, target = 0.1f, channels = 1)
+        Dsp.levelTo(stereo, rate, target = 0.1f, channels = 2)
+        for (i in 0 until frames) {
+            assertEquals(
+                mono[i], stereo[i * 2], 1e-4f,
+                "the same sound levelled differently as stereo at frame $i",
+            )
+        }
+    }
 }

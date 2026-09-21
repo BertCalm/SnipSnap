@@ -282,16 +282,33 @@ object Thump {
      * under). Trimming the true tail restores that duration-tracks-decay
      * property without touching [Modes.ring]'s own fixed-size math.
      */
-    private fun trimSnareTail(out: FloatArray, rate: Int, marginSeconds: Float = 0.03f): FloatArray {
+    private fun trimSnareTail(
+        out: FloatArray,
+        rate: Int,
+        channels: Int = 1,
+        marginSeconds: Float = 0.03f,
+    ): FloatArray {
+        if (out.isEmpty() || channels < 1) return out
         var peak = 0f
         for (v in out) { val a = kotlin.math.abs(v); if (a > peak) peak = a }
         if (peak <= 1e-9f) return out
         val threshold = peak * 0.001f // -60 dB
-        var last = 0
-        for (i in out.indices) if (kotlin.math.abs(out[i]) > threshold) last = i
-        val end = (last + (marginSeconds * rate).toInt() + 1).coerceAtMost(out.size)
+        val frames = out.size / channels
+        var lastFrame = 0
+        for (f in 0 until frames) {
+            for (c in 0 until channels) {
+                if (kotlin.math.abs(out[f * channels + c]) > threshold) { lastFrame = f; break }
+            }
+        }
+        // Frames throughout: mixing a sample index with a frame count gave a
+        // stereo buffer half its margin, and an odd cut transposed L and R.
+        val endFrame = (lastFrame + (marginSeconds * rate).toInt() + 1).coerceAtMost(frames)
+        val end = endFrame * channels
         return if (end >= out.size) out else out.copyOf(end)
     }
+
+    internal fun trimSnareTailForTest(out: FloatArray, rate: Int, channels: Int = 1): FloatArray =
+        trimSnareTail(out, rate, channels)
 
     /** The head's fundamental: drum size, from piccolo to a deep 14-inch. */
     internal fun snareFundamental(tune: Float): Float = Dsp.expMap(tune, 120f, 330f)

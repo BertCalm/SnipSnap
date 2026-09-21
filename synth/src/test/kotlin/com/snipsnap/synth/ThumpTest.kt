@@ -311,4 +311,40 @@ class ThumpTest {
             )
         }
     }
+
+    // ---------- trimSnareTail is channel-aware (Task 3a) ----------
+
+    @Test
+    fun `trimSnareTail never cuts mid-frame`() {
+        // An odd-length truncation transposes L and R for the whole buffer -
+        // a silent channel swap that nothing downstream would flag.
+        val rate = Dsp.RATE
+        val frames = rate / 4
+        val stereo = FloatArray(frames * 2)
+        // Loud for the first tenth, silent after, so there is a real cut to make.
+        for (f in 0 until frames / 10) { stereo[f * 2] = 0.8f; stereo[f * 2 + 1] = 0.2f }
+        val out = Thump.trimSnareTailForTest(stereo, rate, channels = 2)
+        assertEquals(0, out.size % 2, "cut at an odd sample index - L and R are now swapped")
+        assertTrue(out.size < stereo.size, "nothing was trimmed, so the test proves nothing")
+        // Orientation must survive the trim: left was the loud channel.
+        var l = 0.0; var r = 0.0
+        var f = 0
+        while (f < out.size) { l += out[f] * out[f]; r += out[f + 1] * out[f + 1]; f += 2 }
+        assertTrue(l > r * 2, "channels came back transposed: L=$l R=$r")
+    }
+
+    @Test
+    fun `trimSnareTail gives a stereo buffer the same margin as a mono one`() {
+        val rate = Dsp.RATE
+        val frames = rate / 4
+        val mono = FloatArray(frames)
+        val stereo = FloatArray(frames * 2)
+        for (f in 0 until frames / 10) { mono[f] = 0.8f; stereo[f * 2] = 0.8f; stereo[f * 2 + 1] = 0.8f }
+        val mOut = Thump.trimSnareTailForTest(mono, rate, channels = 1)
+        val sOut = Thump.trimSnareTailForTest(stereo, rate, channels = 2)
+        assertEquals(
+            mOut.size, sOut.size / 2,
+            "stereo kept a different number of frames than mono - the margin is in frames",
+        )
+    }
 }

@@ -462,9 +462,9 @@ internal object Dsp {
      * [limitPeak] afterward only steps in for the voices that actually reach
      * it, exactly like it does downstream of [Punch].
      */
-    fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f) {
+    fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f, channels: Int = 1) {
         if (buf.isEmpty()) return
-        val measured = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
+        val measured = Loudness.of(Snip(buf.copyOf(), channels = channels, sampleRate = rate))
         if (measured <= 1e-6f) return
         val gain = target / measured
         for (i in buf.indices) buf[i] *= gain
@@ -497,23 +497,53 @@ internal object Dsp {
      * -10.9 dB rejection just above the new Nyquist versus -17.9 dB
      * cascaded (25 kHz probe, 176.4 kHz source) - each stage this way stays
      * inside the kernel's own documented comfort zone.
+     *
+     * Each channel is resampled on its own. Running the kernel straight down
+     * an interleaved buffer would interpolate across the L/R boundary -
+     * neighbouring samples there belong to different channels, so the filter
+     * would average left into right and destroy both.
      */
-    fun decimate(buf: FloatArray, rate: Int): FloatArray {
-        val oversampled = Snip(buf, channels = 1, sampleRate = rate * OVERSAMPLE)
-        val half = Resampler.resample(oversampled, rate * OVERSAMPLE / 2)
-        return Resampler.resample(half, rate).samples
+    fun decimate(buf: FloatArray, rate: Int, channels: Int = 1): FloatArray {
+        if (channels <= 1) {
+            val oversampled = Snip(buf, channels = 1, sampleRate = rate * OVERSAMPLE)
+            val half = Resampler.resample(oversampled, rate * OVERSAMPLE / 2)
+            return Resampler.resample(half, rate).samples
+        }
+        val frames = buf.size / channels
+        val out = ArrayList<FloatArray>(channels)
+        for (c in 0 until channels) {
+            val one = FloatArray(frames)
+            for (f in 0 until frames) one[f] = buf[f * channels + c]
+            out.add(decimate(one, rate, channels = 1))
+        }
+        val outFrames = out.minOf { it.size }
+        val merged = FloatArray(outFrames * channels)
+        for (f in 0 until outFrames) {
+            for (c in 0 until channels) merged[f * channels + c] = out[c][f]
+        }
+        return merged
     }
 
     /**
      * Short linear fade-out so a truncated tail never clicks.
      *
-     * [rate] is a parameter because this used to hardcode [RATE] and
-     * therefore faded well under the asked duration on a 48/96 kHz project.
+     * The ramp is computed in FRAMES and applied to every channel of a frame
+     * identically: a fade that walked sample by sample across an interleaved
+     * buffer would cover half the asked duration and would also tilt the pan
+     * as it went, which is a pan automation, not a fade.
+     *
+     * [rate] is a parameter because this used to hardcode [RATE] and therefore
+     * faded well under half the asked duration on a 96 kHz project.
      */
-    fun fadeTail(buf: FloatArray, ms: Float = 4f, rate: Int = RATE) {
-        val n = min(buf.size, (ms / 1000f * rate).toInt())
+    fun fadeTail(buf: FloatArray, ms: Float = 4f, rate: Int = RATE, channels: Int = 1) {
+        if (buf.isEmpty() || channels < 1) return
+        val frames = buf.size / channels
+        val n = min(frames, (ms / 1000f * rate).toInt())
+        if (n <= 0) return
         for (i in 0 until n) {
-            buf[buf.size - 1 - i] *= i.toFloat() / n
+            val g = i.toFloat() / n
+            val frame = frames - 1 - i
+            for (c in 0 until channels) buf[frame * channels + c] *= g
         }
     }
 
