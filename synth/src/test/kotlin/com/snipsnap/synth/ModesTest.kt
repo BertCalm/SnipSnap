@@ -396,4 +396,33 @@ class ModesTest {
             "same inputs must give byte-identical stereo output",
         )
     }
+
+    @Test
+    fun `a hard-panned mode lands on the side it was panned to`() {
+        val rate = Dsp.RATE
+        val exc = FloatArray(rate / 8).also { it[0] = 1f }
+        // Every other stereo test here is symmetric — it sums L+R or squares
+        // L-R — so all of them pass with the channels swapped. This is the
+        // one that pins orientation, and it asserts BOTH directions so a
+        // swap cannot satisfy it either way.
+        fun energies(pan: Float): Pair<Double, Double> {
+            val s = Modes.ringStereo(
+                exc, 220f, listOf(Modes.Mode(ratio = 1f, gain = 1f, t60 = 0.3f, pan = pan)), rate,
+            )
+            var l = 0.0
+            var r = 0.0
+            var f = 0
+            while (f < s.size) { l += s[f] * s[f]; r += s[f + 1] * s[f + 1]; f += 2 }
+            return l to r
+        }
+
+        val (lRight, rRight) = energies(1f)
+        assertTrue(rRight > 1e-6, "pan 1 put nothing in the right channel at all")
+        assertTrue(lRight < rRight * 1e-9, "pan 1 leaked into the left channel: L=$lRight R=$rRight")
+
+        val (lLeft, rLeft) = energies(0f)
+        assertTrue(lLeft > 1e-6, "pan 0 put nothing in the left channel at all")
+        assertTrue(rLeft < lLeft * 1e-9, "pan 0 leaked into the right channel: L=$lLeft R=$rLeft")
+    }
 }
+
