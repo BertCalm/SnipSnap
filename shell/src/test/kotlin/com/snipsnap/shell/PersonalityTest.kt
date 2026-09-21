@@ -388,6 +388,54 @@ class PersonalityTest {
      * It has to name the gesture, because it is the only thing on screen
      * that does — the toast it backstops can be dismissed forever.
      */
+    /**
+     * The three labels J18's rename missed, found by extending
+     * `ConventionTest`'s own GROOVE law from `PROG_NAMES` to the whole
+     * file while writing `GrooveScreenTest`.
+     *
+     * J18 took A–E off the program row because the letter is an argument
+     * to `GrooveProgram.compute` and nothing a player can find on the
+     * hardware. Three strings kept it: the step editor's header (`STEP
+     * EDIT — PROG E`), RECORD's status line (`OVERDUBBING ONTO PROG A`)
+     * and the editor's footer (`B–D STAY DERIVED FROM A`, on a screen
+     * where nothing is called A, B, C or D). The law stops a fourth; this
+     * holds down what the three say now.
+     */
+    @Test
+    fun `GROOVE names its programs the same way wherever it says them`() {
+        // The row's own words, which these three now use.
+        assertTrue(Copy.STEP_EDIT_TITLE.contains("YOURS"), Copy.STEP_EDIT_TITLE)
+        assertTrue(Copy.GROOVE_OVERDUBBING.contains("CAPTURED"), Copy.GROOVE_OVERDUBBING)
+
+        // Shorter than the string it replaces: the header shares its row
+        // with DONE and has about 260dp of a 360dp phone to live in.
+        assertTrue(
+            Copy.STEP_EDIT_TITLE.length <= "STEP EDIT — PROG E".length,
+            "the header got longer, and it did not have the room: ${Copy.STEP_EDIT_TITLE}",
+        )
+
+        // The count is its own line under the header, so it says the
+        // number and nothing else.
+        assertEquals("2 OF 3", Copy.stepEditOf(2, 3))
+
+        // The footer says what editing yours does NOT do, in the words
+        // FORKED_TO_E already uses for the same fact.
+        val footer = Copy.stepEditFooter(16, "CAPTURED")
+        assertTrue(footer.contains("16 STEPS"), footer)
+        assertTrue(footer.contains("FORKED FROM CAPTURED"), footer)
+        assertTrue(footer.contains("THE OTHER FOUR"), "the house phrase, as FORKED_TO_E says it: $footer")
+        assertTrue(Copy.FORKED_TO_E.contains("THE OTHER FOUR"), Copy.FORKED_TO_E)
+        assertEquals("1 STEP", Copy.stepEditFooter(1, "X").substringBefore(" ·"))
+
+        // And none of the three says a letter again.
+        for (line in listOf(Copy.STEP_EDIT_TITLE, Copy.GROOVE_OVERDUBBING, footer)) {
+            assertFalse(
+                Regex("""PROG [A-E]\b|\b[A-E][-–—][A-E]\b""").containsMatchIn(line),
+                "a PROG letter is back on GROOVE: $line",
+            )
+        }
+    }
+
     @Test
     fun `the pad sheet legend names the gesture`() {
         assertTrue(Copy.PAD_SHEET_LEGEND.contains("HOLD"), Copy.PAD_SHEET_LEGEND)
@@ -494,6 +542,11 @@ class PersonalityTest {
         // readout above it is. SETUP_RATE_NOTE is NOT here: it is a
         // sentence the screen says, and it keeps its full stop.
         "SETUP_RATE_HEADING", "SETUP_RATE",
+        // The step editor's header and RECORD's own status line - a title
+        // over a grid and a label saying what is happening right now,
+        // neither of them a toast said once. Both arrived with the sweep
+        // that found the two PROG letters J18's rename had missed.
+        "STEP_EDIT_TITLE", "GROOVE_OVERDUBBING",
         // GRAIN FIELD's own busy line while the tape is read into its grid -
         // furniture, like every other `…`-suffixed busy line above.
         "GRAIN_FIELD_LISTENING",

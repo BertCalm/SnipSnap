@@ -48,8 +48,9 @@ true**: that nothing runs a composable in CI.
 boots an emulator and runs `app/src/androidTest` on it when anything under
 `app/` changes. It exists, it is wired to this branch, and it is green.
 
-**It covers exactly one file:** `SurfaceScreenTest.kt`. That is the whole
-suite.
+It covered exactly one file, `SurfaceScreenTest.kt`, until N1 below
+added `GrooveScreenTest.kt`. Two screens of eleven — still the thinnest
+of the three kinds of coverage, and the one worth growing.
 
 So for the first time there are three kinds of coverage, not two:
 
@@ -67,14 +68,16 @@ listing them.
 
 ## Found by the pass, and not in any finding
 
-These are ranked first because they are the only two items here that are
-defects or near-defects rather than judgements, and because one of them
-compounds. **N2 is done** — it is kept here rather than deleted because
-its ruling is the reason the rest of this plan is unchanged.
+These were ranked first because they were the only two items here that
+were defects or near-defects rather than judgements, and because one of
+them compounds. **Both are now done**, and both are kept rather than
+deleted: N2's ruling is the reason the rest of this plan is unchanged,
+and N1's account of what writing a test found is the argument for
+writing the next one.
 
-### N1 — point the on-device suite at GROOVE ▸ **recommended first**
+### N1 — the on-device suite reaches GROOVE ▸ **built, 2026-09-21**
 
-**Why this one first.** Four times this session a bug lived in `:app`
+**Why it was first.** Four times in one session a bug lived in `:app`
 where no local check could reach it, and each was caught by re-reading
 rather than by a tool:
 
@@ -88,33 +91,61 @@ rather than by a tool:
   (caught pre-push).
 
 All four are the species `SurfaceScreenTest` was written to catch, on a
-screen it does not cover. The GROOVE cycler shipped in #289 with **no
-behavioural test of any kind**, and its whole interaction — tap `YOURS`
-when `YOURS` is already live and it steps to your next program — is
-invisible to a compiler and to `ConventionTest` alike.
+screen it did not cover. The GROOVE cycler shipped in #289 with **no
+behavioural test of any kind**.
 
-**Scope.** A `GrooveScreenTest` in `app/src/androidTest`, in
-`SurfaceScreenTest`'s own shape: laid out at 360dp so a wide emulator
-cannot hide what a narrow phone shows; the clock driven by hand, per that
-file's own hard-won note about `waitForIdle` and a screen with a frame
-loop.
+**What landed.** `app/src/androidTest/.../GrooveScreenTest.kt`, in
+`SurfaceScreenTest`'s shape — laid out at 360dp, clock driven by hand
+(GROOVE runs a `withFrameNanos` loop for its whole life, so auto-advance
+makes every test time out in `waitForIdle`), six tests:
 
-What to assert, in rough order of value:
+| | what it holds down |
+|---|---|
+| the program row reads in full at 360dp | #289's measurement, which lived in a comment |
+| the line under it reads in full for every program | including the cycler's own `1 OF 8`, which nobody had measured |
+| each program selects, and the line says which | the row works at all |
+| YOURS is absent until a kit holds one | the fifth segment is conditional and the other four are not |
+| tapping YOURS while live steps on, and wraps | **the cycler**, untested until now |
+| one program of your own gets no count and nowhere to step | the `> 1` gate |
 
-1. The program row's five labels draw whole at 360dp. This is the
-   measurement from #289 turned into a check — `CAPTURED` needs 48dp and
-   gets 67.6, and if a sixth segment is ever added the row breaks.
-2. Tapping `YOURS` while it is live advances to the next program, and
-   wraps.
-3. The PROGRAM sub-line shows `n OF N` only when N > 1.
-4. `EDIT STEPS` opens the program the cycler is on, not the first.
+**A seventh was written, ran once, and was taken out — and what it cost
+is the thing worth recording here.** It checked the #289 bug itself
+(FORK TO YOURS opens the program the cycler is on) and had to reach a
+button inside GROOVE's scrolling control region. `performScrollTo` drives
+`Modifier.verticalScroll`'s `ScrollBy` semantics action, which *animates*:
+it launches a coroutine on the frame clock and returns, and the
+`waitForIdle` inside `performScrollTo` then waits for work only the clock
+can finish. With the clock driven by hand it never arrives. The first CI
+run said so exactly — **four tests passed, the fifth hung, and the job
+was cancelled at its 45-minute cap with nothing failed.**
 
-**Verified by:** `emulator-tests` in CI. Not runnable in a cloud session —
-no SDK, no emulator — so the same read-it-adversarially discipline applies
-to writing it, and #288's own history (three runs to get one suite green)
-is the realistic expectation for iteration cost.
+So: a hand-driven clock and an animated scroll do not mix, and every
+assertion in that file now lives above the scroll region — which is where
+the cycler is anyway. The header the dropped test would have read exists
+and is JVM-tested; what is missing is a way to reach that button, and a
+slow drag on the container (no fling) is the untried candidate.
 
-**Size:** one PR, but budget for two or three CI cycles.
+**Writing it found two labels J18's rename had missed.** The step editor's
+header read `STEP EDIT — PROG E` and RECORD's status line read
+`OVERDUBBING ONTO PROG A` — a letter the row above them stopped using in
+J18, and one that since #289 could not have said *which* of eight
+programs you were in even had it been right. `ConventionTest`'s own law
+says *"the letters are gone from the screen's own labels"*; it was reading
+`PROG_NAMES` and stopping there, so the two labels not in that list were
+exactly the two it could not see. The law now sweeps every string literal
+in the file, and it found the second one itself.
+
+The header names which of yours is open — **read from the clip the editor
+was handed, not from the index it was forked at.** That is what makes the
+last test a check rather than an echo: `GrooveEdit.fork` takes an index
+and returns a clip, and the bug it guards was the index being right and
+ignored, so an index-derived header would have said "2 OF 3" while
+program one was on screen.
+
+**Verified by:** `emulator-tests` in CI, which is the only place it can
+run — no SDK and no emulator in a cloud session, so the same
+read-it-adversarially discipline applied to writing it as to any other
+`:app` change. The copy and the law are JVM-tested.
 
 ### N2 — sample-rate control ▸ **ruled on and built, 2026-09-20**
 
@@ -261,8 +292,10 @@ could only ever be checked by re-reading it.
 1. ~~**N2** — answer the sample-rate question.~~ **Done 2026-09-20.** It
    was the only item that could have reordered the rest, and it did not:
    the ruling was that the rate is fixed, so nothing below moves.
-2. **N1** — the GROOVE on-device suite. Highest compounding value: it
-   makes the next `:app` change verifiable instead of re-read.
+2. ~~**N1** — the GROOVE on-device suite.~~ **Done 2026-09-21.** It was
+   ranked here for compounding value, and it compounded immediately: the
+   two stale labels above were found by writing it, not by reading the
+   screen.
 3. **P1.1 + P2.4 + P3.2** — one small copy PR, three findings.
 4. ~~**P4.4's in-app half** — after a design call, if wanted.~~ **Done
    2026-09-20.** The call was made and the build was smaller than the

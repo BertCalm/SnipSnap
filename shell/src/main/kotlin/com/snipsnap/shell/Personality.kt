@@ -1056,6 +1056,61 @@ object Copy {
      * a second program never reads a count.
      */
     fun yoursOf(n: Int, total: Int): String = "YOUR STEPS · $n OF $total · TAP AGAIN FOR THE NEXT"
+
+    /**
+     * The step editor's own title, and the line under it naming which of
+     * yours is open.
+     *
+     * J18 took the A–E letters off the program row because "PROG E" is an
+     * argument to `GrooveProgram.compute`, not anything a player can find
+     * on the hardware — and `ConventionTest`'s `the GROOVE programs are
+     * named for what the exporter writes` says so in as many words: *"the
+     * letters are gone from the screen's own labels."* They were gone from
+     * `PROG_NAMES`. The step editor's header still read `STEP EDIT — PROG
+     * E`, because that law read the list and not the file, so the one
+     * label the rename missed was the one nobody could see from the list.
+     *
+     * Worse after #289: there can be eight programs of yours now, and a
+     * header naming a letter that no longer exists could not have said
+     * which of the eight you were in even if the letter had been right.
+     *
+     * Two pieces rather than one line, because the title has a DONE button
+     * beside it and about 260dp of a 360dp phone to live in: the title is
+     * a character shorter than the string it replaces, and the count goes
+     * under it, which is the same shape the program row's own sub-line
+     * already uses for the same fact.
+     */
+    const val STEP_EDIT_TITLE = "STEP EDIT — YOURS"
+
+    /** Under [STEP_EDIT_TITLE], when there is more than one of yours to be in. */
+    fun stepEditOf(n: Int, total: Int): String = "$n OF $total"
+
+    /**
+     * RECORD's own line while a take is going down over the captured
+     * program.
+     *
+     * The second label J18's rename missed, found by the same law as
+     * [STEP_EDIT_TITLE] once it swept the file instead of the list. It
+     * read "OVERDUBBING ONTO PROG A", and PROG A is what the row above it
+     * has called CAPTURED since J18 — so the one line telling a player
+     * what their playing is landing on named it by a letter the rest of
+     * the screen had stopped using.
+     */
+    const val GROOVE_OVERDUBBING = "● RECORDING — OVERDUBBING ONTO CAPTURED"
+
+    /**
+     * Under the step grid: how long the program is, which program it was
+     * forked from, what a tap does, and what editing it does *not* do.
+     *
+     * The third label J18's rename missed, and the one that got furthest
+     * from what the screen says: it read *"B–D STAY DERIVED FROM A"* on a
+     * screen where nothing is called A, B, C or D. It now says the same
+     * thing [FORKED_TO_E] already says, in the same words — the four
+     * programs you did not fork are left exactly as they were, because
+     * they are recomputed from the take rather than stored.
+     */
+    fun stepEditFooter(steps: Int, source: String): String =
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE — THE OTHER FOUR STAY UNTOUCHED"
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
