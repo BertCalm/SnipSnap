@@ -209,19 +209,21 @@ object ShelfImport {
         }
         return when {
             xpn -> {
-                val dirs = KitBackup.restore(file, staging).map { it.directory }
+                val r = KitBackup.restore(file, staging)
                 // Only a backup carries the presets file, and only at its root
                 // (KitBackup's own extras rule); read bounded, as a stranger's
                 // archive may declare anything, and one past the ceiling is
                 // named among the skips so the kits still land without it.
-                val skipped = mutableListOf<String>()
+                // KitBackup.restore's own per-entry skips (a corrupt .xpn, a
+                // reader/writer disagreement) ride in the same list.
+                val skipped = r.skipped.map { (name, why) -> "$name: $why" }.toMutableList()
                 val presets = try {
                     KitBackup.extra(file, UserPresets.FILE_NAME)?.toString(Charsets.UTF_8)
                 } catch (e: LimitedRead.TooLargeException) {
                     skipped += "${UserPresets.FILE_NAME}: ${e.message}"
                     null
                 }
-                ZipLanding(dirs, skipped, presets)
+                ZipLanding(r.kits.map { it.directory }, skipped, presets)
             }
             xpm -> {
                 val r = XpnImporter.importAll(file, staging)

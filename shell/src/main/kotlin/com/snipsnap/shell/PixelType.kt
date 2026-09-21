@@ -19,6 +19,44 @@ object PixelType {
     const val COLS = 5
     const val ROWS = 7
 
+    /** One filled square of a glyph, in caller pixel space — see [rects]. */
+    data class Rect(val x: Int, val y: Int, val w: Int, val h: Int)
+
+    /**
+     * The filled squares [draw] would paint for [text], without painting
+     * them — pure layout, no `Graphics2D` — so a non-AWT renderer
+     * (`android.graphics`, say) can fill each one with its own APIs.
+     * [draw] itself is just this plus one `fillRect` per square.
+     */
+    fun rects(
+        text: String,
+        x: Int,
+        y: Int,
+        heightPx: Int,
+        centered: Boolean = false,
+        maxWidthPx: Int = Int.MAX_VALUE,
+    ): List<Rect> {
+        if (text.isEmpty()) return emptyList()
+        var px = max(1, heightPx / ROWS)
+        // A glyph advance is COLS + 1 gap columns.
+        val advance = { p: Int -> text.length * (COLS + 1) * p - p }
+        while (px > 1 && advance(px) > maxWidthPx) px--
+        val width = advance(px)
+        var cx = if (centered) x - width / 2 else x
+        val out = mutableListOf<Rect>()
+        for (ch in text) {
+            val glyph = GLYPHS[ch.uppercaseChar()] ?: BOX
+            for (r in 0 until ROWS) {
+                val row = glyph[r]
+                for (c in 0 until COLS) {
+                    if (row[c] == '#') out += Rect(cx + c * px, y + r * px, px, px)
+                }
+            }
+            cx += (COLS + 1) * px
+        }
+        return out
+    }
+
     /**
      * Draw [text] with its glyph-pixel size chosen so the line is
      * [heightPx] tall, shrunk if needed to fit the caller's width when
@@ -35,23 +73,9 @@ object PixelType {
         centered: Boolean = false,
         maxWidthPx: Int = Int.MAX_VALUE,
     ) {
-        if (text.isEmpty()) return
-        var px = max(1, heightPx / ROWS)
-        // A glyph advance is COLS + 1 gap columns.
-        val advance = { p: Int -> text.length * (COLS + 1) * p - p }
-        while (px > 1 && advance(px) > maxWidthPx) px--
-        val width = advance(px)
-        var cx = if (centered) x - width / 2 else x
         g.color = color
-        for (ch in text) {
-            val glyph = GLYPHS[ch.uppercaseChar()] ?: BOX
-            for (r in 0 until ROWS) {
-                val row = glyph[r]
-                for (c in 0 until COLS) {
-                    if (row[c] == '#') g.fillRect(cx + c * px, y + r * px, px, px)
-                }
-            }
-            cx += (COLS + 1) * px
+        for (r in rects(text, x, y, heightPx, centered, maxWidthPx)) {
+            g.fillRect(r.x, r.y, r.w, r.h)
         }
     }
 

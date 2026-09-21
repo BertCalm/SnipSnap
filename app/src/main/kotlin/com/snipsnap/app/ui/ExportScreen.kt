@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.AndroidKitArt
 import com.snipsnap.app.Exports
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
@@ -271,7 +272,11 @@ fun ExportScreen(
             KitWrites.mutex.withLock {
                 runCatching {
                     val kit = KitStore.load(entry.dir)
-                    ExportSession(entry.dir, kit, ExportWizardModel(kit, entry.dir))
+                    ExportSession(
+                        entry.dir,
+                        kit,
+                        ExportWizardModel(kit, entry.dir, artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s) }),
+                    )
                 }.getOrNull()
             }
         }

@@ -19,6 +19,23 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
+ * The pixel surface [KitArt.draw] paints onto — deliberately the smallest
+ * surface both an AWT desktop/CLI renderer and an Android
+ * (`android.graphics`) renderer can implement, so the art logic itself
+ * never has to know which platform is asking. Color is a packed
+ * 0xRRGGBB int, the same shape [Scheme]'s own fields already use, so no
+ * conversion sits at the boundary either.
+ *
+ * Public, not internal: `:app` is a separate Gradle/Kotlin module from
+ * `:shell` and implements this directly against `android.graphics` — see
+ * [KitArt.draw]'s own doc for why that split exists.
+ */
+interface ArtCanvas {
+    fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int)
+    fun drawArc(cx: Float, cy: Float, r: Float, startDeg: Float, sweepDeg: Float, strokeWidth: Float, colorRgb: Int)
+}
+
+/**
  * Procedural cover art — the expansion tile drawn from the kit itself:
  * its waveforms, its class colours, its name. Deterministic: same kit,
  * same parameters, same bytes, so re-exporting never churns a card.
@@ -33,6 +50,17 @@ import kotlin.random.Random
  * scheme, seed, size — and the CLI `art` verb regenerates in one command.
  * Once a direction wins the prototyping loop it becomes the export
  * default (Z6.3).
+ *
+ * [draw] is the actual rendering — every style, the caption, the
+ * hairline — expressed purely against [ArtCanvas]. Nothing it calls
+ * touches `java.awt`/`javax.imageio`: those only enter through [render]/
+ * [png] below, the AWT adapter this class, the CLI, and every test here
+ * have always used. `:app`'s Android renderer calls [draw] directly with
+ * its own `android.graphics`-backed [ArtCanvas] — `java.awt` and
+ * `javax.imageio` do not exist on Android at any API level, so a
+ * renderer that went through [render]/[png] instead would crash with
+ * `NoClassDefFoundError` the instant it ran (this is exactly what DUB
+ * did before this split existed, on EXPANSION/XPN writes).
  */
 object KitArt {
 
@@ -58,6 +86,47 @@ object KitArt {
 
     const val DEFAULT_SIZE = 600
 
+    /**
+     * The platform-agnostic half of rendering onto [canvas]: LCD
+     * background, the style dispatch, the caption, the readout hairline.
+     * See the class doc for why this exists apart from [render]/[png].
+     * Public, not internal — see [ArtCanvas]'s own doc.
+     */
+    fun draw(
+        canvas: ArtCanvas,
+        kit: Kit,
+        kitDir: File,
+        style: Style,
+        scheme: Scheme,
+        seed: Int,
+        size: Int,
+        label: String,
+    ) {
+        require(size in 64..2048) { "size wants 64..2048, got $size" }
+        canvas.fillRect(0, 0, size, size, scheme.lcd)
+
+        val m = (size * 0.08f).toInt()
+        val nameBand = (size * 0.16f).toInt()
+        val art = Box(m, m, size - 2 * m, size - 2 * m - nameBand)
+
+        when (style) {
+            Style.WAVEFORM -> waveform(canvas, art, kit, kitDir)
+            Style.GRID -> grid(canvas, art, kit, scheme)
+            Style.SLICES -> slices(canvas, art, kit, kitDir)
+            Style.RINGS -> rings(canvas, art, kit, kitDir, seed)
+        }
+
+        // The name, pixel type, centred in the bottom band.
+        val caption = label.uppercase()
+        val bandTop = size - m - nameBand + (nameBand * 0.25f).toInt()
+        for (px in PixelType.rects(caption, size / 2, bandTop, nameBand / 2, centered = true, maxWidthPx = size - 2 * m)) {
+            canvas.fillRect(px.x, px.y, px.w, px.h, scheme.lcdInk)
+        }
+
+        // A hairline between sound and name — the LCD's readout rule.
+        canvas.fillRect(m, size - m - nameBand + (nameBand * 0.05f).toInt(), size - 2 * m, max(1, size / 300), scheme.amber)
+    }
+
     /** Render to pixels. [size] is the square edge, 64..2048. */
     fun render(
         kit: Kit,
@@ -69,36 +138,11 @@ object KitArt {
         /** The tile's caption — a pack tile carries the pack's title, not one kit's. */
         label: String = kit.name,
     ): BufferedImage {
-        require(size in 64..2048) { "size wants 64..2048, got $size" }
         val img = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
         val g = img.createGraphics()
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g.color = rgb(scheme.lcd)
-            g.fillRect(0, 0, size, size)
-
-            val m = (size * 0.08f).toInt()
-            val nameBand = (size * 0.16f).toInt()
-            val art = Box(m, m, size - 2 * m, size - 2 * m - nameBand)
-
-            when (style) {
-                Style.WAVEFORM -> waveform(g, art, kit, kitDir)
-                Style.GRID -> grid(g, art, kit, scheme)
-                Style.SLICES -> slices(g, art, kit, kitDir)
-                Style.RINGS -> rings(g, art, kit, kitDir, seed)
-            }
-
-            // The name, pixel type, centred in the bottom band.
-            val caption = label.uppercase()
-            val bandTop = size - m - nameBand + (nameBand * 0.25f).toInt()
-            PixelType.draw(
-                g, caption, size / 2, bandTop, nameBand / 2, rgb(scheme.lcdInk),
-                centered = true, maxWidthPx = size - 2 * m,
-            )
-
-            // A hairline between sound and name — the LCD's readout rule.
-            g.color = rgb(scheme.amber)
-            g.fillRect(m, size - m - nameBand + (nameBand * 0.05f).toInt(), size - 2 * m, max(1, size / 300))
+            draw(AwtCanvas(g), kit, kitDir, style, scheme, seed, size, label)
         } finally {
             g.dispose()
         }
@@ -120,12 +164,28 @@ object KitArt {
         return out.toByteArray()
     }
 
+    // ---- the AWT adapter — the only place in this file java.awt appears ----
+
+    /** Internal, not private: [JCard] reuses [waveform] against its own [Graphics2D]. */
+    internal class AwtCanvas(private val g: Graphics2D) : ArtCanvas {
+        override fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int) {
+            g.color = Color(colorRgb)
+            g.fillRect(x, y, w, h)
+        }
+
+        override fun drawArc(cx: Float, cy: Float, r: Float, startDeg: Float, sweepDeg: Float, strokeWidth: Float, colorRgb: Int) {
+            g.color = Color(colorRgb)
+            g.stroke = BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+            g.draw(Arc2D.Float(cx - r, cy - r, 2 * r, 2 * r, startDeg, sweepDeg, Arc2D.OPEN))
+        }
+    }
+
     // ---- styles ------------------------------------------------------------
 
     internal data class Box(val x: Int, val y: Int, val w: Int, val h: Int)
 
-    /** A pad's audio and looks, loaded once per render. */
-    private data class Voice(val mono: FloatArray, val color: Color, val peak: Float)
+    /** A pad's audio and looks, loaded once per render. [color] is packed 0xRRGGBB. */
+    private data class Voice(val mono: FloatArray, val color: Int, val peak: Float)
 
     private fun voices(kit: Kit, kitDir: File): List<Voice> =
         kit.pads.sortedBy { it.slot }.mapNotNull { pad ->
@@ -138,10 +198,10 @@ object KitArt {
                 val a = abs(s)
                 if (a > peak) peak = a
             }
-            Voice(mono, rgb(Schemes.classColor(pad.drumClass)), peak)
+            Voice(mono, Schemes.classColor(pad.drumClass), peak)
         }
 
-    internal fun waveform(g: Graphics2D, box: Box, kit: Kit, kitDir: File) {
+    internal fun waveform(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File) {
         val vs = voices(kit, kitDir)
         if (vs.isEmpty()) return
         val total = vs.sumOf { it.mono.size }
@@ -169,15 +229,14 @@ object KitArt {
         for (c in 0 until box.w) {
             val frame = (total.toLong() * c / box.w).toInt()
             while (owner + 1 < vs.size && frame >= starts[owner + 1]) owner++
-            g.color = vs[owner].color
             val col = cols[c]
             val top = midY - (col.max * norm * amp).toInt()
             val bottom = midY - (col.min * norm * amp).toInt()
-            g.fillRect(box.x + c, min(top, bottom), 1, max(1, abs(bottom - top)))
+            canvas.fillRect(box.x + c, min(top, bottom), 1, max(1, abs(bottom - top)), vs[owner].color)
         }
     }
 
-    private fun grid(g: Graphics2D, box: Box, kit: Kit, scheme: Scheme) {
+    private fun grid(canvas: ArtCanvas, box: Box, kit: Kit, scheme: Scheme) {
         val side = min(box.w, box.h)
         val ox = box.x + (box.w - side) / 2
         val oy = box.y + (box.h - side) / 2
@@ -194,25 +253,21 @@ object KitArt {
                 val y = oy + row * (cell + gap)
                 if (pad == null) {
                     // Empty pads sit dim on the LCD; the kit is the light.
-                    g.color = lighten(rgb(scheme.lcd), 0.07f)
-                    g.fillRect(x, y, cell, cell)
+                    canvas.fillRect(x, y, cell, cell, lighten(scheme.lcd, 0.07f))
                 } else {
-                    val c = rgb(Schemes.classColor(pad.drumClass))
-                    g.color = c
-                    g.fillRect(x, y, cell, cell)
+                    val c = Schemes.classColor(pad.drumClass)
+                    canvas.fillRect(x, y, cell, cell, c)
                     // The raised bevel every TapeOS pad wears.
-                    g.color = lighten(c, 0.35f)
-                    g.fillRect(x, y, cell, bevel)
-                    g.fillRect(x, y, bevel, cell)
-                    g.color = darken(c, 0.35f)
-                    g.fillRect(x, y + cell - bevel, cell, bevel)
-                    g.fillRect(x + cell - bevel, y, bevel, cell)
+                    canvas.fillRect(x, y, cell, bevel, lighten(c, 0.35f))
+                    canvas.fillRect(x, y, bevel, cell, lighten(c, 0.35f))
+                    canvas.fillRect(x, y + cell - bevel, cell, bevel, darken(c, 0.35f))
+                    canvas.fillRect(x + cell - bevel, y, bevel, cell, darken(c, 0.35f))
                 }
             }
         }
     }
 
-    private fun slices(g: Graphics2D, box: Box, kit: Kit, kitDir: File) {
+    private fun slices(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File) {
         val vs = voices(kit, kitDir).take(32)
         if (vs.isEmpty()) return
         val maxLen = vs.maxOf { it.mono.size }.toFloat()
@@ -223,13 +278,12 @@ object KitArt {
         for (v in vs) {
             // sqrt keeps a long loop from flattening every one-shot.
             val h = max(2, (sqrt(v.mono.size / maxLen) * box.h).toInt())
-            g.color = v.color
-            g.fillRect(x, box.y + box.h - h, barW, h)
+            canvas.fillRect(x, box.y + box.h - h, barW, h, v.color)
             x += barW + gap
         }
     }
 
-    private fun rings(g: Graphics2D, box: Box, kit: Kit, kitDir: File, seed: Int) {
+    private fun rings(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File, seed: Int) {
         val vs = voices(kit, kitDir)
         if (vs.isEmpty()) return
         val rnd = Random(seed)
@@ -244,27 +298,29 @@ object KitArt {
             val sweep = 30f + 300f * (v.mono.size / maxLen)
             val start = rnd.nextInt(360).toFloat()
             val stroke = 1.5f + (v.peak / maxPeak) * (maxR * 0.05f)
-            g.color = v.color
-            g.stroke = BasicStroke(stroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g.draw(
-                Arc2D.Float(cx - r, cy - r, 2 * r, 2 * r, start, sweep, Arc2D.OPEN),
-            )
+            canvas.drawArc(cx, cy, r, start, sweep, stroke, v.color)
         }
     }
 
-    // ---- colour helpers ----------------------------------------------------
+    // ---- colour helpers (packed 0xRRGGBB in, same out) ----------------------
 
-    private fun rgb(packed: Int) = Color((packed shr 16) and 0xFF, (packed shr 8) and 0xFF, packed and 0xFF)
+    private fun lighten(rgb: Int, k: Float): Int {
+        val r = (rgb shr 16) and 0xFF
+        val g = (rgb shr 8) and 0xFF
+        val b = rgb and 0xFF
+        val nr = (r + (255 - r) * k).toInt().coerceIn(0, 255)
+        val ng = (g + (255 - g) * k).toInt().coerceIn(0, 255)
+        val nb = (b + (255 - b) * k).toInt().coerceIn(0, 255)
+        return (nr shl 16) or (ng shl 8) or nb
+    }
 
-    private fun lighten(c: Color, k: Float) = Color(
-        (c.red + (255 - c.red) * k).toInt().coerceIn(0, 255),
-        (c.green + (255 - c.green) * k).toInt().coerceIn(0, 255),
-        (c.blue + (255 - c.blue) * k).toInt().coerceIn(0, 255),
-    )
-
-    private fun darken(c: Color, k: Float) = Color(
-        (c.red * (1 - k)).toInt().coerceIn(0, 255),
-        (c.green * (1 - k)).toInt().coerceIn(0, 255),
-        (c.blue * (1 - k)).toInt().coerceIn(0, 255),
-    )
+    private fun darken(rgb: Int, k: Float): Int {
+        val r = (rgb shr 16) and 0xFF
+        val g = (rgb shr 8) and 0xFF
+        val b = rgb and 0xFF
+        val nr = (r * (1 - k)).toInt().coerceIn(0, 255)
+        val ng = (g * (1 - k)).toInt().coerceIn(0, 255)
+        val nb = (b * (1 - k)).toInt().coerceIn(0, 255)
+        return (nr shl 16) or (ng shl 8) or nb
+    }
 }

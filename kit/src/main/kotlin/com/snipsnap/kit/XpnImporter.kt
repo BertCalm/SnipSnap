@@ -359,7 +359,7 @@ object XpnImporter {
         // whitespace (both seen in real files) would otherwise make the
         // parser reject the whole document. Strip them first.
         val cleaned = xml.removePrefix("﻿").trimStart()
-        val doc = SafeXml.newFactory().newDocumentBuilder()
+        val doc = SafeXml.newBuilder()
             .parse(org.xml.sax.InputSource(java.io.StringReader(cleaned)))
         doc.documentElement.normalize()
 
