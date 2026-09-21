@@ -39,9 +39,10 @@ object BackupCommand {
         if (!file.isFile) throw CliError("no such file: $fileArg")
 
         val dest = File(opts["--out"] ?: "snipsnap-out")
-        val results = KitBackup.restore(file, dest, opts.has("--overwrite"))
-        out.println("restored ${results.size} kit(s):")
-        results.forEach { out.println("  + ${it.kit.name} -> ${it.directory.path}") }
+        val result = KitBackup.restore(file, dest, opts.has("--overwrite"))
+        out.println("restored ${result.kits.size} kit(s):")
+        result.kits.forEach { out.println("  + ${it.kit.name} -> ${it.directory.path}") }
+        result.skipped.forEach { (name, why) -> out.println("  ! skipped $name - $why") }
         // After the kits, and never in their way: a presets entry that is
         // not one, or weighs too much, is skipped and named - the phone's
         // own rule for a backup coming home.
