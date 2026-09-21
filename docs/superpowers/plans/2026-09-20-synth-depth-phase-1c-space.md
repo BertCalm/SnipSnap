@@ -50,9 +50,11 @@ The original complaint was "limited, thin, cheap, uninteresting." Phase 0 took c
 
 **Files:**
 - Modify: `synth/src/main/kotlin/com/snipsnap/synth/Squash.kt:58-74`
-- Modify: `synth/src/test/kotlin/com/snipsnap/synth/SquashTest.kt` (or wherever Squash is tested — find it)
+- Modify: `synth/src/test/kotlin/com/snipsnap/synth/FxTest.kt` — **verified**: Squash has no dedicated test file; it is covered in `FxTest`
 
 **Interfaces:** no signature change. `Squash`'s public entry point keeps its shape.
+
+**The threshold is genuinely absolute**, confirmed at `Squash.kt:35-39`: `inPeak` is scanned over the *whole buffer* across both channels, then `threshold = inPeak * Dsp.expMap(1f - amount, 0.12f, 0.9f)`. So both channels are measured against one number derived from whichever channel happened to be loudest.
 
 **The defect, measured.** `Squash.kt:58` opens `for (ch in 0 until snip.channels)` and builds a **separate `env` per channel**, then compares each against `threshold` — which is derived once from the whole-buffer peak and is therefore *absolute*, not scale-invariant. So a quieter channel crosses the threshold later and by less, and the two channels get different gain curves. A correlated pan probe's 2.5:1 ratio collapsed to **1.13 during the attack**, recovering after release: audible pumping, and the image narrows exactly when the hit lands.
 
@@ -76,7 +78,7 @@ The original complaint was "limited, thin, cheap, uninteresting." Phase 0 took c
             samples[f * 2] = x
             samples[f * 2 + 1] = x * 0.4f
         }
-        val out = Squash.apply(Snip(samples, 2, rate), amount = 0.8f)
+        val out = Squash.process(Snip(samples, 2, rate), mapOf("AMOUNT" to 0.8f))
 
         fun ratioOver(fromSec: Float, toSec: Float): Float {
             val a = (fromSec * rate).toInt() * 2
@@ -97,7 +99,7 @@ The original complaint was "limited, thin, cheap, uninteresting." Phase 0 took c
     }
 ```
 
-Find `Squash`'s real entry point before writing this — if it is not `Squash.apply(snip, amount)`, use the real signature. Do not invent one.
+**API note, verified for you:** the entry point is `Squash.process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip` (`Squash.kt:28`). Check `Squash.MACROS` for the real macro name before assuming `"AMOUNT"`.
 
 - [ ] **Step 2: Run it to make sure it fails**
 
