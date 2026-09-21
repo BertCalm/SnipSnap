@@ -73,75 +73,76 @@ object KitStore {
                     ),
                 )
             }
-            root["pads"] = JsonValue.Arr(
-                kit.pads.sortedBy { it.slot }.map { p ->
-                    val entries = linkedMapOf<String, JsonValue>(
-                        "slot" to JsonValue.Num(p.slot.toDouble()),
-                        "sample" to JsonValue.Str(p.sampleFile),
-                        "name" to JsonValue.Str(p.displayName),
-                        "class" to JsonValue.Str(p.drumClass.name),
-                        "level" to JsonValue.Num(p.level.toDouble()),
-                        "pan" to JsonValue.Num(p.pan.toDouble()),
-                        "tuneCoarse" to JsonValue.Num(p.tuneCoarse.toDouble()),
-                        "tuneFine" to JsonValue.Num(p.tuneFine.toDouble()),
-                        "muteGroup" to JsonValue.Num(p.muteGroup.toDouble()),
-                        "oneShot" to JsonValue.Bool(p.oneShot),
-                    )
-                    p.colorHex?.let { entries["colorHex"] = JsonValue.Str(it) }
-                    // The shape rides only when set - null means "the
-                    // format's default", and defaults are never written down.
-                    p.attack?.let { entries["attack"] = JsonValue.Num(it.toDouble()) }
-                    p.decay?.let { entries["decay"] = JsonValue.Num(it.toDouble()) }
-                    p.cutoff?.let { entries["cutoff"] = JsonValue.Num(it.toDouble()) }
-                    p.resonance?.let { entries["resonance"] = JsonValue.Num(it.toDouble()) }
-                    p.humanize?.let { entries["humanize"] = JsonValue.Num(it.toDouble()) }
-                    p.chain?.let { c ->
-                        val chain = linkedMapOf<String, JsonValue>(
-                            "cycle" to JsonValue.Num(c.cycle.toDouble()),
-                            "boundaries" to JsonValue.Arr(c.boundaries.map { JsonValue.Num(it.toDouble()) }),
-                        )
-                        c.zones?.let { zs ->
-                            chain["zones"] = JsonValue.Arr(
-                                zs.map { z ->
-                                    JsonValue.Obj(
-                                        linkedMapOf(
-                                            "velStart" to JsonValue.Num(z.velStart.toDouble()),
-                                            "velEnd" to JsonValue.Num(z.velEnd.toDouble()),
-                                            "baseSlice" to JsonValue.Num(z.baseSlice.toDouble()),
-                                            "cycle" to JsonValue.Num(z.cycle.toDouble()),
-                                        ),
-                                    )
-                                },
-                            )
-                        }
-                        entries["chain"] = JsonValue.Obj(chain)
-                    }
-                    if (p.source.isNotEmpty()) {
-                        entries["source"] = JsonValue.Obj(
-                            p.source.entries.associateTo(LinkedHashMap()) { (k, v) ->
-                                k to JsonValue.Str(v)
-                            },
-                        )
-                    }
-                    p.recipe?.let { entries["recipe"] = it }
-                    if (p.velocityLayers.isNotEmpty()) {
-                        entries["layers"] = JsonValue.Arr(
-                            p.velocityLayers.map { l ->
-                                JsonValue.Obj(
-                                    linkedMapOf(
-                                        "sample" to JsonValue.Str(l.sampleFile),
-                                        "velStart" to JsonValue.Num(l.velStart.toDouble()),
-                                        "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
-                                    ),
-                                )
-                            },
-                        )
-                    }
-                    JsonValue.Obj(entries)
-                },
-            )
+            root["pads"] = JsonValue.Arr(kit.pads.sortedBy { it.slot }.map { p -> padToJson(p) })
         },
     )
+
+    /** One pad's `kit.json` shape — shared by [toJson] and, standalone, by a bin tombstone (see `KitBuilder.moveToBin`). */
+    fun padToJson(p: KitPad): JsonValue.Obj {
+        val entries = linkedMapOf<String, JsonValue>(
+            "slot" to JsonValue.Num(p.slot.toDouble()),
+            "sample" to JsonValue.Str(p.sampleFile),
+            "name" to JsonValue.Str(p.displayName),
+            "class" to JsonValue.Str(p.drumClass.name),
+            "level" to JsonValue.Num(p.level.toDouble()),
+            "pan" to JsonValue.Num(p.pan.toDouble()),
+            "tuneCoarse" to JsonValue.Num(p.tuneCoarse.toDouble()),
+            "tuneFine" to JsonValue.Num(p.tuneFine.toDouble()),
+            "muteGroup" to JsonValue.Num(p.muteGroup.toDouble()),
+            "oneShot" to JsonValue.Bool(p.oneShot),
+        )
+        p.colorHex?.let { entries["colorHex"] = JsonValue.Str(it) }
+        // The shape rides only when set - null means "the
+        // format's default", and defaults are never written down.
+        p.attack?.let { entries["attack"] = JsonValue.Num(it.toDouble()) }
+        p.decay?.let { entries["decay"] = JsonValue.Num(it.toDouble()) }
+        p.cutoff?.let { entries["cutoff"] = JsonValue.Num(it.toDouble()) }
+        p.resonance?.let { entries["resonance"] = JsonValue.Num(it.toDouble()) }
+        p.humanize?.let { entries["humanize"] = JsonValue.Num(it.toDouble()) }
+        p.chain?.let { c ->
+            val chain = linkedMapOf<String, JsonValue>(
+                "cycle" to JsonValue.Num(c.cycle.toDouble()),
+                "boundaries" to JsonValue.Arr(c.boundaries.map { JsonValue.Num(it.toDouble()) }),
+            )
+            c.zones?.let { zs ->
+                chain["zones"] = JsonValue.Arr(
+                    zs.map { z ->
+                        JsonValue.Obj(
+                            linkedMapOf(
+                                "velStart" to JsonValue.Num(z.velStart.toDouble()),
+                                "velEnd" to JsonValue.Num(z.velEnd.toDouble()),
+                                "baseSlice" to JsonValue.Num(z.baseSlice.toDouble()),
+                                "cycle" to JsonValue.Num(z.cycle.toDouble()),
+                            ),
+                        )
+                    },
+                )
+            }
+            entries["chain"] = JsonValue.Obj(chain)
+        }
+        if (p.source.isNotEmpty()) {
+            entries["source"] = JsonValue.Obj(
+                p.source.entries.associateTo(LinkedHashMap()) { (k, v) ->
+                    k to JsonValue.Str(v)
+                },
+            )
+        }
+        p.recipe?.let { entries["recipe"] = it }
+        if (p.velocityLayers.isNotEmpty()) {
+            entries["layers"] = JsonValue.Arr(
+                p.velocityLayers.map { l ->
+                    JsonValue.Obj(
+                        linkedMapOf(
+                            "sample" to JsonValue.Str(l.sampleFile),
+                            "velStart" to JsonValue.Num(l.velStart.toDouble()),
+                            "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
+                        ),
+                    )
+                },
+            )
+        }
+        return JsonValue.Obj(entries)
+    }
 
     private fun fromJson(root: JsonValue): Kit {
         val obj = root.obj()
@@ -159,61 +160,7 @@ object KitStore {
                 } ?: throw JsonException("key has no scale"),
             )
         }
-        val pads = obj["pads"]?.arr().orEmpty().map { padJson ->
-            val p = padJson.obj()
-            KitPad(
-                slot = p["slot"]?.int() ?: throw JsonException("pad has no slot"),
-                sampleFile = p["sample"]?.str() ?: throw JsonException("pad has no sample"),
-                displayName = p["name"]?.str()
-                    ?: (p["sample"]!!.str().substringBeforeLast('.')),
-                drumClass = p["class"]?.str()?.let { cls ->
-                    DrumClass.entries.firstOrNull { it.name == cls } ?: DrumClass.UNKNOWN
-                } ?: DrumClass.UNKNOWN,
-                colorHex = (p["colorHex"] as? JsonValue.Str)?.value,
-                attack = p["attack"]?.num()?.toFloat(),
-                decay = p["decay"]?.num()?.toFloat(),
-                cutoff = p["cutoff"]?.num()?.toFloat(),
-                resonance = p["resonance"]?.num()?.toFloat(),
-                humanize = p["humanize"]?.num()?.toFloat(),
-                chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
-                    ChainInfo(
-                        boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
-                            .map { it.long() },
-                        cycle = c.entries["cycle"]?.int() ?: 2,
-                        zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
-                            val z = zoneJson.obj()
-                            ChainZone(
-                                velStart = z["velStart"]?.int() ?: throw JsonException("zone has no velStart"),
-                                velEnd = z["velEnd"]?.int() ?: throw JsonException("zone has no velEnd"),
-                                baseSlice = z["baseSlice"]?.int() ?: throw JsonException("zone has no baseSlice"),
-                                cycle = z["cycle"]?.int() ?: throw JsonException("zone has no cycle"),
-                            )
-                        },
-                    )
-                },
-                level = p["level"]?.num()?.toFloat() ?: 0.707946f,
-                pan = p["pan"]?.num()?.toFloat() ?: 0.5f,
-                tuneCoarse = p["tuneCoarse"]?.int() ?: 0,
-                tuneFine = p["tuneFine"]?.int() ?: 0,
-                muteGroup = p["muteGroup"]?.int() ?: 0,
-                oneShot = p["oneShot"]?.bool() ?: true,
-                source = (p["source"] as? JsonValue.Obj)?.entries
-                    ?.mapValues { (_, v) -> v.str() }
-                    ?: emptyMap(),
-                // Verbatim, no interpretation: a recipe written by a newer
-                // build (or another engine) must survive a load-save cycle
-                // here untouched.
-                recipe = p["recipe"] as? JsonValue.Obj,
-                velocityLayers = (p["layers"] as? JsonValue.Arr)?.items.orEmpty().map { layerJson ->
-                    val l = layerJson.obj()
-                    KitLayer(
-                        sampleFile = l["sample"]?.str() ?: throw JsonException("layer has no sample"),
-                        velStart = l["velStart"]?.int() ?: throw JsonException("layer has no velStart"),
-                        velEnd = l["velEnd"]?.int() ?: throw JsonException("layer has no velEnd"),
-                    )
-                },
-            )
-        }
+        val pads = obj["pads"]?.arr().orEmpty().map { padJson -> padFromJson(padJson) }
         val wear = (obj["wear"] as? JsonValue.Obj)?.let { w ->
             WearLedger(
                 mileage = w.entries["mileage"]?.num() ?: 0.0,
@@ -222,5 +169,62 @@ object KitStore {
             )
         }
         return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear)
+    }
+
+    /** One pad, the inverse of [padToJson] — shared by [fromJson] and, standalone, by a bin tombstone's read-back. */
+    fun padFromJson(json: JsonValue): KitPad {
+        val p = json.obj()
+        return KitPad(
+            slot = p["slot"]?.int() ?: throw JsonException("pad has no slot"),
+            sampleFile = p["sample"]?.str() ?: throw JsonException("pad has no sample"),
+            displayName = p["name"]?.str()
+                ?: (p["sample"]!!.str().substringBeforeLast('.')),
+            drumClass = p["class"]?.str()?.let { cls ->
+                DrumClass.entries.firstOrNull { it.name == cls } ?: DrumClass.UNKNOWN
+            } ?: DrumClass.UNKNOWN,
+            colorHex = (p["colorHex"] as? JsonValue.Str)?.value,
+            attack = p["attack"]?.num()?.toFloat(),
+            decay = p["decay"]?.num()?.toFloat(),
+            cutoff = p["cutoff"]?.num()?.toFloat(),
+            resonance = p["resonance"]?.num()?.toFloat(),
+            humanize = p["humanize"]?.num()?.toFloat(),
+            chain = (p["chain"] as? JsonValue.Obj)?.let { c ->
+                ChainInfo(
+                    boundaries = ((c.entries["boundaries"] as? JsonValue.Arr)?.items.orEmpty())
+                        .map { it.long() },
+                    cycle = c.entries["cycle"]?.int() ?: 2,
+                    zones = (c.entries["zones"] as? JsonValue.Arr)?.items?.map { zoneJson ->
+                        val z = zoneJson.obj()
+                        ChainZone(
+                            velStart = z["velStart"]?.int() ?: throw JsonException("zone has no velStart"),
+                            velEnd = z["velEnd"]?.int() ?: throw JsonException("zone has no velEnd"),
+                            baseSlice = z["baseSlice"]?.int() ?: throw JsonException("zone has no baseSlice"),
+                            cycle = z["cycle"]?.int() ?: throw JsonException("zone has no cycle"),
+                        )
+                    },
+                )
+            },
+            level = p["level"]?.num()?.toFloat() ?: 0.707946f,
+            pan = p["pan"]?.num()?.toFloat() ?: 0.5f,
+            tuneCoarse = p["tuneCoarse"]?.int() ?: 0,
+            tuneFine = p["tuneFine"]?.int() ?: 0,
+            muteGroup = p["muteGroup"]?.int() ?: 0,
+            oneShot = p["oneShot"]?.bool() ?: true,
+            source = (p["source"] as? JsonValue.Obj)?.entries
+                ?.mapValues { (_, v) -> v.str() }
+                ?: emptyMap(),
+            // Verbatim, no interpretation: a recipe written by a newer
+            // build (or another engine) must survive a load-save cycle
+            // here untouched.
+            recipe = p["recipe"] as? JsonValue.Obj,
+            velocityLayers = (p["layers"] as? JsonValue.Arr)?.items.orEmpty().map { layerJson ->
+                val l = layerJson.obj()
+                KitLayer(
+                    sampleFile = l["sample"]?.str() ?: throw JsonException("layer has no sample"),
+                    velStart = l["velStart"]?.int() ?: throw JsonException("layer has no velStart"),
+                    velEnd = l["velEnd"]?.int() ?: throw JsonException("layer has no velEnd"),
+                )
+            },
+        )
     }
 }

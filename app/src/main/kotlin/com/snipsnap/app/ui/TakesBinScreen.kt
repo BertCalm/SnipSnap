@@ -86,9 +86,27 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  * closes the old `PadEngine`; a fresh one loads from `entry.kit` the
  * moment KIT recomposes on the way back (`LaunchedEffect(entry.kit)`,
  * keyed on structural equality, not identity — any real content change
- * from a restore reloads it). `restoreFromBin` alone never touches
- * `kit.json` (it only moves a WAV back onto disk), so it doesn't call
- * [onKitUpdated]; nothing in the live kit refers to that file yet.
+ * from a restore reloads it).
+ *
+ * `restoreFromBin` no longer means only "a WAV moved back onto disk". A
+ * bin entry that came from a [com.snipsnap.shell.KitBuilderModel.clear] —
+ * a whole pad ejected, not merely a file replaced in place — carries a
+ * JSON tombstone of that pad alongside its WAV (`KitBuilder.moveToBin`);
+ * when [com.snipsnap.shell.KitBuilderModel.restoreFromBin] finds one AND
+ * that pad's original slot is STILL empty, it reinstates the pad into
+ * `kit.json` and saves, in addition to the file-copy it's always done — so
+ * this screen must call [onKitUpdated] for that case too (see
+ * [doRestoreFromBin]). The slot-occupancy check is what keeps this safe
+ * for the OTHER shape of bin entry, the one `assign()`'s previous-pad-
+ * replaced path produces: there the pad's filename never changed and a new
+ * pad already sits in that slot, so the tombstone (if the old pad even
+ * qualified for one) is simply never actionable — restore stays
+ * file-only, exactly as before, and the caller still needs the refresh in
+ * case the file itself is what mattered (a re-treat's original coming
+ * back, say). Calling [onKitUpdated] unconditionally on a successful
+ * restore is safe either way: the effect just above is keyed on
+ * structural equality, so an unchanged-but-structurally-equal kit passed
+ * to it is a no-op.
  */
 @Composable
 fun TakesBinScreen(
@@ -275,6 +293,11 @@ fun TakesBinScreen(
             try {
                 val restoredFile = withContext(Dispatchers.IO) { m.restoreFromBin(entry) }
                 if (restoredFile != null) {
+                    // Safe unconditionally, whether or not a pad was
+                    // actually reinstated - see this screen's own class-doc
+                    // for why a structurally-unchanged kit is a no-op where
+                    // this lands (`App`'s `LaunchedEffect(entry.kit)`).
+                    onKitUpdated(m.kit)
                     refreshLists(m)
                     onToast(Copy.BACK_FROM_BIN)
                 } else {
