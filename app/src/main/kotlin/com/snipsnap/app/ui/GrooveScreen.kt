@@ -2146,7 +2146,7 @@ fun GrooveScreen(
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TapeText(
                             // Fix 2: the beat count, same as this screen's other three "COUNTING IN…" render sites.
-                            if (countingIn) "COUNTING IN… $countInBeat" else "● RECORDING — OVERDUBBING ONTO PROG A",
+                            if (countingIn) "COUNTING IN… $countInBeat" else Copy.GROOVE_OVERDUBBING,
                             TapeType.pixel,
                             scheme.amber.tape,
                         )
@@ -2472,6 +2472,7 @@ fun GrooveScreen(
                     onClear = ::clearEditorBar,
                     onToggle = ::toggleCell,
                     onDone = ::closeEditor,
+                    yoursCount = yoursAll.size,
                 )
             }
         }
@@ -2897,6 +2898,8 @@ private fun StepEditorOverlay(
     onClear: () -> Unit,
     onToggle: (GrooveEdit.Lane, Int) -> Unit,
     onDone: () -> Unit,
+    /** How many programs of yours this kit holds — the `OF n` half of the header's count. */
+    yoursCount: Int,
 ) {
     // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
     // clip's own bar, so a cell's step address is the beat the clip plays.
@@ -2924,7 +2927,21 @@ private fun StepEditorOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TapeText("STEP EDIT — PROG E", TapeType.lcd(20), scheme.lcdInk.tape, Modifier.weight(1f))
+                // Which of yours is open, read from [clip] itself rather
+                // than from the index the caller forked at. That is the
+                // difference between a label and a check: `GrooveEdit.fork`
+                // takes an index and returns a clip, and the bug this
+                // replaces was the index being right and ignored. A header
+                // derived from the index would have said the right thing
+                // while the wrong clip was on screen; derived from the
+                // clip, it can only say what is actually open.
+                Column(Modifier.weight(1f)) {
+                    TapeText(Copy.STEP_EDIT_TITLE, TapeType.lcd(20), scheme.lcdInk.tape)
+                    val ofYours = GrooveEdit.progIndexOf(clip)?.plus(1)
+                    if (ofYours != null && yoursCount > 1) {
+                        TapeText(Copy.stepEditOf(ofYours, yoursCount), TapeType.pixelSmall, scheme.ink2.tape)
+                    }
+                }
                 Box(
                     Modifier
                         .height(Layout.MIN_HIT_TARGET.dp)
@@ -3029,7 +3046,7 @@ private fun StepEditorOverlay(
             }
 
             TapeText(
-                "$totalSteps STEPS · FORKED FROM $sourceLabel · TAP TO TOGGLE — B–D STAY DERIVED FROM A",
+                Copy.stepEditFooter(totalSteps, sourceLabel),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),

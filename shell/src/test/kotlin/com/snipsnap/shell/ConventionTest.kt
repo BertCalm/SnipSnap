@@ -2441,6 +2441,41 @@ class ConventionTest {
             "GrooveScreen's PROG_NAMES is index-first again: $letters. A–E is an argument to " +
                 "GrooveProgram.compute, not an MPC clip slot — see this law's KDoc.",
         )
+
+        // ...and out of every OTHER string this screen draws, which is the
+        // half this law used to miss. It read the list and stopped there,
+        // so `STEP EDIT — PROG E` sat in the step editor's header through
+        // J18's rename and through #289 making eight of them — naming a
+        // letter the app no longer has, on the one screen where the
+        // question is *which* of yours you are in. A list is not a screen:
+        // the sweep below is what makes "the letters are gone from the
+        // screen's own labels" a fact rather than a claim about one
+        // declaration.
+        //
+        // Comments may say PROG E freely. The rename was of what a player
+        // reads, and the history of why is worth keeping in the source.
+        val strayLetters = mutableListOf<String>()
+        // Two shapes, because the sweep's first run found one of each and
+        // the second shape is how the worse one hid: `PROG E` in the step
+        // editor's header, and a bare range — "B–D STAY DERIVED FROM A" —
+        // in its footer, on a screen where nothing is called A, B, C or D.
+        // A bare single letter is not looked for: "A" is a word.
+        val labelLetter = Regex("""PROG [A-E]\b|\b[A-E][-–—][A-E]\b""")
+        groove.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+            val t = line.trim()
+            if (isCommentLine(t)) return@forEachIndexed
+            for (literal in Regex(""""([^"\\]*)"""").findAll(t).map { it.groupValues[1] }) {
+                if (labelLetter.containsMatchIn(literal)) strayLetters += "GrooveScreen.kt:${i + 1}  \"$literal\""
+            }
+        }
+        assertTrue(
+            strayLetters.isEmpty(),
+            "GROOVE still shows a player a PROG letter. J18 took A–E off this screen because the letter " +
+                "is an argument to GrooveProgram.compute and nothing a player can find on the hardware; " +
+                "since #289 a kit holds up to eight programs of the player's own, so a letter cannot even " +
+                "say which one. Name what it is, or which of theirs it is:\n  " +
+                strayLetters.joinToString("\n  "),
+        )
     }
 
 
