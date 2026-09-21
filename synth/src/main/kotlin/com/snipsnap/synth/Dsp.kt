@@ -504,9 +504,14 @@ internal object Dsp {
         return Resampler.resample(half, rate).samples
     }
 
-    /** Short linear fade-out so a truncated tail never clicks. */
-    fun fadeTail(buf: FloatArray, ms: Float = 4f) {
-        val n = min(buf.size, (ms / 1000f * RATE).toInt())
+    /**
+     * Short linear fade-out so a truncated tail never clicks.
+     *
+     * [rate] is a parameter because this used to hardcode [RATE] and
+     * therefore faded well under the asked duration on a 48/96 kHz project.
+     */
+    fun fadeTail(buf: FloatArray, ms: Float = 4f, rate: Int = RATE) {
+        val n = min(buf.size, (ms / 1000f * rate).toInt())
         for (i in 0 until n) {
             buf[buf.size - 1 - i] *= i.toFloat() / n
         }
