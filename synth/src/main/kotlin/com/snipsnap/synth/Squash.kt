@@ -55,21 +55,33 @@ object Squash {
         val look = (0.002f * snip.sampleRate).toInt()
         val frames = snip.frameCount
         val out = FloatArray(snip.samples.size)
-        for (ch in 0 until snip.channels) {
-            val env = FloatArray(frames)
-            var e = 0f
-            for (f in 0 until frames) {
+        // One detector for the whole frame, fed by whichever channel is
+        // loudest. Per-channel envelopes against a shared absolute threshold
+        // are not scale-invariant: the quieter side crosses later and by
+        // less, so the two gains diverge and the image narrows exactly when
+        // the hit lands. Every stereo compressor has a link switch for this
+        // reason, and for a hand-built per-mode image there is no case for
+        // leaving it off.
+        val env = FloatArray(frames)
+        var e = 0f
+        for (f in 0 until frames) {
+            var a = 0f
+            for (ch in 0 until snip.channels) {
                 val x = snip.samples[f * snip.channels + ch]
-                val a = if (x < 0) -x else x
-                e += (if (a > e) aAtk else aRel) * (a - e)
-                env[f] = e
+                val m = if (x < 0) -x else x
+                if (m > a) a = m
             }
-            for (f in 0 until frames) {
-                val ahead = env[if (f + look < frames) f + look else frames - 1]
-                val gain = if (ahead > threshold) {
-                    Math.pow((threshold / ahead).toDouble(), slope.toDouble()).toFloat()
-                } else 1f
-                out[f * snip.channels + ch] = snip.samples[f * snip.channels + ch] * gain
+            e += (if (a > e) aAtk else aRel) * (a - e)
+            env[f] = e
+        }
+        for (f in 0 until frames) {
+            val ahead = env[if (f + look < frames) f + look else frames - 1]
+            val gain = if (ahead > threshold) {
+                Math.pow((threshold / ahead).toDouble(), slope.toDouble()).toFloat()
+            } else 1f
+            for (ch in 0 until snip.channels) {
+                val i = f * snip.channels + ch
+                out[i] = snip.samples[i] * gain
             }
         }
 

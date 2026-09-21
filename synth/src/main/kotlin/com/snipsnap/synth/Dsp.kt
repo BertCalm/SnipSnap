@@ -437,6 +437,63 @@ internal object Dsp {
     }
 
     /**
+     * Peak-normalize [buf] in place to [target] like [normalize], but for
+     * [channels] > 1 the peak scanned is the per-FRAME FOLD (`sum of every
+     * channel`), not [normalize]'s per-sample peak. Falls through to
+     * [normalize] itself at `channels <= 1`, where the two are identical.
+     *
+     * [normalize] and [limitPeak] stay exactly as they are on purpose: a
+     * per-sample peak scan plus one uniform gain cannot tear a stereo
+     * image, so they are correct - and meant to stay channel-agnostic -
+     * for IMAGE and for clip safety. That is a claim about image, not
+     * level, and it is NOT a correct level reference for a stereo buffer
+     * about to feed a nonlinearity: an interleaved buffer's per-sample peak
+     * is generally a fraction of its fold peak (each channel only carries
+     * part of the total), so [normalize] hands a stereo signal to the next
+     * stage at a different level than the mono signal at the same macro
+     * settings reaches - and a nonlinearity does not commute with an
+     * arbitrary rescale, so that level mismatch reshapes the two paths'
+     * onsets differently by more than one gain. This is Task 3b's fix
+     * (`Thump.render`'s own pre-Punch normalize) extracted here so the
+     * fold-vs-per-sample convention is decided once, in one place, instead
+     * of being re-chosen by accident at every call site that has
+     * `channels` in hand.
+     *
+     * `channels` in hand is NOT by itself a reason to call this at
+     * `channels`. `Thump.render`'s pre-Punch normalize is currently the
+     * ONLY call site that needs the fold: it is the one buffer that goes
+     * on to feed a nonlinearity (`Punch.saturate`'s `Dsp.drive`) at a level
+     * that must match what the mono path hands the same nonlinearity.
+     * `Punch.applyOversampled`'s own two normalize calls sit downstream of
+     * where saturation already ran, so passing `channels` there instead of
+     * `1` does not fix a level-into-nonlinearity bug - it just moves the
+     * shipped output's absolute loudness. Measured: doing that dropped a
+     * stereo SNARE's exported peak by roughly half (0.9353 -> 0.4679 for
+     * one scrambled roll) and failed `ThumpTest`'s `scramble is
+     * reproducible and always playable`'s own `peak() > 0.5f` floor - see
+     * `Punch.applyOversampled`'s own comments at each call for the
+     * reasoning specific to that site, including a proof that its SECOND
+     * call is inert whenever PUNCH > 0 regardless of which convention it
+     * uses. Call this at `channels` only where a nonlinearity is genuinely
+     * next; call it at `1` everywhere else so the choice is decided, not
+     * defaulted.
+     */
+    fun normalizeByFold(buf: FloatArray, channels: Int = 1, target: Float = 0.95f) {
+        if (buf.isEmpty() || channels < 1) return
+        if (channels <= 1) { normalize(buf, target); return }
+        var foldPeak = 0f
+        for (f in 0 until buf.size / channels) {
+            var sum = 0f
+            for (c in 0 until channels) sum += buf[f * channels + c]
+            val a = if (sum < 0) -sum else sum
+            if (a > foldPeak) foldPeak = a
+        }
+        if (foldPeak <= 1e-9f) return
+        val g = target / foldPeak
+        for (i in buf.indices) buf[i] *= g
+    }
+
+    /**
      * Scale [buf] so its measured loudness ([Loudness.of]) hits [target],
      * then hold a sample-peak [ceiling] with [limitPeak] - [limitPeak]
      * scans raw sample magnitude, with no oversampling for inter-sample
@@ -463,9 +520,9 @@ internal object Dsp {
      * [limitPeak] afterward only steps in for the voices that actually reach
      * it, exactly like it does downstream of [Punch].
      */
-    fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f) {
-        if (buf.isEmpty()) return
-        val measured = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
+    fun levelTo(buf: FloatArray, rate: Int, target: Float, ceiling: Float = 0.99f, channels: Int = 1) {
+        if (buf.isEmpty() || channels < 1) return
+        val measured = Loudness.of(Snip(buf.copyOf(), channels = channels, sampleRate = rate))
         if (measured <= 1e-6f) return
         val gain = target / measured
         for (i in buf.indices) buf[i] *= gain
@@ -498,18 +555,54 @@ internal object Dsp {
      * -10.9 dB rejection just above the new Nyquist versus -17.9 dB
      * cascaded (25 kHz probe, 176.4 kHz source) - each stage this way stays
      * inside the kernel's own documented comfort zone.
+     *
+     * Each channel is resampled on its own. Running the kernel straight down
+     * an interleaved buffer would interpolate across the L/R boundary -
+     * neighbouring samples there belong to different channels, so the filter
+     * would average left into right and destroy both.
      */
-    fun decimate(buf: FloatArray, rate: Int): FloatArray {
-        val oversampled = Snip(buf, channels = 1, sampleRate = rate * OVERSAMPLE)
-        val half = Resampler.resample(oversampled, rate * OVERSAMPLE / 2)
-        return Resampler.resample(half, rate).samples
+    fun decimate(buf: FloatArray, rate: Int, channels: Int = 1): FloatArray {
+        if (channels < 1) return buf
+        if (channels <= 1) {
+            val oversampled = Snip(buf, channels = 1, sampleRate = rate * OVERSAMPLE)
+            val half = Resampler.resample(oversampled, rate * OVERSAMPLE / 2)
+            return Resampler.resample(half, rate).samples
+        }
+        val frames = buf.size / channels
+        val out = ArrayList<FloatArray>(channels)
+        for (c in 0 until channels) {
+            val one = FloatArray(frames)
+            for (f in 0 until frames) one[f] = buf[f * channels + c]
+            out.add(decimate(one, rate, channels = 1))
+        }
+        val outFrames = out.minOf { it.size }
+        val merged = FloatArray(outFrames * channels)
+        for (f in 0 until outFrames) {
+            for (c in 0 until channels) merged[f * channels + c] = out[c][f]
+        }
+        return merged
     }
 
-    /** Short linear fade-out so a truncated tail never clicks. */
-    fun fadeTail(buf: FloatArray, ms: Float = 4f) {
-        val n = min(buf.size, (ms / 1000f * RATE).toInt())
+    /**
+     * Short linear fade-out so a truncated tail never clicks.
+     *
+     * The ramp is computed in FRAMES and applied to every channel of a frame
+     * identically: a fade that walked sample by sample across an interleaved
+     * buffer would cover half the asked duration and would also tilt the pan
+     * as it went, which is a pan automation, not a fade.
+     *
+     * [rate] is a parameter because this used to hardcode [RATE] and therefore
+     * faded well under half the asked duration on a 96 kHz project.
+     */
+    fun fadeTail(buf: FloatArray, ms: Float = 4f, rate: Int = RATE, channels: Int = 1) {
+        if (buf.isEmpty() || channels < 1) return
+        val frames = buf.size / channels
+        val n = min(frames, (ms / 1000f * rate).toInt())
+        if (n <= 0) return
         for (i in 0 until n) {
-            buf[buf.size - 1 - i] *= i.toFloat() / n
+            val g = i.toFloat() / n
+            val frame = frames - 1 - i
+            for (c in 0 until channels) buf[frame * channels + c] *= g
         }
     }
 

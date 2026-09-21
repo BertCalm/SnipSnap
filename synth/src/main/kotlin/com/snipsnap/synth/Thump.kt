@@ -44,6 +44,11 @@ object Thump {
             // 0.28 is a placeholder - off-centre, where a snare is actually
             // played - and belongs at the next audition (Task 3), not here.
             MacroSpec("STRIKE", 0.28f),
+            // Defaults to 0 so the sixteen presets below, auditioned by ear
+            // in mono, stay byte-identical: widening them silently would
+            // discard that listening work. See snare()'s KDoc for what
+            // WIDTH does and where it goes structurally silent.
+            MacroSpec("WIDTH", 0f),
         )
         ThumpVoice.HAT_CLOSED -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("METAL", 0.5f),
@@ -116,6 +121,10 @@ object Thump {
             ThumpVoice.RIM -> rim(m, renderRate)
         }
         val punch = m.getValue("PUNCH")
+        // Only SNARE carries a WIDTH macro (m["WIDTH"] is absent, hence 0f,
+        // for every other voice) - this is the one place `render()` needs
+        // to know whether `raw` came back interleaved stereo or mono.
+        val channels = if ((m["WIDTH"] ?: 0f) > 0f) 2 else 1
         // Punch (U3, docs/SYNTH_UPGRADE.md) swaps the peak target below for a
         // perceived-level one, so normalize has to set the reference loudness
         // BEFORE Punch reshapes the hit, not after: normalizing again
@@ -123,7 +132,18 @@ object Thump {
         // result right back to a fixed peak, undoing the "more PUNCH reshapes
         // the hit, it doesn't just make it louder" guarantee PunchTest
         // proves for Punch.apply in isolation.
-        Dsp.normalize(raw)
+        //
+        // Dsp.normalizeByFold, not Dsp.normalize: see its own KDoc for why a
+        // per-sample peak scan is the wrong level reference for a stereo
+        // buffer about to feed Punch.saturate's nonlinearity. This is Task
+        // 3b's original fix, now shared with Punch.applyOversampled's own
+        // two normalize calls (which do NOT need the fold - see their own
+        // comments) instead of duplicated at each site that has `channels`
+        // in hand - keeps the pre-Punch reference level the stereo and
+        // mono paths hand to saturate matched (fold ~= mono pre-normalize,
+        // see snare()'s own KDoc), which is what the fold-down test below
+        // actually requires.
+        Dsp.normalizeByFold(raw, channels)
         // Punch.applyOversampled runs saturate and the boost envelope on
         // `raw` here, still at renderRate, before its own internal
         // Dsp.decimate call - both are nonlinear or fast-changing enough to
@@ -131,14 +151,17 @@ object Thump {
         // applying either after decimation would hand U6's whole
         // anti-aliasing story right back to a raw oscillator's problem.
         // PunchTest exercises this exact function, so that ordering is
-        // proven there, not just trusted here.
-        val buf = Punch.applyOversampled(raw, punch, RATE)
+        // proven there, not just trusted here. Punch.applyOversampled
+        // itself keeps the stereo path image-safe (Punch.kt's own KDoc on
+        // saturate/boostEnvelope) rather than SNARE needing to know that
+        // here.
+        val buf = Punch.applyOversampled(raw, punch, RATE, channels)
         // The actual clipping safety net, run last: only steps in if the
         // transient boost pushed a sample past what's safe, same as
         // normalize always did for PUNCH amount 0.
         Dsp.limitPeak(buf)
-        Dsp.fadeTail(buf)
-        return Snip(buf, channels = 1, sampleRate = RATE)
+        Dsp.fadeTail(buf, rate = RATE, channels = channels)
+        return Snip(buf, channels = channels, sampleRate = RATE)
     }
 
     // ---------- voices ----------
@@ -200,6 +223,20 @@ object Thump {
      * excitation. A prototype that fed them through the head lost exactly
      * what makes a snare a snare: the wires rattle AGAINST the drum, they are
      * not filtered BY it.
+     *
+     * WIDTH spreads the head's modes across the stereo field via
+     * [Modes.spread]/[Modes.ringStereo] (seeded from [Dsp.seedFor] on the
+     * patch, never a clock, so two renders stay byte-identical); the wires
+     * stay centred, written equally into both channels - they rattle against
+     * the drum, not around it. WIDTH 0 keeps the mono path byte-identical to
+     * before this macro existed, which is why every shipped preset (all
+     * auditioned in mono) leaves it there.
+     *
+     * WIDTH is structurally inert at SNAP 1: [snareBodyGain] is exactly 0
+     * there, so the output is entirely the centred wire layer no matter how
+     * far WIDTH is turned. Deliberate — SNAP 1 is the static burst the
+     * audition gate asked to keep reaching — not a bug to "fix" by widening
+     * the wires; see `ThumpTest`'s pin for it.
      */
     private fun snare(m: Map<String, Float>, rate: Int): FloatArray {
         val tune = snareFundamental(m.getValue("TUNE"))
@@ -213,6 +250,7 @@ object Thump {
         // corners should go fully silent. Kept off the exact edges so
         // STRIKE 0..1 stays reachable and audible end to end.
         val strike = m.getValue("STRIKE").coerceIn(0.02f, 0.98f)
+        val width = m.getValue("WIDTH")
 
         val frames = frames(0.6f, rate)
 
@@ -224,9 +262,19 @@ object Thump {
         val stickEnv = Dsp.Env(attackSeconds = 0.0005f, decay2T60 = 0.02f)
         for (i in exc.indices) exc[i] += 0.35f * stickNoise.next() * stickEnv.at(i.toFloat() / rate)
 
-        val head = Modes.atPosition(Modes.tableFor(Modes.Material.MEMBRANE), strike)
+        val positioned = Modes.atPosition(Modes.tableFor(Modes.Material.MEMBRANE), strike)
             .map { it.copy(t60 = it.t60 * damp) }
-        val body = Modes.ring(exc, tune, head, rate)
+
+        // channels drives everything below: 1 keeps this function's output
+        // byte-identical to the pre-WIDTH engine (same call order, same
+        // arithmetic), 2 rings the head through Modes.ringStereo instead.
+        val channels = if (width > 0f) 2 else 1
+        val bodyBuf = if (channels == 2) {
+            val spread = Modes.spread(positioned, width, Dsp.seedFor("THUMP", ThumpVoice.SNARE.name))
+            Modes.ringStereo(exc, tune, spread, rate)
+        } else {
+            Modes.ring(exc, tune, positioned, rate)
+        }
         // A resonator's impulse-response peak (Modes.ring's own KDoc gives the
         // closed form: g * r^n * sin((n+1)*theta)/sin(theta)) grows as
         // 1/sin(theta) for a low fundamental against a high sample rate -
@@ -237,24 +285,52 @@ object Thump {
         // 250x head start before it ever gets to choose a balance. Peak-
         // normalizing the head here makes bodyGain/wireGain in
         // [snareBodyGain]/[snareWireGain] mean what their numbers say.
-        val bodyPeak = body.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-9f)
-        for (i in body.indices) body[i] /= bodyPeak
+        //
+        // Stereo normalizes against the FOLD (L+R per frame), not each
+        // channel's own raw peak. Modes.ringStereo's linear pan sums exactly
+        // back to the mono Modes.ring output (its own KDoc), so the fold and
+        // the mono body are the identical signal pre-normalization -
+        // normalizing against the interleaved buffer's own (generally
+        // smaller, since each channel carries only a fraction of the total)
+        // peak instead would scale the body differently relative to the
+        // wires than the mono path does, breaking "a wide SNARE folds down
+        // to the mono render, up to one gain" for a reason that has nothing
+        // to do with WIDTH's own panning - measured: doing it the naive way
+        // left an 8% relative residual against that test's fold-down check.
+        val bodyPeak = if (channels == 2) {
+            var peak = 1e-9f
+            for (f in 0 until frames) {
+                val fold = kotlin.math.abs(bodyBuf[f * 2] + bodyBuf[f * 2 + 1])
+                if (fold > peak) peak = fold
+            }
+            peak
+        } else {
+            bodyBuf.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-9f)
+        }
+        for (i in bodyBuf.indices) bodyBuf[i] /= bodyPeak
 
         // The wires: broadband, highpassed into sizzle, decaying on their own
-        // clock. Not routed through the head - see the KDoc above.
-        val out = FloatArray(frames)
+        // clock. Not routed through the head - see the KDoc above. Computed
+        // once per FRAME (not per channel) so the wire layer stays centred:
+        // the same wire sample is written into every channel of a frame, at
+        // HALF amplitude per channel when stereo (the same p=0.5 linear-pan
+        // law the modes themselves use at dead centre) so L+R folds back to
+        // exactly the mono wire term, not double it.
+        val out = FloatArray(frames * channels)
         val wireNoise = Dsp.Noise(11)
         val dull = Dsp.OnePole(rate)
         val wireEnv = Dsp.Env(attackSeconds = 0.0008f, decay2T60 = damp * 3f)
+        val wireCenterGain = if (channels == 2) 0.5f else 1f
         val bodyGain = snareBodyGain(snap)
         val wireGain = snareWireGain(snap)
-        for (i in out.indices) {
-            val t = i.toFloat() / rate
+        for (f in 0 until frames) {
+            val t = f.toFloat() / rate
             val raw = wireNoise.next()
             val sizzle = raw - dull.lp(raw, Dsp.expMap(air, 900f, 5000f))
-            out[i] = bodyGain * body[i] + wireGain * sizzle * wireEnv.at(t) * 1.8f
+            val wire = wireCenterGain * wireGain * sizzle * wireEnv.at(t) * 1.8f
+            for (c in 0 until channels) out[f * channels + c] = bodyGain * bodyBuf[f * channels + c] + wire
         }
-        return trimSnareTail(out, rate)
+        return trimSnareTail(out, rate, channels)
     }
 
     /**
@@ -282,16 +358,36 @@ object Thump {
      * under). Trimming the true tail restores that duration-tracks-decay
      * property without touching [Modes.ring]'s own fixed-size math.
      */
-    private fun trimSnareTail(out: FloatArray, rate: Int, marginSeconds: Float = 0.03f): FloatArray {
+    private fun trimSnareTail(
+        out: FloatArray,
+        rate: Int,
+        channels: Int = 1,
+        marginSeconds: Float = 0.03f,
+    ): FloatArray {
+        if (out.isEmpty() || channels < 1) return out
         var peak = 0f
         for (v in out) { val a = kotlin.math.abs(v); if (a > peak) peak = a }
         if (peak <= 1e-9f) return out
         val threshold = peak * 0.001f // -60 dB
-        var last = 0
-        for (i in out.indices) if (kotlin.math.abs(out[i]) > threshold) last = i
-        val end = (last + (marginSeconds * rate).toInt() + 1).coerceAtMost(out.size)
+        val frames = out.size / channels
+        var lastFrame = 0
+        for (f in 0 until frames) {
+            for (c in 0 until channels) {
+                // break only leaves the per-channel loop, not the frame loop -
+                // correct: one channel above threshold is enough to keep the
+                // frame, the outer loop still needs to visit every frame.
+                if (kotlin.math.abs(out[f * channels + c]) > threshold) { lastFrame = f; break }
+            }
+        }
+        // Frames throughout: mixing a sample index with a frame count gave a
+        // stereo buffer half its margin, and an odd cut transposed L and R.
+        val endFrame = (lastFrame + (marginSeconds * rate).toInt() + 1).coerceAtMost(frames)
+        val end = endFrame * channels
         return if (end >= out.size) out else out.copyOf(end)
     }
+
+    internal fun trimSnareTailForTest(out: FloatArray, rate: Int, channels: Int = 1): FloatArray =
+        trimSnareTail(out, rate, channels)
 
     /** The head's fundamental: drum size, from piccolo to a deep 14-inch. */
     internal fun snareFundamental(tune: Float): Float = Dsp.expMap(tune, 120f, 330f)

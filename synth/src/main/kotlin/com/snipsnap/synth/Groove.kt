@@ -146,7 +146,7 @@ object Groove {
         }
 
         Dsp.normalize(mix)
-        Dsp.fadeTail(mix, 12f)
+        Dsp.fadeTail(mix, 12f, rate = rate)
         return Snip(mix, channels = 1, sampleRate = rate)
     }
 }

@@ -70,12 +70,20 @@ internal object Punch {
      */
     private const val ATTACK_WINDOW_SECONDS = 0.0005f
 
-    /** The onset window's own geometry, shared by [saturate] and [boost] so
-     * both taper identically across whichever rate they're called at. */
-    private class Window(rate: Int, bufSize: Int) {
+    /**
+     * The onset window's own geometry, shared by [saturate] and [boost] so
+     * both taper identically across whichever rate they're called at.
+     *
+     * [frameCount] - not a raw sample count - so the window covers the same
+     * real-time duration whether [saturate]/[boostEnvelope] are shaping a
+     * mono buffer or an interleaved stereo one; a raw sample count would
+     * halve the window's real duration on stereo, the same class of bug
+     * Task 3a fixed in [Dsp.fadeTail]/[Dsp.decimate]/[Dsp.levelTo].
+     */
+    private class Window(rate: Int, frameCount: Int) {
         val samples = (ATTACK_WINDOW_SECONDS * rate).toInt().coerceAtLeast(1)
         val cutoffSamples = samples * 4
-        val lastShaped = minOf(cutoffSamples, bufSize) - 1
+        val lastShaped = minOf(cutoffSamples, frameCount) - 1
 
         // exp() never actually reaches zero, so a raw exp(-i/window) cut off
         // at the last shaped sample leaves a small but real step in the gain
@@ -99,15 +107,55 @@ internal object Punch {
      * band-limit what it creates (measured: PunchTest's aliasing
      * regression). [apply] calls this for the ordinary (non-oversampled)
      * case.
+     *
+     * On an interleaved stereo [buf] ([channels] == 2), [Dsp.drive] is
+     * shaped into the FOLD (L+R) at each onset frame, not each channel
+     * independently, then redistributed back across L/R in their original
+     * proportion. `drive` is a nonlinearity, and a nonlinearity does not
+     * commute with panning: `drive(L) + drive(R) != drive(L + R)` in
+     * general, so saturating each channel on its own would leave a wide
+     * SNARE's onset a scaled-and-reshaped version of the mono render rather
+     * than the same signal at one gain - exactly the comb-notching-shaped
+     * hazard this task's own fold-down test exists to catch (measured: an
+     * earlier version that skipped shaping entirely on the stereo path
+     * instead left an 8% relative residual there, concentrated at the loud
+     * onset). Reshaping the fold and preserving each channel's share of it
+     * keeps the image's pan ratio untouched while still applying PUNCH's
+     * curve to the same total energy the mono path shapes.
      */
-    fun saturate(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE) {
+    fun saturate(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE, channels: Int = 1) {
         if (amount <= 0f || buf.isEmpty()) return
         val punch = amount.coerceIn(0f, 1f)
         // Cubic: see the doc comment on [apply] for why.
         val satAmount = punch * punch * punch * 0.3f
-        val window = Window(rate, buf.size)
-        for (i in 0..window.lastShaped) {
-            buf[i] = Dsp.drive(buf[i], satAmount * window.taperAt(i))
+        val frames = buf.size / channels
+        val window = Window(rate, frames)
+        for (f in 0..window.lastShaped) {
+            val taper = satAmount * window.taperAt(f)
+            if (channels <= 1) {
+                buf[f] = Dsp.drive(buf[f], taper)
+                continue
+            }
+            var sum = 0f
+            for (c in 0 until channels) sum += buf[f * channels + c]
+            // The guard below only exists for the exact-zero case (sum ==
+            // 0f), which would otherwise divide by zero - it is NOT what
+            // keeps `scale` numerically safe in general. scale =
+            // drive(sum, taper)/sum -> g/tanh(g) as sum -> 0, a BOUNDED
+            // constant: g = 1 + 6*taper and taper's satAmount is capped at
+            // punch^3 * 0.3 <= 0.3, so g <= 2.8 and scale <= g/tanh(g) =
+            // 2.8208. MEASURED (final-review.md): flat at 2.820785 - the
+            // analytic limit to 7 digits - from sum = 1e-4 down to
+            // 1.19e-7, so catastrophic cancellation in the L+R fold does
+            // not make this ill-conditioned. For any O(1) operand the
+            // float ULP is ~6e-8, so `sum` either lands at precisely 0.0
+            // (guard fires) or already sits where `scale` is pinned at its
+            // bounded limit - 1e-9 is not a meaningful magnitude here, the
+            // bound is what makes the guard sufficient.
+            if (kotlin.math.abs(sum) <= 1e-9f) continue
+            val shaped = Dsp.drive(sum, taper)
+            val scale = shaped / sum
+            for (c in 0 until channels) buf[f * channels + c] *= scale
         }
     }
 
@@ -124,15 +172,21 @@ internal object Punch {
      * own uniform gain, by contrast, genuinely is transparent (a constant
      * multiply can't mint new frequency content), which is exactly why
      * it's the one piece safe to keep after decimation.
+     *
+     * Unlike [saturate], this is a plain multiply - linear, so applying the
+     * SAME per-frame gain to every channel already preserves each channel's
+     * share of the signal exactly; no fold/redistribute trick needed here.
      */
-    fun boostEnvelope(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE) {
+    fun boostEnvelope(buf: FloatArray, amount: Float, rate: Int = Dsp.RATE, channels: Int = 1) {
         if (amount <= 0f || buf.isEmpty()) return
         val punch = amount.coerceIn(0f, 1f)
         // Cubic: see the doc comment on [apply] for why.
         val boostGain = punch * punch * punch * 6f
-        val window = Window(rate, buf.size)
-        for (i in 0..window.lastShaped) {
-            buf[i] *= 1f + boostGain * window.taperAt(i)
+        val frames = buf.size / channels
+        val window = Window(rate, frames)
+        for (f in 0..window.lastShaped) {
+            val g = 1f + boostGain * window.taperAt(f)
+            for (c in 0 until channels) buf[f * channels + c] *= g
         }
     }
 
@@ -144,9 +198,9 @@ internal object Punch {
      * decimation left quieter than [target] would get audibly rescaled
      * even though PUNCH never touched it.
      */
-    fun rescaleToLoudness(buf: FloatArray, amount: Float, target: Float, rate: Int = Dsp.RATE) {
+    fun rescaleToLoudness(buf: FloatArray, amount: Float, target: Float, rate: Int = Dsp.RATE, channels: Int = 1) {
         if (amount <= 0f || buf.isEmpty()) return
-        val current = Loudness.of(Snip(buf.copyOf(), channels = 1, sampleRate = rate))
+        val current = Loudness.of(Snip(buf.copyOf(), channels = channels, sampleRate = rate))
         if (current > 1e-6f && target > 1e-6f) {
             val gain = target / current
             for (i in buf.indices) buf[i] *= gain
@@ -205,21 +259,65 @@ internal object Punch {
      * exercises this function directly, so a future edit that moves either
      * stage back across the decimate boundary fails that test, not just a
      * hand-reconstructed stand-in for it.
+     *
+     * [channels] threads through [Dsp.decimate], the [Loudness.of]
+     * measurements below, and [saturate]/[boostEnvelope] themselves - see
+     * their own KDoc for how each stays image-safe on an interleaved
+     * buffer (a linear per-frame gain for [boostEnvelope], reshaping the
+     * fold and redistributing by original L/R proportion for [saturate]'s
+     * nonlinearity).
      */
-    fun applyOversampled(raw: FloatArray, amount: Float, rate: Int): FloatArray {
+    fun applyOversampled(raw: FloatArray, amount: Float, rate: Int, channels: Int = 1): FloatArray {
         val renderRate = rate * Dsp.OVERSAMPLE
+        // Both normalize calls below go through Dsp.normalizeByFold, but
+        // deliberately AT channels = 1 (per-sample), not `channels` -
+        // decided in writing here, not left as unused plumbing (that was
+        // finding 3 in final-review.md: `channels` sat in hand and unused,
+        // so the convention got re-chosen by accident). Neither buffer
+        // below feeds a nonlinearity: saturate/boostEnvelope already ran on
+        // `raw` at renderRate, before either decimate call in this
+        // function. Dsp.normalizeByFold's own KDoc has the one call site
+        // that DOES need channels - Thump.render's pre-Punch normalize -
+        // and this comment is the record for why these two are not it.
+        //
+        // `reference`'s only consumer is Loudness.of -> `before`, the
+        // target the final rescale below matches - not a nonlinearity.
+        // Fold-normalizing it MEASURABLY changes the shipped level: with
+        // channels threaded through here, `before` for a stereo buffer
+        // came out roughly half of the per-sample convention's (a centred
+        // stereo signal's fold peak is ~2x its own per-sample peak), and
+        // because `final = buf0 * before / Loudness.of(buf0)` in
+        // rescaleToLoudness, that halving reaches the exported audio
+        // directly - measured: SNARE roll 4 of `scramble is reproducible
+        // and always playable` (PUNCH=0.19062, WIDTH=0.04869324) went from
+        // peak 0.9353 to peak 0.4679, failing that test's own
+        // `peak() > 0.5f` playability floor. That is a real level
+        // regression, not an artifact of which peak got measured - the
+        // reviewer's own framing (finding 3) was written for a call site
+        // that feeds a nonlinearity; this one does not.
         val before = if (amount > 0f) {
-            val reference = Dsp.decimate(raw.copyOf(), rate)
-            Dsp.normalize(reference)
-            Loudness.of(Snip(reference, channels = 1, sampleRate = rate))
+            val reference = Dsp.decimate(raw.copyOf(), rate, channels)
+            Dsp.normalizeByFold(reference, channels = 1)
+            Loudness.of(Snip(reference, channels = channels, sampleRate = rate))
         } else {
             0f
         }
-        saturate(raw, amount, renderRate)
-        boostEnvelope(raw, amount, renderRate)
-        val buf = Dsp.decimate(raw, rate)
-        Dsp.normalize(buf)
-        rescaleToLoudness(buf, amount, before, rate)
+        saturate(raw, amount, renderRate, channels)
+        boostEnvelope(raw, amount, renderRate, channels)
+        val buf = Dsp.decimate(raw, rate, channels)
+        // `buf`'s own normalize gain is PROVABLY inert whenever amount > 0:
+        // rescaleToLoudness immediately below measures `current =
+        // Loudness.of(buf)` on the just-normalized buffer and rescales by
+        // `before / current` - whatever gain this normalize applied
+        // cancels exactly in that ratio (verified: reverting this one call
+        // alone to a fold reference left the roll-4 render's peak
+        // unchanged to 7 significant figures, 0.4678797 both ways). It
+        // only sets the final level directly at amount == 0f, where
+        // rescaleToLoudness itself early-returns and nothing nonlinear ran
+        // - the same "correct for clip safety, not a level-into-
+        // nonlinearity decision" case Dsp.normalize/limitPeak already are.
+        Dsp.normalizeByFold(buf, channels = 1)
+        rescaleToLoudness(buf, amount, before, rate, channels)
         return buf
     }
 }

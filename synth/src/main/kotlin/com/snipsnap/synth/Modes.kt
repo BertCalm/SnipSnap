@@ -4,6 +4,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.pow
+import kotlin.random.Random
 
 /**
  * MODES — a bank of tuned resonators, each with its own decay.
@@ -25,8 +26,12 @@ internal object Modes {
      * strike excites it, and how long it takes to fall 60 dB. [ratio] is
      * dimensionless on purpose — it is the physics of the body, independent
      * of what note the body is tuned to, and independent of sample rate.
+     *
+     * [pan] is 0 hard left, 1 hard right, 0.5 centred — the position this
+     * mode radiates from. Defaulted to centre so every existing 3-arg
+     * construction still compiles and still renders mono-identical.
      */
-    data class Mode(val ratio: Float, val gain: Float, val t60: Float)
+    data class Mode(val ratio: Float, val gain: Float, val t60: Float, val pan: Float = 0.5f)
 
     /**
      * Rings [modes] with [excitation] — the mallet — at [fundamentalHz].
@@ -353,5 +358,64 @@ internal object Modes {
             val weight = kotlin.math.abs(kotlin.math.sin(n * Math.PI * p)).toFloat()
             mode.copy(gain = mode.gain * weight)
         }
+    }
+
+    /**
+     * [modes] given stereo positions, [width] 0 (all centred) to 1 (full
+     * spread). Seeded from [seed] so a body's image is reproducible — two
+     * renders of the same patch must be byte-identical, and a random image
+     * per render would break that as surely as a random oscillator phase.
+     *
+     * Positions alternate outward rather than landing randomly: a real body's
+     * low modes are its least directional, so the fundamental stays near the
+     * middle and the upper partials fan out, which is both what a physical
+     * radiator does and what keeps a fold-down's low end solid.
+     */
+    fun spread(modes: List<Mode>, width: Float, seed: Int): List<Mode> {
+        val w = width.coerceIn(0f, 1f)
+        val random = Random(seed)
+        return modes.mapIndexed { i, mode ->
+            // Alternating sides, widening with index, jittered so a bank
+            // never sounds like a row of evenly spaced points.
+            val side = if (i % 2 == 0) -1f else 1f
+            val reach = if (modes.size <= 1) 0f else i.toFloat() / (modes.size - 1)
+            val jitter = (random.nextFloat() - 0.5f) * 0.25f
+            mode.copy(pan = (0.5f + side * w * reach * (0.5f + jitter)).coerceIn(0f, 1f))
+        }
+    }
+
+    /**
+     * [modes] rung into an interleaved stereo buffer, each at its own [Mode.pan].
+     *
+     * Panning is LINEAR — `L = (1-p)·x`, `R = p·x` — so, at THIS function's
+     * own output, L+R sums to exactly `x` for every position: a mono fold
+     * of the buffer [ringStereo] returns has no comb notching, which
+     * equal-power panning cannot promise (it sums to √2 at centre). That is
+     * a property of this function's output, not a promise about what a
+     * caller eventually exports — a caller's own level stages downstream
+     * (gain-staging, [Punch], export) can and do rescale the fold relative
+     * to a same-settings mono render; see [Thump.render]'s own KDoc (and
+     * its private `snare` helper) for what the shipped SNARE voice actually
+     * delivers end to end. These files end up on SD cards and club systems, so the
+     * no-comb-notching property this function itself guarantees is not
+     * hypothetical — it just isn't the whole story past this call.
+     */
+    fun ringStereo(
+        excitation: FloatArray,
+        fundamentalHz: Float,
+        modes: List<Mode>,
+        rate: Int = RATE,
+    ): FloatArray {
+        val out = FloatArray(excitation.size * 2)
+        if (excitation.isEmpty() || modes.isEmpty() || fundamentalHz <= 0f) return out
+        for (mode in modes) {
+            val one = ring(excitation, fundamentalHz, listOf(mode.copy(pan = 0.5f)), rate)
+            val p = mode.pan.coerceIn(0f, 1f)
+            for (i in one.indices) {
+                out[i * 2] += one[i] * (1f - p)
+                out[i * 2 + 1] += one[i] * p
+            }
+        }
+        return out
     }
 }

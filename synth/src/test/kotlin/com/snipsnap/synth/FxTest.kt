@@ -127,6 +127,41 @@ class FxTest {
         assertEquals(DrumClass.SNARE, Classifier.classify(Squash.process(snare)).drumClass)
     }
 
+    @Test
+    fun `squash keeps a stereo image instead of pumping it narrower`() {
+        val rate = Dsp.RATE
+        val frames = rate / 4
+        // A correlated pair, deliberately off-centre: R is 0.4x L throughout.
+        // Any honest dynamics processor preserves that ratio; a per-channel
+        // detector closes on the louder side first and squeezes them together.
+        val samples = FloatArray(frames * 2)
+        for (f in 0 until frames) {
+            val t = f.toFloat() / rate
+            val x = kotlin.math.sin(2.0 * Math.PI * 220.0 * t).toFloat() *
+                kotlin.math.exp(-6.0 * t).toFloat()
+            samples[f * 2] = x
+            samples[f * 2 + 1] = x * 0.4f
+        }
+        val out = Squash.process(Snip(samples, 2, rate), mapOf("AMOUNT" to 0.8f))
+
+        fun ratioOver(fromSec: Float, toSec: Float): Float {
+            val a = (fromSec * rate).toInt() * 2
+            val b = (toSec * rate).toInt() * 2
+            var l = 0.0; var r = 0.0
+            var i = a
+            while (i < b) { l += out.samples[i].toDouble() * out.samples[i]
+                            r += out.samples[i + 1].toDouble() * out.samples[i + 1]; i += 2 }
+            return kotlin.math.sqrt(l / (r + 1e-12)).toFloat()
+        }
+        // Measured before the fix: 2.5 at rest, collapsing to 1.13 during the
+        // attack. The image must hold through the transient, not just after it.
+        val duringAttack = ratioOver(0.001f, 0.02f)
+        assertTrue(
+            duringAttack > 2.0f,
+            "squash narrowed the image during the attack: L:R fell to $duringAttack from 2.5",
+        )
+    }
+
     // ---------- ECHO ----------
 
     @Test

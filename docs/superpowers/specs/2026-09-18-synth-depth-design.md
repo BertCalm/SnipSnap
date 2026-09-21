@@ -551,6 +551,75 @@ changes attack character without changing level — a pure timbre control, froze
 That is a preset-authoring gap, not a DSP one, and it is most of why the snares
 read as samey even before the body problem.
 
+## Phase 1C outcome — SPACE, and what it left for the ears — 2026-09-20
+
+Shipped on `claude/synth-space-stereo`. The SPACE stage exists: modes take individual stereo
+positions, the fold-down is exact by construction, and SNARE has a `WIDTH` macro defaulting to 0
+so the sixteen auditioned presets render mono and byte-identical.
+
+**Panning is linear, not equal-power, and that is load-bearing.** `L = (1-p)x`, `R = px` gives
+`L + R = x` exactly for every position, so a mono fold-down returns every mode at full amplitude
+with no comb notching. Equal-power sums to √2 at centre — a position-dependent 3 dB bump. These
+files go to SD cards and club systems; the fold-down is not hypothetical.
+
+### What was measured, and what it means for the listening session
+
+| | side/mid at width 1 |
+|---|---|
+| METAL_BAR @220 Hz, bare modal body | 0.087 |
+| MEMBRANE @199 Hz, bare modal body | 0.128 |
+| **SNARE as shipped, SNAP 0.2** | **0.083** |
+
+The shipped snare is narrower than its own body, because the wire layer is **mono** and mono
+content lands entirely in mid. A prediction made mid-phase that MEMBRANE would audition ~1.5×
+wider than METAL_BAR was therefore wrong in its practical conclusion: the two land in the same
+place once the wires are mixed in.
+
+**The open question is whether 0.083 is enough.** The mechanism is correct and swept-tested; the
+travel may be too narrow, which is the same "limited" complaint that opened this initiative. The
+ceiling is structural: mode 0 sits at `reach = 0`, always centred, and carries ~95% of a bar's
+energy (~81% of a membrane's), so `sqrt(1 - mode0_share)` caps what any spread can reach. If the
+verdict is "too subtle", the first lever is the reach/jitter product in `Modes.spread`. Unpinning
+mode 0 from centre is the last resort — that pin is what keeps the low end solid in mono.
+
+Renders for the gate: `~/Desktop/SnipSnap Audition/16 SNARE - width across its travel/`.
+
+### WIDTH is inert at high SNAP, by construction
+
+`snareBodyGain(snap) = 1 - snap`, so at SNAP 1 the modal body's gain is exactly 0 and the output
+is entirely the mono wire layer. WIDTH then does nothing at any setting, and the high-SNAP
+presets (DUST BURST, LONG HISS) render dead mono. This is pinned by a test rather than papered
+over, because SNAP 1 being a genuine static burst was an explicit request.
+
+If width is wanted there, the lever runs the opposite way: the wires are noise, and two
+decorrelated seeds give a side/mid ratio near 1.0 — far more width than the modal body can reach.
+That is a taste decision and is deliberately not made here.
+
+### Two conventions worth not re-deriving
+
+- **A per-sample peak scan plus one uniform gain is correct for IMAGE and for clip safety, and is
+  NOT a correct LEVEL reference for a stereo buffer feeding a nonlinearity.** `Dsp.normalize` and
+  `Dsp.limitPeak` stay channel-agnostic for that reason; `Dsp.normalizeByFold` exists for the one
+  call site that feeds `Dsp.drive`. Conflating the two produced a measured 6 dB level regression
+  during this phase, caught by a pre-existing playability test rather than by any stereo test.
+- **A nonlinearity does not commute with panning:** `drive(L) + drive(R) != drive(L+R)`. So
+  `Punch.saturate` shapes the fold and redistributes by each channel's original share, which
+  keeps `L' + R' = drive(L+R)` exactly while leaving the pan ratio untouched.
+
+### Still open from earlier phases
+
+- **Macro ranges (Phase 0 Task 9) were never done.** This is the original "limited" complaint and
+  remains the largest unaddressed item.
+- Four placeholders still awaiting ears: FAT `cycles` = 0.25, per-voice `LOUDNESS_OFFSET` (all
+  zero), `MELODIC_WOBBLE_AMOUNT` = 0.05, `CUTOFF_KEY_TRACK_AMOUNT` = 0.6.
+- `PUNCH` across the other seven voices — 1 preset in 128 sets it.
+- `reference/calibration/` holds only a README; every Classifier threshold is tuned against
+  synthesis, never real audio.
+- A pre-existing, unrelated defect found while verifying a plan constraint: `PadRecipe.VERSION`
+  was bumped to 2 in `440cab5a`, and `shell/RecipeReplay.kt:85` swallows the version throw via
+  `runCatching{}.getOrNull()`, so any recipe saved before that bump now reports "nothing to
+  replay" rather than naming the version break.
+
 ## The ninth engine — STRIKE
 
 `SYNTH_UPGRADE.md` lists "no new engines" as a non-goal. That non-goal was

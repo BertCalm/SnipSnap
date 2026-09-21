@@ -330,4 +330,99 @@ class ModesTest {
         assertTrue(out.all { it.isFinite() }, "an over-Nyquist mode must not produce NaN")
         assertTrue(out.all { abs(it) < 1e-6f }, "an over-Nyquist mode must be silent, not folded down")
     }
+
+    @Test
+    fun `a mono fold-down of the stereo bank returns the mono bank exactly`() {
+        val rate = Dsp.RATE
+        val exc = FloatArray(rate / 4).also { it[0] = 1f }
+        val modes = Modes.spread(Modes.tableFor(Modes.Material.METAL_BAR), width = 1f, seed = 7)
+        val mono = Modes.ring(exc, 220f, modes, rate)
+        val stereo = Modes.ringStereo(exc, 220f, modes, rate)
+        // Linear panning sums to unity for every position, so L+R must be
+        // the mono render sample for sample. This is the property that makes
+        // the width safe on a club system, and it is worth asserting exactly
+        // rather than approximately — but "exactly" has to be relative to the
+        // signal's own scale, not an absolute constant: the resonator's
+        // impulse response carries a 1/sin(theta) amplitude factor (~32 at
+        // this pitch, mono peak ~41), and the stereo path sums the same
+        // per-mode terms in a different order (per-mode L/R accumulation vs.
+        // one shared mono accumulator), so float rounding alone can sit right
+        // at a fixed 1e-5 threshold. Scale the tolerance to the peak instead.
+        val peak = mono.maxOf { kotlin.math.abs(it) }
+        val tol = 1e-5f * kotlin.math.max(1f, peak)
+        for (f in mono.indices) {
+            val summed = stereo[f * 2] + stereo[f * 2 + 1]
+            assertTrue(
+                kotlin.math.abs(summed - mono[f]) < tol,
+                "fold-down differs at frame $f: $summed vs ${mono[f]} (tol=$tol, peak=$peak)",
+            )
+        }
+    }
+
+    @Test
+    fun `width actually widens, swept across its travel`() {
+        val rate = Dsp.RATE
+        val exc = FloatArray(rate / 4).also { it[0] = 1f }
+        val table = Modes.tableFor(Modes.Material.METAL_BAR)
+        // Side energy over mid energy: 0 at width 0, rising monotonically.
+        fun sideRatio(width: Float): Float {
+            val s = Modes.ringStereo(exc, 220f, Modes.spread(table, width, seed = 7), rate)
+            var mid = 0.0; var side = 0.0
+            var f = 0
+            while (f < s.size) {
+                val m = (s[f] + s[f + 1]) * 0.5; val d = (s[f] - s[f + 1]) * 0.5
+                mid += m * m; side += d * d; f += 2
+            }
+            return kotlin.math.sqrt(side / (mid + 1e-12)).toFloat()
+        }
+        val points = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { sideRatio(it) }
+        assertTrue(points.first() < 1e-4f, "width 0 must be dead centre, got ${points.first()}")
+        for (i in 0 until points.size - 1) {
+            assertTrue(
+                points[i + 1] > points[i] * 1.15f,
+                "width did nothing between step $i and ${i + 1}: $points",
+            )
+        }
+    }
+
+    @Test
+    fun `the stereo bank is deterministic`() {
+        val rate = Dsp.RATE
+        val exc = FloatArray(rate / 8).also { it[0] = 1f }
+        val modes = Modes.spread(Modes.tableFor(Modes.Material.BELL), width = 0.7f, seed = 3)
+        assertTrue(
+            Modes.ringStereo(exc, 220f, modes, rate)
+                .contentEquals(Modes.ringStereo(exc, 220f, modes, rate)),
+            "same inputs must give byte-identical stereo output",
+        )
+    }
+
+    @Test
+    fun `a hard-panned mode lands on the side it was panned to`() {
+        val rate = Dsp.RATE
+        val exc = FloatArray(rate / 8).also { it[0] = 1f }
+        // Every other stereo test here is symmetric — it sums L+R or squares
+        // L-R — so all of them pass with the channels swapped. This is the
+        // one that pins orientation, and it asserts BOTH directions so a
+        // swap cannot satisfy it either way.
+        fun energies(pan: Float): Pair<Double, Double> {
+            val s = Modes.ringStereo(
+                exc, 220f, listOf(Modes.Mode(ratio = 1f, gain = 1f, t60 = 0.3f, pan = pan)), rate,
+            )
+            var l = 0.0
+            var r = 0.0
+            var f = 0
+            while (f < s.size) { l += s[f] * s[f]; r += s[f + 1] * s[f + 1]; f += 2 }
+            return l to r
+        }
+
+        val (lRight, rRight) = energies(1f)
+        assertTrue(rRight > 1e-6, "pan 1 put nothing in the right channel at all")
+        assertTrue(lRight < rRight * 1e-9, "pan 1 leaked into the left channel: L=$lRight R=$rRight")
+
+        val (lLeft, rLeft) = energies(0f)
+        assertTrue(lLeft > 1e-6, "pan 0 put nothing in the left channel at all")
+        assertTrue(rLeft < lLeft * 1e-9, "pan 0 leaked into the right channel: L=$lLeft R=$rLeft")
+    }
 }
+

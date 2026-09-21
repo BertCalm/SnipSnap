@@ -95,7 +95,7 @@ object Grains {
         }
 
         Dsp.normalize(out)
-        Dsp.fadeTail(out, 12f)
+        Dsp.fadeTail(out, 12f, rate = rate)
         return Snip(out, channels = 1, sampleRate = rate)
     }
 
