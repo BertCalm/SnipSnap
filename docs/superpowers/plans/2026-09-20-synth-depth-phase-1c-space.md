@@ -23,7 +23,16 @@ The original complaint was "limited, thin, cheap, uninteresting." Phase 0 took c
 
 ## Global Constraints
 
-- **`PadRecipe.VERSION` stays 1.** `validateMacros` takes a subset and `render` overlays onto defaults, so an added macro needs no bump; `RecipeReplay.kt:85` swallows the version throw into `null`, so bumping would erase older recipes from breed and replay.
+- **`PadRecipe.VERSION` must not change.** *(Corrected 2026-09-20: this constraint
+  originally read "stays 1". That was wrong — it was already 2, bumped in `440cab5a` as a
+  deliberate hard break, before this plan was written. Nothing in Phase 1C touches
+  `PadRecipe`, so no task was affected, but the stated fact was false.)* The reason to leave
+  it alone is unchanged and still verified: `validateMacros` takes a subset and `render`
+  overlays onto defaults, so an added macro needs no bump — and `shell/RecipeReplay.kt:85`
+  does `runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()`, so the version throw is
+  swallowed into `Plan.Refused(REPLAY_NO_DOOR)`. A bump therefore erases older recipes from
+  breed and replay, and reports it to the user as "nothing to replay" rather than as a
+  version break.
 - **Determinism:** same patch → byte-identical audio. No clock, no shared mutable RNG.
 - **Never hardcode 44100** — `Dsp.RATE` or a passed `rate`.
 - **No invented values.** Measured, sourced, or a marked placeholder. No third category.
