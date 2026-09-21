@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
@@ -17,7 +18,7 @@ import kotlin.random.Random
 /** Small DSP toolbox for offline voice rendering. Nothing here is real-time. */
 internal object Dsp {
 
-    const val RATE = 44_100
+    const val RATE = WavWriter.MPC_SAMPLE_RATE
 
     /**
      * U6 (docs/SYNTH_UPGRADE.md): an engine's per-voice synthesis runs at

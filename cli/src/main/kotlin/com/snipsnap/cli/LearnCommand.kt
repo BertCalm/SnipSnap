@@ -5,6 +5,7 @@ import com.snipsnap.audio.Ear
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Tempo
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
@@ -30,7 +31,7 @@ import java.io.PrintStream
  */
 object LearnCommand {
 
-    const val TARGET_RATE = 44_100
+    const val TARGET_RATE = WavWriter.MPC_SAMPLE_RATE
 
     /** Below this the ear won't claim it knows what a hit was. */
     const val SURE_CONFIDENCE = 0.5f

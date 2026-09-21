@@ -27,6 +27,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1-m0"
+        // The on-device suite (src/androidTest): Compose UI tests that run
+        // on an emulator or a plugged-in phone, `:app:connectedDebugAndroidTest`.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         externalNativeBuild {
             cmake {
@@ -59,6 +62,12 @@ android {
         release {
             isMinifyEnabled = false
         }
+    }
+
+    testOptions {
+        // A UI test waits for the screen to settle; system animations would
+        // make "settled" a moving target.
+        animationsDisabled = true
     }
 }
 
@@ -103,4 +112,13 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // The on-device suite: Compose's own test rule and finders, driving a
+    // screen on an emulator the way a finger would. The manifest artifact
+    // gives the debug build the plain activity the rule hosts content in.
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    debugImplementation(composeBom)
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

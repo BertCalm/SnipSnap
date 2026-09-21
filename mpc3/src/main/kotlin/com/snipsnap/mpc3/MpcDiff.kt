@@ -187,7 +187,7 @@ object MpcDiff {
 
     private fun xmlTree(text: String): JsonValue {
         // The files are machine-written; a doctype would be an attack.
-        val doc = SafeXml.newFactory().newDocumentBuilder().parse(InputSource(StringReader(text)))
+        val doc = SafeXml.newBuilder().parse(InputSource(StringReader(text)))
         val root = doc.documentElement
         return JsonValue.Obj(mapOf(root.tagName to element(root)))
     }

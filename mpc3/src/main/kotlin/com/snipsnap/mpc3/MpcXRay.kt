@@ -259,7 +259,7 @@ object MpcXRay {
     private fun readXpm(xml: String, suffix: String): Reading {
         val doc = try {
             val cleaned = xml.removePrefix("﻿").trimStart()
-            SafeXml.newFactory().newDocumentBuilder().parse(InputSource(StringReader(cleaned))).also { it.documentElement.normalize() }
+            SafeXml.newBuilder().parse(InputSource(StringReader(cleaned))).also { it.documentElement.normalize() }
         } catch (e: Exception) {
             return Reading("MPC 2 (XML)$suffix", unreadable = e.message ?: "not readable XML")
         }

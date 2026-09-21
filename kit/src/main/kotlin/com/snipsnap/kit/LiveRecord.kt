@@ -197,34 +197,40 @@ object LiveRecord {
      */
     fun land(kitDir: File, clip: Mpc3Clip): File {
         require(clip.notes.isNotEmpty()) { "nothing recorded - the take has no notes to land" }
-        val e = GrooveEdit.load(kitDir)
-        return GrooveStore.save(kitDir, GrooveVariations.standard(clip) + listOfNotNull(e))
+        // Every user program, not just the first: this rewrites the whole
+        // sidecar, so a program left out of the list is a program deleted
+        // by landing a take.
+        val yours = GrooveEdit.loadAll(kitDir)
+        return GrooveStore.save(kitDir, GrooveVariations.standard(clip) + yours)
     }
 
     /**
      * Discards back to [preTake] (null = no base existed before this
-     * take). Three branches, covering every state the base/E pair can be
-     * in before a take:
-     * - [preTake] non-null (base + E, or base alone): re-save the
-     *   standard variations of [preTake] with whatever E is currently
-     *   stored riding along, the same [ReadGroove.land] shape.
-     * - [preTake] null and E exists (E alone, no base): [GrooveStore.delete]
-     *   clears the take's landed clips, then [GrooveEdit.save] writes E
-     *   back on its own — `GrooveStore.save(kitDir, listOfNotNull(e))`,
-     *   reached through the existing store/edit API rather than a raw
-     *   clip-list write.
-     * - [preTake] null and no E (neither existed): [GrooveStore.delete]
+     * take). Three branches, covering every state the base and the user's
+     * own programs can be in before a take:
+     * - [preTake] non-null (base plus any user programs, or base alone):
+     *   re-save the standard variations of [preTake] with every user
+     *   program currently stored riding along, the same [ReadGroove.land]
+     *   shape.
+     * - [preTake] null and user programs exist (them alone, no base):
+     *   [GrooveStore.delete] clears the take's landed clips, then they are
+     *   written back on their own.
+     * - [preTake] null and none (neither existed): [GrooveStore.delete]
      *   outright — no groove.json survives, since [GrooveStore.save]
      *   itself refuses an empty clip list.
+     *
+     * **Every branch handles all of them, not the first.** Each one
+     * rewrites the sidecar wholesale, so a user program missing from the
+     * list it saves is a user program destroyed by an undo.
      */
     fun undo(kitDir: File, preTake: Mpc3Clip?) {
         if (preTake != null) {
-            val e = GrooveEdit.load(kitDir)
-            GrooveStore.save(kitDir, GrooveVariations.standard(preTake) + listOfNotNull(e))
+            val yours = GrooveEdit.loadAll(kitDir)
+            GrooveStore.save(kitDir, GrooveVariations.standard(preTake) + yours)
             return
         }
-        val e = GrooveEdit.load(kitDir)
+        val yours = GrooveEdit.loadAll(kitDir)
         GrooveStore.delete(kitDir)
-        if (e != null) GrooveEdit.save(kitDir, e)
+        if (yours.isNotEmpty()) GrooveStore.save(kitDir, yours)
     }
 }

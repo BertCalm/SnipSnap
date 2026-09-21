@@ -99,6 +99,7 @@ import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.Provenance
 import com.snipsnap.shell.RecipeReplay
 import com.snipsnap.shell.Retrim
 import com.snipsnap.shell.Rooms
@@ -2794,55 +2795,33 @@ private fun reapplyPendingMetadataFields(fresh: KitBuilderModel, stalePads: Map<
 // ---------- provenance ----------
 
 /**
- * A pad's origin as one phrase, read defensively from [KitPad.source] — the
- * map's keys vary by pipeline (`song`/`at` for a capture dig, `file` for a
- * CLI chop, `origin` for the app's own CHOP, `resampledFrom`/`importedFrom`/
- * `sculptedFrom`/`dissectedFrom`/`mergedFrom` for the rest), so this reads
- * in the same priority order `LinerNotes.kt` uses and falls back to the
- * bare sample file rather than showing nothing.
+ * The pad sheet's provenance line: what this pad is, in the order a
+ * reader wants it — what made it from other pads, what it borrowed, where
+ * its audio came from and which slice of it, how long it is, and whether
+ * the original is still recoverable from the bin.
+ *
+ * Which stamp in `KitPad.source` wins, and how each reads, is `:shell`'s
+ * [Provenance] and not this file's. It used to be this file's: a ten-key
+ * priority order whose own KDoc claimed it read "in the same priority
+ * order `LinerNotes.kt` uses". That had not been true for a long time —
+ * the liner notes ranked a resample generation above the chop that made
+ * it and this ranked them the other way, neither knew about a capture
+ * from another app, and `Lineage` had a third order again. Three answers
+ * to "where did this sound come from", on the one question where the app
+ * is telling somebody the truth about their own audio.
+ *
+ * `:app` has no unit test source set, so an order typed here could only
+ * ever be checked by re-reading it. It is checked by `ProvenanceTest` now.
  */
-private fun provenanceOrigin(source: Map<String, String>): String? = when {
-    source["song"] != null -> "\"${source["song"]}\" @ ${source["at"] ?: "?"}"
-    source["file"] != null -> source.getValue("file")
-    // RE-TRIM's own key (Retrim.FILE_KEY): CHOP and INSTANT KIT name the
-    // tape now, so a chopped pad reads its file rather than "from tape".
-    source["tapeFile"] != null -> source.getValue("tapeFile")
-    source["resampledFrom"] != null -> "resampled from ${source.getValue("resampledFrom")}"
-    source["importedFrom"] != null -> "imported from ${source.getValue("importedFrom")}"
-    source["sculptedFrom"] != null -> "sculpted from ${source.getValue("sculptedFrom")}"
-    source["stretchedFrom"] != null ->
-        "${if (source["mode"] == "freeze") "frozen" else "stretched"} from ${source.getValue("stretchedFrom")}"
-    source["dissectedFrom"] != null -> "dissected from ${source.getValue("dissectedFrom")}"
-    source["mergedFrom"] != null -> "merged from ${source.getValue("mergedFrom")}"
-    source["origin"] == "chop" -> "chopped from tape"
-    else -> null
-}
-
-/**
- * How the pad came to be, when a door made it from other pads: a twin
- * (`KitBuilderModel.TWIN_OF`, the bank-A pad it was dealt from) and/or a
- * bred child (`Breed`'s `bredFrom`, "Mother x Father"). Both doors copy
- * the parent's source keys, so [provenanceOrigin] alone would read a
- * twin as its parent's tape — this goes first on the line, so BREED and
- * REMIX BANK B are answered for on the one screen that inspects a pad.
- * Both stamps show when both are there (a bred kit whose parent had
- * twins carries a twin's `twinOf` under BREED's `bredFrom`): neither
- * derivation is the whole story alone.
- */
-private fun lineage(source: Map<String, String>): List<String> = listOfNotNull(
-    source[KitBuilderModel.TWIN_OF]?.let { "twin of $it" },
-    source["bredFrom"]?.let { "bred from ${it.replace(" x ", " × ")}" },
-)
-
 private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
-    val origin = provenanceOrigin(pad.source) ?: pad.sampleFile
+    val origin = Provenance.phrase(pad.source) ?: pad.sampleFile
     // The cut in the tape (`BASS 5.WAV @ 1.20–1.62s`, docs/RETRIM.md §5):
     // the one place the numbers show, and what says where RE-TRIM ▸ will
     // land before it is tapped. Frames sit at the tape's rate, which is
     // the pad's own — neither CHOP nor BACK ONTO resamples.
     val cut = Retrim.cutOf(pad)
     val parts = mutableListOf<String>()
-    parts += lineage(pad.source)
+    parts += Provenance.lineage(pad.source)
     // DUST names the tape it borrowed from, which may not be the pad's own.
     PadSheet.readDust(pad.recipe)?.let { parts += "dusted from ${it.tape}" }
     parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin

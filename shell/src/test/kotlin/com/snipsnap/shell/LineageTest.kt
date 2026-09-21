@@ -45,7 +45,7 @@ class LineageTest {
                 "Origin Gen 3",
                 "`- resampled from Origin Gen 2",
                 "   `- resampled from Origin",
-                "      `- dug from Track 07.wav at 1:32",
+                "      `- dug from \"Track 07.wav\" at 1:32",
             ),
             lines,
             "the full chain, in order, origins only at the root",
@@ -62,7 +62,7 @@ class LineageTest {
         val text = Lineage.render(Lineage.trace(File(temp, "Alpha AB")))
         assertContains(text, "merged from Alpha")
         assertContains(text, "merged from Bravo")
-        assertContains(text, "chopped from break.wav", message = "Alpha's own origin rides under it")
+        assertContains(text, "chopped from \"break.wav\"", message = "Alpha's own origin rides under it")
         assertContains(text, "made from scratch", message = "Bravo owns up to having no story")
     }
 

@@ -43,6 +43,16 @@ object GrainField {
         val grains: List<Grain>,
         val grainFrames: Int = GRAIN_FRAMES,
         val projector: Projector? = null,
+        /**
+         * Ask the voice to vary the time between triggers rather than fire
+         * on a fixed clock. A map whose grains are steady tones that all
+         * start at the same phase (a photo field's) overlap-adds copies of
+         * one grain at a fixed period, which is a comb filter: at some
+         * notes the copies cancel to near silence. Random spacing scatters
+         * their phases and the comb goes. An analyzed sample's grains all
+         * differ, so its map leaves this off and keeps the even cadence.
+         */
+        val jitterTriggers: Boolean = false,
     )
 
     /**

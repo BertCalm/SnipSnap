@@ -85,15 +85,13 @@ object Exports {
             val extra = o.companion?.let { " (+ ${it.name}/)" } ?: ""
             out.println("  %-10s %s%s  (%s)".format(format.id, o.primary.path, extra, NOTES.getValue(format)))
             if (format == ExportFormat.EXPANSION) {
-                // The expansion gets its cassette insert beside the artwork,
-                // and the liner notes beside the insert - catalog number on
-                // both when the kit's crate is a label.
-                val catalog = com.snipsnap.shell.Label.forKit(kitDir)
-                File(o.primary, "J-Card.png").writeBytes(com.snipsnap.shell.JCard.png(kit, kitDir, catalog = catalog))
-                com.snipsnap.shell.LinerNotes.writeTo(
-                    kit, kitDir, File(o.primary, com.snipsnap.shell.LinerNotes.FILE_NAME), catalog,
-                )
-                out.println("             + J-Card.png + ${com.snipsnap.shell.LinerNotes.FILE_NAME} (the kit's inserts)")
+                // The expansion gets its cassette insert beside the artwork
+                // and the liner notes beside the insert. Written through
+                // `Inserts` rather than here, because the phone's EXPORT
+                // has to put the same two files in the same folder and
+                // this was the only place that knew to.
+                val written = com.snipsnap.shell.Inserts.write(kit, kitDir, o.primary)
+                out.println("             + ${written.joinToString(" + ") { it.name }} (the kit's inserts)")
             }
         }
     }

@@ -152,7 +152,7 @@ class RingBuffer(
          * 60 s stereo at 44.1 kHz is ~21 MB — comfortable on any device that can
          * run the capture API at all.
          */
-        fun ofSeconds(seconds: Float, channels: Int = 2, sampleRate: Int = 44_100): RingBuffer {
+        fun ofSeconds(seconds: Float, channels: Int = 2, sampleRate: Int = WavWriter.MPC_SAMPLE_RATE): RingBuffer {
             require(seconds > 0f) { "seconds must be positive: $seconds" }
             return RingBuffer((seconds * sampleRate).toInt(), channels, sampleRate)
         }

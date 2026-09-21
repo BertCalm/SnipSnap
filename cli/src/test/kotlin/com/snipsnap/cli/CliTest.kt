@@ -234,7 +234,7 @@ class CliTest {
             "Track 09 Break Gen 3",
             "resampled from Track 09 Break Gen 2",
             "resampled from Track 09 Break\n",
-            "dug from Track 09.wav at ",
+            "dug from \"Track 09.wav\" at ",
         ).map { stdout.indexOf(it) }
         assertTrue(stops.all { it >= 0 }, "every hop prints:\n$stdout")
         assertEquals(stops, stops.sorted(), "hops print in chain order:\n$stdout")

@@ -262,6 +262,39 @@ a table, the starting shapes, a SMOOTH for a shaky hand — and every
 function returns a new array, so a draft and a committed line never share
 storage.
 
+PHOTO FIELD is the whole picture under a finger. SNAP reads one line; a
+photo has two dimensions, and the GRAIN FIELD screen already plays a
+scatter of grains from wherever a finger is, off nothing more than a
+sample and a list of positions. `PhotoField.build` cuts the picture into a
+16×12 grid, renders each cell as its own short SNAP grain (its line as the
+cycle, its colours as the knobs, its brightness as the level, a flat cell a
+pure tone rather than a refusal), and lays the grains out where their
+cells are — so FIELD on the SNAP screen opens the grain field over the
+photo and sky and brick sound as different as they look, with no new
+real-time code. CLOUD hands the field to GRAINS and lands the picture on a
+pad as a texture, a LOOP by the classifier's measure. PRINT captures the
+performance: from the tap to STOP PRINT, everything the field's voice
+mixed lands on TAPE as a snip — `GrainVoice`'s own tap into the block it
+was about to write, preallocated once at `start()` and never in the
+render loop — so a drag across the field ends up on pads through the
+same door as a capture, for the pad sheet's own field as much as a
+photo's. TILT is a second automatic cursor beside DUET's: the phone's own
+roll and pitch, dead-banded and smoothed, stand in for a finger, so
+holding the phone up to the photo it was taken of and tilting plays the
+picture hands-free — exclusive with DUET, one automatic cursor at a time.
+
+A KIT FROM ONE PHOTO turns the whole idea into a kit, not one pad.
+`PhotoKit.build` cuts the picture into the MPC's own 4×4 instead of PHOTO
+FIELD's 16×12, renders each cell as a full SNAP pad (a note, not a grain),
+and lands all sixteen at once with the picture's own geometry: the
+top-left cell is A13, the bottom-left A01, `KitScreen`'s own grid. Every
+pad's colour is its cell's mean RGB, so the MPC lights up as the photo
+did — `AutoPlace` never runs, and a photo kit says so on its landing
+toast, since the layout is the picture's, not the drum convention's. KIT
+▸ on the SNAP screen builds it off the main thread and lands it as a
+brand-new kit on the shelf, named PHOTO KIT, never overwriting whatever
+kit is open.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH

@@ -68,8 +68,31 @@ object Copy {
      * stop, one line below where that law was looking. KIT IT is the
      * app's own verb for the step already ([orbitBounced] says "TRIM IT,
      * CHOP IT, KIT IT"), so the sentence now names the tab it means.
+     *
+     * **Step four is WRITE IT, not DUB IT** (persona review, P1.1). DUB is
+     * the app's word and it stays the app's word everywhere else - the
+     * dub is what EXPORT calls the write while it runs ("DUBBING…", "DUB
+     * COMPLETE") - but this is the one sentence whose whole job is to be
+     * understood by somebody who has not used the app yet, and a beginner
+     * does not arrive knowing it. The word it arrives at is the one on the
+     * button: EXPORT's primary action reads WRITE KIT. That is J13's own
+     * rule applied to the last step rather than the third - name what the
+     * screen names.
+     *
+     * **The last clause no longer claims the walk is compulsory** (P2.4,
+     * P3.2). Those two findings ask for a second entry point to be
+     * advertised here, and reading the screen says they are aimed slightly
+     * wrong: the second entry point is already the most prominent thing on
+     * it - NEW KIT ▸ STARTERS, directly below this panel - and the doors
+     * that skip the middle (INSTANT KIT, CATCH A HIT) are buttons on TAPE.
+     * Nothing is hidden. What was wrong is that this sentence ended "FOUR
+     * TABS, IN ORDER", which is stricter than the app: a starter kit
+     * begins at step three, and either TAPE shortcut lands sounds on pads
+     * without CHOP. Saying so costs a clause and keeps the note's own rule
+     * that it names no door - which is why a line pointing at STARTERS
+     * would have been a third copy of a control already twice on screen.
      */
-    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, DUB IT. FOUR TABS, IN ORDER."
+    const val FIRST_RUN_LOOP_NOTE = "RECORD IT, CUT IT, KIT IT, WRITE IT. FOUR TABS, IN ORDER — OR START FURTHER IN."
     /**
      * The shelf's empty face during a SNIPS → PAD hand-off (`assigningSnip`
      * in `KitsScreen`/`App.kt`) when the shelf also has zero kits — distinct
@@ -217,10 +240,27 @@ object Copy {
      */
     const val MIC_HEARING_NOTHING = "TAPE ROLLING, HEARING NOTHING. CHECK THE MIC ISN'T MUTED OR COVERED."
     // IMPORT: a file shared in from another app (F3).
-    /** A shared file landed as a snip; [seconds] how much, [truncated] whether the cap cut its tail. */
-    fun imported(seconds: Float, truncated: Boolean): String {
+    /**
+     * A shared file landed as a snip; [seconds] how much, [truncated]
+     * whether the cap cut its tail, [resampledFrom] the rate it arrived
+     * at when that was not the rate it is now.
+     *
+     * [resampledFrom] is the half of P4.2 that was a real defect rather
+     * than a missing feature. `SnipStore.import` has always moved a 48 k
+     * or 22.05 k share onto the MPC's rate — correctly, since nothing
+     * downstream takes any other — and said nothing, so the one user who
+     * would notice, and who is the only reason the finding exists, was
+     * the one the app kept it from. A conversion the app performs on
+     * somebody's audio is theirs to be told about. Null when the file
+     * already arrived at the rate, which is every bounce and most shares.
+     */
+    fun imported(seconds: Float, truncated: Boolean, resampledFrom: Int? = null): String {
         val length = if (seconds >= 60f) "${Math.round(seconds / 60f)} MIN" else "${Math.round(seconds)}s"
-        return if (truncated) "TAPED FROM OUTSIDE. FIRST $length KEPT - THE TAPE IS ONLY SO LONG." else "TAPED FROM OUTSIDE. $length ON THE DECK."
+        val head = if (truncated) "TAPED FROM OUTSIDE. FIRST $length KEPT - THE TAPE IS ONLY SO LONG." else "TAPED FROM OUTSIDE. $length ON THE DECK."
+        val rate = resampledFrom?.let {
+            " CAME IN AT ${rateLabel(it)}, ON THE DECK AT ${rateLabel(com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE)}."
+        } ?: ""
+        return head + rate
     }
     const val IMPORT_BUSY = "IMPORTING…"
     const val IMPORT_NOT_AUDIO = "NOTHING TO HEAR IN THAT. SHARE AUDIO OR A VIDEO WITH SOUND."
@@ -514,6 +554,55 @@ object Copy {
     const val SETUP_CARD_NONE = "NO CARD PICKED. EXPORT ASKS FOR ONE."
 
     /**
+     * The fourth thing the app knew and never said: what rate everything
+     * it makes is at.
+     *
+     * The persona review (P4.2) named sample-rate control as the one
+     * absence nobody had ruled on. The ruling is that there is no knob,
+     * and this is where the app says so instead of leaving a user to
+     * infer it: [com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE] is the
+     * rate the writer refuses a file at any other, `Preflight` FAILs a
+     * pad that is not at it, and TAPE moves a 48 k or 22.05 k file onto
+     * it on the way in. A picker offering a second setting the export
+     * would then refuse is a trap, not a control.
+     *
+     * The other half of that question — a sample rate as a *sound* — has
+     * shipped for a long time under a better name than a number: the
+     * TIME MACHINE on the pad sheet is 26.04 kHz at 12 bits for SP1200
+     * and 40 kHz for MPC60, which is what somebody asking for a rate
+     * control on a sampler usually means. This note points at it, since
+     * the word "rate" is what they will have come here looking for.
+     */
+    const val SETUP_RATE_HEADING = "THE RATE"
+    val SETUP_RATE = rateLabel(com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE)
+    const val SETUP_RATE_NOTE =
+        "THE ONLY RATE THE MPC READS. ANYTHING YOU BRING IN IS MOVED ONTO IT. " +
+            "FOR A RATE YOU CAN HEAR, THE TIME MACHINE ON A PAD."
+
+    /**
+     * Where the kit came from, under its grid — the persona review's P4.4.
+     *
+     * The finding called provenance "good and half-hidden": good because
+     * every door stamps it, half-hidden because reaching any of it meant
+     * holding a pad. Naming it in [PAD_SHEET_LEGEND] was looked at and
+     * rejected — that legend is a sample of what the sheet holds, not an
+     * inventory, and does not name layers or takes either — and a third
+     * mark on the grid would crowd the treated dog-ear and the mini
+     * waveform for a fact a mark cannot actually state.
+     *
+     * So it is a line, in the same register and the same place as the two
+     * legends above it: always there, cannot be dismissed, says the thing
+     * rather than pointing at a gesture. [phrase] is `Provenance.ofKit`,
+     * so this line and the liner notes on the card cannot name different
+     * parents.
+     *
+     * Absent, not empty, for a kit built by hand: there is no honest
+     * sentence for "nowhere", and `MADE BY HAND` under a grid of pads a
+     * user just chopped would be a lie the app told about their work.
+     */
+    fun kitCameFrom(phrase: String): String = "THIS KIT: ${phrase.uppercase()}"
+
+    /**
      * The exports folder, said plainly. [where] is the real path, because a
      * user hunting for a file on a cable needs the actual thing to look for
      * and "your app's private storage" is not it.
@@ -606,6 +695,12 @@ object Copy {
         "· FOLD ON CHOP: ONE PAD PER SOUND, THE REPEATS CYCLE UNDER IT.",
         "· GHOSTS ON CHOP: THE SPACES BETWEEN HITS. HOLD A PAD, HOLD THE ROOM.",
         "· CATCH ON TAPE: HOLD A PAD AS THE HIT GOES BY. IT LANDS THERE.",
+        // P3.2's real gap. The finding names INSTANT KIT and CATCH A HIT
+        // together as the unadvertised record-to-pad path; CATCH has had
+        // the line above since HELP was written and INSTANT KIT was in no
+        // list at all, so half the finding was already closed and the
+        // other half was invisible. This is the half that was missing.
+        "· INSTANT KIT ON TAPE: ONE TAP, AND THE CUTS LAND ON PADS.",
         "· HUM ON CHOP: BEATBOX ALONG. THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
         // Every chip of the ladder row, read out of the row itself
         // (J42): the line used to name the four rungs and not COUNT,
@@ -708,6 +803,14 @@ object Copy {
     const val SNAP_SHAPE_SILENT = "THAT SHAPE NEVER OPENS. DRAW IT UP SOMEWHERE."
     /** DRAW's DONE with a shape drawn but no line under it (no photo, blank wave): the shape is kept, and there is nothing yet to play it on. */
     const val SNAP_SHAPE_NO_LINE = "SHAPE KEPT. DRAW A LINE OR TAKE A PHOTO TO HEAR IT."
+    /** FIELD's busy line while every cell of the photo is rendered — an overlay line like every other *_BUSY, not a landing. */
+    const val SNAP_FIELD_BUSY = "CUTTING THE PHOTO INTO GRAINS…"
+    /** CLOUD's busy line while the field is granulated for a pad. */
+    const val SNAP_CLOUD_BUSY = "CLOUDING THE PICTURE…"
+    /** KIT's busy line while `PhotoKit.build` renders all sixteen cells of the photo off the main thread — `App.kt`'s own whole-screen busy overlay, since KIT lands on the shelf and leaves the screen. */
+    const val SNAP_KIT_BUSY = "CUTTING THE PHOTO INTO A KIT…"
+    /** KIT's landing toast: named, and said plainly that the layout is the picture's own — AutoPlace never ran. */
+    fun photoKitMade(name: String): String = "$name MADE. LAID OUT AS THE PHOTO — NOT AUTO-PLACED."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."
@@ -965,6 +1068,78 @@ object Copy {
      * words alone.
      */
     fun feelStolen(covered: Int): String = "FEEL STOLEN: $covered OF 16 POSITIONS. IT'S ON YOURS. THE REST STAY UNTOUCHED."
+
+    /**
+     * GROOVE's PROGRAM sub-line while YOURS is live and the kit holds more
+     * than one of them: which one is sounding, and that the segment steps
+     * to the next.
+     *
+     * It sits here rather than on the segment because the segment cannot
+     * hold it. The program row gives each of its five segments about 56dp
+     * at the 390dp design frame, and CAPTURED already needs 48 of them —
+     * the row's own note ("one token each, no spaces") is the rule, and a
+     * sixth segment would leave 47dp, under what CAPTURED needs. The
+     * sub-line has the whole row instead.
+     *
+     * Only shown when there is more than one, so a player who never makes
+     * a second program never reads a count.
+     */
+    fun yoursOf(n: Int, total: Int): String = "YOUR STEPS · $n OF $total · TAP AGAIN FOR THE NEXT"
+
+    /**
+     * The step editor's own title, and the line under it naming which of
+     * yours is open.
+     *
+     * J18 took the A–E letters off the program row because "PROG E" is an
+     * argument to `GrooveProgram.compute`, not anything a player can find
+     * on the hardware — and `ConventionTest`'s `the GROOVE programs are
+     * named for what the exporter writes` says so in as many words: *"the
+     * letters are gone from the screen's own labels."* They were gone from
+     * `PROG_NAMES`. The step editor's header still read `STEP EDIT — PROG
+     * E`, because that law read the list and not the file, so the one
+     * label the rename missed was the one nobody could see from the list.
+     *
+     * Worse after #289: there can be eight programs of yours now, and a
+     * header naming a letter that no longer exists could not have said
+     * which of the eight you were in even if the letter had been right.
+     *
+     * Two pieces rather than one line, because the title has a DONE button
+     * beside it and about 260dp of a 360dp phone to live in: the title is
+     * a character shorter than the string it replaces, and the count goes
+     * under it, which is the same shape the program row's own sub-line
+     * already uses for the same fact.
+     */
+    const val STEP_EDIT_TITLE = "STEP EDIT — YOURS"
+
+    /** Under [STEP_EDIT_TITLE], when there is more than one of yours to be in. */
+    fun stepEditOf(n: Int, total: Int): String = "$n OF $total"
+
+    /**
+     * RECORD's own line while a take is going down over the captured
+     * program.
+     *
+     * The second label J18's rename missed, found by the same law as
+     * [STEP_EDIT_TITLE] once it swept the file instead of the list. It
+     * read "OVERDUBBING ONTO PROG A", and PROG A is what the row above it
+     * has called CAPTURED since J18 — so the one line telling a player
+     * what their playing is landing on named it by a letter the rest of
+     * the screen had stopped using.
+     */
+    const val GROOVE_OVERDUBBING = "● RECORDING — OVERDUBBING ONTO CAPTURED"
+
+    /**
+     * Under the step grid: how long the program is, which program it was
+     * forked from, what a tap does, and what editing it does *not* do.
+     *
+     * The third label J18's rename missed, and the one that got furthest
+     * from what the screen says: it read *"B–D STAY DERIVED FROM A"* on a
+     * screen where nothing is called A, B, C or D. It now says the same
+     * thing [FORKED_TO_E] already says, in the same words — the four
+     * programs you did not fork are left exactly as they were, because
+     * they are recomputed from the take rather than stored.
+     */
+    fun stepEditFooter(steps: Int, source: String): String =
+        "${countOf(steps, "STEP", "STEPS")} · FORKED FROM $source · TAP TO TOGGLE — THE OTHER FOUR STAY UNTOUCHED"
     /** STEAL THE FEEL's refusal, [reason] in its own words. */
     fun feelRefused(reason: String): String = "NO FEEL: ${reason.uppercase(java.util.Locale.ROOT).trimEnd('.')}."
     const val FORKED_TO_E = "FORKED TO YOURS. THE OTHER FOUR STAY UNTOUCHED."
@@ -2054,12 +2229,23 @@ object Copy {
     const val GRAIN_FIELD_START_FAILED = "GRAIN VOICE WON'T START."
     /** The render thread died on its own, or a live gesture threw against it - DUET turns itself off either way. */
     const val GRAIN_FIELD_DUET_STOPPED = "DUET STOPPED — OFF."
+    /** TILT's own version of [GRAIN_FIELD_DUET_STOPPED] - the render thread died, or the tick loop threw. */
+    const val GRAIN_FIELD_TILT_STOPPED = "TILT STOPPED — OFF."
     /** The field's own busy line while the tape is read into its grid - furniture, like every other `…`-suffixed busy line, so it carries no full stop. */
     const val GRAIN_FIELD_LISTENING = "LISTENING TO THE GRAIN…"
     /** DUET on: the mic plays the field live, said once so headphones are a choice, not a surprise. */
     const val GRAIN_FIELD_DUET_HINT = "THE MIC PLAYS THE FIELD. HEADPHONES RECOMMENDED."
-    /** DUET off: the field's ordinary touch-to-play hint. */
+    /** TILT on: the phone's own tilt plays the field, DUET's hint shape for the other automatic cursor. */
+    const val GRAIN_FIELD_TILT_HINT = "TIP THE PHONE TO PLAY THE FIELD."
+    /** DUET and TILT both off: the field's ordinary touch-to-play hint. */
     const val GRAIN_FIELD_DRAG_HINT = "DRAG TO PLAY THE GRAIN FIELD."
+    /**
+     * STOP PRINT with nothing captured - `GrainVoice.stopPrint()` found the
+     * buffer still empty. SURFACE's own [SURFACE_NOTHING_PRINTED] says "hold
+     * the surface," which reads wrong on a screen with no surface on it; the
+     * words differ, [PRINT_LOST] below is still reused as it is.
+     */
+    const val GRAIN_FIELD_NOTHING_PRINTED = "NOTHING PRINTED. DRAG A FINGER ON THE FIELD WHILE IT PRINTS."
 
     // ---- GROOVE: MIDI EXPORT's own success line ----
     fun midiFilesWritten(count: Int): String =
@@ -2219,6 +2405,30 @@ object Copy {
      * ("0 BARS", not "0 BAR").
      */
     fun countOf(n: Int, singular: String, plural: String): String = "$n ${if (n == 1) singular else plural}"
+
+    /**
+     * A sample rate the way a person says one: 44100 → `44.1 KHZ`, 48000
+     * → `48 KHZ`, 22050 → `22.05 KHZ`, 26040 → `26.04 KHZ`.
+     *
+     * Every line that states a rate goes through here, so the app cannot
+     * say "44.1 kHz" in one place and "44100 HZ" in another. Resolution
+     * is 10 Hz — no rate any of this app's doors can produce is finer
+     * than that, and a label is not the place to prove otherwise.
+     *
+     * `Locale.ROOT` on the one padded conversion, per `FormatLocaleTest`:
+     * a phone set to Persian would otherwise print the fraction in
+     * Eastern-Arabic digits.
+     */
+    fun rateLabel(hz: Int): String {
+        val whole = hz / 1000
+        val rest = hz % 1000
+        val fraction = when {
+            rest == 0 -> ""
+            rest % 100 == 0 -> ".${rest / 100}"
+            else -> ".%02d".format(java.util.Locale.ROOT, rest / 10)
+        }
+        return "$whole$fraction KHZ"
+    }
 
     /**
      * "1 BAR" or "N BARS" — one place, because both bounce lines count the

@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
+import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.mpc3.Mpc3Clip
@@ -119,6 +120,150 @@ class ArrangerTest {
             "tight — dynamic range 1.0x < 2x threshold",
             flatPlan.sections[2].reason,
         )
+    }
+
+    // ---------- the user's own program in the song ----------
+
+    /** A hand-edited program as [GrooveEdit] stores one: on the grid, named with its suffix. */
+    private fun yoursClip(baseName: String = "Fixture Groove"): Mpc3Clip {
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        return Mpc3Clip(
+            GrooveEdit.progEName(baseName), 1,
+            listOf(
+                Mpc3Note(36, 0, 0.9f),
+                Mpc3Note(36, 6 * s16, 0.9f),
+                Mpc3Note(37, 8 * s16, 0.9f),
+                Mpc3Note(38, 14 * s16, 0.6f),
+            ),
+        )
+    }
+
+    @Test
+    fun `a hand-edited program becomes the song's variation, and says so`() {
+        // The gap this closes: before, SONG composed only from generated
+        // clips, so a pattern someone stepped in by hand could not appear
+        // in a song at all.
+        val m = model("Yours")
+        val yours = yoursClip()
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), yours))
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals(yours.name, plan.sections[2].clip.name, "the variation section is the user's program")
+        assertEquals(yours.notes, plan.sections[2].clip.notes, "handed over as stored, not regenerated")
+        assertEquals("yours — the program you stepped in, exactly as you left it", plan.sections[2].reason)
+
+        // It takes the variation slot and nothing else: the song does not
+        // grow a section, and the derived clips still hold every other one.
+        assertEquals(
+            listOf("intro", "theme", "variation", "the turn", "reprise", "outro"),
+            plan.sections.map { it.name },
+        )
+        assertEquals("Fixture Groove", plan.sections[1].clip.name, "the theme is still the capture")
+    }
+
+    @Test
+    fun `more than one program of your own chains into the song, in slot order`() {
+        // The chaining half of what a wall of pattern buttons is for.
+        val m = model("YoursChain")
+        val one = yoursClip()
+        val two = Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 1), 1, yoursClip().notes.drop(1))
+        val three = Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 2), 1, yoursClip().notes.take(2))
+        // Deliberately stored out of order: slot order is what decides.
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), three, one, two))
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals(
+            listOf("intro", "theme", "variation", "yours 2", "yours 3", "the turn", "reprise", "outro"),
+            plan.sections.map { it.name },
+            "they follow the variation rather than scattering through the structure",
+        )
+        assertEquals(one.notes, plan.sections[2].clip.notes)
+        assertEquals(two.notes, plan.sections[3].clip.notes)
+        assertEquals(three.notes, plan.sections[4].clip.notes)
+        assertTrue(plan.sections.all { it.reason.isNotBlank() }, "every section still explains itself")
+    }
+
+    @Test
+    fun `an empty program is skipped without shifting the ones after it`() {
+        val m = model("YoursGap")
+        val one = yoursClip()
+        val three = Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 2), 1, yoursClip().notes.take(2))
+        GrooveStore.save(
+            m.kitDir,
+            listOf(grooveClip(), one, Mpc3Clip(GrooveEdit.progEName("Fixture Groove", 1), 1, emptyList()), three),
+        )
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals(
+            listOf("intro", "theme", "variation", "yours 2", "the turn", "reprise", "outro"),
+            plan.sections.map { it.name },
+            "the silent one is not a section",
+        )
+        assertEquals(three.notes, plan.sections[3].clip.notes, "and the one after it still plays")
+    }
+
+    @Test
+    fun `the user's program outranks the measured ghost rule`() {
+        // The dynamic fixture would pick `ghosted` on its own measurement.
+        // A hand-edit is a variation somebody actually made, so it wins.
+        val m = model("YoursDynamic", clip = dynamicGrooveClip())
+        val yours = yoursClip("Dynamic Groove")
+        GrooveStore.save(m.kitDir, listOf(dynamicGrooveClip(), yours))
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals(yours.name, plan.sections[2].clip.name)
+        assertTrue("ghost" !in plan.sections[2].reason, plan.sections[2].reason)
+    }
+
+    @Test
+    fun `the feel leans every section except the user's own`() {
+        // `GrooveProgram` exempts the user's program from FEEL on screen
+        // because its steps are already where somebody put them. The song
+        // has to agree, or the same clip means two things.
+        val m = model("YoursFeel")
+        val yours = yoursClip()
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), yours))
+
+        val leaned = Arranger.arrange(
+            m.kit, m.kitDir, seed = 0,
+            feel = -1f, feelTemplate = GrooveFeel.generated(1),
+        )
+        assertEquals(yours.notes, leaned.sections[2].clip.notes, "a hand-edit does not get leaned on")
+        assertNotEquals(
+            grooveClip().notes, leaned.sections[1].clip.notes,
+            "...while the sections that are derived do carry the feel",
+        )
+    }
+
+    @Test
+    fun `an empty user program is not a section`() {
+        // `GrooveEdit.startEmpty` forks a note-less E whenever GROOVE opens
+        // on a kit that has recorded nothing, so this is the common state,
+        // not a corrupt one. Using it would put a silent stretch in the
+        // middle of every such song.
+        val m = model("YoursEmpty")
+        GrooveStore.save(m.kitDir, listOf(grooveClip(), Mpc3Clip(GrooveEdit.progEName("Fixture Groove"), 1, emptyList())))
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertTrue(plan.sections[2].clip.notes.isNotEmpty(), "the variation section still sounds")
+        assertEquals("tight — dynamic range 1.0x < 2x threshold", plan.sections[2].reason)
+    }
+
+    @Test
+    fun `the base is the captured take even when the user's program is stored first`() {
+        // Two rules for "which stored clip is the base" used to agree only
+        // because `GrooveEdit.save` appends. Pin the predicate, not the
+        // ordering: everything derived must come from the capture.
+        val m = model("YoursFirst")
+        GrooveStore.save(m.kitDir, listOf(yoursClip(), grooveClip()))
+
+        val plan = Arranger.arrange(m.kit, m.kitDir, seed = 0)
+        assertEquals("Fixture Groove", plan.sections[1].clip.name, "the theme is the capture, not the hand-edit")
+        // And the derived sections come off that capture rather than off
+        // the hand-edit: `standard` names them for the base it was handed,
+        // so a half derived from PROG E would carry E's name.
+        assertTrue(plan.sections[5].clip.name.endsWith("Half"), plan.sections[5].clip.name)
+        assertTrue(GrooveEdit.NAME_SUFFIX !in plan.sections[5].clip.name, plan.sections[5].clip.name)
     }
 
     @Test

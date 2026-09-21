@@ -80,6 +80,10 @@ class SnipStoreTest {
             var head = 0f
             for (i in 0 until 40_000) head = maxOf(head, kotlin.math.abs(back.samples[i]))
             assertTrue(head < 1e-3f, "the leading silence survives: an import is not a commit")
+            assertEquals(
+                48_000, got.resampledFrom,
+                "the door moved the rate, so it says which rate it moved - P4.2's only real defect",
+            )
             assertEquals(got.file, SnipStore.newest(root), "TAPE finds it first")
         } finally { root.deleteRecursively() }
     }
@@ -100,7 +104,43 @@ class SnipStoreTest {
             assertEquals("TAPED FROM OUTSIDE. 3 MIN ON THE DECK.", Copy.imported(180f, false))
             assertEquals("TAPED FROM OUTSIDE. FIRST 3 MIN KEPT - THE TAPE IS ONLY SO LONG.", Copy.imported(180f, true))
             assertEquals("TAPED FROM OUTSIDE. 8s ON THE DECK.", Copy.imported(8.2f, false))
+            assertNull(got.resampledFrom, "this one arrived at the rate, so there is nothing to report")
         } finally { root.deleteRecursively() }
+    }
+
+    /**
+     * The persona review's P4.2 asked for sample-rate control. The ruling
+     * was that the rate cannot vary - everything downstream of
+     * [SnipStore.commitPrepared] refuses anything but the MPC's - so what
+     * was actually missing was the app ever saying what it does. These are
+     * the two halves of it saying so: the label every rate line goes
+     * through, and the one door that changes somebody's rate for them.
+     */
+    @Test
+    fun `a rate is said the way a person says one, and an import names the one it moved`() {
+        assertEquals("44.1 KHZ", Copy.rateLabel(44_100))
+        assertEquals("48 KHZ", Copy.rateLabel(48_000))
+        assertEquals("22.05 KHZ", Copy.rateLabel(22_050))
+        // The TIME MACHINE's two, since SETUP_RATE_NOTE sends a reader there.
+        assertEquals("26.04 KHZ", Copy.rateLabel(26_040))
+        assertEquals("40 KHZ", Copy.rateLabel(40_000))
+
+        assertEquals(
+            "TAPED FROM OUTSIDE. 8s ON THE DECK. CAME IN AT 48 KHZ, ON THE DECK AT 44.1 KHZ.",
+            Copy.imported(8.2f, false, 48_000),
+        )
+        assertEquals(
+            "TAPED FROM OUTSIDE. FIRST 8s KEPT - THE TAPE IS ONLY SO LONG. CAME IN AT 22.05 KHZ, ON THE DECK AT 44.1 KHZ.",
+            Copy.imported(8.2f, true, 22_050),
+        )
+        assertEquals(
+            "TAPED FROM OUTSIDE. 8s ON THE DECK.", Copy.imported(8.2f, false, null),
+            "a file already at the rate is not told about a conversion that did not happen",
+        )
+
+        // SETUP says the rate rather than typing it: the row and the
+        // writer's own refusal cannot disagree.
+        assertEquals(Copy.rateLabel(com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE), Copy.SETUP_RATE)
     }
 
     @Test

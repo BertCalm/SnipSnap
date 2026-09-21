@@ -27,6 +27,18 @@ Kotlin that has **never been through a compiler**. Treat it accordingly.
 4. Install: `adb install app/build/outputs/apk/debug/app-debug.apk`
    (or copy the APK to the phone and tap it).
 
+## The on-device suite
+
+`app/src/androidTest` holds Compose UI tests that run on an emulator or a
+plugged-in phone: `./gradlew :app:connectedDebugAndroidTest` with a device
+attached. CI runs them (`emulator-tests`, its own workflow) only when
+something under `app/` changes, because booting an emulator costs four
+or five app builds' worth of minutes. `SurfaceScreenTest` is the half of
+the SURFACE pass below a machine can see - every label on the top rows
+drawn whole at 360 dp, the mode row and the print row's buttons doing
+what they say, a second finger raising Z - laid out at a narrow phone's
+width whatever device runs it. What needs an ear stays in the pass.
+
 ## M0's exit test (from docs/APP_PLAN.md)
 
 Browse kits on a phone, tap pads, hear WAVs (interim `SoundPool`), flip
@@ -144,7 +156,48 @@ logcat tag to grab when something is wrong.
   play nothing until the first touch, and CANCEL should not replay.
   Taking a new photo while LINE DRAWN is up should switch the header to
   LINE HORIZON. A shape drawn as a single tiny bump near the floor is
-  refused as never opening.
+  refused as never opening. Then FIELD: with a photo up, the LCD should
+  read CUTTING THE PHOTO INTO GRAINS… for a moment and the GRAIN FIELD
+  should open with the photo dimmed under the dots and PHOTO FIELD in
+  the header; a finger on the sky should sound different from a finger
+  on the ground, a dark corner quieter than a bright one, and ◄ SNAP
+  should bring SNAP back without replaying its line. Then CLOUD: pick a
+  slot, and a Snap Cloud pad should land on KIT as a LOOP that sounds
+  like the whole picture smeared. A second FIELD on the same photo
+  should open at once (the field is kept); a new photo builds afresh.
+  Then the hardening checks: a photo of clear sky should sound the same
+  strength at every note (hold a finger still on one cell and listen
+  for a steady tone, not a thin or silent one); tapping the hint text
+  under the field must not play SNAP's own note; CLOUD onto a pad that
+  was a SNAP note should leave the pad sheet with no recipe card; and
+  while CUTTING THE PHOTO INTO GRAINS… is up, TAKE PHOTO is off. Then
+  KIT ▸: with a photo up, tap it and the LCD should read CUTTING THE
+  PHOTO INTO A KIT… for a moment before landing on KIT with a new kit
+  named PHOTO KIT — never the kit that was open before the tap. All
+  sixteen pads should be filled and lit in the photo's own colours (the
+  MPC grid's top row should read like the top of the picture, the
+  bottom row its bottom), and leaving KIT and coming back must sound
+  the same, since the pads regenerate from `kit.json` rather than a
+  live capture. A second KIT ▸ on the same photo should
+  land a second kit ("PHOTO KIT 2"), not overwrite the first. Then
+  PRINT, from the GRAIN FIELD screen's header: tap PRINT, drag a
+  finger across the field for a few seconds, tap STOP PRINT — the LCD
+  should show ● PRINTING while it runs, and the toast should name the
+  seconds printed to TAPE; TAPE should hold a snip of what was heard.
+  STOP PRINT with no drag at all should toast NOTHING PRINTED rather
+  than land an empty snip. PRINT is on both GRAIN FIELD callers, not
+  only the photo's: the same check from PAD SHEET's own GRAIN FIELD
+  (reached off a pad, not a photo) should behave identically. Then TILT:
+  tap it, hold the phone level and tilt it left/right and up/down — the
+  ring on the field should wander to follow, a hard left should read low
+  X and a hard right high X (`SurfaceScreen`'s own TILT already settles
+  this axis), and tipping the top of the phone away/toward you should
+  move Y in one consistent direction — note which, since only a phone
+  settles the sign. A flat phone held still should not shimmer the
+  cursor. Touching the field with a finger while TILT is on should hand
+  it control at once, and TILT should resume the instant the finger
+  lifts. Tapping DUET while TILT is on should turn TILT off, and tapping
+  TILT while DUET is on should turn DUET off — never both lit together.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

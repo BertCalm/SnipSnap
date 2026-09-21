@@ -353,3 +353,190 @@ column the pen maps a touch onto, so the line and the finger agree; a
 touch with a NaN in it, or a table with no points, draws nothing; and a
 shape drawn over nothing is kept with a toast saying why it is not yet
 heard.
+
+### S7.2 — PHOTO FIELD: the whole picture under a finger
+
+SNAP reads one line through a photo and DRAW draws one; a photo has two
+dimensions and a million pixels. The GRAIN FIELD screen (`docs`: the pad
+sheet's scatter, `GrainField.analyze` in `:audio`) already plays a scatter
+of short grains from wherever a finger is, and all it needs is a sample and
+a list of positions — a `GrainField.GrainMap`. So the picture is the map.
+
+`PhotoField.build` (`synth/PhotoField.kt`) cuts the photo into a grid
+(16×12 by default, a cell at least a pixel each way so a photo smaller
+than the grid reads in overlapping cells rather than refusing), and for
+each cell: `Snap.look` for its reading and `Snap.macrosFrom` for its
+knobs, `Snap.table` for its HORIZON line — or a SINE from `Draw.wave` when
+the line is flat, because the field must sound everywhere and a patch of
+clear sky is a pure tone at its hue — then `Snap.grain` for a steady
+`GRAIN_FRAMES` (4096, ~93 ms) tone of it, HOLD-shaped under the usual ramp
+since the field's voice windows every grain itself, scaled by the cell's
+brightness between `DARKEST_LEVEL` (0.25) and 1 so a night shot still
+speaks. The grains sit end to end in one source and the map places grain
+i at the centre of cell i, y down as the canvas draws it. No
+`Projector` comes with a photo, so DUET's chip stays hidden.
+
+`Snap.grain` is `render` with a length of the caller's choosing
+(`synthesize`'s `lengthSeconds`), through the same oversampled path, cut to
+the exact frame count the field addresses by stride.
+
+On the screen, FIELD builds the field once per photo (off the main thread,
+`Copy.SNAP_FIELD_BUSY` on the LCD meanwhile) and opens `GrainFieldScreen`
+with a `PrebuiltField` — the field's sample and map, the photo as a
+backdrop drawn dimmed under the dots, PHOTO FIELD for a title and ◄ SNAP
+for the way back — in place of loading and analyzing a pad. SNAP's own
+audition stops when the field opens and its render loop stands still while
+it is up, so the two voices never overlap.
+
+CLOUD is `PhotoField.cloud`: the field's whole source through
+`Grains.render` (2.5 s, seeded), landed on a pad through the same slot
+chooser as SEND TO PAD, as audio with no recipe — every GRAINS pad is its
+own truth — classed LOOP, named Snap Cloud.
+
+Deliberately later: capturing a drag across the field as audio (GRAIN
+FIELD's own declared next phase, not built for pads either); the
+spectrogram reading of a photo (the image as a picture of sound, through
+the spectral door and `Pghi` the retune already uses) as a second field
+mode; a KEY lock that pins every cell to one note so the field varies only
+in timbre.
+
+A hardening pass over PHOTO FIELD (an independent read plus this
+document's own) settled the following. The voice re-triggers on a fixed
+512-frame clock and a photo cell's grain is a steady tone from phase zero,
+so copies of one grain overlap-added at a fixed period comb-filtered each
+other — near silence at the notes whose period divides the hop badly (a
+JVM overlap-add of a 311 Hz grain measured under a sixth of its jittered
+level); `GrainMap.jitterTriggers` asks the voice for hops drawn between
+half and one-and-a-half of the clock, which scatters the phases, and a
+photo field sets it while an analyzed pad's map keeps the even cadence.
+`Snap.grain` renders at native rate, the one place SNAP does, because two
+hundred oversampled-and-decimated grains took four seconds on a desktop
+and the voice windows and mixes them eight deep anyway. `Snap.table`
+interpolates between the pixels of a line narrower than the table instead
+of repeating each one, so a 32-pixel cell (or a thumbnail) is a curve and
+not a staircase buzzing at the pixel rate. A cell whose swing is under
+`SOFT_SWING` (24) is blended toward a sine in proportion, since the cycle
+is normalized to full scale before it plays and a four-level sky would
+otherwise be a full-scale four-step square. On the screen: a build that
+lands after a newer photo drops itself, a new photo closes a field that
+is up (the main loop stood still behind an overlay no longer shown), TAKE
+PHOTO waits for a build, the field overlay catches touches so a tap in a
+gap cannot reach AUDITION and play SNAP's voice over the field's, the
+prebuilt field is remembered so a recomposition does not tear the voice
+down mid-drag, the way back consumes its quiet even with nothing to
+render, and CLOUD onto a synth pad clears the pad's recipe (replaceAudio
+keeps one when handed null, and the old note would have regenerated over
+the cloud on the next rebuild from the sidecar).
+
+### S7.3 — A KIT FROM ONE PHOTO
+
+`docs/PHOTO_SPECS.md` §1, built as specced. `PhotoKit.build` (`synth/PhotoKit.kt`)
+is `PhotoField.build`'s own reading of a picture, cut 4×4 instead of 16×12,
+each cell landing as a full SNAP **pad** (`Snap.render`, a note) rather than
+a grain: `Snap.look` for the reading, `Snap.macrosFrom` for the knobs,
+`Snap.table(HORIZON)` plus `PhotoField.cellTable`'s own blend toward a sine
+for the line, so a flat cell never refuses here either — the kit must fill
+every pad, same as the field must sound everywhere. Cell (column, row),
+row 0 the photo's top row, lands at slot `13 - 4×row + column`: (0, 0) is
+A13, (0, 3) is A01 — `PadBanks`'s own top-row-first numbering, the same
+geometry `KitArt`'s GRID style and `KitScreen`'s own grid already draw.
+`AutoPlace` never runs: the layout is the picture's, not the drum
+convention's.
+
+Colour needed one seam: `Snap.Reading` gained `meanRgb` (a third pair of
+accumulators alongside `Snap.look`'s luminance and hue sums, packed through
+`Photo.rgb`), and `ArrangedPad` gained an optional `colorHex`, checked
+first in `KitAssembler.assembleArranged` ahead of `AutoPlace.colorFor` —
+every other caller passes none and gets the class colour exactly as
+before. The recipe is the pad's `SnapPatch` (`PadRecipe(patch =
+patch).toJsonValue()`), so a photo kit regenerates from its `kit.json`
+sidecar like every other synth kit; it is not a folder of anonymous WAVs.
+
+Landing is `KitShelf.landPhotoKit` (`:app`) — `render`'s own shape
+(`freshName`, `KitAssembler.assembleArranged`, a fresh `Entry`) off a
+photo's own cells instead of a starter's seed — called from `App.kt`'s
+`buildPhotoKit`, which mirrors `fresh` line for line: the same whole-app
+`busy` overlay (`Copy.SNAP_KIT_BUSY`), the same shelf-list refresh, the
+same `open`/`screen = AppScreen.KIT` landing. KIT ▸ sits beside FIELD ▸
+and CLOUD ▸ on the SNAP screen; unlike them it leaves the screen, which is
+why it rides the app's own busy lock rather than a local one the way
+`buildingField`/`cloudBusy` do — the same shape `fresh`/`finishBreed`/
+`texture` already use for "render offline, land on the shelf, open it."
+
+### S7.4 — PRINT: capturing a drag across the field
+
+`docs/PHOTO_SPECS.md` §2, built as specced. `GrainFieldScreen`'s own KDoc
+called this out as "v1 is play-only… capturing the performance is the
+declared next phase, not built yet"; PRINT is that phase, for the pad
+sheet's own field as much as PHOTO FIELD's, since both share the one
+`GrainFieldScreen` composable and the one `GrainVoice`.
+
+`GrainVoice` gained `startPrint(): Boolean` / `stopPrint(): FloatArray?`
+and three `@Volatile` fields in the same one-writer/one-reader shape
+`targetX`/`targetY`/`gated` already use: `printing` (the UI writes it,
+the render loop reads it once per block), `printed` (the render loop
+writes it, `stopPrint` reads it back), and `printBuffer` — `PRINT_SECONDS`
+(60, `SurfaceEngine.MAX_PRINT_SECONDS`'s own ceiling) worth of frames,
+preallocated once in `start()` so the render loop itself never allocates,
+the same discipline the mix block follows. The tap sits in `runLoop`
+right after the block is clamped to `[-1, 1]` and before it is written to
+the `AudioTrack` — a print holds exactly what the track was about to
+play. The arithmetic (how much of one block still fits, stopping dead at
+the ceiling) is `PrintTap` (`:shell`, new) — a pure function with its own
+JVM test, since `GrainVoice` is Kotlin over `AudioTrack` and has none.
+`stopPrint` waits one block's worth of wall-clock time before reading the
+buffer back: the loop reads `printing` once per block, so the block
+already in flight when STOP lands still has to land in the buffer first;
+a print that reached the ceiling on its own has already stopped and needs
+no such wait.
+
+`GrainFieldScreen` gained a PRINT / STOP PRINT header chip beside DUET's,
+an `● PRINTING` line over the field while one runs, and the landing:
+`stopPrint()` off `Dispatchers.Default` (never the UI thread — the sleep
+above would jank it), then `SnipStore.import` on IO, the exact shape
+`SurfaceScreen`'s own PRINT already uses (`Copy.surfacePrinted`,
+`Copy.PRINT_LOST` reused verbatim; a new `Copy.GRAIN_FIELD_NOTHING_PRINTED`
+in place of `SURFACE_NOTHING_PRINTED`, whose wording says "hold the
+surface" — true on SURFACE, not on a screen with no surface on it). A new
+`onFieldPrinted: () -> Unit` callback threads through both call sites —
+`App.kt`'s own GRAIN FIELD and, one level down, `SnapScreen`'s PHOTO
+FIELD overlay — to the same `{ importCount++ }` shelf-reload `SURFACE`'s
+own `onPrinted` already triggers. No PAD landing here: PRINT only ever
+lands on TAPE, the spec's own recommended reading ("it is what was
+heard"); a captured drag reaches pads afterward through the ordinary
+TAPE → CHOP door, same as any other capture.
+
+### S7.5 — TILT: tip the phone to play the picture
+
+`docs/PHOTO_SPECS.md` §3, built as specced. `TiltSource` (`:app`) read only
+roll (gravity along the device's X axis); it now reads pitch too (Y axis),
+guarded and set independently of roll so a NaN or a missing reading on one
+axis never holds the other back. Both are `@Volatile` floats, 0..1, flat at
+0.5, written from the sensor thread and read from the UI/control-rate loop
+— the same single-value contract `tilt` already had.
+
+The mapping from a raw (roll, pitch) reading to the field's cursor —
+dead-banded (`DEAD_ZONE`, 0.02: below this much change from the cursor's
+last position, a reading is a still hand's jitter, not a move, or the
+field would shimmer at rest) and smoothed (`SMOOTHING`, 0.5, DUET's own
+factor) — is `TiltCursor.step` (new, `:shell`), a pure function with its
+own JVM test, since `GrainFieldScreen`'s loops have none.
+
+`GrainFieldScreen` gained a TILT header chip and a control-rate
+`LaunchedEffect` in the exact shape DUET's own loop already has: every
+tick, if no finger is down, `TiltCursor.step` walks `autoPos` toward the
+phone's current tilt and calls `voice.setTarget`/`gate`, a finger always
+winning over either automatic cursor the same way. DUET and TILT are
+exclusive — the spec's own recommendation, "one automatic cursor at a
+time" — enforced where each chip is tapped on: turning one on turns the
+other off, since both drive the one `autoPos`/`voice` and nothing
+reconciles two live writers of it. Available on both `GrainFieldScreen`
+callers, the pad sheet's own field as much as PHOTO FIELD's, since
+nothing about TILT is photo-specific — the chip only shows when
+`TiltSource.available` (a gravity or accelerometer sensor exists).
+
+The one thing this environment cannot settle: the Y axis's sign in
+portrait. `SurfaceScreen`'s existing use of `TiltSource.tilt` already
+fixed the X axis's convention on a real device; pitch's sign (tip away =
+up or down) is an on-device check, named as such in `app/README.md`'s
+verify line.

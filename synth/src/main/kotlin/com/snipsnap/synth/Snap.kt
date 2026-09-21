@@ -147,6 +147,8 @@ object Snap {
          * the same as a vertical one.
          */
         val detail: Float,
+        /** Mean colour across the photo, packed as [Photo.rgb] — a kit pad's `colorHex`, straight off the picture. */
+        val meanRgb: Int,
     )
 
     /** Below this mean saturation a photo counts as grey and its hue is not trusted. */
@@ -177,12 +179,18 @@ object Snap {
         var satSum = 0.0
         var hx = 0.0
         var hy = 0.0
+        var rSum = 0.0
+        var gSum = 0.0
+        var bSum = 0.0
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val p = photo.pixel(x, y)
                 val r = Photo.red(p) / 255f
                 val g = Photo.green(p) / 255f
                 val b = Photo.blue(p) / 255f
+                rSum += r
+                gSum += g
+                bSum += b
                 val lum = Photo.luminance(p)
                 lumSum += lum
                 lumSq += lum.toDouble() * lum
@@ -224,6 +232,11 @@ object Snap {
         var hueDeg = (atan2(hy, hx) * 180.0 / PI).toFloat()
         if (hueDeg < 0f) hueDeg += 360f
         val strength = if (satSum <= 1e-9) 0f else (sqrt(hx * hx + hy * hy) / satSum).toFloat().coerceIn(0f, 1f)
+        val meanRgb = Photo.rgb(
+            Math.round((rSum / n * 255).toFloat()),
+            Math.round((gSum / n * 255).toFloat()),
+            Math.round((bSum / n * 255).toFloat()),
+        )
         return Reading(
             luminance = mean,
             contrast = sqrt(variance).toFloat(),
@@ -231,6 +244,7 @@ object Snap {
             hue = hueDeg,
             hueStrength = strength,
             detail = if (steps == 0) 0f else (stepSum / steps).toFloat(),
+            meanRgb = meanRgb,
         )
     }
 
@@ -277,23 +291,24 @@ object Snap {
         val h = photo.height
         val out = IntArray(TABLE_SIZE)
         when (voice) {
-            SnapVoice.HORIZON -> for (i in 0 until TABLE_SIZE) {
-                // Bin i covers a band of columns, at least one wide, so a
-                // photo wider than the table is averaged, not aliased.
-                val x0 = i * w / TABLE_SIZE
-                val x1 = max(x0 + 1, (i + 1) * w / TABLE_SIZE)
-                var sum = 0.0
-                var count = 0
-                for (x in x0 until min(x1, w)) for (y in 0 until h) { sum += photo.luminance(x, y); count++ }
-                out[i] = toByte(sum / count)
+            SnapVoice.HORIZON -> {
+                // Each column averaged top to bottom: the picture's silhouette.
+                val columns = DoubleArray(w)
+                for (x in 0 until w) {
+                    var sum = 0.0
+                    for (y in 0 until h) sum += photo.luminance(x, y)
+                    columns[x] = sum / h
+                }
+                resample(columns, out)
             }
-            SnapVoice.PLUMB -> for (i in 0 until TABLE_SIZE) {
-                val y0 = i * h / TABLE_SIZE
-                val y1 = max(y0 + 1, (i + 1) * h / TABLE_SIZE)
-                var sum = 0.0
-                var count = 0
-                for (y in y0 until min(y1, h)) for (x in 0 until w) { sum += photo.luminance(x, y); count++ }
-                out[i] = toByte(sum / count)
+            SnapVoice.PLUMB -> {
+                val rows = DoubleArray(h)
+                for (y in 0 until h) {
+                    var sum = 0.0
+                    for (x in 0 until w) sum += photo.luminance(x, y)
+                    rows[y] = sum / w
+                }
+                resample(rows, out)
             }
             SnapVoice.DRAWN -> error("unreachable: refused above")
             SnapVoice.ORBIT -> {
@@ -317,6 +332,35 @@ object Snap {
             }
         }
         return out
+    }
+
+    /**
+     * A line of [values] (one per pixel along the read) onto the table's
+     * [TABLE_SIZE] points. A line longer than the table is averaged, bin by
+     * bin, so it is not aliased; a line shorter than the table — a thumbnail,
+     * a field's 32-pixel cell — is interpolated between its pixels rather
+     * than each pixel repeated, so the cycle is a curve and not a staircase
+     * buzzing at the pixel rate.
+     */
+    private fun resample(values: DoubleArray, out: IntArray) {
+        val n = values.size
+        if (n >= TABLE_SIZE) {
+            for (i in 0 until TABLE_SIZE) {
+                val a = i * n / TABLE_SIZE
+                val b = max(a + 1, (i + 1) * n / TABLE_SIZE)
+                var sum = 0.0
+                for (k in a until min(b, n)) sum += values[k]
+                out[i] = toByte(sum / (min(b, n) - a))
+            }
+        } else {
+            for (i in 0 until TABLE_SIZE) {
+                val pos = if (n == 1) 0.0 else i.toDouble() * (n - 1) / (TABLE_SIZE - 1)
+                val k = pos.toInt().coerceIn(0, n - 1)
+                val j = min(k + 1, n - 1)
+                val frac = pos - k
+                out[i] = toByte(values[k] + (values[j] - values[k]) * frac)
+            }
+        }
     }
 
     private fun toByte(lum: Double): Int = Math.round(lum.coerceIn(0.0, 1.0) * 255).toInt()
@@ -395,6 +439,8 @@ object Snap {
         rate: Int,
         /** A drawn volume shape ([Draw.ENVELOPE_SIZE] points, 0..255) in place of the DECAY exponential; DECAY then sets only the length. */
         envelope: IntArray? = null,
+        /** A length of the caller's choosing in place of DECAY's, for a grain; the shape, drawn or not, is stretched over it. */
+        lengthSeconds: Float? = null,
     ): FloatArray {
         val m = defaults(SnapVoice.HORIZON).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
@@ -411,7 +457,7 @@ object Snap {
         // long enough to be heard as a note (TONAL) and is cut, faded,
         // where the envelope is already 40 dB down.
         val t60 = Dsp.expMap(decay, 0.15f, 2f)
-        val seconds = (t60 * LENGTH_OVER_T60).coerceIn(0.25f, MAX_SECONDS)
+        val seconds = lengthSeconds ?: (t60 * LENGTH_OVER_T60).coerceIn(0.25f, MAX_SECONDS)
         val cutoff = Dsp.expMap(bright, 250f, 12_000f)
         val env = Dsp.Env(attackSeconds = ATTACK_SECONDS, decay2T60 = t60)
         val filter = Dsp.TptSvf(rate)
@@ -445,6 +491,39 @@ object Snap {
         }
         return out
     }
+
+    /**
+     * One grain of this line: a steady tone exactly [frames] long at
+     * [RATE], HOLD-shaped under the usual 3 ms ramp, for a grain field
+     * ([PhotoField]) whose voice windows every grain itself. Same
+     * oversampled path as [render], so a grain of a line is the line's
+     * own sound cut short, not a cheaper cousin of it.
+     */
+    fun grain(table: IntArray, macros: Map<String, Float>, frames: Int): FloatArray {
+        require(table.size == TABLE_SIZE) { "a SNAP table has $TABLE_SIZE points, got ${table.size}" }
+        require(frames > 0) { "a grain needs at least one frame" }
+        // The one place SNAP renders at native rate, on purpose: a field is
+        // two hundred grains built while a finger waits, and U6's 4x
+        // oversample plus two resampler passes made that four seconds on a
+        // desktop — ten on a phone. A grain is 93 ms, Hann-windowed by the
+        // voice and mixed eight deep, where the aliasing the oversample
+        // exists to fold away is far below what a pad would show. The
+        // pad's own render keeps the oversampled path.
+        val raw = synthesize(
+            table, macros, RATE,
+            envelope = HOLD_SHAPE,
+            lengthSeconds = frames.toFloat() / RATE,
+        )
+        // Float length arithmetic lands within a frame of the asked length;
+        // the field addresses grains by a fixed stride, so make it exact.
+        val out = raw.copyOf(frames)
+        Dsp.normalize(out)
+        Dsp.fadeTail(out)
+        return out
+    }
+
+    /** The steady shape every grain is rendered under; built once, never written. */
+    private val HOLD_SHAPE: IntArray = Draw.shape(Draw.Shape.HOLD)
 
     fun render(table: IntArray, macros: Map<String, Float> = emptyMap(), envelope: IntArray? = null): Snip {
         require(table.size == TABLE_SIZE) { "a SNAP table has $TABLE_SIZE points, got ${table.size}" }

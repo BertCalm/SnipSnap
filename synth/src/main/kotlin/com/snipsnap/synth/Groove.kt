@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.ArrangedPad
 
 /**
@@ -124,7 +125,7 @@ object Groove {
     ): Snip {
         require(bpm in 40f..220f) { "bpm out of range: $bpm" }
 
-        val rate = arranged.firstNotNullOfOrNull { it?.snip?.sampleRate } ?: 44_100
+        val rate = arranged.firstNotNullOfOrNull { it?.snip?.sampleRate } ?: WavWriter.MPC_SAMPLE_RATE
         val stepFrames = (60.0 / bpm / 4.0 * rate).toInt()
         val tailFrames = rate // let the last hit ring
         val total = stepFrames * STEPS_PER_BAR * bars + tailFrames

@@ -11,7 +11,8 @@ import java.io.PrintStream
 
 /**
  * `snipsnap arrange <kit-dir>` — songs, not loops. The Arranger's
- * structure grammar lays the kit's own variations into sections, and
+ * structure grammar lays the kit's own variations into sections (the
+ * user's own program among them, when the kit has one), and
  * the plan lands as **switchable sequences in an `.xpj`**, numbered in
  * section order — flip 01 upward on the hardware and that's the song.
  * The song slot wears the arrangement's name (steps stay bench-blocked,

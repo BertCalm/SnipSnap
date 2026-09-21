@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.WavWriter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.floor
@@ -29,7 +30,7 @@ import kotlin.math.floor
 class TapeDeckModel(
     /** Mono analysis buffer — zero-crossing snap reads it. */
     private val tape: FloatArray,
-    val sampleRate: Int = 44_100,
+    val sampleRate: Int = WavWriter.MPC_SAMPLE_RATE,
     /** Detected onset frames, for snapping. Sorted ascending. */
     private val onsets: IntArray = IntArray(0),
 ) {

@@ -92,6 +92,15 @@ class SafeXmlTest {
     }
 
     @Test
+    fun `newBuilder returns a working builder that parses an ordinary document`() {
+        // Same shape as "an ordinary document parses as before" above, but
+        // through the newBuilder() convenience every real call site here
+        // uses instead of newFactory().newDocumentBuilder() directly.
+        val doc = SafeXml.newBuilder().parse(InputSource(StringReader("<Program><Name>Funk Kit</Name></Program>")))
+        assertEquals("Funk Kit", doc.documentElement.getElementsByTagName("Name").item(0).textContent)
+    }
+
+    @Test
     fun `newFactory sets every guard, not just the first`() {
         // The regression this guards against: an earlier version set only
         // disallow-doctype-decl inside a try/catch that swallowed failure

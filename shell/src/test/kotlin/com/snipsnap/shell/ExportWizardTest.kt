@@ -6,6 +6,7 @@ import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Severity
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
 import java.io.File
@@ -289,5 +290,57 @@ class ExportWizardTest {
             assertTrue(f.why.endsWith("."), "${f.id}'s reason should land on a full stop")
         }
         assertEquals(whys.size, whys.toSet().size, "two formats share a reason - one was pasted from the other")
+    }
+
+    // ---------- the kit's inserts ----------
+
+    @Test
+    fun `an expansion written from the wizard carries its inserts`() {
+        // `snipsnap export --expansion` has always put a J-Card and liner
+        // notes in the expansion folder; the wizard the phone drives wrote
+        // neither, so the same kit in the same format arrived with its
+        // story or without it depending on which machine made it.
+        val (kit, dir) = makeKit("Inserts")
+        val w = ExportWizardModel(kit, dir)
+        w.setFormat(ExportFormat.EXPANSION)
+
+        val result = w.write(File(temp, "card-inserts"))
+        val done = result as ExportWizardModel.WriteResult.Done
+
+        assertTrue(File(done.outcome.primary, Inserts.J_CARD_NAME).isFile, "no J-Card beside the expansion")
+        val notes = File(done.outcome.primary, LinerNotes.FILE_NAME)
+        assertTrue(notes.isFile, "no liner notes beside the expansion")
+        assertTrue(notes.readText(Charsets.UTF_8).isNotBlank(), "the liner notes are empty")
+    }
+
+    @Test
+    fun `the other formats get no inserts`() {
+        // An expansion is the one export that is presented rather than
+        // merely readable - it lands as a tile in the MPC's own browser.
+        // The rest are a program and its samples, and a stray .txt beside
+        // them would be litter on somebody's card.
+        val (kit, dir) = makeKit("NoInserts")
+        val w = ExportWizardModel(kit, dir)
+        w.setFormat(ExportFormat.PROGRAM_FOLDER)
+
+        val done = w.write(File(temp, "card-noinserts")) as ExportWizardModel.WriteResult.Done
+        assertFalse(File(done.outcome.primary, Inserts.J_CARD_NAME).exists())
+        assertFalse(File(done.outcome.primary, LinerNotes.FILE_NAME).exists())
+    }
+
+    @Test
+    fun `READ BACK judges the program, not the paper beside it`() {
+        // The inserts are written after the verifier has run. Its own
+        // failure mode is a FAIL row rather than a throw, so had it minded
+        // the extra files it would have degraded quietly.
+        val (kit, dir) = makeKit("InsertsReadBack")
+        val w = ExportWizardModel(kit, dir)
+        w.setFormat(ExportFormat.EXPANSION)
+
+        val done = w.write(File(temp, "card-insertsrb")) as ExportWizardModel.WriteResult.Done
+        assertTrue(
+            done.outcome.readBack.none { it.severity == Severity.FAIL },
+            "read back failed on an expansion carrying its inserts: ${done.outcome.readBack}",
+        )
     }
 }

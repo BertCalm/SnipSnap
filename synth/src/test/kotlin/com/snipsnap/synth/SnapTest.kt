@@ -149,6 +149,26 @@ class SnapTest {
     }
 
     @Test
+    fun `a line narrower than the table is a curve between its pixels, not a staircase`() {
+        // Eight columns, black to white: 256 points that climb through
+        // every level, not eight steps of 32 repeats each.
+        val eight = Photo.grey(8, 4) { x, _ -> x / 7f }
+        val table = Snap.table(eight, SnapVoice.HORIZON)
+        assertEquals(0, table.first())
+        assertEquals(255, table.last())
+        var steps = 0
+        for (i in 1 until table.size) {
+            assertTrue(table[i] >= table[i - 1], "not monotone at $i")
+            if (table[i] != table[i - 1]) steps++
+        }
+        assertTrue(steps > 200, "only $steps distinct steps: a staircase")
+        // The same photo read down is one colour per row: a flat line.
+        assertTrue(Snap.isFlat(Snap.table(eight, SnapVoice.PLUMB)))
+        // One column wide reads as one level everywhere.
+        assertTrue(Snap.table(Photo.grey(1, 9) { _, y -> y / 8f }, SnapVoice.HORIZON).distinct().size == 1)
+    }
+
+    @Test
     fun `ORBIT closes on itself`() {
         // A photo that is bright on the left and dark on the right: an
         // ORBIT line crosses that edge twice per turn, at twelve and six
@@ -238,6 +258,22 @@ class SnapTest {
         assertEquals(0.5f, Snap.macrosFrom(reading).getValue("TUNE"))
         // One colour, by contrast, is fully in agreement with itself.
         assertTrue(Snap.look(tinted(230, 30, 30)).hueStrength > 0.95f)
+    }
+
+    @Test
+    fun `meanRgb is the photo's own average colour, for a kit pad to light up with`() {
+        val flat = Snap.look(tinted(200, 60, 30))
+        assertEquals(200, Photo.red(flat.meanRgb))
+        assertEquals(60, Photo.green(flat.meanRgb))
+        assertEquals(30, Photo.blue(flat.meanRgb))
+
+        // Half red, half blue averages to a colour between the two -
+        // meanRgb is a plain mean, not the hue circle's circular one.
+        val split = Photo.of(80, 80) { x, _ -> if (x < 40) Photo.rgb(255, 0, 0) else Photo.rgb(0, 0, 255) }
+        val mean = Snap.look(split).meanRgb
+        assertTrue(Photo.red(mean) in 120..135, "red channel ${Photo.red(mean)}")
+        assertTrue(Photo.blue(mean) in 120..135, "blue channel ${Photo.blue(mean)}")
+        assertEquals(0, Photo.green(mean))
     }
 
     @Test

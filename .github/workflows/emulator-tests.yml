@@ -1,0 +1,79 @@
+name: emulator-tests
+
+# The on-device suite (app/src/androidTest): Compose UI tests on an
+# emulator. The half of the SURFACE phone pass a machine can see - a label
+# cut to "TA..." at a phone's width, a button that does not flip, a second
+# finger the pad does not read - fails here instead of waiting for a tester
+# to notice.
+#
+# Booting an emulator is the most expensive thing this repo asks of its
+# metered minutes (ten to fifteen a run against three for the app build),
+# so this workflow runs only when something under app/ changes, and the
+# same once-per-branch and cancel-superseded rules as tests.yml apply.
+# Anything else that wants it can start it by hand (workflow_dispatch).
+on:
+  push:
+    branches: [claude/mobile-mpc-drum-sampler-t58x74]
+    paths:
+      - "app/**"
+      - ".github/workflows/emulator-tests.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/emulator-tests.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  emulator-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      # See tests.yml's identical step for why packages is empty; the
+      # emulator runner below installs the system image it needs itself.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+      # The hosted runners have KVM but hand it to root only; without this
+      # the emulator falls back to software emulation and the boot alone
+      # outlasts the job.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the on-device suite
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          # The runner's defaults minus -noaudio: the SURFACE engine opens an
+          # audio stream when the screen appears, and a device with no audio
+          # would make every one of these a test of the fallback toast.
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
+          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+      - name: Keep the reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-test-reports-${{ github.sha }}
+          path: |
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/**
+          if-no-files-found: ignore
+          retention-days: 7

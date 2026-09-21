@@ -230,6 +230,17 @@ private val PROG_SUBS = listOf(
 /** What a fork says it came from - [PROG_NAMES] for the four derived programs. */
 private val PROG_SOURCES = PROG_NAMES.take(4)
 
+/**
+ * Where YOURS sits in [PROG_NAMES] — the one segment that is not a
+ * derived program, and the one that cycles.
+ *
+ * A name rather than the literal `4` it replaces at every site that used
+ * it. The number is the same; what it means was not written down, and
+ * "the last of the five" and "the user's own" are different facts that
+ * happened to agree.
+ */
+private const val YOURS_INDEX = 4
+
 /** Lane display order, straight from [GrooveEdit.Lane]'s own declaration order. */
 private val LANE_ORDER: List<GrooveEdit.Lane> = GrooveEdit.Lane.entries
 private val LANE_LABEL: Map<GrooveEdit.Lane, String> = mapOf(
@@ -353,17 +364,30 @@ fun GrooveScreen(
     val kit = entry.kit
 
     var base by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
+    /**
+     * Every user program this kit holds, in slot order, and which one the
+     * YOURS segment is currently showing. [eClip] is that one — kept as
+     * its own state rather than derived so every path that already wrote
+     * it keeps working, with [setYours] below holding the two in step.
+     */
+    var yoursAll by remember(kitDir) { mutableStateOf<List<Mpc3Clip>>(emptyList()) }
+    var yoursIndex by remember(kitDir) { mutableIntStateOf(0) }
     var eClip by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
     var loading by remember(kitDir) { mutableStateOf(true) }
     LaunchedEffect(kitDir, reloadRequest) {
         loading = true
-        val (b, e) = withContext(Dispatchers.IO) {
-            // The captured base is first by convention — six call sites
-            // across the codebase depend on it; do not reorder.
-            GrooveStore.load(kitDir).firstOrNull() to GrooveEdit.load(kitDir)
+        val (b, all) = withContext(Dispatchers.IO) {
+            // The captured base used to be taken as whatever was stored
+            // first, on a convention several call sites shared. It is now
+            // taken by the same predicate `GrooveEdit` and `Arranger` use,
+            // so the three cannot drift: the base is the clip that is not
+            // one of yours, whatever order the sidecar holds them in.
+            GrooveStore.load(kitDir).firstOrNull { !GrooveEdit.isProgE(it) } to GrooveEdit.loadAll(kitDir)
         }
         base = b
-        eClip = e
+        yoursAll = all
+        yoursIndex = yoursIndex.coerceIn(0, maxOf(0, all.size - 1))
+        eClip = all.getOrNull(yoursIndex)
         loading = false
     }
 
@@ -769,6 +793,22 @@ fun GrooveScreen(
 
     val progCount = if (eClip != null) 5 else 4
     if (progIndex >= progCount) progIndex = 0
+
+    /**
+     * Make [clip] the current user program, putting it into [yoursAll] at
+     * its own slot — replacing the entry of the same name, or appending a
+     * new one.
+     *
+     * By name, for the same reason `GrooveEdit.save` matches by name: the
+     * name carries the slot, and matching on anything looser would let an
+     * edit to your second program land on your first.
+     */
+    fun setYours(clip: Mpc3Clip) {
+        val at = yoursAll.indexOfFirst { it.name == clip.name }
+        yoursAll = if (at < 0) yoursAll + clip else yoursAll.toMutableList().also { it[at] = clip }
+        yoursIndex = yoursAll.indexOfFirst { it.name == clip.name }.coerceAtLeast(0)
+        eClip = clip
+    }
 
     // Editing: EDIT STEPS forks (or re-enters) PROG E and opens the
     // full-screen step editor. `eClip` IS the editor's working buffer —
@@ -1201,11 +1241,11 @@ fun GrooveScreen(
             try {
                 val (b, e) = withContext(Dispatchers.IO) { GrooveEdit.startEmpty(kitDir, kit.name) }
                 base = b
-                eClip = e
+                setYours(e)
                 editorSourceLabel = PROG_SOURCES[0]
                 editorBar = 0
                 editorDirty = false
-                progIndex = 4
+                progIndex = YOURS_INDEX
                 isEditing = true
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
@@ -1228,17 +1268,20 @@ fun GrooveScreen(
         val source = currentClip ?: return
         clearJustLanded()
         busy = true
-        val sourceLetter = if (progIndex < 4) PROG_SOURCES[progIndex] else editorSourceLabel
+        val sourceLetter = if (progIndex < YOURS_INDEX) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
                 val (hadE, forked) = withContext(Dispatchers.IO) {
-                    GrooveEdit.hasUserProgram(kitDir) to GrooveEdit.fork(kitDir, source)
+                    // `index = yoursIndex`, not the default: EDIT STEPS
+                    // opens the program you are looking at. Left at 0 it
+                    // re-entered the first one however far you had cycled.
+                    GrooveEdit.hasUserProgram(kitDir) to GrooveEdit.fork(kitDir, source, index = yoursIndex)
                 }
-                eClip = forked
+                setYours(forked)
                 editorSourceLabel = sourceLetter
                 editorBar = 0
                 editorDirty = false
-                progIndex = 4
+                progIndex = YOURS_INDEX
                 isEditing = true
                 if (!hadE) onToast(Copy.FORKED_TO_E)
             } catch (e: Exception) {
@@ -1275,24 +1318,43 @@ fun GrooveScreen(
     fun forkTakeToE() {
         if (busy) return
         val source = currentClip ?: return
-        val existingE = eClip != null
-        if (existingE && !forkArmed) {
+        // The arm exists because this used to destroy the one program you
+        // had. With room for another it destroys nothing, so it asks
+        // nothing: a confirm on a non-destructive act teaches people to
+        // tap through confirms. Only a kit already holding
+        // `GrooveEdit.MAX_USER_PROGRAMS` still has to replace, and only
+        // that case still arms.
+        val full = yoursAll.size >= GrooveEdit.MAX_USER_PROGRAMS
+        if (full && !forkArmed) {
             forkArmed = true
             return
         }
         clearJustLanded()
         busy = true
-        val sourceLetter = if (progIndex < 4) PROG_SOURCES[progIndex] else editorSourceLabel
+        val sourceLetter = if (progIndex < YOURS_INDEX) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
-                val forked = withContext(Dispatchers.IO) { GrooveEdit.fork(kitDir, source, replace = existingE) }
-                eClip = forked
+                val forked = withContext(Dispatchers.IO) {
+                    // Replacing the one on screen when there is nowhere to
+                    // put a new one; otherwise the next free slot.
+                    if (full) {
+                        GrooveEdit.fork(kitDir, source, replace = true, index = yoursIndex)
+                    } else {
+                        GrooveEdit.forkNew(kitDir, source) ?: GrooveEdit.fork(kitDir, source, replace = true, index = yoursIndex)
+                    }
+                }
+                // Read off the result rather than off the intent: the
+                // fallback above replaces when this screen's list has gone
+                // stale against the sidecar, and a toast saying a new
+                // program was made would be wrong exactly when it matters.
+                val replaced = yoursAll.any { it.name == forked.name }
+                setYours(forked)
                 editorSourceLabel = sourceLetter
                 editorBar = 0
                 editorDirty = false
-                progIndex = 4
+                progIndex = YOURS_INDEX
                 isEditing = true
-                onToast(if (existingE) Copy.FORKED_TO_E_REPLACED else Copy.FORKED_TO_E)
+                onToast(if (replaced) Copy.FORKED_TO_E_REPLACED else Copy.FORKED_TO_E)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 failure("FORK", e)
@@ -1307,7 +1369,7 @@ fun GrooveScreen(
         val note = GrooveEdit.noteFor(lane)
         val pulses = step * GrooveEdit.STEP_PULSES
         val turningOn = c.notes.none { it.note == note && it.timePulses == pulses }
-        eClip = GrooveEdit.toggleStep(c, lane, step)
+        setYours(GrooveEdit.toggleStep(c, lane, step))
         editorDirty = true
         editorSaveTick++
         if (turningOn) hit(GrooveEdit.LANE_SLOT.getValue(lane))
@@ -1315,7 +1377,7 @@ fun GrooveScreen(
 
     fun clearEditorBar() {
         val c = eClip ?: return
-        eClip = GrooveEdit.clearBar(c, editorBar)
+        setYours(GrooveEdit.clearBar(c, editorBar))
         editorDirty = true
         editorSaveTick++
         onToast(Copy.BAR_WIPED)
@@ -1373,7 +1435,7 @@ fun GrooveScreen(
                 // fixed.
                 val clips = (0 until 4).mapNotNull {
                     GrooveProgram.compute(it, exportBase, swingPercent, feel, feelTemplate, eClip = null)
-                } + listOfNotNull(eClip)
+                } + yoursAll
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
                 val written = withContext(Dispatchers.IO) {
                     val root = Exports.dir(context)
@@ -1997,7 +2059,15 @@ fun GrooveScreen(
 
                 ProgramSelector(
                     names = PROG_NAMES,
-                    sub = PROG_SUBS[progIndex],
+                    // Which of yours is live, and that tapping again moves
+                    // on, said in the sub-line rather than on the segment:
+                    // the segment has 55dp to play with and this line has
+                    // the whole row.
+                    sub = if (progIndex == YOURS_INDEX && yoursAll.size > 1) {
+                        Copy.yoursOf(yoursIndex + 1, yoursAll.size)
+                    } else {
+                        PROG_SUBS[progIndex]
+                    },
                     selected = progIndex,
                     count = progCount,
                     // Locked to the captured program while RECORD is armed
@@ -2009,7 +2079,22 @@ fun GrooveScreen(
                     // TalkBack as well as the touch layer, which is the
                     // contract PR 2 established for every picker.
                     enabled = !recording && !countingIn,
-                    onPick = { clearJustLanded(); progIndex = it },
+                    // Tapping YOURS when YOURS is already live steps to
+                    // the next program of yours rather than doing nothing.
+                    // One segment reaches all of them, which is what keeps
+                    // the row at five: measured, seven segments make
+                    // CAPTURED wrap and a wrapped label makes its segment
+                    // taller than its neighbours.
+                    onPick = {
+                        clearJustLanded()
+                        if (it == YOURS_INDEX && progIndex == YOURS_INDEX && yoursAll.size > 1) {
+                            val next = (yoursIndex + 1) % yoursAll.size
+                            yoursIndex = next
+                            eClip = yoursAll[next]
+                        } else {
+                            progIndex = it
+                        }
+                    },
                     scheme = scheme,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -2061,7 +2146,7 @@ fun GrooveScreen(
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         TapeText(
                             // Fix 2: the beat count, same as this screen's other three "COUNTING IN…" render sites.
-                            if (countingIn) "COUNTING IN… $countInBeat" else "● RECORDING — OVERDUBBING ONTO PROG A",
+                            if (countingIn) "COUNTING IN… $countInBeat" else Copy.GROOVE_OVERDUBBING,
                             TapeType.pixel,
                             scheme.amber.tape,
                         )
@@ -2387,6 +2472,7 @@ fun GrooveScreen(
                     onClear = ::clearEditorBar,
                     onToggle = ::toggleCell,
                     onDone = ::closeEditor,
+                    yoursCount = yoursAll.size,
                 )
             }
         }
@@ -2812,6 +2898,8 @@ private fun StepEditorOverlay(
     onClear: () -> Unit,
     onToggle: (GrooveEdit.Lane, Int) -> Unit,
     onDone: () -> Unit,
+    /** How many programs of yours this kit holds — the `OF n` half of the header's count. */
+    yoursCount: Int,
 ) {
     // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
     // clip's own bar, so a cell's step address is the beat the clip plays.
@@ -2839,7 +2927,21 @@ private fun StepEditorOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TapeText("STEP EDIT — PROG E", TapeType.lcd(20), scheme.lcdInk.tape, Modifier.weight(1f))
+                // Which of yours is open, read from [clip] itself rather
+                // than from the index the caller forked at. That is the
+                // difference between a label and a check: `GrooveEdit.fork`
+                // takes an index and returns a clip, and the bug this
+                // replaces was the index being right and ignored. A header
+                // derived from the index would have said the right thing
+                // while the wrong clip was on screen; derived from the
+                // clip, it can only say what is actually open.
+                Column(Modifier.weight(1f)) {
+                    TapeText(Copy.STEP_EDIT_TITLE, TapeType.lcd(20), scheme.lcdInk.tape)
+                    val ofYours = GrooveEdit.progIndexOf(clip)?.plus(1)
+                    if (ofYours != null && yoursCount > 1) {
+                        TapeText(Copy.stepEditOf(ofYours, yoursCount), TapeType.pixelSmall, scheme.ink2.tape)
+                    }
+                }
                 Box(
                     Modifier
                         .height(Layout.MIN_HIT_TARGET.dp)
@@ -2944,7 +3046,7 @@ private fun StepEditorOverlay(
             }
 
             TapeText(
-                "$totalSteps STEPS · FORKED FROM $sourceLabel · TAP TO TOGGLE — B–D STAY DERIVED FROM A",
+                Copy.stepEditFooter(totalSteps, sourceLabel),
                 TapeType.pixelSmall,
                 scheme.ink3.tape,
                 Modifier.fillMaxWidth(),

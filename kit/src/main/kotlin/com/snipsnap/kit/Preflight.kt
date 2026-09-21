@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.xpm.WavInfo
 import java.io.File
 import java.io.IOException
@@ -66,7 +67,7 @@ object Preflight {
                 formatClean = false
                 continue
             }
-            if (info.sampleRate != 44_100) {
+            if (info.sampleRate != WavWriter.MPC_SAMPLE_RATE) {
                 out += Finding(
                     Severity.FAIL,
                     "${p.sampleFile} is ${info.sampleRate} Hz — resample to 44.1 kHz before export",

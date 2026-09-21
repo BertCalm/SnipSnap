@@ -213,7 +213,23 @@ object SnipStore {
     const val IMPORT_MAX_SEC = 180f
 
     /** What an import left: the file, how long it is, and whether the tail was cut at [IMPORT_MAX_SEC]. */
-    data class Imported(val file: File, val seconds: Float, val truncated: Boolean)
+    data class Imported(
+        val file: File,
+        val seconds: Float,
+        val truncated: Boolean,
+        /**
+         * The rate the file arrived at, when [import] had to move it onto
+         * [WavWriter.MPC_SAMPLE_RATE] — null when it already was there,
+         * which is every bounce through this door and most shares.
+         *
+         * Reported because the conversion happens to somebody else's
+         * audio: the app has always done it and never said so, and the
+         * only user who would notice a 48 k share silently becoming a
+         * 44.1 k one is the one the silence was worst for. `Copy.imported`
+         * says it; nothing depends on it being acted upon.
+         */
+        val resampledFrom: Int? = null,
+    )
 
     /**
      * The import path (F3.1/F3.2): a file shared into the app lands as a
@@ -234,7 +250,8 @@ object SnipStore {
     fun import(snip: Snip, root: File, nowMillis: Long): Imported {
         require(snip.frameCount > 0) { "the shared file holds no audio" }
         val mono = if (snip.channels == 1) snip else Cleanup.toMono(snip)
-        val atRate = if (mono.sampleRate == WavWriter.MPC_SAMPLE_RATE) mono else Resampler.resample(mono, WavWriter.MPC_SAMPLE_RATE)
+        val cameInAt = mono.sampleRate.takeIf { it != WavWriter.MPC_SAMPLE_RATE }
+        val atRate = if (cameInAt == null) mono else Resampler.resample(mono, WavWriter.MPC_SAMPLE_RATE)
         val maxFrames = (IMPORT_MAX_SEC * atRate.sampleRate).toInt()
         val truncated = atRate.frameCount > maxFrames
         val kept = if (truncated) Snip(atRate.samples.copyOf(maxFrames), 1, atRate.sampleRate) else atRate
@@ -242,7 +259,7 @@ object SnipStore {
         val file = freshFile(root, nowMillis)
         val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, kept) }.toByteArray()
         writeClaimedFile(file, bytes)
-        return Imported(file, kept.durationSeconds, truncated)
+        return Imported(file, kept.durationSeconds, truncated, cameInAt)
     }
 
     /**

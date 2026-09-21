@@ -1522,6 +1522,99 @@ class ConventionTest {
                 "SNIPS spent five days reading a directory nothing wrote:\n  " + strays.joinToString("\n  "),
         )
     }
+
+    // ==================== Law: the MPC's rate is named in one place ====================
+
+    /**
+     * Every source that may say `44_100` on a code line, and why it is not
+     * a second copy of the MPC's own rate.
+     *
+     * 44.1 kHz is the other quantity this repo kept everywhere. Before
+     * this law it was typed on seventeen code lines across six modules —
+     * the capture rate, two writers' seconds-per-frame divisors and an
+     * importer's inverse of one of them, the preflight gate, three
+     * engines' render rates, two CLI target rates, a ring buffer's
+     * default and a tape deck's. Each was right, and each was
+     * independently right, which is exactly the shape [pathOwners] exists
+     * to stop: one quantity in many places is many quantities that happen
+     * to agree today.
+     *
+     * [WavWriter.MPC_SAMPLE_RATE] is the owner — it is the constant the
+     * refusal at the card's edge is written against, so it is the one that
+     * cannot be wrong without the export being wrong.
+     *
+     * The three exceptions are exceptions on purpose, not oversights:
+     * two of them are not this quantity at all, and one cannot reach it.
+     */
+    private val rateSayers = mapOf(
+        "WavWriter.kt" to "the owner: the rate the MPC reads, declared once",
+        // `:xpm` is a leaf — nothing on its compile path carries `:audio`,
+        // so it cannot import the owner. Inverting the dependency to fix
+        // one integer would be a worse trade than this entry.
+        "WavInfo.kt" to "`:xpm` does not depend on `:audio` and so cannot see the owner",
+        // Not the contract: the rates the decode fixtures are *built* at,
+        // deliberately including two the MPC will not take, because the
+        // point of that array is to prove the decoder survives them.
+        "DecodeContract.kt" to "the rates decode fixtures are built at, two of which the MPC refuses on purpose",
+        // Not the contract either: the rate SPRING's coefficients were
+        // tuned at. If the MPC's rate ever changed, this number would
+        // not - the spring would still need scaling against the rate its
+        // own constants were measured at.
+        "Spring.kt" to "the rate SPRING's own coefficients were tuned at, which would not move if the MPC's did",
+    )
+
+    @Test
+    fun `law - no source retypes the rate the MPC reads`() {
+        val roots = listOf("app", "audio", "cli", "kit", "loop", "mpc3", "shell", "synth", "xpm", "json")
+            .map { File("../$it/src/main/kotlin") }
+        val sources = roots.filter { it.isDirectory }
+            .flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" } }
+        require(sources.size > 200) { "found only ${sources.size} sources — the scan is broken, not the tree." }
+
+        // Anti-staleness, exactly as `pathOwners` does it: an allowlisted
+        // file that no longer says the number is an entry guarding nothing.
+        // Either spelling, with or without a float/long suffix — `44_100f`
+        // is how two of the four allowlisted sites write it, and a plain
+        // `\b` will not match across the `f`. The lookarounds keep the
+        // match off a longer number (`144100`, `44_1000`) and off a
+        // qualified reference that merely ends in the digits.
+        val rate = Regex("""(?<![\w.])44_?100[fFdDlL]?(?![\w.])""")
+        for ((name, why) in rateSayers) {
+            val file = sources.singleOrNull { it.name == name }
+            assertTrue(file != null, "rateSayers allows $name ($why), and no such source exists.")
+            val says = file!!.readText(Charsets.UTF_8).lineSequence()
+                .any { line -> !isCommentLine(line.trim()) && rate.containsMatchIn(line) }
+            assertTrue(
+                says,
+                "$name is allowed to say the MPC's rate on a code line ($why), and no code line there does. " +
+                    "Either it stopped needing to — drop the entry — or it moved, in which case point the " +
+                    "entry at its new home. Do not leave it permitting a number nobody types.",
+            )
+        }
+
+        val strays = mutableListOf<String>()
+        for (file in sources) {
+            if (file.name in rateSayers) continue
+            file.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+                val t = line.trim()
+                // Prose may say 44.1 kHz freely, in either spelling: a KDoc
+                // explaining why a ring buffer is 21 MB is documentation,
+                // not a second definition.
+                if (isCommentLine(t)) return@forEachIndexed
+                if (rate.containsMatchIn(t)) {
+                    strays += "${file.name}:${i + 1} types the MPC's rate — WavWriter.MPC_SAMPLE_RATE owns it\n      ${t.take(100)}"
+                }
+            }
+        }
+
+        assertTrue(
+            strays.isEmpty(),
+            "these lines retype the rate WavWriter.MPC_SAMPLE_RATE already names. Use that constant, or — if " +
+                "the number here genuinely is not the MPC's rate — add the file to rateSayers with the reason " +
+                "it is a different quantity:\n  " + strays.joinToString("\n  "),
+        )
+    }
+
     // ---- Law: what the player chose outlives the chop it was chosen on ----
 
     /**
@@ -2347,6 +2440,41 @@ class ConventionTest {
             letters.isEmpty(),
             "GrooveScreen's PROG_NAMES is index-first again: $letters. A–E is an argument to " +
                 "GrooveProgram.compute, not an MPC clip slot — see this law's KDoc.",
+        )
+
+        // ...and out of every OTHER string this screen draws, which is the
+        // half this law used to miss. It read the list and stopped there,
+        // so `STEP EDIT — PROG E` sat in the step editor's header through
+        // J18's rename and through #289 making eight of them — naming a
+        // letter the app no longer has, on the one screen where the
+        // question is *which* of yours you are in. A list is not a screen:
+        // the sweep below is what makes "the letters are gone from the
+        // screen's own labels" a fact rather than a claim about one
+        // declaration.
+        //
+        // Comments may say PROG E freely. The rename was of what a player
+        // reads, and the history of why is worth keeping in the source.
+        val strayLetters = mutableListOf<String>()
+        // Two shapes, because the sweep's first run found one of each and
+        // the second shape is how the worse one hid: `PROG E` in the step
+        // editor's header, and a bare range — "B–D STAY DERIVED FROM A" —
+        // in its footer, on a screen where nothing is called A, B, C or D.
+        // A bare single letter is not looked for: "A" is a word.
+        val labelLetter = Regex("""PROG [A-E]\b|\b[A-E][-–—][A-E]\b""")
+        groove.readText(Charsets.UTF_8).lineSequence().forEachIndexed { i, line ->
+            val t = line.trim()
+            if (isCommentLine(t)) return@forEachIndexed
+            for (literal in Regex(""""([^"\\]*)"""").findAll(t).map { it.groupValues[1] }) {
+                if (labelLetter.containsMatchIn(literal)) strayLetters += "GrooveScreen.kt:${i + 1}  \"$literal\""
+            }
+        }
+        assertTrue(
+            strayLetters.isEmpty(),
+            "GROOVE still shows a player a PROG letter. J18 took A–E off this screen because the letter " +
+                "is an argument to GrooveProgram.compute and nothing a player can find on the hardware; " +
+                "since #289 a kit holds up to eight programs of the player's own, so a letter cannot even " +
+                "say which one. Name what it is, or which of theirs it is:\n  " +
+                strayLetters.joinToString("\n  "),
         )
     }
 

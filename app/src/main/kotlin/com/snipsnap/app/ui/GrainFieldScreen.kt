@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -26,18 +27,24 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.GrainVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.TiltSource
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -52,10 +59,13 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.TiltCursor
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
@@ -82,6 +92,24 @@ private const val DUET_SILENCE_LEVEL = 0.02f
 private const val DUET_SMOOTHING = 0.5f
 
 /**
+ * A field built elsewhere and handed to [GrainFieldScreen] whole, in place
+ * of a pad's WAV and its analysis — SNAP's PHOTO FIELD (`PhotoField.build`
+ * in `:synth`), where the map's positions are the cells of a picture and
+ * [backdrop] is that picture, drawn under the dots so a finger sees what
+ * it hears. No [GrainField.Projector] comes with one, so DUET's chip stays
+ * hidden, exactly as it does for a degenerate analysis.
+ */
+class PrebuiltField(
+    val snip: Snip,
+    val map: GrainField.GrainMap,
+    val backdrop: Bitmap?,
+    /** The header's title in place of PAD A01. */
+    val title: String,
+    /** The back chip's label in place of ◄ KIT. */
+    val backLabel: String,
+)
+
+/**
  * GRAIN FIELD: drag across a pad's own timbre landscape and hear it play.
  *
  * [GrainField.analyze] dices the pad's sample into a few hundred short
@@ -102,9 +130,19 @@ private const val DUET_SMOOTHING = 0.5f
  * wins — see [GrainFieldCanvas]'s `touching` flag — and DUET resumes the
  * instant it lifts.
  *
- * **v1 is play-only.** Nothing dragged here is ever written back to a pad or
- * into TAPE — capturing the performance (recording what a drag actually
- * played) is the declared next phase, not built yet.
+ * **TILT** is the field's other automatic cursor: `TiltSource`'s roll and
+ * pitch, dead-banded and smoothed by [TiltCursor.step], stand in for a
+ * finger the same way DUET's projected mic input does — the identical
+ * control-rate loop shape, `autoPos`, `setTarget`/`gate` and all, just fed
+ * from the phone's own tilt instead of a projection. DUET and TILT are
+ * exclusive: turning one on turns the other off, since both drive the same
+ * one cursor and only one automatic source should own it at a time.
+ *
+ * **PRINT** captures the performance: from the tap to STOP PRINT,
+ * everything [GrainVoice] mixed lands on TAPE as a snip ([GrainVoice.startPrint]/
+ * [GrainVoice.stopPrint]) — the app's own capture door, so a drag across a
+ * pad, or a photo, ends up on pads the same way a capture does (trim, chop,
+ * classify, kit).
  *
  * On open: the pad's WAV is read and analyzed off the main thread (a
  * "LISTENING TO THE GRAIN…" LCD covers the wait); a `null` analysis — too
@@ -116,18 +154,33 @@ private const val DUET_SMOOTHING = 0.5f
  */
 @Composable
 fun GrainFieldScreen(
-    entry: KitShelf.Entry,
-    slot: Int,
+    /** The kit and slot whose pad is analyzed into a field — or null when [prebuilt] brings one. */
+    entry: KitShelf.Entry?,
+    slot: Int?,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRequestArm: () -> Unit,
+    /** PRINT landed on TAPE: the same reload request a share-sheet import raises. */
+    onFieldPrinted: () -> Unit,
+    /** A field built elsewhere (SNAP's photo), in place of loading and analyzing a pad. */
+    prebuilt: PrebuiltField? = null,
 ) {
     val scheme = LocalScheme.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    var loaded by remember(entry.dir, slot) { mutableStateOf<Pair<Snip, GrainField.GrainMap>?>(null) }
-    var failed by remember(entry.dir, slot) { mutableStateOf(false) }
+    var loaded by remember(entry?.dir, slot, prebuilt) { mutableStateOf<Pair<Snip, GrainField.GrainMap>?>(null) }
+    var failed by remember(entry?.dir, slot, prebuilt) { mutableStateOf(false) }
 
-    LaunchedEffect(entry.dir, slot) {
+    LaunchedEffect(entry?.dir, slot, prebuilt) {
+        if (prebuilt != null) {
+            loaded = prebuilt.snip to prebuilt.map
+            return@LaunchedEffect
+        }
+        if (entry == null || slot == null) {
+            failed = true
+            return@LaunchedEffect
+        }
         val pad = entry.kit.pad(slot)
         val snip = pad?.let { p ->
             withContext(Dispatchers.IO) {
@@ -144,6 +197,8 @@ fun GrainFieldScreen(
         val map = withContext(Dispatchers.Default) { GrainField.analyze(snip) }
         if (map == null) failed = true else loaded = snip to map
     }
+    // The picture under the dots, converted once per field.
+    val backdrop = remember(prebuilt) { prebuilt?.backdrop?.asImageBitmap() }
 
     // Analyze-null (or the WAV itself missing/unreadable) — same shape as
     // every other "can't do this" path in the app: toast, then leave. Keyed
@@ -201,9 +256,61 @@ fun GrainFieldScreen(
         }
     }
 
+    // PRINT: everything the voice mixes from a tap to STOP PRINT lands on
+    // TAPE as a snip — the field's own declared next phase (its class KDoc,
+    // above), for the pad sheet's field as much as the photo's.
+    var printing by remember { mutableStateOf(false) }
+    // Guards the frame loop from calling finishPrint() again while the stop
+    // is already in flight — SurfaceScreen's own `finishing` shape.
+    var finishingPrint by remember { mutableStateOf(false) }
+
+    fun printToTape(snip: Snip) {
+        scope.launch {
+            val landed = withContext(Dispatchers.IO) {
+                runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
+            }
+            landed.onSuccess {
+                onToast(Copy.surfacePrinted(it.seconds))
+                onFieldPrinted()
+            }.onFailure {
+                Log.e("GrainFieldScreen", "printToTape: print lost", it)
+                onToast(Copy.PRINT_LOST)
+            }
+        }
+    }
+
+    fun finishPrint() {
+        if (finishingPrint) return
+        val v = voice ?: return
+        val rate = current?.first?.sampleRate ?: return
+        finishingPrint = true
+        printing = false
+        scope.launch {
+            try {
+                val samples = withContext(Dispatchers.Default) { v.stopPrint() }
+                if (samples == null || samples.size < rate / 10) {
+                    onToast(Copy.GRAIN_FIELD_NOTHING_PRINTED)
+                    return@launch
+                }
+                printToTape(Snip(samples, channels = 1, sampleRate = rate))
+            } finally {
+                finishingPrint = false
+            }
+        }
+    }
+
     val projector = current?.second?.projector
+    // DUET and TILT are the field's two automatic cursors, exclusive with
+    // each other (one at a time) the same way a finger always wins over
+    // either: turning one on turns the other off, at the header chips below.
     var duetOn by remember { mutableStateOf(false) }
+    var tiltOn by remember { mutableStateOf(false) }
     val armed by MicSessionService.armed.collectAsState()
+    val tilt = remember { TiltSource(context) }
+    DisposableEffect(tilt) {
+        tilt.start()
+        onDispose { tilt.stop() }
+    }
 
     // Written by the finger gesture inside GrainFieldCanvas (down/up only,
     // not per-move), read here so the DUET loop below can stand down the
@@ -309,6 +416,49 @@ fun GrainFieldScreen(
         }
     }
 
+    // TILT: the phone's own roll/pitch drives the field's cursor instead of
+    // a finger — DUET's own loop shape, [TiltCursor.step] in place of the
+    // mic's projection, ticked no faster than the frame it draws on.
+    LaunchedEffect(tiltOn, tilt.available) {
+        val v = voice
+        if (!tiltOn || !tilt.available || v == null) {
+            autoPos.value = null
+            return@LaunchedEffect
+        }
+        try {
+            var prevX = 0.5f
+            var prevY = 0.5f
+            while (true) {
+                try {
+                    if (!v.alive) {
+                        onToast(Copy.GRAIN_FIELD_TILT_STOPPED)
+                        tiltOn = false
+                        break
+                    }
+                    if (!touching.value) {
+                        val (nx, ny) = TiltCursor.step(tilt.tilt, tilt.pitch, prevX, prevY)
+                        prevX = nx
+                        prevY = ny
+                        autoPos.value = Offset(prevX, prevY)
+                        v.setTarget(prevX, prevY)
+                        v.gate(true)
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e("GrainFieldScreen", "tilt loop stumbled", e)
+                    onToast(Copy.GRAIN_FIELD_TILT_STOPPED)
+                    tiltOn = false
+                    break
+                }
+                delay(DUET_TICK_MS)
+            }
+        } finally {
+            // Same discipline as DUET's own loop above: a finger already
+            // holding the field owns gate() exclusively.
+            if (!touching.value) v.gate(false)
+        }
+    }
+
     Column(Modifier.fillMaxSize().padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier
@@ -318,10 +468,24 @@ fun GrainFieldScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), onClick = ::requestBack)
+            HeaderChip(prebuilt?.backLabel ?: "◄ KIT", scheme, Modifier.width(64.dp), onClick = ::requestBack)
             Spacer(Modifier.weight(1f))
-            TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
+            TapeText(prebuilt?.title ?: "PAD ${padTag(slot ?: 0)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
+            if (voice != null) {
+                HeaderChip(
+                    if (printing) "STOP PRINT" else "PRINT",
+                    scheme,
+                    Modifier.width(84.dp),
+                    engaged = printing,
+                    accessibilityLabel = if (printing) "STOP PRINT" else "PRINT TO TAPE",
+                ) {
+                    if (printing) finishPrint() else if (voice.startPrint()) printing = true
+                }
+            } else {
+                Spacer(Modifier.width(84.dp))
+            }
+            Spacer(Modifier.width(4.dp))
             if (projector != null) {
                 HeaderChip(
                     "DUET",
@@ -329,7 +493,27 @@ fun GrainFieldScreen(
                     Modifier.width(64.dp),
                     engaged = duetOn,
                     accessibilityLabel = "DUET ${if (duetOn) "ON" else "OFF"}",
-                ) { duetOn = !duetOn }
+                ) {
+                    // Exclusive with TILT: at most one automatic cursor at a time.
+                    duetOn = !duetOn
+                    if (duetOn) tiltOn = false
+                }
+            } else {
+                Spacer(Modifier.width(64.dp))
+            }
+            Spacer(Modifier.width(4.dp))
+            if (tilt.available) {
+                HeaderChip(
+                    "TILT",
+                    scheme,
+                    Modifier.width(64.dp),
+                    engaged = tiltOn,
+                    accessibilityLabel = "TILT ${if (tiltOn) "ON" else "OFF"}",
+                ) {
+                    // Exclusive with DUET: at most one automatic cursor at a time.
+                    tiltOn = !tiltOn
+                    if (tiltOn) duetOn = false
+                }
             } else {
                 Spacer(Modifier.width(64.dp))
             }
@@ -344,12 +528,26 @@ fun GrainFieldScreen(
             }
         } else {
             val (_, map) = current
-            GrainFieldCanvas(map, voice!!, scheme, touching, autoPos, Modifier.fillMaxWidth().weight(1f))
+            Box(Modifier.fillMaxWidth().weight(1f)) {
+                GrainFieldCanvas(map, voice!!, scheme, touching, autoPos, backdrop, Modifier.fillMaxSize())
+                if (printing) {
+                    TapeText(
+                        "● PRINTING",
+                        TapeType.lcdSmall,
+                        scheme.amber.tape,
+                        Modifier.align(Alignment.TopCenter).padding(8.dp),
+                    )
+                }
+            }
             if (duetOn && !armed) {
                 PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
             }
             TapeText(
-                if (duetOn) Copy.GRAIN_FIELD_DUET_HINT else Copy.GRAIN_FIELD_DRAG_HINT,
+                when {
+                    duetOn -> Copy.GRAIN_FIELD_DUET_HINT
+                    tiltOn -> Copy.GRAIN_FIELD_TILT_HINT
+                    else -> Copy.GRAIN_FIELD_DRAG_HINT
+                },
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.fillMaxWidth().padding(horizontal = 10.dp),
@@ -371,14 +569,15 @@ fun GrainFieldScreen(
  * draw lambda itself — never at this composable's own body scope. A draw
  * lambda's state reads are tracked against the draw phase, not composition,
  * so writing [touch] from the pointer-input coroutine below invalidates
- * only this Canvas's next draw pass. [autoPos] (DUET's cursor, written by
- * the caller's control-rate loop) follows the exact same discipline.
+ * only this Canvas's next draw pass. [autoPos] (DUET's or TILT's cursor —
+ * exclusive, so only ever one at a time — written by whichever caller's
+ * control-rate loop is on) follows the exact same discipline.
  *
  * [touching] is the one signal this composable exports upward: true for as
  * long as a finger is down, set/cleared only on down/up (not per-move, so
  * it doesn't fight the same 60Hz budget [touch] is protected from) — the
- * caller's DUET loop polls it each tick to know whether the manual path
- * currently owns [voice]'s target and gate.
+ * caller's DUET/TILT loop polls it each tick to know whether the manual
+ * path currently owns [voice]'s target and gate.
  */
 @Composable
 private fun GrainFieldCanvas(
@@ -387,6 +586,8 @@ private fun GrainFieldCanvas(
     scheme: Scheme,
     touching: MutableState<Boolean>,
     autoPos: MutableState<Offset?>,
+    /** The picture the grains were cut from, drawn under them; null for an analyzed pad. */
+    backdrop: ImageBitmap? = null,
     modifier: Modifier = Modifier,
 ) {
     val dots = remember(map) { map.grains.map { Offset(it.x, it.y) } }
@@ -456,6 +657,12 @@ private fun GrainFieldCanvas(
         val litRadiusPx = LIT_RADIUS.toPx()
         val litRadiusSqPx = litRadiusPx * litRadiusPx
 
+        // The picture first, dimmed so the dots and the cursor still read
+        // over it, stretched to the panel the way the cells were laid out.
+        if (backdrop != null && w > 0f && h > 0f) {
+            drawImage(backdrop, dstSize = IntSize(w.toInt(), h.toInt()), alpha = 0.6f)
+        }
+
         // The one deferred state read for this whole draw pass — see this
         // function's own KDoc for why it must happen here and nowhere else.
         val t = touch
@@ -486,10 +693,11 @@ private fun GrainFieldCanvas(
             )
         }
 
-        // DUET's cursor: a hollow ring at a distinct radius from the touch
-        // ring above, so the two never read as the same mark even in the
-        // brief window either could be drawn (they're not otherwise
-        // expected to coexist — see GrainFieldCanvas's own KDoc on `touching`).
+        // DUET's or TILT's cursor (exclusive, never both): a hollow ring at
+        // a distinct radius from the touch ring above, so the two never
+        // read as the same mark even in the brief window either could be
+        // drawn (they're not otherwise expected to coexist — see
+        // GrainFieldCanvas's own KDoc on `touching`).
         if (a != null) {
             drawCircle(
                 color = scheme.accent.tape,

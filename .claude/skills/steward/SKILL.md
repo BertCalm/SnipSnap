@@ -121,9 +121,12 @@ Two gradle hygiene rules, both learned the hard way:
 ## Reading CI
 
 Jobs on a PR: **`jvm-tests`**, **`android-build`**, **`native-tests`**
-(`.github/workflows/tests.yml`). `dependency-check` is weekly and
-on-demand only; it never gates a PR, and a red one there is not your PR's
-problem.
+(`.github/workflows/tests.yml`), and **`emulator-tests`**
+(`.github/workflows/emulator-tests.yml`) only when the PR touches
+`app/**`: it boots an emulator and runs `app/src/androidTest`, ten to
+fifteen minutes, and a PR with nothing under `app/` gets no such check.
+`dependency-check` is weekly and on-demand only; it never gates a PR,
+and a red one there is not your PR's problem.
 
 Three things about this workflow will mislead you if you don't know them.
 Its own header explains all three — read it before diagnosing anything.

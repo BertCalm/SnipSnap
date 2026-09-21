@@ -23,6 +23,16 @@ class Photo(val width: Int, val height: Int, val argb: IntArray) {
 
     fun pixel(x: Int, y: Int): Int = argb[y * width + x]
 
+    /** The [w] x [h] patch whose top-left corner is ([x0], [y0]), as a photo of its own. */
+    fun crop(x0: Int, y0: Int, w: Int, h: Int): Photo {
+        require(x0 >= 0 && y0 >= 0 && w > 0 && h > 0 && x0 + w <= width && y0 + h <= height) {
+            "crop ${w}x$h at ($x0, $y0) is outside ${width}x$height"
+        }
+        val px = IntArray(w * h)
+        for (y in 0 until h) System.arraycopy(argb, (y0 + y) * width + x0, px, y * w, w)
+        return Photo(w, h, px)
+    }
+
     /** Rec. 601 luma of the pixel at ([x], [y]), 0..1 — how bright it looks, not how much light it carries. */
     fun luminance(x: Int, y: Int): Float = luminance(pixel(x, y))
 

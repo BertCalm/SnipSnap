@@ -4,7 +4,9 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.Json
 import com.snipsnap.kit.ArrangedPad
+import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.KitPad
@@ -1053,15 +1055,36 @@ class KitBuilderModel private constructor(
 
     // ---------- the bin ----------
 
-    /** What's recoverable: file name it had, when it was binned, its bin file. */
-    data class BinEntry(val originalName: String, val binnedAtMillis: Long, val file: File)
+    /**
+     * What's recoverable: file name it had, when it was binned, its bin
+     * file. [padSnapshot], when present, is the whole pad this file was
+     * ejected from (via [clear]) — read back from the bin's paired JSON
+     * tombstone (see [moveToBin]) — and is what lets [restoreFromBin]
+     * reinstate the pad itself, not just its audio.
+     */
+    data class BinEntry(val originalName: String, val binnedAtMillis: Long, val file: File, val padSnapshot: KitPad? = null)
 
-    /** Recoverable deletes, newest first. */
+    /**
+     * Recoverable deletes, newest first. The listing predicate excludes
+     * tombstone sidecars (`..._something.wav.json`) themselves — [BIN_NAME]
+     * is loose enough to match one, and without the exclusion each would
+     * double-count as a bogus entry of its own. For each real entry, a
+     * paired tombstone is read back if present; a corrupt or unparseable
+     * one degrades to `padSnapshot = null` rather than breaking the whole
+     * listing — the same "degrade honestly, never crash" posture the rest
+     * of this file keeps around torn/partial state (see [takes]).
+     */
     fun binContents(): List<BinEntry> =
-        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) }
+        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) && !f.name.endsWith(".json", ignoreCase = true) }
             ?.map {
                 val m = BIN_NAME.find(it.name)!!
-                BinEntry(m.groupValues[2], m.groupValues[1].toLong(), it)
+                val tombstone = File(it.parentFile, "${it.name}.json")
+                val padSnapshot = if (tombstone.isFile) {
+                    runCatching { KitStore.padFromJson(Json.parse(tombstone.readText(Charsets.UTF_8))) }.getOrNull()
+                } else {
+                    null
+                }
+                BinEntry(m.groupValues[2], m.groupValues[1].toLong(), it, padSnapshot)
             }
             ?.sortedByDescending { it.binnedAtMillis } ?: emptyList()
 
@@ -1080,6 +1103,24 @@ class KitBuilderModel private constructor(
         val dest = File(kitDir, entry.originalName)
         entry.file.copyTo(dest, overwrite = true)
         entry.file.delete()
+        // Reinstate the pad itself only when we know what it was AND its
+        // slot is still empty. The slot-occupancy check is what makes this
+        // correct for both callers of moveToBin's tombstone: clear()'s
+        // case (the slot genuinely has nothing in it - safe to bring the
+        // pad back) and assign()'s previous-pad-replaced case (a NEW pad
+        // already occupies that slot by the time anyone could restore the
+        // old one - clobbering it would silently steal the slot back from
+        // whatever the user put there since). When the guard fails this
+        // stays exactly the old file-only behaviour.
+        if (entry.padSnapshot != null && kit.pad(entry.padSnapshot.slot) == null) {
+            kit = kit.copy(pads = kit.pads + entry.padSnapshot.copy(sampleFile = entry.originalName))
+            dirty = true
+            save(accrueWear = false)
+        }
+        // The tombstone's lifecycle mirrors the WAV's: consumed here either
+        // way, tolerant of it not existing (an entry from before tombstones
+        // existed, or one moveToBin never wrote one for).
+        File(entry.file.parentFile, "${entry.file.name}.json").delete()
         return dest
     }
 
@@ -1091,7 +1132,12 @@ class KitBuilderModel private constructor(
     fun purgeBin(olderThanDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
         val cutoff = nowMillis - (olderThanDays * 24 * 60 * 60 * 1000).toLong()
         val old = binContents().filter { it.binnedAtMillis < cutoff }
-        old.forEach { it.file.delete() }
+        old.forEach {
+            it.file.delete()
+            // The tombstone must not outlive its WAV as orphaned litter
+            // past the purge horizon.
+            File(it.file.parentFile, "${it.file.name}.json").delete()
+        }
         return old.size
     }
 
@@ -1172,7 +1218,7 @@ class KitBuilderModel private constructor(
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).toSet()
         val stillUsed = kit.pads.flatMap { listOf(it.sampleFile) + it.velocityLayers.map { l -> l.sampleFile } }
         for (f in files) {
-            if (f !in stillUsed) moveToBin(f)
+            if (f !in stillUsed) moveToBin(f, padSnapshot = pad)
         }
     }
 
@@ -1192,8 +1238,22 @@ class KitBuilderModel private constructor(
      * `binnedAtMillis` meaningful (still real-clock-based, only nudged
      * past a genuine same-instant tie) instead of losing one entry's
      * content outright.
+     *
+     * [padSnapshot], when given, is the whole [KitPad] this file was
+     * ejected from (not merely rewritten) — [clear]'s own call, via
+     * [deleteIfUnreferenced]. When it names THIS file as its own
+     * [KitPad.sampleFile] and the pad is otherwise a plain single-sample
+     * pad (no velocity layers, no chain), a JSON tombstone rides alongside
+     * the WAV so [restoreFromBin] can reinstate the pad itself, not just
+     * its bytes — see that function's KDoc. Deliberately narrow: a
+     * velocity-layered or chained pad is several files pretending to be
+     * one, and reconstructing that correctly from a single restored file
+     * is a materially harder problem than this door needs to solve today.
+     * [assign]'s previous-pad-replaced call also routes through
+     * [deleteIfUnreferenced] and can pass a snapshot here too — harmless by
+     * construction, see [restoreFromBin]'s slot-occupancy guard.
      */
-    private fun moveToBin(fileName: String) {
+    private fun moveToBin(fileName: String, padSnapshot: KitPad? = null) {
         val src = File(kitDir, fileName)
         if (!src.isFile) return
         val binDir = File(kitDir, BIN_DIR).apply { mkdirs() }
@@ -1205,6 +1265,12 @@ class KitBuilderModel private constructor(
         }
         src.copyTo(dest, overwrite = true)
         src.delete()
+        if (padSnapshot != null && padSnapshot.sampleFile == fileName &&
+            padSnapshot.velocityLayers.isEmpty() && padSnapshot.chain == null
+        ) {
+            val tombstone = File(binDir, "${stamp}_$fileName.json")
+            AtomicFile.writeText(tombstone, Json.write(KitStore.padToJson(padSnapshot)) + "\n")
+        }
     }
 
     companion object {

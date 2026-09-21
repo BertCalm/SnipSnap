@@ -1053,7 +1053,114 @@ class KitBuilderTest {
 
         m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
         m.clear(2)
-        assertEquals(1, m.emptyBin())
+        // 2, not 1: the cleared snare pad is a simple (unlayered, unchained)
+        // pad, so moveToBin now writes its JSON tombstone alongside the WAV
+        // (see KitBuilder.moveToBin) - both are real files under `.bin/`
+        // and emptyBin() counts every file it deletes, sidecar included.
+        assertEquals(2, m.emptyBin())
+    }
+
+    @Test
+    fun `clear()-ed pad is fully restored via restoreFromBin - not just its audio`() {
+        val dir = File(temp, "BinTombstone")
+        val m = KitBuilderModel.create("BinTombstone", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.update(1) { it.copy(level = 0.5f, pan = 0.3f) }
+        val original = m.pad(1)!!
+        m.save()
+
+        m.clear(1)
+        assertNull(m.pad(1))
+        val entry = m.binContents().single()
+        assertEquals(original.sampleFile, entry.originalName)
+        assertTrue(entry.padSnapshot != null, "a simple (unlayered, unchained) pad's tombstone rides along with its WAV")
+        assertEquals(1, entry.padSnapshot!!.slot)
+        assertEquals(DrumClass.KICK, entry.padSnapshot!!.drumClass)
+        assertEquals(0.5f, entry.padSnapshot!!.level)
+        assertEquals(0.3f, entry.padSnapshot!!.pan)
+
+        val restored = m.restoreFromBin(entry)
+        assertTrue(restored != null && restored.isFile, "the WAV came back")
+
+        val pad = m.pad(1)
+        assertTrue(pad != null, "the pad itself came back, not just the file")
+        assertEquals(DrumClass.KICK, pad!!.drumClass)
+        assertEquals(original.displayName, pad.displayName)
+        assertEquals(0.5f, pad.level)
+        assertEquals(0.3f, pad.pan)
+
+        assertTrue(m.binContents().isEmpty(), "the bin entry is consumed")
+        val binFiles = File(dir, KitBuilderModel.BIN_DIR).listFiles()?.toList() ?: emptyList()
+        assertTrue(binFiles.none { it.name.endsWith(".json") }, "the paired tombstone is consumed too, not left as litter")
+    }
+
+    @Test
+    fun `restoreFromBin never clobbers a pad that has since taken the old pad's slot`() {
+        val dir = File(temp, "BinSlotGuard")
+        val m = KitBuilderModel.create("BinSlotGuard", dir)
+        val oldPad = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.clear(1)
+        val entry = m.binContents().single()
+        assertTrue(entry.padSnapshot != null)
+
+        // A genuinely different new pad takes the same slot before anyone
+        // acts on the old bin entry.
+        val newPad = m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+
+        val restored = m.restoreFromBin(entry)
+
+        // The slot-occupancy guard's whole job: the new pad is untouched.
+        assertEquals(DrumClass.SNARE, m.pad(1)?.drumClass)
+        assertEquals(newPad.sampleFile, m.pad(1)?.sampleFile)
+        assertEquals(1, m.kit.pads.count { it.slot == 1 }, "still exactly one pad on slot 1")
+
+        // The file itself: this branch keeps restoreFromBin's pre-existing,
+        // always-was behaviour (the copy-back runs before the pad-reinstate
+        // guard is even checked - same order the assign()-replaced case
+        // needs to stay correct too). With nowhere left to attach it - a
+        // different pad already owns the slot - the old kick's bytes land
+        // back on disk under their own name but ownerless, exactly the
+        // pre-fix behaviour for every bin restore. Not a regression this
+        // fix introduces; the fix's whole point is that a *still-empty*
+        // slot no longer ends up this way.
+        assertTrue(restored != null && restored.isFile, "the WAV still comes back onto disk")
+        assertEquals(oldPad.sampleFile, restored!!.name)
+        assertFalse(m.kit.pads.any { it.sampleFile == oldPad.sampleFile }, "…but nothing in the live kit references it")
+    }
+
+    @Test
+    fun `a velocity-layered pad's bin entries never get a tombstone - reconstructing a multi-file pad is out of scope`() {
+        val dir = File(temp, "BinLayered")
+        val m = KitBuilderModel.create("BinLayered", dir)
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        m.addGhostLayers(1)
+        assertTrue(m.pad(1)!!.velocityLayers.isNotEmpty())
+
+        m.clear(1)
+        val bin = m.binContents()
+        assertTrue(bin.size >= 2, "every file the layered pad referenced was binned")
+        assertTrue(bin.all { it.padSnapshot == null }, "a layered pad's bin entries carry no tombstone")
+    }
+
+    @Test
+    fun `purgeBin removes a purged entry's tombstone too - no orphaned json litter`() {
+        val dir = File(temp, "BinPurgeTombstone")
+        val m = KitBuilderModel.create("BinPurgeTombstone", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.clear(1)
+        val entry = m.binContents().single()
+        assertTrue(entry.padSnapshot != null)
+
+        val binDir = File(dir, KitBuilderModel.BIN_DIR)
+        assertEquals(2, binDir.listFiles()?.size, "the WAV and its paired tombstone")
+
+        assertEquals(
+            1,
+            m.purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000),
+            "one entry purged",
+        )
+        assertEquals(0, m.binContents().size)
+        assertEquals(0, binDir.listFiles()?.size ?: 0, "the tombstone was purged along with its WAV, not left behind")
     }
 
     @Test
