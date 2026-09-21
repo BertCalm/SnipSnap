@@ -3,8 +3,9 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. None is built. Each ends with the
-decision that is not mine to make.
+one list and priced as eight sections. §1 is now built (`synth/PhotoKit.kt`,
+`docs/SYNTH_ROADMAP.md` S7.3); §2–§8 are not. Each ends with the decision
+that is not mine to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -104,6 +105,11 @@ busy line up. No real-time code.
 Whether a photo kit lands beside the shelf's kits as a first-class kit
 (recommended) or as a bank B behind the open kit. And whether the layout
 is the picture's (recommended, it is the point) or `AutoPlace`'s.
+
+**Built as recommended:** a photo kit lands as its own first-class entry
+on the shelf (`KitShelf.landPhotoKit`, named PHOTO KIT, `freshName`d like
+every other kit), never as a bank B on the kit that was open, and the
+layout is the picture's own — `AutoPlace` never runs.
 
 ---
 

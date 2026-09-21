@@ -261,6 +261,22 @@ class SnapTest {
     }
 
     @Test
+    fun `meanRgb is the photo's own average colour, for a kit pad to light up with`() {
+        val flat = Snap.look(tinted(200, 60, 30))
+        assertEquals(200, Photo.red(flat.meanRgb))
+        assertEquals(60, Photo.green(flat.meanRgb))
+        assertEquals(30, Photo.blue(flat.meanRgb))
+
+        // Half red, half blue averages to a colour between the two -
+        // meanRgb is a plain mean, not the hue circle's circular one.
+        val split = Photo.of(80, 80) { x, _ -> if (x < 40) Photo.rgb(255, 0, 0) else Photo.rgb(0, 0, 255) }
+        val mean = Snap.look(split).meanRgb
+        assertTrue(Photo.red(mean) in 120..135, "red channel ${Photo.red(mean)}")
+        assertTrue(Photo.blue(mean) in 120..135, "blue channel ${Photo.blue(mean)}")
+        assertEquals(0, Photo.green(mean))
+    }
+
+    @Test
     fun `detail does not care which way the stripes run or how many pixels the camera sent`() {
         val across = Snap.look(Photo.grey(240, 240) { x, _ -> if ((x * 8 / 240) % 2 == 0) 0.15f else 0.85f }).detail
         val down = Snap.look(Photo.grey(240, 240) { _, y -> if ((y * 8 / 240) % 2 == 0) 0.15f else 0.85f }).detail

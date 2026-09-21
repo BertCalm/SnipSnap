@@ -223,6 +223,22 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * PHOTO KIT: [pads] (SNAP's `PhotoKit.build` — sixteen cells of a
+     * picture, one photo becoming one kit) landed on the shelf as a
+     * brand-new kit — [render]'s own shape, off a photo's own cells
+     * rather than a starter's seed; never overwrites whatever kit is
+     * open. Seconds-long (sixteen SNAP pads render offline); the caller
+     * shows a busy line.
+     */
+    fun landPhotoKit(baseName: String, pads: List<com.snipsnap.kit.ArrangedPad?>): Entry {
+        root.mkdirs()
+        val name = freshName(baseName)
+        val dir = File(root, name)
+        val kit = com.snipsnap.kit.KitAssembler.assembleArranged(name, pads, dir)
+        return Entry(dir, kit)
+    }
+
+    /**
      * KEY: set or clear [source]'s key - metadata in `kit.json`, nothing
      * retuned by itself - and hand back the entry with the kit re-read.
      */

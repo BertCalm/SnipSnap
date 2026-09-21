@@ -147,6 +147,8 @@ object Snap {
          * the same as a vertical one.
          */
         val detail: Float,
+        /** Mean colour across the photo, packed as [Photo.rgb] — a kit pad's `colorHex`, straight off the picture. */
+        val meanRgb: Int,
     )
 
     /** Below this mean saturation a photo counts as grey and its hue is not trusted. */
@@ -177,12 +179,18 @@ object Snap {
         var satSum = 0.0
         var hx = 0.0
         var hy = 0.0
+        var rSum = 0.0
+        var gSum = 0.0
+        var bSum = 0.0
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val p = photo.pixel(x, y)
                 val r = Photo.red(p) / 255f
                 val g = Photo.green(p) / 255f
                 val b = Photo.blue(p) / 255f
+                rSum += r
+                gSum += g
+                bSum += b
                 val lum = Photo.luminance(p)
                 lumSum += lum
                 lumSq += lum.toDouble() * lum
@@ -224,6 +232,11 @@ object Snap {
         var hueDeg = (atan2(hy, hx) * 180.0 / PI).toFloat()
         if (hueDeg < 0f) hueDeg += 360f
         val strength = if (satSum <= 1e-9) 0f else (sqrt(hx * hx + hy * hy) / satSum).toFloat().coerceIn(0f, 1f)
+        val meanRgb = Photo.rgb(
+            Math.round((rSum / n * 255).toFloat()),
+            Math.round((gSum / n * 255).toFloat()),
+            Math.round((bSum / n * 255).toFloat()),
+        )
         return Reading(
             luminance = mean,
             contrast = sqrt(variance).toFloat(),
@@ -231,6 +244,7 @@ object Snap {
             hue = hueDeg,
             hueStrength = strength,
             detail = if (steps == 0) 0f else (stepSum / steps).toFloat(),
+            meanRgb = meanRgb,
         )
     }
 
