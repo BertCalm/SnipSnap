@@ -2192,10 +2192,10 @@ fun GrooveScreen(
                                 // axis carrying quantize now, this button's job is
                                 // "make this editable", not "make this tight" — the
                                 // armed confirm and the handler underneath are unchanged.
-                                // J19: the same words as FORK TO YOURS above -
+                                // J19: the same words as EDIT STEPS ▸ below -
                                 // it is the same fork, from the take rather than
                                 // from the program on screen.
-                                if (forkArmed) "REPLACE YOURS?" else "FORK TO YOURS",
+                                if (forkArmed) "REPLACE YOURS?" else "EDIT STEPS ▸",
                                 scheme,
                                 Modifier.weight(1f),
                                 enabled = !busy,
@@ -2203,6 +2203,18 @@ fun GrooveScreen(
                             ) { forkTakeToE() }
                             GrooveActionButton("UNDO TAKE", scheme, Modifier.weight(1f), enabled = !busy) { undoTake() }
                         }
+                    } else {
+                        // EDIT STEPS ▸: pulled out of the buried SHAPE THE GROOVE
+                        // scroller (design follow-up — a real user could not find
+                        // it there, and once found, "FORK TO YOURS" didn't tell
+                        // them it opened a step editor at all). Given the same
+                        // fixed-above-the-scroll tier the post-take FORK/UNDO row
+                        // above already earned for the same reason: the standing
+                        // way into the step editor must not require scrolling to
+                        // find. Hidden whenever the post-take row is showing
+                        // (`justLanded`) so there is never a second, redundant
+                        // "edit this by hand" button on screen at the same time.
+                        GrooveActionButton("EDIT STEPS ▸", scheme, Modifier.fillMaxWidth(), enabled = !busy) { forkToE() }
                     }
 
                     // Batch 3, Task 1: EXPORT's own shape (named section
@@ -2327,23 +2339,19 @@ fun GrooveScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
-                                // PROG A once and forced a jump to it — a control
-                                // whose whole job the feel axis now does continuously,
-                                // on every program the axis rides. RESEED only rerolls
-                                // the template feel is currently drawing from, so it's
-                                // disabled at feel <= 0 (nothing is applying it yet)
-                                // and, unlike the old button, never touches progIndex:
-                                // the axis reaches A, C and D alike, so there is no
-                                // one program to jump to.
-                                GrooveActionButton("⚄ RESEED", scheme, Modifier.weight(1f), enabled = !busy && feel > 0) {
-                                    clearJustLanded()
-                                    seed++
-                                    onToast(Copy.feelRolled(seed))
-                                }
-                                // J19: see START YOURS' comment in the record row.
-                                GrooveActionButton("FORK TO YOURS", scheme, Modifier.weight(1f), enabled = !busy) { forkToE() }
+                            // HUMANIZE ⚄ is gone (feel axis, task 6): it jittered
+                            // PROG A once and forced a jump to it — a control
+                            // whose whole job the feel axis now does continuously,
+                            // on every program the axis rides. RESEED only rerolls
+                            // the template feel is currently drawing from, so it's
+                            // disabled at feel <= 0 (nothing is applying it yet)
+                            // and, unlike the old button, never touches progIndex:
+                            // the axis reaches A, C and D alike, so there is no
+                            // one program to jump to.
+                            GrooveActionButton("⚄ RESEED", scheme, Modifier.fillMaxWidth(), enabled = !busy && feel > 0) {
+                                clearJustLanded()
+                                seed++
+                                onToast(Copy.feelRolled(seed))
                             }
 
                             // "SEND IT SOMEWHERE" until J46, which is true of
