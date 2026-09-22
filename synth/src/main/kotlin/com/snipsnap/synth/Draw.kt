@@ -166,3 +166,26 @@ object Draw {
 
     private fun toByte(v: Float): Int = Math.round(v.coerceIn(0f, 1f) * 255f)
 }
+
+/**
+ * [a] and [b] — two [Draw]-shaped point arrays of the same length, a
+ * SNAP table's 256 or a drawn envelope's 64 alike — crossed point by
+ * point: [coin] flips fresh for every point (0 → A's, 1 → B's, anything
+ * else → the mean — the same three-way shape BREED's own coin flips for
+ * a macro), so a child's line resembles both parents' shapes rather
+ * than copying one outright or landing at their flat average
+ * everywhere. Takes the coin as a callback rather than a concrete
+ * random source so BREED's own `java.util.Random` and this module's own
+ * `kotlin.random.Random` both drive it without either depending on the
+ * other's type.
+ */
+fun crossTable(a: IntArray, b: IntArray, coin: () -> Int): IntArray {
+    require(a.size == b.size) { "crossTable needs two lines the same length, got ${a.size} and ${b.size}" }
+    return IntArray(a.size) { i ->
+        when (coin()) {
+            0 -> a[i]
+            1 -> b[i]
+            else -> (a[i] + b[i]) / 2
+        }
+    }
+}

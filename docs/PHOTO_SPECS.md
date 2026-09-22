@@ -3,11 +3,11 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1–§5 are now built
+one list and priced as eight sections. §1–§6 are now built
 (`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`,
-`synth/PhotoPath.kt`, `audio/AxesProjector.kt`; `docs/SYNTH_ROADMAP.md`
-S7.3–S7.7); §6–§8 are not. Each ends with the decision that is not mine
-to make.
+`synth/PhotoPath.kt`, `audio/AxesProjector.kt`, `synth/Draw.kt`'s own
+`crossTable`; `docs/SYNTH_ROADMAP.md` S7.3–S7.8); §7–§8 are not. Each
+ends with the decision that is not mine to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -412,6 +412,22 @@ falls back to A.
 ### The decision
 
 None blocking; a small, self-contained addition.
+
+**Built as specced.** `crossTable` (`:synth`, `Draw.kt`'s own neighbour,
+not a method of `Draw` itself) crosses two same-length point arrays —
+either a 256-point SNAP table or a 64-point drawn envelope, the shape is
+size-agnostic — through a `coin: () -> Int` callback rather than a
+concrete `Random` type, so `Breed`'s own `java.util.Random` drives it
+without `:synth` taking on that type (every other seeded function in
+`:synth` uses `kotlin.random.Random`). `Breed.cross` crosses a SNAP
+pair's tables and, when both parents drew one, their envelopes — one
+alone rides half the time, `crossMacros`'s own rule for a section only
+one side has. `SnapPatch`'s own constructor is what refuses a flat
+table or a shape that never opens; on that refusal the coin gets one
+full re-spin (table and envelope together), and a second refusal falls
+back to A's own line and shape verbatim — the crossed macros ride
+through regardless, since they are decided independently and never fail
+to construct.
 
 ---
 
