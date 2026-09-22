@@ -33,11 +33,22 @@ Kotlin that has **never been through a compiler**. Treat it accordingly.
 plugged-in phone: `./gradlew :app:connectedDebugAndroidTest` with a device
 attached. CI runs them (`emulator-tests`, its own workflow) only when
 something under `app/` changes, because booting an emulator costs four
-or five app builds' worth of minutes. `SurfaceScreenTest` is the half of
-the SURFACE pass below a machine can see - every label on the top rows
-drawn whole at 360 dp, the mode row and the print row's buttons doing
-what they say, a second finger raising Z - laid out at a narrow phone's
-width whatever device runs it. What needs an ear stays in the pass.
+or five app builds' worth of minutes. `ComposeScreenTest` is the shared
+base every suite below extends - the hand-driven frame clock a screen's
+own `withFrameNanos` loop needs, the finder/tap helpers, and the
+phone-width readable-in-full check - written up once after the first two
+suites had grown the same three word for word. `SurfaceScreenTest` is the
+half of the SURFACE pass below a machine can see - every label on the top
+rows drawn whole at 360 dp, the mode row and the print row's buttons
+doing what they say, a second finger raising Z - laid out at a narrow
+phone's width whatever device runs it. `GrooveScreenTest` does the same
+for GROOVE's program row: the five segments and the line under them
+reading in full, each program selecting, and the YOURS cycler (#289)
+stepping and wrapping. `ExportScreenTest` does it for EXPORT's wizard:
+the stage machine reaching COMPLETE and resetting, a PREFLIGHT fail
+actually disabling WRITE KIT, the format list, an armed overwrite naming
+what it would replace, and SHARE staying tappable through a card copy in
+flight. What needs an ear stays in the pass.
 
 ## M0's exit test (from docs/APP_PLAN.md)
 

@@ -743,6 +743,13 @@ private fun ExportContent(
                 ActionButton(
                     Copy.EXPORT_SHARE_LABEL,
                     scheme,
+                    // Always enabled, unlike its two COMPLETE-stage siblings
+                    // below (`!session.busy`): `shareExport()` only reads
+                    // the already-settled `session.lastOutcome` and calls
+                    // synchronous `ShareOut.send` — it never touches
+                    // `session.busy`/`cardPending`, so there is nothing for
+                    // a busy card copy to race here. Gating this on `busy`
+                    // would cost the user a tap with no safety benefit.
                     enabled = true,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = ::shareExport,
