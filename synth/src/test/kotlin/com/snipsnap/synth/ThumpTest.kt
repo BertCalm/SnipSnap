@@ -359,23 +359,60 @@ class ThumpTest {
     }
 
     @Test
-    fun `a wide SNARE folds down to the mono render, up to one gain`() {
-        // Swept across SNAP x DECAY, 11 steps each (121 pairs) - the same
-        // grid final-review.md measured. `abs(frameCount diff) <= 1` used
-        // to be asserted at the DEFAULT macros only, and it passed there
-        // only because trimSnareTail's lastFrame happens to coincide for
-        // mono and wide at exactly that one point. trimSnareTail thresholds
-        // off the per-sample peak (see its own KDoc): a stereo render's
-        // per-sample peak is a different fraction of its own signal than
-        // mono's, so the -60dB crossing moves by an amount that depends on
-        // SNAP/DECAY, not just WIDTH. MEASURED (this exact sweep, gradle
-        // exit 0): 42 of 121 pairs exceed a 1-frame difference; worst case
-        // 599 frames (SNAP 0.1, DECAY 0.9). The behaviour itself is
-        // inaudible - everything trimmed sits below -60dB and fadeTail runs
-        // after (finding 4, final-review.md) - so this bounds the true
-        // range instead of chasing trimSnareTail's own arithmetic. 600 is
-        // 599's measured worst plus one frame of slack, not a separate
-        // guess.
+    fun `a wide SNARE folds down to the mono render, within the wire decorrelation budget`() {
+        // Used to assert the fold-down was the mono signal scaled EXACTLY
+        // (rel < 1e-3) - true before WIDTH decorrelated the wires, because a
+        // centred wire layer folds back to mono exactly like the panned body
+        // does. Decorrelated noise does not fold to the same signal by
+        // construction (that is the whole point: see snare()'s own KDoc and
+        // WIRE_DECORRELATION_MAX's), so this asserts a BUDGET instead of
+        // zero, swept across SNAP - the loss scales with how much of the mix
+        // is wires (SNAP 1 is worst: bodyGain is 0 there, so the fold is
+        // pure decorrelated wire). Still swept against DECAY too (11x11,
+        // same grid the exact test used) since the frame-count check below
+        // is unrelated to SNAP and still worth covering broadly.
+        //
+        // Budget derivation: best-fit a single scalar alpha (as before -
+        // this is what makes the check about SHAPE, not about the pre-
+        // existing normalize/Punch gain difference between the mono and
+        // stereo render paths, which is unrelated to decorrelation and was
+        // already present pre-WIDTH: measured alpha ranges ~1.1-1.9 across
+        // this same grid, even at SNAP=0 where bodyGain=1 and the wires
+        // contribute nothing). `rel` is the fraction of the fold's own
+        // energy the best-fit alpha*mono can't explain. Alpha itself is
+        // contaminated by that pre-existing gain difference, but `rel` is
+        // not (the OLD exact test proved this: rel < 1e-3 held for every
+        // SNAP/DECAY pair pre-decorrelation, regardless of alpha's value) -
+        // so `rel` is what isolates the decorrelation's own contribution.
+        //
+        // L = 1 / (1 + rel^2) reconstructs the alpha-independent "retained
+        // energy fraction" WIRE_DECORRELATION_MAX's own KDoc predicts
+        // (Var(fold)/Var(mono) = 1 - d/2): from the idealized relationship
+        // rel^2 = (d/2)/(1-d/2) [alpha = sqrt(1-d), no confound], solving
+        // for (1-d/2) gives exactly L. Check: d=0.4 -> rel=0.5 -> L=0.8 ->
+        // 10*log10(L) = -0.969 dB, the model's own number.
+        //
+        // MEASURED (this exact sweep, gradle exit 0): worst case SNAP=1.0
+        // DECAY=0.0, lossDb=-1.0234 (rel=0.5155). That is worse than the
+        // model's idealized -0.969dB (rel=0.5) by about 0.05dB - a real,
+        // small excess, not the model being wrong. Ruled out as the cause:
+        // PUNCH's saturate nonlinearity - re-measured at SNAP=1 WIDTH=1 with
+        // PUNCH swept 0/0.5/1, rel stayed within 0.007 of 0.51 regardless
+        // (flat); and the three raw noise streams having unequal variance -
+        // measured directly over 15671 samples, Dsp.Noise(11) vs the two
+        // Dsp.seedFor streams, indepL/common=0.986 indepR/common=0.991, both
+        // close enough to 1 that (since sizzle's one-pole highpass is linear
+        // and scales proportionally with its input's variance) they'd
+        // predict a SMALLER residual than idealized, not this larger one.
+        // Most likely cause, not directly isolated: the three streams'
+        // finite-sample cross-correlation is only zero in EXPECTATION, not
+        // for this specific seed/length triple - a small nonzero Cov(common,
+        // indepL/R) over ~15.7k samples would move `rel` either direction
+        // without showing up in either check above. -1.2dB budgets a further
+        // ~0.18dB past the measured worst case - covers other STRIKE/TUNE/
+        // TONE corners this sweep doesn't visit without hiding a real
+        // regression (a doubling of WIRE_DECORRELATION_MAX, say, would land
+        // near 10*log10(1-0.8/2)=-2.22dB and still trip this).
         for (si in 0..10) {
             val snap = si / 10f
             for (di in 0..10) {
@@ -385,19 +422,21 @@ class ThumpTest {
                 val wide = Thump.render(ThumpVoice.SNARE, macros + ("WIDTH" to 1f))
                 val n = kotlin.math.min(mono.frameCount, wide.frameCount)
                 assertTrue(n > 1000, "SNAP=$snap DECAY=$decay: not enough frames to judge: $n")
+                // RE-MEASURED after the wires started decorrelating (this
+                // exact sweep, gradle exit 0): worst case SNAP=0.1 DECAY=1.0,
+                // diff=874 frames - up from the pre-decorrelation 599, since
+                // the wire layer's own energy right at the tail (where
+                // trimSnareTail's -60dB crossing lives) now depends on which
+                // of `common`/`indepL`/`indepR` happens to be crossing there,
+                // not just the shared centred stream. 875 is that measured
+                // worst plus one frame of slack, same margin convention as
+                // the number it replaces.
                 assertTrue(
-                    kotlin.math.abs(mono.frameCount - wide.frameCount) <= 600,
+                    kotlin.math.abs(mono.frameCount - wide.frameCount) <= 875,
                     "SNAP=$snap DECAY=$decay: width changed the render length past the measured worst case: " +
                         "${mono.frameCount} vs ${wide.frameCount}",
                 )
-                // Fold-down residual over the COMMON prefix only - stays as
-                // strong as it was, and is untouched by the length
-                // difference bounded above since it never compares past `n`.
                 val fold = FloatArray(n) { wide.samples[it * 2] + wide.samples[it * 2 + 1] }
-                // Best-fit single scalar between fold-down and mono. Linear
-                // panning means one gain should explain the whole
-                // difference; comb notching would leave a frequency-
-                // dependent residual that no gain can absorb.
                 var num = 0.0
                 var den = 0.0
                 for (i in 0 until n) { num += fold[i].toDouble() * mono.samples[i]; den += mono.samples[i].toDouble() * mono.samples[i] }
@@ -411,9 +450,11 @@ class ThumpTest {
                     energy += fold[i].toDouble() * fold[i]
                 }
                 val rel = kotlin.math.sqrt(resid / (energy + 1e-12))
+                val lossDb = 10.0 * kotlin.math.log10(1.0 / (1.0 + rel * rel))
                 assertTrue(
-                    rel < 1e-3,
-                    "SNAP=$snap DECAY=$decay: fold-down is not the mono signal scaled: relative residual $rel, alpha $alpha",
+                    lossDb >= -1.2,
+                    "SNAP=$snap DECAY=$decay: mono fold lost more than the wire decorrelation budget: " +
+                        "lossDb=$lossDb (model predicts -0.969dB at WIRE_DECORRELATION_MAX, budget is -1.2dB), rel=$rel",
                 )
             }
         }
@@ -469,6 +510,16 @@ class ThumpTest {
         // energy than the left. 1.03 sits well clear of both that measured
         // value and of 1.0 (a swapped render would measure R/L=1/1.0876
         // =0.919, comfortably on the other side of this threshold).
+        //
+        // RE-MEASURED after the wire layer started decorrelating (this exact
+        // render, this exact macro map, gradle exit 0): L=132.88938027109106
+        // R=144.4873073528007, R/L=1.0872750482999483 - moved by ~0.03%
+        // relative to the value above, because SNAP=0.2 gives the wires a
+        // small (wireGain(0.2)=0.06) but nonzero share of the mix, and the
+        // decorrelated wires now contribute their own (unbiased, but not
+        // perfectly symmetric at finite sample count) L/R energy split on
+        // top of the body's. Still comfortably clear of both 1.03 and 1.0,
+        // so the threshold itself did not need to move, just this comment.
         val wide = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f, "SNAP" to 0.2f))
         assertEquals(2, wide.channels)
         var l = 0.0
@@ -479,7 +530,7 @@ class ThumpTest {
         val ratio = r / l
         assertTrue(
             ratio > 1.03,
-            "expected the right channel to carry measurably more energy than the left (R/L=$ratio, measured baseline 1.0876) - orientation may have flipped",
+            "expected the right channel to carry measurably more energy than the left (R/L=$ratio, measured baseline 1.0873) - orientation may have flipped",
         )
         val rendered = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to 1f, "SNAP" to 0.2f))
         for (i in wide.samples.indices) {
@@ -488,17 +539,19 @@ class ThumpTest {
     }
 
     @Test
-    fun `WIDTH is inert at SNAP 1, because the body is gone there`() {
-        // snareBodyGain(1f) == 0, so the output is entirely the mono wire
-        // layer. This PINS a deliberate behaviour: SNAP=1 is the static
-        // burst the user asked to keep reaching. If someone later widens the
-        // wires, this test should be updated deliberately, not deleted.
+    fun `WIDTH now widens SNAP 1 too, via the decorrelated wires`() {
+        // Used to be `WIDTH is inert at SNAP 1, because the body is gone
+        // there`: snareBodyGain(1f) == 0, the output is entirely wire, and
+        // the wires used to be centred no matter how far WIDTH was turned -
+        // a deliberate pin (SNAP=1 is the static burst the audition gate
+        // asked to keep reaching, and widening it was explicitly called out
+        // as NOT a fix in the old code). Wire decorrelation runs whenever
+        // WIDTH is above 0, independent of SNAP - see snare()'s own KDoc -
+        // so that inertness is gone on purpose: this replaces the old "is
+        // inert" pin with the honest opposite, side energy climbing with
+        // WIDTH even at SNAP 1.
         fun side(width: Float): Float {
             val s = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to width, "SNAP" to 1f))
-            // Fails loudly, not vacuously: returning 0f here for a render
-            // that stopped being stereo would let `side(1f) < 1e-3f` pass
-            // while claiming to have verified an inertness it never
-            // actually measured.
             assertEquals(2, s.channels, "WIDTH $width at SNAP 1 should still render stereo")
             var mid = 0.0; var sd = 0.0
             var f = 0
@@ -509,7 +562,15 @@ class ThumpTest {
             }
             return kotlin.math.sqrt(sd / (mid + 1e-12)).toFloat()
         }
-        assertTrue(side(1f) < 1e-3f, "SNAP 1 produced width ${side(1f)}; the body gain is zero there, so this is unexpected")
+        // MEASURED (not invented), these exact renders, gradle exit 0:
+        // side(0.001)=0.015018034 side(0.5)=0.35866284 side(1)=0.54070616 -
+        // monotonic and clearly separated, not sampling noise.
+        val low = side(0.001f)
+        val mid = side(0.5f)
+        val high = side(1f)
+        assertTrue(low < 0.05f, "WIDTH near 0 should still be nearly centred at SNAP 1: $low")
+        assertTrue(mid > low * 2f, "WIDTH 0.5 should be clearly wider than WIDTH near 0 at SNAP 1: low=$low mid=$mid")
+        assertTrue(high > mid * 1.15f, "WIDTH 1 should be wider than WIDTH 0.5 at SNAP 1: mid=$mid high=$high")
     }
 
     @Test
