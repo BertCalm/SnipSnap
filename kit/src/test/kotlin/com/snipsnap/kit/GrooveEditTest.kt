@@ -160,7 +160,7 @@ class GrooveEditTest {
             "Off Lane E", 1,
             listOf(
                 Mpc3Note(36, 0, 0.9f),      // KICK lane - wiped
-                Mpc3Note(99, 4 * s16, 0.5f), // not one of the editor's five lane notes - survives
+                Mpc3Note(99, 4 * s16, 0.5f), // not one of the editor's seven lane notes - survives
             ),
         )
 

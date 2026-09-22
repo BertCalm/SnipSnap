@@ -191,8 +191,8 @@ class GrooveFeelTest {
             accents = List(GrooveFeel.POSITIONS) { null },
             laneOffsets = mapOf(GrooveEdit.Lane.SNARE to 24L),
         )
-        // Pad 6 (note 41) is not one of the five named lanes.
-        val offLane = Mpc3Clip("b", 2, listOf(Mpc3Note(note = 41, timePulses = 1200L, velocity = 0.8f)))
+        // note 99 is not one of the seven named lanes.
+        val offLane = Mpc3Clip("b", 2, listOf(Mpc3Note(note = 99, timePulses = 1200L, velocity = 0.8f)))
         val out = GrooveFeel.applyFeel(offLane, 1f, t)
         assertEquals(1210L, out.notes[0].timePulses, "position offset applies; the snare's pocket does not")
     }
