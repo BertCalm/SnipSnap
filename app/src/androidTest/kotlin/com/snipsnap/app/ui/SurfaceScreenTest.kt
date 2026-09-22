@@ -1,39 +1,24 @@
 package com.snipsnap.app.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.width
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
-import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PrintLength
-import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.TouchSurface.Mode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -50,58 +35,24 @@ import java.io.File
  * the first pass came back with "TA..." for → TAPE on a phone this wide,
  * and a test on a tablet would never have seen it.
  *
- * The clock is driven by hand ([pump], [waitFor]). SURFACE runs a frame
- * loop for its whole life, and Compose's test harness counts a loop
- * waiting on the next frame as work still pending: with the clock
- * advancing itself, every test sat in `waitForIdle` until it timed out.
- * With auto-advance off the harness waits only for layout, and each
- * frame the loop gets is one this file asked for.
+ * The clock, the finder helpers and the width check are [ComposeScreenTest]'s
+ * own — this file used to carry its own copies of all three, word for
+ * word identical to [GrooveScreenTest]'s, before they were extracted.
  */
 @RunWith(AndroidJUnit4::class)
-class SurfaceScreenTest {
-
-    @get:Rule
-    val compose = createComposeRule()
+class SurfaceScreenTest : ComposeScreenTest() {
 
     private val toasts = mutableListOf<String>()
 
     private fun show(entry: KitShelf.Entry?) {
-        compose.mainClock.autoAdvance = false
-        compose.setContent {
-            TapeTheme(Schemes.DEFAULT) {
-                Box(Modifier.width(PHONE_WIDTH_DP.dp).fillMaxHeight()) {
-                    SurfaceScreen(
-                        entry = entry,
-                        onToast = { toasts += it },
-                        onPrinted = {},
-                        onKitUpdated = {},
-                    )
-                }
-            }
+        setPhoneContent {
+            SurfaceScreen(
+                entry = entry,
+                onToast = { toasts += it },
+                onPrinted = {},
+                onKitUpdated = {},
+            )
         }
-        pump()
-    }
-
-    /** Frames for the screen's loop, then layout: what a moment of real time gives it. */
-    private fun pump(millis: Long = 300) {
-        compose.mainClock.advanceTimeBy(millis)
-        compose.waitForIdle()
-    }
-
-    /** A frame at a time until [condition], or a failure naming what never came. */
-    private fun waitFor(what: String, timeoutMillis: Long = 5_000, condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + timeoutMillis
-        while (!condition()) {
-            if (System.currentTimeMillis() > deadline) throw AssertionError("waited $timeoutMillis ms and $what never came")
-            compose.mainClock.advanceTimeByFrame()
-            compose.waitForIdle()
-        }
-    }
-
-    /** A tap on the button named [label], and the frames for the screen to answer. */
-    private fun tap(label: String) {
-        button(label).performClick()
-        pump()
     }
 
     /** A one-pad kit with a tempo, on disk where the screen can read it. */
@@ -112,8 +63,6 @@ class SurfaceScreenTest {
         return KitShelf.Entry(dir, Kit(name = "TEST KIT", pads = listOf(KitPad(slot = 1, sampleFile = "one.wav")), tempoBpm = 92f))
     }
 
-    private fun button(label: String) = compose.onNodeWithContentDescription(label)
-
     private fun pad(mode: Mode) = compose.onNodeWithContentDescription("TOUCH SURFACE, ${mode.name} MODE")
 
     private fun padState(mode: Mode): String? =
@@ -122,25 +71,6 @@ class SurfaceScreenTest {
     private fun zOf(state: String?): Float? {
         if (state == null) return null
         return Regex("""Z (\d+\.\d+)""").find(state)?.groupValues?.get(1)?.toFloat()
-    }
-
-    /**
-     * The text is drawn whole, on one line, with no ellipsis. Every label
-     * here is a single line that ellipsises when it does not fit, so the
-     * ellipsis is the whole question. `didOverflowWidth` is not asked: the
-     * layout the semantics hand back is measured at the button's width,
-     * not the text's, and answers yes for any label narrower than its
-     * button - "XY" first of all.
-     */
-    private fun assertReadsInFull(text: String) {
-        val node = compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode("nothing on screen reads \"$text\"")
-        val action = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action
-        assertNotNull("\"$text\" has no text layout to inspect", action)
-        val results = mutableListOf<TextLayoutResult>()
-        assertTrue(action!!.invoke(results))
-        val layout = results.single()
-        assertEquals("\"$text\" is more than one line at $PHONE_WIDTH_DP dp", 1, layout.lineCount)
-        assertFalse("\"$text\" is cut short with an ellipsis at $PHONE_WIDTH_DP dp", layout.isLineEllipsized(0))
     }
 
     @Test
@@ -265,10 +195,5 @@ class SurfaceScreenTest {
         show(entry = null)
         waitFor("the pad's state") { padState(Mode.XY) != null }
         assertFalse(padState(Mode.XY)!!.contains("Z "))
-    }
-
-    companion object {
-        /** The narrow phone: 360 dp, the width the first pass was done at. */
-        const val PHONE_WIDTH_DP = 360
     }
 }
