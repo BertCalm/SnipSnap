@@ -5,6 +5,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -210,6 +211,16 @@ object Thump {
     }
 
     /**
+     * Wire decorrelation depth at WIDTH 1. Mono fold energy is (1 - d/2), so
+     * this caps the worst case - a preset whose output is entirely wires,
+     * i.e. SNAP 1 - at 10*log10(1 - 0.4/2) = -0.97 dB. Full decorrelation
+     * (d = 1) would cost -3.01 dB there, which is too much to ask of a
+     * system that may sum to mono. Measured prototype at full depth:
+     * DEEP ROOM -0.58 dB, BACKBEAT -1.11 dB in the finished mix.
+     */
+    private const val WIRE_DECORRELATION_MAX = 0.4f
+
+    /**
      * SNARE — a membrane with wires resting on it.
      *
      * It used to be two detuned sines plus lowpassed noise, crossfaded, and
@@ -224,19 +235,33 @@ object Thump {
      * what makes a snare a snare: the wires rattle AGAINST the drum, they are
      * not filtered BY it.
      *
-     * WIDTH spreads the head's modes across the stereo field via
-     * [Modes.spread]/[Modes.ringStereo] (seeded from [Dsp.seedFor] on the
-     * patch, never a clock, so two renders stay byte-identical); the wires
-     * stay centred, written equally into both channels - they rattle against
-     * the drum, not around it. WIDTH 0 keeps the mono path byte-identical to
-     * before this macro existed, which is why every shipped preset (all
-     * auditioned in mono) leaves it there.
+     * WIDTH drives two effects, not one. It spreads the head's modes across
+     * the stereo field via [Modes.spread]/[Modes.ringStereo] (seeded from
+     * [Dsp.seedFor] on the patch, never a clock, so two renders stay
+     * byte-identical) — that part is unchanged. But a listener localises a
+     * percussive hit from its ONSET, and the onset here is the wires, not
+     * the ringing body: measuring the panned body alone against the user's
+     * ears found WIDTH technically correct but inaudible, because
+     * [Modes.spread] pins the fundamental dead centre and the wire layer
+     * used to be a single [Dsp.Noise] stream written equally to both
+     * channels. So WIDTH now ALSO decorrelates the wires: each channel is
+     * `sqrt(1 - d) * common + sqrt(d) * indep`, three independent
+     * [Dsp.Noise] streams, `d = width * WIRE_DECORRELATION_MAX`. Per-channel
+     * energy is exactly preserved ((1-d)+d=1) so stereo never gets quieter
+     * than mono; `WIRE_DECORRELATION_MAX` caps how much a mono fold can lose
+     * (its own KDoc has the derivation). At `d = 0` both channels are the
+     * common stream exactly, so WIDTH 0 reproduces the pre-decorrelation
+     * mono render bit-for-bit — the same guarantee [Modes.spread] already
+     * gave the body, now extended to the wires. WIDTH 0 keeps the mono path
+     * byte-identical to before this macro existed, which is why every
+     * shipped preset (all auditioned in mono) leaves it there.
      *
-     * WIDTH is structurally inert at SNAP 1: [snareBodyGain] is exactly 0
-     * there, so the output is entirely the centred wire layer no matter how
-     * far WIDTH is turned. Deliberate — SNAP 1 is the static burst the
-     * audition gate asked to keep reaching — not a bug to "fix" by widening
-     * the wires; see `ThumpTest`'s pin for it.
+     * WIDTH used to be structurally inert at SNAP 1, because [snareBodyGain]
+     * is exactly 0 there and the wires used to be centred regardless of
+     * WIDTH. That is no longer true: the wire decorrelation above runs
+     * whenever WIDTH is above 0, independent of SNAP, so SNAP 1 — the static
+     * burst the audition gate asked to keep reaching — is now audibly wide
+     * too when WIDTH is turned up. `ThumpTest` tracks this deliberately.
      */
     private fun snare(m: Map<String, Float>, rate: Int): FloatArray {
         val tune = snareFundamental(m.getValue("TUNE"))
@@ -310,25 +335,56 @@ object Thump {
         for (i in bodyBuf.indices) bodyBuf[i] /= bodyPeak
 
         // The wires: broadband, highpassed into sizzle, decaying on their own
-        // clock. Not routed through the head - see the KDoc above. Computed
-        // once per FRAME (not per channel) so the wire layer stays centred:
-        // the same wire sample is written into every channel of a frame, at
-        // HALF amplitude per channel when stereo (the same p=0.5 linear-pan
-        // law the modes themselves use at dead centre) so L+R folds back to
-        // exactly the mono wire term, not double it.
+        // clock. Not routed through the head - see the KDoc above.
+        //
+        // Mono (WIDTH 0, channels == 1) is untouched: a single Dsp.Noise(11)
+        // stream through a single Dsp.OnePole, computed once per frame,
+        // exactly as before WIDTH decorrelated anything - that seed and call
+        // order are what keep WIDTH 0's render byte-identical.
+        //
+        // Stereo (WIDTH > 0) builds each channel from a shared `common`
+        // stream and its own independent one (`indepL`/`indepR`), weighted
+        // by sqrt(1 - d)/sqrt(d) so per-channel energy is exactly preserved
+        // - see the WIDTH paragraph of this function's KDoc and
+        // WIRE_DECORRELATION_MAX's own KDoc for the model and its budget.
+        // Each channel gets its OWN Dsp.OnePole for the sizzle highpass:
+        // sharing one filter across channels would correlate the two
+        // channels' filtering even where their noise inputs are
+        // independent, undoing the decorrelation this macro exists to add.
+        // `common` keeps seed 11, the existing wire seed, so it produces the
+        // identical stream the mono path reads - WIDTH 0 never takes this
+        // branch at all (channels == 1 there), but at d -> 0 this branch
+        // would still fold to the same signal as mono, by construction.
         val out = FloatArray(frames * channels)
-        val wireNoise = Dsp.Noise(11)
-        val dull = Dsp.OnePole(rate)
+        val common = Dsp.Noise(11)
+        val indepL = Dsp.Noise(Dsp.seedFor("THUMP", "SNARE", "WIRE", 0))
+        val indepR = Dsp.Noise(Dsp.seedFor("THUMP", "SNARE", "WIRE", 1))
+        val dullL = Dsp.OnePole(rate)
+        val dullR = Dsp.OnePole(rate)
+        val cutoffHz = Dsp.expMap(air, 900f, 5000f)
         val wireEnv = Dsp.Env(attackSeconds = 0.0008f, decay2T60 = damp * 3f)
         val wireCenterGain = if (channels == 2) 0.5f else 1f
         val bodyGain = snareBodyGain(snap)
         val wireGain = snareWireGain(snap)
+        val depth = width * WIRE_DECORRELATION_MAX
+        val commonWeight = sqrt(1f - depth)
+        val indepWeight = sqrt(depth)
         for (f in 0 until frames) {
             val t = f.toFloat() / rate
-            val raw = wireNoise.next()
-            val sizzle = raw - dull.lp(raw, Dsp.expMap(air, 900f, 5000f))
-            val wire = wireCenterGain * wireGain * sizzle * wireEnv.at(t) * 1.8f
-            for (c in 0 until channels) out[f * channels + c] = bodyGain * bodyBuf[f * channels + c] + wire
+            val env = wireEnv.at(t)
+            if (channels == 2) {
+                val c = common.next()
+                val rawL = commonWeight * c + indepWeight * indepL.next()
+                val rawR = commonWeight * c + indepWeight * indepR.next()
+                val sizzleL = rawL - dullL.lp(rawL, cutoffHz)
+                val sizzleR = rawR - dullR.lp(rawR, cutoffHz)
+                out[f * 2] = bodyGain * bodyBuf[f * 2] + wireCenterGain * wireGain * sizzleL * env * 1.8f
+                out[f * 2 + 1] = bodyGain * bodyBuf[f * 2 + 1] + wireCenterGain * wireGain * sizzleR * env * 1.8f
+            } else {
+                val raw = common.next()
+                val sizzle = raw - dullL.lp(raw, cutoffHz)
+                out[f] = bodyGain * bodyBuf[f] + wireGain * sizzle * env * 1.8f
+            }
         }
         return trimSnareTail(out, rate, channels)
     }

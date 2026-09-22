@@ -575,7 +575,35 @@ content lands entirely in mid. A prediction made mid-phase that MEMBRANE would a
 wider than METAL_BAR was therefore wrong in its practical conclusion: the two land in the same
 place once the wires are mixed in.
 
-**The open question is whether 0.083 is enough.** The mechanism is correct and swept-tested; the
+**RETRACTED 2026-09-21 — this gate was recorded on a misreading.** The user said the renders
+"were good"; that was taken as "the width reads as space" and written up as a passed audition.
+It was an inference, not their words. Asked directly afterwards, per preset, they reported
+catching **no difference** between the mono and wide versions. The width as built is not audible
+on a snare one-shot.
+
+The measurements were never wrong — side/mid rises linearly with `WIDTH`, exactly as built. They
+measured energy the ear does not use to place a transient. A listener localises a percussive hit
+from its ONSET, and this snare's onset is mono: the wire layer is a single noise seed written
+equally to both channels, and `Modes.spread` pins the fundamental dead centre by design. So
+per-mode panning spreads the ringing TAIL of a sound whose ATTACK does the locating.
+
+The lesson is the one this project keeps relearning from the other direction: a metric agreeing
+with the mechanism does not mean the mechanism is audible. Both of this gate's readings — first
+"probably too subtle", then "passed" — were made without a direct question being asked and
+answered. Ask the question.
+
+The paragraph below is kept as the record of what was expected.
+
+**The superseded claim was that 0.083 is enough:** The renders were played and passed. 0.083 side/mid
+at full width reads as space, and the width ships as built with no retuning. Do not chase the
+number: this is the second time on this project that a metric suggested a problem the ears did
+not hear, and the ears are the gate. `Modes.spread`'s reach/jitter product and mode 0's centre
+pin both stand as they are.
+
+The paragraph below is kept as the record of what was expected before the listening, and of the
+ceiling that still bounds any future change to the spread.
+
+**The question, before it was answered, was whether 0.083 is enough.** The mechanism is correct and swept-tested; the
 travel may be too narrow, which is the same "limited" complaint that opened this initiative. The
 ceiling is structural: mode 0 sits at `reach = 0`, always centred, and carries ~95% of a bar's
 energy (~81% of a membrane's), so `sqrt(1 - mode0_share)` caps what any spread can reach. If the
@@ -583,6 +611,59 @@ verdict is "too subtle", the first lever is the reach/jitter product in `Modes.s
 mode 0 from centre is the last resort — that pin is what keeps the low end solid in mono.
 
 Renders for the gate: `~/Desktop/SnipSnap Audition/16 SNARE - width across its travel/`.
+
+### Measure a mono fold by AVERAGING, never by summing — 2026-09-21
+
+`Cleanup.toMono` computes `sum / channels`, and `Loudness.of` folds through it, so averaging is
+this project's convention throughout. It is also the physically correct one: a mono sample played
+centre sends `a` to both speakers, and a stereo file with `L = R = a` sends `a` to both, so
+per-channel parity IS playback parity.
+
+Summing instead inflates correlated content by exactly 6.02 dB. A controller measuring
+`L + R` rather than `(L + R) / 2` "discovered" a 6 dB stereo level bug that did not exist,
+ordered a fix for it, and shipped a real 6 dB level DROP on every wide render before the
+arithmetic was rechecked (reverted in `cf5ea629`). Under the correct convention the renders had
+been matched to within 0.14 dB all along.
+
+Verified good state: across `WIDTH` 0 / 0.5 / 1.0, avg-fold level moves at most about 1 dB
+(BACKBEAT -0.51 dB, DEEP ROOM -1.07 dB at full width), which is the wire decorrelation's own
+designed cost of `1 - d/2`, not a level defect.
+
+### STRIKE is a hidden width control, and it outweighs WIDTH — measured 2026-09-21
+
+`Modes.atPosition` weights mode *n* by `|sin(n·pi·position)|`. Mode 0 is pinned dead centre by
+`Modes.spread` (its `reach` is always 0), so anything that BOOSTS the fundamental narrows the
+stereo image and anything that SUPPRESSES it widens one. Strike position therefore controls width
+more strongly than the `WIDTH` macro does.
+
+Measured across the sixteen SNARE presets:
+
+- CENTRE HIT (`STRIKE` 0.05, fundamental weighted 0.156) reaches 0.057 side/mid at `WIDTH` 0.45.
+- CRACKED CLAY (`STRIKE` 0.42, fundamental weighted 0.976) reaches only 0.017 at `WIDTH` 0.60.
+
+Higher width, a third the result.
+
+**side/mid is exactly linear in `WIDTH`** — verified to under 0.1% across six presets by predicting
+from one render and re-measuring. So each preset's ceiling is `measured / width` from a single
+render, no sweep needed. Ceilings at `WIDTH` 1.0, against the 0.083 that passed the ear:
+
+| CENTRE HIT 0.128 | DEEP ROOM 0.115 | DRY TIMBER 0.106 | SOFT SHELL 0.093 |
+|---|---|---|---|
+| RIM SHOT 0.087 | TIGHT STEEL 0.075 | PICCOLO 0.074 | BACKBEAT 0.073 |
+| WIDE FLOOR 0.064 | FULL SWING 0.059 | RIM EDGE 0.055 | CRACKED CLAY 0.029 |
+| LOOSE WIRE 0.028 | DARK RATTLE 0.024 | LONG HISS 0.008 | DUST BURST 0.005 |
+
+Five presets are capped below anything audible — CRACKED CLAY, LOOSE WIRE and DARK RATTLE at
+roughly a third of the approved width, plus the two inert high-SNAP ones. They should ship at
+`WIDTH` 0 rather than carrying a value that does nothing, which would only make the knob look
+broken.
+
+**Consequence for extending SPACE to other voices:** `WIDTH` is not a consistent unit across a
+kit. The same number means different amounts on different presets, because the mode weighting
+underneath it differs. That is physically right — where you strike a body changes how it radiates
+— but a kit author turning every voice to 0.5 will not get a uniform image. Normalising `WIDTH`
+against each bank's own ceiling would fix that at the cost of the physics; it is a real choice and
+should be made deliberately before hats and bells take width, not discovered afterwards.
 
 ### WIDTH is inert at high SNAP, by construction
 
