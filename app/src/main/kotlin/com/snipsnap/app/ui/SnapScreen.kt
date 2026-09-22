@@ -212,6 +212,12 @@ fun SnapScreen(
     var spectrumBusy by remember { mutableStateOf(false) }
     var showSpectrumChooser by remember { mutableStateOf(false) }
 
+    // LIVE: the camera preview read every frame, over its own screen —
+    // see LiveSnapScreen.kt. Not a chooser like FIELD/CLOUD/SPECTRUM:
+    // FREEZE lands straight back on this screen's own photo/reading/
+    // macros, the exact door TAKE PHOTO already opens.
+    var showLive by remember { mutableStateOf(false) }
+
     // Nothing is heard until the first real touch, same as SYNTH: landing
     // on the tab never plays a note unasked. Taking a photo counts as one.
     var touched by remember { mutableStateOf(false) }
@@ -737,7 +743,8 @@ fun SnapScreen(
                 // The literal reading: the photo as a spectrogram, columns
                 // time and rows frequency, inverted to audio and landed
                 // like CLOUD's own texture — needs only the photo, not
-                // FIELD's own grid.
+                // FIELD's own grid. LIVE needs no photo at all yet — it
+                // is where one comes from, through the camera preview.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
                         if (spectrumBusy) "…" else "SPECTRUM ▸",
@@ -747,6 +754,18 @@ fun SnapScreen(
                         accessibilityLabel = "SPECTRUM TO PAD",
                     ) {
                         showSpectrumChooser = true
+                    }
+                    LabButton(
+                        "LIVE ▸",
+                        scheme,
+                        enabled = !looking,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "LIVE CAMERA",
+                    ) {
+                        // LIVE is its own voice; SNAP's own must not sound
+                        // under it, the same reasoning FIELD's own tap stops it.
+                        voicePlayer?.stop()
+                        showLive = true
                     }
                 }
             }
@@ -837,6 +856,26 @@ fun SnapScreen(
             }
         }
 
+        if (showLive) {
+            LiveSnapScreen(
+                scheme = scheme,
+                onBack = { showLive = false },
+                onToast = onToast,
+                onFrozen = { small, p, r ->
+                    thumb = small
+                    photo = p
+                    field = null
+                    showField = false
+                    reading = r
+                    macros = Snap.macrosFrom(r)
+                    if (voice == SnapVoice.DRAWN) voice = SnapVoice.HORIZON
+                    touched = true
+                    showLive = false
+                },
+            )
+            BackHandler(onBack = { showLive = false })
+        }
+
         if (showCloudChooser) {
             val cancelCloud = { if (!cloudBusy) showCloudChooser = false }
             SlotChooserOverlay(
@@ -909,8 +948,8 @@ private fun Bitmap.shrunk(): Bitmap {
     return Bitmap.createScaledBitmap(soft, w, h, true)
 }
 
-/** A (small) bitmap as `:synth`'s pixel grid. */
-private fun Bitmap.toPhoto(): Photo {
+/** A (small) bitmap as `:synth`'s pixel grid — shared with [LiveSnapScreen]'s own FREEZE, which has no camera-app thumbnail to shrink first. */
+internal fun Bitmap.toPhoto(): Photo {
     val px = IntArray(width * height)
     getPixels(px, 0, width, 0, 0, width, height)
     return Photo(width, height, px)

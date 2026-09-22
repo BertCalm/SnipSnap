@@ -44,6 +44,7 @@ add_executable(engine_tests
     oboe_stubs.cpp
     "${ENGINE_DIR}/SurfaceEngine.cpp"
     "${ENGINE_DIR}/PadEngine.cpp"
+    "${ENGINE_DIR}/LiveSnapEngine.cpp"
     # The bridge, built here against stub/jni.h. It needs a JVM to link in
     # the app, which is why it went untested for so long; the stub is
     # enough to run it, and android-build against the NDK's own header is

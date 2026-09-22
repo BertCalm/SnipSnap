@@ -819,6 +819,12 @@ object Copy {
     const val SNAP_PATH_SEND_BUSY = "WALKING THE PATH INTO A LOOP…"
     /** SPECTRUM's busy line while the photo is read as a spectrogram and inverted — the same local-busy shape as FIELD's and CLOUD's. */
     const val SNAP_SPECTRUM_BUSY = "READING THE PICTURE AS SOUND…"
+    /** LIVE ▸'s own CAMERA permission ask, refused: the screen closes rather than sitting on a blank preview. */
+    const val LIVE_CAMERA_DENIED = "NO CAMERA. NOTHING TO READ LIVE."
+    /** LIVE ▸'s own bind of `ProcessCameraProvider` to the lifecycle failing outright — not a permission refusal, the device itself declining. */
+    const val LIVE_CAMERA_UNAVAILABLE = "THE CAMERA WOULD NOT OPEN. NOTHING TO READ LIVE."
+    /** FREEZE: the current live frame becomes SNAP's own photo, back on the screen underneath. */
+    const val LIVE_FROZEN = "FROZEN. THAT FRAME IS NOW THE PHOTO."
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

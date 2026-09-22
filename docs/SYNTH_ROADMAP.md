@@ -735,3 +735,102 @@ line: recipe-less audio, `DrumClass.LOOP`, the same `SlotChooserOverlay`.
 No `Grains.render` pass over the result — the texture itself is the pad,
 the same "both are recipe-less audio, as CLOUD is" reading the spec's
 own landing section offered as the simpler of its two options.
+
+### S7.10 — LIVE: the camera preview as a continuous voice
+
+`docs/PHOTO_SPECS.md` §8, built with its own recommended gate (§1–§3
+played on a phone first) explicitly waived — there is no phone in this
+session to play them on, and the answer, asked directly, was to build
+it anyway.
+
+**The native voice.** `LiveSnapEngine.cpp`/`.h` (`app/src/main/cpp/`,
+new) is a wavetable oscillator, not a grain field: one `LiveTable`
+(256 points, `Snap.liveCycle`'s own shape — already −1..1, zero-mean,
+seam-blended) read every sample, cross-fading to a new table over a
+fixed ~50 ms window rather than swapping in a click, at the *same*
+phase on both sides of the fade so the blend is of two comparable
+cycles rather than two waves drifting apart in time. The table handshake
+is `SurfaceEngine::adoptPendingSample`'s own single-slot pointer
+convention, copied rather than reinvented: a `pending_`/`retired_` pair
+of atomics so the audio thread only ever adopts and never frees, and the
+UI thread only ever frees what the audio thread has already retired.
+Three macros — TUNE, BRIGHT, GRIT — glide through `ParameterSmoother`
+exactly as `SurfaceEngine`'s own corners do; BRIGHT's smoother doubles
+as the actual audio-rate lowpass filter itself (`filter_.setTarget(sample);
+filter_.next()`), the same object playing both roles because a one-pole
+follower and a one-pole lowpass are the identical piece of math. DECAY
+is read off every frame (`Snap.macrosFrom`) and shown on its own slider,
+but never sent to the engine at all — the class's own header KDoc says
+why: a continuous voice never stops sounding to decay away, unlike every
+one-shot SNAP render.
+
+Rate-dependent state (both smoothers and the crossfade's own frame
+count) is sized in a private `configureForRate(fs)`, called once from
+the constructor at the default 48000 Hz and again from `start()` at
+whatever rate the device actually opens — `SurfaceEngine`'s own
+constructor keeps the same split, because the host test harness
+(`app/src/main/cpp/test/`) constructs an engine directly and calls
+`onAudioReady` without ever calling `start()`.
+
+**A real bug the host tests caught before a phone would have.** The
+first draft's `setMacros()` correctly stored its three targets into
+atomics, but nothing in `onAudioReady()` ever read them back into the
+smoothers — `tuneSmoother_`/`brightSmoother_`/`gritSmoother_` just kept
+gliding toward whatever they were `.snap()`ped to at construction and
+never moved again. Every macro was a dead knob: the engine compiled,
+opened a stream, and made sound, and would have passed a listen test
+that never actually moved BRIGHT. A new test,
+`live_snap_engine_bright_opens_the_filter`, caught it directly — two
+renders at BRIGHT 0 and BRIGHT 1 came back with the identical filtered
+level (confirmed with a stray `printf` before the fix: `dark=11.395226
+lit=11.395226`, bit for bit) until `onAudioReady` was given three lines
+reading `targetTune_`/`targetBright_`/`targetGrit_` into the smoothers'
+own `setTarget` right after adopting a pending table. All five new
+tests (silence with no table pushed, a table's pitch once one arrives,
+a mismatched `pushFrame` length clamped rather than overrun, the
+crossfade never clicking across a table swap, and this one) pass
+alongside the suite's existing 97.
+
+**The JNI/Kotlin owner shape.** `jni.cpp` gained a third `extern "C"`
+block, `NativeLiveSnap` — the same create/destroy/start/stop/sampleRate/
+needsRestart/isShared/latencyMillis shape `NativeSurface` and
+`NativePads` already keep, plus `pushFrame`/`setMacros`.
+`LiveSnapVoice.kt` is the Kotlin owner class, `SurfaceEngine.kt`'s own
+shape copied exactly: a `Long` handle, every method `@Synchronized` and
+a no-op once closed, `close()` idempotent. Both `CMakeLists.txt`s (the
+production `add_library` and the host test's `add_executable`) list
+`LiveSnapEngine.cpp` — the two-source-lists footgun the steward skill
+warns about, watched for on purpose this time.
+
+**`Snap.liveCycle`.** `:synth`'s own `cycle(table)` — the raw table to
+the seam-blended, zero-mean cycle a wavetable oscillator actually
+reads — was `internal`, unreachable from `:app`'s native/Kotlin tree. A
+one-line public `Snap.liveCycle(table) = cycle(table)` is the only
+`:synth` change this section needed.
+
+**The screen and the camera — unverified beyond static review.**
+`LiveSnapScreen.kt` (`app/src/main/kotlin/com/snipsnap/app/ui/`, new) is
+CameraX `Preview` + `ImageAnalysis`, bound to the screen's own
+`LocalLifecycleOwner`, with `ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888`
+so each analyzed frame becomes a `Bitmap` by a direct
+`copyPixelsFromBuffer` (Android's ARGB_8888 byte order and CameraX's
+RGBA_8888 byte order agree, which is the whole reason that output format
+exists) rather than a hand-rolled YUV_420_888 conversion, downscaled
+before `Bitmap.toPhoto()` (widened from `private` to `internal` in
+`SnapScreen.kt` for exactly this reuse) feeds `Snap.table`/`Snap.look`/
+`Snap.liveCycle` into the voice on the analyzer's own background thread.
+The line just read is drawn over the preview; the four macro sliders
+(TUNE/BRIGHT/DECAY/GRIT, `MacroSlider` reused read-only) track the same
+reading; FREEZE lands the last frame on `SnapScreen`'s own `photo`/
+`reading`/`macros` through the identical assignment TAKE PHOTO's own
+camera-result callback already makes. `AndroidManifest.xml` gained the
+CAMERA permission (optional `uses-feature`, so a camera-less device
+still opens SNAP; LIVE ▸ asks and, refused, says so and closes) and
+`app/build.gradle.kts` gained `androidx.camera:camera-core`/`camera2`/
+`lifecycle`/`view` 1.4.1.
+
+No Android SDK reaches this session — the native engine is proved by its
+own host tests, `Snap.liveCycle` by a JVM test, but the CameraX bind,
+the permission flow, the preview's own look and the live sound on a
+real stream have only been read, never run. `app/README.md`'s on-device
+checklist carries a LIVE line naming exactly that.

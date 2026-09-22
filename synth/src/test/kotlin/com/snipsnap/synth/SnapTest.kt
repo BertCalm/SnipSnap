@@ -150,6 +150,15 @@ class SnapTest {
         assertTrue(abs(cycle.last() - cycle.first()) < 0.2f, "the seam still jumps: ${cycle.last()} vs ${cycle.first()}")
     }
 
+    @Test
+    fun `liveCycle is cycle, reachable from outside synth`() {
+        // The point of liveCycle: the exact same array cycle would give,
+        // through a fun :app's own native tree (internal is off-limits to
+        // a different module) can actually call.
+        val table = Snap.table(ramp(), SnapVoice.HORIZON)
+        assertTrue(Snap.liveCycle(table).contentEquals(Snap.cycle(table)))
+    }
+
     // ---------- the line through the photo ----------
 
     @Test

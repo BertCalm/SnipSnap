@@ -327,6 +327,17 @@ and power-curved so a photograph reads as a picture rather than hiss.
 SPECTRUM ▸ lands it like CLOUD's own texture — recipe-less audio,
 needing only the open photo, not FIELD's own grid.
 
+LIVE ▸ needs no photo at all yet — it is where one comes from. The
+camera's own preview, read every frame into a table and a reading, plays
+through a continuous wavetable voice (`LiveSnapEngine`, native, the same
+control-ring shape as `SurfaceEngine`'s) whose table cross-fades to each
+new frame over ~50 ms and whose TUNE/BRIGHT/GRIT glide toward each new
+reading — point the phone at the world and hear it change as it pans.
+DECAY has nothing to decay away in a voice that never stops sounding, so
+it is shown, never sent. FREEZE takes the frame on screen as the photo,
+through the same door TAKE PHOTO already opens, so DRAW, FIELD and SEND
+TO PAD all work on a live capture exactly as they would on a snapshot.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH

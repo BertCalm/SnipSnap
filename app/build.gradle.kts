@@ -113,6 +113,15 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    // CameraX — LIVE's own preview + frame analysis (PHOTO_SPECS.md §8).
+    // camera-view for PreviewView (wrapped in an AndroidView, TapeOS draws
+    // everything else itself); camera-lifecycle to bind to the screen's
+    // own LocalLifecycleOwner rather than a manual open/close.
+    implementation("androidx.camera:camera-core:1.4.1")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
+
     // The on-device suite: Compose's own test rule and finders, driving a
     // screen on an emulator the way a finger would. The manifest artifact
     // gives the debug build the plain activity the rule hosts content in.

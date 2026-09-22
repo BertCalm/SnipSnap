@@ -415,6 +415,18 @@ object Snap {
     }
 
     /**
+     * [table] as a ready-to-loop cycle, for a caller with no note-on/
+     * note-off of its own to render through — LIVE's own wavetable
+     * (PHOTO_SPECS.md §8), read every camera frame rather than once per
+     * pad. The same [cycle] every one-shot render already uses, exposed
+     * publicly since `:app`'s native tree cannot reach an `internal` one:
+     * zero-mean (a DC offset would be a click every cycle a sustained
+     * tone plays forever, not a one-off thump), the seam blended, peak
+     * at ±1.
+     */
+    fun liveCycle(table: IntArray): FloatArray = cycle(table)
+
+    /**
      * The level at [x] (0 start, 1 end of the note) of a drawn volume
      * shape, 0..1, linearly interpolated between its points and held at
      * the last one. See [Draw.shape].
