@@ -27,6 +27,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -82,17 +85,17 @@ import java.io.File
  * same kit name would find its own leftovers there and get
  * `WouldOverwrite` instead of `Done`.
  *
- * **`assertReadsInFull` is used only where the screen actually promises
- * one line.** `PrimaryAction`/`ActionButton` both default their inner
- * label to `maxLines = 1` (real ellipsis risk for `Copy.replaceWhat`'s
- * interpolated filename, or the header's kit name), so those and the
- * header get the check. `CardRow`'s destination line and
- * `FormatPickerRow`'s own labels are deliberately `maxLines = 2` — built
- * to wrap the longest format name ("MPC SESSION (.XPJ) — KITS + GROOVES")
- * rather than shrink it — so holding them to one line would be testing
- * for a defect that is actually the design; this file only checks that
- * their text is there; it does not fold in a foldedness [assertReadsInFull]
- * would wrongly demand.
+ * **No `assertReadsInFull` here, on purpose.** `PrimaryAction`'s label and
+ * the header's kit name both promise `maxLines = 1`, which looked at first
+ * like the same one-line contract [SurfaceScreenTest]/[GrooveScreenTest]
+ * hold their own fixed-vocabulary labels to — but those are the product's
+ * own copy, chosen and measured to fit; a kit name is free text a player
+ * typed, with only a length *warning* past 32 chars (`Preflight.kt`), not a
+ * cap. `TextOverflow.Ellipsis` is the deliberate fallback for exactly that
+ * case, so a long-name variant of this suite's first two tests read
+ * "ellipsized" straight off CI, correctly — the assumption, not the
+ * screen, was wrong. What this file checks instead is that the label
+ * names the *right* file, not how much of its name fits.
  *
  * **MIDI, not XPN, for the SHARE tests.** Both are the only two formats
  * `exportShareMime` ever returns non-null for (its own KDoc says so), but
@@ -254,7 +257,7 @@ class ExportScreenTest : ComposeScreenTest() {
 
     @Test
     fun an_armed_overwrite_names_what_it_would_replace_and_a_format_change_disarms_it() {
-        val entry = exportKit(name = "A REALLY VERY LONG KIT NAME INDEED")
+        val entry = exportKit()
         show(entry)
         // Simulated: see this class's own KDoc on why the real round trip
         // (write once, write again, read WouldOverwrite back) is not what
@@ -262,7 +265,12 @@ class ExportScreenTest : ComposeScreenTest() {
         val fakeExisting = File(entry.dir, "${entry.kit.name}.xpn")
         session!!.overwriting = fakeExisting
         pump()
-        assertReadsInFull(Copy.replaceWhat(fakeExisting.name))
+        // Not assertReadsInFull: replaceWhat's filename comes straight from
+        // a kit name, which is free text with no length cap PrimaryAction's
+        // `maxLines = 1` promises anything about — TextOverflow.Ellipsis is
+        // the deliberate fallback for a name too long to say in full, not a
+        // defect. This checks the label names the right file, not its width.
+        compose.onNodeWithText(Copy.replaceWhat(fakeExisting.name), useUnmergedTree = true).assertExists()
 
         val armed = session!!.model.format
         pickFormat(ExportFormat.entries.first { it != armed })
@@ -275,15 +283,23 @@ class ExportScreenTest : ComposeScreenTest() {
     fun share_stays_tappable_while_a_card_copy_is_in_flight_but_write_another_locks() {
         show(exportKit())
         pickFormat(ExportFormat.MIDI)
+        assertEquals("pickFormat did not land on MIDI", ExportFormat.MIDI, session!!.model.format)
         tap("WRITE KIT")
         waitForComplete()
+
+        // Pinned explicitly, not just through the SHARE button's presence:
+        // a failure here says which of exportShareMime's three conditions
+        // broke, instead of a bare "node not found" for the button itself.
+        val outcome = session!!.lastOutcome!!
+        assertEquals(ExportFormat.MIDI, outcome.format)
+        assertNull("a MIDI outcome should carry no companion file", outcome.companion)
+        assertTrue("outcome.primary should be the .mid file MidiGroove.writeTo just wrote", outcome.primary.isFile)
         button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
 
-        val outcome = session!!.lastOutcome!!
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
         session!!.cardPending = CardPending(outcome, Uri.EMPTY, what)
         pump()
-        assertReadsInFull(Copy.putOnCardOver(what))
+        compose.onNodeWithText(Copy.putOnCardOver(what), useUnmergedTree = true).assertExists()
         button(Copy.putOnCardOver(what)).assertIsEnabled()
 
         // A card copy in flight: shareExport() only ever reads the already-
@@ -296,12 +312,5 @@ class ExportScreenTest : ComposeScreenTest() {
         button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
         button(Copy.putOnCardOver(what)).assertIsNotEnabled()
         button("WRITE ANOTHER ✓").assertIsNotEnabled()
-    }
-
-    @Test
-    fun the_header_reads_in_full_for_a_long_kit_name() {
-        val name = "A REALLY VERY LONG KIT NAME FOR THE HEADER"
-        show(exportKit(name = name))
-        assertReadsInFull(name)
     }
 }
