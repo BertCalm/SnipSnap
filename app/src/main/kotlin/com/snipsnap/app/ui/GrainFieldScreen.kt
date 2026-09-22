@@ -49,6 +49,7 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.AxesProjector
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.FeatureExtractor
 import com.snipsnap.audio.GrainField
@@ -96,8 +97,10 @@ private const val DUET_SMOOTHING = 0.5f
  * of a pad's WAV and its analysis — SNAP's PHOTO FIELD (`PhotoField.build`
  * in `:synth`), where the map's positions are the cells of a picture and
  * [backdrop] is that picture, drawn under the dots so a finger sees what
- * it hears. No [GrainField.Projector] comes with one, so DUET's chip stays
- * hidden, exactly as it does for a degenerate analysis.
+ * it hears. Its map carries an `AxesProjector` rather than a
+ * [GrainField.PcaProjector] — a photo field has no grains of its own to fit
+ * a PCA basis from — so DUET's chip shows here too: a brighter cell reads
+ * right, a louder voice moves the cursor up.
  */
 class PrebuiltField(
     val snip: Snip,
@@ -122,13 +125,16 @@ class PrebuiltField(
  * [GrainVoice.gate]).
  *
  * **DUET** hands the cursor to the armed mic instead of a finger: the header
- * chip (visible only when the map's [GrainField.Projector] survived analysis
- * — see that class's own KDoc for when it doesn't) toggles a control-rate
- * loop that snapshots the live input, fingerprints it with the SAME
- * extractor the map itself was built from, and projects that fingerprint
- * into the map's existing 0..1 space. A finger touching the field always
- * wins — see [GrainFieldCanvas]'s `touching` flag — and DUET resumes the
- * instant it lifts.
+ * chip (visible only when the map carries a [GrainField.Projector] — a
+ * [GrainField.PcaProjector] that survived analysis, see that class's own
+ * KDoc for when it doesn't, or [AxesProjector] on a [PrebuiltField] that
+ * always carries one) toggles a control-rate loop that snapshots the live
+ * input, fingerprints it with the SAME extractor the map itself was built
+ * from, and projects that fingerprint into the map's existing 0..1 space —
+ * loudness stands in for y itself when the projector is an [AxesProjector],
+ * since that's the one feature [Similar.vector] leaves out. A finger
+ * touching the field always wins — see [GrainFieldCanvas]'s `touching`
+ * flag — and DUET resumes the instant it lifts.
  *
  * **TILT** is the field's other automatic cursor: `TiltSource`'s roll and
  * pitch, dead-banded and smoothed by [TiltCursor.step], stand in for a
@@ -389,8 +395,18 @@ fun GrainFieldScreen(
                                 // resumes (the "re-read live state after
                                 // suspension" rule).
                                 if (projected != null && !touching.value) {
+                                    // AxesProjector leaves y at the map's own
+                                    // centre — loudness, the feature DUET
+                                    // wants there, is deliberately not part
+                                    // of Similar.vector (see AxesProjector's
+                                    // own KDoc) — so the live mic level maps
+                                    // onto y here instead, straight off the
+                                    // same read the silence gate above used.
+                                    // A PcaProjector's own y (its second
+                                    // principal component) is untouched.
+                                    val py = if (p is AxesProjector) level.coerceIn(0f, 1f) else projected.second
                                     prevX += (projected.first - prevX) * DUET_SMOOTHING
-                                    prevY += (projected.second - prevY) * DUET_SMOOTHING
+                                    prevY += (py - prevY) * DUET_SMOOTHING
                                     autoPos.value = Offset(prevX, prevY)
                                     v.setTarget(prevX, prevY)
                                     v.gate(true)

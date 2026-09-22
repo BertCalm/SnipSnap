@@ -540,3 +540,139 @@ portrait. `SurfaceScreen`'s existing use of `TiltSource.tilt` already
 fixed the X axis's convention on a real device; pitch's sign (tip away =
 up or down) is an on-device check, named as such in `app/README.md`'s
 verify line.
+
+### S7.6 — PATH: walk a picture in time
+
+`docs/PHOTO_SPECS.md` §4, built as specced, both landings — §1 shipped
+first, so the ring landing had a kit to name pads on. `PhotoPath`
+(`synth/PhotoPath.kt`, new) is three pure functions: `sample` resamples a
+drawn polyline by arc length to a fixed step count (a fast stroke and a
+slow one over the same line give the same walk; a path that lingers over
+one stretch gives it no more points than a path that crossed it in a
+blink), `cellsFor` maps each resampled point to a `PhotoKit` grid cell
+(0..1 both ways, clamped, `PhotoKit.COLUMNS`/`ROWS` by default so a
+walked path always names the same cells a photo kit from the same
+picture would), and `render` walks the cells as one gapless loop.
+
+`render` needed a third `Snap` shape alongside `render` (full
+oversampled, decay-driven length) and `grain` (native-rate, exact
+length, for a grain field's hundreds-at-once cost): `Snap.cut`, new,
+oversampled like `render` but exact-length and HOLD-shaped like `grain`
+— a path is at most 64 steps, not a field's hundreds, so the
+oversampling cost stays affordable, and a walked path is one gapless
+line, not a run of separate hits, so each step must hold to its own end
+rather than decay away before the next starts. `PhotoKit.kt` itself
+picked up a small refactor first: `cellAt`/`slotFor` pulled out of
+`build`'s own inline loop, so `PhotoPath.render` reads a cell exactly
+the way a photo kit's own pad does — one function, not two readings that
+could drift.
+
+`PhotoPath` stays `:synth`-only; it never builds an `Orbit` or
+`PatternOrbit`, since `:synth` has no dependency on `:loop`. That glue —
+`App.kt`'s new `buildPathRing` — mirrors `OrbitScreen`'s own
+`addPatternRing`/`addSnipRing` shape from outside the screen: load
+`orbits.json` if one exists (else `OrbitPresets.fromKit`, the same
+tempo/rate fallback `OrbitScreen`'s own loader uses), refuse past
+`OrbitSet.MAX_ORBITS` with the existing `Copy.ORBIT_RINGS_FULL`, append
+a `PatternOrbit(kit, hits)` whose hits are `PhotoKit.slotFor(column,
+row)` per step, save, and hand the result back into `App.kt`'s own
+hoisted `orbitSet`/`orbitSelected` before navigating to `AppScreen.ORBIT`
+— the same whole-app busy overlay `buildPhotoKit` uses, since RING
+leaves SNAP the way KIT ▸ does. The loop-pad landing stays local to
+SNAP, `sendPathToSlot` mirroring `sendCloudToSlot` line for line
+(audio with no recipe, `DrumClass.LOOP`, the same `SlotChooserOverlay`).
+
+DRAW's own overlay gained a third tab, PATH — shown only over a photo —
+with a `PathLcd` panel (the photo dimmed underneath, `GrainFieldScreen`'s
+own backdrop convention, plain top-down coordinates rather than
+`DrawLcd`'s wave/shape y-up), a STEPS chip row (8/16/32/64), and its own
+bottom row (`CLEAR | CANCEL | LOOP PAD ▸ | RING ▸`) in place of
+WAVE/SHAPE's `SMOOTH | CLEAR | LAST | CANCEL | DONE` — PATH commits
+nothing through DONE, since LOOP PAD ▸ and RING ▸ each land the walked
+cells directly, the same way KIT ▸ leaves through its own callback
+rather than a draft.
+
+### S7.7 — DUET on a photo field
+
+`docs/PHOTO_SPECS.md` §5, built as recommended (fixed at
+brightness/loudness), with one correction to the spec's own design
+sketch — see below. `GrainField.Projector` (`:audio`) is now an
+interface, one method, `project(vector: FloatArray): Pair<Float,
+Float>`; the hand-rolled PCA basis `analyze` fits from a sample's own
+grains kept its shape and its `internal constructor` under a new name,
+`PcaProjector`. Every call site outside `:audio` only ever called
+`.project(...)` on whatever `GrainMap.projector` held, so the rename
+touched nothing beyond `:audio` itself and two stale KDoc `[...]` links
+in `GrainFieldScreen.kt`; the one test that reached past the interface
+(`GrainFieldTest`'s degenerate-axis case, which reads `.degenerate1`/
+`.degenerate2` — fields the interface has no business declaring, since
+`AxesProjector` has no notion of a degenerate axis) now casts to
+`PcaProjector` for those two lines instead.
+
+`AxesProjector(x: Axis = Axis.CENTROID)` (`:audio`, new) is the other
+`Projector`: no grains to fit a PCA basis from, so it reads `x` straight
+off `Similar.vector`'s own named dimension (`Axis` enum, one entry per
+vector index) and leaves `y` at the map's own 0.5 centre. That is the
+one place this build deviates from the spec's own sketch of
+`AxesProjector(x: Axis, y: Axis)`: loudness is deliberately not one of
+`Similar.vector`'s nine dimensions (the class's own KDoc — "a quiet
+snare is still a snare"), so a second `Axis` for y would have to
+misname some other spectral feature as loudness instead of just not
+having one. `PhotoField.build` (`:synth`) sets `projector =
+AxesProjector()` on its map — the one-line change the spec priced — so
+a photo field carries a projector unconditionally, unlike an analyzed
+sample's, which is only ever present when `analyze` didn't hit the
+degenerate/too-few-grains cases `PcaProjector`'s own KDoc already
+documents.
+
+The spec's "the tick maps y itself" line (its own stated smaller
+option, next to threading level through the interface as a tenth
+dimension) is what actually wires loudness to y, and it needed a real
+few lines in `GrainFieldScreen.kt`'s DUET loop, not the "DUET's code
+changes not at all" the spec predicted for the interface-extraction
+bullet alone: after `p.project(vector)` returns, `y` is replaced with
+`MicSessionService.level.value` (already read once per tick for the
+silence gate, so no new mic read) whenever `p is AxesProjector`,
+leaving a `PcaProjector`-backed field's own second principal component
+untouched. DUET's chip visibility (`projector != null`) and every other
+line of that loop needed no change — the polymorphic `.project(...)`
+call was already the only thing DUET asked of a projector.
+
+### S7.8 — BREED: two photos, one child's line
+
+`docs/PHOTO_SPECS.md` §6, built as specced. `crossTable(a: IntArray, b:
+IntArray, coin: () -> Int)`, a new top-level function beside `object
+Draw` in `Draw.kt` (not a method of `Draw` itself — crossing two lines
+is breeding arithmetic, not "the pen" `Draw`'s own KDoc says that object
+is), crosses two same-length point arrays point by point: `coin()` spun
+fresh for every point, 0 → A's own value, 1 → B's, anything else → the
+mean — the identical three-way shape `Breed.pick` already flips for a
+macro. Size-agnostic on purpose: the same function crosses a SNAP
+table's 256 points and a drawn envelope's 64. The coin is a callback
+rather than a concrete `Random` type so `Breed`'s own `java.util.Random`
+drives it directly — every other seeded function in `:synth` uses
+`kotlin.random.Random`, and `crossTable` taking a `java.util.Random`
+parameter just to suit one caller in another module would have been the
+wrong module owning the convention.
+
+`Breed.cross` (`:shell`) gained one branch: when both parents' patches
+are `SnapPatch` (already guaranteed same engine and voice by the
+surrounding check), a new private `crossSnap` crosses their tables
+through `crossTable`, and their envelopes too when both drew one — a
+new `crossEnvelope` giving a shape only one parent has the identical
+"rides half the time" treatment `crossMacros` already gives a rack
+section only one parent has. `SnapPatch`'s own constructor is the one
+place that can refuse the result (a flat table, or a shape that never
+opens), so `crossSnap` treats that refusal the way `breed()`'s own
+outer classifier audit already treats a mismatched class: one retry
+(a full fresh spin of both table and envelope), then a fallback — here,
+A's own line and shape verbatim, since a photo kit's own line is always
+a valid `SnapPatch` to begin with. The crossed macros are decided
+before any of this and ride through unconditionally, on the fallback
+path too: a table refusing to cross is not a reason to also throw away
+a macro cross that succeeded.
+
+Nothing on the SNAP or BREED screens changed — the spec's own costing
+was right about that: BREED's existing button already crosses whatever
+`Breed.cross` hands it back, and this changes only what that call
+produces for a SNAP pad.

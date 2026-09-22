@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.FeatureExtractor
 import com.snipsnap.json.JsonException
 import kotlin.math.abs
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -222,5 +223,40 @@ class DrawTest {
         val patch = SnapPatch("Own", SnapVoice.DRAWN, emptyMap(), Draw.wave(Draw.Wave.SAW), env)
         env.fill(0)
         assertTrue(patch.envelope!!.all { it == 255 })
+    }
+
+    // ---------- crossTable ----------
+
+    @Test
+    fun `every crossed point is one parent's own value or their mean, never anything else`() {
+        val up = IntArray(256) { it }
+        val down = IntArray(256) { 255 - it }
+        val rng = Random(1)
+        val child = crossTable(up, down) { rng.nextInt(3) }
+        assertEquals(256, child.size)
+        for (i in child.indices) {
+            assertTrue(child[i] == up[i] || child[i] == down[i] || child[i] == (up[i] + down[i]) / 2, "point $i landed outside the three choices: ${child[i]}")
+        }
+    }
+
+    @Test
+    fun `identical parents give the same child, whatever the coin says`() {
+        val table = Draw.wave(Draw.Wave.SAW)
+        val rng = Random(7)
+        assertTrue(crossTable(table, table) { rng.nextInt(3) }.contentEquals(table))
+    }
+
+    @Test
+    fun `the same seed gives the same child`() {
+        val a = Draw.wave(Draw.Wave.SINE)
+        val b = Draw.wave(Draw.Wave.SQUARE)
+        val rng1 = Random(42)
+        val rng2 = Random(42)
+        assertTrue(crossTable(a, b) { rng1.nextInt(3) }.contentEquals(crossTable(a, b) { rng2.nextInt(3) }))
+    }
+
+    @Test
+    fun `a length mismatch refuses rather than silently truncating`() {
+        assertFailsWith<IllegalArgumentException> { crossTable(IntArray(256), IntArray(64)) { 0 } }
     }
 }

@@ -278,10 +278,18 @@ mixed lands on TAPE as a snip — `GrainVoice`'s own tap into the block it
 was about to write, preallocated once at `start()` and never in the
 render loop — so a drag across the field ends up on pads through the
 same door as a capture, for the pad sheet's own field as much as a
-photo's. TILT is a second automatic cursor beside DUET's: the phone's own
-roll and pitch, dead-banded and smoothed, stand in for a finger, so
-holding the phone up to the photo it was taken of and tilting plays the
-picture hands-free — exclusive with DUET, one automatic cursor at a time.
+photo's. DUET hands the cursor to the armed mic: a hum's brightness
+(spectral centroid) moves it right, its loudness moves it up, the same
+`GrainField.Projector` interface a sample field's own PCA fit already
+implements — a photo field has no grains to fit one from, so it carries
+a fixed `AxesProjector` instead, brightness read straight off the mic's
+own fingerprint and loudness mapped on by DUET's tick itself, since that
+one feature is deliberately left out of the fingerprint (`Similar.vector`
+— "a quiet snare is still a snare"). TILT is a second automatic cursor
+beside DUET's: the phone's own roll and pitch, dead-banded and smoothed,
+stand in for a finger, so holding the phone up to the photo it was taken
+of and tilting plays the picture hands-free — exclusive with DUET, one
+automatic cursor at a time.
 
 A KIT FROM ONE PHOTO turns the whole idea into a kit, not one pad.
 `PhotoKit.build` cuts the picture into the MPC's own 4×4 instead of PHOTO
@@ -294,6 +302,19 @@ toast, since the layout is the picture's, not the drum convention's. KIT
 ▸ on the SNAP screen builds it off the main thread and lands it as a
 brand-new kit on the shelf, named PHOTO KIT, never overwriting whatever
 kit is open.
+
+PATH walks the picture in time instead of reading one line through it.
+DRAW's overlay gains a third tab over a photo: draw a path across it and
+`PhotoPath.sample` resamples the stroke by arc length to a fixed step
+count — a fast drag and a slow one over the same line give the same
+walk, and a line that lingers over one patch gives it no more steps than
+one that crossed it in a blink. Each step is the cell under it, the same
+grid `PhotoKit` cuts, so a melody follows where the line goes and a
+rhythm follows where it stays. Two landings: LOOP PAD ▸ renders the
+walked cells as one gapless loop, cut to the tempo's sixteenth grid, and
+lands it like CLOUD's texture; RING ▸ needs the kit above — the walked
+cells become a `PatternOrbit` naming its pads directly, a fresh ring on
+ORBIT that plays live and is editable afterwards like any other.
 
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the

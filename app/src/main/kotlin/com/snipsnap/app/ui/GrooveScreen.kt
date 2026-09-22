@@ -246,29 +246,33 @@ private val LANE_ORDER: List<GrooveEdit.Lane> = GrooveEdit.Lane.entries
 private val LANE_LABEL: Map<GrooveEdit.Lane, String> = mapOf(
     GrooveEdit.Lane.KICK to "KICK",
     GrooveEdit.Lane.SNARE to "SNARE",
+    GrooveEdit.Lane.CLAP to "CLAP",
     GrooveEdit.Lane.HAT_CLOSED to "HAT C",
     GrooveEdit.Lane.HAT_OPEN to "HAT O",
+    GrooveEdit.Lane.TOM to "TOM",
     GrooveEdit.Lane.PERC to "PERC",
 )
 private val LANE_DRUM_CLASS: Map<GrooveEdit.Lane, DrumClass> = mapOf(
     GrooveEdit.Lane.KICK to DrumClass.KICK,
     GrooveEdit.Lane.SNARE to DrumClass.SNARE,
+    GrooveEdit.Lane.CLAP to DrumClass.CLAP,
     GrooveEdit.Lane.HAT_CLOSED to DrumClass.HAT_CLOSED,
     GrooveEdit.Lane.HAT_OPEN to DrumClass.HAT_OPEN,
+    GrooveEdit.Lane.TOM to DrumClass.TOM,
     GrooveEdit.Lane.PERC to DrumClass.PERC,
 )
 
 /**
  * The inverse of [GrooveEdit.LANE_SLOT]'s note mapping — what the
- * needle-roll's RENDERER needs to bucket a clip's raw notes into the five
+ * needle-roll's RENDERER needs to bucket a clip's raw notes into the seven
  * NAMED lane columns (the design). Playback does NOT gate on this map: a
- * note whose pad sits outside the five lanes (a CLAP, a TOM) still plays —
- * see the playback clock's own comment. It used to be true that such a
- * note also wasn't DRAWN at all (this was a defect, not a design choice —
- * the note is captured, played, and landed regardless); `NeedleRoll`'s
- * Fix 3 (live-record follow-ups) closed that: a note whose lookup here
- * misses falls into a sixth, renderer-only OTHER column instead of being
- * dropped from the drawing.
+ * note whose pad sits outside the seven lanes (a TONAL pad, an unclassified
+ * sample) still plays — see the playback clock's own comment. It used to be
+ * true that such a note also wasn't DRAWN at all (this was a defect, not a
+ * design choice — the note is captured, played, and landed regardless);
+ * `NeedleRoll`'s Fix 3 (live-record follow-ups) closed that: a note whose
+ * lookup here misses falls into an eighth, renderer-only OTHER column
+ * instead of being dropped from the drawing.
  */
 private val NOTE_TO_LANE: Map<Int, GrooveEdit.Lane> = GrooveEdit.Lane.entries.associateBy { GrooveEdit.noteFor(it) }
 
@@ -829,9 +833,9 @@ fun GrooveScreen(
     val currentClip = remember(progIndex, base, swingPercent, feel, feelTemplate, eClip) {
         base?.let { GrooveProgram.compute(progIndex, it, swingPercent, feel, feelTemplate, eClip) }
     }
-    // Playback and MIDI export cover every note; the roll's five NAMED
-    // lane columns only cover five of the kit's pads (the design) — a note
-    // outside them still draws too, since Fix 3, just under the sixth
+    // Playback and MIDI export cover every note; the roll's seven NAMED
+    // lane columns only cover seven of the kit's pads (the design) — a note
+    // outside them still draws too, since Fix 3, just under the eighth
     // OTHER column rather than a named one. This is the honesty line that
     // says so whenever the on-screen program actually has notes like that.
     val offLaneCount = currentClip?.notes?.count { it.note !in NOTE_TO_LANE } ?: 0
@@ -1039,14 +1043,14 @@ fun GrooveScreen(
     // started, so switching programs mid-play changes what's triggered on
     // the very next tick — matching the artboard's own `gToggle`.
     //
-    // Every note triggers here, not just the five lane notes the roll
-    // draws (see [NOTE_TO_LANE]'s own KDoc) — a groove with a CLAP or TOM
-    // hit should still be heard, same as it's still written by MIDI.
-    // The lane notes are just five points on the writer's own chromatic
-    // map, not a rule of their own, so `Mpc3Note.slotFor` recovers the pad
-    // slot for any note - including the ones past the wrap, where plain
-    // subtraction gives a slot no kit has; `hit` is silence on a slot with
-    // nothing loaded.
+    // Every note triggers here, not just the seven lane notes the roll
+    // draws (see [NOTE_TO_LANE]'s own KDoc) — a groove with a TONAL pad or
+    // unclassified sample hit should still be heard, same as it's still
+    // written by MIDI. The lane notes are just seven points on the
+    // writer's own chromatic map, not a rule of their own, so
+    // `Mpc3Note.slotFor` recovers the pad slot for any note - including the
+    // ones past the wrap, where plain subtraction gives a slot no kit has;
+    // `hit` is silence on a slot with nothing loaded.
     // Keyed on the kit too, not just the transport: an edit that reaches
     // this screen while the roll is running reloads the engine's bank, and
     // the loop's own `kit` (its tempo) and `hit` (its pads) have to follow
@@ -2737,13 +2741,13 @@ private fun NeedleRoll(
             val laneLeft = 40.dp.toPx()
             val laneRight = size.width - 8.dp.toPx()
             // Fix 3 (off-lane pads are invisible in the roll — a DEFECT,
-            // not an enhancement): a hit on any pad outside the five drum
+            // not an enhancement): a hit on any pad outside the seven drum
             // lanes is still captured, played, and landed (see
             // NOTE_TO_LANE's own KDoc) — it just used to draw nothing,
             // so mid-take the roll answered "is it getting this?" with a
-            // visual NO while saying yes to disk. `+ 1` makes room for a
-            // sixth, RENDERER-ONLY column those notes fall into below —
-            // GrooveEdit.Lane itself stays five entries; this column
+            // visual NO while saying yes to disk. `+ 1` makes room for an
+            // eighth, RENDERER-ONLY column those notes fall into below —
+            // GrooveEdit.Lane itself stays seven entries; this column
             // exists only here, in the drawing, never in the step editor
             // or LANE_SLOT.
             val columnW = ((laneRight - laneLeft) / (LANE_ORDER.size + 1)).coerceAtLeast(1f)
@@ -2763,7 +2767,7 @@ private fun NeedleRoll(
 
             clip?.notes?.forEach { n ->
                 // No `?: return@forEach` here (Fix 3): an off-lane note
-                // falls through to the sixth column (`LANE_ORDER.size`)
+                // falls through to the eighth column (`LANE_ORDER.size`)
                 // instead of being dropped from the drawing entirely.
                 val lane = NOTE_TO_LANE[n.note]
                 val laneIndex = lane?.let { LANE_ORDER.indexOf(it) } ?: LANE_ORDER.size
@@ -2801,7 +2805,7 @@ private fun NeedleRoll(
             // sit where it will sit once landed, or the roll would be
             // lying about what was captured.
             liveNotes.forEach { n ->
-                // Same sixth-column fallback as the saved-clip pass above —
+                // Same eighth-column fallback as the saved-clip pass above —
                 // the two passes must stay geometrically identical, so a
                 // live note sits exactly where it will sit once landed
                 // (this composable's own KDoc on `liveNotes`).
@@ -2856,10 +2860,10 @@ private fun NeedleRoll(
                     TapeText(LANE_LABEL.getValue(lane), TapeType.pixelSmall, c)
                 }
             }
-            // Fix 3's sixth column, legended: same chip shape as the five
+            // Fix 3's eighth column, legended: same chip shape as the seven
             // above, in the same neutral colour the saved-clip pass falls
-            // back to for an off-lane note (`scheme.ink.tape`) — not a
-            // seventh `GrooveEdit.Lane`, purely this row's own label for
+            // back to for an off-lane note (`scheme.ink.tape`) — not an
+            // eighth `GrooveEdit.Lane`, purely this row's own label for
             // the renderer-only column drawn above.
             Box(
                 Modifier
@@ -2880,11 +2884,15 @@ private fun NeedleRoll(
  * half-time program can legitimately be 4 bars; 2 is the normal case, not
  * a cap), not a fixed pair.
  *
- * Cells are drawn well under [Layout.MIN_HIT_TARGET] (5 lanes × 16 cells
+ * Cells are drawn well under [Layout.MIN_HIT_TARGET] (7 lanes × 16 cells
  * on a 390dp frame leaves roughly 15–20dp per cell after the lane-label
  * rail and gaps) — the artboard itself draws these as `flex:1` cells
  * across the same width budget, sub-44dp by design, so this follows it
- * rather than the general hit-target rule.
+ * rather than the general hit-target rule. That per-cell figure is CELL
+ * WIDTH, fixed by the 16 columns across a fixed-width row and unaffected
+ * by lane count; lane ROW HEIGHT is what compresses further at seven
+ * lanes, since the lane rows stack in a `Column` where each gets
+ * `Modifier.weight(1f)` of the remaining vertical space.
  */
 @Composable
 private fun StepEditorOverlay(

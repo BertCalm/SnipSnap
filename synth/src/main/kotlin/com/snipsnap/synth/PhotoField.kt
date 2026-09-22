@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.AxesProjector
 import com.snipsnap.audio.GrainField
 import com.snipsnap.audio.Snip
 import kotlin.math.max
@@ -144,7 +145,7 @@ object PhotoField {
             source = Snip(source, channels = 1, sampleRate = Dsp.RATE),
             // Steady tones from phase zero: the voice must scatter its
             // triggers or copies of one grain comb-filter each other.
-            map = GrainField.GrainMap(grains, grainFrames, projector = null, jitterTriggers = true),
+            map = GrainField.GrainMap(grains, grainFrames, projector = AxesProjector(), jitterTriggers = true),
             columns = columns,
             rows = rows,
             cells = cells,

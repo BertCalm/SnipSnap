@@ -22,24 +22,30 @@ import java.io.File
  */
 object GrooveEdit {
 
-    /** The step editor's five lanes, fixed order per the GROOVE screen. */
-    enum class Lane { KICK, SNARE, HAT_CLOSED, HAT_OPEN, PERC }
+    /** The step editor's seven lanes, fixed order per the GROOVE screen. */
+    enum class Lane { KICK, SNARE, CLAP, HAT_CLOSED, HAT_OPEN, TOM, PERC }
 
     /**
      * Lane → 1-based pad slot, the finger-drumming convention from
      * `docs/KIT_BEST_PRACTICES.md` "Pad layout" and `AutoPlace`: kick A01,
-     * snare A02, closed hat A03, open hat A04. PERC takes `AutoPlace`'s
-     * first preference for `DrumClass.PERC`, which is slot 12 — NOT slot 6.
-     * (The brief guessed 6, but `AutoPlace.PREFERENCES` reserves 6 as
-     * CLAP's first choice; handing it to PERC would collide with where a
-     * clap sample actually auto-places. Verified against the real table,
-     * not assumed — reality wins.)
+     * snare A02, closed hat A03, open hat A04. CLAP and TOM take
+     * `AutoPlace.PREFERENCES`'s own first choices for their classes — slot
+     * 6 and slot 9 respectively — so each lane's note lands exactly where a
+     * same-class sample would auto-place, no separate mapping to keep in
+     * sync. PERC takes `AutoPlace`'s first preference for `DrumClass.PERC`,
+     * which is slot 12 — NOT slot 6, since slot 6 is CLAP's own slot here,
+     * not PERC's. (The brief guessed 6, but `AutoPlace.PREFERENCES`
+     * reserves 6 as CLAP's first choice; handing it to PERC would collide
+     * with where a clap sample actually auto-places. Verified against the
+     * real table, not assumed — reality wins.)
      */
     val LANE_SLOT: Map<Lane, Int> = mapOf(
         Lane.KICK to 1,
         Lane.SNARE to 2,
+        Lane.CLAP to 6,
         Lane.HAT_CLOSED to 3,
         Lane.HAT_OPEN to 4,
+        Lane.TOM to 9,
         Lane.PERC to 12,
     )
 
@@ -351,8 +357,8 @@ object GrooveEdit {
     }
 
     /**
-     * Wipes [bar] (0-based) across all five editor lanes — CLEAR BAR is a
-     * whole-bar action, not a per-lane one, but it's scoped to the five
+     * Wipes [bar] (0-based) across all seven editor lanes — CLEAR BAR is a
+     * whole-bar action, not a per-lane one, but it's scoped to the seven
      * lanes the step editor actually draws: a note that rides some other
      * MIDI note number (never placed by this editor, and unreachable by any
      * of its cells) survives the wipe untouched, same as every other bar.
