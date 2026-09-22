@@ -5,10 +5,14 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.Exports
@@ -22,6 +26,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ExportWizardModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -217,6 +222,22 @@ class ExportScreenTest : ComposeScreenTest() {
         tap("${target.cyclerLabel}: ${target.why}")
     }
 
+    /**
+     * The whole semantics tree as text — content descriptions, visible
+     * text, and whether a node is disabled — for a failure message that
+     * shows what actually rendered instead of just naming what didn't.
+     * Only [SemanticsNode.children] and the same `getOrNull` pattern
+     * [assertReadsInFull] already uses, so no untested API.
+     */
+    private fun dumpTree(node: SemanticsNode = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode(), depth: Int = 0): String {
+        val cd = node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+        val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
+        val disabled = node.config.getOrNull(SemanticsProperties.Disabled) != null
+        val bits = listOfNotNull(cd?.let { "cd=\"$it\"" }, text?.let { "text=\"$it\"" }, "disabled".takeIf { disabled })
+        val self = if (bits.isEmpty()) null else "${"  ".repeat(depth)}- ${bits.joinToString(" ")}"
+        return (listOfNotNull(self) + node.children.map { dumpTree(it, depth + 1) }).joinToString("\n")
+    }
+
     @Test
     fun writing_a_kit_reaches_complete_and_write_another_resets_it() {
         show(exportKit())
@@ -290,11 +311,19 @@ class ExportScreenTest : ComposeScreenTest() {
         // Pinned explicitly, not just through the SHARE button's presence:
         // a failure here says which of exportShareMime's three conditions
         // broke, instead of a bare "node not found" for the button itself.
+        assertEquals(ExportWizardModel.Stage.COMPLETE, session!!.model.stage)
         val outcome = session!!.lastOutcome!!
         assertEquals(ExportFormat.MIDI, outcome.format)
         assertNull("a MIDI outcome should carry no companion file", outcome.companion)
         assertTrue("outcome.primary should be the .mid file MidiGroove.writeTo just wrote", outcome.primary.isFile)
-        button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
+        // Every check above passed once already (a prior CI run pinned
+        // them individually) and the SHARE button still didn't render —
+        // so if this still fails, the tree dump is what finally shows why.
+        try {
+            button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
+        } catch (e: Throwable) {
+            throw AssertionError("SHARE button missing for outcome=$outcome. Screen:\n${dumpTree()}", e)
+        }
 
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
         session!!.cardPending = CardPending(outcome, Uri.EMPTY, what)
