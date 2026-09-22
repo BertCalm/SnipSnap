@@ -242,6 +242,27 @@ logcat tag to grab when something is wrong.
   bottom) should land noticeably higher-pitched, since rows read as
   frequency and the top is high. SPECTRUM ▸ should stay disabled without
   a kit open or a photo taken.
+- **LIVE (unverified beyond static review — the whole reason this line
+  exists)**: on SNAP, tap LIVE ▸. The system permission dialog should
+  ask for CAMERA the first time; deny it and the screen should close
+  with NO CAMERA. NOTHING TO READ LIVE rather than sitting on a blank
+  preview. Grant it and the preview should fill the panel with a line
+  drawn over it that visibly follows what the camera sees — pan across a
+  bright window and a dark corner and the line's own shape should
+  change with it, not just its brightness. The four sliders (TUNE,
+  BRIGHT, DECAY, GRIT) should track the same reading live, un-draggable.
+  The sound itself should follow the room continuously — no clicks on a
+  scene change, the pitch and the filter both moving smoothly rather
+  than stepping — and should stay silent with nothing yet in frame only
+  for the first moment after opening, never afterward. Backgrounding the
+  app (or pulling the headphones) should behave like SURFACE's own two
+  native checks: the stream should recover, and a shared-stream fallback
+  should say so the same way. FREEZE should close LIVE and land back on
+  SNAP exactly as TAKE PHOTO does — the thumbnail, the reading, the
+  macros, and a re-render of the line all matching the frame it froze.
+  Leaving LIVE any other way (◄ SNAP, back gesture) should leave SNAP
+  untouched, with no lingering camera sound. If this line has not yet
+  been checked off, treat everything about LIVE as unverified.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

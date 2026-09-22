@@ -15,6 +15,12 @@
          never required, the notification's own SNIP action is the whole
          story when this isn't granted. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- LIVE (PHOTO_SPECS.md §8): CameraX's continuous preview, unlike TAKE
+         PHOTO's TakePicturePreview, needs this app's own CAMERA grant - not
+         required, so a phone with no camera (or a user who says no) still
+         opens SNAP; LIVE ▸ just says so and stays closed. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".SnipSnapApplication"

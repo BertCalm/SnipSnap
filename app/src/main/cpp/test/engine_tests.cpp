@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Grain.h"
+#include "LiveSnapEngine.h"
 #include "PadEngine.h"
 #include "ParameterSmoother.h"
 #include "PrintBuffer.h"
@@ -28,6 +29,12 @@ std::vector<float> callback(PadEngine& e, int32_t frames) {
 }
 
 std::vector<float> callback(SurfaceEngine& e, int32_t frames) {
+    std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
+    e.onAudioReady(nullptr, out.data(), frames);
+    return out;
+}
+
+std::vector<float> callback(LiveSnapEngine& e, int32_t frames) {
     std::vector<float> out(static_cast<size_t>(frames) * 2, 123.0f);
     e.onAudioReady(nullptr, out.data(), frames);
     return out;
@@ -2356,6 +2363,86 @@ TEST(surface_engine_modulation_reaches_grain_size_density_and_spray) {
         pHi = std::max(pHi, m);
     }
     CHECK(pHi - pLo > 0.05f);
+}
+
+// ---------- LiveSnapEngine (PHOTO_SPECS.md §8) ----------
+
+TEST(live_snap_engine_is_silent_with_no_table) {
+    LiveSnapEngine e(kRate);
+    const std::vector<float> out = callback(e, 512);
+    for (float v : out) CHECK(v == 0.0f);
+}
+
+TEST(live_snap_engine_plays_once_a_table_arrives) {
+    LiveSnapEngine e(kRate);
+    float table[LiveSnapEngine::kTableSize];
+    for (int32_t i = 0; i < LiveSnapEngine::kTableSize; ++i) {
+        const float x = 2.0f * 3.14159265f * static_cast<float>(i) / static_cast<float>(LiveSnapEngine::kTableSize);
+        table[i] = std::sin(x);
+    }
+    e.pushFrame(table, LiveSnapEngine::kTableSize);
+    const std::vector<float> out = callback(e, 4096);
+    CHECK(peak(out) > 0.05f);
+}
+
+TEST(live_snap_engine_pushFrame_clamps_a_mismatched_length) {
+    LiveSnapEngine e(kRate);
+    float shortTable[10];
+    for (float& v : shortTable) v = 0.9f;
+    // Far fewer than kTableSize: the rest of the adopted table reads as
+    // rest (0), never whatever `new` left in that memory - if pushFrame
+    // read past the 10 given, this would be the crash that proves it.
+    e.pushFrame(shortTable, 10);
+    const std::vector<float> out = callback(e, 4096);
+    CHECK(peak(out) >= 0.0f);
+}
+
+TEST(live_snap_engine_crossfade_never_clicks) {
+    LiveSnapEngine e(kRate);
+    e.setMacros(0.5f, 0.6f, 0.0f);  // GRIT 0: the drive stage's own nonlinearity would obscure the bound below
+    float tableA[LiveSnapEngine::kTableSize];
+    float tableB[LiveSnapEngine::kTableSize];
+    for (int32_t i = 0; i < LiveSnapEngine::kTableSize; ++i) {
+        const float x = 2.0f * 3.14159265f * static_cast<float>(i) / static_cast<float>(LiveSnapEngine::kTableSize);
+        tableA[i] = std::sin(x);
+        tableB[i] = std::sin(x + 3.14159265f);  // = -tableA[i]: opposite everywhere, so an un-crossfaded swap would jump hard
+    }
+    e.pushFrame(tableA, LiveSnapEngine::kTableSize);
+    callback(e, 4096);  // past the initial filter/phase settle, so what follows is the swap alone
+    e.pushFrame(tableB, LiveSnapEngine::kTableSize);
+    // Covers the whole ~50ms crossfade window (a bit over 2000 frames at kRate) in one capture.
+    const std::vector<float> out = callback(e, 4096);
+    float maxDelta = 0.0f;
+    for (size_t i = 2; i < out.size(); i += 2) {  // stereo-interleaved; one channel, consecutive frames
+        maxDelta = std::max(maxDelta, std::fabs(out[i] - out[i - 2]));
+    }
+    CHECK(maxDelta < 0.3f);
+}
+
+TEST(live_snap_engine_bright_opens_the_filter) {
+    auto run = [](float bright) {
+        LiveSnapEngine e(kRate);
+        e.setMacros(0.5f, bright, 0.0f);
+        float table[LiveSnapEngine::kTableSize];
+        for (int32_t i = 0; i < LiveSnapEngine::kTableSize; ++i) {
+            // A harmonically rich line - BRIGHT's own lowpass has real
+            // high content to remove, or not.
+            const float x = 2.0f * 3.14159265f * static_cast<float>(i) / static_cast<float>(LiveSnapEngine::kTableSize);
+            table[i] = std::sin(x) + 0.5f * std::sin(3.0f * x) + 0.33f * std::sin(5.0f * x);
+        }
+        e.pushFrame(table, LiveSnapEngine::kTableSize);
+        callback(e, 8192);  // past the filter's own settle and BRIGHT's own glide
+        const std::vector<float> out = callback(e, 4096);
+        double diffEnergy = 0.0;
+        for (size_t i = 2; i < out.size(); i += 2) {
+            const float d = out[i] - out[i - 2];
+            diffEnergy += static_cast<double>(d) * d;
+        }
+        return diffEnergy;
+    };
+    const double dark = run(0.0f);
+    const double lit = run(1.0f);
+    CHECK(dark < lit);
 }
 
 int main() { return check::runAll(); }

@@ -489,3 +489,75 @@ Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv* env, jobject, jlong handle) {
 }
 
 }  // extern "C"
+
+// ---- NativeLiveSnap: LIVE's own voice (PHOTO_SPECS.md §8) ---------------------
+
+#include "LiveSnapEngine.h"
+
+using snipsnap::LiveSnapEngine;
+
+namespace {
+inline LiveSnapEngine* live(jlong handle) { return reinterpret_cast<LiveSnapEngine*>(handle); }
+}  // namespace
+
+extern "C" {
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_create(JNIEnv*, jobject, jint preferredSampleRate) {
+    return reinterpret_cast<jlong>(new LiveSnapEngine(preferredSampleRate));
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_destroy(JNIEnv*, jobject, jlong handle) {
+    delete live(handle);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_start(JNIEnv*, jobject, jlong handle) {
+    return live(handle)->start() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_stop(JNIEnv*, jobject, jlong handle) {
+    live(handle)->stop();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_sampleRate(JNIEnv*, jobject, jlong handle) {
+    return live(handle)->sampleRate();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_needsRestart(JNIEnv*, jobject, jlong handle) {
+    return live(handle)->needsRestart() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_isShared(JNIEnv*, jobject, jlong handle) {
+    return live(handle)->isShared() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_latencyMillis(JNIEnv*, jobject, jlong handle) {
+    return live(handle)->latencyMillis();
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_pushFrame(JNIEnv* env, jobject, jlong handle, jfloatArray table) {
+    const jsize n = env->GetArrayLength(table);
+    std::vector<float> points;
+    try {
+        points.resize(static_cast<size_t>(n));
+    } catch (const std::exception&) {
+        return;
+    }
+    env->GetFloatArrayRegion(table, 0, n, points.data());
+    live(handle)->pushFrame(points.data(), static_cast<int32_t>(points.size()));
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeLiveSnap_setMacros(JNIEnv*, jobject, jlong handle, jfloat tune, jfloat bright, jfloat grit) {
+    live(handle)->setMacros(tune, bright, grit);
+}
+
+}  // extern "C"

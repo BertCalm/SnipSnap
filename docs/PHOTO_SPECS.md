@@ -3,11 +3,13 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1–§7 are now built
+one list and priced as eight sections. All eight are now built
 (`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`,
 `synth/PhotoPath.kt`, `audio/AxesProjector.kt`, `synth/Draw.kt`'s own
-`crossTable`, `synth/Spectrogram.kt`; `docs/SYNTH_ROADMAP.md` S7.3–S7.9);
-§8 is not. Each ends with the decision that is not mine to make.
+`crossTable`, `synth/Spectrogram.kt`, `app/cpp/LiveSnapEngine.cpp`;
+`docs/SYNTH_ROADMAP.md` S7.3–S7.10) — §8 with its own recommended gate
+explicitly waived, not cleared; see its own section below for what that
+means. Each ends with the decision that is not mine to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -564,6 +566,39 @@ already tested. The feel is the phone's.
 Whether to build it at all before the rest — it is the one item here
 that is a project rather than a feature. Recommended: last, and only
 once §1–§3 have been played on a phone.
+
+**Built anyway, the gate explicitly waived.** §1–§3 have not been played
+on a phone from this cloud session — there is no phone here, and no way
+to check that recommendation's own precondition; asked directly, the
+answer was to build §8 regardless. `LiveSnapEngine.cpp`/`.h` (native,
+`app/src/main/cpp/`) is the wavetable oscillator the design called for:
+`ParameterSmoother` doubling as both the three macro glides and the
+audio-rate tone filter BRIGHT drives (the note this document's own
+Design section made, made literal), a ~50 ms crossfade between tables
+through the same single-slot pointer handshake `SurfaceEngine` uses for
+its own sample swap, DECAY left unwired on purpose — a continuous voice
+never stops sounding to decay away. Its own host test suite (5 new
+cases: silence with no table, a table's own pitch once one arrives, a
+mismatched `pushFrame` length clamped rather than overrun, the crossfade
+never clicking, BRIGHT opening the filter) caught one real bug before it
+ever reached a phone — `setMacros` stored its three targets but nothing
+read them back into the smoothers, so every macro was a dead knob until
+a failing `bright_opens_the_filter` test said so. `LiveSnapVoice.kt` and
+`NativeLiveSnap.kt` are the same JNI-owner shape `SurfaceEngine.kt`
+already keeps. `LiveSnapScreen.kt` is the CameraX half named above:
+`Preview` + `ImageAnalysis` (`OUTPUT_IMAGE_FORMAT_RGBA_8888`, so a frame
+becomes a `Bitmap` without a hand-rolled YUV conversion) bound to the
+screen's own lifecycle, a downscaled `Photo` per analyzed frame feeding
+`Snap.table`/`Snap.look`/`Snap.liveCycle` into the voice, the line drawn
+over the preview, FREEZE landing through `Bitmap.toPhoto()` — the exact
+door TAKE PHOTO already opens — back onto `SnapScreen`'s own photo,
+reading and macros. **This half is unverified beyond static review and
+the native engine's own host tests**: no Android SDK reaches this
+session, so nothing about the camera permission flow, the CameraX bind,
+the preview's own look, or the live sound on a real stream has been
+run, only read. `app/README.md`'s on-device checklist says so in words,
+and is the gate this section's own build did not get to clear before
+shipping.
 
 ---
 
