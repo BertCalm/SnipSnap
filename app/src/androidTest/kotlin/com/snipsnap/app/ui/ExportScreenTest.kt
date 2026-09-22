@@ -5,14 +5,11 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.Exports
@@ -223,19 +220,24 @@ class ExportScreenTest : ComposeScreenTest() {
     }
 
     /**
-     * The whole semantics tree as text — content descriptions, visible
-     * text, and whether a node is disabled — for a failure message that
-     * shows what actually rendered instead of just naming what didn't.
-     * Only [SemanticsNode.children] and the same `getOrNull` pattern
-     * [assertReadsInFull] already uses, so no untested API.
+     * Whether each of a handful of known texts/labels is present right now
+     * — for a failure message that shows what actually rendered instead of
+     * just naming what didn't. A hand-rolled semantics-tree walk (this
+     * function's first version, over `SemanticsNode.children`) reported a
+     * near-empty tree on the one CI run that reached it, which — set
+     * against [waitForComplete] having found `Copy.EXPORT_DONE` moments
+     * earlier on the very same screen — reads as a bug in the walk, not in
+     * the screen. This uses only the `onAllNodesWithText`/
+     * `onAllNodesWithContentDescription` queries every other check in this
+     * file already relies on, so a "missing" result here means the same
+     * thing it means everywhere else in this suite.
      */
-    private fun dumpTree(node: SemanticsNode = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode(), depth: Int = 0): String {
-        val cd = node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
-        val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
-        val disabled = node.config.getOrNull(SemanticsProperties.Disabled) != null
-        val bits = listOfNotNull(cd?.let { "cd=\"$it\"" }, text?.let { "text=\"$it\"" }, "disabled".takeIf { disabled })
-        val self = if (bits.isEmpty()) null else "${"  ".repeat(depth)}- ${bits.joinToString(" ")}"
-        return (listOfNotNull(self) + node.children.map { dumpTree(it, depth + 1) }).joinToString("\n")
+    private fun presence(): String {
+        val texts = listOf(Copy.EXPORT_DONE, Copy.EXPORT_SAVED_TO)
+            .filter { compose.onAllNodesWithText(it, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        val labels = listOf(Copy.EXPORT_SHARE_LABEL, "WRITE ANOTHER ✓")
+            .filter { compose.onAllNodesWithContentDescription(it, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        return "texts present: $texts; labelled controls present: $labels; model.stage=${session?.model?.stage}"
     }
 
     @Test
@@ -318,11 +320,11 @@ class ExportScreenTest : ComposeScreenTest() {
         assertTrue("outcome.primary should be the .mid file MidiGroove.writeTo just wrote", outcome.primary.isFile)
         // Every check above passed once already (a prior CI run pinned
         // them individually) and the SHARE button still didn't render —
-        // so if this still fails, the tree dump is what finally shows why.
+        // so if this still fails, presence() is what finally shows why.
         try {
             button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
         } catch (e: Throwable) {
-            throw AssertionError("SHARE button missing for outcome=$outcome. Screen:\n${dumpTree()}", e)
+            throw AssertionError("SHARE button missing for outcome=$outcome. ${presence()}", e)
         }
 
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
