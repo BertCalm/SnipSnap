@@ -14,6 +14,8 @@ import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.SnapPatch
+import com.snipsnap.synth.crossTable
 import java.io.File
 import java.util.Random
 
@@ -211,6 +213,37 @@ object Breed {
         return names.associateWith { n -> pick(x[n], y[n], rng)!!.coerceIn(0f, 1f) }
     }
 
+    /**
+     * SNAP's own cross: [ap]'s and [bp]'s 256-point lines, crossed point
+     * by point through `crossTable` — the identical three-way coin
+     * [pick] flips for a macro, just spun once per point instead of once
+     * per name — and their envelopes likewise, [crossEnvelope]'s own
+     * "rides half the time" rule when only one parent drew one.
+     * `SnapPatch`'s own constructor refuses a flat table or a shape that
+     * never opens, so the coin gets one more full spin (table and
+     * envelope both) before falling back to A's own line verbatim —
+     * [macros] is already decided and rides through unchanged either way.
+     */
+    private fun crossSnap(ap: SnapPatch, bp: SnapPatch, macros: Map<String, Float>, rng: Random): SnapPatch {
+        repeat(2) {
+            val table = crossTable(ap.table, bp.table) { rng.nextInt(3) }
+            val envelope = crossEnvelope(ap.envelope, bp.envelope, rng)
+            try {
+                return SnapPatch(ap.name, ap.voice, macros, table, envelope)
+            } catch (e: IllegalArgumentException) {
+                // A flat table, or a shape that never opens — the coin spins again.
+            }
+        }
+        return SnapPatch(ap.name, ap.voice, macros, ap.table, ap.envelope)
+    }
+
+    /** [a]'s and [b]'s drawn envelopes, crossed point by point when both carry one — [crossMacros]'s own rule when only one parent has one at all. */
+    private fun crossEnvelope(a: IntArray?, b: IntArray?, rng: Random): IntArray? {
+        if (a == null && b == null) return null
+        if (a == null || b == null) return if (rng.nextBoolean()) (a ?: b) else null
+        return crossTable(a, b) { rng.nextInt(3) }
+    }
+
     /** The child's recipe: A's patch with crossed macros when the engines agree, and the crossed rack. */
     internal fun cross(a: PadRecipe?, b: PadRecipe?, rng: Random): PadRecipe {
         val patch: Patch? = a?.patch?.let { ap ->
@@ -218,7 +251,10 @@ object Breed {
             if (bp != null && bp.engine == ap.engine && bp.voiceName == ap.voiceName) {
                 val names = (ap.macros.keys + bp.macros.keys).toList().sorted()
                 val macros = names.associateWith { n -> pick(ap.macros[n], bp.macros[n], rng)!!.coerceIn(0f, 1f) }
-                withMacros(ap, macros)
+                // SNAP is the one engine whose "settings" are a drawn line,
+                // not knobs alone — two photos, one child means the line
+                // itself crosses too, not just the macros the photo set.
+                if (ap is SnapPatch && bp is SnapPatch) crossSnap(ap, bp, macros, rng) else withMacros(ap, macros)
             } else {
                 ap
             }

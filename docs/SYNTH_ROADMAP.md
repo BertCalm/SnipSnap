@@ -637,3 +637,42 @@ leaving a `PcaProjector`-backed field's own second principal component
 untouched. DUET's chip visibility (`projector != null`) and every other
 line of that loop needed no change — the polymorphic `.project(...)`
 call was already the only thing DUET asked of a projector.
+
+### S7.8 — BREED: two photos, one child's line
+
+`docs/PHOTO_SPECS.md` §6, built as specced. `crossTable(a: IntArray, b:
+IntArray, coin: () -> Int)`, a new top-level function beside `object
+Draw` in `Draw.kt` (not a method of `Draw` itself — crossing two lines
+is breeding arithmetic, not "the pen" `Draw`'s own KDoc says that object
+is), crosses two same-length point arrays point by point: `coin()` spun
+fresh for every point, 0 → A's own value, 1 → B's, anything else → the
+mean — the identical three-way shape `Breed.pick` already flips for a
+macro. Size-agnostic on purpose: the same function crosses a SNAP
+table's 256 points and a drawn envelope's 64. The coin is a callback
+rather than a concrete `Random` type so `Breed`'s own `java.util.Random`
+drives it directly — every other seeded function in `:synth` uses
+`kotlin.random.Random`, and `crossTable` taking a `java.util.Random`
+parameter just to suit one caller in another module would have been the
+wrong module owning the convention.
+
+`Breed.cross` (`:shell`) gained one branch: when both parents' patches
+are `SnapPatch` (already guaranteed same engine and voice by the
+surrounding check), a new private `crossSnap` crosses their tables
+through `crossTable`, and their envelopes too when both drew one — a
+new `crossEnvelope` giving a shape only one parent has the identical
+"rides half the time" treatment `crossMacros` already gives a rack
+section only one parent has. `SnapPatch`'s own constructor is the one
+place that can refuse the result (a flat table, or a shape that never
+opens), so `crossSnap` treats that refusal the way `breed()`'s own
+outer classifier audit already treats a mismatched class: one retry
+(a full fresh spin of both table and envelope), then a fallback — here,
+A's own line and shape verbatim, since a photo kit's own line is always
+a valid `SnapPatch` to begin with. The crossed macros are decided
+before any of this and ride through unconditionally, on the fallback
+path too: a table refusing to cross is not a reason to also throw away
+a macro cross that succeeded.
+
+Nothing on the SNAP or BREED screens changed — the spec's own costing
+was right about that: BREED's existing button already crosses whatever
+`Breed.cross` hands it back, and this changes only what that call
+produces for a SNAP pad.
