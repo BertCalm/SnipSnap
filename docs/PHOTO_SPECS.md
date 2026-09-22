@@ -3,11 +3,11 @@
 Written 2026-09-21, the day after PHOTO FIELD's hardening round merged
 (#292). SNAP, DRAW and PHOTO FIELD are on the default branch, each with a
 hardening pass behind it; this document is the next eight, asked for as
-one list and priced as eight sections. §1–§6 are now built
+one list and priced as eight sections. §1–§7 are now built
 (`synth/PhotoKit.kt`, `GrainVoice.startPrint`/`stopPrint`, `TiltCursor.step`,
 `synth/PhotoPath.kt`, `audio/AxesProjector.kt`, `synth/Draw.kt`'s own
-`crossTable`; `docs/SYNTH_ROADMAP.md` S7.3–S7.8); §7–§8 are not. Each
-ends with the decision that is not mine to make.
+`crossTable`, `synth/Spectrogram.kt`; `docs/SYNTH_ROADMAP.md` S7.3–S7.9);
+§8 is not. Each ends with the decision that is not mine to make.
 
 **Method, and the caution `SPECS_2026_09.md` taught.** Every "what
 exists" line below was checked against the source on the day of writing,
@@ -485,6 +485,25 @@ silence; a bright vertical line is a click at that column's time.
 
 Log or linear frequency (recommended: log), and whether it is a CLOUD
 mode or its own button.
+
+**Built as recommended (log), as its own button.** `Spectrogram.read`
+(`:synth`) builds one `FloatArray(513)` magnitude row per output frame:
+the column position is the same fractional-index linear interpolation
+`Snap.table`'s own `resample` uses for a line shorter than its table
+(never a column simply repeated), and each bin's row comes from that
+bin's own **linear** FFT frequency (`Spectral.binHz`) mapped onto the
+photo through the log scale — bin index itself is never log-spaced, only
+the row it reads from is; an earlier draft conflated the two into a
+formula that canceled itself back to a linear map, and a unit test
+(painting a target Hz's own row and probing the inverted audio with a
+Goertzel detector) caught it landing roughly an octave-and-a-half sharp
+of the tone it was supposed to be. Each frame's own quietest bins are
+floored to true zero below 5% of that frame's peak, the second knob
+(with the power curve) the cost section named for keeping a photograph
+from reading as hiss. Landed as its own SPECTRUM ▸ button beside
+FIELD ▸/CLOUD ▸/KIT ▸ — needing only the photo, not FIELD's own grid —
+through the same recipe-less texture-as-a-pad door CLOUD already uses,
+not a further `Grains.render` pass.
 
 ---
 

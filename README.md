@@ -316,6 +316,17 @@ lands it like CLOUD's texture; RING ▸ needs the kit above — the walked
 cells become a `PatternOrbit` naming its pads directly, a fresh ring on
 ORBIT that plays live and is editable afterwards like any other.
 
+SPECTRUM is the literal reading: a photo *is* already a picture of
+sound if you read it that way — columns as time, rows as frequency
+(the top row highest, the bottom ~40 Hz, log-spaced between, since
+linear would put nine tenths of the picture above 2 kHz), brightness as
+level. `Spectrogram.read` builds a magnitude grid off the photo and
+hands it to `Pghi.invert` (the same phase-gradient reconstruction
+`Pghi.stretch` already uses elsewhere) to turn it into audio, floored
+and power-curved so a photograph reads as a picture rather than hiss.
+SPECTRUM ▸ lands it like CLOUD's own texture — recipe-less audio,
+needing only the open photo, not FIELD's own grid.
+
 Effects are the same trick as CRUNCH, generalized: pads are one-shots
 rendered offline, so an effect is a pure `Snip → Snip` pass, baked into the
 WAV like it's 1993 — you sampled the reverb, you didn't rack it. PITCH
