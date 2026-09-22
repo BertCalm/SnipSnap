@@ -19,6 +19,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.ExportFormat
+import com.snipsnap.kit.ExportOutcome
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
@@ -232,12 +233,20 @@ class ExportScreenTest : ComposeScreenTest() {
      * file already relies on, so a "missing" result here means the same
      * thing it means everywhere else in this suite.
      */
-    private fun presence(): String {
+    private fun presence(outcome: ExportOutcome): String {
         val texts = listOf(Copy.EXPORT_DONE, Copy.EXPORT_SAVED_TO)
             .filter { compose.onAllNodesWithText(it, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         val labels = listOf(Copy.EXPORT_SHARE_LABEL, "WRITE ANOTHER ✓")
             .filter { compose.onAllNodesWithContentDescription(it, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        return "texts present: $texts; labelled controls present: $labels; model.stage=${session?.model?.stage}"
+        // DoneContent's own destinationPath text is `outcome?.primary?.absolutePath
+        // ?: ""` — present with this exact path only if the *composable's own*
+        // `val outcome = session.lastOutcome` read was non-null when it rendered,
+        // as opposed to a still-null read from a recomposition that ran before
+        // that assignment reached this composition's snapshot.
+        val pathRendered = compose.onAllNodesWithText(outcome.primary.absolutePath, useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty()
+        return "texts present: $texts; labelled controls present: $labels; " +
+            "destination path rendered: $pathRendered; model.stage=${session?.model?.stage}"
     }
 
     @Test
@@ -324,7 +333,7 @@ class ExportScreenTest : ComposeScreenTest() {
         try {
             button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
         } catch (e: Throwable) {
-            throw AssertionError("SHARE button missing for outcome=$outcome. ${presence()}", e)
+            throw AssertionError("SHARE button missing for outcome=$outcome. ${presence(outcome)}", e)
         }
 
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
