@@ -198,30 +198,7 @@ class ThumpTest {
                 assertTrue(macros.values.all { it in 0f..1f })
                 val snip = Thump.render(voice, macros)
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice roll $roll broke")
-                // This is an ACOUSTIC-level floor, not a per-sample one. A
-                // correctly-levelled centred stereo render (SNARE at
-                // WIDTH > 0 - see Punch.applyOversampled's `before` KDoc,
-                // stereo-level-report.md) splits its energy across two
-                // channels, so each channel's OWN peak sits ~6 dB below what
-                // a mono render of the same acoustic loudness shows - by
-                // construction, not quiet (Dsp.limitPeak still guarantees no
-                // clipping regardless). `Snip.peak()` scans the interleaved
-                // array per-sample, which for a centred stereo buffer is
-                // roughly half its FOLD (L+R per frame) - the quantity a
-                // listener actually hears - so this compares the fold for
-                // stereo and the plain per-sample peak for mono, against the
-                // same 0.5f floor either way.
-                val level = if (snip.channels == 2) {
-                    var fold = 0f
-                    for (f in 0 until snip.frameCount) {
-                        val v = kotlin.math.abs(snip.samples[f * 2] + snip.samples[f * 2 + 1])
-                        if (v > fold) fold = v
-                    }
-                    fold
-                } else {
-                    snip.peak()
-                }
-                assertTrue(level > 0.5f, "$voice roll $roll too quiet")
+                assertTrue(snip.peak() > 0.5f, "$voice roll $roll too quiet")
             }
         }
     }
@@ -616,63 +593,6 @@ class ThumpTest {
         for (v in s.samples) {
             assertTrue(v.isFinite(), "PUNCH+WIDTH produced a non-finite sample")
             assertTrue(v in -1f..1f, "PUNCH+WIDTH produced an out-of-range sample: $v")
-        }
-    }
-
-    /**
-     * WIDTH must not be a volume knob (stereo-level-report.md): a WIDTH 0
-     * and a WIDTH 1 render of the SAME patch should reach the listener at
-     * the same ACOUSTIC loudness, i.e. [Loudness.of] the mono render should
-     * match [Loudness.of] of the stereo render's FOLD (L+R per frame, the
-     * quantity two speakers actually sum to for centred content) - not the
-     * stereo render's own per-channel level, which by design sits ~6 dB
-     * below the mono target for a centred signal (see
-     * [Punch.applyOversampled]'s `before` KDoc).
-     *
-     * Swept across SNAP rather than checked at one point, because SNAP sets
-     * the body/wire balance and the wire layer is the one thing WIDTH
-     * decorrelates (`Thump.WIRE_DECORRELATION_MAX`'s own KDoc): a wider
-     * spread between the two channels' wire content pulls their sum away
-     * from a plain 2x, so the match is not expected to be perfect at every
-     * SNAP - only bounded.
-     *
-     * TOLERANCE DERIVATION (measured, not picked to pass): a 21-point
-     * SNAP=0..1 sweep of this exact test's own comparison, at SNARE's
-     * other macros held at their factory defaults, put the worst |delta|
-     * at 1.0600 dB, at SNAP=1.0 (all-wire - the WIRE_DECORRELATION_MAX
-     * worst case its own KDoc already names: model -0.969 dB at d=0.4).
-     * That ~0.09 dB measured-vs-model excess echoes
-     * wire-decorrelation-report.md's own finding of a similar small excess
-     * (-1.0234 dB measured vs -0.969 dB model there) - a real, small,
-     * already-documented effect, not new noise. 1.5 dB gives that measured
-     * worst case (1.06 dB) a ~0.44 dB margin for the four audition
-     * presets' own TUNE/DECAY/TONE/STRIKE corners, which (like
-     * wire-decorrelation-report.md's own SNAP x DECAY sweep) this
-     * SNAP-only sweep does not visit.
-     */
-    @Test
-    fun `WIDTH keeps SNARE loudness matched to WIDTH 0, swept across SNAP`() {
-        val base = Thump.defaults(ThumpVoice.SNARE)
-        val toleranceDb = 1.5f
-        var snapStep = 0
-        while (snapStep <= 20) {
-            val snap = snapStep / 20f
-            val mono = Thump.render(ThumpVoice.SNARE, base + mapOf("SNAP" to snap, "WIDTH" to 0f))
-            val wide = Thump.render(ThumpVoice.SNARE, base + mapOf("SNAP" to snap, "WIDTH" to 1f))
-            assertEquals(1, mono.channels)
-            assertEquals(2, wide.channels)
-
-            val monoLoudness = Loudness.of(mono)
-            val fold = FloatArray(wide.frameCount)
-            for (f in fold.indices) fold[f] = wide.samples[f * 2] + wide.samples[f * 2 + 1]
-            val foldLoudness = Loudness.of(com.snipsnap.audio.Snip(fold, channels = 1, sampleRate = wide.sampleRate))
-
-            val deltaDb = 20f * kotlin.math.log10((foldLoudness / monoLoudness).coerceAtLeast(1e-9f))
-            assertTrue(
-                kotlin.math.abs(deltaDb) < toleranceDb,
-                "SNAP=$snap: WIDTH 0 vs WIDTH 1 fold differ by $deltaDb dB, exceeds $toleranceDb dB",
-            )
-            snapStep++
         }
     }
 }

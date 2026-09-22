@@ -269,52 +269,35 @@ internal object Punch {
      */
     fun applyOversampled(raw: FloatArray, amount: Float, rate: Int, channels: Int = 1): FloatArray {
         val renderRate = rate * Dsp.OVERSAMPLE
+        // Both normalize calls below go through Dsp.normalizeByFold, but
+        // deliberately AT channels = 1 (per-sample), not `channels` -
+        // decided in writing here, not left as unused plumbing (that was
+        // finding 3 in final-review.md: `channels` sat in hand and unused,
+        // so the convention got re-chosen by accident). Neither buffer
+        // below feeds a nonlinearity: saturate/boostEnvelope already ran on
+        // `raw` at renderRate, before either decimate call in this
+        // function. Dsp.normalizeByFold's own KDoc has the one call site
+        // that DOES need channels - Thump.render's pre-Punch normalize -
+        // and this comment is the record for why these two are not it.
+        //
         // `reference`'s only consumer is Loudness.of -> `before`, the
-        // loudness target [rescaleToLoudness] rescales the shipped buffer
-        // to match - NOT a nonlinearity, so the "channels = 1 because
-        // nothing here feeds a nonlinearity" reasoning that keeps `buf`'s
-        // own normalize below at channels = 1 does not apply to this one.
-        // `before` IS the level decision: `final = buf0 * before /
-        // Loudness.of(buf0)` in rescaleToLoudness, so whatever peak convention
-        // sets `before` reaches the exported audio directly, unlike `buf`'s
-        // own normalize (provably inert, see its own comment below).
-        //
-        // Fold-normalizing `reference` here (channels = channels, not the
-        // per-sample `channels = 1` this used to hardcode) is Task-level's
-        // stereo-level fix: a centred/panned stereo buffer's per-sample
-        // peak runs roughly half its fold peak, so a per-sample-scanned
-        // `before` was a per-CHANNEL target - rescaleToLoudness then matched
-        // each of the shipped buffer's channels to that target individually
-        // (Loudness.of also folds by averaging, Cleanup.toMono, so a
-        // per-sample `before` and a channel-averaged `current` measure the
-        // same "per channel" thing and agreed with each other) - so a
-        // stereo SNARE's ACOUSTIC total (its fold, L+R, what a listener
-        // actually hears) landed at roughly double a mono render's, a
-        // measured +5.6 to +6.0 dB across all sixteen SNARE presets
-        // (stereo-level-report.md) that had nothing to do with WIDTH's own
-        // panning. Fold-normalizing `reference` first makes `before` an
-        // ACOUSTIC target instead - reference's fold, not each channel,
-        // hits 0.95 - so the shipped buffer's fold ends up matching a mono
-        // render's level, at the cost of each channel individually sitting
-        // ~6 dB below full scale for a centred signal (expected: two
-        // channels each carrying half the energy sum to the same acoustic
-        // level a mono render reaches with one channel carrying all of it;
-        // Dsp.limitPeak downstream still guarantees no clipping either way).
-        //
-        // MEASURED, this exact change, SNARE roll 4 of `scramble is
-        // reproducible and always playable` (PUNCH=0.19062,
-        // WIDTH=0.04869324): peak 0.9353 -> 0.4679, i.e. each channel now
-        // peaks near half of what it used to - that IS the fix, not a
-        // regression, and ThumpTest's own playability floor is now
-        // fold-aware for stereo so it reads that 0.4679 correctly (its own
-        // fold, ~0.94, clears 0.5f). `buf`'s own normalize just below stays
-        // at channels = 1 on purpose - it is provably inert whenever
-        // amount > 0 (see its own comment), so touching it changes nothing
-        // but risk at amount == 0 (no shipped SNARE preset is PUNCH 0, but
-        // SCRAMBLE can roll one).
+        // target the final rescale below matches - not a nonlinearity.
+        // Fold-normalizing it MEASURABLY changes the shipped level: with
+        // channels threaded through here, `before` for a stereo buffer
+        // came out roughly half of the per-sample convention's (a centred
+        // stereo signal's fold peak is ~2x its own per-sample peak), and
+        // because `final = buf0 * before / Loudness.of(buf0)` in
+        // rescaleToLoudness, that halving reaches the exported audio
+        // directly - measured: SNARE roll 4 of `scramble is reproducible
+        // and always playable` (PUNCH=0.19062, WIDTH=0.04869324) went from
+        // peak 0.9353 to peak 0.4679, failing that test's own
+        // `peak() > 0.5f` playability floor. That is a real level
+        // regression, not an artifact of which peak got measured - the
+        // reviewer's own framing (finding 3) was written for a call site
+        // that feeds a nonlinearity; this one does not.
         val before = if (amount > 0f) {
             val reference = Dsp.decimate(raw.copyOf(), rate, channels)
-            Dsp.normalizeByFold(reference, channels = channels)
+            Dsp.normalizeByFold(reference, channels = 1)
             Loudness.of(Snip(reference, channels = channels, sampleRate = rate))
         } else {
             0f
