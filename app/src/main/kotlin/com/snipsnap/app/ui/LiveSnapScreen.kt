@@ -60,9 +60,9 @@ import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapVoice
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.math.roundToInt
-import kotlinx.coroutines.resume
-import kotlinx.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
