@@ -676,3 +676,62 @@ Nothing on the SNAP or BREED screens changed — the spec's own costing
 was right about that: BREED's existing button already crosses whatever
 `Breed.cross` hands it back, and this changes only what that call
 produces for a SNAP pad.
+
+### S7.9 — SPECTRUM: the photo as a spectrogram
+
+`docs/PHOTO_SPECS.md` §7, built as recommended (log frequency, its own
+button). `Spectrogram.read(photo, seconds, sampleRate, seed): Snip`
+(`synth/Spectrogram.kt`, new) builds one `FloatArray(Spectral.BINS)`
+per output frame and hands the whole grid to `Pghi.invert` — a synthetic
+spectrogram grid, not a real STFT of anything, since the "signal" here
+is a picture read as one. Two axes, read differently on purpose:
+
+- **Time (columns).** Each frame's fractional photo-x position is
+  interpolated the exact way `Snap.table`'s own `resample` handles a
+  line shorter than its 256-point table — the linear-interpolation
+  else-branch, generalized from `TABLE_SIZE` to `frameCount` — so a
+  narrow photo's columns blend into each other rather than repeating in
+  a staircase.
+- **Frequency (rows).** Each magnitude bin *b* has one true frequency,
+  `Spectral.binHz(b, sampleRate)` — the plain linear FFT spacing every
+  other `:audio` caller already assumes — and *that* frequency is what
+  the log scale maps onto a photo row (~40 Hz at the bottom, Nyquist at
+  the top; linear would put nine tenths of the image above 2 kHz). The
+  bin index itself is never log-spaced.
+
+That second point was a real bug on the first pass, not a hypothetical
+one: an earlier version computed a bin's "frequency" by *inverting* the
+log-row formula as a function of the bin index — `hz(b) = 40 ×
+(nyquist/40)^(b/(BINS−1))` — then immediately fed that same `hz(b)`
+back into `ln(hz/40)/logSpan` to pick a row. The two operations are
+exact inverses of each other, so the whole thing canceled algebraically
+into a **linear** bin-to-row map, silently defeating the log scale
+entirely. It surfaced as a correctness bug, not a crash: `SpectrogramTest`
+painted a photo's row for a chosen 1000 Hz and probed the inverted
+audio with a single-bin Goertzel detector expecting energy to
+concentrate there: instead it found near-flat noise from 100 Hz up to
+5 kHz and a sharp spike around 10 kHz — the tone had landed roughly an
+octave and a half sharp of where it was painted, following the linear
+map's own bin arithmetic rather than the log scale the picture was
+drawn against. The fix reads each bin's real linear frequency via
+`Spectral.binHz` first, *then* runs that through the log-row formula —
+one direction only.
+
+The other two knobs the spec named for keeping a photograph from
+reading as hiss: `magnitude = luminance²` (a power curve, so a dark
+photo is near-silent rather than carrying a hiss floor), and each
+frame's own bins under 5% of that frame's peak floored to true zero
+before `Pghi.invert` ever sees them. `SpectrogramTest` covers all four
+of the spec's own suggested cases — a bright row's tone lands near that
+row's frequency (Goertzel probe), a black photo inverts to exact
+silence, a bright column's energy concentrates in the output's own
+middle third (a "click" at that column's time), and a non-positive
+`seconds` refuses outright — plus the regression case above.
+
+Landing is SPECTRUM ▸, a new button beside FIELD ▸/CLOUD ▸/KIT ▸ on the
+SNAP screen, needing only the open photo (not FIELD's own grid the way
+CLOUD does) — `sendSpectrumToSlot` mirrors `sendCloudToSlot` line for
+line: recipe-less audio, `DrumClass.LOOP`, the same `SlotChooserOverlay`.
+No `Grains.render` pass over the result — the texture itself is the pad,
+the same "both are recipe-less audio, as CLOUD is" reading the spec's
+own landing section offered as the simpler of its two options.

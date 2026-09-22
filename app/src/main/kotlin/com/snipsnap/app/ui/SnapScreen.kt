@@ -78,6 +78,7 @@ import com.snipsnap.synth.PhotoPath
 import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.SnapVoice
+import com.snipsnap.synth.Spectrogram
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -205,6 +206,11 @@ fun SnapScreen(
     var pathBusy by remember { mutableStateOf(false) }
     var showPathChooser by remember { mutableStateOf(false) }
     var pendingPath by remember { mutableStateOf<Pair<List<Pair<Int, Int>>, Float>?>(null) }
+
+    // SPECTRUM: the photo read as a spectrogram and inverted — needs
+    // only the photo itself, unlike CLOUD's field.
+    var spectrumBusy by remember { mutableStateOf(false) }
+    var showSpectrumChooser by remember { mutableStateOf(false) }
 
     // Nothing is heard until the first real touch, same as SYNTH: landing
     // on the tab never plays a note unasked. Taking a photo counts as one.
@@ -499,6 +505,59 @@ fun SnapScreen(
         }
     }
 
+    // SPECTRUM: the photo read as a spectrogram — columns time, rows
+    // frequency, brightness level — and inverted, landed as audio with
+    // no recipe, the same shape CLOUD's texture lands in. Needs only the
+    // photo itself, not FIELD's own grid.
+    val spectrumName = "Snap Spectrum"
+    val spectrumClass = DrumClass.LOOP
+    fun sendSpectrumToSlot(slot: Int) {
+        val e = entry ?: return
+        val p = photo ?: return
+        if (spectrumBusy) return
+        spectrumBusy = true
+        appScope.launch {
+            try {
+                val spectrum = withContext(Dispatchers.Default) { Spectrogram.read(p, seconds = 2.5f) }
+                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val alreadyThere = model.pad(slot) != null
+                        if (alreadyThere) {
+                            model.replaceAudio(slot, null) { _ -> spectrum }
+                            model.update(slot) { pd ->
+                                pd.copy(
+                                    displayName = spectrumName,
+                                    drumClass = spectrumClass,
+                                    colorHex = AutoPlace.colorFor(spectrumClass),
+                                    muteGroup = AutoPlace.muteGroupFor(spectrumClass),
+                                    recipe = null,
+                                )
+                            }
+                        } else {
+                            model.assign(slot, spectrum, spectrumClass, spectrumName)
+                        }
+                        model.save()
+                        alreadyThere to model.kit
+                    }
+                }
+                showSpectrumChooser = false
+                onKitUpdated(updatedKit)
+                onToast(Copy.synthSent(padTag(slot), spectrumName, replaced = existed))
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                if (ex is IllegalStateException || ex is IllegalArgumentException) {
+                    onToast(Copy.SYNTH_PAD_REFUSED)
+                } else {
+                    Log.e("SnapScreen", "sendSpectrumToSlot: failed", ex)
+                    onToast(Copy.SEND_FAILED)
+                }
+            } finally {
+                spectrumBusy = false
+            }
+        }
+    }
+
     // PATH's LOOP PAD ▸: the walked cells rendered as one gapless loop
     // ([PhotoPath.render]) — landed the same way CLOUD's is, audio with
     // no recipe, since a walked path has no per-cell knobs to regenerate.
@@ -575,6 +634,7 @@ fun SnapScreen(
                         buildingField -> Copy.SNAP_FIELD_BUSY
                         cloudBusy -> Copy.SNAP_CLOUD_BUSY
                         pathBusy -> Copy.SNAP_PATH_SEND_BUSY
+                        spectrumBusy -> Copy.SNAP_SPECTRUM_BUSY
                         busy -> Copy.SNAP_KIT_BUSY
                         envelope != null -> "$lineWord · SHAPE DRAWN"
                         else -> lineWord
@@ -671,6 +731,22 @@ fun SnapScreen(
                         accessibilityLabel = "PHOTO KIT",
                     ) {
                         photo?.let(onBuildKit)
+                    }
+                }
+
+                // The literal reading: the photo as a spectrogram, columns
+                // time and rows frequency, inverted to audio and landed
+                // like CLOUD's own texture — needs only the photo, not
+                // FIELD's own grid.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton(
+                        if (spectrumBusy) "…" else "SPECTRUM ▸",
+                        scheme,
+                        enabled = kit != null && photo != null && !spectrumBusy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "SPECTRUM TO PAD",
+                    ) {
+                        showSpectrumChooser = true
                     }
                 }
             }
@@ -798,6 +874,19 @@ fun SnapScreen(
                 onCancel = cancelPath,
             )
             BackHandler(onBack = cancelPath)
+        }
+
+        if (showSpectrumChooser) {
+            val cancelSpectrum = { if (!spectrumBusy) showSpectrumChooser = false }
+            SlotChooserOverlay(
+                kit = kit,
+                previewColor = Schemes.classColor(spectrumClass).tape,
+                scheme = scheme,
+                busy = spectrumBusy,
+                onPick = ::sendSpectrumToSlot,
+                onCancel = cancelSpectrum,
+            )
+            BackHandler(onBack = cancelSpectrum)
         }
     }
 }

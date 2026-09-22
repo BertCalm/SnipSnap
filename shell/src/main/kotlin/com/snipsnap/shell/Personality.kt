@@ -817,6 +817,8 @@ object Copy {
     fun pathRingMade(name: String): String = "$name ON THE RINGS."
     /** LOOP PAD ▸'s own busy line, while the walked cells render as one gapless loop — SNAP's own local busy, like FIELD's and CLOUD's, since LOOP PAD stays on this screen. */
     const val SNAP_PATH_SEND_BUSY = "WALKING THE PATH INTO A LOOP…"
+    /** SPECTRUM's busy line while the photo is read as a spectrogram and inverted — the same local-busy shape as FIELD's and CLOUD's. */
+    const val SNAP_SPECTRUM_BUSY = "READING THE PICTURE AS SOUND…"
 
     // ---- CHOP: the melodic rule (X1.3) ----
     const val MELODIC_ON = "MELODIC. THE PADS BECOME A SCALE, LOW LEFT."

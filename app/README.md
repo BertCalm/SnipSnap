@@ -233,7 +233,15 @@ logcat tag to grab when something is wrong.
   that match the drawn line's own cells — a straight diagonal should walk
   visibly across the MPC grid as it plays. CANCEL on the PATH tab should
   leave SNAP with nothing changed. Without a kit open, LOOP PAD ▸ and
-  RING ▸ should both stay disabled even with a path drawn.
+  RING ▸ should both stay disabled even with a path drawn. Then
+  SPECTRUM ▸, with a photo up (FIELD not required first): tap it, and
+  the LCD should read READING THE PICTURE AS SOUND… for a moment before
+  the slot chooser opens; the landed Snap Spectrum pad should sound
+  different for a bright, detailed photo than a dark, flat one, and a
+  photo with a strong bright band near its top (versus one near its
+  bottom) should land noticeably higher-pitched, since rows read as
+  frequency and the top is high. SPECTRUM ▸ should stay disabled without
+  a kit open or a photo taken.
 - **SURFACE**: open a kit, tap SURFACE. A finger on the pad should loop
   the first pad with pitch across and filter up; XYZ's second finger
   should open the drive with the pinch; MORPH's corners should sound

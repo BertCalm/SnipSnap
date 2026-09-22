@@ -542,6 +542,9 @@ class PersonalityTest {
         // above. The landing toasts are `pathRingMade` and `synthSent`,
         // functions, which this reflective sweep never sees.
         "SNAP_PATH_BUSY", "SNAP_PATH_SEND_BUSY",
+        // SPECTRUM's own busy line, the same *_BUSY shape as FIELD/CLOUD
+        // above — the landing toast is `synthSent`, a function.
+        "SNAP_SPECTRUM_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // CATCH A HIT's busy line while the hits are found, and its grid's
