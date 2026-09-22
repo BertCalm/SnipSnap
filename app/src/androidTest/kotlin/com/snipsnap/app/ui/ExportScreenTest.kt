@@ -19,7 +19,6 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.ExportFormat
-import com.snipsnap.kit.ExportOutcome
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
@@ -220,35 +219,6 @@ class ExportScreenTest : ComposeScreenTest() {
         tap("${target.cyclerLabel}: ${target.why}")
     }
 
-    /**
-     * Whether each of a handful of known texts/labels is present right now
-     * — for a failure message that shows what actually rendered instead of
-     * just naming what didn't. A hand-rolled semantics-tree walk (this
-     * function's first version, over `SemanticsNode.children`) reported a
-     * near-empty tree on the one CI run that reached it, which — set
-     * against [waitForComplete] having found `Copy.EXPORT_DONE` moments
-     * earlier on the very same screen — reads as a bug in the walk, not in
-     * the screen. This uses only the `onAllNodesWithText`/
-     * `onAllNodesWithContentDescription` queries every other check in this
-     * file already relies on, so a "missing" result here means the same
-     * thing it means everywhere else in this suite.
-     */
-    private fun presence(outcome: ExportOutcome): String {
-        val texts = listOf(Copy.EXPORT_DONE, Copy.EXPORT_SAVED_TO)
-            .filter { compose.onAllNodesWithText(it, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        val labels = listOf(Copy.EXPORT_SHARE_LABEL, "WRITE ANOTHER ✓")
-            .filter { compose.onAllNodesWithContentDescription(it, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        // DoneContent's own destinationPath text is `outcome?.primary?.absolutePath
-        // ?: ""` — present with this exact path only if the *composable's own*
-        // `val outcome = session.lastOutcome` read was non-null when it rendered,
-        // as opposed to a still-null read from a recomposition that ran before
-        // that assignment reached this composition's snapshot.
-        val pathRendered = compose.onAllNodesWithText(outcome.primary.absolutePath, useUnmergedTree = true)
-            .fetchSemanticsNodes().isNotEmpty()
-        return "texts present: $texts; labelled controls present: $labels; " +
-            "destination path rendered: $pathRendered; model.stage=${session?.model?.stage}"
-    }
-
     @Test
     fun writing_a_kit_reaches_complete_and_write_another_resets_it() {
         show(exportKit())
@@ -327,14 +297,25 @@ class ExportScreenTest : ComposeScreenTest() {
         assertEquals(ExportFormat.MIDI, outcome.format)
         assertNull("a MIDI outcome should carry no companion file", outcome.companion)
         assertTrue("outcome.primary should be the .mid file MidiGroove.writeTo just wrote", outcome.primary.isFile)
-        // Every check above passed once already (a prior CI run pinned
-        // them individually) and the SHARE button still didn't render —
-        // so if this still fails, presence() is what finally shows why.
-        try {
-            button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
-        } catch (e: Throwable) {
-            throw AssertionError("SHARE button missing for outcome=$outcome. ${presence(outcome)}", e)
+
+        // Two CI runs pinned every field above true and still hit "SHARE
+        // button missing", with presence() showing DoneContent's static
+        // labels rendered but its own destination-path text (empty when
+        // *its* outcome argument is null) did not: the recomposition that
+        // first satisfies waitForComplete()'s condition (Copy.EXPORT_DONE)
+        // is not reliably the same one where the SHARE conditional's own
+        // `val outcome = session.lastOutcome` read has settled. On a real
+        // device the frame clock never stops, so this gap closes within
+        // milliseconds, invisibly; this suite's hand-driven clock is
+        // precise enough to catch the frame in between. So this waits for
+        // the button itself — the same idiom every other async wait in
+        // this file already uses — rather than trusting an earlier signal
+        // to imply the whole stage has settled.
+        waitFor("the SHARE button") {
+            compose.onAllNodesWithContentDescription(Copy.EXPORT_SHARE_LABEL, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
         }
+        button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
 
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
         session!!.cardPending = CardPending(outcome, Uri.EMPTY, what)
