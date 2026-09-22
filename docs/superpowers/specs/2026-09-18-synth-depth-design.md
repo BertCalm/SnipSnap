@@ -612,6 +612,23 @@ mode 0 from centre is the last resort — that pin is what keeps the low end sol
 
 Renders for the gate: `~/Desktop/SnipSnap Audition/16 SNARE - width across its travel/`.
 
+### Measure a mono fold by AVERAGING, never by summing — 2026-09-21
+
+`Cleanup.toMono` computes `sum / channels`, and `Loudness.of` folds through it, so averaging is
+this project's convention throughout. It is also the physically correct one: a mono sample played
+centre sends `a` to both speakers, and a stereo file with `L = R = a` sends `a` to both, so
+per-channel parity IS playback parity.
+
+Summing instead inflates correlated content by exactly 6.02 dB. A controller measuring
+`L + R` rather than `(L + R) / 2` "discovered" a 6 dB stereo level bug that did not exist,
+ordered a fix for it, and shipped a real 6 dB level DROP on every wide render before the
+arithmetic was rechecked (reverted in `cf5ea629`). Under the correct convention the renders had
+been matched to within 0.14 dB all along.
+
+Verified good state: across `WIDTH` 0 / 0.5 / 1.0, avg-fold level moves at most about 1 dB
+(BACKBEAT -0.51 dB, DEEP ROOM -1.07 dB at full width), which is the wire decorrelation's own
+designed cost of `1 - d/2`, not a level defect.
+
 ### STRIKE is a hidden width control, and it outweighs WIDTH — measured 2026-09-21
 
 `Modes.atPosition` weights mode *n* by `|sin(n·pi·position)|`. Mode 0 is pinned dead centre by
