@@ -461,6 +461,54 @@ class ThumpTest {
     }
 
     @Test
+    fun `WIDTH 0 and WIDTH 1 land within tolerance of the same average-fold loudness at mid SNAP`() {
+        // Punch.applyOversampled peak-normalizes its internal `reference` buffer with
+        // Dsp.normalizeByAverageFold (max|(L+R)/channels|) - the same AVERAGE fold
+        // Loudness.of measures through Cleanup.toMono's sum/channels - rather than a
+        // per-sample scan. Before that fix, a decorrelated stereo reference's per-
+        // sample peak ran hotter than its own average-fold peak at the same fold
+        // loudness, so `before` (the target rescaleToLoudness matches) came out too
+        // quiet for WIDTH > 0 specifically, and turning WIDTH up made the whole render
+        // measurably quieter: BACKBEAT (SNAP 0.45) measured -0.57 dB at WIDTH 1 vs
+        // WIDTH 0.
+        //
+        // BACKBEAT-class presets (SNAP around 0.45) sit close enough to Dsp.limitPeak's
+        // 1.0 ceiling that they don't clip it, so the fixed `before` reaches the output
+        // directly. MEASURED with this fix in place (gradle exit 0, this exact patch):
+        // WIDTH 0 loudness 0.10048105, WIDTH 1 loudness 0.1010917, delta = +0.0526 dB.
+        // 0.3 dB is that measurement rounded up by close to 6x - room for the SNAP/
+        // TUNE/DECAY/TONE/STRIKE/PUNCH neighborhood around BACKBEAT without hiding a
+        // regression back toward the pre-fix -0.57 dB.
+        //
+        // High-SNAP presets are OUT OF SCOPE for this test, on purpose - do not widen
+        // this tolerance to also cover them. Dsp.limitPeak runs AFTER
+        // Punch.rescaleToLoudness, and once the rescaled wide buffer already exceeds
+        // the ceiling, the final loudness reduces algebraically to
+        // `ceiling * current / 0.95` - `before` cancels out of it entirely, so no
+        // change to the reference target can reach a buffer that's already clipping.
+        // DUST BURST (SNAP 0.92) stays at -3.70 dB under this same fix, unchanged to 7
+        // significant figures from before it, because its wide path clips both ways
+        // (peak 1.115 before, 1.331 after). That is a real loudness-versus-peak
+        // trade-off inherent to decorrelated content overshooting the ceiling, not a
+        // defect this test should be widened to chase - see
+        // docs/superpowers/specs/2026-09-18-synth-depth-design.md.
+        val macros = mapOf(
+            "TUNE" to 0.38f, "SNAP" to 0.45f, "DECAY" to 0.48f,
+            "TONE" to 0.50f, "STRIKE" to 0.28f, "PUNCH" to 0.55f,
+        )
+        val mono = Thump.render(ThumpVoice.SNARE, macros + ("WIDTH" to 0f))
+        val wide = Thump.render(ThumpVoice.SNARE, macros + ("WIDTH" to 1f))
+        val loudMono = Loudness.of(mono)
+        val loudWide = Loudness.of(wide)
+        val deltaDb = 20.0 * kotlin.math.log10((loudWide / loudMono).toDouble())
+        assertTrue(
+            kotlin.math.abs(deltaDb) < 0.3,
+            "BACKBEAT-class (mid SNAP) WIDTH 0 vs WIDTH 1 should land within 0.3 dB on the average fold: " +
+                "mono=$loudMono wide=$loudWide deltaDb=$deltaDb",
+        )
+    }
+
+    @Test
     fun `a wide SNARE is actually wider than a narrow one`() {
         fun sideRatio(width: Float): Float {
             val s = Thump.render(ThumpVoice.SNARE, mapOf("WIDTH" to width, "SNAP" to 0.2f))

@@ -269,35 +269,34 @@ internal object Punch {
      */
     fun applyOversampled(raw: FloatArray, amount: Float, rate: Int, channels: Int = 1): FloatArray {
         val renderRate = rate * Dsp.OVERSAMPLE
-        // Both normalize calls below go through Dsp.normalizeByFold, but
-        // deliberately AT channels = 1 (per-sample), not `channels` -
-        // decided in writing here, not left as unused plumbing (that was
-        // finding 3 in final-review.md: `channels` sat in hand and unused,
-        // so the convention got re-chosen by accident). Neither buffer
-        // below feeds a nonlinearity: saturate/boostEnvelope already ran on
-        // `raw` at renderRate, before either decimate call in this
-        // function. Dsp.normalizeByFold's own KDoc has the one call site
-        // that DOES need channels - Thump.render's pre-Punch normalize -
-        // and this comment is the record for why these two are not it.
+        // `reference`'s only consumer is Loudness.of -> `before`, the target the final
+        // rescale below matches - not a nonlinearity, so this is not the
+        // level-into-nonlinearity decision Dsp.normalizeByFold's own KDoc is about (that
+        // one is Thump.render's pre-Punch normalize). It IS, however, a
+        // crest-factor-into-loudness-measurement decision: `before` is Loudness.of(reference),
+        // and Loudness.of measures the AVERAGE fold (Cleanup.toMono's sum/channels). Peak-
+        // normalizing `reference` on anything other than that same average fold measures its
+        // crest factor on a different statistic than the one that sets `before`, and a
+        // decorrelated stereo buffer's per-sample peak runs measurably hotter than its
+        // average-fold peak at the same fold loudness (a flat per-sample scan sees two
+        // independent noise channels' extremes; the average fold only sees their sum) - so
+        // normalizing on the per-sample peak leaves `before` too quiet for decorrelated
+        // content specifically, and the whole render lands quieter once rescaleToLoudness
+        // matches it. Dsp.normalizeByAverageFold fixes that: it scans max|(L+R)/channels|,
+        // exactly the fold Loudness.of measures, so `reference`'s crest factor is judged on
+        // the same statistic its loudness will be. At channels = 1 it falls through to
+        // Dsp.normalize unchanged, so WIDTH 0 (mono, channels = 1 - see Thump.render) is
+        // byte-identical to before this change.
         //
-        // `reference`'s only consumer is Loudness.of -> `before`, the
-        // target the final rescale below matches - not a nonlinearity.
-        // Fold-normalizing it MEASURABLY changes the shipped level: with
-        // channels threaded through here, `before` for a stereo buffer
-        // came out roughly half of the per-sample convention's (a centred
-        // stereo signal's fold peak is ~2x its own per-sample peak), and
-        // because `final = buf0 * before / Loudness.of(buf0)` in
-        // rescaleToLoudness, that halving reaches the exported audio
-        // directly - measured: SNARE roll 4 of `scramble is reproducible
-        // and always playable` (PUNCH=0.19062, WIDTH=0.04869324) went from
-        // peak 0.9353 to peak 0.4679, failing that test's own
-        // `peak() > 0.5f` playability floor. That is a real level
-        // regression, not an artifact of which peak got measured - the
-        // reviewer's own framing (finding 3) was written for a call site
-        // that feeds a nonlinearity; this one does not.
+        // This is deliberately NOT Dsp.normalizeByFold(reference, channels = channels): that
+        // scans the SUM fold (max|L+R|), exactly twice the average fold Loudness.of measures
+        // - a flat 6.02 dB error, content-independent. That mistake is commit `c9d85b81`,
+        // reverted in `cf5ea629` for making things worse, not better - see
+        // Dsp.normalizeByAverageFold's own KDoc and
+        // docs/superpowers/specs/2026-09-18-synth-depth-design.md.
         val before = if (amount > 0f) {
             val reference = Dsp.decimate(raw.copyOf(), rate, channels)
-            Dsp.normalizeByFold(reference, channels = 1)
+            Dsp.normalizeByAverageFold(reference, channels = channels)
             Loudness.of(Snip(reference, channels = channels, sampleRate = rate))
         } else {
             0f
@@ -316,6 +315,12 @@ internal object Punch {
         // rescaleToLoudness itself early-returns and nothing nonlinear ran
         // - the same "correct for clip safety, not a level-into-
         // nonlinearity decision" case Dsp.normalize/limitPeak already are.
+        // Left at `channels = 1` (unlike `reference`'s own normalize above) precisely
+        // because it's inert whenever it matters: with nothing downstream measuring
+        // THIS buffer's crest factor on any fold (rescaleToLoudness immediately
+        // cancels whatever gain it applied), there is no average-fold-vs-per-sample
+        // decision to get right here the way there was for `reference` - a convention
+        // choice recorded here, not left to be re-picked by accident.
         Dsp.normalizeByFold(buf, channels = 1)
         rescaleToLoudness(buf, amount, before, rate, channels)
         return buf

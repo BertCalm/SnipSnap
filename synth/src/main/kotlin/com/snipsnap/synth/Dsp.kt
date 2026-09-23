@@ -494,6 +494,40 @@ internal object Dsp {
     }
 
     /**
+     * Peak-normalize [buf] in place to [target], scanning the per-frame AVERAGE fold
+     * (`(sum of every channel) / channels`) rather than [normalizeByFold]'s SUM fold. This
+     * is exactly what [com.snipsnap.audio.Cleanup.toMono] computes and what [Loudness.of]
+     * measures through it, so a buffer normalized here has its crest factor measured on the
+     * same fold convention its own loudness will later be judged on. Falls through to
+     * [normalize] at `channels <= 1`, where per-sample peak, sum fold and average fold are
+     * all identical - so a mono call is unchanged from today's behaviour.
+     *
+     * NOT interchangeable with [normalizeByFold]: that function's SUM fold is exactly twice
+     * this one's AVERAGE fold for any content, a flat 6.02 dB difference (see
+     * `docs/superpowers/specs/2026-09-18-synth-depth-design.md`, "Measure a mono fold by
+     * AVERAGING, never by summing"). Commit `c9d85b81` used the sum fold to normalize
+     * [Punch.applyOversampled]'s reference buffer, which measured that reference 6.02 dB
+     * quieter than [Loudness.of] would judge it, made decorrelated SNARE renders measurably
+     * quieter still, and was reverted in `cf5ea629`. This function is the corrected
+     * average-fold version of that same idea.
+     */
+    fun normalizeByAverageFold(buf: FloatArray, channels: Int = 1, target: Float = 0.95f) {
+        if (buf.isEmpty() || channels < 1) return
+        if (channels <= 1) { normalize(buf, target); return }
+        var foldPeak = 0f
+        for (f in 0 until buf.size / channels) {
+            var sum = 0f
+            for (c in 0 until channels) sum += buf[f * channels + c]
+            val avg = sum / channels
+            val a = if (avg < 0) -avg else avg
+            if (a > foldPeak) foldPeak = a
+        }
+        if (foldPeak <= 1e-9f) return
+        val g = target / foldPeak
+        for (i in buf.indices) buf[i] *= g
+    }
+
+    /**
      * Scale [buf] so its measured loudness ([Loudness.of]) hits [target],
      * then hold a sample-peak [ceiling] with [limitPeak] - [limitPeak]
      * scans raw sample magnitude, with no oversampling for inter-sample
