@@ -74,6 +74,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
+import com.snipsnap.loop.Arp
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBank
 import com.snipsnap.loop.OrbitBrush
@@ -251,6 +252,11 @@ fun OrbitScreen(
     var spanPickerOpen by remember(kitDir) { mutableStateOf(false) }
     /** SPREAD asks how many hits before it fills the ring. */
     var spreadOpen by remember(kitDir) { mutableStateOf(false) }
+    /** ARP ▸ swaps the panel for the arpeggiator: shape, octaves and gate over this ring's own PLAYS chord. */
+    var arpOpen by remember(kitDir) { mutableStateOf(false) }
+    var arpShape by remember(kitDir) { mutableStateOf(Arp.Shape.UP) }
+    var arpOctaves by remember(kitDir) { mutableStateOf(1) }
+    var arpGate by remember(kitDir) { mutableStateOf(1f) }
     /** The dice: every roll a new seed, so a roll can always be rolled again. */
     var scrambleSeed by remember(kitDir) { mutableIntStateOf(scrambleSeed) }
     // What a long-press on a square writes. [OrbitBrush.WEIGHT] is what it
@@ -691,6 +697,12 @@ fun OrbitScreen(
     fun scrambleRing(index: Int) {
         scrambleSeed += 1
         updateRing(index) { ring -> OrbitPatterns.scramble(ring, scrambleSeed) }
+    }
+
+    fun applyArp(index: Int) {
+        val s = set ?: return
+        updateRing(index) { ring -> Arp.run(s, ring, ring.pads, arpShape, arpOctaves, arpGate, seed = scrambleSeed) }
+        arpOpen = false
     }
 
     fun setSteps(index: Int, steps: Int) {
@@ -1546,6 +1558,55 @@ fun OrbitScreen(
                         }
                     }
                     TapeText("AS EVEN AS THE STEPS ALLOW: 3 ROUND 8 IS THE TRESILLO, 5 ROUND 8 THE CINQUILLO. ON THE RING'S FIRST PAD.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                } else if (arpOpen && ring != null && ring.content is PatternOrbit) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("ARPEGGIATE ${ring.name}", TapeType.pixel, scheme.ink.tape)
+                        SmallChip("CLOSE", scheme) { arpOpen = false }
+                    }
+                    TapeText(
+                        "THE CHORD IS WHATEVER PADS PLAY ON THIS RING — PICK THEM ON PLAYS, BELOW.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 2,
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        for (shape in Arp.Shape.entries) {
+                            SmallChip(shape.label, scheme, accent = shape == arpShape) { arpShape = shape }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        TapeText("OCTAVES", TapeType.pixelSmall, scheme.ink3.tape)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            for (n in Arp.OCTAVE_CHOICES) {
+                                SmallChip(n.toString(), scheme, accent = n == arpOctaves, enabled = arpShape != Arp.Shape.CHORD) { arpOctaves = n }
+                            }
+                        }
+                    }
+                    if (arpShape == Arp.Shape.CHORD) {
+                        TapeText("CHORD PLAYS EVERY NOTE AT ONCE — OCTAVES DON'T APPLY.", TapeType.pixelSmall, scheme.ink3.tape, Modifier.fillMaxWidth())
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SmallChip("−", scheme, description = "GATE SHORTER") { arpGate = (arpGate - ARP_GATE_STEP).coerceAtLeast(Arp.MIN_GATE) }
+                        Box(
+                            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET GATE TO FULL") { arpGate = 1f },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText("GATE ${(arpGate * 100).roundToInt()}%", TapeType.pixel, scheme.ink.tape)
+                        }
+                        SmallChip("+", scheme, description = "GATE LONGER") { arpGate = (arpGate + ARP_GATE_STEP).coerceAtMost(1f) }
+                    }
+                    TapeText(
+                        "EACH STEP GETS THE RUN'S NEXT NOTE, WRAPPING OR CUTTING SHORT TO FIT THE RING'S OWN STEPS. GATE SHORTENS EACH HIT INSTEAD OF LETTING IT RING OUT.",
+                        TapeType.pixelSmall,
+                        scheme.ink3.tape,
+                        Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
+                    ActionButton("APPLY ARP ▸", scheme, Modifier.fillMaxWidth(), accent = true) { applyArp(selected) }
                 } else if (ring == null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
@@ -1605,6 +1666,7 @@ fun OrbitScreen(
                             SmallChip("SPREAD", scheme) { spreadOpen = true }
                             SmallChip("CLEAR", scheme) { updateRing(selected) { OrbitPatterns.clear(it) } }
                             SmallChip("⚄ DICE", scheme, description = "ROLL THE DICE") { scrambleRing(selected) }
+                            SmallChip("ARP ▸", scheme) { arpOpen = true }
                             SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { updateRing(selected) { OrbitPatterns.turn(it, -1) } }
                             SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { updateRing(selected) { OrbitPatterns.turn(it, 1) } }
                         }
@@ -2295,6 +2357,9 @@ private const val MAX_LEVEL = 1.5f
 
 /** One tap on PAN ◀ / ▶: a quarter of the way. */
 private const val PAN_STEP = 0.25f
+
+/** One tap on GATE − / +, as a share of a step. */
+private const val ARP_GATE_STEP = 0.1f
 
 /** How long after the ear a thumb lands, taken off a REC tap along with the output buffer. */
 private const val REC_TOUCH_MS = 30
