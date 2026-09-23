@@ -629,6 +629,19 @@ Verified good state: across `WIDTH` 0 / 0.5 / 1.0, avg-fold level moves at most 
 (BACKBEAT -0.51 dB, DEEP ROOM -1.07 dB at full width), which is the wire decorrelation's own
 designed cost of `1 - d/2`, not a level defect.
 
+**A third instance of this same mistake, on the exact same buffer — 2026-09-22.** `c9d85b81`
+above is the fold this convention section is about: it made `Punch.applyOversampled`'s internal
+`reference` normalize sum-fold instead of per-sample, which is what shipped the 6 dB DROP reverted
+in `cf5ea629`. Reverting it left that normalize back at per-sample (`channels = 1`) — correct
+relative to `c9d85b81`'s sum-fold mistake, but still not the AVERAGE fold this section says is the
+project's convention throughout, and `Loudness.of` still measures average, not per-sample. That gap
+is what made `WIDTH` render measurably quieter (BACKBEAT -0.57 dB), independently of `c9d85b81` and
+not fixed by reverting it. Fixed 2026-09-22 with `Dsp.normalizeByAverageFold` — see "PUNCH's
+reference normalize was measuring the wrong crest factor" below for the mechanism and the measured
+numbers, including why DUST BURST's -3.70 dB does not move the same way. The BACKBEAT/DEEP ROOM
+numbers immediately above stand as the historical record of what was verified before this fix, not
+the current state.
+
 ### STRIKE is a hidden width control, and it outweighs WIDTH — measured 2026-09-21
 
 `Modes.atPosition` weights mode *n* by `|sin(n·pi·position)|`. Mode 0 is pinned dead centre by
@@ -675,6 +688,57 @@ over, because SNAP 1 being a genuine static burst was an explicit request.
 If width is wanted there, the lever runs the opposite way: the wires are noise, and two
 decorrelated seeds give a side/mid ratio near 1.0 — far more width than the modal body can reach.
 That is a taste decision and is deliberately not made here.
+
+### PUNCH's reference normalize was measuring the wrong crest factor — 2026-09-22
+
+Turning `WIDTH` up made THUMP SNARE render measurably quieter: −0.57 dB on BACKBEAT (SNAP 0.45),
+−3.70 dB on DUST BURST (SNAP 0.92). Traced to `Punch.applyOversampled`: it peak-normalizes an
+internal `reference` buffer, measures that reference's `Loudness.of` as `before`, then rescales
+the shaped-and-decimated output back to `before`. The normalize was a flat per-sample scan
+(`Dsp.normalize` via `channels = 1`), so its target was the reference's raw sample peak — but a
+decorrelated stereo buffer's per-sample peak runs hotter than its average-fold peak at the same
+fold loudness (two independent noise channels each contribute their own extreme to a flat scan;
+the average fold only sees their sum), so `before` came out too quiet for `WIDTH` specifically, and
+`rescaleToLoudness` faithfully matched the whole render to that too-quiet target.
+
+**Fix:** `Dsp.normalizeByAverageFold` peak-normalizes on `max` over frames of
+`|(L + R) / channels|` — the AVERAGE fold, exactly what `Loudness.of` measures through
+`Cleanup.toMono`'s `sum / channels` — instead of the per-sample scan. `reference`'s crest factor is
+now judged on the same statistic its loudness will be. At `channels = 1` it falls through to
+`Dsp.normalize` unchanged, so `WIDTH` 0 (mono, `Thump.render`'s own `channels = 1` there) is
+byte-identical to before this fix — verified by a SHA-256 digest over all sixteen shipped SNARE
+presets, unchanged across the change.
+
+Measured: BACKBEAT −0.57 dB → **+0.05 dB**. DUST BURST −3.70 dB → **unchanged**.
+
+**Why DUST BURST doesn't move, and why that's not a bug to chase:** `Dsp.limitPeak` runs
+immediately after `rescaleToLoudness` in `Thump.render`. Once the rescaled buffer's peak already
+exceeds `limitPeak`'s 1.0 ceiling, the uniform scale-down it applies makes the final loudness
+reduce algebraically to `ceiling * current / 0.95` — `before` cancels out of that ratio entirely,
+so no change to the reference target can reach a buffer that's already clipping. DUST BURST's wide
+path clips both at baseline (peak 1.115) and under this fix (peak 1.331, `before` raised from 0.097
+to 0.115) — the final loudness is identical to 7 significant figures either way
+(−3.6953833942733194 dB both times, reproduced directly against this fix). High-SNAP presets at
+high `WIDTH` therefore render measurably quieter than their `WIDTH` 0 render, and stay that way:
+decorrelated noise has a higher crest factor than correlated content, so matching its loudness to
+the pre-decorrelation reference requires overshooting the peak ceiling, and the ceiling wins. This
+is a genuine loudness-versus-peak trade-off inherent to decorrelated content — not a defect. Do not
+chase it with a soft clipper, SNAP-scaled decorrelation, or a raised ceiling; each was considered
+and rejected (see the phase-1c level-diagnosis investigation for why).
+
+**The sum-fold versus average-fold trap, a third instance.** "Measure a mono fold by AVERAGING,
+never by summing" above already has one instance of this mistake — `c9d85b81`'s `L + R` measurement
+that "found" a 6 dB bug that didn't exist and shipped a real 6 dB drop, reverted in `cf5ea629`.
+That commit's sum-fold mistake landed on the exact same `reference` buffer this section fixes: it
+changed `Punch.applyOversampled`'s normalize from `channels = 1` (per-sample, this section's bug)
+to `Dsp.normalizeByFold(reference, channels = channels)` (the SUM fold, `max|L + R|`) — exactly
+twice this fix's AVERAGE fold, a flat 6.02 dB error on top of whatever the acoustic gap already
+was, which is why it made the SNARE quieter still rather than fixing it. `Dsp.normalizeByAverageFold`
+is the corrected version of that same idea: same insight (the reference's fold statistics need to
+match what `Loudness.of` measures), the factor of two done right this time. Three instances of the
+same arithmetic slip now, all in this project: get the fold's denominator wrong by 2x and the error
+is a flat, content-independent 6.02 dB, silent until someone measures against `Loudness.of` and
+finds the mismatch.
 
 ### Two conventions worth not re-deriving
 
