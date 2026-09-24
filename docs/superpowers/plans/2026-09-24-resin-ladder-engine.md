@@ -1,12 +1,12 @@
-# AMBER Ladder Engine Implementation Plan
+# RESIN Ladder Engine Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Design:** [`docs/superpowers/specs/2026-09-24-amber-ladder-engine-design.md`](../specs/2026-09-24-amber-ladder-engine-design.md) — read it first; this plan does not repeat its reasoning, only its decisions.
+**Design:** [`docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md`](../specs/2026-09-24-resin-ladder-engine-design.md) — read it first; this plan does not repeat its reasoning, only its decisions.
 
-**Goal:** Add `Dsp.Ladder`, a measured four-pole transistor-ladder low-pass; AMBER, a ninth synth engine with three voices (BASS/LEAD/BRASS) built around it; and CONTOUR, a rack section that puts the same filter on a captured pad.
+**Goal:** Add `Dsp.Ladder`, a measured four-pole transistor-ladder low-pass; RESIN, a ninth synth engine with three voices (BASS/LEAD/BRASS) built around it; and CONTOUR, a rack section that puts the same filter on a captured pad.
 
-**Architecture:** One filter class in `Dsp.kt`. One engine file `Amber.kt` shaped exactly like `Velvet.kt`. One rack section file `Contour.kt` shaped exactly like `Ring.kt`. Registry touchpoints in `Patches.kt`, `Presets.kt`, `Velocity.kt`, `FxChain.kt`, `Treatments.kt`, `PadSheet.kt`, `SynthScreen.kt`.
+**Architecture:** One filter class in `Dsp.kt`. One engine file `Resin.kt` shaped exactly like `Velvet.kt`. One rack section file `Contour.kt` shaped exactly like `Ring.kt`. Registry touchpoints in `Patches.kt`, `Presets.kt`, `Velocity.kt`, `FxChain.kt`, `Treatments.kt`, `PadSheet.kt`, `SynthScreen.kt`.
 
 **Tech Stack:** Kotlin/JVM 2.0.21, Gradle wrapper, `kotlin.test`. No new dependencies.
 
@@ -15,7 +15,7 @@
 Paste this as the opening prompt of a fresh session on this repository:
 
 ```
-Implement docs/superpowers/plans/2026-09-24-amber-ladder-engine.md task by
+Implement docs/superpowers/plans/2026-09-24-resin-ladder-engine.md task by
 task, on branch claude/sound-design-tools-mdmrbw (restart it from the
 default branch, claude/mobile-mpc-drum-sampler-t58x74, if its PR has merged).
 Read the design spec it links first, and .claude/skills/steward/SKILL.md
@@ -42,11 +42,11 @@ file, mirroring FATHOM's entries exactly, and re-reading your diff twice.
 
 ## Global Constraints
 
-- **Naming (legal guardrail, `docs/SYNTH_ROADMAP.md`):** no trademarked names, model numbers, or near-misses, in code, comments, KDoc, presets, or commit messages. The engine is `AMBER`, voices `BASS`/`LEAD`/`BRASS`, the filter `Dsp.Ladder`, the section `contour`. Do not write the name of the company whose filter this models anywhere in the diff. The word "ladder" is the published technical term and is fine.
+- **Naming (legal guardrail, `docs/SYNTH_ROADMAP.md`):** no trademarked names, model numbers, or near-misses, in code, comments, KDoc, presets, or commit messages. The engine is `RESIN`, voices `BASS`/`LEAD`/`BRASS`, the filter `Dsp.Ladder`, the section `contour`. Do not write the name of the company whose filter this models anywhere in the diff. The word "ladder" is the published technical term and is fine.
 - **Every macro is a `Float` in `0f..1f`**, every value in that range is a sound. Clamp with `coerceIn(0f, 1f)`.
 - **Six macros per voice**, all shared: `TUNE STACK CUTOFF CREAM CONTOUR DECAY`.
 - **`TUNE` snaps to semitones** over `TUNE_SEMITONES = 24`, exactly as `Velvet.frequencyFor`.
-- **Renders are deterministic.** Phases come from `Dsp.phases(3, Dsp.seedFor("AMBER", voice.name))`. No `Random` inside `render`.
+- **Renders are deterministic.** Phases come from `Dsp.phases(3, Dsp.seedFor("RESIN", voice.name))`. No `Random` inside `render`.
 - **Oversampled.** `synthesize(voice, macros, rate)` is `internal`, called by `render` at `RATE * Dsp.OVERSAMPLE`, then `Dsp.decimate`. Same shape as `Velvet.synthesize`.
 - **Thresholds are measurements.** Every number in a test came from the design spec's measured table. If a Kotlin render misses one, print both values, write the measurement into the test's comment, and set the threshold from the measurement with ~20 % margin. Never loosen a threshold to pass without writing down what was measured.
 - **Keep each task's diff to the files it names.** No drive-by refactors.
@@ -58,17 +58,17 @@ file, mirroring FATHOM's entries exactly, and re-reading your diff twice.
 |---|---|
 | `synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt` | **Modify.** Add `class Ladder` after `class TptSvf`; update `OVERSAMPLE`'s KDoc. |
 | `synth/src/test/kotlin/com/snipsnap/synth/LadderTest.kt` | **Create.** The filter's measured suite. |
-| `synth/src/main/kotlin/com/snipsnap/synth/Amber.kt` | **Create.** Voice enum, macro specs, frequency snapping, the stack, `synthesize`, `render`. |
-| `synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt` | **Create.** Engine tests. |
-| `synth/src/main/kotlin/com/snipsnap/synth/Patches.kt` | **Modify.** `AmberPatch` + decoder branch. |
-| `synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt` | **Modify.** `is AmberPatch ->` branch + KDoc line. |
-| `synth/src/test/kotlin/com/snipsnap/synth/DeterminismTest.kt` | **Modify.** AMBER canary. |
-| `synth/src/main/kotlin/com/snipsnap/synth/AmberPresets.kt` | **Create.** 36 presets. |
-| `synth/src/test/kotlin/com/snipsnap/synth/AmberPresetsTest.kt` | **Create.** |
+| `synth/src/main/kotlin/com/snipsnap/synth/Resin.kt` | **Create.** Voice enum, macro specs, frequency snapping, the stack, `synthesize`, `render`. |
+| `synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt` | **Create.** Engine tests. |
+| `synth/src/main/kotlin/com/snipsnap/synth/Patches.kt` | **Modify.** `ResinPatch` + decoder branch. |
+| `synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt` | **Modify.** `is ResinPatch ->` branch + KDoc line. |
+| `synth/src/test/kotlin/com/snipsnap/synth/DeterminismTest.kt` | **Modify.** RESIN canary. |
+| `synth/src/main/kotlin/com/snipsnap/synth/ResinPresets.kt` | **Create.** 36 presets. |
+| `synth/src/test/kotlin/com/snipsnap/synth/ResinPresetsTest.kt` | **Create.** |
 | `synth/src/main/kotlin/com/snipsnap/synth/Presets.kt` | **Modify.** Registry. |
 | `synth/src/test/kotlin/com/snipsnap/synth/PresetsTest.kt` | **Modify.** |
 | `shell/src/test/kotlin/com/snipsnap/shell/UserPresetsTest.kt` | **Modify.** Roster. |
-| `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt` | **Modify.** `Engine.AMBER`. |
+| `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt` | **Modify.** `Engine.RESIN`. |
 | `synth/src/main/kotlin/com/snipsnap/synth/Contour.kt` | **Create.** The rack section. |
 | `synth/src/main/kotlin/com/snipsnap/synth/FxChain.kt` | **Modify.** Field, section, order KDoc. |
 | `synth/src/main/kotlin/com/snipsnap/synth/Treatments.kt` | **Modify.** `"contoured"`. |
@@ -104,7 +104,7 @@ import kotlin.test.assertTrue
 
 /**
  * The ladder's signature, pinned from the design spec's prototype
- * (docs/superpowers/specs/2026-09-24-amber-ladder-engine-design.md,
+ * (docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md,
  * "Measured, not guessed"): 24 dB/oct, a 1/(1+r) passband loss as
  * resonance rises, bounded self-oscillation past r = 4. All at the rate
  * every engine synthesises at, because that is where the filter runs.
@@ -247,7 +247,7 @@ Immediately after `class TptSvf { ... }` (before the `Biquad` KDoc), add:
      * self-oscillates at 4, the tanh pushes that slightly higher and
      * bounds it when it does. Two things this topology does that
      * [TptSvf] does not, both measured in the design spec
-     * (docs/superpowers/specs/2026-09-24-amber-ladder-engine-design.md)
+     * (docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md)
      * and pinned by `LadderTest`: the slope is 24 dB/oct, and the
      * passband drops by 1/(1+r) as resonance rises — the "thinning" that
      * makes a resonant sweep on this filter sound hollow rather than
@@ -310,21 +310,21 @@ git commit -m "Dsp.Ladder: the four-pole ladder low-pass, measured before it is 
 
 ---
 
-### Task 2: `Amber.kt` — the engine
+### Task 2: `Resin.kt` — the engine
 
 **Files:**
-- Create: `synth/src/main/kotlin/com/snipsnap/synth/Amber.kt`
-- Create: `synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt` (the first half; Task 3 adds the behaviour tests)
+- Create: `synth/src/main/kotlin/com/snipsnap/synth/Resin.kt`
+- Create: `synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt` (the first half; Task 3 adds the behaviour tests)
 
 **Interfaces:**
 - Consumes: `Dsp.RATE`, `Dsp.OVERSAMPLE`, `Dsp.lin`, `Dsp.expMap`, `Dsp.envAt`, `Dsp.keyTrack`, `Dsp.phases`, `Dsp.seedFor`, `Dsp.scrambleNear`, `Dsp.Env`, `Dsp.Ladder`, `Dsp.decimate`, `Dsp.levelTo`, `Dsp.fadeTail`, `Dsp.MELODIC_LOUDNESS_TARGET`, `MacroSpec`, `Snip`.
 - Produces:
-  - `enum class AmberVoice { BASS, LEAD, BRASS }`
-  - `Amber.TUNE_SEMITONES = 24`, `Amber.MAX_CUTOFF_HZ = 16_000f`
-  - `Amber.macrosFor / defaults / scramble / frequencyFor / render`
-  - `internal Amber.synthesize(voice, macros, rate)`, `internal Amber.stackGains(stack)`
+  - `enum class ResinVoice { BASS, LEAD, BRASS }`
+  - `Resin.TUNE_SEMITONES = 24`, `Resin.MAX_CUTOFF_HZ = 16_000f`
+  - `Resin.macrosFor / defaults / scramble / frequencyFor / render`
+  - `internal Resin.synthesize(voice, macros, rate)`, `internal Resin.stackGains(stack)`
 
-Note: `scramble` references `AmberPresets`, which Task 5 creates. Until then, write `scramble` **without** the preset branch (the `near == null && temperature < 1f` case seeds from `base`), and Task 5 restores the VELVET-shaped three-way `when`. This keeps every commit compiling.
+Note: `scramble` references `ResinPresets`, which Task 5 creates. Until then, write `scramble` **without** the preset branch (the `near == null && temperature < 1f` case seeds from `base`), and Task 5 restores the VELVET-shaped three-way `when`. This keeps every commit compiling.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -338,17 +338,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class AmberTest {
+class ResinTest {
 
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
-        for (voice in AmberVoice.entries) {
+        for (voice in ResinVoice.entries) {
             for (macros in listOf(
                 emptyMap(),
-                Amber.macrosFor(voice).associate { it.name to 0f },
-                Amber.macrosFor(voice).associate { it.name to 1f },
+                Resin.macrosFor(voice).associate { it.name to 0f },
+                Resin.macrosFor(voice).associate { it.name to 1f },
             )) {
-                val snip = Amber.render(voice, macros)
+                val snip = Resin.render(voice, macros)
                 assertTrue(snip.frameCount > 0, "$voice rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke range at $macros")
                 assertTrue(snip.peak() > 0.5f, "$voice too quiet at $macros")
@@ -361,10 +361,10 @@ class AmberTest {
 
     @Test
     fun `every voice declares exactly the six shared macros`() {
-        for (voice in AmberVoice.entries) {
+        for (voice in ResinVoice.entries) {
             assertEquals(
                 listOf("TUNE", "STACK", "CUTOFF", "CREAM", "CONTOUR", "DECAY"),
-                Amber.macrosFor(voice).map { it.name },
+                Resin.macrosFor(voice).map { it.name },
                 "$voice's macro contract",
             )
         }
@@ -372,20 +372,20 @@ class AmberTest {
 
     @Test
     fun `every voice is deterministic`() {
-        for (voice in AmberVoice.entries) {
-            val a = Amber.render(voice, mapOf("CREAM" to 0.7f))
-            val b = Amber.render(voice, mapOf("CREAM" to 0.7f))
+        for (voice in ResinVoice.entries) {
+            val a = Resin.render(voice, mapOf("CREAM" to 0.7f))
+            val b = Resin.render(voice, mapOf("CREAM" to 0.7f))
             assertTrue(a.samples.contentEquals(b.samples), "$voice: same macros must render the same bytes")
         }
     }
 
     @Test
     fun `scrambles are reproducible and stay in range`() {
-        for (voice in AmberVoice.entries) {
-            val a = Amber.scramble(voice, Random(11))
-            val b = Amber.scramble(voice, Random(11))
+        for (voice in ResinVoice.entries) {
+            val a = Resin.scramble(voice, Random(11))
+            val b = Resin.scramble(voice, Random(11))
             assertEquals(a, b, "$voice scramble should be seed-stable")
-            assertEquals(Amber.defaults(voice).keys, a.keys)
+            assertEquals(Resin.defaults(voice).keys, a.keys)
             assertTrue(a.values.all { it in 0f..1f })
         }
     }
@@ -395,9 +395,9 @@ class AmberTest {
         // The same mean-abs-diff proof VELVET/FATHOM/TONEWHEEL/VOX carry
         // (VelvetTest has the full reasoning): render() must not be a
         // native-rate synthesize() finished the same way.
-        for (voice in AmberVoice.entries) {
-            val actual = Amber.render(voice)
-            val direct = Amber.synthesize(voice, emptyMap(), Dsp.RATE)
+        for (voice in ResinVoice.entries) {
+            val actual = Resin.render(voice)
+            val direct = Resin.synthesize(voice, emptyMap(), Dsp.RATE)
             Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.fadeTail(direct)
             var diff = 0.0
@@ -411,10 +411,10 @@ class AmberTest {
 
 - [ ] **Step 2: Run it to make sure it fails**
 
-Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.AmberTest"`
-Expected: FAIL — `Unresolved reference: Amber`.
+Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.ResinTest"`
+Expected: FAIL — `Unresolved reference: Resin`.
 
-- [ ] **Step 3: Write `Amber.kt`**
+- [ ] **Step 3: Write `Resin.kt`**
 
 ```kotlin
 package com.snipsnap.synth
@@ -425,7 +425,7 @@ import kotlin.math.pow
 import kotlin.random.Random
 
 /**
- * AMBER — the ladder engine.
+ * RESIN — the ladder engine.
  *
  * VELVET is subtractive through a state-variable filter; FATHOM slides and
  * beats; neither can make the sound this engine exists for, because that
@@ -441,11 +441,11 @@ import kotlin.random.Random
  * speed together (the wah, then the snap), CREAM is the feedback. TUNE
  * snaps to semitones. One-shot stabs onto pads, like every other engine.
  *
- * Design: docs/superpowers/specs/2026-09-24-amber-ladder-engine-design.md.
+ * Design: docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md.
  */
-enum class AmberVoice { BASS, LEAD, BRASS }
+enum class ResinVoice { BASS, LEAD, BRASS }
 
-object Amber {
+object Resin {
 
     const val TUNE_SEMITONES = 24
 
@@ -457,33 +457,33 @@ object Amber {
      * awaiting a listening pass — a table edit here, not a refactor of
      * [render], same as every melodic engine.
      */
-    private val LOUDNESS_OFFSET: Map<AmberVoice, Float> = AmberVoice.entries.associateWith { 0f }
+    private val LOUDNESS_OFFSET: Map<ResinVoice, Float> = ResinVoice.entries.associateWith { 0f }
 
-    fun macrosFor(voice: AmberVoice): List<MacroSpec> = when (voice) {
-        AmberVoice.BASS -> listOf(
+    fun macrosFor(voice: ResinVoice): List<MacroSpec> = when (voice) {
+        ResinVoice.BASS -> listOf(
             MacroSpec("TUNE", 0.3f), MacroSpec("STACK", 0.5f), MacroSpec("CUTOFF", 0.35f),
             MacroSpec("CREAM", 0.35f), MacroSpec("CONTOUR", 0.4f), MacroSpec("DECAY", 0.5f),
         )
-        AmberVoice.LEAD -> listOf(
+        ResinVoice.LEAD -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("STACK", 0.8f), MacroSpec("CUTOFF", 0.55f),
             MacroSpec("CREAM", 0.5f), MacroSpec("CONTOUR", 0.5f), MacroSpec("DECAY", 0.45f),
         )
-        AmberVoice.BRASS -> listOf(
+        ResinVoice.BRASS -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("STACK", 0.6f), MacroSpec("CUTOFF", 0.4f),
             MacroSpec("CREAM", 0.3f), MacroSpec("CONTOUR", 0.75f), MacroSpec("DECAY", 0.5f),
         )
     }
 
-    fun defaults(voice: AmberVoice): Map<String, Float> =
+    fun defaults(voice: ResinVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
     /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
-    fun scramble(voice: AmberVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
+    fun scramble(voice: ResinVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
         val seed = when {
             near != null -> base + near.macros.filterKeys { it in base }
             temperature >= 1f -> base
-            else -> base + AmberPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+            else -> base + ResinPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
         }
         return Dsp.scrambleNear(seed, temperature, random)
     }
@@ -496,23 +496,23 @@ object Amber {
     internal const val CUTOFF_KEY_TRACK_AMOUNT = 0.6f
 
     /** The tuning centre of the voice's own TUNE range — see [Velvet.keyTrackReferenceHz]. */
-    private fun keyTrackReferenceHz(voice: AmberVoice): Float = frequencyFor(voice, 0.5f)
+    private fun keyTrackReferenceHz(voice: ResinVoice): Float = frequencyFor(voice, 0.5f)
 
-    fun frequencyFor(voice: AmberVoice, tune: Float): Float {
+    fun frequencyFor(voice: ResinVoice, tune: Float): Float {
         val root = when (voice) {
-            AmberVoice.BASS -> 55f     // A1
-            AmberVoice.LEAD -> 220f    // A3
-            AmberVoice.BRASS -> 110f   // A2
+            ResinVoice.BASS -> 55f     // A1
+            ResinVoice.LEAD -> 220f    // A3
+            ResinVoice.BRASS -> 110f   // A2
         }
         val semis = Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
         return root * 2f.pow(semis / 12f)
     }
 
     /** CUTOFF's floor and ceiling per voice, Hz, before key tracking. */
-    private fun cutoffRange(voice: AmberVoice): Pair<Float, Float> = when (voice) {
-        AmberVoice.BASS -> 60f to 5_000f
-        AmberVoice.LEAD -> 200f to 14_000f
-        AmberVoice.BRASS -> 120f to 9_000f
+    private fun cutoffRange(voice: ResinVoice): Pair<Float, Float> = when (voice) {
+        ResinVoice.BASS -> 60f to 5_000f
+        ResinVoice.LEAD -> 200f to 14_000f
+        ResinVoice.BRASS -> 120f to 9_000f
     }
 
     /** Naive saw from a 0..1 phase. Aliases; the render is oversampled. */
@@ -540,7 +540,7 @@ object Amber {
      * of [render] so the oversampled dispatch can be tested against a
      * native-rate render (VelvetTest has the reasoning).
      */
-    internal fun synthesize(voice: AmberVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(voice: ResinVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -576,7 +576,7 @@ object Amber {
         val ladder = Dsp.Ladder(rate)
         val env = Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
         // Seeded per voice so the stack never opens phase-locked.
-        val ph = Dsp.phases(3, Dsp.seedFor("AMBER", voice.name))
+        val ph = Dsp.phases(3, Dsp.seedFor("RESIN", voice.name))
         var p1 = ph[0]
         var p2 = ph[1]
         var p3 = ph[2]
@@ -592,7 +592,7 @@ object Amber {
         return out
     }
 
-    fun render(voice: AmberVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    fun render(voice: ResinVoice, macros: Map<String, Float> = emptyMap()): Snip {
         // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the naive
         // oscillators' and the ladder's tanh harmonics fold down above
         // 22.05 kHz instead of into the audible band, then decimate.
@@ -609,11 +609,11 @@ object Amber {
 }
 ```
 
-For this task only, replace the `else ->` branch of `scramble` with `else -> base` and leave a `// Task 5 restores the preset seed.` comment; Task 5 puts the `AmberPresets` line back.
+For this task only, replace the `else ->` branch of `scramble` with `else -> base` and leave a `// Task 5 restores the preset seed.` comment; Task 5 puts the `ResinPresets` line back.
 
 - [ ] **Step 4: Run the tests and make sure they pass**
 
-Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.AmberTest"`
+Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.ResinTest"`
 Expected: PASS, five tests.
 
 If `every voice renders clean audio…` fails on `peak > 0.5` at the all-zeros corner: that corner is BASS at 55 Hz through a 60 Hz cutoff, a near-sine. `Dsp.levelTo` can only raise a low-crest signal so far; FATHOM's DEEP passes the same floor with a sine, so this should too. If it does not, report the measured peak in the PR rather than raising the cutoff floor to dodge it.
@@ -621,8 +621,8 @@ If `every voice renders clean audio…` fails on `peak > 0.5` at the all-zeros c
 - [ ] **Step 5: Commit**
 
 ```bash
-git add synth/src/main/kotlin/com/snipsnap/synth/Amber.kt synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt
-git commit -m "AMBER: three voices through the ladder, the engine and its first tests"
+git add synth/src/main/kotlin/com/snipsnap/synth/Resin.kt synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt
+git commit -m "RESIN: three voices through the ladder, the engine and its first tests"
 ```
 
 ---
@@ -630,13 +630,13 @@ git commit -m "AMBER: three voices through the ladder, the engine and its first 
 ### Task 3: The macros do what they say — measured
 
 **Files:**
-- Modify: `synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt`
+- Modify: `synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt`
 
 These tests are the point of the engine. Each measures the macro's own promise in the render.
 
 - [ ] **Step 1: Add the tests**
 
-Append inside `class AmberTest`:
+Append inside `class ResinTest`:
 
 ```kotlin
     /** [snip] between two times, mono, for a windowed measurement. */
@@ -649,23 +649,23 @@ Append inside `class AmberTest`:
     @Test
     fun `TUNE snaps to semitones and actually tunes`() {
         val distinct = HashSet<Float>()
-        for (i in 0..100) distinct.add(Amber.frequencyFor(AmberVoice.LEAD, i / 100f))
-        assertEquals(Amber.TUNE_SEMITONES + 1, distinct.size)
+        for (i in 0..100) distinct.add(Resin.frequencyFor(ResinVoice.LEAD, i / 100f))
+        assertEquals(Resin.TUNE_SEMITONES + 1, distinct.size)
 
         // One saw, no sweep, gentle resonance: a clean pitch read.
         // LEAD 0.5 -> 1.0 is one octave, 440 Hz -> 880 Hz.
         val clean = mapOf("STACK" to 0f, "CONTOUR" to 0f, "CREAM" to 0.2f, "CUTOFF" to 0.8f)
-        val low = TestPitch.estimate(Amber.render(AmberVoice.LEAD, clean + ("TUNE" to 0.5f)), fromSec = 0.05f, windowSec = 0.2f)
-        val high = TestPitch.estimate(Amber.render(AmberVoice.LEAD, clean + ("TUNE" to 1f)), fromSec = 0.05f, windowSec = 0.2f)
+        val low = TestPitch.estimate(Resin.render(ResinVoice.LEAD, clean + ("TUNE" to 0.5f)), fromSec = 0.05f, windowSec = 0.2f)
+        val high = TestPitch.estimate(Resin.render(ResinVoice.LEAD, clean + ("TUNE" to 1f)), fromSec = 0.05f, windowSec = 0.2f)
         assertTrue(high > low * 1.8f && high < low * 2.2f, "TUNE 0.5 -> 1 is one octave: $low Hz -> $high Hz")
     }
 
     @Test
     fun `CUTOFF opens`() {
-        for (voice in AmberVoice.entries) {
+        for (voice in ResinVoice.entries) {
             val still = mapOf("CREAM" to 0f, "CONTOUR" to 0f)
-            val dark = FeatureExtractor.extract(Amber.render(voice, still + ("CUTOFF" to 0.05f)))
-            val open = FeatureExtractor.extract(Amber.render(voice, still + ("CUTOFF" to 0.95f)))
+            val dark = FeatureExtractor.extract(Resin.render(voice, still + ("CUTOFF" to 0.05f)))
+            val open = FeatureExtractor.extract(Resin.render(voice, still + ("CUTOFF" to 0.95f)))
             assertTrue(open.centroidHz > dark.centroidHz * 1.5f, "$voice CUTOFF up should brighten: ${dark.centroidHz} -> ${open.centroidHz}")
         }
     }
@@ -680,8 +680,8 @@ Append inside `class AmberTest`:
         // 0.5, 0.364 at 0.85, 0.280 at 1 - a 0.47x drop at 0.85, pinned
         // at 0.6x with margin.
         val still = mapOf("TUNE" to 0.3f, "CUTOFF" to 0.5f, "CONTOUR" to 0f, "STACK" to 0.5f)
-        val plain = FeatureExtractor.extract(Amber.render(AmberVoice.BASS, still + ("CREAM" to 0f)))
-        val creamy = FeatureExtractor.extract(Amber.render(AmberVoice.BASS, still + ("CREAM" to 0.85f)))
+        val plain = FeatureExtractor.extract(Resin.render(ResinVoice.BASS, still + ("CREAM" to 0f)))
+        val creamy = FeatureExtractor.extract(Resin.render(ResinVoice.BASS, still + ("CREAM" to 0.85f)))
         assertTrue(
             creamy.lowRatio < plain.lowRatio * 0.6f,
             "CREAM should thin the bass: lowRatio ${plain.lowRatio} -> ${creamy.lowRatio}",
@@ -701,7 +701,7 @@ Append inside `class AmberTest`:
         // is handed, so the windows are cut first and measured second.
         val still = mapOf("STACK" to 0f, "CREAM" to 0.3f, "CUTOFF" to 0.5f, "DECAY" to 0.5f)
         fun measure(contour: Float): Pair<Float, Float> {
-            val snip = Amber.render(AmberVoice.LEAD, still + ("CONTOUR" to contour))
+            val snip = Resin.render(ResinVoice.LEAD, still + ("CONTOUR" to contour))
             val head = FeatureExtractor.extract(slice(snip, 0f, 0.01f)).centroidHz
             val tail = FeatureExtractor.extract(slice(snip, snip.durationSeconds * 0.7f, snip.durationSeconds)).centroidHz
             return head to tail
@@ -718,9 +718,9 @@ Append inside `class AmberTest`:
 
     @Test
     fun `STACK thickens - the sub-octave saw takes the pitch down an octave`() {
-        val (g2Lo, g3Lo) = Amber.stackGains(0f)
-        val (g2Mid, _) = Amber.stackGains(0.5f)
-        val (g2Hi, g3Hi) = Amber.stackGains(1f)
+        val (g2Lo, g3Lo) = Resin.stackGains(0f)
+        val (g2Mid, _) = Resin.stackGains(0.5f)
+        val (g2Hi, g3Hi) = Resin.stackGains(1f)
         assertEquals(0f, g2Lo); assertEquals(0f, g3Lo)
         assertTrue(g2Mid > 0.8f, "the sub joins over the bottom half: $g2Mid")
         assertTrue(g2Hi > 0.8f && g3Hi == 1f, "the top is all three: $g2Hi, $g3Hi")
@@ -730,18 +730,18 @@ Append inside `class AmberTest`:
         // (652 -> 604 Hz: power-weighted, the fundamental dominates), so
         // the pitch detector is the honest instrument for "the sub joined".
         val still = mapOf("CUTOFF" to 0.8f, "CREAM" to 0f, "CONTOUR" to 0f, "TUNE" to 0.5f)
-        for (voice in listOf(AmberVoice.LEAD, AmberVoice.BASS)) {
-            val thin = TestPitch.estimate(Amber.render(voice, still + ("STACK" to 0f)), fromSec = 0.05f, windowSec = 0.2f)
-            val deep = TestPitch.estimate(Amber.render(voice, still + ("STACK" to 0.5f)), fromSec = 0.05f, windowSec = 0.2f)
+        for (voice in listOf(ResinVoice.LEAD, ResinVoice.BASS)) {
+            val thin = TestPitch.estimate(Resin.render(voice, still + ("STACK" to 0f)), fromSec = 0.05f, windowSec = 0.2f)
+            val deep = TestPitch.estimate(Resin.render(voice, still + ("STACK" to 0.5f)), fromSec = 0.05f, windowSec = 0.2f)
             assertTrue(thin > deep * 1.8f && thin < deep * 2.2f, "$voice: the sub should read an octave down: $thin -> $deep")
         }
     }
 
     @Test
     fun `DECAY lengthens`() {
-        for (voice in AmberVoice.entries) {
-            val short = FeatureExtractor.extract(Amber.render(voice, mapOf("DECAY" to 0.1f)))
-            val long = FeatureExtractor.extract(Amber.render(voice, mapOf("DECAY" to 0.9f)))
+        for (voice in ResinVoice.entries) {
+            val short = FeatureExtractor.extract(Resin.render(voice, mapOf("DECAY" to 0.1f)))
+            val long = FeatureExtractor.extract(Resin.render(voice, mapOf("DECAY" to 0.9f)))
             assertTrue(long.decayMs > short.decayMs * 1.5f, "$voice DECAY should stretch the note: ${short.decayMs} -> ${long.decayMs}")
         }
     }
@@ -750,64 +750,64 @@ Append inside `class AmberTest`:
     fun `factory defaults are harmonic, not noise`() {
         // No DrumClass predicted (FathomTest has the reasoning): flatness
         // measures the thing that matters.
-        for (voice in AmberVoice.entries) {
-            val f = FeatureExtractor.extract(Amber.render(voice))
+        for (voice in ResinVoice.entries) {
+            val f = FeatureExtractor.extract(Resin.render(voice))
             assertTrue(f.flatness < 0.2f, "$voice should measure harmonic, got flatness ${f.flatness}")
         }
     }
 
     @Test
     fun `scramble honors temperature and near`() {
-        val voice = AmberVoice.LEAD
-        val base = Amber.defaults(voice)
-        assertEquals(base, Amber.scramble(voice, Random(3), temperature = 0f, near = null).let { base }, "temperature 0 is the seed")
-        val near = AmberPatch("X", voice, mapOf("CREAM" to 0.9f))
-        val nearRoll = Amber.scramble(voice, Random(3), temperature = 0f, near = near)
+        val voice = ResinVoice.LEAD
+        val base = Resin.defaults(voice)
+        assertEquals(base, Resin.scramble(voice, Random(3), temperature = 0f, near = null).let { base }, "temperature 0 is the seed")
+        val near = ResinPatch("X", voice, mapOf("CREAM" to 0.9f))
+        val nearRoll = Resin.scramble(voice, Random(3), temperature = 0f, near = near)
         assertEquals(0.9f, nearRoll["CREAM"], "near seeds the roll")
     }
 ```
 
-The last test needs `AmberPatch` (Task 4). Add it in Task 4's step 1 instead if you are running strictly task by task; it is listed here so the macro suite reads as one unit.
+The last test needs `ResinPatch` (Task 4). Add it in Task 4's step 1 instead if you are running strictly task by task; it is listed here so the macro suite reads as one unit.
 
 - [ ] **Step 2: Run the tests**
 
-Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.AmberTest"`
+Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.ResinTest"`
 Expected: PASS. Each threshold has margin over the spec's numbers; on a miss, apply the Global Constraints rule and record the measurement in the test comment.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt
-git commit -m "AMBER's macros keep their promises: CREAM thins, CONTOUR sweeps, STACK thickens"
+git add synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt
+git commit -m "RESIN's macros keep their promises: CREAM thins, CONTOUR sweeps, STACK thickens"
 ```
 
 ---
 
-### Task 4: `AmberPatch` — an AMBER pad survives `kit.json`
+### Task 4: `ResinPatch` — a RESIN pad survives `kit.json`
 
 **Files:**
 - Modify: `synth/src/main/kotlin/com/snipsnap/synth/Patches.kt`
 - Modify: `synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt`
 - Modify: `synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt` (KDoc only)
-- Modify: `synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt`, `DeterminismTest.kt`
+- Modify: `synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt`, `DeterminismTest.kt`
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `AmberTest`:
+Append to `ResinTest`:
 
 ```kotlin
     @Test
-    fun `an AMBER patch round-trips through JSON`() {
-        val patch = AmberPatch("Cream Test", AmberVoice.BRASS, mapOf("CONTOUR" to 0.9f, "CREAM" to 0.4f))
+    fun `a RESIN patch round-trips through JSON`() {
+        val patch = ResinPatch("Cream Test", ResinVoice.BRASS, mapOf("CONTOUR" to 0.9f, "CREAM" to 0.4f))
         val restored = Patches.fromJsonText(patch.toJsonText())
         assertEquals(patch, restored)
         assertTrue(patch.render().samples.contentEquals(restored.render().samples))
     }
 
     @Test
-    fun `an AMBER patch rejects a macro the voice does not have`() {
+    fun `a RESIN patch rejects a macro the voice does not have`() {
         kotlin.test.assertFailsWith<IllegalArgumentException> {
-            AmberPatch("Bad", AmberVoice.BASS, mapOf("GLIDE" to 0.5f))
+            ResinPatch("Bad", ResinVoice.BASS, mapOf("GLIDE" to 0.5f))
         }
     }
 ```
@@ -816,44 +816,44 @@ Add to `DeterminismTest`, after the FATHOM canary:
 
 ```kotlin
     @Test
-    fun `AMBER is byte-identical across renders`() {
-        val patch = AmberPatch("Canary", AmberVoice.LEAD, Amber.defaults(AmberVoice.LEAD))
+    fun `RESIN is byte-identical across renders`() {
+        val patch = ResinPatch("Canary", ResinVoice.LEAD, Resin.defaults(ResinVoice.LEAD))
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
 ```
 
-(Task 5 may switch it to `AmberPresets.forVoice(AmberVoice.LEAD).first()` for parity with the others; either is a real `render()` path.) Update that file's comment listing the engines that call `Dsp.seedFor` to include `Amber.kt`.
+(Task 5 may switch it to `ResinPresets.forVoice(ResinVoice.LEAD).first()` for parity with the others; either is a real `render()` path.) Update that file's comment listing the engines that call `Dsp.seedFor` to include `Resin.kt`.
 
 - [ ] **Step 2: Run to see the compile failure**
 
-Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.AmberTest"`
-Expected: FAIL — `Unresolved reference: AmberPatch`.
+Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.ResinTest"`
+Expected: FAIL — `Unresolved reference: ResinPatch`.
 
-- [ ] **Step 3: Add `AmberPatch` to `Patches.kt`**
+- [ ] **Step 3: Add `ResinPatch` to `Patches.kt`**
 
 After `FathomPatch`'s class, mirroring it exactly:
 
 ```kotlin
-/** A saved AMBER sound. */
-data class AmberPatch(
+/** A saved RESIN sound. */
+data class ResinPatch(
     override val name: String,
-    val voice: AmberVoice,
+    val voice: ResinVoice,
     override val macros: Map<String, Float>,
 ) : Patch {
     init {
-        Patches.validateMacros(this, Amber.macrosFor(voice))
+        Patches.validateMacros(this, Resin.macrosFor(voice))
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Amber.render(voice, macros)
+    override fun render() = Resin.render(voice, macros)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     companion object {
-        const val ENGINE = "AMBER"
+        const val ENGINE = "RESIN"
         fun fromJsonValue(value: JsonValue): Patch =
-            Patches.decode(value, ENGINE, { n -> AmberVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
-                AmberPatch(name, voice, macros)
+            Patches.decode(value, ENGINE, { n -> ResinVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                ResinPatch(name, voice, macros)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }
@@ -863,7 +863,7 @@ data class AmberPatch(
 And one branch in `Patches.fromJsonValue`'s `when`, after `FathomPatch.ENGINE`:
 
 ```kotlin
-            AmberPatch.ENGINE -> AmberPatch.fromJsonValue(value)
+            ResinPatch.ENGINE -> ResinPatch.fromJsonValue(value)
 ```
 
 - [ ] **Step 4: The sealed `when` in `Velocity.kt`**
@@ -871,14 +871,14 @@ And one branch in `Patches.fromJsonValue`'s `when`, after `FathomPatch.ENGINE`:
 `Patch` is a sealed interface, so `Velocity.macroSpecsFor`'s `when` stops compiling until it knows the new type. After `is FathomPatch -> Fathom.macrosFor(patch.voice)` add:
 
 ```kotlin
-        is AmberPatch -> Amber.macrosFor(patch.voice)
+        is ResinPatch -> Resin.macrosFor(patch.voice)
 ```
 
-In the `BRIGHTNESS_MACROS` KDoc, change the CUTOFF bullet's parenthetical to `(VELVET all voices; FATHOM all voices; AMBER all voices)` — AMBER's soft zone is its cutoff, found by name, no other change.
+In the `BRIGHTNESS_MACROS` KDoc, change the CUTOFF bullet's parenthetical to `(VELVET all voices; FATHOM all voices; RESIN all voices)` — RESIN's soft zone is its cutoff, found by name, no other change.
 
 - [ ] **Step 5: `Dsp.OVERSAMPLE`'s KDoc**
 
-Change `All 8 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel], [Vox], [Pluck], [Skin] - are wired` to `All 9 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel], [Vox], [Pluck], [Skin], [Amber] - are wired`, and append a sentence: `Amber, like Skin, was born wired to it.`
+Change `All 8 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel], [Vox], [Pluck], [Skin] - are wired` to `All 9 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel], [Vox], [Pluck], [Skin], [Resin] - are wired`, and append a sentence: `Resin, like Skin, was born wired to it.`
 
 - [ ] **Step 6: Run the module's tests**
 
@@ -888,8 +888,8 @@ Expected: PASS. (`PadRecipeTest` and `ExportRegressionTest` exercise `Patches.fr
 - [ ] **Step 7: Commit**
 
 ```bash
-git add synth/src/main/kotlin/com/snipsnap/synth/Patches.kt synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt synth/src/test/kotlin/com/snipsnap/synth/AmberTest.kt synth/src/test/kotlin/com/snipsnap/synth/DeterminismTest.kt
-git commit -m "AmberPatch: an AMBER pad regenerates from kit.json like every other engine's"
+git add synth/src/main/kotlin/com/snipsnap/synth/Patches.kt synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt synth/src/test/kotlin/com/snipsnap/synth/ResinTest.kt synth/src/test/kotlin/com/snipsnap/synth/DeterminismTest.kt
+git commit -m "ResinPatch: a RESIN pad regenerates from kit.json like every other engine's"
 ```
 
 ---
@@ -897,35 +897,35 @@ git commit -m "AmberPatch: an AMBER pad regenerates from kit.json like every oth
 ### Task 5: Thirty-six factory presets
 
 **Files:**
-- Create: `synth/src/main/kotlin/com/snipsnap/synth/AmberPresets.kt`
-- Create: `synth/src/test/kotlin/com/snipsnap/synth/AmberPresetsTest.kt`
-- Modify: `synth/src/main/kotlin/com/snipsnap/synth/Amber.kt` (restore `scramble`'s preset seed), `Presets.kt`
+- Create: `synth/src/main/kotlin/com/snipsnap/synth/ResinPresets.kt`
+- Create: `synth/src/test/kotlin/com/snipsnap/synth/ResinPresetsTest.kt`
+- Modify: `synth/src/main/kotlin/com/snipsnap/synth/Resin.kt` (restore `scramble`'s preset seed), `Presets.kt`
 - Modify: `synth/src/test/kotlin/com/snipsnap/synth/PresetsTest.kt`, `shell/src/test/kotlin/com/snipsnap/shell/UserPresetsTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
-`AmberPresetsTest.kt` is `VelvetPresetsTest.kt` with the names swapped (`AmberVoice`, `AmberPresets`, `AmberPatch`) and this KDoc:
+`ResinPresetsTest.kt` is `VelvetPresetsTest.kt` with the names swapped (`ResinVoice`, `ResinPresets`, `ResinPatch`) and this KDoc:
 
 ```kotlin
 /**
- * U1 of `docs/SYNTH_UPGRADE.md`, AMBER's turn: twelve presets per voice
- * (thirty-six total). No classifier identity check — every AMBER voice is
+ * U1 of `docs/SYNTH_UPGRADE.md`, RESIN's turn: twelve presets per voice
+ * (thirty-six total). No classifier identity check — every RESIN voice is
  * statically TONAL in `SynthScreen`'s mapping, like VELVET's — so this is
  * the rest of the playability contract: a real, clean sound; a faithful
  * JSON round-trip; listbox-legal names under the naming rule. Authored
- * from `Amber.kt`'s DSP (the STACK curve, CONTOUR's octave sweep,
+ * from `Resin.kt`'s DSP (the STACK curve, CONTOUR's octave sweep,
  * CREAM's 1/(1+r) thinning), not by ear.
  */
 ```
 
-Also add to `PresetsTest`: an `assertEquals(AmberPresets.forVoice(AmberVoice.LEAD), Presets.forVoice("AMBER", "LEAD"))` beside the FATHOM line, and `+ AmberPresets.all()` in the `all()` sum. In `UserPresetsTest`'s `voices` list add `"AMBER" to AmberVoice.entries.map { it.name },` with the import.
+Also add to `PresetsTest`: an `assertEquals(ResinPresets.forVoice(ResinVoice.LEAD), Presets.forVoice("RESIN", "LEAD"))` beside the FATHOM line, and `+ ResinPresets.all()` in the `all()` sum. In `UserPresetsTest`'s `voices` list add `"RESIN" to ResinVoice.entries.map { it.name },` with the import.
 
 - [ ] **Step 2: Run to see it fail**
 
-Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.AmberPresetsTest"`
-Expected: FAIL — `Unresolved reference: AmberPresets`.
+Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.ResinPresetsTest"`
+Expected: FAIL — `Unresolved reference: ResinPresets`.
 
-- [ ] **Step 3: Write `AmberPresets.kt`**
+- [ ] **Step 3: Write `ResinPresets.kt`**
 
 Macro order in every line: `TUNE, STACK, CUTOFF, CREAM, CONTOUR, DECAY`.
 
@@ -933,70 +933,70 @@ Macro order in every line: `TUNE, STACK, CUTOFF, CREAM, CONTOUR, DECAY`.
 package com.snipsnap.synth
 
 /**
- * AMBER's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
+ * RESIN's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
  * Twelve per voice, thirty-six total, spread across STACK (thin → deep →
  * fat), CUTOFF, CREAM (the top sings) and CONTOUR (the wah, then the
- * snap). Authored from `Amber.kt`'s DSP, not by ear, and checked by
- * [AmberPresetsTest]. Named for what they sound like — never for the
+ * snap). Authored from `Resin.kt`'s DSP, not by ear, and checked by
+ * [ResinPresetsTest]. Named for what they sound like — never for the
  * machine whose filter this is — per the naming rule.
  */
-object AmberPresets {
+object ResinPresets {
 
-    private fun p(voice: AmberVoice, name: String, vararg macros: Pair<String, Float>) =
-        AmberPatch(name, voice, macros.toMap())
+    private fun p(voice: ResinVoice, name: String, vararg macros: Pair<String, Float>) =
+        ResinPatch(name, voice, macros.toMap())
 
-    fun forVoice(voice: AmberVoice): List<AmberPatch> = when (voice) {
-        AmberVoice.BASS -> bassPresets
-        AmberVoice.LEAD -> leadPresets
-        AmberVoice.BRASS -> brassPresets
+    fun forVoice(voice: ResinVoice): List<ResinPatch> = when (voice) {
+        ResinVoice.BASS -> bassPresets
+        ResinVoice.LEAD -> leadPresets
+        ResinVoice.BRASS -> brassPresets
     }
 
-    fun all(): List<AmberPatch> = AmberVoice.entries.flatMap { forVoice(it) }
+    fun all(): List<ResinPatch> = ResinVoice.entries.flatMap { forVoice(it) }
 
     private val bassPresets = listOf(
-        p(AmberVoice.BASS, "DEEP CREAM", "TUNE" to 0.2f, "STACK" to 0.5f, "CUTOFF" to 0.3f, "CREAM" to 0.45f, "CONTOUR" to 0.35f, "DECAY" to 0.55f),
-        p(AmberVoice.BASS, "SUB WOOD", "TUNE" to 0.1f, "STACK" to 0.55f, "CUTOFF" to 0.2f, "CREAM" to 0.2f, "CONTOUR" to 0.2f, "DECAY" to 0.6f),
-        p(AmberVoice.BASS, "ROUND SUB", "TUNE" to 0.15f, "STACK" to 0.45f, "CUTOFF" to 0.25f, "CREAM" to 0.3f, "CONTOUR" to 0.25f, "DECAY" to 0.5f),
-        p(AmberVoice.BASS, "WARM STACK", "TUNE" to 0.3f, "STACK" to 0.7f, "CUTOFF" to 0.35f, "CREAM" to 0.35f, "CONTOUR" to 0.4f, "DECAY" to 0.5f),
-        p(AmberVoice.BASS, "FAT BOTTOM", "TUNE" to 0.25f, "STACK" to 0.95f, "CUTOFF" to 0.4f, "CREAM" to 0.3f, "CONTOUR" to 0.45f, "DECAY" to 0.45f),
-        p(AmberVoice.BASS, "SLOW SWELL", "TUNE" to 0.2f, "STACK" to 0.6f, "CUTOFF" to 0.3f, "CREAM" to 0.5f, "CONTOUR" to 0.15f, "DECAY" to 0.8f),
-        p(AmberVoice.BASS, "RUBBER BOOM", "TUNE" to 0.35f, "STACK" to 0.4f, "CUTOFF" to 0.45f, "CREAM" to 0.6f, "CONTOUR" to 0.7f, "DECAY" to 0.35f),
-        p(AmberVoice.BASS, "HOLLOW LOW", "TUNE" to 0.3f, "STACK" to 0.85f, "CUTOFF" to 0.3f, "CREAM" to 0.55f, "CONTOUR" to 0.3f, "DECAY" to 0.5f),
-        p(AmberVoice.BASS, "TIGHT KNOCK", "TUNE" to 0.4f, "STACK" to 0.3f, "CUTOFF" to 0.5f, "CREAM" to 0.4f, "CONTOUR" to 0.85f, "DECAY" to 0.2f),
-        p(AmberVoice.BASS, "DARK DRONE", "TUNE" to 0.05f, "STACK" to 0.5f, "CUTOFF" to 0.15f, "CREAM" to 0.25f, "CONTOUR" to 0.1f, "DECAY" to 0.9f),
-        p(AmberVoice.BASS, "SINGING LOW", "TUNE" to 0.3f, "STACK" to 0.2f, "CUTOFF" to 0.35f, "CREAM" to 0.95f, "CONTOUR" to 0.5f, "DECAY" to 0.5f),
-        p(AmberVoice.BASS, "THICK BUTTER", "TUNE" to 0.25f, "STACK" to 0.8f, "CUTOFF" to 0.3f, "CREAM" to 0.65f, "CONTOUR" to 0.4f, "DECAY" to 0.55f),
+        p(ResinVoice.BASS, "DEEP CREAM", "TUNE" to 0.2f, "STACK" to 0.5f, "CUTOFF" to 0.3f, "CREAM" to 0.45f, "CONTOUR" to 0.35f, "DECAY" to 0.55f),
+        p(ResinVoice.BASS, "SUB WOOD", "TUNE" to 0.1f, "STACK" to 0.55f, "CUTOFF" to 0.2f, "CREAM" to 0.2f, "CONTOUR" to 0.2f, "DECAY" to 0.6f),
+        p(ResinVoice.BASS, "ROUND SUB", "TUNE" to 0.15f, "STACK" to 0.45f, "CUTOFF" to 0.25f, "CREAM" to 0.3f, "CONTOUR" to 0.25f, "DECAY" to 0.5f),
+        p(ResinVoice.BASS, "WARM STACK", "TUNE" to 0.3f, "STACK" to 0.7f, "CUTOFF" to 0.35f, "CREAM" to 0.35f, "CONTOUR" to 0.4f, "DECAY" to 0.5f),
+        p(ResinVoice.BASS, "FAT BOTTOM", "TUNE" to 0.25f, "STACK" to 0.95f, "CUTOFF" to 0.4f, "CREAM" to 0.3f, "CONTOUR" to 0.45f, "DECAY" to 0.45f),
+        p(ResinVoice.BASS, "SLOW SWELL", "TUNE" to 0.2f, "STACK" to 0.6f, "CUTOFF" to 0.3f, "CREAM" to 0.5f, "CONTOUR" to 0.15f, "DECAY" to 0.8f),
+        p(ResinVoice.BASS, "RUBBER BOOM", "TUNE" to 0.35f, "STACK" to 0.4f, "CUTOFF" to 0.45f, "CREAM" to 0.6f, "CONTOUR" to 0.7f, "DECAY" to 0.35f),
+        p(ResinVoice.BASS, "HOLLOW LOW", "TUNE" to 0.3f, "STACK" to 0.85f, "CUTOFF" to 0.3f, "CREAM" to 0.55f, "CONTOUR" to 0.3f, "DECAY" to 0.5f),
+        p(ResinVoice.BASS, "TIGHT KNOCK", "TUNE" to 0.4f, "STACK" to 0.3f, "CUTOFF" to 0.5f, "CREAM" to 0.4f, "CONTOUR" to 0.85f, "DECAY" to 0.2f),
+        p(ResinVoice.BASS, "DARK DRONE", "TUNE" to 0.05f, "STACK" to 0.5f, "CUTOFF" to 0.15f, "CREAM" to 0.25f, "CONTOUR" to 0.1f, "DECAY" to 0.9f),
+        p(ResinVoice.BASS, "SINGING LOW", "TUNE" to 0.3f, "STACK" to 0.2f, "CUTOFF" to 0.35f, "CREAM" to 0.95f, "CONTOUR" to 0.5f, "DECAY" to 0.5f),
+        p(ResinVoice.BASS, "THICK BUTTER", "TUNE" to 0.25f, "STACK" to 0.8f, "CUTOFF" to 0.3f, "CREAM" to 0.65f, "CONTOUR" to 0.4f, "DECAY" to 0.55f),
     )
 
     private val leadPresets = listOf(
-        p(AmberVoice.LEAD, "SOLO CREAM", "TUNE" to 0.5f, "STACK" to 0.8f, "CUTOFF" to 0.55f, "CREAM" to 0.55f, "CONTOUR" to 0.5f, "DECAY" to 0.45f),
-        p(AmberVoice.LEAD, "SCREAM LEAD", "TUNE" to 0.6f, "STACK" to 0.9f, "CUTOFF" to 0.7f, "CREAM" to 0.9f, "CONTOUR" to 0.6f, "DECAY" to 0.4f),
-        p(AmberVoice.LEAD, "WOOD FLUTE", "TUNE" to 0.7f, "STACK" to 0.1f, "CUTOFF" to 0.35f, "CREAM" to 0.3f, "CONTOUR" to 0.2f, "DECAY" to 0.5f),
-        p(AmberVoice.LEAD, "THIN SAW", "TUNE" to 0.5f, "STACK" to 0f, "CUTOFF" to 0.8f, "CREAM" to 0.2f, "CONTOUR" to 0.3f, "DECAY" to 0.4f),
-        p(AmberVoice.LEAD, "FAT LEAD", "TUNE" to 0.4f, "STACK" to 1f, "CUTOFF" to 0.5f, "CREAM" to 0.45f, "CONTOUR" to 0.45f, "DECAY" to 0.5f),
-        p(AmberVoice.LEAD, "SQUARE SING", "TUNE" to 0.55f, "STACK" to 0.75f, "CUTOFF" to 0.45f, "CREAM" to 0.95f, "CONTOUR" to 0.35f, "DECAY" to 0.5f),
-        p(AmberVoice.LEAD, "LASER ZAP", "TUNE" to 0.8f, "STACK" to 0.3f, "CUTOFF" to 0.9f, "CREAM" to 1f, "CONTOUR" to 1f, "DECAY" to 0.15f),
-        p(AmberVoice.LEAD, "SOFT WHISTLE", "TUNE" to 0.75f, "STACK" to 0.05f, "CUTOFF" to 0.3f, "CREAM" to 0.85f, "CONTOUR" to 0.1f, "DECAY" to 0.6f),
-        p(AmberVoice.LEAD, "BRIGHT STACK", "TUNE" to 0.5f, "STACK" to 0.85f, "CUTOFF" to 0.85f, "CREAM" to 0.35f, "CONTOUR" to 0.55f, "DECAY" to 0.4f),
-        p(AmberVoice.LEAD, "SLOW OPENER", "TUNE" to 0.45f, "STACK" to 0.7f, "CUTOFF" to 0.25f, "CREAM" to 0.5f, "CONTOUR" to 0.05f, "DECAY" to 0.85f),
-        p(AmberVoice.LEAD, "NASAL LEAD", "TUNE" to 0.55f, "STACK" to 0.6f, "CUTOFF" to 0.4f, "CREAM" to 0.7f, "CONTOUR" to 0.8f, "DECAY" to 0.35f),
-        p(AmberVoice.LEAD, "GLASS SING", "TUNE" to 0.65f, "STACK" to 0.35f, "CUTOFF" to 0.6f, "CREAM" to 0.9f, "CONTOUR" to 0.65f, "DECAY" to 0.45f),
+        p(ResinVoice.LEAD, "SOLO CREAM", "TUNE" to 0.5f, "STACK" to 0.8f, "CUTOFF" to 0.55f, "CREAM" to 0.55f, "CONTOUR" to 0.5f, "DECAY" to 0.45f),
+        p(ResinVoice.LEAD, "SCREAM LEAD", "TUNE" to 0.6f, "STACK" to 0.9f, "CUTOFF" to 0.7f, "CREAM" to 0.9f, "CONTOUR" to 0.6f, "DECAY" to 0.4f),
+        p(ResinVoice.LEAD, "WOOD FLUTE", "TUNE" to 0.7f, "STACK" to 0.1f, "CUTOFF" to 0.35f, "CREAM" to 0.3f, "CONTOUR" to 0.2f, "DECAY" to 0.5f),
+        p(ResinVoice.LEAD, "THIN SAW", "TUNE" to 0.5f, "STACK" to 0f, "CUTOFF" to 0.8f, "CREAM" to 0.2f, "CONTOUR" to 0.3f, "DECAY" to 0.4f),
+        p(ResinVoice.LEAD, "FAT LEAD", "TUNE" to 0.4f, "STACK" to 1f, "CUTOFF" to 0.5f, "CREAM" to 0.45f, "CONTOUR" to 0.45f, "DECAY" to 0.5f),
+        p(ResinVoice.LEAD, "SQUARE SING", "TUNE" to 0.55f, "STACK" to 0.75f, "CUTOFF" to 0.45f, "CREAM" to 0.95f, "CONTOUR" to 0.35f, "DECAY" to 0.5f),
+        p(ResinVoice.LEAD, "LASER ZAP", "TUNE" to 0.8f, "STACK" to 0.3f, "CUTOFF" to 0.9f, "CREAM" to 1f, "CONTOUR" to 1f, "DECAY" to 0.15f),
+        p(ResinVoice.LEAD, "SOFT WHISTLE", "TUNE" to 0.75f, "STACK" to 0.05f, "CUTOFF" to 0.3f, "CREAM" to 0.85f, "CONTOUR" to 0.1f, "DECAY" to 0.6f),
+        p(ResinVoice.LEAD, "BRIGHT STACK", "TUNE" to 0.5f, "STACK" to 0.85f, "CUTOFF" to 0.85f, "CREAM" to 0.35f, "CONTOUR" to 0.55f, "DECAY" to 0.4f),
+        p(ResinVoice.LEAD, "SLOW OPENER", "TUNE" to 0.45f, "STACK" to 0.7f, "CUTOFF" to 0.25f, "CREAM" to 0.5f, "CONTOUR" to 0.05f, "DECAY" to 0.85f),
+        p(ResinVoice.LEAD, "NASAL LEAD", "TUNE" to 0.55f, "STACK" to 0.6f, "CUTOFF" to 0.4f, "CREAM" to 0.7f, "CONTOUR" to 0.8f, "DECAY" to 0.35f),
+        p(ResinVoice.LEAD, "GLASS SING", "TUNE" to 0.65f, "STACK" to 0.35f, "CUTOFF" to 0.6f, "CREAM" to 0.9f, "CONTOUR" to 0.65f, "DECAY" to 0.45f),
     )
 
     private val brassPresets = listOf(
-        p(AmberVoice.BRASS, "BIG BRASS", "TUNE" to 0.4f, "STACK" to 0.7f, "CUTOFF" to 0.4f, "CREAM" to 0.3f, "CONTOUR" to 0.75f, "DECAY" to 0.5f),
-        p(AmberVoice.BRASS, "SOFT HORN", "TUNE" to 0.35f, "STACK" to 0.5f, "CUTOFF" to 0.3f, "CREAM" to 0.2f, "CONTOUR" to 0.45f, "DECAY" to 0.55f),
-        p(AmberVoice.BRASS, "WAH STAB", "TUNE" to 0.45f, "STACK" to 0.65f, "CUTOFF" to 0.35f, "CREAM" to 0.6f, "CONTOUR" to 0.95f, "DECAY" to 0.3f),
-        p(AmberVoice.BRASS, "THIN REED", "TUNE" to 0.6f, "STACK" to 0.15f, "CUTOFF" to 0.5f, "CREAM" to 0.5f, "CONTOUR" to 0.5f, "DECAY" to 0.4f),
-        p(AmberVoice.BRASS, "DARK HORN", "TUNE" to 0.3f, "STACK" to 0.6f, "CUTOFF" to 0.2f, "CREAM" to 0.25f, "CONTOUR" to 0.4f, "DECAY" to 0.6f),
-        p(AmberVoice.BRASS, "FANFARE", "TUNE" to 0.55f, "STACK" to 0.8f, "CUTOFF" to 0.55f, "CREAM" to 0.35f, "CONTOUR" to 0.7f, "DECAY" to 0.4f),
-        p(AmberVoice.BRASS, "PUNCHY STAB", "TUNE" to 0.4f, "STACK" to 0.75f, "CUTOFF" to 0.45f, "CREAM" to 0.4f, "CONTOUR" to 0.9f, "DECAY" to 0.2f),
-        p(AmberVoice.BRASS, "CREAM HORN", "TUNE" to 0.4f, "STACK" to 0.55f, "CUTOFF" to 0.35f, "CREAM" to 0.7f, "CONTOUR" to 0.6f, "DECAY" to 0.5f),
-        p(AmberVoice.BRASS, "WIDE SECTION", "TUNE" to 0.35f, "STACK" to 1f, "CUTOFF" to 0.4f, "CREAM" to 0.3f, "CONTOUR" to 0.55f, "DECAY" to 0.55f),
-        p(AmberVoice.BRASS, "QUICK BLAT", "TUNE" to 0.5f, "STACK" to 0.6f, "CUTOFF" to 0.5f, "CREAM" to 0.45f, "CONTOUR" to 1f, "DECAY" to 0.15f),
-        p(AmberVoice.BRASS, "MELLOW WAH", "TUNE" to 0.3f, "STACK" to 0.4f, "CUTOFF" to 0.25f, "CREAM" to 0.55f, "CONTOUR" to 0.65f, "DECAY" to 0.65f),
-        p(AmberVoice.BRASS, "SINGING HORN", "TUNE" to 0.45f, "STACK" to 0.45f, "CUTOFF" to 0.35f, "CREAM" to 0.95f, "CONTOUR" to 0.7f, "DECAY" to 0.45f),
+        p(ResinVoice.BRASS, "BIG BRASS", "TUNE" to 0.4f, "STACK" to 0.7f, "CUTOFF" to 0.4f, "CREAM" to 0.3f, "CONTOUR" to 0.75f, "DECAY" to 0.5f),
+        p(ResinVoice.BRASS, "SOFT HORN", "TUNE" to 0.35f, "STACK" to 0.5f, "CUTOFF" to 0.3f, "CREAM" to 0.2f, "CONTOUR" to 0.45f, "DECAY" to 0.55f),
+        p(ResinVoice.BRASS, "WAH STAB", "TUNE" to 0.45f, "STACK" to 0.65f, "CUTOFF" to 0.35f, "CREAM" to 0.6f, "CONTOUR" to 0.95f, "DECAY" to 0.3f),
+        p(ResinVoice.BRASS, "THIN REED", "TUNE" to 0.6f, "STACK" to 0.15f, "CUTOFF" to 0.5f, "CREAM" to 0.5f, "CONTOUR" to 0.5f, "DECAY" to 0.4f),
+        p(ResinVoice.BRASS, "DARK HORN", "TUNE" to 0.3f, "STACK" to 0.6f, "CUTOFF" to 0.2f, "CREAM" to 0.25f, "CONTOUR" to 0.4f, "DECAY" to 0.6f),
+        p(ResinVoice.BRASS, "FANFARE", "TUNE" to 0.55f, "STACK" to 0.8f, "CUTOFF" to 0.55f, "CREAM" to 0.35f, "CONTOUR" to 0.7f, "DECAY" to 0.4f),
+        p(ResinVoice.BRASS, "PUNCHY STAB", "TUNE" to 0.4f, "STACK" to 0.75f, "CUTOFF" to 0.45f, "CREAM" to 0.4f, "CONTOUR" to 0.9f, "DECAY" to 0.2f),
+        p(ResinVoice.BRASS, "CREAM HORN", "TUNE" to 0.4f, "STACK" to 0.55f, "CUTOFF" to 0.35f, "CREAM" to 0.7f, "CONTOUR" to 0.6f, "DECAY" to 0.5f),
+        p(ResinVoice.BRASS, "WIDE SECTION", "TUNE" to 0.35f, "STACK" to 1f, "CUTOFF" to 0.4f, "CREAM" to 0.3f, "CONTOUR" to 0.55f, "DECAY" to 0.55f),
+        p(ResinVoice.BRASS, "QUICK BLAT", "TUNE" to 0.5f, "STACK" to 0.6f, "CUTOFF" to 0.5f, "CREAM" to 0.45f, "CONTOUR" to 1f, "DECAY" to 0.15f),
+        p(ResinVoice.BRASS, "MELLOW WAH", "TUNE" to 0.3f, "STACK" to 0.4f, "CUTOFF" to 0.25f, "CREAM" to 0.55f, "CONTOUR" to 0.65f, "DECAY" to 0.65f),
+        p(ResinVoice.BRASS, "SINGING HORN", "TUNE" to 0.45f, "STACK" to 0.45f, "CUTOFF" to 0.35f, "CREAM" to 0.95f, "CONTOUR" to 0.7f, "DECAY" to 0.45f),
     )
 }
 ```
@@ -1005,9 +1005,9 @@ Every name is ≤ 14 characters, uppercase, unique per voice, and clear of `Pres
 
 - [ ] **Step 4: Register**
 
-`Amber.scramble`: restore the three-way `when` from Task 2's listing (the `else ->` branch seeds from `AmberPresets.forVoice(voice).random(random)`).
+`Resin.scramble`: restore the three-way `when` from Task 2's listing (the `else ->` branch seeds from `ResinPresets.forVoice(voice).random(random)`).
 
-`Presets.kt`: after the `FathomPatch.ENGINE` branch add the same three lines for `AmberPatch.ENGINE` / `AmberVoice` / `AmberPresets`; append `+ AmberPresets.all()` to `all()`; change the KDoc's "all eight registered engines" to nine.
+`Presets.kt`: after the `FathomPatch.ENGINE` branch add the same three lines for `ResinPatch.ENGINE` / `ResinVoice` / `ResinPresets`; append `+ ResinPresets.all()` to `all()`; change the KDoc's "all eight registered engines" to nine.
 
 - [ ] **Step 5: Run the tests**
 
@@ -1017,13 +1017,13 @@ Expected: PASS. If a preset fails `peak > 0.5`, adjust **that preset's** values 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add synth/src/main/kotlin/com/snipsnap/synth/AmberPresets.kt synth/src/test/kotlin/com/snipsnap/synth/AmberPresetsTest.kt synth/src/main/kotlin/com/snipsnap/synth/Amber.kt synth/src/main/kotlin/com/snipsnap/synth/Presets.kt synth/src/test/kotlin/com/snipsnap/synth/PresetsTest.kt shell/src/test/kotlin/com/snipsnap/shell/UserPresetsTest.kt
-git commit -m "AMBER's factory presets: thirty-six sounds, named for what they are"
+git add synth/src/main/kotlin/com/snipsnap/synth/ResinPresets.kt synth/src/test/kotlin/com/snipsnap/synth/ResinPresetsTest.kt synth/src/main/kotlin/com/snipsnap/synth/Resin.kt synth/src/main/kotlin/com/snipsnap/synth/Presets.kt synth/src/test/kotlin/com/snipsnap/synth/PresetsTest.kt shell/src/test/kotlin/com/snipsnap/shell/UserPresetsTest.kt
+git commit -m "RESIN's factory presets: thirty-six sounds, named for what they are"
 ```
 
 ---
 
-### Task 6: AMBER joins the SYNTH picker
+### Task 6: RESIN joins the SYNTH picker
 
 **Files:**
 - Modify: `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`
@@ -1032,46 +1032,46 @@ git commit -m "AMBER's factory presets: thirty-six sounds, named for what they a
 
 - [ ] **Step 1: Imports**
 
-Beside the `Fathom` imports add `com.snipsnap.synth.Amber`, `com.snipsnap.synth.AmberPatch`, `com.snipsnap.synth.AmberVoice`.
+Beside the `Fathom` imports add `com.snipsnap.synth.Resin`, `com.snipsnap.synth.ResinPatch`, `com.snipsnap.synth.ResinVoice`.
 
 - [ ] **Step 2: The enum and every `when`**
 
-- `THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, AMBER;` and extend `next()`'s KDoc cycle `… → FATHOM → AMBER → THUMP`.
-- `voices()`: `AMBER -> AmberVoice.entries`
-- `macrosFor`: `AMBER -> Amber.macrosFor(voice as AmberVoice)`
-- `defaults`: `AMBER -> Amber.defaults(voice as AmberVoice)`
-- `scramble`: `AMBER -> Amber.scramble(voice as AmberVoice, random)`
-- `render`: `AMBER -> Amber.render(voice as AmberVoice, macros)`
-- `drumClass`: `AMBER -> (voice as AmberVoice).drumClass`
-- `buildPatch`: `AMBER -> AmberPatch(name, voice as AmberVoice, macros)`
+- `THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN;` and extend `next()`'s KDoc cycle `… → FATHOM → RESIN → THUMP`.
+- `voices()`: `RESIN -> ResinVoice.entries`
+- `macrosFor`: `RESIN -> Resin.macrosFor(voice as ResinVoice)`
+- `defaults`: `RESIN -> Resin.defaults(voice as ResinVoice)`
+- `scramble`: `RESIN -> Resin.scramble(voice as ResinVoice, random)`
+- `render`: `RESIN -> Resin.render(voice as ResinVoice, macros)`
+- `drumClass`: `RESIN -> (voice as ResinVoice).drumClass`
+- `buildPatch`: `RESIN -> ResinPatch(name, voice as ResinVoice, macros)`
 
 - [ ] **Step 3: The class mapping**
 
 After `FathomVoice.drumClass`, add:
 
 ```kotlin
-// AMBER's three voices are pitched notes through a filter — the same
+// RESIN's three voices are pitched notes through a filter — the same
 // "tonal-pitched voices -> TONAL" fallback VELVET/VOX/PLUCK/TONEWHEEL
-// take above, never judged from a render (AmberPresetsTest says why).
-private val AmberVoice.drumClass: DrumClass
+// take above, never judged from a render (ResinPresetsTest says why).
+private val ResinVoice.drumClass: DrumClass
     get() = DrumClass.TONAL
 ```
 
-Update the block comment above the mappings that says "VELVET/VOX/PLUCK/TONEWHEEL … all four engines are TONAL across the board" to include AMBER (five engines).
+Update the block comment above the mappings that says "VELVET/VOX/PLUCK/TONEWHEEL … all four engines are TONAL across the board" to include RESIN (five engines).
 
 - [ ] **Step 4: The KDoc**
 
-The file's top KDoc says "multiplexed over all eight registered engines" and lists "seven more engines (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM)". Make it nine and eight, adding AMBER.
+The file's top KDoc says "multiplexed over all eight registered engines" and lists "seven more engines (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM)". Make it nine and eight, adding RESIN.
 
 - [ ] **Step 5: Re-read the diff**
 
-`git diff app/` — count the `AMBER ->` branches: there must be seven inside the enum plus the property. Check every cast says `AmberVoice`, not a copy-pasted `FathomVoice`.
+`git diff app/` — count the `RESIN ->` branches: there must be seven inside the enum plus the property. Check every cast says `ResinVoice`, not a copy-pasted `FathomVoice`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt
-git commit -m "AMBER joins the SYNTH picker, after FATHOM"
+git commit -m "RESIN joins the SYNTH picker, after FATHOM"
 ```
 
 ---
@@ -1146,7 +1146,7 @@ import kotlin.math.abs
 import kotlin.math.pow
 
 /**
- * CONTOUR — AMBER's ladder filter on a pad that was never a synth: a
+ * CONTOUR — RESIN's ladder filter on a pad that was never a synth: a
  * ripped snare or a vocal chop swept through [Dsp.Ladder] from its
  * onset. SWEEP is the filter contour's amount and speed together (the
  * same one-knob device as the engine's own CONTOUR macro), CUTOFF the
@@ -1271,7 +1271,7 @@ The app's `PadSheetScreen` reads `PadSheet.ROWS`; no `:app` change is needed. Th
 
 - [ ] **Step 1: Update the tests**
 
-In `PadSheetTest`: the `CHARACTER_SEGMENTS` assertion becomes `listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR")`; both `28` counts become `29`; the inventory test's expected set gains `"CONTOUR"` (with a comment: `// the ladder's contour, from the AMBER plan`) and its name says twenty-nine.
+In `PadSheetTest`: the `CHARACTER_SEGMENTS` assertion becomes `listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR")`; both `28` counts become `29`; the inventory test's expected set gains `"CONTOUR"` (with a comment: `// the ladder's contour, from the RESIN plan`) and its name says twenty-nine.
 
 - [ ] **Step 2: Run to see them fail**
 
@@ -1310,7 +1310,7 @@ git commit -m "The pad sheet draws CONTOUR on the character row"
 
 In the `:synth` section, after the SKIN paragraph and before the `Velocity` paragraph, add one paragraph in the README's voice:
 
-> AMBER is the ladder engine, S8 of the roadmap: four one-poles in a row, the last fed back to the first and soft-clipped inside the loop (`Dsp.Ladder`, measured before it was used — 24 dB an octave, a passband that thins by 1/(1+r) as resonance rises, a top that sings). Three oscillators feed it and STACK is their mixer on one knob; CONTOUR is the filter envelope's amount and speed together; CREAM is the feedback. BASS, LEAD, BRASS. CONTOUR is also a rack section — the same filter swept from a captured hit's onset — because the synth's job is to sit with what was captured.
+> RESIN is the ladder engine, S8 of the roadmap: four one-poles in a row, the last fed back to the first and soft-clipped inside the loop (`Dsp.Ladder`, measured before it was used — 24 dB an octave, a passband that thins by 1/(1+r) as resonance rises, a top that sings). Three oscillators feed it and STACK is their mixer on one knob; CONTOUR is the filter envelope's amount and speed together; CREAM is the feedback. BASS, LEAD, BRASS. CONTOUR is also a rack section — the same filter swept from a captured hit's onset — because the synth's job is to sit with what was captured.
 
 Change "eight synth engines" in the status line and "eight engines in the `Engine` picker counting SKIN" to nine. Add `Dsp.Ladder` nowhere else; the paragraph is enough.
 
@@ -1319,7 +1319,7 @@ Change "eight synth engines" in the status line and "eight engines in the `Engin
 In `docs/SYNTH_ROADMAP.md`'s phasing table, after the S6 row:
 
 ```
-| S8 | **shipped** — AMBER, the ladder engine (BASS/LEAD/BRASS: a three-oscillator STACK through `Dsp.Ladder`, the four-pole transistor-ladder low-pass with tanh in the loop, measured before use; CUTOFF key-tracked, CREAM the feedback up to self-oscillation, CONTOUR the filter envelope's amount and speed on one knob) and CONTOUR, the same filter as a rack section after EQ — design in `docs/superpowers/specs/2026-09-24-amber-ladder-engine-design.md` | S1 + U5 + U6 |
+| S8 | **shipped** — RESIN, the ladder engine (BASS/LEAD/BRASS: a three-oscillator STACK through `Dsp.Ladder`, the four-pole transistor-ladder low-pass with tanh in the loop, measured before use; CUTOFF key-tracked, CREAM the feedback up to self-oscillation, CONTOUR the filter envelope's amount and speed on one knob) and CONTOUR, the same filter as a rack section after EQ — design in `docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md` | S1 + U5 + U6 |
 ```
 
 (S7 is the photo engine, already numbered; S8 follows it in the table even though S7's rows sit in their own section below.)
@@ -1328,7 +1328,7 @@ In `docs/SYNTH_ROADMAP.md`'s phasing table, after the S6 row:
 
 ```bash
 git add README.md docs/SYNTH_ROADMAP.md
-git commit -m "Document AMBER and CONTOUR"
+git commit -m "Document RESIN and CONTOUR"
 ```
 
 ---
@@ -1342,7 +1342,7 @@ Expected: PASS, every module. The native harness does not need re-running (nothi
 
 - [ ] **Step 2: The naming sweep**
 
-Run: `git diff origin/claude/mobile-mpc-drum-sampler-t58x74 | grep -n -i -E 'moog|minimoog|model d' ` — expected: no output. Also `grep -rn -i 'ladder' synth/src/main/kotlin/com/snipsnap/synth/Amber.kt synth/src/main/kotlin/com/snipsnap/synth/Contour.kt` should only find KDoc references to `Dsp.Ladder`, never a product string.
+Run: `git diff origin/claude/mobile-mpc-drum-sampler-t58x74 | grep -n -i -E 'moog|minimoog|model d' ` — expected: no output. Also `grep -rn -i 'ladder' synth/src/main/kotlin/com/snipsnap/synth/Resin.kt synth/src/main/kotlin/com/snipsnap/synth/Contour.kt` should only find KDoc references to `Dsp.Ladder`, never a product string.
 
 - [ ] **Step 3: Push and open the PR**
 
@@ -1350,7 +1350,7 @@ Run: `git diff origin/claude/mobile-mpc-drum-sampler-t58x74 | grep -n -i -E 'moo
 git push -u origin claude/sound-design-tools-mdmrbw
 ```
 
-Open the PR against `claude/mobile-mpc-drum-sampler-t58x74` (not `main`; see the steward skill). Title: `AMBER, the ladder engine, and CONTOUR, its filter on a captured pad`. Body: what shipped, the measured table from `LadderTest` (copy the Kotlin numbers, not the Python ones), the three placeholders awaiting the audition gate, and the one file CI alone can compile (`SynthScreen.kt`). Then watch `android-build`: a missed `when` branch there is the likeliest red, and it is fixed by reading the log, not by re-running.
+Open the PR against `claude/mobile-mpc-drum-sampler-t58x74` (not `main`; see the steward skill). Title: `RESIN, the ladder engine, and CONTOUR, its filter on a captured pad`. Body: what shipped, the measured table from `LadderTest` (copy the Kotlin numbers, not the Python ones), the three placeholders awaiting the audition gate, and the one file CI alone can compile (`SynthScreen.kt`). Then watch `android-build`: a missed `when` branch there is the likeliest red, and it is fixed by reading the log, not by re-running.
 
 ---
 
@@ -1364,8 +1364,8 @@ only the two documents:
 | Suite | Result |
 |---|---|
 | `LadderTest` | 7/7 — every number from the spec's prototype held in `Float` |
-| `AmberTest` | 15/15 |
-| `AmberPresetsTest` | 4/4 — all 36 presets clean, in range, peak > 0.5, byte-stable through JSON |
+| `ResinTest` | 15/15 |
+| `ResinPresetsTest` | 4/4 — all 36 presets clean, in range, peak > 0.5, byte-stable through JSON |
 | `FxTest` (with `contour` in `SECTIONS`) | 59/59 — the shared peak-match and stereo contracts cover the section unchanged |
 | `TreatmentsTest`, `DeterminismTest`, `PresetsTest` | green |
 | `./gradlew --no-daemon test` | green — `:synth` 574 tests (0 failed, 30 m on one worker), `:shell` 854, `:cli` 90; the six modules the change does not reach were up to date and skipped |
@@ -1394,11 +1394,11 @@ the JVM build here and is proved by CI's `android-build` only.
 ## Notes for the implementer
 
 - **`Dsp` is `internal`.** `Dsp.Ladder` is reachable from `:synth` tests and nothing else; that is by design, and it is why the class can share a name with `com.snipsnap.shell.Ladder` without anyone ever seeing both.
-- **`Patch` is sealed.** Adding `AmberPatch` breaks `Velocity.macroSpecsFor` until Task 4 step 4 lands; do Task 4's steps in order and the build never goes red between commits.
+- **`Patch` is sealed.** Adding `ResinPatch` breaks `Velocity.macroSpecsFor` until Task 4 step 4 lands; do Task 4's steps in order and the build never goes red between commits.
 - **`:app` is not in the build here.** Task 6 is proved by CI only. Read the file, mirror FATHOM, re-read the diff.
 - **`tanh` on `Float`.** `kotlin.math.tanh(Float)` exists; do not widen to `Double` in the loop for "precision" — the prototype's margins are wide and the JVM float path is what ships.
 - **Don't compensate the filter.** No passband make-up inside `Dsp.Ladder`, no tuning polynomial. Both decisions are argued in the spec; a listening pass may revisit them, a plan may not.
-- **Thresholds.** Every number in `LadderTest` and `AmberTest` came from a measurement in the spec. On a miss: print, record, re-derive with margin, never loosen blind.
-- **Test time.** An AMBER render is ~300k samples at nine `tanh` each; the presets suite renders 36 sounds a few times. Expect `:synth:test` to grow by tens of seconds, not minutes. If it grows by minutes, something is rendering at the oversampled rate twice.
+- **Thresholds.** Every number in `LadderTest` and `ResinTest` came from a measurement in the spec. On a miss: print, record, re-derive with margin, never loosen blind.
+- **Test time.** An RESIN render is ~300k samples at nine `tanh` each; the presets suite renders 36 sounds a few times. Expect `:synth:test` to grow by tens of seconds, not minutes. If it grows by minutes, something is rendering at the oversampled rate twice.
 - **Commit style.** Plain prose titles, long bodies that say why and what was tried. No model identifiers anywhere in the repository.
 - **One quantity in one place.** The repo's recurring defect shape. `MAX_CUTOFF_HZ`, `Ladder.MAX_RESONANCE`, `Contour.MAX_RESONANCE` and the `0.4 * rate` ceiling each live exactly once; tests reference the constants, never a retyped number.
