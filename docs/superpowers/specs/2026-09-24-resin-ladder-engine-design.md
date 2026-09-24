@@ -1,8 +1,8 @@
-# AMBER — the ladder engine, and CONTOUR, its filter on a captured pad
+# RESIN — the ladder engine, and CONTOUR, its filter on a captured pad
 
 **Status:** design, approved. Not implemented.
 **Date:** 2026-09-24
-**Plan:** [`docs/superpowers/plans/2026-09-24-amber-ladder-engine.md`](../plans/2026-09-24-amber-ladder-engine.md)
+**Plan:** [`docs/superpowers/plans/2026-09-24-resin-ladder-engine.md`](../plans/2026-09-24-resin-ladder-engine.md)
 **Roadmap:** the phasing row (S8) gets added when implementation starts, not
 now — an approved design is not a shipped engine, same rule FATHOM followed.
 
@@ -18,7 +18,7 @@ Most of what "that classic mono-synth sound" means already exists in `:synth`:
 | Filter cutoff that tracks the note | `Dsp.keyTrack`, wired into VELVET and FATHOM |
 | Oversampled render, decimated back to `RATE` | every engine, `Dsp.OVERSAMPLE` (U6) |
 
-So AMBER is only worth building for what none of that can do. Two things
+So RESIN is only worth building for what none of that can do. Two things
 qualify, and the first is the engine's whole reason to exist:
 
 1. **The transistor-ladder low-pass.** Four one-pole stages in series (24 dB
@@ -56,14 +56,22 @@ messages. The circuit this filter models was patented in 1966 and the patent
 is long expired; the *sound* is fair game, the *name* of the company that
 sold it is not, and neither is anything that winks at it.
 
-The engine is **AMBER**: warm, thick, golden, and a plain word in the same
-register as VELVET and FATHOM. Voices are `BASS`, `LEAD`, `BRASS`. The filter
-class is `Dsp.Ladder` — the published technical term (Stilson & Smith 1996,
-Huovilainen 2004 both call it that) for a DSP-internal class nobody outside
-`:synth` can see (`Dsp` is `internal`).
+The engine is **RESIN**: what amber literally is before it fossilizes —
+warm, thick, and golden, the same character this filter has — and a plain
+word in the same register as VELVET and FATHOM. Voices are `BASS`, `LEAD`,
+`BRASS`. The filter class is `Dsp.Ladder` — the published technical term
+(Stilson & Smith 1996, Huovilainen 2004 both call it that) for a
+DSP-internal class nobody outside `:synth` can see (`Dsp` is `internal`).
 
 Names considered and rejected, so nobody re-litigates them:
 
+- **AMBER**, the original name for this engine, through this document's own
+  first approved draft. A design-review pass on 2026-09-24 found that
+  FXpansion shipped a subtractive software synthesizer called exactly
+  `Amber` — not a generic sound-category word like the BASS/LEAD/BRASS
+  voice names above, but a real product in this engine's own category.
+  RESIN keeps the amber association (it is literally amber's precursor)
+  without the collision.
 - **LADDER** as the *engine* name — `com.snipsnap.shell.Ladder` is already
   the CHOP screen's ZOOM LADDER, a product word with a different meaning.
   A chip on the pad sheet reading LADDER next to RING and PHASE would be a
@@ -134,12 +142,12 @@ the numbers the Kotlin port's tests pin, each with margin:
 | What | Setting | Measured | Test pins |
 |---|---|---|---|
 | Passband | `fc = 1 kHz`, `r = 0`, 125 Hz tone | −0.24 dB | ≥ −1 dB |
-| At the cutoff | same, 1 kHz tone | −12.04 dB | (four −3 dB poles; informational) |
+| At the cutoff | same, 1 kHz tone | −12.04 dB | (four −3 dB poles at `r = 0`, where there is no feedback to couple them; informational) |
 | Slope | 4 kHz → 8 kHz tones | −49.2 → −72.4 dB (23.2 dB/oct) | ≥ 20 dB apart; 8 kHz ≤ −60 dB |
 | Resonant peak | `r = 3.5`, swept 600–1400 Hz | +6.85 dB at 975 Hz | peak within 5 % of `fc`, ≥ 12 dB above the `r = 0` gain at `fc` |
 | Bass loss with resonance | 100 Hz tone, `r = 0 → 3.5` | −0.17 → −12.98 dB | 10–16 dB lower at `r = 3.5` |
-| DC gain | 0.5 DC in | 0.500 at `r = 0`; 0.111 at `r = 3.5` (= 1/(1+r)) | within 1 % of both |
-| Self-oscillation | `r = 4.3`, zero input after a 1e-3 tick, 1 s | 498 Hz at `fc = 500`; 1009 Hz at `fc = 1000`; 4217 Hz at `fc = 4000`; peak 0.09–0.11 | tail RMS > 0.01, frequency within 3 % at 500 Hz and 1 kHz |
+| DC gain | 0.5 DC in | 0.500 at `r = 0`; 0.111 at `r = 3.5` (input × 1/(1+r): 0.5 × 1 = 0.5; 0.5 × 1/4.5 = 0.111) | within 1 % of both |
+| Self-oscillation | `r = 4.3`, zero input after a 1e-3 tick, 1 s | 498 Hz at `fc = 500`; 1009 Hz at `fc = 1000`; 4217 Hz at `fc = 4000`; peak 0.114/0.093/0.000 | tail RMS > 0.01, frequency within 3 % at 500 Hz and 1 kHz |
 | No self-oscillation below threshold | `r = 3.5`, same tick | decays | tail RMS < 1e-3 |
 | Stability | full-scale 55 Hz saw, `fc` swept 20 Hz → 16 kHz over 1 s, `r = 4.3` | finite, peak 0.42 | finite, peak < 1 |
 
@@ -175,17 +183,17 @@ touchpoints every engine has:
 | File | Change |
 |---|---|
 | `synth/.../Dsp.kt` | **Add** `class Ladder`; update `OVERSAMPLE`'s KDoc engine count |
-| `synth/.../Amber.kt` | **Create.** `enum class AmberVoice`, `object Amber` |
-| `synth/.../AmberPresets.kt` | **Create.** Twelve presets per voice |
-| `synth/.../Patches.kt` | **Add** `AmberPatch`, one decoder branch |
+| `synth/.../Resin.kt` | **Create.** `enum class ResinVoice`, `object Resin` |
+| `synth/.../ResinPresets.kt` | **Create.** Twelve presets per voice |
+| `synth/.../Patches.kt` | **Add** `ResinPatch`, one decoder branch |
 | `synth/.../Presets.kt` | **Add** a `forVoice` branch, `all()` term |
-| `synth/.../Velocity.kt` | **Add** `is AmberPatch ->` (sealed `when`), KDoc line |
+| `synth/.../Velocity.kt` | **Add** `is ResinPatch ->` (sealed `when`), KDoc line |
 | `synth/.../Contour.kt` | **Create.** The rack section |
 | `synth/.../FxChain.kt` | **Add** field `contour`, `Section("contour", …)` after `eq`, order KDoc |
 | `synth/.../Treatments.kt` | **Add** `"contoured"` to `EXTRA` |
 | `shell/.../PadSheet.kt` | **Add** `CONTOUR` to `CHARACTER_SEGMENTS` and `CHARACTER_FOR` |
-| `app/.../SynthScreen.kt` | **Add** `AMBER` to the private `Engine` enum and every `when` on it |
-| tests | `LadderTest`, `AmberTest`, `AmberPresetsTest`; additions to `DeterminismTest`, `PresetsTest`, `FxTest`, `TreatmentsTest`, `UserPresetsTest`, `PadSheetTest` |
+| `app/.../SynthScreen.kt` | **Add** `RESIN` to the private `Engine` enum and every `when` on it |
+| tests | `LadderTest`, `ResinTest`, `ResinPresetsTest`; additions to `DeterminismTest`, `PresetsTest`, `FxTest`, `TreatmentsTest`, `UserPresetsTest`, `PadSheetTest` |
 | docs | `README.md` `:synth`, `SYNTH_ROADMAP.md` S8 row |
 
 ### Signal path
@@ -202,7 +210,7 @@ osc 3: square, detuned ────────┘                    ↑    ↑
 Rendered at `RATE * Dsp.OVERSAMPLE` in `synthesize(voice, macros, rate)`,
 decimated in `render` — the U6 contract, verified by the same "dispatches
 through the oversampled path" test every engine carries. Oscillator phases
-come from `Dsp.phases(3, Dsp.seedFor("AMBER", voice.name))`, so the stack
+come from `Dsp.phases(3, Dsp.seedFor("RESIN", voice.name))`, so the stack
 never opens phase-locked and `DeterminismTest` gets a ninth canary.
 
 ## Macros
@@ -220,7 +228,7 @@ in that range is a sound, and `Patches.validateMacros` refuses the rest.
 | `DECAY` | 0.5 / 0.45 / 0.5 | `t60 = expMap(decay, 0.15, 1.2)`; `Dsp.Env(attackSeconds = 0.003, decay2T60 = t60)`; buffer `t60 * 1.4 * rate` |
 
 No `GLIDE`. It is FATHOM's headline and a seventh macro would break the
-roadmap's 3–6 rule; a sliding AMBER lead is a FATHOM-shaped follow-up, not
+roadmap's 3–6 rule; a sliding RESIN lead is a FATHOM-shaped follow-up, not
 this engine's job. No beat floor on osc 3's detune either: `STACK`'s detune
 is width, and VELVET's `minBeatDetune` exists for a macro (`FAT`) that
 promises movement.
@@ -239,7 +247,7 @@ and a self-oscillating "WHISTLE" voice is `LEAD` with `STACK 0`, `CREAM 1`
 
 Every voice is statically `DrumClass.TONAL` in `SynthScreen`'s mapping, like
 VELVET, PLUCK, TONEWHEEL and VOX: pitched notes, never judged from a render.
-`AmberPresetsTest` therefore carries no classifier identity check, exactly
+`ResinPresetsTest` therefore carries no classifier identity check, exactly
 as `VelvetPresetsTest` explains.
 
 ## CONTOUR — the rack section
@@ -278,13 +286,13 @@ CRUNCH. Recorded here so nobody mistakes it for an oversight.
 Unchanged from every other engine:
 
 ```
-macros ─→ Amber.render() ─→ Snip ─→ AmberPatch ─→ kit.json recipe
+macros ─→ Resin.render() ─→ Snip ─→ ResinPatch ─→ kit.json recipe
                                                      ↓
                                  KitAssembler → Preflight → export
 ```
 
 A kit folder still rebuilds its WAVs bit for bit from the sidecar, because
-`AmberPatch` goes through `Patches.fromJsonValue` like the other nine.
+`ResinPatch` goes through `Patches.fromJsonValue` like the other nine.
 
 ## Failure handling
 
@@ -292,7 +300,7 @@ Mostly inherited: `Patches.validateMacros` refuses unknown macros and
 out-of-range values against `macrosFor`; `FxChain.init` does the same for
 the section.
 
-AMBER's own:
+RESIN's own:
 
 - **Finite, in range, no DC** under any macro combination. The `tanh` loop
   is bounded by construction (measured: peak 0.42 with a full-scale saw
@@ -318,7 +326,7 @@ signature (24 dB/oct, `1/(1+r)` bass loss, bounded self-oscillation) rather
 than a proxy for it, so a future "improvement" that quietly turns the ladder
 into a generic resonant low-pass fails loudly.
 
-### `AmberTest` — the engine
+### `ResinTest` — the engine
 
 | Test | What it protects |
 |---|---|
@@ -330,7 +338,7 @@ into a generic resonant low-pass fails loudly.
 | `CUTOFF` opens | centroid ratio > 1.5, `CREAM 0`, `CONTOUR 0` |
 | `CREAM` thins the bass | **the ladder's signature, measured in the render:** BASS at `CUTOFF 0.5`, `lowRatio` 0.773 at `CREAM 0` → 0.364 at `CREAM 0.85` (measured); pinned < 0.6× |
 | `CONTOUR` sweeps, then lands | on LEAD, `STACK 0`, `CREAM 0.3`, `CUTOFF 0.5`: first-10 ms centroid 951 Hz against a 596 Hz tail at `CONTOUR 1` (1.60×, pinned > 1.3×); 630 Hz at `CONTOUR 0` (1.06×, pinned < 1.2×); the tail reads 595.8 Hz at every `CONTOUR` (pinned within 5 %) — the sweep has landed. Ten milliseconds, because `FeatureExtractor` measures the first 4096 samples of what it is handed and the sweep's T60 at `CONTOUR 1` is 85 ms |
-| `STACK` thickens | the sub-octave saw takes the detected pitch down an octave: LEAD 441 → 220.5 Hz, BASS 110 → 55 Hz from `STACK 0.25` up (measured; pinned 1.8–2.2×). The power-weighted centroid barely moves (652 → 604 Hz), so it is not the instrument |
+| `STACK` thickens | the sub-octave saw takes the detected pitch down an octave: LEAD 441 → 220.5 Hz, BASS 110 → 55 Hz from `STACK 0` to `STACK 0.5` (measured; pinned 1.8–2.2×). The power-weighted centroid barely moves (652 → 604 Hz), so it is not the instrument |
 | `DECAY` lengthens | `decayMs` ratio > 1.5 |
 | defaults are harmonic, not noise | `flatness < 0.2`, no `DrumClass` predicted |
 | deterministic; JSON round-trip; unknown macro refused | the patch contract |
@@ -341,7 +349,7 @@ numbers, record the measurement in the test's comment, and set the threshold
 from the measurement with ~20 % margin — never loosen a threshold to pass
 without writing down what was measured.
 
-### `AmberPresetsTest`
+### `ResinPresetsTest`
 
 A copy of `VelvetPresetsTest`: clean and non-silent, JSON round-trip byte
 for byte, twelve names per voice ≤ 14 chars uppercase unique, blocklist
@@ -359,13 +367,13 @@ clean.
   sets `contour`, and is a bypass at AMT 0.
 - `TreatmentsTest`: the ordered names list gains `"contoured"` last.
 - `PadSheetTest`: the row, the inventory set, and the count (28 → 29).
-- `DeterminismTest`: `AMBER is byte-identical across renders`.
-- `PresetsTest`, `UserPresetsTest`: AMBER joins the rosters.
+- `DeterminismTest`: `RESIN is byte-identical across renders`.
+- `PresetsTest`, `UserPresetsTest`: RESIN joins the rosters.
 
 ## Out of scope
 
 - **Keygroup rendering.** The S5 instrument suite converts engines to
-  keygroups by its own table; a sustained AMBER key patch is a follow-up.
+  keygroups by its own table; a sustained RESIN key patch is a follow-up.
 - **`GLIDE`.** FATHOM's, for the reasons above.
 - **A fourth voice**, a `SynthKits` kit, a CLI verb: none needed; `treat`
   is generic over `Treatments.names`, so `contoured` is CLI-reachable the
