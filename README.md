@@ -6,7 +6,7 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, eight
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, nine
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
 play). No Android layer yet.
@@ -215,6 +215,15 @@ THUMP's own `DrumClass` gates wherever a dedicated class exists, PUNCH on
 every voice — SKIN shares that stage with THUMP alone; it isn't a
 cross-engine macro.
 
+RESIN is the ladder engine, S8 of the roadmap: four one-poles in a row, the
+last fed back to the first and soft-clipped inside the loop (`Dsp.Ladder`,
+measured before it was used — 24 dB an octave, a passband that thins by
+1/(1+r) as resonance rises, a top that sings). Three oscillators feed it
+and STACK is their mixer on one knob; CONTOUR is the filter envelope's
+amount and speed together; CREAM is the feedback. BASS, LEAD, BRASS.
+CONTOUR is also a rack section — the same filter swept from a captured
+hit's onset — because the synth's job is to sit with what was captured.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -222,10 +231,10 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — eight engines in the `Engine` picker
-counting SKIN; GRAINS is a ninth thing entirely, out of the picker's scope
-since it has no voice enum and works on a source snip instead of picking
-one. VOX is three-formant vocal
+VOX and GRAINS round out the lineup — nine engines in the `Engine` picker
+counting SKIN and RESIN; GRAINS is a tenth thing entirely, out of the
+picker's scope since it has no voice enum and works on a source snip
+instead of picking one. VOX is three-formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
