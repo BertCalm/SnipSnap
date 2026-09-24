@@ -1,5 +1,7 @@
 package com.snipsnap.synth
 
+import kotlin.math.abs
+
 /**
  * A picture as SNAP sees it: packed ARGB pixels, row-major, top row first —
  * exactly the array Android's `Bitmap.getPixels` hands back, so the app
@@ -67,5 +69,42 @@ class Photo(val width: Int, val height: Int, val argb: IntArray) {
         /** Pack a colour, each channel 0..255. */
         fun rgb(r: Int, g: Int, b: Int): Int =
             (r.coerceIn(0, 255) shl 16) or (g.coerceIn(0, 255) shl 8) or b.coerceIn(0, 255)
+
+        /** A pure hue, [degrees] round the colour wheel, at full saturation and brightness, packed as [rgb]. */
+        fun hue(degrees: Float): Int {
+            val h = (((degrees % 360f) + 360f) % 360f) / 60f
+            val x = 1f - abs(h % 2f - 1f)
+            val (r, g, b) = when (h.toInt()) {
+                0 -> Triple(1f, x, 0f)
+                1 -> Triple(x, 1f, 0f)
+                2 -> Triple(0f, 1f, x)
+                3 -> Triple(0f, x, 1f)
+                4 -> Triple(x, 0f, 1f)
+                else -> Triple(1f, 0f, x)
+            }
+            return rgb(Math.round(r * 255f), Math.round(g * 255f), Math.round(b * 255f))
+        }
+
+        /**
+         * [color] shaded to exactly [brightness] (0..1, on [luminance]'s own
+         * Rec. 601 scale): darkened toward black below the colour's own
+         * brightness, washed toward white above it. Luma is a straight sum
+         * of the channels, so both directions land on the asked-for
+         * brightness to within a channel's rounding — which is what lets a
+         * picture carry colour without changing what a reader of
+         * brightness alone sees.
+         */
+        fun tint(color: Int, brightness: Float): Int {
+            val target = brightness.coerceIn(0f, 1f)
+            val own = luminance(color)
+            val r = red(color) / 255f
+            val g = green(color) / 255f
+            val b = blue(color) / 255f
+            fun shade(c: Float): Int = Math.round(
+                255f * if (target <= own) c * (target / own) else c + (1f - c) * ((target - own) / (1f - own)),
+            )
+            if (own <= 0f) return rgb(Math.round(target * 255f), Math.round(target * 255f), Math.round(target * 255f))
+            return rgb(shade(r), shade(g), shade(b))
+        }
     }
 }

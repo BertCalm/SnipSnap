@@ -170,6 +170,17 @@ object Snap {
      */
     internal const val HUE_SEAM_DEGREES = 330f
 
+    /**
+     * The hue [macrosFrom] reads as [semitones] above A2: its TUNE mapping
+     * run backwards, one turn of the circle every [TUNE_SEMITONES]. Pitches
+     * outside SNAP's range wrap onto it, so every sound has a colour and
+     * the one colour language holds from a chord pad to a portrait's row.
+     */
+    internal fun hueForSemitones(semitones: Float): Float {
+        val turns = HUE_SEAM_DEGREES + semitones / TUNE_SEMITONES * 360f
+        return ((turns % 360f) + 360f) % 360f
+    }
+
     fun look(photo: Photo): Reading {
         val w = photo.width
         val h = photo.height
