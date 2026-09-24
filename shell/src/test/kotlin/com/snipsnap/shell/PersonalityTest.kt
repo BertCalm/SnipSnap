@@ -545,6 +545,12 @@ class PersonalityTest {
         // SPECTRUM's own busy line, the same *_BUSY shape as FIELD/CLOUD
         // above — the landing toast is `synthSent`, a function.
         "SNAP_SPECTRUM_BUSY",
+        // CHORD's busy line (leaves SNAP for ORBIT) and TELEPHONE's (stays
+        // on SNAP) — the same *_BUSY shape as FIELD/CLOUD/KIT/SPECTRUM
+        // above. CHORD's landing toast is `chordKitMade`, a function,
+        // which this reflective sweep never sees; TELEPHONE's landing
+        // reuses `synthSent`.
+        "SNAP_CHORD_BUSY", "SNAP_TELEPHONE_BUSY",
         // BACK ONTO's busy overlay line, like every other *_BUSY above.
         "RETRIM_BUSY",
         // CATCH A HIT's busy line while the hits are found, and its grid's
