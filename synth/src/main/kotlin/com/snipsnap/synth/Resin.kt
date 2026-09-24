@@ -64,8 +64,7 @@ object Resin {
         val seed = when {
             near != null -> base + near.macros.filterKeys { it in base }
             temperature >= 1f -> base
-            // Task 5 restores the preset seed.
-            else -> base
+            else -> base + ResinPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
         }
         return Dsp.scrambleNear(seed, temperature, random)
     }
