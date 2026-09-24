@@ -43,6 +43,7 @@ object Patches {
             TonewheelPatch.ENGINE -> TonewheelPatch.fromJsonValue(value)
             VelvetPatch.ENGINE -> VelvetPatch.fromJsonValue(value)
             FathomPatch.ENGINE -> FathomPatch.fromJsonValue(value)
+            ResinPatch.ENGINE -> ResinPatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
@@ -189,6 +190,31 @@ data class FathomPatch(
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> FathomVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 FathomPatch(name, voice, macros)
+            }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/** A saved RESIN sound. */
+data class ResinPatch(
+    override val name: String,
+    val voice: ResinVoice,
+    override val macros: Map<String, Float>,
+) : Patch {
+    init {
+        Patches.validateMacros(this, Resin.macrosFor(voice))
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Resin.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    companion object {
+        const val ENGINE = "RESIN"
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> ResinVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                ResinPatch(name, voice, macros)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

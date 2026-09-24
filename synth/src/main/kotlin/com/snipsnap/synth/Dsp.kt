@@ -24,10 +24,11 @@ internal object Dsp {
      * U6 (docs/SYNTH_UPGRADE.md): an engine's per-voice synthesis runs at
      * `RATE * OVERSAMPLE` internally (see [decimate]) so naive oscillators'
      * own aliasing folds down above audible range instead of into it.
-     * All 8 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel],
-     * [Vox], [Pluck], [Skin] - are wired to this contract. Skin was born
-     * wired to it (SYNTH_ROADMAP.md's S6, shipped after the other seven's
-     * own U6 migration) rather than migrated to it after the fact.
+     * All 9 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel],
+     * [Vox], [Pluck], [Skin], [Resin] - are wired to this contract. Skin was
+     * born wired to it (SYNTH_ROADMAP.md's S6, shipped after the other
+     * seven's own U6 migration) rather than migrated to it after the fact.
+     * Resin, like Skin, was born wired to it.
      */
     const val OVERSAMPLE = 4
 

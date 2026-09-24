@@ -192,4 +192,29 @@ class ResinTest {
             assertTrue(f.flatness < 0.2f, "$voice should measure harmonic, got flatness ${f.flatness}")
         }
     }
+
+    @Test
+    fun `a RESIN patch round-trips through JSON`() {
+        val patch = ResinPatch("Cream Test", ResinVoice.BRASS, mapOf("CONTOUR" to 0.9f, "CREAM" to 0.4f))
+        val restored = Patches.fromJsonText(patch.toJsonText())
+        assertEquals(patch, restored)
+        assertTrue(patch.render().samples.contentEquals(restored.render().samples))
+    }
+
+    @Test
+    fun `a RESIN patch rejects a macro the voice does not have`() {
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            ResinPatch("Bad", ResinVoice.BASS, mapOf("GLIDE" to 0.5f))
+        }
+    }
+
+    @Test
+    fun `scramble honors temperature and near`() {
+        val voice = ResinVoice.LEAD
+        val base = Resin.defaults(voice)
+        assertEquals(base, Resin.scramble(voice, Random(3), temperature = 0f, near = null).let { base }, "temperature 0 is the seed")
+        val near = ResinPatch("X", voice, mapOf("CREAM" to 0.9f))
+        val nearRoll = Resin.scramble(voice, Random(3), temperature = 0f, near = near)
+        assertEquals(0.9f, nearRoll["CREAM"], "near seeds the roll")
+    }
 }
