@@ -100,6 +100,7 @@ import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.loop.Arp
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBrush
 import com.snipsnap.loop.OrbitHit
@@ -139,6 +140,7 @@ import com.snipsnap.shell.TextureKits
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.shell.Workshop
 import com.snipsnap.synth.Photo
+import com.snipsnap.synth.PhotoChord
 import com.snipsnap.synth.PhotoKit
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
@@ -1178,6 +1180,68 @@ fun App(shelf: KitShelf) {
             } catch (ex: Exception) {
                 busy = null
                 Log.e(TAG, "buildPathRing: failed", ex)
+                toast = Copy.CREATE_FAILED
+            }
+        }
+    }
+
+    /**
+     * CHORD ▸ on SNAP: [photo] read as a chord (`PhotoChord.build` — the
+     * picture's hue and brightness pick a root and a quality, its tones
+     * rendered one per pad) and landed on the shelf as a brand-new kit,
+     * the same never-overwrite shape as [buildPhotoKit] — plus an ORBIT
+     * arp ring, built and saved for that SAME new kit before the screen
+     * ever shows it, so CHORD always opens ORBIT onto a ring already
+     * arpeggiating rather than a silent kit waiting for one. Every `dir`
+     * below is the brand-new entry's own, never `open` — the kit this
+     * lands is never the one already open.
+     */
+    fun buildChordKit(photo: Photo) {
+        if (busy != null) return
+        busy = Copy.SNAP_CHORD_BUSY
+        scope.launch {
+            try {
+                val built = withContext(Dispatchers.Default) { PhotoChord.build(photo, "PHOTO CHORD") }
+                val newEntry = withContext(Dispatchers.IO) { shelf.landPhotoKit(built.chord.name, built.pads) }
+                val current = withContext(Dispatchers.IO) {
+                    if (OrbitStore.exists(newEntry.dir)) {
+                        OrbitStore.load(newEntry.dir)
+                    } else {
+                        val startBpm = (newEntry.kit.tempoBpm ?: 92f).coerceIn(OrbitSet.MIN_BPM, OrbitSet.MAX_BPM)
+                        OrbitPresets.fromKit(newEntry.dir.name, newEntry.kit, startBpm, deviceSampleRate(context))
+                    }
+                }
+                if (current.orbits.size >= OrbitSet.MAX_ORBITS) {
+                    busy = null
+                    toast = Copy.ORBIT_RINGS_FULL
+                    return@launch
+                }
+                // The ring wears the chord's name as the chord spells it,
+                // while the kit folder beside it is the shouted, sanitized
+                // one `freshName` made. They disagree on purpose: a kit name
+                // is a filename and has to survive `Names.sanitizeStem`,
+                // but a chord name is not free to shout. "Cm" uppercased is
+                // "CM", and the lost lower-case m is the whole difference
+                // between a minor chord and a major one.
+                val seedRing = OrbitPresets.emptyPattern(newEntry.dir.name, built.chord.name, built.slots)
+                // UP_DOWN over the chord's own pads, one octave: PhotoChord
+                // already spreads its tones across an octave or more of
+                // them, so a second would only reach into an empty bank B.
+                val ring = Arp.run(current, seedRing, built.slots, Arp.Shape.UP_DOWN)
+                val merged = current.copy(orbits = current.orbits + ring)
+                withContext(Dispatchers.IO) { OrbitStore.save(merged, newEntry.dir) }
+                // orbitSet/orbitSelected are `remember(open?.dir)`: assigning them
+                // here, before `open` changes below, lands on the state that is
+                // about to be thrown away. ORBIT's own LaunchedEffect(kitDir)
+                // reloads orbits.json fresh once `open` points at the new kit.
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                busy = null
+                toast = Copy.chordKitMade(newEntry.kit.name, ring.name)
+                open = newEntry
+                screen = AppScreen.ORBIT
+            } catch (e: Exception) {
+                busy = null
+                Log.e(TAG, "buildChordKit: failed", e)
                 toast = Copy.CREATE_FAILED
             }
         }
@@ -3261,6 +3325,7 @@ fun App(shelf: KitShelf) {
                                 },
                                 onBuildKit = ::buildPhotoKit,
                                 onBuildPathRing = ::buildPathRing,
+                                onBuildChord = ::buildChordKit,
                                 onFieldPrinted = { importCount++ },
                                 appScope = scope,
                             )
