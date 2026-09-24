@@ -203,13 +203,45 @@ class TonewheelTest {
 
     @Test
     fun `DIRT adds harmonics, not loudness`() {
-        val clean = FeatureExtractor.extract(Tonewheel.render(TonewheelVoice.SOUL, bars(2 to 1f)))
-        val dirty = FeatureExtractor.extract(
-            Tonewheel.render(TonewheelVoice.SOUL, bars(2 to 1f) + mapOf("DIRT" to 1f)),
-        )
+        // Measured as harmonic content, not as spectral centroid.
+        //
+        // Centroid was the old proxy, and it stopped meaning what it used to
+        // the moment DIRT started modelling the cabinet the drive is heard
+        // through: overdrive raises the centroid, a speaker rolling off the
+        // top lowers it, and the two now move together inside one macro.
+        // Centroid measures their sum and so can report "no harmonics added"
+        // about a drive that plainly added them. It was also never a
+        // specification - the pre-cabinet engine cleared its 1.2x threshold
+        // by 1.6%, which is an accident rather than a margin.
+        //
+        // So assert the thing the macro's own name promises instead. tanh is
+        // an odd function, so driving a single drawbar's sine puts energy on
+        // the third harmonic that simply is not there when it is clean.
+        fun thirdHarmonicRatio(dirt: Float): Float {
+            val s = Tonewheel.render(TonewheelVoice.SOUL, bars(2 to 1f) + mapOf("DIRT" to dirt))
+            // BAR2 is the 8' bar, so it sounds at TUNE's own frequency.
+            val f0 = Tonewheel.frequencyFor(0.5f)
+            // The sustained middle only: the key click is broadband and would
+            // land on every harmonic being measured here.
+            val from = (0.1f * s.sampleRate).toInt()
+            val to = (0.5f * s.sampleRate).toInt().coerceAtMost(s.samples.size)
+            fun magAt(hz: Float): Double {
+                var re = 0.0
+                var im = 0.0
+                for (i in from until to) {
+                    val a = 2.0 * Math.PI * hz * (i - from) / s.sampleRate
+                    re += s.samples[i] * kotlin.math.cos(a)
+                    im += s.samples[i] * kotlin.math.sin(a)
+                }
+                return sqrt(re * re + im * im)
+            }
+            return (magAt(f0 * 3f) / magAt(f0)).toFloat()
+        }
+        val clean = thirdHarmonicRatio(0f)
+        val dirty = thirdHarmonicRatio(1f)
         assertTrue(
-            dirty.centroidHz > clean.centroidHz * 1.2f,
-            "drive should add upper harmonics: ${clean.centroidHz} -> ${dirty.centroidHz}",
+            dirty > 0.05f && dirty > clean * 4f,
+            "drive should put energy on the third harmonic: $clean -> $dirty",
         )
     }
 

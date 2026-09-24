@@ -306,10 +306,30 @@ object Velocity {
      * - METAL (THUMP HAT_CLOSED, HAT_OPEN) — drives the cascaded
      *   high-pass cutoff that shapes the hats' sizzle (`Thump.kt:219`,
      *   `hpHz`).
-     * - DIRT (TONEWHEEL, all voices) — pushes the additive sum into
-     *   `Dsp.drive` saturation, the one nonlinearity in an otherwise pure
-     *   additive engine (`Tonewheel.kt:127`); a harder drawbar strike
-     *   reads as more overdrive, same as a harder hit on a driven amp.
+     * - PERC (TONEWHEEL, all voices) — the percussion register, a third-
+     *   harmonic ping over the sustaining bars (`Tonewheel.kt`); a harder
+     *   key strike rings the percussion harder, which is the one touch
+     *   response a drawbar organ actually has.
+     *
+     * DIRT held TONEWHEEL's slot until the engine grew a speaker cabinet.
+     * It was chosen because pushing the additive sum into `Dsp.drive`
+     * adds harmonics, and harmonics read as brightness — true while the
+     * drive was heard bare. It no longer is: DIRT now drives *and* rolls
+     * off the cabinet the drive is heard through, so the macro moves
+     * centroid in both directions at once and the sum comes out backwards.
+     * Measured on each voice's first preset, centroid at velocity 0.25 vs
+     * 1.0: FULL 292.4 -> 287.0 and STAB 542.9 -> 540.1, both inverted (soft
+     * brighter than hard), and SOUL 210.3 -> 210.8, a 0.4 Hz difference
+     * that is not a brightness signal either.
+     *
+     * PERC replaces it, measured the same way: FULL 277.6 -> 287.0, SOUL
+     * 201.3 -> 210.8, STAB 515.4 -> 540.1 — monotone on every voice with
+     * ~9-25 Hz of margin. BAR8 was the other candidate and was disqualified
+     * for a different reason: SOUL's BALLAD BED preset declares BAR8 at 0,
+     * and [atVelocity] returns the plain `soften()` fallback when the
+     * preset's own value for the macro is zero, so that voice would have no
+     * velocity response of its own at all. A brightness macro has to be
+     * non-zero in every shipped preset to be worth anything.
      *
      * DRIVE was in an earlier draft of this list — THUMP KICK's only other
      * macro option and, on paper, "pre-filter saturation adds harmonics"
@@ -394,5 +414,5 @@ object Velocity {
      * before trusting SNAP again if `snareBodyGain`/`snareWireGain` ever
      * change.
      */
-    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "DIRT")
+    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC")
 }
