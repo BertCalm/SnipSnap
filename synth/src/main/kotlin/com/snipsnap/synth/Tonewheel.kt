@@ -38,6 +38,16 @@ object Tonewheel {
     private const val CLICK_T60_SECONDS = 0.004f
     private const val CLICK_LEVEL = 0.30f
 
+    /**
+     * How hard the percussion register rings against the drawbars, set by
+     * ear at a full PERC: 0.8 was a shade polite there once the register
+     * moved onto the third harmonic, where it sings rather than pings.
+     * [render] normalizes the whole voice afterwards, so this is a balance
+     * against the bars rather than a level — turning it up makes the ping
+     * louder relative to them, not the pad louder.
+     */
+    private const val PERC_GAIN = 0.88f
+
     // ---- Cabinet ---------------------------------------------------------
     // The drive's intermodulation products otherwise run to Nyquist, which
     // is buzz rather than grit. Overdrive is only ever heard through a
@@ -230,7 +240,7 @@ object Tonewheel {
             // harmonic, not the 2' wheel, and the third is the one that sings
             // rather than pings.
             percPhase += base * 3f / rate
-            var dry = perc * 0.8f * Dsp.envAt(t, 0.2f) * sin(2.0 * PI * percPhase).toFloat()
+            var dry = perc * PERC_GAIN * Dsp.envAt(t, 0.2f) * sin(2.0 * PI * percPhase).toFloat()
             // Key click: the contact bounce, broadband and gone in a breath.
             if (t < CLICK_T60_SECONDS * 4f) {
                 dry += CLICK_LEVEL * Dsp.envAt(t, CLICK_T60_SECONDS) *
