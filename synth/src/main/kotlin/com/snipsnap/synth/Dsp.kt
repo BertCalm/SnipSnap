@@ -24,10 +24,11 @@ internal object Dsp {
      * U6 (docs/SYNTH_UPGRADE.md): an engine's per-voice synthesis runs at
      * `RATE * OVERSAMPLE` internally (see [decimate]) so naive oscillators'
      * own aliasing folds down above audible range instead of into it.
-     * All 8 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel],
-     * [Vox], [Pluck], [Skin] - are wired to this contract. Skin was born
-     * wired to it (SYNTH_ROADMAP.md's S6, shipped after the other seven's
-     * own U6 migration) rather than migrated to it after the fact.
+     * All 9 engines - [Thump], [Tines], [Velvet], [Fathom], [Tonewheel],
+     * [Vox], [Pluck], [Skin], [Resin] - are wired to this contract. Skin was
+     * born wired to it (SYNTH_ROADMAP.md's S6, shipped after the other
+     * seven's own U6 migration) rather than migrated to it after the fact.
+     * Resin, like Skin, was born wired to it.
      */
     const val OVERSAMPLE = 4
 
@@ -233,6 +234,61 @@ internal object Dsp {
             high = input - kk * v1 - v2
         }
         fun reset() { ic1 = 0f; ic2 = 0f; low = 0f; band = 0f; high = 0f }
+    }
+
+    /**
+     * The four-pole transistor-ladder low-pass — four one-poles in
+     * series, the fourth fed back to the input and soft-clipped at every
+     * stage. The simplified Huovilainen form most open ports use.
+     *
+     * [resonance] is the feedback, 0..[MAX_RESONANCE]: the linear model
+     * self-oscillates at 4, the tanh pushes that slightly higher and
+     * bounds it when it does. Two things this topology does that
+     * [TptSvf] does not, both measured in the design spec
+     * (docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md)
+     * and pinned by `LadderTest`: the slope is 24 dB/oct, and the
+     * passband drops by 1/(1+r) as resonance rises — the "thinning" that
+     * makes a resonant sweep on this filter sound hollow rather than
+     * peaky. Neither is compensated: the loss is the character, and every
+     * engine ends in [levelTo].
+     *
+     * No tuning compensation either. The unit delay in the feedback pulls
+     * the resonant peak slightly flat and the self-oscillation slightly
+     * sharp (measured: 975 Hz for 1000; +0.9% at 1 kHz, +5.4% at 4 kHz,
+     * at RATE * OVERSAMPLE). Under a quarter-tone everywhere a CUTOFF
+     * knob with no Hz readout will land, and a published polynomial fix
+     * would be a tuned constant shipped unmeasured.
+     *
+     * Do not replace the per-stage tanh pair with one shared tanh: the
+     * `tanh(in) - tanh(y)` form is what makes each stage's DC gain
+     * exactly 1, which is what keeps the passband flat at r = 0.
+     *
+     * One instance per voice per pass; process() advances one sample.
+     */
+    class Ladder(private val rate: Int = RATE) {
+        private val y = FloatArray(4)
+        var out = 0f
+            private set
+
+        fun process(input: Float, freqHz: Float, resonance: Float): Float {
+            val fc = freqHz.coerceIn(10f, rate * 0.45f)
+            val g = (1.0 - exp(-2.0 * PI * fc / rate)).toFloat()
+            val r = resonance.coerceIn(0f, MAX_RESONANCE)
+            var u = tanh(input - r * y[3])
+            for (i in 0 until 4) {
+                y[i] += g * (u - tanh(y[i]))
+                u = tanh(y[i])
+            }
+            out = y[3]
+            return out
+        }
+
+        fun reset() { y.fill(0f); out = 0f }
+
+        companion object {
+            /** Past the linear model's threshold of 4, so the top of a CREAM knob sings. */
+            const val MAX_RESONANCE = 4.3f
+        }
     }
 
     /**

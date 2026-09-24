@@ -571,6 +571,46 @@ class FxTest {
         assertTrue(ringLikeness < 0.3, "RING at full MIX barely changed the sound: likeness $ringLikeness")
     }
 
+    // ---------- CONTOUR ----------
+
+    @Test
+    fun `CONTOUR CUTOFF low darkens and SWEEP brightens the head`() {
+        // Measured on THUMP's snare, 2026-09-24: head centroid 9971 Hz at
+        // CUTOFF 1 -> 180 Hz at CUTOFF 0.2 (SWEEP 0, CREAM 0.2); first-10 ms
+        // centroid 558 Hz at SWEEP 0 -> 1197 Hz at SWEEP 1 (CUTOFF 0.6,
+        // CREAM 0.4), a 2.1x lift, pinned at 1.5x. Ten milliseconds, not
+        // twenty: at SWEEP 1 the contour's T60 is 60 ms, so a 20 ms window
+        // already averages in the landed filter (545 vs 283 Hz there, and
+        // at CUTOFF 0.3 the 20 ms ordering even inverts, 173 vs 200).
+        val still = mapOf("CREAM" to 0.2f, "SWEEP" to 0f)
+        val open = FeatureExtractor.extract(Contour.process(snare, still + ("CUTOFF" to 1f)))
+        val dark = FeatureExtractor.extract(Contour.process(snare, still + ("CUTOFF" to 0.2f)))
+        assertTrue(dark.centroidHz < open.centroidHz * 0.6f, "CUTOFF should darken: ${open.centroidHz} -> ${dark.centroidHz}")
+
+        fun head10(sweep: Float): Float {
+            val out = Contour.process(snare, mapOf("CUTOFF" to 0.6f, "CREAM" to 0.4f, "SWEEP" to sweep))
+            val head = (0.01f * out.sampleRate).toInt()
+            return FeatureExtractor.extract(Snip(out.samples.copyOfRange(0, head), 1, out.sampleRate)).centroidHz
+        }
+        val swept = head10(1f)
+        val flat = head10(0f)
+        assertTrue(swept > flat * 1.5f, "SWEEP 1 should open the first 10 ms well above SWEEP 0: $swept vs $flat")
+    }
+
+    @Test
+    fun `a gently contoured kick is still a kick`() {
+        // Measured 2026-09-24: KICK, centroid 45.7 Hz, lowRatio 0.978 - nowhere near a boundary.
+        val mild = Contour.process(kick, mapOf("CUTOFF" to 0.6f, "CREAM" to 0.3f, "SWEEP" to 0.3f))
+        assertEquals(DrumClass.KICK, Classifier.classify(mild).drumClass)
+    }
+
+    @Test
+    fun `contoured exists, sets contour, and is a bypass at AMT 0`() {
+        assertTrue("contoured" in Treatments.names)
+        assertTrue(Treatments.chain("contoured", 1f).section("contour") != null)
+        assertTrue(Treatments.chain("contoured", 0f).isBypass)
+    }
+
     // ---------- PHASE ----------
 
     @Test

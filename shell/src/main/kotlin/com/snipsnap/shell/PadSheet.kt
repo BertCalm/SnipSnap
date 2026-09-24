@@ -74,7 +74,7 @@ object PadSheet {
     val ANATOMY_SEGMENTS: List<String> = listOf("SWELL", TAIL, "SKIM", "GHOST", "SPIKE")
 
     /** Row three — what the hit sounds like once it is itself: the damage. */
-    val CHARACTER_SEGMENTS: List<String> = listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE")
+    val CHARACTER_SEGMENTS: List<String> = listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR")
 
     /** Row four — what happens to it in time: repeats, rooms, the grid. */
     val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE")
@@ -195,6 +195,8 @@ object PadSheet {
         "PHASE" to "phased",
         // The transport: pitch is speed. AMT fades it back toward native, not toward silence.
         "PITCH" to "pitched",
+        // The ladder's own filter contour, swept from the hit's onset.
+        "CONTOUR" to "contoured",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )

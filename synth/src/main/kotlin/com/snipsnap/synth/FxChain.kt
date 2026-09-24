@@ -8,7 +8,10 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → SQUASH → CRUNCH → RING → DUB → VINYL → TAPE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → SQUASH → CRUNCH → RING → DUB → VINYL → TAPE → PHASE → ECHO → SPRING → MOTION
+ *
+ * contour after EQ and before the dynamics, so SQUASH tames the resonant
+ * peak rather than the peak riding over the squash.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -50,6 +53,7 @@ data class FxChain(
     val dub: Map<String, Float>? = null,
     val vinyl: Map<String, Float>? = null,
     val swell: Map<String, Float>? = null,
+    val contour: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -173,6 +177,7 @@ data class FxChain(
             Section("ghost", Ghost.MACROS, { it.ghost }, { c, m -> c.copy(ghost = m) }, Ghost::process),
             Section("spike", Spike.MACROS, { it.spike }, { c, m -> c.copy(spike = m) }, Spike::process),
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
+            Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),

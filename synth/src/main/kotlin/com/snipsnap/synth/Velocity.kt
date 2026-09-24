@@ -205,6 +205,7 @@ object Velocity {
         is PluckPatch -> Pluck.macrosFor(patch.voice)
         is VelvetPatch -> Velvet.macrosFor(patch.voice)
         is FathomPatch -> Fathom.macrosFor(patch.voice)
+        is ResinPatch -> Resin.macrosFor(patch.voice)
         is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
         is VoxPatch -> Vox.macrosFor(patch.voice)
         is SkinPatch -> Skin.macrosFor(patch.voice)
@@ -296,8 +297,8 @@ object Velocity {
      * - BRIGHT (TINES, all voices) — directly scales the FM modulation
      *   index (`Tines.kt` bell/chime/block/zap/toy), the exact shape of
      *   [Keys.ep]'s velocity precedent.
-     * - CUTOFF (VELVET all voices; FATHOM all voices) — the resonant
-     *   low-pass cutoff both engines are built around (`Velvet.kt`'s own
+     * - CUTOFF (VELVET all voices; FATHOM all voices; RESIN all voices) —
+     *   the resonant low-pass cutoff both engines are built around (`Velvet.kt`'s own
      *   KDoc calls filter+resonance "the most gratifying knob in
      *   synthesis"; `Fathom.kt`'s signal path is source → DRIVE → CUTOFF →
      *   envelope).
