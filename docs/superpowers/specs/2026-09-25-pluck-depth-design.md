@@ -1,4 +1,4 @@
-# PLUCK depth — STRIKE, BODY, and a tine that is a bar
+# PLUCK depth — STRIKE, BODY, and KALIMBA's move to TINES
 
 **Status:** design, approved in conversation 2026-09-25. Not implemented.
 **Date:** 2026-09-25
@@ -81,11 +81,14 @@ Four conclusions, each of which shapes a section below:
 
 ## Architecture
 
-PLUCK stays one engine with four voices, one `render(voice, macros)`, and
-the existing 4× oversampled render/decimate/level/fade tail. Two paths sit
-under it after Phase 3; until then, one.
+PLUCK stays one engine with one `render(voice, macros)` and the existing 4×
+oversampled render/decimate/level/fade tail, and after Phase 2 it has three
+voices, all strings. KALIMBA leaves for TINES (its own section below): the
+audition found it flat at every body amount because a tine is not a string,
+and the engine whose voices are BELL, CHIME, BLOCK, ZAP and TOY is where a
+plucked metal tongue belongs.
 
-### The string path — NYLON, HARP, KOTO (and KALIMBA until Phase 3)
+### The string path — NYLON, HARP, KOTO (and KALIMBA until Phase 2 removes it)
 
 ```
 noise burst ──(PICK low-pass)──(STRIKE comb)──▶ Karplus-Strong loop ──┬──▶ string
@@ -127,43 +130,55 @@ noise burst ──(PICK low-pass)──(STRIKE comb)──▶ Karplus-Strong loo
 - **DOUBLE** is unchanged: a second string, sharp by `1.002–1.012`, at
   `0.7 × DOUBLE`. Both strings feed the one body.
 
-### The tine path — KALIMBA, Phase 3
+### KALIMBA moves to TINES — built in Phase 1, PLUCK's copy removed in Phase 2
+
+TINES is "FM, deliberately small": every voice is `Tines.strike(out,
+carrierHz, ratio, index, t60, bite, gain, rate)` with different numbers,
+and the index always decays `bite` times faster than the amplitude. That
+shape is a plucked tine's transient, and the core can place a strike at
+*any* multiple of the note, which is how the voice reaches a clamped-free
+bar's overtones exactly, with no modal bank:
 
 ```
-short burst ──(PICK low-pass)──▶ Modes.ring(TINE table, atPosition(STRIKE)) ──▶ tine
-                                          first difference ──▶ Modes.ring(box) ──▶ × BODY ──▶ +
+strike(f0,        ratio 1, index by BRIGHT, t60)              the tongue's fundamental
+strike(6.267 f0,  ratio 1, low index,       t60 × 0.25, g .35) second partial, dies fast
+strike(17.548 f0, ratio 1, low index,       t60 × 0.10, g .12) third partial, gone in a blink
++ BUZZ: amplitude-gated noise, the bottle-cap rattle
 ```
 
-- `Modes.Material.TINE` is a **clamped-free bar**: Euler–Bernoulli
-  eigenvalues `βL = 1.8751, 4.6941, 7.8548, 10.9955`, squared and normalised
-  to the first, give `1 : 6.267 : 17.548 : 34.386`. The free-free bar the
-  table already carries (`1 : 2.756 : 5.404 : 8.933`) comes from the same
-  family, and `Modes.body()` dresses the ratios with the same strike shape.
-  Sourcing follows the rule written on `Modes.tableFor`: the ratios are
-  recorded in the plan workspace with citations (Fletcher & Rossing,
-  *The Physics of Musical Instruments*, the bars chapter; Rossing, *Science
-  of Percussion Instruments*, the mbira chapter) before they land in code,
-  the way `mode-ratios-research.md` did for the others.
-- The exciter is the same PICK-coloured burst, cut to a few milliseconds:
-  a tine is struck-plucked by a thumbnail, not rung by a period of noise.
-- STRIKE keeps its name and its "position" meaning, and on the tine it uses
-  the cantilever's own mode shapes rather than `Modes.atPosition`'s string
-  sine: a clamped-free bar's `n`-th shape is
-  `φₙ(x) = cosh(βₙx) − cos(βₙx) − σₙ(sinh(βₙx) − sin(βₙx))` with
-  `σₙ = (cosh βₙL − cos βₙL) / (sinh βₙL + sin βₙL)`, and mode `n`'s gain is
-  weighted by `|φₙ(p·L)| / |φₙ(L)|`. The free tip is an antinode of every
-  mode, so `p = 1` is the full strike; the second mode's node near `0.774 L`
-  and the third's near `0.5 L` and `0.868 L` are where a pluck goes glassy
-  or woody, which is the range STRIKE exists to reach. `p` runs from `0.4 L`
-  (the ugly end) to the tip. PICK stays what it is on every voice — exciter
-  brightness, which on a tine is thumbnail versus flesh. Decided 2026-09-25
-  on Josh's "you tell me"; the gate still judges it.
-- TUNE places the fundamental mode at the snapped frequency exactly, so
-  `TuningAccuracyTest`'s five-cent bound holds by construction.
-- DAMP scales every mode's t60, the way the snare's DECAY does. DOUBLE is a
-  second tine, sharp, at the same gain as the string path's second string:
-  the doubled-tine mbira is real.
-- The tine feeds the same BODY stage as the strings, with a small box body.
+- **The ratios are the clamped-free bar's**: Euler–Bernoulli eigenvalues
+  `βL = 1.8751, 4.6941, 7.8548`, squared and normalised, give
+  `1 : 6.267 : 17.548`. The free-free bar `Modes.tableFor` already carries
+  (`1 : 2.756 : 5.404 : 8.933`) is the same family; as there, the ratios are
+  recorded with citations (Fletcher & Rossing, *The Physics of Musical
+  Instruments*, the bars chapter; Rossing, *Science of Percussion
+  Instruments*, the mbira chapter) in the plan workspace before they land
+  in code. Two upper partials are enough: the fourth (`34.4 f0`) would sit
+  above 15 kHz across most of the range and above Nyquist at the top.
+- **TUNE snaps to semitones** from a root of A3, 220 Hz, over two octaves
+  — PLUCK's convention, applied to this one TINES voice through
+  `Tines.frequencyFor(TinesVoice.KALIMBA, tune)`. The other TINES voices
+  keep their continuous carrier ranges; this one is melodic, and
+  `SynthKits.melodic()`'s kalimba pads are pad recipes that replay through
+  macros, so the note has to be reachable *as a macro value*. The root and
+  span match PLUCK's KALIMBA, so the kit's five notes do not move.
+- **Macros:** TUNE, **BUZZ**, BRIGHT, DECAY — the engine's four-knob shape.
+  BRIGHT is the index on the fundamental strike plus the gain of the two
+  partials, so it stays the velocity macro TINES already routes through.
+  DECAY maps t60 over `0.3–2.0 s`. BUZZ is the voice's character knob: an
+  mbira's soundboard carries buzzers — bottle caps, shells — that rattle at
+  the peaks of the vibration, so the buzz lives in the attack and dies with
+  the note. Modelled as amplitude-gated noise: at every sample where `|x|`
+  exceeds a threshold BUZZ lowers, add seeded noise scaled by the excess.
+  BUZZ 0 is a clean thumb piano; BUZZ 1 is a full rattle, the ugly end.
+- **Twelve presets**, reusing the PLUCK kalimba names that describe a sound
+  (THUMBPIANO, RUSTY TINE, GLASSY MBIRA, …) mapped onto the new macros,
+  authored the way every other preset here was and re-authored by ear
+  later.
+- **The audition** puts the new voice's default, its BUZZ and BRIGHT
+  extremes, and the five melodic-kit notes on the listening page beside
+  PLUCK's KALIMBA at the same notes; his chips decide, and Phase 2 removes
+  `PluckVoice.KALIMBA` only after that gate.
 
 ## Macros
 
@@ -192,10 +207,9 @@ sonic one; the gate can move it.
 **Per-voice defaults are placeholders until the gate**, and are written as
 such in code (a table with a comment naming this document), the way
 `LOUDNESS_OFFSET` already is. Starting values from the chips: BODY HARP 0.4,
-KOTO 0.35, NYLON 0.5, and KALIMBA 0 until Phase 3 — every body amount made
-the string-model kalimba read WORSE, and the string is what Phase 3
-replaces; STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played
-with a pick near the bridge).
+KOTO 0.35, NYLON 0.5; STRIKE 0.75 on every voice except KOTO at 0.6 (a koto
+is played with a pick near the bridge). KALIMBA has no body default and no
+STRIKE tuning effort: it leaves PLUCK in Phase 2.
 
 ## The bodies
 
@@ -216,7 +230,6 @@ voice before any Hz reaches `Pluck.kt`:
 | NYLON | classical guitar | the air resonance A0 near 100 Hz, the top-plate T1 near 200 Hz, the back-coupled T2 near 250 Hz, then plate modes; Q of order 20–50 (Fletcher & Rossing, the guitar chapter) | 98, 195, 250, 410, 560, 780, 1200, 2400 Hz |
 | KOTO | paulownia box, ~1.8 m | body resonances measured on the instrument; the literature is thinner (Ando's koto studies are the starting point) | 140, 205, 310, 470, 690, 1050, 1600 Hz |
 | HARP | spruce soundboard | a dense soundboard series from roughly 100 Hz up (Waltham & Kotlicki on the concert harp) | 110, 165, 240, 330, 450, 600, 820, 1100, 1500 Hz |
-| KALIMBA | hand-sized box with sound holes | a Helmholtz resonance in the low hundreds of Hz plus box-plate modes; sparse literature, so a measured resonance from a recording is acceptable evidence | 330, 620, 950, 1400, 2100 Hz — Phase 3, with the tine |
 
 **Decays.** The knock fix has two halves. The first difference drive is
 one. The other is that a body's lowest modes have moderate Q: the spike gave
@@ -264,6 +277,11 @@ left.
 - `Keys.harp(midi)` and `SynthKits.melodic()` call `render` with TUNE only
   and inherit the new defaults. Their sound changes; the presets policy
   accepts that, and `InstrumentSuite`'s harp export changes with it.
+- Removing `PluckVoice.KALIMBA` (Phase 2) makes a saved `PLUCK/KALIMBA`
+  patch undecodable: `Patches.decode` looks the voice name up in
+  `PluckVoice.entries` and finds nothing. Pre-launch, accepted (decision 1).
+  `SynthKits.melodic()`'s five kalimba pads (A07–A11) are re-pointed at the
+  TINES voice at the same pentatonic notes, so the kit keeps its layout.
 - `SCRAMBLE` (`Pluck.scramble`) works over the six macros with no change.
 - Export is untouched: mono WAVs through `Cleanup`, `WavWriter`, `Preflight`.
 - `PadRecipe.VERSION` is not bumped: old recipes decode and replay with
@@ -297,13 +315,12 @@ notes are the gate's record.
 
 | Phase | Ships | Audio changes | Gate |
 |---|---|---|---|
-| 1 | STRIKE macro; decay-following render length with the 4 s ceiling; velocity through PICK; seed convention; `macrosFor` at five | Yes | STRIKE extremes and DAMP 0 across all four voices |
-| 2 | `body-research.md`; per-voice sourced tables for the three string voices; first-difference drive; BODY macro with placeholder defaults (KALIMBA at 0); `macrosFor` at six | Yes | BODY at 0 / default / 1 for NYLON, KOTO and HARP; the knock question asked again |
-| 3 (outline) | `Modes.Material.TINE` and KALIMBA on the tine path; dispersion allpasses inside the loop for KOTO and HARP (stiff-string inharmonicity, with the allpass phase folded into the loop's tuning budget); sympathetic strings under DOUBLE | Yes | its own spec and plan, written after Phase 2's gate, because the tine spike comes first |
+| 1 | STRIKE macro; decay-following render length with the 4 s ceiling; velocity through PICK; seed convention; `macrosFor` at five. **Alongside:** the TINES KALIMBA voice, its presets, and its clips on the page beside PLUCK's KALIMBA | Yes | STRIKE extremes and DAMP 0 for NYLON, KOTO and HARP; TINES KALIMBA against PLUCK KALIMBA |
+| 2 | Remove `PluckVoice.KALIMBA`, its presets and its melodic-kit pads (the kit's A07–A11 move to TINES); `body-research.md`; per-voice sourced tables; first-difference drive; BODY macro with placeholder defaults; `macrosFor` at six | Yes | BODY at 0 / default / 1 for NYLON, KOTO and HARP; the knock question asked again |
+| 3 (outline) | dispersion allpasses inside the loop for KOTO and HARP (stiff-string inharmonicity, with the allpass phase folded into the loop's tuning budget); sympathetic strings under DOUBLE | Yes | its own spec and plan, written after Phase 2's gate |
 
 Phase 3's string physics were not tested by the spike and are not designed
-here beyond their names. The tine is designed above because the audition
-made the case for it; its plan still opens with a throwaway render, the way
+here beyond their names; its plan opens with a throwaway render, the way
 this one did.
 
 ## Testing
@@ -343,12 +360,18 @@ saying why.
   behaviour.
 - **Presets** — `PluckPresetsTest` unchanged: clean, non-silent, round-trip,
   names.
-- **Tine (Phase 3)** — a `ModesTest` case pins TINE's second and third
-  ratios at 6.267 and 17.548 within 0.5 %; a KALIMBA render's measured
-  second partial lands within 2 % of 6.27× the fundamental.
-- **Tine position (Phase 3)** — the cantilever weighting leaves mode 1
-  unchanged across `p` and puts mode 2 at least 20 dB below its tip level
-  at `p = 0.774`, its node.
+- **TINES KALIMBA** — in `TinesTest`: renders clean at defaults and both
+  corners; every melodic-kit pitch it is asked for lands within five cents
+  (the `TuningAccuracyTest` bound, applied to the notes `SynthKits.melodic`
+  uses); BRIGHT moves the centroid at every step of its travel, the way
+  `SNAP moves at every step of its travel` is written for the snare, so the
+  existing BRIGHT velocity path is proven for the new voice; `is
+  deterministic`. In `TinesPresetsTest`: the voice's twelve presets render
+  clean and pass the name rules.
+- **KALIMBA removal (Phase 2)** — `PluckVoice.entries` has three members;
+  `SynthKits.melodic()` still lands sixteen pads with A07–A11 on TINES; the
+  kit's pads still classify as they did; decoding a saved `PLUCK/KALIMBA`
+  patch fails loudly (`UserPresetsTest` names the voice list it expects).
 
 ## Out of scope
 
@@ -375,9 +398,18 @@ the sections above already reflect the answers.
    defect; its BODY default is 0 in Phase 2 and its box table ships with
    the tine.
 3. **The 4 s ring ceiling stands.**
-4. **STRIKE on the tine means position**, weighted by the cantilever's own
-   mode shapes so the nodes fall where a real tine has them; PICK remains
-   hardness. Josh delegated the call; the Phase 3 gate still judges it.
+4. **STRIKE on the tine means position** — superseded the same day by
+   decision 5, and kept here so the reasoning is not re-derived: on a
+   cantilever the free tip is every mode's antinode and the second mode's
+   node sits near `0.774 L`, which is where position would have earned its
+   name.
+5. **KALIMBA moves to TINES.** Asked "should Kalimba be moved to the TINES
+   engine?", the answer was yes, on these terms: TINES gets a KALIMBA voice
+   (FM, era-correct, the 1980s kalimba patch's lineage) built and auditioned
+   beside PLUCK's during Phase 1; PLUCK drops KALIMBA at the start of Phase
+   2; Phase 3 is strings only; and if a physically modelled tine is ever
+   wanted, the clamped-free bar table belongs to the STRIKE engine, which is
+   excitation into modal bodies by definition.
 
 ## Appendix — the spike
 
