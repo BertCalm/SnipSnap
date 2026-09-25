@@ -353,3 +353,63 @@ reads `DRONE A1 · 1/8 · -3.2¢ OFF`.
 of silence while a drone re-renders, has only been measured on this cloud
 machine, not a phone. Also still to listen for: whether RATE 1 across four
 bars sounds like breathing.
+
+## Hardening, round one
+
+What a pass with hostile, extreme and unlucky inputs found and changed:
+
+- **A tempo change left the old render running.** Each settled tempo change
+  starts a render at the new length. The old one ran to its end, seconds of
+  CPU and tens of MB for a length nothing would play. `ResinDrone.render`
+  now asks every 2^15 oversampled samples (about 0.2 s of audio) whether it
+  is still wanted, and checks its thread's interrupt flag. `Residency`
+  answers "wanted" only while the render's interval length is the one
+  playing or the one on its way in, so a tempo on its way in is never
+  cancelled by the one playing. A stopped bake is never cached, so a return
+  to that tempo renders again instead of playing silence. PREVIEW on the
+  SYNTH screen stops the same way on CANCEL.
+- **Drones held LOOP's whole bake pool.** LOOP bakes on two threads. Two
+  drones rendering held both, so every other track's bake queued behind them
+  and ran on the audio thread after all: the stall this design exists to
+  prevent. Drones now render on their own single thread
+  (`Residency`'s `droneExecutor`). That also caps in-flight render memory
+  to one drone.
+- **Drones were held and sliced in stereo.** `DroneSource` now keeps renders
+  mono, and `BlockBaker` widens each slice as it cuts it. It used to widen
+  the whole drone for every slice.
+- **A real bug the new tests caught:** `CompletableFuture.get()` rethrows a
+  `CancellationException` as itself, not wrapped in an
+  `ExecutionException`. A stopped render would have escaped `DroneSource` as
+  an exception, not come back as silence.
+
+**Worst-case memory**, computed for the longest drone (one 48 s interval,
+8 bars at 40 BPM) at 48 kHz:
+
+| | Before | After |
+|---|---|---|
+| One render in flight (4× buffer, decimator halves, the cut) | ~77 MB, and up to two at once on the shared pool | ~77 MB, one at a time |
+| Cached renders (one per track, six tracks) | 6 × 18.4 MB stereo = 110 MB | 6 × 9.2 MB mono = 55 MB |
+| Baking one slice | a stereo copy of the whole drone, 18.4 MB | a stereo copy of the slice only |
+
+The baked slices `Residency` keeps (this interval's and the next, per
+track) are the grid's own design and the same for any block.
+
+**Fuzzed:**
+- 32 seeded random recipes: every macro including its exact ends, junk keys,
+  any MIDI root 0–127, rates from 22.05 to 96 kHz, any tempo and bar count.
+  All finite, all under the 0.99 ceiling. Loudness was within
+  −1.69..0.00 dB of target over 48 cases; the limiter only ever pulls a
+  resonant patch down. Every case repeated exactly: the worst
+  period-to-period difference was 0.0.
+- 300 random grids: one `refit` settles every drone, a second changes
+  nothing, and no other track is touched.
+
+**Hostile inputs:**
+- Every bad value of every `--drone` and `--instrument` flag is refused with
+  exit 2 and the flag named, and nothing is written. Odd but valid
+  spellings (`a3`, ` A3 `, `Bb3`, `-0`) render.
+- Ten malformed `loop.json` drone blocks are refused whole. Thirteen odd but
+  whole ones load, refit and bounce finite audio of the right length. Those
+  include half a drone, two drones in one track, another engine's recipe, a
+  recipe that is text or null, and roots at MIDI 0 and 127. A recipe the
+  renderer can't read plays as silence.
