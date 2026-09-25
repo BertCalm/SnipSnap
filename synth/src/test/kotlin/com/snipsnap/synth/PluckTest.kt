@@ -396,4 +396,46 @@ class PluckTest {
         for (i in from until snip.frameCount) tail = maxOf(tail, kotlin.math.abs(snip.samples[i]))
         return 20f * kotlin.math.log10(tail / peak + 1e-9f)
     }
+
+    @Test
+    fun `PICK moves the centroid at every step of its travel`() {
+        // The precondition for routing velocity through PICK: the same
+        // sweep the snare's SNAP had to pass before its override line.
+        // KALIMBA is excluded because its sweep inverts (centroid peaks at
+        // PICK 0.1 and falls, net -2.4% at PICK 1) - its loop cutoff at the
+        // default DAMP sits under most of its PICK range - and it leaves
+        // PLUCK in Phase 2; until then it keeps the soften fallback.
+        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+            val points = (0..10).map { it / 10f }
+            val measured = points.map { p ->
+                FeatureExtractor.extract(Pluck.render(voice, mapOf("PICK" to p))).centroidHz
+            }
+            for (i in 0 until measured.size - 1) {
+                assertTrue(
+                    measured[i + 1] > measured[i] * 0.98f,
+                    "$voice: PICK fell between ${points[i]} and ${points[i + 1]}: $measured",
+                )
+                assertTrue(
+                    kotlin.math.abs(measured[i + 1] - measured[i]) > 1f,
+                    "$voice: PICK is dead between ${points[i]} and ${points[i + 1]}: $measured",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `a soft PLUCK is re-synthesised through PICK, not low-passed`() {
+        val patch = PluckPresets.forVoice(PluckVoice.NYLON).first()
+        val soft = Velocity.atVelocity(patch, 0.2f)
+        val hard = Velocity.atVelocity(patch, 1f)
+        val softened = Velocity.soften(patch.render(), 0.8f)
+        assertTrue(
+            FeatureExtractor.extract(soft).centroidHz < FeatureExtractor.extract(hard).centroidHz,
+            "a soft strike should be darker than a hard one",
+        )
+        assertTrue(
+            !soft.samples.contentEquals(softened.samples),
+            "soft velocity must be a re-render through PICK, not the soften() fallback",
+        )
+    }
 }
