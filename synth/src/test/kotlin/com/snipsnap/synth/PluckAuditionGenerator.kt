@@ -1,16 +1,16 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 /**
  * Renders the Phase 1 audition set of
  * docs/superpowers/specs/2026-09-25-pluck-depth-design.md under
- * testkit/pluck-audition/ (gitignored): 16-bit clips at one RMS, plus the
- * listening page copied from the test resources. Run via
+ * testkit/pluck-audition/ (gitignored): 16-bit clips at one loudness (see
+ * [level]), plus the listening page copied from the test resources. Run via
  * `./gradlew :synth:generatePluckAudition`.
  *
  * The folder is then published as the listening artifact the spec names.
@@ -21,7 +21,7 @@ import kotlin.math.sqrt
 object PluckAuditionGenerator {
 
     /** Quiet on purpose: low enough that no clip needs the peak guard. */
-    private const val AUDITION_RMS = 0.03f
+    private const val AUDITION_LEVEL = 0.03f
 
     /** The melodic kit's five kalimba notes as semitones above A3 (A07..A11 in SynthKits.melodic). */
     private val KIT_NOTES = listOf("C4" to 3, "D4" to 5, "E4" to 7, "G4" to 10, "A4" to 12)
@@ -72,16 +72,20 @@ object PluckAuditionGenerator {
     }
 
     /**
-     * One RMS for every clip, for a fair A/B: the spike measured shipped
-     * PLUCK as peak-limited, so loudness would decide the comparison
-     * otherwise. A peak guard keeps the file in range.
+     * One loudness for every clip, for a fair A/B: the spike measured
+     * shipped PLUCK as peak-limited, so loudness would decide the
+     * comparison otherwise. The measure is [Loudness.of] - the RMS of the
+     * loudest 200 ms window, the same measure `Dsp.levelTo` uses - not a
+     * whole-file RMS: a whole-file measure divides a short thud's energy
+     * over silence it doesn't have and a long ring's energy over tail it
+     * does, so at equal loudest-moment level a longer clip reads quieter by
+     * whole-file RMS and gets over-boosted here; clip length must not be
+     * what decides the A/B. A peak guard keeps the file in range.
      */
     private fun level(snip: Snip): Snip {
         val out = snip.samples.copyOf()
-        var acc = 0.0
-        for (v in out) acc += v.toDouble() * v
-        val rms = sqrt(acc / out.size.coerceAtLeast(1)).toFloat()
-        var g = AUDITION_RMS / rms.coerceAtLeast(1e-9f)
+        val loudness = Loudness.of(Snip(out, channels = 1, sampleRate = snip.sampleRate))
+        var g = AUDITION_LEVEL / loudness.coerceAtLeast(1e-9f)
         var peak = 0f
         for (v in out) peak = maxOf(peak, abs(v))
         if (peak * g > 0.99f) g = 0.99f / peak
