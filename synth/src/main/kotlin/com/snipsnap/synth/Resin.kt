@@ -96,6 +96,37 @@ object Resin {
         ResinVoice.BRASS -> 120f to 9_000f
     }
 
+    /**
+     * A held render (docs/superpowers/specs/2026-09-25-resin-held-pad-design.md):
+     * the amp rises over [attackSeconds] and then holds flat for the whole
+     * [seconds]. [squareRatio], when set, replaces osc 3's detune with an
+     * exact ratio so a loop can close on a whole beat ([Keys.resinPad]);
+     * null keeps the one-shot's own detune.
+     */
+    internal data class Held(val attackSeconds: Float, val seconds: Float, val squareRatio: Double? = null) {
+        init {
+            require(attackSeconds in ATTACK_MIN_SECONDS..ATTACK_MAX_SECONDS) {
+                "attack wants $ATTACK_MIN_SECONDS..$ATTACK_MAX_SECONDS s, got $attackSeconds"
+            }
+            require(seconds > attackSeconds) { "a held note must outlast its attack: $seconds <= $attackSeconds" }
+        }
+    }
+
+    const val ATTACK_MIN_SECONDS = 0.01f
+    const val ATTACK_MAX_SECONDS = 2.5f
+
+    /**
+     * Held renders stop at the ladder's self-oscillation threshold, not past
+     * it: a self-oscillating ladder rings at its own frequency, which no loop
+     * of the note's period closes (measured: BASS A1 at r 4.3 seams at
+     * 7.9e-3, eight times the Organ's bar). CONTOUR caps at 4 for its own
+     * reason.
+     */
+    const val HELD_MAX_RESONANCE = 4f
+
+    internal fun resonanceFor(cream: Float, held: Boolean): Float =
+        Dsp.lin(cream, 0f, if (held) HELD_MAX_RESONANCE else Dsp.Ladder.MAX_RESONANCE)
+
     /** Naive saw from a 0..1 phase. Aliases; the render is oversampled. */
     private fun saw(phase: Double): Float = (2.0 * (phase - Math.floor(phase)) - 1.0).toFloat()
 
@@ -121,7 +152,7 @@ object Resin {
      * of [render] so the oversampled dispatch can be tested against a
      * native-rate render (VelvetTest has the reasoning).
      */
-    internal fun synthesize(voice: ResinVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(voice: ResinVoice, macros: Map<String, Float>, rate: Int, held: Held? = null): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -151,11 +182,21 @@ object Resin {
         val octavesUp = Dsp.lin(contour, 0f, 4f)
         val contourT60 = t60 * Dsp.lin(contour, 0.6f, 0.2f)
         // The top of the knob is past the linear threshold: the filter sings.
-        val resonance = Dsp.lin(cream, 0f, Dsp.Ladder.MAX_RESONANCE)
+        val resonance = resonanceFor(cream, held != null)
 
-        val out = FloatArray((t60 * 1.4f * rate).toInt().coerceAtLeast(64))
+        val out = FloatArray(
+            if (held == null) (t60 * 1.4f * rate).toInt().coerceAtLeast(64) else (held.seconds * rate).toInt(),
+        )
         val ladder = Dsp.Ladder(rate)
-        val env = Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
+        val env = if (held == null) {
+            Dsp.Env(attackSeconds = 0.003f, decay2T60 = t60)
+        } else {
+            Dsp.Env(attackSeconds = held.attackSeconds, decay2T60 = t60, holdSeconds = held.seconds)
+        }
+        // The one-shot's increment is the same Float expression as before,
+        // widened once; a snapped ratio stays Double so the loop closes on
+        // the beat.
+        val inc3: Double = held?.squareRatio?.let { base * it / rate } ?: (base * detune / rate).toDouble()
         // Seeded per voice so the stack never opens phase-locked.
         val ph = Dsp.phases(3, Dsp.seedFor("RESIN", voice.name))
         var p1 = ph[0]
@@ -165,7 +206,7 @@ object Resin {
             val t = i.toFloat() / rate
             p1 += base / rate
             p2 += base * 0.5 / rate
-            p3 += base * detune / rate
+            p3 += inc3
             val stackOut = mixScale * (saw(p1) + g2 * saw(p2) + g3 * square(p3))
             val fc = (floorHz * 2f.pow(octavesUp * Dsp.envAt(t, contourT60))).coerceAtMost(MAX_CUTOFF_HZ)
             out[i] = ladder.process(stackOut, fc, resonance) * env.at(t)
@@ -185,6 +226,16 @@ object Resin {
         // restored here as loudness, never inside the filter.
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
+        return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /**
+     * [synthesize] held, oversampled and decimated like [render] - but
+     * neither levelled nor tail-faded: [Keys.resinPad] cuts the loop first,
+     * then levels on the loop itself, where a held note is heard.
+     */
+    internal fun renderHeld(voice: ResinVoice, macros: Map<String, Float>, held: Held): Snip {
+        val out = Dsp.decimate(synthesize(voice, macros, RATE * Dsp.OVERSAMPLE, held), RATE)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 }
