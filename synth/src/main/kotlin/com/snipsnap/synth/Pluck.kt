@@ -11,6 +11,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -57,6 +58,15 @@ object Pluck {
      */
     internal const val STRIKE_BRIDGE = 0.03f
     internal const val STRIKE_CENTRE = 0.5f
+
+    /**
+     * The render follows the string's own decay between these bounds
+     * (spec, "Macros"): the ceiling is a file-size judgement (≈ 350–530 KB
+     * per pad at 24-bit mono), the floor keeps a muted pluck from becoming
+     * a click. `Dsp.levelTo`'s ceiling and `Dsp.fadeTail` are unchanged.
+     */
+    internal const val RING_FLOOR_SECONDS = 0.25f
+    internal const val RING_CEILING_SECONDS = 4.0f
 
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.KALIMBA -> listOf(
@@ -149,7 +159,12 @@ object Pluck {
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
         }
 
-        val seconds = (ring * Dsp.lin(1f - damp, 0.35f, 1f)).coerceAtMost(1.35f)
+        // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
+        // voice's ring), DAMP 0 reaches the ceiling, and trimToDecay below
+        // then cuts the buffer where the string actually stops ringing, so a
+        // muted pluck stays a short file and a DAMP 0 harp gets its ring.
+        val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
+            .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
         val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = rate, position = position)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
@@ -161,7 +176,7 @@ object Pluck {
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
         }
-        return out
+        return trimToDecay(out, rate)
     }
 
     fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
@@ -182,6 +197,52 @@ object Pluck {
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /**
+     * Cuts [buf] where its 5 ms RMS envelope has fallen 60 dB below its
+     * peak, never under [RING_FLOOR_SECONDS]. A string that reaches the end
+     * of its budget still ringing (DAMP near 0 at the ceiling) is not cut at
+     * all but given a long squared fade, so the render's end is inaudible
+     * either way; `render`'s own 4 ms `Dsp.fadeTail` then has nothing
+     * audible left to touch.
+     */
+    internal fun trimToDecay(buf: FloatArray, rate: Int): FloatArray {
+        val block = (rate * 0.005f).toInt().coerceAtLeast(1)
+        val blocks = (buf.size + block - 1) / block
+        if (blocks == 0) return buf
+        val rms = DoubleArray(blocks)
+        for (b in 0 until blocks) {
+            val start = b * block
+            val end = min(buf.size, start + block)
+            var acc = 0.0
+            for (i in start until end) acc += buf[i].toDouble() * buf[i]
+            rms[b] = sqrt(acc / (end - start))
+        }
+        val peak = rms.max()
+        if (peak <= 0.0) return buf
+        val floorBlocks = ((RING_FLOOR_SECONDS * rate) / block).toInt()
+        var last = blocks - 1
+        while (last > floorBlocks && rms[last] < peak * 0.001) last--
+        val end = min(buf.size, (last + 2) * block)
+        if (end < buf.size) return buf.copyOf(end)
+        fadeCeiling(buf, ms = 400f, rate = rate)
+        return buf
+    }
+
+    /**
+     * A squared fade over the last [ms]. At the ring ceiling the string is
+     * still moving, and a linear fade's last few milliseconds would sit
+     * only ~30 dB down; squaring it puts them past -60 dB.
+     */
+    private fun fadeCeiling(buf: FloatArray, ms: Float, rate: Int) {
+        val n = min(buf.size, (ms / 1000f * rate).toInt())
+        if (n <= 0) return
+        val start = buf.size - n
+        for (i in 0 until n) {
+            val g = 1f - i.toFloat() / n
+            buf[start + i] *= g * g
+        }
     }
 
     /**

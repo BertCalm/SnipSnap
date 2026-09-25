@@ -24,7 +24,10 @@ class PluckTest {
                 assertTrue(snip.frameCount > 0, "$voice rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke range")
                 assertTrue(snip.peak() > 0.5f, "$voice too quiet at $macros")
-                assertTrue(snip.durationSeconds < 1.5f, "$voice must stay a one-shot")
+                assertTrue(
+                    snip.durationSeconds <= Pluck.RING_CEILING_SECONDS + 0.05f,
+                    "$voice must stay inside the ring ceiling",
+                )
             }
         }
     }
@@ -130,13 +133,16 @@ class PluckTest {
         // not decay into a fake kick. SCRAMBLE now rolls near a preset
         // (docs/SYNTH_UPGRADE.md, U2), so - like a preset itself can - a
         // roll can land close to that boundary; "most of the time", not
-        // "always", is the doc's own contract for a scrambled roll.
+        // "always", is the doc's own contract for a scrambled roll. The
+        // guard now counts only KICK: a long ring reading as LOOP is the
+        // decay-following render working, not the DC-thump it guards
+        // against.
         for (voice in PluckVoice.entries) {
             var misses = 0
             val rolls = 30
             repeat(rolls) { seed ->
                 val c = Classifier.classify(Pluck.render(voice, Pluck.scramble(voice, Random(seed))))
-                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+                if (c.drumClass == DrumClass.KICK) misses++
             }
             assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
         }
@@ -236,10 +242,11 @@ class PluckTest {
     fun `DOUBLE thickens audibly`() {
         val single = Pluck.render(PluckVoice.KOTO, mapOf("DOUBLE" to 0f))
         val doubled = Pluck.render(PluckVoice.KOTO, mapOf("DOUBLE" to 1f))
-        assertEquals(single.frameCount, doubled.frameCount)
         var diff = 0.0
         var level = 0.0
-        for (i in single.samples.indices) {
+        // The two renders end where their own strings do, so the comparison
+        // runs over the frames both have.
+        for (i in 0 until minOf(single.frameCount, doubled.frameCount)) {
             diff += Math.abs((single.samples[i] - doubled.samples[i]).toDouble())
             level += Math.abs(single.samples[i].toDouble())
         }
@@ -335,5 +342,58 @@ class PluckTest {
             quarter > plain * 0.5 && quarter < plain * 2.0,
             "default STRIKE share $quarter should be within 2x of the comb-less $plain",
         )
+    }
+
+    @Test
+    fun `DAMP at zero rings past three and a half seconds and fades out clean`() {
+        // The three string voices at their default notes (196-350 Hz) lose
+        // under 9 dB per second through the loop filter at DAMP 0 and reach
+        // the ceiling. KALIMBA's default is 440 Hz, where the same filter
+        // costs ~29 dB per second and the string is gone by ~2 s; it leaves
+        // PLUCK in Phase 2 and is covered by the reach test below instead.
+        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+            val snip = Pluck.render(voice, mapOf("DAMP" to 0f))
+            assertTrue(snip.durationSeconds >= 3.5f, "$voice: ${snip.durationSeconds}s is not a ring")
+            assertTrue(snip.durationSeconds <= Pluck.RING_CEILING_SECONDS + 0.05f, "$voice: past the ceiling")
+            assertTrue(tailDb(snip) < -55f, "$voice: last 10 ms at ${tailDb(snip)} dB should be inaudible")
+        }
+    }
+
+    @Test
+    fun `DAMP zero rings at least twice as long as DAMP half on every voice`() {
+        for (voice in PluckVoice.entries) {
+            val open = Pluck.render(voice, mapOf("DAMP" to 0f)).durationSeconds
+            val half = Pluck.render(voice, mapOf("DAMP" to 0.5f)).durationSeconds
+            assertTrue(open >= half * 2f, "$voice: DAMP 0 ${open}s vs DAMP 0.5 ${half}s is not enough reach")
+            assertTrue(tailDb(Pluck.render(voice, mapOf("DAMP" to 0f))) < -55f, "$voice: DAMP 0 tail is audible")
+        }
+    }
+
+    @Test
+    fun `DAMP at one is a short thud`() {
+        for (voice in PluckVoice.entries) {
+            val snip = Pluck.render(voice, mapOf("DAMP" to 1f))
+            assertTrue(snip.durationSeconds < 0.5f, "$voice: ${snip.durationSeconds}s is not a thud")
+        }
+    }
+
+    @Test
+    fun `the render ends where the string does, not at the budget`() {
+        // HARP at DAMP 0.6 gets a budget near a second and stops ringing well
+        // before it; the file must follow the string, and the cut must land
+        // on inaudible signal.
+        val snip = Pluck.render(PluckVoice.HARP, mapOf("DAMP" to 0.6f))
+        assertTrue(snip.durationSeconds >= Pluck.RING_FLOOR_SECONDS, "under the floor: ${snip.durationSeconds}s")
+        assertTrue(snip.durationSeconds < 0.9f, "padded to the budget: ${snip.durationSeconds}s")
+        assertTrue(tailDb(snip) < -50f, "tail at ${tailDb(snip)} dB: the cut landed on audible signal")
+    }
+
+    /** Level of the last 10 ms against the render's peak, in dB. */
+    private fun tailDb(snip: Snip): Float {
+        val peak = snip.peak()
+        val from = (snip.frameCount - (0.010f * snip.sampleRate).toInt()).coerceAtLeast(0)
+        var tail = 0f
+        for (i in from until snip.frameCount) tail = maxOf(tail, kotlin.math.abs(snip.samples[i]))
+        return 20f * kotlin.math.log10(tail / peak + 1e-9f)
     }
 }
