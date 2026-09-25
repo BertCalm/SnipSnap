@@ -402,9 +402,9 @@ class PluckTest {
         // The precondition for routing velocity through PICK: the same
         // sweep the snare's SNAP had to pass before its override line.
         // KALIMBA is excluded because its sweep inverts (centroid peaks at
-        // PICK 0.1 and falls, net -2.4% at PICK 1) - its loop cutoff at the
-        // default DAMP sits under most of its PICK range - and it leaves
-        // PLUCK in Phase 2; until then it keeps the soften fallback.
+        // PICK 0.1 and falls, net -2.4% at PICK 1; root cause not
+        // investigated) and it leaves PLUCK in Phase 2; until then it keeps
+        // the soften fallback.
         for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
             val points = (0..10).map { it / 10f }
             val measured = points.map { p ->
