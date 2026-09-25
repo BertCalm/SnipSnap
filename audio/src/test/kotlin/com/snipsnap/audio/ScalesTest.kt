@@ -85,6 +85,15 @@ class ScalesTest {
     }
 
     /** Tiny LCG so this test doesn't depend on synth-module noise. */
+    @Test
+    fun `midiOf reads back every name nameOf writes`() {
+        for (midi in 0..127) assertEquals(midi, Scales.midiOf(Scales.nameOf(midi)), Scales.nameOf(midi))
+        assertEquals(33, Scales.midiOf("A1"))
+        assertEquals(46, Scales.midiOf("Bb2"))
+        assertEquals(49, Scales.midiOf(" c#3 "))
+        for (bad in listOf("", "H2", "A", "A#", "Ax2", "G#9", "C-2", "A1.5")) assertEquals(null, Scales.midiOf(bad), bad)
+    }
+
     private class Dsp2Noise {
         private var s = 7
         fun next(): Float { s = (s * 1103515245 + 12345) and 0x7fffffff; return (s.toFloat() / 0x3fffffff) - 1f }
