@@ -207,7 +207,10 @@ strike(17.548 f0, ratio 1, low index,       t60 × 0.10, g .12) third partial, g
 - **Macros:** TUNE, **BUZZ**, BRIGHT, DECAY — the engine's four-knob shape.
   BRIGHT is the index on the fundamental strike plus the gain of the two
   partials, so it stays the velocity macro TINES already routes through.
-  DECAY maps t60 over `0.3–2.0 s`. BUZZ is the voice's character knob: an
+  DECAY maps t60 over `0.3–1.0 s`: `TinesTest` holds every TINES voice under
+  1.5 s at full DECAY so a hit never crosses the classifier's loop
+  threshold, and a kalimba note is short anyway. BUZZ is the voice's
+  character knob: an
   mbira's soundboard carries buzzers — bottle caps, shells — that rattle at
   the peaks of the vibration, so the buzz lives in the attack and dies with
   the note. Modelled as amplitude-gated noise: at every sample where `|x|`
@@ -385,8 +388,13 @@ saying why.
 - **STRIKE default is inert** — a render at the default STRIKE differs from
   the pre-STRIKE engine by less than a stated spectral distance; the
   audition's "quarter reads SAME" is what this pins.
-- **Ring ceiling** — at DAMP 0 the render is at least 3.5 s and its envelope
-  at the fade is at least 55 dB below peak; at DAMP 1 it is under 0.5 s.
+- **Ring ceiling** — at DAMP 0 the string voices at their default notes
+  render at least 3.5 s and their envelope at the fade is at least 55 dB
+  below peak; at DAMP 1 every voice is under 0.5 s; and on every voice
+  DAMP 0 rings at least twice as long as DAMP 0.5. The 3.5 s figure is a
+  property of a note in the 200–350 Hz range: the loop's one-pole costs a
+  440 Hz string about 29 dB per second even with the feedback at 0.998,
+  so a note an octave up rings shorter by physics, not by the budget.
 - **PICK is monotonic** — spectral centroid is non-decreasing across eleven
   PICK steps for every voice; this test is the precondition for the
   velocity override and is written before it.
