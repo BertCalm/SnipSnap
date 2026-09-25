@@ -81,6 +81,15 @@ class LoopActivity : ComponentActivity() {
     private val bakers = Executors.newFixedThreadPool(2)
 
     /**
+     * Drones render here, one at a time, never on [bakers]. A drone is
+     * seconds of work: two on the shared pool would hold both its threads,
+     * every other track's bake would queue behind them, and the engine would
+     * bake those on the audio thread. One thread also caps what drones hold
+     * in flight to one render's worth of memory (tens of MB for the longest).
+     */
+    private val droneBaker = Executors.newSingleThreadExecutor()
+
+    /**
      * One thread, for writing the session back — not [bakers].
      *
      * Two reasons, and the second is the one that bit. A sidecar write is
@@ -362,7 +371,7 @@ class LoopActivity : ComponentActivity() {
 
     private fun start(session: Session, dir: File) {
         val audioSink = AndroidAudioSink(session.sampleRate)
-        val res = Residency(session, source ?: DroneSource(KitSampleSource(dir)), bakers)
+        val res = Residency(session, source ?: DroneSource(KitSampleSource(dir)), bakers, droneBaker)
         val loopEngine = LoopEngine(res, audioSink)
 
         sink = audioSink
@@ -414,6 +423,8 @@ class LoopActivity : ComponentActivity() {
         // comes back next launch and the shelf's count disagrees with the
         // screen they just left.
         bakers.shutdownNow()
+        // A drone render stops at the interrupt (ResinDrone checks it).
+        droneBaker.shutdownNow()
         writer.shutdown()
         writer.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)
         // Nothing to do for a bounce in flight: it is not this activity's

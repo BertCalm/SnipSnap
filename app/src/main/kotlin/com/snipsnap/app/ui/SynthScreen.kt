@@ -146,6 +146,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -669,7 +670,9 @@ fun SynthScreen(
         droneJob = appScope.launch {
             try {
                 val heard = withContext(Dispatchers.Default) {
-                    val once = DroneMaker.render(spec, root, session)
+                    // CANCEL (or closing the sheet) cancels this job; the
+                    // render asks and stops rather than running on for seconds.
+                    val once = DroneMaker.render(spec, root, session) { !isActive }
                     Snip(FloatArray(once.size * 2) { once[it % once.size] }, 1, session.sampleRate)
                 }
                 audition(heard)

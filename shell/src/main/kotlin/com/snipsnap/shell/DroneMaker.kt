@@ -47,9 +47,17 @@ object DroneMaker {
     /** Intervals the drone spans in [session]. */
     fun span(rootMidi: Int, session: Session): Int = DroneFit.spanFor(rootMidi, session)
 
-    /** The whole drone for [session]: its span of intervals, mono, at the session's rate. */
-    fun render(spec: ResinDrone.Spec, rootMidi: Int, session: Session): FloatArray =
-        ResinDrone.render(spec, rootMidi, span(rootMidi, session).toLong() * session.intervalFrames, session.sampleRate)
+    /**
+     * The whole drone for [session]: its span of intervals, mono, at the
+     * session's rate. [cancelled] stops it part-way (see [ResinDrone.render]).
+     */
+    fun render(
+        spec: ResinDrone.Spec,
+        rootMidi: Int,
+        session: Session,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray =
+        ResinDrone.render(spec, rootMidi, span(rootMidi, session).toLong() * session.intervalFrames, session.sampleRate, cancelled)
 
     fun motionLabel(motion: Float): String =
         "±%.1f OCT".format(Locale.ROOT, motion * ResinDrone.MOTION_MAX_OCTAVES)

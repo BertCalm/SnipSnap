@@ -37,15 +37,25 @@ interface SampleSource {
     fun muteGroups(kit: String): Map<Int, Int> = emptyMap()
 
     /**
-     * A drone's whole render: exactly [frames] frames at [sampleRate], or
-     * null when this source has no renderer for [recipe]. The baker slices
-     * it; the source never sees slices, so a drone's slices can share one
-     * render.
+     * A drone's whole render: exactly [frames] frames at [sampleRate], mono
+     * or stereo, or null when this source has no renderer for [recipe] (or
+     * the render failed, or was [cancelled]). The baker slices it; the
+     * source never sees slices, so a drone's slices can share one render.
+     *
+     * [cancelled] says the render is no longer wanted (the grid has left the
+     * tempo it was for). A source that renders for seconds should ask it now
+     * and then and give up; one that answers at once can ignore it.
      *
      * Defaulted to null, like [muteGroups], because the grid does not know
      * what a synth is: a source that can render drones is handed in from
      * outside (`:shell`'s `DroneSource`), and a drone on a source that
      * can't bakes to silence, the same as a missing file.
      */
-    fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int): Snip? = null
+    fun drone(
+        recipe: JsonValue,
+        rootMidi: Int,
+        frames: Long,
+        sampleRate: Int,
+        cancelled: () -> Boolean = { false },
+    ): Snip? = null
 }

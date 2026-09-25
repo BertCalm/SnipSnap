@@ -449,7 +449,7 @@ class ResidencyTest {
         val droneCalls = AtomicInteger(0)
         override fun loop(sampleFile: String): Snip = Snip(FloatArray(frames * 2) { 0.5f }, 2, 48_000)
         override fun pad(kit: String, slot: Int): Snip? = null
-        override fun drone(recipe: com.snipsnap.json.JsonValue, rootMidi: Int, frames: Long, sampleRate: Int): Snip {
+        override fun drone(recipe: com.snipsnap.json.JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip {
             droneCalls.incrementAndGet()
             release.await(10, TimeUnit.SECONDS)
             return Snip(FloatArray(frames.toInt()) { 0.25f }, 1, sampleRate)
@@ -503,5 +503,84 @@ class ResidencyTest {
         for (f in 0 until out.frameCount) if (out.samples[f * 2] != 0f) { dronePart = true; break }
         assertTrue(dronePart, "the bounce lost the drone")
         assertEquals(1, src.droneCalls.get())
+    }
+
+    @Test
+    fun `drones render on their own executor, so the other tracks never queue behind them`() {
+        val s = withDrone()
+        val src = SlowDroneSource(s.intervalFrames) // never released: the drone thread stays busy
+        val droneThread = Executors.newSingleThreadExecutor()
+        try {
+            // The shared pool runs inline; a drone put on it would block right here.
+            val r = Residency(s, src, sameThread, droneThread)
+            val t0 = System.nanoTime()
+            r.prefetch(0)
+            val buffers = r.buffersFor(0)
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue(ms < 500, "a busy drone held up the other tracks for ${ms}ms")
+            for (i in 1 until 6) assertEquals(0.5f, buffers[i].samples[0], "track $i should have baked")
+        } finally {
+            src.release.countDown()
+            droneThread.shutdownNow()
+        }
+    }
+
+    /** A drone render that runs until the grid says it is no longer wanted. */
+    private class PatientDroneSource(private val frames: Int) : SampleSource {
+        val started = CountDownLatch(1)
+        val stoppedEarly = AtomicInteger(0)
+        override fun loop(sampleFile: String): Snip = Snip(FloatArray(frames * 2) { 0.5f }, 2, 48_000)
+        override fun pad(kit: String, slot: Int): Snip? = null
+        override fun drone(recipe: com.snipsnap.json.JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip? {
+            started.countDown()
+            val deadline = System.nanoTime() + 5_000_000_000L
+            while (System.nanoTime() < deadline) {
+                if (cancelled()) {
+                    stoppedEarly.incrementAndGet()
+                    return null
+                }
+                Thread.sleep(5)
+            }
+            return Snip(FloatArray(frames.toInt()) { 0.25f }, 1, sampleRate)
+        }
+    }
+
+    @Test
+    fun `a drone rendering for a tempo the grid has left stops, and leaves nothing cached`() {
+        val s = withDrone()
+        val src = PatientDroneSource(s.intervalFrames)
+        val droneThread = Executors.newSingleThreadExecutor()
+        try {
+            val r = Residency(s, src, sameThread, droneThread)
+            r.buffersFor(0)
+            assertTrue(src.started.await(5, TimeUnit.SECONDS))
+            val before = r.residentCount()
+            // The player changes tempo; the old length is neither playing nor on its way in.
+            r.update(s.copy(bpm = s.bpm - 20f))
+            droneThread.shutdown()
+            assertTrue(droneThread.awaitTermination(5, TimeUnit.SECONDS), "the stale render ran to its end")
+            assertEquals(1, src.stoppedEarly.get())
+            assertTrue(r.residentCount() <= before, "a stopped render's silence was cached")
+        } finally {
+            droneThread.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `a drone rendering for the tempo on its way in is not stopped by the one playing`() {
+        val s = withDrone()
+        val src = PatientDroneSource(s.intervalFrames)
+        val droneThread = Executors.newSingleThreadExecutor()
+        try {
+            val r = Residency(s, src, sameThread, droneThread)
+            val faster = s.copy(bpm = s.bpm + 20f)
+            // warm waits at most WARM_TIMEOUT_MS; the render keeps going after it returns.
+            r.warm(faster, 0)
+            assertTrue(src.started.await(5, TimeUnit.SECONDS))
+            Thread.sleep(100)
+            assertEquals(0, src.stoppedEarly.get(), "the incoming tempo's drone was cancelled")
+        } finally {
+            droneThread.shutdownNow()
+        }
     }
 }

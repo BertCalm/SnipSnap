@@ -48,6 +48,14 @@ class Residency(
     initial: Session,
     private val source: SampleSource,
     private val executor: Executor,
+    /**
+     * Where drones render, apart from [executor]. A drone takes seconds;
+     * on the shared pool (two threads in LOOP) two of them would hold every
+     * thread, the other tracks' bakes would queue behind them, and the
+     * engine would bake those on the audio thread after all. Defaults to
+     * [executor] for callers with nothing to separate (tests, one-offs).
+     */
+    private val droneExecutor: Executor = executor,
 ) {
 
     /** A block stamped with the interval length it was baked for. */
@@ -116,6 +124,13 @@ class Residency(
     /**
      * Submit a drone's bake unless one is already on its way. Same early-out
      * as [prefetch]: a bake for a length nothing plays any more is skipped.
+     *
+     * And the same question asked *during* the render, which is the part a
+     * drone needs and a loop never did: a tempo change mid-render leaves
+     * seconds of work for a length the grid has left. The render asks
+     * [isLive] as it goes and stops. A bake that stopped is not cached:
+     * its silence says nothing about the drone, and the player may come
+     * back to that tempo.
      */
     private fun bakeDroneLater(key: CacheKey, s: Session, whenDone: () -> Unit = {}) {
         if (!droneBaking.add(key)) {
@@ -123,11 +138,17 @@ class Residency(
             return
         }
         try {
-            executor.execute {
+            droneExecutor.execute {
                 try {
-                    val live = s.intervalFrames == current.get().intervalFrames ||
-                        s.intervalFrames == incoming.get()?.intervalFrames
-                    if (live && !baked.containsKey(key)) baked.putIfAbsent(key, BlockBaker.bake(key.block, s, source))
+                    if (isLive(s) && !baked.containsKey(key)) {
+                        var stopped = false
+                        val snip = BlockBaker.bake(key.block, s, source) {
+                            (!isLive(s)).also { if (it) stopped = true }
+                        }
+                        // Checked again at the end: a slice that waited on another
+                        // slice's render sees that render stop only as silence.
+                        if (!stopped && isLive(s)) baked.putIfAbsent(key, snip)
+                    }
                 } finally {
                     droneBaking.remove(key)
                     whenDone()
@@ -138,6 +159,11 @@ class Residency(
             whenDone()
         }
     }
+
+
+    /** Whether a bake for [s]'s interval length is for the session playing or the one on its way in. */
+    private fun isLive(s: Session): Boolean =
+        s.intervalFrames == current.get().intervalFrames || s.intervalFrames == incoming.get()?.intervalFrames
 
     /** Bake what [interval] will need, on the executor. Returns immediately. */
     fun prefetch(interval: Int) {

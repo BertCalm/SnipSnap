@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonValue
+import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.pow
@@ -50,6 +51,14 @@ object ResinDrone {
     private const val TAIL_FRAMES = 256
 
     /**
+     * How often, in oversampled samples, a render asks whether it is still
+     * wanted: about every 0.2 s of audio at 44.1 kHz, so a stale render
+     * stops within a few milliseconds of CPU, and the check costs nothing
+     * against the ladder it interrupts.
+     */
+    private const val CANCEL_CHECK_SAMPLES = 1 shl 15
+
+    /**
      * A drone's recipe: the patch (CONTOUR, DECAY and TUNE have no note-on
      * to act on and are ignored; ROOT replaces TUNE and lives outside, with
      * the grid), how far the filter breathes, and how many times per drone.
@@ -90,9 +99,21 @@ object ResinDrone {
      * The drone: mono, exactly [frames] long at [sampleRate], and periodic
      * with period [frames], so playing it end to end has no seam. Levelled
      * on the loop to the melodic loudness target, the way a held pad is.
+     *
+     * [cancelled] is asked every [CANCEL_CHECK_SAMPLES] samples, and so is
+     * the thread's interrupt flag. Either stops the render with a
+     * [CancellationException]: a drone takes seconds, and one rendered for a
+     * tempo the grid has already left would hold a thread and tens of MB for
+     * nothing.
      */
-    fun render(spec: Spec, rootMidi: Int, frames: Long, sampleRate: Int): FloatArray {
-        val out = synthesize(spec, rootMidi, frames, sampleRate)
+    fun render(
+        spec: Spec,
+        rootMidi: Int,
+        frames: Long,
+        sampleRate: Int,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray {
+        val out = synthesize(spec, rootMidi, frames, sampleRate, cancelled = cancelled)
         val loud = Loudness.of(Snip(out, channels = 1, sampleRate = sampleRate))
         if (loud > 1e-6f) {
             val g = Dsp.MELODIC_LOUDNESS_TARGET / loud
@@ -108,7 +129,15 @@ object ResinDrone {
      * repeat, since a render of twice the length is a different loop (its
      * note snaps to a finer grid).
      */
-    internal fun synthesize(spec: Spec, rootMidi: Int, frames: Long, sampleRate: Int, periods: Int = 1, prerollSeconds: Float = DRONE_PREROLL_SECONDS): FloatArray {
+    internal fun synthesize(
+        spec: Spec,
+        rootMidi: Int,
+        frames: Long,
+        sampleRate: Int,
+        periods: Int = 1,
+        prerollSeconds: Float = DRONE_PREROLL_SECONDS,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray {
         require(frames > 0 && sampleRate > 0) { "a drone needs a length and a rate: $frames frames at $sampleRate Hz" }
         require(periods >= 1) { "periods: $periods" }
         require(rootMidi in 0..127) { "root out of MIDI range: $rootMidi" }
@@ -144,6 +173,9 @@ object ResinDrone {
         val raw = FloatArray((total * os).toInt())
         val ladder = Dsp.Ladder(sampleRate * os)
         for (i in raw.indices) {
+            if (i % CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw CancellationException("drone render no longer wanted")
+            }
             // The loop starts after the pre-roll; any offset would do, since
             // everything below repeats every loopOs samples.
             val k = (i.toLong() - pre * os).mod(loopOs).toDouble()

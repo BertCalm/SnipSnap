@@ -39,7 +39,7 @@ class DroneSourceTest {
     /** A cheap stand-in render: a ramp, so slices are checkable by value, counted. */
     private class Counting(val sleepMs: Long = 0) {
         val calls = AtomicInteger(0)
-        val render: (ResinDrone.Spec, Int, Long, Int) -> FloatArray = { _, _, frames, _ ->
+        val render: (ResinDrone.Spec, Int, Long, Int, () -> Boolean) -> FloatArray = { _, _, frames, _, _ ->
             calls.incrementAndGet()
             if (sleepMs > 0) Thread.sleep(sleepMs)
             FloatArray(frames.toInt()) { it.toFloat() / frames }
@@ -67,9 +67,9 @@ class DroneSourceTest {
     fun `a recipe it can't read goes to the source it wraps`() {
         val marker = Snip(FloatArray(8), 2, 44_100)
         val inner = object : SampleSource by Nothing {
-            override fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int): Snip = marker
+            override fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip = marker
         }
-        val src = DroneSource(inner) { _, _, _, _ -> error("not a RESIN recipe") }
+        val src = DroneSource(inner) { _, _, _, _, _ -> error("not a RESIN recipe") }
         assertSame(marker, src.drone(Json.parse("""{"engine":"VELVET"}"""), 33, 8, 44_100))
     }
 
@@ -77,15 +77,15 @@ class DroneSourceTest {
     fun `a render that throws is silence, and the next bake tries again`() {
         var fail = true
         val calls = AtomicInteger(0)
-        val src = DroneSource(Nothing) { _, _, frames, _ ->
+        val src = DroneSource(Nothing) { _, _, frames, _, _ ->
             calls.incrementAndGet()
             if (fail) error("render failed") else FloatArray(frames.toInt())
         }
         assertNull(src.drone(spec.toJson(), 33, 100, 44_100))
-        val silent = BlockBaker.bake(DroneBlock(spec.toJson(), 33, 0, 1), session, DroneSource(Nothing) { _, _, _, _ -> error("x") })
+        val silent = BlockBaker.bake(DroneBlock(spec.toJson(), 33, 0, 1), session, DroneSource(Nothing) { _, _, _, _, _ -> error("x") })
         assertTrue(silent.samples.all { it == 0f })
         fail = false
-        assertEquals(200, src.drone(spec.toJson(), 33, 100, 44_100)?.samples?.size)
+        assertEquals(100, src.drone(spec.toJson(), 33, 100, 44_100)?.samples?.size, "kept mono")
         assertEquals(2, calls.get())
     }
 
@@ -143,5 +143,19 @@ class DroneSourceTest {
         )
         val on = bin(s, whole)
         assertTrue(maxOf(bin(s, whole - 1), bin(s, whole + 1)) < on * 1e-4)
+    }
+
+    @Test
+    fun `a cancelled render answers null and is forgotten, so the next ask renders`() {
+        val calls = AtomicInteger(0)
+        val src = DroneSource(Nothing) { _, _, frames, _, cancelled ->
+            calls.incrementAndGet()
+            if (cancelled()) throw java.util.concurrent.CancellationException("stale")
+            FloatArray(frames.toInt())
+        }
+        assertNull(src.drone(spec.toJson(), 33, 100, 44_100) { true })
+        assertEquals(0, src.residentCount())
+        assertEquals(100, src.drone(spec.toJson(), 33, 100, 44_100)?.frameCount)
+        assertEquals(2, calls.get())
     }
 }

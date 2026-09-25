@@ -21,7 +21,7 @@ class DroneBlockTest {
         var calls = 0
         override fun loop(sampleFile: String): Snip? = null
         override fun pad(kit: String, slot: Int): Snip? = null
-        override fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int): Snip? {
+        override fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip? {
             calls++
             if (none) return null
             val n = (frames + lengthFix).toInt()
@@ -110,5 +110,22 @@ class DroneBlockTest {
         val whole = 2 * session.intervalFrames
         val expected = FloatArray(whole * 2) { (it / 2).toFloat() / whole }
         assertContentEquals(expected, out.toFloatArray())
+    }
+
+    @Test
+    fun `a stereo render slices as cleanly as a mono one`() {
+        val stereoSource = object : SampleSource {
+            override fun loop(sampleFile: String): Snip? = null
+            override fun pad(kit: String, slot: Int): Snip? = null
+            override fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip {
+                val n = frames.toInt()
+                return Snip(FloatArray(n * 2) { if (it % 2 == 0) (it / 2).toFloat() / n else -(it / 2).toFloat() / n }, 2, sampleRate)
+            }
+        }
+        val frames = session.intervalFrames
+        val baked = BlockBaker.bake(DroneBlock(recipe, 33, 1, 2), session, stereoSource)
+        assertEquals(frames, baked.frameCount)
+        assertEquals(frames.toFloat() / (2 * frames), baked.samples[0])
+        assertEquals(-frames.toFloat() / (2 * frames), baked.samples[1], "left and right stay apart")
     }
 }
