@@ -92,6 +92,7 @@ import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.Spread
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
@@ -617,6 +618,85 @@ fun SynthScreen(
         makingInstrument = false
     }
 
+    // ---- SPREAD ----
+    // The patch as it stood when SPREAD opened, rendered once: the panel
+    // previews and the write lands the same audio its pitch was measured on.
+    var spreadSource by remember { mutableStateOf<SpreadSource?>(null) }
+    var spreadPatch by remember { mutableStateOf<Patch?>(null) }
+    var spreadClass by remember { mutableStateOf(DrumClass.TONAL) }
+    var spreadOpening by remember { mutableStateOf(false) }
+    var spreadBusy by remember { mutableStateOf(false) }
+
+    fun openSpread() {
+        if (spreadOpening || sendBusy || entry == null) return
+        spreadOpening = true
+        val patch = engine.buildPatch(engine.patchDisplayName(voice), voice, macros)
+        val cls = engine.drumClass(voice)
+        scope.launch {
+            try {
+                val src = withContext(Dispatchers.Default) {
+                    val rendered = patch.render()
+                    val midi = Spread.detect(rendered)
+                    SpreadSource(rendered, midi, Spread.defaultRoot(midi))
+                }
+                spreadPatch = patch
+                spreadClass = cls
+                spreadSource = src
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "openSpread: render failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                spreadOpening = false
+            }
+        }
+    }
+
+    fun spread(options: Spread.Options) {
+        val e = entry ?: return
+        val src = spreadSource ?: return
+        val patch = spreadPatch ?: return
+        if (spreadBusy) return
+        spreadBusy = true
+        val sound = Spread.Sound(
+            name = patch.name,
+            drumClass = spreadClass,
+            colorHex = AutoPlace.colorFor(spreadClass),
+            recipe = PadRecipe(patch = patch).toJsonValue(),
+            source = mapOf(Spread.FROM_KEY to "SYNTH"),
+        )
+        appScope.launch {
+            try {
+                // Planned again over the kit on disk, under the lock: the
+                // panel's preview read App's copy, which a write elsewhere
+                // may have moved on since.
+                val (plan, updatedKit) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val plan = Spread.plan(model.kit, src.midi, options)
+                        if (plan.notes.isNotEmpty()) {
+                            Spread.apply(model, src.snip, plan, sound)
+                            model.save()
+                        }
+                        plan to model.kit
+                    }
+                }
+                if (plan.notes.isNotEmpty()) {
+                    spreadSource = null
+                    onKitUpdated(updatedKit)
+                }
+                onToast(Spread.toast(plan))
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                Log.e("SynthScreen", "spread: failed", ex)
+                onToast(Copy.SPREAD_FAILED)
+            } finally {
+                spreadBusy = false
+            }
+        }
+    }
+
     val classColor = Schemes.classColor(engine.drumClass(voice)).tape
 
     Box(Modifier.fillMaxSize()) {
@@ -751,9 +831,20 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
+                // One sound, a whole bank of notes: its own row, since the
+                // three above already fill theirs at the pixel face.
+                LabButton(
+                    if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                    scheme,
+                    enabled = kit != null && !sendBusy && !spreadOpening,
+                    modifier = Modifier.fillMaxWidth(),
+                    accessibilityLabel = "SPREAD ACROSS PADS",
+                ) {
+                    openSpread()
+                }
                 // RESIN, held: the sound as a keys instrument. RESIN only -
                 // it is the one engine whose held render closes its loops.
-                // Full width under the row, the DELETED PRESETS door's place.
+                // Full width under SPREAD's row, the DELETED PRESETS door's shape.
                 if (engine == Engine.RESIN) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
@@ -793,6 +884,22 @@ fun SynthScreen(
             // Innermost: same self-guarded cancel as the overlay's own
             // CANCEL — a send in flight (sendBusy) makes both no-ops.
             BackHandler(onBack = cancelChooser)
+        }
+
+        spreadSource?.let { src ->
+            // Self-guarded like the chooser's CANCEL: a write in flight
+            // keeps the panel up until it lands.
+            val cancelSpread = { if (!spreadBusy) spreadSource = null }
+            SpreadOverlay(
+                kit = kit,
+                source = src,
+                colorHex = AutoPlace.colorFor(spreadClass),
+                scheme = scheme,
+                busy = spreadBusy,
+                onSpread = ::spread,
+                onCancel = cancelSpread,
+            )
+            BackHandler(onBack = cancelSpread)
         }
 
         if (namingPreset) {
