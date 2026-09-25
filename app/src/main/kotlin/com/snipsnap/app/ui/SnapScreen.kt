@@ -9,9 +9,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -79,6 +82,7 @@ import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.SnapVoice
 import com.snipsnap.synth.Spectrogram
+import com.snipsnap.synth.Telephone
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -152,6 +156,11 @@ fun SnapScreen(
     // open kit's own pads. App.kt owns the orbits.json write and the
     // navigation to ORBIT — the same shape as onBuildKit above.
     onBuildPathRing: (cells: List<Pair<Int, Int>>, bpm: Float) -> Unit,
+    // CHORD ▸: the photo read as a chord and landed on the shelf as a kit,
+    // plus an arpeggio ring built for that same new kit — App.kt owns the
+    // shelf write, the orbits.json write, and the navigation to ORBIT, the
+    // same shape as onBuildKit and onBuildPathRing above.
+    onBuildChord: (Photo) -> Unit,
     // FIELD's own PRINT, threaded down to GrainFieldScreen: a print landed
     // on TAPE, the same reload request a share-sheet import raises.
     onFieldPrinted: () -> Unit,
@@ -211,6 +220,17 @@ fun SnapScreen(
     // only the photo itself, unlike CLOUD's field.
     var spectrumBusy by remember { mutableStateOf(false) }
     var showSpectrumChooser by remember { mutableStateOf(false) }
+
+    // TELEPHONE: SPECTRUM's own reading, passed down eight more
+    // generations (Telephone.chain) — each a picture of what the last one
+    // sounded like, whispered forward. Stays on SNAP like FIELD/CLOUD/
+    // SPECTRUM; its own strip picks a generation, SEND TO PAD ▸ reuses
+    // SlotChooserOverlay the same way those three do.
+    var telephoneBusy by remember { mutableStateOf(false) }
+    var generations by remember { mutableStateOf<List<Telephone.Generation>>(emptyList()) }
+    var showTelephone by remember { mutableStateOf(false) }
+    var showTelephoneChooser by remember { mutableStateOf(false) }
+    var telephonePick by remember { mutableStateOf(0) }
 
     // LIVE: the camera preview read every frame, over its own screen —
     // see LiveSnapScreen.kt. Not a chooser like FIELD/CLOUD/SPECTRUM:
@@ -327,10 +347,10 @@ fun SnapScreen(
     // line as read, not on the chip: a new photo's knobs arrive with the
     // photo, a beat before its line does, and the old line under the new
     // knobs is not a sound anyone asked for.
-    LaunchedEffect(current, macros, envelope, drawing, showField) {
-        // The DRAW surface and the PHOTO FIELD each have a voice of their
-        // own; this loop stands still while either is up.
-        if (drawing || showField) return@LaunchedEffect
+    LaunchedEffect(current, macros, envelope, drawing, showField, showTelephone) {
+        // The DRAW surface, the PHOTO FIELD, and the TELEPHONE strip each
+        // have a voice of their own; this loop stands still while any is up.
+        if (drawing || showField || showTelephone) return@LaunchedEffect
         val l = current
         if (l == null || l.flat) {
             snip = null
@@ -618,6 +638,99 @@ fun SnapScreen(
         }
     }
 
+    // TELEPHONE: SPECTRUM's own reading, whispered down eight more
+    // generations (Telephone.chain) — each a picture of what the last one
+    // sounded like. Stays on this screen: the strip picks a generation,
+    // SEND TO PAD ▸ lands it the same way CLOUD's/SPECTRUM's own texture
+    // lands, audio with no recipe.
+    val telephoneName = "Snap Telephone"
+    val telephoneClass = DrumClass.LOOP
+    fun runTelephone() {
+        val p = photo ?: return
+        if (telephoneBusy) return
+        telephoneBusy = true
+        appScope.launch {
+            try {
+                // Same reading SPECTRUM ▸ itself makes, so the line starts
+                // from exactly what SPECTRUM ▸ would have landed.
+                val start = withContext(Dispatchers.Default) { Spectrogram.read(p, seconds = 2.5f) }
+                val line = withContext(Dispatchers.Default) { Telephone.chain(start, 8) }
+                // A newer photo arrived while this chained: this line is
+                // the old picture's and opens nowhere, the same guard
+                // openField() makes.
+                if (photo !== p) return@launch
+                generations = line
+                telephonePick = 0
+                // The SNAP audition and the strip's own portraits must not
+                // overlap, the same reasoning FIELD's and LIVE's own opens do.
+                voicePlayer?.stop()
+                showTelephone = true
+            } catch (ex: OutOfMemoryError) {
+                // Not an Exception, so the catch below would let it through
+                // and the process would die whispering — the same split
+                // openField() and the photo decode above both make. A line
+                // is eight portraits and eight sounds held at once, which is
+                // the most this screen ever asks for in one go.
+                Log.e("SnapScreen", "telephone: out of memory", ex)
+                onToast(Copy.SNAP_TOO_BIG)
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                Log.e("SnapScreen", "telephone: failed", ex)
+                onToast(Copy.SEND_FAILED)
+            } finally {
+                telephoneBusy = false
+            }
+        }
+    }
+    fun sendTelephoneToSlot(slot: Int) {
+        val e = entry ?: return
+        // The tapped portrait's own sound, not a re-read: TELEPHONE's line
+        // is fixed the moment it chains: picking a pad should not chain
+        // it again.
+        val g = generations.getOrNull(telephonePick) ?: return
+        if (telephoneBusy) return
+        telephoneBusy = true
+        appScope.launch {
+            try {
+                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val alreadyThere = model.pad(slot) != null
+                        if (alreadyThere) {
+                            model.replaceAudio(slot, null) { _ -> g.sound }
+                            model.update(slot) { pd ->
+                                pd.copy(
+                                    displayName = telephoneName,
+                                    drumClass = telephoneClass,
+                                    colorHex = AutoPlace.colorFor(telephoneClass),
+                                    muteGroup = AutoPlace.muteGroupFor(telephoneClass),
+                                    recipe = null,
+                                )
+                            }
+                        } else {
+                            model.assign(slot, g.sound, telephoneClass, telephoneName)
+                        }
+                        model.save()
+                        alreadyThere to model.kit
+                    }
+                }
+                showTelephoneChooser = false
+                onKitUpdated(updatedKit)
+                onToast(Copy.synthSent(padTag(slot), telephoneName, replaced = existed))
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                if (ex is IllegalStateException || ex is IllegalArgumentException) {
+                    onToast(Copy.SYNTH_PAD_REFUSED)
+                } else {
+                    Log.e("SnapScreen", "sendTelephoneToSlot: failed", ex)
+                    onToast(Copy.SEND_FAILED)
+                }
+            } finally {
+                telephoneBusy = false
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -641,6 +754,7 @@ fun SnapScreen(
                         cloudBusy -> Copy.SNAP_CLOUD_BUSY
                         pathBusy -> Copy.SNAP_PATH_SEND_BUSY
                         spectrumBusy -> Copy.SNAP_SPECTRUM_BUSY
+                        telephoneBusy -> Copy.SNAP_TELEPHONE_BUSY
                         busy -> Copy.SNAP_KIT_BUSY
                         envelope != null -> "$lineWord · SHAPE DRAWN"
                         else -> lineWord
@@ -766,6 +880,34 @@ fun SnapScreen(
                         // under it, the same reasoning FIELD's own tap stops it.
                         voicePlayer?.stop()
                         showLive = true
+                    }
+                }
+
+                // CHORD reads the whole photo as a chord and lands a
+                // brand-new kit plus an arpeggio already circling it on
+                // ORBIT — App.kt owns both writes, the same hand-off as
+                // KIT ▸ above. TELEPHONE reads the photo the way SPECTRUM
+                // ▸ does, then passes what comes back down eight more
+                // generations, each a picture of what the last one
+                // sounded like — a strip to pick from, staying here.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LabButton(
+                        if (busy) "…" else "CHORD ▸",
+                        scheme,
+                        enabled = photo != null && !busy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "PHOTO CHORD",
+                    ) {
+                        photo?.let(onBuildChord)
+                    }
+                    LabButton(
+                        if (telephoneBusy) "…" else "TELEPHONE ▸",
+                        scheme,
+                        enabled = photo != null && !telephoneBusy,
+                        modifier = Modifier.weight(1f),
+                        accessibilityLabel = "TELEPHONE CHAIN",
+                    ) {
+                        runTelephone()
                     }
                 }
             }
@@ -927,6 +1069,42 @@ fun SnapScreen(
             )
             BackHandler(onBack = cancelSpectrum)
         }
+
+        if (showTelephone) {
+            val cancelTelephone = {
+                if (!telephoneBusy) {
+                    quietResume = true
+                    showTelephone = false
+                }
+            }
+            TelephoneOverlay(
+                generations = generations,
+                picked = telephonePick,
+                scheme = scheme,
+                onPick = { i ->
+                    telephonePick = i
+                    audition(generations[i].sound)
+                },
+                onSend = { showTelephoneChooser = true },
+                onCancel = cancelTelephone,
+            )
+            BackHandler(onBack = cancelTelephone)
+        }
+
+        // Declared after the strip above so it wins the back gesture while
+        // both are open — the same layering every other chooser here uses.
+        if (showTelephoneChooser) {
+            val cancelTelephoneChooser = { if (!telephoneBusy) showTelephoneChooser = false }
+            SlotChooserOverlay(
+                kit = kit,
+                previewColor = Schemes.classColor(telephoneClass).tape,
+                scheme = scheme,
+                busy = telephoneBusy,
+                onPick = ::sendTelephoneToSlot,
+                onCancel = cancelTelephoneChooser,
+            )
+            BackHandler(onBack = cancelTelephoneChooser)
+        }
     }
 }
 
@@ -953,6 +1131,118 @@ internal fun Bitmap.toPhoto(): Photo {
     val px = IntArray(width * height)
     getPixels(px, 0, width, 0, 0, width, height)
     return Photo(width, height, px)
+}
+
+/** The reverse of [Bitmap.toPhoto] — TELEPHONE's own portraits, `:synth`'s packed ARGB read straight back as a drawable bitmap. */
+internal fun Photo.toBitmap(): Bitmap = Bitmap.createBitmap(argb, width, height, Bitmap.Config.ARGB_8888)
+
+// ---------- TELEPHONE: a strip of eight whispers ----------
+
+/**
+ * The full-screen strip over eight [Telephone.Generation]s, the same
+ * shape as [SlotChooserOverlay]'s own gesture catch-all: tap a portrait to
+ * hear its sound, SEND TO PAD ▸ lands whichever was last tapped. The eight
+ * bitmaps are built once per chain, not once per recomposition — this
+ * screen recomposes on every macro-slider frame.
+ */
+@Composable
+private fun TelephoneOverlay(
+    generations: List<Telephone.Generation>,
+    picked: Int,
+    scheme: Scheme,
+    onPick: (Int) -> Unit,
+    onSend: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val portraits = remember(generations) { generations.map { it.portrait.toBitmap().asImageBitmap() } }
+    Box(Modifier.fillMaxSize().background(scheme.lcd.tape).pointerInput(Unit) { detectTapGestures { } }.padding(10.dp)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TapeText("TELEPHONE — TAP ONE TO HEAR IT", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                        .tapeClick(label = "CANCEL", onClick = onCancel)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("CANCEL", TapeType.pixel, scheme.amber.tape)
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (i in generations.indices) {
+                    TelephonePortrait(
+                        index = i,
+                        bitmap = portraits[i],
+                        picked = i == picked,
+                        scheme = scheme,
+                        onTap = { onPick(i) },
+                    )
+                }
+            }
+            LabButton(
+                "SEND TO PAD ▸",
+                scheme,
+                enabled = generations.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                accessibilityLabel = "SEND GENERATION TO PAD",
+                onClick = onSend,
+            )
+        }
+    }
+}
+
+/**
+ * One portrait: [picked] shown as a heavier amber border over its own
+ * number, the border-and-sub-label pair every selected control here wears.
+ *
+ * The count is carried twice on purpose. The border is what an eye picks a
+ * generation out by; `selected` is what a screen reader reads, which a
+ * border alone never reaches — [LinePicker] sets the same flag beside its
+ * own bevel for the same reason. The portrait itself takes no
+ * `contentDescription`: the tap target around it is already named, and an
+ * inner node would only have the reader say the number twice.
+ */
+@Composable
+private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, scheme: Scheme, onTap: () -> Unit) {
+    Column(
+        Modifier
+            .semantics { selected = picked }
+            .tapeClick(label = "GENERATION ${index + 1}", onClick = onTap),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(96.dp)
+                .border(
+                    if (picked) 2.dp else 1.dp,
+                    if (picked) scheme.amber.tape else scheme.grayEdge.tape,
+                    RoundedCornerShape(4.dp),
+                ),
+        ) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        TapeText(
+            "${index + 1}",
+            TapeType.pixelSmall,
+            if (picked) scheme.amber.tape else scheme.ink3.tape,
+            maxLines = 1,
+        )
+    }
 }
 
 // ---------- the photo and its numbers ----------

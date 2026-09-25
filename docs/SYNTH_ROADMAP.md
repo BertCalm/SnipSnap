@@ -204,6 +204,7 @@ What follows from it:
 | S4 | **shipped** — keygroup export in both generations: `KeygroupWriter` (`.xpm`, corrected line-by-line against commercial programs) and `Mpc3TrackWriter.writeKeygroup` (`.xty`, corpus-guarded); hardware load check pending | reference corpus (done) |
 | S5 | **shipped** — the instrument suite: `Keys` renders engines at exact MIDI pitch (EP from TINES with velocity-true soft/hard renders, Organ from TONEWHEEL with mathematically-cut sustain loops, Harp from PLUCK, Music Box from TINES), multisampled every minor third, packaged dual-generation (`.xty` + `.xpm` twin in one `_[TrackData]/`) | S3 + S4 |
 | S6 | **shipped** — SKIN, a second drum engine alongside THUMP: modal synthesis rather than THUMP's oscillators (KICK/SNARE/TOM sum decaying sine partials at inharmonic ratios — a struck membrane's own recipe; STICK is that same recipe's single-partial limit; HAT_CLOSED/HAT_OPEN/RIDE run continuous noise through a bank of resonant filters; SHAKER runs continuous noise through one deliberately wide, non-resonant filter), eight voices classifier-verified against THUMP's own `DrumClass` gates where a dedicated class exists, PUNCH on every voice | S1 + U3 + U5 + U6 |
+| S8 | **shipped** — RESIN, the ladder engine (BASS/LEAD/BRASS: a three-oscillator STACK through `Dsp.Ladder`, the four-pole transistor-ladder low-pass with tanh in the loop, measured before use; CUTOFF key-tracked, CREAM the feedback up to self-oscillation, CONTOUR the filter envelope's amount and speed on one knob) and CONTOUR, the same filter as a rack section after EQ — design in `docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md` | S1 + U5 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -834,3 +835,72 @@ own host tests, `Snap.liveCycle` by a JVM test, but the CameraX bind,
 the permission flow, the preview's own look and the live sound on a
 real stream have only been read, never run. `app/README.md`'s on-device
 checklist carries a LIVE line naming exactly that.
+
+### S7.11 — CHORD: the photo picks a chord
+
+`PhotoChord` (`synth/PhotoChord.kt`, new) reads one photo as a chord and
+lands the chord on the pads low to high, so `Arp` (`:loop`) can walk it.
+Three readings, each on its own axis so they cannot move together:
+
+- **Root** from hue, through SNAP's own TUNE mapping, so the chord is
+  rooted on the note the photo's SNAP pad already plays; a grey photo
+  lands on the centre detent, A.
+- **Third** from brightness: at or above mid-grey (`MAJOR_LUMINANCE`,
+  0.5) is major, below is minor.
+- **Seventh** from colourfulness, at the halfway point `Snap.macrosFrom`
+  stretches saturation around (`SEVENTH_SATURATION`, 0.25).
+
+`PhotoChord.tones` is every chord tone inside SNAP's two-octave TUNE
+range, from the root's first appearance, so the root sits on A01 (the
+`Scales` keys-on-pads rule). That is four pads for a high root (root,
+third, fifth, root again) up to nine for a low seventh chord, so an UP
+arpeggio across them always spans at least an octave inside one bank.
+`build` renders every pad from the whole photo's HORIZON line (through
+`PhotoField.cellTable`'s sine blend, so a plain wall still fills its
+chord) and returns the slots an arpeggio should walk beside the pads.
+
+Each pad wears `PhotoChord.colorFor` its pitch: `Snap.hueForSemitones`
+(the TUNE mapping run backwards, new and shared) at full saturation, so
+photographing a pad's light and reading it with SNAP plays that pad's
+note. `PhotoChordTest` holds that round trip for every semitone, by
+pitch class, since the hue circle closes and the bottom and top A share
+a colour.
+
+Not done: the landing. `:synth` cannot see `:loop`, so the glue that
+lands the pads on the shelf and writes an `Arp.run` ring over
+`Built.slots` belongs in `:app`, beside `buildPathRing`, and has not
+been written.
+
+### S7.12 — TELEPHONE: a sound whispered through pictures
+
+Every door before this one runs picture to sound. `Spectrogram.portrait`
+(new) is the first the other way: a sound painted on exactly the scale
+`Spectrogram.read` plays a picture back on, columns of time by rows of
+log frequency. The two share `rowForBin` (pulled out of `read`, whose
+behaviour is unchanged; `SpectrogramTest` still passes as it was), so
+each is the other's way back. A row takes the loudest bin `read` would
+light from it, so a partial between rows is never averaged into the
+dark; brightness is the square root of level against the portrait's
+peak, `read`'s power curve undone. Frames are kept when their centre
+lies inside the audio. `Spectral` pads a frame of silence at each end,
+and drawing those would add a black margin that the next `read` plays
+as extra time. Reverting that filter alone turns the edge column of a
+steady tone from 0.73 to 0.0, which is what the edge test asserts
+against.
+
+The colour carries pitch as SNAP hears it, `Photo.tint` (new) shading a
+row's hue to exactly the brightness the level asks for. Rec. 601 luma is
+a straight sum of the channels, so the tint changes nothing `read` sees,
+to within a channel's rounding. It changes what SNAP sees: a 220 Hz
+tone's portrait reads through `Snap.look` as TUNE at A3.
+
+`Telephone` (`synth/Telephone.kt`, new) is the loop: `pass` paints a
+sound and reads the portrait back at the sound's own length, and `chain`
+repeats it up to `MAX_GENERATIONS` (16) times, each pass hearing only
+the one before. A pass keeps where the energy sits in time and pitch
+(`TelephoneTest` holds 440 Hz within 3% through one) and loses phase,
+anything under a frame's 5% floor, detail finer than a row or a column,
+and whatever 8-bit pixels round away. Deterministic per seed.
+
+Not done: the screen. The portraits want showing in a row as the
+generations drift, with any generation's sound one tap from a pad.

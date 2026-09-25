@@ -819,6 +819,12 @@ object Copy {
     const val SNAP_PATH_SEND_BUSY = "WALKING THE PATH INTO A LOOP…"
     /** SPECTRUM's busy line while the photo is read as a spectrogram and inverted — the same local-busy shape as FIELD's and CLOUD's. */
     const val SNAP_SPECTRUM_BUSY = "READING THE PICTURE AS SOUND…"
+    /** CHORD's busy line while `PhotoChord.build` renders the photo's tones and lands them on the shelf — `App.kt`'s own whole-screen busy overlay, since CHORD leaves the screen for ORBIT, the same shape as KIT's own. */
+    const val SNAP_CHORD_BUSY = "READING THE PICTURE AS A CHORD…"
+    /** CHORD's landing toast: named for the kit AutoPlace never touched, and for the arpeggio already circling its own rings. */
+    fun chordKitMade(name: String, ring: String): String = "$name MADE, $ring ALREADY ARPEGGIATING ON THE RINGS."
+    /** TELEPHONE's busy line while the photo's spectrogram is passed down eight generations — SNAP's own local busy, like FIELD's and CLOUD's, since TELEPHONE stays on this screen. */
+    const val SNAP_TELEPHONE_BUSY = "WHISPERING IT DOWN THE LINE…"
     /** LIVE ▸'s own CAMERA permission ask, refused: the screen closes rather than sitting on a blank preview. */
     const val LIVE_CAMERA_DENIED = "NO CAMERA. NOTHING TO READ LIVE."
     /** LIVE ▸'s own bind of `ProcessCameraProvider` to the lifecycle failing outright — not a permission refusal, the device itself declining. */

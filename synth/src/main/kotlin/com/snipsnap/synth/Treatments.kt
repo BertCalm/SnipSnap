@@ -52,6 +52,8 @@ object Treatments {
         "phased" to FxChain(phase = mapOf("RATE" to 0.3f, "DEPTH" to 0.7f, "FEEDBACK" to 0.4f)),
         // The transport: the same hit, played slower.
         "pitched" to FxChain(speed = mapOf("SEMITONES" to 0.25f)),
+        // The ladder's own contour, dropped onto a hit that was never a synth.
+        "contoured" to FxChain(contour = mapOf("CUTOFF" to 0.3f, "CREAM" to 0.6f, "SWEEP" to 0.7f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
