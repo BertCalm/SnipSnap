@@ -73,6 +73,14 @@ object Keys {
                 "DIRT" to 0.12f,
             ),
             gateSeconds = 2.6f,
+            // No scanner and no rotor on this one path. Both are
+            // time-varying, and the loop cut below depends on the steady
+            // region being exactly periodic - a rotor a third of the way
+            // through a turn at the seam is a click. The rate could instead
+            // be fitted so a whole number of rotor turns lands inside the
+            // chosen loop length; that is worth doing, but it is a change to
+            // the arithmetic below rather than to the engine.
+            motion = false,
         )
         val base = 110f * 2f.pow(semis / 12f)
         // The waveform's true period is the 16' sub bar's: 2/base seconds.
