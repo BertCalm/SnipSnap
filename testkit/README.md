@@ -193,6 +193,22 @@ renders are deterministic). Things to confirm: each loads, plays in tune
 chromatically, the EP's soft hits sound darker, and — the big one —
 **held organ pads sustain indefinitely** with no audible loop seam.
 
+### RESIN held pads — made with the CLI
+
+Not committed here: make one yourself, any RESIN preset, any release.
+
+```
+snipsnap synth RESIN BRASS --preset 1 --instrument --attack 0.8 --release 1.5 --out ~/resin-pad
+```
+
+That writes a nine-zone instrument in the same dual-generation layout as
+`Instruments/`. Things to confirm: held pads sustain with **no audible
+seam** (the loops are cut at whole cycles of every oscillator, including
+the detuned one's beat), a slow ATTACK fades in rather than clicking, and
+the big one for this format: **does a 1.5 s RELEASE sound like a second
+and a half?** The shop has only ever written releases of 0.3–0.6 s, and
+the MPC's reading of `VolumeRelease` above that has never been heard.
+
 ### SnipSnap_Factory.xpn — one-file import
 
 The factory kit as a single `.xpn` archive, in the layout every real
