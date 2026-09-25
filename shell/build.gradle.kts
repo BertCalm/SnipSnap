@@ -16,6 +16,8 @@ dependencies {
     // Groove capture hands the app Mpc3Clip values; the flow tests also
     // verify real exports through the format detectors.
     implementation(project(":mpc3"))
+    // The drone renderer is a loop-grid SampleSource (DroneSource).
+    implementation(project(":loop"))
     testImplementation(kotlin("test"))
 }
 
