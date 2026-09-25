@@ -94,9 +94,13 @@ fact that we choose every frequency ourselves:
   Both saws complete whole cycles in it (K and 2K).
 - Set the square's frequency ratio to exactly **`1 + 1/(2K)`**. In one loop it
   then completes `2K + 1` cycles, a whole number, which is *exactly one beat*.
-- Choose K from the detune STACK asks for: `K ≈ 1 / (2 × (2^(cents/1200) − 1))`.
-  Then search K within ±10% for the loop whose length lands closest to a whole
-  number of frames (the same search `Keys.organ` does).
+- Choose K from the detune STACK asks for: `K = round(1 / (2 × (2^(cents/1200) − 1)))`.
+- Round the loop to a whole number of frames and **move the pitch by a hair
+  to fit it**: `f' = 2K × RATE / loopFrames`. The move is at most half a frame
+  over the loop, 0.14 cents at the shortest loop (A5), far below hearing and
+  below the keygroup's own tuning. (The first draft searched K for a loop
+  that happened to land near a whole frame, the Organ's method. Building it
+  showed why that isn't enough; see "What building it measured" below.)
 
 The beat stays in. It becomes the loop's own clock: one beat per pass.
 
@@ -146,21 +150,47 @@ and 0.35), CONTOUR 1 and DECAY 1 (the slowest-landing sweep), r = 3.5 / 3.9 /
 | 2.5 s | 1.9e-6 |
 | 3.5 s, also with a 2 s attack | 3.2e-7 |
 
-**Detune after snapping.** Asking for 9.6 cents gets 9.81 at every pitch.
-Asking for 14.0 gets 15.7 at A1–A4 under the ±10% search. The beat then runs
-up to about 12% faster than the one-shot's; STACK's knob position is
-unchanged, only the fine detune moves. A ±3% search holds 14.0 to within
-0.3 cents, at the cost of up to 0.27 frames of length residue. Seams with
-that residue were **not** measured, so the plan starts at ±10% (measured) and
-leaves tightening as a measured follow-up.
-
-**Loop lengths.** Snapped loops run from 0.14 s (LEAD A5, STACK 1) to 4.1 s
-(BASS A1, just above STACK 0.4, where the detune is smallest and the beat
-slowest).
+**Loop lengths.** Snapped loops run from about 0.14 s (LEAD A5, STACK 1) to
+about 4 s (BASS A1, just above STACK 0.4, where the detune is smallest and the
+beat slowest).
 
 **Render cost.** 1.06 s of CPU per 4 s held zone on this cloud machine
-(JVM, 4× oversampled, single thread). The phone is untested; see Open
-questions.
+(JVM, 4× oversampled, single thread). The phone is untested; see Decided 3.
+
+### What building it measured
+
+The probe's snapped seams (≈1e-10) were not the whole story. The first
+implementation searched K ±10% for a loop that landed *near* a whole frame,
+the way `Keys.organ` does, and a loop can only be a whole number of samples.
+Where the true length of K periods fell a few hundredths of a frame off, the
+leftover was audible in the seams of bright zones:
+
+| LEAD at CUTOFF 1, CREAM 0 | Frame residue | Seam |
+|---|---|---|
+| STACK 0.6, A3 | 0.000 | 1.5e-10 |
+| STACK 0.6, C4 | +0.068 | 2.2e-4 |
+| STACK 0.6, C5 | −0.025 | **6.5e-4** |
+| STACK 1.0, F#5 | −0.013 | 5.3e-4 |
+
+That passes the 1e-3 bar, but not by much. The fix is the pitch fit above:
+round the loop to whole frames and move the pitch to fill it exactly. Measured
+after the fit (the plan's tests pin all of it):
+
+| | Worst seam |
+|---|---|
+| Every zone of every voice at defaults | 1.3e-14 |
+| Bright LEAD (the table above), all zones, STACK 0.6 and 1.0 | 1.8e-15 |
+| BASS A1 worst corner (CUTOFF 0, CREAM 1 → r 4.0, CONTOUR 1, DECAY 1) | ≤ 2.8e-14 |
+| Largest pitch move, any zone | < 0.2 cents |
+
+Everything is floating-point noise, including the worst corner the probe put
+at 7.1e-5. The probe had the same fractional residue, so that figure measured
+the residue as much as the filter settling. **Detune** now comes straight
+from STACK: only K's rounding moves it, by under a quarter of a cent (the
+probe's ±10% search had moved 14.0 cents to 15.7).
+
+Nine zones, single thread, on this cloud machine: BASS 9.3 s, BRASS 6.5 s,
+LEAD 5.3 s (JIT warm-up included).
 
 ## Decisions
 
@@ -265,7 +295,12 @@ The plan pins each of these as a real test:
   DECAY 1) at STACK 0.3 / 0.6 / 1.0, and ATTACK 2.5 s.
 - **Detune snapped:** the square's ratio is exactly `1 + 1/(2K)`, the loop is
   exactly the rounded length of K sub-periods, and the snapped detune is
-  within 2 cents of the asked one.
+  within a quarter cent of the asked one.
+- **Whole frames:** in every zone of every voice, the fitted pitch completes
+  exactly 2K cycles in the loop's frames, and it moves less than 0.2 cents.
+- **Bright zones stay clean:** LEAD at CUTOFF 1, every zone, seams under 1e-8
+  (measured 1.8e-15; the fractional-frame residue it guards against
+  produced 2e-4 and up).
 - **Held means held:** the level over the last loop pass is within 1% of the
   level over the first pass, so nothing pumps.
 - **ATTACK is slow:** a 1 s attack is below −6 dB at 0.25 s and within 1 dB of
@@ -332,7 +367,8 @@ p1 += base / rate; p2 += base * 0.5 / rate; p3 += base * detune / rate
 // K sub-periods holding exactly one beat of the square:
 val k0 = (1.0 / (2.0 * (2.0.pow(cents / 1200.0) - 1.0))).roundToInt()
 val period = 2.0 * RATE / base            // one sub-octave period, in frames
-// search k in k0 ±10% for the smallest |k * period - round(k * period)|
-val loopFrames = Math.round(best * period).toInt()
-val ratio3 = 1.0 + 1.0 / (2.0 * best)
+// (the probe then searched k0 ±10% for the smallest frame residue;
+// the implementation instead rounds the loop and fits the pitch to it:
+// loopFrames = round(k0 * period); baseHz = 2 * k0 * RATE / loopFrames)
+val ratio3 = 1.0 + 1.0 / (2.0 * k0)
 ```

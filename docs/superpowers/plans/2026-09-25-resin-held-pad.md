@@ -178,7 +178,7 @@ internal fun renderHeld(voice: ResinVoice, macros: Map<String, Float>, held: Hel
   - `a seam that does not close is refused by name`: `Keys.requireSeam("BRASS A2", samples, loopStart)` on a deliberately misaligned loop (loop length off by half a period) throws, with "BRASS A2" in the message.
   - `resinPad refuses a note outside the voice`: MIDI root − 1 and root + 25 throw.
 - [ ] **Step 2:** Confirm they fail to compile.
-- [ ] **Step 3: Implement in `Keys.kt`.** The planner's arithmetic is the probe's, as it ran (spec, appendix):
+- [ ] **Step 3: Implement in `Keys.kt`.** *As built, `planLoop` differs from the listing below:* it does not search K for a near-whole-frame loop. It rounds the loop to whole frames and fits the pitch to it (`LoopPlan.baseHz`, carried into `Resin.Held.baseHz`), because the listing's residue measured up to 6.5e-4 in bright zones (spec, "What building it measured"). The listing is kept as the plan was written:
 
 ```kotlin
 /** The nine RESIN pad zones: every minor third across the voice's TUNE range (A1–A3, A2–A4, A3–A5). */

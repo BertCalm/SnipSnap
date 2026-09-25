@@ -101,9 +101,16 @@ object Resin {
      * the amp rises over [attackSeconds] and then holds flat for the whole
      * [seconds]. [squareRatio], when set, replaces osc 3's detune with an
      * exact ratio so a loop can close on a whole beat ([Keys.resinPad]);
-     * null keeps the one-shot's own detune.
+     * null keeps the one-shot's own detune. [baseHz], when set, replaces
+     * TUNE's pitch with an exact one, carried in Double all the way into the
+     * phase increments, so a loop of whole frames holds whole cycles.
      */
-    internal data class Held(val attackSeconds: Float, val seconds: Float, val squareRatio: Double? = null) {
+    internal data class Held(
+        val attackSeconds: Float,
+        val seconds: Float,
+        val squareRatio: Double? = null,
+        val baseHz: Double? = null,
+    ) {
         init {
             require(attackSeconds in ATTACK_MIN_SECONDS..ATTACK_MAX_SECONDS) {
                 "attack wants $ATTACK_MIN_SECONDS..$ATTACK_MAX_SECONDS s, got $attackSeconds"
@@ -156,7 +163,7 @@ object Resin {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
-        val base = frequencyFor(voice, m.getValue("TUNE"))
+        val base = held?.baseHz?.toFloat() ?: frequencyFor(voice, m.getValue("TUNE"))
         val stack = m.getValue("STACK")
         val cutoff = m.getValue("CUTOFF")
         val cream = m.getValue("CREAM")
@@ -193,10 +200,13 @@ object Resin {
         } else {
             Dsp.Env(attackSeconds = held.attackSeconds, decay2T60 = t60, holdSeconds = held.seconds)
         }
-        // The one-shot's increment is the same Float expression as before,
-        // widened once; a snapped ratio stays Double so the loop closes on
-        // the beat.
-        val inc3: Double = held?.squareRatio?.let { base * it / rate } ?: (base * detune / rate).toDouble()
+        // The one-shot's increments are the same expressions as before (the
+        // Float ones widened once); a held note's exact pitch and snapped
+        // ratio stay Double so a loop of whole frames closes on whole cycles.
+        val hz: Double = held?.baseHz ?: base.toDouble()
+        val inc1: Double = if (held?.baseHz != null) hz / rate else (base / rate).toDouble()
+        val inc2: Double = if (held?.baseHz != null) hz * 0.5 / rate else base * 0.5 / rate
+        val inc3: Double = held?.squareRatio?.let { hz * it / rate } ?: (base * detune / rate).toDouble()
         // Seeded per voice so the stack never opens phase-locked.
         val ph = Dsp.phases(3, Dsp.seedFor("RESIN", voice.name))
         var p1 = ph[0]
@@ -204,8 +214,8 @@ object Resin {
         var p3 = ph[2]
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            p1 += base / rate
-            p2 += base * 0.5 / rate
+            p1 += inc1
+            p2 += inc2
             p3 += inc3
             val stackOut = mixScale * (saw(p1) + g2 * saw(p2) + g3 * square(p3))
             val fc = (floorHz * 2f.pow(octavesUp * Dsp.envAt(t, contourT60))).coerceAtMost(MAX_CUTOFF_HZ)
