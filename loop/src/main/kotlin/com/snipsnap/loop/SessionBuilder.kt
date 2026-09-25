@@ -207,14 +207,6 @@ object SessionBuilder {
     }
 
     /**
-     * Take a track back to empty.
-     *
-     * The pieces stay on disk on purpose: this drops the arrangement, not the
-     * audio, and the snip itself was never moved out of SNIPS in the first
-     * place. Sending it again writes the same filenames back — which is a
-     * second send, not an undo, and the copy that announces this says so.
-     */
-    /**
      * Hand [trackIndex] a drone: [recipe] on [rootMidi], sliced over the
      * span [DroneFit] says keeps it in tune at this tempo. Nothing is
      * written but the arrangement; the audio exists only at bake time, from
@@ -230,6 +222,14 @@ object SessionBuilder {
         return session.copy(tracks = tracks.toList())
     }
 
+    /**
+     * Take a track back to empty.
+     *
+     * The pieces stay on disk on purpose: this drops the arrangement, not the
+     * audio, and the snip itself was never moved out of SNIPS in the first
+     * place. Sending it again writes the same filenames back — which is a
+     * second send, not an undo, and the copy that announces this says so.
+     */
     fun clear(session: Session, trackIndex: Int): Session {
         require(trackIndex in session.tracks.indices) {
             "track $trackIndex is outside a ${session.tracks.size}-track session"

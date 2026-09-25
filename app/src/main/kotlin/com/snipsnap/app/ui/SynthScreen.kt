@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -67,6 +68,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.LoopWrites
+import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
@@ -83,8 +86,13 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.OneNote
+import com.snipsnap.json.JsonValue
+import com.snipsnap.loop.Session
+import com.snipsnap.loop.SessionBuilder
+import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -100,6 +108,7 @@ import com.snipsnap.synth.Fathom
 import com.snipsnap.synth.FathomPatch
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.Resin
+import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinPatch
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.Pluck
@@ -192,6 +201,9 @@ fun SynthScreen(
     // list is not reactive to that folder, so this tells it to re-read -
     // PadSheetScreen's own parameter of the same name, for the same reason.
     onShelfAssetWritten: () -> Unit,
+    // DRONE TO LOOP (RESIN): the drone's recipe on its root, handed to App,
+    // whose sendSnipToLoop already owns the grid's sidecar and its one writer.
+    onDroneToLoop: (name: String, recipe: JsonValue, rootMidi: Int) -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
     // receive as their own `appScope` — so a SEND TO PAD write in flight
     // survives a MenuRow tab switch instead of being cancelled by it (see
@@ -618,6 +630,79 @@ fun SynthScreen(
         makingInstrument = false
     }
 
+    // ---- DRONE TO LOOP: RESIN, droning ----
+    // docs/superpowers/specs/2026-09-25-resin-drone-design.md. SEND puts a
+    // recipe on the grid, not audio: LOOP renders it at its own tempo, so
+    // nothing here renders except PREVIEW, which renders it the way LOOP
+    // will (the grid's tempo, bars and the device's rate) and plays it
+    // twice, so the wrap is heard.
+    val context = LocalContext.current
+    var droneOpen by remember { mutableStateOf(false) }
+    var droneRoot by remember { mutableStateOf<Int?>(null) }
+    var droneMotion by remember { mutableStateOf(DroneMaker.DEFAULT_MOTION) }
+    var droneRate by remember { mutableStateOf(DroneMaker.DEFAULT_RATE) }
+    var dronePreviewing by remember { mutableStateOf(false) }
+    var droneJob by remember { mutableStateOf<Job?>(null) }
+    // The grid the drone will land on, read when the sheet opens: its tempo
+    // and bars decide the span the readout names and PREVIEW renders.
+    var droneSession by remember { mutableStateOf<Session?>(null) }
+    LaunchedEffect(droneOpen, voice) {
+        if (!droneOpen || engine != Engine.RESIN) return@LaunchedEffect
+        val v = voice as? ResinVoice ?: return@LaunchedEffect
+        if (droneRoot?.let { it in DroneMaker.roots(v) } != true) droneRoot = DroneMaker.defaultRoot(v, kit?.key)
+        droneSession = withContext(Dispatchers.IO) {
+            val rate = deviceSampleRate(context)
+            val dir = LoopWrites.dir(context)
+            runCatching { SessionStore.load(dir) }.getOrNull()?.copy(sampleRate = rate)
+                ?: SessionBuilder.empty(rate)
+        }
+    }
+
+    fun droneSpec() = DroneMaker.spec(voice as ResinVoice, macros, droneMotion, droneRate)
+
+    fun previewDrone() {
+        val root = droneRoot ?: return
+        val session = droneSession ?: return
+        if (engine != Engine.RESIN || dronePreviewing) return
+        val spec = droneSpec()
+        dronePreviewing = true
+        droneJob = appScope.launch {
+            try {
+                val heard = withContext(Dispatchers.Default) {
+                    val once = DroneMaker.render(spec, root, session)
+                    Snip(FloatArray(once.size * 2) { once[it % once.size] }, 1, session.sampleRate)
+                }
+                audition(heard)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "previewDrone: failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                dronePreviewing = false
+                droneJob = null
+            }
+        }
+    }
+
+    fun sendDrone() {
+        val root = droneRoot ?: return
+        if (engine != Engine.RESIN) return
+        val name = "${currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"} DRONE"
+        onDroneToLoop(name, droneSpec().toJson(), root)
+        droneJob?.cancel()
+        droneJob = null
+        dronePreviewing = false
+        droneOpen = false
+    }
+
+    fun closeDrone() {
+        droneJob?.cancel()
+        droneJob = null
+        dronePreviewing = false
+        droneOpen = false
+    }
+
     // ---- SPREAD ----
     // The patch as it stood when SPREAD opened, rendered once: the panel
     // previews and the write lands the same audio its pitch was measured on.
@@ -855,6 +940,16 @@ fun SynthScreen(
                     ) {
                         makingInstrument = true
                     }
+                    // RESIN, droning: the sound as a breathing loop-grid track.
+                    LabButton(
+                        "DRONE TO LOOP ▸",
+                        scheme,
+                        enabled = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = "DRONE TO LOOP",
+                    ) {
+                        droneOpen = true
+                    }
                 }
             }
 
@@ -961,6 +1056,28 @@ fun SynthScreen(
                 onCancel = ::closeHeld,
             )
             BackHandler(onBack = ::closeHeld)
+        }
+
+        val droneVoice = voice as? ResinVoice
+        if (droneOpen && engine == Engine.RESIN && droneVoice != null) {
+            DroneSheet(
+                heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                voice = droneVoice,
+                root = droneRoot,
+                session = droneSession,
+                motion = droneMotion,
+                rate = droneRate,
+                previewing = dronePreviewing,
+                fillColor = classColor,
+                scheme = scheme,
+                onRoot = { droneRoot = it },
+                onMotion = { droneMotion = it },
+                onRate = { droneRate = it },
+                onPreview = ::previewDrone,
+                onSend = ::sendDrone,
+                onCancel = ::closeDrone,
+            )
+            BackHandler(onBack = ::closeDrone)
         }
     }
 }
@@ -1289,6 +1406,128 @@ private fun HeldInstrumentSheet(
                 ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
                 ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
                 ActionButton("MAKE", scheme, enabled = !busy, dimmed = busy, lit = !busy, modifier = Modifier.weight(1f), onClick = onMake)
+            }
+        }
+    }
+}
+
+// ---------- DRONE TO LOOP: RESIN, droning ----------
+
+/**
+ * DRONE TO LOOP ▸'s sheet (RESIN only), [HeldInstrumentSheet]'s frame over
+ * the three things a drone has that a one-shot never needed: ROOT (a note
+ * stepper across the voice's own register), MOTION (how far the filter
+ * breathes) and BREATHS (how many times per drone). The readout under ROOT
+ * is [DroneMaker.label]: the note, how many bars before it repeats at the
+ * grid's tempo, and the nudge the loop needed to close.
+ */
+@Composable
+private fun DroneSheet(
+    heading: String,
+    voice: ResinVoice,
+    root: Int?,
+    session: Session?,
+    motion: Float,
+    rate: Int,
+    previewing: Boolean,
+    fillColor: Color,
+    scheme: Scheme,
+    onRoot: (Int) -> Unit,
+    onMotion: (Float) -> Unit,
+    onRate: (Int) -> Unit,
+    onPreview: () -> Unit,
+    onSend: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val ready = root != null && session != null
+    val range = DroneMaker.roots(voice)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("DRONE TO LOOP", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText(heading, TapeType.pixel, scheme.ink2.tape)
+            TapeText(Copy.DRONE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ActionButton(
+                    "−",
+                    scheme,
+                    enabled = root != null && root > range.first,
+                    accessibilityLabel = "ROOT DOWN",
+                    modifier = Modifier.weight(1f),
+                ) { root?.let { onRoot(it - 1) } }
+                TapeText(
+                    if (root != null && session != null) DroneMaker.label(root, session) else "…",
+                    TapeType.lcdSmall,
+                    scheme.ink.tape,
+                    modifier = Modifier.weight(3f),
+                )
+                ActionButton(
+                    "+",
+                    scheme,
+                    enabled = root != null && root < range.last,
+                    accessibilityLabel = "ROOT UP",
+                    modifier = Modifier.weight(1f),
+                ) { root?.let { onRoot(it + 1) } }
+            }
+            MacroSlider("MOTION", motion, fillColor, scheme, onMotion)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TapeText(
+                    "MOTION ${DroneMaker.motionLabel(motion)}",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionButton(
+                    DroneMaker.breathsLabel(rate),
+                    scheme,
+                    enabled = !previewing,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    val rates = ResinDrone.RATES
+                    onRate(rates[(rates.indexOf(rate) + 1) % rates.size])
+                }
+            }
+            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton(
+                    "PREVIEW",
+                    scheme,
+                    enabled = ready && !previewing,
+                    dimmed = !ready || previewing,
+                    modifier = Modifier.weight(1f),
+                    onClick = onPreview,
+                )
+                ActionButton(
+                    "SEND",
+                    scheme,
+                    enabled = ready,
+                    dimmed = !ready,
+                    lit = ready,
+                    modifier = Modifier.weight(1f),
+                    onClick = onSend,
+                )
             }
         }
     }

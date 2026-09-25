@@ -38,11 +38,14 @@ import java.io.File
 import androidx.compose.runtime.setValue
 import com.snipsnap.loop.Arrangement
 import com.snipsnap.loop.Bouncer
+import com.snipsnap.loop.DroneBlock
+import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.LoopBlock
 import com.snipsnap.loop.PatternBlock
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.app.ui.tapeClick
+import com.snipsnap.audio.Scales
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.SnipStore
@@ -180,6 +183,18 @@ private fun describe(session: Session, track: Int, block: Int): String? {
             if (chain.size > 1) "$name · PIECE ${block + 1}/${chain.size}" else name
         }
         is PatternBlock -> b.kit
+        // The note and which slice this block plays. The nudge only when
+        // the tuning promise was missed at this tempo (DroneFit's one case,
+        // A1 at 216 BPM): the grid says so rather than hiding it.
+        is DroneBlock -> {
+            val cents = DroneFit.nudgeCents(b.rootMidi, b.of, session)
+            Copy.droneBlock(
+                Scales.nameOf(b.rootMidi),
+                b.slice + 1,
+                b.of,
+                cents.takeIf { kotlin.math.abs(it) > DroneFit.MAX_NUDGE_CENTS },
+            )
+        }
         else -> null
     }
 }

@@ -162,7 +162,7 @@ object SynthCommand {
             raw.toIntOrNull()?.takeIf { it in 1..MAX_DRONE_LOOPS } ?: throw CliError("--loop wants 1..$MAX_DRONE_LOOPS, got '$raw'")
         } ?: 1
 
-        val session = SessionBuilder.empty(DRONE_SAMPLE_RATE, bpm, bars)
+        val session = SessionBuilder.empty(WavWriter.MPC_SAMPLE_RATE, bpm, bars)
         val spec = DroneMaker.spec(v, patch.macros, motion, rate)
         val once = DroneMaker.render(spec, root, session)
         val all = FloatArray(once.size * loops) { once[it % once.size] }
@@ -176,9 +176,6 @@ object SynthCommand {
         out.println("drone: ${file.path}" + if (loops > 1) " ($loops loops end to end)" else "")
         return 0
     }
-
-    /** The rate every other WAV this command writes is at (the engines' own). */
-    private const val DRONE_SAMPLE_RATE = 44_100
 
     /** Enough to hear several wraps; a cap so a typo can't write gigabytes. */
     private const val MAX_DRONE_LOOPS = 16
