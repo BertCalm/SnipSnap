@@ -1,12 +1,46 @@
 # DRONE — a RESIN texture that loops on the bar line
 
-**Status:** on deck. A design for review, **not approved and not planned**.
-Nothing here is measured yet except the tuning table below; the first task
-of any plan is a probe, the same way the held pad's was.
+**Status:** approved direction (2026-09-25). The five open questions are
+answered in **Decided** below. The probe has run; its measurements are in
+**What the probe measured**, at the end. The plan is
+[`../plans/2026-09-25-resin-drone.md`](../plans/2026-09-25-resin-drone.md).
 **Date:** 2026-09-25
 **Builds on:** [`2026-09-25-resin-held-pad-design.md`](2026-09-25-resin-held-pad-design.md),
 the "every moving part completes whole cycles" loop math, generalized from
 one note's loop to a whole bar-length block.
+
+## Decided
+
+1. **How long before it repeats: (a).** The drone spans the smallest n in
+   {1, 2, 4, 8} intervals that keeps its note within 3 cents.
+2. **Block or file: a `DroneBlock`** on the loop grid, re-rendered on a BPM
+   change.
+3. **Mono** for the first version. The grid bakes stereo, so the one
+   channel goes to both sides.
+4. **Module boundary: inject a renderer.** This wasn't put to the user as a
+   question; it is the spec's recommendation, taken as the default because
+   it only changes where code lives, not what the drone sounds like.
+5. **MOTION is filter breathing**, as designed. Width drift stays out of
+   scope.
+
+Three smaller calls follow from those answers and the probe. They are
+recorded here so the plan doesn't have to argue them again:
+
+- **n is re-chosen when the tempo changes.** "Stay in tune" is the promise
+  you picked. A drone placed at 90 BPM with n = 4 would drift up to 7 cents
+  off at 220 BPM if n were frozen, so a tempo change re-slices each drone
+  track to its new n. The drone restarts from its first slice at that
+  moment; a tempo change already re-renders it.
+- **n is picked on the actual nudge, not the worst case.** The worst-case
+  table below is the ceiling; a particular ROOT at a particular tempo is
+  often closer. The smallest n whose *actual* nudge is ≤ 3 cents wins, which
+  means fewer slices and a cheaper render whenever the note is lucky. If
+  even n = 8 misses 3 cents, n = 8 and the readout shows the nudge. Across
+  RESIN's whole register (A1 and up), every whole BPM from 40 to 220, and
+  both 44.1 and 48 kHz, that happens once: A1 at 216 BPM, 3.15 cents.
+- **A drone owns its whole track.** Its n slices *are* the chain, because
+  the chain's wrap has to be the drone's wrap. Nothing else can share the
+  track.
 
 ## What this is
 
@@ -45,7 +79,7 @@ every moving part complete a whole number of cycles in that length, L:
 | Saw at the note, saw an octave down | nudging the note so the *sub-octave* completes an integer count (below) |
 | Detuned square | a ratio snapped to an integer cycle count, the held pad's trick at interval scale; the beat count then comes out whole on its own |
 | Filter breathing (new: MOTION) | a sine on CUTOFF (in octaves, like CONTOUR) with exactly 1, 2 or 4 cycles per drone (RATE) |
-| The ladder itself | render a settle pre-roll first and keep only the last L. A stable filter driven by an input and a modulation that are periodic with period L settles into output periodic with period L. **Unmeasured:** this is the probe's first question, for the same self-oscillation reason the pad caps CREAM at r = 4.0 |
+| The ladder itself | render a settle pre-roll first and keep only the last L. A stable filter driven by an input and a modulation that are periodic with period L settles into output periodic with period L. **Measured:** it does, to the bit, after a 1 s pre-roll (see the end) |
 
 Nothing is crossfaded. If the probe shows the ladder doesn't settle into a
 periodic state under modulation, that is the finding that changes the
@@ -67,8 +101,9 @@ cents:
 | 8 bars @ 90 | 21.33 s | 1.5 | 0.7 | 0.4 |
 
 A fresh loop-grid session is **one bar at 90 BPM**
-(`SessionBuilder.DEFAULT_BARS = 1`, `DEFAULT_BPM = 90`), and the grid has no
-tempo or bar control yet (the builder's own KDoc says so). The original
+(`SessionBuilder.DEFAULT_BARS = 1`, `DEFAULT_BPM = 90`). The grid has a
+tempo control (`LoopGrid.kt`'s `TempoControl`, one BPM per tap) but no bar
+control; `barsPerInterval` is not live. The original
 loop-player design's "default 4 bars" is only `SessionStore`'s fallback for
 a file that doesn't say. So a drone confined to one interval would, in the
 common case, be up to 12 cents off at A1: audibly out against any other
@@ -122,9 +157,10 @@ Options (open question 4):
 - **(i)** `:loop` → `:synth`. No cycle (`:synth` doesn't depend on `:loop`),
   but the grid learns about engines.
 - **(ii)** Inject a renderer, the seam `BlockBaker.bake(block, session,
-  source)` already uses for samples: a `DroneRenderer` fun interface that
-  `:shell` (which depends on both) supplies. `:loop` stores the recipe as
-  opaque `JsonValue`.
+  source)` already uses for samples: a defaulted `SampleSource.drone(...)`
+  that a `:shell` decorator answers. `:shell` depends on `:synth` today and
+  gains `:loop` for this (no cycle: `:loop` depends on neither). `:loop`
+  stores the recipe as opaque `JsonValue`.
 
 Recommendation: **(ii)**. The grid stays engine-agnostic, and a drone from
 another engine later is a renderer change, not a grid change.
@@ -153,10 +189,9 @@ another engine later is a renderer change, not a grid change.
 3. **Bake cost.** 1.06 s of CPU per 4 s at 4× oversampling (the held pad's
    measurement), so a four-interval drone at the default (4 × 2.67 s =
    10.7 s) is about 3 s plus pre-roll, on this cloud machine. It re-bakes
-   whenever `intervalFrames` changes. That is rare today (the grid has no
-   tempo control), but it will not stay rare. The loop-player design
-   accepts a "brief re-bake pause" with parallel baking; measure whether
-   drones make it not brief, on a phone.
+   whenever `intervalFrames` changes, which is every settled tempo tap. The
+   loop-player design accepts a "brief re-bake pause" with parallel baking;
+   measure whether drones make it not brief, on a phone.
 
 ## Out of scope for the first drone
 
@@ -164,18 +199,81 @@ Stereo width (two decorrelated renders); drones from other engines; motion
 on anything but CUTOFF; per-bar variation; and a WAV export beyond what the
 grid's existing BOUNCE already does.
 
-## Open questions (for the user)
+## What the probe measured
 
-1. **How long before it repeats:** (a) span as many intervals as it takes to
-   stay within 3 cents (recommended: at a fresh session's 1 bar, that is 4
-   bars for a low A), (b) one interval with the tuning error shown, or
-   (c) one interval, refusing low notes?
-2. **Block or file:** a `DroneBlock` on the grid (recommended) or a WAV from
-   the SYNTH screen?
-3. **Mono or stereo** for the first version? Mono is simpler and a drone
-   under a groove often sits in the middle anyway; stereo is wider but
-   doubles the render.
-4. **Module boundary:** inject a renderer (recommended) or let `:loop` depend
-   on `:synth`?
-5. **Is MOTION on the filter the right first movement,** or would you rather
-   the width drift (STACK breathing) or both?
+A throwaway test (not committed, like the held pad's) rendered the drone
+exactly as designed: phases taken from the sample index modulo the loop, so
+each period recomputes identical oscillator values; the square's cycle
+count snapped to a whole number (with at least one beat); the filter
+breathing as a sine with RATE whole cycles per loop; everything rendered at
+4× the session's rate and decimated with `Dsp.decimate`. The metric is the
+energy of one period minus the period before it, over the energy of the
+period before: the seam metric, taken across a whole period instead of 256
+frames. The bar is 1e-3.
+
+**1. The ladder settles, exactly.** 108 corners: the three voices at their
+default roots (A1, A2, A3), CREAM 0 / 0.5 / 1 (r = 4.0), CUTOFF 0.1 / 0.9,
+MOTION 0 / 1 / 2 octaves, RATE 1 / 4, six periods each with no pre-roll.
+The first period (the transient) differs from the second by up to 1.4e-2 (BASS,
+r = 4, CUTOFF 0.1, MOTION 2). **Every later period is identical to the one
+before it, bit for bit (0.0), in all 108.** A stable filter in finite
+precision doesn't just approach a periodic orbit; it lands on one.
+
+The pre-roll it needs, on the worst corners (r = 4, the lowest cutoffs,
+full MOTION), period after the pre-roll against the next:
+
+| Corner | 0.10 s | 0.25 s | 0.50 s | 1.00 s | 1.50 s |
+|---|---|---|---|---|---|
+| BASS, CUTOFF 0.1, MOTION 2, RATE 1 | 1.3e-3 | 2.6e-9 | 0 | 0 | 0 |
+| BASS, CUTOFF 0, MOTION 2, RATE 4 | 3.1e-5 | 2.5e-10 | 4.1e-13 | 7.4e-17 | 0 |
+| BRASS, CUTOFF 0.1, MOTION 2, RATE 1 | 2.8e-5 | 1.6e-13 | 0 | 0 | 0 |
+| LEAD, CUTOFF 0.1, MOTION 1, RATE 4 | 1.3e-8 | 1.3e-15 | 0 | 0 | 0 |
+| BASS, STACK 0.3, CUTOFF 0, MOTION 0 (slowest ring) | 4.9e-4 | 1.8e-6 | 2.2e-10 | 1.0e-14 | 0 |
+
+**Decision: a 1.0 s pre-roll.** It is 11 orders of magnitude under the bar
+on the slowest corner, and it costs 0.24 s of CPU. No crossfade, as
+promised.
+
+**2. The session's rate works.** Nothing in the chain assumes `Dsp.RATE`:
+`Dsp.Ladder(rate)`, `Dsp.decimate(buf, rate)` (4× → 2× → 1× through
+`Resampler`, whose weights repeat every period because the oversampled
+loop is a multiple of 4 frames) and the phase math all take the rate. At
+44.1 and 48 kHz, BASS n = 4, BRASS n = 2 and LEAD n = 1 (r = 4, MOTION 2,
+RATE 4) all came out with a period diff of 0 and a 256-frame seam of 0.
+The snapped note was -1.97 cents in all six, inside the 3-cent promise.
+The detuned square landed on 4 whole beats per loop at STACK 0.8.
+
+**3. Bake cost: too slow for the grid's warm window.** 0.24 s of CPU per
+second of audio at 44.1 kHz, 0.26 s at 48 kHz (4× oversampled, one core of
+this cloud machine):
+
+| Drone at 90 BPM, 1 bar | Rendered (with pre-roll) | CPU, 44.1 kHz | CPU, 48 kHz |
+|---|---|---|---|
+| BASS A1, n = 4 | 11.7 s | 2.8 s | 3.1 s |
+| BRASS A2, n = 2 | 6.3 s | 1.5 s | 1.7 s |
+| LEAD A3, n = 1 | 3.7 s | 0.9 s | 1.0 s |
+
+A phone is plausibly 2 to 3 times slower. **That is past
+`Residency.WARM_TIMEOUT_MS` (1.5 s)**. When a tempo change's warm runs
+out, the next `buffersFor` bakes whatever is missing *on the engine
+thread*, and a 3 to 8 s render there is a long dropout for every track, not
+just the drone's. It is also longer than one 2.67 s interval, the window
+`prefetch` has on a fresh start. So:
+
+- **A drone never bakes on the engine thread.** When `buffersFor` finds a
+  drone slice missing, it hands the engine one interval of silence for that
+  track (not cached) and queues the bake on the executor. The drone comes
+  in at the first interval after its render lands; every other track plays
+  on. The offline bounce (`Bouncer`) still bakes synchronously, as it
+  should: it has no deadline.
+- **The n slices render once.** The renderer holds one in-flight render per
+  (recipe, n × `intervalFrames`, rate), so n slices baking in parallel
+  wait on the same render instead of starting n.
+
+**Memory.** The longest drone is one interval at 8 bars and 40 BPM:
+48 s, 8.5 M oversampled floats (34 MB), plus the decimator's intermediates.
+Spanning never makes a drone longer than about 21 s: a low A needs
+roughly 10.5 s to stay within 3 cents, and doubling n can overshoot that
+by at most 2×. So the 48 s case is a single long interval. The plan
+measures the peak on the JVM and keeps it; streaming decimation is a later
+optimization if a phone objects.
