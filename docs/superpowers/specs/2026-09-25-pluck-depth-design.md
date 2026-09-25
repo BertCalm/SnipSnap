@@ -82,8 +82,9 @@ Four conclusions, each of which shapes a section below:
 ## Architecture
 
 PLUCK stays one engine with one `render(voice, macros)` and the existing 4×
-oversampled render/decimate/level/fade tail, and after Phase 2 it has three
-voices, all strings. KALIMBA leaves for TINES (its own section below): the
+oversampled render/decimate/level/fade tail, and after Phase 2 it has four
+voices, all strings: NYLON, KOTO, HARP and BANJO, with SITAR as the fifth in
+Phase 3. KALIMBA leaves for TINES (its own section below): the
 audition found it flat at every body amount because a tine is not a string,
 and the engine whose voices are BELL, CHIME, BLOCK, ZAP and TOY is where a
 plucked metal tongue belongs.
@@ -129,6 +130,47 @@ noise burst ──(PICK low-pass)──(STRIKE comb)──▶ Karplus-Strong loo
   to the string path**, the same guarantee WIDTH 0 gives the snare.
 - **DOUBLE** is unchanged: a second string, sharp by `1.002–1.012`, at
   `0.7 × DOUBLE`. Both strings feed the one body.
+
+### BANJO — Phase 2, the fourth string
+
+A banjo is a string into a drumhead: the body *is* `Modes.Material.MEMBRANE`,
+the Bessel-zero table the snare already rings, scaled to a head fundamental
+instead of a drum's, with the pot's air resonance under it. No new DSP: a
+voice row, a body table, twelve presets.
+
+- **Constants:** root G3 (196 Hz, the open-G tonal centre), loop cutoff
+  5600 Hz (brighter than HARP: a steel string over a taut head), exciter
+  range 2000–10000 Hz.
+- **Body:** the MEMBRANE ratios `1 : 1.593 : 2.135 : 2.295 : 2.917` on a head
+  fundamental in the low-to-mid hundreds of Hz, plus one pot air mode near
+  150 Hz. Sourced in `body-research.md` before it lands (Rae & Rossing on
+  banjo acoustics; Politzer's head-and-bridge papers); working head
+  fundamental 310 Hz. Head modes are damped hard by the bridge and the
+  player's arm, so their t60s are short (≤ 0.15 s), which is also what
+  keeps the head from ringing a knock.
+- **Defaults, placeholders for the gate:** DAMP 0.5 (banjo notes are short),
+  PICK 0.7, STRIKE 0.4 (fingerpicks close to the bridge, `p ≈ 0.09`),
+  BODY 0.6 (a banjo is mostly its head), DOUBLE 0.1.
+- **Presets:** twelve, authored like the others and disposable like the
+  others. The name is a generic instrument word, allowed by the naming rule.
+- It takes KALIMBA's place in `PluckVoice`; the melodic kit's A07–A11 go to
+  TINES KALIMBA regardless (decision 5), and BANJO claims no kit slots
+  until a kit wants it.
+
+### SITAR — Phase 3, the fifth string (outline)
+
+A sitar's identity is made of things this engine builds anyway. A wire
+plectrum near the bridge is STRIKE low and PICK high (Phase 1). The gourd
+is a body table (Phase 2's machinery). The rest is Phase 3's, and SITAR is
+the voice that justifies it: the sympathetic taraf strings that shimmer
+behind every note, and the **jawari** — a wide, gently curved bridge the
+string grazes as it swings. That contact is one-sided and follows the
+string's amplitude, so the buzz is fierce at the attack and thins as the
+note decays; in the loop it is a nonlinearity, and it needs no macro,
+because its strength is the string's own level and PICK sets how hard the
+pluck is. The jawari is new DSP: its spec section is written after
+Phase 2's gate and opens with a throwaway render, the way the body did.
+Josh's ordering on 2026-09-25 was banjo first, sitar later.
 
 ### KALIMBA moves to TINES — built in Phase 1, PLUCK's copy removed in Phase 2
 
@@ -208,8 +250,9 @@ sonic one; the gate can move it.
 such in code (a table with a comment naming this document), the way
 `LOUDNESS_OFFSET` already is. Starting values from the chips: BODY HARP 0.4,
 KOTO 0.35, NYLON 0.5; STRIKE 0.75 on every voice except KOTO at 0.6 (a koto
-is played with a pick near the bridge). KALIMBA has no body default and no
-STRIKE tuning effort: it leaves PLUCK in Phase 2.
+is played with a pick near the bridge). BANJO's are in its own section.
+KALIMBA has no body default and no STRIKE tuning effort: it leaves PLUCK in
+Phase 2.
 
 ## The bodies
 
@@ -230,6 +273,7 @@ voice before any Hz reaches `Pluck.kt`:
 | NYLON | classical guitar | the air resonance A0 near 100 Hz, the top-plate T1 near 200 Hz, the back-coupled T2 near 250 Hz, then plate modes; Q of order 20–50 (Fletcher & Rossing, the guitar chapter) | 98, 195, 250, 410, 560, 780, 1200, 2400 Hz |
 | KOTO | paulownia box, ~1.8 m | body resonances measured on the instrument; the literature is thinner (Ando's koto studies are the starting point) | 140, 205, 310, 470, 690, 1050, 1600 Hz |
 | HARP | spruce soundboard | a dense soundboard series from roughly 100 Hz up (Waltham & Kotlicki on the concert harp) | 110, 165, 240, 330, 450, 600, 820, 1100, 1500 Hz |
+| BANJO | drumhead over a pot | the head's modes are the circular membrane's, at a fundamental set by head tension; the pot adds an air mode (Rae & Rossing; Politzer) | MEMBRANE ratios on 310 Hz: 310, 494, 662, 711, 904 Hz; pot air 150 Hz |
 
 **Decays.** The knock fix has two halves. The first difference drive is
 one. The other is that a body's lowest modes have moderate Q: the spike gave
@@ -316,8 +360,8 @@ notes are the gate's record.
 | Phase | Ships | Audio changes | Gate |
 |---|---|---|---|
 | 1 | STRIKE macro; decay-following render length with the 4 s ceiling; velocity through PICK; seed convention; `macrosFor` at five. **Alongside:** the TINES KALIMBA voice, its presets, and its clips on the page beside PLUCK's KALIMBA | Yes | STRIKE extremes and DAMP 0 for NYLON, KOTO and HARP; TINES KALIMBA against PLUCK KALIMBA |
-| 2 | Remove `PluckVoice.KALIMBA`, its presets and its melodic-kit pads (the kit's A07–A11 move to TINES); `body-research.md`; per-voice sourced tables; first-difference drive; BODY macro with placeholder defaults; `macrosFor` at six | Yes | BODY at 0 / default / 1 for NYLON, KOTO and HARP; the knock question asked again |
-| 3 (outline) | dispersion allpasses inside the loop for KOTO and HARP (stiff-string inharmonicity, with the allpass phase folded into the loop's tuning budget); sympathetic strings under DOUBLE | Yes | its own spec and plan, written after Phase 2's gate |
+| 2 | Remove `PluckVoice.KALIMBA`, its presets and its melodic-kit pads (the kit's A07–A11 move to TINES); BANJO voice and presets; `body-research.md`; per-voice sourced tables; first-difference drive; BODY macro with placeholder defaults; `macrosFor` at six | Yes | BODY at 0 / default / 1 for NYLON, KOTO, HARP and BANJO; the knock question asked again |
+| 3 (outline) | SITAR: the fifth string, its gourd body and the jawari bridge nonlinearity; sympathetic strings under DOUBLE; dispersion allpasses inside the loop for KOTO and HARP (stiff-string inharmonicity, with the allpass phase folded into the loop's tuning budget) | Yes | its own spec and plan, written after Phase 2's gate |
 
 Phase 3's string physics were not tested by the spike and are not designed
 here beyond their names; its plan opens with a throwaway render, the way
@@ -356,6 +400,12 @@ saying why.
 - **Body tables are sane** — every row below 20 kHz, ascending, with
   positive gain and t60; the table's source is named in a KDoc that the
   test does not check but the reviewer does.
+- **BANJO (Phase 2)** joins every per-voice test through
+  `PluckVoice.entries`, including the five-cent tuning bound. Its head's
+  fundamental sits inside the no-knock test's sub-200 Hz band only through
+  the pot air mode, so that test's ratio is measured against BANJO's own
+  BODY 0 render like every other voice's; whether a head thump is banjo or
+  defect is the gate's call.
 - **Determinism** — `is deterministic` stays; seeds change value, not
   behaviour.
 - **Presets** — `PluckPresetsTest` unchanged: clean, non-silent, round-trip,
@@ -379,8 +429,9 @@ saying why.
   and PLUCK's body is new; WIDTH waits until the body has been heard in
   mono. The FX-rack per-channel audit the parent spec owes applies when it
   arrives.
-- **DRIVE.** No saturation on the exciter or in the loop. The sitar buzz is
-  a real reach and it is not what the audition asked for.
+- **DRIVE, until SITAR.** No saturation on the exciter or in the loop in
+  Phases 1 and 2. The jawari bridge is Phase 3's, and it arrives with the
+  voice that needs it.
 - **Splitting DAMP.** Not heard, not built.
 - **Per-render randomisation.** Pads are one WAV; determinism is the
   product.
@@ -410,6 +461,11 @@ the sections above already reflect the answers.
    2; Phase 3 is strings only; and if a physically modelled tine is ever
    wanted, the clamped-free bar table belongs to the STRIKE engine, which is
    excitation into modal bodies by definition.
+6. **Banjo first, sitar later.** Asked whether another string should take
+   KALIMBA's place and whether it should be a sitar, the answer was a
+   banjo in Phase 2 — a string into the membrane table that already
+   exists, no new DSP — and SITAR in Phase 3, where its jawari bridge and
+   the sympathetic strings are built together.
 
 ## Appendix — the spike
 

@@ -1,0 +1,843 @@
+<title>Pluck Body Audition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md.
+     The scheme is dark by design (light shells were cut), so this page
+     commits to one theme and paints every surface explicitly. */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised1: #221A34;
+    --raised2: #161020;
+    --gray-hi: #40306A;
+    --lcd: #0A0714;
+    --lcd-ink: #C8B2F8;
+    --lcd-glow: rgba(154, 108, 240, .9);
+    --cyan: #40E0E8;
+    --cyan-glow: rgba(64, 224, 232, .8);
+    --warn: #FFB000;
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --accent: #E040C8;
+    --bin-red: #C86050;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    --f-marker: "Rock Salt", "Comic Sans MS", cursive;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 48px;
+    padding-inline: 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      repeating-linear-gradient(90deg, rgba(90, 42, 224, .12) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(224, 64, 200, .08) 0 1px, transparent 1px 22px),
+      repeating-conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 17px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .win {
+    max-width: 430px;
+    margin: 0 auto;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background:
+      linear-gradient(var(--win), var(--win2)) padding-box,
+      var(--oil) border-box;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+    /* No overflow: hidden here: it would turn .win into the sticky
+       transport's scroll container and the bar would never stick. */
+  }
+
+  .titlebar {
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .titlebar .tag {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    opacity: .85;
+  }
+
+  /* LCD surfaces: dark, inset, scanlined. Sound lives here. */
+  .lcd {
+    position: relative;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    text-shadow: 0 0 6px var(--lcd-glow);
+  }
+  .lcd::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px);
+  }
+  .lcd > * { position: relative; z-index: 1; }
+
+  .transport {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--field-border);
+  }
+  /* The 1fr track must be allowed below its content's min-content width,
+     or the nowrap readout grows the row and pushes REPEAT off-screen. */
+  .transport > div { min-width: 0; }
+  .transport .label {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    text-shadow: none;
+  }
+  .transport .now {
+    font-size: 22px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .transport .now.idle { color: var(--lcd-ink); text-shadow: 0 0 6px var(--lcd-glow); }
+
+  /* Raised chrome: buttons and pads. */
+  .raised {
+    appearance: none;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  .toggle {
+    min-height: 44px;
+    min-width: 88px;
+    padding-inline: 12px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .toggle .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ink3);
+  }
+  .toggle[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+  .toggle[aria-pressed="true"] .dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+
+  .guide {
+    margin: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .guide p { margin: 0; }
+  .guide p + p { margin-top: 6px; }
+  .guide .hd {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+    margin-bottom: 6px;
+  }
+
+  /* One cassette per voice. */
+  .voice {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    overflow: hidden;
+  }
+  .voice-hd {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 4px 12px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .voice-hd h2 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--title-ink);
+    text-wrap: balance;
+  }
+  .voice-hd .readout {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 17px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .voice-hd .readout b { font-weight: 400; color: var(--ink); }
+  .voice-hd .body-note {
+    font-family: var(--f-marker);
+    font-size: 11px;
+    color: var(--ink2);
+    text-align: right;
+    max-width: 160px;
+  }
+
+  .group { padding: 8px 8px 4px; }
+  .group + .group { border-top: 1px dashed var(--field-border); }
+  .group-hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px 6px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+  .group.key .group-hd { color: var(--accent); }
+  .group.key .group-hd::before {
+    content: "";
+    width: 3px; height: 12px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  .clip {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-areas:
+      "pad meta"
+      "pad chips";
+    gap: 4px 10px;
+    align-items: center;
+    padding: 6px 4px;
+    border-radius: 6px;
+  }
+  .clip.playing { background: rgba(64, 224, 232, .06); }
+
+  .pad {
+    grid-area: pad;
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    font-family: var(--f-pixel);
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    align-self: center;
+  }
+  .pad .ico { display: block; width: 14px; height: 14px; }
+  .pad .ico path, .pad .ico rect { fill: currentColor; }
+  .pad .stop { display: none; }
+  .pad[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
+  }
+  .pad[aria-pressed="true"] .play { display: none; }
+  .pad[aria-pressed="true"] .stop { display: block; }
+
+  .meta {
+    grid-area: meta;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .meta .id {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink3);
+    flex: none;
+  }
+  .meta .name {
+    font-size: 18px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .meta .dur {
+    margin-left: auto;
+    flex: none;
+    font-size: 15px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .desc {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 15px;
+    color: var(--ink2);
+    line-height: 1.2;
+  }
+  .clip { grid-template-areas: "pad meta" "pad desc" "pad chips"; }
+  .desc { grid-area: desc; }
+
+  .chips {
+    grid-area: chips;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .chip {
+    appearance: none;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink2);
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip .g { font-family: var(--f-lcd); font-size: 15px; line-height: 1; }
+  .chip.worse .g { color: var(--bin-red); }
+  .chip.closer .g { color: var(--cyan); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--title-ink);
+    box-shadow: 0 0 10px rgba(224, 64, 200, .45);
+  }
+  .chip[aria-pressed="true"] .g { color: var(--title-ink); }
+
+  .notes {
+    padding: 8px 12px 12px;
+    border-top: 1px solid var(--field-border);
+    display: grid;
+    gap: 6px;
+  }
+  .notes label {
+    font-family: var(--f-marker);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  textarea {
+    width: 100%;
+    min-height: 64px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    font-family: var(--f-lcd);
+    font-size: 19px;
+    line-height: 1.25;
+    caret-color: var(--cyan);
+  }
+  textarea::placeholder { color: var(--ink3); }
+
+  .verdict { margin: 0 12px 12px; }
+  .verdict .voice-hd h2 { color: var(--title-ink); }
+  .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
+  .q + .q { border-top: 1px dashed var(--field-border); }
+  .q .ask { font-size: 19px; color: var(--ink); line-height: 1.25; }
+  .q .sub { font-size: 15px; color: var(--ink2); }
+
+  .actions {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--field-border);
+  }
+  .primary {
+    appearance: none;
+    min-height: 52px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background:
+      linear-gradient(#0C2426, #081418) padding-box,
+      var(--oil) border-box;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 20px rgba(64, 224, 232, .35);
+  }
+  .primary:disabled { opacity: .6; cursor: default; box-shadow: none; }
+  .status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .status .k { font-family: var(--f-pixel); font-size: 8px; letter-spacing: .5px; color: var(--ink2); text-shadow: none; align-self: center; }
+  .status.warn .v { color: var(--warn); text-shadow: 0 0 8px rgba(255, 176, 0, .6); }
+  .status.ok .v { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+
+  .foot {
+    margin: 4px 12px 12px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink3);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pad[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25); }
+      50% { box-shadow: 0 0 22px rgba(64, 224, 232, .85), inset 0 0 14px rgba(64, 224, 232, .35); }
+    }
+  }
+</style>
+
+<div class="win">
+  <div class="titlebar">
+    <span>Pluck Audition</span>
+    <span class="tag">BODY SPIKE &middot; 2026-09-25</span>
+  </div>
+
+  <div class="transport lcd">
+    <div>
+      <div class="label">NOW PLAYING</div>
+      <div class="now idle" id="now">TAP A PAD TO PLAY</div>
+    </div>
+    <button class="raised toggle" id="repeat" type="button" aria-pressed="false">
+      <span class="dot"></span>REPEAT
+    </button>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">WHAT YOU ARE LISTENING FOR</div>
+    <p>Each voice is at its factory defaults. Every clip sits at the same RMS, deliberately quiet: turn up and use headphones.</p>
+    <p>The question: does a body, or a pick position, make the voice sound like the instrument it is named after? Tap SHIPPED, then BODY, then BODY + PICK. Mark each clip against the instrument, not against the clip before it.</p>
+    <p>NYLON and KOTO are the two that decide the next step.</p>
+  </div>
+
+  <div id="voices"></div>
+
+  <div class="voice verdict" id="verdict">
+    <div class="voice-hd">
+      <h2>Verdict</h2>
+      <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
+    </div>
+    <div class="q">
+      <div class="ask">1 &middot; Does the body make NYLON and KOTO sound like the instrument?</div>
+      <textarea id="q_body" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <div class="ask">2 &middot; Does the pick position do more or less than the body?</div>
+      <div class="sub">BRIDGE, QUARTER, CENTRE against SHIPPED.</div>
+      <textarea id="q_pick" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <div class="ask">3 &middot; Where does BODY &middot; DOMINANT stop being useful?</div>
+      <div class="sub">The ugly end is allowed. Unusable-by-most is not useless.</div>
+      <textarea id="q_dominant" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <div class="ask">Anything else</div>
+      <textarea id="q_else" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="save" type="button">Save verdict</button>
+      <div class="status lcd" id="status"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    RENDERED FROM PluckBodySpike.kt &middot; 44 CLIPS &middot; 16-BIT 44.1 KHZ &middot; BODY TABLES ARE BALLPARK GUESSES, NOT SOURCED.
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Real engine facts: factory TUNE snapped to a semitone from each voice's root.
+  // Non-ASCII glyphs are escaped so the page reads the same whatever
+  // charset a host serves it under.
+  var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
+
+  var VOICES = [
+    { id: 'NYLON',   note: 'G3',  hz: 196, root: 'A2' + DOT + '110 HZ', macros: 'DAMP .45' + DOT + 'PICK .40' + DOT + 'DOUBLE .15', dur: 0.78, body: 'guitar body: air, top, back' },
+    { id: 'KOTO',    note: 'C#4', hz: 278, root: 'D3' + DOT + '147 HZ', macros: 'DAMP .40' + DOT + 'PICK .75' + DOT + 'DOUBLE .45', dur: 0.74, body: 'long paulownia box' },
+    { id: 'KALIMBA', note: 'A4',  hz: 440, root: 'A3' + DOT + '220 HZ', macros: 'DAMP .60' + DOT + 'PICK .55' + DOT + 'DOUBLE .10', dur: 0.55, body: 'hand-sized box' },
+    { id: 'HARP',    note: 'F4',  hz: 350, root: 'E3' + DOT + '165 HZ', macros: 'DAMP .20' + DOT + 'PICK .60' + DOT + 'DOUBLE .20', dur: 1.13, body: 'soundboard' }
+  ];
+
+  // [file id, name, description, duration override]
+  var GROUPS = [
+    { label: 'THE THREE THAT MATTER', key: true, clips: [
+      ['00_shipped', 'SHIPPED', 'what the app renders today'],
+      ['11_body_equal', 'BODY' + DOT + 'EQUAL', 'the string driving a fixed modal body'],
+      ['30_body_equal_pick_quarter', 'BODY + PICK ' + String.fromCharCode(0xBC), 'body, plus the pick a quarter along the string']
+    ]},
+    { label: 'BODY AMOUNT' + DOT + 'EQUAL IS ABOVE', clips: [
+      ['10_body_subtle', 'BODY' + DOT + 'SUBTLE', 'body at half the string'],
+      ['12_body_dominant', 'BODY' + DOT + 'DOMINANT', 'body at three times the string. the ugly end']
+    ]},
+    { label: 'PICK POSITION' + DOT + 'NO BODY', clips: [
+      ['20_pick_bridge', 'PICK' + DOT + 'BRIDGE', 'thin and bright, low harmonics cut'],
+      ['21_pick_quarter', 'PICK' + DOT + 'QUARTER', 'the usual playing spot'],
+      ['22_pick_centre', 'PICK' + DOT + 'CENTRE', 'hollow, even harmonics gone']
+    ]},
+    { label: 'RING CEILING' + DOT + 'DAMP .05' + DOT + '3.5 S', clips: [
+      ['40_long_ring', 'LONG RING', 'the 1.35 s cap lifted', 3.5],
+      ['41_long_ring_body_equal', 'LONG RING + BODY', 'same, through the body', 3.5]
+    ]},
+    { label: 'CHECK', clips: [
+      ['01_spike_baseline', 'SPIKE BASELINE', 'should be identical to SHIPPED']
+    ]}
+  ];
+
+  var REACTIONS = [
+    { v: 'closer', cls: 'closer', g: String.fromCharCode(0x25B2), t: 'CLOSER' },
+    { v: 'same',   cls: 'same',   g: '=', t: 'SAME' },
+    { v: 'worse',  cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'WORSE' }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  // ---------- state ----------
+  var state = { overall: { q_body: '', q_pick: '', q_dominant: '', q_else: '' } };
+  VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
+
+  // ---------- build ----------
+  var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
+                 '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
+
+  var host = $('voices');
+  VOICES.forEach(function (v) {
+    var card = el('section', 'voice');
+    card.id = 'voice-' + v.id;
+
+    var hd = el('div', 'voice-hd');
+    var h2 = el('h2', null, v.id);
+    var note = el('div', 'body-note', v.body);
+    var ro = el('div', 'readout');
+    ro.innerHTML = '<span><b>' + v.note + '</b>' + DOT + v.hz + ' HZ</span><span>ROOT ' + v.root + '</span><span>' + v.macros + '</span>';
+    hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
+    card.appendChild(hd);
+
+    GROUPS.forEach(function (g) {
+      var grp = el('div', 'group' + (g.key ? ' key' : ''));
+      grp.appendChild(el('div', 'group-hd', g.label));
+      g.clips.forEach(function (c) {
+        var fid = c[0], name = c[1], desc = c[2], dur = c[3] || v.dur;
+        var row = el('div', 'clip');
+        row.id = 'clip-' + v.id + '-' + fid;
+
+        var pad = el('button', 'raised pad');
+        pad.type = 'button';
+        pad.setAttribute('aria-pressed', 'false');
+        pad.setAttribute('aria-label', 'Play ' + v.id + ' ' + name);
+        pad.innerHTML = PLAY_SVG;
+        pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
+        row.appendChild(pad);
+
+        var meta = el('div', 'meta');
+        meta.appendChild(el('span', 'id', fid.slice(0, 2)));
+        meta.appendChild(el('span', 'name', name));
+        meta.appendChild(el('span', 'dur', dur.toFixed(2) + ' S'));
+        row.appendChild(meta);
+        row.appendChild(el('div', 'desc', desc));
+
+        var chips = el('div', 'chips');
+        REACTIONS.forEach(function (r) {
+          var chip = el('button', 'chip ' + r.cls);
+          chip.type = 'button';
+          chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
+          chip.setAttribute('aria-pressed', 'false');
+          chip.setAttribute('aria-label', v.id + ' ' + name + ': ' + r.t.toLowerCase() + ' to the instrument');
+          chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
+          chip.addEventListener('click', function () { react(v.id, fid, r.v); });
+          chips.appendChild(chip);
+        });
+        row.appendChild(chips);
+        grp.appendChild(row);
+      });
+      card.appendChild(grp);
+    });
+
+    var notes = el('div', 'notes');
+    var lab = el('label', null, v.id.charAt(0) + v.id.slice(1).toLowerCase() + ' notes');
+    var ta = el('textarea');
+    ta.id = 'note-' + v.id;
+    ta.placeholder = 'what it sounds like, in your words';
+    lab.htmlFor = ta.id;
+    ta.addEventListener('input', function () {
+      state[v.id].note = ta.value;
+      debounce(v.id, function () { persist(v.id); });
+    });
+    notes.appendChild(lab); notes.appendChild(ta);
+    card.appendChild(notes);
+
+    host.appendChild(card);
+  });
+
+  // ---------- audio ----------
+  var audio = null, current = null, repeat = false;
+  var nowEl = $('now');
+
+  function ensureAudio() {
+    if (audio) return audio;
+    audio = new Audio();
+    audio.preload = 'auto';
+    audio.addEventListener('ended', function () {
+      if (repeat && current) {
+        audio.currentTime = 0;
+        audio.play().catch(function () { setPlaying(null); });
+      } else {
+        setPlaying(null);
+      }
+    });
+    audio.addEventListener('error', function () {
+      setPlaying(null);
+      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
+      nowEl.classList.remove('idle');
+    });
+    return audio;
+  }
+
+  function setPlaying(next) {
+    if (current) {
+      current.pad.setAttribute('aria-pressed', 'false');
+      current.row.classList.remove('playing');
+    }
+    current = next;
+    if (next) {
+      next.pad.setAttribute('aria-pressed', 'true');
+      next.row.classList.add('playing');
+      nowEl.textContent = next.voice.id + DOT + next.name;
+      nowEl.classList.remove('idle');
+    } else {
+      nowEl.textContent = 'TAP A PAD TO PLAY';
+      nowEl.classList.add('idle');
+    }
+  }
+
+  function toggle(voice, fid, name, pad, row) {
+    var a = ensureAudio();
+    if (current && current.pad === pad) {
+      a.pause();
+      setPlaying(null);
+      return;
+    }
+    a.pause();
+    a.src = voice.id + '/' + fid + '.wav';
+    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
+    a.play().catch(function () { setPlaying(null); });
+  }
+
+  $('repeat').addEventListener('click', function () {
+    repeat = !repeat;
+    this.setAttribute('aria-pressed', repeat ? 'true' : 'false');
+  });
+
+  // ---------- reactions ----------
+  function react(voiceId, fid, value) {
+    var cur = state[voiceId].reactions[fid];
+    var next = cur === value ? null : value;
+    if (next) state[voiceId].reactions[fid] = next; else delete state[voiceId].reactions[fid];
+    paintChips(voiceId, fid);
+    persist(voiceId);
+  }
+
+  function paintChips(voiceId, fid) {
+    var cur = state[voiceId].reactions[fid] || null;
+    REACTIONS.forEach(function (r) {
+      var chip = $('chip-' + voiceId + '-' + fid + '-' + r.v);
+      if (chip) chip.setAttribute('aria-pressed', cur === r.v ? 'true' : 'false');
+    });
+  }
+
+  // A field being typed into wins over anything arriving from the store:
+  // state takes the live value instead, so the next save cannot re-save
+  // stale text over what was just typed.
+  function paintVoice(voiceId) {
+    GROUPS.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
+    var ta = $('note-' + voiceId);
+    if (!ta) return;
+    if (ta === document.activeElement) { state[voiceId].note = ta.value; }
+    else if (ta.value !== state[voiceId].note) { ta.value = state[voiceId].note; }
+  }
+
+  function paintOverall() {
+    ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+      var ta = $(k);
+      if (!ta) return;
+      if (ta === document.activeElement) { state.overall[k] = ta.value; }
+      else if (ta.value !== state.overall[k]) { ta.value = state.overall[k]; }
+    });
+  }
+
+  // The four answers keep a local draft as they are typed; only SAVE
+  // VERDICT writes them to the shared store.
+  ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+    $(k).addEventListener('input', function () {
+      state.overall[k] = this.value;
+      debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
+    });
+  });
+  $('save').addEventListener('click', function () { persist('overall'); });
+
+  // ---------- persistence ----------
+  var db = null;
+  var statusEl = $('status'), statusV = $('statusv');
+  var timers = {}, queues = {};
+
+  function setStatus(kind, text) {
+    statusEl.classList.remove('warn', 'ok');
+    if (kind) statusEl.classList.add(kind);
+    statusV.textContent = text;
+  }
+
+  function debounce(key, fn) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(fn, 700);
+  }
+
+  function snapshotOf(key) {
+    var data = key === 'overall'
+      ? { q_body: state.overall.q_body, q_pick: state.overall.q_pick, q_dominant: state.overall.q_dominant, q_else: state.overall.q_else }
+      : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
+    data.savedAt = new Date().toISOString();
+    return data;
+  }
+
+  function saveLocal(key, data) {
+    try { localStorage.setItem('pluck-audition:' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+  }
+
+  function loadLocal(key) {
+    try {
+      var raw = localStorage.getItem('pluck-audition:' + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function apply(key, data) {
+    if (!data) return;
+    if (key === 'overall') {
+      ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+        if (typeof data[k] === 'string') state.overall[k] = data[k];
+      });
+      paintOverall();
+    } else if (state[key]) {
+      if (data.reactions && typeof data.reactions === 'object') state[key].reactions = Object.assign({}, data.reactions);
+      if (typeof data.note === 'string') state[key].note = data.note;
+      paintVoice(key);
+    }
+  }
+
+  function persist(key) {
+    var data = snapshotOf(key);
+    saveLocal(key, data);
+    if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    setStatus(null, 'SAVING...');
+    queues[key] = (queues[key] || Promise.resolve())
+      .then(function () { return db.doc('verdicts/' + key).set(data); })
+      .then(function () { setStatus('ok', 'SAVED ' + clock()); },
+            function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
+  }
+
+  function clock() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  var KEYS = VOICES.map(function (v) { return v.id; }).concat(['overall']);
+
+  // Local copy first so the page is never empty, then the shared store wins.
+  KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
+
+  (function connect() {
+    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+    Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
+      .then(function (ns) {
+        if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
+        return Promise.all(KEYS.map(function (k) {
+          return ns.doc('verdicts/' + k).get().then(function (snap) {
+            if (snap && snap.exists) apply(k, snap.data());
+          }, function () { /* keep the local copy */ });
+        })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
+      })
+      .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
+  })();
+})();
+</script>
