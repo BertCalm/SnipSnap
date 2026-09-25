@@ -747,6 +747,36 @@ object Copy {
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
+    // ---- SPREAD: one sound across a bank, in a scale ----
+    /**
+     * SPREAD, when it lands: the scale, how many pads and where from, then
+     * only the facts that apply — full pads kept, notes past the tune
+     * range, originals binned, and the shared choke group (or that there
+     * was none free to share).
+     */
+    fun spreadLanded(
+        root: String,
+        scale: String,
+        pads: Int,
+        firstPad: String,
+        keptFull: Int,
+        outOfReach: Int,
+        replaced: Int,
+        chokeGroup: Int,
+        noFreeChoke: Boolean,
+    ): String = buildString {
+        append("$root $scale ACROSS ${countOf(pads, "PAD", "PADS")} FROM $firstPad.")
+        if (keptFull > 0) append(" ${countOf(keptFull, "FULL PAD", "FULL PADS")} KEPT.")
+        if (outOfReach > 0) append(" ${countOf(outOfReach, "NOTE", "NOTES")} OUT OF TUNE RANGE.")
+        if (replaced > 0) append(if (replaced == 1) " 1 ORIGINAL SLEEPS IN THE BIN." else " $replaced ORIGINALS SLEEP IN THE BIN.")
+        if (chokeGroup > 0) append(" CHOKE GROUP $chokeGroup: ONE NOTE AT A TIME.")
+        if (noFreeChoke) append(" NO FREE CHOKE GROUP, SO NOTES OVERLAP.")
+    }
+    const val SPREAD_NOTHING = "NO PAD TOOK A NOTE. EVERY SLOT WAS FULL OR OUT OF TUNE RANGE."
+    const val SPREAD_NO_PITCH = "NO CLEAR PITCH, SO THE ROOT IS A GUESS. THE FIRST PAD PLAYS IT AS IT SOUNDS NOW."
+    const val SPREAD_CHAIN_REFUSED = "A ROUND-ROBIN PAD WON'T SPREAD. PICK A SINGLE-SAMPLE PAD."
+    const val SPREAD_FAILED = "SPREAD FAILED. TRY AGAIN."
+
     // ---- SYNTH: SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
     /**
      * Under the name field: the one rule with a number in it, where the

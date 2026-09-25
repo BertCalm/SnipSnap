@@ -44,14 +44,7 @@ object Tuner {
 
         val target = Scales.nearestInKey(estimate.hz, rootSemitone, scale)
         val offsetSemis = Scales.hzToMidi(Scales.midiToHz(target)) - Scales.hzToMidi(estimate.hz)
-        // Total correction in cents, split MPC-style: whole semitones coarse,
-        // the remainder fine.
-        val cents = (offsetSemis * 100f).roundToInt()
-        var coarse = cents / 100
-        var fine = cents % 100
-        if (fine > 50) { coarse += 1; fine -= 100 }
-        if (fine < -50) { coarse -= 1; fine += 100 }
-        if (coarse !in -36..36) return null // out of the MPC's reach; leave it alone
+        val (coarse, fine) = coarseFine(offsetSemis) ?: return null // out of the MPC's reach; leave it alone
 
         return TuneResult(
             detectedHz = estimate.hz,
@@ -61,5 +54,19 @@ object Tuner {
             tuneCoarse = coarse,
             tuneFine = fine,
         )
+    }
+
+    /**
+     * A pitch shift of [semitones] as the pad's coarse/fine pair, split
+     * MPC-style: whole semitones coarse, the remainder fine within ±50
+     * cents. Null when the coarse part falls outside the pad's -36..36.
+     */
+    fun coarseFine(semitones: Float): Pair<Int, Int>? {
+        val cents = (semitones * 100f).roundToInt()
+        var coarse = cents / 100
+        var fine = cents % 100
+        if (fine > 50) { coarse += 1; fine -= 100 }
+        if (fine < -50) { coarse -= 1; fine += 100 }
+        return if (coarse in -36..36) coarse to fine else null
     }
 }

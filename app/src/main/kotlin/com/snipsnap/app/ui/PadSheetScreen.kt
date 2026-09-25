@@ -94,6 +94,7 @@ import com.snipsnap.shell.Mutate
 import com.snipsnap.shell.MutateSheet
 import com.snipsnap.shell.OutsideSheet
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.Spread
 import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
@@ -1564,6 +1565,63 @@ fun PadSheetScreen(
         }
     }
 
+    // ---- SPREAD: this pad's sound across a bank, in a scale ----
+    // Pitch is measured when the panel opens, on the audio this sheet
+    // already decoded; the write goes through commitPadEditNow, so it runs
+    // on a fresh model under the lock and is refused if the pad changed.
+    var spreadSource by remember(model) { mutableStateOf<SpreadSource?>(null) }
+    var spreadOpening by remember(model) { mutableStateOf(false) }
+
+    fun openSpread() {
+        if (busy || spreadOpening) return
+        val currentSnip = snip ?: return
+        val p = model?.kit?.pad(slot) ?: return
+        // A chain's file is every take end to end; spreading it would tune
+        // the whole run of takes as one note.
+        if (p.chain != null) {
+            onToast(Copy.SPREAD_CHAIN_REFUSED)
+            return
+        }
+        spreadOpening = true
+        scope.launch {
+            try {
+                val midi = withContext(Dispatchers.Default) { Spread.detect(currentSnip) }
+                spreadSource = SpreadSource(currentSnip, midi, Spread.defaultRoot(midi, p.tuneCoarse, p.tuneFine))
+            } finally {
+                spreadOpening = false
+            }
+        }
+    }
+
+    fun spread(options: Spread.Options) {
+        val src = spreadSource ?: return
+        val fromTag = padTag(slot)
+        var landed: Spread.Plan? = null
+        commitPadEditNow("SPREAD", onSuccess = {
+            val plan = landed
+            if (plan != null && plan.notes.isNotEmpty()) spreadSource = null
+            onToast(plan?.let(Spread::toast) ?: Copy.SPREAD_FAILED)
+        }) { f ->
+            val like = f.kit.pad(slot) ?: return@commitPadEditNow
+            val plan = Spread.plan(f.kit, src.midi, options)
+            landed = plan
+            if (plan.notes.isEmpty()) return@commitPadEditNow
+            Spread.apply(
+                f,
+                src.snip,
+                plan,
+                Spread.Sound(
+                    name = Spread.baseName(like),
+                    drumClass = like.drumClass,
+                    colorHex = like.colorHex ?: AutoPlace.colorFor(like.drumClass),
+                    recipe = like.recipe,
+                    like = like,
+                    source = like.source - Spread.NOTE_KEY - Spread.FROM_KEY + (Spread.FROM_KEY to fromTag),
+                ),
+            )
+        }
+    }
+
     // ---- OUTSIDE: the world as an effect (OutsideSheet over Outside) ----
     var outsideMove by remember(slot) { mutableStateOf(OutsideSheet.MOVES.first()) }
     val outsideKnob = OutsideSheet.knobFor(OutsideSheet.moveFor(outsideMove))
@@ -2210,6 +2268,24 @@ fun PadSheetScreen(
         applyDust(m, p, pendingAmt, p.displayName, from = tape)
     }
 
+    spreadSource?.let { src ->
+        // Drawn instead of the sheet, the way the loading shell above is:
+        // a full-screen panel needs no parent Box to sit on top of. Its
+        // BackHandler, composed after the sheet's own, is the one Back reaches.
+        val cancelSpread = { if (!busy) spreadSource = null }
+        SpreadOverlay(
+            kit = model?.kit,
+            source = src,
+            colorHex = pad.colorHex ?: AutoPlace.colorFor(pad.drumClass),
+            scheme = scheme,
+            busy = busy,
+            onSpread = ::spread,
+            onCancel = cancelSpread,
+        )
+        BackHandler(onBack = cancelSpread)
+        return
+    }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
             slot = slot,
@@ -2609,6 +2685,14 @@ fun PadSheetScreen(
                 dimmed = pad.drumClass != DrumClass.TONAL,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakeInstrument,
+            )
+            ActionButton(
+                if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                scheme,
+                enabled = !busy && !spreadOpening && snip != null,
+                accessibilityLabel = "SPREAD ACROSS PADS",
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::openSpread,
             )
             }
 
