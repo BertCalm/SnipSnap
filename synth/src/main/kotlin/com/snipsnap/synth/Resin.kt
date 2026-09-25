@@ -90,7 +90,7 @@ object Resin {
     }
 
     /** CUTOFF's floor and ceiling per voice, Hz, before key tracking. */
-    private fun cutoffRange(voice: ResinVoice): Pair<Float, Float> = when (voice) {
+    internal fun cutoffRange(voice: ResinVoice): Pair<Float, Float> = when (voice) {
         ResinVoice.BASS -> 60f to 5_000f
         ResinVoice.LEAD -> 200f to 14_000f
         ResinVoice.BRASS -> 120f to 9_000f

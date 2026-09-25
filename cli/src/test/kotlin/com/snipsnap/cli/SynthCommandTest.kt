@@ -68,4 +68,44 @@ class SynthCommandTest {
             "expected the unknown engine name in the refusal, got: ${e.message}",
         )
     }
+
+    @Test
+    fun `a RESIN preset becomes a drone exactly as long as the grid would make it`() {
+        val dir = File.createTempFile("synthdrone", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val bytes = ByteArrayOutputStream()
+            val code = SynthCommand.run(
+                listOf("RESIN", "BASS", "--drone", "--root", "A1", "--motion", "0.6", "--rate", "2", "--loop", "2", "--out", dir.path),
+                PrintStream(bytes),
+            )
+            assertEquals(0, code)
+            val wav = dir.listFiles { f -> f.extension == "wav" }!!.single()
+            val snip = com.snipsnap.audio.WavReader.read(wav)
+            // A fresh session: 1 bar at 90 BPM, 44.1 kHz; A1 spans 4 of them.
+            val session = com.snipsnap.loop.SessionBuilder.empty(44_100)
+            assertEquals(2 * 4 * session.intervalFrames, snip.frameCount)
+            val printed = bytes.toString()
+            assertTrue("A1 - 4 bars - -1.97 cents" in printed, "stdout names the note, span and nudge: $printed")
+            assertTrue(printed.all { it.code < 128 }, "stdout is ASCII, like every other line the CLI prints: $printed")
+            assertTrue("2 BREATHS" in printed, printed)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `drone flags are refused where they can't mean anything`() {
+        val out = PrintStream(ByteArrayOutputStream())
+        fun refusal(vararg args: String): String? =
+            (runCatching { SynthCommand.run(args.toList() + listOf("--out", "/tmp"), out) }.exceptionOrNull() as? CliError)?.message
+        assertTrue(refusal("RESIN", "BASS", "--root", "A1")?.contains("--drone") == true)
+        assertTrue(refusal("VELVET", "BASS", "--drone")?.contains("RESIN") == true)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--instrument") != null)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--all") != null)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--root", "A5")?.contains("A1..A3") == true)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--rate", "3") != null)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--motion", "1.5") != null)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--bars", "3") != null)
+        assertTrue(refusal("RESIN", "BASS", "--drone", "--bpm", "300") != null)
+    }
 }

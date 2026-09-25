@@ -233,6 +233,16 @@ fraction of a cent so the loop is whole frames, so every seam measures at
 floating-point noise. Held, CREAM stops at the self-oscillation threshold,
 the one place a loop cannot close.
 
+RESIN also drones. `DRONE TO LOOP ▸` on SYNTH (and `snipsnap synth RESIN
+<VOICE> --drone` on the desk) puts one long note on the next empty loop-grid
+track, breathing through the ladder (MOTION, up to ±2 octaves, 1, 2 or 4
+BREATHS per loop). The track holds a recipe, not audio: LOOP renders it at
+its own tempo, spanning as many intervals as it takes to keep the note
+within 3 cents, with every oscillator and every breath completing whole
+cycles in the loop, so the wrap repeats to the bit. A tempo change re-slices
+and re-renders it, and a drone still rendering is silence on its own track,
+never a stall on the other five.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best

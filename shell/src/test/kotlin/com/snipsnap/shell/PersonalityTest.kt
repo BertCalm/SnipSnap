@@ -861,6 +861,14 @@ class PersonalityTest {
         assertTrue("KEYS" in note && note.endsWith("."), "and says where it plays, on a full stop: $note")
         assertEquals(note.uppercase(), note, "TapeOS shouts here too")
         assertEquals("RENDERING 3/9…", Copy.instrumentRendering(3, 9))
+        // SYNTH's DRONE TO LOOP: the toast names the note, the track as
+        // counted on screen, and how long before it repeats; LOOP's readout
+        // names the slice, and the nudge only when the promise was missed.
+        assertEquals("A1 DRONE IS ON TRACK 3, 4 BARS AROUND.", Copy.droneLanded("A1", 3, 4))
+        assertEquals("A3 DRONE IS ON TRACK 1, 1 BAR AROUND.", Copy.droneLanded("A3", 1, 1))
+        assertEquals("DRONE A1 · 2/4", Copy.droneBlock("A1", 2, 4))
+        assertEquals("DRONE A1 · 1/8 · -3.2¢ OFF", Copy.droneBlock("A1", 1, 8, -3.16))
+        assertTrue("TEMPO" in Copy.DRONE_NOTE && "LOOP" in Copy.DRONE_NOTE, Copy.DRONE_NOTE)
     }
 
     @Test

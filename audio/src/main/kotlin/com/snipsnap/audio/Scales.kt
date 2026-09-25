@@ -51,6 +51,25 @@ object Scales {
     fun nameOf(midi: Int): String = NOTE_NAMES[((midi % 12) + 12) % 12] + (midi / 12 - 1)
 
     /**
+     * [nameOf] backwards: "A1" is 33, "C#3" is 49, and a flat is read as
+     * the sharp below it ("Bb2" is 46). Null for anything else, including
+     * a note outside MIDI's 0..127.
+     */
+    fun midiOf(name: String): Int? {
+        val m = NOTE.matchEntire(name.trim()) ?: return null
+        val letter = NOTE_NAMES.indexOf(m.groupValues[1].uppercase())
+        val accidental = when (m.groupValues[2]) {
+            "#" -> 1
+            "b" -> -1
+            else -> 0
+        }
+        val midi = (m.groupValues[3].toInt() + 1) * 12 + letter + accidental
+        return midi.takeIf { it in 0..127 }
+    }
+
+    private val NOTE = Regex("([A-Ga-g])([#b]?)(-?\\d+)")
+
+    /**
      * The nearest note to [hz] that belongs to [scale] rooted at
      * [rootSemitone] (semitones above C, 0..11), searched across octaves.
      */

@@ -15,6 +15,8 @@ dependencies {
     implementation(project(":json"))
     // remix / --ghosts / treat drive the same kit actions the app binds to.
     implementation(project(":shell"))
+    // synth --drone picks its span the way the loop grid does (DroneFit).
+    implementation(project(":loop"))
     implementation(project(":synth"))
     testImplementation(kotlin("test"))
 }

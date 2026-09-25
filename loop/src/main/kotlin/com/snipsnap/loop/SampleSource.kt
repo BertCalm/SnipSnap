@@ -1,6 +1,7 @@
 package com.snipsnap.loop
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.json.JsonValue
 
 /**
  * Where the baker gets its audio.
@@ -34,4 +35,17 @@ interface SampleSource {
      * say about choke, and an empty map is exactly "play as before".
      */
     fun muteGroups(kit: String): Map<Int, Int> = emptyMap()
+
+    /**
+     * A drone's whole render: exactly [frames] frames at [sampleRate], or
+     * null when this source has no renderer for [recipe]. The baker slices
+     * it; the source never sees slices, so a drone's slices can share one
+     * render.
+     *
+     * Defaulted to null, like [muteGroups], because the grid does not know
+     * what a synth is: a source that can render drones is handed in from
+     * outside (`:shell`'s `DroneSource`), and a drone on a source that
+     * can't bakes to silence, the same as a missing file.
+     */
+    fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int): Snip? = null
 }

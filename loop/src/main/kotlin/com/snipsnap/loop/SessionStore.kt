@@ -75,6 +75,15 @@ object SessionStore {
             ),
         )
         is SilenceBlock -> JsonValue.Obj(linkedMapOf("type" to JsonValue.Str("silence")))
+        is DroneBlock -> JsonValue.Obj(
+            linkedMapOf(
+                "type" to JsonValue.Str("drone"),
+                "recipe" to block.recipe,
+                "rootMidi" to num(block.rootMidi),
+                "slice" to num(block.slice),
+                "of" to num(block.of),
+            ),
+        )
         is PatternBlock -> JsonValue.Obj(
             linkedMapOf(
                 "type" to JsonValue.Str("pattern"),
@@ -127,6 +136,15 @@ object SessionStore {
             "pattern" -> PatternBlock(
                 kit = b["kit"]?.str() ?: throw IllegalStateException("pattern block has no kit"),
                 steps = b["steps"]?.arr().orEmpty().map { stepFrom(it) },
+            )
+            // No VERSION bump for this kind: a build that predates it already
+            // refuses an unknown type loudly, and a bump would make every
+            // existing loop.json unreadable to this build instead.
+            "drone" -> DroneBlock(
+                recipe = b["recipe"] ?: throw IllegalStateException("drone block has no recipe"),
+                rootMidi = b["rootMidi"]?.int() ?: throw IllegalStateException("drone block has no rootMidi"),
+                slice = b["slice"]?.int() ?: throw IllegalStateException("drone block has no slice"),
+                of = b["of"]?.int() ?: throw IllegalStateException("drone block has no of"),
             )
             else -> throw IllegalStateException("unknown block type '$type'")
         }

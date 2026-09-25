@@ -763,6 +763,27 @@ object Copy {
      */
     fun instrumentRendering(done: Int, total: Int): String = "RENDERING $done/$total…"
 
+    // ---- SYNTH: DRONE TO LOOP (RESIN, droning) ----
+    /**
+     * The drone sheet's own line: where SEND puts it and the one promise
+     * that makes a drone different from a sent snip - it follows the tempo
+     * and stays in tune (docs/superpowers/specs/2026-09-25-resin-drone-design.md).
+     */
+    const val DRONE_NOTE = "TAKES THE NEXT EMPTY TRACK IN LOOP AND BREATHES THERE, IN TUNE AT ANY TEMPO."
+    /**
+     * A drone landed: [note] on [track] (1-based, the column counted across
+     * the grid), repeating every [bars] bars.
+     */
+    fun droneLanded(note: String, track: Int, bars: Int): String =
+        "$note DRONE IS ON TRACK $track, ${countOf(bars, "BAR", "BARS")} AROUND."
+    /**
+     * What a tapped drone block is, for LOOP's readout: the note and which
+     * slice of the drone this block plays. [offCents] only when the tuning
+     * promise could not be kept at this tempo, so the grid says so.
+     */
+    fun droneBlock(note: String, slice: Int, of: Int, offCents: Double? = null): String =
+        "DRONE $note · $slice/$of" + (offCents?.let { " · %+.1f¢ OFF".format(java.util.Locale.ROOT, it) } ?: "")
+
     // ---- SPREAD: one sound across a bank, in a scale ----
     /**
      * SPREAD, when it lands: the scale, how many pads and where from, then
