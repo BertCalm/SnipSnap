@@ -9,6 +9,26 @@ import kotlin.test.assertTrue
 
 class ResinTest {
 
+    /**
+     * DeterminismTest proves two renders agree with each other; this proves
+     * they agree with yesterday. Captured before the held branch went into
+     * Resin.synthesize (docs/superpowers/plans/2026-09-25-resin-held-pad.md,
+     * Task 1) - every RESIN pad in a kit.json depends on it.
+     */
+    @Test
+    fun `the one-shot render is pinned - held work must not move it by a bit`() {
+        val expected = mapOf(
+            ResinVoice.BASS to (1646780647 to -605980797),
+            ResinVoice.LEAD to (601330122 to -600287048),
+            ResinVoice.BRASS to (-325293879 to -763106684),
+        )
+        for ((voice, hashes) in expected) {
+            assertEquals(hashes.first, Resin.render(voice).samples.contentHashCode(), "$voice defaults moved")
+            val preset = ResinPresets.forVoice(voice).first()
+            assertEquals(hashes.second, Resin.render(voice, preset.macros).samples.contentHashCode(), "$voice '${preset.name}' moved")
+        }
+    }
+
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
         for (voice in ResinVoice.entries) {
