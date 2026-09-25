@@ -250,18 +250,23 @@ button sits under the SCRAMBLE / SAVE PRESET / SEND TO PAD row, shown only
 when the engine is RESIN (the same full-width placement the `DELETED
 PRESETS ▸` button already uses). It opens a sheet with:
 
-- **NAME**: defaults to the current preset's name, otherwise `RESIN BRASS`
-  (the voice), made unique with `OneNote.freshName`.
+- **NAME**: the current preset's name, otherwise `RESIN BRASS` (the voice),
+  made unique with `OneNote.freshName`. It is shown, not typed, in the
+  sheet's line (`Copy.heldInstrumentNote`), the way PAD SHEET's MAKE
+  INSTRUMENT names without asking. The confirmation toast is the shop's
+  existing `Copy.madeNamed("INSTRUMENT", name)`.
 - **ATTACK** and **RELEASE** sliders, with readouts in seconds.
 - **PREVIEW**: renders the middle zone only (about one render's worth of
-  wait, with the indicator below) and plays the head plus two passes of the
-  loop, which is what a three-second hold sounds like. You hear the pad
-  before paying for all nine zones.
+  wait, shown as `RENDERING…`, the scope's own busy word) and plays the head
+  plus two passes of the loop, which is what a short hold sounds like. You
+  hear the pad before paying for all nine zones.
 - **MAKE**: renders the nine zones in parallel off the main thread. A
   processing indicator shows throughout: `RENDERING 3/9` beside a progress
   bar that fills as zones finish, so a slow phone reads as working, not
-  frozen. It writes only after *all* zones succeed, then confirms
-  `ON KEYS · HOLDS`. CANCEL during a render writes nothing.
+  frozen (`Copy.instrumentRendering`). It writes only after *all* zones
+  succeed, then confirms with the shop's `INSTRUMENT MADE — NAME. ON THE
+  SHELF.` CANCEL during a render writes nothing; once the last zone lands
+  the write is left to finish.
 
 **Desktop: the CLI.** `snipsnap synth RESIN BRASS --preset 3 --instrument
 --attack 0.8 --release 0.6 --out <dir>` writes the same package. This is the
@@ -346,9 +351,9 @@ The plan pins each of these as a real test:
 3. **Nine zones always, with a progress indicator.** Measured cost is 1.06 s
    of CPU per 4 s zone here, and a phone is likely slower. The zone count is
    *not* reduced if a render runs long. Instead, MAKE shows progress for the
-   whole render (`RENDERING 3/9` beside a moving bar), so a render that
-   takes longer than 15 s reads as working, not frozen. PREVIEW shows the
-   same indicator while its one zone renders.
+   whole render (`RENDERING 3/9…` beside a bar that fills as zones land),
+   so a render that takes longer than 15 s reads as working, not frozen.
+   PREVIEW shows `RENDERING…` while its one zone renders.
 4. **RELEASE on hardware is a listening check.** Does the MPC read
    `volumeRelease` 1.5 as a 1.5-second release? This is checked by ear on
    real hardware, and the check is added to the testkit acceptance notes.

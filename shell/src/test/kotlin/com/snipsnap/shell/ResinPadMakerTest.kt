@@ -128,8 +128,15 @@ class ResinPadMakerTest {
     fun `the knobs cover the spec's ranges`() {
         assertEquals(ResinPadMaker.ATTACK.lo, ResinPadMaker.ATTACK.value(0f))
         assertEquals(ResinPadMaker.RELEASE.hi, ResinPadMaker.RELEASE.value(1f), 1e-5f)
-        ResinPadMaker.Spec(ResinVoice.LEAD, emptyMap(), ResinPadMaker.ATTACK.value(1f), ResinPadMaker.RELEASE.value(0f))
         assertEquals("0.30 s", ResinPadMaker.secondsLabel(0.3f))
+        // Every stepper position makes a spec, the ends included: the sheet
+        // must never refuse a slider it drew.
+        for (a in listOf(0f, 0.5f, 1f)) for (r in listOf(0f, 0.5f, 1f)) {
+            val s = ResinPadMaker.spec(ResinVoice.LEAD, emptyMap(), a, r)
+            assertTrue(s.attackSeconds in ResinPadMaker.ATTACK.lo..ResinPadMaker.ATTACK.hi)
+            assertTrue(s.releaseSeconds in ResinPadMaker.RELEASE.lo..ResinPadMaker.RELEASE.hi)
+        }
+        assertEquals(0.3f, ResinPadMaker.spec(ResinVoice.LEAD, emptyMap(), ResinPadMaker.ATTACK.defaultFraction, 0f).attackSeconds, 1e-4f)
     }
 
     private fun render(engine: InstrumentEngine, seconds: Float, rate: Int): Snip {

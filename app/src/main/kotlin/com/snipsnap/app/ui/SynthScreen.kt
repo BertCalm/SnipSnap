@@ -82,12 +82,14 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.OneNote
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.UserPresets
@@ -128,6 +130,11 @@ import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
@@ -180,6 +187,10 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
+    // MAKE INSTRUMENT (RESIN, held) writes beside the kits; App's instrument
+    // list is not reactive to that folder, so this tells it to re-read -
+    // PadSheetScreen's own parameter of the same name, for the same reason.
+    onShelfAssetWritten: () -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
     // receive as their own `appScope` — so a SEND TO PAD write in flight
     // survives a MenuRow tab switch instead of being cancelled by it (see
@@ -501,6 +512,111 @@ fun SynthScreen(
         }
     }
 
+    // ---- MAKE INSTRUMENT: RESIN, held ----
+    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md. Nine held
+    // zones render off the main thread, in parallel, with a progress bar
+    // the whole way (the author's call: a slow phone shows work, it does not
+    // drop zones); the package is written once every zone has landed, so a
+    // CANCEL mid-render leaves nothing on the shelf.
+    var makingInstrument by remember { mutableStateOf(false) }
+    var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
+    var holdRelease by remember { mutableStateOf(ResinPadMaker.RELEASE.defaultFraction) }
+    // Zones landed during MAKE, of [holdTotal]; -1 when no MAKE is running.
+    var holdDone by remember { mutableStateOf(-1) }
+    var holdTotal by remember { mutableStateOf(0) }
+    var holdPreviewing by remember { mutableStateOf(false) }
+    var holdJob by remember { mutableStateOf<Job?>(null) }
+    // The name MAKE will land under, read off the shelf when the sheet opens
+    // so the sheet can say it; MAKE asks the shelf again at write time.
+    var holdName by remember { mutableStateOf("") }
+    val holdBase = currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"
+    val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
+    LaunchedEffect(makingInstrument, holdBase) {
+        if (!makingInstrument) return@LaunchedEffect
+        holdName = try {
+            withContext(Dispatchers.IO) { OneNote.freshName(instrumentsDir, holdBase) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SynthScreen", "holdName: shelf unreadable", e)
+            holdBase
+        }
+    }
+
+    fun previewHeld() {
+        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
+        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        holdPreviewing = true
+        holdJob = appScope.launch {
+            try {
+                val heard = withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) }
+                audition(heard)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "previewHeld: failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                holdPreviewing = false
+                holdJob = null
+            }
+        }
+    }
+
+    fun makeHeld() {
+        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
+        // Captured now: the sheet's own sound, before anything can move it.
+        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        val base = holdBase
+        val midis = ResinPadMaker.zoneMidis(spec)
+        holdTotal = midis.size
+        holdDone = 0
+        holdJob = appScope.launch {
+            try {
+                // coroutineScope, not bare asyncs on appScope: a zone that
+                // throws must surface here as an exception this catch sees,
+                // not fail the app's own scope.
+                val notes = coroutineScope {
+                    midis.map { midi ->
+                        async(Dispatchers.Default) {
+                            val note = ResinPadMaker.renderZone(spec, midi)
+                            withContext(Dispatchers.Main) { holdDone += 1 }
+                            note
+                        }
+                    }.awaitAll()
+                }
+                // Past here the write lands even under CANCEL: a package half
+                // written is worse than a whole one the player can bin.
+                val made = withContext(NonCancellable + Dispatchers.IO) {
+                    val name = OneNote.freshName(instrumentsDir, base)
+                    ResinPadMaker.export(name, spec, notes, instrumentsDir)
+                    name
+                }
+                makingInstrument = false
+                onShelfAssetWritten()
+                onToast(Copy.madeNamed("INSTRUMENT", made))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "makeHeld: failed", e)
+                onToast(Copy.actionFailed("INSTRUMENT"))
+            } finally {
+                holdDone = -1
+                holdJob = null
+            }
+        }
+    }
+
+    fun closeHeld() {
+        // Every zone rendered means the write is under way; let it land.
+        if (holdDone >= 0 && holdDone >= holdTotal) return
+        holdJob?.cancel()
+        holdJob = null
+        holdDone = -1
+        holdPreviewing = false
+        makingInstrument = false
+    }
+
     val classColor = Schemes.classColor(engine.drumClass(voice)).tape
 
     Box(Modifier.fillMaxSize()) {
@@ -635,6 +751,20 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
+                // RESIN, held: the sound as a keys instrument. RESIN only -
+                // it is the one engine whose held render closes its loops.
+                // Full width under the row, the DELETED PRESETS door's place.
+                if (engine == Engine.RESIN) {
+                    LabButton(
+                        "MAKE INSTRUMENT ▸",
+                        scheme,
+                        enabled = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = "MAKE INSTRUMENT",
+                    ) {
+                        makingInstrument = true
+                    }
+                }
             }
 
             Box(
@@ -704,6 +834,26 @@ fun SynthScreen(
                 onClose = closeBin,
             )
             BackHandler(onBack = closeBin)
+        }
+
+        if (makingInstrument && engine == Engine.RESIN) {
+            HeldInstrumentSheet(
+                heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                name = holdName,
+                attack = holdAttack,
+                release = holdRelease,
+                done = holdDone,
+                total = holdTotal,
+                previewing = holdPreviewing,
+                fillColor = classColor,
+                scheme = scheme,
+                onAttack = { holdAttack = it },
+                onRelease = { holdRelease = it },
+                onPreview = ::previewHeld,
+                onMake = ::makeHeld,
+                onCancel = ::closeHeld,
+            )
+            BackHandler(onBack = ::closeHeld)
         }
     }
 }
@@ -956,6 +1106,109 @@ private fun PresetNameDialog(
                 )
             }
         }
+    }
+}
+
+// ---------- MAKE INSTRUMENT: RESIN, held ----------
+
+/**
+ * MAKE INSTRUMENT ▸'s sheet (RESIN only): [PresetNameDialog]'s frame - scrim,
+ * raised bevel, CANCEL beside the real buttons - over the two knobs a held
+ * note has that a one-shot never needed, ATTACK and RELEASE, with their
+ * seconds spelled out. While MAKE runs the knobs give way to [HeldProgress],
+ * a bar that fills as each zone lands and the line counting them; PREVIEW's
+ * one zone says RENDERING… the way the scope does. CANCEL stays live until
+ * the last zone lands, and the write that follows is left to finish.
+ */
+@Composable
+private fun HeldInstrumentSheet(
+    heading: String,
+    name: String,
+    attack: Float,
+    release: Float,
+    done: Int,
+    total: Int,
+    previewing: Boolean,
+    fillColor: Color,
+    scheme: Scheme,
+    onAttack: (Float) -> Unit,
+    onRelease: (Float) -> Unit,
+    onPreview: () -> Unit,
+    onMake: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val making = done >= 0
+    val busy = making || previewing
+    val writing = making && done >= total
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // No descendant text of its own - labelled with the same word
+            // the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", enabled = !writing, onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the scrim's
+                // CANCEL (MessageBox.kt's pattern, as PresetNameDialog's).
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("MAKE INSTRUMENT", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText(heading, TapeType.pixel, scheme.ink2.tape)
+            if (name.isNotEmpty()) {
+                TapeText(Copy.heldInstrumentNote(name), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            }
+            if (making) {
+                HeldProgress(done, total, fillColor, scheme)
+            } else {
+                MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
+                MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
+                TapeText(
+                    "ATTACK ${ResinPadMaker.secondsLabel(ResinPadMaker.ATTACK.value(attack))} · " +
+                        "RELEASE ${ResinPadMaker.secondsLabel(ResinPadMaker.RELEASE.value(release))}",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                )
+                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
+                ActionButton("MAKE", scheme, enabled = !busy, dimmed = busy, lit = !busy, modifier = Modifier.weight(1f), onClick = onMake)
+            }
+        }
+    }
+}
+
+/** MAKE's progress: a bar filling zone by zone, and [Copy.instrumentRendering] counting them. */
+@Composable
+private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme) {
+    val fraction = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
+    val line = Copy.instrumentRendering(done, total)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(18.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .sunkenField(scheme)
+                // Canvas-free, but still a bar a screen reader must hear as
+                // one: the same semantics MacroSlider gives its fill.
+                .semantics {
+                    contentDescription = line
+                    progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
+                },
+        ) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(fillColor.copy(alpha = 0.85f)))
+        }
+        TapeText(line, TapeType.lcdSmall, scheme.amber.tape)
     }
 }
 

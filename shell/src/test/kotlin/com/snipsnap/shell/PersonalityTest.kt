@@ -852,6 +852,15 @@ class PersonalityTest {
         assertTrue(Copy.madeNamed("PAD", "DRONE").endsWith("."), "and still lands on a full stop")
         val made = Copy.madeNamed("PAD", "DRONE 2")
         assertEquals(made.uppercase(), made, "TapeOS shouts here too")
+        // SYNTH's MAKE INSTRUMENT (RESIN, held): the sheet names what MAKE
+        // will leave, by the same name the madeNamed toast then uses, and
+        // says where it plays. The progress line counts zones, 1-based
+        // like every count on screen, and trails off like treatmentBusy.
+        val note = Copy.heldInstrumentNote("Big Brass 2")
+        assertTrue("BIG BRASS 2" in note, "the note names what will land: $note")
+        assertTrue("KEYS" in note && note.endsWith("."), "and says where it plays, on a full stop: $note")
+        assertEquals(note.uppercase(), note, "TapeOS shouts here too")
+        assertEquals("RENDERING 3/9…", Copy.instrumentRendering(3, 9))
     }
 
     @Test

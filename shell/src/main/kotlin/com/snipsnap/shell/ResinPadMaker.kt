@@ -51,6 +51,19 @@ object ResinPadMaker {
         }
     }
 
+    /**
+     * The sheet's two steppers as a spec, [PadMaker.spec]'s shape. Clamped,
+     * because an exponential knob's ends can land a float's width outside
+     * the range the spec refuses.
+     */
+    fun spec(voice: ResinVoice, macros: Map<String, Float>, attackFraction: Float, releaseFraction: Float): Spec =
+        Spec(
+            voice,
+            macros,
+            attackSeconds = ATTACK.value(attackFraction).coerceIn(Resin.ATTACK_MIN_SECONDS, Resin.ATTACK_MAX_SECONDS),
+            releaseSeconds = RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS),
+        )
+
     fun zoneMidis(spec: Spec): List<Int> = Keys.resinPadMidis(spec.voice)
 
     fun renderZone(spec: Spec, midi: Int): KeyNote = Keys.resinPad(spec.voice, spec.macros, midi, spec.attackSeconds)
