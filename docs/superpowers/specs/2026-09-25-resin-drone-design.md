@@ -1,9 +1,11 @@
 # DRONE — a RESIN texture that loops on the bar line
 
-**Status:** approved direction (2026-09-25). The five open questions are
-answered in **Decided** below. The probe has run; its measurements are in
-**What the probe measured**, at the end. The plan is
+**Status:** built (2026-09-25), to
 [`../plans/2026-09-25-resin-drone.md`](../plans/2026-09-25-resin-drone.md).
+The five open questions are answered in **Decided**; the probe's
+measurements are in **What the probe measured**; and what building it
+changed is in **What building it measured**, at the end. The pre-roll is
+2.0 s, not the probe's 1.0 s.
 **Date:** 2026-09-25
 **Builds on:** [`2026-09-25-resin-held-pad-design.md`](2026-09-25-resin-held-pad-design.md),
 the "every moving part completes whole cycles" loop math, generalized from
@@ -232,7 +234,8 @@ full MOTION), period after the pre-roll against the next:
 
 **Decision: a 1.0 s pre-roll.** It is 11 orders of magnitude under the bar
 on the slowest corner, and it costs 0.24 s of CPU. No crossfade, as
-promised.
+promised. *(Superseded when built: 2.0 s. See "What building it
+measured".)*
 
 **2. The session's rate works.** Nothing in the chain assumes `Dsp.RATE`:
 `Dsp.Ladder(rate)`, `Dsp.decimate(buf, rate)` (4× → 2× → 1× through
@@ -277,3 +280,76 @@ roughly 10.5 s to stay within 3 cents, and doubling n can overshoot that
 by at most 2×. So the 48 s case is a single long interval. The plan
 measures the peak on the JVM and keeps it; streaming decimation is a later
 optimization if a phone objects.
+
+## What building it measured
+
+**The pre-roll is 2.0 s, not 1.0 s.** The probe's loop started wherever its
+pre-roll happened to leave the breath. The built render starts the loop at
+the breath's zero (the LFO at the middle of its swing, rising), because
+that is where the grid's bar line is and where a listener expects a breath
+to begin. From that start, the darkest full-MOTION corners were still
+2.1e-7 apart period to period after 1.0 s. That is far under the seam bar,
+but it is not "to the bit". So the pre-roll was re-measured on the six
+slowest corners at 44.1 and 48 kHz:
+
+| Corner | 1.0 s | 1.5 s | 2.0 s | 3.0 s |
+|---|---|---|---|---|
+| BASS, CUTOFF 0.1, CREAM 1, MOTION 1, RATE 1 | 2.1e-7 | 1.4e-15 | 0 | 0 |
+| BASS, CUTOFF 0, CREAM 1, MOTION 1, RATE 1 | 2.9e-8 | 3.5e-15 | 0 | 0 |
+| BASS, CUTOFF 0, CREAM 1, MOTION 1, RATE 4 | 3.0e-14 | 0 | 0 | 0 |
+| BRASS, CUTOFF 0.1, CREAM 1, MOTION 1 | 1.2e-14 | 0 | 0 | 0 |
+| LEAD, CUTOFF 0.1, CREAM 1, MOTION 0.5, RATE 4 | 0 | 0 | 0 | 0 |
+| BASS, STACK 0.3, CUTOFF 0, MOTION 0 (slowest ring) | 0 | 0 | 0 | 0 |
+
+(44.1 kHz shown. 48 kHz follows the same pattern, with its worst leftover at
+1.5 s being 6.9e-15 on the slowest ring; every corner is 0 at 2.0 s.) At 2.0 s, every
+corner repeats exactly. It costs 0.24 s more CPU per drone: a default A1
+drone measured 3.05 s here, not 2.8 s. `ResinDroneTest` holds every corner
+to a period-to-period difference below 1e-12, at both rates.
+
+**The plan's periodicity test couldn't work as written.** It said to render
+the loop, then render twice the length and compare. But a drone twice as
+long snaps its note to a finer grid, so it is a different loop.
+`ResinDrone.synthesize` takes a number of periods instead, and the test
+compares consecutive periods of one render, which is what the probe did.
+
+**Pitch is checked exactly, not with a pitch detector.** `Pitch.detect` is
+good to about 2%. The drone's note is proved by its spectrum over one loop:
+all the energy sits on exactly 2m cycles per loop (m the snapped
+sub-octave count) and less than 1e-4 of it a cycle either side. The same
+check in `:shell` confirms that the note `DroneFit` reads out on the grid is
+the note `ResinDrone` plays.
+
+**Breathing is checked on a brightness curve.** Counting peaks was too
+noisy. The test takes the breath count as the dominant cycle rate of
+first-difference-over-energy across the loop, and it matches RATE for 1, 2
+and 4. At STACK 0.3, where the detuned square is silent, MOTION 0 swings
+1.04× and MOTION 1 swings 15.9×. The square's beat at higher STACK moves
+brightness too, which is a sound, not a bug.
+
+**The n = 8 miss is flat.** A1 at 216 BPM is -3.15 cents (-3.14 at
+48 kHz), pinned in `DroneFitTest` with its sign. On the grid, that one case
+reads `DRONE A1 · 1/8 · -3.2¢ OFF`.
+
+**Things the plan didn't name that the build needed:**
+- `DroneMaker` in `:shell` holds what the CLI and the SYNTH screen share:
+  the recipe (only STACK, CUTOFF and CREAM, so a drone that differs only in
+  an ignored knob is one render), the register, the span, the render and
+  the readout.
+- `Scales.midiOf` is the inverse of `nameOf`, for `--root A1`. No parser
+  existed.
+- `DroneSource` holds one render per track (`MAX_RESIDENT` =
+  `Session.TRACK_COUNT`), least recently used goes first, and a drone's old
+  length goes as soon as its new one lands. A cap below the track count
+  would re-render a live drone every interval.
+- LOOP refits drones on load as well as on tempo, since the device's rate
+  changes the interval in frames. After a tempo change the screen's own copy
+  of the session takes the refit too, or the next mute would hand the
+  engine the old span back.
+- `Residency` tracks drone bakes in flight, so `prefetch`, which runs every
+  interval, doesn't restart a render that takes longer than an interval.
+
+**Still to hear on a device:** the tempo-change drop-out, the one interval
+of silence while a drone re-renders, has only been measured on this cloud
+machine, not a phone. Also still to listen for: whether RATE 1 across four
+bars sounds like breathing.

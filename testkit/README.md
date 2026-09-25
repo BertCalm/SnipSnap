@@ -209,6 +209,22 @@ the big one for this format: **does a 1.5 s RELEASE sound like a second
 and a half?** The shop has only ever written releases of 0.3–0.6 s, and
 the MPC's reading of `VolumeRelease` above that has never been heard.
 
+### RESIN drones — made with the CLI
+
+Not committed here either: make one, any RESIN preset, any root.
+
+```
+snipsnap synth RESIN BASS --preset 1 --drone --root A1 --motion 0.6 --rate 2 --loop 3 --out ~/resin-drone
+```
+
+That writes the whole drone the loop grid would make at 90 BPM, one bar per
+interval (A1 spans four), three times end to end. Three things to listen
+for: **no seam at either wrap**; the breath lands where the wrap is (with
+`--rate 1` the filter is at the middle of its swing, rising, on the first
+sample); and the note sits in tune against a RESIN held instrument or a
+keys instrument at the same root, since the printed nudge (`-1.97¢` for A1)
+is all the loop moved it.
+
 ### SnipSnap_Factory.xpn — one-file import
 
 The factory kit as a single `.xpn` archive, in the layout every real
