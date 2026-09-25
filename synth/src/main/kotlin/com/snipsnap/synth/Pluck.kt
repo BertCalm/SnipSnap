@@ -165,13 +165,13 @@ object Pluck {
         // muted pluck stays a short file and a DAMP 0 harp gets its ring.
         val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
-        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = rate, position = position)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
             // first. Detune grows with the macro so it goes chorus -> honky.
             val det = ks(
                 freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = 23, rate = rate, position = position,
+                Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position,
             )
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
