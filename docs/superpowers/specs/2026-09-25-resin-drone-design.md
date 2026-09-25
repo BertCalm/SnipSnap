@@ -1,12 +1,26 @@
 # DRONE — a RESIN texture that loops on the bar line
 
-**Status:** on deck. A design for review, **not approved and not planned**.
-Nothing here is measured yet except the tuning table below; the first task
-of any plan is a probe, the same way the held pad's was.
+**Status:** approved direction (2026-09-25). The five open questions are
+answered in **Decided** below. The probe the spec asks for is running; its
+findings and the plan follow in this branch.
 **Date:** 2026-09-25
 **Builds on:** [`2026-09-25-resin-held-pad-design.md`](2026-09-25-resin-held-pad-design.md),
 the "every moving part completes whole cycles" loop math, generalized from
 one note's loop to a whole bar-length block.
+
+## Decided
+
+1. **How long before it repeats: (a).** The drone spans the smallest n in
+   {1, 2, 4, 8} intervals that keeps its note within 3 cents.
+2. **Block or file: a `DroneBlock`** on the loop grid, re-rendered on a BPM
+   change.
+3. **Mono** for the first version. The grid bakes stereo, so the one
+   channel goes to both sides.
+4. **Module boundary: inject a renderer.** This wasn't put to the user as a
+   question; it is the spec's recommendation, taken as the default because
+   it only changes where code lives, not what the drone sounds like.
+5. **MOTION is filter breathing**, as designed. Width drift stays out of
+   scope.
 
 ## What this is
 
