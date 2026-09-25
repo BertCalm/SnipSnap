@@ -245,7 +245,11 @@ object OneNote {
             xty.exists() || dataDir.exists()
         }
 
-    internal fun writePackage(
+    /**
+     * The shop's one packaging door - MAKE INSTRUMENT, MAKE PAD, the `keys`
+     * and `pad` verbs, and `:shell`'s held RESIN pads all write through it.
+     */
+    fun writePackage(
         name: String,
         program: KeygroupProgram,
         samples: Map<String, Snip>,
