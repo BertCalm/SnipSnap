@@ -290,6 +290,15 @@ object Tines {
      * dies with the note. Amplitude-gated noise: wherever the tongue swings
      * past a threshold BUZZ lowers, add seeded noise scaled by the excess.
      * BUZZ 0 is a clean thumb piano; BUZZ 1 is a full rattle, the ugly end.
+     *
+     * At BUZZ 1 the rattle can add roughly twice the tine's own peak before
+     * [render]'s `Dsp.normalize` pulls the whole buffer back down (~10 dB),
+     * so a full rattle reads quieter in the app than a clean tine does, not
+     * louder as the raw gain here would suggest. The noise is also white at
+     * the 4x render rate, and `Dsp.decimate`'s low-pass on the way back down
+     * to RATE discards most of that energy - only what survives under
+     * Nyquist at RATE actually reaches the ear. Both to revisit once the
+     * presets are authored by ear rather than from this table.
      */
     private fun rattle(out: FloatArray, buzz: Float, seed: Int) {
         val noise = Dsp.Noise(seed)

@@ -100,15 +100,18 @@ noise burst ──(PICK low-pass)──(STRIKE comb)──▶ Karplus-Strong loo
 - **EXCITE.** The burst is unchanged: one loop period of seeded noise
   through a one-pole at the PICK frequency, zero-meaned. STRIKE adds the
   Jaffe–Smith pick-position comb *to the burst*, `e[i] = x[i] − x[i − d]`
-  with `d = round(p · N)`, where `N` is the integer loop length and `p` the
-  fractional position along the string. The comb lengthens the exciter to
-  `N + d` samples; those extra samples enter the loop as input, not initial
-  state, which the loop's `out[i] += fb · lp(tuned)` form already supports
-  (the spike proved this against the shipped engine: with `d = 0` it
-  reproduced `Pluck.render` bit-for-bit). The comb's notches fall at every
-  harmonic `k` where `k · p` is an integer: at `p = 0.5` the even harmonics
-  vanish (hollow), and as `p → 0` the comb approaches a differentiator
-  (thin, bright, low harmonics cut).
+  with `d = round(p · rate / f0)`, the string's physical period in samples,
+  and `p` the fractional position along the string. The integer delay-line
+  length `N` is shorter than that period by the loop's allpass, filter lag
+  and two-tap average (Phase 0b's tuning budget), so a comb cut to `N`
+  instead puts its notches 1–3% off the true harmonics. The comb lengthens
+  the exciter to `N + d` samples; those extra samples enter the loop as
+  input, not initial state, which the loop's `out[i] += fb · lp(tuned)` form
+  already supports (the spike proved this against the shipped engine: with
+  `d = 0` it reproduced `Pluck.render` bit-for-bit). The comb's notches fall
+  at every harmonic `k` where `k · p` is an integer: at `p = 0.5` the even
+  harmonics vanish (hollow), and as `p → 0` the comb approaches a
+  differentiator (thin, bright, low harmonics cut).
 - **The loop** is untouched. Its tuning budget — integer delay, fractional
   allpass, the loop filter's phase lag and the two-tap average — is the
   work of Phase 0b and the comb does not enter it: the comb sits before the
