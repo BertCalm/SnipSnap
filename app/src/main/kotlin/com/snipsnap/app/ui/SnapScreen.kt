@@ -337,10 +337,24 @@ fun SnapScreen(
             return@LaunchedEffect
         }
         val v = voice
-        val t = withContext(Dispatchers.Default) { Snap.table(p, v) }
-        val isFlat = Snap.isFlat(t)
-        line = Line(p, v, t, isFlat)
-        if (isFlat) onToast(Copy.SNAP_FLAT)
+        // The one unguarded step on the whole post-capture path. This
+        // effect runs *because* `photo` just changed, so it fires a beat
+        // after TAKE PHOTO returns — and an uncaught throw in a main-
+        // dispatcher LaunchedEffect takes the process with it, while the
+        // capture callback above and the render loop below both catch and
+        // toast. Same handler as the render loop's: a failure here is a
+        // named logcat line and a toast, not a silent death.
+        try {
+            val t = withContext(Dispatchers.Default) { Snap.table(p, v) }
+            val isFlat = Snap.isFlat(t)
+            line = Line(p, v, t, isFlat)
+            if (isFlat) onToast(Copy.SNAP_FLAT)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SnapScreen", "table: failed", e)
+            onToast(Copy.RENDER_FAILED)
+        }
     }
 
     // The debounced re-render + retrigger loop, SYNTH's own. Keyed on the

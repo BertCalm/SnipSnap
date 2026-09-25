@@ -45,11 +45,13 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
+import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.VoiceAllocator
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +76,8 @@ private fun Context.findActivity(): Activity? {
 /**
  * PLAY: performance mode over `:shell`'s tested [VoiceAllocator] — real
  * choke groups and one-shots, not just "tap a pad, hear a sample" like
- * KIT. In-window is bank A's 4×4, physically laid out the same way
+ * KIT. In-window is one bank's 4×4 — BANK A / BANK B flips it, the same
+ * control KIT grew — physically laid out the same way
  * KitScreen's own grid is (this file mirrors that pad composable rather
  * than reusing KitScreen's private `PadCell` — it doesn't extract cleanly
  * without exporting it, and the brief's pad states — a resting "assigned"
@@ -204,6 +207,36 @@ fun PlayScreen(
         for (slot in glow.keys) extinguish(slot)
     }
 
+    /** Which bank the in-window grid is drawing, 0-based. Bank A until asked otherwise. */
+    var bank by remember(entry.dir) { mutableIntStateOf(0) }
+    // Two banks are always reachable, filled or not — KIT's rule (September
+    // UAT, finding 11): a second page that only appears once something is
+    // on it is a page nobody finds. A kit that loses a bank above B falls
+    // back rather than drawing a page that is no longer there.
+    val reachable = maxOf(PadBanks.banksUsed(kit.pads.map { it.slot }), 2)
+    LaunchedEffect(reachable) {
+        if (bank >= reachable) bank = 0
+    }
+    val showingBank = bank.coerceAtMost(reachable - 1)
+
+    /**
+     * Flip the window to [b], taking every finger on the outgoing bank
+     * with it.
+     *
+     * The outgoing pads leave the composition on this recomposition, so
+     * their own pointer-release never fires and [release] would never be
+     * called for them — a gated pad held across the flip would ring until
+     * PANIC. [VoiceAllocator.noteOff] stops only non-one-shots, so this
+     * is a no-op for one-shots: a hit played across a bank change rings
+     * out and clears itself through `drainEnded`, which is what it should
+     * do. Fullscreen draws both banks at once and so never needs this.
+     */
+    fun showBank(b: Int) {
+        if (b == showingBank) return
+        for (slot in PadBanks.slots(showingBank)) release(slot)
+        bank = b
+    }
+
     // Lessons: ON_STOP means allOff() + stop every voice — a backgrounded
     // phone should not keep a choke group ringing. A focus loss (a call,
     // another app's audio) asks for exactly the same silence, so PLAY's
@@ -325,11 +358,49 @@ fun PlayScreen(
             }
         }
 
+        // The door onto bank B, the one KIT already grew. Always drawn,
+        // even with only bank A filled. PLAY cannot fill a bank — it is a
+        // performance screen — so an empty B reads EMPTY on its own button
+        // and plays nothing, which is the honest answer rather than a page
+        // that hides until something lands on it.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            for (b in 0 until reachable) {
+                val here = b == showingBank
+                val filled = kit.pads.count { it.slot in PadBanks.slots(b) }
+                // Empty by its own count, not by `reachable`: a sparse kit
+                // with pads on A and C has a B with nothing on it.
+                val empty = b > 0 && filled == 0
+                val label = "BANK ${PadBanks.letter(b)} · ${if (empty) "EMPTY" else filled.toString()}"
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .let { if (here) it.raisedBevel(scheme) else it.sunkenField(scheme) }
+                        .tapeClick(label = label) { showBank(b) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(
+                        label,
+                        TapeType.pixel,
+                        when {
+                            here -> scheme.titleInk.tape
+                            empty -> scheme.ink3.tape
+                            else -> scheme.ink2.tape
+                        },
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+
         Column(
             Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
         ) {
-            for (row in WINDOW_GRID_ROWS) {
+            for (row in windowRows(showingBank)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
