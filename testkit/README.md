@@ -222,7 +222,7 @@ interval (A1 spans four), three times end to end. Three things to listen
 for: **no seam at either wrap**; the breath lands where the wrap is (with
 `--rate 1` the filter is at the middle of its swing, rising, on the first
 sample); and the note sits in tune against a RESIN held instrument or a
-keys instrument at the same root, since the printed nudge (`-1.97¢` for A1)
+keys instrument at the same root, since the printed nudge (`-1.97 cents` for A1)
 is all the loop moved it.
 
 ### SnipSnap_Factory.xpn — one-file import

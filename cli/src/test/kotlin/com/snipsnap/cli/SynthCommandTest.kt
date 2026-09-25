@@ -85,7 +85,8 @@ class SynthCommandTest {
             val session = com.snipsnap.loop.SessionBuilder.empty(44_100)
             assertEquals(2 * 4 * session.intervalFrames, snip.frameCount)
             val printed = bytes.toString()
-            assertTrue("A1 · 4 BARS · -1.97¢" in printed, "stdout names the note, span and nudge: $printed")
+            assertTrue("A1 - 4 bars - -1.97 cents" in printed, "stdout names the note, span and nudge: $printed")
+            assertTrue(printed.all { it.code < 128 }, "stdout is ASCII, like every other line the CLI prints: $printed")
             assertTrue("2 BREATHS" in printed, printed)
         } finally {
             dir.deleteRecursively()

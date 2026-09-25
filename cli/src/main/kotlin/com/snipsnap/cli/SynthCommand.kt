@@ -5,6 +5,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
@@ -169,9 +170,16 @@ object SynthCommand {
         val name = Names.sanitizeStem("${patch.name}_DRONE_${Scales.nameOf(root)}")
         val file = File(dir, "$name.wav")
         FileOutputStream(file).use { WavWriter.write(it, Snip(all, channels = 1, sampleRate = session.sampleRate)) }
+        // ASCII, like every other line this CLI prints: a terminal that
+        // isn't UTF-8 shows the app's middle dots and cent signs as '?'.
+        val span = DroneMaker.span(root, session)
+        val around = span * session.barsPerInterval
+        val cents = DroneFit.nudgeCents(root, span, session)
         out.println(
-            "${DroneMaker.label(root, session)} · MOTION ${DroneMaker.motionLabel(motion)} · ${DroneMaker.breathsLabel(rate)} · " +
-                "${"%.0f".format(Locale.ROOT, bpm)} BPM",
+            "%s - %d %s - %+.2f cents - MOTION +/-%.1f oct - %s - %.0f BPM".format(
+                Locale.ROOT, Scales.nameOf(root), around, if (around == 1) "bar" else "bars", cents,
+                motion * ResinDrone.MOTION_MAX_OCTAVES, DroneMaker.breathsLabel(rate), bpm,
+            ),
         )
         out.println("drone: ${file.path}" + if (loops > 1) " ($loops loops end to end)" else "")
         return 0
