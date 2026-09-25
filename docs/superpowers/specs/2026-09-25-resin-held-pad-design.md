@@ -1,6 +1,7 @@
 # RESIN, held — a pad instrument that sounds until you let go
 
-**Status:** design, awaiting approval. Not implemented.
+**Status:** design, approved 2026-09-25 (answers to the open questions are
+recorded under "Decided"). Implementation per the plan.
 **Date:** 2026-09-25
 **Plan:** [`docs/superpowers/plans/2026-09-25-resin-held-pad.md`](../plans/2026-09-25-resin-held-pad.md)
 **Next on deck:** [`2026-09-25-resin-drone-design.md`](2026-09-25-resin-drone-design.md) — the long,
@@ -223,12 +224,14 @@ PRESETS ▸` button already uses). It opens a sheet with:
   (the voice), made unique with `OneNote.freshName`.
 - **ATTACK** and **RELEASE** sliders, with readouts in seconds.
 - **PREVIEW**: renders the middle zone only (about one render's worth of
-  wait) and plays the head plus two passes of the loop, which is what a
-  three-second hold sounds like. You hear the pad before paying for all nine
-  zones.
-- **MAKE**: renders the nine zones in parallel off the main thread with a
-  `RENDERING 3/9` readout, writes only after *all* zones succeed, then
-  confirms `ON KEYS · HOLDS`. CANCEL during a render writes nothing.
+  wait, with the indicator below) and plays the head plus two passes of the
+  loop, which is what a three-second hold sounds like. You hear the pad
+  before paying for all nine zones.
+- **MAKE**: renders the nine zones in parallel off the main thread. A
+  processing indicator shows throughout: `RENDERING 3/9` beside a progress
+  bar that fills as zones finish, so a slow phone reads as working, not
+  frozen. It writes only after *all* zones succeed, then confirms
+  `ON KEYS · HOLDS`. CANCEL during a render writes nothing.
 
 **Desktop: the CLI.** `snipsnap synth RESIN BRASS --preset 3 --instrument
 --attack 0.8 --release 0.6 --out <dir>` writes the same package. This is the
@@ -297,24 +300,23 @@ The plan pins each of these as a real test:
   is a follow-up.
 - The drone: [`2026-09-25-resin-drone-design.md`](2026-09-25-resin-drone-design.md).
 
-## Open questions (for the user)
+## Decided (the author's answers, 2026-09-25)
 
-1. **The button's name.** `MAKE INSTRUMENT ▸` matches the PAD SHEET's verb for
-   "make something KEYS plays". The alternatives are `HOLD ▸` or
-   `MAKE KEYS ▸`. Avoid `MAKE PAD`, since SYNTH already has `SEND TO PAD` and
-   the two would read as the same thing.
-2. **Losing the whistle.** Is a held pad that stops just short of
-   self-oscillation acceptable? The alternative is to allow r = 4.3 and
-   refuse the zones that don't close, which means an instrument with holes
-   in it. I recommend the cap.
-3. **Phone render time.** 1.06 s of CPU per 4 s zone here. A mid-range phone
-   is likely 2–4× slower, so nine zones in parallel on four cores is
-   plausibly 5–15 s. The plan measures it on the emulator. If a render comes
-   out over 15 s, drop to seven zones (every major third) rather than
-   shorten the settle time, which is what keeps the seam clean.
-4. **RELEASE on hardware.** Does the MPC read `volumeRelease` 1.5 as a
-   1.5-second release? This is a listening check on real hardware and is
-   added to the testkit acceptance notes.
+1. **The button is `MAKE INSTRUMENT ▸`.** It matches the PAD SHEET's verb for
+   "make something KEYS plays". `MAKE PAD` was avoided because SYNTH already
+   has `SEND TO PAD`.
+2. **The whistle is given up.** A held pad stops just short of
+   self-oscillation (r = 4.0). The alternative, allowing r = 4.3 and refusing
+   the zones that don't close, would leave an instrument with holes in it.
+3. **Nine zones always, with a progress indicator.** Measured cost is 1.06 s
+   of CPU per 4 s zone here, and a phone is likely slower. The zone count is
+   *not* reduced if a render runs long. Instead, MAKE shows progress for the
+   whole render (`RENDERING 3/9` beside a moving bar), so a render that
+   takes longer than 15 s reads as working, not frozen. PREVIEW shows the
+   same indicator while its one zone renders.
+4. **RELEASE on hardware is a listening check.** Does the MPC read
+   `volumeRelease` 1.5 as a 1.5-second release? This is checked by ear on
+   real hardware, and the check is added to the testkit acceptance notes.
 
 ## Appendix — the probe's held render
 

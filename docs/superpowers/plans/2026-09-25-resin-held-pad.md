@@ -309,7 +309,7 @@ fun resinPad(voice: ResinVoice, macros: Map<String, Float>, midi: Int, attackSec
  */
 object ResinPadMaker {
     const val RELEASE_MIN_SECONDS = 0.1f
-    const val RELEASE_MAX_SECONDS = 1.5f   // modest until the MPC's reading of larger values is heard (spec, open question 4)
+    const val RELEASE_MAX_SECONDS = 1.5f   // modest until the MPC's reading of larger values is heard (spec, Decided 4)
 
     data class Spec(
         val voice: ResinVoice,
@@ -369,6 +369,7 @@ object ResinPadMaker {
 - [ ] **Step 2: The sheet**, an overlay shaped like the SAVE AS PRESET naming overlay (`:900–960`) with `BackHandler` cancel:
   - NAME: defaults to `currentPresetByVoice[engine to voice]?.name ?: "RESIN ${voice.name}"`, made unique at write time with `OneNote.freshName(File(shelfRoot, KitShelf.INSTRUMENTS_DIR), …)`.
   - ATTACK and RELEASE: two `MacroSlider`s over 0..1, mapped with `Dsp.expMap` onto the `Spec` ranges, with readouts in seconds (`"0.30 s"`).
+  - **The processing indicator** (spec, Decided 3): while PREVIEW or MAKE is running, the sheet shows a progress bar that fills as zones finish (`done / 9` for MAKE; indeterminate for PREVIEW's single zone), with the `RENDERING 3/9` label beside it. The indicator is what answers a slow phone. The zone count never drops.
   - PREVIEW: `appScope.launch` → `withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) }` → the screen's existing `audition(snip)`. Disabled while busy.
   - MAKE: `appScope.launch` (a write in flight survives a tab switch, per the screen's own KDoc on `appScope`). Render zones with `coroutineScope { midis.map { async(Dispatchers.Default) { ResinPadMaker.renderZone(spec, it).also { done.incrementAndGet() } } }.awaitAll() }`, update a `"RENDERING $done/9"` label, then `withContext(Dispatchers.IO) { KitWrites.mutex.withLock { ResinPadMaker.export(name, spec, notes, destRoot) } }`, then `onToast("$name · ON KEYS · HOLDS")`. Wrap it in `try/catch` the way `sendToSlot` does, and on failure toast the exception's message: it names the zone.
   - CANCEL while rendering cancels the job; nothing is written, since the write is after `awaitAll`.
@@ -382,7 +383,7 @@ object ResinPadMaker {
 
 - [ ] `README.md`: one paragraph after the RESIN paragraph. RESIN held: nine zones, whole-beat seams, `MAKE INSTRUMENT ▸` on SYNTH, `snipsnap synth RESIN <VOICE> --instrument` on the desk. Keep the README's existing voice.
 - [ ] `docs/SYNTH_ROADMAP.md`: a phasing row after S8: `| S8.1 | **shipped** — RESIN, held: a RESIN patch as a keys instrument that sounds while held (…) — design in docs/superpowers/specs/2026-09-25-resin-held-pad-design.md | S5 + S8 |`.
-- [ ] `testkit/README.md`: a short "RESIN held pads — made with the CLI" section. How to make one (`snipsnap synth RESIN BRASS --preset 1 --instrument --release 1.5 --out …`) and what to check on hardware: held pads sustain with **no audible seam**, and a 1.5 s RELEASE *sounds* like a second and a half (spec, open question 4).
+- [ ] `testkit/README.md`: a short "RESIN held pads — made with the CLI" section. How to make one (`snipsnap synth RESIN BRASS --preset 1 --instrument --release 1.5 --out …`) and what to check on hardware: held pads sustain with **no audible seam**, and a 1.5 s RELEASE *sounds* like a second and a half (spec, Decided 4).
 - [ ] Commit: "Document RESIN, held".
 
 ---
@@ -392,7 +393,7 @@ object ResinPadMaker {
 - [ ] Naming sweep over the diff: no trademarked names or model numbers.
 - [ ] `./gradlew --no-daemon test`, green across every JVM module.
 - [ ] Push; open one PR against `claude/mobile-mpc-drum-sampler-t58x74`. The body carries the spec's probe tables, the render-time measurement from Task 6 (CLI wall-clock per zone), and a note that `android-build` is the only proof of Task 7. Subscribe to its activity.
-- [ ] On the emulator run (`emulator-tests` runs because `app/**` changed), read the logs for a MAKE INSTRUMENT render time if the suite exercised it. Otherwise add phone render time to the PR's open questions (spec, open question 3).
+- [ ] On the emulator run (`emulator-tests` runs because `app/**` changed), read the logs for a MAKE INSTRUMENT render time if the suite exercised it. Otherwise note in the PR that phone render time is unmeasured. Per spec Decided 3, the zone count stays at nine whatever it measures; the progress indicator is the answer to a slow render.
 
 ## Notes for the implementer
 
