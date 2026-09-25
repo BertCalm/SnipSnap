@@ -906,3 +906,184 @@ and whatever 8-bit pixels round away. Deterministic per seed.
 
 Not done: the screen. The portraits want showing in a row as the
 generations drift, with any generation's sound one tap from a pad.
+
+## S9 — TIDE: the West Coast engine
+
+**Status:** spec. Not implemented. The phasing row is added when the
+build starts, not now, the rule RESIN and FATHOM followed.
+
+RESIN (S8) is the East Coast half of synthesis: a rich wave, cut down by
+a resonant filter. TIDE is the other half. It **builds** harmonics instead
+of cutting them: a plain sine is bent, folded and modulated until it is
+bright, and then a low-pass gate closes brightness and level together, the
+way a struck object goes quiet. The signature result is the "bongo": a
+woody, wet, pitched knock with nothing like it anywhere else in the picker.
+
+Guardrail: the style is named after the coast, never after its makers.
+Nothing on a product surface (engine, voices, presets, descriptions,
+commits) names a manufacturer, a module or a model number. The words
+below (wavefolder, low-pass gate, complex oscillator) are generic
+terms of the craft. The guard that enforces this,
+`PresetTestSupport.trademarkBlocklist`, knows only the drum-machine and
+keyboard makers today, so S9 extends it with this style's own: `buchla`,
+`serge` and `make\s*noise`, plus their model numbers as they come up in
+review.
+
+### Why a new engine and not a preset
+
+| Already in `:synth` | Where |
+|---|---|
+| Two-operator FM with a snapped RATIO | `Tines` (`RATIOS`, `strike`) |
+| A resonant two-pole low-pass | `Dsp.TptSvf` |
+| 4× oversampled render, decimated to `RATE` | `Dsp.OVERSAMPLE`, `Dsp.decimate` |
+| Loudness levelling for melodic voices | `Dsp.levelTo` at `Dsp.MELODIC_LOUDNESS_TARGET` |
+| Deterministic per-render seeds | `Dsp.seedFor`, `Dsp.Noise` |
+
+So TIDE is only worth building for the three things none of that does:
+
+1. **The wavefolder.** Past full scale, a folder reflects the wave back on
+   itself instead of clipping it, so each extra unit of drive adds a new
+   fold and a new set of odd harmonics. A sine stays a sine at zero, and
+   turns glassy, then vocal, then snarling as FOLD rises. Nothing in the
+   tree adds harmonics this way. `tanh` drive (RESIN, FATHOM) squashes;
+   folding multiplies.
+2. **The low-pass gate.** One control drives a VCA and a low-pass together,
+   through a slow-to-let-go response (the light-dependent resistor of the
+   original circuits). Brightness and level fall at once, and the tail
+   slows as it fades. That coupling is the "bongo". A VCA after a filter
+   envelope can approximate it, but only by accident.
+3. **Uncertainty.** A smooth, seeded random source that nudges timbre and
+   decay a little per note, so sixteen hits of one pad are sixteen
+   slightly different knocks. It is baked, deterministic and bounded.
+
+### Signal path
+
+Rendered at `Dsp.RATE * Dsp.OVERSAMPLE` and decimated at the end, like
+every engine. Folding is the most alias-prone operation in synthesis, so
+oversampling is not optional here.
+
+```
+MOD sine (carrier × RATIO) ──phase-mod (WARP)──▶ CARRIER sine at the note
+    ──▶ FOLDER (FOLD, opened by the strike, closing with the gate)
+    ──▶ LOW-PASS GATE (VCA + two-pole low-pass on one control, DECAY)
+    ──▶ decimate ──▶ levelTo(MELODIC_LOUDNESS_TARGET + voice offset) ──▶ fadeTail
+         ▲
+    WANDER: one seeded smooth-random line nudging fold depth, gate decay and
+            WARP per note; never pitch
+```
+
+- **Phase modulation, not frequency modulation.** The carrier's phase is
+  pushed around; its frequency never moves. Pitch therefore stays exactly
+  on the note at any WARP, which keeps TUNE, `Keys`, SPREAD and the
+  keygroup export honest. Through-zero FM would sound close but drift the
+  pitch the detector reads.
+- **Sine folder:** `y = sin(π/2 · drive · x)`, drive `1 → 6` from FOLD. It
+  is smooth, so it aliases less than a triangle folder at the same
+  brightness, and at drive 1 it passes a sine untouched. A small fixed DC
+  offset before the fold, set per voice, adds the even harmonics that
+  keep it from sounding like a square.
+- **Gate control `c`:** rises in about 2 ms, then falls as
+  `dc/dt = −c / τ(c)` with `τ(c) = τ₀ · (1 + 3·(1 − c))`, so the tail
+  slows as it fades. Gain is `c^1.3`. Cutoff maps `c` from 60 Hz up to
+  18 kHz, key-tracked through `Dsp.keyTrack` so a high note is not
+  darker than a low one at the same setting. Resonance stays low (a gate is
+  not a squelch filter); BONGO alone gets a little, for the pop.
+- **The fold closes with the gate.** Fold depth is `FOLD × c`, so a hit is
+  brightest at the strike and mellows into its tail, the second half of
+  what makes it sound struck rather than switched.
+
+### Macros
+
+Plain words and bounded ranges (playability rules 2 and 3). Every voice has
+the first five; RATIO appears only where it is the point.
+
+| Macro | Moves | Range |
+|---|---|---|
+| **TUNE** | the note, snapped to semitones from the voice's root | 24 semitones, like VELVET/PLUCK/VOX |
+| **FOLD** | folder drive at the strike | 1× (clean) → 6× |
+| **WARP** | phase-modulation depth | index 0 → 3, `Dsp.expMap` |
+| **DECAY** | the gate's `τ₀` | per voice, e.g. BONGO 20 ms → 400 ms |
+| **WANDER** | how far the random line strays, per note | 0 (identical hits) → ±25% on fold, decay and WARP |
+| **RATIO** | modulator : carrier, snapped | `Tines.RATIOS` (GONG, FLARE only) |
+
+### Voices
+
+| Voice | What it is | Root | Expected class |
+|---|---|---|---|
+| **BONGO** | the signature: sine, ratio 1, light fold, a short gate with a touch of resonance | C3 | TONAL |
+| **DRIP** | high and very short; the pitch chirps into the note over its first 15 ms and lands on it before the detector's window opens | C5 | PERC or TONAL |
+| **GONG** | an inharmonic RATIO, long gate, low fold: metallic and ringing | C3 | TONAL (pitch may read unclear) |
+| **FLARE** | the lead/stab: the fold opens wide and closes slower than the gate, a brassy "wah" of harmonics | C2 | TONAL |
+
+"Expected" means the mapping in `SynthScreen`'s `drumClass` table mirrors
+what the classifier test actually measures, the rule FATHOM set, not what
+this table guesses.
+
+Presets (`TidePresets.kt`) ship in the first phase, 8–12 per voice, named
+for the sound: WOOD BONGO, RAIN DRIP, TEMPLE GONG, SNARL FLARE. SCRAMBLE
+uses `Dsp.scrambleNear`, so a dice roll stays inside each voice's sweet
+spot.
+
+### It already works with what shipped
+
+- **SPREAD** (PR #327): TIDE keeps exact pitch, so one BONGO spread across
+  a bank in MIN PENT is the classic West Coast plucked pattern in one tap.
+  WANDER never moves pitch, so the pitch SPREAD detects is the pitch every
+  pad plays. GONG may read as no clear pitch, and SPREAD already handles
+  that.
+- **The rack:** SPRING and ECHO after a BONGO is most of the genre's
+  ambience; nothing new is needed.
+- **The CLI:** `snipsnap synth TIDE BONGO --all --out <dir>` works once the
+  engine is registered, so every preset can be heard without a phone.
+
+### Tests (CI measures the sound, not just the code)
+
+- **Pitch:** at every snapped TUNE step, BONGO and FLARE detect within
+  5 cents with FOLD and WARP at 0, and within 10 cents with both at
+  maximum. Folding and phase modulation keep the fundamental.
+- **The gate's signature:** the spectral centroid of the tail is at least
+  1.5× lower than at the strike (brightness closes with level), and the
+  fall from −6 dB to −20 dB takes longer than the first 6 dB did (the
+  tail slows).
+- **FOLD adds harmonics:** the centroid rises across FOLD 0 → 0.5 → 1
+  for every voice at its defaults.
+- **Aliasing floor:** at FOLD 1, WARP 1 and the top TUNE, energy between
+  harmonics stays at least 45 dB under the harmonic energy.
+- **Determinism:** the same recipe renders bit-identical audio (the
+  regenerate-from-`kit.json` promise); WANDER 0 makes take indices
+  identical, and WANDER above 0 makes them differ with the same pitch.
+- **Loudness:** within the band the other melodic engines are held to.
+- **Identity:** each voice's defaults and presets classify as its mapped
+  class, and 200 SCRAMBLEs are all audible and unclipped.
+- **Recipe:** `TidePatch` round-trips through JSON and `Patches.fromJsonValue`.
+
+### Phasing
+
+| Step | Ships |
+|---|---|
+| **S9** | `synth/Tide.kt` (`TideVoice`, macros, render), `TidePatch` in `Patches.kt`, `TidePresets.kt` and its `Presets` branch, the tests above, TIDE in the SYNTH picker (…→ RESIN → TIDE → THUMP; README's engine count goes from nine to ten), and a `SnipSnap Tide Kit` generator under `testkit/` (`./gradlew :synth:generateTideKit`). **Ends at an audition gate**: nothing proceeds until the voices have been heard, the rule the synth-depth work set. |
+| **S9.1** | FLARE and BONGO as keys instruments through S8.1's `MAKE INSTRUMENT ▸` path, via a `Keys.tide(midi)` renderer at exact pitch. A gate is a strike device, so "held" means the gate parks at a sustain level with the fold settled before the loop starts. Whether that still sounds like TIDE is a listening question. |
+| **S9.2** | *Optional:* TIDE POOL, uncertainty driving the *notes*: a seeded, in-key random melody landed on the loop grid as an `Arp`-style ring over a spread bank. This is the genre's generative patch, and the one place WANDER is allowed to choose pitches (from the scale, never between them). |
+
+### Not doing
+
+A patchbay or patch cables (rule 1: presets and macros, never modular);
+real-time synthesis (TIDE renders offline like every engine); through-zero
+FM (it moves the pitch, see above); stereo in S9 (mono first, as RESIN's
+drone was; width is a later per-voice decision).
+
+### Open questions
+
+1. **The name.** TIDE is unused anywhere in the tree. COAST was the obvious
+   pick, but `TapeDeck.Mode.COAST` already means a flicked reel coasting to
+   a stop.
+2. **FOLD, the word.** It is the genre's own word, but CHOP already has a
+   FOLD layout. They live on different screens and mean different things;
+   is that acceptable, or should the macro be BEND?
+3. **WANDER and MOTION.** The synth-depth design says per-note randomness
+   should make a *re-render* differ. The recipe promise says a kit
+   regenerates bit-for-bit. This spec resolves it by seeding from the patch
+   plus an explicit take index, so the same take is always identical and
+   different takes differ. MOTION, when built, should use the same rule.
+4. **DRIP's class.** Short and high reads PERC to the classifier. If it
+   lands PERC, it stays out of SPREAD's pitch path unless a pitch is found.
