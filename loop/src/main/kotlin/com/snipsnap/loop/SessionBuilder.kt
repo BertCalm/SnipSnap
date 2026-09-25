@@ -2,6 +2,7 @@ package com.snipsnap.loop
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.Names
 import java.io.ByteArrayOutputStream
@@ -213,6 +214,22 @@ object SessionBuilder {
      * place. Sending it again writes the same filenames back — which is a
      * second send, not an undo, and the copy that announces this says so.
      */
+    /**
+     * Hand [trackIndex] a drone: [recipe] on [rootMidi], sliced over the
+     * span [DroneFit] says keeps it in tune at this tempo. Nothing is
+     * written but the arrangement; the audio exists only at bake time, from
+     * whatever renderer the [SampleSource] was given.
+     */
+    fun sendDrone(session: Session, trackIndex: Int, name: String, recipe: JsonValue, rootMidi: Int): Session {
+        require(trackIndex in session.tracks.indices) {
+            "track $trackIndex is outside a ${session.tracks.size}-track session"
+        }
+        val span = DroneFit.spanFor(rootMidi, session)
+        val tracks = session.tracks.toMutableList()
+        tracks[trackIndex] = Track(name = name, chain = DroneFit.slices(recipe, rootMidi, span), engaged = true)
+        return session.copy(tracks = tracks.toList())
+    }
+
     fun clear(session: Session, trackIndex: Int): Session {
         require(trackIndex in session.tracks.indices) {
             "track $trackIndex is outside a ${session.tracks.size}-track session"

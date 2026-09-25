@@ -46,6 +46,26 @@ object BlockBaker {
         is LoopBlock -> bakeLoop(block, session, source)
         is PatternBlock -> bakePattern(block, session, source)
         is SilenceBlock -> silence(session)
+        is DroneBlock -> bakeDrone(block, session, source)
+    }
+
+    /**
+     * One slice of a drone's whole render. No fade at either end: the
+     * slices are contiguous pieces of one loop that closes on whole cycles,
+     * and a fade would *make* the seam it exists to hide. A render that is
+     * missing or the wrong length is silence, not a throw, for the reason a
+     * missing file is.
+     */
+    private fun bakeDrone(block: DroneBlock, session: Session, source: SampleSource): Snip {
+        val target = session.intervalFrames
+        val whole = source.drone(block.recipe, block.rootMidi, block.of.toLong() * target, session.sampleRate)
+            ?: return silence(session)
+        if (whole.sampleRate != session.sampleRate || whole.frameCount.toLong() != block.of.toLong() * target) {
+            return silence(session)
+        }
+        val stereo = toStereo(whole)
+        val from = block.slice * target * 2
+        return Snip(stereo.samples.copyOfRange(from, from + target * 2), 2, session.sampleRate)
     }
 
     private fun bakeLoop(block: LoopBlock, session: Session, source: SampleSource): Snip {

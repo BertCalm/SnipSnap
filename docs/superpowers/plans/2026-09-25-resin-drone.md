@@ -114,7 +114,7 @@ fun spanFor(rootMidi: Int, session: Session): Int
 - [ ] Tests, `DroneFitTest`:
   - Fresh session (1 bar, 90 BPM, 44.1 kHz): A1 (33) → 4; A2 (45) → 2; A3 (57) → 1.
   - `nudgeCents` for A1 at n = 4 is within 0.01 of **-1.97**, the probe's number.
-  - For every MIDI note 33..84 (RESIN's register), every whole BPM 40..220, and both 44.1 and 48 kHz: `spanFor`'s nudge is ≤ 3 cents, except exactly one case. That case is A1 (33) at 216 BPM: n = 8, 3.15 cents. Both numbers were computed when this plan was written. Assert the exception list equals that one case. If it doesn't, print the list and correct the spec. Don't widen the assertion.
+  - For every MIDI note 33..84 (RESIN's register), every whole BPM 40..220, and both 44.1 and 48 kHz: `spanFor`'s nudge is ≤ 3 cents, except exactly one case. That case is A1 (33) at 216 BPM: n = 8, -3.15 cents (-3.14 at 48 kHz). Both numbers were computed when this plan was written. Assert the exception list equals that one case. If it doesn't, print the list and correct the spec. Don't widen the assertion.
   - `refit` at a new BPM changes only drone tracks, and keeps `name`, `level`, `pan` and `engaged`.
 
 Commit: "A drone knows how many bars it needs to stay in tune, and the grid can ask without knowing what a synth is"

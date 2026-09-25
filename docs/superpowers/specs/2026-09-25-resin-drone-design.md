@@ -37,7 +37,7 @@ recorded here so the plan doesn't have to argue them again:
   means fewer slices and a cheaper render whenever the note is lucky. If
   even n = 8 misses 3 cents, n = 8 and the readout shows the nudge. Across
   RESIN's whole register (A1 and up), every whole BPM from 40 to 220, and
-  both 44.1 and 48 kHz, that happens once: A1 at 216 BPM, 3.15 cents.
+  both 44.1 and 48 kHz, that happens once: A1 at 216 BPM, 3.15 cents flat (3.14 at 48 kHz).
 - **A drone owns its whole track.** Its n slices *are* the chain, because
   the chain's wrap has to be the drone's wrap. Nothing else can share the
   track.
