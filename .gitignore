@@ -28,3 +28,7 @@ app/.cxx/
 # lives on the artifact, so it is never committed.
 design/*/*.html
 !design/*/*.dc.html
+
+# The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
+# and published as the listening artifact; never committed.
+testkit/pluck-audition/

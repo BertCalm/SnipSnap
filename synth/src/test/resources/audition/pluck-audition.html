@@ -461,7 +461,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Pluck Audition</span>
-    <span class="tag">BODY SPIKE &middot; 2026-09-25</span>
+    <span class="tag">PHASE 1 &middot; STRIKE, RING, KALIMBA</span>
   </div>
 
   <div class="transport lcd">
@@ -476,9 +476,9 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>Each voice is at its factory defaults. Every clip sits at the same RMS, deliberately quiet: turn up and use headphones.</p>
-    <p>The question: does a body, or a pick position, make the voice sound like the instrument it is named after? Tap SHIPPED, then BODY, then BODY + PICK. Mark each clip against the instrument, not against the clip before it.</p>
-    <p>NYLON and KOTO are the two that decide the next step.</p>
+    <p>Every clip sits at the same RMS, deliberately quiet: turn up and use headphones.</p>
+    <p>Strings: BEFORE is the engine as it shipped; the PHASE 1 clips are the new engine. Mark each clip against the instrument. STRIKE and DAMP are shown at their ends on purpose.</p>
+    <p>KALIMBA: the same five notes from the PLUCK string and the new TINES voice. Pick the instrument, not the louder one.</p>
   </div>
 
   <div id="voices"></div>
@@ -489,18 +489,17 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Does the body make NYLON and KOTO sound like the instrument?</div>
-      <textarea id="q_body" placeholder="&hellip;"></textarea>
+      <div class="ask">1 &middot; Do STRIKE's ends earn their place on NYLON, KOTO and HARP?</div>
+      <div class="sub">BRIDGE and CENTRE against BEFORE.</div>
+      <textarea id="q_strike" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; Does the pick position do more or less than the body?</div>
-      <div class="sub">BRIDGE, QUARTER, CENTRE against SHIPPED.</div>
-      <textarea id="q_pick" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; Does DAMP 0 ring long enough, and is DAMP 1 still the dead thud?</div>
+      <textarea id="q_damp" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">3 &middot; Where does BODY &middot; DOMINANT stop being useful?</div>
-      <div class="sub">The ugly end is allowed. Unusable-by-most is not useless.</div>
-      <textarea id="q_dominant" placeholder="&hellip;"></textarea>
+      <div class="ask">3 &middot; PLUCK or TINES for the kalimba, and does BUZZ read as a rattle?</div>
+      <textarea id="q_kalimba" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -513,7 +512,7 @@
   </div>
 
   <div class="foot">
-    RENDERED FROM PluckBodySpike.kt &middot; 44 CLIPS &middot; 16-BIT 44.1 KHZ &middot; BODY TABLES ARE BALLPARK GUESSES, NOT SOURCED.
+    RENDERED BY generatePluckAudition &middot; PHASE 1 &middot; 16-BIT 44.1 KHZ &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -527,36 +526,49 @@
   // charset a host serves it under.
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
-  var VOICES = [
-    { id: 'NYLON',   note: 'G3',  hz: 196, root: 'A2' + DOT + '110 HZ', macros: 'DAMP .45' + DOT + 'PICK .40' + DOT + 'DOUBLE .15', dur: 0.78, body: 'guitar body: air, top, back' },
-    { id: 'KOTO',    note: 'C#4', hz: 278, root: 'D3' + DOT + '147 HZ', macros: 'DAMP .40' + DOT + 'PICK .75' + DOT + 'DOUBLE .45', dur: 0.74, body: 'long paulownia box' },
-    { id: 'KALIMBA', note: 'A4',  hz: 440, root: 'A3' + DOT + '220 HZ', macros: 'DAMP .60' + DOT + 'PICK .55' + DOT + 'DOUBLE .10', dur: 0.55, body: 'hand-sized box' },
-    { id: 'HARP',    note: 'F4',  hz: 350, root: 'E3' + DOT + '165 HZ', macros: 'DAMP .20' + DOT + 'PICK .60' + DOT + 'DOUBLE .20', dur: 1.13, body: 'soundboard' }
+  // [file id, name, description]
+  var STRING_GROUPS = [
+    { label: 'BEFORE AND AFTER', key: true, clips: [
+      ['00_shipped', 'BEFORE PHASE 1', 'the engine as it shipped, from the spike publish'],
+      ['p1_default', 'PHASE 1 DEFAULT', 'STRIKE at its default; the render follows the decay']
+    ]},
+    { label: 'STRIKE', clips: [
+      ['p1_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'thin and bright, low harmonics cut'],
+      ['p1_strike_centre', 'STRIKE' + DOT + 'CENTRE', 'hollow, even harmonics gone']
+    ]},
+    { label: 'DAMP', clips: [
+      ['p1_ring', 'DAMP 0', 'rings out to the 4 s ceiling'],
+      ['p1_thud', 'DAMP 1', 'the dead end']
+    ]},
+    { label: 'VELOCITY THROUGH PICK', clips: [
+      ['p1_soft', 'SOFT', 'velocity 0.3, re-rendered darker through PICK'],
+      ['p1_hard', 'HARD', 'velocity 1.0, the preset as written']
+    ]}
   ];
 
-  // [file id, name, description, duration override]
-  var GROUPS = [
-    { label: 'THE THREE THAT MATTER', key: true, clips: [
-      ['00_shipped', 'SHIPPED', 'what the app renders today'],
-      ['11_body_equal', 'BODY' + DOT + 'EQUAL', 'the string driving a fixed modal body'],
-      ['30_body_equal_pick_quarter', 'BODY + PICK ' + String.fromCharCode(0xBC), 'body, plus the pick a quarter along the string']
+  var KALIMBA_GROUPS = [
+    { label: 'PLUCK VERSUS TINES' + DOT + 'C4', key: true, clips: [
+      ['pluck_C4', 'PLUCK C4', 'the string model'],
+      ['tines_C4', 'TINES C4', 'three FM strikes at the bar\'s ratios']
     ]},
-    { label: 'BODY AMOUNT' + DOT + 'EQUAL IS ABOVE', clips: [
-      ['10_body_subtle', 'BODY' + DOT + 'SUBTLE', 'body at half the string'],
-      ['12_body_dominant', 'BODY' + DOT + 'DOMINANT', 'body at three times the string. the ugly end']
-    ]},
-    { label: 'PICK POSITION' + DOT + 'NO BODY', clips: [
-      ['20_pick_bridge', 'PICK' + DOT + 'BRIDGE', 'thin and bright, low harmonics cut'],
-      ['21_pick_quarter', 'PICK' + DOT + 'QUARTER', 'the usual playing spot'],
-      ['22_pick_centre', 'PICK' + DOT + 'CENTRE', 'hollow, even harmonics gone']
-    ]},
-    { label: 'RING CEILING' + DOT + 'DAMP .05' + DOT + '3.5 S', clips: [
-      ['40_long_ring', 'LONG RING', 'the 1.35 s cap lifted', 3.5],
-      ['41_long_ring_body_equal', 'LONG RING + BODY', 'same, through the body', 3.5]
-    ]},
-    { label: 'CHECK', clips: [
-      ['01_spike_baseline', 'SPIKE BASELINE', 'should be identical to SHIPPED']
+    { label: 'D4', clips: [['pluck_D4', 'PLUCK D4', ''], ['tines_D4', 'TINES D4', '']] },
+    { label: 'E4', clips: [['pluck_E4', 'PLUCK E4', ''], ['tines_E4', 'TINES E4', '']] },
+    { label: 'G4', clips: [['pluck_G4', 'PLUCK G4', ''], ['tines_G4', 'TINES G4', '']] },
+    { label: 'A4', clips: [['pluck_A4', 'PLUCK A4', ''], ['tines_A4', 'TINES A4', '']] },
+    { label: 'TINES EXTREMES' + DOT + 'A4', clips: [
+      ['tines_buzz_0', 'BUZZ 0', 'clean thumb piano'],
+      ['tines_buzz_1', 'BUZZ 1', 'full rattle, the ugly end'],
+      ['tines_bright_0', 'BRIGHT 0', 'flesh'],
+      ['tines_bright_1', 'BRIGHT 1', 'thumbnail']
     ]}
+  ];
+
+  // Factory TUNE snapped to a semitone from each voice's root.
+  var VOICES = [
+    { id: 'NYLON',      display: 'NYLON',   note: 'G3',  hz: '196 HZ',   root: 'A2' + DOT + '110 HZ', macros: 'DAMP .45' + DOT + 'PICK .40' + DOT + 'STRIKE .75' + DOT + 'DOUBLE .15', body: 'no body until phase 2', groups: STRING_GROUPS },
+    { id: 'KOTO',       display: 'KOTO',    note: 'C#4', hz: '278 HZ',   root: 'D3' + DOT + '147 HZ', macros: 'DAMP .40' + DOT + 'PICK .75' + DOT + 'STRIKE .60' + DOT + 'DOUBLE .45', body: 'no body until phase 2', groups: STRING_GROUPS },
+    { id: 'HARP',       display: 'HARP',    note: 'F4',  hz: '350 HZ',   root: 'E3' + DOT + '165 HZ', macros: 'DAMP .20' + DOT + 'PICK .60' + DOT + 'STRIKE .75' + DOT + 'DOUBLE .20', body: 'no body until phase 2', groups: STRING_GROUPS },
+    { id: 'KALIMBA_AB', display: 'KALIMBA', note: 'C4 TO A4', hz: 'the kit\'s five notes', root: 'A3' + DOT + '220 HZ', macros: 'TINES: BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .45', body: 'PLUCK string versus TINES tine', groups: KALIMBA_GROUPS }
   ];
 
   var REACTIONS = [
@@ -574,7 +586,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_body: '', q_pick: '', q_dominant: '', q_else: '' } };
+  var state = { overall: { q_strike: '', q_damp: '', q_kalimba: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -587,18 +599,18 @@
     card.id = 'voice-' + v.id;
 
     var hd = el('div', 'voice-hd');
-    var h2 = el('h2', null, v.id);
+    var h2 = el('h2', null, v.display);
     var note = el('div', 'body-note', v.body);
     var ro = el('div', 'readout');
-    ro.innerHTML = '<span><b>' + v.note + '</b>' + DOT + v.hz + ' HZ</span><span>ROOT ' + v.root + '</span><span>' + v.macros + '</span>';
+    ro.innerHTML = '<span><b>' + v.note + '</b>' + DOT + v.hz + '</span><span>ROOT ' + v.root + '</span><span>' + v.macros + '</span>';
     hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
     card.appendChild(hd);
 
-    GROUPS.forEach(function (g) {
+    v.groups.forEach(function (g) {
       var grp = el('div', 'group' + (g.key ? ' key' : ''));
       grp.appendChild(el('div', 'group-hd', g.label));
       g.clips.forEach(function (c) {
-        var fid = c[0], name = c[1], desc = c[2], dur = c[3] || v.dur;
+        var fid = c[0], name = c[1], desc = c[2];
         var row = el('div', 'clip');
         row.id = 'clip-' + v.id + '-' + fid;
 
@@ -613,7 +625,7 @@
         var meta = el('div', 'meta');
         meta.appendChild(el('span', 'id', fid.slice(0, 2)));
         meta.appendChild(el('span', 'name', name));
-        meta.appendChild(el('span', 'dur', dur.toFixed(2) + ' S'));
+        var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
         row.appendChild(meta);
         row.appendChild(el('div', 'desc', desc));
 
@@ -670,6 +682,11 @@
       setPlaying(null);
       nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
       nowEl.classList.remove('idle');
+    });
+    audio.addEventListener('loadedmetadata', function () {
+      if (current && current.row.durEl && isFinite(audio.duration)) {
+        current.row.durEl.textContent = audio.duration.toFixed(2) + ' S';
+      }
     });
     return audio;
   }
@@ -730,7 +747,8 @@
   // state takes the live value instead, so the next save cannot re-save
   // stale text over what was just typed.
   function paintVoice(voiceId) {
-    GROUPS.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
+    var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
+    if (voice) voice.groups.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
     var ta = $('note-' + voiceId);
     if (!ta) return;
     if (ta === document.activeElement) { state[voiceId].note = ta.value; }
@@ -738,7 +756,7 @@
   }
 
   function paintOverall() {
-    ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+    ['q_strike', 'q_damp', 'q_kalimba', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -748,7 +766,7 @@
 
   // The four answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+  ['q_strike', 'q_damp', 'q_kalimba', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -774,7 +792,7 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_body: state.overall.q_body, q_pick: state.overall.q_pick, q_dominant: state.overall.q_dominant, q_else: state.overall.q_else }
+      ? { q_strike: state.overall.q_strike, q_damp: state.overall.q_damp, q_kalimba: state.overall.q_kalimba, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
@@ -794,7 +812,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+      ['q_strike', 'q_damp', 'q_kalimba', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();
