@@ -134,15 +134,18 @@ class PluckTest {
         // (docs/SYNTH_UPGRADE.md, U2), so - like a preset itself can - a
         // roll can land close to that boundary; "most of the time", not
         // "always", is the doc's own contract for a scrambled roll. The
-        // guard now counts only KICK: a long ring reading as LOOP is the
-        // decay-following render working, not the DC-thump it guards
-        // against.
+        // guard counts KICK and UNKNOWN: UNKNOWN is the classifier's own
+        // silent/zero-peak class (Classifier.classify short-circuits to it
+        // whenever peak or duration is <= 0), which is "unplayable" by this
+        // test's own words just as much as a fake kick is. Only LOOP stays
+        // excluded: a long ring reading as LOOP is the decay-following
+        // render working, not the DC-thump it guards against.
         for (voice in PluckVoice.entries) {
             var misses = 0
             val rolls = 30
             repeat(rolls) { seed ->
                 val c = Classifier.classify(Pluck.render(voice, Pluck.scramble(voice, Random(seed))))
-                if (c.drumClass == DrumClass.KICK) misses++
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.UNKNOWN) misses++
             }
             assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
         }
@@ -323,7 +326,7 @@ class PluckTest {
     }
 
     @Test
-    fun `the default STRIKE keeps the shipped balance`() {
+    fun `the default STRIKE keeps the comb-less balance`() {
         // The audition read the quarter position as SAME as the shipped
         // engine, so the default lands there: within a factor of two of the
         // comb-less exciter on the fundamental's share.
@@ -386,6 +389,54 @@ class PluckTest {
         assertTrue(snip.durationSeconds >= Pluck.RING_FLOOR_SECONDS, "under the floor: ${snip.durationSeconds}s")
         assertTrue(snip.durationSeconds < 0.9f, "padded to the budget: ${snip.durationSeconds}s")
         assertTrue(tailDb(snip) < -50f, "tail at ${tailDb(snip)} dB: the cut landed on audible signal")
+    }
+
+    /** A 440 Hz tone decaying exponentially to -60 dB at [t60] seconds, [seconds] long, at [rate]. */
+    private fun decayingTone(seconds: Float, t60: Float, rate: Int): FloatArray {
+        val n = (seconds * rate).toInt()
+        return FloatArray(n) { i ->
+            val t = i.toFloat() / rate
+            (Math.exp(-6.9078 * t / t60) * Math.sin(2.0 * Math.PI * 440.0 * t)).toFloat()
+        }
+    }
+
+    @Test
+    fun `trimToDecay leaves silence and sub-block buffers alone`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val silent = FloatArray(rate)
+        assertTrue(Pluck.trimToDecay(silent, rate) === silent, "an all-silent buffer is returned as is")
+        val tiny = FloatArray(100) { 0.5f }
+        assertTrue(Pluck.trimToDecay(tiny, rate).size == 100, "a buffer shorter than one block keeps its length")
+    }
+
+    @Test
+    fun `trimToDecay cuts where the string stopped, never under the floor`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val cut = Pluck.trimToDecay(decayingTone(seconds = 1.0f, t60 = 0.5f, rate = rate), rate)
+        val cutSeconds = cut.size.toFloat() / rate
+        assertTrue(cutSeconds > 0.45f && cutSeconds < 0.6f, "the cut should land near the -60 dB point at 0.5 s, got ${cutSeconds}s")
+        val fast = Pluck.trimToDecay(decayingTone(seconds = 1.0f, t60 = 0.05f, rate = rate), rate)
+        assertTrue(fast.size.toFloat() / rate >= Pluck.RING_FLOOR_SECONDS - 0.01f, "a fast decay is held at the floor, got ${fast.size.toFloat() / rate}s")
+    }
+
+    @Test
+    fun `trimToDecay fades only the end of a budget cut and the last 400 ms at the ceiling`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        // A budget cut: still ringing at 0.35 s. The first 80% must be untouched.
+        val budget = decayingTone(seconds = 0.35f, t60 = 2.0f, rate = rate)
+        val reference = budget.copyOf()
+        val trimmed = Pluck.trimToDecay(budget, rate)
+        assertTrue(trimmed.size == reference.size, "a budget cut keeps its length")
+        val untouched = (reference.size * 0.8f).toInt()
+        for (i in 0 until untouched) assertTrue(trimmed[i] == reference[i], "sample $i was re-enveloped by the budget-cut fade")
+        assertTrue(kotlin.math.abs(trimmed[trimmed.size - 1]) < 1e-4f, "the budget cut must end at silence")
+        // The ceiling: still ringing at 4.0 s. Length kept, last 10 ms at least 55 dB down.
+        val ceiling = decayingTone(seconds = Pluck.RING_CEILING_SECONDS, t60 = 20f, rate = rate)
+        val faded = Pluck.trimToDecay(ceiling, rate)
+        assertTrue(faded.size == ceiling.size, "the ceiling keeps its length")
+        var tail = 0f
+        for (i in faded.size - (0.010f * rate).toInt() until faded.size) tail = maxOf(tail, kotlin.math.abs(faded[i]))
+        assertTrue(20f * kotlin.math.log10(tail + 1e-9f) < -55f, "the ceiling fade should leave the last 10 ms inaudible, got ${20f * kotlin.math.log10(tail + 1e-9f)} dB")
     }
 
     /** Level of the last 10 ms against the render's peak, in dB. */

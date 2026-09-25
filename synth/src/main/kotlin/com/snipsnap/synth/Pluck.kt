@@ -201,11 +201,20 @@ object Pluck {
 
     /**
      * Cuts [buf] where its 5 ms RMS envelope has fallen 60 dB below its
-     * peak, never under [RING_FLOOR_SECONDS]. A string that reaches the end
-     * of its budget still ringing (DAMP near 0 at the ceiling) is not cut at
-     * all but given a long squared fade, so the render's end is inaudible
-     * either way; `render`'s own 4 ms `Dsp.fadeTail` then has nothing
-     * audible left to touch.
+     * peak, never under [RING_FLOOR_SECONDS] - that's the normal case, and
+     * the string stopped ringing before the budget ran out.
+     *
+     * If the scan never finds that point, the string was still ringing when
+     * the buffer ran out, and which fade applies depends on why: at the ring
+     * ceiling (`buf.size >= RING_CEILING_SECONDS * rate`) the string was cut
+     * off mid-ring for real, so the last 400 ms gets the long squared fade.
+     * Short of the ceiling, this was a DAMP-driven budget cut (a high DAMP
+     * gave `synthesize` only a few hundred ms to work with), and the render
+     * is still audible for nearly all of that budget - re-enveloping the
+     * whole thing with a 400 ms fade would choke the very thud DAMP asked
+     * for, so only the last 30 ms is faded, just enough to declick the cut.
+     * Either way `render`'s own 4 ms `Dsp.fadeTail` then has nothing audible
+     * left to touch.
      */
     internal fun trimToDecay(buf: FloatArray, rate: Int): FloatArray {
         val block = (rate * 0.005f).toInt().coerceAtLeast(1)
@@ -223,10 +232,19 @@ object Pluck {
         if (peak <= 0.0) return buf
         val floorBlocks = ((RING_FLOOR_SECONDS * rate) / block).toInt()
         var last = blocks - 1
+        // The scan never steps below floorBlocks, so that block is always
+        // kept; when the loop stops because last == floorBlocks (rather than
+        // finding a loud block), the block just above it was already walked
+        // and found quiet on the previous iteration, so keeping both here is
+        // not a guess.
         while (last > floorBlocks && rms[last] < peak * 0.001) last--
         val end = min(buf.size, (last + 2) * block)
         if (end < buf.size) return buf.copyOf(end)
-        fadeCeiling(buf, ms = 400f, rate = rate)
+        if (buf.size >= (RING_CEILING_SECONDS * rate).toInt()) {
+            fadeCeiling(buf, ms = 400f, rate = rate)
+        } else {
+            fadeCeiling(buf, ms = 30f, rate = rate)
+        }
         return buf
     }
 
@@ -378,15 +396,18 @@ object Pluck {
         // (see `exact` above), and a comb cut to `n` alone puts its
         // notches ~3% off the true harmonics at high DAMP (measured on
         // KALIMBA: the 2nd-harmonic null missed the 20 dB gate). The
-        // exciter grows to n + d samples, and the extra samples enter
+        // exciter grows to n + combDelay samples, and the extra samples enter
         // the loop as INPUT through the `+=` below, not as initial state -
         // the loop's own length and tuning budget are untouched. position
         // = 0 reproduces the pre-STRIKE exciter sample for sample.
-        val d = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
-        val excLen = min(n + d, out.size)
+        // The coerceIn(1, n) clamp is unreachable in production: combDelay / n
+        // <= ~0.5 * period/(period - lag), at most ~0.5 across the voice
+        // table, and the lower bound needs position * period < 0.5 samples.
+        val combDelay = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
+        val excLen = min(n + combDelay, out.size)
         for (i in 0 until excLen) {
             val x = if (i < n) burst[i] else 0f
-            val xd = if (d > 0 && i - d in 0 until n) burst[i - d] else 0f
+            val xd = if (combDelay > 0 && i - combDelay in 0 until n) burst[i - combDelay] else 0f
             out[i] = x - xd
         }
 
