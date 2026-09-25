@@ -96,4 +96,19 @@ class TuningAccuracyTest {
             }
         }
     }
+
+    @Test
+    fun `STRIKE at either end keeps every Pluck voice within five cents`() {
+        // The comb sits before the loop and cannot touch its length; this
+        // pins that at the octave, at both extremes.
+        for (voice in PluckVoice.entries) {
+            for (strike in listOf(0f, 1f)) {
+                val snip = Pluck.render(voice, mapOf("TUNE" to 0.5f, "DOUBLE" to 0f, "STRIKE" to strike))
+                val want = Pluck.frequencyFor(voice, 12)
+                val measured = measuredHz(snip, want)
+                val err = abs(cents(measured, want.toDouble()))
+                assertTrue(err <= 5.0, "$voice at STRIKE $strike is $err cents off (want $want, got $measured)")
+            }
+        }
+    }
 }

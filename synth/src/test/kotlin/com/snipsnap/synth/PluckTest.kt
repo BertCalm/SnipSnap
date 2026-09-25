@@ -148,8 +148,11 @@ class PluckTest {
         // Pluck's own wiring: see DspTest for the central proof.
         for (voice in PluckVoice.entries) {
             val preset = PluckPresets.forVoice(voice).first()
+            // Presets may omit macros added after they were authored (STRIKE
+            // is the first): the seed is the defaults under the preset's own
+            // macros, not the preset's macro map alone.
             assertEquals(
-                preset.macros,
+                Pluck.defaults(voice) + preset.macros,
                 Pluck.scramble(voice, Random(1), temperature = 0f, near = preset),
                 "$voice: temperature 0 should return the seed untouched",
             )
@@ -269,5 +272,68 @@ class PluckTest {
         // rejects legitimate high notes.
         val out = Pluck.ks(freq = 50_000f, seconds = 0.05f, damp = 0f, bodyLoopHz = 2600f, pickHz = 3000f, seed = 1, rate = 176_400)
         assertTrue(out.isNotEmpty() && out.all { it.isFinite() }, "a valid near-boundary loop length should still render cleanly")
+    }
+
+    @Test
+    fun `STRIKE is a macro on every voice`() {
+        for (voice in PluckVoice.entries) {
+            assertTrue(Pluck.macrosFor(voice).any { it.name == "STRIKE" }, "$voice has no STRIKE")
+        }
+    }
+
+    @Test
+    fun `STRIKE at the bridge thins the fundamental against the harmonics`() {
+        // The comb's gain at harmonic k is 2*sin(pi*k*p): near the bridge (p
+        // small) the fundamental is the most attenuated harmonic, at the
+        // centre (p = 0.5) the least. The audition read both ends as CLOSER
+        // to the instrument; this pins that they are ends.
+        for (voice in PluckVoice.entries) {
+            val f0 = Pluck.frequencyFor(voice, 0.5f)
+            val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
+            val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
+            val atBridge = PluckSpectra.fundamentalShare(bridge, f0)
+            val atCentre = PluckSpectra.fundamentalShare(centre, f0)
+            assertTrue(
+                atBridge < atCentre,
+                "$voice: fundamental share at the bridge ($atBridge) should sit below the centre ($atCentre)",
+            )
+        }
+    }
+
+    @Test
+    fun `STRIKE at the centre removes the second harmonic`() {
+        for (voice in PluckVoice.entries) {
+            val f0 = Pluck.frequencyFor(voice, 0.5f)
+            val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
+            val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
+            val h2Bridge = PluckSpectra.toneEnergy(bridge, 2 * f0)
+            val h2Centre = PluckSpectra.toneEnergy(centre, 2 * f0)
+            assertTrue(
+                h2Centre < h2Bridge * 0.1,
+                "$voice: 2nd harmonic at the centre ($h2Centre) should be 20 dB under the bridge ($h2Bridge)",
+            )
+        }
+    }
+
+    @Test
+    fun `the default STRIKE keeps the shipped balance`() {
+        // The audition read the quarter position as SAME as the shipped
+        // engine, so the default lands there: within a factor of two of the
+        // comb-less exciter on the fundamental's share.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        fun share(position: Float): Double {
+            val raw = Pluck.ks(
+                freq = 220f, seconds = 0.6f, damp = 0.4f, bodyLoopHz = 3400f, pickHz = 2500f,
+                seed = 11, rate = rate, position = position,
+            )
+            val snip = Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+            return PluckSpectra.fundamentalShare(snip, 220f)
+        }
+        val plain = share(0f)
+        val quarter = share(Dsp.expMap(0.75f, Pluck.STRIKE_BRIDGE, Pluck.STRIKE_CENTRE))
+        assertTrue(
+            quarter > plain * 0.5 && quarter < plain * 2.0,
+            "default STRIKE share $quarter should be within 2x of the comb-less $plain",
+        )
     }
 }

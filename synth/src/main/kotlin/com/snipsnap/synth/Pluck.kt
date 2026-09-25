@@ -9,6 +9,7 @@ import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -47,22 +48,33 @@ object Pluck {
      */
     private val LOUDNESS_OFFSET: Map<PluckVoice, Float> = PluckVoice.entries.associateWith { 0f }
 
+    /**
+     * STRIKE's ends as a fraction of the string: the bridge and the centre.
+     * The map between them is exponential because positions near the bridge
+     * change fast (spec, "Macros"). Defaults sit on the quarter position the
+     * audition read as SAME as the pre-STRIKE engine - placeholders until
+     * the gate, like [LOUDNESS_OFFSET].
+     */
+    internal const val STRIKE_BRIDGE = 0.03f
+    internal const val STRIKE_CENTRE = 0.5f
+
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.KALIMBA -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.6f), MacroSpec("PICK", 0.55f),
-            MacroSpec("DOUBLE", 0.1f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.1f),
         )
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
-            MacroSpec("DOUBLE", 0.15f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.15f),
         )
         PluckVoice.HARP -> listOf(
             MacroSpec("TUNE", 0.55f), MacroSpec("DAMP", 0.2f), MacroSpec("PICK", 0.6f),
-            MacroSpec("DOUBLE", 0.2f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.2f),
         )
+        // A koto is played with a pick close to the bridge.
         PluckVoice.KOTO -> listOf(
             MacroSpec("TUNE", 0.45f), MacroSpec("DAMP", 0.4f), MacroSpec("PICK", 0.75f),
-            MacroSpec("DOUBLE", 0.45f),
+            MacroSpec("STRIKE", 0.6f), MacroSpec("DOUBLE", 0.45f),
         )
     }
 
@@ -121,6 +133,7 @@ object Pluck {
         val damp = m.getValue("DAMP")
         val pick = m.getValue("PICK")
         val double = m.getValue("DOUBLE")
+        val position = Dsp.expMap(m.getValue("STRIKE"), STRIKE_BRIDGE, STRIKE_CENTRE)
 
         // The body characters. loopHz is the low-pass inside the feedback
         // loop (what makes a kalimba woody and a harp glassy); pickLo/pickHi
@@ -137,13 +150,13 @@ object Pluck {
         }
 
         val seconds = (ring * Dsp.lin(1f - damp, 0.35f, 1f)).coerceAtMost(1.35f)
-        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = rate)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = 11, rate = rate, position = position)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
             // first. Detune grows with the macro so it goes chorus -> honky.
             val det = ks(
                 freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = 23, rate = rate,
+                Dsp.expMap(pick, pickLo, pickHi), seed = 23, rate = rate, position = position,
             )
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
@@ -193,6 +206,7 @@ object Pluck {
         pickHz: Float,
         seed: Int,
         rate: Int,
+        position: Float = 0f,
     ): FloatArray {
         val loopHz = bodyLoopHz * Dsp.lin(1f - damp, 0.35f, 1.6f)
         val fb = Dsp.lin(1f - damp, 0.94f, 0.998f)
@@ -282,16 +296,38 @@ object Pluck {
 
         val noise = Dsp.Noise(seed)
         val pickLp = Dsp.OnePole(rate)
-        val head = minOf(n, out.size)
-        for (i in 0 until head) out[i] = pickLp.lp(noise.next(), pickHz)
+        val burst = FloatArray(n)
+        for (i in 0 until n) burst[i] = pickLp.lp(noise.next(), pickHz)
         // Zero-mean the exciter: the loop filter passes DC untouched, so any
         // net offset in the burst survives as a sub-thump long after the
         // string content is damped away — a dark pluck decayed into a fake
         // kick until this subtraction.
         var mean = 0f
-        for (i in 0 until head) mean += out[i]
-        mean /= head
-        for (i in 0 until head) out[i] -= mean
+        for (v in burst) mean += v
+        mean /= n
+        for (i in 0 until n) burst[i] -= mean
+
+        // Pick position (Jaffe & Smith 1983): the burst minus a copy of
+        // itself delayed by `position` of one period. The comb's notches
+        // fall on every harmonic k where k*position is a whole number: the
+        // centre kills the even harmonics, the bridge thins the low ones.
+        // The period here is the string's physical period `rate / freq`,
+        // not the integer delay-line length `n` - the loop's allpass,
+        // filter lag, and two-tap average make up the rest of that period
+        // (see `exact` above), and a comb cut to `n` alone puts its
+        // notches ~3% off the true harmonics at high DAMP (measured on
+        // KALIMBA: the 2nd-harmonic null missed the 20 dB gate). The
+        // exciter grows to n + d samples, and the extra samples enter
+        // the loop as INPUT through the `+=` below, not as initial state -
+        // the loop's own length and tuning budget are untouched. position
+        // = 0 reproduces the pre-STRIKE exciter sample for sample.
+        val d = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
+        val excLen = min(n + d, out.size)
+        for (i in 0 until excLen) {
+            val x = if (i < n) burst[i] else 0f
+            val xd = if (d > 0 && i - d in 0 until n) burst[i - d] else 0f
+            out[i] = x - xd
+        }
 
         val loopLp = Dsp.OnePole(rate)
         for (i in n + 1 until out.size) {
