@@ -266,4 +266,64 @@ class TinesTest {
             TinesPatch("Bad", TinesVoice.BELL, mapOf("TUNE" to 1.5f))
         }
     }
+
+    // ---------- KALIMBA ----------
+
+    @Test
+    fun `KALIMBA TUNE snaps to semitones from A3`() {
+        // Two octaves inclusive, so the melodic kit's pads land on notes
+        // that a pad recipe can replay as a macro value.
+        val distinct = HashSet<Float>()
+        for (i in 0..100) distinct.add(Tines.frequencyFor(TinesVoice.KALIMBA, i / 100f))
+        assertEquals(Tines.KALIMBA_TUNE_SEMITONES + 1, distinct.size)
+        assertEquals(220f, Tines.frequencyFor(TinesVoice.KALIMBA, 0f))
+        assertEquals(880f, Tines.frequencyFor(TinesVoice.KALIMBA, 1f))
+    }
+
+    @Test
+    fun `only KALIMBA snaps`() {
+        assertFailsWith<IllegalArgumentException> { Tines.frequencyFor(TinesVoice.BELL, 0.5f) }
+    }
+
+    @Test
+    fun `KALIMBA rings the bar's partials, not a harmonic series`() {
+        // A clamped-free bar's second partial sits at 6.267 f0, between the
+        // sixth and seventh harmonics; the voice must put energy there and
+        // not on the harmonics either side.
+        val f0 = Tines.frequencyFor(TinesVoice.KALIMBA, 0.5f)
+        val snip = Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to 0.5f, "BRIGHT" to 0.8f, "BUZZ" to 0f))
+        val atBar = PluckSpectra.toneEnergy(snip, f0 * Tines.KALIMBA_PARTIALS[1], seconds = 0.1f)
+        val atSixth = PluckSpectra.toneEnergy(snip, f0 * 6f, seconds = 0.1f)
+        val atSeventh = PluckSpectra.toneEnergy(snip, f0 * 7f, seconds = 0.1f)
+        assertTrue(
+            atBar > atSixth * 4 && atBar > atSeventh * 4,
+            "second partial should sit at 6.267 f0: bar=$atBar h6=$atSixth h7=$atSeventh",
+        )
+    }
+
+    @Test
+    fun `BUZZ rattles`() {
+        val clean = FeatureExtractor.extract(Tines.render(TinesVoice.KALIMBA, mapOf("BUZZ" to 0f)))
+        val buzzed = FeatureExtractor.extract(Tines.render(TinesVoice.KALIMBA, mapOf("BUZZ" to 1f)))
+        assertTrue(
+            buzzed.flatness > clean.flatness * 1.5f,
+            "BUZZ should add noise: flatness ${clean.flatness} -> ${buzzed.flatness}",
+        )
+    }
+
+    @Test
+    fun `KALIMBA BRIGHT moves at every step of its travel`() {
+        // The engine's velocity path is BRIGHT; the new voice has to keep it
+        // monotonic, the way the snare's SNAP sweep is written.
+        val points = (0..8).map { it / 8f }
+        val measured = points.map { b ->
+            FeatureExtractor.extract(Tines.render(TinesVoice.KALIMBA, mapOf("BRIGHT" to b, "BUZZ" to 0f))).centroidHz
+        }
+        for (i in 0 until measured.size - 1) {
+            assertTrue(
+                measured[i + 1] > measured[i] + 1f,
+                "BRIGHT is dead or reversed between ${points[i]} and ${points[i + 1]}: $measured",
+            )
+        }
+    }
 }

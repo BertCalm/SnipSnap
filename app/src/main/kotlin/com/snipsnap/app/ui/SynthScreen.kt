@@ -1144,7 +1144,7 @@ private val SkinVoice.drumClass: DrumClass
 
 private val TinesVoice.drumClass: DrumClass
     get() = when (this) {
-        TinesVoice.BELL, TinesVoice.CHIME -> DrumClass.TONAL
+        TinesVoice.BELL, TinesVoice.CHIME, TinesVoice.KALIMBA -> DrumClass.TONAL
         TinesVoice.BLOCK, TinesVoice.ZAP, TinesVoice.TOY -> DrumClass.PERC
     }
 

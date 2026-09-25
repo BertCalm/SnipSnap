@@ -111,4 +111,16 @@ class TuningAccuracyTest {
             }
         }
     }
+
+    @Test
+    fun `every TINES KALIMBA semitone lands within five cents`() {
+        for (semi in 0..Tines.KALIMBA_TUNE_SEMITONES) {
+            val macro = semi.toFloat() / Tines.KALIMBA_TUNE_SEMITONES
+            val snip = Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to macro, "BUZZ" to 0f))
+            val want = Tines.frequencyFor(TinesVoice.KALIMBA, semi)
+            val measured = measuredHz(snip, want)
+            val err = abs(cents(measured, want.toDouble()))
+            assertTrue(err <= 5.0, "KALIMBA semitone $semi is $err cents off (want $want, got $measured)")
+        }
+    }
 }
