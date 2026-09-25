@@ -1,6 +1,7 @@
 # RESIN, held — a pad instrument that sounds until you let go
 
-**Status:** design, awaiting approval. Not implemented.
+**Status:** design, approved 2026-09-25 (answers to the open questions are
+recorded under "Decided"). Implementation per the plan.
 **Date:** 2026-09-25
 **Plan:** [`docs/superpowers/plans/2026-09-25-resin-held-pad.md`](../plans/2026-09-25-resin-held-pad.md)
 **Next on deck:** [`2026-09-25-resin-drone-design.md`](2026-09-25-resin-drone-design.md) — the long,
@@ -93,9 +94,13 @@ fact that we choose every frequency ourselves:
   Both saws complete whole cycles in it (K and 2K).
 - Set the square's frequency ratio to exactly **`1 + 1/(2K)`**. In one loop it
   then completes `2K + 1` cycles, a whole number, which is *exactly one beat*.
-- Choose K from the detune STACK asks for: `K ≈ 1 / (2 × (2^(cents/1200) − 1))`.
-  Then search K within ±10% for the loop whose length lands closest to a whole
-  number of frames (the same search `Keys.organ` does).
+- Choose K from the detune STACK asks for: `K = round(1 / (2 × (2^(cents/1200) − 1)))`.
+- Round the loop to a whole number of frames and **move the pitch by a hair
+  to fit it**: `f' = 2K × RATE / loopFrames`. The move is at most half a frame
+  over the loop, 0.14 cents at the shortest loop (A5), far below hearing and
+  below the keygroup's own tuning. (The first draft searched K for a loop
+  that happened to land near a whole frame, the Organ's method. Building it
+  showed why that isn't enough; see "What building it measured" below.)
 
 The beat stays in. It becomes the loop's own clock: one beat per pass.
 
@@ -145,21 +150,47 @@ and 0.35), CONTOUR 1 and DECAY 1 (the slowest-landing sweep), r = 3.5 / 3.9 /
 | 2.5 s | 1.9e-6 |
 | 3.5 s, also with a 2 s attack | 3.2e-7 |
 
-**Detune after snapping.** Asking for 9.6 cents gets 9.81 at every pitch.
-Asking for 14.0 gets 15.7 at A1–A4 under the ±10% search. The beat then runs
-up to about 12% faster than the one-shot's; STACK's knob position is
-unchanged, only the fine detune moves. A ±3% search holds 14.0 to within
-0.3 cents, at the cost of up to 0.27 frames of length residue. Seams with
-that residue were **not** measured, so the plan starts at ±10% (measured) and
-leaves tightening as a measured follow-up.
-
-**Loop lengths.** Snapped loops run from 0.14 s (LEAD A5, STACK 1) to 4.1 s
-(BASS A1, just above STACK 0.4, where the detune is smallest and the beat
-slowest).
+**Loop lengths.** Snapped loops run from about 0.14 s (LEAD A5, STACK 1) to
+about 4 s (BASS A1, just above STACK 0.4, where the detune is smallest and the
+beat slowest).
 
 **Render cost.** 1.06 s of CPU per 4 s held zone on this cloud machine
-(JVM, 4× oversampled, single thread). The phone is untested; see Open
-questions.
+(JVM, 4× oversampled, single thread). The phone is untested; see Decided 3.
+
+### What building it measured
+
+The probe's snapped seams (≈1e-10) were not the whole story. The first
+implementation searched K ±10% for a loop that landed *near* a whole frame,
+the way `Keys.organ` does, and a loop can only be a whole number of samples.
+Where the true length of K periods fell a few hundredths of a frame off, the
+leftover was audible in the seams of bright zones:
+
+| LEAD at CUTOFF 1, CREAM 0 | Frame residue | Seam |
+|---|---|---|
+| STACK 0.6, A3 | 0.000 | 1.5e-10 |
+| STACK 0.6, C4 | +0.068 | 2.2e-4 |
+| STACK 0.6, C5 | −0.025 | **6.5e-4** |
+| STACK 1.0, F#5 | −0.013 | 5.3e-4 |
+
+That passes the 1e-3 bar, but not by much. The fix is the pitch fit above:
+round the loop to whole frames and move the pitch to fill it exactly. Measured
+after the fit (the plan's tests pin all of it):
+
+| | Worst seam |
+|---|---|
+| Every zone of every voice at defaults | 1.3e-14 |
+| Bright LEAD (the table above), all zones, STACK 0.6 and 1.0 | 1.8e-15 |
+| BASS A1 worst corner (CUTOFF 0, CREAM 1 → r 4.0, CONTOUR 1, DECAY 1) | ≤ 2.8e-14 |
+| Largest pitch move, any zone | < 0.2 cents |
+
+Everything is floating-point noise, including the worst corner the probe put
+at 7.1e-5. The probe had the same fractional residue, so that figure measured
+the residue as much as the filter settling. **Detune** now comes straight
+from STACK: only K's rounding moves it, by under a quarter of a cent (the
+probe's ±10% search had moved 14.0 cents to 15.7).
+
+Nine zones, single thread, on this cloud machine: BASS 9.3 s, BRASS 6.5 s,
+LEAD 5.3 s (JIT warm-up included).
 
 ## Decisions
 
@@ -219,16 +250,23 @@ button sits under the SCRAMBLE / SAVE PRESET / SEND TO PAD row, shown only
 when the engine is RESIN (the same full-width placement the `DELETED
 PRESETS ▸` button already uses). It opens a sheet with:
 
-- **NAME**: defaults to the current preset's name, otherwise `RESIN BRASS`
-  (the voice), made unique with `OneNote.freshName`.
+- **NAME**: the current preset's name, otherwise `RESIN BRASS` (the voice),
+  made unique with `OneNote.freshName`. It is shown, not typed, in the
+  sheet's line (`Copy.heldInstrumentNote`), the way PAD SHEET's MAKE
+  INSTRUMENT names without asking. The confirmation toast is the shop's
+  existing `Copy.madeNamed("INSTRUMENT", name)`.
 - **ATTACK** and **RELEASE** sliders, with readouts in seconds.
 - **PREVIEW**: renders the middle zone only (about one render's worth of
-  wait) and plays the head plus two passes of the loop, which is what a
-  three-second hold sounds like. You hear the pad before paying for all nine
-  zones.
-- **MAKE**: renders the nine zones in parallel off the main thread with a
-  `RENDERING 3/9` readout, writes only after *all* zones succeed, then
-  confirms `ON KEYS · HOLDS`. CANCEL during a render writes nothing.
+  wait, shown as `RENDERING…`, the scope's own busy word) and plays the head
+  plus two passes of the loop, which is what a short hold sounds like. You
+  hear the pad before paying for all nine zones.
+- **MAKE**: renders the nine zones in parallel off the main thread. A
+  processing indicator shows throughout: `RENDERING 3/9` beside a progress
+  bar that fills as zones finish, so a slow phone reads as working, not
+  frozen (`Copy.instrumentRendering`). It writes only after *all* zones
+  succeed, then confirms with the shop's `INSTRUMENT MADE — NAME. ON THE
+  SHELF.` CANCEL during a render writes nothing; once the last zone lands
+  the write is left to finish.
 
 **Desktop: the CLI.** `snipsnap synth RESIN BRASS --preset 3 --instrument
 --attack 0.8 --release 0.6 --out <dir>` writes the same package. This is the
@@ -262,7 +300,12 @@ The plan pins each of these as a real test:
   DECAY 1) at STACK 0.3 / 0.6 / 1.0, and ATTACK 2.5 s.
 - **Detune snapped:** the square's ratio is exactly `1 + 1/(2K)`, the loop is
   exactly the rounded length of K sub-periods, and the snapped detune is
-  within 2 cents of the asked one.
+  within a quarter cent of the asked one.
+- **Whole frames:** in every zone of every voice, the fitted pitch completes
+  exactly 2K cycles in the loop's frames, and it moves less than 0.2 cents.
+- **Bright zones stay clean:** LEAD at CUTOFF 1, every zone, seams under 1e-8
+  (measured 1.8e-15; the fractional-frame residue it guards against
+  produced 2e-4 and up).
 - **Held means held:** the level over the last loop pass is within 1% of the
   level over the first pass, so nothing pumps.
 - **ATTACK is slow:** a 1 s attack is below −6 dB at 0.25 s and within 1 dB of
@@ -297,24 +340,23 @@ The plan pins each of these as a real test:
   is a follow-up.
 - The drone: [`2026-09-25-resin-drone-design.md`](2026-09-25-resin-drone-design.md).
 
-## Open questions (for the user)
+## Decided (the author's answers, 2026-09-25)
 
-1. **The button's name.** `MAKE INSTRUMENT ▸` matches the PAD SHEET's verb for
-   "make something KEYS plays". The alternatives are `HOLD ▸` or
-   `MAKE KEYS ▸`. Avoid `MAKE PAD`, since SYNTH already has `SEND TO PAD` and
-   the two would read as the same thing.
-2. **Losing the whistle.** Is a held pad that stops just short of
-   self-oscillation acceptable? The alternative is to allow r = 4.3 and
-   refuse the zones that don't close, which means an instrument with holes
-   in it. I recommend the cap.
-3. **Phone render time.** 1.06 s of CPU per 4 s zone here. A mid-range phone
-   is likely 2–4× slower, so nine zones in parallel on four cores is
-   plausibly 5–15 s. The plan measures it on the emulator. If a render comes
-   out over 15 s, drop to seven zones (every major third) rather than
-   shorten the settle time, which is what keeps the seam clean.
-4. **RELEASE on hardware.** Does the MPC read `volumeRelease` 1.5 as a
-   1.5-second release? This is a listening check on real hardware and is
-   added to the testkit acceptance notes.
+1. **The button is `MAKE INSTRUMENT ▸`.** It matches the PAD SHEET's verb for
+   "make something KEYS plays". `MAKE PAD` was avoided because SYNTH already
+   has `SEND TO PAD`.
+2. **The whistle is given up.** A held pad stops just short of
+   self-oscillation (r = 4.0). The alternative, allowing r = 4.3 and refusing
+   the zones that don't close, would leave an instrument with holes in it.
+3. **Nine zones always, with a progress indicator.** Measured cost is 1.06 s
+   of CPU per 4 s zone here, and a phone is likely slower. The zone count is
+   *not* reduced if a render runs long. Instead, MAKE shows progress for the
+   whole render (`RENDERING 3/9…` beside a bar that fills as zones land),
+   so a render that takes longer than 15 s reads as working, not frozen.
+   PREVIEW shows `RENDERING…` while its one zone renders.
+4. **RELEASE on hardware is a listening check.** Does the MPC read
+   `volumeRelease` 1.5 as a 1.5-second release? This is checked by ear on
+   real hardware, and the check is added to the testkit acceptance notes.
 
 ## Appendix — the probe's held render
 
@@ -330,7 +372,8 @@ p1 += base / rate; p2 += base * 0.5 / rate; p3 += base * detune / rate
 // K sub-periods holding exactly one beat of the square:
 val k0 = (1.0 / (2.0 * (2.0.pow(cents / 1200.0) - 1.0))).roundToInt()
 val period = 2.0 * RATE / base            // one sub-octave period, in frames
-// search k in k0 ±10% for the smallest |k * period - round(k * period)|
-val loopFrames = Math.round(best * period).toInt()
-val ratio3 = 1.0 + 1.0 / (2.0 * best)
+// (the probe then searched k0 ±10% for the smallest frame residue;
+// the implementation instead rounds the loop and fits the pitch to it:
+// loopFrames = round(k0 * period); baseHz = 2 * k0 * RATE / loopFrames)
+val ratio3 = 1.0 + 1.0 / (2.0 * k0)
 ```

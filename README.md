@@ -224,6 +224,15 @@ amount and speed together; CREAM is the feedback. BASS, LEAD, BRASS.
 CONTOUR is also a rack section — the same filter swept from a captured
 hit's onset — because the synth's job is to sit with what was captured.
 
+RESIN also holds. `MAKE INSTRUMENT ▸` on SYNTH (and `snipsnap synth RESIN
+<VOICE> --instrument` on the desk) renders the sound as a nine-zone keys
+instrument that sounds for as long as a key is down, with its own ATTACK
+and RELEASE: the Organ's whole-period loop, generalized. The detuned square
+is snapped so each loop holds exactly one beat, and the pitch moves by a
+fraction of a cent so the loop is whole frames, so every seam measures at
+floating-point noise. Held, CREAM stops at the self-oscillation threshold,
+the one place a loop cannot close.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best

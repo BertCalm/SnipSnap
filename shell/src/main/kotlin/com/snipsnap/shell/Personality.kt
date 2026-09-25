@@ -747,6 +747,22 @@ object Copy {
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
+    // ---- SYNTH: MAKE INSTRUMENT (RESIN, held) ----
+    /**
+     * The sheet's own line: what MAKE leaves and where. [name] is the name it
+     * will land under - already made unique against the shelf - so the toast
+     * that follows ([madeNamed]) names the same thing this promised.
+     */
+    fun heldInstrumentNote(name: String): String =
+        "EVERY KEY HOLDS WHILE IT IS DOWN. LANDS ON THE SHELF AS ${name.uppercase(java.util.Locale.ROOT)}, PLAYABLE ON KEYS."
+    /**
+     * MAKE INSTRUMENT's progress indicator, [done] of [total] zones rendered.
+     * A function for [treatmentBusy]'s reason: a render that runs longer than
+     * a breath must say it is working, and the reflective shout-and-stop law
+     * scans constants, not progress lines.
+     */
+    fun instrumentRendering(done: Int, total: Int): String = "RENDERING $done/$total…"
+
     // ---- SPREAD: one sound across a bank, in a scale ----
     /**
      * SPREAD, when it lands: the scale, how many pads and where from, then

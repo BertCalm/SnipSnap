@@ -3287,6 +3287,9 @@ fun App(shelf: KitShelf) {
                                         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
                                 },
+                                // MAKE INSTRUMENT (RESIN, held) writes beside the kits:
+                                // the same re-read PAD SHEET's MAKE INSTRUMENT asks for.
+                                onShelfAssetWritten = { roomsRevision++ },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
                                 // a MenuRow tab switch, not be cancelled by it.

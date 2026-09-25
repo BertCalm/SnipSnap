@@ -25,6 +25,38 @@ class SynthCommandTest {
     }
 
     @Test
+    fun `a RESIN preset becomes a held instrument`() {
+        val dir = File.createTempFile("synthinst", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val bytes = ByteArrayOutputStream()
+            val code = SynthCommand.run(
+                listOf("RESIN", "BRASS", "--preset", "1", "--instrument", "--attack", "0.5", "--release", "0.8", "--out", dir.path),
+                PrintStream(bytes),
+            )
+            assertEquals(0, code)
+            assertEquals(1, dir.listFiles { f -> f.name.endsWith(".xty") }!!.size, "one MPC 3 track")
+            val data = dir.listFiles { f -> f.isDirectory && f.name.endsWith("_[TrackData]") }!!.single()
+            assertEquals(9, data.listFiles { f -> f.extension == "wav" }!!.size, "nine zones")
+            val (_, instrument) = com.snipsnap.kit.InstrumentStore.list(dir).single()
+            assertTrue(instrument.zones.all { it.loopStartFrame > 0 }, "every zone holds")
+            assertEquals(0.8f, instrument.release)
+            assertTrue("9 zones, each holds" in bytes.toString(), "stdout says what was made: $bytes")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `--instrument is refused for an engine that cannot hold`() {
+        val out = PrintStream(ByteArrayOutputStream())
+        val e = runCatching {
+            SynthCommand.run(listOf("TINES", "BELL", "--instrument", "--out", "/tmp"), out)
+        }.exceptionOrNull()
+        assertTrue(e is CliError, "expected CliError, got $e")
+        assertTrue(e.message?.contains("RESIN") == true, "the refusal names the engine that can: ${e.message}")
+    }
+
+    @Test
     fun `an unknown engine is refused by name`() {
         val out = PrintStream(ByteArrayOutputStream())
         val e = runCatching {
