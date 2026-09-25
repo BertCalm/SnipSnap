@@ -146,11 +146,18 @@ short burst ──(PICK low-pass)──▶ Modes.ring(TINE table, atPosition(STR
   the way `mode-ratios-research.md` did for the others.
 - The exciter is the same PICK-coloured burst, cut to a few milliseconds:
   a tine is struck-plucked by a thumbnail, not rung by a period of noise.
-- STRIKE keeps its name and its "position" meaning. `Modes.atPosition`'s
-  `|sin(n·π·p)|` shape is a string's, not a cantilever's; it is the
-  approximation on hand and the gate judges it. `p` runs from mid-tine to
-  the free tip, because the tip is where a thumb lands and mid-tine is the
-  ugly end.
+- STRIKE keeps its name and its "position" meaning, and on the tine it uses
+  the cantilever's own mode shapes rather than `Modes.atPosition`'s string
+  sine: a clamped-free bar's `n`-th shape is
+  `φₙ(x) = cosh(βₙx) − cos(βₙx) − σₙ(sinh(βₙx) − sin(βₙx))` with
+  `σₙ = (cosh βₙL − cos βₙL) / (sinh βₙL + sin βₙL)`, and mode `n`'s gain is
+  weighted by `|φₙ(p·L)| / |φₙ(L)|`. The free tip is an antinode of every
+  mode, so `p = 1` is the full strike; the second mode's node near `0.774 L`
+  and the third's near `0.5 L` and `0.868 L` are where a pluck goes glassy
+  or woody, which is the range STRIKE exists to reach. `p` runs from `0.4 L`
+  (the ugly end) to the tip. PICK stays what it is on every voice — exciter
+  brightness, which on a tine is thumbnail versus flesh. Decided 2026-09-25
+  on Josh's "you tell me"; the gate still judges it.
 - TUNE places the fundamental mode at the snapped frequency exactly, so
   `TuningAccuracyTest`'s five-cent bound holds by construction.
 - DAMP scales every mode's t60, the way the snare's DECAY does. DOUBLE is a
@@ -185,8 +192,10 @@ sonic one; the gate can move it.
 **Per-voice defaults are placeholders until the gate**, and are written as
 such in code (a table with a comment naming this document), the way
 `LOUDNESS_OFFSET` already is. Starting values from the chips: BODY HARP 0.4,
-KOTO 0.35, NYLON 0.5, KALIMBA 0.25; STRIKE 0.75 on every voice except KOTO
-at 0.6 (a koto is played with a pick near the bridge).
+KOTO 0.35, NYLON 0.5, and KALIMBA 0 until Phase 3 — every body amount made
+the string-model kalimba read WORSE, and the string is what Phase 3
+replaces; STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played
+with a pick near the bridge).
 
 ## The bodies
 
@@ -207,7 +216,7 @@ voice before any Hz reaches `Pluck.kt`:
 | NYLON | classical guitar | the air resonance A0 near 100 Hz, the top-plate T1 near 200 Hz, the back-coupled T2 near 250 Hz, then plate modes; Q of order 20–50 (Fletcher & Rossing, the guitar chapter) | 98, 195, 250, 410, 560, 780, 1200, 2400 Hz |
 | KOTO | paulownia box, ~1.8 m | body resonances measured on the instrument; the literature is thinner (Ando's koto studies are the starting point) | 140, 205, 310, 470, 690, 1050, 1600 Hz |
 | HARP | spruce soundboard | a dense soundboard series from roughly 100 Hz up (Waltham & Kotlicki on the concert harp) | 110, 165, 240, 330, 450, 600, 820, 1100, 1500 Hz |
-| KALIMBA | hand-sized box with sound holes | a Helmholtz resonance in the low hundreds of Hz plus box-plate modes; sparse literature, so a measured resonance from a recording is acceptable evidence | 330, 620, 950, 1400, 2100 Hz |
+| KALIMBA | hand-sized box with sound holes | a Helmholtz resonance in the low hundreds of Hz plus box-plate modes; sparse literature, so a measured resonance from a recording is acceptable evidence | 330, 620, 950, 1400, 2100 Hz — Phase 3, with the tine |
 
 **Decays.** The knock fix has two halves. The first difference drive is
 one. The other is that a body's lowest modes have moderate Q: the spike gave
@@ -257,9 +266,10 @@ left.
   accepts that, and `InstrumentSuite`'s harp export changes with it.
 - `SCRAMBLE` (`Pluck.scramble`) works over the six macros with no change.
 - Export is untouched: mono WAVs through `Cleanup`, `WavWriter`, `Preflight`.
-- `PadRecipe.VERSION` is not bumped for Phase 1 or 2: old recipes decode and
-  replay with defaults for the new macros. Whether a replayed recipe must
-  *sound* the same across this change is an open question below.
+- `PadRecipe.VERSION` is not bumped: old recipes decode and replay with
+  defaults for the new macros, and a replayed recipe is "the same patch
+  through today's engine," not a sound-identical re-render. Josh's call,
+  2026-09-25: pad recipes can change, the app is pre-launch.
 
 ## Failure handling
 
@@ -288,7 +298,7 @@ notes are the gate's record.
 | Phase | Ships | Audio changes | Gate |
 |---|---|---|---|
 | 1 | STRIKE macro; decay-following render length with the 4 s ceiling; velocity through PICK; seed convention; `macrosFor` at five | Yes | STRIKE extremes and DAMP 0 across all four voices |
-| 2 | `body-research.md`; per-voice sourced tables; first-difference drive; BODY macro with placeholder defaults; `macrosFor` at six | Yes | BODY at 0 / default / 1 for all four voices; the knock question asked again |
+| 2 | `body-research.md`; per-voice sourced tables for the three string voices; first-difference drive; BODY macro with placeholder defaults (KALIMBA at 0); `macrosFor` at six | Yes | BODY at 0 / default / 1 for NYLON, KOTO and HARP; the knock question asked again |
 | 3 (outline) | `Modes.Material.TINE` and KALIMBA on the tine path; dispersion allpasses inside the loop for KOTO and HARP (stiff-string inharmonicity, with the allpass phase folded into the loop's tuning budget); sympathetic strings under DOUBLE | Yes | its own spec and plan, written after Phase 2's gate, because the tine spike comes first |
 
 Phase 3's string physics were not tested by the spike and are not designed
@@ -336,6 +346,9 @@ saying why.
 - **Tine (Phase 3)** — a `ModesTest` case pins TINE's second and third
   ratios at 6.267 and 17.548 within 0.5 %; a KALIMBA render's measured
   second partial lands within 2 % of 6.27× the fundamental.
+- **Tine position (Phase 3)** — the cantilever weighting leaves mode 1
+  unchanged across `p` and puts mode 2 at least 20 dB below its tip level
+  at `p = 0.774`, its node.
 
 ## Out of scope
 
@@ -350,23 +363,21 @@ saying why.
   product.
 - **Re-authoring the 48 presets.** The parent spec's Phase 3.
 
-## Open questions
+## Decisions taken at review — 2026-09-25
 
-1. **Recipe replay.** `PadRecipe.VERSION` was bumped for the spine on the
-   snare. Adding two defaulted macros does not break decoding, but a recipe
-   replayed after Phase 1 renders longer and after Phase 2 renders with a
-   body. If replay is meant to be sound-identical, Phase 1 needs a version
-   bump and the migration that goes with it; if replay means "the same
-   patch through today's engine," it does not. The reviewer of this
-   document decides.
-2. **KALIMBA in Phase 2.** With BODY available before the tine, KALIMBA's
-   box on the flat string may still read WORSE, as every body amount did in
-   the spike. The default is low (0.25) and the gate may set it to 0.
-3. **The 4 s ceiling** is a file-size judgement. If a harp glissando pad
-   wants more, the gate says so.
-4. **STRIKE on the tine** uses a string's mode shape for a cantilever. If
-   the gate finds it inert or wrong, the tine's STRIKE becomes exciter
-   hardness instead, and the name still holds.
+These were the document's open questions; Josh answered them on review and
+the sections above already reflect the answers.
+
+1. **Recipe replay: no version bump.** Pad recipes can change; the app is
+   pre-launch. A replayed recipe is the same patch through today's engine.
+2. **KALIMBA gets no body until Phase 3.** Every body amount made the
+   string-model kalimba read WORSE in the spike because the string is the
+   defect; its BODY default is 0 in Phase 2 and its box table ships with
+   the tine.
+3. **The 4 s ring ceiling stands.**
+4. **STRIKE on the tine means position**, weighted by the cantilever's own
+   mode shapes so the nodes fall where a real tine has them; PICK remains
+   hardness. Josh delegated the call; the Phase 3 gate still judges it.
 
 ## Appendix — the spike
 
