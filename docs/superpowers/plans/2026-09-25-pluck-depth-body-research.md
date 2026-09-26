@@ -208,22 +208,33 @@ Only confirmed/corrected modes appear below. Every gain and t60 is a **proposal 
 | Top-plate mode 5 | 645 | 0.10 | 0.08 | shape |
 | Higher air-cavity mode | 370 | 0.30 | 0.15 | shape |
 
-### 5.2 Koto — no table
+### 5.2 Koto — no table, except two modes confirmed via source #2
 
-**Zero confirmed or corrected modes.** All seven catalogued Hz values are unsupported (source unreachable) and must not be copied into any resonator table. Treat koto as blocked on a Phase 2 re-verification pass (an authenticated or institutional route to the JASA 2020 paper, or a direct request to the author) before any number in §2 is usable in code.
+**Zero confirmed or corrected modes from source #1** (the 2020 JASA paper). All seven Hz values catalogued against it in §2.1 are unsupported and must not be copied into any resonator table. Treat koto as blocked on a Phase 2 re-verification pass (an authenticated or institutional route to that paper, or a direct request to the author) before any further number in §2 is usable in code.
+
+Two of those seven do, however, also appear directly in source #2 (Coaldrake, ICA 2019, read in full — see §2's "Why unsupported despite partial corroboration"), which is reachable and was opened: "the (0,1) mode was at 100Hz and the (0,0) mode at 85Hz which the acoustic camera confirmed." That gives a two-row working table:
+
+**Confirmed via source #2 (ICA 2019), decays shape — the rest of section 2 stays unsupported**
+
+| Label | Hz | Gain (0–1) | t60 (s) | Basis |
+|---|---|---|---|---|
+| Air mode (0,0) | 85 | 0.80 | 0.40 | shape — no Q or bandwidth reported |
+| First top-plate eigenmode | 100 | 1.00 | 0.50 | shape — no Q or bandwidth reported |
+
+The mode-numbering discrepancy noted in §2 (source #1's abstract calls the plate mode (0,2); source #2's own text calls it (0,1)) does not affect either Hz value — both sources agree on 85 and 100 Hz — so it does not block using them here.
 
 ### 5.3 Concert harp (6/6 modes confirmed)
 
 | Label | Hz | Gain (0–1) | t60 (s) | Basis |
 |---|---|---|---|---|
-| Mode 1 (global soundbox) | 54.8 | 0.20 | 0.30 | shape |
-| Mode 2 (first bending) | 80.9 | 0.15 | 0.35 | shape |
-| Mode 3 (second bending) | 123.4 | 0.15 | 0.70 | shape |
-| T1 (Mode 4) | 152.2 | 0.95 | 0.80 | shape |
+| Mode 1 (global soundbox) | 54.8 | 0.20 | 0.30 | shape — the source's damping % read as ζ; the η reading doubles it |
+| Mode 2 (first bending) | 80.9 | 0.15 | 0.35 | shape — the source's damping % read as ζ; the η reading doubles it |
+| Mode 3 (second bending) | 123.4 | 0.15 | 0.36 | shape — the source's damping % read as ζ; the η reading doubles it |
+| T1 (Mode 4) | 152.2 | 0.95 | 0.31 | shape — the source's damping % read as ζ; the η reading doubles it |
 | Pitch mode (Mode 5) *(source excludes it from playing relevance — row kept only for completeness; do not give it meaningful gain)* | 161.9 | 0.00 | n/a | excluded per source (not well excited in play) |
-| A0 (Mode 6) | 168.5 | 1.00 | 1.20 | shape |
+| A0 (Mode 6) | 168.5 | 1.00 | 0.47 | shape — the source's damping % read as ζ; the η reading doubles it |
 
-Note: the source's damping-coefficient percentages (5.5/4.8/2.5/2.3/0.9/1.4%, in the same mode order) were not converted to t60 because the source never states whether they are a damping ratio or a loss factor — a 2× ambiguity in the implied Q. They are a reasonable *relative* guide (lower % likely rings longer) but are not the basis for the shape values above, which are audition placeholders only.
+Note: the source's damping-coefficient percentages (5.5/4.8/2.5/2.3/0.9/1.4%, in the same mode order) are read above as a damping ratio ζ, via t60 = 2.2·Q/f with Q = 1/(2ζ) — the source never states whether they are ζ or a loss factor η, a convention that would double every t60 above (η = 2ζ). That reading is this document's own choice, not the source's, which is why the basis column still says "shape" rather than "measured": the % figures themselves come from the source's own modal fit, but the ζ-vs-η convention does not, and the audition may need to retune by ear if the real convention turns out to be η.
 
 ### 5.4 Banjo (9/9 modes confirmed)
 
