@@ -101,4 +101,45 @@ class DroneFitTest {
         val mixed = Track("x", listOf(DroneBlock(recipe, 33, 0, 2), LoopBlock("a.wav")))
         assertEquals(null, DroneFit.droneOf(mixed))
     }
+
+    /**
+     * Random grids: drones on random roots, loops and silence beside them,
+     * random tempos, bars and rates. However a session arrives, one refit
+     * puts every drone at its span and a second changes nothing.
+     */
+    @Test
+    fun `refit settles any grid in one pass and never touches a non-drone track`() {
+        val r = kotlin.random.Random(20260925)
+        repeat(300) { n ->
+            val rate = listOf(22_050, 44_100, 48_000, 96_000)[r.nextInt(4)]
+            val bars = Session.VALID_BARS[r.nextInt(Session.VALID_BARS.size)]
+            var s = SessionBuilder.empty(rate, bpm = (40 + r.nextInt(181)).toFloat(), barsPerInterval = bars)
+            val tracks = s.tracks.mapIndexed { t, track ->
+                when (r.nextInt(3)) {
+                    // A drone sliced for some other tempo: any span, which refit must correct.
+                    0 -> {
+                        val of = DroneFit.SPANS[r.nextInt(DroneFit.SPANS.size)]
+                        track.copy(name = "D$t", chain = DroneFit.slices(recipe, r.nextInt(128), of))
+                    }
+                    1 -> track.copy(name = "L$t", chain = listOf(LoopBlock("t$t.wav")))
+                    else -> track
+                }
+            }
+            s = s.copy(tracks = tracks)
+            val once = DroneFit.refit(s)
+            assertSame(once, DroneFit.refit(once), "case $n: a second refit changed something")
+            for (t in s.tracks.indices) {
+                val before = s.tracks[t]
+                val after = once.tracks[t]
+                val drone = DroneFit.droneOf(before)
+                if (drone == null) {
+                    assertSame(before, after, "case $n track $t: not a drone, but refit touched it")
+                } else {
+                    val span = DroneFit.spanFor(drone.rootMidi, once)
+                    assertEquals(span, after.chain.size, "case $n track $t")
+                    after.chain.forEachIndexed { i, b -> assertEquals(DroneBlock(recipe, drone.rootMidi, i, span), b) }
+                }
+            }
+        }
+    }
 }

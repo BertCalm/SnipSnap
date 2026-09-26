@@ -108,4 +108,72 @@ class SynthCommandTest {
         assertTrue(refusal("RESIN", "BASS", "--drone", "--bars", "3") != null)
         assertTrue(refusal("RESIN", "BASS", "--drone", "--bpm", "300") != null)
     }
+
+    /**
+     * Hostile values for every flag the drone and the held instrument grew,
+     * through the real front door (Cli.run, which turns a stray exception
+     * into a generic exit 1). A bad flag is a person's typo, not a bad file:
+     * it must be refused as one, exit 2 with the flag named, never the
+     * catch-all, never an exception.
+     */
+    @Test
+    fun `hostile drone and instrument flags are refused by name`() {
+        val dir = File.createTempFile("synthhostile", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            // A cheap valid drone the bad flag rides on: LEAD A3, one short bar.
+            val base = listOf("synth", "RESIN", "LEAD", "--out", dir.path)
+            val drone = base + listOf("--drone", "--root", "A3", "--bpm", "220")
+            val cases: List<Pair<String, List<String>>> = listOf(
+                "--root" to listOf("", "Z9", "H2", "A1000", "C-2", "G#9", "A", "1", "A1.5", "A#b1", "\u0000"),
+                "--motion" to listOf("", "NaN", "-0.01", "1.0001", "1e9", "Infinity", "-Infinity", "x"),
+                "--rate" to listOf("", "0", "3", "-1", "1.0", "2147483648", "four"),
+                "--bpm" to listOf("", "NaN", "39.9", "220.1", "1e40", "-90", "fast"),
+                "--bars" to listOf("", "0", "3", "16", "-1", "1.0"),
+                "--loop" to listOf("", "0", "17", "-1", "999999999999", "1.5"),
+                "--preset" to listOf("", "0", "-1", "999", "1.5", "one"),
+            )
+            for ((flag, values) in cases) for (v in values) {
+                val args = drone.filterIndexed { i, a -> !(a == flag || (i > 0 && drone[i - 1] == flag)) } + listOf(flag, v)
+                val out = ByteArrayOutputStream()
+                val err = ByteArrayOutputStream()
+                val code = Cli.run(args.toTypedArray(), PrintStream(out, true), PrintStream(err, true))
+                val said = err.toString()
+                assertEquals(2, code, "$flag '$v': exit $code, stderr: $said")
+                assertTrue(flag.removePrefix("--") in said, "$flag '$v' refused without naming it: $said")
+                assertTrue("Exception" !in said, "$flag '$v' leaked an exception: $said")
+            }
+            // The held instrument's own two, on the same terms.
+            val held = base + listOf("--instrument")
+            for (flag in listOf("--attack", "--release")) for (v in listOf("", "NaN", "-1", "0", "1e9", "Infinity", "slow")) {
+                val err = ByteArrayOutputStream()
+                val code = Cli.run((held + listOf(flag, v)).toTypedArray(), PrintStream(ByteArrayOutputStream(), true), PrintStream(err, true))
+                val said = err.toString()
+                assertEquals(2, code, "$flag '$v': exit $code, stderr: $said")
+                assertTrue("Exception" !in said, "$flag '$v' leaked an exception: $said")
+            }
+            assertEquals(0, dir.listFiles()!!.size, "a refused run wrote something")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `odd but valid drone flags render a drone that reads back`() {
+        val dir = File.createTempFile("synthodd", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            // Spellings a person might type that mean something real.
+            for ((flag, v) in listOf("--root" to "a3", "--root" to " A3 ", "--root" to "Bb3", "--motion" to "0", "--motion" to "1", "--motion" to "-0")) {
+                dir.listFiles()!!.forEach { it.delete() }
+                val args = arrayOf("synth", "RESIN", "LEAD", "--out", dir.path, "--drone", "--bpm", "220") + arrayOf(flag, v)
+                val err = ByteArrayOutputStream()
+                val code = Cli.run(args, PrintStream(ByteArrayOutputStream(), true), PrintStream(err, true))
+                assertEquals(0, code, "$flag '$v': $err")
+                val wav = dir.listFiles { f -> f.extension == "wav" }!!.single()
+                val snip = com.snipsnap.audio.WavReader.read(wav)
+                assertTrue(snip.frameCount > 0 && snip.samples.all { it.isFinite() }, "$flag '$v' wrote a broken WAV")
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }

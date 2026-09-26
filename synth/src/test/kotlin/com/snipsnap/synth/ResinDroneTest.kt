@@ -204,4 +204,34 @@ class ResinDroneTest {
         println("drone cost: %.2f s for %.2f s of loop, %.3f s per rendered second, ~%.0f MB live after".format(cpu, frames.toDouble() / rate, perSecond, used))
         assertTrue(perSecond < 1.0, "a drone costs $perSecond s per rendered second")
     }
+
+    @Test
+    fun `a render nobody wants any more stops, fast`() {
+        val frames = 4 * interval(44_100)
+        var asked = 0
+        val t0 = System.nanoTime()
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            ResinDrone.render(ResinDrone.Spec(ResinVoice.BASS, emptyMap(), 0.5f, 1), 33, frames, 44_100) { ++asked > 3 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        // Four checks is ~0.8 s of audio at 4x; the whole drone is ~13 s.
+        assertTrue(ms < 1_000, "a cancelled render ran on for ${ms}ms")
+        assertEquals(4, asked)
+    }
+
+    @Test
+    fun `a render stops when its thread is interrupted`() {
+        var thrown: Throwable? = null
+        val t = Thread {
+            thrown = runCatching {
+                ResinDrone.render(ResinDrone.Spec(ResinVoice.BASS, emptyMap(), 0.5f, 1), 33, 8 * interval(44_100), 44_100)
+            }.exceptionOrNull()
+        }
+        t.start()
+        Thread.sleep(200)
+        t.interrupt()
+        t.join(5_000)
+        assertTrue(!t.isAlive, "the render ignored the interrupt")
+        assertTrue(thrown is java.util.concurrent.CancellationException, "expected a cancellation, got $thrown")
+    }
 }

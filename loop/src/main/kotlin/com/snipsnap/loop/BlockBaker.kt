@@ -42,11 +42,17 @@ object BlockBaker {
      * On the already-fits path, the returned [Snip] aliases the [SampleSource]'s
      * own `FloatArray` with no copy — a caller must not mutate it in place.
      */
-    fun bake(block: Block, session: Session, source: SampleSource): Snip = when (block) {
+    fun bake(
+        block: Block,
+        session: Session,
+        source: SampleSource,
+        /** Asked by a drone's render while it runs; see [SampleSource.drone]. Other blocks never ask. */
+        cancelled: () -> Boolean = { false },
+    ): Snip = when (block) {
         is LoopBlock -> bakeLoop(block, session, source)
         is PatternBlock -> bakePattern(block, session, source)
         is SilenceBlock -> silence(session)
-        is DroneBlock -> bakeDrone(block, session, source)
+        is DroneBlock -> bakeDrone(block, session, source, cancelled)
     }
 
     /**
@@ -55,17 +61,24 @@ object BlockBaker {
      * and a fade would *make* the seam it exists to hide. A render that is
      * missing or the wrong length is silence, not a throw, for the reason a
      * missing file is.
+     *
+     * Sliced before it is made stereo: a drone can be tens of seconds, and
+     * widening the whole of it to cut out one interval would allocate the
+     * entire drone again, twice over, for every slice.
      */
-    private fun bakeDrone(block: DroneBlock, session: Session, source: SampleSource): Snip {
+    private fun bakeDrone(block: DroneBlock, session: Session, source: SampleSource, cancelled: () -> Boolean): Snip {
         val target = session.intervalFrames
-        val whole = source.drone(block.recipe, block.rootMidi, block.of.toLong() * target, session.sampleRate)
+        val whole = source.drone(block.recipe, block.rootMidi, block.of.toLong() * target, session.sampleRate, cancelled)
             ?: return silence(session)
-        if (whole.sampleRate != session.sampleRate || whole.frameCount.toLong() != block.of.toLong() * target) {
+        if (whole.sampleRate != session.sampleRate || whole.frameCount.toLong() != block.of.toLong() * target ||
+            whole.channels !in 1..2
+        ) {
             return silence(session)
         }
-        val stereo = toStereo(whole)
-        val from = block.slice * target * 2
-        return Snip(stereo.samples.copyOfRange(from, from + target * 2), 2, session.sampleRate)
+        val ch = whole.channels
+        val from = block.slice * target * ch
+        val piece = Snip(whole.samples.copyOfRange(from, from + target * ch), ch, session.sampleRate)
+        return toStereo(piece)
     }
 
     private fun bakeLoop(block: LoopBlock, session: Session, source: SampleSource): Snip {
