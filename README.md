@@ -256,6 +256,9 @@ keeps its harmonics. Past the line of tidy, the edge is built in: the
 modulator dives into place in the strike (a zap), the fold feeds back into
 the modulator (a snarl, held short of noise), the fold's symmetry turns
 over across the note, and small seeded jitters keep a held note moving.
+Under it all sits the oomph: every strike thumps (it starts sharp and
+drops onto the note in a few milliseconds) and a clean sine carries the
+note itself under the fold.
 WANDER nudges fold, decay and WARP per note from a seed the recipe itself
 carries, so a kit still regenerates to the bit.
 BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG

@@ -69,7 +69,8 @@ pentatonic up A01–A08, then DRIP (A09–A12), GONG (A13–A14) and FLARE
 (A15–A16) presets. Regenerate with `./gradlew :synth:generateTideKit`.
 Things to confirm: the bongo rows play **in tune and ascending**, each hit
 gets darker as it fades (brightness and level close together — the whole
-point of the engine), each strike has its zap without losing the note,
+point of the engine), each strike has its zap and its thump without
+losing the note, the FLARE pads have weight under the fold,
 and no pad has a click, a buzz of aliasing on the high DRIPs, or an early
 cutoff.
 

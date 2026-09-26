@@ -146,6 +146,37 @@ object Tide {
     /** TILT and WOBBLE's bias reach full strength at this FOLD, and are silent at FOLD 0: a clean note stays a sine. */
     private const val EDGE_FOLD_IN = 0.1f
 
+    // The oomph, chosen at the character audition ("g OOMPH", THUMP and
+    // BODY; DRIVE, CLICK and PUNCH were heard and left out). Built in,
+    // like the edge: GONG and FLARE have no room for an eighth macro.
+
+    /**
+     * THUMP: the strike starts this many semitones sharp and falls onto
+     * the note with time constant [THUMP_SECONDS], carrier and modulator
+     * together, the way a drum head's pitch drops as it is hit: a knock.
+     * Gone within 20 ms (13 cents left there), before anything reads the pitch.
+     */
+    private const val THUMP_SEMITONES = 7f
+    private const val THUMP_SECONDS = 0.005f
+
+    /**
+     * BODY: a clean sine on the carrier's phase, this loud against the
+     * gate's output, under the same VCA. The fold spreads a bright voice's
+     * energy up the spectrum and leaves the note itself thin; measured
+     * over the first 150 ms, SNARL FLARE's fundamental sat 28.3 dB under
+     * the whole and FOLD BASS's 17.7; with BODY, 6.6 and 5.6. The struck
+     * voices, whose fundamental already carried them, move under 1 dB.
+     *
+     * A fold and a RATIO above 1 can turn the note's own fundamental
+     * upside down, and a sine added blind then cancels it: REED STAB
+     * (RATIO 3) lost 2 dB of note and HOLLOW HORN 5. So BODY takes the
+     * note's polarity, once per note: the sign of the whole note's
+     * correlation with BODY's own sine, so it always adds to the note.
+     * Once, not tracked: a running read of a fundamental 28 dB under the
+     * fold (SNARL FLARE) wavers, and a BODY that follows it wavers too.
+     */
+    private const val BODY = 0.5f
+
     /**
      * How far past the note the brightest corner may reach, Hz. The fold's
      * drive times the phase modulation's bandwidth sets how high the
@@ -412,6 +443,8 @@ object Tide {
         val dcPole = exp(-2.0 * PI * 20.0 / rate).toFloat()
         var dcIn = 0f
         var dcOut = 0f
+        // BODY's sine through the VCA, added once the note's polarity is known.
+        val body = FloatArray(out.size)
         for (i in out.indices) {
             val t = i.toFloat() / rate
             val c = gate.next()
@@ -422,9 +455,10 @@ object Tide {
             } else {
                 1f
             }
-            carrier += hz * chirp / rate
+            val thump = 2f.pow(THUMP_SEMITONES * exp(-t / THUMP_SECONDS) / 12f)
+            carrier += hz * chirp * thump / rate
             val sweep = 1f + SWEEP_DEPTH * exp(-t / SWEEP_SECONDS)
-            mod += hz * chirp * ratio * sweep / rate
+            mod += hz * chirp * thump * ratio * sweep / rate
             val step = (t * WOBBLE_HZ).toInt().coerceAtMost(wobbleSteps[0].size - 1)
             for (k in 0 until 3) wobble[k] += wobbleK * (wobbleSteps[k][step] - wobble[k])
             // Held under CROSS_LOOP by last sample's index and drive: a sample late, harmlessly.
@@ -445,8 +479,14 @@ object Tide {
             val cFilter = if (filterCurve == 1f || c <= 0f) c else exp(filterCurve * kotlin.math.ln(c))
             val cutoff = (closedHz * exp(span * cFilter)).coerceAtMost(cutoffCeiling)
             filter.process(dcOut, cutoff, damping)
-            out[i] = if (c <= 0f) 0f else filter.low * exp(GAIN_CURVE.toFloat() * kotlin.math.ln(c))
+            val vca = if (c <= 0f) 0f else exp(GAIN_CURVE.toFloat() * kotlin.math.ln(c))
+            out[i] = filter.low * vca
+            body[i] = sin(2.0 * PI * carrier).toFloat() * vca
         }
+        var correlation = 0.0
+        for (i in out.indices) correlation += out[i] * body[i]
+        val polarity = if (correlation < 0.0) -BODY else BODY
+        for (i in out.indices) out[i] += polarity * body[i]
         return out
     }
 

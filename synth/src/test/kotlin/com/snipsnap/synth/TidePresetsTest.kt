@@ -14,9 +14,9 @@ import kotlin.test.assertTrue
  * is what `SynthScreen`'s BONGO and DRIP mapping mirrors (the FATHOM
  * rule): a real measurement, not a guess.
  *
- * Measured with the edge in (GLOW, held notes, SWEEP, CROSS, TILT,
- * WOBBLE): BONGO lands 10 PERC, DRIP 9 PERC + 1 SNARE (CRYSTAL); the
- * strike's zap reads more struck than before (8 and 8). GONG and FLARE
+ * Measured with the edge and the oomph in (GLOW, held notes, SWEEP,
+ * CROSS, TILT, WOBBLE, THUMP, BODY): BONGO and DRIP land 10 PERC each;
+ * the zap and the thump read more struck than before (8 and 8). GONG and FLARE
  * are notes DECAY can hold, and the classifier reads them by length alone
  * (GONG: 4 LOOP, 4 SNARE, 2 PERC; FLARE: 8 PERC, 2 LOOP), so they are
  * TONAL by design, RESIN's rule, and held to ringing harmonic.

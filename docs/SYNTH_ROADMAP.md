@@ -1224,6 +1224,47 @@ The classifier now reads BONGO as PERC for all ten presets (was 8) and
 DRIP for nine (was 8): the zap reads more struck. GONG and FLARE are
 TONAL as before.
 
+### Revision — the oomph, 2026-09-26
+
+The character stages parked after GLOW were ported onto the engine as it
+stands (GLOW and the edge in) and auditioned one at a time and in pairs,
+on WOOD BONGO, LOW CONGA, RAIN DRIP, TEMPLE GONG, SNARL FLARE and FOLD
+BASS. The pick was "g OOMPH": THUMP and BODY. DRIVE (saturation), CLICK
+(a noise transient) and PUNCH (a transient shaper) were heard and left
+out. Both are built in, like the edge: GONG and FLARE have no room for
+an eighth macro.
+
+- **THUMP.** The strike starts seven semitones sharp and falls onto the
+  note with a 5 ms time constant, carrier and modulator together, the way
+  a drum head's pitch drops as it is hit. At 20 ms 13 cents remain, and
+  every pitch reading starts later than that. BONGO's top note reads
+  623 Hz over its first 1-8 ms for a 523 Hz note.
+- **BODY.** A clean sine on the carrier's phase, half the gate's level,
+  under the same VCA: the note itself under the fold. The fold spreads a
+  bright voice's energy up the spectrum and leaves the note thin. The
+  fundamental's share of the first 150 ms, across FLARE's ten presets:
+  −2.7 to −28.3 dB without BODY (SNARL FLARE the worst), −1.3 to −6.6
+  with it. The struck voices, whose note already carried them, move
+  under 1 dB.
+- **BODY takes the note's polarity, once per note.** A fold and a RATIO
+  above 1 can turn the note's fundamental upside down, and a sine added
+  blind then cancels it: REED STAB (RATIO 3) lost 2 dB of note and
+  HOLLOW HORN 5. A running read of the polarity was tried and dropped:
+  under a fundamental 28 dB down (SNARL FLARE) it wavered, and BODY with
+  it (SNARL FLARE fell to −12 dB, OCTAVE GROWL to −19). The sign of the
+  whole note's correlation with BODY's sine, taken after the loop, is
+  steady and always adds.
+
+What moved in the tests: "brightness closes with the level" asked the
+strike to be twice as bright as the tail. BODY's sine under the strike
+pulls its centroid toward the note, most on DRIP (C6, the least fold
+room): 1.9 times its tail with BODY, 2.6 without. The test now holds what
+the gate actually does, more strictly: the tail closes to the note itself
+(within 10%), and the strike is at least 1.5 times brighter. New tests:
+the strike starts sharp and lands; every FLARE preset's note sits within
+8 dB of the whole. The classifier reads BONGO and DRIP as PERC on all ten
+presets each.
+
 ### Not doing
 
 A patchbay or patch cables (rule 1: presets and macros, never modular);
