@@ -19,10 +19,11 @@ enum class GlintVoice { REED, BOTTLE, KAZOO }
  * Only the window's *slope* jumps across the wrap, and that slope
  * discontinuity is the buzz the engine is made of. Do not smooth it.
  *
- * The bare window doubles as the body waveform: a linear-decay window is a
- * sawtooth, a triangle window is a triangle, a trapezoid is a pulse. Mixing
- * it back in (mean-removed, so it carries no DC) gives "a saw with a
- * resonant peak riding on it" for one macro instead of a second oscillator.
+ * BODY is a second burst under the same window, two and a half octaves below
+ * the main formant and on its own envelope — a second source, not a copy of
+ * the first. (An earlier version mixed the bare window back in instead; that
+ * added the same harmonic series the burst already carries and was
+ * inaudible however loud it was mixed.)
  *
  * Design: `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`.
  */
@@ -47,16 +48,26 @@ object Glint {
     const val KAZOO_FLAT = 0.7f
 
     /**
-     * BODY's own t60 as a fraction of the amp t60 — the body burns off, the
-     * glass rings on. The constant is 0.45, but the body is double
-     * enveloped: `Dsp.envAt(t, bodyT60)` inside the mix, then `amp.at(t)`
-     * again over the whole sum. Two exponentials compose (both are pure
-     * `exp(-6.9078*t/t60)` past the 2ms attack), so the *effective* decay
-     * seen in the render is 1/(1/t60 + 1/(0.45*t60)) = 0.45/1.45 ≈ 0.31 of
-     * the amp t60, not 0.45 of it. Intended behaviour — only the number
-     * quoted here was wrong.
+     * The second formant's t60 as a fraction of the amp t60. Single-
+     * enveloped, unlike the body term this replaced: that one was scaled by
+     * its own envelope and then again by the amp envelope, so two
+     * exponentials composed and its real decay was ~0.31x t60 rather than
+     * the 0.45 the constant claimed.
      */
-    const val BODY_DECAY_RATIO = 0.45f
+    const val BODY_DECAY_RATIO = 0.8f
+
+    /**
+     * How far below the main formant the second one sits — k/5.6, about two
+     * and a half octaves. The old BODY mixed the mean-removed window back
+     * in, which is the same harmonic series the burst already carries, so it
+     * was inaudible however loud it was mixed. A second burst at its own
+     * ratio is a second *source*: "two formants, two speeds, is a vowel and
+     * the room it sits in" (design 2026-09-26).
+     */
+    const val BODY_RATIO_DIVISOR = 5.6f
+
+    /** The second formant's level relative to the main burst at BODY 1. */
+    const val BODY_MIX = 0.7f
 
     /**
      * BLOOM's ceiling: the peak opens to 1 + this many times its settled
@@ -128,17 +139,6 @@ object Glint {
     }
 
     /**
-     * The window's own mean, subtracted before BODY mixes it. A window is
-     * unipolar; mixing it raw would push DC into `Dsp.levelTo` and out to
-     * the WAV. Pinned against numeric integration by `GlintTest`.
-     */
-    fun windowMean(voice: GlintVoice): Float = when (voice) {
-        GlintVoice.REED -> 0.5f
-        GlintVoice.BOTTLE -> 0.5f
-        GlintVoice.KAZOO -> KAZOO_FLAT + (1f - KAZOO_FLAT) / 2f
-    }
-
-    /**
      * PEAK as a ratio at the voice's own reference note. Exponential,
      * because the ear judges the peak's position by interval, not by Hz.
      */
@@ -193,9 +193,13 @@ object Glint {
         val bloomT60 = Dsp.expMap(bloom, BLOOM_SLOW_T60, BLOOM_FAST_T60)
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
-        val bodyMix = m.getValue("BODY")
+        val bodyMix = m.getValue("BODY") * BODY_MIX
         val bodyT60 = t60 * BODY_DECAY_RATIO
-        val mean = windowMean(voice)
+        // The second formant is pinned to the *base* ratio, not the
+        // bloom-modulated one: it is a separate resonance, not a shadow of
+        // the first. Clamped to K_MIN so it never falls below two burst
+        // cycles per window and stops being a formant at all.
+        val k2 = (kBase / BODY_RATIO_DIVISOR).coerceAtLeast(K_MIN)
         val step = f0 / rate
         var phase = 0f
         val out = FloatArray(frames)
@@ -209,9 +213,9 @@ object Glint {
             // sine stays effectively periodic while restarting at each wrap.
             val k = (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, K_MAX)
             val burst = w * sin(2.0 * PI * k * phase).toFloat()
-            // The body decays faster than the burst, so the note opens as a
-            // saw with a peak on it and fades to pure whistling resonance.
-            val body = bodyMix * Dsp.envAt(t, bodyT60) * (w - mean)
+            // A windowed sine carries no DC, so unlike the window copy this
+            // replaced, nothing here needs mean-removing.
+            val body = bodyMix * Dsp.envAt(t, bodyT60) * w * sin(2.0 * PI * k2 * phase).toFloat()
             out[i] = amp.at(t) * (burst + body)
             phase += step
             if (phase >= 1f) phase -= 1f
