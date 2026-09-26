@@ -195,6 +195,12 @@ object Glint {
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val bodyMix = m.getValue("BODY") * BODY_MIX
         val bodyT60 = t60 * BODY_DECAY_RATIO
+        // Its own envelope, not the amp envelope times another one. The term
+        // this replaced was scaled twice — by its own decay and then by the
+        // amp's — so two exponentials composed and its real decay was ~0.31x
+        // t60 rather than the constant it claimed. One envelope now, with
+        // the same 2 ms attack so the onset does not click.
+        val bodyEnv = Dsp.Env(attackSeconds = 0.002f, decay2T60 = bodyT60)
         // The second formant is pinned to the *base* ratio, not the
         // bloom-modulated one: it is a separate resonance, not a shadow of
         // the first. Clamped to K_MIN so it never falls below two burst
@@ -215,8 +221,8 @@ object Glint {
             val burst = w * sin(2.0 * PI * k * phase).toFloat()
             // A windowed sine carries no DC, so unlike the window copy this
             // replaced, nothing here needs mean-removing.
-            val body = bodyMix * Dsp.envAt(t, bodyT60) * w * sin(2.0 * PI * k2 * phase).toFloat()
-            out[i] = amp.at(t) * (burst + body)
+            val body = bodyMix * w * sin(2.0 * PI * k2 * phase).toFloat()
+            out[i] = amp.at(t) * burst + bodyEnv.at(t) * body
             phase += step
             if (phase >= 1f) phase -= 1f
         }

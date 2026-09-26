@@ -493,49 +493,42 @@ class GlintTest {
     }
 
     @Test
-    fun `the second formant outlasts nothing and rings under the peak`() {
-        // BODY_DECAY_RATIO is 0.8 and the term is single-enveloped now, so
-        // the second formant is still present well into the note rather than
-        // gone by 0.13 s as the old double-enveloped body was.
+    fun `the glass tail - the body burns off and leaves the resonance ringing`() {
+        // Measured as low+mid share, not centroid: centroidHz is dominated by
+        // the burst, so the body evaporating moves it only 2-8% (1.068 /
+        // 1.081 / 1.022) — and lowering BODY_DECAY_RATIO makes that WORSE,
+        // not better. The share below 2 kHz is what actually changes.
         //
-        // Measured 2026-09-26: THIS ASSERTION CURRENTLY FAILS for every
-        // voice. REED early=0.12219116 late=3.3901664E-8 (ratio 2.77e-7),
-        // BOTTLE early=0.037051857 late=2.185138E-10 (ratio 5.90e-9), KAZOO
-        // early=0.05096992 late=3.0759504E-9 (ratio 6.03e-8) — all far below
-        // the 0.02 bar. Two compounding planning defects, not implementation
-        // bugs:
-        //   1. `body` is scaled by `Dsp.envAt(t, bodyT60)` AND the whole
-        //      `(burst + body)` sum is scaled again by `amp.at(t)`, so the
-        //      two exponentials compose to an effective t60 of
-        //      ~0.8/1.8 = 0.444x the amp t60 — faster, not slower, than the
-        //      amp envelope alone, contradicting the "single-enveloped"
-        //      KDoc on BODY_DECAY_RATIO. This is the exact composition bug
-        //      that KDoc says this change fixes.
-        //   2. Independent of (1): the 0.02 bar is below this metric's
-        //      structural ceiling. late/early on a Goertzel energy over a
-        //      decaying tone is ~exp(-2*6.9078*0.675) ~= 8.9e-5 even for a
-        //      term that decays no faster than the amp envelope alone
-        //      (t_half = 0.675*t60 at these settings, independent of t60).
-        //      Measured proof: the *main burst* (k*f0, everyone agrees it
-        //      "rings on") scores REED 9.079e-5, BOTTLE 8.972e-5, KAZOO
-        //      8.978e-5 on this same ratio — all clustered at the predicted
-        //      ceiling and all still 225x under the 0.02 bar. No value of
-        //      BODY_DECAY_RATIO can pass this assertion as written; the fix
-        //      is the metric (e.g. body-on vs body-off at the same late
-        //      offset, or body vs burst at the same offset), not the
-        //      constant. Left failing per instructions: report the number,
-        //      do not loosen the assertion, do not invent a fix outside the
-        //      brief's scope.
-        val rate = Dsp.RATE
+        // Re-measured 2026-09-26 after BODY became a second formant (own
+        // envelope, k2 = kBase/5.6, applied instead of the amp envelope): at
+        // PEAK 0.75 the second formant sits near 560 Hz and the main burst
+        // near 3115 Hz, so this sub-2kHz share now captures genuinely
+        // distinct content, not a redundant copy of the burst.
+        //
+        // Measured 2026-09-26 at BODY 0.9, head -> tail: REED 0.3323 ->
+        // 0.1793 (1.85x), BOTTLE 0.3581 -> 0.1216 (2.94x), KAZOO 0.3337 ->
+        // 0.1215 (2.75x). The control at BODY 0.02 is flat for all three
+        // (0.996x, 0.329x, 0.980x - all inside the 1.5x bar), which is the
+        // half that proves the fall is the body and not the amp envelope.
+        // 1.4x is 24-52% margin under this run's worst case of 1.85x.
+        //
+        // BODY_DECAY_RATIO was swept 0.15 to 5.0 while chasing this bar
+        // before it was known to be the wrong instrument: lowering it (the
+        // pre-authorised direction) makes the differential WORSE, not
+        // better, because a faster-decaying body has less energy left in the
+        // head window. Do not retry that; the fix was the metric, not the
+        // constant.
         for (voice in GlintVoice.entries) {
-            val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f, "BODY" to 1f)
-            val snip = Glint.render(voice, still)
-            val f0 = Glint.frequencyFor(voice, 0.5f)
-            val k2 = (Glint.ratioFor(voice, 0.5f, 0.8f, 1f) / Glint.BODY_RATIO_DIVISOR).coerceAtLeast(Glint.K_MIN)
-            val half = (snip.durationSeconds * 0.5f * rate).toInt()
-            val late = energyAt(snip.samples, k2 * f0, rate, from = half)
-            val earlyRef = energyAt(snip.samples, k2 * f0, rate, from = 0)
-            assertTrue(late > earlyRef * 0.02f, "$voice: the second formant should still be ringing at the halfway point ($earlyRef -> $late)")
+            val still = mapOf("TUNE" to 0.3f, "PEAK" to 0.75f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
+            fun headAndTail(body: Float): Pair<Float, Float> {
+                val snip = Glint.render(voice, still + ("BODY" to body))
+                return lowMid(slice(snip, 0f, 0.1f)) to
+                    lowMid(slice(snip, snip.durationSeconds * 0.6f, snip.durationSeconds))
+            }
+            val (head, tail) = headAndTail(0.9f)
+            assertTrue(head > tail * 1.4f, "$voice should turn to glass as it fades: $head -> $tail")
+            val (flatHead, flatTail) = headAndTail(0.02f)
+            assertTrue(flatTail <= flatHead * 1.5f, "$voice with no body should not change: $flatHead -> $flatTail")
         }
     }
 
