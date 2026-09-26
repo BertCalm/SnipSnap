@@ -163,15 +163,27 @@ same way `filterDelay` is computed from the low-pass pole, and the
 
 The sitar's tumba (gourd) and tabli (soundboard) are its body. The Phase 2
 rule stands: **every Hz in the body table comes from a source the verifier
-opened.** Before the plan is written, one researcher and one verifier run
-in the form of `2026-09-25-pluck-depth-body-research.md`, on the sitar
-alone, and the plan carries only confirmed rows into `bodyFor(SITAR)`. If
-nothing reachable confirms, SITAR starts with the two-mode minimum the
-sources allow, as koto did, and the note records what stayed unsupported.
+opened.** The research ran before this section was final
+(`2026-09-26-pluck-sitar-body-research.md`, 2026-09-26) and came back with
+**zero body modes**: six sources opened, all about the string, the bridge
+or the sympathetic strings; the four candidates that plausibly hold a
+measured body mode — above all Limkar & Chandekar's 2022 modal analysis in
+the *Journal of Vibration and Control* — sit behind paywalls no
+policy-compliant route opened. No opened source gives the gourd's
+dimensions either, so a Helmholtz frequency cannot be derived from a cited
+geometry.
 
-The body is driven, matched and added exactly as Phase 2's bodies are
-(`withBody`: first-difference drive, RMS match over the string, zero-padded
-tail). The BODY macro's reach (0–3× the string) is unchanged.
+So SITAR starts **without a body table.** `bodyFor(SITAR)` is empty and
+`withBody` returns the string unchanged; the BODY macro is inert on this
+voice and its KDoc says why. The jawari, the sympathetic strings and the
+stiffness carry the identity at the first gate, and the audition renders
+the voice at BODY 0 only. The body arrives in a follow-up inside this
+phase the moment a source is read — the paywalled paper, if Josh can open
+it through an institution or a purchase, is the single most likely source
+of a full modal table — and then the rows enter exactly as Phase 2's did:
+driven by the first difference, RMS-matched over the string, zero-padded
+tail, BODY's reach 0–3× the string. The classification and BODY tests
+enumerate voices with a table, so an empty table is skipped, not failed.
 
 ### Presets
 
@@ -244,16 +256,17 @@ per axis, each at the default note and the root:
 
 - the jawari drive at three levels (soft, the constant, hard);
 - the sympathetic level at two (the default and DOUBLE 1);
-- BODY at three amounts (0, default, 1);
-- dispersion on and off, and on KOTO and HARP the same pair.
+- dispersion on and off, and on KOTO and HARP the same pair;
+- BODY at 0 only, until a source gives the voice a table.
 
 The constants the chips choose ship. A second round, if needed, follows
 the Phase 2 pattern: last time's clip beside the new one.
 
 ## Sequence
 
-1. Research note: the gourd and soundboard, sourced and verified.
-2. Plan: written from this spec and the note, with the confirmed rows.
+1. Research note: done 2026-09-26, zero body modes reachable; the body
+   waits on a source (see The gourd body).
+2. Plan: written from this spec and the note, with no body table.
 3. Implementation in tasks, each gated by review; the audition set last.
 4. Josh's gate; a second round if the chips ask for one.
 5. Merge.
