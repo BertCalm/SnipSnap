@@ -476,9 +476,10 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>NYLON, KOTO and HARP carry a raised BODY default now. Hear them against your own memory of the last set: keep them, or back off.</p>
+    <p>NYLON, KOTO and HARP carry a raised BODY default now. Each card opens with the last set's default and the new one, the only difference being BODY: keep the new one, or back off.</p>
     <p>BANJO's pot and head fundamental lead now. Four notes at the new default - G3, B3, D4, G4 - plus the ugly end (BODY 1) at two of them, G3 and G4. Does it read as banjo away from the root now?</p>
-    <p>The kit's kalimba pad, five ways: as it is, brighter twice, and an octave up twice. Which one is a kalimba?</p>
+    <p>The kit's kalimba pad, five ways: as it is, brighter twice, and an octave up twice. Which one is a kalimba? These are rendered dry, without the kit's tape wobble.</p>
+    <p>The Phase 2 cards further down are the last set re-rendered at the new defaults and the new banjo body, for reference: you have chipped them already. The kit seam's nylon pads sit at the new default too.</p>
   </div>
 
   <div id="voices"></div>
@@ -552,7 +553,8 @@
   // p2b follow-up groups: the raised string defaults, BANJO across four
   // notes, and the kit's kalimba pad five ways.
   var FOLLOWUP_STRING_GROUPS = [
-    { label: 'NEW DEFAULT', key: true, clips: [
+    { label: 'LAST DEFAULT AGAINST NEW', key: true, clips: [
+      ['p2b_default_old', 'LAST SET' + String.fromCharCode(0x27) + 'S DEFAULT', 'BODY as the last set had it; everything else the same'],
       ['p2b_default_new', 'NEW DEFAULT', 'the raised default at the usual note'],
       ['p2b_default_new_root', 'NEW DEFAULT AT THE ROOT', 'the lowest note']
     ]}

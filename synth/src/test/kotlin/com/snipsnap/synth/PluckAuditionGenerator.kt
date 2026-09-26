@@ -79,6 +79,11 @@ object PluckAuditionGenerator {
                 WavWriter.write(File(dir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
                 count++
             }
+            // The last set's default as an explicit macro, so the raised
+            // default is heard against it and not against memory: BODY is
+            // the only difference between the two clips.
+            val lastBody = mapOf(PluckVoice.NYLON to 0.10f, PluckVoice.KOTO to 0.15f, PluckVoice.HARP to 0.10f)
+            write("p2b_default_old", Pluck.render(voice, mapOf("BODY" to lastBody.getValue(voice))))
             write("p2b_default_new", Pluck.render(voice, emptyMap()))
             write("p2b_default_new_root", Pluck.render(voice, mapOf("TUNE" to 0f)))
         }
