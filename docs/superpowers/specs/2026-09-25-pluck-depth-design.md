@@ -153,10 +153,11 @@ voice row, a body table, twelve presets.
   everything else in the table is a shape for the gate.
 - **Defaults, placeholders for the gate:** TUNE 0.3 (D4, 294 Hz), DAMP 0.5
   (banjo notes are short), PICK 0.7, STRIKE 0.25 (fingerpicks near the
-  bridge, `p ≈ 0.06`), BODY 0.6 (a banjo is mostly its head), DOUBLE 0.1.
-  The second gate heard the 5.6 kHz string as "not tinny enough" and the
-  body only at notes where the head sits just above them, so the default
-  note is D4.
+  bridge, `p ≈ 0.06`), BODY 0.20, DOUBLE 0.1. The second gate heard the
+  5.6 kHz string as "not tinny enough" and the body only at notes where the
+  head sits just above them, so the default note is D4. The third gate
+  chose this string over darker and thinner ones; the classifier reads its
+  attack as a snare's, which the test records.
 - **Presets:** twelve, authored like the others and disposable like the
   others. The name is a generic instrument word, allowed by the naming rule.
 - It takes KALIMBA's place in `PluckVoice`; the melodic kit's A07–A11 go to
@@ -465,6 +466,12 @@ saying why.
   - velocity drive against displacement drive on its own wet layer - not
   against a BODY 0 render; whether its head resonance still reads as a
   knock at BODY 1 is the gate's call, not this test's.
+- **Classification (Phase 2, fourth listen)** — `factory defaults
+  classify as percussion, and the banjo may read as a snare` lets BANJO
+  alone read `SNARE` in addition to `PERC`: the classifier has no pitch
+  feature, only the attack window's share of energy above 2 kHz, and the
+  gate-chosen string puts two thirds of its attack there. Every other
+  voice must still read `PERC`.
 - **Determinism** — `is deterministic` stays; seeds change value, not
   behaviour.
 - **Presets** — `PluckPresetsTest` unchanged: clean, non-silent, round-trip,
