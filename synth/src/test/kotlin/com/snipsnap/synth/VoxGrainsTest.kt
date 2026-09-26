@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
@@ -87,7 +88,8 @@ class VoxGrainsTest {
         // note, which is VOX being a pad (the app files VOX as TONAL). What
         // a roll must never be is a kick-shaped thud or unclassifiable mud.
         // Measured at round 1: CHOIR 14 LOOP, 13 SNARE, 3 PERC of 30.
-        for (voice in VoxVoice.entries) {
+        // BEATBOX is a drum kit, where a kick is the point: its own test below.
+        for (voice in listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST)) {
             repeat(30) { seed ->
                 val c = Classifier.classify(Vox.render(voice, Vox.scramble(voice, Random(seed))))
                 assertTrue(c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.UNKNOWN, "$voice roll $seed read ${c.drumClass}")
@@ -127,7 +129,7 @@ class VoxGrainsTest {
         // every voice is a playable hit, so VOX works for drum hits and
         // chops; from 0.8 it holds and reads LOOP, a pad, which is what
         // DECAY's top half is for.
-        for (voice in VoxVoice.entries) {
+        for (voice in listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST)) {
             for (decay in listOf(0f, 0.2f, 0.4f, 0.6f)) {
                 val c = Classifier.classify(Vox.render(voice, mapOf("DECAY" to decay)))
                 assertTrue(c.drumClass in setOf(DrumClass.PERC, DrumClass.SNARE), "$voice at DECAY $decay read as ${c.drumClass}")
@@ -280,6 +282,178 @@ class VoxGrainsTest {
         assertEquals(-1f, cycle.min(), 1e-3f, "the closure is the peak")
         assertTrue(cycle.max() < 0.5f, "the opening is softer than the closure")
         assertTrue(cycle.drop((n * 0.6).toInt()).all { it == 0f }, "the folds rest closed")
+    }
+
+    // ---------- VOX round 2 ----------
+
+    private val singers = listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST)
+
+    private fun onset(c: Vox.Consonant) = c.ordinal / (Vox.Consonant.entries.size - 1f)
+
+    /**
+     * A click is a sudden jump between neighbouring samples. Low-passed at
+     * ~1.5 kHz first (a cluck is a knock or a gap, which reaches down
+     * there; the bright hiss of a breath does not), then the largest step
+     * in the 25 ms around [release] over the RMS step of the vowel after
+     * it. A plain vowel's own start scores 3.5-5.
+     */
+    private fun clickiness(s: Snip, release: Float): Float {
+        val lp = FloatArray(s.frameCount)
+        val k = 1f - kotlin.math.exp(-2f * PI.toFloat() * 1500f / s.sampleRate)
+        var y1 = 0f
+        var y2 = 0f
+        for (i in 0 until s.frameCount) {
+            y1 += k * (s.samples[i * s.channels] - y1)
+            y2 += k * (y1 - y2)
+            lp[i] = y2
+        }
+        fun step(i: Int) = abs(lp[i + 1] - lp[i])
+        val r = (release * s.sampleRate).toInt()
+        var peak = 0f
+        for (i in maxOf(0, r - (0.01f * s.sampleRate).toInt()) until minOf(s.frameCount - 1, r + (0.015f * s.sampleRate).toInt())) peak = maxOf(peak, step(i))
+        val a = r + (0.06f * s.sampleRate).toInt()
+        val b = minOf(s.frameCount - 1, a + (0.05f * s.sampleRate).toInt())
+        var e = 0.0
+        for (i in a until b) e += step(i).toDouble().let { it * it }
+        return peak / kotlin.math.sqrt(e / maxOf(1, b - a)).toFloat()
+    }
+
+    @Test
+    fun `bah, dah, tah and mah open without a cluck`() {
+        // The audition heard b, d and t "clucky". An envelope dropout at the
+        // release, the hum's upper formants switching on in one sample and a
+        // narrow "tok" of a burst were the causes; with the bursts gone and
+        // the mouth opening over 90 ms these measured 2.2-5.5 (ROBOT's "ba"
+        // was 28, CHOIR's 14). H and S are breath and hiss by nature: noise,
+        // not a click, and not measured here.
+        for (voice in singers) for (c in listOf(Vox.Consonant.M, Vox.Consonant.B, Vox.Consonant.D, Vox.Consonant.T)) {
+            val spec = Vox.CONSONANTS.getValue(c)
+            val s = Vox.render(voice, mapOf("VOWEL" to 0.05f, "DECAY" to 0.2f, "BREATH" to 0f, "ONSET" to onset(c)))
+            val click = clickiness(s, spec.closure + spec.voiceDelay)
+            assertTrue(click < 7f, "$voice $c clucks: $click")
+        }
+    }
+
+    @Test
+    fun `each consonant sounds like itself`() {
+        for (voice in singers) {
+            fun say(c: Vox.Consonant) = Vox.render(voice, mapOf("VOWEL" to 0.05f, "DECAY" to 0.5f, "BREATH" to 0f, "ONSET" to onset(c)))
+            val plain = say(Vox.Consonant.NONE)
+            // m: lips shut, a dark hum before the vowel.
+            val m = say(Vox.Consonant.M)
+            val hum = FeatureExtractor.extract(window(m, 0.01f, 0.08f)).centroidHz
+            val vowel = FeatureExtractor.extract(window(plain, 0.03f, 0.1f)).centroidHz
+            assertTrue(hum < vowel * 0.5f, "$voice: m should hum darker than the vowel, $hum Hz vs $vowel Hz")
+            // s: a bright hiss with no note in it.
+            val sHiss = say(Vox.Consonant.S)
+            assertTrue(FeatureExtractor.extract(window(sHiss, 0.03f, 0.13f)).centroidHz > 5_000f, "$voice: s should hiss bright")
+            assertEquals(null, Pitch.detect(window(sHiss, 0.02f, 0.15f), 0f, 0.1f), "$voice: there is no note in an s")
+        }
+        // b and d, with no pops, differ in the closure: d's tongue leaves the
+        // front of the mouth bright. Measured: ROBOT 306 vs 420 Hz, GHOST 361
+        // vs 507 (CHOIR's seven singers blur it, 457 vs 501).
+        for (voice in listOf(VoxVoice.ROBOT, VoxVoice.GHOST)) {
+            fun closure(c: Vox.Consonant): Float {
+                val spec = Vox.CONSONANTS.getValue(c)
+                val s = Vox.render(voice, mapOf("VOWEL" to 0.05f, "DECAY" to 0.5f, "BREATH" to 0f, "ONSET" to onset(c)))
+                return FeatureExtractor.extract(window(s, 0.005f, spec.closure + 0.04f)).centroidHz
+            }
+            val b = closure(Vox.Consonant.B)
+            val d = closure(Vox.Consonant.D)
+            assertTrue(d > b * 1.2f, "$voice: d should open brighter than b, $b Hz vs $d Hz")
+        }
+    }
+
+    @Test
+    fun `a consonant never pulls the note out of tune`() {
+        // ROBOT, the steady voice: every onset lands on the plain note's reading.
+        val plain = Pitch.detect(Vox.render(VoxVoice.ROBOT, mapOf("VOWEL" to 0.05f, "DECAY" to 0.5f, "BREATH" to 0f)), 0.1f, 0.15f)!!.hz
+        for (c in Vox.Consonant.entries) {
+            val spec = Vox.CONSONANTS.getValue(c)
+            val s = Vox.render(VoxVoice.ROBOT, mapOf("VOWEL" to 0.05f, "DECAY" to 0.5f, "BREATH" to 0f, "ONSET" to onset(c)))
+            val got = Pitch.detect(s, spec.closure + spec.voiceDelay + 0.1f, 0.15f)
+            assertNotNull(got, "$c: no note after the consonant")
+            assertEquals(plain, got.hz, plain * 0.01f, "$c moved the note")
+        }
+    }
+
+    @Test
+    fun `BEATBOX is filed by its hit, and the singers stay notes`() {
+        fun cls(hit: VoxBeatbox.Hit) = Vox.drumClassFor(VoxVoice.BEATBOX, mapOf("HIT" to hit.ordinal / (VoxBeatbox.Hit.entries.size - 1f)))
+        assertEquals(DrumClass.KICK, cls(VoxBeatbox.Hit.KICK))
+        for (h in listOf(VoxBeatbox.Hit.PF, VoxBeatbox.Hit.PSH, VoxBeatbox.Hit.K)) assertEquals(DrumClass.SNARE, cls(h), "$h")
+        for (h in listOf(VoxBeatbox.Hit.TS, VoxBeatbox.Hit.T)) assertEquals(DrumClass.HAT_CLOSED, cls(h), "$h")
+        assertEquals(DrumClass.HAT_OPEN, cls(VoxBeatbox.Hit.TSS))
+        assertEquals(DrumClass.PERC, cls(VoxBeatbox.Hit.RIM))
+        for (voice in singers) assertEquals(DrumClass.TONAL, Vox.drumClassFor(voice))
+        // Every hit reachable, in order, from HIT's travel.
+        assertEquals(VoxBeatbox.Hit.entries, (0..7).map { VoxBeatbox.hitFor(it / 7f) })
+    }
+
+    @Test
+    fun `every BEATBOX hit is a clean mono drum at full level`() {
+        for (hit in VoxBeatbox.Hit.entries) for (decay in listOf(0f, 0.5f, 1f)) {
+            val s = Vox.render(VoxVoice.BEATBOX, mapOf("HIT" to hit.ordinal / 7f, "DECAY" to decay))
+            assertEquals(1, s.channels)
+            assertTrue(s.samples.all { it.isFinite() && it in -1f..1f }, "$hit broke range")
+            assertEquals(0.95f, s.peak(), 0.01f, "$hit peak")
+            assertTrue(s.durationSeconds < 1.5f, "$hit at DECAY $decay is a drum, not a pad: ${s.durationSeconds} s")
+        }
+    }
+
+    /** Share of energy below 500 Hz, dB: the weight a hit carries. */
+    private fun lowShareDb(s: Snip): Double {
+        val n = 8192
+        val re = FloatArray(n) { if (it < s.samples.size) s.samples[it] else 0f }
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        var lo = 0.0
+        var all = 1e-12
+        for (b in 1 until n / 2) {
+            val e = (re[b] * re[b] + im[b] * im[b]).toDouble()
+            all += e
+            if (b.toDouble() * s.sampleRate / n < 500) lo += e
+        }
+        return 10 * log10(lo / all + 1e-12)
+    }
+
+    /** How much the brightness moves during the hit: the spread of the centroid over 10 ms frames in its first 150 ms, as a fraction. */
+    private fun movement(s: Snip): Double {
+        val c = ArrayList<Double>()
+        val n = (0.01f * s.sampleRate).toInt()
+        var start = 0
+        while (start + n <= minOf(s.frameCount, (0.15f * s.sampleRate).toInt())) {
+            val w = window(s, start.toFloat() / s.sampleRate, (start + n).toFloat() / s.sampleRate)
+            if (w.samples.sumOf { (it * it).toDouble() } > 1e-6) c += FeatureExtractor.extract(w).centroidHz.toDouble()
+            start += n
+        }
+        val mean = c.average()
+        return kotlin.math.sqrt(c.sumOf { (it - mean) * (it - mean) } / c.size) / mean
+    }
+
+    @Test
+    fun `BEATBOX snares and hats are a mouth, with weight, not THUMP's noise`() {
+        // The audition: the first snares and hats "sounded basically like the
+        // hat and snare in THUMP", then "synthetic" and "thin". A mouth moves
+        // while it sounds, and a close mic fattens it. Measured: the snares'
+        // brightness moves 0.39-1.28 against THUMP's snare's 0.24, and carry
+        // -0.9 to -2.6 dB of their energy under 500 Hz; the hats -14.5 to
+        // -16.2 dB, where THUMP's hat carries -40.9.
+        val thumpSnare = Thump.render(ThumpVoice.SNARE)
+        val thumpSnareMono = if (thumpSnare.channels == 1) thumpSnare else Snip(FloatArray(thumpSnare.frameCount) { thumpSnare.samples[it * thumpSnare.channels] }, 1, thumpSnare.sampleRate)
+        val thumpHat = Thump.render(ThumpVoice.HAT_CLOSED)
+        val thumpHatMono = if (thumpHat.channels == 1) thumpHat else Snip(FloatArray(thumpHat.frameCount) { thumpHat.samples[it * thumpHat.channels] }, 1, thumpHat.sampleRate)
+        fun hit(h: VoxBeatbox.Hit) = Vox.render(VoxVoice.BEATBOX, mapOf("HIT" to h.ordinal / 7f))
+        val snareMove = movement(thumpSnareMono)
+        for (h in listOf(VoxBeatbox.Hit.PF, VoxBeatbox.Hit.PSH, VoxBeatbox.Hit.K)) {
+            val s = hit(h)
+            assertTrue(movement(s) > snareMove * 1.4, "$h should move like a mouth: ${movement(s)} vs THUMP's $snareMove")
+            assertTrue(lowShareDb(s) > -6.0, "$h is thin: ${lowShareDb(s)} dB under 500 Hz")
+        }
+        for (h in listOf(VoxBeatbox.Hit.TS, VoxBeatbox.Hit.T, VoxBeatbox.Hit.TSS)) {
+            val s = hit(h)
+            assertTrue(lowShareDb(s) > lowShareDb(thumpHatMono) + 15.0, "$h should carry a mouth's body, not a cymbal's: ${lowShareDb(s)} dB")
+        }
     }
 
     // ---------- GRAINS ----------

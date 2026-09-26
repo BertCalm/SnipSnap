@@ -281,7 +281,10 @@ synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
 through a vocal-cord pulse with vibrato; CHOIR is seven singers in
 sections, in stereo; a long DECAY holds; SIZE scales the throat from
-chipmunk to giant, and GLIDE moves the vowel during the note. GRAINS is
+chipmunk to giant, and GLIDE moves the vowel during the note. ONSET
+opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
+and BEATBOX is a mouth doing a drum kit: a kick, three snares, three
+hats and a tongue click. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a
