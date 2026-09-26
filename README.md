@@ -252,8 +252,12 @@ and closed by a low-pass gate: one control on a VCA and a low-pass
 together, keyed to the note and slowing as it falls, so brightness and
 level close at once. That coupling is the "bongo"; GLOW sets how much
 brightness outlives the level, from the classic dark knock to a tail that
-keeps its harmonics. WANDER nudges fold, decay and WARP per note from a
-seed the recipe itself carries, so a kit still regenerates to the bit.
+keeps its harmonics. Past the line of tidy, the edge is built in: the
+modulator dives into place in the strike (a zap), the fold feeds back into
+the modulator (a snarl, held short of noise), the fold's symmetry turns
+over across the note, and small seeded jitters keep a held note moving.
+WANDER nudges fold, decay and WARP per note from a seed the recipe itself
+carries, so a kit still regenerates to the bit.
 BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG
 and FLARE a long DECAY holds the gate open first, so they are notes, and
 TONAL.

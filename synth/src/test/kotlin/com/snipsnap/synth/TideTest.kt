@@ -165,26 +165,88 @@ class TideTest {
     }
 
     @Test
-    fun `FOLD, WARP and WANDER never move the pitch`() {
+    fun `FOLD, WARP, WANDER and the edge never move the pitch`() {
         // Phase modulation keeps the carrier on the note; a fold keeps the
-        // period; WANDER is timbre and decay only. The detector reads the
-        // clean note and the wildest one the same. DRIP is read at its root:
-        // the detector's range stops short of its top octave.
+        // period; WANDER is timbre and decay only; CROSS is held under the
+        // loop gain where feedback turns a note to noise. The detector reads
+        // the clean note and the wildest one the same once SWEEP's dive has
+        // landed: read from 100 ms, since at 50 ms the modulator is still
+        // 10% sharp of its ratio and its sidebands pull the reading a step.
+        // DRIP is read at its root: the detector's range stops short of its
+        // top octave. GONG is a bell, with no one pitch to hold.
         for (voice in listOf(TideVoice.BONGO, TideVoice.DRIP, TideVoice.FLARE)) {
             val tune = if (voice == TideVoice.DRIP) 0f else 0.5f
-            val plain = TestPitch.estimate(Tide.render(voice, clean + ("TUNE" to tune)), fromSec = 0.05f, windowSec = 0.2f)
-            for (take in 0..2) {
+            val plain = TestPitch.estimate(Tide.render(voice, clean + ("TUNE" to tune)), fromSec = 0.1f, windowSec = 0.2f)
+            for (ratio in listOf(0f, 1f)) for (take in 0..2) {
                 val wild = Tide.render(
                     voice,
-                    mapOf("TUNE" to tune, "FOLD" to 1f, "WARP" to 1f, "WANDER" to 1f, "DECAY" to 1f).filterKeys { it in Tide.defaults(voice) },
+                    mapOf("TUNE" to tune, "FOLD" to 1f, "WARP" to 1f, "RATIO" to ratio, "WANDER" to 1f, "DECAY" to 1f).filterKeys { it in Tide.defaults(voice) },
                     take = take,
                 )
-                val got = TestPitch.estimate(wild, fromSec = 0.05f, windowSec = 0.2f)
+                val got = com.snipsnap.audio.Pitch.detect(wild, fromSec = 0.1f, windowSec = 0.2f)
+                assertTrue(got != null && got.confidence >= 0.6f, "$voice RATIO $ratio take $take: the note turned to noise (${got?.confidence})")
                 // Within one step of the detector's whole-sample lag: f²/(rate − f) Hz, ~5 cents at C3, ~20 at C5.
                 val step = plain * plain / (wild.sampleRate - plain)
-                assertTrue(abs(got - plain) <= step * 1.01f, "$voice take $take: $plain Hz clean, $got Hz folded and warped")
+                assertTrue(abs(got.hz - plain) <= step * 1.01f, "$voice RATIO $ratio take $take: $plain Hz clean, ${got.hz} Hz folded and warped")
             }
         }
+    }
+
+    @Test
+    fun `the edge leaves a clean note clean`() {
+        // SWEEP and CROSS work through WARP's index, WOBBLE through FOLD and
+        // WARP, TILT through a bias that fades in over FOLD's first tenth:
+        // at FOLD 0 and WARP 0 all four are silent and the note is a sine.
+        for (voice in TideVoice.entries) {
+            val s = Tide.render(voice, clean)
+            val hz = Tide.frequencyFor(voice, Tide.defaults(voice).getValue("TUNE"))
+            val w = slice(s, 0.05f, 0.25f).samples
+            fun level(f: Float): Double {
+                var re = 0.0
+                var im = 0.0
+                for (i in w.indices) {
+                    val hann = 0.5 - 0.5 * cos(2 * PI * i / (w.size - 1))
+                    re += w[i] * hann * cos(2 * PI * f * i / s.sampleRate)
+                    im += w[i] * hann * sin(2 * PI * f * i / s.sampleRate)
+                }
+                return re * re + im * im
+            }
+            val fundamental = level(hz)
+            for (k in 2..6) {
+                val db = 10 * log10(level(hz * k) / fundamental)
+                assertTrue(db < -50.0, "$voice: harmonic $k of a clean note is only ${"%.1f".format(db)} dB down")
+            }
+        }
+    }
+
+    @Test
+    fun `the strike's sweep lands - every FLARE preset reads its note from 100 ms`() {
+        // SWEEP starts the modulator 2.2 times its ratio and dives at 20 ms
+        // a step. Auditioned at 60 ms, SNARL FLARE read 196 Hz for 131 into
+        // its second hundred milliseconds; at 20 ms it reads true by 50.
+        for (preset in TidePresets.forVoice(TideVoice.FLARE)) {
+            val want = Tide.frequencyFor(TideVoice.FLARE, preset.macros.getValue("TUNE"))
+            val got = com.snipsnap.audio.Pitch.detect(preset.render(), fromSec = 0.1f, windowSec = 0.1f)
+            assertTrue(got != null && got.confidence >= 0.8f, "${preset.name}: no clear pitch at 100 ms (${got?.confidence})")
+            assertTrue(abs(cents(got.hz, want)) < 10f, "${preset.name}: ${got.hz} Hz at 100 ms, want $want")
+        }
+    }
+
+    @Test
+    fun `the edge's extra reach goes to the low notes and eases off where it would alias`() {
+        // Full reach wherever the brightest corner stays under REACH_LIMIT_HZ.
+        assertEquals(1f, Tide.reachAt(Tide.frequencyFor(TideVoice.BONGO, 0.5f)), "BONGO's middle gets all of it")
+        assertTrue(Tide.reachAt(Tide.frequencyFor(TideVoice.BONGO, 1f)) > 0.95f, "and its top note nearly all")
+        assertEquals(1f, Tide.reachAt(Tide.frequencyFor(TideVoice.FLARE, 0.5f), 4f), "FLARE's middle gets all of it, even at RATIO 4")
+        // Less as the note or the modulator climbs, never nothing.
+        var last = 1f
+        for (midi in 72..96) {
+            val r = Tide.reachAt(440f * Math.pow(2.0, (midi - 69) / 12.0).toFloat())
+            assertTrue(r <= last && r > 0.3f, "reach at MIDI $midi: $r after $last")
+            last = r
+        }
+        val c4 = Tide.frequencyFor(TideVoice.FLARE, 1f)
+        assertTrue(Tide.reachAt(c4, 4f) < Tide.reachAt(c4, 2f), "a higher RATIO reaches further, so it eases sooner")
     }
 
     @Test
@@ -305,7 +367,7 @@ class TideTest {
 
     /** One steady second of TIDE's oscillator and folder at [rate], at their brightest for [hz]. */
     private fun steadyFold(hz: Float, ratio: Float, rate: Int): FloatArray {
-        val reach = Tide.reachAt(hz)
+        val reach = Tide.reachAt(hz, ratio)
         val drive = 1f + (Tide.MAX_DRIVE - 1f) * reach
         val index = Tide.MAX_INDEX * reach
         return FloatArray(rate) { i ->

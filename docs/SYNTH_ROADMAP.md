@@ -1161,6 +1161,69 @@ The character stages auditioned alongside (a pitch thump, body, drive,
 click, punch) are parked, not built: GLOW answered the missing harmonics
 first, and the next audition says whether the oomph is still missing.
 
+### Revision — the edge, 2026-09-26
+
+With GLOW in, the audition said the voices "walk the line between good and
+weird" and asked to push further. Five levers were prototyped and
+auditioned one at a time and together (four presets: WOOD BONGO, TEMPLE
+GONG, SNARL FLARE, RAIN DRIP); the pick was all five at a moderate
+setting. They are built in as how TIDE sounds, not as knobs: an EDGE macro
+would have made GONG and FLARE eight macros, past THUMP SNARE's seven.
+
+- **SWEEP.** The modulator starts 2.2 times its ratio and dives onto it
+  with a 20 ms time constant: WARP's sidebands fall into place in the
+  strike, a zap. Auditioned at 60 ms, it left SNARL FLARE's pitch
+  unreadable into its second hundred milliseconds (read 196 Hz for 131,
+  confidence 0.47); at 20 ms it reads true, confidence 0.85, by 50 ms.
+- **CROSS.** The folded output feeds back into the modulator's phase, 0.75
+  radians per unit, so fold and WARP argue instead of chaining. Feedback
+  like this is clean while `CROSS · index · drive` stays under about 1,
+  rough to about 1.6 and noise past it (mapped on a steady fold at C3:
+  index 1, drive 6 kept 79 dB of clarity at CROSS 0.1 and 30 at 0.4; full
+  FOLD and WARP at 0.75 had none, 0.6 dB). So the loop is held at 1.5, the
+  rough side on purpose: SNARL FLARE's strike sits right there, and a full
+  corner keeps its harmonics 25-40 dB clear, a snarl rather than a hiss.
+- **TILT.** The fold's bias leans +0.4 rad at the strike to −0.4 as the
+  gate closes: the even harmonics turn over across the note.
+- **WOBBLE.** Three seeded random lines, stepped at 11 Hz and smoothed over
+  6 ms, jitter the fold's depth and WARP's index by ±22.5% and the fold's
+  bias by ±0.27 rad, so a held note is never quite still. Seeded from the
+  recipe (and from the take only when WANDER is up), so a pad plays the
+  same way every time and WANDER 0 still makes every take identical.
+- **REACH.** FOLD and WARP reach 40% further: drive 8.4 at FOLD 1 (was 6),
+  index 4.2 at WARP 1 (was 3). The "above C6" easing is replaced by one
+  rule that knows the modulator: the brightest corner reaches about
+  `drive · (1 + index · ratio) · note`, and where that passes 22 kHz both
+  ease together (`reachAt`). Low notes get all of the extra; DRIP's top
+  octave and FLARE's high RATIOs ease back. Measured on a steady
+  full-corner fold, the worst, DRIP at C7, keeps 45.7 dB of clarity; at the
+  old notion's 25.1 kHz it and FLARE's C4 at RATIO 4 sat at 44.3-44.5.
+
+None of them touches a clean note: SWEEP and CROSS act through WARP's
+index, WOBBLE's depth moves scale with FOLD and WARP, and TILT and WOBBLE's
+bias fade in over FOLD's first tenth. `TideTest` holds FOLD 0, WARP 0 to
+harmonics 50 dB under the fundamental.
+
+What moved in the tests, and why:
+
+- **Pitch is read from 100 ms, not 50.** At 50 ms SWEEP still has the
+  modulator 10% sharp and BONGO at full everything read a step high. From
+  100 ms every harmonic voice at full FOLD and WARP, both RATIO ends,
+  three takes, reads the clean note's pitch, now with a confidence floor
+  (0.6) so a note that turned to noise fails too. Every FLARE preset
+  reads its note within 10 cents at confidence 0.8 from 100 ms.
+- **GONG and FLARE are held to ringing harmonic from 100 ms.** The zap is
+  noisy by design (TEMPLE GONG reads flatness 0.23 over the whole note,
+  0.05 from 100 ms); the presets' rings all measure 0.08 or under.
+- **GONG's corners clang.** At full FOLD and WARP, a bell ratio gives CROSS
+  no period to lock to, and GONG measures noise-like there (flatness
+  0.26-0.42, was 0.06-0.14). GONG is a bell with no one pitch, so this is
+  scrap metal struck hard rather than a broken note, and it is kept.
+
+The classifier now reads BONGO as PERC for all ten presets (was 8) and
+DRIP for nine (was 8): the zap reads more struck. GONG and FLARE are
+TONAL as before.
+
 ### Not doing
 
 A patchbay or patch cables (rule 1: presets and macros, never modular);

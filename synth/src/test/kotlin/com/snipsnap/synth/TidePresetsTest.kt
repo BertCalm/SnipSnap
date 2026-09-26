@@ -14,11 +14,12 @@ import kotlin.test.assertTrue
  * is what `SynthScreen`'s BONGO and DRIP mapping mirrors (the FATHOM
  * rule): a real measurement, not a guess.
  *
- * Measured with GLOW and held notes in: BONGO lands 8 PERC + 2 TOM (LOW
- * CONGA, LOG DRUM), DRIP 8 PERC + 2 SNARE (CRYSTAL, SPLASH TICK). GONG
- * and FLARE are notes DECAY can hold, and the classifier reads them by
- * length alone (GONG: 4 LOOP, 3 SNARE, 3 PERC; FLARE: 8 PERC, 2 LOOP), so
- * they are TONAL by design, RESIN's rule, and held to being harmonic.
+ * Measured with the edge in (GLOW, held notes, SWEEP, CROSS, TILT,
+ * WOBBLE): BONGO lands 10 PERC, DRIP 9 PERC + 1 SNARE (CRYSTAL); the
+ * strike's zap reads more struck than before (8 and 8). GONG and FLARE
+ * are notes DECAY can hold, and the classifier reads them by length alone
+ * (GONG: 4 LOOP, 4 SNARE, 2 PERC; FLARE: 8 PERC, 2 LOOP), so they are
+ * TONAL by design, RESIN's rule, and held to ringing harmonic.
  */
 class TidePresetsTest {
 
@@ -50,11 +51,17 @@ class TidePresetsTest {
     }
 
     @Test
-    fun `GONG and FLARE presets are notes, not noise`() {
+    fun `GONG and FLARE presets ring as notes, not noise`() {
+        // Measured from 100 ms: the edge's SWEEP and CROSS make the strike a
+        // zap, noisy by design (TEMPLE GONG reads 0.23 whole), and it has
+        // landed by then. What rings after it is the note.
         for (voice in listOf(TideVoice.GONG, TideVoice.FLARE)) {
             for (preset in TidePresets.forVoice(voice)) {
-                val f = FeatureExtractor.extract(preset.render())
-                assertTrue(f.flatness < 0.2f, "${preset.name} should measure harmonic, got flatness ${f.flatness}")
+                val s = preset.render()
+                val from = (0.1f * s.sampleRate).toInt()
+                val ring = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, s.samples.size), 1, s.sampleRate)
+                val f = FeatureExtractor.extract(ring)
+                assertTrue(f.flatness < 0.2f, "${preset.name} should ring harmonic, got flatness ${f.flatness}")
             }
         }
     }
