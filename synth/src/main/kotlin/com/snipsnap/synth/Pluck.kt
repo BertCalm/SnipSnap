@@ -84,8 +84,8 @@ object Pluck {
      * to the highest each voice's own tests still pass: NYLON 0.30, HARP
      * 0.30, KOTO 0.45, BANJO 0.25 (BANJO's ceiling dropped under the
      * Phase 2b head-mode rework above, which strengthens the same 220/234
-     * Hz modes that eat into PICK's reach), SITAR 0.0 (inert, no table).
-     * The ceiling on every voice is
+     * Hz modes that eat into PICK's reach), SITAR 0.0 (inert, no table). The
+     * ceiling on every voice is
      * `PICK moves the centroid at every step of its travel`: PICK's top end
      * must still move the note's spectral centroid at the shipped default
      * body, or a bright pick stroke stops reading as brighter. NYLON also
