@@ -221,4 +221,26 @@ class ResinHeldTest {
         assertFailsWith<IllegalArgumentException> { Resin.Held(3f, 4f) }
         assertFailsWith<IllegalArgumentException> { Resin.Held(1f, 0.5f) }
     }
+
+    @Test
+    fun `a held zone nobody wants any more stops, and the retry lets the stop through`() {
+        var asked = 0
+        val t0 = System.nanoTime()
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            // The slowest zone there is: the longest attack, the lowest note.
+            Keys.resinPad(ResinVoice.BASS, emptyMap(), Keys.resinPadMidis(ResinVoice.BASS).first(), Resin.ATTACK_MAX_SECONDS) { ++asked > 2 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertEquals(3, asked, "asked once too often: the retry caught the stop and rendered again")
+        assertTrue(ms < 1_000, "a cancelled zone ran on for ${ms}ms")
+    }
+
+    @Test
+    fun `asking changes nothing about a held zone that isn't cancelled`() {
+        val midi = Keys.resinPadMidis(ResinVoice.LEAD)[4]
+        val plain = Keys.resinPad(ResinVoice.LEAD, emptyMap(), midi, 0.3f)
+        val asked = Keys.resinPad(ResinVoice.LEAD, emptyMap(), midi, 0.3f) { false }
+        assertEquals(plain.loopStartFrame, asked.loopStartFrame)
+        assertTrue(plain.snip.samples.contentEquals(asked.snip.samples))
+    }
 }

@@ -66,7 +66,9 @@ object ResinPadMaker {
 
     fun zoneMidis(spec: Spec): List<Int> = Keys.resinPadMidis(spec.voice)
 
-    fun renderZone(spec: Spec, midi: Int): KeyNote = Keys.resinPad(spec.voice, spec.macros, midi, spec.attackSeconds)
+    /** One zone; [cancelled] stops it part-way (MAKE's CANCEL), see [Keys.resinPad]. */
+    fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote =
+        Keys.resinPad(spec.voice, spec.macros, midi, spec.attackSeconds, cancelled)
 
     /**
      * The zones, in [zoneMidis] order, as a keygroup program and the samples
@@ -105,9 +107,9 @@ object ResinPadMaker {
     }
 
     /** The middle zone, its head plus two passes of its loop: what a short hold sounds like. */
-    fun preview(spec: Spec): Snip {
+    fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {
         val midis = zoneMidis(spec)
-        val note = renderZone(spec, midis[midis.size / 2])
+        val note = renderZone(spec, midis[midis.size / 2], cancelled)
         val s = note.snip.samples
         val loopStart = note.loopStartFrame.toInt()
         val out = s.copyOf(s.size + (s.size - loopStart))

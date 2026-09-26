@@ -131,6 +131,14 @@ object Resin {
      */
     const val HELD_MAX_RESONANCE = 4f
 
+    /**
+     * How often, in samples, a held render asks whether it is still wanted
+     * (about 0.2 s of audio at 4x). A held zone takes up to seconds, and
+     * MAKE INSTRUMENT renders nine at once: a CANCEL has to stop them, not
+     * leave them burning the phone's cores. One-shots never ask.
+     */
+    private const val HELD_CANCEL_CHECK_SAMPLES = 1 shl 15
+
     internal fun resonanceFor(cream: Float, held: Boolean): Float =
         Dsp.lin(cream, 0f, if (held) HELD_MAX_RESONANCE else Dsp.Ladder.MAX_RESONANCE)
 
@@ -159,7 +167,13 @@ object Resin {
      * of [render] so the oversampled dispatch can be tested against a
      * native-rate render (VelvetTest has the reasoning).
      */
-    internal fun synthesize(voice: ResinVoice, macros: Map<String, Float>, rate: Int, held: Held? = null): FloatArray {
+    internal fun synthesize(
+        voice: ResinVoice,
+        macros: Map<String, Float>,
+        rate: Int,
+        held: Held? = null,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -213,6 +227,10 @@ object Resin {
         var p2 = ph[1]
         var p3 = ph[2]
         for (i in out.indices) {
+            // Held renders only: the one-shot path must not change by a bit.
+            if (held != null && i % HELD_CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw java.util.concurrent.CancellationException("held render no longer wanted")
+            }
             val t = i.toFloat() / rate
             p1 += inc1
             p2 += inc2
@@ -243,9 +261,10 @@ object Resin {
      * [synthesize] held, oversampled and decimated like [render] - but
      * neither levelled nor tail-faded: [Keys.resinPad] cuts the loop first,
      * then levels on the loop itself, where a held note is heard.
+     * [cancelled] stops it part-way with a CancellationException.
      */
-    internal fun renderHeld(voice: ResinVoice, macros: Map<String, Float>, held: Held): Snip {
-        val out = Dsp.decimate(synthesize(voice, macros, RATE * Dsp.OVERSAMPLE, held), RATE)
+    internal fun renderHeld(voice: ResinVoice, macros: Map<String, Float>, held: Held, cancelled: () -> Boolean = { false }): Snip {
+        val out = Dsp.decimate(synthesize(voice, macros, RATE * Dsp.OVERSAMPLE, held, cancelled), RATE)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 }
