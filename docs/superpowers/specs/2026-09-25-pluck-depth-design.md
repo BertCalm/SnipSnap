@@ -142,8 +142,8 @@ instead of a drum's, with the pot's air resonance under it. No new DSP: a
 voice row, a body table, twelve presets.
 
 - **Constants:** root G3 (196 Hz, the open-G tonal centre), loop cutoff
-  5600 Hz (brighter than HARP: a steel string over a taut head), exciter
-  range 2000–10000 Hz.
+  9000 Hz (brighter than HARP: a steel string over a taut head), exciter
+  range 3000–14000 Hz.
 - **Body:** the sourced table (`body-research.md` §5.4; Rae 2010,
   Politzer 2016, Politzer/Woodhouse/Mansour 2021), not the MEMBRANE ratios
   on a 310 Hz head this section proposed before the sourcing pass replaced
@@ -151,9 +151,13 @@ voice row, a body table, twelve presets.
   mode 850 Hz, and bridge hills near 3500 and 5000 Hz on one bridge. Only
   the head's (0,1) mode carries a measured decay — a 20–30 Hz bandwidth —
   everything else in the table is a shape for the gate.
-- **Defaults, placeholders for the gate:** DAMP 0.5 (banjo notes are short),
-  PICK 0.7, STRIKE 0.4 (fingerpicks close to the bridge, `p ≈ 0.09`),
-  BODY 0.6 (a banjo is mostly its head), DOUBLE 0.1.
+- **Defaults, placeholders for the gate:** TUNE 0.3 (D4, 294 Hz), DAMP 0.5
+  (banjo notes are short), PICK 0.7, STRIKE 0.25 (fingerpicks near the
+  bridge, `p ≈ 0.06`), BODY 0.20, DOUBLE 0.1. The second gate heard the
+  5.6 kHz string as "not tinny enough" and the body only at notes where the
+  head sits just above them, so the default note is D4. The third gate
+  chose this string over darker and thinner ones; the classifier reads its
+  attack as a snare's, which the test records.
 - **Presets:** twelve, authored like the others and disposable like the
   others. The name is a generic instrument word, allowed by the naming rule.
 - It takes KALIMBA's place in `PluckVoice`; the melodic kit's A07–A11 go to
@@ -185,11 +189,27 @@ shape is a plucked tine's transient, and the core can place a strike at
 bar's overtones exactly, with no modal bank:
 
 ```
-strike(f0,        ratio 1, index by BRIGHT, t60)              the tongue's fundamental
-strike(6.267 f0,  ratio 1, low index,       t60 × 0.25, g .35) second partial, dies fast
-strike(17.548 f0, ratio 1, low index,       t60 × 0.10, g .12) third partial, gone in a blink
+strike(f0,        ratio 1, index by BRIGHT, t60)             the tongue's fundamental
+strike(6.267 f0,  ratio 1, low index,       t60 × 0.6, g .60) second partial, dies fast
+strike(17.548 f0, ratio 1, low index,       t60 × 0.25, g .30) third partial, gone in a blink
 + BUZZ: amplitude-gated noise, the bottle-cap rattle
 ```
+
+(gains shown at the default BRIGHT 0.5, where `upper = lin(BRIGHT, 0.3, 0.9)`.)
+Gate-tuned 2026-09-26 (third listen): a few milliseconds of seeded,
+high-passed noise now precede the strikes — the thumbnail's tick — and the
+partials' own t60 multipliers rose from 0.25/0.10 to 0.6/0.25 (the second's
+gain unchanged at `upper`, the third's raised from `upper × 0.35` to
+`upper × 0.5`), so the shimmer rings longer and louder.
+
+Gate-tuned again 2026-09-26 (fourth listen): the tick was losing most of
+its energy to `Dsp.decimate`'s near-22 kHz low-pass on the way back down
+from the 4x oversampled render, because it was white noise above its
+3 kHz high-pass corner; a second, one-pole low-pass at 9 kHz now band-limits
+it to 3–9 kHz, inside what the decimator keeps. The fourth gate heard the
+longest tine (DECAY 1) as closer and everything shorter as the same, so
+DECAY's default moves to 0.9, near the ceiling, and the unsourced box the
+same gate could not hear either way is removed.
 
 - **The ratios are the clamped-free bar's**: Euler–Bernoulli eigenvalues
   `βL = 1.8751, 4.6941, 7.8548`, squared and normalised, give
@@ -210,8 +230,11 @@ strike(17.548 f0, ratio 1, low index,       t60 × 0.10, g .12) third partial, g
 - **Macros:** TUNE, **BUZZ**, BRIGHT, DECAY — the engine's four-knob shape.
   BRIGHT is the index on the fundamental strike plus the gain of the two
   partials, so it stays the velocity macro TINES already routes through.
-  DECAY maps t60 over `0.3–1.0 s`: `TinesTest` holds every TINES voice under
-  1.5 s at full DECAY so a hit never crosses the classifier's loop
+  DECAY maps t60 over `0.5–1.1 s` (raised from `0.3–1.0 s` at the fourth
+  listen, 2026-09-26: "a kalimba typically would have a bit of decay and
+  resonance even at the low levels", so the floor no longer reaches a bare
+  tap): `TinesTest` holds every TINES voice under 1.5 s at full DECAY
+  (1.1 × 1.3 = 1.43 s) so a hit never crosses the classifier's loop
   threshold, and a kalimba note is short anyway. BUZZ is the voice's
   character knob: an
   mbira's soundboard carries buzzers — bottle caps, shells — that rattle at
@@ -257,10 +280,14 @@ such in code (a table with a comment naming this document), the way
 `LOUDNESS_OFFSET` already is. The chips asked for BODY HARP 0.4, KOTO 0.35,
 NYLON 0.5; the five-cent tuning sweep at the default body would not accept
 them (the sourced bodies sit nearer the notes than the spike's guessed ones),
-so the shipped defaults are NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15 —
-0.3–0.45× the string — and the gate can push them up as far as that sweep
-allows. STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played with
-a pick near the bridge). BANJO's are in its own section.
+so the shipped defaults are NYLON 0.30, HARP 0.30, KOTO 0.45, BANJO 0.20 —
+raised after the Phase 2 gate heard every one of them read closer to the
+instrument at every amount; the ceiling is `PICK moves the centroid`: PICK's
+top end must still move the note's spectral centroid at the default body.
+BANJO's BODY dropped again at the third listen (2026-09-26) after the
+bridge hills' gain doubled for the string's tin pulled that same ceiling
+past 0.9. STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played
+with a pick near the bridge). BANJO's are in its own section.
 KALIMBA has no body default and no STRIKE tuning effort: it leaves PLUCK in
 Phase 2.
 
@@ -451,6 +478,12 @@ saying why.
   - velocity drive against displacement drive on its own wet layer - not
   against a BODY 0 render; whether its head resonance still reads as a
   knock at BODY 1 is the gate's call, not this test's.
+- **Classification (Phase 2, fourth listen)** — `factory defaults
+  classify as percussion, and the banjo may read as a snare` lets BANJO
+  alone read `SNARE` in addition to `PERC`: the classifier has no pitch
+  feature, only the attack window's share of energy above 2 kHz, and the
+  gate-chosen string puts two thirds of its attack there. Every other
+  voice must still read `PERC`.
 - **Determinism** — `is deterministic` stays; seeds change value, not
   behaviour.
 - **Presets** — `PluckPresetsTest` unchanged: clean, non-silent, round-trip,

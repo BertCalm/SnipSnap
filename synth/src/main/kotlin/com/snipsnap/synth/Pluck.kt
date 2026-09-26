@@ -75,33 +75,51 @@ object Pluck {
      * above the fundamental - NYLON's 104 Hz air mode against its 110 Hz
      * root, HARP's 168.5 Hz A0 against 165 Hz, BANJO's 220/234 Hz head
      * modes under a 392 Hz note - which pulled the pitch detector off the
-     * note and swamped PICK; an initial 0.45-0.75x pass was lowered again
-     * to the current NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15
-     * (0.3-0.45x the string). Every per-voice pitch test (Task 3) accepted
-     * this range, NYLON included - `PICK brightens the attack` had briefly
-     * pulled NYLON's own default down to 0.05 to keep its own centroid
-     * measurement clean; that test now forces BODY to 0 for its own
-     * measurement instead, so the default is free to sit where Task 3 put
-     * it.
+     * note and swamped PICK; an initial 0.45-0.75x pass was lowered to
+     * NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15 for the Phase 2 gate.
+     * That gate heard every one of them read CLOSER to the instrument at
+     * every amount, timid rather than wrong, so they were raised again -
+     * bisected one voice at a time, holding the others at their own
+     * known-good value so a failing voice never masked the ones after it -
+     * to the highest each voice's own tests still pass: NYLON 0.30, HARP
+     * 0.30, KOTO 0.45, BANJO 0.25 (BANJO's ceiling dropped under the
+     * Phase 2b head-mode rework above, which strengthens the same 220/234
+     * Hz modes that eat into PICK's reach). The ceiling on every voice is
+     * `PICK moves the centroid at every step of its travel`: PICK's top end
+     * must still move the note's spectral centroid at the shipped default
+     * body, or a bright pick stroke stops reading as brighter. NYLON also
+     * has to clear `every Pluck semitone lands within five cents at the
+     * default body` - `PICK brightens the attack` no longer competes for
+     * NYLON's ceiling, since that test now forces BODY to 0 for its own
+     * centroid measurement instead of relying on wherever the default sits.
+     * BANJO dropped again at the third listen (2026-09-26), bisected the
+     * same way, to 0.20: the bridge hills' gain doubling (3500/5000 Hz to
+     * 0.70/0.55, for the string's tin) pulled `PICK moves the centroid`
+     * dead between 0.9 and 1.0 at 0.25. `factory defaults all classify as
+     * percussion` still reads BANJO's default as SNARE at every BODY down
+     * to 0.10 tried - independent of BODY, traced instead to the same
+     * gate's loop/pick brightening (loopHz 9000, pick 3000-14000) pushing
+     * `highRatio` over the classifier's SNARE threshold - so it is left
+     * failing rather than loosened or masked by a BODY this low.
      */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.10f), MacroSpec("DOUBLE", 0.15f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.30f), MacroSpec("DOUBLE", 0.15f),
         )
         PluckVoice.HARP -> listOf(
             MacroSpec("TUNE", 0.55f), MacroSpec("DAMP", 0.2f), MacroSpec("PICK", 0.6f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.10f), MacroSpec("DOUBLE", 0.2f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.30f), MacroSpec("DOUBLE", 0.2f),
         )
         // A koto is played with a pick close to the bridge.
         PluckVoice.KOTO -> listOf(
             MacroSpec("TUNE", 0.45f), MacroSpec("DAMP", 0.4f), MacroSpec("PICK", 0.75f),
-            MacroSpec("STRIKE", 0.6f), MacroSpec("BODY", 0.15f), MacroSpec("DOUBLE", 0.45f),
+            MacroSpec("STRIKE", 0.6f), MacroSpec("BODY", 0.45f), MacroSpec("DOUBLE", 0.45f),
         )
-        // Fingerpicks close to the bridge, short notes (spec, "BANJO").
+        // Fingerpicks near the bridge, short notes, and a default note where the head sits just above it (spec, "BANJO"; gate 2026-09-26).
         PluckVoice.BANJO -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
-            MacroSpec("STRIKE", 0.4f), MacroSpec("BODY", 0.15f), MacroSpec("DOUBLE", 0.1f),
+            MacroSpec("TUNE", 0.3f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
+            MacroSpec("STRIKE", 0.25f), MacroSpec("BODY", 0.20f), MacroSpec("DOUBLE", 0.1f),
         )
     }
 
@@ -174,8 +192,8 @@ object Pluck {
             PluckVoice.NYLON -> { loopHz = 3400f; pickLo = 1200f; pickHi = 6000f; ring = 1.1f }
             PluckVoice.HARP -> { loopHz = 5200f; pickLo = 1800f; pickHi = 9000f; ring = 1.3f }
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
-            // A steel string over a taut head: brighter than HARP.
-            PluckVoice.BANJO -> { loopHz = 5600f; pickLo = 2000f; pickHi = 10000f; ring = 1.0f }
+            // A steel string over a taut head, and the brightest string here: the loop keeps its treble (the gate heard 5.6 kHz as "not tinny enough") and the pick band sits above the others'.
+            PluckVoice.BANJO -> { loopHz = 9000f; pickLo = 3000f; pickHi = 14000f; ring = 1.0f }
         }
 
         // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
@@ -335,16 +353,19 @@ object Pluck {
         // Banjo - research note section 5.4 (Rae 2010; Politzer 2016;
         // Politzer, Woodhouse & Mansour 2021). The two bridge hills are one
         // specific bridge's; the source says other bridges put them elsewhere.
+        // Gate-tuned 2026-09-26: the head fundamental leads, because at the
+        // default note G4 the 509/803 Hz modes only thickened the string's
+        // own harmonics ("closer to guitar").
         PluckVoice.BANJO -> listOf(
-            Modes.fixed(220f, 0.50f, 0.35f),   // pot air, coupled doublet - shape
-            Modes.fixed(234f, 0.60f, 0.09f),   // head (0,1) - measured, bandwidth 20-30 Hz
-            Modes.fixed(509f, 0.90f, 0.15f),   // head (1,1) - shape
-            Modes.fixed(803f, 0.90f, 0.12f),   // head (2,1) - shape
+            Modes.fixed(220f, 0.80f, 0.15f),   // pot air, coupled doublet - shape; short, so it thumps rather than sings beside the note
+            Modes.fixed(234f, 1.00f, 0.09f),   // head (0,1) - measured, bandwidth 20-30 Hz; the banjo's plunk, on every note
+            Modes.fixed(509f, 0.70f, 0.15f),   // head (1,1) - shape
+            Modes.fixed(803f, 0.60f, 0.12f),   // head (2,1) - shape
             Modes.fixed(850f, 0.70f, 0.10f),   // pot-air cylinder mode - shape
             Modes.fixed(1593f, 0.40f, 0.08f),  // head (5,1) - shape
             Modes.fixed(2055f, 0.30f, 0.06f),  // head (7,1), the last strong head mode - shape
-            Modes.fixed(3500f, 0.30f, 0.05f),  // bridge hill - shape
-            Modes.fixed(5000f, 0.25f, 0.04f),  // bridge hill - shape
+            Modes.fixed(3500f, 0.70f, 0.05f),  // bridge hill - shape - raised at the gate: these formants are the tin
+            Modes.fixed(5000f, 0.55f, 0.04f),  // bridge hill - shape - raised at the gate: these formants are the tin
         )
     }
 

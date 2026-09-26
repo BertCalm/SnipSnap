@@ -461,7 +461,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Pluck Audition</span>
-    <span class="tag">PHASE 2 &middot; BODY, BANJO, THE KIT SEAM</span>
+    <span class="tag">PHASE 2 FOURTH LISTEN &middot; KALIMBA AND THE SEAM</span>
   </div>
 
   <div class="transport lcd">
@@ -476,9 +476,8 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>Every clip sits at the same level, deliberately quiet: turn up and use headphones.</p>
-    <p>Strings: BODY 0 is the string alone, DEFAULT is the placeholder amount, BODY 1 is three times the string. Mark each against the instrument. Listen for a thump at the very start: that is the knock, and it is supposed to be gone.</p>
-    <p>BANJO is new. KIT SEAM is four neighbouring pads of the melodic kit, where nylon hands to the kalimba, now on TINES.</p>
+    <p>BANJO is settled at the string the third gate chipped closer, and it is not on this page.</p>
+    <p>KALIMBA: the box is gone, and the default decay now sits near the ceiling because that is what read as a kalimba. The first pad is last time's C4; then the new default, the floor (DECAY 0), the ceiling (DECAY 1), brighter, and the kit's highest kalimba pad at A4. Is this the decay and resonance you meant?</p>
   </div>
 
   <div id="voices"></div>
@@ -486,21 +485,15 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>TWO QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Does the body make each string sound like its instrument?</div>
-      <div class="sub">BODY DEFAULT and BODY 1 against BODY 0, per voice.</div>
-      <textarea id="q_body" placeholder="&hellip;"></textarea>
+      <div class="ask">1 &middot; Is this the decay and resonance you meant? Which pad is the kalimba?</div>
+      <textarea id="q_kalimba4" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; Is the knock gone?</div>
-      <div class="sub">The thump at the very start. If it is still there, say which voices.</div>
-      <textarea id="q_knock" placeholder="&hellip;"></textarea>
-    </div>
-    <div class="q">
-      <div class="ask">3 &middot; Does BANJO read as a banjo, and does the kit seam hold?</div>
-      <textarea id="q_banjo" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; The kit's kalimba pads sit at C4 to A4 next to the nylon pads at G3 and A3. Keep them there, or move them?</div>
+      <textarea id="q_seam2" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -513,8 +506,8 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generatePluckAudition &middot; PHASE 2 &middot; 16-BIT 44.1 KHZ &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+    RENDERED BY generatePluckAudition &middot; PHASE 2 FOURTH LISTEN &middot; 16-BIT 44.1 KHZ &middot;
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE THREE ANSWERS.
   </div>
 </div>
 
@@ -528,20 +521,6 @@
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
   // [file id, name, description]
-  var STRING_GROUPS = [
-    { label: 'BODY', key: true, clips: [
-      ['p2_body_0', 'BODY 0', 'the string alone'],
-      ['p2_body_default', 'BODY DEFAULT', 'the placeholder amount'],
-      ['p2_body_1', 'BODY 1', 'three times the string, the ugly end'],
-      ['p2_body_1_root', 'BODY 1 AT THE ROOT', 'the ugly end on the lowest note']
-    ]},
-    { label: 'AT THE DEFAULT BODY', clips: [
-      ['p2_body_default_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'pick at the bridge'],
-      ['p2_body_default_ring', 'DAMP 0', 'rings out'],
-      ['p2_body_default_thud', 'DAMP 1', 'the dead end']
-    ]}
-  ];
-
   var SEAM_GROUPS = [
     { label: 'NYLON TO KALIMBA', key: true, clips: [
       ['a05_nylon_5', 'A05 NYLON 5', 'PLUCK'],
@@ -551,11 +530,25 @@
     ]}
   ];
 
+  // p2d fourth-listen groups: the tine against last time, its DECAY floor
+  // to ceiling, and the kit's highest kalimba pad.
+  var KALIMBA_GROUPS = [
+    { label: 'LAST TIME AGAINST NOW, C4', key: true, clips: [
+      ['p2c_c4_default', 'LAST TIME, C4', 'tick and partials, no box, DECAY .45'],
+      ['p2d_c4_default', 'SHIPPED, C4', 'DECAY .90, no box: what the kit plays']
+    ]},
+    { label: 'DECAY, FLOOR TO CEILING', clips: [
+      ['p2d_c4_decay_0', 'DECAY 0', 'the softest it gets: 0.5 s'],
+      ['p2d_c4_decay_1', 'DECAY 1', '1.1 s'],
+      ['p2d_c4_bright_75', 'BRIGHT .75', '']
+    ]},
+    { label: 'THE KIT PADS', clips: [
+      ['p2d_a4_default', 'A4, KALIMBA 5 PAD', 'the highest kalimba pad in the kit']
+    ]}
+  ];
+
   var VOICES = [
-    { id: 'NYLON', display: 'NYLON', note: 'G3',  hz: '196 HZ', root: 'A2' + DOT + '110 HZ', macros: 'BODY .05 default', body: 'classical guitar', groups: STRING_GROUPS },
-    { id: 'KOTO',  display: 'KOTO',  note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'BODY .15 default', body: 'paulownia box', groups: STRING_GROUPS },
-    { id: 'HARP',  display: 'HARP',  note: 'F4',  hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'BODY .10 default', body: 'soundboard', groups: STRING_GROUPS },
-    { id: 'BANJO', display: 'BANJO', note: 'G4',  hz: '392 HZ', root: 'G3' + DOT + '196 HZ', macros: 'BODY .15 default', body: 'head over a pot', groups: STRING_GROUPS },
+    { id: 'FU_KALIMBA', display: 'KALIMBA', folder: 'KALIMBA', note: 'C4', hz: '262 HZ', root: 'A3' + DOT + '220 HZ', macros: 'BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .90', body: 'a tick and the shimmer, ringing long', groups: KALIMBA_GROUPS },
     { id: 'KIT_SEAM', display: 'KIT SEAM', note: 'A05 TO A08', hz: 'the melodic kit', root: 'nylon to kalimba', macros: 'two engines', body: 'PLUCK then TINES', groups: SEAM_GROUPS }
   ];
 
@@ -574,7 +567,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_body: '', q_knock: '', q_banjo: '', q_else: '' } };
+  var state = { overall: { q_kalimba4: '', q_seam2: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -687,7 +680,7 @@
     if (next) {
       next.pad.setAttribute('aria-pressed', 'true');
       next.row.classList.add('playing');
-      nowEl.textContent = next.voice.id + DOT + next.name;
+      nowEl.textContent = next.voice.display + DOT + next.name;
       nowEl.classList.remove('idle');
     } else {
       nowEl.textContent = 'TAP A PAD TO PLAY';
@@ -703,7 +696,7 @@
       return;
     }
     a.pause();
-    a.src = voice.id + '/' + fid + '.wav';
+    a.src = (voice.folder || voice.id) + '/' + fid + '.wav';
     setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
     a.play().catch(function () { setPlaying(null); });
   }
@@ -743,7 +736,7 @@
   }
 
   function paintOverall() {
-    ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
+    ['q_kalimba4', 'q_seam2', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -753,7 +746,7 @@
 
   // The four answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
+  ['q_kalimba4', 'q_seam2', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -779,7 +772,7 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_body: state.overall.q_body, q_knock: state.overall.q_knock, q_banjo: state.overall.q_banjo, q_else: state.overall.q_else }
+      ? { q_kalimba4: state.overall.q_kalimba4, q_seam2: state.overall.q_seam2, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
@@ -788,7 +781,7 @@
   // Every phase's verdicts live under their own prefix: the spike and Phase 1
   // wrote verdicts/NYLON etc., and a page that read those back would open
   // pre-filled with an older gate's notes and overwrite them on save.
-  var PHASE = 'p2';
+  var PHASE = 'p2d';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
@@ -805,7 +798,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
+      ['q_kalimba4', 'q_seam2', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();
