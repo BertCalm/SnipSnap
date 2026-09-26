@@ -73,9 +73,15 @@ class PluckTest {
         // that rate, so the string would ring exactly two octaves sharp
         // once decimated back down. Pin TUNE's pitch directly against
         // frequencyFor to catch that regression.
+        // This test measures the delay line, not the body: BODY forced to 0
+        // here, because a fixed body mode sitting on the second harmonic can
+        // fool this unhinted detector into the octave above (BANJO measured
+        // 787.5Hz against an expected ~392.0Hz once BODY's default rose).
+        // The hinted sweeps in TuningAccuracyTest guard the note with the
+        // body on, at the same TUNE/DAMP settings.
         for (voice in PluckVoice.entries) {
             val expected = Pluck.frequencyFor(voice, 0.5f)
-            val measured = TestPitch.estimate(Pluck.render(voice, mapOf("TUNE" to 0.5f, "DAMP" to 0.2f)))
+            val measured = TestPitch.estimate(Pluck.render(voice, mapOf("TUNE" to 0.5f, "DAMP" to 0.2f, "BODY" to 0f)))
             assertTrue(
                 measured > expected * 0.9f && measured < expected * 1.1f,
                 "$voice: expected ~${expected}Hz, measured ${measured}Hz - two octaves sharp (4x) " +

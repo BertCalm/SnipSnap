@@ -240,12 +240,14 @@ Note: the source's damping-coefficient percentages (5.5/4.8/2.5/2.3/0.9/1.4%, in
 
 | Label | Hz | Gain (0–1) | t60 (s) | Basis |
 |---|---|---|---|---|
-| Pot-air (Helmholtz doublet, coupled) | 220 | 0.50 | 0.35 | shape |
-| Head (0,1) | 234 | 0.60 | **0.09** | measured — bandwidth 20–30 Hz → Q≈7.8–11.7 → 2.2×Q/234 (range 0.07–0.11 s, midpoint used) |
-| Head (1,1) | 509 | 0.90 | 0.15 | shape |
-| Head (2,1) | 803 | 0.90 | 0.12 | shape |
+| Pot-air (Helmholtz doublet, coupled) | 220 | 0.80 | 0.15 | shape |
+| Head (0,1) | 234 | 1.00 | **0.09** | measured — bandwidth 20–30 Hz → Q≈7.8–11.7 → 2.2×Q/234 (range 0.07–0.11 s, midpoint used) |
+| Head (1,1) | 509 | 0.70 | 0.15 | shape |
+| Head (2,1) | 803 | 0.60 | 0.12 | shape |
 | Pot-air cylinder mode | 850 | 0.70 | 0.10 | shape |
 | Head (5,1) | 1,593 | 0.40 | 0.08 | shape |
 | Head (7,1) | 2,055 | 0.30 | 0.06 | shape |
 | Bridge hill ~3.5 kHz | 3,500 | 0.30 | 0.05 | shape |
 | Bridge hill ~5 kHz | 5,000 | 0.25 | 0.04 | shape |
+
+Gate-tuned 2026-09-26: the head (0,1) leads and the pot air mode is shortened, after the Phase 2 gate heard the banjo only at BODY 1 on the root.

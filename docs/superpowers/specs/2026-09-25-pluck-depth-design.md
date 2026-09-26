@@ -257,9 +257,11 @@ such in code (a table with a comment naming this document), the way
 `LOUDNESS_OFFSET` already is. The chips asked for BODY HARP 0.4, KOTO 0.35,
 NYLON 0.5; the five-cent tuning sweep at the default body would not accept
 them (the sourced bodies sit nearer the notes than the spike's guessed ones),
-so the shipped defaults are NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15 —
-0.3–0.45× the string — and the gate can push them up as far as that sweep
-allows. STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played with
+so the shipped defaults are NYLON 0.30, HARP 0.30, KOTO 0.45, BANJO 0.25 —
+raised after the Phase 2 gate heard every one of them read closer to the
+instrument at every amount; the ceiling is `PICK moves the centroid`: PICK's
+top end must still move the note's spectral centroid at the default body.
+STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played with
 a pick near the bridge). BANJO's are in its own section.
 KALIMBA has no body default and no STRIKE tuning effort: it leaves PLUCK in
 Phase 2.
