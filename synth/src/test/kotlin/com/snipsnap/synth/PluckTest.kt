@@ -205,10 +205,13 @@ class PluckTest {
         // PLUCK slot, so nothing in the app acts on that reading today; a
         // harmonicity feature is the Phase 3 item that would let the
         // classifier tell a bright pluck from a drum. Every other voice must
-        // still read PERC.
+        // still read PERC. SITAR reads SNARE too (plan 2026-09-26-pluck-sitar.md):
+        // a plain steel string picked near the bridge puts the same share of
+        // its attack above 2 kHz (measured highRatio 0.524 at the default,
+        // just over the 0.5 SNARE line); Task 3 re-measures once the jawari lands.
         for (voice in PluckVoice.entries) {
             val c = Classifier.classify(Pluck.render(voice))
-            val allowed = if (voice == PluckVoice.BANJO) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
+            val allowed = if (voice == PluckVoice.BANJO || voice == PluckVoice.SITAR) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
             assertTrue(c.drumClass in allowed, "$voice default read as ${c.drumClass}")
         }
     }
@@ -556,6 +559,8 @@ class PluckTest {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
         for (voice in PluckVoice.entries) {
+            // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): withBody is a no-op, so there is no share to measure.
+            if (Pluck.bodyFor(voice).isEmpty()) continue
             val out = Pluck.withBody(string, voice, 1f, rate)
             var body = 0.0
             var dry = 0.0
@@ -607,6 +612,8 @@ class PluckTest {
         // BODY 1 is three times the string's RMS - the spike's "dominant",
         // which read CLOSER on two voices and must stay reachable.
         for (voice in PluckVoice.entries) {
+            // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): BODY is inert, so the centroid cannot move.
+            if (Pluck.bodyFor(voice).isEmpty()) continue
             val plain = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 0f)))
             val full = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 1f)))
             assertTrue(

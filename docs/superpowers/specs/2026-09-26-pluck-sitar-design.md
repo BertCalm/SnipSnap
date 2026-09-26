@@ -8,8 +8,7 @@ four listening gates. Phase 2's other leftovers (a fixed per-voice body
 calibration, a pitch feature in the audio module's classifier, the KALIMBA
 preset pass, koto's remaining body modes) are out of scope here and get
 their own specs.
-**Plan:** to be written (`docs/superpowers/plans/2026-09-26-pluck-sitar.md`)
-after the research note it depends on.
+**Plan:** docs/superpowers/plans/2026-09-26-pluck-sitar.md
 
 ## Why a sitar, and why now
 
