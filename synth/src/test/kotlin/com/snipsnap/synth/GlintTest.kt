@@ -188,6 +188,13 @@ class GlintTest {
         // Measured 2026-09-26 across 3 voices x 4 PEAK settings: worst case
         // 0.99188. A synthetic control whose pitch drifts 9% scores 0.73149,
         // so the 0.98 threshold has a wide margin and can still fail.
+        //
+        // This fixture holds BLOOM at 0, so it never exercises the
+        // time-varying k that Task 5 introduces. Re-run once (2026-09-26)
+        // with BLOOM forced to 1 instead, same voices and PEAK settings:
+        // worst case dropped to 0.98643 (BOTTLE, PEAK 0.9) - thinner margin
+        // over the 0.98 bar than the BLOOM-0 case, but still passing, so a
+        // slowly time-varying k does not break the periodicity claim.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
             val f0 = Glint.frequencyFor(voice, 0.5f)
@@ -433,6 +440,73 @@ class GlintTest {
             assertTrue(head > tail * 1.4f, "$voice should turn to glass as it fades: $head -> $tail")
             val (flatHead, flatTail) = headAndTail(0.02f)
             assertTrue(flatTail <= flatHead * 1.5f, "$voice with no body should not change: $flatHead -> $flatTail")
+        }
+    }
+
+    /**
+     * Measured 2026-09-26, still = TUNE 0.3 PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY
+     * 0.7 (duration 0.9044s for all three voices), head/tail centroid ratio:
+     *   REED   BLOOM 0 -> 1.0028   BLOOM 1 -> 1.8871
+     *   BOTTLE BLOOM 0 -> 0.9938   BLOOM 1 -> 1.7900
+     *   KAZOO  BLOOM 0 -> 1.0086   BLOOM 1 -> 1.8543
+     * Every BLOOM 1 case clears the 1.4x bar by 28-40%; every BLOOM 0 case
+     * sits at parity (0.99-1.01), well inside the 1.2x bar.
+     */
+    @Test
+    fun `BLOOM opens the peak at the attack and lets it settle`() {
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.3f, "PEAK" to 0.4f, "BODY" to 0.2f, "FOLLOW" to 1f, "DECAY" to 0.7f)
+            fun headToTail(bloom: Float): Float {
+                val snip = Glint.render(voice, still + ("BLOOM" to bloom))
+                val head = FeatureExtractor.extract(slice(snip, 0f, 0.012f)).centroidHz
+                val tail = FeatureExtractor.extract(
+                    slice(snip, snip.durationSeconds * 0.7f, snip.durationSeconds),
+                ).centroidHz
+                return head / tail
+            }
+            assertTrue(headToTail(1f) > 1.4f, "$voice BLOOM 1 should open the head well above the tail: ${headToTail(1f)}")
+            assertTrue(headToTail(0f) < 1.2f, "$voice BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+        }
+    }
+
+    /**
+     * Measured 2026-09-26, same still as above, tail centroid (0.75 * duration
+     * to the end) at BLOOM 0 vs BLOOM 1:
+     *   REED   1127.9448 Hz -> 1127.9445 Hz (diff 0.0003 Hz)
+     *   BOTTLE 2307.9585 Hz -> 2307.9578 Hz (diff 0.0007 Hz)
+     *   KAZOO  2286.9421 Hz -> 2286.9434 Hz (diff 0.0013 Hz)
+     * BLOOM_SLOW_T60 = 0.30s against a 0.67s DECAY-0.7 t60 leaves the sweep
+     * fully settled (envAt past 5 t60s) well before the 0.75-duration mark,
+     * so the two tails are identical to four significant figures - nowhere
+     * near the 20% bar.
+     */
+    @Test
+    fun `BLOOM lands before the note ends, whatever it did on the way`() {
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.3f, "PEAK" to 0.4f, "BODY" to 0.2f, "FOLLOW" to 1f, "DECAY" to 0.7f)
+            fun tail(bloom: Float): Float {
+                val snip = Glint.render(voice, still + ("BLOOM" to bloom))
+                return FeatureExtractor.extract(
+                    slice(snip, snip.durationSeconds * 0.75f, snip.durationSeconds),
+                ).centroidHz
+            }
+            assertTrue(
+                kotlin.math.abs(tail(1f) - tail(0f)) < tail(0f) * 0.2f,
+                "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
+            )
+        }
+    }
+
+    @Test
+    fun `BLOOM at its ugliest still renders legal audio`() {
+        // GLINT has no feedback path, so BLOOM is allowed to be ugly at the
+        // top — but ugly must still be finite, in range and in tune.
+        for (voice in GlintVoice.entries) {
+            for (peak in listOf(0f, 0.5f, 1f)) {
+                val snip = Glint.render(voice, mapOf("BLOOM" to 1f, "PEAK" to peak, "BODY" to 1f))
+                assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice BLOOM 1 PEAK $peak broke range")
+                assertTrue(snip.peak() > 0.5f, "$voice BLOOM 1 PEAK $peak too quiet")
+            }
         }
     }
 

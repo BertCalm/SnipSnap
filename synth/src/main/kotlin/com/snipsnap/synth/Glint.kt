@@ -49,6 +49,13 @@ object Glint {
     /** BODY's own t60 as a fraction of the amp t60 — the body burns off, the glass rings on. */
     const val BODY_DECAY_RATIO = 0.45f
 
+    /** BLOOM's ceiling: the peak opens to this many times its settled ratio. */
+    const val BLOOM_MAX = 3f
+
+    /** BLOOM's sweep t60 at the knob's top and bottom — more BLOOM is further AND faster. */
+    const val BLOOM_FAST_T60 = 0.06f
+    const val BLOOM_SLOW_T60 = 0.30f
+
     fun macrosFor(voice: GlintVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, 0.5f),
         MacroSpec("PEAK", 0.45f),
@@ -161,7 +168,10 @@ object Glint {
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 1.4f)
         val frames = (t60 * 1.35f * rate).toInt().coerceAtLeast(64)
 
-        val k = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
+        val kBase = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
+        val bloom = m.getValue("BLOOM")
+        val bloomAmount = Dsp.lin(bloom, 0f, BLOOM_MAX)
+        val bloomT60 = Dsp.expMap(bloom, BLOOM_SLOW_T60, BLOOM_FAST_T60)
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val bodyMix = m.getValue("BODY")
@@ -174,6 +184,11 @@ object Glint {
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
             val w = windowAt(voice, phase)
+            // kBase is snapped; BLOOM modulates continuously on top of it, so
+            // the knob is musical and the sweep is smooth. k moves on the
+            // envelope's timescale, far slower than one cycle, so the inner
+            // sine stays effectively periodic while restarting at each wrap.
+            val k = (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, K_MAX)
             val burst = w * sin(2.0 * PI * k * phase).toFloat()
             // The body decays faster than the burst, so the note opens as a
             // saw with a peak on it and fades to pure whistling resonance.
