@@ -579,6 +579,13 @@ class GlintTest {
 
     @Test
     fun `atVelocity is genuinely darker at low velocity`() {
+        // Does NOT discriminate PEAK from the soften() fallback: Velocity.soften
+        // also darkens a soft hit, so this assertion would pass even if PEAK were
+        // never wired up. The test directly above this one (`GLINT uses PEAK for
+        // velocity, not the soften fallback`) is what proves the real routing, but
+        // it only checks REED. This one earns its place by covering all three
+        // voices - a coarse "velocity is directionally correct everywhere" guard
+        // that the routing test alone doesn't give.
         for (voice in GlintVoice.entries) {
             val patch = GlintPatch("Vel $voice", voice, Glint.defaults(voice))
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
