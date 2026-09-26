@@ -2,7 +2,6 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
-import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -44,6 +43,17 @@ object Glint {
 
     /** At or below this, `k` snaps to integers so the peak lands on a harmonic. */
     const val SNAP_CEILING = 12f
+
+    /**
+     * Below this the ratio runs free. Between [K_MIN] and 3 there is only
+     * one integer, so snapping there quantises nothing — it flattens the
+     * whole range onto 2, and that flattening is what made velocity's
+     * floor-scaled layer land on the same ratio as the full one: measured
+     * dead across PEAK 0.00-0.06 before this floor, and nowhere after it.
+     * The audition's own verdict points the same way: k=3, 5 and 8 were
+     * marked KEEP and k=2 only "ok".
+     */
+    const val SNAP_FLOOR = 3f
 
     /** KAZOO's trapezoid holds at full for this fraction of the cycle, then ramps out. */
     const val KAZOO_FLAT = 0.7f
@@ -108,7 +118,6 @@ object Glint {
 
     fun defaults(voice: GlintVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
-            .let { it + ("PEAK" to snapPeak(it.getValue("PEAK"))) }
 
     /**
      * No preset roster yet — Phase 3 authors one and this gains the
@@ -123,7 +132,6 @@ object Glint {
         val base = defaults(voice)
         val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
         return Dsp.scrambleNear(seed, temperature, random)
-            .let { it + ("PEAK" to snapPeak(it.getValue("PEAK"))) }
     }
 
     /** The bottom of each voice's own two-octave TUNE range. */
@@ -158,49 +166,28 @@ object Glint {
     fun ratioAtReference(peak: Float): Float = Dsp.expMap(peak, K_MIN, K_MAX)
 
     /**
-     * Integers put the peak exactly on a harmonic — k=2 the octave, k=3 the
-     * octave-and-a-fifth, k=5 two octaves and a major third. Snapping matters
-     * only where the ear reads the peak as related to the note, so it applies
-     * below [SNAP_CEILING] and stops above it, where it would be inaudible.
+     * Integers put the peak exactly on a harmonic — k=3 the octave-and-a-
+     * fifth, k=5 two octaves and a major third. Snapping matters only where
+     * the ear reads the peak as related to the note, so it applies inside
+     * [SNAP_FLOOR]..[SNAP_CEILING] and is identity outside that band.
+     *
+     * The floor exists because between [K_MIN] and 3 there is only one
+     * integer to land on: snapping that range doesn't quantise anything, it
+     * flattens the whole range onto 2. That flattening was the velocity
+     * bug — a floor-scaled macro and its full-strength twin both fell onto
+     * the same flat ratio and rendered byte-identical. Quantization for the
+     * ear, full resolution for the diff — never conflate them again.
      *
      * The base ratio snaps; BLOOM modulates continuously on top of it. That
      * is what makes the knob musical and the sweep smooth.
      */
-    fun snapRatio(k: Float): Float = if (k <= SNAP_CEILING) Math.round(k).toFloat() else k
-
-    /**
-     * [peak] moved to the nearest macro value whose ratio is an exact
-     * harmonic — the snap, applied where PEAK is *authored* rather than
-     * where it is rendered.
-     *
-     * It used to live inside [ratioFor], which meant velocity's
-     * floor-scaled macro quantised onto the same integer as the full one:
-     * below about PEAK 0.06 the soft and hard layers rendered byte-
-     * identically and a preset there had no velocity response at all.
-     * Snapping the stored value instead leaves the render path continuous,
-     * so scaling it always moves the formant. Quantisation for the ear,
-     * full resolution for the difference.
-     *
-     * Identity above [SNAP_CEILING], where the ratio runs free.
-     */
-    fun snapPeak(peak: Float): Float {
-        val k = ratioAtReference(peak)
-        if (k > SNAP_CEILING) return peak
-        val target = Math.round(k).toFloat().coerceIn(K_MIN, K_MAX)
-        return (ln(target / K_MIN) / ln(K_MAX / K_MIN)).coerceIn(0f, 1f)
-    }
+    fun snapRatio(k: Float): Float = if (k in SNAP_FLOOR..SNAP_CEILING) Math.round(k).toFloat() else k
 
     /** The centre of the voice's own TUNE range — where FOLLOW has no work to do. */
     fun referenceHz(voice: GlintVoice): Float = frequencyFor(voice, 0.5f)
 
     /**
-     * The formant ratio actually used, after FOLLOW and the clamp.
-     *
-     * The snap now lives in [snapPeak] and is applied when PEAK is set
-     * (by [defaults] and [scramble]), not when it is rendered — this stays
-     * continuous so a scaled macro (as `Velocity.atVelocity` produces)
-     * always moves the formant rather than quantising onto the same
-     * integer as the unscaled value.
+     * The formant ratio actually used, after FOLLOW, the snap and the clamp.
      *
      * FOLLOW rides `Dsp.keyTrack`: at 1 the peak's Hz scales exactly with the
      * note, so the ratio is constant and the timbre is identical across the
@@ -219,7 +206,7 @@ object Glint {
         val f0 = frequencyFor(voice, tune)
         val peakHzAtReference = ratioAtReference(peak) * reference
         val peakHz = Dsp.keyTrack(peakHzAtReference, f0, reference, follow)
-        return (peakHz / f0).coerceIn(K_MIN, K_MAX)
+        return snapRatio((peakHz / f0).coerceIn(K_MIN, K_MAX))
     }
 
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {
