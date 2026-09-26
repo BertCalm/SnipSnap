@@ -785,13 +785,19 @@
     return data;
   }
 
+  // Every phase's verdicts live under their own prefix: the spike and Phase 1
+  // wrote verdicts/NYLON etc., and a page that read those back would open
+  // pre-filled with an older gate's notes and overwrite them on save.
+  var PHASE = 'p2';
+  function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
+
   function saveLocal(key, data) {
-    try { localStorage.setItem('pluck-audition:' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+    try { localStorage.setItem('pluck-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
   }
 
   function loadLocal(key) {
     try {
-      var raw = localStorage.getItem('pluck-audition:' + key);
+      var raw = localStorage.getItem('pluck-audition:' + PHASE + ':' + key);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
@@ -816,7 +822,7 @@
     if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
     setStatus(null, 'SAVING...');
     queues[key] = (queues[key] || Promise.resolve())
-      .then(function () { return db.doc('verdicts/' + key).set(data); })
+      .then(function () { return db.doc(docPath(key)).set(data); })
       .then(function () { setStatus('ok', 'SAVED ' + clock()); },
             function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
   }
@@ -837,7 +843,7 @@
       .then(function (ns) {
         if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
         return Promise.all(KEYS.map(function (k) {
-          return ns.doc('verdicts/' + k).get().then(function (snap) {
+          return ns.doc(docPath(k)).get().then(function (snap) {
             if (snap && snap.exists) apply(k, snap.data());
           }, function () { /* keep the local copy */ });
         })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
