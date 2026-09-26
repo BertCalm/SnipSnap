@@ -622,7 +622,7 @@
           chip.type = 'button';
           chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
           chip.setAttribute('aria-pressed', 'false');
-          chip.setAttribute('aria-label', v.id + ' ' + name + ': ' + r.t.toLowerCase() + ' to the instrument');
+          chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase() + ' to the instrument');
           chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
           chip.addEventListener('click', function () { react(v.id, fid, r.v); });
           chips.appendChild(chip);
