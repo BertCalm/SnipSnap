@@ -185,7 +185,17 @@ class GlintTest {
         // made BLOOM audible at all - moved that same window into the
         // middle of the sweep, and this test now runs only from a settled
         // window (0.35s onward, chosen so envAt(0.35, 0.45) = 0.0045) at the
-        // original 0.98 bar.
+        // original 0.98 bar. That 0.35 is written below as
+        // `Glint.BLOOM_T60 * (7f / 9f)`, not the literal, so it stays at the
+        // same envAt fraction if BLOOM_T60 ever changes - D2 is expected to
+        // touch it, and a hardcoded 0.35 would silently slide back into the
+        // sweep and fail a correct engine (see the inversion documented
+        // below) while pointing at a pitch bug that does not exist. This
+        // trades one failure mode for another: at DECAY 0.7 the render is
+        // ~0.90s, so this only has room while BLOOM_T60 stays below ~0.9s
+        // (fromSec + the 0.2s correlation window must fit before the end);
+        // a BLOOM_T60 much larger than that needs `still`'s DECAY raised
+        // here too, not just this derivation.
         //
         // Measured 2026-09-26 at fromSec=0.35 across 3 voices x 4 PEAK
         // settings x both BLOOM extremes: worst case 0.98737 (BOTTLE, PEAK
@@ -215,13 +225,17 @@ class GlintTest {
         // is shape-insensitive and stays valid during a sweep. It has to be
         // built there regardless: PLATE and RATCHET both move k in new
         // ways that this test's settled-window-only approach won't cover.
+        // == 0.35 at the current BLOOM_T60 (0.45); expressed as a fraction
+        // of BLOOM_T60 rather than that literal so it tracks BLOOM_T60 if
+        // D2 changes it (see comment above).
+        val settledFromSec = Glint.BLOOM_T60 * (7f / 9f)
         for (voice in GlintVoice.entries) {
             for (bloom in listOf(0f, 1f)) {
                 val still = mapOf("TUNE" to 0.5f, "BLOOM" to bloom, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
                 val f0 = Glint.frequencyFor(voice, 0.5f)
                 for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
                     val snip = Glint.render(voice, still + ("PEAK" to peak))
-                    val corr = periodCorrelation(snip, f0, fromSec = 0.35f)
+                    val corr = periodCorrelation(snip, f0, fromSec = settledFromSec)
                     assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
                 }
             }
@@ -507,30 +521,65 @@ class GlintTest {
         // BOTTLE bare=7.350461E-9 full=0.037051857 (5040752x), KAZOO
         // bare=5.071703E-5 full=0.05096992 (1005x). All clear the 3x bar by
         // a wide margin.
-        val rate = Dsp.RATE
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
             val f0 = Glint.frequencyFor(voice, 0.5f)
             val k = Glint.ratioFor(voice, 0.5f, 0.8f, 1f)
-            val k2 = (k / Glint.BODY_RATIO_DIVISOR).coerceAtLeast(Glint.K_MIN)
-            val bare = energyAt(Glint.render(voice, still + ("BODY" to 0f)).samples, k2 * f0, rate)
-            val full = energyAt(Glint.render(voice, still + ("BODY" to 1f)).samples, k2 * f0, rate)
+            val k2 = Glint.bodyRatio(k)
+            val bareSnip = Glint.render(voice, still + ("BODY" to 0f))
+            val fullSnip = Glint.render(voice, still + ("BODY" to 1f))
+            val bare = energyAt(bareSnip.samples, k2 * f0, bareSnip.sampleRate)
+            val full = energyAt(fullSnip.samples, k2 * f0, fullSnip.sampleRate)
             assertTrue(full > bare * 3f, "$voice: BODY should put real energy at k2*f0 ($bare -> $full)")
         }
     }
 
     @Test
-    fun `BODY carries no DC at any setting`() {
-        // BODY is now a windowed sine, which carries no DC for any k2 >= 1 —
-        // unlike the old term, which mixed the raw unipolar window and
-        // needed windowMean subtracted to avoid pushing DC through
-        // Dsp.levelTo and out to the WAV. This assertion still guards the
-        // output regardless of how BODY is built.
+    fun `BODY carries a small, bounded DC that decays with the envelope`() {
+        // A windowed sine is NOT DC-free in general — only a window
+        // symmetric about phase 0.5 nulls integral(w(phi) * sin(2*pi*k*phi), phi, 0, 1),
+        // and of GLINT's three windows only BOTTLE's triangle is symmetric
+        // that way. REED's ramp (w = 1-phi) integrates to 1/(2*pi*k) for
+        // every integer k, and KAZOO's trapezoid is asymmetric the same
+        // way. Mean-removing BODY to cancel that residual would stop it
+        // reaching exactly zero at the cycle wrap — the property the class
+        // doc calls "the whole engine" — so it is left in deliberately, and
+        // this test's job is to show the residual is small and decaying,
+        // not to claim it is absent.
+        //
+        // Averaging the whole buffer (the old form of this test) can't see
+        // that: the decayed tail is far longer and far quieter than the
+        // head, so it dominates the mean and reads ~0.0044 regardless of
+        // BODY — a bound that never moves is not testing anything. This
+        // version measures the head window instead, where the DC is
+        // actually largest.
+        //
+        // Measured 2026-09-26: DC over the first 50ms, as a fraction of
+        // that window's own peak, at BLOOM 0, BODY 0 -> 1:
+        //   REED   0.0136 -> 0.0340
+        //   KAZOO  0.0129 -> 0.0321
+        //   BOTTLE 1.4E-6 -> 1.2E-5  (triangle window, nulls as expected)
+        // 0.05 sits above the worst measured ratio (0.0340) with real
+        // margin, but is still tight enough to bite: mutation-verified by
+        // temporarily adding a constant to the `body` assignment in
+        // Glint.synthesize (`... .toFloat() + <offset>`, a raw per-sample
+        // value added before it's scaled by bodyEnv - not the same unit as
+        // the head-window DC ratio above, though the render's peak
+        // normalization to ~0.99 puts them in the same ballpark) and
+        // bisecting the offset. +0.04f fails, +0.03f passes - so the
+        // smallest offset this bound catches lies between 0.03 and 0.04.
+        // Reverted after each run.
         for (voice in GlintVoice.entries) {
             for (body in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
                 val snip = Glint.render(voice, mapOf("BODY" to body, "BLOOM" to 0f))
-                val dc = snip.samples.average().toFloat()
-                assertTrue(kotlin.math.abs(dc) < 0.02f, "$voice at BODY $body has DC $dc")
+                val head = slice(snip, 0f, 0.05f)
+                val dc = head.samples.average().toFloat()
+                val peak = head.peak()
+                val ratio = if (peak > 0f) dc / peak else 0f
+                assertTrue(
+                    kotlin.math.abs(ratio) < 0.05f,
+                    "$voice at BODY $body has head-window DC ratio $ratio (dc=$dc, peak=$peak)",
+                )
             }
         }
     }

@@ -52,6 +52,13 @@ object Glint {
      * dead across PEAK 0.00-0.06 before this floor, and nowhere after it.
      * The audition's own verdict points the same way: k=3, 5 and 8 were
      * marked KEEP and k=2 only "ok".
+     *
+     * PEAK exactly 0 is still identical for both velocity layers even with
+     * this floor — kBase is 2.0 either way — but that row is covered by
+     * `Velocity.kt`'s own `asked <= 1e-6f` guard, which routes a macro
+     * parked at zero to `soften` instead of scaling it. This floor and that
+     * guard are two separate fixes for the same PEAK 0.00-0.06 range; move
+     * that guard's threshold and this claim needs re-checking.
      */
     const val SNAP_FLOOR = 3f
 
@@ -69,11 +76,20 @@ object Glint {
 
     /**
      * How far below the main formant the second one sits — k/5.6, about two
-     * and a half octaves. The old BODY mixed the mean-removed window back
-     * in, which is the same harmonic series the burst already carries, so it
-     * was inaudible however loud it was mixed. A second burst at its own
-     * ratio is a second *source*: "two formants, two speeds, is a vowel and
-     * the room it sits in" (design 2026-09-26).
+     * and a half octaves — but only once `kBase` clears 11.2, where
+     * [bodyRatio]'s `(kBase / BODY_RATIO_DIVISOR).coerceAtLeast(K_MIN)`
+     * stops returning K_MIN. Below that it pins the body to K_MIN (2)
+     * instead, and the real interval is smaller than 5.6. That binds for
+     * most of the knob: 11.2 is PEAK ≈0.575 at the reference note on the
+     * raw, unsnapped ratio, though `kBase` itself is snapped to integers in
+     * [SNAP_FLOOR]..[SNAP_CEILING], so in practice the first reachable
+     * `kBase` that clears the clamp is 12, not a smooth crossing at 11.2.
+     * At the shipped default (PEAK 0.45, kBase 8) the body sits at exactly
+     * 2×f0 — a 4x interval, not 5.6x. The old BODY mixed the mean-removed
+     * window back in, which is the same harmonic series the burst already
+     * carries, so it was inaudible however loud it was mixed. A second
+     * burst at its own ratio is a second *source*: "two formants, two
+     * speeds, is a vowel and the room it sits in" (design 2026-09-26).
      */
     const val BODY_RATIO_DIVISOR = 5.6f
 
@@ -209,6 +225,17 @@ object Glint {
         return snapRatio((peakHz / f0).coerceIn(K_MIN, K_MAX))
     }
 
+    /**
+     * BODY's second-formant ratio for a given [kBase] — see
+     * [BODY_RATIO_DIVISOR]. Clamped to [K_MIN] so it never falls below two
+     * burst cycles per window and stops being a formant at all; that clamp
+     * binds below `kBase ≈ 11.2`, which is most of the knob (see
+     * [BODY_RATIO_DIVISOR]'s doc). One definition, shared by [synthesize]
+     * and the test that probes it, so a change here can't silently drift
+     * out of step with a copy elsewhere.
+     */
+    internal fun bodyRatio(kBase: Float): Float = (kBase / BODY_RATIO_DIVISOR).coerceAtLeast(K_MIN)
+
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice) + macros
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
@@ -230,9 +257,8 @@ object Glint {
         val bodyEnv = Dsp.Env(attackSeconds = 0.002f, decay2T60 = bodyT60)
         // The second formant is pinned to the *base* ratio, not the
         // bloom-modulated one: it is a separate resonance, not a shadow of
-        // the first. Clamped to K_MIN so it never falls below two burst
-        // cycles per window and stops being a formant at all.
-        val k2 = (kBase / BODY_RATIO_DIVISOR).coerceAtLeast(K_MIN)
+        // the first.
+        val k2 = bodyRatio(kBase)
         val step = f0 / rate
         var phase = 0f
         val out = FloatArray(frames)
@@ -246,8 +272,16 @@ object Glint {
             // sine stays effectively periodic while restarting at each wrap.
             val k = (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, K_MAX)
             val burst = w * sin(2.0 * PI * k * phase).toFloat()
-            // A windowed sine carries no DC, so unlike the window copy this
-            // replaced, nothing here needs mean-removing.
+            // Not because a windowed sine has no DC — it does, for any
+            // window that isn't symmetric about phase 0.5: REED's ramp and
+            // KAZOO's trapezoid both integrate to a nonzero mean (BOTTLE's
+            // triangle is the one window here that nulls it). This stays
+            // uncorrected because subtracting a constant would stop it
+            // reaching exactly zero at the wrap — the property this file's
+            // class doc calls the whole engine — and the residual is small
+            // (a few percent of peak in the head window at BODY 1) and
+            // decays with bodyEnv; see `BODY carries a small, bounded DC`
+            // in GlintTest.
             val body = bodyMix * w * sin(2.0 * PI * k2 * phase).toFloat()
             out[i] = amp.at(t) * burst + bodyEnv.at(t) * body
             phase += step
