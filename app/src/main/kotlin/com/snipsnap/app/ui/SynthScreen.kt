@@ -230,8 +230,8 @@ fun SynthScreen(
     // prototype's `state.macros` map — not a fresh set of defaults every
     // time. Populated eagerly for every (engine, voice) pair up front, same
     // idiom the THUMP-only screen used for its own eight voices — cheap
-    // (27 entries total across all six engines) and means no read site ever
-    // has to defend against a missing key.
+    // (49 entries total across all eleven engines) and means no read site
+    // ever has to defend against a missing key.
     val macrosByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
             for (e in Engine.entries) {

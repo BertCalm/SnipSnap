@@ -287,8 +287,11 @@ is no contract.
 
 ## Data flow and compatibility
 
-Registration points, exhaustive. The shape of each is established by RESIN
-and TINES.
+Registration points, as known when this table was written — not exhaustive.
+Building the engine turned up two more (see the note below the table). The
+reliable method for a future phase is to grep for every exhaustive `when`
+over `Patch` and every hardcoded engine list, not to trust this table as a
+checklist. The shape of each entry here is established by RESIN and TINES.
 
 **New files**
 
@@ -313,6 +316,15 @@ and TINES.
 
 **Untouched:** the CLI (`SynthCommand` resolves through `Presets` generically),
 `SynthKits.kt`, `Keys.kt`, `Modes.kt`, `PadRecipe.kt`.
+
+**Missed by this table, found while building GLINT, not while planning it:**
+`Velocity.kt`'s `macroSpecsFor` carries its own exhaustive `when (patch)`
+over the sealed `Patch` interface, mapping each patch type to its macro
+list — skip a branch there and `:synth` does not compile. `shell`'s
+`UserPresetsTest` also hardcodes an "every voice of every engine" roster;
+missing GLINT there is harmless today, but it is a second place the table
+above did not name. Neither turned up until implementation forced the
+compiler's or the test's hand.
 
 ## Failure handling
 
