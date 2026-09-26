@@ -210,6 +210,7 @@ object Velocity {
         is VoxPatch -> Vox.macrosFor(patch.voice)
         is SkinPatch -> Skin.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
+        is GlintPatch -> Glint.macrosFor(patch.voice)
     }
 
     /**

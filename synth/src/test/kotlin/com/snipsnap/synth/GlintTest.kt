@@ -514,4 +514,34 @@ class GlintTest {
         }
     }
 
+    @Test
+    fun `a GLINT patch round-trips through JSON`() {
+        val patch = GlintPatch("Glass Test", GlintVoice.BOTTLE, mapOf("PEAK" to 0.7f, "FOLLOW" to 0.2f))
+        val restored = Patches.fromJsonText(patch.toJsonText())
+        assertEquals(patch, restored)
+        assertTrue(patch.render().samples.contentEquals(restored.render().samples))
+    }
+
+    @Test
+    fun `a GLINT patch rejects a macro the voice does not have`() {
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            GlintPatch("Bad", GlintVoice.REED, mapOf("CUTOFF" to 0.5f))
+        }
+    }
+
+    @Test
+    fun `a GLINT patch rejects a macro out of range`() {
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            GlintPatch("Bad", GlintVoice.REED, mapOf("PEAK" to 1.4f))
+        }
+    }
+
+    @Test
+    fun `a GLINT patch will not load from another engine's JSON`() {
+        val tines = TinesPatch("Bell", TinesVoice.BELL, mapOf("RATIO" to 0.5f))
+        kotlin.test.assertFailsWith<com.snipsnap.json.JsonException> {
+            GlintPatch.fromJsonText(tines.toJsonText())
+        }
+    }
+
 }

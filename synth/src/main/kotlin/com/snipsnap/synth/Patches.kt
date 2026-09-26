@@ -46,6 +46,7 @@ object Patches {
             ResinPatch.ENGINE -> ResinPatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
+            GlintPatch.ENGINE -> GlintPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
