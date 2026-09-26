@@ -215,8 +215,8 @@ object Velocity {
 
     /**
      * Per-voice override of [brightnessSpec]'s answer, checked before the
-     * generic [BRIGHTNESS_MACROS] scan. THUMP SNARE is the only entry - see
-     * [SNARE_TONE_EXCLUDED] for the measurement backing it.
+     * generic [BRIGHTNESS_MACROS] scan. THUMP SNARE and PLUCK are the
+     * entries - see [SNARE_TONE_EXCLUDED] for the measurement backing it.
      *
      * This exists *instead of* adding "SNAP" to [BRIGHTNESS_MACROS]
      * outright, on purpose: SKIN SNARE (`SkinVoice.SNARE`) exposes its own,
@@ -230,8 +230,16 @@ object Velocity {
      * it stays on [soften] until someone runs SKIN's own sweep and adds its
      * own override line.
      */
-    private fun brightnessOverride(patch: Patch): String? =
-        if (patch is ThumpPatch && patch.voice == ThumpVoice.SNARE) "SNAP" else null
+    private fun brightnessOverride(patch: Patch): String? = when {
+        patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
+        // PICK is proven monotonic for NYLON, KOTO and HARP by PluckTest's
+        // `PICK moves the centroid at every step of its travel`. KALIMBA is
+        // excluded because its own sweep inverts (centroid peaks at PICK
+        // 0.1 and falls, net -2.4% at PICK 1) and it leaves PLUCK in Phase
+        // 2, so it keeps the soften() fallback until then.
+        patch is PluckPatch && patch.voice != PluckVoice.KALIMBA -> "PICK"
+        else -> null
+    }
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and

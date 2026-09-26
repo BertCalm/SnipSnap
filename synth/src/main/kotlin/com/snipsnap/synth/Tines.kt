@@ -3,6 +3,8 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -18,7 +20,7 @@ import kotlin.random.Random
  * S3 scope: percussion one-shots that join THUMP kits. The key-patch side of
  * TINES (e-pianos, growl basses) waits on keygroup export.
  */
-enum class TinesVoice { BELL, CHIME, BLOCK, ZAP, TOY }
+enum class TinesVoice { BELL, CHIME, BLOCK, ZAP, TOY, KALIMBA }
 
 object Tines {
 
@@ -29,6 +31,38 @@ object Tines {
      * FM panel playable at first touch.
      */
     val RATIOS = floatArrayOf(1f, 1.4f, 2f, 2.7f, 3.5f, 4.2f, 5.8f)
+
+    /**
+     * KALIMBA is TINES' one melodic voice, so its TUNE snaps to semitones
+     * from a root of A3 over two octaves — PLUCK's convention
+     * ([Pluck.TUNE_SEMITONES]), applied here because `SynthKits.melodic()`'s
+     * kalimba pads are pad recipes that replay through macro values and
+     * the note has to be reachable as one. The root and span match the
+     * PLUCK voice this one replaces, so the kit's notes do not move.
+     */
+    const val KALIMBA_TUNE_SEMITONES = 24
+    const val KALIMBA_ROOT_HZ = 220f
+
+    /**
+     * A clamped-free bar's partials — a kalimba tine — from the
+     * Euler–Bernoulli eigenvalues βL = 1.8751, 4.6941, 7.8548 squared and
+     * normalised to the first. The free-free bar in [Modes.tableFor] is
+     * the same family. Citations: Fletcher & Rossing, The Physics of
+     * Musical Instruments (bars); Rossing, Science of Percussion
+     * Instruments (mbira) — recorded in the plan workspace before landing.
+     * Two overtones only: the fourth (34.4 f0) would sit above 15 kHz over
+     * most of the range and above Nyquist at the top.
+     */
+    internal val KALIMBA_PARTIALS = floatArrayOf(1f, 6.267f, 17.548f)
+
+    /** The snapped note KALIMBA's TUNE lands on; every other TINES voice has a continuous carrier range. */
+    fun frequencyFor(voice: TinesVoice, tune: Float): Float =
+        frequencyFor(voice, Math.round(tune.coerceIn(0f, 1f) * KALIMBA_TUNE_SEMITONES))
+
+    internal fun frequencyFor(voice: TinesVoice, semitone: Int): Float {
+        require(voice == TinesVoice.KALIMBA) { "only KALIMBA snaps TUNE to semitones; $voice has a continuous carrier range" }
+        return KALIMBA_ROOT_HZ * 2f.pow(semitone / 12f)
+    }
 
     fun macrosFor(voice: TinesVoice): List<MacroSpec> = when (voice) {
         TinesVoice.BELL -> listOf(
@@ -49,6 +83,10 @@ object Tines {
         TinesVoice.TOY -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("WOBBLE", 0.5f), MacroSpec("BRIGHT", 0.5f),
             MacroSpec("DECAY", 0.4f),
+        )
+        TinesVoice.KALIMBA -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("BUZZ", 0.15f), MacroSpec("BRIGHT", 0.5f),
+            MacroSpec("DECAY", 0.45f),
         )
     }
 
@@ -79,6 +117,7 @@ object Tines {
             TinesVoice.BLOCK -> block(m, renderRate)
             TinesVoice.ZAP -> zap(m, renderRate)
             TinesVoice.TOY -> toy(m, renderRate)
+            TinesVoice.KALIMBA -> kalimba(m, renderRate)
         }
         val buf = Dsp.decimate(raw, RATE)
         Dsp.normalize(buf)
@@ -218,5 +257,59 @@ object Tines {
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
         }
         return out
+    }
+
+    /**
+     * A plucked tine: a harmonic strike for the tongue, then two near-pure
+     * partials at the bar's own ratios, each dying faster than the one
+     * below it, then the buzzers. DECAY tops out at 1.0 s so the voice stays
+     * under the 1.5 s one-shot bound every TINES voice keeps.
+     */
+    private fun kalimba(m: Map<String, Float>, rate: Int): FloatArray {
+        val hz = frequencyFor(TinesVoice.KALIMBA, m.getValue("TUNE"))
+        val bright = m.getValue("BRIGHT")
+        val buzz = m.getValue("BUZZ")
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.3f, 1.0f)
+
+        val out = FloatArray(frames(t60 * 1.3f, rate))
+        // The tongue: its index is the thumb's hardness, and the bite keeps
+        // the pluck at the front.
+        strike(out, hz, ratio = 1f, index = Dsp.lin(bright, 0.3f, 1.6f), t60 = t60, bite = 2.5f, rate = rate)
+        // The bar's overtones, each a near-pure partial (ratio 1, tiny
+        // index) that BRIGHT brings up and that die faster than the tongue.
+        val upper = Dsp.lin(bright, 0.15f, 0.5f)
+        strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.25f, bite = 2f, gain = upper, rate = rate)
+        strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.10f, bite = 2f, gain = upper * 0.35f, rate = rate)
+        if (buzz > 0.01f) rattle(out, buzz, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "BUZZ"))
+        return out
+    }
+
+    /**
+     * The mbira's buzzers — bottle caps, shells on the soundboard — rattle
+     * at the peaks of the vibration, so the buzz lives in the attack and
+     * dies with the note. Amplitude-gated noise: wherever the tongue swings
+     * past a threshold BUZZ lowers, add seeded noise scaled by the excess.
+     * BUZZ 0 is a clean thumb piano; BUZZ 1 is a full rattle, the ugly end.
+     *
+     * At BUZZ 1 the rattle can add roughly twice the tine's own peak before
+     * [render]'s `Dsp.normalize` pulls the whole buffer back down (~10 dB),
+     * so a full rattle reads quieter in the app than a clean tine does, not
+     * louder as the raw gain here would suggest. The noise is also white at
+     * the 4x render rate, and `Dsp.decimate`'s low-pass on the way back down
+     * to RATE discards most of that energy - only what survives under
+     * Nyquist at RATE actually reaches the ear. Both to revisit once the
+     * presets are authored by ear rather than from this table.
+     */
+    private fun rattle(out: FloatArray, buzz: Float, seed: Int) {
+        val noise = Dsp.Noise(seed)
+        var peak = 0f
+        for (v in out) peak = maxOf(peak, abs(v))
+        if (peak <= 0f) return
+        val threshold = peak * Dsp.lin(buzz, 0.9f, 0.15f)
+        val gain = Dsp.lin(buzz, 0.5f, 2.5f)
+        for (i in out.indices) {
+            val excess = abs(out[i]) - threshold
+            if (excess > 0f) out[i] += gain * excess * noise.next()
+        }
     }
 }

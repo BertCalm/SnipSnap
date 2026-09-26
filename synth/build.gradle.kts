@@ -48,6 +48,16 @@ tasks.register<JavaExec>("generateThumpKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the PLUCK depth audition clips and page under testkit/pluck-audition/. See PluckAuditionGenerator. */
+tasks.register<JavaExec>("generatePluckAudition") {
+    group = "distribution"
+    description = "Render the PLUCK depth audition clips and listening page under testkit/pluck-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PluckAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pluck-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"

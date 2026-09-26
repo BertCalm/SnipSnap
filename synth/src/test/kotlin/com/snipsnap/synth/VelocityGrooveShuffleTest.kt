@@ -146,11 +146,16 @@ class VelocityGrooveShuffleTest {
 
     @Test
     fun `atVelocity falls back to soften for voices with no brightness macro`() {
-        // PLUCK's macros (TUNE, DAMP, PICK, DOUBLE) contain nothing in
-        // Velocity's BRIGHTNESS_MACROS list, so atVelocity must fall back
-        // to the same soften() path soft-variant zones already use -
-        // proven here by requiring byte-identical output, not just "still
-        // works".
+        // KALIMBA specifically, not PLUCK generally: NYLON, KOTO and HARP
+        // are now routed through PICK by Velocity's own PluckPatch override
+        // (PluckTest's `a soft PLUCK is re-synthesised through PICK, not
+        // low-passed`), and PICK isn't in BRIGHTNESS_MACROS either - the
+        // override just names it directly. KALIMBA is carved out of that
+        // override because its PICK sweep inverts, so it's the one voice
+        // still falling back to soften() here - this test pins that
+        // exclusion, byte-identical output and all, and it will need
+        // updating (not just re-passing) once Phase 2 removes
+        // PluckVoice.KALIMBA.
         val patch = PluckPresets.forVoice(PluckVoice.KALIMBA).first()
         val velocity = 0.3f
         val viaFallback = Velocity.atVelocity(patch, velocity)

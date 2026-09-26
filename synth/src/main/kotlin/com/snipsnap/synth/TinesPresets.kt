@@ -25,6 +25,7 @@ object TinesPresets {
         TinesVoice.BLOCK -> blockPresets
         TinesVoice.ZAP -> zapPresets
         TinesVoice.TOY -> toyPresets
+        TinesVoice.KALIMBA -> kalimbaPresets
     }
 
     fun all(): List<TinesPatch> = TinesVoice.entries.flatMap { forVoice(it) }
@@ -102,5 +103,23 @@ object TinesPresets {
         p(TinesVoice.TOY, "TIN TOY", "TUNE" to 0.5f, "WOBBLE" to 0.15f, "BRIGHT" to 0.6f, "DECAY" to 0.5f),
         p(TinesVoice.TOY, "CHEAP LASER", "TUNE" to 0.8f, "WOBBLE" to 0.65f, "BRIGHT" to 0.8f, "DECAY" to 0.1f),
         p(TinesVoice.TOY, "NOVELTY", "TUNE" to 0.25f, "WOBBLE" to 0.45f, "BRIGHT" to 0.4f, "DECAY" to 0.55f),
+    )
+
+    // The kalimba names carried over from PLUCK's voice of the same name,
+    // mapped onto TUNE/BUZZ/BRIGHT/DECAY; authored from the DSP like every
+    // other list here, to be re-authored by ear.
+    private val kalimbaPresets = listOf(
+        p(TinesVoice.KALIMBA, "THUMBPIANO", "TUNE" to 0.3f, "BUZZ" to 0.1f, "BRIGHT" to 0.4f, "DECAY" to 0.5f),
+        p(TinesVoice.KALIMBA, "RUSTY TINE", "TUNE" to 0.2f, "BUZZ" to 0.35f, "BRIGHT" to 0.3f, "DECAY" to 0.4f),
+        p(TinesVoice.KALIMBA, "BRASS TINE", "TUNE" to 0.4f, "BUZZ" to 0.05f, "BRIGHT" to 0.7f, "DECAY" to 0.6f),
+        p(TinesVoice.KALIMBA, "WOOD BODY", "TUNE" to 0.35f, "BUZZ" to 0.0f, "BRIGHT" to 0.3f, "DECAY" to 0.45f),
+        p(TinesVoice.KALIMBA, "GLASSY MBIRA", "TUNE" to 0.5f, "BUZZ" to 0.2f, "BRIGHT" to 0.85f, "DECAY" to 0.7f),
+        p(TinesVoice.KALIMBA, "SOFT PLUCK", "TUNE" to 0.45f, "BUZZ" to 0.0f, "BRIGHT" to 0.2f, "DECAY" to 0.35f),
+        p(TinesVoice.KALIMBA, "TWANG", "TUNE" to 0.6f, "BUZZ" to 0.45f, "BRIGHT" to 0.6f, "DECAY" to 0.3f),
+        p(TinesVoice.KALIMBA, "DUSTY KEYS", "TUNE" to 0.55f, "BUZZ" to 0.25f, "BRIGHT" to 0.45f, "DECAY" to 0.5f),
+        p(TinesVoice.KALIMBA, "BRIGHT TINE", "TUNE" to 0.7f, "BUZZ" to 0.1f, "BRIGHT" to 0.95f, "DECAY" to 0.55f),
+        p(TinesVoice.KALIMBA, "MUTED THUMB", "TUNE" to 0.25f, "BUZZ" to 0.0f, "BRIGHT" to 0.15f, "DECAY" to 0.15f),
+        p(TinesVoice.KALIMBA, "FULL RATTLE", "TUNE" to 0.65f, "BUZZ" to 0.9f, "BRIGHT" to 0.6f, "DECAY" to 0.5f),
+        p(TinesVoice.KALIMBA, "HIGH TINE", "TUNE" to 0.85f, "BUZZ" to 0.15f, "BRIGHT" to 0.8f, "DECAY" to 0.8f),
     )
 }
