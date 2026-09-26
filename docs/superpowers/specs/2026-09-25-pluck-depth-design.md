@@ -202,6 +202,18 @@ partials' own t60 multipliers rose from 0.25/0.10 to 0.6/0.25 (the second's
 gain unchanged at `upper`, the third's raised from `upper × 0.35` to
 `upper × 0.5`), so the shimmer rings longer and louder.
 
+Gate-tuned again 2026-09-26 (fourth listen): the tick was losing most of
+its energy to `Dsp.decimate`'s near-22 kHz low-pass on the way back down
+from the 4x oversampled render, because it was white noise above its
+3 kHz high-pass corner; a second, one-pole low-pass at 9 kHz now band-limits
+it to 3–9 kHz, inside what the decimator keeps. A small fixed body — two
+modes at 190 Hz and 470 Hz, standing in for the hollow wooden box under the
+tines and its sound hole — rings from the tone's own first difference and
+is added at a fixed fraction (`Tines.BOX_LEVEL`, 0.35): a candidate the
+gate asked to hear ("a bit of decay and resonance even at the low
+levels"), SHAPES rather than SOURCED the way PLUCK's bodies were (Phase 2's
+sourcing rule covered PLUCK; the box is Phase 3's to source if it stays).
+
 - **The ratios are the clamped-free bar's**: Euler–Bernoulli eigenvalues
   `βL = 1.8751, 4.6941, 7.8548`, squared and normalised, give
   `1 : 6.267 : 17.548`. The free-free bar `Modes.tableFor` already carries
@@ -221,8 +233,11 @@ gain unchanged at `upper`, the third's raised from `upper × 0.35` to
 - **Macros:** TUNE, **BUZZ**, BRIGHT, DECAY — the engine's four-knob shape.
   BRIGHT is the index on the fundamental strike plus the gain of the two
   partials, so it stays the velocity macro TINES already routes through.
-  DECAY maps t60 over `0.3–1.0 s`: `TinesTest` holds every TINES voice under
-  1.5 s at full DECAY so a hit never crosses the classifier's loop
+  DECAY maps t60 over `0.5–1.1 s` (raised from `0.3–1.0 s` at the fourth
+  listen, 2026-09-26: "a kalimba typically would have a bit of decay and
+  resonance even at the low levels", so the floor no longer reaches a bare
+  tap): `TinesTest` holds every TINES voice under 1.5 s at full DECAY
+  (1.1 × 1.3 = 1.43 s) so a hit never crosses the classifier's loop
   threshold, and a kalimba note is short anyway. BUZZ is the voice's
   character knob: an
   mbira's soundboard carries buzzers — bottle caps, shells — that rattle at
