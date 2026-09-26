@@ -5,6 +5,7 @@ import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
@@ -105,7 +106,7 @@ class UserPresetsTest {
                 "TINES" to TinesVoice.entries.map { it.name }, "VELVET" to VelvetVoice.entries.map { it.name },
                 "VOX" to VoxVoice.entries.map { it.name }, "PLUCK" to PluckVoice.entries.map { it.name },
                 "TONEWHEEL" to TonewheelVoice.entries.map { it.name }, "FATHOM" to FathomVoice.entries.map { it.name },
-                "RESIN" to ResinVoice.entries.map { it.name },
+                "RESIN" to ResinVoice.entries.map { it.name }, "TIDE" to TideVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {

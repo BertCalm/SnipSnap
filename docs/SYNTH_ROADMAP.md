@@ -207,6 +207,7 @@ What follows from it:
 | S8 | **shipped** — RESIN, the ladder engine (BASS/LEAD/BRASS: a three-oscillator STACK through `Dsp.Ladder`, the four-pole transistor-ladder low-pass with tanh in the loop, measured before use; CUTOFF key-tracked, CREAM the feedback up to self-oscillation, CONTOUR the filter envelope's amount and speed on one knob) and CONTOUR, the same filter as a rack section after EQ — design in `docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md` | S1 + U5 + U6 |
 | S8.1 | **shipped** — RESIN, held: a RESIN patch as a nine-zone keys instrument that sounds while a key is held (ATTACK/RELEASE; loops of whole sub-octave periods with the detuned square snapped to one beat per loop and the pitch fitted to whole frames; CREAM capped at the self-oscillation threshold), from SYNTH's `MAKE INSTRUMENT ▸` or `snipsnap synth RESIN <VOICE> --instrument` — design in `docs/superpowers/specs/2026-09-25-resin-held-pad-design.md` | S5 + S8 |
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
+| S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/DECAY/WANDER, RATIO on GONG and FLARE; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -909,8 +910,9 @@ generations drift, with any generation's sound one tap from a pad.
 
 ## S9 — TIDE: the West Coast engine
 
-**Status:** spec. Not implemented. The phasing row is added when the
-build starts, not now, the rule RESIN and FATHOM followed.
+**Status:** S9 built (engine, presets, tests, SYNTH picker, testkit
+kit); **waiting on its audition gate** before S9.1. Where the build
+departs from this spec, and why, is under "As built" below.
 
 RESIN (S8) is the East Coast half of synthesis: a rich wave, cut down by
 a resonant filter. TIDE is the other half. It **builds** harmonics instead
@@ -1064,6 +1066,53 @@ spot.
 | **S9** | `synth/Tide.kt` (`TideVoice`, macros, render), `TidePatch` in `Patches.kt`, `TidePresets.kt` and its `Presets` branch, the tests above, TIDE in the SYNTH picker (…→ RESIN → TIDE → THUMP; README's engine count goes from nine to ten), and a `SnipSnap Tide Kit` generator under `testkit/` (`./gradlew :synth:generateTideKit`). **Ends at an audition gate**: nothing proceeds until the voices have been heard, the rule the synth-depth work set. |
 | **S9.1** | FLARE and BONGO as keys instruments through S8.1's `MAKE INSTRUMENT ▸` path, via a `Keys.tide(midi)` renderer at exact pitch. A gate is a strike device, so "held" means the gate parks at a sustain level with the fold settled before the loop starts. Whether that still sounds like TIDE is a listening question. |
 | **S9.2** | *Optional:* TIDE POOL, uncertainty driving the *notes*: a seeded, in-key random melody landed on the loop grid as an `Arp`-style ring over a spread bank. This is the genre's generative patch, and the one place WANDER is allowed to choose pitches (from the scale, never between them). |
+
+### As built — 2026-09-25
+
+Measured while building, and each one changed the design rather than
+the test:
+
+- **The gate is keyed to the note, not to a fixed floor.** Closed is half
+  the note, open is 64 times it (held between 6 and 18 kHz), exponential
+  between. With the spec's absolute 60 Hz floor the gate closed through a
+  high note's fundamental almost at once, and a closing filter pulls a
+  partial's phase as it passes: DRIP at C5 read −22 cents in its first
+  60 ms. Keyed, the gate passes the fundamental late and quiet on every
+  note. A small sag remains, the way a struck drum's pitch falls: `TideTest`
+  holds a clean note within 10 cents while the gate is over half open and
+  within 30 cents down to a tenth.
+- **An eighth-order band limit at 19.5 kHz runs before decimation.** The
+  shared decimator rejects only about 18 dB just above the new Nyquist.
+  Measured on a steady fold at C6 (drive 6, index 3): 36.5 dB of clarity at
+  4×, 37.1 dB at 8×, 45.3 dB at 4× with the band limit. The leak, not the
+  render rate, set the floor, so TIDE keeps the family's 4× render.
+- **Above C6, FOLD and WARP ease off with pitch** (`reachAt`). DRIP's top
+  octave at full fold and full WARP puts harmonics past what 4× holds (32 dB
+  clarity at C7 even band-limited, 41 dB at 8× at twice the render time).
+  Only DRIP plays up there. `TideTest` holds every harmonic voice's top note
+  at ≥ 45 dB and proves the measure sees aliasing (the native-rate render
+  scores at least 10 dB worse).
+- **DECAY is the time to −60 dB, per voice**, not τ₀: BONGO 0.12–0.9 s, DRIP
+  0.06–0.5 s, GONG 0.4–1.9 s, FLARE 0.25–1.6 s, and no hit past 2 s however
+  far WANDER stretches it. The release slows by `1 + 1.5·(1 − c)`, not
+  `1 + 3·(1 − c)`: at 3 a long GONG ran to ten seconds.
+- **RATIO snaps to whole numbers on FLARE (1–4) and to bell ratios on GONG**
+  (1.4, 2.7, 3.5, 4.2, 5.8), not to `Tines.RATIOS` for both. A non-integer
+  ratio on the lead made it a bell with no clear pitch.
+- **Every voice is PERC.** The classifier hears all four defaults as PERC,
+  and at least eight of each voice's ten presets; `TidePresetsTest` holds
+  it and `SynthScreen` mirrors it. FLARE is a lead by intent and PERC by
+  measurement, so it gets PERC's colour and no in-key retune on landing.
+- **Velocity reaches TIDE through FOLD.** It joins `Velocity`'s brightness
+  macros, so a soft strike folds less, not just quieter.
+- **WANDER's seed is the recipe plus a take index.** The same take always
+  renders the same bytes (the kit regenerates to the bit); take 1 differs
+  from take 0 only when WANDER is above 0. Nothing lands takes on pads yet:
+  a round-robin chain is where they belong.
+- **Ten presets per voice**, forty in all, `TidePresets.kt`.
+
+Open questions 1–4 are answered as recommended: TIDE, FOLD, the seed rule
+above, and DRIP (like the other three) as PERC.
 
 ### Not doing
 

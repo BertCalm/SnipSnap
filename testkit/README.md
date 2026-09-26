@@ -62,6 +62,16 @@ through the same ~9-bit virtual converter. Regenerate with
 `./gradlew :synth:generateChipKit`. It answers nothing the other kits don't
 — it exists because it's fun, which is also a requirement.
 
+### SnipSnap Tide Kit — does the West Coast knock survive the trip?
+
+TIDE, the wavefolder-and-low-pass-gate engine: WOOD BONGO walks C minor
+pentatonic up A01–A08, then DRIP (A09–A12), GONG (A13–A14) and FLARE
+(A15–A16) presets. Regenerate with `./gradlew :synth:generateTideKit`.
+Things to confirm: the bongo rows play **in tune and ascending**, each hit
+gets darker as it fades (brightness and level close together — the whole
+point of the engine), and no pad has a click, a buzz of aliasing on the
+high DRIPs, or an early cutoff.
+
 ### SnipSnap Velocity Kit — do ghost notes sound like ghost notes?
 
 The factory kit with three velocity zones per pad: soft and mid renders are

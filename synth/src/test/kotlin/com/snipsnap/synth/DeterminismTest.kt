@@ -57,6 +57,14 @@ class DeterminismTest {
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
 
+    // TIDE seeds WANDER from the recipe itself (Tide.seedFor), so this is
+    // the canary for the regenerate-from-kit.json promise at full WANDER.
+    @Test
+    fun `TIDE is byte-identical across renders`() {
+        val patch = TidePatch("Canary", TideVoice.BONGO, Tide.defaults(TideVoice.BONGO) + ("WANDER" to 1f))
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
     @Test
     fun `VELVET is byte-identical across renders`() {
         val patch = VelvetPresets.forVoice(VelvetVoice.BASS).first()

@@ -6,7 +6,7 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, nine
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, ten
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
 play). No Android layer yet.
@@ -243,6 +243,18 @@ cycles in the loop, so the wrap repeats to the bit. A tempo change re-slices
 and re-renders it, and a drone still rendering is silence on its own track,
 never a stall on the other five.
 
+TIDE is the West Coast engine, S9 of the roadmap, and RESIN's opposite:
+where the ladder cuts harmonics out of a rich wave, TIDE builds them into a
+plain one. A sine is phase-modulated (WARP — phase, not frequency, so the
+note never moves), bent through a wavefolder (FOLD — a triangle core into a
+sine shaper, so FOLD 0 is a clean sine and each unit of drive adds a fold),
+and closed by a low-pass gate: one control on a VCA and a low-pass
+together, keyed to the note and slowing as it falls, so brightness and
+level close at once. That coupling is the "bongo". WANDER nudges fold,
+decay and WARP per note from a seed the recipe itself carries, so a kit
+still regenerates to the bit. BONGO, DRIP, GONG, FLARE; the classifier
+hears all four as PERC, and the pads say so.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -250,8 +262,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — nine engines in the `Engine` picker
-counting SKIN and RESIN; GRAINS is a tenth thing entirely, out of the
+VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
+counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
 instead of picking one. VOX is three-formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
@@ -262,7 +274,7 @@ snapped PITCH, SHINE), deterministic per seed, honest enough that a
 texture classifies as the LOOP it is. `SynthKits.cloud()` is the
 atmosphere kit both of them make together.
 
-SNAP is the tenth thing, and the other half of the name: a photo becomes
+SNAP is the twelfth thing, and the other half of the name: a photo becomes
 a pad. A picture is already mathematical data — three numbers per pixel —
 so the engine only decides which numbers to read and in what order. One
 line through the photo is one cycle of a wavetable (HORIZON reads across,

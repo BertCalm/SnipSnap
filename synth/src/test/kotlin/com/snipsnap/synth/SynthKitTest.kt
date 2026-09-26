@@ -56,6 +56,18 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the tide kit walks a bongo up the pentatonic and fills the grid`() {
+        val kit = SynthKits.tide()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a TIDE render with its recipe")
+        assertTrue(kit.all { it!!.drumClass == DrumClass.PERC })
+        val pitches = (0 until 8).map { TestPitch.estimate(kit[it]!!.snip, fromSec = 0.02f, windowSec = 0.08f) }
+        for (i in 1 until pitches.size) {
+            assertTrue(pitches[i] > pitches[i - 1] * 1.02f, "bongo ${i + 1} (${pitches[i]} Hz) should sit above bongo $i (${pitches[i - 1]} Hz)")
+        }
+    }
+
+    @Test
     fun `the chip kit is sixteen crunched pads that keep their identities`() {
         val kit = SynthKits.chip()
         assertEquals(16, kit.size)

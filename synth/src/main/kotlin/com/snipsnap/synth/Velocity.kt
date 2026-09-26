@@ -178,7 +178,7 @@ object Velocity {
 
     /**
      * [patch]'s own macro specs, straight from the engine that owns its
-     * voice — an exhaustive `when` over [Patch]'s nine sealed subtypes, the
+     * voice — an exhaustive `when` over [Patch]'s ten sealed subtypes, the
      * same shape `Patches.fromJsonValue` already dispatches on by engine
      * string. This is deliberately **not** `patch.macros.keys`: a `Patch`
      * carrying a partial macro map (a hand-built one, or one rebuilt from a
@@ -206,6 +206,7 @@ object Velocity {
         is VelvetPatch -> Velvet.macrosFor(patch.voice)
         is FathomPatch -> Fathom.macrosFor(patch.voice)
         is ResinPatch -> Resin.macrosFor(patch.voice)
+        is TidePatch -> Tide.macrosFor(patch.voice)
         is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
         is VoxPatch -> Vox.macrosFor(patch.voice)
         is SkinPatch -> Skin.macrosFor(patch.voice)
@@ -415,5 +416,10 @@ object Velocity {
      * before trusting SNAP again if `snareBodyGain`/`snareWireGain` ever
      * change.
      */
-    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC")
+    //
+    // FOLD is TIDE's: the folder's drive at the strike, which adds partials
+    // and nothing else (`TideTest`'s FOLD sweep holds the centroid rising
+    // for every voice), so a soft TIDE strike folds less, as a soft strike
+    // should. No other engine has a macro by that name.
+    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC", "FOLD")
 }

@@ -167,3 +167,13 @@ tasks.register<JavaExec>("generateChipKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Render the TIDE acceptance kit into testkit/. See TideKitGenerator. */
+tasks.register<JavaExec>("generateTideKit") {
+    group = "distribution"
+    description = "Render the TIDE West Coast acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TideKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
