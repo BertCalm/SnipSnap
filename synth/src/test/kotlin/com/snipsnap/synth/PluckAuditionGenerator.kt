@@ -21,6 +21,13 @@ import kotlin.math.abs
  * won, recorded in the spec) and is no longer rendered; its clips stay on
  * the artifact.
  *
+ * A p2b follow-up set renders on top of the above, for the gate's two open
+ * items: the raised string defaults at their usual note and the root
+ * (NYLON, KOTO, HARP); BANJO at its new default body across four notes
+ * (G3, B3, D4, G4) plus the ugly end at G3 and G4; and the kit's Kalimba 1
+ * pad (TINES KALIMBA, semitone 3 = C4) five ways - as shipped, brighter
+ * twice, and an octave up (semitone 15 = C5) twice.
+ *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
  * publish — the pre-Phase-1 renders — because a republish keeps files it
@@ -62,6 +69,51 @@ object PluckAuditionGenerator {
             WavWriter.write(File(seam, "$name.wav"), level(kit[index]!!.snip), WavWriter.BitDepth.PCM_16)
             count++
         }
+
+        // p2b follow-up: the raised string defaults, BANJO across four
+        // notes, and the kit's kalimba pad five ways (follow-up brief,
+        // section 2).
+        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+            val dir = File(root, voice.name)
+            fun write(name: String, snip: Snip) {
+                WavWriter.write(File(dir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
+                count++
+            }
+            write("p2b_default_new", Pluck.render(voice, emptyMap()))
+            write("p2b_default_new_root", Pluck.render(voice, mapOf("TUNE" to 0f)))
+        }
+
+        val banjoDir = File(root, PluckVoice.BANJO.name)
+        fun writeBanjo(name: String, macros: Map<String, Float>) {
+            WavWriter.write(File(banjoDir, "$name.wav"), level(Pluck.render(PluckVoice.BANJO, macros)), WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        writeBanjo("p2b_g3_default", mapOf("TUNE" to 0f))
+        writeBanjo("p2b_g3_body_1", mapOf("TUNE" to 0f, "BODY" to 1f))
+        writeBanjo("p2b_b3_default", mapOf("TUNE" to 4f / 24f))
+        writeBanjo("p2b_d4_default", mapOf("TUNE" to 7f / 24f))
+        writeBanjo("p2b_g4_default", mapOf("TUNE" to 0.5f))
+        writeBanjo("p2b_g4_body_1", mapOf("TUNE" to 0.5f, "BODY" to 1f))
+
+        // The kit's Kalimba 1 pad is TINES KALIMBA at semitone 3 = C4, BUZZ/
+        // BRIGHT/DECAY at the voice default; only BRIGHT moves here.
+        val kalimbaDir = File(root, "KALIMBA")
+        fun writeKalimba(name: String, semitone: Int, bright: Float) {
+            val snip = Tines.render(
+                TinesVoice.KALIMBA,
+                mapOf(
+                    "TUNE" to semitone / Tines.KALIMBA_TUNE_SEMITONES.toFloat(),
+                    "BUZZ" to 0.15f, "BRIGHT" to bright, "DECAY" to 0.45f,
+                ),
+            )
+            WavWriter.write(File(kalimbaDir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        writeKalimba("p2b_c4_as_is", 3, 0.5f)
+        writeKalimba("p2b_c4_bright_70", 3, 0.7f)
+        writeKalimba("p2b_c4_bright_85", 3, 0.85f)
+        writeKalimba("p2b_c5_as_is", 15, 0.5f)
+        writeKalimba("p2b_c5_bright_70", 15, 0.7f)
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
