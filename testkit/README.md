@@ -120,8 +120,8 @@ VOX formant choirs (aah/ooh/robot/ghost) on the bottom rows, GRAINS clouds
 above: scattered bells, glass stutters, smeared brass, and four
 LOOP-length drones on the top row. Regenerate with
 `./gradlew :synth:generateCloudKit`. Things to confirm: the long pads play
-out fully (they are 2.5 s textures, not one-shot drums), and nothing
-clicks at the tails.
+out fully (they are 2.5 s textures, not one-shot drums), the choir pads
+are stereo and wide, and nothing clicks at the tails.
 
 ### SnipSnap Keys — the keygroup door (S4)
 

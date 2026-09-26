@@ -209,6 +209,7 @@ What follows from it:
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 | S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst so a note fades to glass) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. | S1 + U5 + U6 |
+| S11 | **Round 1 built, awaiting the audition gate** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE; rounds 2 (consonants, BEATBOX) and 3 (THROAT, SWARM, WRAITH; GROWL, STUTTER, ALIEN, YODEL) to follow — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1313,3 +1314,102 @@ drone was; width is a later per-voice decision).
    different takes differ. MOTION, when built, should use the same rule.
 4. **DRIP's class.** Short and high reads PERC to the classifier. If it
    lands PERC, it stays out of SPREAD's pitch path unless a pitch is found.
+
+## S11 — VOX, the whole shebang
+
+VOX shipped (S3.7) as three formants over a buzzing source: four knobs,
+nothing moving inside a note, one adult throat for every pitch, the
+same breath on every render. Asked to "go for the whole shebang" and add
+"unique, great sounding, bordering on weird" ideas, the plan is three
+rounds, each prototyped, auditioned by ear and only then built:
+
+1. **Alive** (this round): a real throat, motion, a real choir, held
+   notes, SIZE and GLIDE.
+2. **Speak**: consonant onsets ("ba", "da", "ma", "hey", "ts") and a
+   BEATBOX voice (vocal kick, snare, hat, rim).
+3. **Weird**: three new voices, THROAT (overtone singing, a whistled
+   melody over a drone), SWARM (a crowd of 8-16) and WRAITH (sine-wave
+   speech), and four behaviours, GROWL, STUTTER, ALIEN (vowels past
+   what a human throat can shape) and YODEL. The knob budget (seven)
+   cannot take all four on every voice: round 3 decides where each
+   lives.
+
+The uses to tune for, asked: drum hits, vocal chops, pads and choirs.
+
+### Round 1, as built — 2026-09-26
+
+The first audition was too subtle ("I'm not detecting much
+difference"). A difference measure (the average spectrum in 24 log
+bands, levelled, RMS dB) was calibrated before it was trusted: the new
+render path alone, with every feature off, measured 1-4.5 dB from the
+old engine (a detuned pair's beating depends on where it starts), a
+semitone of pitch 8. The first throat and choir sat in that noise, so
+the second audition turned everything up and played each preset as
+NOW-then-NEW pairs. The choir still "didn't come across": seven fixed
+detunes starting together fuse into one voice, and a mono file cannot
+place singers. A third audition gave the choir motion, sections and
+stereo. The pick: everything.
+
+- **The throat.** CHOIR and GHOST sing through a Rosenberg vocal-cord
+  pulse (opens over 40% of the cycle, snaps shut over 16%, rests), with
+  breath that puffs while the folds are open. Five formants, F4 and F5
+  fixed at 3.3 and 4.2 kHz, at roughly constant bandwidths (60-180 Hz)
+  rather than a fixed Q; F4 and F5 at levels 1 and 0.55, the "singer's
+  formant" ring. F1 never sits below 1.15 times the note, so a high note
+  keeps its vowel. ROBOT keeps its square wave. Measured against the old
+  engine: 4.4-7.5 dB, a semitone's worth of spectral change.
+- **Alive.** Vibrato of 70 cents (GHOST 90, slower), easing in from
+  30 ms over 120, on a slow random wobble of 15 cents and 12% level.
+  ROBOT holds dead steady. Measured over a held GHOST note: 190 cents
+  peak to peak; ROBOT 0.
+- **The choir.** CHOIR is seven singers: two basses an octave down,
+  three in the middle, two sopranos an octave up, each with their own
+  throat (0.88-1.2x), detune (−35 to +36 cents), vibrato, a start up to
+  60 ms late (the middle singer always on time, so the strike stays
+  crisp), and a place in the stereo field (equal-power pans shuffled per
+  recipe). CHOIR renders in stereo; ROBOT and GHOST stay mono. L/R
+  correlation of a held CHOIR note: 0.63. The pitch detector still reads
+  the written note, not the basses: TUNE 1 reads 445.5 Hz for 440.
+- **Held notes.** DECAY runs 0.25-3 s to −60 dB and its top half holds,
+  up to 60% of the note at DECAY 1 (TIDE's rule). No note outlasts
+  `Vox.MAX_SECONDS`, 4 s.
+- **SIZE** scales every formant by `2^((0.5 − SIZE)·2.2)`, about ×2.1
+  to ×0.47, chipmunk to giant. ROBOT's centroid falls 7.7 times across
+  it, GHOST's 2.7.
+- **GLIDE** moves the vowel over the first 0.5 s (or 60% of the note):
+  below 0.5 toward A, above toward U, by up to the whole A-U line. U
+  gliding to A doubles in brightness; GLIDE 0.5 holds (0.99).
+- **Seeded.** Each note's wobble, detunes, onsets and pans come from its
+  recipe, so a pad regenerates to the byte.
+
+What moved in the tests, and why:
+
+- **"One-shot" is 4 s, not 1.5.** Held notes, like TIDE's.
+- **"Reads as percussion" is now "a short VOX is a hit, a long one is
+  held".** Up to DECAY 0.6 (about 1.4 s) every voice reads PERC or SNARE
+  and serves as a drum hit or a chop; at 0.8 and above it reads LOOP, a
+  pad. The app has always filed VOX as TONAL. Scrambles are held to
+  never reading KICK or UNKNOWN (CHOIR's 30 rolls: 14 LOOP, 13 SNARE,
+  3 PERC).
+- **BREATH.** BREATH 0 now carries the throat's own puffs (flatness
+  0.22), so BREATH 1 (0.30) is 1.4 times it, not 1.5; the test holds
+  1.25 and, more to the point, that the pitch detector finds a note at
+  BREATH 0 and none at BREATH 1.
+- **New tests**: CHOIR stereo and wide, the lone voices mono; vibrato on
+  GHOST, none on ROBOT; DECAY 1 holds within 4 dB at 40-50% of the note,
+  DECAY 0.3 has fallen past 12; SIZE moves the centroid over 1.5x; GLIDE
+  moves the vowel and 0.5 holds it; the vocal-cord pulse has no DC,
+  peaks at the closure and rests closed.
+
+Presets: still twelve per voice, eleven of them now set SIZE or GLIDE
+where the name already says so (LOW/HIGH/DEEP throats; SPEAK BOX's
+"wah", DROID VOICE, EH CHOIR, HIGH SIGH, LOW MOAN, HAUNTED OOH gliding).
+The Cloud Kit's six VOX pads and three choir-fed GRAINS pads regenerate
+(GRAINS folds the stereo choir to mono, as it does any stereo source).
+
+**Known cost.** A 3.9 s stereo CHOIR note takes about 1.8 s to render on
+the CI-class JVM, and 1.66 s of that is `Dsp.decimate`'s windowed-sinc
+resampler, shared by every engine, run twice for stereo. Synthesis
+itself is 340 ms. Short notes (drum hits, chops) are a fraction of it.
+Speeding up the shared decimator would change every engine's bytes and
+every kit, so it is its own change, not this one.

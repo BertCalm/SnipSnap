@@ -7,6 +7,7 @@ import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.log10
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.test.Test
@@ -29,7 +30,8 @@ class VoxGrainsTest {
                 val snip = Vox.render(voice, macros)
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke at $macros")
                 assertTrue(snip.peak() > 0.5f, "$voice too quiet at $macros")
-                assertTrue(snip.durationSeconds < 1.5f, "$voice must stay a one-shot")
+                assertTrue(snip.durationSeconds <= Vox.MAX_SECONDS + 0.01f, "$voice must stay a one-shot: ${snip.durationSeconds} s")
+                assertEquals(Vox.channelsFor(voice), snip.channels, "$voice channel count")
             }
         }
     }
@@ -55,8 +57,9 @@ class VoxGrainsTest {
         for (voice in VoxVoice.entries) {
             val actual = Vox.render(voice)
             val direct = Vox.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-            Dsp.fadeTail(direct)
+            val channels = Vox.channelsFor(voice)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET, channels = channels)
+            Dsp.fadeTail(direct, channels = channels)
             var diff = 0.0
             val n = minOf(actual.samples.size, direct.size)
             for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
@@ -78,19 +81,17 @@ class VoxGrainsTest {
     }
 
     @Test
-    fun `vox scrambles usually still read as playable percussion`() {
-        // SCRAMBLE now rolls near a preset (docs/SYNTH_UPGRADE.md, U2), so a
-        // roll can land close to a classifier boundary the same way a
-        // preset itself can. "Most of the time", not "always", is the
-        // contract the doc itself sets for a scrambled roll.
+    fun `vox scrambles never come back as mud`() {
+        // SCRAMBLE rolls near a preset (docs/SYNTH_UPGRADE.md, U2). Since
+        // round 1 a long DECAY holds, so a long roll reads LOOP: a held
+        // note, which is VOX being a pad (the app files VOX as TONAL). What
+        // a roll must never be is a kick-shaped thud or unclassifiable mud.
+        // Measured at round 1: CHOIR 14 LOOP, 13 SNARE, 3 PERC of 30.
         for (voice in VoxVoice.entries) {
-            var misses = 0
-            val rolls = 30
-            repeat(rolls) { seed ->
+            repeat(30) { seed ->
                 val c = Classifier.classify(Vox.render(voice, Vox.scramble(voice, Random(seed))))
-                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+                assertTrue(c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.UNKNOWN, "$voice roll $seed read ${c.drumClass}")
             }
-            assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
         }
     }
 
@@ -101,7 +102,7 @@ class VoxGrainsTest {
         for (voice in VoxVoice.entries) {
             val preset = VoxPresets.forVoice(voice).first()
             assertEquals(
-                preset.macros,
+                Vox.defaults(voice) + preset.macros,
                 Vox.scramble(voice, Random(1), temperature = 0f, near = preset),
                 "$voice: temperature 0 should return the seed untouched",
             )
@@ -120,15 +121,18 @@ class VoxGrainsTest {
     }
 
     @Test
-    fun `vox defaults land on the vocal shelf`() {
-        // PERC for the tonal throats; GHOST is deliberately breathy, and a
-        // breathy vocal honestly reads snare-shaped to a drum classifier.
+    fun `a short vox is a hit, a long one is held`() {
+        // PERC for the tonal throats; a breathy vocal honestly reads
+        // snare-shaped to a drum classifier. Up to DECAY 0.6 (about 1.4 s)
+        // every voice is a playable hit, so VOX works for drum hits and
+        // chops; from 0.8 it holds and reads LOOP, a pad, which is what
+        // DECAY's top half is for.
         for (voice in VoxVoice.entries) {
-            val c = Classifier.classify(Vox.render(voice))
-            assertTrue(
-                c.drumClass in setOf(DrumClass.PERC, DrumClass.SNARE),
-                "$voice default read as ${c.drumClass}",
-            )
+            for (decay in listOf(0f, 0.2f, 0.4f, 0.6f)) {
+                val c = Classifier.classify(Vox.render(voice, mapOf("DECAY" to decay)))
+                assertTrue(c.drumClass in setOf(DrumClass.PERC, DrumClass.SNARE), "$voice at DECAY $decay read as ${c.drumClass}")
+            }
+            assertEquals(DrumClass.LOOP, Classifier.classify(Vox.render(voice, mapOf("DECAY" to 1f))).drumClass, "$voice at DECAY 1 should hold")
         }
     }
 
@@ -148,9 +152,17 @@ class VoxGrainsTest {
 
     @Test
     fun `BREATH airs it out and TUNE tunes, snapped`() {
-        val clean = FeatureExtractor.extract(Vox.render(VoxVoice.CHOIR, mapOf("BREATH" to 0f)))
-        val airy = FeatureExtractor.extract(Vox.render(VoxVoice.CHOIR, mapOf("BREATH" to 1f)))
-        assertTrue(airy.flatness > clean.flatness * 1.5f, "breath is noise: ${clean.flatness} -> ${airy.flatness}")
+        // BREATH 1 is all breath: noisier, and no note left to find. Since
+        // round 1 BREATH 0 carries the throat's own puffs of breath, so it
+        // is not as clean as it was (flatness 0.22, was lower); measured,
+        // BREATH 1 reads 0.30, and the pitch detector finds nothing there.
+        val cleanSnip = Vox.render(VoxVoice.CHOIR, mapOf("BREATH" to 0f))
+        val airySnip = Vox.render(VoxVoice.CHOIR, mapOf("BREATH" to 1f))
+        val clean = FeatureExtractor.extract(cleanSnip)
+        val airy = FeatureExtractor.extract(airySnip)
+        assertTrue(airy.flatness > clean.flatness * 1.25f, "breath is noise: ${clean.flatness} -> ${airy.flatness}")
+        assertNotNull(Pitch.detect(cleanSnip), "BREATH 0 is a note")
+        assertEquals(null, Pitch.detect(airySnip), "BREATH 1 has no note left in it")
 
         val distinct = HashSet<Float>()
         for (i in 0..100) distinct.add(Vox.frequencyFor(VoxVoice.CHOIR, i / 100f))
@@ -171,6 +183,103 @@ class VoxGrainsTest {
         val back = Patches.fromJsonText(patch.toJsonText())
         assertEquals(patch, back)
         assertTrue(back.render().samples.contentEquals(patch.render().samples))
+    }
+
+    // ---------- VOX round 1 ----------
+
+    private fun window(s: Snip, from: Float, to: Float, channel: Int = 0): Snip {
+        val a = (from * s.sampleRate).toInt().coerceIn(0, s.frameCount)
+        val b = (to * s.sampleRate).toInt().coerceIn(a, s.frameCount)
+        return Snip(FloatArray(b - a) { s.samples[(a + it) * s.channels + channel] }, 1, s.sampleRate)
+    }
+
+    private fun rms(s: Snip): Double = kotlin.math.sqrt(s.samples.sumOf { (it * it).toDouble() } / s.samples.size.coerceAtLeast(1))
+
+    @Test
+    fun `CHOIR sings in stereo across the field, the lone voices stay mono`() {
+        val choir = Vox.render(VoxVoice.CHOIR, mapOf("DECAY" to 0.8f))
+        assertEquals(2, choir.channels)
+        val l = window(choir, 0.1f, 1.0f, 0)
+        val r = window(choir, 0.1f, 1.0f, 1)
+        var lr = 0.0; var ll = 0.0; var rr = 0.0
+        for (i in l.samples.indices) { lr += l.samples[i] * r.samples[i]; ll += l.samples[i] * l.samples[i]; rr += r.samples[i] * r.samples[i] }
+        val correlation = lr / kotlin.math.sqrt(ll * rr)
+        assertTrue(correlation < 0.9, "the choir should be wide, L/R correlation $correlation")
+        assertEquals(1, Vox.render(VoxVoice.ROBOT).channels)
+        assertEquals(1, Vox.render(VoxVoice.GHOST).channels)
+    }
+
+    /** Pitch across a note in 60 ms steps, cents from its first reading. */
+    private fun pitchTrack(s: Snip, from: Float, to: Float): List<Float> {
+        val out = ArrayList<Float>()
+        var t = from
+        while (t + 0.06f <= to) {
+            Pitch.detect(window(s, 0f, s.durationSeconds), t, 0.06f)?.let { out += it.hz }
+            t += 0.06f
+        }
+        return out.map { 1200f * kotlin.math.ln(it / out.first()) / kotlin.math.ln(2f) }
+    }
+
+    @Test
+    fun `GHOST and CHOIR sing with vibrato, ROBOT holds dead steady`() {
+        val ghost = pitchTrack(Vox.render(VoxVoice.GHOST, mapOf("TUNE" to 0f, "BREATH" to 0f, "DECAY" to 1f)), 0.2f, 1.4f)
+        val robot = pitchTrack(Vox.render(VoxVoice.ROBOT, mapOf("TUNE" to 0f, "BREATH" to 0f, "DECAY" to 1f)), 0.2f, 1.4f)
+        val ghostSwing = ghost.max() - ghost.min()
+        val robotSwing = robot.max() - robot.min()
+        assertTrue(ghostSwing > 60f, "GHOST should swing with vibrato, $ghostSwing cents")
+        assertTrue(robotSwing < 15f, "ROBOT should hold steady, $robotSwing cents")
+    }
+
+    @Test
+    fun `a long DECAY holds the note, a short one falls`() {
+        assertEquals(0f, Vox.holdFractionFor(0.5f))
+        assertEquals(0.6f, Vox.holdFractionFor(1f), 1e-6f)
+        for (voice in listOf(VoxVoice.ROBOT, VoxVoice.GHOST)) {
+            val held = Vox.render(voice, mapOf("DECAY" to 1f))
+            val early = rms(window(held, 0.05f, 0.25f))
+            val middle = rms(window(held, held.durationSeconds * 0.4f, held.durationSeconds * 0.5f))
+            val heldDb = 20 * log10(middle / early)
+            val short = Vox.render(voice, mapOf("DECAY" to 0.3f))
+            val shortDb = 20 * log10(rms(window(short, short.durationSeconds * 0.4f, short.durationSeconds * 0.5f)) / rms(window(short, 0.02f, 0.06f)))
+            assertTrue(heldDb > -4.0, "$voice DECAY 1 should still be held at 40%: $heldDb dB")
+            assertTrue(shortDb < -12.0, "$voice DECAY 0.3 should have fallen: $shortDb dB")
+        }
+    }
+
+    @Test
+    fun `SIZE scales the throat, chipmunk to giant`() {
+        for (voice in listOf(VoxVoice.ROBOT, VoxVoice.GHOST)) {
+            val small = FeatureExtractor.extract(Vox.render(voice, mapOf("SIZE" to 0f, "BREATH" to 0f))).centroidHz
+            val large = FeatureExtractor.extract(Vox.render(voice, mapOf("SIZE" to 1f, "BREATH" to 0f))).centroidHz
+            assertTrue(small > large * 1.5f, "$voice: a small throat should ring higher, $small Hz vs $large Hz")
+        }
+        assertEquals(1f, Vox.throatScale(0.5f), 1e-6f)
+    }
+
+    @Test
+    fun `GLIDE moves the vowel during the note, and the middle stays put`() {
+        fun lift(glide: Float): Float {
+            val s = Vox.render(VoxVoice.ROBOT, mapOf("VOWEL" to 1f, "GLIDE" to glide, "BREATH" to 0f, "DECAY" to 1f))
+            val early = FeatureExtractor.extract(window(s, 0.03f, 0.1f)).centroidHz
+            val late = FeatureExtractor.extract(window(s, 0.6f, 0.8f)).centroidHz
+            return late / early
+        }
+        val still = lift(0.5f)
+        val wah = lift(0f)
+        assertTrue(wah > 1.3f, "U gliding to A should open up, $wah")
+        assertTrue(still in 0.8f..1.2f, "GLIDE 0.5 should hold the vowel, $still")
+        assertEquals(0f, Vox.glideTarget(1f, 0f))
+        assertEquals(0.3f, Vox.glideTarget(0.3f, 0.5f))
+    }
+
+    @Test
+    fun `the vocal-cord pulse opens softly, snaps shut and carries no DC`() {
+        val n = 10_000
+        val cycle = FloatArray(n) { Vox.glottal(it.toDouble() / n) }
+        assertEquals(0.0, cycle.average(), 1e-3, "no DC")
+        assertEquals(-1f, cycle.min(), 1e-3f, "the closure is the peak")
+        assertTrue(cycle.max() < 0.5f, "the opening is softer than the closure")
+        assertTrue(cycle.drop((n * 0.6).toInt()).all { it == 0f }, "the folds rest closed")
     }
 
     // ---------- GRAINS ----------

@@ -2,27 +2,53 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * VOX — formant synthesis, maximum kitsch.
+ * VOX — formant synthesis, maximum kitsch, now with a throat.
  *
- * Three bandpass formants over a buzzing source is how every
- * shopping-mall-keyboard "choir" ever worked, and that is exactly the shelf
+ * A buzzing source through bandpass formants is how every
+ * shopping-mall-keyboard "choir" ever worked, and that is still the shelf
  * this engine aims for. The VOWEL knob morphs continuously through
- * A → E → I → O → U by interpolating the classic three-formant tables — one
- * knob, and the pad goes from "aah" to "ooh" under your finger.
+ * A → E → I → O → U by interpolating the classic formant tables, one knob,
+ * and the pad goes from "aah" to "ooh" under your finger.
  *
- * Voices are characters of the same throat: CHOIR (detuned saw pair, lush),
- * ROBOT (square source, tight formants), GHOST (breathy, noise-forward).
- * TUNE snaps to semitones like every melodic engine here.
+ * Round 1 of the VOX upgrade (docs/SYNTH_ROADMAP.md, "VOX, round 1"),
+ * everything the audition was played, kept:
+ *
+ * - **A throat.** CHOIR and GHOST sing through a vocal-cord pulse
+ *   ([glottal]) with breath that puffs on each pulse, into five formants
+ *   of natural width, the two top ones the "singer's formant" ring near
+ *   3 kHz. The lowest formant rises to meet a high note rather than
+ *   letting it slip under and go thin. ROBOT keeps its square wave.
+ * - **Alive.** Vibrato eases in after the attack, over a slow random
+ *   wobble in pitch and level. ROBOT stays machine-steady.
+ * - **A real choir.** CHOIR is seven singers in sections, two basses an
+ *   octave down, three in the middle, two sopranos an octave up, each
+ *   with their own throat, detune, vibrato and a start up to 60 ms late,
+ *   spread across the stereo field. CHOIR renders in stereo; ROBOT and
+ *   GHOST stay mono.
+ * - **Held notes.** DECAY's top half holds the note before it fades.
+ * - **SIZE** scales the throat, chipmunk to giant, independent of pitch.
+ * - **GLIDE** moves the vowel during the note: below the middle it slides
+ *   toward A, above it toward U. "Wah", "yeah", "ow".
+ *
+ * TUNE snaps to semitones like every melodic engine here. Each note's
+ * wobble, detune and onsets are seeded from its recipe, so a pad
+ * regenerates to the byte.
  */
 enum class VoxVoice { CHOIR, ROBOT, GHOST }
 
 object Vox {
 
     const val TUNE_SEMITONES = 24
+
+    /** No note outlasts this, hold and tail included: a pad is a one-shot. TIDE's held voices stop here too. */
+    const val MAX_SECONDS = 4f
 
     /**
      * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
@@ -39,26 +65,80 @@ object Vox {
         floatArrayOf(400f, 800f, 2830f),   // O
         floatArrayOf(350f, 600f, 2700f),   // U
     )
-    private val FORMANT_GAINS = floatArrayOf(1f, 0.63f, 0.32f)
-    private const val FORMANT_Q = 9f
+
+    /** F4 and F5, the same for every vowel: with F3 they are the "singer's formant" cluster. */
+    private val UPPER_FORMANTS = floatArrayOf(3300f, 4200f)
+
+    /**
+     * Each formant's level, F1 to F5. The top two were raised until the
+     * ring carried: at 0.22 and 0.1 the whole throat measured barely
+     * clear of the new render path's own noise floor against the old
+     * engine (1-4.5 dB), at 1 and 0.55 it measured 6-7.5, a semitone's
+     * worth of spectral change.
+     */
+    private val FORMANT_GAINS = floatArrayOf(1f, 0.7f, 0.45f, 1f, 0.55f)
+
+    /** Each formant's bandwidth, Hz: roughly constant in a real vocal tract, where a fixed Q widens with frequency. */
+    private val FORMANT_BANDWIDTHS = floatArrayOf(60f, 70f, 100f, 130f, 180f)
+
+    /** The lowest formant never sits below this much above the note, so a high note keeps its vowel. */
+    private const val F1_FLOOR_RATIO = 1.15f
+
+    /** Rosenberg glottal pulse: the fold opens over [OPEN] of the cycle and snaps shut over [CLOSE]. */
+    private const val OPEN = 0.4f
+    private const val CLOSE = 0.16f
+    private val GLOTTAL_NORM = (PI / (2 * CLOSE)).toFloat()
+
+    /** Breath that puffs on each vocal-cord pulse, over BREATH's own. */
+    private const val PUFF = 0.35f
+
+    /** Vibrato depth, cents: 70, with GHOST's slower, wider 90. Eases in [VIBRATO_DELAY] after the strike over [VIBRATO_RISE]. */
+    private const val VIBRATO_CENTS = 70f
+    private const val GHOST_VIBRATO_CENTS = 90f
+    private const val VIBRATO_DELAY = 0.03f
+    private const val VIBRATO_RISE = 0.12f
+
+    /** Slow random wander, [WOBBLE_HZ] points a second: this many cents of pitch, this fraction of level. */
+    private const val WOBBLE_HZ = 7f
+    private const val WOBBLE_CENTS = 15f
+    private const val SHIMMER = 0.12f
+
+    /** CHOIR's seven: detune in cents, octave, throat scale and pan slot, basses first. */
+    private val CHOIR_DETUNE = floatArrayOf(-35f, -22f, -10f, 0f, 11f, 23f, 36f)
+    private val CHOIR_OCTAVE = floatArrayOf(0.5f, 0.5f, 1f, 1f, 1f, 2f, 2f)
+    private val CHOIR_THROAT = floatArrayOf(0.88f, 0.9f, 0.97f, 1f, 1.03f, 1.16f, 1.2f)
+    private val PAN_SLOTS = floatArrayOf(-0.9f, -0.6f, -0.3f, 0f, 0.3f, 0.6f, 0.9f)
+
+    /** The latest a choir singer comes in, and how long each takes to reach full voice. */
+    private const val ONSET_SPREAD = 0.06f
+    private const val ONSET_RISE = 0.03f
+
+    /** SIZE's reach: the throat scales by 2^((0.5 − SIZE)·this), about ×2.1 at 0 to ×0.47 at 1. */
+    private const val SIZE_OCTAVES = 2.2f
+
+    /** Formant and pitch controls update every this many samples at the render rate. */
+    private const val CONTROL_BLOCK = 16
 
     fun macrosFor(voice: VoxVoice): List<MacroSpec> = when (voice) {
         VoxVoice.CHOIR -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("VOWEL", 0.1f), MacroSpec("BREATH", 0.15f),
-            MacroSpec("DECAY", 0.6f),
+            MacroSpec("DECAY", 0.6f), MacroSpec("SIZE", 0.5f), MacroSpec("GLIDE", 0.5f),
         )
         VoxVoice.ROBOT -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("VOWEL", 0.6f), MacroSpec("BREATH", 0.05f),
-            MacroSpec("DECAY", 0.4f),
+            MacroSpec("DECAY", 0.4f), MacroSpec("SIZE", 0.5f), MacroSpec("GLIDE", 0.5f),
         )
         VoxVoice.GHOST -> listOf(
             MacroSpec("TUNE", 0.45f), MacroSpec("VOWEL", 0.85f), MacroSpec("BREATH", 0.6f),
-            MacroSpec("DECAY", 0.7f),
+            MacroSpec("DECAY", 0.7f), MacroSpec("SIZE", 0.5f), MacroSpec("GLIDE", 0.5f),
         )
     }
 
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
+
+    /** CHOIR sings in stereo; ROBOT and GHOST are one throat, mono. */
+    fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR) 2 else 1
 
     /** SCRAMBLE near a preset; see [Thump.scramble] (docs/SYNTH_UPGRADE.md, U2). */
     fun scramble(voice: VoxVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
@@ -81,7 +161,7 @@ object Vox {
         return root * 2f.pow(semis / 12f)
     }
 
-    /** The morphed formant set for a VOWEL position 0..1 across A→E→I→O→U. */
+    /** The morphed F1-F3 for a VOWEL position 0..1 across A→E→I→O→U. */
     internal fun formantsAt(vowel: Float): FloatArray {
         val pos = vowel.coerceIn(0f, 1f) * (VOWELS.size - 1)
         val i = pos.toInt().coerceAtMost(VOWELS.size - 2)
@@ -89,73 +169,177 @@ object Vox {
         return FloatArray(3) { f -> VOWELS[i][f] + (VOWELS[i + 1][f] - VOWELS[i][f]) * frac }
     }
 
+    /** SIZE as a formant scale: above 1 is a smaller throat, below 1 a bigger one. */
+    internal fun throatScale(size: Float): Float = 2f.pow((0.5f - size.coerceIn(0f, 1f)) * SIZE_OCTAVES)
+
+    /** Where GLIDE takes VOWEL by the end of the glide: the middle stays put, the ends reach the far vowel. */
+    internal fun glideTarget(vowel: Float, glide: Float): Float = (vowel + (glide - 0.5f) * 2f).coerceIn(0f, 1f)
+
+    /** DECAY as seconds from the strike to −60 dB, hold included. */
+    internal fun lengthFor(decay: Float): Float = Dsp.expMap(decay, 0.25f, 3f)
+
+    /** How much of the note DECAY holds before it fades: none below the middle, up to 60% at the top. */
+    internal fun holdFractionFor(decay: Float): Float = 0.6f * ((decay - 0.5f) / 0.5f).coerceIn(0f, 1f)
+
+    /** Rosenberg glottal flow derivative: a soft opening, a sharp closure, a closed rest. Peak −1 at closure, no DC. */
+    internal fun glottal(phase: Double): Float {
+        val p = (phase - Math.floor(phase)).toFloat()
+        return when {
+            p < OPEN -> (0.5f * PI.toFloat() / OPEN * sin(PI.toFloat() * p / OPEN)) / GLOTTAL_NORM
+            p < OPEN + CLOSE -> -(PI.toFloat() / (2 * CLOSE) * sin(PI.toFloat() * (p - OPEN) / (2 * CLOSE))) / GLOTTAL_NORM
+            else -> 0f
+        }
+    }
+
+    /** One singer: their own throat, pitch, vibrato, wobble and entrance. */
+    private class Singer(
+        val detuneCents: Float,
+        val octave: Float,
+        val throat: Float,
+        val pan: Float,
+        val onset: Float,
+        val vibratoHz: Float,
+        val vibratoPhase: Float,
+        val wobble: FloatArray,
+        val shimmer: FloatArray,
+        var phase: Double,
+        nForm: Int,
+    ) {
+        val formants = Array(nForm) { Dsp.Biquad() }
+        var ratio = 1f
+        var level = 1f
+
+        fun line(points: FloatArray, t: Float): Float {
+            val x = t * WOBBLE_HZ
+            val k = x.toInt().coerceAtMost(points.size - 2)
+            val w = (1f - cos(PI.toFloat() * (x - k))) / 2f
+            return points[k] * (1f - w) + points[k + 1] * w
+        }
+    }
+
     /**
-     * The raw synth loop, at whatever [rate] the caller wants - split out of
-     * [render] so U6's oversampled dispatch (docs/SYNTH_UPGRADE.md) can be
-     * tested directly against a native-rate render, rather than trusting
-     * that reading [render]'s own source matches what it actually does.
+     * The raw synth loop at whatever [rate] the caller wants, interleaved
+     * when [channelsFor] is 2 - split out of [render] so the oversampled
+     * dispatch can be tested directly against a native-rate render.
      */
     internal fun synthesize(voice: VoxVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        val random = Random(Dsp.seedFor("VOX", voice.name, m.toSortedMap().entries.joinToString(",")))
 
         val base = frequencyFor(voice, m.getValue("TUNE"))
-        val formants = formantsAt(m.getValue("VOWEL"))
+        val vowelFrom = m.getValue("VOWEL")
+        val vowelTo = glideTarget(vowelFrom, m.getValue("GLIDE"))
+        val scale = throatScale(m.getValue("SIZE"))
         val breath = m.getValue("BREATH")
-        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.1f)
+        val length = lengthFor(m.getValue("DECAY"))
+        val hold = length * holdFractionFor(m.getValue("DECAY"))
+        val glideSeconds = minOf(0.5f, 0.6f * length)
 
-        val out = FloatArray((t60 * 1.3f * rate).toInt().coerceAtLeast(64))
-        val filters = Array(3) { f ->
-            Dsp.Biquad().apply { bandpass(formants[f], FORMANT_Q, rate) }
+        val channels = channelsFor(voice)
+        val frames = ((length * 1.3f).coerceAtMost(MAX_SECONDS) * rate).toInt().coerceAtLeast(64)
+        val out = FloatArray(frames * channels)
+        val nForm = FORMANT_GAINS.size
+
+        val choir = voice == VoxVoice.CHOIR
+        val moving = voice != VoxVoice.ROBOT
+        val pans = PAN_SLOTS.toMutableList().also { it.shuffle(random) }
+        val wobblePoints = (frames.toFloat() / rate * WOBBLE_HZ).toInt() + 3
+        val singers = List(if (choir) CHOIR_DETUNE.size else 1) { s ->
+            Singer(
+                detuneCents = if (choir) CHOIR_DETUNE[s] else 0f,
+                octave = if (choir) CHOIR_OCTAVE[s] else 1f,
+                throat = if (choir) CHOIR_THROAT[s] else 1f,
+                pan = if (choir) pans[s] else 0f,
+                // The middle singer is always on time, so the strike is never soft.
+                onset = if (choir && s != 3) ONSET_SPREAD * random.nextFloat() else 0f,
+                vibratoHz = if (voice == VoxVoice.GHOST) 4f + random.nextFloat() else 5f + 1.2f * random.nextFloat(),
+                vibratoPhase = random.nextFloat(),
+                wobble = FloatArray(wobblePoints) { random.nextFloat() * 2f - 1f },
+                shimmer = FloatArray(wobblePoints) { random.nextFloat() * 2f - 1f },
+                phase = random.nextDouble(),
+                nForm = nForm,
+            )
         }
+        val vibratoCents = if (voice == VoxVoice.GHOST) GHOST_VIBRATO_CENTS else VIBRATO_CENTS
+
+        fun tuneFormants(vowel: Float) {
+            val f = formantsAt(vowel)
+            for (singer in singers) for (k in 0 until nForm) {
+                var hz = (if (k < 3) f[k] else UPPER_FORMANTS[k - 3]) * scale * singer.throat
+                if (k == 0) hz = maxOf(hz, base * singer.octave * F1_FLOOR_RATIO)
+                hz = hz.coerceAtMost(rate * 0.45f)
+                singer.formants[k].bandpass(hz, (hz / FORMANT_BANDWIDTHS[k]).coerceAtLeast(2f), rate)
+            }
+        }
+        tuneFormants(vowelFrom)
+
         val noise = Dsp.Noise(17)
         val noiseLp = Dsp.OnePole(rate)
-        val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = t60) // vocal onsets are soft
+        val env = Dsp.Env(attackSeconds = 0.02f, decay2T60 = length - hold, holdSeconds = hold)
+        val gainL = FloatArray(singers.size) { cos((singers[it].pan + 1f) * PI.toFloat() / 4f) }
+        val gainR = FloatArray(singers.size) { sin((singers[it].pan + 1f) * PI.toFloat() / 4f) }
 
-        // Seeded per voice so CHOIR's detuned pair no longer opens locked.
-        val ph = Dsp.phases(2, Dsp.seedFor("VOX", voice.name))
-        var p1 = ph[0]
-        var p2 = ph[1]
-        val detune = if (voice == VoxVoice.CHOIR) 1.007f else 1.0f
-        for (i in out.indices) {
+        for (i in 0 until frames) {
             val t = i.toFloat() / rate
-            p1 += base / rate
-            p2 += base * detune / rate
-
-            // The throat: a buzzing source with the character per voice.
-            val buzz = when (voice) {
-                VoxVoice.CHOIR -> 0.5f * (saw(p1) + saw(p2))
-                VoxVoice.ROBOT -> Dsp.square(p1)
-                VoxVoice.GHOST -> 0.7f * saw(p1)
+            if (i % CONTROL_BLOCK == 0) {
+                if (vowelTo != vowelFrom) {
+                    val x = (t / glideSeconds).coerceIn(0f, 1f)
+                    tuneFormants(vowelFrom + (vowelTo - vowelFrom) * x * x * (3f - 2f * x))
+                }
+                for (singer in singers) {
+                    var cents = singer.detuneCents
+                    var level = if (choir) ((t - singer.onset) / ONSET_RISE).coerceIn(0f, 1f) else 1f
+                    if (moving) {
+                        val rise = ((t - singer.onset - VIBRATO_DELAY) / VIBRATO_RISE).coerceIn(0f, 1f)
+                        cents += rise * vibratoCents * sin(2f * PI.toFloat() * (singer.vibratoHz * t + singer.vibratoPhase))
+                        cents += WOBBLE_CENTS * singer.line(singer.wobble, t)
+                        level *= 1f + SHIMMER * singer.line(singer.shimmer, t)
+                    }
+                    singer.ratio = singer.octave * 2f.pow(cents / 1200f)
+                    singer.level = level
+                }
             }
             val air = noiseLp.lp(noise.next(), 3_000f) * 2f
-            val source = (1f - breath) * buzz + breath * air
-
-            // The mouth: three formant resonances in parallel.
-            var s = 0f
-            for (f in 0 until 3) s += FORMANT_GAINS[f] * filters[f].process(source)
-
-            out[i] = s * env.at(t)
+            val e = env.at(t)
+            var left = 0f
+            var right = 0f
+            for ((s, singer) in singers.withIndex()) {
+                singer.phase += base * singer.ratio / rate
+                val buzz = if (voice == VoxVoice.ROBOT) Dsp.square(singer.phase) else glottal(singer.phase)
+                // Breath puffs while the folds are open.
+                val open = (singer.phase - Math.floor(singer.phase)).toFloat()
+                val puff = if (moving && open < OPEN + CLOSE) PUFF * air * sin(PI.toFloat() * open / (OPEN + CLOSE)) else 0f
+                val source = singer.level * ((1f - breath) * buzz) + breath * air + puff
+                var y = 0f
+                for (k in 0 until nForm) y += FORMANT_GAINS[k] * singer.formants[k].process(source)
+                left += y * gainL[s]
+                right += y * gainR[s]
+            }
+            if (channels == 2) {
+                out[2 * i] = left / singers.size * e
+                out[2 * i + 1] = right / singers.size * e
+            } else {
+                // A lone singer sits in the middle, cos(π/4) each side: undo it.
+                out[i] = left * Math.sqrt(2.0).toFloat() * e
+            }
         }
         return out
     }
 
     fun render(voice: VoxVoice, macros: Map<String, Float> = emptyMap()): Snip {
-        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the naive saw/
-        // square source oscillators' harmonics fold down above 22.05kHz
+        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE so the vocal-cord
+        // pulse's and the square's harmonics fold down above 22.05kHz
         // instead of into the audible band, then Dsp.decimate brings it
         // back to RATE. The formant bandpasses and noise lowpass are
-        // rate-aware (Dsp.Biquad/Dsp.OnePole default to RATE), so they're
-        // threaded the renderRate explicitly here.
-        val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = synthesize(voice, macros, renderRate)
-        val out = Dsp.decimate(raw, RATE)
+        // threaded the render rate explicitly.
+        val channels = channelsFor(voice)
+        val raw = synthesize(voice, macros, RATE * Dsp.OVERSAMPLE)
+        val out = Dsp.decimate(raw, RATE, channels)
         // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
         // (Dsp.MELODIC_LOUDNESS_TARGET's doc comment has the measurement).
-        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice))
-        Dsp.fadeTail(out)
-        return Snip(out, channels = 1, sampleRate = RATE)
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET + LOUDNESS_OFFSET.getValue(voice), channels = channels)
+        Dsp.fadeTail(out, channels = channels)
+        return Snip(out, channels = channels, sampleRate = RATE)
     }
-
-    private fun saw(phase: Double): Float = (2.0 * (phase - Math.floor(phase)) - 1.0).toFloat()
 }
