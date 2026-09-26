@@ -50,8 +50,34 @@ object Tide {
     /** Folder drive at FOLD 1, strike brightness: 1 is a clean sine. */
     const val MAX_DRIVE = 6f
 
-    /** No hit outlasts this, however far WANDER stretches DECAY: a pad is a one-shot. */
-    const val MAX_SECONDS = 2f
+    /**
+     * No note outlasts this, however far WANDER stretches DECAY: a pad is a
+     * one-shot. The struck voices stop at 2 s; GONG and FLARE, which can
+     * hold, at 4.
+     */
+    fun maxSecondsFor(voice: TideVoice): Float = when (voice) {
+        TideVoice.BONGO, TideVoice.DRIP -> 2f
+        TideVoice.GONG, TideVoice.FLARE -> 4f
+    }
+
+    /**
+     * GLOW 1 keeps this much of the fold's depth once the gate has closed.
+     * Measured before GLOW existed: with the fold following the gate all
+     * the way down, WOOD BONGO had 13 harmonics within 40 dB of its
+     * loudest in its first 40 ms and 3 by 120-280 ms; held at full depth,
+     * 5. The fold was darkening a tail the gate was already darkening.
+     */
+    private const val GLOW_FOLD_FLOOR = 0.6f
+
+    /**
+     * GLOW 1 drives the gate's filter from `c^(1 - this)` instead of `c`,
+     * so the filter closes behind the level rather than with it: at c 0.1
+     * (the level already −26 dB) it is still `0.1^0.25 ≈ 0.56` open. The
+     * filter was the biggest remover of all: held open, WOOD BONGO kept 6
+     * harmonics at 120-280 ms where it had 3, SNARL FLARE 16 at 280-600 ms
+     * where it had 5.
+     */
+    private const val GLOW_FILTER_LAG = 0.75f
 
     /** WARP 1's phase-modulation index. */
     const val MAX_INDEX = 3f
@@ -120,19 +146,19 @@ object Tide {
     fun macrosFor(voice: TideVoice): List<MacroSpec> = when (voice) {
         TideVoice.BONGO -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("FOLD", 0.3f), MacroSpec("WARP", 0.2f),
-            MacroSpec("DECAY", 0.35f), MacroSpec("WANDER", 0.3f),
+            MacroSpec("GLOW", 0.3f), MacroSpec("DECAY", 0.35f), MacroSpec("WANDER", 0.3f),
         )
         TideVoice.DRIP -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("FOLD", 0.2f), MacroSpec("WARP", 0.3f),
-            MacroSpec("DECAY", 0.3f), MacroSpec("WANDER", 0.3f),
+            MacroSpec("GLOW", 0.3f), MacroSpec("DECAY", 0.3f), MacroSpec("WANDER", 0.3f),
         )
         TideVoice.GONG -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("FOLD", 0.15f), MacroSpec("WARP", 0.45f),
-            MacroSpec("RATIO", 0.5f), MacroSpec("DECAY", 0.6f), MacroSpec("WANDER", 0.25f),
+            MacroSpec("RATIO", 0.5f), MacroSpec("GLOW", 0.6f), MacroSpec("DECAY", 0.6f), MacroSpec("WANDER", 0.25f),
         )
         TideVoice.FLARE -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("FOLD", 0.6f), MacroSpec("WARP", 0.3f),
-            MacroSpec("RATIO", 0f), MacroSpec("DECAY", 0.5f), MacroSpec("WANDER", 0.2f),
+            MacroSpec("RATIO", 0f), MacroSpec("GLOW", 0.7f), MacroSpec("DECAY", 0.5f), MacroSpec("WANDER", 0.2f),
         )
     }
 
@@ -167,15 +193,26 @@ object Tide {
         return table[Math.round(ratio.coerceIn(0f, 1f) * (table.size - 1))]
     }
 
-    /** DECAY as seconds from the strike to −60 dB. */
+    /** DECAY as seconds from the strike to −60 dB, hold included. */
     internal fun lengthFor(voice: TideVoice, decay: Float): Float {
         val (lo, hi) = when (voice) {
-            TideVoice.BONGO -> 0.12f to 0.9f
-            TideVoice.DRIP -> 0.06f to 0.5f
-            TideVoice.GONG -> 0.4f to 1.9f
-            TideVoice.FLARE -> 0.25f to 1.6f
+            TideVoice.BONGO -> 0.12f to 1.5f
+            TideVoice.DRIP -> 0.06f to 0.8f
+            TideVoice.GONG -> 0.4f to 4f
+            TideVoice.FLARE -> 0.25f to 4f
         }
         return Dsp.expMap(decay, lo, hi)
+    }
+
+    /**
+     * How much of the note the gate holds fully open before it starts to
+     * close, as a fraction of [lengthFor]: DECAY's top half on GONG and
+     * FLARE, up to 60% at DECAY 1, so a long setting is a held note that
+     * then rings out. The struck voices never hold: a hand drum is struck.
+     */
+    internal fun holdFractionFor(voice: TideVoice, decay: Float): Float = when (voice) {
+        TideVoice.BONGO, TideVoice.DRIP -> 0f
+        TideVoice.GONG, TideVoice.FLARE -> 0.6f * ((decay - 0.5f) / 0.5f).coerceIn(0f, 1f)
     }
 
     /** A small resonant pop on BONGO; the others close gently. SVF damping, 2 = no resonance. */
@@ -204,17 +241,21 @@ object Tide {
 
     /**
      * The low-pass gate's control, 0..1, one sample per [next]: a 2 ms rise,
-     * then a release that slows as it falls, reaching −60 dB (through
-     * `c^GAIN_CURVE`) [length] seconds after the strike.
+     * held fully open for [hold] of the note, then a release that slows as
+     * it falls, reaching −60 dB (through `c^GAIN_CURVE`) [length] seconds
+     * after the strike.
      */
-    internal class Gate(private val length: Float, private val rate: Int) {
-        private val tau0 = length / SECONDS_PER_TAU
+    internal class Gate(private val length: Float, private val rate: Int, hold: Float = 0f) {
+        private val holdSeconds = length * hold.coerceIn(0f, 0.9f)
+        private val tau0 = (length - holdSeconds) / SECONDS_PER_TAU
         private var c = 0f
         private var i = 0
         fun next(): Float {
             val t = i++.toFloat() / rate
             c = if (t < ATTACK_SECONDS) {
                 t / ATTACK_SECONDS
+            } else if (t < ATTACK_SECONDS + holdSeconds) {
+                1f
             } else {
                 val tau = tau0 * (1f + SLOW * (1f - c))
                 (c - c / (tau * rate)).coerceAtLeast(0f)
@@ -247,7 +288,11 @@ object Tide {
         val warp = m.getValue("WARP")
         val reach = reachAt(hz)
         val index = MAX_INDEX * reach * warp * warp * nudge()
-        val length = (lengthFor(voice, m.getValue("DECAY")) * nudge()).coerceAtMost(MAX_SECONDS)
+        val length = (lengthFor(voice, m.getValue("DECAY")) * nudge()).coerceAtMost(maxSecondsFor(voice))
+        val hold = holdFractionFor(voice, m.getValue("DECAY"))
+        val glow = m.getValue("GLOW")
+        val foldFloor = GLOW_FOLD_FLOOR * glow
+        val filterCurve = 1f - GLOW_FILTER_LAG * glow
         val bias = biasFor(voice)
         val damping = dampingFor(voice)
         val lag = foldLag(voice)
@@ -268,10 +313,10 @@ object Tide {
         val cutoffCeiling = rate * 0.45f
 
         val out = FloatArray(((length + ATTACK_SECONDS) * rate).toInt().coerceAtLeast(64))
-        val gate = Gate(length, rate)
+        val gate = Gate(length, rate, hold)
         val filter = Dsp.TptSvf(rate)
         // Its own slower gate, for FLARE's lingering bloom; the same gate elsewhere.
-        val foldGate = Gate(length / lag, rate)
+        val foldGate = Gate(length / lag, rate, hold)
         val ph = Dsp.phases(2, Dsp.seedFor("TIDE", voice.name))
         var carrier = ph[0]
         var mod = ph[1]
@@ -293,12 +338,14 @@ object Tide {
             mod += hz * chirp * ratio / rate
             val pm = index * (0.35f + 0.65f * c) * sin(2.0 * PI * mod).toFloat()
             val x = sin(2.0 * PI * carrier + pm).toFloat()
-            val depth = foldAmount * cFold * (1f + 0.2f * wander * line(t))
+            val foldEnv = cFold + (1f - cFold) * foldFloor
+            val depth = foldAmount * foldEnv * (1f + 0.2f * wander * line(t))
             val drive = 1f + (MAX_DRIVE - 1f) * reach * depth.coerceIn(0f, 1f)
             val folded = fold(x, drive, bias * depth)
             dcOut = folded - dcIn + dcPole * dcOut
             dcIn = folded
-            val cutoff = (closedHz * exp(span * c)).coerceAtMost(cutoffCeiling)
+            val cFilter = if (filterCurve == 1f || c <= 0f) c else exp(filterCurve * kotlin.math.ln(c))
+            val cutoff = (closedHz * exp(span * cFilter)).coerceAtMost(cutoffCeiling)
             filter.process(dcOut, cutoff, damping)
             out[i] = if (c <= 0f) 0f else filter.low * exp(GAIN_CURVE.toFloat() * kotlin.math.ln(c))
         }

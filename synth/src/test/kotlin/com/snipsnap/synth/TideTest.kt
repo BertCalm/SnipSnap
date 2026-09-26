@@ -58,8 +58,10 @@ class TideTest {
                 val snip = Tide.render(voice, macros)
                 assertTrue(snip.frameCount > 0, "$voice rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke range at $macros")
-                assertTrue(snip.peak() > 0.5f, "$voice too quiet at $macros: ${snip.peak()}")
-                assertTrue(snip.durationSeconds <= Tide.MAX_SECONDS + 0.01f, "$voice must stay a one-shot: ${snip.durationSeconds} s")
+                // Levelled by loudness: a long note meets the target under a low peak, a short hit meets the ceiling first.
+                val loud = com.snipsnap.audio.Loudness.of(snip)
+                assertTrue(loud >= Dsp.MELODIC_LOUDNESS_TARGET * 0.9f || snip.peak() >= 0.95f, "$voice too quiet at $macros: loudness $loud, peak ${snip.peak()}")
+                assertTrue(snip.durationSeconds <= Tide.maxSecondsFor(voice) + 0.01f, "$voice must stay a one-shot: ${snip.durationSeconds} s")
                 val dc = snip.samples.average().toFloat()
                 assertTrue(abs(dc) < 0.05f, "$voice has DC offset $dc at $macros")
             }
@@ -67,13 +69,13 @@ class TideTest {
     }
 
     @Test
-    fun `the struck voices declare five macros, and GONG and FLARE add RATIO`() {
-        val five = listOf("TUNE", "FOLD", "WARP", "DECAY", "WANDER")
-        val six = listOf("TUNE", "FOLD", "WARP", "RATIO", "DECAY", "WANDER")
-        assertEquals(five, Tide.macrosFor(TideVoice.BONGO).map { it.name })
-        assertEquals(five, Tide.macrosFor(TideVoice.DRIP).map { it.name })
-        assertEquals(six, Tide.macrosFor(TideVoice.GONG).map { it.name })
-        assertEquals(six, Tide.macrosFor(TideVoice.FLARE).map { it.name })
+    fun `the struck voices declare six macros, and GONG and FLARE add RATIO`() {
+        val struck = listOf("TUNE", "FOLD", "WARP", "GLOW", "DECAY", "WANDER")
+        val held = listOf("TUNE", "FOLD", "WARP", "RATIO", "GLOW", "DECAY", "WANDER")
+        assertEquals(struck, Tide.macrosFor(TideVoice.BONGO).map { it.name })
+        assertEquals(struck, Tide.macrosFor(TideVoice.DRIP).map { it.name })
+        assertEquals(held, Tide.macrosFor(TideVoice.GONG).map { it.name })
+        assertEquals(held, Tide.macrosFor(TideVoice.FLARE).map { it.name })
     }
 
     @Test
@@ -130,7 +132,7 @@ class TideTest {
     /** Seconds until [voice]'s gate, WANDER 0, first closes below [level]. */
     private fun gateBelow(voice: TideVoice, decay: Float, level: Float): Float {
         val rate = 10_000
-        val gate = Tide.Gate(Tide.lengthFor(voice, decay), rate)
+        val gate = Tide.Gate(Tide.lengthFor(voice, decay), rate, Tide.holdFractionFor(voice, decay))
         var i = 0
         while (gate.next() >= level || i < rate / 100) i++
         return i.toFloat() / rate
@@ -201,11 +203,47 @@ class TideTest {
     @Test
     fun `brightness closes with the level - the gate's signature`() {
         for (voice in TideVoice.entries) {
-            val s = Tide.render(voice, mapOf("FOLD" to 0.8f, "DECAY" to 1f, "WANDER" to 0f))
+            // GLOW 0: the classic gate, brightness and level together.
+            val s = Tide.render(voice, mapOf("FOLD" to 0.8f, "DECAY" to 0.5f, "GLOW" to 0f, "WANDER" to 0f))
             val head = FeatureExtractor.extract(slice(s, 0f, 0.03f)).centroidHz
             val tail = FeatureExtractor.extract(slice(s, s.durationSeconds * 0.5f, s.durationSeconds * 0.75f)).centroidHz
             assertTrue(head > tail * 2f, "$voice: the strike should be over twice as bright as the tail, $head Hz vs $tail Hz")
         }
+    }
+
+    @Test
+    fun `GLOW keeps the tail's harmonics`() {
+        for (voice in TideVoice.entries) {
+            fun tail(glow: Float): Float {
+                val s = Tide.render(voice, mapOf("FOLD" to 0.8f, "DECAY" to 0.5f, "GLOW" to glow, "WANDER" to 0f))
+                return FeatureExtractor.extract(slice(s, s.durationSeconds * 0.3f, s.durationSeconds * 0.6f)).centroidHz
+            }
+            val dark = tail(0f)
+            val bright = tail(1f)
+            assertTrue(bright > dark * 1.3f, "$voice: GLOW 1 should keep the tail brighter, $dark Hz at 0 vs $bright Hz at 1")
+        }
+    }
+
+    @Test
+    fun `a long DECAY holds GONG and FLARE open, and the struck voices never hold`() {
+        for (voice in TideVoice.entries) {
+            assertEquals(0f, Tide.holdFractionFor(voice, 0.5f), "$voice holds nothing at DECAY 0.5")
+        }
+        assertEquals(0f, Tide.holdFractionFor(TideVoice.BONGO, 1f))
+        assertEquals(0f, Tide.holdFractionFor(TideVoice.DRIP, 1f))
+        assertEquals(0.6f, Tide.holdFractionFor(TideVoice.FLARE, 1f), 1e-6f)
+        fun rms(s: Snip, from: Float, to: Float): Double {
+            val w = slice(s, from, to).samples
+            return kotlin.math.sqrt(w.sumOf { (it * it).toDouble() } / w.size)
+        }
+        for (voice in listOf(TideVoice.GONG, TideVoice.FLARE)) {
+            val s = Tide.render(voice, mapOf("DECAY" to 1f, "WANDER" to 0f))
+            val early = rms(s, 0.05f, 0.25f)
+            val middle = rms(s, s.durationSeconds * 0.4f, s.durationSeconds * 0.5f)
+            assertTrue(20 * log10(middle / early) > -3.0, "$voice DECAY 1 should still be held at 40%: ${20 * log10(middle / early)} dB")
+        }
+        val bongo = Tide.render(TideVoice.BONGO, mapOf("DECAY" to 1f, "WANDER" to 0f))
+        assertTrue(20 * log10(rms(bongo, bongo.durationSeconds * 0.4f, bongo.durationSeconds * 0.5f) / rms(bongo, 0.01f, 0.05f)) < -12.0, "BONGO is struck, not held")
     }
 
     @Test

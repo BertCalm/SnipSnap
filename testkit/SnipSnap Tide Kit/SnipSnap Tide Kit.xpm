@@ -31,10 +31,10 @@
             &quot;value9&quot;: 9425956,
             &quot;value10&quot;: 9425956,
             &quot;value11&quot;: 9425956,
-            &quot;value12&quot;: 9425956,
-            &quot;value13&quot;: 9425956,
-            &quot;value14&quot;: 9425956,
-            &quot;value15&quot;: 9425956,
+            &quot;value12&quot;: 11562224,
+            &quot;value13&quot;: 11562224,
+            &quot;value14&quot;: 11562224,
+            &quot;value15&quot;: 11562224,
             &quot;value16&quot;: 0,
             &quot;value17&quot;: 0,
             &quot;value18&quot;: 0,
@@ -282,7 +282,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>11039</SliceEnd>
+            <SliceEnd>13019</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -482,7 +482,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>11015</SliceEnd>
+            <SliceEnd>12321</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -682,7 +682,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>10202</SliceEnd>
+            <SliceEnd>12874</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -882,7 +882,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>10695</SliceEnd>
+            <SliceEnd>13743</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -1082,7 +1082,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>11170</SliceEnd>
+            <SliceEnd>13807</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -1282,7 +1282,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>11017</SliceEnd>
+            <SliceEnd>12589</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -1482,7 +1482,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>11490</SliceEnd>
+            <SliceEnd>11976</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -1682,7 +1682,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>10331</SliceEnd>
+            <SliceEnd>12737</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -1882,7 +1882,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>4936</SliceEnd>
+            <SliceEnd>5500</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -2082,7 +2082,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>6298</SliceEnd>
+            <SliceEnd>7573</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -2282,7 +2282,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>3879</SliceEnd>
+            <SliceEnd>3821</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -2482,7 +2482,7 @@
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>3031</SliceEnd>
+            <SliceEnd>3023</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -2676,13 +2676,13 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A13_Perc_13</SampleName>
+            <SampleName>A13_Tonal_01</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>47254</SliceEnd>
+            <SliceEnd>67288</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -2876,13 +2876,13 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A14_Perc_14</SampleName>
+            <SampleName>A14_Tonal_02</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>25060</SliceEnd>
+            <SliceEnd>28649</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -3076,13 +3076,13 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A15_Perc_15</SampleName>
+            <SampleName>A15_Tonal_03</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>29175</SliceEnd>
+            <SliceEnd>44498</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>
@@ -3276,13 +3276,13 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A16_Perc_16</SampleName>
+            <SampleName>A16_Tonal_04</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
             <Offset>0</Offset>
             <SliceStart>0</SliceStart>
-            <SliceEnd>26610</SliceEnd>
+            <SliceEnd>37387</SliceEnd>
             <SliceLoopStart>0</SliceLoopStart>
             <SliceLoop>0</SliceLoop>
             <SliceLoopCrossFadeLength>0</SliceLoopCrossFadeLength>

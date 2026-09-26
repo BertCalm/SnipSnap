@@ -162,8 +162,9 @@ object SynthKits {
      * The TIDE kit (docs/SYNTH_ROADMAP.md, S9): WOOD BONGO walks C minor
      * pentatonic up the first two rows — the West Coast plucked pattern,
      * the sound the engine exists for — then DRIP, GONG and FLARE presets
-     * above it. Dry: the gate's own decay is the space. Every pad classifies
-     * PERC ([TidePresetsTest] has the measurement) and carries its recipe.
+     * above it. Dry: the gate's own decay is the space. BONGO and DRIP pads
+     * are PERC ([TidePresetsTest] has the measurement), GONG and FLARE TONAL
+     * (notes DECAY can hold); every pad carries its recipe.
      */
     fun tide(): List<ArrangedPad?> {
         val wood = TidePresets.forVoice(TideVoice.BONGO).first { it.name == "WOOD BONGO" }
@@ -171,8 +172,10 @@ object SynthKits {
             TidePatch("Bongo $n", TideVoice.BONGO, wood.macros + ("TUNE" to semitone / Tide.TUNE_SEMITONES.toFloat())),
             DrumClass.PERC,
         )
-        fun preset(voice: TideVoice, name: String) =
-            pad(TidePresets.forVoice(voice).first { it.name == name }, DrumClass.PERC)
+        fun preset(voice: TideVoice, name: String) = pad(
+            TidePresets.forVoice(voice).first { it.name == name },
+            if (voice == TideVoice.GONG || voice == TideVoice.FLARE) DrumClass.TONAL else DrumClass.PERC,
+        )
 
         return listOf(
             bongo(1, PENTATONIC[0]), bongo(2, PENTATONIC[1]), bongo(3, PENTATONIC[2]), bongo(4, PENTATONIC[3]), // A01-A04
