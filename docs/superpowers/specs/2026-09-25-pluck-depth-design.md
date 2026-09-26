@@ -274,12 +274,20 @@ the audition could happen before the sourcing work. Phase 2's first task
 writes `body-research.md` in the plan workspace with citations for each
 voice before any Hz reaches `Pluck.kt`:
 
-| Voice | Body | What the literature gives | Working values the plan must confirm or replace |
+> **Sourced 2026-09-25.** The research is in
+> [`../plans/2026-09-25-pluck-depth-body-research.md`](../plans/2026-09-25-pluck-depth-body-research.md):
+> a researcher per instrument, a verifier per instrument opening every cited
+> source, and only confirmed rows reaching code. The spike's guessed Hz that
+> an earlier draft of this table carried are gone; the table below is what
+> the sources gave. Decays are "measured" only where a source gave a Q or a
+> bandwidth; the rest are shapes for the audition.
+
+| Voice | Body | What the sources give | In code (research note section) |
 |---|---|---|---|
-| NYLON | classical guitar | the air resonance A0 near 100 Hz, the top-plate T1 near 200 Hz, the back-coupled T2 near 250 Hz, then plate modes; Q of order 20–50 (Fletcher & Rossing, the guitar chapter) | 98, 195, 250, 410, 560, 780, 1200, 2400 Hz |
-| KOTO | paulownia box, ~1.8 m | body resonances measured on the instrument; the literature is thinner (Ando's koto studies are the starting point) | 140, 205, 310, 470, 690, 1050, 1600 Hz |
-| HARP | spruce soundboard | a dense soundboard series from roughly 100 Hz up (Waltham & Kotlicki on the concert harp) | 110, 165, 240, 330, 450, 600, 820, 1100, 1500 Hz |
-| BANJO | drumhead over a pot | the head's modes are the circular membrane's, at a fundamental set by head tension; the pot adds an air mode (Rae & Rossing; Politzer) | MEMBRANE ratios on 310 Hz: 310, 494, 662, 711, 904 Hz; pot air 150 Hz |
+| NYLON | classical guitar | A0 air resonance 104 Hz (Q 29), the Helmholtz antiresonance at 127 Hz as a notch, T1 top plate 219 Hz (Q 25.8), T2 dipole 286 Hz, plate modes 436, 510, 645 Hz, a higher air mode 370 Hz — Christensen & Vistisen 1980, Jansson 2002, Su et al. 2024 | seven modes, 5.1; the antiresonance is left out |
+| KOTO | paulownia box, ~1.8 m | the (0,0) air mode at 85 Hz and the first plate mode at 100 Hz, confirmed in Coaldrake's ICA 2019 paper and the abstract of the 2020 JASA paper; the 2020 paper's fuller catalogue (157, 184, 202, 352 Hz) is unreachable behind a paywall and stays unsupported | two modes, 5.2; the rest wait for the paper |
+| HARP | soundbox and soundboard | one instrument (Le Carrou, Gautier & Foltête 2007): global 54.8 Hz, bending 80.9 and 123.4 Hz, T1 152.2 Hz, A0 168.5 Hz; the 161.9 Hz pitch mode is excluded by the source; damping given as percentages of an unstated convention, so no measured decay | five modes, 5.3 |
+| BANJO | Mylar head over a pot | pot air 220 Hz (a coupled doublet), head (0,1) 234 Hz with a 20–30 Hz bandwidth, head (1,1) 509, (2,1) 803, (5,1) 1593, (7,1) 2055 Hz, a pot cylinder mode 850 Hz, bridge hills near 3.5 and 5 kHz on one bridge — Rae 2010, Politzer 2016, Politzer, Woodhouse & Mansour 2021 | nine modes, 5.4 |
 
 **Decays.** The knock fix has two halves. The first difference drive is
 one. The other is that a body's lowest modes have moderate Q: the spike gave
