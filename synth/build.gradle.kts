@@ -58,6 +58,16 @@ tasks.register<JavaExec>("generatePluckAudition") {
     args("${rootDir}/testkit/pluck-audition")
 }
 
+/** Render the GLINT Phase 1 audition clips and page under testkit/glint-audition/. See GlintAuditionGenerator. */
+tasks.register<JavaExec>("generateGlintAudition") {
+    group = "distribution"
+    description = "Render the GLINT Phase 1 audition clips and listening page under testkit/glint-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"

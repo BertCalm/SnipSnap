@@ -32,3 +32,7 @@ design/*/*.html
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
 # and published as the listening artifact; never committed.
 testkit/pluck-audition/
+
+# The GLINT audition clips and page, rendered by :synth:generateGlintAudition
+# and published as the listening artifact; never committed.
+testkit/glint-audition/
