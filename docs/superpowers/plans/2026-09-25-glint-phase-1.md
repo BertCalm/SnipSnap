@@ -163,20 +163,6 @@ class GlintTest {
         }
     }
 
-    @Test
-    fun `render dispatches through the oversampled path, not directly at RATE`() {
-        // The same mean-abs-diff proof VELVET/FATHOM/TONEWHEEL/VOX/RESIN carry.
-        for (voice in GlintVoice.entries) {
-            val actual = Glint.render(voice)
-            val direct = Glint.synthesize(voice, emptyMap(), Dsp.RATE)
-            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-            Dsp.fadeTail(direct)
-            var diff = 0.0
-            val n = minOf(actual.samples.size, direct.size)
-            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
-            assertTrue(diff / n > 0.002, "$voice: render should differ from a native-rate synthesize, avgDiff=${diff / n}")
-        }
-    }
 }
 ```
 
@@ -344,7 +330,9 @@ object Glint {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `./gradlew :synth:test --tests "com.snipsnap.synth.GlintTest"`
-Expected: PASS, all nine tests.
+Expected: PASS, all eight tests.
+
+(The oversampled-path proof every other engine carries lives in Task 2, not here — at a fixed k of 8 the burst sits nowhere near Nyquist and the test would fail on a false premise. The measurement is in Task 2's notes.)
 
 If `every voice renders clean audio` fails on `peak() > 0.5f`, the cause is `Dsp.levelTo` targeting loudness rather than peak — check the sine burst is not being cancelled by an all-zero window (a sign `windowAt` returned 0 everywhere).
 
@@ -442,15 +430,44 @@ Append to `GlintTest.kt`, inside the class:
     }
 
     @Test
+    fun `render dispatches through the oversampled path, not directly at RATE`() {
+        // The mean-abs-diff proof VELVET/FATHOM/TONEWHEEL/VOX/RESIN carry —
+        // but it only means anything at the TOP of the sweep. Simulated
+        // 2026-09-25 before this plan was written: at k=8 and mid TUNE the
+        // diff is 0.00007 (REED), 0.00000 (BOTTLE), 0.00004 (KAZOO) — the
+        // burst is nowhere near Nyquist and oversampling changes nothing.
+        // At PEAK 1 and TUNE 1, k is 40 and k*f0 reaches 17.6 kHz: 0.00223
+        // (REED), 0.04557 (BOTTLE), 0.06231 (KAZOO). REED is the tight one,
+        // hence the 0.001 threshold rather than the 0.002 other engines use.
+        val corner = mapOf("PEAK" to 1f, "TUNE" to 1f, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f)
+        for (voice in GlintVoice.entries) {
+            val actual = Glint.render(voice, corner)
+            val direct = Glint.synthesize(voice, corner, Dsp.RATE)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            assertTrue(diff / n > 0.001, "$voice: render should differ from a native-rate synthesize, avgDiff=${diff / n}")
+        }
+    }
+
+    @Test
     fun `a non-integer ratio clicks no more than an integer one - the window's promise`() {
         // Above SNAP_CEILING k is continuous, so this is where a click would
         // show. Compare the largest sample-to-sample step at a deliberately
         // non-integer k against an integer one; a discontinuity at the wrap
         // would spike the non-integer case.
+        //
+        // Measured on the RAW oversampled buffer, not on render()'s output:
+        // Dsp.decimate low-passes to the output Nyquist, which is precisely
+        // the filter that would smooth a wrap discontinuity away before it
+        // could be seen. The window's promise lives before that filter.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f)
             fun maxStep(peak: Float): Float {
-                val s = Glint.render(voice, still + ("PEAK" to peak)).samples
+                val s = Glint.synthesize(voice, still + ("PEAK" to peak), rate)
                 var worst = 0f
                 for (i in 1 until s.size) {
                     val d = kotlin.math.abs(s[i] - s[i - 1])
@@ -1356,11 +1373,11 @@ git commit -m "Record GLINT Phase 1 on the synth roadmap as S9"
 
 | Spec section | Task |
 |---|---|
-| Synthesis property 1 — `w(1) = 0` frees `k` | 1 (window test), 2 (no-click test) |
+| Synthesis property 1 — `w(1) = 0` frees `k` | 1 (window test), 2 (no-click test, on the raw buffer) |
 | Synthesis property 2 — inner sine resets at the wrap | 2 (pitch invariance), 5 (k time-varying) |
 | Synthesis property 3 — `k` clamped `[2, 40]` | 3 (floor at every note/FOLLOW/PEAK) |
 | Synthesis property 4 — window mean-removed | 1 (mean integration), 4 (DC at every BODY) |
-| Sample rate / U6 oversample contract | 1 (oversampled-path test) |
+| Sample rate / U6 oversample contract | 2 (oversampled-path test, at PEAK 1 / TUNE 1 where it is measurable) |
 | Three voices, window per voice | 1 |
 | Six macros | 1 (contract test), 2–5 (behaviour) |
 | FOLLOW over `Dsp.keyTrack` | 3 |
