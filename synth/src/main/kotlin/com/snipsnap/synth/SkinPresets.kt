@@ -11,10 +11,10 @@ package com.snipsnap.synth
  * engine wandered around sixteen per voice. [Skin.scramble]'s own KDoc
  * said as much and named this file as the fix.
  *
- * Sixteen per voice, four apiece across the same four genres THUMP uses —
- * BOOM BAP, HOUSE, JUNGLE, DUB — deliberately the same four, so a player
- * who has met THUMP's list finds the same shelf here rather than a second
- * vocabulary.
+ * Twenty per voice: four apiece across the same four genres THUMP uses —
+ * BOOM BAP, HOUSE, JUNGLE, DUB — deliberately the same four, then four
+ * BOLD (below), so a player who has met THUMP's list finds the same shelf
+ * here rather than a second vocabulary.
  *
  * ## The values were measured, not guessed
  *
@@ -74,6 +74,17 @@ package com.snipsnap.synth
  * a classifier boundary the next time the rule was touched, and nothing
  * would say so until a preset stopped being a tom.
  *
+ * ## BOLD, the last four of every voice
+ *
+ * Added with the sound-design macros (CLICK, DROP, RATTLE, SIZZLE, RING,
+ * SWELL, GRAIN, BODY - see [Skin.macrosFor]), each pushing them toward an
+ * end the first sixteen, which predate them, never reach. They keep the
+ * safe-while table above, spell out every macro of their voice (so
+ * `SkinPresetsTest`'s distance, which reads the first preset's keys from
+ * both, never meets a key the second lacks), and were checked by the
+ * classifier and sanity tests only - never heard, so they belong at the
+ * next audition.
+ *
  * Names never reference a real machine or model number
  * (`docs/SYNTH_ROADMAP.md`'s naming rule), machine-checked by
  * `SkinPresetsTest` through the shared blocklist.
@@ -115,6 +126,11 @@ object SkinPresets {
         p(SkinVoice.KICK, "LONG ROOM", "TUNE" to 0.07f, "DECAY" to 0.83f, "TONE" to 0.40f, "PUNCH" to 0.25f),
         p(SkinVoice.KICK, "ROOTS DRUM", "TUNE" to 0.23f, "DECAY" to 0.67f, "TONE" to 0.40f, "PUNCH" to 0.25f),
         p(SkinVoice.KICK, "SLOW SKIN", "TUNE" to 0.07f, "DECAY" to 0.67f, "TONE" to 0.20f, "PUNCH" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.KICK, "HARD BEATER", "TUNE" to 0.70f, "DECAY" to 0.25f, "TONE" to 0.30f, "PUNCH" to 0.95f, "CLICK" to 1.00f, "DROP" to 0.20f),
+        p(SkinVoice.KICK, "LOOSE HEAD", "TUNE" to 0.15f, "DECAY" to 0.75f, "TONE" to 0.35f, "PUNCH" to 0.60f, "CLICK" to 0.50f, "DROP" to 0.90f),
+        p(SkinVoice.KICK, "FELT BOOM", "TUNE" to 0.10f, "DECAY" to 0.95f, "TONE" to 0.15f, "PUNCH" to 0.30f, "CLICK" to 0.00f, "DROP" to 0.40f),
+        p(SkinVoice.KICK, "TENSION", "TUNE" to 0.60f, "DECAY" to 0.30f, "TONE" to 0.75f, "PUNCH" to 0.70f, "CLICK" to 0.80f, "DROP" to 0.60f),
     )
 
     private val snarePresets = listOf(
@@ -134,6 +150,11 @@ object SkinPresets {
         p(SkinVoice.SNARE, "LONG CRACK", "TUNE" to 0.21f, "SNAP" to 0.52f, "DECAY" to 0.74f, "PUNCH" to 0.25f),
         p(SkinVoice.SNARE, "ROOTS SNARE", "TUNE" to 0.39f, "SNAP" to 0.32f, "DECAY" to 0.74f, "PUNCH" to 0.25f),
         p(SkinVoice.SNARE, "ECHO WIRE", "TUNE" to 0.21f, "SNAP" to 0.32f, "DECAY" to 0.56f, "PUNCH" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.SNARE, "DRY PAPER", "TUNE" to 0.30f, "SNAP" to 0.50f, "DECAY" to 0.35f, "PUNCH" to 0.70f, "RATTLE" to 0.10f, "SIZZLE" to 0.00f),
+        p(SkinVoice.SNARE, "HISS TAIL", "TUNE" to 0.50f, "SNAP" to 0.65f, "DECAY" to 0.45f, "PUNCH" to 0.40f, "RATTLE" to 1.00f, "SIZZLE" to 0.80f),
+        p(SkinVoice.SNARE, "THIN WIRE", "TUNE" to 0.70f, "SNAP" to 0.60f, "DECAY" to 0.20f, "PUNCH" to 0.75f, "RATTLE" to 0.60f, "SIZZLE" to 1.00f),
+        p(SkinVoice.SNARE, "MUDDY WIRE", "TUNE" to 0.20f, "SNAP" to 0.55f, "DECAY" to 0.60f, "PUNCH" to 0.50f, "RATTLE" to 0.80f, "SIZZLE" to 0.15f),
     )
 
     private val hatclosedPresets = listOf(
@@ -153,6 +174,11 @@ object SkinPresets {
         p(SkinVoice.HAT_CLOSED, "WARM SHUT", "TUNE" to 0.44f, "DECAY" to 0.47f, "TONE" to 0.50f, "PUNCH" to 0.25f),
         p(SkinVoice.HAT_CLOSED, "ROOTS FOIL", "TUNE" to 0.60f, "DECAY" to 0.33f, "TONE" to 0.50f, "PUNCH" to 0.25f),
         p(SkinVoice.HAT_CLOSED, "DUB TICK", "TUNE" to 0.44f, "DECAY" to 0.33f, "TONE" to 0.30f, "PUNCH" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.HAT_CLOSED, "TRASH TICK", "TUNE" to 0.45f, "DECAY" to 0.35f, "TONE" to 0.50f, "PUNCH" to 0.60f, "RING" to 0.00f),
+        p(SkinVoice.HAT_CLOSED, "GLASS TICK", "TUNE" to 0.75f, "DECAY" to 0.15f, "TONE" to 0.60f, "PUNCH" to 0.65f, "RING" to 1.00f),
+        p(SkinVoice.HAT_CLOSED, "DUST TICK", "TUNE" to 0.40f, "DECAY" to 0.55f, "TONE" to 0.25f, "PUNCH" to 0.50f, "RING" to 0.30f),
+        p(SkinVoice.HAT_CLOSED, "PING TICK", "TUNE" to 0.90f, "DECAY" to 0.30f, "TONE" to 0.80f, "PUNCH" to 0.85f, "RING" to 0.95f),
     )
 
     private val hatopenPresets = listOf(
@@ -172,6 +198,11 @@ object SkinPresets {
         p(SkinVoice.HAT_OPEN, "DEEP OPEN", "TUNE" to 0.44f, "DECAY" to 0.88f, "TONE" to 0.50f, "PUNCH" to 0.25f),
         p(SkinVoice.HAT_OPEN, "ROOTS BRASS", "TUNE" to 0.60f, "DECAY" to 0.72f, "TONE" to 0.50f, "PUNCH" to 0.25f),
         p(SkinVoice.HAT_OPEN, "ECHO SPILL", "TUNE" to 0.44f, "DECAY" to 0.72f, "TONE" to 0.30f, "PUNCH" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.HAT_OPEN, "TRASH WASH", "TUNE" to 0.50f, "DECAY" to 0.75f, "TONE" to 0.50f, "PUNCH" to 0.60f, "RING" to 0.00f),
+        p(SkinVoice.HAT_OPEN, "SINGING HAT", "TUNE" to 0.70f, "DECAY" to 0.80f, "TONE" to 0.60f, "PUNCH" to 0.55f, "RING" to 1.00f),
+        p(SkinVoice.HAT_OPEN, "DUST WASH", "TUNE" to 0.30f, "DECAY" to 0.35f, "TONE" to 0.50f, "PUNCH" to 0.40f, "RING" to 0.30f),
+        p(SkinVoice.HAT_OPEN, "METAL SPLASH", "TUNE" to 0.85f, "DECAY" to 0.95f, "TONE" to 0.75f, "PUNCH" to 0.70f, "RING" to 0.90f),
     )
 
     private val tomPresets = listOf(
@@ -191,6 +222,11 @@ object SkinPresets {
         p(SkinVoice.TOM, "DEEP WOOD", "TUNE" to 0.54f, "DECAY" to 0.87f, "TONE" to 0.50f, "PUNCH" to 0.25f),
         p(SkinVoice.TOM, "ROOTS DRUM", "TUNE" to 0.66f, "DECAY" to 0.69f, "TONE" to 0.50f, "PUNCH" to 0.25f),
         p(SkinVoice.TOM, "ECHO SHELL", "TUNE" to 0.54f, "DECAY" to 0.69f, "TONE" to 0.30f, "PUNCH" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.TOM, "BEND TOM", "TUNE" to 0.50f, "DECAY" to 0.70f, "TONE" to 0.45f, "PUNCH" to 0.60f, "DROP" to 1.00f, "CLICK" to 0.00f),
+        p(SkinVoice.TOM, "STICK SHELL", "TUNE" to 0.55f, "DECAY" to 0.45f, "TONE" to 0.65f, "PUNCH" to 0.75f, "DROP" to 0.20f, "CLICK" to 0.90f),
+        p(SkinVoice.TOM, "DEEP BEND", "TUNE" to 0.50f, "DECAY" to 0.85f, "TONE" to 0.15f, "PUNCH" to 0.45f, "DROP" to 0.70f, "CLICK" to 0.30f),
+        p(SkinVoice.TOM, "TIGHT HEAD", "TUNE" to 0.60f, "DECAY" to 0.22f, "TONE" to 0.80f, "PUNCH" to 0.95f, "DROP" to 0.30f, "CLICK" to 0.60f),
     )
 
     private val ridePresets = listOf(
@@ -210,6 +246,11 @@ object SkinPresets {
         p(SkinVoice.RIDE, "DEEP BELL", "TUNE" to 0.52f, "DECAY" to 0.89f, "TONE" to 0.64f, "PUNCH" to 0.25f),
         p(SkinVoice.RIDE, "ROOTS PING", "TUNE" to 0.68f, "DECAY" to 0.71f, "TONE" to 0.64f, "PUNCH" to 0.25f),
         p(SkinVoice.RIDE, "ECHO BOW", "TUNE" to 0.52f, "DECAY" to 0.71f, "TONE" to 0.48f, "PUNCH" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.RIDE, "SIZZLE RIDE", "TUNE" to 0.70f, "DECAY" to 0.75f, "TONE" to 0.65f, "PUNCH" to 0.55f, "SIZZLE" to 1.00f),
+        p(SkinVoice.RIDE, "RIVET WASH", "TUNE" to 0.60f, "DECAY" to 0.90f, "TONE" to 0.70f, "PUNCH" to 0.45f, "SIZZLE" to 0.70f),
+        p(SkinVoice.RIDE, "DRY RIVET", "TUNE" to 0.85f, "DECAY" to 0.40f, "TONE" to 0.65f, "PUNCH" to 0.70f, "SIZZLE" to 0.50f),
+        p(SkinVoice.RIDE, "JAZZ RIDE", "TUNE" to 0.55f, "DECAY" to 0.85f, "TONE" to 0.55f, "PUNCH" to 0.60f, "SIZZLE" to 0.30f),
     )
 
     private val shakerPresets = listOf(
@@ -229,6 +270,11 @@ object SkinPresets {
         p(SkinVoice.SHAKER, "DEEP POD", "TONE" to 0.30f, "DECAY" to 0.71f, "PUNCH" to 0.45f),
         p(SkinVoice.SHAKER, "ROOTS SAND", "TONE" to 0.50f, "DECAY" to 0.53f, "PUNCH" to 0.45f),
         p(SkinVoice.SHAKER, "ECHO SEED", "TONE" to 0.30f, "DECAY" to 0.53f, "PUNCH" to 0.25f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.SHAKER, "SLOW SHAKE", "TONE" to 0.60f, "DECAY" to 0.60f, "PUNCH" to 0.30f, "SWELL" to 1.00f, "GRAIN" to 0.20f),
+        p(SkinVoice.SHAKER, "SEED POD", "TONE" to 0.75f, "DECAY" to 0.45f, "PUNCH" to 0.60f, "SWELL" to 0.20f, "GRAIN" to 1.00f),
+        p(SkinVoice.SHAKER, "SAND SWELL", "TONE" to 0.40f, "DECAY" to 0.75f, "PUNCH" to 0.15f, "SWELL" to 0.70f, "GRAIN" to 0.50f),
+        p(SkinVoice.SHAKER, "BEAD SNAP", "TONE" to 0.80f, "DECAY" to 0.25f, "PUNCH" to 0.80f, "SWELL" to 0.00f, "GRAIN" to 0.80f),
     )
 
     private val stickPresets = listOf(
@@ -248,5 +294,10 @@ object SkinPresets {
         p(SkinVoice.STICK, "DEEP TAP", "TUNE" to 0.30f, "DECAY" to 0.67f, "PUNCH" to 0.45f),
         p(SkinVoice.STICK, "ROOTS STICK", "TUNE" to 0.50f, "DECAY" to 0.49f, "PUNCH" to 0.45f),
         p(SkinVoice.STICK, "ECHO KNOCK", "TUNE" to 0.30f, "DECAY" to 0.49f, "PUNCH" to 0.25f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(SkinVoice.STICK, "SHELL KNOCK", "TUNE" to 0.45f, "DECAY" to 0.55f, "PUNCH" to 0.60f, "BODY" to 0.80f, "CLICK" to 0.20f),
+        p(SkinVoice.STICK, "WOOD CRACK", "TUNE" to 0.75f, "DECAY" to 0.30f, "PUNCH" to 0.80f, "BODY" to 0.00f, "CLICK" to 1.00f),
+        p(SkinVoice.STICK, "RIMSHOT", "TUNE" to 0.60f, "DECAY" to 0.55f, "PUNCH" to 0.60f, "BODY" to 0.50f, "CLICK" to 0.60f),
+        p(SkinVoice.STICK, "LOG DRUM", "TUNE" to 0.30f, "DECAY" to 0.80f, "PUNCH" to 0.35f, "BODY" to 1.00f, "CLICK" to 0.00f),
     )
 }

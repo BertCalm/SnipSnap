@@ -44,9 +44,9 @@ class ThumpSoundDesignTest {
             Triple(1.1f / 1.48f, 1f, 2.6f / 1.48f), Triple(0.85f, 1.2f, 3f),
             Triple(0.08f, 0.6f, 1.4f), Triple(0.006f, 0.12f, 0.35f),
         )) {
-            assertEquals(center, Thump.around(0.5f, lo, center, hi), "around(0.5, $lo, $center, $hi)")
-            assertEquals(lo, Thump.around(0f, lo, center, hi), 1e-5f * lo)
-            assertEquals(hi, Thump.around(1f, lo, center, hi), 1e-5f * hi)
+            assertEquals(center, Dsp.around(0.5f, lo, center, hi), "around(0.5, $lo, $center, $hi)")
+            assertEquals(lo, Dsp.around(0f, lo, center, hi), 1e-5f * lo)
+            assertEquals(hi, Dsp.around(1f, lo, center, hi), 1e-5f * hi)
         }
     }
 

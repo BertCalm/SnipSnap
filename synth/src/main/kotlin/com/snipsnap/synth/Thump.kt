@@ -38,7 +38,7 @@ object Thump {
         ThumpVoice.KICK -> listOf(
             MacroSpec("TUNE", 0.35f), MacroSpec("SWEEP", 0.5f), MacroSpec("DECAY", 0.45f),
             MacroSpec("CLICK", 0.35f), MacroSpec("DRIVE", 0.25f), MacroSpec("PUNCH", 0.5f),
-            // The sound-design round (see [around]'s KDoc): every macro from
+            // The sound-design round (see [Dsp.around]'s KDoc): every macro from
             // here down in each list defaults to exactly the constant it
             // replaced, so a preset that doesn't mention it is unchanged.
             MacroSpec("BEND", 0.5f, neutral = 0.5f), MacroSpec("HOLD", 0f),
@@ -82,27 +82,6 @@ object Thump {
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("PUNCH", 0.5f),
             MacroSpec("RING", 0.5f, neutral = 0.5f), MacroSpec("BODY", 0f),
         )
-    }
-
-    /**
-     * A centred macro map: [macro] 0 -> [lo], exactly 0.5 -> [center], 1 ->
-     * [hi], exponential on each half.
-     *
-     * Every macro the sound-design round added opened up a constant a voice
-     * used to hardcode (the kick's sweep rate of 90, the clap's four
-     * impacts, the cowbell's 1.48 ratio...). Its default has to render that
-     * constant *exactly*, or every factory preset - none of which mention
-     * the new macro - would drift. A plain [Dsp.expMap] over lo..hi only
-     * lands on the old constant if it is the range's geometric mean, and
-     * only to within float rounding; here 0.5 takes the upper branch at its
-     * own start, `center * exp(0)`, which is [center] to the bit. Two
-     * halves also let the range be lopsided around it - a kick's bend can
-     * go five times slower than today but only four and a half times
-     * faster, because that is where each end stops sounding like a kick.
-     */
-    internal fun around(macro: Float, lo: Float, center: Float, hi: Float): Float {
-        val m = macro.coerceIn(0f, 1f)
-        return if (m < 0.5f) Dsp.expMap(m * 2f, lo, center) else Dsp.expMap((m - 0.5f) * 2f, center, hi)
     }
 
     /** The factory macro settings for [voice]. */
@@ -213,7 +192,7 @@ object Thump {
         // BEND: how fast the pitch falls onto the base, as a rate in 1/s.
         // 90 was the only kick there was; slow (18) is the long dive of a
         // tuned boom, fast (400) is a thud with no audible drop at all.
-        val bendRate = around(m.getValue("BEND"), 18f, 90f, 400f).toDouble()
+        val bendRate = Dsp.around(m.getValue("BEND"), 18f, 90f, 400f).toDouble()
         // HOLD: the body sits at full level before DECAY starts, the long
         // sustained sub DECAY alone can't reach without also lengthening its
         // fade. Up to 0.25 s - but HOLD and DECAY share one budget at the
@@ -328,7 +307,7 @@ object Thump {
         // RATTLE's default keeps SNARE's 0.6 s exactly - up to 1.2 s, where
         // trimSnareTail and fadeTail take over; its KDoc says why this voice
         // must stay well short of Classifier's 1.5 s loop floor.
-        val rattle = around(m.getValue("RATTLE"), 1f, 3f, 7f)
+        val rattle = Dsp.around(m.getValue("RATTLE"), 1f, 3f, 7f)
 
         val frames = frames(0.6f * (rattle / 3f).coerceIn(1f, 2f), rate)
 
@@ -618,7 +597,7 @@ object Thump {
         // BEND: the pitch fall's rate, 30/s fixed until now. Slow (8) is the
         // long electronic "pew" of a synth tom; fast (120) a tight
         // acoustic-ish knock whose SWEEP is heard as attack, not glide.
-        val bendRate = around(m.getValue("BEND"), 8f, 30f, 120f).toDouble()
+        val bendRate = Dsp.around(m.getValue("BEND"), 8f, 30f, 120f).toDouble()
         // CLICK: a stick on the head - the kick's click burst, lowpassed
         // higher since a tom's body sits an octave or two above a kick's.
         val click = m.getValue("CLICK")
@@ -657,15 +636,15 @@ object Thump {
         // Scaled from 1.48 as a Double rather than mapped onto it: the old
         // code multiplied by the Double 1.48, which no Float equals, and a
         // multiplier of exactly 1 at the default keeps that bit-for-bit.
-        val ratio = 1.48 * around(m.getValue("RATIO"), 1.1f / 1.48f, 1f, 2.6f / 1.48f)
+        val ratio = 1.48 * Dsp.around(m.getValue("RATIO"), 1.1f / 1.48f, 1f, 2.6f / 1.48f)
         // TONE: where the bandpass sits, as a multiple of the base. 1.2 was
         // fixed; low is a hollow, muffled knock, high throws the squares'
         // upper harmonics forward into a cutting clang.
-        val toneMult = around(m.getValue("TONE"), 0.85f, 1.2f, 3f)
+        val toneMult = Dsp.around(m.getValue("TONE"), 0.85f, 1.2f, 3f)
         // RING: the bandpass's own resonance (inverted into Svf's damping,
         // so turning it up rings more). 0.6 was fixed; 1.4 is a dull, wide
         // thud, 0.08 a filter singing on its own like struck metal.
-        val damp = around(1f - m.getValue("RING"), 0.08f, 0.6f, 1.4f)
+        val damp = Dsp.around(1f - m.getValue("RING"), 0.08f, 0.6f, 1.4f)
 
         val out = FloatArray(frames(t60 * 1.4f, rate))
         var p1 = 0.0; var p2 = 0.0
@@ -688,7 +667,7 @@ object Thump {
         // RING: the resonator's own damping, inverted so up rings more. 0.12
         // was fixed - a dry tick; toward 0.006 the tick carries a pitch, a
         // clave or woodblock. DECAY's envelope still caps how long it lasts.
-        val damp = around(1f - m.getValue("RING"), 0.006f, 0.12f, 0.35f)
+        val damp = Dsp.around(1f - m.getValue("RING"), 0.006f, 0.12f, 0.35f)
         // BODY: the drum head under the rim. A rimshot is the stick hitting
         // both at once; this is a second, much lower resonator on the same
         // excitation, ringing ~3x longer than the tick. 0 is the side-stick
