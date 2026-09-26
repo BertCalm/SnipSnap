@@ -46,10 +46,29 @@ object Glint {
     /** KAZOO's trapezoid holds at full for this fraction of the cycle, then ramps out. */
     const val KAZOO_FLAT = 0.7f
 
-    /** BODY's own t60 as a fraction of the amp t60 — the body burns off, the glass rings on. */
+    /**
+     * BODY's own t60 as a fraction of the amp t60 — the body burns off, the
+     * glass rings on. The constant is 0.45, but the body is double
+     * enveloped: `Dsp.envAt(t, bodyT60)` inside the mix, then `amp.at(t)`
+     * again over the whole sum. Two exponentials compose (both are pure
+     * `exp(-6.9078*t/t60)` past the 2ms attack), so the *effective* decay
+     * seen in the render is 1/(1/t60 + 1/(0.45*t60)) = 0.45/1.45 ≈ 0.31 of
+     * the amp t60, not 0.45 of it. Intended behaviour — only the number
+     * quoted here was wrong.
+     */
     const val BODY_DECAY_RATIO = 0.45f
 
-    /** BLOOM's ceiling: the peak opens to this many times its settled ratio. */
+    /**
+     * BLOOM's ceiling: the peak opens to 1 + this many times its settled
+     * ratio — 4x at full BLOOM.
+     *
+     * That 4x is clamped against [K_MAX] (40) in `synthesize`, and the two
+     * interact: full BLOOM starts clipping against the ceiling once
+     * `kBase > 10` (PEAK ≈ 0.54, since `kBase = 2 * 20^PEAK`), and is
+     * entirely inert at PEAK 1, where `kBase` is already 40 and has nowhere
+     * left to open. Not a bug — undocumented behaviour someone auditioning
+     * BLOOM at high PEAK would otherwise read as the knob being broken.
+     */
     const val BLOOM_MAX = 3f
 
     /** BLOOM's sweep t60 at the knob's top and bottom — more BLOOM is further AND faster. */

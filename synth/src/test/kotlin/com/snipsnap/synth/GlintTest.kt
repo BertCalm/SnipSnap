@@ -39,6 +39,12 @@ class GlintTest {
      * factor again, and 0.443 against 0.40 is only 10% margin. 0.35 still
      * catches a genuinely broken render (near zero), which is all this
      * assertion is for.
+     *
+     * Note (2026-09-26): the figures above — both the corner-case peaks and
+     * the DECAY sweep — were measured when `k` was fixed at 8 and BLOOM did
+     * not exist yet (Task 1). They describe that fixed-`k` engine, not the
+     * current one; read them as historical motivation for the 0.35 floor,
+     * not as current numbers.
      */
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
@@ -233,6 +239,68 @@ class GlintTest {
         assertTrue(a.samples.contentEquals(b.samples), "same snapped harmonic must render the same bytes")
     }
 
+    /** Energy at exactly [hz] in [samples], by Goertzel. Measures a named frequency — nothing to tune. */
+    private fun energyAt(samples: FloatArray, hz: Float, sampleRate: Int, from: Int = 0, n: Int = 16384): Float {
+        val count = minOf(n, samples.size - from)
+        val w = 2.0 * kotlin.math.PI * hz / sampleRate
+        val coeff = 2.0 * kotlin.math.cos(w)
+        var s1 = 0.0; var s2 = 0.0
+        for (i in 0 until count) {
+            val s = samples[from + i] + coeff * s1 - s2
+            s2 = s1; s1 = s
+        }
+        return ((s1 * s1 + s2 * s2 - coeff * s1 * s2) / count).toFloat()
+    }
+
+    @Test
+    fun `PEAK pins the formant on the named harmonic, not just relatively`() {
+        // Every other spectral assertion in this suite is relative -
+        // centroids and band shares compared against each other. A
+        // constant-factor error in the burst (say `sin(2*pi*2k*phase)`
+        // instead of `sin(2*pi*k*phase)`) would pass all of them. This pins
+        // the spec's central claim directly: integers land the peak exactly
+        // on a harmonic (k=3 is the octave-and-a-fifth) - by measuring
+        // energy at named frequencies with a Goertzel filter, which has
+        // nothing to tune and cannot be fooled by a doubled or halved
+        // formant the way a centroid could.
+        //
+        // BLOOM held at 0 so k is constant through the render; BODY at 0 so
+        // the body's own harmonics don't muddy the comparison; k=3 chosen
+        // because it is below SNAP_CEILING (so it snaps to an exact
+        // integer) and is the spec's own worked example.
+        //
+        // Measured 2026-09-26 (energy ratio, peak-to-decoy):
+        //   REED   atK/at2k = 204x   atK/at(k/2) = 23810x
+        //   BOTTLE atK/at2k = 625x   atK/at(k/2) = 384935x
+        //   KAZOO  atK/at2k = 456x   atK/at(k/2) = 561187x
+        // The doubled-formant decoy is the tight one (a real harmonic of f0,
+        // just the "wrong" one) at 204x worst case; the halved decoy isn't
+        // a harmonic of f0 at all here (1.5*f0) so it reads near noise
+        // floor. 20x is comfortably inside the 204x floor - roughly an
+        // order of magnitude of margin - while still being a bar a doubled
+        // or halved formant could not pass.
+        val stillTune = 0.5f
+        for (voice in GlintVoice.entries) {
+            val peak = (0..2000).map { it / 2000f }.first { Glint.ratioFor(voice, stillTune, it, 1f) == 3f }
+            val k = Glint.ratioFor(voice, stillTune, peak, 1f)
+            assertEquals(3f, k, 1e-6f, "$voice: test setup expected k=3")
+            val f0 = Glint.frequencyFor(voice, stillTune)
+            val still = mapOf("TUNE" to stillTune, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
+            val snip = Glint.render(voice, still + ("PEAK" to peak))
+            val atK = energyAt(snip.samples, k * f0, snip.sampleRate)
+            val atDoubled = energyAt(snip.samples, 2f * k * f0, snip.sampleRate)
+            val atHalved = energyAt(snip.samples, k * f0 / 2f, snip.sampleRate)
+            assertTrue(
+                atK > atDoubled * 20f,
+                "$voice: energy at k*f0 ($atK) should dwarf energy at 2k*f0 ($atDoubled) - formant may be doubled",
+            )
+            assertTrue(
+                atK > atHalved * 20f,
+                "$voice: energy at k*f0 ($atK) should dwarf energy at k*f0/2 ($atHalved) - formant may be halved",
+            )
+        }
+    }
+
     @Test
     fun `render dispatches through the oversampled path, not directly at RATE`() {
         // The mean-abs-diff proof VELVET/FATHOM/TONEWHEEL/VOX/RESIN carry —
@@ -240,9 +308,10 @@ class GlintTest {
         // 2026-09-25 before this plan was written: at k=8 and mid TUNE the
         // diff is 0.00007 (REED), 0.00000 (BOTTLE), 0.00004 (KAZOO) — the
         // burst is nowhere near Nyquist and oversampling changes nothing.
-        // At PEAK 1 and TUNE 1, k is 40 and k*f0 reaches 17.6 kHz: 0.00223
-        // (REED), 0.04557 (BOTTLE), 0.06231 (KAZOO). REED is the tight one,
-        // hence the 0.001 threshold rather than the 0.002 other engines use.
+        // At PEAK 1 and TUNE 1, k is 40 and k*f0 reaches 17.6 kHz — measured
+        // (not simulated) 2026-09-26: REED 0.0027, BOTTLE 0.0408, KAZOO
+        // 0.0459. REED is the tight one, hence the 0.001 threshold rather
+        // than the 0.002 other engines use.
         val corner = mapOf("PEAK" to 1f, "TUNE" to 1f, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f)
         for (voice in GlintVoice.entries) {
             val actual = Glint.render(voice, corner)
@@ -267,6 +336,26 @@ class GlintTest {
         // Dsp.decimate low-passes to the output Nyquist, which is precisely
         // the filter that would smooth a wrap discontinuity away before it
         // could be seen. The window's promise lives before that filter.
+        //
+        // Off-harmonic target is 0.25, not 0.5, as of 2026-09-26: the
+        // discontinuity this test exists to catch is w(1-)*|sin(2*pi*k)|, and
+        // |sin(2*pi*k)| is 0 at BOTH a fractional part of 0.0 (integer k) and
+        // 0.5 (half-integer k) - sin(pi*n) is 0 either way. A window broken
+        // to end at 0.5 instead of exactly 0 (a total violation of the
+        // engine's founding property) therefore lands on silence at the wrap
+        // regardless of what the window does, and the test was blind to
+        // exactly the defect it names. Measured with REED's window forced to
+        // `1f - 0.5f*p` (linear, ending at 0.5 instead of 0): at the old 0.5
+        // target, onHarmonic=0.2856 offHarmonic=0.2260 - the broken window
+        // passes clean, ratio 0.79, not even close to failing. At 0.25,
+        // where |sin(2*pi*k)| = 1, the same break measures
+        // onHarmonic=0.2856 offHarmonic=0.4380, ratio 1.53 > the 1.5x bar -
+        // FAILS, as it must. With the real window restored and the 0.25
+        // target, REED measures onHarmonic=0.2839 offHarmonic=0.1244,
+        // BOTTLE onHarmonic=0.5785 offHarmonic=0.2510, KAZOO
+        // onHarmonic=0.5802 offHarmonic=0.2591 - all comfortably inside the
+        // 1.5x bar. 1.5f stays the right comparison factor: it did not need
+        // to move, only the target that decides which k's get compared.
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f)
@@ -280,14 +369,16 @@ class GlintTest {
                 return worst
             }
             // Find a PEAK landing closest to an integer ratio above the
-            // ceiling, and one landing closest to halfway between two.
-            // minByOrNull rather than first{tolerance}: the ratio map is
-            // exponential, so step size near the top is coarse and a fixed
-            // tolerance can miss entirely and throw instead of failing.
+            // ceiling, and one landing closest to a fractional part of 0.25,
+            // where |sin(2*pi*k)| = 1 and a broken window has nowhere to
+            // hide. minByOrNull rather than first{tolerance}: the ratio map
+            // is exponential, so step size near the top is coarse and a
+            // fixed tolerance can miss entirely and throw instead of
+            // failing.
             val candidates = (0..4000).map { it / 4000f }
                 .filter { Glint.ratioAtReference(it) > Glint.SNAP_CEILING + 1f }
             val onHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0f) }!!
-            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0.5f) }!!
+            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0.25f) }!!
             assertTrue(
                 maxStep(offHarmonic) < maxStep(onHarmonic) * 1.5f,
                 "$voice: a fractional ratio must not click — ${maxStep(offHarmonic)} vs ${maxStep(onHarmonic)}",
