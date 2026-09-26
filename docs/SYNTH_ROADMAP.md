@@ -62,6 +62,27 @@ range. First-generation voices:
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
 
+Every voice has since grown PUNCH (U3), and SNARE a membrane body with
+STRIKE and WIDTH (Phase 1B). **Sound-design round (shipped):** each voice
+then opened up the constants it used to hardcode, as macros whose default
+is the old constant exactly, so no preset that predates them moved:
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| Kick | BEND · HOLD | pitch-drop speed (long dive ↔ instant thud); a full-level hold before DECAY, the sustained boom |
+| Snare | RATTLE | wires choked with the head ↔ sizzling long after it |
+| Hats | NOISE | white noise under the square cluster, the washy side |
+| Clap | CLAPS · ROOM | 3–6 impacts; tail level, dry slaps ↔ a hall |
+| Tom | BEND · CLICK · DRIVE | synth-tom "pew" ↔ tight knock; a stick attack; saturation |
+| Cowbell | RATIO · TONE · RING | the pair's interval (sour ↔ agogo-like); filter centre; filter resonance |
+| Rim | RING · BODY | dry tick ↔ pitched clave; a drum head under the rim (a rimshot) |
+
+KICK and SNARE reach eight macros - past the seven TIDE's notes below
+treat as the ceiling, deliberately: the owner chose range over the cap for
+this round. The new ones stay off DE-SAMPLE's grid (each searched macro
+would triple its voice's points), and every voice gained four BOLD
+presets that push them.
+
 Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
 modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
 style preset (the demo kit becomes THUMP's factory default).
