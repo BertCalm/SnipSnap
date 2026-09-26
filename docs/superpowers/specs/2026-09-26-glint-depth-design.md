@@ -118,7 +118,15 @@ Dave Smith found a defect rather than a taste, and it is verified:
 
 `Velocity.atVelocity` scales the brightness macro by `VELOCITY_FLOOR_RATIO = 0.28125`, and because `PEAK` snaps to integers, both the soft and hard values quantise onto `k = 2` below about PEAK 0.06. The two renders come out the same bytes.
 
-**Fix:** render velocity layers from the **unsnapped** ratio. Snapping stays for the player's knob and for the value stored in the patch; the soft/hard pair is computed at full resolution. Smith's rule is the comment to keep: *"Quantization for the ear, full resolution for the diff — never conflate them again."*
+**Fix:** the dead zone exists only where snapping has a single integer to offer. Between `K_MIN = 2` and 3 there is exactly one integer, so snapping flattens that whole span onto `k = 2` — and that flattening is why both velocity layers landed on the same ratio.
+
+The shipped fix is a floor, `SNAP_FLOOR = 3f`: `snapRatio` snaps only within `SNAP_FLOOR..SNAP_CEILING` and is identity below it, while `ratioFor` keeps snapping on every note exactly as before. An earlier attempt removed the snap from `ratioFor` instead, computing velocity layers at full resolution — but that silently dropped the per-note harmonic staircase whenever FOLLOW < 1, which is GLINT's default (0.8). At PEAK 0.3, FOLLOW 0, the old snapped code gave `k` = 10, 9, 9, 8 across semitones; the unsnapped version gave 9.824, 9.274, 8.753, 8.262, never landing on an integer. Harmonic landing was one of only two things the audition marked KEEP, so that approach was overridden before it shipped.
+
+Measured across 51 PEAK samples, the floor cuts the dead zones from four (PEAK 0.00–0.06) to one, at PEAK exactly 0 — and `Velocity.atVelocity`'s existing `asked <= 1e-6f` guard already routes that case to `soften` before the collision matters, so it is zero in practice. A reviewer confirmed the margin analytically: the hard/soft ratio gap is `20^(0.575·asked)`, which grows with PEAK, so by the time the soft value reaches the floor (peak ≈ 0.319) the gap is already ≈1.6 in `k` — past the ≤1 a rounding collision needs. The defect cannot recur inside the band. The audition corroborates the floor from the other direction: `k` = 3, 5 and 8 were marked KEEP, `k` = 2 only "ok" — the zone worth keeping was `[3,12]` all along.
+
+Smith's rule is still the comment to keep: *"Quantization for the ear, full resolution for the diff — never conflate them again."* The shipped fix honors it by trimming where the snap applies rather than by splitting the ratio into two computations — the render's `k` is never conflated across velocities inside `[3,12]`, which is the outcome the rule demands.
+
+The snap range is therefore `k = 3…12`, not `2…12` as Phase 1 stated. `k = 2` is deliberately left unsnapped: that sub-range offered only one integer, and flattening onto it was the defect. One asymmetry falls out of the floor: `k = 3`'s snap catchment is `[3.0, 3.5)` rather than the `[2.5, 3.5)` every other integer in the band gets, because below 3.0 the ratio runs free. Harmless, but it makes `k = 3` a slightly thinner target for `scramble`'s random draws.
 
 This matters beyond GLINT: the patch format and the velocity system are shared with ten sibling engines, and GLINT is the first to snap a brightness macro.
 
@@ -130,9 +138,9 @@ Registration points, and this table is **not exhaustive** — Phase 1 learned th
 
 | File | Change |
 |---|---|
-| `Glint.kt` | three new mechanisms, BODY redefined, BLOOM's constants collapsed, `macrosFor` returns five for RATCHET and PLATE |
+| `Glint.kt` | three new mechanisms, BODY redefined, BLOOM's constants collapsed, `macrosFor` returns five for RATCHET and PLATE; `SNAP_FLOOR = 3f` added, `snapRatio` floored to `SNAP_FLOOR..SNAP_CEILING` |
 | `GlintTest.kt` | the new mechanisms' tests; existing tests re-pointed at six voices |
-| `Velocity.kt` | velocity computed from the unsnapped ratio |
+| `Velocity.kt` | none — the fix lives in `Glint.kt`'s snap, not in how velocity computes its ratio |
 | `SynthScreen.kt` | nothing — voices come from `GlintVoice.entries`, and `drumClass` already maps every voice to TONAL |
 | `docs/SYNTH_ROADMAP.md` | amend the S10 row |
 
