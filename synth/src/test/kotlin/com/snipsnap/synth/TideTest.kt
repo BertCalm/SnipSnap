@@ -69,8 +69,8 @@ class TideTest {
     }
 
     @Test
-    fun `the struck voices declare six macros, and GONG and FLARE add RATIO`() {
-        val struck = listOf("TUNE", "FOLD", "WARP", "GLOW", "DECAY", "WANDER")
+    fun `the struck voices add CLICK, and GONG and FLARE add RATIO`() {
+        val struck = listOf("TUNE", "FOLD", "WARP", "GLOW", "CLICK", "DECAY", "WANDER")
         val held = listOf("TUNE", "FOLD", "WARP", "RATIO", "GLOW", "DECAY", "WANDER")
         assertEquals(struck, Tide.macrosFor(TideVoice.BONGO).map { it.name })
         assertEquals(struck, Tide.macrosFor(TideVoice.DRIP).map { it.name })
@@ -270,6 +270,40 @@ class TideTest {
             val share = fundamentalShareDb(preset.render(), hz)
             assertTrue(share > -8.0, "${preset.name}: the note is ${"%.1f".format(share)} dB under the whole")
         }
+    }
+
+    @Test
+    fun `CLICK puts a stick on the skin, and at 0 it is nothing`() {
+        // Every preset leaves CLICK at 0, so it must not move a byte there,
+        // WANDER's draws included (seedFor leaves CLICK out).
+        for (voice in listOf(TideVoice.BONGO, TideVoice.DRIP)) {
+            val base = mapOf("WANDER" to 0.7f)
+            assertTrue(
+                Tide.render(voice, base).samples.contentEquals(Tide.render(voice, base + ("CLICK" to 0f)).samples),
+                "$voice: CLICK 0 must render the note unchanged",
+            )
+        }
+        // Up, the first 4 ms carry far more energy above the note, and the
+        // body under it keeps its level. Measured: WOOD BONGO 3.1 times,
+        // losing 0.3 dB.
+        fun above(s: Snip): Double {
+            var e = 0.0
+            for (i in 1 until (0.004f * s.sampleRate).toInt()) {
+                val d = (s.samples[i] - s.samples[i - 1]).toDouble()
+                e += d * d
+            }
+            return e
+        }
+        fun rms(s: Snip, from: Float, to: Float): Double {
+            val w = slice(s, from, to).samples
+            return kotlin.math.sqrt(w.sumOf { (it * it).toDouble() } / w.size)
+        }
+        val bongo = TidePresets.all().first { it.name == "WOOD BONGO" }
+        val plain = bongo.render()
+        val clicked = Tide.render(bongo.voice, bongo.macros + ("CLICK" to 1f))
+        assertTrue(kotlin.math.sqrt(above(clicked) / above(plain)) > 2.0, "CLICK 1 should brighten the strike well past the note's own")
+        val loss = 20 * log10(rms(clicked, 0.02f, 0.2f) / rms(plain, 0.02f, 0.2f))
+        assertTrue(loss > -1.0, "the body under the click should keep its level, lost ${"%.1f".format(loss)} dB")
     }
 
     @Test
