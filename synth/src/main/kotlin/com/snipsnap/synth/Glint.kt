@@ -82,9 +82,19 @@ object Glint {
      */
     const val BLOOM_MAX = 3f
 
-    /** BLOOM's sweep t60 at the knob's top and bottom — more BLOOM is further AND faster. */
-    const val BLOOM_FAST_T60 = 0.06f
-    const val BLOOM_SLOW_T60 = 0.30f
+    /**
+     * The formant sweep's t60, fixed. It used to run from 0.30 s at low
+     * BLOOM down to 0.06 s at full — depth and rate on one knob, so a big
+     * sweep was always a fast one and a wide, unhurried one could not be
+     * dialled at all. Measured at the shipped coupling the centroid fell to
+     * 0.92x of its opening value and then sat flat for the rest of the note;
+     * at 0.45 s it travels to 0.35x over 300 ms, which is the single change
+     * the 2026-09-26 audition marked KEEP on both voices tested.
+     *
+     * BLOOM now means how far the formant travels. Each voice supplies how
+     * it travels — D2's PLATE ties it to loudness and RATCHET steps it.
+     */
+    const val BLOOM_T60 = 0.45f
 
     fun macrosFor(voice: GlintVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, 0.5f),
@@ -188,9 +198,8 @@ object Glint {
         val frames = (t60 * 1.35f * rate).toInt().coerceAtLeast(64)
 
         val kBase = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
-        val bloom = m.getValue("BLOOM")
-        val bloomAmount = Dsp.lin(bloom, 0f, BLOOM_MAX)
-        val bloomT60 = Dsp.expMap(bloom, BLOOM_SLOW_T60, BLOOM_FAST_T60)
+        val bloomAmount = Dsp.lin(m.getValue("BLOOM"), 0f, BLOOM_MAX)
+        val bloomT60 = BLOOM_T60
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val bodyMix = m.getValue("BODY") * BODY_MIX

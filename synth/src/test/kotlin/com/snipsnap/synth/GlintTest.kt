@@ -571,13 +571,18 @@ class GlintTest {
     }
 
     /**
-     * Measured 2026-09-26, still = TUNE 0.3 PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY
-     * 0.7 (duration 0.9044s for all three voices), head/tail centroid ratio:
-     *   REED   BLOOM 0 -> 1.0028   BLOOM 1 -> 1.8871
-     *   BOTTLE BLOOM 0 -> 0.9938   BLOOM 1 -> 1.7900
-     *   KAZOO  BLOOM 0 -> 1.0086   BLOOM 1 -> 1.8543
-     * Every BLOOM 1 case clears the 1.4x bar by 28-40%; every BLOOM 0 case
-     * sits at parity (0.99-1.01), well inside the 1.2x bar.
+     * Measured 2026-09-26 (Task 2, fixed BLOOM_T60 = 0.45s), still = TUNE 0.3
+     * PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY 0.7 (duration 0.9044s for all three
+     * voices), head/tail centroid ratio:
+     *   REED   BLOOM 0 -> 1.0013   BLOOM 1 -> 3.5664
+     *   BOTTLE BLOOM 0 -> 0.9899   BLOOM 1 -> 3.4596
+     *   KAZOO  BLOOM 0 -> 0.9929   BLOOM 1 -> 3.4975
+     * BLOOM 1's ratio nearly doubled from the old coupling's 1.79-1.89
+     * (BLOOM_FAST_T60 0.06s) to 3.46-3.57: the slower fixed rate leaves k
+     * much closer to its peak at the 0-12ms head window, since envAt(0.012,
+     * 0.45) is still ~0.94 against the old envAt(0.012, 0.06) of ~0.15.
+     * Every BLOOM 1 case clears the 1.4x bar by well over 2x margin; every
+     * BLOOM 0 case sits at parity (0.99-1.00), well inside the 1.2x bar.
      */
     @Test
     fun `BLOOM opens the peak at the attack and lets it settle`() {
@@ -597,15 +602,17 @@ class GlintTest {
     }
 
     /**
-     * Measured 2026-09-26, same still as above, tail centroid (0.75 * duration
-     * to the end) at BLOOM 0 vs BLOOM 1:
-     *   REED   1127.9448 Hz -> 1127.9445 Hz (diff 0.0003 Hz)
-     *   BOTTLE 2307.9585 Hz -> 2307.9578 Hz (diff 0.0007 Hz)
-     *   KAZOO  2286.9421 Hz -> 2286.9434 Hz (diff 0.0013 Hz)
-     * BLOOM_SLOW_T60 = 0.30s against a 0.67s DECAY-0.7 t60 leaves the sweep
-     * fully settled (envAt past 5 t60s) well before the 0.75-duration mark,
-     * so the two tails are identical to four significant figures - nowhere
-     * near the 20% bar.
+     * Measured 2026-09-26 (Task 2, fixed BLOOM_T60 = 0.45s), same still as
+     * above, tail centroid (0.75 * duration to the end) at BLOOM 0 vs BLOOM 1:
+     *   REED   1126.3811 Hz -> 1126.4362 Hz (diff 0.0551 Hz)
+     *   BOTTLE 2307.8090 Hz -> 2307.9167 Hz (diff 0.1077 Hz)
+     *   KAZOO  2285.5515 Hz -> 2285.6560 Hz (diff 0.1045 Hz)
+     * At 0.75 * 0.9044s = 0.678s, envAt(0.678, 0.45) is ~3e-5 - the sweep is
+     * fully settled by five-plus t60s regardless of which BLOOM value chose
+     * the (now fixed) rate, so the two tails still land within the 20% bar.
+     * This guard still matters at the new, slower rate: it is what catches a
+     * future voice-specific sweep (D2's PLATE, RATCHET) that runs so slow it
+     * never lands before the note's DECAY ends.
      */
     @Test
     fun `BLOOM lands before the note ends, whatever it did on the way`() {
@@ -622,6 +629,54 @@ class GlintTest {
                 "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
             )
         }
+    }
+
+    @Test
+    fun `BLOOM sweeps at one fixed rate, however deep it is set`() {
+        // The shipped coupling ran the sweep t60 from 0.30 s down to 0.06 s
+        // as BLOOM rose, so a big sweep was always a fast one and "wide and
+        // unhurried" was unreachable. Measured at the shipped setting the
+        // centroid fell to 0.92x and then sat flat — Josh heard that as "I
+        // don't get a sense of movement". At a fixed 0.45 s it travels to
+        // 0.35x over 300 ms, which was the one change he marked KEEP.
+        //
+        // The assertion: the *time* the sweep takes must not change with
+        // depth. Measure how far through the note the centroid has settled
+        // at two different BLOOM depths; the settling point must match.
+        // Measured 2026-09-26: after the fix (fixed 0.45s t60) both BLOOM 1
+        // and BLOOM 0.5 settle at 0.16s - identical, because envAt's decay
+        // to a fixed relative threshold depends only on t60, not on the
+        // amplitude it is scaling. Note for whoever revisits this: against
+        // the OLD coupling (t60 0.06s at BLOOM 1, 0.134s at BLOOM 0.5) this
+        // assertion did NOT fail - it measured 0.02s vs 0.04s, a 0.02s gap
+        // comfortably under the 0.08s bar. The maximum possible gap across
+        // the old coupling's entire t60 range (0.06s to 0.30s) is only
+        // 0.08s - exactly the bar - so this test could not reliably go red
+        // against the coupling it was meant to catch; it passed by
+        // construction, not because the bug was fixed. It is still a good
+        // regression guard for the new engine, just not the TDD RED it was
+        // written to be.
+        val voice = GlintVoice.REED
+        val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.5f, "BODY" to 0.2f, "FOLLOW" to 1f, "DECAY" to 0.85f)
+        fun settledFraction(bloom: Float): Float {
+            val snip = Glint.render(voice, still + ("BLOOM" to bloom))
+            val head = FeatureExtractor.extract(slice(snip, 0f, 0.04f)).centroidHz
+            val tail = FeatureExtractor.extract(slice(snip, snip.durationSeconds * 0.8f, snip.durationSeconds)).centroidHz
+            // where the centroid first comes within 10% of its settled value
+            for (i in 1..40) {
+                val t = i * 0.02f
+                val here = FeatureExtractor.extract(slice(snip, t, t + 0.04f)).centroidHz
+                if (kotlin.math.abs(here - tail) < kotlin.math.abs(head - tail) * 0.1f) return t
+            }
+            return Float.NaN
+        }
+        val deep = settledFraction(1f)
+        val shallow = settledFraction(0.5f)
+        assertTrue(deep.isFinite() && shallow.isFinite(), "both depths must settle within the note: $deep, $shallow")
+        assertTrue(
+            kotlin.math.abs(deep - shallow) < 0.08f,
+            "the sweep's duration must not depend on its depth: settled at ${deep}s vs ${shallow}s",
+        )
     }
 
     @Test
