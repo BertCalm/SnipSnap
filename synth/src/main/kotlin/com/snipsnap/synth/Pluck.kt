@@ -92,6 +92,15 @@ object Pluck {
      * default body` - `PICK brightens the attack` no longer competes for
      * NYLON's ceiling, since that test now forces BODY to 0 for its own
      * centroid measurement instead of relying on wherever the default sits.
+     * BANJO dropped again at the third listen (2026-09-26), bisected the
+     * same way, to 0.20: the bridge hills' gain doubling (3500/5000 Hz to
+     * 0.70/0.55, for the string's tin) pulled `PICK moves the centroid`
+     * dead between 0.9 and 1.0 at 0.25. `factory defaults all classify as
+     * percussion` still reads BANJO's default as SNARE at every BODY down
+     * to 0.10 tried - independent of BODY, traced instead to the same
+     * gate's loop/pick brightening (loopHz 9000, pick 3000-14000) pushing
+     * `highRatio` over the classifier's SNARE threshold - so it is left
+     * failing rather than loosened or masked by a BODY this low.
      */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.NYLON -> listOf(
@@ -107,10 +116,10 @@ object Pluck {
             MacroSpec("TUNE", 0.45f), MacroSpec("DAMP", 0.4f), MacroSpec("PICK", 0.75f),
             MacroSpec("STRIKE", 0.6f), MacroSpec("BODY", 0.45f), MacroSpec("DOUBLE", 0.45f),
         )
-        // Fingerpicks close to the bridge, short notes (spec, "BANJO").
+        // Fingerpicks near the bridge, short notes, and a default note where the head sits just above it (spec, "BANJO"; gate 2026-09-26).
         PluckVoice.BANJO -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
-            MacroSpec("STRIKE", 0.4f), MacroSpec("BODY", 0.25f), MacroSpec("DOUBLE", 0.1f),
+            MacroSpec("TUNE", 0.3f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
+            MacroSpec("STRIKE", 0.25f), MacroSpec("BODY", 0.20f), MacroSpec("DOUBLE", 0.1f),
         )
     }
 
@@ -183,8 +192,8 @@ object Pluck {
             PluckVoice.NYLON -> { loopHz = 3400f; pickLo = 1200f; pickHi = 6000f; ring = 1.1f }
             PluckVoice.HARP -> { loopHz = 5200f; pickLo = 1800f; pickHi = 9000f; ring = 1.3f }
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
-            // A steel string over a taut head: brighter than HARP.
-            PluckVoice.BANJO -> { loopHz = 5600f; pickLo = 2000f; pickHi = 10000f; ring = 1.0f }
+            // A steel string over a taut head, and the brightest string here: the loop keeps its treble (the gate heard 5.6 kHz as "not tinny enough") and the pick band sits above the others'.
+            PluckVoice.BANJO -> { loopHz = 9000f; pickLo = 3000f; pickHi = 14000f; ring = 1.0f }
         }
 
         // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
@@ -355,8 +364,8 @@ object Pluck {
             Modes.fixed(850f, 0.70f, 0.10f),   // pot-air cylinder mode - shape
             Modes.fixed(1593f, 0.40f, 0.08f),  // head (5,1) - shape
             Modes.fixed(2055f, 0.30f, 0.06f),  // head (7,1), the last strong head mode - shape
-            Modes.fixed(3500f, 0.30f, 0.05f),  // bridge hill - shape
-            Modes.fixed(5000f, 0.25f, 0.04f),  // bridge hill - shape
+            Modes.fixed(3500f, 0.70f, 0.05f),  // bridge hill - shape - raised at the gate: these formants are the tin
+            Modes.fixed(5000f, 0.55f, 0.04f),  // bridge hill - shape - raised at the gate: these formants are the tin
         )
     }
 

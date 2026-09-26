@@ -247,7 +247,7 @@ Note: the source's damping-coefficient percentages (5.5/4.8/2.5/2.3/0.9/1.4%, in
 | Pot-air cylinder mode | 850 | 0.70 | 0.10 | shape |
 | Head (5,1) | 1,593 | 0.40 | 0.08 | shape |
 | Head (7,1) | 2,055 | 0.30 | 0.06 | shape |
-| Bridge hill ~3.5 kHz | 3,500 | 0.30 | 0.05 | shape |
-| Bridge hill ~5 kHz | 5,000 | 0.25 | 0.04 | shape |
+| Bridge hill ~3.5 kHz | 3,500 | 0.70 | 0.05 | shape |
+| Bridge hill ~5 kHz | 5,000 | 0.55 | 0.04 | shape |
 
-Gate-tuned 2026-09-26: the head (0,1) leads and the pot air mode is shortened, after the Phase 2 gate heard the banjo only at BODY 1 on the root.
+Gate-tuned 2026-09-26: the head (0,1) leads and the pot air mode is shortened, after the Phase 2 gate heard the banjo only at BODY 1 on the root. Gate-tuned again 2026-09-26 (third listen): the bridge hills' gains raised to 0.70/0.55, after the gate heard the string itself as "not tinny enough" at G3, B3 and D4, with the string's own default note extended from G4 to D4.

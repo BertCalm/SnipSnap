@@ -142,8 +142,8 @@ instead of a drum's, with the pot's air resonance under it. No new DSP: a
 voice row, a body table, twelve presets.
 
 - **Constants:** root G3 (196 Hz, the open-G tonal centre), loop cutoff
-  5600 Hz (brighter than HARP: a steel string over a taut head), exciter
-  range 2000–10000 Hz.
+  9000 Hz (brighter than HARP: a steel string over a taut head), exciter
+  range 3000–14000 Hz.
 - **Body:** the sourced table (`body-research.md` §5.4; Rae 2010,
   Politzer 2016, Politzer/Woodhouse/Mansour 2021), not the MEMBRANE ratios
   on a 310 Hz head this section proposed before the sourcing pass replaced
@@ -151,9 +151,12 @@ voice row, a body table, twelve presets.
   mode 850 Hz, and bridge hills near 3500 and 5000 Hz on one bridge. Only
   the head's (0,1) mode carries a measured decay — a 20–30 Hz bandwidth —
   everything else in the table is a shape for the gate.
-- **Defaults, placeholders for the gate:** DAMP 0.5 (banjo notes are short),
-  PICK 0.7, STRIKE 0.4 (fingerpicks close to the bridge, `p ≈ 0.09`),
-  BODY 0.6 (a banjo is mostly its head), DOUBLE 0.1.
+- **Defaults, placeholders for the gate:** TUNE 0.3 (D4, 294 Hz), DAMP 0.5
+  (banjo notes are short), PICK 0.7, STRIKE 0.25 (fingerpicks near the
+  bridge, `p ≈ 0.06`), BODY 0.6 (a banjo is mostly its head), DOUBLE 0.1.
+  The second gate heard the 5.6 kHz string as "not tinny enough" and the
+  body only at notes where the head sits just above them, so the default
+  note is D4.
 - **Presets:** twelve, authored like the others and disposable like the
   others. The name is a generic instrument word, allowed by the naming rule.
 - It takes KALIMBA's place in `PluckVoice`; the melodic kit's A07–A11 go to
@@ -257,12 +260,14 @@ such in code (a table with a comment naming this document), the way
 `LOUDNESS_OFFSET` already is. The chips asked for BODY HARP 0.4, KOTO 0.35,
 NYLON 0.5; the five-cent tuning sweep at the default body would not accept
 them (the sourced bodies sit nearer the notes than the spike's guessed ones),
-so the shipped defaults are NYLON 0.30, HARP 0.30, KOTO 0.45, BANJO 0.25 —
+so the shipped defaults are NYLON 0.30, HARP 0.30, KOTO 0.45, BANJO 0.20 —
 raised after the Phase 2 gate heard every one of them read closer to the
 instrument at every amount; the ceiling is `PICK moves the centroid`: PICK's
 top end must still move the note's spectral centroid at the default body.
-STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played with
-a pick near the bridge). BANJO's are in its own section.
+BANJO's BODY dropped again at the third listen (2026-09-26) after the
+bridge hills' gain doubled for the string's tin pulled that same ceiling
+past 0.9. STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played
+with a pick near the bridge). BANJO's are in its own section.
 KALIMBA has no body default and no STRIKE tuning effort: it leaves PLUCK in
 Phase 2.
 
