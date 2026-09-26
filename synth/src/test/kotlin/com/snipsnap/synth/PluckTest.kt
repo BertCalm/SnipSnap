@@ -450,13 +450,9 @@ class PluckTest {
 
     @Test
     fun `PICK moves the centroid at every step of its travel`() {
-        // The precondition for routing velocity through PICK: the same
-        // sweep the snare's SNAP had to pass before its override line.
-        // KALIMBA is excluded because its sweep inverts (centroid peaks at
-        // PICK 0.1 and falls, net -2.4% at PICK 1; root cause not
-        // investigated) and it leaves PLUCK in Phase 2; until then it keeps
-        // the soften fallback.
-        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+        // The sweep is the precondition for routing velocity through PICK,
+        // the same sweep the snare's SNAP had to pass.
+        for (voice in PluckVoice.entries) {
             val points = (0..10).map { it / 10f }
             val measured = points.map { p ->
                 FeatureExtractor.extract(Pluck.render(voice, mapOf("PICK" to p))).centroidHz

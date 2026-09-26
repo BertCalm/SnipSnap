@@ -26,7 +26,7 @@ import kotlin.random.Random
  * TUNE snaps to semitones across two octaves from the voice's root: pads get
  * notes, not frequencies, which is what makes a pluck kit playable as music.
  */
-enum class PluckVoice { KALIMBA, NYLON, HARP, KOTO, BANJO }
+enum class PluckVoice { NYLON, HARP, KOTO, BANJO }
 
 object Pluck {
 
@@ -69,10 +69,6 @@ object Pluck {
     internal const val RING_CEILING_SECONDS = 4.0f
 
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
-        PluckVoice.KALIMBA -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.6f), MacroSpec("PICK", 0.55f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.1f),
-        )
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
             MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.15f),
@@ -108,7 +104,6 @@ object Pluck {
     }
 
     private fun rootFor(voice: PluckVoice): Float = when (voice) {
-        PluckVoice.KALIMBA -> 220f
         PluckVoice.NYLON -> 110f
         PluckVoice.HARP -> 165f
         PluckVoice.KOTO -> 147f
@@ -159,7 +154,6 @@ object Pluck {
         val pickHi: Float
         val ring: Float
         when (voice) {
-            PluckVoice.KALIMBA -> { loopHz = 2600f; pickLo = 900f; pickHi = 4500f; ring = 0.9f }
             PluckVoice.NYLON -> { loopHz = 3400f; pickLo = 1200f; pickHi = 6000f; ring = 1.1f }
             PluckVoice.HARP -> { loopHz = 5200f; pickLo = 1800f; pickHi = 9000f; ring = 1.3f }
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
@@ -280,10 +274,11 @@ object Pluck {
      * Internal, not private, so PluckTest can drive it with a synthetic
      * freq/rate pair and pin the loop-length invariant below directly -
      * the real voice table never reaches it (measured minimum `exact`
-     * across every voice x TUNE semitone x DAMP is 175.93 samples, at
-     * KALIMBA TUNE=1/DAMP=1 - swept and printed against this function's
-     * own formula, not estimated), so there is no reachable call site to
-     * assert against otherwise.
+     * across every voice x TUNE semitone x DAMP was 175.93 samples, at
+     * the since-removed KALIMBA's TUNE=1/DAMP=1, a 220 Hz root - swept and
+     * printed against this function's own formula, not estimated; BANJO,
+     * at 196 Hz, now has the shortest loop of the remaining voices), so
+     * there is no reachable call site to assert against otherwise.
      */
     internal fun ks(
         freq: Float,
@@ -358,8 +353,8 @@ object Pluck {
         // require: as long as exact clears MIN_LOOP_SAMPLES, floor(exact)
         // >= MIN_LOOP_SAMPLES and frac = exact - floor(exact) is safe by
         // definition, no clamp needed. Unreachable today - the closest any
-        // voice/TUNE/DAMP corner comes is 175.93 samples (KALIMBA,
-        // TUNE=1, DAMP=1) - this is a require, not
+        // voice/TUNE/DAMP corner ever came to it was 175.93 samples, on the
+        // since-removed KALIMBA at TUNE=1/DAMP=1 - this is a require, not
         // a silent coerce, so raising a voice root, widening
         // TUNE_SEMITONES, or adding a high-pitched voice fails loudly
         // here, naming the real cause, instead of surfacing later as a
@@ -403,7 +398,8 @@ object Pluck {
         // filter lag, and two-tap average make up the rest of that period
         // (see `exact` above), and a comb cut to `n` alone puts its
         // notches ~3% off the true harmonics at high DAMP (measured on
-        // KALIMBA: the 2nd-harmonic null missed the 20 dB gate). The
+        // the since-removed KALIMBA voice: the 2nd-harmonic null missed
+        // the 20 dB gate). The
         // exciter grows to n + combDelay samples, and the extra samples enter
         // the loop as INPUT through the `+=` below, not as initial state -
         // the loop's own length and tuning budget are untouched. position

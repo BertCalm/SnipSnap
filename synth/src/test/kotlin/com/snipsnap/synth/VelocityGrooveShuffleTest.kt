@@ -146,23 +146,17 @@ class VelocityGrooveShuffleTest {
 
     @Test
     fun `atVelocity falls back to soften for voices with no brightness macro`() {
-        // KALIMBA specifically, not PLUCK generally: NYLON, KOTO and HARP
-        // are now routed through PICK by Velocity's own PluckPatch override
-        // (PluckTest's `a soft PLUCK is re-synthesised through PICK, not
-        // low-passed`), and PICK isn't in BRIGHTNESS_MACROS either - the
-        // override just names it directly. KALIMBA is carved out of that
-        // override because its PICK sweep inverts, so it's the one voice
-        // still falling back to soften() here - this test pins that
-        // exclusion, byte-identical output and all, and it will need
-        // updating (not just re-passing) once Phase 2 removes
-        // PluckVoice.KALIMBA.
-        val patch = PluckPresets.forVoice(PluckVoice.KALIMBA).first()
+        // VOX exposes TUNE, VOWEL, BREATH and DECAY - none of them in
+        // BRIGHTNESS_MACROS, and no override names it - so it is the voice
+        // that still falls back to soften() here. Every PLUCK voice now
+        // goes through PICK (Velocity's own PluckPatch override).
+        val patch = VoxPresets.forVoice(VoxVoice.CHOIR).first()
         val velocity = 0.3f
         val viaFallback = Velocity.atVelocity(patch, velocity)
         val viaSoftenDirect = Velocity.soften(patch.render(), 1f - velocity)
         assertTrue(
             viaFallback.samples.contentEquals(viaSoftenDirect.samples),
-            "PLUCK has no brightness macro; atVelocity should match soften(render(), 1 - velocity) exactly",
+            "VOX has no brightness macro; atVelocity should match soften(render(), 1 - velocity) exactly",
         )
         // And it should actually be darker than the un-softened render -
         // the fallback isn't a silent no-op.

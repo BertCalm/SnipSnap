@@ -232,12 +232,9 @@ object Velocity {
      */
     private fun brightnessOverride(patch: Patch): String? = when {
         patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
-        // PICK is proven monotonic for NYLON, KOTO and HARP by PluckTest's
-        // `PICK moves the centroid at every step of its travel`. KALIMBA is
-        // excluded because its own sweep inverts (centroid peaks at PICK
-        // 0.1 and falls, net -2.4% at PICK 1) and it leaves PLUCK in Phase
-        // 2, so it keeps the soften() fallback until then.
-        patch is PluckPatch && patch.voice != PluckVoice.KALIMBA -> "PICK"
+        // PICK is proven monotonic for every PLUCK voice by PluckTest's
+        // `PICK moves the centroid at every step of its travel`.
+        patch is PluckPatch -> "PICK"
         else -> null
     }
 

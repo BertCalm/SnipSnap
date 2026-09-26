@@ -13,6 +13,10 @@ import kotlin.math.abs
  * [level]), plus the listening page copied from the test resources. Run via
  * `./gradlew :synth:generatePluckAudition`.
  *
+ * The PLUCK-versus-TINES kalimba A/B was decided at the Phase 1 gate (TINES
+ * won, recorded in the spec) and is no longer rendered; its clips stay on
+ * the artifact.
+ *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
  * publish — the pre-Phase-1 renders — because a republish keeps files it
@@ -22,9 +26,6 @@ object PluckAuditionGenerator {
 
     /** Quiet on purpose: low enough that no clip needs the peak guard. */
     private const val AUDITION_LEVEL = 0.03f
-
-    /** The melodic kit's five kalimba notes as semitones above A3 (A07..A11 in SynthKits.melodic). */
-    private val KIT_NOTES = listOf("C4" to 3, "D4" to 5, "E4" to 7, "G4" to 10, "A4" to 12)
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -47,23 +48,6 @@ object PluckAuditionGenerator {
             write("p1_soft", Velocity.atVelocity(patch, 0.3f))
             write("p1_hard", Velocity.atVelocity(patch, 1f))
         }
-
-        val ab = File(root, "KALIMBA_AB")
-        fun writeAb(name: String, snip: Snip) {
-            WavWriter.write(File(ab, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
-            count++
-        }
-        for ((note, semi) in KIT_NOTES) {
-            // Same root (A3) and span (24) on both engines, so one macro value is the same note.
-            val tune = semi / Pluck.TUNE_SEMITONES.toFloat()
-            writeAb("pluck_$note", Pluck.render(PluckVoice.KALIMBA, mapOf("TUNE" to tune)))
-            writeAb("tines_$note", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to tune)))
-        }
-        val a4 = 12 / Tines.KALIMBA_TUNE_SEMITONES.toFloat()
-        writeAb("tines_buzz_0", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BUZZ" to 0f)))
-        writeAb("tines_buzz_1", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BUZZ" to 1f)))
-        writeAb("tines_bright_0", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BRIGHT" to 0f)))
-        writeAb("tines_bright_1", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BRIGHT" to 1f)))
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
