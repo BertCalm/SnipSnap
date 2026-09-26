@@ -276,9 +276,12 @@ that doubles any kit onto pads 17–32 through seeded FX.
 VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
 counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
-instead of picking one. VOX is three-formant vocal
+instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
-continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
+continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
+through a vocal-cord pulse with vibrato; CHOIR is seven singers in
+sections, in stereo; a long DECAY holds; SIZE scales the throat from
+chipmunk to giant, and GLIDE moves the vowel during the note. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a
