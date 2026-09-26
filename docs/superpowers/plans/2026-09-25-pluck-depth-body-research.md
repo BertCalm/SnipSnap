@@ -227,8 +227,8 @@ The mode-numbering discrepancy noted in §2 (source #1's abstract calls the plat
 
 | Label | Hz | Gain (0–1) | t60 (s) | Basis |
 |---|---|---|---|---|
-| Mode 1 (global soundbox) | 54.8 | 0.20 | 0.30 | shape — the source's damping % read as ζ; the η reading doubles it |
-| Mode 2 (first bending) | 80.9 | 0.15 | 0.35 | shape — the source's damping % read as ζ; the η reading doubles it |
+| Mode 1 (global soundbox) | 54.8 | 0.20 | 0.37 | shape — the source's damping % read as ζ; the η reading doubles it |
+| Mode 2 (first bending) | 80.9 | 0.15 | 0.28 | shape — the source's damping % read as ζ; the η reading doubles it |
 | Mode 3 (second bending) | 123.4 | 0.15 | 0.36 | shape — the source's damping % read as ζ; the η reading doubles it |
 | T1 (Mode 4) | 152.2 | 0.95 | 0.31 | shape — the source's damping % read as ζ; the η reading doubles it |
 | Pitch mode (Mode 5) *(source excludes it from playing relevance — row kept only for completeness; do not give it meaningful gain)* | 161.9 | 0.00 | n/a | excluded per source (not well excited in play) |

@@ -254,9 +254,13 @@ sonic one; the gate can move it.
 
 **Per-voice defaults are placeholders until the gate**, and are written as
 such in code (a table with a comment naming this document), the way
-`LOUDNESS_OFFSET` already is. Starting values from the chips: BODY HARP 0.4,
-KOTO 0.35, NYLON 0.5; STRIKE 0.75 on every voice except KOTO at 0.6 (a koto
-is played with a pick near the bridge). BANJO's are in its own section.
+`LOUDNESS_OFFSET` already is. The chips asked for BODY HARP 0.4, KOTO 0.35,
+NYLON 0.5; the five-cent tuning sweep at the default body would not accept
+them (the sourced bodies sit nearer the notes than the spike's guessed ones),
+so the shipped defaults are NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15 —
+0.3–0.45× the string — and the gate can push them up as far as that sweep
+allows. STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played with
+a pick near the bridge). BANJO's are in its own section.
 KALIMBA has no body default and no STRIKE tuning effort: it leaves PLUCK in
 Phase 2.
 
@@ -396,10 +400,15 @@ in `PluckTest` unless named otherwise, and every threshold below is a
 starting number the plan may tighten after the gate, never loosen without
 saying why.
 
-- **Tuning** — `TuningAccuracyTest`'s `every Pluck semitone lands within
-  five cents` keeps passing at defaults **and** with STRIKE and BODY at both
-  extremes: neither the comb nor a fixed body moves the fundamental. In
-  Phase 3 it also covers the tine.
+- **Tuning** — three `TuningAccuracyTest` sweeps over every voice and all
+  25 notes: `every Pluck semitone lands within five cents at the default
+  body` (the shipped defaults), `STRIKE at either end keeps every Pluck
+  voice within five cents` (the comb does not move the fundamental), and
+  `BODY at its ugly end keeps every note inside a quarter tone, and names
+  the ones it pulls` (BODY 1: a 50-cent bound asserted, every note over five
+  cents printed for the gate — a fixed body near the note can pull a
+  Karplus-Strong loop, and the gate hears the list). In Phase 3 the first
+  sweep also covers the tine.
 - **STRIKE reach** — at the bridge, the fundamental's share of energy
   against harmonics 2–4 is lower than at the centre for every voice; at the
   centre, the second harmonic sits at least 20 dB below where the bridge

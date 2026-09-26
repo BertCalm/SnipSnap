@@ -326,8 +326,8 @@ object Pluck {
         // mode is absent: the source excludes it from play.
         PluckVoice.HARP -> listOf(
             // t60 = 2.2*Q/f, Q = 1/(2*zeta) per row below.
-            Modes.fixed(54.8f, 0.20f, 0.30f),  // global soundbox motion - shape from the source's damping % read as zeta; the eta reading doubles it
-            Modes.fixed(80.9f, 0.15f, 0.35f),  // first bending - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(54.8f, 0.20f, 0.37f),  // global soundbox motion (5.5%) - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(80.9f, 0.15f, 0.28f),  // first bending (4.8%) - shape from the source's damping % read as zeta; the eta reading doubles it
             Modes.fixed(123.4f, 0.15f, 0.36f), // second bending - shape from the source's damping % read as zeta; the eta reading doubles it
             Modes.fixed(152.2f, 0.95f, 0.31f), // T1 soundboard - shape from the source's damping % read as zeta; the eta reading doubles it
             Modes.fixed(168.5f, 1.00f, 0.47f), // A0 soundbox air - shape from the source's damping % read as zeta; the eta reading doubles it
