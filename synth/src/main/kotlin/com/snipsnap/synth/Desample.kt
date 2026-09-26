@@ -56,6 +56,26 @@ object Desample {
      */
     private val UNSEARCHED_MACROS = setOf("PUNCH")
 
+    /**
+     * THUMP's sound-design macros (BEND, HOLD, RATTLE, NOISE, CLAPS, ROOM,
+     * CLICK and DRIVE on TOM, RATIO/TONE/RING, RING/BODY), kept off the grid
+     * for PUNCH's reason and one more: each searched macro triples its
+     * voice's point count, so searching all of them would have multiplied
+     * THUMP's share of the grid by 3^n per voice for knobs that, at their
+     * defaults, reproduce exactly the voice the grid already walks.
+     * Per voice, not by name: TOM's CLICK and DRIVE are new, KICK's are not.
+     */
+    private val THUMP_UNSEARCHED: Map<ThumpVoice, Set<String>> = mapOf(
+        ThumpVoice.KICK to setOf("BEND", "HOLD"),
+        ThumpVoice.SNARE to setOf("RATTLE"),
+        ThumpVoice.HAT_CLOSED to setOf("NOISE"),
+        ThumpVoice.HAT_OPEN to setOf("NOISE"),
+        ThumpVoice.CLAP to setOf("CLAPS", "ROOM"),
+        ThumpVoice.TOM to setOf("BEND", "CLICK", "DRIVE"),
+        ThumpVoice.COWBELL to setOf("RATIO", "TONE", "RING"),
+        ThumpVoice.RIM to setOf("RING", "BODY"),
+    )
+
     /** The refinement's first step, halved whenever a round no longer helps. */
     const val REFINE_STEP = 0.175f
     const val REFINE_ROUNDS = 8
@@ -101,7 +121,8 @@ object Desample {
         val THUMP: List<Voice> = ThumpVoice.entries.map { v ->
             Voice(
                 ThumpPatch.ENGINE, v.name,
-                Thump.macrosFor(v).map { it.name }.filter { it !in UNSEARCHED_MACROS },
+                Thump.macrosFor(v).map { it.name }
+                    .filter { it !in UNSEARCHED_MACROS && it !in THUMP_UNSEARCHED.getValue(v) },
                 { m -> Thump.render(v, m) },
                 { n, m -> ThumpPatch(n, v, m) },
             )

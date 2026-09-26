@@ -38,6 +38,10 @@ object Thump {
         ThumpVoice.KICK -> listOf(
             MacroSpec("TUNE", 0.35f), MacroSpec("SWEEP", 0.5f), MacroSpec("DECAY", 0.45f),
             MacroSpec("CLICK", 0.35f), MacroSpec("DRIVE", 0.25f), MacroSpec("PUNCH", 0.5f),
+            // The sound-design round (see [around]'s KDoc): every macro from
+            // here down in each list defaults to exactly the constant it
+            // replaced, so a preset that doesn't mention it is unchanged.
+            MacroSpec("BEND", 0.5f, neutral = 0.5f), MacroSpec("HOLD", 0f),
         )
         ThumpVoice.SNARE -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("SNAP", 0.55f), MacroSpec("DECAY", 0.4f),
@@ -50,29 +54,55 @@ object Thump {
             // discard that listening work. See snare()'s KDoc for what
             // WIDTH does and where it goes structurally silent.
             MacroSpec("WIDTH", 0f),
+            MacroSpec("RATTLE", 0.5f, neutral = 0.5f),
         )
         ThumpVoice.HAT_CLOSED -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("METAL", 0.5f),
-            MacroSpec("PUNCH", 0.5f),
+            MacroSpec("PUNCH", 0.5f), MacroSpec("NOISE", 0f),
         )
         ThumpVoice.HAT_OPEN -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.55f), MacroSpec("METAL", 0.5f),
-            MacroSpec("PUNCH", 0.5f),
+            MacroSpec("PUNCH", 0.5f), MacroSpec("NOISE", 0f),
         )
         ThumpVoice.CLAP -> listOf(
             MacroSpec("SPREAD", 0.5f), MacroSpec("DECAY", 0.45f), MacroSpec("TONE", 0.5f),
-            MacroSpec("PUNCH", 0.5f),
+            MacroSpec("PUNCH", 0.5f), MacroSpec("CLAPS", 0.5f, neutral = 0.5f), MacroSpec("ROOM", 0.5f, neutral = 0.5f),
         )
         ThumpVoice.TOM -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("SWEEP", 0.4f), MacroSpec("DECAY", 0.5f),
-            MacroSpec("PUNCH", 0.5f),
+            MacroSpec("PUNCH", 0.5f), MacroSpec("BEND", 0.5f, neutral = 0.5f), MacroSpec("CLICK", 0f),
+            MacroSpec("DRIVE", 0f),
         )
         ThumpVoice.COWBELL -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.4f), MacroSpec("PUNCH", 0.5f),
+            MacroSpec("RATIO", 0.5f, neutral = 0.5f), MacroSpec("TONE", 0.5f, neutral = 0.5f),
+            MacroSpec("RING", 0.5f, neutral = 0.5f),
         )
         ThumpVoice.RIM -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("PUNCH", 0.5f),
+            MacroSpec("RING", 0.5f, neutral = 0.5f), MacroSpec("BODY", 0f),
         )
+    }
+
+    /**
+     * A centred macro map: [macro] 0 -> [lo], exactly 0.5 -> [center], 1 ->
+     * [hi], exponential on each half.
+     *
+     * Every macro the sound-design round added opened up a constant a voice
+     * used to hardcode (the kick's sweep rate of 90, the clap's four
+     * impacts, the cowbell's 1.48 ratio...). Its default has to render that
+     * constant *exactly*, or every factory preset - none of which mention
+     * the new macro - would drift. A plain [Dsp.expMap] over lo..hi only
+     * lands on the old constant if it is the range's geometric mean, and
+     * only to within float rounding; here 0.5 takes the upper branch at its
+     * own start, `center * exp(0)`, which is [center] to the bit. Two
+     * halves also let the range be lopsided around it - a kick's bend can
+     * go five times slower than today but only four and a half times
+     * faster, because that is where each end stops sounding like a kick.
+     */
+    internal fun around(macro: Float, lo: Float, center: Float, hi: Float): Float {
+        val m = macro.coerceIn(0f, 1f)
+        return if (m < 0.5f) Dsp.expMap(m * 2f, lo, center) else Dsp.expMap((m - 0.5f) * 2f, center, hi)
     }
 
     /** The factory macro settings for [voice]. */
@@ -180,19 +210,34 @@ object Thump {
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.85f)
         val click = m.getValue("CLICK")
         val driveAmt = m.getValue("DRIVE")
+        // BEND: how fast the pitch falls onto the base, as a rate in 1/s.
+        // 90 was the only kick there was; slow (18) is the long dive of a
+        // tuned boom, fast (400) is a thud with no audible drop at all.
+        val bendRate = around(m.getValue("BEND"), 18f, 90f, 400f).toDouble()
+        // HOLD: the body sits at full level before DECAY starts, the long
+        // sustained sub DECAY alone can't reach without also lengthening its
+        // fade. Up to 0.25 s - but HOLD and DECAY share one budget at the
+        // long end, measured: past about 0.84 s of t60 + hold, a held sine
+        // this low stops reading as a kick and classifies as TONAL (DECAY 1
+        // tolerates 0.1 s of hold, DECAY 0.9 about 0.17 s, DECAY 0.8 all
+        // 0.25). So HOLD's ceiling shrinks as DECAY lengthens, never below
+        // 0.1 s so the knob always does something. That also keeps the
+        // longest possible kick far under Classifier's 1.5 s loop floor.
+        val holdMax = (0.84f - t60).coerceIn(0.1f, 0.25f)
+        val hold = Dsp.lin(m.getValue("HOLD"), 0f, holdMax)
 
-        val out = FloatArray(frames(t60 * 1.4f, rate))
+        val out = FloatArray(frames(t60 * 1.4f + hold, rate))
         var phase = 0.0
         val noise = Dsp.Noise(7)
         val clickLp = Dsp.OnePole(rate)
         // A 1ms attack ramp (U5, docs/SYNTH_UPGRADE.md) - short enough to
         // leave the punch alone, long enough to declick the instant onset
         // every THUMP voice used to jump straight into.
-        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
+        val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60, holdSeconds = hold)
         for (i in out.indices) {
             val t = i.toFloat() / rate
             // The defining kick shape: frequency falls fast onto the base.
-            val f = base * (1f + (sweepMult - 1f) * exp((-90.0 * t)).toFloat())
+            val f = base * (1f + (sweepMult - 1f) * exp((-bendRate * t)).toFloat())
             phase += f / rate
             var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
             if (t < 0.005f) {
@@ -276,8 +321,16 @@ object Thump {
         // STRIKE 0..1 stays reachable and audible end to end.
         val strike = m.getValue("STRIKE").coerceIn(0.02f, 0.98f)
         val width = m.getValue("WIDTH")
+        // RATTLE: how long the wires ring against the head, as a multiple of
+        // the head's own damping. 3 was the fixed ratio; 1 chokes the wires
+        // with the head (a tight, dry crack), 7 leaves them sizzling long
+        // after it. The buffer grows with it - only above today's ratio, so
+        // RATTLE's default keeps SNARE's 0.6 s exactly - up to 1.2 s, where
+        // trimSnareTail and fadeTail take over; its KDoc says why this voice
+        // must stay well short of Classifier's 1.5 s loop floor.
+        val rattle = around(m.getValue("RATTLE"), 1f, 3f, 7f)
 
-        val frames = frames(0.6f, rate)
+        val frames = frames(0.6f * (rattle / 3f).coerceIn(1f, 2f), rate)
 
         // The stick, plus a breath of noise so the head is struck rather than
         // plucked. Short: this excites the membrane, it is not the wires.
@@ -362,7 +415,7 @@ object Thump {
         val dullL = Dsp.OnePole(rate)
         val dullR = Dsp.OnePole(rate)
         val cutoffHz = Dsp.expMap(air, 900f, 5000f)
-        val wireEnv = Dsp.Env(attackSeconds = 0.0008f, decay2T60 = damp * 3f)
+        val wireEnv = Dsp.Env(attackSeconds = 0.0008f, decay2T60 = damp * rattle)
         val wireCenterGain = if (channels == 2) 0.5f else 1f
         val bodyGain = snareBodyGain(snap)
         val wireGain = snareWireGain(snap)
@@ -489,6 +542,11 @@ object Thump {
         val t60 = if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
         else Dsp.expMap(m.getValue("DECAY"), 0.04f, 0.16f)
         val metal = m.getValue("METAL")
+        // NOISE: white noise crossfaded in under the square cluster, before
+        // the high-pass - the washy, trashy side of a hat the six squares'
+        // fixed partials can't reach on their own. 0 is the pure cluster.
+        val noiseMix = m.getValue("NOISE")
+        val noise = Dsp.Noise(Dsp.seedFor("THUMP", "HAT", "NOISE"))
         val ratios = floatArrayOf(1f, 1.342f, 1.681f, 1.940f, 2.318f, 2.703f)
         val spread = Dsp.lin(metal, 0.9f, 1.25f)
 
@@ -512,6 +570,7 @@ object Thump {
                 s += Dsp.square(phases[k])
             }
             s /= 6f
+            if (noiseMix > 0f) s = (1f - noiseMix) * s + noiseMix * noise.next()
             // Two cascaded one-pole high-passes: keep the sizzle, dump the body.
             val hp = s - lp1.lp(s, hpHz)
             val hp2 = hp - lp2.lp(hp, hpHz)
@@ -524,18 +583,29 @@ object Thump {
         val spreadS = Dsp.lin(m.getValue("SPREAD"), 0.007f, 0.016f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.15f, 0.5f)
         val toneHz = Dsp.expMap(m.getValue("TONE"), 1600f, 5200f)
+        // CLAPS: how many hands. Four was the only clap; three is a tight
+        // flam, six a small crowd smeared across SPREAD's spacing. Two
+        // halves so 0.5 rounds to four exactly. Floored at three, measured:
+        // two impacts and a tail classify as SNARE, not CLAP.
+        val clapsMacro = m.getValue("CLAPS")
+        val claps = Math.round(if (clapsMacro < 0.5f) Dsp.lin(clapsMacro * 2f, 3f, 4f) else Dsp.lin((clapsMacro - 0.5f) * 2f, 4f, 6f))
+        // ROOM: the tail's level against the impacts. 0.6 was fixed; 0 is a
+        // bone-dry string of slaps, the top a clap heard from the back of a
+        // hall. Linear, and 1.2 * 0.5 is exactly 0.6 in float, so the
+        // default is the old constant to the bit.
+        val room = Dsp.lin(m.getValue("ROOM"), 0f, 1.2f)
 
-        val out = FloatArray(frames(t60 * 1.4f + 3 * spreadS, rate))
+        val out = FloatArray(frames(t60 * 1.4f + (claps - 1) * spreadS, rate))
         val noise = Dsp.Noise(4)
         val lp = Dsp.OnePole(rate)
-        val bursts = floatArrayOf(0f, spreadS, 2 * spreadS, 3 * spreadS)
+        val bursts = FloatArray(claps) { it * spreadS }
         for (i in out.indices) {
             val t = i.toFloat() / rate
             val n = lp.lp(noise.next(), toneHz) * 2.4f
             var env = 0f
             // A hand clap is several impacts a few ms apart, then a tail.
             for (b in bursts) if (t >= b) env = maxOf(env, exp((-320.0 * (t - b))).toFloat())
-            val tail = if (t >= bursts.last()) 0.6f * Dsp.envAt(t - bursts.last(), t60) else 0f
+            val tail = if (t >= bursts.last()) room * Dsp.envAt(t - bursts.last(), t60) else 0f
             out[i] = n * maxOf(env, tail)
         }
         return out
@@ -545,15 +615,34 @@ object Thump {
         val base = Dsp.expMap(m.getValue("TUNE"), 82f, 240f)
         val sweep = Dsp.lin(m.getValue("SWEEP"), 1.05f, 1.6f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.18f, 0.7f)
+        // BEND: the pitch fall's rate, 30/s fixed until now. Slow (8) is the
+        // long electronic "pew" of a synth tom; fast (120) a tight
+        // acoustic-ish knock whose SWEEP is heard as attack, not glide.
+        val bendRate = around(m.getValue("BEND"), 8f, 30f, 120f).toDouble()
+        // CLICK: a stick on the head - the kick's click burst, lowpassed
+        // higher since a tom's body sits an octave or two above a kick's.
+        val click = m.getValue("CLICK")
+        // DRIVE: the kick's saturation, off by default so the tom stays the
+        // pure swept sine it has always been until someone asks for grit.
+        val driveAmt = m.getValue("DRIVE")
 
         val out = FloatArray(frames(t60 * 1.4f, rate))
         var phase = 0.0
+        val noise = Dsp.Noise(Dsp.seedFor("THUMP", "TOM", "CLICK"))
+        val clickLp = Dsp.OnePole(rate)
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            val f = base * (1f + (sweep - 1f) * exp((-30.0 * t)).toFloat())
+            val f = base * (1f + (sweep - 1f) * exp((-bendRate * t)).toFloat())
             phase += f / rate
-            out[i] = env.at(t) * sin(2.0 * PI * phase).toFloat()
+            var s = env.at(t) * sin(2.0 * PI * phase).toFloat()
+            if (click > 0f && t < 0.004f) {
+                // Same shape as the kick's click (its own 1 ms attack, a
+                // linear fade out), shorter because a tom's stick is lighter.
+                val clickAttack = (t / 0.001f).coerceAtMost(1f)
+                s += click * 3f * clickLp.lp(noise.next(), 4000f) * (1f - t / 0.004f) * clickAttack
+            }
+            out[i] = Dsp.drive(s, driveAmt)
         }
         return out
     }
@@ -561,6 +650,22 @@ object Thump {
     private fun cowbell(m: Map<String, Float>, rate: Int): FloatArray {
         val base = Dsp.expMap(m.getValue("TUNE"), 420f, 700f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.45f)
+        // RATIO: the second square's interval over the first. 1.48 is the
+        // classic two-tone clank; toward 1.1 the pair beats against itself
+        // into a sour, detuned bell, toward 2.6 it spreads into an open,
+        // agogo-like pair of separate tones.
+        // Scaled from 1.48 as a Double rather than mapped onto it: the old
+        // code multiplied by the Double 1.48, which no Float equals, and a
+        // multiplier of exactly 1 at the default keeps that bit-for-bit.
+        val ratio = 1.48 * around(m.getValue("RATIO"), 1.1f / 1.48f, 1f, 2.6f / 1.48f)
+        // TONE: where the bandpass sits, as a multiple of the base. 1.2 was
+        // fixed; low is a hollow, muffled knock, high throws the squares'
+        // upper harmonics forward into a cutting clang.
+        val toneMult = around(m.getValue("TONE"), 0.85f, 1.2f, 3f)
+        // RING: the bandpass's own resonance (inverted into Svf's damping,
+        // so turning it up rings more). 0.6 was fixed; 1.4 is a dull, wide
+        // thud, 0.08 a filter singing on its own like struck metal.
+        val damp = around(1f - m.getValue("RING"), 0.08f, 0.6f, 1.4f)
 
         val out = FloatArray(frames(t60 * 1.4f, rate))
         var p1 = 0.0; var p2 = 0.0
@@ -569,9 +674,9 @@ object Thump {
         for (i in out.indices) {
             val t = i.toFloat() / rate
             p1 += base / rate
-            p2 += base * 1.48 / rate
+            p2 += base * ratio / rate
             val s = (Dsp.square(p1) + Dsp.square(p2)) * 0.5f
-            svf.process(s, base * 1.2f, 0.6f)
+            svf.process(s, base * toneMult, damp)
             out[i] = svf.band * 1.6f * env.at(t)
         }
         return out
@@ -580,16 +685,34 @@ object Thump {
     private fun rim(m: Map<String, Float>, rate: Int): FloatArray {
         val freq = Dsp.expMap(m.getValue("TUNE"), 1200f, 2400f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.03f, 0.12f)
+        // RING: the resonator's own damping, inverted so up rings more. 0.12
+        // was fixed - a dry tick; toward 0.006 the tick carries a pitch, a
+        // clave or woodblock. DECAY's envelope still caps how long it lasts.
+        val damp = around(1f - m.getValue("RING"), 0.006f, 0.12f, 0.35f)
+        // BODY: the drum head under the rim. A rimshot is the stick hitting
+        // both at once; this is a second, much lower resonator on the same
+        // excitation, ringing ~3x longer than the tick. 0 is the side-stick
+        // it has always been.
+        val body = m.getValue("BODY")
+        val bodyHz = freq * 0.16f
+        val bodyT60 = t60 * 3f
 
-        val out = FloatArray(frames(maxOf(t60 * 1.6f, 0.05f), rate))
+        val seconds = maxOf(t60 * 1.6f, 0.05f).let { if (body > 0f) maxOf(it, bodyT60 * 1.4f) else it }
+        val out = FloatArray(frames(seconds, rate))
         val svf = Dsp.Svf(rate)
+        val bodySvf = Dsp.Svf(rate)
         val noise = Dsp.Noise(9)
         for (i in out.indices) {
             val t = i.toFloat() / rate
             // A damped resonator struck by a 1 ms excitation: the tick.
             val excite = if (t < 0.001f) noise.next() + 1.5f else 0f
-            svf.process(excite, freq, 0.12f)
-            out[i] = svf.band * Dsp.envAt(t, t60)
+            svf.process(excite, freq, damp)
+            var s = svf.band * Dsp.envAt(t, t60)
+            if (body > 0f) {
+                bodySvf.process(excite, bodyHz, 0.2f)
+                s += body * 0.4f * bodySvf.band * Dsp.envAt(t, bodyT60)
+            }
+            out[i] = s
         }
         return out
     }
