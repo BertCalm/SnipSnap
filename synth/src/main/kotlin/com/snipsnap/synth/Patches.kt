@@ -44,6 +44,7 @@ object Patches {
             VelvetPatch.ENGINE -> VelvetPatch.fromJsonValue(value)
             FathomPatch.ENGINE -> FathomPatch.fromJsonValue(value)
             ResinPatch.ENGINE -> ResinPatch.fromJsonValue(value)
+            TidePatch.ENGINE -> TidePatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             GlintPatch.ENGINE -> GlintPatch.fromJsonValue(value)
@@ -191,6 +192,31 @@ data class FathomPatch(
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> FathomVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 FathomPatch(name, voice, macros)
+            }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/** A saved TIDE sound. */
+data class TidePatch(
+    override val name: String,
+    val voice: TideVoice,
+    override val macros: Map<String, Float>,
+) : Patch {
+    init {
+        Patches.validateMacros(this, Tide.macrosFor(voice))
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Tide.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    companion object {
+        const val ENGINE = "TIDE"
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> TideVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                TidePatch(name, voice, macros)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

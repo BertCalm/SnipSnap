@@ -461,7 +461,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Pluck Audition</span>
-    <span class="tag">BODY SPIKE &middot; 2026-09-25</span>
+    <span class="tag">PHASE 2 &middot; BODY, BANJO, THE KIT SEAM</span>
   </div>
 
   <div class="transport lcd">
@@ -476,9 +476,9 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>Each voice is at its factory defaults. Every clip sits at the same RMS, deliberately quiet: turn up and use headphones.</p>
-    <p>The question: does a body, or a pick position, make the voice sound like the instrument it is named after? Tap SHIPPED, then BODY, then BODY + PICK. Mark each clip against the instrument, not against the clip before it.</p>
-    <p>NYLON and KOTO are the two that decide the next step.</p>
+    <p>Every clip sits at the same level, deliberately quiet: turn up and use headphones.</p>
+    <p>Strings: BODY 0 is the string alone, DEFAULT is the placeholder amount, BODY 1 is three times the string. Mark each against the instrument. Listen for a thump at the very start: that is the knock, and it is supposed to be gone.</p>
+    <p>BANJO is new. KIT SEAM is four neighbouring pads of the melodic kit, where nylon hands to the kalimba, now on TINES.</p>
   </div>
 
   <div id="voices"></div>
@@ -489,18 +489,18 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Does the body make NYLON and KOTO sound like the instrument?</div>
+      <div class="ask">1 &middot; Does the body make each string sound like its instrument?</div>
+      <div class="sub">BODY DEFAULT and BODY 1 against BODY 0, per voice.</div>
       <textarea id="q_body" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; Does the pick position do more or less than the body?</div>
-      <div class="sub">BRIDGE, QUARTER, CENTRE against SHIPPED.</div>
-      <textarea id="q_pick" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; Is the knock gone?</div>
+      <div class="sub">The thump at the very start. If it is still there, say which voices.</div>
+      <textarea id="q_knock" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">3 &middot; Where does BODY &middot; DOMINANT stop being useful?</div>
-      <div class="sub">The ugly end is allowed. Unusable-by-most is not useless.</div>
-      <textarea id="q_dominant" placeholder="&hellip;"></textarea>
+      <div class="ask">3 &middot; Does BANJO read as a banjo, and does the kit seam hold?</div>
+      <textarea id="q_banjo" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -513,7 +513,7 @@
   </div>
 
   <div class="foot">
-    RENDERED FROM PluckBodySpike.kt &middot; 44 CLIPS &middot; 16-BIT 44.1 KHZ &middot; BODY TABLES ARE BALLPARK GUESSES, NOT SOURCED.
+    RENDERED BY generatePluckAudition &middot; PHASE 2 &middot; 16-BIT 44.1 KHZ &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -527,36 +527,36 @@
   // charset a host serves it under.
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
-  var VOICES = [
-    { id: 'NYLON',   note: 'G3',  hz: 196, root: 'A2' + DOT + '110 HZ', macros: 'DAMP .45' + DOT + 'PICK .40' + DOT + 'DOUBLE .15', dur: 0.78, body: 'guitar body: air, top, back' },
-    { id: 'KOTO',    note: 'C#4', hz: 278, root: 'D3' + DOT + '147 HZ', macros: 'DAMP .40' + DOT + 'PICK .75' + DOT + 'DOUBLE .45', dur: 0.74, body: 'long paulownia box' },
-    { id: 'KALIMBA', note: 'A4',  hz: 440, root: 'A3' + DOT + '220 HZ', macros: 'DAMP .60' + DOT + 'PICK .55' + DOT + 'DOUBLE .10', dur: 0.55, body: 'hand-sized box' },
-    { id: 'HARP',    note: 'F4',  hz: 350, root: 'E3' + DOT + '165 HZ', macros: 'DAMP .20' + DOT + 'PICK .60' + DOT + 'DOUBLE .20', dur: 1.13, body: 'soundboard' }
+  // [file id, name, description]
+  var STRING_GROUPS = [
+    { label: 'BODY', key: true, clips: [
+      ['p2_body_0', 'BODY 0', 'the string alone'],
+      ['p2_body_default', 'BODY DEFAULT', 'the placeholder amount'],
+      ['p2_body_1', 'BODY 1', 'three times the string, the ugly end'],
+      ['p2_body_1_root', 'BODY 1 AT THE ROOT', 'the ugly end on the lowest note']
+    ]},
+    { label: 'AT THE DEFAULT BODY', clips: [
+      ['p2_body_default_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'pick at the bridge'],
+      ['p2_body_default_ring', 'DAMP 0', 'rings out'],
+      ['p2_body_default_thud', 'DAMP 1', 'the dead end']
+    ]}
   ];
 
-  // [file id, name, description, duration override]
-  var GROUPS = [
-    { label: 'THE THREE THAT MATTER', key: true, clips: [
-      ['00_shipped', 'SHIPPED', 'what the app renders today'],
-      ['11_body_equal', 'BODY' + DOT + 'EQUAL', 'the string driving a fixed modal body'],
-      ['30_body_equal_pick_quarter', 'BODY + PICK ' + String.fromCharCode(0xBC), 'body, plus the pick a quarter along the string']
-    ]},
-    { label: 'BODY AMOUNT' + DOT + 'EQUAL IS ABOVE', clips: [
-      ['10_body_subtle', 'BODY' + DOT + 'SUBTLE', 'body at half the string'],
-      ['12_body_dominant', 'BODY' + DOT + 'DOMINANT', 'body at three times the string. the ugly end']
-    ]},
-    { label: 'PICK POSITION' + DOT + 'NO BODY', clips: [
-      ['20_pick_bridge', 'PICK' + DOT + 'BRIDGE', 'thin and bright, low harmonics cut'],
-      ['21_pick_quarter', 'PICK' + DOT + 'QUARTER', 'the usual playing spot'],
-      ['22_pick_centre', 'PICK' + DOT + 'CENTRE', 'hollow, even harmonics gone']
-    ]},
-    { label: 'RING CEILING' + DOT + 'DAMP .05' + DOT + '3.5 S', clips: [
-      ['40_long_ring', 'LONG RING', 'the 1.35 s cap lifted', 3.5],
-      ['41_long_ring_body_equal', 'LONG RING + BODY', 'same, through the body', 3.5]
-    ]},
-    { label: 'CHECK', clips: [
-      ['01_spike_baseline', 'SPIKE BASELINE', 'should be identical to SHIPPED']
+  var SEAM_GROUPS = [
+    { label: 'NYLON TO KALIMBA', key: true, clips: [
+      ['a05_nylon_5', 'A05 NYLON 5', 'PLUCK'],
+      ['a06_nylon_6', 'A06 NYLON 6', 'PLUCK'],
+      ['a07_kalimba_1', 'A07 KALIMBA 1', 'TINES'],
+      ['a08_kalimba_2', 'A08 KALIMBA 2', 'TINES']
     ]}
+  ];
+
+  var VOICES = [
+    { id: 'NYLON', display: 'NYLON', note: 'G3',  hz: '196 HZ', root: 'A2' + DOT + '110 HZ', macros: 'BODY .05 default', body: 'classical guitar', groups: STRING_GROUPS },
+    { id: 'KOTO',  display: 'KOTO',  note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'BODY .15 default', body: 'paulownia box', groups: STRING_GROUPS },
+    { id: 'HARP',  display: 'HARP',  note: 'F4',  hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'BODY .10 default', body: 'soundboard', groups: STRING_GROUPS },
+    { id: 'BANJO', display: 'BANJO', note: 'G4',  hz: '392 HZ', root: 'G3' + DOT + '196 HZ', macros: 'BODY .15 default', body: 'head over a pot', groups: STRING_GROUPS },
+    { id: 'KIT_SEAM', display: 'KIT SEAM', note: 'A05 TO A08', hz: 'the melodic kit', root: 'nylon to kalimba', macros: 'two engines', body: 'PLUCK then TINES', groups: SEAM_GROUPS }
   ];
 
   var REACTIONS = [
@@ -574,7 +574,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_body: '', q_pick: '', q_dominant: '', q_else: '' } };
+  var state = { overall: { q_body: '', q_knock: '', q_banjo: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -587,33 +587,32 @@
     card.id = 'voice-' + v.id;
 
     var hd = el('div', 'voice-hd');
-    var h2 = el('h2', null, v.id);
+    var h2 = el('h2', null, v.display);
     var note = el('div', 'body-note', v.body);
     var ro = el('div', 'readout');
-    ro.innerHTML = '<span><b>' + v.note + '</b>' + DOT + v.hz + ' HZ</span><span>ROOT ' + v.root + '</span><span>' + v.macros + '</span>';
+    ro.innerHTML = '<span><b>' + v.note + '</b>' + DOT + v.hz + '</span><span>ROOT ' + v.root + '</span><span>' + v.macros + '</span>';
     hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
     card.appendChild(hd);
 
-    GROUPS.forEach(function (g) {
+    v.groups.forEach(function (g) {
       var grp = el('div', 'group' + (g.key ? ' key' : ''));
       grp.appendChild(el('div', 'group-hd', g.label));
       g.clips.forEach(function (c) {
-        var fid = c[0], name = c[1], desc = c[2], dur = c[3] || v.dur;
+        var fid = c[0], name = c[1], desc = c[2];
         var row = el('div', 'clip');
         row.id = 'clip-' + v.id + '-' + fid;
 
         var pad = el('button', 'raised pad');
         pad.type = 'button';
         pad.setAttribute('aria-pressed', 'false');
-        pad.setAttribute('aria-label', 'Play ' + v.id + ' ' + name);
+        pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
         pad.innerHTML = PLAY_SVG;
         pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
         row.appendChild(pad);
 
         var meta = el('div', 'meta');
-        meta.appendChild(el('span', 'id', fid.slice(0, 2)));
         meta.appendChild(el('span', 'name', name));
-        meta.appendChild(el('span', 'dur', dur.toFixed(2) + ' S'));
+        var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
         row.appendChild(meta);
         row.appendChild(el('div', 'desc', desc));
 
@@ -623,7 +622,7 @@
           chip.type = 'button';
           chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
           chip.setAttribute('aria-pressed', 'false');
-          chip.setAttribute('aria-label', v.id + ' ' + name + ': ' + r.t.toLowerCase() + ' to the instrument');
+          chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase() + ' to the instrument');
           chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
           chip.addEventListener('click', function () { react(v.id, fid, r.v); });
           chips.appendChild(chip);
@@ -635,7 +634,7 @@
     });
 
     var notes = el('div', 'notes');
-    var lab = el('label', null, v.id.charAt(0) + v.id.slice(1).toLowerCase() + ' notes');
+    var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
     var ta = el('textarea');
     ta.id = 'note-' + v.id;
     ta.placeholder = 'what it sounds like, in your words';
@@ -670,6 +669,11 @@
       setPlaying(null);
       nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
       nowEl.classList.remove('idle');
+    });
+    audio.addEventListener('loadedmetadata', function () {
+      if (current && current.row.durEl && isFinite(audio.duration)) {
+        current.row.durEl.textContent = audio.duration.toFixed(2) + ' S';
+      }
     });
     return audio;
   }
@@ -730,7 +734,8 @@
   // state takes the live value instead, so the next save cannot re-save
   // stale text over what was just typed.
   function paintVoice(voiceId) {
-    GROUPS.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
+    var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
+    if (voice) voice.groups.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
     var ta = $('note-' + voiceId);
     if (!ta) return;
     if (ta === document.activeElement) { state[voiceId].note = ta.value; }
@@ -738,7 +743,7 @@
   }
 
   function paintOverall() {
-    ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+    ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -748,7 +753,7 @@
 
   // The four answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+  ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -774,19 +779,25 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_body: state.overall.q_body, q_pick: state.overall.q_pick, q_dominant: state.overall.q_dominant, q_else: state.overall.q_else }
+      ? { q_body: state.overall.q_body, q_knock: state.overall.q_knock, q_banjo: state.overall.q_banjo, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
   }
 
+  // Every phase's verdicts live under their own prefix: the spike and Phase 1
+  // wrote verdicts/NYLON etc., and a page that read those back would open
+  // pre-filled with an older gate's notes and overwrite them on save.
+  var PHASE = 'p2';
+  function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
+
   function saveLocal(key, data) {
-    try { localStorage.setItem('pluck-audition:' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+    try { localStorage.setItem('pluck-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
   }
 
   function loadLocal(key) {
     try {
-      var raw = localStorage.getItem('pluck-audition:' + key);
+      var raw = localStorage.getItem('pluck-audition:' + PHASE + ':' + key);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
@@ -794,7 +805,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_body', 'q_pick', 'q_dominant', 'q_else'].forEach(function (k) {
+      ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();
@@ -811,7 +822,7 @@
     if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
     setStatus(null, 'SAVING...');
     queues[key] = (queues[key] || Promise.resolve())
-      .then(function () { return db.doc('verdicts/' + key).set(data); })
+      .then(function () { return db.doc(docPath(key)).set(data); })
       .then(function () { setStatus('ok', 'SAVED ' + clock()); },
             function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
   }
@@ -832,7 +843,7 @@
       .then(function (ns) {
         if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
         return Promise.all(KEYS.map(function (k) {
-          return ns.doc('verdicts/' + k).get().then(function (snap) {
+          return ns.doc(docPath(k)).get().then(function (snap) {
             if (snap && snap.exists) apply(k, snap.data());
           }, function () { /* keep the local copy */ });
         })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });

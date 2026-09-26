@@ -1,5 +1,6 @@
 package com.snipsnap.loop
 
+import com.snipsnap.json.JsonValue
 import kotlin.math.roundToInt
 
 /**
@@ -52,6 +53,25 @@ data object SilenceBlock : Block()
 /** A sequence of hits against a kit, rendered to audio at bake time. */
 data class PatternBlock(val kit: String, val steps: List<Step>) : Block() {
     init { require(kit.isNotBlank()) { "kit must not be blank" } }
+}
+
+/**
+ * One slice of a drone: a recipe a renderer understands, rendered once over
+ * [of] intervals and played back a slice per interval. The chain's wrap is
+ * the drone's wrap, so a drone owns its whole track
+ * (docs/superpowers/specs/2026-09-25-resin-drone-design.md, Decided).
+ *
+ * The grid never reads [recipe]; it is opaque JSON a [SampleSource] turns
+ * into audio, so a drone from another engine later is a renderer change,
+ * not a grid change. [rootMidi] sits outside it because the grid does need
+ * the note: [DroneFit] picks the span from it.
+ */
+data class DroneBlock(val recipe: JsonValue, val rootMidi: Int, val slice: Int, val of: Int) : Block() {
+    init {
+        require(of in DroneFit.SPANS) { "a drone spans one of ${DroneFit.SPANS} intervals, got $of" }
+        require(slice in 0 until of) { "slice $slice of $of" }
+        require(rootMidi in 0..127) { "root out of MIDI range: $rootMidi" }
+    }
 }
 
 /** One column of the grid: a name, a chain, and whether it is heard. */

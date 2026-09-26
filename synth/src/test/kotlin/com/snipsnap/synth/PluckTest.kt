@@ -24,7 +24,10 @@ class PluckTest {
                 assertTrue(snip.frameCount > 0, "$voice rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke range")
                 assertTrue(snip.peak() > 0.5f, "$voice too quiet at $macros")
-                assertTrue(snip.durationSeconds < 1.5f, "$voice must stay a one-shot")
+                assertTrue(
+                    snip.durationSeconds <= Pluck.RING_CEILING_SECONDS + 0.05f,
+                    "$voice must stay inside the ring ceiling",
+                )
             }
         }
     }
@@ -130,13 +133,19 @@ class PluckTest {
         // not decay into a fake kick. SCRAMBLE now rolls near a preset
         // (docs/SYNTH_UPGRADE.md, U2), so - like a preset itself can - a
         // roll can land close to that boundary; "most of the time", not
-        // "always", is the doc's own contract for a scrambled roll.
+        // "always", is the doc's own contract for a scrambled roll. The
+        // guard counts KICK and UNKNOWN: UNKNOWN is the classifier's own
+        // silent/zero-peak class (Classifier.classify short-circuits to it
+        // whenever peak or duration is <= 0), which is "unplayable" by this
+        // test's own words just as much as a fake kick is. Only LOOP stays
+        // excluded: a long ring reading as LOOP is the decay-following
+        // render working, not the DC-thump it guards against.
         for (voice in PluckVoice.entries) {
             var misses = 0
             val rolls = 30
             repeat(rolls) { seed ->
                 val c = Classifier.classify(Pluck.render(voice, Pluck.scramble(voice, Random(seed))))
-                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.LOOP || c.drumClass == DrumClass.UNKNOWN) misses++
+                if (c.drumClass == DrumClass.KICK || c.drumClass == DrumClass.UNKNOWN) misses++
             }
             assertTrue(misses <= rolls / 3, "$voice: $misses/$rolls scrambled rolls came back unplayable")
         }
@@ -148,8 +157,11 @@ class PluckTest {
         // Pluck's own wiring: see DspTest for the central proof.
         for (voice in PluckVoice.entries) {
             val preset = PluckPresets.forVoice(voice).first()
+            // Presets may omit macros added after they were authored (STRIKE
+            // is the first): the seed is the defaults under the preset's own
+            // macros, not the preset's macro map alone.
             assertEquals(
-                preset.macros,
+                Pluck.defaults(voice) + preset.macros,
                 Pluck.scramble(voice, Random(1), temperature = 0f, near = preset),
                 "$voice: temperature 0 should return the seed untouched",
             )
@@ -197,8 +209,11 @@ class PluckTest {
 
     @Test
     fun `PICK brightens the attack`() {
-        val soft = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.05f)))
-        val hard = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.95f)))
+        // BODY forced to 0: this measures the exciter, and at any nonzero
+        // BODY the attack window (FeatureExtractor's centroid) also
+        // contains the body's own free ring, which is not what PICK does.
+        val soft = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.05f, "BODY" to 0f)))
+        val hard = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.95f, "BODY" to 0f)))
         assertTrue(
             hard.centroidHz > soft.centroidHz * 1.2f,
             "PICK should brighten: ${soft.centroidHz} -> ${hard.centroidHz}",
@@ -233,10 +248,11 @@ class PluckTest {
     fun `DOUBLE thickens audibly`() {
         val single = Pluck.render(PluckVoice.KOTO, mapOf("DOUBLE" to 0f))
         val doubled = Pluck.render(PluckVoice.KOTO, mapOf("DOUBLE" to 1f))
-        assertEquals(single.frameCount, doubled.frameCount)
         var diff = 0.0
         var level = 0.0
-        for (i in single.samples.indices) {
+        // The two renders end where their own strings do, so the comparison
+        // runs over the frames both have.
+        for (i in 0 until minOf(single.frameCount, doubled.frameCount)) {
             diff += Math.abs((single.samples[i] - doubled.samples[i]).toDouble())
             level += Math.abs(single.samples[i].toDouble())
         }
@@ -269,5 +285,316 @@ class PluckTest {
         // rejects legitimate high notes.
         val out = Pluck.ks(freq = 50_000f, seconds = 0.05f, damp = 0f, bodyLoopHz = 2600f, pickHz = 3000f, seed = 1, rate = 176_400)
         assertTrue(out.isNotEmpty() && out.all { it.isFinite() }, "a valid near-boundary loop length should still render cleanly")
+    }
+
+    @Test
+    fun `STRIKE is a macro on every voice`() {
+        for (voice in PluckVoice.entries) {
+            assertTrue(Pluck.macrosFor(voice).any { it.name == "STRIKE" }, "$voice has no STRIKE")
+        }
+    }
+
+    @Test
+    fun `STRIKE at the bridge thins the fundamental against the harmonics`() {
+        // The comb's gain at harmonic k is 2*sin(pi*k*p): near the bridge (p
+        // small) the fundamental is the most attenuated harmonic, at the
+        // centre (p = 0.5) the least. The audition read both ends as CLOSER
+        // to the instrument; this pins that they are ends.
+        for (voice in PluckVoice.entries) {
+            val f0 = Pluck.frequencyFor(voice, 0.5f)
+            val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
+            val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
+            val atBridge = PluckSpectra.fundamentalShare(bridge, f0)
+            val atCentre = PluckSpectra.fundamentalShare(centre, f0)
+            assertTrue(
+                atBridge < atCentre,
+                "$voice: fundamental share at the bridge ($atBridge) should sit below the centre ($atCentre)",
+            )
+        }
+    }
+
+    @Test
+    fun `STRIKE at the centre removes the second harmonic`() {
+        for (voice in PluckVoice.entries) {
+            val f0 = Pluck.frequencyFor(voice, 0.5f)
+            val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
+            val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
+            val h2Bridge = PluckSpectra.toneEnergy(bridge, 2 * f0)
+            val h2Centre = PluckSpectra.toneEnergy(centre, 2 * f0)
+            assertTrue(
+                h2Centre < h2Bridge * 0.1,
+                "$voice: 2nd harmonic at the centre ($h2Centre) should be 20 dB under the bridge ($h2Bridge)",
+            )
+        }
+    }
+
+    @Test
+    fun `the default STRIKE keeps the comb-less balance`() {
+        // The audition read the quarter position as SAME as the shipped
+        // engine, so the default lands there: within a factor of two of the
+        // comb-less exciter on the fundamental's share.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        fun share(position: Float): Double {
+            val raw = Pluck.ks(
+                freq = 220f, seconds = 0.6f, damp = 0.4f, bodyLoopHz = 3400f, pickHz = 2500f,
+                seed = 11, rate = rate, position = position,
+            )
+            val snip = Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+            return PluckSpectra.fundamentalShare(snip, 220f)
+        }
+        val plain = share(0f)
+        val quarter = share(Dsp.expMap(0.75f, Pluck.STRIKE_BRIDGE, Pluck.STRIKE_CENTRE))
+        assertTrue(
+            quarter > plain * 0.5 && quarter < plain * 2.0,
+            "default STRIKE share $quarter should be within 2x of the comb-less $plain",
+        )
+    }
+
+    @Test
+    fun `DAMP at zero rings past three and a half seconds and fades out clean`() {
+        // The three string voices at their default notes (196-350 Hz) lose
+        // under 9 dB per second through the loop filter at DAMP 0 and reach
+        // the ceiling. KALIMBA's default is 440 Hz, where the same filter
+        // costs ~29 dB per second and the string is gone by ~2 s; it leaves
+        // PLUCK in Phase 2 and is covered by the reach test below instead.
+        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+            val snip = Pluck.render(voice, mapOf("DAMP" to 0f))
+            assertTrue(snip.durationSeconds >= 3.5f, "$voice: ${snip.durationSeconds}s is not a ring")
+            assertTrue(snip.durationSeconds <= Pluck.RING_CEILING_SECONDS + 0.05f, "$voice: past the ceiling")
+            assertTrue(tailDb(snip) < -55f, "$voice: last 10 ms at ${tailDb(snip)} dB should be inaudible")
+        }
+    }
+
+    @Test
+    fun `DAMP zero rings at least twice as long as DAMP half on every voice`() {
+        for (voice in PluckVoice.entries) {
+            val open = Pluck.render(voice, mapOf("DAMP" to 0f)).durationSeconds
+            val half = Pluck.render(voice, mapOf("DAMP" to 0.5f)).durationSeconds
+            assertTrue(open >= half * 2f, "$voice: DAMP 0 ${open}s vs DAMP 0.5 ${half}s is not enough reach")
+            assertTrue(tailDb(Pluck.render(voice, mapOf("DAMP" to 0f))) < -55f, "$voice: DAMP 0 tail is audible")
+        }
+    }
+
+    @Test
+    fun `DAMP at one is a short thud`() {
+        for (voice in PluckVoice.entries) {
+            val snip = Pluck.render(voice, mapOf("DAMP" to 1f))
+            assertTrue(snip.durationSeconds < 0.5f, "$voice: ${snip.durationSeconds}s is not a thud")
+        }
+    }
+
+    @Test
+    fun `the render ends where the string does, not at the budget`() {
+        // HARP at DAMP 0.6 gets a budget near a second and stops ringing well
+        // before it; the file must follow the string, and the cut must land
+        // on inaudible signal.
+        val snip = Pluck.render(PluckVoice.HARP, mapOf("DAMP" to 0.6f))
+        assertTrue(snip.durationSeconds >= Pluck.RING_FLOOR_SECONDS, "under the floor: ${snip.durationSeconds}s")
+        assertTrue(snip.durationSeconds < 0.9f, "padded to the budget: ${snip.durationSeconds}s")
+        assertTrue(tailDb(snip) < -50f, "tail at ${tailDb(snip)} dB: the cut landed on audible signal")
+    }
+
+    /** A 440 Hz tone decaying exponentially to -60 dB at [t60] seconds, [seconds] long, at [rate]. */
+    private fun decayingTone(seconds: Float, t60: Float, rate: Int): FloatArray {
+        val n = (seconds * rate).toInt()
+        return FloatArray(n) { i ->
+            val t = i.toFloat() / rate
+            (Math.exp(-6.9078 * t / t60) * Math.sin(2.0 * Math.PI * 440.0 * t)).toFloat()
+        }
+    }
+
+    @Test
+    fun `trimToDecay leaves silence and sub-block buffers alone`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val silent = FloatArray(rate)
+        assertTrue(Pluck.trimToDecay(silent, rate) === silent, "an all-silent buffer is returned as is")
+        val tiny = FloatArray(100) { 0.5f }
+        assertTrue(Pluck.trimToDecay(tiny, rate).size == 100, "a buffer shorter than one block keeps its length")
+    }
+
+    @Test
+    fun `trimToDecay cuts where the string stopped, never under the floor`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val cut = Pluck.trimToDecay(decayingTone(seconds = 1.0f, t60 = 0.5f, rate = rate), rate)
+        val cutSeconds = cut.size.toFloat() / rate
+        assertTrue(cutSeconds > 0.45f && cutSeconds < 0.6f, "the cut should land near the -60 dB point at 0.5 s, got ${cutSeconds}s")
+        val fast = Pluck.trimToDecay(decayingTone(seconds = 1.0f, t60 = 0.05f, rate = rate), rate)
+        assertTrue(fast.size.toFloat() / rate >= Pluck.RING_FLOOR_SECONDS - 0.01f, "a fast decay is held at the floor, got ${fast.size.toFloat() / rate}s")
+    }
+
+    @Test
+    fun `trimToDecay fades only the end of a budget cut and the last 400 ms at the ceiling`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        // A budget cut: still ringing at 0.35 s. The first 80% must be untouched.
+        val budget = decayingTone(seconds = 0.35f, t60 = 2.0f, rate = rate)
+        val reference = budget.copyOf()
+        val trimmed = Pluck.trimToDecay(budget, rate)
+        assertTrue(trimmed.size == reference.size, "a budget cut keeps its length")
+        val untouched = (reference.size * 0.8f).toInt()
+        for (i in 0 until untouched) assertTrue(trimmed[i] == reference[i], "sample $i was re-enveloped by the budget-cut fade")
+        assertTrue(kotlin.math.abs(trimmed[trimmed.size - 1]) < 1e-4f, "the budget cut must end at silence")
+        // The ceiling: still ringing at 4.0 s. Length kept, last 10 ms at least 55 dB down.
+        val ceiling = decayingTone(seconds = Pluck.RING_CEILING_SECONDS, t60 = 20f, rate = rate)
+        val faded = Pluck.trimToDecay(ceiling, rate)
+        assertTrue(faded.size == ceiling.size, "the ceiling keeps its length")
+        var tail = 0f
+        for (i in faded.size - (0.010f * rate).toInt() until faded.size) tail = maxOf(tail, kotlin.math.abs(faded[i]))
+        assertTrue(20f * kotlin.math.log10(tail + 1e-9f) < -55f, "the ceiling fade should leave the last 10 ms inaudible, got ${20f * kotlin.math.log10(tail + 1e-9f)} dB")
+    }
+
+    /** Level of the last 10 ms against the render's peak, in dB. */
+    private fun tailDb(snip: Snip): Float {
+        val peak = snip.peak()
+        val from = (snip.frameCount - (0.010f * snip.sampleRate).toInt()).coerceAtLeast(0)
+        var tail = 0f
+        for (i in from until snip.frameCount) tail = maxOf(tail, kotlin.math.abs(snip.samples[i]))
+        return 20f * kotlin.math.log10(tail / peak + 1e-9f)
+    }
+
+    @Test
+    fun `PICK moves the centroid at every step of its travel`() {
+        // The sweep is the precondition for routing velocity through PICK,
+        // the same sweep the snare's SNAP had to pass.
+        for (voice in PluckVoice.entries) {
+            val points = (0..10).map { it / 10f }
+            val measured = points.map { p ->
+                FeatureExtractor.extract(Pluck.render(voice, mapOf("PICK" to p))).centroidHz
+            }
+            for (i in 0 until measured.size - 1) {
+                assertTrue(
+                    measured[i + 1] > measured[i] * 0.98f,
+                    "$voice: PICK fell between ${points[i]} and ${points[i + 1]}: $measured",
+                )
+                assertTrue(
+                    kotlin.math.abs(measured[i + 1] - measured[i]) > 1f,
+                    "$voice: PICK is dead between ${points[i]} and ${points[i + 1]}: $measured",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `a soft PLUCK is re-synthesised through PICK, not low-passed`() {
+        val patch = PluckPresets.forVoice(PluckVoice.NYLON).first()
+        val soft = Velocity.atVelocity(patch, 0.2f)
+        val hard = Velocity.atVelocity(patch, 1f)
+        val softened = Velocity.soften(patch.render(), 0.8f)
+        assertTrue(
+            FeatureExtractor.extract(soft).centroidHz < FeatureExtractor.extract(hard).centroidHz,
+            "a soft strike should be darker than a hard one",
+        )
+        assertTrue(
+            !soft.samples.contentEquals(softened.samples),
+            "soft velocity must be a re-render through PICK, not the soften() fallback",
+        )
+    }
+
+    @Test
+    fun `BANJO is a bright string with a short default ring`() {
+        // The spec's BANJO row: root G3, brighter loop than HARP, picked
+        // near the bridge, short notes. Pinned here as reach, not taste.
+        assertEquals(196f, Pluck.frequencyFor(PluckVoice.BANJO, 0f))
+        val banjo = FeatureExtractor.extract(Pluck.render(PluckVoice.BANJO))
+        val nylon = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON))
+        assertTrue(banjo.centroidHz > nylon.centroidHz, "a banjo should read brighter than a nylon string: ${banjo.centroidHz} vs ${nylon.centroidHz}")
+        val strike = Pluck.defaults(PluckVoice.BANJO).getValue("STRIKE")
+        assertTrue(strike < 0.5f, "the default pick sits near the bridge, got STRIKE $strike")
+    }
+
+    @Test
+    fun `BODY is a macro on every voice with a body table`() {
+        for (voice in PluckVoice.entries) {
+            assertTrue(Pluck.macrosFor(voice).any { it.name == "BODY" }, "$voice has no BODY")
+            val table = Pluck.bodyFor(voice)
+            // Two is KOTO's count: only its 85 Hz air mode and 100 Hz plate
+            // mode are in a source the research note's verifier could open.
+            assertTrue(table.size >= 2, "$voice: a body needs at least two sourced modes, got ${table.size}")
+            var lastHz = 0f
+            for (mode in table) {
+                assertTrue(mode.ratio > lastHz, "$voice: body rows must ascend, ${mode.ratio} after $lastHz")
+                assertTrue(mode.ratio < 20_000f, "$voice: ${mode.ratio} Hz is not a body mode")
+                assertTrue(mode.gain > 0f && mode.t60 > 0f, "$voice: ${mode.ratio} Hz has a non-positive gain or decay")
+                lastHz = mode.ratio
+            }
+        }
+    }
+
+    @Test
+    fun `BODY zero is the string, byte for byte`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
+        assertTrue(Pluck.withBody(string, PluckVoice.NYLON, 0f, rate) === string, "amount 0 must skip the stage and return the same buffer")
+        for (voice in PluckVoice.entries) {
+            val a = Pluck.render(voice, mapOf("BODY" to 0f))
+            val b = Pluck.render(voice, mapOf("BODY" to 0f))
+            assertTrue(a.samples.contentEquals(b.samples), "$voice: BODY 0 must be deterministic")
+        }
+    }
+
+    @Test
+    fun `BODY carries its share`() {
+        // The body layer is RMS-matched to the string and scaled by the
+        // amount, so (out - string) carries `amount` times the string's RMS.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
+        for (voice in PluckVoice.entries) {
+            val out = Pluck.withBody(string, voice, 1f, rate)
+            var body = 0.0
+            var dry = 0.0
+            for (i in string.indices) {
+                val d = (out[i] - string[i]).toDouble()
+                body += d * d
+                dry += string[i].toDouble() * string[i]
+            }
+            val share = kotlin.math.sqrt(body / dry)
+            assertTrue(share > 0.8 && share < 1.2, "$voice: body share at amount 1 should be ~1, got $share")
+        }
+    }
+
+    @Test
+    fun `the velocity drive knocks no more than driving the body with the string itself`() {
+        // The audition's thump came from the spike driving the body with the
+        // string's displacement. The bridge force follows the string's
+        // velocity, so the body is driven by the first difference; this pins
+        // that the velocity drive leaves no more low-frequency swing at the
+        // onset than the displacement drive, and prints both ratios so the
+        // report can carry the measurement to the gate. Measured on the wet
+        // layer alone (out - string), not the rendered note: the string
+        // itself carries low-frequency energy of its own that would
+        // otherwise swamp the difference the drive choice actually makes.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (voice in PluckVoice.entries) {
+            val string = Pluck.synthesize(voice, mapOf("BODY" to 0f), rate)
+            val velocityDriven = Pluck.withBody(string, voice, 1f, rate)
+            val displacementDriven = Pluck.withBody(string, voice, 1f, rate, differentiate = false)
+            val wetV = FloatArray(string.size) { velocityDriven[it] - string[it] }
+            val wetD = FloatArray(string.size) { displacementDriven[it] - string[it] }
+            val onsetV = PluckSpectra.lowPassPeak(wetV, rate, 200f, 0.03f) / PluckSpectra.peak(string)
+            val onsetD = PluckSpectra.lowPassPeak(wetD, rate, 200f, 0.03f) / PluckSpectra.peak(string)
+            println("$voice: onset low-band ratio velocity=$onsetV displacement=$onsetD")
+            assertTrue(onsetV <= onsetD * 1.01f, "$voice: the velocity drive should not knock more than the displacement drive: $onsetV vs $onsetD")
+
+            // Printed only, for the gate: the sub-200 Hz onset on real
+            // renders, BODY 1 over BODY 0.
+            val body1 = Pluck.render(voice, mapOf("BODY" to 1f))
+            val body0 = Pluck.render(voice, mapOf("BODY" to 0f))
+            val subRatio = PluckSpectra.lowPassPeak(body1.samples, Dsp.RATE, 200f, 0.03f) /
+                PluckSpectra.lowPassPeak(body0.samples, Dsp.RATE, 200f, 0.03f)
+            println("$voice: sub-200 Hz onset, BODY 1 over BODY 0 = $subRatio")
+        }
+    }
+
+    @Test
+    fun `BODY reaches the ugly end`() {
+        // BODY 1 is three times the string's RMS - the spike's "dominant",
+        // which read CLOSER on two voices and must stay reachable.
+        for (voice in PluckVoice.entries) {
+            val plain = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 0f)))
+            val full = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 1f)))
+            assertTrue(
+                kotlin.math.abs(full.centroidHz - plain.centroidHz) > plain.centroidHz * 0.05f,
+                "$voice: BODY 1 should move the centroid by more than 5%: ${plain.centroidHz} -> ${full.centroidHz}",
+            )
+        }
     }
 }

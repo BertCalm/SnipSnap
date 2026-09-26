@@ -72,6 +72,9 @@ object Cli {
         |  keys <notes.wav...>   pitched notes -> a playable chromatic instrument
         |  synth <ENGINE> <VOICE> [--preset N | --all] --out <dir>
         |                        render factory presets to wav, to hear them
+        |                        (RESIN: --instrument holds a note; --drone
+        |                        [--root A1 --motion 0..1 --rate 1|2|4
+        |                        --bpm N --bars N --loop N] loops one)
         |  pad <wav|kit pad>    one hit -> a pad held forever in every note
         |                        (--loop cuts sustain loops: held pads sing forever)
         |  resample <kit-dir>    the ritual: bounce the kit playing its own

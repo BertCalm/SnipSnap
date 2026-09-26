@@ -94,7 +94,9 @@ import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Dust
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.WavReader
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
@@ -1773,6 +1775,46 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * SYNTH → LOOP: a RESIN drone takes the next empty track
+     * (docs/superpowers/specs/2026-09-25-resin-drone-design.md).
+     *
+     * [sendSnipToLoop]'s shape without the decode or the WAV writes: a drone
+     * is a recipe on the track, rendered only when LOOP bakes it, so this is
+     * one read-modify-write of the sidecar under the grid's one writer, with
+     * the same refusals (a sidecar that won't read, a full grid).
+     */
+    fun sendDroneToLoop(name: String, recipe: JsonValue, rootMidi: Int) {
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                LoopWrites.writing {
+                    val sidecar = File(loopDir, SessionStore.FILE_NAME)
+                    val session = if (sidecar.isFile) {
+                        runCatching { SessionStore.load(loopDir) }
+                            .onFailure { e -> Log.e(TAG, "sendDroneToLoop: session unreadable", e) }
+                            .getOrNull()
+                            ?: return@writing LoopSend(Copy.LOOP_UNREADABLE, null)
+                    } else {
+                        SessionBuilder.empty(deviceSampleRate(context))
+                    }
+                    val at = SessionBuilder.nextEmpty(session)
+                    if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
+
+                    val sent = SessionBuilder.sendDrone(session, at, name, recipe, rootMidi)
+                    val saved = runCatching { SessionStore.save(sent, loopDir) }
+                        .onFailure { e -> Log.e(TAG, "sendDroneToLoop: save failed", e) }
+                        .isSuccess
+                    if (!saved) return@writing LoopSend(Copy.LOOP_SEND_FAILED, null)
+
+                    val bars = sent.tracks[at].chain.size * sent.barsPerInterval
+                    LoopSend(Copy.droneLanded(Scales.nameOf(rootMidi), at + 1, bars), SessionBuilder.filled(sent))
+                }
+            }
+            toast = outcome.toast
+            outcome.filled?.let { loopTracks = it }
+        }
+    }
+
+    /**
      * BACK ONTO (docs/RETRIM.md §4): [range] of [request]'s tape, read at
      * the file's own rate and cut as CHOP's slice would be (`Retrim.cut`),
      * replaces the pad's audio through `KitBuilderModel.backOnto` — class,
@@ -3287,6 +3329,12 @@ fun App(shelf: KitShelf) {
                                         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                     }
                                 },
+                                // MAKE INSTRUMENT (RESIN, held) writes beside the kits:
+                                // the same re-read PAD SHEET's MAKE INSTRUMENT asks for.
+                                onShelfAssetWritten = { roomsRevision++ },
+                                // DRONE TO LOOP (RESIN): the grid's sidecar is App's to
+                                // write, under the same one writer SNIPS' → LOOP uses.
+                                onDroneToLoop = { name, recipe, root -> sendDroneToLoop(name, recipe, root) },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
                                 // a MenuRow tab switch, not be cancelled by it.

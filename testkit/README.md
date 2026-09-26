@@ -62,6 +62,18 @@ through the same ~9-bit virtual converter. Regenerate with
 `./gradlew :synth:generateChipKit`. It answers nothing the other kits don't
 — it exists because it's fun, which is also a requirement.
 
+### SnipSnap Tide Kit — does the West Coast knock survive the trip?
+
+TIDE, the wavefolder-and-low-pass-gate engine: WOOD BONGO walks C minor
+pentatonic up A01–A08, then DRIP (A09–A12), GONG (A13–A14) and FLARE
+(A15–A16) presets. Regenerate with `./gradlew :synth:generateTideKit`.
+Things to confirm: the bongo rows play **in tune and ascending**, each hit
+gets darker as it fades (brightness and level close together — the whole
+point of the engine), each strike has its zap and its thump without
+losing the note, the FLARE pads have weight under the fold,
+and no pad has a click, a buzz of aliasing on the high DRIPs, or an early
+cutoff.
+
 ### SnipSnap Velocity Kit — do ghost notes sound like ghost notes?
 
 The factory kit with three velocity zones per pad: soft and mid renders are
@@ -192,6 +204,38 @@ recorded from the actual renders — so the folder can rebuild itself (the
 renders are deterministic). Things to confirm: each loads, plays in tune
 chromatically, the EP's soft hits sound darker, and — the big one —
 **held organ pads sustain indefinitely** with no audible loop seam.
+
+### RESIN held pads — made with the CLI
+
+Not committed here: make one yourself, any RESIN preset, any release.
+
+```
+snipsnap synth RESIN BRASS --preset 1 --instrument --attack 0.8 --release 1.5 --out ~/resin-pad
+```
+
+That writes a nine-zone instrument in the same dual-generation layout as
+`Instruments/`. Things to confirm: held pads sustain with **no audible
+seam** (the loops are cut at whole cycles of every oscillator, including
+the detuned one's beat), a slow ATTACK fades in rather than clicking, and
+the big one for this format: **does a 1.5 s RELEASE sound like a second
+and a half?** The shop has only ever written releases of 0.3–0.6 s, and
+the MPC's reading of `VolumeRelease` above that has never been heard.
+
+### RESIN drones — made with the CLI
+
+Not committed here either: make one, any RESIN preset, any root.
+
+```
+snipsnap synth RESIN BASS --preset 1 --drone --root A1 --motion 0.6 --rate 2 --loop 3 --out ~/resin-drone
+```
+
+That writes the whole drone the loop grid would make at 90 BPM, one bar per
+interval (A1 spans four), three times end to end. Three things to listen
+for: **no seam at either wrap**; the breath lands where the wrap is (with
+`--rate 1` the filter is at the middle of its swing, rising, on the first
+sample); and the note sits in tune against a RESIN held instrument or a
+keys instrument at the same root, since the printed nudge (`-1.97 cents` for A1)
+is all the loop moved it.
 
 ### SnipSnap_Factory.xpn — one-file import
 

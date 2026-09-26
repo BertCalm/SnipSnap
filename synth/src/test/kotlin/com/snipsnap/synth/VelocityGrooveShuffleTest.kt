@@ -147,18 +147,17 @@ class VelocityGrooveShuffleTest {
 
     @Test
     fun `atVelocity falls back to soften for voices with no brightness macro`() {
-        // PLUCK's macros (TUNE, DAMP, PICK, DOUBLE) contain nothing in
-        // Velocity's BRIGHTNESS_MACROS list, so atVelocity must fall back
-        // to the same soften() path soft-variant zones already use -
-        // proven here by requiring byte-identical output, not just "still
-        // works".
-        val patch = PluckPresets.forVoice(PluckVoice.KALIMBA).first()
+        // VOX exposes TUNE, VOWEL, BREATH and DECAY - none of them in
+        // BRIGHTNESS_MACROS, and no override names it - so it is the voice
+        // that still falls back to soften() here. Every PLUCK voice now
+        // goes through PICK (Velocity's own PluckPatch override).
+        val patch = VoxPresets.forVoice(VoxVoice.CHOIR).first()
         val velocity = 0.3f
         val viaFallback = Velocity.atVelocity(patch, velocity)
         val viaSoftenDirect = Velocity.soften(patch.render(), 1f - velocity)
         assertTrue(
             viaFallback.samples.contentEquals(viaSoftenDirect.samples),
-            "PLUCK has no brightness macro; atVelocity should match soften(render(), 1 - velocity) exactly",
+            "VOX has no brightness macro; atVelocity should match soften(render(), 1 - velocity) exactly",
         )
         // And it should actually be darker than the un-softened render -
         // the fallback isn't a silent no-op.

@@ -56,6 +56,19 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the tide kit walks a bongo up the pentatonic and fills the grid`() {
+        val kit = SynthKits.tide()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a TIDE render with its recipe")
+        assertTrue(kit.take(12).all { it!!.drumClass == DrumClass.PERC }, "bongos and drips are percussion")
+        assertTrue(kit.drop(12).all { it!!.drumClass == DrumClass.TONAL }, "gongs and flares are notes")
+        val pitches = (0 until 8).map { TestPitch.estimate(kit[it]!!.snip, fromSec = 0.02f, windowSec = 0.08f) }
+        for (i in 1 until pitches.size) {
+            assertTrue(pitches[i] > pitches[i - 1] * 1.02f, "bongo ${i + 1} (${pitches[i]} Hz) should sit above bongo $i (${pitches[i - 1]} Hz)")
+        }
+    }
+
+    @Test
     fun `the chip kit is sixteen crunched pads that keep their identities`() {
         val kit = SynthKits.chip()
         assertEquals(16, kit.size)
@@ -91,5 +104,18 @@ class SynthKitTest {
         val xml = result.program.readText()
         assertTrue("<SampleName>A01_Tonal_01</SampleName>" in xml)
         assertTrue("<SampleName>A16_Tonal_16</SampleName>" in xml)
+    }
+
+    @Test
+    fun `the melodic kit's kalimba pads are TINES notes at the same pitches`() {
+        // KALIMBA moved engines (spec decision 5, Phase 1 gate: TINES won).
+        // The pads keep their slots and their notes; only the engine changes.
+        val kit = SynthKits.melodic()
+        for (i in 6..10) {
+            val recipe = PadRecipe.fromJsonValue(kit[i]!!.recipe!!)
+            val patch = recipe.patch as? TinesPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a TINES patch, got ${recipe.patch?.engine}")
+            assertEquals(TinesVoice.KALIMBA, patch!!.voice, "pad ${i + 1} voice")
+        }
     }
 }

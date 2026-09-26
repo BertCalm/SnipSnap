@@ -240,12 +240,25 @@ object OneNote {
      * ordinary first-export case - [writePackage] creates it.
      */
     fun freshName(destRoot: File, base: String): String =
-        Names.freshStem(Names.sanitizeStem(base)) { candidate ->
+        Names.freshStem(Names.sanitizeStem(base).take(MAX_NAME_LENGTH).trimEnd(' ', '_', '.').ifBlank { "Sample" }) { candidate ->
             val (xty, dataDir) = occupies(destRoot, candidate)
             xty.exists() || dataDir.exists()
         }
 
-    internal fun writePackage(
+    /**
+     * The longest name [freshName] hands out. Not an MPC rule (none is
+     * written down); a filesystem one: a name becomes `<name>_[TrackData]`
+     * and `<name>_<note>.wav`, file names stop at 255 bytes, and a 300-letter
+     * name failed its own write. 64 leaves room for every suffix, and for
+     * [Names.freshStem]'s ` 2`.
+     */
+    const val MAX_NAME_LENGTH = 64
+
+    /**
+     * The shop's one packaging door - MAKE INSTRUMENT, MAKE PAD, the `keys`
+     * and `pad` verbs, and `:shell`'s held RESIN pads all write through it.
+     */
+    fun writePackage(
         name: String,
         program: KeygroupProgram,
         samples: Map<String, Snip>,

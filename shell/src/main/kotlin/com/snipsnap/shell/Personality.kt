@@ -747,6 +747,73 @@ object Copy {
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 
+    // ---- SYNTH: MAKE INSTRUMENT (RESIN, held) ----
+    /**
+     * The sheet's own line: what MAKE leaves and where. [name] is the name it
+     * will land under - already made unique against the shelf - so the toast
+     * that follows ([madeNamed]) names the same thing this promised.
+     */
+    fun heldInstrumentNote(name: String): String =
+        "EVERY KEY HOLDS WHILE IT IS DOWN. LANDS ON THE SHELF AS ${name.uppercase(java.util.Locale.ROOT)}, PLAYABLE ON KEYS."
+    /**
+     * MAKE INSTRUMENT's progress indicator, [done] of [total] zones rendered.
+     * A function for [treatmentBusy]'s reason: a render that runs longer than
+     * a breath must say it is working, and the reflective shout-and-stop law
+     * scans constants, not progress lines.
+     */
+    fun instrumentRendering(done: Int, total: Int): String = "RENDERING $done/$total…"
+
+    // ---- SYNTH: DRONE TO LOOP (RESIN, droning) ----
+    /**
+     * The drone sheet's own line: where SEND puts it and the one promise
+     * that makes a drone different from a sent snip - it follows the tempo
+     * and stays in tune (docs/superpowers/specs/2026-09-25-resin-drone-design.md).
+     */
+    const val DRONE_NOTE = "TAKES THE NEXT EMPTY TRACK IN LOOP AND BREATHES THERE, IN TUNE AT ANY TEMPO."
+    /**
+     * A drone landed: [note] on [track] (1-based, the column counted across
+     * the grid), repeating every [bars] bars.
+     */
+    fun droneLanded(note: String, track: Int, bars: Int): String =
+        "$note DRONE IS ON TRACK $track, ${countOf(bars, "BAR", "BARS")} AROUND."
+    /**
+     * What a tapped drone block is, for LOOP's readout: the note and which
+     * slice of the drone this block plays. [offCents] only when the tuning
+     * promise could not be kept at this tempo, so the grid says so.
+     */
+    fun droneBlock(note: String, slice: Int, of: Int, offCents: Double? = null): String =
+        "DRONE $note · $slice/$of" + (offCents?.let { " · %+.1f¢ OFF".format(java.util.Locale.ROOT, it) } ?: "")
+
+    // ---- SPREAD: one sound across a bank, in a scale ----
+    /**
+     * SPREAD, when it lands: the scale, how many pads and where from, then
+     * only the facts that apply — full pads kept, notes past the tune
+     * range, originals binned, and the shared choke group (or that there
+     * was none free to share).
+     */
+    fun spreadLanded(
+        root: String,
+        scale: String,
+        pads: Int,
+        firstPad: String,
+        keptFull: Int,
+        outOfReach: Int,
+        replaced: Int,
+        chokeGroup: Int,
+        noFreeChoke: Boolean,
+    ): String = buildString {
+        append("$root $scale ACROSS ${countOf(pads, "PAD", "PADS")} FROM $firstPad.")
+        if (keptFull > 0) append(" ${countOf(keptFull, "FULL PAD", "FULL PADS")} KEPT.")
+        if (outOfReach > 0) append(" ${countOf(outOfReach, "NOTE", "NOTES")} OUT OF TUNE RANGE.")
+        if (replaced > 0) append(if (replaced == 1) " 1 ORIGINAL SLEEPS IN THE BIN." else " $replaced ORIGINALS SLEEP IN THE BIN.")
+        if (chokeGroup > 0) append(" CHOKE GROUP $chokeGroup: ONE NOTE AT A TIME.")
+        if (noFreeChoke) append(" NO FREE CHOKE GROUP, SO NOTES OVERLAP.")
+    }
+    const val SPREAD_NOTHING = "NO PAD TOOK A NOTE. EVERY SLOT WAS FULL OR OUT OF TUNE RANGE."
+    const val SPREAD_NO_PITCH = "NO CLEAR PITCH, SO THE ROOT IS A GUESS. THE FIRST PAD PLAYS IT AS IT SOUNDS NOW."
+    const val SPREAD_CHAIN_REFUSED = "A ROUND-ROBIN PAD WON'T SPREAD. PICK A SINGLE-SAMPLE PAD."
+    const val SPREAD_FAILED = "SPREAD FAILED. TRY AGAIN."
+
     // ---- SYNTH: SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
     /**
      * Under the name field: the one rule with a number in it, where the

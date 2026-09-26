@@ -11,8 +11,14 @@ import kotlin.math.pow
  */
 data class Knob(val label: String, val lo: Float, val hi: Float, val default: Float, val exponential: Boolean) {
 
-    /** Stepper fraction 0..1 → the knob's value. */
+    /**
+     * Stepper fraction 0..1 → the knob's value. A fraction that isn't a
+     * number is the default: coerceIn passes NaN straight through, and a
+     * NaN seconds would fail the verb's own range check with no answer the
+     * card could give.
+     */
     fun value(fraction: Float): Float {
+        if (fraction.isNaN()) return default
         val f = fraction.coerceIn(0f, 1f)
         return if (exponential) lo * (hi / lo).pow(f) else lo + (hi - lo) * f
     }

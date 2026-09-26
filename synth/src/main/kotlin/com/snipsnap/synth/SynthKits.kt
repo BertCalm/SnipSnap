@@ -55,6 +55,14 @@ object SynthKits {
             melodicMotion,
         )
 
+    /** A TINES KALIMBA note: TUNE snaps from A3 over the same 24 semitones PLUCK's voices use. */
+    private fun tines(name: String, semitone: Int) =
+        pad(
+            TinesPatch(name, TinesVoice.KALIMBA, mapOf("TUNE" to semitone / Tines.KALIMBA_TUNE_SEMITONES.toFloat())),
+            DrumClass.TONAL,
+            melodicMotion,
+        )
+
     /** A minor pentatonic: 0 3 5 7 10, repeating up the octaves. */
     private val PENTATONIC = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24)
 
@@ -67,11 +75,12 @@ object SynthKits {
         pluck("Nylon 6", PluckVoice.NYLON, PENTATONIC[5]),        // A06
         // The kalimba's root sits an octave above the nylon's, so subtracting
         // an octave keeps one unbroken pitch line while the timbre climbs.
-        pluck("Kalimba 1", PluckVoice.KALIMBA, PENTATONIC[6] - 12),  // A07 - kalimba takes over
-        pluck("Kalimba 2", PluckVoice.KALIMBA, PENTATONIC[7] - 12),  // A08
-        pluck("Kalimba 3", PluckVoice.KALIMBA, PENTATONIC[8] - 12),  // A09
-        pluck("Kalimba 4", PluckVoice.KALIMBA, PENTATONIC[9] - 12),  // A10
-        pluck("Kalimba 5", PluckVoice.KALIMBA, PENTATONIC[10] - 12), // A11
+        // It is a TINES voice now: a kalimba tine is a bar, not a string.
+        tines("Kalimba 1", PENTATONIC[6] - 12),  // A07 - kalimba takes over
+        tines("Kalimba 2", PENTATONIC[7] - 12),  // A08
+        tines("Kalimba 3", PENTATONIC[8] - 12),  // A09
+        tines("Kalimba 4", PENTATONIC[9] - 12),  // A10
+        tines("Kalimba 5", PENTATONIC[10] - 12), // A11
         pluck("Harp Crown", PluckVoice.HARP, 24, "DOUBLE" to 0.4f),  // A12 - harp crown (E5, the in-scale fifth)
         stab("Soul Root", TonewheelVoice.SOUL, 0),                // A13 - stabs: root
         stab("Stab Fourth", TonewheelVoice.STAB, 5),              // A14 - fourth
@@ -155,6 +164,35 @@ object SynthKits {
             cloudOf(brass, DrumClass.LOOP, 2.5f, 28, "SIZE" to 1f, "SMEAR" to 0.9f, "DRIFT" to 0.3f),    // A14 brass pad
             cloudOf(bell, DrumClass.LOOP, 2.5f, 29, "SIZE" to 0.9f, "SHINE" to 0.8f, "DRIFT" to 0.5f),   // A15 shimmer wash
             cloudOf(chime, DrumClass.LOOP, 2.5f, 30, "SIZE" to 0.6f, "PITCH" to 0.3f, "DRIFT" to 0.7f),  // A16 deep glass
+        )
+    }
+
+    /**
+     * The TIDE kit (docs/SYNTH_ROADMAP.md, S9): WOOD BONGO walks C minor
+     * pentatonic up the first two rows — the West Coast plucked pattern,
+     * the sound the engine exists for — then DRIP, GONG and FLARE presets
+     * above it. Dry: the gate's own decay is the space. BONGO and DRIP pads
+     * are PERC ([TidePresetsTest] has the measurement), GONG and FLARE TONAL
+     * (notes DECAY can hold); every pad carries its recipe.
+     */
+    fun tide(): List<ArrangedPad?> {
+        val wood = TidePresets.forVoice(TideVoice.BONGO).first { it.name == "WOOD BONGO" }
+        fun bongo(n: Int, semitone: Int) = pad(
+            TidePatch("Bongo $n", TideVoice.BONGO, wood.macros + ("TUNE" to semitone / Tide.TUNE_SEMITONES.toFloat())),
+            DrumClass.PERC,
+        )
+        fun preset(voice: TideVoice, name: String) = pad(
+            TidePresets.forVoice(voice).first { it.name == name },
+            if (voice == TideVoice.GONG || voice == TideVoice.FLARE) DrumClass.TONAL else DrumClass.PERC,
+        )
+
+        return listOf(
+            bongo(1, PENTATONIC[0]), bongo(2, PENTATONIC[1]), bongo(3, PENTATONIC[2]), bongo(4, PENTATONIC[3]), // A01-A04
+            bongo(5, PENTATONIC[4]), bongo(6, PENTATONIC[5]), bongo(7, PENTATONIC[6]), bongo(8, PENTATONIC[7]), // A05-A08
+            preset(TideVoice.DRIP, "RAIN DRIP"), preset(TideVoice.DRIP, "BUBBLE"),                              // A09 A10
+            preset(TideVoice.DRIP, "ICE BLIP"), preset(TideVoice.DRIP, "SPLASH TICK"),                         // A11 A12
+            preset(TideVoice.GONG, "TEMPLE GONG"), preset(TideVoice.GONG, "TIN CAN"),                          // A13 A14
+            preset(TideVoice.FLARE, "SNARL FLARE"), preset(TideVoice.FLARE, "FOLD BASS"),                       // A15 A16
         )
     }
 }

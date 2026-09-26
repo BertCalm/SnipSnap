@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -67,6 +68,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.LoopWrites
+import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
@@ -82,14 +85,22 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.OneNote
+import com.snipsnap.json.JsonValue
+import com.snipsnap.loop.Session
+import com.snipsnap.loop.SessionBuilder
+import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
+import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.Spread
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
@@ -97,8 +108,12 @@ import com.snipsnap.synth.Fathom
 import com.snipsnap.synth.FathomPatch
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.Resin
+import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinPatch
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Tide
+import com.snipsnap.synth.TidePatch
+import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
@@ -131,7 +146,13 @@ import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -151,10 +172,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the nine-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the ten-engine drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all nine
+ * Compose surface plus the SEND TO PAD action, multiplexed over all ten
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -162,8 +183,8 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and nine more engines
- * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, GLINT) join it here.
+ * only; reality wins: THUMP alone ships eight voices, and ten more engines
+ * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT) join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -183,6 +204,13 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
+    // MAKE INSTRUMENT (RESIN, held) writes beside the kits; App's instrument
+    // list is not reactive to that folder, so this tells it to re-read -
+    // PadSheetScreen's own parameter of the same name, for the same reason.
+    onShelfAssetWritten: () -> Unit,
+    // DRONE TO LOOP (RESIN): the drone's recipe on its root, handed to App,
+    // whose sendSnipToLoop already owns the grid's sidecar and its one writer.
+    onDroneToLoop: (name: String, recipe: JsonValue, rootMidi: Int) -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
     // receive as their own `appScope` — so a SEND TO PAD write in flight
     // survives a MenuRow tab switch instead of being cancelled by it (see
@@ -504,6 +532,268 @@ fun SynthScreen(
         }
     }
 
+    // ---- MAKE INSTRUMENT: RESIN, held ----
+    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md. Nine held
+    // zones render off the main thread, in parallel, with a progress bar
+    // the whole way (the author's call: a slow phone shows work, it does not
+    // drop zones); the package is written once every zone has landed, so a
+    // CANCEL mid-render leaves nothing on the shelf.
+    var makingInstrument by remember { mutableStateOf(false) }
+    var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
+    var holdRelease by remember { mutableStateOf(ResinPadMaker.RELEASE.defaultFraction) }
+    // Zones landed during MAKE, of [holdTotal]; -1 when no MAKE is running.
+    var holdDone by remember { mutableStateOf(-1) }
+    var holdTotal by remember { mutableStateOf(0) }
+    var holdPreviewing by remember { mutableStateOf(false) }
+    var holdJob by remember { mutableStateOf<Job?>(null) }
+    // The name MAKE will land under, read off the shelf when the sheet opens
+    // so the sheet can say it; MAKE asks the shelf again at write time.
+    var holdName by remember { mutableStateOf("") }
+    val holdBase = currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"
+    val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
+    LaunchedEffect(makingInstrument, holdBase) {
+        if (!makingInstrument) return@LaunchedEffect
+        holdName = try {
+            withContext(Dispatchers.IO) { OneNote.freshName(instrumentsDir, holdBase) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SynthScreen", "holdName: shelf unreadable", e)
+            holdBase
+        }
+    }
+
+    fun previewHeld() {
+        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
+        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        holdPreviewing = true
+        holdJob = appScope.launch {
+            try {
+                // CANCEL cancels this job; the render asks and stops.
+                val heard = withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) { !isActive } }
+                audition(heard)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "previewHeld: failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                holdPreviewing = false
+                holdJob = null
+            }
+        }
+    }
+
+    fun makeHeld() {
+        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
+        // Captured now: the sheet's own sound, before anything can move it.
+        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        val base = holdBase
+        val midis = ResinPadMaker.zoneMidis(spec)
+        holdTotal = midis.size
+        holdDone = 0
+        holdJob = appScope.launch {
+            try {
+                // coroutineScope, not bare asyncs on appScope: a zone that
+                // throws must surface here as an exception this catch sees,
+                // not fail the app's own scope.
+                val notes = coroutineScope {
+                    midis.map { midi ->
+                        async(Dispatchers.Default) {
+                            // CANCEL cancels the scope; each zone asks and stops,
+                            // rather than all nine running on for seconds.
+                            val note = ResinPadMaker.renderZone(spec, midi) { !isActive }
+                            withContext(Dispatchers.Main) { holdDone += 1 }
+                            note
+                        }
+                    }.awaitAll()
+                }
+                // Past here the write lands even under CANCEL: a package half
+                // written is worse than a whole one the player can bin.
+                val made = withContext(NonCancellable + Dispatchers.IO) {
+                    val name = OneNote.freshName(instrumentsDir, base)
+                    ResinPadMaker.export(name, spec, notes, instrumentsDir)
+                    name
+                }
+                makingInstrument = false
+                onShelfAssetWritten()
+                onToast(Copy.madeNamed("INSTRUMENT", made))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "makeHeld: failed", e)
+                onToast(Copy.actionFailed("INSTRUMENT"))
+            } finally {
+                holdDone = -1
+                holdJob = null
+            }
+        }
+    }
+
+    fun closeHeld() {
+        // Every zone rendered means the write is under way; let it land.
+        if (holdDone >= 0 && holdDone >= holdTotal) return
+        holdJob?.cancel()
+        holdJob = null
+        holdDone = -1
+        holdPreviewing = false
+        makingInstrument = false
+    }
+
+    // ---- DRONE TO LOOP: RESIN, droning ----
+    // docs/superpowers/specs/2026-09-25-resin-drone-design.md. SEND puts a
+    // recipe on the grid, not audio: LOOP renders it at its own tempo, so
+    // nothing here renders except PREVIEW, which renders it the way LOOP
+    // will (the grid's tempo, bars and the device's rate) and plays it
+    // twice, so the wrap is heard.
+    val context = LocalContext.current
+    var droneOpen by remember { mutableStateOf(false) }
+    var droneRoot by remember { mutableStateOf<Int?>(null) }
+    var droneMotion by remember { mutableStateOf(DroneMaker.DEFAULT_MOTION) }
+    var droneRate by remember { mutableStateOf(DroneMaker.DEFAULT_RATE) }
+    var dronePreviewing by remember { mutableStateOf(false) }
+    var droneJob by remember { mutableStateOf<Job?>(null) }
+    // The grid the drone will land on, read when the sheet opens: its tempo
+    // and bars decide the span the readout names and PREVIEW renders.
+    var droneSession by remember { mutableStateOf<Session?>(null) }
+    LaunchedEffect(droneOpen, voice) {
+        if (!droneOpen || engine != Engine.RESIN) return@LaunchedEffect
+        val v = voice as? ResinVoice ?: return@LaunchedEffect
+        if (droneRoot?.let { it in DroneMaker.roots(v) } != true) droneRoot = DroneMaker.defaultRoot(v, kit?.key)
+        droneSession = withContext(Dispatchers.IO) {
+            val rate = deviceSampleRate(context)
+            val dir = LoopWrites.dir(context)
+            runCatching { SessionStore.load(dir) }.getOrNull()?.copy(sampleRate = rate)
+                ?: SessionBuilder.empty(rate)
+        }
+    }
+
+    fun droneSpec() = DroneMaker.spec(voice as ResinVoice, macros, droneMotion, droneRate)
+
+    fun previewDrone() {
+        val root = droneRoot ?: return
+        val session = droneSession ?: return
+        if (engine != Engine.RESIN || dronePreviewing) return
+        val spec = droneSpec()
+        dronePreviewing = true
+        droneJob = appScope.launch {
+            try {
+                val heard = withContext(Dispatchers.Default) {
+                    // CANCEL (or closing the sheet) cancels this job; the
+                    // render asks and stops rather than running on for seconds.
+                    val once = DroneMaker.render(spec, root, session) { !isActive }
+                    Snip(FloatArray(once.size * 2) { once[it % once.size] }, 1, session.sampleRate)
+                }
+                audition(heard)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "previewDrone: failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                dronePreviewing = false
+                droneJob = null
+            }
+        }
+    }
+
+    fun sendDrone() {
+        val root = droneRoot ?: return
+        if (engine != Engine.RESIN) return
+        val name = "${currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"} DRONE"
+        onDroneToLoop(name, droneSpec().toJson(), root)
+        droneJob?.cancel()
+        droneJob = null
+        dronePreviewing = false
+        droneOpen = false
+    }
+
+    fun closeDrone() {
+        droneJob?.cancel()
+        droneJob = null
+        dronePreviewing = false
+        droneOpen = false
+    }
+
+    // ---- SPREAD ----
+    // The patch as it stood when SPREAD opened, rendered once: the panel
+    // previews and the write lands the same audio its pitch was measured on.
+    var spreadSource by remember { mutableStateOf<SpreadSource?>(null) }
+    var spreadPatch by remember { mutableStateOf<Patch?>(null) }
+    var spreadClass by remember { mutableStateOf(DrumClass.TONAL) }
+    var spreadOpening by remember { mutableStateOf(false) }
+    var spreadBusy by remember { mutableStateOf(false) }
+
+    fun openSpread() {
+        if (spreadOpening || sendBusy || entry == null) return
+        spreadOpening = true
+        val patch = engine.buildPatch(engine.patchDisplayName(voice), voice, macros)
+        val cls = engine.drumClass(voice)
+        scope.launch {
+            try {
+                val src = withContext(Dispatchers.Default) {
+                    val rendered = patch.render()
+                    val midi = Spread.detect(rendered)
+                    SpreadSource(rendered, midi, Spread.defaultRoot(midi))
+                }
+                spreadPatch = patch
+                spreadClass = cls
+                spreadSource = src
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "openSpread: render failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                spreadOpening = false
+            }
+        }
+    }
+
+    fun spread(options: Spread.Options) {
+        val e = entry ?: return
+        val src = spreadSource ?: return
+        val patch = spreadPatch ?: return
+        if (spreadBusy) return
+        spreadBusy = true
+        val sound = Spread.Sound(
+            name = patch.name,
+            drumClass = spreadClass,
+            colorHex = AutoPlace.colorFor(spreadClass),
+            recipe = PadRecipe(patch = patch).toJsonValue(),
+            source = mapOf(Spread.FROM_KEY to "SYNTH"),
+        )
+        appScope.launch {
+            try {
+                // Planned again over the kit on disk, under the lock: the
+                // panel's preview read App's copy, which a write elsewhere
+                // may have moved on since.
+                val (plan, updatedKit) = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val model = KitBuilderModel.open(e.dir)
+                        val plan = Spread.plan(model.kit, src.midi, options)
+                        if (plan.notes.isNotEmpty()) {
+                            Spread.apply(model, src.snip, plan, sound)
+                            model.save()
+                        }
+                        plan to model.kit
+                    }
+                }
+                if (plan.notes.isNotEmpty()) {
+                    spreadSource = null
+                    onKitUpdated(updatedKit)
+                }
+                onToast(Spread.toast(plan))
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                Log.e("SynthScreen", "spread: failed", ex)
+                onToast(Copy.SPREAD_FAILED)
+            } finally {
+                spreadBusy = false
+            }
+        }
+    }
+
     val classColor = Schemes.classColor(engine.drumClass(voice)).tape
 
     Box(Modifier.fillMaxSize()) {
@@ -638,6 +928,41 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
+                // One sound, a whole bank of notes: its own row, since the
+                // three above already fill theirs at the pixel face.
+                LabButton(
+                    if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                    scheme,
+                    enabled = kit != null && !sendBusy && !spreadOpening,
+                    modifier = Modifier.fillMaxWidth(),
+                    accessibilityLabel = "SPREAD ACROSS PADS",
+                ) {
+                    openSpread()
+                }
+                // RESIN, held: the sound as a keys instrument. RESIN only -
+                // it is the one engine whose held render closes its loops.
+                // Full width under SPREAD's row, the DELETED PRESETS door's shape.
+                if (engine == Engine.RESIN) {
+                    LabButton(
+                        "MAKE INSTRUMENT ▸",
+                        scheme,
+                        enabled = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = "MAKE INSTRUMENT",
+                    ) {
+                        makingInstrument = true
+                    }
+                    // RESIN, droning: the sound as a breathing loop-grid track.
+                    LabButton(
+                        "DRONE TO LOOP ▸",
+                        scheme,
+                        enabled = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = "DRONE TO LOOP",
+                    ) {
+                        droneOpen = true
+                    }
+                }
             }
 
             Box(
@@ -666,6 +991,22 @@ fun SynthScreen(
             // Innermost: same self-guarded cancel as the overlay's own
             // CANCEL — a send in flight (sendBusy) makes both no-ops.
             BackHandler(onBack = cancelChooser)
+        }
+
+        spreadSource?.let { src ->
+            // Self-guarded like the chooser's CANCEL: a write in flight
+            // keeps the panel up until it lands.
+            val cancelSpread = { if (!spreadBusy) spreadSource = null }
+            SpreadOverlay(
+                kit = kit,
+                source = src,
+                colorHex = AutoPlace.colorFor(spreadClass),
+                scheme = scheme,
+                busy = spreadBusy,
+                onSpread = ::spread,
+                onCancel = cancelSpread,
+            )
+            BackHandler(onBack = cancelSpread)
         }
 
         if (namingPreset) {
@@ -707,6 +1048,48 @@ fun SynthScreen(
                 onClose = closeBin,
             )
             BackHandler(onBack = closeBin)
+        }
+
+        if (makingInstrument && engine == Engine.RESIN) {
+            HeldInstrumentSheet(
+                heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                name = holdName,
+                attack = holdAttack,
+                release = holdRelease,
+                done = holdDone,
+                total = holdTotal,
+                previewing = holdPreviewing,
+                fillColor = classColor,
+                scheme = scheme,
+                onAttack = { holdAttack = it },
+                onRelease = { holdRelease = it },
+                onPreview = ::previewHeld,
+                onMake = ::makeHeld,
+                onCancel = ::closeHeld,
+            )
+            BackHandler(onBack = ::closeHeld)
+        }
+
+        val droneVoice = voice as? ResinVoice
+        if (droneOpen && engine == Engine.RESIN && droneVoice != null) {
+            DroneSheet(
+                heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                voice = droneVoice,
+                root = droneRoot,
+                session = droneSession,
+                motion = droneMotion,
+                rate = droneRate,
+                previewing = dronePreviewing,
+                fillColor = classColor,
+                scheme = scheme,
+                onRoot = { droneRoot = it },
+                onMotion = { droneMotion = it },
+                onRate = { droneRate = it },
+                onPreview = ::previewDrone,
+                onSend = ::sendDrone,
+                onCancel = ::closeDrone,
+            )
+            BackHandler(onBack = ::closeDrone)
         }
     }
 }
@@ -962,15 +1345,240 @@ private fun PresetNameDialog(
     }
 }
 
+// ---------- MAKE INSTRUMENT: RESIN, held ----------
+
+/**
+ * MAKE INSTRUMENT ▸'s sheet (RESIN only): [PresetNameDialog]'s frame - scrim,
+ * raised bevel, CANCEL beside the real buttons - over the two knobs a held
+ * note has that a one-shot never needed, ATTACK and RELEASE, with their
+ * seconds spelled out. While MAKE runs the knobs give way to [HeldProgress],
+ * a bar that fills as each zone lands and the line counting them; PREVIEW's
+ * one zone says RENDERING… the way the scope does. CANCEL stays live until
+ * the last zone lands, and the write that follows is left to finish.
+ */
+@Composable
+private fun HeldInstrumentSheet(
+    heading: String,
+    name: String,
+    attack: Float,
+    release: Float,
+    done: Int,
+    total: Int,
+    previewing: Boolean,
+    fillColor: Color,
+    scheme: Scheme,
+    onAttack: (Float) -> Unit,
+    onRelease: (Float) -> Unit,
+    onPreview: () -> Unit,
+    onMake: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val making = done >= 0
+    val busy = making || previewing
+    val writing = making && done >= total
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            // No descendant text of its own - labelled with the same word
+            // the visible CANCEL button below uses.
+            .tapeClick(label = "CANCEL", enabled = !writing, onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it doesn't fall through to the scrim's
+                // CANCEL (MessageBox.kt's pattern, as PresetNameDialog's).
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("MAKE INSTRUMENT", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText(heading, TapeType.pixel, scheme.ink2.tape)
+            if (name.isNotEmpty()) {
+                TapeText(Copy.heldInstrumentNote(name), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            }
+            if (making) {
+                HeldProgress(done, total, fillColor, scheme)
+            } else {
+                MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
+                MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
+                TapeText(
+                    "ATTACK ${ResinPadMaker.secondsLabel(ResinPadMaker.ATTACK.value(attack))} · " +
+                        "RELEASE ${ResinPadMaker.secondsLabel(ResinPadMaker.RELEASE.value(release))}",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                )
+                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
+                ActionButton("MAKE", scheme, enabled = !busy, dimmed = busy, lit = !busy, modifier = Modifier.weight(1f), onClick = onMake)
+            }
+        }
+    }
+}
+
+// ---------- DRONE TO LOOP: RESIN, droning ----------
+
+/**
+ * DRONE TO LOOP ▸'s sheet (RESIN only), [HeldInstrumentSheet]'s frame over
+ * the three things a drone has that a one-shot never needed: ROOT (a note
+ * stepper across the voice's own register), MOTION (how far the filter
+ * breathes) and BREATHS (how many times per drone). The readout under ROOT
+ * is [DroneMaker.label]: the note, how many bars before it repeats at the
+ * grid's tempo, and the nudge the loop needed to close.
+ */
+@Composable
+private fun DroneSheet(
+    heading: String,
+    voice: ResinVoice,
+    root: Int?,
+    session: Session?,
+    motion: Float,
+    rate: Int,
+    previewing: Boolean,
+    fillColor: Color,
+    scheme: Scheme,
+    onRoot: (Int) -> Unit,
+    onMotion: (Float) -> Unit,
+    onRate: (Int) -> Unit,
+    onPreview: () -> Unit,
+    onSend: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val ready = root != null && session != null
+    val range = DroneMaker.roots(voice)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText("DRONE TO LOOP", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText(heading, TapeType.pixel, scheme.ink2.tape)
+            TapeText(Copy.DRONE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ActionButton(
+                    "−",
+                    scheme,
+                    enabled = root != null && root > range.first,
+                    accessibilityLabel = "ROOT DOWN",
+                    modifier = Modifier.weight(1f),
+                ) { root?.let { onRoot(it - 1) } }
+                TapeText(
+                    if (root != null && session != null) DroneMaker.label(root, session) else "…",
+                    TapeType.lcdSmall,
+                    scheme.ink.tape,
+                    modifier = Modifier.weight(3f),
+                )
+                ActionButton(
+                    "+",
+                    scheme,
+                    enabled = root != null && root < range.last,
+                    accessibilityLabel = "ROOT UP",
+                    modifier = Modifier.weight(1f),
+                ) { root?.let { onRoot(it + 1) } }
+            }
+            MacroSlider("MOTION", motion, fillColor, scheme, onMotion)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TapeText(
+                    "MOTION ${DroneMaker.motionLabel(motion)}",
+                    TapeType.pixelSmall,
+                    scheme.ink2.tape,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionButton(
+                    DroneMaker.breathsLabel(rate),
+                    scheme,
+                    enabled = !previewing,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    val rates = ResinDrone.RATES
+                    onRate(rates[(rates.indexOf(rate) + 1) % rates.size])
+                }
+            }
+            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton(
+                    "PREVIEW",
+                    scheme,
+                    enabled = ready && !previewing,
+                    dimmed = !ready || previewing,
+                    modifier = Modifier.weight(1f),
+                    onClick = onPreview,
+                )
+                ActionButton(
+                    "SEND",
+                    scheme,
+                    enabled = ready,
+                    dimmed = !ready,
+                    lit = ready,
+                    modifier = Modifier.weight(1f),
+                    onClick = onSend,
+                )
+            }
+        }
+    }
+}
+
+/** MAKE's progress: a bar filling zone by zone, and [Copy.instrumentRendering] counting them. */
+@Composable
+private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme) {
+    val fraction = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
+    val line = Copy.instrumentRendering(done, total)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(18.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .sunkenField(scheme)
+                // Canvas-free, but still a bar a screen reader must hear as
+                // one: the same semantics MacroSlider gives its fill.
+                .semantics {
+                    contentDescription = line
+                    progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
+                },
+        ) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(fillColor.copy(alpha = 0.85f)))
+        }
+        TapeText(line, TapeType.lcdSmall, scheme.amber.tape)
+    }
+}
+
 // ---------- the engine adapter ----------
 
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). All nine registered engines already converge on one shape (an
+ * change"). All ten registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of nine near-
+ * this just gives the screen one dispatch point instead of ten near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
@@ -980,9 +1588,9 @@ private fun PresetNameDialog(
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, GLINT;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → GLINT → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -995,6 +1603,7 @@ private enum class Engine {
         TONEWHEEL -> TonewheelVoice.entries
         FATHOM -> FathomVoice.entries
         RESIN -> ResinVoice.entries
+        TIDE -> TideVoice.entries
         GLINT -> GlintVoice.entries
     }
 
@@ -1008,6 +1617,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
         RESIN -> Resin.macrosFor(voice as ResinVoice)
+        TIDE -> Tide.macrosFor(voice as TideVoice)
         GLINT -> Glint.macrosFor(voice as GlintVoice)
     }
 
@@ -1021,6 +1631,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
         RESIN -> Resin.defaults(voice as ResinVoice)
+        TIDE -> Tide.defaults(voice as TideVoice)
         GLINT -> Glint.defaults(voice as GlintVoice)
     }
 
@@ -1034,6 +1645,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
         RESIN -> Resin.scramble(voice as ResinVoice, random)
+        TIDE -> Tide.scramble(voice as TideVoice, random)
         GLINT -> Glint.scramble(voice as GlintVoice, random)
     }
 
@@ -1052,6 +1664,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
         RESIN -> Resin.render(voice as ResinVoice, macros)
+        TIDE -> Tide.render(voice as TideVoice, macros)
         GLINT -> Glint.render(voice as GlintVoice, macros)
     }
 
@@ -1065,6 +1678,7 @@ private enum class Engine {
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
         FATHOM -> (voice as FathomVoice).drumClass
         RESIN -> (voice as ResinVoice).drumClass
+        TIDE -> (voice as TideVoice).drumClass
         GLINT -> (voice as GlintVoice).drumClass
     }
 
@@ -1078,6 +1692,7 @@ private enum class Engine {
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
         RESIN -> ResinPatch(name, voice as ResinVoice, macros)
+        TIDE -> TidePatch(name, voice as TideVoice, macros)
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
     }
 
@@ -1100,10 +1715,10 @@ private enum class Engine {
 // keyboard laser/game hit reads as a percussive one-shot, not a pitched
 // note). VELVET/VOX/PLUCK/TONEWHEEL are silent in SynthKits.kt about most of
 // their own voices — but every voice from these four engines SynthKits DOES
-// render (VELVET's CHIP, VOX's CHOIR/ROBOT/GHOST, PLUCK's NYLON/KALIMBA/
-// HARP, TONEWHEEL's SOUL/STAB/FULL) is classified TONAL there, and every
+// render (VELVET's CHIP, VOX's CHOIR/ROBOT/GHOST, PLUCK's NYLON/HARP,
+// TONEWHEEL's SOUL/STAB/FULL) is classified TONAL there, and every
 // remaining voice in these four engines is likewise a pitched note (VELVET's
-// BASS/BRASS/SQUELCH, PLUCK's KOTO) — so per the brief's fallback rule
+// BASS/BRASS/SQUELCH, PLUCK's KOTO/BANJO) — so per the brief's fallback rule
 // ("tonal-pitched voices -> TONAL, percussive -> PERC"), all four engines
 // are TONAL across the board. RESIN's three voices (BASS/LEAD/BRASS) are
 // pitched notes through a filter, never judged from a render (ResinPresetsTest
@@ -1155,7 +1770,7 @@ private val SkinVoice.drumClass: DrumClass
 
 private val TinesVoice.drumClass: DrumClass
     get() = when (this) {
-        TinesVoice.BELL, TinesVoice.CHIME -> DrumClass.TONAL
+        TinesVoice.BELL, TinesVoice.CHIME, TinesVoice.KALIMBA -> DrumClass.TONAL
         TinesVoice.BLOCK, TinesVoice.ZAP, TinesVoice.TOY -> DrumClass.PERC
     }
 
@@ -1175,6 +1790,17 @@ private val FathomVoice.drumClass: DrumClass
 // take above, never judged from a render (ResinPresetsTest says why).
 private val ResinVoice.drumClass: DrumClass
     get() = DrumClass.TONAL
+
+// TIDE splits. BONGO and DRIP are FATHOM's rule, a real classifier
+// judgment: `TidePresetsTest` holds their defaults to PERC and at least 8
+// of each voice's 10 presets with them. GONG and FLARE are RESIN's rule:
+// pitched notes that DECAY can hold, which the classifier reads as PERC,
+// SNARE or LOOP depending on length alone, so they are TONAL by design.
+private val TideVoice.drumClass: DrumClass
+    get() = when (this) {
+        TideVoice.BONGO, TideVoice.DRIP -> DrumClass.PERC
+        TideVoice.GONG, TideVoice.FLARE -> DrumClass.TONAL
+    }
 
 // GLINT's voices are pitched notes with a formant on them — the same
 // "tonal-pitched voices -> TONAL" fallback VELVET/VOX/PLUCK/TONEWHEEL/RESIN

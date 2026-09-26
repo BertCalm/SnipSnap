@@ -6,7 +6,7 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, nine
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, ten
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
 play). No Android layer yet.
@@ -224,6 +224,47 @@ amount and speed together; CREAM is the feedback. BASS, LEAD, BRASS.
 CONTOUR is also a rack section — the same filter swept from a captured
 hit's onset — because the synth's job is to sit with what was captured.
 
+RESIN also holds. `MAKE INSTRUMENT ▸` on SYNTH (and `snipsnap synth RESIN
+<VOICE> --instrument` on the desk) renders the sound as a nine-zone keys
+instrument that sounds for as long as a key is down, with its own ATTACK
+and RELEASE: the Organ's whole-period loop, generalized. The detuned square
+is snapped so each loop holds exactly one beat, and the pitch moves by a
+fraction of a cent so the loop is whole frames, so every seam measures at
+floating-point noise. Held, CREAM stops at the self-oscillation threshold,
+the one place a loop cannot close.
+
+RESIN also drones. `DRONE TO LOOP ▸` on SYNTH (and `snipsnap synth RESIN
+<VOICE> --drone` on the desk) puts one long note on the next empty loop-grid
+track, breathing through the ladder (MOTION, up to ±2 octaves, 1, 2 or 4
+BREATHS per loop). The track holds a recipe, not audio: LOOP renders it at
+its own tempo, spanning as many intervals as it takes to keep the note
+within 3 cents, with every oscillator and every breath completing whole
+cycles in the loop, so the wrap repeats to the bit. A tempo change re-slices
+and re-renders it, and a drone still rendering is silence on its own track,
+never a stall on the other five.
+
+TIDE is the West Coast engine, S9 of the roadmap, and RESIN's opposite:
+where the ladder cuts harmonics out of a rich wave, TIDE builds them into a
+plain one. A sine is phase-modulated (WARP — phase, not frequency, so the
+note never moves), bent through a wavefolder (FOLD — a triangle core into a
+sine shaper, so FOLD 0 is a clean sine and each unit of drive adds a fold),
+and closed by a low-pass gate: one control on a VCA and a low-pass
+together, keyed to the note and slowing as it falls, so brightness and
+level close at once. That coupling is the "bongo"; GLOW sets how much
+brightness outlives the level, from the classic dark knock to a tail that
+keeps its harmonics. Past the line of tidy, the edge is built in: the
+modulator dives into place in the strike (a zap), the fold feeds back into
+the modulator (a snarl, held short of noise), the fold's symmetry turns
+over across the note, and small seeded jitters keep a held note moving.
+Under it all sits the oomph: every strike thumps (it starts sharp and
+drops onto the note in a few milliseconds) and a clean sine carries the
+note itself under the fold.
+WANDER nudges fold, decay and WARP per note from a seed the recipe itself
+carries, so a kit still regenerates to the bit.
+BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG
+and FLARE a long DECAY holds the gate open first, so they are notes, and
+TONAL.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -231,8 +272,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — nine engines in the `Engine` picker
-counting SKIN and RESIN; GRAINS is a tenth thing entirely, out of the
+VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
+counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
 instead of picking one. VOX is three-formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
@@ -243,7 +284,7 @@ snapped PITCH, SHINE), deterministic per seed, honest enough that a
 texture classifies as the LOOP it is. `SynthKits.cloud()` is the
 atmosphere kit both of them make together.
 
-SNAP is the tenth thing, and the other half of the name: a photo becomes
+SNAP is the twelfth thing, and the other half of the name: a photo becomes
 a pad. A picture is already mathematical data — three numbers per pixel —
 so the engine only decides which numbers to read and in what order. One
 line through the photo is one cycle of a wavetable (HORIZON reads across,

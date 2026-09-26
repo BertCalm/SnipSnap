@@ -1,8 +1,11 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Loudness
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
@@ -123,6 +126,137 @@ object Keys {
     }
 
     const val HARP_LOW_MIDI = 52
+
+    // ---------- RESIN, held ----------
+    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md
+
+    /** The nine RESIN pad zones: every minor third across the voice's TUNE range (A1–A3, A2–A4, A3–A5). */
+    fun resinPadMidis(voice: ResinVoice): List<Int> {
+        val root = Scales.hzToMidi(Resin.frequencyFor(voice, 0f)).roundToInt()
+        return (0..Resin.TUNE_SEMITONES step 3).map { root + it }
+    }
+
+    /**
+     * Seconds the ladder is given to settle after the attack before the loop
+     * may start. The spec's worst measured seam at this settle was 7.1e-5,
+     * fourteen times under the bar.
+     */
+    const val RESIN_PAD_SETTLE_SECONDS = 1.5f
+
+    /** The Organ's bar: difference energy across the wrap over signal energy. */
+    const val MAX_SEAM_ERROR = 1e-3
+
+    internal data class LoopPlan(val loopFrames: Int, val baseHz: Double, val squareRatio: Double?, val k: Int)
+
+    /**
+     * The loop's length, the exact pitch that fills it, and the square's
+     * ratio if it sounds.
+     *
+     * The loop is K periods of the sub-octave saw. With the square silent, K
+     * is whatever fits in about half a second (the Organ's length). With it
+     * sounding, K comes straight from the detune STACK asks for, and the
+     * square's ratio is exactly 1 + 1/(2K): it completes 2K + 1 cycles, one
+     * whole beat per loop.
+     *
+     * K periods of the true pitch almost never land on a whole frame, and a
+     * fraction of a frame left over is audible in the seam of a bright zone
+     * (measured: residues of 0.03-0.07 frames put LEAD at CUTOFF 1 at
+     * 2e-4..6.5e-4 against 1e-10 where the residue was zero). So the loop is
+     * rounded to whole frames and the pitch moves to fit it - by at most half
+     * a frame over the loop, 0.14 cents at the shortest (A5), far below
+     * hearing and the keygroup's own tuning.
+     */
+    internal fun planLoop(noteHz: Float, stack: Float): LoopPlan {
+        val g3 = Resin.stackGains(stack).second
+        val k = if (g3 <= 0f) {
+            (0.5 * noteHz / 2.0).roundToInt().coerceAtLeast(10)
+        } else {
+            val cents = Dsp.lin(stack, 3f, 14f)
+            (1.0 / (2.0 * (2.0.pow(cents / 1200.0) - 1.0))).roundToInt()
+        }
+        val loopFrames = Math.round(k * 2.0 * RATE / noteHz).toInt()
+        val baseHz = k * 2.0 * RATE / loopFrames
+        return LoopPlan(loopFrames, baseHz, if (g3 <= 0f) null else 1.0 + 1.0 / (2.0 * k), k)
+    }
+
+    /**
+     * InstrumentSuiteTest's seam metric: over the 256 frames before
+     * [loopStart], the energy of the difference between what plays before the
+     * wrap and what plays after it, over the signal's own energy. The loop
+     * runs from [loopStart] to the end of [s].
+     */
+    fun seamError(s: FloatArray, loopStart: Int): Double {
+        val loopLen = s.size - loopStart
+        require(loopStart >= 256 && loopLen > 0) { "no room to measure a seam: start $loopStart, loop $loopLen" }
+        var diff = 0.0
+        var level = 0.0
+        for (i in loopStart - 256 until loopStart) {
+            val d = s[i + loopLen] - s[i].toDouble()
+            diff += d * d
+            level += s[i].toDouble() * s[i]
+        }
+        return diff / level
+    }
+
+    internal fun requireSeam(label: String, s: FloatArray, loopStart: Int) {
+        val e = seamError(s, loopStart)
+        require(e < MAX_SEAM_ERROR) {
+            "$label: the loop does not close (seam %.2e, bar %.0e)".format(java.util.Locale.ROOT, e, MAX_SEAM_ERROR)
+        }
+    }
+
+    /**
+     * RESIN held down - one pad zone at exact MIDI pitch, cut at a seam that
+     * is a whole number of every waveform's cycles. TUNE is set by [midi];
+     * the rest of [macros] plays as it does in the one-shot, except CREAM,
+     * which stops at the self-oscillation threshold ([Resin.HELD_MAX_RESONANCE]).
+     * [cancelled] stops the render part-way (a CancellationException, which
+     * the retry below lets through).
+     */
+    fun resinPad(
+        voice: ResinVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        attackSeconds: Float,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
+        val low = resinPadMidis(voice).first()
+        val semis = midi - low
+        require(semis in 0..Resin.TUNE_SEMITONES) {
+            "$voice pads are MIDI $low..${low + Resin.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Resin.defaults(voice)
+        val m = defaults + macros.filterKeys { it in defaults } + ("TUNE" to semis / Resin.TUNE_SEMITONES.toFloat())
+        val base = Resin.frequencyFor(voice, m.getValue("TUNE"))
+        val plan = planLoop(base, m.getValue("STACK"))
+        val label = "$voice ${Scales.nameOf(midi)}"
+
+        fun cut(settle: Float): KeyNote {
+            val loopStart = ((attackSeconds + settle) * RATE).roundToInt()
+            val end = loopStart + plan.loopFrames
+            // A quarter second past the cut, so the decimator's edge never reaches it.
+            val held = Resin.Held(attackSeconds, end.toFloat() / RATE + 0.25f, plan.squareRatio, plan.baseHz)
+            val s = Resin.renderHeld(voice, m, held, cancelled).samples.copyOf(end)
+            requireSeam(label, s, loopStart)
+            // Loud where it is held: the loop, not the attack, sets the level
+            // (spec decision 10). RESIN's per-voice loudness offsets are all
+            // zero today; if they move, this target should carry them too.
+            val loud = Loudness.of(Snip(s.copyOfRange(loopStart, end), channels = 1, sampleRate = RATE))
+            if (loud > 1e-6f) {
+                val g = Dsp.MELODIC_LOUDNESS_TARGET / loud
+                for (i in s.indices) s[i] *= g
+            }
+            Dsp.limitPeak(s, 0.99f)
+            return KeyNote(Snip(s, channels = 1, sampleRate = RATE), loopStartFrame = loopStart.toLong())
+        }
+        // One retry with twice the settle; the measurements say it never fires.
+        // A second failure propagates, naming the zone - never a crossfade.
+        return try {
+            cut(RESIN_PAD_SETTLE_SECONDS)
+        } catch (e: IllegalArgumentException) {
+            cut(RESIN_PAD_SETTLE_SECONDS * 2f)
+        }
+    }
 
     /**
      * Music box — the TINES chime recipe held to exact pitch: an

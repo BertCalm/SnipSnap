@@ -2,6 +2,7 @@ package com.snipsnap.loop
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.kit.Names
 import java.io.ByteArrayOutputStream
@@ -203,6 +204,22 @@ object SessionBuilder {
         if (cut < 0) return base
         val suffix = base.substring(cut + 1)
         return if (suffix.isNotEmpty() && suffix.all(Char::isDigit)) base.substring(0, cut) else base
+    }
+
+    /**
+     * Hand [trackIndex] a drone: [recipe] on [rootMidi], sliced over the
+     * span [DroneFit] says keeps it in tune at this tempo. Nothing is
+     * written but the arrangement; the audio exists only at bake time, from
+     * whatever renderer the [SampleSource] was given.
+     */
+    fun sendDrone(session: Session, trackIndex: Int, name: String, recipe: JsonValue, rootMidi: Int): Session {
+        require(trackIndex in session.tracks.indices) {
+            "track $trackIndex is outside a ${session.tracks.size}-track session"
+        }
+        val span = DroneFit.spanFor(rootMidi, session)
+        val tracks = session.tracks.toMutableList()
+        tracks[trackIndex] = Track(name = name, chain = DroneFit.slices(recipe, rootMidi, span), engaged = true)
+        return session.copy(tracks = tracks.toList())
     }
 
     /**

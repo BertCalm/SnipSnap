@@ -178,7 +178,7 @@ object Velocity {
 
     /**
      * [patch]'s own macro specs, straight from the engine that owns its
-     * voice — an exhaustive `when` over [Patch]'s nine sealed subtypes, the
+     * voice — an exhaustive `when` over [Patch]'s ten sealed subtypes, the
      * same shape `Patches.fromJsonValue` already dispatches on by engine
      * string. This is deliberately **not** `patch.macros.keys`: a `Patch`
      * carrying a partial macro map (a hand-built one, or one rebuilt from a
@@ -206,6 +206,7 @@ object Velocity {
         is VelvetPatch -> Velvet.macrosFor(patch.voice)
         is FathomPatch -> Fathom.macrosFor(patch.voice)
         is ResinPatch -> Resin.macrosFor(patch.voice)
+        is TidePatch -> Tide.macrosFor(patch.voice)
         is TonewheelPatch -> Tonewheel.macrosFor(patch.voice)
         is VoxPatch -> Vox.macrosFor(patch.voice)
         is SkinPatch -> Skin.macrosFor(patch.voice)
@@ -215,8 +216,8 @@ object Velocity {
 
     /**
      * Per-voice override of [brightnessSpec]'s answer, checked before the
-     * generic [BRIGHTNESS_MACROS] scan. THUMP SNARE is the only entry - see
-     * [SNARE_TONE_EXCLUDED] for the measurement backing it.
+     * generic [BRIGHTNESS_MACROS] scan. THUMP SNARE and PLUCK are the
+     * entries - see [SNARE_TONE_EXCLUDED] for the measurement backing it.
      *
      * This exists *instead of* adding "SNAP" to [BRIGHTNESS_MACROS]
      * outright, on purpose: SKIN SNARE (`SkinVoice.SNARE`) exposes its own,
@@ -230,8 +231,13 @@ object Velocity {
      * it stays on [soften] until someone runs SKIN's own sweep and adds its
      * own override line.
      */
-    private fun brightnessOverride(patch: Patch): String? =
-        if (patch is ThumpPatch && patch.voice == ThumpVoice.SNARE) "SNAP" else null
+    private fun brightnessOverride(patch: Patch): String? = when {
+        patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
+        // PICK is proven monotonic for every PLUCK voice by PluckTest's
+        // `PICK moves the centroid at every step of its travel`.
+        patch is PluckPatch -> "PICK"
+        else -> null
+    }
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -428,5 +434,16 @@ object Velocity {
      * rather than a [brightnessOverride]: no other engine exposes a macro
      * named PEAK, so there is no name collision to scope around.
      */
-    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC", "PEAK")
+    //
+    // FOLD is TIDE's: the folder's drive at the strike, which adds partials
+    // and nothing else (`TideTest`'s FOLD sweep holds the centroid rising
+    // for every voice), so a soft TIDE strike folds less, as a soft strike
+    // should. No other engine has a macro by that name.
+    //
+    // FOLD and PEAK arrived from two branches at once and neither collides
+    // with the other: TIDE exposes no PEAK, GLINT exposes no FOLD, and each
+    // earned its place on its own measured sweep. Order between them is
+    // immaterial — no patch carries both names — so the base's entry keeps
+    // its position and PEAK follows.
+    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC", "FOLD", "PEAK")
 }

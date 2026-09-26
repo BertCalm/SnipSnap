@@ -100,15 +100,18 @@ noise burst ──(PICK low-pass)──(STRIKE comb)──▶ Karplus-Strong loo
 - **EXCITE.** The burst is unchanged: one loop period of seeded noise
   through a one-pole at the PICK frequency, zero-meaned. STRIKE adds the
   Jaffe–Smith pick-position comb *to the burst*, `e[i] = x[i] − x[i − d]`
-  with `d = round(p · N)`, where `N` is the integer loop length and `p` the
-  fractional position along the string. The comb lengthens the exciter to
-  `N + d` samples; those extra samples enter the loop as input, not initial
-  state, which the loop's `out[i] += fb · lp(tuned)` form already supports
-  (the spike proved this against the shipped engine: with `d = 0` it
-  reproduced `Pluck.render` bit-for-bit). The comb's notches fall at every
-  harmonic `k` where `k · p` is an integer: at `p = 0.5` the even harmonics
-  vanish (hollow), and as `p → 0` the comb approaches a differentiator
-  (thin, bright, low harmonics cut).
+  with `d = round(p · rate / f0)`, the string's physical period in samples,
+  and `p` the fractional position along the string. The integer delay-line
+  length `N` is shorter than that period by the loop's allpass, filter lag
+  and two-tap average (Phase 0b's tuning budget), so a comb cut to `N`
+  instead puts its notches 1–3% off the true harmonics. The comb lengthens
+  the exciter to `N + d` samples; those extra samples enter the loop as
+  input, not initial state, which the loop's `out[i] += fb · lp(tuned)` form
+  already supports (the spike proved this against the shipped engine: with
+  `d = 0` it reproduced `Pluck.render` bit-for-bit). The comb's notches fall
+  at every harmonic `k` where `k · p` is an integer: at `p = 0.5` the even
+  harmonics vanish (hollow), and as `p → 0` the comb approaches a
+  differentiator (thin, bright, low harmonics cut).
 - **The loop** is untouched. Its tuning budget — integer delay, fractional
   allpass, the loop filter's phase lag and the two-tap average — is the
   work of Phase 0b and the comb does not enter it: the comb sits before the
@@ -141,13 +144,13 @@ voice row, a body table, twelve presets.
 - **Constants:** root G3 (196 Hz, the open-G tonal centre), loop cutoff
   5600 Hz (brighter than HARP: a steel string over a taut head), exciter
   range 2000–10000 Hz.
-- **Body:** the MEMBRANE ratios `1 : 1.593 : 2.135 : 2.295 : 2.917` on a head
-  fundamental in the low-to-mid hundreds of Hz, plus one pot air mode near
-  150 Hz. Sourced in `body-research.md` before it lands (Rae & Rossing on
-  banjo acoustics; Politzer's head-and-bridge papers); working head
-  fundamental 310 Hz. Head modes are damped hard by the bridge and the
-  player's arm, so their t60s are short (≤ 0.15 s), which is also what
-  keeps the head from ringing a knock.
+- **Body:** the sourced table (`body-research.md` §5.4; Rae 2010,
+  Politzer 2016, Politzer/Woodhouse/Mansour 2021), not the MEMBRANE ratios
+  on a 310 Hz head this section proposed before the sourcing pass replaced
+  it: pot air 220 Hz, head modes 234/509/803/1593/2055 Hz, a pot cylinder
+  mode 850 Hz, and bridge hills near 3500 and 5000 Hz on one bridge. Only
+  the head's (0,1) mode carries a measured decay — a 20–30 Hz bandwidth —
+  everything else in the table is a shape for the gate.
 - **Defaults, placeholders for the gate:** DAMP 0.5 (banjo notes are short),
   PICK 0.7, STRIKE 0.4 (fingerpicks close to the bridge, `p ≈ 0.09`),
   BODY 0.6 (a banjo is mostly its head), DOUBLE 0.1.
@@ -251,9 +254,13 @@ sonic one; the gate can move it.
 
 **Per-voice defaults are placeholders until the gate**, and are written as
 such in code (a table with a comment naming this document), the way
-`LOUDNESS_OFFSET` already is. Starting values from the chips: BODY HARP 0.4,
-KOTO 0.35, NYLON 0.5; STRIKE 0.75 on every voice except KOTO at 0.6 (a koto
-is played with a pick near the bridge). BANJO's are in its own section.
+`LOUDNESS_OFFSET` already is. The chips asked for BODY HARP 0.4, KOTO 0.35,
+NYLON 0.5; the five-cent tuning sweep at the default body would not accept
+them (the sourced bodies sit nearer the notes than the spike's guessed ones),
+so the shipped defaults are NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15 —
+0.3–0.45× the string — and the gate can push them up as far as that sweep
+allows. STRIKE 0.75 on every voice except KOTO at 0.6 (a koto is played with
+a pick near the bridge). BANJO's are in its own section.
 KALIMBA has no body default and no STRIKE tuning effort: it leaves PLUCK in
 Phase 2.
 
@@ -271,20 +278,31 @@ the audition could happen before the sourcing work. Phase 2's first task
 writes `body-research.md` in the plan workspace with citations for each
 voice before any Hz reaches `Pluck.kt`:
 
-| Voice | Body | What the literature gives | Working values the plan must confirm or replace |
+> **Sourced 2026-09-25.** The research is in
+> [`../plans/2026-09-25-pluck-depth-body-research.md`](../plans/2026-09-25-pluck-depth-body-research.md):
+> a researcher per instrument, a verifier per instrument opening every cited
+> source, and only confirmed rows reaching code. The spike's guessed Hz that
+> an earlier draft of this table carried are gone; the table below is what
+> the sources gave. Decays are "measured" only where a source gave a Q or a
+> bandwidth; the rest are shapes for the audition.
+
+| Voice | Body | What the sources give | In code (research note section) |
 |---|---|---|---|
-| NYLON | classical guitar | the air resonance A0 near 100 Hz, the top-plate T1 near 200 Hz, the back-coupled T2 near 250 Hz, then plate modes; Q of order 20–50 (Fletcher & Rossing, the guitar chapter) | 98, 195, 250, 410, 560, 780, 1200, 2400 Hz |
-| KOTO | paulownia box, ~1.8 m | body resonances measured on the instrument; the literature is thinner (Ando's koto studies are the starting point) | 140, 205, 310, 470, 690, 1050, 1600 Hz |
-| HARP | spruce soundboard | a dense soundboard series from roughly 100 Hz up (Waltham & Kotlicki on the concert harp) | 110, 165, 240, 330, 450, 600, 820, 1100, 1500 Hz |
-| BANJO | drumhead over a pot | the head's modes are the circular membrane's, at a fundamental set by head tension; the pot adds an air mode (Rae & Rossing; Politzer) | MEMBRANE ratios on 310 Hz: 310, 494, 662, 711, 904 Hz; pot air 150 Hz |
+| NYLON | classical guitar | A0 air resonance 104 Hz (Q 29), the Helmholtz antiresonance at 127 Hz as a notch, T1 top plate 219 Hz (Q 25.8), T2 dipole 286 Hz, plate modes 436, 510, 645 Hz, a higher air mode 370 Hz — Christensen & Vistisen 1980, Jansson 2002, Su et al. 2024 | seven modes, 5.1; the antiresonance is left out |
+| KOTO | paulownia box, ~1.8 m | the (0,0) air mode at 85 Hz and the first plate mode at 100 Hz, confirmed in Coaldrake's ICA 2019 paper and the abstract of the 2020 JASA paper; the 2020 paper's fuller catalogue (157, 184, 202, 352 Hz) is unreachable behind a paywall and stays unsupported | two modes, 5.2; the rest wait for the paper |
+| HARP | soundbox and soundboard | one instrument (Le Carrou, Gautier & Foltête 2007): global 54.8 Hz, bending 80.9 and 123.4 Hz, T1 152.2 Hz, A0 168.5 Hz; the 161.9 Hz pitch mode is excluded by the source; damping given as percentages of an unstated convention, so no measured decay | five modes, 5.3 |
+| BANJO | Mylar head over a pot | pot air 220 Hz (a coupled doublet), head (0,1) 234 Hz with a 20–30 Hz bandwidth, head (1,1) 509, (2,1) 803, (5,1) 1593, (7,1) 2055 Hz, a pot cylinder mode 850 Hz, bridge hills near 3.5 and 5 kHz on one bridge — Rae 2010, Politzer 2016, Politzer, Woodhouse & Mansour 2021 | nine modes, 5.4 |
 
 **Decays.** The knock fix has two halves. The first difference drive is
-one. The other is that a body's lowest modes have moderate Q: the spike gave
-the guitar's A0 a 0.45 s t60 (Q ≈ 20, which is physically reasonable) and
-still knocked, because the drive was wrong; with the drive fixed, the
-lowest mode's t60 is bounded at 0.3 s and the rest follow `Modes.body()`'s
-shape, and the gate decides whether the residual thump — which a real
-guitar does have on a hard pluck — is character or defect.
+one. The other is the table's own decays, and there is no single bound
+across them: a measured Q wins where a source gives one — NYLON's A0 at
+0.61 s and T1 at 0.26 s, BANJO's head (0,1) at 0.09 s. HARP's five decays
+are the source's damping percentages read as a damping ratio ζ
+(t60 = 2.2·Q/f, Q = 1/(2ζ)) — the source never disambiguates ζ from a
+loss factor η, which would double them. Everything else in every table is
+a shape for the gate to tune by ear, including whether the residual
+thump on a hard pluck — which a real guitar does have — reads as
+character or defect.
 
 **Level.** The body layer is RMS-matched to the string over the whole
 render before the macro scales it. `Modes.ring`'s KDoc explains why its raw
@@ -329,6 +347,11 @@ left.
   `PluckVoice.entries` and finds nothing. Pre-launch, accepted (decision 1).
   `SynthKits.melodic()`'s five kalimba pads (A07–A11) are re-pointed at the
   TINES voice at the same pentatonic notes, so the kit keeps its layout.
+  Nothing crashes or is lost from an undecodable pad recipe already on a
+  device: `UserPresets.parseStore` keeps such an entry unread rather than
+  failing the whole store, `Breed.recipeOf` returns null for it so the pad
+  simply plays as captured audio, and `RecipeReplay` refuses replaying it
+  with its own no-door message.
 - `SCRAMBLE` (`Pluck.scramble`) works over the six macros with no change.
 - Export is untouched: mono WAVs through `Cleanup`, `WavWriter`, `Preflight`.
 - `PadRecipe.VERSION` is not bumped: old recipes decode and replay with
@@ -377,10 +400,15 @@ in `PluckTest` unless named otherwise, and every threshold below is a
 starting number the plan may tighten after the gate, never loosen without
 saying why.
 
-- **Tuning** — `TuningAccuracyTest`'s `every Pluck semitone lands within
-  five cents` keeps passing at defaults **and** with STRIKE and BODY at both
-  extremes: neither the comb nor a fixed body moves the fundamental. In
-  Phase 3 it also covers the tine.
+- **Tuning** — three `TuningAccuracyTest` sweeps over every voice and all
+  25 notes: `every Pluck semitone lands within five cents at the default
+  body` (the shipped defaults), `STRIKE at either end keeps every Pluck
+  voice within five cents` (the comb does not move the fundamental), and
+  `BODY at its ugly end keeps every note inside a quarter tone, and names
+  the ones it pulls` (BODY 1: a 50-cent bound asserted, every note over five
+  cents printed for the gate — a fixed body near the note can pull a
+  Karplus-Strong loop, and the gate hears the list). In Phase 3 the first
+  sweep also covers the tine.
 - **STRIKE reach** — at the bridge, the fundamental's share of energy
   against harmonics 2–4 is lower than at the centre for every voice; at the
   centre, the second harmonic sits at least 20 dB below where the bridge
@@ -402,18 +430,27 @@ saying why.
   stage bypassed.
 - **BODY carries its share** — at BODY 1 the RMS of (render − string) over
   the RMS of the string is within ±20 % of the macro's mapped amount.
-- **No knock** — in the first 30 ms of a BODY 1 render, energy below 200 Hz
-  is no more than 1.5× that of the BODY 0 render; the first-difference drive
-  is what makes this pass.
+- **No knock** — relative, not absolute: `PluckTest`'s `the velocity drive
+  knocks no more than driving the body with the string itself` builds the
+  wet layer alone (`out − string`) two ways, once with the body driven by
+  the string's first difference and once by the string's raw displacement,
+  and pins that the velocity drive's sub-200 Hz onset energy is no higher
+  than the displacement drive's on the same voice. It also prints, per
+  voice, the sub-200 Hz onset ratio of a real BODY 1 render over a real
+  BODY 0 render, for the gate to read. An absolute sub-200 Hz bound
+  (BODY 1 against BODY 0) is unattainable for HARP and KOTO: every sourced
+  mode in both voices' tables already sits under 200 Hz, so their whole
+  body layer is sub-200 Hz content by construction, and no fixed ratio
+  against a body-free render could ever pass.
 - **Body tables are sane** — every row below 20 kHz, ascending, with
   positive gain and t60; the table's source is named in a KDoc that the
   test does not check but the reviewer does.
 - **BANJO (Phase 2)** joins every per-voice test through
-  `PluckVoice.entries`, including the five-cent tuning bound. Its head's
-  fundamental sits inside the no-knock test's sub-200 Hz band only through
-  the pot air mode, so that test's ratio is measured against BANJO's own
-  BODY 0 render like every other voice's; whether a head thump is banjo or
-  defect is the gate's call.
+  `PluckVoice.entries`, including the five-cent tuning bound. Its own
+  no-knock ratio is measured the same relative way as every other voice's
+  - velocity drive against displacement drive on its own wet layer - not
+  against a BODY 0 render; whether its head resonance still reads as a
+  knock at BODY 1 is the gate's call, not this test's.
 - **Determinism** — `is deterministic` stays; seeds change value, not
   behaviour.
 - **Presets** — `PluckPresetsTest` unchanged: clean, non-silent, round-trip,
@@ -426,7 +463,7 @@ saying why.
   existing BRIGHT velocity path is proven for the new voice; `is
   deterministic`. In `TinesPresetsTest`: the voice's twelve presets render
   clean and pass the name rules.
-- **KALIMBA removal (Phase 2)** — `PluckVoice.entries` has three members;
+- **KALIMBA removal (Phase 2)** — `PluckVoice.entries` has four members;
   `SynthKits.melodic()` still lands sixteen pads with A07–A11 on TINES; the
   kit's pads still classify as they did; decoding a saved `PLUCK/KALIMBA`
   patch fails loudly (`UserPresetsTest` names the voice list it expects).
@@ -474,6 +511,14 @@ the sections above already reflect the answers.
    banjo in Phase 2 — a string into the membrane table that already
    exists, no new DSP — and SITAR in Phase 3, where its jawari bridge and
    the sympathetic strings are built together.
+
+## Phase 1 gate — 2026-09-25, evening
+
+Josh auditioned the Phase 1 set (PR #335) from the listening page and gave
+the verdict in words rather than chips: "everything sounds right". Asked
+which kalimba read as the instrument, he answered **TINES wins**. Phase 2
+therefore proceeds as written: PLUCK's KALIMBA, its presets and its melodic
+kit pads go, BANJO takes the slot, and BODY arrives on the string voices.
 
 ## Appendix — the spike
 

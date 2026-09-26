@@ -48,6 +48,14 @@ class Residency(
     initial: Session,
     private val source: SampleSource,
     private val executor: Executor,
+    /**
+     * Where drones render, apart from [executor]. A drone takes seconds;
+     * on the shared pool (two threads in LOOP) two of them would hold every
+     * thread, the other tracks' bakes would queue behind them, and the
+     * engine would bake those on the audio thread after all. Defaults to
+     * [executor] for callers with nothing to separate (tests, one-offs).
+     */
+    private val droneExecutor: Executor = executor,
 ) {
 
     /** A block stamped with the interval length it was baked for. */
@@ -83,9 +91,79 @@ class Residency(
         return s.tracks.map { track ->
             val block = Arrangement.blockAt(track, interval)
             val key = CacheKey(block, s.intervalFrames)
-            baked.getOrPut(key) { BlockBaker.bake(block, s, source) }
+            if (block is DroneBlock) {
+                // A drone is seconds of render, not tens of milliseconds
+                // (docs/superpowers/specs/2026-09-25-resin-drone-design.md,
+                // probe finding 3). Baked here it would stall every track on
+                // the audio thread, so a drone that isn't ready is one
+                // interval of silence on its own track, and comes in at the
+                // first interval after its render lands. Not cached: the
+                // next call must look again.
+                baked[key] ?: run {
+                    bakeDroneLater(key, s)
+                    silenceFor(s)
+                }
+            } else {
+                baked.getOrPut(key) { BlockBaker.bake(block, s, source) }
+            }
         }
     }
+
+    /** Drone keys with a bake submitted and not yet finished, so no drone is ever baked twice at once. */
+    private val droneBaking = ConcurrentHashMap.newKeySet<CacheKey>()
+
+    /** One silent interval, reused: the audio thread should not allocate a buffer per missing drone. */
+    private val silence = AtomicReference<Snip?>(null)
+
+    private fun silenceFor(s: Session): Snip {
+        val cached = silence.get()
+        if (cached != null && cached.frameCount == s.intervalFrames && cached.sampleRate == s.sampleRate) return cached
+        return BlockBaker.silence(s).also { silence.set(it) }
+    }
+
+    /**
+     * Submit a drone's bake unless one is already on its way. Same early-out
+     * as [prefetch]: a bake for a length nothing plays any more is skipped.
+     *
+     * And the same question asked *during* the render, which is the part a
+     * drone needs and a loop never did: a tempo change mid-render leaves
+     * seconds of work for a length the grid has left. The render asks
+     * [isLive] as it goes and stops. A bake that stopped is not cached:
+     * its silence says nothing about the drone, and the player may come
+     * back to that tempo.
+     */
+    private fun bakeDroneLater(key: CacheKey, s: Session, whenDone: () -> Unit = {}) {
+        if (!droneBaking.add(key)) {
+            whenDone()
+            return
+        }
+        try {
+            droneExecutor.execute {
+                try {
+                    if (isLive(s) && !baked.containsKey(key)) {
+                        var stopped = false
+                        val snip = BlockBaker.bake(key.block, s, source) {
+                            (!isLive(s)).also { if (it) stopped = true }
+                        }
+                        // Checked again at the end: a slice that waited on another
+                        // slice's render sees that render stop only as silence.
+                        if (!stopped && isLive(s)) baked.putIfAbsent(key, snip)
+                    }
+                } finally {
+                    droneBaking.remove(key)
+                    whenDone()
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            droneBaking.remove(key)
+            whenDone()
+        }
+    }
+
+
+    /** Whether a bake for [s]'s interval length is for the session playing or the one on its way in. */
+    private fun isLive(s: Session): Boolean =
+        s.intervalFrames == current.get().intervalFrames || s.intervalFrames == incoming.get()?.intervalFrames
 
     /** Bake what [interval] will need, on the executor. Returns immediately. */
     fun prefetch(interval: Int) {
@@ -94,6 +172,13 @@ class Residency(
             val block = Arrangement.blockAt(track, interval)
             val key = CacheKey(block, s.intervalFrames)
             if (baked.containsKey(key)) continue
+            if (key.block is DroneBlock) {
+                // A drone can take longer than an interval to render, and
+                // this runs every interval: without the in-flight check each
+                // boundary would start the same render again.
+                bakeDroneLater(key, s)
+                continue
+            }
             executor.execute {
                 // Cheap early-out for a session that's plainly gone stale
                 // before baking even starts. Not required for correctness —
@@ -154,6 +239,13 @@ class Residency(
 
         val done = CountDownLatch(wanted.size)
         for (key in wanted) {
+            if (key.block is DroneBlock) {
+                // Counted like any other bake, so the wait covers it when it
+                // is quick; when it isn't, the timeout still bounds the wait,
+                // and buffersFor plays silence on its track until it lands.
+                bakeDroneLater(key, session) { done.countDown() }
+                continue
+            }
             try {
                 executor.execute {
                     try {

@@ -24,13 +24,17 @@ an Android SDK is located** (`local.properties` `sdk.dir`, then
 content-filtered. There is a fourth suite outside Gradle entirely: the
 native audio engines, built with CMake under `app/src/main/cpp/test`.
 
-There is no `app/src/test` (nor `app/src/androidTest`), so **`:app` has no
-Kotlin test source set** — say the path, because `app/src/main/cpp/test`
-*does* exist and is a different thing entirely. Its Compose and ViewModel
-code is proved only by a compiler — `android-build` in CI, or
-`./gradlew :app:assembleDebug` on a machine with an SDK (`app/README.md` is
-worth reading: that tree was written by a session that could not compile
-it).
+There is no `app/src/test`, so **`:app` has no *host* Kotlin test source
+set** and `./gradlew test` proves nothing about its Kotlin. But
+`app/src/androidTest` **does** exist — five Compose UI suites, wired
+through `testInstrumentationRunner` and the `androidTestImplementation`
+block in `app/build.gradle.kts` — and it runs on a device, under the
+`emulator-tests` job described below. Say which path you mean:
+`app/src/main/cpp/test` is a third thing again. So `:app`'s Compose and
+ViewModel code is proved by a compiler — `android-build` in CI, or
+`./gradlew :app:assembleDebug` on a machine with an SDK (`app/README.md`
+is worth reading: that tree was written by a session that could not
+compile it) — plus that on-device suite, which no local JVM run touches.
 
 Its *native* half is a different story, and "no test source set" must not
 be read as "nothing under `app/` is tested": `app/src/main/cpp/test` holds

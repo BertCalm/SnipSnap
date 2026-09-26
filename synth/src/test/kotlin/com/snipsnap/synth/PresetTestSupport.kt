@@ -28,7 +28,9 @@ internal object PresetTestSupport {
         """(?i)(808|909|606|707|727|626|636|637|303)""" +
             """|roland|akai|yamaha|korg|native\s*instruments|elektron""" +
             """|linn(drum)?|oberheim|simmons|emu|e-mu|fairlight""" +
-            """|tr-?\d{3}|cr-?78|sp-?1200|sp-?12|dmx|acid""",
+            """|tr-?\d{3}|cr-?78|sp-?1200|sp-?12|dmx|acid""" +
+            // TIDE's style has makers too (docs/SYNTH_ROADMAP.md, S9).
+            """|buchla|serge|make\s*noise""",
     )
 
     /**

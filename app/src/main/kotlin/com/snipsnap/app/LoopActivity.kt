@@ -13,13 +13,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import java.io.File
+import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.KitSampleSource
 import com.snipsnap.loop.LoopEngine
 import com.snipsnap.loop.Residency
+import com.snipsnap.loop.SampleSource
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.DroneSource
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +81,15 @@ class LoopActivity : ComponentActivity() {
     private val bakers = Executors.newFixedThreadPool(2)
 
     /**
+     * Drones render here, one at a time, never on [bakers]. A drone is
+     * seconds of work: two on the shared pool would hold both its threads,
+     * every other track's bake would queue behind them, and the engine would
+     * bake those on the audio thread. One thread also caps what drones hold
+     * in flight to one render's worth of memory (tens of MB for the longest).
+     */
+    private val droneBaker = Executors.newSingleThreadExecutor()
+
+    /**
      * One thread, for writing the session back — not [bakers].
      *
      * Two reasons, and the second is the one that bit. A sidecar write is
@@ -99,8 +111,12 @@ class LoopActivity : ComponentActivity() {
      * the render pays a second copy of the whole session in memory to produce
      * exactly the same audio. It is safe to share: the cache is a
      * `ConcurrentHashMap` and both readers only ever read.
+     *
+     * Wrapped in a [DroneSource] so drones render, and render once for
+     * playback and BOUNCE alike: without it every drone on the grid is
+     * silence.
      */
-    private var source: KitSampleSource? = null
+    private var source: SampleSource? = null
 
     /**
      * Kept rather than left inside [start], because the tempo control needs
@@ -122,6 +138,10 @@ class LoopActivity : ComponentActivity() {
         // callback because nothing needs to.
         val loaded = runCatching { SessionStore.load(dir) }.getOrNull()
             ?.copy(sampleRate = rate)
+            // A drone's span depends on the interval in frames, and the rate
+            // just changed under it: re-slice so the tuning promise holds
+            // here too (see DroneFit.refit).
+            ?.let(DroneFit::refit)
         // Nothing sent yet, or a sidecar that will not parse? The two look
         // identical here (both `null`) and must not read the same on screen:
         // SEND A SNIP FROM SNIPS is false advice for the second, whose next
@@ -132,7 +152,7 @@ class LoopActivity : ComponentActivity() {
             Copy.LOOP_EMPTY
         }
 
-        val samples = KitSampleSource(dir)
+        val samples = DroneSource(KitSampleSource(dir))
         source = samples
 
         setContent {
@@ -222,7 +242,9 @@ class LoopActivity : ComponentActivity() {
                             // silently undo it. Only the tempo is ours to
                             // carry forward — everything else comes from
                             // whatever the grid is showing right now.
-                            val toWarm = (session ?: s).copy(bpm = targetBpm)
+                            // Refit, so a drone re-slices to the span this
+                            // tempo needs to stay within its tuning promise.
+                            val toWarm = DroneFit.refit((session ?: s).copy(bpm = targetBpm))
                             // Baked BEFORE it is applied, on the baker pool:
                             // a new BPM resizes the interval, and without this
                             // the engine's next buffersFor would bake six
@@ -236,12 +258,16 @@ class LoopActivity : ComponentActivity() {
                             // fixed for the shorter settle delay — applying
                             // `toWarm` here would just move the race, not
                             // close it.
-                            val toApply = (session ?: s).copy(bpm = targetBpm)
+                            val toApply = DroneFit.refit((session ?: s).copy(bpm = targetBpm))
                             engine?.apply(toApply)
+                            // The screen holds the refit too, or the next
+                            // mute (built from `session`) would hand the
+                            // engine the drone's old span back.
+                            session = toApply
                             // A tempo is an edit, so it is written — from the
                             // disk-backed copy, so this does not also save the
                             // mutes tapped beside it.
-                            val written = (onDisk ?: toApply).copy(bpm = targetBpm)
+                            val written = DroneFit.refit((onDisk ?: toApply).copy(bpm = targetBpm))
                             onDisk = written
                             persist(written, dir, Copy.LOOP_TEMPO_SET, Copy.LOOP_TEMPO_NOT_SAVED)
                         }
@@ -345,7 +371,7 @@ class LoopActivity : ComponentActivity() {
 
     private fun start(session: Session, dir: File) {
         val audioSink = AndroidAudioSink(session.sampleRate)
-        val res = Residency(session, source ?: KitSampleSource(dir), bakers)
+        val res = Residency(session, source ?: DroneSource(KitSampleSource(dir)), bakers, droneBaker)
         val loopEngine = LoopEngine(res, audioSink)
 
         sink = audioSink
@@ -397,6 +423,8 @@ class LoopActivity : ComponentActivity() {
         // comes back next launch and the shelf's count disagrees with the
         // screen they just left.
         bakers.shutdownNow()
+        // A drone render stops at the interrupt (ResinDrone checks it).
+        droneBaker.shutdownNow()
         writer.shutdown()
         writer.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)
         // Nothing to do for a bounce in flight: it is not this activity's
