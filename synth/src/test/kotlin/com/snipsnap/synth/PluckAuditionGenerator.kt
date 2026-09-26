@@ -7,11 +7,19 @@ import java.io.File
 import kotlin.math.abs
 
 /**
- * Renders the Phase 1 audition set of
+ * Renders the Phase 2 audition set of
  * docs/superpowers/specs/2026-09-25-pluck-depth-design.md under
- * testkit/pluck-audition/ (gitignored): 16-bit clips at one loudness (see
- * [level]), plus the listening page copied from the test resources. Run via
+ * testkit/pluck-audition/ (gitignored): BODY at 0, default and 1 for every
+ * string voice, BODY 1 again at the root note (where the body's modes sit
+ * nearest the note), STRIKE and DAMP at their ends with BODY held at the
+ * default, and the kit seam where the melodic kit hands from nylon to
+ * kalimba - 16-bit clips at one loudness (see [level]), plus the listening
+ * page copied from the test resources. Run via
  * `./gradlew :synth:generatePluckAudition`.
+ *
+ * The PLUCK-versus-TINES kalimba A/B was decided at the Phase 1 gate (TINES
+ * won, recorded in the spec) and is no longer rendered; its clips stay on
+ * the artifact.
  *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
@@ -23,47 +31,37 @@ object PluckAuditionGenerator {
     /** Quiet on purpose: low enough that no clip needs the peak guard. */
     private const val AUDITION_LEVEL = 0.03f
 
-    /** The melodic kit's five kalimba notes as semitones above A3 (A07..A11 in SynthKits.melodic). */
-    private val KIT_NOTES = listOf("C4" to 3, "D4" to 5, "E4" to 7, "G4" to 10, "A4" to 12)
-
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/pluck-audition")
         root.mkdirs()
         var count = 0
 
-        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+        for (voice in PluckVoice.entries) {
             val dir = File(root, voice.name)
-            val patch = PluckPatch("AUDITION", voice, Pluck.defaults(voice))
+            val defaults = Pluck.defaults(voice)
             fun write(name: String, snip: Snip) {
                 WavWriter.write(File(dir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
                 count++
             }
-            write("p1_default", Pluck.render(voice))
-            write("p1_strike_bridge", Pluck.render(voice, mapOf("STRIKE" to 0f)))
-            write("p1_strike_centre", Pluck.render(voice, mapOf("STRIKE" to 1f)))
-            write("p1_ring", Pluck.render(voice, mapOf("DAMP" to 0f)))
-            write("p1_thud", Pluck.render(voice, mapOf("DAMP" to 1f)))
-            write("p1_soft", Velocity.atVelocity(patch, 0.3f))
-            write("p1_hard", Velocity.atVelocity(patch, 1f))
+            write("p2_body_0", Pluck.render(voice, mapOf("BODY" to 0f)))
+            write("p2_body_default", Pluck.render(voice))
+            write("p2_body_1", Pluck.render(voice, mapOf("BODY" to 1f)))
+            write("p2_body_1_root", Pluck.render(voice, mapOf("TUNE" to 0f, "BODY" to 1f)))
+            write("p2_body_default_strike_bridge", Pluck.render(voice, mapOf("STRIKE" to 0f)))
+            write("p2_body_default_ring", Pluck.render(voice, mapOf("DAMP" to 0f)))
+            write("p2_body_default_thud", Pluck.render(voice, mapOf("DAMP" to 1f)))
+            println("${voice.name}: BODY default ${defaults.getValue("BODY")}")
         }
 
-        val ab = File(root, "KALIMBA_AB")
-        fun writeAb(name: String, snip: Snip) {
-            WavWriter.write(File(ab, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
+        // The kit seam: where the melodic kit hands from nylon to kalimba,
+        // now across two engines. Pads 5-8 of SynthKits.melodic().
+        val seam = File(root, "KIT_SEAM")
+        val kit = SynthKits.melodic()
+        for ((index, name) in listOf(4 to "a05_nylon_5", 5 to "a06_nylon_6", 6 to "a07_kalimba_1", 7 to "a08_kalimba_2")) {
+            WavWriter.write(File(seam, "$name.wav"), level(kit[index]!!.snip), WavWriter.BitDepth.PCM_16)
             count++
         }
-        for ((note, semi) in KIT_NOTES) {
-            // Same root (A3) and span (24) on both engines, so one macro value is the same note.
-            val tune = semi / Pluck.TUNE_SEMITONES.toFloat()
-            writeAb("pluck_$note", Pluck.render(PluckVoice.KALIMBA, mapOf("TUNE" to tune)))
-            writeAb("tines_$note", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to tune)))
-        }
-        val a4 = 12 / Tines.KALIMBA_TUNE_SEMITONES.toFloat()
-        writeAb("tines_buzz_0", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BUZZ" to 0f)))
-        writeAb("tines_buzz_1", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BUZZ" to 1f)))
-        writeAb("tines_bright_0", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BRIGHT" to 0f)))
-        writeAb("tines_bright_1", Tines.render(TinesVoice.KALIMBA, mapOf("TUNE" to a4, "BRIGHT" to 1f)))
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")

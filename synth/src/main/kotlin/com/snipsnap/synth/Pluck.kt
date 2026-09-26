@@ -26,7 +26,7 @@ import kotlin.random.Random
  * TUNE snaps to semitones across two octaves from the voice's root: pads get
  * notes, not frequencies, which is what makes a pluck kit playable as music.
  */
-enum class PluckVoice { KALIMBA, NYLON, HARP, KOTO }
+enum class PluckVoice { NYLON, HARP, KOTO, BANJO }
 
 object Pluck {
 
@@ -68,23 +68,40 @@ object Pluck {
     internal const val RING_FLOOR_SECONDS = 0.25f
     internal const val RING_CEILING_SECONDS = 4.0f
 
+    /**
+     * BODY defaults are placeholders until the audition (spec 2026-09-25,
+     * "Macros"), like LOUDNESS_OFFSET; the spec's first values (0.35-0.6,
+     * 1.05-1.8x the string) put the body's modes nearest a voice's root
+     * above the fundamental - NYLON's 104 Hz air mode against its 110 Hz
+     * root, HARP's 168.5 Hz A0 against 165 Hz, BANJO's 220/234 Hz head
+     * modes under a 392 Hz note - which pulled the pitch detector off the
+     * note and swamped PICK; an initial 0.45-0.75x pass was lowered again
+     * to the current NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15
+     * (0.3-0.45x the string). Every per-voice pitch test (Task 3) accepted
+     * this range, NYLON included - `PICK brightens the attack` had briefly
+     * pulled NYLON's own default down to 0.05 to keep its own centroid
+     * measurement clean; that test now forces BODY to 0 for its own
+     * measurement instead, so the default is free to sit where Task 3 put
+     * it.
+     */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
-        PluckVoice.KALIMBA -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.6f), MacroSpec("PICK", 0.55f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.1f),
-        )
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.15f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.10f), MacroSpec("DOUBLE", 0.15f),
         )
         PluckVoice.HARP -> listOf(
             MacroSpec("TUNE", 0.55f), MacroSpec("DAMP", 0.2f), MacroSpec("PICK", 0.6f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.2f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.10f), MacroSpec("DOUBLE", 0.2f),
         )
         // A koto is played with a pick close to the bridge.
         PluckVoice.KOTO -> listOf(
             MacroSpec("TUNE", 0.45f), MacroSpec("DAMP", 0.4f), MacroSpec("PICK", 0.75f),
-            MacroSpec("STRIKE", 0.6f), MacroSpec("DOUBLE", 0.45f),
+            MacroSpec("STRIKE", 0.6f), MacroSpec("BODY", 0.15f), MacroSpec("DOUBLE", 0.45f),
+        )
+        // Fingerpicks close to the bridge, short notes (spec, "BANJO").
+        PluckVoice.BANJO -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
+            MacroSpec("STRIKE", 0.4f), MacroSpec("BODY", 0.15f), MacroSpec("DOUBLE", 0.1f),
         )
     }
 
@@ -103,10 +120,10 @@ object Pluck {
     }
 
     private fun rootFor(voice: PluckVoice): Float = when (voice) {
-        PluckVoice.KALIMBA -> 220f
         PluckVoice.NYLON -> 110f
         PluckVoice.HARP -> 165f
         PluckVoice.KOTO -> 147f
+        PluckVoice.BANJO -> 196f
     }
 
     /** The snapped note frequency the TUNE macro lands on for [voice]. */
@@ -143,6 +160,7 @@ object Pluck {
         val damp = m.getValue("DAMP")
         val pick = m.getValue("PICK")
         val double = m.getValue("DOUBLE")
+        val body = Dsp.lin(m.getValue("BODY"), 0f, BODY_MAX)
         val position = Dsp.expMap(m.getValue("STRIKE"), STRIKE_BRIDGE, STRIKE_CENTRE)
 
         // The body characters. loopHz is the low-pass inside the feedback
@@ -153,10 +171,11 @@ object Pluck {
         val pickHi: Float
         val ring: Float
         when (voice) {
-            PluckVoice.KALIMBA -> { loopHz = 2600f; pickLo = 900f; pickHi = 4500f; ring = 0.9f }
             PluckVoice.NYLON -> { loopHz = 3400f; pickLo = 1200f; pickHi = 6000f; ring = 1.1f }
             PluckVoice.HARP -> { loopHz = 5200f; pickLo = 1800f; pickHi = 9000f; ring = 1.3f }
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
+            // A steel string over a taut head: brighter than HARP.
+            PluckVoice.BANJO -> { loopHz = 5600f; pickLo = 2000f; pickHi = 10000f; ring = 1.0f }
         }
 
         // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
@@ -176,7 +195,7 @@ object Pluck {
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
         }
-        return trimToDecay(out, rate)
+        return trimToDecay(withBody(out, voice, body, rate), rate)
     }
 
     fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
@@ -263,6 +282,148 @@ object Pluck {
         }
     }
 
+    /** BODY 1 is three times the string's RMS - the spike's "dominant", which stays reachable (spec, "Macros"). */
+    internal const val BODY_MAX = 3f
+
+    /**
+     * The fixed body of each voice, in absolute Hz. Every row is a confirmed
+     * or corrected line of docs/superpowers/plans/2026-09-25-pluck-depth-body-research.md
+     * (source numbers in the comments); a t60 marked "shape" there is a
+     * placeholder for the audition, not a measurement.
+     */
+    internal fun bodyFor(voice: PluckVoice): List<Modes.Mode> = when (voice) {
+        // Classical guitar - research note section 5.1 (Christensen & Vistisen
+        // 1980; Jansson 2002; Su et al. 2024; Richardson via Woodhouse). The
+        // 127 Hz Helmholtz antiresonance is deliberately absent: the source
+        // calls it a notch in the response, not a radiating peak.
+        PluckVoice.NYLON -> listOf(
+            Modes.fixed(104f, 1.00f, 0.61f),   // A0 air resonance - measured, Q 29.0
+            Modes.fixed(219f, 0.90f, 0.26f),   // T1 top plate - measured, Q 25.8
+            Modes.fixed(286f, 0.35f, 0.15f),   // T2 dipole, quiet radiator - shape
+            Modes.fixed(370f, 0.30f, 0.15f),   // higher air-cavity mode - shape
+            Modes.fixed(436f, 0.25f, 0.12f),   // top-plate mode 3 - shape
+            Modes.fixed(510f, 0.15f, 0.10f),   // top-plate mode 4 - shape
+            Modes.fixed(645f, 0.10f, 0.08f),   // top-plate mode 5 - shape
+        )
+        // Koto - research note section 2, which quotes the Coaldrake ICA
+        // 2019 conference paper directly, read in full (not the unreachable
+        // 2020 JASA paper the rest of section 2's catalogue depends on):
+        // "the (0,1) mode was at 100Hz and the (0,0) mode at 85Hz which the
+        // acoustic camera confirmed." Section 5.2 is NOT cited here as
+        // endorsing this table - it says "no table," because every other
+        // mode in section 2 traces only to the unreachable source; these
+        // two are the exception the controller ruled usable, because they
+        // come from the source the verifier could actually open. The rest
+        // of the koto catalogue stays out until the 2020 paper can be read.
+        // Both decays below are shapes, not measurements: neither source
+        // reports a Q or a bandwidth for either mode.
+        PluckVoice.KOTO -> listOf(
+            Modes.fixed(85f, 0.80f, 0.40f),    // air mode (0,0) - shape decay
+            Modes.fixed(100f, 1.00f, 0.50f),   // first top-plate eigenmode - shape decay
+        )
+        // Concert harp - research note section 5.3 (Le Carrou, Gautier &
+        // Foltete 2007, one Camac Atlantide Prestige). The 161.9 Hz pitch
+        // mode is absent: the source excludes it from play.
+        PluckVoice.HARP -> listOf(
+            // t60 = 2.2*Q/f, Q = 1/(2*zeta) per row below.
+            Modes.fixed(54.8f, 0.20f, 0.37f),  // global soundbox motion (5.5%) - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(80.9f, 0.15f, 0.28f),  // first bending (4.8%) - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(123.4f, 0.15f, 0.36f), // second bending - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(152.2f, 0.95f, 0.31f), // T1 soundboard - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(168.5f, 1.00f, 0.47f), // A0 soundbox air - shape from the source's damping % read as zeta; the eta reading doubles it
+        )
+        // Banjo - research note section 5.4 (Rae 2010; Politzer 2016;
+        // Politzer, Woodhouse & Mansour 2021). The two bridge hills are one
+        // specific bridge's; the source says other bridges put them elsewhere.
+        PluckVoice.BANJO -> listOf(
+            Modes.fixed(220f, 0.50f, 0.35f),   // pot air, coupled doublet - shape
+            Modes.fixed(234f, 0.60f, 0.09f),   // head (0,1) - measured, bandwidth 20-30 Hz
+            Modes.fixed(509f, 0.90f, 0.15f),   // head (1,1) - shape
+            Modes.fixed(803f, 0.90f, 0.12f),   // head (2,1) - shape
+            Modes.fixed(850f, 0.70f, 0.10f),   // pot-air cylinder mode - shape
+            Modes.fixed(1593f, 0.40f, 0.08f),  // head (5,1) - shape
+            Modes.fixed(2055f, 0.30f, 0.06f),  // head (7,1), the last strong head mode - shape
+            Modes.fixed(3500f, 0.30f, 0.05f),  // bridge hill - shape
+            Modes.fixed(5000f, 0.25f, 0.04f),  // bridge hill - shape
+        )
+    }
+
+    /**
+     * The string drives its body. The drive is the string's FIRST
+     * DIFFERENCE, because the bridge force follows the string's slope at
+     * the bridge, the velocity-like quantity - not, as a 34 dB tilt might
+     * suggest, to hide the burst from the body's low modes. The
+     * differentiator's own gain, `2*sin(theta/2)`, and [Modes.ring]'s own
+     * onset peak, `1/sin(theta)` (`theta = 2*pi*hz/rate`), multiply to 1.0
+     * at every body frequency, so it is the table's GAIN column that
+     * governs each mode's burst response, and `ring`'s documented
+     * low-frequency onset hazard is cancelled outright, not merely
+     * reduced. What differentiating the drive actually buys: it removes
+     * the burst's DC step (the spike's knock came from driving the body
+     * with the string's raw displacement, DC and all), and it re-tilts
+     * the balance among a voice's own sourced modes toward the high ones
+     * by the differentiator's own frequency slope - NYLON's 645 Hz mode
+     * gains on its 104 Hz mode by about 16 dB, BANJO's 5000 Hz mode on
+     * its 220 Hz mode by about 27 dB, KOTO's 100 Hz mode on its 85 Hz
+     * mode by about 1.4 dB. The body's level against the string is set by
+     * the RMS match below, not by the drive.
+     *
+     * The body's own longest mode can ring well past the string that
+     * struck it: a muted string's DAMP-driven budget is a few hundred ms,
+     * a body mode's t60 can run past a second, and [Modes.ring] itself
+     * only ever returns as many samples as it was given to excite - it
+     * does not extend the ring on its own. So the drive here, and the
+     * ring it produces, run `pad` samples past the string's own length
+     * (`pad` sized off the table's own longest t60), and the returned
+     * buffer follows that ring out toward the ring ceiling rather than
+     * being cut where the string itself ends; [trimToDecay] (in
+     * [synthesize]) follows the combined tail from there. The RMS match
+     * is taken over the string's own length only, on both sides, so
+     * [amount] means "times the string" the same way whether or not the
+     * table's tail outlives it; the body is then added on top of the
+     * string where the string still runs, and on its own past the
+     * string's end. Amount 0 returns [string] itself: BODY 0 is the
+     * string, byte for byte. [differentiate] exists only so the knock
+     * test below can reproduce the spike's displacement drive for
+     * comparison - production never sets it false.
+     */
+    internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray {
+        if (amount <= 0f) return string
+        val table = bodyFor(voice)
+        if (table.isEmpty()) return string
+        val pad = (table.maxOf { it.t60 } * rate).toInt()
+        val driveLen = string.size + pad
+        // `differentiate = false` reproduces the spike's displacement drive;
+        // only the knock test passes it, production never does. Either way
+        // the drive is silent past the string's own length - there is
+        // nothing left to differentiate or copy once the string has ended,
+        // and the padding is what lets the body ring on regardless.
+        val drive = FloatArray(driveLen)
+        if (differentiate) {
+            var prev = 0f
+            for (i in string.indices) {
+                drive[i] = string[i] - prev
+                prev = string[i]
+            }
+        } else {
+            string.copyInto(drive)
+        }
+        val wet = Modes.ring(drive, 1f, table, rate)
+        val g = rms(string, string.size) / rms(wet, string.size).coerceAtLeast(1e-9f)
+        val outLen = min(driveLen, (RING_CEILING_SECONDS * rate).toInt())
+        val out = FloatArray(outLen)
+        for (i in out.indices) out[i] = (if (i < string.size) string[i] else 0f) + amount * g * wet[i]
+        return out
+    }
+
+    /** RMS of the first [n] samples of [buf] (all of it by default). */
+    private fun rms(buf: FloatArray, n: Int = buf.size): Float {
+        val len = min(n, buf.size)
+        var acc = 0.0
+        for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
+        return sqrt(acc / len.coerceAtLeast(1)).toFloat()
+    }
+
     /**
      * The 1983 algorithm itself: one period of filtered noise, then a delay
      * line feeding back through a low-pass. DAMP closes the loop filter and
@@ -272,10 +433,11 @@ object Pluck {
      * Internal, not private, so PluckTest can drive it with a synthetic
      * freq/rate pair and pin the loop-length invariant below directly -
      * the real voice table never reaches it (measured minimum `exact`
-     * across every voice x TUNE semitone x DAMP is 175.93 samples, at
-     * KALIMBA TUNE=1/DAMP=1 - swept and printed against this function's
-     * own formula, not estimated), so there is no reachable call site to
-     * assert against otherwise.
+     * across every voice x TUNE semitone x DAMP was 175.93 samples, at
+     * the since-removed KALIMBA's TUNE=1/DAMP=1, a 220 Hz root - swept and
+     * printed against this function's own formula, not estimated; BANJO,
+     * at 196 Hz, now has the shortest loop of the remaining voices), so
+     * there is no reachable call site to assert against otherwise.
      */
     internal fun ks(
         freq: Float,
@@ -350,8 +512,8 @@ object Pluck {
         // require: as long as exact clears MIN_LOOP_SAMPLES, floor(exact)
         // >= MIN_LOOP_SAMPLES and frac = exact - floor(exact) is safe by
         // definition, no clamp needed. Unreachable today - the closest any
-        // voice/TUNE/DAMP corner comes is 175.93 samples (KALIMBA,
-        // TUNE=1, DAMP=1) - this is a require, not
+        // voice/TUNE/DAMP corner ever came to it was 175.93 samples, on the
+        // since-removed KALIMBA at TUNE=1/DAMP=1 - this is a require, not
         // a silent coerce, so raising a voice root, widening
         // TUNE_SEMITONES, or adding a high-pitched voice fails loudly
         // here, naming the real cause, instead of surfacing later as a
@@ -395,7 +557,8 @@ object Pluck {
         // filter lag, and two-tap average make up the rest of that period
         // (see `exact` above), and a comb cut to `n` alone puts its
         // notches ~3% off the true harmonics at high DAMP (measured on
-        // KALIMBA: the 2nd-harmonic null missed the 20 dB gate). The
+        // the since-removed KALIMBA voice: the 2nd-harmonic null missed
+        // the 20 dB gate). The
         // exciter grows to n + combDelay samples, and the extra samples enter
         // the loop as INPUT through the `+=` below, not as initial state -
         // the loop's own length and tuning budget are untouched. position

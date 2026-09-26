@@ -1705,10 +1705,10 @@ private enum class Engine {
 // keyboard laser/game hit reads as a percussive one-shot, not a pitched
 // note). VELVET/VOX/PLUCK/TONEWHEEL are silent in SynthKits.kt about most of
 // their own voices — but every voice from these four engines SynthKits DOES
-// render (VELVET's CHIP, VOX's CHOIR/ROBOT/GHOST, PLUCK's NYLON/KALIMBA/
-// HARP, TONEWHEEL's SOUL/STAB/FULL) is classified TONAL there, and every
+// render (VELVET's CHIP, VOX's CHOIR/ROBOT/GHOST, PLUCK's NYLON/HARP,
+// TONEWHEEL's SOUL/STAB/FULL) is classified TONAL there, and every
 // remaining voice in these four engines is likewise a pitched note (VELVET's
-// BASS/BRASS/SQUELCH, PLUCK's KOTO) — so per the brief's fallback rule
+// BASS/BRASS/SQUELCH, PLUCK's KOTO/BANJO) — so per the brief's fallback rule
 // ("tonal-pitched voices -> TONAL, percussive -> PERC"), all four engines
 // are TONAL across the board. RESIN's three voices (BASS/LEAD/BRASS) are
 // pitched notes through a filter, never judged from a render (ResinPresetsTest

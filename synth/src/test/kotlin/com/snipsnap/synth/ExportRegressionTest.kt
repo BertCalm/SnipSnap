@@ -86,7 +86,7 @@ class ExportRegressionTest {
         // there is no shipped stereo preset to reach for, and this is the
         // one WIDTH value the macro's own contract already commits to.
         val wideSnare = snare.withMacros(snare.macros + ("WIDTH" to 1f))
-        val pluck = PluckPresets.forVoice(PluckVoice.KALIMBA).first() // loop arithmetic changed under this
+        val pluck = PluckPresets.forVoice(PluckVoice.BANJO).first() // the shortest loop of the string voices: loop arithmetic changed under this
         val velvet = VelvetPresets.forVoice(VelvetVoice.BASS).first()
         val tonewheel = TonewheelPresets.forVoice(TonewheelVoice.FULL).first()
 

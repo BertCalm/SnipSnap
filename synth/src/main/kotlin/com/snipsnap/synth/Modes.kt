@@ -194,6 +194,14 @@ internal object Modes {
         }
 
     /**
+     * A body resonance at an absolute frequency. A fixed body does not track
+     * the note, so callers ring these against a 1 Hz "fundamental":
+     * `ring(drive, 1f, listOf(fixed(98f, 1f, 0.45f)), rate)`. [hz] lands in
+     * [Mode.ratio], which [ring] multiplies by that 1 Hz.
+     */
+    fun fixed(hz: Float, gain: Float, t60: Float): Mode = Mode(ratio = hz, gain = gain, t60 = t60)
+
+    /**
      * A floor on how fast the extrapolation in [resample] is allowed to
      * decelerate per additional slot. Without it, two sourced steps that
      * happen to be very close together (the membrane's dense Bessel-zero

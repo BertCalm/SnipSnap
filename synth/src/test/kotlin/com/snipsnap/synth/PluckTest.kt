@@ -209,8 +209,11 @@ class PluckTest {
 
     @Test
     fun `PICK brightens the attack`() {
-        val soft = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.05f)))
-        val hard = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.95f)))
+        // BODY forced to 0: this measures the exciter, and at any nonzero
+        // BODY the attack window (FeatureExtractor's centroid) also
+        // contains the body's own free ring, which is not what PICK does.
+        val soft = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.05f, "BODY" to 0f)))
+        val hard = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.95f, "BODY" to 0f)))
         assertTrue(
             hard.centroidHz > soft.centroidHz * 1.2f,
             "PICK should brighten: ${soft.centroidHz} -> ${hard.centroidHz}",
@@ -450,13 +453,9 @@ class PluckTest {
 
     @Test
     fun `PICK moves the centroid at every step of its travel`() {
-        // The precondition for routing velocity through PICK: the same
-        // sweep the snare's SNAP had to pass before its override line.
-        // KALIMBA is excluded because its sweep inverts (centroid peaks at
-        // PICK 0.1 and falls, net -2.4% at PICK 1; root cause not
-        // investigated) and it leaves PLUCK in Phase 2; until then it keeps
-        // the soften fallback.
-        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+        // The sweep is the precondition for routing velocity through PICK,
+        // the same sweep the snare's SNAP had to pass.
+        for (voice in PluckVoice.entries) {
             val points = (0..10).map { it / 10f }
             val measured = points.map { p ->
                 FeatureExtractor.extract(Pluck.render(voice, mapOf("PICK" to p))).centroidHz
@@ -488,5 +487,114 @@ class PluckTest {
             !soft.samples.contentEquals(softened.samples),
             "soft velocity must be a re-render through PICK, not the soften() fallback",
         )
+    }
+
+    @Test
+    fun `BANJO is a bright string with a short default ring`() {
+        // The spec's BANJO row: root G3, brighter loop than HARP, picked
+        // near the bridge, short notes. Pinned here as reach, not taste.
+        assertEquals(196f, Pluck.frequencyFor(PluckVoice.BANJO, 0f))
+        val banjo = FeatureExtractor.extract(Pluck.render(PluckVoice.BANJO))
+        val nylon = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON))
+        assertTrue(banjo.centroidHz > nylon.centroidHz, "a banjo should read brighter than a nylon string: ${banjo.centroidHz} vs ${nylon.centroidHz}")
+        val strike = Pluck.defaults(PluckVoice.BANJO).getValue("STRIKE")
+        assertTrue(strike < 0.5f, "the default pick sits near the bridge, got STRIKE $strike")
+    }
+
+    @Test
+    fun `BODY is a macro on every voice with a body table`() {
+        for (voice in PluckVoice.entries) {
+            assertTrue(Pluck.macrosFor(voice).any { it.name == "BODY" }, "$voice has no BODY")
+            val table = Pluck.bodyFor(voice)
+            // Two is KOTO's count: only its 85 Hz air mode and 100 Hz plate
+            // mode are in a source the research note's verifier could open.
+            assertTrue(table.size >= 2, "$voice: a body needs at least two sourced modes, got ${table.size}")
+            var lastHz = 0f
+            for (mode in table) {
+                assertTrue(mode.ratio > lastHz, "$voice: body rows must ascend, ${mode.ratio} after $lastHz")
+                assertTrue(mode.ratio < 20_000f, "$voice: ${mode.ratio} Hz is not a body mode")
+                assertTrue(mode.gain > 0f && mode.t60 > 0f, "$voice: ${mode.ratio} Hz has a non-positive gain or decay")
+                lastHz = mode.ratio
+            }
+        }
+    }
+
+    @Test
+    fun `BODY zero is the string, byte for byte`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
+        assertTrue(Pluck.withBody(string, PluckVoice.NYLON, 0f, rate) === string, "amount 0 must skip the stage and return the same buffer")
+        for (voice in PluckVoice.entries) {
+            val a = Pluck.render(voice, mapOf("BODY" to 0f))
+            val b = Pluck.render(voice, mapOf("BODY" to 0f))
+            assertTrue(a.samples.contentEquals(b.samples), "$voice: BODY 0 must be deterministic")
+        }
+    }
+
+    @Test
+    fun `BODY carries its share`() {
+        // The body layer is RMS-matched to the string and scaled by the
+        // amount, so (out - string) carries `amount` times the string's RMS.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
+        for (voice in PluckVoice.entries) {
+            val out = Pluck.withBody(string, voice, 1f, rate)
+            var body = 0.0
+            var dry = 0.0
+            for (i in string.indices) {
+                val d = (out[i] - string[i]).toDouble()
+                body += d * d
+                dry += string[i].toDouble() * string[i]
+            }
+            val share = kotlin.math.sqrt(body / dry)
+            assertTrue(share > 0.8 && share < 1.2, "$voice: body share at amount 1 should be ~1, got $share")
+        }
+    }
+
+    @Test
+    fun `the velocity drive knocks no more than driving the body with the string itself`() {
+        // The audition's thump came from the spike driving the body with the
+        // string's displacement. The bridge force follows the string's
+        // velocity, so the body is driven by the first difference; this pins
+        // that the velocity drive leaves no more low-frequency swing at the
+        // onset than the displacement drive, and prints both ratios so the
+        // report can carry the measurement to the gate. Measured on the wet
+        // layer alone (out - string), not the rendered note: the string
+        // itself carries low-frequency energy of its own that would
+        // otherwise swamp the difference the drive choice actually makes.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (voice in PluckVoice.entries) {
+            val string = Pluck.synthesize(voice, mapOf("BODY" to 0f), rate)
+            val velocityDriven = Pluck.withBody(string, voice, 1f, rate)
+            val displacementDriven = Pluck.withBody(string, voice, 1f, rate, differentiate = false)
+            val wetV = FloatArray(string.size) { velocityDriven[it] - string[it] }
+            val wetD = FloatArray(string.size) { displacementDriven[it] - string[it] }
+            val onsetV = PluckSpectra.lowPassPeak(wetV, rate, 200f, 0.03f) / PluckSpectra.peak(string)
+            val onsetD = PluckSpectra.lowPassPeak(wetD, rate, 200f, 0.03f) / PluckSpectra.peak(string)
+            println("$voice: onset low-band ratio velocity=$onsetV displacement=$onsetD")
+            assertTrue(onsetV <= onsetD * 1.01f, "$voice: the velocity drive should not knock more than the displacement drive: $onsetV vs $onsetD")
+
+            // Printed only, for the gate: the sub-200 Hz onset on real
+            // renders, BODY 1 over BODY 0.
+            val body1 = Pluck.render(voice, mapOf("BODY" to 1f))
+            val body0 = Pluck.render(voice, mapOf("BODY" to 0f))
+            val subRatio = PluckSpectra.lowPassPeak(body1.samples, Dsp.RATE, 200f, 0.03f) /
+                PluckSpectra.lowPassPeak(body0.samples, Dsp.RATE, 200f, 0.03f)
+            println("$voice: sub-200 Hz onset, BODY 1 over BODY 0 = $subRatio")
+        }
+    }
+
+    @Test
+    fun `BODY reaches the ugly end`() {
+        // BODY 1 is three times the string's RMS - the spike's "dominant",
+        // which read CLOSER on two voices and must stay reachable.
+        for (voice in PluckVoice.entries) {
+            val plain = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 0f)))
+            val full = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 1f)))
+            assertTrue(
+                kotlin.math.abs(full.centroidHz - plain.centroidHz) > plain.centroidHz * 0.05f,
+                "$voice: BODY 1 should move the centroid by more than 5%: ${plain.centroidHz} -> ${full.centroidHz}",
+            )
+        }
     }
 }
