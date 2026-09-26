@@ -179,39 +179,42 @@ class GlintTest {
         // detector artifact that a periodicity measure sidesteps entirely.
         //
         // Task 2 fixed BLOOM's sweep at a single 0.45s t60 (previously it
-        // varied 0.30s -> 0.06s with depth). That changed what this window
-        // measures. `periodCorrelation`'s default window starts at 0.05s and
-        // runs 0.2s. Under the old coupling, envAt(0.05, 0.06) = 0.003 at
-        // BLOOM 1 - the sweep was already fully landed before that window
-        // opened, so the test never actually correlated a moving formant.
-        // At the new fixed 0.45s rate, envAt(0.05, 0.45) = 0.464 and
-        // envAt(0.25, 0.45) = 0.022, so k is still sweeping from 2.39x to
-        // 1.06x kBase *inside* the correlation window - measured worst case
-        // across all 3 voices x 4 PEAK settings x both BLOOM extremes at
-        // that window is 0.4580 (BOTTLE, PEAK 0.6, BLOOM 1), well below both
-        // the 0.98 bar and the 0.73 synthetic 9%-pitch-drift control below.
-        // That is not a period break - a settled-window re-measure (below)
-        // proves the period is exact - it is a single Pearson correlation
-        // collapsing while the waveform's *shape* is genuinely still
-        // changing cycle to cycle, which no bar between 0.4580 and 0.73 can
-        // separate from real pitch drift. So this test measures only the
-        // settled portion of the note (from 0.35s, chosen so
-        // envAt(0.35, 0.45) = 0.0045 - fully landed) and keeps the original
-        // 0.98 bar there; it does not attempt to bound the during-sweep
-        // portion, which the fixed slower rate has made genuinely
-        // indistinguishable, at this measure, from the failure it exists to
-        // catch. See Task 2's report for the full 24-case grid at both
-        // windows and the reasoning the controller should use to decide
-        // whether a during-sweep guard is worth a different measure.
+        // varied 0.30s -> 0.06s with depth). In Phase 1 the sweep was fast
+        // enough that this window's default 0.05s start sat mostly *after*
+        // it, reading 0.98643. Slowing the sweep sevenfold - the change that
+        // made BLOOM audible at all - moved that same window into the
+        // middle of the sweep, and this test now runs only from a settled
+        // window (0.35s onward, chosen so envAt(0.35, 0.45) = 0.0045) at the
+        // original 0.98 bar.
         //
         // Measured 2026-09-26 at fromSec=0.35 across 3 voices x 4 PEAK
         // settings x both BLOOM extremes: worst case 0.98737 (BOTTLE, PEAK
-        // 0.9, BLOOM 1) - still comfortably above the bar, and far above the
-        // 0.73149 synthetic 9%-pitch-drift control (which this settled
-        // window would reject by the same wide margin the original
-        // fromSec=0.05 measurement did, since neither the period nor the
-        // settled shape depends on where the window starts once the sweep
-        // has landed).
+        // 0.9, BLOOM 1) - comfortably above the bar, and far above the
+        // 0.73149 synthetic 9%-pitch-drift control from Phase 1.
+        //
+        // The during-sweep regime (fromSec=0.05, the old default) is
+        // deliberately NOT asserted here. Measured worst case there is
+        // 0.4580 (BOTTLE, PEAK 0.6, BLOOM 1) - *below* the 0.73149 drift
+        // control, not above it, so no bar can separate correct from broken
+        // in that window. The reason is structural, not a tuning problem: a
+        // one-period Pearson correlation measures whether consecutive
+        // cycles have the same *shape*. A strong, genuine sweep changes
+        // shape rapidly cycle to cycle while leaving the period exact - that
+        // scores 0.458. A 9% pitch drift changes both shape and period -
+        // that scores 0.73. The correct engine scores worse than the broken
+        // control, so the metric inverts mid-sweep; it is only a valid
+        // period test where the spectrum is quasi-static. This is a
+        // property of the measure, not of GLINT: the period remains exact
+        // by construction regardless of window - `phase` advances by
+        // `f0 / rate` and wraps at 1.0 independently of `k`, so BLOOM can
+        // never drag pitch even while this test is silent about the sweep
+        // itself.
+        //
+        // D2 needs a lag-domain measure here - where the autocorrelation
+        // peak sits, rather than how similar two cycles look - since that
+        // is shape-insensitive and stays valid during a sweep. It has to be
+        // built there regardless: PLATE and RATCHET both move k in new
+        // ways that this test's settled-window-only approach won't cover.
         for (voice in GlintVoice.entries) {
             for (bloom in listOf(0f, 1f)) {
                 val still = mapOf("TUNE" to 0.5f, "BLOOM" to bloom, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
