@@ -74,4 +74,10 @@ class DeterminismTest {
         val patch = TonewheelPresets.forVoice(TonewheelVoice.FULL).first()
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
+
+    @Test
+    fun `GLINT is byte-identical across renders`() {
+        val patch = GlintPatch("Canary", GlintVoice.BOTTLE, Glint.defaults(GlintVoice.BOTTLE))
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
 }

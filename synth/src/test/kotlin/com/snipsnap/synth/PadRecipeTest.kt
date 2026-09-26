@@ -30,6 +30,7 @@ class PadRecipeTest {
         TonewheelPatch("Stab Test", TonewheelVoice.STAB, mapOf("BAR8" to 1f)),
         VelvetPatch("Acid Test", VelvetVoice.SQUELCH, mapOf("SQUEEZE" to 0.9f)),
         SnapPatch("Photo Test", SnapVoice.ORBIT, mapOf("GRIT" to 0.4f), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
+        GlintPatch("Glass Test", GlintVoice.BOTTLE, mapOf("PEAK" to 0.7f)),
     )
 
     @Test
