@@ -44,4 +44,30 @@ internal object PluckSpectra {
         }
         return s1 * s1 + s2 * s2 - coeff * s1 * s2
     }
+
+    /** The largest absolute sample in [x]. */
+    fun peak(x: FloatArray): Float {
+        var p = 0f
+        for (v in x) if (kotlin.math.abs(v) > p) p = kotlin.math.abs(v)
+        return p
+    }
+
+    /**
+     * The peak of [x] low-passed at [cutoffHz] (two one-poles in series,
+     * 12 dB per octave) over the first [seconds] at [rate]. For the knock
+     * test: a thump is a large low-frequency swing at the onset.
+     */
+    fun lowPassPeak(x: FloatArray, rate: Int, cutoffHz: Float, seconds: Float): Float {
+        val n = min(x.size, (seconds * rate).toInt())
+        val a = (1.0 - Math.exp(-2.0 * PI * cutoffHz / rate)).toFloat()
+        var lp1 = 0f
+        var lp2 = 0f
+        var p = 0f
+        for (i in 0 until n) {
+            lp1 += a * (x[i] - lp1)
+            lp2 += a * (lp1 - lp2)
+            if (kotlin.math.abs(lp2) > p) p = kotlin.math.abs(lp2)
+        }
+        return p
+    }
 }

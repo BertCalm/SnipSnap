@@ -123,4 +123,17 @@ class TuningAccuracyTest {
             assertTrue(err <= 5.0, "KALIMBA semitone $semi is $err cents off (want $want, got $measured)")
         }
     }
+
+    @Test
+    fun `BODY at either end keeps every Pluck voice within five cents`() {
+        for (voice in PluckVoice.entries) {
+            for (body in listOf(0f, 1f)) {
+                val snip = Pluck.render(voice, mapOf("TUNE" to 0.5f, "DOUBLE" to 0f, "BODY" to body))
+                val want = Pluck.frequencyFor(voice, 12)
+                val measured = measuredHz(snip, want)
+                val err = abs(cents(measured, want.toDouble()))
+                assertTrue(err <= 5.0, "$voice at BODY $body is $err cents off (want $want, got $measured)")
+            }
+        }
+    }
 }

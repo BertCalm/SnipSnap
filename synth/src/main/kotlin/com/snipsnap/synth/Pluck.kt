@@ -68,24 +68,34 @@ object Pluck {
     internal const val RING_FLOOR_SECONDS = 0.25f
     internal const val RING_CEILING_SECONDS = 4.0f
 
+    /**
+     * BODY defaults are placeholders until the audition (spec 2026-09-25,
+     * "Macros"), like LOUDNESS_OFFSET; the spec's first values (0.35-0.6,
+     * 1.05-1.8x the string) put the body's modes nearest a voice's root
+     * above the fundamental - NYLON's 104 Hz air mode against its 110 Hz
+     * root, HARP's 168.5 Hz A0 against 165 Hz, BANJO's 220/234 Hz head
+     * modes under a 392 Hz note - which pulled the pitch detector off the
+     * note and swamped PICK; these sit at 0.15-0.45x, lowered further still
+     * from an initial 0.45-0.75x pass by the same per-voice tests.
+     */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.15f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.05f), MacroSpec("DOUBLE", 0.15f),
         )
         PluckVoice.HARP -> listOf(
             MacroSpec("TUNE", 0.55f), MacroSpec("DAMP", 0.2f), MacroSpec("PICK", 0.6f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("DOUBLE", 0.2f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.10f), MacroSpec("DOUBLE", 0.2f),
         )
         // A koto is played with a pick close to the bridge.
         PluckVoice.KOTO -> listOf(
             MacroSpec("TUNE", 0.45f), MacroSpec("DAMP", 0.4f), MacroSpec("PICK", 0.75f),
-            MacroSpec("STRIKE", 0.6f), MacroSpec("DOUBLE", 0.45f),
+            MacroSpec("STRIKE", 0.6f), MacroSpec("BODY", 0.15f), MacroSpec("DOUBLE", 0.45f),
         )
         // Fingerpicks close to the bridge, short notes (spec, "BANJO").
         PluckVoice.BANJO -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
-            MacroSpec("STRIKE", 0.4f), MacroSpec("DOUBLE", 0.1f),
+            MacroSpec("STRIKE", 0.4f), MacroSpec("BODY", 0.15f), MacroSpec("DOUBLE", 0.1f),
         )
     }
 
@@ -144,6 +154,7 @@ object Pluck {
         val damp = m.getValue("DAMP")
         val pick = m.getValue("PICK")
         val double = m.getValue("DOUBLE")
+        val body = Dsp.lin(m.getValue("BODY"), 0f, BODY_MAX)
         val position = Dsp.expMap(m.getValue("STRIKE"), STRIKE_BRIDGE, STRIKE_CENTRE)
 
         // The body characters. loopHz is the low-pass inside the feedback
@@ -178,7 +189,7 @@ object Pluck {
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
         }
-        return trimToDecay(out, rate)
+        return trimToDecay(withBody(out, voice, body, rate), rate)
     }
 
     fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
@@ -263,6 +274,106 @@ object Pluck {
             val g = 1f - i.toFloat() / n
             buf[start + i] *= g * g
         }
+    }
+
+    /** BODY 1 is three times the string's RMS - the spike's "dominant", which stays reachable (spec, "Macros"). */
+    internal const val BODY_MAX = 3f
+
+    /**
+     * The fixed body of each voice, in absolute Hz. Every row is a confirmed
+     * or corrected line of docs/superpowers/plans/2026-09-25-pluck-depth-body-research.md
+     * (source numbers in the comments); a t60 marked "shape" there is a
+     * placeholder for the audition, not a measurement.
+     */
+    internal fun bodyFor(voice: PluckVoice): List<Modes.Mode> = when (voice) {
+        // Classical guitar - research note section 5.1 (Christensen & Vistisen
+        // 1980; Jansson 2002; Su et al. 2024; Richardson via Woodhouse). The
+        // 127 Hz Helmholtz antiresonance is deliberately absent: the source
+        // calls it a notch in the response, not a radiating peak.
+        PluckVoice.NYLON -> listOf(
+            Modes.fixed(104f, 1.00f, 0.61f),   // A0 air resonance - measured, Q 29.0
+            Modes.fixed(219f, 0.90f, 0.26f),   // T1 top plate - measured, Q 25.8
+            Modes.fixed(286f, 0.35f, 0.15f),   // T2 dipole, quiet radiator - shape
+            Modes.fixed(370f, 0.30f, 0.15f),   // higher air-cavity mode - shape
+            Modes.fixed(436f, 0.25f, 0.12f),   // top-plate mode 3 - shape
+            Modes.fixed(510f, 0.15f, 0.10f),   // top-plate mode 4 - shape
+            Modes.fixed(645f, 0.10f, 0.08f),   // top-plate mode 5 - shape
+        )
+        // Koto - research note sections 2 and 5.2. Only two modes are in a
+        // source the verifier could open (Coaldrake, ICA 2019: the (0,0) air
+        // mode at 85 Hz and the first plate mode at 100 Hz, both confirmed by
+        // the acoustic camera; the 2020 JASA paper's abstract says the same).
+        // The rest of the koto catalogue is unsupported and stays out until
+        // that paper can be read.
+        PluckVoice.KOTO -> listOf(
+            Modes.fixed(85f, 0.80f, 0.40f),    // air mode (0,0) - shape decay
+            Modes.fixed(100f, 1.00f, 0.50f),   // first top-plate eigenmode - shape decay
+        )
+        // Concert harp - research note section 5.3 (Le Carrou, Gautier &
+        // Foltete 2007, one Camac Atlantide Prestige). The 161.9 Hz pitch
+        // mode is absent: the source excludes it from play.
+        PluckVoice.HARP -> listOf(
+            Modes.fixed(54.8f, 0.20f, 0.30f),  // global soundbox motion - shape
+            Modes.fixed(80.9f, 0.15f, 0.35f),  // first bending - shape
+            Modes.fixed(123.4f, 0.15f, 0.70f), // second bending - shape
+            Modes.fixed(152.2f, 0.95f, 0.80f), // T1 soundboard - shape
+            Modes.fixed(168.5f, 1.00f, 1.20f), // A0 soundbox air - shape
+        )
+        // Banjo - research note section 5.4 (Rae 2010; Politzer 2016;
+        // Politzer, Woodhouse & Mansour 2021). The two bridge hills are one
+        // specific bridge's; the source says other bridges put them elsewhere.
+        PluckVoice.BANJO -> listOf(
+            Modes.fixed(220f, 0.50f, 0.35f),   // pot air, coupled doublet - shape
+            Modes.fixed(234f, 0.60f, 0.09f),   // head (0,1) - measured, bandwidth 20-30 Hz
+            Modes.fixed(509f, 0.90f, 0.15f),   // head (1,1) - shape
+            Modes.fixed(803f, 0.90f, 0.12f),   // head (2,1) - shape
+            Modes.fixed(850f, 0.70f, 0.10f),   // pot-air cylinder mode - shape
+            Modes.fixed(1593f, 0.40f, 0.08f),  // head (5,1) - shape
+            Modes.fixed(2055f, 0.30f, 0.06f),  // head (7,1), the last strong head mode - shape
+            Modes.fixed(3500f, 0.30f, 0.05f),  // bridge hill - shape
+            Modes.fixed(5000f, 0.25f, 0.04f),  // bridge hill - shape
+        )
+    }
+
+    /**
+     * The string drives its body. The drive is the string's FIRST
+     * DIFFERENCE, because the bridge force follows the string's slope at
+     * the bridge, the velocity-like quantity - and numerically because at
+     * the 4x render rate the difference passes 5 kHz at 2*sin(pi*5000/176400)
+     * ~ 0.178 and 98 Hz at ~ 0.0035, 34 dB apart, which is what keeps the
+     * burst out of the low body modes (the spike's knock drove them with
+     * the string itself). The body layer is RMS-matched to the string so
+     * [amount] means "times the string", then added. Amount 0 returns
+     * [string] itself: BODY 0 is the string, byte for byte.
+     */
+    internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray {
+        if (amount <= 0f) return string
+        val table = bodyFor(voice)
+        if (table.isEmpty()) return string
+        // `differentiate = false` reproduces the spike's displacement drive;
+        // only the knock test passes it, production never does.
+        val drive = if (differentiate) {
+            val d = FloatArray(string.size)
+            var prev = 0f
+            for (i in string.indices) {
+                d[i] = string[i] - prev
+                prev = string[i]
+            }
+            d
+        } else {
+            string
+        }
+        val wet = Modes.ring(drive, 1f, table, rate)
+        val g = rms(string) / rms(wet).coerceAtLeast(1e-9f)
+        val out = FloatArray(string.size)
+        for (i in out.indices) out[i] = string[i] + amount * g * wet[i]
+        return out
+    }
+
+    private fun rms(buf: FloatArray): Float {
+        var acc = 0.0
+        for (v in buf) acc += v.toDouble() * v
+        return sqrt(acc / buf.size.coerceAtLeast(1)).toFloat()
     }
 
     /**
