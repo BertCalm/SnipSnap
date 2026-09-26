@@ -7,7 +7,6 @@ import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -88,7 +87,7 @@ object Tines {
         )
         TinesVoice.KALIMBA -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("BUZZ", 0.15f), MacroSpec("BRIGHT", 0.5f),
-            MacroSpec("DECAY", 0.6f),
+            MacroSpec("DECAY", 0.9f),
         )
     }
 
@@ -264,10 +263,12 @@ object Tines {
     /**
      * A plucked tine: a harmonic strike for the tongue, then two near-pure
      * partials at the bar's own ratios, each dying faster than the one
-     * below it, then the tick, the box, and the buzzers. DECAY runs
-     * 0.5-1.1 s because a tine always rings a little even played softly
-     * (gate 2026-09-26), and 1.1 x 1.3 keeps the buffer under the 1.5 s
-     * one-shot bound.
+     * below it, then the tick and the buzzers. The default DECAY sits near
+     * the ceiling because the fourth gate heard the longest tine as the
+     * kalimba and everything shorter as the same. DECAY runs 0.5-1.1 s
+     * because a tine always rings a little even played softly (gate
+     * 2026-09-26), and 1.1 x 1.3 keeps the buffer under the 1.5 s one-shot
+     * bound.
      */
     private fun kalimba(m: Map<String, Float>, rate: Int): FloatArray {
         val hz = frequencyFor(TinesVoice.KALIMBA, m.getValue("TUNE"))
@@ -287,7 +288,6 @@ object Tines {
         strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.6f, bite = 2f, gain = upper, rate = rate)
         strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.25f, bite = 2f, gain = upper * 0.5f, rate = rate)
         tick(out, bright, rate, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "TICK"))
-        box(out, rate)
         if (buzz > 0.01f) rattle(out, buzz, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "BUZZ"))
         return out
     }
@@ -319,45 +319,6 @@ object Tines {
             val env = 1f - i.toFloat() / n
             out[i] += gain * env * env * band
         }
-    }
-
-    /**
-     * The box under the tines: two modes standing in for a small wooden
-     * soundbox with a hole - SHAPES, not sourced (Phase 2's sourcing rule
-     * covered PLUCK's bodies; the gate asked for resonance here and this is
-     * the candidate it hears; Phase 3 sources it if it stays). Driven by
-     * the tone's first difference so the strikes' onsets do not knock the
-     * low mode, RMS-matched to the tone and added at [BOX_LEVEL].
-     */
-    private val KALIMBA_BOX = listOf(Modes.fixed(190f, 1.0f, 0.25f), Modes.fixed(470f, 0.6f, 0.15f))
-    private const val BOX_LEVEL = 0.35f
-
-    /**
-     * Rings [KALIMBA_BOX] off [out]'s own first difference - the same
-     * velocity-like drive [Pluck.withBody] uses, for the same reason: it
-     * removes the drive's DC step and re-tilts the balance toward the
-     * box's higher mode by the differentiator's own frequency slope. RMS-
-     * matched to [out] over its own length (there is no tail to pad past
-     * here, unlike [Pluck.withBody]: the box's t60s are far shorter than
-     * the note) and added in place at [BOX_LEVEL].
-     */
-    private fun box(out: FloatArray, rate: Int) {
-        val drive = FloatArray(out.size)
-        var prev = 0f
-        for (i in out.indices) {
-            drive[i] = out[i] - prev
-            prev = out[i]
-        }
-        val wet = Modes.ring(drive, 1f, KALIMBA_BOX, rate)
-        val g = rms(out) / rms(wet).coerceAtLeast(1e-9f)
-        for (i in out.indices) out[i] += BOX_LEVEL * g * wet[i]
-    }
-
-    /** RMS of [buf]. */
-    private fun rms(buf: FloatArray): Float {
-        var acc = 0.0
-        for (v in buf) acc += v.toDouble() * v
-        return sqrt(acc / buf.size.coerceAtLeast(1)).toFloat()
     }
 
     /**

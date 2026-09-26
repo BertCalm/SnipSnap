@@ -38,8 +38,8 @@ import kotlin.math.abs
  *
  * A p2d fourth-listen set renders on top of that, for the gate's one
  * remaining open item: the kalimba tine's higher DECAY floor (a tine rings
- * a little even played softly), its tick band-limited to where the ear can
- * still hear it past decimation, and the new box under it. Rendered at the
+ * a little even played softly) and its tick band-limited to where the ear
+ * can still hear it past decimation. Rendered at the
  * kit's Kalimba 1 pad's C4 (the new default, the DECAY floor, the DECAY
  * ceiling, and brighter) and Kalimba 5's A4, the kit's highest kalimba
  * pad. BANJO's third-listen clips are kept as they are - the gate settled
@@ -116,18 +116,18 @@ object PluckAuditionGenerator {
         fun writeKalimba(name: String, macros: Map<String, Float>) {
             val full = mapOf(
                 "TUNE" to 3f / Tines.KALIMBA_TUNE_SEMITONES.toFloat(),
-                "BUZZ" to 0.15f, "DECAY" to 0.6f,
+                "BUZZ" to 0.15f, "DECAY" to 0.9f,
             ) + macros
             WavWriter.write(File(kalimbaDir, "$name.wav"), level(Tines.render(TinesVoice.KALIMBA, full)), WavWriter.BitDepth.PCM_16)
             count++
         }
-        writeKalimba("p2d_c4_default", mapOf("BRIGHT" to 0.5f, "DECAY" to 0.6f))
+        writeKalimba("p2d_c4_default", mapOf("BRIGHT" to 0.5f, "DECAY" to 0.9f))
         writeKalimba("p2d_c4_decay_0", mapOf("BRIGHT" to 0.5f, "DECAY" to 0.0f))
         writeKalimba("p2d_c4_decay_1", mapOf("BRIGHT" to 0.5f, "DECAY" to 1.0f))
-        writeKalimba("p2d_c4_bright_75", mapOf("BRIGHT" to 0.75f, "DECAY" to 0.6f))
+        writeKalimba("p2d_c4_bright_75", mapOf("BRIGHT" to 0.75f, "DECAY" to 0.9f))
         writeKalimba(
             "p2d_a4_default",
-            mapOf("TUNE" to 12f / Tines.KALIMBA_TUNE_SEMITONES.toFloat(), "BRIGHT" to 0.5f, "DECAY" to 0.6f),
+            mapOf("TUNE" to 12f / Tines.KALIMBA_TUNE_SEMITONES.toFloat(), "BRIGHT" to 0.5f, "DECAY" to 0.9f),
         )
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")

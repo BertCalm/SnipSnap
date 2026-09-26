@@ -206,13 +206,10 @@ Gate-tuned again 2026-09-26 (fourth listen): the tick was losing most of
 its energy to `Dsp.decimate`'s near-22 kHz low-pass on the way back down
 from the 4x oversampled render, because it was white noise above its
 3 kHz high-pass corner; a second, one-pole low-pass at 9 kHz now band-limits
-it to 3–9 kHz, inside what the decimator keeps. A small fixed body — two
-modes at 190 Hz and 470 Hz, standing in for the hollow wooden box under the
-tines and its sound hole — rings from the tone's own first difference and
-is added at a fixed fraction (`Tines.BOX_LEVEL`, 0.35): a candidate the
-gate asked to hear ("a bit of decay and resonance even at the low
-levels"), SHAPES rather than SOURCED the way PLUCK's bodies were (Phase 2's
-sourcing rule covered PLUCK; the box is Phase 3's to source if it stays).
+it to 3–9 kHz, inside what the decimator keeps. The fourth gate heard the
+longest tine (DECAY 1) as closer and everything shorter as the same, so
+DECAY's default moves to 0.9, near the ceiling, and the unsourced box the
+same gate could not hear either way is removed.
 
 - **The ratios are the clamped-free bar's**: Euler–Bernoulli eigenvalues
   `βL = 1.8751, 4.6941, 7.8548`, squared and normalised, give

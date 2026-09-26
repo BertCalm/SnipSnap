@@ -477,7 +477,7 @@
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
     <p>BANJO is settled at the string the third gate chipped closer, and it is not on this page.</p>
-    <p>KALIMBA: the tine rings longer now, from a higher floor, its tick sits where you can hear it, and a small box hums under it. The first pad is last time's C4; then the new default, the floor (DECAY 0), the ceiling (DECAY 1), brighter, and the kit's highest kalimba pad at A4. Is this the decay and resonance you meant?</p>
+    <p>KALIMBA: the box is gone, and the default decay now sits near the ceiling because that is what read as a kalimba. The first pad is last time's C4; then the new default, the floor (DECAY 0), the ceiling (DECAY 1), brighter, and the kit's highest kalimba pad at A4. Is this the decay and resonance you meant?</p>
   </div>
 
   <div id="voices"></div>
@@ -535,7 +535,7 @@
   var KALIMBA_GROUPS = [
     { label: 'LAST TIME AGAINST NOW, C4', key: true, clips: [
       ['p2c_c4_default', 'LAST TIME, C4', 'tick and partials, no box, DECAY .45'],
-      ['p2d_c4_default', 'NOW, C4', 'the box, DECAY .60 from a higher floor']
+      ['p2d_c4_default', 'SHIPPED, C4', 'DECAY .90, no box: what the kit plays']
     ]},
     { label: 'DECAY, FLOOR TO CEILING', clips: [
       ['p2d_c4_decay_0', 'DECAY 0', 'the softest it gets: 0.5 s'],
@@ -548,7 +548,7 @@
   ];
 
   var VOICES = [
-    { id: 'FU_KALIMBA', display: 'KALIMBA', folder: 'KALIMBA', note: 'C4', hz: '262 HZ', root: 'A3' + DOT + '220 HZ', macros: 'BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .60', body: 'a tick, the shimmer, and a box under it', groups: KALIMBA_GROUPS },
+    { id: 'FU_KALIMBA', display: 'KALIMBA', folder: 'KALIMBA', note: 'C4', hz: '262 HZ', root: 'A3' + DOT + '220 HZ', macros: 'BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .90', body: 'a tick and the shimmer, ringing long', groups: KALIMBA_GROUPS },
     { id: 'KIT_SEAM', display: 'KIT SEAM', note: 'A05 TO A08', hz: 'the melodic kit', root: 'nylon to kalimba', macros: 'two engines', body: 'PLUCK then TINES', groups: SEAM_GROUPS }
   ];
 
