@@ -461,7 +461,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Pluck Audition</span>
-    <span class="tag">PHASE 1 &middot; STRIKE, RING, KALIMBA</span>
+    <span class="tag">PHASE 2 &middot; BODY, BANJO, THE KIT SEAM</span>
   </div>
 
   <div class="transport lcd">
@@ -476,9 +476,9 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>Every clip sits at the same RMS, deliberately quiet: turn up and use headphones.</p>
-    <p>Strings: BEFORE is the engine as it shipped; the PHASE 1 clips are the new engine. Mark each clip against the instrument. STRIKE and DAMP are shown at their ends on purpose.</p>
-    <p>KALIMBA: the same five notes from the PLUCK string and the new TINES voice. Pick the instrument, not the louder one.</p>
+    <p>Every clip sits at the same level, deliberately quiet: turn up and use headphones.</p>
+    <p>Strings: BODY 0 is the string alone, DEFAULT is the placeholder amount, BODY 1 is three times the string. Mark each against the instrument. Listen for a thump at the very start: that is the knock, and it is supposed to be gone.</p>
+    <p>BANJO is new. KIT SEAM is four neighbouring pads of the melodic kit, where nylon hands to the kalimba, now on TINES.</p>
   </div>
 
   <div id="voices"></div>
@@ -489,17 +489,18 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Do STRIKE's ends earn their place on NYLON, KOTO and HARP?</div>
-      <div class="sub">BRIDGE and CENTRE against BEFORE.</div>
-      <textarea id="q_strike" placeholder="&hellip;"></textarea>
+      <div class="ask">1 &middot; Does the body make each string sound like its instrument?</div>
+      <div class="sub">BODY DEFAULT and BODY 1 against BODY 0, per voice.</div>
+      <textarea id="q_body" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; Does DAMP 0 ring long enough, and is DAMP 1 still the dead thud?</div>
-      <textarea id="q_damp" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; Is the knock gone?</div>
+      <div class="sub">The thump at the very start. If it is still there, say which voices.</div>
+      <textarea id="q_knock" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">3 &middot; PLUCK or TINES for the kalimba, and does BUZZ read as a rattle?</div>
-      <textarea id="q_kalimba" placeholder="&hellip;"></textarea>
+      <div class="ask">3 &middot; Does BANJO read as a banjo, and does the kit seam hold?</div>
+      <textarea id="q_banjo" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -512,7 +513,7 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generatePluckAudition &middot; PHASE 1 &middot; 16-BIT 44.1 KHZ &middot;
+    RENDERED BY generatePluckAudition &middot; PHASE 2 &middot; 16-BIT 44.1 KHZ &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -528,47 +529,33 @@
 
   // [file id, name, description]
   var STRING_GROUPS = [
-    { label: 'BEFORE AND AFTER', key: true, clips: [
-      ['00_shipped', 'BEFORE PHASE 1', 'the engine as it shipped, from the spike publish'],
-      ['p1_default', 'PHASE 1 DEFAULT', 'STRIKE at its default; the render follows the decay']
+    { label: 'BODY', key: true, clips: [
+      ['p2_body_0', 'BODY 0', 'the string alone'],
+      ['p2_body_default', 'BODY DEFAULT', 'the placeholder amount'],
+      ['p2_body_1', 'BODY 1', 'three times the string, the ugly end']
     ]},
-    { label: 'STRIKE', clips: [
-      ['p1_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'thin and bright, low harmonics cut'],
-      ['p1_strike_centre', 'STRIKE' + DOT + 'CENTRE', 'hollow, even harmonics gone']
-    ]},
-    { label: 'DAMP', clips: [
-      ['p1_ring', 'DAMP 0', 'rings out to the 4 s ceiling'],
-      ['p1_thud', 'DAMP 1', 'the dead end']
-    ]},
-    { label: 'VELOCITY THROUGH PICK', clips: [
-      ['p1_soft', 'SOFT', 'velocity 0.3, re-rendered darker through PICK'],
-      ['p1_hard', 'HARD', 'velocity 1.0, the preset as written']
+    { label: 'AT THE DEFAULT BODY', clips: [
+      ['p2_body_default_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'pick at the bridge'],
+      ['p2_body_default_ring', 'DAMP 0', 'rings out'],
+      ['p2_body_default_thud', 'DAMP 1', 'the dead end']
     ]}
   ];
 
-  var KALIMBA_GROUPS = [
-    { label: 'PLUCK VERSUS TINES' + DOT + 'C4', key: true, clips: [
-      ['pluck_C4', 'PLUCK C4', 'the string model'],
-      ['tines_C4', 'TINES C4', 'three FM strikes at the bar\'s ratios']
-    ]},
-    { label: 'D4', clips: [['pluck_D4', 'PLUCK D4', ''], ['tines_D4', 'TINES D4', '']] },
-    { label: 'E4', clips: [['pluck_E4', 'PLUCK E4', ''], ['tines_E4', 'TINES E4', '']] },
-    { label: 'G4', clips: [['pluck_G4', 'PLUCK G4', ''], ['tines_G4', 'TINES G4', '']] },
-    { label: 'A4', clips: [['pluck_A4', 'PLUCK A4', ''], ['tines_A4', 'TINES A4', '']] },
-    { label: 'TINES EXTREMES' + DOT + 'A4', clips: [
-      ['tines_buzz_0', 'BUZZ 0', 'clean thumb piano'],
-      ['tines_buzz_1', 'BUZZ 1', 'full rattle, the ugly end'],
-      ['tines_bright_0', 'BRIGHT 0', 'flesh'],
-      ['tines_bright_1', 'BRIGHT 1', 'thumbnail']
+  var SEAM_GROUPS = [
+    { label: 'NYLON TO KALIMBA', key: true, clips: [
+      ['a05_nylon_5', 'A05 NYLON 5', 'PLUCK'],
+      ['a06_nylon_6', 'A06 NYLON 6', 'PLUCK'],
+      ['a07_kalimba_1', 'A07 KALIMBA 1', 'TINES'],
+      ['a08_kalimba_2', 'A08 KALIMBA 2', 'TINES']
     ]}
   ];
 
-  // Factory TUNE snapped to a semitone from each voice's root.
   var VOICES = [
-    { id: 'NYLON',      display: 'NYLON',   note: 'G3',  hz: '196 HZ',   root: 'A2' + DOT + '110 HZ', macros: 'DAMP .45' + DOT + 'PICK .40' + DOT + 'STRIKE .75' + DOT + 'DOUBLE .15', body: 'no body until phase 2', groups: STRING_GROUPS },
-    { id: 'KOTO',       display: 'KOTO',    note: 'C#4', hz: '278 HZ',   root: 'D3' + DOT + '147 HZ', macros: 'DAMP .40' + DOT + 'PICK .75' + DOT + 'STRIKE .60' + DOT + 'DOUBLE .45', body: 'no body until phase 2', groups: STRING_GROUPS },
-    { id: 'HARP',       display: 'HARP',    note: 'F4',  hz: '350 HZ',   root: 'E3' + DOT + '165 HZ', macros: 'DAMP .20' + DOT + 'PICK .60' + DOT + 'STRIKE .75' + DOT + 'DOUBLE .20', body: 'no body until phase 2', groups: STRING_GROUPS },
-    { id: 'KALIMBA_AB', display: 'KALIMBA', note: 'C4 TO A4', hz: 'the kit\'s five notes', root: 'A3' + DOT + '220 HZ', macros: 'TINES: BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .45', body: 'PLUCK string versus TINES tine', groups: KALIMBA_GROUPS }
+    { id: 'NYLON', display: 'NYLON', note: 'G3',  hz: '196 HZ', root: 'A2' + DOT + '110 HZ', macros: 'BODY .05 default', body: 'classical guitar', groups: STRING_GROUPS },
+    { id: 'KOTO',  display: 'KOTO',  note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'BODY .15 default', body: 'paulownia box', groups: STRING_GROUPS },
+    { id: 'HARP',  display: 'HARP',  note: 'F4',  hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'BODY .10 default', body: 'soundboard', groups: STRING_GROUPS },
+    { id: 'BANJO', display: 'BANJO', note: 'G4',  hz: '392 HZ', root: 'G3' + DOT + '196 HZ', macros: 'BODY .15 default', body: 'head over a pot', groups: STRING_GROUPS },
+    { id: 'KIT_SEAM', display: 'KIT SEAM', note: 'A05 TO A08', hz: 'the melodic kit', root: 'nylon to kalimba', macros: 'two engines', body: 'PLUCK then TINES', groups: SEAM_GROUPS }
   ];
 
   var REACTIONS = [
@@ -586,7 +573,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_strike: '', q_damp: '', q_kalimba: '', q_else: '' } };
+  var state = { overall: { q_body: '', q_knock: '', q_banjo: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -755,7 +742,7 @@
   }
 
   function paintOverall() {
-    ['q_strike', 'q_damp', 'q_kalimba', 'q_else'].forEach(function (k) {
+    ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -765,7 +752,7 @@
 
   // The four answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_strike', 'q_damp', 'q_kalimba', 'q_else'].forEach(function (k) {
+  ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -791,7 +778,7 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_strike: state.overall.q_strike, q_damp: state.overall.q_damp, q_kalimba: state.overall.q_kalimba, q_else: state.overall.q_else }
+      ? { q_body: state.overall.q_body, q_knock: state.overall.q_knock, q_banjo: state.overall.q_banjo, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
@@ -811,7 +798,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_strike', 'q_damp', 'q_kalimba', 'q_else'].forEach(function (k) {
+      ['q_body', 'q_knock', 'q_banjo', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();

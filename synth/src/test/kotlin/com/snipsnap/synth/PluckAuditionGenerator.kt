@@ -7,10 +7,13 @@ import java.io.File
 import kotlin.math.abs
 
 /**
- * Renders the Phase 1 audition set of
+ * Renders the Phase 2 audition set of
  * docs/superpowers/specs/2026-09-25-pluck-depth-design.md under
- * testkit/pluck-audition/ (gitignored): 16-bit clips at one loudness (see
- * [level]), plus the listening page copied from the test resources. Run via
+ * testkit/pluck-audition/ (gitignored): BODY at 0, default and 1 for every
+ * string voice, STRIKE and DAMP at their ends with BODY held at the
+ * default, and the kit seam where the melodic kit hands from nylon to
+ * kalimba - 16-bit clips at one loudness (see [level]), plus the listening
+ * page copied from the test resources. Run via
  * `./gradlew :synth:generatePluckAudition`.
  *
  * The PLUCK-versus-TINES kalimba A/B was decided at the Phase 1 gate (TINES
@@ -33,20 +36,29 @@ object PluckAuditionGenerator {
         root.mkdirs()
         var count = 0
 
-        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
+        for (voice in PluckVoice.entries) {
             val dir = File(root, voice.name)
-            val patch = PluckPatch("AUDITION", voice, Pluck.defaults(voice))
+            val defaults = Pluck.defaults(voice)
             fun write(name: String, snip: Snip) {
                 WavWriter.write(File(dir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
                 count++
             }
-            write("p1_default", Pluck.render(voice))
-            write("p1_strike_bridge", Pluck.render(voice, mapOf("STRIKE" to 0f)))
-            write("p1_strike_centre", Pluck.render(voice, mapOf("STRIKE" to 1f)))
-            write("p1_ring", Pluck.render(voice, mapOf("DAMP" to 0f)))
-            write("p1_thud", Pluck.render(voice, mapOf("DAMP" to 1f)))
-            write("p1_soft", Velocity.atVelocity(patch, 0.3f))
-            write("p1_hard", Velocity.atVelocity(patch, 1f))
+            write("p2_body_0", Pluck.render(voice, mapOf("BODY" to 0f)))
+            write("p2_body_default", Pluck.render(voice))
+            write("p2_body_1", Pluck.render(voice, mapOf("BODY" to 1f)))
+            write("p2_body_default_strike_bridge", Pluck.render(voice, mapOf("STRIKE" to 0f)))
+            write("p2_body_default_ring", Pluck.render(voice, mapOf("DAMP" to 0f)))
+            write("p2_body_default_thud", Pluck.render(voice, mapOf("DAMP" to 1f)))
+            println("${voice.name}: BODY default ${defaults.getValue("BODY")}")
+        }
+
+        // The kit seam: where the melodic kit hands from nylon to kalimba,
+        // now across two engines. Pads 5-8 of SynthKits.melodic().
+        val seam = File(root, "KIT_SEAM")
+        val kit = SynthKits.melodic()
+        for ((index, name) in listOf(4 to "a05_nylon_5", 5 to "a06_nylon_6", 6 to "a07_kalimba_1", 7 to "a08_kalimba_2")) {
+            WavWriter.write(File(seam, "$name.wav"), level(kit[index]!!.snip), WavWriter.BitDepth.PCM_16)
+            count++
         }
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")
