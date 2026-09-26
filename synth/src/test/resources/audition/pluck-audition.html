@@ -532,7 +532,8 @@
     { label: 'BODY', key: true, clips: [
       ['p2_body_0', 'BODY 0', 'the string alone'],
       ['p2_body_default', 'BODY DEFAULT', 'the placeholder amount'],
-      ['p2_body_1', 'BODY 1', 'three times the string, the ugly end']
+      ['p2_body_1', 'BODY 1', 'three times the string, the ugly end'],
+      ['p2_body_1_root', 'BODY 1 AT THE ROOT', 'the ugly end on the lowest note']
     ]},
     { label: 'AT THE DEFAULT BODY', clips: [
       ['p2_body_default_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'pick at the bridge'],
@@ -604,7 +605,7 @@
         var pad = el('button', 'raised pad');
         pad.type = 'button';
         pad.setAttribute('aria-pressed', 'false');
-        pad.setAttribute('aria-label', 'Play ' + v.id + ' ' + name);
+        pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
         pad.innerHTML = PLAY_SVG;
         pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
         row.appendChild(pad);
@@ -633,7 +634,7 @@
     });
 
     var notes = el('div', 'notes');
-    var lab = el('label', null, v.id.charAt(0) + v.id.slice(1).toLowerCase() + ' notes');
+    var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
     var ta = el('textarea');
     ta.id = 'note-' + v.id;
     ta.placeholder = 'what it sounds like, in your words';

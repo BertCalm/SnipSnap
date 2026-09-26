@@ -10,7 +10,8 @@ import kotlin.math.abs
  * Renders the Phase 2 audition set of
  * docs/superpowers/specs/2026-09-25-pluck-depth-design.md under
  * testkit/pluck-audition/ (gitignored): BODY at 0, default and 1 for every
- * string voice, STRIKE and DAMP at their ends with BODY held at the
+ * string voice, BODY 1 again at the root note (where the body's modes sit
+ * nearest the note), STRIKE and DAMP at their ends with BODY held at the
  * default, and the kit seam where the melodic kit hands from nylon to
  * kalimba - 16-bit clips at one loudness (see [level]), plus the listening
  * page copied from the test resources. Run via
@@ -46,6 +47,7 @@ object PluckAuditionGenerator {
             write("p2_body_0", Pluck.render(voice, mapOf("BODY" to 0f)))
             write("p2_body_default", Pluck.render(voice))
             write("p2_body_1", Pluck.render(voice, mapOf("BODY" to 1f)))
+            write("p2_body_1_root", Pluck.render(voice, mapOf("TUNE" to 0f, "BODY" to 1f)))
             write("p2_body_default_strike_bridge", Pluck.render(voice, mapOf("STRIKE" to 0f)))
             write("p2_body_default_ring", Pluck.render(voice, mapOf("DAMP" to 0f)))
             write("p2_body_default_thud", Pluck.render(voice, mapOf("DAMP" to 1f)))
