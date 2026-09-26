@@ -209,8 +209,11 @@ class PluckTest {
 
     @Test
     fun `PICK brightens the attack`() {
-        val soft = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.05f)))
-        val hard = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.95f)))
+        // BODY forced to 0: this measures the exciter, and at any nonzero
+        // BODY the attack window (FeatureExtractor's centroid) also
+        // contains the body's own free ring, which is not what PICK does.
+        val soft = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.05f, "BODY" to 0f)))
+        val hard = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON, mapOf("PICK" to 0.95f, "BODY" to 0f)))
         assertTrue(
             hard.centroidHz > soft.centroidHz * 1.2f,
             "PICK should brighten: ${soft.centroidHz} -> ${hard.centroidHz}",
@@ -555,16 +558,29 @@ class PluckTest {
         // velocity, so the body is driven by the first difference; this pins
         // that the velocity drive leaves no more low-frequency swing at the
         // onset than the displacement drive, and prints both ratios so the
-        // report can carry the measurement to the gate.
+        // report can carry the measurement to the gate. Measured on the wet
+        // layer alone (out - string), not the rendered note: the string
+        // itself carries low-frequency energy of its own that would
+        // otherwise swamp the difference the drive choice actually makes.
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         for (voice in PluckVoice.entries) {
             val string = Pluck.synthesize(voice, mapOf("BODY" to 0f), rate)
             val velocityDriven = Pluck.withBody(string, voice, 1f, rate)
             val displacementDriven = Pluck.withBody(string, voice, 1f, rate, differentiate = false)
-            val onsetV = PluckSpectra.lowPassPeak(velocityDriven, rate, 200f, 0.03f) / PluckSpectra.peak(velocityDriven)
-            val onsetD = PluckSpectra.lowPassPeak(displacementDriven, rate, 200f, 0.03f) / PluckSpectra.peak(displacementDriven)
+            val wetV = FloatArray(string.size) { velocityDriven[it] - string[it] }
+            val wetD = FloatArray(string.size) { displacementDriven[it] - string[it] }
+            val onsetV = PluckSpectra.lowPassPeak(wetV, rate, 200f, 0.03f) / PluckSpectra.peak(string)
+            val onsetD = PluckSpectra.lowPassPeak(wetD, rate, 200f, 0.03f) / PluckSpectra.peak(string)
             println("$voice: onset low-band ratio velocity=$onsetV displacement=$onsetD")
             assertTrue(onsetV <= onsetD * 1.01f, "$voice: the velocity drive should not knock more than the displacement drive: $onsetV vs $onsetD")
+
+            // Printed only, for the gate: the sub-200 Hz onset on real
+            // renders, BODY 1 over BODY 0.
+            val body1 = Pluck.render(voice, mapOf("BODY" to 1f))
+            val body0 = Pluck.render(voice, mapOf("BODY" to 0f))
+            val subRatio = PluckSpectra.lowPassPeak(body1.samples, Dsp.RATE, 200f, 0.03f) /
+                PluckSpectra.lowPassPeak(body0.samples, Dsp.RATE, 200f, 0.03f)
+            println("$voice: sub-200 Hz onset, BODY 1 over BODY 0 = $subRatio")
         }
     }
 

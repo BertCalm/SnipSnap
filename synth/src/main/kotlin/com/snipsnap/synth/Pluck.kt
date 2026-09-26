@@ -75,13 +75,19 @@ object Pluck {
      * above the fundamental - NYLON's 104 Hz air mode against its 110 Hz
      * root, HARP's 168.5 Hz A0 against 165 Hz, BANJO's 220/234 Hz head
      * modes under a 392 Hz note - which pulled the pitch detector off the
-     * note and swamped PICK; these sit at 0.15-0.45x, lowered further still
-     * from an initial 0.45-0.75x pass by the same per-voice tests.
+     * note and swamped PICK; an initial 0.45-0.75x pass was lowered again
+     * to the current NYLON 0.10, HARP 0.10, KOTO 0.15, BANJO 0.15
+     * (0.3-0.45x the string). Every per-voice pitch test (Task 3) accepted
+     * this range, NYLON included - `PICK brightens the attack` had briefly
+     * pulled NYLON's own default down to 0.05 to keep its own centroid
+     * measurement clean; that test now forces BODY to 0 for its own
+     * measurement instead, so the default is free to sit where Task 3 put
+     * it.
      */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
-            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.05f), MacroSpec("DOUBLE", 0.15f),
+            MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.10f), MacroSpec("DOUBLE", 0.15f),
         )
         PluckVoice.HARP -> listOf(
             MacroSpec("TUNE", 0.55f), MacroSpec("DAMP", 0.2f), MacroSpec("PICK", 0.6f),
@@ -299,12 +305,18 @@ object Pluck {
             Modes.fixed(510f, 0.15f, 0.10f),   // top-plate mode 4 - shape
             Modes.fixed(645f, 0.10f, 0.08f),   // top-plate mode 5 - shape
         )
-        // Koto - research note sections 2 and 5.2. Only two modes are in a
-        // source the verifier could open (Coaldrake, ICA 2019: the (0,0) air
-        // mode at 85 Hz and the first plate mode at 100 Hz, both confirmed by
-        // the acoustic camera; the 2020 JASA paper's abstract says the same).
-        // The rest of the koto catalogue is unsupported and stays out until
-        // that paper can be read.
+        // Koto - research note section 2, which quotes the Coaldrake ICA
+        // 2019 conference paper directly, read in full (not the unreachable
+        // 2020 JASA paper the rest of section 2's catalogue depends on):
+        // "the (0,1) mode was at 100Hz and the (0,0) mode at 85Hz which the
+        // acoustic camera confirmed." Section 5.2 is NOT cited here as
+        // endorsing this table - it says "no table," because every other
+        // mode in section 2 traces only to the unreachable source; these
+        // two are the exception the controller ruled usable, because they
+        // come from the source the verifier could actually open. The rest
+        // of the koto catalogue stays out until the 2020 paper can be read.
+        // Both decays below are shapes, not measurements: neither source
+        // reports a Q or a bandwidth for either mode.
         PluckVoice.KOTO -> listOf(
             Modes.fixed(85f, 0.80f, 0.40f),    // air mode (0,0) - shape decay
             Modes.fixed(100f, 1.00f, 0.50f),   // first top-plate eigenmode - shape decay
@@ -313,11 +325,12 @@ object Pluck {
         // Foltete 2007, one Camac Atlantide Prestige). The 161.9 Hz pitch
         // mode is absent: the source excludes it from play.
         PluckVoice.HARP -> listOf(
-            Modes.fixed(54.8f, 0.20f, 0.30f),  // global soundbox motion - shape
-            Modes.fixed(80.9f, 0.15f, 0.35f),  // first bending - shape
-            Modes.fixed(123.4f, 0.15f, 0.70f), // second bending - shape
-            Modes.fixed(152.2f, 0.95f, 0.80f), // T1 soundboard - shape
-            Modes.fixed(168.5f, 1.00f, 1.20f), // A0 soundbox air - shape
+            // t60 = 2.2*Q/f, Q = 1/(2*zeta) per row below.
+            Modes.fixed(54.8f, 0.20f, 0.30f),  // global soundbox motion - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(80.9f, 0.15f, 0.35f),  // first bending - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(123.4f, 0.15f, 0.36f), // second bending - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(152.2f, 0.95f, 0.31f), // T1 soundboard - shape from the source's damping % read as zeta; the eta reading doubles it
+            Modes.fixed(168.5f, 1.00f, 0.47f), // A0 soundbox air - shape from the source's damping % read as zeta; the eta reading doubles it
         )
         // Banjo - research note section 5.4 (Rae 2010; Politzer 2016;
         // Politzer, Woodhouse & Mansour 2021). The two bridge hills are one
@@ -338,42 +351,77 @@ object Pluck {
     /**
      * The string drives its body. The drive is the string's FIRST
      * DIFFERENCE, because the bridge force follows the string's slope at
-     * the bridge, the velocity-like quantity - and numerically because at
-     * the 4x render rate the difference passes 5 kHz at 2*sin(pi*5000/176400)
-     * ~ 0.178 and 98 Hz at ~ 0.0035, 34 dB apart, which is what keeps the
-     * burst out of the low body modes (the spike's knock drove them with
-     * the string itself). The body layer is RMS-matched to the string so
-     * [amount] means "times the string", then added. Amount 0 returns
-     * [string] itself: BODY 0 is the string, byte for byte.
+     * the bridge, the velocity-like quantity - not, as a 34 dB tilt might
+     * suggest, to hide the burst from the body's low modes. The
+     * differentiator's own gain, `2*sin(theta/2)`, and [Modes.ring]'s own
+     * onset peak, `1/sin(theta)` (`theta = 2*pi*hz/rate`), multiply to 1.0
+     * at every body frequency, so it is the table's GAIN column that
+     * governs each mode's burst response, and `ring`'s documented
+     * low-frequency onset hazard is cancelled outright, not merely
+     * reduced. What differentiating the drive actually buys: it removes
+     * the burst's DC step (the spike's knock came from driving the body
+     * with the string's raw displacement, DC and all), and it re-tilts
+     * the balance among a voice's own sourced modes toward the high ones
+     * by the differentiator's own frequency slope - NYLON's 645 Hz mode
+     * gains on its 104 Hz mode by about 16 dB, BANJO's 5000 Hz mode on
+     * its 220 Hz mode by about 27 dB, KOTO's 100 Hz mode on its 85 Hz
+     * mode by about 1.4 dB. The body's level against the string is set by
+     * the RMS match below, not by the drive.
+     *
+     * The body's own longest mode can ring well past the string that
+     * struck it: a muted string's DAMP-driven budget is a few hundred ms,
+     * a body mode's t60 can run past a second, and [Modes.ring] itself
+     * only ever returns as many samples as it was given to excite - it
+     * does not extend the ring on its own. So the drive here, and the
+     * ring it produces, run `pad` samples past the string's own length
+     * (`pad` sized off the table's own longest t60), and the returned
+     * buffer follows that ring out toward the ring ceiling rather than
+     * being cut where the string itself ends; [trimToDecay] (in
+     * [synthesize]) follows the combined tail from there. The RMS match
+     * is taken over the string's own length only, on both sides, so
+     * [amount] means "times the string" the same way whether or not the
+     * table's tail outlives it; the body is then added on top of the
+     * string where the string still runs, and on its own past the
+     * string's end. Amount 0 returns [string] itself: BODY 0 is the
+     * string, byte for byte. [differentiate] exists only so the knock
+     * test below can reproduce the spike's displacement drive for
+     * comparison - production never sets it false.
      */
     internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray {
         if (amount <= 0f) return string
         val table = bodyFor(voice)
         if (table.isEmpty()) return string
+        val pad = (table.maxOf { it.t60 } * rate).toInt()
+        val driveLen = string.size + pad
         // `differentiate = false` reproduces the spike's displacement drive;
-        // only the knock test passes it, production never does.
-        val drive = if (differentiate) {
-            val d = FloatArray(string.size)
+        // only the knock test passes it, production never does. Either way
+        // the drive is silent past the string's own length - there is
+        // nothing left to differentiate or copy once the string has ended,
+        // and the padding is what lets the body ring on regardless.
+        val drive = FloatArray(driveLen)
+        if (differentiate) {
             var prev = 0f
             for (i in string.indices) {
-                d[i] = string[i] - prev
+                drive[i] = string[i] - prev
                 prev = string[i]
             }
-            d
         } else {
-            string
+            string.copyInto(drive)
         }
         val wet = Modes.ring(drive, 1f, table, rate)
-        val g = rms(string) / rms(wet).coerceAtLeast(1e-9f)
-        val out = FloatArray(string.size)
-        for (i in out.indices) out[i] = string[i] + amount * g * wet[i]
+        val g = rms(string, string.size) / rms(wet, string.size).coerceAtLeast(1e-9f)
+        val outLen = min(driveLen, (RING_CEILING_SECONDS * rate).toInt())
+        val out = FloatArray(outLen)
+        for (i in out.indices) out[i] = (if (i < string.size) string[i] else 0f) + amount * g * wet[i]
         return out
     }
 
-    private fun rms(buf: FloatArray): Float {
+    /** RMS of the first [n] samples of [buf] (all of it by default). */
+    private fun rms(buf: FloatArray, n: Int = buf.size): Float {
+        val len = min(n, buf.size)
         var acc = 0.0
-        for (v in buf) acc += v.toDouble() * v
-        return sqrt(acc / buf.size.coerceAtLeast(1)).toFloat()
+        for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
+        return sqrt(acc / len.coerceAtLeast(1)).toFloat()
     }
 
     /**

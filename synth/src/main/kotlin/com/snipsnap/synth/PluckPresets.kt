@@ -4,7 +4,7 @@ package com.snipsnap.synth
  * PLUCK's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
  * Twelve presets per voice (four voices, forty-eight total), spread across
- * TUNE/DAMP/PICK/STRIKE/DOUBLE — the same five macros every voice shares, since
+ * TUNE/DAMP/PICK/STRIKE/BODY/DOUBLE — the same six macros every voice shares, since
  * PLUCK's character lives in each voice's fixed body constants
  * (`loopHz`/`pickLo`/`pickHi`/`ring` in `Pluck.kt`), not in a different
  * macro shape per voice. Authored from that DSP, not by ear (no audio
