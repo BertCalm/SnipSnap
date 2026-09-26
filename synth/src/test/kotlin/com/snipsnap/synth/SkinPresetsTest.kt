@@ -90,7 +90,7 @@ class SkinPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in SkinVoice.entries) {
             val names = SkinPresets.forVoice(voice).map { it.name }
-            assertEquals(16, names.size, "$voice should ship 16 presets, has ${names.size}")
+            assertEquals(20, names.size, "$voice should ship 20 presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")
@@ -148,7 +148,7 @@ class SkinPresetsTest {
             assertTrue(
                 minDist >= threshold,
                 "$voice's closest pair ${closest?.first} / ${closest?.second} is $minDist apart, " +
-                    "under $threshold — sixteen presets that all sound alike is a list that looks full " +
+                    "under $threshold — twenty presets that all sound alike is a list that looks full " +
                     "and plays empty.",
             )
         }

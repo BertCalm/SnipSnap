@@ -83,6 +83,26 @@ this round. The new ones stay off DE-SAMPLE's grid (each searched macro
 would triple its voice's points), and every voice gained four BOLD
 presets that push them.
 
+**SKIN got the same round**, in the same shape (defaults exact, off
+DE-SAMPLE's grid, four BOLD presets per voice), with macros that suit a
+modal engine rather than an oscillator one:
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| Kick | CLICK · DROP | the beater, felt ↔ hard plastic; the head's pitch dip when struck hard (tension modulation, every mode at once) |
+| Snare | RATTLE · SIZZLE | wire ring against the head's; the wires' highpass, level-matched so it moves shape, not loudness |
+| Hats | RING | the bank's resonance, a trashy band ↔ ringing metal (default 0.8: the travel is below today's sound, not above; the trashy end stops where closed hats would start reading as SNARE) |
+| Tom | DROP · CLICK | the classic tom bend; a stick on the head |
+| Ride | SIZZLE | rivets: a bright buzz outlasting the wash |
+| Shaker | SWELL · GRAIN | a thrown "shh" attack; separate beads instead of hiss |
+| Stick | BODY · CLICK | a shell under the stick; a wood crack |
+
+Ride BELL (clear tones from the cup) was built and dropped: any bell above
+~10% of the wash's peak classifies as SNARE, and one quiet enough to pass
+was all but inaudible. SIZZLE took its place because it pushes the
+centroid away from that line instead of across it. `Dsp.around` - the
+exact-default map both engines use - moved out of THUMP for SKIN to share.
+
 Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
 modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
 style preset (the demo kit becomes THUMP's factory default).
