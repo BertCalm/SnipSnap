@@ -1266,6 +1266,31 @@ the strike starts sharp and lands; every FLARE preset's note sits within
 8 dB of the whole. The classifier reads BONGO and DRIP as PERC on all ten
 presets each.
 
+### Revision — CLICK, 2026-09-26
+
+Of the three character stages left out of the oomph, CLICK came back as a
+knob: BONGO and DRIP's seventh macro (THUMP SNARE's count), starting at 0
+on every preset, so nothing that shipped changes. GONG and FLARE have no
+room. DRIVE and PUNCH stay out.
+
+- **After the VCA, not before it.** The prototype put the noise burst
+  into the gate, which takes 2 ms to open while the click is gone in
+  1.5: at CLICK 1 it added 5% to WOOD BONGO's energy above the note in
+  the first 4 ms, so the audition's "e CLICK" was barely a click. After
+  the VCA, at 1.5 times full scale falling over 2 ms, CLICK 1 gives WOOD
+  BONGO 3.1 times, LOW CONGA 5.2, RAIN DRIP 1.5 (a strike already
+  bright); the body under it, levelled to the same peak, loses 0.3, 0.6
+  and 1.5 dB. A brighter click (differenced noise) was tried and measured
+  weaker: at the 4x render most of its energy sits above what the band
+  limit keeps.
+- **CLICK is left out of the WANDER seed**, so adding the macro left every
+  existing recipe's draws where they were: the Tide Kit regenerates to
+  the byte.
+- **Velocity does not reach CLICK.** `Velocity` moves one brightness macro
+  per voice (FOLD, on TIDE), so a soft strike is darker but clicks as
+  hard. Moving two would be a change to `Velocity` for every engine, left
+  for when it is wanted.
+
 ### Not doing
 
 A patchbay or patch cables (rule 1: presets and macros, never modular);

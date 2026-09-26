@@ -258,7 +258,8 @@ the modulator (a snarl, held short of noise), the fold's symmetry turns
 over across the note, and small seeded jitters keep a held note moving.
 Under it all sits the oomph: every strike thumps (it starts sharp and
 drops onto the note in a few milliseconds) and a clean sine carries the
-note itself under the fold.
+note itself under the fold. BONGO and DRIP add CLICK, the stick on the
+skin, at 0 until you turn it up.
 WANDER nudges fold, decay and WARP per note from a seed the recipe itself
 carries, so a kit still regenerates to the bit.
 BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG

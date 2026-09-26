@@ -178,6 +178,17 @@ object Tide {
     private const val BODY = 0.5f
 
     /**
+     * CLICK, BONGO and DRIP's seventh macro: a burst of noise at the strike,
+     * the stick on the skin, this loud at CLICK 1 and falling with time
+     * constant [CLICK_SECONDS]. At 0 (every preset's setting) it is nothing.
+     * Measured at CLICK 1 as the first 4 ms's energy above the note: WOOD
+     * BONGO 3.1 times, LOW CONGA 5.2, RAIN DRIP 1.5 (already a bright
+     * strike); the body, levelled to the same peak, loses 0.3, 0.6 and 1.5 dB.
+     */
+    private const val CLICK_LEVEL = 1.5f
+    private const val CLICK_SECONDS = 0.002f
+
+    /**
      * How far past the note the brightest corner may reach, Hz. The fold's
      * drive times the phase modulation's bandwidth sets how high the
      * harmonics go, roughly `drive · (1 + index · ratio) · note`; where
@@ -255,11 +266,11 @@ object Tide {
     fun macrosFor(voice: TideVoice): List<MacroSpec> = when (voice) {
         TideVoice.BONGO -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("FOLD", 0.3f), MacroSpec("WARP", 0.2f),
-            MacroSpec("GLOW", 0.3f), MacroSpec("DECAY", 0.35f), MacroSpec("WANDER", 0.3f),
+            MacroSpec("GLOW", 0.3f), MacroSpec("CLICK", 0f), MacroSpec("DECAY", 0.35f), MacroSpec("WANDER", 0.3f),
         )
         TideVoice.DRIP -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("FOLD", 0.2f), MacroSpec("WARP", 0.3f),
-            MacroSpec("GLOW", 0.3f), MacroSpec("DECAY", 0.3f), MacroSpec("WANDER", 0.3f),
+            MacroSpec("GLOW", 0.3f), MacroSpec("CLICK", 0f), MacroSpec("DECAY", 0.3f), MacroSpec("WANDER", 0.3f),
         )
         TideVoice.GONG -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("FOLD", 0.15f), MacroSpec("WARP", 0.45f),
@@ -373,9 +384,14 @@ object Tide {
         }
     }
 
-    /** A per-note seed from what the note is: the same recipe and take always wander the same way. */
+    /**
+     * A per-note seed from what the note is: the same recipe and take always
+     * wander the same way. CLICK is left out, so adding it (at 0 on every
+     * existing recipe) left every existing note's draws, and its bytes, where
+     * they were.
+     */
     internal fun seedFor(voice: TideVoice, macros: Map<String, Float>, take: Int): Int =
-        Dsp.seedFor("TIDE", voice.name, macros.toSortedMap().entries.joinToString(","), take)
+        Dsp.seedFor("TIDE", voice.name, macros.filterKeys { it != "CLICK" }.toSortedMap().entries.joinToString(","), take)
 
     /**
      * The raw synth loop at whatever [rate] the caller wants — split out of
@@ -487,6 +503,14 @@ object Tide {
         for (i in out.indices) correlation += out[i] * body[i]
         val polarity = if (correlation < 0.0) -BODY else BODY
         for (i in out.indices) out[i] += polarity * body[i]
+        // CLICK: after the VCA, not before it. The gate takes 2 ms to open,
+        // longer than the click lasts, and ate it: before the VCA, CLICK 1
+        // added 5% to WOOD BONGO's energy above the note in its first 4 ms.
+        val click = m["CLICK"] ?: 0f
+        if (click > 0f) {
+            val noise = Dsp.Noise(seedFor(voice, m, if (wander > 0f) take else 0) + 2)
+            for (i in out.indices) out[i] += click * CLICK_LEVEL * noise.next() * exp(-(i.toFloat() / rate) / CLICK_SECONDS)
+        }
         return out
     }
 
