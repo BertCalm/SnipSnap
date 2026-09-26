@@ -7,7 +7,8 @@ package com.snipsnap.synth
  * TUNE/VOWEL/BREATH/DECAY, and since round 1 SIZE (LOW and HIGH throats)
  * and GLIDE (SPEAK BOX's "wah", HIGH SIGH and LOW MOAN sighing toward
  * "ooh"). VOWEL walks the A→E→I→O→U morph `Vox.kt` defines; BREATH
- * crossfades the throat toward filtered noise.
+ * crossfades the throat toward filtered noise. BEATBOX's twelve walk its
+ * eight HITs: three kicks, four snares (two PSH), four hats, a rim.
  * Authored from that DSP, not by ear, and checked by [VoxPresetsTest]'s
  * sanity/round-trip/spread suite.
  */
@@ -20,6 +21,7 @@ object VoxPresets {
         VoxVoice.CHOIR -> choirPresets
         VoxVoice.ROBOT -> robotPresets
         VoxVoice.GHOST -> ghostPresets
+        VoxVoice.BEATBOX -> beatboxPresets
     }
 
     fun all(): List<VoxPatch> = VoxVoice.entries.flatMap { forVoice(it) }
@@ -67,5 +69,23 @@ object VoxPresets {
         p(VoxVoice.GHOST, "DRY GHOST", "TUNE" to 0.45f, "VOWEL" to 0.55f, "BREATH" to 0.2f, "DECAY" to 0.5f),
         p(VoxVoice.GHOST, "SHORT GASP", "TUNE" to 0.5f, "VOWEL" to 0.3f, "BREATH" to 0.8f, "DECAY" to 0.2f),
         p(VoxVoice.GHOST, "DISTANT AAH", "TUNE" to 0.4f, "VOWEL" to 0.1f, "BREATH" to 0.5f, "DECAY" to 1f),
+    )
+
+    /** HIT's eight positions, KICK to RIM. */
+    private fun hit(h: VoxBeatbox.Hit) = h.ordinal / (VoxBeatbox.Hit.entries.size - 1f)
+
+    private val beatboxPresets = listOf(
+        p(VoxVoice.BEATBOX, "BOOM KICK", "HIT" to hit(VoxBeatbox.Hit.KICK), "TUNE" to 0.5f, "DECAY" to 0.5f),
+        p(VoxVoice.BEATBOX, "DEEP BOOM", "HIT" to hit(VoxBeatbox.Hit.KICK), "TUNE" to 0.25f, "DECAY" to 0.75f, "SIZE" to 0.75f),
+        p(VoxVoice.BEATBOX, "TIGHT KICK", "HIT" to hit(VoxBeatbox.Hit.KICK), "TUNE" to 0.6f, "DECAY" to 0.2f),
+        p(VoxVoice.BEATBOX, "PF SNARE", "HIT" to hit(VoxBeatbox.Hit.PF), "DECAY" to 0.5f),
+        p(VoxVoice.BEATBOX, "PSH SNARE", "HIT" to hit(VoxBeatbox.Hit.PSH), "DECAY" to 0.55f),
+        p(VoxVoice.BEATBOX, "SHORT PSH", "HIT" to hit(VoxBeatbox.Hit.PSH), "DECAY" to 0.15f, "SIZE" to 0.35f),
+        p(VoxVoice.BEATBOX, "K SNARE", "HIT" to hit(VoxBeatbox.Hit.K), "DECAY" to 0.5f),
+        p(VoxVoice.BEATBOX, "TS HAT", "HIT" to hit(VoxBeatbox.Hit.TS), "DECAY" to 0.35f),
+        p(VoxVoice.BEATBOX, "TICK HAT", "HIT" to hit(VoxBeatbox.Hit.T), "DECAY" to 0.5f),
+        p(VoxVoice.BEATBOX, "OPEN TSSS", "HIT" to hit(VoxBeatbox.Hit.TSS), "DECAY" to 0.6f),
+        p(VoxVoice.BEATBOX, "LONG TSSS", "HIT" to hit(VoxBeatbox.Hit.TSS), "DECAY" to 0.95f, "SIZE" to 0.6f),
+        p(VoxVoice.BEATBOX, "TONGUE RIM", "HIT" to hit(VoxBeatbox.Hit.RIM), "TUNE" to 0.5f),
     )
 }

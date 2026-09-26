@@ -209,7 +209,7 @@ What follows from it:
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 | S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst so a note fades to glass) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. | S1 + U5 + U6 |
-| S11 | **Round 1 built, awaiting the audition gate** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE; rounds 2 (consonants, BEATBOX) and 3 (THROAT, SWARM, WRAITH; GROWL, STUTTER, ALIEN, YODEL) to follow — under S11 below | S3.7 + U6 |
+| S11 | **Rounds 1-2 built** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3 (THROAT, SWARM, WRAITH; GROWL, STUTTER, ALIEN, YODEL) to follow — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1413,3 +1413,67 @@ resampler, shared by every engine, run twice for stereo. Synthesis
 itself is 340 ms. Short notes (drum hits, chops) are a fraction of it.
 Speeding up the shared decimator would change every engine's bytes and
 every kit, so it is its own change, not this one.
+
+### Round 2, as built — 2026-09-26 ("Speak")
+
+The plan was consonant onsets on the singing voices and a BEATBOX voice.
+Both went through the audition more than once.
+
+**ONSET**, the singing voices' seventh macro, snaps across none, m, b, d,
+h, t, s: the note opens on that consonant. At 0, every preset's setting,
+nothing changes: ONSET is left out of the recipe seed, and the Cloud Kit
+regenerates to the byte.
+
+- **m** hums through closed lips (F1 only, at 0.55 of the voice) for
+  90 ms, then opens. **b** and **d** close for 35-40 ms with a softer
+  murmur. **h** breathes through the vowel's shape for 100 ms; **t** is a
+  20 ms stop and 60 ms of breath before the voice; **s** hisses (6 kHz)
+  for 160 ms. The vowel's envelope starts when the vowel does.
+- **No pops.** The first audition measured every consonant 8-38 dB
+  louder than its vowel: the envelope started at the strike, and the
+  pops and hiss were fixed levels while the vowel comes out of its
+  narrow formants about 20 times quieter than it leaves them. Fixed by
+  starting the envelope at the vowel and setting the hiss against the
+  vowel's own RMS. Then b, d and t were "clucky". Three causes were
+  found and measured (a click measure: the largest sample step around
+  the release, low-passed at 1.5 kHz, over the vowel's own; a plain
+  vowel scores 3.5-5): the envelope dropped to zero at the release and
+  re-attacked, the hum's upper formants switched on in one sample, and
+  the burst was a narrow 700 Hz "tok". With those fixed ROBOT's "ba"
+  went from 28 to 10, CHOIR's from 14 to 4. The audition still heard a
+  cluck with the pops at 30%, and none without them and with the mouth
+  opening over 90 ms instead of 40: so the pops are gone.
+- **b and d without pops** differ where the vowel opens from (F2 800
+  against 1800) and in the closure: lips shut let almost nothing above
+  F1 through (8%), the tongue behind the teeth leaves the front of the
+  mouth bright (60%). Their closures measure 306 against 420 Hz on
+  ROBOT, 361 against 507 on GHOST.
+- **Vibrato waits for the vowel.** Measured from the strike, a GHOST
+  note after an s already swung a full 90 cents as its vowel began.
+
+**BEATBOX** (`VoxBeatbox`), a fourth voice: TUNE, HIT, DECAY, SIZE. HIT
+snaps across KICK, three snares (PF, PSH, K), three hats (TS, T, TSS
+open) and RIM.
+
+- The first version's snares and hats were filtered noise and "sounded
+  basically like the hat and snare in THUMP": the spectral measure put
+  them 11.5 and 10.2 dB from THUMP's, the nearest of anything. Rebuilt
+  as a mouth: breath through a moving vocal tract (the "psh" opening O
+  toward E), a constriction setting the hiss (s ~7-8 kHz, sh ~2.7 kHz,
+  f broad), fluttering breath and, on the snares, a trace of voice. The
+  hats moved to 18-19 dB from THUMP's hat (its own closed and open hats
+  are 8.8 apart).
+- "Better but still synthetic and thin": three takes (real, punchy,
+  big), and the pick was BIG. Built in: warmer breath that swells after
+  the release, spit crackle, a jittering mouth, the voice louder, longer
+  and dropped into the chest, the mouth moving further, tails 30%
+  longer, and the close mic: an 11 dB low shelf at 250 Hz, saturation
+  and a transient shaper. Measured: the snares' brightness moves
+  0.39-1.28 against THUMP's snare's 0.24 and carries -0.9 to -2.6 dB of
+  its energy under 500 Hz; the hats -14.5 to -16.2, THUMP's hat -40.9.
+- **Filed by its hit.** The drum classifier does not hear a mouth's
+  drums as what they stand for (the kick reads PERC, the hats and the
+  rim SNARE), so `Vox.drumClassFor` files BEATBOX by HIT: KICK, SNARE,
+  HAT_CLOSED, HAT_OPEN, PERC. `SynthScreen` passes the knobs through
+  when it sends to a pad; the singing voices stay TONAL.
+- Twelve presets: three kicks, four snares, four hats, a rim.
