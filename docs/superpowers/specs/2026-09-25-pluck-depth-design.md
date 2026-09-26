@@ -478,6 +478,14 @@ the sections above already reflect the answers.
    exists, no new DSP — and SITAR in Phase 3, where its jawari bridge and
    the sympathetic strings are built together.
 
+## Phase 1 gate — 2026-09-25, evening
+
+Josh auditioned the Phase 1 set (PR #335) from the listening page and gave
+the verdict in words rather than chips: "everything sounds right". Asked
+which kalimba read as the instrument, he answered **TINES wins**. Phase 2
+therefore proceeds as written: PLUCK's KALIMBA, its presets and its melodic
+kit pads go, BANJO takes the slot, and BODY arrives on the string voices.
+
 ## Appendix — the spike
 
 `synth/src/test/kotlin/com/snipsnap/synth/PluckBodySpike.kt` (untracked,
