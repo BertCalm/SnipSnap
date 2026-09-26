@@ -49,9 +49,6 @@ object Glint {
     /** BODY's own t60 as a fraction of the amp t60 — the body burns off, the glass rings on. */
     const val BODY_DECAY_RATIO = 0.45f
 
-    /** TEMPORARY: replaced by the PEAK macro in Task 2. */
-    private const val K_FIXED = 8f
-
     fun macrosFor(voice: GlintVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", 0.5f, 0.5f),
         MacroSpec("PEAK", 0.45f),
@@ -115,11 +112,30 @@ object Glint {
         GlintVoice.KAZOO -> KAZOO_FLAT + (1f - KAZOO_FLAT) / 2f
     }
 
+    /**
+     * PEAK as a ratio at the voice's own reference note. Exponential,
+     * because the ear judges the peak's position by interval, not by Hz.
+     */
+    fun ratioAtReference(peak: Float): Float = Dsp.expMap(peak, K_MIN, K_MAX)
+
+    /**
+     * Integers put the peak exactly on a harmonic — k=2 the octave, k=3 the
+     * octave-and-a-fifth, k=5 two octaves and a major third. Snapping matters
+     * only where the ear reads the peak as related to the note, so it applies
+     * below [SNAP_CEILING] and stops above it, where it would be inaudible.
+     *
+     * The base ratio snaps; BLOOM modulates continuously on top of it. That
+     * is what makes the knob musical and the sweep smooth.
+     */
+    fun snapRatio(k: Float): Float = if (k <= SNAP_CEILING) Math.round(k).toFloat() else k
+
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice) + macros
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 1.4f)
         val frames = (t60 * 1.35f * rate).toInt().coerceAtLeast(64)
+
+        val k = snapRatio(ratioAtReference(m.getValue("PEAK")).coerceIn(K_MIN, K_MAX))
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val step = f0 / rate
@@ -129,7 +145,7 @@ object Glint {
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
             val w = windowAt(voice, phase)
-            out[i] = amp.at(t) * w * sin(2.0 * PI * K_FIXED * phase).toFloat()
+            out[i] = amp.at(t) * w * sin(2.0 * PI * k * phase).toFloat()
             phase += step
             if (phase >= 1f) phase -= 1f
         }

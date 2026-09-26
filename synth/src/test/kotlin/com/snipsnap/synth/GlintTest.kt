@@ -129,4 +129,125 @@ class GlintTest {
         }
     }
 
+    @Test
+    fun `PEAK opens`() {
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("BLOOM" to 0f, "BODY" to 0.2f)
+            val dark = FeatureExtractor.extract(Glint.render(voice, still + ("PEAK" to 0.05f)))
+            val open = FeatureExtractor.extract(Glint.render(voice, still + ("PEAK" to 0.95f)))
+            assertTrue(
+                open.centroidHz > dark.centroidHz * 1.5f,
+                "$voice PEAK up should brighten: ${dark.centroidHz} -> ${open.centroidHz}",
+            )
+        }
+    }
+
+    @Test
+    fun `the formant sweeps and the pitch does not move - the line between GLINT and TINES`() {
+        // FM moves perceived pitch as its index climbs. A windowed burst does
+        // not: the window wraps at f0 no matter what k is doing, so the period
+        // is untouched. This is the engine's whole claim.
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
+            val expected = Glint.frequencyFor(voice, 0.5f)
+            for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
+                val hz = TestPitch.estimate(
+                    Glint.render(voice, still + ("PEAK" to peak)),
+                    fromSec = 0.05f,
+                    windowSec = 0.2f,
+                )
+                assertTrue(
+                    hz > expected * 0.94f && hz < expected * 1.06f,
+                    "$voice at PEAK $peak: pitch drifted to $hz, expected $expected",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `the ratio snaps to harmonics below the ceiling and runs free above it`() {
+        for (k in listOf(2.4f, 3.7f, 11.6f)) {
+            assertEquals(Math.round(k).toFloat(), Glint.snapRatio(k), 1e-6f, "k=$k should snap")
+        }
+        for (k in listOf(12.7f, 23.4f, 39.1f)) {
+            assertEquals(k, Glint.snapRatio(k), 1e-6f, "k=$k should run free")
+        }
+    }
+
+    @Test
+    fun `PEAK values inside one snap zone render identically`() {
+        // Snapping is real, not cosmetic: two PEAK settings that land on the
+        // same harmonic must produce the same bytes.
+        val voice = GlintVoice.BOTTLE
+        val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "FOLLOW" to 1f)
+        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak).coerceIn(Glint.K_MIN, Glint.K_MAX))
+        val pairs = (0..100).map { it / 100f }.groupBy { ratioAt(it) }.values.firstOrNull { it.size >= 2 }
+        assertTrue(pairs != null, "expected at least one snap zone with two PEAK values in it")
+        val a = Glint.render(voice, still + ("PEAK" to pairs!!.first()))
+        val b = Glint.render(voice, still + ("PEAK" to pairs.last()))
+        assertTrue(a.samples.contentEquals(b.samples), "same snapped harmonic must render the same bytes")
+    }
+
+    @Test
+    fun `render dispatches through the oversampled path, not directly at RATE`() {
+        // The mean-abs-diff proof VELVET/FATHOM/TONEWHEEL/VOX/RESIN carry —
+        // but it only means anything at the TOP of the sweep. Simulated
+        // 2026-09-25 before this plan was written: at k=8 and mid TUNE the
+        // diff is 0.00007 (REED), 0.00000 (BOTTLE), 0.00004 (KAZOO) — the
+        // burst is nowhere near Nyquist and oversampling changes nothing.
+        // At PEAK 1 and TUNE 1, k is 40 and k*f0 reaches 17.6 kHz: 0.00223
+        // (REED), 0.04557 (BOTTLE), 0.06231 (KAZOO). REED is the tight one,
+        // hence the 0.001 threshold rather than the 0.002 other engines use.
+        val corner = mapOf("PEAK" to 1f, "TUNE" to 1f, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f)
+        for (voice in GlintVoice.entries) {
+            val actual = Glint.render(voice, corner)
+            val direct = Glint.synthesize(voice, corner, Dsp.RATE)
+            Dsp.levelTo(direct, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+            Dsp.fadeTail(direct)
+            var diff = 0.0
+            val n = minOf(actual.samples.size, direct.size)
+            for (i in 0 until n) diff += kotlin.math.abs((actual.samples[i] - direct[i]).toDouble())
+            assertTrue(diff / n > 0.001, "$voice: render should differ from a native-rate synthesize, avgDiff=${diff / n}")
+        }
+    }
+
+    @Test
+    fun `a non-integer ratio clicks no more than an integer one - the window's promise`() {
+        // Above SNAP_CEILING k is continuous, so this is where a click would
+        // show. Compare the largest sample-to-sample step at a deliberately
+        // non-integer k against an integer one; a discontinuity at the wrap
+        // would spike the non-integer case.
+        //
+        // Measured on the RAW oversampled buffer, not on render()'s output:
+        // Dsp.decimate low-passes to the output Nyquist, which is precisely
+        // the filter that would smooth a wrap discontinuity away before it
+        // could be seen. The window's promise lives before that filter.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f)
+            fun maxStep(peak: Float): Float {
+                val s = Glint.synthesize(voice, still + ("PEAK" to peak), rate)
+                var worst = 0f
+                for (i in 1 until s.size) {
+                    val d = kotlin.math.abs(s[i] - s[i - 1])
+                    if (d > worst) worst = d
+                }
+                return worst
+            }
+            // Find a PEAK landing closest to an integer ratio above the
+            // ceiling, and one landing closest to halfway between two.
+            // minByOrNull rather than first{tolerance}: the ratio map is
+            // exponential, so step size near the top is coarse and a fixed
+            // tolerance can miss entirely and throw instead of failing.
+            val candidates = (0..4000).map { it / 4000f }
+                .filter { Glint.ratioAtReference(it) > Glint.SNAP_CEILING + 1f }
+            val onHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0f) }!!
+            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0.5f) }!!
+            assertTrue(
+                maxStep(offHarmonic) < maxStep(onHarmonic) * 1.5f,
+                "$voice: a fractional ratio must not click — ${maxStep(offHarmonic)} vs ${maxStep(onHarmonic)}",
+            )
+        }
+    }
+
 }
