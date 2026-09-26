@@ -461,7 +461,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Pluck Audition</span>
-    <span class="tag">PHASE 2 FOLLOW-UP &middot; BODY, BANJO, THE KIT SEAM</span>
+    <span class="tag">PHASE 2 THIRD LISTEN &middot; BODY, BANJO, THE KIT SEAM</span>
   </div>
 
   <div class="transport lcd">
@@ -476,10 +476,9 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>NYLON, KOTO and HARP carry a raised BODY default now. Each card opens with the last set's default and the new one, the only difference being BODY: keep the new one, or back off.</p>
-    <p>BANJO's pot and head fundamental lead now. Four notes at the new default - G3, B3, D4, G4 - plus the ugly end (BODY 1) at two of them, G3 and G4. Does it read as banjo away from the root now?</p>
-    <p>The kit's kalimba pad, five ways: as it is, brighter twice, and an octave up twice. Which one is a kalimba? These are rendered dry, without the kit's tape wobble.</p>
-    <p>The Phase 2 cards further down are the last set re-rendered at the new defaults and the new banjo body, for reference: you have chipped them already. The kit seam's nylon pads sit at the new default too.</p>
+    <p>BANJO: the string is brighter now, the pick sits nearer the bridge, the bridge formants are louder, and the default note is D4, where the head sits just above the note. The first pad is last time's D4 for comparison. TIN MORE and TIN LESS are the same string pushed either way; TINNY is the preset of that name. Is it tinny enough, and which way?</p>
+    <p>KALIMBA: the tine has a thumbnail tick now and its partials ring longer and louder. The first pad is last time's C4; then the new default, brighter, a longer decay, and no buzz. Which one is a kalimba, if any?</p>
+    <p>The kit seam below is re-rendered with the new tine; the Phase 2 cards are gone from this page.</p>
   </div>
 
   <div id="voices"></div>
@@ -490,16 +489,16 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; The three strings' new defaults: keep, or back off?</div>
-      <textarea id="q_defaults" placeholder="&hellip;"></textarea>
+      <div class="ask">1 &middot; Is BANJO tinny enough now, and which way: as it is, TIN MORE, TIN LESS, or the TINNY preset?</div>
+      <textarea id="q_banjo3" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; Does BANJO read as banjo at B3, D4 and G4 now, and should its default note move down to G3?</div>
-      <textarea id="q_banjo2" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; Which kalimba, if any, and what is still wrong with it?</div>
+      <textarea id="q_kalimba3" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">3 &middot; Which kalimba: as it is, brighter (.70 or .85), or an octave up?</div>
-      <textarea id="q_kalimba2" placeholder="&hellip;"></textarea>
+      <div class="ask">3 &middot; The kit seam: does the kalimba pad sit next to the nylon now?</div>
+      <textarea id="q_seam" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -512,7 +511,7 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generatePluckAudition &middot; PHASE 2 FOLLOW-UP &middot; 16-BIT 44.1 KHZ &middot;
+    RENDERED BY generatePluckAudition &middot; PHASE 2 THIRD LISTEN &middot; 16-BIT 44.1 KHZ &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -527,20 +526,6 @@
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
   // [file id, name, description]
-  var STRING_GROUPS = [
-    { label: 'BODY', key: true, clips: [
-      ['p2_body_0', 'BODY 0', 'the string alone'],
-      ['p2_body_default', 'BODY DEFAULT', 'the placeholder amount'],
-      ['p2_body_1', 'BODY 1', 'three times the string, the ugly end'],
-      ['p2_body_1_root', 'BODY 1 AT THE ROOT', 'the ugly end on the lowest note']
-    ]},
-    { label: 'AT THE DEFAULT BODY', clips: [
-      ['p2_body_default_strike_bridge', 'STRIKE' + DOT + 'BRIDGE', 'pick at the bridge'],
-      ['p2_body_default_ring', 'DAMP 0', 'rings out'],
-      ['p2_body_default_thud', 'DAMP 1', 'the dead end']
-    ]}
-  ];
-
   var SEAM_GROUPS = [
     { label: 'NYLON TO KALIMBA', key: true, clips: [
       ['a05_nylon_5', 'A05 NYLON 5', 'PLUCK'],
@@ -550,51 +535,40 @@
     ]}
   ];
 
-  // p2b follow-up groups: the raised string defaults, BANJO across four
-  // notes, and the kit's kalimba pad five ways.
-  var FOLLOWUP_STRING_GROUPS = [
-    { label: 'LAST DEFAULT AGAINST NEW', key: true, clips: [
-      ['p2b_default_old', 'LAST SET' + String.fromCharCode(0x27) + 'S DEFAULT', 'BODY as the last set had it; everything else the same'],
-      ['p2b_default_new', 'NEW DEFAULT', 'the raised default at the usual note'],
-      ['p2b_default_new_root', 'NEW DEFAULT AT THE ROOT', 'the lowest note']
-    ]}
-  ];
-
-  var FOLLOWUP_BANJO_GROUPS = [
-    { label: 'AT THE DEFAULT BODY', clips: [
-      ['p2b_g3_default', 'G3 ROOT', 'the root note'],
-      ['p2b_b3_default', 'B3', 'a major third up'],
-      ['p2b_d4_default', 'D4', 'a fifth up'],
-      ['p2b_g4_default', 'G4 DEFAULT NOTE', 'the usual note']
+  // p2c third-listen groups: the banjo's string pushed either way from its
+  // new default, and the tine against last time.
+  var BANJO_GROUPS = [
+    { label: 'LAST TIME AGAINST NOW, D4', key: true, clips: [
+      ['p2b_d4_default', 'LAST TIME, D4', 'the head-led body on the old string'],
+      ['p2c_d4_default', 'NOW, D4', 'the brighter string at the new default']
     ]},
-    { label: 'THE UGLY END', clips: [
-      ['p2b_g3_body_1', 'BODY 1 AT G3', 'three times the string, at the root'],
-      ['p2b_g4_body_1', 'BODY 1 AT G4', 'three times the string, at the default note']
+    { label: 'THE SAME STRING PUSHED', clips: [
+      ['p2c_d4_tin_more', 'TIN MORE', 'PICK .95, STRIKE .10'],
+      ['p2c_d4_tin_less', 'TIN LESS', 'PICK .50, STRIKE .45'],
+      ['p2c_d4_thud', 'DAMP 1', 'the dead end'],
+      ['p2c_preset_tinny', 'TINNY PRESET', 'TUNE .70, PICK .95, STRIKE .15']
+    ]},
+    { label: 'OTHER NOTES', clips: [
+      ['p2c_g3_default', 'G3 ROOT', ''],
+      ['p2c_g4_default', 'G4', 'last time' + String.fromCharCode(0x27) + 's default note']
     ]}
   ];
 
   var KALIMBA_GROUPS = [
-    { label: 'KALIMBA 1 PAD, C4', clips: [
-      ['p2b_c4_as_is', 'AS IS', 'the kit pad, unchanged'],
-      ['p2b_c4_bright_70', 'BRIGHT .70', 'brighter'],
-      ['p2b_c4_bright_85', 'BRIGHT .85', 'brighter still']
+    { label: 'LAST TIME AGAINST NOW, C4', key: true, clips: [
+      ['p2b_c4_as_is', 'LAST TIME, C4', 'no tick, short partials'],
+      ['p2c_c4_default', 'NOW, C4', 'the tick and the longer partials at the same settings']
     ]},
-    { label: 'AN OCTAVE UP, C5', clips: [
-      ['p2b_c5_as_is', 'AS IS', 'the kit pad, an octave up'],
-      ['p2b_c5_bright_70', 'BRIGHT .70', 'brighter, an octave up']
+    { label: 'THE SAME TINE PUSHED', clips: [
+      ['p2c_c4_bright_75', 'BRIGHT .75', 'louder tick and partials'],
+      ['p2c_c4_decay_1', 'DECAY 1', 'the longest note the voice allows'],
+      ['p2c_c4_buzz_0', 'BUZZ 0', 'no rattle at all']
     ]}
   ];
 
   var VOICES = [
-    { id: 'FU_NYLON', display: 'NYLON', folder: 'NYLON', note: 'G3',  hz: '196 HZ', root: 'A2' + DOT + '110 HZ', macros: 'BODY .30 default', body: 'classical guitar', groups: FOLLOWUP_STRING_GROUPS },
-    { id: 'FU_KOTO',  display: 'KOTO',  folder: 'KOTO',  note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'BODY .45 default', body: 'paulownia box', groups: FOLLOWUP_STRING_GROUPS },
-    { id: 'FU_HARP',  display: 'HARP',  folder: 'HARP',  note: 'F4',  hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'BODY .30 default', body: 'soundboard', groups: FOLLOWUP_STRING_GROUPS },
-    { id: 'FU_BANJO', display: 'BANJO', folder: 'BANJO', note: 'G4',  hz: '392 HZ', root: 'G3' + DOT + '196 HZ', macros: 'BODY .25 default', body: 'head over a pot', groups: FOLLOWUP_BANJO_GROUPS },
-    { id: 'FU_KALIMBA', display: 'KALIMBA', folder: 'KALIMBA', note: 'C4', hz: '262 HZ', root: 'A3' + DOT + '220 HZ', macros: 'BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .45', body: 'the kit pad as it is, then brighter, then higher', groups: KALIMBA_GROUPS },
-    { id: 'NYLON', display: 'NYLON', note: 'G3',  hz: '196 HZ', root: 'A2' + DOT + '110 HZ', macros: 'BODY .30 default', body: 'classical guitar', groups: STRING_GROUPS },
-    { id: 'KOTO',  display: 'KOTO',  note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'BODY .45 default', body: 'paulownia box', groups: STRING_GROUPS },
-    { id: 'HARP',  display: 'HARP',  note: 'F4',  hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'BODY .30 default', body: 'soundboard', groups: STRING_GROUPS },
-    { id: 'BANJO', display: 'BANJO', note: 'G4',  hz: '392 HZ', root: 'G3' + DOT + '196 HZ', macros: 'BODY .25 default', body: 'head over a pot', groups: STRING_GROUPS },
+    { id: 'FU_BANJO', display: 'BANJO', folder: 'BANJO', note: 'D4', hz: '294 HZ', root: 'G3' + DOT + '196 HZ', macros: 'DAMP .50' + DOT + 'PICK .70' + DOT + 'STRIKE .25' + DOT + 'BODY .20', body: 'head over a pot; the string is the change', groups: BANJO_GROUPS },
+    { id: 'FU_KALIMBA', display: 'KALIMBA', folder: 'KALIMBA', note: 'C4', hz: '262 HZ', root: 'A3' + DOT + '220 HZ', macros: 'BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .45', body: 'a tick at the nail, then the shimmer', groups: KALIMBA_GROUPS },
     { id: 'KIT_SEAM', display: 'KIT SEAM', note: 'A05 TO A08', hz: 'the melodic kit', root: 'nylon to kalimba', macros: 'two engines', body: 'PLUCK then TINES', groups: SEAM_GROUPS }
   ];
 
@@ -613,7 +587,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_defaults: '', q_banjo2: '', q_kalimba2: '', q_else: '' } };
+  var state = { overall: { q_banjo3: '', q_kalimba3: '', q_seam: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -782,7 +756,7 @@
   }
 
   function paintOverall() {
-    ['q_defaults', 'q_banjo2', 'q_kalimba2', 'q_else'].forEach(function (k) {
+    ['q_banjo3', 'q_kalimba3', 'q_seam', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -792,7 +766,7 @@
 
   // The four answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_defaults', 'q_banjo2', 'q_kalimba2', 'q_else'].forEach(function (k) {
+  ['q_banjo3', 'q_kalimba3', 'q_seam', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -818,7 +792,7 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_defaults: state.overall.q_defaults, q_banjo2: state.overall.q_banjo2, q_kalimba2: state.overall.q_kalimba2, q_else: state.overall.q_else }
+      ? { q_banjo3: state.overall.q_banjo3, q_kalimba3: state.overall.q_kalimba3, q_seam: state.overall.q_seam, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
@@ -827,7 +801,7 @@
   // Every phase's verdicts live under their own prefix: the spike and Phase 1
   // wrote verdicts/NYLON etc., and a page that read those back would open
   // pre-filled with an older gate's notes and overwrite them on save.
-  var PHASE = 'p2b';
+  var PHASE = 'p2c';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
@@ -844,7 +818,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_defaults', 'q_banjo2', 'q_kalimba2', 'q_else'].forEach(function (k) {
+      ['q_banjo3', 'q_kalimba3', 'q_seam', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();

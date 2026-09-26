@@ -21,12 +21,20 @@ import kotlin.math.abs
  * won, recorded in the spec) and is no longer rendered; its clips stay on
  * the artifact.
  *
- * A p2b follow-up set renders on top of the above, for the gate's two open
- * items: the raised string defaults at their usual note and the root
- * (NYLON, KOTO, HARP); BANJO at its new default body across four notes
- * (G3, B3, D4, G4) plus the ugly end at G3 and G4; and the kit's Kalimba 1
- * pad (TINES KALIMBA, semitone 3 = C4) five ways - as shipped, brighter
- * twice, and an octave up (semitone 15 = C5) twice.
+ * A p2c third-listen set renders on top of the above, for the gate's two
+ * remaining open items after the banjo's body and the raised string
+ * defaults landed: BANJO's brighter string (loop, pick band, bridge
+ * formants, D4 default) pushed both ways from its new default, plus the
+ * TINNY preset; and the kalimba tine's new thumbnail tick and longer
+ * partials, at the kit's Kalimba 1 pad (TINES KALIMBA, semitone 3 = C4)
+ * pushed for BRIGHT, DECAY and BUZZ. The earlier p2b follow-up set (the
+ * raised string defaults at their usual note and the root for NYLON, KOTO
+ * and HARP; BANJO across four notes; the kalimba pad five ways including an
+ * octave up) is not re-rendered - the page no longer references those
+ * clips except for `p2b_d4_default` and `p2b_c4_as_is`, kept as this
+ * round's "last time" comparison, and the artifact keeps every file from
+ * every earlier round untouched (a republish keeps files it is not
+ * handed).
  *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
@@ -70,55 +78,39 @@ object PluckAuditionGenerator {
             count++
         }
 
-        // p2b follow-up: the raised string defaults, BANJO across four
-        // notes, and the kit's kalimba pad five ways (follow-up brief,
-        // section 2).
-        for (voice in listOf(PluckVoice.NYLON, PluckVoice.KOTO, PluckVoice.HARP)) {
-            val dir = File(root, voice.name)
-            fun write(name: String, snip: Snip) {
-                WavWriter.write(File(dir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
-                count++
-            }
-            // The last set's default as an explicit macro, so the raised
-            // default is heard against it and not against memory: BODY is
-            // the only difference between the two clips.
-            val lastBody = mapOf(PluckVoice.NYLON to 0.10f, PluckVoice.KOTO to 0.15f, PluckVoice.HARP to 0.10f)
-            write("p2b_default_old", Pluck.render(voice, mapOf("BODY" to lastBody.getValue(voice))))
-            write("p2b_default_new", Pluck.render(voice, emptyMap()))
-            write("p2b_default_new_root", Pluck.render(voice, mapOf("TUNE" to 0f)))
-        }
-
+        // p2c third listen: BANJO's brighter string pushed both ways from
+        // its new default, plus the TINNY preset; and the kit's Kalimba 1
+        // pad through the tine's new tick and longer partials (this
+        // round's brief, sections 1-2).
         val banjoDir = File(root, PluckVoice.BANJO.name)
         fun writeBanjo(name: String, macros: Map<String, Float>) {
             WavWriter.write(File(banjoDir, "$name.wav"), level(Pluck.render(PluckVoice.BANJO, macros)), WavWriter.BitDepth.PCM_16)
             count++
         }
-        writeBanjo("p2b_g3_default", mapOf("TUNE" to 0f))
-        writeBanjo("p2b_g3_body_1", mapOf("TUNE" to 0f, "BODY" to 1f))
-        writeBanjo("p2b_b3_default", mapOf("TUNE" to 4f / 24f))
-        writeBanjo("p2b_d4_default", mapOf("TUNE" to 7f / 24f))
-        writeBanjo("p2b_g4_default", mapOf("TUNE" to 0.5f))
-        writeBanjo("p2b_g4_body_1", mapOf("TUNE" to 0.5f, "BODY" to 1f))
+        writeBanjo("p2c_d4_default", emptyMap())
+        writeBanjo("p2c_d4_tin_more", mapOf("PICK" to 0.95f, "STRIKE" to 0.1f))
+        writeBanjo("p2c_d4_tin_less", mapOf("PICK" to 0.5f, "STRIKE" to 0.45f))
+        writeBanjo("p2c_d4_thud", mapOf("DAMP" to 1f))
+        writeBanjo("p2c_g3_default", mapOf("TUNE" to 0f))
+        writeBanjo("p2c_g4_default", mapOf("TUNE" to 0.5f))
+        writeBanjo("p2c_preset_tinny", mapOf("TUNE" to 0.7f, "DAMP" to 0.6f, "PICK" to 0.95f, "STRIKE" to 0.15f, "DOUBLE" to 0.1f))
 
         // The kit's Kalimba 1 pad is TINES KALIMBA at semitone 3 = C4, BUZZ/
-        // BRIGHT/DECAY at the voice default; only BRIGHT moves here.
+        // DECAY at the voice default unless stated; only BRIGHT/DECAY/BUZZ
+        // move here.
         val kalimbaDir = File(root, "KALIMBA")
-        fun writeKalimba(name: String, semitone: Int, bright: Float) {
-            val snip = Tines.render(
-                TinesVoice.KALIMBA,
-                mapOf(
-                    "TUNE" to semitone / Tines.KALIMBA_TUNE_SEMITONES.toFloat(),
-                    "BUZZ" to 0.15f, "BRIGHT" to bright, "DECAY" to 0.45f,
-                ),
-            )
-            WavWriter.write(File(kalimbaDir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
+        fun writeKalimba(name: String, macros: Map<String, Float>) {
+            val full = mapOf(
+                "TUNE" to 3f / Tines.KALIMBA_TUNE_SEMITONES.toFloat(),
+                "BUZZ" to 0.15f, "DECAY" to 0.45f,
+            ) + macros
+            WavWriter.write(File(kalimbaDir, "$name.wav"), level(Tines.render(TinesVoice.KALIMBA, full)), WavWriter.BitDepth.PCM_16)
             count++
         }
-        writeKalimba("p2b_c4_as_is", 3, 0.5f)
-        writeKalimba("p2b_c4_bright_70", 3, 0.7f)
-        writeKalimba("p2b_c4_bright_85", 3, 0.85f)
-        writeKalimba("p2b_c5_as_is", 15, 0.5f)
-        writeKalimba("p2b_c5_bright_70", 15, 0.7f)
+        writeKalimba("p2c_c4_default", mapOf("BRIGHT" to 0.5f))
+        writeKalimba("p2c_c4_bright_75", mapOf("BRIGHT" to 0.75f))
+        writeKalimba("p2c_c4_decay_1", mapOf("BRIGHT" to 0.5f, "DECAY" to 1.0f))
+        writeKalimba("p2c_c4_buzz_0", mapOf("BRIGHT" to 0.5f, "BUZZ" to 0f))
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
