@@ -415,6 +415,18 @@ object Velocity {
      * nothing like TONE's ~1650-vs-1648 near-tie. Re-run the sweep above
      * before trusting SNAP again if `snareBodyGain`/`snareWireGain` ever
      * change.
+     *
+     * PEAK (GLINT) joins on a measured sweep, not on the name: PEAK 0→1 in
+     * eighths, nine points, `FeatureExtractor.extract(_).centroidHz`, rising
+     * at every step on all three voices — REED 362.2, 558.0, 753.3, 1143.7,
+     * 1729.0, 2510.5, 3662.5, 5336.8, 7772.6; BOTTLE 790.0, 1175.7, 1564.0,
+     * 2343.0, 3512.5, 5075.1, 7379.1, 10730.6, 15601.4; KAZOO 762.5, 1160.1,
+     * 1553.4, 2333.9, 3507.9, 5075.6, 7386.1, 10742.7, 15623.2, measured
+     * 2026-09-26. Physically it is the honest knob: strike a reed harder and
+     * the formant rises. Re-run the sweep if the window shapes or
+     * `ratioFor`'s mapping ever change. Unlike SNAP, this is a flat entry
+     * rather than a [brightnessOverride]: no other engine exposes a macro
+     * named PEAK, so there is no name collision to scope around.
      */
-    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC")
+    private val BRIGHTNESS_MACROS = listOf("BRIGHT", "CUTOFF", "TONE", "METAL", "PERC", "PEAK")
 }

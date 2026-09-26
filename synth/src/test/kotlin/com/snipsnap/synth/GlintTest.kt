@@ -544,4 +544,47 @@ class GlintTest {
         }
     }
 
+    @Test
+    fun `PEAK sweep is monotonic - the gate for joining BRIGHTNESS_MACROS`() {
+        // Velocity.BRIGHTNESS_MACROS' own KDoc records what happens when a
+        // macro joins this list without being measured: THUMP SNARE on TONE
+        // read 1650.29 Hz soft against 1648.09 Hz hard — backwards. A macro
+        // earns its place with a sweep that rises at every step, per voice.
+        //
+        // Measured 2026-09-26, the gate this test locks down:
+        //   PEAK sweep REED:   362.2, 558.0, 753.3, 1143.7, 1729.0, 2510.5, 3662.5, 5336.8, 7772.6
+        //   PEAK sweep BOTTLE: 790.0, 1175.7, 1564.0, 2343.0, 3512.5, 5075.1, 7379.1, 10730.6, 15601.4
+        //   PEAK sweep KAZOO:  762.5, 1160.1, 1553.4, 2333.9, 3507.9, 5075.6, 7386.1, 10742.7, 15623.2
+        // Rises at every step on all three voices, so PEAK joins BRIGHTNESS_MACROS below.
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.4f, "BLOOM" to 0f, "BODY" to 0.3f, "FOLLOW" to 1f, "DECAY" to 0.6f)
+            val readings = (0..8).map { i ->
+                FeatureExtractor.extract(Glint.render(voice, still + ("PEAK" to i / 8f))).centroidHz
+            }
+            println("PEAK sweep $voice: ${readings.joinToString(", ") { "%.1f".format(it) }}")
+            for (i in 1 until readings.size) {
+                assertTrue(
+                    readings[i] > readings[i - 1],
+                    "$voice PEAK is not monotonic at step $i: ${readings[i - 1]} -> ${readings[i]}",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `GLINT uses PEAK for velocity, not the soften fallback`() {
+        val patch = GlintPatch("Vel Test", GlintVoice.REED, Glint.defaults(GlintVoice.REED))
+        assertEquals("PEAK", Velocity.brightnessSpec(patch)?.name, "GLINT should render velocity through PEAK")
+    }
+
+    @Test
+    fun `atVelocity is genuinely darker at low velocity`() {
+        for (voice in GlintVoice.entries) {
+            val patch = GlintPatch("Vel $voice", voice, Glint.defaults(voice))
+            val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
+            val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
+            assertTrue(soft < hard, "$voice: a soft hit must be darker, got soft=$soft hard=$hard")
+        }
+    }
+
 }
