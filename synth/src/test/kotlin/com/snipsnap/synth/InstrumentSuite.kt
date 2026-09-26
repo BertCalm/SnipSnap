@@ -9,7 +9,7 @@ import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 
 /**
- * The S5 instrument suite: four playable key instruments rendered from the
+ * The S5 instrument suite: five playable key instruments rendered from the
  * synth engines at exact MIDI pitch, multisampled every minor third across
  * two octaves, packaged as keygroup programs.
  *
@@ -19,6 +19,7 @@ import java.io.File
  * | SnipSnap Organ | TONEWHEEL SOUL, held | A2–A4 | none (organs aren't) | **looped** — holds forever |
  * | SnipSnap Harp | PLUCK HARP | E3–E5 | soft layer | decays |
  * | SnipSnap Music Box | TINES 3.5-ratio twins | C4–C6 | none (one dynamic, wistful) | decays |
+ * | SnipSnap Resin Pad | RESIN BRASS WIDE SECTION, held | A2–A4 | none | **looped** — holds forever |
  *
  * Each `render*` writes its WAVs into [dir] and returns the program; the
  * generator packages them dual-generation (`.xty` beside `_[TrackData]/`
@@ -52,8 +53,28 @@ object InstrumentSuite {
         listOf(Layered(stem, Keys.musicBox(midi), 0, 127))
     }
 
+    /**
+     * The RESIN held pad as `MAKE INSTRUMENT` makes it, fixed so the MPC can
+     * be heard playing one without building it first. WIDE SECTION because
+     * its STACK of 1 carries the full detuned square, the hardest seam the
+     * loop cut closes; the longest release the sheet offers, because
+     * whether the MPC reads it as 1.5 s is the open hardware question
+     * (docs/superpowers/specs/2026-09-25-resin-held-pad-design.md, Decided 4).
+     */
+    fun renderResinPad(dir: File): KeygroupProgram {
+        val midis = Keys.resinPadMidis(RESIN_PAD_PATCH.voice)
+        return build("SnipSnap Resin Pad", dir, low = midis.first(), count = midis.size, release = RESIN_PAD_RELEASE_SECONDS) { midi, stem ->
+            val note = Keys.resinPad(RESIN_PAD_PATCH.voice, RESIN_PAD_PATCH.macros, midi, RESIN_PAD_ATTACK_SECONDS)
+            listOf(Layered(stem, note.snip, 0, 127, note.loopStartFrame))
+        }
+    }
+
+    val RESIN_PAD_PATCH: ResinPatch = ResinPresets.forVoice(ResinVoice.BRASS).single { it.name == "WIDE SECTION" }
+    const val RESIN_PAD_ATTACK_SECONDS = 0.8f
+    const val RESIN_PAD_RELEASE_SECONDS = 1.5f
+
     fun renderAll(dir: File): List<KeygroupProgram> =
-        listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir))
+        listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir), renderResinPad(dir))
 
     private class Layered(
         val stem: String,
