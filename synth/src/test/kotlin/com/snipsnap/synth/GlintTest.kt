@@ -178,24 +178,47 @@ class GlintTest {
         // renders by ~9% (REED at PEAK 0.6 reads 239.67 Hz against 220), a
         // detector artifact that a periodicity measure sidesteps entirely.
         //
-        // Measured 2026-09-26 across 3 voices x 4 PEAK settings x both BLOOM
-        // extremes: worst case 0.99188 at BLOOM 0, dropping to 0.98643 at
-        // BLOOM 1 (BOTTLE, PEAK 0.9) - still comfortably above the bar. The
-        // period is fixed by the window's wrap independent of k, so BLOOM's
-        // time-varying k only changes in-cycle shape, not period; a
-        // one-period correlation measures exactly that shape identity, so
-        // the small drop is the sweep genuinely changing the waveform's
-        // shape cycle to cycle while its period stays exact - the opposite
-        // signature from phase drift, which would worsen with elapsed time
-        // rather than with sweep speed. A synthetic control whose pitch
-        // drifts 9% scores 0.73149, so the 0.98 threshold has a wide margin
-        // and can still fail.
+        // Task 2 fixed BLOOM's sweep at a single 0.45s t60 (previously it
+        // varied 0.30s -> 0.06s with depth). That changed what this window
+        // measures. `periodCorrelation`'s default window starts at 0.05s and
+        // runs 0.2s. Under the old coupling, envAt(0.05, 0.06) = 0.003 at
+        // BLOOM 1 - the sweep was already fully landed before that window
+        // opened, so the test never actually correlated a moving formant.
+        // At the new fixed 0.45s rate, envAt(0.05, 0.45) = 0.464 and
+        // envAt(0.25, 0.45) = 0.022, so k is still sweeping from 2.39x to
+        // 1.06x kBase *inside* the correlation window - measured worst case
+        // across all 3 voices x 4 PEAK settings x both BLOOM extremes at
+        // that window is 0.4580 (BOTTLE, PEAK 0.6, BLOOM 1), well below both
+        // the 0.98 bar and the 0.73 synthetic 9%-pitch-drift control below.
+        // That is not a period break - a settled-window re-measure (below)
+        // proves the period is exact - it is a single Pearson correlation
+        // collapsing while the waveform's *shape* is genuinely still
+        // changing cycle to cycle, which no bar between 0.4580 and 0.73 can
+        // separate from real pitch drift. So this test measures only the
+        // settled portion of the note (from 0.35s, chosen so
+        // envAt(0.35, 0.45) = 0.0045 - fully landed) and keeps the original
+        // 0.98 bar there; it does not attempt to bound the during-sweep
+        // portion, which the fixed slower rate has made genuinely
+        // indistinguishable, at this measure, from the failure it exists to
+        // catch. See Task 2's report for the full 24-case grid at both
+        // windows and the reasoning the controller should use to decide
+        // whether a during-sweep guard is worth a different measure.
+        //
+        // Measured 2026-09-26 at fromSec=0.35 across 3 voices x 4 PEAK
+        // settings x both BLOOM extremes: worst case 0.98737 (BOTTLE, PEAK
+        // 0.9, BLOOM 1) - still comfortably above the bar, and far above the
+        // 0.73149 synthetic 9%-pitch-drift control (which this settled
+        // window would reject by the same wide margin the original
+        // fromSec=0.05 measurement did, since neither the period nor the
+        // settled shape depends on where the window starts once the sweep
+        // has landed).
         for (voice in GlintVoice.entries) {
             for (bloom in listOf(0f, 1f)) {
                 val still = mapOf("TUNE" to 0.5f, "BLOOM" to bloom, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
                 val f0 = Glint.frequencyFor(voice, 0.5f)
                 for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
-                    val corr = periodCorrelation(Glint.render(voice, still + ("PEAK" to peak)), f0)
+                    val snip = Glint.render(voice, still + ("PEAK" to peak))
+                    val corr = periodCorrelation(snip, f0, fromSec = 0.35f)
                     assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
                 }
             }
@@ -632,51 +655,33 @@ class GlintTest {
     }
 
     @Test
-    fun `BLOOM sweeps at one fixed rate, however deep it is set`() {
-        // The shipped coupling ran the sweep t60 from 0.30 s down to 0.06 s
-        // as BLOOM rose, so a big sweep was always a fast one and "wide and
-        // unhurried" was unreachable. Measured at the shipped setting the
-        // centroid fell to 0.92x and then sat flat — Josh heard that as "I
-        // don't get a sense of movement". At a fixed 0.45 s it travels to
-        // 0.35x over 300 ms, which was the one change he marked KEEP.
+    fun `BLOOM sweeps slowly enough to hear`() {
+        // The rate used to run 0.30 s down to 0.06 s as BLOOM rose — depth
+        // and rate on one knob, so a big sweep was always a fast one. At the
+        // shipped coupling the centroid fell to 0.92x of its opening value
+        // and then sat flat: a control that measured as nearly static and
+        // was heard as "I don't get a sense of movement". At a fixed 0.45 s
+        // it travels to 0.35x over 300 ms, the one change the 2026-09-26
+        // audition marked KEEP.
         //
-        // The assertion: the *time* the sweep takes must not change with
-        // depth. Measure how far through the note the centroid has settled
-        // at two different BLOOM depths; the settling point must match.
-        // Measured 2026-09-26: after the fix (fixed 0.45s t60) both BLOOM 1
-        // and BLOOM 0.5 settle at 0.16s - identical, because envAt's decay
-        // to a fixed relative threshold depends only on t60, not on the
-        // amplitude it is scaling. Note for whoever revisits this: against
-        // the OLD coupling (t60 0.06s at BLOOM 1, 0.134s at BLOOM 0.5) this
-        // assertion did NOT fail - it measured 0.02s vs 0.04s, a 0.02s gap
-        // comfortably under the 0.08s bar. The maximum possible gap across
-        // the old coupling's entire t60 range (0.06s to 0.30s) is only
-        // 0.08s - exactly the bar - so this test could not reliably go red
-        // against the coupling it was meant to catch; it passed by
-        // construction, not because the bug was fixed. It is still a good
-        // regression guard for the new engine, just not the TDD RED it was
-        // written to be.
+        // The assertion is the rate itself, at the moment the two constants
+        // differ most. At 0.05 s the old 0.06 s sweep was finished
+        // (envAt(0.05, 0.06) = 0.003); the new one is still well open.
+        // A test that the rate is independent of depth would be tautological
+        // now that the rate is a constant — this tests the constant's value.
+        // Measured 2026-09-26 at BLOOM_T60 = 0.45s: early=3861.21 Hz,
+        // settled=1943.65 Hz (ratio 1.987), well clear of the 1.25x bar.
+        // Confirmed this fails hard on the old BLOOM_FAST_T60 = 0.06s value:
+        // early=1925.94 Hz vs settled=1943.65 Hz (ratio 0.991 - the old
+        // sweep was already fully landed by 50ms, not still open) - checked
+        // by temporarily setting bloomT60 to 0.06f, running this test alone,
+        // confirming the AssertionFailedError, then reverting.
         val voice = GlintVoice.REED
         val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.5f, "BODY" to 0.2f, "FOLLOW" to 1f, "DECAY" to 0.85f)
-        fun settledFraction(bloom: Float): Float {
-            val snip = Glint.render(voice, still + ("BLOOM" to bloom))
-            val head = FeatureExtractor.extract(slice(snip, 0f, 0.04f)).centroidHz
-            val tail = FeatureExtractor.extract(slice(snip, snip.durationSeconds * 0.8f, snip.durationSeconds)).centroidHz
-            // where the centroid first comes within 10% of its settled value
-            for (i in 1..40) {
-                val t = i * 0.02f
-                val here = FeatureExtractor.extract(slice(snip, t, t + 0.04f)).centroidHz
-                if (kotlin.math.abs(here - tail) < kotlin.math.abs(head - tail) * 0.1f) return t
-            }
-            return Float.NaN
-        }
-        val deep = settledFraction(1f)
-        val shallow = settledFraction(0.5f)
-        assertTrue(deep.isFinite() && shallow.isFinite(), "both depths must settle within the note: $deep, $shallow")
-        assertTrue(
-            kotlin.math.abs(deep - shallow) < 0.08f,
-            "the sweep's duration must not depend on its depth: settled at ${deep}s vs ${shallow}s",
-        )
+        val snip = Glint.render(voice, still + ("BLOOM" to 1f))
+        val early = FeatureExtractor.extract(slice(snip, 0.04f, 0.08f)).centroidHz
+        val settled = FeatureExtractor.extract(slice(snip, snip.durationSeconds * 0.8f, snip.durationSeconds)).centroidHz
+        assertTrue(early > settled * 1.25f, "the sweep should still be open at 50 ms: $early vs settled $settled")
     }
 
     @Test
@@ -771,5 +776,4 @@ class GlintTest {
             assertTrue(soft < hard, "$voice: a soft hit must be darker, got soft=$soft hard=$hard")
         }
     }
-
 }
