@@ -176,37 +176,43 @@ the pads, and soft hits use the darker layer.
 ### SnipSnap Session — the whole thing in one file
 
 The capstone artifact: `SnipSnap Session.xpj` beside its flat
-`SnipSnap Session_[ProjectData]/` — the factory kit, all four suite
+`SnipSnap Session_[ProjectData]/` — the factory kit, all five suite
 instruments and the demo groove as **one MPC 3 project**. Open the `.xpj`
 and the entire session should be standing there: kit on track 1 in class
-colours, EP/Organ/Harp/Music Box on their own tracks, "SnipSnap Groove"
+colours, EP/Organ/Harp/Music Box/Resin Pad on their own tracks, "SnipSnap Groove"
 on sequence 1 ready to play, mixer wired. Regenerate with
 `./gradlew :synth:generateSessionProject`. Things to confirm: it opens,
-every track plays, the sequence plays the kit, and the organ still
-sustains inside the project.
+every track plays, the sequence plays the kit, and the organ and the
+Resin Pad still sustain inside the project.
 
 ### Instruments/ — the S5 suite, dual-generation
 
-Four playable key instruments, engines at exact MIDI pitch, multisampled
+Five playable key instruments, engines at exact MIDI pitch, multisampled
 every minor third across two octaves: **SnipSnap EP** (TINES electric piano
 — soft hits are *rendered darker*, not attenuated), **SnipSnap Organ**
 (TONEWHEEL held down, with a sustain loop cut at an exact whole number of
 waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
-(PLUCK), **SnipSnap Music Box** (TINES chime twins). Regenerate with
+(PLUCK), **SnipSnap Music Box** (TINES chime twins), **SnipSnap Resin
+Pad** (RESIN held, looped like the organ; see below). Regenerate with
 `./gradlew :synth:generateInstrumentSuite`.
 
 Each instrument ships the Timeless Glow dual-generation layout: the `.xty`
 loads on MPC 3; an MPC 2 machine browses into `_[TrackData]/` and finds the
 `.xpm` sitting with its samples. An `instruments.json` sidecar rides at the
-folder root — engine, zones, velocity layers, and the organ's loop points,
+folder root — engine, zones, velocity layers, and the loop points,
 recorded from the actual renders — so the folder can rebuild itself (the
 renders are deterministic). Things to confirm: each loads, plays in tune
 chromatically, the EP's soft hits sound darker, and — the big one —
 **held organ pads sustain indefinitely** with no audible loop seam.
 
-### RESIN held pads — made with the CLI
+### RESIN held pads — SnipSnap Resin Pad
 
-Not committed here: make one yourself, any RESIN preset, any release.
+`Instruments/SnipSnap Resin Pad` is what MAKE INSTRUMENT writes for the
+BRASS preset WIDE SECTION at ATTACK 0.8 s and RELEASE 1.5 s: nine zones,
+A2–A4, every one looped. WIDE SECTION because its full STACK carries the
+detuned square, the hardest loop to close; 1.5 s because it is the longest
+release the sheet offers. To hear any other preset or release, make one
+with the CLI:
 
 ```
 snipsnap synth RESIN BRASS --preset 1 --instrument --attack 0.8 --release 1.5 --out ~/resin-pad
@@ -222,7 +228,7 @@ the MPC's reading of `VolumeRelease` above that has never been heard.
 
 ### RESIN drones — made with the CLI
 
-Not committed here either: make one, any RESIN preset, any root.
+Not committed here: make one, any RESIN preset, any root.
 
 ```
 snipsnap synth RESIN BASS --preset 1 --drone --root A1 --motion 0.6 --rate 2 --loop 3 --out ~/resin-drone

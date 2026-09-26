@@ -380,10 +380,9 @@ from the shelf.
 - Stereo. RESIN is mono.
 - A regenerate-from-recipe sidecar. `InstrumentStore` has no recipe field;
   adding one is its own change.
-- A factory "SnipSnap Resin Pad" in `testkit/Instruments/` for MPC-hardware
-  listening. It is cheap once `Keys.resinPad` exists, but it changes
-  committed testkit files and `InstrumentSuiteTest`'s count of four, so it
-  is a follow-up.
+- ~~A factory "SnipSnap Resin Pad" in `testkit/Instruments/`~~. Done as its
+  own follow-up: `InstrumentSuite.renderResinPad`, BRASS WIDE SECTION at
+  ATTACK 0.8 s and RELEASE 1.5 s, also a track in `SnipSnap Session.xpj`.
 - The drone: [`2026-09-25-resin-drone-design.md`](2026-09-25-resin-drone-design.md).
 
 ## Decided (the author's answers, 2026-09-25)

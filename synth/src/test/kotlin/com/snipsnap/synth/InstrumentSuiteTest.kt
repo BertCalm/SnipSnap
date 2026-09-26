@@ -66,6 +66,32 @@ class InstrumentSuiteTest {
         assertPitched(Keys.harp(52), 52, "Harp")
     }
 
+    /**
+     * The factory RESIN pad is MAKE INSTRUMENT's own output at fixed
+     * settings, so what the MPC plays is what the phone makes: the sheet's
+     * zones, every one looped and in tune, and the release the hardware
+     * check is about.
+     */
+    @Test
+    fun `the Resin Pad is the held pad, looped in every zone`() {
+        val pad = InstrumentSuite.renderResinPad(File(temp, "resin"))
+        zonesTile(pad)
+        val voice = InstrumentSuite.RESIN_PAD_PATCH.voice
+        assertEquals(Keys.resinPadMidis(voice), pad.keygroups.map { it.rootNote })
+        assertEquals(InstrumentSuite.RESIN_PAD_RELEASE_SECONDS, pad.volumeRelease)
+        pad.keygroups.forEach { kg ->
+            val layer = kg.layers.single()
+            assertTrue(layer.loopStartFrame in 1 until layer.frameCount, "${kg.rootNote}: every zone holds")
+        }
+        // The loop is the point, so pitch is checked on the looped part, both ends of the range.
+        for (midi in listOf(pad.keygroups.first().rootNote, pad.keygroups.last().rootNote)) {
+            val note = Keys.resinPad(voice, InstrumentSuite.RESIN_PAD_PATCH.macros, midi, InstrumentSuite.RESIN_PAD_ATTACK_SECONDS)
+            val s = note.snip.samples
+            val held = com.snipsnap.audio.Snip(s.copyOfRange(note.loopStartFrame.toInt(), s.size), 1, note.snip.sampleRate)
+            assertPitched(held, midi, "Resin Pad")
+        }
+    }
+
     @Test
     fun `the EP's soft layer is darker not just quieter`() {
         val soft = Keys.ep(53, bright = 0.35f)
@@ -150,7 +176,7 @@ class InstrumentSuiteTest {
         }
         assertEquals(1.0, (root.entries["version"] as com.snipsnap.json.JsonValue.Num).value)
         val instruments = (root.entries["instruments"] as com.snipsnap.json.JsonValue.Arr).items
-        assertEquals(4, instruments.size)
+        assertEquals(5, instruments.size)
 
         fun obj(v: com.snipsnap.json.JsonValue) = (v as com.snipsnap.json.JsonValue.Obj).entries
         fun num(v: com.snipsnap.json.JsonValue?) = (v as com.snipsnap.json.JsonValue.Num).value

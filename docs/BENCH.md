@@ -244,7 +244,7 @@ already built and committed.
 ### B1 · The headliner [AA1.3]
 
 `SnipSnap Session.xpj` — open it. This one file exercises the kit, all
-four instruments, the organ sustain loops and the sequence at once.
+five instruments, the organ and Resin Pad sustain loops and the sequence at once.
 
 - Does it open?
 - Do the sequences flip verse to chorus?

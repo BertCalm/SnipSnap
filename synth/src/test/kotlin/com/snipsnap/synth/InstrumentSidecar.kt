@@ -44,6 +44,10 @@ object InstrumentSidecar {
             "tines-chime-twins",
             listOf("single layer - one dynamic, wistful"),
         ),
+        "SnipSnap Resin Pad" to Recipe(
+            "resin-held",
+            listOf("single layer; RESIN BRASS preset WIDE SECTION, attack 0.8 s; loop cut at whole cycles of every oscillator"),
+        ),
     )
 
     fun describe(programs: List<KeygroupProgram>): JsonValue.Obj {

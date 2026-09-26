@@ -81,7 +81,7 @@ tasks.register<JavaExec>("generateSessionProject") {
 /** Render the S5 instrument suite (dual-generation) into testkit/Instruments/. See InstrumentSuiteGenerator. */
 tasks.register<JavaExec>("generateInstrumentSuite") {
     group = "distribution"
-    description = "Render the four-instrument S5 suite as .xty + .xpm twins under testkit/Instruments/."
+    description = "Render the five-instrument S5 suite as .xty + .xpm twins under testkit/Instruments/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.InstrumentSuiteGenerator")
     workingDir = projectDir
