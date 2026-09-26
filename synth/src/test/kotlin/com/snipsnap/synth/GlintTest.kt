@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Snip
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -142,24 +143,57 @@ class GlintTest {
         }
     }
 
+    /** [x] linearly interpolated at a fractional sample position. */
+    private fun sampleAt(x: FloatArray, pos: Float): Float {
+        val i = pos.toInt()
+        val f = pos - i
+        return x[i] * (1f - f) + x[i + 1] * f
+    }
+
+    /**
+     * Correlation of [snip] against itself exactly one period later.
+     *
+     * The lag is fractional on purpose. 44100/220 is 200.45 samples, so an
+     * integer lag sits ~0.45 samples out, and at high k that misalignment
+     * alone pulls the correlation to 0.91 - it would measure sample
+     * quantization rather than the engine.
+     */
+    private fun periodCorrelation(snip: Snip, f0: Float, fromSec: Float = 0.05f, winSec: Float = 0.2f): Float {
+        val lag = snip.sampleRate / f0
+        val a0 = (fromSec * snip.sampleRate).toInt()
+        val n = (winSec * snip.sampleRate).toInt()
+            .coerceAtMost(snip.samples.size - a0 - lag.toInt() - 2)
+        var sa = 0.0; var sb = 0.0
+        for (i in 0 until n) { sa += snip.samples[a0 + i]; sb += sampleAt(snip.samples, a0 + i + lag) }
+        val ma = sa / n; val mb = sb / n
+        var num = 0.0; var da = 0.0; var db = 0.0
+        for (i in 0 until n) {
+            val x = snip.samples[a0 + i] - ma
+            val y = sampleAt(snip.samples, a0 + i + lag) - mb
+            num += x * y; da += x * x; db += y * y
+        }
+        return (num / kotlin.math.sqrt(da * db)).toFloat()
+    }
+
     @Test
     fun `the formant sweeps and the pitch does not move - the line between GLINT and TINES`() {
-        // FM moves perceived pitch as its index climbs. A windowed burst does
-        // not: the window wraps at f0 no matter what k is doing, so the period
-        // is untouched. This is the engine's whole claim.
+        // FM drags perceived pitch as its index climbs, because sidebands
+        // crowd the fundamental. A windowed burst cannot: the window wraps at
+        // f0 whatever k is doing, so the period is untouched by construction.
+        // This asserts that directly rather than through a pitch detector -
+        // Pitch.detect's smallest-lag heuristic mis-reads some of these
+        // renders by ~9% (REED at PEAK 0.6 reads 239.67 Hz against 220), a
+        // detector artifact that a periodicity measure sidesteps entirely.
+        //
+        // Measured 2026-09-26 across 3 voices x 4 PEAK settings: worst case
+        // 0.99188. A synthetic control whose pitch drifts 9% scores 0.73149,
+        // so the 0.98 threshold has a wide margin and can still fail.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
-            val expected = Glint.frequencyFor(voice, 0.5f)
+            val f0 = Glint.frequencyFor(voice, 0.5f)
             for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
-                val hz = TestPitch.estimate(
-                    Glint.render(voice, still + ("PEAK" to peak)),
-                    fromSec = 0.05f,
-                    windowSec = 0.2f,
-                )
-                assertTrue(
-                    hz > expected * 0.94f && hz < expected * 1.06f,
-                    "$voice at PEAK $peak: pitch drifted to $hz, expected $expected",
-                )
+                val corr = periodCorrelation(Glint.render(voice, still + ("PEAK" to peak)), f0)
+                assertTrue(corr > 0.98f, "$voice at PEAK $peak: period broke, correlation $corr")
             }
         }
     }
