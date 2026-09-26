@@ -185,22 +185,26 @@ class GlintTest {
         // renders by ~9% (REED at PEAK 0.6 reads 239.67 Hz against 220), a
         // detector artifact that a periodicity measure sidesteps entirely.
         //
-        // Measured 2026-09-26 across 3 voices x 4 PEAK settings: worst case
-        // 0.99188. A synthetic control whose pitch drifts 9% scores 0.73149,
-        // so the 0.98 threshold has a wide margin and can still fail.
-        //
-        // This fixture holds BLOOM at 0, so it never exercises the
-        // time-varying k that Task 5 introduces. Re-run once (2026-09-26)
-        // with BLOOM forced to 1 instead, same voices and PEAK settings:
-        // worst case dropped to 0.98643 (BOTTLE, PEAK 0.9) - thinner margin
-        // over the 0.98 bar than the BLOOM-0 case, but still passing, so a
-        // slowly time-varying k does not break the periodicity claim.
+        // Measured 2026-09-26 across 3 voices x 4 PEAK settings x both BLOOM
+        // extremes: worst case 0.99188 at BLOOM 0, dropping to 0.98643 at
+        // BLOOM 1 (BOTTLE, PEAK 0.9) - still comfortably above the bar. The
+        // period is fixed by the window's wrap independent of k, so BLOOM's
+        // time-varying k only changes in-cycle shape, not period; a
+        // one-period correlation measures exactly that shape identity, so
+        // the small drop is the sweep genuinely changing the waveform's
+        // shape cycle to cycle while its period stays exact - the opposite
+        // signature from phase drift, which would worsen with elapsed time
+        // rather than with sweep speed. A synthetic control whose pitch
+        // drifts 9% scores 0.73149, so the 0.98 threshold has a wide margin
+        // and can still fail.
         for (voice in GlintVoice.entries) {
-            val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
-            val f0 = Glint.frequencyFor(voice, 0.5f)
-            for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
-                val corr = periodCorrelation(Glint.render(voice, still + ("PEAK" to peak)), f0)
-                assertTrue(corr > 0.98f, "$voice at PEAK $peak: period broke, correlation $corr")
+            for (bloom in listOf(0f, 1f)) {
+                val still = mapOf("TUNE" to 0.5f, "BLOOM" to bloom, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
+                val f0 = Glint.frequencyFor(voice, 0.5f)
+                for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
+                    val corr = periodCorrelation(Glint.render(voice, still + ("PEAK" to peak)), f0)
+                    assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
+                }
             }
         }
     }
