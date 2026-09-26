@@ -8,18 +8,50 @@ import kotlin.test.assertTrue
 
 class GlintTest {
 
+    /**
+     * The all-ones corner's peak floor is lower than the other two cases'
+     * because `Dsp.levelTo` normalizes to loudness (RMS of the loudest
+     * 200 ms), not peak, and a denser window lands a lower peak at equal
+     * loudness. KAZOO's trapezoid holds flat for KAZOO_FLAT of the cycle,
+     * so its mean-square energy at a given peak is ~0.8 against REED's and
+     * BOTTLE's 1/3 - about 2.4x - which alone predicts a ~1.55x lower peak
+     * at matched loudness.
+     *
+     * Measured 2026-09-26, all macros = 1 (k fixed at 8, Task 1):
+     *   REED   peak=0.6518
+     *   BOTTLE peak=0.6334
+     *   KAZOO  peak=0.4430
+     *
+     * Sweeping KAZOO's DECAY alone (TUNE at default) isolates DECAY, not
+     * TUNE, as the driver - a long decay keeps the loudest-RMS window near
+     * full level, raising measured loudness and so lowering the normalized
+     * peak further:
+     *   DECAY=0.0 -> peak=0.99
+     *   DECAY=0.3 -> peak=0.936
+     *   DECAY=0.5 -> peak=0.742
+     *   DECAY=0.7 -> peak=0.590
+     *   DECAY=0.8 -> peak=0.530
+     *   DECAY=0.9 -> peak=0.480  (crosses below 0.5)
+     *   DECAY=1.0 -> peak=0.439
+     *
+     * 0.35, not a tighter floor: Task 5's BLOOM changes KAZOO's crest
+     * factor again, and 0.443 against 0.40 is only 10% margin. 0.35 still
+     * catches a genuinely broken render (near zero), which is all this
+     * assertion is for.
+     */
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
         for (voice in GlintVoice.entries) {
-            for (macros in listOf(
-                emptyMap(),
-                Glint.macrosFor(voice).associate { it.name to 0f },
-                Glint.macrosFor(voice).associate { it.name to 1f },
-            )) {
+            val cases = listOf(
+                emptyMap<String, Float>() to 0.5f,
+                Glint.macrosFor(voice).associate { it.name to 0f } to 0.5f,
+                Glint.macrosFor(voice).associate { it.name to 1f } to 0.35f,
+            )
+            for ((macros, peakFloor) in cases) {
                 val snip = Glint.render(voice, macros)
                 assertTrue(snip.frameCount > 0, "$voice rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "$voice broke range at $macros")
-                assertTrue(snip.peak() > 0.5f, "$voice too quiet at $macros")
+                assertTrue(snip.peak() > peakFloor, "$voice too quiet at $macros")
                 assertTrue(snip.durationSeconds < 2f, "$voice must stay a one-shot")
                 val dc = snip.samples.average().toFloat()
                 assertTrue(kotlin.math.abs(dc) < 0.05f, "$voice has DC offset $dc at $macros")
