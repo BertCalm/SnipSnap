@@ -566,7 +566,8 @@ fun SynthScreen(
         holdPreviewing = true
         holdJob = appScope.launch {
             try {
-                val heard = withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) }
+                // CANCEL cancels this job; the render asks and stops.
+                val heard = withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) { !isActive } }
                 audition(heard)
             } catch (e: CancellationException) {
                 throw e
@@ -596,7 +597,9 @@ fun SynthScreen(
                 val notes = coroutineScope {
                     midis.map { midi ->
                         async(Dispatchers.Default) {
-                            val note = ResinPadMaker.renderZone(spec, midi)
+                            // CANCEL cancels the scope; each zone asks and stops,
+                            // rather than all nine running on for seconds.
+                            val note = ResinPadMaker.renderZone(spec, midi) { !isActive }
                             withContext(Dispatchers.Main) { holdDone += 1 }
                             note
                         }

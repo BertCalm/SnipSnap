@@ -57,5 +57,5 @@ object KeyHit {
     }
 
     /** The instrument's release as the fade a note-off asks for, at least a millisecond. */
-    fun releaseMs(instrument: InstrumentStore.Instrument): Float = (instrument.release * 1000f).coerceAtLeast(1f)
+    fun releaseMs(instrument: InstrumentStore.Instrument): Float = (instrument.playableRelease * 1000f).coerceAtLeast(1f)
 }

@@ -324,6 +324,52 @@ The plan pins each of these as a real test:
 - **App (CI only):** `android-build` compiles the sheet; if a SynthScreen
   on-device test exists, MAKE INSTRUMENT is shown only for RESIN.
 
+## Hardening, round one
+
+What a pass with hostile, extreme and unlucky inputs found and changed:
+
+- **A hand-edited sidecar could hold a note forever.** `release` 1e39 reads
+  as a Double but becomes an infinite Float, so `InstrumentEngine`'s release
+  step was 1/∞ = 0 and a looped note never let go. `InstrumentStore.read` now
+  refuses a release that is non-finite, negative, or too big for a Float, and
+  caps a large one at `MAX_RELEASE_SECONDS` (30 s). Both players read
+  `playableRelease`, which is finite and in 0..30 s whatever the object
+  holds, so an `Instrument` built in code can't do it either.
+- **A sidecar could point outside its folder.** A zone's `sample` of
+  `../../secret.wav`, an absolute path, a backslashed climb, or a blank name
+  is refused, along with zones outside MIDI 0–127, upside-down zones, a
+  sample with no frames and a negative loop start. A refused sidecar is
+  skipped by the shelf, as a malformed one always was (13 cases pinned).
+- **MAKE INSTRUMENT's CANCEL stopped the progress bar, not the renders.**
+  Nine zones kept rendering to the end for an instrument nobody would get.
+  The held render now asks every 2^15 oversampled samples whether it is
+  still wanted, and checks its thread's interrupt flag, the drone's pattern.
+  The one-shot path never asks, so `Resin.render`'s pinned hashes are
+  unchanged. The seam retry catches `IllegalArgumentException` only, so a
+  stop is not retried. PREVIEW stops the same way.
+- **A NaN knob failed the verb.** `coerceIn` passes NaN through, so a NaN
+  ATTACK fraction reached `resinPad`'s range check as NaN seconds.
+  `Knob.value` now answers the knob's default for NaN; ±∞ already clamped
+  to the ends.
+- **A 300-letter name failed its own write.** File names stop at 255 bytes
+  and a name becomes `<name>_[TrackData]` and `<name>_<note>.wav`.
+  `OneNote.freshName` now caps a name at 64 characters (`MAX_NAME_LENGTH`),
+  trims what the cut leaves dangling, and falls back to `Sample` if nothing
+  is left. The app's own names are 14 at most, so only the CLI and a future
+  caller could reach this.
+
+**Fuzzed:** 48 seeded random zones (every voice, every macro including its
+exact ends, junk keys, ATTACK 0.01–2.5 s, any note in the voice's register). All finite, all
+under the 0.99 ceiling, every seam under 1e-10 (the worst measured 1.0e-13),
+every loop at least 16 frames and starting at attack + one or two settles.
+Loudness was within −4.44..0.00 dB of target; the limiter only ever pulls a
+resonant patch down.
+
+**Hostile names:** empty, blank, `..`, `../../escape`, `/etc/passwd`,
+unicode, emoji, forbidden characters, 60 and 300 letters. Every one
+packages inside `Instruments`, writes nothing beside it, and reads back
+from the shelf.
+
 ## Out of scope
 
 - Held versions of other engines (VELVET, FATHOM, VOX). Same method, each
