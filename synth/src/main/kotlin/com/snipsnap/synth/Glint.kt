@@ -129,13 +129,39 @@ object Glint {
      */
     fun snapRatio(k: Float): Float = if (k <= SNAP_CEILING) Math.round(k).toFloat() else k
 
+    /** The centre of the voice's own TUNE range — where FOLLOW has no work to do. */
+    fun referenceHz(voice: GlintVoice): Float = frequencyFor(voice, 0.5f)
+
+    /**
+     * The formant ratio actually used, after FOLLOW, the snap and the clamp.
+     *
+     * FOLLOW rides `Dsp.keyTrack`: at 1 the peak's Hz scales exactly with the
+     * note, so the ratio is constant and the timbre is identical across the
+     * range; at 0 the peak's Hz is fixed, so the ratio falls as the note
+     * rises and the sound turns vocal — a body resonance rather than a
+     * filter. In between, `keyTrack` blends in the log domain, so half
+     * tracking means half the octaves of movement.
+     *
+     * The [K_MIN] floor is unconditional. Across a pad's two-octave range it
+     * never binds (a 700 Hz peak is k=12.7 at A1 and 3.2 at A3), but across
+     * a four-octave keygroup at FOLLOW 0 it would — see the spec's note, and
+     * expect FOLLOW's bottom half to collapse toward tracking up there.
+     */
+    fun ratioFor(voice: GlintVoice, tune: Float, peak: Float, follow: Float): Float {
+        val reference = referenceHz(voice)
+        val f0 = frequencyFor(voice, tune)
+        val peakHzAtReference = ratioAtReference(peak) * reference
+        val peakHz = Dsp.keyTrack(peakHzAtReference, f0, reference, follow)
+        return snapRatio((peakHz / f0).coerceIn(K_MIN, K_MAX))
+    }
+
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice) + macros
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 1.4f)
         val frames = (t60 * 1.35f * rate).toInt().coerceAtLeast(64)
 
-        val k = snapRatio(ratioAtReference(m.getValue("PEAK")).coerceIn(K_MIN, K_MAX))
+        val k = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val step = f0 / rate

@@ -284,4 +284,72 @@ class GlintTest {
         }
     }
 
+    @Test
+    fun `FOLLOW 1 rides the note and FOLLOW 0 stands still`() {
+        for (voice in GlintVoice.entries) {
+            val lowTune = 0.1f
+            val highTune = 0.9f
+            // Tracking: the ratio is the same at both notes, so the peak's Hz
+            // scales with the note.
+            val rideLow = Glint.ratioFor(voice, lowTune, 0.5f, 1f)
+            val rideHigh = Glint.ratioFor(voice, highTune, 0.5f, 1f)
+            assertEquals(rideLow, rideHigh, 1e-3f, "$voice at FOLLOW 1: the ratio must not change with the note")
+
+            // Parked: the peak's Hz is the same at both notes, so the ratio
+            // falls as the note rises.
+            val parkLowHz = Glint.ratioFor(voice, lowTune, 0.5f, 0f) * Glint.frequencyFor(voice, lowTune)
+            val parkHighHz = Glint.ratioFor(voice, highTune, 0.5f, 0f) * Glint.frequencyFor(voice, highTune)
+            assertEquals(parkLowHz, parkHighHz, parkLowHz * 0.02f, "$voice at FOLLOW 0: the peak's Hz must not move")
+        }
+    }
+
+    @Test
+    fun `FOLLOW changes what the render measures, not only what the math says`() {
+        // The centroid climbs with the note when the peak tracks it, and
+        // stays put when the peak is parked. Measured on BOTTLE, whose
+        // triangle window leaves the burst most exposed in the spectrum.
+        //
+        // Measured 2026-09-26 at PEAK 0.5 (ratio well below SNAP_CEILING, so
+        // both notes land on the same snapped harmonic and the effect is
+        // visible without raising PEAK): ridesLow=2222.7 Hz,
+        // ridesHigh=7056.7 Hz (3.17x, clears the >1.8x bar) and
+        // parkedLow=3935.5 Hz, parkedHigh=3922.6 Hz (0.997x, clears the
+        // <1.35x bar) — the snap did not hide the effect here.
+        val voice = GlintVoice.BOTTLE
+        val still = mapOf("PEAK" to 0.5f, "BLOOM" to 0f, "BODY" to 0.2f, "DECAY" to 0.6f)
+        fun centroid(tune: Float, follow: Float) = FeatureExtractor.extract(
+            Glint.render(voice, still + ("TUNE" to tune) + ("FOLLOW" to follow)),
+        ).centroidHz
+
+        val ridesLow = centroid(0.1f, 1f)
+        val ridesHigh = centroid(0.9f, 1f)
+        assertTrue(ridesHigh > ridesLow * 1.8f, "FOLLOW 1 should carry the peak up with the note: $ridesLow -> $ridesHigh")
+
+        val parkedLow = centroid(0.1f, 0f)
+        val parkedHigh = centroid(0.9f, 0f)
+        assertTrue(
+            parkedHigh < parkedLow * 1.35f,
+            "FOLLOW 0 should leave the peak where it was: $parkedLow -> $parkedHigh",
+        )
+    }
+
+    @Test
+    fun `the ratio floor holds at every note and every FOLLOW`() {
+        // k below 2 is fewer than two burst cycles in the window: no peak,
+        // just a dull fragment. The clamp must be unconditional.
+        for (voice in GlintVoice.entries) {
+            for (tune in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+                for (follow in listOf(0f, 0.5f, 1f)) {
+                    for (peak in listOf(0f, 0.5f, 1f)) {
+                        val k = Glint.ratioFor(voice, tune, peak, follow)
+                        assertTrue(
+                            k >= Glint.K_MIN - 1e-4f && k <= Glint.K_MAX + 1e-4f,
+                            "$voice tune=$tune follow=$follow peak=$peak gave k=$k",
+                        )
+                    }
+                }
+            }
+        }
+    }
+
 }
