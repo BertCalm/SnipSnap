@@ -164,6 +164,9 @@ object Glint {
         val k = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
+        val bodyMix = m.getValue("BODY")
+        val bodyT60 = t60 * BODY_DECAY_RATIO
+        val mean = windowMean(voice)
         val step = f0 / rate
         var phase = 0f
         val out = FloatArray(frames)
@@ -171,7 +174,11 @@ object Glint {
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
             val w = windowAt(voice, phase)
-            out[i] = amp.at(t) * w * sin(2.0 * PI * k * phase).toFloat()
+            val burst = w * sin(2.0 * PI * k * phase).toFloat()
+            // The body decays faster than the burst, so the note opens as a
+            // saw with a peak on it and fades to pure whistling resonance.
+            val body = bodyMix * Dsp.envAt(t, bodyT60) * (w - mean)
+            out[i] = amp.at(t) * (burst + body)
             phase += step
             if (phase >= 1f) phase -= 1f
         }

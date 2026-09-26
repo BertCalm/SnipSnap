@@ -352,4 +352,88 @@ class GlintTest {
         }
     }
 
+    /** [snip] between two times, mono, for a windowed measurement. */
+    private fun slice(snip: Snip, fromSec: Float, toSec: Float): Snip {
+        val a = (fromSec * snip.sampleRate).toInt().coerceIn(0, snip.samples.size)
+        val b = (toSec * snip.sampleRate).toInt().coerceIn(a, snip.samples.size)
+        return Snip(snip.samples.copyOfRange(a, b), 1, snip.sampleRate)
+    }
+
+    /** Share of energy below 2 kHz — where BODY's fundamental lands, whatever the voice's root. */
+    private fun lowMid(snip: Snip): Float =
+        FeatureExtractor.extract(snip).let { it.lowRatio + it.midRatio }
+
+    @Test
+    fun `BODY puts a fundamental under the peak`() {
+        // Not lowRatio: Features' low band stops at 200 Hz, but BOTTLE and
+        // KAZOO are rooted at 220 and TUNE only transposes upward, so their
+        // fundamental is always above that edge — measured 0.0000 -> 0.0000
+        // for BOTTLE and a slight DECREASE for KAZOO. The energy is really
+        // there; the band was wrong. Below 2 kHz catches it for every voice
+        // while the burst at PEAK 0.8 sits well above.
+        //
+        // Measured 2026-09-26, BODY 0 -> 1: REED 0.1257 -> 0.2001 (1.59x),
+        // BOTTLE 0.0008 -> 0.1288 (159x), KAZOO 0.0473 -> 0.1092 (2.31x).
+        // REED's sawtooth window spreads burst sidebands well down the
+        // spectrum, so its bare sub-2kHz floor is already high and BODY's
+        // contribution is proportionally smaller even though the effect is
+        // real — 1.3x is 22% margin under REED's worst case of 1.59x, and
+        // 0.05 is under KAZOO's worst full value of 0.1092.
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.2f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f)
+            val bare = lowMid(Glint.render(voice, still + ("BODY" to 0f)))
+            val full = lowMid(Glint.render(voice, still + ("BODY" to 1f)))
+            assertTrue(full > 0.05f, "$voice BODY should put real energy under 2 kHz, got $full")
+            assertTrue(full > bare * 1.3f, "$voice BODY should add low end: $bare -> $full")
+        }
+    }
+
+    @Test
+    fun `BODY carries no DC at any setting`() {
+        // The window is unipolar. Mixed in raw it would push DC straight
+        // through Dsp.levelTo and out to the WAV; windowMean is subtracted
+        // to stop that, and this is the assertion that catches a wrong mean.
+        for (voice in GlintVoice.entries) {
+            for (body in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
+                val snip = Glint.render(voice, mapOf("BODY" to body, "BLOOM" to 0f))
+                val dc = snip.samples.average().toFloat()
+                assertTrue(kotlin.math.abs(dc) < 0.02f, "$voice at BODY $body has DC $dc")
+            }
+        }
+    }
+
+    @Test
+    fun `the glass tail - the body burns off and leaves the resonance ringing`() {
+        // Measured as low+mid share, not centroid: centroidHz is dominated by
+        // the burst, so the body evaporating moves it only 2-8% (1.068 /
+        // 1.081 / 1.022) — and lowering BODY_DECAY_RATIO makes that WORSE,
+        // not better. The share below 2 kHz is what actually changes.
+        //
+        // Measured 2026-09-26 at BODY 0.9, head -> tail: REED 0.2479 ->
+        // 0.1434 (1.73x), BOTTLE 81.8x, KAZOO 0.1488 -> 0.0568 (2.62x). The
+        // control at BODY 0.02 is flat for all three (already inside the
+        // 1.5x bar), which is the half that proves the fall is the body and
+        // not the amp envelope. 1.4x is 24% margin under REED's worst case
+        // of 1.73x.
+        //
+        // BODY_DECAY_RATIO was swept 0.15 to 5.0 while chasing this bar
+        // before it was known to be the wrong instrument: lowering it (the
+        // pre-authorised direction) makes the differential WORSE, not
+        // better, because a faster-decaying body has less energy left in the
+        // head window. Do not retry that; the fix was the metric, not the
+        // constant.
+        for (voice in GlintVoice.entries) {
+            val still = mapOf("TUNE" to 0.3f, "PEAK" to 0.75f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
+            fun headAndTail(body: Float): Pair<Float, Float> {
+                val snip = Glint.render(voice, still + ("BODY" to body))
+                return lowMid(slice(snip, 0f, 0.1f)) to
+                    lowMid(slice(snip, snip.durationSeconds * 0.6f, snip.durationSeconds))
+            }
+            val (head, tail) = headAndTail(0.9f)
+            assertTrue(head > tail * 1.4f, "$voice should turn to glass as it fades: $head -> $tail")
+            val (flatHead, flatTail) = headAndTail(0.02f)
+            assertTrue(flatTail <= flatHead * 1.5f, "$voice with no body should not change: $flatHead -> $flatTail")
+        }
+    }
+
 }
