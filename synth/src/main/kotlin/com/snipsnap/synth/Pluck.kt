@@ -26,7 +26,7 @@ import kotlin.random.Random
  * TUNE snaps to semitones across two octaves from the voice's root: pads get
  * notes, not frequencies, which is what makes a pluck kit playable as music.
  */
-enum class PluckVoice { NYLON, HARP, KOTO, BANJO }
+enum class PluckVoice { NYLON, HARP, KOTO, BANJO, SITAR }
 
 object Pluck {
 
@@ -84,7 +84,8 @@ object Pluck {
      * to the highest each voice's own tests still pass: NYLON 0.30, HARP
      * 0.30, KOTO 0.45, BANJO 0.25 (BANJO's ceiling dropped under the
      * Phase 2b head-mode rework above, which strengthens the same 220/234
-     * Hz modes that eat into PICK's reach). The ceiling on every voice is
+     * Hz modes that eat into PICK's reach), SITAR 0.0 (inert, no table).
+     * The ceiling on every voice is
      * `PICK moves the centroid at every step of its travel`: PICK's top end
      * must still move the note's spectral centroid at the shipped default
      * body, or a bright pick stroke stops reading as brighter. NYLON also
@@ -121,6 +122,14 @@ object Pluck {
             MacroSpec("TUNE", 0.3f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
             MacroSpec("STRIKE", 0.25f), MacroSpec("BODY", 0.20f), MacroSpec("DOUBLE", 0.1f),
         )
+        // A sitar: plucked near the bridge with a wire mizrab, the sympathetic
+        // strings present by default. BODY is 0 and inert on this voice: the
+        // research found no reachable body measurement (research note
+        // 2026-09-26), so bodyFor(SITAR) is empty until a source is read.
+        PluckVoice.SITAR -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.35f), MacroSpec("PICK", 0.65f),
+            MacroSpec("STRIKE", 0.3f), MacroSpec("BODY", 0f), MacroSpec("DOUBLE", 0.4f),
+        )
     }
 
     fun defaults(voice: PluckVoice): Map<String, Float> =
@@ -142,6 +151,7 @@ object Pluck {
         PluckVoice.HARP -> 165f
         PluckVoice.KOTO -> 147f
         PluckVoice.BANJO -> 196f
+        PluckVoice.SITAR -> 139f   // C#3, the common tonic of the playing string
     }
 
     /** The snapped note frequency the TUNE macro lands on for [voice]. */
@@ -194,6 +204,9 @@ object Pluck {
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
             // A steel string over a taut head, and the brightest string here: the loop keeps its treble (the gate heard 5.6 kHz as "not tinny enough") and the pick band sits above the others'.
             PluckVoice.BANJO -> { loopHz = 9000f; pickLo = 3000f; pickHi = 14000f; ring = 1.0f }
+            // Steel strings under a wire plectrum: brighter than KOTO, darker
+            // than BANJO, and the longest ring of the five (spec, "Voice constants").
+            PluckVoice.SITAR -> { loopHz = 7000f; pickLo = 2500f; pickHi = 12000f; ring = 1.4f }
         }
 
         // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
@@ -367,6 +380,13 @@ object Pluck {
             Modes.fixed(3500f, 0.70f, 0.05f),  // bridge hill - shape - raised at the gate: these formants are the tin
             Modes.fixed(5000f, 0.55f, 0.04f),  // bridge hill - shape - raised at the gate: these formants are the tin
         )
+        // No body: the sitar research (docs/superpowers/plans/
+        // 2026-09-26-pluck-sitar-body-research.md) opened six sources and
+        // none measures the gourd or the soundboard; the modal analysis that
+        // would is paywalled. Under the rule that no Hz reaches this table
+        // without an opened source, SITAR has none, withBody returns the
+        // string unchanged, and the BODY macro is inert on this voice.
+        PluckVoice.SITAR -> emptyList()
     }
 
     /**

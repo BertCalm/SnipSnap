@@ -1,6 +1,6 @@
 # PLUCK Phase 3a — SITAR: the jawari, the sympathetic strings, the gourd, and stiffness in the loop
 
-**Status:** design, approved in conversation 2026-09-26. Not implemented.
+**Status:** implementing on claude/pluck-depth-phase-3 (plan 2026-09-26-pluck-sitar.md).
 **Date:** 2026-09-26
 **Parent:** [`2026-09-25-pluck-depth-design.md`](2026-09-25-pluck-depth-design.md) — this is
 the "Phase 3 (outline)" row of that spec, made concrete after Phase 2's
