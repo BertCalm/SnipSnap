@@ -108,6 +108,7 @@ class PadRecipeTest {
             "classic" to ThumpKits.classic(),
             "melodic" to SynthKits.melodic(),
             "chip" to SynthKits.chip(),
+            "tide" to SynthKits.tide(),
         )) {
             kit.forEachIndexed { i, pad ->
                 if (pad == null) return@forEachIndexed

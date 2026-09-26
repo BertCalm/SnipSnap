@@ -111,6 +111,9 @@ import com.snipsnap.synth.Resin
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinPatch
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.Tide
+import com.snipsnap.synth.TidePatch
+import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
@@ -166,10 +169,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the nine-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the ten-engine drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all nine
+ * Compose surface plus the SEND TO PAD action, multiplexed over all ten
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -177,8 +180,8 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and eight more engines
- * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN) join it here.
+ * only; reality wins: THUMP alone ships eight voices, and nine more engines
+ * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE) join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -1566,10 +1569,10 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). All nine registered engines already converge on one shape (an
+ * change"). All ten registered engines already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of nine near-
+ * this just gives the screen one dispatch point instead of ten near-
  * identical call sites, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
@@ -1579,9 +1582,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1594,6 +1597,7 @@ private enum class Engine {
         TONEWHEEL -> TonewheelVoice.entries
         FATHOM -> FathomVoice.entries
         RESIN -> ResinVoice.entries
+        TIDE -> TideVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1606,6 +1610,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
         RESIN -> Resin.macrosFor(voice as ResinVoice)
+        TIDE -> Tide.macrosFor(voice as TideVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1618,6 +1623,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
         RESIN -> Resin.defaults(voice as ResinVoice)
+        TIDE -> Tide.defaults(voice as TideVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1630,6 +1636,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
         RESIN -> Resin.scramble(voice as ResinVoice, random)
+        TIDE -> Tide.scramble(voice as TideVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1647,6 +1654,7 @@ private enum class Engine {
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
         RESIN -> Resin.render(voice as ResinVoice, macros)
+        TIDE -> Tide.render(voice as TideVoice, macros)
     }
 
     fun drumClass(voice: Enum<*>): DrumClass = when (this) {
@@ -1659,6 +1667,7 @@ private enum class Engine {
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
         FATHOM -> (voice as FathomVoice).drumClass
         RESIN -> (voice as ResinVoice).drumClass
+        TIDE -> (voice as TideVoice).drumClass
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -1671,6 +1680,7 @@ private enum class Engine {
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
         RESIN -> ResinPatch(name, voice as ResinVoice, macros)
+        TIDE -> TidePatch(name, voice as TideVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -1766,6 +1776,13 @@ private val FathomVoice.drumClass: DrumClass
 // take above, never judged from a render (ResinPresetsTest says why).
 private val ResinVoice.drumClass: DrumClass
     get() = DrumClass.TONAL
+
+// TIDE is FATHOM's rule, not RESIN's: a real classifier judgment.
+// `TidePresetsTest` holds every voice's defaults to PERC and at least 8 of
+// its 10 presets with them — the low-pass gate's struck envelope is what
+// the classifier hears, FLARE's lead included.
+private val TideVoice.drumClass: DrumClass
+    get() = DrumClass.PERC
 
 /**
  * Chip/header label. THUMP and SKIN keep prototype-verbatim abbreviations

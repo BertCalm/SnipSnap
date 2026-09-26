@@ -157,4 +157,30 @@ object SynthKits {
             cloudOf(chime, DrumClass.LOOP, 2.5f, 30, "SIZE" to 0.6f, "PITCH" to 0.3f, "DRIFT" to 0.7f),  // A16 deep glass
         )
     }
+
+    /**
+     * The TIDE kit (docs/SYNTH_ROADMAP.md, S9): WOOD BONGO walks C minor
+     * pentatonic up the first two rows — the West Coast plucked pattern,
+     * the sound the engine exists for — then DRIP, GONG and FLARE presets
+     * above it. Dry: the gate's own decay is the space. Every pad classifies
+     * PERC ([TidePresetsTest] has the measurement) and carries its recipe.
+     */
+    fun tide(): List<ArrangedPad?> {
+        val wood = TidePresets.forVoice(TideVoice.BONGO).first { it.name == "WOOD BONGO" }
+        fun bongo(n: Int, semitone: Int) = pad(
+            TidePatch("Bongo $n", TideVoice.BONGO, wood.macros + ("TUNE" to semitone / Tide.TUNE_SEMITONES.toFloat())),
+            DrumClass.PERC,
+        )
+        fun preset(voice: TideVoice, name: String) =
+            pad(TidePresets.forVoice(voice).first { it.name == name }, DrumClass.PERC)
+
+        return listOf(
+            bongo(1, PENTATONIC[0]), bongo(2, PENTATONIC[1]), bongo(3, PENTATONIC[2]), bongo(4, PENTATONIC[3]), // A01-A04
+            bongo(5, PENTATONIC[4]), bongo(6, PENTATONIC[5]), bongo(7, PENTATONIC[6]), bongo(8, PENTATONIC[7]), // A05-A08
+            preset(TideVoice.DRIP, "RAIN DRIP"), preset(TideVoice.DRIP, "BUBBLE"),                              // A09 A10
+            preset(TideVoice.DRIP, "ICE BLIP"), preset(TideVoice.DRIP, "SPLASH TICK"),                         // A11 A12
+            preset(TideVoice.GONG, "TEMPLE GONG"), preset(TideVoice.GONG, "TIN CAN"),                          // A13 A14
+            preset(TideVoice.FLARE, "SNARL FLARE"), preset(TideVoice.FLARE, "FOLD BASS"),                       // A15 A16
+        )
+    }
 }
