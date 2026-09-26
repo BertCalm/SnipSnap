@@ -1780,12 +1780,16 @@ private val FathomVoice.drumClass: DrumClass
 private val ResinVoice.drumClass: DrumClass
     get() = DrumClass.TONAL
 
-// TIDE is FATHOM's rule, not RESIN's: a real classifier judgment.
-// `TidePresetsTest` holds every voice's defaults to PERC and at least 8 of
-// its 10 presets with them — the low-pass gate's struck envelope is what
-// the classifier hears, FLARE's lead included.
+// TIDE splits. BONGO and DRIP are FATHOM's rule, a real classifier
+// judgment: `TidePresetsTest` holds their defaults to PERC and at least 8
+// of each voice's 10 presets with them. GONG and FLARE are RESIN's rule:
+// pitched notes that DECAY can hold, which the classifier reads as PERC,
+// SNARE or LOOP depending on length alone, so they are TONAL by design.
 private val TideVoice.drumClass: DrumClass
-    get() = DrumClass.PERC
+    get() = when (this) {
+        TideVoice.BONGO, TideVoice.DRIP -> DrumClass.PERC
+        TideVoice.GONG, TideVoice.FLARE -> DrumClass.TONAL
+    }
 
 /**
  * Chip/header label. THUMP and SKIN keep prototype-verbatim abbreviations

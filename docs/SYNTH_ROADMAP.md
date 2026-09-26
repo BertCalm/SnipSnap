@@ -207,7 +207,7 @@ What follows from it:
 | S8 | **shipped** — RESIN, the ladder engine (BASS/LEAD/BRASS: a three-oscillator STACK through `Dsp.Ladder`, the four-pole transistor-ladder low-pass with tanh in the loop, measured before use; CUTOFF key-tracked, CREAM the feedback up to self-oscillation, CONTOUR the filter envelope's amount and speed on one knob) and CONTOUR, the same filter as a rack section after EQ — design in `docs/superpowers/specs/2026-09-24-resin-ladder-engine-design.md` | S1 + U5 + U6 |
 | S8.1 | **shipped** — RESIN, held: a RESIN patch as a nine-zone keys instrument that sounds while a key is held (ATTACK/RELEASE; loops of whole sub-octave periods with the detuned square snapped to one beat per loop and the pitch fitted to whole frames; CREAM capped at the self-oscillation threshold), from SYNTH's `MAKE INSTRUMENT ▸` or `snipsnap synth RESIN <VOICE> --instrument` — design in `docs/superpowers/specs/2026-09-25-resin-held-pad-design.md` | S5 + S8 |
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
-| S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/DECAY/WANDER, RATIO on GONG and FLARE; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
+| S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1092,17 +1092,15 @@ the test:
   Only DRIP plays up there. `TideTest` holds every harmonic voice's top note
   at ≥ 45 dB and proves the measure sees aliasing (the native-rate render
   scores at least 10 dB worse).
-- **DECAY is the time to −60 dB, per voice**, not τ₀: BONGO 0.12–0.9 s, DRIP
-  0.06–0.5 s, GONG 0.4–1.9 s, FLARE 0.25–1.6 s, and no hit past 2 s however
-  far WANDER stretches it. The release slows by `1 + 1.5·(1 − c)`, not
-  `1 + 3·(1 − c)`: at 3 a long GONG ran to ten seconds.
+- **DECAY is the time to −60 dB, per voice**, not τ₀ (ranges as revised
+  below). The release slows by `1 + 1.5·(1 − c)`, not `1 + 3·(1 − c)`: at 3
+  a long GONG ran to ten seconds.
 - **RATIO snaps to whole numbers on FLARE (1–4) and to bell ratios on GONG**
   (1.4, 2.7, 3.5, 4.2, 5.8), not to `Tines.RATIOS` for both. A non-integer
   ratio on the lead made it a bell with no clear pitch.
-- **Every voice is PERC.** The classifier hears all four defaults as PERC,
-  and at least eight of each voice's ten presets; `TidePresetsTest` holds
-  it and `SynthScreen` mirrors it. FLARE is a lead by intent and PERC by
-  measurement, so it gets PERC's colour and no in-key retune on landing.
+- **BONGO and DRIP are PERC; GONG and FLARE are TONAL** (as revised
+  below). The struck pair follows the classifier; the held pair follows
+  RESIN's rule.
 - **Velocity reaches TIDE through FOLD.** It joins `Velocity`'s brightness
   macros, so a soft strike folds less, not just quieter.
 - **WANDER's seed is the recipe plus a take index.** The same take always
@@ -1112,7 +1110,119 @@ the test:
 - **Ten presets per voice**, forty in all, `TidePresets.kt`.
 
 Open questions 1–4 are answered as recommended: TIDE, FOLD, the seed rule
-above, and DRIP (like the other three) as PERC.
+above, and DRIP as PERC.
+
+### Revision — GLOW and held notes, 2026-09-26
+
+The audition said "more character and oomph" and "very staccato". A
+measurement found why: the strike was rich and the tail was bare. Counting
+harmonics within 40 dB of the loudest, with each of the three things that
+close with the gate held open in turn (DECAY 1):
+
+| | 0–40 ms | 40–120 ms | 120–280 ms | 280–600 ms |
+|---|---|---|---|---|
+| WOOD BONGO, as built | 13 | 6 | 3 | 1 |
+| … WARP not following the gate | 14 | 6 | 3 | 2 |
+| … fold not following the gate | 11 | 7 | 5 | 3 |
+| … filter held open | 14 | 9 | 6 | 3 |
+| SNARL FLARE, as built | 21 | 11 | 6 | 5 |
+| … filter held open | 21 | 12 | 11 | 16 |
+
+The filter took the most, the fold closing with it took the tail twice,
+and WARP barely mattered. So:
+
+- **GLOW**, a new macro on every voice: how much brightness outlives the
+  level. At 0 the gate is as built (the classic knock). Up, the fold keeps
+  up to 60% of its depth once the gate has closed, and the filter follows
+  `c^(1 − 0.75·GLOW)` rather than `c`, closing behind the level. Defaults:
+  BONGO and DRIP 0.3, GONG 0.6, FLARE 0.7. Measured, SNARL FLARE at its
+  default keeps 13 harmonics at 40–120 ms where GLOW 0 keeps 6; WOOD BONGO
+  at GLOW 1 keeps 5 at 120–280 ms where GLOW 0 keeps 1.
+- **Held notes live in DECAY on GONG and FLARE.** DECAY's top half holds
+  the gate fully open for up to 60% of the note before it releases, so a
+  long setting is a held note that then rings out. A separate HOLD macro
+  would have made GONG and FLARE eight macros; this keeps them at seven,
+  THUMP SNARE's count, with RESIN's CONTOUR as the one-knob precedent.
+  BONGO and DRIP never hold.
+- **Longer ranges.** DECAY now runs BONGO 0.12–1.5 s, DRIP 0.06–0.8 s,
+  GONG 0.4–4 s, FLARE 0.25–4 s; the struck pair stops at 2 s, the held
+  pair at 4 s.
+- **GONG and FLARE are TONAL.** Long enough to hold, the classifier reads
+  GONG as LOOP for four of ten presets, SNARE for three, PERC for three;
+  FLARE as PERC or LOOP by length. They are pitched notes, so they take
+  RESIN's rule and are held to measuring harmonic instead. BONGO and DRIP
+  still classify PERC (8 of 10 presets each) and stay PERC.
+- **Level, by loudness.** A held note meets the loudness target under a
+  low peak (SLOW SUNRISE: 3.3 s at peak 0.29), a short hit meets the peak
+  ceiling first; the tests hold "at the target or at the ceiling", which
+  is the rule the engine follows, instead of "peak over 0.5".
+
+The character stages auditioned alongside (a pitch thump, body, drive,
+click, punch) are parked, not built: GLOW answered the missing harmonics
+first, and the next audition says whether the oomph is still missing.
+
+### Revision — the edge, 2026-09-26
+
+With GLOW in, the audition said the voices "walk the line between good and
+weird" and asked to push further. Five levers were prototyped and
+auditioned one at a time and together (four presets: WOOD BONGO, TEMPLE
+GONG, SNARL FLARE, RAIN DRIP); the pick was all five at a moderate
+setting. They are built in as how TIDE sounds, not as knobs: an EDGE macro
+would have made GONG and FLARE eight macros, past THUMP SNARE's seven.
+
+- **SWEEP.** The modulator starts 2.2 times its ratio and dives onto it
+  with a 20 ms time constant: WARP's sidebands fall into place in the
+  strike, a zap. Auditioned at 60 ms, it left SNARL FLARE's pitch
+  unreadable into its second hundred milliseconds (read 196 Hz for 131,
+  confidence 0.47); at 20 ms it reads true, confidence 0.85, by 50 ms.
+- **CROSS.** The folded output feeds back into the modulator's phase, 0.75
+  radians per unit, so fold and WARP argue instead of chaining. Feedback
+  like this is clean while `CROSS · index · drive` stays under about 1,
+  rough to about 1.6 and noise past it (mapped on a steady fold at C3:
+  index 1, drive 6 kept 79 dB of clarity at CROSS 0.1 and 30 at 0.4; full
+  FOLD and WARP at 0.75 had none, 0.6 dB). So the loop is held at 1.5, the
+  rough side on purpose: SNARL FLARE's strike sits right there, and a full
+  corner keeps its harmonics 25-40 dB clear, a snarl rather than a hiss.
+- **TILT.** The fold's bias leans +0.4 rad at the strike to −0.4 as the
+  gate closes: the even harmonics turn over across the note.
+- **WOBBLE.** Three seeded random lines, stepped at 11 Hz and smoothed over
+  6 ms, jitter the fold's depth and WARP's index by ±22.5% and the fold's
+  bias by ±0.27 rad, so a held note is never quite still. Seeded from the
+  recipe (and from the take only when WANDER is up), so a pad plays the
+  same way every time and WANDER 0 still makes every take identical.
+- **REACH.** FOLD and WARP reach 40% further: drive 8.4 at FOLD 1 (was 6),
+  index 4.2 at WARP 1 (was 3). The "above C6" easing is replaced by one
+  rule that knows the modulator: the brightest corner reaches about
+  `drive · (1 + index · ratio) · note`, and where that passes 22 kHz both
+  ease together (`reachAt`). Low notes get all of the extra; DRIP's top
+  octave and FLARE's high RATIOs ease back. Measured on a steady
+  full-corner fold, the worst, DRIP at C7, keeps 45.7 dB of clarity; at the
+  old notion's 25.1 kHz it and FLARE's C4 at RATIO 4 sat at 44.3-44.5.
+
+None of them touches a clean note: SWEEP and CROSS act through WARP's
+index, WOBBLE's depth moves scale with FOLD and WARP, and TILT and WOBBLE's
+bias fade in over FOLD's first tenth. `TideTest` holds FOLD 0, WARP 0 to
+harmonics 50 dB under the fundamental.
+
+What moved in the tests, and why:
+
+- **Pitch is read from 100 ms, not 50.** At 50 ms SWEEP still has the
+  modulator 10% sharp and BONGO at full everything read a step high. From
+  100 ms every harmonic voice at full FOLD and WARP, both RATIO ends,
+  three takes, reads the clean note's pitch, now with a confidence floor
+  (0.6) so a note that turned to noise fails too. Every FLARE preset
+  reads its note within 10 cents at confidence 0.8 from 100 ms.
+- **GONG and FLARE are held to ringing harmonic from 100 ms.** The zap is
+  noisy by design (TEMPLE GONG reads flatness 0.23 over the whole note,
+  0.05 from 100 ms); the presets' rings all measure 0.08 or under.
+- **GONG's corners clang.** At full FOLD and WARP, a bell ratio gives CROSS
+  no period to lock to, and GONG measures noise-like there (flatness
+  0.26-0.42, was 0.06-0.14). GONG is a bell with no one pitch, so this is
+  scrap metal struck hard rather than a broken note, and it is kept.
+
+The classifier now reads BONGO as PERC for all ten presets (was 8) and
+DRIP for nine (was 8): the zap reads more struck. GONG and FLARE are
+TONAL as before.
 
 ### Not doing
 
