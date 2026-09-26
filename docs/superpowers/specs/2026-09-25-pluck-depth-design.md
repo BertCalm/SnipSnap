@@ -188,11 +188,18 @@ shape is a plucked tine's transient, and the core can place a strike at
 bar's overtones exactly, with no modal bank:
 
 ```
-strike(f0,        ratio 1, index by BRIGHT, t60)              the tongue's fundamental
-strike(6.267 f0,  ratio 1, low index,       t60 × 0.25, g .35) second partial, dies fast
-strike(17.548 f0, ratio 1, low index,       t60 × 0.10, g .12) third partial, gone in a blink
+strike(f0,        ratio 1, index by BRIGHT, t60)             the tongue's fundamental
+strike(6.267 f0,  ratio 1, low index,       t60 × 0.6, g .60) second partial, dies fast
+strike(17.548 f0, ratio 1, low index,       t60 × 0.25, g .30) third partial, gone in a blink
 + BUZZ: amplitude-gated noise, the bottle-cap rattle
 ```
+
+(gains shown at the default BRIGHT 0.5, where `upper = lin(BRIGHT, 0.3, 0.9)`.)
+Gate-tuned 2026-09-26 (third listen): a few milliseconds of seeded,
+high-passed noise now precede the strikes — the thumbnail's tick — and the
+partials' own t60 multipliers rose from 0.25/0.10 to 0.6/0.25 (the second's
+gain unchanged at `upper`, the third's raised from `upper × 0.35` to
+`upper × 0.5`), so the shimmer rings longer and louder.
 
 - **The ratios are the clamped-free bar's**: Euler–Bernoulli eigenvalues
   `βL = 1.8751, 4.6941, 7.8548`, squared and normalised, give

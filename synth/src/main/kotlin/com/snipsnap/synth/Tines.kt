@@ -4,6 +4,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -276,12 +277,37 @@ object Tines {
         // the pluck at the front.
         strike(out, hz, ratio = 1f, index = Dsp.lin(bright, 0.3f, 1.6f), t60 = t60, bite = 2.5f, rate = rate)
         // The bar's overtones, each a near-pure partial (ratio 1, tiny
-        // index) that BRIGHT brings up and that die faster than the tongue.
-        val upper = Dsp.lin(bright, 0.15f, 0.5f)
-        strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.25f, bite = 2f, gain = upper, rate = rate)
-        strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.10f, bite = 2f, gain = upper * 0.35f, rate = rate)
+        // index) that BRIGHT brings up: the partials are the kalimba's
+        // shimmer, and die slower than the tongue's index but faster than
+        // the tongue.
+        val upper = Dsp.lin(bright, 0.3f, 0.9f)
+        strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.6f, bite = 2f, gain = upper, rate = rate)
+        strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.25f, bite = 2f, gain = upper * 0.5f, rate = rate)
+        tick(out, bright, rate, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "TICK"))
         if (buzz > 0.01f) rattle(out, buzz, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "BUZZ"))
         return out
+    }
+
+    /**
+     * The thumbnail's tick: a few milliseconds of seeded noise at the
+     * onset, high-passed above the tongue, louder as BRIGHT rises. A real
+     * tine is struck by a nail or a flesh-and-nail edge and the tick is
+     * what says "struck" before the tone says "kalimba"; without it the
+     * gate heard the voice as muffled at every brightness and register.
+     */
+    private fun tick(out: FloatArray, bright: Float, rate: Int, seed: Int) {
+        val noise = Dsp.Noise(seed)
+        val n = (0.003f * rate).toInt().coerceAtMost(out.size)
+        val gain = Dsp.lin(bright, 0.2f, 0.7f)
+        // One-pole high-pass at 3 kHz, matched-Z: y = x - lp(x).
+        val a = exp(-2.0 * PI * 3000.0 / rate).toFloat()
+        var lp = 0f
+        for (i in 0 until n) {
+            val x = noise.next()
+            lp = a * lp + (1f - a) * x
+            val env = 1f - i.toFloat() / n
+            out[i] += gain * env * env * (x - lp)
+        }
     }
 
     /**
