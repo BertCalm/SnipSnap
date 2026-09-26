@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
+import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -107,6 +108,7 @@ object Glint {
 
     fun defaults(voice: GlintVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
+            .let { it + ("PEAK" to snapPeak(it.getValue("PEAK"))) }
 
     /**
      * No preset roster yet — Phase 3 authors one and this gains the
@@ -121,6 +123,7 @@ object Glint {
         val base = defaults(voice)
         val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
         return Dsp.scrambleNear(seed, temperature, random)
+            .let { it + ("PEAK" to snapPeak(it.getValue("PEAK"))) }
     }
 
     /** The bottom of each voice's own two-octave TUNE range. */
@@ -165,11 +168,39 @@ object Glint {
      */
     fun snapRatio(k: Float): Float = if (k <= SNAP_CEILING) Math.round(k).toFloat() else k
 
+    /**
+     * [peak] moved to the nearest macro value whose ratio is an exact
+     * harmonic — the snap, applied where PEAK is *authored* rather than
+     * where it is rendered.
+     *
+     * It used to live inside [ratioFor], which meant velocity's
+     * floor-scaled macro quantised onto the same integer as the full one:
+     * below about PEAK 0.06 the soft and hard layers rendered byte-
+     * identically and a preset there had no velocity response at all.
+     * Snapping the stored value instead leaves the render path continuous,
+     * so scaling it always moves the formant. Quantisation for the ear,
+     * full resolution for the difference.
+     *
+     * Identity above [SNAP_CEILING], where the ratio runs free.
+     */
+    fun snapPeak(peak: Float): Float {
+        val k = ratioAtReference(peak)
+        if (k > SNAP_CEILING) return peak
+        val target = Math.round(k).toFloat().coerceIn(K_MIN, K_MAX)
+        return (ln(target / K_MIN) / ln(K_MAX / K_MIN)).coerceIn(0f, 1f)
+    }
+
     /** The centre of the voice's own TUNE range — where FOLLOW has no work to do. */
     fun referenceHz(voice: GlintVoice): Float = frequencyFor(voice, 0.5f)
 
     /**
-     * The formant ratio actually used, after FOLLOW, the snap and the clamp.
+     * The formant ratio actually used, after FOLLOW and the clamp.
+     *
+     * The snap now lives in [snapPeak] and is applied when PEAK is set
+     * (by [defaults] and [scramble]), not when it is rendered — this stays
+     * continuous so a scaled macro (as `Velocity.atVelocity` produces)
+     * always moves the formant rather than quantising onto the same
+     * integer as the unscaled value.
      *
      * FOLLOW rides `Dsp.keyTrack`: at 1 the peak's Hz scales exactly with the
      * note, so the ratio is constant and the timbre is identical across the
@@ -188,7 +219,7 @@ object Glint {
         val f0 = frequencyFor(voice, tune)
         val peakHzAtReference = ratioAtReference(peak) * reference
         val peakHz = Dsp.keyTrack(peakHzAtReference, f0, reference, follow)
-        return snapRatio((peakHz / f0).coerceIn(K_MIN, K_MAX))
+        return (peakHz / f0).coerceIn(K_MIN, K_MAX)
     }
 
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {

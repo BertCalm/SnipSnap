@@ -239,16 +239,28 @@ class GlintTest {
     }
 
     @Test
-    fun `PEAK values inside one snap zone render identically`() {
-        // Snapping is real, not cosmetic: two PEAK settings that land on the
-        // same harmonic must produce the same bytes.
+    fun `PEAK values inside one snap zone render identically once snapped`() {
+        // The snap moved from ratioFor (render path) to snapPeak (author
+        // path, Task 3) so that a velocity-scaled macro always moves the
+        // formant instead of quantising onto the same integer as the
+        // unscaled one. That means two raw PEAK values in the same zone no
+        // longer render identically on their own — the render path is now
+        // continuous. What is still true, and what this asserts instead: once
+        // both values are pushed through snapPeak (as defaults/scramble do),
+        // they land on the same stored macro and render identical bytes.
         val voice = GlintVoice.BOTTLE
         val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "FOLLOW" to 1f)
         fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak).coerceIn(Glint.K_MIN, Glint.K_MAX))
         val pairs = (0..100).map { it / 100f }.groupBy { ratioAt(it) }.values.firstOrNull { it.size >= 2 }
         assertTrue(pairs != null, "expected at least one snap zone with two PEAK values in it")
-        val a = Glint.render(voice, still + ("PEAK" to pairs!!.first()))
-        val b = Glint.render(voice, still + ("PEAK" to pairs.last()))
+        val peakA = pairs!!.first()
+        val peakB = pairs.last()
+        assertEquals(
+            Glint.snapPeak(peakA), Glint.snapPeak(peakB), 1e-6f,
+            "snapPeak should collapse two PEAK values in one zone onto the same macro",
+        )
+        val a = Glint.render(voice, still + ("PEAK" to Glint.snapPeak(peakA)))
+        val b = Glint.render(voice, still + ("PEAK" to Glint.snapPeak(peakB)))
         assertTrue(a.samples.contentEquals(b.samples), "same snapped harmonic must render the same bytes")
     }
 
@@ -282,7 +294,10 @@ class GlintTest {
         // because it is below SNAP_CEILING (so it snaps to an exact
         // integer) and is the spec's own worked example.
         //
-        // Measured 2026-09-26 (energy ratio, peak-to-decoy):
+        // Measured 2026-09-26, re-measured after Task 3 moved the snap from
+        // ratioFor to snapPeak and this test's setup started passing a
+        // snapped PEAK (identical numbers: at stillTune=0.5, FOLLOW=1, the
+        // ratio lands on exactly k=3 either way, so the render is unchanged):
         //   REED   atK/at2k = 204x   atK/at(k/2) = 23810x
         //   BOTTLE atK/at2k = 625x   atK/at(k/2) = 384935x
         //   KAZOO  atK/at2k = 456x   atK/at(k/2) = 561187x
@@ -294,7 +309,13 @@ class GlintTest {
         // or halved formant could not pass.
         val stillTune = 0.5f
         for (voice in GlintVoice.entries) {
-            val peak = (0..2000).map { it / 2000f }.first { Glint.ratioFor(voice, stillTune, it, 1f) == 3f }
+            // ratioFor no longer snaps (Task 3) — the snap now happens at
+            // author time via snapPeak, the way defaults/scramble apply it.
+            // So the search finds a raw PEAK whose ratio rounds to 3, then
+            // snaps it before handing it to ratioFor, exactly as a stored
+            // preset value would already be snapped.
+            val rawPeak = (0..2000).map { it / 2000f }.first { Math.round(Glint.ratioAtReference(it)) == 3 }
+            val peak = Glint.snapPeak(rawPeak)
             val k = Glint.ratioFor(voice, stillTune, peak, 1f)
             assertEquals(3f, k, 1e-6f, "$voice: test setup expected k=3")
             val f0 = Glint.frequencyFor(voice, stillTune)
@@ -303,6 +324,7 @@ class GlintTest {
             val atK = energyAt(snip.samples, k * f0, snip.sampleRate)
             val atDoubled = energyAt(snip.samples, 2f * k * f0, snip.sampleRate)
             val atHalved = energyAt(snip.samples, k * f0 / 2f, snip.sampleRate)
+            println("$voice atK/at2k = ${"%.0f".format(atK / atDoubled)}x   atK/at(k/2) = ${"%.0f".format(atK / atHalved)}x")
             assertTrue(
                 atK > atDoubled * 20f,
                 "$voice: energy at k*f0 ($atK) should dwarf energy at 2k*f0 ($atDoubled) - formant may be doubled",
@@ -777,6 +799,53 @@ class GlintTest {
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
             val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
             assertTrue(soft < hard, "$voice: a soft hit must be darker, got soft=$soft hard=$hard")
+        }
+    }
+
+    @Test
+    fun `velocity always changes the render, at every PEAK`() {
+        // The snap used to run inside ratioFor, so velocity's floor-scaled
+        // macro quantised onto the same integer as the full one and the two
+        // layers came out byte-identical below about PEAK 0.06 — a preset
+        // there would have had no velocity response at all. Verified before
+        // the fix: hard k=2, soft k=2 at PEAK 0.03 through 0.06.
+        for (voice in GlintVoice.entries) {
+            for (peak in listOf(0.0f, 0.02f, 0.04f, 0.06f, 0.1f, 0.3f, 0.6f, 1.0f)) {
+                val patch = GlintPatch("Vel", voice, Glint.defaults(voice) + ("PEAK" to peak))
+                val soft = Velocity.atVelocity(patch, 0.2f)
+                val hard = Velocity.atVelocity(patch, 1.0f)
+                assertTrue(
+                    !soft.samples.contentEquals(hard.samples),
+                    "$voice at PEAK $peak: soft and hard renders are identical — no velocity response",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `snapPeak lands a macro on a harmonic, and leaves the free zone alone`() {
+        for (voice in GlintVoice.entries) {
+            for (peak in listOf(0.05f, 0.14f, 0.31f, 0.46f)) {
+                val snapped = Glint.snapPeak(peak)
+                val k = Glint.ratioAtReference(snapped)
+                assertEquals(Math.round(k).toFloat(), k, 1e-3f, "snapPeak($peak) should land on an integer ratio, got $k")
+            }
+            // Above the ceiling the ratio runs free and snapPeak is identity.
+            for (peak in listOf(0.7f, 0.9f, 1.0f)) {
+                assertEquals(peak, Glint.snapPeak(peak), 1e-6f, "snapPeak should not touch the continuous zone")
+            }
+        }
+    }
+
+    @Test
+    fun `defaults and scramble both sit on a harmonic`() {
+        for (voice in GlintVoice.entries) {
+            val d = Glint.defaults(voice).getValue("PEAK")
+            assertEquals(d, Glint.snapPeak(d), 1e-6f, "$voice's default PEAK should already be snapped")
+            for (seed in 1..20) {
+                val s = Glint.scramble(voice, kotlin.random.Random(seed)).getValue("PEAK")
+                assertEquals(s, Glint.snapPeak(s), 1e-6f, "$voice scramble seed $seed produced an unsnapped PEAK")
+            }
         }
     }
 }
