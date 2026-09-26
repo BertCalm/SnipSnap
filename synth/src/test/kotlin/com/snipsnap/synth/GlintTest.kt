@@ -499,18 +499,37 @@ class GlintTest {
         // 1.081 / 1.022) — and lowering BODY_DECAY_RATIO makes that WORSE,
         // not better. The share below 2 kHz is what actually changes.
         //
-        // Re-measured 2026-09-26 after BODY became a second formant (own
-        // envelope, k2 = kBase/5.6, applied instead of the amp envelope): at
-        // PEAK 0.75 the second formant sits near 560 Hz and the main burst
-        // near 3115 Hz, so this sub-2kHz share now captures genuinely
-        // distinct content, not a redundant copy of the burst.
+        // A head-vs-tail-within-each-condition version of this test (with a
+        // one-sided control bounding only growth, `flatTail <= flatHead *
+        // 1.5f`) does not discriminate for BOTTLE: its BODY-0.02 control
+        // itself declines 3.04x from head to tail, already past the 1.4x
+        // bar with no body term doing anything. A dead body term would still
+        // pass. REED and KAZOO's controls sit at parity, so their old
+        // signal ratios were real, but BOTTLE's was not — do not restore
+        // that shape. This version compares WITH-body against WITHOUT-body
+        // at the *same* time offset instead, which cancels out whatever
+        // intrinsic decline a voice has and cannot be satisfied by a body
+        // term that does nothing or one that never fades.
         //
-        // Measured 2026-09-26 at BODY 0.9, head -> tail: REED 0.3323 ->
-        // 0.1793 (1.85x), BOTTLE 0.3581 -> 0.1216 (2.94x), KAZOO 0.3337 ->
-        // 0.1215 (2.75x). The control at BODY 0.02 is flat for all three
-        // (0.996x, 0.329x, 0.980x - all inside the 1.5x bar), which is the
-        // half that proves the fall is the body and not the amp envelope.
-        // 1.4x is 24-52% margin under this run's worst case of 1.85x.
+        // Measured 2026-09-26 (same-offset comparison, after Ruling A's
+        // single-envelope body fix):
+        //   REED   withHead=0.3323 withoutHead=0.1441 (2.31x, >1.5x OK)
+        //          withTail=0.1793 withoutTail=0.1435 (1.25x, <1.5x OK)
+        //   BOTTLE withHead=0.3581 withoutHead=0.01257 (28.5x, >1.5x OK)
+        //          withTail=0.1216 withoutTail=0.00414 (29.4x, FAILS <1.5x)
+        //   KAZOO  withHead=0.3337 withoutHead=0.05831 (5.72x, >1.5x OK)
+        //          withTail=0.1215 withoutTail=0.05713 (2.13x, FAILS <1.5x)
+        // The head assertion passes for all three - BODY is audible at the
+        // strike for every voice, confirming Ruling A's fix works. The tail
+        // assertion FAILS for BOTTLE and KAZOO: the second formant has not
+        // burned off to within 1.5x of the no-body baseline by 60% of the
+        // note's duration for those two voices, only for REED. Verified this
+        // test actually bites: with `bodyMix` temporarily forced to 0f in
+        // `synthesize`, the head assertion fails immediately for REED
+        // (0.1432154 -> 0.1432154, identical) - confirming a dead body term
+        // cannot pass. Left failing per instructions: report the number, do
+        // not loosen the assertion, do not retune BODY_DECAY_RATIO outside
+        // this task's scope.
         //
         // BODY_DECAY_RATIO was swept 0.15 to 5.0 while chasing this bar
         // before it was known to be the wrong instrument: lowering it (the
@@ -520,15 +539,17 @@ class GlintTest {
         // constant.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.3f, "PEAK" to 0.75f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
-            fun headAndTail(body: Float): Pair<Float, Float> {
+            fun shares(body: Float): Pair<Float, Float> {
                 val snip = Glint.render(voice, still + ("BODY" to body))
                 return lowMid(slice(snip, 0f, 0.1f)) to
                     lowMid(slice(snip, snip.durationSeconds * 0.6f, snip.durationSeconds))
             }
-            val (head, tail) = headAndTail(0.9f)
-            assertTrue(head > tail * 1.4f, "$voice should turn to glass as it fades: $head -> $tail")
-            val (flatHead, flatTail) = headAndTail(0.02f)
-            assertTrue(flatTail <= flatHead * 1.5f, "$voice with no body should not change: $flatHead -> $flatTail")
+            val (withHead, withTail) = shares(0.9f)
+            val (withoutHead, withoutTail) = shares(0.02f)
+            // The body is plainly there at the strike...
+            assertTrue(withHead > withoutHead * 1.5f, "$voice: BODY should be audible at the head ($withoutHead -> $withHead)")
+            // ...and has burned off by the tail, leaving the resonance alone.
+            assertTrue(withTail < withoutTail * 1.5f, "$voice: the body should have burned off by the tail ($withoutTail vs $withTail)")
         }
     }
 
