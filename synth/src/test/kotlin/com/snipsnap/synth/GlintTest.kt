@@ -569,6 +569,15 @@ class GlintTest {
         // bisecting the offset. +0.04f fails, +0.03f passes - so the
         // smallest offset this bound catches lies between 0.03 and 0.04.
         // Reverted after each run.
+        //
+        // PEAK is deliberately left at its default and NOT swept, and the
+        // 0.05 bound is only valid there. The burst carries this same
+        // window asymmetry and carries it worse at low k: swept to PEAK 0,
+        // KAZOO reads 0.0619 with BODY at 0 — i.e. over the bound with the
+        // body term switched off entirely. That is the burst's own DC, not
+        // a defect and not BODY's doing, but a PEAK sweep added here would
+        // fail this test and point at the wrong component. Widening the
+        // sweep means re-deriving the bound per PEAK first.
         for (voice in GlintVoice.entries) {
             for (body in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
                 val snip = Glint.render(voice, mapOf("BODY" to body, "BLOOM" to 0f))
