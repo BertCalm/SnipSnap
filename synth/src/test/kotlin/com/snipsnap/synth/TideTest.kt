@@ -233,6 +233,46 @@ class TideTest {
     }
 
     @Test
+    fun `the strike thumps - it starts sharp and lands on the note`() {
+        // THUMP starts the strike seven semitones sharp, falling at 5 ms a
+        // step. On BONGO's top note (C5, a cycle every 1.9 ms) its first
+        // milliseconds read well sharp; the pitch tests above show it gone.
+        val want = Tide.frequencyFor(TideVoice.BONGO, 1f)
+        val s = Tide.render(TideVoice.BONGO, clean + ("TUNE" to 1f))
+        val strike = zeroCrossingHz(s, 0.001f, 0.008f)
+        assertTrue(strike > want * 1.1f, "the strike should start sharp: $strike Hz for a $want Hz note")
+    }
+
+    /** The fundamental's share of the first 150 ms, dB: 0 is a pure sine at [hz]. */
+    private fun fundamentalShareDb(s: Snip, hz: Float): Double {
+        val n = minOf(s.samples.size, (0.15f * s.sampleRate).toInt())
+        var re = 0.0
+        var im = 0.0
+        var total = 0.0
+        for (i in 0 until n) {
+            val v = s.samples[i] * (0.5 - 0.5 * cos(2 * PI * i / (n - 1)))
+            re += v * cos(2 * PI * hz * i / s.sampleRate)
+            im += v * sin(2 * PI * hz * i / s.sampleRate)
+            total += v * v
+        }
+        // A Hann-windowed sine puts N/3 of its windowed energy in its own bin.
+        return 10 * log10((re * re + im * im) / (n / 3.0) / total)
+    }
+
+    @Test
+    fun `BODY keeps the note under the fold - every FLARE preset carries its fundamental`() {
+        // The fold spreads FLARE's energy up the spectrum; BODY's clean sine
+        // puts the note back under it, always on the note's side. Measured
+        // without BODY: -2.7 to -28.3 dB (SNARL FLARE the worst); with it,
+        // -1.3 to -6.6.
+        for (preset in TidePresets.forVoice(TideVoice.FLARE)) {
+            val hz = Tide.frequencyFor(TideVoice.FLARE, preset.macros.getValue("TUNE"))
+            val share = fundamentalShareDb(preset.render(), hz)
+            assertTrue(share > -8.0, "${preset.name}: the note is ${"%.1f".format(share)} dB under the whole")
+        }
+    }
+
+    @Test
     fun `the edge's extra reach goes to the low notes and eases off where it would alias`() {
         // Full reach wherever the brightest corner stays under REACH_LIMIT_HZ.
         assertEquals(1f, Tide.reachAt(Tide.frequencyFor(TideVoice.BONGO, 0.5f)), "BONGO's middle gets all of it")
@@ -269,7 +309,13 @@ class TideTest {
             val s = Tide.render(voice, mapOf("FOLD" to 0.8f, "DECAY" to 0.5f, "GLOW" to 0f, "WANDER" to 0f))
             val head = FeatureExtractor.extract(slice(s, 0f, 0.03f)).centroidHz
             val tail = FeatureExtractor.extract(slice(s, s.durationSeconds * 0.5f, s.durationSeconds * 0.75f)).centroidHz
-            assertTrue(head > tail * 2f, "$voice: the strike should be over twice as bright as the tail, $head Hz vs $tail Hz")
+            // The tail closes all the way to the note itself. The strike is
+            // brighter, though BODY's clean sine under it pulls its centroid
+            // toward the note: measured with BODY, DRIP (C6, the least fold
+            // room) 1.9 times its tail, the others 4.4-7.2; without, 2.6-10.9.
+            val note = Tide.frequencyFor(voice, Tide.defaults(voice).getValue("TUNE"))
+            assertTrue(tail < note * 1.1f, "$voice: the closed gate should leave only the note, $tail Hz for a $note Hz note")
+            assertTrue(head > tail * 1.5f, "$voice: the strike should be brighter than the tail, $head Hz vs $tail Hz")
         }
     }
 
