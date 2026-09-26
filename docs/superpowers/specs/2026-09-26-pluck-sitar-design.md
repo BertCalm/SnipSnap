@@ -85,13 +85,19 @@ fades as the note decays — which is why a sitar note "opens" into its buzz
 and then closes. In the loop, after the low-pass and before feedback:
 
 ```
-z = y + k · max(0, y)² / p0
+z = y − k · max(0, y)² / p0
 ```
 
 where `y` is the low-passed loop signal, `p0` the exciter's peak (so the
 term is a fraction of the string's own level, not an absolute), and `k`
-the drive. Because the term is quadratic in `y`, it is loudest at the onset
-and vanishes on its own as the note decays; no envelope is needed. `k` is
+the drive. The sign matters: the bridge is a barrier, so it can only
+*limit* the string's swing toward it, never add to it — a one-sided
+limiter loses a little energy on each positive half-cycle and generates
+the even harmonics of the buzz, and because `|z| ≤ |y|` it can never raise
+the loop's gain above one. (A term that added to `y` would be a positive
+feedback on half of every cycle and would run away at feedback near one.)
+Because the term is quadratic in `y`, it is loudest at the onset and
+vanishes on its own as the note decays; no envelope is needed. `k` is
 the voice's drive constant times a velocity map `lin(velocity, 0.3, 1.0)`:
 a soft note buzzes a little, a hard one buzzes fully. The drive constant
 starts at 0.3; the audition hears 0.15, 0.3 and 0.6 and the chips choose.
@@ -109,9 +115,11 @@ shape, applied once, no feedback). That version cannot "open" the tone the
 same way, and the spec records the choice if it is taken.
 
 **Velocity reaches the render as a number.** Today `Velocity.atVelocity`
-moves the brightness macro (PICK, for PLUCK) and re-renders. For SITAR the
-same call also puts a `VELOCITY` entry in the macro map it renders with;
-`synthesize` reads it if present and defaults it to 1.0. `VELOCITY` is not
+moves the brightness macro (PICK, for PLUCK) and re-renders. Patch
+validation rejects any macro key `macrosFor` does not list, so velocity
+cannot travel in the macro map; instead `Pluck.render` gains a `velocity`
+parameter (default 1.0) and `atVelocity` calls it directly for a
+`PluckPatch`, passing the scaled PICK map and the velocity. Velocity is not
 a `MacroSpec`: it has no knob, no preset carries it, no pad recipe saves it,
 and `macrosFor` does not list it. The other four voices ignore it.
 
@@ -151,7 +159,7 @@ tune while the upper partials stretch.
 
 | Voice | Stiffness | Why |
 |---|---|---|
-| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (inharmonicity coefficient B ≈ 1e-4) and the one that puts it 3.0% sharp (B ≈ 4e-4), both computed in the plan from the allpass's phase response, not tuned by hand | long steel strings: the inharmonicity is audible |
+| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 2e-4) and the one that puts it 3.0% sharp (B ≈ 6e-4), both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
 | KOTO, HARP | 0, with a dispersion-on candidate in the audition | both passed a gate; they do not change unheard |
 | NYLON, BANJO | 0 | not offered |
 
@@ -195,9 +203,9 @@ them rendering clean; the parent spec's by-ear pass re-authors them later.
 
 ## Data flow
 
-- `Pluck.render(voice, macros)` is unchanged in signature. `synthesize`
-  reads `VELOCITY` from the map if present (default 1.0) and passes the
-  jawari drive into `ks`.
+- `Pluck.render(voice, macros, velocity = 1f)` gains the velocity
+  parameter; `synthesize` takes it too and passes the jawari drive into
+  `ks`. `PluckPatch.render()` keeps calling it with the default.
 - `ks` gains three optional parameters: a stiffness coefficient (default 0,
   no allpass), a jawari drive (default 0, no nonlinearity, no DC blocker),
   and — for the sympathetic loops — an optional external input array read
