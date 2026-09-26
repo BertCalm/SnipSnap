@@ -489,4 +489,16 @@ class PluckTest {
             "soft velocity must be a re-render through PICK, not the soften() fallback",
         )
     }
+
+    @Test
+    fun `BANJO is a bright string with a short default ring`() {
+        // The spec's BANJO row: root G3, brighter loop than HARP, picked
+        // near the bridge, short notes. Pinned here as reach, not taste.
+        assertEquals(196f, Pluck.frequencyFor(PluckVoice.BANJO, 0f))
+        val banjo = FeatureExtractor.extract(Pluck.render(PluckVoice.BANJO))
+        val nylon = FeatureExtractor.extract(Pluck.render(PluckVoice.NYLON))
+        assertTrue(banjo.centroidHz > nylon.centroidHz, "a banjo should read brighter than a nylon string: ${banjo.centroidHz} vs ${nylon.centroidHz}")
+        val strike = Pluck.defaults(PluckVoice.BANJO).getValue("STRIKE")
+        assertTrue(strike < 0.5f, "the default pick sits near the bridge, got STRIKE $strike")
+    }
 }

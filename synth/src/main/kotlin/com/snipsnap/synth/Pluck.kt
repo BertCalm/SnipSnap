@@ -26,7 +26,7 @@ import kotlin.random.Random
  * TUNE snaps to semitones across two octaves from the voice's root: pads get
  * notes, not frequencies, which is what makes a pluck kit playable as music.
  */
-enum class PluckVoice { KALIMBA, NYLON, HARP, KOTO }
+enum class PluckVoice { KALIMBA, NYLON, HARP, KOTO, BANJO }
 
 object Pluck {
 
@@ -86,6 +86,11 @@ object Pluck {
             MacroSpec("TUNE", 0.45f), MacroSpec("DAMP", 0.4f), MacroSpec("PICK", 0.75f),
             MacroSpec("STRIKE", 0.6f), MacroSpec("DOUBLE", 0.45f),
         )
+        // Fingerpicks close to the bridge, short notes (spec, "BANJO").
+        PluckVoice.BANJO -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
+            MacroSpec("STRIKE", 0.4f), MacroSpec("DOUBLE", 0.1f),
+        )
     }
 
     fun defaults(voice: PluckVoice): Map<String, Float> =
@@ -107,6 +112,7 @@ object Pluck {
         PluckVoice.NYLON -> 110f
         PluckVoice.HARP -> 165f
         PluckVoice.KOTO -> 147f
+        PluckVoice.BANJO -> 196f
     }
 
     /** The snapped note frequency the TUNE macro lands on for [voice]. */
@@ -157,6 +163,8 @@ object Pluck {
             PluckVoice.NYLON -> { loopHz = 3400f; pickLo = 1200f; pickHi = 6000f; ring = 1.1f }
             PluckVoice.HARP -> { loopHz = 5200f; pickLo = 1800f; pickHi = 9000f; ring = 1.3f }
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
+            // A steel string over a taut head: brighter than HARP.
+            PluckVoice.BANJO -> { loopHz = 5600f; pickLo = 2000f; pickHi = 10000f; ring = 1.0f }
         }
 
         // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
