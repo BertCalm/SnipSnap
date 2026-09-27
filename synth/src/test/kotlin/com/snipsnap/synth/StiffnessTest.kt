@@ -22,7 +22,15 @@ class StiffnessTest {
      */
     private fun tenthPartialRatio(stiffness: Float): Double {
         val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
-        val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("TUNE" to 0.5f, "DOUBLE" to 0f, "DAMP" to 0.2f), rate, stiffnessOverride = stiffness)
+        // jawariOverride = 0f: this probe isolates the stiffness allpass
+        // alone. Any jawari nonlinearity active in the same loop risks
+        // brightening this test's DAMP 0.2 render enough to let the ninth
+        // partial win the tenth-partial search below (measured against an
+        // in-loop bridge candidate tried 2026-09-27, since reverted - see
+        // the spec's "The jawari"); the combination with the shipped jawari
+        // on is guarded separately by `the high stiffness candidate with
+        // the bridge on...` below.
+        val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("TUNE" to 0.5f, "DOUBLE" to 0f, "DAMP" to 0.2f), rate, stiffnessOverride = stiffness, jawariOverride = 0f)
         val tenth = PluckSpectra.peakHz(raw, rate, 10f * f0, spanFraction = 0.05)
         return tenth / (10.0 * f0)
     }

@@ -85,9 +85,12 @@ and then closes. Issanchou et al. (2018, research note §2, source 6), who
 simulate the string against the bridge as a nonsmooth contact problem and
 compare it with measurement, describe the same thing as a "descending
 formant": energy pushed into the high partials at the onset and receding as
-the amplitude falls. The engine reproduces the direction, not the model —
-their tanpura case needs a 2 MHz sampling rate and a complementarity solve
-per contact step. In the loop, after the low-pass and before feedback:
+the amplitude falls, and record the flat-topped "crenel" shape directly
+(their Fig. 2) that a hard one-sided clamp reproduces. The engine
+reproduces the direction, not the model — their tanpura case needs a 2 MHz
+sampling rate and a complementarity solve per contact step.
+
+In the loop, after the low-pass and before feedback:
 
 ```
 z = y − k · min(y, p0) · y / p0    (y > 0)
@@ -123,6 +126,41 @@ the stability test fails at any DAMP, the jawari moves outside the loop as
 an amplitude-gated one-sided waveshaper on the string's output (the same
 shape, applied once, no feedback). That version cannot "open" the tone the
 same way, and the spec records the choice if it is taken.
+
+**History (spike round, 2026-09-27): the fallback above, and two other
+in-loop placements, were tried and measured, and none replaced the version
+shipped above.** A hard clamp inside the loop referenced to the exciter's
+own pre-loop peak barely engaged: `y`, the clamped quantity, is measured
+after the two-tap average and the loop low-pass have already stripped
+most of the burst's energy, so the loop's working amplitude sits well
+below that reference and the clamp rarely crossed it — the onset's
+high-band share sat flat at 0.41–0.45 across the whole depth range tried,
+never reaching a 0.55 gate. Referenced instead to the loop's own running
+swing, an in-loop clamp damps and pulls: it removes loop energy every
+cycle it engages (high-band share 0.09 against a dry string's 0.19 in the
+same window — less buzz than no jawari at all — and render duration
+collapsed from ~0.5 s to 0.38 s) and detuned the note by 65 cents at depth
+0.7, non-monotonically as the depth was stepped down — ruling out a simple
+wrong-constant fix, since the tuning budget above has no term for what an
+in-loop nonlinearity does to the loop's own phase. Taking the fallback —
+moved outside the loop, referenced to the raw signal — fixed both of
+those (tuning and decay both clean at every depth tried) but never
+buzzed, because the burst is forty times the tone: a peak follower's
+max-hold latched onto the exciter burst (peak ≈ 1.0) rather than the
+tone's own steady swing (peak ≈ 0.03 in the 0.15–0.35 s measurement
+window) and decayed from that inflated value too slowly to ever give the
+tone's own peaks room to clamp against. Low-passing the follower at
+800 Hz so it would track the fundamental instead of the burst stopped the
+latching, but the clip removes the string's own harmonics instead of
+adding them — it behaves as a declipper, not a buzz generator: the
+crenel's own band (`PluckSpectra.harmonicsOverFundamental`, the 2nd–8th
+harmonic over the fundamental, past onset) fell *below* the dry string's
+at every depth tried, and fell further as depth rose. **The shipped
+jawari stays the version above — in the loop, a one-sided quadratic bend
+referenced to the exciter's peak — until a design is found that closes
+one of these four failure modes (barely engages; damps and pulls;
+misses the tone for the burst; declips instead of buzzing) without
+opening another.**
 
 **Velocity reaches the render as a number.** Today `Velocity.atVelocity`
 moves the brightness macro (PICK, for PLUCK) and re-renders. Patch
