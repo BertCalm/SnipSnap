@@ -68,9 +68,21 @@ object Glint {
 
     /**
      * How many times CICADA's carrier re-clocks inside one cycle of `f0`.
-     * Integer by necessity: the sub-cycles must divide the cycle a whole
-     * number of times or the output stops repeating at `f0` and the pitch
-     * moves, which is the one thing this engine promises not to do.
+     * Integer by necessity - but not for the reason periodicity first
+     * suggests. Measured (D2 diagnostic, 2026-09-27): at N = 4.37 the
+     * engine-only one-period correlation is 0.9999999 - still exactly
+     * periodic - because `phase` wraps independently of the sub-clock, so
+     * `frac(N * phase)` repeats whenever `phase` does. A fractional N does
+     * NOT break periodicity at `f0`.
+     *
+     * What actually forces N to be an integer is the wrap: a fractional N
+     * leaves a truncated final sub-cycle, so the window does not reach zero
+     * at the instant the carrier restarts, and that restart clicks. Same
+     * diagnostic: worst adjacent jump goes 0.132858 -> 0.705022, a 5.3x
+     * jump at the truncated restart. This is the same zero-crossing promise
+     * `CICADA does not click at its inner restarts` already guards for the
+     * integer case (there, a window read at the wrong phase); a fractional
+     * N would break it from a different direction.
      *
      * Four gives a lattice dense enough to read as its own texture at the
      * voice's A3 root (four edges per cycle, 880 edges a second) without the

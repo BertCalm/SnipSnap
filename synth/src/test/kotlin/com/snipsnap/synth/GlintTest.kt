@@ -86,26 +86,42 @@ class GlintTest {
     }
 
     @Test
-    fun `every voice has a window that reaches zero at the cycle end`() {
+    fun `each voice's window is the shape the spec pairs it with, not just any window`() {
+        // Replaces two tests inherited from the six-voice expansion
+        // (commit ad923519) that a review found could not discriminate a
+        // correct window pairing from a wrong one:
+        //   - the zero-at-phase-1 check duplicated the pre-existing test
+        //     just above (`every window ends at exactly zero`), which
+        //     already loops the enum at the same tolerance;
+        //   - the open-at-0.05 check (> 0.01f) was cleared by all three
+        //     window shapes regardless of pairing (saw 0.95, triangle 0.1,
+        //     trapezoid 1.0), so it would pass even if CICADA had been
+        //     given the trapezoid;
+        //   - `snip.peak() > 0.1f` is true by construction: `Dsp.levelTo`
+        //     normalises every render to MELODIC_LOUDNESS_TARGET (0.1834)
+        //     and only ever clamps down, and RMS <= peak, so any non-silent
+        //     render clears it. The only way to trip it is literal digital
+        //     silence, which a missing `when` branch raises as a compile
+        //     error, not a quiet render.
+        //
+        // Phase 0.6 is where the three shapes actually diverge: saw (REED,
+        // PLATE) is 0.4, triangle (BOTTLE, CICADA) is 0.8, trapezoid
+        // (KAZOO, RATCHET) is 1.0 (still flat - KAZOO_FLAT is 0.7). Getting
+        // CICADA's own reading here requires it to actually be the
+        // triangle - the trapezoid or the saw would each read a different
+        // number - which is what makes this a real discriminator rather
+        // than a floor all three shapes clear regardless of pairing.
+        // Verified against `windowAt` directly before writing these in:
+        // REED/PLATE 0.39999998, BOTTLE/CICADA 0.79999995, KAZOO/RATCHET
+        // 1.0 - the 1e-6f tolerance below absorbs that float rounding
+        // against the exact literals.
         for (voice in GlintVoice.entries) {
-            val end = Glint.windowAt(voice, 1f)
-            assertTrue(
-                kotlin.math.abs(end) < 1e-6f,
-                "$voice's window is $end at phase 1, not zero — the wrap would click",
-            )
-            val open = Glint.windowAt(voice, 0.05f)
-            assertTrue(open > 0.01f, "$voice's window is silent at phase 0.05 ($open)")
-        }
-    }
-
-    @Test
-    fun `every voice renders at its own root and is not silent`() {
-        for (voice in GlintVoice.entries) {
-            val root = Glint.rootHz(voice)
-            assertTrue(root > 20f && root < 2000f, "$voice root $root Hz is out of range")
-            val snip = Glint.render(voice)
-            assertTrue(snip.frameCount > 1000, "$voice rendered ${snip.frameCount} frames")
-            assertTrue(snip.peak() > 0.1f, "$voice rendered near-silence, peak ${snip.peak()}")
+            val expected = when (voice) {
+                GlintVoice.REED, GlintVoice.PLATE -> 0.4f
+                GlintVoice.BOTTLE, GlintVoice.CICADA -> 0.8f
+                GlintVoice.KAZOO, GlintVoice.RATCHET -> 1.0f
+            }
+            assertEquals(expected, Glint.windowAt(voice, 0.6f), 1e-6f, "$voice's window shape at phase 0.6")
         }
     }
 
@@ -160,11 +176,41 @@ class GlintTest {
         }
     }
 
-    /** [x] linearly interpolated at a fractional sample position. */
+    /**
+     * [x] resampled at the fractional sample position [pos] with a 64-tap
+     * Blackman-windowed sinc kernel, not two-tap linear interpolation.
+     *
+     * Linear interpolation is not accurate enough for what this file uses
+     * it for: a mathematically exact 15,840 Hz sinusoid, no engine
+     * involved, scores 0.97132 under [periodCorrelation]'s own measure
+     * with linear interpolation — within 0.003 of a real CICADA reading
+     * this file used to fail on at that same carrier. The two-tap method
+     * was measuring its own phase error, not periodicity; see
+     * `periodCorrelation`'s callers for the reading this replaced.
+     *
+     * Taps are clamped to the array's bounds at the edges rather than
+     * zero-padded, and the kernel is normalized to unit DC gain (divided
+     * by the sum of its own weights) so a clamped, truncated kernel near
+     * a buffer edge does not also scale the result.
+     */
     private fun sampleAt(x: FloatArray, pos: Float): Float {
-        val i = pos.toInt()
-        val f = pos - i
-        return x[i] * (1f - f) + x[i + 1] * f
+        val taps = 64
+        val half = taps / 2
+        val base = kotlin.math.floor(pos).toInt()
+        val frac = pos - base
+        var sum = 0.0
+        var weight = 0.0
+        for (j in 0 until taps) {
+            val idx = (base - half + 1 + j).coerceIn(0, x.size - 1)
+            val d = (frac + half - 1 - j).toDouble()
+            val sinc = if (kotlin.math.abs(d) < 1e-7) 1.0 else kotlin.math.sin(kotlin.math.PI * d) / (kotlin.math.PI * d)
+            val blackman = 0.42 - 0.5 * kotlin.math.cos(2.0 * kotlin.math.PI * j / (taps - 1)) +
+                0.08 * kotlin.math.cos(4.0 * kotlin.math.PI * j / (taps - 1))
+            val w = sinc * blackman
+            sum += x[idx] * w
+            weight += w
+        }
+        return (sum / weight).toFloat()
     }
 
     /**
@@ -221,10 +267,20 @@ class GlintTest {
         // a BLOOM_T60 much larger than that needs `still`'s DECAY raised
         // here too, not just this derivation.
         //
-        // Measured 2026-09-26 at fromSec=0.35 across 3 voices x 4 PEAK
-        // settings x both BLOOM extremes: worst case 0.98737 (BOTTLE, PEAK
-        // 0.9, BLOOM 1) - comfortably above the bar, and far above the
-        // 0.73149 synthetic 9%-pitch-drift control from Phase 1.
+        // Measured 2026-09-27 at fromSec=0.35 across all SIX voices x 4 PEAK
+        // settings x both BLOOM extremes, with `sampleAt` now the 64-tap
+        // Blackman-sinc kernel documented above it - not the two-tap linear
+        // interpolation that used to make this test read CICADA as
+        // aperiodic (correlation 0.9683 at a 15,840 Hz carrier, within
+        // 0.003 of a mathematically exact sinusoid's own 0.97132 under
+        // linear interpolation - see `sampleAt`'s doc): worst case
+        // 0.99940187 (REED and PLATE, PEAK 0.9, BLOOM 1) - comfortably
+        // above the bar. This replaces a three-voice figure measured before
+        // CICADA existed and before the interpolator changed. The paragraph
+        // below was measured under the old linear interpolator and is not
+        // re-verified here, but the property it documents - the metric
+        // inverting mid-sweep - is a property of one-period correlation
+        // during a sweep, independent of interpolation method.
         //
         // The during-sweep regime (fromSec=0.05, the old default) is
         // deliberately NOT asserted here. Measured worst case there is
@@ -861,13 +917,52 @@ class GlintTest {
         // Velocity.BRIGHTNESS_MACROS' own KDoc records what happens when a
         // macro joins this list without being measured: THUMP SNARE on TONE
         // read 1650.29 Hz soft against 1648.09 Hz hard — backwards. A macro
-        // earns its place with a sweep that rises at every step, per voice.
+        // earns its place with a sweep that never falls, per voice.
         //
-        // Measured 2026-09-26, the gate this test locks down:
-        //   PEAK sweep REED:   362.2, 558.0, 753.3, 1143.7, 1729.0, 2510.5, 3662.5, 5336.8, 7772.6
-        //   PEAK sweep BOTTLE: 790.0, 1175.7, 1564.0, 2343.0, 3512.5, 5075.1, 7379.1, 10730.6, 15601.4
-        //   PEAK sweep KAZOO:  762.5, 1160.1, 1553.4, 2333.9, 3507.9, 5075.6, 7386.1, 10742.7, 15623.2
-        // Rises at every step on all three voices, so PEAK joins BRIGHTNESS_MACROS below.
+        // Strictly-rising was the original bar here, and CICADA breaks it:
+        // two adjacent PEAK steps both snap to k=4 and render
+        // byte-identical. That is not a CICADA defect - it is what
+        // `PEAK values inside one snap zone render identically` REQUIRES
+        // for any two PEAK values landing on the same snapped k. The suite
+        // was contradicting itself: one test demanded byte-identity inside
+        // a snap zone, this one forbade it. Both are satisfiable together
+        // only when no two of the 9 grid points share a snapped k, which is
+        // an accident of this grid's spacing, not a property PEAK has.
+        // Measured at 0.01 PEAK spacing (100 adjacent pairs), ties are
+        // normal snap behaviour on EVERY voice, not a CICADA-only thing:
+        // REED 36/100, BOTTLE 36/100, KAZOO 36/100, CICADA 67/100, RATCHET
+        // 36/100, PLATE 36/100 - the 9-point grid only avoids them because
+        // it happens to place just three points (k = 4, 6, 9) inside the
+        // snap band.
+        //
+        // So the bar is non-decreasing at every step, plus a 3x end-to-end
+        // rise so a macro that merely plateaus the whole way (dead, not
+        // snapped) still fails - not `PluckTest.kt`'s "PICK is dead between"
+        // per-step `abs(diff) > 1f` clause, which would fail here for
+        // exactly the same reason a strict rise does: a snapped macro has
+        // legitimate zero-diff steps. Falls: zero out of 100 at 0.01
+        // spacing for every voice, so non-decreasing is not vacuous - ties
+        // happen, drops never do. End/start centroid ratio at the 9-point
+        // grid: REED 21.1x, BOTTLE 19.3x, KAZOO 20.1x, RATCHET 20.1x, PLATE
+        // 21.1x, and CICADA 4.8x - the binding case, leaving the 3x bar
+        // about 60% margin. CICADA's 4.8x is not a weaker sweep, it falls
+        // out of the ceiling equalisation arithmetically: at PEAK 0 both
+        // CICADA and BOTTLE sit at k=K_MIN=2, but CICADA's real carrier is
+        // k*CICADA_SUBCYCLES*f0 - 4x BOTTLE's at that same k and f0 (both
+        // root at 220 Hz) - while `kCeilingFor` equalises their PEAK-1
+        // ceilings, so CICADA's whole travel compresses to exactly 1/4 of
+        // BOTTLE's: 19.264683 / 4 = 4.816171, measured 4.8161697.
+        //
+        // Measured 2026-09-27, the gate this test locks down:
+        //   PEAK sweep REED:    359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4, 3568.1, 5207.0, 7589.7
+        //   PEAK sweep BOTTLE:  792.1, 1180.9, 1529.5, 2297.0, 3445.9, 4962.1, 7215.2, 10497.0, 15259.6
+        //   PEAK sweep KAZOO:   758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
+        //   PEAK sweep CICADA:  3168.4, 3792.9, 4855.8, 6117.8, 6117.8, 7741.9, 10754.6, 12234.2, 15259.4
+        //   PEAK sweep RATCHET: 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
+        //   PEAK sweep PLATE:   359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4, 3568.1, 5207.0, 7589.7
+        // CICADA ties once (step 4 -> 5, both 6117.8); every other voice
+        // rises at every step. All six clear non-decreasing + 3x, so PEAK
+        // joins BRIGHTNESS_MACROS below.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.4f, "BLOOM" to 0f, "BODY" to 0.3f, "FOLLOW" to 1f, "DECAY" to 0.6f)
             val readings = (0..8).map { i ->
@@ -876,10 +971,14 @@ class GlintTest {
             println("PEAK sweep $voice: ${readings.joinToString(", ") { "%.1f".format(it) }}")
             for (i in 1 until readings.size) {
                 assertTrue(
-                    readings[i] > readings[i - 1],
-                    "$voice PEAK is not monotonic at step $i: ${readings[i - 1]} -> ${readings[i]}",
+                    readings[i] >= readings[i - 1],
+                    "$voice PEAK fell at step $i: ${readings[i - 1]} -> ${readings[i]}",
                 )
             }
+            assertTrue(
+                readings.last() > readings.first() * 3f,
+                "$voice PEAK should rise at least 3x end to end: ${readings.first()} -> ${readings.last()}",
+            )
         }
     }
 

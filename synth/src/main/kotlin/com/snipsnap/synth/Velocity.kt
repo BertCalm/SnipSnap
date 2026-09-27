@@ -424,16 +424,32 @@ object Velocity {
      * change.
      *
      * PEAK (GLINT) joins on a measured sweep, not on the name: PEAK 0→1 in
-     * eighths, nine points, `FeatureExtractor.extract(_).centroidHz`, rising
-     * at every step on all three voices — REED 362.2, 558.0, 753.3, 1143.7,
-     * 1729.0, 2510.5, 3662.5, 5336.8, 7772.6; BOTTLE 790.0, 1175.7, 1564.0,
-     * 2343.0, 3512.5, 5075.1, 7379.1, 10730.6, 15601.4; KAZOO 762.5, 1160.1,
-     * 1553.4, 2333.9, 3507.9, 5075.6, 7386.1, 10742.7, 15623.2, measured
-     * 2026-09-26. Physically it is the honest knob: strike a reed harder and
-     * the formant rises. Re-run the sweep if the window shapes or
-     * `ratioFor`'s mapping ever change. Unlike SNAP, this is a flat entry
-     * rather than a [brightnessOverride]: no other engine exposes a macro
-     * named PEAK, so there is no name collision to scope around.
+     * eighths, nine points, `FeatureExtractor.extract(_).centroidHz`, never
+     * falling at any step on any of the six voices, with one exact tie
+     * rather than a fall (CICADA, step 4→5, both land on the same snapped
+     * ratio - 6117.8 Hz twice) — REED 359.3, 517.6, 726.9, 1107.8, 1677.9,
+     * 2440.4, 3568.1, 5207.0, 7589.7; BOTTLE 792.1, 1180.9, 1529.5, 2297.0,
+     * 3445.9, 4962.1, 7215.2, 10497.0, 15259.6; KAZOO 758.1, 1102.9, 1515.6,
+     * 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1; CICADA 3168.4,
+     * 3792.9, 4855.8, 6117.8, 6117.8, 7741.9, 10754.6, 12234.2, 15259.4;
+     * RATCHET 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2,
+     * 10456.0, 15212.1; PLATE 359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4,
+     * 3568.1, 5207.0, 7589.7 — measured 2026-09-27 (RATCHET and PLATE read
+     * identically to KAZOO and REED respectively: neither has its own
+     * mechanism yet, so they still render the same bytes). CICADA's tie is
+     * normal snap behaviour, not a broken knob - see `GlintTest.kt`'s
+     * `PEAK sweep is monotonic` for why that gate itself is non-decreasing
+     * rather than strict - and it does not threaten velocity here:
+     * [atVelocity] scales PEAK continuously toward its floor rather than
+     * stepping through this nine-point grid, and `GlintTest.kt`'s
+     * `velocity always changes the render, at every PEAK` checks every
+     * voice, CICADA included, at eight different PEAK settings and finds a
+     * real difference at each one. Physically it is the honest knob: strike
+     * a reed harder and the formant rises. Re-run the sweep if the window
+     * shapes or `ratioFor`'s mapping ever change. Unlike SNAP, this is a
+     * flat entry rather than a [brightnessOverride]: no other engine
+     * exposes a macro named PEAK, so there is no name collision to scope
+     * around.
      */
     //
     // FOLD is TIDE's: the folder's drive at the strike, which adds partials
