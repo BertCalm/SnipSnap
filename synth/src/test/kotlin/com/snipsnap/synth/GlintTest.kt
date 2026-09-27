@@ -987,11 +987,24 @@ class GlintTest {
         //   PEAK sweep BOTTLE:  792.1, 1180.9, 1529.5, 2297.0, 3445.9, 4962.1, 7215.2, 10497.0, 15259.6
         //   PEAK sweep KAZOO:   758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
         //   PEAK sweep CICADA:  3168.4, 3792.9, 4855.8, 6117.8, 6117.8, 7741.9, 10754.6, 12234.2, 15259.4
-        //   PEAK sweep RATCHET: 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
+        //   PEAK sweep RATCHET: 758.1, 1138.6, 1515.6, 2265.4, 3402.6, 4926.9, 7211.5, 10645.0, 15212.1
         //   PEAK sweep PLATE:   359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4, 3568.1, 5207.0, 7589.7
         // CICADA ties once (step 4 -> 5, both 6117.8); every other voice
         // rises at every step. All six clear non-decreasing + 3x, so PEAK
         // joins BRIGHTNESS_MACROS below.
+        //
+        // RATCHET's row is re-measured from the figure this comment
+        // originally recorded (identical to KAZOO's, back when RATCHET had
+        // no mechanism of its own and rendered the same bytes). BLOOM=0
+        // here, so RATCHET's ladder never climbs past its own bottom rung
+        // (see `ratchetLadder`'s doc) - but that bottom rung is
+        // `Math.round(kBase)`, not the raw `kBase` KAZOO uses unrounded, so
+        // the two now agree only where `kBase` already lands on (or very
+        // near) an integer and drift apart by up to half an integer's worth
+        // of ratio elsewhere (steps 2, 6, 7, 8 above). End-to-end ratio is
+        // unaffected (20.1x, same as before): PEAK 0 and PEAK 1 both pin
+        // `kBase` to K_MIN and kCeilingFor exactly, which are already
+        // integers for both voices.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.4f, "BLOOM" to 0f, "BODY" to 0.3f, "FOLLOW" to 1f, "DECAY" to 0.6f)
             val readings = (0..8).map { i ->
@@ -1221,6 +1234,143 @@ class GlintTest {
         assertTrue(
             c > b * 3f,
             "CICADA has $c at the lattice rate ($lattice Hz), BOTTLE (same 3,960 Hz carrier) has $b",
+        )
+    }
+
+    /**
+     * The spec's requirement: measure the centroid in windows and assert the
+     * plateaus. A glide would show a different centroid in every window;
+     * steps show runs of equal ones with jumps between.
+     *
+     * The 0.25x bar was checked against the mechanism-absent case before it
+     * was trusted, per this branch's own rule that a threshold is only as
+     * good as the range it was measured against. Before RATCHET had its own
+     * `when` branch (i.e. running the plain continuous BLOOM sweep every
+     * other non-CICADA voice uses, at the same macros this test renders
+     * with, step = 0.15f literal since the constant did not exist yet):
+     * early=7549.2656, late=5515.9536, next=3901.208 -
+     * |late-early|=2033.312, |next-early|=3648.0576, ratio=0.5574. That
+     * clears (i.e. fails to clear) the 0.25 bar by more than 2x, so a
+     * continuous ramp cannot pass this test by accident - the bar is a real
+     * discriminator, not a vacuous one.
+     */
+    @Test
+    fun `RATCHET's formant is piecewise constant, not a ramp`() {
+        val snip = Glint.render(GlintVoice.RATCHET, mapOf("BLOOM" to 1f, "DECAY" to 0.9f, "BODY" to 0f))
+        val step = Glint.RATCHET_STEP_SECONDS
+        // Two probes inside one step must agree; probes either side of a step
+        // boundary must not.
+        val early = FeatureExtractor.extract(slice(snip, step * 0.25f, step * 0.45f)).centroidHz
+        val late = FeatureExtractor.extract(slice(snip, step * 0.55f, step * 0.75f)).centroidHz
+        val next = FeatureExtractor.extract(slice(snip, step * 1.25f, step * 1.45f)).centroidHz
+        assertTrue(
+            kotlin.math.abs(late - early) < kotlin.math.abs(next - early) * 0.25f,
+            "RATCHET: within-step centroid moved $early -> $late, across-step moved $early -> $next — that is a ramp, not a staircase",
+        )
+    }
+
+    @Test
+    fun `RATCHET's steps land on integer harmonics`() {
+        // "Steps between fixed harmonics, never glides." Every step's ratio
+        // must be a whole number, or the ladder is not a ladder.
+        for (bloom in listOf(0.25f, 0.5f, 1f)) {
+            val ks = Glint.ratchetLadder(
+                kBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.45f, 0.8f),
+                bloomAmount = Dsp.lin(bloom, 0f, Glint.BLOOM_MAX),
+            )
+            assertTrue(ks.isNotEmpty(), "RATCHET ladder is empty at BLOOM $bloom")
+            for (k in ks) {
+                assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k is not an integer")
+            }
+            assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
+        }
+    }
+
+    @Test
+    fun `RATCHET climbs further as BLOOM opens`() {
+        val kBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.45f, 0.8f)
+        val small = Glint.ratchetLadder(kBase, Dsp.lin(0.25f, 0f, Glint.BLOOM_MAX)).last()
+        val large = Glint.ratchetLadder(kBase, Dsp.lin(1f, 0f, Glint.BLOOM_MAX)).last()
+        assertTrue(large > small, "RATCHET's ladder top did not rise with BLOOM: $small -> $large")
+    }
+
+    /**
+     * The step is quantised to the phase wrap, where the window has just
+     * reached zero - the one instant any `k` starts a cycle from silence
+     * instead of interrupting a wide-open window mid-sine.
+     *
+     * The plan's own sketch for this test compared RATCHET against KAZOO
+     * over a broad early window (0.01-0.60 s). That control is confounded
+     * the same way `CICADA does not click at its inner restarts` found REED
+     * to be confounded for CICADA: KAZOO's BLOOM sweep runs downward from
+     * `kBase*(1+bloomAmount)` (its loudest, highest-carrier moment is at
+     * t=0), while RATCHET's ladder climbs upward from `kBase` (its lowest
+     * carrier is at t=0) - same starting `kBase` (RATCHET and KAZOO share
+     * `rootHz` and `kCeilingFor`, so `ratioFor` returns byte-identical values
+     * for both at any shared macros), opposite direction. Over a broad early
+     * window KAZOO sits at a much higher instantaneous carrier than RATCHET,
+     * and a sine's sample-to-sample step scales with frequency - so KAZOO's
+     * own "worst jump" baseline is inflated by nothing to do with clicking,
+     * and a bar built on it could clear for the wrong reason.
+     *
+     * The fix is the one the CICADA test already used for the equivalent
+     * problem: hold everything but the mechanism fixed. Here that needs no
+     * second voice at all - compare RATCHET against itself, a window
+     * straddling a step boundary against an equal-width window fully inside
+     * one rung, close enough in time that the envelope has barely moved
+     * between them. Same voice, same render, same render call, differing
+     * only in whether a step boundary falls inside the window.
+     *
+     * Measured on `synthesize`'s raw oversampled buffer, not `render`: as the
+     * CICADA test's own comment notes, `Dsp.decimate` low-passes to the
+     * output Nyquist, which is exactly the filter that would smooth a wrap
+     * discontinuity away before it could be seen.
+     *
+     * TUNE must be off RATCHET's default (0.5, i.e. 440 Hz): the root
+     * (220 Hz) times [Glint.RATCHET_STEP_SECONDS] (0.15 s) is 33, an
+     * integer, so every octave of the root (TUNE 0, 0.5, 1 -> 220/440/880
+     * Hz) lands the nominal step boundary on an exact whole number of
+     * cycles - the step and the phase wrap coincide by construction there,
+     * regardless of whether the mutation below is present. First round of
+     * mutation-verification used the default TUNE and the mutation did NOT
+     * fail (straddle and inside both stayed at the ordinary per-cycle
+     * transient's size) for exactly this reason - not because the design
+     * was wrong, but because 440*0.15=66 exactly gave the mutated code
+     * nowhere mid-cycle to land. TUNE=0.3 -> f0=329.6 Hz -> 329.6*0.15=49.4,
+     * comfortably off-integer, exposes it.
+     *
+     * Mutation-verified 2026-09-27 at TUNE=0.3: moved the `rung` update out
+     * of the `if (phase >= 1f)` block so it runs every sample (the exact
+     * mistake this design guards against - a rung picked at whatever phase
+     * elapsed time happens to cross the 150 ms mark, instead of only at the
+     * wrap). Correct code (both measured against `inside=0.03507772`, which
+     * the mutation leaves untouched since that window never contains a step
+     * boundary either way): straddle=0.042295076 (ratio 1.206x, clears the
+     * 3x bar). Mutated code: straddle=0.1769346 (ratio 5.045x, fails, as it
+     * must - a clean separation from the passing 1.206x). Reverted
+     * immediately after recording it.
+     */
+    @Test
+    fun `RATCHET does not click when it steps`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        // TUNE=0.3, not left at its 0.5 default - see this test's own KDoc
+        // for why the default's exact-integer step/cycle ratio would hide
+        // the very bug this test exists to catch.
+        val raw = Glint.synthesize(GlintVoice.RATCHET, mapOf("TUNE" to 0.3f, "BLOOM" to 1f, "DECAY" to 0.9f), rate)
+        val snip = Snip(raw, 1, rate)
+        val step = Glint.RATCHET_STEP_SECONDS
+        // Straddles the first step boundary (nominally at t=step; the actual
+        // wrap lands within one cycle period after it) - wide enough (0.2 *
+        // step = 30 ms, ~10 cycles at this 329.6 Hz note) to contain it
+        // regardless of exactly where in that cycle it falls.
+        val straddle = worstAdjacentJump(snip, from = step * 0.9f, to = step * 1.1f)
+        // Same width, fully inside the second rung - no boundary within it,
+        // starting only 15 ms after the first window ends so the amplitude
+        // envelope has barely moved between the two.
+        val inside = worstAdjacentJump(snip, from = step * 1.2f, to = step * 1.4f)
+        assertTrue(
+            straddle < inside * 3f,
+            "RATCHET's worst jump straddling a step boundary ($straddle) vs fully inside one rung ($inside) — the step is clicking",
         )
     }
 }

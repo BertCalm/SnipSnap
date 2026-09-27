@@ -250,6 +250,15 @@ object Glint {
         if (voice == GlintVoice.CICADA) K_MAX / CICADA_SUBCYCLES else K_MAX
 
     /**
+     * How long RATCHET holds each rung before jumping to the next. The spec
+     * asks for "a hard jump every ~150 ms"; at the shortest DECAY (0.12 s
+     * t60) that is under one step, so short notes render a single rung and
+     * the ladder only reads on longer ones — which is correct for a tuning
+     * dial being turned.
+     */
+    const val RATCHET_STEP_SECONDS = 0.15f
+
+    /**
      * PEAK as a ratio at the voice's own reference note. Exponential,
      * because the ear judges the peak's position by interval, not by Hz.
      * Maps onto [K_MIN]..[kCeilingFor] rather than the raw [K_MIN]..[K_MAX]
@@ -313,6 +322,57 @@ object Glint {
      */
     internal fun bodyRatio(kBase: Float): Float = (kBase / BODY_RATIO_DIVISOR).coerceAtLeast(K_MIN)
 
+    /**
+     * The integer harmonics RATCHET steps through, bottom rung first.
+     *
+     * The ladder starts at the snapped base ratio and climbs by whole
+     * harmonics to `kBase * (1 + bloomAmount)`, BLOOM's extent. Every rung is
+     * an integer because "steps between fixed harmonics" is the mechanism —
+     * a fractional rung would be a glide that happens to be quantised in
+     * time, which is a different and much duller thing.
+     *
+     * Bounded by [kCeilingFor] for [GlintVoice.RATCHET], not a bare [K_MAX]:
+     * the same ceiling [ratioFor] already clamped [kBase] to, so this can
+     * never ask for a rung a note could not otherwise reach. RATCHET is
+     * never CICADA, so this is [K_MAX] today, but the call stays rather than
+     * inlining the constant — see [kCeilingFor]'s own doc on why it has to
+     * be one definition shared by every site that bounds a ratio, not a
+     * value copied into a fourth place that could drift from the other
+     * three.
+     *
+     * Rounding to the nearest rung is not free: [snapRatio] deliberately
+     * leaves the ratio unrounded below [SNAP_FLOOR] so two velocity layers
+     * landing in the same unit interval (say 2.05 and 2.12) stay
+     * distinguishable — the exact case [SNAP_FLOOR]'s own doc records as a
+     * shipped bug once already. Rounding `kBase` to a bottom rung here
+     * undoes that below [SNAP_FLOOR] (and, symmetrically, above
+     * [SNAP_CEILING]): a ladder's rungs are integers by definition, so two
+     * kBase values in the same unit interval can land on the same bottom
+     * rung and, if BLOOM's reach does not separate their tops either,
+     * produce byte-identical ladders and renders. Measured consequence and
+     * exact PEAK values in `GlintTest`'s `velocity always changes the
+     * render, at every PEAK` and this file's own ladder test — this is the
+     * ladder's resolution limit, not a defect in the rounding: an
+     * integer-only mechanism cannot carry the sub-integer distinction
+     * [SNAP_FLOOR] exists to preserve.
+     *
+     * Always at least one rung, so a note shorter than one step still has a
+     * ratio to render.
+     */
+    internal fun ratchetLadder(kBase: Float, bloomAmount: Float): FloatArray {
+        val kCeiling = kCeilingFor(GlintVoice.RATCHET)
+        val bottom = Math.round(kBase.coerceIn(K_MIN, kCeiling)).toFloat()
+        val top = (kBase * (1f + bloomAmount)).coerceIn(K_MIN, kCeiling)
+        val rungs = ArrayList<Float>()
+        var k = bottom
+        while (k <= top && rungs.size < kCeiling.toInt()) {
+            rungs.add(k)
+            k += 1f
+        }
+        if (rungs.isEmpty()) rungs.add(bottom)
+        return rungs.toFloatArray()
+    }
+
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice) + macros
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
@@ -359,6 +419,13 @@ object Glint {
         val step = f0 / rate
         var phase = 0f
         val out = FloatArray(frames)
+        // RATCHET resolves its whole ladder once, up front - BLOOM only sets
+        // how far it reaches, not a per-sample computation - and then only
+        // ever reads one rung of it per sample. `rung` advances exclusively
+        // at the phase wrap below; nothing in the per-sample body ever
+        // touches it.
+        val ladder = if (voice == GlintVoice.RATCHET) ratchetLadder(kBase, bloomAmount) else null
+        var rung = 0
 
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
@@ -375,11 +442,23 @@ object Glint {
                 phase
             }
             val w = windowAt(voice, carrier)
-            // kBase is snapped; BLOOM modulates continuously on top of it, so
-            // the knob is musical and the sweep is smooth. k moves on the
-            // envelope's timescale, far slower than one cycle, so the inner
-            // sine stays effectively periodic while restarting at each wrap.
-            val k = (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, kCeiling)
+            val k = when (voice) {
+                // RATCHET's k only ever changes at the phase wrap below, not
+                // here: its trapezoid window is 1 at phase 0 (KAZOO_FLAT > 0)
+                // and only reaches zero at the cycle's end, so a k picked
+                // mid-cycle would multiply a wide-open window by a sine at an
+                // arbitrary phase for the OLD k one sample and the NEW k the
+                // next - a real discontinuity, once per step. Reading `rung`
+                // here is safe precisely because it is frozen for the whole
+                // cycle; only the wrap is allowed to move it.
+                GlintVoice.RATCHET -> ladder!![rung]
+                // kBase is snapped; BLOOM modulates continuously on top of it,
+                // so the knob is musical and the sweep is smooth. k moves on
+                // the envelope's timescale, far slower than one cycle, so the
+                // inner sine stays effectively periodic while restarting at
+                // each wrap.
+                else -> (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, kCeiling)
+            }
             val burst = w * sin(2.0 * PI * k * carrier).toFloat()
             // Not because a windowed sine has no DC — it does, for any
             // window that isn't symmetric about phase 0.5: REED's ramp and
@@ -398,7 +477,18 @@ object Glint {
             val body = bodyMix * w * sin(2.0 * PI * k2 * carrier).toFloat()
             out[i] = amp.at(t) * burst + bodyEnv.at(t) * body
             phase += step
-            if (phase >= 1f) phase -= 1f
+            if (phase >= 1f) {
+                phase -= 1f
+                // The only instant a ratio change is free: the window has
+                // just reached zero, so any k starts the new cycle from
+                // silence instead of breaking a wide-open one. `t` is this
+                // sample's own time, not the wrapped-to sample's - RATCHET's
+                // ~150 ms step is long enough next to one cycle that which
+                // side of the wrap names the boundary is inaudible.
+                if (ladder != null) {
+                    rung = (t / RATCHET_STEP_SECONDS).toInt().coerceAtMost(ladder.size - 1)
+                }
+            }
         }
         return out
     }
