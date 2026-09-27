@@ -197,6 +197,16 @@ tasks.register<JavaExec>("generateTideKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the SIREN audition clips, manifest and page under testkit/siren-audition/. See SirenAuditionGenerator. */
+tasks.register<JavaExec>("generateSirenAudition") {
+    group = "distribution"
+    description = "Render the SIREN audition clips, manifest and listening page under testkit/siren-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SirenAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/siren-audition")
+}
+
 tasks.register<JavaExec>("generateSirenKit") {
     group = "distribution"
     description = "Render the SIREN dub siren acceptance kit under testkit/."
