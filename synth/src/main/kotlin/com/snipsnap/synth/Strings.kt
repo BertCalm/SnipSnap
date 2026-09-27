@@ -7,6 +7,7 @@ import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -431,6 +432,58 @@ internal object Strings {
         val loop = Loop(t.n, t.a, damping.fb, damping.loopHz, rate, stiffness, jawari, jawariP0, dispersion)
         for (i in out.indices) out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
         return out
+    }
+
+    /**
+     * The widest a single [course] loop can drift from [freq], in cents, at
+     * [spread] 1 - "shape, not measurement" (spec, OUD's COURSE and
+     * SANTUR's COURSE both note no source measures a course's detune),
+     * chosen to sit well past where two coupled strings audibly beat
+     * (Weinreich; Woodhouse's simulation puts that around 2-5 cents,
+     * research §4) while staying inside a semitone, so [course] can never
+     * be mistaken for a different note.
+     */
+    private const val COURSE_MAX_CENTS = 50f
+
+    /**
+     * OUD's course, SANTUR's four strings: [count] loops around [freq],
+     * summed, each seeded from [seed] so one pad's shimmer is stable across
+     * renders and two pads differ (spec, "OUD"). [spread] 0 keeps every
+     * loop at [freq] exactly; [spread] 1 reaches [COURSE_MAX_CENTS]. Each
+     * loop's feedback is nudged slightly apart by its own index so the
+     * course decays unevenly - the "prompt then aftersound" of coupled
+     * strings a single shared `fb` cannot produce.
+     *
+     * [count] = 1 returns [pluck] itself, untouched by [spread]: the
+     * off-by-default point for [course] is "one loop", not "no detune" -
+     * a caller reaching [course] with [count] 1 must get exactly what
+     * calling [pluck] directly would have given it.
+     */
+    fun course(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, count: Int, spread: Float, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null): FloatArray {
+        require(count >= 1) { "course needs at least 1 loop, got $count" }
+        if (count == 1) return pluck(freq, seconds, damping, pickHz, seed, rate, position, stiffness, jawari, dispersion)
+
+        val detunes = courseDetuneCents(seed, count, spread)
+        val loops = detunes.mapIndexed { k, cents ->
+            val detuned = freq * 2f.pow(cents / 1200f)
+            val fbK = (damping.fb * (1f - 0.01f * k)).coerceIn(0f, 0.999f)
+            pluck(detuned, seconds, Damping(damping.loopHz, fbK), pickHz, Dsp.seedFor(seed, "COURSE", k), rate, position, stiffness, jawari, dispersion)
+        }
+        val out = FloatArray(loops.maxOf { it.size })
+        for (loop in loops) for (i in loop.indices) out[i] += loop[i]
+        return out
+    }
+
+    /**
+     * The cents each of [count] [course] loops drifts from the note,
+     * seeded from [seed] - split out from [course] so its own bounds and
+     * determinism are testable without rendering anything. [spread] 0
+     * gives every loop exactly 0 - the product zeroes out regardless of
+     * the draw - and [spread] 1 spans ±[COURSE_MAX_CENTS]/2.
+     */
+    internal fun courseDetuneCents(seed: Int, count: Int, spread: Float): List<Float> {
+        val random = kotlin.random.Random(seed)
+        return (0 until count).map { (random.nextFloat() - 0.5f) * spread.coerceIn(0f, 1f) * COURSE_MAX_CENTS }
     }
 
     /**

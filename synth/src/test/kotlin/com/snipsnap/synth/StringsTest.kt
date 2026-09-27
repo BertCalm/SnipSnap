@@ -188,4 +188,56 @@ class StringsTest {
             assertTrue(abs(cents) <= 5.0, "partial $n with no dispersion is $cents cents off, expected harmonic")
         }
     }
+
+    @Test
+    fun `course fails loudly below one loop`() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Strings.course(220f, 0.3f, Strings.damping(0.3f, 4200f), 6000f, seed = 1, rate = Dsp.RATE, count = 0, spread = 0f)
+        }
+        assertTrue(e.message!!.contains("at least 1"), e.message)
+    }
+
+    /**
+     * [Strings.course]'s off-by-default point is "one loop", not "no
+     * detune" - a caller reaching it with count=1 must get exactly what
+     * calling [Strings.pluck] directly would, whatever spread it also
+     * passed (spread is meaningless with nothing to spread against).
+     */
+    @Test
+    fun `course with one loop is exactly pluck, whatever spread is`() {
+        val damping = Strings.damping(0.4f, 4200f)
+        for (spread in listOf(0f, 0.3f, 1f)) {
+            val viaCourse = Strings.course(220f, 0.3f, damping, 6000f, seed = 11, rate = Dsp.RATE, count = 1, spread = spread)
+            val direct = Strings.pluck(220f, 0.3f, damping, 6000f, seed = 11, rate = Dsp.RATE)
+            assertContentEquals(direct, viaCourse, "spread=$spread")
+        }
+    }
+
+    /**
+     * The spec's COURSE test ("the envelope of a COURSE-1 render shows
+     * beating that a COURSE-0 render does not") is a claim about two
+     * different-frequency loops summed - ordinary superposition, not
+     * something worth re-deriving through a noisy acoustic measurement.
+     * What [course] actually adds is the *detuning*, so this tests that
+     * directly: two attempts at measuring beating in the rendered audio
+     * (an envelope-ripple metric, then a spectral-spread one) both turned
+     * out to be dominated by measurement artifacts unrelated to spread -
+     * the exciter's own per-loop noise in the first case, the analysis
+     * window's own ~30-cent Goertzel resolution (wider than the offsets
+     * being compared) in the second. [Strings.courseDetuneCents] is the
+     * actual mechanism spread controls, and it needs no audio to check.
+     */
+    @Test
+    fun `course's detune is bounded by spread, zero at spread 0, and reproducible`() {
+        val zero = Strings.courseDetuneCents(seed = 5, count = 4, spread = 0f)
+        assertTrue(zero.all { it == 0f }, "spread=0 must give exactly zero detune: $zero")
+
+        val full = Strings.courseDetuneCents(seed = 5, count = 4, spread = 1f)
+        assertTrue(full.any { abs(it) > 1f }, "spread=1 should produce a real, nonzero detune: $full")
+        assertTrue(full.all { abs(it) <= 25f }, "no loop should exceed +-25 cents (half of COURSE_MAX_CENTS): $full")
+        assertEquals(full, Strings.courseDetuneCents(seed = 5, count = 4, spread = 1f), "same seed must draw the same detunes")
+
+        val half = Strings.courseDetuneCents(seed = 5, count = 4, spread = 0.5f)
+        for (i in half.indices) assertEquals(full[i] * 0.5f, half[i], 1e-5f, "spread scales the same draw linearly, loop $i")
+    }
 }
