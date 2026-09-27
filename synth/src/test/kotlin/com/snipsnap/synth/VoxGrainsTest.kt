@@ -668,25 +668,6 @@ class VoxGrainsTest {
         }
     }
 
-    /** A stereo crowd's energy under 500 Hz as a share of the whole, dB, over all of it (BEATBOX's [lowShareDb] reads a mono hit's head). */
-    private fun crowdLowShareDb(s: Snip): Float {
-        val m = monoOf(s)
-        val size = 8192
-        var low = 0.0
-        var all = 0.0
-        var i = 0
-        while (i + size <= m.size) {
-            val mag = Fft.magnitudeSpectrum(m.copyOfRange(i, i + size), size)
-            for (b in mag.indices) {
-                val e = (mag[b] * mag[b]).toDouble()
-                all += e
-                if (b * Dsp.RATE.toFloat() / size < 500f) low += e
-            }
-            i += size / 2
-        }
-        return (10 * log10(low / all)).toFloat()
-    }
-
     @Test
     fun `SWARM is a crowd in stereo, and its first mouth is always on time`() {
         val crowd = swarm()
@@ -740,20 +721,22 @@ class VoxGrainsTest {
     }
 
     @Test
-    fun `EFFORT whispers, talks and shouts, and the whisper hisses rather than moans`() {
-        val whisper = swarm("EFFORT" to 0f, "DECAY" to 0.7f)
-        val talk = swarm("EFFORT" to 0.5f, "DECAY" to 0.7f)
-        val shout = swarm("EFFORT" to 1f, "DECAY" to 0.7f)
+    fun `EFFORT goes hushed, talk, shout, and a hushed crowd is people, not ghosts`() {
         fun features(s: Snip) = FeatureExtractor.extract(Snip(monoOf(s), 1, Dsp.RATE))
-        // Measured: under 500 Hz -18.1 dB whispered, -0.5 talked; centres 3805, 615 and 1517 Hz.
-        // The first whisper put -4.7 dB under 500 Hz and centred at 2.2 kHz: a moan, "demonic".
-        val low = crowdLowShareDb(whisper)
-        assertTrue(low < -12f, "a whisper has little low end: $low dB")
-        assertTrue(crowdLowShareDb(talk) > low + 10f, "a voice has its low end")
-        val w = features(whisper)
-        assertTrue(w.centroidHz in 2500f..6000f, "a whisper centres where breath does, not in static: ${w.centroidHz}")
-        assertTrue(w.flatness > features(talk).flatness * 2f, "a whisper is breath, not a note")
-        assertTrue(features(shout).centroidHz > features(talk).centroidHz * 1.5f, "a shout is brighter than talk")
+        // The quiet end was a whisper, and a room of whispers sounded like a horror film ("still scary
+        // sounding"): no voice at all. Hushed voices keep a soft one under the breath. Measured on a room:
+        // a note found in 7 of 8 windows, flatness 0.36 against talk's 0.07.
+        val hushed = swarm("EFFORT" to 0f, "DECAY" to 0.7f, "LOOSE" to 1f)
+        val talk = swarm("EFFORT" to 0.5f, "DECAY" to 0.7f, "LOOSE" to 1f)
+        val m = monoOf(hushed)
+        val windows = (0 until 8).map { ((0.1f + it * 0.15f) * Dsp.RATE).toInt() }.filter { it + 4410 <= m.size }
+        val voiced = windows.count { a -> Pitch.detect(Snip(m.copyOfRange(a, a + 4410), 1, Dsp.RATE)) != null }
+        assertTrue(voiced >= windows.size * 5 / 8, "a hushed crowd still has voices in it: $voiced of ${windows.size}")
+        assertTrue(features(hushed).flatness > features(talk).flatness * 2.5f, "hushed is breathier than talk")
+        // A shout is brighter than talk: centres measured 1637 and 853 Hz on the chant.
+        val shout = features(swarm("EFFORT" to 1f, "DECAY" to 0.7f)).centroidHz
+        val said = features(swarm("EFFORT" to 0.5f, "DECAY" to 0.7f)).centroidHz
+        assertTrue(shout > said * 1.5f, "a shout is brighter than talk: $shout vs $said")
     }
 
     @Test

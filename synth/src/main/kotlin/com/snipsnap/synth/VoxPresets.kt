@@ -13,7 +13,7 @@ package com.snipsnap.synth
  * hold, short growls and whistle blips to hit, and two yodels. WRAITH's
  * walk its six words as hits, chops in key and slowed pads. SWARM's are
  * crowd shouts to hit, chants and cheers, held stadium vowels, murmuring
- * and whispering rooms as pads, and stutters.
+ * and hushed rooms as pads, and stutters.
  * Authored from that DSP, not by ear, and checked by [VoxPresetsTest]'s
  * sanity/round-trip/spread suite.
  */
@@ -146,7 +146,7 @@ object VoxPresets {
         p(VoxVoice.SWARM, "STADIUM OOH", "WORD" to say(VoxSwarm.Word.OOH), "CROWD" to 1f, "LOOSE" to 0.3f, "EFFORT" to 0.7f, "DECAY" to 0.9f),
         p(VoxVoice.SWARM, "CROWD AAH", "WORD" to say(VoxSwarm.Word.AAH), "CROWD" to 0.8f, "LOOSE" to 0.25f, "EFFORT" to 0.55f, "DECAY" to 0.85f),
         p(VoxVoice.SWARM, "MURMUR ROOM", "CROWD" to 1f, "LOOSE" to 1f, "EFFORT" to 0.5f, "DECAY" to 1f),
-        p(VoxVoice.SWARM, "WHISPER ROOM", "CROWD" to 0.9f, "LOOSE" to 1f, "EFFORT" to 0f, "DECAY" to 1f),
+        p(VoxVoice.SWARM, "HUSHED ROOM", "CROWD" to 0.9f, "LOOSE" to 1f, "EFFORT" to 0f, "DECAY" to 1f),
         p(VoxVoice.SWARM, "SMALL TALK", "CROWD" to 0.2f, "LOOSE" to 1f, "EFFORT" to 0.45f, "DECAY" to 0.9f),
         p(VoxVoice.SWARM, "STUTTER HEY", "WORD" to say(VoxSwarm.Word.HEY), "CROWD" to 0.9f, "LOOSE" to 0f, "EFFORT" to 0.8f, "DECAY" to 0.25f, "STUTTER" to 0.75f),
     )

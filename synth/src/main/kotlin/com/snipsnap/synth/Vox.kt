@@ -55,7 +55,7 @@ import kotlin.random.Random
  *   a word's formants (WORD), gliding or stepping in key (TUNED), with
  *   ALIEN, STUTTER and BREATH.
  * - **SWARM**, a crowd ([VoxSwarm]): two to sixteen mouths (CROWD) saying
- *   a word together or talking over each other (LOOSE), whispered, talked
+ *   a word together or talking over each other (LOOSE), hushed, talked
  *   or shouted (EFFORT), with STUTTER. Stereo, like CHOIR.
  *
  * TUNE snaps to semitones like every melodic engine here. Each note's

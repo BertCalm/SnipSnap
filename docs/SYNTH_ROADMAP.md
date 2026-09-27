@@ -1649,22 +1649,30 @@ against CHOIR's "aah", 9.1 on the difference measure.
   two people, and past eight a crowd is a crowd (8 and 16 measured 1.2
   apart on the difference measure, inside its noise floor). Asked, the
   knob stays, as "a few people to a crowd".
-- **EFFORT** goes whisper, talk, shout. A shout is four semitones
+- **EFFORT** goes hushed, talk, shout. A shout is four semitones
   higher, rises and falls on its word, and is brightened and pushed.
+  Hushed is a soft voice (a third of its strength, fewer upper
+  harmonics) under breath: a library, not a seance.
 - **STUTTER** grabs the word's opening up to four times, together when
   the crowd is tight, scattered when it is loose; counted by the silent
   gaps between grabs, exact across nine crowds.
 
 What the audition changed:
 
-- **The whisper was rebuilt.** Heard: "everything sounds great except
-  whisper sounds demonic". It was noise through the voice's own narrow
-  resonances, which rang into a low moan: -4.7 dB of its energy under
-  500 Hz, centred at 2.2 kHz. Now the resonances widen and weaken, the
-  low end thins, and breath hisses between 2 and 6.5 kHz: -18 dB under
-  500 Hz, centred at 3.8 kHz, a real whisper's range. A first try
-  overshot into 10-12 kHz of static; the breath level was measured
-  across four settings and set at the one that landed in range.
+- **The quiet end went from whisper to hushed voices, over three
+  auditions.** First: "everything sounds great except whisper sounds
+  demonic". It was noise through the voice's own narrow resonances,
+  ringing into a low moan (-4.7 dB of its energy under 500 Hz, centred
+  at 2.2 kHz). Rebuilt to hiss rather than moan (wider, weaker
+  resonances, a thinned low end, breath at 2-6.5 kHz: -18 dB under
+  500 Hz, centred at 3.8 kHz, a real whisper's range; a first try
+  overshot into 10-12 kHz of static), it was "somewhat better, but could
+  be a little more tamed". Four takes (softer, quieter, both) all left
+  the whispering room "still scary sounding": a room of voiceless
+  whispers is a horror film whatever its tone. Asked, the pick was
+  hushed voices: a soft voice kept under the breath. A note is found in
+  7 of 8 windows of a hushed room, and it stays breathier than talk
+  (flatness 0.36 against 0.07). WHISPER ROOM became HUSHED ROOM.
 - **The first mouth is always on time**, like CHOIR's middle singer.
   Two or three late talkers left the classifier's first 93 ms silent
   (it read them UNKNOWN), and a pad that starts late sounds late.
@@ -1672,7 +1680,7 @@ What the audition changed:
 Babble searches each mouth's path on from where it last was, not from
 the start; the longest preset renders in about 2.5 s here, CHOIR's
 longest in about 2. Twelve presets: shouted hits, chants and a cheer,
-held stadium vowels, murmuring and whispering rooms, and a stutter.
+held stadium vowels, murmuring and hushed rooms, and a stutter.
 
 That completes round 3, and with it S11: three rounds, prototyped and
 auditioned by ear before each was built.

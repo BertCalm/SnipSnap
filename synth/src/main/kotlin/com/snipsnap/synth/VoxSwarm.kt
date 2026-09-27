@@ -24,10 +24,13 @@ import kotlin.random.Random
  *   shout: full level in 40 ms) through a ragged crowd (the start smeared
  *   over most of a second) to everyone talking over each other, a
  *   murmuring room of random syllables.
- * - **EFFORT** goes whisper, talk, shout. A shout is higher, brighter and
- *   pushed; a whisper has no voice, so its resonances widen and weaken, its
- *   low end thins and its breath hisses above them. The first whisper, the
- *   voice's own narrow resonances rung by noise, moaned: "demonic".
+ * - **EFFORT** goes hushed, talk, shout. A shout is higher, brighter and
+ *   pushed. The quiet end is hushed voices: a soft voice, a third of its
+ *   full strength and with fewer upper harmonics, under breath, like a
+ *   library. It was a whisper, and a room of whispers was a horror film:
+ *   the first, noise through the voice's own narrow resonances, moaned
+ *   ("demonic"); rebuilt to hiss rather than moan, a room of it was
+ *   "still scary sounding". Voice is what makes a quiet crowd people.
  * - **STUTTER** grabs the word's opening up to four times, together when
  *   the crowd is tight, scattered when it is loose.
  *
@@ -127,6 +130,7 @@ internal object VoxSwarm {
         val noise = Dsp.Noise(seed)
         val airLow = Dsp.OnePole(rate)
         val airHigh = Dsp.OnePole(rate)
+        val soft = Dsp.OnePole(rate)
         var f0 = 0f
         var amp = 0f
         var asp = 0f
@@ -142,10 +146,15 @@ internal object VoxSwarm {
     private const val CONTROL_BLOCK = 16
 
     /**
-     * The breath hiss in a whisper, 2-6.5 kHz. Measured: at 0 the whisper centres at 3.1 kHz, at this 0.06 at
-     * 3.9-4.7 (a real whisper's range), at 0.2 at 5.4-7; the first try, 0.315 above 3.5 kHz, 10-12 kHz of static.
+     * The breath hiss over a hushed voice, 2-6.5 kHz, at full hush. Set when the quiet end was a whisper:
+     * at 0 it centred at 3.1 kHz, at this 0.06 at 3.9-4.7, at 0.2 at 5.4-7; 0.315 above 3.5 kHz was static.
      */
     private const val WHISPER_AIR = 0.06f
+
+    /** How much of a voice a hushed mouth keeps (the rest is breath), and how much of the whisper's treatment. */
+    private const val HUSHED_VOICE = 0.35f
+    private const val HUSHED_BREATH = 0.5f
+    private const val HUSHED_WHISPER = 0.35f
 
     /** What each stutter grabs of the word's opening, and the gap after it. */
     private const val GRAB = 0.09f
@@ -177,8 +186,10 @@ internal object VoxSwarm {
         val chantLoose = (loose / 0.5f).coerceIn(0f, 1f)
         val babbleShare = ((loose - 0.5f) / 0.5f).coerceIn(0f, 1f)
         val shout = ((effort - 0.5f) / 0.5f).coerceIn(0f, 1f)
-        val voicing = ((effort - 0.1f) / 0.3f).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
-        val breath = 0.12f + 0.88f * (1f - voicing)
+        // How hushed: 1 at EFFORT 0, gone by 0.4.
+        val hushed = 1f - ((effort - 0.1f) / 0.3f).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
+        val voicing = 1f - (1f - HUSHED_VOICE) * hushed
+        val breath = 0.12f + HUSHED_BREATH * hushed
         val maxOnset = 0.004f + 0.15f * chantLoose
         val lead = stutters * (GRAB + GAP)
         val total = (maxOnset + lead * 1.3f + length * 1.3f).coerceAtMost(Vox.MAX_SECONDS)
@@ -208,8 +219,9 @@ internal object VoxSwarm {
         }
         val env = Dsp.Env(attackSeconds = 0.03f - 0.022f * shout, decay2T60 = length - hold, holdSeconds = hold)
         val scale = 1f / sqrt(mouthCount.toFloat())
-        // A whisper: no voice, so the resonances widen and weaken, the low end thins, and the breath hisses above them.
-        val hush = 1f - voicing
+        // Some of a whisper's treatment: resonances a little wider and weaker, the low end a little thinner,
+        // breath hissing above them. At full strength, with no voice under it, it was a haunted room.
+        val hush = HUSHED_WHISPER * hushed
         val bwScale = 1f + 1.2f * hush
         val f1Gain = 1f - 0.5f * hush
         val airLevel = WHISPER_AIR * hush
@@ -258,7 +270,9 @@ internal object VoxSwarm {
             var right = 0f
             for (m in mouths) {
                 m.phase += m.f0 / rate
-                val g = Vox.glottal(m.phase)
+                val pulse = Vox.glottal(m.phase)
+                // A hushed voice is soft: its pulse loses its upper harmonics.
+                val g = if (hushed > 0f) pulse + hushed * (m.soft.lp(pulse, 700f) * 2.5f - pulse) else pulse
                 val n = m.noise.next()
                 val src = voicing * g * (1f - m.asp) + (breath + 0.8f * m.asp) * 0.5f * n
                 var y = 0f
@@ -272,7 +286,7 @@ internal object VoxSwarm {
             out[2 * i] = left * scale
             out[2 * i + 1] = right * scale
         }
-        // A whisper loses its low end.
+        // A hushed crowd loses a little of its low end.
         if (hush > 0f) {
             val lowL = Dsp.Biquad().apply { lowShelf(400f, -8f * hush, rate) }
             val lowR = Dsp.Biquad().apply { lowShelf(400f, -8f * hush, rate) }
