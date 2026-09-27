@@ -241,16 +241,13 @@ object Pluck {
                 // The tarab: strings under the frets that ring in sympathy with
                 // the played note. With no scale to tune them to, they take the
                 // note's own series (spec, "Sympathetic strings under DOUBLE").
-                // These loops are fed by the main string's own `out` before
-                // this loop's `+=` alters it: `sympathetic` copies nothing, so
-                // it reads `input[i]` sample by sample as it goes, and later
-                // sympathetic loops in this same pass are fed by the string
-                // plus whatever earlier ones already added. Deterministic
-                // (the ratios are fixed order), and acceptable: the tarab
-                // strings sit under and against each other physically too.
+                // The tarab are fed by the played string alone, the way the
+                // bridge feeds them, so their sum is independent of the order
+                // of SYMPATHETIC_RATIOS.
                 val g = SYMPATHETIC_LEVEL * double
+                val string = out.copyOf()
                 for (ratio in SYMPATHETIC_RATIOS) {
-                    val s = sympathetic(out, freq * ratio, rate)
+                    val s = sympathetic(string, freq * ratio, rate)
                     for (i in out.indices) out[i] += g * s[i]
                 }
             } else {
@@ -372,7 +369,11 @@ object Pluck {
      * the tenth partial about 1 % and about 3 % sharp of harmonic, found by
      * StiffnessTest's probe, not by hand; the low one ships until the gate
      * chooses. KOTO and HARP carry zero: both passed a Phase 2 gate and do
-     * not change unheard (the audition offers them the low candidate).
+     * not change unheard (the audition offers them the low candidate). The
+     * coefficient is a raw z-domain value, so its delay is about 24 samples
+     * at any rate and the dispersion it produces scales with the render
+     * rate (RATE × OVERSAMPLE today); a reader deriving an inharmonicity
+     * coefficient from it must say which rate.
      */
     internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 0.88 % sharp with the shipped jawari on (StiffnessTest's probe)
     internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 6.5 c sharp, so if the gate chooses this candidate the drive steps down or the spec's fallback applies
@@ -662,7 +663,8 @@ object Pluck {
         // the offset at any corner; the corner only sets how fast a slow
         // offset drains and how much lead the loop owes for it - 2 Hz (not
         // 20) keeps that lead under a degree at the lowest note (C#3) and
-        // the dispersion it leaves on the upper partials under 0.2 %.
+        // the dispersion it leaves on the upper partials is 0.11 % at the
+        // default note C#4 and 0.23 % at the root.
         val dcDelay = if (jawari > 0f) {
             val r = 1.0 - dcA
             val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
@@ -791,7 +793,10 @@ object Pluck {
      * its own, fed continuously by [input] at [SYMPATHETIC_COUPLING], ringing
      * with [SYMPATHETIC_FEEDBACK] under a darker low-pass. Tuned the way [ks]
      * is (integer delay, fractional allpass, the low-pass's delay in the
-     * budget), so the loop rings at the ratio it was given.
+     * budget), so the loop rings at the ratio it was given. The real tarab
+     * strings sit under and against each other physically too, but this
+     * model couples each loop only to the played string, not to its
+     * neighbors.
      *
      * A tarab rings long, not forever: [SYMPATHETIC_FEEDBACK] at 0.995 is a
      * decay of about five seconds at C#4's fundamental and ten an octave

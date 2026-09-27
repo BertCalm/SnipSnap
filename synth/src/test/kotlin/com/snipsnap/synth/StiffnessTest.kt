@@ -76,4 +76,19 @@ class StiffnessTest {
             assertTrue(kotlin.math.abs(cents) <= 5.0, "SITAR semitone $semi at the high stiffness is $cents cents off")
         }
     }
+
+    @Test
+    fun `the high stiffness candidate with the bridge on stays inside a quarter tone, and names its pull`() {
+        // What the gate can choose: HIGH stiffness with the shipped jawari.
+        // The isolated test above proves the allpass alone; this measures
+        // the combination, so the pull is a number and not a comment.
+        for (semi in listOf(0, 6, 12, 18, 24)) {
+            val f0 = Pluck.frequencyFor(PluckVoice.SITAR, semi)
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("TUNE" to semi / 24f, "DOUBLE" to 0f), rate, stiffnessOverride = Pluck.SITAR_STIFFNESS_HIGH)
+            val measured = PluckSpectra.peakHz(raw, rate, f0, spanFraction = 0.03)
+            val cents = 1200.0 * kotlin.math.ln(measured / f0) / kotlin.math.ln(2.0)
+            if (kotlin.math.abs(cents) > 5.0) println("SITAR semitone $semi at the high stiffness with the jawari on: $cents cents")
+            assertTrue(kotlin.math.abs(cents) <= 50.0, "SITAR semitone $semi at the high stiffness with the jawari on is $cents cents off, past the quarter tone")
+        }
+    }
 }

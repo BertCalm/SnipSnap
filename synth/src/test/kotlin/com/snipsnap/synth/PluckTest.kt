@@ -205,15 +205,13 @@ class PluckTest {
         // PLUCK slot, so nothing in the app acts on that reading today; a
         // harmonicity feature is the Phase 3 item that would let the
         // classifier tell a bright pluck from a drum. Every other voice must
-        // still read PERC. SITAR reads SNARE too (plan 2026-09-26-pluck-sitar.md):
-        // a plain steel string picked near the bridge puts the same share of
-        // its attack above 2 kHz (measured highRatio 0.532 at the default
-        // with the jawari, up from 0.524 without it - the bridge buzz is
-        // itself high-band energy landing inside the same attack window the
-        // classifier reads - both just over the 0.5 SNARE line).
+        // still read PERC. SITAR's default reads PERC (measured highRatio 0.41
+        // over a 1.30 s render) since the DAMP default moved to 0.5 and the
+        // sympathetic strings landed; the margin under the 0.5 snare line is
+        // 0.09, and a regression over it should fail here.
         for (voice in PluckVoice.entries) {
             val c = Classifier.classify(Pluck.render(voice))
-            val allowed = if (voice == PluckVoice.BANJO || voice == PluckVoice.SITAR) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
+            val allowed = if (voice == PluckVoice.BANJO) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
             assertTrue(c.drumClass in allowed, "$voice default read as ${c.drumClass}")
         }
     }
@@ -293,15 +291,21 @@ class PluckTest {
         // renders exist: the dry render at DAMP 0.5 is decay-limited to
         // about 0.56 s, while the wet one runs the full 1.3 s budget.
         val late = 0.3f
-        fun droneEnergy(s: com.snipsnap.audio.Snip): Double {
+        fun energyAt(s: com.snipsnap.audio.Snip, hz: Float): Double {
             val from = (late * s.sampleRate).toInt()
-            require(s.frameCount > from) { "render ends at ${s.frameCount / s.sampleRate.toFloat()} s, before the $late s window" }
+            require(s.frameCount - from >= (0.25f * s.sampleRate).toInt()) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the 0.25 s window" }
             val slice = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
-            return PluckSpectra.toneEnergy(slice, 0.5f * f0, 0.25f)
+            return PluckSpectra.toneEnergy(slice, hz, 0.25f)
         }
+        fun droneEnergy(s: com.snipsnap.audio.Snip): Double = energyAt(s, 0.5f * f0)
         val gain = 10.0 * kotlin.math.log10(droneEnergy(wet) / (droneEnergy(dry) + 1e-12))
-        println("SITAR drone energy at half the note, late in the note, DOUBLE 1 over DOUBLE 0: $gain dB")
-        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the drone at half the note by 6 dB late in the note, got $gain dB")
+        println("SITAR drone energy at half the note, in the 0.3–0.55 s window, DOUBLE 1 over DOUBLE 0: $gain dB")
+        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the drone at half the note by 6 dB in the 0.3–0.55 s window, got $gain dB")
+
+        val fifthGain = 10.0 * kotlin.math.log10(energyAt(wet, 1.5f * f0) / (energyAt(dry, 1.5f * f0) + 1e-12))
+        println("SITAR drone energy at the fifth, in the 0.3–0.55 s window, DOUBLE 1 over DOUBLE 0: $fifthGain dB")
+        assertTrue(fifthGain >= 6.0, "DOUBLE 1 should ring the fifth by 6 dB too, the fifth, which no detuned second string can add either, got $fifthGain dB")
+
         assertTrue(!dry.samples.contentEquals(wet.samples), "DOUBLE 1 must change the render")
     }
 
@@ -695,6 +699,13 @@ class PluckTest {
         mean /= out.size
         val peak = PluckSpectra.peak(out)
         assertTrue(kotlin.math.abs(mean) <= 1e-4 * peak, "DC after the jawari: mean $mean against peak $peak")
+
+        val withTarab = Pluck.render(PluckVoice.SITAR, emptyMap(), velocity = 1f).samples
+        var tarabMean = 0.0
+        for (v in withTarab) tarabMean += v
+        tarabMean /= withTarab.size
+        val tarabPeak = PluckSpectra.peak(withTarab)
+        assertTrue(kotlin.math.abs(tarabMean) <= 1e-4 * tarabPeak, "DC after the jawari with the tarab on (default DOUBLE 0.4): mean $tarabMean against peak $tarabPeak")
     }
 
     @Test
@@ -709,6 +720,12 @@ class PluckTest {
             val onset = PluckSpectra.peak(raw.copyOfRange(0, minOf(raw.size, (0.01f * rate).toInt())))
             val whole = PluckSpectra.peak(raw)
             assertTrue(whole <= 2f * onset, "DAMP $damp: the note grew past twice its onset ($whole > 2 * $onset)")
+            if (damp >= 0.3f) {
+                // This render is at DOUBLE 0, so the string alone must decay
+                // under its budget (the spec's stability clause).
+                val budget = Dsp.expMap(1f - damp, 0.3f * 1.4f, Pluck.RING_CEILING_SECONDS).coerceIn(Pluck.RING_FLOOR_SECONDS, Pluck.RING_CEILING_SECONDS)
+                assertTrue(raw.size < (budget * rate).toInt(), "DAMP $damp: the string alone should hit the -60 dB cut before its budget of $budget s, got ${raw.size / rate.toFloat()} s")
+            }
         }
     }
 
@@ -719,6 +736,7 @@ class PluckTest {
         val hard = Velocity.atVelocity(patch, 1.0f).samples
         val softShare = PluckSpectra.highShare(soft, Dsp.RATE, 2000f, 0.2f)
         val hardShare = PluckSpectra.highShare(hard, Dsp.RATE, 2000f, 0.2f)
-        assertTrue(softShare < hardShare, "the velocity path should carry the jawari, not just PICK: $softShare vs $hardShare")
+        // The velocity path should reach Pluck.render with the number (PICK moves too; the jawari's own effect is isolated by 'the jawari buzz follows velocity').
+        assertTrue(softShare < hardShare, "the velocity path should reach Pluck.render with the number (PICK moves too; the jawari's own effect is isolated by 'the jawari buzz follows velocity'): $softShare vs $hardShare")
     }
 }
