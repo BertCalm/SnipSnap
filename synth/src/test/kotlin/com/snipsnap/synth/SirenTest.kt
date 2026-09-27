@@ -218,6 +218,29 @@ class SirenTest {
     }
 
     @Test
+    fun `SWEEP is a glide, not a blip - still travelling at a third of a second, landed by the end of the hold`() {
+        // The audition's finding: the first build's sweep was over in 100 ms
+        // and could not be heard under the wail. The full dive now takes a
+        // second, so it is still six semitones out at 0.3 s and lands
+        // before the hold ends.
+        val s = Siren.render(SirenVoice.WAIL, mapOf("DEPTH" to 0f, "SWEEP" to 0f, "HOLD" to 0.6f))
+        val t = track(s, 0.005f, s.durationSeconds - 0.07f)
+        val landed = t.takeLast(50).average().toFloat()
+        val at300 = t[295]
+        assertTrue(semitones(at300, landed) > 6f, "at 0.3 s the dive is only ${semitones(at300, landed)} semitones out")
+        val at900 = t[895]
+        assertTrue(abs(cents(at900, landed)) < 30f, "by 0.9 s the dive has not landed: ${cents(at900, landed)} cents out")
+        // A short press still lands: the sweep is capped to most of the hold.
+        val short = Siren.render(SirenVoice.WAIL, mapOf("DEPTH" to 0f, "SWEEP" to 0f, "HOLD" to 0f))
+        val ts = track(short, 0.005f, short.durationSeconds - 0.07f)
+        assertTrue(abs(cents(ts[ts.size - 10], ts.last())) < 30f, "a 0.3 s press does not land its note")
+        assertTrue(semitones(ts[0], ts.last()) > 12f, "a 0.3 s press still starts well above the note")
+        assertEquals(Siren.SWEEP_FAR_SECONDS, Siren.sweepSeconds(0f, 4f), 0.001f)
+        assertEquals(0.3f * Siren.SWEEP_HOLD_FRACTION, Siren.sweepSeconds(0f, 0.3f), 0.001f)
+        assertEquals(Siren.SWEEP_NEAR_SECONDS, Siren.sweepSeconds(0.5f, 4f), 0.001f)
+    }
+
+    @Test
     fun `pitch moves by step, never by reset - the fastest, deepest siren has no click`() {
         for (voice in SirenVoice.entries) {
             val wild = Siren.render(voice, mapOf("RATE" to 1f, "DEPTH" to 1f, "GRIT" to 0f, "HOLD" to 0.6f))

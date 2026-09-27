@@ -278,7 +278,8 @@ is down, because a siren is gated, not struck; its top is LOOP, one
 seamless loop of whole LFO periods with the centre pitch fitted under a
 cent so the pulse closes on whole cycles, cut at a zero crossing — the
 render the SURFACE holds under a finger, pitched by where the finger is,
-released into the surface's own echo on lift. SEND TO PAD lands a
+released into the surface's own echo on lift, and `→ SURFACE ▸` on SYNTH
+lands a LOOP and opens the surface on it in one tap. SEND TO PAD lands a
 one-shot siren with the rack's ECHO in its recipe and a LOOP dry, and
 the toast says which. Forty presets, one LOOP per voice, and
 `SynthKits.siren()` is the kit (`./gradlew :synth:generateSirenKit`).
@@ -324,7 +325,9 @@ opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
 BEATBOX is a mouth doing a drum kit: a kick, three snares, three
 hats and a tongue click, and THROAT is overtone singing: a low drone
 with a whistled melody on its harmonics, a growl an octave down and a
-yodel. GRAINS is
+yodel. WRAITH is sine-wave speech: three pure tones trace a word's
+formants, ghostly whistling you half hear as "why" or "hello", gliding
+or stepping in key. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a

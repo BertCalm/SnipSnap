@@ -47,6 +47,25 @@ class SurfaceStoreTest {
     }
 
     @Test
+    fun `choosePad points the surface at a slot and keeps everything else`() {
+        // A kit with no surface file yet: the defaults, plus the pad.
+        assertEquals(Settings.DEFAULT.copy(padSlot = 5), SurfaceStore.choosePad(temp, 5))
+        assertEquals(5, SurfaceStore.load(temp).padSlot)
+        // A kit whose surface is set up: only the pad moves.
+        val setUp = Settings(
+            padSlot = 1,
+            corners = listOf(Corner(0f, 1f, 0.5f, 0.25f, echo = 0.5f), Corner.DARK, Corner.LOW, Corner.HOT),
+            secondPadSlot = 12,
+            keySnap = true,
+            echoTime = 2,
+        )
+        SurfaceStore.save(temp, setUp)
+        val chosen = SurfaceStore.choosePad(temp, 14)
+        assertEquals(setUp.copy(padSlot = 14), chosen)
+        assertEquals(chosen, SurfaceStore.load(temp))
+    }
+
+    @Test
     fun `a null pad reads back as the kit's lowest`() {
         SurfaceStore.save(temp, Settings(padSlot = null))
         assertEquals(null, SurfaceStore.load(temp).padSlot)
