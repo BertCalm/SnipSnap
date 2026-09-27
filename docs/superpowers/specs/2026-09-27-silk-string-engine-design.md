@@ -1,0 +1,517 @@
+# SILK — four Silk Road strings, and a TUNE that leaves the piano
+
+**Status:** design; its five open decisions settled in conversation 2026-09-27. Not implemented.
+**Date:** 2026-09-27
+**Research:** [`../plans/2026-09-27-silk-research.md`](../plans/2026-09-27-silk-research.md) —
+read its preamble first: this session's network blocked every scholarly
+host, so **no body, tuning or string number in it is confirmed yet**.
+**Plan:** to be written per phase (`docs/superpowers/plans/2026-09-27-silk-phase-N.md`)
+**Related:** [`2026-09-25-pluck-depth-design.md`](2026-09-25-pluck-depth-design.md) —
+PLUCK's Phase 3 outline (SITAR: jawari, sympathetic strings, dispersion)
+names three of the four primitives this spec builds. See "SILK and PLUCK's
+Phase 3" below.
+**Roadmap:** the `SYNTH_ROADMAP.md` row is added when implementation
+starts, not now — the rule FATHOM, RESIN and GLINT followed.
+
+## Why SILK
+
+The ask (2026-09-27) arrived as four C++ prototypes — a shamisen dual
+exciter, an oud double course, a guzheng allpass dispersion chain and a
+santur sympathetic matrix — and three answers:
+
+| Question | Answer |
+|---|---|
+| Where does it live? | a new engine, SILK, in `:synth` (Kotlin, offline one-shots), not native C++ |
+| Microtones? | yes — "add to TUNE" |
+| Scope? | all four instruments; phasing left to this spec |
+| Next step? | research, then spec (this document) |
+
+PLUCK cannot hold these four as more voices. Its macro set — TUNE, DAMP,
+PICK, STRIKE, BODY, DOUBLE — has nowhere for a bend, a buzz, stiffness,
+or a sympathetic wash, and all four instruments want at least one of
+those as their *identity*, not as an effect. A new engine gets its own
+macro list; the string loop underneath is PLUCK's, shared rather than
+copied (see "Architecture").
+
+### The prototypes, as reviewed
+
+The C++ was read as pseudocode for intent. What it got right and what it
+got wrong both shaped this design:
+
+| Prototype | Kept | Changed, and why |
+|---|---|---|
+| Shamisen `ShamisenExciter` | strike splits into string + skin | `trigger()` returns one sample: a KS string wants a *burst* the length of the loop, and the slap needs its own short envelope. The skin is `Modes` (a resonator bank with per-mode decay), not one 400 Hz biquad. The prototype also misses the shamisen's identity, **sawari** — the buzz. |
+| Oud `OudCourse` | two loops per course, smoothed pitch for slides | the detune was a constant `1.0015` though the comment said randomised; SnipSnap draws it from `Dsp.seedFor`. `sampleRate / freq` ignored the loop filter's delay — the exact bug PLUCK's task-11 measured as "tens of cents flat". |
+| Guzheng `GuzhengDispersion` | first-order allpasses in the loop | **the difference equation is not an allpass.** `out = g·x + z1 − g·z1; z1 = x + g·out` has `|H| = 1.33` at DC per stage at `g = 0.5` (3.16× across four stages) — inside a loop at 0.998 feedback it diverges. The correct transposed form is `out = a·x + z1; z1 = x − a·out`, and for partials to go *sharp* (what stiffness does) `a` must be **negative** in that form; the prototype's `0 … 0.9` range bends them flat. |
+| Santur `SanturSympatheticMatrix` | a parallel bank driven by the string | `Q = 50` rings for `t60 ≈ 2.2·Q/f` — 0.55 s at 200 Hz, 0.11 s at 1 kHz, so the top of the bank dies first. SILK specifies each resonator by **t60**, which `Modes.Mode` already does. The soft clipper goes: an offline render sees the whole buffer, so level is `Dsp.levelTo` after the fact, never a nonlinearity on the wash. |
+
+### The name
+
+SILK: the Silk Road that carried all four instruments' ancestors, and the
+silk strings the guzheng and shamisen were strung with before nylon. A
+generic word, allowed by the naming rule.
+
+## Architecture
+
+```
+exciter ──▶ course (1–4 loops) ──▶ body (Modes) ──▶ [sympathetic bank] ──▶ decimate ──▶ levelTo ──▶ fadeTail
+  pluck burst      each loop:                                 SANTUR only
+  mallet pulse     delay ─▶ tuning allpass ─▶ loop LP ─▶ [dispersion] ─▶ [collision] ─┐
+  + slap burst       ▲                                                               │
+                     └──────────────────────── × feedback ◀──────────────────────────┘
+```
+
+Rendered at `Dsp.RATE * Dsp.OVERSAMPLE` and decimated (U6), like every
+other engine. Mono, like PLUCK.
+
+### A shared string toolkit, extracted from PLUCK
+
+`Pluck.ks` is already most of a waveguide: an integer delay, a first-order
+tuning allpass for the fractional remainder (Jaffe & Smith), a one-pole loop
+low-pass, a two-tap average, and — the hard-won part — a **tuning budget**
+that subtracts every in-loop stage's phase delay at the fundamental before
+splitting the loop into integer + fraction. SILK needs that loop with four
+optional stages added, so the first job is to lift it into a shared file
+rather than fork it.
+
+**New file `synth/.../Strings.kt`** — `internal object Strings` holding:
+
+| Piece | What it is | New or moved |
+|---|---|---|
+| `Loop` | PLUCK's `ks` loop as a class: delay, tuning allpass, loop LP, two-tap average, feedback; optional `Dispersion` and `Collision` slots; a per-sample **pitch envelope** (for slides and bends) that re-solves the tuning budget as the delay moves | moved, then extended |
+| `Dispersion` | a cascade of `M` first-order allpasses, one coefficient `a < 0`; its phase delay at f0 is computed in closed form and charged to the tuning budget | new |
+| `Collision` | a one-sided obstacle in the loop (sawari / jawari): displacement past `−h` is folded back with a loss, so the buzz follows the string's own amplitude — fierce at the attack, thinning as the note decays | new |
+| `Course` | `N` loops (1 to 4) at seeded detunes in cents around f0, each with a slightly different feedback so the pair decays unevenly, summed | new; DOUBLE is its N=2 special case |
+| `Exciter.pluck` | PLUCK's one-period filtered noise burst with STRIKE's position comb | moved |
+| `Exciter.mallet` | a raised-cosine force pulse; width is hardness | new |
+
+**The guard on the move:** PLUCK renders **bit-identical** before and after
+the extraction. A test renders every PLUCK voice at its defaults and at a
+macro corner set, before the move, stores the hashes, and asserts them
+after. The extraction ships as its own PR with no audio change; SILK is
+built on it after.
+
+### SILK and PLUCK's Phase 3
+
+PLUCK's spec outlines a SITAR voice needing a jawari, sympathetic strings
+and dispersion allpasses for KOTO and HARP. SILK builds all three first,
+in `Strings`. PLUCK's Phase 3 then becomes wiring: SITAR is a `Collision`
+plus a sympathetic bank on PLUCK's own macros. Nothing in this spec changes
+PLUCK's sound; PLUCK adopting dispersion or collision is PLUCK's decision,
+in its own spec.
+
+### The tuning budget, extended
+
+The rule PLUCK learned stays the rule: **every stage in the loop pays for
+its own delay at the fundamental.** With dispersion added the budget is:
+
+```
+exact = rate / f0 − loopLpDelay(f0) − 0.5 − dispersionDelay(f0)
+n     = floor(exact);  frac = exact − n   → tuning allpass
+```
+
+`dispersionDelay(f0)` is `M × (phase delay of one allpass at ω0)`, closed
+form. With `a < 0` each stage delays low frequencies by *more* than one
+sample (`(1 − a)/(1 + a)` at DC), so a strong STIFF on a high note eats
+the loop — `require(exact ≥ MIN_LOOP_SAMPLES)` stays, and STIFF's top is
+set so the voice's highest note at STIFF 1 clears it (tested).
+
+Research §Guzheng confirms both the sign and the budget from two
+author-lineage implementations read directly (Van Duyne's CLM piano, whose
+stiffness table runs −0.92 … −0.04 across the stiff range; J. O. Smith's
+Faust port of Rauhala–Välimäki, whose `-Df0*M` term is this budget's
+`dispersionDelay`). It adds two findings that change the design:
+
+- **A fixed `a` barely moves a low note.** At f0 = 147 Hz, `a = −0.5` over
+  four sections stretches the 12th partial by about 2 cents. So STIFF is
+  mapped onto an **inharmonicity coefficient `B`** (`fk = k·f0·√(1+B·k²)`)
+  and `a` is derived per note, rather than STIFF setting `a` directly.
+- **The closed-form B→a design flips sign at the top.** For high, weakly
+  stiff notes it yields `D < 1`, hence `a > 0` — flat partials, the wrong
+  way (D6 at `B = 1e-4`: −11 cents at the 10th partial). Rule: **if
+  `D ≤ 1`, bypass the cascade.** Where the sign is right the fit still
+  overshoots the target by 13–20 % at `B = 1e-4`, so the STIFF test
+  measures the stretch rather than trusting the map.
+
+No guzheng `B` could be read. STIFF's range is set by an audition sweep
+over `B ∈ {0, 1e-5, 3e-5, 1e-4, beyond}` against a recording, and whatever
+passes is "shape, not measurement".
+
+Collision is not in the budget: it is inactive at rest and, when it bites,
+it *shortens* the effective loop slightly — which is audible on a real
+sitar and shamisen as the attack reading a hair sharp. That is kept.
+
+## TUNE and SCALE — leaving the piano
+
+### What changes
+
+Every melodic engine snaps TUNE to 24 semitones above a root. SILK adds a
+second snapped macro, **SCALE**, and TUNE steps through **SCALE's degrees**
+instead of semitones:
+
+- `SCALE` snaps to an entry of a fixed table (the RATIO precedent in TINES:
+  `snap(macro) = TABLE[(macro × (size − 1)).toInt()]`).
+- Each entry is a list of **cents above the root for one octave** (the
+  degrees), and the octave's size (1200 for everything except
+  Bohlen–Pierce).
+- `TUNE` spans two octaves of that scale: `degree = round(TUNE × 2·size)`,
+  `hz = root × 2^((octave·1200 + cents[degree mod size]) / 1200)`.
+- **"Snapped notes, never a mistuning"** holds: every TUNE position lands on
+  a scale degree exactly. A quarter-tone is a degree, not a detune.
+
+Both are ordinary 0..1 macros, so the recipe format, `PadRecipe.VERSION`,
+SCRAMBLE and presets are unaffected: a pad's `{"SCALE": 0.43, "TUNE": 0.6}`
+regenerates to the bit like any other.
+
+### The table
+
+Rows come from research §5. "Dataset" means confirmed against an open
+research dataset read directly (DaMuSc, McBride, Passmore & Tlusty 2023),
+whose row cites a book this pass could not open — the row's provenance goes
+in the table file as a comment, `.scl`-style, so it travels with the code.
+A row that is neither dataset-confirmed nor equal-division does not ship.
+
+| SCALE entry | Cents above the root (one period) | Period | Source |
+|---|---|---|---|
+| CHROMATIC | 0 100 … 1100 — PLUCK's behaviour | 1200 | equal division |
+| PENTATONIC (gong) | 0 204 408 702 906 | 1200 | dataset (Ho & Han 1982 via DaMuSc `T0337`; DaMuSc assumes *shi-er-lü* tuning, its own note says so; its Pythagorean 1201 closes to 1200 here) |
+| RAST | 0 204 362 498 702 906 1064 | 1200 | dataset (Rechberger 2018, 53-comma row, `OT0441`) |
+| BAYATI | 0 136 294 498 702 838 996 | 1200 | dataset (`OT0468`) |
+| HIJAZ | 0 100 400 500 700 850 1000 | 1200 | dataset, 24-EDO row (`OT0279`) — DaMuSc's 53-comma row does not close the octave |
+| SIKAH | 0 136 340 543 634 838 1042 | 1200 | dataset (`OT0485`) |
+| SHUR | 0 133 294 498 702 792 996 | 1200 | dataset (Rechberger's 17-note gamut, `OT0308`) |
+| MAHUR | 0 204 408 498 702 906 1110 | 1200 | dataset (`OT0311`) |
+| CHAHARGAH | 0 133 408 498 702 835 1110 | 1200 | dataset (`OT0318`) |
+| KUMOI | 0 90 498 702 792 | 1200 | dataset (Hewitt 2013, `OT0103`) — the in-scale shape |
+| HIRAJOSHI | 0 204 294 702 792 | 1200 | dataset (`OT0102`) |
+| 24-EDO | every 50 cents | 1200 | equal division |
+| 19-EDO | every 63.158 cents | 1200 | equal division |
+| 31-EDO | every 38.710 cents | 1200 | equal division |
+| BOHLEN–PIERCE | 13 equal steps of 146.304 cents | **1902** (3/1, a tritave) | equal division of 3/1 |
+
+What §5 settled and what it left open:
+
+- **The neutral third has no single right size.** Rast's third is 350 cents
+  in 24-EDO notation, 362 in the 53-comma row and 384 in Ellis (1885); the
+  1932 Cairo recordings put thirteen Egyptian tracks at 343–363 and Iraqi
+  and Maghrebi ones anywhere from 309 to 376. SILK ships the 53-comma row
+  because it is one consistent theory source for every Arabic row; a second
+  "measured" variant per maqam is a follow-on, not a guess.
+- **Miyako-bushi is not shipped.** DaMuSc's rows labelled "In" and
+  "Miyako-bushi" are seven-step rows for scales usually described as
+  pentatonic — flagged suspect, left out. KUMOI carries the same interval
+  shape (half step, major third, whole step, half step, major third).
+- **Shamisen tunings are open-string sets, not scales:** honchōshi (root,
+  4th, octave), niagari (root, 5th, octave), sansagari (root, 4th, minor
+  7th in the same octave), confirmed as note names only. They matter to a
+  multi-string gesture, which a one-shot is not; recorded for the preset
+  pass.
+- **The guzheng's pressed 4th and 7th have no sourced cents.** PRESS lands
+  on the next scale degree; how far a real player overshoots it is unknown.
+
+Each voice defaults to its own tradition's scale (OUD → RAST, SANTUR → SHUR,
+GUZHENG → PENTATONIC, SHAMISEN → KUMOI) — but **every scale is reachable
+from every voice**. A santur in 19-EDO is a feature.
+
+TUNE's two-period span means two tritaves for BOHLEN–PIERCE, about three
+octaves: the voice's root is lowered for that row so the top stays under
+the loop-length floor (`require` covers it either way).
+
+### INFLECT — between the degrees, without leaving the table
+
+Asked in conversation: does this enable more atonal abilities? Recorded
+answer: *atonal* (no key centre) was always possible with twelve semitones;
+what SCALE adds is *microtonal* and *xenharmonic* pitch — notes between the
+piano keys, and whole tunings outside the Western set.
+
+An unsnapped FREE row was drafted and **rejected in favour of INFLECT**
+(decision 2026-09-27): TUNE always lands on a table degree, and **INFLECT**
+bends that degree by a bounded amount on top. It is what real players do
+and a table cannot hold — the 1932 Cairo rast thirds scatter ±20 cents
+around one another; a pressed guzheng note overshoots; a Persian
+*moteghayer* degree moves with the phrase — without giving up "snapped
+notes, never a mistuning" as the default.
+
+- **Bipolar, centred:** `MacroSpec("INFLECT", 0.5f, neutral = 0.5f)`.
+  0.5 is the degree exactly; 0 is −50 cents, 1 is +50 cents, linear in
+  cents between. ±50 is a quarter tone — enough to reach halfway to the
+  next 12-EDO semitone from anywhere, and past the measured spread of
+  every neutral degree §5 found.
+- **A detent at the centre:** within ±0.02 of 0.5 the offset is exactly
+  0, so a knob nudged back near the middle lands on the degree rather
+  than a cent off it.
+- **SCRAMBLE leaves it at 0.5.** A dice roll never detunes a pad; INFLECT
+  is a deliberate move, like KEY on the kit screen.
+- **It moves the played note only.** SLIDE and PRESS bend toward the
+  inflected pitch. WASH's sympathetic bank stays on the *un-inflected*
+  table — the santur's strings are tuned to the dastgah; the player's
+  hand is what bends one note against them, and that beating is the
+  point.
+- **The pad readout includes it:** `E♭ −50¢` already carries the cents,
+  so an inflected pad reads as the pitch it is.
+
+### Where microtones meet the MPC
+
+- **Pads: already fine.** Each SILK pad is rendered at its exact pitch, and
+  a pad's `tuneCoarse` / `tuneFine` (−36..36 semitones, −100..100 cents,
+  `Kit.kt:97-98`) exist for the kit-level key picker. A quarter-tone pad
+  needs nothing new in the export.
+- **`fineTune` is cents — probably.** Research §5 found three MPC 3 track
+  files from three exporter builds in which a layer's
+  `pitch == coarseTune + fineTune/100` (e.g. −2 and 34 → −1.66). That
+  answers `MPC3_FORMAT.md`'s open question on paper; the hardware still
+  has the last word. The corpus holds no MPE, MTS or tuning-table field,
+  so anything microtonal that reaches the MPC is baked into per-zone
+  coarse + fine, whole cents at best.
+- **The pad tune readout** (F5.3) shows a name and a cents offset against
+  12-EDO for a SILK pad, e.g. `E♭ −50¢`, instead of rounding to the nearest
+  semitone. The IN KEY action leaves SILK pads with a non-CHROMATIC SCALE
+  alone — they are in their own key by construction.
+- **Keygroups: out of scope.** `Keys.kt` samples every minor third and lets
+  the MPC transpose in semitones; a maqam keyboard needs one zone per key,
+  each rendered at its own degree. Named as the follow-on below.
+
+## The voices
+
+Each voice is a recipe over `Strings`. Every Hz, t60 and cents value below
+that comes from an instrument (a body mode, a tuning, a detune) is a
+**placeholder marked "shape, not measurement"** until the research note
+confirms it — the rule PLUCK's Phase 2 kept. DSP constants (a feedback
+range, an allpass count) are engineering and are set by the audition.
+
+### OUD — the course and the slide
+
+- **Course:** two loops per note (`Course(N = 2)`), detune drawn per note
+  from a seed that depends on the voice and the note, so one pad's shimmer
+  is stable across renders and two pads differ. **COURSE** sets the spread
+  (0 = unison, 1 = wide, honky), and the pair gets slightly unequal
+  feedback so it decays unevenly — the "prompt then aftersound" of coupled
+  strings, cheaply.
+- **Excitation:** the pick burst near the bridge (STRIKE low), plus a very
+  short high-passed tick for the risha. PICK is the burst's brightness.
+- **Slide:** **SLIDE** bends into the note from below — depth and time on
+  one knob (0 = none, 1 = a slow slide from a whole degree under, measured
+  in *scale* degrees so a maqam slide lands on a maqam note). Both loops
+  share the pitch envelope so the detune survives the glide.
+- **Body:** a bowl-back table under BODY. Research returned eight candidate
+  peaks, all unsupported; until one is read, BODY uses a **neutral wooden
+  shape** (the guitar's confirmed low modes, shifted by ear) and says so.
+- **Loop:** darker and shorter than NYLON (nylon trebles, fretless neck).
+
+### GUZHENG — stiffness and the press
+
+- **Loop:** one string per note, bright, long ring (DAMP default low).
+- **Dispersion:** **STIFF** sets the inharmonicity `B` (see "The tuning
+  budget, extended"), from which each note's allpass coefficient is derived
+  for `M = 4` stages, bypassed where the design would flip sign. 0 is a
+  harmonic string; 1 is bell-like, past any real guzheng — the ugly end is
+  kept reachable (audition-gate rule).
+- **Press:** **PRESS** is the left hand pushing down behind the bridge: the
+  note starts at the open string one scale degree *below* and bends up to
+  the target (the *an* technique, which is how a pentatonic instrument plays
+  its missing 4th and 7th). 0 = plucked open; 1 = a slow, full bend.
+- **Pick:** fingerpicks — PICK high, STRIKE low.
+- **Body:** paulownia box; research pending.
+
+### SANTUR — four strings and the wash
+
+- **Course:** `Course(N = 4)`, COURSE is the spread of the four — the
+  santur's shimmer is four unison strings slightly apart, before any
+  sympathy.
+- **Excitation:** `Exciter.mallet`. PICK is **mallet hardness** (pulse
+  width: wide and dark to narrow and bright), so velocity-through-PICK
+  means the same thing it does on every other voice. STRIKE is where on the
+  string it lands. One pulse, no bounce: light mezrabs are reported not to
+  bounce (unsupported; kept as the simpler default either way).
+- **Wash:** **WASH** is the undamped instrument. A bank of resonators
+  (`Modes`, specified by t60 — never Q) tuned to the **current SCALE's
+  degrees across three octaves**, driven by the string's first difference
+  (PLUCK's body drive, same reasoning). WASH sets the bank's level and its
+  t60 together. The bank follows SCALE, so a SHUR santur rings in SHUR.
+- **Body:** research pending.
+
+### SHAMISEN — sawari and the slap
+
+- **Loop:** one string, bright, shortish ring.
+- **Sawari:** **SAWARI** is the obstacle's depth: 0 = no contact, 1 = the
+  string grazing the neck on every swing. Strength needs no second knob —
+  it follows the string's amplitude, as the jawari outline in PLUCK's spec
+  already reasons. Loss on contact is fixed; the buzz must never add energy
+  (tested).
+- **What the one paper read says** (van Walstijn, Bridges & Mehes, DAFx-16
+  tanpura model — method, not shamisen values): the buzz's "precursor"
+  **disappears when the string has no stiffness**, so the SHAMISEN loop
+  always carries a small `Dispersion`, whatever STIFF would be; the note
+  audibly *grows* in brightness over its first few hundred milliseconds,
+  which is the test that a sawari works (a static bright EQ cannot do it);
+  and 2× oversampling suffices, which U6's 4× already exceeds. The
+  obstacle should be near-rigid — a soft clamp reads as mush.
+- **Sympathetic sawari (later):** sawari acts on the open first string only,
+  but stopped notes on the other strings buzz by resonance with it. A
+  second, always-open loop carrying the obstacle, fed a little of the
+  played string, reproduces that. Not in Phase 3's first cut; named so the
+  audition can ask for it.
+- **Slap:** **SLAP** is the bachi hitting the skin with the string: a short
+  noise burst through a small skin `Modes` table, mixed in parallel. 0 =
+  string only.
+- **Body:** the skin *is* the body; the string drives it as BANJO's string
+  drives its head. Skin modes research pending.
+- **Pick:** the bachi — PICK high, STRIKE very low.
+
+## Macros
+
+Nine per voice: seven shared, two character. Eight were approved on
+2026-09-27 before INFLECT was chosen over FREE; INFLECT is the ninth, and
+the screen question below (SCALE as a chip) now carries more weight.
+
+| Macro | Meaning | All voices |
+|---|---|---|
+| TUNE | scale degree over two octaves above the voice's root | ✓ |
+| SCALE | which scale TUNE walks (snapped table above) | ✓ |
+| INFLECT | ±50 cents on the snapped degree; 0.5 is exact, with a centre detent | ✓ |
+| DAMP | the loop's decay and brightness together (PLUCK's meaning) | ✓ |
+| PICK | exciter brightness; mallet hardness on SANTUR. The velocity macro | ✓ |
+| STRIKE | where on the string — bridge to centre (PLUCK's map) | ✓ |
+| BODY | the body table's level against the string | ✓ |
+
+| Voice | Character 1 | Character 2 |
+|---|---|---|
+| OUD | COURSE — spread of the pair | SLIDE — bend in from below |
+| GUZHENG | STIFF — dispersion | PRESS — pressed bend up to the note |
+| SANTUR | COURSE — spread of the four | WASH — sympathetic ring |
+| SHAMISEN | SAWARI — buzz | SLAP — skin hit |
+
+Every character macro at 0 is the plain string, and at 1 is past the real
+instrument. Velocity goes through PICK, registered the way PLUCK's is.
+
+## Data flow and compatibility
+
+Registration follows GLINT's table (its spec, "Data flow and
+compatibility"), with GLINT's warning kept: grep for every exhaustive
+`when` over `Patch` and every hardcoded engine roster rather than trust a
+list. Known points:
+
+| File | Change |
+|---|---|
+| `synth/.../Strings.kt` | new — the shared loop (Phase 1a, no audio change) |
+| `synth/.../Pluck.kt` | `ks` and the exciter move to `Strings` |
+| `synth/.../Silk.kt`, `SilkPatch.kt`, `SilkPresets.kt`, `SilkScales.kt` | new |
+| `Patches.kt`, `Presets.kt`, `Velocity.kt` (`macroSpecsFor` + PICK) | one branch each |
+| `app/.../SynthScreen.kt` | `Engine.SILK` and a branch in each parallel dispatcher; all four voices `DrumClass.TONAL` |
+| `DeterminismTest`, `PresetsTest`, `PadRecipeTest`, `VelocityGrooveShuffleTest`, `shell`'s `UserPresetsTest` | add SILK |
+| the KIT tune readout | cents offset for SILK pads |
+
+**Untouched:** the CLI (`SynthCommand` resolves through `Presets`),
+`Keys.kt`, `PadRecipe.kt`, the export writers.
+
+## Failure handling
+
+| Risk | Handling |
+|---|---|
+| Loop too short at high TUNE + high STIFF | `require(exact ≥ MIN_LOOP_SAMPLES)` with a message naming STIFF; STIFF's bound chosen so no voice's top degree reaches it (tested at every scale's top degree) |
+| Dispersion coefficient out of range | `a` clamped to `(−0.95, 0]`; `|a| < 1` is what keeps an allpass stable |
+| Pitch envelope drives the loop under its floor | SLIDE and PRESS only ever start *below* the target, so the loop only lengthens during a bend |
+| Collision adds energy | the fold-back loss is `< 1` by construction; a test renders SAWARI 1 at PICK 1 and asserts the envelope never rises after the attack |
+| Sympathetic bank blows up the level | linear bank, levelled by `Dsp.levelTo` after render; no clipper |
+| A SCALE table row without a source | not shipped. A pending row is absent from the table, not present with guessed cents |
+
+## Testing
+
+### The ones that carry the claims
+
+1. **In tune at every degree of every scale.** For each voice × each shipped
+   SCALE × each TUNE degree, the rendered fundamental lands within 5 cents
+   of *the scale's own* target (not 12-EDO's). PLUCK's 5-cent rule,
+   generalised.
+2. **STIFF makes partials sharp.** At STIFF 1, partial `n`'s measured
+   frequency divided by `n·f0` rises with `n` (monotonic over the first
+   eight partials); at STIFF 0 it stays within 5 cents of harmonic. This is
+   the test that catches a sign error in `a`.
+3. **PLUCK unchanged.** The bit-identical hashes across the `Strings`
+   extraction.
+4. **INFLECT is bounded and centred.** At 0 and 1 the fundamental sits
+   −50 and +50 cents (±5) from the degree; anywhere in 0.48–0.52 it is on
+   the degree exactly (test 1's tolerance); SCRAMBLE never moves it.
+
+### The rest
+
+- COURSE: the envelope of a COURSE-1 render shows beating (amplitude
+  modulation) that a COURSE-0 render does not.
+- SLIDE / PRESS: the pitch track starts below the target and ends on it
+  within 5 cents.
+- WASH: the tail after the string's own t60 is louder with WASH 1 than 0,
+  and its spectral peaks sit on the SCALE's degrees.
+- SAWARI: late-tail high-band energy ratio rises with SAWARI; the envelope
+  never grows (the energy test above).
+- SLAP: the first 20 ms gains broadband energy with SLAP; the tail does not.
+- Determinism: same patch, same bytes. Seeds from `Dsp.seedFor("SILK", voice, …)`.
+- Fuzz: every macro at 0 / 0.5 / 1 across all voices — finite, bounded,
+  within the ring ceiling.
+- Classifier: all four defaults read TONAL.
+
+## Phasing and gates
+
+Grouped by how much new DSP each voice needs — least risk first. Every
+phase ends the house way: **stop and listen.** A listening page renders the
+phase's voices at defaults and at each character macro's extremes, and the
+chips (CLOSER / SAME / WORSE against the real instrument) are the gate.
+
+| Phase | Ships | Audio change | Gate |
+|---|---|---|---|
+| 0 | Research re-run with network access; throwaway spike renders of all four for a first listen | none (spike only) | research note rows confirmed or struck; spike heard |
+| 1a | `Strings` extraction from PLUCK | **none** — bit-identical | hashes match |
+| 1b | SCALE + TUNE (`SilkScales`, equal-division rows + any confirmed rows); OUD and GUZHENG; `Dispersion`; pitch envelope; COURSE; registration | yes | OUD's COURSE and SLIDE, GUZHENG's STIFF and PRESS, at extremes |
+| 2 | SANTUR: `Exciter.mallet`, `Course(N = 4)`, the sympathetic bank | yes | WASH and COURSE extremes; mallet hardness |
+| 3 | SHAMISEN: `Collision`, the slap, the skin table | yes | SAWARI and SLAP extremes |
+| 4 | Presets, by ear, after each voice's gate | — | the standing rule: presets authored blind are disposable |
+
+Why this order: OUD and GUZHENG are PLUCK's loop plus two linear stages.
+SANTUR adds a new exciter and the bank, both linear. SHAMISEN's sawari is
+the only nonlinearity in the loop — the one piece with a stability risk —
+so it lands last, on a toolkit that has already been listened to. PLUCK's
+SITAR can follow Phase 3 directly.
+
+## Out of scope
+
+- **Real-time / native.** SILK is offline one-shots like every `:synth`
+  engine. A live string would be `app/src/main/cpp` work with its own spec.
+- **Microtonal keygroups** (`Keys.kt`), MTS and MPE. Pads first.
+- **Gestures across strings:** the guzheng's *hua* glissando, santur
+  tremolo rolls, oud tremolo. Those are phrases, not one-shots — a
+  `Groove` or ROLL question, not an engine one.
+- **Yao vibrato** on the guzheng. PRESS is the bend; vibrato is a third
+  knob the audition can ask for.
+- **Stereo courses.** Mono, like PLUCK.
+
+## What comes after
+
+**A maqam keyboard.** Once SCALE exists, `Keys.kt` can render one zone per
+key at each scale degree, and the kit-level key picker can offer SCALE
+beside KEY. That is the point where SILK stops being pads and becomes an
+instrument the MPC plays in maqam.
+
+## Decisions taken in conversation — 2026-09-27
+
+| Question | Decision |
+|---|---|
+| Home | new engine SILK in `:synth`, Kotlin, offline |
+| Microtones | yes, through TUNE — SCALE macro, TUNE walks degrees |
+| SCALE reach | every scale on every voice, each voice defaulting to its tradition |
+| Knob count | eight approved; INFLECT then chosen, making nine |
+| Between the degrees | INFLECT (±50 cents on a snapped degree), not an unsnapped FREE row |
+| Scale sources | dataset-confirmed rows (DaMuSc) accepted for scales; not for instrument measurements |
+| Research re-run | yes, once the environment's network access is widened |
+| Scope | all four voices, phased by DSP risk (OUD+GUZHENG, SANTUR, SHAMISEN) |
+| Order of work | research, then this spec, then per-phase plans |
+
+### Open for review
+
+1. **Network.** Approved; the re-run waits on the environment's network
+   access being widened (at least pub.dega-akustik.de, en.wikipedia.org,
+   ccrma.stanford.edu, arxiv.org, researchgate.net, pubs.aip.org,
+   bioresources.cnr.ncsu.edu, www.jstage.jst.go.jp). Until then every
+   instrument number here is a placeholder.
+2. **SCALE as a knob or a chip.** Nine knobs is one more than was
+   approved. If the SYNTH screen is crowded, SCALE moves to a chip row
+   above the knobs (it is a list choice, not a sweep); decided when the
+   screen is built, not here.
