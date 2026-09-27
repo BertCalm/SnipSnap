@@ -376,7 +376,7 @@ object Pluck {
      * coefficient from it must say which rate.
      */
     internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 0.88 % sharp with the shipped jawari on (StiffnessTest's probe)
-    internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 6.5 c sharp, so if the gate chooses this candidate the drive steps down or the spec's fallback applies
+    internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 5.6 c sharp (StiffnessTest measures it on every run), so if the gate chooses this candidate the drive steps down or the spec's fallback applies
     internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_LOW
 
     internal fun stiffnessFor(voice: PluckVoice): Float = when (voice) {

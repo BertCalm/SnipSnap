@@ -168,7 +168,7 @@ tune while the upper partials stretch.
 
 | Voice | Stiffness | Why |
 |---|---|---|
-| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 2e-4) and the one that puts it 3.0% sharp (B ≈ 6e-4, reads 6.5 c sharp at the root with the jawari on), both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
+| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 2e-4) and the one that puts it 3.0% sharp (B ≈ 6e-4, reads 5.6 c sharp at the root with the jawari on (measured by StiffnessTest at the shipped DAMP default)), both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
 | KOTO, HARP | 0, with a dispersion-on candidate in the audition | both passed a gate; they do not change unheard |
 | NYLON, BANJO | 0 | not offered |
 
