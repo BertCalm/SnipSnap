@@ -48,10 +48,11 @@ import kotlin.test.assertTrue
  * constraint — every exported WAV is mono or stereo, nothing wider — which
  * is what `every exported WAV has 1 or 2 channels` below checks.
  *
- * Six pads, not sixteen: enough engines to be a real spread (THUMP three
+ * Seven pads, not sixteen: enough engines to be a real spread (THUMP three
  * times — KICK, the just-rebuilt modal SNARE, and a WIDTH>0 SNARE — plus
- * PLUCK, VELVET and TONEWHEEL, one through a named FX treatment) without
- * paying to render and export a full kit on every `:synth:test` run.
+ * PLUCK (BANJO and SITAR), VELVET and TONEWHEEL, one through a named FX
+ * treatment) without paying to render and export a full kit on every
+ * `:synth:test` run.
  *
  * The WIDTH>0 SNARE pad exists because of a gap the class KDoc above
  * already names: docs/SYNTH_UPGRADE.md's U4 (Stereo) is Task 3b, and until
@@ -87,6 +88,7 @@ class ExportRegressionTest {
         // one WIDTH value the macro's own contract already commits to.
         val wideSnare = snare.withMacros(snare.macros + ("WIDTH" to 1f))
         val pluck = PluckPresets.forVoice(PluckVoice.BANJO).first() // the shortest loop of the string voices: loop arithmetic changed under this
+        val sitar = PluckPresets.forVoice(PluckVoice.SITAR).first() // the voice whose render length the sympathetic strings changed
         val velvet = VelvetPresets.forVoice(VelvetVoice.BASS).first()
         val tonewheel = TonewheelPresets.forVoice(TonewheelVoice.FULL).first()
 
@@ -95,6 +97,7 @@ class ExportRegressionTest {
             ArrangedPad(snare.render(), DrumClass.SNARE, PadRecipe(snare).toJsonValue()),
             ArrangedPad(wideSnare.render(), DrumClass.SNARE, PadRecipe(wideSnare).toJsonValue()),
             ArrangedPad(pluck.render(), DrumClass.TONAL, PadRecipe(pluck).toJsonValue()),
+            ArrangedPad(sitar.render(), DrumClass.TONAL, PadRecipe(sitar).toJsonValue()),
             // Routed through a shipped FX treatment, not a bare render - this
             // is the one pad that exercises the render -> FX half of the
             // render -> level -> FX -> write path; the other four exercise
@@ -182,7 +185,7 @@ class ExportRegressionTest {
             )
             checked++
         }
-        assertEquals(6, checked, "expected to check all 6 occupied pads")
+        assertEquals(7, checked, "expected to check all 7 occupied pads")
     }
 
     // ---------- invariant 4: filenames ----------
@@ -220,7 +223,7 @@ class ExportRegressionTest {
         val result = exportedKit()
         val instruments = parseInstruments(result.program)
         val occupied = instruments.count { inst -> inst.layers.any { it.sampleName.isNotBlank() } }
-        assertEquals(6, occupied, "expected all 6 pads to round-trip out of the parsed program")
+        assertEquals(7, occupied, "expected all 7 pads to round-trip out of the parsed program")
 
         val doc = SafeXml.newFactory().newDocumentBuilder()
             .parse(InputSource(StringReader(result.program.readText())))

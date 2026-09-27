@@ -3,7 +3,7 @@ package com.snipsnap.synth
 /**
  * PLUCK's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
- * Twelve presets per voice (four voices, forty-eight total), spread across
+ * Twelve presets per voice (five voices, sixty total), spread across
  * TUNE/DAMP/PICK/STRIKE/BODY/DOUBLE — the same six macros every voice shares, since
  * PLUCK's character lives in each voice's fixed body constants
  * (`loopHz`/`pickLo`/`pickHi`/`ring` in `Pluck.kt`), not in a different
@@ -21,6 +21,7 @@ object PluckPresets {
         PluckVoice.HARP -> harpPresets
         PluckVoice.KOTO -> kotoPresets
         PluckVoice.BANJO -> banjoPresets
+        PluckVoice.SITAR -> sitarPresets
     }
 
     fun all(): List<PluckPatch> = PluckVoice.entries.flatMap { forVoice(it) }
@@ -83,5 +84,22 @@ object PluckPresets {
         p(PluckVoice.BANJO, "THUMB", "TUNE" to 0.25f, "DAMP" to 0.55f, "PICK" to 0.45f, "STRIKE" to 0.7f, "DOUBLE" to 0.05f),
         p(PluckVoice.BANJO, "TINNY", "TUNE" to 0.7f, "DAMP" to 0.6f, "PICK" to 0.95f, "STRIKE" to 0.15f, "DOUBLE" to 0.1f),
         p(PluckVoice.BANJO, "SOFT PICK", "TUNE" to 0.4f, "DAMP" to 0.5f, "PICK" to 0.3f, "STRIKE" to 0.5f, "DOUBLE" to 0.1f),
+    )
+
+    // Authored for the audition, not by ear (the parent spec's by-ear pass
+    // re-authors them). DOUBLE is the sympathetic strings on this voice.
+    private val sitarPresets = listOf(
+        p(PluckVoice.SITAR, "ALAAP", "TUNE" to 0.5f, "DAMP" to 0.3f, "PICK" to 0.6f, "STRIKE" to 0.3f, "DOUBLE" to 0.4f),
+        p(PluckVoice.SITAR, "JHALA", "TUNE" to 0.6f, "DAMP" to 0.5f, "PICK" to 0.85f, "STRIKE" to 0.2f, "DOUBLE" to 0.3f),
+        p(PluckVoice.SITAR, "GAT", "TUNE" to 0.45f, "DAMP" to 0.4f, "PICK" to 0.7f, "STRIKE" to 0.3f, "DOUBLE" to 0.45f),
+        p(PluckVoice.SITAR, "DRONE", "TUNE" to 0.5f, "DAMP" to 0.15f, "PICK" to 0.5f, "STRIKE" to 0.35f, "DOUBLE" to 1.0f),
+        p(PluckVoice.SITAR, "DRY STRING", "TUNE" to 0.5f, "DAMP" to 0.45f, "PICK" to 0.65f, "STRIKE" to 0.3f, "DOUBLE" to 0.0f),
+        p(PluckVoice.SITAR, "MUTED", "TUNE" to 0.4f, "DAMP" to 0.85f, "PICK" to 0.4f, "STRIKE" to 0.4f, "DOUBLE" to 0.2f),
+        p(PluckVoice.SITAR, "HIGH STRING", "TUNE" to 0.85f, "DAMP" to 0.35f, "PICK" to 0.75f, "STRIKE" to 0.25f, "DOUBLE" to 0.35f),
+        p(PluckVoice.SITAR, "BRIDGE PICK", "TUNE" to 0.5f, "DAMP" to 0.35f, "PICK" to 0.7f, "STRIKE" to 0.0f, "DOUBLE" to 0.4f),
+        p(PluckVoice.SITAR, "CENTRE PICK", "TUNE" to 0.5f, "DAMP" to 0.35f, "PICK" to 0.5f, "STRIKE" to 1.0f, "DOUBLE" to 0.4f),
+        p(PluckVoice.SITAR, "RINGING", "TUNE" to 0.55f, "DAMP" to 0.0f, "PICK" to 0.6f, "STRIKE" to 0.3f, "DOUBLE" to 0.5f),
+        p(PluckVoice.SITAR, "LOW TONIC", "TUNE" to 0.0f, "DAMP" to 0.3f, "PICK" to 0.55f, "STRIKE" to 0.3f, "DOUBLE" to 0.4f),
+        p(PluckVoice.SITAR, "BRIGHT MIZRAB", "TUNE" to 0.5f, "DAMP" to 0.25f, "PICK" to 0.95f, "STRIKE" to 0.15f, "DOUBLE" to 0.3f),
     )
 }

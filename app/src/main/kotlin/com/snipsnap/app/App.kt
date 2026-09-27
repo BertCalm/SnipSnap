@@ -3335,6 +3335,10 @@ fun App(shelf: KitShelf) {
                                 // DRONE TO LOOP (RESIN): the grid's sidecar is App's to
                                 // write, under the same one writer SNIPS' → LOOP uses.
                                 onDroneToLoop = { name, recipe, root -> sendDroneToLoop(name, recipe, root) },
+                                // → SURFACE (SIREN, a LOOP): the pad has landed and
+                                // surface.json points at it; the same screen switch a
+                                // MenuRow tap makes, so SURFACE reads the file as it opens.
+                                onOpenSurface = { goToScreen(AppScreen.SURFACE) },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
                                 // a MenuRow tab switch, not be cancelled by it.

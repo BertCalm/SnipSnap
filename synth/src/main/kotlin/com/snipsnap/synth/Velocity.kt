@@ -213,6 +213,7 @@ object Velocity {
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
+        is ForkPatch -> Fork.macrosFor(patch.voice)
         is TerraPatch -> Terra.macrosFor(patch.voice)
     }
 
@@ -238,6 +239,11 @@ object Velocity {
         // PICK is proven monotonic for every PLUCK voice by PluckTest's
         // `PICK moves the centroid at every step of its travel`.
         patch is PluckPatch -> "PICK"
+        // STRIKE moves the hammer's cutoff, its own t60 and the tine's
+        // swing together - none of BRIGHTNESS_MACROS' generic names, but
+        // exactly what this function exists to find. Proven monotonic by
+        // ForkTest's `STRIKE moves the onset centroid at every step`.
+        patch is ForkPatch -> "STRIKE"
         else -> null
     }
 
@@ -271,7 +277,12 @@ object Velocity {
         // Velocity scales the macro toward its floor, never above what the
         // preset asked for: a preset's brightest is still its own ceiling.
         val scaled = asked * Dsp.lin(v, VELOCITY_FLOOR_RATIO, 1f)
-        return patch.withMacros(patch.macros + (spec.name to scaled)).render()
+        val moved = patch.macros + (spec.name to scaled)
+        // PLUCK also takes the velocity as a number: the sitar's bridge
+        // limiter reads it (Pluck.render's KDoc). validateMacros rejects any
+        // key macrosFor does not list, so it cannot travel in the map.
+        if (patch is PluckPatch) return Pluck.render(patch.voice, moved, velocity = v)
+        return patch.withMacros(moved).render()
     }
 
     /**

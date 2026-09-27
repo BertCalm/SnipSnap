@@ -252,6 +252,20 @@ object SurfaceStore {
         return file
     }
 
+    /**
+     * Point the surface at [slot] and keep everything else the kit's
+     * surface already had: corners, the other three pads, GRAIN, SWARM,
+     * the modulators, KEY, ECHO's time. What SYNTH's `→ SURFACE` does
+     * before opening the screen on a landed LOOP siren, so the pad under
+     * the finger is the one that just landed and not the kit's lowest.
+     * The same write PAD ◄ ► makes, from a screen that is not SURFACE.
+     */
+    fun choosePad(kitDir: File, slot: Int): Settings {
+        val chosen = load(kitDir).copy(padSlot = slot)
+        save(kitDir, chosen)
+        return chosen
+    }
+
     /** The kit's surface settings; the defaults when it has none. */
     fun load(kitDir: File): Settings {
         val file = File(kitDir, FILE_NAME)
