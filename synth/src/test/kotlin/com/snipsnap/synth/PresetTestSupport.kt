@@ -32,7 +32,10 @@ internal object PresetTestSupport {
             // TIDE's style has makers too (docs/SYNTH_ROADMAP.md, S9).
             """|buchla|serge|make\s*noise""" +
             // SIREN's inspiration is a maker too (docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md).
-            """|benidub""",
+            """|benidub""" +
+            // FORK's brief named the electric piano makers directly
+            // (docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md).
+            """|rhodes|wurlitzer|fender""",
     )
 
     /**

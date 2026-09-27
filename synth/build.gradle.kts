@@ -235,3 +235,12 @@ tasks.register<JavaExec>("generateSirenKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+tasks.register<JavaExec>("generateForkKit") {
+    group = "distribution"
+    description = "Render the FORK modal electric piano acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForkKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}

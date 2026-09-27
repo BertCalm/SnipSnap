@@ -37,6 +37,39 @@ class StringsTest {
         assertEquals(384, cases)
     }
 
+    /**
+     * PLUCK Phase 3a's SITAR voice built its stiffness allpass and jawari
+     * bridge limiter directly into the old `Pluck.ks`, in parallel with and
+     * unaware of this Phase's own extraction; merging the two folded SITAR's
+     * two stages into [Strings] as well (docs/superpowers/plans/2026-09-27-silk-phase-1a.md,
+     * the merge note). This is that grid's SITAR-shaped sibling: [LegacyPluckLoop.ksWithSitar]
+     * is Phase 3a's loop frozen at the merge, and [Strings.pluck] must
+     * reproduce it - both of SITAR's shipped candidates
+     * (`Pluck.SITAR_STIFFNESS_LOW`/`_HIGH`), its shipped jawari drive
+     * (`Pluck.SITAR_JAWARI`), the root note and a spread around it, both
+     * render rates, and the pick positions SITAR's own STRIKE macro reaches.
+     */
+    @Test
+    fun `Strings pluck reproduces PLUCK Phase 3a's stiffness and jawari, sample for sample`() {
+        var cases = 0
+        for (rate in listOf(Dsp.RATE, Dsp.RATE * Dsp.OVERSAMPLE)) {
+            for (freq in listOf(139f, 220f, 440f)) {
+                for (stiffness in listOf(0f, Pluck.SITAR_STIFFNESS_LOW, Pluck.SITAR_STIFFNESS_HIGH)) {
+                    for (jawari in listOf(0f, Pluck.SITAR_JAWARI, 0.6f)) {
+                        for (position in listOf(0f, 0.3f)) {
+                            val seed = Dsp.seedFor("STRINGS-SITAR", freq, stiffness, jawari, position)
+                            val legacy = LegacyPluckLoop.ksWithSitar(freq, 0.5f, 0.5f, 7000f, 6000f, seed, rate, position, stiffness, jawari)
+                            val shared = Strings.pluck(freq, 0.5f, Strings.damping(0.5f, 7000f), 6000f, seed, rate, position, stiffness, jawari)
+                            assertContentEquals(legacy, shared, "rate=$rate freq=$freq stiffness=$stiffness jawari=$jawari position=$position")
+                            cases++
+                        }
+                    }
+                }
+            }
+        }
+        assertEquals(108, cases)
+    }
+
     @Test
     fun `tune fails loudly below the KS minimum, and names the cause`() {
         val e = assertFailsWith<IllegalArgumentException> { Strings.tune(70_000f, 4200f, 176_400) }

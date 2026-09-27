@@ -56,9 +56,20 @@ object Siren {
     /** SWEEP at either end: the note comes in from two octaves away. */
     const val SWEEP_OCTAVES = 2f
 
-    /** The sweep's t60: a small sweep is slow, a big dive is fast. */
-    const val SWEEP_SLOW_T60 = 0.6f
-    const val SWEEP_FAST_T60 = 0.15f
+    /**
+     * How long the sweep takes to land on the note: a short glide for a
+     * small one, up to a second for the full two octaves, so the gesture
+     * is heard as a glide and not a blip. The first build had a time
+     * constant that *shortened* as the sweep deepened (0.15 s at full), and
+     * a two-octave dive over in 100 ms under a wail that itself moves an
+     * octave each way was inaudible at the audition. Further is longer,
+     * the way a portamento is.
+     */
+    const val SWEEP_NEAR_SECONDS = 0.25f
+    const val SWEEP_FAR_SECONDS = 1.0f
+
+    /** The sweep never outlasts this much of HOLD, so a short press still lands on its note. */
+    const val SWEEP_HOLD_FRACTION = 0.85f
 
     /** HOLD, below its LOOP step: how long the button is down. */
     const val HOLD_MIN_SECONDS = 0.3f
@@ -185,8 +196,23 @@ object Siren {
      */
     internal fun sweepOctaves(sweep: Float): Float = (0.5f - sweep.coerceIn(0f, 1f)) * 2f * SWEEP_OCTAVES
 
-    /** The sweep's t60: further is faster. */
-    internal fun sweepT60(sweep: Float): Float = Dsp.expMap(abs(sweepOctaves(sweep)) / SWEEP_OCTAVES, SWEEP_SLOW_T60, SWEEP_FAST_T60)
+    /** How long the sweep takes to land, in seconds: further is longer, and never past [SWEEP_HOLD_FRACTION] of the hold. */
+    internal fun sweepSeconds(sweep: Float, holdSeconds: Float): Float =
+        Dsp.expMap(abs(sweepOctaves(sweep)) / SWEEP_OCTAVES, SWEEP_NEAR_SECONDS, SWEEP_FAR_SECONDS)
+            .coerceAtMost(holdSeconds * SWEEP_HOLD_FRACTION)
+
+    /**
+     * The sweep's remaining offset at [t], as a fraction of where it began:
+     * a quadratic ease-out, fast off the mark and slowing into the note,
+     * landing exactly at [seconds] with no corner. An exponential approach
+     * never lands and spends its audible travel in its first tenth; this
+     * spends it across the whole glide.
+     */
+    internal fun sweepRemaining(t: Float, seconds: Float): Float {
+        if (seconds <= 0f || t >= seconds) return 0f
+        val left = 1f - t / seconds
+        return left * left
+    }
 
     /**
      * The LFO's value in -1..1 at [phase] (cycles), each voice starting
@@ -275,7 +301,7 @@ object Siren {
         val depth = depthSemitones(m.getValue("DEPTH")) / 12f
         val hold = holdSeconds(m.getValue("HOLD"))
         val sweepOct = sweepOctaves(m.getValue("SWEEP"))
-        val sweepT60 = sweepT60(m.getValue("SWEEP"))
+        val sweepSeconds = sweepSeconds(m.getValue("SWEEP"), hold)
         val env = Dsp.Env(attackSeconds = ATTACK_SECONDS, decay2T60 = RELEASE_T60, holdSeconds = hold)
         val frames = ((ATTACK_SECONDS + hold + RELEASE_T60) * rate).toInt().coerceAtLeast(64)
         val lfo = Lfo(voice, rateHz(m.getValue("RATE")).toDouble() / rate, rate)
@@ -283,7 +309,7 @@ object Siren {
         val out = FloatArray(frames)
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
-            val octaves = depth * lfo.next() + sweepOct * Dsp.envAt(t, sweepT60)
+            val octaves = depth * lfo.next() + sweepOct * sweepRemaining(t, sweepSeconds)
             out[i] = env.at(t) * tone.next(f0 * 2.0.pow(octaves.toDouble()))
         }
         return out

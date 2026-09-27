@@ -278,11 +278,32 @@ is down, because a siren is gated, not struck; its top is LOOP, one
 seamless loop of whole LFO periods with the centre pitch fitted under a
 cent so the pulse closes on whole cycles, cut at a zero crossing — the
 render the SURFACE holds under a finger, pitched by where the finger is,
-released into the surface's own echo on lift. SEND TO PAD lands a
+released into the surface's own echo on lift, and `→ SURFACE ▸` on SYNTH
+lands a LOOP and opens the surface on it in one tap. SEND TO PAD lands a
 one-shot siren with the rack's ECHO in its recipe and a LOOP dry, and
 the toast says which. Forty presets, one LOOP per voice, and
 `SynthKits.siren()` is the kit (`./gradlew :synth:generateSirenKit`).
 Design: `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md`.
+
+FORK is the modal electric piano — every other engine here is a strike;
+this one is what a magnetic pickup does *after* one. A struck bar (TINE, a
+cantilever like a real tine, whose overtones sit far from the fundamental
+and die in tens of milliseconds; or BAR, the free-free shape a vibraphone
+uses) rings through four tuned modes, and the pickup reads that ringing
+through `v / (1 - x)^2` — the standard reluctance model, an asymmetric
+curve that adds even harmonics on top of the resonator's own odd ones. The
+curve gets less curved as the tine's swing decays, so the "bark" thins out
+on its own with no envelope faking it — TINES fakes exactly this with its
+BITE envelope; here it is physics. STIFF morphs the four modes from a
+harmonic string, through the voice's own bar, to a stretched, rigid one;
+BARK is the pickup's own closeness, the identity knob; STRIKE is the
+hammer, moving its cutoff, its own decay and how hard the tine swings
+together, and directly boosts the higher modes' own share the harder it
+gets — real hammer-strike physics, not only a filter's own rolloff.
+Sixteen presets, and a captured snip's own first 20 ms can stand in for
+the hammer (kept in the recipe, so a struck kit still regenerates from
+`kit.json`). Design:
+`docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md`.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
@@ -291,8 +312,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — twelve engines in the `Engine` picker
-counting SKIN, RESIN, TIDE, GLINT and SIREN; GRAINS is a thirteenth thing entirely, out of the
+VOX, FORK and GRAINS round out the lineup — thirteen engines in the `Engine` picker
+counting SKIN, RESIN, TIDE, GLINT, SIREN and FORK; GRAINS is a fourteenth thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
 instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
@@ -304,7 +325,9 @@ opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
 BEATBOX is a mouth doing a drum kit: a kick, three snares, three
 hats and a tongue click, and THROAT is overtone singing: a low drone
 with a whistled melody on its harmonics, a growl an octave down and a
-yodel. GRAINS is
+yodel. WRAITH is sine-wave speech: three pure tones trace a word's
+formants, ghostly whistling you half hear as "why" or "hello", gliding
+or stepping in key. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a

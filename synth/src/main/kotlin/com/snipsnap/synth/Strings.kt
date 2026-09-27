@@ -57,9 +57,11 @@ internal object Strings {
      * The tuning budget: the loop's total delay must equal one period of
      * [freq], and every stage in it pays for its own delay at the
      * fundamental. [loopHz] is the loop low-pass's corner, whose phase lag
-     * is one of those stages.
+     * is one of those stages; [stiffness] (see [Loop]) and [jawari] (see
+     * [Loop]) are two more, budgeted the same way, and skipped at 0 - the
+     * SITAR voice (PLUCK Phase 3a) is what needs them.
      */
-    fun tune(freq: Float, loopHz: Float, rate: Int): Tuning {
+    fun tune(freq: Float, loopHz: Float, rate: Int, stiffness: Float = 0f, jawari: Float = 0f): Tuning {
         // The loop length is almost never a whole number of samples, and
         // truncating it (the old `(rate / freq).toInt()`) detunes the
         // string by an amount that depends on the fractional remainder at
@@ -109,7 +111,39 @@ internal object Strings {
         val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
         val filterDelay = -filterPhase / w
 
-        val exact = (rate / freq) - filterDelay - 0.5
+        // The stiffness allpass H(z) = (c + z⁻¹) / (1 + c·z⁻¹): its phase at the
+        // fundamental is part of the loop's delay, the same way the low-pass's
+        // is, so it enters the budget here and the fundamental stays put.
+        val stiffDelay = if (stiffness != 0f) {
+            val c = stiffness.toDouble()
+            val phase = atan2(-sin(w), c + cos(w)) - atan2(-c * sin(w), 1.0 + c * cos(w))
+            -phase / w
+        } else 0.0
+
+        // The DC blocker after the jawari (see [Loop]) is a one-pole
+        // high-pass, and a high-pass leads at the fundamental: its phase
+        // delay is negative and, like the low-pass's and the stiffness
+        // allpass's, it belongs to the loop's budget or the note reads
+        // sharp. A zero at DC nulls the offset at any corner; the corner
+        // only sets how fast a slow offset drains and how much lead the
+        // loop owes for it - 2 Hz (not 20) keeps that lead under a degree
+        // at the lowest SITAR note (C#3) and the dispersion it leaves on
+        // the upper partials is 0.11 % at the default note C#4 and 0.23 %
+        // at the root.
+        // Narrowed to Float here, matching [Loop]'s own dcA exactly (SITAR's
+        // original `ks` computed this once as a Float and used it both in
+        // this budget and in the per-sample loop) - the full-Double value
+        // rounds `r` differently by the time it reaches atan2, and the drift
+        // only crosses a bit boundary a couple hundred samples into the
+        // loop, so a mismatch here is easy to miss on a short render.
+        val dcA = dcBlockerA(rate).toFloat()
+        val dcDelay = if (jawari > 0f) {
+            val r = 1.0 - dcA
+            val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
+            -phase / w
+        } else 0.0
+
+        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -141,13 +175,17 @@ internal object Strings {
         return Tuning(exact, n, a)
     }
 
+    /** The DC blocker's one-pole coefficient (see [Loop], [tune]) - depends only on [rate]. */
+    private fun dcBlockerA(rate: Int): Double = 1.0 - exp(-2.0 * PI * 2.0 / rate)
+
     /**
-     * One period of filtered, zero-mean noise, combed by the pick position -
-     * the 1983 exciter with Jaffe & Smith's position comb. [n] is the loop's
-     * integer delay from [tune]. Returns at most [maxLen] samples; they enter
-     * the loop as input, never as its state.
+     * One period of filtered, zero-mean noise - the raw exciter burst before
+     * the pick-position comb. Shared by [pluckExciter] and [burstPeak], which
+     * both need it and must agree on it: the bridge limiter's reference peak
+     * (see [Loop]) is measured on this burst, not on the combed exciter, the
+     * way SITAR's own [Pluck.ks] always measured it.
      */
-    fun pluckExciter(n: Int, freq: Float, pickHz: Float, position: Float, seed: Int, rate: Int, maxLen: Int): FloatArray {
+    private fun rawBurst(n: Int, pickHz: Float, seed: Int, rate: Int): FloatArray {
         val noise = Dsp.Noise(seed)
         val pickLp = Dsp.OnePole(rate)
         val burst = FloatArray(n)
@@ -160,6 +198,32 @@ internal object Strings {
         for (v in burst) mean += v
         mean /= n
         for (i in 0 until n) burst[i] -= mean
+        return burst
+    }
+
+    /**
+     * The bridge limiter's reference peak (see [Loop]): the raw burst's own
+     * peak, before the pick-position comb - a full swing on this string, so
+     * the same jawari drive buzzes the same on every note and fades as the
+     * note does. Only called when jawari is on; regenerating the burst here
+     * is cheap next to a mode bank, and it keeps [pluckExciter]'s own return
+     * type untouched.
+     */
+    fun burstPeak(n: Int, pickHz: Float, seed: Int, rate: Int): Float {
+        val burst = rawBurst(n, pickHz, seed, rate)
+        var p0 = 1e-6f
+        for (v in burst) if (kotlin.math.abs(v) > p0) p0 = kotlin.math.abs(v)
+        return p0
+    }
+
+    /**
+     * One period of filtered, zero-mean noise, combed by the pick position -
+     * the 1983 exciter with Jaffe & Smith's position comb. [n] is the loop's
+     * integer delay from [tune]. Returns at most [maxLen] samples; they enter
+     * the loop as input, never as its state.
+     */
+    fun pluckExciter(n: Int, freq: Float, pickHz: Float, position: Float, seed: Int, rate: Int, maxLen: Int): FloatArray {
+        val burst = rawBurst(n, pickHz, seed, rate)
 
         // Pick position (Jaffe & Smith 1983): the burst minus a copy of
         // itself delayed by `position` of one period. The comb's notches
@@ -197,14 +261,43 @@ internal object Strings {
      * For the first `n + 1` samples there is no history to feed back and the
      * output is the input - exactly as `Pluck.ks`'s loop always started at
      * `n + 1`. The history is a ring of `n + 2` outputs: both taps, no more.
+     *
+     * [stiffness] is a first-order allpass coefficient in (-1, 0]; 0 is no
+     * allpass and skipped. A negative value delays low partials more than
+     * high ones so the upper partials sit sharp of harmonic, the stiff-string
+     * law `n*sqrt(1 + B*n^2)` with B rising as the coefficient falls - SITAR's
+     * dispersion (PLUCK Phase 3a), applied right after the tuning allpass,
+     * before the loop's own low-pass.
+     *
+     * [jawari] is the bridge limiter's drive in [0, 1): after the low-pass,
+     * positive swings are pulled down by `jawari · min(y, jawariP0) · y /
+     * jawariP0` (clamped so it never crosses zero), the way a string
+     * wrapping on a flat bridge is stopped on one side - SITAR's buzz. A
+     * one-pole DC blocker follows because a one-sided term leaves an offset;
+     * both are skipped at jawari 0. [jawariP0] is the reference peak (see
+     * [burstPeak]) that a full swing on this string looks like, so the same
+     * drive buzzes the same on every note.
      */
-    class Loop(private val n: Int, private val a: Float, private val fb: Float, private val loopHz: Float, rate: Int) {
+    class Loop(
+        private val n: Int,
+        private val a: Float,
+        private val fb: Float,
+        private val loopHz: Float,
+        rate: Int,
+        private val stiffness: Float = 0f,
+        private val jawari: Float = 0f,
+        private val jawariP0: Float = 1e-6f,
+    ) {
         private val size = n + 2
         private val history = FloatArray(size)
         private var i = 0
         private var apX1 = 0f
         private var apY1 = 0f
+        private var stX1 = 0f
+        private var stY1 = 0f
         private val loopLp = Dsp.OnePole(rate)
+        private val dcA = dcBlockerA(rate).toFloat()
+        private var dc = 0f
 
         fun next(x: Float): Float {
             val y = if (i <= n) {
@@ -218,7 +311,19 @@ internal object Strings {
                 val tuned = a * (d - apY1) + apX1
                 apX1 = d
                 apY1 = tuned
-                x + fb * loopLp.lp(tuned, loopHz)
+                val stiff = if (stiffness != 0f) {
+                    val s = stiffness * (tuned - stY1) + stX1
+                    stX1 = tuned
+                    stY1 = s
+                    s
+                } else tuned
+                var yy = loopLp.lp(stiff, loopHz)
+                if (jawari > 0f) {
+                    if (yy > 0f) yy -= jawari * min(yy, jawariP0) * yy / jawariP0
+                    dc += dcA * (yy - dc)
+                    yy -= dc
+                }
+                x + fb * yy
             }
             history[i % size] = y
             i++
@@ -226,12 +331,17 @@ internal object Strings {
         }
     }
 
-    /** The 1983 plucked string: [pluckExciter] into a [Loop] tuned by [tune]. */
-    fun pluck(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, position: Float = 0f): FloatArray {
-        val t = tune(freq, damping.loopHz, rate)
+    /**
+     * The 1983 plucked string: [pluckExciter] into a [Loop] tuned by [tune].
+     * [stiffness] and [jawari] are SITAR's dispersion and buzz; both default
+     * to 0, which reproduces the plain string exactly.
+     */
+    fun pluck(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f): FloatArray {
+        val t = tune(freq, damping.loopHz, rate, stiffness, jawari)
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t.n + 2))
         val exc = pluckExciter(t.n, freq, pickHz, position, seed, rate, out.size)
-        val loop = Loop(t.n, t.a, damping.fb, damping.loopHz, rate)
+        val jawariP0 = if (jawari > 0f) burstPeak(t.n, pickHz, seed, rate) else 1e-6f
+        val loop = Loop(t.n, t.a, damping.fb, damping.loopHz, rate, stiffness, jawari, jawariP0)
         for (i in out.indices) out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
         return out
     }

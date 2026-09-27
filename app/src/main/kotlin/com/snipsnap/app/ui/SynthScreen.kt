@@ -101,6 +101,7 @@ import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
+import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
@@ -142,6 +143,9 @@ import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.Vox
 import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
+import com.snipsnap.synth.Fork
+import com.snipsnap.synth.ForkPatch
+import com.snipsnap.synth.ForkVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -215,6 +219,10 @@ fun SynthScreen(
     // DRONE TO LOOP (RESIN): the drone's recipe on its root, handed to App,
     // whose sendSnipToLoop already owns the grid's sidecar and its one writer.
     onDroneToLoop: (name: String, recipe: JsonValue, rootMidi: Int) -> Unit,
+    // → SURFACE (SIREN, a LOOP): the pad has landed and surface.json points
+    // at it; App switches to the SURFACE screen, which reads that file as
+    // it opens. Navigation is App's, the same way every MenuRow tap is.
+    onOpenSurface: () -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
     // receive as their own `appScope` — so a SEND TO PAD write in flight
     // survives a MenuRow tab switch instead of being cancelled by it (see
@@ -456,12 +464,18 @@ fun SynthScreen(
     // ---- SEND TO PAD ----
     var showChooser by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
+    // → SURFACE opened the chooser: after the landing, point the kit's
+    // surface at the slot and open the SURFACE screen on it. Read at the
+    // start of the send, so a chooser opened one way and cancelled cannot
+    // leak its intent into the next.
+    var sendToSurface by remember { mutableStateOf(false) }
     val kit = entry?.kit
 
     fun sendToSlot(slot: Int) {
         val e = entry ?: return
         if (sendBusy) return
         sendBusy = true
+        val toSurface = sendToSurface
         appScope.launch {
             try {
                 // The patch's own init validates its macros (Patches.
@@ -516,6 +530,17 @@ fun SynthScreen(
                 }
                 showChooser = false
                 onKitUpdated(updatedKit)
+                if (toSurface) {
+                    // The pad is on disk; now the surface's own sidecar says
+                    // which pad it plays (SurfaceStore.choosePad keeps the
+                    // corners and the rest), and App opens the screen. The
+                    // SURFACE screen is not showing while SYNTH is, so nothing
+                    // else writes surface.json underneath this.
+                    withContext(Dispatchers.IO) { SurfaceStore.choosePad(e.dir, slot) }
+                    onToast(Copy.sirenToSurface(padTag(slot), name, replaced = existed))
+                    onOpenSurface()
+                    return@launch
+                }
                 // Copy.synthSent: only the REPLACE branch bins anything —
                 // `replaceAudio` moves the displaced WAV to the bin
                 // (`moveToBin`), the same fact `Copy.treated`'s "ORIGINAL
@@ -544,6 +569,7 @@ fun SynthScreen(
                 }
             } finally {
                 sendBusy = false
+                sendToSurface = false
             }
         }
     }
@@ -960,6 +986,22 @@ fun SynthScreen(
                 ) {
                     openSpread()
                 }
+                // SIREN at LOOP: land it and open the SURFACE on it - the
+                // siren-box gesture (hold, slide, let go into the echo) one
+                // tap away. Only a LOOP: a one-shot on the surface would
+                // replay its sweep at every wrap (the spec's SURFACE section).
+                if (engine == Engine.SIREN && Siren.isLoop(macros.getValue("HOLD"))) {
+                    LabButton(
+                        if (sendBusy && sendToSurface) "…" else "→ SURFACE ▸",
+                        scheme,
+                        enabled = kit != null && !sendBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = "TO SURFACE",
+                    ) {
+                        sendToSurface = true
+                        showChooser = true
+                    }
+                }
                 // RESIN, held: the sound as a keys instrument. RESIN only -
                 // it is the one engine whose held render closes its loops.
                 // Full width under SPREAD's row, the DELETED PRESETS door's shape.
@@ -1000,7 +1042,7 @@ fun SynthScreen(
         }
 
         if (showChooser) {
-            val cancelChooser = { if (!sendBusy) showChooser = false }
+            val cancelChooser = { if (!sendBusy) { showChooser = false; sendToSurface = false } }
             SlotChooserOverlay(
                 kit = kit,
                 previewColor = classColor,
@@ -1609,9 +1651,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → FORK → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1627,6 +1669,7 @@ private enum class Engine {
         TIDE -> TideVoice.entries
         GLINT -> GlintVoice.entries
         SIREN -> SirenVoice.entries
+        FORK -> ForkVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1642,6 +1685,7 @@ private enum class Engine {
         TIDE -> Tide.macrosFor(voice as TideVoice)
         GLINT -> Glint.macrosFor(voice as GlintVoice)
         SIREN -> Siren.macrosFor(voice as SirenVoice)
+        FORK -> Fork.macrosFor(voice as ForkVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1657,6 +1701,7 @@ private enum class Engine {
         TIDE -> Tide.defaults(voice as TideVoice)
         GLINT -> Glint.defaults(voice as GlintVoice)
         SIREN -> Siren.defaults(voice as SirenVoice)
+        FORK -> Fork.defaults(voice as ForkVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1672,6 +1717,7 @@ private enum class Engine {
         TIDE -> Tide.scramble(voice as TideVoice, random)
         GLINT -> Glint.scramble(voice as GlintVoice, random)
         SIREN -> Siren.scramble(voice as SirenVoice, random)
+        FORK -> Fork.scramble(voice as ForkVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1692,6 +1738,7 @@ private enum class Engine {
         TIDE -> Tide.render(voice as TideVoice, macros)
         GLINT -> Glint.render(voice as GlintVoice, macros)
         SIREN -> Siren.render(voice as SirenVoice, macros)
+        FORK -> Fork.render(voice as ForkVoice, macros)
     }
 
     /**
@@ -1712,6 +1759,8 @@ private enum class Engine {
         GLINT -> (voice as GlintVoice).drumClass
         // SIREN: a LOOP by name when HOLD is at its top, a pitched note otherwise - the one knob that picks the class, like VOX's HIT.
         SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
+        // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
+        FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -1727,6 +1776,7 @@ private enum class Engine {
         TIDE -> TidePatch(name, voice as TideVoice, macros)
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
+        FORK -> ForkPatch(name, voice as ForkVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

@@ -35,6 +35,7 @@ object InstrumentSuiteGenerator {
             "SnipSnap Harp" to InstrumentSuite::renderHarp,
             "SnipSnap Music Box" to InstrumentSuite::renderMusicBox,
             "SnipSnap Resin Pad" to InstrumentSuite::renderResinPad,
+            "SnipSnap Fork" to InstrumentSuite::renderFork,
         )
 
         var samples = 0
