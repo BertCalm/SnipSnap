@@ -98,12 +98,14 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.shell.SirenPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
 import com.snipsnap.synth.FathomPatch
@@ -121,6 +123,7 @@ import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.Siren
 import com.snipsnap.synth.SirenPatch
 import com.snipsnap.synth.SirenVoice
+import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
@@ -574,12 +577,13 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN, held ----
-    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md. Nine held
-    // zones render off the main thread, in parallel, with a progress bar
-    // the whole way (the author's call: a slow phone shows work, it does not
-    // drop zones); the package is written once every zone has landed, so a
-    // CANCEL mid-render leaves nothing on the shelf.
+    // ---- MAKE INSTRUMENT: RESIN and SIREN, held ----
+    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN) and
+    // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
+    // (SIREN). Zones render off the main thread, in parallel, with a
+    // progress bar the whole way (the author's call: a slow phone shows
+    // work, it does not drop zones); the package is written once every zone
+    // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
     var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
     var holdRelease by remember { mutableStateOf(ResinPadMaker.RELEASE.defaultFraction) }
@@ -591,7 +595,7 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
-    val holdBase = currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"
+    val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
         if (!makingInstrument) return@LaunchedEffect
@@ -605,14 +609,24 @@ fun SynthScreen(
         }
     }
 
+    // MAKE INSTRUMENT's two engines behind one shape, so the render/export
+    // orchestration below (identical for both) is written once: RESIN's
+    // spec carries an ATTACK; SIREN's LOOP render has none to carry
+    // (Keys.sirenPad's own KDoc), so [HeldSpec.Siren] simply has none.
+    fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
+        Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
+        else -> null
+    }
+
     fun previewHeld() {
-        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
-        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        if (holdDone >= 0 || holdPreviewing) return
+        val spec = heldSpec() ?: return
         holdPreviewing = true
         holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) { !isActive } }
+                val heard = withContext(Dispatchers.Default) { spec.preview { !isActive } }
                 audition(heard)
             } catch (e: CancellationException) {
                 throw e
@@ -627,11 +641,11 @@ fun SynthScreen(
     }
 
     fun makeHeld() {
-        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
+        if (holdDone >= 0 || holdPreviewing) return
         // Captured now: the sheet's own sound, before anything can move it.
-        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        val spec = heldSpec() ?: return
         val base = holdBase
-        val midis = ResinPadMaker.zoneMidis(spec)
+        val midis = spec.zoneMidis
         holdTotal = midis.size
         holdDone = 0
         holdJob = appScope.launch {
@@ -644,7 +658,7 @@ fun SynthScreen(
                         async(Dispatchers.Default) {
                             // CANCEL cancels the scope; each zone asks and stops,
                             // rather than all nine running on for seconds.
-                            val note = ResinPadMaker.renderZone(spec, midi) { !isActive }
+                            val note = spec.renderZone(midi) { !isActive }
                             withContext(Dispatchers.Main) { holdDone += 1 }
                             note
                         }
@@ -654,7 +668,7 @@ fun SynthScreen(
                 // written is worse than a whole one the player can bin.
                 val made = withContext(NonCancellable + Dispatchers.IO) {
                     val name = OneNote.freshName(instrumentsDir, base)
-                    ResinPadMaker.export(name, spec, notes, instrumentsDir)
+                    spec.export(name, notes, instrumentsDir)
                     name
                 }
                 makingInstrument = false
@@ -1002,10 +1016,13 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // RESIN, held: the sound as a keys instrument. RESIN only -
-                // it is the one engine whose held render closes its loops.
-                // Full width under SPREAD's row, the DELETED PRESETS door's shape.
-                if (engine == Engine.RESIN) {
+                // RESIN or SIREN, held: the sound as a keys instrument -
+                // the two engines whose held render closes its own loop.
+                // Full width under SPREAD's row, the DELETED PRESETS door's
+                // shape. Shown regardless of SIREN's own HOLD slider: MAKE
+                // always substitutes the loop-and-release envelope, the
+                // same way it ignores RESIN's one-shot DECAY.
+                if (engine == Engine.RESIN || engine == Engine.SIREN) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
@@ -1015,7 +1032,10 @@ fun SynthScreen(
                     ) {
                         makingInstrument = true
                     }
-                    // RESIN, droning: the sound as a breathing loop-grid track.
+                }
+                // RESIN, droning: the sound as a breathing loop-grid track.
+                // SIREN's own loop-grid door (spec, S12.3) is not built yet.
+                if (engine == Engine.RESIN) {
                     LabButton(
                         "DRONE TO LOOP ▸",
                         scheme,
@@ -1113,23 +1133,30 @@ fun SynthScreen(
             BackHandler(onBack = closeBin)
         }
 
-        if (makingInstrument && engine == Engine.RESIN) {
-            HeldInstrumentSheet(
-                heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                name = holdName,
-                attack = holdAttack,
-                release = holdRelease,
-                done = holdDone,
-                total = holdTotal,
-                previewing = holdPreviewing,
-                fillColor = classColor,
-                scheme = scheme,
-                onAttack = { holdAttack = it },
-                onRelease = { holdRelease = it },
-                onPreview = ::previewHeld,
-                onMake = ::makeHeld,
-                onCancel = ::closeHeld,
-            )
+        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN)) {
+            // Recomputed here rather than cached: cheap (a Spec is a data
+            // class, no rendering), and it must reflect whatever the panel
+            // holds right now, the same as every value below it.
+            heldSpec()?.let { spec ->
+                HeldInstrumentSheet(
+                    heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                    name = holdName,
+                    hasAttack = spec.hasAttack,
+                    attack = holdAttack,
+                    release = holdRelease,
+                    knobLabel = spec.knobLabel,
+                    done = holdDone,
+                    total = holdTotal,
+                    previewing = holdPreviewing,
+                    fillColor = classColor,
+                    scheme = scheme,
+                    onAttack = { holdAttack = it },
+                    onRelease = { holdRelease = it },
+                    onPreview = ::previewHeld,
+                    onMake = ::makeHeld,
+                    onCancel = ::closeHeld,
+                )
+            }
             BackHandler(onBack = ::closeHeld)
         }
 
@@ -1408,23 +1435,66 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN, held ----------
+// ---------- MAKE INSTRUMENT: RESIN and SIREN, held ----------
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN only): [PresetNameDialog]'s frame - scrim,
- * raised bevel, CANCEL beside the real buttons - over the two knobs a held
- * note has that a one-shot never needed, ATTACK and RELEASE, with their
- * seconds spelled out. While MAKE runs the knobs give way to [HeldProgress],
- * a bar that fills as each zone lands and the line counting them; PREVIEW's
- * one zone says RENDERING… the way the scope does. CANCEL stays live until
- * the last zone lands, and the write that follows is left to finish.
+ * MAKE INSTRUMENT's two engines behind one shape, so the render/export
+ * orchestration in [SynthScreen] (identical for both — render every zone,
+ * show progress, write the package once every zone has landed) is written
+ * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
+ * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc), so
+ * [Siren.hasAttack] is false and its slider never appears.
+ */
+private sealed interface HeldSpec {
+    val zoneMidis: List<Int>
+    val hasAttack: Boolean
+
+    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec], never the raw stepper fractions again. */
+    val knobLabel: String
+    fun renderZone(midi: Int, cancelled: () -> Boolean): KeyNote
+    fun preview(cancelled: () -> Boolean): Snip
+    fun export(name: String, notes: List<KeyNote>, destRoot: File): KeygroupProgram
+
+    class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = ResinPadMaker.zoneMidis(spec)
+        override val hasAttack get() = true
+        override val knobLabel
+            get() = "ATTACK ${ResinPadMaker.secondsLabel(spec.attackSeconds)} · " +
+                "RELEASE ${ResinPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = ResinPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = ResinPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = ResinPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    class Siren(private val spec: SirenPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = SirenPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${SirenPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi)
+        override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = SirenPadMaker.export(name, spec, notes, destRoot)
+    }
+}
+
+/**
+ * MAKE INSTRUMENT ▸'s sheet (RESIN or SIREN): [PresetNameDialog]'s frame -
+ * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
+ * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
+ * slider for an engine with none to dial (SIREN); RELEASE always shows,
+ * and [knobLabel] spells out whichever of the two apply in seconds. While
+ * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
+ * zone lands and the line counting them; PREVIEW's one zone says
+ * RENDERING… the way the scope does. CANCEL stays live until the last
+ * zone lands, and the write that follows is left to finish.
  */
 @Composable
 private fun HeldInstrumentSheet(
     heading: String,
     name: String,
+    hasAttack: Boolean,
     attack: Float,
     release: Float,
+    knobLabel: String,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -1467,14 +1537,9 @@ private fun HeldInstrumentSheet(
             if (making) {
                 HeldProgress(done, total, fillColor, scheme)
             } else {
-                MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
+                if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
                 MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
-                TapeText(
-                    "ATTACK ${ResinPadMaker.secondsLabel(ResinPadMaker.ATTACK.value(attack))} · " +
-                        "RELEASE ${ResinPadMaker.secondsLabel(ResinPadMaker.RELEASE.value(release))}",
-                    TapeType.pixelSmall,
-                    scheme.ink2.tape,
-                )
+                TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
                 if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

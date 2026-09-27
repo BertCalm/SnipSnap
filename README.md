@@ -285,6 +285,17 @@ the toast says which. Forty presets, one LOOP per voice, and
 `SynthKits.siren()` is the kit (`./gradlew :synth:generateSirenKit`).
 Design: `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md`.
 
+SIREN also holds. `MAKE INSTRUMENT ▸` on SYNTH renders it as the same
+nine-zone keys instrument RESIN's own MAKE INSTRUMENT builds, with only a
+RELEASE to dial — the LOOP render already closes on itself exactly, so
+there is no ATTACK to settle and no per-zone seam to cut. A keygroup
+layer's loop start of `0` means *no loop* rather than *loop from the
+start*, so the file is the loop rendered once and then doubled: two
+bit-identical copies, with the loop marker at the second copy's own start,
+so the player's one pass through copy one gives way to copy two repeating
+forever — the same audio the LOOP render alone produces, through a marker
+the format can express.
+
 FORK is the modal electric piano — every other engine here is a strike;
 this one is what a magnetic pickup does *after* one. A struck bar (TINE, a
 cantilever like a real tine, whose overtones sit far from the fundamental
