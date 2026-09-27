@@ -435,8 +435,17 @@ object Velocity {
      * RATCHET 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2,
      * 10456.0, 15212.1; PLATE 359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4,
      * 3568.1, 5207.0, 7589.7 — measured 2026-09-27 (RATCHET and PLATE read
-     * identically to KAZOO and REED respectively: neither has its own
-     * mechanism yet, so they still render the same bytes). CICADA's tie is
+     * identically to KAZOO and REED respectively, but not for the same
+     * reason any more: PLATE has no mechanism of its own yet, so it still
+     * renders REED's bytes outright. RATCHET now does have one — a ladder
+     * of integer harmonics, [Glint.ratchetLadder] — but this sweep pins
+     * BLOOM at 0, and BLOOM is what makes the ladder climb past its bottom
+     * rung; at BLOOM 0 the ladder is exactly one rung, equal to `kBase`,
+     * which is the same value KAZOO's own unmodulated `k` already is. Same
+     * window, same root, same `k` — same bytes, but only at BLOOM 0. Raise
+     * BLOOM and RATCHET's ladder climbs while KAZOO's own sweep moves the
+     * other way, and the two diverge; see `GlintTest.kt`'s RATCHET-specific
+     * tests and `ratchetLadder`'s own doc). CICADA's tie is
      * normal snap behaviour, not a broken knob - see `GlintTest.kt`'s
      * `PEAK sweep is monotonic` for why that gate itself is non-decreasing
      * rather than strict - and it does not threaten velocity here:

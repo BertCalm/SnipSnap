@@ -29,6 +29,19 @@ object GlintAuditionGenerator {
     /** All clips hold FOLLOW 1 and TUNE 0.5 unless a section overrides them. */
     private val BASE = mapOf("TUNE" to 0.5f, "FOLLOW" to 1f)
 
+    /**
+     * This generator is a Phase 1 artifact, captured for three voices — the
+     * class doc's "32 clips across six listening sections" is that
+     * three-voice count. `GlintVoice` has since grown to six (D2); pinned
+     * explicitly here rather than looping `GlintVoice.entries` so CICADA,
+     * RATCHET and PLATE don't spill into a set this page was never built to
+     * show. `GlintD1AuditionGenerator` is D1's own three-voice tool, built
+     * for the depth pass's own questions rather than Phase 1's; a listening
+     * set for the D2 voices, if one is wanted, is a new generator, not a
+     * loop added here.
+     */
+    private val PHASE_1_VOICES = listOf(GlintVoice.REED, GlintVoice.BOTTLE, GlintVoice.KAZOO)
+
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/glint-audition")
@@ -48,13 +61,13 @@ object GlintAuditionGenerator {
         }
 
         // A. THE THREE VOICES — each voice at its real defaults, no overrides.
-        for (voice in GlintVoice.entries) {
+        for (voice in PHASE_1_VOICES) {
             write(voice, "a_default", emptyMap())
         }
 
         // B. PEAK, THE STAR KNOB — all three voices. BLOOM held at 0 so the
         // sweep doesn't confuse the reading.
-        for (voice in GlintVoice.entries) {
+        for (voice in PHASE_1_VOICES) {
             write(voice, "b_peak_low", BASE + mapOf("PEAK" to 0.05f, "BLOOM" to 0f))
             write(voice, "b_peak_default", BASE + mapOf("BLOOM" to 0f))
             write(voice, "b_peak_high", BASE + mapOf("PEAK" to 0.95f, "BLOOM" to 0f))
@@ -80,7 +93,7 @@ object GlintAuditionGenerator {
         }
 
         // D. BODY AND THE GLASS TAIL — all three voices. BLOOM held at 0.
-        for (voice in GlintVoice.entries) {
+        for (voice in PHASE_1_VOICES) {
             write(voice, "d_body_0", BASE + mapOf("BODY" to 0f, "BLOOM" to 0f))
             write(voice, "d_body_1", BASE + mapOf("BODY" to 1f, "BLOOM" to 0f))
             write(voice, "d_glass", BASE + mapOf("BODY" to 0.9f, "DECAY" to 0.85f, "BLOOM" to 0f))

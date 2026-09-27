@@ -325,11 +325,37 @@ object Glint {
     /**
      * The integer harmonics RATCHET steps through, bottom rung first.
      *
-     * The ladder starts at the snapped base ratio and climbs by whole
-     * harmonics to `kBase * (1 + bloomAmount)`, BLOOM's extent. Every rung is
-     * an integer because "steps between fixed harmonics" is the mechanism —
-     * a fractional rung would be a glide that happens to be quantised in
-     * time, which is a different and much duller thing.
+     * Every rung above the bottom is a whole number — "steps between fixed
+     * harmonics" is the mechanism, and a fractional rung would be a glide
+     * that happens to be quantised in time, a different and much duller
+     * thing. The bottom rung is the one exception: it is
+     * [snapRatio]`(kBase)`, not `Math.round(kBase)`. Below [SNAP_FLOOR],
+     * `snapRatio` is identity, so the bottom rung stays unrounded there —
+     * the same trade [SNAP_FLOOR]'s own doc already made for [ratioFor],
+     * now honoured here too instead of walked around.
+     *
+     * Rounding the bottom unconditionally was this function's first
+     * version, and it reintroduced [SNAP_FLOOR]'s bug on a second path: two
+     * kBase values inside `[K_MIN, SNAP_FLOOR)` that differ from each other
+     * — 2.0515814 and 2.1234918, PEAK 0.02's velocity-soft and
+     * velocity-hard values — both rounded to bottom rung 2 and produced
+     * byte-identical ladders `[2, 3, 4]`. Measured before this fix, at PEAK
+     * 0.02, 0.04 and 0.06: RATCHET was the one voice where a soft and a
+     * hard render came out identical, failing `velocity always changes the
+     * render, at every PEAK`. With the bottom rung left unrounded, the same
+     * two kBase values give `[2.0515814, 3, 4]` and `[2.1234918, 3, 4]` —
+     * different bottom rungs, different renders.
+     *
+     * Above [SNAP_FLOOR] this changes nothing: [snapRatio] already rounds
+     * there, the same way `Math.round` did, so a `kBase` that arrives
+     * already snapped to an integer — every call from [synthesize] does,
+     * via [ratioFor] — produces the identical ladder either way. Measured
+     * at kBase=8 (inside the snap band): BLOOM 0.25/0.5/1 give the same
+     * rung counts and the same rungs, 8..14 / 8..20 / 8..32, before and
+     * after this change.
+     *
+     * The ladder climbs from the bottom by whole harmonics up to `kBase *
+     * (1 + bloomAmount)`, BLOOM's extent.
      *
      * Bounded by [kCeilingFor] for [GlintVoice.RATCHET], not a bare [K_MAX]:
      * the same ceiling [ratioFor] already clamped [kBase] to, so this can
@@ -340,44 +366,21 @@ object Glint {
      * value copied into a fourth place that could drift from the other
      * three.
      *
-     * Rounding to the nearest rung is not free: [snapRatio] deliberately
-     * leaves the ratio unrounded below [SNAP_FLOOR] so two velocity layers
-     * landing in the same unit interval (say 2.05 and 2.12) stay
-     * distinguishable — the exact case [SNAP_FLOOR]'s own doc records as a
-     * shipped bug once already. Rounding `kBase` to a bottom rung here
-     * undoes that below [SNAP_FLOOR] (and, symmetrically, above
-     * [SNAP_CEILING]): a ladder's rungs are integers by definition, so two
-     * kBase values in the same unit interval can land on the same bottom
-     * rung and, if BLOOM's reach does not separate their tops either,
-     * produce byte-identical ladders and renders. At BLOOM 0 this is
-     * unconditional - the ladder is exactly one rung, `round(kBase)`, so
-     * there is no top left to separate anything - and above BLOOM 0 it is a
-     * real but narrower gap: `top = kBase * (1 + bloomAmount)` is itself
-     * continuous and does sometimes separate two close kBase values into
-     * different-length ladders (see the measurement below, where it starts
-     * doing exactly that once PEAK reaches 0.1). Measured consequence and
-     * exact PEAK values in `GlintTest`'s `velocity always changes the
-     * render, at every PEAK` and this file's own ladder test — this is the
-     * ladder's resolution limit, not a defect in the rounding: structurally
-     * total at BLOOM 0, and empirically still wide enough above it to lose
-     * the exact three PEAK values measured there. Whether the fix is a
-     * frac-aware bottom rung, routing RATCHET off PEAK's velocity mapping,
-     * or something else is a design call, not resolved here.
-     *
-     * Always at least one rung, so a note shorter than one step still has a
-     * ratio to render.
+     * Always at least one rung — the bottom is added unconditionally, not
+     * only when the climb finds nothing — so a note shorter than one step
+     * still has a ratio to render.
      */
     internal fun ratchetLadder(kBase: Float, bloomAmount: Float): FloatArray {
         val kCeiling = kCeilingFor(GlintVoice.RATCHET)
-        val bottom = Math.round(kBase.coerceIn(K_MIN, kCeiling)).toFloat()
+        val bottom = snapRatio(kBase.coerceIn(K_MIN, kCeiling))
         val top = (kBase * (1f + bloomAmount)).coerceIn(K_MIN, kCeiling)
         val rungs = ArrayList<Float>()
-        var k = bottom
+        rungs.add(bottom)
+        var k = floor(bottom) + 1f
         while (k <= top && rungs.size < kCeiling.toInt()) {
             rungs.add(k)
             k += 1f
         }
-        if (rungs.isEmpty()) rungs.add(bottom)
         return rungs.toFloatArray()
     }
 

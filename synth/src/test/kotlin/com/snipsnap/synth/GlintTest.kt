@@ -808,6 +808,27 @@ class GlintTest {
     }
 
     /**
+     * Voices whose BLOOM sweeps the formant open at the attack and lets it
+     * fall back and settle near its base ratio, per the fixed [BLOOM_T60]
+     * rate — the shared assertion both BLOOM tests below apply to this
+     * group. RATCHET's ladder climbs instead of sweeping down and never
+     * settles inside a fixed t60 (see each test's own RATCHET branch for
+     * its measured numbers), so it is deliberately left out of this set
+     * rather than folded in under a weakened bar.
+     *
+     * PLATE sits here only because Task 4 hasn't given it its own formant
+     * motion yet: today it still renders through the exact same plain
+     * [BLOOM_T60] sweep as REED/BOTTLE/KAZOO/CICADA — `synthesize`'s `k`
+     * `when` only special-cases RATCHET, so PLATE falls through to the
+     * generic branch. Once PLATE couples BLOOM to the amplitude envelope
+     * instead, move it out of this set (or leave it in, if its own
+     * numbers still clear these bars) rather than assuming either answer.
+     */
+    private val BLOOM_SWEEPS_AND_SETTLES = setOf(
+        GlintVoice.REED, GlintVoice.BOTTLE, GlintVoice.KAZOO, GlintVoice.CICADA, GlintVoice.PLATE,
+    )
+
+    /**
      * Measured 2026-09-26 (Task 2, fixed BLOOM_T60 = 0.45s), still = TUNE 0.3
      * PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY 0.7 (duration 0.9044s for all three
      * voices), head/tail centroid ratio:
@@ -820,6 +841,20 @@ class GlintTest {
      * 0.45) is still ~0.94 against the old envAt(0.012, 0.06) of ~0.15.
      * Every BLOOM 1 case clears the 1.4x bar by well over 2x margin; every
      * BLOOM 0 case sits at parity (0.99-1.00), well inside the 1.2x bar.
+     * CICADA and PLATE render through this same formula (see
+     * [BLOOM_SWEEPS_AND_SETTLES]'s doc) and are not separately re-measured
+     * here; both already passed this bar before RATCHET existed to break
+     * it.
+     *
+     * RATCHET climbs instead of sweeping, so its bar is inverted — the tail
+     * must end up BRIGHTER than the attack, not darker. Measured 2026-09-27
+     * at this same still (RATCHET's kBase here is 7.0, the same reference
+     * ratio KAZOO gets at these macros, since the two share rootHz and
+     * kCeilingFor): BLOOM 1 head/tail = 0.6299082 (head 2269.1367 Hz, tail
+     * 3602.329 Hz — still climbing at the tail; see the next test's RATCHET
+     * branch for why); BLOOM 0 head/tail = 0.9929 (head 2269.1353 Hz, tail
+     * 2285.2646 Hz) — a one-rung ladder never climbs, so head and tail
+     * agree the same way every sweeping voice's own BLOOM-0 case does.
      */
     @Test
     fun `BLOOM opens the peak at the attack and lets it settle`() {
@@ -833,8 +868,25 @@ class GlintTest {
                 ).centroidHz
                 return head / tail
             }
-            assertTrue(headToTail(1f) > 1.4f, "$voice BLOOM 1 should open the head well above the tail: ${headToTail(1f)}")
-            assertTrue(headToTail(0f) < 1.2f, "$voice BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+            when {
+                voice in BLOOM_SWEEPS_AND_SETTLES -> {
+                    assertTrue(headToTail(1f) > 1.4f, "$voice BLOOM 1 should open the head well above the tail: ${headToTail(1f)}")
+                    assertTrue(headToTail(0f) < 1.2f, "$voice BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+                }
+                voice == GlintVoice.RATCHET -> {
+                    // "Ends brighter than it began" is the climbing ladder's
+                    // version of "opens at the attack and settles" — the
+                    // direction is reversed, not merely a weaker bar. See
+                    // this test's own KDoc for the measured figures behind
+                    // the two thresholds below.
+                    assertTrue(headToTail(1f) < 0.8f, "RATCHET BLOOM 1 should end brighter than it began: ${headToTail(1f)}")
+                    assertTrue(headToTail(0f) in 0.9f..1.1f, "RATCHET BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+                }
+                else -> error(
+                    "$voice has no BLOOM assertion in this test — add it to BLOOM_SWEEPS_AND_SETTLES " +
+                        "or give it its own branch, per measured numbers, not by assumption",
+                )
+            }
         }
     }
 
@@ -847,9 +899,23 @@ class GlintTest {
      * At 0.75 * 0.9044s = 0.678s, envAt(0.678, 0.45) is ~3e-5 - the sweep is
      * fully settled by five-plus t60s regardless of which BLOOM value chose
      * the (now fixed) rate, so the two tails still land within the 20% bar.
-     * This guard still matters at the new, slower rate: it is what catches a
-     * future voice-specific sweep (D2's PLATE, RATCHET) that runs so slow it
-     * never lands before the note's DECAY ends.
+     * This guard is for [BLOOM_SWEEPS_AND_SETTLES]'s voices (CICADA and
+     * PLATE included, unmeasured here for the same reason as the test
+     * above); it does not apply to RATCHET, below.
+     *
+     * This comment used to predict "a future voice-specific sweep (D2's
+     * PLATE, RATCHET) that runs so slow it never lands before the note's
+     * DECAY ends" — anticipating the shape of the problem, if not quite its
+     * mechanism. What actually happens is not a slow sweep: RATCHET's
+     * ladder is a staircase that has no reason to return to its starting
+     * value at all, and at this fixture climbs far more rungs than a
+     * ~0.9s note has time to step through. Measured 2026-09-27, kBase=7,
+     * BLOOM 1 -> bloomAmount 3 -> top 28 (a 22-rung ladder): reaching rung
+     * 28 takes 21 * RATCHET_STEP_SECONDS = 3.15s, so at this note's own
+     * 0.75x-to-1.0x-duration tail window the rung index is still moving,
+     * 4 -> 6 of 21 (k 11 -> 13), not holding. RATCHET's own tail(1) =
+     * 3605.4092 Hz vs tail(0) = 2285.5515 Hz, ratio 1.578 — nothing like
+     * the sweeping voices' <0.1 Hz drift.
      */
     @Test
     fun `BLOOM lands before the note ends, whatever it did on the way`() {
@@ -861,10 +927,34 @@ class GlintTest {
                     slice(snip, snip.durationSeconds * 0.75f, snip.durationSeconds),
                 ).centroidHz
             }
-            assertTrue(
-                kotlin.math.abs(tail(1f) - tail(0f)) < tail(0f) * 0.2f,
-                "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
-            )
+            when {
+                voice in BLOOM_SWEEPS_AND_SETTLES -> {
+                    assertTrue(
+                        kotlin.math.abs(tail(1f) - tail(0f)) < tail(0f) * 0.2f,
+                        "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
+                    )
+                }
+                voice == GlintVoice.RATCHET -> {
+                    // Not "landed": see this test's own KDoc for why a
+                    // ladder whose reach outruns the note's DECAY keeps
+                    // climbing through the tail window instead of settling
+                    // near BLOOM 0's baseline. RATCHET_STEP_SECONDS's own
+                    // doc already names the flip side of this — "short
+                    // notes render a single rung and the ladder only reads
+                    // on longer ones" — a ladder can just as easily be
+                    // *longer* than the note, which is this case. The
+                    // assertion is direction and margin instead of
+                    // "landed near baseline."
+                    assertTrue(
+                        tail(1f) > tail(0f) * 1.3f,
+                        "RATCHET's climbing ladder should still read brighter at the tail than BLOOM 0's flat baseline: ${tail(1f)} vs ${tail(0f)}",
+                    )
+                }
+                else -> error(
+                    "$voice has no BLOOM assertion in this test — add it to BLOOM_SWEEPS_AND_SETTLES " +
+                        "or give it its own branch, per measured numbers, not by assumption",
+                )
+            }
         }
     }
 
@@ -987,24 +1077,32 @@ class GlintTest {
         //   PEAK sweep BOTTLE:  792.1, 1180.9, 1529.5, 2297.0, 3445.9, 4962.1, 7215.2, 10497.0, 15259.6
         //   PEAK sweep KAZOO:   758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
         //   PEAK sweep CICADA:  3168.4, 3792.9, 4855.8, 6117.8, 6117.8, 7741.9, 10754.6, 12234.2, 15259.4
-        //   PEAK sweep RATCHET: 758.1, 1138.6, 1515.6, 2265.4, 3402.6, 4926.9, 7211.5, 10645.0, 15212.1
+        //   PEAK sweep RATCHET: 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
         //   PEAK sweep PLATE:   359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4, 3568.1, 5207.0, 7589.7
         // CICADA ties once (step 4 -> 5, both 6117.8); every other voice
         // rises at every step. All six clear non-decreasing + 3x, so PEAK
         // joins BRIGHTNESS_MACROS below.
         //
-        // RATCHET's row is re-measured from the figure this comment
-        // originally recorded (identical to KAZOO's, back when RATCHET had
-        // no mechanism of its own and rendered the same bytes). BLOOM=0
-        // here, so RATCHET's ladder never climbs past its own bottom rung
-        // (see `ratchetLadder`'s doc) - but that bottom rung is
-        // `Math.round(kBase)`, not the raw `kBase` KAZOO uses unrounded, so
-        // the two now agree only where `kBase` already lands on (or very
-        // near) an integer and drift apart by up to half an integer's worth
-        // of ratio elsewhere (steps 2, 6, 7, 8 above). End-to-end ratio is
-        // unaffected (20.1x, same as before): PEAK 0 and PEAK 1 both pin
-        // `kBase` to K_MIN and kCeilingFor exactly, which are already
-        // integers for both voices.
+        // RATCHET's row is re-measured a second time, after `ratchetLadder`
+        // stopped rounding its bottom rung with a bare `Math.round(kBase)`
+        // and started using `snapRatio(kBase)` instead (see that function's
+        // own doc). BLOOM=0 here, so RATCHET's ladder never climbs past its
+        // bottom rung, and that bottom rung is now exactly `kBase` — the
+        // same value KAZOO's own (unmodulated, BLOOM=0) `k` already is, and
+        // RATCHET shares KAZOO's window and root — so the two rows are now
+        // identical at every point, not just close. That identity is
+        // specific to BLOOM=0: raise BLOOM and the ladder climbs past its
+        // bottom rung while KAZOO's own sweep moves the other way, and the
+        // two diverge. The previous version of this row (758.1, 1138.6,
+        // 1515.6, 2265.4, 3402.6, 4926.9, 7211.5, 10645.0, 15212.1) was
+        // `Math.round(kBase)`'s rounding showing up as drift of up to half
+        // an integer's worth of ratio wherever `kBase` didn't already land
+        // on an integer — the same rounding that made RATCHET the one
+        // voice with no velocity response at PEAK 0.02-0.06 (see
+        // `velocity always changes the render, at every PEAK` and
+        // `ratchetLadder`'s doc). End-to-end ratio is unaffected either way
+        // (20.1x): PEAK 0 and PEAK 1 both pin `kBase` to K_MIN and
+        // kCeilingFor exactly, already integers for both voices.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.4f, "BLOOM" to 0f, "BODY" to 0.3f, "FOLLOW" to 1f, "DECAY" to 0.6f)
             val readings = (0..8).map { i ->
@@ -1277,8 +1375,15 @@ class GlintTest {
 
     @Test
     fun `RATCHET's steps land on integer harmonics`() {
-        // "Steps between fixed harmonics, never glides." Every step's ratio
-        // must be a whole number, or the ladder is not a ladder.
+        // "Steps between fixed harmonics, never glides." Every rung ABOVE
+        // THE BOTTOM must be a whole number, or the ladder is not a ladder.
+        // The bottom rung is the one exception: below SNAP_FLOOR it is
+        // snapRatio(kBase), left unrounded — see ratchetLadder's own KDoc
+        // for why (the velocity collision Fix 1 exists to undo). This
+        // fixture's kBase=8 is already in the snap band, so its own bottom
+        // rung is already a whole number and never exercises that
+        // exception; the second loop below adds a below-SNAP_FLOOR case
+        // that does.
         //
         // Measured 2026-09-27 at kBase=8.0 (TUNE 0.5, PEAK 0.45, FOLLOW 0.8 -
         // this test's own inputs): BLOOM 0.25 -> [8..14] (7 rungs), BLOOM 0.5
@@ -1291,6 +1396,28 @@ class GlintTest {
             assertTrue(ks.isNotEmpty(), "RATCHET ladder is empty at BLOOM $bloom")
             for (k in ks) {
                 assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k is not an integer")
+            }
+            assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
+        }
+
+        // Below SNAP_FLOOR: the bottom rung is free, not rounded. Measured
+        // 2026-09-27 at kBase=2.1234918 (PEAK 0.02, TUNE 0.5, FOLLOW 0.8 -
+        // the exact hard-velocity case `velocity always changes the
+        // render, at every PEAK` locks down for RATCHET): BLOOM 0.25 ->
+        // [2.1234918, 3] (2 rungs), BLOOM 0.5 -> [2.1234918, 3, 4, 5]
+        // (4 rungs), BLOOM 1 -> [2.1234918, 3, 4, 5, 6, 7, 8] (7 rungs) -
+        // the bottom rung stays at the unrounded kBase every time, and
+        // every rung after it is still a whole number.
+        val belowFloorKBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.02f, 0.8f)
+        for (bloom in listOf(0.25f, 0.5f, 1f)) {
+            val ks = Glint.ratchetLadder(belowFloorKBase, Dsp.lin(bloom, 0f, Glint.BLOOM_MAX))
+            assertEquals(
+                belowFloorKBase,
+                ks.first(),
+                "RATCHET's bottom rung must stay at the unrounded kBase below SNAP_FLOOR",
+            )
+            for (k in ks.drop(1)) {
+                assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k above the bottom is not an integer")
             }
             assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
         }
