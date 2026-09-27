@@ -1,7 +1,9 @@
 # SIREN — the dub siren engine
 
 **Status:** S12 built and merged (PR #348: engine, presets, tests, SYNTH
-picker, landing, testkit kit), **awaiting the audition gate**. The
+picker, landing, testkit kit), **audition gate passed** 2026-09-27: good
+across the board on the first listen, SWEEP inaudible and fixed (below),
+then confirmed on the second. S12.1 onward are open to build. The
 listening page for that gate is
 `https://claude.ai/artifact/DXEn8DC3ZkcHGzFrTP6VEz`, rendered by
 `./gradlew :synth:generateSirenAudition` (the kit as it lands, every knob
@@ -410,6 +412,8 @@ of HOLD so a 0.3 s press still lands on its note. `SirenTest` now holds
 the gesture to what the ear needs: still six semitones out at 0.3 s, and
 landed by 0.9 s. The audition page was re-rendered and republished so the
 SWEEP clips can be heard again.
+
+Second listen, same day: "Sweep is great." The gate is passed.
 
 ## Still open, not blocking
 
