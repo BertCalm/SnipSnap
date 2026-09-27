@@ -476,7 +476,7 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>SITAR is new: a steel string with a bridge that buzzes, four strings that ring in sympathy under DOUBLE, and stiffness that puts its upper partials sharp; it has no body yet because no source for one could be opened, so BODY does nothing on it.</p>
+    <p>SITAR is new: a steel string with a bridge that buzzes, four strings that ring in sympathy under DOUBLE, and stiffness that puts its upper partials sharp; the body on this page is a shape, three resonances proposed from general sitar acoustics because the one measured table is behind a paywall - it ships only if you chip it closer, and BODY stays off until then.</p>
     <p>The cards hear each axis: the jawari at three drives and a soft pluck, the sympathetic strings off and at the drone, stiffness off and at the higher candidate, then the ends of TUNE and DAMP. With the sympathetic strings on, the note runs to the end of its budget and ends on a short fade over the still-ringing drone rather than where the string stops, so a chip on the ending is about DOUBLE, not DAMP.</p>
     <p>KOTO and HARP: the same note with stiffness off and on, and they only change if you chip on as closer.</p>
   </div>
@@ -486,7 +486,7 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>FOUR QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
       <div class="ask">1 &middot; Does the bridge buzz read as a sitar, and at which drive?</div>
@@ -501,6 +501,10 @@
       <textarea id="q_stiff" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
+      <div class="ask">4 &middot; The shape body: does it read as a sitar's hollow, and at which amount?</div>
+      <textarea id="q_body" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
       <div class="ask">Anything else</div>
       <textarea id="q_else" placeholder="&hellip;"></textarea>
     </div>
@@ -512,7 +516,7 @@
 
   <div class="foot">
     RENDERED BY generatePluckAudition &middot; PHASE 3A &middot; 16-BIT 44.1 KHZ &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
   </div>
 </div>
 
@@ -538,8 +542,14 @@
       ['p3a_symp_1', 'DOUBLE 1', 'the drone, the ugly end']
     ]},
     { label: 'STIFFNESS', clips: [
-      ['p3a_stiff_off', 'OFF', 'partials on the harmonics'],
+      ['p3a_stiff_off', 'OFF', 'partials on the harmonics: within a tenth of a percent, what a real baaj string does'],
       ['p3a_stiff_high', 'HIGH', 'the tenth partial three percent sharp; with the bridge on the root reads 5.6 cents sharp']
+    ]},
+    { label: 'THE BODY, A SHAPE', key: true, clips: [
+      ['p3a_default', 'NO BODY', 'the string, as it ships'],
+      ['p3a_body_35', 'BODY .35', 'the shape body at the string\'s level'],
+      ['p3a_body_1', 'BODY 1', 'three times the string, the ugly end'],
+      ['p3a_body_35_root', 'BODY .35 AT C#3', 'the root, where the modes sit nearest the note']
     ]},
     { label: 'THE ENDS', clips: [
       ['p3a_root', 'C#3 ROOT', ''],
@@ -556,7 +566,7 @@
   ];
 
   var VOICES = [
-    { id: 'SITAR', display: 'SITAR', folder: 'SITAR', note: 'C#4', hz: '277 HZ', root: 'C#3' + DOT + '139 HZ', macros: 'DAMP .50' + DOT + 'PICK .65' + DOT + 'STRIKE .30' + DOT + 'DOUBLE .40', body: 'no body yet: no source could be opened', groups: SITAR_GROUPS },
+    { id: 'SITAR', display: 'SITAR', folder: 'SITAR', note: 'C#4', hz: '277 HZ', root: 'C#3' + DOT + '139 HZ', macros: 'DAMP .50' + DOT + 'PICK .65' + DOT + 'STRIKE .30' + DOT + 'DOUBLE .40', body: 'a shape body to audition; BODY 0 until you choose', groups: SITAR_GROUPS },
     { id: 'KOTO', display: 'KOTO', folder: 'KOTO', note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'the shipped defaults', body: 'only the stiffness changes', groups: STIFF_GROUPS },
     { id: 'HARP', display: 'HARP', folder: 'HARP', note: 'F4', hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'the shipped defaults', body: 'only the stiffness changes', groups: STIFF_GROUPS }
   ];
@@ -576,7 +586,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_jawari: '', q_symp: '', q_stiff: '', q_else: '' } };
+  var state = { overall: { q_jawari: '', q_symp: '', q_stiff: '', q_body: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -745,7 +755,7 @@
   }
 
   function paintOverall() {
-    ['q_jawari', 'q_symp', 'q_stiff', 'q_else'].forEach(function (k) {
+    ['q_jawari', 'q_symp', 'q_stiff', 'q_body', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -753,9 +763,9 @@
     });
   }
 
-  // The four answers keep a local draft as they are typed; only SAVE
+  // The five answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_jawari', 'q_symp', 'q_stiff', 'q_else'].forEach(function (k) {
+  ['q_jawari', 'q_symp', 'q_stiff', 'q_body', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -781,7 +791,7 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_jawari: state.overall.q_jawari, q_symp: state.overall.q_symp, q_stiff: state.overall.q_stiff, q_else: state.overall.q_else }
+      ? { q_jawari: state.overall.q_jawari, q_symp: state.overall.q_symp, q_stiff: state.overall.q_stiff, q_body: state.overall.q_body, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
@@ -807,7 +817,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_jawari', 'q_symp', 'q_stiff', 'q_else'].forEach(function (k) {
+      ['q_jawari', 'q_symp', 'q_stiff', 'q_body', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();

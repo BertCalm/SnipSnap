@@ -55,6 +55,10 @@ import kotlin.math.abs
  * and TUNE/DAMP at their ends), plus KOTO and HARP with the low stiffness
  * candidate against their shipped stiffness-off default - those two voices
  * already passed the Phase 2 gate and only stiffness is new to them here.
+ * It also renders the shape body candidates added for this round: BODY at
+ * the string's level (.35), at its ugly end (1), and at .35 on the root
+ * note, against the shipped no-body default - unsourced shapes, not a
+ * measurement, and off by default until the gate chips one closer.
  *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
@@ -160,6 +164,9 @@ object PluckAuditionGenerator {
         writeSitar("p3a_top", mapOf("TUNE" to 1f))
         writeSitar("p3a_thud", mapOf("DAMP" to 1f))
         writeSitar("p3a_ring", mapOf("DAMP" to 0f))
+        writeSitar("p3a_body_35", mapOf("BODY" to 0.35f))
+        writeSitar("p3a_body_1", mapOf("BODY" to 1f))
+        writeSitar("p3a_body_35_root", mapOf("TUNE" to 0f, "BODY" to 0.35f))
         for (voice in listOf(PluckVoice.KOTO, PluckVoice.HARP)) {
             val dir = File(root, voice.name)
             WavWriter.write(File(dir, "p3a_stiff_off.wav"), level(Pluck.renderWith(voice, emptyMap())), WavWriter.BitDepth.PCM_16)
