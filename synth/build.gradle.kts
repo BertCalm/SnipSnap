@@ -49,6 +49,15 @@ tasks.register<JavaExec>("generateThumpKit") {
 }
 
 /** Render the PLUCK depth audition clips and page under testkit/pluck-audition/. See PluckAuditionGenerator. */
+tasks.register<JavaExec>("generateTinesAudition") {
+    group = "distribution"
+    description = "Render the TINES sound-design audition phrases, manifest and listening page under testkit/tines-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TinesAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tines-audition")
+}
+
 tasks.register<JavaExec>("generatePluckAudition") {
     group = "distribution"
     description = "Render the PLUCK depth audition clips and listening page under testkit/pluck-audition/."

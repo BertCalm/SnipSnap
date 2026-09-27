@@ -5,6 +5,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -55,6 +56,37 @@ object Tines {
      * most of the range and above Nyquist at the top.
      */
     internal val KALIMBA_PARTIALS = floatArrayOf(1f, 6.267f, 17.548f)
+
+    /**
+     * Every voice but KALIMBA tunes continuously: TUNE 0..1 maps
+     * exponentially onto this range in Hz (ZAP's is where its drop lands).
+     * One table so anything that has to play a voice at a pitch - the
+     * audition's phrases - inverts the same numbers the voice renders with
+     * ([tuneFor]), rather than a copy of them.
+     */
+    private val CARRIER_HZ: Map<TinesVoice, Pair<Float, Float>> = mapOf(
+        TinesVoice.BELL to (220f to 740f),
+        TinesVoice.CHIME to (520f to 1500f),
+        TinesVoice.BLOCK to (380f to 950f),
+        TinesVoice.ZAP to (55f to 120f),
+        TinesVoice.TOY to (300f to 900f),
+    )
+
+    /** [voice]'s carrier (ZAP: landing) frequency at [tune]. Not KALIMBA, which snaps: see [frequencyFor]. */
+    internal fun carrierFor(voice: TinesVoice, tune: Float): Float {
+        val (lo, hi) = CARRIER_HZ[voice] ?: error("$voice snaps TUNE to semitones; use frequencyFor")
+        return Dsp.expMap(tune, lo, hi)
+    }
+
+    /** The TUNE that plays [voice] at [hz], clamped to its range: [carrierFor]'s inverse. */
+    internal fun tuneFor(voice: TinesVoice, hz: Float): Float {
+        val (lo, hi) = CARRIER_HZ[voice] ?: error("$voice snaps TUNE to semitones; use frequencyFor")
+        return (ln((hz / lo).toDouble()) / ln((hi / lo).toDouble())).toFloat().coerceIn(0f, 1f)
+    }
+
+    /** [voice]'s own continuous TUNE range in Hz, for anything that has to stay inside it. */
+    internal fun carrierRange(voice: TinesVoice): Pair<Float, Float> =
+        CARRIER_HZ[voice] ?: error("$voice snaps TUNE to semitones; use frequencyFor")
 
     /** The snapped note KALIMBA's TUNE lands on; every other TINES voice has a continuous carrier range. */
     fun frequencyFor(voice: TinesVoice, tune: Float): Float =
@@ -196,7 +228,7 @@ object Tines {
     // ---------- voices ----------
 
     private fun bell(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 220f, 740f)
+        val carrier = carrierFor(TinesVoice.BELL, m.getValue("TUNE"))
         val ratio = snapRatio(m.getValue("RATIO"))
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.8f, 5f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.1f)
@@ -219,7 +251,7 @@ object Tines {
     }
 
     private fun chime(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 520f, 1500f)
+        val carrier = carrierFor(TinesVoice.CHIME, m.getValue("TUNE"))
         val shimmer = m.getValue("SHIMMER")
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.6f, 4f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.2f, 0.9f)
@@ -238,7 +270,7 @@ object Tines {
     }
 
     private fun block(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 380f, 950f)
+        val carrier = carrierFor(TinesVoice.BLOCK, m.getValue("TUNE"))
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.4f, 2.2f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.045f, 0.16f)
 
@@ -251,7 +283,7 @@ object Tines {
     }
 
     private fun zap(m: Map<String, Float>, rate: Int): FloatArray {
-        val endHz = Dsp.expMap(m.getValue("TUNE"), 55f, 120f)
+        val endHz = carrierFor(TinesVoice.ZAP, m.getValue("TUNE"))
         val dropMult = Dsp.lin(m.getValue("DROP"), 4f, 16f)
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.5f, 3f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.35f)
@@ -280,7 +312,7 @@ object Tines {
     }
 
     private fun toy(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 300f, 900f)
+        val carrier = carrierFor(TinesVoice.TOY, m.getValue("TUNE"))
         val wobble = m.getValue("WOBBLE")
         val index = Dsp.lin(m.getValue("BRIGHT"), 1f, 4.5f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.4f)
