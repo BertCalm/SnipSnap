@@ -276,7 +276,12 @@ object Velocity {
         // Velocity scales the macro toward its floor, never above what the
         // preset asked for: a preset's brightest is still its own ceiling.
         val scaled = asked * Dsp.lin(v, VELOCITY_FLOOR_RATIO, 1f)
-        return patch.withMacros(patch.macros + (spec.name to scaled)).render()
+        val moved = patch.macros + (spec.name to scaled)
+        // PLUCK also takes the velocity as a number: the sitar's bridge
+        // limiter reads it (Pluck.render's KDoc). validateMacros rejects any
+        // key macrosFor does not list, so it cannot travel in the map.
+        if (patch is PluckPatch) return Pluck.render(patch.voice, moved, velocity = v)
+        return patch.withMacros(moved).render()
     }
 
     /**
