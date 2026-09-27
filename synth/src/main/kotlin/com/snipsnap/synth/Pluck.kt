@@ -102,6 +102,14 @@ object Pluck {
      * gate's loop/pick brightening (loopHz 9000, pick 3000-14000) pushing
      * `highRatio` over the classifier's SNARE threshold - so it is left
      * failing rather than loosened or masked by a BODY this low.
+     *
+     * DOUBLE means something different on SITAR than on the other four
+     * voices: everywhere else it's the 12-string trick, a second detuned
+     * string under the first (see [synthesize]'s DOUBLE block). On SITAR
+     * it rings the tarab - four sympathetic strings under the fret at the
+     * played note's own octave-below/fifth/octave/octave-and-a-fifth
+     * (see [sympathetic], [SYMPATHETIC_RATIOS]) - because a sitar has no
+     * second playing string to detune; DOUBLE 1 is a deliberate drone.
      */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.NYLON -> listOf(
@@ -226,14 +234,33 @@ object Pluck {
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
         val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position, stiffness = stiffness, jawari = jawari)
         if (double > 0.01f) {
-            // The 12-string trick: a second, slightly sharp string under the
-            // first. Detune grows with the macro so it goes chorus -> honky.
-            val det = ks(
-                freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position, stiffness = stiffness,
-            )
-            val g = double * 0.7f
-            for (i in out.indices) out[i] += det[i] * g
+            if (voice == PluckVoice.SITAR) {
+                // The tarab: strings under the frets that ring in sympathy with
+                // the played note. With no scale to tune them to, they take the
+                // note's own series (spec, "Sympathetic strings under DOUBLE").
+                // These loops are fed by the main string's own `out` before
+                // this loop's `+=` alters it: `sympathetic` copies nothing, so
+                // it reads `input[i]` sample by sample as it goes, and later
+                // sympathetic loops in this same pass are fed by the string
+                // plus whatever earlier ones already added. Deterministic
+                // (the ratios are fixed order), and acceptable: the tarab
+                // strings sit under and against each other physically too.
+                val g = SYMPATHETIC_LEVEL * double
+                for (ratio in SYMPATHETIC_RATIOS) {
+                    val s = sympathetic(out, freq * ratio, rate)
+                    for (i in out.indices) out[i] += g * s[i]
+                }
+            } else {
+                // The 12-string trick: a second, slightly sharp string under the
+                // first. Detune grows with the macro so it goes chorus -> honky.
+                val det = ks(
+                    freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
+                    Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position,
+                    stiffness = stiffness,
+                )
+                val g = double * 0.7f
+                for (i in out.indices) out[i] += det[i] * g
+            }
         }
         return trimToDecay(withBody(out, voice, body, rate), rate)
     }
@@ -735,6 +762,48 @@ object Pluck {
                 y -= dc
             }
             out[i] += fb * y
+        }
+        return out
+    }
+
+    /** The tarab's ratios to the played note: the octave below, the fifth, the octave, the octave and a fifth. */
+    internal val SYMPATHETIC_RATIOS = floatArrayOf(0.5f, 1.5f, 2f, 3f)
+    /** How much of the main string reaches each sympathetic loop, sample by sample, the way the bridge transmits it. */
+    internal const val SYMPATHETIC_COUPLING = 0.05f
+    /** Their sum enters the output at this times DOUBLE, so DOUBLE 1 is a drone on purpose. */
+    internal const val SYMPATHETIC_LEVEL = 0.5f
+    private const val SYMPATHETIC_LOOP_HZ = 4000f
+    private const val SYMPATHETIC_FEEDBACK = 0.999f
+
+    /**
+     * One sympathetic string: a Karplus-Strong loop at [hz] with no burst of
+     * its own, fed continuously by [input] at [SYMPATHETIC_COUPLING], ringing
+     * with [SYMPATHETIC_FEEDBACK] under a darker low-pass. Tuned the way [ks]
+     * is (integer delay, fractional allpass, the low-pass's delay in the
+     * budget), so the loop rings at the ratio it was given.
+     */
+    private fun sympathetic(input: FloatArray, hz: Float, rate: Int): FloatArray {
+        val filterA = 1.0 - exp(-2.0 * PI * min(SYMPATHETIC_LOOP_HZ, rate * 0.45f) / rate)
+        val poleR = 1.0 - filterA
+        val w = 2.0 * PI * hz / rate
+        val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
+        val exact = (rate / hz) - (-filterPhase / w) - 0.5
+        require(exact >= MIN_LOOP_SAMPLES) { "sympathetic loop at $hz Hz is too short ($exact samples)" }
+        val n = floor(exact).toInt()
+        val frac = (exact - n).toFloat()
+        val a = (1f - frac) / (1f + frac)
+        var apX1 = 0f
+        var apY1 = 0f
+        val lp = Dsp.OnePole(rate)
+        val out = FloatArray(input.size)
+        for (i in input.indices) {
+            val fed = SYMPATHETIC_COUPLING * input[i]
+            if (i <= n) { out[i] = fed; continue }
+            val d = 0.5f * (out[i - n] + out[i - n - 1])
+            val tuned = a * (d - apY1) + apX1
+            apX1 = d
+            apY1 = tuned
+            out[i] = fed + SYMPATHETIC_FEEDBACK * lp.lp(tuned, SYMPATHETIC_LOOP_HZ)
         }
         return out
     }

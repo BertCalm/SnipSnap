@@ -283,6 +283,32 @@ class PluckTest {
     }
 
     @Test
+    fun `DOUBLE on the sitar is the sympathetic strings, not the detune`() {
+        val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
+        val dry = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f))
+        val wet = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 1f))
+        // The octave loop rings at 2·f0 for the whole note; measure late,
+        // past the string's own second harmonic's loudest moment.
+        val late = 0.6f
+        fun octaveEnergy(s: com.snipsnap.audio.Snip): Double {
+            val from = (late * s.sampleRate).toInt()
+            val slice = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
+            return PluckSpectra.toneEnergy(slice, 2f * f0, 0.25f)
+        }
+        val gain = 10.0 * kotlin.math.log10(octaveEnergy(wet) / (octaveEnergy(dry) + 1e-12))
+        println("SITAR octave energy late in the note, DOUBLE 1 over DOUBLE 0: $gain dB")
+        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the octave by 6 dB late in the note, got $gain dB")
+        assertTrue(!dry.samples.contentEquals(wet.samples), "DOUBLE 1 must change the render")
+    }
+
+    @Test
+    fun `DOUBLE below its threshold renders the sitar string alone`() {
+        val a = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f)).samples
+        val b = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0.005f)).samples
+        assertTrue(a.contentEquals(b), "DOUBLE under 0.01 should render nothing extra")
+    }
+
+    @Test
     fun `a loop length below the KS minimum fails loudly instead of going unstable`() {
         // The real voice table never gets close to this (measured minimum
         // `exact` across every voice x TUNE semitone x DAMP is 175.93
