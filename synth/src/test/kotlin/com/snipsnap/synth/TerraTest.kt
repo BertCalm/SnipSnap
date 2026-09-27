@@ -13,7 +13,10 @@ class TerraTest {
     fun `render is bit-for-bit deterministic`() {
         val a = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
         val b = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
-        assertEquals(a, b)
+        // Snip.equals deliberately compares format and length only, not
+        // sample contents (Cleanup.kt's own KDoc on it) - contentEquals is
+        // what actually proves bit-for-bit here.
+        assertTrue(a.samples.contentEquals(b.samples))
     }
 
     @Test
@@ -60,7 +63,7 @@ class TerraTest {
     fun `resonant cavity render is bit-for-bit deterministic`() {
         val a = Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp)
         val b = Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp)
-        assertEquals(a, b)
+        assertTrue(a.samples.contentEquals(b.samples))
     }
 
     @Test
@@ -81,13 +84,15 @@ class TerraTest {
     )
 
     // Cajón Low Port, S5 (Pad 04): fundamental 60Hz, hardness 0.20, no droop,
-    // CavityMix 0.70, RattleAmount 0.15 ("slight snare rattle").
+    // CavityMix 0.70, RattleAmount 0.15 ("slight snare rattle") - S2.4's
+    // "rattle" becomes this engine's BUZZ macro (see macrosFor's own KDoc
+    // for why it isn't called RATTLE).
     private val cajonLowPort = mapOf(
         "TUNE" to 0.1516f,
         "FORCE" to 0.20f,
         "DROOP" to 0f,
         "CAVITY" to 0.70f,
-        "RATTLE" to 0.15f,
+        "BUZZ" to 0.15f,
     )
 
     @Test
@@ -117,16 +122,16 @@ class TerraTest {
     }
 
     @Test
-    fun `rattle adds high-frequency energy`() {
+    fun `buzz adds high-frequency energy`() {
         val dry = FeatureExtractor.extract(
-            Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort + ("RATTLE" to 0f)),
+            Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort + ("BUZZ" to 0f)),
         )
-        val rattled = FeatureExtractor.extract(
-            Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort + ("RATTLE" to 1f)),
+        val buzzed = FeatureExtractor.extract(
+            Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort + ("BUZZ" to 1f)),
         )
         assertTrue(
-            rattled.centroidHz > dry.centroidHz,
-            "RATTLE should raise the centroid: dry=${dry.centroidHz} rattled=${rattled.centroidHz}",
+            buzzed.centroidHz > dry.centroidHz,
+            "BUZZ should raise the centroid: dry=${dry.centroidHz} buzzed=${buzzed.centroidHz}",
         )
     }
 }

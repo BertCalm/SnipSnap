@@ -58,11 +58,16 @@ object Terra {
             // into the strike, 0 dry .. 1 full coupling. The point of this
             // topology, so it defaults on rather than off.
             MacroSpec("CAVITY", 0.5f),
-            // RATTLE: parasitic contact buzz (S2.4) - a loose boundary or
-            // snare rattling against the body. Same name and meaning as
-            // Thump.snare's own RATTLE. Off by default: most cavity presets
-            // (Udu) don't want it, only a rattly cajón does.
-            MacroSpec("RATTLE", 0f),
+            // BUZZ: parasitic contact buzz (S2.4) - a loose boundary rattling
+            // against the body, amplitude-gated noise above a threshold.
+            // Not called RATTLE: Thump.snare's RATTLE is a decay-TIME control
+            // (a multiplier on how long the wires ring), a different axis
+            // entirely - this is the same shape as Tines.kalimba's own BUZZ
+            // (threshold-gated noise scaled by the excess), just a new
+            // per-engine threshold/gain rather than a shared implementation.
+            // Off by default: most cavity presets (Udu) don't want it, only
+            // a rattly cajón does.
+            MacroSpec("BUZZ", 0f),
         )
     }
 
@@ -76,7 +81,7 @@ object Terra {
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE, same contract as
         // every other engine, so the exciter's raised-cosine edge and (on
-        // RESONANT_CAVITY) the cavity's tanh saturator and the rattle
+        // RESONANT_CAVITY) the cavity's tanh saturator and the buzz
         // threshold all fold down above 22.05kHz instead of aliasing into
         // the audible band - the source spec's own reference code ran both
         // of those nonlinear stages straight at 44.1kHz with no oversample.
@@ -116,11 +121,11 @@ object Terra {
     private const val CAVITY_DRIVE = 1.15f
 
     // Parasitic contact buzz (S2.4): only the part of the signal above this
-    // threshold rattles, scaled by RATTLE. Numbers carried over from the
+    // threshold rattles, scaled by BUZZ. Numbers carried over from the
     // spec's own reference (its theta_thresh/K_rattle), which had no stated
     // derivation either.
-    private const val RATTLE_THRESHOLD = 0.12f
-    private const val RATTLE_GAIN = 0.45f
+    private const val BUZZ_THRESHOLD = 0.12f
+    private const val BUZZ_GAIN = 0.45f
 
     private const val TWO_PI = (2.0 * Math.PI).toFloat()
 
@@ -214,7 +219,7 @@ object Terra {
         val position = m.getValue("STRIKE")
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
         val cavityMix = m.getValue("CAVITY")
-        val rattleAmount = m.getValue("RATTLE")
+        val buzzAmount = m.getValue("BUZZ")
 
         val baseModes = CAVITY_RATIOS.indices.map { i ->
             val gamma = 1f + i * CAVITY_GAMMA_STEP
@@ -225,7 +230,7 @@ object Terra {
         val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, hardness, frames, rate)
 
         val cavity = Dsp.Biquad().apply { bandpass(CAVITY_FREQ_HZ, CAVITY_Q, rate) }
-        val rattleNoise = Dsp.Noise(13)
+        val buzzNoise = Dsp.Noise(13)
         val out = FloatArray(frames)
         for (i in out.indices) {
             var sample = raw[i]
@@ -236,11 +241,11 @@ object Terra {
                 sample = sample * (1f - cavityMix) + cavitySat * cavityMix
             }
             // Parasitic contact buzz (S2.4): only what clears the threshold
-            // rattles, scaled by RATTLE.
-            if (rattleAmount > 0.001f) {
+            // rattles, scaled by BUZZ.
+            if (buzzAmount > 0.001f) {
                 val absS = abs(sample)
-                if (absS > RATTLE_THRESHOLD) {
-                    sample += (absS - RATTLE_THRESHOLD) * rattleNoise.next() * rattleAmount * RATTLE_GAIN
+                if (absS > BUZZ_THRESHOLD) {
+                    sample += (absS - BUZZ_THRESHOLD) * buzzNoise.next() * buzzAmount * BUZZ_GAIN
                 }
             }
             out[i] = sample
