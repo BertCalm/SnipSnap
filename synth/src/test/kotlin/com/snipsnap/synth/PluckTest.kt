@@ -310,6 +310,56 @@ class PluckTest {
     }
 
     @Test
+    fun `the scale tuning rings where the note has nothing`() {
+        // The series tuning (the shipped default) coincides with the note's
+        // own partials, so it never proves audibility where the string has
+        // no energy. The scale tuning's ratios (9/8, 5/4, 4/3, 5/3) do not
+        // sit on the note's series - the major third and the sixth below
+        // are the clearest of those to measure, since neither is anywhere
+        // near a harmonic of f0.
+        val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        fun renderAt(double: Float, sympathetic: Pluck.Sympathetic?): Snip {
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DOUBLE" to double), rate, sympatheticOverride = sympathetic)
+            return Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+        }
+        val dry = renderAt(0f, Pluck.SYMPATHETIC_SCALE)
+        val scale = renderAt(1f, Pluck.SYMPATHETIC_SCALE)
+        val series = renderAt(1f, Pluck.SYMPATHETIC_SERIES)
+        println(
+            "SITAR scale-tuning renders: dry ${dry.durationSeconds} s, scale ${scale.durationSeconds} s, " +
+                "series ${series.durationSeconds} s",
+        )
+
+        val late = 0.3f
+        fun energyAt(s: Snip, hz: Float): Double {
+            val from = (late * s.sampleRate).toInt()
+            require(s.frameCount - from >= (0.25f * s.sampleRate).toInt()) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the 0.25 s window" }
+            val slice = Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
+            return PluckSpectra.toneEnergy(slice, hz, 0.25f)
+        }
+
+        val thirdHz = 5f / 4f * f0
+        val sixthHz = 5f / 3f * f0
+
+        val thirdOverDry = 10.0 * kotlin.math.log10(energyAt(scale, thirdHz) / (energyAt(dry, thirdHz) + 1e-12))
+        println("SITAR scale tuning energy at the major third, in the 0.3-0.55 s window, over the dry string: $thirdOverDry dB")
+        assertTrue(thirdOverDry >= 10.0, "the scale tuning should ring the major third by 10 dB over the dry string, got $thirdOverDry dB")
+
+        val sixthOverDry = 10.0 * kotlin.math.log10(energyAt(scale, sixthHz) / (energyAt(dry, sixthHz) + 1e-12))
+        println("SITAR scale tuning energy at the sixth, in the 0.3-0.55 s window, over the dry string: $sixthOverDry dB")
+        assertTrue(sixthOverDry >= 10.0, "the scale tuning should ring the sixth by 10 dB over the dry string, got $sixthOverDry dB")
+
+        val thirdOverSeries = 10.0 * kotlin.math.log10(energyAt(scale, thirdHz) / (energyAt(series, thirdHz) + 1e-12))
+        println("SITAR scale tuning energy at the major third, over the series tuning at DOUBLE 1: $thirdOverSeries dB")
+        assertTrue(thirdOverSeries >= 6.0, "the scale tuning should ring the major third by 6 dB over the series tuning, where the series has nothing, got $thirdOverSeries dB")
+
+        val sixthOverSeries = 10.0 * kotlin.math.log10(energyAt(scale, sixthHz) / (energyAt(series, sixthHz) + 1e-12))
+        println("SITAR scale tuning energy at the sixth, over the series tuning at DOUBLE 1: $sixthOverSeries dB")
+        assertTrue(sixthOverSeries >= 6.0, "the scale tuning should ring the sixth by 6 dB over the series tuning, where the series has nothing, got $sixthOverSeries dB")
+    }
+
+    @Test
     fun `DOUBLE below its threshold renders the sitar string alone`() {
         val a = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f)).samples
         val b = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0.005f)).samples

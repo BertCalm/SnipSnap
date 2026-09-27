@@ -177,4 +177,16 @@ class TuningAccuracyTest {
             assertTrue(err <= 5.0, "SITAR semitone $semi at DOUBLE 1 is $err cents off (want $want, got $measured)")
         }
     }
+
+    @Test
+    fun `the scale tuning at DOUBLE 1 keeps every sitar note within five cents`() {
+        for (semi in 0..Pluck.TUNE_SEMITONES) {
+            val macro = semi.toFloat() / Pluck.TUNE_SEMITONES
+            val snip = Pluck.renderWith(PluckVoice.SITAR, mapOf("TUNE" to macro, "DOUBLE" to 1f), sympathetic = Pluck.SYMPATHETIC_SCALE)
+            val want = Pluck.frequencyFor(PluckVoice.SITAR, semi)
+            val measured = measuredHz(snip, want)
+            val err = abs(cents(measured, want.toDouble()))
+            assertTrue(err <= 5.0, "SITAR semitone $semi at DOUBLE 1 with the scale tuning is $err cents off (want $want, got $measured)")
+        }
+    }
 }
