@@ -68,7 +68,7 @@ tail, the decay-following length and the 4 s ceiling are untouched.
 | ring | 1.4 | a sitar sustains longer than a koto; HARP is 1.3 |
 | STRIKE default | 0.30 | plucked nearer the bridge than the guitar's quarter |
 | DOUBLE default | 0.40 | the sympathetic strings are present by default |
-| DAMP default | 0.35 | long, but not the ceiling |
+| DAMP default | 0.50 | a 1.3 s budget: the sympathetic strings ring to the end of it, and a longer default reads as a loop to the classifier (Task 4 ruling) |
 | PICK default | 0.65 | bright |
 | BODY default | placeholder until the gate, written as such in code |
 | stiffness | chosen at the gate between two computed candidates (see Dispersion) |

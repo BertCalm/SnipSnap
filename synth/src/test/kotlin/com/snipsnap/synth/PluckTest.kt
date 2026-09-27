@@ -287,17 +287,21 @@ class PluckTest {
         val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
         val dry = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f))
         val wet = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 1f))
-        // The octave loop rings at 2·f0 for the whole note; measure late,
-        // past the string's own second harmonic's loudest moment.
-        val late = 0.6f
-        fun octaveEnergy(s: com.snipsnap.audio.Snip): Double {
+        // The drone loop rings at 0.5·f0 for the whole note - the octave
+        // below, something the dry string cannot make at any time, no
+        // matter when it's measured. So the window sits where both
+        // renders exist: the dry render at DAMP 0.5 is decay-limited to
+        // about 0.56 s, while the wet one runs the full 1.3 s budget.
+        val late = 0.3f
+        fun droneEnergy(s: com.snipsnap.audio.Snip): Double {
             val from = (late * s.sampleRate).toInt()
+            require(s.frameCount > from) { "render ends at ${s.frameCount / s.sampleRate.toFloat()} s, before the $late s window" }
             val slice = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
-            return PluckSpectra.toneEnergy(slice, 2f * f0, 0.25f)
+            return PluckSpectra.toneEnergy(slice, 0.5f * f0, 0.25f)
         }
-        val gain = 10.0 * kotlin.math.log10(octaveEnergy(wet) / (octaveEnergy(dry) + 1e-12))
-        println("SITAR octave energy late in the note, DOUBLE 1 over DOUBLE 0: $gain dB")
-        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the octave by 6 dB late in the note, got $gain dB")
+        val gain = 10.0 * kotlin.math.log10(droneEnergy(wet) / (droneEnergy(dry) + 1e-12))
+        println("SITAR drone energy at half the note, late in the note, DOUBLE 1 over DOUBLE 0: $gain dB")
+        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the drone at half the note by 6 dB late in the note, got $gain dB")
         assertTrue(!dry.samples.contentEquals(wet.samples), "DOUBLE 1 must change the render")
     }
 

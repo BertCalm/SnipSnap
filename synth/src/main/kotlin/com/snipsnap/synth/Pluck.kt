@@ -134,8 +134,11 @@ object Pluck {
         // strings present by default. BODY is 0 and inert on this voice: the
         // research found no reachable body measurement (research note
         // 2026-09-26), so bodyFor(SITAR) is empty until a source is read.
+        // DAMP 0.5 gives a default budget of about 1.3 s, under the
+        // classifier's 1.5 s loop gate - the sympathetic strings pushed the
+        // old 0.35 default past it (1.82 s, read as LOOP; Task 4 ruling).
         PluckVoice.SITAR -> listOf(
-            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.35f), MacroSpec("PICK", 0.65f),
+            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.65f),
             MacroSpec("STRIKE", 0.3f), MacroSpec("BODY", 0f), MacroSpec("DOUBLE", 0.4f),
         )
     }
@@ -773,7 +776,7 @@ object Pluck {
     /** Their sum enters the output at this times DOUBLE, so DOUBLE 1 is a drone on purpose. */
     internal const val SYMPATHETIC_LEVEL = 0.5f
     private const val SYMPATHETIC_LOOP_HZ = 4000f
-    private const val SYMPATHETIC_FEEDBACK = 0.999f
+    private const val SYMPATHETIC_FEEDBACK = 0.995f
 
     /**
      * One sympathetic string: a Karplus-Strong loop at [hz] with no burst of
@@ -781,6 +784,12 @@ object Pluck {
      * with [SYMPATHETIC_FEEDBACK] under a darker low-pass. Tuned the way [ks]
      * is (integer delay, fractional allpass, the low-pass's delay in the
      * budget), so the loop rings at the ratio it was given.
+     *
+     * A tarab rings long, not forever: [SYMPATHETIC_FEEDBACK] at 0.995 is a
+     * decay of about five seconds at C#4's fundamental and ten an octave
+     * below, and the 4 kHz loop low-pass shortens the partials further. At
+     * 0.999 the loops held the render above the trim threshold to the end
+     * of the string's own budget.
      */
     private fun sympathetic(input: FloatArray, hz: Float, rate: Int): FloatArray {
         val filterA = 1.0 - exp(-2.0 * PI * min(SYMPATHETIC_LOOP_HZ, rate * 0.45f) / rate)
