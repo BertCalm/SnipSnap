@@ -622,4 +622,16 @@ class PluckTest {
             )
         }
     }
+
+    @Test
+    fun `every voice renders deterministically at the oversampled rate`() {
+        // The audition fingerprints (plan 2026-09-26-pluck-sitar.md, Task 2)
+        // only mean something if two renders of the same voice agree.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (voice in PluckVoice.entries) {
+            val a = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
+            val b = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
+            assertTrue(a.contentEquals(b), "$voice is not deterministic")
+        }
+    }
 }

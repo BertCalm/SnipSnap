@@ -180,7 +180,13 @@ object Pluck {
      * real-time duration, so the string's pitch and decay are unaffected -
      * only the resolution of the loop and its exciter's low-pass changes.
      */
-    internal fun synthesize(voice: PluckVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(
+        voice: PluckVoice,
+        macros: Map<String, Float>,
+        rate: Int,
+        velocity: Float = 1f,
+        stiffnessOverride: Float? = null,
+    ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -190,6 +196,7 @@ object Pluck {
         val double = m.getValue("DOUBLE")
         val body = Dsp.lin(m.getValue("BODY"), 0f, BODY_MAX)
         val position = Dsp.expMap(m.getValue("STRIKE"), STRIKE_BRIDGE, STRIKE_CENTRE)
+        val stiffness = stiffnessOverride ?: stiffnessFor(voice)
 
         // The body characters. loopHz is the low-pass inside the feedback
         // loop (what makes a kalimba woody and a harp glassy); pickLo/pickHi
@@ -215,13 +222,13 @@ object Pluck {
         // muted pluck stays a short file and a DAMP 0 harp gets its ring.
         val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
-        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position, stiffness = stiffness)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
             // first. Detune grows with the macro so it goes chorus -> honky.
             val det = ks(
                 freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position,
+                Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position, stiffness = stiffness,
             )
             val g = double * 0.7f
             for (i in out.indices) out[i] += det[i] * g
@@ -315,6 +322,22 @@ object Pluck {
 
     /** BODY 1 is three times the string's RMS - the spike's "dominant", which stays reachable (spec, "Macros"). */
     internal const val BODY_MAX = 3f
+
+    /**
+     * Stiffness allpass coefficients (see [ks]). SITAR's two candidates put
+     * the tenth partial about 1 % and about 3 % sharp of harmonic, found by
+     * StiffnessTest's probe, not by hand; the low one ships until the gate
+     * chooses. KOTO and HARP carry zero: both passed a Phase 2 gate and do
+     * not change unheard (the audition offers them the low candidate).
+     */
+    internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 1.00 % sharp
+    internal const val SITAR_STIFFNESS_HIGH = -0.952f  // measured: tenth partial 2.96 % sharp
+    internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_LOW
+
+    internal fun stiffnessFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.SITAR -> SITAR_STIFFNESS
+        PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
+    }
 
     /**
      * The fixed body of each voice, in absolute Hz. Every row is a confirmed
@@ -479,6 +502,13 @@ object Pluck {
      * printed against this function's own formula, not estimated; BANJO,
      * at 196 Hz, now has the shortest loop of the remaining voices), so
      * there is no reachable call site to assert against otherwise.
+     *
+     * [stiffness] is a first-order allpass coefficient in (-1, 0]; 0 is no
+     * allpass and the Phase 2 loop exactly. A negative value delays low
+     * partials more than high ones so the upper partials sit sharp of
+     * harmonic, the stiff-string law `n*sqrt(1 + B*n^2)` with B rising as
+     * the coefficient falls. Its phase delay at the fundamental is
+     * subtracted from the loop length so the note stays in tune.
      */
     internal fun ks(
         freq: Float,
@@ -489,7 +519,9 @@ object Pluck {
         seed: Int,
         rate: Int,
         position: Float = 0f,
+        stiffness: Float = 0f,
     ): FloatArray {
+        require(stiffness > -1f && stiffness <= 0f) { "stiffness must be in (-1, 0], got $stiffness" }
         val loopHz = bodyLoopHz * Dsp.lin(1f - damp, 0.35f, 1.6f)
         val fb = Dsp.lin(1f - damp, 0.94f, 0.998f)
 
@@ -542,7 +574,15 @@ object Pluck {
         val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
         val filterDelay = -filterPhase / w
 
-        val exact = (rate / freq) - filterDelay - 0.5
+        // The stiffness allpass H(z) = (c + z⁻¹) / (1 + c·z⁻¹): its phase at the
+        // fundamental is part of the loop's delay, the same way the low-pass's
+        // is, so it enters the budget here and the fundamental stays put.
+        val stiffDelay = if (stiffness != 0f) {
+            val c = stiffness.toDouble()
+            val phase = atan2(-sin(w), c + cos(w)) - atan2(-c * sin(w), 1.0 + c * cos(w))
+            -phase / w
+        } else 0.0
+        val exact = (rate / freq) - filterDelay - stiffDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -573,6 +613,8 @@ object Pluck {
         val a = (1f - frac) / (1f + frac)
         var apX1 = 0f
         var apY1 = 0f
+        var stX1 = 0f
+        var stY1 = 0f
 
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(n + 2))
 
@@ -625,7 +667,13 @@ object Pluck {
             val tuned = a * (d - apY1) + apX1
             apX1 = d
             apY1 = tuned
-            out[i] += fb * loopLp.lp(tuned, loopHz)
+            val stiff = if (stiffness != 0f) {
+                val s = stiffness * (tuned - stY1) + stX1
+                stX1 = tuned
+                stY1 = s
+                s
+            } else tuned
+            out[i] += fb * loopLp.lp(stiff, loopHz)
         }
         return out
     }

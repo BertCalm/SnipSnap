@@ -32,6 +32,28 @@ internal object PluckSpectra {
         return h1 / (rest + 1e-12)
     }
 
+    /**
+     * The frequency of the strongest component near [nearHz]: a Goertzel
+     * scan over ±[spanFraction] of it in [steps] steps, over [seconds] from
+     * [fromSec] into the buffer (past the attack). Resolution is
+     * 2·spanFraction/steps of the guess — 0.05 % at the defaults, under a
+     * cent — which is enough to read a partial's sharpness in percent.
+     */
+    fun peakHz(x: FloatArray, rate: Int, nearHz: Float, spanFraction: Double = 0.06, steps: Int = 240, fromSec: Float = 0.05f, seconds: Float = 0.25f): Double {
+        val from = (fromSec * rate).toInt().coerceIn(0, x.size)
+        val n = min(x.size - from, (seconds * rate).toInt())
+        require(n > 0) { "peakHz needs samples past $fromSec s" }
+        val slice = x.copyOfRange(from, from + n)
+        var bestHz = nearHz.toDouble()
+        var best = -1.0
+        for (s in 0..steps) {
+            val hz = nearHz * (1.0 - spanFraction + 2.0 * spanFraction * s / steps)
+            val e = goertzel(slice, n, hz.toFloat(), rate)
+            if (e > best) { best = e; bestHz = hz }
+        }
+        return bestHz
+    }
+
     private fun goertzel(x: FloatArray, n: Int, hz: Float, rate: Int): Double {
         val w = 2.0 * PI * hz / rate
         val coeff = 2.0 * cos(w)
