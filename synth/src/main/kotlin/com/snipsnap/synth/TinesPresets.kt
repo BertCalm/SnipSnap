@@ -4,7 +4,7 @@ package com.snipsnap.synth
  * TINES' factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md),
  * the second engine after THUMP.
  *
- * Twelve presets per voice (five voices, sixty total), spread across each
+ * Twelve presets per voice (then four BOLD, below), spread across each
  * voice's own macro shape rather than clustered near its `defaults()`. TINES
  * has no drum-class ambiguity to guard against the way THUMP's HAT/TOM
  * boundaries did — every voice here is a fixed FM shape, not something a
@@ -13,6 +13,12 @@ package com.snipsnap.synth
  * verified by [TinesPresetsTest]'s sanity/round-trip/spread checks, not by
  * ear: this session has no audio playback. Names never reference a real
  * drum machine or model number, same rule THUMP's presets follow.
+ *
+ * The last four of every voice - BOLD - came with the sound-design macros
+ * (BITE on every voice; CLANG, RATIO on CHIME/BLOCK/ZAP/TOY, BEND, SHAPE,
+ * TICK - see [Tines.macrosFor]), each pushing them toward an end the
+ * first twelve, which predate them, never reach. Reasoned from the DSP
+ * and checked by the same tests, never heard, like the rest.
  */
 object TinesPresets {
 
@@ -43,6 +49,11 @@ object TinesPresets {
         p(TinesVoice.BELL, "THIMBLE", "TUNE" to 0.9f, "RATIO" to 0.5f, "BRIGHT" to 0.45f, "DECAY" to 0.15f),
         p(TinesVoice.BELL, "FOGHORN", "TUNE" to 0.05f, "RATIO" to 0.05f, "BRIGHT" to 0.15f, "DECAY" to 0.95f),
         p(TinesVoice.BELL, "SLEIGH", "TUNE" to 0.6f, "RATIO" to 0.8f, "BRIGHT" to 0.75f, "DECAY" to 0.25f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(TinesVoice.BELL, "GONG", "TUNE" to 0.10f, "RATIO" to 0.20f, "BRIGHT" to 0.60f, "DECAY" to 0.95f, "BITE" to 0.15f, "CLANG" to 1.00f),
+        p(TinesVoice.BELL, "CHURCH", "TUNE" to 0.30f, "RATIO" to 0.45f, "BRIGHT" to 0.70f, "DECAY" to 0.85f, "BITE" to 0.35f, "CLANG" to 0.85f),
+        p(TinesVoice.BELL, "GLASS FIFTH", "TUNE" to 0.65f, "RATIO" to 0.10f, "BRIGHT" to 0.35f, "DECAY" to 0.60f, "BITE" to 0.80f, "CLANG" to 0.00f),
+        p(TinesVoice.BELL, "GROWL BELL", "TUNE" to 0.40f, "RATIO" to 0.90f, "BRIGHT" to 0.90f, "DECAY" to 0.50f, "BITE" to 0.00f, "CLANG" to 0.70f),
     )
 
     private val chimePresets = listOf(
@@ -58,6 +69,11 @@ object TinesPresets {
         p(TinesVoice.CHIME, "NEEDLE", "TUNE" to 0.9f, "SHIMMER" to 0.1f, "BRIGHT" to 0.6f, "DECAY" to 0.2f),
         p(TinesVoice.CHIME, "DEEP CHIME", "TUNE" to 0.1f, "SHIMMER" to 0.35f, "BRIGHT" to 0.3f, "DECAY" to 0.8f),
         p(TinesVoice.CHIME, "HOLLOW BELL", "TUNE" to 0.15f, "SHIMMER" to 0.05f, "BRIGHT" to 0.2f, "DECAY" to 0.9f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(TinesVoice.CHIME, "TUBE", "TUNE" to 0.30f, "SHIMMER" to 0.30f, "BRIGHT" to 0.50f, "DECAY" to 0.70f, "BITE" to 0.60f, "RATIO" to 0.05f),
+        p(TinesVoice.CHIME, "ROD", "TUNE" to 0.60f, "SHIMMER" to 0.60f, "BRIGHT" to 0.70f, "DECAY" to 0.50f, "BITE" to 0.70f, "RATIO" to 0.95f),
+        p(TinesVoice.CHIME, "BUZZ GLASS", "TUNE" to 0.50f, "SHIMMER" to 0.80f, "BRIGHT" to 0.60f, "DECAY" to 0.60f, "BITE" to 0.10f, "RATIO" to 0.60f),
+        p(TinesVoice.CHIME, "PURE DROP", "TUNE" to 0.80f, "SHIMMER" to 0.10f, "BRIGHT" to 0.30f, "DECAY" to 0.40f, "BITE" to 1.00f, "RATIO" to 0.20f),
     )
 
     private val blockPresets = listOf(
@@ -73,6 +89,11 @@ object TinesPresets {
         p(TinesVoice.BLOCK, "LOUD CRACK", "TUNE" to 0.7f, "BRIGHT" to 0.8f, "DECAY" to 0.3f),
         p(TinesVoice.BLOCK, "DEEP THUD", "TUNE" to 0.1f, "BRIGHT" to 0.15f, "DECAY" to 0.9f),
         p(TinesVoice.BLOCK, "GLASS TAP", "TUNE" to 0.8f, "BRIGHT" to 0.9f, "DECAY" to 0.2f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(TinesVoice.BLOCK, "METAL BAR", "TUNE" to 0.50f, "BRIGHT" to 0.70f, "DECAY" to 0.60f, "BITE" to 0.30f, "RATIO" to 0.90f),
+        p(TinesVoice.BLOCK, "PLASTIC", "TUNE" to 0.70f, "BRIGHT" to 0.50f, "DECAY" to 0.30f, "BITE" to 0.60f, "RATIO" to 0.40f),
+        p(TinesVoice.BLOCK, "SOFT WOOD", "TUNE" to 0.30f, "BRIGHT" to 0.30f, "DECAY" to 0.50f, "BITE" to 1.00f, "RATIO" to 0.00f),
+        p(TinesVoice.BLOCK, "ICE TAP", "TUNE" to 0.85f, "BRIGHT" to 0.80f, "DECAY" to 0.20f, "BITE" to 0.20f, "RATIO" to 0.70f),
     )
 
     private val zapPresets = listOf(
@@ -88,6 +109,11 @@ object TinesPresets {
         p(TinesVoice.ZAP, "TORPEDO", "TUNE" to 0.35f, "DROP" to 0.55f, "BRIGHT" to 0.35f, "DECAY" to 0.55f),
         p(TinesVoice.ZAP, "ZERO G", "TUNE" to 0.65f, "DROP" to 0.2f, "BRIGHT" to 0.75f, "DECAY" to 0.3f),
         p(TinesVoice.ZAP, "GALAXY", "TUNE" to 0.8f, "DROP" to 0.1f, "BRIGHT" to 0.55f, "DECAY" to 0.45f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(TinesVoice.ZAP, "SLOW LASER", "TUNE" to 0.50f, "DROP" to 0.80f, "BRIGHT" to 0.50f, "DECAY" to 0.80f, "BITE" to 0.40f, "BEND" to 0.00f, "RATIO" to 0.50f),
+        p(TinesVoice.ZAP, "PITCH THUD", "TUNE" to 0.60f, "DROP" to 0.50f, "BRIGHT" to 0.30f, "DECAY" to 0.30f, "BITE" to 0.80f, "BEND" to 1.00f, "RATIO" to 0.20f),
+        p(TinesVoice.ZAP, "METAL ZAP", "TUNE" to 0.60f, "DROP" to 0.60f, "BRIGHT" to 0.80f, "DECAY" to 0.50f, "BITE" to 0.10f, "BEND" to 0.40f, "RATIO" to 0.95f),
+        p(TinesVoice.ZAP, "SOFT PEW", "TUNE" to 0.70f, "DROP" to 0.30f, "BRIGHT" to 0.20f, "DECAY" to 0.40f, "BITE" to 0.70f, "BEND" to 0.20f, "RATIO" to 0.00f),
     )
 
     private val toyPresets = listOf(
@@ -103,6 +129,11 @@ object TinesPresets {
         p(TinesVoice.TOY, "TIN TOY", "TUNE" to 0.5f, "WOBBLE" to 0.15f, "BRIGHT" to 0.6f, "DECAY" to 0.5f),
         p(TinesVoice.TOY, "CHEAP LASER", "TUNE" to 0.8f, "WOBBLE" to 0.65f, "BRIGHT" to 0.8f, "DECAY" to 0.1f),
         p(TinesVoice.TOY, "NOVELTY", "TUNE" to 0.25f, "WOBBLE" to 0.45f, "BRIGHT" to 0.4f, "DECAY" to 0.55f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(TinesVoice.TOY, "CHIP TRILL", "TUNE" to 0.60f, "WOBBLE" to 0.60f, "BRIGHT" to 0.50f, "DECAY" to 0.50f, "BITE" to 0.50f, "RATIO" to 0.40f, "SHAPE" to 1.00f),
+        p(TinesVoice.TOY, "ARCADE", "TUNE" to 0.70f, "WOBBLE" to 0.80f, "BRIGHT" to 0.70f, "DECAY" to 0.40f, "BITE" to 0.30f, "RATIO" to 0.70f, "SHAPE" to 0.80f),
+        p(TinesVoice.TOY, "BUZZ TOY", "TUNE" to 0.40f, "WOBBLE" to 0.30f, "BRIGHT" to 0.80f, "DECAY" to 0.50f, "BITE" to 0.00f, "RATIO" to 0.55f, "SHAPE" to 0.30f),
+        p(TinesVoice.TOY, "MUSIC CARD", "TUNE" to 0.80f, "WOBBLE" to 0.20f, "BRIGHT" to 0.30f, "DECAY" to 0.30f, "BITE" to 0.90f, "RATIO" to 0.10f, "SHAPE" to 0.50f),
     )
 
     // The kalimba names carried over from PLUCK's voice of the same name,
@@ -121,5 +152,10 @@ object TinesPresets {
         p(TinesVoice.KALIMBA, "MUTED THUMB", "TUNE" to 0.25f, "BUZZ" to 0.0f, "BRIGHT" to 0.15f, "DECAY" to 0.15f),
         p(TinesVoice.KALIMBA, "FULL RATTLE", "TUNE" to 0.65f, "BUZZ" to 0.9f, "BRIGHT" to 0.6f, "DECAY" to 0.5f),
         p(TinesVoice.KALIMBA, "HIGH TINE", "TUNE" to 0.85f, "BUZZ" to 0.15f, "BRIGHT" to 0.8f, "DECAY" to 0.8f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(TinesVoice.KALIMBA, "NAIL PICK", "TUNE" to 0.50f, "BUZZ" to 0.10f, "BRIGHT" to 0.70f, "DECAY" to 0.80f, "BITE" to 0.60f, "TICK" to 1.00f),
+        p(TinesVoice.KALIMBA, "SOFT THUMB", "TUNE" to 0.40f, "BUZZ" to 0.00f, "BRIGHT" to 0.30f, "DECAY" to 0.95f, "BITE" to 0.80f, "TICK" to 0.00f),
+        p(TinesVoice.KALIMBA, "RATTLE BOX", "TUNE" to 0.60f, "BUZZ" to 0.70f, "BRIGHT" to 0.60f, "DECAY" to 0.70f, "BITE" to 0.30f, "TICK" to 0.70f),
+        p(TinesVoice.KALIMBA, "SHINY TINE", "TUNE" to 0.75f, "BUZZ" to 0.20f, "BRIGHT" to 0.90f, "DECAY" to 0.85f, "BITE" to 0.10f, "TICK" to 0.60f),
     )
 }

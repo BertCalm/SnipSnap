@@ -103,6 +103,19 @@ was all but inaudible. SIZZLE took its place because it pushes the
 centroid away from that line instead of across it. `Dsp.around` - the
 exact-default map both engines use - moved out of THUMP for SKIN to share.
 
+**TINES got the same round** (defaults exact - including the EP and music
+box `Keys` builds from `Tines.strike`, which it calls with its own
+constants and never sees these macros - and four BOLD presets per voice):
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| every voice | BITE | how much faster the FM index dies than the note: a sharp strike that settles pure ↔ a buzzy tone that stays bright to the end |
+| Bell | CLANG | the partner strike's interval, a fifth ↔ the stretched octave ↔ off every harmonic (church bell, gong), louder at the top |
+| Chime, Block | RATIO | the snapped ratio set BELL already had; each default lands on the ratio the voice used to hardcode |
+| Zap | BEND · RATIO | the drop's speed, long laser ↔ pitched thud; the FM colour |
+| Toy | RATIO · SHAPE | the FM colour; the wobble squared off, sliding pitch ↔ a stepping chip trill |
+| Kalimba | TICK | the nail, fleshy thumb ↔ six times today's click (measured ~-27 dB under the onset today) |
+
 Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
 modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
 style preset (the demo kit becomes THUMP's factory default).
