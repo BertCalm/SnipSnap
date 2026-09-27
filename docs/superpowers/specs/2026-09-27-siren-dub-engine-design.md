@@ -93,7 +93,7 @@ at the end like every engine:
 
 ```
 lfo(t)     = shape(φ_lfo)                        // -1..1, φ_lfo advancing at RATE
-sweep(t)   = ±SWEEP_OCTAVES · envAt(t, sweepT60)  // the button-press gesture, one-shot
+sweep(t)   = ±SWEEP_OCTAVES · (1 − t/T)²         // the button-press gesture: a glide of T seconds
 hz(t)      = f0 · 2^( DEPTH_SEMIS/12 · lfo(t) + sweep(t) )
 tone       = pulse(φ_tone) → drive(GRIT) → onePole(lp, toneHz(GRIT))
 out        = amp(t) · tone
@@ -163,7 +163,7 @@ Plain words and bounded ranges (playability rules 2 and 3).
 | **TUNE** | the centre pitch | 24 semitones from the voice's root (C4), snapped — settled: snapping is what lets SPREAD and in-key work put a siren in the tune's key, and the rack's PITCH can detune it afterwards |
 | **RATE** | the LFO's speed | 0.25 Hz → 25 Hz, `Dsp.expMap` (the ear hears rate by ratio too) |
 | **DEPTH** | how far the pitch travels each way | 0 → 24 semitones, linear; 0 is a plain tone, which is a legitimate siren too |
-| **SWEEP** | the button-press gesture | bipolar around 0.5 (`Dsp.around`): below centre the note *falls in* from up to two octaves above; above centre it *rises in* from two below; the centre is no sweep. The sweep's t60 shortens as it deepens (a big dive is a fast one), 0.6 s → 0.15 s |
+| **SWEEP** | the button-press gesture | bipolar around 0.5: below centre the note *falls in* from up to two octaves above; above centre it *rises in* from two below; the centre is no sweep. A glide with a length, a quadratic ease-out that lands with no corner: 0.25 s for a small sweep up to 1 s for the full two octaves (further is longer, like a portamento), and never past 85% of HOLD, so a short press still lands |
 | **GRIT** | drive + tone on the pulse | one-pole cutoff 1.2 kHz → 12 kHz and `Dsp.drive` 0 → 0.8 together |
 | **HOLD** | how long the button is down | 0.3 s → 4 s, `Dsp.expMap`, up to the knob's last step; **the top of the knob is LOOP** — see "Living on the SURFACE" |
 
@@ -391,6 +391,25 @@ harmonic. SCRAMBLE stops one step short.
 - **`benidub` is in the blocklist**, with the near-miss and clean-name
   checks extended (`BENIDUB WAIL` refused, `DUB SIREN` and `AIR RAID`
   allowed).
+
+## After the first listen — 2026-09-27
+
+Josh's verdict from the audition page: good across the board, except no
+audible difference on SWEEP. The numbers agreed. The first build gave the
+sweep an exponential approach whose time constant *shortened* as the
+sweep deepened, 0.15 s at full, so a two-octave dive halved every 15 ms
+and was over in about 100 ms, under a wail that itself moves an octave
+each way. A blip, not a gesture, and the test that passed only asked
+whether the first 50 ms sat higher than the last.
+
+The fix: the sweep is a glide with a length. A quadratic ease-out from
+the offset to the note, fast off the mark and slowing in, landing exactly
+at T with no corner; T runs 0.25 s for a small sweep to 1 s for the full
+two octaves (further is longer, the way a portamento is), capped at 85%
+of HOLD so a 0.3 s press still lands on its note. `SirenTest` now holds
+the gesture to what the ear needs: still six semitones out at 0.3 s, and
+landed by 0.9 s. The audition page was re-rendered and republished so the
+SWEEP clips can be heard again.
 
 ## Still open, not blocking
 
