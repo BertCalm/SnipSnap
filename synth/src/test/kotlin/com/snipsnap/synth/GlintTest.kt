@@ -354,7 +354,7 @@ class GlintTest {
         // same harmonic must produce the same bytes.
         val voice = GlintVoice.BOTTLE
         val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "FOLLOW" to 1f)
-        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak, voice).coerceIn(Glint.K_MIN, Glint.K_MAX))
+        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak, voice).coerceIn(Glint.K_MIN, Glint.kCeilingFor(voice)))
         val pairs = (0..100).map { it / 100f }.groupBy { ratioAt(it) }.values.firstOrNull { it.size >= 2 }
         assertTrue(pairs != null, "expected at least one snap zone with two PEAK values in it")
         val a = Glint.render(voice, still + ("PEAK" to pairs!!.first()))
@@ -604,7 +604,7 @@ class GlintTest {
                     for (peak in listOf(0f, 0.5f, 1f)) {
                         val k = Glint.ratioFor(voice, tune, peak, follow)
                         assertTrue(
-                            k >= Glint.K_MIN - 1e-4f && k <= Glint.K_MAX + 1e-4f,
+                            k >= Glint.K_MIN - 1e-4f && k <= Glint.kCeilingFor(voice) + 1e-4f,
                             "$voice tune=$tune follow=$follow peak=$peak gave k=$k",
                         )
                     }
@@ -632,20 +632,41 @@ class GlintTest {
         // and Josh's audition agreed: "Body 1 doesn't really seem to have an
         // impact." The replacement is a genuine second burst at k/5.6, so
         // there is energy near k2*f0 that BODY 0 does not have at all.
-        // Measured 2026-09-26: REED bare=3.951246E-4 full=0.12219116 (309x),
-        // BOTTLE bare=7.350461E-9 full=0.037051857 (5040752x), KAZOO
-        // bare=5.071703E-5 full=0.05096992 (1005x). All clear the 3x bar by
-        // a wide margin.
+        //
+        // CICADA's body rides the re-clocked carrier the same way its main
+        // burst does (see `synthesize`'s comment on why BODY shares `carrier`
+        // rather than `phase`), so its real second formant sits at
+        // k2*CICADA_SUBCYCLES*f0, not k2*f0 — the same carrierMul correction
+        // `PEAK pins the formant on the named harmonic` already applies at
+        // GlintTest.kt:417. Probing the plain k2*f0 = 880 Hz location for
+        // CICADA missed the real 3,520 Hz formant: measured 17.0x there
+        // (leakage, barely over the 3x bar) against 1855x at the corrected
+        // location. Identity for every other voice.
+        //
+        // Measured 2026-09-27 (bare -> full, energy at k2*f0*carrierMul), all
+        // six voices — REED/BOTTLE/KAZOO were previously recorded 2026-09-26
+        // for three voices only, and REED's had already gone stale
+        // (0.12219116 recorded, 0.12315088 measured) from engine changes
+        // since:
+        //   REED    3.951246E-4 -> 0.12315088   (312x)
+        //   BOTTLE  7.350461E-9 -> 0.038122714  (5186438x)
+        //   KAZOO   5.071703E-5 -> 0.047637813  (939x)
+        //   CICADA  0.008937839 -> 16.5795      (1855x)
+        //   RATCHET 5.071703E-5 -> 0.047637813  (939x)
+        //   PLATE   3.951246E-4 -> 0.12315088   (312x)
+        // All clear the 3x bar by a wide margin.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
             val f0 = Glint.frequencyFor(voice, 0.5f)
             val k = Glint.ratioFor(voice, 0.5f, 0.8f, 1f)
             val k2 = Glint.bodyRatio(k)
+            val carrierMul = if (voice == GlintVoice.CICADA) Glint.CICADA_SUBCYCLES.toFloat() else 1f
             val bareSnip = Glint.render(voice, still + ("BODY" to 0f))
             val fullSnip = Glint.render(voice, still + ("BODY" to 1f))
-            val bare = energyAt(bareSnip.samples, k2 * f0, bareSnip.sampleRate)
-            val full = energyAt(fullSnip.samples, k2 * f0, fullSnip.sampleRate)
-            assertTrue(full > bare * 3f, "$voice: BODY should put real energy at k2*f0 ($bare -> $full)")
+            val probeHz = k2 * f0 * carrierMul
+            val bare = energyAt(bareSnip.samples, probeHz, bareSnip.sampleRate)
+            val full = energyAt(fullSnip.samples, probeHz, fullSnip.sampleRate)
+            assertTrue(full > bare * 3f, "$voice: BODY should put real energy at $probeHz Hz ($bare -> $full)")
         }
     }
 
@@ -1136,15 +1157,70 @@ class GlintTest {
     }
 
     @Test
-    fun `CICADA puts energy at its sub-cycle rate that REED does not`() {
+    fun `CICADA puts energy at its sub-cycle rate that BOTTLE does not`() {
         // The lattice is audible as energy at N * f0. This is what makes CICADA
         // a different voice rather than a differently-windowed one.
+        //
+        // The control used to be BOTTLE at its own default PEAK, which was
+        // correct when this test was written: CICADA's default kBase was then
+        // 8, the same as BOTTLE's, and neither voice's own peak sat near the
+        // N*f0 probe. A later fix moved CICADA's default kBase to 4 - which is
+        // CICADA_SUBCYCLES itself - so a mechanism-removed CICADA (carrier =
+        // phase, no re-clock) now puts its OWN formant at kBase*f0 =
+        // 4*440 = 1,760 Hz: exactly the N*f0 this test probes. Nobody
+        // re-derived the control when the default moved, so the default-PEAK
+        // comparison stopped isolating the mechanism - it was testing which
+        // voice's own peak happened to land nearest 1,760 Hz, not the
+        // re-clock.
+        //
+        // Fixed with the same matched-carrier control the no-click test above
+        // (`CICADA does not click at its inner restarts`) already built for
+        // the same confound at the inner wrap: CICADA at kBase ~= 2.25 and
+        // BOTTLE at k = 9 share the identical 3,960 Hz carrier and triangle
+        // window, differing only in whether the window re-clocks
+        // CICADA_SUBCYCLES times a cycle. Neither voice's own peak sits near
+        // the 1,760 Hz probe, so any energy CICADA shows there over BOTTLE is
+        // attributable to the re-clocking alone.
+        //
+        // The old control moved the wrong way when the mechanism it exists to
+        // catch was deleted: reviewer-measured, deleting
+        // `carrier = frac(N*phase)` against the old default-PEAK comparison
+        // still passed - MORE comfortably (ratio ~8.1e8) than the correct
+        // engine did (~6.6e5) - because that comparison was never measuring
+        // the re-clock, only which voice's own default peak sat nearer
+        // 1,760 Hz.
+        //
+        // Mutation-verified 2026-09-27 against THIS (matched-carrier)
+        // control (`carrier = phase` for CICADA only, reverted immediately
+        // after): mechanism correct gives
+        // cicada=1.6518465 bottle=0.005919548 (ratio 279.0x, clears the 3x
+        // bar); mechanism removed gives cicada=0.013001844 against the same
+        // bottle=0.005919548 (ratio 2.2x, FAILS, as it must - a clean
+        // separation from the passing 279.0x, and the correct direction this
+        // time: broken drops below the bar instead of clearing it wider).
         val f0 = Glint.frequencyFor(GlintVoice.CICADA, 0.5f)
         val lattice = Glint.CICADA_SUBCYCLES * f0
-        val cicada = Glint.render(GlintVoice.CICADA, mapOf("BLOOM" to 0f, "BODY" to 0f))
-        val bottle = Glint.render(GlintVoice.BOTTLE, mapOf("BLOOM" to 0f, "BODY" to 0f))
+        val cicadaPeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.CICADA, 0.5f, it, 1f) - 2.25f) }!!
+        val cicadaK = Glint.ratioFor(GlintVoice.CICADA, 0.5f, cicadaPeak, 1f)
+        assertTrue(
+            kotlin.math.abs(cicadaK - 2.25f) < 0.01f,
+            "test setup expected CICADA kBase near 2.25 (unsnapped), got $cicadaK",
+        )
+        val bottleTargetK = cicadaK * Glint.CICADA_SUBCYCLES
+        val bottlePeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, it, 1f) - bottleTargetK) }!!
+        val bottleK = Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, bottlePeak, 1f)
+        assertEquals(9f, bottleK, 1e-6f, "test setup expected BOTTLE k=9 (snapped, matches CICADA's carrier)")
+
+        val still = mapOf("TUNE" to 0.5f, "FOLLOW" to 1f, "BLOOM" to 0f, "BODY" to 0f)
+        val cicada = Glint.render(GlintVoice.CICADA, still + ("PEAK" to cicadaPeak))
+        val bottle = Glint.render(GlintVoice.BOTTLE, still + ("PEAK" to bottlePeak))
         val c = energyAt(cicada.samples, lattice, cicada.sampleRate)
         val b = energyAt(bottle.samples, lattice, bottle.sampleRate)
-        assertTrue(c > b * 3f, "CICADA has $c at the lattice rate, BOTTLE (same window) has $b")
+        assertTrue(
+            c > b * 3f,
+            "CICADA has $c at the lattice rate ($lattice Hz), BOTTLE (same 3,960 Hz carrier) has $b",
+        )
     }
 }
