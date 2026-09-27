@@ -3,9 +3,8 @@
 **Status:** S12 built and merged (PR #348: engine, presets, tests, SYNTH
 picker, landing, testkit kit), **audition gate passed** 2026-09-27: good
 across the board on the first listen, SWEEP inaudible and fixed (below),
-then confirmed on the second. S12.1 (`→ SURFACE ▸`) and S12.2 (SIREN held
-as a keys instrument) are also built; S12.3 (the loop-grid drone) is open.
-The
+then confirmed on the second. S12.1 (`→ SURFACE ▸`), S12.2 (SIREN held as a
+keys instrument) and S12.3 (the loop-grid drone) are also built. The
 listening page for that gate is
 `https://claude.ai/artifact/DXEn8DC3ZkcHGzFrTP6VEz`, rendered by
 `./gradlew :synth:generateSirenAudition` (the kit as it lands, every knob
@@ -348,7 +347,7 @@ harmonic. SCRAMBLE stops one step short.
 | **S12** | `synth/Siren.kt` (`SirenVoice`, macros, the one-shot render and the LOOP render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). Then the phone: SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), the HOLD readout's LOOP step, SEND TO PAD landing a one-shot siren with the rack's ECHO in its recipe and a LOOP siren dry, and a toast for each that says which it did and, for a LOOP, that the SURFACE plays it. **Ends at an audition gate.** |
 | **S12.1** | **built** — `→ SURFACE ▸` on SYNTH, shown only while a SIREN's HOLD is at LOOP: the same slot chooser as SEND TO PAD, then `SurfaceStore.choosePad` points the kit's surface at the slot (keeping its corners and the rest) and App switches to the SURFACE screen, which reads the file as it opens. The toast says what to do with a finger. One App callback, one store write. |
 | **S12.2** | **built** — Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render doubled into the keygroup's sustain loop (below), RELEASE the only knob. |
-| **S12.3** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
+| **S12.3** | **built** — Door 4: `DRONE TO LOOP ▸` for SIREN, RATE's own Hz snapped onto the nearest whole cycle count the grid's loop can hold, re-rendered on tempo change. No MOTION or BREATHS knob: RATE and DEPTH already are the patch's own speed and swing. |
 
 ## Settled — 2026-09-27
 
@@ -456,6 +455,55 @@ Second listen, same day: "Sweep is great." The gate is passed.
   exactly; there is nothing to settle, so `SirenPadMaker.Spec` carries only
   RELEASE, and `SynthScreen`'s `HeldInstrumentSheet` hides the ATTACK
   slider for it.
+- **The `cancelled` callback reached every layer but the one that renders.**
+  Review caught it before the second listen: `HeldSpec.Siren` took
+  `cancelled` and dropped it on the floor, so CANCEL on the sheet could not
+  stop a render already running — at RATE's floor a single zone is several
+  seconds of audio, nine zones deep in parallel. `Siren.synthesizeLoopStretch`
+  now asks every 32768 oversampled samples, the same cadence
+  `Resin.renderHeld` and `ResinDrone` already use, and `renderLoop` →
+  `Keys.sirenPad` → `SirenPadMaker` → `HeldSpec.Siren` each thread it
+  through rather than discarding it. `SirenHeldTest` holds the stop and its
+  time bound.
+
+## S12.3, as built — 2026-09-27
+
+- **No MOTION or BREATHS to invent.** RESIN's drone needs both because
+  RESIN's held macros carry no swing of their own; SIREN already *is* a
+  movement (README's own words) — RATE and DEPTH are its speed and swing,
+  dialed on the panel above before DRONE TO LOOP is even opened. `SirenDrone.Spec`
+  is a voice and the patch's own macros, kept to `SOUNDING_MACROS =
+  listOf("RATE", "DEPTH", "GRIT")`; TUNE, HOLD and SWEEP have no note-on to
+  act on, the same exclusion RESIN's own CONTOUR and DECAY get.
+- **RATE is snapped, not replaced.** Rather than inventing a discrete
+  breaths-per-loop knob, `SirenDrone.synthesize` reads RATE's own Hz
+  (`Siren.rateHz`) and rounds it to the nearest whole number of cycles the
+  grid's own loop can hold (`Math.round(desiredHz * frames / sampleRate)`,
+  floored at one) — the same "further is longer" snap `DroneFit` already
+  applies to pitch, applied here to speed. The knob keeps its ordinary
+  meaning everywhere else; only the drone quantizes it, silently, to
+  whatever whole cycle count is closest for the span it lands on.
+- **The carrier snaps the way `Siren.planLoop` already does**, run at the
+  grid's own loop length instead of `Siren.loopFrames`'s: the LFO's own
+  phase integral over one loop (`g`) fixes how many whole carrier cycles
+  fit, and `baseHz = cycles / g` lands within a fraction of a cycle of the
+  root's true Hz over the whole span — provably exact in the phase domain
+  (the accumulated phase over one loop is `cycles`, a whole number, by
+  construction), not just approximately so.
+- **A one-pole settles fast; the pre-roll doesn't need RESIN's two
+  seconds.** RESIN's ladder is a resonant 4-pole that can ring for a
+  second near self-oscillation; SIREN's GRIT stage and its LFO de-zipper
+  are both single one-poles with sub-millisecond time constants, so 0.1 s
+  of pre-roll (a hundred-plus time constants) reaches the periodic steady
+  state with room to spare — confirmed by `SirenDroneTest`'s own two-period
+  seam measurement landing at float noise, not merely under the bar.
+- **`DroneSource` tries RESIN, then SIREN, then falls through to `inner`**,
+  so a recipe from a later engine can still wrap this one; the cache key
+  never reads which engine matched, only the recipe's own JSON, root,
+  frames and rate.
+- **`DroneMaker.label`, `DroneFit.span`/`nudgeCents` never read an engine.**
+  `SirenDroneMaker` calls them directly rather than re-deriving pitch
+  arithmetic that was already engine-agnostic.
 
 ## Still open, not blocking
 

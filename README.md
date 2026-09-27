@@ -296,6 +296,16 @@ so the player's one pass through copy one gives way to copy two repeating
 forever — the same audio the LOOP render alone produces, through a marker
 the format can express.
 
+SIREN also drones. `DRONE TO LOOP ▸` on SYNTH puts the wail on the next
+empty loop-grid track, no new knob needed: RATE and DEPTH are already the
+patch's own speed and swing, unlike RESIN's MOTION and BREATHS, which the
+drone invents because RESIN's held macros carry none. RATE's own Hz is
+snapped onto the nearest whole cycle count the grid's loop can hold — the
+same "further is longer" snap `DroneFit` already applies to pitch, applied
+here to speed — and the carrier snaps the way the LOOP render's own
+`planLoop` does, just run at the grid's own loop length. A tempo change
+re-slices and re-renders it, the same as a RESIN drone's.
+
 FORK is the modal electric piano — every other engine here is a strike;
 this one is what a magnetic pickup does *after* one. A struck bar (TINE, a
 cantilever like a real tine, whose overtones sit far from the fundamental
