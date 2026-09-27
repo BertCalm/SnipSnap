@@ -207,7 +207,7 @@ class PluckTest {
         // classifier tell a bright pluck from a drum. Every other voice must
         // still read PERC. SITAR reads SNARE too (plan 2026-09-26-pluck-sitar.md):
         // a plain steel string picked near the bridge puts the same share of
-        // its attack above 2 kHz (measured highRatio 0.545 at the default
+        // its attack above 2 kHz (measured highRatio 0.532 at the default
         // with the jawari, up from 0.524 without it - the bridge buzz is
         // itself high-band energy landing inside the same attack window the
         // classifier reads - both just over the 0.5 SNARE line).
