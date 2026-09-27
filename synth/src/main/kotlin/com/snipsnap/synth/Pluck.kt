@@ -272,17 +272,25 @@ object Pluck {
      * [velocity] is a render parameter, not a macro - no knob, no preset,
      * no recipe carries it; only the jawari reads it today.
      */
-    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
-        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
-        // consistency with the other 6 engines and because the exciter's
-        // one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
-        // saturation stage generating fresh above-Nyquist harmonics the way
-        // THUMP/TONEWHEEL/VOX do, so the audible effect here is smaller -
-        // but it is still real plumbing, not a no-op: Dsp.decimate's own
-        // low-pass changes what a keygroup sounds like near the top of its
-        // range, same as every other engine.
+    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
+        renderWith(voice, macros, velocity)
+
+    /**
+     * [render] with the audition's overrides: the generator hears stiffness
+     * and jawari values the shipped constants do not carry.
+     *
+     * U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
+     * consistency with the other 6 engines and because the exciter's
+     * one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
+     * saturation stage generating fresh above-Nyquist harmonics the way
+     * THUMP/TONEWHEEL/VOX do, so the audible effect here is smaller -
+     * but it is still real plumbing, not a no-op: Dsp.decimate's own
+     * low-pass changes what a keygroup sounds like near the top of its
+     * range, same as every other engine.
+     */
+    internal fun renderWith(voice: PluckVoice, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null): Snip {
         val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = synthesize(voice, macros, renderRate, velocity = velocity)
+        val raw = synthesize(voice, macros, renderRate, velocity = velocity, stiffnessOverride = stiffness, jawariOverride = jawari)
         val out = Dsp.decimate(raw, RATE)
 
         // Loudness, not peak: a sine-heavy voice at equal peak reads quieter

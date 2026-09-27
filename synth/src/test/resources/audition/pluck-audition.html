@@ -461,7 +461,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Pluck Audition</span>
-    <span class="tag">PHASE 2 FOURTH LISTEN &middot; KALIMBA AND THE SEAM</span>
+    <span class="tag">PHASE 3A &middot; SITAR, AND STIFFNESS ON KOTO AND HARP</span>
   </div>
 
   <div class="transport lcd">
@@ -476,8 +476,9 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>BANJO is settled at the string the third gate chipped closer, and it is not on this page.</p>
-    <p>KALIMBA: the box is gone, and the default decay now sits near the ceiling because that is what read as a kalimba. The first pad is last time's C4; then the new default, the floor (DECAY 0), the ceiling (DECAY 1), brighter, and the kit's highest kalimba pad at A4. Is this the decay and resonance you meant?</p>
+    <p>SITAR is new: a steel string with a bridge that buzzes, four strings that ring in sympathy under DOUBLE, and stiffness that puts its upper partials sharp; it has no body yet because no source for one could be opened, so BODY does nothing on it.</p>
+    <p>The cards hear each axis: the jawari at three drives and a soft pluck, the sympathetic strings off and at the drone, stiffness off and at the higher candidate, then the ends of TUNE and DAMP.</p>
+    <p>KOTO and HARP: the same note with stiffness off and on, and they only change if you chip on as closer.</p>
   </div>
 
   <div id="voices"></div>
@@ -485,15 +486,19 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>TWO QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Is this the decay and resonance you meant? Which pad is the kalimba?</div>
-      <textarea id="q_kalimba4" placeholder="&hellip;"></textarea>
+      <div class="ask">1 &middot; Does the bridge buzz read as a sitar, and at which drive?</div>
+      <textarea id="q_jawari" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; The kit's kalimba pads sit at C4 to A4 next to the nylon pads at G3 and A3. Keep them there, or move them?</div>
-      <textarea id="q_seam2" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; The sympathetic strings: keep the default, more, or off?</div>
+      <textarea id="q_symp" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <div class="ask">3 &middot; Stiffness: does SITAR want the high candidate, and should KOTO or HARP turn it on?</div>
+      <textarea id="q_stiff" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -506,8 +511,8 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generatePluckAudition &middot; PHASE 2 FOURTH LISTEN &middot; 16-BIT 44.1 KHZ &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE THREE ANSWERS.
+    RENDERED BY generatePluckAudition &middot; PHASE 3A &middot; 16-BIT 44.1 KHZ &middot;
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
 
@@ -521,35 +526,39 @@
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
   // [file id, name, description]
-  var SEAM_GROUPS = [
-    { label: 'NYLON TO KALIMBA', key: true, clips: [
-      ['a05_nylon_5', 'A05 NYLON 5', 'PLUCK'],
-      ['a06_nylon_6', 'A06 NYLON 6', 'PLUCK'],
-      ['a07_kalimba_1', 'A07 KALIMBA 1', 'TINES'],
-      ['a08_kalimba_2', 'A08 KALIMBA 2', 'TINES']
+  var SITAR_GROUPS = [
+    { label: 'THE JAWARI', key: true, clips: [
+      ['p3a_default', 'DEFAULT', 'drive .30 at full velocity'],
+      ['p3a_jawari_15', 'DRIVE .15', 'a rounder bridge'],
+      ['p3a_jawari_60', 'DRIVE .60', 'a flatter bridge, the ugly end'],
+      ['p3a_soft', 'SOFT PLUCK', 'velocity .30: the buzz backs off']
+    ]},
+    { label: 'THE SYMPATHETIC STRINGS', clips: [
+      ['p3a_symp_0', 'DOUBLE 0', 'the string alone'],
+      ['p3a_symp_1', 'DOUBLE 1', 'the drone, the ugly end']
+    ]},
+    { label: 'STIFFNESS', clips: [
+      ['p3a_stiff_off', 'OFF', 'partials on the harmonics'],
+      ['p3a_stiff_high', 'HIGH', 'the tenth partial three percent sharp']
+    ]},
+    { label: 'THE ENDS', clips: [
+      ['p3a_root', 'C#3 ROOT', ''],
+      ['p3a_top', 'C#5', 'two octaves up'],
+      ['p3a_ring', 'DAMP 0', 'rings out'],
+      ['p3a_thud', 'DAMP 1', 'the dead end']
     ]}
   ];
-
-  // p2d fourth-listen groups: the tine against last time, its DECAY floor
-  // to ceiling, and the kit's highest kalimba pad.
-  var KALIMBA_GROUPS = [
-    { label: 'LAST TIME AGAINST NOW, C4', key: true, clips: [
-      ['p2c_c4_default', 'LAST TIME, C4', 'tick and partials, no box, DECAY .45'],
-      ['p2d_c4_default', 'SHIPPED, C4', 'DECAY .90, no box: what the kit plays']
-    ]},
-    { label: 'DECAY, FLOOR TO CEILING', clips: [
-      ['p2d_c4_decay_0', 'DECAY 0', 'the softest it gets: 0.5 s'],
-      ['p2d_c4_decay_1', 'DECAY 1', '1.1 s'],
-      ['p2d_c4_bright_75', 'BRIGHT .75', '']
-    ]},
-    { label: 'THE KIT PADS', clips: [
-      ['p2d_a4_default', 'A4, KALIMBA 5 PAD', 'the highest kalimba pad in the kit']
+  var STIFF_GROUPS = [
+    { label: 'STIFFNESS OFF AND ON', key: true, clips: [
+      ['p3a_stiff_off', 'OFF', 'as it ships'],
+      ['p3a_stiff_on', 'ON', 'the low candidate']
     ]}
   ];
 
   var VOICES = [
-    { id: 'FU_KALIMBA', display: 'KALIMBA', folder: 'KALIMBA', note: 'C4', hz: '262 HZ', root: 'A3' + DOT + '220 HZ', macros: 'BUZZ .15' + DOT + 'BRIGHT .50' + DOT + 'DECAY .90', body: 'a tick and the shimmer, ringing long', groups: KALIMBA_GROUPS },
-    { id: 'KIT_SEAM', display: 'KIT SEAM', note: 'A05 TO A08', hz: 'the melodic kit', root: 'nylon to kalimba', macros: 'two engines', body: 'PLUCK then TINES', groups: SEAM_GROUPS }
+    { id: 'SITAR', display: 'SITAR', folder: 'SITAR', note: 'C#4', hz: '277 HZ', root: 'C#3' + DOT + '139 HZ', macros: 'DAMP .50' + DOT + 'PICK .65' + DOT + 'STRIKE .30' + DOT + 'DOUBLE .40', body: 'no body yet: no source could be opened', groups: SITAR_GROUPS },
+    { id: 'KOTO', display: 'KOTO', folder: 'KOTO', note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'the shipped defaults', body: 'only the stiffness changes', groups: STIFF_GROUPS },
+    { id: 'HARP', display: 'HARP', folder: 'HARP', note: 'F4', hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'the shipped defaults', body: 'only the stiffness changes', groups: STIFF_GROUPS }
   ];
 
   var REACTIONS = [
@@ -567,7 +576,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_kalimba4: '', q_seam2: '', q_else: '' } };
+  var state = { overall: { q_jawari: '', q_symp: '', q_stiff: '', q_else: '' } };
   VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
   // ---------- build ----------
@@ -736,7 +745,7 @@
   }
 
   function paintOverall() {
-    ['q_kalimba4', 'q_seam2', 'q_else'].forEach(function (k) {
+    ['q_jawari', 'q_symp', 'q_stiff', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -746,7 +755,7 @@
 
   // The four answers keep a local draft as they are typed; only SAVE
   // VERDICT writes them to the shared store.
-  ['q_kalimba4', 'q_seam2', 'q_else'].forEach(function (k) {
+  ['q_jawari', 'q_symp', 'q_stiff', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -772,7 +781,7 @@
 
   function snapshotOf(key) {
     var data = key === 'overall'
-      ? { q_kalimba4: state.overall.q_kalimba4, q_seam2: state.overall.q_seam2, q_else: state.overall.q_else }
+      ? { q_jawari: state.overall.q_jawari, q_symp: state.overall.q_symp, q_stiff: state.overall.q_stiff, q_else: state.overall.q_else }
       : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
@@ -781,7 +790,7 @@
   // Every phase's verdicts live under their own prefix: the spike and Phase 1
   // wrote verdicts/NYLON etc., and a page that read those back would open
   // pre-filled with an older gate's notes and overwrite them on save.
-  var PHASE = 'p2d';
+  var PHASE = 'p3a';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
@@ -798,7 +807,7 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      ['q_kalimba4', 'q_seam2', 'q_else'].forEach(function (k) {
+      ['q_jawari', 'q_symp', 'q_stiff', 'q_else'].forEach(function (k) {
         if (typeof data[k] === 'string') state.overall[k] = data[k];
       });
       paintOverall();

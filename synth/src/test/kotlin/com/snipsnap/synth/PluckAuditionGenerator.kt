@@ -49,6 +49,13 @@ import kotlin.math.abs
  * regenerated, the same pattern p2b's `p2b_d4_default`/`p2b_c4_as_is`
  * already use.
  *
+ * A p3a set renders SITAR's first gate: every axis at the default note
+ * C#4 (the jawari at three drives plus a soft pluck, the sympathetic
+ * strings off and at the drone, stiffness off and at the high candidate,
+ * and TUNE/DAMP at their ends), plus KOTO and HARP with the low stiffness
+ * candidate against their shipped stiffness-off default - those two voices
+ * already passed the Phase 2 gate and only stiffness is new to them here.
+ *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
  * publish — the pre-Phase-1 renders — because a republish keeps files it
@@ -129,6 +136,32 @@ object PluckAuditionGenerator {
             "p2d_a4_default",
             mapOf("TUNE" to 12f / Tines.KALIMBA_TUNE_SEMITONES.toFloat(), "BRIGHT" to 0.5f, "DECAY" to 0.9f),
         )
+
+        // p3a: the sitar's first gate. Every axis at the default note C#4,
+        // the two notes at the ends, and KOTO/HARP with the low stiffness on.
+        val sitarDir = File(root, PluckVoice.SITAR.name)
+        fun writeSitar(name: String, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null) {
+            WavWriter.write(File(sitarDir, "$name.wav"), level(Pluck.renderWith(PluckVoice.SITAR, macros, velocity, stiffness, jawari)), WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        writeSitar("p3a_default", emptyMap())
+        writeSitar("p3a_jawari_15", emptyMap(), jawari = 0.15f)
+        writeSitar("p3a_jawari_60", emptyMap(), jawari = 0.6f)
+        writeSitar("p3a_soft", emptyMap(), velocity = 0.3f)
+        writeSitar("p3a_symp_0", mapOf("DOUBLE" to 0f))
+        writeSitar("p3a_symp_1", mapOf("DOUBLE" to 1f))
+        writeSitar("p3a_stiff_off", emptyMap(), stiffness = 0f)
+        writeSitar("p3a_stiff_high", emptyMap(), stiffness = Pluck.SITAR_STIFFNESS_HIGH)
+        writeSitar("p3a_root", mapOf("TUNE" to 0f))
+        writeSitar("p3a_top", mapOf("TUNE" to 1f))
+        writeSitar("p3a_thud", mapOf("DAMP" to 1f))
+        writeSitar("p3a_ring", mapOf("DAMP" to 0f))
+        for (voice in listOf(PluckVoice.KOTO, PluckVoice.HARP)) {
+            val dir = File(root, voice.name)
+            WavWriter.write(File(dir, "p3a_stiff_off.wav"), level(Pluck.renderWith(voice, emptyMap())), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(dir, "p3a_stiff_on.wav"), level(Pluck.renderWith(voice, emptyMap(), stiffness = Pluck.SITAR_STIFFNESS_LOW)), WavWriter.BitDepth.PCM_16)
+            count += 2
+        }
 
         val page = PluckAuditionGenerator::class.java.getResourceAsStream("/audition/pluck-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
