@@ -5,6 +5,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -56,6 +57,37 @@ object Tines {
      */
     internal val KALIMBA_PARTIALS = floatArrayOf(1f, 6.267f, 17.548f)
 
+    /**
+     * Every voice but KALIMBA tunes continuously: TUNE 0..1 maps
+     * exponentially onto this range in Hz (ZAP's is where its drop lands).
+     * One table so anything that has to play a voice at a pitch - the
+     * audition's phrases - inverts the same numbers the voice renders with
+     * ([tuneFor]), rather than a copy of them.
+     */
+    private val CARRIER_HZ: Map<TinesVoice, Pair<Float, Float>> = mapOf(
+        TinesVoice.BELL to (220f to 740f),
+        TinesVoice.CHIME to (520f to 1500f),
+        TinesVoice.BLOCK to (380f to 950f),
+        TinesVoice.ZAP to (55f to 120f),
+        TinesVoice.TOY to (300f to 900f),
+    )
+
+    /** [voice]'s carrier (ZAP: landing) frequency at [tune]. Not KALIMBA, which snaps: see [frequencyFor]. */
+    internal fun carrierFor(voice: TinesVoice, tune: Float): Float {
+        val (lo, hi) = CARRIER_HZ[voice] ?: error("$voice snaps TUNE to semitones; use frequencyFor")
+        return Dsp.expMap(tune, lo, hi)
+    }
+
+    /** The TUNE that plays [voice] at [hz], clamped to its range: [carrierFor]'s inverse. */
+    internal fun tuneFor(voice: TinesVoice, hz: Float): Float {
+        val (lo, hi) = CARRIER_HZ[voice] ?: error("$voice snaps TUNE to semitones; use frequencyFor")
+        return (ln((hz / lo).toDouble()) / ln((hi / lo).toDouble())).toFloat().coerceIn(0f, 1f)
+    }
+
+    /** [voice]'s own continuous TUNE range in Hz, for anything that has to stay inside it. */
+    internal fun carrierRange(voice: TinesVoice): Pair<Float, Float> =
+        CARRIER_HZ[voice] ?: error("$voice snaps TUNE to semitones; use frequencyFor")
+
     /** The snapped note KALIMBA's TUNE lands on; every other TINES voice has a continuous carrier range. */
     fun frequencyFor(voice: TinesVoice, tune: Float): Float =
         frequencyFor(voice, Math.round(tune.coerceIn(0f, 1f) * KALIMBA_TUNE_SEMITONES))
@@ -65,29 +97,54 @@ object Tines {
         return KALIMBA_ROOT_HZ * 2f.pow(semitone / 12f)
     }
 
+    /**
+     * BITE, on every voice: how much faster the FM index dies than the
+     * note, as a multiplier on the voice's own bite constant (bell 2.5,
+     * chime 3, block 2, zap 2, toy 1.8, kalimba's tongue 2.5) - exactly 1
+     * at the default, via [Dsp.around]. Up, the clang is a sharp strike
+     * that settles pure almost at once; down toward 0.3x, the index
+     * outlives the note and the tone stays buzzy and bright all the way
+     * out - the "sustained FM growl" end the fixed bites never reached.
+     */
+    private val BITE = MacroSpec("BITE", 0.5f, neutral = 0.5f)
+
+    private fun biteOf(m: Map<String, Float>) = Dsp.around(m.getValue("BITE"), 0.3f, 1f, 3f)
+
+    /**
+     * RATIO's default for a voice whose ratio used to be fixed, placed so
+     * [snapRatio] lands on that same entry of [RATIOS] exactly: CHIME's
+     * 3.5 (index 4), BLOCK's 1.4 (index 1), ZAP's 2.7 (index 3), TOY's 2
+     * (index 2). Each sits inside its entry's band, not on an edge, so a
+     * float's last bit can never tip it into a neighbour.
+     */
+    private fun ratioDefaultFor(index: Int) = (index + 0.4f) / (RATIOS.size - 1)
+
     fun macrosFor(voice: TinesVoice): List<MacroSpec> = when (voice) {
         TinesVoice.BELL -> listOf(
             MacroSpec("TUNE", 0.45f), MacroSpec("RATIO", 0.7f), MacroSpec("BRIGHT", 0.5f),
-            MacroSpec("DECAY", 0.55f),
+            MacroSpec("DECAY", 0.55f), BITE, MacroSpec("CLANG", 0.5f, neutral = 0.5f),
         )
         TinesVoice.CHIME -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("SHIMMER", 0.45f), MacroSpec("BRIGHT", 0.55f),
-            MacroSpec("DECAY", 0.5f),
+            MacroSpec("DECAY", 0.5f), BITE, MacroSpec("RATIO", ratioDefaultFor(4), neutral = ratioDefaultFor(4)),
         )
         TinesVoice.BLOCK -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("BRIGHT", 0.4f), MacroSpec("DECAY", 0.35f),
+            BITE, MacroSpec("RATIO", ratioDefaultFor(1), neutral = ratioDefaultFor(1)),
         )
         TinesVoice.ZAP -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DROP", 0.55f), MacroSpec("BRIGHT", 0.45f),
-            MacroSpec("DECAY", 0.45f),
+            MacroSpec("DECAY", 0.45f), BITE, MacroSpec("BEND", 0.5f, neutral = 0.5f),
+            MacroSpec("RATIO", ratioDefaultFor(3), neutral = ratioDefaultFor(3)),
         )
         TinesVoice.TOY -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("WOBBLE", 0.5f), MacroSpec("BRIGHT", 0.5f),
-            MacroSpec("DECAY", 0.4f),
+            MacroSpec("DECAY", 0.4f), BITE, MacroSpec("RATIO", ratioDefaultFor(2), neutral = ratioDefaultFor(2)),
+            MacroSpec("SHAPE", 0f),
         )
         TinesVoice.KALIMBA -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("BUZZ", 0.15f), MacroSpec("BRIGHT", 0.5f),
-            MacroSpec("DECAY", 0.9f),
+            MacroSpec("DECAY", 0.9f), BITE, MacroSpec("TICK", 0.5f, neutral = 0.5f),
         )
     }
 
@@ -171,21 +228,30 @@ object Tines {
     // ---------- voices ----------
 
     private fun bell(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 220f, 740f)
+        val carrier = carrierFor(TinesVoice.BELL, m.getValue("TUNE"))
         val ratio = snapRatio(m.getValue("RATIO"))
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.8f, 5f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.1f)
+        val bite = 2.5f * biteOf(m)
+        // CLANG: the second strike's interval, 2.01 (a slightly stretched
+        // octave) until now. Down to 1.5, a fifth - rounder, organ-ish; up
+        // to 2.76, off every harmonic, where a bell turns church bell or
+        // gong - and the partner louder too, up to twice its old 0.35, so
+        // the clang is heard rather than implied. Both exact at 0.5.
+        val clang = m.getValue("CLANG")
+        val partnerRatio = Dsp.around(clang, 1.5f, 2.01f, 2.76f)
+        val partnerGain = if (clang < 0.5f) 0.35f else 0.35f * (1f + (clang - 0.5f) * 2f)
 
         val out = FloatArray(frames(t60 * 1.3f, rate))
         // A quiet second strike an octave up thickens the hit without a
         // third operator; bite 2.5 keeps the clang at the front.
-        strike(out, carrier, ratio, index, t60, bite = 2.5f, rate = rate)
-        strike(out, carrier * 2.01f, ratio, index * 0.6f, t60 * 0.6f, bite = 2.5f, gain = 0.35f, rate = rate)
+        strike(out, carrier, ratio, index, t60, bite = bite, rate = rate)
+        strike(out, carrier * partnerRatio, ratio, index * 0.6f, t60 * 0.6f, bite = bite, gain = partnerGain, rate = rate)
         return out
     }
 
     private fun chime(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 520f, 1500f)
+        val carrier = carrierFor(TinesVoice.CHIME, m.getValue("TUNE"))
         val shimmer = m.getValue("SHIMMER")
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.6f, 4f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.2f, 0.9f)
@@ -194,27 +260,38 @@ object Tines {
         // Glass is two near-identical bells beating against each other:
         // SHIMMER is the detune between them, in cents-ish territory.
         val detune = Dsp.lin(shimmer, 1.001f, 1.02f)
-        strike(out, carrier, 3.5f, index, t60, bite = 3f, gain = 0.6f, rate = rate)
-        strike(out, carrier * detune, 3.5f, index, t60 * 0.9f, bite = 3f, gain = 0.6f, rate = rate)
+        // RATIO: 3.5 was the only glass; the snapped set runs it from a
+        // round, near-sine tube (1) to a hard, clanging rod (5.8).
+        val ratio = snapRatio(m.getValue("RATIO"))
+        val bite = 3f * biteOf(m)
+        strike(out, carrier, ratio, index, t60, bite = bite, gain = 0.6f, rate = rate)
+        strike(out, carrier * detune, ratio, index, t60 * 0.9f, bite = bite, gain = 0.6f, rate = rate)
         return out
     }
 
     private fun block(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 380f, 950f)
+        val carrier = carrierFor(TinesVoice.BLOCK, m.getValue("TUNE"))
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.4f, 2.2f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.045f, 0.16f)
 
         // Woodblock: a near-harmonic ratio and a low index, gone in a blink.
         val out = FloatArray(frames(maxOf(t60 * 1.5f, 0.06f), rate))
-        strike(out, carrier, 1.4f, index, t60, bite = 2f, rate = rate)
+        // RATIO: 1.4 is wood; up the snapped set the block turns to
+        // plastic, then glass, then a struck metal bar.
+        strike(out, carrier, snapRatio(m.getValue("RATIO")), index, t60, bite = 2f * biteOf(m), rate = rate)
         return out
     }
 
     private fun zap(m: Map<String, Float>, rate: Int): FloatArray {
-        val endHz = Dsp.expMap(m.getValue("TUNE"), 55f, 120f)
+        val endHz = carrierFor(TinesVoice.ZAP, m.getValue("TUNE"))
         val dropMult = Dsp.lin(m.getValue("DROP"), 4f, 16f)
         val index = Dsp.lin(m.getValue("BRIGHT"), 0.5f, 3f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.35f)
+        // BEND: how fast the drop lands, 24/s until now - slow (6) is a long
+        // falling laser, fast (90) a pitched thud with no audible fall.
+        val bendRate = Dsp.around(m.getValue("BEND"), 6f, 24f, 90f).toDouble()
+        val ratio = snapRatio(m.getValue("RATIO"))
+        val bite = 2f * biteOf(m)
 
         // The laser tom: carrier and modulator ride the same exponential
         // drop, so the FM colour holds while the pitch falls onto the floor.
@@ -224,10 +301,10 @@ object Tines {
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            val f = endHz * (1f + (dropMult - 1f) * Math.exp(-24.0 * t).toFloat())
+            val f = endHz * (1f + (dropMult - 1f) * Math.exp(-bendRate * t).toFloat())
             pc += f / rate
-            pm += f * 2.7f / rate
-            val idx = index * Dsp.envAt(t, t60 / 2f)
+            pm += f * ratio / rate
+            val idx = index * Dsp.envAt(t, t60 / bite)
             out[i] = env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
         }
@@ -235,7 +312,7 @@ object Tines {
     }
 
     private fun toy(m: Map<String, Float>, rate: Int): FloatArray {
-        val carrier = Dsp.expMap(m.getValue("TUNE"), 300f, 900f)
+        val carrier = carrierFor(TinesVoice.TOY, m.getValue("TUNE"))
         val wobble = m.getValue("WOBBLE")
         val index = Dsp.lin(m.getValue("BRIGHT"), 1f, 4.5f)
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.09f, 0.4f)
@@ -244,16 +321,25 @@ object Tines {
         // into the render. It's the cheap-keyboard laser/game hit.
         val wobHz = Dsp.lin(wobble, 6f, 34f)
         val wobDepth = Dsp.lin(wobble, 0.02f, 0.35f)
+        val ratio = snapRatio(m.getValue("RATIO"))
+        val bite = 1.8f * biteOf(m)
+        // SHAPE: the wobble's waveform, a sine until now. Up, it squares
+        // off, so the pitch stops sliding and steps between two notes - the
+        // chip-tune trill of a cheap keyboard's arpeggio. At 0 the square
+        // is never computed.
+        val shape = m.getValue("SHAPE")
         val out = FloatArray(frames(t60 * 1.4f, rate))
         var pc = 0.0
         var pm = 0.0
         val env = Dsp.Env(attackSeconds = 0.001f, decay2T60 = t60)
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            val f = carrier * (1f + wobDepth * sin(2.0 * PI * wobHz * t).toFloat())
+            val sine = sin(2.0 * PI * wobHz * t).toFloat()
+            val lfo = if (shape > 0f) (1f - shape) * sine + shape * kotlin.math.sign(sine) else sine
+            val f = carrier * (1f + wobDepth * lfo)
             pc += f / rate
-            pm += f * 2f / rate
-            val idx = index * Dsp.envAt(t, t60 / 1.8f)
+            pm += f * ratio / rate
+            val idx = index * Dsp.envAt(t, t60 / bite)
             out[i] = env.at(t) *
                 sin(2.0 * PI * pc + idx * sin(2.0 * PI * pm)).toFloat()
         }
@@ -279,7 +365,7 @@ object Tines {
         val out = FloatArray(frames(t60 * 1.3f, rate))
         // The tongue: its index is the thumb's hardness, and the bite keeps
         // the pluck at the front.
-        strike(out, hz, ratio = 1f, index = Dsp.lin(bright, 0.3f, 1.6f), t60 = t60, bite = 2.5f, rate = rate)
+        strike(out, hz, ratio = 1f, index = Dsp.lin(bright, 0.3f, 1.6f), t60 = t60, bite = 2.5f * biteOf(m), rate = rate)
         // The bar's overtones, each a near-pure partial (ratio 1, tiny
         // index) that BRIGHT brings up: the partials are the kalimba's
         // shimmer, and die slower than the tongue's index but faster than
@@ -287,7 +373,14 @@ object Tines {
         val upper = Dsp.lin(bright, 0.3f, 0.9f)
         strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.6f, bite = 2f, gain = upper, rate = rate)
         strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.25f, bite = 2f, gain = upper * 0.5f, rate = rate)
-        tick(out, bright, rate, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "TICK"))
+        // TICK: the nail, as a multiplier on BRIGHT's own tick level - 0
+        // is a fleshy thumb with no click at all, 1 six times today's nail.
+        // Measured: today's click sits ~27 dB under the note's first 4 ms,
+        // and 3x only reached ~-18 dB, so the top goes to 6x (~-12 dB) to
+        // be heard as a nail. Linear halves meeting at exactly 1.
+        val tickMacro = m.getValue("TICK")
+        val tickMult = if (tickMacro < 0.5f) tickMacro * 2f else 1f + (tickMacro - 0.5f) * 10f
+        if (tickMult > 0f) tick(out, bright, rate, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "TICK"), tickMult)
         if (buzz > 0.01f) rattle(out, buzz, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "BUZZ"))
         return out
     }
@@ -304,10 +397,10 @@ object Tines {
      * its energy there (gate 2026-09-26) - the 9 kHz low-pass keeps the
      * tick's energy inside what the decimator actually keeps.
      */
-    private fun tick(out: FloatArray, bright: Float, rate: Int, seed: Int) {
+    private fun tick(out: FloatArray, bright: Float, rate: Int, seed: Int, mult: Float = 1f) {
         val noise = Dsp.Noise(seed)
         val n = (0.003f * rate).toInt().coerceAtMost(out.size)
-        val gain = Dsp.lin(bright, 0.2f, 0.7f)
+        val gain = Dsp.lin(bright, 0.2f, 0.7f) * mult
         val a = exp(-2.0 * PI * 3000.0 / rate).toFloat()   // high-pass corner
         val b = exp(-2.0 * PI * 9000.0 / rate).toFloat()   // low-pass corner
         var lp = 0f

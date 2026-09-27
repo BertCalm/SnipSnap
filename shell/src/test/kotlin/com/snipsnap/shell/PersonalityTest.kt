@@ -784,6 +784,14 @@ class PersonalityTest {
         assertTrue("NO ORIGINAL IN THE BIN" in stacked && "VERSIONS" in stacked, stacked)
         assertEquals(stacked.uppercase(), stacked, "shouts")
         assertTrue(stacked.endsWith("."))
+        // A siren's landing: SEND TO PAD's own line first, then which shape landed and where its echo is.
+        val sirenShot = Copy.sirenSent("A05", "Wail Siren", replaced = false, loop = false)
+        assertTrue(sirenShot.startsWith("PAD A05 ADDED: WAIL SIREN."), sirenShot)
+        assertTrue("ECHO IS IN THE RACK" in sirenShot && "SURFACE" !in sirenShot, sirenShot)
+        val sirenLoop = Copy.sirenSent("A05", "Wail Siren", replaced = true, loop = true)
+        assertTrue(sirenLoop.startsWith("PAD A05 REPLACED WITH WAIL SIREN. ORIGINAL SLEEPS IN THE BIN."), sirenLoop)
+        assertTrue("SURFACE" in sirenLoop && "PAD ◄ ► TO A05" in sirenLoop && "RACK" !in sirenLoop, sirenLoop)
+        assertTrue(sirenLoop.endsWith(".") && sirenShot.endsWith("."))
         assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE BIN.", Copy.keyed("TUNE", "A02", "C MAJOR"))
         assertEquals("A02 DRIFTED TOWARD Other:B03. ORIGINAL SLEEPS IN THE BIN.", Copy.drifted("A02", "Other:B03"))
         // Both engines own a HAT_CLOSED and a SNARE, so the engine is

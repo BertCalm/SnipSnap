@@ -88,4 +88,14 @@ class DeterminismTest {
         val patch = GlintPatch("Canary", GlintVoice.BOTTLE, Glint.defaults(GlintVoice.BOTTLE))
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
+
+    // SIREN has no seed at all (its LFO starts at a fixed phase), and its
+    // LOOP render fits a pitch and cuts at a crossing: both paths here.
+    @Test
+    fun `SIREN is byte-identical across renders, one-shot and LOOP`() {
+        val shot = SirenPatch("Canary", SirenVoice.WAIL, Siren.defaults(SirenVoice.WAIL))
+        assertContentEquals(shot.render().samples, shot.render().samples)
+        val loop = SirenPatch("Canary Loop", SirenVoice.LASER, Siren.defaults(SirenVoice.LASER) + ("HOLD" to 1f))
+        assertContentEquals(loop.render().samples, loop.render().samples)
+    }
 }
