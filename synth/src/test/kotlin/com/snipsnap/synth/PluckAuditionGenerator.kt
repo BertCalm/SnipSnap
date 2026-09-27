@@ -139,8 +139,8 @@ object PluckAuditionGenerator {
         // p3a: the sitar's first gate. Every axis at the default note C#4,
         // the two notes at the ends, and KOTO/HARP with the low stiffness on.
         val sitarDir = File(root, PluckVoice.SITAR.name)
-        fun writeSitar(name: String, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null) {
-            WavWriter.write(File(sitarDir, "$name.wav"), AuditionLevel.level(Pluck.renderWith(PluckVoice.SITAR, macros, velocity, stiffness, jawari)), WavWriter.BitDepth.PCM_16)
+        fun writeSitar(name: String, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null, sympathetic: Pluck.Sympathetic? = null) {
+            WavWriter.write(File(sitarDir, "$name.wav"), AuditionLevel.level(Pluck.renderWith(PluckVoice.SITAR, macros, velocity, stiffness, jawari, sympathetic)), WavWriter.BitDepth.PCM_16)
             count++
         }
         writeSitar("p3a_default", emptyMap())
@@ -152,7 +152,10 @@ object PluckAuditionGenerator {
         WavWriter.write(File(sitarDir, "p3a_soft.wav"), AuditionLevel.level(Velocity.atVelocity(soft, 0.3f)), WavWriter.BitDepth.PCM_16)
         count++
         writeSitar("p3a_symp_0", mapOf("DOUBLE" to 0f))
-        writeSitar("p3a_symp_1", mapOf("DOUBLE" to 1f))
+        writeSitar("p3a_symp_series_4", emptyMap())
+        writeSitar("p3a_symp_series_1", mapOf("DOUBLE" to 1f))
+        writeSitar("p3a_symp_scale_4", emptyMap(), sympathetic = Pluck.SYMPATHETIC_SCALE)
+        writeSitar("p3a_symp_scale_1", mapOf("DOUBLE" to 1f), sympathetic = Pluck.SYMPATHETIC_SCALE)
         writeSitar("p3a_stiff_off", emptyMap(), stiffness = 0f)
         writeSitar("p3a_stiff_high", emptyMap(), stiffness = Pluck.SITAR_STIFFNESS_HIGH)
         writeSitar("p3a_root", mapOf("TUNE" to 0f))

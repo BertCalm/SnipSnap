@@ -478,6 +478,7 @@
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
     <p>SITAR is new: a steel string with a bridge that buzzes, four strings that ring in sympathy under DOUBLE, and stiffness that puts its upper partials sharp; the body on this page is a shape, three resonances proposed from general sitar acoustics because the one measured table is behind a paywall - it ships only if you chip it closer, and BODY stays off until then.</p>
     <p>The cards hear each axis: the jawari at three drives and a soft pluck, the sympathetic strings off and at the drone, stiffness off and at the higher candidate, then the ends of TUNE and DAMP. With the sympathetic strings on, the note runs to the end of its budget and ends on a short fade over the still-ringing drone rather than where the string stops, so a chip on the ending is about DOUBLE, not DAMP.</p>
+    <p>The tarab come two ways now: tuned to the note's own series, which rings inside the note and is what ships, and tuned to scale degrees with a little detune and the pluck fed through the bridge, which rings beside it.</p>
     <p>KOTO and HARP: the same note with stiffness off and on, and they only change if you chip on as closer.</p>
   </div>
 
@@ -493,7 +494,7 @@
       <textarea id="q_jawari" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; The sympathetic strings: keep the default, more, or off?</div>
+      <div class="ask">2 &middot; The sympathetic strings: series or scale, and at which DOUBLE?</div>
       <textarea id="q_symp" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
@@ -537,9 +538,12 @@
       ['p3a_jawari_60', 'DRIVE .60', 'a flatter bridge, the ugly end'],
       ['p3a_soft', 'SOFT PLUCK', 'velocity .30 through the real path: PICK darkens and the buzz backs off']
     ]},
-    { label: 'THE SYMPATHETIC STRINGS', clips: [
-      ['p3a_symp_0', 'DOUBLE 0', 'the string alone'],
-      ['p3a_symp_1', 'DOUBLE 1', 'the drone, the ugly end']
+    { label: 'THE SYMPATHETIC STRINGS, TWO TUNINGS', key: true, clips: [
+      ['p3a_symp_0', 'NONE', 'the string alone'],
+      ['p3a_symp_series_4', 'SERIES, DOUBLE .4', 'tuned to the note\'s own series: what ships'],
+      ['p3a_symp_series_1', 'SERIES, DOUBLE 1', 'the drone'],
+      ['p3a_symp_scale_4', 'SCALE, DOUBLE .4', 'the second, third, fourth and sixth, slightly detuned, fed the pluck'],
+      ['p3a_symp_scale_1', 'SCALE, DOUBLE 1', 'the same at the drone']
     ]},
     { label: 'STIFFNESS', clips: [
       ['p3a_stiff_off', 'OFF', 'partials on the harmonics: within a tenth of a percent, what a real baaj string does'],
