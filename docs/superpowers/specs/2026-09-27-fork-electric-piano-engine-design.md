@@ -1,10 +1,11 @@
 # FORK — the modal electric piano engine
 
-**Status:** design; question 1 (home) settled in conversation 2026-09-27,
-questions 2–5 settled here by default, marked as such, to be overturned at
-the first gate rather than argued now. Not implemented.
+**Status:** design; questions 1, 2, 4 and 5 (home, which bar, scope,
+excite-from-pad) settled in conversation 2026-09-27; question 3 (residual
+and stereo) left open by the owner, so its default stands until the first
+gate. Not implemented.
 **Date:** 2026-09-27
-**Plan:** to be written per phase (`docs/superpowers/plans/2026-09-27-fork-phase-N.md`)
+**Plan:** to be written per round (`docs/superpowers/plans/2026-09-27-fork-round-N.md`)
 **Related:** [`2026-09-27-silk-string-engine-design.md`](2026-09-27-silk-string-engine-design.md)
 made the same home decision the same day and for the same reasons; its
 `Modes.stiffString` and t60-not-Q rule are reused here.
@@ -85,7 +86,7 @@ which one the ear calls an electric piano.
 | **PLUCK / SILK** | Waveguide strings. A string's stiffness bends its partials by a few percent (`B` ~ 10⁻⁴); a bar's puts them at six times the fundamental. Different physics, different table, and neither has a nonlinearity *after* the resonator. |
 | **GLINT** | Phase distortion: a formant that sweeps while the pitch holds. A bark is even-harmonic distortion of a *decaying* signal; the spectrum thins on its own. |
 | **WOBBLE** (the rack) | The electric piano's tremolo *is* WOBBLE — a tempo-locked amplitude LFO baked onto a hit. FORK renders dry and the rack does what it already does. The CRUNCH rule. |
-| **GRAINS** | The engine that eats captures. FORK's excite-from-pad (Phase 4) is the other way round: a capture *strikes* a tine rather than being smeared by one. |
+| **GRAINS** | The engine that eats captures. FORK's excite-from-pad is the other way round: a capture *strikes* a tine rather than being smeared by one — and unlike a GRAINS pad, which lands as audio with no recipe, a FORK pad keeps its striker in the recipe (below). |
 
 So FORK is worth building for exactly one thing none of that does: **an
 asymmetric magnetic pickup reading a decaying bar**, where velocity,
@@ -117,7 +118,7 @@ STRIKE ──▶ hammer burst ──▶ Modes.ring (4–6 modes at the voice's r
 
 Rendered at `Dsp.RATE * Dsp.OVERSAMPLE` and decimated (U6), like every
 other engine — and not optionally here: the pickup makes harmonics above
-Nyquist by construction. Mono in Phase 1, like PLUCK; stereo is Phase 3.
+Nyquist by construction. Mono in round one, like PLUCK; stereo is round two.
 
 ### The exciter
 
@@ -128,11 +129,32 @@ through `Dsp.Biquad.bandpass` centred two octaves above the note, under a
 things together, because a harder hammer is brighter, shorter and bigger:
 the burst's `Dsp.OnePole` cutoff (1.5 kHz → 9 kHz, `Dsp.expMap`), its
 t60 (3 ms → 1 ms), and the tine's **swing** (below). On the keys path
-(Phase 2) velocity *is* STRIKE, which is how `Keys.ep` already treats it.
+velocity *is* STRIKE, which is how `Keys.ep` already treats it.
 
-The spec's second exciter mode — an external audio buffer — is Phase 4,
-and offline it is a better idea than live: any captured snip's head can
-strike the tine. See "What comes after".
+**Excite-from-pad** is the spec's second exciter mode — an external audio
+buffer — and offline it is a better idea than live: any captured snip's
+head can strike the tine. In round one, by decision. The rules:
+
+- **The striker is the head, and short.** `Fork.striker(snip)` takes the
+  source's first `STRIKER_MS` (20 ms, 882 frames at `Dsp.RATE`), mono,
+  peak-normalised to the noise burst's own level, with a 2 ms raised-cosine
+  fade at its end so a cut mid-waveform is not a click. Longer would not
+  be a hammer: a source that keeps going through a 10 s mode is a drone,
+  and the classifier would file it LOOP.
+- **STRIKE still means what it means.** The striker goes through the same
+  `Dsp.OnePole` cutoff and sets the same swing, so velocity on the keys
+  path darkens and softens a captured strike the way it does the noise.
+  Only the burst's own t60 has no meaning for it.
+- **The striker lives in the recipe.** A GRAINS pad lands "as audio with
+  no recipe — every GRAINS pad is its own truth" (`SYNTH_ROADMAP.md`,
+  S7), because a 2.5 s source is not a recipe. 882 numbers are: SNAP keeps
+  256 in its recipe and DRAW 64, so `ForkPatch` carries an optional
+  `striker` field of that shape, and a kit with a FORK pad struck by a
+  drum hit regenerates bit-for-bit from `kit.json` like every other pad.
+  The source snip itself is not kept, as SNAP does not keep the photo.
+- **The picker is GRAINS'.** The SYNTH screen's source chooser for GRAINS
+  is reused as STRIKE FROM ▸ on FORK; the default, no source chosen, is
+  the noise hammer.
 
 ### The resonator
 
@@ -236,7 +258,7 @@ model with the gap normalised to 1. Four rules around it:
 **Loudness.** The pickup makes level depend on BARK and STRIKE. On pads,
 `Dsp.levelTo(Dsp.MELODIC_LOUDNESS_TARGET)` after the fact, as every
 melodic engine does — so BARK changes tone, not loudness, the promise
-`Dsp.drive` makes with its unity make-up. On keys (Phase 2) the layers
+`Dsp.drive` makes with its unity make-up. On keys the layers
 are velocity-true, as `Keys.ep`'s are, so a note is *not* levelled per
 render: the hard layer's gain is fixed relative to the soft one at the
 instrument level.
@@ -249,12 +271,12 @@ independent pans and FX sends. Offline, the honest version of that:
 
 - **Per-mode pan is already there** (`Modes.Mode.pan`), so a stereo render
   with the fundamental centred and the overtones and hammer spread is a
-  table change, not DSP. It is Phase 3 because stereo is U4's opt-in
+  table change, not DSP. It is round two because stereo is U4's opt-in
   (`docs/SYNTH_UPGRADE.md`): WAV size doubles and the rack has a
   stereo-safety audit to pass first.
 - **FX sends do not exist and are not proposed.** The rack is per pad by
   design. The sampler's way to send two streams to two effects is two
-  pads, and that is Phase 3's `SPLIT TO PADS`: land the harmonic render
+  pads, and that is round two's `SPLIT TO PADS`: land the harmonic render
   and the percussive render on two pads, each with its own rack — the
   spec's "ping-pong delay on the transient, fundamental anchored centre"
   becomes ECHO on one pad and nothing on the other. On the MPC that is a
@@ -282,8 +304,17 @@ sixteen points). No PUNCH: it is a drum-engine macro and FORK is melodic.
 
 ## Data flow and compatibility
 
-- `ForkPatch` in `Patches.kt`, the common shape: voice + the five macros;
-  `Patches.fromJsonValue` round-trips it. A recipe replays bit-for-bit.
+- `ForkPatch` in `Patches.kt`, the common shape: voice + the five macros,
+  plus the optional `striker` (882 samples, the shape SNAP's `table`
+  set); `Patches.fromJsonValue` round-trips it, and a wrong-length or
+  non-finite striker is a `JsonException` like a wrong-length SNAP table.
+  A recipe replays bit-for-bit.
+- `Keys.fork(midi, velocity)` renders at exact MIDI pitch for the
+  instrument: velocity-true soft and hard layers, STRIKE from velocity,
+  per-note t60 like `Keys.ep`'s but capped at 5 s (a 110 Hz fundamental
+  at the spec's Q rings for 40 s, and that is file size); multisampled
+  every minor third; `MAKE INSTRUMENT ▸` and `snipsnap synth FORK TINE
+  --instrument`, dual-generation keygroup.
 - `Presets.kt` gains a FORK branch; `ForkPresets.kt` holds 8–12 per voice,
   named for the sound (DINNER JAZZ, GLASS TINE, HARD BARK). SUITCASE and
   STAGE are model nicknames and are not names here; the near-miss check
@@ -312,7 +343,7 @@ sixteen points). No PUNCH: it is a drum-engine macro and FORK is melodic.
 1. **In tune.** Every snapped TUNE step, both voices, all five macros at
    default and at their corners: the rendered fundamental within 5 cents.
    The pickup adds harmonics; it must not move the fundamental. On the
-   keys path (Phase 2), every MIDI note in range, both layers.
+   keys path, every MIDI note in range, both layers.
 2. **The bar is where the table says.** At STIFF 0.5 the spectral peaks
    of a long-DECAY render sit on the voice's ratios (within 1 %); at
    STIFF 0 within 5 cents of `2, 3, 4 × f0`; at STIFF 1 above the table
@@ -329,6 +360,13 @@ sixteen points). No PUNCH: it is a drum-engine macro and FORK is melodic.
    higher than that of the 500–550 ms window, at every BARK above 0, and
    the gap widens with BARK. This is the claim that the physics does what
    TINES' BITE envelope fakes.
+6. **A striker is a hammer, not a drone.** Struck from a captured kick's
+   head and from a captured hat's: the fundamental within 5 cents either
+   way (test 1 holds for any striker); the first 20 ms's spectral centroid
+   differs between the two (the striker is heard); past 200 ms the two
+   renders' spectra agree within 1 dB per band (the striker is *only*
+   heard at the start). A striker of 882 samples of silence renders
+   silence, not a crash.
 
 ### The rest
 
@@ -343,7 +381,11 @@ sixteen points). No PUNCH: it is a drum-engine macro and FORK is melodic.
   bounded, finishes.
 - **Identity:** both defaults classify TONAL; 200 SCRAMBLEs audible and
   unclipped.
-- **Recipe:** `ForkPatch` round-trips through JSON.
+- **Recipe:** `ForkPatch` round-trips through JSON, with and without a
+  striker; a kit with a struck FORK pad regenerates bit-for-bit.
+- **Keys:** the instrument's zones cover the range with no gap; the hard
+  layer is louder and brighter than the soft at every zone; the sustain
+  cap holds at 5 s.
 - **Names:** the roster passes the blocklist with `rhodes`, `wurlitzer`
   and `fender` added; `ThumpPresetsTest`'s near-miss and clean-name checks
   extended (`ELECTRIC PIANO` and `DINNER JAZZ` allowed).
@@ -354,24 +396,26 @@ Every phase ends the house way: stop and listen. A listening page renders
 the phase's voices at defaults and at each macro's extremes, and the chips
 are the gate.
 
-| Phase | Ships | Gate |
+| Round | Ships | Gate |
 |---|---|---|
-| **F1** | `synth/Fork.kt` (both voices, the hammer, the bank, the pickup), `ForkPatch`, `ForkPresets.kt` and its `Presets` branch, the tests above, the blocklist terms, the testkit kit; the phone: FORK in the SYNTH picker, SEND TO PAD. Mono | **the physics question:** TINE or BAR is the electric piano; SLOPE 2 or 2.7; BARK's ceiling |
-| **F2** | keys: `Keys.fork(midi, velocity)` — velocity-true soft/hard layers, STRIKE from velocity, per-note t60 like `Keys.ep`'s (capped at 5 s: a 110 Hz fundamental at the spec's Q rings for 40 s, and that is file size); `MAKE INSTRUMENT ▸`, multisampled every minor third, dual-generation keygroup | the instrument under two hands |
-| **F3** | stereo: per-mode pan (fundamental centred, overtones and hammer spread), U4 opt-in per patch; `SPLIT TO PADS` landing harmonic and percussive renders on two pads | the split against the mono |
-| **F4** | excite-from-pad: any captured snip's first 15 ms as the hammer (`GRAINS`' source picker, the other way round) | a drum hit rung through a tine |
+| **R1** | `synth/Fork.kt` (both voices, the hammer, the striker, the bank, the pickup), `ForkPatch` with its optional striker, `ForkPresets.kt` and its `Presets` branch, `Keys.fork` and `MAKE INSTRUMENT ▸`, the tests above, the blocklist terms, the testkit kit; the phone: FORK in the SYNTH picker, SEND TO PAD, STRIKE FROM ▸. Mono | **the physics question:** TINE or BAR is the electric piano; SLOPE 2 or 2.7; BARK's ceiling; the instrument under two hands; a drum hit rung through a tine |
+| **R2** | stereo: per-mode pan (fundamental centred, overtones and hammer spread), U4 opt-in per patch; `SPLIT TO PADS` landing harmonic and percussive renders on two pads | the split against the mono |
 
-Why this order: F1 is the engine and the only open physics. F2 is
-plumbing on a path five instruments already walk. F3 waits on U4's audit.
-F4 is the most SnipSnap idea in the spec and the least certain to be
-musical, so it goes last, on an engine that has already been listened to.
+The first draft staged this as four phases — engine, then keys, then
+stereo, then excite-from-pad last as the least certain to be musical.
+The owner chose scope over the staging for keys and the striker (the
+roadmap's THUMP round made the same kind of call, range over the cap),
+so R1 carries all three and one audition hears them together. Inside R1
+the order of *work* is still engine, keys, striker, since each is built
+on the one before, and a plan may cut a round-one PR at any of those
+seams. R2 waits on U4's stereo audit regardless.
 
 ## Out of scope
 
 - **Real-time / native.** Settled above. No telemetry bridge, no voice
   pool, no callback constraints: they exist for the sample players and are
   not this engine's.
-- **A live external-audio exciter.** F4 is the offline form.
+- **A live external-audio exciter.** The striker is the offline form.
 - **FX sends per stream.** Two pads are the sends.
 - **A tremolo or a "suitcase" stereo pan.** That is WOBBLE and the rack.
 - **A reed voice.** The other classic electric piano reads its reed with an
@@ -383,17 +427,23 @@ musical, so it goes last, on an engine that has already been listened to.
 | Question | Decision | By |
 |---|---|---|
 | Home | a `:synth` engine, Kotlin, offline | conversation |
-| Which bar sits at STIFF's centre | both, as voices: TINE (cantilever) and BAR (free-free); the audition picks the default | default, this document |
-| Residual, and stereo in round one | residual is the hammer after 15 ms; round one is mono; per-mode pan and SPLIT TO PADS are F3 | default, this document |
-| Scope | pads first (F1), the keys instrument second (F2) | default, this document |
-| Excite-from-pad | F4, after the audition | default, this document |
+| Which bar sits at STIFF's centre | both, as voices: TINE (cantilever) and BAR (free-free); the audition picks the default | conversation |
+| Residual, and stereo in round one | **open** — the owner does not know yet. The default stands until R1's gate: residual is the hammer after 15 ms; R1 is mono; per-mode pan and SPLIT TO PADS are R2 | default, this document |
+| Scope | keys and one-shots together, in R1 | conversation |
+| Excite-from-pad | R1 | conversation |
 
 ### Open for review
 
-1. **SLOPE** — 2 (bar physics) or 2.7 (the spec's Q pair). Set at F1's
+1. **SLOPE** — 2 (bar physics) or 2.7 (the spec's Q pair). Set at R1's
    gate by ear; the test only asks that higher modes die first.
 2. **BARK's ceiling** — 0.7 by the harmonic-series estimate; the aliasing
    test decides, the ear may ask for less.
 3. **Mode gains** — `1 / ratio` is a guess with the right shape; the gate
    may want TINE's second mode louder for the tink.
 4. **The keys t60 cap** — 5 s is a file-size number, not a musical one.
+5. **Residual and stereo** — question 3 above. What to listen for at
+   R1's gate: whether the mono render sounds *small* (U4's word for the
+   thing stereo fixes), and whether anyone reaches for the hammer's tail
+   as a thing of its own. If neither, R2 is per-mode pan and the split
+   as written; if the tail matters, residual becomes a third pad in the
+   split.
