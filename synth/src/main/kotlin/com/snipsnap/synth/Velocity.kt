@@ -213,6 +213,7 @@ object Velocity {
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
+        is TerraPatch -> Terra.macrosFor(patch.voice)
     }
 
     /**

@@ -49,6 +49,7 @@ object Patches {
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             GlintPatch.ENGINE -> GlintPatch.fromJsonValue(value)
             SirenPatch.ENGINE -> SirenPatch.fromJsonValue(value)
+            TerraPatch.ENGINE -> TerraPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
