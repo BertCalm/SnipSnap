@@ -1,9 +1,16 @@
 # SIREN — the dub siren engine
 
-**Status:** S12 built (engine, presets, tests, SYNTH picker, landing,
-testkit kit), **awaiting the audition gate**. Where the build departs from
-the design, and why, is under "As built" at the end. The SURFACE section is
-the second pass, written after reading how the surface actually plays a pad.
+**Status:** S12 built and merged (PR #348: engine, presets, tests, SYNTH
+picker, landing, testkit kit), **awaiting the audition gate**. The
+listening page for that gate is
+`https://claude.ai/artifact/DXEn8DC3ZkcHGzFrTP6VEz`, rendered by
+`./gradlew :synth:generateSirenAudition` (the kit as it lands, every knob
+at both ends per voice, and the four LOOPs held under a finger with an
+echo through Web Audio, a stand-in for the SURFACE); its verdicts save to
+the artifact's store under `verdicts/siren_s12_*`. Where the build
+departs from the design, and why, is under "As built" at the end. The
+SURFACE section is the second pass, written after reading how the surface
+actually plays a pad.
 **Date:** 2026-09-27
 **Plan:** the phasing table below is the plan; no separate plan file yet.
 **Roadmap:** the `SYNTH_ROADMAP.md` phasing row is added when implementation

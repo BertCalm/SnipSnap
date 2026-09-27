@@ -46,3 +46,6 @@ testkit/glint-d1-audition/
 # The TINES audition phrases and page, rendered by :synth:generateTinesAudition
 # and published as the listening artifact; never committed.
 testkit/tines-audition/
+# The SIREN audition clips, manifest and page, rendered by :synth:generateSirenAudition
+# and published as the listening artifact; never committed.
+testkit/siren-audition/
