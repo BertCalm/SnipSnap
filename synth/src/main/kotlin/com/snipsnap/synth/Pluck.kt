@@ -9,9 +9,7 @@ import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -32,15 +30,6 @@ object Pluck {
 
     /** Semitone span of the TUNE macro. Root at 0, two octaves up at 1. */
     const val TUNE_SEMITONES = 24
-
-    /**
-     * The smallest Karplus-Strong loop length [ks] will accept, in
-     * samples. Below this, splitting the loop into an integer delay [n]
-     * plus a fractional allpass remainder stops being meaningful - see
-     * [ks]'s `require` for why going below it used to produce a silently
-     * unstable filter instead of a clear failure.
-     */
-    private const val MIN_LOOP_SAMPLES = 2.0
 
     /**
      * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
@@ -304,83 +293,23 @@ object Pluck {
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 
-    /**
-     * Cuts [buf] where its 5 ms RMS envelope has fallen 60 dB below its
-     * peak, never under [RING_FLOOR_SECONDS] - that's the normal case, and
-     * the string stopped ringing before the budget ran out.
-     *
-     * If the scan never finds that point, the string was still ringing when
-     * the buffer ran out, and which fade applies depends on why: at the ring
-     * ceiling (`buf.size >= RING_CEILING_SECONDS * rate`) the string was cut
-     * off mid-ring for real, so the last 400 ms gets the long squared fade.
-     * Short of the ceiling, this was a DAMP-driven budget cut (a high DAMP
-     * gave `synthesize` only a few hundred ms to work with), and the render
-     * is still audible for nearly all of that budget - re-enveloping the
-     * whole thing with a 400 ms fade would choke the very thud DAMP asked
-     * for, so only the last 30 ms is faded, just enough to declick the cut.
-     * Either way `render`'s own 4 ms `Dsp.fadeTail` then has nothing audible
-     * left to touch.
-     */
-    internal fun trimToDecay(buf: FloatArray, rate: Int): FloatArray {
-        val block = (rate * 0.005f).toInt().coerceAtLeast(1)
-        val blocks = (buf.size + block - 1) / block
-        if (blocks == 0) return buf
-        val rms = DoubleArray(blocks)
-        for (b in 0 until blocks) {
-            val start = b * block
-            val end = min(buf.size, start + block)
-            var acc = 0.0
-            for (i in start until end) acc += buf[i].toDouble() * buf[i]
-            rms[b] = sqrt(acc / (end - start))
-        }
-        val peak = rms.max()
-        if (peak <= 0.0) return buf
-        val floorBlocks = ((RING_FLOOR_SECONDS * rate) / block).toInt()
-        var last = blocks - 1
-        // The scan never steps below floorBlocks, so that block is always
-        // kept; when the loop stops because last == floorBlocks (rather than
-        // finding a loud block), the block just above it was already walked
-        // and found quiet on the previous iteration, so keeping both here is
-        // not a guess.
-        while (last > floorBlocks && rms[last] < peak * 0.001) last--
-        val end = min(buf.size, (last + 2) * block)
-        if (end < buf.size) return buf.copyOf(end)
-        if (buf.size >= (RING_CEILING_SECONDS * rate).toInt()) {
-            fadeCeiling(buf, ms = 400f, rate = rate)
-        } else {
-            fadeCeiling(buf, ms = 30f, rate = rate)
-        }
-        return buf
-    }
-
-    /**
-     * A squared fade over the last [ms]. At the ring ceiling the string is
-     * still moving, and a linear fade's last few milliseconds would sit
-     * only ~30 dB down; squaring it puts them past -60 dB.
-     */
-    private fun fadeCeiling(buf: FloatArray, ms: Float, rate: Int) {
-        val n = min(buf.size, (ms / 1000f * rate).toInt())
-        if (n <= 0) return
-        val start = buf.size - n
-        for (i in 0 until n) {
-            val g = 1f - i.toFloat() / n
-            buf[start + i] *= g * g
-        }
-    }
+    /** The decay-following cut, with PLUCK's floor and ceiling - see [Strings.trimToDecay]. */
+    internal fun trimToDecay(buf: FloatArray, rate: Int): FloatArray =
+        Strings.trimToDecay(buf, rate, RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
 
     /** BODY 1 is three times the string's RMS - the spike's "dominant", which stays reachable (spec, "Macros"). */
     internal const val BODY_MAX = 3f
 
     /**
-     * Stiffness allpass coefficients (see [ks]). SITAR's two candidates put
-     * the tenth partial about 1 % and about 3 % sharp of harmonic, found by
-     * StiffnessTest's probe, not by hand; the low one ships until the gate
-     * chooses. KOTO and HARP carry zero: both passed a Phase 2 gate and do
-     * not change unheard (the audition offers them the low candidate). The
-     * coefficient is a raw z-domain value, so its delay is about 24 samples
-     * at any rate and the dispersion it produces scales with the render
-     * rate (RATE × OVERSAMPLE today); a reader deriving an inharmonicity
-     * coefficient from it must say which rate.
+     * Stiffness allpass coefficients (see [Strings.Loop]). SITAR's two
+     * candidates put the tenth partial about 1 % and about 3 % sharp of
+     * harmonic, found by StiffnessTest's probe, not by hand; the low one
+     * ships until the gate chooses. KOTO and HARP carry zero: both passed a
+     * Phase 2 gate and do not change unheard (the audition offers them the
+     * low candidate). The coefficient is a raw z-domain value, so its delay
+     * is about 24 samples at any rate and the dispersion it produces scales
+     * with the render rate (RATE × OVERSAMPLE today); a reader deriving an
+     * inharmonicity coefficient from it must say which rate.
      */
     internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 0.88 % sharp with the shipped jawari on (StiffnessTest's probe)
     internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 5.6 c sharp (StiffnessTest measures it on every run), so if the gate chooses this candidate the drive steps down or the spec's fallback applies
@@ -392,8 +321,8 @@ object Pluck {
     }
 
     /**
-     * The jawari's drive (see [ks]) times [velocityDrive]. 0.3 is the
-     * starting point; the audition hears 0.15, 0.3 and 0.6 and the chips
+     * The jawari's drive (see [Strings.Loop]) times [velocityDrive]. 0.3 is
+     * the starting point; the audition hears 0.15, 0.3 and 0.6 and the chips
      * choose (spec, "The jawari").
      */
     internal const val SITAR_JAWARI = 0.3f
@@ -487,86 +416,19 @@ object Pluck {
     }
 
     /**
-     * The string drives its body. The drive is the string's FIRST
-     * DIFFERENCE, because the bridge force follows the string's slope at
-     * the bridge, the velocity-like quantity - not, as a 34 dB tilt might
-     * suggest, to hide the burst from the body's low modes. The
-     * differentiator's own gain, `2*sin(theta/2)`, and [Modes.ring]'s own
-     * onset peak, `1/sin(theta)` (`theta = 2*pi*hz/rate`), multiply to 1.0
-     * at every body frequency, so it is the table's GAIN column that
-     * governs each mode's burst response, and `ring`'s documented
-     * low-frequency onset hazard is cancelled outright, not merely
-     * reduced. What differentiating the drive actually buys: it removes
-     * the burst's DC step (the spike's knock came from driving the body
-     * with the string's raw displacement, DC and all), and it re-tilts
-     * the balance among a voice's own sourced modes toward the high ones
-     * by the differentiator's own frequency slope - NYLON's 645 Hz mode
-     * gains on its 104 Hz mode by about 16 dB, BANJO's 5000 Hz mode on
-     * its 220 Hz mode by about 27 dB, KOTO's 100 Hz mode on its 85 Hz
-     * mode by about 1.4 dB. The body's level against the string is set by
-     * the RMS match below, not by the drive.
-     *
-     * The body's own longest mode can ring well past the string that
-     * struck it: a muted string's DAMP-driven budget is a few hundred ms,
-     * a body mode's t60 can run past a second, and [Modes.ring] itself
-     * only ever returns as many samples as it was given to excite - it
-     * does not extend the ring on its own. So the drive here, and the
-     * ring it produces, run `pad` samples past the string's own length
-     * (`pad` sized off the table's own longest t60), and the returned
-     * buffer follows that ring out toward the ring ceiling rather than
-     * being cut where the string itself ends; [trimToDecay] (in
-     * [synthesize]) follows the combined tail from there. The RMS match
-     * is taken over the string's own length only, on both sides, so
-     * [amount] means "times the string" the same way whether or not the
-     * table's tail outlives it; the body is then added on top of the
-     * string where the string still runs, and on its own past the
-     * string's end. Amount 0 returns [string] itself: BODY 0 is the
-     * string, byte for byte. [differentiate] exists only so the knock
-     * test below can reproduce the spike's displacement drive for
-     * comparison - production never sets it false.
+     * The string drives its body - see [Strings.bodyRing], where the drive
+     * and its reasoning live; PLUCK passes its own table and ceiling.
      */
-    internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray {
-        if (amount <= 0f) return string
-        val table = bodyFor(voice)
-        if (table.isEmpty()) return string
-        val pad = (table.maxOf { it.t60 } * rate).toInt()
-        val driveLen = string.size + pad
-        // `differentiate = false` reproduces the spike's displacement drive;
-        // only the knock test passes it, production never does. Either way
-        // the drive is silent past the string's own length - there is
-        // nothing left to differentiate or copy once the string has ended,
-        // and the padding is what lets the body ring on regardless.
-        val drive = FloatArray(driveLen)
-        if (differentiate) {
-            var prev = 0f
-            for (i in string.indices) {
-                drive[i] = string[i] - prev
-                prev = string[i]
-            }
-        } else {
-            string.copyInto(drive)
-        }
-        val wet = Modes.ring(drive, 1f, table, rate)
-        val g = rms(string, string.size) / rms(wet, string.size).coerceAtLeast(1e-9f)
-        val outLen = min(driveLen, (RING_CEILING_SECONDS * rate).toInt())
-        val out = FloatArray(outLen)
-        for (i in out.indices) out[i] = (if (i < string.size) string[i] else 0f) + amount * g * wet[i]
-        return out
-    }
-
-    /** RMS of the first [n] samples of [buf] (all of it by default). */
-    private fun rms(buf: FloatArray, n: Int = buf.size): Float {
-        val len = min(n, buf.size)
-        var acc = 0.0
-        for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
-        return sqrt(acc / len.coerceAtLeast(1)).toFloat()
-    }
+    internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray =
+        Strings.bodyRing(string, bodyFor(voice), amount, rate, RING_CEILING_SECONDS, differentiate)
 
     /**
      * The 1983 algorithm itself: one period of filtered noise, then a delay
      * line feeding back through a low-pass. DAMP closes the loop filter and
      * pulls the feedback gain down together — one knob, two parameters,
-     * always musical.
+     * always musical. The loop lives in [Strings] (SILK Phase 1a), shared
+     * with SILK; this is PLUCK's door into it, and its loop-length floor is
+     * [Strings.MIN_LOOP_SAMPLES].
      *
      * Internal, not private, so PluckTest can drive it with a synthetic
      * freq/rate pair and pin the loop-length invariant below directly -
@@ -577,22 +439,10 @@ object Pluck {
      * at 196 Hz, now has the shortest loop of the remaining voices), so
      * there is no reachable call site to assert against otherwise.
      *
-     * [stiffness] is a first-order allpass coefficient in (-1, 0]; 0 is no
-     * allpass and the Phase 2 loop exactly. A negative value delays low
-     * partials more than high ones so the upper partials sit sharp of
-     * harmonic, the stiff-string law `n*sqrt(1 + B*n^2)` with B rising as
-     * the coefficient falls. Its phase delay at the fundamental is
-     * subtracted from the loop length so the note stays in tune.
-     *
-     * [jawari] is the bridge limiter's drive in [0, 1): after the low-pass,
-     * positive swings are pulled down by `jawari · y² / p0` (clamped so it
-     * never crosses zero), the way a string wrapping on a flat bridge is
-     * stopped on one side; a 2 Hz DC blocker follows because a one-sided
-     * term leaves an offset. A zero at DC nulls that offset at any corner -
-     * 2 Hz is chosen only for how fast a slow offset drains and how much
-     * lead the loop owes for it, and its own phase lead at the fundamental
-     * is budgeted into the loop length the same way the low-pass's and the
-     * stiffness allpass's are; both are skipped at 0.
+     * [stiffness] is SITAR's dispersion and [jawari] its bridge buzz - see
+     * [Strings.Loop] and [Strings.tune] for what they do and how their own
+     * delay is budgeted into the loop length; both are skipped at 0, which
+     * is every voice but SITAR.
      */
     internal fun ks(
         freq: Float,
@@ -608,189 +458,7 @@ object Pluck {
     ): FloatArray {
         require(stiffness > -1f && stiffness <= 0f) { "stiffness must be in (-1, 0], got $stiffness" }
         require(jawari in 0f..0.95f) { "jawari drive must be in [0, 0.95], got $jawari" }
-        val loopHz = bodyLoopHz * Dsp.lin(1f - damp, 0.35f, 1.6f)
-        val fb = Dsp.lin(1f - damp, 0.94f, 0.998f)
-
-        // The loop length is almost never a whole number of samples, and
-        // truncating it (the old `(rate / freq).toInt()`) detunes the
-        // string by an amount that depends on the fractional remainder at
-        // each frequency - non-monotonically across the keyboard, so a
-        // pentatonic run of pads came out sour relative to *each other*,
-        // not merely transposed (measured against the pre-fix loop: tens
-        // of cents flat and growing worse at higher TUNE, see task-11's
-        // report for the full table - flat, not the sharp direction this
-        // task was originally filed under. Truncation alone is a small
-        // sharp error - `44100/880` truncates from 50.11 to 50, ~4 cents -
-        // but the loop filter's own phase lag below, unaccounted for in
-        // the pre-fix loop, pulls flat and outweighs it at every note
-        // measured). The classic Karplus-Strong fix (Jaffe & Smith) keeps
-        // the delay line an integer length and carries the leftover
-        // fraction through a first-order allpass instead.
-        //
-        // That alone isn't the whole loop, though: two other stages in the
-        // feedback path have their own delay, and both must come out of
-        // the same budget the allpass fills in, or the loop still rings
-        // flat by an amount that shifts with DAMP and the note (confirmed
-        // by zero-crossing and FFT measurement on the rendered tail, not
-        // assumed):
-        //  - [loopLp], a one-pole lowpass, has a frequency-dependent phase
-        //    lag at the fundamental - real here, since DAMP can pull
-        //    loopHz down close to the note itself. [filterA]/[poleR] use
-        //    the same coefficient as [Dsp.OnePole.lp], so this is the
-        //    filter's actual closed-form phase, not an approximation.
-        //  - the two-tap average below (`0.5*(d, d-1)`) is a fixed-phase
-        //    FIR, exactly 0.5 samples of delay at every frequency, kept
-        //    from the pre-fix loop rather than dropped in favor of a
-        //    single-tap read. Its own magnitude response (|cos(w/2)|) is
-        //    near-unity at audible frequencies and isn't what's at stake;
-        //    what matters is its 0.5-sample shift in the loop's total
-        //    length, which - in a loop this resonant (DAMP low enough to
-        //    put `fb` near 0.998, dozens of round trips before decay) -
-        //    moves the comb's teeth relative to [loopLp]'s fixed rolloff
-        //    and re-rolls which harmonic of the one-period noise burst
-        //    rings loudest. Measured, not assumed: dropping the average
-        //    for a plain single-tap read put HARP's 2nd harmonic louder
-        //    than its fundamental at TUNE semitone 20, enough to fool a
-        //    general-purpose pitch detector into an octave error. Keeping
-        //    the average (and budgeting its exact 0.5-sample delay here)
-        //    reproduces the pre-fix engine's harmonic balance.
-        val filterA = 1.0 - exp(-2.0 * PI * min(loopHz, rate * 0.45f) / rate)
-        val poleR = 1.0 - filterA
-        val w = 2.0 * PI * freq / rate
-        val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
-        val filterDelay = -filterPhase / w
-
-        // The stiffness allpass H(z) = (c + z⁻¹) / (1 + c·z⁻¹): its phase at the
-        // fundamental is part of the loop's delay, the same way the low-pass's
-        // is, so it enters the budget here and the fundamental stays put.
-        val stiffDelay = if (stiffness != 0f) {
-            val c = stiffness.toDouble()
-            val phase = atan2(-sin(w), c + cos(w)) - atan2(-c * sin(w), 1.0 + c * cos(w))
-            -phase / w
-        } else 0.0
-
-        val dcA = (1.0 - exp(-2.0 * PI * 2.0 / rate)).toFloat()
-        // The DC blocker after the jawari is a one-pole high-pass, and a
-        // high-pass leads at the fundamental: its phase delay is negative
-        // and, like the low-pass's and the stiffness allpass's, it belongs
-        // to the loop's budget or the note reads sharp. A zero at DC nulls
-        // the offset at any corner; the corner only sets how fast a slow
-        // offset drains and how much lead the loop owes for it - 2 Hz (not
-        // 20) keeps that lead under a degree at the lowest note (C#3) and
-        // the dispersion it leaves on the upper partials is 0.11 % at the
-        // default note C#4 and 0.23 % at the root.
-        val dcDelay = if (jawari > 0f) {
-            val r = 1.0 - dcA
-            val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
-            -phase / w
-        } else 0.0
-        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
-        // n and frac must come from the SAME exact - splitting them and
-        // then independently coercing n up (the old `.coerceAtLeast(2)`)
-        // decouples them: frac keeps whatever floor(exact) - n produced,
-        // which goes negative the moment exact < n. A negative frac drives
-        // `a` above 1 - |a|>1 is an unconditionally unstable feedback
-        // allpass, not a degraded one. Guaranteeing frac stays in [0,1) by
-        // construction means never separating n from exact after this
-        // require: as long as exact clears MIN_LOOP_SAMPLES, floor(exact)
-        // >= MIN_LOOP_SAMPLES and frac = exact - floor(exact) is safe by
-        // definition, no clamp needed. Unreachable today - the closest any
-        // voice/TUNE/DAMP corner ever came to it was 175.93 samples, on the
-        // since-removed KALIMBA at TUNE=1/DAMP=1 - this is a require, not
-        // a silent coerce, so raising a voice root, widening
-        // TUNE_SEMITONES, or adding a high-pitched voice fails loudly
-        // here, naming the real cause, instead of surfacing later as a
-        // distant isFinite() failure with no trail back to this loop.
-        require(exact >= MIN_LOOP_SAMPLES) {
-            "Pluck loop length ($exact samples, freq=$freq Hz at rate=$rate) fell " +
-                "below the Karplus-Strong minimum of $MIN_LOOP_SAMPLES samples - a " +
-                "note this high (or a filter delay this large) needs either a lower " +
-                "root, a narrower TUNE_SEMITONES span, or this allpass revisited; " +
-                "coercing the loop length up here without also correcting the " +
-                "fractional remainder used to produce an unconditionally unstable " +
-                "feedback allpass."
-        }
-        val n = floor(exact).toInt()
-        val frac = (exact - n).toFloat()
-        val a = (1f - frac) / (1f + frac)
-        var apX1 = 0f
-        var apY1 = 0f
-        var stX1 = 0f
-        var stY1 = 0f
-
-        val out = FloatArray((seconds * rate).toInt().coerceAtLeast(n + 2))
-
-        val noise = Dsp.Noise(seed)
-        val pickLp = Dsp.OnePole(rate)
-        val burst = FloatArray(n)
-        for (i in 0 until n) burst[i] = pickLp.lp(noise.next(), pickHz)
-        // Zero-mean the exciter: the loop filter passes DC untouched, so any
-        // net offset in the burst survives as a sub-thump long after the
-        // string content is damped away — a dark pluck decayed into a fake
-        // kick until this subtraction.
-        var mean = 0f
-        for (v in burst) mean += v
-        mean /= n
-        for (i in 0 until n) burst[i] -= mean
-
-        // The bridge limiter scales to the string's own level: p0 is what a
-        // full swing looks like, so the same drive buzzes the same on every
-        // note and fades as the note does.
-        var p0 = 1e-6f
-        for (v in burst) if (kotlin.math.abs(v) > p0) p0 = kotlin.math.abs(v)
-        var dc = 0f
-
-        // Pick position (Jaffe & Smith 1983): the burst minus a copy of
-        // itself delayed by `position` of one period. The comb's notches
-        // fall on every harmonic k where k*position is a whole number: the
-        // centre kills the even harmonics, the bridge thins the low ones.
-        // The period here is the string's physical period `rate / freq`,
-        // not the integer delay-line length `n` - the loop's allpass,
-        // filter lag, and two-tap average make up the rest of that period
-        // (see `exact` above), and a comb cut to `n` alone puts its
-        // notches ~3% off the true harmonics at high DAMP (measured on
-        // the since-removed KALIMBA voice: the 2nd-harmonic null missed
-        // the 20 dB gate). The
-        // exciter grows to n + combDelay samples, and the extra samples enter
-        // the loop as INPUT through the `+=` below, not as initial state -
-        // the loop's own length and tuning budget are untouched. position
-        // = 0 reproduces the pre-STRIKE exciter sample for sample.
-        // The coerceIn(1, n) clamp is unreachable in production: combDelay / n
-        // <= ~0.5 * period/(period - lag), at most ~0.5 across the voice
-        // table, and the lower bound needs position * period < 0.5 samples.
-        val combDelay = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
-        val excLen = min(n + combDelay, out.size)
-        for (i in 0 until excLen) {
-            val x = if (i < n) burst[i] else 0f
-            val xd = if (combDelay > 0 && i - combDelay in 0 until n) burst[i - combDelay] else 0f
-            out[i] = x - xd
-        }
-
-        val loopLp = Dsp.OnePole(rate)
-        for (i in n + 1 until out.size) {
-            val d = 0.5f * (out[i - n] + out[i - n - 1])
-            // First-order allpass: y[i] = a*(x[i] - y[i-1]) + x[i-1]. Order
-            // matters here - it's the *tuned* sample that must feed both
-            // the loop filter and the output, or the correction never
-            // reaches the loop it was meant to fix.
-            val tuned = a * (d - apY1) + apX1
-            apX1 = d
-            apY1 = tuned
-            val stiff = if (stiffness != 0f) {
-                val s = stiffness * (tuned - stY1) + stX1
-                stX1 = tuned
-                stY1 = s
-                s
-            } else tuned
-            var y = loopLp.lp(stiff, loopHz)
-            if (jawari > 0f) {
-                if (y > 0f) y -= jawari * min(y, p0) * y / p0
-                dc += dcA * (y - dc)
-                y -= dc
-            }
-            out[i] += fb * y
-        }
-        return out
+        return Strings.pluck(freq, seconds, Strings.damping(damp, bodyLoopHz), pickHz, seed, rate, position, stiffness, jawari)
     }
 
     /** How much of the main string reaches each sympathetic loop, sample by sample, the way the bridge transmits it. */
@@ -834,9 +502,13 @@ object Pluck {
      * One sympathetic string: a Karplus-Strong loop at [hz] with no burst of
      * its own, fed continuously by [input] - at [onset] for the first
      * [onsetSamples], then at the steady [coupling] - ringing with
-     * [SYMPATHETIC_FEEDBACK] under a darker low-pass. Tuned the way [ks]
-     * is (integer delay, fractional allpass, the low-pass's delay in the
-     * budget), so the loop rings at the ratio it was given. The real tarab
+     * [SYMPATHETIC_FEEDBACK] under a darker low-pass. Tuned the way
+     * [Strings.tune] is (integer delay, fractional allpass, the low-pass's
+     * delay in the budget) - its own local copy of that math, since this
+     * loop's shape (no burst, continuously fed, no stiffness or jawari) is
+     * different enough from [Strings.pluck]'s that sharing the function
+     * would need a third caller shape neither SILK nor PLUCK currently
+     * needs - so the loop rings at the ratio it was given. The real tarab
      * strings sit under and against each other physically too, but this
      * model couples each loop only to the played string, not to its
      * neighbors.
@@ -853,7 +525,7 @@ object Pluck {
         val w = 2.0 * PI * hz / rate
         val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
         val exact = (rate / hz) - (-filterPhase / w) - 0.5
-        require(exact >= MIN_LOOP_SAMPLES) { "sympathetic loop at $hz Hz is too short ($exact samples)" }
+        require(exact >= Strings.MIN_LOOP_SAMPLES) { "sympathetic loop at $hz Hz is too short ($exact samples)" }
         val n = floor(exact).toInt()
         val frac = (exact - n).toFloat()
         val a = (1f - frac) / (1f + frac)

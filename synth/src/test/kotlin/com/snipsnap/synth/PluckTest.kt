@@ -12,6 +12,54 @@ import kotlin.test.assertTrue
 
 class PluckTest {
 
+    /**
+     * DeterminismTest proves two renders agree with each other; this proves
+     * they agree with yesterday. Captured before SILK Phase 1a moved the
+     * loop into Strings.kt (docs/superpowers/plans/2026-09-27-silk-phase-1a.md,
+     * Task 1) - every PLUCK pad in a kit.json depends on it.
+     */
+    @Test
+    fun `the render is pinned - the Strings extraction must not move it by a bit`() {
+        val expected: Map<String, Int> = mapOf(
+            "NYLON defaults" to -1684536122,
+            "NYLON all 0" to 550196401,
+            "NYLON all 1" to -737150253,
+            "NYLON first preset" to -1165758204,
+            "HARP defaults" to -1247316461,
+            "HARP all 0" to 1872873036,
+            "HARP all 1" to 1238762665,
+            "HARP first preset" to -2031479157,
+            "KOTO defaults" to -2072799550,
+            "KOTO all 0" to 2123899936,
+            "KOTO all 1" to 43220203,
+            "KOTO first preset" to 689756851,
+            "BANJO defaults" to 307363570,
+            "BANJO all 0" to 842078288,
+            "BANJO all 1" to -1976468254,
+            "BANJO first preset" to -1168603215,
+            "SITAR defaults" to 1543632262,
+            "SITAR all 0" to 1975822981,
+            "SITAR all 1" to 598514162,
+            "SITAR first preset" to 1717323465,
+        )
+        val actual = LinkedHashMap<String, Int>()
+        for (voice in PluckVoice.entries) {
+            val names = Pluck.macrosFor(voice).map { it.name }
+            val renders = listOf(
+                "defaults" to emptyMap<String, Float>(),
+                "all 0" to names.associateWith { 0f },
+                "all 1" to names.associateWith { 1f },
+                "first preset" to PluckPresets.forVoice(voice).first().macros,
+            )
+            for ((label, macros) in renders) {
+                actual["$voice $label"] = Pluck.render(voice, macros).samples.contentHashCode()
+            }
+        }
+        // One comparison of the whole table, so a failure prints every
+        // hash at once.
+        assertEquals(expected, actual)
+    }
+
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
         for (voice in PluckVoice.entries) {

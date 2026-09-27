@@ -3,7 +3,9 @@
 **Status:** S12 built and merged (PR #348: engine, presets, tests, SYNTH
 picker, landing, testkit kit), **audition gate passed** 2026-09-27: good
 across the board on the first listen, SWEEP inaudible and fixed (below),
-then confirmed on the second. S12.1 onward are open to build. The
+then confirmed on the second. S12.1 (`→ SURFACE ▸`) and S12.2 (SIREN held
+as a keys instrument) are also built; S12.3 (the loop-grid drone) is open.
+The
 listening page for that gate is
 `https://claude.ai/artifact/DXEn8DC3ZkcHGzFrTP6VEz`, rendered by
 `./gradlew :synth:generateSirenAudition` (the kit as it lands, every knob
@@ -345,7 +347,7 @@ harmonic. SCRAMBLE stops one step short.
 |---|---|
 | **S12** | `synth/Siren.kt` (`SirenVoice`, macros, the one-shot render and the LOOP render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). Then the phone: SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), the HOLD readout's LOOP step, SEND TO PAD landing a one-shot siren with the rack's ECHO in its recipe and a LOOP siren dry, and a toast for each that says which it did and, for a LOOP, that the SURFACE plays it. **Ends at an audition gate.** |
 | **S12.1** | **built** — `→ SURFACE ▸` on SYNTH, shown only while a SIREN's HOLD is at LOOP: the same slot chooser as SEND TO PAD, then `SurfaceStore.choosePad` points the kit's surface at the slot (keeping its corners and the rest) and App switches to the SURFACE screen, which reads the file as it opens. The toast says what to do with a finger. One App callback, one store write. |
-| **S12.2** | Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render as the keygroup's sustain loop. |
+| **S12.2** | **built** — Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render doubled into the keygroup's sustain loop (below), RELEASE the only knob. |
 | **S12.3** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
 
 ## Settled — 2026-09-27
@@ -414,6 +416,46 @@ landed by 0.9 s. The audition page was re-rendered and republished so the
 SWEEP clips can be heard again.
 
 Second listen, same day: "Sweep is great." The gate is passed.
+
+## S12.1 and S12.2, as built — 2026-09-27
+
+- **`→ SURFACE ▸`** reads a flag captured once, at the moment SEND TO PAD is
+  pressed — `sendToSurface` — so the send's own async chain can't race a
+  macro edit made while it renders. Landing a LOOP with the flag set calls
+  `SurfaceStore.choosePad`, which loads the kit's existing `surface.json`,
+  changes only `padSlot`, and saves it back, so every corner, GRAIN, SWARM,
+  modulator, KEY and echo-time setting the kit already had survives the
+  hand-off untouched. `SurfaceStoreTest` holds that.
+- **A keygroup layer's loop start of `0` means *no loop*, not *loop from
+  frame 0*** (`VelocityLayer`'s own KDoc) — a sentinel RESIN's own held pad
+  never has to think about, because its loop never starts at the file's
+  first frame (there is always an attack ahead of it). SIREN's LOOP render
+  has no attack: the whole file *is* the loop, so pointing the marker at
+  frame 0 would misread as "don't loop this note at all." `Keys.sirenPad`
+  renders the loop once, then doubles it — two bit-identical copies — and
+  points `loopStartFrame` at the second copy's own start: the player's one
+  pass through copy one gives way to copy two repeating forever, which is
+  exactly what `Siren.renderLoop` alone produces, expressed through a
+  marker the format can carry. `SirenHeldTest` (`:synth`) holds the frame
+  count, the marker position and the bit-identical halves; `SirenPadMakerTest`
+  (`:shell`) holds the export round trip and the phone's own hold/release.
+- **No autocorrelation pitch check on the rendered audio, and no
+  zero-crossing time-average either.** A held WAIL's own default DEPTH is a
+  full swung octave; no single period near the centre repeats often enough
+  for a general pitch detector to lock onto, and 2^x's convexity means a
+  linear-Hz time-average of a symmetric vibrato reads measurably *sharp* of
+  centre (a naive zero-crossing count landed WAIL's root two-plus semitones
+  high before this was caught, on a plainly correct render). The musical
+  centre a vibrato is heard *around* is the geometric mean of instantaneous
+  frequency, which `planLoop`'s own construction fixes to `baseHz` exactly —
+  so `SirenHeldTest` checks `Siren.planLoop(...).baseHz` against the target
+  MIDI frequency directly, the same formula-level trick `ResinHeldTest`
+  already uses for its own "square snapped to one whole beat" check.
+- **SIREN's held pad has one knob, not two.** RESIN's ATTACK dials in the
+  settle before its loop; SIREN's LOOP render already closes on itself
+  exactly; there is nothing to settle, so `SirenPadMaker.Spec` carries only
+  RELEASE, and `SynthScreen`'s `HeldInstrumentSheet` hides the ATTACK
+  slider for it.
 
 ## Still open, not blocking
 
