@@ -37,6 +37,8 @@ testkit/pluck-audition/
 # and published as the listening artifact; never committed.
 testkit/glint-audition/
 
-# The GLINT D1 depth-pass audition clips, rendered by
-# :synth:generateGlintD1Audition; WAVs only, never committed.
+# The GLINT D1 depth-pass audition clips and page, rendered by
+# :synth:generateGlintD1Audition; never committed. The clips land under
+# clips/ and the page is copied in as index.html — this pattern still
+# covers both since it ignores the whole directory.
 testkit/glint-d1-audition/

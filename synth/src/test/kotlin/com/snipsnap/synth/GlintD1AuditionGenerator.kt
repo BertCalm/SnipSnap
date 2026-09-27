@@ -8,9 +8,12 @@ import kotlin.math.abs
 
 /**
  * Renders the GLINT depth pass (D1) audition set under
- * testkit/glint-d1-audition/ (gitignored) — WAVs only, flat, no listening
- * page: a later step reads the directory and builds the page from what it
- * finds there. Run via `./gradlew :synth:generateGlintD1Audition`.
+ * testkit/glint-d1-audition/ (gitignored): WAVs land under a clips/
+ * subdirectory and the listening page (committed at
+ * synth/src/test/resources/audition/glint-d1-audition.html, which references
+ * its clips as `clips/<name>.wav`) is copied alongside them as index.html —
+ * the same layout `GlintAuditionGenerator` uses for Phase 1. Run via
+ * `./gradlew :synth:generateGlintD1Audition`.
  *
  * Six sections answer the depth pass's own questions rather than repeating
  * Phase 1's broad survey:
@@ -21,6 +24,11 @@ import kotlin.math.abs
  *  E. the velocity fix — SNAP_FLOOR broke the byte-identical soft/hard pair
  *  F. the harmonic staircase — a formant parked in place (FOLLOW 0) against
  *     one that mostly tracks the note (FOLLOW 0.8, the shipped default)
+ *
+ * The clip list lives in two places — this generator's `write` calls and the
+ * page's `clips/<name>.wav` references — with nothing else keeping them in
+ * sync, so `main` finishes by diffing the rendered set against what the page
+ * references and fails loudly if either side has something the other lacks.
  *
  * See docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md and
  * `.superpowers/sdd/2026-09-26-glint-depth-d1/`.
@@ -36,13 +44,14 @@ object GlintD1AuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/glint-d1-audition")
-        root.mkdirs()
+        val clipsDir = File(root, "clips")
+        clipsDir.mkdirs()
         var count = 0
 
         fun write(voice: GlintVoice, name: String, macros: Map<String, Float>) {
             val snip = Glint.render(voice, macros)
             val leveled = level(snip)
-            WavWriter.write(File(root, "$name.wav"), leveled, WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(clipsDir, "$name.wav"), leveled, WavWriter.BitDepth.PCM_16)
             count++
             val loudness = Loudness.of(leveled)
             var peak = 0f
@@ -52,7 +61,7 @@ object GlintD1AuditionGenerator {
 
         fun writeRendered(name: String, snip: Snip) {
             val leveled = level(snip)
-            WavWriter.write(File(root, "$name.wav"), leveled, WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(clipsDir, "$name.wav"), leveled, WavWriter.BitDepth.PCM_16)
             count++
             val loudness = Loudness.of(leveled)
             var peak = 0f
@@ -228,7 +237,37 @@ object GlintD1AuditionGenerator {
             }
         }
 
-        println("wrote $count clips under ${root.absolutePath}")
+        val page = GlintD1AuditionGenerator::class.java.getResourceAsStream("/audition/glint-d1-audition.html")
+            ?: error("the listening page is missing from synth/src/test/resources/audition/")
+        val pageText = page.use { it.readBytes() }
+        File(root, "index.html").outputStream().use { out -> out.write(pageText) }
+
+        // The page hardcodes its 33 clip references and this generator
+        // independently renders 33 clips — two copies of the same quantity
+        // with nothing else keeping them in sync. Cross-check both ways
+        // against what actually landed on disk under clips/ (not just what
+        // this run intended to write) so a future edit to either side (a
+        // renamed clip, a section added to one but not the other, a write
+        // that silently failed) fails the build instead of shipping quietly.
+        val referenced = Regex("""clips/([A-Za-z0-9_.-]+)\.wav""")
+            .findAll(String(pageText, Charsets.UTF_8))
+            .map { it.groupValues[1] }
+            .toSet()
+        val renderedOnDisk = (clipsDir.listFiles { f -> f.name.endsWith(".wav") } ?: emptyArray())
+            .map { it.name.removeSuffix(".wav") }
+            .toSet()
+        val renderedNotReferenced = renderedOnDisk - referenced
+        val referencedNotRendered = referenced - renderedOnDisk
+        if (renderedNotReferenced.isNotEmpty() || referencedNotRendered.isNotEmpty()) {
+            error(
+                "GLINT D1 audition clip list mismatch between the generator and the page — " +
+                    "rendered but never referenced by index.html: ${renderedNotReferenced.sorted()}; " +
+                    "referenced by index.html but never rendered: ${referencedNotRendered.sorted()}",
+            )
+        }
+        println("page references ${referenced.size} clips, all rendered")
+
+        println("wrote $count clips under ${clipsDir.absolutePath} + index.html under ${root.absolutePath}")
     }
 
     /**
