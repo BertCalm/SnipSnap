@@ -214,6 +214,7 @@ object Velocity {
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
         is ForkPatch -> Fork.macrosFor(patch.voice)
+        is TerraPatch -> Terra.macrosFor(patch.voice)
     }
 
     /**
