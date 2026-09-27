@@ -101,6 +101,7 @@ import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
+import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.PadRecipe
@@ -215,6 +216,10 @@ fun SynthScreen(
     // DRONE TO LOOP (RESIN): the drone's recipe on its root, handed to App,
     // whose sendSnipToLoop already owns the grid's sidecar and its one writer.
     onDroneToLoop: (name: String, recipe: JsonValue, rootMidi: Int) -> Unit,
+    // → SURFACE (SIREN, a LOOP): the pad has landed and surface.json points
+    // at it; App switches to the SURFACE screen, which reads that file as
+    // it opens. Navigation is App's, the same way every MenuRow tap is.
+    onOpenSurface: () -> Unit,
     // App()'s own scope — the same one PadSheetScreen/PadCaptureScreen
     // receive as their own `appScope` — so a SEND TO PAD write in flight
     // survives a MenuRow tab switch instead of being cancelled by it (see
@@ -456,12 +461,18 @@ fun SynthScreen(
     // ---- SEND TO PAD ----
     var showChooser by remember { mutableStateOf(false) }
     var sendBusy by remember { mutableStateOf(false) }
+    // → SURFACE opened the chooser: after the landing, point the kit's
+    // surface at the slot and open the SURFACE screen on it. Read at the
+    // start of the send, so a chooser opened one way and cancelled cannot
+    // leak its intent into the next.
+    var sendToSurface by remember { mutableStateOf(false) }
     val kit = entry?.kit
 
     fun sendToSlot(slot: Int) {
         val e = entry ?: return
         if (sendBusy) return
         sendBusy = true
+        val toSurface = sendToSurface
         appScope.launch {
             try {
                 // The patch's own init validates its macros (Patches.
@@ -516,6 +527,17 @@ fun SynthScreen(
                 }
                 showChooser = false
                 onKitUpdated(updatedKit)
+                if (toSurface) {
+                    // The pad is on disk; now the surface's own sidecar says
+                    // which pad it plays (SurfaceStore.choosePad keeps the
+                    // corners and the rest), and App opens the screen. The
+                    // SURFACE screen is not showing while SYNTH is, so nothing
+                    // else writes surface.json underneath this.
+                    withContext(Dispatchers.IO) { SurfaceStore.choosePad(e.dir, slot) }
+                    onToast(Copy.sirenToSurface(padTag(slot), name, replaced = existed))
+                    onOpenSurface()
+                    return@launch
+                }
                 // Copy.synthSent: only the REPLACE branch bins anything —
                 // `replaceAudio` moves the displaced WAV to the bin
                 // (`moveToBin`), the same fact `Copy.treated`'s "ORIGINAL
@@ -544,6 +566,7 @@ fun SynthScreen(
                 }
             } finally {
                 sendBusy = false
+                sendToSurface = false
             }
         }
     }
@@ -960,6 +983,22 @@ fun SynthScreen(
                 ) {
                     openSpread()
                 }
+                // SIREN at LOOP: land it and open the SURFACE on it - the
+                // siren-box gesture (hold, slide, let go into the echo) one
+                // tap away. Only a LOOP: a one-shot on the surface would
+                // replay its sweep at every wrap (the spec's SURFACE section).
+                if (engine == Engine.SIREN && Siren.isLoop(macros.getValue("HOLD"))) {
+                    LabButton(
+                        if (sendBusy && sendToSurface) "…" else "→ SURFACE ▸",
+                        scheme,
+                        enabled = kit != null && !sendBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = "TO SURFACE",
+                    ) {
+                        sendToSurface = true
+                        showChooser = true
+                    }
+                }
                 // RESIN, held: the sound as a keys instrument. RESIN only -
                 // it is the one engine whose held render closes its loops.
                 // Full width under SPREAD's row, the DELETED PRESETS door's shape.
@@ -1000,7 +1039,7 @@ fun SynthScreen(
         }
 
         if (showChooser) {
-            val cancelChooser = { if (!sendBusy) showChooser = false }
+            val cancelChooser = { if (!sendBusy) { showChooser = false; sendToSurface = false } }
             SlotChooserOverlay(
                 kit = kit,
                 previewColor = classColor,

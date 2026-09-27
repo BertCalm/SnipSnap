@@ -792,6 +792,9 @@ class PersonalityTest {
         assertTrue(sirenLoop.startsWith("PAD A05 REPLACED WITH WAIL SIREN. ORIGINAL SLEEPS IN THE BIN."), sirenLoop)
         assertTrue("SURFACE" in sirenLoop && "PAD ◄ ► TO A05" in sirenLoop && "RACK" !in sirenLoop, sirenLoop)
         assertTrue(sirenLoop.endsWith(".") && sirenShot.endsWith("."))
+        val toSurface = Copy.sirenToSurface("A13", "Wail Siren", replaced = false)
+        assertTrue(toSurface.startsWith("PAD A13 ADDED: WAIL SIREN."), toSurface)
+        assertTrue("SURFACE OPENS" in toSurface && "HOLD" in toSurface && toSurface.endsWith("."), toSurface)
         assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE BIN.", Copy.keyed("TUNE", "A02", "C MAJOR"))
         assertEquals("A02 DRIFTED TOWARD Other:B03. ORIGINAL SLEEPS IN THE BIN.", Copy.drifted("A02", "Other:B03"))
         // Both engines own a HAT_CLOSED and a SNARE, so the engine is

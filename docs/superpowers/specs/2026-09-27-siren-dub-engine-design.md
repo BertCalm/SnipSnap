@@ -1,7 +1,9 @@
 # SIREN — the dub siren engine
 
 **Status:** S12 built and merged (PR #348: engine, presets, tests, SYNTH
-picker, landing, testkit kit), **awaiting the audition gate**. The
+picker, landing, testkit kit), **audition gate passed** 2026-09-27: good
+across the board on the first listen, SWEEP inaudible and fixed (below),
+then confirmed on the second. S12.1 onward are open to build. The
 listening page for that gate is
 `https://claude.ai/artifact/DXEn8DC3ZkcHGzFrTP6VEz`, rendered by
 `./gradlew :synth:generateSirenAudition` (the kit as it lands, every knob
@@ -93,7 +95,7 @@ at the end like every engine:
 
 ```
 lfo(t)     = shape(φ_lfo)                        // -1..1, φ_lfo advancing at RATE
-sweep(t)   = ±SWEEP_OCTAVES · envAt(t, sweepT60)  // the button-press gesture, one-shot
+sweep(t)   = ±SWEEP_OCTAVES · (1 − t/T)²         // the button-press gesture: a glide of T seconds
 hz(t)      = f0 · 2^( DEPTH_SEMIS/12 · lfo(t) + sweep(t) )
 tone       = pulse(φ_tone) → drive(GRIT) → onePole(lp, toneHz(GRIT))
 out        = amp(t) · tone
@@ -163,7 +165,7 @@ Plain words and bounded ranges (playability rules 2 and 3).
 | **TUNE** | the centre pitch | 24 semitones from the voice's root (C4), snapped — settled: snapping is what lets SPREAD and in-key work put a siren in the tune's key, and the rack's PITCH can detune it afterwards |
 | **RATE** | the LFO's speed | 0.25 Hz → 25 Hz, `Dsp.expMap` (the ear hears rate by ratio too) |
 | **DEPTH** | how far the pitch travels each way | 0 → 24 semitones, linear; 0 is a plain tone, which is a legitimate siren too |
-| **SWEEP** | the button-press gesture | bipolar around 0.5 (`Dsp.around`): below centre the note *falls in* from up to two octaves above; above centre it *rises in* from two below; the centre is no sweep. The sweep's t60 shortens as it deepens (a big dive is a fast one), 0.6 s → 0.15 s |
+| **SWEEP** | the button-press gesture | bipolar around 0.5: below centre the note *falls in* from up to two octaves above; above centre it *rises in* from two below; the centre is no sweep. A glide with a length, a quadratic ease-out that lands with no corner: 0.25 s for a small sweep up to 1 s for the full two octaves (further is longer, like a portamento), and never past 85% of HOLD, so a short press still lands |
 | **GRIT** | drive + tone on the pulse | one-pole cutoff 1.2 kHz → 12 kHz and `Dsp.drive` 0 → 0.8 together |
 | **HOLD** | how long the button is down | 0.3 s → 4 s, `Dsp.expMap`, up to the knob's last step; **the top of the knob is LOOP** — see "Living on the SURFACE" |
 
@@ -342,7 +344,7 @@ harmonic. SCRAMBLE stops one step short.
 | Step | Ships |
 |---|---|
 | **S12** | `synth/Siren.kt` (`SirenVoice`, macros, the one-shot render and the LOOP render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). Then the phone: SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), the HOLD readout's LOOP step, SEND TO PAD landing a one-shot siren with the rack's ECHO in its recipe and a LOOP siren dry, and a toast for each that says which it did and, for a LOOP, that the SURFACE plays it. **Ends at an audition gate.** |
-| **S12.1** | `→ SURFACE` on SYNTH for a LOOP siren: lands it, writes `surface.json`'s pad to that slot, opens the SURFACE. One App callback, one store write. |
+| **S12.1** | **built** — `→ SURFACE ▸` on SYNTH, shown only while a SIREN's HOLD is at LOOP: the same slot chooser as SEND TO PAD, then `SurfaceStore.choosePad` points the kit's surface at the slot (keeping its corners and the rest) and App switches to the SURFACE screen, which reads the file as it opens. The toast says what to do with a finger. One App callback, one store write. |
 | **S12.2** | Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render as the keygroup's sustain loop. |
 | **S12.3** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
 
@@ -391,6 +393,27 @@ harmonic. SCRAMBLE stops one step short.
 - **`benidub` is in the blocklist**, with the near-miss and clean-name
   checks extended (`BENIDUB WAIL` refused, `DUB SIREN` and `AIR RAID`
   allowed).
+
+## After the first listen — 2026-09-27
+
+Josh's verdict from the audition page: good across the board, except no
+audible difference on SWEEP. The numbers agreed. The first build gave the
+sweep an exponential approach whose time constant *shortened* as the
+sweep deepened, 0.15 s at full, so a two-octave dive halved every 15 ms
+and was over in about 100 ms, under a wail that itself moves an octave
+each way. A blip, not a gesture, and the test that passed only asked
+whether the first 50 ms sat higher than the last.
+
+The fix: the sweep is a glide with a length. A quadratic ease-out from
+the offset to the note, fast off the mark and slowing in, landing exactly
+at T with no corner; T runs 0.25 s for a small sweep to 1 s for the full
+two octaves (further is longer, the way a portamento is), capped at 85%
+of HOLD so a 0.3 s press still lands on its note. `SirenTest` now holds
+the gesture to what the ear needs: still six semitones out at 0.3 s, and
+landed by 0.9 s. The audition page was re-rendered and republished so the
+SWEEP clips can be heard again.
+
+Second listen, same day: "Sweep is great." The gate is passed.
 
 ## Still open, not blocking
 
