@@ -260,33 +260,7 @@ class GlintTest {
                 for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
                     val snip = Glint.render(voice, still + ("PEAK" to peak))
                     val corr = periodCorrelation(snip, f0, fromSec = settledFromSec)
-                    // CICADA only, added by Task 2 (D2): its carrier is
-                    // k * CICADA_SUBCYCLES * f0, so `synthesize` clamps its
-                    // per-sample k at K_MAX / CICADA_SUBCYCLES rather than
-                    // K_MAX - see the `kCeiling` comment there. Above the PEAK
-                    // that saturates that clamp, every higher PEAK renders an
-                    // (almost) identical carrier sitting close enough to the
-                    // 22.05 kHz output Nyquist that Resampler's own documented
-                    // stopband softness (Resampler.kt: "-13 dB stopband
-                    // rejection" at a more extreme ratio than this one, but
-                    // not brick-wall here either) pulls the correlation under
-                    // 0.98 - even though the underlying signal is exactly
-                    // periodic by construction (BLOOM 0 makes k time-invariant,
-                    // and the dedicated `CICADA stays periodic at f0...` test
-                    // holds 0.98 comfortably at the default, unsaturated PEAK).
-                    // Measured 2026-09-27: PEAK 0.1 -> 0.9998, 0.35 -> 0.9970
-                    // (both clear the bar, asserted below); 0.6 -> 0.9388,
-                    // 0.9 -> 0.9400 (both below it, identically across BLOOM 0
-                    // and 1, because the clamp saturates regardless of BLOOM's
-                    // boost - confirming this is the clamp plateau, not noise).
-                    // Not asserted for CICADA past that point: a known, bounded
-                    // consequence of protecting K_MAX's fold-safety claim
-                    // (Glint.kt), not evidence the sub-division is wrong.
-                    val cicadaSaturated = voice == GlintVoice.CICADA &&
-                        Glint.ratioAtReference(peak) > Glint.K_MAX / Glint.CICADA_SUBCYCLES
-                    if (!cicadaSaturated) {
-                        assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
-                    }
+                    assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
                 }
             }
         }
@@ -316,7 +290,7 @@ class GlintTest {
         // same harmonic must produce the same bytes.
         val voice = GlintVoice.BOTTLE
         val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "FOLLOW" to 1f)
-        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak).coerceIn(Glint.K_MIN, Glint.K_MAX))
+        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak, voice).coerceIn(Glint.K_MIN, Glint.K_MAX))
         val pairs = (0..100).map { it / 100f }.groupBy { ratioAt(it) }.values.firstOrNull { it.size >= 2 }
         assertTrue(pairs != null, "expected at least one snap zone with two PEAK values in it")
         val a = Glint.render(voice, still + ("PEAK" to pairs!!.first()))
@@ -461,17 +435,36 @@ class GlintTest {
                 }
                 return worst
             }
-            // Find a PEAK landing closest to an integer ratio above the
-            // ceiling, and one landing closest to a fractional part of 0.25,
-            // where |sin(2*pi*k)| = 1 and a broken window has nowhere to
-            // hide. minByOrNull rather than first{tolerance}: the ratio map
-            // is exponential, so step size near the top is coarse and a
-            // fixed tolerance can miss entirely and throw instead of
+            // Find a PEAK landing closest to an integer ratio in a free
+            // (unsnapped) region, and one landing closest to a fractional
+            // part of 0.25, where |sin(2*pi*k)| = 1 and a broken window has
+            // nowhere to hide. minByOrNull rather than first{tolerance}: the
+            // ratio map is exponential, so step size near the top is coarse
+            // and a fixed tolerance can miss entirely and throw instead of
             // failing.
-            val candidates = (0..4000).map { it / 4000f }
-                .filter { Glint.ratioAtReference(it) > Glint.SNAP_CEILING + 1f }
-            val onHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0f) }!!
-            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0.25f) }!!
+            //
+            // The free region above SNAP_CEILING only exists while the
+            // voice's own ceiling clears it. CICADA's kCeilingFor (10) sits
+            // below SNAP_CEILING (12) - see kCeilingFor's doc - so above the
+            // ceiling is not a free region for CICADA at all; every PEAK
+            // there would snap to CICADA's own ceiling. The region below
+            // SNAP_FLOOR is free for every voice regardless (there is only
+            // one integer there to snap to), so CICADA uses that one
+            // instead - the same region the dedicated CICADA click test
+            // uses for the same reason.
+            val candidates = if (Glint.kCeilingFor(voice) > Glint.SNAP_CEILING + 1f) {
+                (0..4000).map { it / 4000f }.filter { Glint.ratioAtReference(it, voice) > Glint.SNAP_CEILING + 1f }
+            } else {
+                (0..4000).map { it / 4000f }.filter { Glint.ratioAtReference(it, voice) < Glint.SNAP_FLOOR }
+            }
+            // CICADA's below-floor region is only [K_MIN, SNAP_FLOOR) = [2, 3),
+            // narrow enough to check the two searches don't collapse onto the
+            // same point (which would make the comparison vacuous even though
+            // it passes). Measured: onHarmonic lands at PEAK 0.0 (k=2.0 exactly,
+            // fractional part 0 - the region's own lower bound), offHarmonic at
+            // PEAK 0.07325 (k=2.2502437, fractional part ~0.25) - distinct.
+            val onHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it, voice) % 1f - 0f) }!!
+            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it, voice) % 1f - 0.25f) }!!
             assertTrue(
                 maxStep(offHarmonic) < maxStep(onHarmonic) * 1.5f,
                 "$voice: a fractional ratio must not click — ${maxStep(offHarmonic)} vs ${maxStep(onHarmonic)}",

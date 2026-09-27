@@ -206,10 +206,45 @@ object Glint {
     }
 
     /**
+     * The ceiling PEAK maps to and the render loop's instantaneous k clamps
+     * against, per voice. K_MAX for every voice except CICADA.
+     *
+     * CICADA's real formant sits at roughly N * k, not k (see
+     * [CICADA_SUBCYCLES]), so capping its own k at K_MAX / CICADA_SUBCYCLES
+     * makes its *effective* ceiling - kCeiling * CICADA_SUBCYCLES - equal to
+     * every other voice's own K_MAX. That is an equalisation, not a
+     * restriction: it is what makes 10 the correct number here rather than
+     * a value tuned until some test passed.
+     *
+     * This is not standing in for an anti-aliasing clamp. [K_MAX]'s own doc
+     * is explicit that aliasing is not what bounds it - folding starts only
+     * around k*f0 ≈ 88 kHz, comfortably above any voice's own ceiling. What
+     * this equalises is the *musical* ceiling every voice's K_MAX already
+     * represents, which CICADA's re-clocking would otherwise let PEAK sail
+     * straight through.
+     *
+     * Applied in three places that must agree with each other -
+     * [ratioAtReference] (what PEAK maps to), [ratioFor]'s own clamp (what a
+     * note actually resolves to after FOLLOW), and [synthesize]'s per-sample
+     * clamp (what BLOOM can push the instantaneous k to). Only clamping the
+     * last of those left PEAK mapped across the full K_MIN..K_MAX band and
+     * then chopped after the fact - roughly the top half of PEAK's travel
+     * rendered one flat, saturated value, with BLOOM inert on top of it: "a
+     * dead macro on five of six voices is not defensible" applies here even
+     * though only one voice's ceiling moved. One definition, three call
+     * sites, so they cannot drift apart.
+     */
+    internal fun kCeilingFor(voice: GlintVoice): Float =
+        if (voice == GlintVoice.CICADA) K_MAX / CICADA_SUBCYCLES else K_MAX
+
+    /**
      * PEAK as a ratio at the voice's own reference note. Exponential,
      * because the ear judges the peak's position by interval, not by Hz.
+     * Maps onto [K_MIN]..[kCeilingFor] rather than the raw [K_MIN]..[K_MAX]
+     * band, so PEAK's full 0..1 travel reaches whatever ceiling the voice's
+     * own mechanism allows instead of running past it and being chopped.
      */
-    fun ratioAtReference(peak: Float): Float = Dsp.expMap(peak, K_MIN, K_MAX)
+    fun ratioAtReference(peak: Float, voice: GlintVoice): Float = Dsp.expMap(peak, K_MIN, kCeilingFor(voice))
 
     /**
      * Integers put the peak exactly on a harmonic — k=3 the octave-and-a-
@@ -250,9 +285,9 @@ object Glint {
     fun ratioFor(voice: GlintVoice, tune: Float, peak: Float, follow: Float): Float {
         val reference = referenceHz(voice)
         val f0 = frequencyFor(voice, tune)
-        val peakHzAtReference = ratioAtReference(peak) * reference
+        val peakHzAtReference = ratioAtReference(peak, voice) * reference
         val peakHz = Dsp.keyTrack(peakHzAtReference, f0, reference, follow)
-        return snapRatio((peakHz / f0).coerceIn(K_MIN, K_MAX))
+        return snapRatio((peakHz / f0).coerceIn(K_MIN, kCeilingFor(voice)))
     }
 
     /**
@@ -275,21 +310,26 @@ object Glint {
         val kBase = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
         val bloomAmount = Dsp.lin(m.getValue("BLOOM"), 0f, BLOOM_MAX)
         val bloomT60 = BLOOM_T60
-        // CICADA's real carrier is k * CICADA_SUBCYCLES * f0, not k * f0 - the
-        // re-clocking multiplies whatever k the burst runs at. K_MAX's own doc
-        // claims folding starts only above k*f0 ~ 88 kHz, a claim only true if
-        // the thing multiplying f0 is bounded by K_MAX itself. Dividing the
-        // ceiling by the same factor the carrier is multiplied by restores
-        // that claim: CICADA's clamped carrier now tops out at K_MAX * f0,
-        // identical to every other voice's, instead of K_MAX * CICADA_SUBCYCLES * f0.
-        // Measured without this: at TUNE 0.3 PEAK 0.4 BLOOM 1, the onset carrier
-        // reached ~36.9 kHz (kBase 7 boosted 4x by BLOOM, times the sub-clock's
-        // own 4x) against a 22.05 kHz output Nyquist, and the attack that BLOOM
-        // is supposed to open collapsed instead of opening. This is a ceiling on
-        // the instantaneous, BLOOM-modulated k - bodyRatio's k2 is left alone,
-        // since it divides kBase by BODY_RATIO_DIVISOR (5.6) and so never gets
-        // near K_MAX regardless of voice.
-        val kCeiling = if (voice == GlintVoice.CICADA) K_MAX / CICADA_SUBCYCLES else K_MAX
+        // Equalises CICADA's effective ceiling against every other voice's
+        // K_MAX - see kCeilingFor's doc for why K_MAX / CICADA_SUBCYCLES is
+        // the right number, not a tuned one. Applied here so BLOOM's boost
+        // cannot push the instantaneous k past that ceiling either; measured
+        // without this, at TUNE 0.3 PEAK 0.4 BLOOM 1 the onset carrier
+        // reached ~36.9 kHz (kBase 7 boosted 4x by BLOOM, times the
+        // sub-clock's own 4x) against a 22.05 kHz output Nyquist, and the
+        // attack BLOOM is supposed to open collapsed instead.
+        //
+        // bodyRatio's k2 is not itself clamped by this - it is derived from
+        // kBase directly, below - but it is not unaffected: kCeilingFor also
+        // bounds kBase now (see ratioFor), and CICADA's kBase can never
+        // exceed 10, so bodyRatio(10) = 1.79 floors to K_MIN (2) at every
+        // PEAK. CICADA's BODY ratio is therefore pinned at K_MIN across its
+        // whole range, unlike every other voice, where the same floor only
+        // binds below kBase ≈ 11.2 (see BODY_RATIO_DIVISOR's doc). BODY's
+        // level still responds to the BODY macro; only its ratio is frozen
+        // for this one voice - a known consequence of the equalisation, not
+        // something resolved here.
+        val kCeiling = kCeilingFor(voice)
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val bodyMix = m.getValue("BODY") * BODY_MIX
