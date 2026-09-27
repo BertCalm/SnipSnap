@@ -186,6 +186,7 @@ object Pluck {
         rate: Int,
         velocity: Float = 1f,
         stiffnessOverride: Float? = null,
+        jawariOverride: Float? = null,
     ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
@@ -197,6 +198,7 @@ object Pluck {
         val body = Dsp.lin(m.getValue("BODY"), 0f, BODY_MAX)
         val position = Dsp.expMap(m.getValue("STRIKE"), STRIKE_BRIDGE, STRIKE_CENTRE)
         val stiffness = stiffnessOverride ?: stiffnessFor(voice)
+        val jawari = (jawariOverride ?: jawariFor(voice)) * velocityDrive(velocity)
 
         // The body characters. loopHz is the low-pass inside the feedback
         // loop (what makes a kalimba woody and a harp glassy); pickLo/pickHi
@@ -222,7 +224,7 @@ object Pluck {
         // muted pluck stays a short file and a DAMP 0 harp gets its ring.
         val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
-        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position, stiffness = stiffness)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position, stiffness = stiffness, jawari = jawari)
         if (double > 0.01f) {
             // The 12-string trick: a second, slightly sharp string under the
             // first. Detune grows with the macro so it goes chorus -> honky.
@@ -236,7 +238,11 @@ object Pluck {
         return trimToDecay(withBody(out, voice, body, rate), rate)
     }
 
-    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * [velocity] is a render parameter, not a macro - no knob, no preset,
+     * no recipe carries it; only the jawari reads it today.
+     */
+    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
         // consistency with the other 6 engines and because the exciter's
         // one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
@@ -246,7 +252,7 @@ object Pluck {
         // low-pass changes what a keygroup sounds like near the top of its
         // range, same as every other engine.
         val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = synthesize(voice, macros, renderRate)
+        val raw = synthesize(voice, macros, renderRate, velocity = velocity)
         val out = Dsp.decimate(raw, RATE)
 
         // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
@@ -330,14 +336,29 @@ object Pluck {
      * chooses. KOTO and HARP carry zero: both passed a Phase 2 gate and do
      * not change unheard (the audition offers them the low candidate).
      */
-    internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 1.00 % sharp
-    internal const val SITAR_STIFFNESS_HIGH = -0.952f  // measured: tenth partial 2.96 % sharp
+    internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 0.88 % sharp with the shipped jawari on (StiffnessTest's probe)
+    internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 6.5 c sharp, so if the gate chooses this candidate the drive steps down or the spec's fallback applies
     internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_LOW
 
     internal fun stiffnessFor(voice: PluckVoice): Float = when (voice) {
         PluckVoice.SITAR -> SITAR_STIFFNESS
         PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
     }
+
+    /**
+     * The jawari's drive (see [ks]) times [velocityDrive]. 0.3 is the
+     * starting point; the audition hears 0.15, 0.3 and 0.6 and the chips
+     * choose (spec, "The jawari").
+     */
+    internal const val SITAR_JAWARI = 0.3f
+
+    internal fun jawariFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.SITAR -> SITAR_JAWARI
+        PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
+    }
+
+    /** A soft note buzzes a little, a hard one fully. */
+    private fun velocityDrive(velocity: Float): Float = Dsp.lin(velocity.coerceIn(0f, 1f), 0.3f, 1f)
 
     /**
      * The fixed body of each voice, in absolute Hz. Every row is a confirmed
@@ -509,6 +530,16 @@ object Pluck {
      * harmonic, the stiff-string law `n*sqrt(1 + B*n^2)` with B rising as
      * the coefficient falls. Its phase delay at the fundamental is
      * subtracted from the loop length so the note stays in tune.
+     *
+     * [jawari] is the bridge limiter's drive in [0, 1): after the low-pass,
+     * positive swings are pulled down by `jawari · y² / p0` (clamped so it
+     * never crosses zero), the way a string wrapping on a flat bridge is
+     * stopped on one side; a 2 Hz DC blocker follows because a one-sided
+     * term leaves an offset. A zero at DC nulls that offset at any corner -
+     * 2 Hz is chosen only for how fast a slow offset drains and how much
+     * lead the loop owes for it, and its own phase lead at the fundamental
+     * is budgeted into the loop length the same way the low-pass's and the
+     * stiffness allpass's are; both are skipped at 0.
      */
     internal fun ks(
         freq: Float,
@@ -520,8 +551,10 @@ object Pluck {
         rate: Int,
         position: Float = 0f,
         stiffness: Float = 0f,
+        jawari: Float = 0f,
     ): FloatArray {
         require(stiffness > -1f && stiffness <= 0f) { "stiffness must be in (-1, 0], got $stiffness" }
+        require(jawari in 0f..0.95f) { "jawari drive must be in [0, 0.95], got $jawari" }
         val loopHz = bodyLoopHz * Dsp.lin(1f - damp, 0.35f, 1.6f)
         val fb = Dsp.lin(1f - damp, 0.94f, 0.998f)
 
@@ -582,7 +615,22 @@ object Pluck {
             val phase = atan2(-sin(w), c + cos(w)) - atan2(-c * sin(w), 1.0 + c * cos(w))
             -phase / w
         } else 0.0
-        val exact = (rate / freq) - filterDelay - stiffDelay - 0.5
+
+        val dcA = (1.0 - exp(-2.0 * PI * 2.0 / rate)).toFloat()
+        // The DC blocker after the jawari is a one-pole high-pass, and a
+        // high-pass leads at the fundamental: its phase delay is negative
+        // and, like the low-pass's and the stiffness allpass's, it belongs
+        // to the loop's budget or the note reads sharp. A zero at DC nulls
+        // the offset at any corner; the corner only sets how fast a slow
+        // offset drains and how much lead the loop owes for it - 2 Hz (not
+        // 20) keeps that lead under a degree at the lowest note (C#3) and
+        // the dispersion it leaves on the upper partials under 0.2 %.
+        val dcDelay = if (jawari > 0f) {
+            val r = 1.0 - dcA
+            val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
+            -phase / w
+        } else 0.0
+        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -631,6 +679,13 @@ object Pluck {
         mean /= n
         for (i in 0 until n) burst[i] -= mean
 
+        // The bridge limiter scales to the string's own level: p0 is what a
+        // full swing looks like, so the same drive buzzes the same on every
+        // note and fades as the note does.
+        var p0 = 1e-6f
+        for (v in burst) if (kotlin.math.abs(v) > p0) p0 = kotlin.math.abs(v)
+        var dc = 0f
+
         // Pick position (Jaffe & Smith 1983): the burst minus a copy of
         // itself delayed by `position` of one period. The comb's notches
         // fall on every harmonic k where k*position is a whole number: the
@@ -673,7 +728,13 @@ object Pluck {
                 stY1 = s
                 s
             } else tuned
-            out[i] += fb * loopLp.lp(stiff, loopHz)
+            var y = loopLp.lp(stiff, loopHz)
+            if (jawari > 0f) {
+                if (y > 0f) y -= jawari * min(y, p0) * y / p0
+                dc += dcA * (y - dc)
+                y -= dc
+            }
+            out[i] += fb * y
         }
         return out
     }

@@ -39,7 +39,8 @@ class StiffnessTest {
         // (the window is the rule, the list is not).
         val coefficients = listOf(
             0f, -0.05f, -0.10f, -0.15f, -0.20f, -0.30f, -0.40f, -0.50f,
-            -0.70f, -0.80f, -0.85f, -0.88f, -0.90f, -0.92f, -0.94f, -0.95f, -0.952f, -0.96f,
+            -0.70f, -0.80f, -0.85f, -0.88f, -0.90f, -0.92f, -0.94f, -0.95f, -0.952f,
+            -0.953f, -0.955f, -0.958f, -0.96f,
         )
         var last = 0.0
         for (c in coefficients) {
@@ -65,9 +66,11 @@ class StiffnessTest {
         // The allpass's delay at the fundamental is in the tuning budget;
         // TuningAccuracyTest sweeps every note at the shipped stiffness, and
         // this pins the high candidate at three notes so the gate can choose it.
+        // This test isolates the allpass: the shipped combination of the low
+        // candidate and the jawari is proven by TuningAccuracyTest's default sweep.
         for (semi in listOf(0, 12, 24)) {
             val f0 = Pluck.frequencyFor(PluckVoice.SITAR, semi)
-            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("TUNE" to semi / 24f, "DOUBLE" to 0f), rate, stiffnessOverride = Pluck.SITAR_STIFFNESS_HIGH)
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("TUNE" to semi / 24f, "DOUBLE" to 0f), rate, stiffnessOverride = Pluck.SITAR_STIFFNESS_HIGH, jawariOverride = 0f)
             val measured = PluckSpectra.peakHz(raw, rate, f0, spanFraction = 0.03)
             val cents = 1200.0 * kotlin.math.ln(measured / f0) / kotlin.math.ln(2.0)
             assertTrue(kotlin.math.abs(cents) <= 5.0, "SITAR semitone $semi at the high stiffness is $cents cents off")

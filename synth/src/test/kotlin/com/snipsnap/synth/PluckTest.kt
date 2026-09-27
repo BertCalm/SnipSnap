@@ -207,8 +207,10 @@ class PluckTest {
         // classifier tell a bright pluck from a drum. Every other voice must
         // still read PERC. SITAR reads SNARE too (plan 2026-09-26-pluck-sitar.md):
         // a plain steel string picked near the bridge puts the same share of
-        // its attack above 2 kHz (measured highRatio 0.524 at the default,
-        // just over the 0.5 SNARE line); Task 3 re-measures once the jawari lands.
+        // its attack above 2 kHz (measured highRatio 0.545 at the default
+        // with the jawari, up from 0.524 without it - the bridge buzz is
+        // itself high-band energy landing inside the same attack window the
+        // classifier reads - both just over the 0.5 SNARE line).
         for (voice in PluckVoice.entries) {
             val c = Classifier.classify(Pluck.render(voice))
             val allowed = if (voice == PluckVoice.BANJO || voice == PluckVoice.SITAR) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
@@ -336,8 +338,17 @@ class PluckTest {
     fun `STRIKE at the centre removes the second harmonic`() {
         for (voice in PluckVoice.entries) {
             val f0 = Pluck.frequencyFor(voice, 0.5f)
-            val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
-            val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
+            // The jawari makes even harmonics on purpose (the buzz), so this
+            // comb notch is proven on the sitar's string with the bridge
+            // limiter off - left on, it would swamp the notch being measured.
+            fun renderAt(strike: Float): Snip = if (voice == PluckVoice.SITAR) {
+                val raw = Pluck.synthesize(voice, mapOf("TUNE" to 0.5f, "STRIKE" to strike, "DOUBLE" to 0f), Dsp.RATE * Dsp.OVERSAMPLE, jawariOverride = 0f)
+                Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+            } else {
+                Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to strike, "DOUBLE" to 0f))
+            }
+            val bridge = renderAt(0f)
+            val centre = renderAt(1f)
             val h2Bridge = PluckSpectra.toneEnergy(bridge, 2 * f0)
             val h2Centre = PluckSpectra.toneEnergy(centre, 2 * f0)
             assertTrue(
@@ -633,5 +644,51 @@ class PluckTest {
             val b = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
             assertTrue(a.contentEquals(b), "$voice is not deterministic")
         }
+    }
+
+    @Test
+    fun `the jawari buzz follows velocity`() {
+        // Harder plucks wrap further on the bridge: the high band's share of
+        // the first 200 ms must rise with velocity on SITAR.
+        val shares = listOf(0.3f, 0.65f, 1.0f).map { v ->
+            PluckSpectra.highShare(Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f), velocity = v).samples, Dsp.RATE, 2000f, 0.2f)
+        }
+        println("SITAR high-band share by velocity: $shares")
+        assertTrue(shares[0] < shares[1] && shares[1] < shares[2], "buzz should rise with velocity: $shares")
+    }
+
+    @Test
+    fun `the jawari leaves no offset`() {
+        val out = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f), velocity = 1f).samples
+        var mean = 0.0
+        for (v in out) mean += v
+        mean /= out.size
+        val peak = PluckSpectra.peak(out)
+        assertTrue(kotlin.math.abs(mean) <= 1e-4 * peak, "DC after the jawari: mean $mean against peak $peak")
+    }
+
+    @Test
+    fun `the jawari never raises the loop's gain`() {
+        // |z| <= |y| by construction; this pins the sign so a later edit
+        // cannot turn the limiter into a boost inside feedback.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (tenth in 0..10) {
+            val damp = tenth / 10f
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DAMP" to damp, "DOUBLE" to 0f), rate, velocity = 1f, jawariOverride = 0.6f)
+            assertTrue(raw.all { it.isFinite() }, "non-finite sample at DAMP $damp")
+            val onset = PluckSpectra.peak(raw.copyOfRange(0, minOf(raw.size, (0.01f * rate).toInt())))
+            val whole = PluckSpectra.peak(raw)
+            assertTrue(whole <= 2f * onset, "DAMP $damp: the note grew past twice its onset ($whole > 2 * $onset)")
+        }
+    }
+
+    @Test
+    fun `velocity reaches the sitar as a number through the velocity path`() {
+        val patch = PluckPresets.forVoice(PluckVoice.SITAR).first()
+        val soft = Velocity.atVelocity(patch, 0.3f).samples
+        val hard = Velocity.atVelocity(patch, 1.0f).samples
+        val softShare = PluckSpectra.highShare(soft, Dsp.RATE, 2000f, 0.2f)
+        val hardShare = PluckSpectra.highShare(hard, Dsp.RATE, 2000f, 0.2f)
+        assertTrue(softShare < hardShare, "the velocity path should carry the jawari, not just PICK: $softShare vs $hardShare")
     }
 }
