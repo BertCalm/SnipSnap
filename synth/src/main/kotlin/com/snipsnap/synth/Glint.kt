@@ -358,13 +358,21 @@ object Glint {
      * below [SNAP_FLOOR], for the identical reason: [snapRatio] is
      * identity above the ceiling too, so a `kBase` up there stays
      * unrounded rather than snapping to the nearest integer. Measured at
-     * PEAK 0.7 (`kBase` = 16.28362, `TUNE` 0.5, `FOLLOW` 0.8): the old,
-     * unconditional `Math.round` would have given a bottom rung of 16;
-     * this version keeps it at 16.28362. This is exactly what closes the
-     * remaining gap between RATCHET's and KAZOO's PEAK-sweep rows in
-     * `GlintTest`'s `PEAK sweep is monotonic` — the three points that
-     * differed before this fix (steps at PEAK 0.625, 0.75 and 0.875) are
-     * all above [SNAP_CEILING], not inside the snap band.
+     * PEAK 0.7, `TUNE` 0.5, `FOLLOW` 0.8 (`kBase` = 16.28362 — at `TUNE`
+     * 0.5 the note sits exactly at the voice's own reference, so `FOLLOW`
+     * has nothing to track and this reduces to plain [ratioAtReference]):
+     * the old, unconditional `Math.round` would have given a bottom rung
+     * of 16; this version keeps it at 16.28362.
+     *
+     * This is exactly what closes the remaining gap between RATCHET's and
+     * KAZOO's PEAK-sweep rows in `GlintTest`'s `PEAK sweep is monotonic`,
+     * whose own fixture (`TUNE` 0.4, `FOLLOW` 1) reduces to the same
+     * [ratioAtReference] mapping by the opposite route — `FOLLOW` 1 tracks
+     * the note fully, which cancels `TUNE`'s offset in [ratioFor]'s own
+     * `keyTrack` call. The three points that differed before this fix
+     * there — PEAK 0.625, 0.75 and 0.875, `kBase` 13.006898, 18.914833 and
+     * 27.506243 — are all above [SNAP_CEILING], not inside the snap band,
+     * same as this paragraph's own example.
      *
      * The ladder climbs from the bottom by whole harmonics up to `kBase *
      * (1 + bloomAmount)`, BLOOM's extent.
