@@ -1253,6 +1253,12 @@ class GlintTest {
      * clears (i.e. fails to clear) the 0.25 bar by more than 2x, so a
      * continuous ramp cannot pass this test by accident - the bar is a real
      * discriminator, not a vacuous one.
+     *
+     * With the mechanism in place, same render: early=3486.6492,
+     * late=3490.6194, next=3957.623 - |late-early|=3.9702148 (two probes 66
+     * cycles apart at the same 440 Hz note, both squarely inside kBase=8's
+     * bottom rung), |next-early|=470.97388 (the jump to rung two, k=9),
+     * ratio=0.008430 - about 66x under the bar, not just clearing it.
      */
     @Test
     fun `RATCHET's formant is piecewise constant, not a ramp`() {
@@ -1273,6 +1279,10 @@ class GlintTest {
     fun `RATCHET's steps land on integer harmonics`() {
         // "Steps between fixed harmonics, never glides." Every step's ratio
         // must be a whole number, or the ladder is not a ladder.
+        //
+        // Measured 2026-09-27 at kBase=8.0 (TUNE 0.5, PEAK 0.45, FOLLOW 0.8 -
+        // this test's own inputs): BLOOM 0.25 -> [8..14] (7 rungs), BLOOM 0.5
+        // -> [8..20] (13 rungs), BLOOM 1 -> [8..32] (25 rungs).
         for (bloom in listOf(0.25f, 0.5f, 1f)) {
             val ks = Glint.ratchetLadder(
                 kBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.45f, 0.8f),

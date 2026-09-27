@@ -349,12 +349,20 @@ object Glint {
      * [SNAP_CEILING]): a ladder's rungs are integers by definition, so two
      * kBase values in the same unit interval can land on the same bottom
      * rung and, if BLOOM's reach does not separate their tops either,
-     * produce byte-identical ladders and renders. Measured consequence and
+     * produce byte-identical ladders and renders. At BLOOM 0 this is
+     * unconditional - the ladder is exactly one rung, `round(kBase)`, so
+     * there is no top left to separate anything - and above BLOOM 0 it is a
+     * real but narrower gap: `top = kBase * (1 + bloomAmount)` is itself
+     * continuous and does sometimes separate two close kBase values into
+     * different-length ladders (see the measurement below, where it starts
+     * doing exactly that once PEAK reaches 0.1). Measured consequence and
      * exact PEAK values in `GlintTest`'s `velocity always changes the
      * render, at every PEAK` and this file's own ladder test — this is the
-     * ladder's resolution limit, not a defect in the rounding: an
-     * integer-only mechanism cannot carry the sub-integer distinction
-     * [SNAP_FLOOR] exists to preserve.
+     * ladder's resolution limit, not a defect in the rounding: structurally
+     * total at BLOOM 0, and empirically still wide enough above it to lose
+     * the exact three PEAK values measured there. Whether the fix is a
+     * frac-aware bottom rung, routing RATCHET off PEAK's velocity mapping,
+     * or something else is a design call, not resolved here.
      *
      * Always at least one rung, so a note shorter than one step still has a
      * ratio to render.
