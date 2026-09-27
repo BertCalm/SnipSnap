@@ -178,7 +178,7 @@ object Velocity {
 
     /**
      * [patch]'s own macro specs, straight from the engine that owns its
-     * voice — an exhaustive `when` over [Patch]'s ten sealed subtypes, the
+     * voice — an exhaustive `when` over [Patch]'s sealed subtypes, the
      * same shape `Patches.fromJsonValue` already dispatches on by engine
      * string. This is deliberately **not** `patch.macros.keys`: a `Patch`
      * carrying a partial macro map (a hand-built one, or one rebuilt from a
@@ -212,6 +212,7 @@ object Velocity {
         is SkinPatch -> Skin.macrosFor(patch.voice)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
+        is SirenPatch -> Siren.macrosFor(patch.voice)
     }
 
     /**

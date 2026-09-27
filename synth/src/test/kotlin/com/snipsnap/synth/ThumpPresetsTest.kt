@@ -104,10 +104,10 @@ class ThumpPresetsTest {
         // A guard proven by what it rejects, not just what it once caught:
         // suffix concatenation (no separator at all) and the classic
         // "acid" family name the roadmap's own examples call out.
-        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT")) {
+        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT", "BENIDUB WAIL", "BeniDub")) {
             assertTrue(PresetTestSupport.trademarkBlocklist.containsMatchIn(nearMiss), "blocklist let '$nearMiss' through")
         }
-        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB")) {
+        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB", "DUB SIREN", "AIR RAID")) {
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(clean), "blocklist wrongly flagged '$clean'")
         }
     }

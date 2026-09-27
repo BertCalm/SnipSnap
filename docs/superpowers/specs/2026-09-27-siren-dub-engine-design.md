@@ -1,8 +1,9 @@
 # SIREN — the dub siren engine
 
-**Status:** design, settled in conversation 2026-09-27 (see "Settled" at the
-end); implementation of S12 starting. The SURFACE section below is the
-second pass, written after reading how the surface actually plays a pad.
+**Status:** S12 built (engine, presets, tests, SYNTH picker, landing,
+testkit kit), **awaiting the audition gate**. Where the build departs from
+the design, and why, is under "As built" at the end. The SURFACE section is
+the second pass, written after reading how the surface actually plays a pad.
 **Date:** 2026-09-27
 **Plan:** the phasing table below is the plan; no separate plan file yet.
 **Roadmap:** the `SYNTH_ROADMAP.md` phasing row is added when implementation
@@ -347,6 +348,42 @@ harmonic. SCRAMBLE stops one step short.
 4. **Echo by landing:** a one-shot siren lands with the rack's ECHO in its
    recipe; a LOOP siren lands dry, because the surface's echo is its own,
    and the toast says so.
+
+## As built — 2026-09-27
+
+- **DEPTH is each way.** The spec's test line said "spans 12 semitones at
+  DEPTH 0.5"; the knob means 12 semitones *each way*, so the track spans
+  24, and the test says so. The macro table was already right.
+- **The classifier does not hear a siren as TONAL**, measured across the
+  roster: a pitch that moves defeats the pitch detector, so a one-shot
+  siren reads LOOP past 1.5 s (the classifier's own length rule) and SNARE
+  or PERC under it. `SynthScreen` files a one-shot siren as TONAL *by
+  design* — the fallback RESIN, GLINT and VELVET take — so it never lands in
+  a hat's choke group; a LOOP siren is filed LOOP, and the classifier agrees
+  with that one. `SirenPresetsTest` holds the measurement.
+- **The cut is on the tone's own edge, not at silence.** A square wave
+  has no gentle crossings: at every crossing one neighbour is up the edge.
+  So the loop is cut at the crossing whose two neighbours are smallest, and
+  the one-shot's last sample is at most one of the square's own steps —
+  which is what "no click" means for a waveform made of steps. The spec's
+  "within 1e-3 of zero" was the wrong test; the seam test (the render
+  against a fresh stretch across its own wrap, under 1e-3 of peak) is the
+  right one, and passes at float noise.
+- **The tone is PolyBLEP, and the drive sits after the one-pole.** A naive
+  square at 4× would have left the aliasing floor marginal at C6; PolyBLEP
+  puts it well under the 45 dB bar with room. And a drive *before* a
+  one-pole does nothing to a square (it is already at the rails), so GRIT's
+  drive follows the filter and re-sharpens what the filter rounded.
+- **One loop rendered, not two.** The stretch is periodic, so the loop from
+  the cut is the stretch from there to its end and then from its start to
+  the cut. The two-loop stretch exists only for the tests.
+- **The LFO de-zipper is 1 ms, not 3.** A one-pole lags a triangle by its
+  time constant, and 3 ms cost a 25 Hz triangle 30% of its depth; 1 ms
+  costs 10%, and the pulse's phase never jumps anyway, so the smoothing
+  only turns a step into a flick.
+- **`benidub` is in the blocklist**, with the near-miss and clean-name
+  checks extended (`BENIDUB WAIL` refused, `DUB SIREN` and `AIR RAID`
+  allowed).
 
 ## Still open, not blocking
 
