@@ -46,11 +46,17 @@ import kotlin.random.Random
  * - **BEATBOX**, a fourth voice: vocal percussion ([VoxBeatbox]), HIT
  *   choosing a kick, three snares, three hats or a rim.
  *
+ * Round 3 ("Weird"), its first voice:
+ *
+ * - **THROAT**, overtone singing ([VoxThroat]): a low drone with a
+ *   whistled harmonic above it (WHISTLE, MELODY, DRONE), a growl an
+ *   octave down (GROWL) and a yodel (YODEL).
+ *
  * TUNE snaps to semitones like every melodic engine here. Each note's
  * wobble, detune and onsets are seeded from its recipe, so a pad
  * regenerates to the byte.
  */
-enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX }
+enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT }
 
 object Vox {
 
@@ -144,12 +150,16 @@ object Vox {
         VoxVoice.BEATBOX -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("HIT", 0f), MacroSpec("DECAY", 0.5f), MacroSpec("SIZE", 0.5f),
         )
+        VoxVoice.THROAT -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("WHISTLE", 0.4f), MacroSpec("MELODY", 0.5f), MacroSpec("DRONE", 0.5f),
+            MacroSpec("DECAY", 0.75f), MacroSpec("GROWL", 0f), MacroSpec("YODEL", 0f),
+        )
     }
 
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    /** CHOIR sings in stereo; ROBOT, GHOST and BEATBOX are one mouth, mono. */
+    /** CHOIR sings in stereo; ROBOT, GHOST, BEATBOX and THROAT are one mouth, mono. */
     fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR) 2 else 1
 
     /**
@@ -187,6 +197,8 @@ object Vox {
             VoxVoice.GHOST -> 147f
             // An octave under the kick's hum: TUNE's middle lands it on VoxBeatbox.KICK_HZ.
             VoxVoice.BEATBOX -> VoxBeatbox.KICK_HZ / 2f
+            // A low drone, A1 to A3: the whistle rides its harmonics, so the drone sits well under it.
+            VoxVoice.THROAT -> 55f
         }
         val semis = Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
         return root * 2f.pow(semis / 12f)
@@ -315,6 +327,18 @@ object Vox {
                 pitch = frequencyFor(voice, m.getValue("TUNE")) / VoxBeatbox.KICK_HZ,
                 decay = m.getValue("DECAY"),
                 scale = throatScale(m.getValue("SIZE")),
+                rate = rate,
+            )
+        }
+        if (voice == VoxVoice.THROAT) {
+            return VoxThroat.synthesize(
+                baseHz = frequencyFor(voice, m.getValue("TUNE")),
+                whistle = m.getValue("WHISTLE"),
+                melody = m.getValue("MELODY"),
+                drone = m.getValue("DRONE"),
+                decay = m.getValue("DECAY"),
+                growl = m.getValue("GROWL"),
+                yodel = m.getValue("YODEL"),
                 rate = rate,
             )
         }

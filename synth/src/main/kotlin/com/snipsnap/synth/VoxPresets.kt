@@ -3,12 +3,14 @@ package com.snipsnap.synth
 /**
  * VOX's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
- * Twelve presets per voice (three voices, thirty-six total), spread across
+ * Twelve presets per voice (five voices, sixty total). The singers spread across
  * TUNE/VOWEL/BREATH/DECAY, and since round 1 SIZE (LOW and HIGH throats)
  * and GLIDE (SPEAK BOX's "wah", HIGH SIGH and LOW MOAN sighing toward
  * "ooh"). VOWEL walks the A→E→I→O→U morph `Vox.kt` defines; BREATH
  * crossfades the throat toward filtered noise. BEATBOX's twelve walk its
  * eight HITs: three kicks, four snares (two PSH), four hats, a rim.
+ * THROAT's twelve cover its three uses: drones and whistled melodies to
+ * hold, short growls and whistle blips to hit, and two yodels.
  * Authored from that DSP, not by ear, and checked by [VoxPresetsTest]'s
  * sanity/round-trip/spread suite.
  */
@@ -22,6 +24,7 @@ object VoxPresets {
         VoxVoice.ROBOT -> robotPresets
         VoxVoice.GHOST -> ghostPresets
         VoxVoice.BEATBOX -> beatboxPresets
+        VoxVoice.THROAT -> throatPresets
     }
 
     fun all(): List<VoxPatch> = VoxVoice.entries.flatMap { forVoice(it) }
@@ -87,5 +90,23 @@ object VoxPresets {
         p(VoxVoice.BEATBOX, "OPEN TSSS", "HIT" to hit(VoxBeatbox.Hit.TSS), "DECAY" to 0.6f),
         p(VoxVoice.BEATBOX, "LONG TSSS", "HIT" to hit(VoxBeatbox.Hit.TSS), "DECAY" to 0.95f, "SIZE" to 0.6f),
         p(VoxVoice.BEATBOX, "TONGUE RIM", "HIT" to hit(VoxBeatbox.Hit.RIM), "TUNE" to 0.5f),
+    )
+
+    /** WHISTLE's position for a harmonic, 5th to 13th. */
+    private fun harmonic(h: Int) = (h - VoxThroat.LOWEST_WHISTLE) / (VoxThroat.HIGHEST_WHISTLE - VoxThroat.LOWEST_WHISTLE).toFloat()
+
+    private val throatPresets = listOf(
+        p(VoxVoice.THROAT, "STEPPE DRONE", "WHISTLE" to harmonic(8), "MELODY" to 0.5f, "DRONE" to 0.5f, "DECAY" to 0.8f),
+        p(VoxVoice.THROAT, "WHISTLE SONG", "WHISTLE" to harmonic(8), "MELODY" to 1f, "DRONE" to 0.1f, "DECAY" to 0.9f),
+        p(VoxVoice.THROAT, "SKY WHISTLE", "TUNE" to 0.6f, "WHISTLE" to harmonic(12), "MELODY" to 0f, "DRONE" to 0.2f, "DECAY" to 0.85f),
+        p(VoxVoice.THROAT, "BELLY DRONE", "TUNE" to 0.35f, "WHISTLE" to harmonic(6), "MELODY" to 0.2f, "DRONE" to 1f, "DECAY" to 0.9f),
+        p(VoxVoice.THROAT, "LOW GROWL", "TUNE" to 0.3f, "WHISTLE" to harmonic(8), "MELODY" to 0.35f, "DRONE" to 0.8f, "GROWL" to 1f, "DECAY" to 0.8f),
+        p(VoxVoice.THROAT, "NIGHT CHANT", "TUNE" to 0.25f, "WHISTLE" to harmonic(9), "MELODY" to 0.5f, "DRONE" to 0.7f, "GROWL" to 0.5f, "DECAY" to 1f),
+        p(VoxVoice.THROAT, "GROWL STAB", "TUNE" to 0f, "WHISTLE" to harmonic(8), "MELODY" to 0f, "DRONE" to 1f, "GROWL" to 1f, "DECAY" to 0.15f),
+        p(VoxVoice.THROAT, "WHISTLE BLIP", "WHISTLE" to harmonic(12), "MELODY" to 0.35f, "DRONE" to 0f, "DECAY" to 0.1f),
+        p(VoxVoice.THROAT, "RASP HIT", "TUNE" to 0.4f, "WHISTLE" to harmonic(10), "MELODY" to 0f, "DRONE" to 0.7f, "GROWL" to 0.6f, "DECAY" to 0.25f),
+        p(VoxVoice.THROAT, "MOUNTAIN CALL", "TUNE" to 0.7f, "WHISTLE" to harmonic(6), "MELODY" to 0f, "DRONE" to 0.6f, "YODEL" to 0.5f, "DECAY" to 0.85f),
+        p(VoxVoice.THROAT, "YODEL RUN", "TUNE" to 0.7f, "WHISTLE" to harmonic(6), "MELODY" to 0f, "DRONE" to 0.9f, "YODEL" to 1f, "DECAY" to 0.9f),
+        p(VoxVoice.THROAT, "THROAT PAD", "TUNE" to 0.1f, "WHISTLE" to harmonic(8), "MELODY" to 0.8f, "DRONE" to 0.7f, "GROWL" to 0.25f, "DECAY" to 1f),
     )
 }
