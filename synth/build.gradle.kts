@@ -68,6 +68,16 @@ tasks.register<JavaExec>("generateGlintAudition") {
     args("${rootDir}/testkit/glint-audition")
 }
 
+/** Render the GLINT D1 depth-pass audition clips (WAVs only) under testkit/glint-d1-audition/. See GlintD1AuditionGenerator. */
+tasks.register<JavaExec>("generateGlintD1Audition") {
+    group = "distribution"
+    description = "Render the GLINT D1 depth-pass audition clips under testkit/glint-d1-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintD1AuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-d1-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"
