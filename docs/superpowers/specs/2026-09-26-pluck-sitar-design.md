@@ -81,7 +81,13 @@ As the string swings toward it, the string wraps on the curve, which
 shortens the vibrating length for that half of the cycle. The effect is
 asymmetric (one side only), grows with the swing (amplitude-dependent), and
 fades as the note decays — which is why a sitar note "opens" into its buzz
-and then closes. In the loop, after the low-pass and before feedback:
+and then closes. Issanchou et al. (2018, research note §2, source 6), who
+simulate the string against the bridge as a nonsmooth contact problem and
+compare it with measurement, describe the same thing as a "descending
+formant": energy pushed into the high partials at the onset and receding as
+the amplitude falls. The engine reproduces the direction, not the model —
+their tanpura case needs a 2 MHz sampling rate and a complementarity solve
+per contact step. In the loop, after the low-pass and before feedback:
 
 ```
 z = y − k · min(y, p0) · y / p0    (y > 0)

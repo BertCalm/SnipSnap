@@ -99,6 +99,13 @@ Priority: quotes only, no numbers needed — this backs a design claim (why PLUC
 
 - "The seven main upper strings run along the dand, above moveable, curved metal frets, over a bridge (jawari) made of ivory or deer horn and tie together at the langot at the very bottom of the sitar. The sympathetic strings, or tarab strings, run below the frets and have their own separate bridge (ara), but still tie together at the langot."
 
+**The contact itself, simulated and compared with measurement — Issanchou, Acary, Pérignon, Touzé & Le Carrou (2018), supplied by Josh as a PDF on 2026-09-27 and read in full (13 pages).** The paper models a stiff string vibrating against a unilateral obstacle — the two-point bridge of a tanpura, then the twenty frets of an electric bass — with nonsmooth contact dynamics, and compares the simulations with a compliant (penalty) model and with experiment. It gives no body measurement and no sitar-specific string parameters (its strings are an electric guitar string and a bass string), so nothing from it reaches `bodyFor`. It does support two claims the spec's "The jawari" section makes and one thing the engine could test:
+
+- On why the bridge matters: "In these examples, the role of contacts is to alter the frequency content due to a nonlinear, nonsmooth interaction that generates high frequencies and contributes to enrich the hearing experience. This effect is particularly prominent in the case of the sitar, where a curved bridge contributes to significantly modify the frequency content of the string vibration".
+- On what the contact does over a note (Fig. 3, the tanpura case): "In both cases, there is no missing mode despite the centered initial condition, due to energy transfers induced by collisions. Moreover, both methods accurately recover the descending formant observed experimentally. Such formants constitute a distinctive feature of musical instruments such as tanpuras." The spectrogram shows the energy above ~1 kHz strongest at the onset and receding over the first second as the amplitude decays — the direction the engine's amplitude-dependent limiter takes by construction, and a property a test could measure (the high band's share falling over the note faster than the dry string's).
+- On the model's cost, for anyone tempted to port it: the tanpura case needs a sampling rate of 2 MHz for convergence and a linear complementarity solve per contact step; the paper's point is that the nonsmooth scheme is 12–37× cheaper than the penalty one, not that either is cheap. PLUCK's limiter is a one-line stand-in for this, not an implementation of it.
+- One geometric fact for a later, closer model: the tanpura's bridge is mimicked by "a point obstacle located at 6 mm from the boundary x = 0, in agreement with the range of positions mentioned in (Valette and Cuesta, 1993)", with the string's parameters in its Table I.
+
 ### Sources
 
 | # | Citation | URL | Opened? |
@@ -108,6 +115,7 @@ Priority: quotes only, no numbers needed — this backs a design claim (why PLUC
 | 3 | Siddiq, S. (2010). "Physical Modelling of the Sitar String." *Proceedings of the Second Vienna Talk*, pp. 137–140. | https://viennatalk.mdw.ac.at/papers/Pap_01_90_Siddiq.pdf | Yes |
 | 4 | Ronan, D. "The Physical Modelling of a Sitar." MSc dissertation, University of Limerick. | http://issta.ie/wp-content/uploads/The-Physical-Modelling-of-a-Sitar.pdf | Yes |
 | 5 | Kapur, A. et al. (2004). "The Electronic Sitar Controller." *Proc. NIME 2004*. | https://www.nime.org/proceedings/2004/nime2004_007.pdf | Yes |
+| 6 | Issanchou, C., Acary, V., Pérignon, F., Touzé, C., & Le Carrou, J.-L. (2018). "Nonsmooth contact dynamics for the numerical simulation of collisions in musical string instruments." *J. Acoust. Soc. Am.* 143(5). HAL open-archive preprint, supplied as a PDF by Josh. | (PDF, HAL) | Yes — read in full, 2026-09-27 |
 
 ---
 
