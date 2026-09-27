@@ -1421,6 +1421,32 @@ class GlintTest {
             }
             assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
         }
+
+        // Above SNAP_CEILING: the bottom rung is free there too, for the
+        // identical reason (snapRatio is identity above the ceiling, same
+        // as below the floor). Measured 2026-09-27 at kBase=16.28362 (PEAK
+        // 0.7, TUNE 0.5, FOLLOW 0.8): BLOOM 0.25 -> [16.28362..28] (13
+        // rungs), BLOOM 0.5 -> [16.28362..40] (25 rungs, clamped at
+        // kCeilingFor), BLOOM 1 -> the same 25 rungs as BLOOM 0.5 (BLOOM's
+        // reach already exceeds the ceiling at 0.5, so 1 has nowhere further
+        // to open) - the old, unconditional `Math.round` would have given a
+        // bottom rung of 16 in every case. This is the case that closes the
+        // three points where RATCHET's PEAK-sweep row still differed from
+        // KAZOO's before this fix (see `PEAK sweep is monotonic`'s own
+        // comment) - all three sit above SNAP_CEILING, not below SNAP_FLOOR.
+        val aboveCeilingKBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.7f, 0.8f)
+        for (bloom in listOf(0.25f, 0.5f, 1f)) {
+            val ks = Glint.ratchetLadder(aboveCeilingKBase, Dsp.lin(bloom, 0f, Glint.BLOOM_MAX))
+            assertEquals(
+                aboveCeilingKBase,
+                ks.first(),
+                "RATCHET's bottom rung must stay at the unrounded kBase above SNAP_CEILING",
+            )
+            for (k in ks.drop(1)) {
+                assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k above the bottom is not an integer")
+            }
+            assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
+        }
     }
 
     @Test

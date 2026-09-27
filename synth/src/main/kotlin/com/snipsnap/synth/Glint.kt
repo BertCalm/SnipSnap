@@ -346,13 +346,25 @@ object Glint {
      * two kBase values give `[2.0515814, 3, 4]` and `[2.1234918, 3, 4]` —
      * different bottom rungs, different renders.
      *
-     * Above [SNAP_FLOOR] this changes nothing: [snapRatio] already rounds
-     * there, the same way `Math.round` did, so a `kBase` that arrives
-     * already snapped to an integer — every call from [synthesize] does,
-     * via [ratioFor] — produces the identical ladder either way. Measured
-     * at kBase=8 (inside the snap band): BLOOM 0.25/0.5/1 give the same
-     * rung counts and the same rungs, 8..14 / 8..20 / 8..32, before and
-     * after this change.
+     * Inside [SNAP_FLOOR]..[SNAP_CEILING] this changes nothing: [snapRatio]
+     * already rounds there, the same way `Math.round` did, so a `kBase`
+     * that arrives already snapped to an integer — every call from
+     * [synthesize] does, via [ratioFor] — produces the identical ladder
+     * either way. Measured at kBase=8 (inside the snap band): BLOOM
+     * 0.25/0.5/1 give the same rung counts and the same rungs,
+     * 8..14 / 8..20 / 8..32, before and after this change.
+     *
+     * Above [SNAP_CEILING] the same free-bottom-rung change applies as
+     * below [SNAP_FLOOR], for the identical reason: [snapRatio] is
+     * identity above the ceiling too, so a `kBase` up there stays
+     * unrounded rather than snapping to the nearest integer. Measured at
+     * PEAK 0.7 (`kBase` = 16.28362, `TUNE` 0.5, `FOLLOW` 0.8): the old,
+     * unconditional `Math.round` would have given a bottom rung of 16;
+     * this version keeps it at 16.28362. This is exactly what closes the
+     * remaining gap between RATCHET's and KAZOO's PEAK-sweep rows in
+     * `GlintTest`'s `PEAK sweep is monotonic` — the three points that
+     * differed before this fix (steps at PEAK 0.625, 0.75 and 0.875) are
+     * all above [SNAP_CEILING], not inside the snap band.
      *
      * The ladder climbs from the bottom by whole harmonics up to `kBase *
      * (1 + bloomAmount)`, BLOOM's extent.
