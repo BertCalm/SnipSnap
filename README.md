@@ -304,7 +304,9 @@ opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
 BEATBOX is a mouth doing a drum kit: a kick, three snares, three
 hats and a tongue click, and THROAT is overtone singing: a low drone
 with a whistled melody on its harmonics, a growl an octave down and a
-yodel. GRAINS is
+yodel. WRAITH is sine-wave speech: three pure tones trace a word's
+formants, ghostly whistling you half hear as "why" or "hello", gliding
+or stepping in key. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a
