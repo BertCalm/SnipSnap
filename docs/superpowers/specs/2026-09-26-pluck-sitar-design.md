@@ -187,6 +187,14 @@ approximates the stiff-string law; its delay is fixed in samples, so
 shorter loops are more inharmonic, which is the right direction for a
 fretted string.
 
+A real baaj string's numbers — steel, 0.31 mm diameter, 0.88 m speaking
+length, tuned to D3 at about 40 N, E = 2e11 Pa — give an inharmonicity
+coefficient near 3e-5 by B = pi^2 E I / (T L^2), so its tenth partial sits
+about 0.1% sharp. The shipped LOW candidate's 1.0% is roughly ten times
+that, and HIGH's 3.0% is roughly thirty times it, so stiffness OFF is the
+physically faithful setting and LOW/HIGH are stylizations the gate may
+prefer — recorded so the section does not read as if 1% were measured.
+
 ### The gourd body
 
 The sitar's tumba (gourd) and tabli (soundboard) are its body. The Phase 2
@@ -201,17 +209,26 @@ policy-compliant route opened. No opened source gives the gourd's
 dimensions either, so a Helmholtz frequency cannot be derived from a cited
 geometry.
 
-So SITAR starts **without a body table.** `bodyFor(SITAR)` is empty and
-`withBody` returns the string unchanged; the BODY macro is inert on this
-voice and its KDoc says why. The jawari, the sympathetic strings and the
-stiffness carry the identity at the first gate, and the audition renders
-the voice at BODY 0 only. The body arrives in a follow-up inside this
-phase the moment a source is read — the paywalled paper, if Josh can open
-it through an institution or a purchase, is the single most likely source
-of a full modal table — and then the rows enter exactly as Phase 2's did:
-driven by the first difference, RMS-matched over the string, zero-padded
-tail, BODY's reach 0–3× the string. The classification and BODY tests
-enumerate voices with a table, so an empty table is skipped, not failed.
+So SITAR **started without a body table.** `bodyFor(SITAR)` was empty and
+`withBody` returned the string unchanged; the BODY macro was inert on this
+voice and its KDoc said why. The jawari, the sympathetic strings and the
+stiffness carried the identity at the first gate, and the audition
+rendered the voice at BODY 0 only. A fully sourced body still arrives in a
+follow-up inside this phase the moment a source is read — the paywalled
+paper, if Josh can open it through an institution or a purchase, is the
+single most likely source of a full modal table — and then the rows enter
+exactly as Phase 2's did: driven by the first difference, RMS-matched over
+the string, zero-padded tail, BODY's reach 0–3× the string. The
+classification and BODY tests enumerate voices with a table, so an empty
+table is skipped, not failed.
+
+**2026-09-27:** the paper could not be obtained, so under one explicit
+exception to the sourcing rule — a shape may ship if the gate chose it and
+it is labelled — `bodyFor(SITAR)` carries three unsourced modes, 110 Hz
+(air, Q ~ 10), 270 Hz (soundboard, Q ~ 8), 520 Hz (bridge region, Q ~ 6),
+as candidates on the page. BODY's default stays 0 until the gate chooses;
+the note's section 5 (`2026-09-26-pluck-sitar-body-research.md`) lists
+them as shapes.
 
 ### Presets
 

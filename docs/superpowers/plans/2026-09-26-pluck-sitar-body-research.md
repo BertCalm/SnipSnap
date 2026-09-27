@@ -165,3 +165,15 @@ Priority: quotes only — how many there are, and how they are tuned.
 | 4 | "Sitar spectrum properties." *The Journal of the Acoustical Society of America* 71, S83 (1982). DOI: 10.1121/1.2019587. | https://pubs.aip.org/asa/jasa/article-pdf/71/S1/S83/10768501/s83_1_online.pdf | Direct PDF link: HTTP 403. This is a one-paragraph 1982 ASA-meeting abstract (title only, from search results); even if opened, abstracts of this vintage and length are unlikely to carry a specific Hz table, but it was a genuine candidate and is recorded as unreached rather than assumed empty. |
 
 **Named leads that were explicitly checked against and ruled out as sitar body-mode sources (not listed in the table above because they are not body-mode candidates at all, not because they were unreachable):** Taguti's sawari-mechanism papers concern the biwa/shamisen string against an obstacle, not the sitar body. Vyasarayani, Birkett & McPhee (2009, JASA 125(6), 3673–3682) and Burridge, Kappraff & Morshedi (1982, SIAM J. Appl. Math. 42) model the sitar *string's* dynamics against the curved bridge, not the body — both are cited by name inside Siddiq's opened paper but were not independently fetched, since their subject (per that citation context) is the string, not a resonator Hz. Valette & Cuesta's *Mécanique de la corde vibrante* (1993) is a French monograph on the tanpura string, cited inside Siddiq and Pisharody & Gupta, and no accessible PDF or repository copy was found. A Shodhganga thesis titled "Sitar in Indian classical music: a study of the changing Vadan Shailis of the instrument vis-à-vis its structure" was found by search but not opened — its title indicates a musicological/performance-practice study of playing style, not an acoustics/vibration thesis, so it was not a plausible body-mode candidate and pursuing it further was not a good use of the remaining search budget.
+
+## 5. Working table (shapes, unsourced) — the gate's candidates
+
+The paywalled paper could not be obtained (Josh, 2026-09-27: "I cannot get that article"), so with the controller's ruling the rule gains one exception — a shape body may ship if the gate chose it and it is labelled — and the three rows below are representative resonances proposed by Josh from general sitar/tanpura acoustics, not measurements.
+
+| Label | Hz | Gain | t60 (s) | Basis |
+|---|---|---|---|---|
+| gourd air resonance | 110 | 1.00 | 0.20 | shape — Q ~ 10 read as t60 = 2.2·Q/f |
+| soundboard main wood mode | 270 | 0.70 | 0.065 | shape — Q ~ 8 read as t60 = 2.2·Q/f |
+| bridge-region resonance | 520 | 0.50 | 0.025 | shape — Q ~ 6 read as t60 = 2.2·Q/f |
+
+BODY's default stays 0 until the gate chips one closer; a sourced table replaces this one the day a source opens.

@@ -131,10 +131,11 @@ object Pluck {
             MacroSpec("STRIKE", 0.25f), MacroSpec("BODY", 0.20f), MacroSpec("DOUBLE", 0.1f),
         )
         // A sitar: plucked near the bridge with a wire mizrab, the sympathetic
-        // strings present by default. BODY is 0 and inert on this voice: the
-        // research found no reachable body measurement (research note
-        // 2026-09-26), so bodyFor(SITAR) is empty until a source is read.
-        // DAMP 0.5 gives a default budget of about 1.3 s, under the
+        // strings present by default. BODY defaults to 0: bodyFor(SITAR) now
+        // carries a table (see bodyFor), but it is a SHAPE, not a measurement
+        // (research note 2026-09-26, section 5) - it ships as a candidate on
+        // the audition page and stays off by default until the gate chips
+        // one closer. DAMP 0.5 gives a default budget of about 1.3 s, under the
         // classifier's 1.5 s loop gate - the sympathetic strings pushed the
         // old 0.35 default past it (1.82 s, read as LOOP; Task 4 ruling).
         PluckVoice.SITAR -> listOf(
@@ -403,7 +404,8 @@ object Pluck {
      * The fixed body of each voice, in absolute Hz. Every row is a confirmed
      * or corrected line of docs/superpowers/plans/2026-09-25-pluck-depth-body-research.md
      * (source numbers in the comments); a t60 marked "shape" there is a
-     * placeholder for the audition, not a measurement.
+     * placeholder for the audition, not a measurement - except SITAR's,
+     * a shape body under an explicit exception (see below).
      */
     internal fun bodyFor(voice: PluckVoice): List<Modes.Mode> = when (voice) {
         // Classical guitar - research note section 5.1 (Christensen & Vistisen
@@ -463,13 +465,19 @@ object Pluck {
             Modes.fixed(3500f, 0.70f, 0.05f),  // bridge hill - shape - raised at the gate: these formants are the tin
             Modes.fixed(5000f, 0.55f, 0.04f),  // bridge hill - shape - raised at the gate: these formants are the tin
         )
-        // No body: the sitar research (docs/superpowers/plans/
-        // 2026-09-26-pluck-sitar-body-research.md) opened six sources and
-        // none measures the gourd or the soundboard; the modal analysis that
-        // would is paywalled. Under the rule that no Hz reaches this table
-        // without an opened source, SITAR has none, withBody returns the
-        // string unchanged, and the BODY macro is inert on this voice.
-        PluckVoice.SITAR -> emptyList()
+        // A SHAPE, not a measurement: the one paper that measures a sitar's
+        // body is paywalled and could not be opened (research note
+        // 2026-09-26, section 4), so under the note's explicit exception
+        // these three modes are representative sitar/tanpura resonances
+        // (a gourd's air resonance, the soundboard's main wood mode, a
+        // bridge-region resonance) with t60 from a plausible Q by
+        // t60 = 2.2 Q / f. They are candidates: BODY's default is 0 until
+        // the gate chips one closer, and the note lists them as shapes.
+        PluckVoice.SITAR -> listOf(
+            Modes.fixed(110f, 1.00f, 0.20f),   // gourd air resonance - shape, Q ~ 10
+            Modes.fixed(270f, 0.70f, 0.065f),  // soundboard main wood mode - shape, Q ~ 8
+            Modes.fixed(520f, 0.50f, 0.025f),  // bridge-region resonance - shape, Q ~ 6
+        )
     }
 
     /**
