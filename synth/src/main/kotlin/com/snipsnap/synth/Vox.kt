@@ -54,12 +54,15 @@ import kotlin.random.Random
  * - **WRAITH**, sine-wave speech ([VoxWraith]): three pure tones tracing
  *   a word's formants (WORD), gliding or stepping in key (TUNED), with
  *   ALIEN, STUTTER and BREATH.
+ * - **SWARM**, a crowd ([VoxSwarm]): two to sixteen mouths (CROWD) saying
+ *   a word together or talking over each other (LOOSE), whispered, talked
+ *   or shouted (EFFORT), with STUTTER. Stereo, like CHOIR.
  *
  * TUNE snaps to semitones like every melodic engine here. Each note's
  * wobble, detune and onsets are seeded from its recipe, so a pad
  * regenerates to the byte.
  */
-enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT, WRAITH }
+enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT, WRAITH, SWARM }
 
 object Vox {
 
@@ -161,13 +164,17 @@ object Vox {
             MacroSpec("TUNE", 0.5f), MacroSpec("WORD", 0f), MacroSpec("DECAY", 0.5f), MacroSpec("TUNED", 0f),
             MacroSpec("ALIEN", 0f), MacroSpec("STUTTER", 0f), MacroSpec("BREATH", 0.15f),
         )
+        VoxVoice.SWARM -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("WORD", 0f), MacroSpec("CROWD", 0.75f), MacroSpec("LOOSE", 0.25f),
+            MacroSpec("EFFORT", 0.55f), MacroSpec("DECAY", 0.5f), MacroSpec("STUTTER", 0f),
+        )
     }
 
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    /** CHOIR sings in stereo; ROBOT, GHOST, BEATBOX, THROAT and WRAITH are one mouth, mono. */
-    fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR) 2 else 1
+    /** CHOIR and SWARM are many mouths, in stereo; ROBOT, GHOST, BEATBOX, THROAT and WRAITH are one, mono. */
+    fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR || voice == VoxVoice.SWARM) 2 else 1
 
     /**
      * What a pad holding this sound is filed as. The singing voices are
@@ -208,6 +215,8 @@ object Vox {
             VoxVoice.THROAT -> 55f
             // The key note TUNED steps onto, A1 to A3; TUNE's middle leaves the word where it is spoken.
             VoxVoice.WRAITH -> 55f
+            // The chant's note for the men, A1 to A3 (the women sing it an octave up); a murmur wanders around it.
+            VoxVoice.SWARM -> 55f
         }
         val semis = Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
         return root * 2f.pow(semis / 12f)
@@ -362,6 +371,19 @@ object Vox {
                 alien = m.getValue("ALIEN"),
                 stutter = m.getValue("STUTTER"),
                 breath = m.getValue("BREATH"),
+                rate = rate,
+            )
+        }
+        if (voice == VoxVoice.SWARM) {
+            return VoxSwarm.synthesize(
+                noteHz = frequencyFor(voice, m.getValue("TUNE")),
+                word = VoxSwarm.wordFor(m.getValue("WORD")),
+                crowd = m.getValue("CROWD"),
+                loose = m.getValue("LOOSE"),
+                effort = m.getValue("EFFORT"),
+                decay = m.getValue("DECAY"),
+                stutter = m.getValue("STUTTER"),
+                seed = Dsp.seedFor("VOX", voice.name, m.toSortedMap().entries.joinToString(",")),
                 rate = rate,
             )
         }

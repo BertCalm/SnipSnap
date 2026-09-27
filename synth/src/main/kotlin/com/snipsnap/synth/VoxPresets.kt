@@ -3,7 +3,7 @@ package com.snipsnap.synth
 /**
  * VOX's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
- * Twelve presets per voice (six voices, seventy-two total). The singers spread across
+ * Twelve presets per voice (seven voices, eighty-four total). The singers spread across
  * TUNE/VOWEL/BREATH/DECAY, and since round 1 SIZE (LOW and HIGH throats)
  * and GLIDE (SPEAK BOX's "wah", HIGH SIGH and LOW MOAN sighing toward
  * "ooh"). VOWEL walks the A→E→I→O→U morph `Vox.kt` defines; BREATH
@@ -11,7 +11,9 @@ package com.snipsnap.synth
  * eight HITs: three kicks, four snares (two PSH), four hats, a rim.
  * THROAT's twelve cover its three uses: drones and whistled melodies to
  * hold, short growls and whistle blips to hit, and two yodels. WRAITH's
- * walk its six words as hits, chops in key and slowed pads.
+ * walk its six words as hits, chops in key and slowed pads. SWARM's are
+ * crowd shouts to hit, chants and cheers, held stadium vowels, murmuring
+ * and whispering rooms as pads, and stutters.
  * Authored from that DSP, not by ear, and checked by [VoxPresetsTest]'s
  * sanity/round-trip/spread suite.
  */
@@ -27,6 +29,7 @@ object VoxPresets {
         VoxVoice.BEATBOX -> beatboxPresets
         VoxVoice.THROAT -> throatPresets
         VoxVoice.WRAITH -> wraithPresets
+        VoxVoice.SWARM -> swarmPresets
     }
 
     fun all(): List<VoxPatch> = VoxVoice.entries.flatMap { forVoice(it) }
@@ -128,5 +131,23 @@ object VoxPresets {
         p(VoxVoice.WRAITH, "MACHINE DREAM", "WORD" to word(VoxWraith.Word.YEAH), "DECAY" to 0.8f, "TUNED" to 1f, "ALIEN" to 0.6f),
         p(VoxVoice.WRAITH, "LOW WAIL", "TUNE" to 0.1f, "WORD" to word(VoxWraith.Word.WOW), "DECAY" to 1f, "TUNED" to 0.5f),
         p(VoxVoice.WRAITH, "HALF TUNED", "WORD" to word(VoxWraith.Word.HELLO), "DECAY" to 0.6f, "TUNED" to 0.5f),
+    )
+
+    /** WORD's position for one of SWARM's words. */
+    private fun say(w: VoxSwarm.Word) = w.ordinal / (VoxSwarm.Word.entries.size - 1f)
+
+    private val swarmPresets = listOf(
+        p(VoxVoice.SWARM, "HEY SHOUT", "WORD" to say(VoxSwarm.Word.HEY), "CROWD" to 1f, "LOOSE" to 0.12f, "EFFORT" to 1f, "DECAY" to 0.1f),
+        p(VoxVoice.SWARM, "HO SHOUT", "WORD" to say(VoxSwarm.Word.HO), "CROWD" to 1f, "LOOSE" to 0.12f, "EFFORT" to 1f, "DECAY" to 0.1f),
+        p(VoxVoice.SWARM, "HUH HIT", "WORD" to say(VoxSwarm.Word.HUH), "CROWD" to 1f, "LOOSE" to 0.1f, "EFFORT" to 0.9f, "DECAY" to 0.05f),
+        p(VoxVoice.SWARM, "HEY CHANT", "WORD" to say(VoxSwarm.Word.HEY), "CROWD" to 0.75f, "LOOSE" to 0.1f, "EFFORT" to 0.75f, "DECAY" to 0.3f),
+        p(VoxVoice.SWARM, "HO CHANT", "WORD" to say(VoxSwarm.Word.HO), "CROWD" to 0.75f, "LOOSE" to 0.1f, "EFFORT" to 0.75f, "DECAY" to 0.3f),
+        p(VoxVoice.SWARM, "YEAH CHEER", "WORD" to say(VoxSwarm.Word.YEAH), "CROWD" to 1f, "LOOSE" to 0.35f, "EFFORT" to 0.9f, "DECAY" to 0.45f),
+        p(VoxVoice.SWARM, "STADIUM OOH", "WORD" to say(VoxSwarm.Word.OOH), "CROWD" to 1f, "LOOSE" to 0.3f, "EFFORT" to 0.7f, "DECAY" to 0.9f),
+        p(VoxVoice.SWARM, "CROWD AAH", "WORD" to say(VoxSwarm.Word.AAH), "CROWD" to 0.8f, "LOOSE" to 0.25f, "EFFORT" to 0.55f, "DECAY" to 0.85f),
+        p(VoxVoice.SWARM, "MURMUR ROOM", "CROWD" to 1f, "LOOSE" to 1f, "EFFORT" to 0.5f, "DECAY" to 1f),
+        p(VoxVoice.SWARM, "WHISPER ROOM", "CROWD" to 0.9f, "LOOSE" to 1f, "EFFORT" to 0f, "DECAY" to 1f),
+        p(VoxVoice.SWARM, "SMALL TALK", "CROWD" to 0.2f, "LOOSE" to 1f, "EFFORT" to 0.45f, "DECAY" to 0.9f),
+        p(VoxVoice.SWARM, "STUTTER HEY", "WORD" to say(VoxSwarm.Word.HEY), "CROWD" to 0.9f, "LOOSE" to 0f, "EFFORT" to 0.8f, "DECAY" to 0.25f, "STUTTER" to 0.75f),
     )
 }

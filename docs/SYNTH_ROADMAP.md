@@ -264,7 +264,7 @@ What follows from it:
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 | S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. **D1 shipped** — BODY is a real second formant at `k/5.6`, clamped to `K_MIN` (2) below `kBase ≈ 11.2` (PEAK ≈0.575 at the reference note) — so at the shipped default (PEAK 0.45, kBase 8) the body pins to 2×f0, a 4× interval rather than 5.6× — on its own single envelope (the old mean-removed window copy was the same harmonic series the burst already carried, and measured inaudible), and it rides its own envelope at 0.8× the burst's — though the glass tail that ratio was meant to buy only measures on two of the three voices: REED and KAZOO lose body share from head to tail (2.31→1.25, 5.72→2.13) while BOTTLE gains it (28.5→29.4) and rings rather than burning off, and which of those a player wants is a question for the audition; BLOOM's depth is free of its rate, fixed at a 0.45 s sweep; and PEAK's harmonic snap stays in the render path but now floors at `k ≥ 3` — between `K_MIN = 2` and 3 there is only one integer, so snapping flattened both velocity layers onto it, and below the floor the ratio now runs free instead. Depth design in `docs/superpowers/specs/2026-09-26-glint-depth-design.md`; CICADA/RATCHET/PLATE are D2 and the preset roster is D3, both gated on the D1 audition. | S1 + U5 + U6 |
 | S12 | **built, awaiting the audition gate** — SIREN, the dub siren (WAIL/TRILL/LASER/BIRD, a voice being the LFO's shape: a PolyBLEP square whose pitch the LFO moves in the log domain, phase-continuous, through a one-pole and a drive that GRIT opens together; TUNE snapped, RATE 0.25–25 Hz, DEPTH to two octaves each way, SWEEP the dive or climb into the note, HOLD the gated length whose top is LOOP — whole LFO periods, the pitch fitted so the pulse closes on whole cycles, cut at a zero crossing, for the SURFACE to hold under a finger; forty presets with one LOOP per voice; SEND TO PAD bakes the rack's ECHO into a one-shot's recipe and lands a LOOP dry) — design and as-built notes in `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md` | S1 + U5 + U6 + the SURFACE |
-| S11 | **Rounds 1-2 built, round 3 under way** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL) and WRAITH (sine-wave speech, with ALIEN and STUTTER) built, SWARM to follow — under S11 below | S3.7 + U6 |
+| S11 | **Built, rounds 1-3** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER) — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1622,3 +1622,54 @@ longest note renders in about 50 ms); the dispatch test says so and a
 test of its own holds it. Filed TONAL (PERC when short, LOOP when
 long). Twelve presets across the six words, as hits, chops in key and
 slowed pads.
+
+### Round 3, SWARM as built — 2026-09-27 ("Weird", third voice; round 3 complete)
+
+**SWARM** (`VoxSwarm`): TUNE, WORD, CROWD, LOOSE, EFFORT, DECAY, STUTTER.
+A crowd: two to sixteen mouths, men and women (the women an octave up),
+each with its own throat, detune, pitch wander, timing and place in the
+stereo field. Stereo, like CHOIR. It was the voice most at risk of
+sounding like CHOIR, so it was aimed at people rather than singers: no
+vibrato, speech-like onsets and a shout's rise and fall. Measured
+against CHOIR's "aah", 9.1 on the difference measure.
+
+- **WORD** is what the crowd says together: hey, ho, yeah, huh, ooh,
+  aah.
+- **LOOSE** is the heart of it. Its lower half loosens a chant (the
+  opening's rise measured 30 ms tight, 95 at 0.25, 250 at 0.5, as the
+  mouths come in over a moment); its upper half turns mouths, one by
+  one, to talking: random syllables of consonant loci and vowels, words
+  of two to four, pauses between. At 1 it is a murmuring room.
+- **CROWD** is 2 to 16 mouths, squared so most of its travel is at the
+  small end. Measured on a murmur, the envelope's lumpiness is 0.38 for
+  two mouths and 0.17 for sixteen, flat past about ten: you can pick out
+  two people, and past eight a crowd is a crowd (8 and 16 measured 1.2
+  apart on the difference measure, inside its noise floor). Asked, the
+  knob stays, as "a few people to a crowd".
+- **EFFORT** goes whisper, talk, shout. A shout is four semitones
+  higher, rises and falls on its word, and is brightened and pushed.
+- **STUTTER** grabs the word's opening up to four times, together when
+  the crowd is tight, scattered when it is loose; counted by the silent
+  gaps between grabs, exact across nine crowds.
+
+What the audition changed:
+
+- **The whisper was rebuilt.** Heard: "everything sounds great except
+  whisper sounds demonic". It was noise through the voice's own narrow
+  resonances, which rang into a low moan: -4.7 dB of its energy under
+  500 Hz, centred at 2.2 kHz. Now the resonances widen and weaken, the
+  low end thins, and breath hisses between 2 and 6.5 kHz: -18 dB under
+  500 Hz, centred at 3.8 kHz, a real whisper's range. A first try
+  overshot into 10-12 kHz of static; the breath level was measured
+  across four settings and set at the one that landed in range.
+- **The first mouth is always on time**, like CHOIR's middle singer.
+  Two or three late talkers left the classifier's first 93 ms silent
+  (it read them UNKNOWN), and a pad that starts late sounds late.
+
+Babble searches each mouth's path on from where it last was, not from
+the start; the longest preset renders in about 2.5 s here, CHOIR's
+longest in about 2. Twelve presets: shouted hits, chants and a cheer,
+held stadium vowels, murmuring and whispering rooms, and a stutter.
+
+That completes round 3, and with it S11: three rounds, prototyped and
+auditioned by ear before each was built.
