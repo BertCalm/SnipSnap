@@ -683,8 +683,7 @@
     });
     audio.addEventListener('error', function () {
       setPlaying(null);
-      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
-      nowEl.classList.remove('idle');
+      showTrouble('COULD NOT LOAD THAT CLIP', mediaErr(audio));
     });
     audio.addEventListener('loadedmetadata', function () {
       if (current && current.row.durEl && isFinite(audio.duration)) {
@@ -720,9 +719,46 @@
     }
     a.pause();
     a.src = (voice.folder || voice.id) + '/' + fid + '.wav';
-    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
-    a.play().catch(function () { setPlaying(null); });
+    var next = { voice: voice, fid: fid, name: name, pad: pad, row: row };
+    setPlaying(next);
+    a.play().catch(function (e) {
+      // A tap on another pad supersedes this one; its rejection is not news.
+      if (current !== next) return;
+      setPlaying(null);
+      showTrouble('PLAY BLOCKED', errName(e));
+    });
   }
+
+  // Why a pad did not play, in the NOW line, so a report from a phone can
+  // name the failure instead of describing silence.
+  var MEDIA_ERR = ['', 'ABORTED', 'NETWORK', 'DECODE', 'NOT SUPPORTED'];
+  function mediaErr(a) {
+    var e = a.error;
+    if (!e) return 'NO ERROR CODE';
+    return (MEDIA_ERR[e.code] || 'CODE ' + e.code) + (e.message ? DOT + e.message.toUpperCase() : '');
+  }
+  function errName(e) {
+    var n = (e && e.name) || 'no reason given';
+    return n.replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase();
+  }
+  function showTrouble(what, why) {
+    nowEl.textContent = what + DOT + why;
+    nowEl.classList.remove('idle');
+  }
+
+  // Before any tap: load one clip's header the way the pads do, and say in
+  // the NOW line if the clips cannot be reached from where this page is
+  // served. Browsers that defer media loads until a tap fire neither
+  // event, and then the pad's own handlers report.
+  (function probe() {
+    var v = VOICES[0], first = v.groups[0].clips[0][0];
+    var p = new Audio();
+    p.preload = 'metadata';
+    p.addEventListener('error', function () {
+      if (!current) showTrouble('CLIPS UNREACHABLE', mediaErr(p) + DOT + 'TAP A PAD ANYWAY');
+    });
+    p.src = (v.folder || v.id) + '/' + first + '.wav';
+  })();
 
   $('repeat').addEventListener('click', function () {
     repeat = !repeat;
