@@ -122,6 +122,14 @@ class GlintTest {
                 GlintVoice.KAZOO, GlintVoice.RATCHET -> 1.0f
             }
             assertEquals(expected, Glint.windowAt(voice, 0.6f), 1e-6f, "$voice's window shape at phase 0.6")
+            // Kept from the pair of tests this replaced. It is a weak bound,
+            // but unlike the peak and frame-count checks alongside it, it is
+            // not implied by anything: rootHz is a hand-written per-voice
+            // literal, and a typo there (2200 for 220) would sail past every
+            // other test in this file, which all measure ratios rather than
+            // absolute pitch.
+            val root = Glint.rootHz(voice)
+            assertTrue(root > 20f && root < 2000f, "$voice's root is $root Hz, outside the audible fundamental range")
         }
     }
 
