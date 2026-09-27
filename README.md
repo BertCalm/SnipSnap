@@ -273,9 +273,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
-counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
-picker's scope since it has no voice enum and works on a source snip
+VOX and GRAINS round out the lineup — eleven engines in the `Engine` picker
+counting SKIN, RESIN, TIDE and GLINT; GRAINS is a twelfth thing entirely, out of
+the picker's scope since it has no voice enum and works on a source snip
 instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
