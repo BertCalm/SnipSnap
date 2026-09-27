@@ -6,7 +6,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class GlintVoice { REED, BOTTLE, KAZOO }
+enum class GlintVoice { REED, BOTTLE, KAZOO, CICADA, RATCHET, PLATE }
 
 /**
  * GLINT — phase distortion, where the formant is generated rather than
@@ -155,6 +155,9 @@ object Glint {
         GlintVoice.REED -> 110f     // A2
         GlintVoice.BOTTLE -> 220f   // A3
         GlintVoice.KAZOO -> 220f    // A3
+        GlintVoice.CICADA -> 220f   // A3 — shares BOTTLE's register with its window
+        GlintVoice.RATCHET -> 220f  // A3 — shares KAZOO's register with its window
+        GlintVoice.PLATE -> 110f    // A2 — a struck plate sits low, like REED
     }
 
     fun frequencyFor(voice: GlintVoice, tune: Float): Float {
@@ -165,13 +168,26 @@ object Glint {
     /**
      * The window at [phase] in [0, 1). Must reach exactly zero at phase 1 —
      * every voice's definition below is written so that it does.
+     *
+     * The three Task 1 voices each reuse an existing shape rather than
+     * inventing one, per the spec's voice table — their distinguishing
+     * mechanism arrives in a later task, so for now the shape alone has to
+     * carry the pairing:
+     *   - CICADA takes the triangle (BOTTLE's) because it is the softest
+     *     base window here, so a later nested modulation supplies the edge
+     *     instead of doubling one the window already has.
+     *   - RATCHET takes the trapezoid (KAZOO's) because the toy, clicky
+     *     character that window already gives is the point of the voice.
+     *   - PLATE takes the saw (REED's) because a struck plate is brightest
+     *     right at the strike and decays from there, the same shape as a
+     *     ramp that opens at phase 0 and falls to zero.
      */
     fun windowAt(voice: GlintVoice, phase: Float): Float {
         val p = phase.coerceIn(0f, 1f)
         return when (voice) {
-            GlintVoice.REED -> 1f - p
-            GlintVoice.BOTTLE -> if (p < 0.5f) p * 2f else (1f - p) * 2f
-            GlintVoice.KAZOO -> if (p < KAZOO_FLAT) 1f else (1f - p) / (1f - KAZOO_FLAT)
+            GlintVoice.REED, GlintVoice.PLATE -> 1f - p
+            GlintVoice.BOTTLE, GlintVoice.CICADA -> if (p < 0.5f) p * 2f else (1f - p) * 2f
+            GlintVoice.KAZOO, GlintVoice.RATCHET -> if (p < KAZOO_FLAT) 1f else (1f - p) / (1f - KAZOO_FLAT)
         }
     }
 

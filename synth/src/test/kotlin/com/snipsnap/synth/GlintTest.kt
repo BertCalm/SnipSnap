@@ -86,6 +86,30 @@ class GlintTest {
     }
 
     @Test
+    fun `every voice has a window that reaches zero at the cycle end`() {
+        for (voice in GlintVoice.entries) {
+            val end = Glint.windowAt(voice, 1f)
+            assertTrue(
+                kotlin.math.abs(end) < 1e-6f,
+                "$voice's window is $end at phase 1, not zero — the wrap would click",
+            )
+            val open = Glint.windowAt(voice, 0.05f)
+            assertTrue(open > 0.01f, "$voice's window is silent at phase 0.05 ($open)")
+        }
+    }
+
+    @Test
+    fun `every voice renders at its own root and is not silent`() {
+        for (voice in GlintVoice.entries) {
+            val root = Glint.rootHz(voice)
+            assertTrue(root > 20f && root < 2000f, "$voice root $root Hz is out of range")
+            val snip = Glint.render(voice)
+            assertTrue(snip.frameCount > 1000, "$voice rendered ${snip.frameCount} frames")
+            assertTrue(snip.peak() > 0.1f, "$voice rendered near-silence, peak ${snip.peak()}")
+        }
+    }
+
+    @Test
     fun `TUNE snaps to semitones and actually tunes`() {
         val distinct = HashSet<Float>()
         for (i in 0..100) distinct.add(Glint.frequencyFor(GlintVoice.REED, i / 100f))
