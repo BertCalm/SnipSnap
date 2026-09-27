@@ -19,6 +19,10 @@ J-STAGE, BioResources, Springer, World Scientific, AIP/JASA, DAFx archives
 and more — answered `EGRESS_BLOCKED` or a proxy 403. None was retried or
 routed around. So:
 
+- **Tuning (section 5) is the exception:** open research datasets on GitHub
+  (DaMuSc; the 1932 Cairo Congress recordings) were read directly, so its
+  scale rows are confirmed *against those datasets* — the books behind
+  each row were not opened.
 - **No instrument measurement for any of the four instruments is
   confirmed.** Body modes, decay times, course detunes, open-string pitches
   and inharmonicity coefficients are all `unsupported`. The spec treats
@@ -40,7 +44,7 @@ Välimäki 2006, Abel, Välimäki & Smith 2010 (dispersion); Siddiq 2012
 (Archives of Acoustics — not DAFx, as the brief said). Each section's own
 source table lists the rest.
 
-Sections 1–4 are one instrument each and keep their researchers' inner numbering (`N.`, `Z.`);
+Sections 1–4 are one instrument each, section 5 is tuning systems, and keep their researchers' inner numbering (`N.`, `Z.`);
 each is self-contained, with its own sources table, its own "what the
 literature cannot give", and a "modelling implications" subsection that
 is clearly marked as synthesis, not data.
@@ -549,3 +553,191 @@ Do **not** convert C3/F6 to Hz on the strength of T1. The note names are unsuppo
 
 ---
 
+## 5. Tuning systems for SILK's TUNE macro — sourced, not recalled
+
+**Date:** 2026-09-27 · Standard: `docs/superpowers/plans/2026-09-25-pluck-depth-body-research.md` §0. A value marked `confirmed` was read directly in the cited file, and the supporting text is quoted verbatim. A value marked `unsupported` could not be opened this run. **Unsupported values are NOT to be used in code.** A value marked `derived` is arithmetic on a confirmed value (for example, steps × 1200/53), and the arithmetic is shown.
+
+**Access this run.** The egress proxy denied every scholarly and reference host tried: huygens-fokker.org, maqamworld.com, wikipedia.org, arxiv, zenodo, PMC, JSTOR, MDPI, ISMIR, midi.org, tuning.ableton.com, the WKU and White Rose guzheng PDFs, and shamisen-zentrale.de. WebFetch was blocked the same way. What could be reached was GitHub (`git clone` and `raw.githubusercontent.com`), pkg.go.dev, hackage and PyPI. So every confirmed number below comes from **open research datasets and code on GitHub that carry their own citations**. The main ones are DaMuSc (McBride, Passmore & Tlusty, PLoS ONE 2023), ORD-CC32 (Bozkurt 2025, as packaged in `scale-library`) and the CompMusic/MTG makam tools. For those numbers, "confirmed" means confirmed against that dataset file. The book or paper behind each row (Rechberger 2018, Hewitt 2013, Ellis 1885, and so on) was **not** opened. The named primary authorities (Marcus, Touma, Maqam World, Farhat, Talai, Vaziri, the 1932 Cairo Congress proceedings, the official Scala page and the MIDI.org MTS spec) are all **unsupported** this run.
+
+---
+
+### 1. Arabic maqam — 24-EDO convention vs. measured practice
+
+**Theory rows (DaMuSc, from Rechberger 2018).** DaMuSc stores each maqam twice: once in 24-EDO quarter-tone units and once in 53-EDO comma units. Cents are cumulative from the tonic. 1 unit = 50.0 ¢ in 24-EDO (`edo-24.scl`: `50.0   !  1\24`) and 22.641509 ¢ in 53-EDO (`edo-53.scl`: `22.641509   !  1\53`).
+
+| Maqam | 24-EDO row (units) | 24-EDO cents | 53-EDO row (units) | 53-EDO cents | Status |
+|---|---|---|---|---|---|
+| Rast | `4;3;3;4;4;3;3` (desc. `4;3;3;4;4;2;4`) | 0 200 350 500 700 900 1050 1200 | `9;7;6;9;9;7;6` | 0 204 362 498 702 906 1064 1200 | confirmed (53: DaMuSc `OT0441`); 24 derived ×50 |
+| Bayati | `3;3;4;4;3;3;4` | 0 150 300 500 700 850 1000 1200 | `6;7;9;9;6;7;9` | 0 136 294 498 702 838 996 1200 | confirmed (`OT0272`, `OT0468`) |
+| Hijaz | `2;6;2;4;3;3;4` | 0 100 400 500 700 850 1000 1200 | `5;13;4;9;7;6;9` | 0 113 408 498 702 860 996 1200 | 24 confirmed (`OT0279`); 53 derived (DaMuSc's own `OT0475` row does not reach 1200 — see note) |
+| Saba | `3;3;2;6;2;4;4` | 0 150 300 400 700 800 1000 1200 | `6;7;4;14;4;9;9` | 0 136 294 385 702 792 996 1200 | confirmed (`OT0282`, `OT0476`) |
+| Nahawand | `4;2;4;4;2;6;2` (desc. `4;2;4;4;2;4;4`) | 0 200 300 500 700 800 1100 1200 | `9;4;9;9;4;9;9` (desc. `…4;14;4`) | 0 204 294 498 702 792 996 1200 | derived (×50 / ×22.64) |
+| Kurd | `2;4;4;4;2;4;4` | 0 100 300 500 700 800 1000 1200 | `4;9;9;9;4;9;9` | 0 91 294 498 702 792 996 1200 | derived |
+| Sikah | `3;4;4;3;3;4;3` | 0 150 350 550 650 850 1050 1200 | `6;9;9;7;6;9;7` | 0 136 340 543 634 838 1042 1200 | confirmed (`OT0298`, `OT0485`) |
+| Ajam | no plain "Ajam" row; only *Ajam Ushayran* `4;4;2;4;4;4;2` | 0 200 400 500 700 900 1100 1200 | `9;9;4;9;9;9;4` | 0 204 408 498 702 906 1109 1200 | confirmed (`OT0231`, `OT0436`), and only for Ajam Ushayran |
+
+Verbatim rows from `Data/theory_scales.csv`: `T0200,Maqam Rast,4;3;3;4;4;3;3,4;3;3;4;4;2;4,1,24-tet,Arabic,…` · `T0200,Maqam Rast,9;7;6;9;9;7;6,9;7;6;9;9;4;9,1,53-tet,…` · `T0222,Maqam Hijaz,5;13;4;9;7;6;9,4;13;4;9;4;14;4,1,53-tet,…`. Note: DaMuSc's computed `OT0475` for Hijaz 53-EDO is `0;91;385;475;679;770;1087;1177`, which is its *descending* row and does not close the octave. The derived ascending values above come from the raw row. Nahawand's ascending and descending rows swap between the 24-EDO and 53-EDO versions, and this note reports both as stored.
+
+**A 19th-century theory reading (Ellis 1885, via DaMuSc `T0356`).** Row: `T0356,Rast,204;180;114;204;180;114;204,N/A,1,Cents,Arabic,…` gives Rast = 0 204 384 498 702 882 996 1200 (`OT0529`). Status: confirmed against DaMuSc; Ellis not opened. Here the Rast third sits at 384 ¢. In the 24-EDO row it is 350 ¢ and in the 53-EDO row it is 362 ¢. **Three theory sources, three different neutral thirds.**
+
+**Practice: the 1932 Cairo Congress recordings (ORD-CC32, Bozkurt 2025, as .scl in `scale-library`).** The README says the dataset "contains cent values computationally extracted from the audio recordings available in the Internet Archive". It also warns: tracks without an annotated tonic "use the lowest detected peak as the tonic reference, so might not be the expected mode of the maqam." Only files named with a maqam (the annotated tonic) are used below. I extracted the degree lying in the stated window from each file.
+
+| Degree (window) | Egypt | Iraq | Other | Status |
+|---|---|---|---|---|
+| Rast 3rd (300–420 ¢) | 13 tracks: **343.2 – 363.0 ¢** (e.g. `CD01_17`: `350.667055`; `CD01_18`: 343.2; `CD06_03`: 363.0) | 311.1, 359.7, 375.9 | Syria (rast_segah) 363.1; Algeria 309.4; Tunisia: no degree in window | confirmed per file; ranges derived |
+| Bayati 2nd (100–200 ¢) | 18 of 20 tracks: **133.0 – 183.6 ¢**, most between 140 and 157 | 136.6, 141.5, 142.7 | — | confirmed per file |
+| Saba 2nd (100–200 ¢) | 9 tracks: 112.4 – 167.4 ¢ | 139.7, 158.4 | — | confirmed per file |
+| Hijaz 2nd / 3rd | 2nd 104.2 – 134.7 ¢; 3rd 391 – 396 ¢ (3 tracks) | — | — | confirmed per file |
+
+Verbatim example file (`CD01_17_rast_Egypt.scl`): `208.585775 / 350.667055 / 497.159885 / 701.535774 …` with `! maqam = rast`, `! region = Egypt`, `! tonic_ref = annotated`. Takeaway: the Egyptian 1932 rast third clusters in a band about 20 ¢ wide around 350 ¢. Iraqi and Maghrebi tracks scatter by ±40 ¢ around it. This supports "region-dependent", but each value is one track's peak, not a regional norm.
+
+**A measured qanun (Mokhtar & Mosharrafa, *Nature* 1937, via DaMuSc `M0426`):** `Qanun,96;105;115;40;64;74;110;96;103;100;94;50;46;107`. Status: confirmed against DaMuSc; the paper was not opened. It is a string-by-string tuning with steps from 40 ¢ to 115 ¢, not a 50 ¢ grid.
+
+**Unsupported (NOT to be used in code):** anything attributed to Marcus, Touma, Maqam World or the Congress proceedings themselves. That includes any claim about "which size is correct" for a given city or school.
+
+---
+
+### 2. Turkish makam — Arel–Ezgi–Uzdilek (AEU), 53 commas
+
+- **Comma size:** `edo-53.scl` → `22.641509 ! 1\53`. **confirmed.** The name "Holderian comma" appears only in a code comment in the MTG `tomato` repo: `kernel width of the pitch distribution, 7-5 cents ~1/3 Holderian comma` (`toniclastnote.py:44`). That comment is consistent with the size, but no source read this run *defines* the term, so treat the name as convention, not a citation.
+- **AEU uses 53rds of an octave (code evidence):** `adaptive-tuning/symbtrsynthesis/musicxmlreader.py:290`: `freq *= 2 ** (int(acc) / 53.0)`. The same package calls its interval table theory: `Falling back to the theoretical (AEU) interval` (`adaptivesynthesizer.py`). **confirmed.**
+- **Accidental names by comma count** (tomato `symbtrnote.py`): `if acc in ['#1', '#2']: … D_KOMA` · `['#3', '#4']: … D_BAKIYYE` · `['#5', '#6']: … D_KMUCENNEP` · `['#7', '#8']: … D_BMUCENNEP`, with the same pattern for flats. **confirmed.**
+- **Step letters used by DaMuSc** (`Src/tuning_system.py:19`): `TURKISH = {'T':203.8, 'K':181.1, 'S':113.2, 'B':90.6, 'F':22.6, 'A':271, 'E':67.9}`. **confirmed.** In commas (derived, ÷22.64) these are T=9, K=8, S=5, B=4, F=1, A=12, E=3.
+
+| Makam | DaMuSc 53-EDO row | Steps (¢) | Cumulative (¢) | Cross-check: MTG AEU note table + SymbTr key signature | Status |
+|---|---|---|---|---|---|
+| Rast | `9;8;5;9;9;8;5` (desc. `…9;4;9`) | 204 181 113 204 204 181 113 | 0 204 385 498 702 906 1087 1200 | G4 + [`B4b1`,`F5#4`] → steps 204 181 113 204 204 181 113 | confirmed, and both sources agree |
+| Uşşak | `8;5;9;9;4;9;9` | 181 113 204 204 91 204 204 | 0 181 294 498 702 792 996 1200 | A4 + [`B4b1`] → 181 113 204 204 90 204 204 | confirmed, agree |
+| Hicaz | `5;12;5;9;8;5;9` | 113 272 113 204 181 113 204 | 0 113 385 498 702 883 996 1200 | A4 + [`B4b4`,`F5#4`,`C5#4`] → 113 272 113 204 181 113 204 | confirmed, agree |
+| Segah | `5;9;8;9;5;13;4` | 113 204 181 204 113 294 91 | 0 113 317 498 702 815 1109 1200 | B4b1 + [`B4b1`,`E5b1`,`F5#4`] → 113 204 181 204 113 204 181 | the rows **disagree** above the 5th (see note) |
+
+The cross-check column applies the key signatures in `adaptive-tuning/data/makam.json` (e.g. `"rast": … "key_signature": ["B4b1", "F5#4"]`) to the cent table `note_intervals_C0.json` (e.g. `"G4": 5502`, `"A4": 5706`, `"B4b1": 5887`). Building a scale this way is my construction. Segah note: Rechberger's Segah includes an augmented step (13 commas), while the plain key signature does not. Both are recorded as found. DaMuSc's letter-coded Segah (`S;T;K;T;S;A;B`) uses A = 12 commas and sums to 1177 ¢, so it does not close the octave. Caution: `tomato/music_data/note.json` gives a *different*, 12-TET-anchored table (e.g. rast→dügâh = 200 ¢ and segâh = 372 ¢ above rast). **Use the `adaptive-tuning` table, which matches DaMuSc and 53-EDO.**
+
+**Performance ≠ AEU:** DaMuSc also carries nine measured ney tunings (Tan 2011, `M0329`–`M0337`, e.g. `8/913,219;174;165;187;190;203;142`). None of them reproduces the 204/181/113 grid. Status: confirmed against DaMuSc; thesis not opened.
+
+---
+
+### 3. Persian dastgah — koron/sori, 24-EDO notation vs. measured practice
+
+- **Rechberger's 17-note gamut** (DaMuSc `tuning_system.py:18`): `DASTGAH = np.array([0., 90., 133.23, 204., 294.14, 337.14, 407.82, 498., 568.72, 631.28, 702., 792.18, 835.2, 906., 996., 1039.1, 1109.77, 1200.])`. **confirmed** against DaMuSc.
+
+| Dastgah (DaMuSc row, gamut indices) | Cents | Status |
+|---|---|---|
+| Shur `2;2;3;3;1;3;3` | 0 133 294 498 702 792 996 1200 | confirmed (`OT0308`) |
+| Mahur `3;3;1;3;3;3;1` | 0 204 408 498 702 906 1110 1200 | confirmed (`OT0311`) |
+| Homayun `2;4;1;3;1;3;3` | 0 133 408 498 702 792 996 1200 | confirmed (`OT0313`) |
+| Segah 1 `2;3;2;2;3;3;2` / Segah 2 `3;2;2;3;2;2;3` | 0 133 337 498 631 835 1039 1200 / 0 204 337 498 702 835 996 1200 | confirmed (`OT0316`/`OT0317`) |
+| Chahargah `2;4;1;3;2;4;1` | 0 133 408 498 702 835 1110 1200 | confirmed (`OT0318`) |
+
+- **Two implementations of koron and sori in one open app (Gushe, a design reference, not scholarship).** The README says: "a hybrid tuning system that combines limit-3 Pythagorean ratios with limit-11 microtones (sori and koron)". Its 11-limit table: `{ name: "C sori", ratio: "33/32" }`, `{ name: "D koron", ratio: "12/11" }`, `{ name: "E koron", ratio: "27/22" }`, `{ name: "F sori", ratio: "11/8" }`. Its 24-EDO table: `{ name: "C sori", ratio: "50.0" }`, `{ name: "D koron", ratio: "150.0" }`, `{ name: "E koron", ratio: "350.0" }`. **confirmed** as the app's own choices. In cents (derived): 12/11 = 150.6, 27/22 = 354.5, 11/8 = 551.3, 33/32 = 53.3. So one app offers koron = 50 ¢ below natural (24-EDO) *or* the 11-limit ratios. Compare Rechberger's second degree of Shur at 133 ¢.
+- **Unsupported (NOT to be used in code):** Vaziri's introduction of koron/sori, Farhat's measured interval sizes, and Talai's system. None of them could be opened.
+
+---
+
+### 4. Japanese — shamisen tunings and koto/shamisen scales
+
+**Shamisen tunings** (`threedaymonk/lilypond-shamisen`, `shamisen.ly:261–263`): `honchoushiTuning = \stringTuning <c f c'>` · `niagariTuning    = \stringTuning <c g c'>` · `sansagariTuning  = \stringTuning <c f bes>`. **confirmed.**
+- Honchōshi = root, 4th, octave. Niagari = root, 5th, octave. **Sansagari = root, 4th, minor 7th** (B♭ in the *same* octave). This is the answer to the task's "root–4th–7th? verify": both the `.ly` definition and `convert.rb:32` (`'sansagari' => [['c', 0], ['f', 0], ['bf', 0], …]`) say so. The README's "`sansagariTuning` (C F B♭')" uses a prime mark that disagrees with its own code.
+- The source gives note names only, never cents. "5 / 7 / 10 semitones" is a 12-TET reading, not a sourced tuning.
+
+**Scales** (DaMuSc; Hewitt 2013 rows are tagged `Pythagorean`, Rechberger 2018 rows `12-tet;Pythagorean`):
+
+| Scale | Row (semitone steps) | Cents given by DaMuSc | Status |
+|---|---|---|---|
+| Hirajoshi (Hewitt `T0079`) | `2;1;4;1;4` | 0 204 294 702 792 1200 | confirmed (`OT0102`) |
+| Kumoi joshi (`T0080`) | `1;4;2;1;4` | 0 90 498 702 792 1200 | confirmed (`OT0103`) |
+| Iwato (`T0081`) | `1;4;1;4;2` | 0 90 498 612 996 1200 | confirmed (`OT0104`) |
+| Yosenpō (`T0086`) | `2;3;2;3;2` (desc. `2;3;2;2;3`) | 0 204 498 702 996 1200 | confirmed (`OT0109`) |
+| Insenpō (`T0088`) | `1;4;2;3;2` (desc. `1;4;2;1;4`) | 12-TET: 0 100 500 700 1000 | row confirmed; cents derived |
+| "In" (Rechberger `T0314`), "Miyako-bushi Onkai" (`T0327`) | `3;1;1;2;3;1;1`; `1;1;3;2;1;1;3` | `OT0370`: 0 300 400 500 700 1000 1100; `OT0396`: 0 100 200 500 700 800 900 | confirmed as stored, but **suspect**: 7-step rows for scales usually described as pentatonic. Do not use until checked against the book. |
+
+Reading "Yosenpō/Insenpō" as the yo and in scales is mine; the names suggest it, but no source read this run states it.
+
+**Measured koto (Ellis 1885, via DaMuSc `M0419`/`M0420`):** `Koto female,719;193;164;362;82;398` and `Koto master,683;185;152;346;107;410` give octave scales 0 193 357 719 801 1199 and 0 185 337 683 790 1200 (`OM0541`, `OM0543`). Status: confirmed against DaMuSc. The small step measures 82–107 ¢ and the large step 346–410 ¢, so real koto tunings sit far from both Pythagorean (90/408) and 12-TET (100/400) in places.
+
+---
+
+### 5. Chinese — guzheng pentatonic and pressed notes
+
+- **Gong-mode pentatonic** (Ho & Han 1982 via DaMuSc `T0337`, tuned by DaMuSc to *shi-er-lü*): `Gong,2;2;3;2;3,…,Chinese` → 0 204 408 702 906 1201 (`OT0410`). **confirmed** against DaMuSc. The 1201 is not a typo: DaMuSc's `CHINA` array ends at `1201.27828039`, the Pythagorean spiral that does not close. The other modes are Shang, Jue, Zhi and Yu (`T0338`–`T0341`). DaMuSc's source note on Ho & Han says: "Despite being written on Western staff notation, I have assumed that these scales follow the Shi-er-lu tuning system." So that tuning is DaMuSc's assumption.
+- **Guzheng standard D-major pentatonic tuning, and the pitch of pressed *fa*/*ti*:** **unsupported.** Every guzheng-specific source found (WKU "21-Stringed Guzheng Tuning Method in D Major" PDF, the White Rose thesis *Extending the sound of the guzheng*, guzhengalive.com) was blocked. Search snippets said fa/ti "can be produced by pressing E and A". That is snippet-only and **NOT to be used in code**. No source anywhere in this run gives a *cents deviation* for a pressed note.
+- Adjacent measured data: Ellis's *yangqin* (hammered dulcimer, a santur relative) `169;105;217;170;217;118;202` (DaMuSc `M0414`). Confirmed against DaMuSc, and not a guzheng.
+
+---
+
+### 6. Xenharmonic tunings and the Scala `.scl` format
+
+| System | Step | Source line (verbatim) | Status |
+|---|---|---|---|
+| 19-EDO | 63.157895 ¢ | `edo-19.scl`: ` 63.157895   !  1\19`, cited to `Augusto Novaro, Sistema Natural de la Música, 1951.` | confirmed |
+| 31-EDO | 38.709677 ¢ | `edo-31.scl`: ` 38.709677   !  1\31` | confirmed |
+| Bohlen–Pierce (13 equal steps of 3/1) | 146.304231 ¢ | `xen14-mclaren-nonoctave-13-3.scl`: `Pierce-Bohlen scale, 13th root of 3` … ` 146.304231` … ` 3/1` (McLaren, *Xenharmonikon* 14, 1993) | confirmed |
+| Bohlen–Pierce, just | 27/25 25/21 9/7 7/5 75/49 5/3 9/5 49/25 15/7 7/3 63/25 25/9 3/1 | `xen17-bohlen-harmonic-1.scl` (Bohlen, *Xenharmonikon* 17, 1998, p.124) | confirmed |
+
+**Scala `.scl` format.** The official page (`huygens-fokker.org/scala/scl_format.html`) was **blocked**. What follows is a verbatim transcription of it in the `github.com/mikebharris/music/scala` package docs on pkg.go.dev. That makes it a secondary source, read directly:
+- "Lines beginning with an exclamation mark are regarded as comments and are to be ignored."
+- "The first (non comment) line contains a short description of the scale … If there is no description, there should be an empty line."
+- "The second line contains the number of notes. … The lower limit is 0, which is possible since degree 0 of 1/1 is implicit."
+- "**If the value contains a period, it is a cents value, otherwise a ratio. Ratios are written with a slash, and only one.** Integer values with no period or slash should be regarded as such, for example "2" should be taken as "2/1"."
+- "Anything after a valid pitch value should be ignored." "Negative ratios are meaningless and should give a read error." "The first note of 1/1 or 0.0 cents is implicit and not in the files."
+- Corroborated independently by the Haskell `hmt` docs: "A .scl pitch is either in Cents or is a Ratio."
+
+On the period: the quoted rules never *say* "the last line is the repeat interval". Every example read ends on it (`2/1` for octave scales, `3/1` for Bohlen–Pierce), and parsers treat it as the period. That is a convention inferred from examples, not a quoted rule. Keyboard mapping (which MIDI key maps to degree 0) belongs to the separate `.kbm` format (the Go `go-scala` API has `TuningFromSCLAndKBM(s, k)`). Its spec was not read.
+
+---
+
+### 7. MPC / MIDI practicalities
+
+**The fields exist per zone and per layer, and the evidence says the unit is cents:**
+- `docs/XPM_STRUCTURE.md:401`: "Real files carry `<TuneCoarse>`/`<TuneFine>` at **both** instrument and layer level." In a keygroup program the instrument is the zone.
+- Real Akai keygroup file: `reference/golden/keygroup/Bass-MPC3 AM Upright Bass.xpm:3878–3879` has instrument-level `<TuneCoarse>0</TuneCoarse>` `<TuneFine>16</TuneFine>`. Other zones in the same file hold 15/16/17. Layer-level fields sit at `:339–340`, next to a layer `<Pitch>0.000000</Pitch>` (`:338`). Only integers were observed.
+- MPC 3 JSON: `coarseTune`/`fineTune` (`docs/MPC3_FORMAT.md:104–105, 140`). The doc still lists "`fineTune` units" as open (`:432`) and calls `layersv[j].pitch` "a third pitch field … with an unresolved unit" (`:913`).
+- **New corpus evidence on units (my inference, not yet in the docs).** In three MPC 3 track files from three exporter builds, one layer object holds `pitch == coarseTune + fineTune/100`: `Kit-PSK 009 Hip Hop Kit.xtd` has `coarseTune: -2`, `fineTune: 34`, `pitch: -1.65999996662`; `RnB-Kit-91V Grove G#m 85.xtd` has `0`, `-39`, `-0.3899…`; `Inst-808-F9 Matrix 808 130.xty` has `0`, `-10`, `-0.1000…`. So fineTune is hundredths of a semitone, i.e. **cents**, and `pitch` is in semitones. This matches what the app already assumes: `Tuner.kt:18` "Cents for the pad's fine tune, -100..100". The observed range is −90…+34. The ±100 clamp is the app's own (`XpnImporter.kt:248` `tuneFine = inst.tuneFine.coerceIn(-100, 100)`, `:247` coarse `-36..36`), not an Akai-documented limit.
+- **Pitch bend:** `<KeygroupPitchBendPositiveRange>2` / `NegativeRange>2` (`Kalimba-TAB Magic.xpm:7446–7447`), plus a float `<KeygroupPitchBendRange>` (`0.130000` in the Bass file `:51699`; its unit is not established).
+- **MPE / MTS / scale tables:** none. There is no MPE, MTS, microtuning or tuning-table field in any golden XPM/XTY/XTD file (grep for `mpe|microtun|tuning` over `reference/golden`: no hits), and none in `docs/`. A microtonal SILK export therefore has to **bake** each degree into a zone's `TuneCoarse`/`TuneFine`. The resolution is 1 ¢ at best.
+- **MIDI Tuning Standard (one sentence, secondary).** The ODDSound MTS-ESP README: a client's local tuning table "can be updated with MIDI Tuning Standard (MTS) SysEx messages. The client API includes a function that parses incoming MIDI data and identifies all message formats defined in the MTS standard." **confirmed** (README). The MIDI.org spec itself was blocked, so any MTS resolution figure is **unsupported**.
+
+---
+
+### What the literature cannot give (this run)
+
+- **Normative "correct" sizes for neutral intervals.** The sources read give *rows* (Rechberger: 350/362 ¢ for the Rast third; Ellis: 384 ¢) and *single-performance peaks* (Cairo 1932: 309–376 ¢). None gives a per-region norm. The authorities who argue region-dependence (Marcus, Touma, Maqam World) were unreachable.
+- **Performance-dependent intonation.** Several sources show the same degree moving by direction or context: the ascending/descending Rast, Nahawand and Hijaz rows, the Persian *moteghayer* "changeable scale degree" in Gushe, and Segah's disagreeing rows. A static scale table cannot capture that, and no source here gives a rule for it.
+- **Pressed-string pitch on guzheng/koto.** No cents for pressed *fa*/*ti* or for koto oshide were reachable. Pitch reached by pressing is a gesture (a bend), not a table value.
+- **Persian measured practice** (Farhat, Talai, Vaziri's own values): wholly unsupported.
+- **Instrument-to-instrument spread.** Ellis's two koto tunings differ by up to 36 ¢ on the same degree (719 vs 683), and the 1937 qanun is irregular. A "scale" is a family, not a point.
+- **MPC hardware behaviour.** No Akai document confirms the fineTune unit or range. The cents reading comes from corpus arithmetic, and hardware still has the last word (`MPC3_FORMAT.md:432`).
+
+---
+
+### Design implications — **my synthesis, not sourced**
+
+1. **Snap to scale degrees, not semitones.** Store a scale as an ordered list of cents from the tonic plus a period, which is exactly what `.scl` carries. TUNE's 0..1 range then maps onto *degree indices* over N periods: `degree = round(tune * (steps*periods))`, `cents = period*floor(degree/steps) + table[degree mod steps]`. Every stop is a listed degree, so the "snapped notes, never a mistuning" rule still holds. A mistuning is now defined as "off the table", not "off 12-TET". Glide with the existing macro smoothing between degree pitches, never between indices.
+2. **The current key model can't carry this.** `SurfaceKey.Snap.scaleMask` is "twelve bits" (`SurfaceKey.kt:34`), and `LiveSnapEngine.cpp:16–20` hard-codes a semitone ladder (`kTuneSemitones = 24`). A microtonal scale needs a cents array plus a period in its place. Keep the 12-bit mask as the special case of 12-TET.
+3. **Ship tables as `.scl`, with provenance in `!` comments.** The DaMuSc and Cairo files already use that convention. Start with the rows marked confirmed above. For maqam offer *two* variants per scale: "notation" (24-EDO) and "measured" (for example, Rast third ≈ 350 ¢ from the Egyptian 1932 cluster, cited to its track files). Do not invent a third.
+4. **Export honestly.** On MPC, write each zone's degree as `TuneCoarse` + `TuneFine`, with fine in whole cents and within ±50 as `Tuner.coarseFine` already does. The export can then only round by up to 0.5 ¢. Say so in the export log when a table value isn't an integer cent.
+5. **FREE (unsnapped) mode: make it opt-in and separate.** It is musically real: Cairo peaks, pressed guzheng notes and Segah variants all sit between table entries. But it breaks the product rule by definition. My recommendation is a separate FREE toggle, off by default, that shows the cents offset from the nearest degree. A better alternative is a small, bounded "inflect" control (±N ¢, spring-return) layered on the snapped degree. That models pressed or moving degrees while TUNE itself still always lands on a table note.
+6. **Instrument defaults** (all tables to be taken from the confirmed rows above). **Shamisen:** honchōshi, niagari and sansagari as *open-string sets*, not scales. **Oud:** maqam tables. **Santur:** dastgah tables. **Guzheng:** gong pentatonic, with pressed 4th/7th left to the inflect control until a sourced deviation exists.
+
+---
+
+### Sources
+
+| # | Citation | URL | Read directly |
+|---|---|---|---|
+| 1 | McBride, Passmore & Tlusty (2023), DaMuSc database — `Data/theory_scales.csv`, `measured_scales.csv`, `octave_scales.csv`, `Src/tuning_system.py`, `Metadata/sources.csv` | https://github.com/jomimc/DaMuSc | Yes (cloned) |
+| 1a | Rechberger (2018); Hewitt (2013); Ellis (1885); Ho & Han (1982); Mokhtar & Mosharrafa (1937); Tan (2011) — the sources *behind* DaMuSc rows | via #1 | **No** |
+| 2 | narenratan, `scale-library` — README, `scales/cairo-congress/*.scl` (ORD-CC32), `scales/edos/edo-{19,24,31,53}.scl`, Xenharmonikon BP files | https://github.com/narenratan/scale-library | Yes (cloned) |
+| 2a | Bozkurt (2025), "An Open Research Dataset of the 1932 Cairo Congress of Arab Music", arXiv:2506.14503 / Zenodo 15682346 | https://arxiv.org/abs/2506.14503 | **No** (blocked) |
+| 3 | Şentürk, Holzapfel & Serra (2012), `adaptive-tuning` — `note_intervals_C0.json`, `makam.json`, `musicxmlreader.py`, `adaptivesynthesizer.py` | https://github.com/hsercanatli/adaptive-tuning | Yes (cloned) |
+| 4 | Şentürk, `tomato` — `symbtrnote.py`, `toniclastnote.py`, `music_data/note.json` | https://github.com/sertansenturk/tomato | Yes (cloned) |
+| 5 | Scala format as transcribed in `mikebharris/music/scala` Go docs | https://pkg.go.dev/github.com/mikebharris/music/scala | Yes |
+| 5a | Op de Coul, "Scala scale file format" (official) | https://www.huygens-fokker.org/scala/scl_format.html | **No** (blocked) |
+| 6 | `hmt` Haskell docs, Music.Theory.Tuning.Scala | https://hackage.haskell.org/package/hmt-0.16/docs/Music-Theory-Tuning-Scala.html | Yes |
+| 7 | `chinenual/go-scala` Go docs (SCL+KBM API) | https://pkg.go.dev/github.com/chinenual/go-scala | Yes |
+| 8 | ODDSound, MTS-ESP README | https://github.com/ODDSound/MTS-ESP | Yes |
+| 9 | `threedaymonk/lilypond-shamisen` — `shamisen.ly`, `convert/convert.rb`, README | https://github.com/threedaymonk/lilypond-shamisen | Yes (cloned) |
+| 10 | `peimankhosravi/Gushe` — README, `home.html` | https://github.com/peimankhosravi/Gushe | Yes (cloned) |
+| 11 | SnipSnap repo: `docs/XPM_STRUCTURE.md`, `docs/MPC3_FORMAT.md`, `reference/golden/**`, `Tuner.kt`, `XpnImporter.kt`, `SurfaceKey.kt`, `LiveSnapEngine.cpp` | local | Yes |
+| 12 | Maqam World; Marcus; Touma; Cairo Congress 1932 proceedings; Farhat, *The Dastgah Concept in Persian Music*; Talai; Vaziri; Wikipedia (maqam, makam, MTS, Holdrian comma); MIDI.org MTS spec; tuning.ableton.com | various | **No** (blocked or not reachable) |
+| 13 | Guzheng: WKU "21-Stringed Guzheng Tuning Method in D Major"; Shi, *Extending the sound of the guzheng* (White Rose); guzhengalive.com; shamisen-zentrale.de | various | **No** (blocked; snippet only) |

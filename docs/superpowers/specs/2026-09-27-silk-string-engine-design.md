@@ -165,27 +165,58 @@ regenerates to the bit like any other.
 
 ### The table
 
-Cents values are **not in this spec on purpose.** Each row below is filled
-from the research note once its source is read directly; until then the
-row ships only if marked "equal-division, no source needed".
+Rows come from research §5. "Dataset" means confirmed against an open
+research dataset read directly (DaMuSc, McBride, Passmore & Tlusty 2023),
+whose row cites a book this pass could not open — the row's provenance goes
+in the table file as a comment, `.scl`-style, so it travels with the code.
+A row that is neither dataset-confirmed nor equal-division does not ship.
 
-| SCALE entry | Degrees | Source status |
-|---|---|---|
-| CHROMATIC | 12-EDO — PLUCK's behaviour | equal-division, no source needed |
-| PENTATONIC (gong) | guzheng's open strings | research pending |
-| RAST | Arabic, neutral 3rd and 7th | research pending (24-EDO convention vs practice) |
-| BAYATI | Arabic, neutral 2nd | research pending |
-| HIJAZ | Arabic, augmented 2nd | research pending |
-| SHUR | Persian, koron 2nd | research pending |
-| MAHUR | Persian | research pending |
-| MIYAKO-BUSHI | Japanese in-scale | research pending |
-| 24-EDO | every quarter tone | equal-division, no source needed |
-| 19-EDO, 31-EDO | xenharmonic | equal-division, no source needed |
-| FREE | unsnapped — TUNE is continuous over 24 semitones | none |
+| SCALE entry | Cents above the root (one period) | Period | Source |
+|---|---|---|---|
+| CHROMATIC | 0 100 … 1100 — PLUCK's behaviour | 1200 | equal division |
+| PENTATONIC (gong) | 0 204 408 702 906 | 1200 | dataset (Ho & Han 1982 via DaMuSc `T0337`; DaMuSc assumes *shi-er-lü* tuning, its own note says so; its Pythagorean 1201 closes to 1200 here) |
+| RAST | 0 204 362 498 702 906 1064 | 1200 | dataset (Rechberger 2018, 53-comma row, `OT0441`) |
+| BAYATI | 0 136 294 498 702 838 996 | 1200 | dataset (`OT0468`) |
+| HIJAZ | 0 100 400 500 700 850 1000 | 1200 | dataset, 24-EDO row (`OT0279`) — DaMuSc's 53-comma row does not close the octave |
+| SIKAH | 0 136 340 543 634 838 1042 | 1200 | dataset (`OT0485`) |
+| SHUR | 0 133 294 498 702 792 996 | 1200 | dataset (Rechberger's 17-note gamut, `OT0308`) |
+| MAHUR | 0 204 408 498 702 906 1110 | 1200 | dataset (`OT0311`) |
+| CHAHARGAH | 0 133 408 498 702 835 1110 | 1200 | dataset (`OT0318`) |
+| KUMOI | 0 90 498 702 792 | 1200 | dataset (Hewitt 2013, `OT0103`) — the in-scale shape |
+| HIRAJOSHI | 0 204 294 702 792 | 1200 | dataset (`OT0102`) |
+| 24-EDO | every 50 cents | 1200 | equal division |
+| 19-EDO | every 63.158 cents | 1200 | equal division |
+| 31-EDO | every 38.710 cents | 1200 | equal division |
+| BOHLEN–PIERCE | 13 equal steps of 146.304 cents | **1902** (3/1, a tritave) | equal division of 3/1 |
+| FREE | unsnapped — TUNE is continuous over 24 semitones | — | none |
+
+What §5 settled and what it left open:
+
+- **The neutral third has no single right size.** Rast's third is 350 cents
+  in 24-EDO notation, 362 in the 53-comma row and 384 in Ellis (1885); the
+  1932 Cairo recordings put thirteen Egyptian tracks at 343–363 and Iraqi
+  and Maghrebi ones anywhere from 309 to 376. SILK ships the 53-comma row
+  because it is one consistent theory source for every Arabic row; a second
+  "measured" variant per maqam is a follow-on, not a guess.
+- **Miyako-bushi is not shipped.** DaMuSc's rows labelled "In" and
+  "Miyako-bushi" are seven-step rows for scales usually described as
+  pentatonic — flagged suspect, left out. KUMOI carries the same interval
+  shape (half step, major third, whole step, half step, major third).
+- **Shamisen tunings are open-string sets, not scales:** honchōshi (root,
+  4th, octave), niagari (root, 5th, octave), sansagari (root, 4th, minor
+  7th in the same octave), confirmed as note names only. They matter to a
+  multi-string gesture, which a one-shot is not; recorded for the preset
+  pass.
+- **The guzheng's pressed 4th and 7th have no sourced cents.** PRESS lands
+  on the next scale degree; how far a real player overshoots it is unknown.
 
 Each voice defaults to its own tradition's scale (OUD → RAST, SANTUR → SHUR,
-GUZHENG → PENTATONIC, SHAMISEN → MIYAKO-BUSHI) — but **every scale is
-reachable from every voice**. A santur in 19-EDO is a feature.
+GUZHENG → PENTATONIC, SHAMISEN → KUMOI) — but **every scale is reachable
+from every voice**. A santur in 19-EDO is a feature.
+
+TUNE's two-period span means two tritaves for BOHLEN–PIERCE, about three
+octaves: the voice's root is lowered for that row so the top stays under
+the loop-length floor (`require` covers it either way).
 
 ### FREE, and the "atonal" question
 
@@ -203,6 +234,13 @@ SCRAMBLE roll reaches it only as often as any other scale.
   a pad's `tuneCoarse` / `tuneFine` (−36..36 semitones, −100..100 cents,
   `Kit.kt:97-98`) exist for the kit-level key picker. A quarter-tone pad
   needs nothing new in the export.
+- **`fineTune` is cents — probably.** Research §5 found three MPC 3 track
+  files from three exporter builds in which a layer's
+  `pitch == coarseTune + fineTune/100` (e.g. −2 and 34 → −1.66). That
+  answers `MPC3_FORMAT.md`'s open question on paper; the hardware still
+  has the last word. The corpus holds no MPE, MTS or tuning-table field,
+  so anything microtonal that reaches the MPC is baked into per-zone
+  coarse + fine, whole cents at best.
 - **The pad tune readout** (F5.3) shows a name and a cents offset against
   12-EDO for a SILK pad, e.g. `E♭ −50¢`, instead of rounding to the nearest
   semitone. The IN KEY action leaves SILK pads with a non-CHROMATIC SCALE
@@ -444,3 +482,14 @@ instrument the MPC plays in maqam.
 3. **Eight macros.** Two more than PLUCK's six. If the screen
    is crowded, SCALE could move to a chip above the knobs rather than a
    knob.
+4. **FREE, or INFLECT?** Research §5 suggests an alternative to FREE: keep
+   TUNE always snapped and add a small bounded offset (± some cents) on top
+   of the snapped degree — the pressed and moving degrees real players use,
+   without ever leaving the table. That costs a ninth macro, so this spec
+   keeps FREE and names INFLECT for the audition to ask for.
+5. **Dataset-confirmed rows.** The scale rows cite DaMuSc, read directly,
+   not the books behind it. That is one step short of the pluck-depth
+   note's rule; this spec accepts it for scales (published theory tables,
+   and where §5 could cross-check — the Turkish Rast, Uşşak and Hicaz rows
+   against an independent MTG table — they agreed) and does not accept it
+   for instrument measurements.
