@@ -240,4 +240,48 @@ class StringsTest {
         val half = Strings.courseDetuneCents(seed = 5, count = 4, spread = 0.5f)
         for (i in half.indices) assertEquals(full[i] * 0.5f, half[i], 1e-5f, "spread scales the same draw linearly, loop $i")
     }
+
+    /**
+     * OUD's SLIDE (SILK Phase 1b): a [Strings.Loop] built at a low note and
+     * later moved, mid-render, to a higher one - the pitch envelope beside
+     * the fixed-tuning path. Measured on two separate windows of one
+     * continuous render, before and well after the retune point (past the
+     * allpass' own settling), against [PluckSpectra.peakHz]'s usual 5-cent
+     * bound.
+     */
+    @Test
+    fun `retune moves the loop's resonant frequency, carrying the allpass state through`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val lowFreq = 130f
+        val targetFreq = 147f
+        val loopHz = 4200f
+        val t0 = Strings.tune(lowFreq, loopHz, rate)
+        val seconds = 0.6f
+        val total = (seconds * rate).toInt()
+        val exc = Strings.pluckExciter(t0.n, lowFreq, 6000f, position = 0f, seed = 9, rate = rate, maxLen = total)
+        val loop = Strings.Loop(t0.n, t0.a, fb = 0.995f, loopHz = loopHz, rate = rate)
+        val out = FloatArray(total)
+        val retuneAt = total / 3
+        for (i in 0 until total) {
+            if (i == retuneAt) loop.retune(targetFreq)
+            out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
+        }
+        val retuneAtSec = retuneAt.toFloat() / rate
+        val before = PluckSpectra.peakHz(out, rate, lowFreq, spanFraction = 0.05, fromSec = 0.02f, seconds = retuneAtSec - 0.04f)
+        val after = PluckSpectra.peakHz(out, rate, targetFreq, spanFraction = 0.05, fromSec = retuneAtSec + 0.05f, seconds = seconds - retuneAtSec - 0.1f)
+        val beforeCents = 1200.0 * ln(before / lowFreq) / ln(2.0)
+        val afterCents = 1200.0 * ln(after / targetFreq) / ln(2.0)
+        assertTrue(abs(beforeCents) <= 5.0, "before retuning, expected near $lowFreq Hz, measured $beforeCents cents off")
+        assertTrue(abs(afterCents) <= 5.0, "after retuning, expected near $targetFreq Hz, measured $afterCents cents off")
+    }
+
+    @Test
+    fun `retune refuses to grow the loop past what it was built for`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val loopHz = 4200f
+        val t = Strings.tune(440f, loopHz, rate)
+        val loop = Strings.Loop(t.n, t.a, fb = 0.99f, loopHz = loopHz, rate = rate)
+        val e = assertFailsWith<IllegalArgumentException> { loop.retune(55f) }
+        assertTrue(e.message!!.contains("built for"), e.message)
+    }
 }

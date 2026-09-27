@@ -344,17 +344,24 @@ internal object Strings {
      * drive buzzes the same on every note.
      */
     class Loop(
-        private val n: Int,
-        private val a: Float,
+        private var n: Int,
+        private var a: Float,
         private val fb: Float,
         private val loopHz: Float,
-        rate: Int,
+        private val rate: Int,
         private val stiffness: Float = 0f,
         private val jawari: Float = 0f,
         private val jawariP0: Float = 1e-6f,
         private val dispersion: Dispersion? = null,
     ) {
-        private val size = n + 2
+        // The ring is sized once, here, from the constructor's own n - the
+        // loop's lowest note (its longest delay), for a voice that will
+        // later call [retune]. Every such voice starts at that low note and
+        // only ever moves toward a shorter, higher-pitched target (SLIDE
+        // glides in from below; PRESS and the SHAMISEN glide bend up), so
+        // the ring never needs to grow past this - see [retune].
+        private val maxN = n
+        private val size = maxN + 2
         private val history = FloatArray(size)
         private var i = 0
         private var apX1 = 0f
@@ -416,6 +423,30 @@ internal object Strings {
             history[i % size] = y
             i++
             return y
+        }
+
+        /**
+         * A pitch envelope beside the fixed-tuning path: re-solves the
+         * tuning budget for [freq] (the same [tune] every fixed-pitch
+         * voice uses) and carries the tuning allpass' and loop filter's own
+         * state through unchanged - no click, no re-priming. OUD's SLIDE,
+         * GUZHENG's PRESS and SHAMISEN's built-in glide are the callers,
+         * and every one of them starts at a lower, longer-loop note and
+         * moves toward a shorter one, which is exactly what [maxN] (the
+         * ring this [Loop] was constructed with) already has room for.
+         *
+         * A [freq] whose own loop would need more than [maxN] samples
+         * fails loudly rather than reading history this ring never kept:
+         * construct the [Loop] at the glide's lowest note, not its target.
+         */
+        fun retune(freq: Float) {
+            val t = tune(freq, loopHz, rate, stiffness, jawari, dispersion)
+            require(t.n <= maxN) {
+                "retune($freq) needs a loop of ${t.n} samples, past the $maxN this Loop was built for - " +
+                    "construct it at the glide's lowest note, not the target it's moving toward"
+            }
+            n = t.n
+            a = t.a
         }
     }
 
