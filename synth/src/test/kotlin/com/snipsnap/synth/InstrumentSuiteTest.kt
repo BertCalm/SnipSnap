@@ -53,8 +53,9 @@ class InstrumentSuiteTest {
         val organ = InstrumentSuite.renderOrgan(File(temp, "organ"))
         val harp = InstrumentSuite.renderHarp(File(temp, "harp"))
         val box = InstrumentSuite.renderMusicBox(File(temp, "box"))
+        val fork = InstrumentSuite.renderFork(File(temp, "fork"))
 
-        for (p in listOf(ep, organ, harp, box)) {
+        for (p in listOf(ep, organ, harp, box, fork)) {
             zonesTile(p)
             assertEquals(9, p.keygroups.size)
         }
@@ -64,6 +65,8 @@ class InstrumentSuiteTest {
         assertPitched(Keys.organ(45).snip, 45, "Organ")
         assertPitched(Keys.organ(69).snip, 69, "Organ")
         assertPitched(Keys.harp(52), 52, "Harp")
+        assertPitched(Keys.fork(Keys.FORK_LOW_MIDI, ForkVoice.TINE, strike = 0.8f), Keys.FORK_LOW_MIDI, "Fork")
+        assertPitched(Keys.fork(Keys.FORK_HIGH_MIDI, ForkVoice.TINE, strike = 0.8f), Keys.FORK_HIGH_MIDI, "Fork")
     }
 
     /**
@@ -176,7 +179,7 @@ class InstrumentSuiteTest {
         }
         assertEquals(1.0, (root.entries["version"] as com.snipsnap.json.JsonValue.Num).value)
         val instruments = (root.entries["instruments"] as com.snipsnap.json.JsonValue.Arr).items
-        assertEquals(5, instruments.size)
+        assertEquals(6, instruments.size)
 
         fun obj(v: com.snipsnap.json.JsonValue) = (v as com.snipsnap.json.JsonValue.Obj).entries
         fun num(v: com.snipsnap.json.JsonValue?) = (v as com.snipsnap.json.JsonValue.Num).value

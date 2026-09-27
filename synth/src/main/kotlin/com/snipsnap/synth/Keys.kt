@@ -274,4 +274,43 @@ object Keys {
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
+
+    // ---------- FORK ----------
+    // docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md
+
+    /**
+     * FORK, held to an exact keyboard pitch — the same move [ep] and
+     * [musicBox] already make: the engine's own low-level primitive
+     * ([Fork.strike]) called directly at [midi]'s true frequency, so
+     * TUNE's semitone snap never has to be inverted. [strike] plays the
+     * part [ep]'s own `bright` does: not a full macro map, because
+     * velocity is the one thing a keyboard supplies that a pad's macro
+     * panel doesn't. It is not baked into two layers here — an instrument
+     * builder renders this twice per zone at two different [strike]
+     * values for a soft and a hard layer, exactly the move
+     * `InstrumentSuite.renderEp` already makes for TINES.
+     *
+     * DECAY needs no separate cap for the keyboard the way a physical
+     * derivation would (a low fundamental's *natural* ring at the spec's
+     * own Q climbs into tens of seconds): FORK's DECAY macro sets the
+     * fundamental's t60 directly in seconds, independent of pitch, so its
+     * own top (`Fork.DECAY_MAX_SECONDS`) is already the file-size ceiling
+     * every zone renders under, on every key.
+     */
+    fun fork(midi: Int, voice: ForkVoice, macros: Map<String, Float> = emptyMap(), strike: Float = 0.5f): Snip {
+        val hz = midiHz(midi)
+        val base = Fork.defaults(voice)
+        val m = base + macros.filterKeys { it in base } + mapOf("STRIKE" to strike.coerceIn(0f, 1f))
+        val rate = RATE * Dsp.OVERSAMPLE
+        val raw = Fork.strike(voice, hz, m, striker = null, rate = rate)
+        Tide.bandLimit(raw, rate)
+        val out = Dsp.decimate(raw, RATE)
+        Dsp.normalize(out)
+        Dsp.fadeTail(out)
+        return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /** FORK's own keyboard range: two octaves plus a fourth around C3, wide enough for a genuinely playable instrument without reaching past [Fork.TUNE_SEMITONES]'s own snapped range. */
+    const val FORK_LOW_MIDI = Fork.ROOT_MIDI
+    const val FORK_HIGH_MIDI = Fork.ROOT_MIDI + Fork.TUNE_SEMITONES
 }

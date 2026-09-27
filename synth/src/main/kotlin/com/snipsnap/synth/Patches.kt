@@ -49,6 +49,7 @@ object Patches {
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
             GlintPatch.ENGINE -> GlintPatch.fromJsonValue(value)
             SirenPatch.ENGINE -> SirenPatch.fromJsonValue(value)
+            ForkPatch.ENGINE -> ForkPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
@@ -413,6 +414,87 @@ class SnapPatch(
                     env
                 }
                 SnapPatch(name, voice, macros, table, envelope)
+            }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/**
+ * A saved FORK sound. [striker] is the optional captured excitation — a
+ * struck pad's own truth, kept in the recipe (unlike a GRAINS pad, which
+ * lands as audio with no recipe at all: `SYNTH_ROADMAP.md`, S7) so a kit
+ * with a struck FORK pad regenerates bit-for-bit from `kit.json`. Exactly
+ * [Fork.STRIKER_SAMPLES] long when present — the shape [SnapPatch]'s own
+ * table (256 points) and [Draw]'s envelope (64) set; a wrong-length or
+ * non-finite striker is refused here, the same door those guard.
+ */
+class ForkPatch(
+    override val name: String,
+    val voice: ForkVoice,
+    override val macros: Map<String, Float>,
+    striker: FloatArray? = null,
+) : Patch {
+    /** [Fork.STRIKER_SAMPLES] samples at [Dsp.RATE], or null for the noise hammer. */
+    val striker: FloatArray? = striker?.copyOf()
+
+    init {
+        Patches.validateMacros(this, Fork.macrosFor(voice))
+        val s = this.striker
+        if (s != null) {
+            require(s.size == Fork.STRIKER_SAMPLES) { "a FORK striker has ${Fork.STRIKER_SAMPLES} samples, got ${s.size}" }
+            for ((i, v) in s.withIndex()) require(v.isFinite()) { "striker[$i] is not finite: $v" }
+        }
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Fork.render(voice, macros, striker)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    fun copy(
+        name: String = this.name,
+        voice: ForkVoice = this.voice,
+        macros: Map<String, Float> = this.macros,
+        striker: FloatArray? = this.striker,
+    ): ForkPatch = ForkPatch(name, voice, macros, striker)
+
+    override fun toJsonValue(): JsonValue.Obj {
+        val base = Patches.toJsonValue(this)
+        val s = striker ?: return base
+        val obj = LinkedHashMap(base.entries)
+        obj["striker"] = JsonValue.Arr(s.map { JsonValue.Num(it.toDouble()) })
+        return JsonValue.Obj(obj)
+    }
+
+    // Not a data class: an array member would compare by identity there,
+    // and a recipe round-trip test has to compare the numbers (SnapPatch's
+    // own reasoning, exactly).
+    override fun equals(other: Any?): Boolean =
+        other is ForkPatch && name == other.name && voice == other.voice &&
+            macros == other.macros &&
+            (striker?.contentEquals(other.striker ?: FloatArray(0)) ?: (other.striker == null))
+
+    override fun hashCode(): Int =
+        ((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + (striker?.contentHashCode() ?: 0)
+
+    override fun toString(): String =
+        "ForkPatch(name=$name, voice=$voice, macros=$macros" + (striker?.let { ", striker=[${it.size} samples]" } ?: "") + ")"
+
+    companion object {
+        const val ENGINE = "FORK"
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> ForkVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                val strikerField = value.obj()["striker"]?.takeUnless { it is JsonValue.Null }
+                val striker = strikerField?.let { raw ->
+                    val points = raw.arr()
+                    if (points.size != Fork.STRIKER_SAMPLES) throw JsonException("FORK striker has ${points.size} samples, not ${Fork.STRIKER_SAMPLES}")
+                    FloatArray(points.size) { i ->
+                        val v = points[i].num().toFloat()
+                        if (!v.isFinite()) throw JsonException("FORK striker[$i] is not finite: $v")
+                        v
+                    }
+                }
+                ForkPatch(name, voice, macros, striker)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

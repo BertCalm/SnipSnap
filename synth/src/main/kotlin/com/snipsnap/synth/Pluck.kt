@@ -26,7 +26,7 @@ import kotlin.random.Random
  * TUNE snaps to semitones across two octaves from the voice's root: pads get
  * notes, not frequencies, which is what makes a pluck kit playable as music.
  */
-enum class PluckVoice { NYLON, HARP, KOTO, BANJO }
+enum class PluckVoice { NYLON, HARP, KOTO, BANJO, SITAR }
 
 object Pluck {
 
@@ -84,7 +84,8 @@ object Pluck {
      * to the highest each voice's own tests still pass: NYLON 0.30, HARP
      * 0.30, KOTO 0.45, BANJO 0.25 (BANJO's ceiling dropped under the
      * Phase 2b head-mode rework above, which strengthens the same 220/234
-     * Hz modes that eat into PICK's reach). The ceiling on every voice is
+     * Hz modes that eat into PICK's reach), SITAR 0.0 (inert, no table). The
+     * ceiling on every voice is
      * `PICK moves the centroid at every step of its travel`: PICK's top end
      * must still move the note's spectral centroid at the shipped default
      * body, or a bright pick stroke stops reading as brighter. NYLON also
@@ -101,6 +102,14 @@ object Pluck {
      * gate's loop/pick brightening (loopHz 9000, pick 3000-14000) pushing
      * `highRatio` over the classifier's SNARE threshold - so it is left
      * failing rather than loosened or masked by a BODY this low.
+     *
+     * DOUBLE means something different on SITAR than on the other four
+     * voices: everywhere else it's the 12-string trick, a second detuned
+     * string under the first (see [synthesize]'s DOUBLE block). On SITAR
+     * it rings the tarab - four sympathetic strings under the fret at the
+     * played note's own octave-below/fifth/octave/octave-and-a-fifth
+     * (see [sympathetic], [SYMPATHETIC_SERIES]) - because a sitar has no
+     * second playing string to detune; DOUBLE 1 is a deliberate drone.
      */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
         PluckVoice.NYLON -> listOf(
@@ -120,6 +129,18 @@ object Pluck {
         PluckVoice.BANJO -> listOf(
             MacroSpec("TUNE", 0.3f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.7f),
             MacroSpec("STRIKE", 0.25f), MacroSpec("BODY", 0.20f), MacroSpec("DOUBLE", 0.1f),
+        )
+        // A sitar: plucked near the bridge with a wire mizrab, the sympathetic
+        // strings present by default. BODY defaults to 0: bodyFor(SITAR) now
+        // carries a table (see bodyFor), but it is a SHAPE, not a measurement
+        // (research note 2026-09-26, section 5) - it ships as a candidate on
+        // the audition page and stays off by default until the gate chips
+        // one closer. DAMP 0.5 gives a default budget of about 1.3 s, under the
+        // classifier's 1.5 s loop gate - the sympathetic strings pushed the
+        // old 0.35 default past it (1.82 s, read as LOOP; Task 4 ruling).
+        PluckVoice.SITAR -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.65f),
+            MacroSpec("STRIKE", 0.3f), MacroSpec("BODY", 0f), MacroSpec("DOUBLE", 0.4f),
         )
     }
 
@@ -142,6 +163,7 @@ object Pluck {
         PluckVoice.HARP -> 165f
         PluckVoice.KOTO -> 147f
         PluckVoice.BANJO -> 196f
+        PluckVoice.SITAR -> 139f   // C#3, the common tonic of the playing string
     }
 
     /** The snapped note frequency the TUNE macro lands on for [voice]. */
@@ -170,7 +192,15 @@ object Pluck {
      * real-time duration, so the string's pitch and decay are unaffected -
      * only the resolution of the loop and its exciter's low-pass changes.
      */
-    internal fun synthesize(voice: PluckVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    internal fun synthesize(
+        voice: PluckVoice,
+        macros: Map<String, Float>,
+        rate: Int,
+        velocity: Float = 1f,
+        stiffnessOverride: Float? = null,
+        jawariOverride: Float? = null,
+        sympatheticOverride: Sympathetic? = null,
+    ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -180,6 +210,8 @@ object Pluck {
         val double = m.getValue("DOUBLE")
         val body = Dsp.lin(m.getValue("BODY"), 0f, BODY_MAX)
         val position = Dsp.expMap(m.getValue("STRIKE"), STRIKE_BRIDGE, STRIKE_CENTRE)
+        val stiffness = stiffnessOverride ?: stiffnessFor(voice)
+        val jawari = (jawariOverride ?: jawariFor(voice)) * velocityDrive(velocity)
 
         // The body characters. loopHz is the low-pass inside the feedback
         // loop (what makes a kalimba woody and a harp glassy); pickLo/pickHi
@@ -194,6 +226,9 @@ object Pluck {
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
             // A steel string over a taut head, and the brightest string here: the loop keeps its treble (the gate heard 5.6 kHz as "not tinny enough") and the pick band sits above the others'.
             PluckVoice.BANJO -> { loopHz = 9000f; pickLo = 3000f; pickHi = 14000f; ring = 1.0f }
+            // Steel strings under a wire plectrum: brighter than KOTO, darker
+            // than BANJO, and the longest ring of the five (spec, "Voice constants").
+            PluckVoice.SITAR -> { loopHz = 7000f; pickLo = 2500f; pickHi = 12000f; ring = 1.4f }
         }
 
         // The budget, not the length: DAMP 1 keeps today's thud (0.3 x the
@@ -202,31 +237,64 @@ object Pluck {
         // muted pluck stays a short file and a DAMP 0 harp gets its ring.
         val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
             .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
-        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position)
+        val out = ks(freq, seconds, damp, loopHz, Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name), rate = rate, position = position, stiffness = stiffness, jawari = jawari)
         if (double > 0.01f) {
-            // The 12-string trick: a second, slightly sharp string under the
-            // first. Detune grows with the macro so it goes chorus -> honky.
-            val det = ks(
-                freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
-                Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position,
-            )
-            val g = double * 0.7f
-            for (i in out.indices) out[i] += det[i] * g
+            if (voice == PluckVoice.SITAR) {
+                // The tarab: strings under the frets that ring in sympathy with
+                // the played note. [sympatheticOverride] lets the audition swap
+                // the tuning; the shipped default is the note's own series
+                // (spec, "Sympathetic strings under DOUBLE") until the gate
+                // chooses SYMPATHETIC_SCALE's scale-degree tuning instead. The
+                // tarab are fed by the played string alone, the way the bridge
+                // feeds them, so their sum is independent of the order of
+                // s.ratios.
+                val s = sympatheticOverride ?: SYMPATHETIC_SERIES
+                val g = s.level * double
+                val string = out.copyOf()
+                for ((k, ratio) in s.ratios.withIndex()) {
+                    val sign = if (k % 2 == 0) 1f else -1f
+                    val hz = freq * ratio * (1f + sign * s.detune)
+                    val loop = sympathetic(string, hz, rate, s.coupling, s.onset, (s.onsetSeconds * rate).toInt())
+                    for (i in out.indices) out[i] += g * loop[i]
+                }
+            } else {
+                // The 12-string trick: a second, slightly sharp string under the
+                // first. Detune grows with the macro so it goes chorus -> honky.
+                val det = ks(
+                    freq * Dsp.lin(double, 1.002f, 1.012f), seconds, damp, loopHz,
+                    Dsp.expMap(pick, pickLo, pickHi), seed = Dsp.seedFor("PLUCK", voice.name, "DOUBLE"), rate = rate, position = position,
+                    stiffness = stiffness,
+                )
+                val g = double * 0.7f
+                for (i in out.indices) out[i] += det[i] * g
+            }
         }
         return trimToDecay(withBody(out, voice, body, rate), rate)
     }
 
-    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap()): Snip {
-        // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
-        // consistency with the other 6 engines and because the exciter's
-        // one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
-        // saturation stage generating fresh above-Nyquist harmonics the way
-        // THUMP/TONEWHEEL/VOX do, so the audible effect here is smaller -
-        // but it is still real plumbing, not a no-op: Dsp.decimate's own
-        // low-pass changes what a keygroup sounds like near the top of its
-        // range, same as every other engine.
+    /**
+     * [velocity] is a render parameter, not a macro - no knob, no preset,
+     * no recipe carries it; only the jawari reads it today.
+     */
+    fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
+        renderWith(voice, macros, velocity)
+
+    /**
+     * [render] with the audition's overrides: the generator hears stiffness
+     * and jawari values the shipped constants do not carry.
+     *
+     * U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE and decimate, for
+     * consistency with the other 6 engines and because the exciter's
+     * one-pole low-pass is itself rate-aware. PLUCK has no tanh/drive
+     * saturation stage generating fresh above-Nyquist harmonics the way
+     * THUMP/TONEWHEEL/VOX do, so the audible effect here is smaller -
+     * but it is still real plumbing, not a no-op: Dsp.decimate's own
+     * low-pass changes what a keygroup sounds like near the top of its
+     * range, same as every other engine.
+     */
+    internal fun renderWith(voice: PluckVoice, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null, sympathetic: Sympathetic? = null): Snip {
         val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = synthesize(voice, macros, renderRate)
+        val raw = synthesize(voice, macros, renderRate, velocity = velocity, stiffnessOverride = stiffness, jawariOverride = jawari, sympatheticOverride = sympathetic)
         val out = Dsp.decimate(raw, RATE)
 
         // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
@@ -304,10 +372,46 @@ object Pluck {
     internal const val BODY_MAX = 3f
 
     /**
+     * Stiffness allpass coefficients (see [ks]). SITAR's two candidates put
+     * the tenth partial about 1 % and about 3 % sharp of harmonic, found by
+     * StiffnessTest's probe, not by hand; the low one ships until the gate
+     * chooses. KOTO and HARP carry zero: both passed a Phase 2 gate and do
+     * not change unheard (the audition offers them the low candidate). The
+     * coefficient is a raw z-domain value, so its delay is about 24 samples
+     * at any rate and the dispersion it produces scales with the render
+     * rate (RATE × OVERSAMPLE today); a reader deriving an inharmonicity
+     * coefficient from it must say which rate.
+     */
+    internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 0.88 % sharp with the shipped jawari on (StiffnessTest's probe)
+    internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 5.6 c sharp (StiffnessTest measures it on every run), so if the gate chooses this candidate the drive steps down or the spec's fallback applies
+    internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_LOW
+
+    internal fun stiffnessFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.SITAR -> SITAR_STIFFNESS
+        PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
+    }
+
+    /**
+     * The jawari's drive (see [ks]) times [velocityDrive]. 0.3 is the
+     * starting point; the audition hears 0.15, 0.3 and 0.6 and the chips
+     * choose (spec, "The jawari").
+     */
+    internal const val SITAR_JAWARI = 0.3f
+
+    internal fun jawariFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.SITAR -> SITAR_JAWARI
+        PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
+    }
+
+    /** A soft note buzzes a little, a hard one fully. */
+    private fun velocityDrive(velocity: Float): Float = Dsp.lin(velocity.coerceIn(0f, 1f), 0.3f, 1f)
+
+    /**
      * The fixed body of each voice, in absolute Hz. Every row is a confirmed
      * or corrected line of docs/superpowers/plans/2026-09-25-pluck-depth-body-research.md
      * (source numbers in the comments); a t60 marked "shape" there is a
-     * placeholder for the audition, not a measurement.
+     * placeholder for the audition, not a measurement - except SITAR's,
+     * a shape body under an explicit exception (see below).
      */
     internal fun bodyFor(voice: PluckVoice): List<Modes.Mode> = when (voice) {
         // Classical guitar - research note section 5.1 (Christensen & Vistisen
@@ -366,6 +470,19 @@ object Pluck {
             Modes.fixed(2055f, 0.30f, 0.06f),  // head (7,1), the last strong head mode - shape
             Modes.fixed(3500f, 0.70f, 0.05f),  // bridge hill - shape - raised at the gate: these formants are the tin
             Modes.fixed(5000f, 0.55f, 0.04f),  // bridge hill - shape - raised at the gate: these formants are the tin
+        )
+        // A SHAPE, not a measurement: the one paper that measures a sitar's
+        // body is paywalled and could not be opened (research note
+        // 2026-09-26, section 4), so under the note's explicit exception
+        // these three modes are representative sitar/tanpura resonances
+        // (a gourd's air resonance, the soundboard's main wood mode, a
+        // bridge-region resonance) with t60 from a plausible Q by
+        // t60 = 2.2 Q / f. They are candidates: BODY's default is 0 until
+        // the gate chips one closer, and the note lists them as shapes.
+        PluckVoice.SITAR -> listOf(
+            Modes.fixed(110f, 1.00f, 0.20f),   // gourd air resonance - shape, Q ~ 10
+            Modes.fixed(270f, 0.70f, 0.065f),  // soundboard main wood mode - shape, Q ~ 8
+            Modes.fixed(520f, 0.50f, 0.025f),  // bridge-region resonance - shape, Q ~ 6
         )
     }
 
@@ -459,6 +576,23 @@ object Pluck {
      * printed against this function's own formula, not estimated; BANJO,
      * at 196 Hz, now has the shortest loop of the remaining voices), so
      * there is no reachable call site to assert against otherwise.
+     *
+     * [stiffness] is a first-order allpass coefficient in (-1, 0]; 0 is no
+     * allpass and the Phase 2 loop exactly. A negative value delays low
+     * partials more than high ones so the upper partials sit sharp of
+     * harmonic, the stiff-string law `n*sqrt(1 + B*n^2)` with B rising as
+     * the coefficient falls. Its phase delay at the fundamental is
+     * subtracted from the loop length so the note stays in tune.
+     *
+     * [jawari] is the bridge limiter's drive in [0, 1): after the low-pass,
+     * positive swings are pulled down by `jawari · y² / p0` (clamped so it
+     * never crosses zero), the way a string wrapping on a flat bridge is
+     * stopped on one side; a 2 Hz DC blocker follows because a one-sided
+     * term leaves an offset. A zero at DC nulls that offset at any corner -
+     * 2 Hz is chosen only for how fast a slow offset drains and how much
+     * lead the loop owes for it, and its own phase lead at the fundamental
+     * is budgeted into the loop length the same way the low-pass's and the
+     * stiffness allpass's are; both are skipped at 0.
      */
     internal fun ks(
         freq: Float,
@@ -469,7 +603,11 @@ object Pluck {
         seed: Int,
         rate: Int,
         position: Float = 0f,
+        stiffness: Float = 0f,
+        jawari: Float = 0f,
     ): FloatArray {
+        require(stiffness > -1f && stiffness <= 0f) { "stiffness must be in (-1, 0], got $stiffness" }
+        require(jawari in 0f..0.95f) { "jawari drive must be in [0, 0.95], got $jawari" }
         val loopHz = bodyLoopHz * Dsp.lin(1f - damp, 0.35f, 1.6f)
         val fb = Dsp.lin(1f - damp, 0.94f, 0.998f)
 
@@ -522,7 +660,31 @@ object Pluck {
         val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
         val filterDelay = -filterPhase / w
 
-        val exact = (rate / freq) - filterDelay - 0.5
+        // The stiffness allpass H(z) = (c + z⁻¹) / (1 + c·z⁻¹): its phase at the
+        // fundamental is part of the loop's delay, the same way the low-pass's
+        // is, so it enters the budget here and the fundamental stays put.
+        val stiffDelay = if (stiffness != 0f) {
+            val c = stiffness.toDouble()
+            val phase = atan2(-sin(w), c + cos(w)) - atan2(-c * sin(w), 1.0 + c * cos(w))
+            -phase / w
+        } else 0.0
+
+        val dcA = (1.0 - exp(-2.0 * PI * 2.0 / rate)).toFloat()
+        // The DC blocker after the jawari is a one-pole high-pass, and a
+        // high-pass leads at the fundamental: its phase delay is negative
+        // and, like the low-pass's and the stiffness allpass's, it belongs
+        // to the loop's budget or the note reads sharp. A zero at DC nulls
+        // the offset at any corner; the corner only sets how fast a slow
+        // offset drains and how much lead the loop owes for it - 2 Hz (not
+        // 20) keeps that lead under a degree at the lowest note (C#3) and
+        // the dispersion it leaves on the upper partials is 0.11 % at the
+        // default note C#4 and 0.23 % at the root.
+        val dcDelay = if (jawari > 0f) {
+            val r = 1.0 - dcA
+            val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
+            -phase / w
+        } else 0.0
+        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -553,6 +715,8 @@ object Pluck {
         val a = (1f - frac) / (1f + frac)
         var apX1 = 0f
         var apY1 = 0f
+        var stX1 = 0f
+        var stY1 = 0f
 
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(n + 2))
 
@@ -568,6 +732,13 @@ object Pluck {
         for (v in burst) mean += v
         mean /= n
         for (i in 0 until n) burst[i] -= mean
+
+        // The bridge limiter scales to the string's own level: p0 is what a
+        // full swing looks like, so the same drive buzzes the same on every
+        // note and fades as the note does.
+        var p0 = 1e-6f
+        for (v in burst) if (kotlin.math.abs(v) > p0) p0 = kotlin.math.abs(v)
+        var dc = 0f
 
         // Pick position (Jaffe & Smith 1983): the burst minus a copy of
         // itself delayed by `position` of one period. The comb's notches
@@ -605,7 +776,99 @@ object Pluck {
             val tuned = a * (d - apY1) + apX1
             apX1 = d
             apY1 = tuned
-            out[i] += fb * loopLp.lp(tuned, loopHz)
+            val stiff = if (stiffness != 0f) {
+                val s = stiffness * (tuned - stY1) + stX1
+                stX1 = tuned
+                stY1 = s
+                s
+            } else tuned
+            var y = loopLp.lp(stiff, loopHz)
+            if (jawari > 0f) {
+                if (y > 0f) y -= jawari * min(y, p0) * y / p0
+                dc += dcA * (y - dc)
+                y -= dc
+            }
+            out[i] += fb * y
+        }
+        return out
+    }
+
+    /** How much of the main string reaches each sympathetic loop, sample by sample, the way the bridge transmits it. */
+    private const val SYMPATHETIC_COUPLING = 0.05f
+    /** Their sum enters the output at this times DOUBLE, so DOUBLE 1 is a drone on purpose. */
+    private const val SYMPATHETIC_LEVEL = 0.5f
+    private const val SYMPATHETIC_LOOP_HZ = 4000f
+    private const val SYMPATHETIC_FEEDBACK = 0.995f
+
+    /**
+     * How the sitar's sympathetic strings are tuned and fed. [ratios] are each loop's
+     * frequency over the played note; [detune] a signed cents-like spread
+     * applied alternately (+, -, +, -) so no two loops sit exactly on a
+     * harmonic of the note; [onset] the coupling for the first
+     * [onsetSeconds] of the note, the pluck's transient reaching the tarab
+     * through the bridge before the steady [coupling] takes over.
+     */
+    internal data class Sympathetic(
+        val ratios: FloatArray,
+        val detune: Float,
+        val onset: Float,
+        val onsetSeconds: Float,
+        val coupling: Float = SYMPATHETIC_COUPLING,
+        val level: Float = SYMPATHETIC_LEVEL,
+    )
+
+    /** The played note's own series: the drone below, the fifth, the octave, the octave and a fifth. Ships until the gate chooses. */
+    internal val SYMPATHETIC_SERIES = Sympathetic(ratios = floatArrayOf(0.5f, 1.5f, 2f, 3f), detune = 0f, onset = SYMPATHETIC_COUPLING, onsetSeconds = 0f)
+
+    /**
+     * Scale degrees - the second, the major third, the fourth, the major
+     * sixth - whose harmonics do not sit on the note's own partials, so
+     * they are heard as strings and not as a resonance inside the note;
+     * detuned three thousandths so they shimmer; and fed the pluck's first
+     * ten milliseconds at ten times the steady coupling, as the bridge
+     * transmits the transient. A candidate for the gate.
+     */
+    internal val SYMPATHETIC_SCALE = Sympathetic(ratios = floatArrayOf(9f / 8f, 5f / 4f, 4f / 3f, 5f / 3f), detune = 0.003f, onset = 0.5f, onsetSeconds = 0.010f)
+
+    /**
+     * One sympathetic string: a Karplus-Strong loop at [hz] with no burst of
+     * its own, fed continuously by [input] - at [onset] for the first
+     * [onsetSamples], then at the steady [coupling] - ringing with
+     * [SYMPATHETIC_FEEDBACK] under a darker low-pass. Tuned the way [ks]
+     * is (integer delay, fractional allpass, the low-pass's delay in the
+     * budget), so the loop rings at the ratio it was given. The real tarab
+     * strings sit under and against each other physically too, but this
+     * model couples each loop only to the played string, not to its
+     * neighbors.
+     *
+     * A tarab rings long, not forever: [SYMPATHETIC_FEEDBACK] at 0.995 is a
+     * decay of about five seconds at C#4's fundamental and ten an octave
+     * below, and the 4 kHz loop low-pass shortens the partials further. At
+     * 0.999 the loops held the render above the trim threshold to the end
+     * of the string's own budget.
+     */
+    private fun sympathetic(input: FloatArray, hz: Float, rate: Int, coupling: Float, onset: Float, onsetSamples: Int): FloatArray {
+        val filterA = 1.0 - exp(-2.0 * PI * min(SYMPATHETIC_LOOP_HZ, rate * 0.45f) / rate)
+        val poleR = 1.0 - filterA
+        val w = 2.0 * PI * hz / rate
+        val filterPhase = -atan2(poleR * sin(w), 1.0 - poleR * cos(w))
+        val exact = (rate / hz) - (-filterPhase / w) - 0.5
+        require(exact >= MIN_LOOP_SAMPLES) { "sympathetic loop at $hz Hz is too short ($exact samples)" }
+        val n = floor(exact).toInt()
+        val frac = (exact - n).toFloat()
+        val a = (1f - frac) / (1f + frac)
+        var apX1 = 0f
+        var apY1 = 0f
+        val lp = Dsp.OnePole(rate)
+        val out = FloatArray(input.size)
+        for (i in input.indices) {
+            val fed = (if (i < onsetSamples) onset else coupling) * input[i]
+            if (i <= n) { out[i] = fed; continue }
+            val d = 0.5f * (out[i - n] + out[i - n - 1])
+            val tuned = a * (d - apY1) + apX1
+            apX1 = d
+            apY1 = tuned
+            out[i] = fed + SYMPATHETIC_FEEDBACK * lp.lp(tuned, SYMPATHETIC_LOOP_HZ)
         }
         return out
     }
