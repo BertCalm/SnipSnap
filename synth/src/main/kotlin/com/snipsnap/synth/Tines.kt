@@ -4,6 +4,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -86,7 +87,7 @@ object Tines {
         )
         TinesVoice.KALIMBA -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("BUZZ", 0.15f), MacroSpec("BRIGHT", 0.5f),
-            MacroSpec("DECAY", 0.45f),
+            MacroSpec("DECAY", 0.9f),
         )
     }
 
@@ -262,26 +263,62 @@ object Tines {
     /**
      * A plucked tine: a harmonic strike for the tongue, then two near-pure
      * partials at the bar's own ratios, each dying faster than the one
-     * below it, then the buzzers. DECAY tops out at 1.0 s so the voice stays
-     * under the 1.5 s one-shot bound every TINES voice keeps.
+     * below it, then the tick and the buzzers. The default DECAY sits near
+     * the ceiling because the fourth gate heard the longest tine as the
+     * kalimba and everything shorter as the same. DECAY runs 0.5-1.1 s
+     * because a tine always rings a little even played softly (gate
+     * 2026-09-26), and 1.1 x 1.3 keeps the buffer under the 1.5 s one-shot
+     * bound.
      */
     private fun kalimba(m: Map<String, Float>, rate: Int): FloatArray {
         val hz = frequencyFor(TinesVoice.KALIMBA, m.getValue("TUNE"))
         val bright = m.getValue("BRIGHT")
         val buzz = m.getValue("BUZZ")
-        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.3f, 1.0f)
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.5f, 1.1f)
 
         val out = FloatArray(frames(t60 * 1.3f, rate))
         // The tongue: its index is the thumb's hardness, and the bite keeps
         // the pluck at the front.
         strike(out, hz, ratio = 1f, index = Dsp.lin(bright, 0.3f, 1.6f), t60 = t60, bite = 2.5f, rate = rate)
         // The bar's overtones, each a near-pure partial (ratio 1, tiny
-        // index) that BRIGHT brings up and that die faster than the tongue.
-        val upper = Dsp.lin(bright, 0.15f, 0.5f)
-        strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.25f, bite = 2f, gain = upper, rate = rate)
-        strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.10f, bite = 2f, gain = upper * 0.35f, rate = rate)
+        // index) that BRIGHT brings up: the partials are the kalimba's
+        // shimmer, and die slower than the tongue's index but faster than
+        // the tongue.
+        val upper = Dsp.lin(bright, 0.3f, 0.9f)
+        strike(out, hz * KALIMBA_PARTIALS[1], ratio = 1f, index = 0.2f, t60 = t60 * 0.6f, bite = 2f, gain = upper, rate = rate)
+        strike(out, hz * KALIMBA_PARTIALS[2], ratio = 1f, index = 0.1f, t60 = t60 * 0.25f, bite = 2f, gain = upper * 0.5f, rate = rate)
+        tick(out, bright, rate, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "TICK"))
         if (buzz > 0.01f) rattle(out, buzz, Dsp.seedFor("TINES", TinesVoice.KALIMBA.name, "BUZZ"))
         return out
+    }
+
+    /**
+     * The thumbnail's tick: a few milliseconds of seeded noise at the
+     * onset, band-limited to 3-9 kHz, louder as BRIGHT rises. A real
+     * tine is struck by a nail or a flesh-and-nail edge and the tick is
+     * what says "struck" before the tone says "kalimba"; without it the
+     * gate heard the voice as muffled at every brightness and register.
+     * Band-limited, not just high-passed: `kalimba()` renders at the
+     * oversampled rate and [Dsp.decimate] low-passes near 22 kHz on the
+     * way back down, so a tick that stayed white above 3 kHz lost most of
+     * its energy there (gate 2026-09-26) - the 9 kHz low-pass keeps the
+     * tick's energy inside what the decimator actually keeps.
+     */
+    private fun tick(out: FloatArray, bright: Float, rate: Int, seed: Int) {
+        val noise = Dsp.Noise(seed)
+        val n = (0.003f * rate).toInt().coerceAtMost(out.size)
+        val gain = Dsp.lin(bright, 0.2f, 0.7f)
+        val a = exp(-2.0 * PI * 3000.0 / rate).toFloat()   // high-pass corner
+        val b = exp(-2.0 * PI * 9000.0 / rate).toFloat()   // low-pass corner
+        var lp = 0f
+        var band = 0f
+        for (i in 0 until n) {
+            val x = noise.next()
+            lp = a * lp + (1f - a) * x
+            band = b * band + (1f - b) * (x - lp)
+            val env = 1f - i.toFloat() / n
+            out[i] += gain * env * env * band
+        }
     }
 
     /**

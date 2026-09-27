@@ -62,6 +62,47 @@ range. First-generation voices:
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
 
+Every voice has since grown PUNCH (U3), and SNARE a membrane body with
+STRIKE and WIDTH (Phase 1B). **Sound-design round (shipped):** each voice
+then opened up the constants it used to hardcode, as macros whose default
+is the old constant exactly, so no preset that predates them moved:
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| Kick | BEND · HOLD | pitch-drop speed (long dive ↔ instant thud); a full-level hold before DECAY, the sustained boom |
+| Snare | RATTLE | wires choked with the head ↔ sizzling long after it |
+| Hats | NOISE | white noise under the square cluster, the washy side |
+| Clap | CLAPS · ROOM | 3–6 impacts; tail level, dry slaps ↔ a hall |
+| Tom | BEND · CLICK · DRIVE | synth-tom "pew" ↔ tight knock; a stick attack; saturation |
+| Cowbell | RATIO · TONE · RING | the pair's interval (sour ↔ agogo-like); filter centre; filter resonance |
+| Rim | RING · BODY | dry tick ↔ pitched clave; a drum head under the rim (a rimshot) |
+
+KICK and SNARE reach eight macros - past the seven TIDE's notes below
+treat as the ceiling, deliberately: the owner chose range over the cap for
+this round. The new ones stay off DE-SAMPLE's grid (each searched macro
+would triple its voice's points), and every voice gained four BOLD
+presets that push them.
+
+**SKIN got the same round**, in the same shape (defaults exact, off
+DE-SAMPLE's grid, four BOLD presets per voice), with macros that suit a
+modal engine rather than an oscillator one:
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| Kick | CLICK · DROP | the beater, felt ↔ hard plastic; the head's pitch dip when struck hard (tension modulation, every mode at once) |
+| Snare | RATTLE · SIZZLE | wire ring against the head's; the wires' highpass, level-matched so it moves shape, not loudness |
+| Hats | RING | the bank's resonance, a trashy band ↔ ringing metal (default 0.8: the travel is below today's sound, not above; the trashy end stops where closed hats would start reading as SNARE) |
+| Tom | DROP · CLICK | the classic tom bend; a stick on the head |
+| Ride | SIZZLE | rivets: a bright buzz outlasting the wash |
+| Shaker | SWELL · GRAIN | a thrown "shh" attack; separate beads instead of hiss |
+| Stick | BODY · CLICK | a shell under the stick; a wood crack |
+
+Ride BELL (clear tones from the cup) was built and dropped: any bell above
+~10% of the wash's peak classifies as SNARE, and one quiet enough to pass
+was all but inaudible. SIZZLE took its place because it pushes the
+centroid away from that line instead of across it. `Dsp.around` - the
+exact-default map both engines use - moved out of THUMP for SKIN to share.
+
 Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
 modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
 style preset (the demo kit becomes THUMP's factory default).
@@ -209,6 +250,7 @@ What follows from it:
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 | S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. **D1 shipped** — BODY is a real second formant at `k/5.6`, clamped to `K_MIN` (2) below `kBase ≈ 11.2` (PEAK ≈0.575 at the reference note) — so at the shipped default (PEAK 0.45, kBase 8) the body pins to 2×f0, a 4× interval rather than 5.6× — on its own single envelope (the old mean-removed window copy was the same harmonic series the burst already carried, and measured inaudible), and it rides its own envelope at 0.8× the burst's — though the glass tail that ratio was meant to buy only measures on two of the three voices: REED and KAZOO lose body share from head to tail (2.31→1.25, 5.72→2.13) while BOTTLE gains it (28.5→29.4) and rings rather than burning off, and which of those a player wants is a question for the audition; BLOOM's depth is free of its rate, fixed at a 0.45 s sweep; and PEAK's harmonic snap stays in the render path but now floors at `k ≥ 3` — between `K_MIN = 2` and 3 there is only one integer, so snapping flattened both velocity layers onto it, and below the floor the ratio now runs free instead. Depth design in `docs/superpowers/specs/2026-09-26-glint-depth-design.md`; CICADA/RATCHET/PLATE are D2 and the preset roster is D3, both gated on the D1 audition. | S1 + U5 + U6 |
+| S11 | **Rounds 1-2 built** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3 (THROAT, SWARM, WRAITH; GROWL, STUTTER, ALIEN, YODEL) to follow — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1266,6 +1308,31 @@ the strike starts sharp and lands; every FLARE preset's note sits within
 8 dB of the whole. The classifier reads BONGO and DRIP as PERC on all ten
 presets each.
 
+### Revision — CLICK, 2026-09-26
+
+Of the three character stages left out of the oomph, CLICK came back as a
+knob: BONGO and DRIP's seventh macro (THUMP SNARE's count), starting at 0
+on every preset, so nothing that shipped changes. GONG and FLARE have no
+room. DRIVE and PUNCH stay out.
+
+- **After the VCA, not before it.** The prototype put the noise burst
+  into the gate, which takes 2 ms to open while the click is gone in
+  1.5: at CLICK 1 it added 5% to WOOD BONGO's energy above the note in
+  the first 4 ms, so the audition's "e CLICK" was barely a click. After
+  the VCA, at 1.5 times full scale falling over 2 ms, CLICK 1 gives WOOD
+  BONGO 3.1 times, LOW CONGA 5.2, RAIN DRIP 1.5 (a strike already
+  bright); the body under it, levelled to the same peak, loses 0.3, 0.6
+  and 1.5 dB. A brighter click (differenced noise) was tried and measured
+  weaker: at the 4x render most of its energy sits above what the band
+  limit keeps.
+- **CLICK is left out of the WANDER seed**, so adding the macro left every
+  existing recipe's draws where they were: the Tide Kit regenerates to
+  the byte.
+- **Velocity does not reach CLICK.** `Velocity` moves one brightness macro
+  per voice (FOLD, on TIDE), so a soft strike is darker but clicks as
+  hard. Moving two would be a change to `Velocity` for every engine, left
+  for when it is wanted.
+
 ### Not doing
 
 A patchbay or patch cables (rule 1: presets and macros, never modular);
@@ -1288,3 +1355,166 @@ drone was; width is a later per-voice decision).
    different takes differ. MOTION, when built, should use the same rule.
 4. **DRIP's class.** Short and high reads PERC to the classifier. If it
    lands PERC, it stays out of SPREAD's pitch path unless a pitch is found.
+
+## S11 — VOX, the whole shebang
+
+VOX shipped (S3.7) as three formants over a buzzing source: four knobs,
+nothing moving inside a note, one adult throat for every pitch, the
+same breath on every render. Asked to "go for the whole shebang" and add
+"unique, great sounding, bordering on weird" ideas, the plan is three
+rounds, each prototyped, auditioned by ear and only then built:
+
+1. **Alive** (this round): a real throat, motion, a real choir, held
+   notes, SIZE and GLIDE.
+2. **Speak**: consonant onsets ("ba", "da", "ma", "hey", "ts") and a
+   BEATBOX voice (vocal kick, snare, hat, rim).
+3. **Weird**: three new voices, THROAT (overtone singing, a whistled
+   melody over a drone), SWARM (a crowd of 8-16) and WRAITH (sine-wave
+   speech), and four behaviours, GROWL, STUTTER, ALIEN (vowels past
+   what a human throat can shape) and YODEL. The knob budget (seven)
+   cannot take all four on every voice: round 3 decides where each
+   lives.
+
+The uses to tune for, asked: drum hits, vocal chops, pads and choirs.
+
+### Round 1, as built — 2026-09-26
+
+The first audition was too subtle ("I'm not detecting much
+difference"). A difference measure (the average spectrum in 24 log
+bands, levelled, RMS dB) was calibrated before it was trusted: the new
+render path alone, with every feature off, measured 1-4.5 dB from the
+old engine (a detuned pair's beating depends on where it starts), a
+semitone of pitch 8. The first throat and choir sat in that noise, so
+the second audition turned everything up and played each preset as
+NOW-then-NEW pairs. The choir still "didn't come across": seven fixed
+detunes starting together fuse into one voice, and a mono file cannot
+place singers. A third audition gave the choir motion, sections and
+stereo. The pick: everything.
+
+- **The throat.** CHOIR and GHOST sing through a Rosenberg vocal-cord
+  pulse (opens over 40% of the cycle, snaps shut over 16%, rests), with
+  breath that puffs while the folds are open. Five formants, F4 and F5
+  fixed at 3.3 and 4.2 kHz, at roughly constant bandwidths (60-180 Hz)
+  rather than a fixed Q; F4 and F5 at levels 1 and 0.55, the "singer's
+  formant" ring. F1 never sits below 1.15 times the note, so a high note
+  keeps its vowel. ROBOT keeps its square wave. Measured against the old
+  engine: 4.4-7.5 dB, a semitone's worth of spectral change.
+- **Alive.** Vibrato of 70 cents (GHOST 90, slower), easing in from
+  30 ms over 120, on a slow random wobble of 15 cents and 12% level.
+  ROBOT holds dead steady. Measured over a held GHOST note: 190 cents
+  peak to peak; ROBOT 0.
+- **The choir.** CHOIR is seven singers: two basses an octave down,
+  three in the middle, two sopranos an octave up, each with their own
+  throat (0.88-1.2x), detune (−35 to +36 cents), vibrato, a start up to
+  60 ms late (the middle singer always on time, so the strike stays
+  crisp), and a place in the stereo field (equal-power pans shuffled per
+  recipe). CHOIR renders in stereo; ROBOT and GHOST stay mono. L/R
+  correlation of a held CHOIR note: 0.63. The pitch detector still reads
+  the written note, not the basses: TUNE 1 reads 445.5 Hz for 440.
+- **Held notes.** DECAY runs 0.25-3 s to −60 dB and its top half holds,
+  up to 60% of the note at DECAY 1 (TIDE's rule). No note outlasts
+  `Vox.MAX_SECONDS`, 4 s.
+- **SIZE** scales every formant by `2^((0.5 − SIZE)·2.2)`, about ×2.1
+  to ×0.47, chipmunk to giant. ROBOT's centroid falls 7.7 times across
+  it, GHOST's 2.7.
+- **GLIDE** moves the vowel over the first 0.5 s (or 60% of the note):
+  below 0.5 toward A, above toward U, by up to the whole A-U line. U
+  gliding to A doubles in brightness; GLIDE 0.5 holds (0.99).
+- **Seeded.** Each note's wobble, detunes, onsets and pans come from its
+  recipe, so a pad regenerates to the byte.
+
+What moved in the tests, and why:
+
+- **"One-shot" is 4 s, not 1.5.** Held notes, like TIDE's.
+- **"Reads as percussion" is now "a short VOX is a hit, a long one is
+  held".** Up to DECAY 0.6 (about 1.4 s) every voice reads PERC or SNARE
+  and serves as a drum hit or a chop; at 0.8 and above it reads LOOP, a
+  pad. The app has always filed VOX as TONAL. Scrambles are held to
+  never reading KICK or UNKNOWN (CHOIR's 30 rolls: 14 LOOP, 13 SNARE,
+  3 PERC).
+- **BREATH.** BREATH 0 now carries the throat's own puffs (flatness
+  0.22), so BREATH 1 (0.30) is 1.4 times it, not 1.5; the test holds
+  1.25 and, more to the point, that the pitch detector finds a note at
+  BREATH 0 and none at BREATH 1.
+- **New tests**: CHOIR stereo and wide, the lone voices mono; vibrato on
+  GHOST, none on ROBOT; DECAY 1 holds within 4 dB at 40-50% of the note,
+  DECAY 0.3 has fallen past 12; SIZE moves the centroid over 1.5x; GLIDE
+  moves the vowel and 0.5 holds it; the vocal-cord pulse has no DC,
+  peaks at the closure and rests closed.
+
+Presets: still twelve per voice, eleven of them now set SIZE or GLIDE
+where the name already says so (LOW/HIGH/DEEP throats; SPEAK BOX's
+"wah", DROID VOICE, EH CHOIR, HIGH SIGH, LOW MOAN, HAUNTED OOH gliding).
+The Cloud Kit's six VOX pads and three choir-fed GRAINS pads regenerate
+(GRAINS folds the stereo choir to mono, as it does any stereo source).
+
+**Known cost.** A 3.9 s stereo CHOIR note takes about 1.8 s to render on
+the CI-class JVM, and 1.66 s of that is `Dsp.decimate`'s windowed-sinc
+resampler, shared by every engine, run twice for stereo. Synthesis
+itself is 340 ms. Short notes (drum hits, chops) are a fraction of it.
+Speeding up the shared decimator would change every engine's bytes and
+every kit, so it is its own change, not this one.
+
+### Round 2, as built — 2026-09-26 ("Speak")
+
+The plan was consonant onsets on the singing voices and a BEATBOX voice.
+Both went through the audition more than once.
+
+**ONSET**, the singing voices' seventh macro, snaps across none, m, b, d,
+h, t, s: the note opens on that consonant. At 0, every preset's setting,
+nothing changes: ONSET is left out of the recipe seed, and the Cloud Kit
+regenerates to the byte.
+
+- **m** hums through closed lips (F1 only, at 0.55 of the voice) for
+  90 ms, then opens. **b** and **d** close for 35-40 ms with a softer
+  murmur. **h** breathes through the vowel's shape for 100 ms; **t** is a
+  20 ms stop and 60 ms of breath before the voice; **s** hisses (6 kHz)
+  for 160 ms. The vowel's envelope starts when the vowel does.
+- **No pops.** The first audition measured every consonant 8-38 dB
+  louder than its vowel: the envelope started at the strike, and the
+  pops and hiss were fixed levels while the vowel comes out of its
+  narrow formants about 20 times quieter than it leaves them. Fixed by
+  starting the envelope at the vowel and setting the hiss against the
+  vowel's own RMS. Then b, d and t were "clucky". Three causes were
+  found and measured (a click measure: the largest sample step around
+  the release, low-passed at 1.5 kHz, over the vowel's own; a plain
+  vowel scores 3.5-5): the envelope dropped to zero at the release and
+  re-attacked, the hum's upper formants switched on in one sample, and
+  the burst was a narrow 700 Hz "tok". With those fixed ROBOT's "ba"
+  went from 28 to 10, CHOIR's from 14 to 4. The audition still heard a
+  cluck with the pops at 30%, and none without them and with the mouth
+  opening over 90 ms instead of 40: so the pops are gone.
+- **b and d without pops** differ where the vowel opens from (F2 800
+  against 1800) and in the closure: lips shut let almost nothing above
+  F1 through (8%), the tongue behind the teeth leaves the front of the
+  mouth bright (60%). Their closures measure 306 against 420 Hz on
+  ROBOT, 361 against 507 on GHOST.
+- **Vibrato waits for the vowel.** Measured from the strike, a GHOST
+  note after an s already swung a full 90 cents as its vowel began.
+
+**BEATBOX** (`VoxBeatbox`), a fourth voice: TUNE, HIT, DECAY, SIZE. HIT
+snaps across KICK, three snares (PF, PSH, K), three hats (TS, T, TSS
+open) and RIM.
+
+- The first version's snares and hats were filtered noise and "sounded
+  basically like the hat and snare in THUMP": the spectral measure put
+  them 11.5 and 10.2 dB from THUMP's, the nearest of anything. Rebuilt
+  as a mouth: breath through a moving vocal tract (the "psh" opening O
+  toward E), a constriction setting the hiss (s ~7-8 kHz, sh ~2.7 kHz,
+  f broad), fluttering breath and, on the snares, a trace of voice. The
+  hats moved to 18-19 dB from THUMP's hat (its own closed and open hats
+  are 8.8 apart).
+- "Better but still synthetic and thin": three takes (real, punchy,
+  big), and the pick was BIG. Built in: warmer breath that swells after
+  the release, spit crackle, a jittering mouth, the voice louder, longer
+  and dropped into the chest, the mouth moving further, tails 30%
+  longer, and the close mic: an 11 dB low shelf at 250 Hz, saturation
+  and a transient shaper. Measured: the snares' brightness moves
+  0.39-1.28 against THUMP's snare's 0.24 and carries -0.9 to -2.6 dB of
+  its energy under 500 Hz; the hats -14.5 to -16.2, THUMP's hat -40.9.
+- **Filed by its hit.** The drum classifier does not hear a mouth's
+  drums as what they stand for (the kick reads PERC, the hats and the
+  rim SNARE), so `Vox.drumClassFor` files BEATBOX by HIT: KICK, SNARE,
+  HAT_CLOSED, HAT_OPEN, PERC. `SynthScreen` passes the knobs through
+  when it sends to a pad; the singing voices stay TONAL.
+- Twelve presets: three kicks, four snares, four hats, a rim.

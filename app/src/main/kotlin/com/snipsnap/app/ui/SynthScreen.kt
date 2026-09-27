@@ -468,7 +468,7 @@ fun SynthScreen(
                 val name = engine.patchDisplayName(voice)
                 val patch = engine.buildPatch(name, voice, macros)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
-                val cls = engine.drumClass(voice)
+                val cls = engine.drumClass(voice, macros)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
@@ -728,7 +728,7 @@ fun SynthScreen(
         if (spreadOpening || sendBusy || entry == null) return
         spreadOpening = true
         val patch = engine.buildPatch(engine.patchDisplayName(voice), voice, macros)
-        val cls = engine.drumClass(voice)
+        val cls = engine.drumClass(voice, macros)
         scope.launch {
             try {
                 val src = withContext(Dispatchers.Default) {
@@ -1668,12 +1668,16 @@ private enum class Engine {
         GLINT -> Glint.render(voice as GlintVoice, macros)
     }
 
-    fun drumClass(voice: Enum<*>): DrumClass = when (this) {
+    /**
+     * What a pad holding this voice's sound is filed as. [macros] matters
+     * only where one knob picks the drum: VOX BEATBOX's HIT.
+     */
+    fun drumClass(voice: Enum<*>, macros: Map<String, Float> = emptyMap()): DrumClass = when (this) {
         THUMP -> (voice as ThumpVoice).drumClass
         SKIN -> (voice as SkinVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> (voice as VelvetVoice).drumClass
-        VOX -> (voice as VoxVoice).drumClass
+        VOX -> Vox.drumClassFor(voice as VoxVoice, macros)
         PLUCK -> (voice as PluckVoice).drumClass
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
         FATHOM -> (voice as FathomVoice).drumClass
@@ -1775,7 +1779,6 @@ private val TinesVoice.drumClass: DrumClass
     }
 
 private val VelvetVoice.drumClass: DrumClass get() = DrumClass.TONAL
-private val VoxVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val PluckVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val TonewheelVoice.drumClass: DrumClass get() = DrumClass.TONAL
 

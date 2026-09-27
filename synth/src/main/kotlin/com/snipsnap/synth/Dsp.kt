@@ -43,6 +43,29 @@ internal object Dsp {
         (lo * exp(ln((hi / lo).toDouble()) * macro.coerceIn(0f, 1f))).toFloat()
 
     /**
+     * A macro map pinned at one point: [macro] 0 -> [lo], exactly [pivot]
+     * -> [center], 1 -> [hi], exponential on each side ([lo] above [hi]
+     * runs the map downward, which is fine).
+     *
+     * For a macro that opens up a constant a voice used to hardcode - THUMP
+     * and SKIN's sound-design macros (the kick's sweep rate of 90, the
+     * clap's four impacts, SKIN's mallet level...). Its default has to
+     * render that constant *exactly*, or every factory preset, none of
+     * which mention the new macro, would drift. [expMap] over lo..hi only
+     * lands on the old constant if it is the range's geometric mean, and
+     * then only to within float rounding; here [pivot] takes the upper
+     * branch at its own start, `center * exp(0)`, which is [center] to the
+     * bit. Two sides also let the range be lopsided around it, since each
+     * end stops sounding like the instrument at a different distance. The
+     * default [pivot] 0.5 splits by exact powers of two, so a centred
+     * macro's arithmetic is the same whichever way it is written.
+     */
+    fun around(macro: Float, lo: Float, center: Float, hi: Float, pivot: Float = 0.5f): Float {
+        val m = macro.coerceIn(0f, 1f)
+        return if (m < pivot) expMap(m / pivot, lo, center) else expMap((m - pivot) / (1f - pivot), center, hi)
+    }
+
+    /**
      * Raises a too-slow beat toward audibility - it does not complete one.
      * Two oscillators a ratio r apart beat at baseHz*(r-1); below this
      * floor a "FAT" macro is a static comb tint rather than movement.

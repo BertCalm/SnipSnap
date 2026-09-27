@@ -258,7 +258,8 @@ the modulator (a snarl, held short of noise), the fold's symmetry turns
 over across the note, and small seeded jitters keep a held note moving.
 Under it all sits the oomph: every strike thumps (it starts sharp and
 drops onto the note in a few milliseconds) and a clean sine carries the
-note itself under the fold.
+note itself under the fold. BONGO and DRIP add CLICK, the stick on the
+skin, at 0 until you turn it up.
 WANDER nudges fold, decay and WARP per note from a seed the recipe itself
 carries, so a kit still regenerates to the bit.
 BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG
@@ -275,9 +276,15 @@ that doubles any kit onto pads 17–32 through seeded FX.
 VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
 counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
-instead of picking one. VOX is three-formant vocal
+instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
-continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
+continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
+through a vocal-cord pulse with vibrato; CHOIR is seven singers in
+sections, in stereo; a long DECAY holds; SIZE scales the throat from
+chipmunk to giant, and GLIDE moves the vowel during the note. ONSET
+opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
+and BEATBOX is a mouth doing a drum kit: a kick, three snares, three
+hats and a tongue click. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a

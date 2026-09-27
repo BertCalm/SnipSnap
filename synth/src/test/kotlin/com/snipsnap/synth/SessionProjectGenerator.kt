@@ -11,10 +11,10 @@ import java.io.File
 /**
  * Renders the whole session as one MPC 3 project under testkit/ —
  * `SnipSnap Session.xpj` beside its flat `SnipSnap Session_[ProjectData]/`:
- * the factory kit, all four suite instruments, and the demo groove on the
+ * the factory kit, all five suite instruments, and the demo groove on the
  * sequence timeline. Open the `.xpj` on the Live III and the entire
  * SnipSnap session is standing there — kit red-to-teal on the pads, EP,
- * organ, harp and music box on their own tracks, "SnipSnap Groove" ready
+ * organ, harp, music box and RESIN pad on their own tracks, "SnipSnap Groove" ready
  * on sequence 1. Run via `./gradlew :synth:generateSessionProject`.
  */
 object SessionProjectGenerator {

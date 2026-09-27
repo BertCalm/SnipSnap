@@ -45,7 +45,11 @@ class TinesTest {
             // unavoidable property of a band-limited filter, not a revival
             // of the instant-onset bug this test exists to catch (see
             // ThumpTest's own version of this same fix).
-            assertEquals(0f, snip.samples[0], 0.02f, "$voice: first sample should start at zero, not jump to full level")
+            // KALIMBA is the one exception: its thumbnail tick (gate
+            // 2026-09-26) is seeded noise at full envelope right at sample
+            // 0, not a ramp from zero, so it keeps a wider tolerance here.
+            val tolerance = if (voice == TinesVoice.KALIMBA) 0.1f else 0.02f
+            assertEquals(0f, snip.samples[0], tolerance, "$voice: first sample should start at zero, not jump to full level")
             val earlyPeak = snip.samples.take((Dsp.RATE * 0.02f).toInt()).maxOf { kotlin.math.abs(it) }
             assertTrue(earlyPeak > 0.1f, "$voice: should audibly ramp up within the first 20ms, peaked at $earlyPeak")
         }
