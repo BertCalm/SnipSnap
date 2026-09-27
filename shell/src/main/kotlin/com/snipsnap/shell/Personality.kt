@@ -744,6 +744,16 @@ object Copy {
         } else {
             "PAD $pad ADDED: ${name.uppercase(java.util.Locale.ROOT)}."
         }
+    /**
+     * A SIREN's landing ([synthSent]'s own line first) says which of the
+     * engine's two shapes landed: a one-shot carries the rack's ECHO in
+     * its recipe; a LOOP lands dry, because the SURFACE's echo is its own,
+     * and the SURFACE is where a LOOP is played - PAD ◄ ► there picks it
+     * (docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md).
+     */
+    fun sirenSent(pad: String, name: String, replaced: Boolean, loop: Boolean): String =
+        synthSent(pad, name, replaced) +
+            if (loop) " A LOOP: THE SURFACE HOLDS IT UNDER A FINGER, PAD ◄ ► TO $pad. ITS ECHO IS THE SURFACE'S." else " ECHO IS IN THE RACK."
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 

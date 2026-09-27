@@ -117,6 +117,9 @@ import com.snipsnap.synth.TideVoice
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
+import com.snipsnap.synth.Siren
+import com.snipsnap.synth.SirenPatch
+import com.snipsnap.synth.SirenVoice
 import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
@@ -172,10 +175,10 @@ private const val MACRO_DEBOUNCE_MS = 100L
 private const val RENDER_SHIMMER_DELAY_MS = 150L
 
 /**
- * SYNTH — the ten-engine drum/tonal-synthesis lab: pick an engine, pick a
+ * SYNTH — the twelve-engine drum/tonal-synthesis lab: pick an engine, pick a
  * voice, shape it with macro sliders, SCRAMBLE it, watch the scope, audition
  * it, and land it on a pad. `synth/` is the tested engine layer; this is the
- * Compose surface plus the SEND TO PAD action, multiplexed over all ten
+ * Compose surface plus the SEND TO PAD action, multiplexed over all eleven
  * registered engines via the file-private [Engine] adapter below.
  *
  * `prototype/thumplab.html` is the interaction truth this ports: every
@@ -183,8 +186,9 @@ private const val RENDER_SHIMMER_DELAY_MS = 150L
  * voice (its own on-screen label says so — "EVERY MOVE RE-RENDERS +
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
- * only; reality wins: THUMP alone ships eight voices, and ten more engines
- * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT) join it here.
+ * only; reality wins: THUMP alone ships eight voices, and eleven more engines
+ * (SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT,
+ * SIREN) join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -467,12 +471,18 @@ fun SynthScreen(
                 // failure toasts honestly instead of crashing the screen.
                 val name = engine.patchDisplayName(voice)
                 val patch = engine.buildPatch(name, voice, macros)
-                val recipe = PadRecipe(patch = patch).toJsonValue()
+                // A SIREN one-shot carries the rack's ECHO in its recipe and
+                // renders through it; a SIREN LOOP lands dry, since the
+                // SURFACE's echo is its own (Siren.landingChain). Every other
+                // engine lands with no chain, exactly as before.
+                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else null
+                val padRecipe = PadRecipe(patch = patch, fx = fx)
+                val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
-                        val rendered = patch.render()
+                        val rendered = padRecipe.render()
                         val alreadyThere = model.pad(slot) != null
                         if (alreadyThere) {
                             // REPLACE: `replaceAudio` only rewrites the sample +
@@ -512,7 +522,13 @@ fun SynthScreen(
                 // SLEEPS IN THE BIN" states for TREATMENT — `assign`'s own
                 // `deleteIfUnreferenced` is a no-op on an empty slot (there
                 // was no original), so the ADD branch doesn't claim it.
-                onToast(Copy.synthSent(padTag(slot), name, replaced = existed))
+                onToast(
+                    if (engine == Engine.SIREN) {
+                        Copy.sirenSent(padTag(slot), name, replaced = existed, loop = Siren.isLoop(macros.getValue("HOLD")))
+                    } else {
+                        Copy.synthSent(padTag(slot), name, replaced = existed)
+                    },
+                )
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 if (ex is IllegalStateException || ex is IllegalArgumentException) {
@@ -890,6 +906,11 @@ fun SynthScreen(
                             value = macros.getValue(spec.name),
                             fillColor = classColor,
                             scheme = scheme,
+                            // SIREN's HOLD reads LOOP at its top: the render is
+                            // one seamless loop for the SURFACE, not a longer
+                            // hold (Siren.isLoop), the way GLINT's PEAK readout
+                            // would say the harmonic it snapped to.
+                            readout = if (engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name))) "LOOP" else null,
                             onValueChange = { v -> updateMacro(spec.name, v) },
                         )
                     }
@@ -1588,9 +1609,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1605,6 +1626,7 @@ private enum class Engine {
         RESIN -> ResinVoice.entries
         TIDE -> TideVoice.entries
         GLINT -> GlintVoice.entries
+        SIREN -> SirenVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1619,6 +1641,7 @@ private enum class Engine {
         RESIN -> Resin.macrosFor(voice as ResinVoice)
         TIDE -> Tide.macrosFor(voice as TideVoice)
         GLINT -> Glint.macrosFor(voice as GlintVoice)
+        SIREN -> Siren.macrosFor(voice as SirenVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1633,6 +1656,7 @@ private enum class Engine {
         RESIN -> Resin.defaults(voice as ResinVoice)
         TIDE -> Tide.defaults(voice as TideVoice)
         GLINT -> Glint.defaults(voice as GlintVoice)
+        SIREN -> Siren.defaults(voice as SirenVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1647,6 +1671,7 @@ private enum class Engine {
         RESIN -> Resin.scramble(voice as ResinVoice, random)
         TIDE -> Tide.scramble(voice as TideVoice, random)
         GLINT -> Glint.scramble(voice as GlintVoice, random)
+        SIREN -> Siren.scramble(voice as SirenVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1666,6 +1691,7 @@ private enum class Engine {
         RESIN -> Resin.render(voice as ResinVoice, macros)
         TIDE -> Tide.render(voice as TideVoice, macros)
         GLINT -> Glint.render(voice as GlintVoice, macros)
+        SIREN -> Siren.render(voice as SirenVoice, macros)
     }
 
     /**
@@ -1684,6 +1710,8 @@ private enum class Engine {
         RESIN -> (voice as ResinVoice).drumClass
         TIDE -> (voice as TideVoice).drumClass
         GLINT -> (voice as GlintVoice).drumClass
+        // SIREN: a LOOP by name when HOLD is at its top, a pitched note otherwise - the one knob that picks the class, like VOX's HIT.
+        SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -1698,6 +1726,7 @@ private enum class Engine {
         RESIN -> ResinPatch(name, voice as ResinVoice, macros)
         TIDE -> TidePatch(name, voice as TideVoice, macros)
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
+        SIREN -> SirenPatch(name, voice as SirenVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -2052,6 +2081,13 @@ internal fun MacroSlider(
     fillColor: Color,
     scheme: Scheme,
     onValueChange: (Float) -> Unit,
+    /**
+     * What the LCD says instead of the whole percent, when a knob's position
+     * means a word (SIREN's HOLD at LOOP). Last, after the callback, so the
+     * positional five-argument calls below (ATTACK, RELEASE, MOTION) keep
+     * binding their lambda to [onValueChange].
+     */
+    readout: String? = null,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
     Row(
@@ -2100,7 +2136,7 @@ internal fun MacroSlider(
             )
         }
         Box(Modifier.width(44.dp).heightIn(min = 26.dp).lcdPanel(scheme, 3.dp), contentAlignment = Alignment.Center) {
-            TapeText("${(value * 100).roundToInt()}", TapeType.lcdSmall, scheme.lcdInk.tape)
+            TapeText(readout ?: "${(value * 100).roundToInt()}", TapeType.lcdSmall, scheme.lcdInk.tape)
         }
     }
 }

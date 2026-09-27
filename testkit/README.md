@@ -74,6 +74,20 @@ losing the note, the FLARE pads have weight under the fold,
 and no pad has a click, a buzz of aliasing on the high DRIPs, or an early
 cutoff.
 
+### SnipSnap Siren Kit — does the wail cut through, and does the loop close?
+
+SIREN, the dub siren engine: AIR RAID walks root, minor third, fifth and
+octave across A01–A04, TRILL and LASER one-shots on A05–A08, BIRD and the
+dive and the climb on A09–A12, and the four LOOP presets across the top
+row (A13–A16). Every one-shot carries the rack's ECHO in its recipe, the
+way SEND TO PAD lands one; the LOOPs are dry. Regenerate with
+`./gradlew :synth:generateSirenKit`. Things to confirm: the wail row plays
+**in tune and ascending** under its echo, TWO TONE and RAY GUN read as the
+sounds their names say, the dive on A11 lands on its note, and the four
+LOOP pads end without a click the ear can tell from the tone (they are cut
+on the square's own edge) — then, on the phone, that the same four loop
+seamlessly on the SURFACE with a finger down.
+
 ### SnipSnap Velocity Kit — do ghost notes sound like ghost notes?
 
 The factory kit with three velocity zones per pad: soft and mid renders are

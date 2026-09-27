@@ -30,7 +30,9 @@ internal object PresetTestSupport {
             """|linn(drum)?|oberheim|simmons|emu|e-mu|fairlight""" +
             """|tr-?\d{3}|cr-?78|sp-?1200|sp-?12|dmx|acid""" +
             // TIDE's style has makers too (docs/SYNTH_ROADMAP.md, S9).
-            """|buchla|serge|make\s*noise""",
+            """|buchla|serge|make\s*noise""" +
+            // SIREN's inspiration is a maker too (docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md).
+            """|benidub""",
     )
 
     /**

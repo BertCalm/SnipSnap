@@ -187,3 +187,12 @@ tasks.register<JavaExec>("generateTideKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+tasks.register<JavaExec>("generateSirenKit") {
+    group = "distribution"
+    description = "Render the SIREN dub siren acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SirenKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}

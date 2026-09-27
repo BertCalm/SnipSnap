@@ -266,6 +266,24 @@ BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG
 and FLARE a long DECAY holds the gate open first, so they are notes, and
 TONAL.
 
+SIREN is the dub siren, and the first engine in the picker that is a
+*movement* rather than a strike: a square-wave tone whose pitch a slow
+oscillator throws up and down, in the log domain so DEPTH reads as
+semitones, phase-continuous so RATE can go as fast as it likes without a
+click. A voice is the oscillator's shape — WAIL (triangle, the air-raid
+rise and fall), TRILL (square, two tones), LASER (a falling ramp) and BIRD
+(a rising one) — and SWEEP is the button-press gesture, the note diving
+or climbing in from up to two octaves away. HOLD is how long the button
+is down, because a siren is gated, not struck; its top is LOOP, one
+seamless loop of whole LFO periods with the centre pitch fitted under a
+cent so the pulse closes on whole cycles, cut at a zero crossing — the
+render the SURFACE holds under a finger, pitched by where the finger is,
+released into the surface's own echo on lift. SEND TO PAD lands a
+one-shot siren with the rack's ECHO in its recipe and a LOOP dry, and
+the toast says which. Forty presets, one LOOP per voice, and
+`SynthKits.siren()` is the kit (`./gradlew :synth:generateSirenKit`).
+Design: `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -273,8 +291,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
-counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
+VOX and GRAINS round out the lineup — twelve engines in the `Engine` picker
+counting SKIN, RESIN, TIDE, GLINT and SIREN; GRAINS is a thirteenth thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
 instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
