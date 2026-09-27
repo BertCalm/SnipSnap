@@ -823,7 +823,7 @@ In `pluck-audition.html`: `var PHASE = 'p3a';`. Title-bar tag: `PHASE 3A` + `SIT
   ];
 
   var VOICES = [
-    { id: 'SITAR', display: 'SITAR', folder: 'SITAR', note: 'C#4', hz: '277 HZ', root: 'C#3' + DOT + '139 HZ', macros: 'DAMP .35' + DOT + 'PICK .65' + DOT + 'STRIKE .30' + DOT + 'DOUBLE .40', body: 'no body yet: no source could be opened', groups: SITAR_GROUPS },
+    { id: 'SITAR', display: 'SITAR', folder: 'SITAR', note: 'C#4', hz: '277 HZ', root: 'C#3' + DOT + '139 HZ', macros: 'DAMP .50' + DOT + 'PICK .65' + DOT + 'STRIKE .30' + DOT + 'DOUBLE .40', body: 'no body yet: no source could be opened', groups: SITAR_GROUPS },
     { id: 'KOTO', display: 'KOTO', folder: 'KOTO', note: 'C#4', hz: '278 HZ', root: 'D3' + DOT + '147 HZ', macros: 'the shipped defaults', body: 'only the stiffness changes', groups: STIFF_GROUPS },
     { id: 'HARP', display: 'HARP', folder: 'HARP', note: 'F4', hz: '350 HZ', root: 'E3' + DOT + '165 HZ', macros: 'the shipped defaults', body: 'only the stiffness changes', groups: STIFF_GROUPS }
   ];
