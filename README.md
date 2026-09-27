@@ -283,8 +283,10 @@ through a vocal-cord pulse with vibrato; CHOIR is seven singers in
 sections, in stereo; a long DECAY holds; SIZE scales the throat from
 chipmunk to giant, and GLIDE moves the vowel during the note. ONSET
 opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
-and BEATBOX is a mouth doing a drum kit: a kick, three snares, three
-hats and a tongue click. GRAINS is
+BEATBOX is a mouth doing a drum kit: a kick, three snares, three
+hats and a tongue click, and THROAT is overtone singing: a low drone
+with a whistled melody on its harmonics, a growl an octave down and a
+yodel. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a

@@ -209,7 +209,7 @@ What follows from it:
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 | S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst so a note fades to glass) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. | S1 + U5 + U6 |
-| S11 | **Rounds 1-2 built** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3 (THROAT, SWARM, WRAITH; GROWL, STUTTER, ALIEN, YODEL) to follow — under S11 below | S3.7 + U6 |
+| S11 | **Rounds 1-2 built, round 3 under way** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT voice (overtone singing, with GROWL and YODEL) built, SWARM and WRAITH (with STUTTER and ALIEN) to follow — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1477,3 +1477,55 @@ open) and RIM.
   HAT_CLOSED, HAT_OPEN, PERC. `SynthScreen` passes the knobs through
   when it sends to a pad; the singing voices stay TONAL.
 - Twelve presets: three kicks, four snares, four hats, a rim.
+
+### Round 3, THROAT as built — 2026-09-27 ("Weird", first voice)
+
+**Where the behaviours live.** The singers are at the seven-knob budget
+(TUNE, VOWEL, BREATH, DECAY, SIZE, GLIDE, ONSET), so none of the four
+behaviours fits on them. Asked, the pick was to spread them across the
+three new voices as their own knobs and leave CHOIR, ROBOT and GHOST as
+they are: THROAT takes GROWL and YODEL; SWARM (STUTTER) and WRAITH
+(ALIEN, STUTTER) follow. THROAT was auditioned first.
+
+**THROAT** (`VoxThroat`): TUNE, WHISTLE, MELODY, DRONE, DECAY, GROWL,
+YODEL. A low drone (A1 to A3) through a glottal pulse, and above it a
+whistle: one harmonic picked out by a pair of 25 Hz resonances in
+series, the way a singer merges two formants into one sharp peak.
+
+- **WHISTLE** snaps across the 5th to 13th harmonic; the whistled one
+  stands 29-47 dB over its neighbours (a sung one is roughly 20-40).
+- **MELODY** walks the whistle up to six harmonics and home; between
+  points the resonance glides and the harmonics pop out one by one, the
+  sound of the style. At 0 it holds.
+- **DRONE** brings up the body: the energy under 600 Hz goes from -26 to
+  -8 dB of the whole.
+- **GROWL**: every other pulse damped, with rasp shaped by the pulse, as
+  the false vocal folds flap at half the pitch. The half harmonics rise
+  from -74 dB to within 3 dB of the note.
+- **YODEL** flips chest to head and back, up a sixth then an octave,
+  long-short like a lilt, with a catch in the voice at each break.
+
+What the audition changed:
+
+- **The whistle's width is fixed.** Offered narrow, medium and wide
+  (15, 25, 45 Hz): "I can't tell the difference". Measured, the three
+  sat 1.2-1.7 apart on the difference measure, inside its noise floor.
+  Medium, and no knob.
+- **The yodel was rebuilt.** The first "is strange and doesn't seem
+  right": the whistle stayed where it was when the voice jumped, ringing
+  between the new note's harmonics, and the head voice was a bare sine
+  on no vowel. Now the whistle steps aside while the voice is up, the
+  vowel follows the register ("oh" low, "ee" high), the head voice is
+  the same pulse softened and breathed, with vibrato on a held note, and
+  the high notes make a tune. Heard: "quirky, but interesting", kept.
+- **GROWL stayed as first heard.** A deeper one (damping 0.9, rasp 0.7
+  against 0.8, 0.35) measured 1.1 from it, which nobody would hear.
+- **No SIZE.** THROAT wanted eight knobs; SIZE went, as the whistle and
+  DRONE already set the colour.
+
+Filed TONAL like the other singers (short settings read PERC, long ones
+LOOP). The "too quiet" checks for VOX now read loudness, as TIDE's do:
+levelled to the same loudness, a whistle's steady tone peaks at
+0.31-0.5, where the old peak > 0.5 rule would have called it silent.
+Twelve presets: drones and whistled melodies, three hits (GROWL STAB,
+WHISTLE BLIP, RASP HIT), two yodels and a pad.
