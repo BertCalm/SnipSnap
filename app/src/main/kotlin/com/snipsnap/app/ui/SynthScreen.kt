@@ -142,6 +142,9 @@ import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.Vox
 import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
+import com.snipsnap.synth.Fork
+import com.snipsnap.synth.ForkPatch
+import com.snipsnap.synth.ForkVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
