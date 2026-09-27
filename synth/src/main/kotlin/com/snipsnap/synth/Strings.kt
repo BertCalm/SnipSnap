@@ -5,6 +5,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
+import kotlin.math.ln
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -61,7 +62,7 @@ internal object Strings {
      * [Loop]) are two more, budgeted the same way, and skipped at 0 - the
      * SITAR voice (PLUCK Phase 3a) is what needs them.
      */
-    fun tune(freq: Float, loopHz: Float, rate: Int, stiffness: Float = 0f, jawari: Float = 0f): Tuning {
+    fun tune(freq: Float, loopHz: Float, rate: Int, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null): Tuning {
         // The loop length is almost never a whole number of samples, and
         // truncating it (the old `(rate / freq).toInt()`) detunes the
         // string by an amount that depends on the fractional remainder at
@@ -143,7 +144,20 @@ internal object Strings {
             -phase / w
         } else 0.0
 
-        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
+        // Dispersion (GUZHENG's STIFF, SILK Phase 1b): [dispersion]'s cascade
+        // is [dispersion.count] identical first-order allpasses, and LTI
+        // stages in series commute - their phase delays simply add
+        // (research §3, Z.7 point 2) - so the budget charges one section's
+        // delay at the fundamental, times the section count, the same
+        // atan2 form the stiffness allpass above uses for its own single
+        // section.
+        val dispersionDelay = if (dispersion != null) {
+            val c = dispersion.a.toDouble()
+            val phase = atan2(-sin(w), c + cos(w)) - atan2(-c * sin(w), 1.0 + c * cos(w))
+            dispersion.count * (-phase / w)
+        } else 0.0
+
+        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - dispersionDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -177,6 +191,56 @@ internal object Strings {
 
     /** The DC blocker's one-pole coefficient (see [Loop], [tune]) - depends only on [rate]. */
     private fun dcBlockerA(rate: Int): Double = 1.0 - exp(-2.0 * PI * 2.0 / rate)
+
+    /**
+     * A cascade of [count] identical first-order allpasses, sharing one
+     * coefficient [a] - Rauhala & Välimäki's dispersion filter (DAFx-06,
+     * "Dispersion modeling in waveguide piano synthesis using tunable
+     * allpass filters"), in the same transposed form [Loop] already carries
+     * for SITAR's own single-section stiffness allpass (PLUCK Phase 3a):
+     * H(z) = (a + z⁻¹)/(1 + a·z⁻¹). [a] < 0 is what makes partials go sharp
+     * of harmonic - the sign the guzheng prototype got backwards (spec,
+     * "The prototypes, as reviewed": "the prototype's 0…0.9 range bends
+     * them flat"). GUZHENG's STIFF is the first caller; SANTUR's fixed
+     * stiffness (Phase 2) reuses the same class.
+     */
+    class Dispersion(val count: Int, val a: Float) {
+        companion object {
+            // Rauhala's 2007 dissertation, Eq. 3.8 - the erratum-corrected
+            // form of DAFx-06's own Eq. 7, which prints "ln M" a second time
+            // where "ln B" belongs and so carries no B at all. Constants
+            // from DAFx-06 Table 2 (research §3, Z.7 point 4 - both the
+            // erratum and these constants are quoted from the papers
+            // themselves, not recalled).
+            private const val M1 = 0.0126
+            private const val M2 = 0.0606
+            private const val M3 = -0.00825
+            private const val M4 = 1.97
+
+            /**
+             * The cascade for inharmonicity [b] over [count] sections, or
+             * null if [b] is silent (0) or the design's own D comes out at
+             * or below 1. DAFx-06's own rule for that case: "D was set to
+             * be 1, which corresponds to replacing the allpass filters with
+             * the transfer function A(z) = 1" (research §3, Z.7 point 4) -
+             * read here as *dropping* the cascade rather than building a
+             * degenerate one, since a first-order section at D = 1 is a
+             * bare unit delay, not an identity. This is also what keeps a
+             * weakly-stiff high note from flipping sign (partials flat
+             * instead of sharp): past that note's own D = 1 point, STIFF is
+             * inert rather than wrong.
+             */
+            fun forB(b: Float, count: Int = 4): Dispersion? {
+                if (b <= 0f) return null
+                val lnM = ln(count.toDouble())
+                val lnB = ln(b.toDouble())
+                val d = exp((M1 * lnM + M2) * lnB + M3 * lnM + M4)
+                if (d <= 1.0) return null
+                val a = ((1.0 - d) / (1.0 + d)).toFloat()
+                return Dispersion(count, a)
+            }
+        }
+    }
 
     /**
      * One period of filtered, zero-mean noise - the raw exciter burst before
@@ -287,6 +351,7 @@ internal object Strings {
         private val stiffness: Float = 0f,
         private val jawari: Float = 0f,
         private val jawariP0: Float = 1e-6f,
+        private val dispersion: Dispersion? = null,
     ) {
         private val size = n + 2
         private val history = FloatArray(size)
@@ -298,6 +363,12 @@ internal object Strings {
         private val loopLp = Dsp.OnePole(rate)
         private val dcA = dcBlockerA(rate).toFloat()
         private var dc = 0f
+
+        // Dispersion's own state: [dispersion.count] identical sections
+        // chained, each carrying its own one-sample history - empty arrays,
+        // and no work in [next], when [dispersion] is null.
+        private val dispX1 = FloatArray(dispersion?.count ?: 0)
+        private val dispY1 = FloatArray(dispersion?.count ?: 0)
 
         fun next(x: Float): Float {
             val y = if (i <= n) {
@@ -318,6 +389,22 @@ internal object Strings {
                     s
                 } else tuned
                 var yy = loopLp.lp(stiff, loopHz)
+                // GUZHENG's STIFF (SILK Phase 1b), after the loop low-pass -
+                // the spec's own architecture diagram order ("loop LP ->
+                // [dispersion] -> [collision]"), not SITAR's stiffness
+                // position above: the tuning budget above does not care
+                // which order the loop's LTI stages run in (their delays
+                // just add), so this placement is free to differ from
+                // SITAR's without retuning anything.
+                if (dispersion != null) {
+                    val da = dispersion.a
+                    for (k in 0 until dispersion.count) {
+                        val s = da * (yy - dispY1[k]) + dispX1[k]
+                        dispX1[k] = yy
+                        dispY1[k] = s
+                        yy = s
+                    }
+                }
                 if (jawari > 0f) {
                     if (yy > 0f) yy -= jawari * min(yy, jawariP0) * yy / jawariP0
                     dc += dcA * (yy - dc)
@@ -336,12 +423,12 @@ internal object Strings {
      * [stiffness] and [jawari] are SITAR's dispersion and buzz; both default
      * to 0, which reproduces the plain string exactly.
      */
-    fun pluck(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f): FloatArray {
-        val t = tune(freq, damping.loopHz, rate, stiffness, jawari)
+    fun pluck(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null): FloatArray {
+        val t = tune(freq, damping.loopHz, rate, stiffness, jawari, dispersion)
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t.n + 2))
         val exc = pluckExciter(t.n, freq, pickHz, position, seed, rate, out.size)
         val jawariP0 = if (jawari > 0f) burstPeak(t.n, pickHz, seed, rate) else 1e-6f
-        val loop = Loop(t.n, t.a, damping.fb, damping.loopHz, rate, stiffness, jawari, jawariP0)
+        val loop = Loop(t.n, t.a, damping.fb, damping.loopHz, rate, stiffness, jawari, jawariP0, dispersion)
         for (i in out.indices) out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
         return out
     }

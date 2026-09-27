@@ -1,10 +1,12 @@
 package com.snipsnap.synth
 
 import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class StringsTest {
@@ -99,5 +101,91 @@ class StringsTest {
         assertTrue(abs(plain.sum()) < 1e-3f, "sum=${plain.sum()}")
         val combed = Strings.pluckExciter(n = 300, freq = 147f, pickHz = 6000f, position = 0.25f, seed = 7, rate = Dsp.RATE, maxLen = 10_000)
         assertTrue(combed.size > plain.size, "the comb's delayed copy extends the exciter")
+    }
+
+    /**
+     * Guards the erratum fix itself (docs/superpowers/plans/2026-09-27-silk-research.md
+     * §3, Z.7 point 4): DAFx-06's own Eq. 7 prints "ln M" a second time where
+     * "ln B" belongs, so a naive reading has no B in it at all. -0.4853 is
+     * this test's own independently hand-computed value from the corrected
+     * form (Rauhala's dissertation Eq. 3.8) at B=1e-5, M=4 - if a future
+     * edit reintroduces the erratum (swaps `ln(b)` for a second `ln(count)`),
+     * the coefficient stops depending on B in the right way and this drifts
+     * off by far more than the tolerance below.
+     */
+    @Test
+    fun `Dispersion forB reproduces the corrected Rauhala design, not the printed erratum`() {
+        val d = Strings.Dispersion.forB(1e-5f, 4)
+        assertTrue(d != null)
+        assertEquals(-0.4853f, d!!.a, 0.001f, "a drift here likely means the erratum crept back in")
+        assertEquals(4, d.count)
+        // Doubling B must make the coefficient more negative (more stretch),
+        // never the other way - the sign DAFx-06's own prototype got backwards.
+        val stronger = Strings.Dispersion.forB(2e-5f, 4)!!
+        assertTrue(stronger.a < d.a, "doubling B should deepen the coefficient: ${stronger.a} vs ${d.a}")
+    }
+
+    @Test
+    fun `Dispersion is null when B is silent, and the D under 1 bypass rule is reachable`() {
+        assertNull(Strings.Dispersion.forB(0f, 4))
+        assertNull(Strings.Dispersion.forB(-1e-5f, 4))
+        // Far below any sourced string's B (research §3's guzheng range
+        // tops out at 1.5e-4) - a mechanism check that the D <= 1 bypass
+        // (DAFx-06's own rule) actually fires, not a claim that any voice
+        // reaches a B this small.
+        assertNull(Strings.Dispersion.forB(1e-14f, 4))
+    }
+
+    @Test
+    fun `every non-null Dispersion coefficient is negative, in (-1, 0)`() {
+        for (b in listOf(1e-6f, 1e-5f, 3.5e-5f, 9e-5f, 1.5e-4f, 1e-3f)) {
+            val d = Strings.Dispersion.forB(b, 4)!!
+            assertTrue(d.a < 0f && d.a > -1f, "B=$b gave a=${d.a}, expected (-1, 0)")
+        }
+    }
+
+    /**
+     * The test that catches a sign error in [Strings.Dispersion] outright
+     * (spec, "Testing", item 2): with dispersion on, partial n's measured
+     * frequency over n*f0 must rise with n; with it off, every partial
+     * stays within 5 cents of harmonic - the budget holds the fundamental
+     * exact (partial 1) either way, since [Strings.tune] charges the
+     * cascade's own delay before splitting the loop length.
+     *
+     * -0.9 over 4 sections is a deliberately strong probe, not GUZHENG's own
+     * shipped range: [Strings.Dispersion.forB] at the sourced B ceiling
+     * (1.5e-4) moves the loop length by hundredths of a sample by the 8th
+     * partial (computed: -0.024 samples against a ~1200-sample loop at
+     * 147 Hz, rate 176400) - StiffnessTest's own SITAR probe hit the
+     * identical wall at weak coefficients ("the brief's list (0 to -0.50)
+     * never leaves 0.00% sharp") and had to extend its own list toward -1
+     * to see anything measurable at all. This test proves the mechanism's
+     * direction and monotonicity the same way that probe does; how much of
+     * it GUZHENG actually ships is Task 7's own audition question, not
+     * this one's.
+     */
+    @Test
+    fun `dispersion makes partials progressively sharper, and the fundamental stays put`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val f0 = 147f
+        val damping = Strings.damping(0.5f, 4200f)
+        val dispersion = Strings.Dispersion(count = 4, a = -0.9f)
+        val stiff = Strings.pluck(f0, 0.5f, damping, 6000f, seed = 7, rate = rate, dispersion = dispersion)
+        val plain = Strings.pluck(f0, 0.5f, damping, 6000f, seed = 7, rate = rate)
+
+        var last = 0.0
+        for (n in 1..8) {
+            val measured = PluckSpectra.peakHz(stiff, rate, n * f0, spanFraction = 0.05)
+            val ratio = measured / (n * f0.toDouble())
+            assertTrue(ratio >= last - 0.0005, "partial $n ratio $ratio is not sharper than partial ${n - 1}'s $last")
+            last = ratio
+        }
+        assertTrue(last > 1.001, "the top partial measured should be measurably sharp of harmonic, got $last")
+
+        for (n in 1..8) {
+            val measured = PluckSpectra.peakHz(plain, rate, n * f0, spanFraction = 0.05)
+            val cents = 1200.0 * ln(measured / (n * f0.toDouble())) / ln(2.0)
+            assertTrue(abs(cents) <= 5.0, "partial $n with no dispersion is $cents cents off, expected harmonic")
+        }
     }
 }
