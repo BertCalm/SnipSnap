@@ -47,6 +47,8 @@ object Patches {
             TidePatch.ENGINE -> TidePatch.fromJsonValue(value)
             VoxPatch.ENGINE -> VoxPatch.fromJsonValue(value)
             SnapPatch.ENGINE -> SnapPatch.fromJsonValue(value)
+            GlintPatch.ENGINE -> GlintPatch.fromJsonValue(value)
+            SirenPatch.ENGINE -> SirenPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
@@ -216,6 +218,31 @@ data class TidePatch(
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> TideVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 TidePatch(name, voice, macros)
+            }
+        fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
+    }
+}
+
+/** A saved SIREN sound. */
+data class SirenPatch(
+    override val name: String,
+    val voice: SirenVoice,
+    override val macros: Map<String, Float>,
+) : Patch {
+    init {
+        Patches.validateMacros(this, Siren.macrosFor(voice))
+    }
+
+    override val engine get() = ENGINE
+    override val voiceName get() = voice.name
+    override fun render() = Siren.render(voice, macros)
+    override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    companion object {
+        const val ENGINE = "SIREN"
+        fun fromJsonValue(value: JsonValue): Patch =
+            Patches.decode(value, ENGINE, { n -> SirenVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                SirenPatch(name, voice, macros)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

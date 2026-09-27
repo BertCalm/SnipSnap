@@ -78,7 +78,7 @@ class ThumpPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in ThumpVoice.entries) {
             val names = ThumpPresets.forVoice(voice).map { it.name }
-            assertEquals(16, names.size, "$voice should ship 16 presets, has ${names.size}")
+            assertEquals(20, names.size, "$voice should ship 20 presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")
@@ -104,10 +104,10 @@ class ThumpPresetsTest {
         // A guard proven by what it rejects, not just what it once caught:
         // suffix concatenation (no separator at all) and the classic
         // "acid" family name the roadmap's own examples call out.
-        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT")) {
+        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT", "BENIDUB WAIL", "BeniDub")) {
             assertTrue(PresetTestSupport.trademarkBlocklist.containsMatchIn(nearMiss), "blocklist let '$nearMiss' through")
         }
-        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB")) {
+        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB", "DUB SIREN", "AIR RAID")) {
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(clean), "blocklist wrongly flagged '$clean'")
         }
     }

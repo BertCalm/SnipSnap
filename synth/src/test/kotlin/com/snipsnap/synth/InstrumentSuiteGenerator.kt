@@ -19,7 +19,7 @@ import java.io.File
  * ```
  *
  * MPC 3 opens the `.xty`; an MPC 2 machine browses into `_[TrackData]/` and
- * finds a bare program folder. The organ carries mathematically-cut sustain
+ * finds a bare program folder. The organ and the RESIN pad carry mathematically-cut sustain
  * loops in both formats. Run via `./gradlew :synth:generateInstrumentSuite`.
  */
 object InstrumentSuiteGenerator {
@@ -34,6 +34,7 @@ object InstrumentSuiteGenerator {
             "SnipSnap Organ" to InstrumentSuite::renderOrgan,
             "SnipSnap Harp" to InstrumentSuite::renderHarp,
             "SnipSnap Music Box" to InstrumentSuite::renderMusicBox,
+            "SnipSnap Resin Pad" to InstrumentSuite::renderResinPad,
         )
 
         var samples = 0

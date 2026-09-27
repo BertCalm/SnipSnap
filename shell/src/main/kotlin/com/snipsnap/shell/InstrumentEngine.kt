@@ -93,7 +93,7 @@ class InstrumentEngine(
     fun render(out: FloatArray, frames: Int) {
         require(out.size >= frames * 2) { "out holds ${out.size / 2} frames, asked $frames" }
         java.util.Arrays.fill(out, 0, frames * 2, 0f)
-        val releaseFrames = (instrument.instrument.release * outRate).coerceAtLeast(1f)
+        val releaseFrames = (instrument.instrument.playableRelease * outRate).coerceAtLeast(1f)
         val releaseStep = 1f / releaseFrames
         for (v in voices) {
             if (v.dead) continue

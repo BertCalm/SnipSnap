@@ -60,7 +60,8 @@ class SynthKitTest {
         val kit = SynthKits.tide()
         assertEquals(16, kit.size)
         assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a TIDE render with its recipe")
-        assertTrue(kit.all { it!!.drumClass == DrumClass.PERC })
+        assertTrue(kit.take(12).all { it!!.drumClass == DrumClass.PERC }, "bongos and drips are percussion")
+        assertTrue(kit.drop(12).all { it!!.drumClass == DrumClass.TONAL }, "gongs and flares are notes")
         val pitches = (0 until 8).map { TestPitch.estimate(kit[it]!!.snip, fromSec = 0.02f, windowSec = 0.08f) }
         for (i in 1 until pitches.size) {
             assertTrue(pitches[i] > pitches[i - 1] * 1.02f, "bongo ${i + 1} (${pitches[i]} Hz) should sit above bongo $i (${pitches[i - 1]} Hz)")

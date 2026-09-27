@@ -171,8 +171,9 @@ object SynthKits {
      * The TIDE kit (docs/SYNTH_ROADMAP.md, S9): WOOD BONGO walks C minor
      * pentatonic up the first two rows — the West Coast plucked pattern,
      * the sound the engine exists for — then DRIP, GONG and FLARE presets
-     * above it. Dry: the gate's own decay is the space. Every pad classifies
-     * PERC ([TidePresetsTest] has the measurement) and carries its recipe.
+     * above it. Dry: the gate's own decay is the space. BONGO and DRIP pads
+     * are PERC ([TidePresetsTest] has the measurement), GONG and FLARE TONAL
+     * (notes DECAY can hold); every pad carries its recipe.
      */
     fun tide(): List<ArrangedPad?> {
         val wood = TidePresets.forVoice(TideVoice.BONGO).first { it.name == "WOOD BONGO" }
@@ -180,8 +181,10 @@ object SynthKits {
             TidePatch("Bongo $n", TideVoice.BONGO, wood.macros + ("TUNE" to semitone / Tide.TUNE_SEMITONES.toFloat())),
             DrumClass.PERC,
         )
-        fun preset(voice: TideVoice, name: String) =
-            pad(TidePresets.forVoice(voice).first { it.name == name }, DrumClass.PERC)
+        fun preset(voice: TideVoice, name: String) = pad(
+            TidePresets.forVoice(voice).first { it.name == name },
+            if (voice == TideVoice.GONG || voice == TideVoice.FLARE) DrumClass.TONAL else DrumClass.PERC,
+        )
 
         return listOf(
             bongo(1, PENTATONIC[0]), bongo(2, PENTATONIC[1]), bongo(3, PENTATONIC[2]), bongo(4, PENTATONIC[3]), // A01-A04
@@ -190,6 +193,35 @@ object SynthKits {
             preset(TideVoice.DRIP, "ICE BLIP"), preset(TideVoice.DRIP, "SPLASH TICK"),                         // A11 A12
             preset(TideVoice.GONG, "TEMPLE GONG"), preset(TideVoice.GONG, "TIN CAN"),                          // A13 A14
             preset(TideVoice.FLARE, "SNARL FLARE"), preset(TideVoice.FLARE, "FOLD BASS"),                       // A15 A16
+        )
+    }
+
+    /**
+     * The SIREN kit (docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md):
+     * AIR RAID walks root, minor third, fifth and octave across A01–A04,
+     * then TRILL and LASER one-shots (A05–A08), BIRD and the dive and the
+     * climb (A09–A12), and the four LOOPs across the top row (A13–A16) —
+     * the renders the SURFACE holds under a finger. Every one-shot carries
+     * the landing's own ECHO in its recipe ([Siren.landingChain]); every
+     * LOOP is dry and filed as the LOOP it is. Every pad carries its recipe.
+     */
+    fun siren(): List<ArrangedPad?> {
+        val airRaid = SirenPresets.forVoice(SirenVoice.WAIL).first { it.name == "AIR RAID" }
+        fun wail(n: Int, semitone: Int) = SirenPatch(
+            "Wail $n", SirenVoice.WAIL,
+            airRaid.macros + ("TUNE" to (12 + semitone) / Siren.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Siren.drumClassFor(it.voice, it.macros), Siren.landingChain(it.macros)) }
+        fun preset(voice: SirenVoice, name: String) = SirenPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Siren.drumClassFor(it.voice, it.macros), Siren.landingChain(it.macros)) }
+
+        return listOf(
+            wail(1, 0), wail(2, 3), wail(3, 7), wail(4, 12),                                                     // A01-A04
+            preset(SirenVoice.TRILL, "TWO TONE"), preset(SirenVoice.TRILL, "PATROL"),                           // A05 A06
+            preset(SirenVoice.LASER, "RAY GUN"), preset(SirenVoice.LASER, "DEEP LASER"),                        // A07 A08
+            preset(SirenVoice.BIRD, "CHIRP"), preset(SirenVoice.BIRD, "LOW BIRD"),                              // A09 A10
+            preset(SirenVoice.WAIL, "DIVE WAIL"), preset(SirenVoice.TRILL, "RISE TRILL"),                       // A11 A12
+            preset(SirenVoice.WAIL, "WAIL LOOP"), preset(SirenVoice.TRILL, "TRILL LOOP"),                       // A13 A14
+            preset(SirenVoice.LASER, "LASER LOOP"), preset(SirenVoice.BIRD, "BIRD LOOP"),                       // A15 A16
         )
     }
 }

@@ -139,7 +139,12 @@ class TinesTest {
         for (voice in TinesVoice.entries) {
             val preset = TinesPresets.forVoice(voice).first()
             assertEquals(
-                preset.macros,
+                // A preset doesn't have to name every macro Tines knows about
+                // (BITE and the other sound-design macros came after these
+                // presets were written) - `near`'s seed is the full default
+                // map with the preset's values layered on top, the same
+                // expectation ThumpTest's version of this test holds.
+                Tines.defaults(voice) + preset.macros,
                 Tines.scramble(voice, Random(1), temperature = 0f, near = preset),
                 "$voice: temperature 0 should return the seed untouched",
             )

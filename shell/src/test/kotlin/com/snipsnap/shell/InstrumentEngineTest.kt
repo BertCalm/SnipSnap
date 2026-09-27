@@ -113,4 +113,17 @@ class InstrumentEngineTest {
         assertTrue(out.samples.all { it <= 1f && it >= -1f }, "soft clipped inside full scale")
         assertTrue(out.peak() > 0.5f, "and still loud")
     }
+
+    @Test
+    fun `a looped note lets go even when the instrument asks for an endless release`() {
+        val base = looped()
+        val endless = InstrumentEngine.Loaded(base.instrument.copy(release = Float.POSITIVE_INFINITY), rate, base.samples)
+        val engine = InstrumentEngine(endless, rate)
+        assertTrue(engine.noteOn(57))
+        render(engine, 0.2f)
+        engine.noteOff(57)
+        // Capped at MAX_RELEASE_SECONDS: the fade has an end, so the voice does too.
+        render(engine, InstrumentStore.MAX_RELEASE_SECONDS + 1f)
+        assertTrue(engine.activeNotes.isEmpty(), "an infinite release left the note sounding")
+    }
 }

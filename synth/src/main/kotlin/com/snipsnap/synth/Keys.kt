@@ -210,8 +210,16 @@ object Keys {
      * is a whole number of every waveform's cycles. TUNE is set by [midi];
      * the rest of [macros] plays as it does in the one-shot, except CREAM,
      * which stops at the self-oscillation threshold ([Resin.HELD_MAX_RESONANCE]).
+     * [cancelled] stops the render part-way (a CancellationException, which
+     * the retry below lets through).
      */
-    fun resinPad(voice: ResinVoice, macros: Map<String, Float>, midi: Int, attackSeconds: Float): KeyNote {
+    fun resinPad(
+        voice: ResinVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        attackSeconds: Float,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote {
         val low = resinPadMidis(voice).first()
         val semis = midi - low
         require(semis in 0..Resin.TUNE_SEMITONES) {
@@ -228,7 +236,7 @@ object Keys {
             val end = loopStart + plan.loopFrames
             // A quarter second past the cut, so the decimator's edge never reaches it.
             val held = Resin.Held(attackSeconds, end.toFloat() / RATE + 0.25f, plan.squareRatio, plan.baseHz)
-            val s = Resin.renderHeld(voice, m, held).samples.copyOf(end)
+            val s = Resin.renderHeld(voice, m, held, cancelled).samples.copyOf(end)
             requireSeam(label, s, loopStart)
             // Loud where it is held: the loop, not the attack, sets the level
             // (spec decision 10). RESIN's per-voice loudness offsets are all

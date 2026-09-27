@@ -250,10 +250,39 @@ note never moves), bent through a wavefolder (FOLD — a triangle core into a
 sine shaper, so FOLD 0 is a clean sine and each unit of drive adds a fold),
 and closed by a low-pass gate: one control on a VCA and a low-pass
 together, keyed to the note and slowing as it falls, so brightness and
-level close at once. That coupling is the "bongo". WANDER nudges fold,
-decay and WARP per note from a seed the recipe itself carries, so a kit
-still regenerates to the bit. BONGO, DRIP, GONG, FLARE; the classifier
-hears all four as PERC, and the pads say so.
+level close at once. That coupling is the "bongo"; GLOW sets how much
+brightness outlives the level, from the classic dark knock to a tail that
+keeps its harmonics. Past the line of tidy, the edge is built in: the
+modulator dives into place in the strike (a zap), the fold feeds back into
+the modulator (a snarl, held short of noise), the fold's symmetry turns
+over across the note, and small seeded jitters keep a held note moving.
+Under it all sits the oomph: every strike thumps (it starts sharp and
+drops onto the note in a few milliseconds) and a clean sine carries the
+note itself under the fold. BONGO and DRIP add CLICK, the stick on the
+skin, at 0 until you turn it up.
+WANDER nudges fold, decay and WARP per note from a seed the recipe itself
+carries, so a kit still regenerates to the bit.
+BONGO and DRIP are struck hand percussion, PERC by the classifier; on GONG
+and FLARE a long DECAY holds the gate open first, so they are notes, and
+TONAL.
+
+SIREN is the dub siren, and the first engine in the picker that is a
+*movement* rather than a strike: a square-wave tone whose pitch a slow
+oscillator throws up and down, in the log domain so DEPTH reads as
+semitones, phase-continuous so RATE can go as fast as it likes without a
+click. A voice is the oscillator's shape — WAIL (triangle, the air-raid
+rise and fall), TRILL (square, two tones), LASER (a falling ramp) and BIRD
+(a rising one) — and SWEEP is the button-press gesture, the note diving
+or climbing in from up to two octaves away. HOLD is how long the button
+is down, because a siren is gated, not struck; its top is LOOP, one
+seamless loop of whole LFO periods with the centre pitch fitted under a
+cent so the pulse closes on whole cycles, cut at a zero crossing — the
+render the SURFACE holds under a finger, pitched by where the finger is,
+released into the surface's own echo on lift. SEND TO PAD lands a
+one-shot siren with the rack's ECHO in its recipe and a LOOP dry, and
+the toast says which. Forty presets, one LOOP per voice, and
+`SynthKits.siren()` is the kit (`./gradlew :synth:generateSirenKit`).
+Design: `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md`.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
@@ -262,12 +291,18 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX and GRAINS round out the lineup — ten engines in the `Engine` picker
-counting SKIN, RESIN and TIDE; GRAINS is an eleventh thing entirely, out of the
+VOX and GRAINS round out the lineup — twelve engines in the `Engine` picker
+counting SKIN, RESIN, TIDE, GLINT and SIREN; GRAINS is a thirteenth thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
-instead of picking one. VOX is three-formant vocal
+instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
-continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. GRAINS is
+continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
+through a vocal-cord pulse with vibrato; CHOIR is seven singers in
+sections, in stereo; a long DECAY holds; SIZE scales the throat from
+chipmunk to giant, and GLIDE moves the vowel during the note. ONSET
+opens the note on a consonant ("mah", "bah", "dah", "hah", "tah", "sah"),
+and BEATBOX is a mouth doing a drum kit: a kick, three snares, three
+hats and a tongue click. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a

@@ -373,14 +373,14 @@
           "samples": [
             {
               "sample": "Harp_E3_soft",
-              "frames": 49877,
+              "frames": 102753,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E3",
-              "frames": 49877,
+              "frames": 102753,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -395,14 +395,14 @@
           "samples": [
             {
               "sample": "Harp_G3_soft",
-              "frames": 49877,
+              "frames": 84010,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_G3",
-              "frames": 49877,
+              "frames": 84010,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -417,14 +417,14 @@
           "samples": [
             {
               "sample": "Harp_A#3_soft",
-              "frames": 49877,
+              "frames": 72103,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_A#3",
-              "frames": 49877,
+              "frames": 72103,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -439,14 +439,14 @@
           "samples": [
             {
               "sample": "Harp_C#4_soft",
-              "frames": 49877,
+              "frames": 59314,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_C#4",
-              "frames": 49877,
+              "frames": 59314,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -461,14 +461,14 @@
           "samples": [
             {
               "sample": "Harp_E4_soft",
-              "frames": 49877,
+              "frames": 48069,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E4",
-              "frames": 49877,
+              "frames": 48069,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -483,14 +483,14 @@
           "samples": [
             {
               "sample": "Harp_G4_soft",
-              "frames": 49877,
+              "frames": 41233,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_G4",
-              "frames": 49877,
+              "frames": 41233,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -505,14 +505,14 @@
           "samples": [
             {
               "sample": "Harp_A#4_soft",
-              "frames": 49877,
+              "frames": 35059,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_A#4",
-              "frames": 49877,
+              "frames": 35059,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -527,14 +527,14 @@
           "samples": [
             {
               "sample": "Harp_C#5_soft",
-              "frames": 49877,
+              "frames": 28224,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_C#5",
-              "frames": 49877,
+              "frames": 28224,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -549,14 +549,14 @@
           "samples": [
             {
               "sample": "Harp_E5_soft",
-              "frames": 49877,
+              "frames": 22711,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E5",
-              "frames": 49877,
+              "frames": 22711,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -705,6 +705,151 @@
               "velStart": 0,
               "velEnd": 127,
               "loopStartFrame": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Resin Pad",
+      "engine": "resin-held",
+      "layers": [
+        "single layer; RESIN BRASS preset WIDE SECTION, attack 0.8 s; loop cut at whole cycles of every oscillator"
+      ],
+      "volumeRelease": 1.5,
+      "zones": [
+        {
+          "rootMidi": 45,
+          "note": "A2",
+          "lowNote": 36,
+          "highNote": 46,
+          "samples": [
+            {
+              "sample": "ResinPad_A2",
+              "frames": 151143,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 48,
+          "note": "C3",
+          "lowNote": 47,
+          "highNote": 49,
+          "samples": [
+            {
+              "sample": "ResinPad_C3",
+              "frames": 143233,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 51,
+          "note": "D#3",
+          "lowNote": 50,
+          "highNote": 52,
+          "samples": [
+            {
+              "sample": "ResinPad_D#3",
+              "frames": 136582,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 54,
+          "note": "F#3",
+          "lowNote": 53,
+          "highNote": 55,
+          "samples": [
+            {
+              "sample": "ResinPad_F#3",
+              "frames": 130989,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 57,
+          "note": "A3",
+          "lowNote": 56,
+          "highNote": 58,
+          "samples": [
+            {
+              "sample": "ResinPad_A3",
+              "frames": 126286,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 60,
+          "note": "C4",
+          "lowNote": 59,
+          "highNote": 61,
+          "samples": [
+            {
+              "sample": "ResinPad_C4",
+              "frames": 122332,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 63,
+          "note": "D#4",
+          "lowNote": 62,
+          "highNote": 64,
+          "samples": [
+            {
+              "sample": "ResinPad_D#4",
+              "frames": 119006,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 66,
+          "note": "F#4",
+          "lowNote": 65,
+          "highNote": 67,
+          "samples": [
+            {
+              "sample": "ResinPad_F#4",
+              "frames": 116210,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
+            }
+          ]
+        },
+        {
+          "rootMidi": 69,
+          "note": "A4",
+          "lowNote": 68,
+          "highNote": 78,
+          "samples": [
+            {
+              "sample": "ResinPad_A4",
+              "frames": 113858,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 101430
             }
           ]
         }

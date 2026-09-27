@@ -1,10 +1,8 @@
 package com.snipsnap.synth
 
-import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
-import kotlin.math.abs
 
 /**
  * Renders the Phase 2 audition set of
@@ -67,9 +65,6 @@ import kotlin.math.abs
  */
 object PluckAuditionGenerator {
 
-    /** Quiet on purpose: low enough that no clip needs the peak guard. */
-    private const val AUDITION_LEVEL = 0.03f
-
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/pluck-audition")
@@ -80,7 +75,7 @@ object PluckAuditionGenerator {
             val dir = File(root, voice.name)
             val defaults = Pluck.defaults(voice)
             fun write(name: String, snip: Snip) {
-                WavWriter.write(File(dir, "$name.wav"), level(snip), WavWriter.BitDepth.PCM_16)
+                WavWriter.write(File(dir, "$name.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
                 count++
             }
             write("p2_body_0", Pluck.render(voice, mapOf("BODY" to 0f)))
@@ -98,7 +93,7 @@ object PluckAuditionGenerator {
         val seam = File(root, "KIT_SEAM")
         val kit = SynthKits.melodic()
         for ((index, name) in listOf(4 to "a05_nylon_5", 5 to "a06_nylon_6", 6 to "a07_kalimba_1", 7 to "a08_kalimba_2")) {
-            WavWriter.write(File(seam, "$name.wav"), level(kit[index]!!.snip), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(seam, "$name.wav"), AuditionLevel.level(kit[index]!!.snip), WavWriter.BitDepth.PCM_16)
             count++
         }
 
@@ -108,7 +103,7 @@ object PluckAuditionGenerator {
         // round's brief, sections 1-2).
         val banjoDir = File(root, PluckVoice.BANJO.name)
         fun writeBanjo(name: String, macros: Map<String, Float>) {
-            WavWriter.write(File(banjoDir, "$name.wav"), level(Pluck.render(PluckVoice.BANJO, macros)), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(banjoDir, "$name.wav"), AuditionLevel.level(Pluck.render(PluckVoice.BANJO, macros)), WavWriter.BitDepth.PCM_16)
             count++
         }
         writeBanjo("p2c_d4_default", emptyMap())
@@ -129,7 +124,7 @@ object PluckAuditionGenerator {
                 "TUNE" to 3f / Tines.KALIMBA_TUNE_SEMITONES.toFloat(),
                 "BUZZ" to 0.15f, "DECAY" to 0.9f,
             ) + macros
-            WavWriter.write(File(kalimbaDir, "$name.wav"), level(Tines.render(TinesVoice.KALIMBA, full)), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(kalimbaDir, "$name.wav"), AuditionLevel.level(Tines.render(TinesVoice.KALIMBA, full)), WavWriter.BitDepth.PCM_16)
             count++
         }
         writeKalimba("p2d_c4_default", mapOf("BRIGHT" to 0.5f, "DECAY" to 0.9f))
@@ -178,27 +173,5 @@ object PluckAuditionGenerator {
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
         File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
         println("wrote $count clips + index.html under ${root.absolutePath}")
-    }
-
-    /**
-     * One loudness for every clip, for a fair A/B: the spike measured
-     * shipped PLUCK as peak-limited, so loudness would decide the
-     * comparison otherwise. The measure is [Loudness.of] - the RMS of the
-     * loudest 200 ms window, the same measure `Dsp.levelTo` uses - not a
-     * whole-file RMS: a whole-file measure divides a short thud's energy
-     * over silence it doesn't have and a long ring's energy over tail it
-     * does, so at equal loudest-moment level a longer clip reads quieter by
-     * whole-file RMS and gets over-boosted here; clip length must not be
-     * what decides the A/B. A peak guard keeps the file in range.
-     */
-    private fun level(snip: Snip): Snip {
-        val out = snip.samples.copyOf()
-        val loudness = Loudness.of(Snip(out, channels = 1, sampleRate = snip.sampleRate))
-        var g = AUDITION_LEVEL / loudness.coerceAtLeast(1e-9f)
-        var peak = 0f
-        for (v in out) peak = maxOf(peak, abs(v))
-        if (peak * g > 0.99f) g = 0.99f / peak
-        for (i in out.indices) out[i] *= g
-        return Snip(out, channels = 1, sampleRate = snip.sampleRate)
     }
 }
