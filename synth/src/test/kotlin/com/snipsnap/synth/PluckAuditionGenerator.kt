@@ -147,7 +147,11 @@ object PluckAuditionGenerator {
         writeSitar("p3a_default", emptyMap())
         writeSitar("p3a_jawari_15", emptyMap(), jawari = 0.15f)
         writeSitar("p3a_jawari_60", emptyMap(), jawari = 0.6f)
-        writeSitar("p3a_soft", emptyMap(), velocity = 0.3f)
+        // The shipped soft note - PICK darkens and the jawari backs off
+        // together - where p3a_jawari_15 is the drive alone.
+        val soft = PluckPatch("DEFAULT", PluckVoice.SITAR, Pluck.defaults(PluckVoice.SITAR))
+        WavWriter.write(File(sitarDir, "p3a_soft.wav"), level(Velocity.atVelocity(soft, 0.3f)), WavWriter.BitDepth.PCM_16)
+        count++
         writeSitar("p3a_symp_0", mapOf("DOUBLE" to 0f))
         writeSitar("p3a_symp_1", mapOf("DOUBLE" to 1f))
         writeSitar("p3a_stiff_off", emptyMap(), stiffness = 0f)
