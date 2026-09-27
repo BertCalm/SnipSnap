@@ -2,9 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
-import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -220,69 +218,9 @@ object Pluck {
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 
-    /**
-     * Cuts [buf] where its 5 ms RMS envelope has fallen 60 dB below its
-     * peak, never under [RING_FLOOR_SECONDS] - that's the normal case, and
-     * the string stopped ringing before the budget ran out.
-     *
-     * If the scan never finds that point, the string was still ringing when
-     * the buffer ran out, and which fade applies depends on why: at the ring
-     * ceiling (`buf.size >= RING_CEILING_SECONDS * rate`) the string was cut
-     * off mid-ring for real, so the last 400 ms gets the long squared fade.
-     * Short of the ceiling, this was a DAMP-driven budget cut (a high DAMP
-     * gave `synthesize` only a few hundred ms to work with), and the render
-     * is still audible for nearly all of that budget - re-enveloping the
-     * whole thing with a 400 ms fade would choke the very thud DAMP asked
-     * for, so only the last 30 ms is faded, just enough to declick the cut.
-     * Either way `render`'s own 4 ms `Dsp.fadeTail` then has nothing audible
-     * left to touch.
-     */
-    internal fun trimToDecay(buf: FloatArray, rate: Int): FloatArray {
-        val block = (rate * 0.005f).toInt().coerceAtLeast(1)
-        val blocks = (buf.size + block - 1) / block
-        if (blocks == 0) return buf
-        val rms = DoubleArray(blocks)
-        for (b in 0 until blocks) {
-            val start = b * block
-            val end = min(buf.size, start + block)
-            var acc = 0.0
-            for (i in start until end) acc += buf[i].toDouble() * buf[i]
-            rms[b] = sqrt(acc / (end - start))
-        }
-        val peak = rms.max()
-        if (peak <= 0.0) return buf
-        val floorBlocks = ((RING_FLOOR_SECONDS * rate) / block).toInt()
-        var last = blocks - 1
-        // The scan never steps below floorBlocks, so that block is always
-        // kept; when the loop stops because last == floorBlocks (rather than
-        // finding a loud block), the block just above it was already walked
-        // and found quiet on the previous iteration, so keeping both here is
-        // not a guess.
-        while (last > floorBlocks && rms[last] < peak * 0.001) last--
-        val end = min(buf.size, (last + 2) * block)
-        if (end < buf.size) return buf.copyOf(end)
-        if (buf.size >= (RING_CEILING_SECONDS * rate).toInt()) {
-            fadeCeiling(buf, ms = 400f, rate = rate)
-        } else {
-            fadeCeiling(buf, ms = 30f, rate = rate)
-        }
-        return buf
-    }
-
-    /**
-     * A squared fade over the last [ms]. At the ring ceiling the string is
-     * still moving, and a linear fade's last few milliseconds would sit
-     * only ~30 dB down; squaring it puts them past -60 dB.
-     */
-    private fun fadeCeiling(buf: FloatArray, ms: Float, rate: Int) {
-        val n = min(buf.size, (ms / 1000f * rate).toInt())
-        if (n <= 0) return
-        val start = buf.size - n
-        for (i in 0 until n) {
-            val g = 1f - i.toFloat() / n
-            buf[start + i] *= g * g
-        }
-    }
+    /** The decay-following cut, with PLUCK's floor and ceiling - see [Strings.trimToDecay]. */
+    internal fun trimToDecay(buf: FloatArray, rate: Int): FloatArray =
+        Strings.trimToDecay(buf, rate, RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
 
     /** BODY 1 is three times the string's RMS - the spike's "dominant", which stays reachable (spec, "Macros"). */
     internal const val BODY_MAX = 3f
@@ -354,80 +292,12 @@ object Pluck {
     }
 
     /**
-     * The string drives its body. The drive is the string's FIRST
-     * DIFFERENCE, because the bridge force follows the string's slope at
-     * the bridge, the velocity-like quantity - not, as a 34 dB tilt might
-     * suggest, to hide the burst from the body's low modes. The
-     * differentiator's own gain, `2*sin(theta/2)`, and [Modes.ring]'s own
-     * onset peak, `1/sin(theta)` (`theta = 2*pi*hz/rate`), multiply to 1.0
-     * at every body frequency, so it is the table's GAIN column that
-     * governs each mode's burst response, and `ring`'s documented
-     * low-frequency onset hazard is cancelled outright, not merely
-     * reduced. What differentiating the drive actually buys: it removes
-     * the burst's DC step (the spike's knock came from driving the body
-     * with the string's raw displacement, DC and all), and it re-tilts
-     * the balance among a voice's own sourced modes toward the high ones
-     * by the differentiator's own frequency slope - NYLON's 645 Hz mode
-     * gains on its 104 Hz mode by about 16 dB, BANJO's 5000 Hz mode on
-     * its 220 Hz mode by about 27 dB, KOTO's 100 Hz mode on its 85 Hz
-     * mode by about 1.4 dB. The body's level against the string is set by
-     * the RMS match below, not by the drive.
-     *
-     * The body's own longest mode can ring well past the string that
-     * struck it: a muted string's DAMP-driven budget is a few hundred ms,
-     * a body mode's t60 can run past a second, and [Modes.ring] itself
-     * only ever returns as many samples as it was given to excite - it
-     * does not extend the ring on its own. So the drive here, and the
-     * ring it produces, run `pad` samples past the string's own length
-     * (`pad` sized off the table's own longest t60), and the returned
-     * buffer follows that ring out toward the ring ceiling rather than
-     * being cut where the string itself ends; [trimToDecay] (in
-     * [synthesize]) follows the combined tail from there. The RMS match
-     * is taken over the string's own length only, on both sides, so
-     * [amount] means "times the string" the same way whether or not the
-     * table's tail outlives it; the body is then added on top of the
-     * string where the string still runs, and on its own past the
-     * string's end. Amount 0 returns [string] itself: BODY 0 is the
-     * string, byte for byte. [differentiate] exists only so the knock
-     * test below can reproduce the spike's displacement drive for
-     * comparison - production never sets it false.
+     * The string drives its body - see [Strings.bodyRing], where the drive
+     * and its reasoning live; PLUCK passes its own table and ceiling.
      */
-    internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray {
-        if (amount <= 0f) return string
-        val table = bodyFor(voice)
-        if (table.isEmpty()) return string
-        val pad = (table.maxOf { it.t60 } * rate).toInt()
-        val driveLen = string.size + pad
-        // `differentiate = false` reproduces the spike's displacement drive;
-        // only the knock test passes it, production never does. Either way
-        // the drive is silent past the string's own length - there is
-        // nothing left to differentiate or copy once the string has ended,
-        // and the padding is what lets the body ring on regardless.
-        val drive = FloatArray(driveLen)
-        if (differentiate) {
-            var prev = 0f
-            for (i in string.indices) {
-                drive[i] = string[i] - prev
-                prev = string[i]
-            }
-        } else {
-            string.copyInto(drive)
-        }
-        val wet = Modes.ring(drive, 1f, table, rate)
-        val g = rms(string, string.size) / rms(wet, string.size).coerceAtLeast(1e-9f)
-        val outLen = min(driveLen, (RING_CEILING_SECONDS * rate).toInt())
-        val out = FloatArray(outLen)
-        for (i in out.indices) out[i] = (if (i < string.size) string[i] else 0f) + amount * g * wet[i]
-        return out
-    }
+    internal fun withBody(string: FloatArray, voice: PluckVoice, amount: Float, rate: Int, differentiate: Boolean = true): FloatArray =
+        Strings.bodyRing(string, bodyFor(voice), amount, rate, RING_CEILING_SECONDS, differentiate)
 
-    /** RMS of the first [n] samples of [buf] (all of it by default). */
-    private fun rms(buf: FloatArray, n: Int = buf.size): Float {
-        val len = min(n, buf.size)
-        var acc = 0.0
-        for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
-        return sqrt(acc / len.coerceAtLeast(1)).toFloat()
-    }
 
     /**
      * The 1983 algorithm itself: one period of filtered noise, then a delay
