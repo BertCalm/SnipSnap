@@ -1,6 +1,6 @@
 # SILK — four Silk Road strings, and a TUNE that leaves the piano
 
-**Status:** design, from conversation 2026-09-27. Not implemented.
+**Status:** design; its five open decisions settled in conversation 2026-09-27. Not implemented.
 **Date:** 2026-09-27
 **Research:** [`../plans/2026-09-27-silk-research.md`](../plans/2026-09-27-silk-research.md) —
 read its preamble first: this session's network blocked every scholarly
@@ -188,7 +188,6 @@ A row that is neither dataset-confirmed nor equal-division does not ship.
 | 19-EDO | every 63.158 cents | 1200 | equal division |
 | 31-EDO | every 38.710 cents | 1200 | equal division |
 | BOHLEN–PIERCE | 13 equal steps of 146.304 cents | **1902** (3/1, a tritave) | equal division of 3/1 |
-| FREE | unsnapped — TUNE is continuous over 24 semitones | — | none |
 
 What §5 settled and what it left open:
 
@@ -218,15 +217,38 @@ TUNE's two-period span means two tritaves for BOHLEN–PIERCE, about three
 octaves: the voice's root is lowered for that row so the top stays under
 the loop-length floor (`require` covers it either way).
 
-### FREE, and the "atonal" question
+### INFLECT — between the degrees, without leaving the table
 
 Asked in conversation: does this enable more atonal abilities? Recorded
 answer: *atonal* (no key centre) was always possible with twelve semitones;
 what SCALE adds is *microtonal* and *xenharmonic* pitch — notes between the
-piano keys, and whole tunings outside the Western set. FREE is the one
-place "snapped, never a mistuning" is given up on purpose: any pitch in the
-range, for sound design rather than melody. It is last in the table so a
-SCRAMBLE roll reaches it only as often as any other scale.
+piano keys, and whole tunings outside the Western set.
+
+An unsnapped FREE row was drafted and **rejected in favour of INFLECT**
+(decision 2026-09-27): TUNE always lands on a table degree, and **INFLECT**
+bends that degree by a bounded amount on top. It is what real players do
+and a table cannot hold — the 1932 Cairo rast thirds scatter ±20 cents
+around one another; a pressed guzheng note overshoots; a Persian
+*moteghayer* degree moves with the phrase — without giving up "snapped
+notes, never a mistuning" as the default.
+
+- **Bipolar, centred:** `MacroSpec("INFLECT", 0.5f, neutral = 0.5f)`.
+  0.5 is the degree exactly; 0 is −50 cents, 1 is +50 cents, linear in
+  cents between. ±50 is a quarter tone — enough to reach halfway to the
+  next 12-EDO semitone from anywhere, and past the measured spread of
+  every neutral degree §5 found.
+- **A detent at the centre:** within ±0.02 of 0.5 the offset is exactly
+  0, so a knob nudged back near the middle lands on the degree rather
+  than a cent off it.
+- **SCRAMBLE leaves it at 0.5.** A dice roll never detunes a pad; INFLECT
+  is a deliberate move, like KEY on the kit screen.
+- **It moves the played note only.** SLIDE and PRESS bend toward the
+  inflected pitch. WASH's sympathetic bank stays on the *un-inflected*
+  table — the santur's strings are tuned to the dastgah; the player's
+  hand is what bends one note against them, and that beating is the
+  point.
+- **The pad readout includes it:** `E♭ −50¢` already carries the cents,
+  so an inflected pad reads as the pitch it is.
 
 ### Where microtones meet the MPC
 
@@ -338,12 +360,15 @@ range, an allpass count) are engineering and are set by the audition.
 
 ## Macros
 
-Eight per voice: six shared, two character.
+Nine per voice: seven shared, two character. Eight were approved on
+2026-09-27 before INFLECT was chosen over FREE; INFLECT is the ninth, and
+the screen question below (SCALE as a chip) now carries more weight.
 
 | Macro | Meaning | All voices |
 |---|---|---|
 | TUNE | scale degree over two octaves above the voice's root | ✓ |
 | SCALE | which scale TUNE walks (snapped table above) | ✓ |
+| INFLECT | ±50 cents on the snapped degree; 0.5 is exact, with a centre detent | ✓ |
 | DAMP | the loop's decay and brightness together (PLUCK's meaning) | ✓ |
 | PICK | exciter brightness; mallet hardness on SANTUR. The velocity macro | ✓ |
 | STRIKE | where on the string — bridge to centre (PLUCK's map) | ✓ |
@@ -404,6 +429,9 @@ list. Known points:
    the test that catches a sign error in `a`.
 3. **PLUCK unchanged.** The bit-identical hashes across the `Strings`
    extraction.
+4. **INFLECT is bounded and centred.** At 0 and 1 the fundamental sits
+   −50 and +50 cents (±5) from the degree; anywhere in 0.48–0.52 it is on
+   the degree exactly (test 1's tolerance); SCRAMBLE never moves it.
 
 ### The rest
 
@@ -467,29 +495,23 @@ instrument the MPC plays in maqam.
 | Question | Decision |
 |---|---|
 | Home | new engine SILK in `:synth`, Kotlin, offline |
-| Microtones | yes, through TUNE — SCALE macro, TUNE walks degrees; FREE for unsnapped |
+| Microtones | yes, through TUNE — SCALE macro, TUNE walks degrees |
+| SCALE reach | every scale on every voice, each voice defaulting to its tradition |
+| Knob count | eight approved; INFLECT then chosen, making nine |
+| Between the degrees | INFLECT (±50 cents on a snapped degree), not an unsnapped FREE row |
+| Scale sources | dataset-confirmed rows (DaMuSc) accepted for scales; not for instrument measurements |
+| Research re-run | yes, once the environment's network access is widened |
 | Scope | all four voices, phased by DSP risk (OUD+GUZHENG, SANTUR, SHAMISEN) |
 | Order of work | research, then this spec, then per-phase plans |
 
 ### Open for review
 
-1. **Network.** The research re-run needs the environment's network access
-   widened (at least pub.dega-akustik.de, en.wikipedia.org,
-   ccrma.stanford.edu, arxiv.org, researchgate.net, pubs.aip.org). Until
-   then every instrument number here is a placeholder.
-2. **SCALE on every voice, or per-voice lists?** This spec says every scale
-   everywhere, each voice defaulting to its tradition.
-3. **Eight macros.** Two more than PLUCK's six. If the screen
-   is crowded, SCALE could move to a chip above the knobs rather than a
-   knob.
-4. **FREE, or INFLECT?** Research §5 suggests an alternative to FREE: keep
-   TUNE always snapped and add a small bounded offset (± some cents) on top
-   of the snapped degree — the pressed and moving degrees real players use,
-   without ever leaving the table. That costs a ninth macro, so this spec
-   keeps FREE and names INFLECT for the audition to ask for.
-5. **Dataset-confirmed rows.** The scale rows cite DaMuSc, read directly,
-   not the books behind it. That is one step short of the pluck-depth
-   note's rule; this spec accepts it for scales (published theory tables,
-   and where §5 could cross-check — the Turkish Rast, Uşşak and Hicaz rows
-   against an independent MTG table — they agreed) and does not accept it
-   for instrument measurements.
+1. **Network.** Approved; the re-run waits on the environment's network
+   access being widened (at least pub.dega-akustik.de, en.wikipedia.org,
+   ccrma.stanford.edu, arxiv.org, researchgate.net, pubs.aip.org,
+   bioresources.cnr.ncsu.edu, www.jstage.jst.go.jp). Until then every
+   instrument number here is a placeholder.
+2. **SCALE as a knob or a chip.** Nine knobs is one more than was
+   approved. If the SYNTH screen is crowded, SCALE moves to a chip row
+   above the knobs (it is a list choice, not a sweep); decided when the
+   screen is built, not here.
