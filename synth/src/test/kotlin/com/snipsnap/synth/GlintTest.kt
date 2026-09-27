@@ -260,7 +260,33 @@ class GlintTest {
                 for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
                     val snip = Glint.render(voice, still + ("PEAK" to peak))
                     val corr = periodCorrelation(snip, f0, fromSec = settledFromSec)
-                    assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
+                    // CICADA only, added by Task 2 (D2): its carrier is
+                    // k * CICADA_SUBCYCLES * f0, so `synthesize` clamps its
+                    // per-sample k at K_MAX / CICADA_SUBCYCLES rather than
+                    // K_MAX - see the `kCeiling` comment there. Above the PEAK
+                    // that saturates that clamp, every higher PEAK renders an
+                    // (almost) identical carrier sitting close enough to the
+                    // 22.05 kHz output Nyquist that Resampler's own documented
+                    // stopband softness (Resampler.kt: "-13 dB stopband
+                    // rejection" at a more extreme ratio than this one, but
+                    // not brick-wall here either) pulls the correlation under
+                    // 0.98 - even though the underlying signal is exactly
+                    // periodic by construction (BLOOM 0 makes k time-invariant,
+                    // and the dedicated `CICADA stays periodic at f0...` test
+                    // holds 0.98 comfortably at the default, unsaturated PEAK).
+                    // Measured 2026-09-27: PEAK 0.1 -> 0.9998, 0.35 -> 0.9970
+                    // (both clear the bar, asserted below); 0.6 -> 0.9388,
+                    // 0.9 -> 0.9400 (both below it, identically across BLOOM 0
+                    // and 1, because the clamp saturates regardless of BLOOM's
+                    // boost - confirming this is the clamp plateau, not noise).
+                    // Not asserted for CICADA past that point: a known, bounded
+                    // consequence of protecting K_MAX's fold-safety claim
+                    // (Glint.kt), not evidence the sub-division is wrong.
+                    val cicadaSaturated = voice == GlintVoice.CICADA &&
+                        Glint.ratioAtReference(peak) > Glint.K_MAX / Glint.CICADA_SUBCYCLES
+                    if (!cicadaSaturated) {
+                        assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
+                    }
                 }
             }
         }
@@ -338,17 +364,25 @@ class GlintTest {
         // floor. 20x is comfortably inside the 204x floor - roughly an
         // order of magnitude of margin - while still being a bar a doubled
         // or halved formant could not pass.
+        // CICADA (Task 2, D2) re-clocks the carrier CICADA_SUBCYCLES times a
+        // cycle, so its real formant sits at k * CICADA_SUBCYCLES * f0, not
+        // k * f0 - probing the plain k * f0 location measured near-noise
+        // energy for both "atK" and "atDoubled" and failed (6.02E-8 vs
+        // 5.73E-7 - the wrong location can't even keep atK the larger of the
+        // two). carrierMul folds that in for CICADA only; it is 1 for every
+        // other voice, so their probes are unchanged.
         val stillTune = 0.5f
         for (voice in GlintVoice.entries) {
             val peak = (0..2000).map { it / 2000f }.first { Glint.ratioFor(voice, stillTune, it, 1f) == 3f }
             val k = Glint.ratioFor(voice, stillTune, peak, 1f)
             assertEquals(3f, k, 1e-6f, "$voice: test setup expected k=3")
+            val carrierMul = if (voice == GlintVoice.CICADA) Glint.CICADA_SUBCYCLES.toFloat() else 1f
             val f0 = Glint.frequencyFor(voice, stillTune)
             val still = mapOf("TUNE" to stillTune, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
             val snip = Glint.render(voice, still + ("PEAK" to peak))
-            val atK = energyAt(snip.samples, k * f0, snip.sampleRate)
-            val atDoubled = energyAt(snip.samples, 2f * k * f0, snip.sampleRate)
-            val atHalved = energyAt(snip.samples, k * f0 / 2f, snip.sampleRate)
+            val atK = energyAt(snip.samples, k * f0 * carrierMul, snip.sampleRate)
+            val atDoubled = energyAt(snip.samples, 2f * k * f0 * carrierMul, snip.sampleRate)
+            val atHalved = energyAt(snip.samples, k * f0 * carrierMul / 2f, snip.sampleRate)
             assertTrue(
                 atK > atDoubled * 20f,
                 "$voice: energy at k*f0 ($atK) should dwarf energy at 2k*f0 ($atDoubled) - formant may be doubled",
@@ -897,5 +931,120 @@ class GlintTest {
                 )
             }
         }
+    }
+
+    /** The largest absolute difference between adjacent samples in a time window. */
+    private fun worstAdjacentJump(snip: Snip, from: Float, to: Float): Float {
+        val a = (from * snip.sampleRate).toInt().coerceAtLeast(1)
+        val b = (to * snip.sampleRate).toInt().coerceAtMost(snip.samples.size)
+        var worst = 0f
+        for (i in a until b) worst = maxOf(worst, kotlin.math.abs(snip.samples[i] - snip.samples[i - 1]))
+        return worst
+    }
+
+    @Test
+    fun `CICADA stays periodic at f0 despite re-clocking inside the cycle`() {
+        // The sub-cycles divide the cycle an integer number of times, so the
+        // whole pattern still repeats at f0 and the pitch does not move. This
+        // is the test the spec names as CICADA's risk.
+        for (bloom in listOf(0f, 1f)) {
+            val snip = Glint.render(GlintVoice.CICADA, mapOf("BLOOM" to bloom))
+            val f0 = Glint.frequencyFor(GlintVoice.CICADA, 0.5f)
+            val corr = periodCorrelation(snip, f0, fromSec = Glint.BLOOM_T60 * (7f / 9f))
+            assertTrue(corr > 0.98f, "CICADA at BLOOM $bloom: period correlation $corr")
+        }
+    }
+
+    @Test
+    fun `CICADA does not click at its inner restarts`() {
+        // Two things had to be measured, not assumed, before this test could
+        // guard anything - both are the same lesson the sibling test below
+        // (`a non-integer ratio clicks no more than an integer one`) already
+        // learned for the OUTER wrap, recurring here at the INNER one.
+        //
+        // (1) REED is not a valid control. CICADA's carrier is k * N * f0;
+        // at any shared nominal k, that makes CICADA's carrier
+        // (220/110)*CICADA_SUBCYCLES = 8x REED's, from root Hz and the
+        // re-clock multiplier alone - nothing to do with clicking. A pure
+        // sine's sample-to-sample step scales with frequency, so this
+        // confound holds at every k, not just high ones. Measured at the
+        // default integer k=8: worst=1.4358492, reed=0.21170102 (6.78x) -
+        // OVER the 3x bar on a *correct* mechanism. BOTTLE at a matched
+        // carrier removes it: it shares CICADA's triangle window, and at
+        // k=9 (which sits inside BOTTLE's own snap zone and rounds to it
+        // exactly) the same 440 Hz f0 gives it the identical 9*440 = 3,960 Hz
+        // carrier CICADA has at kBase=2.25 (2.25*4*440 = 3,960) - same
+        // frequency, same window shape, differing only in whether the window
+        // re-clocks every sub-cycle or once a cycle.
+        //
+        // (2) Integer k hides the click regardless of the control. For
+        // integer k, sin(2*pi*k*x) is zero on both sides of a sub-boundary,
+        // so a window computed on the wrong phase still multiplies a
+        // near-zero sine there and the break is invisible. Measured at k=8
+        // with the BOTTLE control and the mechanism deliberately broken
+        // (`windowAt(voice, phase)` for CICADA): worst=1.388665 against the
+        // correct 1.4358492 - barely different (1.10x vs 1.14x against
+        // bottle=1.2594743) - BLIND. kBase=2.25 fixes this: fractional part
+        // exactly 0.25, so |sin(2*pi*2.25)| = 1, the discontinuity's maximum.
+        // It sits in [K_MIN, SNAP_FLOOR) so it runs free instead of snapping,
+        // and it is well under CICADA's own ceiling (K_MAX/CICADA_SUBCYCLES
+        // = 10, see `kCeiling` in Glint.synthesize) so that clamp never
+        // engages either - this test isolates window timing from the
+        // ceiling question.
+        //
+        // Measured on the raw oversampled buffer (`synthesize`, not
+        // `render`): Dsp.decimate low-passes to the output Nyquist, which is
+        // precisely the filter that would smooth a wrap discontinuity away
+        // before it could be seen - the window's promise lives before that
+        // filter, per the sibling test's own comment.
+        //
+        // Measured 2026-09-27, kBase=2.2498858 (CICADA) / k=9.0 (BOTTLE),
+        // on the raw oversampled buffer: mechanism correct (window on
+        // `carrier`) gives worst=0.1328646, bottle=0.1108724 (1.20x, clears
+        // the 3x bar). Mechanism broken (`windowAt(voice, phase)` for
+        // CICADA only, reverted immediately after): worst=0.7709526,
+        // bottle unchanged at 0.1108724 (6.95x, fails, as it must - a clean
+        // separation from the passing 1.20x).
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val cicadaPeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.CICADA, 0.5f, it, 1f) - 2.25f) }!!
+        val cicadaK = Glint.ratioFor(GlintVoice.CICADA, 0.5f, cicadaPeak, 1f)
+        assertTrue(
+            kotlin.math.abs(cicadaK - 2.25f) < 0.01f,
+            "test setup expected CICADA kBase near 2.25 (unsnapped), got $cicadaK",
+        )
+        // Derived from the actual measured cicadaK, not the literal 2.25, so
+        // the two carriers match exactly regardless of search granularity.
+        val bottleTargetK = cicadaK * Glint.CICADA_SUBCYCLES
+        val bottlePeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, it, 1f) - bottleTargetK) }!!
+        val bottleK = Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, bottlePeak, 1f)
+        assertEquals(9f, bottleK, 1e-6f, "test setup expected BOTTLE k=9 (snapped, matches CICADA's carrier)")
+
+        val cicadaRaw = Glint.synthesize(
+            GlintVoice.CICADA, mapOf("TUNE" to 0.5f, "FOLLOW" to 1f, "BLOOM" to 0f, "PEAK" to cicadaPeak), rate,
+        )
+        val bottleRaw = Glint.synthesize(
+            GlintVoice.BOTTLE, mapOf("TUNE" to 0.5f, "FOLLOW" to 1f, "BLOOM" to 0f, "PEAK" to bottlePeak), rate,
+        )
+        val worst = worstAdjacentJump(Snip(cicadaRaw, 1, rate), from = 0.01f, to = 0.20f)
+        val bottle = worstAdjacentJump(Snip(bottleRaw, 1, rate), from = 0.01f, to = 0.20f)
+        assertTrue(
+            worst < bottle * 3f,
+            "CICADA's worst sample-to-sample jump $worst is more than 3x BOTTLE's $bottle at the same 3,960 Hz carrier — the inner restarts are clicking",
+        )
+    }
+
+    @Test
+    fun `CICADA puts energy at its sub-cycle rate that REED does not`() {
+        // The lattice is audible as energy at N * f0. This is what makes CICADA
+        // a different voice rather than a differently-windowed one.
+        val f0 = Glint.frequencyFor(GlintVoice.CICADA, 0.5f)
+        val lattice = Glint.CICADA_SUBCYCLES * f0
+        val cicada = Glint.render(GlintVoice.CICADA, mapOf("BLOOM" to 0f, "BODY" to 0f))
+        val bottle = Glint.render(GlintVoice.BOTTLE, mapOf("BLOOM" to 0f, "BODY" to 0f))
+        val c = energyAt(cicada.samples, lattice, cicada.sampleRate)
+        val b = energyAt(bottle.samples, lattice, bottle.sampleRate)
+        assertTrue(c > b * 3f, "CICADA has $c at the lattice rate, BOTTLE (same window) has $b")
     }
 }

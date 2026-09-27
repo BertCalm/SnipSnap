@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
+import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -64,6 +65,19 @@ object Glint {
 
     /** KAZOO's trapezoid holds at full for this fraction of the cycle, then ramps out. */
     const val KAZOO_FLAT = 0.7f
+
+    /**
+     * How many times CICADA's carrier re-clocks inside one cycle of `f0`.
+     * Integer by necessity: the sub-cycles must divide the cycle a whole
+     * number of times or the output stops repeating at `f0` and the pitch
+     * moves, which is the one thing this engine promises not to do.
+     *
+     * Four gives a lattice dense enough to read as its own texture at the
+     * voice's A3 root (four edges per cycle, 880 edges a second) without the
+     * sub-rate climbing so far that the burst's own harmonics fold. A value
+     * to revisit at the audition, not a derived quantity.
+     */
+    const val CICADA_SUBCYCLES = 4
 
     /**
      * The second formant's t60 as a fraction of the amp t60. Single-
@@ -261,6 +275,21 @@ object Glint {
         val kBase = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
         val bloomAmount = Dsp.lin(m.getValue("BLOOM"), 0f, BLOOM_MAX)
         val bloomT60 = BLOOM_T60
+        // CICADA's real carrier is k * CICADA_SUBCYCLES * f0, not k * f0 - the
+        // re-clocking multiplies whatever k the burst runs at. K_MAX's own doc
+        // claims folding starts only above k*f0 ~ 88 kHz, a claim only true if
+        // the thing multiplying f0 is bounded by K_MAX itself. Dividing the
+        // ceiling by the same factor the carrier is multiplied by restores
+        // that claim: CICADA's clamped carrier now tops out at K_MAX * f0,
+        // identical to every other voice's, instead of K_MAX * CICADA_SUBCYCLES * f0.
+        // Measured without this: at TUNE 0.3 PEAK 0.4 BLOOM 1, the onset carrier
+        // reached ~36.9 kHz (kBase 7 boosted 4x by BLOOM, times the sub-clock's
+        // own 4x) against a 22.05 kHz output Nyquist, and the attack that BLOOM
+        // is supposed to open collapsed instead of opening. This is a ceiling on
+        // the instantaneous, BLOOM-modulated k - bodyRatio's k2 is left alone,
+        // since it divides kBase by BODY_RATIO_DIVISOR (5.6) and so never gets
+        // near K_MAX regardless of voice.
+        val kCeiling = if (voice == GlintVoice.CICADA) K_MAX / CICADA_SUBCYCLES else K_MAX
 
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         val bodyMix = m.getValue("BODY") * BODY_MIX
@@ -281,13 +310,25 @@ object Glint {
 
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
-            val w = windowAt(voice, phase)
+            // CICADA re-clocks the carrier inside every cycle: N nested copies
+            // of the window and burst, instead of one. The window is applied
+            // to the SUB-phase, which is what makes each inner restart land on
+            // silence — window it on `phase` and it clicks N times a cycle
+            // instead of never. N is an integer, so the whole pattern still
+            // repeats at f0.
+            val carrier = if (voice == GlintVoice.CICADA) {
+                val scaled = phase * CICADA_SUBCYCLES
+                scaled - floor(scaled)
+            } else {
+                phase
+            }
+            val w = windowAt(voice, carrier)
             // kBase is snapped; BLOOM modulates continuously on top of it, so
             // the knob is musical and the sweep is smooth. k moves on the
             // envelope's timescale, far slower than one cycle, so the inner
             // sine stays effectively periodic while restarting at each wrap.
-            val k = (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, K_MAX)
-            val burst = w * sin(2.0 * PI * k * phase).toFloat()
+            val k = (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, kCeiling)
+            val burst = w * sin(2.0 * PI * k * carrier).toFloat()
             // Not because a windowed sine has no DC — it does, for any
             // window that isn't symmetric about phase 0.5: REED's ramp and
             // KAZOO's trapezoid both integrate to a nonzero mean (BOTTLE's
@@ -298,7 +339,11 @@ object Glint {
             // (a few percent of peak in the head window at BODY 1) and
             // decays with bodyEnv; see `BODY carries a small, bounded DC`
             // in GlintTest.
-            val body = bodyMix * w * sin(2.0 * PI * k2 * phase).toFloat()
+            // The body rides the same carrier, for the same reason: a second
+            // formant still running on `phase` would be non-zero at every
+            // sub-boundary and would click there even though the burst is
+            // clean.
+            val body = bodyMix * w * sin(2.0 * PI * k2 * carrier).toFloat()
             out[i] = amp.at(t) * burst + bodyEnv.at(t) * body
             phase += step
             if (phase >= 1f) phase -= 1f
