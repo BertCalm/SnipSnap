@@ -108,8 +108,8 @@ ridiculous fun. This is the additive engine.
 **PLUCK — Karplus-Strong physical modeling (1983, era-correct).** The best
 fun-per-parameter ratio in synthesis: essentially one knob (DAMP) and it
 always sounds good. Macros: DAMP · BODY (resonator colour) · PICK (exciter
-brightness) · DOUBLE (12-string detune). Kalimbas, nylon guitar, harps,
-koto. Cheap to render, impossible to ruin.
+brightness) · DOUBLE (12-string detune; the sympathetic tarab on SITAR).
+Kalimbas, nylon guitar, harps, koto. Cheap to render, impossible to ruin.
 
 **Free bonus, no engine required:** a chip-tune preset pack is VELVET
 squares rendered through CRUNCH. Maximum kitsch, zero new DSP.

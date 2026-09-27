@@ -84,26 +84,31 @@ fades as the note decays — which is why a sitar note "opens" into its buzz
 and then closes. In the loop, after the low-pass and before feedback:
 
 ```
-z = y − k · max(0, y)² / p0
+z = y − k · min(y, p0) · y / p0    (y > 0)
 ```
 
 where `y` is the low-passed loop signal, `p0` the exciter's peak (so the
 term is a fraction of the string's own level, not an absolute), and `k`
-the drive. The sign matters: the bridge is a barrier, so it can only
-*limit* the string's swing toward it, never add to it — a one-sided
-limiter loses a little energy on each positive half-cycle and generates
-the even harmonics of the buzz, and because `|z| ≤ |y|` it can never raise
-the loop's gain above one. (A term that added to `y` would be a positive
-feedback on half of every cycle and would run away at feedback near one.)
-Because the term is quadratic in `y`, it is loudest at the onset and
-vanishes on its own as the note decays; no envelope is needed. `k` is
-the voice's drive constant times a velocity map `lin(velocity, 0.3, 1.0)`:
-a soft note buzzes a little, a hard one buzzes fully. The drive constant
-starts at 0.3; the audition hears 0.15, 0.3 and 0.6 and the chips choose.
+the drive. The `min(y, p0)` clamp means `|z| ≤ |y|` holds above `p0` as
+well, not only below it. The sign matters: the bridge is a barrier, so it
+can only *limit* the string's swing toward it, never add to it — a
+one-sided limiter loses a little energy on each positive half-cycle and
+generates the even harmonics of the buzz, and because `|z| ≤ |y|` it can
+never raise the loop's gain above one. (A term that added to `y` would be
+a positive feedback on half of every cycle and would run away at feedback
+near one.) Below the clamp the term is quadratic in `y`, so it is loudest
+at the onset and vanishes on its own as the note decays; no envelope is
+needed. `k` is the voice's drive constant times a velocity map
+`lin(velocity, 0.3, 1.0)`: a soft note buzzes a little, a hard one buzzes
+fully. The drive constant starts at 0.3; the audition hears 0.15, 0.3 and
+0.6 and the chips choose.
 
 A one-sided term adds offset. A DC blocker follows it inside the loop —
-the signal minus its own 20 Hz one-pole low-pass — so the loop cannot
-accumulate the offset over hundreds of cycles.
+the signal minus its own 2 Hz one-pole low-pass — so the loop cannot
+accumulate the offset over hundreds of cycles. Its phase delay at the
+fundamental joins the tuning budget the same way the low-pass's and the
+stiffness allpass's already do, and a corner far below the lowest note
+keeps its own dispersion negligible: 0.11% at C#4's tenth partial.
 
 The nonlinearity sits in feedback, so two guards are part of the design,
 not afterthoughts: the stability test (below) and the fallback. **Fallback:**
@@ -136,13 +141,18 @@ DOUBLE is above zero, four short loops ring beside the main string:
 | 3 | 2.0 | the octave |
 | 4 | 3.0 | the octave and a fifth |
 
-Each is a Karplus-Strong loop with feedback 0.999 and a darker low-pass at
-4 kHz, **fed continuously by the main string's output** at a coupling of
-0.05, the way the bridge transmits vibration to the tarab, rather than by
-its own burst. Their sum enters the output at `0.5 · DOUBLE`, so DOUBLE 1 is
-a drone and is the ugly end on purpose. At DOUBLE 0 they are not rendered
-and cost nothing. On SITAR, DOUBLE therefore stops meaning the twelve-string
-detune it means on the other four voices; the macro's KDoc says so.
+Each is a Karplus-Strong loop with feedback 0.995 and a darker low-pass at
+4 kHz, **fed by the played string alone** at a coupling of 0.05, the way
+the bridge transmits vibration to the tarab, rather than by its own burst
+or by each other. A tarab rings long, not forever: 0.995 is a decay of
+about five seconds at C#4 and ten an octave below; at 0.999 the loops held
+the render to the end of the budget. Their sum enters the output at
+`0.5 · DOUBLE`, so DOUBLE 1 is a drone and is the ugly end on purpose. At
+DOUBLE 0 they are not rendered and cost nothing. With the tarab on, the
+note runs to the end of its DAMP budget and ends on the trim's short fade,
+rather than where the string itself stops ringing. On SITAR, DOUBLE
+therefore stops meaning the twelve-string detune it means on the other
+four voices; the macro's KDoc says so.
 
 Cost: five loops instead of one. The Phase 2 profile put PLUCK at a quarter
 of the fleet average, so this is affordable without a budget change.
@@ -158,13 +168,18 @@ tune while the upper partials stretch.
 
 | Voice | Stiffness | Why |
 |---|---|---|
-| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 2e-4) and the one that puts it 3.0% sharp (B ≈ 6e-4), both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
+| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 2e-4) and the one that puts it 3.0% sharp (B ≈ 6e-4, reads 6.5 c sharp at the root with the jawari on), both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
 | KOTO, HARP | 0, with a dispersion-on candidate in the audition | both passed a gate; they do not change unheard |
 | NYLON, BANJO | 0 | not offered |
 
 The allpass phase at the fundamental is computed from the coefficient the
 same way `filterDelay` is computed from the low-pass pole, and the
 `MIN_LOOP_SAMPLES` guard covers the combined delay.
+
+A single first-order allpass pins one partial (the tenth) and only
+approximates the stiff-string law; its delay is fixed in samples, so
+shorter loops are more inharmonic, which is the right direction for a
+fretted string.
 
 ### The gourd body
 
@@ -205,11 +220,13 @@ them rendering clean; the parent spec's by-ear pass re-authors them later.
 - `Pluck.render(voice, macros, velocity = 1f)` gains the velocity
   parameter; `synthesize` takes it too and passes the jawari drive into
   `ks`. `PluckPatch.render()` keeps calling it with the default.
-- `ks` gains three optional parameters: a stiffness coefficient (default 0,
-  no allpass), a jawari drive (default 0, no nonlinearity, no DC blocker),
-  and — for the sympathetic loops — an optional external input array read
-  sample by sample into the loop at the coupling gain. With every default,
-  `ks` produces the Phase 2 output byte for byte; the test asserts it.
+- `ks` gains two optional parameters: a stiffness coefficient (default 0,
+  no allpass) and a jawari drive (default 0, no nonlinearity, no DC
+  blocker). The sympathetic loops are a separate private
+  `sympathetic(input, hz, rate)` beside `ks`, sharing its geometry
+  derivation by copy; folding the two into one helper is a Phase 3b item
+  before KOTO and HARP reuse the pattern. With every default, `ks`
+  produces the Phase 2 output byte for byte; the test asserts it.
 - `Velocity.atVelocity` adds `VELOCITY` to the map for `PluckPatch` beside
   the PICK move it already makes. `Velocity.brightnessOverride` is
   unchanged (PICK for every PLUCK voice).
@@ -237,17 +254,26 @@ and `TuningAccuracyTest`:
   on) within five cents. All 25 at full jawari drive within a quarter tone,
   every note over five cents printed for the gate. All 25 at DOUBLE 1
   within five cents (the sympathetic loops must not pull the note).
-- **Stability.** At every DAMP tenth and full drive, the note decays under
-  its DAMP budget (the −60 dB cut lands before the ceiling for DAMP > 0)
-  and never clips.
+- **Stability.** At every DAMP tenth and full drive, at DOUBLE 0 the
+  −60 dB cut lands before the budget for DAMP ≥ 0.3, and no render exceeds
+  its budget; with the tarab on the note runs to the budget's end by
+  design. No render clips.
 - **The buzz follows velocity.** The high band's share of energy over the
   first 200 ms rises monotonically with VELOCITY at 0.3, 0.65 and 1.0.
-- **No offset.** The output's mean over the note is under 1e-4 of its peak.
-- **DOUBLE 0 is the string, byte for byte.** DOUBLE 1 raises the energy at
-  twice the note by at least 6 dB over DOUBLE 0.
+- **No offset.** The output's mean over the note is under 1e-4 of its
+  peak, at DOUBLE 0 and again at the default macros (DOUBLE 0.4, the tarab
+  on).
+- **DOUBLE 0 is the string, byte for byte.** The DOUBLE test measures the
+  drone at f0/2 and the fifth at 1.5·f0 over a 0.3–0.55 s window (not the
+  octave at 2·f0, which the old detune branch also raised); DOUBLE 1
+  raises each by at least 6 dB over DOUBLE 0.
 - **Dispersion is real.** With the stiffness candidate on, the tenth
   partial sits above ten times the fundamental by the amount the
   coefficient predicts, within a tolerance; with stiffness 0 it sits on it.
+- **The high candidate holds under the bridge.** With
+  `SITAR_STIFFNESS_HIGH` and the shipped jawari, five notes across the
+  range stay within a quarter tone, printing any that read over five cents
+  so the gate sees the pull as a number, not a comment.
 - **The defaults are the Phase 2 path.** `ks` with every new parameter at
   its default matches the Phase 2 render byte for byte on every voice.
 - **Classification.** The classification test states what `Classifier`
