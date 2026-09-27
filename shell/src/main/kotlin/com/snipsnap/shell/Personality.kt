@@ -754,6 +754,14 @@ object Copy {
     fun sirenSent(pad: String, name: String, replaced: Boolean, loop: Boolean): String =
         synthSent(pad, name, replaced) +
             if (loop) " A LOOP: THE SURFACE HOLDS IT UNDER A FINGER, PAD ◄ ► TO $pad. ITS ECHO IS THE SURFACE'S." else " ECHO IS IN THE RACK."
+
+    /**
+     * `→ SURFACE` on SYNTH: the LOOP siren landed ([synthSent]'s own line
+     * first) and the SURFACE is opening on that pad, so the toast says what
+     * to do with a finger rather than where to find the pad.
+     */
+    fun sirenToSurface(pad: String, name: String, replaced: Boolean): String =
+        synthSent(pad, name, replaced) + " THE SURFACE OPENS ON IT: HOLD, SLIDE, LET GO."
     /** The chooser's own `IllegalArgumentException`/`IllegalStateException` when the kit changed under it - same "no pad on slot N" internal text `KitBuilder.assign`/`replaceAudio`/`update` throw that [PRINT_PAD_REFUSED] already keeps out of a toast, so this keeps it out here too rather than quoting it. */
     const val SYNTH_PAD_REFUSED = "THAT PAD WON'T TAKE THE PATCH. PICK ANOTHER."
 

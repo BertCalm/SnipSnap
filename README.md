@@ -278,7 +278,8 @@ is down, because a siren is gated, not struck; its top is LOOP, one
 seamless loop of whole LFO periods with the centre pitch fitted under a
 cent so the pulse closes on whole cycles, cut at a zero crossing — the
 render the SURFACE holds under a finger, pitched by where the finger is,
-released into the surface's own echo on lift. SEND TO PAD lands a
+released into the surface's own echo on lift, and `→ SURFACE ▸` on SYNTH
+lands a LOOP and opens the surface on it in one tap. SEND TO PAD lands a
 one-shot siren with the rack's ECHO in its recipe and a LOOP dry, and
 the toast says which. Forty presets, one LOOP per voice, and
 `SynthKits.siren()` is the kit (`./gradlew :synth:generateSirenKit`).

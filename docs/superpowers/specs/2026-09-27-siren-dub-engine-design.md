@@ -344,7 +344,7 @@ harmonic. SCRAMBLE stops one step short.
 | Step | Ships |
 |---|---|
 | **S12** | `synth/Siren.kt` (`SirenVoice`, macros, the one-shot render and the LOOP render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). Then the phone: SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), the HOLD readout's LOOP step, SEND TO PAD landing a one-shot siren with the rack's ECHO in its recipe and a LOOP siren dry, and a toast for each that says which it did and, for a LOOP, that the SURFACE plays it. **Ends at an audition gate.** |
-| **S12.1** | `→ SURFACE` on SYNTH for a LOOP siren: lands it, writes `surface.json`'s pad to that slot, opens the SURFACE. One App callback, one store write. |
+| **S12.1** | **built** — `→ SURFACE ▸` on SYNTH, shown only while a SIREN's HOLD is at LOOP: the same slot chooser as SEND TO PAD, then `SurfaceStore.choosePad` points the kit's surface at the slot (keeping its corners and the rest) and App switches to the SURFACE screen, which reads the file as it opens. The toast says what to do with a finger. One App callback, one store write. |
 | **S12.2** | Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render as the keygroup's sustain loop. |
 | **S12.3** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
 
