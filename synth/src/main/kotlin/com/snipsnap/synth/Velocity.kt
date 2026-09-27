@@ -213,6 +213,7 @@ object Velocity {
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
+        is ForkPatch -> Fork.macrosFor(patch.voice)
     }
 
     /**
@@ -237,6 +238,11 @@ object Velocity {
         // PICK is proven monotonic for every PLUCK voice by PluckTest's
         // `PICK moves the centroid at every step of its travel`.
         patch is PluckPatch -> "PICK"
+        // STRIKE moves the hammer's cutoff, its own t60 and the tine's
+        // swing together - none of BRIGHTNESS_MACROS' generic names, but
+        // exactly what this function exists to find. Proven monotonic by
+        // ForkTest's `STRIKE moves the onset centroid at every step`.
+        patch is ForkPatch -> "STRIKE"
         else -> null
     }
 
