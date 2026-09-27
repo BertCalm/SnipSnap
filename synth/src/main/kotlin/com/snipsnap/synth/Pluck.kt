@@ -392,17 +392,11 @@ object Pluck {
     }
 
     /**
-     * The wrap's drive (see [ks]) times [velocityDrive]. 0.015 is the
-     * shipped default under this round's slow-envelope drive - a much
-     * smaller number than the old rail-driven mechanism's 0.3, because it
-     * now scales a fractional-sample shortening ([SITAR_WRAP_REF],
-     * [SITAR_WRAP_MAX]) rather than a per-sample y² pulldown.
+     * The jawari's drive (see [ks]) times [velocityDrive]. 0.3 is the
+     * starting point; the audition hears 0.15, 0.3 and 0.6 and the chips
+     * choose (spec, "The jawari").
      */
-    internal const val SITAR_JAWARI = 0.003f
-    /** How much the loop shortens per unit of swing (see [ks]'s KDoc on [jawari]). */
-    internal const val SITAR_WRAP_REF = 0.03f
-    /** The loop never shortens by more than this fraction of its own period. */
-    internal const val SITAR_WRAP_MAX = 0.03f
+    internal const val SITAR_JAWARI = 0.3f
 
     internal fun jawariFor(voice: PluckVoice): Float = when (voice) {
         PluckVoice.SITAR -> SITAR_JAWARI
@@ -590,13 +584,15 @@ object Pluck {
      * the coefficient falls. Its phase delay at the fundamental is
      * subtracted from the loop length so the note stays in tune.
      *
-     * [jawari] is the wrap's drive: how much the loop shortens, per
-     * [SITAR_WRAP_REF] of the string's own swing - tracked by a slow
-     * envelope follower, not sample by sample - capped at [SITAR_WRAP_MAX]
-     * of the period. A 30 ms running mean of the shortening is given back
-     * to the read position so the note's average pitch is unmoved while
-     * the within-cycle motion (which shrinks as the note decays, because
-     * the envelope driving it does) remains. Skipped entirely at 0.
+     * [jawari] is the bridge limiter's drive in [0, 1): after the low-pass,
+     * positive swings are pulled down by `jawari · y² / p0` (clamped so it
+     * never crosses zero), the way a string wrapping on a flat bridge is
+     * stopped on one side; a 2 Hz DC blocker follows because a one-sided
+     * term leaves an offset. A zero at DC nulls that offset at any corner -
+     * 2 Hz is chosen only for how fast a slow offset drains and how much
+     * lead the loop owes for it, and its own phase lead at the fundamental
+     * is budgeted into the loop length the same way the low-pass's and the
+     * stiffness allpass's are; both are skipped at 0.
      */
     internal fun ks(
         freq: Float,
@@ -673,8 +669,22 @@ object Pluck {
             -phase / w
         } else 0.0
 
-        val budgetedJawari = min(jawari, SITAR_WRAP_MAX)
-        val exact = (if (jawari > 0f) (rate / freq).toDouble() / (1.0 - budgetedJawari) else (rate / freq).toDouble()) - filterDelay - stiffDelay - 0.5
+        val dcA = (1.0 - exp(-2.0 * PI * 2.0 / rate)).toFloat()
+        // The DC blocker after the jawari is a one-pole high-pass, and a
+        // high-pass leads at the fundamental: its phase delay is negative
+        // and, like the low-pass's and the stiffness allpass's, it belongs
+        // to the loop's budget or the note reads sharp. A zero at DC nulls
+        // the offset at any corner; the corner only sets how fast a slow
+        // offset drains and how much lead the loop owes for it - 2 Hz (not
+        // 20) keeps that lead under a degree at the lowest note (C#3) and
+        // the dispersion it leaves on the upper partials is 0.11 % at the
+        // default note C#4 and 0.23 % at the root.
+        val dcDelay = if (jawari > 0f) {
+            val r = 1.0 - dcA
+            val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
+            -phase / w
+        } else 0.0
+        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -723,6 +733,13 @@ object Pluck {
         mean /= n
         for (i in 0 until n) burst[i] -= mean
 
+        // The bridge limiter scales to the string's own level: p0 is what a
+        // full swing looks like, so the same drive buzzes the same on every
+        // note and fades as the note does.
+        var p0 = 1e-6f
+        for (v in burst) if (kotlin.math.abs(v) > p0) p0 = kotlin.math.abs(v)
+        var dc = 0f
+
         // Pick position (Jaffe & Smith 1983): the burst minus a copy of
         // itself delayed by `position` of one period. The comb's notches
         // fall on every harmonic k where k*position is a whole number: the
@@ -750,52 +767,8 @@ object Pluck {
         }
 
         val loopLp = Dsp.OnePole(rate)
-        val dMax = SITAR_WRAP_MAX * n
-        // Attack and release far longer than one period (about 3.6 ms at
-        // this note) so the envelope - and the shortening it drives -
-        // changes slowly relative to the loop instead of swinging with
-        // every cycle. Two prior designs drove the shortening from the
-        // raw or DC-drained rail directly, both of which retain (or
-        // isolate) a ripple at the carrier rate; shifting a delay line's
-        // read position at the carrier's own rate is phase modulation
-        // synchronous with the loop's signal, not a static nonlinearity,
-        // and it measurably broke tuning and reversed the wrap's own
-        // velocity and drive trends. A follower this slow cannot do that:
-        // within any few periods the shortening it produces is close to
-        // constant, closer to a static fractional-delay shift than a
-        // modulator.
-        val envAttackK = (1.0 - exp(-1.0 / (0.002 * rate))).toFloat()
-        val envReleaseK = (1.0 - exp(-1.0 / (0.015 * rate))).toFloat()
-        var env = 0f
         for (i in n + 1 until out.size) {
-            val d = if (jawari == 0f) 0.5f * (out[i - n] + out[i - n - 1]) else {
-                // The envelope tracks the rail's overall swing (both
-                // directions, so it is a clean amplitude follower, not a
-                // half-wave one with its own zero-crossing ripple); the
-                // one-sidedness of the physical effect is carried by
-                // `shorten` itself, which only ever shortens the loop,
-                // never lengthens it.
-                // DIAGNOSTIC ONLY (coordinator-requested, not shipped): the
-                // envelope-driven shortening restored on top of Step A's
-                // budgeted `exact` (which now bakes the reference-level
-                // shortening into the loop length up front, the same way
-                // filterDelay/stiffDelay already are), with no giveback at
-                // all - the prior round's wrapMean tracking is gone
-                // entirely, not just skipped, since the budget itself now
-                // accounts for it and there is nothing left to give back.
-                val rectified = kotlin.math.abs(out[i - 1])
-                env += (if (rectified > env) envAttackK else envReleaseK) * (rectified - env)
-                val shorten = min(dMax, jawari * n * env / SITAR_WRAP_REF)
-                val pos = (i - n + shorten).coerceAtLeast(1f)
-                val j = floor(pos).toInt()
-                val f = pos - j
-                // j+1 <= i-1 always: pos <= i - n + dMax = i - 0.97n, and n
-                // >= MIN_LOOP_SAMPLES, so both taps of both interpolated
-                // reads stay behind the write cursor.
-                val a1 = out[j] * (1f - f) + out[j + 1] * f
-                val a0 = out[j - 1] * (1f - f) + out[j] * f
-                0.5f * (a1 + a0)
-            }
+            val d = 0.5f * (out[i - n] + out[i - n - 1])
             // First-order allpass: y[i] = a*(x[i] - y[i-1]) + x[i-1]. Order
             // matters here - it's the *tuned* sample that must feed both
             // the loop filter and the output, or the correction never
@@ -809,7 +782,12 @@ object Pluck {
                 stY1 = s
                 s
             } else tuned
-            val y = loopLp.lp(stiff, loopHz)
+            var y = loopLp.lp(stiff, loopHz)
+            if (jawari > 0f) {
+                if (y > 0f) y -= jawari * min(y, p0) * y / p0
+                dc += dcA * (y - dc)
+                y -= dc
+            }
             out[i] += fb * y
         }
         return out
