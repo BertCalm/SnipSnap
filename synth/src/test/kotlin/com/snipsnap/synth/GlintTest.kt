@@ -637,11 +637,11 @@ class GlintTest {
         // burst does (see `synthesize`'s comment on why BODY shares `carrier`
         // rather than `phase`), so its real second formant sits at
         // k2*CICADA_SUBCYCLES*f0, not k2*f0 — the same carrierMul correction
-        // `PEAK pins the formant on the named harmonic` already applies at
-        // GlintTest.kt:417. Probing the plain k2*f0 = 880 Hz location for
-        // CICADA missed the real 3,520 Hz formant: measured 17.0x there
-        // (leakage, barely over the 3x bar) against 1855x at the corrected
-        // location. Identity for every other voice.
+        // `PEAK pins the formant on the named harmonic` already applies.
+        // Probing the plain k2*f0 = 880 Hz location for CICADA missed the
+        // real 3,520 Hz formant: reviewer-measured 17.0x there (leakage,
+        // barely over the 3x bar) against 1855x at the corrected location.
+        // Identity for every other voice.
         //
         // Measured 2026-09-27 (bare -> full, energy at k2*f0*carrierMul), all
         // six voices — REED/BOTTLE/KAZOO were previously recorded 2026-09-26
