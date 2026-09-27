@@ -189,4 +189,25 @@ class TuningAccuracyTest {
             assertTrue(err <= 5.0, "SITAR semitone $semi at DOUBLE 1 with the scale tuning is $err cents off (want $want, got $measured)")
         }
     }
+
+    // TEMPORARY DIAGNOSTIC for the coordinator's fixed-shorten follow-up
+    // round only - reproduces "every Pluck semitone lands within five
+    // cents at the default body"'s own loop without stopping at the first
+    // violation, to print every SITAR note's cents error (and its sign)
+    // against the constant-shorten Pluck.kt edit. Not reverted this round
+    // per instruction; never committed.
+    @Test
+    fun `p3b wrap env diagnostic fixed shorten default body`() {
+        for (voice in PluckVoice.entries) {
+            for (semi in 0..Pluck.TUNE_SEMITONES) {
+                val macro = semi.toFloat() / Pluck.TUNE_SEMITONES
+                val snip = Pluck.render(voice, mapOf("TUNE" to macro, "DOUBLE" to 0f))
+                val want = Pluck.frequencyFor(voice, semi)
+                val measured = measuredHz(snip, want)
+                val signedCents = cents(measured, want.toDouble())
+                val err = abs(signedCents)
+                println("DIAG fixed-shorten $voice semitone $semi: $signedCents cents (want $want, got $measured) ${if (err <= 5.0) "OK" else "FAIL"}")
+            }
+        }
+    }
 }
