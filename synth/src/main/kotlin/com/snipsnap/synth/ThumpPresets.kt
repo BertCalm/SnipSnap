@@ -5,9 +5,10 @@ package com.snipsnap.synth
  *
  * The app shipped eight drum voices and zero presets: every voice had exactly
  * one hardcoded [Thump.defaults] macro map, so a beginner met TUNE/SWEEP/
- * DECAY/CLICK/DRIVE instead of a sound. Sixteen presets per voice here, four
+ * DECAY/CLICK/DRIVE instead of a sound. Twenty presets per voice here, four
  * apiece across the genres a young producer with a phone actually reaches
- * for: BOOM BAP, HOUSE, JUNGLE, DUB. Loading one sets the macro sliders, so
+ * for: BOOM BAP, HOUSE, JUNGLE, DUB - then four BOLD ones for the macros
+ * that came after (see below). Loading one sets the macro sliders, so
  * a preset is a starting point to wreck, not a locked sound.
  *
  * For most voices, the four variants within a genre are the same genre
@@ -27,6 +28,13 @@ package com.snipsnap.synth
  * the name says — not reasoned into existence from the macro math. Say
  * so here rather than let this KDoc's silence imply every table below it
  * was checked the same way; it wasn't.
+ *
+ * The last four of every voice - BOLD - came later, with the
+ * sound-design macros (BEND, HOLD, RATTLE, NOISE, CLAPS, ROOM, CLICK,
+ * DRIVE, RATIO, TONE, RING, BODY): each pushes the new knobs toward an
+ * end the first sixteen, which predate them, never reach. Reasoned from
+ * the DSP like the rest, never heard, checked only by
+ * [ThumpPresetsTest] - so they belong at the next audition too.
  *
  * Names never reference a real drum machine or model number
  * (`docs/SYNTH_ROADMAP.md`'s naming rule) — not even a near-miss; the
@@ -51,7 +59,7 @@ object ThumpPresets {
 
     fun all(): List<ThumpPatch> = ThumpVoice.entries.flatMap { forVoice(it) }
 
-    // Order within every list: BOOM BAP x4, HOUSE x4, JUNGLE x4, DUB x4.
+    // Order within every list: BOOM BAP x4, HOUSE x4, JUNGLE x4, DUB x4, BOLD x4.
 
     private val kickPresets = listOf(
         p(ThumpVoice.KICK, "DUSTY BOOM", "TUNE" to 0.34f, "SWEEP" to 0.45f, "DECAY" to 0.37f, "CLICK" to 0.32f, "DRIVE" to 0.35f),
@@ -70,6 +78,11 @@ object ThumpPresets {
         p(ThumpVoice.KICK, "STEPPER", "TUNE" to 0.17f, "SWEEP" to 0.32f, "DECAY" to 0.70f, "CLICK" to 0.15f, "DRIVE" to 0.28f),
         p(ThumpVoice.KICK, "ECHO CHAMBER", "TUNE" to 0.00f, "SWEEP" to 0.32f, "DECAY" to 0.86f, "CLICK" to 0.00f, "DRIVE" to 0.48f),
         p(ThumpVoice.KICK, "ROOTS", "TUNE" to 0.17f, "SWEEP" to 0.12f, "DECAY" to 0.86f, "CLICK" to 0.00f, "DRIVE" to 0.28f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.KICK, "LONG BOOM", "TUNE" to 0.10f, "SWEEP" to 0.55f, "DECAY" to 0.80f, "CLICK" to 0.10f, "DRIVE" to 0.30f, "BEND" to 0.15f, "HOLD" to 0.60f),
+        p(ThumpVoice.KICK, "SUB GLIDE", "TUNE" to 0.05f, "SWEEP" to 0.80f, "DECAY" to 0.70f, "CLICK" to 0.05f, "DRIVE" to 0.20f, "BEND" to 0.05f, "HOLD" to 0.40f),
+        p(ThumpVoice.KICK, "HARD KNOCK", "TUNE" to 0.45f, "SWEEP" to 0.30f, "DECAY" to 0.20f, "CLICK" to 0.70f, "DRIVE" to 0.85f, "BEND" to 0.95f),
+        p(ThumpVoice.KICK, "FUZZ SUB", "TUNE" to 0.20f, "SWEEP" to 0.50f, "DECAY" to 0.60f, "CLICK" to 0.30f, "DRIVE" to 1.00f, "BEND" to 0.40f, "HOLD" to 1.00f),
     )
 
     // Phase 1B rebuilt SNARE's body as a membrane with wires rattling
@@ -98,6 +111,11 @@ object ThumpPresets {
         p(ThumpVoice.SNARE, "FULL SWING", "TUNE" to 0.42f, "SNAP" to 0.50f, "DECAY" to 0.40f, "TONE" to 0.55f, "STRIKE" to 0.30f, "PUNCH" to 1.00f),
         p(ThumpVoice.SNARE, "CENTRE HIT", "TUNE" to 0.45f, "SNAP" to 0.45f, "DECAY" to 0.42f, "TONE" to 0.55f, "STRIKE" to 0.05f, "PUNCH" to 0.55f),
         p(ThumpVoice.SNARE, "RIM SHOT", "TUNE" to 0.45f, "SNAP" to 0.45f, "DECAY" to 0.42f, "TONE" to 0.55f, "STRIKE" to 0.85f, "PUNCH" to 0.55f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.SNARE, "CHOKED CRACK", "TUNE" to 0.38f, "SNAP" to 0.45f, "DECAY" to 0.48f, "TONE" to 0.50f, "STRIKE" to 0.28f, "PUNCH" to 0.70f, "RATTLE" to 0.00f),
+        p(ThumpVoice.SNARE, "BURNING WIRE", "TUNE" to 0.45f, "SNAP" to 0.60f, "DECAY" to 0.45f, "TONE" to 0.62f, "STRIKE" to 0.30f, "PUNCH" to 0.45f, "RATTLE" to 1.00f),
+        p(ThumpVoice.SNARE, "TRAP SNAP", "TUNE" to 0.70f, "SNAP" to 0.55f, "DECAY" to 0.25f, "TONE" to 0.75f, "STRIKE" to 0.40f, "PUNCH" to 0.80f, "RATTLE" to 0.20f),
+        p(ThumpVoice.SNARE, "LONG SIZZLE", "TUNE" to 0.35f, "SNAP" to 0.50f, "DECAY" to 0.50f, "TONE" to 0.50f, "STRIKE" to 0.30f, "PUNCH" to 0.45f, "RATTLE" to 0.80f),
     )
 
     // METAL is pinned at 0.30 on every hat preset. The classifier's
@@ -129,6 +147,11 @@ object ThumpPresets {
         p(ThumpVoice.HAT_CLOSED, "ROOTS TAP", "TUNE" to 0.95f, "DECAY" to 0.95f, "METAL" to 0.3f),
         p(ThumpVoice.HAT_CLOSED, "SKANK TICK", "TUNE" to 0.05f, "DECAY" to 0.95f, "METAL" to 0.3f),
         p(ThumpVoice.HAT_CLOSED, "STEPPA TAP", "TUNE" to 0.50f, "DECAY" to 0.95f, "METAL" to 0.3f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.HAT_CLOSED, "TRASH TICK", "TUNE" to 0.50f, "DECAY" to 0.35f, "METAL" to 0.3f, "NOISE" to 0.60f),
+        p(ThumpVoice.HAT_CLOSED, "SAND TAP", "TUNE" to 0.30f, "DECAY" to 0.60f, "METAL" to 0.3f, "NOISE" to 1.00f),
+        p(ThumpVoice.HAT_CLOSED, "GRIT TICK", "TUNE" to 0.95f, "DECAY" to 0.20f, "METAL" to 0.3f, "PUNCH" to 0.80f, "NOISE" to 0.35f),
+        p(ThumpVoice.HAT_CLOSED, "STATIC TAP", "TUNE" to 0.05f, "DECAY" to 0.85f, "METAL" to 0.3f, "NOISE" to 0.80f),
     )
 
     private val hatOpenPresets = listOf(
@@ -148,6 +171,11 @@ object ThumpPresets {
         p(ThumpVoice.HAT_OPEN, "DISCO WASH", "TUNE" to 0.05f, "DECAY" to 0.97f, "METAL" to 0.3f),
         p(ThumpVoice.HAT_OPEN, "FOUR SPLASH", "TUNE" to 0.50f, "DECAY" to 0.97f, "METAL" to 0.3f),
         p(ThumpVoice.HAT_OPEN, "PEAK WASH", "TUNE" to 0.70f, "DECAY" to 0.97f, "METAL" to 0.3f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.HAT_OPEN, "WHITE WASH", "TUNE" to 0.50f, "DECAY" to 0.97f, "METAL" to 0.3f, "NOISE" to 1.00f),
+        p(ThumpVoice.HAT_OPEN, "TRASH SPLASH", "TUNE" to 0.25f, "DECAY" to 0.87f, "METAL" to 0.3f, "NOISE" to 0.60f),
+        p(ThumpVoice.HAT_OPEN, "SHAKE HISS", "TUNE" to 0.70f, "DECAY" to 0.67f, "METAL" to 0.3f, "NOISE" to 0.80f),
+        p(ThumpVoice.HAT_OPEN, "GRIT WASH", "TUNE" to 0.05f, "DECAY" to 0.42f, "METAL" to 0.3f, "NOISE" to 0.40f),
     )
 
     private val clapPresets = listOf(
@@ -167,13 +195,21 @@ object ThumpPresets {
         p(ThumpVoice.CLAP, "ROOTS CLAP", "SPREAD" to 0.39f, "DECAY" to 0.84f, "TONE" to 0.01f),
         p(ThumpVoice.CLAP, "SKANK CLAP", "SPREAD" to 0.11f, "DECAY" to 0.84f, "TONE" to 0.29f),
         p(ThumpVoice.CLAP, "ECHO CLAP", "SPREAD" to 0.39f, "DECAY" to 0.60f, "TONE" to 0.29f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.CLAP, "TIGHT FLAM", "SPREAD" to 0.30f, "DECAY" to 0.30f, "TONE" to 0.60f, "CLAPS" to 0.00f, "ROOM" to 0.15f),
+        p(ThumpVoice.CLAP, "CROWD CLAP", "SPREAD" to 0.80f, "DECAY" to 0.55f, "TONE" to 0.50f, "CLAPS" to 1.00f, "ROOM" to 0.70f),
+        p(ThumpVoice.CLAP, "HALL CLAP", "SPREAD" to 0.50f, "DECAY" to 0.80f, "TONE" to 0.35f, "CLAPS" to 0.70f, "ROOM" to 1.00f),
+        p(ThumpVoice.CLAP, "DRY SLAP", "SPREAD" to 0.20f, "DECAY" to 0.20f, "TONE" to 0.85f, "CLAPS" to 0.35f, "ROOM" to 0.05f),
     )
 
     // TOM's TUNE is held to [0.46, 0.64] on every preset: measured (see
     // ThumpPresetsTest's generation notes) to be the only window that's
     // clean of both boundaries at once — below it a low, slow-swept tom
     // reads as a KICK, above it a bright one reads as PERC. SWEEP and
-    // DECAY carry the genre character instead.
+    // DECAY carry the genre character instead. BEND's slow end holds the
+    // pitch up long enough to read as PERC anywhere but that window's low
+    // edge, so the two slow-BEND BOLD presets sit at 0.46 - both points
+    // measured TOM, not reasoned.
     private val tomPresets = listOf(
         p(ThumpVoice.TOM, "DUSTY TOM", "TUNE" to 0.53f, "SWEEP" to 0.39f, "DECAY" to 0.31f),
         p(ThumpVoice.TOM, "LOFI TOM", "TUNE" to 0.47f, "SWEEP" to 0.39f, "DECAY" to 0.59f),
@@ -191,6 +227,11 @@ object ThumpPresets {
         p(ThumpVoice.TOM, "ROOTS TOM", "TUNE" to 0.52f, "SWEEP" to 0.29f, "DECAY" to 0.58f),
         p(ThumpVoice.TOM, "SKANK TOM", "TUNE" to 0.46f, "SWEEP" to 0.29f, "DECAY" to 0.86f),
         p(ThumpVoice.TOM, "ECHO TOM", "TUNE" to 0.52f, "SWEEP" to 0.01f, "DECAY" to 0.86f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.TOM, "LASER TOM", "TUNE" to 0.46f, "SWEEP" to 0.95f, "DECAY" to 0.50f, "BEND" to 0.00f, "DRIVE" to 0.30f),
+        p(ThumpVoice.TOM, "STICK TOM", "TUNE" to 0.60f, "SWEEP" to 0.40f, "DECAY" to 0.35f, "BEND" to 0.80f, "CLICK" to 0.70f),
+        p(ThumpVoice.TOM, "FUZZ TOM", "TUNE" to 0.50f, "SWEEP" to 0.50f, "DECAY" to 0.55f, "CLICK" to 0.30f, "DRIVE" to 0.90f),
+        p(ThumpVoice.TOM, "SPACE PEW", "TUNE" to 0.46f, "SWEEP" to 0.70f, "DECAY" to 0.70f, "BEND" to 0.15f, "DRIVE" to 0.30f),
     )
 
     private val cowbellPresets = listOf(
@@ -210,6 +251,11 @@ object ThumpPresets {
         p(ThumpVoice.COWBELL, "ROOTS BELL", "TUNE" to 0.42f, "DECAY" to 0.87f),
         p(ThumpVoice.COWBELL, "SKANK BELL", "TUNE" to 0.22f, "DECAY" to 0.87f),
         p(ThumpVoice.COWBELL, "ECHO BELL", "TUNE" to 0.42f, "DECAY" to 0.69f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.COWBELL, "SOUR BELL", "TUNE" to 0.40f, "DECAY" to 0.50f, "RATIO" to 0.05f, "TONE" to 0.40f, "RING" to 0.30f),
+        p(ThumpVoice.COWBELL, "AGOGO HIGH", "TUNE" to 0.70f, "DECAY" to 0.40f, "RATIO" to 0.90f, "TONE" to 0.60f, "RING" to 0.70f),
+        p(ThumpVoice.COWBELL, "SINGING BELL", "TUNE" to 0.50f, "DECAY" to 0.80f, "RATIO" to 0.60f, "TONE" to 0.55f, "RING" to 1.00f),
+        p(ThumpVoice.COWBELL, "CLANG", "TUNE" to 0.30f, "DECAY" to 0.35f, "RATIO" to 0.75f, "TONE" to 1.00f, "RING" to 0.40f),
     )
 
     private val rimPresets = listOf(
@@ -229,5 +275,10 @@ object ThumpPresets {
         p(ThumpVoice.RIM, "ROOTS RIM", "TUNE" to 0.45f, "DECAY" to 0.73f),
         p(ThumpVoice.RIM, "SKANK RIM", "TUNE" to 0.25f, "DECAY" to 0.73f),
         p(ThumpVoice.RIM, "ECHO RIM", "TUNE" to 0.45f, "DECAY" to 0.57f),
+        // BOLD x4: the sound-design macros, pushed (see the KDoc).
+        p(ThumpVoice.RIM, "CLAVE", "TUNE" to 0.45f, "DECAY" to 0.70f, "RING" to 1.00f),
+        p(ThumpVoice.RIM, "WOODBLOCK", "TUNE" to 0.20f, "DECAY" to 0.50f, "RING" to 0.85f),
+        p(ThumpVoice.RIM, "RIMSHOT", "TUNE" to 0.50f, "DECAY" to 0.50f, "PUNCH" to 0.70f, "RING" to 0.40f, "BODY" to 0.60f),
+        p(ThumpVoice.RIM, "FAT CRACK", "TUNE" to 0.30f, "DECAY" to 0.80f, "RING" to 0.60f, "BODY" to 1.00f),
     )
 }

@@ -62,6 +62,47 @@ range. First-generation voices:
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
 
+Every voice has since grown PUNCH (U3), and SNARE a membrane body with
+STRIKE and WIDTH (Phase 1B). **Sound-design round (shipped):** each voice
+then opened up the constants it used to hardcode, as macros whose default
+is the old constant exactly, so no preset that predates them moved:
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| Kick | BEND · HOLD | pitch-drop speed (long dive ↔ instant thud); a full-level hold before DECAY, the sustained boom |
+| Snare | RATTLE | wires choked with the head ↔ sizzling long after it |
+| Hats | NOISE | white noise under the square cluster, the washy side |
+| Clap | CLAPS · ROOM | 3–6 impacts; tail level, dry slaps ↔ a hall |
+| Tom | BEND · CLICK · DRIVE | synth-tom "pew" ↔ tight knock; a stick attack; saturation |
+| Cowbell | RATIO · TONE · RING | the pair's interval (sour ↔ agogo-like); filter centre; filter resonance |
+| Rim | RING · BODY | dry tick ↔ pitched clave; a drum head under the rim (a rimshot) |
+
+KICK and SNARE reach eight macros - past the seven TIDE's notes below
+treat as the ceiling, deliberately: the owner chose range over the cap for
+this round. The new ones stay off DE-SAMPLE's grid (each searched macro
+would triple its voice's points), and every voice gained four BOLD
+presets that push them.
+
+**SKIN got the same round**, in the same shape (defaults exact, off
+DE-SAMPLE's grid, four BOLD presets per voice), with macros that suit a
+modal engine rather than an oscillator one:
+
+| Voice | Added | What it opens up |
+|---|---|---|
+| Kick | CLICK · DROP | the beater, felt ↔ hard plastic; the head's pitch dip when struck hard (tension modulation, every mode at once) |
+| Snare | RATTLE · SIZZLE | wire ring against the head's; the wires' highpass, level-matched so it moves shape, not loudness |
+| Hats | RING | the bank's resonance, a trashy band ↔ ringing metal (default 0.8: the travel is below today's sound, not above; the trashy end stops where closed hats would start reading as SNARE) |
+| Tom | DROP · CLICK | the classic tom bend; a stick on the head |
+| Ride | SIZZLE | rivets: a bright buzz outlasting the wash |
+| Shaker | SWELL · GRAIN | a thrown "shh" attack; separate beads instead of hiss |
+| Stick | BODY · CLICK | a shell under the stick; a wood crack |
+
+Ride BELL (clear tones from the cup) was built and dropped: any bell above
+~10% of the wash's peak classifies as SNARE, and one quiet enough to pass
+was all but inaudible. SIZZLE took its place because it pushes the
+centroid away from that line instead of across it. `Dsp.around` - the
+exact-default map both engines use - moved out of THUMP for SKIN to share.
+
 Presets ship, knobs refine — MVP is preset + 3-5 macros per voice, never a
 modular patchbay. A "SYNTH KIT" action renders a whole 16-pad kit from one
 style preset (the demo kit becomes THUMP's factory default).
@@ -209,6 +250,7 @@ What follows from it:
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
 | S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst so a note fades to glass) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. | S1 + U5 + U6 |
+| S12 | **built, awaiting the audition gate** — SIREN, the dub siren (WAIL/TRILL/LASER/BIRD, a voice being the LFO's shape: a PolyBLEP square whose pitch the LFO moves in the log domain, phase-continuous, through a one-pole and a drive that GRIT opens together; TUNE snapped, RATE 0.25–25 Hz, DEPTH to two octaves each way, SWEEP the dive or climb into the note, HOLD the gated length whose top is LOOP — whole LFO periods, the pitch fitted so the pulse closes on whole cycles, cut at a zero crossing, for the SURFACE to hold under a finger; forty presets with one LOOP per voice; SEND TO PAD bakes the rack's ECHO into a one-shot's recipe and lands a LOOP dry) — design and as-built notes in `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md` | S1 + U5 + U6 + the SURFACE |
 | S11 | **Rounds 1-2 built, round 3 under way** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT voice (overtone singing, with GROWL and YODEL) built, SWARM and WRAITH (with STUTTER and ALIEN) to follow — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
