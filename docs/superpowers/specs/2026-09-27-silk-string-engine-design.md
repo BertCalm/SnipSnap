@@ -116,6 +116,27 @@ sample (`(1 − a)/(1 + a)` at DC), so a strong STIFF on a high note eats
 the loop — `require(exact ≥ MIN_LOOP_SAMPLES)` stays, and STIFF's top is
 set so the voice's highest note at STIFF 1 clears it (tested).
 
+Research §Guzheng confirms both the sign and the budget from two
+author-lineage implementations read directly (Van Duyne's CLM piano, whose
+stiffness table runs −0.92 … −0.04 across the stiff range; J. O. Smith's
+Faust port of Rauhala–Välimäki, whose `-Df0*M` term is this budget's
+`dispersionDelay`). It adds two findings that change the design:
+
+- **A fixed `a` barely moves a low note.** At f0 = 147 Hz, `a = −0.5` over
+  four sections stretches the 12th partial by about 2 cents. So STIFF is
+  mapped onto an **inharmonicity coefficient `B`** (`fk = k·f0·√(1+B·k²)`)
+  and `a` is derived per note, rather than STIFF setting `a` directly.
+- **The closed-form B→a design flips sign at the top.** For high, weakly
+  stiff notes it yields `D < 1`, hence `a > 0` — flat partials, the wrong
+  way (D6 at `B = 1e-4`: −11 cents at the 10th partial). Rule: **if
+  `D ≤ 1`, bypass the cascade.** Where the sign is right the fit still
+  overshoots the target by 13–20 % at `B = 1e-4`, so the STIFF test
+  measures the stretch rather than trusting the map.
+
+No guzheng `B` could be read. STIFF's range is set by an audition sweep
+over `B ∈ {0, 1e-5, 3e-5, 1e-4, beyond}` against a recording, and whatever
+passes is "shape, not measurement".
+
 Collision is not in the budget: it is inactive at rest and, when it bites,
 it *shortens* the effective loop slightly — which is audible on a real
 sitar and shamisen as the attack reading a hair sharp. That is kept.
@@ -220,8 +241,9 @@ range, an allpass count) are engineering and are set by the audition.
 ### GUZHENG — stiffness and the press
 
 - **Loop:** one string per note, bright, long ring (DAMP default low).
-- **Dispersion:** **STIFF** sets the allpass coefficient (`a` from 0 to a
-  negative bound found by the budget test) with `M = 4` stages. 0 is a
+- **Dispersion:** **STIFF** sets the inharmonicity `B` (see "The tuning
+  budget, extended"), from which each note's allpass coefficient is derived
+  for `M = 4` stages, bypassed where the design would flip sign. 0 is a
   harmonic string; 1 is bell-like, past any real guzheng — the ugly end is
   kept reachable (audition-gate rule).
 - **Press:** **PRESS** is the left hand pushing down behind the bridge: the
@@ -256,6 +278,19 @@ range, an allpass count) are engineering and are set by the audition.
   it follows the string's amplitude, as the jawari outline in PLUCK's spec
   already reasons. Loss on contact is fixed; the buzz must never add energy
   (tested).
+- **What the one paper read says** (van Walstijn, Bridges & Mehes, DAFx-16
+  tanpura model — method, not shamisen values): the buzz's "precursor"
+  **disappears when the string has no stiffness**, so the SHAMISEN loop
+  always carries a small `Dispersion`, whatever STIFF would be; the note
+  audibly *grows* in brightness over its first few hundred milliseconds,
+  which is the test that a sawari works (a static bright EQ cannot do it);
+  and 2× oversampling suffices, which U6's 4× already exceeds. The
+  obstacle should be near-rigid — a soft clamp reads as mush.
+- **Sympathetic sawari (later):** sawari acts on the open first string only,
+  but stopped notes on the other strings buzz by resonance with it. A
+  second, always-open loop carrying the obstacle, fed a little of the
+  played string, reproduces that. Not in Phase 3's first cut; named so the
+  audition can ask for it.
 - **Slap:** **SLAP** is the bachi hitting the skin with the string: a short
   noise burst through a small skin `Modes` table, mixed in parallel. 0 =
   string only.
