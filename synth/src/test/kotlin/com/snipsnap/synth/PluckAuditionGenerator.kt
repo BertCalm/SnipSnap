@@ -140,7 +140,7 @@ object PluckAuditionGenerator {
         // the two notes at the ends, and KOTO/HARP with the low stiffness on.
         val sitarDir = File(root, PluckVoice.SITAR.name)
         fun writeSitar(name: String, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null) {
-            WavWriter.write(File(sitarDir, "$name.wav"), level(Pluck.renderWith(PluckVoice.SITAR, macros, velocity, stiffness, jawari)), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(sitarDir, "$name.wav"), AuditionLevel.level(Pluck.renderWith(PluckVoice.SITAR, macros, velocity, stiffness, jawari)), WavWriter.BitDepth.PCM_16)
             count++
         }
         writeSitar("p3a_default", emptyMap())
@@ -149,7 +149,7 @@ object PluckAuditionGenerator {
         // The shipped soft note - PICK darkens and the jawari backs off
         // together - where p3a_jawari_15 is the drive alone.
         val soft = PluckPatch("DEFAULT", PluckVoice.SITAR, Pluck.defaults(PluckVoice.SITAR))
-        WavWriter.write(File(sitarDir, "p3a_soft.wav"), level(Velocity.atVelocity(soft, 0.3f)), WavWriter.BitDepth.PCM_16)
+        WavWriter.write(File(sitarDir, "p3a_soft.wav"), AuditionLevel.level(Velocity.atVelocity(soft, 0.3f)), WavWriter.BitDepth.PCM_16)
         count++
         writeSitar("p3a_symp_0", mapOf("DOUBLE" to 0f))
         writeSitar("p3a_symp_1", mapOf("DOUBLE" to 1f))
@@ -164,8 +164,8 @@ object PluckAuditionGenerator {
         writeSitar("p3a_body_35_root", mapOf("TUNE" to 0f, "BODY" to 0.35f))
         for (voice in listOf(PluckVoice.KOTO, PluckVoice.HARP)) {
             val dir = File(root, voice.name)
-            WavWriter.write(File(dir, "p3a_stiff_off.wav"), level(Pluck.renderWith(voice, emptyMap())), WavWriter.BitDepth.PCM_16)
-            WavWriter.write(File(dir, "p3a_stiff_on.wav"), level(Pluck.renderWith(voice, emptyMap(), stiffness = Pluck.SITAR_STIFFNESS_LOW)), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(dir, "p3a_stiff_off.wav"), AuditionLevel.level(Pluck.renderWith(voice, emptyMap())), WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(dir, "p3a_stiff_on.wav"), AuditionLevel.level(Pluck.renderWith(voice, emptyMap(), stiffness = Pluck.SITAR_STIFFNESS_LOW)), WavWriter.BitDepth.PCM_16)
             count += 2
         }
 
