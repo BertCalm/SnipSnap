@@ -6,8 +6,9 @@ import kotlin.test.assertTrue
 
 /**
  * U1 of `docs/SYNTH_UPGRADE.md`, VOX's turn: twelve presets per voice
- * (thirty-six total). No classifier "identity" check — every VOX voice is
- * statically TONAL, not judged from its render — so this covers the rest
+ * (sixty total). No classifier "identity" check — every VOX voice is
+ * filed statically (the singers TONAL, BEATBOX by its HIT), not judged
+ * from its render — so this covers the rest
  * of the playability contract: a real, clean sound; a faithful JSON
  * round-trip; and listbox-legal names. (No spread check: good presets
  * cluster in the narrow regions of macro space that actually sound
@@ -23,7 +24,9 @@ class VoxPresetsTest {
                 assertTrue(snip.frameCount > 0, "${preset.name} rendered nothing")
                 assertTrue(snip.samples.all { it.isFinite() }, "${preset.name} produced non-finite samples")
                 assertTrue(snip.samples.all { it in -1f..1f }, "${preset.name} clipped")
-                assertTrue(snip.peak() > 0.5f, "${preset.name} is too quiet: ${snip.peak()}")
+                // Levelled by loudness, like TIDE's: THROAT's whistle meets the target under a low peak; BEATBOX is peak-levelled to 0.95.
+                val loud = com.snipsnap.audio.Loudness.of(snip)
+                assertTrue(loud >= Dsp.MELODIC_LOUDNESS_TARGET * 0.9f || snip.peak() > 0.9f, "${preset.name} is too quiet: loudness $loud, peak ${snip.peak()}")
             }
         }
     }

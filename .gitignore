@@ -32,6 +32,20 @@ design/*/*.html
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
 # and published as the listening artifact; never committed.
 testkit/pluck-audition/
+
+# The GLINT audition clips and page, rendered by :synth:generateGlintAudition
+# and published as the listening artifact; never committed.
+testkit/glint-audition/
+
+# The GLINT D1 depth-pass audition clips and page, rendered by
+# :synth:generateGlintD1Audition; never committed. The clips land under
+# clips/ and the page is copied in as index.html — this pattern still
+# covers both since it ignores the whole directory.
+testkit/glint-d1-audition/
+
 # The TINES audition phrases and page, rendered by :synth:generateTinesAudition
 # and published as the listening artifact; never committed.
 testkit/tines-audition/
+# The SIREN audition clips, manifest and page, rendered by :synth:generateSirenAudition
+# and published as the listening artifact; never committed.
+testkit/siren-audition/

@@ -262,10 +262,10 @@ What follows from it:
 | S8.1 | **shipped** — RESIN, held: a RESIN patch as a nine-zone keys instrument that sounds while a key is held (ATTACK/RELEASE; loops of whole sub-octave periods with the detuned square snapped to one beat per loop and the pitch fitted to whole frames; CREAM capped at the self-oscillation threshold), from SYNTH's `MAKE INSTRUMENT ▸` or `snipsnap synth RESIN <VOICE> --instrument` — design in `docs/superpowers/specs/2026-09-25-resin-held-pad-design.md` | S5 + S8 |
 | S8.2 | **shipped** — RESIN, droning: a RESIN patch as a loop-grid track (`DroneBlock`, a recipe rendered at bake time) that breathes through the ladder (MOTION, BREATHS 1/2/4) and spans the fewest intervals that keep its note within 3 cents, every oscillator and breath whole cycles per loop so the wrap is exact; re-sliced on every tempo change, and never rendered on the engine thread; from SYNTH's `DRONE TO LOOP ▸` or `snipsnap synth RESIN <VOICE> --drone` — design in `docs/superpowers/specs/2026-09-25-resin-drone-design.md` | S8.1 + loop grid |
 | S9 | **built, awaiting the audition gate** — TIDE, the West Coast engine (BONGO/DRIP/GONG/FLARE: a phase-modulated sine through a triangle-core wavefolder into a note-keyed low-pass gate whose release slows as it falls; FOLD/WARP/GLOW/DECAY/WANDER, RATIO on GONG and FLARE, DECAY holding GONG and FLARE open; WANDER seeded from the recipe and a take index; eighth-order band limit before decimation; forty presets) — spec and as-built notes under S9 below | S1 + U5 + U6 |
-| S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst so a note fades to glass) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. | S1 + U5 + U6 |
+| S10 | **Phase 1 shipped** — GLINT, the phase-distortion engine (REED/BOTTLE/KAZOO: a sine burst at `k`× the fundamental windowed to zero by each cycle's end, so the formant sweeps while the pitch does not move; TUNE/PEAK/FOLLOW/BODY/BLOOM/DECAY, FOLLOW morphing the peak between absolute Hz and note-tracking over `Dsp.keyTrack`, PEAK snapping to integer harmonics up to k=12, the body decaying faster than the burst) — design in `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`. TRACE (the window taken from your own material) and the preset roster are Phases 2 and 3, gated on the audition. **D1 shipped** — BODY is a real second formant at `k/5.6`, clamped to `K_MIN` (2) below `kBase ≈ 11.2` (PEAK ≈0.575 at the reference note) — so at the shipped default (PEAK 0.45, kBase 8) the body pins to 2×f0, a 4× interval rather than 5.6× — on its own single envelope (the old mean-removed window copy was the same harmonic series the burst already carried, and measured inaudible), and it rides its own envelope at 0.8× the burst's — though the glass tail that ratio was meant to buy only measures on two of the three voices: REED and KAZOO lose body share from head to tail (2.31→1.25, 5.72→2.13) while BOTTLE gains it (28.5→29.4) and rings rather than burning off, and which of those a player wants is a question for the audition; BLOOM's depth is free of its rate, fixed at a 0.45 s sweep; and PEAK's harmonic snap stays in the render path but now floors at `k ≥ 3` — between `K_MIN = 2` and 3 there is only one integer, so snapping flattened both velocity layers onto it, and below the floor the ratio now runs free instead. Depth design in `docs/superpowers/specs/2026-09-26-glint-depth-design.md`; CICADA/RATCHET/PLATE are D2 and the preset roster is D3, both gated on the D1 audition. | S1 + U5 + U6 |
 | S12 | **built, awaiting the audition gate** — SIREN, the dub siren (WAIL/TRILL/LASER/BIRD, a voice being the LFO's shape: a PolyBLEP square whose pitch the LFO moves in the log domain, phase-continuous, through a one-pole and a drive that GRIT opens together; TUNE snapped, RATE 0.25–25 Hz, DEPTH to two octaves each way, SWEEP the dive or climb into the note, HOLD the gated length whose top is LOOP — whole LFO periods, the pitch fitted so the pulse closes on whole cycles, cut at a zero crossing, for the SURFACE to hold under a finger; forty presets with one LOOP per voice; SEND TO PAD bakes the rack's ECHO into a one-shot's recipe and lands a LOOP dry) — design and as-built notes in `docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md` | S1 + U5 + U6 + the SURFACE |
-| S11 | **Rounds 1-2 built** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3 (THROAT, SWARM, WRAITH; GROWL, STUTTER, ALIEN, YODEL) to follow — under S11 below | S3.7 + U6 |
-| S13 | **built, awaiting the audition gate** — PLUCK Phase 3a: SITAR, the fifth string — jawari limiter in the loop, four sympathetic loops under DOUBLE, per-voice stiffness allpass; a labelled shape body to audition, a sourced one the day a source opens | S3.5 |
+| S11 | **Rounds 1-2 built, round 3 under way** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL) and WRAITH (sine-wave speech, with ALIEN and STUTTER) built, SWARM to follow — under S11 below | S3.7 + U6 |
+| S13 | **built, awaiting the audition gate** — PLUCK Phase 3a: SITAR, the fifth string — the jawari in the loop, four sympathetic loops under DOUBLE, per-voice stiffness allpass; a labelled shape body to audition, a sourced one the day a source opens | S3.5 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1533,3 +1533,93 @@ open) and RIM.
   HAT_CLOSED, HAT_OPEN, PERC. `SynthScreen` passes the knobs through
   when it sends to a pad; the singing voices stay TONAL.
 - Twelve presets: three kicks, four snares, four hats, a rim.
+
+### Round 3, THROAT as built — 2026-09-27 ("Weird", first voice)
+
+**Where the behaviours live.** The singers are at the seven-knob budget
+(TUNE, VOWEL, BREATH, DECAY, SIZE, GLIDE, ONSET), so none of the four
+behaviours fits on them. Asked, the pick was to spread them across the
+three new voices as their own knobs and leave CHOIR, ROBOT and GHOST as
+they are: THROAT takes GROWL and YODEL; SWARM (STUTTER) and WRAITH
+(ALIEN, STUTTER) follow. THROAT was auditioned first.
+
+**THROAT** (`VoxThroat`): TUNE, WHISTLE, MELODY, DRONE, DECAY, GROWL,
+YODEL. A low drone (A1 to A3) through a glottal pulse, and above it a
+whistle: one harmonic picked out by a pair of 25 Hz resonances in
+series, the way a singer merges two formants into one sharp peak.
+
+- **WHISTLE** snaps across the 5th to 13th harmonic; the whistled one
+  stands 29-47 dB over its neighbours (a sung one is roughly 20-40).
+- **MELODY** walks the whistle up to six harmonics and home; between
+  points the resonance glides and the harmonics pop out one by one, the
+  sound of the style. At 0 it holds.
+- **DRONE** brings up the body: the energy under 600 Hz goes from -26 to
+  -8 dB of the whole.
+- **GROWL**: every other pulse damped, with rasp shaped by the pulse, as
+  the false vocal folds flap at half the pitch. The half harmonics rise
+  from -74 dB to within 3 dB of the note.
+- **YODEL** flips chest to head and back, up a sixth then an octave,
+  long-short like a lilt, with a catch in the voice at each break.
+
+What the audition changed:
+
+- **The whistle's width is fixed.** Offered narrow, medium and wide
+  (15, 25, 45 Hz): "I can't tell the difference". Measured, the three
+  sat 1.2-1.7 apart on the difference measure, inside its noise floor.
+  Medium, and no knob.
+- **The yodel was rebuilt.** The first "is strange and doesn't seem
+  right": the whistle stayed where it was when the voice jumped, ringing
+  between the new note's harmonics, and the head voice was a bare sine
+  on no vowel. Now the whistle steps aside while the voice is up, the
+  vowel follows the register ("oh" low, "ee" high), the head voice is
+  the same pulse softened and breathed, with vibrato on a held note, and
+  the high notes make a tune. Heard: "quirky, but interesting", kept.
+- **GROWL stayed as first heard.** A deeper one (damping 0.9, rasp 0.7
+  against 0.8, 0.35) measured 1.1 from it, which nobody would hear.
+- **No SIZE.** THROAT wanted eight knobs; SIZE went, as the whistle and
+  DRONE already set the colour.
+
+Filed TONAL like the other singers (short settings read PERC, long ones
+LOOP). The "too quiet" checks for VOX now read loudness, as TIDE's do:
+levelled to the same loudness, a whistle's steady tone peaks at
+0.31-0.5, where the old peak > 0.5 rule would have called it silent.
+Twelve presets: drones and whistled melodies, three hits (GROWL STAB,
+WHISTLE BLIP, RASP HIT), two yodels and a pad.
+
+### Round 3, WRAITH as built — 2026-09-27 ("Weird", second voice)
+
+**WRAITH** (`VoxWraith`): TUNE, WORD, DECAY, TUNED, ALIEN, STUTTER,
+BREATH. Sine-wave speech: no voice at all, three pure tones gliding
+along the paths a speaker's first three formants take through a word.
+The ear hears whistling until it catches the word; the audition heard
+the words as "slightly abstract and left to interpretation, but I think
+that is interesting and good", so they stay that way, not pushed toward
+plain speech.
+
+- **WORD** snaps across six words (why, you, no, hello, wow, yeah),
+  each a path of F1-F3 and openness through its sounds. Slowed, why's
+  second tone sits at 540-750 Hz through the w and the ah and lifts to
+  2200 for the ee.
+- **DECAY** is how long the word takes, about `Vox.lengthFor`: 0.3 s, a
+  hit, to 3 s, the word slowed nearly six times into a pad.
+- **TUNED** crossfades (equal power) the gliding tones with the same
+  tones stepping onto the harmonics of TUNE's note. Asked whether to
+  glide or step, the pick was a knob: 0 is ghostly speech, 1 sits in a
+  key (every tone measured within 0.8% of a harmonic), between plays
+  both. TUNE moves the word and the key note together.
+- **ALIEN** moves the tones further than a mouth can (the loudest tone
+  travels 2400 Hz over why, against 450 without), pushes F1 up and F2
+  down across each other, and gives each a twin a few Hz off, beating.
+- **STUTTER** grabs the word's opening up to four times first ("wh-wh-
+  why"); one to five bursts, measured exactly.
+- **BREATH** turns the tones to whispered noise bands (flatness 0.0001
+  to 0.19).
+
+Every difference in the audition measured 21-43 on the difference
+measure, well clear of its 1-4.5 noise floor: no "can't tell the
+difference" this time. Pure tones have nothing to fold, so WRAITH
+renders at the output rate, not the 4x the buzzing throats need (the
+longest note renders in about 50 ms); the dispatch test says so and a
+test of its own holds it. Filed TONAL (PERC when short, LOOP when
+long). Twelve presets across the six words, as hits, chops in key and
+slowed pads.

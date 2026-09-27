@@ -86,19 +86,6 @@ class GlintTest {
     }
 
     @Test
-    fun `declared window means match numeric integration`() {
-        // BODY subtracts these to kill DC. A wrong constant is a DC offset
-        // that only shows up after normalization, so pin them here.
-        for (voice in GlintVoice.entries) {
-            var sum = 0.0
-            val n = 100_000
-            for (i in 0 until n) sum += Glint.windowAt(voice, i.toFloat() / n)
-            val measured = (sum / n).toFloat()
-            assertEquals(measured, Glint.windowMean(voice), 1e-3f, "$voice window mean")
-        }
-    }
-
-    @Test
     fun `TUNE snaps to semitones and actually tunes`() {
         val distinct = HashSet<Float>()
         for (i in 0..100) distinct.add(Glint.frequencyFor(GlintVoice.REED, i / 100f))
@@ -191,24 +178,64 @@ class GlintTest {
         // renders by ~9% (REED at PEAK 0.6 reads 239.67 Hz against 220), a
         // detector artifact that a periodicity measure sidesteps entirely.
         //
-        // Measured 2026-09-26 across 3 voices x 4 PEAK settings x both BLOOM
-        // extremes: worst case 0.99188 at BLOOM 0, dropping to 0.98643 at
-        // BLOOM 1 (BOTTLE, PEAK 0.9) - still comfortably above the bar. The
-        // period is fixed by the window's wrap independent of k, so BLOOM's
-        // time-varying k only changes in-cycle shape, not period; a
-        // one-period correlation measures exactly that shape identity, so
-        // the small drop is the sweep genuinely changing the waveform's
-        // shape cycle to cycle while its period stays exact - the opposite
-        // signature from phase drift, which would worsen with elapsed time
-        // rather than with sweep speed. A synthetic control whose pitch
-        // drifts 9% scores 0.73149, so the 0.98 threshold has a wide margin
-        // and can still fail.
+        // Task 2 fixed BLOOM's sweep at a single 0.45s t60 (previously it
+        // varied 0.30s -> 0.06s with depth). In Phase 1 the sweep was fast
+        // enough that this window's default 0.05s start sat mostly *after*
+        // it, reading 0.98643. Slowing the sweep sevenfold - the change that
+        // made BLOOM audible at all - moved that same window into the
+        // middle of the sweep, and this test now runs only from a settled
+        // window (0.35s onward, chosen so envAt(0.35, 0.45) = 0.0045) at the
+        // original 0.98 bar. That 0.35 is written below as
+        // `Glint.BLOOM_T60 * (7f / 9f)`, not the literal, so it stays at the
+        // same envAt fraction if BLOOM_T60 ever changes - D2 is expected to
+        // touch it, and a hardcoded 0.35 would silently slide back into the
+        // sweep and fail a correct engine (see the inversion documented
+        // below) while pointing at a pitch bug that does not exist. This
+        // trades one failure mode for another: at DECAY 0.7 the render is
+        // ~0.90s, so this only has room while BLOOM_T60 stays below ~0.9s
+        // (fromSec + the 0.2s correlation window must fit before the end);
+        // a BLOOM_T60 much larger than that needs `still`'s DECAY raised
+        // here too, not just this derivation.
+        //
+        // Measured 2026-09-26 at fromSec=0.35 across 3 voices x 4 PEAK
+        // settings x both BLOOM extremes: worst case 0.98737 (BOTTLE, PEAK
+        // 0.9, BLOOM 1) - comfortably above the bar, and far above the
+        // 0.73149 synthetic 9%-pitch-drift control from Phase 1.
+        //
+        // The during-sweep regime (fromSec=0.05, the old default) is
+        // deliberately NOT asserted here. Measured worst case there is
+        // 0.4580 (BOTTLE, PEAK 0.6, BLOOM 1) - *below* the 0.73149 drift
+        // control, not above it, so no bar can separate correct from broken
+        // in that window. The reason is structural, not a tuning problem: a
+        // one-period Pearson correlation measures whether consecutive
+        // cycles have the same *shape*. A strong, genuine sweep changes
+        // shape rapidly cycle to cycle while leaving the period exact - that
+        // scores 0.458. A 9% pitch drift changes both shape and period -
+        // that scores 0.73. The correct engine scores worse than the broken
+        // control, so the metric inverts mid-sweep; it is only a valid
+        // period test where the spectrum is quasi-static. This is a
+        // property of the measure, not of GLINT: the period remains exact
+        // by construction regardless of window - `phase` advances by
+        // `f0 / rate` and wraps at 1.0 independently of `k`, so BLOOM can
+        // never drag pitch even while this test is silent about the sweep
+        // itself.
+        //
+        // D2 needs a lag-domain measure here - where the autocorrelation
+        // peak sits, rather than how similar two cycles look - since that
+        // is shape-insensitive and stays valid during a sweep. It has to be
+        // built there regardless: PLATE and RATCHET both move k in new
+        // ways that this test's settled-window-only approach won't cover.
+        // == 0.35 at the current BLOOM_T60 (0.45); expressed as a fraction
+        // of BLOOM_T60 rather than that literal so it tracks BLOOM_T60 if
+        // D2 changes it (see comment above).
+        val settledFromSec = Glint.BLOOM_T60 * (7f / 9f)
         for (voice in GlintVoice.entries) {
             for (bloom in listOf(0f, 1f)) {
                 val still = mapOf("TUNE" to 0.5f, "BLOOM" to bloom, "BODY" to 0.5f, "FOLLOW" to 1f, "DECAY" to 0.7f)
                 val f0 = Glint.frequencyFor(voice, 0.5f)
                 for (peak in listOf(0.1f, 0.35f, 0.6f, 0.9f)) {
-                    val corr = periodCorrelation(Glint.render(voice, still + ("PEAK" to peak)), f0)
+                    val snip = Glint.render(voice, still + ("PEAK" to peak))
+                    val corr = periodCorrelation(snip, f0, fromSec = settledFromSec)
                     assertTrue(corr > 0.98f, "$voice at PEAK $peak BLOOM $bloom: period broke, correlation $corr")
                 }
             }
@@ -216,12 +243,20 @@ class GlintTest {
     }
 
     @Test
-    fun `the ratio snaps to harmonics below the ceiling and runs free above it`() {
-        for (k in listOf(2.4f, 3.7f, 11.6f)) {
+    fun `the ratio snaps to harmonics inside the floor-to-ceiling band and runs free outside it`() {
+        // Between K_MIN (2) and SNAP_FLOOR (3) there is only one integer, so
+        // snapping that range quantises nothing - it flattens everything
+        // onto 2, which is what collapsed velocity's floor-scaled layer onto
+        // the full-strength one below about PEAK 0.06. Below the floor runs
+        // free, same as above the ceiling.
+        for (k in listOf(2.1f, 2.4f, 2.9f)) {
+            assertEquals(k, Glint.snapRatio(k), 1e-6f, "k=$k should run free (below SNAP_FLOOR)")
+        }
+        for (k in listOf(3.2f, 3.7f, 11.6f)) {
             assertEquals(Math.round(k).toFloat(), Glint.snapRatio(k), 1e-6f, "k=$k should snap")
         }
         for (k in listOf(12.7f, 23.4f, 39.1f)) {
-            assertEquals(k, Glint.snapRatio(k), 1e-6f, "k=$k should run free")
+            assertEquals(k, Glint.snapRatio(k), 1e-6f, "k=$k should run free (above SNAP_CEILING)")
         }
     }
 
@@ -411,12 +446,21 @@ class GlintTest {
         // stays put when the peak is parked. Measured on BOTTLE, whose
         // triangle window leaves the burst most exposed in the spectrum.
         //
-        // Measured 2026-09-26 at PEAK 0.5 (ratio well below SNAP_CEILING, so
-        // both notes land on the same snapped harmonic and the effect is
-        // visible without raising PEAK): ridesLow=2222.7 Hz,
-        // ridesHigh=7056.7 Hz (3.17x, clears the >1.8x bar) and
-        // parkedLow=3935.5 Hz, parkedHigh=3922.6 Hz (0.997x, clears the
-        // <1.35x bar) — the snap did not hide the effect here.
+        // Measured 2026-09-26 at PEAK 0.5 (ratio 8.94, well below
+        // SNAP_CEILING). Re-checked after the velocity-floor fix added
+        // SNAP_FLOOR: unchanged here, since 8.94's neighbourhood is nowhere
+        // near the floor's dead zone. At FOLLOW=1, keyTrack cancels the note
+        // dependence outright, so both notes land on the same snapped
+        // harmonic (k=9) regardless of TUNE — the effect below is visible
+        // without raising PEAK because it's the absolute Hz that climbs with
+        // the note, not the ratio: ridesLow=2222.7 Hz, ridesHigh=7056.7 Hz
+        // (3.17x, clears the >1.8x bar). At FOLLOW=0 the two notes do NOT
+        // land on the same harmonic — the peak's Hz is fixed instead, so the
+        // ratio falls as the note rises (k=15.9 at TUNE 0.1, above
+        // SNAP_CEILING and running free; k=5 at TUNE 0.9, snapped) — but the
+        // point of the parked case is that the absolute Hz holds flat
+        // despite that: parkedLow=3935.5 Hz, parkedHigh=3922.6 Hz (0.997x,
+        // clears the <1.35x bar) — the snap did not hide the effect here.
         val voice = GlintVoice.BOTTLE
         val still = mapOf("PEAK" to 0.5f, "BLOOM" to 0f, "BODY" to 0.2f, "DECAY" to 0.6f)
         fun centroid(tune: Float, follow: Float) = FeatureExtractor.extract(
@@ -466,86 +510,180 @@ class GlintTest {
         FeatureExtractor.extract(snip).let { it.lowRatio + it.midRatio }
 
     @Test
-    fun `BODY puts a fundamental under the peak`() {
-        // Not lowRatio: Features' low band stops at 200 Hz, but BOTTLE and
-        // KAZOO are rooted at 220 and TUNE only transposes upward, so their
-        // fundamental is always above that edge — measured 0.0000 -> 0.0000
-        // for BOTTLE and a slight DECREASE for KAZOO. The energy is really
-        // there; the band was wrong. Below 2 kHz catches it for every voice
-        // while the burst at PEAK 0.8 sits well above.
-        //
-        // Measured 2026-09-26, BODY 0 -> 1: REED 0.1257 -> 0.2001 (1.59x),
-        // BOTTLE 0.0008 -> 0.1288 (159x), KAZOO 0.0473 -> 0.1092 (2.31x).
-        // REED's sawtooth window spreads burst sidebands well down the
-        // spectrum, so its bare sub-2kHz floor is already high and BODY's
-        // contribution is proportionally smaller even though the effect is
-        // real — 1.3x is 22% margin under REED's worst case of 1.59x, and
-        // 0.05 is under KAZOO's worst full value of 0.1092.
+    fun `BODY adds a second formant, not a copy of the first`() {
+        // The old BODY mixed the mean-removed window back in — the same
+        // harmonic series the burst already carries, spread down from k*f0.
+        // Four reviewers independently found it inaudible for that reason,
+        // and Josh's audition agreed: "Body 1 doesn't really seem to have an
+        // impact." The replacement is a genuine second burst at k/5.6, so
+        // there is energy near k2*f0 that BODY 0 does not have at all.
+        // Measured 2026-09-26: REED bare=3.951246E-4 full=0.12219116 (309x),
+        // BOTTLE bare=7.350461E-9 full=0.037051857 (5040752x), KAZOO
+        // bare=5.071703E-5 full=0.05096992 (1005x). All clear the 3x bar by
+        // a wide margin.
         for (voice in GlintVoice.entries) {
-            val still = mapOf("TUNE" to 0.2f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f)
-            val bare = lowMid(Glint.render(voice, still + ("BODY" to 0f)))
-            val full = lowMid(Glint.render(voice, still + ("BODY" to 1f)))
-            assertTrue(full > 0.05f, "$voice BODY should put real energy under 2 kHz, got $full")
-            assertTrue(full > bare * 1.3f, "$voice BODY should add low end: $bare -> $full")
+            val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
+            val f0 = Glint.frequencyFor(voice, 0.5f)
+            val k = Glint.ratioFor(voice, 0.5f, 0.8f, 1f)
+            val k2 = Glint.bodyRatio(k)
+            val bareSnip = Glint.render(voice, still + ("BODY" to 0f))
+            val fullSnip = Glint.render(voice, still + ("BODY" to 1f))
+            val bare = energyAt(bareSnip.samples, k2 * f0, bareSnip.sampleRate)
+            val full = energyAt(fullSnip.samples, k2 * f0, fullSnip.sampleRate)
+            assertTrue(full > bare * 3f, "$voice: BODY should put real energy at k2*f0 ($bare -> $full)")
         }
     }
 
     @Test
-    fun `BODY carries no DC at any setting`() {
-        // The window is unipolar. Mixed in raw it would push DC straight
-        // through Dsp.levelTo and out to the WAV; windowMean is subtracted
-        // to stop that, and this is the assertion that catches a wrong mean.
+    fun `BODY carries a small, bounded DC that decays with the envelope`() {
+        // A windowed sine is NOT DC-free in general — only a window
+        // symmetric about phase 0.5 nulls integral(w(phi) * sin(2*pi*k*phi), phi, 0, 1),
+        // and of GLINT's three windows only BOTTLE's triangle is symmetric
+        // that way. REED's ramp (w = 1-phi) integrates to 1/(2*pi*k) for
+        // every integer k, and KAZOO's trapezoid is asymmetric the same
+        // way. Mean-removing BODY to cancel that residual would stop it
+        // reaching exactly zero at the cycle wrap — the property the class
+        // doc calls "the whole engine" — so it is left in deliberately, and
+        // this test's job is to show the residual is small and decaying,
+        // not to claim it is absent.
+        //
+        // Averaging the whole buffer (the old form of this test) can't see
+        // that: the decayed tail is far longer and far quieter than the
+        // head, so it dominates the mean and reads ~0.0044 regardless of
+        // BODY — a bound that never moves is not testing anything. This
+        // version measures the head window instead, where the DC is
+        // actually largest.
+        //
+        // Measured 2026-09-26: DC over the first 50ms, as a fraction of
+        // that window's own peak, at BLOOM 0, BODY 0 -> 1:
+        //   REED   0.0136 -> 0.0340
+        //   KAZOO  0.0129 -> 0.0321
+        //   BOTTLE 1.4E-6 -> 1.2E-5  (triangle window, nulls as expected)
+        // 0.05 sits above the worst measured ratio (0.0340) with real
+        // margin, but is still tight enough to bite: mutation-verified by
+        // temporarily adding a constant to the `body` assignment in
+        // Glint.synthesize (`... .toFloat() + <offset>`, a raw per-sample
+        // value added before it's scaled by bodyEnv - not the same unit as
+        // the head-window DC ratio above, though the render's peak
+        // normalization to ~0.99 puts them in the same ballpark) and
+        // bisecting the offset. +0.04f fails, +0.03f passes - so the
+        // smallest offset this bound catches lies between 0.03 and 0.04.
+        // Reverted after each run.
+        //
+        // PEAK is deliberately left at its default and NOT swept, and the
+        // 0.05 bound is only valid there. The burst carries this same
+        // window asymmetry and carries it worse at low k: swept to PEAK 0,
+        // KAZOO reads 0.0619 with BODY at 0 — i.e. over the bound with the
+        // body term switched off entirely. That is the burst's own DC, not
+        // a defect and not BODY's doing, but a PEAK sweep added here would
+        // fail this test and point at the wrong component. Widening the
+        // sweep means re-deriving the bound per PEAK first.
         for (voice in GlintVoice.entries) {
             for (body in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
                 val snip = Glint.render(voice, mapOf("BODY" to body, "BLOOM" to 0f))
-                val dc = snip.samples.average().toFloat()
-                assertTrue(kotlin.math.abs(dc) < 0.02f, "$voice at BODY $body has DC $dc")
+                val head = slice(snip, 0f, 0.05f)
+                val dc = head.samples.average().toFloat()
+                val peak = head.peak()
+                val ratio = if (peak > 0f) dc / peak else 0f
+                assertTrue(
+                    kotlin.math.abs(ratio) < 0.05f,
+                    "$voice at BODY $body has head-window DC ratio $ratio (dc=$dc, peak=$peak)",
+                )
             }
         }
     }
 
     @Test
-    fun `the glass tail - the body burns off and leaves the resonance ringing`() {
+    fun `BODY is audible as a second source`() {
         // Measured as low+mid share, not centroid: centroidHz is dominated by
         // the burst, so the body evaporating moves it only 2-8% (1.068 /
         // 1.081 / 1.022) — and lowering BODY_DECAY_RATIO makes that WORSE,
         // not better. The share below 2 kHz is what actually changes.
         //
-        // Measured 2026-09-26 at BODY 0.9, head -> tail: REED 0.2479 ->
-        // 0.1434 (1.73x), BOTTLE 81.8x, KAZOO 0.1488 -> 0.0568 (2.62x). The
-        // control at BODY 0.02 is flat for all three (already inside the
-        // 1.5x bar), which is the half that proves the fall is the body and
-        // not the amp envelope. 1.4x is 24% margin under REED's worst case
-        // of 1.73x.
+        // A head-vs-tail-within-each-condition version of this test (with a
+        // one-sided control bounding only growth, `flatTail <= flatHead *
+        // 1.5f`) does not discriminate for BOTTLE: its BODY-0.02 control
+        // itself declines 3.04x from head to tail, already past the 1.4x
+        // bar with no body term doing anything. A dead body term would still
+        // pass. REED and KAZOO's controls sit at parity, so their old
+        // signal ratios were real, but BOTTLE's was not — do not restore
+        // that shape. This version compares WITH-body against WITHOUT-body
+        // at the *same* time offset instead, which cancels out whatever
+        // intrinsic decline a voice has, so the head assertion below cannot
+        // be satisfied by a body term that does nothing.
         //
-        // BODY_DECAY_RATIO was swept 0.15 to 5.0 while chasing this bar
-        // before it was known to be the wrong instrument: lowering it (the
-        // pre-authorised direction) makes the differential WORSE, not
-        // better, because a faster-decaying body has less energy left in the
-        // head window. Do not retry that; the fix was the metric, not the
-        // constant.
+        // This test used to also assert the body burns off by the tail
+        // (`withTail < withoutTail * 1.5f`). That assertion is deliberately
+        // REMOVED, not tuned to pass: the spec bundled two incompatible
+        // claims — BODY_DECAY_RATIO 0.8, single-enveloped (Tomita's slower
+        // resonance ringing after the strike) and "the body burns off"
+        // (the glass tail) — and the old body's double envelope composed
+        // to an effective ~0.31x t60, so fixing the envelope (Ruling A) made
+        // the body 2.6x slower while the spec still expected it to vanish.
+        // Those cannot both be true, and which one is correct is a design
+        // question for the D1 audition to settle by ear, not a number this
+        // test should assert.
+        //
+        // Measured 2026-09-26 (same-offset comparison, after Ruling A's
+        // single-envelope body fix), all four figures per voice — head
+        // proves the source, tail is recorded for the audition, not asserted:
+        //   REED   withHead=0.3323 withoutHead=0.1441 (head 2.31x)
+        //          withTail=0.1793 withoutTail=0.1435 (tail 1.25x - burns off)
+        //   BOTTLE withHead=0.3581 withoutHead=0.01257 (head 28.5x)
+        //          withTail=0.1216 withoutTail=0.00414 (tail 29.4x - rings the whole note)
+        //   KAZOO  withHead=0.3337 withoutHead=0.05831 (head 5.72x)
+        //          withTail=0.1215 withoutTail=0.05713 (tail 2.13x - only partly burns off)
+        // The head ratio clears the 1.5x bar for all three, so BODY is a
+        // real second source everywhere. The tail ratio is a genuine,
+        // per-voice split, not test noise: REED's second formant burns off
+        // (1.25x, near parity with no-body), KAZOO's only partly does
+        // (2.13x), and BOTTLE's does not burn off at all across the note
+        // (29.4x, same order as its own head ratio) — it rings the whole
+        // note through, closer to Tomita's resonance than to a glass tail.
+        // Verified this test actually bites: with `bodyMix` temporarily
+        // forced to 0f in `synthesize`, the head assertion failed
+        // immediately for REED (0.1432154 -> 0.1432154, identical) -
+        // confirming a dead body term cannot pass. Reverted before
+        // committing; this is a test-only file.
+        //
+        // BODY_DECAY_RATIO was swept 0.15 to 5.0 while chasing the old
+        // head-vs-tail bar before it was known to be the wrong instrument:
+        // lowering it (the pre-authorised direction) makes the differential
+        // WORSE, not better, because a faster-decaying body has less energy
+        // left in the head window. Do not retry that; the fix was the
+        // metric, not the constant — and per the ruling above, the tail
+        // behaviour itself is now an open design question, not a bug to
+        // chase with this constant.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.3f, "PEAK" to 0.75f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
-            fun headAndTail(body: Float): Pair<Float, Float> {
+            fun shares(body: Float): Pair<Float, Float> {
                 val snip = Glint.render(voice, still + ("BODY" to body))
                 return lowMid(slice(snip, 0f, 0.1f)) to
                     lowMid(slice(snip, snip.durationSeconds * 0.6f, snip.durationSeconds))
             }
-            val (head, tail) = headAndTail(0.9f)
-            assertTrue(head > tail * 1.4f, "$voice should turn to glass as it fades: $head -> $tail")
-            val (flatHead, flatTail) = headAndTail(0.02f)
-            assertTrue(flatTail <= flatHead * 1.5f, "$voice with no body should not change: $flatHead -> $flatTail")
+            val (withHead, _) = shares(0.9f)
+            val (withoutHead, _) = shares(0.02f)
+            // The body is plainly there at the strike - a real second source.
+            // Whether it burns off or rings on by the tail is a per-voice
+            // design question for the D1 audition (see the comment above),
+            // not asserted here.
+            assertTrue(withHead > withoutHead * 1.5f, "$voice: BODY should be audible at the head ($withoutHead -> $withHead)")
         }
     }
 
     /**
-     * Measured 2026-09-26, still = TUNE 0.3 PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY
-     * 0.7 (duration 0.9044s for all three voices), head/tail centroid ratio:
-     *   REED   BLOOM 0 -> 1.0028   BLOOM 1 -> 1.8871
-     *   BOTTLE BLOOM 0 -> 0.9938   BLOOM 1 -> 1.7900
-     *   KAZOO  BLOOM 0 -> 1.0086   BLOOM 1 -> 1.8543
-     * Every BLOOM 1 case clears the 1.4x bar by 28-40%; every BLOOM 0 case
-     * sits at parity (0.99-1.01), well inside the 1.2x bar.
+     * Measured 2026-09-26 (Task 2, fixed BLOOM_T60 = 0.45s), still = TUNE 0.3
+     * PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY 0.7 (duration 0.9044s for all three
+     * voices), head/tail centroid ratio:
+     *   REED   BLOOM 0 -> 1.0013   BLOOM 1 -> 3.5664
+     *   BOTTLE BLOOM 0 -> 0.9899   BLOOM 1 -> 3.4596
+     *   KAZOO  BLOOM 0 -> 0.9929   BLOOM 1 -> 3.4975
+     * BLOOM 1's ratio nearly doubled from the old coupling's 1.79-1.89
+     * (BLOOM_FAST_T60 0.06s) to 3.46-3.57: the slower fixed rate leaves k
+     * much closer to its peak at the 0-12ms head window, since envAt(0.012,
+     * 0.45) is still ~0.94 against the old envAt(0.012, 0.06) of ~0.15.
+     * Every BLOOM 1 case clears the 1.4x bar by well over 2x margin; every
+     * BLOOM 0 case sits at parity (0.99-1.00), well inside the 1.2x bar.
      */
     @Test
     fun `BLOOM opens the peak at the attack and lets it settle`() {
@@ -565,15 +703,17 @@ class GlintTest {
     }
 
     /**
-     * Measured 2026-09-26, same still as above, tail centroid (0.75 * duration
-     * to the end) at BLOOM 0 vs BLOOM 1:
-     *   REED   1127.9448 Hz -> 1127.9445 Hz (diff 0.0003 Hz)
-     *   BOTTLE 2307.9585 Hz -> 2307.9578 Hz (diff 0.0007 Hz)
-     *   KAZOO  2286.9421 Hz -> 2286.9434 Hz (diff 0.0013 Hz)
-     * BLOOM_SLOW_T60 = 0.30s against a 0.67s DECAY-0.7 t60 leaves the sweep
-     * fully settled (envAt past 5 t60s) well before the 0.75-duration mark,
-     * so the two tails are identical to four significant figures - nowhere
-     * near the 20% bar.
+     * Measured 2026-09-26 (Task 2, fixed BLOOM_T60 = 0.45s), same still as
+     * above, tail centroid (0.75 * duration to the end) at BLOOM 0 vs BLOOM 1:
+     *   REED   1126.3811 Hz -> 1126.4362 Hz (diff 0.0551 Hz)
+     *   BOTTLE 2307.8090 Hz -> 2307.9167 Hz (diff 0.1077 Hz)
+     *   KAZOO  2285.5515 Hz -> 2285.6560 Hz (diff 0.1045 Hz)
+     * At 0.75 * 0.9044s = 0.678s, envAt(0.678, 0.45) is ~3e-5 - the sweep is
+     * fully settled by five-plus t60s regardless of which BLOOM value chose
+     * the (now fixed) rate, so the two tails still land within the 20% bar.
+     * This guard still matters at the new, slower rate: it is what catches a
+     * future voice-specific sweep (D2's PLATE, RATCHET) that runs so slow it
+     * never lands before the note's DECAY ends.
      */
     @Test
     fun `BLOOM lands before the note ends, whatever it did on the way`() {
@@ -590,6 +730,36 @@ class GlintTest {
                 "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
             )
         }
+    }
+
+    @Test
+    fun `BLOOM sweeps slowly enough to hear`() {
+        // The rate used to run 0.30 s down to 0.06 s as BLOOM rose — depth
+        // and rate on one knob, so a big sweep was always a fast one. At the
+        // shipped coupling the centroid fell to 0.92x of its opening value
+        // and then sat flat: a control that measured as nearly static and
+        // was heard as "I don't get a sense of movement". At a fixed 0.45 s
+        // it travels to 0.35x over 300 ms, the one change the 2026-09-26
+        // audition marked KEEP.
+        //
+        // The assertion is the rate itself, at the moment the two constants
+        // differ most. At 0.05 s the old 0.06 s sweep was finished
+        // (envAt(0.05, 0.06) = 0.003); the new one is still well open.
+        // A test that the rate is independent of depth would be tautological
+        // now that the rate is a constant — this tests the constant's value.
+        // Measured 2026-09-26 at BLOOM_T60 = 0.45s: early=3861.21 Hz,
+        // settled=1943.65 Hz (ratio 1.987), well clear of the 1.25x bar.
+        // Confirmed this fails hard on the old BLOOM_FAST_T60 = 0.06s value:
+        // early=1925.94 Hz vs settled=1943.65 Hz (ratio 0.991 - the old
+        // sweep was already fully landed by 50ms, not still open) - checked
+        // by temporarily setting bloomT60 to 0.06f, running this test alone,
+        // confirming the AssertionFailedError, then reverting.
+        val voice = GlintVoice.REED
+        val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.5f, "BODY" to 0.2f, "FOLLOW" to 1f, "DECAY" to 0.85f)
+        val snip = Glint.render(voice, still + ("BLOOM" to 1f))
+        val early = FeatureExtractor.extract(slice(snip, 0.04f, 0.08f)).centroidHz
+        val settled = FeatureExtractor.extract(slice(snip, snip.durationSeconds * 0.8f, snip.durationSeconds)).centroidHz
+        assertTrue(early > settled * 1.25f, "the sweep should still be open at 50 ms: $early vs settled $settled")
     }
 
     @Test
@@ -685,4 +855,23 @@ class GlintTest {
         }
     }
 
+    @Test
+    fun `velocity always changes the render, at every PEAK`() {
+        // The snap used to run inside ratioFor, so velocity's floor-scaled
+        // macro quantised onto the same integer as the full one and the two
+        // layers came out byte-identical below about PEAK 0.06 — a preset
+        // there would have had no velocity response at all. Verified before
+        // the fix: hard k=2, soft k=2 at PEAK 0.03 through 0.06.
+        for (voice in GlintVoice.entries) {
+            for (peak in listOf(0.0f, 0.02f, 0.04f, 0.06f, 0.1f, 0.3f, 0.6f, 1.0f)) {
+                val patch = GlintPatch("Vel", voice, Glint.defaults(voice) + ("PEAK" to peak))
+                val soft = Velocity.atVelocity(patch, 0.2f)
+                val hard = Velocity.atVelocity(patch, 1.0f)
+                assertTrue(
+                    !soft.samples.contentEquals(hard.samples),
+                    "$voice at PEAK $peak: soft and hard renders are identical — no velocity response",
+                )
+            }
+        }
+    }
 }
