@@ -1,12 +1,12 @@
 # SIREN — the dub siren engine
 
-**Status:** workshop draft, 2026-09-27. Not approved, not implemented. The
-open questions at the end are the ones that decide the shape; nothing
-below is settled until they are answered in conversation.
+**Status:** design, settled in conversation 2026-09-27 (see "Settled" at the
+end); implementation of S12 starting. The SURFACE section below is the
+second pass, written after reading how the surface actually plays a pad.
 **Date:** 2026-09-27
-**Plan:** none yet. Written after approval, the rule GLINT and RESIN followed.
+**Plan:** the phasing table below is the plan; no separate plan file yet.
 **Roadmap:** the `SYNTH_ROADMAP.md` phasing row is added when implementation
-starts, not now.
+lands, not now.
 
 ## Why a siren
 
@@ -118,9 +118,11 @@ is open and `Dsp.drive` is on: the raw, cheap-chip edge. One knob, because
 
 A siren is *gated*, not struck: full level the moment the button is down,
 no thwack, and it stops when the thumb lifts. `Dsp.Env(attack = 5 ms,
-hold = DECAY, decay2T60 = RELEASE_T60)` with a fixed short release
-(~60 ms) so the cut is clean but not a click. DECAY is therefore a *hold
-time*, and the macro should probably say so (see the open questions).
+hold = HOLD, decay2T60 = RELEASE_T60)` with a fixed short release
+(~60 ms) so the cut is clean but not a click. The macro is therefore
+called HOLD, not DECAY: it is how long the button is down. Nothing in
+`SynthScreen` special-cases the name DECAY (checked), so the honest name
+costs nothing.
 
 ## Voices
 
@@ -150,59 +152,131 @@ Plain words and bounded ranges (playability rules 2 and 3).
 
 | Macro | Moves | Range / mapping |
 |---|---|---|
-| **TUNE** | the centre pitch | 24 semitones from the voice's root (C4), snapped, like every melodic engine — *see open question 2* |
+| **TUNE** | the centre pitch | 24 semitones from the voice's root (C4), snapped — settled: snapping is what lets SPREAD and in-key work put a siren in the tune's key, and the rack's PITCH can detune it afterwards |
 | **RATE** | the LFO's speed | 0.25 Hz → 25 Hz, `Dsp.expMap` (the ear hears rate by ratio too) |
 | **DEPTH** | how far the pitch travels each way | 0 → 24 semitones, linear; 0 is a plain tone, which is a legitimate siren too |
 | **SWEEP** | the button-press gesture | bipolar around 0.5 (`Dsp.around`): below centre the note *falls in* from up to two octaves above; above centre it *rises in* from two below; the centre is no sweep. The sweep's t60 shortens as it deepens (a big dive is a fast one), 0.6 s → 0.15 s |
 | **GRIT** | drive + tone on the pulse | one-pole cutoff 1.2 kHz → 12 kHz and `Dsp.drive` 0 → 0.8 together |
-| **DECAY** | how long the button is held | 0.3 s → 4 s, `Dsp.expMap`; the one-shot promise's own budget, and above 1.5 s the classifier reads a LOOP — *see open question 3* |
+| **HOLD** | how long the button is down | 0.3 s → 4 s, `Dsp.expMap`, up to the knob's last step; **the top of the knob is LOOP** — see "Living on the SURFACE" |
 
 SCRAMBLE uses `Dsp.scrambleNear` around the voice's defaults, so a dice
-roll stays a siren.
+roll stays a siren. SCRAMBLE never lands on LOOP: the top detent is a
+choice, not a roll.
 
 ## The hold problem — where the button lives
 
-This is the design question that matters, and the reason the brief says
-"workshop". A siren is a *held* instrument. Everything in `:synth` renders
-a fixed length. There are four doors, and they are not exclusive:
+A siren is a *held* instrument. Everything in `:synth` renders a fixed
+length. There are four doors, and they are not exclusive. **Settled:**
+doors 1 and 2 ship together in S12; 3 and 4 are later phases, gated on
+hearing the first two.
 
-**Door 1 — a one-shot with DECAY.** Ships with the engine. It is what most
+**Door 1 — a one-shot with HOLD.** Ships with the engine. It is what most
 MPC users actually play: a siren sampled at a few lengths across a row of
 pads, retriggered by hand. The SYNTH screen's re-render-and-retrigger loop
 already gives the instant feedback the playability rules ask for, and
 SEND TO PAD lands it like anything else.
 
-**Door 2 — the SURFACE, for free.** `SurfaceEngine` already plays one
-looping sample under a finger, with pitch on an axis, a gate on
-touch-down, and ECHO and SPRING in its chain. A siren rendered with
-DECAY at full and its LFO closed on a whole number of cycles is a loop
-the surface can hold indefinitely, pitched by the finger, released into
-the echo on lift. That *is* the siren-box experience — thumb down, thumb
-up, the echo carries it — and it costs no native code. Implementation is
-a landing that says so: SEND TO PAD's toast for a SIREN pad names the
-SURFACE, the way a photo kit's landing toast explains its own layout.
+**Door 2 — the SURFACE.** The screen that already holds a looping sample
+under a finger with a gate, pitch on an axis and a delay behind it. What
+it needs from the engine is a loop that closes, and that is the whole of
+the next section.
 
 **Door 3 — MAKE INSTRUMENT, held.** RESIN's held-note path renders a loop
 of whole periods with the pitch fitted so the wrap is exact
-(`Keys.planLoop`). A siren's loop is one LFO period: the LFO closes by
-construction, and the pulse closes if the *total* phase it accumulates over
-that period is a whole number of cycles — the same fraction-of-a-cent
-adjustment `planLoop` already makes, applied to the centre pitch. Then a
-siren holds on the keys' pads for as long as a key is down and releases on
-lift, through the keygroup's existing sustain loop. This is the truest
-"held siren" on a pad and it is a second phase, gated on hearing door 1.
+(`Keys.planLoop`). The LOOP render below is that same loop, so this door
+is mostly plumbing once S12 exists: a siren holds on the keys' pads for as
+long as a key is down and releases on lift, through the keygroup's
+existing sustain loop.
 
 **Door 4 — DRONE TO LOOP.** A siren that runs for the whole of a loop-grid
 bar, with RATE snapped to divisions of the bar so the wail lands on the
 grid (WOBBLE's `DIVISIONS`), re-rendered on tempo change like RESIN's
-drone. The dub-mix move (a siren riding across the drop) and a natural
-third phase. Not proposed until doors 1 and 2 have been heard.
+drone. The dub-mix move (a siren riding across the drop).
 
-Not proposed at all: a new native live voice. Door 2 already holds a siren
-under a finger with an echo behind it, and `LiveSnapEngine` shows what a
-continuous voice costs to build and keep threaded correctly. If the
-surface turns out not to *feel* like a siren box, that is the moment to
-revisit it, with a reason.
+Not proposed: a new native live voice. Door 2 already holds a siren under
+a finger with an echo behind it, and `LiveSnapEngine` shows what a
+continuous voice costs to build and keep threaded correctly. The one thing
+door 2 cannot do is bend pitch and wail speed *independently* while
+holding (below). If that turns out to matter, it is the reason to build a
+live voice, and not before.
+
+## Living on the SURFACE
+
+Read from `SurfaceScreen`, `SurfaceEngine.cpp`, `SurfaceStore` and
+`TouchSurface` rather than from memory. What the surface does with a pad,
+and what each fact means for a siren:
+
+**The surface plays a pad's WAV whole, end to end, and wraps it with no
+crossfade.** `readSlot` reads the sample with linear interpolation and
+wraps the phase at the last frame straight back to the first. Whatever
+the WAV contains is what loops. So a one-shot siren with a SWEEP dive at
+its head and a release at its tail would replay the dive at every wrap
+and dip at every seam. Playable, but it ticks.
+
+**A touch-down restarts the loop from its head; lift closes a 3 ms gain
+glide.** So each press starts the siren where the render starts (rule 2
+above, the LFO's fixed phase), and the release is the surface's, not the
+render's. The echo and spring are fed the *gated* signal, so the tail
+rings on after the lift — the siren-box release, for free.
+
+**X is pitch, ±1 octave, by resampling the whole loop.** Pitch up an
+octave plays the loop twice as fast, so the wail's *speed* follows the
+finger along with its pitch — a tape's behaviour, and a musical one, but
+worth saying plainly: on the surface, RATE and TUNE are coupled by the
+finger. KEY snaps X to the kit's key. Y is the surface's own low-pass,
+tilt its resonance, a pinch (XYZ) its drive. LATCH holds the siren with
+no finger down. GRAIN mode over a siren pad is a cloud of siren grains,
+which nobody asked for and everybody will try.
+
+**The surface's echo is a corner, not a rack.** In XY and XYZ the echo
+mix is 0 by construction (`Corner.from`); it lives in MORPH and VECTOR
+corners (the library's ECHO + / ECHO − are two), and the ECHO button locks
+the delay's time to a division of the bar. Two consequences:
+
+- A siren meant for the surface must land **dry**. A baked ECHO tail in
+  a loop smears across the seam and doubles up under the surface's own
+  delay. So "echo on by landing" (settled, question 4) applies to
+  *one-shot* sirens only; a LOOP siren lands dry and its echo is the
+  surface's, and the landing toast says exactly that.
+- The genre's siren-into-echo on the surface is: MORPH or VECTOR mode
+  with an ECHO corner armed, ECHO on the SET row locked to the bar. That
+  is a *setting*, not code, and the toast can name it.
+
+**PAD ◄ ► picks the pad; the choice lives in `surface.json`.** A landing
+does not have to write that file — the toast names the pad, PAD ◄ ► gets
+there — and S12 does not, because rewriting the player's surface choice
+on every SEND TO PAD would be a surprise. A `→ SURFACE` action that lands
+*and* opens the surface on that pad is a small later step (S12.1 below)
+needing one App-level callback and one `SurfaceStore.save`.
+
+### The LOOP render — HOLD at the top
+
+HOLD's last step is not the longest hold; it is **LOOP**: the render is
+one seamless loop for the surface (and, later, the keys). The recipe:
+
+1. **Whole periods.** `L` frames = `k` LFO periods at RATE, with `k` the
+   fewest that make `L` at least two seconds (so the WAV is also a usable
+   one-shot on a pad and on the MPC), rounded to whole frames; the LFO's
+   rate moves by the rounding, well under 0.1 %.
+2. **Whole cycles.** The centre pitch is nudged so the pulse completes a
+   whole number of cycles over `L`: the cycles per loop are
+   `f0 · L / rate · mean(2^(DEPTH·lfo))`, rounded to an integer and solved
+   back for `f0` — `Keys.planLoop`'s own fraction-of-a-cent trick. Under a
+   cent at every setting; the snapped TUNE is not audibly moved.
+3. **Steady state.** One extra period is rendered first and discarded, so
+   the one-pole and the drive are in steady state at both ends of the loop.
+4. **Cut at a crossing.** The loop is cut at the first zero crossing of the
+   filtered tone at the start of period two, and one `L` later — the same
+   point by construction. So the WAV starts and ends at silence: the
+   surface's wrap is seamless *and* the one-shot ends without a click on a
+   pad (`PadEngine` has no end window on a one-shot) or on the MPC (which
+   plays the WAV raw).
+5. **No SWEEP, no release, no `fadeTail`.** The finger is the sweep, the
+   gate is the release, and a fade would be a dip at every wrap.
+
+The SYNTH screen shows a 0..1 slider like every other macro; the readout
+for the top step says LOOP, the way GLINT's PEAK readout says the snapped
+harmonic. SCRAMBLE stops one step short.
 
 ## It already works with what shipped
 
@@ -244,47 +318,41 @@ revisit it, with a reason.
   (`Dsp.MELODIC_LOUDNESS_TARGET`); one-shot bound at
   `maxSecondsFor(voice)`; DC within 0.05.
 - **Identity:** each voice's defaults classify as the `SynthScreen` table's
-  class (TONAL under 1.5 s), and 200 SCRAMBLEs are audible and unclipped.
+  class (TONAL under 1.5 s), and 200 SCRAMBLEs are audible, unclipped and
+  never LOOP.
 - **Recipe:** `SirenPatch` round-trips through JSON and `Patches.fromJsonValue`.
 - **Names:** the roster passes the blocklist with `benidub` added, and
   `ThumpPresetsTest`'s near-miss and clean-name checks cover the new term.
-- **Door 2's loop (if taken):** at DECAY 1 the render is a whole number of
-  LFO periods and `Keys.seamError` at the wrap is at floating-point noise.
+- **The LOOP render:** at HOLD's top, for every voice and at RATE 0, 0.5
+  and 1: the length is whole LFO periods and at least two seconds;
+  `Keys.seamError` at the wrap is at floating-point noise; the first and
+  last samples are within 1e-3 of zero; the centre pitch is within 1 cent
+  of the snapped TUNE; and the render is bit-identical across two calls.
 
 ## Phasing
 
 | Step | Ships |
 |---|---|
-| **S12** | `synth/Siren.kt` (`SirenVoice`, macros, render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). **Ends at an audition gate.** |
-| **S12 (door 2)** | The SIREN landing toast names the SURFACE, and DECAY at full renders whole LFO periods so the surface's loop has no seam. Cheap enough to ship with S12 if the audition says the surface feels right. |
-| **S12.1** | Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the centre pitch fitted so one LFO period is a seamless loop. |
-| **S12.2** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
+| **S12** | `synth/Siren.kt` (`SirenVoice`, macros, the one-shot render and the LOOP render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). Then the phone: SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), the HOLD readout's LOOP step, SEND TO PAD landing a one-shot siren with the rack's ECHO in its recipe and a LOOP siren dry, and a toast for each that says which it did and, for a LOOP, that the SURFACE plays it. **Ends at an audition gate.** |
+| **S12.1** | `→ SURFACE` on SYNTH for a LOOP siren: lands it, writes `surface.json`'s pad to that slot, opens the SURFACE. One App callback, one store write. |
+| **S12.2** | Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render as the keygroup's sustain loop. |
+| **S12.3** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
 
-## Open questions — the ones that shape the build
+## Settled — 2026-09-27
 
-1. **Which hold matters most?** Door 1 (one-shots on pads) is the cheapest
-   and lands in the MPC workflow; door 2 (the SURFACE) is the closest to a
-   siren box in the hand and nearly free; door 3 (held on keys) is the
-   truest but a second phase. The recommendation is 1 + 2 together, then
-   listen. Is that the order?
-2. **Snapped TUNE or free?** Every melodic engine snaps to semitones, and
-   snapping is what lets SPREAD and in-key work put a siren *in the tune's
-   key*. But a hardware siren's pitch knob is free, and part of the dub
-   move is a siren that is deliberately *not* in key. Recommendation: snap,
-   because the fleet does and the rack can detune afterwards.
-3. **DECAY, or HOLD?** The knob is a hold time on a gated voice, not a decay
-   on a struck one. Every engine calls its length knob DECAY, and nothing in
-   `SynthScreen` special-cases the name (checked: the screen renders whatever
-   `macrosFor` lists). A siren that says HOLD is more honest and costs
-   nothing. Recommendation: HOLD.
-4. **Echo by default?** A siren without echo is half a siren, but presets
-   are `Patch` lists and carry no `FxChain`. Options: (a) SEND TO PAD for a
-   SIREN lands with the rack's ECHO at a preset setting, the way factory
-   kits carry `melodicMotion`; (b) nothing special, the rack is a tap away.
-   Recommendation: (a), with the toast saying so.
+1. **Where the button lives:** pads plus the SURFACE, together, in S12.
+   Held keys and the loop grid after the audition.
+2. **TUNE snaps to semitones**, like every melodic engine.
+3. **The length knob is HOLD**, and its top step is LOOP.
+4. **Echo by landing:** a one-shot siren lands with the rack's ECHO in its
+   recipe; a LOOP siren lands dry, because the surface's echo is its own,
+   and the toast says so.
+
+## Still open, not blocking
+
 5. **A fifth voice?** A one-shot dive with no LFO at all (SWEEP at full,
    DEPTH 0) is the "bomb", and it is reachable on any voice by the knobs.
    Not adding it unless the roster shows people cannot find it.
-6. **Stereo?** A hardware siren is mono. Two detuned pulses (FATHOM's
-   SPREAD idea) would thicken it, but would also blur the two-tone TRILL.
-   Recommendation: mono, and let the rack's SPRING and PHASE widen it.
+6. **Stereo?** A hardware siren is mono. Two detuned pulses would thicken
+   it but blur the two-tone TRILL. Mono; the rack's SPRING and PHASE and
+   the surface's SWARM widen it.
