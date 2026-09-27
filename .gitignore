@@ -49,3 +49,7 @@ testkit/tines-audition/
 # The SIREN audition clips, manifest and page, rendered by :synth:generateSirenAudition
 # and published as the listening artifact; never committed.
 testkit/siren-audition/
+
+# The FORK audition clips, manifest and page, rendered by :synth:generateForkAudition
+# and published as the listening artifact; never committed.
+testkit/fork-audition/
