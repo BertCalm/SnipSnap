@@ -1609,9 +1609,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → FORK → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1627,6 +1627,7 @@ private enum class Engine {
         TIDE -> TideVoice.entries
         GLINT -> GlintVoice.entries
         SIREN -> SirenVoice.entries
+        FORK -> ForkVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1642,6 +1643,7 @@ private enum class Engine {
         TIDE -> Tide.macrosFor(voice as TideVoice)
         GLINT -> Glint.macrosFor(voice as GlintVoice)
         SIREN -> Siren.macrosFor(voice as SirenVoice)
+        FORK -> Fork.macrosFor(voice as ForkVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1657,6 +1659,7 @@ private enum class Engine {
         TIDE -> Tide.defaults(voice as TideVoice)
         GLINT -> Glint.defaults(voice as GlintVoice)
         SIREN -> Siren.defaults(voice as SirenVoice)
+        FORK -> Fork.defaults(voice as ForkVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1672,6 +1675,7 @@ private enum class Engine {
         TIDE -> Tide.scramble(voice as TideVoice, random)
         GLINT -> Glint.scramble(voice as GlintVoice, random)
         SIREN -> Siren.scramble(voice as SirenVoice, random)
+        FORK -> Fork.scramble(voice as ForkVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1692,6 +1696,7 @@ private enum class Engine {
         TIDE -> Tide.render(voice as TideVoice, macros)
         GLINT -> Glint.render(voice as GlintVoice, macros)
         SIREN -> Siren.render(voice as SirenVoice, macros)
+        FORK -> Fork.render(voice as ForkVoice, macros)
     }
 
     /**
@@ -1712,6 +1717,8 @@ private enum class Engine {
         GLINT -> (voice as GlintVoice).drumClass
         // SIREN: a LOOP by name when HOLD is at its top, a pitched note otherwise - the one knob that picks the class, like VOX's HIT.
         SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
+        // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
+        FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -1727,6 +1734,7 @@ private enum class Engine {
         TIDE -> TidePatch(name, voice as TideVoice, macros)
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
+        FORK -> ForkPatch(name, voice as ForkVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

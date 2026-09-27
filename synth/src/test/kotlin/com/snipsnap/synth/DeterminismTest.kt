@@ -98,4 +98,12 @@ class DeterminismTest {
         val loop = SirenPatch("Canary Loop", SirenVoice.LASER, Siren.defaults(SirenVoice.LASER) + ("HOLD" to 1f))
         assertContentEquals(loop.render().samples, loop.render().samples)
     }
+
+    // FORK seeds its hammer noise from the voice and the note
+    // (Fork.kt's own `excite`), so it joins the canaries above.
+    @Test
+    fun `FORK is byte-identical across renders`() {
+        val patch = ForkPresets.forVoice(ForkVoice.TINE).first()
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
 }
