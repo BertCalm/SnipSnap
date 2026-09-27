@@ -355,6 +355,9 @@ object Siren {
         return LoopPlan(frames, periods, lfoHz, cycles / g, cycles)
     }
 
+    /** How often, in oversampled samples, a held-pad render asks whether it is still wanted (`Resin.HELD_CANCEL_CHECK_SAMPLES`'s own value: about every 0.2 s of audio at 44.1 kHz). */
+    private const val LOOP_CANCEL_CHECK_SAMPLES = 1 shl 15
+
     /**
      * [loops] consecutive LOOPs at [RATE], unlevelled, taken from a stretch
      * whose warm-up has been discarded: the LFO periodic in the loop, the
@@ -362,8 +365,17 @@ object Siren {
      * the band limit all in steady state, and the decimator run over the
      * whole stretch so its edge never touches what is kept. No sweep, no
      * envelope, no fade: the finger is the sweep and the gate is the release.
+     *
+     * [cancelled] stops the render part-way with a `CancellationException` —
+     * a held zone at the slowest RATE is seconds of audio, the same reach
+     * [Resin.renderHeld]'s own `cancelled` has over a RESIN zone.
      */
-    internal fun synthesizeLoopStretch(voice: SirenVoice, macros: Map<String, Float>, loops: Int): FloatArray {
+    internal fun synthesizeLoopStretch(
+        voice: SirenVoice,
+        macros: Map<String, Float>,
+        loops: Int,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray {
         require(loops >= 1) { "a stretch is at least one loop, asked for $loops" }
         val m = settled(macros, voice)
         val rate = RATE * Dsp.OVERSAMPLE
@@ -375,7 +387,12 @@ object Siren {
         val lfo = Lfo(voice, plan.lfoHz / rate, rate)
         val tone = Tone(m.getValue("GRIT"), rate)
         val raw = FloatArray(total)
-        for (i in 0 until total) raw[i] = tone.next(plan.baseHz * 2.0.pow(depth * lfo.next()))
+        for (i in 0 until total) {
+            if (i % LOOP_CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw java.util.concurrent.CancellationException("SIREN loop render no longer wanted")
+            }
+            raw[i] = tone.next(plan.baseHz * 2.0.pow(depth * lfo.next()))
+        }
         Tide.bandLimit(raw, rate)
         val out = Dsp.decimate(raw, RATE)
         return out.copyOfRange(warm, warm + loops * plan.frames)
@@ -406,11 +423,12 @@ object Siren {
     /**
      * One loop, levelled: the stretch is periodic, so the loop from the cut
      * is the stretch from there to its end and then from its start to the
-     * cut — one loop rendered, not two.
+     * cut — one loop rendered, not two. [cancelled] reaches
+     * [synthesizeLoopStretch]'s own check.
      */
-    internal fun renderLoop(voice: SirenVoice, macros: Map<String, Float>): FloatArray {
+    internal fun renderLoop(voice: SirenVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): FloatArray {
         val (frames, _) = loopFrames(settled(macros, voice).getValue("RATE"))
-        val stretch = synthesizeLoopStretch(voice, macros, loops = 1)
+        val stretch = synthesizeLoopStretch(voice, macros, loops = 1, cancelled)
         val cut = bestCut(stretch, frames)
         val loop = stretch.copyOfRange(cut, frames) + stretch.copyOfRange(0, cut)
         Dsp.levelTo(loop, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)

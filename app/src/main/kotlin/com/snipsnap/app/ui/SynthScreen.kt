@@ -1470,8 +1470,8 @@ private sealed interface HeldSpec {
         override val zoneMidis get() = SirenPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${SirenPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi)
-        override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = SirenPadMaker.export(name, spec, notes, destRoot)
     }
 }
