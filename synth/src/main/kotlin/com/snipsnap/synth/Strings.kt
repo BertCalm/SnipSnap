@@ -70,7 +70,7 @@ internal object Strings {
         // report for the full table - flat, not the sharp direction this
         // task was originally filed under. Truncation alone is a small
         // sharp error - `44100/880` truncates from 50.11 to 50, ~4 cents -
-        // but the loop filter's own phase lag below, unaccounted for in
+        // but the loop filter's own phase lag (in [Loop]), unaccounted for in
         // the pre-fix loop, pulls flat and outweighs it at every note
         // measured). The classic Karplus-Strong fix (Jaffe & Smith) keeps
         // the delay line an integer length and carries the leftover
@@ -82,12 +82,12 @@ internal object Strings {
         // flat by an amount that shifts with DAMP and the note (confirmed
         // by zero-crossing and FFT measurement on the rendered tail, not
         // assumed):
-        //  - [loopLp], a one-pole lowpass, has a frequency-dependent phase
+        //  - [Loop]'s one-pole lowpass has a frequency-dependent phase
         //    lag at the fundamental - real here, since DAMP can pull
         //    loopHz down close to the note itself. [filterA]/[poleR] use
         //    the same coefficient as [Dsp.OnePole.lp], so this is the
         //    filter's actual closed-form phase, not an approximation.
-        //  - the two-tap average below (`0.5*(d, d-1)`) is a fixed-phase
+        //  - [Loop]'s two-tap average (`0.5*(d, d-1)`) is a fixed-phase
         //    FIR, exactly 0.5 samples of delay at every frequency, kept
         //    from the pre-fix loop rather than dropped in favor of a
         //    single-tap read. Its own magnitude response (|cos(w/2)|) is
@@ -95,7 +95,7 @@ internal object Strings {
         //    what matters is its 0.5-sample shift in the loop's total
         //    length, which - in a loop this resonant (DAMP low enough to
         //    put `fb` near 0.998, dozens of round trips before decay) -
-        //    moves the comb's teeth relative to [loopLp]'s fixed rolloff
+        //    moves the comb's teeth relative to the lowpass's fixed rolloff
         //    and re-rolls which harmonic of the one-period noise burst
         //    rings loudest. Measured, not assumed: dropping the average
         //    for a plain single-tap read put HARP's 2nd harmonic louder
@@ -168,12 +168,12 @@ internal object Strings {
         // The period here is the string's physical period `rate / freq`,
         // not the integer delay-line length `n` - the loop's allpass,
         // filter lag, and two-tap average make up the rest of that period
-        // (see `exact` above), and a comb cut to `n` alone puts its
+        // (see `exact` in [tune]), and a comb cut to `n` alone puts its
         // notches ~3% off the true harmonics at high DAMP (measured on
         // the since-removed KALIMBA voice: the 2nd-harmonic null missed
         // the 20 dB gate). The
         // exciter grows to n + combDelay samples, and the extra samples enter
-        // the loop as INPUT through the `+=` below, not as initial state -
+        // the loop as INPUT to [Loop.next], not as initial state -
         // the loop's own length and tuning budget are untouched. position
         // = 0 reproduces the pre-STRIKE exciter sample for sample.
         // The coerceIn(1, n) clamp is unreachable in production: combDelay / n
