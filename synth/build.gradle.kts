@@ -244,3 +244,13 @@ tasks.register<JavaExec>("generateForkKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Render the FORK round-one audition clips, manifest and page under testkit/fork-audition/. See ForkAuditionGenerator. */
+tasks.register<JavaExec>("generateForkAudition") {
+    group = "distribution"
+    description = "Render the FORK audition clips, manifest and listening page under testkit/fork-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForkAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/fork-audition")
+}
