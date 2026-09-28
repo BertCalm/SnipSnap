@@ -4,6 +4,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ResamplerTest {
@@ -138,6 +139,18 @@ class ResamplerTest {
         for (f in 100 until output.frameCount - 100) {
             assertTrue(output.samples[f * 2] > 0.55f, "left at frame $f")
             assertTrue(output.samples[f * 2 + 1] < -0.55f, "right at frame $f")
+        }
+    }
+
+    @Test
+    fun `only whole power of two steps down take the fast path`() {
+        // Dsp.decimate's steps, and any other clean halving, take it...
+        for ((from, to) in listOf(176_400 to 88_200, 88_200 to 44_100, 176_400 to 44_100, 96_000 to 48_000, 44_100 to 11_025)) {
+            assertTrue(Resampler.isPowerOfTwoDown(from, to), "$from -> $to should take the fast path")
+        }
+        // ...while going up, staying put, a 3:1 step or a fractional ratio keep the general loop.
+        for ((from, to) in listOf(44_100 to 88_200, 44_100 to 44_100, 132_300 to 44_100, 48_000 to 44_100, 44_100 to 48_000)) {
+            assertFalse(Resampler.isPowerOfTwoDown(from, to), "$from -> $to should use the general loop")
         }
     }
 

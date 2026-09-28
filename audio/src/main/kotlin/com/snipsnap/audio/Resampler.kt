@@ -86,9 +86,8 @@ object Resampler {
         // for every output: compute them once instead of three trig calls per
         // tap per sample. Same weights, summed in the same order, so the result
         // is the general loop's to the bit, several times faster.
-        val step = snip.sampleRate / targetRate
-        if (powerOfTwoFastPath && snip.sampleRate % targetRate == 0 && step and (step - 1) == 0) {
-            decimateByPowerOfTwo(snip, step, cutoff, dstFrames, out)
+        if (powerOfTwoFastPath && isPowerOfTwoDown(snip.sampleRate, targetRate)) {
+            decimateByPowerOfTwo(snip, snip.sampleRate / targetRate, cutoff, dstFrames, out)
             return Snip(out, channels, targetRate)
         }
 
@@ -111,6 +110,13 @@ object Resampler {
             }
         }
         return Snip(out, channels, targetRate)
+    }
+
+    /** Whether [from] -> [to] is a whole power-of-two step down, the case [resample]'s fast path takes. */
+    internal fun isPowerOfTwoDown(from: Int, to: Int): Boolean {
+        if (to <= 0 || from <= to || from % to != 0) return false
+        val step = from / to
+        return step and (step - 1) == 0
     }
 
     /**
