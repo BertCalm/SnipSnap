@@ -237,7 +237,13 @@ internal object Strings {
                 val lnB = ln(b.toDouble())
                 val d = exp((M1 * lnM + M2) * lnB + M3 * lnM + M4)
                 if (d <= 1.0) return null
-                val a = ((1.0 - d) / (1.0 + d)).toFloat()
+                // Clamped per the design's own risk table ("Dispersion
+                // coefficient out of range"): |a| < 1 is what keeps the
+                // allpass stable, and -0.95 is the margin kept from that
+                // edge. `a` is already strictly negative here (d > 1 makes
+                // (1-d) negative and (1+d) positive), so only the lower
+                // bound is reachable.
+                val a = ((1.0 - d) / (1.0 + d)).toFloat().coerceIn(-0.95f, 0f)
                 return Dispersion(count, a)
             }
         }
@@ -346,7 +352,7 @@ internal object Strings {
     class Loop(
         private var n: Int,
         private var a: Float,
-        private val fb: Float,
+        fb: Float,
         private val loopHz: Float,
         private val rate: Int,
         private val stiffness: Float = 0f,
@@ -354,6 +360,8 @@ internal object Strings {
         private val jawariP0: Float = 1e-6f,
         private val dispersion: Dispersion? = null,
     ) {
+        private val baseFb = fb
+        private var fb = fb
         // The ring is sized once, here, from the constructor's own n - the
         // loop's lowest note (its longest delay), for a voice that will
         // later call [retune]. Every such voice starts at that low note and
@@ -447,6 +455,17 @@ internal object Strings {
             }
             n = t.n
             a = t.a
+        }
+
+        /**
+         * Scales the loop's own feedback by [scale] against its built
+         * value, restored with `gain(1f)` - OUD's SLIDE models the
+         * finger's extra damping on a fretless slide as a slightly lower
+         * loop gain for the slide's own duration (spec, "OUD", Erkut §2),
+         * without touching [retune]'s pitch envelope alongside it.
+         */
+        fun gain(scale: Float) {
+            fb = baseFb * scale
         }
     }
 

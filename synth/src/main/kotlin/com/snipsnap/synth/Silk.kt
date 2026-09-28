@@ -169,7 +169,24 @@ object Silk {
             val detunedTarget = freq * 2f.pow(cents / 1200f)
             val detunedStart = slideFrom * 2f.pow(cents / 1200f)
             val seed = Dsp.seedFor("SILK", SilkVoice.OUD, "COURSE", k, freq)
-            oudCourseLoop(detunedStart, detunedTarget, seconds, damping, pickHz, position, slide, rate, seed)
+            // "The pair gets slightly unequal feedback so it decays
+            // unevenly - the 'prompt then aftersound' of coupled strings,
+            // cheaply" (spec, "OUD") - the same shape as [Strings.course]'s
+            // own per-loop roll-off, at a fifth its rate: two identical-
+            // frequency KS loops summed are only exactly at that shared
+            // frequency when their resonances are identically shaped, and
+            // [Strings.course]'s own 1%-per-loop step, measured through
+            // this voice's own tuning test at unison (COURSE 0, where the
+            // two loops' *only* difference is this feedback split), pulls
+            // the summed peak measurably off pitch - a real interaction
+            // [Strings.course] does not surface because nothing measures
+            // its own tuning at count > 1. This voice's tuning claim
+            // (spec, "Testing", item 1) is load-bearing, so the step stays
+            // small enough to keep every degree inside the 5-cent bound
+            // it is tested against, rather than widening that bound to
+            // fit a bigger, untested step.
+            val fbK = (damping.fb * (1f - 0.002f * k)).coerceIn(0f, 0.999f)
+            oudCourseLoop(detunedStart, detunedTarget, seconds, Strings.Damping(damping.loopHz, fbK), pickHz, position, slide, rate, seed)
         }
         val out = FloatArray(loops.maxOf { it.size })
         for (loop in loops) for (i in loop.indices) out[i] += loop[i]
@@ -189,6 +206,8 @@ object Silk {
         val t0 = Strings.tune(startFreq, damping.loopHz, rate)
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t0.n + 2))
         val exc = Strings.pluckExciter(t0.n, startFreq, pickHz, position, seed, rate, out.size)
+        val risha = rishaTick(Dsp.seedFor(seed, "RISHA"), rate)
+        for (i in risha.indices) if (i < exc.size) exc[i] += risha[i]
         val loop = Strings.Loop(t0.n, t0.a, damping.fb, damping.loopHz, rate)
 
         val gliding = slideAmount > 0.01f && startFreq != targetFreq
@@ -196,15 +215,55 @@ object Silk {
         // slide's rise time) - 0.35 s at SLIDE 1 is a shape, awaiting the
         // audition gate, like PLUCK's own placeholder constants.
         val slideSamples = if (gliding) (Dsp.lin(slideAmount, 0.05f, 0.35f) * rate).toInt().coerceAtLeast(1) else 0
+        // "The finger's extra damping is modelled as a slightly lower
+        // loop gain for the slide's duration" (spec, "OUD", Erkut §2) -
+        // dropped for the glide's own span and restored once it settles.
+        if (gliding) loop.gain(SLIDE_GAIN_SCALE)
 
         for (i in out.indices) {
             if (gliding && i in 1..slideSamples) {
                 val progress = i.toFloat() / slideSamples
                 loop.retune(startFreq * (targetFreq / startFreq).pow(progress))
+            } else if (gliding && i == slideSamples + 1) {
+                loop.gain(1f)
             }
             out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
         }
         return out
+    }
+
+    /** Unsourced (spec, "OUD" gives no measurement of the risha's own rise time or spectral shape) - a shape constant awaiting the audition gate, like this file's other placeholders. */
+    private const val RISHA_SECONDS = 0.004f
+    private const val RISHA_HP_HZ = 3000f
+    private const val RISHA_GAIN = 0.12f
+
+    /** OUD's SLIDE models finger damping as a lower loop gain for the slide's own span - see [oudCourseLoop]; unsourced in its exact ratio, a shape constant like [RISHA_GAIN]. */
+    private const val SLIDE_GAIN_SCALE = 0.97f
+
+    /**
+     * The very short high-passed tick alongside the pick burst that
+     * stands for the risha (spec, "OUD": "the pick burst near the bridge
+     * (STRIKE low), plus a very short high-passed tick for the risha").
+     * A cheap one-pole high-pass - noise minus its own low-pass, the same
+     * shape [Strings.rawBurst]'s own low-pass builds the pick burst from
+     * - rather than a dedicated filter class; zero-meaned for the same
+     * reason [Strings.rawBurst] is (a DC-free exciter, or the loop's own
+     * filter passes a fake sub-thump through untouched).
+     */
+    private fun rishaTick(seed: Int, rate: Int): FloatArray {
+        val len = (RISHA_SECONDS * rate).toInt().coerceAtLeast(1)
+        val noise = Dsp.Noise(seed)
+        val lp = Dsp.OnePole(rate)
+        val tick = FloatArray(len)
+        for (i in 0 until len) {
+            val n = noise.next()
+            tick[i] = (n - lp.lp(n, RISHA_HP_HZ)) * RISHA_GAIN
+        }
+        var mean = 0f
+        for (v in tick) mean += v
+        mean /= len
+        for (i in tick.indices) tick[i] -= mean
+        return tick
     }
 
     /**

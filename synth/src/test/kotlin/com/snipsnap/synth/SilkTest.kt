@@ -158,6 +158,22 @@ class SilkTest {
         }
     }
 
+    /**
+     * STIFF's wiring, at the voice level: `StringsTest`'s own dispersion
+     * proofs run at the `Strings.Dispersion`/`Strings.Loop` layer with a
+     * deliberately strong synthetic coefficient (real GUZHENG-scale B
+     * measures too weak to move a partial - see `Silk.guzheng`'s own
+     * comment); this checks the path a regression in the `STIFF`->B
+     * mapping, the `forB` call, or wiring the cascade into `guzhengLoop`
+     * would actually break, without asserting an audible amount.
+     */
+    @Test
+    fun `STIFF actually reaches the render, not just Strings Dispersion in isolation`() {
+        val zero = Silk.render(SilkVoice.GUZHENG, mapOf("STIFF" to 0f)).samples
+        val one = Silk.render(SilkVoice.GUZHENG, mapOf("STIFF" to 1f)).samples
+        assertFalse(zero.contentEquals(one), "STIFF 0 and 1 should not render identically")
+    }
+
     @Test
     fun `is deterministic`() {
         for (voice in SilkVoice.entries) {

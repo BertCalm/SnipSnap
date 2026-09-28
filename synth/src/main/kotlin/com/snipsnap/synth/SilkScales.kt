@@ -10,7 +10,7 @@ import kotlin.math.pow
  * above the voice's root (`Pluck.TUNE_SEMITONES` and its siblings). SILK adds
  * a second snapped macro, SCALE, and TUNE walks SCALE's own degrees instead
  * (docs/superpowers/specs/2026-09-27-silk-string-engine-design.md, "TUNE and
- * SCALE"): fourteen rows, each either confirmed against an open research
+ * SCALE"): fifteen rows, each either confirmed against an open research
  * dataset or an equal division — research §5
  * (docs/superpowers/plans/2026-09-27-silk-research.md) has every citation. A
  * row that is neither does not ship; there is no "computed" or "shape" row
