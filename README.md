@@ -348,7 +348,8 @@ hats and a tongue click, and THROAT is overtone singing: a low drone
 with a whistled melody on its harmonics, a growl an octave down and a
 yodel. WRAITH is sine-wave speech: three pure tones trace a word's
 formants, ghostly whistling you half hear as "why" or "hello", gliding
-or stepping in key. GRAINS is
+or stepping in key. SWARM is a crowd: up to sixteen people shouting a
+word together, talking over each other or talking in hushed voices. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a
