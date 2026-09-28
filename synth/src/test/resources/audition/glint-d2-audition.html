@@ -1,0 +1,745 @@
+<title>GLINT D2 Audition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#EBEEEA; --card:#FDFDFC; --ink:#151A17; --ink-soft:#4E5852; --ink-faint:#7C857E;
+  --rule:#D3D9D3; --rule-soft:#E4E8E3;
+  --amber:#B05600; --amber-soft:#F2E3D2;
+  --keep:#2C6349; --ok:#5F675F; --drop:#93302C;
+  --reed:#6A5A2E; --bottle:#2F5568; --kazoo:#6B3A57;
+  --cicada:#3F6B32; --ratchet:#8B4A1D; --plate:#4B5A66;
+  --shadow:0 1px 2px rgba(21,26,23,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111513; --card:#191E1B; --ink:#E4E8E3; --ink-soft:#A3ADA5; --ink-faint:#79837B;
+    --rule:#2A312C; --rule-soft:#222824;
+    --amber:#E89440; --amber-soft:#3A2A16;
+    --keep:#6FBF97; --ok:#96A098; --drop:#E0736C;
+    --reed:#C9B478; --bottle:#8FBBD4; --kazoo:#CE9BBD;
+    --cicada:#8FC97D; --ratchet:#E4A26B; --plate:#A9BCC7;
+    --shadow:0 1px 2px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111513; --card:#191E1B; --ink:#E4E8E3; --ink-soft:#A3ADA5; --ink-faint:#79837B;
+  --rule:#2A312C; --rule-soft:#222824;
+  --amber:#E89440; --amber-soft:#3A2A16;
+  --keep:#6FBF97; --ok:#96A098; --drop:#E0736C;
+  --reed:#C9B478; --bottle:#8FBBD4; --kazoo:#CE9BBD;
+  --cicada:#8FC97D; --ratchet:#E4A26B; --plate:#A9BCC7;
+  --shadow:0 1px 2px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  font-size:16px; line-height:1.5; margin:0;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:40rem;margin:0 auto;padding:0 .85rem 5rem}
+
+/* progress rail */
+.rail{
+  position:sticky; top:0; z-index:20;
+  background:var(--paper); border-bottom:1px solid var(--rule);
+  margin:0 -.85rem; padding:.6rem .85rem .55rem;
+  display:flex; align-items:center; gap:.7rem;
+}
+.rail .bar{flex:1;height:4px;background:var(--rule);border-radius:2px;overflow:hidden}
+.rail .bar i{display:block;height:100%;width:0%;background:var(--amber);transition:width .25s}
+.rail .cnt{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;flex:none}
+.rail .save{font-family:"IBM Plex Mono",monospace;font-size:.62rem;color:var(--ink-faint);flex:none;min-width:3.4rem;text-align:right}
+
+header{padding:2rem 0 1.4rem}
+header .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem}
+header h1{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:700; font-size:clamp(1.9rem,8vw,2.6rem); line-height:1.05;
+  letter-spacing:-.02em; margin:0 0 .6rem; text-wrap:balance;
+}
+header p{margin:0;color:var(--ink-soft);font-size:1.02rem}
+
+section{margin:0 0 2.6rem}
+.shead{display:flex;gap:.7rem;align-items:flex-start;margin-bottom:.55rem}
+.sletter{
+  font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:600;
+  color:var(--amber); border:1.5px solid var(--amber); border-radius:3px;
+  padding:.15rem .4rem; flex:none; margin-top:.2rem;
+}
+.stitle{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .12rem}
+.squestion{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:600; font-size:1.3rem; line-height:1.2; margin:0; letter-spacing:-.012em;
+  text-wrap:balance;
+}
+.sblurb{margin:0 0 1rem;color:var(--ink-soft);font-size:.93rem}
+.sblurb b{color:var(--ink);font-family:"IBM Plex Mono",monospace;font-size:.86em;font-variant-numeric:tabular-nums}
+
+.clips{display:flex;flex-direction:column;gap:.5rem}
+.clip{
+  display:flex; gap:.7rem; align-items:flex-start;
+  background:var(--card); border:1px solid var(--rule); border-radius:4px;
+  padding:.6rem .7rem .65rem; box-shadow:var(--shadow);
+}
+.clip.playing{border-color:var(--amber);background:var(--amber-soft)}
+
+.play{
+  flex:none; width:2.9rem;height:2.9rem;border-radius:50%;
+  border:1.5px solid var(--amber); background:transparent; color:var(--amber);
+  display:grid;place-items:center;cursor:pointer;padding:0;
+  transition:background .12s;
+}
+.play:hover{background:var(--amber-soft)}
+.play svg{width:1.5rem;height:1.5rem;fill:currentColor}
+.play .i-stop{display:none}
+.clip.playing .play{background:var(--amber);color:var(--card)}
+.clip.playing .play .i-play{display:none}
+.clip.playing .play .i-stop{display:block}
+
+.meat{flex:1;min-width:0}
+.cl-top{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.cid{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:600;color:var(--ink-faint)}
+.voice{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:600;letter-spacing:.07em}
+.v-reed{color:var(--reed)} .v-bottle{color:var(--bottle)} .v-kazoo{color:var(--kazoo)}
+.v-cicada{color:var(--cicada)} .v-ratchet{color:var(--ratchet)} .v-plate{color:var(--plate)}
+.dur{font-family:"IBM Plex Mono",monospace;font-size:.66rem;color:var(--ink-faint);margin-left:auto;font-variant-numeric:tabular-nums}
+.cnote{margin:.2rem 0 .5rem;font-size:.9rem;color:var(--ink-soft);line-height:1.4}
+
+.verdicts{display:flex;gap:.35rem}
+.v{
+  flex:1; font-family:"IBM Plex Mono",monospace; font-size:.68rem; font-weight:600;
+  letter-spacing:.06em; text-transform:uppercase;
+  padding:.42rem .2rem; border-radius:3px; cursor:pointer;
+  background:transparent; border:1.5px solid var(--rule); color:var(--ink-faint);
+  transition:border-color .12s,color .12s;
+}
+.v:hover{border-color:var(--ink-faint);color:var(--ink-soft)}
+.v.keep.on{border-color:var(--keep);color:var(--keep)}
+.v.ok.on{border-color:var(--ok);color:var(--ok)}
+.v.drop.on{border-color:var(--drop);color:var(--drop)}
+.v.on{border-width:1.5px;font-weight:700}
+.v.on::after{content:" ✓"}
+
+.notewrap{display:block;margin-top:.8rem}
+.notewrap span{
+  display:block;font-family:"IBM Plex Mono",monospace;font-size:.62rem;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.3rem;
+}
+textarea{
+  width:100%;background:var(--card);color:var(--ink);
+  border:1px solid var(--rule);border-radius:4px;padding:.55rem .6rem;
+  font-family:inherit;font-size:.92rem;line-height:1.45;resize:vertical;
+}
+textarea:focus,.v:focus-visible,.play:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+
+.closing{border-top:1px solid var(--rule);padding-top:1.3rem;color:var(--ink-soft);font-size:.95rem}
+.closing p{margin:0 0 .8rem}
+.closing p:last-child{margin-bottom:0}
+.closing b{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+  <div class="rail">
+    <span class="cnt" id="cnt">0 / 20</span>
+    <span class="bar"><i id="barfill"></i></span>
+    <span class="save" id="save"></span>
+  </div>
+
+  <header>
+    <p class="eyebrow">GLINT · depth pass D2 · 20 clips</p>
+    <h1>Three new motions — do they earn their own voices?</h1>
+    <p>Every clip is level-matched to the same loudness, so nothing wins by being louder. D3's preset roster is gated on what you say here.</p>
+  </header>
+
+  <section id="sec-a">
+    <div class="shead">
+      <span class="sletter">A</span>
+      <div>
+        <p class="stitle">The new three, cold</p>
+        <h2 class="squestion">What do CICADA, RATCHET and PLATE sound like on their own?</h2>
+      </div>
+    </div>
+    <p class="sblurb">No comparison yet — just the three new mechanisms at their own defaults. CICADA re-clocks its carrier four times inside every cycle (a lattice). RATCHET climbs a ladder of harmonics, one rung per phase wrap (a staircase). PLATE's formant is tied to the note's own loudness, not a clock (a fall). CICADA's root sets its cycle rate, not its pitch — each of the four sub-cycles is a complete windowed grain, so CICADA sounds about two octaves above the other five voices in this set, RATCHET and PLATE included.</p>
+    <div class="clips">
+    <div class="clip" data-id="a01">
+      <button class="play" data-file="clips/a01_cicada_default.wav" data-id="a01" aria-label="Play a01">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">a01</span>
+          <span class="voice v-cicada">CICADA</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">CICADA at its defaults — a lattice, cold.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for a01">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="a02">
+      <button class="play" data-file="clips/a02_ratchet_default.wav" data-id="a02" aria-label="Play a02">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">a02</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">RATCHET at its defaults — a staircase, cold.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for a02">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="a03">
+      <button class="play" data-file="clips/a03_plate_default.wav" data-id="a03" aria-label="Play a03">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">a03</span>
+          <span class="voice v-plate">PLATE</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">PLATE at its defaults — a fall, cold.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for a03">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <label class="notewrap">
+      <span>Anything you want to say about the new three</span>
+      <textarea data-note="a" rows="2" placeholder="Optional. Your words are more useful than the buttons."></textarea>
+    </label>
+  </section>
+
+  <section id="sec-b">
+    <div class="shead">
+      <span class="sletter">B</span>
+      <div>
+        <p class="stitle">The full six</p>
+        <h2 class="squestion">Does the family still hang together?</h2>
+      </div>
+    </div>
+    <p class="sblurb">REED, BOTTLE and KAZOO, same defaults, same treatment. A and B together are GLINT's whole voice list, back to back, before anything gets swept.</p>
+    <div class="clips">
+    <div class="clip" data-id="b04">
+      <button class="play" data-file="clips/b04_reed_default.wav" data-id="b04" aria-label="Play b04">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">b04</span>
+          <span class="voice v-reed">REED</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">REED at its defaults.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for b04">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="b05">
+      <button class="play" data-file="clips/b05_bottle_default.wav" data-id="b05" aria-label="Play b05">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">b05</span>
+          <span class="voice v-bottle">BOTTLE</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">BOTTLE at its defaults.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for b05">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="b06">
+      <button class="play" data-file="clips/b06_kazoo_default.wav" data-id="b06" aria-label="Play b06">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">b06</span>
+          <span class="voice v-kazoo">KAZOO</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">KAZOO at its defaults.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for b06">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <label class="notewrap">
+      <span>Anything you want to say about the full six</span>
+      <textarea data-note="b" rows="2" placeholder="Optional. Your words are more useful than the buttons."></textarea>
+    </label>
+  </section>
+
+  <section id="sec-c">
+    <div class="shead">
+      <span class="sletter">C</span>
+      <div>
+        <p class="stitle">CICADA's lattice</p>
+        <h2 class="squestion">Does the inner re-clocking read as its own texture?</h2>
+      </div>
+    </div>
+    <p class="sblurb">CICADA restarts its carrier <b>CICADA_SUBCYCLES = 4</b> times inside every cycle of the fundamental, windowed per sub-cycle so none of the inner restarts click. BLOOM sweeps the ratio those four sub-cycles carry; the pitch never moves. Four is a chosen density, not a derived one — this is where a different number would announce itself.</p>
+    <div class="clips">
+    <div class="clip" data-id="c07">
+      <button class="play" data-file="clips/c07_cicada_bloom0.wav" data-id="c07" aria-label="Play c07">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">c07</span>
+          <span class="voice v-cicada">CICADA</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">BLOOM 0 — the lattice held still, all four sub-cycles at the base ratio.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for c07">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="c08">
+      <button class="play" data-file="clips/c08_cicada_bloom05.wav" data-id="c08" aria-label="Play c08">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">c08</span>
+          <span class="voice v-cicada">CICADA</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">BLOOM 0.5 — the sweep opens partway, all four sub-cycles moving together.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for c08">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="c09">
+      <button class="play" data-file="clips/c09_cicada_bloom1.wav" data-id="c09" aria-label="Play c09">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">c09</span>
+          <span class="voice v-cicada">CICADA</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">BLOOM 1 — the widest sweep the lattice gets.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for c09">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <label class="notewrap">
+      <span>Anything you want to say about the lattice</span>
+      <textarea data-note="c" rows="2" placeholder="Optional. Your words are more useful than the buttons."></textarea>
+    </label>
+  </section>
+
+  <section id="sec-d">
+    <div class="shead">
+      <span class="sletter">D</span>
+      <div>
+        <p class="stitle">RATCHET's ladder</p>
+        <h2 class="squestion">Do the steps read as a dial being turned, or a warble?</h2>
+      </div>
+    </div>
+    <p class="sblurb">RATCHET holds each rung for <b>RATCHET_STEP_SECONDS = 0.15s</b> and only steps at the next phase wrap — never a glide between harmonics. DECAY 0.9 gives the note room for several steps. Each clip's ladder below is the exact array <b>Glint.ratchetLadder</b> computed for it, printed to the generator's own console when this set renders — the rung counts here are that same record, not a separate guess.</p>
+    <div class="clips">
+    <div class="clip" data-id="d10">
+      <button class="play" data-file="clips/d10_ratchet_bloom025.wav" data-id="d10" aria-label="Play d10">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">d10</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">1.48s</span>
+        </div>
+        <p class="cnote">BLOOM 0.25 — kBase 8, climbing to rung 14 (7 rungs).</p>
+        <div class="verdicts" role="group" aria-label="Verdict for d10">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="d11">
+      <button class="play" data-file="clips/d11_ratchet_bloom05.wav" data-id="d11" aria-label="Play d11">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">d11</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">1.48s</span>
+        </div>
+        <p class="cnote">BLOOM 0.5 — climbing to rung 20 (13 rungs).</p>
+        <div class="verdicts" role="group" aria-label="Verdict for d11">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="d12">
+      <button class="play" data-file="clips/d12_ratchet_bloom075.wav" data-id="d12" aria-label="Play d12">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">d12</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">1.48s</span>
+        </div>
+        <p class="cnote">BLOOM 0.75 — climbing to rung 26 (19 rungs).</p>
+        <div class="verdicts" role="group" aria-label="Verdict for d12">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="d13">
+      <button class="play" data-file="clips/d13_ratchet_bloom1.wav" data-id="d13" aria-label="Play d13">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">d13</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">1.48s</span>
+        </div>
+        <p class="cnote">BLOOM 1 — climbing to rung 32 (25 rungs), the widest ladder RATCHET has at these defaults.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for d13">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <label class="notewrap">
+      <span>Anything you want to say about the ladder</span>
+      <textarea data-note="d" rows="2" placeholder="Optional. Your words are more useful than the buttons."></textarea>
+    </label>
+  </section>
+
+  <section id="sec-e">
+    <div class="shead">
+      <span class="sletter">E</span>
+      <div>
+        <p class="stitle">PLATE's fall</p>
+        <h2 class="squestion">Does the brightness really track the note's own loudness?</h2>
+      </div>
+    </div>
+    <p class="sblurb">PLATE has no clock of its own: <b>k(t) = kBase · (1 + BLOOM · amp_env(t))</b> ties the formant directly to the amplitude envelope. The point of this section is the cross-comparison: the DECAY 0.95 pair should still sound brighter than the DECAY 0.3 pair at the same instant into the note, because the fall follows each note's own decay rather than a fixed rate.</p>
+    <div class="clips">
+    <div class="clip" data-id="e14">
+      <button class="play" data-file="clips/e14_plate_decay03_bloom0.wav" data-id="e14" aria-label="Play e14">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">e14</span>
+          <span class="voice v-plate">PLATE</span>
+          <span class="dur">0.34s</span>
+        </div>
+        <p class="cnote">DECAY 0.3, BLOOM 0 — the short note's control: BLOOM 0 gates the coupling off, so this is a plain fixed-ratio strike.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for e14">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="e15">
+      <button class="play" data-file="clips/e15_plate_decay03_bloom1.wav" data-id="e15" aria-label="Play e15">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">e15</span>
+          <span class="voice v-plate">PLATE</span>
+          <span class="dur">0.34s</span>
+        </div>
+        <p class="cnote">DECAY 0.3, BLOOM 1 — the short note with the coupling on. It should already be dulling out well before the note ends.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for e15">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="e16">
+      <button class="play" data-file="clips/e16_plate_decay095_bloom0.wav" data-id="e16" aria-label="Play e16">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">e16</span>
+          <span class="voice v-plate">PLATE</span>
+          <span class="dur">1.67s</span>
+        </div>
+        <p class="cnote">DECAY 0.95, BLOOM 0 — the long note's control: same fixed ratio, just held longer.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for e16">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="e17">
+      <button class="play" data-file="clips/e17_plate_decay095_bloom1.wav" data-id="e17" aria-label="Play e17">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">e17</span>
+          <span class="voice v-plate">PLATE</span>
+          <span class="dur">1.67s</span>
+        </div>
+        <p class="cnote">DECAY 0.95, BLOOM 1 — the long note with the coupling on. At the same time-into-the-note as e15, this one should still sound brighter than e15 already does.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for e17">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <label class="notewrap">
+      <span>Anything you want to say about the fall</span>
+      <textarea data-note="e" rows="2" placeholder="Optional. Your words are more useful than the buttons."></textarea>
+    </label>
+  </section>
+
+  <section id="sec-f">
+    <div class="shead">
+      <span class="sletter">F</span>
+      <div>
+        <p class="stitle">The dissent</p>
+        <h2 class="squestion">Is RATCHET's bleep a defect, or a lineage?</h2>
+      </div>
+    </div>
+    <p class="sblurb">The spec records a designer's argument that GLINT's toy-like "bleep" character is a lineage worth keeping rather than a flaw to engineer away, and that RATCHET — stepping between fixed harmonics like an old chip tune — is that position given a voice. Three PEAK settings, everything else at RATCHET's defaults. If this is the one you reach for, the roadmap should follow it.</p>
+    <div class="clips">
+    <div class="clip" data-id="f18">
+      <button class="play" data-file="clips/f18_ratchet_peak010.wav" data-id="f18" aria-label="Play f18">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">f18</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">PEAK 0.1 — the darkest bleep.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for f18">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="f19">
+      <button class="play" data-file="clips/f19_ratchet_peak045.wav" data-id="f19" aria-label="Play f19">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">f19</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">PEAK 0.45 — the shipped default.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for f19">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    <div class="clip" data-id="f20">
+      <button class="play" data-file="clips/f20_ratchet_peak090.wav" data-id="f20" aria-label="Play f20">
+        <svg viewBox="0 0 24 24" class="i-play" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg viewBox="0 0 24 24" class="i-stop" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+      </button>
+      <div class="meat">
+        <div class="cl-top">
+          <span class="cid">f20</span>
+          <span class="voice v-ratchet">RATCHET</span>
+          <span class="dur">0.55s</span>
+        </div>
+        <p class="cnote">PEAK 0.9 — the brightest, most aggressive ladder RATCHET has.</p>
+        <div class="verdicts" role="group" aria-label="Verdict for f20">
+          <button class="v keep" data-v="KEEP">Keep</button>
+          <button class="v ok"   data-v="OK">Ok</button>
+          <button class="v drop" data-v="DROP">Drop</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <label class="notewrap">
+      <span>Anything you want to say about the dissent</span>
+      <textarea data-note="f" rows="2" placeholder="Optional. Your words are more useful than the buttons."></textarea>
+    </label>
+  </section>
+
+  <div class="closing">
+    <p><b>Skipping is a verdict too.</b> D, E and F are the sections that actually decide what D3 builds — A and B are the baseline, confirming the new three still belong next to the old three.</p>
+    <p>Your answers save as you tap. If the page says <b>local</b> instead of <b>saved</b>, they are still in this browser and you can tell me the gist instead.</p>
+  </div>
+
+</div>
+
+<script>
+
+const clips = [{"id": "a01"}, {"id": "a02"}, {"id": "a03"}, {"id": "b04"}, {"id": "b05"}, {"id": "b06"}, {"id": "c07"}, {"id": "c08"}, {"id": "c09"}, {"id": "d10"}, {"id": "d11"}, {"id": "d12"}, {"id": "d13"}, {"id": "e14"}, {"id": "e15"}, {"id": "e16"}, {"id": "e17"}, {"id": "f18"}, {"id": "f19"}, {"id": "f20"}];
+const audio = new Audio();
+let current = null, db = null;
+
+function setPlaying(id){
+  document.querySelectorAll('.clip.playing').forEach(function(e){ e.classList.remove('playing'); });
+  if (id) {
+    const el = document.querySelector('.clip[data-id="'+id+'"]');
+    if (el) el.classList.add('playing');
+  }
+  current = id;
+}
+audio.addEventListener('ended', function(){ setPlaying(null); });
+
+document.querySelectorAll('.play').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    const id = btn.dataset.id;
+    if (current === id) { audio.pause(); setPlaying(null); return; }
+    audio.src = btn.dataset.file;
+    audio.currentTime = 0;
+    audio.play().then(function(){ setPlaying(id); }).catch(function(){ setPlaying(null); });
+  });
+});
+
+const verdicts = {};
+const notes = {};
+
+function refresh(){
+  const n = Object.keys(verdicts).length;
+  document.getElementById('cnt').textContent = n + ' / ' + clips.length;
+  document.getElementById('barfill').style.width = (100 * n / clips.length) + '%';
+}
+
+function flashSaved(txt){
+  const el = document.getElementById('save');
+  el.textContent = txt;
+  if (txt === 'saved') setTimeout(function(){ if (el.textContent === 'saved') el.textContent = ''; }, 1600);
+}
+
+async function persist(coll, id, data){
+  if (!db) { flashSaved('local'); return; }
+  try {
+    await db.doc(coll + '/' + id).set(Object.assign({ at: Date.now() }, data));
+    flashSaved('saved');
+  } catch (e) { flashSaved('local'); }
+}
+
+document.querySelectorAll('.verdicts').forEach(function(group){
+  const id = group.closest('.clip').dataset.id;
+  group.querySelectorAll('.v').forEach(function(b){
+    b.addEventListener('click', function(){
+      const val = b.dataset.v;
+      const already = verdicts[id] === val;
+      group.querySelectorAll('.v').forEach(function(x){ x.classList.remove('on'); });
+      if (already) { delete verdicts[id]; }
+      else { verdicts[id] = val; b.classList.add('on'); }
+      refresh();
+      try { localStorage.setItem('glint-d2-verdicts', JSON.stringify(verdicts)); } catch (e) {}
+      persist('verdicts', id, { verdict: verdicts[id] || null });
+    });
+  });
+});
+
+let noteTimer = {};
+document.querySelectorAll('textarea[data-note]').forEach(function(ta){
+  const sec = ta.dataset.note;
+  ta.addEventListener('input', function(){
+    notes[sec] = ta.value;
+    try { localStorage.setItem('glint-d2-notes', JSON.stringify(notes)); } catch (e) {}
+    clearTimeout(noteTimer[sec]);
+    noteTimer[sec] = setTimeout(function(){ persist('notes', sec, { text: ta.value }); }, 900);
+  });
+});
+
+// restore whatever this browser remembers, before the network answers
+try {
+  const v = JSON.parse(localStorage.getItem('glint-d2-verdicts') || '{}');
+  Object.keys(v).forEach(function(id){
+    verdicts[id] = v[id];
+    const el = document.querySelector('.clip[data-id="'+id+'"] .v[data-v="'+v[id]+'"]');
+    if (el) el.classList.add('on');
+  });
+  const n = JSON.parse(localStorage.getItem('glint-d2-notes') || '{}');
+  Object.keys(n).forEach(function(sec){
+    notes[sec] = n[sec];
+    const ta = document.querySelector('textarea[data-note="'+sec+'"]');
+    if (ta) ta.value = n[sec];
+  });
+} catch (e) {}
+refresh();
+
+if (window.claude && window.claude.use) {
+  window.claude.use('db').then(function(d){ db = d; }).catch(function(){});
+}
+
+</script>

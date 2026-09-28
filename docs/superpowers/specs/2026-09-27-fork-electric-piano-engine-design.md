@@ -552,3 +552,48 @@ suite the spec named. Where the build departs from the design, and why:
   like SIREN's, since FORK has no LOOP render to distinguish from a
   one-shot). Both are small, and neither blocks the audition: presets,
   the kit, and the keys instrument all render and export today.
+
+## Round two — 2026-09-28
+
+R1's own audition (16 presets, both voices) came back: closer on TINE, but
+neither read as "piano" outright, and BAR read as its own thing — a
+marimba, worth keeping as a voice rather than chasing toward piano. Asked
+for at least one more voice option, aimed at the piano gap specifically.
+
+**`ForkVoice.NODE`** — the same cantilever tine as TINE (`TINE_RATIOS`
+unchanged), read at a different spot: its own second mode's internal
+node. A pickup there cannot see mode 2 at all, and modes 3 and 4 are
+strongly reduced too (their own shape function is simply small in that
+region) — a purer, more fundamental-forward tone than TINE's own tip
+read, without inventing a new physical claim to get there or touching the
+bar itself.
+
+The mechanism, not asserted: a cantilever's mode shape is derived from the
+Euler-Bernoulli fixed-free boundary conditions (`Fork.cantileverModeShape`
+— fixed end gives `φ(0)=φ'(0)=0`, collapsing the general solution to
+`A[cosh(βξ)−cos(βξ)] + B[sinh(βξ)−sin(βξ)]`; the free end's own two
+conditions then fix `B/A` and, requiring both to agree, *reproduce* the
+textbook characteristic equation `cosh(β)cos(β) = −1` — not assumed, a
+derivation that happened to land on the independently-known answer, which
+is the actual verification). The pickup position (`NODE_PICKUP_XI =
+0.783445`) is mode 2's own root of that shape function, found by
+bisection — not a chosen or fitted number, and it matches the value beam-
+vibration references already tabulate for a cantilever's second mode, a
+cross-check the derivation did not have to pass but did.
+
+`ForkTest` carries the check twice: once on the derivation itself (the
+tabulated eigenvalues satisfy `cosh(β)cos(β) = −1`, the mode shape is zero
+at the clamped root), and once on the audible claim (mode 2's own energy,
+measured on the clean resonator before the pickup's nonlinearity, is
+suppressed to under 15% of TINE's own at the identical macros).
+
+**What round two deliberately did not do**: touch `BARK`'s closeness
+mechanism, add a `POSITION` macro letting a player move the pickup
+themselves (the shape function crosses zero repeatedly across 0..1 — an
+exposed macro would wander through a landscape of arbitrary phase
+flips between modes, not a clean bright/warm dial, so this round bakes in
+the one physically-motivated spot rather than exposing the whole
+unpredictable range), or claim NODE "solves" the piano question — that is
+still the audition's own call, now with a third, purpose-built candidate
+to make it against. Eight presets shipped for NODE (`ForkPresets.kt`),
+named for the tone the mechanism gives, not for having arrived.

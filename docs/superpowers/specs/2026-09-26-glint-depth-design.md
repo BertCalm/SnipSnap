@@ -138,19 +138,21 @@ Registration points, and this table is **not exhaustive** — Phase 1 learned th
 
 | File | Change |
 |---|---|
-| `Glint.kt` | three new mechanisms, BODY redefined, BLOOM's constants collapsed, `macrosFor` returns five for RATCHET and PLATE; `SNAP_FLOOR = 3f` added, `snapRatio` floored to `SNAP_FLOOR..SNAP_CEILING` |
+| `Glint.kt` | three new mechanisms, BODY redefined, BLOOM's constants collapsed, `macrosFor` returns six macros on every voice; `SNAP_FLOOR = 3f` added, `snapRatio` floored to `SNAP_FLOOR..SNAP_CEILING` |
 | `GlintTest.kt` | the new mechanisms' tests; existing tests re-pointed at six voices |
 | `Velocity.kt` | none — the fix lives in `Glint.kt`'s snap, not in how velocity computes its ratio |
 | `SynthScreen.kt` | nothing — voices come from `GlintVoice.entries`, and `drumClass` already maps every voice to TONAL |
 | `docs/SYNTH_ROADMAP.md` | amend the S10 row |
 
-Before implementation, grep for every exhaustive `when` over `Patch` and every hardcoded engine or voice list rather than trusting this table. Phase 1's "exhaustive" registration table missed `Velocity.macroSpecsFor`'s sealed `when` — which stops `:synth` compiling — and `shell`'s `UserPresetsTest` roster.
+**Correction, D2:** the row above used to say `macrosFor` returns "five for RATCHET and PLATE." That contradicted this document's own macro table (see **Macros — still six, unchanged names** above), whose **BLOOM** row spells out what BLOOM means on both RATCHET and PLATE — a macro the table defines is not one it also drops. The contradiction was found while building the D2 audition generator and checking this table's claims against `Glint.kt` directly: `macrosFor` does not branch on `voice` at all, so it returns the identical six-entry list for every voice, RATCHET and PLATE included. It was settled in favour of six on every voice, matching both the code and the macro table, and the line above is corrected accordingly; `GlintTest.kt`'s `every voice declares exactly the six macros` locks this down for all six voices going forward.
+
+Before implementation, grep for every exhaustive `when` over `Patch` and every hardcoded engine or voice list rather than trusting this table. Phase 1's "exhaustive" registration table missed `Velocity.macroSpecsFor`'s sealed `when` — which stops `:synth` compiling — and `shell`'s `UserPresetsTest` roster. This table's own "five for RATCHET and PLATE" line, above, is a second instance of the same failure mode — a claim in this document diverging from what the code and the document's other sections actually say.
 
 ## Testing
 
 Everything Phase 1 proved must keep passing, re-pointed at six voices. In particular:
 
-- **Periodicity** — the correlation at the exact fractional one-period lag, threshold 0.98, at both BLOOM extremes. **CICADA is the risk**: a carrier that re-clocks inside the cycle must still leave the output periodic at `f0`, because its sub-cycles divide the cycle an integer number of times. If CICADA cannot hold 0.98, its sub-division is wrong, not the test.
+- **Periodicity** — the correlation at the exact fractional one-period lag, threshold 0.98, at both BLOOM extremes. **CICADA is the risk**: a carrier that re-clocks inside the cycle must still leave the output periodic at `f0`. If CICADA cannot hold 0.98, check the measurement before the sub-division: a non-integer sub-cycle count does not by itself break periodicity at `f0` (`frac(N·φ)` repeats whenever `φ` does, since `phase` wraps independently of the sub-clock), so a failing correlation is not proof the engine is wrong. **Recorded 2026-09-27**: D2's actual CICADA periodicity failure was the test's own two-tap linear interpolation (`GlintTest.kt`'s `sampleAt`), which scored 0.9683 at a 15,840 Hz carrier — replaced with a 64-tap Blackman-sinc kernel, worst case across all six voices 0.99940. What an integer sub-cycle count actually guards is the wrap: a fractional count leaves the final sub-cycle truncated, so the window does not reach zero at the restart, which clicks (worst adjacent jump measured 0.132858 → 0.705022, a 5.3× jump) — already covered by the no-click test below.
 - **The formant lands where it is named** — the Goertzel test, extended to the second formant: energy at `k₂·f0` must exceed its decoys.
 - **No click** — at fractional part 0.25, where the discontinuity is maximal. CICADA's inner restarts must each land on silence too, or it will click at every sub-cycle rather than once per cycle.
 - **Velocity** — a new test that the soft and hard renders differ at every PEAK from 0 to 1, which is the bug above stated as an assertion.

@@ -3,9 +3,8 @@
 **Status:** S12 built and merged (PR #348: engine, presets, tests, SYNTH
 picker, landing, testkit kit), **audition gate passed** 2026-09-27: good
 across the board on the first listen, SWEEP inaudible and fixed (below),
-then confirmed on the second. S12.1 (`→ SURFACE ▸`) and S12.2 (SIREN held
-as a keys instrument) are also built; S12.3 (the loop-grid drone) is open.
-The
+then confirmed on the second. S12.1 (`→ SURFACE ▸`), S12.2 (SIREN held as a
+keys instrument) and S12.3 (the loop-grid drone) are also built. The
 listening page for that gate is
 `https://claude.ai/artifact/DXEn8DC3ZkcHGzFrTP6VEz`, rendered by
 `./gradlew :synth:generateSirenAudition` (the kit as it lands, every knob
@@ -348,7 +347,7 @@ harmonic. SCRAMBLE stops one step short.
 | **S12** | `synth/Siren.kt` (`SirenVoice`, macros, the one-shot render and the LOOP render), `SirenPatch` in `Patches.kt`, `SirenPresets.kt` (8–12 per voice, named for the sound: AIR RAID, TWO TONE, RAY GUN, CHIRP…) and its `Presets` branch, the tests above, `benidub` in the blocklist, and a `SnipSnap Siren Kit` under `testkit/` (`./gradlew :synth:generateSirenKit`). Then the phone: SIREN in the SYNTH picker (… → GLINT → SIREN → THUMP; README's engine count moves up one), the HOLD readout's LOOP step, SEND TO PAD landing a one-shot siren with the rack's ECHO in its recipe and a LOOP siren dry, and a toast for each that says which it did and, for a LOOP, that the SURFACE plays it. **Ends at an audition gate.** |
 | **S12.1** | **built** — `→ SURFACE ▸` on SYNTH, shown only while a SIREN's HOLD is at LOOP: the same slot chooser as SEND TO PAD, then `SurfaceStore.choosePad` points the kit's surface at the slot (keeping its corners and the rest) and App switches to the SURFACE screen, which reads the file as it opens. The toast says what to do with a finger. One App callback, one store write. |
 | **S12.2** | **built** — Door 3: a SIREN patch as a held keys instrument through `MAKE INSTRUMENT ▸`, the LOOP render doubled into the keygroup's sustain loop (below), RELEASE the only knob. |
-| **S12.3** | Door 4: `DRONE TO LOOP ▸` for SIREN, RATE snapped to bar divisions, re-rendered on tempo change. |
+| **S12.3** | **built** — Door 4: `DRONE TO LOOP ▸` for SIREN, RATE's own Hz snapped onto the nearest whole cycle count the grid's loop can hold, re-rendered on tempo change. No MOTION or BREATHS knob: RATE and DEPTH already are the patch's own speed and swing. |
 
 ## Settled — 2026-09-27
 
@@ -456,6 +455,165 @@ Second listen, same day: "Sweep is great." The gate is passed.
   exactly; there is nothing to settle, so `SirenPadMaker.Spec` carries only
   RELEASE, and `SynthScreen`'s `HeldInstrumentSheet` hides the ATTACK
   slider for it.
+- **The `cancelled` callback reached every layer but the one that renders.**
+  Review caught it before the second listen: `HeldSpec.Siren` took
+  `cancelled` and dropped it on the floor, so CANCEL on the sheet could not
+  stop a render already running — at RATE's floor a single zone is several
+  seconds of audio, nine zones deep in parallel. `Siren.synthesizeLoopStretch`
+  now asks every 32768 oversampled samples, the same cadence
+  `Resin.renderHeld` and `ResinDrone` already use, and `renderLoop` →
+  `Keys.sirenPad` → `SirenPadMaker` → `HeldSpec.Siren` each thread it
+  through rather than discarding it. `SirenHeldTest` holds the stop and its
+  time bound.
+
+## S12.3, as built — 2026-09-27
+
+- **No MOTION or BREATHS to invent.** RESIN's drone needs both because
+  RESIN's held macros carry no swing of their own; SIREN already *is* a
+  movement (README's own words) — RATE and DEPTH are its speed and swing,
+  dialed on the panel above before DRONE TO LOOP is even opened. `SirenDrone.Spec`
+  is a voice and the patch's own macros, kept to `SOUNDING_MACROS =
+  listOf("RATE", "DEPTH", "GRIT")`; TUNE, HOLD and SWEEP have no note-on to
+  act on, the same exclusion RESIN's own CONTOUR and DECAY get.
+- **RATE is snapped, not replaced.** Rather than inventing a discrete
+  breaths-per-loop knob, `SirenDrone.synthesize` reads RATE's own Hz
+  (`Siren.rateHz`) and rounds it to the nearest whole number of cycles the
+  grid's own loop can hold (`Math.round(desiredHz * frames / sampleRate)`,
+  floored at one) — the same "further is longer" snap `DroneFit` already
+  applies to pitch, applied here to speed. The knob keeps its ordinary
+  meaning everywhere else; only the drone quantizes it, silently, to
+  whatever whole cycle count is closest for the span it lands on.
+- **The carrier snaps the way `Siren.planLoop` already does**, run at the
+  grid's own loop length instead of `Siren.loopFrames`'s: the LFO's own
+  phase integral over one loop (`g`) fixes how many whole carrier cycles
+  fit, and `baseHz = cycles / g` lands within a fraction of a cycle of the
+  root's true Hz over the whole span — provably exact in the phase domain
+  (the accumulated phase over one loop is `cycles`, a whole number, by
+  construction), not just approximately so.
+- **A one-pole settles fast; the pre-roll doesn't need RESIN's two
+  seconds.** RESIN's ladder is a resonant 4-pole that can ring for a
+  second near self-oscillation; SIREN's GRIT stage and its LFO de-zipper
+  are both single one-poles with sub-millisecond time constants, so 0.1 s
+  of pre-roll (a hundred-plus time constants) reaches the periodic steady
+  state with room to spare — confirmed by `SirenDroneTest`'s own two-period
+  seam measurement landing at float noise, not merely under the bar.
+- **`DroneSource` tries RESIN, then SIREN, then falls through to `inner`**,
+  so a recipe from a later engine can still wrap this one; the cache key
+  never reads which engine matched, only the recipe's own JSON, root,
+  frames and rate.
+
+## After review — 2026-09-27
+
+Three findings on the first review, all real, none touching the audio a
+finished render actually produces:
+
+- **`DroneFit.spanFor`/`nudgeCents` are not engine-agnostic — they are
+  RESIN's own model.** The as-built note above claimed otherwise, and it
+  was wrong: `DroneFit`'s formula assumes RESIN's even-only sub-octave
+  snap and pure pitch arithmetic, while SIREN's own carrier
+  (`SirenDrone.fitCarrier`) permits any whole cycle count and depends on
+  DEPTH through the LFO's own phase integral. Reusing `DroneFit` for SIREN
+  never broke the tuning promise — SIREN's true achievable nudge is
+  provably no worse than what `DroneFit`'s model estimates (its
+  even-only constraint is strictly tighter than SIREN needs, and a
+  zero-mean swing's phase integral is always at least the loop's plain
+  duration, by Jensen's inequality) — but it could choose a longer span
+  than necessary, and the readout would not be the number SIREN's own
+  render lands on. `SirenDrone` now exposes `fitCarrier` (shared with
+  `synthesize`, so the snap is computed once, not twice) and `nudgeCents`;
+  `SirenDroneMaker.span`/`label` read those instead of `DroneMaker`'s.
+  `SessionBuilder.sendDrone` takes an explicit `span` (default: the old
+  RESIN-shaped guess, for RESIN's own callers and the existing tests), and
+  `App.sendDroneToLoop` works it out against the session it just loaded,
+  dispatching on the recipe's own engine — the one place outside `:synth`
+  and `:shell` a SIREN drone's span is chosen, so it has to ask the right
+  model too.
+- **`Siren.planLoop`'s own warm-up and integral, and `SirenDrone`'s own
+  settle and integral, ran before either's `cancelled` was ever asked.**
+  At RATE's floor, or across an 8-interval drone's own loop, that
+  planning pass is itself seconds of iteration — a render already
+  cancelled would still have to wait it out. Both now check the same
+  cadence their own audio loop already did (`SirenTest`'s "planLoop itself
+  stops...", `SirenDroneTest`'s "the carrier's own settle and integral
+  pass stops too...").
+
+## Hardening round — 2026-09-28
+
+A pass over all four doors after #368 merged, looking for what neither
+the automated review nor the tests would have caught: malformed/corrupted
+recipe JSON, NaN/Infinity propagation through macros, integer and
+array-size edges in the drone and held-pad paths, and the new caching and
+dispatch logic in `DroneSource`. Most of the surface held on inspection —
+`Json`'s own number grammar can produce `Infinity` from an absurd exponent
+but never `NaN` (no token for it), and `Infinity` clamps correctly through
+`coerceIn`, unlike `NaN`; every render call site already wraps in
+`try/catch` with a toast, a pattern `makeHeld`'s own `coroutineScope` (not
+raw `appScope.launch`) exists specifically to preserve; the loop-grid's
+own BPM/bars bounds keep every frame count `SirenDrone` ever sees safely
+inside `Int` range with room to spare; and the native `SurfaceEngine` was
+already mono-only, so a mono SIREN LOOP render introduced no new channel
+mismatch.
+
+Two real gaps, both about `SirenDroneMaker.span`/`label`'s own cost —
+unlike RESIN's closed-form `DroneMaker.label`, SIREN's own reads an LFO
+phase integral over the candidate span's own frame count, measured at
+~850 ms per voice at the grid's slowest tempo and longest bars
+(`SirenDroneMakerTest`'s new "span and label finish quickly even at the
+grid's slowest, longest setting"):
+
+- **`SynthScreen`'s DRONE TO LOOP sheet computed its own readout inline in
+  the composable body** — synchronous, on the main thread, on every ROOT
+  +/- tap. RESIN's own version was always free, so this never showed; it
+  now runs through a `LaunchedEffect` off the main thread
+  (`Dispatchers.Default`), the same way `droneSession` itself already
+  loads off it, with the placeholder shown until it lands.
+- **`App.sendDroneToLoop`'s new SIREN-vs-RESIN span dispatch ran unguarded
+  inside the write path**, the one place in this whole feature that broke
+  the "a render or fit computation never crashes the app, it toasts"
+  pattern every other call site holds. No live input was found that makes
+  it throw — `rootMidi` is always inside SIREN's own register, the session
+  is validated before this runs, and the recipe is the app's own
+  freshly-serialized spec — but it now falls back to RESIN's own (proven
+  safe, if less precise) estimate on any failure rather than trusting that
+  reasoning to hold forever.
+
+## Hardening round, after review — 2026-09-28
+
+Three findings on the hardening round itself, all in the fix, not the
+original bug — the readout's own move off the main thread was right, but
+the move was incomplete:
+
+- **The label effect never restarted on a macro change.** Its keys were
+  `droneOpen, droneRoot, droneSession` — never `engine`, `voice` or
+  `macros`. RESIN's own label reads none of these (pure pitch), so this
+  never showed; SIREN's own reads RATE and DEPTH through
+  `SirenDrone.nudgeCents`, so a macro change while the sheet is open
+  (unreachable today — the panel sits behind the sheet's own scrim — but
+  not a fact this file should have to keep being true to stay correct)
+  would have left a stale readout standing indefinitely. All three now
+  key the effect.
+- **The readout kept the *old* root's label while the new one computed.**
+  A ROOT tap left the prior span and cents on screen for the full ~850 ms
+  the new fit takes, while PREVIEW and SEND already read the new root —
+  a readout that could describe a note neither button was about to play.
+  The effect now resets to the sheet's own placeholder before it starts
+  computing the next one, not after.
+- **`cancelled` never reached the fit at all.** `SirenDroneMaker.span`
+  and `label`, and `SirenDrone.nudgeCents` under them, took no
+  `cancelled` parameter, so `LaunchedEffect`'s own cancellation on a key
+  change could not stop a computation already inside `fitCarrier`'s
+  integral — only the *next* tap's effect would start, on top of, not
+  instead of, the still-running previous one. A run of ROOT taps could
+  pile up several ~850 ms computations on `Dispatchers.Default`'s own
+  pool at once. `nudgeCents` now takes `cancelled` and threads it into
+  `fitCarrier`; `span` and `label` thread it the same way `render`
+  already did; the effect passes `{ !isActive }`, the same idiom
+  `previewDrone`'s own render call uses, and the label's own `try/catch`
+  rethrows a cancellation rather than catching it as a plain failure —
+  `runCatching` does not tell the two apart, `catch` does.
+  `SirenDroneTest`'s "nudgeCents itself stops..." and
+  `SirenDroneMakerTest`'s "span and label stop..." hold the new reach
+  directly.
 
 ## Still open, not blocking
 

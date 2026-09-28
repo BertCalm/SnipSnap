@@ -43,9 +43,18 @@ testkit/glint-audition/
 # covers both since it ignores the whole directory.
 testkit/glint-d1-audition/
 
+# The GLINT D2 audition clips and page, rendered by
+# :synth:generateGlintD2Audition; never committed. Same layout as D1: clips
+# under clips/, the page copied in as index.html.
+testkit/glint-d2-audition/
+
 # The TINES audition phrases and page, rendered by :synth:generateTinesAudition
 # and published as the listening artifact; never committed.
 testkit/tines-audition/
 # The SIREN audition clips, manifest and page, rendered by :synth:generateSirenAudition
 # and published as the listening artifact; never committed.
 testkit/siren-audition/
+
+# The FORK audition clips, manifest and page, rendered by :synth:generateForkAudition
+# and published as the listening artifact; never committed.
+testkit/fork-audition/

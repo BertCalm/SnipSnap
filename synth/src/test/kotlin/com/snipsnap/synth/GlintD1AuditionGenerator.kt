@@ -225,9 +225,9 @@ object GlintD1AuditionGenerator {
                 // would be visible in the console output too.
                 val reference = Glint.referenceHz(GlintVoice.REED)
                 val f0 = Glint.frequencyFor(GlintVoice.REED, tune)
-                val peakHzAtReference = Glint.ratioAtReference(group.peak) * reference
+                val peakHzAtReference = Glint.ratioAtReference(group.peak, GlintVoice.REED) * reference
                 val peakHz = Dsp.keyTrack(peakHzAtReference, f0, reference, group.follow)
-                val unsnapped = (peakHz / f0).coerceIn(Glint.K_MIN, Glint.K_MAX)
+                val unsnapped = (peakHz / f0).coerceIn(Glint.K_MIN, Glint.kCeilingFor(GlintVoice.REED))
                 println("$name: TUNE=$tune -> unsnapped=$unsnapped k=$k")
                 ks.add(k)
                 write(GlintVoice.REED, name, macros)

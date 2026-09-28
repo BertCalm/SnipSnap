@@ -111,4 +111,26 @@ class SirenHeldTest {
         val rateMoved = Keys.sirenPad(SirenVoice.WAIL, mapOf("RATE" to 0.9f), midi)
         assertTrue(!plain.snip.samples.contentEquals(rateMoved.snip.samples), "RATE must move a held SIREN's render")
     }
+
+    @Test
+    fun `a held zone nobody wants any more stops`() {
+        var asked = 0
+        val t0 = System.nanoTime()
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            // The slowest zone there is: RATE at its floor, seconds of loop.
+            Keys.sirenPad(SirenVoice.WAIL, mapOf("RATE" to 0f), Keys.sirenPadMidis().first()) { ++asked > 0 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue(asked >= 1, "the render never asked")
+        assertTrue(ms < 1_000, "a cancelled zone ran on for ${ms}ms")
+    }
+
+    @Test
+    fun `asking changes nothing about a held zone that isn't cancelled`() {
+        val midi = Keys.sirenPadMidis()[4]
+        val plain = Keys.sirenPad(SirenVoice.LASER, emptyMap(), midi)
+        val asked = Keys.sirenPad(SirenVoice.LASER, emptyMap(), midi) { false }
+        assertEquals(plain.loopStartFrame, asked.loopStartFrame)
+        assertTrue(plain.snip.samples.contentEquals(asked.snip.samples))
+    }
 }

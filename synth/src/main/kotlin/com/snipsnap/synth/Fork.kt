@@ -23,14 +23,24 @@ import kotlin.random.Random
  * signal explores less of the curve and the tone cleans up on its own —
  * TINES fakes exactly that with its BITE envelope; here it is free.
  *
- * The two voices are two answers to "what is the bar": [ForkVoice.TINE] is
- * a cantilever (screwed down at one end, free at the other — the physical
- * shape of a real tine, whose overtones sit far from the fundamental and
- * die in tens of milliseconds), [ForkVoice.BAR] is a free-free bar (the
- * vibraphone's own shape, and the ratios the brief's spec named). Both are
- * shipped because nearly all the harmonic content a listener calls "the
- * sound of an electric piano" comes from the pickup, not the bar, so which
- * bar reads as the instrument is a listening question, not a derivation.
+ * The first two voices are two answers to "what is the bar":
+ * [ForkVoice.TINE] is a cantilever (screwed down at one end, free at the
+ * other — the physical shape of a real tine, whose overtones sit far from
+ * the fundamental and die in tens of milliseconds), [ForkVoice.BAR] is a
+ * free-free bar (the vibraphone's own shape, and the ratios the brief's
+ * spec named). Both are shipped because nearly all the harmonic content a
+ * listener calls "the sound of an electric piano" comes from the pickup,
+ * not the bar, so which bar reads as the instrument is a listening
+ * question, not a derivation.
+ *
+ * Round one's own audition (both voices, sixteen presets) came back: closer
+ * on TINE than BAR, but neither read as "piano" outright. [ForkVoice.NODE]
+ * is round two's answer — the same cantilever tine as TINE, only read at a
+ * different spot: its second mode's own internal node (see
+ * [NODE_PICKUP_XI]), which cannot see that mode at all and barely sees the
+ * third or fourth either. Same bar, same ratios, only where the pickup
+ * listens — a purer, more fundamental-forward tone than TINE's own tip
+ * read, without inventing a new physical claim to get there.
  *
  * Same contract as every engine: macros are 0..1 mapped onto bounded
  * musical ranges (SCRAMBLE can't land on garbage), the DSP renders at
@@ -38,7 +48,7 @@ import kotlin.random.Random
  * the pickup's nonlinearity makes harmonics the linear resonator never
  * had — and TUNE snaps to semitones like every melodic engine.
  */
-enum class ForkVoice { TINE, BAR }
+enum class ForkVoice { TINE, BAR, NODE }
 
 object Fork {
 
@@ -51,18 +61,84 @@ object Fork {
      * fundamental. TINE is the cantilever eigenvalues (βL = 1.8751, 4.6941,
      * 7.8548, 10.9955, squared and normalised) — the same family
      * [Tines.KALIMBA_PARTIALS] carries for its first three, extended here
-     * by the fourth so FORK has the same four-mode budget on both voices.
+     * by the fourth so FORK has the same four-mode budget on every voice.
      * BAR is the free-free bar, exactly [Modes.tableFor]'s own
      * `METAL_BAR` ratios (Euler-Bernoulli free-free eigenvalues 4.730,
      * 7.853, 10.996, 14.137 squared and normalised) — Fletcher & Rossing,
-     * Blevins, the same citation `Modes.kt` carries.
+     * Blevins, the same citation `Modes.kt` carries. [ForkVoice.NODE]
+     * shares TINE's own table exactly (see [tableFor]) — it is the same
+     * tine, only read from a different spot; see [NODE_POSITION_GAIN].
      */
     val TINE_RATIOS = floatArrayOf(1f, 6.267f, 17.548f, 34.386f)
     val BAR_RATIOS = floatArrayOf(1f, 2.756f, 5.404f, 8.933f)
 
-    private fun tableFor(voice: ForkVoice): FloatArray = when (voice) {
-        ForkVoice.TINE -> TINE_RATIOS
+    /** [tableFor] internal for testability: [ForkTest] reads it directly rather than re-deriving the voice-to-table mapping. */
+    internal fun tableFor(voice: ForkVoice): FloatArray = when (voice) {
+        ForkVoice.TINE, ForkVoice.NODE -> TINE_RATIOS
         ForkVoice.BAR -> BAR_RATIOS
+    }
+
+    /**
+     * The cantilever's own eigenvalues (βL), to full double precision —
+     * [TINE_RATIOS]' own KDoc rounds these to four digits for the ratio
+     * table, which is fine for a ratio but not for [cantileverModeShape]:
+     * `cosh(βL)` grows fast enough that Float32's own ~7-digit precision,
+     * not just a rounded literal, already moved mode 4's boundary-condition
+     * check past 1e-3 (checked directly before switching this to `Double`,
+     * not assumed). These satisfy the cantilever characteristic equation
+     * `cosh(βL)·cos(βL) = -1` to 3e-5 or tighter at every mode — Blevins,
+     * "Formulas for Natural Frequency and Mode Shape", the same family
+     * [TINE_RATIOS] cites.
+     */
+    internal val CANTILEVER_BETA_L = doubleArrayOf(1.8751040687, 4.694091133, 7.854757438, 10.995540734)
+
+    /**
+     * The cantilever's own mode shape (Euler-Bernoulli, fixed at ξ=0, free at
+     * ξ=1), evaluated at a point [xi] along the bar — only ever used here as
+     * a *ratio* between two [xi] values, so no normalisation is applied.
+     *
+     * Derived, not recalled: the fixed end forces `φ(0)=φ'(0)=0`, which
+     * collapses the general solution to `A[cosh(βξ)-cos(βξ)] +
+     * B[sinh(βξ)-sin(βξ)]`; the free end's own two conditions (`φ''(1)=0`,
+     * `φ'''(1)=0`) then fix `B/A` and, requiring both to agree, reproduce
+     * the textbook characteristic equation `cosh(β)cos(β) = -1` — the same
+     * equation [CANTILEVER_BETA_L] is checked against. That agreement is
+     * the verification: an error anywhere in this derivation would not
+     * also happen to reproduce the independently-known equation.
+     */
+    internal fun cantileverModeShape(betaL: Double, xi: Float): Float {
+        val b = betaL
+        val x = xi.toDouble()
+        val alpha = (kotlin.math.sin(b) - kotlin.math.sinh(b)) / (kotlin.math.cosh(b) + kotlin.math.cos(b))
+        val shape = (kotlin.math.cosh(b * x) - kotlin.math.cos(b * x)) + alpha * (kotlin.math.sinh(b * x) - kotlin.math.sin(b * x))
+        return shape.toFloat()
+    }
+
+    /**
+     * [ForkVoice.NODE]'s own pickup position along the tine, root (0) to tip
+     * (1): the second mode's own internal node, solved by bisection against
+     * [cantileverModeShape] (0.783445 — the same value beam-vibration
+     * references tabulate for a cantilever's second mode, a cross-check this
+     * derivation did not have to pass but did).
+     */
+    const val NODE_PICKUP_XI = 0.783445f
+
+    /**
+     * Per-mode gain [modesFor] applies for [ForkVoice.NODE] on top of the
+     * `1/ratio` every voice already carries: [cantileverModeShape] at
+     * [NODE_PICKUP_XI] over its own value at the tip (ξ=1, TINE's own read),
+     * mode by mode. Mode 2 (index 1) lands at ~0 by construction — that is
+     * the node [NODE_PICKUP_XI] was solved for — and modes 3 and 4 are
+     * strongly reduced too (their own shape is simply small in that region,
+     * not zero); mode 1 is never zero (a cantilever's fundamental has no
+     * internal node) and stays positive throughout. A negative entry (modes
+     * 3 and 4 here) is not an error: that mode's own displacement really
+     * does sit in antiphase at this position relative to the tip, and nothing
+     * downstream ([Modes.Mode.gain], [Modes.ring]) requires a positive gain.
+     */
+    internal val NODE_POSITION_GAIN = FloatArray(CANTILEVER_BETA_L.size) { i ->
+        val b = CANTILEVER_BETA_L[i]
+        cantileverModeShape(b, NODE_PICKUP_XI) / cantileverModeShape(b, 1f)
     }
 
     /**
@@ -213,6 +289,15 @@ object Fork {
      * placement and DECAY's per-mode falloff are each a direct, exact
      * claim to test — no spectral estimation needed to check the mapping
      * itself, only to check the render actually carries it.
+     *
+     * [ForkVoice.NODE] applies [NODE_POSITION_GAIN] on top of the plain
+     * `1/ratio` every voice starts from — the same tine, same ratio table,
+     * only where the pickup reads it — indexed by mode position (0..3), not
+     * by the mode's own (possibly STIFF-stretched) ratio: [STRIKE_BRIGHT_BOOST]
+     * already takes that same "by index, not by current ratio" shape, since
+     * STIFF's morph is a sound-design liberty layered on top of the physics,
+     * not a claim that the modes stay real cantilever eigenmodes at every
+     * STIFF setting.
      */
     internal fun modesFor(voice: ForkVoice, macros: Map<String, Float>): List<Modes.Mode> {
         val table = tableFor(voice)
@@ -220,9 +305,10 @@ object Fork {
         val t60Fund = Dsp.expMap(macros.getValue("DECAY"), DECAY_MIN_SECONDS, DECAY_MAX_SECONDS)
         return table.mapIndexed { i, tableK ->
             val ratio = stiffRatio((i + 1).toFloat(), tableK, stiff)
+            val positionGain = if (voice == ForkVoice.NODE) NODE_POSITION_GAIN[i] else 1f
             Modes.Mode(
                 ratio = ratio,
-                gain = 1f / ratio,
+                gain = positionGain / ratio,
                 t60 = (t60Fund / ratio.pow(DECAY_SLOPE)).coerceAtLeast(0.001f),
             )
         }
