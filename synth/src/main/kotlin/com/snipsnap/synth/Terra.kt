@@ -123,8 +123,19 @@ object Terra {
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate)
         }
-        val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // A fixed level into Punch.saturate's nonlinearity, same reason
+        // Thump.render normalizes raw before its own Punch call (Punch.kt's
+        // own KDoc on applyOversampled) - strikeAndModalBank's exciter/modal
+        // mix is otherwise an unbounded, preset-dependent amplitude.
+        Dsp.normalize(raw)
+        // Every other engine here runs its strike through some transient
+        // shaping; TERRA had none at all, which measured out as a real
+        // contributor to reading "small, meek, dull" next to Thump's own
+        // kick/snare (bare exciter+modal mix straight to decimate). A fixed
+        // internal amount, not a macro yet - the same "first-pass listening
+        // call" TERRA's exciter/modal mix ratio already is.
+        val out = Punch.applyOversampled(raw, TERRA_PUNCH_AMOUNT, RATE)
+        Dsp.limitPeak(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
@@ -169,10 +180,22 @@ object Terra {
     private const val BUZZ_THRESHOLD = 0.12f
     private const val BUZZ_GAIN = 0.45f
 
+    // FLESH_PALM's own noise ceiling (see fleshPalmExciter's own KDoc):
+    // measured lower than HARD_STICK's 0.4f - a palm/finger strike's own
+    // skin-contact grit is softer and broader-onset than a mallet's tick.
+    private const val FLESH_NOISE_GAIN = 0.18f
+
     // HARD_STICK's own strike length (S4's sLen): shorter than FLESH_PALM's
     // shortest (0.003s at FORCE=1), a mallet's tick against a stick's own
     // seed keeps every HARD_STICK voice's own noise stream distinct.
     private const val HARD_STICK_SECONDS = 0.0018f
+
+    // Every other engine here shapes its strike's transient (Thump.render
+    // always runs Punch.applyOversampled); TERRA never has, and measured out
+    // as a real contributor to reading dull next to Thump's own kick/snare -
+    // see Terra.render's own comment. Not a macro yet, the same "first-pass
+    // listening call" spirit as the exciter/modal mix ratio it sits beside.
+    private const val TERRA_PUNCH_AMOUNT = 0.5f
 
     // CLACK's own ceiling: the spec's own Agogô Clack preset (S5, pad 15)
     // uses interlockClackMs = 20ms; 30ms gives the macro a little more
@@ -211,12 +234,26 @@ object Terra {
         (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
 
     /**
-     * FLESH_PALM (S3's ExciterType): a soft, broad raised-cosine impulse, no
-     * noise. A harder strike is a shorter pulse.
+     * FLESH_PALM (S3's ExciterType): a soft, broad raised-cosine impulse. A
+     * harder strike is a shorter pulse, plus a touch of skin-contact grit
+     * scaled by [hardness] - measured (FeatureExtractor flatness/highRatio
+     * both pinned to 0.0000 across the whole FORCE range) as a real gap
+     * against every other exciter here: HARD_STICK already scales its own
+     * noise by hardness, and a hand slapping a drumhead is not perfectly
+     * smooth even softly struck. [FLESH_NOISE_GAIN] keeps it well under
+     * HARD_STICK's own 0.4f - a palm, not a mallet.
      */
-    private fun fleshPalmExciter(hardness: Float, rate: Int): (Int) -> Float {
+    private fun fleshPalmExciter(hardness: Float, rate: Int, seed: Int): (Int) -> Float {
         val pulseLen = (rate * (0.003f + (1f - hardness) * 0.009f)).toInt().coerceAtLeast(1)
-        return { i -> if (i < pulseLen) 0.5f * (1f - cos(TWO_PI * i / pulseLen)) else 0f }
+        val noise = Dsp.Noise(seed)
+        return { i ->
+            if (i < pulseLen) {
+                val pulse = 0.5f * (1f - cos(TWO_PI * i / pulseLen))
+                pulse * (1f - FLESH_NOISE_GAIN) + noise.next() * pulse * FLESH_NOISE_GAIN * hardness
+            } else {
+                0f
+            }
+        }
     }
 
     /**
@@ -352,7 +389,7 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
-        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
+        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 11))
     }
 
     private fun resonantCavity(m: Map<String, Float>, rate: Int): FloatArray {
@@ -377,7 +414,7 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
-        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 31))
 
         val cavity = Dsp.Biquad().apply { bandpass(CAVITY_FREQ_HZ, CAVITY_Q, rate) }
         val out = raw.copyOf()

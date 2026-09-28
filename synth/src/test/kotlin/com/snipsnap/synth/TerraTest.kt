@@ -71,6 +71,28 @@ class TerraTest {
         }
     }
 
+    // TERRA had no transient shaping at all (straight from the exciter/
+    // modal mix to decimate) - measured as a real contributor to reading
+    // "small, meek, dull" next to Thump, which always runs every voice
+    // through Punch. Every voice's default now measures a real attack: the
+    // first 10ms comfortably louder than the 10-100ms window that follows,
+    // never close to a flat, un-shaped sustain (which would sit near 1x).
+    @Test
+    fun `every default has a real attack, not a flat sustain`() {
+        for (voice in TerraVoice.entries) {
+            val samples = Terra.render(voice).samples
+            fun rms(range: IntRange): Double {
+                var sumSq = 0.0
+                for (i in range) sumSq += (samples[i] * samples[i]).toDouble()
+                return Math.sqrt(sumSq / range.count())
+            }
+            val onset = rms(0 until minOf(441, samples.size))
+            val restEnd = minOf(4410, samples.size)
+            val rest = if (restEnd > 441) rms(441 until restEnd) else onset
+            assertTrue(onset > rest * 1.5, "$voice's onset should stand out from its own sustain: onset=$onset rest=$rest")
+        }
+    }
+
     // Djembe Bass, TERRA_World_Percussion_Synth_Spec.md S5 (Pad 03):
     // fundamental 73Hz, hardness 0.30, droop 0.12, strike position 0.05
     // ("warm thump"). TUNE/DROOP below are this engine's macros solved back
@@ -101,6 +123,22 @@ class TerraTest {
     fun `djembe bass classifies as a tom`() {
         val snip = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
         assertEquals(DrumClass.TOM, Classifier.classify(snip).drumClass)
+    }
+
+    // Measured before fixing this: flatness and highRatio both rounded to
+    // 0.0000 at FORCE=0 AND FORCE=1 - fleshPalmExciter was a pure raised-
+    // cosine pulse with no noise term at all, so a soft vs. hard hand-strike
+    // was spectrally indistinguishable, unlike HARD_STICK's own hardness-
+    // scaled noise (see "force injects noise into the strike" below). Now
+    // measures flatness 9.6e-4 (FORCE=0) vs 1.3e-3 (FORCE=1).
+    @Test
+    fun `force adds grit to a hand-struck strike too`() {
+        val soft = FeatureExtractor.extract(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("FORCE" to 0f)))
+        val hard = FeatureExtractor.extract(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("FORCE" to 1f)))
+        assertTrue(
+            hard.flatness > soft.flatness,
+            "FORCE should add noise/grit to a hand-struck strike too: soft=${soft.flatness} hard=${hard.flatness}",
+        )
     }
 
     // ---------- RESONANT_CAVITY ----------
