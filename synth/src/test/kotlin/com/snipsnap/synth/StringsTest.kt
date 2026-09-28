@@ -141,6 +141,22 @@ class StringsTest {
         assertTrue(narrowCentroid > wideCentroid, "narrow (hard) pulse should read brighter: $narrowCentroid vs $wideCentroid")
     }
 
+    /**
+     * Guards against a real regression a review caught: the mean correction
+     * subtracted the pulse's own mean from every sample out to `n`, not just
+     * the active `width` it was computed over - since the zero padding past
+     * `width` shares in the subtraction, that turns silence into a flat
+     * `-mean` shelf, a long reverse-force tail. The *overall* sum still
+     * lands at zero either way (`pulseSum - n * (pulseSum / n) = 0`), which
+     * is why the sum-based zero-mean test above didn't catch it - only the
+     * shape does.
+     */
+    @Test
+    fun `mallet's zero-mean correction stays inside the active pulse, not the padding past it`() {
+        val pulse = Strings.mallet(n = 400, freq = 147f, hardness = 500f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertEquals(0f, pulse[pulse.size - 1], "the tail well past any pulse width here should be exact silence, not a residual shelf")
+    }
+
     @Test
     fun `mallet is deterministic, and the comb lengthens it same as the pick burst`() {
         val a = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)

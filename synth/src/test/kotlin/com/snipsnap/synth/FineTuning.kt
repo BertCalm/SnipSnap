@@ -10,7 +10,7 @@ import kotlin.math.ln
 /**
  * A finer pitch measurement than the promoted [com.snipsnap.audio.Pitch]
  * detector's autocorrelation gives - that one's own lag resolution
- * (`sampleRate / lag`, unintepolated) is coarser than the 5-cent bounds
+ * (`sampleRate / lag`, uninterpolated) is coarser than the 5-cent bounds
  * SILK's own tuning tests carry at its voices' low roots (SilkTest first
  * measured this directly: `PluckSpectra.peakHz`'s plain narrow Goertzel
  * scan was a full-blown octave-of-cents short at OUD's 65 Hz root, its

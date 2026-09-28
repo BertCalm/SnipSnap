@@ -361,9 +361,9 @@ internal object Strings {
         val pulse = FloatArray(n)
         for (i in 0 until width) pulse[i] = 0.5f - 0.5f * cos(2.0 * PI * i / (width - 1)).toFloat()
         var mean = 0f
-        for (v in pulse) mean += v
-        mean /= n
-        for (i in pulse.indices) pulse[i] -= mean
+        for (i in 0 until width) mean += pulse[i]
+        mean /= width
+        for (i in 0 until width) pulse[i] -= mean
         return positionComb(pulse, n, freq, position, rate, maxLen)
     }
 
