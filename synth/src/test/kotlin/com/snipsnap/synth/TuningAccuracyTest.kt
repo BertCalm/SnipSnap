@@ -145,8 +145,12 @@ class TuningAccuracyTest {
         // own spectral peak measurably, even though the loop's tuning is
         // itself untouched. The bound here is a quarter tone (50 cents),
         // not the five-cent bound at the default, because this sweep's job
-        // is to name which notes the ugly end pulls for the audition gate,
-        // not to hold the tight bound at a setting nobody ships at.
+        // is to name which notes the ugly end pulls for the audition gate.
+        // For NYLON/HARP/KOTO/BANJO that is still a setting nobody ships at
+        // (their own BODY defaults stay small); it is no longer true of
+        // SITAR (2026-09-28 gate, `p3a_body_1`) - here its sweep measures
+        // the actual shipped cost, worst case +16.46 cents at semitone 24,
+        // comfortably inside the bound this loop already holds everyone to.
         for (voice in PluckVoice.entries) {
             for (semi in 0..Pluck.TUNE_SEMITONES) {
                 val macro = semi.toFloat() / Pluck.TUNE_SEMITONES

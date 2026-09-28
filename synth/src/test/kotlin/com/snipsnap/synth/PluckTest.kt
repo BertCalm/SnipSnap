@@ -37,18 +37,19 @@ class PluckTest {
             "BANJO all 0" to 842078288,
             "BANJO all 1" to -1976468254,
             "BANJO first preset" to -1168603215,
-            // SITAR's four pins only, updated 2026-09-28: the render
-            // genuinely changed, on purpose, in this session's own work -
-            // the wrap's shipped depth (0.010) and the tarab's level and
-            // coupling both moved, gate-approved on the audition page (see
-            // Pluck.kt's SITAR_JAWARI and SYMPATHETIC_LEVEL/COUPLING
-            // KDocs). The other sixteen pins above are untouched; NYLON,
-            // HARP, KOTO and BANJO are confirmed byte for byte identical
-            // by this same test.
-            "SITAR defaults" to -1427687789,
-            "SITAR all 0" to 1539184528,
-            "SITAR all 1" to 209676837,
-            "SITAR first preset" to 1644257589,
+            // SITAR's four pins only, updated 2026-09-28 twice in the same
+            // day: first for the wrap's shipped depth (0.010) and the
+            // tarab's level and coupling, then again for stiffness (HIGH,
+            // `p3a_stiff_high`) and BODY (1, `p3a_body_1`) - both from
+            // standing chips finished this same round, gate-approved on the
+            // audition page (see Pluck.kt's SITAR_STIFFNESS, SITAR_JAWARI
+            // and SYMPATHETIC_LEVEL/COUPLING KDocs). The other sixteen pins
+            // above are untouched; NYLON, HARP, KOTO and BANJO are
+            // confirmed byte for byte identical by this same test.
+            "SITAR defaults" to 1889149781,
+            "SITAR all 0" to 1886024609,
+            "SITAR all 1" to 1459683016,
+            "SITAR first preset" to 845240741,
         )
         val actual = LinkedHashMap<String, Int>()
         for (voice in PluckVoice.entries) {
@@ -261,10 +262,13 @@ class PluckTest {
         // PLUCK slot, so nothing in the app acts on that reading today; a
         // harmonicity feature is the Phase 3 item that would let the
         // classifier tell a bright pluck from a drum. Every other voice must
-        // still read PERC. SITAR's default reads PERC (measured highRatio 0.41
-        // over a 1.30 s render) since the DAMP default moved to 0.5 and the
-        // sympathetic strings landed; the margin under the 0.5 snare line is
-        // 0.09, and a regression over it should fail here.
+        // still read PERC. SITAR's default reads PERC (measured highRatio
+        // 0.289 over a 1.405 s render, re-measured 2026-09-28 with BODY 1
+        // and stiffness HIGH now in the default too - BODY's low-frequency
+        // modes dilute the >2kHz share further, not raise it) since the
+        // DAMP default moved to 0.5 and the sympathetic strings landed; the
+        // margin under the 0.5 snare line is 0.211, and a regression over it
+        // should fail here.
         for (voice in PluckVoice.entries) {
             val c = Classifier.classify(Pluck.render(voice))
             val allowed = if (voice == PluckVoice.BANJO) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
@@ -573,9 +577,39 @@ class PluckTest {
     @Test
     fun `DAMP at one is a short thud`() {
         for (voice in PluckVoice.entries) {
+            // SITAR's own exception lives below: BODY 1's own resonance
+            // keeps a muted string humming past this bound, confirmed as
+            // the intended character rather than a defect this bound is
+            // meant to catch - the same shape as the wrap's own carve-out
+            // from the shared five-cent tuning sweep.
+            if (voice == PluckVoice.SITAR) continue
             val snip = Pluck.render(voice, mapOf("DAMP" to 1f))
             assertTrue(snip.durationSeconds < 0.5f, "$voice: ${snip.durationSeconds}s is not a thud")
         }
+    }
+
+    @Test
+    fun `SITAR at DAMP one hums through the body instead of thudding, and stays under a real ceiling`() {
+        // Every other voice's DAMP=1 is a short thud (the test above); SITAR
+        // genuinely cannot clear that 0.5s bound at any nonzero BODY - its
+        // three fixed resonances (110/270/520 Hz) are a separate, undamped
+        // stage whose own decay time does not shorten proportionally with
+        // amount (measured across this whole arc: BODY 0 already sits at
+        // 0.42s, only 0.08s under the old bound; BODY .35 spent most of
+        // that headroom at 0.52s; BODY 1 landed at 0.55s - three points,
+        // not a straight line). This was put to Josh directly, isolated
+        // from every other axis: a two-clip A/B at DAMP 1, BODY 0 (TIGHT)
+        // against BODY 1 (WITH BODY) - "Hum is fine with body"
+        // (`answer/mute_body`, today's date). So this is not an unbounded
+        // exception, just a different, honestly looser one: a full second
+        // is comfortably past the ~0.55s this actually measures (room for
+        // ordinary render variance without flaking) while staying well
+        // under the classifier's own 1.5s LOOP threshold, so a genuine
+        // future regression - BODY's resonance running away, not just
+        // humming - still fails here rather than surfacing somewhere else.
+        val snip = Pluck.render(PluckVoice.SITAR, mapOf("DAMP" to 1f))
+        println("SITAR DAMP=1 duration (BODY 1, the shipped default): ${snip.durationSeconds}s")
+        assertTrue(snip.durationSeconds < 1.0f, "SITAR DAMP=1 is ${snip.durationSeconds}s, past the honestly-looser ceiling this exception uses")
     }
 
     @Test
@@ -817,16 +851,26 @@ class PluckTest {
         // depth was actually settled: `harmonicsOverFundamental` (2nd-8th
         // harmonic over the fundamental, past onset, the measure
         // PluckSpectra's own KDoc names as what a jawari should be judged
-        // against, not a >2kHz share) is what the final A/B gate's pick
-        // and the measured peak agreed on (spec, "The jawari") - 0.015
-        // measured LOWER here than no wrap at all, which is why that depth
-        // was never a genuine buzz claim; 0.010 is where this metric
-        // actually peaks, and this is that claim, written for real instead
-        // of deferred again.
+        // against, not a >2kHz share) is the metric the final A/B gate's
+        // pick agreed with when this was first settled (spec, "The
+        // jawari") - the wrap adds harmonic content over having none, and
+        // that is the one claim asserted here. `Pluck.SITAR_JAWARI`'s own
+        // KDoc has the fresh numbers (re-measured 2026-09-28, at the final
+        // shipped configuration) and is honest that the earlier, narrower
+        // claim about exactly where this metric peaks across depths no
+        // longer holds now that stiffness moved to HIGH - that reopening
+        // does not touch this test's own assertion or the shipped depth.
         val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        // This test measures the wrap, not the body: BODY forced to 0 here,
+        // the same isolation and the same reason as `the oversampled delay
+        // line still lands on pitch...` above - a fixed body mode is a
+        // broadband confound unrelated to the wrap's own harmonic content,
+        // and BODY's own tuning-cost and classifier exposure are already
+        // covered elsewhere (TuningAccuracyTest's BODY-at-its-ugly-end
+        // sweep, the classifier test in this file).
         fun hofAt(jawari: Float): Double {
-            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DOUBLE" to 0f), rate, velocity = 1f, jawariOverride = jawari)
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DOUBLE" to 0f, "BODY" to 0f), rate, velocity = 1f, jawariOverride = jawari)
             val snip = Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
             return PluckSpectra.harmonicsOverFundamental(snip, f0, 2, 8, 0.15f, 0.20f)
         }
