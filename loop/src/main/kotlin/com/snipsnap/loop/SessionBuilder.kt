@@ -207,16 +207,27 @@ object SessionBuilder {
     }
 
     /**
-     * Hand [trackIndex] a drone: [recipe] on [rootMidi], sliced over the
-     * span [DroneFit] says keeps it in tune at this tempo. Nothing is
-     * written but the arrangement; the audio exists only at bake time, from
-     * whatever renderer the [SampleSource] was given.
+     * Hand [trackIndex] a drone: [recipe] on [rootMidi], sliced over [span]
+     * intervals — [DroneFit]'s own choice by default, the fit every engine
+     * whose carrier is pure pitch arithmetic shares. An engine whose own
+     * carrier snap [DroneFit] cannot model (SIREN's own FM integral, for
+     * one) has its caller work out the right span from the recipe itself
+     * and pass it here, rather than this — engine-agnostic on purpose —
+     * guessing from [rootMidi] alone. Nothing is written but the
+     * arrangement; the audio exists only at bake time, from whatever
+     * renderer the [SampleSource] was given.
      */
-    fun sendDrone(session: Session, trackIndex: Int, name: String, recipe: JsonValue, rootMidi: Int): Session {
+    fun sendDrone(
+        session: Session,
+        trackIndex: Int,
+        name: String,
+        recipe: JsonValue,
+        rootMidi: Int,
+        span: Int = DroneFit.spanFor(rootMidi, session),
+    ): Session {
         require(trackIndex in session.tracks.indices) {
             "track $trackIndex is outside a ${session.tracks.size}-track session"
         }
-        val span = DroneFit.spanFor(rootMidi, session)
         val tracks = session.tracks.toMutableList()
         tracks[trackIndex] = Track(name = name, chain = DroneFit.slices(recipe, rootMidi, span), engaged = true)
         return session.copy(tracks = tracks.toList())

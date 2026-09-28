@@ -58,8 +58,14 @@ object SirenPadMaker {
     /** Same nine zones for every voice ([Keys.sirenPadMidis]'s own KDoc) — `spec.voice` decides the sound, never the layout. */
     fun zoneMidis(spec: Spec): List<Int> = Keys.sirenPadMidis()
 
-    /** One zone. SIREN's render is short and uninterruptible mid-flight, unlike RESIN's own settle-and-retry path, so there is no cancellation lambda to poll. */
-    fun renderZone(spec: Spec, midi: Int): KeyNote = Keys.sirenPad(spec.voice, spec.macros, midi)
+    /**
+     * One zone. There is no settle-and-retry path here — SIREN's LOOP render
+     * closes on itself the first time — but at the slowest RATE a single
+     * zone is seconds of audio, so [cancelled] still reaches the render loop
+     * ([Keys.sirenPad]'s own), the same as [ResinPadMaker.renderZone]'s.
+     */
+    fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote =
+        Keys.sirenPad(spec.voice, spec.macros, midi, cancelled)
 
     /**
      * The zones, in [zoneMidis] order, as a keygroup program and the
@@ -103,8 +109,8 @@ object SirenPadMaker {
      * with no extra assembly — unlike [ResinPadMaker.preview], which has an
      * unlooped attack head to splice in front of the loop.
      */
-    fun preview(spec: Spec): Snip {
+    fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {
         val midis = zoneMidis(spec)
-        return renderZone(spec, midis[midis.size / 2]).snip
+        return renderZone(spec, midis[midis.size / 2], cancelled).snip
     }
 }
