@@ -94,6 +94,33 @@ class SilkTest {
     }
 
     /**
+     * PLUCK's own 5-cent rule, generalised: every degree of SANTUR's
+     * default scale (SHUR) lands within 5 cents of the scale's own
+     * target. Unlike OUD/GUZHENG, this is the test most likely to catch
+     * a leftover Task 1 regression: SANTUR is the first voice actually
+     * calling `Strings.course` at `count = 4` through the shared function
+     * itself, not a per-voice custom loop. STIFF has no knob to disable
+     * here (SANTUR's own B is fixed) - `StringsTest`'s own finding
+     * already establishes the fundamental holds exact regardless (the
+     * tuning budget charges the cascade's own delay before splitting the
+     * loop length), so this isolates SCALE/TUNE/COURSE, not dispersion.
+     */
+    @Test
+    fun `SANTUR is in tune at every degree of SHUR`() {
+        val root = Silk.rootFor(SilkVoice.SANTUR)
+        val scale = SilkScales.SHUR
+        val size = scale.cents.size
+        for (degree in 0..2 * size) {
+            val tune = degree / (2f * size)
+            val want = SilkScales.frequencyFor(root, scale, tune)
+            val snip = Silk.render(SilkVoice.SANTUR, mapOf("TUNE" to tune, "COURSE" to 0f, "WASH" to 0f))
+            val measured = measuredHz(snip, want)
+            val off = cents(measured, want.toDouble())
+            assertTrue(abs(off) <= 5.0, "degree $degree (tune=$tune): wanted $want Hz, measured $measured Hz ($off cents)")
+        }
+    }
+
+    /**
      * PRESS (spec, "GUZHENG"): at each of its four snapped stops, the
      * pitch track starts on the plucked degree and settles 0/100/200/300
      * cents above it - measured well after the 0.12 s rise
