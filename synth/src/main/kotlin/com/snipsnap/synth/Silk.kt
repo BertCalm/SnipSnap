@@ -539,6 +539,111 @@ object Silk {
         Strings.bodyRing(string, bodyFor(voice), amount, rate, RING_CEILING_SECONDS)
 
     /**
+     * SHAMISEN's own BODY table - not yet wired into [bodyFor]'s own
+     * `when` (Task 4 adds `SilkVoice.SHAMISEN` to the enum and the branch
+     * that reaches this; kept standalone here so Task 3 compiles and is
+     * testable on its own). The bare dō frame (573.2/630.8 Hz) and the
+     * whole instrument's own neck-bending modes (67.55/85.38 Hz), all four
+     * measured (research §1, B1-B4). `t60 = 2.2*Q/f`, `Q = 1/(2*zeta)`,
+     * the same formula OUD's own table above uses - 1.76/0.55/0.32/0.20 s
+     * respectively for 67.55/85.38/573.2/630.8 Hz.
+     *
+     * Gains are the one place this table reads differently from every
+     * other voice's own: OUD's and GUZHENG's lowest sourced mode is their
+     * loudest (nothing in their own research says otherwise), but
+     * SHAMISEN's own radiated spectrum "peaks near 700 Hz and falls about
+     * 25 dB an octave below it" (research §1, R1) - so the frame modes,
+     * which sit close to that peak, carry meaningfully more gain here than
+     * the neck modes, which the same rolloff (over three octaves below
+     * 700 Hz) would put far down in the real instrument's own radiated
+     * balance. These gains are still shape, not the literal computed
+     * rolloff (which would put the neck modes near-silent and defeat the
+     * point of a placeholder table) - they encode the qualitative fact
+     * (frame louder than neck), not the exact dB.
+     */
+    internal val SHAMISEN_BODY = listOf(
+        Modes.fixed(67.55f, 0.15f, 1.76f),
+        Modes.fixed(85.38f, 0.25f, 0.55f),
+        Modes.fixed(573.2f, 0.8f, 0.32f),
+        Modes.fixed(630.8f, 1.0f, 0.20f),
+    )
+
+    /**
+     * SLAP's own skin table - separate from [bodyFor], since SLAP drives a
+     * synthetic burst rather than the string's own first difference (see
+     * [withSlap]). The skin's own fundamental mode is genuinely unresolved:
+     * the same lab's two mounted-skin measurements disagree by an order of
+     * magnitude (research §1, B5 ~151.7 Hz vs B6 ~766.4 Hz, N.3 verifier
+     * note i) - rather than pick one and call it settled, this ships one
+     * mode near the sourced *radiated* peak instead (700 Hz, R1/R2 - two
+     * independent, anechoic-adjacent labs), explicitly a stand-in for the
+     * unresolved skin mode, not a claim about it. [t60] is unsourced shape,
+     * short - a contact transient, not a sustained ring.
+     */
+    private val SHAMISEN_SKIN = listOf(Modes.fixed(700f, 1f, 0.15f))
+
+    /** How long [withSlap]'s own noise burst runs - A2's own touch-noise duration and A3's own string-skin contact window both measure about 20 ms (research §1). */
+    private const val SLAP_BURST_SECONDS = 0.02f
+
+    /** [withSlap]'s own burst filter cutoff - unsourced; wide enough to carry the burst up toward SLAP's own high-frequency content (A4: skin-strike content reaches ~16 kHz) without simply being white noise. */
+    private const val SLAP_BURST_HZ = 12_000f
+
+    /**
+     * SHAMISEN's SLAP: the bachi hitting the skin, in parallel with the
+     * string rather than derived from it (spec, "SHAMISEN": "SLAP scales
+     * the contact layer: a short noise burst through a small skin `Modes`
+     * table, in parallel. 0 = string only, and the note's top end drops
+     * with it"). Not a [Strings.bodyRing] call: that function's own
+     * contract treats its `string` argument as both the drive source (via
+     * its first difference) and the dry carrier the wet mix adds onto -
+     * SLAP needs a *different* drive (a synthetic burst standing in for
+     * the bachi/skin contact) added onto the *unmodified* string, so this
+     * drives [SHAMISEN_SKIN] directly through [Modes.ring] instead.
+     *
+     * [Modes.ring]'s own output is not level-normalized (its own KDoc: a
+     * low-frequency fixed mode measured roughly 250x louder than a
+     * non-modal layer at an oversampled rate, before either was
+     * gain-staged) - RMS-matched against [string] before mixing, the same
+     * pattern [Strings.bodyRing] itself uses and for the same reason every
+     * other character macro here reads consistently: [slap] means "this
+     * many multiples of the string's own loudness", the same convention
+     * [BODY_MAX]'s own KDoc states for BODY.
+     */
+    internal fun withSlap(string: FloatArray, slap: Float, rate: Int, seed: Int): FloatArray {
+        if (slap <= 0f) return string
+        val burstLen = (SLAP_BURST_SECONDS * rate).toInt().coerceAtLeast(1)
+        val noise = Dsp.Noise(seed)
+        val lp = Dsp.OnePole(rate)
+        val burst = FloatArray(burstLen) { lp.lp(noise.next(), SLAP_BURST_HZ) }
+        var mean = 0f
+        for (v in burst) mean += v
+        mean /= burstLen
+        for (i in burst.indices) burst[i] -= mean
+
+        val pad = (SHAMISEN_SKIN.maxOf { it.t60 } * rate).toInt()
+        val drive = FloatArray(burstLen + pad)
+        burst.copyInto(drive)
+        val wet = Modes.ring(drive, 1f, SHAMISEN_SKIN, rate)
+
+        fun rms(buf: FloatArray, n: Int): Float {
+            val len = minOf(n, buf.size)
+            var acc = 0.0
+            for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
+            return kotlin.math.sqrt(acc / len.coerceAtLeast(1)).toFloat()
+        }
+        val g = rms(string, string.size) / rms(wet, wet.size).coerceAtLeast(1e-9f)
+
+        val outLen = maxOf(string.size, drive.size)
+        val out = FloatArray(outLen)
+        for (i in out.indices) {
+            val dry = if (i < string.size) string[i] else 0f
+            val wetSample = if (i < wet.size) wet[i] else 0f
+            out[i] = dry + slap * g * wetSample
+        }
+        return out
+    }
+
+    /**
      * SANTUR's WASH: unlike every other voice's fixed [bodyFor] table
      * (one measured instrument, baked in), this bank is *dynamic* - tuned
      * to whichever SCALE the pad is currently on, across three octaves

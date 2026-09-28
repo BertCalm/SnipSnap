@@ -7,6 +7,7 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -313,5 +314,59 @@ class SilkTest {
             val off = FineTuning.cents(measured, hz.toDouble())
             assertTrue(abs(off) <= 20.0, "expected a WASH peak near $hz Hz, measured $measured Hz ($off cents)")
         }
+    }
+
+    /**
+     * SILK Phase 3, Task 3 (SHAMISEN's SLAP): checked directly on
+     * [Silk.withSlap] - the same "internal fun, tested ahead of the full
+     * voice" precedent as [Silk.washModesFor] above. SLAP 0 is the plain
+     * string, byte for byte (every character macro's own "0 is the input"
+     * contract). Past `withSlap`'s own drive length (the burst plus the
+     * skin table's own pad), its wet contribution is exactly zero by
+     * construction, not merely decayed - so the render is byte-identical
+     * to the dry string there too, a stronger and cheaper check than a
+     * tail-RMS comparison.
+     */
+    @Test
+    fun `SLAP 0 is the plain string, and past its own burst SLAP 1 changes nothing`() {
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.3f, 7000f)
+        val string = Strings.pluck(130.81f, 0.6f, damping, 9000f, seed = 5, rate = rate)
+
+        val dry = Silk.withSlap(string, slap = 0f, rate = rate, seed = 9)
+        assertContentEquals(string, dry, "SLAP 0 should return the string untouched")
+
+        val wet = Silk.withSlap(string, slap = 1f, rate = rate, seed = 9)
+        val pastBurst = (0.2f * rate).toInt() // well past the ~20 ms burst plus the skin table's own pad
+        for (i in pastBurst until string.size) {
+            assertEquals(string[i], wet[i], "past the burst, SLAP should contribute nothing at sample $i")
+        }
+    }
+
+    /**
+     * The spec's own claim (spec, "Testing": "the first 20 ms gains
+     * broadband energy with SLAP; the tail does not").
+     */
+    @Test
+    fun `SLAP gains broadband energy in its first 20 ms, and nowhere past it`() {
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.3f, 7000f)
+        val string = Strings.pluck(130.81f, 0.6f, damping, 9000f, seed = 5, rate = rate)
+        val wet = Silk.withSlap(string, slap = 1f, rate = rate, seed = 9)
+
+        val window = (0.02f * rate).toInt()
+        fun rms(buf: FloatArray, from: Int, len: Int): Double {
+            var acc = 0.0
+            for (i in from until from + len) acc += buf[i].toDouble() * buf[i]
+            return kotlin.math.sqrt(acc / len)
+        }
+        val dryOnset = rms(string, 0, window)
+        val wetOnset = rms(wet, 0, window)
+        assertTrue(wetOnset > dryOnset, "the first 20 ms should gain broadband energy with SLAP: dry=$dryOnset wet=$wetOnset")
+
+        val tailFrom = (0.3f * rate).toInt()
+        val dryTail = rms(string, tailFrom, window)
+        val wetTail = rms(wet, tailFrom, window)
+        assertEquals(dryTail, wetTail, "well past the burst, SLAP should not still be adding energy")
     }
 }
