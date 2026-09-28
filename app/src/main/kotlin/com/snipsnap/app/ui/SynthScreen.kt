@@ -738,22 +738,35 @@ fun SynthScreen(
     // main thread rather than inline in the composable body, the same
     // reason droneSession itself does.
     var droneLabel by remember { mutableStateOf("…") }
-    LaunchedEffect(droneOpen, droneRoot, droneSession) {
+    LaunchedEffect(droneOpen, droneRoot, droneSession, engine, voice, macros) {
+        // Reset before recomputing, not after: root or macros just moved,
+        // and the stale string is for a spec PREVIEW/SEND no longer read
+        // off the moment either changed — showing it a beat longer would
+        // name a note that is no longer the one either button plays.
+        droneLabel = "…"
         val root = droneRoot
         val session = droneSession
         val spec = droneSpec()
-        droneLabel = if (droneOpen && root != null && session != null && spec != null) {
-            // Falls back to the sheet's own placeholder on any failure —
-            // a readout that never lands is a worse sheet, not a crashed
-            // one; PREVIEW and SEND key off root/session directly, never
-            // off this string.
-            withContext(Dispatchers.Default) {
-                runCatching { spec.label(root, session) }
-                    .onFailure { e -> Log.e("SynthScreen", "drone label failed", e) }
-                    .getOrDefault("…")
+        if (droneOpen && root != null && session != null && spec != null) {
+            droneLabel = withContext(Dispatchers.Default) {
+                // cancelled reaches SirenDrone.fitCarrier's own check: a
+                // rapid run of ROOT taps must stop one computation before
+                // starting the next, not pile them up on the pool that
+                // runs them (review finding on PR #373). Falls back to
+                // the placeholder on any other failure — a readout that
+                // never lands is a worse sheet, not a crashed one; PREVIEW
+                // and SEND key off root/session directly, never off this
+                // string — but a cancellation is this effect's own
+                // restart, not a failure, and must keep propagating.
+                try {
+                    spec.label(root, session) { !isActive }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("SynthScreen", "drone label failed", e)
+                    "…"
+                }
             }
-        } else {
-            "…"
         }
     }
 
@@ -1618,7 +1631,7 @@ private sealed interface DroneSpec {
     val roots: IntRange
     val hasMotion: Boolean
     fun defaultRoot(key: KeySpec?): Int
-    fun label(root: Int, session: Session): String
+    fun label(root: Int, session: Session, cancelled: () -> Boolean): String
     fun render(root: Int, session: Session, cancelled: () -> Boolean): FloatArray
     fun toJson(): JsonValue
 
@@ -1627,7 +1640,7 @@ private sealed interface DroneSpec {
         override val roots get() = DroneMaker.roots(voice)
         override val hasMotion get() = true
         override fun defaultRoot(key: KeySpec?) = DroneMaker.defaultRoot(voice, key)
-        override fun label(root: Int, session: Session) = DroneMaker.label(root, session)
+        override fun label(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.label(root, session)
         override fun render(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.render(spec, root, session, cancelled)
         override fun toJson() = spec.toJson()
     }
@@ -1637,7 +1650,7 @@ private sealed interface DroneSpec {
         override val roots get() = SirenDroneMaker.roots(voice)
         override val hasMotion get() = false
         override fun defaultRoot(key: KeySpec?) = SirenDroneMaker.defaultRoot(voice, key)
-        override fun label(root: Int, session: Session) = SirenDroneMaker.label(spec, root, session)
+        override fun label(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.label(spec, root, session, cancelled)
         override fun render(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.render(spec, root, session, cancelled)
         override fun toJson() = spec.toJson()
     }

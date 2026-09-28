@@ -577,6 +577,44 @@ grid's slowest, longest setting"):
   safe, if less precise) estimate on any failure rather than trusting that
   reasoning to hold forever.
 
+## Hardening round, after review — 2026-09-28
+
+Three findings on the hardening round itself, all in the fix, not the
+original bug — the readout's own move off the main thread was right, but
+the move was incomplete:
+
+- **The label effect never restarted on a macro change.** Its keys were
+  `droneOpen, droneRoot, droneSession` — never `engine`, `voice` or
+  `macros`. RESIN's own label reads none of these (pure pitch), so this
+  never showed; SIREN's own reads RATE and DEPTH through
+  `SirenDrone.nudgeCents`, so a macro change while the sheet is open
+  (unreachable today — the panel sits behind the sheet's own scrim — but
+  not a fact this file should have to keep being true to stay correct)
+  would have left a stale readout standing indefinitely. All three now
+  key the effect.
+- **The readout kept the *old* root's label while the new one computed.**
+  A ROOT tap left the prior span and cents on screen for the full ~850 ms
+  the new fit takes, while PREVIEW and SEND already read the new root —
+  a readout that could describe a note neither button was about to play.
+  The effect now resets to the sheet's own placeholder before it starts
+  computing the next one, not after.
+- **`cancelled` never reached the fit at all.** `SirenDroneMaker.span`
+  and `label`, and `SirenDrone.nudgeCents` under them, took no
+  `cancelled` parameter, so `LaunchedEffect`'s own cancellation on a key
+  change could not stop a computation already inside `fitCarrier`'s
+  integral — only the *next* tap's effect would start, on top of, not
+  instead of, the still-running previous one. A run of ROOT taps could
+  pile up several ~850 ms computations on `Dispatchers.Default`'s own
+  pool at once. `nudgeCents` now takes `cancelled` and threads it into
+  `fitCarrier`; `span` and `label` thread it the same way `render`
+  already did; the effect passes `{ !isActive }`, the same idiom
+  `previewDrone`'s own render call uses, and the label's own `try/catch`
+  rethrows a cancellation rather than catching it as a plain failure —
+  `runCatching` does not tell the two apart, `catch` does.
+  `SirenDroneTest`'s "nudgeCents itself stops..." and
+  `SirenDroneMakerTest`'s "span and label stop..." hold the new reach
+  directly.
+
 ## Still open, not blocking
 
 5. **A fifth voice?** A one-shot dive with no LFO at all (SWEEP at full,

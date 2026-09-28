@@ -106,4 +106,20 @@ class SirenDroneMakerTest {
             assertTrue(ms < 5_000, "$voice: span+label took ${ms}ms at the grid's worst setting")
         }
     }
+
+    /** `span`/`label` thread `cancelled` all the way to `SirenDrone.fitCarrier`'s own check (review finding on PR #373) — a rapid run of ROOT taps must be able to stop one before starting the next. */
+    @Test
+    fun `span and label stop when nobody wants them any more`() {
+        val fresh = SessionBuilder.empty(44_100)
+        val spec = SirenDrone.Spec(SirenVoice.WAIL, mapOf("RATE" to 0.5f, "DEPTH" to 1f))
+        val root = Siren.ROOT_MIDI
+        var asked = 0
+        val t0 = System.nanoTime()
+        kotlin.test.assertFailsWith<java.util.concurrent.CancellationException> {
+            SirenDroneMaker.span(spec, root, fresh) { ++asked > 0 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue(asked >= 1, "span never asked")
+        assertTrue(ms < 200, "a cancelled span ran on for ${ms}ms")
+    }
 }
