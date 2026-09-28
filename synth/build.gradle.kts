@@ -273,3 +273,13 @@ tasks.register<JavaExec>("generateTerraKit") {
     workingDir = projectDir
     args("${rootDir}/testkit")
 }
+
+/** Render the TERRA audition clips, manifest and page under testkit/terra-audition/. See TerraAuditionGenerator. */
+tasks.register<JavaExec>("generateTerraAudition") {
+    group = "distribution"
+    description = "Render the TERRA audition clips, manifest and listening page under testkit/terra-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/terra-audition")
+}

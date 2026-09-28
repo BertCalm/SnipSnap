@@ -58,3 +58,7 @@ testkit/siren-audition/
 # The FORK audition clips, manifest and page, rendered by :synth:generateForkAudition
 # and published as the listening artifact; never committed.
 testkit/fork-audition/
+
+# The TERRA audition clips, manifest and page, rendered by :synth:generateTerraAudition
+# and published as the listening artifact; never committed.
+testkit/terra-audition/
