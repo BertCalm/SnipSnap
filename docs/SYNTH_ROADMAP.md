@@ -267,7 +267,7 @@ What follows from it:
 | S13 | **built, awaiting the audition gate** — PLUCK Phase 3a: SITAR, the fifth string — the jawari in the loop, four sympathetic loops under DOUBLE, per-voice stiffness allpass; a labelled shape body to audition, a sourced one the day a source opens | S3.5 |
 | S14 | **R2 built, awaiting the audition gate** — FORK, the modal electric piano (TINE/BAR/NODE: a struck bar rung through four tuned modes, read by an asymmetric magnetic pickup — `v / (1 - x)^2`, the standard reluctance model — whose even-harmonic bark thins on its own as the tine's swing decays, with no envelope faking it; TUNE snapped, STRIKE the hammer (cutoff, its own decay and the tine's swing together, plus a direct boost on the higher modes' own gain — real hammer physics, measured necessary once BAR's closely-spaced modes showed the filter channel alone was not enough), BARK the pickup's closeness, STIFF morphing the four modes from a harmonic string through the voice's own bar to a stretched one, DECAY the fundamental's own t60 with higher modes falling off faster by a fixed slope; a captured snip's own head can stand in for the hammer, kept in the recipe so a struck pad still regenerates from `kit.json`; NODE is R1's audition follow-up — the same cantilever tine as TINE, read at its own second mode's node (derived from the Euler-Bernoulli cantilever boundary conditions, not fitted), a purer and more fundamental-forward tone aimed at the "neither reads as piano" gap the R1 gate found; twenty-four presets across the three voices and a real keys instrument, `Keys.fork` multisampled every minor third and exported dual-generation through `InstrumentSuite.renderFork`) — design and as-built notes in `docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md` | S1 + U6 |
 | S15 | **Phase 1a shipped** — SILK's string toolkit: PLUCK's Karplus-Strong loop lifted into `Strings.kt` (the tuning budget, the pick exciter, a per-sample `Loop`, the decay-following trim, the body drive) with no change to a single PLUCK sample — pinned render hashes per voice, and a frozen copy of the old loop matched sample for sample over 384 cases. SILK itself (OUD, GUZHENG, SANTUR, SHAMISEN; SCALE and INFLECT) is Phases 1b–4 — design in `docs/superpowers/specs/2026-09-27-silk-string-engine-design.md`, research in `docs/superpowers/plans/2026-09-27-silk-research.md` | S3.5 (PLUCK) |
-| S11 | **Rounds 1-2 built, round 3 under way** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL) and WRAITH (sine-wave speech, with ALIEN and STUTTER) built, SWARM to follow — under S11 below | S3.7 + U6 |
+| S11 | **Built, rounds 1-3** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER) — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1625,3 +1625,62 @@ longest note renders in about 50 ms); the dispatch test says so and a
 test of its own holds it. Filed TONAL (PERC when short, LOOP when
 long). Twelve presets across the six words, as hits, chops in key and
 slowed pads.
+
+### Round 3, SWARM as built — 2026-09-27 ("Weird", third voice; round 3 complete)
+
+**SWARM** (`VoxSwarm`): TUNE, WORD, CROWD, LOOSE, EFFORT, DECAY, STUTTER.
+A crowd: two to sixteen mouths, men and women (the women an octave up),
+each with its own throat, detune, pitch wander, timing and place in the
+stereo field. Stereo, like CHOIR. It was the voice most at risk of
+sounding like CHOIR, so it was aimed at people rather than singers: no
+vibrato, speech-like onsets and a shout's rise and fall. Measured
+against CHOIR's "aah", 9.1 on the difference measure.
+
+- **WORD** is what the crowd says together: hey, ho, yeah, huh, ooh,
+  aah.
+- **LOOSE** is the heart of it. Its lower half loosens a chant (the
+  opening's rise measured 30 ms tight, 95 at 0.25, 250 at 0.5, as the
+  mouths come in over a moment); its upper half turns mouths, one by
+  one, to talking: random syllables of consonant loci and vowels, words
+  of two to four, pauses between. At 1 it is a murmuring room.
+- **CROWD** is 2 to 16 mouths, squared so most of its travel is at the
+  small end. Measured on a murmur, the envelope's lumpiness is 0.38 for
+  two mouths and 0.17 for sixteen, flat past about ten: you can pick out
+  two people, and past eight a crowd is a crowd (8 and 16 measured 1.2
+  apart on the difference measure, inside its noise floor). Asked, the
+  knob stays, as "a few people to a crowd".
+- **EFFORT** goes hushed, talk, shout. A shout is four semitones
+  higher, rises and falls on its word, and is brightened and pushed.
+  Hushed is a soft voice (a third of its strength, fewer upper
+  harmonics) under breath: a library, not a seance.
+- **STUTTER** grabs the word's opening up to four times, together when
+  the crowd is tight, scattered when it is loose; counted by the silent
+  gaps between grabs, exact across nine crowds.
+
+What the audition changed:
+
+- **The quiet end went from whisper to hushed voices, over three
+  auditions.** First: "everything sounds great except whisper sounds
+  demonic". It was noise through the voice's own narrow resonances,
+  ringing into a low moan (-4.7 dB of its energy under 500 Hz, centred
+  at 2.2 kHz). Rebuilt to hiss rather than moan (wider, weaker
+  resonances, a thinned low end, breath at 2-6.5 kHz: -18 dB under
+  500 Hz, centred at 3.8 kHz, a real whisper's range; a first try
+  overshot into 10-12 kHz of static), it was "somewhat better, but could
+  be a little more tamed". Four takes (softer, quieter, both) all left
+  the whispering room "still scary sounding": a room of voiceless
+  whispers is a horror film whatever its tone. Asked, the pick was
+  hushed voices: a soft voice kept under the breath. A note is found in
+  7 of 8 windows of a hushed room, and it stays breathier than talk
+  (flatness 0.36 against 0.07). WHISPER ROOM became HUSHED ROOM.
+- **The first mouth is always on time**, like CHOIR's middle singer.
+  Two or three late talkers left the classifier's first 93 ms silent
+  (it read them UNKNOWN), and a pad that starts late sounds late.
+
+Babble searches each mouth's path on from where it last was, not from
+the start; the longest preset renders in about 2.5 s here, CHOIR's
+longest in about 2. Twelve presets: shouted hits, chants and a cheer,
+held stadium vowels, murmuring and hushed rooms, and a stutter.
+
+That completes round 3, and with it S11: three rounds, prototyped and
+auditioned by ear before each was built.

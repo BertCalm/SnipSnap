@@ -103,6 +103,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.loop.Arp
+import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Orbit
 import com.snipsnap.loop.OrbitBrush
 import com.snipsnap.loop.OrbitHit
@@ -136,6 +137,7 @@ import com.snipsnap.shell.Rooms
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShelfImport
+import com.snipsnap.shell.SirenDroneMaker
 import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.shell.TextureKits
@@ -144,6 +146,7 @@ import com.snipsnap.shell.Workshop
 import com.snipsnap.synth.Photo
 import com.snipsnap.synth.PhotoChord
 import com.snipsnap.synth.PhotoKit
+import com.snipsnap.synth.SirenDrone
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -1775,13 +1778,21 @@ fun App(shelf: KitShelf) {
     }
 
     /**
-     * SYNTH → LOOP: a RESIN drone takes the next empty track
-     * (docs/superpowers/specs/2026-09-25-resin-drone-design.md).
+     * SYNTH → LOOP: a RESIN or SIREN drone takes the next empty track
+     * (docs/superpowers/specs/2026-09-25-resin-drone-design.md;
+     * docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 4).
      *
      * [sendSnipToLoop]'s shape without the decode or the WAV writes: a drone
      * is a recipe on the track, rendered only when LOOP bakes it, so this is
      * one read-modify-write of the sidecar under the grid's one writer, with
      * the same refusals (a sidecar that won't read, a full grid).
+     *
+     * The span is worked out here, against the session just read, rather
+     * than trusted from whatever SynthScreen showed in its own preview: a
+     * SIREN recipe's own carrier snap depends on DEPTH through the LFO's
+     * phase integral, which [DroneFit.spanFor] cannot model (review finding
+     * on PR #368), so [SessionBuilder.sendDrone] cannot work it out from
+     * `rootMidi` alone the way it can for a RESIN recipe.
      */
     fun sendDroneToLoop(name: String, recipe: JsonValue, rootMidi: Int) {
         scope.launch {
@@ -1799,7 +1810,9 @@ fun App(shelf: KitShelf) {
                     val at = SessionBuilder.nextEmpty(session)
                     if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
 
-                    val sent = SessionBuilder.sendDrone(session, at, name, recipe, rootMidi)
+                    val siren = SirenDrone.Spec.fromJson(recipe)
+                    val span = if (siren != null) SirenDroneMaker.span(siren, rootMidi, session) else DroneFit.spanFor(rootMidi, session)
+                    val sent = SessionBuilder.sendDrone(session, at, name, recipe, rootMidi, span)
                     val saved = runCatching { SessionStore.save(sent, loopDir) }
                         .onFailure { e -> Log.e(TAG, "sendDroneToLoop: save failed", e) }
                         .isSuccess

@@ -82,6 +82,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
@@ -98,6 +99,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.shell.SirenDroneMaker
 import com.snipsnap.shell.SirenPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
@@ -121,6 +123,7 @@ import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.Siren
+import com.snipsnap.synth.SirenDrone
 import com.snipsnap.synth.SirenPatch
 import com.snipsnap.synth.SirenVoice
 import com.snipsnap.xpm.KeygroupProgram
@@ -696,12 +699,13 @@ fun SynthScreen(
         makingInstrument = false
     }
 
-    // ---- DRONE TO LOOP: RESIN, droning ----
-    // docs/superpowers/specs/2026-09-25-resin-drone-design.md. SEND puts a
-    // recipe on the grid, not audio: LOOP renders it at its own tempo, so
-    // nothing here renders except PREVIEW, which renders it the way LOOP
-    // will (the grid's tempo, bars and the device's rate) and plays it
-    // twice, so the wrap is heard.
+    // ---- DRONE TO LOOP: RESIN and SIREN, droning ----
+    // docs/superpowers/specs/2026-09-25-resin-drone-design.md (RESIN) and
+    // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 4
+    // (SIREN). SEND puts a recipe on the grid, not audio: LOOP renders it at
+    // its own tempo, so nothing here renders except PREVIEW, which renders
+    // it the way LOOP will (the grid's tempo, bars and the device's rate)
+    // and plays it twice, so the wrap is heard.
     val context = LocalContext.current
     var droneOpen by remember { mutableStateOf(false) }
     var droneRoot by remember { mutableStateOf<Int?>(null) }
@@ -712,10 +716,22 @@ fun SynthScreen(
     // The grid the drone will land on, read when the sheet opens: its tempo
     // and bars decide the span the readout names and PREVIEW renders.
     var droneSession by remember { mutableStateOf<Session?>(null) }
+
+    // RESIN and SIREN behind one shape, the same division [HeldSpec] draws:
+    // RESIN's own MOTION and BREATHS are knobs invented for the drone, since
+    // RESIN's held macros carry no swing of their own; SIREN already *is* a
+    // movement (RATE and DEPTH, dialed on the panel above), so its own
+    // DroneSpec has no extra knob and [hasMotion] is false.
+    fun droneSpec(): DroneSpec? = when (engine) {
+        Engine.RESIN -> DroneSpec.Resin(voice as ResinVoice, macros, droneMotion, droneRate)
+        Engine.SIREN -> DroneSpec.Siren(voice as SirenVoice, macros)
+        else -> null
+    }
+
     LaunchedEffect(droneOpen, voice) {
-        if (!droneOpen || engine != Engine.RESIN) return@LaunchedEffect
-        val v = voice as? ResinVoice ?: return@LaunchedEffect
-        if (droneRoot?.let { it in DroneMaker.roots(v) } != true) droneRoot = DroneMaker.defaultRoot(v, kit?.key)
+        if (!droneOpen) return@LaunchedEffect
+        val spec = droneSpec() ?: return@LaunchedEffect
+        if (droneRoot?.let { it in spec.roots } != true) droneRoot = spec.defaultRoot(kit?.key)
         droneSession = withContext(Dispatchers.IO) {
             val rate = deviceSampleRate(context)
             val dir = LoopWrites.dir(context)
@@ -724,20 +740,18 @@ fun SynthScreen(
         }
     }
 
-    fun droneSpec() = DroneMaker.spec(voice as ResinVoice, macros, droneMotion, droneRate)
-
     fun previewDrone() {
         val root = droneRoot ?: return
         val session = droneSession ?: return
-        if (engine != Engine.RESIN || dronePreviewing) return
-        val spec = droneSpec()
+        val spec = droneSpec() ?: return
+        if (dronePreviewing) return
         dronePreviewing = true
         droneJob = appScope.launch {
             try {
                 val heard = withContext(Dispatchers.Default) {
                     // CANCEL (or closing the sheet) cancels this job; the
                     // render asks and stops rather than running on for seconds.
-                    val once = DroneMaker.render(spec, root, session) { !isActive }
+                    val once = spec.render(root, session) { !isActive }
                     Snip(FloatArray(once.size * 2) { once[it % once.size] }, 1, session.sampleRate)
                 }
                 audition(heard)
@@ -755,9 +769,9 @@ fun SynthScreen(
 
     fun sendDrone() {
         val root = droneRoot ?: return
-        if (engine != Engine.RESIN) return
-        val name = "${currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"} DRONE"
-        onDroneToLoop(name, droneSpec().toJson(), root)
+        val spec = droneSpec() ?: return
+        val name = "${currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"} DRONE"
+        onDroneToLoop(name, spec.toJson(), root)
         droneJob?.cancel()
         droneJob = null
         dronePreviewing = false
@@ -1033,9 +1047,9 @@ fun SynthScreen(
                         makingInstrument = true
                     }
                 }
-                // RESIN, droning: the sound as a breathing loop-grid track.
-                // SIREN's own loop-grid door (spec, S12.3) is not built yet.
-                if (engine == Engine.RESIN) {
+                // RESIN or SIREN, droning: the sound as a loop-grid track,
+                // RESIN's own breathing filter or SIREN's own wail.
+                if (engine == Engine.RESIN || engine == Engine.SIREN) {
                     LabButton(
                         "DRONE TO LOOP ▸",
                         scheme,
@@ -1160,25 +1174,34 @@ fun SynthScreen(
             BackHandler(onBack = ::closeHeld)
         }
 
-        val droneVoice = voice as? ResinVoice
-        if (droneOpen && engine == Engine.RESIN && droneVoice != null) {
-            DroneSheet(
-                heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                voice = droneVoice,
-                root = droneRoot,
-                session = droneSession,
-                motion = droneMotion,
-                rate = droneRate,
-                previewing = dronePreviewing,
-                fillColor = classColor,
-                scheme = scheme,
-                onRoot = { droneRoot = it },
-                onMotion = { droneMotion = it },
-                onRate = { droneRate = it },
-                onPreview = ::previewDrone,
-                onSend = ::sendDrone,
-                onCancel = ::closeDrone,
-            )
+        if (droneOpen) {
+            // Recomputed here rather than cached, the same call [heldSpec]
+            // makes and for the same reason: cheap, and it must reflect
+            // whatever the panel holds right now.
+            droneSpec()?.let { spec ->
+                val root = droneRoot
+                val session = droneSession
+                val ready = root != null && session != null
+                DroneSheet(
+                    heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                    roots = spec.roots,
+                    hasMotion = spec.hasMotion,
+                    root = root,
+                    ready = ready,
+                    label = if (root != null && session != null) spec.label(root, session) else "…",
+                    motion = droneMotion,
+                    rate = droneRate,
+                    previewing = dronePreviewing,
+                    fillColor = classColor,
+                    scheme = scheme,
+                    onRoot = { droneRoot = it },
+                    onMotion = { droneMotion = it },
+                    onRate = { droneRate = it },
+                    onPreview = ::previewDrone,
+                    onSend = ::sendDrone,
+                    onCancel = ::closeDrone,
+                )
+            }
             BackHandler(onBack = ::closeDrone)
         }
     }
@@ -1470,8 +1493,8 @@ private sealed interface HeldSpec {
         override val zoneMidis get() = SirenPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${SirenPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi)
-        override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = SirenPadMaker.export(name, spec, notes, destRoot)
     }
 }
@@ -1551,22 +1574,62 @@ private fun HeldInstrumentSheet(
     }
 }
 
-// ---------- DRONE TO LOOP: RESIN, droning ----------
+// ---------- DRONE TO LOOP: RESIN and SIREN, droning ----------
 
 /**
- * DRONE TO LOOP ▸'s sheet (RESIN only), [HeldInstrumentSheet]'s frame over
- * the three things a drone has that a one-shot never needed: ROOT (a note
- * stepper across the voice's own register), MOTION (how far the filter
- * breathes) and BREATHS (how many times per drone). The readout under ROOT
- * is [DroneMaker.label]: the note, how many bars before it repeats at the
- * grid's tempo, and the nudge the loop needed to close.
+ * DRONE TO LOOP's two engines behind one shape, mirroring [HeldSpec]: RESIN
+ * invents MOTION and BREATHS because its held macros carry no swing of
+ * their own; SIREN already is a movement (RATE and DEPTH), so
+ * [DroneSpec.Siren] adds nothing and [hasMotion] is false.
+ */
+private sealed interface DroneSpec {
+    val roots: IntRange
+    val hasMotion: Boolean
+    fun defaultRoot(key: KeySpec?): Int
+    fun label(root: Int, session: Session): String
+    fun render(root: Int, session: Session, cancelled: () -> Boolean): FloatArray
+    fun toJson(): JsonValue
+
+    class Resin(private val voice: ResinVoice, macros: Map<String, Float>, motion: Float, rate: Int) : DroneSpec {
+        private val spec = DroneMaker.spec(voice, macros, motion, rate)
+        override val roots get() = DroneMaker.roots(voice)
+        override val hasMotion get() = true
+        override fun defaultRoot(key: KeySpec?) = DroneMaker.defaultRoot(voice, key)
+        override fun label(root: Int, session: Session) = DroneMaker.label(root, session)
+        override fun render(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.render(spec, root, session, cancelled)
+        override fun toJson() = spec.toJson()
+    }
+
+    class Siren(private val voice: SirenVoice, macros: Map<String, Float>) : DroneSpec {
+        private val spec = SirenDroneMaker.spec(voice, macros)
+        override val roots get() = SirenDroneMaker.roots(voice)
+        override val hasMotion get() = false
+        override fun defaultRoot(key: KeySpec?) = SirenDroneMaker.defaultRoot(voice, key)
+        override fun label(root: Int, session: Session) = SirenDroneMaker.label(spec, root, session)
+        override fun render(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.render(spec, root, session, cancelled)
+        override fun toJson() = spec.toJson()
+    }
+}
+
+/**
+ * DRONE TO LOOP ▸'s sheet (RESIN or SIREN), [HeldInstrumentSheet]'s frame
+ * over the things a drone has that a one-shot never needed: ROOT (a note
+ * stepper across the voice's own register), and — RESIN only — MOTION (how
+ * far the filter breathes) and BREATHS (how many times per drone). SIREN
+ * already is a movement: RATE and DEPTH are the patch's own swing and
+ * speed, dialed on the panel above, so [hasMotion] is false and that row
+ * never appears. The readout under ROOT is [label]: the note, how many
+ * bars before it repeats at the grid's tempo, and the nudge the loop
+ * needed to close.
  */
 @Composable
 private fun DroneSheet(
     heading: String,
-    voice: ResinVoice,
+    roots: IntRange,
+    hasMotion: Boolean,
     root: Int?,
-    session: Session?,
+    ready: Boolean,
+    label: String,
     motion: Float,
     rate: Int,
     previewing: Boolean,
@@ -1579,8 +1642,7 @@ private fun DroneSheet(
     onSend: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val ready = root != null && session != null
-    val range = DroneMaker.roots(voice)
+    val range = roots
     Box(
         Modifier
             .fillMaxSize()
@@ -1613,7 +1675,7 @@ private fun DroneSheet(
                     modifier = Modifier.weight(1f),
                 ) { root?.let { onRoot(it - 1) } }
                 TapeText(
-                    if (root != null && session != null) DroneMaker.label(root, session) else "…",
+                    label,
                     TapeType.lcdSmall,
                     scheme.ink.tape,
                     modifier = Modifier.weight(3f),
@@ -1626,26 +1688,28 @@ private fun DroneSheet(
                     modifier = Modifier.weight(1f),
                 ) { root?.let { onRoot(it + 1) } }
             }
-            MacroSlider("MOTION", motion, fillColor, scheme, onMotion)
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TapeText(
-                    "MOTION ${DroneMaker.motionLabel(motion)}",
-                    TapeType.pixelSmall,
-                    scheme.ink2.tape,
-                    modifier = Modifier.weight(1f),
-                )
-                ActionButton(
-                    DroneMaker.breathsLabel(rate),
-                    scheme,
-                    enabled = !previewing,
-                    modifier = Modifier.weight(1f),
+            if (hasMotion) {
+                MacroSlider("MOTION", motion, fillColor, scheme, onMotion)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val rates = ResinDrone.RATES
-                    onRate(rates[(rates.indexOf(rate) + 1) % rates.size])
+                    TapeText(
+                        "MOTION ${DroneMaker.motionLabel(motion)}",
+                        TapeType.pixelSmall,
+                        scheme.ink2.tape,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionButton(
+                        DroneMaker.breathsLabel(rate),
+                        scheme,
+                        enabled = !previewing,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        val rates = ResinDrone.RATES
+                        onRate(rates[(rates.indexOf(rate) + 1) % rates.size])
+                    }
                 }
             }
             if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)

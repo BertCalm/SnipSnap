@@ -93,9 +93,11 @@ class VoxGrainsTest {
         // a roll must never be is a kick-shaped thud or unclassifiable mud.
         // Measured at round 1: CHOIR 14 LOOP, 13 SNARE, 3 PERC of 30; THROAT
         // at round 3, 18 LOOP, 11 PERC, 1 SNARE, its low growls never a kick;
-        // WRAITH 14 LOOP, 9 PERC, 6 SNARE, 1 TONAL.
+        // WRAITH 14 LOOP, 9 PERC, 6 SNARE, 1 TONAL; SWARM 16 LOOP, 9 PERC, 5
+        // SNARE, once its first mouth was kept on time (two came back UNKNOWN
+        // before: two or three late talkers left the classifier's 93 ms silent).
         // BEATBOX is a drum kit, where a kick is the point: its own test below.
-        for (voice in listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST, VoxVoice.THROAT, VoxVoice.WRAITH)) {
+        for (voice in listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST, VoxVoice.THROAT, VoxVoice.WRAITH, VoxVoice.SWARM)) {
             repeat(30) { seed ->
                 val c = Classifier.classify(Vox.render(voice, Vox.scramble(voice, Random(seed))))
                 assertTrue(c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.UNKNOWN, "$voice roll $seed read ${c.drumClass}")
@@ -391,7 +393,7 @@ class VoxGrainsTest {
         for (h in listOf(VoxBeatbox.Hit.TS, VoxBeatbox.Hit.T)) assertEquals(DrumClass.HAT_CLOSED, cls(h), "$h")
         assertEquals(DrumClass.HAT_OPEN, cls(VoxBeatbox.Hit.TSS))
         assertEquals(DrumClass.PERC, cls(VoxBeatbox.Hit.RIM))
-        for (voice in singers + VoxVoice.THROAT + VoxVoice.WRAITH) assertEquals(DrumClass.TONAL, Vox.drumClassFor(voice))
+        for (voice in singers + VoxVoice.THROAT + VoxVoice.WRAITH + VoxVoice.SWARM) assertEquals(DrumClass.TONAL, Vox.drumClassFor(voice))
         // Every hit reachable, in order, from HIT's travel.
         assertEquals(VoxBeatbox.Hit.entries, (0..7).map { VoxBeatbox.hitFor(it / 7f) })
     }
@@ -648,6 +650,129 @@ class VoxGrainsTest {
         // Measured 0.30 s at DECAY 0, 3.05 at 1.
         val lengths = listOf(0f, 0.5f, 1f).map { wraith("DECAY" to it).durationSeconds }
         assertTrue(lengths.zipWithNext().all { (a, b) -> b > a } && lengths.first() < 0.5f && lengths.last() > 2.5f, "DECAY stretches the word: $lengths")
+    }
+
+    // ---------- VOX round 3: SWARM ----------
+
+    private fun swarm(vararg macros: Pair<String, Float>) = Vox.render(VoxVoice.SWARM, macros.toMap())
+
+    private fun monoOf(s: Snip) = FloatArray(s.frameCount) { (s.samples[2 * it] + s.samples[2 * it + 1]) / 2f }
+
+    /** RMS of the mono mix in [ms]-long windows. */
+    private fun rmsWindows(x: FloatArray, ms: Int): FloatArray {
+        val w = Dsp.RATE * ms / 1000
+        return FloatArray(x.size / w) { k ->
+            var e = 0.0
+            for (i in k * w until (k + 1) * w) e += x[i] * x[i]
+            kotlin.math.sqrt(e / w).toFloat()
+        }
+    }
+
+    @Test
+    fun `SWARM is a crowd in stereo, and its first mouth is always on time`() {
+        val crowd = swarm()
+        assertEquals(2, crowd.channels)
+        var lr = 0.0
+        var ll = 0.0
+        var rr = 0.0
+        for (f in 0 until crowd.frameCount) {
+            val l = crowd.samples[2 * f]
+            val r = crowd.samples[2 * f + 1]
+            lr += l * r; ll += l * l; rr += r * r
+        }
+        // Measured 0.69: the mouths are spread across the field.
+        assertTrue(lr / kotlin.math.sqrt(ll * rr) < 0.9, "the crowd should be wide")
+        // A pad that starts late sounds late: the smallest, loosest crowds still sound from the strike.
+        for (tune in listOf(0.3f, 0.5f, 0.7f)) for (loose in listOf(0.5f, 1f)) {
+            val head = monoOf(swarm("CROWD" to 0f, "LOOSE" to loose, "TUNE" to tune)).copyOfRange(0, (0.09f * Dsp.RATE).toInt())
+            assertTrue(head.maxOf { abs(it) } > 0.01f, "two mouths at LOOSE $loose, TUNE $tune start silent")
+        }
+    }
+
+    @Test
+    fun `LOOSE smears the crowd's start, from one shout toward a murmuring room`() {
+        // 10% to 90% of the opening's peak, measured 30, 95 and 250 ms.
+        fun rise(loose: Float): Int {
+            val e = rmsWindows(monoOf(swarm("LOOSE" to loose, "DECAY" to 0.6f)), 5).let { it.copyOfRange(0, minOf(it.size, 240)) }
+            val peak = e.max()
+            return (e.indexOfFirst { it > 0.9f * peak } - e.indexOfFirst { it > 0.1f * peak }) * 5
+        }
+        val tight = rise(0f)
+        val ragged = rise(0.5f)
+        assertTrue(tight < 60, "LOOSE 0 is one shout: $tight ms")
+        assertTrue(ragged > 150, "LOOSE 0.5 is a ragged crowd: $ragged ms")
+    }
+
+    @Test
+    fun `CROWD runs from a few people to a crowd`() {
+        assertEquals(VoxSwarm.MIN_MOUTHS, VoxSwarm.mouthsFor(0f))
+        assertEquals(VoxSwarm.MAX_MOUTHS, VoxSwarm.mouthsFor(1f))
+        assertTrue((0..10).map { VoxSwarm.mouthsFor(it / 10f) }.zipWithNext().all { (a, b) -> b >= a })
+        // A murmur's lumpiness over its held part, measured 0.38 for two mouths, 0.17 for sixteen:
+        // you can pick out two people; past about ten it is a crowd.
+        fun lumpiness(crowd: Float): Double {
+            val e = rmsWindows(monoOf(swarm("CROWD" to crowd, "LOOSE" to 1f, "DECAY" to 1f)), 25).let { it.copyOfRange(16, 68) }
+            val mean = e.average()
+            return kotlin.math.sqrt(e.map { (it - mean) * (it - mean) }.average()) / mean
+        }
+        val few = lumpiness(0f)
+        val many = lumpiness(1f)
+        assertTrue(few > many * 1.6, "two mouths should be lumpier than sixteen: $few vs $many")
+    }
+
+    @Test
+    fun `EFFORT goes hushed, talk, shout, and a hushed crowd is people, not ghosts`() {
+        fun features(s: Snip) = FeatureExtractor.extract(Snip(monoOf(s), 1, Dsp.RATE))
+        // The quiet end was a whisper, and a room of whispers sounded like a horror film ("still scary
+        // sounding"): no voice at all. Hushed voices keep a soft one under the breath. Measured on a room:
+        // a note found in 7 of 8 windows, flatness 0.36 against talk's 0.07.
+        val hushed = swarm("EFFORT" to 0f, "DECAY" to 0.7f, "LOOSE" to 1f)
+        val talk = swarm("EFFORT" to 0.5f, "DECAY" to 0.7f, "LOOSE" to 1f)
+        val m = monoOf(hushed)
+        val windows = (0 until 8).map { ((0.1f + it * 0.15f) * Dsp.RATE).toInt() }.filter { it + 4410 <= m.size }
+        val voiced = windows.count { a -> Pitch.detect(Snip(m.copyOfRange(a, a + 4410), 1, Dsp.RATE)) != null }
+        assertTrue(voiced >= windows.size * 5 / 8, "a hushed crowd still has voices in it: $voiced of ${windows.size}")
+        assertTrue(features(hushed).flatness > features(talk).flatness * 2.5f, "hushed is breathier than talk")
+        // A shout is brighter than talk: centres measured 1637 and 853 Hz on the chant.
+        val shout = features(swarm("EFFORT" to 1f, "DECAY" to 0.7f)).centroidHz
+        val said = features(swarm("EFFORT" to 0.5f, "DECAY" to 0.7f)).centroidHz
+        assertTrue(shout > said * 1.5f, "a shout is brighter than talk: $shout vs $said")
+    }
+
+    @Test
+    fun `STUTTER grabs the opening up to four times, silent between`() {
+        // Counted as silent gaps (under 2% of the peak for 15 ms): the grabs themselves are the word's
+        // quiet h, near a burst-counter's threshold. Exact across nine crowds when measured.
+        fun gaps(s: Snip, within: Float): Int {
+            val x = monoOf(s)
+            val hop = Dsp.RATE / 200
+            val env = (0 until minOf(x.size / hop, (within * 200).toInt())).map { k -> (k * hop until (k + 1) * hop).maxOf { abs(x[it]) } }
+            val top = x.maxOf { abs(it) }
+            var n = 0
+            var run = 0
+            var started = false
+            for (v in env) {
+                if (v > 0.1f * top) started = true
+                if (started && v < 0.02f * top) run++ else { if (run >= 3) n++; run = 0 }
+            }
+            return n
+        }
+        for (crowd in listOf(0.2f, 1f)) for (stutter in listOf(0f, 0.5f, 1f)) {
+            val n = VoxSwarm.stuttersFor(stutter)
+            val s = swarm("STUTTER" to stutter, "LOOSE" to 0f, "DECAY" to 0.3f, "CROWD" to crowd)
+            assertEquals(n, gaps(s, n * 0.125f + 0.03f), "STUTTER $stutter, CROWD $crowd")
+        }
+    }
+
+    @Test
+    fun `a short SWARM is a hit, a long one holds`() {
+        // PERC or SNARE to DECAY 0.4, LOOP at 1. At 0.6 a crowd is 1.52 s, just past the classifier's
+        // 1.5 s loop line (its mouths come in over a moment): filed TONAL all the same.
+        for (decay in listOf(0f, 0.2f, 0.4f)) {
+            val c = Classifier.classify(swarm("DECAY" to decay)).drumClass
+            assertTrue(c in setOf(DrumClass.PERC, DrumClass.SNARE), "SWARM at DECAY $decay read as $c")
+        }
+        assertEquals(DrumClass.LOOP, Classifier.classify(swarm("DECAY" to 1f)).drumClass)
     }
 
     // ---------- GRAINS ----------

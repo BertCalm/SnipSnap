@@ -288,9 +288,11 @@ object Keys {
      * the format can express. RATE, DEPTH and GRIT play as they do on the
      * loop's own render; SWEEP and HOLD play no part in a LOOP render and
      * are ignored here exactly as [Siren.renderLoop] ignores them; TUNE is
-     * fixed by [midi].
+     * fixed by [midi]. [cancelled] reaches [Siren.renderLoop]'s own check —
+     * a held zone at the slowest RATE is seconds of audio, the same reach
+     * [resinPad]'s own `cancelled` has.
      */
-    fun sirenPad(voice: SirenVoice, macros: Map<String, Float>, midi: Int): KeyNote {
+    fun sirenPad(voice: SirenVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
         val low = sirenPadMidis().first()
         require(midi - low in 0..Siren.TUNE_SEMITONES) {
             "SIREN pads are MIDI $low..${low + Siren.TUNE_SEMITONES}, got $midi"
@@ -298,7 +300,7 @@ object Keys {
         val defaults = Siren.defaults(voice)
         val tune = (midi - low) / Siren.TUNE_SEMITONES.toFloat()
         val m = defaults + macros.filterKeys { it in defaults } + ("TUNE" to tune)
-        val loop = Siren.renderLoop(voice, m)
+        val loop = Siren.renderLoop(voice, m, cancelled)
         return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
