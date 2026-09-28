@@ -7,6 +7,7 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -191,6 +192,74 @@ class SilkTest {
             val allowed = if (voice == SilkVoice.GUZHENG) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
             val c = Classifier.classify(Silk.render(voice))
             assertTrue(c.drumClass in allowed, "$voice default classified ${c.drumClass}, expected one of $allowed")
+        }
+    }
+
+    /**
+     * [Silk.washModesFor] (SILK Phase 2, SANTUR's WASH): every mode's own
+     * frequency must be distinct - the plan review round's own finding
+     * was that naively adding a separate "top-of-period" degree on top of
+     * a full octave loop double-books the seam between consecutive
+     * octaves (a period-top degree and the next octave's own degree 0 are
+     * the identical frequency).
+     */
+    @Test
+    fun `washModesFor produces no duplicate frequencies at the octave seams`() {
+        for (scale in SilkScales.TABLE) {
+            val modes = Silk.washModesFor(164.81f, scale, gain = 1f, t60 = 2f)
+            val hz = modes.map { it.ratio }
+            val distinct = hz.toSet()
+            assertEquals(hz.size, distinct.size, "${scale.cents.size}-degree scale: duplicate frequencies in $hz")
+        }
+    }
+
+    /** RMS over [samples] from [fromSec] to [toSec], 0 for any part of that window past the buffer's own end (silence, not an index error). */
+    private fun tailRms(samples: FloatArray, rate: Int, fromSec: Float, toSec: Float): Double {
+        val from = (fromSec * rate).toInt()
+        val to = (toSec * rate).toInt()
+        var acc = 0.0
+        var n = 0
+        for (i in from until to) {
+            val v = if (i < samples.size) samples[i].toDouble() else 0.0
+            acc += v * v
+            n++
+        }
+        return kotlin.math.sqrt(acc / n.coerceAtLeast(1))
+    }
+
+    /**
+     * The spec's own two WASH claims (SILK Phase 2, "Testing"), checked
+     * directly on [Silk.washModesFor] plus [Strings.bodyRing] - the same
+     * two calls SANTUR's own voice will chain once it exists (Task 5),
+     * so this doesn't wait on that voice to verify the bank itself.
+     */
+    @Test
+    fun `WASH rings on after the driven string, on the scale's own degrees`() {
+        val root = 164.81f // E3, SANTUR's own root
+        val scale = SilkScales.SHUR // SANTUR's own default
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.8f, 6500f) // high DAMP: a short-lived driven string
+        val string = Strings.pluck(root, 0.5f, damping, 8000f, seed = 1, rate = rate)
+
+        val washT60 = 2f
+        val modes = Silk.washModesFor(root, scale, gain = 1f, t60 = washT60)
+        val dry = Strings.bodyRing(string, modes, amount = 0f, rate = rate, ceilingSeconds = 4f)
+        val wet = Strings.bodyRing(string, modes, amount = 1f, rate = rate, ceilingSeconds = 4f)
+
+        // Well past the driven string's own 0.5 s buffer, where `dry` (WASH
+        // 0, bodyRing's own no-op) has nothing left to contribute at all.
+        val dryTail = tailRms(dry, rate, 1.0f, 1.3f)
+        val wetTail = tailRms(wet, rate, 1.0f, 1.3f)
+        assertTrue(wetTail > dryTail * 5.0, "WASH's own tail should ring on well past the driven string: dry=$dryTail, wet=$wetTail")
+
+        // The tail's own spectral peaks land on SCALE's degrees, not
+        // arbitrary points - checked at three of washModesFor's own modes
+        // (the root, an interior degree, and the span's own top note).
+        val checkHz = listOf(root, root * 2f.pow(scale.cents[scale.cents.size / 2] / 1200f), root * 2f.pow(3f))
+        for (hz in checkHz) {
+            val measured = FineTuning.measuredHz(wet, rate, hz, fromSec = 1.0f, bodySeconds = 0.5f)
+            val off = FineTuning.cents(measured, hz.toDouble())
+            assertTrue(abs(off) <= 20.0, "expected a WASH peak near $hz Hz, measured $measured Hz ($off cents)")
         }
     }
 }

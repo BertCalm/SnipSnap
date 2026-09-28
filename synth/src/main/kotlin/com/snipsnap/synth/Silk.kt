@@ -353,6 +353,52 @@ object Silk {
     private fun withBody(string: FloatArray, voice: SilkVoice, amount: Float, rate: Int): FloatArray =
         Strings.bodyRing(string, bodyFor(voice), amount, rate, RING_CEILING_SECONDS)
 
+    /**
+     * SANTUR's WASH: unlike every other voice's fixed [bodyFor] table
+     * (one measured instrument, baked in), this bank is *dynamic* - tuned
+     * to whichever SCALE the pad is currently on, across three octaves
+     * (spec, "SANTUR": "a bank of resonators... tuned to the current
+     * SCALE's degrees across three octaves... The bank follows SCALE, so
+     * a SHUR santur rings in SHUR").
+     *
+     * [scale.cents] already starts at 0 (every shipped row's own
+     * invariant - see `SilkScalesTest`), so walking it across three whole
+     * octave transpositions already reaches every degree in the span
+     * exactly once: octave 0's own degree 0 is [root] itself, octave 1's
+     * degree 0 is one octave up, and so on - nothing here separately adds
+     * "the top-of-period degree", which would land on the exact same
+     * frequency as the next octave's own degree 0 and double a resonator
+     * there instead of representing one degree per mode (the interaction
+     * the SILK Phase 2 plan's own review round caught). The span's own
+     * top note - three literal octaves above [root] - is added once,
+     * separately, closing the range.
+     *
+     * "Octaves" is read literally (1200 cents), not as three periods of
+     * [scale] itself: for [SilkScales.BOHLEN_PIERCE] specifically (period
+     * ~1901.955 cents, a tritave, not an octave) this means its own
+     * degrees do not land on this bank's own three-octave boundary - an
+     * accepted consequence of the spec's own wording, not a bug, should a
+     * future voice ever pair BOHLEN_PIERCE with a WASH-style bank.
+     *
+     * [gain] is uniform across every mode - no source weights a santur's
+     * sympathetic strings against each other, so nothing here invents a
+     * curve; overall level is [Strings.bodyRing]'s own `amount` argument,
+     * which WASH also drives. [t60] is likewise shared by every mode -
+     * WASH's own single knob sets the whole bank's decay together (spec,
+     * "SANTUR": "WASH sets the bank's level and its t60 together").
+     */
+    internal fun washModesFor(root: Float, scale: SilkScales.Scale, gain: Float, t60: Float): List<Modes.Mode> {
+        val modes = mutableListOf<Modes.Mode>()
+        for (octave in 0..2) {
+            for (cents in scale.cents) {
+                val hz = root * 2f.pow((cents + 1200f * octave) / 1200f)
+                modes.add(Modes.fixed(hz, gain, t60))
+            }
+        }
+        modes.add(Modes.fixed(root * 2f.pow(3f), gain, t60)) // the span's own top: 3 literal octaves above root
+        return modes
+    }
+
     private fun trimToDecay(buf: FloatArray, rate: Int): FloatArray =
         Strings.trimToDecay(buf, rate, RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
 
