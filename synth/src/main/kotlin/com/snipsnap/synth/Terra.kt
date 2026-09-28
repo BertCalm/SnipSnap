@@ -11,27 +11,37 @@ import kotlin.math.tanh
 /**
  * TERRA — world percussion, physically modeled.
  *
- * COMPOUND_MEMBRANE (hand-struck membranes: djembe, dholak, dumbek, tabla)
- * and RESONANT_CAVITY (air-cavity instruments: udu, cajón) are both a bank
- * of inharmonic partials — mode ratios and damping curves sourced from
- * `TERRA_World_Percussion_Synth_Spec.md` S2.2 — excited by a FLESH_PALM
- * strike (a raised-cosine impulse, no noise). RESONANT_CAVITY adds two
- * things COMPOUND_MEMBRANE doesn't need: a Helmholtz cavity resonance
- * (S2.3) and a parasitic contact buzz (S2.4). CONICAL_BELL, TUNED_BAR (the
- * spec's other two topologies) and the HARD_STICK/MICRO_FLOCK exciters land
- * as follow-up work, the same way [SkinVoice]'s eight voices landed across
- * two PRs.
+ * All four topologies from `TERRA_World_Percussion_Synth_Spec.md` S2.2 are a
+ * bank of inharmonic partials, mode ratios/gains/damping curves sourced from
+ * that table, excited by a strike:
+ * - COMPOUND_MEMBRANE (djembe, dholak, dumbek, tabla) and RESONANT_CAVITY
+ *   (udu, cajón) are hand-struck: a FLESH_PALM exciter (a raised-cosine
+ *   impulse, no noise), and both carry DROOP (S2.1) - a membrane's or a
+ *   cavity's own surface can genuinely sag in pitch under a hard hit.
+ * - CONICAL_BELL (agogô) and TUNED_BAR (balafon) are mallet-struck: a
+ *   HARD_STICK exciter (a shorter pulse with a noise component scaled by
+ *   hardness), and neither carries DROOP - a solid metal bell or wooden bar
+ *   has no membrane tension to relax, so the macro would have nothing
+ *   physical to control.
+ *
+ * RESONANT_CAVITY's Helmholtz coupling (S2.3, CAVITY) is specific to it -
+ * nothing else here has a coupled air cavity. The parasitic contact buzz
+ * (S2.4, BUZZ) is shared by RESONANT_CAVITY and TUNED_BAR (a loose cajón
+ * boundary, a balafon's spider-egg membrane), factored into [applyBuzz].
+ * MICRO_FLOCK (the spec's third exciter, for seed/scraper instruments) has
+ * no user in the spec's own 16-pad kit (S5) and is deferred indefinitely,
+ * not landed-later work like the other four topologies were.
  *
  * Unlike [Modes.ring], the modal bank here can't be a fixed two-pole
- * recursion: DROOP needs the fundamental itself to slide during the decay
- * (a struck membrane's tension relaxing, S2.1), so each mode is rung by a
- * phase-accumulated oscillator re-tuned every sample from that sliding f0,
- * instead of [Modes.ring]'s single-fundamental filter. The per-mode table
- * still borrows [Modes.Mode] for its shape (ratio/gain/t60), and strike
- * position still borrows [Modes.atPosition] — only the accumulation itself
- * ([strikeAndModalBank]) had to be bespoke, and both topologies share it.
+ * recursion: DROOP needs the fundamental itself to slide during the decay,
+ * so each mode is rung by a phase-accumulated oscillator re-tuned every
+ * sample from that sliding f0, instead of [Modes.ring]'s single-fundamental
+ * filter. The per-mode table still borrows [Modes.Mode] for its shape
+ * (ratio/gain/t60), and strike position still borrows [Modes.atPosition] -
+ * only the accumulation itself ([strikeAndModalBank]) had to be bespoke,
+ * and every topology shares it.
  */
-enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY }
+enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR }
 
 object Terra {
 
@@ -69,6 +79,19 @@ object Terra {
             // a rattly cajón does.
             MacroSpec("BUZZ", 0f),
         )
+        TerraVoice.CONICAL_BELL -> listOf(
+            MacroSpec("TUNE", 0.4f),
+            MacroSpec("DECAY", 0.5f),
+            MacroSpec("FORCE", 0.5f),
+            MacroSpec("STRIKE", 0.25f),
+        )
+        TerraVoice.TUNED_BAR -> listOf(
+            MacroSpec("TUNE", 0.35f),
+            MacroSpec("DECAY", 0.5f),
+            MacroSpec("FORCE", 0.5f),
+            MacroSpec("STRIKE", 0.25f),
+            MacroSpec("BUZZ", 0f),
+        )
     }
 
     /** The factory macro settings for [voice]. */
@@ -80,15 +103,17 @@ object Terra {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE, same contract as
-        // every other engine, so the exciter's raised-cosine edge and (on
-        // RESONANT_CAVITY) the cavity's tanh saturator and the buzz
-        // threshold all fold down above 22.05kHz instead of aliasing into
-        // the audible band - the source spec's own reference code ran both
-        // of those nonlinear stages straight at 44.1kHz with no oversample.
+        // every other engine, so the exciters' pulse edges and (on
+        // RESONANT_CAVITY/TUNED_BAR) the cavity's tanh saturator and the
+        // buzz threshold all fold down above 22.05kHz instead of aliasing
+        // into the audible band - the source spec's own reference code ran
+        // its nonlinear stages straight at 44.1kHz with no oversample.
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = when (voice) {
             TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate)
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate)
+            TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate)
+            TerraVoice.TUNED_BAR -> tunedBar(m, renderRate)
         }
         val out = Dsp.decimate(raw, RATE)
         Dsp.normalize(out)
@@ -96,18 +121,27 @@ object Terra {
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 
-    // COMPOUND_MEMBRANE mode ratios and gains, and its damping curve
-    // gamma_m = 1 + 0.65m: TERRA_World_Percussion_Synth_Spec.md S2.2.
+    // Mode ratios, gains, and damping curves: TERRA_World_Percussion_Synth_Spec.md
+    // S2.2. COMPOUND_MEMBRANE and RESONANT_CAVITY's curves are linear in the
+    // mode index (gamma_m = 1 + step*m); CONICAL_BELL's is quadratic (high
+    // damping, gamma_m = 1 + 0.85*m^2) and computed inline in [conicalBell]
+    // rather than forcing a step constant it doesn't have.
     private val MEMBRANE_RATIOS = floatArrayOf(1.00f, 1.99f, 2.98f, 3.99f, 4.88f, 5.92f)
     private val MEMBRANE_GAINS = floatArrayOf(1.00f, 0.65f, 0.45f, 0.25f, 0.12f, 0.08f)
     private const val MEMBRANE_GAMMA_STEP = 0.65f
 
-    // RESONANT_CAVITY mode ratios and gains, and its damping curve
-    // gamma_m = 1 + 1.2m: TERRA_World_Percussion_Synth_Spec.md S2.2 ("Coupled
-    // Helmholtz" row).
     private val CAVITY_RATIOS = floatArrayOf(1.00f, 2.14f, 3.20f, 4.45f)
     private val CAVITY_GAINS = floatArrayOf(1.00f, 0.35f, 0.15f, 0.05f)
     private const val CAVITY_GAMMA_STEP = 1.2f
+
+    private val BELL_RATIOS = floatArrayOf(1.00f, 1.48f, 2.14f, 2.87f, 3.42f, 4.15f)
+    private val BELL_GAINS = floatArrayOf(1.00f, 0.72f, 0.45f, 0.30f, 0.18f, 0.09f)
+    private const val BELL_GAMMA_QUADRATIC = 0.85f
+
+    // Euler-Bernoulli free-bar series (S2.2's TUNED_BAR row).
+    private val BAR_RATIOS = floatArrayOf(1.00f, 6.27f, 17.55f, 34.39f)
+    private val BAR_GAINS = floatArrayOf(1.00f, 0.25f, 0.08f, 0.02f)
+    private const val BAR_GAMMA_STEP = 1.8f
 
     // The Helmholtz cavity resonance (S2.3). The spec's own reference
     // derives its resonator from a hand-rolled pole-radius formula tied to
@@ -127,6 +161,11 @@ object Terra {
     private const val BUZZ_THRESHOLD = 0.12f
     private const val BUZZ_GAIN = 0.45f
 
+    // HARD_STICK's own strike length (S4's sLen): shorter than FLESH_PALM's
+    // shortest (0.003s at FORCE=1), a mallet's tick against a stick's own
+    // seed keeps every HARD_STICK voice's own noise stream distinct.
+    private const val HARD_STICK_SECONDS = 0.0018f
+
     private const val TWO_PI = (2.0 * Math.PI).toFloat()
 
     // -60dB in nepers - the same constant [Modes.ring] uses for its own
@@ -139,34 +178,59 @@ object Terra {
     private const val DROOP_TAU_SECONDS = 0.020f
 
     /**
-     * The exciter-plus-modal-bank core every TERRA topology shares: a
-     * FLESH_PALM raised-cosine strike into [modes], each mode rung by a
-     * phase-accumulated oscillator re-tuned every sample from a
-     * droop-sliding fundamental (S2.1). [modes] is assumed already
-     * strike-position-weighted (see [Modes.atPosition]).
+     * FLESH_PALM (S3's ExciterType): a soft, broad raised-cosine impulse, no
+     * noise. A harder strike is a shorter pulse.
+     */
+    private fun fleshPalmExciter(hardness: Float, rate: Int): (Int) -> Float {
+        val pulseLen = (rate * (0.003f + (1f - hardness) * 0.009f)).toInt().coerceAtLeast(1)
+        return { i -> if (i < pulseLen) 0.5f * (1f - cos(TWO_PI * i / pulseLen)) else 0f }
+    }
+
+    /**
+     * HARD_STICK (S3/S4): a short raised-cosine pulse with a noise
+     * component scaled by hardness - a mallet's tick, not a palm's push.
+     */
+    private fun hardStickExciter(hardness: Float, rate: Int, seed: Int): (Int) -> Float {
+        val stickLen = (rate * HARD_STICK_SECONDS).toInt().coerceAtLeast(1)
+        val noise = Dsp.Noise(seed)
+        return { i ->
+            if (i < stickLen) {
+                val pulse = 0.5f * (1f - cos(TWO_PI * i / stickLen))
+                pulse * 0.6f + noise.next() * pulse * 0.4f * hardness
+            } else {
+                0f
+            }
+        }
+    }
+
+    /**
+     * The exciter-plus-modal-bank core every TERRA topology shares:
+     * [exciterAt] into [modes], each mode rung by a phase-accumulated
+     * oscillator re-tuned every sample from a droop-sliding fundamental
+     * (S2.1; pass `droopDepth = 0f` for a topology with no membrane tension
+     * to relax). [modes] is assumed already strike-position-weighted (see
+     * [Modes.atPosition]).
      */
     private fun strikeAndModalBank(
         modes: List<Modes.Mode>,
         fundamentalHz: Float,
         droopDepth: Float,
-        hardness: Float,
         frames: Int,
         rate: Int,
+        exciterAt: (Int) -> Float,
     ): FloatArray {
         val out = FloatArray(frames)
         val phases = FloatArray(modes.size)
         val nyquist = rate / 2f
 
-        // FLESH_PALM: a soft, broad raised-cosine impulse - no noise, unlike
-        // HARD_STICK (follow-up work). A harder strike is a shorter pulse.
-        val pulseLen = (rate * (0.003f + (1f - hardness) * 0.009f)).toInt().coerceAtLeast(1)
-
         for (i in out.indices) {
             val t = i.toFloat() / rate
-            val exciter = if (i < pulseLen) 0.5f * (1f - cos(TWO_PI * i / pulseLen)) else 0f
+            val exciter = exciterAt(i)
 
             // Tension droop (S2.1): the strike temporarily sharps the body,
-            // settling back exponentially onto fundamentalHz.
+            // settling back exponentially onto fundamentalHz. droopDepth is
+            // 0 for a rigid body (CONICAL_BELL, TUNED_BAR), collapsing this
+            // to fundamentalHz exactly.
             val currentF0 = fundamentalHz * (1f + droopDepth * exp(-t / DROOP_TAU_SECONDS))
 
             var modalSum = 0f
@@ -183,6 +247,26 @@ object Terra {
             // First-pass mix, exciter-vs-body - a listening call for the
             // audition gate, not derived from anything.
             out[i] = 0.35f * exciter + 0.65f * modalSum
+        }
+        return out
+    }
+
+    /**
+     * Parasitic contact buzz (S2.4), shared by RESONANT_CAVITY and
+     * TUNED_BAR: only the part of [raw] above [BUZZ_THRESHOLD] rattles,
+     * scaled by [amount]. A no-op copy below the 0.001 gate a patch's
+     * default (0) always takes, so a preset that never asks for buzz pays
+     * nothing beyond the copy.
+     */
+    private fun applyBuzz(raw: FloatArray, amount: Float, seed: Int): FloatArray {
+        if (amount <= 0.001f) return raw
+        val noise = Dsp.Noise(seed)
+        val out = raw.copyOf()
+        for (i in out.indices) {
+            val absS = abs(out[i])
+            if (absS > BUZZ_THRESHOLD) {
+                out[i] += (absS - BUZZ_THRESHOLD) * noise.next() * amount * BUZZ_GAIN
+            }
         }
         return out
     }
@@ -207,7 +291,7 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
-        return strikeAndModalBank(modes, fundamentalHz, droopDepth, hardness, frames, rate)
+        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
     }
 
     private fun resonantCavity(m: Map<String, Float>, rate: Int): FloatArray {
@@ -227,29 +311,60 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
-        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, hardness, frames, rate)
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
 
         val cavity = Dsp.Biquad().apply { bandpass(CAVITY_FREQ_HZ, CAVITY_Q, rate) }
-        val buzzNoise = Dsp.Noise(13)
-        val out = FloatArray(frames)
-        for (i in out.indices) {
-            var sample = raw[i]
+        val out = raw.copyOf()
+        if (cavityMix > 0.001f) {
             // Helmholtz cavity coupling (S2.3): a resonant bandpass into a
             // soft clip, crossfaded against the dry signal.
-            if (cavityMix > 0.001f) {
-                val cavitySat = tanh(cavity.process(sample) * CAVITY_DRIVE)
-                sample = sample * (1f - cavityMix) + cavitySat * cavityMix
+            for (i in out.indices) {
+                val cavitySat = tanh(cavity.process(out[i]) * CAVITY_DRIVE)
+                out[i] = out[i] * (1f - cavityMix) + cavitySat * cavityMix
             }
-            // Parasitic contact buzz (S2.4): only what clears the threshold
-            // rattles, scaled by BUZZ.
-            if (buzzAmount > 0.001f) {
-                val absS = abs(sample)
-                if (absS > BUZZ_THRESHOLD) {
-                    sample += (absS - BUZZ_THRESHOLD) * buzzNoise.next() * buzzAmount * BUZZ_GAIN
-                }
-            }
-            out[i] = sample
         }
-        return out
+        return applyBuzz(out, buzzAmount, seed = 13)
+    }
+
+    private fun conicalBell(m: Map<String, Float>, rate: Int): FloatArray {
+        // Agogô territory: the spec's own presets span D5-A5 (587-880Hz):
+        // TERRA_World_Percussion_Synth_Spec.md S5, pads 13-15.
+        val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 500f, 950f)
+        val t60Base = Dsp.around(m.getValue("DECAY"), 0.08f, 0.35f, 0.9f)
+        val hardness = m.getValue("FORCE")
+        val position = m.getValue("STRIKE")
+
+        // gamma_m = 1 + 0.85*m^2 (S2.2's "high damping" row): the upper
+        // partials of a struck cone die far faster than a linear curve
+        // would give them, which is most of what makes this read as
+        // forged metal rather than a drum.
+        val baseModes = BELL_RATIOS.indices.map { i ->
+            val gamma = 1f + BELL_GAMMA_QUADRATIC * i * i
+            Modes.Mode(ratio = BELL_RATIOS[i], gain = BELL_GAINS[i], t60 = t60Base / gamma)
+        }
+        val modes = Modes.atPosition(baseModes, position)
+        val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+        // No DROOP: a forged bell has no membrane tension to relax.
+        return strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 17))
+    }
+
+    private fun tunedBar(m: Map<String, Float>, rate: Int): FloatArray {
+        // Balafon territory: the spec's own presets sit at 220-330Hz:
+        // TERRA_World_Percussion_Synth_Spec.md S5, pads 07 and 16.
+        val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 180f, 400f)
+        val t60Base = Dsp.around(m.getValue("DECAY"), 0.08f, 0.35f, 0.9f)
+        val hardness = m.getValue("FORCE")
+        val position = m.getValue("STRIKE")
+        val buzzAmount = m.getValue("BUZZ")
+
+        val baseModes = BAR_RATIOS.indices.map { i ->
+            val gamma = 1f + i * BAR_GAMMA_STEP
+            Modes.Mode(ratio = BAR_RATIOS[i], gain = BAR_GAINS[i], t60 = t60Base / gamma)
+        }
+        val modes = Modes.atPosition(baseModes, position)
+        val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+        // No DROOP: a wooden bar has no membrane tension to relax.
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 19))
+        return applyBuzz(raw, buzzAmount, seed = 23)
     }
 }
