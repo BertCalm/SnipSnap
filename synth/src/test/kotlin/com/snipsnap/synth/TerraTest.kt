@@ -29,22 +29,46 @@ class TerraTest {
     // POS 0 and POS 1 land exactly on Modes.atPosition's own degenerate
     // case (|sin(n*pi*p)| is 0 for every mode at p=0 and at p=1, an integer
     // multiple of pi) - both ends used to silence the whole modal bank,
-    // leaving only the bare exciter. Measured: center rms=0.1288, clamped
-    // low/high rms=0.0871 each (Terra.compoundMembrane's own 0.02/0.98
-    // floor/ceiling) - comfortably above a collapsed exciter-only render,
-    // whose rms would sit under half of center's.
+    // leaving only the bare exciter. A whole-buffer RMS/peak comparison
+    // does NOT catch this: Terra.render peak-normalizes the whole buffer,
+    // so an exciter-only render (almost entirely true zero) gets scaled up
+    // by a much larger factor to reach the same target peak, and its
+    // whole-buffer RMS lands surprisingly close to a real render's -
+    // measured center=0.1288 vs an unclamped low/high of 0.0801, comfortably
+    // over half of center despite carrying no modal ring at all. What
+    // normalization can't fake is a window well past every exciter's own
+    // duration (HARD_STICK's ~80 samples, FLESH_PALM's worst case ~530):
+    // pre-fix that tail is exactly 0 before normalization (0 scaled by
+    // anything is still 0), so this checks samples 700-2000 instead, across
+    // every voice the fix touched.
     @Test
-    fun `pos macro stays audible at both extremes`() {
-        fun rms(samples: FloatArray): Double {
-            var sumSq = 0.0
-            for (v in samples) sumSq += (v * v).toDouble()
-            return Math.sqrt(sumSq / samples.size)
+    fun `pos macro rings the body at both extremes, for every voice`() {
+        val presets = mapOf(
+            TerraVoice.COMPOUND_MEMBRANE to djembeBass,
+            TerraVoice.RESONANT_CAVITY to uduLowWhoomp,
+            TerraVoice.CONICAL_BELL to agogoLowBell,
+            TerraVoice.TUNED_BAR to balafonKeyGourd,
+        )
+        val tailStart = 700
+        val tailEnd = 2000
+        for ((voice, macros) in presets) {
+            fun tailPeak(pos: Float): Float {
+                val samples = Terra.render(voice, macros + ("POS" to pos)).samples
+                var peak = 0f
+                for (i in tailStart until minOf(tailEnd, samples.size)) peak = maxOf(peak, abs(samples[i]))
+                return peak
+            }
+            val center = tailPeak(0.5f)
+            val low = tailPeak(0f)
+            val high = tailPeak(1f)
+            // 0.15 leaves a wide margin either side of what's actually
+            // measured: real per-voice ratios run from TUNED_BAR's 0.23 up,
+            // while a genuine collapse measures exactly 0 (three of the
+            // four voices) or a tiny filter-memory residual (RESONANT_
+            // CAVITY's cavity biquad) - nowhere near this bar.
+            assertTrue(low > center * 0.15f, "$voice POS=0 should still ring the body past the exciter: low=$low center=$center")
+            assertTrue(high > center * 0.15f, "$voice POS=1 should still ring the body past the exciter: high=$high center=$center")
         }
-        val center = rms(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("POS" to 0.5f)).samples)
-        val low = rms(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("POS" to 0f)).samples)
-        val high = rms(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("POS" to 1f)).samples)
-        assertTrue(low > center * 0.5, "POS=0 should still ring the body, not just the exciter: low=$low center=$center")
-        assertTrue(high > center * 0.5, "POS=1 should still ring the body, not just the exciter: high=$high center=$center")
     }
 
     // Djembe Bass, TERRA_World_Percussion_Synth_Spec.md S5 (Pad 03):
