@@ -50,19 +50,22 @@ object Terra {
             MacroSpec("TUNE", 0.35f),
             MacroSpec("DECAY", 0.5f),
             // FORCE: strike hardness (S2's strikeHardness) - a harder hit is
-            // a shorter, sharper exciter pulse. Not called STRIKE: THUMP's
-            // SNARE already uses that name for strike POSITION, below.
+            // a shorter, sharper exciter pulse.
             MacroSpec("FORCE", 0.5f),
-            // STRIKE: strike position, 0 centre .. 1 rim - same name and the
-            // same 0..1 meaning as Thump.snare's own STRIKE macro.
-            MacroSpec("STRIKE", 0.25f),
+            // POS: strike position, 0 centre .. 1 rim - the same 0..1
+            // meaning as Thump.snare's and Pluck's own STRIKE macros, but
+            // named differently from them: Fork's STRIKE macro is hammer
+            // hardness/velocity (Fork.kt), an unrelated axis, and this
+            // engine already has a hardness macro of its own (FORCE) - POS
+            // avoids colliding with either.
+            MacroSpec("POS", 0.25f),
             MacroSpec("DROOP", 0.23f),
         )
         TerraVoice.RESONANT_CAVITY -> listOf(
             MacroSpec("TUNE", 0.3f),
             MacroSpec("DECAY", 0.5f),
             MacroSpec("FORCE", 0.5f),
-            MacroSpec("STRIKE", 0.25f),
+            MacroSpec("POS", 0.25f),
             MacroSpec("DROOP", 0.1f),
             // CAVITY: how much the Helmholtz air resonance (S2.3) is mixed
             // into the strike, 0 dry .. 1 full coupling. The point of this
@@ -83,13 +86,13 @@ object Terra {
             MacroSpec("TUNE", 0.4f),
             MacroSpec("DECAY", 0.5f),
             MacroSpec("FORCE", 0.5f),
-            MacroSpec("STRIKE", 0.25f),
+            MacroSpec("POS", 0.25f),
         )
         TerraVoice.TUNED_BAR -> listOf(
             MacroSpec("TUNE", 0.35f),
             MacroSpec("DECAY", 0.5f),
             MacroSpec("FORCE", 0.5f),
-            MacroSpec("STRIKE", 0.25f),
+            MacroSpec("POS", 0.25f),
             MacroSpec("BUZZ", 0f),
         )
     }
@@ -177,6 +180,24 @@ object Terra {
     // yet, and the spec's own default (20ms) sits at this range's centre.
     private const val DROOP_TAU_SECONDS = 0.020f
 
+    // DECAY as RT60 (the house convention - see Dsp.Env's decay2T60), shared
+    // by every topology: the fundamental mode (gamma=1) falls 60dB by
+    // t60Base exactly. Sizing a render buffer at 1.4x it (see [framesFor],
+    // the same margin Thump's kick/tom/etc. use) leaves every mode audibly
+    // silent well before the cut, unlike the source spec's own reference
+    // code (whose decayMs is a 1/e time constant sized to exactly one
+    // buffer length, so its loudest mode is still at -8.7dB, not -60dB,
+    // right at the truncation point).
+    private const val DECAY_MIN_SECONDS = 0.08f
+    private const val DECAY_DEFAULT_SECONDS = 0.35f
+    private const val DECAY_MAX_SECONDS = 0.9f
+    private fun t60BaseFor(m: Map<String, Float>): Float =
+        Dsp.around(m.getValue("DECAY"), DECAY_MIN_SECONDS, DECAY_DEFAULT_SECONDS, DECAY_MAX_SECONDS)
+
+    /** Every topology's render buffer: [t60Base] (the fundamental's own RT60) times 1.4, floored at 64 frames. */
+    private fun framesFor(t60Base: Float, rate: Int): Int =
+        (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+
     /**
      * FLESH_PALM (S3's ExciterType): a soft, broad raised-cosine impulse, no
      * noise. A harder strike is a shorter pulse.
@@ -208,7 +229,7 @@ object Terra {
      * [exciterAt] into [modes], each mode rung by a phase-accumulated
      * oscillator re-tuned every sample from a droop-sliding fundamental
      * (S2.1; pass `droopDepth = 0f` for a topology with no membrane tension
-     * to relax). [modes] is assumed already strike-position-weighted (see
+     * to relax). [modes] is assumed already position-weighted (see
      * [Modes.atPosition]).
      */
     private fun strikeAndModalBank(
@@ -273,16 +294,9 @@ object Terra {
 
     private fun compoundMembrane(m: Map<String, Float>, rate: Int): FloatArray {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 55f, 440f)
-        // DECAY as RT60 (the house convention - see Dsp.Env's decay2T60):
-        // the fundamental mode (gamma=1) falls 60dB by t60Base exactly, so
-        // sizing the buffer at 1.4x it (same margin Thump's kick/tom/etc.
-        // use) leaves every mode audibly silent well before the cut, unlike
-        // the source spec's own reference code (whose decayMs is a 1/e time
-        // constant sized to exactly one buffer length, so its loudest mode
-        // is still at -8.7dB, not -60dB, right at the truncation point).
-        val t60Base = Dsp.around(m.getValue("DECAY"), 0.08f, 0.35f, 0.9f)
+        val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("STRIKE")
+        val position = m.getValue("POS")
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
 
         val baseModes = MEMBRANE_RATIOS.indices.map { i ->
@@ -290,7 +304,7 @@ object Terra {
             Modes.Mode(ratio = MEMBRANE_RATIOS[i], gain = MEMBRANE_GAINS[i], t60 = t60Base / gamma)
         }
         val modes = Modes.atPosition(baseModes, position)
-        val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+        val frames = framesFor(t60Base, rate)
         return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
     }
 
@@ -298,9 +312,9 @@ object Terra {
         // Udu/cajón territory: the spec's own presets sit at 55-60Hz: see
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 01 and 04.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 45f, 300f)
-        val t60Base = Dsp.around(m.getValue("DECAY"), 0.08f, 0.35f, 0.9f)
+        val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("STRIKE")
+        val position = m.getValue("POS")
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
         val cavityMix = m.getValue("CAVITY")
         val buzzAmount = m.getValue("BUZZ")
@@ -310,7 +324,7 @@ object Terra {
             Modes.Mode(ratio = CAVITY_RATIOS[i], gain = CAVITY_GAINS[i], t60 = t60Base / gamma)
         }
         val modes = Modes.atPosition(baseModes, position)
-        val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+        val frames = framesFor(t60Base, rate)
         val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
 
         val cavity = Dsp.Biquad().apply { bandpass(CAVITY_FREQ_HZ, CAVITY_Q, rate) }
@@ -330,9 +344,9 @@ object Terra {
         // Agogô territory: the spec's own presets span D5-A5 (587-880Hz):
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 13-15.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 500f, 950f)
-        val t60Base = Dsp.around(m.getValue("DECAY"), 0.08f, 0.35f, 0.9f)
+        val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("STRIKE")
+        val position = m.getValue("POS")
 
         // gamma_m = 1 + 0.85*m^2 (S2.2's "high damping" row): the upper
         // partials of a struck cone die far faster than a linear curve
@@ -343,7 +357,7 @@ object Terra {
             Modes.Mode(ratio = BELL_RATIOS[i], gain = BELL_GAINS[i], t60 = t60Base / gamma)
         }
         val modes = Modes.atPosition(baseModes, position)
-        val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+        val frames = framesFor(t60Base, rate)
         // No DROOP: a forged bell has no membrane tension to relax.
         return strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 17))
     }
@@ -352,9 +366,9 @@ object Terra {
         // Balafon territory: the spec's own presets sit at 220-330Hz:
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 07 and 16.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 180f, 400f)
-        val t60Base = Dsp.around(m.getValue("DECAY"), 0.08f, 0.35f, 0.9f)
+        val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("STRIKE")
+        val position = m.getValue("POS")
         val buzzAmount = m.getValue("BUZZ")
 
         val baseModes = BAR_RATIOS.indices.map { i ->
@@ -362,7 +376,7 @@ object Terra {
             Modes.Mode(ratio = BAR_RATIOS[i], gain = BAR_GAINS[i], t60 = t60Base / gamma)
         }
         val modes = Modes.atPosition(baseModes, position)
-        val frames = (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
+        val frames = framesFor(t60Base, rate)
         // No DROOP: a wooden bar has no membrane tension to relax.
         val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 19))
         return applyBuzz(raw, buzzAmount, seed = 23)

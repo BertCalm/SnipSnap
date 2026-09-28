@@ -29,11 +29,11 @@ class TerraTest {
     // fundamental 73Hz, hardness 0.30, droop 0.12, strike position 0.05
     // ("warm thump"). TUNE/DROOP below are this engine's macros solved back
     // to those raw values (Dsp.expMap/Dsp.lin are the forward maps in
-    // Terra.compoundMembrane) - FORCE and STRIKE take S5's 0..1 values directly.
+    // Terra.compoundMembrane) - FORCE and POS take S5's 0..1 values directly.
     private val djembeBass = mapOf(
         "TUNE" to 0.1362f,
         "FORCE" to 0.30f,
-        "STRIKE" to 0.05f,
+        "POS" to 0.05f,
         "DROOP" to 0.1846f,
     )
 
