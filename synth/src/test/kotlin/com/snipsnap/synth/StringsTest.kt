@@ -546,11 +546,22 @@ class StringsTest {
         }
     }
 
+    /**
+     * The round trip is a fraction of a period, so it lives in (0, 1]. Each bad
+     * value here would otherwise fail somewhere else under another name: zero and
+     * below trip the Karplus-Strong minimum's message about a note too high, a
+     * value above 1 builds a loop longer than its own note, and a finite extreme
+     * overflows `exact` to infinity, which passes the minimum and returns a Tuning
+     * nobody can build a ring from. 1.0 itself is the ordinary loop and must pass.
+     */
     @Test
-    fun `tune refuses a round trip that is not a positive fraction, and names it`() {
-        for (bad in listOf(0.0, -0.5, Double.NaN, Double.POSITIVE_INFINITY)) {
+    fun `tune refuses a round trip that is not a fraction of a period, and names it`() {
+        for (bad in listOf(0.0, -0.5, 1.0000001, 1.5, 2.0, Double.MAX_VALUE, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
             val e = assertFailsWith<IllegalArgumentException> { Strings.tune(220f, 4200f, boreRate, roundTrip = bad) }
             assertTrue(e.message!!.contains("roundTrip"), "roundTrip=$bad should be refused by name, not as a too-high note: ${e.message}")
+        }
+        for (ok in listOf(1.0, 0.5, 0.25)) {
+            assertTrue(Strings.tune(220f, 4200f, boreRate, roundTrip = ok).exact > Strings.MIN_LOOP_SAMPLES, "roundTrip=$ok is a fraction of a period and must be accepted")
         }
     }
 
@@ -576,8 +587,29 @@ class StringsTest {
             "jawari alone still charges the blocker, as it always did",
         )
         assertEquals(plain.exact, Strings.tune(f, 4200f, boreRate, dcBlock = false).exact, "no jawari, no blocker: the plain string's budget")
-        val e = assertFailsWith<IllegalArgumentException> { Strings.tune(f, 4200f, boreRate, dcBlock = true, dcHz = 0f) }
-        assertTrue(e.message!!.contains("corner"), e.message)
+    }
+
+    /**
+     * The corner has to be a frequency the loop can have. Infinity is the case that
+     * matters: it makes the one-pole coefficient exactly 1, a blocker that subtracts
+     * every sample and silently kills the loop, so a refusal by name is the only
+     * good outcome. So is any finite value far enough past Nyquist for the same
+     * underflow, and Nyquist itself, which is not "under" it. Both entry points
+     * refuse: the budget in [Strings.tune] and the loop that runs the corner.
+     */
+    @Test
+    fun `the DC blocker refuses a corner that is not a frequency under Nyquist, in the budget and in the loop`() {
+        val nyquist = boreRate / 2f
+        for (bad in listOf(0f, -2f, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.MAX_VALUE, 1e30f, nyquist, nyquist * 2f)) {
+            val budget = assertFailsWith<IllegalArgumentException>("tune with dcHz=$bad") { Strings.tune(220f, 4200f, boreRate, dcBlock = true, dcHz = bad) }
+            assertTrue(budget.message!!.contains("corner"), "tune, dcHz=$bad: ${budget.message}")
+            val running = assertFailsWith<IllegalArgumentException>("Loop with dcHz=$bad") { Strings.Loop(200, 0.5f, 0.9f, 4200f, boreRate, dcBlock = true, dcHz = bad) }
+            assertTrue(running.message!!.contains("corner"), "Loop, dcHz=$bad: ${running.message}")
+        }
+        // Off, the corner is never used, so it is not validated - the default corner with the blocker off is the ordinary string.
+        Strings.Loop(200, 0.5f, 0.9f, 4200f, boreRate, dcBlock = false, dcHz = Float.POSITIVE_INFINITY)
+        // Just under Nyquist is a frequency: accepted, and a coefficient short of 1.
+        assertTrue(Strings.tune(220f, 4200f, boreRate, dcBlock = true, dcHz = nyquist * 0.99f).exact > Strings.MIN_LOOP_SAMPLES)
     }
 
     /**

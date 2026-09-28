@@ -1590,17 +1590,27 @@ except where a departure is listed):
   the grids compare. `next` passes `x` straight through until there is
   history, exactly as the loop always started, and the identity test
   exercises both halves.
-- **Two guards the design did not list.** `tune` refuses a `roundTrip` that
-  is not a positive finite number, by name (`:111`) — left alone it makes
+- **Two guards the design did not list, both tightened by review.** `tune`
+  refuses a `roundTrip` outside (0, 1], by name — at or below 0 it makes
   `exact` negative and trips the Karplus-Strong minimum's message, which
-  blames a note that is too high; and the blocker refuses a corner that is
-  not positive (`:243`). Both are tested.
+  blames a note that is too high; above 1 it is a loop longer than its own
+  note; and a finite extreme like `Double.MAX_VALUE` overflows `exact` to
+  infinity, which passes the minimum and returns a tuning no ring can be
+  built from. The blocker refuses a corner that is not a frequency under
+  Nyquist: an infinite corner, or any finite one far enough past Nyquist
+  that `exp(−2π·hz/rate)` underflows, makes the coefficient exactly 1, a
+  blocker that subtracts every sample and silently kills the loop. Both
+  first shipped weaker (`roundTrip > 0`, corner `> 0`) and an automated
+  review found the holes; each is now tested at the extremes, in the budget
+  and in the loop, and removing either alone fails its test — including the
+  review's own suggested weaker fix, finite-only, which lets
+  `3.4028235E38` through.
 - **The corner is a named constant.** `DC_BLOCK_HZ` replaces the literal 2
   inside `dcBlockerA`, with its KDoc carrying the spike's reason for
   leaving it a parameter: whether the cone wants `f0/25` (Appendix B) is
   now R1's choice to make, not a change to `Strings` to ask for.
 
-**The checks** (`StringsTest.kt:539-705`, nine new tests, 31 in the class).
+**The checks** (`StringsTest.kt`, ten new tests, 32 in the class).
 Each was written to fail for its own reason, and each guard was proven by
 removing it alone and watching a test fail with a message that names it:
 

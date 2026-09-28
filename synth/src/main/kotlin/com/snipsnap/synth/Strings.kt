@@ -87,8 +87,8 @@ internal object Strings {
      *    bridge limiter anywhere near it. [dcHz] is its corner ([DC_BLOCK_HZ]
      *    by default) and must be the same number the [Loop] runs.
      *  - [roundTrip] is the fraction of a period one trip round the loop
-     *    takes: 1.0 for a loop whose reflection keeps its sign (a string, a
-     *    cone, an open pipe), 0.5 for one that inverts it (a closed
+     *    takes, in (0, 1]: 1.0 for a loop whose reflection keeps its sign (a
+     *    string, a cone, an open pipe), 0.5 for one that inverts it (a closed
      *    cylinder), whose wave needs two trips to come back in phase, so
      *    its loop is half as long and its harmonics are the odd ones. It
      *    multiplies the period only - never the filters' own delays, which
@@ -105,10 +105,15 @@ internal object Strings {
         dcHz: Float = DC_BLOCK_HZ,
         roundTrip: Double = 1.0,
     ): Tuning {
-        // A round trip that is not a positive number would make `exact` negative
-        // and trip the Karplus-Strong minimum's own message below, naming a
-        // cause (a note too high) that has nothing to do with it.
-        require(roundTrip.isFinite() && roundTrip > 0.0) { "roundTrip must be a positive fraction of a period, got $roundTrip" }
+        // The round trip is a fraction of a period, so it is in (0, 1]. Outside that
+        // the budget is nonsense that fails somewhere else, under another name: a
+        // value at or below 0 makes `exact` negative and trips the Karplus-Strong
+        // minimum's message below, blaming a note that is too high; a value above 1
+        // is a loop longer than the note it is supposed to ring at; and a huge one
+        // overflows `exact` to infinity, which passes the minimum and hands back a
+        // Tuning nobody can build a ring from. NaN fails the comparisons and is
+        // refused with the rest.
+        require(roundTrip > 0.0 && roundTrip <= 1.0) { "roundTrip must be a fraction of a period in (0, 1], got $roundTrip" }
         // The loop length is almost never a whole number of samples, and
         // truncating it (the old `(rate / freq).toInt()`) detunes the
         // string by an amount that depends on the fractional remainder at
@@ -239,9 +244,18 @@ internal object Strings {
         return Tuning(exact, n, a)
     }
 
-    /** The DC blocker's one-pole coefficient (see [Loop], [tune]) - depends on [rate] and the corner [hz]. */
+    /**
+     * The DC blocker's one-pole coefficient (see [Loop], [tune]) - depends on [rate] and the corner [hz].
+     *
+     * The corner has to be a frequency the loop can have: positive, finite and
+     * under Nyquist. An infinite one, or any finite one far enough past Nyquist
+     * that `exp(-2 pi hz / rate)` underflows to 0, makes the coefficient exactly 1 -
+     * a blocker that subtracts every sample it sees and silently kills the loop,
+     * where a refusal would have named the mistake. NaN fails the comparisons and
+     * is refused with the rest.
+     */
     private fun dcBlockerA(rate: Int, hz: Float): Double {
-        require(hz > 0f) { "the DC blocker's corner must be positive, got $hz Hz" }
+        require(hz > 0f && hz < rate / 2f) { "the DC blocker's corner must be a frequency above 0 Hz and under Nyquist ($rate Hz rate), got $hz Hz" }
         return 1.0 - exp(-2.0 * PI * hz / rate)
     }
 
