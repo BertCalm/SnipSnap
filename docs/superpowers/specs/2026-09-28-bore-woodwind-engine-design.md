@@ -1,7 +1,8 @@
 # BORE — the woodwind engine: a blown bore in a fleet of strikes
 
-**Status:** design; brainstorm from the 2026-09-28 specification; not
-implemented. The spec's engine, transcribed and rendered, does not work
+**Status:** design; brainstorm from the 2026-09-28 specification. **R0,
+the shared-toolkit change, is built** (2026-09-28; "R0, as built" below);
+R1, the engine, is not started. The spec's engine, transcribed and rendered, does not work
 (three of five voices NaN, one a DC limit cycle, one an octave up — "The
 specification, as reviewed"); the corrections below are measured, and
 the corrected model is a Phase-0 spike — a throwaway prototype built only
@@ -1377,7 +1378,7 @@ BORE code.
 | Phase | Ships | Gate |
 |---|---|---|
 | **0 — spike** (spike done, recorded in `../plans/2026-09-28-bore-phase-0-spike.md`; the gate not yet run on its full grid) | the corrected loop on the house's primitives, three shapes, six print-only tests, every number in Appendix B | **speaks *and* in tune**, in that order, per voice: a contiguous BREATH window at least half the knob wide at f0 across TUNE 0–24 at every LIP corner, then 5 cents at defaults. "The knob" is the spike's share axis (BREATH → 0.4–0.97 of the closing pressure) before the per-LIP window mapping R1 ships — measured there, not on raw pressure. Where it stands: HOLLOW is ±2 cents at all 13 speaking corners at 220 Hz and at 110 / 220 / 440 at LIP 0.5, but the TUNE 0–24 × LIP grid the rule asks for has not been run, and at LIP 1 its window is BREATH 0.65–1.0 (0.35 wide), so the rule as worded is met only after the window mapping; SAX speaks at 55/110/220 with the f0/25 blocker, ~5 cents flat, and has dead corners at LIP 1 / BREATH ≤ 0.65 and at LIP 0.5 / BREATH 0.3 — the window mapping at LIP 1 and the blocker question (f0/25 versus the apex allpass or a two-segment cone) remain; FLUTE locks at 440/880, its window edges, ceiling and low register remain. Nothing registered until each R1 voice passes |
-| **R0** | the three `Strings.kt` additions, `StringsTest`'s two new checks; no audio change | the frozen-grid hashes match (SILK 1a) |
+| **R0** (built 2026-09-28, "R0, as built") | the three `Strings.kt` additions, `StringsTest`'s new checks; no audio change | the frozen grids match sample for sample (SILK 1a): **met** — 384 and 108 cases unchanged, and the whole JVM suite green |
 | **R1** | `Bore.kt` (FLUTE and SAX, five macros, the LOOP render behind the seam test, `landingChain`, the thump), `BorePatch`, `BorePresets` (8 + 8, by ear against the built engine, frozen by the six-contract test), registration in `Patches`/`Presets`/`Velocity`, `SynthKits.bore()` and its testkit kit, the tests above, the blocklist terms, the audition page. Mono | **the audition** (below) |
 | **R1.1** | the phone: the picker entry and seven arms, SEND TO PAD landing with tape, `→ SURFACE ▸` at LOOP, the toast; README's count | built in a session that can see `:app`; the gate's verdict is its precondition |
 | **R2** | `Keys.borePad` + `InstrumentSuite.renderBore` + `HeldSpec.Bore` (MAKE INSTRUMENT), the one-shot `Keys.bore` beside it, RUNS OUT, HOLLOW as a voice, the sixth macro (VIBRATO or OVERBLOW), the withheld LOOP if R1 withheld it | the instrument under two hands for ten seconds: the seam, and whether breath repeats audibly at the loop period |
@@ -1438,13 +1439,15 @@ generated, 60 files. FORK R2 (one voice from the gate): 7 files, +275/−37.
 | Phase | Files | Hand-written | Notes |
 |---|---|---|---|
 | 0 | 2 | 543 (throwaway) | `BoreSpike.kt` 238, `BoreSpikeTest.kt` 305 — done |
-| R0 | 2 | ~100 | `Strings.kt` +60, `StringsTest.kt` +40 |
+| R0 (built) | 2 | ~390 as built | `Strings.kt` +116/−12, `StringsTest.kt` +264; the estimate was ~100 |
 | R1 | ~20 hand-written, +17 generated | **~1,750** | main ~616: `Bore.kt` ~480 (two exciters, the budget calls, `renderLoop` on `Siren.kt:339-451`'s ~130-line shape, `landingChain`, CHIFF), `BorePatch` 35, `BorePresets` 50, `Patches` 1, `Presets` 6, `Velocity` 1, `SynthKits` 25, gradle 18; tests ~971: `BoreTest` ~600, `BorePresetsTest` ~115, kit generator 32, audition generator ~200, canaries 24; docs ~165 (README 24, roadmap 1, "As built" ~140); plus a ~1,000-line page copied and edited, and a kit's 16 WAVs and `.xpm` generated |
 | R1.1 | 3 | ~20 | `SynthScreen.kt` ~18, README's count |
 | R2 | ~12 | ~530 | `Bore.kt` +120 (`Held`, `renderHeld`, the retune step), `Keys.kt` +100, suite/sidecar/generator +18, `BorePadMaker` in `:shell` ~60, `HeldSpec` +30, tests ~200; a ~3.5 MB instrument generated |
 
-R0 plus R1 is about 1,850 hand-written lines against FORK R1's 1,538 — a
-fifth *more*, not two-thirds (an earlier two-thirds estimate was wrong);
+R0 plus R1 was estimated at about 1,850 hand-written lines against FORK R1's
+1,538 — a fifth *more*, not two-thirds (an earlier two-thirds estimate was
+wrong); with R0 built at about 390 rather than 100 it is about 2,140, two
+fifths more ("R0, as built");
 the generated weight is a third of FORK's, because there is no
 instrument in R1. The size is five voices' worth of physics claims
 folded into two, and a LOOP render FORK never had.
@@ -1547,6 +1550,106 @@ owner or the gate overturns it. This is FORK's "Open for review".
     one sound this user asks for that no engine in the fleet makes.
 
 ---
+
+## R0, as built — 2026-09-28
+
+R0 is the change to `Strings` that BORE's bore needs and that no PLUCK or
+SILK sample may notice. It is built, and it moves nothing: the two frozen
+grids (384 cases against PLUCK's own loop, 108 against Phase 3a's stiffness
+and jawari, both sample for sample), PLUCK's, SILK's, the determinism and
+the pad-recipe suites, and the whole JVM build (nine modules, 3,277 tests,
+none failing) are green on it.
+
+**What landed** (`Strings.kt`; the design's "Three additions", as written
+except where a departure is listed):
+
+1. `tune(…, roundTrip: Double = 1.0)` (`:97-111, :210`): `exact =
+   (rate / freq) * roundTrip − filterDelay − stiffDelay − dcDelay −
+   dispersionDelay − 0.5`. The period stays a Float division and the round
+   trip multiplies it as a Double, so at the default the value is the same
+   Float widened and multiplied by 1.0 — the bit-for-bit reason the grids
+   stay green. `Loop` carries the factor and `retune` passes it back
+   (`:465`, `:597`).
+2. `tune(…, dcBlock, dcHz)` and `Loop(…, dcBlock, dcHz)` (`:186`, `:453`):
+   the DC blocker stands on its own, at a corner the caller chooses.
+   `dcBlock` defaults to `jawari > 0`, `dcHz` to the new `DC_BLOCK_HZ = 2f`
+   (`:51`), so SITAR keeps exactly what it had. In the loop the blocker was
+   the second half of the jawari branch; it is now its own step in the same
+   place in the chain, so a loop with the limiter on runs the same
+   operations in the same order.
+3. `reflected()` / `inject(y)` (`:507`, `:565`) with `next(x)` rebuilt on
+   them (`:578`): a blown bore replaces `x + …` with a nonlinear function
+   of the returning wave. `reflected()` is cached until `inject`, so a
+   caller that asks twice does not step the filters twice.
+
+**Departures from the design, each small and each for a reason:**
+
+- **`next` keeps its warm-up branch.** The design wrote `next(x) =
+  inject(x + reflected())`. Before the loop has history `reflected()` is
+  0, and `x + 0f` turns a `-0.0` input into `+0.0` — a different bit, which
+  the grids compare. `next` passes `x` straight through until there is
+  history, exactly as the loop always started, and the identity test
+  exercises both halves.
+- **Two guards the design did not list.** `tune` refuses a `roundTrip` that
+  is not a positive finite number, by name (`:111`) — left alone it makes
+  `exact` negative and trips the Karplus-Strong minimum's message, which
+  blames a note that is too high; and the blocker refuses a corner that is
+  not positive (`:243`). Both are tested.
+- **The corner is a named constant.** `DC_BLOCK_HZ` replaces the literal 2
+  inside `dcBlockerA`, with its KDoc carrying the spike's reason for
+  leaving it a parameter: whether the cone wants `f0/25` (Appendix B) is
+  now R1's choice to make, not a change to `Strings` to ask for.
+
+**The checks** (`StringsTest.kt:539-705`, nine new tests, 31 in the class).
+Each was written to fail for its own reason, and each guard was proven by
+removing it alone and watching a test fail with a message that names it:
+
+| Guard removed | Caught by | The message |
+|---|---|---|
+| `retune` drops the round trip | *retune carries the round trip* | the loop's own "needs a loop of 1193 samples, past the 671 this Loop was built for" |
+| the loop runs the default corner, not the one it was given | *the blocker's budgeted corner and its running corner are the same number* | measured 107.3 Hz for a 110 Hz note |
+| `tune` ignores the round trip | *roundTrip multiplies the period*, *a half-length loop that inverts…*, *retune carries…* | the budgets should differ by half a period; 104.1 Hz for 110 |
+| the blocker runs only under jawari again | *a loop with the blocker on drains a steady offset*, and the corner test | the loop stays at the offset instead of settling at the input |
+| `reflected()` is not cached | *reflected then inject is next, taken apart* | "a second reflected() before inject must return the same wave", differing at sample 892 |
+
+The corner test carries its own control: it budgets 20 Hz and runs 2 Hz on
+purpose and requires the result to read audibly off, so a measurement that
+could not see the mismatch would fail there rather than pass the guard for
+nothing.
+
+**A measurement lesson, kept because R1's tests will hit the same wall.**
+The closed-cylinder test first failed — on the measurement, not on the
+loop. It read the 2nd harmonic 16.6 dB under the fundamental where the
+physics says far more, for two reasons that both belong to the ruler:
+`PluckSpectra`'s Goertzel has no window, so a ringing fundamental leaks
+into the harmonic an octave up; and a single noise burst has a random
+spectrum at each harmonic, so a claim about one harmonic against another
+cannot rest on a draw. The test now excites with a unit impulse (a flat
+spectrum, so what comes out is the loop's own comb) and reads a
+Hann-windowed FFT. Measured that way the 2nd harmonic is 97.6, 103.8 and
+101.4 dB under the fundamental at 110, 220 and 440 Hz, and the 3rd at least
+72 dB over the 2nd; the bounds (60 and 40 dB) sit well inside those. The
+reason it is that clean is the one the design gave for a closed cylinder in
+other words: a ring-down whose every half period is the last with its sign
+flipped is half-wave antisymmetric, so an even harmonic can be nothing but
+what the decay envelope and the window leave behind — where the design's
+first justification, the driven comb's 32 dB resonance-to-anti-resonance
+ratio, is a steady-state figure that a ring-down skips. The control beside
+it, the same half-length loop with its sign kept, plays an octave up within
+5 cents: the spec's defect reproduced in five lines.
+
+**Size.** The design estimated about 100 hand-written lines (`Strings.kt`
++60, `StringsTest.kt` +40); it came to 128 changed lines in `Strings.kt`
+(about 90 of them KDoc and comments, in the file's own habit of saying why
+beside the code) and 264 added in `StringsTest.kt`. R0 plus R1's estimate
+in "Phasing and gates" moves from about 1,850 to about 2,140 hand-written
+lines (R0 at its built ~390 in place of ~100), most of the difference the
+tests the design asked for.
+
+**Not done, on purpose.** No BORE code; no audio change of any kind; no
+roadmap row (S17 is added with R1, the house rule). R1's first open
+question is unchanged: the cone's blocker corner, `f0/25` as measured or
+the apex allpass, now a parameter and no longer a `Strings` change.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 

@@ -470,4 +470,268 @@ class StringsTest {
         val e = assertFailsWith<IllegalArgumentException> { loop.retune(55f) }
         assertTrue(e.message!!.contains("built for"), e.message)
     }
+
+    // ---------- BORE's R0: the three additions ----------
+    // docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md, "The bore".
+    // The two frozen grids above are the proof that the defaults change no sample;
+    // what follows is what the new parameters do when they are used.
+
+    private val boreRate = Dsp.RATE * Dsp.OVERSAMPLE
+
+    /**
+     * One pluck burst rung through a [Strings.Loop] built the way [Strings.pluck]
+     * builds it, but at a chosen round trip, feedback sign and DC-blocker corner.
+     * [loopDcHz] is the corner the loop *runs*, [dcHz] the one [Strings.tune]
+     * *budgets*; they are the same number unless a test is deliberately
+     * mismatching them.
+     */
+    private fun ring(
+        freq: Float,
+        seconds: Float,
+        fb: Float,
+        roundTrip: Double,
+        dcBlock: Boolean = false,
+        dcHz: Float = Strings.DC_BLOCK_HZ,
+        loopDcHz: Float = dcHz,
+    ): FloatArray {
+        val loopHz = 4200f
+        val t = Strings.tune(freq, loopHz, boreRate, dcBlock = dcBlock, dcHz = dcHz, roundTrip = roundTrip)
+        val total = (seconds * boreRate).toInt()
+        val loop = Strings.Loop(t.n, t.a, fb, loopHz, boreRate, dcBlock = dcBlock, dcHz = loopDcHz, roundTrip = roundTrip)
+        // A unit impulse, not a noise burst: its spectrum is flat, so what comes out is the loop's own
+        // comb and nothing else. A burst's spectrum at any one harmonic is a random draw, and a claim
+        // about how far one harmonic sits under another cannot rest on a draw.
+        return FloatArray(total) { loop.next(if (it == 0) 1f else 0f) }
+    }
+
+    /**
+     * The level, in dB, of the loudest Hann-windowed FFT bin within +-[span] of [hz] over
+     * [bodySeconds] from [fromSec]. Windowed on purpose: [PluckSpectra.toneEnergy]'s plain
+     * Goertzel has no taper, and against a ringing fundamental its window edges leak
+     * enough into a harmonic an octave up to hide a real 20 dB difference.
+     */
+    private fun levelDb(samples: FloatArray, hz: Float, fromSec: Float = 0.05f, bodySeconds: Float = 0.25f, span: Double = 0.03): Double {
+        val from = (fromSec * boreRate).toInt()
+        val len = minOf(samples.size - from, (bodySeconds * boreRate).toInt())
+        var n = 1
+        while (n < 65536) n *= 2
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until len) re[i] = samples[from + i] * (0.5f - 0.5f * kotlin.math.cos(2.0 * Math.PI * i / (len - 1)).toFloat())
+        com.snipsnap.audio.Fft.forward(re, im)
+        val binHz = boreRate.toDouble() / n
+        var best = 0.0
+        for (b in maxOf(1, ((hz * (1 - span)) / binHz).toInt())..minOf(n / 2 - 1, ((hz * (1 + span)) / binHz).toInt())) {
+            best = maxOf(best, kotlin.math.hypot(re[b].toDouble(), im[b].toDouble()))
+        }
+        return 20.0 * kotlin.math.log10(best + 1e-30)
+    }
+
+    /**
+     * The round-trip factor is the period's, not the filters'. A closed
+     * cylinder's loop is half a period long, but the one-pole's phase lag, the
+     * blocker's lead and the dispersion cascade's delay are what they are at
+     * the fundamental whatever the loop's length - so halving `exact` wholesale
+     * would over-correct every one of them. The difference between the two
+     * budgets must be exactly half the period, with every stage on.
+     */
+    @Test
+    fun `tune's roundTrip multiplies the period and nothing else`() {
+        val dispersion = Strings.Dispersion(count = 2, a = -0.3f)
+        for (freq in listOf(110f, 220f, 440f, 880f)) {
+            val full = Strings.tune(freq, 4200f, boreRate, stiffness = -0.2f, dispersion = dispersion, dcBlock = true)
+            val half = Strings.tune(freq, 4200f, boreRate, stiffness = -0.2f, dispersion = dispersion, dcBlock = true, roundTrip = 0.5)
+            val period = (boreRate / freq).toDouble()
+            assertEquals(period * 0.5, full.exact - half.exact, 1e-9, "freq=$freq: the two budgets should differ by half a period, not by anything the filters owe")
+        }
+    }
+
+    @Test
+    fun `tune refuses a round trip that is not a positive fraction, and names it`() {
+        for (bad in listOf(0.0, -0.5, Double.NaN, Double.POSITIVE_INFINITY)) {
+            val e = assertFailsWith<IllegalArgumentException> { Strings.tune(220f, 4200f, boreRate, roundTrip = bad) }
+            assertTrue(e.message!!.contains("roundTrip"), "roundTrip=$bad should be refused by name, not as a too-high note: ${e.message}")
+        }
+    }
+
+    /**
+     * The blocker used to exist only inside the jawari branch, so its phase
+     * lead was charged only when [jawari] was on. A +1 loop under a steady
+     * pressure needs the blocker with no limiter anywhere near it, so the flag
+     * stands on its own - and still defaults to what `jawari > 0` always meant.
+     */
+    @Test
+    fun `the DC blocker is budgeted on its own, at the corner it is given, and jawari still implies it`() {
+        val f = 220f
+        val plain = Strings.tune(f, 4200f, boreRate)
+        val blocked = Strings.tune(f, 4200f, boreRate, dcBlock = true)
+        val blockedFast = Strings.tune(f, 4200f, boreRate, dcBlock = true, dcHz = 20f)
+        // A high-pass leads; the loop owes that lead back, so the ring gets longer, and more so at a higher corner.
+        assertTrue(blocked.exact > plain.exact, "charging the blocker should lengthen the ring: ${blocked.exact} vs ${plain.exact}")
+        assertTrue(blockedFast.exact > blocked.exact + 1.0, "a 20 Hz corner leads by samples more than a 2 Hz one: ${blockedFast.exact} vs ${blocked.exact}")
+        assertEquals(blocked.exact, Strings.tune(f, 4200f, boreRate, dcBlock = true, dcHz = Strings.DC_BLOCK_HZ).exact, "the default corner is DC_BLOCK_HZ")
+        assertEquals(
+            Strings.tune(f, 4200f, boreRate, jawari = 0.3f).exact,
+            Strings.tune(f, 4200f, boreRate, jawari = 0.3f, dcBlock = true).exact,
+            "jawari alone still charges the blocker, as it always did",
+        )
+        assertEquals(plain.exact, Strings.tune(f, 4200f, boreRate, dcBlock = false).exact, "no jawari, no blocker: the plain string's budget")
+        val e = assertFailsWith<IllegalArgumentException> { Strings.tune(f, 4200f, boreRate, dcBlock = true, dcHz = 0f) }
+        assertTrue(e.message!!.contains("corner"), e.message)
+    }
+
+    /**
+     * A steady input into a +0.95 loop settles at 1/(1 - 0.95) = 20 times itself -
+     * the offset a blown reed leaves - unless the blocker drains it, in which
+     * case the loop settles at the input. Proves the blocker actually runs
+     * with [jawari] at 0, which is the whole reason for the flag.
+     */
+    @Test
+    fun `a loop with the blocker on drains a steady offset, and one without it does not`() {
+        val rate = Dsp.RATE
+        fun settled(dcBlock: Boolean): Float {
+            val t = Strings.tune(220f, 4200f, rate, dcBlock = dcBlock)
+            val loop = Strings.Loop(t.n, t.a, 0.95f, 4200f, rate, dcBlock = dcBlock)
+            var y = 0f
+            repeat(rate * 3 / 2) { y = loop.next(1f) }
+            return y
+        }
+        assertEquals(1f, settled(dcBlock = true), 0.05f, "the blocker should drain the loop's offset back to the input")
+        assertTrue(settled(dcBlock = false) > 15f, "with no blocker the loop should build to about 1/(1 - fb) = 20 times the input")
+    }
+
+    /**
+     * [Strings.tune] charges a corner and [Strings.Loop] runs one; they have to be the
+     * same number or the note is off. At 20 Hz the mismatch against the 2 Hz default is
+     * tens of cents, so the control below proves the measurement can see it - a test
+     * that could not fail would prove nothing about the corner reaching the loop.
+     */
+    @Test
+    fun `the blocker's budgeted corner and its running corner are the same number`() {
+        for (freq in listOf(110f, 220f)) {
+            val right = FineTuning.measuredHz(ring(freq, 0.6f, 0.99f, 1.0, dcBlock = true, dcHz = 20f), boreRate, freq)
+            assertTrue(abs(FineTuning.cents(right, freq.toDouble())) <= 5.0, "freq=$freq: a loop running the corner it budgeted measured $right Hz")
+            val wrong = FineTuning.measuredHz(ring(freq, 0.6f, 0.99f, 1.0, dcBlock = true, dcHz = 20f, loopDcHz = Strings.DC_BLOCK_HZ), boreRate, freq)
+            assertTrue(
+                abs(FineTuning.cents(wrong, freq.toDouble())) > 5.0,
+                "control: budgeting 20 Hz and running 2 Hz should read audibly off at $freq Hz, measured $wrong Hz - if this passes the test above proves nothing",
+            )
+        }
+    }
+
+    /**
+     * The inverting budget, the reason `roundTrip` exists. A closed cylinder's
+     * wave needs two trips to return in phase, so a loop half a period long with
+     * its sign flipped rings at f and its ODD harmonics only. Its ring-down is
+     * half-wave antisymmetric - each half period is the last with its sign flipped -
+     * so an even harmonic can be nothing but what the decay envelope and the
+     * analysis window leave behind. Measured on an impulse, Hann-windowed from
+     * 50 ms in, the 2nd harmonic sat 97.6, 103.8 and 101.4 dB under the
+     * fundamental at 110, 220 and 440 Hz, the 3rd at least 72 dB over the 2nd;
+     * the bounds below (60 and 40 dB) leave a wide margin under those, so they
+     * fail on a wrong sign or a wrong length and not on float noise.
+     */
+    @Test
+    fun `a half-length loop that inverts its wave is a closed cylinder - f, then only the odd harmonics`() {
+        for (freq in listOf(110f, 220f, 440f)) {
+            val out = ring(freq, 0.6f, -0.95f, 0.5)
+            val measured = FineTuning.measuredHz(out, boreRate, freq)
+            assertTrue(abs(FineTuning.cents(measured, freq.toDouble())) <= 5.0, "freq=$freq measured $measured Hz")
+            val h1 = levelDb(out, freq)
+            val h2 = levelDb(out, 2 * freq)
+            val h3 = levelDb(out, 3 * freq)
+            assertTrue(h1 - h2 > 60.0, "freq=$freq: the 2nd harmonic should be over 60 dB under the fundamental, got ${h1 - h2} dB")
+            assertTrue(h3 - h2 > 40.0, "freq=$freq: the 3rd is a resonance and the 2nd is not, got only ${h3 - h2} dB between them")
+        }
+    }
+
+    /**
+     * The mistake the reviewed spec made, in miniature: keep the half length and
+     * keep the sign, and the loop is a full-period comb on half a period - it
+     * rings an octave up. The length alone does not make a closed cylinder;
+     * the length and the inversion together do.
+     */
+    @Test
+    fun `the same half-length loop with its sign kept plays an octave up`() {
+        for (freq in listOf(110f, 220f)) {
+            val out = ring(freq, 0.6f, 0.95f, 0.5)
+            val measured = FineTuning.measuredHz(out, boreRate, 2 * freq)
+            assertTrue(abs(FineTuning.cents(measured, 2.0 * freq)) <= 5.0, "freq=$freq: expected the octave, measured $measured Hz")
+        }
+    }
+
+    /**
+     * The retune test above, at a closed cylinder's half-length loop with the
+     * sign flipped. A [Strings.Loop.retune] that dropped the round trip would
+     * re-solve the budget at a full period, a loop longer than the ring it was
+     * built with, and refuse ("built for") - so this fails by name if the factor is
+     * not carried through.
+     */
+    @Test
+    fun `retune carries the round trip, so a closed cylinder stays one`() {
+        val rate = boreRate
+        val lowFreq = 130f
+        val targetFreq = 147f
+        val loopHz = 4200f
+        val t0 = Strings.tune(lowFreq, loopHz, rate, roundTrip = 0.5)
+        val seconds = 0.6f
+        val total = (seconds * rate).toInt()
+        val exc = Strings.pluckExciter(t0.n, lowFreq, 6000f, position = 0f, seed = 9, rate = rate, maxLen = total)
+        val loop = Strings.Loop(t0.n, t0.a, fb = -0.995f, loopHz = loopHz, rate = rate, roundTrip = 0.5)
+        val out = FloatArray(total)
+        val retuneAt = total / 3
+        for (i in 0 until total) {
+            if (i == retuneAt) loop.retune(targetFreq)
+            out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
+        }
+        val retuneAtSec = retuneAt.toFloat() / rate
+        val before = PluckSpectra.peakHz(out, rate, lowFreq, spanFraction = 0.05, fromSec = 0.02f, seconds = retuneAtSec - 0.04f)
+        val after = PluckSpectra.peakHz(out, rate, targetFreq, spanFraction = 0.05, fromSec = retuneAtSec + 0.05f, seconds = seconds - retuneAtSec - 0.1f)
+        assertTrue(abs(FineTuning.cents(before, lowFreq.toDouble())) <= 5.0, "before retuning, expected near $lowFreq Hz, measured $before")
+        assertTrue(abs(FineTuning.cents(after, targetFreq.toDouble())) <= 5.0, "after retuning, expected near $targetFreq Hz, measured $after")
+    }
+
+    /**
+     * The junction hook is a reordering, not a new loop: [Strings.Loop.next] is
+     * `inject(x + reflected())` once history exists, and passes the input straight
+     * through before it. A blown bore replaces the `x + ...` with a nonlinear
+     * function of [Strings.Loop.reflected]; everything else stays this loop.
+     * With every stage on (stiffness, jawari, dispersion, the blocker) and both
+     * signs, the split must reproduce `next` sample for sample - and asking
+     * [Strings.Loop.reflected] twice before [Strings.Loop.inject] must not step
+     * the loop's filters twice.
+     */
+    @Test
+    fun `reflected then inject is next, taken apart, with every stage on`() {
+        val rate = boreRate
+        val freq = 196f
+        val dispersion = Strings.Dispersion(count = 2, a = -0.3f)
+        for (fb in listOf(0.98f, -0.95f)) {
+            val roundTrip = if (fb < 0f) 0.5 else 1.0
+            val t = Strings.tune(freq, 4200f, rate, stiffness = -0.2f, jawari = 0.3f, dispersion = dispersion, dcBlock = true, dcHz = 5f, roundTrip = roundTrip)
+            val total = 6000
+            val exc = Strings.pluckExciter(t.n, freq, 6000f, position = 0f, seed = 3, rate = rate, maxLen = total)
+            val p0 = Strings.burstPeak(t.n, 6000f, 3, rate)
+            fun make() = Strings.Loop(
+                t.n, t.a, fb, 4200f, rate,
+                stiffness = -0.2f, jawari = 0.3f, jawariP0 = p0, dispersion = dispersion,
+                dcBlock = true, dcHz = 5f, roundTrip = roundTrip,
+            )
+            val viaNext = make()
+            val viaParts = make()
+            val viaTwice = make()
+            val a = FloatArray(total)
+            val b = FloatArray(total)
+            val c = FloatArray(total)
+            for (i in 0 until total) {
+                val x = if (i < exc.size) exc[i] else 0f
+                a[i] = viaNext.next(x)
+                b[i] = viaParts.inject(x + viaParts.reflected())
+                viaTwice.reflected()
+                c[i] = viaTwice.inject(x + viaTwice.reflected())
+            }
+            assertContentEquals(a, b, "fb=$fb: inject(x + reflected()) must be next(x)")
+            assertContentEquals(a, c, "fb=$fb: a second reflected() before inject must return the same wave, not step the filters again")
+        }
+    }
 }
