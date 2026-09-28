@@ -211,9 +211,16 @@ past onset) - the chip had been read as "buzz over strict tuning," but
 the harmonics said the opposite. A second, cleaner gate settled it: a
 plain two-clip A/B, 0.010 against 0.015, no other context - Josh picked
 0.010 outright. That preference and the measurement agree, independently:
-`harmonicsOverFundamental` reads 4.4709 with no wrap at all, peaks at
-4.6422 at 0.010, and has already fallen to 3.0152 by 0.015 - 0.015 was
-already past its own peak. **`SITAR_JAWARI = 0.010` ships.**
+`harmonicsOverFundamental` read 4.4709 with no wrap at all, peaked at
+4.6422 at 0.010, and had already fallen to 3.0152 by 0.015 at the time -
+0.015 was already past its own peak. (These numbers were measured before
+stiffness moved to HIGH and before BODY existed; re-measured 2026-09-28 at
+the final shipped configuration - stiffness HIGH, BODY isolated out the
+same way the wrap's own tuning-cost measurement isolates DOUBLE - they
+move to 1.3653/1.7966/2.5485 and the 0.015-already-past-its-peak shape no
+longer holds once stiffness is in the mix; see `Pluck.SITAR_JAWARI`'s
+KDoc. The one claim that held then and holds now: the wrap adds harmonic
+content over having none.) **`SITAR_JAWARI = 0.010` ships.**
 `the wrap adds harmonics over the fundamental at the shipped depth`
 (PluckTest) asserts it for real, the buzz-content test this design
 deferred since its very first draft.
@@ -308,7 +315,7 @@ tune while the upper partials stretch.
 
 | Voice | Stiffness | Why |
 |---|---|---|
-| SITAR | one of two candidates, chosen at the gate: the allpass coefficient that puts the tenth partial 1.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 2e-4) and the one that puts it 3.0% sharp (B ≈ 6e-4, reads 5.6 c sharp at the root with the jawari on (measured by StiffnessTest at the shipped DAMP default)), both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
+| SITAR | HIGH ships (2026-09-28 gate, `p3a_stiff_high`): the allpass coefficient that puts the tenth partial 3.0% sharp (the stiff-string law `n·√(1 + B·n²)` with B ≈ 6e-4). Combined with the current wrap (0.010), the root note reads 16.1 c sharp (`measuredHz`/`cents`, `TuningAccuracyTest`'s own approach); the whole sweep stays inside a quarter tone (`the high stiffness candidate with the bridge on...`). The LOW candidate (1.0% sharp, B ≈ 2e-4) remains in the audition as the road not taken. Both found by a measuring probe in the plan, not tuned by hand | long steel strings: the inharmonicity is audible |
 | KOTO, HARP | 0, with a dispersion-on candidate in the audition | both passed a gate; they do not change unheard |
 | NYLON, BANJO | 0 | not offered |
 
@@ -324,10 +331,11 @@ fretted string.
 A real baaj string's numbers — steel, 0.31 mm diameter, 0.88 m speaking
 length, tuned to D3 at about 40 N, E = 2e11 Pa — give an inharmonicity
 coefficient near 3e-5 by B = pi^2 E I / (T L^2), so its tenth partial sits
-about 0.1% sharp. The shipped LOW candidate's 1.0% is roughly ten times
-that, and HIGH's 3.0% is roughly thirty times it, so stiffness OFF is the
-physically faithful setting and LOW/HIGH are stylizations the gate may
-prefer — recorded so the section does not read as if 1% were measured.
+about 0.1% sharp. The LOW candidate's 1.0% is roughly ten times that, and
+the shipped HIGH candidate's 3.0% is roughly thirty times it, so stiffness
+OFF is the physically faithful setting and LOW/HIGH are stylizations — the
+gate chose HIGH (2026-09-28) — recorded so the section does not read as if
+3% were measured.
 
 ### The gourd body
 
@@ -363,6 +371,54 @@ it is labelled — `bodyFor(SITAR)` carries three unsourced modes, 110 Hz
 as candidates on the page. BODY's default stays 0 until the gate chooses;
 the note's section 5 (`2026-09-26-pluck-sitar-body-research.md`) lists
 them as shapes.
+
+**2026-09-28:** BODY 1 ships as SITAR's default, settled across two gates.
+First, `p3a_body_1` chipped closer — the "dominant" amount (`BODY_MAX`,
+three times the string) — at the note that's actually representative
+(TUNE's default, 277 Hz). A separate chip, `p3a_body_35_root`, preferred
+the quieter .35 — but only at the root note (139 Hz), not the default: the
+three fixed resonances (110/270/520 Hz) sit closer to 139 Hz than to
+277 Hz, so a smaller amount already reads convincing there regardless of
+its actual size — an artifact of where the note sits, not a competing
+verdict about the amount itself. `TuningAccuracyTest`'s BODY-at-its-ugly-end
+sweep, run at these final defaults (stiffness HIGH, the 0.010 wrap, the
+raised tarab, all at once), measures SITAR's actual shipped tuning cost
+rather than a setting nobody hears — worst case +16.46 cents at semitone
+24, inside the quarter tone the sweep already held every voice to.
+
+Second: once BODY 1 was combined with the wrap and the louder tarab, a
+muted string (DAMP 1) turned out to keep resonating through the body for
+about half a second — narrow enough a concern that it went back to Josh as
+its own direct A/B, isolated from every other axis: TIGHT (BODY 0) against
+WITH BODY (BODY 1), both at DAMP 1 (`answer/mute_body`). His call: **"Hum
+is fine with body."** The fuller amount, confirmed rather than walked back
+to the .35 fallback. `SITAR at DAMP one hums through the body instead of
+thudding...` (PluckTest) documents the exception this creates against the
+shared `DAMP at one is a short thud` bound (every other voice stays under
+0.5 s; SITAR measures ~0.55 s and is held to a looser, honestly-disclosed
+1.0 s ceiling instead, not left unbounded).
+
+Two presets needed their own correction once BODY's default actually
+reached 1 - stacked with a fixed body mode, the crest factor falls low
+enough that `Dsp.levelTo`'s loudness match squashes a render's peak under
+`PluckPresetsTest`'s 0.5 floor. This was first scoped to SITAR's RINGING
+alone (its DAMP 0 is the most sustained corner any SITAR preset uses) on
+the theory that DAMP was the whole story; measuring all twelve presets
+against the real 1.0 default - not the interim .35 an earlier round
+shipped while this was still under investigation - found a second driver,
+proximity to `bodyFor(SITAR)`'s 110 Hz mode, and a second preset, LOW
+TONIC (`TUNE 0`, the root note at 139 Hz, close enough to that mode to be
+exposed even at a moderate DAMP 0.3), that driver alone accounts for.
+Each now carries its own BODY override, the last amount that keeps its own
+peak at the untouched-string ceiling (0.99), measured across the whole
+range rather than guessed: RINGING at `"BODY" to 0.35f` (0.99 through
+0.35, falling smoothly above it to 0.4754537 at 1.0 - the same amount
+`p3a_body_35_root` already established as carrying real character, not a
+compromise toward zero), LOW TONIC at `"BODY" to 0.2f` (0.99 through 0.2,
+falling to 0.44782394 at 1.0 - smaller than RINGING's because the root
+sits nearer the resonance). Every other preset clears 0.5 on the voice
+default with real margin; DRONE (0.594) and CENTRE PICK (0.624) are the
+closest of the rest, neither close enough to need touching.
 
 ### Presets
 
