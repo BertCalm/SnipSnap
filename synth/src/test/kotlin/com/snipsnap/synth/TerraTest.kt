@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.FeatureExtractor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -12,7 +13,10 @@ class TerraTest {
     fun `render is bit-for-bit deterministic`() {
         val a = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
         val b = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
-        assertEquals(a, b)
+        // Snip.equals deliberately compares format and length only, not
+        // sample contents (Cleanup.kt's own KDoc on it) - contentEquals is
+        // what actually proves bit-for-bit here.
+        assertTrue(a.samples.contentEquals(b.samples))
     }
 
     @Test
@@ -51,5 +55,83 @@ class TerraTest {
     fun `djembe bass classifies as a tom`() {
         val snip = Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass)
         assertEquals(DrumClass.TOM, Classifier.classify(snip).drumClass)
+    }
+
+    // ---------- RESONANT_CAVITY ----------
+
+    @Test
+    fun `resonant cavity render is bit-for-bit deterministic`() {
+        val a = Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp)
+        val b = Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp)
+        assertTrue(a.samples.contentEquals(b.samples))
+    }
+
+    @Test
+    fun `resonant cavity render stays in bounds`() {
+        val snip = Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort)
+        for (s in snip.samples) assertTrue(s in -1f..1f, "sample out of bounds: $s")
+    }
+
+    // Udu Low Whoomp, TERRA_World_Percussion_Synth_Spec.md S5 (Pad 01):
+    // fundamental 55Hz, hardness 0.10, droop 0.05, CavityMix 0.90 ("deep air
+    // push"). Strike position isn't given per-pad in S5, so STRIKE stays at
+    // TerraParams' own default (0.25).
+    private val uduLowWhoomp = mapOf(
+        "TUNE" to 0.1058f,
+        "FORCE" to 0.10f,
+        "DROOP" to 0.0769f,
+        "CAVITY" to 0.90f,
+    )
+
+    // Cajón Low Port, S5 (Pad 04): fundamental 60Hz, hardness 0.20, no droop,
+    // CavityMix 0.70, RattleAmount 0.15 ("slight snare rattle") - S2.4's
+    // "rattle" becomes this engine's BUZZ macro (see macrosFor's own KDoc
+    // for why it isn't called RATTLE).
+    private val cajonLowPort = mapOf(
+        "TUNE" to 0.1516f,
+        "FORCE" to 0.20f,
+        "DROOP" to 0f,
+        "CAVITY" to 0.70f,
+        "BUZZ" to 0.15f,
+    )
+
+    @Test
+    fun `udu low whoomp classifies as a kick`() {
+        val snip = Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp)
+        assertEquals(DrumClass.KICK, Classifier.classify(snip).drumClass)
+    }
+
+    @Test
+    fun `cajon low port classifies as a kick`() {
+        val snip = Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort)
+        assertEquals(DrumClass.KICK, Classifier.classify(snip).drumClass)
+    }
+
+    @Test
+    fun `cavity coupling is audible - CAVITY changes the spectrum`() {
+        val dry = FeatureExtractor.extract(
+            Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp + ("CAVITY" to 0f)),
+        )
+        val wet = FeatureExtractor.extract(
+            Terra.render(TerraVoice.RESONANT_CAVITY, uduLowWhoomp + ("CAVITY" to 1f)),
+        )
+        assertTrue(
+            dry.centroidHz != wet.centroidHz,
+            "CAVITY should change the spectrum: dry=${dry.centroidHz} wet=${wet.centroidHz}",
+        )
+    }
+
+    @Test
+    fun `buzz adds high-frequency energy`() {
+        val dry = FeatureExtractor.extract(
+            Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort + ("BUZZ" to 0f)),
+        )
+        val buzzed = FeatureExtractor.extract(
+            Terra.render(TerraVoice.RESONANT_CAVITY, cajonLowPort + ("BUZZ" to 1f)),
+        )
+        assertTrue(
+            buzzed.centroidHz > dry.centroidHz,
+            "BUZZ should raise the centroid: dry=${dry.centroidHz} buzzed=${buzzed.centroidHz}",
+        )
     }
 }
