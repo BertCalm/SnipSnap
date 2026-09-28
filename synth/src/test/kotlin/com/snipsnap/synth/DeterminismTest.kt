@@ -106,4 +106,16 @@ class DeterminismTest {
         val patch = ForkPresets.forVoice(ForkVoice.TINE).first()
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
+
+    // SILK seeds its course detune and its exciters from Dsp.seedFor per
+    // voice and note (Silk.kt's oud/guzheng), so it joins the canaries
+    // above too - one per voice, since OUD's course and GUZHENG's
+    // dispersion/press are different code paths.
+    @Test
+    fun `SILK is byte-identical across renders, both voices`() {
+        val oud = SilkPatch("Canary", SilkVoice.OUD, Silk.defaults(SilkVoice.OUD))
+        assertContentEquals(oud.render().samples, oud.render().samples)
+        val guzheng = SilkPatch("Canary", SilkVoice.GUZHENG, Silk.defaults(SilkVoice.GUZHENG))
+        assertContentEquals(guzheng.render().samples, guzheng.render().samples)
+    }
 }

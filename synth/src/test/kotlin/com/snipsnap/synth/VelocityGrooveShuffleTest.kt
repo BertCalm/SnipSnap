@@ -137,6 +137,7 @@ class VelocityGrooveShuffleTest {
             "THUMP HAT_CLOSED (METAL)" to ThumpPresets.forVoice(ThumpVoice.HAT_CLOSED).first(),
             "TONEWHEEL FULL (PERC)" to TonewheelPresets.forVoice(TonewheelVoice.FULL).first(),
             "GLINT REED (PEAK)" to GlintPatch("Vel Canary", GlintVoice.REED, Glint.defaults(GlintVoice.REED)),
+            "SILK OUD (PICK)" to SilkPatch("Vel Canary", SilkVoice.OUD, Silk.defaults(SilkVoice.OUD)),
         )
         for ((label, patch) in cases) {
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
