@@ -497,11 +497,15 @@ class ForkTest {
     fun `NODE's own pickup spot is the second mode's node, and only the second mode's`() {
         // Mode 2 (index 1) is what NODE_PICKUP_XI was solved for - it must
         // read as silence there. Mode 1 (the fundamental) has no internal
-        // node on a cantilever and must not collapse; modes 3 and 4 are
-        // reduced but not asserted to any particular floor, since nothing
-        // in the derivation targets them specifically.
+        // node on a cantilever and must not collapse. Modes 3 and 4 are
+        // reduced but must stay clearly audible (not zero) - otherwise
+        // "only the second mode's [node]" is not actually what this
+        // position gives, whatever [NODE_POSITION_GAIN]'s own two entries
+        // happen to read.
         assertTrue(abs(Fork.NODE_POSITION_GAIN[1]) < 1e-3f, "mode 2's own gain at NODE_PICKUP_XI is ${Fork.NODE_POSITION_GAIN[1]}, not ~0")
         assertTrue(abs(Fork.NODE_POSITION_GAIN[0]) > 0.5f, "mode 1 collapsed at NODE_PICKUP_XI: ${Fork.NODE_POSITION_GAIN[0]}")
+        assertTrue(abs(Fork.NODE_POSITION_GAIN[2]) > 0.1f, "mode 3 also collapsed at NODE_PICKUP_XI: ${Fork.NODE_POSITION_GAIN[2]} - this position is not mode 2's node alone")
+        assertTrue(abs(Fork.NODE_POSITION_GAIN[3]) > 0.1f, "mode 4 also collapsed at NODE_PICKUP_XI: ${Fork.NODE_POSITION_GAIN[3]} - this position is not mode 2's node alone")
     }
 
     @Test
@@ -537,6 +541,14 @@ class ForkTest {
             val s = Fork.render(ForkVoice.NODE, macros)
             assertTrue(s.samples.all { it.isFinite() }, "NODE produced non-finite audio at $macros")
             assertTrue(s.samples.any { abs(it) > 1e-6f }, "NODE rendered silence at $macros")
+            // drumClassFor is DECAY-only and voice-generic, so it predicts
+            // the same class for NODE as for TINE at the identical macros;
+            // the real classifier, run on both voices' own renders, must
+            // actually agree - a per-mode gain change is not a decay-shape
+            // change, and this is the direct check that it stayed that way.
+            val tineClass = Classifier.classify(Fork.render(ForkVoice.TINE, macros)).drumClass
+            val nodeClass = Classifier.classify(s).drumClass
+            assertEquals(tineClass, nodeClass, "NODE classified as $nodeClass, TINE as $tineClass, at the same macros ($macros)")
         }
     }
 
