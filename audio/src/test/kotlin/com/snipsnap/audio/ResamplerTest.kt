@@ -140,4 +140,23 @@ class ResamplerTest {
             assertTrue(output.samples[f * 2 + 1] < -0.55f, "right at frame $f")
         }
     }
+
+    @Test
+    fun `halving and quartering the rate takes the fast path and matches the general loop to the bit`() {
+        // Dsp.decimate's two 2:1 steps render every oversampled synth voice; the
+        // power-of-two path computes the kernel's weights once instead of per
+        // sample. It must change speed, not sound: noise (every frequency at
+        // once), mono and stereo, odd lengths so the edges are exercised.
+        var state = 12345
+        fun noise(): Float { state = state * 1103515245 + 12345; return ((state ushr 8) and 0xffff) / 32768f - 1f }
+        for ((rate, target) in listOf(176_400 to 88_200, 88_200 to 44_100, 176_400 to 44_100, 96_000 to 48_000)) {
+            for (channels in listOf(1, 2)) {
+                val snip = Snip(FloatArray(4_001 * channels) { noise() }, channels, rate)
+                val fast = Resampler.resample(snip, target)
+                val general = Resampler.resample(snip, target, powerOfTwoFastPath = false)
+                assertEquals(general.frameCount, fast.frameCount, "$rate -> $target, $channels ch: length")
+                assertTrue(fast.samples.contentEquals(general.samples), "$rate -> $target, $channels ch: samples differ")
+            }
+        }
+    }
 }
