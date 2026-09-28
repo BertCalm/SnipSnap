@@ -24,10 +24,9 @@ import com.snipsnap.kit.ArrangedPad
  * ringing tone, an agogô's forged bell and a balafon's buzzing bar aren't
  * any of those, any more than SkinKits' RIDE/SHAKER/STICK trio is - PERC is
  * the shelf for "a real, distinct sound with no kit-vocabulary name," not a
- * failure to classify. Only the deepest, most fundamental-heavy hits (the
- * two cavity pads, plus one shallow-draw djembe/dholak/dumbek/bayan each)
- * clear KICK's or TOM's low-band/centroid gates - measured per pad, not
- * assumed from the family.
+ * failure to classify. Only the deepest, most fundamental-heavy hits clear
+ * KICK's or TOM's low-band/centroid gates - measured per pad, not assumed
+ * from the family.
  */
 object TerraKits {
 
@@ -53,14 +52,14 @@ object TerraKits {
         slot("Udu Whoomp", TerraVoice.RESONANT_CAVITY, DrumClass.KICK, "TUNE" to 0.1058f, "FORCE" to 0.10f, "DROOP" to 0.0769f, "CAVITY" to 0.90f), // A01
         // Bayan Heel Drag: 65Hz, hardness 0.25, droop 0.55 (a bayan's own heel-pressure pitch sweep).
         slot("Bayan Drag", TerraVoice.COMPOUND_MEMBRANE, DrumClass.KICK, "TUNE" to 0.0803f, "FORCE" to 0.25f, "DROOP" to 0.8462f), // A02
-        // Djembe Bass: 73Hz, hardness 0.30, droop 0.12, POS 0.05 ("warm thump") - measured TOM, not KICK: see TerraTest's own note on why.
-        slot("Djembe Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.1362f, "FORCE" to 0.30f, "POS" to 0.05f, "DROOP" to 0.1846f), // A03
+        // Djembe Bass: 73Hz, hardness 0.30, droop 0.12, POS 0.05 ("warm thump") - measured KICK: see TerraTest's own note on why.
+        slot("Djembe Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.KICK, "TUNE" to 0.1362f, "FORCE" to 0.30f, "POS" to 0.05f, "DROOP" to 0.1846f), // A03
         // Cajon Low Port: 60Hz, hardness 0.20, CAVITY 0.70, BUZZ 0.15 ("slight snare rattle").
         slot("Cajon Low", TerraVoice.RESONANT_CAVITY, DrumClass.KICK, "TUNE" to 0.1516f, "FORCE" to 0.20f, "CAVITY" to 0.70f, "BUZZ" to 0.15f), // A04
         // Dholak Bass: 98Hz, hardness 0.35, droop 0.35 ("heavy dynamic pitch sag").
         slot("Dholak Bass", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.2779f, "FORCE" to 0.35f, "DROOP" to 0.5385f), // A05
-        // Dumbek Doum: 110Hz, hardness 0.40, droop 0.18 ("full center mass displacement").
-        slot("Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, DrumClass.PERC, "TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f), // A06
+        // Dumbek Doum: 110Hz, hardness 0.40, droop 0.18 ("full center mass displacement") - measured TOM: centroidHz=125.4, lowRatio=0.642, same honest bass-family reasoning as Djembe Bass above.
+        slot("Dumbek Doum", TerraVoice.COMPOUND_MEMBRANE, DrumClass.TOM, "TUNE" to 0.3333f, "FORCE" to 0.40f, "DROOP" to 0.2769f), // A06
         // Cajon Corner Slap: TUNED_BAR, 220Hz, hardness 0.85, BUZZ 0.75 ("high rattleAmount, fast decay").
         slot("Cajon Slap", TerraVoice.TUNED_BAR, DrumClass.PERC, "TUNE" to 0.2514f, "FORCE" to 0.85f, "BUZZ" to 0.75f), // A07
         // Djembe Open Tone: 245Hz, hardness 0.50, droop 0.05, POS 0.5 ("harmonic mode resonance").
