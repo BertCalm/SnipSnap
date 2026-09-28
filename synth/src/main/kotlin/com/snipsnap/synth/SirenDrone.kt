@@ -181,10 +181,21 @@ object SirenDrone {
     /**
      * How far off [rootMidi] a drone of [frames] at [sampleRate] actually
      * lands — [DroneFit.nudgeCents]'s own shape, but read off SIREN's own
-     * [fitCarrier] rather than RESIN's pure-pitch snap.
+     * [fitCarrier] rather than RESIN's pure-pitch snap. [cancelled] reaches
+     * [fitCarrier]'s own check: a span search (`SirenDroneMaker.span`) can
+     * run this several times over, each a real integral, from a UI thread's
+     * own coroutine — a rapid run of taps must be able to stop one after
+     * another rather than piling up on the pool that runs them.
      */
-    fun nudgeCents(voice: SirenVoice, macros: Map<String, Float>, rootMidi: Int, frames: Long, sampleRate: Int): Double {
-        val fit = fitCarrier(voice, macros, rootMidi, frames, sampleRate)
+    fun nudgeCents(
+        voice: SirenVoice,
+        macros: Map<String, Float>,
+        rootMidi: Int,
+        frames: Long,
+        sampleRate: Int,
+        cancelled: () -> Boolean = { false },
+    ): Double {
+        val fit = fitCarrier(voice, macros, rootMidi, frames, sampleRate, cancelled = cancelled)
         val rootHz = 440.0 * 2.0.pow((rootMidi - 69) / 12.0)
         return 1200.0 * ln(fit.baseHz / rootHz) / ln(2.0)
     }

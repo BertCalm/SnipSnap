@@ -537,6 +537,84 @@ finished render actually produces:
   stops...", `SirenDroneTest`'s "the carrier's own settle and integral
   pass stops too...").
 
+## Hardening round — 2026-09-28
+
+A pass over all four doors after #368 merged, looking for what neither
+the automated review nor the tests would have caught: malformed/corrupted
+recipe JSON, NaN/Infinity propagation through macros, integer and
+array-size edges in the drone and held-pad paths, and the new caching and
+dispatch logic in `DroneSource`. Most of the surface held on inspection —
+`Json`'s own number grammar can produce `Infinity` from an absurd exponent
+but never `NaN` (no token for it), and `Infinity` clamps correctly through
+`coerceIn`, unlike `NaN`; every render call site already wraps in
+`try/catch` with a toast, a pattern `makeHeld`'s own `coroutineScope` (not
+raw `appScope.launch`) exists specifically to preserve; the loop-grid's
+own BPM/bars bounds keep every frame count `SirenDrone` ever sees safely
+inside `Int` range with room to spare; and the native `SurfaceEngine` was
+already mono-only, so a mono SIREN LOOP render introduced no new channel
+mismatch.
+
+Two real gaps, both about `SirenDroneMaker.span`/`label`'s own cost —
+unlike RESIN's closed-form `DroneMaker.label`, SIREN's own reads an LFO
+phase integral over the candidate span's own frame count, measured at
+~850 ms per voice at the grid's slowest tempo and longest bars
+(`SirenDroneMakerTest`'s new "span and label finish quickly even at the
+grid's slowest, longest setting"):
+
+- **`SynthScreen`'s DRONE TO LOOP sheet computed its own readout inline in
+  the composable body** — synchronous, on the main thread, on every ROOT
+  +/- tap. RESIN's own version was always free, so this never showed; it
+  now runs through a `LaunchedEffect` off the main thread
+  (`Dispatchers.Default`), the same way `droneSession` itself already
+  loads off it, with the placeholder shown until it lands.
+- **`App.sendDroneToLoop`'s new SIREN-vs-RESIN span dispatch ran unguarded
+  inside the write path**, the one place in this whole feature that broke
+  the "a render or fit computation never crashes the app, it toasts"
+  pattern every other call site holds. No live input was found that makes
+  it throw — `rootMidi` is always inside SIREN's own register, the session
+  is validated before this runs, and the recipe is the app's own
+  freshly-serialized spec — but it now falls back to RESIN's own (proven
+  safe, if less precise) estimate on any failure rather than trusting that
+  reasoning to hold forever.
+
+## Hardening round, after review — 2026-09-28
+
+Three findings on the hardening round itself, all in the fix, not the
+original bug — the readout's own move off the main thread was right, but
+the move was incomplete:
+
+- **The label effect never restarted on a macro change.** Its keys were
+  `droneOpen, droneRoot, droneSession` — never `engine`, `voice` or
+  `macros`. RESIN's own label reads none of these (pure pitch), so this
+  never showed; SIREN's own reads RATE and DEPTH through
+  `SirenDrone.nudgeCents`, so a macro change while the sheet is open
+  (unreachable today — the panel sits behind the sheet's own scrim — but
+  not a fact this file should have to keep being true to stay correct)
+  would have left a stale readout standing indefinitely. All three now
+  key the effect.
+- **The readout kept the *old* root's label while the new one computed.**
+  A ROOT tap left the prior span and cents on screen for the full ~850 ms
+  the new fit takes, while PREVIEW and SEND already read the new root —
+  a readout that could describe a note neither button was about to play.
+  The effect now resets to the sheet's own placeholder before it starts
+  computing the next one, not after.
+- **`cancelled` never reached the fit at all.** `SirenDroneMaker.span`
+  and `label`, and `SirenDrone.nudgeCents` under them, took no
+  `cancelled` parameter, so `LaunchedEffect`'s own cancellation on a key
+  change could not stop a computation already inside `fitCarrier`'s
+  integral — only the *next* tap's effect would start, on top of, not
+  instead of, the still-running previous one. A run of ROOT taps could
+  pile up several ~850 ms computations on `Dispatchers.Default`'s own
+  pool at once. `nudgeCents` now takes `cancelled` and threads it into
+  `fitCarrier`; `span` and `label` thread it the same way `render`
+  already did; the effect passes `{ !isActive }`, the same idiom
+  `previewDrone`'s own render call uses, and the label's own `try/catch`
+  rethrows a cancellation rather than catching it as a plain failure —
+  `runCatching` does not tell the two apart, `catch` does.
+  `SirenDroneTest`'s "nudgeCents itself stops..." and
+  `SirenDroneMakerTest`'s "span and label stop..." hold the new reach
+  directly.
+
 ## Still open, not blocking
 
 5. **A fifth voice?** A one-shot dive with no LFO at all (SWEEP at full,

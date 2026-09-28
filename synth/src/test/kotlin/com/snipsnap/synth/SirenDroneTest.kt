@@ -188,4 +188,24 @@ class SirenDroneTest {
         assertTrue(!t.isAlive, "the render ignored the interrupt")
         assertTrue(thrown is java.util.concurrent.CancellationException, "expected a cancellation, got $thrown")
     }
+
+    /**
+     * `nudgeCents` (and so `SirenDroneMaker.span`/`label`) is a real
+     * integral, not a closed form — a UI thread stepping ROOT quickly must
+     * be able to stop one before it starts the next, rather than piling up
+     * uncancellable work on whatever pool runs it (review finding on PR
+     * #373).
+     */
+    @Test
+    fun `nudgeCents itself stops when nobody wants it any more`() {
+        val frames = 8 * interval(44_100)
+        var asked = 0
+        val t0 = System.nanoTime()
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            SirenDrone.nudgeCents(SirenVoice.WAIL, emptyMap(), 60, frames, 44_100) { ++asked > 0 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue(asked >= 1, "nudgeCents never asked")
+        assertTrue(ms < 200, "a cancelled nudgeCents ran on for ${ms}ms")
+    }
 }
