@@ -242,6 +242,72 @@ class StringsTest {
     }
 
     /**
+     * [Strings.course]'s own per-loop feedback step ([Strings.COURSE_FB_STEP])
+     * is meant to be inaudible-in-pitch: at COURSE 0 (true unison), summing
+     * `count` loops whose *only* difference is that feedback split must
+     * still land on [freq]. This isolates that claim from a confound
+     * [Strings.course] itself can't avoid: it seeds each loop's own
+     * exciter differently even at spread 0 (`Dsp.seedFor(seed, "COURSE",
+     * k)`), so a single FFT reading of the real `course()` output can pass
+     * or fail on excitation luck as much as on the fb step (SILK Phase 2's
+     * own plan review round caught exactly this, first drafted against
+     * `course()` directly). Built by hand here - [Strings.tune] once,
+     * [Strings.pluckExciter] once, then `count` [Strings.Loop]s fed that
+     * *identical* burst - so feedback is the only thing that varies.
+     *
+     * With excitation controlled out this way, the fb step alone turns
+     * out not to move the fundamental measurably even at its original
+     * (pre-Phase-2) value of 0.01 - passes at either constant, across
+     * OUD's, SANTUR's, and mid-range roots alike. See
+     * [Strings.COURSE_FB_STEP]'s own KDoc: the smaller value this test
+     * runs against is kept as an inexpensive precaution, not because this
+     * test demonstrates it is load-bearing.
+     */
+    @Test
+    fun `course's own feedback step, isolated from excitation, stays in tune`() {
+        val freq = 220f
+        val damping = Strings.damping(0.3f, 4200f)
+        val t = Strings.tune(freq, damping.loopHz, Dsp.RATE)
+        val len = (0.5f * Dsp.RATE).toInt().coerceAtLeast(t.n + 2)
+        val exc = Strings.pluckExciter(t.n, freq, 6000f, 0f, seed = 3, rate = Dsp.RATE, maxLen = len)
+        for (count in 1..4) {
+            val out = FloatArray(len)
+            for (k in 0 until count) {
+                val fbK = (damping.fb * (1f - Strings.COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
+                val loop = Strings.Loop(t.n, t.a, fbK, damping.loopHz, Dsp.RATE)
+                for (i in out.indices) out[i] += loop.next(if (i < exc.size) exc[i] else 0f)
+            }
+            val measured = FineTuning.measuredHz(out, Dsp.RATE, freq)
+            val off = FineTuning.cents(measured, freq.toDouble())
+            assertTrue(abs(off) <= 5.0, "count=$count: measured $measured Hz, $off cents off $freq Hz")
+        }
+    }
+
+    /**
+     * The real end-to-end path, excitation and all: [Strings.course] at
+     * COURSE 0 across several unrelated seeds, requiring the tuning bound
+     * to hold on every one. Where the test above isolates the mechanism,
+     * this one rules out excitation luck by exhausting it rather than
+     * removing it - the actual caller path (SANTUR's own `count = 4`) goes
+     * through here, exciter variation included. Also passes at
+     * [Strings.COURSE_FB_STEP]'s original 0.01 - `Strings.course` itself,
+     * at its own native (non-oversampled) rate, isn't where Phase 1b's
+     * OUD miss lived. SANTUR's own voice-level tuning test (Task 5, the
+     * real oversampled render path) is what actually closes this out.
+     */
+    @Test
+    fun `course at spread 0 is in tune across several seeds, real excitation included`() {
+        val freq = 220f
+        val damping = Strings.damping(0.3f, 4200f)
+        for (seed in listOf(1, 2, 3, 7, 11, 19, 23)) {
+            val out = Strings.course(freq, 0.5f, damping, 6000f, seed = seed, rate = Dsp.RATE, count = 4, spread = 0f)
+            val measured = FineTuning.measuredHz(out, Dsp.RATE, freq)
+            val off = FineTuning.cents(measured, freq.toDouble())
+            assertTrue(abs(off) <= 5.0, "seed=$seed: measured $measured Hz, $off cents off $freq Hz")
+        }
+    }
+
+    /**
      * OUD's SLIDE (SILK Phase 1b): a [Strings.Loop] built at a low note and
      * later moved, mid-render, to a higher one - the pitch envelope beside
      * the fixed-tuning path. Measured on two separate windows of one

@@ -2,13 +2,8 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.hypot
-import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.test.Test
@@ -17,51 +12,11 @@ import kotlin.test.assertTrue
 
 class SilkTest {
 
-    private fun cents(measured: Double, want: Double) = 1200.0 * ln(measured / want) / ln(2.0)
+    private fun cents(measured: Double, want: Double) = FineTuning.cents(measured, want)
 
-    /**
-     * The loudest spectral peak within one semitone of [wantHz], read from
-     * [fromSec] over [bodySeconds] and zero-padded to a large FFT with
-     * parabolic interpolation - [TuningAccuracyTest]'s own `measuredHz`,
-     * parameterised so it can look anywhere in a render rather than only
-     * at the start. A plain narrow Goertzel scan (`PluckSpectra.peakHz`)
-     * turned out to be a full-blown octave-of-cents short of this at
-     * OUD's low root (65 Hz): its bin width there is tens of cents wide,
-     * wider than the ±5-cent bound being measured.
-     */
-    private fun measuredHz(snip: Snip, wantHz: Float, fromSec: Float = 0.05f, bodySeconds: Float = 0.25f): Double {
-        val rate = snip.sampleRate
-        val from = (fromSec * rate).toInt().coerceIn(0, snip.samples.size)
-        val bodyLen = minOf(snip.samples.size - from, (bodySeconds * rate).toInt())
-        require(bodyLen > 8) { "measuredHz needs samples past $fromSec s (buffer is ${snip.samples.size} samples)" }
-        var n = 1
-        while (n < 65536) n *= 2
-        val re = FloatArray(n)
-        val im = FloatArray(n)
-        for (i in 0 until bodyLen) {
-            val w = 0.5f - 0.5f * cos(2.0 * PI * i / (bodyLen - 1)).toFloat()
-            re[i] = snip.samples[from + i] * w
-        }
-        Fft.forward(re, im)
-        val mag = DoubleArray(n / 2) { hypot(re[it].toDouble(), im[it].toDouble()) }
-        val binHz = rate.toDouble() / n
-        val radiusBins = maxOf(1, (wantHz * 0.059 / binHz).toInt())
-        val centerBin = (wantHz / binHz).toInt()
-        var bestBin = centerBin
-        var bestMag = -1.0
-        for (b in maxOf(1, centerBin - radiusBins)..minOf(mag.size - 2, centerBin + radiusBins)) {
-            if (mag[b] > bestMag) {
-                bestMag = mag[b]
-                bestBin = b
-            }
-        }
-        val a = mag[bestBin - 1]
-        val b2 = mag[bestBin]
-        val c = mag[bestBin + 1]
-        val denom = a - 2.0 * b2 + c
-        val delta = if (denom != 0.0) 0.5 * (a - c) / denom else 0.0
-        return (bestBin + delta) * binHz
-    }
+    /** [FineTuning.measuredHz] - see that object for why a plain Goertzel scan isn't enough here. */
+    private fun measuredHz(snip: Snip, wantHz: Float, fromSec: Float = 0.05f, bodySeconds: Float = 0.25f): Double =
+        FineTuning.measuredHz(snip, wantHz, fromSec, bodySeconds)
 
     /**
      * PLUCK's own 5-cent rule (spec, "Testing", item 1), generalised: every

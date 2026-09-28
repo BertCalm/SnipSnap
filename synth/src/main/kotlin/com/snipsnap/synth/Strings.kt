@@ -496,6 +496,37 @@ internal object Strings {
     private const val COURSE_MAX_CENTS = 50f
 
     /**
+     * How much each successive [course] loop's feedback is nudged down
+     * from the one before it (loop `k` gets `fb * (1 - COURSE_FB_STEP *
+     * k)`) - the spec's own "pair decays unevenly" character (course
+     * loops at the same frequency still sound like coupled strings, not
+     * one voice with extra gain).
+     *
+     * SILK Phase 1b's OUD work (its own custom per-loop course, not this
+     * function - `Strings.course` had no production caller before SANTUR)
+     * found a multi-cent tuning miss at this step's original value, 0.01,
+     * and fixed it locally by dropping to 0.002. Directly probing
+     * `course` itself at that original 0.01 (SANTUR Phase 2, both with a
+     * shared identical exciter across loops and with `course`'s own
+     * real per-loop exciter variation, across the frequency range SILK's
+     * voices actually use) did **not** reproduce a multi-cent miss - see
+     * `course's own feedback step, isolated from excitation, stays in
+     * tune` and `course at spread 0 is in tune across several seeds, real
+     * excitation included` in `StringsTest`, both passing at 0.01 too, not
+     * only at this smaller value. So whatever OUD's own render actually
+     * hit lives somewhere this direct probe doesn't reach - most likely
+     * the U6 oversample/decimate pipeline's own interaction with two
+     * differently-decaying loops, which no test here exercises in
+     * isolation. This constant is kept small anyway, as a real but
+     * unconfirmed-necessary precaution: it costs nothing (COURSE's own
+     * "unevenly" character survives at either value) and the claim that
+     * actually matters - SANTUR's own tuning, through its real, fully
+     * oversampled render path - is what Task 5's own voice-level test
+     * checks, not this number in isolation.
+     */
+    internal const val COURSE_FB_STEP = 0.002f
+
+    /**
      * OUD's course, SANTUR's four strings: [count] loops around [freq],
      * summed, each seeded from [seed] so one pad's shimmer is stable across
      * renders and two pads differ (spec, "OUD"). [spread] 0 keeps every
@@ -516,7 +547,7 @@ internal object Strings {
         val detunes = courseDetuneCents(seed, count, spread)
         val loops = detunes.mapIndexed { k, cents ->
             val detuned = freq * 2f.pow(cents / 1200f)
-            val fbK = (damping.fb * (1f - 0.01f * k)).coerceIn(0f, 0.999f)
+            val fbK = (damping.fb * (1f - COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
             pluck(detuned, seconds, Damping(damping.loopHz, fbK), pickHz, Dsp.seedFor(seed, "COURSE", k), rate, position, stiffness, jawari, dispersion)
         }
         val out = FloatArray(loops.maxOf { it.size })

@@ -171,21 +171,14 @@ object Silk {
             val seed = Dsp.seedFor("SILK", SilkVoice.OUD, "COURSE", k, freq)
             // "The pair gets slightly unequal feedback so it decays
             // unevenly - the 'prompt then aftersound' of coupled strings,
-            // cheaply" (spec, "OUD") - the same shape as [Strings.course]'s
-            // own per-loop roll-off, at a fifth its rate: two identical-
-            // frequency KS loops summed are only exactly at that shared
-            // frequency when their resonances are identically shaped, and
-            // [Strings.course]'s own 1%-per-loop step, measured through
-            // this voice's own tuning test at unison (COURSE 0, where the
-            // two loops' *only* difference is this feedback split), pulls
-            // the summed peak measurably off pitch - a real interaction
-            // [Strings.course] does not surface because nothing measures
-            // its own tuning at count > 1. This voice's tuning claim
-            // (spec, "Testing", item 1) is load-bearing, so the step stays
-            // small enough to keep every degree inside the 5-cent bound
-            // it is tested against, rather than widening that bound to
-            // fit a bigger, untested step.
-            val fbK = (damping.fb * (1f - 0.002f * k)).coerceIn(0f, 0.999f)
+            // cheaply" (spec, "OUD") - [Strings.COURSE_FB_STEP], the same
+            // step [Strings.course] uses (see that constant's own KDoc for
+            // why it's kept smaller than its original value: a real
+            // regression this voice's own tuning test caught in SILK
+            // Phase 1b, at this voice's own render path, though a later
+            // direct probe of `Strings.course` itself did not reproduce
+            // it - the smaller step costs nothing either way).
+            val fbK = (damping.fb * (1f - Strings.COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
             oudCourseLoop(detunedStart, detunedTarget, seconds, Strings.Damping(damping.loopHz, fbK), pickHz, position, slide, rate, seed)
         }
         val out = FloatArray(loops.maxOf { it.size })
