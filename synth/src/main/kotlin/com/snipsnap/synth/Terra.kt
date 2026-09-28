@@ -87,6 +87,11 @@ object Terra {
             MacroSpec("DECAY", 0.5f),
             MacroSpec("FORCE", 0.5f),
             MacroSpec("POS", 0.25f),
+            // CLACK: an optional pre-strike squeeze (S3's "Agogô squeeze or
+            // pre-flam") - a short decaying noise burst before the mallet
+            // lands, the two-tone bell's own interlock click. Off by
+            // default: most bell presets are a plain strike.
+            MacroSpec("CLACK", 0f),
         )
         TerraVoice.TUNED_BAR -> listOf(
             MacroSpec("TUNE", 0.35f),
@@ -169,6 +174,13 @@ object Terra {
     // seed keeps every HARD_STICK voice's own noise stream distinct.
     private const val HARD_STICK_SECONDS = 0.0018f
 
+    // CLACK's own ceiling: the spec's own Agogô Clack preset (S5, pad 15)
+    // uses interlockClackMs = 20ms; 30ms gives the macro a little more
+    // travel above that without the pre-strike click starting to read as
+    // its own separate hit.
+    private const val CLACK_MAX_SECONDS = 0.03f
+    private const val CLACK_GAIN = 0.35f
+
     private const val TWO_PI = (2.0 * Math.PI).toFloat()
 
     // -60dB in nepers - the same constant [Modes.ring] uses for its own
@@ -225,12 +237,39 @@ object Terra {
     }
 
     /**
+     * Wraps [mainExciter] with an optional pre-strike squeeze (S3's CLACK):
+     * [clackSamples] of decaying noise, then [mainExciter] starting fresh
+     * right after it - the whole strike shifts later by [clackSamples], so
+     * the caller must size its buffer for that (see [conicalBell]).
+     * `clackSamples <= 0` returns [mainExciter] unchanged.
+     */
+    private fun withPreStrikeClack(clackSamples: Int, seed: Int, mainExciter: (Int) -> Float): (Int) -> Float {
+        if (clackSamples <= 0) return mainExciter
+        val noise = Dsp.Noise(seed)
+        return { i ->
+            if (i < clackSamples) {
+                val env = 1f - i.toFloat() / clackSamples
+                noise.next() * env * CLACK_GAIN
+            } else {
+                mainExciter(i - clackSamples)
+            }
+        }
+    }
+
+    /**
      * The exciter-plus-modal-bank core every TERRA topology shares:
      * [exciterAt] into [modes], each mode rung by a phase-accumulated
      * oscillator re-tuned every sample from a droop-sliding fundamental
      * (S2.1; pass `droopDepth = 0f` for a topology with no membrane tension
      * to relax). [modes] is assumed already position-weighted (see
      * [Modes.atPosition]).
+     *
+     * [onsetSamples] is where the body actually starts ringing - 0 for every
+     * topology except a CLACKed CONICAL_BELL, where it's the clack's own
+     * pre-roll length. Before it, modalSum is exactly 0 (the bell hasn't
+     * been struck yet); the phase/decay clock then starts fresh at
+     * [onsetSamples], so a used CLACK is silent underneath the click rather
+     * than a bell already partway through decaying.
      */
     private fun strikeAndModalBank(
         modes: List<Modes.Mode>,
@@ -239,31 +278,34 @@ object Terra {
         frames: Int,
         rate: Int,
         exciterAt: (Int) -> Float,
+        onsetSamples: Int = 0,
     ): FloatArray {
         val out = FloatArray(frames)
         val phases = FloatArray(modes.size)
         val nyquist = rate / 2f
 
         for (i in out.indices) {
-            val t = i.toFloat() / rate
             val exciter = exciterAt(i)
-
-            // Tension droop (S2.1): the strike temporarily sharps the body,
-            // settling back exponentially onto fundamentalHz. droopDepth is
-            // 0 for a rigid body (CONICAL_BELL, TUNED_BAR), collapsing this
-            // to fundamentalHz exactly.
-            val currentF0 = fundamentalHz * (1f + droopDepth * exp(-t / DROOP_TAU_SECONDS))
-
             var modalSum = 0f
-            for (k in modes.indices) {
-                val mode = modes[k]
-                val hz = currentF0 * mode.ratio
-                // Skipped, not folded - same guard as Modes.ring's own.
-                if (hz <= 0f || hz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
-                phases[k] += TWO_PI * hz / rate
-                if (phases[k] >= TWO_PI) phases[k] -= TWO_PI
-                val decay = exp(-T60_NEPERS * t / mode.t60)
-                modalSum += sin(phases[k]) * mode.gain * decay
+            if (i >= onsetSamples) {
+                val t = (i - onsetSamples).toFloat() / rate
+
+                // Tension droop (S2.1): the strike temporarily sharps the
+                // body, settling back exponentially onto fundamentalHz.
+                // droopDepth is 0 for a rigid body (CONICAL_BELL,
+                // TUNED_BAR), collapsing this to fundamentalHz exactly.
+                val currentF0 = fundamentalHz * (1f + droopDepth * exp(-t / DROOP_TAU_SECONDS))
+
+                for (k in modes.indices) {
+                    val mode = modes[k]
+                    val hz = currentF0 * mode.ratio
+                    // Skipped, not folded - same guard as Modes.ring's own.
+                    if (hz <= 0f || hz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
+                    phases[k] += TWO_PI * hz / rate
+                    if (phases[k] >= TWO_PI) phases[k] -= TWO_PI
+                    val decay = exp(-T60_NEPERS * t / mode.t60)
+                    modalSum += sin(phases[k]) * mode.gain * decay
+                }
             }
             // First-pass mix, exciter-vs-body - a listening call for the
             // audition gate, not derived from anything.
@@ -347,6 +389,7 @@ object Terra {
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
         val position = m.getValue("POS")
+        val clackSamples = (m.getValue("CLACK") * CLACK_MAX_SECONDS * rate).toInt()
 
         // gamma_m = 1 + 0.85*m^2 (S2.2's "high damping" row): the upper
         // partials of a struck cone die far faster than a linear curve
@@ -357,9 +400,15 @@ object Terra {
             Modes.Mode(ratio = BELL_RATIOS[i], gain = BELL_GAINS[i], t60 = t60Base / gamma)
         }
         val modes = Modes.atPosition(baseModes, position)
-        val frames = framesFor(t60Base, rate)
+        // Room for the clack pre-roll ahead of the strike, when CLACK asks
+        // for one - onsetSamples below holds the bell silent for exactly
+        // that long, so the click is heard on its own before the bell
+        // actually starts ringing, rather than underneath a ring that's
+        // already partway through decaying.
+        val frames = framesFor(t60Base, rate) + clackSamples
         // No DROOP: a forged bell has no membrane tension to relax.
-        return strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 17))
+        val exciter = withPreStrikeClack(clackSamples, seed = 29, hardStickExciter(hardness, rate, seed = 17))
+        return strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, exciter, onsetSamples = clackSamples)
     }
 
     private fun tunedBar(m: Map<String, Float>, rate: Int): FloatArray {

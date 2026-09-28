@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -163,6 +164,38 @@ class TerraTest {
     fun `agogo low bell classifies as perc`() {
         val snip = Terra.render(TerraVoice.CONICAL_BELL, agogoLowBell)
         assertEquals(DrumClass.PERC, Classifier.classify(snip).drumClass)
+    }
+
+    // Checks the ordering CLACK is supposed to give (quiet click, *then* a
+    // fresh strike), not just that the buffer grew - a buggy version that
+    // starts the bell's own decay clock at frame 0 regardless of the
+    // pre-roll (so the bell is already ringing underneath the click) would
+    // also pass a plain length check. Peak *ratio* rather than an absolute
+    // threshold: Terra.render normalizes the whole buffer, so only a
+    // same-buffer comparison stays meaningful.
+    @Test
+    fun `clack is quiet, and the bell only starts ringing after it`() {
+        val plain = Terra.render(TerraVoice.CONICAL_BELL, agogoLowBell + ("CLACK" to 0f))
+        val clacked = Terra.render(TerraVoice.CONICAL_BELL, agogoLowBell + ("CLACK" to 1f))
+        assertTrue(
+            clacked.frameCount > plain.frameCount,
+            "CLACK should extend the render by its own pre-roll: plain=${plain.frameCount} clacked=${clacked.frameCount}",
+        )
+
+        val clackSamples = clacked.frameCount - plain.frameCount
+        val preroll = clacked.samples.copyOfRange(0, clackSamples)
+        val bodyEnd = minOf(clacked.samples.size, clackSamples + 2000)
+        val body = clacked.samples.copyOfRange(clackSamples, bodyEnd)
+
+        val prerollPeak = preroll.maxOf { abs(it) }
+        val bodyPeak = body.maxOf { abs(it) }
+
+        assertTrue(prerollPeak > 0f, "the pre-roll should carry the click's own noise burst, not silence")
+        assertTrue(
+            prerollPeak < bodyPeak * 0.5f,
+            "the bell should stay silent during the pre-roll, not already ringing underneath the click: " +
+                "prerollPeak=$prerollPeak bodyPeak=$bodyPeak",
+        )
     }
 
     // Agogô Low Bell, S5 (Pad 13): fundamental 587.3Hz (D5), hardness 0.85,
