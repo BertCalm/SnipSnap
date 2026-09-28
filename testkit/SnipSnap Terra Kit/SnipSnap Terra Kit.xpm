@@ -21,10 +21,10 @@
         &quot;pads&quot;: {
             &quot;value0&quot;: 15225902,
             &quot;value1&quot;: 15225902,
-            &quot;value2&quot;: 10120432,
+            &quot;value2&quot;: 15225902,
             &quot;value3&quot;: 15225902,
             &quot;value4&quot;: 10120432,
-            &quot;value5&quot;: 9425956,
+            &quot;value5&quot;: 10120432,
             &quot;value6&quot;: 9425956,
             &quot;value7&quot;: 9425956,
             &quot;value8&quot;: 9425956,
@@ -676,7 +676,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A03_Tom_01</SampleName>
+            <SampleName>A03_Kick_03</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -876,7 +876,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A04_Kick_03</SampleName>
+            <SampleName>A04_Kick_04</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -1076,7 +1076,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A05_Tom_02</SampleName>
+            <SampleName>A05_Tom_01</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -1276,7 +1276,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A06_Perc_01</SampleName>
+            <SampleName>A06_Tom_02</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -1476,7 +1476,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A07_Perc_02</SampleName>
+            <SampleName>A07_Perc_01</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -1676,7 +1676,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A08_Perc_03</SampleName>
+            <SampleName>A08_Perc_02</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -1876,7 +1876,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A09_Perc_04</SampleName>
+            <SampleName>A09_Perc_03</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -2076,7 +2076,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A10_Perc_05</SampleName>
+            <SampleName>A10_Perc_04</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -2276,7 +2276,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A11_Perc_06</SampleName>
+            <SampleName>A11_Perc_05</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -2476,7 +2476,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A12_Perc_07</SampleName>
+            <SampleName>A12_Perc_06</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -2676,7 +2676,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A13_Perc_08</SampleName>
+            <SampleName>A13_Perc_07</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -2876,7 +2876,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A14_Perc_09</SampleName>
+            <SampleName>A14_Perc_08</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -3076,7 +3076,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A15_Perc_10</SampleName>
+            <SampleName>A15_Perc_09</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
@@ -3276,7 +3276,7 @@
             <Mute>False</Mute>
             <RootNote>0</RootNote>
             <KeyTrack>False</KeyTrack>
-            <SampleName>A16_Perc_11</SampleName>
+            <SampleName>A16_Perc_10</SampleName>
             <SampleFile></SampleFile>
             <SliceIndex>129</SliceIndex>
             <Direction>0</Direction>
