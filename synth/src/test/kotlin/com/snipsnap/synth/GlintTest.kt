@@ -310,7 +310,7 @@ class GlintTest {
         // same still, same fromSec, 2026-09-27) found the real minimum
         // off-grid: correlation keeps falling past PEAK 0.9, bottoms out at
         // 0.9824176 (PEAK 0.97, kBase 36.56193) - only 0.0024 above the 0.98
-        // floor, six times less margin than the in-grid figure suggests -
+        // floor, about 3.5x less margin than the in-grid figure suggests -
         // then recovers sharply (0.9934069 at PEAK 0.98, 0.99998647 at PEAK
         // 1.0). The recovery is not a coincidence: kCeilingFor(PLATE) is 40,
         // and `kBase * (1 + bloomAmount * x) >= kBase` for any `x >= 0`, so
