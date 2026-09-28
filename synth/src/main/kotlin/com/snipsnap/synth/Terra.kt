@@ -130,6 +130,34 @@ object Terra {
         // jointly, before any CLACK split below, so the click and the body
         // stay level-consistent with each other.
         Dsp.normalize(raw)
+        // Measured (four rounds of listening feedback, the last of which
+        // asked to "push more" and got no audible change): every knob this
+        // engine has - Punch's amount, CLACK_GAIN, the exciter/modal mix
+        // ratio - is provably incapable of raising perceived body loudness.
+        // Punch.applyOversampled re-derives its own loudness target from a
+        // fresh, independently re-peak-normalized copy of raw (its own
+        // `before`/`reference`), so nothing downstream of raw can move it;
+        // CLACK's preroll is capped at 30ms against notes running hundreds
+        // of ms, too short a fraction to move whole-buffer RMS; and
+        // reweighting exciter vs. modal energy in strikeAndModalBank
+        // (measured directly: three separate rebalances, up to 0.22/0.78,
+        // all within +-1% RMS of baseline) does nothing because both
+        // ingredients already share the same "loudest at the strike, decays
+        // from there" envelope shape by physical construction - recombining
+        // two decaying signals in different proportions can't change the
+        // combined envelope's own crest factor. Instrumented directly:
+        // COMPOUND_MEMBRANE's raw peak/RMS both rose ~19% under the
+        // aggressive rebalance with crest factor unchanged to 2 decimal
+        // places (7.79 -> 7.77).
+        //
+        // The only thing that CAN move it is actually changing raw's own
+        // crest factor - compressing the strike's transient down relative
+        // to the body it's ringing into, the literal opposite of what
+        // Punch's boost does. [compressAttack] does exactly that, before
+        // Punch ever sees the signal, so Punch's own onset-boost still
+        // layers its snap on top of a genuinely louder body rather than
+        // fighting this stage.
+        compressAttack(raw, renderRate)
         // Every other engine here runs its strike through some transient
         // shaping; TERRA had none at all, which measured out as a real
         // contributor to reading "small, meek, dull" next to Thump's own
@@ -157,6 +185,63 @@ object Terra {
         Dsp.limitPeak(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    // ATTACK_COMPRESS_* below are a first-pass listening call, not yet
+    // measured against real clips - see [compressAttack]'s own KDoc for the
+    // mechanism these tune.
+    private const val ATTACK_COMPRESS_THRESHOLD = 0.70f
+    private const val ATTACK_COMPRESS_RATIO = 5f
+    private const val ATTACK_COMPRESS_ATTACK_SECONDS = 0.0002f
+    private const val ATTACK_COMPRESS_RELEASE_SECONDS = 0.005f
+
+    /**
+     * A feedforward downward compressor on [buf]'s own strike transient -
+     * the one lever in this whole render path that can actually raise
+     * perceived body loudness (see [render]'s own comment on why every
+     * other knob here provably can't). A one-pole envelope follower tracks
+     * `abs(buf)` with a fast attack and a slower release (both in
+     * [rate]-scale seconds, so this runs BEFORE [Dsp.decimate] like every
+     * other time-varying gain here - [Punch]'s own [Punch.boostEnvelope]
+     * KDoc explains why a per-sample gain that isn't a flat constant needs
+     * to be band-limited by the decimation downstream of it, not applied
+     * after); above [ATTACK_COMPRESS_THRESHOLD] the envelope is pulled down
+     * toward it at [ATTACK_COMPRESS_RATIO]:1, and [buf] is scaled by
+     * however much that reduces the envelope. Below threshold, gain is
+     * exactly 1 - the decaying tail of a normal hit sits under threshold
+     * for nearly all of its own length and passes through untouched, only
+     * the loud strike itself gets pulled down.
+     *
+     * Runs on the WHOLE buffer, including a CLACK pre-roll when there is
+     * one: the pre-roll's own peak sits at a fraction of the struck body's
+     * (CLACK_GAIN's own doc), comfortably under [ATTACK_COMPRESS_THRESHOLD]
+     * on every shipped preset, so it passes through this stage unchanged
+     * rather than needing the same onset-split [render] gives Punch.
+     *
+     * Ordered before Punch, not after: Punch's own rescale re-derives its
+     * loudness target from a fresh copy of THIS buffer, so lowering its
+     * crest factor here genuinely raises what Punch then preserves, rather
+     * than fighting Punch's own boost after the fact (which would just
+     * undo the snap round 3 already added).
+     */
+    private fun compressAttack(buf: FloatArray, rate: Int) {
+        if (buf.isEmpty()) return
+        val attackCoeff = exp(-1f / (ATTACK_COMPRESS_ATTACK_SECONDS * rate))
+        val releaseCoeff = exp(-1f / (ATTACK_COMPRESS_RELEASE_SECONDS * rate))
+        var envelope = 0f
+        for (i in buf.indices) {
+            val absX = abs(buf[i])
+            envelope = if (absX > envelope) {
+                attackCoeff * envelope + (1f - attackCoeff) * absX
+            } else {
+                releaseCoeff * envelope + (1f - releaseCoeff) * absX
+            }
+            if (envelope > ATTACK_COMPRESS_THRESHOLD) {
+                val excess = envelope - ATTACK_COMPRESS_THRESHOLD
+                val target = ATTACK_COMPRESS_THRESHOLD + excess / ATTACK_COMPRESS_RATIO
+                buf[i] *= target / envelope
+            }
+        }
     }
 
     // Mode ratios, gains, and damping curves: TERRA_World_Percussion_Synth_Spec.md
