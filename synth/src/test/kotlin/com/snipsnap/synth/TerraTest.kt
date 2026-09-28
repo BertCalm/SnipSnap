@@ -26,6 +26,27 @@ class TerraTest {
         for (s in snip.samples) assertTrue(s in -1f..1f, "sample out of bounds: $s")
     }
 
+    // POS 0 and POS 1 land exactly on Modes.atPosition's own degenerate
+    // case (|sin(n*pi*p)| is 0 for every mode at p=0 and at p=1, an integer
+    // multiple of pi) - both ends used to silence the whole modal bank,
+    // leaving only the bare exciter. Measured: center rms=0.1288, clamped
+    // low/high rms=0.0871 each (Terra.compoundMembrane's own 0.02/0.98
+    // floor/ceiling) - comfortably above a collapsed exciter-only render,
+    // whose rms would sit under half of center's.
+    @Test
+    fun `pos macro stays audible at both extremes`() {
+        fun rms(samples: FloatArray): Double {
+            var sumSq = 0.0
+            for (v in samples) sumSq += (v * v).toDouble()
+            return Math.sqrt(sumSq / samples.size)
+        }
+        val center = rms(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("POS" to 0.5f)).samples)
+        val low = rms(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("POS" to 0f)).samples)
+        val high = rms(Terra.render(TerraVoice.COMPOUND_MEMBRANE, djembeBass + ("POS" to 1f)).samples)
+        assertTrue(low > center * 0.5, "POS=0 should still ring the body, not just the exciter: low=$low center=$center")
+        assertTrue(high > center * 0.5, "POS=1 should still ring the body, not just the exciter: high=$high center=$center")
+    }
+
     // Djembe Bass, TERRA_World_Percussion_Synth_Spec.md S5 (Pad 03):
     // fundamental 73Hz, hardness 0.30, droop 0.12, strike position 0.05
     // ("warm thump"). TUNE/DROOP below are this engine's macros solved back

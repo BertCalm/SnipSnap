@@ -338,7 +338,12 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 55f, 440f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Kept off the exact edges: Modes.atPosition weights every mode by
+        // |sin(n*pi*p)|, which is exactly 0 for every n at p=0 AND p=1 (sin
+        // of an integer multiple of pi), silencing the whole modal bank at
+        // both ends rather than just favoring odd/even harmonics - the same
+        // trap Thump.snare's own STRIKE already coerces away from.
+        val position = m.getValue("POS").coerceIn(0.02f, 0.98f)
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
 
         val baseModes = MEMBRANE_RATIOS.indices.map { i ->
@@ -356,7 +361,12 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 45f, 300f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Kept off the exact edges: Modes.atPosition weights every mode by
+        // |sin(n*pi*p)|, which is exactly 0 for every n at p=0 AND p=1 (sin
+        // of an integer multiple of pi), silencing the whole modal bank at
+        // both ends rather than just favoring odd/even harmonics - the same
+        // trap Thump.snare's own STRIKE already coerces away from.
+        val position = m.getValue("POS").coerceIn(0.02f, 0.98f)
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
         val cavityMix = m.getValue("CAVITY")
         val buzzAmount = m.getValue("BUZZ")
@@ -388,7 +398,12 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 500f, 950f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Kept off the exact edges: Modes.atPosition weights every mode by
+        // |sin(n*pi*p)|, which is exactly 0 for every n at p=0 AND p=1 (sin
+        // of an integer multiple of pi), silencing the whole modal bank at
+        // both ends rather than just favoring odd/even harmonics - the same
+        // trap Thump.snare's own STRIKE already coerces away from.
+        val position = m.getValue("POS").coerceIn(0.02f, 0.98f)
         val clackSamples = (m.getValue("CLACK") * CLACK_MAX_SECONDS * rate).toInt()
 
         // gamma_m = 1 + 0.85*m^2 (S2.2's "high damping" row): the upper
@@ -417,7 +432,12 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 180f, 400f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Kept off the exact edges: Modes.atPosition weights every mode by
+        // |sin(n*pi*p)|, which is exactly 0 for every n at p=0 AND p=1 (sin
+        // of an integer multiple of pi), silencing the whole modal bank at
+        // both ends rather than just favoring odd/even harmonics - the same
+        // trap Thump.snare's own STRIKE already coerces away from.
+        val position = m.getValue("POS").coerceIn(0.02f, 0.98f)
         val buzzAmount = m.getValue("BUZZ")
 
         val baseModes = BAR_RATIOS.indices.map { i ->
