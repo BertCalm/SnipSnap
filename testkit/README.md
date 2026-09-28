@@ -191,10 +191,10 @@ the pads, and soft hits use the darker layer.
 ### SnipSnap Session — the whole thing in one file
 
 The capstone artifact: `SnipSnap Session.xpj` beside its flat
-`SnipSnap Session_[ProjectData]/` — the factory kit, all five suite
+`SnipSnap Session_[ProjectData]/` — the factory kit, all six suite
 instruments and the demo groove as **one MPC 3 project**. Open the `.xpj`
 and the entire session should be standing there: kit on track 1 in class
-colours, EP/Organ/Harp/Music Box/Resin Pad on their own tracks, "SnipSnap Groove"
+colours, EP/Organ/Harp/Music Box/Resin Pad/Fork on their own tracks, "SnipSnap Groove"
 on sequence 1 ready to play, mixer wired. Regenerate with
 `./gradlew :synth:generateSessionProject`. Things to confirm: it opens,
 every track plays, the sequence plays the kit, and the organ and the
@@ -202,13 +202,15 @@ Resin Pad still sustain inside the project.
 
 ### Instruments/ — the S5 suite, dual-generation
 
-Five playable key instruments, engines at exact MIDI pitch, multisampled
+Six playable key instruments, engines at exact MIDI pitch, multisampled
 every minor third across two octaves: **SnipSnap EP** (TINES electric piano
 — soft hits are *rendered darker*, not attenuated), **SnipSnap Organ**
 (TONEWHEEL held down, with a sustain loop cut at an exact whole number of
 waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
 (PLUCK), **SnipSnap Music Box** (TINES chime twins), **SnipSnap Resin
-Pad** (RESIN held, looped like the organ; see below). Regenerate with
+Pad** (RESIN held, looped like the organ; see below), **SnipSnap Fork**
+(FORK TINE at the DINNER JAZZ preset, the modal electric piano — soft hits
+rendered darker, like the EP). Regenerate with
 `./gradlew :synth:generateInstrumentSuite`.
 
 Each instrument ships the Timeless Glow dual-generation layout: the `.xty`
