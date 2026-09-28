@@ -87,6 +87,15 @@ tasks.register<JavaExec>("generateGlintD1Audition") {
     args("${rootDir}/testkit/glint-d1-audition")
 }
 
+tasks.register<JavaExec>("generateGlintD2Audition") {
+    group = "distribution"
+    description = "Render the GLINT D2 audition clips and listening page under testkit/glint-d2-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintD2AuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-d2-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"

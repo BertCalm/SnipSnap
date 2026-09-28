@@ -86,6 +86,54 @@ class GlintTest {
     }
 
     @Test
+    fun `each voice's window is the shape the spec pairs it with, not just any window`() {
+        // Replaces two tests inherited from the six-voice expansion
+        // (commit ad923519) that a review found could not discriminate a
+        // correct window pairing from a wrong one:
+        //   - the zero-at-phase-1 check duplicated the pre-existing test
+        //     just above (`every window ends at exactly zero`), which
+        //     already loops the enum at the same tolerance;
+        //   - the open-at-0.05 check (> 0.01f) was cleared by all three
+        //     window shapes regardless of pairing (saw 0.95, triangle 0.1,
+        //     trapezoid 1.0), so it would pass even if CICADA had been
+        //     given the trapezoid;
+        //   - `snip.peak() > 0.1f` is true by construction: `Dsp.levelTo`
+        //     normalises every render to MELODIC_LOUDNESS_TARGET (0.1834)
+        //     and only ever clamps down, and RMS <= peak, so any non-silent
+        //     render clears it. The only way to trip it is literal digital
+        //     silence, which a missing `when` branch raises as a compile
+        //     error, not a quiet render.
+        //
+        // Phase 0.6 is where the three shapes actually diverge: saw (REED,
+        // PLATE) is 0.4, triangle (BOTTLE, CICADA) is 0.8, trapezoid
+        // (KAZOO, RATCHET) is 1.0 (still flat - KAZOO_FLAT is 0.7). Getting
+        // CICADA's own reading here requires it to actually be the
+        // triangle - the trapezoid or the saw would each read a different
+        // number - which is what makes this a real discriminator rather
+        // than a floor all three shapes clear regardless of pairing.
+        // Verified against `windowAt` directly before writing these in:
+        // REED/PLATE 0.39999998, BOTTLE/CICADA 0.79999995, KAZOO/RATCHET
+        // 1.0 - the 1e-6f tolerance below absorbs that float rounding
+        // against the exact literals.
+        for (voice in GlintVoice.entries) {
+            val expected = when (voice) {
+                GlintVoice.REED, GlintVoice.PLATE -> 0.4f
+                GlintVoice.BOTTLE, GlintVoice.CICADA -> 0.8f
+                GlintVoice.KAZOO, GlintVoice.RATCHET -> 1.0f
+            }
+            assertEquals(expected, Glint.windowAt(voice, 0.6f), 1e-6f, "$voice's window shape at phase 0.6")
+            // Kept from the pair of tests this replaced. It is a weak bound,
+            // but unlike the peak and frame-count checks alongside it, it is
+            // not implied by anything: rootHz is a hand-written per-voice
+            // literal, and a typo there (2200 for 220) would sail past every
+            // other test in this file, which all measure ratios rather than
+            // absolute pitch.
+            val root = Glint.rootHz(voice)
+            assertTrue(root > 20f && root < 2000f, "$voice's root is $root Hz, outside the audible fundamental range")
+        }
+    }
+
+    @Test
     fun `TUNE snaps to semitones and actually tunes`() {
         val distinct = HashSet<Float>()
         for (i in 0..100) distinct.add(Glint.frequencyFor(GlintVoice.REED, i / 100f))
@@ -136,11 +184,41 @@ class GlintTest {
         }
     }
 
-    /** [x] linearly interpolated at a fractional sample position. */
+    /**
+     * [x] resampled at the fractional sample position [pos] with a 64-tap
+     * Blackman-windowed sinc kernel, not two-tap linear interpolation.
+     *
+     * Linear interpolation is not accurate enough for what this file uses
+     * it for: a mathematically exact 15,840 Hz sinusoid, no engine
+     * involved, scores 0.97132 under [periodCorrelation]'s own measure
+     * with linear interpolation — within 0.003 of a real CICADA reading
+     * this file used to fail on at that same carrier. The two-tap method
+     * was measuring its own phase error, not periodicity; see
+     * `periodCorrelation`'s callers for the reading this replaced.
+     *
+     * Taps are clamped to the array's bounds at the edges rather than
+     * zero-padded, and the kernel is normalized to unit DC gain (divided
+     * by the sum of its own weights) so a clamped, truncated kernel near
+     * a buffer edge does not also scale the result.
+     */
     private fun sampleAt(x: FloatArray, pos: Float): Float {
-        val i = pos.toInt()
-        val f = pos - i
-        return x[i] * (1f - f) + x[i + 1] * f
+        val taps = 64
+        val half = taps / 2
+        val base = kotlin.math.floor(pos).toInt()
+        val frac = pos - base
+        var sum = 0.0
+        var weight = 0.0
+        for (j in 0 until taps) {
+            val idx = (base - half + 1 + j).coerceIn(0, x.size - 1)
+            val d = (frac + half - 1 - j).toDouble()
+            val sinc = if (kotlin.math.abs(d) < 1e-7) 1.0 else kotlin.math.sin(kotlin.math.PI * d) / (kotlin.math.PI * d)
+            val blackman = 0.42 - 0.5 * kotlin.math.cos(2.0 * kotlin.math.PI * j / (taps - 1)) +
+                0.08 * kotlin.math.cos(4.0 * kotlin.math.PI * j / (taps - 1))
+            val w = sinc * blackman
+            sum += x[idx] * w
+            weight += w
+        }
+        return (sum / weight).toFloat()
     }
 
     /**
@@ -197,10 +275,75 @@ class GlintTest {
         // a BLOOM_T60 much larger than that needs `still`'s DECAY raised
         // here too, not just this derivation.
         //
-        // Measured 2026-09-26 at fromSec=0.35 across 3 voices x 4 PEAK
-        // settings x both BLOOM extremes: worst case 0.98737 (BOTTLE, PEAK
-        // 0.9, BLOOM 1) - comfortably above the bar, and far above the
-        // 0.73149 synthetic 9%-pitch-drift control from Phase 1.
+        // Measured 2026-09-27 at fromSec=0.35 across all SIX voices x 4 PEAK
+        // settings x both BLOOM extremes, with `sampleAt` now the 64-tap
+        // Blackman-sinc kernel documented above it - not the two-tap linear
+        // interpolation that used to make this test read CICADA as
+        // aperiodic (correlation 0.9683 at a 15,840 Hz carrier, within
+        // 0.003 of a mathematically exact sinusoid's own 0.97132 under
+        // linear interpolation - see `sampleAt`'s doc): worst case
+        // 0.99940187 (REED and PLATE, PEAK 0.9, BLOOM 1) - comfortably
+        // above the bar. This replaces a three-voice figure measured before
+        // CICADA existed and before the interpolator changed. The paragraph
+        // below was measured under the old linear interpolator and is not
+        // re-verified here, but the property it documents - the metric
+        // inverting mid-sweep - is a property of one-period correlation
+        // during a sweep, independent of interpolation method.
+        //
+        // STALE for PLATE as of Task 4 (D2): PLATE no longer shares REED's
+        // formula, so it no longer shares REED's number either. Its own k(t)
+        // is tied to amp.at(t) (t60 derived from this fixture's DECAY 0.7,
+        // ~0.67s) rather than the fixed BLOOM_T60 (0.45s) the shared sweep
+        // used - slower to settle, so more of it is still moving at this
+        // fixed fromSec=0.35 probe. Measured 2026-09-27, PLATE only, BLOOM 1,
+        // at this test's own 4 PEAK settings: 0.9999127 (PEAK 0.1), 0.9995182
+        // (0.35), 0.99806124 (0.6), 0.9883967 (0.9) - still comfortably above
+        // the 0.98 bar. REED's own 0.99940187 is unaffected (its code did not
+        // change). BLOOM 0 is unaffected for PLATE too (bloomAmount 0 makes
+        // its branch identical to the shared sweep - see `PLATE at BLOOM zero
+        // does not move its formant`'s own KDoc), so those four readings are
+        // still the pre-Task-4 ones.
+        //
+        // 0.9883967 (PEAK 0.9) is NOT PLATE's true worst reading, though -
+        // only the worst among the four PEAK values this test happens to
+        // sample. A supplementary sweep (PEAK 0.85 to 1.0 in finer steps,
+        // same still, same fromSec, 2026-09-27) found the real minimum
+        // off-grid: correlation keeps falling past PEAK 0.9, bottoms out at
+        // 0.9824176 (PEAK 0.97, kBase 36.56193) - only 0.0024 above the 0.98
+        // floor, about 3.5x less margin than the in-grid figure suggests -
+        // then recovers sharply (0.9934069 at PEAK 0.98, 0.99998647 at PEAK
+        // 1.0). The recovery is not a coincidence: kCeilingFor(PLATE) is 40,
+        // and `kBase * (1 + bloomAmount * x) >= kBase` for any `x >= 0`, so
+        // once `kBase` reaches 40 the per-sample `coerceIn(K_MIN, kCeiling)`
+        // clamp binds for the ENTIRE render regardless of `amp.at(t)` - the
+        // coupling goes fully inert at PEAK 1 (see `every voice renders
+        // clean audio`'s all-BLOOM-1-macros-at-1 case, which is
+        // byte-identical whether PLATE's branch reads `amp.at(t)` or the old
+        // `envAt(t, BLOOM_T60)`). The minimum's position - PEAK 0.97 rather
+        // than closer to the PEAK-1 boundary - traces to the clamp itself.
+        // At BLOOM 1, bloomAmount = BLOOM_MAX = 3, so k(t) = kBase *
+        // (1 + 3 * amp(t)), clamped at kCeilingFor(PLATE) = 40. For a kBase
+        // near that ceiling the clamp is BOUND early in the note - flat,
+        // therefore perfectly periodic - and RELEASES at the instant t*
+        // solving kBase * (1 + 3 * amp(t*)) = 40. Solving for the kBase
+        // whose release lands exactly at the probe window's own start
+        // (0.35s) gives a critical kBase ~36.99, i.e. PEAK ~0.974 - which
+        // is why the measured minimum sits at the PEAK 0.97 grid point
+        // (kBase 36.56193, the nearest sample below that true continuous
+        // minimum). Below that kBase the release happens well before the
+        // window, so the drift inside it is smaller; above it the release
+        // happens inside the window itself and part of the window is
+        // shielded by the flat clamp - the dip-then-recovery shape the
+        // four grid readings above trace out. This is an artifact of three
+        // fixed constants - kCeilingFor's 40, BLOOM_MAX's 3, and the probe
+        // window's 0.35s start - so changing any of them moves the
+        // minimum.
+        // This test still passes at every PEAK it actually samples, but the
+        // true margin near PLATE's own ceiling is thin enough that a future
+        // change to this fixture (or to BLOOM_MAX, kCeilingFor, or the probe
+        // window) could cross it; a lag-domain measure (see this test's own
+        // KDoc above) would settle the question instead of sampling around
+        // it.
         //
         // The during-sweep regime (fromSec=0.05, the old default) is
         // deliberately NOT asserted here. Measured worst case there is
@@ -225,6 +368,15 @@ class GlintTest {
         // is shape-insensitive and stays valid during a sweep. It has to be
         // built there regardless: PLATE and RATCHET both move k in new
         // ways that this test's settled-window-only approach won't cover.
+        //
+        // RATCHET departs from "settled" too, in a different way than
+        // PLATE's continuous drift above: at this fixture, RATCHET's ladder
+        // crosses a rung boundary at ~0.45s - inside this test's own
+        // [0.35, 0.55] correlation window - at all four PEAK values sampled
+        // here at BLOOM 1 (at BLOOM 0 the ladder has a single rung, so
+        // there is nothing to cross). Harmless, because a k step does not
+        // move the period (see "the period remains exact by construction"
+        // above), but undocumented until now.
         // == 0.35 at the current BLOOM_T60 (0.45); expressed as a fraction
         // of BLOOM_T60 rather than that literal so it tracks BLOOM_T60 if
         // D2 changes it (see comment above).
@@ -266,7 +418,7 @@ class GlintTest {
         // same harmonic must produce the same bytes.
         val voice = GlintVoice.BOTTLE
         val still = mapOf("TUNE" to 0.5f, "BLOOM" to 0f, "FOLLOW" to 1f)
-        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak).coerceIn(Glint.K_MIN, Glint.K_MAX))
+        fun ratioAt(peak: Float) = Glint.snapRatio(Glint.ratioAtReference(peak, voice).coerceIn(Glint.K_MIN, Glint.kCeilingFor(voice)))
         val pairs = (0..100).map { it / 100f }.groupBy { ratioAt(it) }.values.firstOrNull { it.size >= 2 }
         assertTrue(pairs != null, "expected at least one snap zone with two PEAK values in it")
         val a = Glint.render(voice, still + ("PEAK" to pairs!!.first()))
@@ -314,17 +466,25 @@ class GlintTest {
         // floor. 20x is comfortably inside the 204x floor - roughly an
         // order of magnitude of margin - while still being a bar a doubled
         // or halved formant could not pass.
+        // CICADA (Task 2, D2) re-clocks the carrier CICADA_SUBCYCLES times a
+        // cycle, so its real formant sits at k * CICADA_SUBCYCLES * f0, not
+        // k * f0 - probing the plain k * f0 location measured near-noise
+        // energy for both "atK" and "atDoubled" and failed (6.02E-8 vs
+        // 5.73E-7 - the wrong location can't even keep atK the larger of the
+        // two). carrierMul folds that in for CICADA only; it is 1 for every
+        // other voice, so their probes are unchanged.
         val stillTune = 0.5f
         for (voice in GlintVoice.entries) {
             val peak = (0..2000).map { it / 2000f }.first { Glint.ratioFor(voice, stillTune, it, 1f) == 3f }
             val k = Glint.ratioFor(voice, stillTune, peak, 1f)
             assertEquals(3f, k, 1e-6f, "$voice: test setup expected k=3")
+            val carrierMul = if (voice == GlintVoice.CICADA) Glint.CICADA_SUBCYCLES.toFloat() else 1f
             val f0 = Glint.frequencyFor(voice, stillTune)
             val still = mapOf("TUNE" to stillTune, "BLOOM" to 0f, "BODY" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
             val snip = Glint.render(voice, still + ("PEAK" to peak))
-            val atK = energyAt(snip.samples, k * f0, snip.sampleRate)
-            val atDoubled = energyAt(snip.samples, 2f * k * f0, snip.sampleRate)
-            val atHalved = energyAt(snip.samples, k * f0 / 2f, snip.sampleRate)
+            val atK = energyAt(snip.samples, k * f0 * carrierMul, snip.sampleRate)
+            val atDoubled = energyAt(snip.samples, 2f * k * f0 * carrierMul, snip.sampleRate)
+            val atHalved = energyAt(snip.samples, k * f0 * carrierMul / 2f, snip.sampleRate)
             assertTrue(
                 atK > atDoubled * 20f,
                 "$voice: energy at k*f0 ($atK) should dwarf energy at 2k*f0 ($atDoubled) - formant may be doubled",
@@ -403,17 +563,36 @@ class GlintTest {
                 }
                 return worst
             }
-            // Find a PEAK landing closest to an integer ratio above the
-            // ceiling, and one landing closest to a fractional part of 0.25,
-            // where |sin(2*pi*k)| = 1 and a broken window has nowhere to
-            // hide. minByOrNull rather than first{tolerance}: the ratio map
-            // is exponential, so step size near the top is coarse and a
-            // fixed tolerance can miss entirely and throw instead of
+            // Find a PEAK landing closest to an integer ratio in a free
+            // (unsnapped) region, and one landing closest to a fractional
+            // part of 0.25, where |sin(2*pi*k)| = 1 and a broken window has
+            // nowhere to hide. minByOrNull rather than first{tolerance}: the
+            // ratio map is exponential, so step size near the top is coarse
+            // and a fixed tolerance can miss entirely and throw instead of
             // failing.
-            val candidates = (0..4000).map { it / 4000f }
-                .filter { Glint.ratioAtReference(it) > Glint.SNAP_CEILING + 1f }
-            val onHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0f) }!!
-            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it) % 1f - 0.25f) }!!
+            //
+            // The free region above SNAP_CEILING only exists while the
+            // voice's own ceiling clears it. CICADA's kCeilingFor (10) sits
+            // below SNAP_CEILING (12) - see kCeilingFor's doc - so above the
+            // ceiling is not a free region for CICADA at all; every PEAK
+            // there would snap to CICADA's own ceiling. The region below
+            // SNAP_FLOOR is free for every voice regardless (there is only
+            // one integer there to snap to), so CICADA uses that one
+            // instead - the same region the dedicated CICADA click test
+            // uses for the same reason.
+            val candidates = if (Glint.kCeilingFor(voice) > Glint.SNAP_CEILING + 1f) {
+                (0..4000).map { it / 4000f }.filter { Glint.ratioAtReference(it, voice) > Glint.SNAP_CEILING + 1f }
+            } else {
+                (0..4000).map { it / 4000f }.filter { Glint.ratioAtReference(it, voice) < Glint.SNAP_FLOOR }
+            }
+            // CICADA's below-floor region is only [K_MIN, SNAP_FLOOR) = [2, 3),
+            // narrow enough to check the two searches don't collapse onto the
+            // same point (which would make the comparison vacuous even though
+            // it passes). Measured: onHarmonic lands at PEAK 0.0 (k=2.0 exactly,
+            // fractional part 0 - the region's own lower bound), offHarmonic at
+            // PEAK 0.07325 (k=2.2502437, fractional part ~0.25) - distinct.
+            val onHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it, voice) % 1f - 0f) }!!
+            val offHarmonic = candidates.minByOrNull { kotlin.math.abs(Glint.ratioAtReference(it, voice) % 1f - 0.25f) }!!
             assertTrue(
                 maxStep(offHarmonic) < maxStep(onHarmonic) * 1.5f,
                 "$voice: a fractional ratio must not click — ${maxStep(offHarmonic)} vs ${maxStep(onHarmonic)}",
@@ -489,7 +668,7 @@ class GlintTest {
                     for (peak in listOf(0f, 0.5f, 1f)) {
                         val k = Glint.ratioFor(voice, tune, peak, follow)
                         assertTrue(
-                            k >= Glint.K_MIN - 1e-4f && k <= Glint.K_MAX + 1e-4f,
+                            k >= Glint.K_MIN - 1e-4f && k <= Glint.kCeilingFor(voice) + 1e-4f,
                             "$voice tune=$tune follow=$follow peak=$peak gave k=$k",
                         )
                     }
@@ -517,20 +696,41 @@ class GlintTest {
         // and Josh's audition agreed: "Body 1 doesn't really seem to have an
         // impact." The replacement is a genuine second burst at k/5.6, so
         // there is energy near k2*f0 that BODY 0 does not have at all.
-        // Measured 2026-09-26: REED bare=3.951246E-4 full=0.12219116 (309x),
-        // BOTTLE bare=7.350461E-9 full=0.037051857 (5040752x), KAZOO
-        // bare=5.071703E-5 full=0.05096992 (1005x). All clear the 3x bar by
-        // a wide margin.
+        //
+        // CICADA's body rides the re-clocked carrier the same way its main
+        // burst does (see `synthesize`'s comment on why BODY shares `carrier`
+        // rather than `phase`), so its real second formant sits at
+        // k2*CICADA_SUBCYCLES*f0, not k2*f0 — the same carrierMul correction
+        // `PEAK pins the formant on the named harmonic` already applies.
+        // Probing the plain k2*f0 = 880 Hz location for CICADA missed the
+        // real 3,520 Hz formant: reviewer-measured 17.0x there (leakage,
+        // barely over the 3x bar) against 1855x at the corrected location.
+        // Identity for every other voice.
+        //
+        // Measured 2026-09-27 (bare -> full, energy at k2*f0*carrierMul), all
+        // six voices — REED/BOTTLE/KAZOO were previously recorded 2026-09-26
+        // for three voices only, and REED's had already gone stale
+        // (0.12219116 recorded, 0.12315088 measured) from engine changes
+        // since:
+        //   REED    3.951246E-4 -> 0.12315088   (312x)
+        //   BOTTLE  7.350461E-9 -> 0.038122714  (5186438x)
+        //   KAZOO   5.071703E-5 -> 0.047637813  (939x)
+        //   CICADA  0.008937839 -> 16.5795      (1855x)
+        //   RATCHET 5.071703E-5 -> 0.047637813  (939x)
+        //   PLATE   3.951246E-4 -> 0.12315088   (312x)
+        // All clear the 3x bar by a wide margin.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.5f, "PEAK" to 0.8f, "BLOOM" to 0f, "FOLLOW" to 1f, "DECAY" to 0.8f)
             val f0 = Glint.frequencyFor(voice, 0.5f)
             val k = Glint.ratioFor(voice, 0.5f, 0.8f, 1f)
             val k2 = Glint.bodyRatio(k)
+            val carrierMul = if (voice == GlintVoice.CICADA) Glint.CICADA_SUBCYCLES.toFloat() else 1f
             val bareSnip = Glint.render(voice, still + ("BODY" to 0f))
             val fullSnip = Glint.render(voice, still + ("BODY" to 1f))
-            val bare = energyAt(bareSnip.samples, k2 * f0, bareSnip.sampleRate)
-            val full = energyAt(fullSnip.samples, k2 * f0, fullSnip.sampleRate)
-            assertTrue(full > bare * 3f, "$voice: BODY should put real energy at k2*f0 ($bare -> $full)")
+            val probeHz = k2 * f0 * carrierMul
+            val bare = energyAt(bareSnip.samples, probeHz, bareSnip.sampleRate)
+            val full = energyAt(fullSnip.samples, probeHz, fullSnip.sampleRate)
+            assertTrue(full > bare * 3f, "$voice: BODY should put real energy at $probeHz Hz ($bare -> $full)")
         }
     }
 
@@ -672,6 +872,40 @@ class GlintTest {
     }
 
     /**
+     * Voices whose BLOOM sweeps the formant open at the attack and lets it
+     * fall back and settle near its base ratio, per the fixed [BLOOM_T60]
+     * rate — the shared assertion both BLOOM tests below apply to this
+     * group. RATCHET's ladder climbs instead of sweeping down and never
+     * settles inside a fixed t60 (see each test's own RATCHET branch for
+     * its measured numbers), so it is deliberately left out of this set
+     * rather than folded in under a weakened bar.
+     *
+     * PLATE (Task 4, D2) has its OWN formant motion now — `k(t) = kBase *
+     * (1 + BLOOM * amp.at(t))`, no [BLOOM_T60], no clock of its own — and it
+     * stays in this set on measured numbers, not by assumption. At the
+     * `BLOOM opens the peak at the attack and lets it settle` fixture (TUNE
+     * 0.3 PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY 0.7), PLATE's own head/tail
+     * ratios are 1.0013 at BLOOM 0 and 3.6967943 at BLOOM 1 — both clear
+     * this set's bars, and BLOOM 1's is even wider than the shared-formula
+     * figure it replaced (3.5664227), not narrower.
+     *
+     * The reason is structural, not coincidence: `Dsp.Env.at`'s decay
+     * always reaches roughly -60 dB (0.1% of peak) by one t60, and
+     * `synthesize`'s own `frames = t60 * 1.35 * rate` guarantees the
+     * rendered note is 1.35x that t60 long — so PLATE's coupling is
+     * mathematically certain to have collapsed back to `kBase` well before
+     * this set's 0.7x-to-1.0x-duration tail window, for ANY DECAY. That is
+     * exactly what `BLOOM lands before the note ends, whatever it did on the
+     * way`'s own KDoc measures below, and exactly what RATCHET's ladder does
+     * NOT get for free — its reach is set by BLOOM alone, independent of
+     * DECAY, which is why IT needed its own branch instead of joining this
+     * set.
+     */
+    private val BLOOM_SWEEPS_AND_SETTLES = setOf(
+        GlintVoice.REED, GlintVoice.BOTTLE, GlintVoice.KAZOO, GlintVoice.CICADA, GlintVoice.PLATE,
+    )
+
+    /**
      * Measured 2026-09-26 (Task 2, fixed BLOOM_T60 = 0.45s), still = TUNE 0.3
      * PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY 0.7 (duration 0.9044s for all three
      * voices), head/tail centroid ratio:
@@ -684,6 +918,31 @@ class GlintTest {
      * 0.45) is still ~0.94 against the old envAt(0.012, 0.06) of ~0.15.
      * Every BLOOM 1 case clears the 1.4x bar by well over 2x margin; every
      * BLOOM 0 case sits at parity (0.99-1.00), well inside the 1.2x bar.
+     * CICADA renders through this same formula (see [BLOOM_SWEEPS_AND_SETTLES]'s
+     * doc) and is not separately re-measured here; it already passed this
+     * bar before RATCHET existed to break it.
+     *
+     * PLATE (Task 4, D2) no longer shares this formula — its own `k(t) =
+     * kBase * (1 + BLOOM * amp.at(t))` is measured separately. At this same
+     * still, 2026-09-27: BLOOM 0 -> 1.0013 (identical to the figure above:
+     * BLOOM 0 makes `bloomAmount` 0, which zeroes out either curve the same
+     * way — see `PLATE at BLOOM zero does not move its formant`'s own KDoc),
+     * BLOOM 1 -> 3.6967943 - slightly WIDER than the shared-formula figure
+     * it replaces (3.5664227), not narrower, because DECAY 0.7 gives
+     * `amp.at`'s own t60 (~0.67s) a slower fall than the fixed BLOOM_T60
+     * (0.45s) the old sweep used, so PLATE's head window sits closer to its
+     * own opened peak. Clears both the 1.4x and 1.2x bars with room, so
+     * PLATE stays in [BLOOM_SWEEPS_AND_SETTLES].
+     *
+     * RATCHET climbs instead of sweeping, so its bar is inverted — the tail
+     * must end up BRIGHTER than the attack, not darker. Measured 2026-09-27
+     * at this same still (RATCHET's kBase here is 7.0, the same reference
+     * ratio KAZOO gets at these macros, since the two share rootHz and
+     * kCeilingFor): BLOOM 1 head/tail = 0.6299082 (head 2269.1367 Hz, tail
+     * 3602.329 Hz — still climbing at the tail; see the next test's RATCHET
+     * branch for why); BLOOM 0 head/tail = 0.9929 (head 2269.1353 Hz, tail
+     * 2285.2646 Hz) — a one-rung ladder never climbs, so head and tail
+     * agree the same way every sweeping voice's own BLOOM-0 case does.
      */
     @Test
     fun `BLOOM opens the peak at the attack and lets it settle`() {
@@ -697,8 +956,25 @@ class GlintTest {
                 ).centroidHz
                 return head / tail
             }
-            assertTrue(headToTail(1f) > 1.4f, "$voice BLOOM 1 should open the head well above the tail: ${headToTail(1f)}")
-            assertTrue(headToTail(0f) < 1.2f, "$voice BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+            when {
+                voice in BLOOM_SWEEPS_AND_SETTLES -> {
+                    assertTrue(headToTail(1f) > 1.4f, "$voice BLOOM 1 should open the head well above the tail: ${headToTail(1f)}")
+                    assertTrue(headToTail(0f) < 1.2f, "$voice BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+                }
+                voice == GlintVoice.RATCHET -> {
+                    // "Ends brighter than it began" is the climbing ladder's
+                    // version of "opens at the attack and settles" — the
+                    // direction is reversed, not merely a weaker bar. See
+                    // this test's own KDoc for the measured figures behind
+                    // the two thresholds below.
+                    assertTrue(headToTail(1f) < 0.8f, "RATCHET BLOOM 1 should end brighter than it began: ${headToTail(1f)}")
+                    assertTrue(headToTail(0f) in 0.9f..1.1f, "RATCHET BLOOM 0 should leave head and tail alike: ${headToTail(0f)}")
+                }
+                else -> error(
+                    "$voice has no BLOOM assertion in this test — add it to BLOOM_SWEEPS_AND_SETTLES " +
+                        "or give it its own branch, per measured numbers, not by assumption",
+                )
+            }
         }
     }
 
@@ -711,9 +987,36 @@ class GlintTest {
      * At 0.75 * 0.9044s = 0.678s, envAt(0.678, 0.45) is ~3e-5 - the sweep is
      * fully settled by five-plus t60s regardless of which BLOOM value chose
      * the (now fixed) rate, so the two tails still land within the 20% bar.
-     * This guard still matters at the new, slower rate: it is what catches a
-     * future voice-specific sweep (D2's PLATE, RATCHET) that runs so slow it
-     * never lands before the note's DECAY ends.
+     * This guard is for [BLOOM_SWEEPS_AND_SETTLES]'s voices (CICADA included,
+     * unmeasured here for the same reason as the test above; PLATE's own
+     * numbers are below); it does not apply to RATCHET, below.
+     *
+     * PLATE (Task 4, D2) no longer shares the formula above, but lands here
+     * for a structural reason rather than a coincidence — see
+     * [BLOOM_SWEEPS_AND_SETTLES]'s own doc. Measured 2026-09-27 at this same
+     * still: tail(0) = 1126.3811 Hz, tail(1) = 1128.4126 Hz (diff 2.0315 Hz,
+     * ratio 0.18%) - larger than the shared-formula voices' sub-0.1 Hz drift
+     * (its own `amp.at` t60, ~0.67s, settles slower than the fixed 0.45s
+     * BLOOM_T60 those voices ride), but still two orders of magnitude inside
+     * the 20% bar, because 0.75 * duration (0.678s) is itself ~1.01 t60 of
+     * PLATE's own DECAY-derived envelope - past the point where any DECAY's
+     * amp envelope has collapsed to background level.
+     *
+     * This comment used to predict "a future voice-specific sweep (D2's
+     * PLATE, RATCHET) that runs so slow it never lands before the note's
+     * DECAY ends" — anticipating the shape of the problem, if not quite its
+     * mechanism. What actually happens is not a slow sweep for either voice:
+     * PLATE's coupling is pinned to the note's OWN t60 (so it always lands,
+     * per the structural argument above, regardless of how slow or fast
+     * DECAY makes the note), and RATCHET's ladder is a staircase that has no
+     * reason to return to its starting value at all, and at this fixture
+     * climbs far more rungs than a ~0.9s note has time to step through.
+     * Measured 2026-09-27, kBase=7, BLOOM 1 -> bloomAmount 3 -> top 28 (a
+     * 22-rung ladder): reaching rung 28 takes 21 * RATCHET_STEP_SECONDS =
+     * 3.15s, so at this note's own 0.75x-to-1.0x-duration tail window the
+     * rung index is still moving, 4 -> 6 of 21 (k 11 -> 13), not holding.
+     * RATCHET's own tail(1) = 3605.4092 Hz vs tail(0) = 2285.5515 Hz, ratio
+     * 1.578 — nothing like either sweeping mechanism's own tiny drift.
      */
     @Test
     fun `BLOOM lands before the note ends, whatever it did on the way`() {
@@ -725,10 +1028,34 @@ class GlintTest {
                     slice(snip, snip.durationSeconds * 0.75f, snip.durationSeconds),
                 ).centroidHz
             }
-            assertTrue(
-                kotlin.math.abs(tail(1f) - tail(0f)) < tail(0f) * 0.2f,
-                "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
-            )
+            when {
+                voice in BLOOM_SWEEPS_AND_SETTLES -> {
+                    assertTrue(
+                        kotlin.math.abs(tail(1f) - tail(0f)) < tail(0f) * 0.2f,
+                        "the sweep must have landed by the tail: ${tail(1f)} vs ${tail(0f)}",
+                    )
+                }
+                voice == GlintVoice.RATCHET -> {
+                    // Not "landed": see this test's own KDoc for why a
+                    // ladder whose reach outruns the note's DECAY keeps
+                    // climbing through the tail window instead of settling
+                    // near BLOOM 0's baseline. RATCHET_STEP_SECONDS's own
+                    // doc already names the flip side of this — "short
+                    // notes render a single rung and the ladder only reads
+                    // on longer ones" — a ladder can just as easily be
+                    // *longer* than the note, which is this case. The
+                    // assertion is direction and margin instead of
+                    // "landed near baseline."
+                    assertTrue(
+                        tail(1f) > tail(0f) * 1.3f,
+                        "RATCHET's climbing ladder should still read brighter at the tail than BLOOM 0's flat baseline: ${tail(1f)} vs ${tail(0f)}",
+                    )
+                }
+                else -> error(
+                    "$voice has no BLOOM assertion in this test — add it to BLOOM_SWEEPS_AND_SETTLES " +
+                        "or give it its own branch, per measured numbers, not by assumption",
+                )
+            }
         }
     }
 
@@ -810,13 +1137,73 @@ class GlintTest {
         // Velocity.BRIGHTNESS_MACROS' own KDoc records what happens when a
         // macro joins this list without being measured: THUMP SNARE on TONE
         // read 1650.29 Hz soft against 1648.09 Hz hard — backwards. A macro
-        // earns its place with a sweep that rises at every step, per voice.
+        // earns its place with a sweep that never falls, per voice.
         //
-        // Measured 2026-09-26, the gate this test locks down:
-        //   PEAK sweep REED:   362.2, 558.0, 753.3, 1143.7, 1729.0, 2510.5, 3662.5, 5336.8, 7772.6
-        //   PEAK sweep BOTTLE: 790.0, 1175.7, 1564.0, 2343.0, 3512.5, 5075.1, 7379.1, 10730.6, 15601.4
-        //   PEAK sweep KAZOO:  762.5, 1160.1, 1553.4, 2333.9, 3507.9, 5075.6, 7386.1, 10742.7, 15623.2
-        // Rises at every step on all three voices, so PEAK joins BRIGHTNESS_MACROS below.
+        // Strictly-rising was the original bar here, and CICADA breaks it:
+        // two adjacent PEAK steps both snap to k=4 and render
+        // byte-identical. That is not a CICADA defect - it is what
+        // `PEAK values inside one snap zone render identically` REQUIRES
+        // for any two PEAK values landing on the same snapped k. The suite
+        // was contradicting itself: one test demanded byte-identity inside
+        // a snap zone, this one forbade it. Both are satisfiable together
+        // only when no two of the 9 grid points share a snapped k, which is
+        // an accident of this grid's spacing, not a property PEAK has.
+        // Measured at 0.01 PEAK spacing (100 adjacent pairs), ties are
+        // normal snap behaviour on EVERY voice, not a CICADA-only thing:
+        // REED 36/100, BOTTLE 36/100, KAZOO 36/100, CICADA 67/100, RATCHET
+        // 36/100, PLATE 36/100 - the 9-point grid only avoids them because
+        // it happens to place just three points (k = 4, 6, 9) inside the
+        // snap band.
+        //
+        // So the bar is non-decreasing at every step, plus a 3x end-to-end
+        // rise so a macro that merely plateaus the whole way (dead, not
+        // snapped) still fails - not `PluckTest.kt`'s "PICK is dead between"
+        // per-step `abs(diff) > 1f` clause, which would fail here for
+        // exactly the same reason a strict rise does: a snapped macro has
+        // legitimate zero-diff steps. Falls: zero out of 100 at 0.01
+        // spacing for every voice, so non-decreasing is not vacuous - ties
+        // happen, drops never do. End/start centroid ratio at the 9-point
+        // grid: REED 21.1x, BOTTLE 19.3x, KAZOO 20.1x, RATCHET 20.1x, PLATE
+        // 21.1x, and CICADA 4.8x - the binding case, leaving the 3x bar
+        // about 60% margin. CICADA's 4.8x is not a weaker sweep, it falls
+        // out of the ceiling equalisation arithmetically: at PEAK 0 both
+        // CICADA and BOTTLE sit at k=K_MIN=2, but CICADA's real carrier is
+        // k*CICADA_SUBCYCLES*f0 - 4x BOTTLE's at that same k and f0 (both
+        // root at 220 Hz) - while `kCeilingFor` equalises their PEAK-1
+        // ceilings, so CICADA's whole travel compresses to exactly 1/4 of
+        // BOTTLE's: 19.264683 / 4 = 4.816171, measured 4.8161697.
+        //
+        // Measured 2026-09-27, the gate this test locks down:
+        //   PEAK sweep REED:    359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4, 3568.1, 5207.0, 7589.7
+        //   PEAK sweep BOTTLE:  792.1, 1180.9, 1529.5, 2297.0, 3445.9, 4962.1, 7215.2, 10497.0, 15259.6
+        //   PEAK sweep KAZOO:   758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
+        //   PEAK sweep CICADA:  3168.4, 3792.9, 4855.8, 6117.8, 6117.8, 7741.9, 10754.6, 12234.2, 15259.4
+        //   PEAK sweep RATCHET: 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1
+        //   PEAK sweep PLATE:   359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4, 3568.1, 5207.0, 7589.7
+        // CICADA ties once (step 4 -> 5, both 6117.8); every other voice
+        // rises at every step. All six clear non-decreasing + 3x, so PEAK
+        // joins BRIGHTNESS_MACROS below.
+        //
+        // RATCHET's row is re-measured a second time, after `ratchetLadder`
+        // stopped rounding its bottom rung with a bare `Math.round(kBase)`
+        // and started using `snapRatio(kBase)` instead (see that function's
+        // own doc). BLOOM=0 here, so RATCHET's ladder never climbs past its
+        // bottom rung, and that bottom rung is now exactly `kBase` — the
+        // same value KAZOO's own (unmodulated, BLOOM=0) `k` already is, and
+        // RATCHET shares KAZOO's window and root — so the two rows are now
+        // identical at every point, not just close. That identity is
+        // specific to BLOOM=0: raise BLOOM and the ladder climbs past its
+        // bottom rung while KAZOO's own sweep moves the other way, and the
+        // two diverge. The previous version of this row (758.1, 1138.6,
+        // 1515.6, 2265.4, 3402.6, 4926.9, 7211.5, 10645.0, 15212.1) was
+        // `Math.round(kBase)`'s rounding showing up as drift of up to half
+        // an integer's worth of ratio wherever `kBase` didn't already land
+        // on an integer — the same rounding that made RATCHET the one
+        // voice with no velocity response at PEAK 0.02-0.06 (see
+        // `velocity always changes the render, at every PEAK` and
+        // `ratchetLadder`'s doc). End-to-end ratio is unaffected either way
+        // (20.1x): PEAK 0 and PEAK 1 both pin `kBase` to K_MIN and
+        // kCeilingFor exactly, already integers for both voices.
         for (voice in GlintVoice.entries) {
             val still = mapOf("TUNE" to 0.4f, "BLOOM" to 0f, "BODY" to 0.3f, "FOLLOW" to 1f, "DECAY" to 0.6f)
             val readings = (0..8).map { i ->
@@ -825,10 +1212,14 @@ class GlintTest {
             println("PEAK sweep $voice: ${readings.joinToString(", ") { "%.1f".format(it) }}")
             for (i in 1 until readings.size) {
                 assertTrue(
-                    readings[i] > readings[i - 1],
-                    "$voice PEAK is not monotonic at step $i: ${readings[i - 1]} -> ${readings[i]}",
+                    readings[i] >= readings[i - 1],
+                    "$voice PEAK fell at step $i: ${readings[i - 1]} -> ${readings[i]}",
                 )
             }
+            assertTrue(
+                readings.last() > readings.first() * 3f,
+                "$voice PEAK should rise at least 3x end to end: ${readings.first()} -> ${readings.last()}",
+            )
         }
     }
 
@@ -873,5 +1264,509 @@ class GlintTest {
                 )
             }
         }
+    }
+
+    /** The largest absolute difference between adjacent samples in a time window. */
+    private fun worstAdjacentJump(snip: Snip, from: Float, to: Float): Float {
+        val a = (from * snip.sampleRate).toInt().coerceAtLeast(1)
+        val b = (to * snip.sampleRate).toInt().coerceAtMost(snip.samples.size)
+        var worst = 0f
+        for (i in a until b) worst = maxOf(worst, kotlin.math.abs(snip.samples[i] - snip.samples[i - 1]))
+        return worst
+    }
+
+    // `CICADA stays periodic at f0 despite re-clocking inside the cycle` was
+    // deleted here (D2 whole-branch review). It asserted
+    // `periodCorrelation(...) > 0.98f` for CICADA at BLOOM 0 and 1 - but a
+    // signal periodic at T/4 is periodic at T by construction, so that
+    // assertion is satisfied for any sub-cycle count, working or broken; it
+    // cannot fail. Mutation-verified 2026-09-27 (`carrier = phase`
+    // substituted for CICADA only, reverted immediately after): mechanism
+    // correct gives 0.99998933 (BLOOM 0) / 0.9999792 (BLOOM 1); mechanism
+    // removed gives 0.9999901 / 0.9999801 - HIGHER in both cases, not lower.
+    // It passed *better* without the thing it was named to guard.
+    //
+    // `the formant sweeps and the pitch does not move` above already runs
+    // this identical metric at this identical bar for CICADA, across 4
+    // PEAKs x 2 BLOOMs rather than 1 x 2, and is exactly as mutation-immune
+    // there: the same substitution raised every one of those 8 readings too
+    // (e.g. PEAK 0.9 BLOOM 1: 0.99994963 correct -> 0.9999592 removed). So
+    // this test contributed a narrower slice of a check that was already
+    // vacuous for CICADA, not a second opinion.
+    //
+    // The property that actually distinguishes a working re-clock from a
+    // deleted one - where CICADA's energy sits - is guarded below by
+    // `CICADA puts energy at its sub-cycle rate that BOTTLE does not`,
+    // already mutation-verified there against the identical substitution
+    // (see that test's own comment: ratio 279x mechanism correct, 2.2x
+    // FAILS mechanism removed). That is the guard this file needs; a second
+    // copy of the periodicity check was not.
+
+    @Test
+    fun `CICADA does not click at its inner restarts`() {
+        // Two things had to be measured, not assumed, before this test could
+        // guard anything - both are the same lesson the sibling test below
+        // (`a non-integer ratio clicks no more than an integer one`) already
+        // learned for the OUTER wrap, recurring here at the INNER one.
+        //
+        // (1) REED is not a valid control. CICADA's carrier is k * N * f0;
+        // at any shared nominal k, that makes CICADA's carrier
+        // (220/110)*CICADA_SUBCYCLES = 8x REED's, from root Hz and the
+        // re-clock multiplier alone - nothing to do with clicking. A pure
+        // sine's sample-to-sample step scales with frequency, so this
+        // confound holds at every k, not just high ones. Measured at the
+        // default integer k=8: worst=1.4358492, reed=0.21170102 (6.78x) -
+        // OVER the 3x bar on a *correct* mechanism. BOTTLE at a matched
+        // carrier removes it: it shares CICADA's triangle window, and at
+        // k=9 (which sits inside BOTTLE's own snap zone and rounds to it
+        // exactly) the same 440 Hz f0 gives it the identical 9*440 = 3,960 Hz
+        // carrier CICADA has at kBase=2.25 (2.25*4*440 = 3,960) - same
+        // frequency, same window shape, differing only in whether the window
+        // re-clocks every sub-cycle or once a cycle.
+        //
+        // (2) Integer k hides the click regardless of the control. For
+        // integer k, sin(2*pi*k*x) is zero on both sides of a sub-boundary,
+        // so a window computed on the wrong phase still multiplies a
+        // near-zero sine there and the break is invisible. Measured at k=8
+        // with the BOTTLE control and the mechanism deliberately broken
+        // (`windowAt(voice, phase)` for CICADA): worst=1.388665 against the
+        // correct 1.4358492 - barely different (1.10x vs 1.14x against
+        // bottle=1.2594743) - BLIND. kBase=2.25 fixes this: fractional part
+        // exactly 0.25, so |sin(2*pi*2.25)| = 1, the discontinuity's maximum.
+        // It sits in [K_MIN, SNAP_FLOOR) so it runs free instead of snapping,
+        // and it is well under CICADA's own ceiling (K_MAX/CICADA_SUBCYCLES
+        // = 10, see `kCeiling` in Glint.synthesize) so that clamp never
+        // engages either - this test isolates window timing from the
+        // ceiling question.
+        //
+        // Measured on the raw oversampled buffer (`synthesize`, not
+        // `render`): Dsp.decimate low-passes to the output Nyquist, which is
+        // precisely the filter that would smooth a wrap discontinuity away
+        // before it could be seen - the window's promise lives before that
+        // filter, per the sibling test's own comment.
+        //
+        // Measured 2026-09-27, kBase=2.2498858 (CICADA) / k=9.0 (BOTTLE),
+        // on the raw oversampled buffer: mechanism correct (window on
+        // `carrier`) gives worst=0.1328646, bottle=0.1108724 (1.20x, clears
+        // the 3x bar). Mechanism broken (`windowAt(voice, phase)` for
+        // CICADA only, reverted immediately after): worst=0.7709526,
+        // bottle unchanged at 0.1108724 (6.95x, fails, as it must - a clean
+        // separation from the passing 1.20x).
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val cicadaPeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.CICADA, 0.5f, it, 1f) - 2.25f) }!!
+        val cicadaK = Glint.ratioFor(GlintVoice.CICADA, 0.5f, cicadaPeak, 1f)
+        assertTrue(
+            kotlin.math.abs(cicadaK - 2.25f) < 0.01f,
+            "test setup expected CICADA kBase near 2.25 (unsnapped), got $cicadaK",
+        )
+        // Derived from the actual measured cicadaK, not the literal 2.25, so
+        // the two carriers match exactly regardless of search granularity.
+        val bottleTargetK = cicadaK * Glint.CICADA_SUBCYCLES
+        val bottlePeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, it, 1f) - bottleTargetK) }!!
+        val bottleK = Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, bottlePeak, 1f)
+        assertEquals(9f, bottleK, 1e-6f, "test setup expected BOTTLE k=9 (snapped, matches CICADA's carrier)")
+
+        val cicadaRaw = Glint.synthesize(
+            GlintVoice.CICADA, mapOf("TUNE" to 0.5f, "FOLLOW" to 1f, "BLOOM" to 0f, "PEAK" to cicadaPeak), rate,
+        )
+        val bottleRaw = Glint.synthesize(
+            GlintVoice.BOTTLE, mapOf("TUNE" to 0.5f, "FOLLOW" to 1f, "BLOOM" to 0f, "PEAK" to bottlePeak), rate,
+        )
+        val worst = worstAdjacentJump(Snip(cicadaRaw, 1, rate), from = 0.01f, to = 0.20f)
+        val bottle = worstAdjacentJump(Snip(bottleRaw, 1, rate), from = 0.01f, to = 0.20f)
+        assertTrue(
+            worst < bottle * 3f,
+            "CICADA's worst sample-to-sample jump $worst is more than 3x BOTTLE's $bottle at the same 3,960 Hz carrier — the inner restarts are clicking",
+        )
+    }
+
+    @Test
+    fun `CICADA puts energy at its sub-cycle rate that BOTTLE does not`() {
+        // The lattice is audible as energy at N * f0. This is what makes CICADA
+        // a different voice rather than a differently-windowed one.
+        //
+        // The control used to be BOTTLE at its own default PEAK, which was
+        // correct when this test was written: CICADA's default kBase was then
+        // 8, the same as BOTTLE's, and neither voice's own peak sat near the
+        // N*f0 probe. A later fix moved CICADA's default kBase to 4 - which is
+        // CICADA_SUBCYCLES itself - so a mechanism-removed CICADA (carrier =
+        // phase, no re-clock) now puts its OWN formant at kBase*f0 =
+        // 4*440 = 1,760 Hz: exactly the N*f0 this test probes. Nobody
+        // re-derived the control when the default moved, so the default-PEAK
+        // comparison stopped isolating the mechanism - it was testing which
+        // voice's own peak happened to land nearest 1,760 Hz, not the
+        // re-clock.
+        //
+        // Fixed with the same matched-carrier control the no-click test above
+        // (`CICADA does not click at its inner restarts`) already built for
+        // the same confound at the inner wrap: CICADA at kBase ~= 2.25 and
+        // BOTTLE at k = 9 share the identical 3,960 Hz carrier and triangle
+        // window, differing only in whether the window re-clocks
+        // CICADA_SUBCYCLES times a cycle. Neither voice's own peak sits near
+        // the 1,760 Hz probe, so any energy CICADA shows there over BOTTLE is
+        // attributable to the re-clocking alone.
+        //
+        // The old control moved the wrong way when the mechanism it exists to
+        // catch was deleted: reviewer-measured, deleting
+        // `carrier = frac(N*phase)` against the old default-PEAK comparison
+        // still passed - MORE comfortably (ratio ~8.1e8) than the correct
+        // engine did (~6.6e5) - because that comparison was never measuring
+        // the re-clock, only which voice's own default peak sat nearer
+        // 1,760 Hz.
+        //
+        // Mutation-verified 2026-09-27 against THIS (matched-carrier)
+        // control (`carrier = phase` for CICADA only, reverted immediately
+        // after): mechanism correct gives
+        // cicada=1.6518465 bottle=0.005919548 (ratio 279.0x, clears the 3x
+        // bar); mechanism removed gives cicada=0.013001844 against the same
+        // bottle=0.005919548 (ratio 2.2x, FAILS, as it must - a clean
+        // separation from the passing 279.0x, and the correct direction this
+        // time: broken drops below the bar instead of clearing it wider).
+        val f0 = Glint.frequencyFor(GlintVoice.CICADA, 0.5f)
+        val lattice = Glint.CICADA_SUBCYCLES * f0
+        val cicadaPeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.CICADA, 0.5f, it, 1f) - 2.25f) }!!
+        val cicadaK = Glint.ratioFor(GlintVoice.CICADA, 0.5f, cicadaPeak, 1f)
+        assertTrue(
+            kotlin.math.abs(cicadaK - 2.25f) < 0.01f,
+            "test setup expected CICADA kBase near 2.25 (unsnapped), got $cicadaK",
+        )
+        val bottleTargetK = cicadaK * Glint.CICADA_SUBCYCLES
+        val bottlePeak = (0..20000).map { it / 20000f }
+            .minByOrNull { kotlin.math.abs(Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, it, 1f) - bottleTargetK) }!!
+        val bottleK = Glint.ratioFor(GlintVoice.BOTTLE, 0.5f, bottlePeak, 1f)
+        assertEquals(9f, bottleK, 1e-6f, "test setup expected BOTTLE k=9 (snapped, matches CICADA's carrier)")
+
+        val still = mapOf("TUNE" to 0.5f, "FOLLOW" to 1f, "BLOOM" to 0f, "BODY" to 0f)
+        val cicada = Glint.render(GlintVoice.CICADA, still + ("PEAK" to cicadaPeak))
+        val bottle = Glint.render(GlintVoice.BOTTLE, still + ("PEAK" to bottlePeak))
+        val c = energyAt(cicada.samples, lattice, cicada.sampleRate)
+        val b = energyAt(bottle.samples, lattice, bottle.sampleRate)
+        assertTrue(
+            c > b * 3f,
+            "CICADA has $c at the lattice rate ($lattice Hz), BOTTLE (same 3,960 Hz carrier) has $b",
+        )
+    }
+
+    /**
+     * The spec's requirement: measure the centroid in windows and assert the
+     * plateaus. A glide would show a different centroid in every window;
+     * steps show runs of equal ones with jumps between.
+     *
+     * The 0.25x bar was checked against the mechanism-absent case before it
+     * was trusted, per this branch's own rule that a threshold is only as
+     * good as the range it was measured against. Before RATCHET had its own
+     * `when` branch (i.e. running the plain continuous BLOOM sweep every
+     * other non-CICADA voice uses, at the same macros this test renders
+     * with, step = 0.15f literal since the constant did not exist yet):
+     * early=7549.2656, late=5515.9536, next=3901.208 -
+     * |late-early|=2033.312, |next-early|=3648.0576, ratio=0.5574. That
+     * clears (i.e. fails to clear) the 0.25 bar by more than 2x, so a
+     * continuous ramp cannot pass this test by accident - the bar is a real
+     * discriminator, not a vacuous one.
+     *
+     * With the mechanism in place, same render: early=3486.6492,
+     * late=3490.6194, next=3957.623 - |late-early|=3.9702148 (early and
+     * late's probe windows are ~19.8 cycles apart center-to-center at this
+     * 440 Hz note, both squarely inside kBase=8's bottom rung),
+     * |next-early|=470.97388 (early and next are a full
+     * RATCHET_STEP_SECONDS apart center-to-center - exactly 66 cycles at
+     * 440 Hz - the jump to rung two, k=9), ratio=0.008430 - about 30x under
+     * the 0.25 bar, not just clearing it (0.5574 / 0.008430 is the ~66x
+     * figure - this ratio's distance from the mechanism-absent control
+     * measured above, a different comparison from the bar).
+     */
+    @Test
+    fun `RATCHET's formant is piecewise constant, not a ramp`() {
+        val snip = Glint.render(GlintVoice.RATCHET, mapOf("BLOOM" to 1f, "DECAY" to 0.9f, "BODY" to 0f))
+        val step = Glint.RATCHET_STEP_SECONDS
+        // Two probes inside one step must agree; probes either side of a step
+        // boundary must not.
+        val early = FeatureExtractor.extract(slice(snip, step * 0.25f, step * 0.45f)).centroidHz
+        val late = FeatureExtractor.extract(slice(snip, step * 0.55f, step * 0.75f)).centroidHz
+        val next = FeatureExtractor.extract(slice(snip, step * 1.25f, step * 1.45f)).centroidHz
+        assertTrue(
+            kotlin.math.abs(late - early) < kotlin.math.abs(next - early) * 0.25f,
+            "RATCHET: within-step centroid moved $early -> $late, across-step moved $early -> $next — that is a ramp, not a staircase",
+        )
+    }
+
+    @Test
+    fun `RATCHET's steps land on integer harmonics`() {
+        // "Steps between fixed harmonics, never glides." Every rung ABOVE
+        // THE BOTTOM must be a whole number, or the ladder is not a ladder.
+        // The bottom rung is the one exception: below SNAP_FLOOR it is
+        // snapRatio(kBase), left unrounded — see ratchetLadder's own KDoc
+        // for why (the velocity collision Fix 1 exists to undo). This
+        // fixture's kBase=8 is already in the snap band, so its own bottom
+        // rung is already a whole number and never exercises that
+        // exception; the second loop below adds a below-SNAP_FLOOR case
+        // that does.
+        //
+        // Measured 2026-09-27 at kBase=8.0 (TUNE 0.5, PEAK 0.45, FOLLOW 0.8 -
+        // this test's own inputs): BLOOM 0.25 -> [8..14] (7 rungs), BLOOM 0.5
+        // -> [8..20] (13 rungs), BLOOM 1 -> [8..32] (25 rungs).
+        for (bloom in listOf(0.25f, 0.5f, 1f)) {
+            val ks = Glint.ratchetLadder(
+                kBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.45f, 0.8f),
+                bloomAmount = Dsp.lin(bloom, 0f, Glint.BLOOM_MAX),
+            )
+            for (k in ks) {
+                assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k is not an integer")
+            }
+            assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
+        }
+
+        // Below SNAP_FLOOR: the bottom rung is free, not rounded. Measured
+        // 2026-09-27 at kBase=2.1234918 (PEAK 0.02, TUNE 0.5, FOLLOW 0.8 -
+        // the exact hard-velocity case `velocity always changes the
+        // render, at every PEAK` locks down for RATCHET): BLOOM 0.25 ->
+        // [2.1234918, 3] (2 rungs), BLOOM 0.5 -> [2.1234918, 3, 4, 5]
+        // (4 rungs), BLOOM 1 -> [2.1234918, 3, 4, 5, 6, 7, 8] (7 rungs) -
+        // the bottom rung stays at the unrounded kBase every time, and
+        // every rung after it is still a whole number.
+        val belowFloorKBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.02f, 0.8f)
+        for (bloom in listOf(0.25f, 0.5f, 1f)) {
+            val ks = Glint.ratchetLadder(belowFloorKBase, Dsp.lin(bloom, 0f, Glint.BLOOM_MAX))
+            assertEquals(
+                belowFloorKBase,
+                ks.first(),
+                "RATCHET's bottom rung must stay at the unrounded kBase below SNAP_FLOOR",
+            )
+            for (k in ks.drop(1)) {
+                assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k above the bottom is not an integer")
+            }
+            assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
+        }
+
+        // Above SNAP_CEILING: the bottom rung is free there too, for the
+        // identical reason (snapRatio is identity above the ceiling, same
+        // as below the floor). Measured 2026-09-27 at kBase=16.28362 (PEAK
+        // 0.7, TUNE 0.5, FOLLOW 0.8): BLOOM 0.25 -> [16.28362..28] (13
+        // rungs), BLOOM 0.5 -> [16.28362..40] (25 rungs, clamped at
+        // kCeilingFor), BLOOM 1 -> the same 25 rungs as BLOOM 0.5 (BLOOM's
+        // reach already exceeds the ceiling at 0.5, so 1 has nowhere further
+        // to open) - the old, unconditional `Math.round` would have given a
+        // bottom rung of 16 in every case. This is the case that closes the
+        // three points where RATCHET's PEAK-sweep row still differed from
+        // KAZOO's before this fix (see `PEAK sweep is monotonic`'s own
+        // comment) - all three sit above SNAP_CEILING, not below SNAP_FLOOR.
+        val aboveCeilingKBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.7f, 0.8f)
+        for (bloom in listOf(0.25f, 0.5f, 1f)) {
+            val ks = Glint.ratchetLadder(aboveCeilingKBase, Dsp.lin(bloom, 0f, Glint.BLOOM_MAX))
+            assertEquals(
+                aboveCeilingKBase,
+                ks.first(),
+                "RATCHET's bottom rung must stay at the unrounded kBase above SNAP_CEILING",
+            )
+            for (k in ks.drop(1)) {
+                assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k above the bottom is not an integer")
+            }
+            assertTrue(ks.toSet().size == ks.size, "RATCHET ladder repeats a rung: ${ks.toList()}")
+        }
+    }
+
+    @Test
+    fun `RATCHET climbs further as BLOOM opens`() {
+        val kBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.45f, 0.8f)
+        val small = Glint.ratchetLadder(kBase, Dsp.lin(0.25f, 0f, Glint.BLOOM_MAX)).last()
+        val large = Glint.ratchetLadder(kBase, Dsp.lin(1f, 0f, Glint.BLOOM_MAX)).last()
+        assertTrue(large > small, "RATCHET's ladder top did not rise with BLOOM: $small -> $large")
+    }
+
+    /**
+     * The step is quantised to the phase wrap, where the window has just
+     * reached zero - the one instant any `k` starts a cycle from silence
+     * instead of interrupting a wide-open window mid-sine.
+     *
+     * The plan's own sketch for this test compared RATCHET against KAZOO
+     * over a broad early window (0.01-0.60 s). That control is confounded
+     * the same way `CICADA does not click at its inner restarts` found REED
+     * to be confounded for CICADA: KAZOO's BLOOM sweep runs downward from
+     * `kBase*(1+bloomAmount)` (its loudest, highest-carrier moment is at
+     * t=0), while RATCHET's ladder climbs upward from `kBase` (its lowest
+     * carrier is at t=0) - same starting `kBase` (RATCHET and KAZOO share
+     * `rootHz` and `kCeilingFor`, so `ratioFor` returns byte-identical values
+     * for both at any shared macros), opposite direction. Over a broad early
+     * window KAZOO sits at a much higher instantaneous carrier than RATCHET,
+     * and a sine's sample-to-sample step scales with frequency - so KAZOO's
+     * own "worst jump" baseline is inflated by nothing to do with clicking,
+     * and a bar built on it could clear for the wrong reason.
+     *
+     * The fix is the one the CICADA test already used for the equivalent
+     * problem: hold everything but the mechanism fixed. Here that needs no
+     * second voice at all - compare RATCHET against itself, a window
+     * straddling a step boundary against an equal-width window fully inside
+     * one rung, close enough in time that the envelope has barely moved
+     * between them. Same voice, same render, same render call, differing
+     * only in whether a step boundary falls inside the window.
+     *
+     * Measured on `synthesize`'s raw oversampled buffer, not `render`: as the
+     * CICADA test's own comment notes, `Dsp.decimate` low-passes to the
+     * output Nyquist, which is exactly the filter that would smooth a wrap
+     * discontinuity away before it could be seen.
+     *
+     * TUNE must be off RATCHET's default (0.5, i.e. 440 Hz): the root
+     * (220 Hz) times [Glint.RATCHET_STEP_SECONDS] (0.15 s) is 33, an
+     * integer, so every octave of the root (TUNE 0, 0.5, 1 -> 220/440/880
+     * Hz) lands the nominal step boundary on an exact whole number of
+     * cycles - the step and the phase wrap coincide by construction there,
+     * regardless of whether the mutation below is present. First round of
+     * mutation-verification used the default TUNE and the mutation did NOT
+     * fail (straddle and inside both stayed at the ordinary per-cycle
+     * transient's size) for exactly this reason - not because the design
+     * was wrong, but because 440*0.15=66 exactly gave the mutated code
+     * nowhere mid-cycle to land. TUNE=0.3 -> f0=329.6 Hz -> 329.6*0.15=49.4,
+     * comfortably off-integer, exposes it.
+     *
+     * Mutation-verified 2026-09-27 at TUNE=0.3: moved the `rung` update out
+     * of the `if (phase >= 1f)` block so it runs every sample (the exact
+     * mistake this design guards against - a rung picked at whatever phase
+     * elapsed time happens to cross the 150 ms mark, instead of only at the
+     * wrap). Correct code (both measured against `inside=0.03507772`, which
+     * the mutation leaves untouched since that window never contains a step
+     * boundary either way): straddle=0.042295076 (ratio 1.206x, clears the
+     * 3x bar). Mutated code: straddle=0.1769346 (ratio 5.045x, fails, as it
+     * must - a clean separation from the passing 1.206x). Reverted
+     * immediately after recording it.
+     */
+    @Test
+    fun `RATCHET does not click when it steps`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        // TUNE=0.3, not left at its 0.5 default - see this test's own KDoc
+        // for why the default's exact-integer step/cycle ratio would hide
+        // the very bug this test exists to catch.
+        val raw = Glint.synthesize(GlintVoice.RATCHET, mapOf("TUNE" to 0.3f, "BLOOM" to 1f, "DECAY" to 0.9f), rate)
+        val snip = Snip(raw, 1, rate)
+        val step = Glint.RATCHET_STEP_SECONDS
+        // Straddles the first step boundary (nominally at t=step; the actual
+        // wrap lands within one cycle period after it) - wide enough (0.2 *
+        // step = 30 ms, ~10 cycles at this 329.6 Hz note) to contain it
+        // regardless of exactly where in that cycle it falls.
+        val straddle = worstAdjacentJump(snip, from = step * 0.9f, to = step * 1.1f)
+        // Same width, fully inside the second rung - no boundary within it,
+        // starting only 15 ms after the first window ends so the amplitude
+        // envelope has barely moved between the two.
+        val inside = worstAdjacentJump(snip, from = step * 1.2f, to = step * 1.4f)
+        assertTrue(
+            straddle < inside * 3f,
+            "RATCHET's worst jump straddling a step boundary ($straddle) vs fully inside one rung ($inside) — the step is clicking",
+        )
+    }
+
+    /**
+     * The spec's central claim for PLATE: `k(t) = kBase * (1 + BLOOM *
+     * amp_env(t))`, no separate clock — a struck plate is brightest at the
+     * strike and its formant falls as the note does.
+     *
+     * Fixture: `Glint.defaults(PLATE)` (TUNE 0.5, PEAK 0.45, FOLLOW 0.8) +
+     * BLOOM 1, DECAY 0.9, BODY 0 (silences the second formant so only the
+     * main burst's ratio drives the centroid).
+     *
+     * This bar does NOT by itself discriminate the new coupling from the
+     * old BLOOM_T60 sweep PLATE fell through to before this task (Task 1-3's
+     * `else` branch, the one every other bloom-sweeping voice still takes):
+     * that sweep also falls from an opened head to a settled tail, and its
+     * fixed 0.45s t60 happens to be almost fully settled by this fixture's
+     * 0.45-0.60s tail window regardless of DECAY. Measured with the
+     * mechanism ABSENT (PLATE still on the plain sweep), 2026-09-27:
+     * head=3700.7407 tail=1728.2657, ratio=0.46700537 - already clears
+     * `tail < head * 0.8`. Measured WITH the mechanism: head=5232.801
+     * tail=1958.1921, ratio=0.37421492 - also clears it, and is a genuine
+     * fall either way. `PLATE's fall tracks the amplitude envelope, not a
+     * separate curve`, immediately below, is the test that actually tells
+     * the two mechanisms apart - the discriminating power lives there, not
+     * here.
+     */
+    @Test
+    fun `PLATE's formant falls as the note decays`() {
+        val snip = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 1f, "DECAY" to 0.9f, "BODY" to 0f))
+        val head = FeatureExtractor.extract(slice(snip, 0.02f, 0.10f)).centroidHz
+        val tail = FeatureExtractor.extract(slice(snip, 0.45f, 0.60f)).centroidHz
+        assertTrue(tail < head * 0.8f, "PLATE's centroid went $head -> $tail — it did not fall")
+    }
+
+    /**
+     * The spec's requirement, and the one test in this trio that actually
+     * separates `k(t) = kBase * (1 + BLOOM * amp_env(t))` from a fixed-rate
+     * sweep: `amp_env` runs on the note's own DECAY, so a longer note must
+     * still be bright at a fixed wall-clock instant where a shorter note has
+     * already gone dark. A sweep on a constant BLOOM_T60 has no idea how
+     * long the note is and reads the same at that instant either way.
+     *
+     * Fixture: BLOOM 1, BODY 0, everything else at `Glint.defaults(PLATE)`;
+     * DECAY 0.3 (t60 ~0.251s, duration ~0.339s) for the short note, DECAY
+     * 0.95 (t60 ~1.238s, duration ~1.672s) for the long one; both probed at
+     * 0.25-0.30s. The short note's probe sits deep in its own tail (its amp
+     * envelope is ~0.001 of peak there) - checked this is a real reading and
+     * not `FeatureExtractor`'s silent-buffer fallback (which would return a
+     * centroid of exactly 0 and pass this bar vacuously): the probed slice
+     * holds 2205 frames and peaks at 0.0011 (the long note's same-width
+     * slice peaks at 0.173) - both comfortably above the `total <= EPSILON`
+     * (1e-10) floor that triggers the fallback.
+     *
+     * Measured with the mechanism ABSENT (PLATE on the plain BLOOM_T60
+     * sweep, which ignores DECAY entirely), 2026-09-27: shortC=1794.223
+     * longC=1791.5879, ratio=0.99853134 - both notes read the same centroid
+     * at this instant, as a clock blind to DECAY must. Fails `> 1.15`
+     * cleanly, confirming the bar separates the two mechanisms instead of
+     * passing by default. Measured WITH the mechanism: shortC=1729.6843
+     * longC=2789.7527, ratio=1.6128681 - clears 1.15 with ~40% margin.
+     *
+     * Mutation-verified 2026-09-27: temporarily replaced `amp.at(t)` with
+     * `Dsp.envAt(t, BLOOM_T60)` in PLATE's own branch of `synthesize` (a
+     * fixed-rate fall — the exact regression this test exists to catch) and
+     * reran. Result was byte-identical to the mechanism-ABSENT numbers
+     * above - shortC=1794.223 longC=1791.5879, ratio=0.99853134 - which is
+     * expected, since that substitution makes PLATE's branch arithmetically
+     * identical to the `else` branch every other bloom-sweeping voice
+     * already takes. Fails the bar, as it must; reverted immediately after
+     * recording it.
+     */
+    @Test
+    fun `PLATE's fall tracks the amplitude envelope, not a separate curve`() {
+        // The spec's requirement. k(t) = kBase * (1 + BLOOM * amp_env(t)), so a
+        // LONGER note must hold its brightness longer in absolute time: the
+        // coupling has no clock of its own. A fixed-rate sweep would fall at
+        // the same wall-clock rate regardless of DECAY.
+        val short = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 1f, "DECAY" to 0.3f, "BODY" to 0f))
+        val long = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 1f, "DECAY" to 0.95f, "BODY" to 0f))
+        val at = 0.25f
+        val shortC = FeatureExtractor.extract(slice(short, at, at + 0.05f)).centroidHz
+        val longC = FeatureExtractor.extract(slice(long, at, at + 0.05f)).centroidHz
+        assertTrue(
+            longC > shortC * 1.15f,
+            "at ${at}s the long note's centroid is $longC and the short note's is $shortC — the fall is not tied to the envelope",
+        )
+    }
+
+    /**
+     * The control: at BLOOM 0, `bloomAmount` is 0 and `k(t) = kBase *
+     * (1 + 0 * amp.at(t)) = kBase` for every `t` - the coupling is gated off
+     * entirely and PLATE is an ordinary, fixed-ratio saw-window voice. If
+     * this fails, BLOOM is not actually gating it.
+     *
+     * Measured 2026-09-27, mechanism ABSENT and WITH the mechanism alike:
+     * head=1725.7195 tail=1725.5787, ratio=8.1558486E-5, in both cases. That
+     * identity is not a coincidence: `0f * x` is exactly `0f` for any finite
+     * `x` in IEEE754, so at BLOOM 0 the old `envAt(t, BLOOM_T60)` curve and
+     * the new `amp.at(t)` curve are each multiplied by zero and vanish from
+     * the expression the same way — PLATE at BLOOM 0 renders byte-identical
+     * regardless of which curve the `when` branch names.
+     */
+    @Test
+    fun `PLATE at BLOOM zero does not move its formant`() {
+        // The control: with the coupling depth at zero, k(t) = kBase and PLATE
+        // is an ordinary saw-window voice. If this fails, the coupling is not
+        // actually gated on BLOOM.
+        val snip = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 0f, "DECAY" to 0.9f, "BODY" to 0f))
+        val head = FeatureExtractor.extract(slice(snip, 0.02f, 0.10f)).centroidHz
+        val tail = FeatureExtractor.extract(slice(snip, 0.45f, 0.60f)).centroidHz
+        assertTrue(
+            kotlin.math.abs(tail - head) < head * 0.15f,
+            "PLATE at BLOOM 0 moved its centroid $head -> $tail",
+        )
     }
 }
