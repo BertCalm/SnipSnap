@@ -288,22 +288,34 @@ class PluckTest {
         // The drone loop rings at 0.5·f0 for the whole note - the octave
         // below, something the dry string cannot make at any time, no
         // matter when it's measured. So the window sits where both
-        // renders exist: the dry render at DAMP 0.5 is decay-limited to
-        // about 0.56 s, while the wet one runs the full 1.3 s budget.
+        // renders exist: `late` skips the attack, and the window itself
+        // is sized to whatever's actually left after it on the shorter of
+        // the two renders (never more than 0.25 s) - a hardcoded 0.25 s
+        // requirement broke here once already when the dry render's own
+        // trimmed length moved (trimToDecay's -60dB-from-peak cut is
+        // sensitive to the peak, not just the decay rate, so its exact
+        // length isn't a stable thing to assume in seconds; the window
+        // this test actually needs is relative to what came back, not a
+        // fixed count).
         val late = 0.3f
+        val windowSeconds = minOf(0.25f, dry.durationSeconds - late, wet.durationSeconds - late)
+        require(windowSeconds > 0f) {
+            "no post-$late-s window available: dry ${dry.durationSeconds} s, wet ${wet.durationSeconds} s"
+        }
         fun energyAt(s: com.snipsnap.audio.Snip, hz: Float): Double {
             val from = (late * s.sampleRate).toInt()
-            require(s.frameCount - from >= (0.25f * s.sampleRate).toInt()) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the 0.25 s window" }
-            val slice = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
-            return PluckSpectra.toneEnergy(slice, hz, 0.25f)
+            val n = (windowSeconds * s.sampleRate).toInt()
+            require(s.frameCount - from >= n) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the $windowSeconds s window" }
+            val slice = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, from + n), channels = 1, sampleRate = s.sampleRate)
+            return PluckSpectra.toneEnergy(slice, hz, windowSeconds)
         }
         fun droneEnergy(s: com.snipsnap.audio.Snip): Double = energyAt(s, 0.5f * f0)
         val gain = 10.0 * kotlin.math.log10(droneEnergy(wet) / (droneEnergy(dry) + 1e-12))
-        println("SITAR drone energy at half the note, in the 0.3–0.55 s window, DOUBLE 1 over DOUBLE 0: $gain dB")
-        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the drone at half the note by 6 dB in the 0.3–0.55 s window, got $gain dB")
+        println("SITAR drone energy at half the note, in the $late-${late + windowSeconds} s window, DOUBLE 1 over DOUBLE 0: $gain dB")
+        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the drone at half the note by 6 dB in the $late-${late + windowSeconds} s window, got $gain dB")
 
         val fifthGain = 10.0 * kotlin.math.log10(energyAt(wet, 1.5f * f0) / (energyAt(dry, 1.5f * f0) + 1e-12))
-        println("SITAR drone energy at the fifth, in the 0.3–0.55 s window, DOUBLE 1 over DOUBLE 0: $fifthGain dB")
+        println("SITAR drone energy at the fifth, in the $late-${late + windowSeconds} s window, DOUBLE 1 over DOUBLE 0: $fifthGain dB")
         assertTrue(fifthGain >= 6.0, "DOUBLE 1 should ring the fifth by 6 dB too, the fifth, which no detuned second string can add either, got $fifthGain dB")
 
         assertTrue(!dry.samples.contentEquals(wet.samples), "DOUBLE 1 must change the render")
@@ -331,23 +343,36 @@ class PluckTest {
                 "series ${series.durationSeconds} s",
         )
 
+        // `late` skips the attack; the window itself is sized to whatever
+        // is actually left after it on the shortest of the three renders
+        // (never more than 0.25 s), not a hardcoded 0.25 s requirement -
+        // see `DOUBLE on the sitar is the sympathetic strings, not the
+        // detune`'s identical comment for why a fixed second count broke
+        // here once already (trimToDecay's cut moves with the peak, not
+        // only with the decay rate, so its length in seconds isn't stable
+        // to assume).
         val late = 0.3f
+        val windowSeconds = minOf(0.25f, dry.durationSeconds - late, scale.durationSeconds - late, series.durationSeconds - late)
+        require(windowSeconds > 0f) {
+            "no post-$late-s window available: dry ${dry.durationSeconds} s, scale ${scale.durationSeconds} s, series ${series.durationSeconds} s"
+        }
         fun energyAt(s: Snip, hz: Float): Double {
             val from = (late * s.sampleRate).toInt()
-            require(s.frameCount - from >= (0.25f * s.sampleRate).toInt()) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the 0.25 s window" }
-            val slice = Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
-            return PluckSpectra.toneEnergy(slice, hz, 0.25f)
+            val n = (windowSeconds * s.sampleRate).toInt()
+            require(s.frameCount - from >= n) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the $windowSeconds s window" }
+            val slice = Snip(s.samples.copyOfRange(from, from + n), channels = 1, sampleRate = s.sampleRate)
+            return PluckSpectra.toneEnergy(slice, hz, windowSeconds)
         }
 
         val thirdHz = 5f / 4f * f0
         val sixthHz = 5f / 3f * f0
 
         val thirdOverDry = 10.0 * kotlin.math.log10(energyAt(scale, thirdHz) / (energyAt(dry, thirdHz) + 1e-12))
-        println("SITAR scale tuning energy at the major third, in the 0.3-0.55 s window, over the dry string: $thirdOverDry dB")
+        println("SITAR scale tuning energy at the major third, in the $late-${late + windowSeconds} s window, over the dry string: $thirdOverDry dB")
         assertTrue(thirdOverDry >= 10.0, "the scale tuning should ring the major third by 10 dB over the dry string, got $thirdOverDry dB")
 
         val sixthOverDry = 10.0 * kotlin.math.log10(energyAt(scale, sixthHz) / (energyAt(dry, sixthHz) + 1e-12))
-        println("SITAR scale tuning energy at the sixth, in the 0.3-0.55 s window, over the dry string: $sixthOverDry dB")
+        println("SITAR scale tuning energy at the sixth, in the $late-${late + windowSeconds} s window, over the dry string: $sixthOverDry dB")
         assertTrue(sixthOverDry >= 10.0, "the scale tuning should ring the sixth by 10 dB over the dry string, got $sixthOverDry dB")
 
         val thirdOverSeries = 10.0 * kotlin.math.log10(energyAt(scale, thirdHz) / (energyAt(series, thirdHz) + 1e-12))
@@ -728,6 +753,34 @@ class PluckTest {
             val b = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
             assertTrue(a.contentEquals(b), "$voice is not deterministic")
         }
+    }
+
+    @Test
+    fun `the wrap adds harmonics over the fundamental at the shipped depth`() {
+        // The buzz-content assertion the original brief deferred until a
+        // depth was actually settled: `harmonicsOverFundamental` (2nd-8th
+        // harmonic over the fundamental, past onset, the measure
+        // PluckSpectra's own KDoc names as what a jawari should be judged
+        // against, not a >2kHz share) is what the final A/B gate's pick
+        // and the measured peak agreed on (spec, "The jawari") - 0.015
+        // measured LOWER here than no wrap at all, which is why that depth
+        // was never a genuine buzz claim; 0.010 is where this metric
+        // actually peaks, and this is that claim, written for real instead
+        // of deferred again.
+        val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        fun hofAt(jawari: Float): Double {
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DOUBLE" to 0f), rate, velocity = 1f, jawariOverride = jawari)
+            val snip = Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+            return PluckSpectra.harmonicsOverFundamental(snip, f0, 2, 8, 0.15f, 0.20f)
+        }
+        val dry = hofAt(0f)
+        val shipped = hofAt(Pluck.SITAR_JAWARI)
+        println("SITAR harmonicsOverFundamental: jawari 0 = $dry, jawari ${Pluck.SITAR_JAWARI} (shipped) = $shipped")
+        assertTrue(
+            shipped > dry,
+            "the wrap should add harmonic content over the fundamental at the shipped depth: $dry (dry) vs $shipped (shipped)",
+        )
     }
 
     @Test

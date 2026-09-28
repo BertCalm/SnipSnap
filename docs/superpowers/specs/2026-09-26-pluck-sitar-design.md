@@ -171,6 +171,102 @@ parameter (default 1.0) and `atVelocity` calls it directly for a
 a `MacroSpec`: it has no knob, no preset carries it, no pad recipe saves it,
 and `macrosFor` does not list it. The other four voices ignore it.
 
+**The mechanism changed again after this section was written.** A later
+round on this branch replaced the quadratic-bend-plus-DC-blocker version
+above with a different in-loop design: the loop length is stretched by a
+static budget computed from the drive alone (`exact` in `Pluck.ks`), and a
+slow (2 ms attack / 15 ms release) envelope follower shifts the delay
+line's read position by a fraction of the period, capped at
+`SITAR_WRAP_MAX`. `Pluck.kt`'s own KDoc on `ks`'s `jawari` parameter and on
+`SITAR_JAWARI` is the current, authoritative description of what actually
+ships (or is staged to) - this section's diagrams and formula are history,
+not the present mechanism.
+
+**Resolution (2026-09-27).** Three engineering rounds separate the design
+above from what ships. The first tried the fast, rail-driven drive
+(0.3, per-sample, essentially the formula above) and broke the spectral
+tests meant to prove the buzz was real - the "History" paragraph above
+records the four placements tried and how each failed. The second drained
+the rail through a DC blocker inside the loop and broke tuning instead -
+a one-sided term inside feedback needs its own phase budgeted into the
+loop length, and this one detuned the note non-monotonically as depth
+fell, ruling out a simple wrong-constant fix. The third replaced the
+mechanism outright: `Pluck.ks`'s KDoc on `jawari` has the version that
+ships - a slow (2 ms attack / 15 ms release) envelope follower shifting
+the delay line's own read position, the loop's average length stretched
+by a static budget computed from the drive alone, no runtime giveback.
+This fixed tuning (every semitone inside a quarter tone, at every depth
+tried) but left the depth-vs-buzz relationship unexamined.
+
+Josh's first gate on that third mechanism (chips on the audition page,
+before anyone had measured that relationship) picked the fuller of two
+depths on offer, 0.015 over 0.003 - `spike_wrap_020`,
+`p3b_wrap_full_default` and `p3b_wrap_full_root` all chipped closer, at
+both the played note (C#4) and the root (C#3). Measuring before
+committing (this repo's practice for every round on this branch) found
+0.015 actually measures with LESS harmonic content than 0.003, by the
+measure `PluckSpectra`'s own KDoc names for exactly this
+(`harmonicsOverFundamental`, the 2nd-8th harmonic over the fundamental,
+past onset) - the chip had been read as "buzz over strict tuning," but
+the harmonics said the opposite. A second, cleaner gate settled it: a
+plain two-clip A/B, 0.010 against 0.015, no other context - Josh picked
+0.010 outright. That preference and the measurement agree, independently:
+`harmonicsOverFundamental` reads 4.4709 with no wrap at all, peaks at
+4.6422 at 0.010, and has already fallen to 3.0152 by 0.015 - 0.015 was
+already past its own peak. **`SITAR_JAWARI = 0.010` ships.**
+`the wrap adds harmonics over the fundamental at the shipped depth`
+(PluckTest) asserts it for real, the buzz-content test this design
+deferred since its very first draft.
+
+The DC-offset and dry-decay-duration questions the 0.015 attempt raised
+were resolved along the way, independent of the final depth. `Pluck.ks`
+and `Pluck.synthesize`'s SITAR branch each gained an output-side one-pole
+high-pass at 2 Hz (guarded by `jawari > 0f`, outside any feedback path, so
+no budget term needed, unlike the old in-loop blocker) - the new
+mechanism's loop has no DC blocker analogous to the old one's, and the
+tarab's own near-unity feedback (`SYMPATHETIC_FEEDBACK` 0.995, a DC gain
+of `1/(1-0.995) = 200`) turned even a tiny residual from the string-level
+fix back into a measurable offset, so it needed the fix twice (string
+ratio 2.76e-4 -> 1.47e-6; tarab ratio 8.05e-4 -> 1.82e-5, both now under
+the 1.0e-4 bound). `the jawari leaves no offset` passes, and `the
+oversampled render's decay time matches a direct native-rate render`
+(every voice) still passes too - the specific regression a
+rate-mismatched high-pass caused in an earlier attempt at exactly this
+fix did not recur, since both `Dsp.OnePole`s are constructed with their
+call site's own `rate` parameter explicitly. Separately, the apparent
+dry-decay-duration finding turned out to be a measurement artifact, not
+an engine defect: `trimToDecay`'s -60dB-from-peak cut moves with the
+peak, not only the decay rate (confirmed: RMS compared in two fixed
+windows at jawari 0 and 0.015 decayed within 0.6 dB of each other), so
+`DOUBLE on the sitar is the sympathetic strings, not the detune` and `the
+scale tuning rings where the note has nothing` now size their own "late"
+analysis window relative to whatever duration the renders being compared
+actually return, rather than assuming a fixed number of seconds will
+always be there.
+
+At the shipped 0.010, the tuning cost is real but smaller than 0.015's:
+swept across all 25 semitones at the default (DOUBLE 0,
+`TuningAccuracyTest`'s "the wrap's tuning cost stays inside a quarter
+tone..."), worst sharp is +11.4 cents (semitone 2, not the root), worst
+flat -15.7 cents (semitone 24), crossing between semitones 8 and 9 - the
+same crossing point as 0.015, at roughly a third of that depth's own
+worst-case cents. Most notes still fall outside the ordinary five-cent
+bound, so the shared sweep (`every Pluck semitone lands within five cents
+at the default body`) still excludes SITAR by name, pointing at the
+dedicated test. Three more tests reach the same string cost and are
+handled the same way, measured rather than loosened blind: `STRIKE at
+either end keeps every Pluck voice within five cents` now skips SITAR too
+- a new companion test, `the wrap's tuning cost stays inside a quarter
+tone at both STRIKE ends too`, covers what it drops (-7.8 cents at the
+default STRIKE, -12.2 at STRIKE 0, both well inside the quarter tone);
+and `the sympathetic strings at DOUBLE 1 keep every sitar note within
+five cents` / `the scale tuning at DOUBLE 1 keeps every sitar note within
+five cents` are renamed to `... inside a quarter tone, the wrap's own
+cost aside`, since the five-cent bound they carried was never actually
+testing what DOUBLE 1 itself adds - their own worst measured values
+(~7-8 cents, at the root) track the dry string's own root-note cost
+(~8.4 cents), not a DOUBLE-1-specific defect.
+
 ### Sympathetic strings under DOUBLE
 
 A sitar carries eleven to thirteen tarab strings under the frets, tuned to

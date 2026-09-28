@@ -200,6 +200,7 @@ object Pluck {
         stiffnessOverride: Float? = null,
         jawariOverride: Float? = null,
         sympatheticOverride: Sympathetic? = null,
+        sympatheticSoloOverride: Boolean = false,
     ): FloatArray {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
@@ -251,11 +252,35 @@ object Pluck {
                 val s = sympatheticOverride ?: SYMPATHETIC_SERIES
                 val g = s.level * double
                 val string = out.copyOf()
+                // Audition-only: [sympatheticSoloOverride] silences the main
+                // string right here - after it has fed [string], so the tarab
+                // still hear it, but before their sum is added to [out] - so
+                // what [out] holds after the loop below is the tarab alone.
+                // Never reachable from a macro or preset, like [jawariOverride].
+                if (sympatheticSoloOverride) out.fill(0f)
                 for ((k, ratio) in s.ratios.withIndex()) {
                     val sign = if (k % 2 == 0) 1f else -1f
                     val hz = freq * ratio * (1f + sign * s.detune)
                     val loop = sympathetic(string, hz, rate, s.coupling, s.onset, (s.onsetSeconds * rate).toInt())
                     for (i in out.indices) out[i] += g * loop[i]
+                }
+                // [ks]'s own output high-pass cleans the string (its own
+                // residual measures ~1e-6 of peak, negligible) before it
+                // ever reaches [string] above, but each tarab loop is a
+                // near-unity-feedback resonator (SYMPATHETIC_FEEDBACK
+                // 0.995) whose own DC gain is 1/(1-0.995) = 200 - even that
+                // negligible residual, fed continuously for the note's
+                // whole ~1.3 s budget, comes back out amplified into a
+                // measurable offset (measured: the combined DOUBLE-default
+                // render alone, without this, still failed `the jawari
+                // leaves no offset`'s bound by about 1.2x after [ks]'s
+                // fix closed the same bound's dry-string half outright).
+                // Same fix, same reasoning, one level up: a plain one-pole
+                // high-pass over the finished sum, applied once, outside
+                // every loop's own feedback path.
+                if (jawari > 0f) {
+                    val dcHp = Dsp.OnePole(rate)
+                    for (i in out.indices) out[i] -= dcHp.lp(out[i], 2f)
                 }
             } else {
                 // The 12-string trick: a second, slightly sharp string under the
@@ -292,9 +317,9 @@ object Pluck {
      * low-pass changes what a keygroup sounds like near the top of its
      * range, same as every other engine.
      */
-    internal fun renderWith(voice: PluckVoice, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null, sympathetic: Sympathetic? = null): Snip {
+    internal fun renderWith(voice: PluckVoice, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null, sympathetic: Sympathetic? = null, sympatheticSolo: Boolean = false): Snip {
         val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = synthesize(voice, macros, renderRate, velocity = velocity, stiffnessOverride = stiffness, jawariOverride = jawari, sympatheticOverride = sympathetic)
+        val raw = synthesize(voice, macros, renderRate, velocity = velocity, stiffnessOverride = stiffness, jawariOverride = jawari, sympatheticOverride = sympathetic, sympatheticSoloOverride = sympatheticSolo)
         val out = Dsp.decimate(raw, RATE)
 
         // Loudness, not peak: a sine-heavy voice at equal peak reads quieter
@@ -392,11 +417,51 @@ object Pluck {
     }
 
     /**
-     * The jawari's drive (see [ks]) times [velocityDrive]. 0.3 is the
-     * starting point; the audition hears 0.15, 0.3 and 0.6 and the chips
-     * choose (spec, "The jawari").
+     * The wrap's drive (see [ks]) times [velocityDrive]. **0.010, settled**
+     * at a second, cleaner gate (2026-09-27) than the one that first
+     * chipped 0.015: a plain two-clip A/B (0.010 vs 0.015, no other
+     * context) had Josh pick 0.010 outright. That preference and a
+     * measurement agree, independently: `harmonicsOverFundamental`
+     * (2nd-8th harmonic over the fundamental, 0.15-0.35 s past onset -
+     * `PluckSpectra`'s own KDoc names it the measure a jawari should be
+     * judged against) reads 4.4709 with no wrap at all, rises to 4.6422 at
+     * 0.010, and had already fallen back to 3.0152 by 0.015 - so 0.015,
+     * the depth an earlier gate chipped before anyone had measured this,
+     * was already past the peak. `the wrap adds harmonics over the
+     * fundamental at the shipped depth` (PluckTest) is that claim, now a
+     * real assertion. See the spec's "The jawari" for the three
+     * engineering rounds and the two gates in full.
+     *
+     * This is a much smaller number than the old rail-driven mechanism's
+     * 0.3, because it now scales a fractional-sample shortening
+     * ([SITAR_WRAP_REF], [SITAR_WRAP_MAX]) rather than a per-sample y²
+     * pulldown.
+     *
+     * The chosen depth still has a real, measured tuning cost, smaller
+     * than 0.015's but not gone: swept across all 25 semitones at this
+     * default (DOUBLE 0, `TuningAccuracyTest`'s "the wrap's tuning cost
+     * stays inside a quarter tone..."), it reads at worst +11.4 cents
+     * sharp (semitone 2, not the root) and -15.7 cents flat at the top
+     * (semitone 24), crossing between semitones 8 and 9 - about a third of
+     * the way up the range, same crossing point as at 0.015, a third of
+     * that depth's own worst-case cents. Most notes still fall outside the
+     * ordinary five-cent bound. [ks]'s KDoc on [jawari] has the likely
+     * reason the sign flips with register. Three tests beyond the
+     * dedicated sweep also reach this cost and were adjusted, not
+     * loosened blind: `STRIKE at either end keeps every Pluck voice within
+     * five cents` now skips SITAR (its own quarter-tone companion test
+     * covers STRIKE's two ends), and `the sympathetic strings at DOUBLE 1
+     * keep every sitar note inside a quarter tone, the wrap's own cost
+     * aside` / `the scale tuning at DOUBLE 1 keeps every sitar note inside
+     * a quarter tone, the wrap's own cost aside` (both renamed from a
+     * five-cent bound they were never actually testing, since the residual
+     * is this same string cost, not anything DOUBLE-1-specific).
      */
-    internal const val SITAR_JAWARI = 0.3f
+    internal const val SITAR_JAWARI = 0.010f
+    /** How much the loop shortens per unit of swing (see [ks]'s KDoc on [jawari]). */
+    internal const val SITAR_WRAP_REF = 0.03f
+    /** The loop never shortens by more than this fraction of its own period. */
+    internal const val SITAR_WRAP_MAX = 0.03f
 
     internal fun jawariFor(voice: PluckVoice): Float = when (voice) {
         PluckVoice.SITAR -> SITAR_JAWARI
@@ -584,15 +649,49 @@ object Pluck {
      * the coefficient falls. Its phase delay at the fundamental is
      * subtracted from the loop length so the note stays in tune.
      *
-     * [jawari] is the bridge limiter's drive in [0, 1): after the low-pass,
-     * positive swings are pulled down by `jawari · y² / p0` (clamped so it
-     * never crosses zero), the way a string wrapping on a flat bridge is
-     * stopped on one side; a 2 Hz DC blocker follows because a one-sided
-     * term leaves an offset. A zero at DC nulls that offset at any corner -
-     * 2 Hz is chosen only for how fast a slow offset drains and how much
-     * lead the loop owes for it, and its own phase lead at the fundamental
-     * is budgeted into the loop length the same way the low-pass's and the
-     * stiffness allpass's are; both are skipped at 0.
+     * [jawari] is the wrap's drive: how much the loop shortens, per
+     * [SITAR_WRAP_REF] of the string's own swing - tracked by a slow
+     * envelope follower, not sample by sample - capped at [SITAR_WRAP_MAX]
+     * of the period. The note's average pitch is kept in tune by `exact`'s
+     * own budget below (`(rate/freq) / (1 - min(jawari, SITAR_WRAP_MAX))`),
+     * a static correction computed once from the drive alone, not a
+     * runtime giveback - there is nothing left to give back once the
+     * budget already accounts for it. What remains audible is the
+     * within-cycle motion itself, which shrinks as the note decays because
+     * the envelope driving it does. Skipped entirely at 0.
+     *
+     * Measured (not assumed): swept across all 25 semitones at the shipped
+     * default, the sign is not a coin flip at the ends - it is a smooth,
+     * monotonic slide from sharp at the bottom of the range to flat at the
+     * top, crossing between semitones 8 and 9 (about a third of the way
+     * up, not at the range's middle); the full table and the worst cents
+     * on each side are in [SITAR_JAWARI]'s KDoc, not repeated here.
+     *
+     * The likely reason, not yet proven by direct instrumentation of
+     * [env] itself: the static budget above assumes the envelope sits at
+     * [SITAR_WRAP_REF] - the one level at which the runtime shortening
+     * (`jawari * n * env / SITAR_WRAP_REF`) exactly equals the budgeted
+     * amount. Away from that level the two disagree, and a fixed
+     * real-time measurement window would disagree with it differently by
+     * register: a loop's round trips happen at its own fundamental, so
+     * over any fixed time span a high note completes far more of them
+     * than a low one, and if the envelope decays a roughly fixed fraction
+     * per round trip - similar to the loop's own per-trip feedback decay -
+     * it has fallen correspondingly further by the time that span is
+     * read. At this voice's DAMP default the per-trip feedback gain is
+     * 0.969, so by 0.30 s in (measuredHz's own window) a note at the
+     * bottom of the range has completed only ~42 round trips and retains
+     * about 27% of its own recent peak, against ~167 round trips and
+     * about 0.5% for a note at the top - a low note's envelope is
+     * therefore still the closer of the two to [SITAR_WRAP_REF] (or
+     * pinned at the [SITAR_WRAP_MAX] cap) when the window is read, so it
+     * plausibly shortens more than the
+     * budget assumed and reads sharp; a high note's envelope has likely
+     * fallen much further below [SITAR_WRAP_REF] by the same real time,
+     * so it shortens less than the budget assumed and reads flat. That
+     * direction matches the measured crossover; the exact crossing point
+     * (semitones 8-9, not the register midpoint) has not been derived
+     * from this argument, only observed.
      */
     internal fun ks(
         freq: Float,
@@ -669,22 +768,8 @@ object Pluck {
             -phase / w
         } else 0.0
 
-        val dcA = (1.0 - exp(-2.0 * PI * 2.0 / rate)).toFloat()
-        // The DC blocker after the jawari is a one-pole high-pass, and a
-        // high-pass leads at the fundamental: its phase delay is negative
-        // and, like the low-pass's and the stiffness allpass's, it belongs
-        // to the loop's budget or the note reads sharp. A zero at DC nulls
-        // the offset at any corner; the corner only sets how fast a slow
-        // offset drains and how much lead the loop owes for it - 2 Hz (not
-        // 20) keeps that lead under a degree at the lowest note (C#3) and
-        // the dispersion it leaves on the upper partials is 0.11 % at the
-        // default note C#4 and 0.23 % at the root.
-        val dcDelay = if (jawari > 0f) {
-            val r = 1.0 - dcA
-            val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
-            -phase / w
-        } else 0.0
-        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - 0.5
+        val budgetedJawari = min(jawari, SITAR_WRAP_MAX)
+        val exact = (if (jawari > 0f) (rate / freq).toDouble() / (1.0 - budgetedJawari) else (rate / freq).toDouble()) - filterDelay - stiffDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -733,13 +818,6 @@ object Pluck {
         mean /= n
         for (i in 0 until n) burst[i] -= mean
 
-        // The bridge limiter scales to the string's own level: p0 is what a
-        // full swing looks like, so the same drive buzzes the same on every
-        // note and fades as the note does.
-        var p0 = 1e-6f
-        for (v in burst) if (kotlin.math.abs(v) > p0) p0 = kotlin.math.abs(v)
-        var dc = 0f
-
         // Pick position (Jaffe & Smith 1983): the burst minus a copy of
         // itself delayed by `position` of one period. The comb's notches
         // fall on every harmonic k where k*position is a whole number: the
@@ -767,8 +845,52 @@ object Pluck {
         }
 
         val loopLp = Dsp.OnePole(rate)
+        val dMax = SITAR_WRAP_MAX * n
+        // Attack and release far longer than one period (about 3.6 ms at
+        // this note) so the envelope - and the shortening it drives -
+        // changes slowly relative to the loop instead of swinging with
+        // every cycle. Two prior designs drove the shortening from the
+        // raw or DC-drained rail directly, both of which retain (or
+        // isolate) a ripple at the carrier rate; shifting a delay line's
+        // read position at the carrier's own rate is phase modulation
+        // synchronous with the loop's signal, not a static nonlinearity,
+        // and it measurably broke tuning and reversed the wrap's own
+        // velocity and drive trends. A follower this slow cannot do that:
+        // within any few periods the shortening it produces is close to
+        // constant, closer to a static fractional-delay shift than a
+        // modulator.
+        val envAttackK = (1.0 - exp(-1.0 / (0.002 * rate))).toFloat()
+        val envReleaseK = (1.0 - exp(-1.0 / (0.015 * rate))).toFloat()
+        var env = 0f
         for (i in n + 1 until out.size) {
-            val d = 0.5f * (out[i - n] + out[i - n - 1])
+            val d = if (jawari == 0f) 0.5f * (out[i - n] + out[i - n - 1]) else {
+                // The envelope tracks the rail's overall swing (both
+                // directions, so it is a clean amplitude follower, not a
+                // half-wave one with its own zero-crossing ripple); the
+                // one-sidedness of the physical effect is carried by
+                // `shorten` itself, which only ever shortens the loop,
+                // never lengthens it.
+                // DIAGNOSTIC ONLY (coordinator-requested, not shipped): the
+                // envelope-driven shortening restored on top of Step A's
+                // budgeted `exact` (which now bakes the reference-level
+                // shortening into the loop length up front, the same way
+                // filterDelay/stiffDelay already are), with no giveback at
+                // all - the prior round's wrapMean tracking is gone
+                // entirely, not just skipped, since the budget itself now
+                // accounts for it and there is nothing left to give back.
+                val rectified = kotlin.math.abs(out[i - 1])
+                env += (if (rectified > env) envAttackK else envReleaseK) * (rectified - env)
+                val shorten = min(dMax, jawari * n * env / SITAR_WRAP_REF)
+                val pos = (i - n + shorten).coerceAtLeast(1f)
+                val j = floor(pos).toInt()
+                val f = pos - j
+                // j+1 <= i-1 always: pos <= i - n + dMax = i - 0.97n, and n
+                // >= MIN_LOOP_SAMPLES, so both taps of both interpolated
+                // reads stay behind the write cursor.
+                val a1 = out[j] * (1f - f) + out[j + 1] * f
+                val a0 = out[j - 1] * (1f - f) + out[j] * f
+                0.5f * (a1 + a0)
+            }
             // First-order allpass: y[i] = a*(x[i] - y[i-1]) + x[i-1]. Order
             // matters here - it's the *tuned* sample that must feed both
             // the loop filter and the output, or the correction never
@@ -782,13 +904,36 @@ object Pluck {
                 stY1 = s
                 s
             } else tuned
-            var y = loopLp.lp(stiff, loopHz)
-            if (jawari > 0f) {
-                if (y > 0f) y -= jawari * min(y, p0) * y / p0
-                dc += dcA * (y - dc)
-                y -= dc
-            }
+            val y = loopLp.lp(stiff, loopHz)
             out[i] += fb * y
+        }
+
+        // The wrap's one-sided shortening leaves a small DC offset on
+        // [out] (measured, not assumed: `the jawari leaves no offset`
+        // is what catches it) - the old rail-driven mechanism had its own
+        // in-loop DC blocker for the same one-sidedness, and had to budget
+        // its phase delay into `exact` because it sat IN the feedback
+        // path, the same way the low-pass's and stiffness allpass's own
+        // delays are. This one sits OUTSIDE the loop instead: a plain
+        // one-pole high-pass over the finished [out], applied once after
+        // the loop above - there is no feedback path here for it to
+        // disturb, so no phase delay to add to the tuning budget. 2 Hz
+        // matches the old in-loop blocker's own corner: far enough below
+        // every voice's lowest note that its dispersion at the
+        // fundamental is negligible, and the corner's job is only how
+        // fast it drains a slow offset, not where it sits relative to the
+        // note. `Dsp.OnePole(rate)` - [rate] is this function's own
+        // parameter, explicitly, not the class's default - the low-pass
+        // it computes must scale with whichever rate `ks` is actually
+        // running at (native or the 4x oversampled path); constructing it
+        // with no argument would silently pin the coefficient to
+        // `Dsp.RATE` regardless, and the two paths would decay at
+        // different real-time rates the moment their sample rates differ
+        // (`the oversampled render's decay time matches a direct
+        // native-rate render` is what would catch that, for every voice).
+        if (jawari > 0f) {
+            val dcHp = Dsp.OnePole(rate)
+            for (i in out.indices) out[i] -= dcHp.lp(out[i], 2f)
         }
         return out
     }
