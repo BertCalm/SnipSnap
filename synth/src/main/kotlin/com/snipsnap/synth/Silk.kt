@@ -12,7 +12,7 @@ import kotlin.random.Random
  * and the character pair (COURSE/SLIDE for OUD, STIFF/PRESS for GUZHENG)
  * is the voice's identity.
  */
-enum class SilkVoice { OUD, GUZHENG, SANTUR }
+enum class SilkVoice { OUD, GUZHENG, SANTUR, SHAMISEN }
 
 object Silk {
 
@@ -121,6 +121,24 @@ object Silk {
             MacroSpec("COURSE", 0.05f),
             MacroSpec("WASH", 0.2f),
         )
+        SilkVoice.SHAMISEN -> listOf(
+            MacroSpec("TUNE", 0.3f),
+            MacroSpec("SCALE", scaleMacroFor(SilkScales.MIYAKO_BUSHI)),
+            MacroSpec("INFLECT", 0.5f, neutral = 0.5f),
+            MacroSpec("DAMP", 0.5f),
+            // "PICK high" (spec, "SHAMISEN") - mirrors GUZHENG's own bright default.
+            MacroSpec("PICK", 0.7f),
+            // Sourced, not shape: "the bachi meets the string at about 1/6
+            // of its length ... STRIKE's default is 1/6" (research §1, A5).
+            MacroSpec("STRIKE", 1f / 6f),
+            MacroSpec("BODY", 0.3f),
+            // Every character macro's own "0 is the plain string" convention.
+            MacroSpec("SAWARI", 0f),
+            // A nonzero shape default, the same reasoning SANTUR's own
+            // nonzero COURSE default uses - a factory pad still carries a
+            // trace of the skin strike rather than reading as a dead knob.
+            MacroSpec("SLAP", 0.2f),
+        )
     }
 
     fun defaults(voice: SilkVoice): Map<String, Float> =
@@ -157,6 +175,10 @@ object Silk {
         // voice is bigger than this task; a named follow-on if the
         // listening gate finds it too narrow, not solved here.
         SilkVoice.SANTUR -> 164.81f
+        // C3, the nearest named note to nagauta honchoshi's own open
+        // string 1 (research §1, P1: ~131 Hz; corroborated by P2's B2 and
+        // P6's inferred ~125 Hz).
+        SilkVoice.SHAMISEN -> 130.81f
     }
 
     /** The macro value that snaps [SilkScales.snap] to exactly [scale] - each voice's own default row. */
@@ -210,6 +232,17 @@ object Silk {
                 // [sympathetic bank] - WASH chains after BODY, not before.
                 val withBody = withBody(out, voice, body, rate)
                 trimToDecay(withWash(withBody, scale, root, m.getValue("WASH"), rate), rate)
+            }
+            SilkVoice.SHAMISEN -> {
+                val out = shamisen(freq, pick, damp, position, m.getValue("SAWARI"), rate, velocity)
+                val withBody = withBody(out, voice, body, rate)
+                // SLAP is a separate radiating path (the bachi striking the
+                // skin directly, not the body frame's own response to the
+                // string's bridge force) - added after BODY, onto the same
+                // carrier, rather than re-processed through the body's own
+                // resonators.
+                val seed = Dsp.seedFor("SILK", SilkVoice.SHAMISEN, "SLAP", freq)
+                trimToDecay(withSlap(withBody, m.getValue("SLAP"), rate, seed), rate)
             }
         }
     }
@@ -431,7 +464,18 @@ object Silk {
      * [Strings.Loop.retune]'s own `t.n <= maxN` require.
      */
     internal fun shamisenLoop(freq: Float, pick: Float, seconds: Float, damping: Strings.Damping, pickHz: Float, position: Float, jawari: Float, dispersion: Strings.Dispersion?, rate: Int, seed: Int): FloatArray {
-        val t0 = Strings.tune(freq, damping.loopHz, rate, dispersion = dispersion)
+        // [jawari] must be passed here too, not left at tune()'s own
+        // default of 0 - Loop.retune's own internal tune() call always
+        // uses the Loop's *stored* jawari (this same real value), and the
+        // DC blocker tune() only budgets for when jawari > 0 shifts the
+        // sample count (research: the blocker leads at the fundamental, a
+        // negative phase delay, so it needs *more* samples budgeted, not
+        // fewer). Build [t0] with jawari at 0 and this glide's own final
+        // retune(freq) - re-deriving the budget with the loop's real,
+        // nonzero jawari - can come out needing one more sample than
+        // [maxN] had room for: caught by ordinary macro fuzzing, not a
+        // theoretical concern.
+        val t0 = Strings.tune(freq, damping.loopHz, rate, jawari = jawari, dispersion = dispersion)
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t0.n + 2))
         val exc = Strings.pluckExciter(t0.n, freq, pickHz, position, seed, rate, out.size)
         val jawariP0 = if (jawari > 0f) Strings.burstPeak(t0.n, pickHz, seed, rate) else 1e-6f
@@ -444,7 +488,13 @@ object Silk {
         for (i in out.indices) {
             if (i in 1..glideSamples) {
                 val progress = i.toFloat() / glideSamples
-                loop.retune(sharpFreq * (freq / sharpFreq).pow(progress))
+                // Clamped at [freq] itself as a second, cheap safety net:
+                // pow()'s own floating-point error could still undershoot
+                // freq by a hair right at progress=1, and freq's own
+                // required loop length is exactly [maxN] now that the
+                // budget above is consistent - zero headroom either way.
+                val target = maxOf(freq, sharpFreq * (freq / sharpFreq).pow(progress))
+                loop.retune(target)
             }
             out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
         }
@@ -481,6 +531,31 @@ object Silk {
             count = 4, spread = course, position = position,
             dispersion = dispersion, exciter = Strings::mallet,
         )
+    }
+
+    // Shape, informed by the qualitative facts research §1 does give: "PICK
+    // high" and a "bright, short ring" (D1: falls 20 dB in ~270 ms, "half
+    // or less" of a guitar's - the shortest sourced decay of any SILK
+    // voice). No source fixes the loop low-pass corner or the pick-burst
+    // brightness range in Hz, the same gap every other voice's own
+    // loopHz/pickLo/pickHi already carries.
+    private const val SHAMISEN_LOOP_HZ = 7000f
+    private const val SHAMISEN_PICK_LO = 2500f
+    private const val SHAMISEN_PICK_HI = 12_000f
+    private const val SHAMISEN_RING = 0.15f
+
+    /**
+     * SHAMISEN: one string (spec, "SHAMISEN": "one string per note"),
+     * [shamisenLoop]'s own built-in glide and SAWARI reuse doing the rest.
+     */
+    private fun shamisen(freq: Float, pick: Float, damp: Float, position: Float, sawari: Float, rate: Int, velocity: Float): FloatArray {
+        val damping = Strings.damping(damp, SHAMISEN_LOOP_HZ)
+        val pickHz = Dsp.expMap(pick, SHAMISEN_PICK_LO, SHAMISEN_PICK_HI)
+        val seconds = Dsp.expMap(1f - damp, 0.3f * SHAMISEN_RING, RING_CEILING_SECONDS)
+            .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
+        val dispersion = Strings.Dispersion.forB(SHAMISEN_B, STIFF_SECTIONS)
+        val seed = Dsp.seedFor("SILK", SilkVoice.SHAMISEN, freq)
+        return shamisenLoop(freq, pick, seconds, damping, pickHz, position, sawari, dispersion, rate, seed)
     }
 
     private const val WASH_T60_FLOOR = 0.5f
@@ -533,40 +608,35 @@ object Silk {
         SilkVoice.SANTUR -> listOf(
             Modes.fixed(200f, 0.5f, 0.3f),
         )
+        // The bare dō frame (573.2/630.8 Hz) and the whole instrument's own
+        // neck-bending modes (67.55/85.38 Hz), all four measured (research
+        // §1, B1-B4). `t60 = 2.2*Q/f`, `Q = 1/(2*zeta)`, the same formula
+        // OUD's own table above uses - 1.76/0.55/0.32/0.20 s respectively
+        // for 67.55/85.38/573.2/630.8 Hz.
+        //
+        // Gains are the one place this table reads differently from every
+        // other voice's own: OUD's and GUZHENG's lowest sourced mode is
+        // their loudest (nothing in their own research says otherwise),
+        // but SHAMISEN's own radiated spectrum "peaks near 700 Hz and
+        // falls about 25 dB an octave below it" (research §1, R1) - so the
+        // frame modes, which sit close to that peak, carry meaningfully
+        // more gain here than the neck modes, which the same rolloff (over
+        // three octaves below 700 Hz) would put far down in the real
+        // instrument's own radiated balance. These gains are still shape,
+        // not the literal computed rolloff (which would put the neck
+        // modes near-silent and defeat the point of a placeholder table) -
+        // they encode the qualitative fact (frame louder than neck), not
+        // the exact dB.
+        SilkVoice.SHAMISEN -> listOf(
+            Modes.fixed(67.55f, 0.15f, 1.76f),
+            Modes.fixed(85.38f, 0.25f, 0.55f),
+            Modes.fixed(573.2f, 0.8f, 0.32f),
+            Modes.fixed(630.8f, 1.0f, 0.20f),
+        )
     }
 
     private fun withBody(string: FloatArray, voice: SilkVoice, amount: Float, rate: Int): FloatArray =
         Strings.bodyRing(string, bodyFor(voice), amount, rate, RING_CEILING_SECONDS)
-
-    /**
-     * SHAMISEN's own BODY table - not yet wired into [bodyFor]'s own
-     * `when` (Task 4 adds `SilkVoice.SHAMISEN` to the enum and the branch
-     * that reaches this; kept standalone here so Task 3 compiles and is
-     * testable on its own). The bare dō frame (573.2/630.8 Hz) and the
-     * whole instrument's own neck-bending modes (67.55/85.38 Hz), all four
-     * measured (research §1, B1-B4). `t60 = 2.2*Q/f`, `Q = 1/(2*zeta)`,
-     * the same formula OUD's own table above uses - 1.76/0.55/0.32/0.20 s
-     * respectively for 67.55/85.38/573.2/630.8 Hz.
-     *
-     * Gains are the one place this table reads differently from every
-     * other voice's own: OUD's and GUZHENG's lowest sourced mode is their
-     * loudest (nothing in their own research says otherwise), but
-     * SHAMISEN's own radiated spectrum "peaks near 700 Hz and falls about
-     * 25 dB an octave below it" (research §1, R1) - so the frame modes,
-     * which sit close to that peak, carry meaningfully more gain here than
-     * the neck modes, which the same rolloff (over three octaves below
-     * 700 Hz) would put far down in the real instrument's own radiated
-     * balance. These gains are still shape, not the literal computed
-     * rolloff (which would put the neck modes near-silent and defeat the
-     * point of a placeholder table) - they encode the qualitative fact
-     * (frame louder than neck), not the exact dB.
-     */
-    internal val SHAMISEN_BODY = listOf(
-        Modes.fixed(67.55f, 0.15f, 1.76f),
-        Modes.fixed(85.38f, 0.25f, 0.55f),
-        Modes.fixed(573.2f, 0.8f, 0.32f),
-        Modes.fixed(630.8f, 1.0f, 0.20f),
-    )
 
     /**
      * SLAP's own skin table - separate from [bodyFor], since SLAP drives a

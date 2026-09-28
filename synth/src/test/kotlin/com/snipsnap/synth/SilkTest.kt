@@ -122,6 +122,28 @@ class SilkTest {
     }
 
     /**
+     * PLUCK's own 5-cent rule, generalised, measured from 150 ms on (spec,
+     * "Testing", item 1: "SHAMISEN is measured after its built-in glide
+     * settles (from 150 ms)") - Task 2's own glide has fully settled onto
+     * the plucked degree by its own end (100 ms), so this is 50 ms of
+     * margin, not a tight bound.
+     */
+    @Test
+    fun `SHAMISEN is in tune at every degree of MIYAKO_BUSHI`() {
+        val root = Silk.rootFor(SilkVoice.SHAMISEN)
+        val scale = SilkScales.MIYAKO_BUSHI
+        val size = scale.cents.size
+        for (degree in 0..2 * size) {
+            val tune = degree / (2f * size)
+            val want = SilkScales.frequencyFor(root, scale, tune)
+            val snip = Silk.render(SilkVoice.SHAMISEN, mapOf("TUNE" to tune, "SAWARI" to 0f, "SLAP" to 0f))
+            val measured = measuredHz(snip, want, fromSec = 0.15f)
+            val off = cents(measured, want.toDouble())
+            assertTrue(abs(off) <= 5.0, "degree $degree (tune=$tune): wanted $want Hz, measured $measured Hz ($off cents)")
+        }
+    }
+
+    /**
      * PRESS (spec, "GUZHENG"): at each of its four snapped stops, the
      * pitch track starts on the plucked degree and settles 0/100/200/300
      * cents above it - measured well after the 0.12 s rise
