@@ -40,7 +40,13 @@ import kotlin.random.Random
  * [NODE_PICKUP_XI]), which cannot see that mode at all and barely sees the
  * third or fourth either. Same bar, same ratios, only where the pickup
  * listens — a purer, more fundamental-forward tone than TINE's own tip
- * read, without inventing a new physical claim to get there.
+ * read, without inventing a new physical claim to get there. Round two's
+ * own A/B against TINE (nine matched settings) came back too close to call
+ * reliably: the pickup's own nonlinearity dominates the audible bark far
+ * more than the pre-pickup modal balance does, so silencing one mode was a
+ * real but largely masked difference. Round three tries a mechanism with
+ * more perceptual weight instead — see [GLIDE_CENTS] and [bank]'s own
+ * KDoc.
  *
  * Same contract as every engine: macros are 0..1 mapped onto bounded
  * musical ranges (SCRAMBLE can't land on garbage), the DSP renders at
@@ -140,6 +146,18 @@ object Fork {
         val b = CANTILEVER_BETA_L[i]
         cantileverModeShape(b, NODE_PICKUP_XI) / cantileverModeShape(b, 1f)
     }
+
+    /**
+     * NODE's own pitch glide (round three), at STRIKE 1: how many cents
+     * sharp the strike reads before it settles — a plausible starting
+     * point (comfortably past the few-cents JND, short of sounding like a
+     * pitch-bend gimmick), not a sourced figure. See [bank]'s own KDoc for
+     * the mechanism and why it is NODE-only for now.
+     */
+    const val GLIDE_CENTS = 15f
+
+    /** How long NODE's own glide takes to settle to the tuned pitch - a plausible fast attack-only window, open for the audition gate to move alongside [GLIDE_CENTS]. */
+    const val GLIDE_TIME_SECONDS = 0.06f
 
     /**
      * How much faster each higher mode's t60 falls off relative to the
@@ -323,7 +341,7 @@ object Fork {
      * voice and note so every render is reproducible with no state carried
      * between calls.
      */
-    private fun excite(voice: ForkVoice, hz: Float, strikeM: Float, striker: FloatArray?, frames: Int, rate: Int): FloatArray {
+    internal fun excite(voice: ForkVoice, hz: Float, strikeM: Float, striker: FloatArray?, frames: Int, rate: Int): FloatArray {
         val out = FloatArray(frames)
         val cutoff = Dsp.expMap(strikeM, STRIKE_CUTOFF_LOW_HZ, STRIKE_CUTOFF_HIGH_HZ)
         val pole = Dsp.OnePole(rate)
@@ -366,20 +384,79 @@ object Fork {
         val strikeM = macros.getValue("STRIKE")
         val excitation = excite(voice, hz, strikeM, striker, frames, rate)
         val modes = modesFor(voice, macros)
-        // Each mode rung on its own (Modes.ring's per-mode loop is already
-        // independent and additive - `out[i] += y`, one mode at a time -
-        // so summing four single-mode calls is exactly what one call with
-        // all four would do) and scaled by its own STRIKE_BRIGHT_BOOST
-        // before the sum, so a harder strike relatively excites the higher
-        // partials more - mode 1 (index 0) never moves, only what rides
-        // above it.
-        val rung = FloatArray(frames)
-        for ((i, mode) in modes.withIndex()) {
-            val boost = 1f + STRIKE_BRIGHT_BOOST * i * strikeM
-            val ringed = Modes.ring(excitation, hz, listOf(mode), rate)
-            for (j in ringed.indices) rung[j] += ringed[j] * boost
-        }
+
+        // NODE's own pitch glide (round three): every mode's own frequency
+        // glides down from a few cents sharp to its tuned ratio over
+        // GLIDE_TIME_SECONDS, then holds - a real struck bar's large-
+        // amplitude vibration briefly stiffens it, reading sharp right at
+        // the strike and settling as the swing dies down, the same
+        // amplitude-dependent effect strings and bars both show. GLIDE_CENTS
+        // and GLIDE_TIME_SECONDS are a plausible starting point, not a
+        // sourced figure - open for the audition gate to move, the same way
+        // DECAY_SLOPE started. Rung as one continuously-swept resonator
+        // (glideSamples below), not two static-pitch renders crossfaded
+        // together: two near-identical frequencies briefly coexisting would
+        // beat, which is exactly what an existing test measuring the clean
+        // resonator's own decay-shape caught on the first attempt at this -
+        // real signal, not description, per this file's own testing
+        // philosophy. Scaled by STRIKE (harder strike, bigger swing, bigger
+        // glide), the same lever every other STRIKE-linked mechanism here
+        // already uses.
+        val glideCents = if (voice == ForkVoice.NODE) GLIDE_CENTS * strikeM else 0f
+        val glideSamples = if (glideCents > 0f) (GLIDE_TIME_SECONDS * rate).toInt() else 0
+        val rung = ringModes(hz, modes, excitation, strikeM, frames, rate, glideCents, glideSamples)
         Dsp.normalize(rung, 1f)
+        return rung
+    }
+
+    /**
+     * The bank's own mode sum at [hz]. Each mode rung on its own
+     * (Modes.ring's per-mode loop is already independent and additive -
+     * `out[i] += y`, one mode at a time - so summing four single-mode
+     * calls is exactly what one call with all four would do) and scaled
+     * by its own STRIKE_BRIGHT_BOOST before the sum, so a harder strike
+     * relatively excites the higher partials more - mode 1 (index 0)
+     * never moves, only what rides above it.
+     *
+     * At [glideSamples] 0 (every voice but NODE, and NODE at STRIKE 0)
+     * this is [Modes.ring] itself, one mode at a time, unchanged from
+     * before the glide existed. At [glideSamples] > 0 it instead reruns
+     * that same two-pole recurrence by hand with the pole angle
+     * recomputed every sample from the instantaneous (gliding) frequency
+     * rather than held fixed for the call - [glideCents] sharp at sample
+     * 0, linearly down to the tuned ratio by [glideSamples], flat after.
+     */
+    internal fun ringModes(hz: Float, modes: List<Modes.Mode>, excitation: FloatArray, strikeM: Float, frames: Int, rate: Int, glideCents: Float, glideSamples: Int): FloatArray {
+        val rung = FloatArray(frames)
+        if (glideSamples <= 0) {
+            for ((i, mode) in modes.withIndex()) {
+                val boost = 1f + STRIKE_BRIGHT_BOOST * i * strikeM
+                val ringed = Modes.ring(excitation, hz, listOf(mode), rate)
+                for (j in ringed.indices) rung[j] += ringed[j] * boost
+            }
+            return rung
+        }
+        val nyquist = rate / 2f
+        for ((i, mode) in modes.withIndex()) {
+            val modeHz = hz * mode.ratio
+            if (modeHz <= 0f || modeHz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
+            val boost = 1f + STRIKE_BRIGHT_BOOST * i * strikeM
+            val g = mode.gain * boost
+            val r = kotlin.math.exp(-6.9078 / (mode.t60.toDouble() * rate)).toFloat()
+            var y1 = 0f
+            var y2 = 0f
+            for (j in 0 until frames) {
+                val cents = if (j < glideSamples) glideCents * (1f - j.toFloat() / glideSamples) else 0f
+                val instHz = modeHz * 2f.pow(cents / 1200f)
+                val theta = 2.0 * Math.PI * instHz / rate
+                val a1 = (2.0 * r * kotlin.math.cos(theta)).toFloat()
+                val a2 = -(r * r)
+                val y = g * excitation[j] + a1 * y1 + a2 * y2
+                y2 = y1
+                y1 = y
+                rung[j] += y
+            }
+        }
         return rung
     }
 
