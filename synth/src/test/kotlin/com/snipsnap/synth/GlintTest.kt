@@ -290,6 +290,47 @@ class GlintTest {
         // inverting mid-sweep - is a property of one-period correlation
         // during a sweep, independent of interpolation method.
         //
+        // STALE for PLATE as of Task 4 (D2): PLATE no longer shares REED's
+        // formula, so it no longer shares REED's number either. Its own k(t)
+        // is tied to amp.at(t) (t60 derived from this fixture's DECAY 0.7,
+        // ~0.67s) rather than the fixed BLOOM_T60 (0.45s) the shared sweep
+        // used - slower to settle, so more of it is still moving at this
+        // fixed fromSec=0.35 probe. Measured 2026-09-27, PLATE only, BLOOM 1,
+        // at this test's own 4 PEAK settings: 0.9999127 (PEAK 0.1), 0.9995182
+        // (0.35), 0.99806124 (0.6), 0.9883967 (0.9) - still comfortably above
+        // the 0.98 bar. REED's own 0.99940187 is unaffected (its code did not
+        // change). BLOOM 0 is unaffected for PLATE too (bloomAmount 0 makes
+        // its branch identical to the shared sweep - see `PLATE at BLOOM zero
+        // does not move its formant`'s own KDoc), so those four readings are
+        // still the pre-Task-4 ones.
+        //
+        // 0.9883967 (PEAK 0.9) is NOT PLATE's true worst reading, though -
+        // only the worst among the four PEAK values this test happens to
+        // sample. A supplementary sweep (PEAK 0.85 to 1.0 in finer steps,
+        // same still, same fromSec, 2026-09-27) found the real minimum
+        // off-grid: correlation keeps falling past PEAK 0.9, bottoms out at
+        // 0.9824176 (PEAK 0.97, kBase 36.56193) - only 0.0024 above the 0.98
+        // floor, six times less margin than the in-grid figure suggests -
+        // then recovers sharply (0.9934069 at PEAK 0.98, 0.99998647 at PEAK
+        // 1.0). The recovery is not a coincidence: kCeilingFor(PLATE) is 40,
+        // and `kBase * (1 + bloomAmount * x) >= kBase` for any `x >= 0`, so
+        // once `kBase` reaches 40 the per-sample `coerceIn(K_MIN, kCeiling)`
+        // clamp binds for the ENTIRE render regardless of `amp.at(t)` - the
+        // coupling goes fully inert at PEAK 1 (see `every voice renders
+        // clean audio`'s all-BLOOM-1-macros-at-1 case, which is
+        // byte-identical whether PLATE's branch reads `amp.at(t)` or the old
+        // `envAt(t, BLOOM_T60)`). What is NOT independently confirmed is
+        // exactly why the minimum sits at PEAK 0.97 rather than closer to
+        // that PEAK-1 boundary - plausibly the ceiling clamp engaging or
+        // releasing partway through the 0.35-0.55s probe window itself, but
+        // that mechanism is not traced here, only the numbers are measured.
+        // This test still passes at every PEAK it actually samples, but the
+        // true margin near PLATE's own ceiling is thin enough that a future
+        // change to this fixture (or to BLOOM_MAX, kCeilingFor, or the probe
+        // window) could cross it; a lag-domain measure (see this test's own
+        // KDoc above) would settle the question instead of sampling around
+        // it.
+        //
         // The during-sweep regime (fromSec=0.05, the old default) is
         // deliberately NOT asserted here. Measured worst case there is
         // 0.4580 (BOTTLE, PEAK 0.6, BLOOM 1) - *below* the 0.73149 drift
@@ -816,13 +857,26 @@ class GlintTest {
      * its measured numbers), so it is deliberately left out of this set
      * rather than folded in under a weakened bar.
      *
-     * PLATE sits here only because Task 4 hasn't given it its own formant
-     * motion yet: today it still renders through the exact same plain
-     * [BLOOM_T60] sweep as REED/BOTTLE/KAZOO/CICADA — `synthesize`'s `k`
-     * `when` only special-cases RATCHET, so PLATE falls through to the
-     * generic branch. Once PLATE couples BLOOM to the amplitude envelope
-     * instead, move it out of this set (or leave it in, if its own
-     * numbers still clear these bars) rather than assuming either answer.
+     * PLATE (Task 4, D2) has its OWN formant motion now — `k(t) = kBase *
+     * (1 + BLOOM * amp.at(t))`, no [BLOOM_T60], no clock of its own — and it
+     * stays in this set on measured numbers, not by assumption. At the
+     * `BLOOM opens the peak at the attack and lets it settle` fixture (TUNE
+     * 0.3 PEAK 0.4 BODY 0.2 FOLLOW 1 DECAY 0.7), PLATE's own head/tail
+     * ratios are 1.0013 at BLOOM 0 and 3.6967943 at BLOOM 1 — both clear
+     * this set's bars, and BLOOM 1's is even wider than the shared-formula
+     * figure it replaced (3.5664227), not narrower.
+     *
+     * The reason is structural, not coincidence: `Dsp.Env.at`'s decay
+     * always reaches roughly -60 dB (0.1% of peak) by one t60, and
+     * `synthesize`'s own `frames = t60 * 1.35 * rate` guarantees the
+     * rendered note is 1.35x that t60 long — so PLATE's coupling is
+     * mathematically certain to have collapsed back to `kBase` well before
+     * this set's 0.7x-to-1.0x-duration tail window, for ANY DECAY. That is
+     * exactly what `BLOOM lands before the note ends, whatever it did on the
+     * way`'s own KDoc measures below, and exactly what RATCHET's ladder does
+     * NOT get for free — its reach is set by BLOOM alone, independent of
+     * DECAY, which is why IT needed its own branch instead of joining this
+     * set.
      */
     private val BLOOM_SWEEPS_AND_SETTLES = setOf(
         GlintVoice.REED, GlintVoice.BOTTLE, GlintVoice.KAZOO, GlintVoice.CICADA, GlintVoice.PLATE,
@@ -841,10 +895,21 @@ class GlintTest {
      * 0.45) is still ~0.94 against the old envAt(0.012, 0.06) of ~0.15.
      * Every BLOOM 1 case clears the 1.4x bar by well over 2x margin; every
      * BLOOM 0 case sits at parity (0.99-1.00), well inside the 1.2x bar.
-     * CICADA and PLATE render through this same formula (see
-     * [BLOOM_SWEEPS_AND_SETTLES]'s doc) and are not separately re-measured
-     * here; both already passed this bar before RATCHET existed to break
-     * it.
+     * CICADA renders through this same formula (see [BLOOM_SWEEPS_AND_SETTLES]'s
+     * doc) and is not separately re-measured here; it already passed this
+     * bar before RATCHET existed to break it.
+     *
+     * PLATE (Task 4, D2) no longer shares this formula — its own `k(t) =
+     * kBase * (1 + BLOOM * amp.at(t))` is measured separately. At this same
+     * still, 2026-09-27: BLOOM 0 -> 1.0013 (identical to the figure above:
+     * BLOOM 0 makes `bloomAmount` 0, which zeroes out either curve the same
+     * way — see `PLATE at BLOOM zero does not move its formant`'s own KDoc),
+     * BLOOM 1 -> 3.6967943 - slightly WIDER than the shared-formula figure
+     * it replaces (3.5664227), not narrower, because DECAY 0.7 gives
+     * `amp.at`'s own t60 (~0.67s) a slower fall than the fixed BLOOM_T60
+     * (0.45s) the old sweep used, so PLATE's head window sits closer to its
+     * own opened peak. Clears both the 1.4x and 1.2x bars with room, so
+     * PLATE stays in [BLOOM_SWEEPS_AND_SETTLES].
      *
      * RATCHET climbs instead of sweeping, so its bar is inverted — the tail
      * must end up BRIGHTER than the attack, not darker. Measured 2026-09-27
@@ -899,23 +964,36 @@ class GlintTest {
      * At 0.75 * 0.9044s = 0.678s, envAt(0.678, 0.45) is ~3e-5 - the sweep is
      * fully settled by five-plus t60s regardless of which BLOOM value chose
      * the (now fixed) rate, so the two tails still land within the 20% bar.
-     * This guard is for [BLOOM_SWEEPS_AND_SETTLES]'s voices (CICADA and
-     * PLATE included, unmeasured here for the same reason as the test
-     * above); it does not apply to RATCHET, below.
+     * This guard is for [BLOOM_SWEEPS_AND_SETTLES]'s voices (CICADA included,
+     * unmeasured here for the same reason as the test above; PLATE's own
+     * numbers are below); it does not apply to RATCHET, below.
+     *
+     * PLATE (Task 4, D2) no longer shares the formula above, but lands here
+     * for a structural reason rather than a coincidence — see
+     * [BLOOM_SWEEPS_AND_SETTLES]'s own doc. Measured 2026-09-27 at this same
+     * still: tail(0) = 1126.3811 Hz, tail(1) = 1128.4126 Hz (diff 2.0315 Hz,
+     * ratio 0.18%) - larger than the shared-formula voices' sub-0.1 Hz drift
+     * (its own `amp.at` t60, ~0.67s, settles slower than the fixed 0.45s
+     * BLOOM_T60 those voices ride), but still two orders of magnitude inside
+     * the 20% bar, because 0.75 * duration (0.678s) is itself ~1.01 t60 of
+     * PLATE's own DECAY-derived envelope - past the point where any DECAY's
+     * amp envelope has collapsed to background level.
      *
      * This comment used to predict "a future voice-specific sweep (D2's
      * PLATE, RATCHET) that runs so slow it never lands before the note's
      * DECAY ends" — anticipating the shape of the problem, if not quite its
-     * mechanism. What actually happens is not a slow sweep: RATCHET's
-     * ladder is a staircase that has no reason to return to its starting
-     * value at all, and at this fixture climbs far more rungs than a
-     * ~0.9s note has time to step through. Measured 2026-09-27, kBase=7,
-     * BLOOM 1 -> bloomAmount 3 -> top 28 (a 22-rung ladder): reaching rung
-     * 28 takes 21 * RATCHET_STEP_SECONDS = 3.15s, so at this note's own
-     * 0.75x-to-1.0x-duration tail window the rung index is still moving,
-     * 4 -> 6 of 21 (k 11 -> 13), not holding. RATCHET's own tail(1) =
-     * 3605.4092 Hz vs tail(0) = 2285.5515 Hz, ratio 1.578 — nothing like
-     * the sweeping voices' <0.1 Hz drift.
+     * mechanism. What actually happens is not a slow sweep for either voice:
+     * PLATE's coupling is pinned to the note's OWN t60 (so it always lands,
+     * per the structural argument above, regardless of how slow or fast
+     * DECAY makes the note), and RATCHET's ladder is a staircase that has no
+     * reason to return to its starting value at all, and at this fixture
+     * climbs far more rungs than a ~0.9s note has time to step through.
+     * Measured 2026-09-27, kBase=7, BLOOM 1 -> bloomAmount 3 -> top 28 (a
+     * 22-rung ladder): reaching rung 28 takes 21 * RATCHET_STEP_SECONDS =
+     * 3.15s, so at this note's own 0.75x-to-1.0x-duration tail window the
+     * rung index is still moving, 4 -> 6 of 21 (k 11 -> 13), not holding.
+     * RATCHET's own tail(1) = 3605.4092 Hz vs tail(0) = 2285.5515 Hz, ratio
+     * 1.578 — nothing like either sweeping mechanism's own tiny drift.
      */
     @Test
     fun `BLOOM lands before the note ends, whatever it did on the way`() {
@@ -1534,6 +1612,120 @@ class GlintTest {
         assertTrue(
             straddle < inside * 3f,
             "RATCHET's worst jump straddling a step boundary ($straddle) vs fully inside one rung ($inside) — the step is clicking",
+        )
+    }
+
+    /**
+     * The spec's central claim for PLATE: `k(t) = kBase * (1 + BLOOM *
+     * amp_env(t))`, no separate clock — a struck plate is brightest at the
+     * strike and its formant falls as the note does.
+     *
+     * Fixture: `Glint.defaults(PLATE)` (TUNE 0.5, PEAK 0.45, FOLLOW 0.8) +
+     * BLOOM 1, DECAY 0.9, BODY 0 (silences the second formant so only the
+     * main burst's ratio drives the centroid).
+     *
+     * This bar does NOT by itself discriminate the new coupling from the
+     * old BLOOM_T60 sweep PLATE fell through to before this task (Task 1-3's
+     * `else` branch, the one every other bloom-sweeping voice still takes):
+     * that sweep also falls from an opened head to a settled tail, and its
+     * fixed 0.45s t60 happens to be almost fully settled by this fixture's
+     * 0.45-0.60s tail window regardless of DECAY. Measured with the
+     * mechanism ABSENT (PLATE still on the plain sweep), 2026-09-27:
+     * head=3700.7407 tail=1728.2657, ratio=0.46700537 - already clears
+     * `tail < head * 0.8`. Measured WITH the mechanism: head=5232.801
+     * tail=1958.1921, ratio=0.37421492 - also clears it, and is a genuine
+     * fall either way. `PLATE's fall tracks the amplitude envelope, not a
+     * separate curve`, immediately below, is the test that actually tells
+     * the two mechanisms apart - the discriminating power lives there, not
+     * here.
+     */
+    @Test
+    fun `PLATE's formant falls as the note decays`() {
+        val snip = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 1f, "DECAY" to 0.9f, "BODY" to 0f))
+        val head = FeatureExtractor.extract(slice(snip, 0.02f, 0.10f)).centroidHz
+        val tail = FeatureExtractor.extract(slice(snip, 0.45f, 0.60f)).centroidHz
+        assertTrue(tail < head * 0.8f, "PLATE's centroid went $head -> $tail — it did not fall")
+    }
+
+    /**
+     * The spec's requirement, and the one test in this trio that actually
+     * separates `k(t) = kBase * (1 + BLOOM * amp_env(t))` from a fixed-rate
+     * sweep: `amp_env` runs on the note's own DECAY, so a longer note must
+     * still be bright at a fixed wall-clock instant where a shorter note has
+     * already gone dark. A sweep on a constant BLOOM_T60 has no idea how
+     * long the note is and reads the same at that instant either way.
+     *
+     * Fixture: BLOOM 1, BODY 0, everything else at `Glint.defaults(PLATE)`;
+     * DECAY 0.3 (t60 ~0.251s, duration ~0.339s) for the short note, DECAY
+     * 0.95 (t60 ~1.147s, duration ~1.672s) for the long one; both probed at
+     * 0.25-0.30s. The short note's probe sits deep in its own tail (its amp
+     * envelope is ~0.001 of peak there) - checked this is a real reading and
+     * not `FeatureExtractor`'s silent-buffer fallback (which would return a
+     * centroid of exactly 0 and pass this bar vacuously): the probed slice
+     * holds 2205 frames and peaks at 0.0011 (the long note's same-width
+     * slice peaks at 0.173) - both comfortably above the `total <= EPSILON`
+     * (1e-10) floor that triggers the fallback.
+     *
+     * Measured with the mechanism ABSENT (PLATE on the plain BLOOM_T60
+     * sweep, which ignores DECAY entirely), 2026-09-27: shortC=1794.223
+     * longC=1791.5879, ratio=0.99853134 - both notes read the same centroid
+     * at this instant, as a clock blind to DECAY must. Fails `> 1.15`
+     * cleanly, confirming the bar separates the two mechanisms instead of
+     * passing by default. Measured WITH the mechanism: shortC=1729.6843
+     * longC=2789.7527, ratio=1.6128681 - clears 1.15 with ~40% margin.
+     *
+     * Mutation-verified 2026-09-27: temporarily replaced `amp.at(t)` with
+     * `Dsp.envAt(t, BLOOM_T60)` in PLATE's own branch of `synthesize` (a
+     * fixed-rate fall — the exact regression this test exists to catch) and
+     * reran. Result was byte-identical to the mechanism-ABSENT numbers
+     * above - shortC=1794.223 longC=1791.5879, ratio=0.99853134 - which is
+     * expected, since that substitution makes PLATE's branch arithmetically
+     * identical to the `else` branch every other bloom-sweeping voice
+     * already takes. Fails the bar, as it must; reverted immediately after
+     * recording it.
+     */
+    @Test
+    fun `PLATE's fall tracks the amplitude envelope, not a separate curve`() {
+        // The spec's requirement. k(t) = kBase * (1 + BLOOM * amp_env(t)), so a
+        // LONGER note must hold its brightness longer in absolute time: the
+        // coupling has no clock of its own. A fixed-rate sweep would fall at
+        // the same wall-clock rate regardless of DECAY.
+        val short = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 1f, "DECAY" to 0.3f, "BODY" to 0f))
+        val long = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 1f, "DECAY" to 0.95f, "BODY" to 0f))
+        val at = 0.25f
+        val shortC = FeatureExtractor.extract(slice(short, at, at + 0.05f)).centroidHz
+        val longC = FeatureExtractor.extract(slice(long, at, at + 0.05f)).centroidHz
+        assertTrue(
+            longC > shortC * 1.15f,
+            "at ${at}s the long note's centroid is $longC and the short note's is $shortC — the fall is not tied to the envelope",
+        )
+    }
+
+    /**
+     * The control: at BLOOM 0, `bloomAmount` is 0 and `k(t) = kBase *
+     * (1 + 0 * amp.at(t)) = kBase` for every `t` - the coupling is gated off
+     * entirely and PLATE is an ordinary, fixed-ratio saw-window voice. If
+     * this fails, BLOOM is not actually gating it.
+     *
+     * Measured 2026-09-27, mechanism ABSENT and WITH the mechanism alike:
+     * head=1725.7195 tail=1725.5787, ratio=8.1558486E-5, in both cases. That
+     * identity is not a coincidence: `0f * x` is exactly `0f` for any finite
+     * `x` in IEEE754, so at BLOOM 0 the old `envAt(t, BLOOM_T60)` curve and
+     * the new `amp.at(t)` curve are each multiplied by zero and vanish from
+     * the expression the same way — PLATE at BLOOM 0 renders byte-identical
+     * regardless of which curve the `when` branch names.
+     */
+    @Test
+    fun `PLATE at BLOOM zero does not move its formant`() {
+        // The control: with the coupling depth at zero, k(t) = kBase and PLATE
+        // is an ordinary saw-window voice. If this fails, the coupling is not
+        // actually gated on BLOOM.
+        val snip = Glint.render(GlintVoice.PLATE, mapOf("BLOOM" to 0f, "DECAY" to 0.9f, "BODY" to 0f))
+        val head = FeatureExtractor.extract(slice(snip, 0.02f, 0.10f)).centroidHz
+        val tail = FeatureExtractor.extract(slice(snip, 0.45f, 0.60f)).centroidHz
+        assertTrue(
+            kotlin.math.abs(tail - head) < head * 0.15f,
+            "PLATE at BLOOM 0 moved its centroid $head -> $tail",
         )
     }
 }

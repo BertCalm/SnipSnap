@@ -483,6 +483,17 @@ object Glint {
                 // here is safe precisely because it is frozen for the whole
                 // cycle; only the wrap is allowed to move it.
                 GlintVoice.RATCHET -> ladder!![rung]
+                // PLATE has no clock of its own: the formant is a function of
+                // how loud the note currently is, so it falls exactly as the
+                // note falls and a longer DECAY holds the brightness longer
+                // in absolute time - a struck plate is brightest at the
+                // strike. BLOOM is the depth of that coupling, not a rate,
+                // which is why PLATE never reads bloomT60 (BLOOM_T60's own
+                // doc names this). amp.at(t) is called again here, not
+                // hoisted: Dsp.Env.at is pure (Dsp.kt), so a second call at
+                // the same t returns the same value as the one already taken
+                // for the output gain below.
+                GlintVoice.PLATE -> (kBase * (1f + bloomAmount * amp.at(t))).coerceIn(K_MIN, kCeiling)
                 // kBase is snapped; BLOOM modulates continuously on top of it,
                 // so the knob is musical and the sweep is smooth. k moves on
                 // the envelope's timescale, far slower than one cycle, so the
