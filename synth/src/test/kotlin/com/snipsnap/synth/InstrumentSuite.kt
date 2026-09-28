@@ -9,7 +9,7 @@ import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 
 /**
- * The S5 instrument suite: five playable key instruments rendered from the
+ * The S5 instrument suite: six playable key instruments rendered from the
  * synth engines at exact MIDI pitch, multisampled every minor third across
  * two octaves, packaged as keygroup programs.
  *
@@ -20,6 +20,7 @@ import java.io.File
  * | SnipSnap Harp | PLUCK HARP | E3–E5 | soft layer | decays |
  * | SnipSnap Music Box | TINES 3.5-ratio twins | C4–C6 | none (one dynamic, wistful) | decays |
  * | SnipSnap Resin Pad | RESIN BRASS WIDE SECTION, held | A2–A4 | none | **looped** — holds forever |
+ * | SnipSnap Fork | FORK TINE, the DINNER JAZZ preset | C3–C5 | two true renders — soft is darker | decays |
  *
  * Each `render*` writes its WAVs into [dir] and returns the program; the
  * generator packages them dual-generation (`.xty` beside `_[TrackData]/`
@@ -73,8 +74,23 @@ object InstrumentSuite {
     const val RESIN_PAD_ATTACK_SECONDS = 0.8f
     const val RESIN_PAD_RELEASE_SECONDS = 1.5f
 
+    /**
+     * FORK — TINE at DINNER JAZZ's own settings, held to the exact MIDI
+     * pitch [Keys.fork] already knows how to strike, two true renders per
+     * zone (soft the FM/EP precedent's own move, `Keys.ep`'s), the same
+     * shape [renderEp] takes for the same reason: velocity is a keyboard's
+     * own axis, and [Keys.fork]'s `strike` parameter plays it directly.
+     */
+    fun renderFork(dir: File): KeygroupProgram = build("SnipSnap Fork", dir, low = Keys.FORK_LOW_MIDI, count = 9) { midi, stem ->
+        val macros = ForkPresets.forVoice(ForkVoice.TINE).first { it.name == "DINNER JAZZ" }.macros
+        listOf(
+            Layered("${stem}_soft", Keys.fork(midi, ForkVoice.TINE, macros, strike = 0.3f), 1, 63),
+            Layered(stem, Keys.fork(midi, ForkVoice.TINE, macros, strike = 0.8f), 64, 127),
+        )
+    }
+
     fun renderAll(dir: File): List<KeygroupProgram> =
-        listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir), renderResinPad(dir))
+        listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir), renderResinPad(dir), renderFork(dir))
 
     private class Layered(
         val stem: String,

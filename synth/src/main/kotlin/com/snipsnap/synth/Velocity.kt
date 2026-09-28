@@ -213,6 +213,9 @@ object Velocity {
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
+        is ForkPatch -> Fork.macrosFor(patch.voice)
+        is TerraPatch -> Terra.macrosFor(patch.voice)
+        is SilkPatch -> Silk.macrosFor(patch.voice)
     }
 
     /**
@@ -235,8 +238,17 @@ object Velocity {
     private fun brightnessOverride(patch: Patch): String? = when {
         patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
         // PICK is proven monotonic for every PLUCK voice by PluckTest's
-        // `PICK moves the centroid at every step of its travel`.
+        // `PICK moves the centroid at every step of its travel`. SILK's own
+        // PICK is the same exciter-brightness macro (Strings.pluckExciter's
+        // pick low-pass), registered here rather than left to the generic
+        // scan for the same reason PLUCK's is.
         patch is PluckPatch -> "PICK"
+        patch is SilkPatch -> "PICK"
+        // STRIKE moves the hammer's cutoff, its own t60 and the tine's
+        // swing together - none of BRIGHTNESS_MACROS' generic names, but
+        // exactly what this function exists to find. Proven monotonic by
+        // ForkTest's `STRIKE moves the onset centroid at every step`.
+        patch is ForkPatch -> "STRIKE"
         else -> null
     }
 
@@ -429,16 +441,49 @@ object Velocity {
      * change.
      *
      * PEAK (GLINT) joins on a measured sweep, not on the name: PEAK 0→1 in
-     * eighths, nine points, `FeatureExtractor.extract(_).centroidHz`, rising
-     * at every step on all three voices — REED 362.2, 558.0, 753.3, 1143.7,
-     * 1729.0, 2510.5, 3662.5, 5336.8, 7772.6; BOTTLE 790.0, 1175.7, 1564.0,
-     * 2343.0, 3512.5, 5075.1, 7379.1, 10730.6, 15601.4; KAZOO 762.5, 1160.1,
-     * 1553.4, 2333.9, 3507.9, 5075.6, 7386.1, 10742.7, 15623.2, measured
-     * 2026-09-26. Physically it is the honest knob: strike a reed harder and
-     * the formant rises. Re-run the sweep if the window shapes or
-     * `ratioFor`'s mapping ever change. Unlike SNAP, this is a flat entry
-     * rather than a [brightnessOverride]: no other engine exposes a macro
-     * named PEAK, so there is no name collision to scope around.
+     * eighths, nine points, `FeatureExtractor.extract(_).centroidHz`, never
+     * falling at any step on any of the six voices, with one exact tie
+     * rather than a fall (CICADA, step 4→5, both land on the same snapped
+     * ratio - 6117.8 Hz twice) — REED 359.3, 517.6, 726.9, 1107.8, 1677.9,
+     * 2440.4, 3568.1, 5207.0, 7589.7; BOTTLE 792.1, 1180.9, 1529.5, 2297.0,
+     * 3445.9, 4962.1, 7215.2, 10497.0, 15259.6; KAZOO 758.1, 1102.9, 1515.6,
+     * 2265.4, 3402.6, 4929.6, 7179.2, 10456.0, 15212.1; CICADA 3168.4,
+     * 3792.9, 4855.8, 6117.8, 6117.8, 7741.9, 10754.6, 12234.2, 15259.4;
+     * RATCHET 758.1, 1102.9, 1515.6, 2265.4, 3402.6, 4929.6, 7179.2,
+     * 10456.0, 15212.1; PLATE 359.3, 517.6, 726.9, 1107.8, 1677.9, 2440.4,
+     * 3568.1, 5207.0, 7589.7 — measured 2026-09-27 (RATCHET and PLATE read
+     * identically to KAZOO and REED respectively, but not for the same
+     * reason any more: PLATE now has a mechanism of its own too —
+     * `k(t) = kBase * (1 + BLOOM * amp.at(t))` — but this sweep pins BLOOM
+     * at 0, where the coupling is inert: `bloomAmount = 0` makes
+     * `k(t) = kBase` for every `t`, the same constant value REED's own
+     * unmodulated `k` already is. Same window (`1f - p`), same root
+     * (110 Hz), same ceiling (40) — same bytes, but only at BLOOM 0. Raise
+     * BLOOM and PLATE's `k` follows the note's own amplitude while REED's
+     * sweep runs on the fixed `BLOOM_T60` clock instead, and the two
+     * diverge; see `GlintTest.kt`'s PLATE-specific tests and `synthesize`'s
+     * own PLATE branch. RATCHET now does have one — a ladder
+     * of integer harmonics, [Glint.ratchetLadder] — but this sweep pins
+     * BLOOM at 0, and BLOOM is what makes the ladder climb past its bottom
+     * rung; at BLOOM 0 the ladder is exactly one rung, equal to `kBase`,
+     * which is the same value KAZOO's own unmodulated `k` already is. Same
+     * window, same root, same `k` — same bytes, but only at BLOOM 0. Raise
+     * BLOOM and RATCHET's ladder climbs while KAZOO's own sweep moves the
+     * other way, and the two diverge; see `GlintTest.kt`'s RATCHET-specific
+     * tests and `ratchetLadder`'s own doc). CICADA's tie is
+     * normal snap behaviour, not a broken knob - see `GlintTest.kt`'s
+     * `PEAK sweep is monotonic` for why that gate itself is non-decreasing
+     * rather than strict - and it does not threaten velocity here:
+     * [atVelocity] scales PEAK continuously toward its floor rather than
+     * stepping through this nine-point grid, and `GlintTest.kt`'s
+     * `velocity always changes the render, at every PEAK` checks every
+     * voice, CICADA included, at eight different PEAK settings and finds a
+     * real difference at each one. Physically it is the honest knob: strike
+     * a reed harder and the formant rises. Re-run the sweep if the window
+     * shapes or `ratioFor`'s mapping ever change. Unlike SNAP, this is a
+     * flat entry rather than a [brightnessOverride]: no other engine
+     * exposes a macro named PEAK, so there is no name collision to scope
+     * around.
      */
     //
     // FOLD is TIDE's: the folder's drive at the strike, which adds partials

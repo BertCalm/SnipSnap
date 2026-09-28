@@ -82,6 +82,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
@@ -98,12 +99,15 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.shell.SirenDroneMaker
+import com.snipsnap.shell.SirenPadMaker
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
 import com.snipsnap.synth.FathomPatch
@@ -119,8 +123,10 @@ import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.Siren
+import com.snipsnap.synth.SirenDrone
 import com.snipsnap.synth.SirenPatch
 import com.snipsnap.synth.SirenVoice
+import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
@@ -143,6 +149,9 @@ import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.Vox
 import com.snipsnap.synth.VoxPatch
 import com.snipsnap.synth.VoxVoice
+import com.snipsnap.synth.Fork
+import com.snipsnap.synth.ForkPatch
+import com.snipsnap.synth.ForkVoice
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -571,12 +580,13 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN, held ----
-    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md. Nine held
-    // zones render off the main thread, in parallel, with a progress bar
-    // the whole way (the author's call: a slow phone shows work, it does not
-    // drop zones); the package is written once every zone has landed, so a
-    // CANCEL mid-render leaves nothing on the shelf.
+    // ---- MAKE INSTRUMENT: RESIN and SIREN, held ----
+    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN) and
+    // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
+    // (SIREN). Zones render off the main thread, in parallel, with a
+    // progress bar the whole way (the author's call: a slow phone shows
+    // work, it does not drop zones); the package is written once every zone
+    // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
     var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
     var holdRelease by remember { mutableStateOf(ResinPadMaker.RELEASE.defaultFraction) }
@@ -588,7 +598,7 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
-    val holdBase = currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"
+    val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
         if (!makingInstrument) return@LaunchedEffect
@@ -602,14 +612,24 @@ fun SynthScreen(
         }
     }
 
+    // MAKE INSTRUMENT's two engines behind one shape, so the render/export
+    // orchestration below (identical for both) is written once: RESIN's
+    // spec carries an ATTACK; SIREN's LOOP render has none to carry
+    // (Keys.sirenPad's own KDoc), so [HeldSpec.Siren] simply has none.
+    fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
+        Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
+        else -> null
+    }
+
     fun previewHeld() {
-        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
-        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        if (holdDone >= 0 || holdPreviewing) return
+        val spec = heldSpec() ?: return
         holdPreviewing = true
         holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = withContext(Dispatchers.Default) { ResinPadMaker.preview(spec) { !isActive } }
+                val heard = withContext(Dispatchers.Default) { spec.preview { !isActive } }
                 audition(heard)
             } catch (e: CancellationException) {
                 throw e
@@ -624,11 +644,11 @@ fun SynthScreen(
     }
 
     fun makeHeld() {
-        if (engine != Engine.RESIN || holdDone >= 0 || holdPreviewing) return
+        if (holdDone >= 0 || holdPreviewing) return
         // Captured now: the sheet's own sound, before anything can move it.
-        val spec = ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease)
+        val spec = heldSpec() ?: return
         val base = holdBase
-        val midis = ResinPadMaker.zoneMidis(spec)
+        val midis = spec.zoneMidis
         holdTotal = midis.size
         holdDone = 0
         holdJob = appScope.launch {
@@ -641,7 +661,7 @@ fun SynthScreen(
                         async(Dispatchers.Default) {
                             // CANCEL cancels the scope; each zone asks and stops,
                             // rather than all nine running on for seconds.
-                            val note = ResinPadMaker.renderZone(spec, midi) { !isActive }
+                            val note = spec.renderZone(midi) { !isActive }
                             withContext(Dispatchers.Main) { holdDone += 1 }
                             note
                         }
@@ -651,7 +671,7 @@ fun SynthScreen(
                 // written is worse than a whole one the player can bin.
                 val made = withContext(NonCancellable + Dispatchers.IO) {
                     val name = OneNote.freshName(instrumentsDir, base)
-                    ResinPadMaker.export(name, spec, notes, instrumentsDir)
+                    spec.export(name, notes, instrumentsDir)
                     name
                 }
                 makingInstrument = false
@@ -679,12 +699,13 @@ fun SynthScreen(
         makingInstrument = false
     }
 
-    // ---- DRONE TO LOOP: RESIN, droning ----
-    // docs/superpowers/specs/2026-09-25-resin-drone-design.md. SEND puts a
-    // recipe on the grid, not audio: LOOP renders it at its own tempo, so
-    // nothing here renders except PREVIEW, which renders it the way LOOP
-    // will (the grid's tempo, bars and the device's rate) and plays it
-    // twice, so the wrap is heard.
+    // ---- DRONE TO LOOP: RESIN and SIREN, droning ----
+    // docs/superpowers/specs/2026-09-25-resin-drone-design.md (RESIN) and
+    // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 4
+    // (SIREN). SEND puts a recipe on the grid, not audio: LOOP renders it at
+    // its own tempo, so nothing here renders except PREVIEW, which renders
+    // it the way LOOP will (the grid's tempo, bars and the device's rate)
+    // and plays it twice, so the wrap is heard.
     val context = LocalContext.current
     var droneOpen by remember { mutableStateOf(false) }
     var droneRoot by remember { mutableStateOf<Int?>(null) }
@@ -695,10 +716,64 @@ fun SynthScreen(
     // The grid the drone will land on, read when the sheet opens: its tempo
     // and bars decide the span the readout names and PREVIEW renders.
     var droneSession by remember { mutableStateOf<Session?>(null) }
+
+    // RESIN and SIREN behind one shape, the same division [HeldSpec] draws:
+    // RESIN's own MOTION and BREATHS are knobs invented for the drone, since
+    // RESIN's held macros carry no swing of their own; SIREN already *is* a
+    // movement (RATE and DEPTH, dialed on the panel above), so its own
+    // DroneSpec has no extra knob and [hasMotion] is false.
+    fun droneSpec(): DroneSpec? = when (engine) {
+        Engine.RESIN -> DroneSpec.Resin(voice as ResinVoice, macros, droneMotion, droneRate)
+        Engine.SIREN -> DroneSpec.Siren(voice as SirenVoice, macros)
+        else -> null
+    }
+
+    // The sheet's own readout. RESIN's own label is closed-form pitch
+    // arithmetic (DroneMaker.label, effectively free); SIREN's own reads
+    // its true carrier fit (SirenDroneMaker.label), an LFO phase integral
+    // over the candidate span's own frame count — at the grid's slowest
+    // tempo and longest bars this is real work, measured at ~850 ms per
+    // voice (SirenDroneMakerTest's own "span and label finish quickly
+    // even at the grid's slowest, longest setting"), so it runs off the
+    // main thread rather than inline in the composable body, the same
+    // reason droneSession itself does.
+    var droneLabel by remember { mutableStateOf("…") }
+    LaunchedEffect(droneOpen, droneRoot, droneSession, engine, voice, macros) {
+        // Reset before recomputing, not after: root or macros just moved,
+        // and the stale string is for a spec PREVIEW/SEND no longer read
+        // off the moment either changed — showing it a beat longer would
+        // name a note that is no longer the one either button plays.
+        droneLabel = "…"
+        val root = droneRoot
+        val session = droneSession
+        val spec = droneSpec()
+        if (droneOpen && root != null && session != null && spec != null) {
+            droneLabel = withContext(Dispatchers.Default) {
+                // cancelled reaches SirenDrone.fitCarrier's own check: a
+                // rapid run of ROOT taps must stop one computation before
+                // starting the next, not pile them up on the pool that
+                // runs them (review finding on PR #373). Falls back to
+                // the placeholder on any other failure — a readout that
+                // never lands is a worse sheet, not a crashed one; PREVIEW
+                // and SEND key off root/session directly, never off this
+                // string — but a cancellation is this effect's own
+                // restart, not a failure, and must keep propagating.
+                try {
+                    spec.label(root, session) { !isActive }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("SynthScreen", "drone label failed", e)
+                    "…"
+                }
+            }
+        }
+    }
+
     LaunchedEffect(droneOpen, voice) {
-        if (!droneOpen || engine != Engine.RESIN) return@LaunchedEffect
-        val v = voice as? ResinVoice ?: return@LaunchedEffect
-        if (droneRoot?.let { it in DroneMaker.roots(v) } != true) droneRoot = DroneMaker.defaultRoot(v, kit?.key)
+        if (!droneOpen) return@LaunchedEffect
+        val spec = droneSpec() ?: return@LaunchedEffect
+        if (droneRoot?.let { it in spec.roots } != true) droneRoot = spec.defaultRoot(kit?.key)
         droneSession = withContext(Dispatchers.IO) {
             val rate = deviceSampleRate(context)
             val dir = LoopWrites.dir(context)
@@ -707,20 +782,18 @@ fun SynthScreen(
         }
     }
 
-    fun droneSpec() = DroneMaker.spec(voice as ResinVoice, macros, droneMotion, droneRate)
-
     fun previewDrone() {
         val root = droneRoot ?: return
         val session = droneSession ?: return
-        if (engine != Engine.RESIN || dronePreviewing) return
-        val spec = droneSpec()
+        val spec = droneSpec() ?: return
+        if (dronePreviewing) return
         dronePreviewing = true
         droneJob = appScope.launch {
             try {
                 val heard = withContext(Dispatchers.Default) {
                     // CANCEL (or closing the sheet) cancels this job; the
                     // render asks and stops rather than running on for seconds.
-                    val once = DroneMaker.render(spec, root, session) { !isActive }
+                    val once = spec.render(root, session) { !isActive }
                     Snip(FloatArray(once.size * 2) { once[it % once.size] }, 1, session.sampleRate)
                 }
                 audition(heard)
@@ -738,9 +811,9 @@ fun SynthScreen(
 
     fun sendDrone() {
         val root = droneRoot ?: return
-        if (engine != Engine.RESIN) return
-        val name = "${currentPresetByVoice[engine to voice] ?: "RESIN ${voice.name}"} DRONE"
-        onDroneToLoop(name, droneSpec().toJson(), root)
+        val spec = droneSpec() ?: return
+        val name = "${currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"} DRONE"
+        onDroneToLoop(name, spec.toJson(), root)
         droneJob?.cancel()
         droneJob = null
         dronePreviewing = false
@@ -999,10 +1072,13 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // RESIN, held: the sound as a keys instrument. RESIN only -
-                // it is the one engine whose held render closes its loops.
-                // Full width under SPREAD's row, the DELETED PRESETS door's shape.
-                if (engine == Engine.RESIN) {
+                // RESIN or SIREN, held: the sound as a keys instrument -
+                // the two engines whose held render closes its own loop.
+                // Full width under SPREAD's row, the DELETED PRESETS door's
+                // shape. Shown regardless of SIREN's own HOLD slider: MAKE
+                // always substitutes the loop-and-release envelope, the
+                // same way it ignores RESIN's one-shot DECAY.
+                if (engine == Engine.RESIN || engine == Engine.SIREN) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
@@ -1012,7 +1088,10 @@ fun SynthScreen(
                     ) {
                         makingInstrument = true
                     }
-                    // RESIN, droning: the sound as a breathing loop-grid track.
+                }
+                // RESIN or SIREN, droning: the sound as a loop-grid track,
+                // RESIN's own breathing filter or SIREN's own wail.
+                if (engine == Engine.RESIN || engine == Engine.SIREN) {
                     LabButton(
                         "DRONE TO LOOP ▸",
                         scheme,
@@ -1110,45 +1189,64 @@ fun SynthScreen(
             BackHandler(onBack = closeBin)
         }
 
-        if (makingInstrument && engine == Engine.RESIN) {
-            HeldInstrumentSheet(
-                heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                name = holdName,
-                attack = holdAttack,
-                release = holdRelease,
-                done = holdDone,
-                total = holdTotal,
-                previewing = holdPreviewing,
-                fillColor = classColor,
-                scheme = scheme,
-                onAttack = { holdAttack = it },
-                onRelease = { holdRelease = it },
-                onPreview = ::previewHeld,
-                onMake = ::makeHeld,
-                onCancel = ::closeHeld,
-            )
+        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN)) {
+            // Recomputed here rather than cached: cheap (a Spec is a data
+            // class, no rendering), and it must reflect whatever the panel
+            // holds right now, the same as every value below it.
+            heldSpec()?.let { spec ->
+                HeldInstrumentSheet(
+                    heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                    name = holdName,
+                    hasAttack = spec.hasAttack,
+                    attack = holdAttack,
+                    release = holdRelease,
+                    knobLabel = spec.knobLabel,
+                    done = holdDone,
+                    total = holdTotal,
+                    previewing = holdPreviewing,
+                    fillColor = classColor,
+                    scheme = scheme,
+                    onAttack = { holdAttack = it },
+                    onRelease = { holdRelease = it },
+                    onPreview = ::previewHeld,
+                    onMake = ::makeHeld,
+                    onCancel = ::closeHeld,
+                )
+            }
             BackHandler(onBack = ::closeHeld)
         }
 
-        val droneVoice = voice as? ResinVoice
-        if (droneOpen && engine == Engine.RESIN && droneVoice != null) {
-            DroneSheet(
-                heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                voice = droneVoice,
-                root = droneRoot,
-                session = droneSession,
-                motion = droneMotion,
-                rate = droneRate,
-                previewing = dronePreviewing,
-                fillColor = classColor,
-                scheme = scheme,
-                onRoot = { droneRoot = it },
-                onMotion = { droneMotion = it },
-                onRate = { droneRate = it },
-                onPreview = ::previewDrone,
-                onSend = ::sendDrone,
-                onCancel = ::closeDrone,
-            )
+        if (droneOpen) {
+            // The spec itself is recomputed here rather than cached, the
+            // same call [heldSpec] makes and for the same reason: cheap
+            // (it is only a voice and a macro map, no rendering), and it
+            // must reflect whatever the panel holds right now. The
+            // readout is not recomputed here — [droneLabel] is, off the
+            // main thread, since SIREN's own is not free.
+            droneSpec()?.let { spec ->
+                val root = droneRoot
+                val session = droneSession
+                val ready = root != null && session != null
+                DroneSheet(
+                    heading = "${engine.name} · ${chipLabel(engine, voice)}",
+                    roots = spec.roots,
+                    hasMotion = spec.hasMotion,
+                    root = root,
+                    ready = ready,
+                    label = droneLabel,
+                    motion = droneMotion,
+                    rate = droneRate,
+                    previewing = dronePreviewing,
+                    fillColor = classColor,
+                    scheme = scheme,
+                    onRoot = { droneRoot = it },
+                    onMotion = { droneMotion = it },
+                    onRate = { droneRate = it },
+                    onPreview = ::previewDrone,
+                    onSend = ::sendDrone,
+                    onCancel = ::closeDrone,
+                )
+            }
             BackHandler(onBack = ::closeDrone)
         }
     }
@@ -1405,23 +1503,66 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN, held ----------
+// ---------- MAKE INSTRUMENT: RESIN and SIREN, held ----------
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN only): [PresetNameDialog]'s frame - scrim,
- * raised bevel, CANCEL beside the real buttons - over the two knobs a held
- * note has that a one-shot never needed, ATTACK and RELEASE, with their
- * seconds spelled out. While MAKE runs the knobs give way to [HeldProgress],
- * a bar that fills as each zone lands and the line counting them; PREVIEW's
- * one zone says RENDERING… the way the scope does. CANCEL stays live until
- * the last zone lands, and the write that follows is left to finish.
+ * MAKE INSTRUMENT's two engines behind one shape, so the render/export
+ * orchestration in [SynthScreen] (identical for both — render every zone,
+ * show progress, write the package once every zone has landed) is written
+ * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
+ * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc), so
+ * [Siren.hasAttack] is false and its slider never appears.
+ */
+private sealed interface HeldSpec {
+    val zoneMidis: List<Int>
+    val hasAttack: Boolean
+
+    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec], never the raw stepper fractions again. */
+    val knobLabel: String
+    fun renderZone(midi: Int, cancelled: () -> Boolean): KeyNote
+    fun preview(cancelled: () -> Boolean): Snip
+    fun export(name: String, notes: List<KeyNote>, destRoot: File): KeygroupProgram
+
+    class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = ResinPadMaker.zoneMidis(spec)
+        override val hasAttack get() = true
+        override val knobLabel
+            get() = "ATTACK ${ResinPadMaker.secondsLabel(spec.attackSeconds)} · " +
+                "RELEASE ${ResinPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = ResinPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = ResinPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = ResinPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    class Siren(private val spec: SirenPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = SirenPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${SirenPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = SirenPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = SirenPadMaker.export(name, spec, notes, destRoot)
+    }
+}
+
+/**
+ * MAKE INSTRUMENT ▸'s sheet (RESIN or SIREN): [PresetNameDialog]'s frame -
+ * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
+ * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
+ * slider for an engine with none to dial (SIREN); RELEASE always shows,
+ * and [knobLabel] spells out whichever of the two apply in seconds. While
+ * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
+ * zone lands and the line counting them; PREVIEW's one zone says
+ * RENDERING… the way the scope does. CANCEL stays live until the last
+ * zone lands, and the write that follows is left to finish.
  */
 @Composable
 private fun HeldInstrumentSheet(
     heading: String,
     name: String,
+    hasAttack: Boolean,
     attack: Float,
     release: Float,
+    knobLabel: String,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -1464,14 +1605,9 @@ private fun HeldInstrumentSheet(
             if (making) {
                 HeldProgress(done, total, fillColor, scheme)
             } else {
-                MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
+                if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
                 MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
-                TapeText(
-                    "ATTACK ${ResinPadMaker.secondsLabel(ResinPadMaker.ATTACK.value(attack))} · " +
-                        "RELEASE ${ResinPadMaker.secondsLabel(ResinPadMaker.RELEASE.value(release))}",
-                    TapeType.pixelSmall,
-                    scheme.ink2.tape,
-                )
+                TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
                 if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1483,22 +1619,62 @@ private fun HeldInstrumentSheet(
     }
 }
 
-// ---------- DRONE TO LOOP: RESIN, droning ----------
+// ---------- DRONE TO LOOP: RESIN and SIREN, droning ----------
 
 /**
- * DRONE TO LOOP ▸'s sheet (RESIN only), [HeldInstrumentSheet]'s frame over
- * the three things a drone has that a one-shot never needed: ROOT (a note
- * stepper across the voice's own register), MOTION (how far the filter
- * breathes) and BREATHS (how many times per drone). The readout under ROOT
- * is [DroneMaker.label]: the note, how many bars before it repeats at the
- * grid's tempo, and the nudge the loop needed to close.
+ * DRONE TO LOOP's two engines behind one shape, mirroring [HeldSpec]: RESIN
+ * invents MOTION and BREATHS because its held macros carry no swing of
+ * their own; SIREN already is a movement (RATE and DEPTH), so
+ * [DroneSpec.Siren] adds nothing and [hasMotion] is false.
+ */
+private sealed interface DroneSpec {
+    val roots: IntRange
+    val hasMotion: Boolean
+    fun defaultRoot(key: KeySpec?): Int
+    fun label(root: Int, session: Session, cancelled: () -> Boolean): String
+    fun render(root: Int, session: Session, cancelled: () -> Boolean): FloatArray
+    fun toJson(): JsonValue
+
+    class Resin(private val voice: ResinVoice, macros: Map<String, Float>, motion: Float, rate: Int) : DroneSpec {
+        private val spec = DroneMaker.spec(voice, macros, motion, rate)
+        override val roots get() = DroneMaker.roots(voice)
+        override val hasMotion get() = true
+        override fun defaultRoot(key: KeySpec?) = DroneMaker.defaultRoot(voice, key)
+        override fun label(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.label(root, session)
+        override fun render(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.render(spec, root, session, cancelled)
+        override fun toJson() = spec.toJson()
+    }
+
+    class Siren(private val voice: SirenVoice, macros: Map<String, Float>) : DroneSpec {
+        private val spec = SirenDroneMaker.spec(voice, macros)
+        override val roots get() = SirenDroneMaker.roots(voice)
+        override val hasMotion get() = false
+        override fun defaultRoot(key: KeySpec?) = SirenDroneMaker.defaultRoot(voice, key)
+        override fun label(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.label(spec, root, session, cancelled)
+        override fun render(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.render(spec, root, session, cancelled)
+        override fun toJson() = spec.toJson()
+    }
+}
+
+/**
+ * DRONE TO LOOP ▸'s sheet (RESIN or SIREN), [HeldInstrumentSheet]'s frame
+ * over the things a drone has that a one-shot never needed: ROOT (a note
+ * stepper across the voice's own register), and — RESIN only — MOTION (how
+ * far the filter breathes) and BREATHS (how many times per drone). SIREN
+ * already is a movement: RATE and DEPTH are the patch's own swing and
+ * speed, dialed on the panel above, so [hasMotion] is false and that row
+ * never appears. The readout under ROOT is [label]: the note, how many
+ * bars before it repeats at the grid's tempo, and the nudge the loop
+ * needed to close.
  */
 @Composable
 private fun DroneSheet(
     heading: String,
-    voice: ResinVoice,
+    roots: IntRange,
+    hasMotion: Boolean,
     root: Int?,
-    session: Session?,
+    ready: Boolean,
+    label: String,
     motion: Float,
     rate: Int,
     previewing: Boolean,
@@ -1511,8 +1687,7 @@ private fun DroneSheet(
     onSend: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val ready = root != null && session != null
-    val range = DroneMaker.roots(voice)
+    val range = roots
     Box(
         Modifier
             .fillMaxSize()
@@ -1545,7 +1720,7 @@ private fun DroneSheet(
                     modifier = Modifier.weight(1f),
                 ) { root?.let { onRoot(it - 1) } }
                 TapeText(
-                    if (root != null && session != null) DroneMaker.label(root, session) else "…",
+                    label,
                     TapeType.lcdSmall,
                     scheme.ink.tape,
                     modifier = Modifier.weight(3f),
@@ -1558,26 +1733,28 @@ private fun DroneSheet(
                     modifier = Modifier.weight(1f),
                 ) { root?.let { onRoot(it + 1) } }
             }
-            MacroSlider("MOTION", motion, fillColor, scheme, onMotion)
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TapeText(
-                    "MOTION ${DroneMaker.motionLabel(motion)}",
-                    TapeType.pixelSmall,
-                    scheme.ink2.tape,
-                    modifier = Modifier.weight(1f),
-                )
-                ActionButton(
-                    DroneMaker.breathsLabel(rate),
-                    scheme,
-                    enabled = !previewing,
-                    modifier = Modifier.weight(1f),
+            if (hasMotion) {
+                MacroSlider("MOTION", motion, fillColor, scheme, onMotion)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val rates = ResinDrone.RATES
-                    onRate(rates[(rates.indexOf(rate) + 1) % rates.size])
+                    TapeText(
+                        "MOTION ${DroneMaker.motionLabel(motion)}",
+                        TapeType.pixelSmall,
+                        scheme.ink2.tape,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionButton(
+                        DroneMaker.breathsLabel(rate),
+                        scheme,
+                        enabled = !previewing,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        val rates = ResinDrone.RATES
+                        onRate(rates[(rates.indexOf(rate) + 1) % rates.size])
+                    }
                 }
             }
             if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
@@ -1648,9 +1825,9 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN;
+    THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK;
 
-    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → THUMP. */
+    /** THUMP → SKIN → TINES → VELVET → VOX → PLUCK → TONEWHEEL → FATHOM → RESIN → TIDE → GLINT → SIREN → FORK → THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
@@ -1666,6 +1843,7 @@ private enum class Engine {
         TIDE -> TideVoice.entries
         GLINT -> GlintVoice.entries
         SIREN -> SirenVoice.entries
+        FORK -> ForkVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -1681,6 +1859,7 @@ private enum class Engine {
         TIDE -> Tide.macrosFor(voice as TideVoice)
         GLINT -> Glint.macrosFor(voice as GlintVoice)
         SIREN -> Siren.macrosFor(voice as SirenVoice)
+        FORK -> Fork.macrosFor(voice as ForkVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -1696,6 +1875,7 @@ private enum class Engine {
         TIDE -> Tide.defaults(voice as TideVoice)
         GLINT -> Glint.defaults(voice as GlintVoice)
         SIREN -> Siren.defaults(voice as SirenVoice)
+        FORK -> Fork.defaults(voice as ForkVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -1711,6 +1891,7 @@ private enum class Engine {
         TIDE -> Tide.scramble(voice as TideVoice, random)
         GLINT -> Glint.scramble(voice as GlintVoice, random)
         SIREN -> Siren.scramble(voice as SirenVoice, random)
+        FORK -> Fork.scramble(voice as ForkVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -1731,6 +1912,7 @@ private enum class Engine {
         TIDE -> Tide.render(voice as TideVoice, macros)
         GLINT -> Glint.render(voice as GlintVoice, macros)
         SIREN -> Siren.render(voice as SirenVoice, macros)
+        FORK -> Fork.render(voice as ForkVoice, macros)
     }
 
     /**
@@ -1751,6 +1933,8 @@ private enum class Engine {
         GLINT -> (voice as GlintVoice).drumClass
         // SIREN: a LOOP by name when HOLD is at its top, a pitched note otherwise - the one knob that picks the class, like VOX's HIT.
         SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
+        // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
+        FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -1766,6 +1950,7 @@ private enum class Engine {
         TIDE -> TidePatch(name, voice as TideVoice, macros)
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
+        FORK -> ForkPatch(name, voice as ForkVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */

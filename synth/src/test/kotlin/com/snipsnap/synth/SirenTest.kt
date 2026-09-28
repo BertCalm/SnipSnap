@@ -403,4 +403,20 @@ class SirenTest {
         assertTrue(abs(cents(a[a.size / 2], b[b.size / 2])) < 2f, "the oversampled render moved the pitch")
         assertTrue(min(native.size, over.samples.size) > 0)
     }
+
+    @Test
+    fun `planLoop itself stops when nobody wants it any more`() {
+        // planLoop's own warm-up and integral run before synthesizeLoopStretch's
+        // audio loop ever starts, and at RATE's floor they are themselves
+        // seconds of iteration — a cancelled render must not have to wait
+        // them out first (review finding on PR #368).
+        var asked = 0
+        val t0 = System.nanoTime()
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            Siren.planLoop(SirenVoice.WAIL, mapOf("RATE" to 0f)) { ++asked > 0 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue(asked >= 1, "planLoop never asked")
+        assertTrue(ms < 200, "a cancelled plan ran on for ${ms}ms")
+    }
 }

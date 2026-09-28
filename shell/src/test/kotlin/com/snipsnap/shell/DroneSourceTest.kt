@@ -10,6 +10,8 @@ import com.snipsnap.loop.SampleSource
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
+import com.snipsnap.synth.SirenDrone
+import com.snipsnap.synth.SirenVoice
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -69,7 +71,7 @@ class DroneSourceTest {
         val inner = object : SampleSource by Nothing {
             override fun drone(recipe: JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip = marker
         }
-        val src = DroneSource(inner) { _, _, _, _, _ -> error("not a RESIN recipe") }
+        val src = DroneSource(inner, renderer = { _, _, _, _, _ -> error("not a RESIN recipe") })
         assertSame(marker, src.drone(Json.parse("""{"engine":"VELVET"}"""), 33, 8, 44_100))
     }
 
@@ -77,12 +79,19 @@ class DroneSourceTest {
     fun `a render that throws is silence, and the next bake tries again`() {
         var fail = true
         val calls = AtomicInteger(0)
-        val src = DroneSource(Nothing) { _, _, frames, _, _ ->
-            calls.incrementAndGet()
-            if (fail) error("render failed") else FloatArray(frames.toInt())
-        }
+        val src = DroneSource(
+            Nothing,
+            renderer = { _, _, frames, _, _ ->
+                calls.incrementAndGet()
+                if (fail) error("render failed") else FloatArray(frames.toInt())
+            },
+        )
         assertNull(src.drone(spec.toJson(), 33, 100, 44_100))
-        val silent = BlockBaker.bake(DroneBlock(spec.toJson(), 33, 0, 1), session, DroneSource(Nothing) { _, _, _, _, _ -> error("x") })
+        val silent = BlockBaker.bake(
+            DroneBlock(spec.toJson(), 33, 0, 1),
+            session,
+            DroneSource(Nothing, renderer = { _, _, _, _, _ -> error("x") }),
+        )
         assertTrue(silent.samples.all { it == 0f })
         fail = false
         assertEquals(100, src.drone(spec.toJson(), 33, 100, 44_100)?.samples?.size, "kept mono")
@@ -148,14 +157,33 @@ class DroneSourceTest {
     @Test
     fun `a cancelled render answers null and is forgotten, so the next ask renders`() {
         val calls = AtomicInteger(0)
-        val src = DroneSource(Nothing) { _, _, frames, _, cancelled ->
-            calls.incrementAndGet()
-            if (cancelled()) throw java.util.concurrent.CancellationException("stale")
-            FloatArray(frames.toInt())
-        }
+        val src = DroneSource(
+            Nothing,
+            renderer = { _, _, frames, _, cancelled ->
+                calls.incrementAndGet()
+                if (cancelled()) throw java.util.concurrent.CancellationException("stale")
+                FloatArray(frames.toInt())
+            },
+        )
         assertNull(src.drone(spec.toJson(), 33, 100, 44_100) { true })
         assertEquals(0, src.residentCount())
         assertEquals(100, src.drone(spec.toJson(), 33, 100, 44_100)?.frameCount)
         assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun `a SIREN recipe renders through its own renderer, not RESIN's`() {
+        val resinCalls = AtomicInteger(0)
+        val sirenCalls = AtomicInteger(0)
+        val src = DroneSource(
+            Nothing,
+            renderer = { _, _, frames, _, _ -> resinCalls.incrementAndGet(); FloatArray(frames.toInt()) },
+            sirenRenderer = { _, _, frames, _, _ -> sirenCalls.incrementAndGet(); FloatArray(frames.toInt()) { it.toFloat() / frames } },
+        )
+        val sirenSpec = SirenDrone.Spec(SirenVoice.WAIL, emptyMap())
+        val snip = src.drone(sirenSpec.toJson(), 60, 100, 44_100)
+        assertEquals(0, resinCalls.get(), "a SIREN recipe must not reach RESIN's renderer")
+        assertEquals(1, sirenCalls.get())
+        assertEquals(100, snip?.frameCount)
     }
 }

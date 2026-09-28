@@ -87,6 +87,15 @@ tasks.register<JavaExec>("generateGlintD1Audition") {
     args("${rootDir}/testkit/glint-d1-audition")
 }
 
+tasks.register<JavaExec>("generateGlintD2Audition") {
+    group = "distribution"
+    description = "Render the GLINT D2 audition clips and listening page under testkit/glint-d2-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintD2AuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-d2-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"
@@ -234,4 +243,43 @@ tasks.register<JavaExec>("generateSirenKit") {
     mainClass.set("com.snipsnap.synth.SirenKitGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit")
+}
+
+tasks.register<JavaExec>("generateForkKit") {
+    group = "distribution"
+    description = "Render the FORK modal electric piano acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForkKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the FORK round-one audition clips, manifest and page under testkit/fork-audition/. See ForkAuditionGenerator. */
+tasks.register<JavaExec>("generateForkAudition") {
+    group = "distribution"
+    description = "Render the FORK audition clips, manifest and listening page under testkit/fork-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForkAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/fork-audition")
+}
+
+/** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
+tasks.register<JavaExec>("generateTerraKit") {
+    group = "distribution"
+    description = "Render the TERRA world-percussion acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the TERRA audition clips, manifest and page under testkit/terra-audition/. See TerraAuditionGenerator. */
+tasks.register<JavaExec>("generateTerraAudition") {
+    group = "distribution"
+    description = "Render the TERRA audition clips, manifest and listening page under testkit/terra-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/terra-audition")
 }

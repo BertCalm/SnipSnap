@@ -48,6 +48,10 @@ object InstrumentSidecar {
             "resin-held",
             listOf("single layer; RESIN BRASS preset WIDE SECTION, attack 0.8 s; loop cut at whole cycles of every oscillator"),
         ),
+        "SnipSnap Fork" to Recipe(
+            "fork-tine",
+            listOf("soft = strike 0.3 (vel 1-63)", "main = strike 0.8 (vel 64-127); FORK TINE preset DINNER JAZZ"),
+        ),
     )
 
     fun describe(programs: List<KeygroupProgram>): JsonValue.Obj {

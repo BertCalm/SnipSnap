@@ -373,14 +373,14 @@
           "samples": [
             {
               "sample": "Harp_E3_soft",
-              "frames": 102753,
+              "frames": 112896,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E3",
-              "frames": 102753,
+              "frames": 112896,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -395,14 +395,14 @@
           "samples": [
             {
               "sample": "Harp_G3_soft",
-              "frames": 84010,
+              "frames": 100327,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_G3",
-              "frames": 84010,
+              "frames": 100327,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -417,14 +417,14 @@
           "samples": [
             {
               "sample": "Harp_A#3_soft",
-              "frames": 72103,
+              "frames": 81585,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_A#3",
-              "frames": 72103,
+              "frames": 81585,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -439,14 +439,14 @@
           "samples": [
             {
               "sample": "Harp_C#4_soft",
-              "frames": 59314,
+              "frames": 67252,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_C#4",
-              "frames": 59314,
+              "frames": 67252,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -461,14 +461,14 @@
           "samples": [
             {
               "sample": "Harp_E4_soft",
-              "frames": 48069,
+              "frames": 54022,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E4",
-              "frames": 48069,
+              "frames": 54022,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -483,14 +483,14 @@
           "samples": [
             {
               "sample": "Harp_G4_soft",
-              "frames": 41233,
+              "frames": 45423,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_G4",
-              "frames": 41233,
+              "frames": 45423,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -505,14 +505,14 @@
           "samples": [
             {
               "sample": "Harp_A#4_soft",
-              "frames": 35059,
+              "frames": 37485,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_A#4",
-              "frames": 35059,
+              "frames": 37485,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -527,14 +527,14 @@
           "samples": [
             {
               "sample": "Harp_C#5_soft",
-              "frames": 28224,
+              "frames": 29988,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_C#5",
-              "frames": 28224,
+              "frames": 29988,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -549,14 +549,14 @@
           "samples": [
             {
               "sample": "Harp_E5_soft",
-              "frames": 22711,
+              "frames": 24034,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E5",
-              "frames": 22711,
+              "frames": 24034,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -850,6 +850,215 @@
               "velStart": 0,
               "velEnd": 127,
               "loopStartFrame": 101430
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Fork",
+      "engine": "fork-tine",
+      "layers": [
+        "soft = strike 0.3 (vel 1-63)",
+        "main = strike 0.8 (vel 64-127); FORK TINE preset DINNER JAZZ"
+      ],
+      "volumeRelease": 0.5,
+      "zones": [
+        {
+          "rootMidi": 48,
+          "note": "C3",
+          "lowNote": 39,
+          "highNote": 49,
+          "samples": [
+            {
+              "sample": "Fork_C3_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_C3",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 51,
+          "note": "D#3",
+          "lowNote": 50,
+          "highNote": 52,
+          "samples": [
+            {
+              "sample": "Fork_D#3_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_D#3",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 54,
+          "note": "F#3",
+          "lowNote": 53,
+          "highNote": 55,
+          "samples": [
+            {
+              "sample": "Fork_F#3_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_F#3",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 57,
+          "note": "A3",
+          "lowNote": 56,
+          "highNote": 58,
+          "samples": [
+            {
+              "sample": "Fork_A3_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_A3",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 60,
+          "note": "C4",
+          "lowNote": 59,
+          "highNote": 61,
+          "samples": [
+            {
+              "sample": "Fork_C4_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_C4",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 63,
+          "note": "D#4",
+          "lowNote": 62,
+          "highNote": 64,
+          "samples": [
+            {
+              "sample": "Fork_D#4_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_D#4",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 66,
+          "note": "F#4",
+          "lowNote": 65,
+          "highNote": 67,
+          "samples": [
+            {
+              "sample": "Fork_F#4_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_F#4",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 69,
+          "note": "A4",
+          "lowNote": 68,
+          "highNote": 70,
+          "samples": [
+            {
+              "sample": "Fork_A4_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_A4",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
+            }
+          ]
+        },
+        {
+          "rootMidi": 72,
+          "note": "C5",
+          "lowNote": 71,
+          "highNote": 81,
+          "samples": [
+            {
+              "sample": "Fork_C5_soft",
+              "frames": 64571,
+              "velStart": 1,
+              "velEnd": 63,
+              "loopStartFrame": 0
+            },
+            {
+              "sample": "Fork_C5",
+              "frames": 64571,
+              "velStart": 64,
+              "velEnd": 127,
+              "loopStartFrame": 0
             }
           ]
         }

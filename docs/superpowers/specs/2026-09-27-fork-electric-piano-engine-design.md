@@ -1,9 +1,9 @@
 # FORK — the modal electric piano engine
 
-**Status:** design; questions 1, 2, 4 and 5 (home, which bar, scope,
-excite-from-pad) settled in conversation 2026-09-27; question 3 (residual
-and stereo) left open by the owner, so its default stands until the first
-gate. Not implemented.
+**Status:** R1 built 2026-09-27 (engine, both voices, the striker, presets,
+keys instrument, the phone picker, the testkit kit — see "As built" at the
+end). Question 3 (residual and stereo) is still open, R2 waits on it and
+on U4's stereo audit.
 **Date:** 2026-09-27
 **Plan:** to be written per round (`docs/superpowers/plans/2026-09-27-fork-round-N.md`)
 **Related:** [`2026-09-27-silk-string-engine-design.md`](2026-09-27-silk-string-engine-design.md)
@@ -194,18 +194,20 @@ sits nearer 2. FORK starts at **2**, which at a 10 s fundamental gives:
 That is the "tink" on TINE and the clang on BAR, and the slope is a
 constant to move at the gate, with the spec's 2.7 as the other candidate.
 
-**STIFF.** The spec's inharmonicity: a multiplier taking modes 2–4 from
-harmonic to the bar. Mapped `Dsp.around`-style so the centre is the
-truth: at STIFF 0.5 the ratios are the voice's table exactly; at 0 they
-are `1, 2, 3, 4` (a string); at 1 each `ratio_k − 1` is stretched 1.5×
-past the table (the spec's "extremely inharmonic rigid bar"). Linear in
-the ratio, `r_k(s) = 1 + m(s)·(table_k − 1)` with `m` running 0 → 1 → 1.5
-over the knob's two halves, because the ear reads a mode's *position* and
-a straight line between two positions is the morph with no surprise in
-the middle. `Modes.stiffString`'s `B` was considered for the string end
-and rejected: at `B` small enough to be a string the partials sit within
-cents of harmonic anyway, and a second family of curve on one knob buys
-nothing audible.
+**STIFF.** The spec's inharmonicity: taking modes 2–4 from harmonic to
+the bar, and past it. Pinned at three stops: at STIFF 0.5 the ratios are
+the voice's table exactly; at 0 they are `1, 2, 3, 4` (a string); at 1
+each is `1 + 1.5·(table_k − 1)` (the spec's "extremely inharmonic rigid
+bar"). Mode 1's `table_1` is always 1, so every stop collapses to 1 for
+it — the fundamental never moves. Piecewise-linear *in the ratio itself*
+between consecutive stops (not in some multiplier on top of it — see "As
+built": the draft's first formula collapsed every mode onto the
+fundamental at STIFF 0, the opposite of the string it was meant to be),
+because the ear reads a mode's *position* and a straight line between two
+positions is the morph with no surprise in the middle. `Modes.stiffString`'s
+`B` was considered for the string end and rejected: at `B` small enough
+to be a string the partials sit within cents of harmonic anyway, and a
+second family of curve on one knob buys nothing audible.
 
 ### The pickup
 
@@ -447,3 +449,151 @@ seams. R2 waits on U4's stereo audit regardless.
    as a thing of its own. If neither, R2 is per-mode pan and the split
    as written; if the tail matters, residual becomes a third pad in the
    split.
+
+## As built — 2026-09-27
+
+R1 shipped whole: `Fork.kt` (both voices), `ForkPatch` with the optional
+striker, `ForkPresets.kt` (8 per voice, 16 total), `Keys.fork` and
+`InstrumentSuite.renderFork` (a real dual-generation keygroup, 9 zones,
+`./gradlew :synth:generateInstrumentSuite`), the SYNTH picker (`… → SIREN
+→ FORK → THUMP`), `SynthKits.fork()` and its testkit kit
+(`./gradlew :synth:generateForkKit`), the blocklist terms, and the test
+suite the spec named. Where the build departs from the design, and why:
+
+- **STIFF's formula was wrong in the draft, not just under-specified.**
+  `r_k(s) = 1 + m(s)·(table_k − 1)` with `m(0) = 0` gives `r_k(0) = 1` for
+  every mode — every mode at the fundamental, not the harmonic string the
+  same sentence promised. The shipped formula is piecewise-linear in the
+  ratio itself between three pinned stops (harmonic → table → stretched),
+  corrected in the "The synthesis" section above rather than left wrong
+  there with the fix only here — a plain arithmetic error is not a design
+  decision worth preserving in place.
+
+- **STRIKE needed a fourth mechanism, not just three.** The spec's
+  excitation-cutoff channel (1.5 → 9 kHz) only helps a mode that sits
+  *above* the darker end of that range. Measured: BAR's four modes, at a
+  typical note, all sit under 1.5 kHz already — the cutoff sweep has
+  nothing to give any of them, and STRIKE's audible brightening (real,
+  and confirmed by the second-harmonic test) came entirely from the
+  pickup's own swing, which turned out to not reliably dominate on its
+  own. The fix, `STRIKE_BRIGHT_BOOST` (`Fork.kt`): each mode's gain gets
+  an extra `1 + 2.2·k·STRIKE` factor, `k` its index (0 for the
+  fundamental, which therefore never moves). This is not a patch over a
+  test — it is real hammer physics (a harder strike excites higher
+  partials disproportionately more) that the excitation-filter channel
+  alone does not carry, measured directly: at STRIKE 0→1, BAR's own mode
+  2/3/4 energy (isolated, pre-pickup) rose 6×/67×/34× while mode 1 barely
+  moved. `STRIKE`'s own macro-table entry above still reads "three
+  things together"; read it as four, this one on the resonator's gain
+  rather than the exciter.
+
+- **`Keys.fork` takes one continuous `strike`, not two baked layers** —
+  exactly the shape `Keys.ep`'s own `bright: Float` already takes, and for
+  the same reason: velocity-true soft/hard rendering is an *instrument
+  builder's* move (`InstrumentSuite.renderFork` calls `Keys.fork` twice,
+  at `strike` 0.3 and 0.8, the same way `InstrumentSuite.renderEp` calls
+  `Keys.ep` at `bright` 0.35 and 0.8), not something the engine itself
+  bakes in. The spec's "velocity-true soft/hard renders" language was
+  right about the *result*; the mechanism sits one level up.
+
+- **There is no general `--instrument` CLI flag to hang FORK's keys off
+  of.** `SynthCommand`'s `--instrument` is hardcoded to RESIN
+  (`ResinPadMaker`, the *held-note* instrument S8.1 built) and refuses
+  every other engine by name. FORK's keys instrument ships instead
+  through the same one-off generator infrastructure EP, Organ, Harp,
+  Music Box and the RESIN pad itself already use —
+  `InstrumentSuite.renderFork` plus a `RECIPES` entry in
+  `InstrumentSidecar` (a `when`-exhaustive-shaped map that throws by name
+  on an unregistered instrument, the same shape `Velocity.kt`'s
+  `macroSpecsFor`/`brightnessOverride` take for `Patch` subtypes — FORK
+  needed an entry in both). No CLI flag was added or promised for this;
+  `./gradlew :synth:generateInstrumentSuite` is the door, same as the
+  other five.
+
+- **FORK never reads strict TONAL, at any DECAY.** Measured across the
+  full preset roster and confirmed with a swept-DECAY test: below the
+  classifier's 1.5 s length line it reads PERC (the pickup's brightest
+  content sits at the attack and the peak-to-−20dB decay-shape gate
+  does not clear 500 ms before the render itself would have to grow past
+  1.5 s), above it LOOP. There is no gap. `Fork.drumClassFor(voice,
+  macros)` is the honest version of this — a cheap, macro-only predictor
+  (the picker's own mute-group filing has to run before a render exists)
+  verified against the real classifier across ten DECAY steps — rather
+  than a static per-voice property (`ThumpVoice.drumClass`'s own shape)
+  that cannot see DECAY, or a wished-for TONAL this engine does not
+  produce. `SynthScreen`'s own `FORK -> Fork.drumClassFor(...)` line and
+  both `ForkTest`/`ForkPresetsTest` hold the measurement.
+
+- **STRIKE is now `Velocity.kt`'s brightness macro for FORK** (a
+  `brightnessOverride` entry, PLUCK's PICK and THUMP SNARE's own
+  precedent), proven monotonic — within a small, physically-explained
+  ripple (a few percent, where the swept excitation cutoff crosses one of
+  a voice's own mode frequencies; not a reversal, and TINE has none of it
+  since its modes sit far apart) — by `ForkTest`'s own centroid sweep.
+
+- **The classifier verdict aside, everything else in "The synthesis",
+  "The pickup" and "Streams" shipped as designed**: the render length is
+  `t60 + a small pad`, not the draft's separate `1.3×` tail factor (the
+  same fix that pushed the classifier reading down from LOOP to PERC at
+  low DECAY — t60 is already −60 dB, and `Dsp.fadeTail` is the
+  truncation's own safety net, so the extra 30% bought nothing). The
+  pickup's clamp is dead at every legal macro corner exactly as
+  predicted; BARK's ceiling (0.7) and the base `1/ratio` mode-gain shape
+  are untouched, both still open for the audition gate.
+
+- **Not shipped in R1, by scope**: the phone's `STRIKE FROM ▸` picker
+  affordance for the striker (the engine and the recipe format —
+  `Fork.striker`, `ForkPatch.striker` — are built and tested; only the
+  Compose screen's own source-chooser button is not wired, since this
+  session has no Android SDK to build or see `:app` with, and a picker
+  button guessed blind is worse than one left for a session that can
+  verify it). `SEND TO PAD`'s landing toast and any FX-chain-on-landing
+  behavior, which FORK does not need yet (no ECHO-on-landing decision
+  like SIREN's, since FORK has no LOOP render to distinguish from a
+  one-shot). Both are small, and neither blocks the audition: presets,
+  the kit, and the keys instrument all render and export today.
+
+## Round two — 2026-09-28
+
+R1's own audition (16 presets, both voices) came back: closer on TINE, but
+neither read as "piano" outright, and BAR read as its own thing — a
+marimba, worth keeping as a voice rather than chasing toward piano. Asked
+for at least one more voice option, aimed at the piano gap specifically.
+
+**`ForkVoice.NODE`** — the same cantilever tine as TINE (`TINE_RATIOS`
+unchanged), read at a different spot: its own second mode's internal
+node. A pickup there cannot see mode 2 at all, and modes 3 and 4 are
+strongly reduced too (their own shape function is simply small in that
+region) — a purer, more fundamental-forward tone than TINE's own tip
+read, without inventing a new physical claim to get there or touching the
+bar itself.
+
+The mechanism, not asserted: a cantilever's mode shape is derived from the
+Euler-Bernoulli fixed-free boundary conditions (`Fork.cantileverModeShape`
+— fixed end gives `φ(0)=φ'(0)=0`, collapsing the general solution to
+`A[cosh(βξ)−cos(βξ)] + B[sinh(βξ)−sin(βξ)]`; the free end's own two
+conditions then fix `B/A` and, requiring both to agree, *reproduce* the
+textbook characteristic equation `cosh(β)cos(β) = −1` — not assumed, a
+derivation that happened to land on the independently-known answer, which
+is the actual verification). The pickup position (`NODE_PICKUP_XI =
+0.783445`) is mode 2's own root of that shape function, found by
+bisection — not a chosen or fitted number, and it matches the value beam-
+vibration references already tabulate for a cantilever's second mode, a
+cross-check the derivation did not have to pass but did.
+
+`ForkTest` carries the check twice: once on the derivation itself (the
+tabulated eigenvalues satisfy `cosh(β)cos(β) = −1`, the mode shape is zero
+at the clamped root), and once on the audible claim (mode 2's own energy,
+measured on the clean resonator before the pickup's nonlinearity, is
+suppressed to under 15% of TINE's own at the identical macros).
+
+**What round two deliberately did not do**: touch `BARK`'s closeness
+mechanism, add a `POSITION` macro letting a player move the pickup
+themselves (the shape function crosses zero repeatedly across 0..1 — an
+exposed macro would wander through a landscape of arbitrary phase
+flips between modes, not a clean bright/warm dial, so this round bakes in
+the one physically-motivated spot rather than exposing the whole
+unpredictable range), or claim NODE "solves" the piano question — that is
+still the audition's own call, now with a third, purpose-built candidate
+to make it against. Eight presets shipped for NODE (`ForkPresets.kt`),
+named for the tone the mechanism gives, not for having arrived.
