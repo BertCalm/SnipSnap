@@ -12,7 +12,7 @@ import kotlin.random.Random
  * and the character pair (COURSE/SLIDE for OUD, STIFF/PRESS for GUZHENG)
  * is the voice's identity.
  */
-enum class SilkVoice { OUD }
+enum class SilkVoice { OUD, GUZHENG }
 
 object Silk {
 
@@ -26,6 +26,18 @@ object Silk {
     /** STRIKE's ends as a fraction of the string - PLUCK's own map, informed by the confirmed Arabic/Turkish scale lengths (research §2, T7) rather than any SILK-specific measurement. */
     internal const val STRIKE_BRIDGE = 0.03f
     internal const val STRIKE_CENTRE = 0.5f
+
+    /**
+     * GUZHENG's STIFF range: an inharmonicity coefficient B from 0 to
+     * 1.5e-4, default about the computed B for string 21 (D2) - research
+     * §3, Z-I8/Z.7 point 5. 1.5e-4 is the guqin proxy's own verbatim value
+     * and the same string's own parameter table read the other way.
+     */
+    internal const val STIFF_B_MAX = 1.5e-4f
+    internal const val STIFF_B_ANCHOR = 3.5e-5f
+
+    /** The number of cascaded [Strings.Dispersion] sections GUZHENG's STIFF drives - research §3's own M=4 worked example. */
+    internal const val STIFF_SECTIONS = 4
 
     /**
      * The nine macros: TUNE/SCALE/INFLECT/DAMP/PICK/STRIKE/BODY on every
@@ -45,6 +57,21 @@ object Silk {
             MacroSpec("BODY", 0.3f),
             MacroSpec("COURSE", 0.2f),
             MacroSpec("SLIDE", 0f),
+        )
+        SilkVoice.GUZHENG -> listOf(
+            MacroSpec("TUNE", 0.3f),
+            MacroSpec("SCALE", scaleMacroFor(SilkScales.PENTATONIC)),
+            MacroSpec("INFLECT", 0.5f, neutral = 0.5f),
+            // Low DAMP is bright and long-ringing (spec, "GUZHENG": "bright,
+            // long ring - DAMP default low").
+            MacroSpec("DAMP", 0.3f),
+            MacroSpec("PICK", 0.7f),
+            MacroSpec("STRIKE", 0.15f),
+            MacroSpec("BODY", 0.3f),
+            // STIFF 0..1 maps to B 0..STIFF_B_MAX; the anchor default sits
+            // at guzheng string 21's own computed B (research §3, ~3.5e-5).
+            MacroSpec("STIFF", STIFF_B_ANCHOR / STIFF_B_MAX),
+            MacroSpec("PRESS", 0f),
         )
     }
 
@@ -71,6 +98,7 @@ object Silk {
     /** The voice's root - the bottom of TUNE's span, one full period of SCALE below its own centre. */
     internal fun rootFor(voice: SilkVoice): Float = when (voice) {
         SilkVoice.OUD -> 65.41f // C2, the confirmed Arabic oud tuning's lowest course (research §2, T1)
+        SilkVoice.GUZHENG -> 73.41f // D2, string 21 of 21 - the confirmed range's own bottom (research §3, Z-U1)
     }
 
     /** The macro value that snaps [SilkScales.snap] to exactly [scale] - each voice's own default row. */
@@ -112,6 +140,10 @@ object Silk {
             SilkVoice.OUD -> {
                 val slideFrom = if (m.getValue("SLIDE") > 0.01f) oneDegreeBelow(root, scale, m.getValue("TUNE")) else freq
                 val out = oud(freq, slideFrom, damp, pick, position, m.getValue("COURSE"), m.getValue("SLIDE"), rate, velocity)
+                trimToDecay(withBody(out, voice, body, rate), rate)
+            }
+            SilkVoice.GUZHENG -> {
+                val out = guzheng(freq, damp, pick, position, m.getValue("STIFF"), m.getValue("PRESS"), rate, velocity)
                 trimToDecay(withBody(out, voice, body, rate), rate)
             }
         }
@@ -175,6 +207,76 @@ object Silk {
         return out
     }
 
+    /**
+     * GUZHENG: one bright, long-ringing string per note - STIFF's
+     * dispersion cascade, PRESS's pressed bend up, a fingerpicked
+     * excitation (PICK high, STRIKE low).
+     */
+    private fun guzheng(freq: Float, damp: Float, pick: Float, position: Float, stiff: Float, press: Float, rate: Int, velocity: Float): FloatArray {
+        val loopHz = 6500f
+        val pickLo = 2000f
+        val pickHi = 10_000f
+        val ring = 0.3f
+        val damping = Strings.damping(damp, loopHz)
+        val pickHz = Dsp.expMap(pick, pickLo, pickHi)
+        val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
+            .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
+
+        // A finding from this task, not a claim the spec made: at
+        // guzheng-scale B, Strings.Dispersion.forB's frequency-independent
+        // coefficient (Task 3's own simplification of the corrected
+        // Rauhala design, which needs no re-derivation per note) produces
+        // a partial stretch on the order of hundredths of a cent - three
+        // orders of magnitude under the ~13-56 cent stretch the physics
+        // itself (fk = k*f0*sqrt(1+B*k^2)) predicts at k=20. STIFF's wiring
+        // is correct and its direction is proven at the Strings level
+        // (StringsTest's own probe, with a deliberately stronger
+        // coefficient); at GUZHENG's own sourced B it is not yet audible.
+        // Closing that gap needs the per-note re-derivation the papers'
+        // own piano application actually does, which this phase did not
+        // reverse-engineer with confidence - a listening-gate / follow-on
+        // question, not a guess to paper over here.
+        val b = Dsp.lin(stiff, 0f, STIFF_B_MAX)
+        val dispersion = Strings.Dispersion.forB(b, STIFF_SECTIONS)
+
+        // PRESS: four snapped stops, 0/100/200/300 cents up from the
+        // plucked degree (spec, "GUZHENG": the note reaches fa and ti this
+        // way, off the pentatonic table on purpose).
+        val pressSteps = Math.round(press.coerceIn(0f, 1f) * 3f)
+        val pressed = freq * 2f.pow(pressSteps * 100f / 1200f)
+
+        val seed = Dsp.seedFor("SILK", SilkVoice.GUZHENG, freq)
+        return guzhengLoop(freq, pressed, seconds, damping, pickHz, position, dispersion, rate, seed)
+    }
+
+    /**
+     * One string, built at [plucked] - the lower of the two frequencies,
+     * so it always has room to [Strings.Loop.retune] up toward [pressed]
+     * (see that contract). At [pressed] == [plucked] (PRESS 0) no
+     * retuning happens at all.
+     */
+    private fun guzhengLoop(plucked: Float, pressed: Float, seconds: Float, damping: Strings.Damping, pickHz: Float, position: Float, dispersion: Strings.Dispersion?, rate: Int, seed: Int): FloatArray {
+        val t0 = Strings.tune(plucked, damping.loopHz, rate, dispersion = dispersion)
+        val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t0.n + 2))
+        val exc = Strings.pluckExciter(t0.n, plucked, pickHz, position, seed, rate, out.size)
+        val loop = Strings.Loop(t0.n, t0.a, damping.fb, damping.loopHz, rate, dispersion = dispersion)
+
+        val pressing = pressed != plucked
+        // The press's own rise time is unsourced (spec, "GUZHENG": "the
+        // bend's rise time is shape: no source measures it") - a shape
+        // constant awaiting the audition gate, like PLUCK's own placeholders.
+        val riseSamples = if (pressing) (0.12f * rate).toInt().coerceAtLeast(1) else 0
+
+        for (i in out.indices) {
+            if (pressing && i in 1..riseSamples) {
+                val progress = i.toFloat() / riseSamples
+                loop.retune(plucked * (pressed / plucked).pow(progress))
+            }
+            out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
+        }
+        return out
+    }
+
     /** The fixed body of each voice - see [Pluck.bodyFor]'s own KDoc for the drive's reasoning, shared via [Strings.bodyRing]. */
     private fun bodyFor(voice: SilkVoice): List<Modes.Mode> = when (voice) {
         // A Turkish ud, strung and radiating - the only two modes measured
@@ -183,6 +285,16 @@ object Silk {
         SilkVoice.OUD -> listOf(
             Modes.fixed(113f, 1.0f, 0.193f), // Q 9.91 - measured
             Modes.fixed(182f, 0.8f, 0.122f), // Q 10.06 - measured
+        )
+        // A complete guzheng, strung and radiating - Deng 2016's five
+        // measured modes (research §3, Z-B7). No source gives a Q for any
+        // guzheng mode, so every gain and t60 here is shape.
+        SilkVoice.GUZHENG -> listOf(
+            Modes.fixed(83.69f, 1.0f, 0.35f),
+            Modes.fixed(138.13f, 0.85f, 0.30f),
+            Modes.fixed(172.50f, 0.7f, 0.26f),
+            Modes.fixed(197.19f, 0.6f, 0.22f),
+            Modes.fixed(275.00f, 0.45f, 0.18f),
         )
     }
 

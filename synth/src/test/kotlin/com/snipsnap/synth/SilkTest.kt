@@ -9,6 +9,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.ln
+import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -112,6 +113,51 @@ class SilkTest {
         assertTrue(abs(cents(late, target.toDouble())) <= 5.0, "after the glide: wanted $target Hz, measured $late Hz")
     }
 
+    /**
+     * PLUCK's own 5-cent rule, generalised: every degree of GUZHENG's
+     * default scale (PENTATONIC) lands within 5 cents of the scale's own
+     * target. STIFF is left at 0 here: at nonzero STIFF the fundamental
+     * still holds exact (the tuning budget charges the cascade's own
+     * delay before splitting the loop length - StringsTest's own
+     * dispersion test proves this at the Strings level), but this test's
+     * job is SCALE/TUNE, not STIFF, so it isolates them.
+     */
+    @Test
+    fun `GUZHENG is in tune at every degree of PENTATONIC`() {
+        val root = Silk.rootFor(SilkVoice.GUZHENG)
+        val scale = SilkScales.PENTATONIC
+        val size = scale.cents.size
+        for (degree in 0..2 * size) {
+            val tune = degree / (2f * size)
+            val want = SilkScales.frequencyFor(root, scale, tune)
+            val snip = Silk.render(SilkVoice.GUZHENG, mapOf("TUNE" to tune, "STIFF" to 0f))
+            val measured = measuredHz(snip, want)
+            val off = cents(measured, want.toDouble())
+            assertTrue(abs(off) <= 5.0, "degree $degree (tune=$tune): wanted $want Hz, measured $measured Hz ($off cents)")
+        }
+    }
+
+    /**
+     * PRESS (spec, "GUZHENG"): at each of its four snapped stops, the
+     * pitch track starts on the plucked degree and settles 0/100/200/300
+     * cents above it - measured well after the 0.12 s rise
+     * (`Silk.guzhengLoop`'s own shape constant).
+     */
+    @Test
+    fun `PRESS lands at each of its four stops`() {
+        val root = Silk.rootFor(SilkVoice.GUZHENG)
+        val scale = SilkScales.PENTATONIC
+        val tune = 0.3f
+        val plucked = SilkScales.frequencyFor(root, scale, tune)
+        for ((press, expectCents) in listOf(0f to 0, 0.34f to 100, 0.67f to 200, 1f to 300)) {
+            val target = plucked * 2f.pow(expectCents / 1200f)
+            val snip = Silk.render(SilkVoice.GUZHENG, mapOf("TUNE" to tune, "PRESS" to press, "DAMP" to 0.1f))
+            val measured = measuredHz(snip, target, fromSec = 0.3f, bodySeconds = 0.3f)
+            val off = cents(measured, target.toDouble())
+            assertTrue(abs(off) <= 5.0, "PRESS=$press: wanted $target Hz (+$expectCents c), measured $measured Hz ($off cents)")
+        }
+    }
+
     @Test
     fun `is deterministic`() {
         for (voice in SilkVoice.entries) {
@@ -161,12 +207,19 @@ class SilkTest {
      * every other voice must still read PERC"); SILK's plucked strings are
      * the same case, not a different one - the spec's "all four defaults
      * read TONAL" line was this plan's own mistake, not a design intent.
+     *
+     * GUZHENG is allowed to read SNARE too, the same exception PLUCK's own
+     * test carries for BANJO: a bright fingerpicked default (PICK high,
+     * per the spec) puts enough energy above the classifier's high-band
+     * threshold to cross it, exactly the mechanism PLUCK's own comment
+     * documents ("two thirds of its attack" above 2 kHz).
      */
     @Test
     fun `factory defaults classify as PERC, same as PLUCK's own plucked strings`() {
         for (voice in SilkVoice.entries) {
+            val allowed = if (voice == SilkVoice.GUZHENG) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
             val c = Classifier.classify(Silk.render(voice))
-            assertTrue(c.drumClass == DrumClass.PERC, "$voice default classified ${c.drumClass}, expected PERC")
+            assertTrue(c.drumClass in allowed, "$voice default classified ${c.drumClass}, expected one of $allowed")
         }
     }
 }
