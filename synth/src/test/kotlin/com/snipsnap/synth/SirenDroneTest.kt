@@ -157,6 +157,23 @@ class SirenDroneTest {
     }
 
     @Test
+    fun `the carrier's own settle and integral pass stops too, not just the audio loop`() {
+        // An 8-interval drone's own loop can be millions of oversampled
+        // samples before the audio loop even starts (review finding on PR
+        // #368): cancelling on the very first ask must not wait that pass
+        // out first.
+        val frames = 8 * interval(44_100)
+        var asked = 0
+        val t0 = System.nanoTime()
+        assertFailsWith<java.util.concurrent.CancellationException> {
+            SirenDrone.render(SirenDrone.Spec(SirenVoice.WAIL, emptyMap()), 60, frames, 44_100) { ++asked > 0 }
+        }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue(asked >= 1, "the render never asked")
+        assertTrue(ms < 200, "a cancelled render ran on for ${ms}ms")
+    }
+
+    @Test
     fun `a render stops when its thread is interrupted`() {
         var thrown: Throwable? = null
         val t = Thread {

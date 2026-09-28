@@ -1605,7 +1605,7 @@ private sealed interface DroneSpec {
         override val roots get() = SirenDroneMaker.roots(voice)
         override val hasMotion get() = false
         override fun defaultRoot(key: KeySpec?) = SirenDroneMaker.defaultRoot(voice, key)
-        override fun label(root: Int, session: Session) = SirenDroneMaker.label(root, session)
+        override fun label(root: Int, session: Session) = SirenDroneMaker.label(spec, root, session)
         override fun render(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.render(spec, root, session, cancelled)
         override fun toJson() = spec.toJson()
     }

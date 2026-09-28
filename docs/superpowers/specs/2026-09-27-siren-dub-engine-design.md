@@ -501,9 +501,41 @@ Second listen, same day: "Sweep is great." The gate is passed.
   so a recipe from a later engine can still wrap this one; the cache key
   never reads which engine matched, only the recipe's own JSON, root,
   frames and rate.
-- **`DroneMaker.label`, `DroneFit.span`/`nudgeCents` never read an engine.**
-  `SirenDroneMaker` calls them directly rather than re-deriving pitch
-  arithmetic that was already engine-agnostic.
+
+## After review — 2026-09-27
+
+Three findings on the first review, all real, none touching the audio a
+finished render actually produces:
+
+- **`DroneFit.spanFor`/`nudgeCents` are not engine-agnostic — they are
+  RESIN's own model.** The as-built note above claimed otherwise, and it
+  was wrong: `DroneFit`'s formula assumes RESIN's even-only sub-octave
+  snap and pure pitch arithmetic, while SIREN's own carrier
+  (`SirenDrone.fitCarrier`) permits any whole cycle count and depends on
+  DEPTH through the LFO's own phase integral. Reusing `DroneFit` for SIREN
+  never broke the tuning promise — SIREN's true achievable nudge is
+  provably no worse than what `DroneFit`'s model estimates (its
+  even-only constraint is strictly tighter than SIREN needs, and a
+  zero-mean swing's phase integral is always at least the loop's plain
+  duration, by Jensen's inequality) — but it could choose a longer span
+  than necessary, and the readout would not be the number SIREN's own
+  render lands on. `SirenDrone` now exposes `fitCarrier` (shared with
+  `synthesize`, so the snap is computed once, not twice) and `nudgeCents`;
+  `SirenDroneMaker.span`/`label` read those instead of `DroneMaker`'s.
+  `SessionBuilder.sendDrone` takes an explicit `span` (default: the old
+  RESIN-shaped guess, for RESIN's own callers and the existing tests), and
+  `App.sendDroneToLoop` works it out against the session it just loaded,
+  dispatching on the recipe's own engine — the one place outside `:synth`
+  and `:shell` a SIREN drone's span is chosen, so it has to ask the right
+  model too.
+- **`Siren.planLoop`'s own warm-up and integral, and `SirenDrone`'s own
+  settle and integral, ran before either's `cancelled` was ever asked.**
+  At RATE's floor, or across an 8-interval drone's own loop, that
+  planning pass is itself seconds of iteration — a render already
+  cancelled would still have to wait it out. Both now check the same
+  cadence their own audio loop already did (`SirenTest`'s "planLoop itself
+  stops...", `SirenDroneTest`'s "the carrier's own settle and integral
+  pass stops too...").
 
 ## Still open, not blocking
 

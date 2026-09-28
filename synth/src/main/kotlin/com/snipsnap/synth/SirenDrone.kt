@@ -6,6 +6,7 @@ import com.snipsnap.json.JsonValue
 import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.pow
 
 /**
@@ -117,6 +118,77 @@ object SirenDrone {
         return out
     }
 
+    /** [fitCarrier]'s own answer: the whole cycle count over one loop, and the base carrier Hz that gives it — [Siren.planLoop]'s `LoopPlan`, without the frame/period bookkeeping that only means something against [Siren.loopFrames]'s own duration choice. */
+    internal data class CarrierFit(val cycles: Long, val baseHz: Double, val stepPerFrame: Double)
+
+    /**
+     * The carrier's own snap: [Siren.planLoop]'s trick — move the base
+     * pitch so the pulse completes a whole number of cycles over one loop —
+     * run at [frames] rather than [Siren.loopFrames]'s own RATE-derived
+     * length, since the grid's own tempo picks the length here. Not
+     * [DroneFit]'s own model: that assumes RESIN's even-only sub-octave
+     * snap and pure pitch arithmetic, while SIREN's own cycle count allows
+     * any whole number and depends on DEPTH through the LFO's own phase
+     * integral, so a caller wanting SIREN's true nudge (`spanFor`-style
+     * span choice, the readout) must run this, not [DroneFit.nudgeCents].
+     *
+     * [cancelled] reaches this pass too: an 8-interval drone's own loop can
+     * itself be millions of oversampled samples before a caller's audio
+     * loop, if any, even starts.
+     */
+    internal fun fitCarrier(
+        voice: SirenVoice,
+        macros: Map<String, Float>,
+        rootMidi: Int,
+        frames: Long,
+        sampleRate: Int,
+        prerollSeconds: Float = PREROLL_SECONDS,
+        cancelled: () -> Boolean = { false },
+    ): CarrierFit {
+        require(frames > 0 && sampleRate > 0) { "a drone needs a length and a rate: $frames frames at $sampleRate Hz" }
+        require(rootMidi in 0..127) { "root out of MIDI range: $rootMidi" }
+        val m = Siren.defaults(voice).toMutableMap()
+        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        val depth = Siren.depthSemitones(m.getValue("DEPTH")) / 12.0
+
+        val os = Dsp.OVERSAMPLE
+        val rate = sampleRate * os
+        val loopOs = frames * os
+        // RATE's own Hz, snapped onto the nearest whole number of cycles the
+        // loop can hold, at least one — the same "further is longer" snap
+        // DroneFit already applies to pitch, applied here to speed.
+        val desiredHz = Siren.rateHz(m.getValue("RATE"))
+        val cyclesPerLoop = Math.round(desiredHz * frames.toDouble() / sampleRate).coerceAtLeast(1)
+        val stepPerFrame = cyclesPerLoop.toDouble() / loopOs
+
+        val rootHz = 440.0 * 2.0.pow((rootMidi - 69) / 12.0)
+        val lfo = SmoothedLfo(voice, stepPerFrame, rate)
+        var asked = 0
+        fun checkCancelled() {
+            if (asked % CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw CancellationException("SIREN drone plan no longer wanted")
+            }
+            asked++
+        }
+        val pre = (prerollSeconds * sampleRate).toLong()
+        repeat((pre * os).toInt()) { checkCancelled(); lfo.next() }
+        var g = 0.0
+        repeat(loopOs.toInt()) { checkCancelled(); g += 2.0.pow(depth * lfo.next()) / rate }
+        val cycles = Math.round(rootHz * g)
+        return CarrierFit(cycles, cycles / g, stepPerFrame)
+    }
+
+    /**
+     * How far off [rootMidi] a drone of [frames] at [sampleRate] actually
+     * lands — [DroneFit.nudgeCents]'s own shape, but read off SIREN's own
+     * [fitCarrier] rather than RESIN's pure-pitch snap.
+     */
+    fun nudgeCents(voice: SirenVoice, macros: Map<String, Float>, rootMidi: Int, frames: Long, sampleRate: Int): Double {
+        val fit = fitCarrier(voice, macros, rootMidi, frames, sampleRate)
+        val rootHz = 440.0 * 2.0.pow((rootMidi - 69) / 12.0)
+        return 1200.0 * ln(fit.baseHz / rootHz) / ln(2.0)
+    }
+
     /**
      * The unlevelled drone, [periods] loops of [frames] after the pre-roll —
      * [ResinDrone.synthesize]'s own shape.
@@ -130,9 +202,7 @@ object SirenDrone {
         prerollSeconds: Float = PREROLL_SECONDS,
         cancelled: () -> Boolean = { false },
     ): FloatArray {
-        require(frames > 0 && sampleRate > 0) { "a drone needs a length and a rate: $frames frames at $sampleRate Hz" }
         require(periods >= 1) { "periods: $periods" }
-        require(rootMidi in 0..127) { "root out of MIDI range: $rootMidi" }
         val m = Siren.defaults(spec.voice).toMutableMap()
         for ((k, v) in spec.macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         val depth = Siren.depthSemitones(m.getValue("DEPTH")) / 12.0
@@ -140,30 +210,15 @@ object SirenDrone {
 
         val os = Dsp.OVERSAMPLE
         val rate = sampleRate * os
-        val loopOs = frames * os
-        // RATE's own Hz, snapped onto the nearest whole number of cycles the
-        // loop can hold, at least one — the same "further is longer" snap
-        // DroneFit already applies to pitch, applied here to speed.
-        val desiredHz = Siren.rateHz(m.getValue("RATE"))
-        val cyclesPerLoop = Math.round(desiredHz * frames.toDouble() / sampleRate).coerceAtLeast(1)
-        val stepPerFrame = cyclesPerLoop.toDouble() / loopOs
+
+        val fit = fitCarrier(spec.voice, spec.macros, rootMidi, frames, sampleRate, prerollSeconds, cancelled)
+        val baseHz = fit.baseHz
 
         val pre = (prerollSeconds * sampleRate).toLong()
         val total = pre + periods * frames + TAIL_FRAMES
         require(total * os <= Int.MAX_VALUE) { "a drone of $frames frames is too long to render" }
 
-        // The carrier's own snap: baseHz moved so the pulse completes a
-        // whole number of cycles over one loop, Siren.planLoop's own trick,
-        // run at the grid's own loop length rather than Siren.loopFrames's.
-        val rootHz = 440.0 * 2.0.pow((rootMidi - 69) / 12.0)
-        val settleLfo = SmoothedLfo(spec.voice, stepPerFrame, rate)
-        repeat((pre * os).toInt()) { settleLfo.next() }
-        var g = 0.0
-        repeat(loopOs.toInt()) { g += 2.0.pow(depth * settleLfo.next()) / rate }
-        val cycles = Math.round(rootHz * g)
-        val baseHz = cycles / g
-
-        val lfo = SmoothedLfo(spec.voice, stepPerFrame, rate)
+        val lfo = SmoothedLfo(spec.voice, fit.stepPerFrame, rate)
         val cutoff = Dsp.expMap(grit, Siren.TONE_LOW_HZ, Siren.TONE_HIGH_HZ)
         val a = (1.0 - exp(-2.0 * PI * cutoff / rate)).toFloat()
         val drive = grit * Siren.DRIVE_MAX

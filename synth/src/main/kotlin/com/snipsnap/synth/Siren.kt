@@ -336,7 +336,12 @@ object Siren {
     private fun warmupFrames(lfoHz: Double): Int =
         Math.round(max(1.0 / lfoHz, WARMUP_MIN_SECONDS.toDouble()) * RATE).toInt()
 
-    internal fun planLoop(voice: SirenVoice, macros: Map<String, Float>, rate: Int = RATE * Dsp.OVERSAMPLE): LoopPlan {
+    internal fun planLoop(
+        voice: SirenVoice,
+        macros: Map<String, Float>,
+        rate: Int = RATE * Dsp.OVERSAMPLE,
+        cancelled: () -> Boolean = { false },
+    ): LoopPlan {
         val m = settled(macros, voice)
         val (frames, periods) = loopFrames(m.getValue("RATE"))
         val lfoHz = periods.toDouble() * RATE / frames
@@ -345,11 +350,21 @@ object Siren {
         val depth = depthSemitones(m.getValue("DEPTH")) / 12.0
         // The LFO exactly as the render will run it, through the warm-up and
         // one loop: the mean pitch multiplier over the loop is what fixes
-        // the cycle count.
+        // the cycle count. At RATE's floor this warm-up and integral are
+        // themselves seconds of iteration, so they ask the same way the
+        // audio loop that follows does — a cancelled held render must not
+        // have to wait out this planning pass first.
         val lfo = Lfo(voice, lfoHz / rate, rate)
-        repeat(warm) { lfo.next() }
+        var asked = 0
+        fun checkCancelled() {
+            if (asked % LOOP_CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw java.util.concurrent.CancellationException("SIREN loop plan no longer wanted")
+            }
+            asked++
+        }
+        repeat(warm) { checkCancelled(); lfo.next() }
         var g = 0.0
-        repeat(frames * over) { g += 2.0.pow(depth * lfo.next()) / rate }
+        repeat(frames * over) { checkCancelled(); g += 2.0.pow(depth * lfo.next()) / rate }
         val f0 = frequencyFor(m.getValue("TUNE")).toDouble()
         val cycles = Math.round(f0 * g)
         return LoopPlan(frames, periods, lfoHz, cycles / g, cycles)
@@ -380,7 +395,7 @@ object Siren {
         val m = settled(macros, voice)
         val rate = RATE * Dsp.OVERSAMPLE
         val over = Dsp.OVERSAMPLE
-        val plan = planLoop(voice, m, rate)
+        val plan = planLoop(voice, m, rate, cancelled)
         val warm = warmupFrames(plan.lfoHz)
         val total = (warm + loops * plan.frames + (STRETCH_PAD_SECONDS * RATE).toInt()) * over
         val depth = depthSemitones(m.getValue("DEPTH")) / 12.0
