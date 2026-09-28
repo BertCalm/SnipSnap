@@ -597,3 +597,52 @@ unpredictable range), or claim NODE "solves" the piano question — that is
 still the audition's own call, now with a third, purpose-built candidate
 to make it against. Eight presets shipped for NODE (`ForkPresets.kt`),
 named for the tone the mechanism gives, not for having arrived.
+
+## Round three — 2026-09-28
+
+Round two's own A/B (nine matched settings, NODE against TINE, blind,
+level-matched) came back too close to call: real per the measurements above,
+but largely masked in listening. The reason, on reflection, is the pickup's
+own nonlinearity — the thing that actually carries most of FORK's audible
+character — operates on the summed time-domain signal and does not care
+much how that sum was built mode by mode, so a change to the pre-pickup
+modal balance alone has less to work with than hoped.
+
+**NODE's own pitch glide**: every mode reads `GLIDE_CENTS` sharp right at
+the strike and settles to its tuned ratio over `GLIDE_TIME_SECONDS`,
+scaled by STRIKE (harder strike, bigger swing, bigger glide — the same
+lever every other STRIKE-linked mechanism here already uses, and zero at
+STRIKE 0). This is a real, if not precisely sourced, amplitude-dependent
+effect: large-amplitude vibration briefly stiffens a struck bar or string,
+raising its effective frequency, before it settles as the swing dies down.
+`GLIDE_CENTS = 15` and `GLIDE_TIME_SECONDS = 0.06` are a plausible
+starting point, not a measured figure — open for the audition gate to
+move, the same way `DECAY_SLOPE` started.
+
+**One real finding, the same testing-philosophy failure this project keeps
+catching early rather than late**: the first implementation modelled the
+glide as two full static-pitch renders (one a few cents sharp, one at the
+tuned pitch) crossfaded together. That broke an existing test —
+`higher modes die first`, which measures the composite decay's own
+envelope slope — because two near-identical frequencies briefly coexisting
+during a crossfade beat against each other, distorting the measured decay
+shape. The fix ships instead as a single continuously-swept two-pole
+resonator (`Fork.ringModes`, the pole angle recomputed every sample from
+the instantaneous, gliding frequency rather than held fixed for the whole
+call) — one coherent signal, never two overlapping ones. `Fork.bank`'s own
+KDoc carries the full account.
+
+Measuring the glide itself needed the same isolation the STIFF tests
+already lean on: on the full four-mode bank, `STRIKE_BRIGHT_BOOST` boosts
+the upper modes hardest at exactly the STRIKE that also maximises the
+glide, and their own fast zero-crossings dominate a naive pitch read in
+the first ~20ms regardless of what the fundamental is doing — even TINE's
+own glide-free onset read several cents "sharp" by this artifact alone.
+`ForkTest` measures the glide on the isolated fundamental instead (via
+`Fork.ringModes` directly, one mode, no competing partials), plus a
+bit-exact check that the no-glide path is untouched for TINE, BAR, and
+NODE at STRIKE 0.
+
+**Not yet answered**: whether the glide is what NODE (or TINE) was
+actually missing — that is the next listening question, not something
+this round asserts.

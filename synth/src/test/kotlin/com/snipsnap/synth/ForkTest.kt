@@ -535,6 +535,83 @@ class ForkTest {
     }
 
     @Test
+    fun `the glide itself reads sharp at the strike and settles to the tuned pitch, on the isolated fundamental`() {
+        // On the full four-mode bank this leaks badly: STRIKE_BRIGHT_BOOST
+        // (needed to drive any glide at all, since GLIDE_CENTS scales with
+        // STRIKE) boosts modes 2-4 the hardest at exactly the STRIKE that
+        // maximises the glide, and their own fast zero-crossings dominate
+        // preciseFundamental's count in the first ~20ms regardless of what
+        // the fundamental itself is doing - even TINE's own glide-free
+        // onset reads several cents sharp for this reason. So this test
+        // isolates mode 1 alone (via Fork.ringModes directly, the same
+        // isolation [Modes.ring] and the STIFF tests above already lean
+        // on), where the measurement has nothing else to leak against.
+        val hz = Fork.frequencyFor(0.5f)
+        val rate = Dsp.RATE
+        val frames = (0.4f * rate).toInt()
+        val excitation = FloatArray(frames).also { buf ->
+            val noise = Dsp.Noise(17)
+            for (i in buf.indices) buf[i] = noise.next() * Dsp.envAt(i / rate.toFloat(), 0.0002f)
+        }
+        val mode = Modes.Mode(ratio = 1f, gain = 1f, t60 = 1.5f)
+        val glideSamples = (Fork.GLIDE_TIME_SECONDS * rate).toInt()
+
+        val glided = Fork.ringModes(hz, listOf(mode), excitation, strikeM = 0f, frames, rate, glideCents = Fork.GLIDE_CENTS, glideSamples = glideSamples)
+        val flat = Fork.ringModes(hz, listOf(mode), excitation, strikeM = 0f, frames, rate, glideCents = 0f, glideSamples = 0)
+
+        val onsetGlided = cents(preciseFundamental(glided, rate, from = 0.004f, span = 0.02f), hz)
+        val settledGlided = cents(preciseFundamental(glided, rate, from = 0.2f, span = 0.08f), hz)
+        val onsetFlat = cents(preciseFundamental(flat, rate, from = 0.004f, span = 0.02f), hz)
+
+        assertTrue(abs(onsetFlat) < 3f, "the flat (no-glide) render's own onset should read at the tuned pitch, read $onsetFlat cents")
+        assertTrue(abs(settledGlided) < 3f, "the glide should have fully settled by 0.2s, read $settledGlided cents from tuned")
+        assertTrue(
+            onsetGlided > Fork.GLIDE_CENTS * 0.5f,
+            "the glided onset ($onsetGlided cents) is not clearly sharp - expected well above half of GLIDE_CENTS (${Fork.GLIDE_CENTS})",
+        )
+    }
+
+    @Test
+    fun `bank carries no glide term for TINE or BAR, or for NODE at STRIKE 0`() {
+        // A precise, noise-free check on the dispatch itself (bit-exact,
+        // not a pitch measurement): bank() should take exactly the
+        // no-glide path - byte-identical to calling ringModes with
+        // glideCents 0 by hand - for every voice but NODE, and for NODE
+        // itself at STRIKE 0, since GLIDE_CENTS * 0 is 0.
+        val hz = Fork.frequencyFor(0.5f)
+        val macros = mapOf("STRIKE" to 1f, "STIFF" to 0.5f, "DECAY" to 0.6f)
+        for (voice in listOf(ForkVoice.TINE, ForkVoice.BAR)) {
+            val got = Fork.bank(voice, hz, macros, striker = null, rate = Dsp.RATE)
+            val excitation = Fork.excite(voice, hz, 1f, null, got.size, Dsp.RATE)
+            val want = FloatArray(got.size)
+            val modes = Fork.modesFor(voice, macros)
+            val flat = Fork.ringModes(hz, modes, excitation, strikeM = 1f, got.size, Dsp.RATE, glideCents = 0f, glideSamples = 0)
+            Dsp.normalize(flat, 1f)
+            assertContentEquals(flat, got, "$voice: bank() took a different path than the plain no-glide render")
+        }
+        val nodeStrike0 = Fork.bank(ForkVoice.NODE, hz, macros + ("STRIKE" to 0f), striker = null, rate = Dsp.RATE)
+        val excitation0 = Fork.excite(ForkVoice.NODE, hz, 0f, null, nodeStrike0.size, Dsp.RATE)
+        val nodeModes = Fork.modesFor(ForkVoice.NODE, macros + ("STRIKE" to 0f))
+        val flat0 = Fork.ringModes(hz, nodeModes, excitation0, strikeM = 0f, nodeStrike0.size, Dsp.RATE, glideCents = 0f, glideSamples = 0)
+        Dsp.normalize(flat0, 1f)
+        assertContentEquals(flat0, nodeStrike0, "NODE at STRIKE 0: bank() carried a glide term it should not have")
+    }
+
+    @Test
+    fun `NODE's own glide is silent at STRIKE 0 and grows with STRIKE`() {
+        val hz = Fork.frequencyFor(0.5f)
+        fun onsetCents(strike: Float): Float {
+            val raw = Fork.bank(ForkVoice.NODE, hz, mapOf("STRIKE" to strike, "STIFF" to 0.5f, "DECAY" to 0.7f), striker = null, rate = Dsp.RATE)
+            val onset = preciseFundamental(raw, Dsp.RATE, from = 0.004f, span = 0.02f)
+            return cents(onset, hz)
+        }
+        val soft = onsetCents(0f)
+        val hard = onsetCents(1f)
+        assertTrue(abs(soft) < 3f, "STRIKE 0 should carry no glide, read $soft cents sharp")
+        assertTrue(hard > soft + 5f, "STRIKE 1's onset ($hard cents) is not clearly sharper than STRIKE 0's ($soft cents)")
+    }
+
+    @Test
     fun `NODE renders clean, finite audio and classifies the same way TINE does`() {
         val allMacros: List<Map<String, Float>> = listOf(emptyMap<String, Float>()) + ForkPresets.forVoice(ForkVoice.NODE).map { it.macros }
         for (macros in allMacros) {
