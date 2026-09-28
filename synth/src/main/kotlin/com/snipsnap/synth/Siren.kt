@@ -56,9 +56,20 @@ object Siren {
     /** SWEEP at either end: the note comes in from two octaves away. */
     const val SWEEP_OCTAVES = 2f
 
-    /** The sweep's t60: a small sweep is slow, a big dive is fast. */
-    const val SWEEP_SLOW_T60 = 0.6f
-    const val SWEEP_FAST_T60 = 0.15f
+    /**
+     * How long the sweep takes to land on the note: a short glide for a
+     * small one, up to a second for the full two octaves, so the gesture
+     * is heard as a glide and not a blip. The first build had a time
+     * constant that *shortened* as the sweep deepened (0.15 s at full), and
+     * a two-octave dive over in 100 ms under a wail that itself moves an
+     * octave each way was inaudible at the audition. Further is longer,
+     * the way a portamento is.
+     */
+    const val SWEEP_NEAR_SECONDS = 0.25f
+    const val SWEEP_FAR_SECONDS = 1.0f
+
+    /** The sweep never outlasts this much of HOLD, so a short press still lands on its note. */
+    const val SWEEP_HOLD_FRACTION = 0.85f
 
     /** HOLD, below its LOOP step: how long the button is down. */
     const val HOLD_MIN_SECONDS = 0.3f
@@ -185,8 +196,23 @@ object Siren {
      */
     internal fun sweepOctaves(sweep: Float): Float = (0.5f - sweep.coerceIn(0f, 1f)) * 2f * SWEEP_OCTAVES
 
-    /** The sweep's t60: further is faster. */
-    internal fun sweepT60(sweep: Float): Float = Dsp.expMap(abs(sweepOctaves(sweep)) / SWEEP_OCTAVES, SWEEP_SLOW_T60, SWEEP_FAST_T60)
+    /** How long the sweep takes to land, in seconds: further is longer, and never past [SWEEP_HOLD_FRACTION] of the hold. */
+    internal fun sweepSeconds(sweep: Float, holdSeconds: Float): Float =
+        Dsp.expMap(abs(sweepOctaves(sweep)) / SWEEP_OCTAVES, SWEEP_NEAR_SECONDS, SWEEP_FAR_SECONDS)
+            .coerceAtMost(holdSeconds * SWEEP_HOLD_FRACTION)
+
+    /**
+     * The sweep's remaining offset at [t], as a fraction of where it began:
+     * a quadratic ease-out, fast off the mark and slowing into the note,
+     * landing exactly at [seconds] with no corner. An exponential approach
+     * never lands and spends its audible travel in its first tenth; this
+     * spends it across the whole glide.
+     */
+    internal fun sweepRemaining(t: Float, seconds: Float): Float {
+        if (seconds <= 0f || t >= seconds) return 0f
+        val left = 1f - t / seconds
+        return left * left
+    }
 
     /**
      * The LFO's value in -1..1 at [phase] (cycles), each voice starting
@@ -275,7 +301,7 @@ object Siren {
         val depth = depthSemitones(m.getValue("DEPTH")) / 12f
         val hold = holdSeconds(m.getValue("HOLD"))
         val sweepOct = sweepOctaves(m.getValue("SWEEP"))
-        val sweepT60 = sweepT60(m.getValue("SWEEP"))
+        val sweepSeconds = sweepSeconds(m.getValue("SWEEP"), hold)
         val env = Dsp.Env(attackSeconds = ATTACK_SECONDS, decay2T60 = RELEASE_T60, holdSeconds = hold)
         val frames = ((ATTACK_SECONDS + hold + RELEASE_T60) * rate).toInt().coerceAtLeast(64)
         val lfo = Lfo(voice, rateHz(m.getValue("RATE")).toDouble() / rate, rate)
@@ -283,7 +309,7 @@ object Siren {
         val out = FloatArray(frames)
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
-            val octaves = depth * lfo.next() + sweepOct * Dsp.envAt(t, sweepT60)
+            val octaves = depth * lfo.next() + sweepOct * sweepRemaining(t, sweepSeconds)
             out[i] = env.at(t) * tone.next(f0 * 2.0.pow(octaves.toDouble()))
         }
         return out
@@ -310,7 +336,12 @@ object Siren {
     private fun warmupFrames(lfoHz: Double): Int =
         Math.round(max(1.0 / lfoHz, WARMUP_MIN_SECONDS.toDouble()) * RATE).toInt()
 
-    internal fun planLoop(voice: SirenVoice, macros: Map<String, Float>, rate: Int = RATE * Dsp.OVERSAMPLE): LoopPlan {
+    internal fun planLoop(
+        voice: SirenVoice,
+        macros: Map<String, Float>,
+        rate: Int = RATE * Dsp.OVERSAMPLE,
+        cancelled: () -> Boolean = { false },
+    ): LoopPlan {
         val m = settled(macros, voice)
         val (frames, periods) = loopFrames(m.getValue("RATE"))
         val lfoHz = periods.toDouble() * RATE / frames
@@ -319,15 +350,28 @@ object Siren {
         val depth = depthSemitones(m.getValue("DEPTH")) / 12.0
         // The LFO exactly as the render will run it, through the warm-up and
         // one loop: the mean pitch multiplier over the loop is what fixes
-        // the cycle count.
+        // the cycle count. At RATE's floor this warm-up and integral are
+        // themselves seconds of iteration, so they ask the same way the
+        // audio loop that follows does — a cancelled held render must not
+        // have to wait out this planning pass first.
         val lfo = Lfo(voice, lfoHz / rate, rate)
-        repeat(warm) { lfo.next() }
+        var asked = 0
+        fun checkCancelled() {
+            if (asked % LOOP_CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw java.util.concurrent.CancellationException("SIREN loop plan no longer wanted")
+            }
+            asked++
+        }
+        repeat(warm) { checkCancelled(); lfo.next() }
         var g = 0.0
-        repeat(frames * over) { g += 2.0.pow(depth * lfo.next()) / rate }
+        repeat(frames * over) { checkCancelled(); g += 2.0.pow(depth * lfo.next()) / rate }
         val f0 = frequencyFor(m.getValue("TUNE")).toDouble()
         val cycles = Math.round(f0 * g)
         return LoopPlan(frames, periods, lfoHz, cycles / g, cycles)
     }
+
+    /** How often, in oversampled samples, a held-pad render asks whether it is still wanted (`Resin.HELD_CANCEL_CHECK_SAMPLES`'s own value: about every 0.2 s of audio at 44.1 kHz). */
+    private const val LOOP_CANCEL_CHECK_SAMPLES = 1 shl 15
 
     /**
      * [loops] consecutive LOOPs at [RATE], unlevelled, taken from a stretch
@@ -336,20 +380,34 @@ object Siren {
      * the band limit all in steady state, and the decimator run over the
      * whole stretch so its edge never touches what is kept. No sweep, no
      * envelope, no fade: the finger is the sweep and the gate is the release.
+     *
+     * [cancelled] stops the render part-way with a `CancellationException` —
+     * a held zone at the slowest RATE is seconds of audio, the same reach
+     * [Resin.renderHeld]'s own `cancelled` has over a RESIN zone.
      */
-    internal fun synthesizeLoopStretch(voice: SirenVoice, macros: Map<String, Float>, loops: Int): FloatArray {
+    internal fun synthesizeLoopStretch(
+        voice: SirenVoice,
+        macros: Map<String, Float>,
+        loops: Int,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray {
         require(loops >= 1) { "a stretch is at least one loop, asked for $loops" }
         val m = settled(macros, voice)
         val rate = RATE * Dsp.OVERSAMPLE
         val over = Dsp.OVERSAMPLE
-        val plan = planLoop(voice, m, rate)
+        val plan = planLoop(voice, m, rate, cancelled)
         val warm = warmupFrames(plan.lfoHz)
         val total = (warm + loops * plan.frames + (STRETCH_PAD_SECONDS * RATE).toInt()) * over
         val depth = depthSemitones(m.getValue("DEPTH")) / 12.0
         val lfo = Lfo(voice, plan.lfoHz / rate, rate)
         val tone = Tone(m.getValue("GRIT"), rate)
         val raw = FloatArray(total)
-        for (i in 0 until total) raw[i] = tone.next(plan.baseHz * 2.0.pow(depth * lfo.next()))
+        for (i in 0 until total) {
+            if (i % LOOP_CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw java.util.concurrent.CancellationException("SIREN loop render no longer wanted")
+            }
+            raw[i] = tone.next(plan.baseHz * 2.0.pow(depth * lfo.next()))
+        }
         Tide.bandLimit(raw, rate)
         val out = Dsp.decimate(raw, RATE)
         return out.copyOfRange(warm, warm + loops * plan.frames)
@@ -380,11 +438,12 @@ object Siren {
     /**
      * One loop, levelled: the stretch is periodic, so the loop from the cut
      * is the stretch from there to its end and then from its start to the
-     * cut — one loop rendered, not two.
+     * cut — one loop rendered, not two. [cancelled] reaches
+     * [synthesizeLoopStretch]'s own check.
      */
-    internal fun renderLoop(voice: SirenVoice, macros: Map<String, Float>): FloatArray {
+    internal fun renderLoop(voice: SirenVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): FloatArray {
         val (frames, _) = loopFrames(settled(macros, voice).getValue("RATE"))
-        val stretch = synthesizeLoopStretch(voice, macros, loops = 1)
+        val stretch = synthesizeLoopStretch(voice, macros, loops = 1, cancelled)
         val cut = bestCut(stretch, frames)
         val loop = stretch.copyOfRange(cut, frames) + stretch.copyOfRange(0, cut)
         Dsp.levelTo(loop, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)

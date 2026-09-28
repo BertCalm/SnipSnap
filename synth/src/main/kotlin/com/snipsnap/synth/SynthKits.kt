@@ -224,4 +224,26 @@ object SynthKits {
             preset(SirenVoice.LASER, "LASER LOOP"), preset(SirenVoice.BIRD, "BIRD LOOP"),                       // A15 A16
         )
     }
+
+    /**
+     * The FORK acceptance kit: a row of TINE across a spread of steps (the
+     * electric piano the phone plays as a scale), then all eight of BAR's
+     * own presets (the vibraphone-shaped voice) — the same "sweep a tune
+     * range, then the named roster" shape [siren]'s own kit takes.
+     */
+    fun fork(): List<ArrangedPad?> {
+        fun tine(n: Int, semitone: Int, strike: Float = 0.55f) = ForkPatch(
+            "Tine $n", ForkVoice.TINE,
+            Fork.defaults(ForkVoice.TINE) + mapOf("TUNE" to semitone / Fork.TUNE_SEMITONES.toFloat(), "STRIKE" to strike),
+        ).let { pad(it, Fork.drumClassFor(it.voice, it.macros)) }
+        fun bar(name: String) = ForkPresets.forVoice(ForkVoice.BAR).first { it.name == name }
+            .let { pad(it, Fork.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            tine(1, 0), tine(2, 3), tine(3, 5), tine(4, 7),                                                     // A01-A04
+            tine(5, 10), tine(6, 12), tine(7, 15), tine(8, 19),                                                  // A05-A08
+            bar("VIBE BELL"), bar("COLD METAL"), bar("MALLET RING"), bar("BRIGHT CHIME"),                        // A09-A12
+            bar("DEEP BAR"), bar("SHORT KNOCK"), bar("ROUND TONE"), bar("LOUD CLANG"),                           // A13-A16
+        )
+    }
 }

@@ -5,6 +5,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.loop.SampleSource
 import com.snipsnap.loop.Session
 import com.snipsnap.synth.ResinDrone
+import com.snipsnap.synth.SirenDrone
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -13,11 +14,12 @@ import java.util.concurrent.ExecutionException
 
 /**
  * The loop grid's drone renderer, handed in from outside so the grid still
- * doesn't know what RESIN is
- * (docs/superpowers/specs/2026-09-25-resin-drone-design.md, Decided 4).
+ * doesn't know what RESIN or SIREN are
+ * (docs/superpowers/specs/2026-09-25-resin-drone-design.md, Decided 4;
+ * 2026-09-27-siren-dub-engine-design.md, door 4).
  *
- * Everything but [drone] is [inner]'s. A drone recipe this can't read goes
- * to [inner] too, so a later engine's renderer can wrap this one.
+ * Everything but [drone] is [inner]'s. A drone recipe neither engine reads
+ * goes to [inner] too, so a later engine's renderer can wrap this one.
  *
  * **One render per drone.** A drone's n slices are n blocks, and the grid
  * bakes blocks in parallel; without this every slice would render the whole
@@ -32,6 +34,7 @@ import java.util.concurrent.ExecutionException
 class DroneSource(
     private val inner: SampleSource,
     private val renderer: (ResinDrone.Spec, Int, Long, Int, () -> Boolean) -> FloatArray = ResinDrone::render,
+    private val sirenRenderer: (SirenDrone.Spec, Int, Long, Int, () -> Boolean) -> FloatArray = SirenDrone::render,
 ) : SampleSource by inner {
 
     private data class Key(val recipe: JsonValue, val rootMidi: Int, val frames: Long, val sampleRate: Int)
@@ -50,7 +53,9 @@ class DroneSource(
         sampleRate: Int,
         cancelled: () -> Boolean,
     ): Snip? {
-        val spec = ResinDrone.Spec.fromJson(recipe) ?: return inner.drone(recipe, rootMidi, frames, sampleRate, cancelled)
+        val resin = ResinDrone.Spec.fromJson(recipe)
+        val siren = if (resin == null) SirenDrone.Spec.fromJson(recipe) else null
+        if (resin == null && siren == null) return inner.drone(recipe, rootMidi, frames, sampleRate, cancelled)
         val key = Key(recipe, rootMidi, frames, sampleRate)
         var mine = false
         val future = renders.computeIfAbsent(key) {
@@ -61,7 +66,12 @@ class DroneSource(
             try {
                 // Kept mono: the baker widens each slice as it cuts it, so
                 // holding the drone stereo would only double what sits here.
-                future.complete(Snip(renderer(spec, rootMidi, frames, sampleRate, cancelled), 1, sampleRate))
+                val rendered = if (resin != null) {
+                    renderer(resin, rootMidi, frames, sampleRate, cancelled)
+                } else {
+                    sirenRenderer(siren!!, rootMidi, frames, sampleRate, cancelled)
+                }
+                future.complete(Snip(rendered, 1, sampleRate))
                 remember(key)
             } catch (e: Throwable) {
                 renders.remove(key, future)

@@ -46,17 +46,23 @@ import kotlin.random.Random
  * - **BEATBOX**, a fourth voice: vocal percussion ([VoxBeatbox]), HIT
  *   choosing a kick, three snares, three hats or a rim.
  *
- * Round 3 ("Weird"), its first voice:
+ * Round 3 ("Weird"):
  *
  * - **THROAT**, overtone singing ([VoxThroat]): a low drone with a
  *   whistled harmonic above it (WHISTLE, MELODY, DRONE), a growl an
  *   octave down (GROWL) and a yodel (YODEL).
+ * - **WRAITH**, sine-wave speech ([VoxWraith]): three pure tones tracing
+ *   a word's formants (WORD), gliding or stepping in key (TUNED), with
+ *   ALIEN, STUTTER and BREATH.
+ * - **SWARM**, a crowd ([VoxSwarm]): two to sixteen mouths (CROWD) saying
+ *   a word together or talking over each other (LOOSE), hushed, talked
+ *   or shouted (EFFORT), with STUTTER. Stereo, like CHOIR.
  *
  * TUNE snaps to semitones like every melodic engine here. Each note's
  * wobble, detune and onsets are seeded from its recipe, so a pad
  * regenerates to the byte.
  */
-enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT }
+enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT, WRAITH, SWARM }
 
 object Vox {
 
@@ -154,13 +160,21 @@ object Vox {
             MacroSpec("TUNE", 0.5f), MacroSpec("WHISTLE", 0.4f), MacroSpec("MELODY", 0.5f), MacroSpec("DRONE", 0.5f),
             MacroSpec("DECAY", 0.75f), MacroSpec("GROWL", 0f), MacroSpec("YODEL", 0f),
         )
+        VoxVoice.WRAITH -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("WORD", 0f), MacroSpec("DECAY", 0.5f), MacroSpec("TUNED", 0f),
+            MacroSpec("ALIEN", 0f), MacroSpec("STUTTER", 0f), MacroSpec("BREATH", 0.15f),
+        )
+        VoxVoice.SWARM -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("WORD", 0f), MacroSpec("CROWD", 0.75f), MacroSpec("LOOSE", 0.25f),
+            MacroSpec("EFFORT", 0.55f), MacroSpec("DECAY", 0.5f), MacroSpec("STUTTER", 0f),
+        )
     }
 
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    /** CHOIR sings in stereo; ROBOT, GHOST, BEATBOX and THROAT are one mouth, mono. */
-    fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR) 2 else 1
+    /** CHOIR and SWARM are many mouths, in stereo; ROBOT, GHOST, BEATBOX, THROAT and WRAITH are one, mono. */
+    fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR || voice == VoxVoice.SWARM) 2 else 1
 
     /**
      * What a pad holding this sound is filed as. The singing voices are
@@ -199,6 +213,10 @@ object Vox {
             VoxVoice.BEATBOX -> VoxBeatbox.KICK_HZ / 2f
             // A low drone, A1 to A3: the whistle rides its harmonics, so the drone sits well under it.
             VoxVoice.THROAT -> 55f
+            // The key note TUNED steps onto, A1 to A3; TUNE's middle leaves the word where it is spoken.
+            VoxVoice.WRAITH -> 55f
+            // The chant's note for the men, A1 to A3 (the women sing it an octave up); a murmur wanders around it.
+            VoxVoice.SWARM -> 55f
         }
         val semis = Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
         return root * 2f.pow(semis / 12f)
@@ -339,6 +357,33 @@ object Vox {
                 decay = m.getValue("DECAY"),
                 growl = m.getValue("GROWL"),
                 yodel = m.getValue("YODEL"),
+                rate = rate,
+            )
+        }
+        if (voice == VoxVoice.WRAITH) {
+            val semis = Math.round(m.getValue("TUNE") * TUNE_SEMITONES)
+            return VoxWraith.synthesize(
+                noteHz = frequencyFor(voice, m.getValue("TUNE")),
+                transpose = VoxWraith.transposeFor(semis - TUNE_SEMITONES / 2),
+                word = VoxWraith.wordFor(m.getValue("WORD")),
+                decay = m.getValue("DECAY"),
+                tuned = m.getValue("TUNED"),
+                alien = m.getValue("ALIEN"),
+                stutter = m.getValue("STUTTER"),
+                breath = m.getValue("BREATH"),
+                rate = rate,
+            )
+        }
+        if (voice == VoxVoice.SWARM) {
+            return VoxSwarm.synthesize(
+                noteHz = frequencyFor(voice, m.getValue("TUNE")),
+                word = VoxSwarm.wordFor(m.getValue("WORD")),
+                crowd = m.getValue("CROWD"),
+                loose = m.getValue("LOOSE"),
+                effort = m.getValue("EFFORT"),
+                decay = m.getValue("DECAY"),
+                stutter = m.getValue("STUTTER"),
+                seed = Dsp.seedFor("VOX", voice.name, m.toSortedMap().entries.joinToString(",")),
                 rate = rate,
             )
         }
@@ -493,8 +538,12 @@ object Vox {
         // back to RATE. The formant bandpasses and noise lowpass are
         // threaded the render rate explicitly.
         val channels = channelsFor(voice)
-        val raw = synthesize(voice, macros, RATE * Dsp.OVERSAMPLE)
-        val out = Dsp.decimate(raw, RATE, channels)
+        // WRAITH is pure tones: nothing above the band to fold, so it renders at RATE.
+        val out = if (voice == VoxVoice.WRAITH) {
+            synthesize(voice, macros, RATE)
+        } else {
+            Dsp.decimate(synthesize(voice, macros, RATE * Dsp.OVERSAMPLE), RATE, channels)
+        }
         if (voice == VoxVoice.BEATBOX) {
             // A drum is levelled by its peak, like THUMP's; the snares and hats go through the close mic first.
             VoxBeatbox.finish(out, VoxBeatbox.hitFor(macros["HIT"] ?: defaults(voice).getValue("HIT")))

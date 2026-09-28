@@ -258,6 +258,52 @@ object Keys {
         }
     }
 
+    // ---------- SIREN, held ----------
+    // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3 (S12.2)
+
+    /**
+     * The nine SIREN pad zones: every minor third across the two-octave
+     * TUNE range, root at [Siren.ROOT_MIDI] (C4) — the same layout for
+     * every voice, unlike [resinPadMidis]'s own per-voice register, since
+     * every SIREN voice shares the same root and the same 24-semitone
+     * range.
+     */
+    fun sirenPadMidis(): List<Int> = (0..Siren.TUNE_SEMITONES step 3).map { Siren.ROOT_MIDI + it }
+
+    /**
+     * SIREN held — a SIREN patch as a keys instrument that sounds while a
+     * key is down. [Siren.renderLoop] already closes on itself exactly
+     * (its own promise, held to float noise by `SirenTest`'s "the LOOP's
+     * wrap is seamless"), so there is no attack to settle and no per-zone
+     * seam to cut, unlike [resinPad]'s own retry-on-settle path: the loop
+     * just *is* the note.
+     *
+     * A keygroup layer's `loopStartFrame` of `0` means *no loop*
+     * (`VelocityLayer`'s own KDoc), so the render can't point its loop
+     * marker at its own start. Instead the loop is rendered once and
+     * doubled: the file is two bit-identical copies of the same loop, and
+     * the marker sits at the start of the second copy — the player's first
+     * pass plays copy one, then repeats copy two forever, which is exactly
+     * the audio [Siren.renderLoop] alone produces, played through a marker
+     * the format can express. RATE, DEPTH and GRIT play as they do on the
+     * loop's own render; SWEEP and HOLD play no part in a LOOP render and
+     * are ignored here exactly as [Siren.renderLoop] ignores them; TUNE is
+     * fixed by [midi]. [cancelled] reaches [Siren.renderLoop]'s own check —
+     * a held zone at the slowest RATE is seconds of audio, the same reach
+     * [resinPad]'s own `cancelled` has.
+     */
+    fun sirenPad(voice: SirenVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        val low = sirenPadMidis().first()
+        require(midi - low in 0..Siren.TUNE_SEMITONES) {
+            "SIREN pads are MIDI $low..${low + Siren.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Siren.defaults(voice)
+        val tune = (midi - low) / Siren.TUNE_SEMITONES.toFloat()
+        val m = defaults + macros.filterKeys { it in defaults } + ("TUNE" to tune)
+        val loop = Siren.renderLoop(voice, m, cancelled)
+        return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
+    }
+
     /**
      * Music box — the TINES chime recipe held to exact pitch: an
      * inharmonic 3.5-ratio strike and a barely-detuned twin beating
@@ -274,4 +320,43 @@ object Keys {
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
+
+    // ---------- FORK ----------
+    // docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md
+
+    /**
+     * FORK, held to an exact keyboard pitch — the same move [ep] and
+     * [musicBox] already make: the engine's own low-level primitive
+     * ([Fork.strike]) called directly at [midi]'s true frequency, so
+     * TUNE's semitone snap never has to be inverted. [strike] plays the
+     * part [ep]'s own `bright` does: not a full macro map, because
+     * velocity is the one thing a keyboard supplies that a pad's macro
+     * panel doesn't. It is not baked into two layers here — an instrument
+     * builder renders this twice per zone at two different [strike]
+     * values for a soft and a hard layer, exactly the move
+     * `InstrumentSuite.renderEp` already makes for TINES.
+     *
+     * DECAY needs no separate cap for the keyboard the way a physical
+     * derivation would (a low fundamental's *natural* ring at the spec's
+     * own Q climbs into tens of seconds): FORK's DECAY macro sets the
+     * fundamental's t60 directly in seconds, independent of pitch, so its
+     * own top (`Fork.DECAY_MAX_SECONDS`) is already the file-size ceiling
+     * every zone renders under, on every key.
+     */
+    fun fork(midi: Int, voice: ForkVoice, macros: Map<String, Float> = emptyMap(), strike: Float = 0.5f): Snip {
+        val hz = midiHz(midi)
+        val base = Fork.defaults(voice)
+        val m = base + macros.filterKeys { it in base } + mapOf("STRIKE" to strike.coerceIn(0f, 1f))
+        val rate = RATE * Dsp.OVERSAMPLE
+        val raw = Fork.strike(voice, hz, m, striker = null, rate = rate)
+        Tide.bandLimit(raw, rate)
+        val out = Dsp.decimate(raw, RATE)
+        Dsp.normalize(out)
+        Dsp.fadeTail(out)
+        return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /** FORK's own keyboard range: two octaves plus a fourth around C3, wide enough for a genuinely playable instrument without reaching past [Fork.TUNE_SEMITONES]'s own snapped range. */
+    const val FORK_LOW_MIDI = Fork.ROOT_MIDI
+    const val FORK_HIGH_MIDI = Fork.ROOT_MIDI + Fork.TUNE_SEMITONES
 }

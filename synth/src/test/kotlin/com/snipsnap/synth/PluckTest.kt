@@ -12,6 +12,54 @@ import kotlin.test.assertTrue
 
 class PluckTest {
 
+    /**
+     * DeterminismTest proves two renders agree with each other; this proves
+     * they agree with yesterday. Captured before SILK Phase 1a moved the
+     * loop into Strings.kt (docs/superpowers/plans/2026-09-27-silk-phase-1a.md,
+     * Task 1) - every PLUCK pad in a kit.json depends on it.
+     */
+    @Test
+    fun `the render is pinned - the Strings extraction must not move it by a bit`() {
+        val expected: Map<String, Int> = mapOf(
+            "NYLON defaults" to -1684536122,
+            "NYLON all 0" to 550196401,
+            "NYLON all 1" to -737150253,
+            "NYLON first preset" to -1165758204,
+            "HARP defaults" to -1247316461,
+            "HARP all 0" to 1872873036,
+            "HARP all 1" to 1238762665,
+            "HARP first preset" to -2031479157,
+            "KOTO defaults" to -2072799550,
+            "KOTO all 0" to 2123899936,
+            "KOTO all 1" to 43220203,
+            "KOTO first preset" to 689756851,
+            "BANJO defaults" to 307363570,
+            "BANJO all 0" to 842078288,
+            "BANJO all 1" to -1976468254,
+            "BANJO first preset" to -1168603215,
+            "SITAR defaults" to 1543632262,
+            "SITAR all 0" to 1975822981,
+            "SITAR all 1" to 598514162,
+            "SITAR first preset" to 1717323465,
+        )
+        val actual = LinkedHashMap<String, Int>()
+        for (voice in PluckVoice.entries) {
+            val names = Pluck.macrosFor(voice).map { it.name }
+            val renders = listOf(
+                "defaults" to emptyMap<String, Float>(),
+                "all 0" to names.associateWith { 0f },
+                "all 1" to names.associateWith { 1f },
+                "first preset" to PluckPresets.forVoice(voice).first().macros,
+            )
+            for ((label, macros) in renders) {
+                actual["$voice $label"] = Pluck.render(voice, macros).samples.contentHashCode()
+            }
+        }
+        // One comparison of the whole table, so a failure prints every
+        // hash at once.
+        assertEquals(expected, actual)
+    }
+
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
         for (voice in PluckVoice.entries) {
@@ -205,7 +253,10 @@ class PluckTest {
         // PLUCK slot, so nothing in the app acts on that reading today; a
         // harmonicity feature is the Phase 3 item that would let the
         // classifier tell a bright pluck from a drum. Every other voice must
-        // still read PERC.
+        // still read PERC. SITAR's default reads PERC (measured highRatio 0.41
+        // over a 1.30 s render) since the DAMP default moved to 0.5 and the
+        // sympathetic strings landed; the margin under the 0.5 snare line is
+        // 0.09, and a regression over it should fail here.
         for (voice in PluckVoice.entries) {
             val c = Classifier.classify(Pluck.render(voice))
             val allowed = if (voice == PluckVoice.BANJO) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
@@ -278,6 +329,92 @@ class PluckTest {
     }
 
     @Test
+    fun `DOUBLE on the sitar is the sympathetic strings, not the detune`() {
+        val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
+        val dry = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f))
+        val wet = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 1f))
+        // The drone loop rings at 0.5·f0 for the whole note - the octave
+        // below, something the dry string cannot make at any time, no
+        // matter when it's measured. So the window sits where both
+        // renders exist: the dry render at DAMP 0.5 is decay-limited to
+        // about 0.56 s, while the wet one runs the full 1.3 s budget.
+        val late = 0.3f
+        fun energyAt(s: com.snipsnap.audio.Snip, hz: Float): Double {
+            val from = (late * s.sampleRate).toInt()
+            require(s.frameCount - from >= (0.25f * s.sampleRate).toInt()) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the 0.25 s window" }
+            val slice = com.snipsnap.audio.Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
+            return PluckSpectra.toneEnergy(slice, hz, 0.25f)
+        }
+        fun droneEnergy(s: com.snipsnap.audio.Snip): Double = energyAt(s, 0.5f * f0)
+        val gain = 10.0 * kotlin.math.log10(droneEnergy(wet) / (droneEnergy(dry) + 1e-12))
+        println("SITAR drone energy at half the note, in the 0.3–0.55 s window, DOUBLE 1 over DOUBLE 0: $gain dB")
+        assertTrue(gain >= 6.0, "DOUBLE 1 should ring the drone at half the note by 6 dB in the 0.3–0.55 s window, got $gain dB")
+
+        val fifthGain = 10.0 * kotlin.math.log10(energyAt(wet, 1.5f * f0) / (energyAt(dry, 1.5f * f0) + 1e-12))
+        println("SITAR drone energy at the fifth, in the 0.3–0.55 s window, DOUBLE 1 over DOUBLE 0: $fifthGain dB")
+        assertTrue(fifthGain >= 6.0, "DOUBLE 1 should ring the fifth by 6 dB too, the fifth, which no detuned second string can add either, got $fifthGain dB")
+
+        assertTrue(!dry.samples.contentEquals(wet.samples), "DOUBLE 1 must change the render")
+    }
+
+    @Test
+    fun `the scale tuning rings where the note has nothing`() {
+        // The series tuning (the shipped default) coincides with the note's
+        // own partials, so it never proves audibility where the string has
+        // no energy. The scale tuning's ratios (9/8, 5/4, 4/3, 5/3) do not
+        // sit on the note's series - the major third and the sixth below
+        // are the clearest of those to measure, since neither is anywhere
+        // near a harmonic of f0.
+        val f0 = Pluck.frequencyFor(PluckVoice.SITAR, 12)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        fun renderAt(double: Float, sympathetic: Pluck.Sympathetic?): Snip {
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DOUBLE" to double), rate, sympatheticOverride = sympathetic)
+            return Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+        }
+        val dry = renderAt(0f, Pluck.SYMPATHETIC_SCALE)
+        val scale = renderAt(1f, Pluck.SYMPATHETIC_SCALE)
+        val series = renderAt(1f, Pluck.SYMPATHETIC_SERIES)
+        println(
+            "SITAR scale-tuning renders: dry ${dry.durationSeconds} s, scale ${scale.durationSeconds} s, " +
+                "series ${series.durationSeconds} s",
+        )
+
+        val late = 0.3f
+        fun energyAt(s: Snip, hz: Float): Double {
+            val from = (late * s.sampleRate).toInt()
+            require(s.frameCount - from >= (0.25f * s.sampleRate).toInt()) { "render leaves ${(s.frameCount - from) / s.sampleRate.toFloat()} s after $late s, under the 0.25 s window" }
+            val slice = Snip(s.samples.copyOfRange(from, s.frameCount), channels = 1, sampleRate = s.sampleRate)
+            return PluckSpectra.toneEnergy(slice, hz, 0.25f)
+        }
+
+        val thirdHz = 5f / 4f * f0
+        val sixthHz = 5f / 3f * f0
+
+        val thirdOverDry = 10.0 * kotlin.math.log10(energyAt(scale, thirdHz) / (energyAt(dry, thirdHz) + 1e-12))
+        println("SITAR scale tuning energy at the major third, in the 0.3-0.55 s window, over the dry string: $thirdOverDry dB")
+        assertTrue(thirdOverDry >= 10.0, "the scale tuning should ring the major third by 10 dB over the dry string, got $thirdOverDry dB")
+
+        val sixthOverDry = 10.0 * kotlin.math.log10(energyAt(scale, sixthHz) / (energyAt(dry, sixthHz) + 1e-12))
+        println("SITAR scale tuning energy at the sixth, in the 0.3-0.55 s window, over the dry string: $sixthOverDry dB")
+        assertTrue(sixthOverDry >= 10.0, "the scale tuning should ring the sixth by 10 dB over the dry string, got $sixthOverDry dB")
+
+        val thirdOverSeries = 10.0 * kotlin.math.log10(energyAt(scale, thirdHz) / (energyAt(series, thirdHz) + 1e-12))
+        println("SITAR scale tuning energy at the major third, over the series tuning at DOUBLE 1: $thirdOverSeries dB")
+        assertTrue(thirdOverSeries >= 6.0, "the scale tuning should ring the major third by 6 dB over the series tuning, where the series has nothing, got $thirdOverSeries dB")
+
+        val sixthOverSeries = 10.0 * kotlin.math.log10(energyAt(scale, sixthHz) / (energyAt(series, sixthHz) + 1e-12))
+        println("SITAR scale tuning energy at the sixth, over the series tuning at DOUBLE 1: $sixthOverSeries dB")
+        assertTrue(sixthOverSeries >= 6.0, "the scale tuning should ring the sixth by 6 dB over the series tuning, where the series has nothing, got $sixthOverSeries dB")
+    }
+
+    @Test
+    fun `DOUBLE below its threshold renders the sitar string alone`() {
+        val a = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f)).samples
+        val b = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0.005f)).samples
+        assertTrue(a.contentEquals(b), "DOUBLE under 0.01 should render nothing extra")
+    }
+
+    @Test
     fun `a loop length below the KS minimum fails loudly instead of going unstable`() {
         // The real voice table never gets close to this (measured minimum
         // `exact` across every voice x TUNE semitone x DAMP is 175.93
@@ -333,8 +470,17 @@ class PluckTest {
     fun `STRIKE at the centre removes the second harmonic`() {
         for (voice in PluckVoice.entries) {
             val f0 = Pluck.frequencyFor(voice, 0.5f)
-            val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
-            val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
+            // The jawari makes even harmonics on purpose (the buzz), so this
+            // comb notch is proven on the sitar's string with the bridge
+            // limiter off - left on, it would swamp the notch being measured.
+            fun renderAt(strike: Float): Snip = if (voice == PluckVoice.SITAR) {
+                val raw = Pluck.synthesize(voice, mapOf("TUNE" to 0.5f, "STRIKE" to strike, "DOUBLE" to 0f), Dsp.RATE * Dsp.OVERSAMPLE, jawariOverride = 0f)
+                Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+            } else {
+                Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to strike, "DOUBLE" to 0f))
+            }
+            val bridge = renderAt(0f)
+            val centre = renderAt(1f)
             val h2Bridge = PluckSpectra.toneEnergy(bridge, 2 * f0)
             val h2Centre = PluckSpectra.toneEnergy(centre, 2 * f0)
             assertTrue(
@@ -522,6 +668,8 @@ class PluckTest {
         for (voice in PluckVoice.entries) {
             assertTrue(Pluck.macrosFor(voice).any { it.name == "BODY" }, "$voice has no BODY")
             val table = Pluck.bodyFor(voice)
+            // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): the test's own name scopes it to voices with a table.
+            if (table.isEmpty()) continue
             // Two is KOTO's count: only its 85 Hz air mode and 100 Hz plate
             // mode are in a source the research note's verifier could open.
             assertTrue(table.size >= 2, "$voice: a body needs at least two sourced modes, got ${table.size}")
@@ -554,6 +702,8 @@ class PluckTest {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
         for (voice in PluckVoice.entries) {
+            // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): withBody is a no-op, so there is no share to measure.
+            if (Pluck.bodyFor(voice).isEmpty()) continue
             val out = Pluck.withBody(string, voice, 1f, rate)
             var body = 0.0
             var dry = 0.0
@@ -605,6 +755,8 @@ class PluckTest {
         // BODY 1 is three times the string's RMS - the spike's "dominant",
         // which read CLOSER on two voices and must stay reachable.
         for (voice in PluckVoice.entries) {
+            // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): BODY is inert, so the centroid cannot move.
+            if (Pluck.bodyFor(voice).isEmpty()) continue
             val plain = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 0f)))
             val full = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 1f)))
             assertTrue(
@@ -612,5 +764,77 @@ class PluckTest {
                 "$voice: BODY 1 should move the centroid by more than 5%: ${plain.centroidHz} -> ${full.centroidHz}",
             )
         }
+    }
+
+    @Test
+    fun `every voice renders deterministically at the oversampled rate`() {
+        // The audition fingerprints (plan 2026-09-26-pluck-sitar.md, Task 2)
+        // only mean something if two renders of the same voice agree.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (voice in PluckVoice.entries) {
+            val a = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
+            val b = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
+            assertTrue(a.contentEquals(b), "$voice is not deterministic")
+        }
+    }
+
+    @Test
+    fun `the jawari buzz follows velocity`() {
+        // Harder plucks wrap further on the bridge: the high band's share of
+        // the first 200 ms must rise with velocity on SITAR.
+        val shares = listOf(0.3f, 0.65f, 1.0f).map { v ->
+            PluckSpectra.highShare(Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f), velocity = v).samples, Dsp.RATE, 2000f, 0.2f)
+        }
+        println("SITAR high-band share by velocity: $shares")
+        assertTrue(shares[0] < shares[1] && shares[1] < shares[2], "buzz should rise with velocity: $shares")
+    }
+
+    @Test
+    fun `the jawari leaves no offset`() {
+        val out = Pluck.render(PluckVoice.SITAR, mapOf("DOUBLE" to 0f), velocity = 1f).samples
+        var mean = 0.0
+        for (v in out) mean += v
+        mean /= out.size
+        val peak = PluckSpectra.peak(out)
+        assertTrue(kotlin.math.abs(mean) <= 1e-4 * peak, "DC after the jawari: mean $mean against peak $peak")
+
+        val withTarab = Pluck.render(PluckVoice.SITAR, emptyMap(), velocity = 1f).samples
+        var tarabMean = 0.0
+        for (v in withTarab) tarabMean += v
+        tarabMean /= withTarab.size
+        val tarabPeak = PluckSpectra.peak(withTarab)
+        assertTrue(kotlin.math.abs(tarabMean) <= 1e-4 * tarabPeak, "DC after the jawari with the tarab on (default DOUBLE 0.4): mean $tarabMean against peak $tarabPeak")
+    }
+
+    @Test
+    fun `the jawari never raises the loop's gain`() {
+        // |z| <= |y| by construction; this pins the sign so a later edit
+        // cannot turn the limiter into a boost inside feedback.
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        for (tenth in 0..10) {
+            val damp = tenth / 10f
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("DAMP" to damp, "DOUBLE" to 0f), rate, velocity = 1f, jawariOverride = 0.6f)
+            assertTrue(raw.all { it.isFinite() }, "non-finite sample at DAMP $damp")
+            val onset = PluckSpectra.peak(raw.copyOfRange(0, minOf(raw.size, (0.01f * rate).toInt())))
+            val whole = PluckSpectra.peak(raw)
+            assertTrue(whole <= 2f * onset, "DAMP $damp: the note grew past twice its onset ($whole > 2 * $onset)")
+            if (damp >= 0.3f) {
+                // This render is at DOUBLE 0, so the string alone must decay
+                // under its budget (the spec's stability clause).
+                val budget = Dsp.expMap(1f - damp, 0.3f * 1.4f, Pluck.RING_CEILING_SECONDS).coerceIn(Pluck.RING_FLOOR_SECONDS, Pluck.RING_CEILING_SECONDS)
+                assertTrue(raw.size < (budget * rate).toInt(), "DAMP $damp: the string alone should hit the -60 dB cut before its budget of $budget s, got ${raw.size / rate.toFloat()} s")
+            }
+        }
+    }
+
+    @Test
+    fun `velocity reaches the sitar as a number through the velocity path`() {
+        val patch = PluckPresets.forVoice(PluckVoice.SITAR).first()
+        val soft = Velocity.atVelocity(patch, 0.3f).samples
+        val hard = Velocity.atVelocity(patch, 1.0f).samples
+        val softShare = PluckSpectra.highShare(soft, Dsp.RATE, 2000f, 0.2f)
+        val hardShare = PluckSpectra.highShare(hard, Dsp.RATE, 2000f, 0.2f)
+        // The velocity path should reach Pluck.render with the number (PICK moves too; the jawari's own effect is isolated by 'the jawari buzz follows velocity').
+        assertTrue(softShare < hardShare, "the velocity path should reach Pluck.render with the number (PICK moves too; the jawari's own effect is isolated by 'the jawari buzz follows velocity'): $softShare vs $hardShare")
     }
 }

@@ -151,4 +151,42 @@ class TuningAccuracyTest {
             }
         }
     }
+
+    @Test
+    fun `the jawari at full drive keeps every sitar note inside a quarter tone, and names the ones it pulls`() {
+        for (semi in 0..Pluck.TUNE_SEMITONES) {
+            val macro = semi.toFloat() / Pluck.TUNE_SEMITONES
+            val raw = Pluck.synthesize(PluckVoice.SITAR, mapOf("TUNE" to macro, "DOUBLE" to 0f), Dsp.RATE * Dsp.OVERSAMPLE, velocity = 1f, jawariOverride = 0.6f)
+            val snip = Snip(Dsp.decimate(raw, Dsp.RATE), channels = 1, sampleRate = Dsp.RATE)
+            val want = Pluck.frequencyFor(PluckVoice.SITAR, semi)
+            val measured = measuredHz(snip, want)
+            val err = abs(cents(measured, want.toDouble()))
+            if (err > 5.0) println("SITAR semitone $semi: $err cents at full jawari")
+            assertTrue(err <= 50.0, "SITAR semitone $semi is $err cents off at full jawari drive (want $want, got $measured)")
+        }
+    }
+
+    @Test
+    fun `the sympathetic strings at DOUBLE 1 keep every sitar note within five cents`() {
+        for (semi in 0..Pluck.TUNE_SEMITONES) {
+            val macro = semi.toFloat() / Pluck.TUNE_SEMITONES
+            val snip = Pluck.render(PluckVoice.SITAR, mapOf("TUNE" to macro, "DOUBLE" to 1f))
+            val want = Pluck.frequencyFor(PluckVoice.SITAR, semi)
+            val measured = measuredHz(snip, want)
+            val err = abs(cents(measured, want.toDouble()))
+            assertTrue(err <= 5.0, "SITAR semitone $semi at DOUBLE 1 is $err cents off (want $want, got $measured)")
+        }
+    }
+
+    @Test
+    fun `the scale tuning at DOUBLE 1 keeps every sitar note within five cents`() {
+        for (semi in 0..Pluck.TUNE_SEMITONES) {
+            val macro = semi.toFloat() / Pluck.TUNE_SEMITONES
+            val snip = Pluck.renderWith(PluckVoice.SITAR, mapOf("TUNE" to macro, "DOUBLE" to 1f), sympathetic = Pluck.SYMPATHETIC_SCALE)
+            val want = Pluck.frequencyFor(PluckVoice.SITAR, semi)
+            val measured = measuredHz(snip, want)
+            val err = abs(cents(measured, want.toDouble()))
+            assertTrue(err <= 5.0, "SITAR semitone $semi at DOUBLE 1 with the scale tuning is $err cents off (want $want, got $measured)")
+        }
+    }
 }
