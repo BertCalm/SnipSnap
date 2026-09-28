@@ -1810,8 +1810,19 @@ fun App(shelf: KitShelf) {
                     val at = SessionBuilder.nextEmpty(session)
                     if (at < 0) return@writing LoopSend(Copy.loopFull(Session.TRACK_COUNT), null)
 
+                    // Falls back to RESIN's own pitch-only estimate on any
+                    // failure — safe (proven no worse than SIREN's true
+                    // nudge, docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md's
+                    // "After review") — rather than letting a span-fit
+                    // surprise turn a drone send into a lost write.
                     val siren = SirenDrone.Spec.fromJson(recipe)
-                    val span = if (siren != null) SirenDroneMaker.span(siren, rootMidi, session) else DroneFit.spanFor(rootMidi, session)
+                    val span = if (siren != null) {
+                        runCatching { SirenDroneMaker.span(siren, rootMidi, session) }
+                            .onFailure { e -> Log.e(TAG, "sendDroneToLoop: SIREN span fit failed, using RESIN's estimate", e) }
+                            .getOrDefault(DroneFit.spanFor(rootMidi, session))
+                    } else {
+                        DroneFit.spanFor(rootMidi, session)
+                    }
                     val sent = SessionBuilder.sendDrone(session, at, name, recipe, rootMidi, span)
                     val saved = runCatching { SessionStore.save(sent, loopDir) }
                         .onFailure { e -> Log.e(TAG, "sendDroneToLoop: save failed", e) }

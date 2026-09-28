@@ -728,6 +728,35 @@ fun SynthScreen(
         else -> null
     }
 
+    // The sheet's own readout. RESIN's own label is closed-form pitch
+    // arithmetic (DroneMaker.label, effectively free); SIREN's own reads
+    // its true carrier fit (SirenDroneMaker.label), an LFO phase integral
+    // over the candidate span's own frame count — at the grid's slowest
+    // tempo and longest bars this is real work, measured at ~850 ms per
+    // voice (SirenDroneMakerTest's own "span and label finish quickly
+    // even at the grid's slowest, longest setting"), so it runs off the
+    // main thread rather than inline in the composable body, the same
+    // reason droneSession itself does.
+    var droneLabel by remember { mutableStateOf("…") }
+    LaunchedEffect(droneOpen, droneRoot, droneSession) {
+        val root = droneRoot
+        val session = droneSession
+        val spec = droneSpec()
+        droneLabel = if (droneOpen && root != null && session != null && spec != null) {
+            // Falls back to the sheet's own placeholder on any failure —
+            // a readout that never lands is a worse sheet, not a crashed
+            // one; PREVIEW and SEND key off root/session directly, never
+            // off this string.
+            withContext(Dispatchers.Default) {
+                runCatching { spec.label(root, session) }
+                    .onFailure { e -> Log.e("SynthScreen", "drone label failed", e) }
+                    .getOrDefault("…")
+            }
+        } else {
+            "…"
+        }
+    }
+
     LaunchedEffect(droneOpen, voice) {
         if (!droneOpen) return@LaunchedEffect
         val spec = droneSpec() ?: return@LaunchedEffect
@@ -1175,9 +1204,12 @@ fun SynthScreen(
         }
 
         if (droneOpen) {
-            // Recomputed here rather than cached, the same call [heldSpec]
-            // makes and for the same reason: cheap, and it must reflect
-            // whatever the panel holds right now.
+            // The spec itself is recomputed here rather than cached, the
+            // same call [heldSpec] makes and for the same reason: cheap
+            // (it is only a voice and a macro map, no rendering), and it
+            // must reflect whatever the panel holds right now. The
+            // readout is not recomputed here — [droneLabel] is, off the
+            // main thread, since SIREN's own is not free.
             droneSpec()?.let { spec ->
                 val root = droneRoot
                 val session = droneSession
@@ -1188,7 +1220,7 @@ fun SynthScreen(
                     hasMotion = spec.hasMotion,
                     root = root,
                     ready = ready,
-                    label = if (root != null && session != null) spec.label(root, session) else "…",
+                    label = droneLabel,
                     motion = droneMotion,
                     rate = droneRate,
                     previewing = dronePreviewing,

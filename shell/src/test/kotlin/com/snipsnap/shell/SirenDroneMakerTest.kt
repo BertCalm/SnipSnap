@@ -70,4 +70,40 @@ class SirenDroneMakerTest {
         val cents = SirenDrone.nudgeCents(spec.voice, spec.macros, root, span.toLong() * fresh.intervalFrames, fresh.sampleRate)
         assertTrue(label.contains("%+.2f¢".format(java.util.Locale.ROOT, cents)), "label '$label' does not carry the measured nudge $cents¢")
     }
+
+    /**
+     * `SirenDroneMaker.span`/`label` run on the SYNTH screen's own UI
+     * thread (off it, via a coroutine, but still on a tap — a ROOT +/-
+     * stepper, not a background job) unlike RESIN's own closed-form
+     * `DroneMaker.label`, since SIREN's own nudge is read off an LFO phase
+     * integral over the candidate span's own frame count. The grid's
+     * slowest tempo (40 BPM) and longest bars (8) at the longest span (8
+     * intervals) is the worst case that flow ever asks for; this holds
+     * that it never throws, at DEPTH and RATE both pinned to their own
+     * extremes (the most LFO motion `fitCarrier`'s own integral has to
+     * do) — measured at ~850 ms per voice, which is why it runs off the
+     * main thread rather than merely being asserted "fast enough" here.
+     */
+    @Test
+    fun `span and label finish quickly even at the grid's slowest, longest setting`() {
+        val slowest = com.snipsnap.loop.Session(
+            tracks = List(com.snipsnap.loop.Session.TRACK_COUNT) {
+                com.snipsnap.loop.Track(name = "EMPTY", chain = listOf(com.snipsnap.loop.SilenceBlock), engaged = false)
+            },
+            bpm = com.snipsnap.loop.Session.MIN_BPM,
+            barsPerInterval = com.snipsnap.loop.Session.VALID_BARS.max(),
+            sampleRate = 48_000,
+        )
+        for (voice in SirenVoice.entries) {
+            val spec = SirenDrone.Spec(voice, mapOf("RATE" to 1f, "DEPTH" to 1f, "GRIT" to 1f))
+            val root = Siren.ROOT_MIDI
+            val t0 = System.nanoTime()
+            val span = SirenDroneMaker.span(spec, root, slowest)
+            val label = SirenDroneMaker.label(spec, root, slowest)
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue(span in DroneFit.SPANS, "$voice: span $span must be one DroneFit itself offers")
+            assertTrue(label.isNotBlank(), "$voice: label came back blank")
+            assertTrue(ms < 5_000, "$voice: span+label took ${ms}ms at the grid's worst setting")
+        }
+    }
 }

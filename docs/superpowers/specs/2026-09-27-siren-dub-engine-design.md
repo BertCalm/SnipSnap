@@ -537,6 +537,46 @@ finished render actually produces:
   stops...", `SirenDroneTest`'s "the carrier's own settle and integral
   pass stops too...").
 
+## Hardening round — 2026-09-28
+
+A pass over all four doors after #368 merged, looking for what neither
+the automated review nor the tests would have caught: malformed/corrupted
+recipe JSON, NaN/Infinity propagation through macros, integer and
+array-size edges in the drone and held-pad paths, and the new caching and
+dispatch logic in `DroneSource`. Most of the surface held on inspection —
+`Json`'s own number grammar can produce `Infinity` from an absurd exponent
+but never `NaN` (no token for it), and `Infinity` clamps correctly through
+`coerceIn`, unlike `NaN`; every render call site already wraps in
+`try/catch` with a toast, a pattern `makeHeld`'s own `coroutineScope` (not
+raw `appScope.launch`) exists specifically to preserve; the loop-grid's
+own BPM/bars bounds keep every frame count `SirenDrone` ever sees safely
+inside `Int` range with room to spare; and the native `SurfaceEngine` was
+already mono-only, so a mono SIREN LOOP render introduced no new channel
+mismatch.
+
+Two real gaps, both about `SirenDroneMaker.span`/`label`'s own cost —
+unlike RESIN's closed-form `DroneMaker.label`, SIREN's own reads an LFO
+phase integral over the candidate span's own frame count, measured at
+~850 ms per voice at the grid's slowest tempo and longest bars
+(`SirenDroneMakerTest`'s new "span and label finish quickly even at the
+grid's slowest, longest setting"):
+
+- **`SynthScreen`'s DRONE TO LOOP sheet computed its own readout inline in
+  the composable body** — synchronous, on the main thread, on every ROOT
+  +/- tap. RESIN's own version was always free, so this never showed; it
+  now runs through a `LaunchedEffect` off the main thread
+  (`Dispatchers.Default`), the same way `droneSession` itself already
+  loads off it, with the placeholder shown until it lands.
+- **`App.sendDroneToLoop`'s new SIREN-vs-RESIN span dispatch ran unguarded
+  inside the write path**, the one place in this whole feature that broke
+  the "a render or fit computation never crashes the app, it toasts"
+  pattern every other call site holds. No live input was found that makes
+  it throw — `rootMidi` is always inside SIREN's own register, the session
+  is validated before this runs, and the recipe is the app's own
+  freshly-serialized spec — but it now falls back to RESIN's own (proven
+  safe, if less precise) estimate on any failure rather than trusting that
+  reasoning to hold forever.
+
 ## Still open, not blocking
 
 5. **A fifth voice?** A one-shot dive with no LFO at all (SWEEP at full,
