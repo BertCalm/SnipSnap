@@ -938,10 +938,24 @@ object Pluck {
         return out
     }
 
-    /** How much of the main string reaches each sympathetic loop, sample by sample, the way the bridge transmits it. */
-    private const val SYMPATHETIC_COUPLING = 0.05f
-    /** Their sum enters the output at this times DOUBLE, so DOUBLE 1 is a drone on purpose. */
-    private const val SYMPATHETIC_LEVEL = 0.5f
+    /**
+     * How much of the main string reaches each sympathetic loop, sample by
+     * sample, the way the bridge transmits it. 0.15 is the level Josh's ear
+     * chose at the 2026-09-27 gate (`p3b_symp_boost_loud`, chipped closer)
+     * from a bracket that ran from a moderate 2x bump (`p3b_symp_boost`, not
+     * chipped) up to this louder one, built deliberately loud - it read as
+     * an improvement, not as too much, at least up to the loud bracket
+     * actually tested. The old 0.05 measured as inaudible against the note
+     * ("not coming through").
+     */
+    private const val SYMPATHETIC_COUPLING = 0.15f
+    /**
+     * Their sum enters the output at this times DOUBLE, so DOUBLE 1 is a
+     * drone on purpose. 2.0 is [SYMPATHETIC_COUPLING]'s companion from the
+     * same 2026-09-27 gate and the same `p3b_symp_boost_loud` bracket - the
+     * old 0.5 was the other half of why the tarab measured as inaudible.
+     */
+    private const val SYMPATHETIC_LEVEL = 2.0f
     private const val SYMPATHETIC_LOOP_HZ = 4000f
     private const val SYMPATHETIC_FEEDBACK = 0.995f
 
