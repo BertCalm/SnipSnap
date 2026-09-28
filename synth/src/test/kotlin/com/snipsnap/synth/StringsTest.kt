@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -101,6 +102,61 @@ class StringsTest {
         assertTrue(abs(plain.sum()) < 1e-3f, "sum=${plain.sum()}")
         val combed = Strings.pluckExciter(n = 300, freq = 147f, pickHz = 6000f, position = 0.25f, seed = 7, rate = Dsp.RATE, maxLen = 10_000)
         assertTrue(combed.size > plain.size, "the comb's delayed copy extends the exciter")
+    }
+
+    /** Mean magnitude weighted by frequency - a cheap onset-brightness measure for a short exciter burst on its own, no string or loop needed. */
+    private fun spectralCentroid(samples: FloatArray, rate: Int): Double {
+        var n = 256
+        while (n < samples.size) n *= 2
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        samples.copyInto(re, 0, 0, samples.size)
+        com.snipsnap.audio.Fft.forward(re, im)
+        var weighted = 0.0
+        var total = 0.0
+        for (i in 0 until n / 2) {
+            val mag = kotlin.math.hypot(re[i].toDouble(), im[i].toDouble())
+            weighted += mag * (i.toDouble() * rate / n)
+            total += mag
+        }
+        return if (total > 0.0) weighted / total else 0.0
+    }
+
+    /**
+     * [Strings.mallet] (SILK Phase 2, SANTUR): a raised-cosine pulse
+     * whose width [Strings.mallet]'s own KDoc ties to [hardness] the same
+     * way [Strings.pluckExciter] reads its `pickHz` as a low-pass cutoff -
+     * a higher value narrows the pulse, so its onset should read brighter
+     * (spec, "SANTUR": "PICK is mallet hardness (pulse width: wide and
+     * dark to narrow and bright)").
+     */
+    @Test
+    fun `mallet's onset gets brighter as hardness rises, and is zero-mean`() {
+        val narrow = Strings.mallet(n = 400, freq = 147f, hardness = 8000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        val wide = Strings.mallet(n = 400, freq = 147f, hardness = 500f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertTrue(abs(narrow.sum()) < 1e-3f, "narrow sum=${narrow.sum()}")
+        assertTrue(abs(wide.sum()) < 1e-3f, "wide sum=${wide.sum()}")
+        val narrowCentroid = spectralCentroid(narrow, Dsp.RATE)
+        val wideCentroid = spectralCentroid(wide, Dsp.RATE)
+        assertTrue(narrowCentroid > wideCentroid, "narrow (hard) pulse should read brighter: $narrowCentroid vs $wideCentroid")
+    }
+
+    @Test
+    fun `mallet is deterministic, and the comb lengthens it same as the pick burst`() {
+        val a = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        val b = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertContentEquals(a, b)
+        val combed = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0.25f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertTrue(combed.size > a.size, "the comb's delayed copy extends the exciter")
+    }
+
+    /** [Strings.pluck]'s own `exciter` seam (SILK Phase 2): swapping in [Strings.mallet] must actually reach the loop, not silently keep the pick burst. */
+    @Test
+    fun `pluck's exciter parameter actually swaps the excitation`() {
+        val damping = Strings.damping(0.3f, 4200f)
+        val picked = Strings.pluck(220f, 0.2f, damping, 6000f, seed = 4, rate = Dsp.RATE)
+        val malleted = Strings.pluck(220f, 0.2f, damping, 6000f, seed = 4, rate = Dsp.RATE, exciter = Strings::mallet)
+        assertFalse(picked.contentEquals(malleted), "pick and mallet excitation should render differently")
     }
 
     /**
