@@ -6,21 +6,25 @@ import java.io.File
 import kotlin.math.roundToInt
 
 /**
- * Renders the FORK round-one audition
+ * Renders the FORK audition
  * (docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md,
  * the S14 gate) under testkit/fork-audition/ (gitignored): the sixteen-pad
- * kit as it lands on the MPC, then for each voice its default, STRIKE/BARK/
- * STIFF/DECAY at both ends of their travel with the rest at their defaults,
- * and all eight of its own presets, then one STRIKER section comparing the
- * noise hammer against a captured-snip hammer at both a dull and a bright
- * source (this environment has no real captured audio to draw on, so the
- * two sources are synthesised noise bursts, dull and bright, the same
- * stand-in [ForkTest]'s own striker tests use). Clips share one loudness
- * ([AuditionLevel]). Writes `manifest.json`, which the page builds itself
- * from, so the clip list lives here and nowhere else, then copies the
- * listening page from the test resources. Run via
+ * kit as it lands on the MPC (TINE and BAR only — round two's third voice
+ * did not change what ships on the kit), then for each of the three voices
+ * its default, STRIKE/BARK/STIFF/DECAY at both ends of their travel with the
+ * rest at their defaults, and all eight of its own presets, then one STRIKER
+ * section comparing the noise hammer against a captured-snip hammer at both
+ * a dull and a bright source (this environment has no real captured audio
+ * to draw on, so the two sources are synthesised noise bursts, dull and
+ * bright, the same stand-in [ForkTest]'s own striker tests use). Clips
+ * share one loudness ([AuditionLevel]). Writes `manifest.json`, which the
+ * page builds itself from, so the clip list lives here and nowhere else,
+ * then copies the listening page from the test resources. Run via
  * `./gradlew :synth:generateForkAudition`, then publish the folder as the
  * listening artifact.
+ *
+ * Round one's own gate (TINE, BAR): closer on TINE, but neither read as
+ * "piano" outright — see [ForkVoice.NODE]'s own KDoc for round two's answer.
  */
 object ForkAuditionGenerator {
 
@@ -37,6 +41,7 @@ object ForkAuditionGenerator {
     private val BODIES = mapOf(
         ForkVoice.TINE to "a cantilever tine, like a real electric piano's — overtones far from the fundamental, gone in tens of milliseconds",
         ForkVoice.BAR to "a free-free bar, the vibraphone's own shape — overtones closer in, ringing longer",
+        ForkVoice.NODE to "the same cantilever tine as TINE, read at its own second mode's node — that overtone silenced at the source, a purer and warmer tone",
     )
 
     private class Clip(val id: String, val name: String, val desc: String)
