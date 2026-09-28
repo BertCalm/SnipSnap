@@ -368,6 +368,15 @@ class GlintTest {
         // is shape-insensitive and stays valid during a sweep. It has to be
         // built there regardless: PLATE and RATCHET both move k in new
         // ways that this test's settled-window-only approach won't cover.
+        //
+        // RATCHET departs from "settled" too, in a different way than
+        // PLATE's continuous drift above: at this fixture, RATCHET's ladder
+        // crosses a rung boundary at ~0.45s - inside this test's own
+        // [0.35, 0.55] correlation window - at all four PEAK values sampled
+        // here at BLOOM 1 (at BLOOM 0 the ladder has a single rung, so
+        // there is nothing to cross). Harmless, because a k step does not
+        // move the period (see "the period remains exact by construction"
+        // above), but undocumented until now.
         // == 0.35 at the current BLOOM_T60 (0.45); expressed as a fraction
         // of BLOOM_T60 rather than that literal so it tracks BLOOM_T60 if
         // D2 changes it (see comment above).
@@ -1266,18 +1275,32 @@ class GlintTest {
         return worst
     }
 
-    @Test
-    fun `CICADA stays periodic at f0 despite re-clocking inside the cycle`() {
-        // The sub-cycles divide the cycle an integer number of times, so the
-        // whole pattern still repeats at f0 and the pitch does not move. This
-        // is the test the spec names as CICADA's risk.
-        for (bloom in listOf(0f, 1f)) {
-            val snip = Glint.render(GlintVoice.CICADA, mapOf("BLOOM" to bloom))
-            val f0 = Glint.frequencyFor(GlintVoice.CICADA, 0.5f)
-            val corr = periodCorrelation(snip, f0, fromSec = Glint.BLOOM_T60 * (7f / 9f))
-            assertTrue(corr > 0.98f, "CICADA at BLOOM $bloom: period correlation $corr")
-        }
-    }
+    // `CICADA stays periodic at f0 despite re-clocking inside the cycle` was
+    // deleted here (D2 whole-branch review). It asserted
+    // `periodCorrelation(...) > 0.98f` for CICADA at BLOOM 0 and 1 - but a
+    // signal periodic at T/4 is periodic at T by construction, so that
+    // assertion is satisfied for any sub-cycle count, working or broken; it
+    // cannot fail. Mutation-verified 2026-09-27 (`carrier = phase`
+    // substituted for CICADA only, reverted immediately after): mechanism
+    // correct gives 0.99998933 (BLOOM 0) / 0.9999792 (BLOOM 1); mechanism
+    // removed gives 0.9999901 / 0.9999801 - HIGHER in both cases, not lower.
+    // It passed *better* without the thing it was named to guard.
+    //
+    // `the formant sweeps and the pitch does not move` above already runs
+    // this identical metric at this identical bar for CICADA, across 4
+    // PEAKs x 2 BLOOMs rather than 1 x 2, and is exactly as mutation-immune
+    // there: the same substitution raised every one of those 8 readings too
+    // (e.g. PEAK 0.9 BLOOM 1: 0.99994963 correct -> 0.9999592 removed). So
+    // this test contributed a narrower slice of a check that was already
+    // vacuous for CICADA, not a second opinion.
+    //
+    // The property that actually distinguishes a working re-clock from a
+    // deleted one - where CICADA's energy sits - is guarded below by
+    // `CICADA puts energy at its sub-cycle rate that BOTTLE does not`,
+    // already mutation-verified there against the identical substitution
+    // (see that test's own comment: ratio 279x mechanism correct, 2.2x
+    // FAILS mechanism removed). That is the guard this file needs; a second
+    // copy of the periodicity check was not.
 
     @Test
     fun `CICADA does not click at its inner restarts`() {

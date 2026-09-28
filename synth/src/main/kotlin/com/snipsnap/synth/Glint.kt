@@ -126,12 +126,27 @@ object Glint {
      * BLOOM's ceiling: the peak opens to 1 + this many times its settled
      * ratio — 4x at full BLOOM.
      *
-     * That 4x is clamped against [K_MAX] (40) in `synthesize`, and the two
-     * interact: full BLOOM starts clipping against the ceiling once
-     * `kBase > 10` (PEAK ≈ 0.54, since `kBase = 2 * 20^PEAK`), and is
-     * entirely inert at PEAK 1, where `kBase` is already 40 and has nowhere
-     * left to open. Not a bug — undocumented behaviour someone auditioning
-     * BLOOM at high PEAK would otherwise read as the knob being broken.
+     * That 4x is clamped against [kCeilingFor] in `synthesize` (see its own
+     * `kCeiling` line) — voice-dependent, not the bare [K_MAX] this doc used
+     * to name — and the two interact: full BLOOM starts clipping against
+     * the ceiling once `kBase > kCeilingFor(voice) / 4`, and is entirely
+     * inert at PEAK 1, where `kBase` already equals the ceiling and has
+     * nowhere left to open. Not a bug — undocumented behaviour someone
+     * auditioning BLOOM at high PEAK would otherwise read as the knob being
+     * broken.
+     *
+     * Per voice, since `kBase = K_MIN * (kCeilingFor(voice) / K_MIN) ^
+     * PEAK` ([ratioAtReference]):
+     *   - Every voice but CICADA: [kCeilingFor] is [K_MAX] (40), so
+     *     clipping starts at `kBase > 10`, PEAK ≈ 0.54 — the top ~46% of
+     *     the knob.
+     *   - CICADA: [kCeilingFor] is 10 — [K_MAX] / [CICADA_SUBCYCLES], 4x
+     *     lower than every other voice's — so clipping starts at
+     *     `kBase > 2.5`, PEAK ≈ 0.1386 — the top ~86% of the knob. BLOOM is
+     *     partly inert across most of CICADA's own PEAK range, not the
+     *     ~46% every other voice sees, and CICADA is exactly the voice
+     *     where the "broken knob" misreading this doc exists to head off
+     *     is most likely.
      */
     const val BLOOM_MAX = 3f
 
@@ -176,12 +191,18 @@ object Glint {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
-    /** The bottom of each voice's own two-octave TUNE range. */
+    /**
+     * The bottom of each voice's own two-octave TUNE range.
+     *
+     * For CICADA this sets the *cycle* rate, not the pitch heard: every
+     * sub-cycle is its own complete windowed grain, so CICADA sounds about
+     * two octaves above whatever this returns (see [CICADA_SUBCYCLES]).
+     */
     fun rootHz(voice: GlintVoice): Float = when (voice) {
         GlintVoice.REED -> 110f     // A2
         GlintVoice.BOTTLE -> 220f   // A3
         GlintVoice.KAZOO -> 220f    // A3
-        GlintVoice.CICADA -> 220f   // A3 — shares BOTTLE's register with its window
+        GlintVoice.CICADA -> 220f   // A3 — heard ~2 octaves above; see doc above
         GlintVoice.RATCHET -> 220f  // A3 — shares KAZOO's register with its window
         GlintVoice.PLATE -> 110f    // A2 — a struck plate sits low, like REED
     }
@@ -470,8 +491,15 @@ object Glint {
             // of the window and burst, instead of one. The window is applied
             // to the SUB-phase, which is what makes each inner restart land on
             // silence — window it on `phase` and it clicks N times a cycle
-            // instead of never. N is an integer, so the whole pattern still
-            // repeats at f0.
+            // instead of never. Both the window and the burst are functions of
+            // this sub-phase alone, so the whole waveform repeats at N * f0 —
+            // CICADA's real fundamental, heard about two octaves above the
+            // note it plays (see rootHz's own doc for the same relationship
+            // at the root) — and, N being an integer, that period divides
+            // f0's own, so the pattern also repeats at f0. See
+            // CICADA_SUBCYCLES's own doc for what a fractional N would cost
+            // instead: a click at the truncated restart, not a pitch change
+            // — periodicity at f0 survives either way.
             val carrier = if (voice == GlintVoice.CICADA) {
                 val scaled = phase * CICADA_SUBCYCLES
                 scaled - floor(scaled)
