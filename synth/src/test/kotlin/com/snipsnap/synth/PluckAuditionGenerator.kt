@@ -58,6 +58,11 @@ import java.io.File
  * note, against the shipped no-body default - unsourced shapes, not a
  * measurement, and off by default until the gate chips one closer.
  *
+ * A p3b pair renders the wrap's drive a second time, at a third of the
+ * shipped default's tuning cost (0.010 against 0.015), for the gate to
+ * weigh the harmonics measurement's own finding against - see the spec's
+ * "The jawari" for the numbers.
+ *
  * The folder is then published as the listening artifact the spec names.
  * The artifact keeps the `VOICE/00_shipped.wav` clips from the spike
  * publish — the pre-Phase-1 renders — because a republish keeps files it
@@ -165,6 +170,18 @@ object PluckAuditionGenerator {
         writeSitar("p3a_body_35", mapOf("BODY" to 0.35f))
         writeSitar("p3a_body_1", mapOf("BODY" to 1f))
         writeSitar("p3a_body_35_root", mapOf("TUNE" to 0f, "BODY" to 0.35f))
+
+        // p3b: the wrap's depth, on the audition page a second time. Josh's
+        // 2026-09-27 gate chipped the full depth (0.015) over a fifth as
+        // strong (0.003) at both notes, but the harmonics measurements
+        // that followed (see the spec's "The jawari") found 0.015 has LESS
+        // 2nd-8th-harmonic energy than 0.003, not more - the harmonics
+        // actually peak around 0.010, a third of 0.015's tuning cost. This
+        // renders that point for Josh's ear, an override only -
+        // SITAR_JAWARI itself is untouched.
+        writeSitar("p3b_wrap_010_default", emptyMap(), jawari = 0.010f)
+        writeSitar("p3b_wrap_010_root", mapOf("TUNE" to 0f), jawari = 0.010f)
+
         for (voice in listOf(PluckVoice.KOTO, PluckVoice.HARP)) {
             val dir = File(root, voice.name)
             WavWriter.write(File(dir, "p3a_stiff_off.wav"), AuditionLevel.level(Pluck.renderWith(voice, emptyMap())), WavWriter.BitDepth.PCM_16)
