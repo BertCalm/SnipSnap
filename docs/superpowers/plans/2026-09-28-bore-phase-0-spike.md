@@ -35,9 +35,10 @@ what made them so they can be re-run:
   (double precision, no Gradle), and the threshold-of-oscillation probe
   behind the design's Appendix A10 and A11. `bore_sim.py` is the shared
   base the other two import. They are claims about the arithmetic, not
-  about a Kotlin build, and the design says so where it uses them. Run
-  with `python3 bore_sim2.py` and `python3 bore_thresh.py` from one
-  directory holding all three.
+  about a Kotlin build, and the design says so where it uses them. They
+  exist only as the code blocks below, not as files in the tree: copy
+  each block into a file of that name in one directory, then run
+  `python3 bore_sim2.py` and `python3 bore_thresh.py` there.
 
 The `F`-numbers in the Kotlin KDoc (`F1`, `F2`, `F8` …) are the DSP desk
 review's finding numbers; each is restated, with its measurement, in the
@@ -45,6 +46,16 @@ design's "The physics, measured" and its verdict table. The worktree and
 scratch paths the report names were the session's temporary directories
 and no longer exist; the report is kept verbatim as the record of what
 was run.
+
+**One line changed after the runs.** `BoreSpikeTest`'s FLUTE test
+originally wrapped `fullRow` in a `try`/`catch (AssertionError)` that
+printed a non-finite render instead of failing — a review finding on the
+PR that landed this record. The block below has that catch removed, so
+the boundedness assertion propagates on a re-run. It changes no number:
+the assertion never fired in any run (every FLUTE row printed
+`nonFinite 0`, and the report's "0 in every render of every test" is that
+count), and the amended test was re-run green on the same code before
+this file was committed.
 
 ## The spike's report
 
@@ -717,7 +728,7 @@ class BoreSpikeTest {
     fun `5 - FLUTE best effort`() {
         println("=== (5) FLUTE 220/440/880 at BREATH 0.65, LIP 0.5 ===")
         for (f0 in listOf(220f, 440f, 880f)) {
-            try { fullRow(BoreSpike.Shape.FLUTE, f0) } catch (e: AssertionError) { println("P1 | FLUTE %5.0f | %s".format(f0, e.message)) }
+            fullRow(BoreSpike.Shape.FLUTE, f0)
         }
         println("=== (5a) FLUTE jet ratio 0.32 / 0.40 / 0.50 at 220/440/880, BREATH 0.65 LIP 0.5: nearPk cents | globalPk Hz | h1..h5 dB ===")
         for (ratio in listOf(0.32f, 0.40f, 0.50f)) {

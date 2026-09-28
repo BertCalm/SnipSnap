@@ -981,7 +981,7 @@ slot stays open for the gate.
 | **BREATH** | mouth pressure: threshold, level (taken back by `levelTo`), turbulence, and on FLUTE the register | a **share of the closing pressure between two measured edges**, `lin(BREATH, s_thr(LIP) + m, 0.97)` on the reeds, the jet's own window on FLUTE; turbulence `lin(BREATH, 0.02, 0.06)` × p_m. Never silent at either end — the spec's silence at 0 and beaten-shut silence at 1 are rule-3 failures | 0.6 |
 | **LIP** | the reed's rest opening — the table's offset — and the bell corner; tighter is darker and closer to the beat | `offset = lin(LIP, 0.5, 0.85)`; bell `expMap(LIP, lo, hi)` per voice if the gate keeps that axis; FLUTE: jet offset 0 → 0.3. Phase budgeted, so it is *not* a pitch knob (a claims test). EMBOUCHURE is not a plain word (rule 2); BITE is TINES'; LIP fits the LCD. `neutral = 0.5` | 0.5 |
 | **CHIFF** | the attack: a swell, a tongue, a tongue plus the key thump | attack `expMap(CHIFF, 120 ms, 8 ms)`; thump gain 0 below 0.7, rising to 1; the thump run to < 1e-3 (~105 ms) or windowed | 0.4 |
-| **HOLD** | how long the player blows; the top step is a LOOP | SIREN's mapping (`Siren.holdSeconds`, `Siren.kt:190`): `expMap(hold/0.99, 0.3, 4)` s with a 40 ms-shaped attack from CHIFF and an 80 ms release; `LOOP_THRESHOLD 0.99`, SCRAMBLE capped at 0.95 (`Siren.kt:83-84, :171`); `drumClassFor` derived from the classifier's 1.5 s line the way `Fork.drumClassFor` derives it (`Fork.kt:239-242`), never a hard-coded 0.65 — the spec's 0.65 is 1.39 s, under the line, whose crossing is 0.679 (`drumClassFor` is each engine's cheap prediction of the classifier's verdict from the macros alone, so a pad can land in the right group without being rendered twice; what the buckets can be is test 11) | 0.45 (0.97 s, under the 1.5 s line) |
+| **HOLD** | how long the player blows; the top step is a LOOP | SIREN's mapping (`Siren.holdSeconds`, `Siren.kt:190`): `expMap(hold/0.99, 0.3, 4)` s with a 40 ms-shaped attack from CHIFF and an 80 ms release; `LOOP_THRESHOLD 0.99`, SCRAMBLE capped at 0.95 (`Siren.kt:83-84, :171`); `drumClassFor` derived from the classifier's 1.5 s line the way `Fork.drumClassFor` derives it (`Fork.kt:239-242`), from the *rendered* duration — the gate plus the 80 ms release and any tail pad — never a hard-coded knob value: under this mapping the gate alone crosses 1.5 s at HOLD ≈ 0.62 and, with the release counted, at ≈ 0.59, so the constant is computed from the mapping at implementation, not typed. (The spec's own hard-coded 0.65 was wrong even for its own mapping: `expMap(0.65, 0.25, 3.5)` is 1.39 s, under the line, whose crossing there is 0.679.) (`drumClassFor` is each engine's cheap prediction of the classifier's verdict from the macros alone, so a pad can land in the right group without being rendered twice; what the buckets can be is test 11) | 0.45 (0.97 s, under the 1.5 s line) |
 
 Defaults: BREATH 0.6 sits in the middle of the measured speaking window at
 every LIP, so SCRAMBLE's neighbourhood speaks; LIP 0.5 is the offset's
@@ -1180,13 +1180,29 @@ argument anywhere (`Dsp.seedFor` only, F19).
 - `Strings.tune`'s `require(exact >= MIN_LOOP_SAMPLES)` is the loud floor
   (`Strings.kt:178`); at BORE's roots and ranges it is never near (169
   samples at the top of FLUTE).
-- The reflection table is passive by construction: `|r| ≤ 1` means `|out
-  − p_m| ≤ |ret − p_m|`, and with 0.95 loss the raw loop peak is bounded
-  by about `2·p_max` at every corner (the line can hold at most the
-  mouth pressure plus a full reflection of it) — a number the fuzz test
-  asserts, not `isFinite`. The jet's `tanh` bounds the flute the same
-  way. No `inf` can be minted, so `normalizeByFold`'s NaN path (F11) is
-  not reachable and is not in the chain anyway.
+- The loop cannot run away, and the argument is the small-gain one, not
+  a pointwise one. The reflection table is non-expansive — `|r| ≤ 1`
+  means `|out − p_m| ≤ |ret − p_m|`, sample by sample: the valve never
+  returns more than it received — and the linear path back to it (the
+  allpass at magnitude 1, the bell one-pole and the DC blocker at
+  magnitude ≤ 1, the 0.95 reflection) returns at most 95 % of what went
+  round at every frequency; with the loop's gain below one, a bounded
+  mouth pressure gives a bounded state (the small-gain theorem: energy
+  cannot grow without limit, so the note is the valve keeping a bounded
+  oscillation alive, never a runaway), no `inf` can be minted, and
+  `normalizeByFold`'s NaN path (F11) is unreachable — and not in the chain
+  anyway. The flute has more room: `tanh` bounds the labium term by `p_m`
+  whatever the jet does, so the path from `ret` to `out` has gain 0.5 and
+  the loop 0.475. What this argument does **not** give is a pointwise
+  ceiling: `|r| ≤ 1` bounds one update, not the sum of a filtered history,
+  and an earlier draft's `2·p_max` claim is withdrawn. The fuzz test
+  therefore pins an *empirical* raw-loop ceiling — the grid's measured
+  maximum with a margin, recorded as a constant with its measurement in
+  the KDoc (the `Dsp.Ladder` precedent) — and asserts against it, so a
+  corner that grows past what Phase 0 saw is named. Phase 0 measured zero
+  non-finite samples in about 220 renders and raw AC RMS up to 1.26 on
+  the cylinder (Appendix B4); it did not tabulate raw peaks, and the fuzz
+  test does.
 - A BREATH window whose margin is wrong at some corner renders breath, at
   a fixed level, never hiss lifted to full scale; the fuzz test's
   non-silent clause is "a pitched tone 20 dB over the between-harmonic
@@ -1245,9 +1261,13 @@ default.
    the octave, the filter lag and the bulb on the first run.
 3. **LIP is not a pitch knob.** Pitch at LIP 0 and LIP 1 within 5 cents
    of each other at three TUNEs per voice — F2's direct test.
-4. **Passive by construction.** Raw loop peak ≤ `2·p_max` at every corner
-   of the fuzz grid, and zero non-finite samples — a number, not
-   `isFinite`.
+4. **Bounded, and pinned.** Zero non-finite samples at every corner of
+   the fuzz grid, and the raw loop peak under an *empirical* ceiling: the
+   grid's measured maximum with a margin, pinned as a constant with its
+   measurement in the KDoc (the `Dsp.Ladder` precedent) — a number the
+   test asserts, not `isFinite`, and not a derived bound: the small-gain
+   argument in "Failure handling" forbids a runaway but gives no
+   pointwise constant.
 5. **The series is the bore's, and the jet's.** SAX's 2nd harmonic within
    12 dB of the 1st (the cone's full series; spike: −7.9 to −10.1 dB);
    FLUTE's 2nd at least 15 dB under (spike: −37 to −44 dB) — and the doc
