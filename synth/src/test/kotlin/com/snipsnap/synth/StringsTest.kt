@@ -166,6 +166,67 @@ class StringsTest {
         assertTrue(combed.size > a.size, "the comb's delayed copy extends the exciter")
     }
 
+    /**
+     * SILK Phase 3, Task 1 (SHAMISEN's SAWARI): the spec's own reasoning is
+     * that sawari needs no new mechanism - it reuses [Strings.Loop]'s own
+     * `jawari` fold-back, the same one SITAR has shipped on since PLUCK
+     * Phase 3a, plus [Silk.SHAMISEN_B]'s small fixed dispersion (so the
+     * buzz has a precursor to build from - research §1, T8). This is the
+     * closest sourced analogue SILK has to a shamisen-specific sawari
+     * measurement: the biwa's own (a related, not identical, instrument)
+     * signature - higher partials boosted and longer-lived, so the whole
+     * render's own spectral centroid reads higher with the obstacle
+     * engaged than without it (research §1, S8/S8b).
+     */
+    @Test
+    fun `SAWARI reused from jawari reads brighter, the biwa measurement's own signature`() {
+        val freq = 130.81f // C3, SHAMISEN's own root
+        val damping = Strings.damping(0.3f, 7000f)
+        val pickHz = 9000f
+        val position = 1f / 6f
+        val dispersion = Strings.Dispersion.forB(Silk.SHAMISEN_B, Silk.STIFF_SECTIONS)
+        val dry = Strings.pluck(freq, 0.6f, damping, pickHz, seed = 5, rate = Dsp.RATE, position = position, jawari = 0f, dispersion = dispersion)
+        val buzzed = Strings.pluck(freq, 0.6f, damping, pickHz, seed = 5, rate = Dsp.RATE, position = position, jawari = 0.5f, dispersion = dispersion)
+        val dryCentroid = spectralCentroid(dry, Dsp.RATE)
+        val buzzedCentroid = spectralCentroid(buzzed, Dsp.RATE)
+        assertTrue(buzzedCentroid > dryCentroid, "SAWARI engaged should read brighter overall (higher partials boosted and longer-lived): dry=$dryCentroid buzzed=$buzzedCentroid")
+    }
+
+    /**
+     * The design's own hard guarantee (spec, "Failure handling": "Collision
+     * adds energy | the fold-back loss is `< 1` by construction; a test
+     * renders SAWARI 1 at PICK 1 and asserts the envelope never rises after
+     * the attack"). [Strings.Loop]'s own fold-back subtracts a bounded
+     * positive quantity from positive swings - never adds - so this is
+     * really a guard against a future regression to that mechanism, not a
+     * discovery: same block-RMS scan [Strings.trimToDecay] already uses to
+     * find where a render's own envelope has decayed away.
+     */
+    @Test
+    fun `SAWARI 1 at PICK 1 - the loudest, brightest setting - never gains energy after its own attack`() {
+        val freq = 130.81f
+        val damping = Strings.damping(0.3f, 7000f)
+        val pickHz = 12_000f // PICK 1: the brightest exciter this voice reaches
+        val dispersion = Strings.Dispersion.forB(Silk.SHAMISEN_B, Silk.STIFF_SECTIONS)
+        val buf = Strings.pluck(freq, 0.6f, damping, pickHz, seed = 5, rate = Dsp.RATE, position = 1f / 6f, jawari = 1f, dispersion = dispersion)
+
+        val block = (Dsp.RATE * 0.005f).toInt().coerceAtLeast(1)
+        val blocks = (buf.size + block - 1) / block
+        val rms = DoubleArray(blocks)
+        for (b in 0 until blocks) {
+            val start = b * block
+            val end = kotlin.math.min(buf.size, start + block)
+            var acc = 0.0
+            for (i in start until end) acc += buf[i].toDouble() * buf[i]
+            rms[b] = kotlin.math.sqrt(acc / (end - start))
+        }
+        val peakIndex = rms.indices.maxByOrNull { rms[it] } ?: return
+        val peak = rms[peakIndex]
+        for (i in (peakIndex + 1) until blocks) {
+            assertTrue(rms[i] <= peak * 1.001, "block $i (${rms[i]}) exceeds the attack's own peak ($peak at block $peakIndex) - the envelope should never rise again after it")
+        }
+    }
+
     /** [Strings.pluck]'s own `exciter` seam (SILK Phase 2): swapping in [Strings.mallet] must actually reach the loop, not silently keep the pick burst. */
     @Test
     fun `pluck's exciter parameter actually swaps the excitation`() {

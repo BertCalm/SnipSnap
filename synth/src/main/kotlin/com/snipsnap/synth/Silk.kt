@@ -53,6 +53,24 @@ object Silk {
     internal const val SANTUR_B = 3.1e-4f
 
     /**
+     * SHAMISEN's own fixed stiffness, unconditional like [SANTUR_B] but
+     * with no source at all behind its magnitude - no B is measured for
+     * silk or nylon shamisen strings anywhere in the research (the
+     * guqin/guzheng proxies, [STIFF_B_ANCHOR] and the guqin's own 9e-5, are
+     * both wound or nylon-over-steel strings, structurally stiffer than a
+     * plain silk or nylon shamisen string). Its only job is sourced,
+     * though: van Walstijn, Bridges & Mehes's tanpura-model finding that
+     * the sawari buzz's own "precursor" disappears when a string has zero
+     * stiffness (research §1, T8 - "with EI = 0 the precursor
+     * disappears"), so SAWARI's reuse of [Strings.Loop]'s `jawari` needs
+     * *some* nonzero dispersion to have anything to buzz off of. This
+     * constant claims that precursor exists, nothing about its stretch
+     * magnitude - smaller than [STIFF_B_ANCHOR] on purpose, since nothing
+     * here backs a guzheng-scale value.
+     */
+    internal const val SHAMISEN_B = 1e-5f
+
+    /**
      * The nine macros: TUNE/SCALE/INFLECT/DAMP/PICK/STRIKE/BODY on every
      * voice, plus a character pair (spec, "Macros"). Every default here is
      * a placeholder awaiting the listening gate ("Phasing and gates"),
