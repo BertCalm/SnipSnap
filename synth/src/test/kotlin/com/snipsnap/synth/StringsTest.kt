@@ -245,6 +245,54 @@ class StringsTest {
         }
     }
 
+    /**
+     * SANTUR (SILK Phase 2) carries a *fixed* `B = 3.1e-4` (Heydarian,
+     * spec "How much B" / "SANTUR" - not a knob, roughly double GUZHENG's
+     * own STIFF ceiling of 1.5e-4). The spec's own testing claim: "its
+     * partial stretch at default matches B = 3.1e-4 within the fit
+     * tolerance the STIFF test uses." No such tolerance exists to point
+     * at (see the plan review round that flagged this), so this defines
+     * one directly - predicted stretch from the closed-form physics the
+     * spec itself cites (`fk = k*f0*sqrt(1+B*k^2)`, ratio `sqrt(1+B*k^2)`)
+     * against what `Dispersion.forB` actually renders - and the honest
+     * result is that they do **not** agree: `forB`'s own coefficient
+     * cascade produces a stretch several orders of magnitude below the
+     * physics' own prediction (partial 8's predicted ~0.99% / ~17 cents
+     * reads as an unmeasurable ~0.0000% here), the identical underlying
+     * weakness GUZHENG's own STIFF found at its own (smaller) B. This is
+     * not a bug in the sign or the mechanism - see the probe above with
+     * its own strong synthetic coefficient, which proves both - it is
+     * `Dispersion.forB`'s per-note-independent simplification of the
+     * corrected Rauhala design falling short of what the piano
+     * application it comes from does with a per-note re-derivation this
+     * phase does not attempt. Documented here rather than forced to pass
+     * a tolerance check with no real agreement behind it: closing this
+     * gap is the same open follow-on GUZHENG's own `Silk.guzheng` comment
+     * already names, not a new one.
+     */
+    @Test
+    fun `SANTUR's own sourced B does not yet produce the stretch its own physics predicts`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val f0 = 164.81f // E3, SANTUR's own root (spec, "SANTUR": "Root E3")
+        val b = 3.1e-4
+        val damping = Strings.damping(0.3f, 6500f)
+        val dispersion = Strings.Dispersion.forB(b.toFloat(), 4)
+        assertTrue(dispersion != null, "B=$b at count=4 should not bypass to null")
+        val stiff = Strings.pluck(f0, 0.5f, damping, 8000f, seed = 7, rate = rate, dispersion = dispersion)
+
+        val predictedRatio8 = kotlin.math.sqrt(1.0 + b * 8.0 * 8.0)
+        val measured8 = PluckSpectra.peakHz(stiff, rate, 8 * f0, spanFraction = 0.05)
+        val measuredRatio8 = measured8 / (8.0 * f0)
+
+        assertTrue(predictedRatio8 > 1.009, "sanity: the physics itself should predict a real stretch at partial 8, got $predictedRatio8")
+        assertTrue(
+            measuredRatio8 < 1.0005,
+            "if this fails, Dispersion.forB has started producing a real stretch at SANTUR's own B - " +
+                "update this test (and the roadmap row/Silk.guzheng's comment) to reflect the fix rather than loosening the bound: " +
+                "measured=$measuredRatio8, predicted=$predictedRatio8",
+        )
+    }
+
     @Test
     fun `course fails loudly below one loop`() {
         val e = assertFailsWith<IllegalArgumentException> {
