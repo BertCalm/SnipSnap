@@ -12,7 +12,7 @@ import kotlin.random.Random
  * and the character pair (COURSE/SLIDE for OUD, STIFF/PRESS for GUZHENG)
  * is the voice's identity.
  */
-enum class SilkVoice { OUD, GUZHENG }
+enum class SilkVoice { OUD, GUZHENG, SANTUR }
 
 object Silk {
 
@@ -38,6 +38,19 @@ object Silk {
 
     /** The number of cascaded [Strings.Dispersion] sections GUZHENG's STIFF drives - research §3's own M=4 worked example. */
     internal const val STIFF_SECTIONS = 4
+
+    /**
+     * SANTUR's own sourced stiffness, fixed rather than a knob (spec,
+     * "How much B": "Santur, average, 3.1e-4, confirmed (Heydarian)";
+     * "SANTUR": "not on a knob"). `StringsTest`'s own measurement found
+     * `Dispersion.forB` does not yet produce the stretch this B's own
+     * physics predicts, at this B or GUZHENG's smaller one - see that
+     * test's own KDoc; the wiring is correct regardless (its sign and
+     * mechanism are proven at the `Strings` level), the audible gap is
+     * a disclosed follow-on, not a reason to leave the source's own
+     * number out.
+     */
+    internal const val SANTUR_B = 3.1e-4f
 
     /**
      * The nine macros: TUNE/SCALE/INFLECT/DAMP/PICK/STRIKE/BODY on every
@@ -73,6 +86,23 @@ object Silk {
             MacroSpec("STIFF", STIFF_B_ANCHOR / STIFF_B_MAX),
             MacroSpec("PRESS", 0f),
         )
+        SilkVoice.SANTUR -> listOf(
+            MacroSpec("TUNE", 0.3f),
+            MacroSpec("SCALE", scaleMacroFor(SilkScales.SHUR)),
+            MacroSpec("INFLECT", 0.5f, neutral = 0.5f),
+            MacroSpec("DAMP", 0.5f),
+            MacroSpec("PICK", 0.5f),
+            MacroSpec("STRIKE", 0.15f),
+            MacroSpec("BODY", 0.3f),
+            // Every santur source says the four course loops are tuned to
+            // exact unison; no spread is measured (spec, "SANTUR": "COURSE
+            // defaults near 0"). Not exactly 0 - a placeholder awaiting
+            // the audition gate, like every default in this file - so a
+            // factory SANTUR pad still carries a trace of the "prompt
+            // then aftersound" coupled-string character the spec asks for.
+            MacroSpec("COURSE", 0.05f),
+            MacroSpec("WASH", 0.2f),
+        )
     }
 
     fun defaults(voice: SilkVoice): Map<String, Float> =
@@ -99,6 +129,16 @@ object Silk {
     internal fun rootFor(voice: SilkVoice): Float = when (voice) {
         SilkVoice.OUD -> 65.41f // C2, the confirmed Arabic oud tuning's lowest course (research §2, T1)
         SilkVoice.GUZHENG -> 73.41f // D2, string 21 of 21 - the confirmed range's own bottom (research §3, Z-U1)
+        // E3, the confirmed 9-bridge santur's own bottom (research §4;
+        // spec, "SANTUR": "the 9-bridge santur runs E3-F6... Root E3").
+        // TUNE's own two-period span (shared SILK infrastructure since
+        // Phase 1b) reaches E3-E5 on SHUR, not the full E3-F6 range a
+        // real santur's 18 courses span - the same sub-range every SILK
+        // voice's TUNE already accepts (OUD's own neck exceeds two
+        // periods of RAST too). Widening that shared convention for one
+        // voice is bigger than this task; a named follow-on if the
+        // listening gate finds it too narrow, not solved here.
+        SilkVoice.SANTUR -> 164.81f
     }
 
     /** The macro value that snaps [SilkScales.snap] to exactly [scale] - each voice's own default row. */
@@ -146,6 +186,13 @@ object Silk {
                 val out = guzheng(freq, damp, pick, position, m.getValue("STIFF"), m.getValue("PRESS"), rate, velocity)
                 trimToDecay(withBody(out, voice, body, rate), rate)
             }
+            SilkVoice.SANTUR -> {
+                val out = santur(freq, damp, pick, position, m.getValue("COURSE"), rate, velocity)
+                // architecture diagram (spec): course -> body (Modes) ->
+                // [sympathetic bank] - WASH chains after BODY, not before.
+                val withBody = withBody(out, voice, body, rate)
+                trimToDecay(withWash(withBody, scale, root, m.getValue("WASH"), rate), rate)
+            }
         }
     }
 
@@ -171,21 +218,14 @@ object Silk {
             val seed = Dsp.seedFor("SILK", SilkVoice.OUD, "COURSE", k, freq)
             // "The pair gets slightly unequal feedback so it decays
             // unevenly - the 'prompt then aftersound' of coupled strings,
-            // cheaply" (spec, "OUD") - the same shape as [Strings.course]'s
-            // own per-loop roll-off, at a fifth its rate: two identical-
-            // frequency KS loops summed are only exactly at that shared
-            // frequency when their resonances are identically shaped, and
-            // [Strings.course]'s own 1%-per-loop step, measured through
-            // this voice's own tuning test at unison (COURSE 0, where the
-            // two loops' *only* difference is this feedback split), pulls
-            // the summed peak measurably off pitch - a real interaction
-            // [Strings.course] does not surface because nothing measures
-            // its own tuning at count > 1. This voice's tuning claim
-            // (spec, "Testing", item 1) is load-bearing, so the step stays
-            // small enough to keep every degree inside the 5-cent bound
-            // it is tested against, rather than widening that bound to
-            // fit a bigger, untested step.
-            val fbK = (damping.fb * (1f - 0.002f * k)).coerceIn(0f, 0.999f)
+            // cheaply" (spec, "OUD") - [Strings.COURSE_FB_STEP], the same
+            // step [Strings.course] uses (see that constant's own KDoc for
+            // why it's kept smaller than its original value: a real
+            // regression this voice's own tuning test caught in SILK
+            // Phase 1b, at this voice's own render path, though a later
+            // direct probe of `Strings.course` itself did not reproduce
+            // it - the smaller step costs nothing either way).
+            val fbK = (damping.fb * (1f - Strings.COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
             oudCourseLoop(detunedStart, detunedTarget, seconds, Strings.Damping(damping.loopHz, fbK), pickHz, position, slide, rate, seed)
         }
         val out = FloatArray(loops.maxOf { it.size })
@@ -336,6 +376,61 @@ object Silk {
         return out
     }
 
+    /**
+     * SANTUR: four loops per note (spec, "Architecture" diagram; "SANTUR":
+     * `Course(N = 4)`), driven by a mallet rather than a pick, carrying
+     * the instrument's own sourced (fixed, not knobbed) stiffness
+     * dispersion ([SANTUR_B]) on every loop.
+     */
+    private fun santur(freq: Float, damp: Float, pick: Float, position: Float, course: Float, rate: Int, velocity: Float): FloatArray {
+        val loopHz = 6000f
+        // Askenfelt & Jansson's piano-hammer contact-time proxy the spec
+        // itself cites (spec, "SANTUR": "no mezrab is measured; the piano
+        // proxy runs from about 4 ms in the bass to under 1 ms in the
+        // treble") read directly as mallet.hardness = 1 / contactTime:
+        // 4 ms -> 250 Hz (wide, dark), under 1 ms -> 1000 Hz (narrow,
+        // bright) - sourced anchors for the range's own two ends, not a
+        // guessed span.
+        val pickLo = 250f
+        val pickHi = 1000f
+        val ring = 1.0f
+        val damping = Strings.damping(damp, loopHz)
+        val pickHz = Dsp.expMap(pick, pickLo, pickHi)
+        val seconds = Dsp.expMap(1f - damp, 0.3f * ring, RING_CEILING_SECONDS)
+            .coerceIn(RING_FLOOR_SECONDS, RING_CEILING_SECONDS)
+
+        val dispersion = Strings.Dispersion.forB(SANTUR_B, STIFF_SECTIONS)
+        val seed = Dsp.seedFor("SILK", SilkVoice.SANTUR, freq)
+        return Strings.course(
+            freq, seconds, damping, pickHz, seed, rate,
+            count = 4, spread = course, position = position,
+            dispersion = dispersion, exciter = Strings::mallet,
+        )
+    }
+
+    private const val WASH_T60_FLOOR = 0.5f
+    private const val WASH_T60_CEILING = 3f
+
+    /**
+     * SANTUR's WASH, applied after [withBody] (architecture diagram:
+     * `body (Modes) -> [sympathetic bank]`): [washModesFor] built fresh
+     * from [scale]/[root] every call - SCALE-following, not a fixed
+     * table - rung via [Strings.bodyRing], the same function [withBody]
+     * calls, a second time with a dynamic one. WASH drives both the
+     * bank's level ([Strings.bodyRing]'s own `amount`) and its t60
+     * together (spec, "SANTUR": "WASH sets the bank's level and its t60
+     * together"); the "a few seconds" range is unsourced ("no santur t60
+     * is measured") - shape, like this file's other placeholder ranges.
+     * [root]/[scale] carry no INFLECT bend - the un-inflected table the
+     * spec asks for ("WASH's sympathetic bank stays on the *un-inflected*
+     * table - the santur's strings are tuned to the dastgah").
+     */
+    private fun withWash(string: FloatArray, scale: SilkScales.Scale, root: Float, wash: Float, rate: Int): FloatArray {
+        val t60 = Dsp.lin(wash, WASH_T60_FLOOR, WASH_T60_CEILING)
+        val modes = washModesFor(root, scale, gain = 1f, t60 = t60)
+        return Strings.bodyRing(string, modes, wash, rate, RING_CEILING_SECONDS)
+    }
+
     /** The fixed body of each voice - see [Pluck.bodyFor]'s own KDoc for the drive's reasoning, shared via [Strings.bodyRing]. */
     private fun bodyFor(voice: SilkVoice): List<Modes.Mode> = when (voice) {
         // A Turkish ud, strung and radiating - the only two modes measured
@@ -355,10 +450,64 @@ object Silk {
             Modes.fixed(197.19f, 0.6f, 0.22f),
             Modes.fixed(275.00f, 0.45f, 0.18f),
         )
+        // No santur body mode is measured at all (spec, "SANTUR": "no
+        // santur body mode is measured; BODY is a neutral shape and says
+        // so"). One placeholder mode, not an empty table, so BODY still
+        // does something at BODY > 0 rather than reading as a dead knob -
+        // every number here is shape, awaiting the audition gate.
+        SilkVoice.SANTUR -> listOf(
+            Modes.fixed(200f, 0.5f, 0.3f),
+        )
     }
 
     private fun withBody(string: FloatArray, voice: SilkVoice, amount: Float, rate: Int): FloatArray =
         Strings.bodyRing(string, bodyFor(voice), amount, rate, RING_CEILING_SECONDS)
+
+    /**
+     * SANTUR's WASH: unlike every other voice's fixed [bodyFor] table
+     * (one measured instrument, baked in), this bank is *dynamic* - tuned
+     * to whichever SCALE the pad is currently on, across three octaves
+     * (spec, "SANTUR": "a bank of resonators... tuned to the current
+     * SCALE's degrees across three octaves... The bank follows SCALE, so
+     * a SHUR santur rings in SHUR").
+     *
+     * [scale.cents] already starts at 0 (every shipped row's own
+     * invariant - see `SilkScalesTest`), so walking it across three whole
+     * octave transpositions already reaches every degree in the span
+     * exactly once: octave 0's own degree 0 is [root] itself, octave 1's
+     * degree 0 is one octave up, and so on - nothing here separately adds
+     * "the top-of-period degree", which would land on the exact same
+     * frequency as the next octave's own degree 0 and double a resonator
+     * there instead of representing one degree per mode (the interaction
+     * the SILK Phase 2 plan's own review round caught). The span's own
+     * top note - three literal octaves above [root] - is added once,
+     * separately, closing the range.
+     *
+     * "Octaves" is read literally (1200 cents), not as three periods of
+     * [scale] itself: for [SilkScales.BOHLEN_PIERCE] specifically (period
+     * ~1901.955 cents, a tritave, not an octave) this means its own
+     * degrees do not land on this bank's own three-octave boundary - an
+     * accepted consequence of the spec's own wording, not a bug, should a
+     * future voice ever pair BOHLEN_PIERCE with a WASH-style bank.
+     *
+     * [gain] is uniform across every mode - no source weights a santur's
+     * sympathetic strings against each other, so nothing here invents a
+     * curve; overall level is [Strings.bodyRing]'s own `amount` argument,
+     * which WASH also drives. [t60] is likewise shared by every mode -
+     * WASH's own single knob sets the whole bank's decay together (spec,
+     * "SANTUR": "WASH sets the bank's level and its t60 together").
+     */
+    internal fun washModesFor(root: Float, scale: SilkScales.Scale, gain: Float, t60: Float): List<Modes.Mode> {
+        val modes = mutableListOf<Modes.Mode>()
+        for (octave in 0..2) {
+            for (cents in scale.cents) {
+                val hz = root * 2f.pow((cents + 1200f * octave) / 1200f)
+                modes.add(Modes.fixed(hz, gain, t60))
+            }
+        }
+        modes.add(Modes.fixed(root * 2f.pow(3f), gain, t60)) // the span's own top: 3 literal octaves above root
+        return modes
+    }
 
     private fun trimToDecay(buf: FloatArray, rate: Int): FloatArray =
         Strings.trimToDecay(buf, rate, RING_FLOOR_SECONDS, RING_CEILING_SECONDS)

@@ -1,12 +1,7 @@
 package com.snipsnap.synth
 
-import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.hypot
-import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -32,52 +27,17 @@ import kotlin.test.assertTrue
  */
 class TuningAccuracyTest {
 
-    private fun cents(a: Double, b: Double) = 1200.0 * (ln(a / b) / ln(2.0))
+    private fun cents(a: Double, b: Double) = FineTuning.cents(a, b)
 
     /**
      * The loudest spectral peak within one semitone of [wantHz] - wide
      * enough to have caught the old truncation error (worth up to ~21
      * cents), narrow enough that it can never lock onto a harmonic (the
-     * nearest one is 12 semitones away).
+     * nearest one is 12 semitones away). [FineTuning.measuredHz] at this
+     * class's own original 0.05s/0.25s window - promoted there once SILK
+     * and `Strings` needed the identical measurement.
      */
-    private fun measuredHz(snip: Snip, wantHz: Float): Double {
-        val rate = snip.sampleRate
-        val from = (0.05f * rate).toInt()
-        val bodyLen = minOf(snip.samples.size - from, (0.25f * rate).toInt())
-        var n = 1
-        while (n < 65536) n *= 2
-        val re = FloatArray(n)
-        val im = FloatArray(n)
-        // Window the body we actually have, then zero-pad to n for
-        // resolution - windowing across the full padded length would taper
-        // against silence instead of the signal's own edges.
-        for (i in 0 until bodyLen) {
-            val w = 0.5f - 0.5f * cos(2.0 * PI * i / (bodyLen - 1)).toFloat()
-            re[i] = snip.samples[from + i] * w
-        }
-        Fft.forward(re, im)
-        val mag = DoubleArray(n / 2) { hypot(re[it].toDouble(), im[it].toDouble()) }
-        val binHz = rate.toDouble() / n
-        val radiusBins = maxOf(1, (wantHz * 0.059 / binHz).toInt())
-        val centerBin = (wantHz / binHz).toInt()
-        var bestBin = centerBin
-        var bestMag = -1.0
-        for (b in maxOf(1, centerBin - radiusBins)..minOf(mag.size - 2, centerBin + radiusBins)) {
-            if (mag[b] > bestMag) {
-                bestMag = mag[b]
-                bestBin = b
-            }
-        }
-        // Parabolic interpolation around the peak bin (Smith, DSP guide ch.
-        // 9): binHz alone (0.67Hz here) is far coarser than the ±5-cent
-        // gate at these frequencies.
-        val a = mag[bestBin - 1]
-        val b2 = mag[bestBin]
-        val c = mag[bestBin + 1]
-        val denom = a - 2.0 * b2 + c
-        val delta = if (denom != 0.0) 0.5 * (a - c) / denom else 0.0
-        return (bestBin + delta) * binHz
-    }
+    private fun measuredHz(snip: Snip, wantHz: Float): Double = FineTuning.measuredHz(snip, wantHz)
 
     @Test
     fun `every Pluck semitone lands within five cents at the default body`() {

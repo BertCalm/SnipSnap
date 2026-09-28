@@ -26,6 +26,9 @@ import kotlin.math.sqrt
  * The long comments on why each stage is there live with the code they
  * explain, moved from Pluck.kt unchanged.
  */
+
+/** The shape every string exciter shares - [Strings.pluckExciter]'s own signature - so [Strings.pluck] and [Strings.course] can be driven by either it or [Strings.mallet]. */
+internal typealias Exciter = (n: Int, freq: Float, pickHz: Float, position: Float, seed: Int, rate: Int, maxLen: Int) -> FloatArray
 internal object Strings {
 
     /**
@@ -293,37 +296,77 @@ internal object Strings {
      * integer delay from [tune]. Returns at most [maxLen] samples; they enter
      * the loop as input, never as its state.
      */
-    fun pluckExciter(n: Int, freq: Float, pickHz: Float, position: Float, seed: Int, rate: Int, maxLen: Int): FloatArray {
-        val burst = rawBurst(n, pickHz, seed, rate)
+    fun pluckExciter(n: Int, freq: Float, pickHz: Float, position: Float, seed: Int, rate: Int, maxLen: Int): FloatArray =
+        positionComb(rawBurst(n, pickHz, seed, rate), n, freq, position, rate, maxLen)
 
-        // Pick position (Jaffe & Smith 1983): the burst minus a copy of
-        // itself delayed by `position` of one period. The comb's notches
-        // fall on every harmonic k where k*position is a whole number: the
-        // centre kills the even harmonics, the bridge thins the low ones.
-        // The period here is the string's physical period `rate / freq`,
-        // not the integer delay-line length `n` - the loop's allpass,
-        // filter lag, and two-tap average make up the rest of that period
-        // (see `exact` in [tune]), and a comb cut to `n` alone puts its
-        // notches ~3% off the true harmonics at high DAMP (measured on
-        // the since-removed KALIMBA voice: the 2nd-harmonic null missed
-        // the 20 dB gate). The
-        // exciter grows to n + combDelay samples, and the extra samples enter
-        // the loop as INPUT to [Loop.next], not as initial state -
-        // the loop's own length and tuning budget are untouched. position
-        // = 0 reproduces the pre-STRIKE exciter sample for sample.
-        // The coerceIn(1, n) clamp is unreachable in production: combDelay / n
-        // <= ~0.5 * period/(period - lag), at most ~0.5 across the voice
-        // table, and the lower bound needs position * period < 0.5 samples.
+    /**
+     * Jaffe & Smith's pick-position comb (1983), shared by every exciter:
+     * [raw] (one period, `n` samples) minus a copy of itself delayed by
+     * [position] of one physical period. The comb's notches fall on every
+     * harmonic k where k*position is a whole number: the centre kills the
+     * even harmonics, the bridge thins the low ones. The period here is
+     * the string's physical period `rate / freq`, not the integer
+     * delay-line length `n` - the loop's allpass, filter lag, and two-tap
+     * average make up the rest of that period (see `exact` in [tune]),
+     * and a comb cut to `n` alone puts its notches ~3% off the true
+     * harmonics at high DAMP (measured on the since-removed KALIMBA
+     * voice: the 2nd-harmonic null missed the 20 dB gate). The exciter
+     * grows to n + combDelay samples, and the extra samples enter the
+     * loop as INPUT to [Loop.next], not as initial state - the loop's own
+     * length and tuning budget are untouched. position = 0 reproduces
+     * [raw] sample for sample. The coerceIn(1, n) clamp is unreachable in
+     * production: combDelay / n <= ~0.5 * period/(period - lag), at most
+     * ~0.5 across the voice table, and the lower bound needs position *
+     * period < 0.5 samples.
+     */
+    private fun positionComb(raw: FloatArray, n: Int, freq: Float, position: Float, rate: Int, maxLen: Int): FloatArray {
         val combDelay = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
         val excLen = min(n + combDelay, maxLen)
         val out = FloatArray(excLen)
         for (i in 0 until excLen) {
-            val x = if (i < n) burst[i] else 0f
-            val xd = if (combDelay > 0 && i - combDelay in 0 until n) burst[i - combDelay] else 0f
+            val x = if (i < n) raw[i] else 0f
+            val xd = if (combDelay > 0 && i - combDelay in 0 until n) raw[i - combDelay] else 0f
             out[i] = x - xd
         }
         return out
     }
+
+    /**
+     * SANTUR's own excitation: a raised-cosine force pulse rather than
+     * filtered noise (spec, "Architecture": "Exciter.mallet, a
+     * raised-cosine force pulse; width is hardness"; "SANTUR": "PICK is
+     * mallet hardness (pulse width: wide and dark to narrow and
+     * bright)"). One pulse, no bounce - the spec's own explicit choice
+     * ("the sources disagree on whether a mezrab rebounds, and one pulse
+     * is the simpler default").
+     *
+     * Shares [pluckExciter]'s own signature exactly - the pluggable
+     * [Exciter] shape both [pluck] and [course] accept - so [hardness]
+     * *is* PICK's usual brightness-in-Hz value, the same one
+     * [pluckExciter] reads as a low-pass cutoff: a narrower pulse for a
+     * higher [hardness], `widthSamples = rate / hardness`, the same
+     * time-width/bandwidth duality a click's own spectrum already
+     * follows. Clamped to `n` - one physical period - the same scope
+     * [rawBurst]'s own noise fills.
+     *
+     * [seed] is part of the shared [Exciter] shape but unused here: a
+     * raised cosine is deterministic, nothing to draw.
+     *
+     * Zero-meaned for the reason [rawBurst] is: the loop's own filter
+     * passes DC untouched, and a net offset in the pulse survives as a
+     * fake sub-thump long after the string itself has decayed away.
+     */
+    fun mallet(n: Int, freq: Float, hardness: Float, position: Float, seed: Int, rate: Int, maxLen: Int): FloatArray {
+        val width = (rate / hardness).roundToInt().coerceIn(2, n)
+        val pulse = FloatArray(n)
+        for (i in 0 until width) pulse[i] = 0.5f - 0.5f * cos(2.0 * PI * i / (width - 1)).toFloat()
+        var mean = 0f
+        for (i in 0 until width) mean += pulse[i]
+        mean /= width
+        for (i in 0 until width) pulse[i] -= mean
+        return positionComb(pulse, n, freq, position, rate, maxLen)
+    }
+
 
     /**
      * The feedback loop, one sample at a time: `y = x + fb * lp(ap(avg))`,
@@ -470,14 +513,18 @@ internal object Strings {
     }
 
     /**
-     * The 1983 plucked string: [pluckExciter] into a [Loop] tuned by [tune].
-     * [stiffness] and [jawari] are SITAR's dispersion and buzz; both default
-     * to 0, which reproduces the plain string exactly.
+     * The 1983 plucked string: an [exciter] (default [pluckExciter], the
+     * pick burst) into a [Loop] tuned by [tune]. [stiffness] and [jawari]
+     * are SITAR's dispersion and buzz; both default to 0, which
+     * reproduces the plain string exactly. [exciter] lets SANTUR drive
+     * the same loop with [mallet] instead, without a second copy of this
+     * function - every existing caller (PLUCK, SITAR, OUD, GUZHENG)
+     * leaves it at its default and is unaffected.
      */
-    fun pluck(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null): FloatArray {
+    fun pluck(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null, exciter: Exciter = ::pluckExciter): FloatArray {
         val t = tune(freq, damping.loopHz, rate, stiffness, jawari, dispersion)
         val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t.n + 2))
-        val exc = pluckExciter(t.n, freq, pickHz, position, seed, rate, out.size)
+        val exc = exciter(t.n, freq, pickHz, position, seed, rate, out.size)
         val jawariP0 = if (jawari > 0f) burstPeak(t.n, pickHz, seed, rate) else 1e-6f
         val loop = Loop(t.n, t.a, damping.fb, damping.loopHz, rate, stiffness, jawari, jawariP0, dispersion)
         for (i in out.indices) out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
@@ -496,6 +543,37 @@ internal object Strings {
     private const val COURSE_MAX_CENTS = 50f
 
     /**
+     * How much each successive [course] loop's feedback is nudged down
+     * from the one before it (loop `k` gets `fb * (1 - COURSE_FB_STEP *
+     * k)`) - the spec's own "pair decays unevenly" character (course
+     * loops at the same frequency still sound like coupled strings, not
+     * one voice with extra gain).
+     *
+     * SILK Phase 1b's OUD work (its own custom per-loop course, not this
+     * function - `Strings.course` had no production caller before SANTUR)
+     * found a multi-cent tuning miss at this step's original value, 0.01,
+     * and fixed it locally by dropping to 0.002. Directly probing
+     * `course` itself at that original 0.01 (SANTUR Phase 2, both with a
+     * shared identical exciter across loops and with `course`'s own
+     * real per-loop exciter variation, across the frequency range SILK's
+     * voices actually use) did **not** reproduce a multi-cent miss - see
+     * `course's own feedback step, isolated from excitation, stays in
+     * tune` and `course at spread 0 is in tune across several seeds, real
+     * excitation included` in `StringsTest`, both passing at 0.01 too, not
+     * only at this smaller value. So whatever OUD's own render actually
+     * hit lives somewhere this direct probe doesn't reach - most likely
+     * the U6 oversample/decimate pipeline's own interaction with two
+     * differently-decaying loops, which no test here exercises in
+     * isolation. This constant is kept small anyway, as a real but
+     * unconfirmed-necessary precaution: it costs nothing (COURSE's own
+     * "unevenly" character survives at either value) and the claim that
+     * actually matters - SANTUR's own tuning, through its real, fully
+     * oversampled render path - is what Task 5's own voice-level test
+     * checks, not this number in isolation.
+     */
+    internal const val COURSE_FB_STEP = 0.002f
+
+    /**
      * OUD's course, SANTUR's four strings: [count] loops around [freq],
      * summed, each seeded from [seed] so one pad's shimmer is stable across
      * renders and two pads differ (spec, "OUD"). [spread] 0 keeps every
@@ -507,17 +585,19 @@ internal object Strings {
      * [count] = 1 returns [pluck] itself, untouched by [spread]: the
      * off-by-default point for [course] is "one loop", not "no detune" -
      * a caller reaching [course] with [count] 1 must get exactly what
-     * calling [pluck] directly would have given it.
+     * calling [pluck] directly would have given it. [exciter] passes
+     * straight through to every loop's own [pluck] call - SANTUR's own
+     * four-course reaches [mallet] this way.
      */
-    fun course(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, count: Int, spread: Float, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null): FloatArray {
+    fun course(freq: Float, seconds: Float, damping: Damping, pickHz: Float, seed: Int, rate: Int, count: Int, spread: Float, position: Float = 0f, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null, exciter: Exciter = ::pluckExciter): FloatArray {
         require(count >= 1) { "course needs at least 1 loop, got $count" }
-        if (count == 1) return pluck(freq, seconds, damping, pickHz, seed, rate, position, stiffness, jawari, dispersion)
+        if (count == 1) return pluck(freq, seconds, damping, pickHz, seed, rate, position, stiffness, jawari, dispersion, exciter)
 
         val detunes = courseDetuneCents(seed, count, spread)
         val loops = detunes.mapIndexed { k, cents ->
             val detuned = freq * 2f.pow(cents / 1200f)
-            val fbK = (damping.fb * (1f - 0.01f * k)).coerceIn(0f, 0.999f)
-            pluck(detuned, seconds, Damping(damping.loopHz, fbK), pickHz, Dsp.seedFor(seed, "COURSE", k), rate, position, stiffness, jawari, dispersion)
+            val fbK = (damping.fb * (1f - COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
+            pluck(detuned, seconds, Damping(damping.loopHz, fbK), pickHz, Dsp.seedFor(seed, "COURSE", k), rate, position, stiffness, jawari, dispersion, exciter)
         }
         val out = FloatArray(loops.maxOf { it.size })
         for (loop in loops) for (i in loop.indices) out[i] += loop[i]
