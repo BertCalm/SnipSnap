@@ -142,6 +142,31 @@ class SilkTest {
     }
 
     /**
+     * SILK Phase 3, Task 2 (SHAMISEN's built-in glide): `Silk.shamisenLoop`
+     * tested directly - the SHAMISEN voice itself doesn't exist yet
+     * (Task 4), the same "internal fun, tested ahead of the full voice"
+     * precedent `Silk.washModesFor` set in Phase 2. G1: "starts about
+     * 3.5 % sharp ... falls to about 1.5 % within 100 ms" - the pitch
+     * track should read clearly sharp early on and be settled onto the
+     * plucked degree (not G1's own further ~0.8 % drift - see
+     * `SHAMISEN_GLIDE_SECONDS`'s own KDoc for why) by 150 ms (spec,
+     * "Testing", item 1).
+     */
+    @Test
+    fun `SHAMISEN's built-in glide reads sharp early and settles onto the degree`() {
+        val freq = 130.81f // C3, SHAMISEN's own root
+        val damping = Strings.damping(0.3f, 7000f)
+        val buf = Silk.shamisenLoop(
+            freq, pick = 1f, seconds = 0.6f, damping = damping, pickHz = 9000f, position = 1f / 6f,
+            jawari = 0f, dispersion = null, rate = Dsp.RATE, seed = 5,
+        )
+        val early = FineTuning.measuredHz(buf, Dsp.RATE, wantHz = freq * 1.03f, fromSec = 0.005f, bodySeconds = 0.03f)
+        val late = FineTuning.measuredHz(buf, Dsp.RATE, wantHz = freq, fromSec = 0.15f, bodySeconds = 0.3f)
+        assertTrue(early > freq * 1.005, "early in the glide ($early Hz) should still read clearly sharp of the target ($freq Hz)")
+        assertTrue(abs(cents(late.toDouble(), freq.toDouble())) <= 5.0, "after the glide settles: wanted $freq Hz, measured $late Hz")
+    }
+
+    /**
      * STIFF's wiring, at the voice level: `StringsTest`'s own dispersion
      * proofs run at the `Strings.Dispersion`/`Strings.Loop` layer with a
      * deliberately strong synthetic coefficient (real GUZHENG-scale B

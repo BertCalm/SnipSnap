@@ -394,6 +394,63 @@ object Silk {
         return out
     }
 
+    /** G1: open strings start about 3.5 % sharp (research §1) - PICK 1's own ceiling for [shamisenLoop]'s built-in glide. */
+    private const val SHAMISEN_GLIDE_SHARP_RATIO = 1.035f
+
+    /** PICK 0: no stretch, no glide - a softer stroke stretches the string less, down to none at all (spec's own causal claim; no source gives this floor's exact value). */
+    private const val SHAMISEN_GLIDE_FLOOR_RATIO = 1.0f
+
+    /**
+     * G1's own sourced fast transient (3.5 % -> 1.5 % within 100 ms). The
+     * SILK Phase 3 plan resolves a tension the source itself doesn't
+     * settle: G1 also describes the pitch drifting further, toward a
+     * long-term ~0.8 % (~14 cents) residual - past the 5-cent bound every
+     * other SILK tuning test enforces. Rather than chase that asymptote
+     * into a value that would fail every other voice's own tuning
+     * standard, this glide models only the sourced 100 ms fast transient
+     * and settles fully to the plucked degree (0 %, not 0.8 %) by its own
+     * end - a disclosed simplification, not a silent contradiction of G1.
+     * `SilkTest`'s own SHAMISEN tuning test measures from 150 ms on (spec,
+     * "Testing", item 1), 50 ms of margin past this window's own end.
+     */
+    private const val SHAMISEN_GLIDE_SECONDS = 0.1f
+
+    /**
+     * SHAMISEN: one string, its own built-in pitch glide (not a macro - it
+     * fires on every note, scaled by [pick]) plus SAWARI's reused
+     * [jawari] and the voice's own small fixed [dispersion] (Task 1).
+     * Unlike [oudCourseLoop]'s SLIDE and [guzhengLoop]'s PRESS, this glide
+     * runs high -> low (G1: "starts sharp ... falls"), the opposite
+     * direction from every other [Strings.Loop.retune] caller - so the
+     * loop is built at [freq] itself (the settled, lower frequency, the
+     * one [Strings.Loop]'s own `maxN` must be sized from) and immediately
+     * retuned *up* to the sharp starting point, before the render loop's
+     * first sample, then glided back down over [SHAMISEN_GLIDE_SECONDS].
+     * A higher frequency always needs a *shorter* loop than the one
+     * `maxN` was sized for, so the initial retune never trips
+     * [Strings.Loop.retune]'s own `t.n <= maxN` require.
+     */
+    internal fun shamisenLoop(freq: Float, pick: Float, seconds: Float, damping: Strings.Damping, pickHz: Float, position: Float, jawari: Float, dispersion: Strings.Dispersion?, rate: Int, seed: Int): FloatArray {
+        val t0 = Strings.tune(freq, damping.loopHz, rate, dispersion = dispersion)
+        val out = FloatArray((seconds * rate).toInt().coerceAtLeast(t0.n + 2))
+        val exc = Strings.pluckExciter(t0.n, freq, pickHz, position, seed, rate, out.size)
+        val jawariP0 = if (jawari > 0f) Strings.burstPeak(t0.n, pickHz, seed, rate) else 1e-6f
+        val loop = Strings.Loop(t0.n, t0.a, damping.fb, damping.loopHz, rate, jawari = jawari, jawariP0 = jawariP0, dispersion = dispersion)
+
+        val sharpFreq = freq * Dsp.lin(pick, SHAMISEN_GLIDE_FLOOR_RATIO, SHAMISEN_GLIDE_SHARP_RATIO)
+        loop.retune(sharpFreq)
+        val glideSamples = (SHAMISEN_GLIDE_SECONDS * rate).toInt().coerceAtLeast(1)
+
+        for (i in out.indices) {
+            if (i in 1..glideSamples) {
+                val progress = i.toFloat() / glideSamples
+                loop.retune(sharpFreq * (freq / sharpFreq).pow(progress))
+            }
+            out[i] = loop.next(if (i < exc.size) exc[i] else 0f)
+        }
+        return out
+    }
+
     /**
      * SANTUR: four loops per note (spec, "Architecture" diagram; "SANTUR":
      * `Course(N = 4)`), driven by a mallet rather than a pick, carrying
