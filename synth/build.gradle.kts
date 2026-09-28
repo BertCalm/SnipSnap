@@ -254,3 +254,13 @@ tasks.register<JavaExec>("generateForkAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/fork-audition")
 }
+
+/** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
+tasks.register<JavaExec>("generateTerraKit") {
+    group = "distribution"
+    description = "Render the TERRA world-percussion acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}

@@ -165,6 +165,16 @@ class TerraTest {
         assertEquals(DrumClass.PERC, Classifier.classify(snip).drumClass)
     }
 
+    @Test
+    fun `clack adds a pre-strike burst`() {
+        val plain = Terra.render(TerraVoice.CONICAL_BELL, agogoLowBell + ("CLACK" to 0f))
+        val clacked = Terra.render(TerraVoice.CONICAL_BELL, agogoLowBell + ("CLACK" to 1f))
+        assertTrue(
+            clacked.frameCount > plain.frameCount,
+            "CLACK should extend the render by its own pre-roll: plain=${plain.frameCount} clacked=${clacked.frameCount}",
+        )
+    }
+
     // Agogô Low Bell, S5 (Pad 13): fundamental 587.3Hz (D5), hardness 0.85,
     // no droop (CONICAL_BELL has no DROOP macro at all - see macrosFor).
     private val agogoLowBell = mapOf(
