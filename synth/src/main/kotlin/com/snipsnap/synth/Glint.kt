@@ -251,10 +251,16 @@ object Glint {
 
     /**
      * How long RATCHET holds each rung before jumping to the next. The spec
-     * asks for "a hard jump every ~150 ms"; at the shortest DECAY (0.12 s
-     * t60) that is under one step, so short notes render a single rung and
-     * the ladder only reads on longer ones — which is correct for a tuning
-     * dial being turned.
+     * asks for "a hard jump every ~150 ms" against the *rendered* length,
+     * not the raw t60 — `synthesize` renders `t60 * 1.35` seconds (see its
+     * frame-count line) — so even the shortest DECAY (0.12 s t60) renders
+     * ~0.162 s, which is *longer* than one 150 ms step, not under it: the
+     * shortest note still crosses a single step boundary, in its final
+     * ~12 ms. Whether that crossing reaches an actual second rung depends
+     * on BLOOM — at BLOOM 0 [ratchetLadder] never climbs past its bottom
+     * rung regardless (see that function's own doc), so there is nothing
+     * there to jump to; a higher BLOOM can open a second rung for even the
+     * shortest note to reach right at its tail.
      */
     const val RATCHET_STEP_SECONDS = 0.15f
 

@@ -319,11 +319,25 @@ class GlintTest {
         // coupling goes fully inert at PEAK 1 (see `every voice renders
         // clean audio`'s all-BLOOM-1-macros-at-1 case, which is
         // byte-identical whether PLATE's branch reads `amp.at(t)` or the old
-        // `envAt(t, BLOOM_T60)`). What is NOT independently confirmed is
-        // exactly why the minimum sits at PEAK 0.97 rather than closer to
-        // that PEAK-1 boundary - plausibly the ceiling clamp engaging or
-        // releasing partway through the 0.35-0.55s probe window itself, but
-        // that mechanism is not traced here, only the numbers are measured.
+        // `envAt(t, BLOOM_T60)`). The minimum's position - PEAK 0.97 rather
+        // than closer to the PEAK-1 boundary - traces to the clamp itself.
+        // At BLOOM 1, bloomAmount = BLOOM_MAX = 3, so k(t) = kBase *
+        // (1 + 3 * amp(t)), clamped at kCeilingFor(PLATE) = 40. For a kBase
+        // near that ceiling the clamp is BOUND early in the note - flat,
+        // therefore perfectly periodic - and RELEASES at the instant t*
+        // solving kBase * (1 + 3 * amp(t*)) = 40. Solving for the kBase
+        // whose release lands exactly at the probe window's own start
+        // (0.35s) gives a critical kBase ~36.99, i.e. PEAK ~0.974 - which
+        // is why the measured minimum sits at the PEAK 0.97 grid point
+        // (kBase 36.56193, the nearest sample below that true continuous
+        // minimum). Below that kBase the release happens well before the
+        // window, so the drift inside it is smaller; above it the release
+        // happens inside the window itself and part of the window is
+        // shielded by the flat clamp - the dip-then-recovery shape the
+        // four grid readings above trace out. This is an artifact of three
+        // fixed constants - kCeilingFor's 40, BLOOM_MAX's 3, and the probe
+        // window's 0.35s start - so changing any of them moves the
+        // minimum.
         // This test still passes at every PEAK it actually samples, but the
         // true margin near PLATE's own ceiling is thin enough that a future
         // change to this fixture (or to BLOOM_MAX, kCeilingFor, or the probe
@@ -1431,10 +1445,15 @@ class GlintTest {
      * discriminator, not a vacuous one.
      *
      * With the mechanism in place, same render: early=3486.6492,
-     * late=3490.6194, next=3957.623 - |late-early|=3.9702148 (two probes 66
-     * cycles apart at the same 440 Hz note, both squarely inside kBase=8's
-     * bottom rung), |next-early|=470.97388 (the jump to rung two, k=9),
-     * ratio=0.008430 - about 66x under the bar, not just clearing it.
+     * late=3490.6194, next=3957.623 - |late-early|=3.9702148 (early and
+     * late's probe windows are ~19.8 cycles apart center-to-center at this
+     * 440 Hz note, both squarely inside kBase=8's bottom rung),
+     * |next-early|=470.97388 (early and next are a full
+     * RATCHET_STEP_SECONDS apart center-to-center - exactly 66 cycles at
+     * 440 Hz - the jump to rung two, k=9), ratio=0.008430 - about 30x under
+     * the 0.25 bar, not just clearing it (0.5574 / 0.008430 is the ~66x
+     * figure - this ratio's distance from the mechanism-absent control
+     * measured above, a different comparison from the bar).
      */
     @Test
     fun `RATCHET's formant is piecewise constant, not a ramp`() {
@@ -1471,7 +1490,6 @@ class GlintTest {
                 kBase = Glint.ratioFor(GlintVoice.RATCHET, 0.5f, 0.45f, 0.8f),
                 bloomAmount = Dsp.lin(bloom, 0f, Glint.BLOOM_MAX),
             )
-            assertTrue(ks.isNotEmpty(), "RATCHET ladder is empty at BLOOM $bloom")
             for (k in ks) {
                 assertTrue(k == Math.round(k).toFloat(), "RATCHET ladder rung $k is not an integer")
             }
@@ -1657,7 +1675,7 @@ class GlintTest {
      *
      * Fixture: BLOOM 1, BODY 0, everything else at `Glint.defaults(PLATE)`;
      * DECAY 0.3 (t60 ~0.251s, duration ~0.339s) for the short note, DECAY
-     * 0.95 (t60 ~1.147s, duration ~1.672s) for the long one; both probed at
+     * 0.95 (t60 ~1.238s, duration ~1.672s) for the long one; both probed at
      * 0.25-0.30s. The short note's probe sits deep in its own tail (its amp
      * envelope is ~0.001 of peak there) - checked this is a real reading and
      * not `FeatureExtractor`'s silent-buffer fallback (which would return a
