@@ -98,8 +98,38 @@ object PluckPresets {
         p(PluckVoice.SITAR, "HIGH STRING", "TUNE" to 0.85f, "DAMP" to 0.35f, "PICK" to 0.75f, "STRIKE" to 0.25f, "DOUBLE" to 0.35f),
         p(PluckVoice.SITAR, "BRIDGE PICK", "TUNE" to 0.5f, "DAMP" to 0.35f, "PICK" to 0.7f, "STRIKE" to 0.0f, "DOUBLE" to 0.4f),
         p(PluckVoice.SITAR, "CENTRE PICK", "TUNE" to 0.5f, "DAMP" to 0.35f, "PICK" to 0.5f, "STRIKE" to 1.0f, "DOUBLE" to 0.4f),
-        p(PluckVoice.SITAR, "RINGING", "TUNE" to 0.55f, "DAMP" to 0.0f, "PICK" to 0.6f, "STRIKE" to 0.3f, "DOUBLE" to 0.5f),
-        p(PluckVoice.SITAR, "LOW TONIC", "TUNE" to 0.0f, "DAMP" to 0.3f, "PICK" to 0.55f, "STRIKE" to 0.3f, "DOUBLE" to 0.4f),
+        // Two of SITAR's twelve presets need their own BODY override once
+        // the voice-wide default actually reached 1 - stacked with a fixed
+        // body mode, the crest factor falls low enough that Dsp.levelTo's
+        // loudness match squashes the render's peak under
+        // PluckPresetsTest's 0.5 floor. Originally scoped to RINGING alone
+        // on the theory that its DAMP 0 (the most sustained corner any
+        // SITAR preset uses) was the whole story; measuring all twelve
+        // against the real 1.0 default (not the interim .35 an earlier
+        // round shipped while this was still under investigation) found a
+        // second driver - proximity to bodyFor(SITAR)'s 110 Hz mode, not
+        // just DAMP - and a second preset it alone accounts for. Neither
+        // amount below is a near-zero compromise; each is the last value
+        // that keeps its own preset's peak at the untouched-string ceiling
+        // (0.99), measured across the whole BODY range rather than guessed.
+        // Every other preset clears 0.5 on the voice default with real
+        // margin - DRONE (0.594) and CENTRE PICK (0.624) are the closest of
+        // the rest, neither close enough to need touching.
+        //
+        // RINGING: DAMP 0. Measured peak 0.4754537 at BODY 1; flat at 0.99
+        // through 0.35, falling smoothly above it (0.4 -> 0.921, ...,
+        // 1.0 -> 0.475) - 0.35 is the last full-headroom amount, and it is
+        // the same value `p3a_body_35_root` already chipped as carrying
+        // real character in its own right.
+        p(PluckVoice.SITAR, "RINGING", "TUNE" to 0.55f, "DAMP" to 0.0f, "PICK" to 0.6f, "STRIKE" to 0.3f, "DOUBLE" to 0.5f, "BODY" to 0.35f),
+        // LOW TONIC: TUNE 0, the root note (139 Hz) - close enough to the
+        // 110 Hz gourd mode that this preset is more exposed to BODY than
+        // its DAMP 0.3 alone would suggest. Measured peak 0.44782394 at
+        // BODY 1; flat at 0.99 through 0.2, falling from there (0.25 ->
+        // 0.920, 0.3 -> 0.857, ..., 1.0 -> 0.448) - 0.2 is this preset's
+        // own last full-headroom amount, smaller than RINGING's because
+        // the root sits nearer the resonance.
+        p(PluckVoice.SITAR, "LOW TONIC", "TUNE" to 0.0f, "DAMP" to 0.3f, "PICK" to 0.55f, "STRIKE" to 0.3f, "DOUBLE" to 0.4f, "BODY" to 0.2f),
         p(PluckVoice.SITAR, "BRIGHT MIZRAB", "TUNE" to 0.5f, "DAMP" to 0.25f, "PICK" to 0.95f, "STRIKE" to 0.15f, "DOUBLE" to 0.3f),
     )
 }

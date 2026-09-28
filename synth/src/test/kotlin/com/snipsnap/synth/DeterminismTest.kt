@@ -112,10 +112,12 @@ class DeterminismTest {
     // above too - one per voice, since OUD's course and GUZHENG's
     // dispersion/press are different code paths.
     @Test
-    fun `SILK is byte-identical across renders, both voices`() {
+    fun `SILK is byte-identical across renders, all three voices`() {
         val oud = SilkPatch("Canary", SilkVoice.OUD, Silk.defaults(SilkVoice.OUD))
         assertContentEquals(oud.render().samples, oud.render().samples)
         val guzheng = SilkPatch("Canary", SilkVoice.GUZHENG, Silk.defaults(SilkVoice.GUZHENG))
         assertContentEquals(guzheng.render().samples, guzheng.render().samples)
+        val santur = SilkPatch("Canary", SilkVoice.SANTUR, Silk.defaults(SilkVoice.SANTUR))
+        assertContentEquals(santur.render().samples, santur.render().samples)
     }
 }

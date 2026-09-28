@@ -2,66 +2,22 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.hypot
-import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SilkTest {
 
-    private fun cents(measured: Double, want: Double) = 1200.0 * ln(measured / want) / ln(2.0)
+    private fun cents(measured: Double, want: Double) = FineTuning.cents(measured, want)
 
-    /**
-     * The loudest spectral peak within one semitone of [wantHz], read from
-     * [fromSec] over [bodySeconds] and zero-padded to a large FFT with
-     * parabolic interpolation - [TuningAccuracyTest]'s own `measuredHz`,
-     * parameterised so it can look anywhere in a render rather than only
-     * at the start. A plain narrow Goertzel scan (`PluckSpectra.peakHz`)
-     * turned out to be a full-blown octave-of-cents short of this at
-     * OUD's low root (65 Hz): its bin width there is tens of cents wide,
-     * wider than the ±5-cent bound being measured.
-     */
-    private fun measuredHz(snip: Snip, wantHz: Float, fromSec: Float = 0.05f, bodySeconds: Float = 0.25f): Double {
-        val rate = snip.sampleRate
-        val from = (fromSec * rate).toInt().coerceIn(0, snip.samples.size)
-        val bodyLen = minOf(snip.samples.size - from, (bodySeconds * rate).toInt())
-        require(bodyLen > 8) { "measuredHz needs samples past $fromSec s (buffer is ${snip.samples.size} samples)" }
-        var n = 1
-        while (n < 65536) n *= 2
-        val re = FloatArray(n)
-        val im = FloatArray(n)
-        for (i in 0 until bodyLen) {
-            val w = 0.5f - 0.5f * cos(2.0 * PI * i / (bodyLen - 1)).toFloat()
-            re[i] = snip.samples[from + i] * w
-        }
-        Fft.forward(re, im)
-        val mag = DoubleArray(n / 2) { hypot(re[it].toDouble(), im[it].toDouble()) }
-        val binHz = rate.toDouble() / n
-        val radiusBins = maxOf(1, (wantHz * 0.059 / binHz).toInt())
-        val centerBin = (wantHz / binHz).toInt()
-        var bestBin = centerBin
-        var bestMag = -1.0
-        for (b in maxOf(1, centerBin - radiusBins)..minOf(mag.size - 2, centerBin + radiusBins)) {
-            if (mag[b] > bestMag) {
-                bestMag = mag[b]
-                bestBin = b
-            }
-        }
-        val a = mag[bestBin - 1]
-        val b2 = mag[bestBin]
-        val c = mag[bestBin + 1]
-        val denom = a - 2.0 * b2 + c
-        val delta = if (denom != 0.0) 0.5 * (a - c) / denom else 0.0
-        return (bestBin + delta) * binHz
-    }
+    /** [FineTuning.measuredHz] - see that object for why a plain Goertzel scan isn't enough here. */
+    private fun measuredHz(snip: Snip, wantHz: Float, fromSec: Float = 0.05f, bodySeconds: Float = 0.25f): Double =
+        FineTuning.measuredHz(snip, wantHz, fromSec, bodySeconds)
 
     /**
      * PLUCK's own 5-cent rule (spec, "Testing", item 1), generalised: every
@@ -131,6 +87,33 @@ class SilkTest {
             val tune = degree / (2f * size)
             val want = SilkScales.frequencyFor(root, scale, tune)
             val snip = Silk.render(SilkVoice.GUZHENG, mapOf("TUNE" to tune, "STIFF" to 0f))
+            val measured = measuredHz(snip, want)
+            val off = cents(measured, want.toDouble())
+            assertTrue(abs(off) <= 5.0, "degree $degree (tune=$tune): wanted $want Hz, measured $measured Hz ($off cents)")
+        }
+    }
+
+    /**
+     * PLUCK's own 5-cent rule, generalised: every degree of SANTUR's
+     * default scale (SHUR) lands within 5 cents of the scale's own
+     * target. Unlike OUD/GUZHENG, this is the test most likely to catch
+     * a leftover Task 1 regression: SANTUR is the first voice actually
+     * calling `Strings.course` at `count = 4` through the shared function
+     * itself, not a per-voice custom loop. STIFF has no knob to disable
+     * here (SANTUR's own B is fixed) - `StringsTest`'s own finding
+     * already establishes the fundamental holds exact regardless (the
+     * tuning budget charges the cascade's own delay before splitting the
+     * loop length), so this isolates SCALE/TUNE/COURSE, not dispersion.
+     */
+    @Test
+    fun `SANTUR is in tune at every degree of SHUR`() {
+        val root = Silk.rootFor(SilkVoice.SANTUR)
+        val scale = SilkScales.SHUR
+        val size = scale.cents.size
+        for (degree in 0..2 * size) {
+            val tune = degree / (2f * size)
+            val want = SilkScales.frequencyFor(root, scale, tune)
+            val snip = Silk.render(SilkVoice.SANTUR, mapOf("TUNE" to tune, "COURSE" to 0f, "WASH" to 0f))
             val measured = measuredHz(snip, want)
             val off = cents(measured, want.toDouble())
             assertTrue(abs(off) <= 5.0, "degree $degree (tune=$tune): wanted $want Hz, measured $measured Hz ($off cents)")
@@ -236,6 +219,74 @@ class SilkTest {
             val allowed = if (voice == SilkVoice.GUZHENG) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
             val c = Classifier.classify(Silk.render(voice))
             assertTrue(c.drumClass in allowed, "$voice default classified ${c.drumClass}, expected one of $allowed")
+        }
+    }
+
+    /**
+     * [Silk.washModesFor] (SILK Phase 2, SANTUR's WASH): every mode's own
+     * frequency must be distinct - the plan review round's own finding
+     * was that naively adding a separate "top-of-period" degree on top of
+     * a full octave loop double-books the seam between consecutive
+     * octaves (a period-top degree and the next octave's own degree 0 are
+     * the identical frequency).
+     */
+    @Test
+    fun `washModesFor produces no duplicate frequencies at the octave seams`() {
+        for (scale in SilkScales.TABLE) {
+            val modes = Silk.washModesFor(164.81f, scale, gain = 1f, t60 = 2f)
+            val hz = modes.map { it.ratio }
+            val distinct = hz.toSet()
+            assertEquals(hz.size, distinct.size, "${scale.cents.size}-degree scale: duplicate frequencies in $hz")
+        }
+    }
+
+    /** RMS over [samples] from [fromSec] to [toSec], 0 for any part of that window past the buffer's own end (silence, not an index error). */
+    private fun tailRms(samples: FloatArray, rate: Int, fromSec: Float, toSec: Float): Double {
+        val from = (fromSec * rate).toInt()
+        val to = (toSec * rate).toInt()
+        var acc = 0.0
+        var n = 0
+        for (i in from until to) {
+            val v = if (i < samples.size) samples[i].toDouble() else 0.0
+            acc += v * v
+            n++
+        }
+        return kotlin.math.sqrt(acc / n.coerceAtLeast(1))
+    }
+
+    /**
+     * The spec's own two WASH claims (SILK Phase 2, "Testing"), checked
+     * directly on [Silk.washModesFor] plus [Strings.bodyRing] - the same
+     * two calls SANTUR's own voice will chain once it exists (Task 5),
+     * so this doesn't wait on that voice to verify the bank itself.
+     */
+    @Test
+    fun `WASH rings on after the driven string, on the scale's own degrees`() {
+        val root = 164.81f // E3, SANTUR's own root
+        val scale = SilkScales.SHUR // SANTUR's own default
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.8f, 6500f) // high DAMP: a short-lived driven string
+        val string = Strings.pluck(root, 0.5f, damping, 8000f, seed = 1, rate = rate)
+
+        val washT60 = 2f
+        val modes = Silk.washModesFor(root, scale, gain = 1f, t60 = washT60)
+        val dry = Strings.bodyRing(string, modes, amount = 0f, rate = rate, ceilingSeconds = 4f)
+        val wet = Strings.bodyRing(string, modes, amount = 1f, rate = rate, ceilingSeconds = 4f)
+
+        // Well past the driven string's own 0.5 s buffer, where `dry` (WASH
+        // 0, bodyRing's own no-op) has nothing left to contribute at all.
+        val dryTail = tailRms(dry, rate, 1.0f, 1.3f)
+        val wetTail = tailRms(wet, rate, 1.0f, 1.3f)
+        assertTrue(wetTail > dryTail * 5.0, "WASH's own tail should ring on well past the driven string: dry=$dryTail, wet=$wetTail")
+
+        // The tail's own spectral peaks land on SCALE's degrees, not
+        // arbitrary points - checked at three of washModesFor's own modes
+        // (the root, an interior degree, and the span's own top note).
+        val checkHz = listOf(root, root * 2f.pow(scale.cents[scale.cents.size / 2] / 1200f), root * 2f.pow(3f))
+        for (hz in checkHz) {
+            val measured = FineTuning.measuredHz(wet, rate, hz, fromSec = 1.0f, bodySeconds = 0.5f)
+            val off = FineTuning.cents(measured, hz.toDouble())
+            assertTrue(abs(off) <= 20.0, "expected a WASH peak near $hz Hz, measured $measured Hz ($off cents)")
         }
     }
 }

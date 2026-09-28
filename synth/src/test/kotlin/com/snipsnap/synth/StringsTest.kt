@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -103,6 +104,77 @@ class StringsTest {
         assertTrue(combed.size > plain.size, "the comb's delayed copy extends the exciter")
     }
 
+    /** Mean magnitude weighted by frequency - a cheap onset-brightness measure for a short exciter burst on its own, no string or loop needed. */
+    private fun spectralCentroid(samples: FloatArray, rate: Int): Double {
+        var n = 256
+        while (n < samples.size) n *= 2
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        samples.copyInto(re, 0, 0, samples.size)
+        com.snipsnap.audio.Fft.forward(re, im)
+        var weighted = 0.0
+        var total = 0.0
+        for (i in 0 until n / 2) {
+            val mag = kotlin.math.hypot(re[i].toDouble(), im[i].toDouble())
+            weighted += mag * (i.toDouble() * rate / n)
+            total += mag
+        }
+        return if (total > 0.0) weighted / total else 0.0
+    }
+
+    /**
+     * [Strings.mallet] (SILK Phase 2, SANTUR): a raised-cosine pulse
+     * whose width [Strings.mallet]'s own KDoc ties to [hardness] the same
+     * way [Strings.pluckExciter] reads its `pickHz` as a low-pass cutoff -
+     * a higher value narrows the pulse, so its onset should read brighter
+     * (spec, "SANTUR": "PICK is mallet hardness (pulse width: wide and
+     * dark to narrow and bright)").
+     */
+    @Test
+    fun `mallet's onset gets brighter as hardness rises, and is zero-mean`() {
+        val narrow = Strings.mallet(n = 400, freq = 147f, hardness = 8000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        val wide = Strings.mallet(n = 400, freq = 147f, hardness = 500f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertTrue(abs(narrow.sum()) < 1e-3f, "narrow sum=${narrow.sum()}")
+        assertTrue(abs(wide.sum()) < 1e-3f, "wide sum=${wide.sum()}")
+        val narrowCentroid = spectralCentroid(narrow, Dsp.RATE)
+        val wideCentroid = spectralCentroid(wide, Dsp.RATE)
+        assertTrue(narrowCentroid > wideCentroid, "narrow (hard) pulse should read brighter: $narrowCentroid vs $wideCentroid")
+    }
+
+    /**
+     * Guards against a real regression a review caught: the mean correction
+     * subtracted the pulse's own mean from every sample out to `n`, not just
+     * the active `width` it was computed over - since the zero padding past
+     * `width` shares in the subtraction, that turns silence into a flat
+     * `-mean` shelf, a long reverse-force tail. The *overall* sum still
+     * lands at zero either way (`pulseSum - n * (pulseSum / n) = 0`), which
+     * is why the sum-based zero-mean test above didn't catch it - only the
+     * shape does.
+     */
+    @Test
+    fun `mallet's zero-mean correction stays inside the active pulse, not the padding past it`() {
+        val pulse = Strings.mallet(n = 400, freq = 147f, hardness = 500f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertEquals(0f, pulse[pulse.size - 1], "the tail well past any pulse width here should be exact silence, not a residual shelf")
+    }
+
+    @Test
+    fun `mallet is deterministic, and the comb lengthens it same as the pick burst`() {
+        val a = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        val b = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertContentEquals(a, b)
+        val combed = Strings.mallet(n = 300, freq = 147f, hardness = 4000f, position = 0.25f, seed = 1, rate = Dsp.RATE, maxLen = 10_000)
+        assertTrue(combed.size > a.size, "the comb's delayed copy extends the exciter")
+    }
+
+    /** [Strings.pluck]'s own `exciter` seam (SILK Phase 2): swapping in [Strings.mallet] must actually reach the loop, not silently keep the pick burst. */
+    @Test
+    fun `pluck's exciter parameter actually swaps the excitation`() {
+        val damping = Strings.damping(0.3f, 4200f)
+        val picked = Strings.pluck(220f, 0.2f, damping, 6000f, seed = 4, rate = Dsp.RATE)
+        val malleted = Strings.pluck(220f, 0.2f, damping, 6000f, seed = 4, rate = Dsp.RATE, exciter = Strings::mallet)
+        assertFalse(picked.contentEquals(malleted), "pick and mallet excitation should render differently")
+    }
+
     /**
      * Guards the erratum fix itself (docs/superpowers/plans/2026-09-27-silk-research.md
      * §3, Z.7 point 4): DAFx-06's own Eq. 7 prints "ln M" a second time where
@@ -189,6 +261,54 @@ class StringsTest {
         }
     }
 
+    /**
+     * SANTUR (SILK Phase 2) carries a *fixed* `B = 3.1e-4` (Heydarian,
+     * spec "How much B" / "SANTUR" - not a knob, roughly double GUZHENG's
+     * own STIFF ceiling of 1.5e-4). The spec's own testing claim: "its
+     * partial stretch at default matches B = 3.1e-4 within the fit
+     * tolerance the STIFF test uses." No such tolerance exists to point
+     * at (see the plan review round that flagged this), so this defines
+     * one directly - predicted stretch from the closed-form physics the
+     * spec itself cites (`fk = k*f0*sqrt(1+B*k^2)`, ratio `sqrt(1+B*k^2)`)
+     * against what `Dispersion.forB` actually renders - and the honest
+     * result is that they do **not** agree: `forB`'s own coefficient
+     * cascade produces a stretch several orders of magnitude below the
+     * physics' own prediction (partial 8's predicted ~0.99% / ~17 cents
+     * reads as an unmeasurable ~0.0000% here), the identical underlying
+     * weakness GUZHENG's own STIFF found at its own (smaller) B. This is
+     * not a bug in the sign or the mechanism - see the probe above with
+     * its own strong synthetic coefficient, which proves both - it is
+     * `Dispersion.forB`'s per-note-independent simplification of the
+     * corrected Rauhala design falling short of what the piano
+     * application it comes from does with a per-note re-derivation this
+     * phase does not attempt. Documented here rather than forced to pass
+     * a tolerance check with no real agreement behind it: closing this
+     * gap is the same open follow-on GUZHENG's own `Silk.guzheng` comment
+     * already names, not a new one.
+     */
+    @Test
+    fun `SANTUR's own sourced B does not yet produce the stretch its own physics predicts`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val f0 = 164.81f // E3, SANTUR's own root (spec, "SANTUR": "Root E3")
+        val b = 3.1e-4
+        val damping = Strings.damping(0.3f, 6500f)
+        val dispersion = Strings.Dispersion.forB(b.toFloat(), 4)
+        assertTrue(dispersion != null, "B=$b at count=4 should not bypass to null")
+        val stiff = Strings.pluck(f0, 0.5f, damping, 8000f, seed = 7, rate = rate, dispersion = dispersion)
+
+        val predictedRatio8 = kotlin.math.sqrt(1.0 + b * 8.0 * 8.0)
+        val measured8 = PluckSpectra.peakHz(stiff, rate, 8 * f0, spanFraction = 0.05)
+        val measuredRatio8 = measured8 / (8.0 * f0)
+
+        assertTrue(predictedRatio8 > 1.009, "sanity: the physics itself should predict a real stretch at partial 8, got $predictedRatio8")
+        assertTrue(
+            measuredRatio8 < 1.0005,
+            "if this fails, Dispersion.forB has started producing a real stretch at SANTUR's own B - " +
+                "update this test (and the roadmap row/Silk.guzheng's comment) to reflect the fix rather than loosening the bound: " +
+                "measured=$measuredRatio8, predicted=$predictedRatio8",
+        )
+    }
+
     @Test
     fun `course fails loudly below one loop`() {
         val e = assertFailsWith<IllegalArgumentException> {
@@ -239,6 +359,72 @@ class StringsTest {
 
         val half = Strings.courseDetuneCents(seed = 5, count = 4, spread = 0.5f)
         for (i in half.indices) assertEquals(full[i] * 0.5f, half[i], 1e-5f, "spread scales the same draw linearly, loop $i")
+    }
+
+    /**
+     * [Strings.course]'s own per-loop feedback step ([Strings.COURSE_FB_STEP])
+     * is meant to be inaudible-in-pitch: at COURSE 0 (true unison), summing
+     * `count` loops whose *only* difference is that feedback split must
+     * still land on [freq]. This isolates that claim from a confound
+     * [Strings.course] itself can't avoid: it seeds each loop's own
+     * exciter differently even at spread 0 (`Dsp.seedFor(seed, "COURSE",
+     * k)`), so a single FFT reading of the real `course()` output can pass
+     * or fail on excitation luck as much as on the fb step (SILK Phase 2's
+     * own plan review round caught exactly this, first drafted against
+     * `course()` directly). Built by hand here - [Strings.tune] once,
+     * [Strings.pluckExciter] once, then `count` [Strings.Loop]s fed that
+     * *identical* burst - so feedback is the only thing that varies.
+     *
+     * With excitation controlled out this way, the fb step alone turns
+     * out not to move the fundamental measurably even at its original
+     * (pre-Phase-2) value of 0.01 - passes at either constant, across
+     * OUD's, SANTUR's, and mid-range roots alike. See
+     * [Strings.COURSE_FB_STEP]'s own KDoc: the smaller value this test
+     * runs against is kept as an inexpensive precaution, not because this
+     * test demonstrates it is load-bearing.
+     */
+    @Test
+    fun `course's own feedback step, isolated from excitation, stays in tune`() {
+        val freq = 220f
+        val damping = Strings.damping(0.3f, 4200f)
+        val t = Strings.tune(freq, damping.loopHz, Dsp.RATE)
+        val len = (0.5f * Dsp.RATE).toInt().coerceAtLeast(t.n + 2)
+        val exc = Strings.pluckExciter(t.n, freq, 6000f, 0f, seed = 3, rate = Dsp.RATE, maxLen = len)
+        for (count in 1..4) {
+            val out = FloatArray(len)
+            for (k in 0 until count) {
+                val fbK = (damping.fb * (1f - Strings.COURSE_FB_STEP * k)).coerceIn(0f, 0.999f)
+                val loop = Strings.Loop(t.n, t.a, fbK, damping.loopHz, Dsp.RATE)
+                for (i in out.indices) out[i] += loop.next(if (i < exc.size) exc[i] else 0f)
+            }
+            val measured = FineTuning.measuredHz(out, Dsp.RATE, freq)
+            val off = FineTuning.cents(measured, freq.toDouble())
+            assertTrue(abs(off) <= 5.0, "count=$count: measured $measured Hz, $off cents off $freq Hz")
+        }
+    }
+
+    /**
+     * The real end-to-end path, excitation and all: [Strings.course] at
+     * COURSE 0 across several unrelated seeds, requiring the tuning bound
+     * to hold on every one. Where the test above isolates the mechanism,
+     * this one rules out excitation luck by exhausting it rather than
+     * removing it - the actual caller path (SANTUR's own `count = 4`) goes
+     * through here, exciter variation included. Also passes at
+     * [Strings.COURSE_FB_STEP]'s original 0.01 - `Strings.course` itself,
+     * at its own native (non-oversampled) rate, isn't where Phase 1b's
+     * OUD miss lived. SANTUR's own voice-level tuning test (Task 5, the
+     * real oversampled render path) is what actually closes this out.
+     */
+    @Test
+    fun `course at spread 0 is in tune across several seeds, real excitation included`() {
+        val freq = 220f
+        val damping = Strings.damping(0.3f, 4200f)
+        for (seed in listOf(1, 2, 3, 7, 11, 19, 23)) {
+            val out = Strings.course(freq, 0.5f, damping, 6000f, seed = seed, rate = Dsp.RATE, count = 4, spread = 0f)
+            val measured = FineTuning.measuredHz(out, Dsp.RATE, freq)
+            val off = FineTuning.cents(measured, freq.toDouble())
+            assertTrue(abs(off) <= 5.0, "seed=$seed: measured $measured Hz, $off cents off $freq Hz")
+        }
     }
 
     /**

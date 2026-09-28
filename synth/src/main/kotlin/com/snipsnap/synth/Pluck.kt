@@ -121,16 +121,31 @@ object Pluck {
             MacroSpec("STRIKE", 0.25f), MacroSpec("BODY", 0.20f), MacroSpec("DOUBLE", 0.1f),
         )
         // A sitar: plucked near the bridge with a wire mizrab, the sympathetic
-        // strings present by default. BODY defaults to 0: bodyFor(SITAR) now
-        // carries a table (see bodyFor), but it is a SHAPE, not a measurement
-        // (research note 2026-09-26, section 5) - it ships as a candidate on
-        // the audition page and stays off by default until the gate chips
-        // one closer. DAMP 0.5 gives a default budget of about 1.3 s, under the
-        // classifier's 1.5 s loop gate - the sympathetic strings pushed the
-        // old 0.35 default past it (1.82 s, read as LOOP; Task 4 ruling).
+        // strings present by default. BODY defaults to 1 - settled across two
+        // gates, in order. First, `p3a_body_1` chipped closer at the note
+        // that's actually representative (277 Hz), over a separate chip,
+        // `p3a_body_35_root`, that preferred the quieter BODY .35 - but only
+        // at the root note (139 Hz): bodyFor(SITAR)'s three fixed resonances
+        // (110/270/520 Hz, a SHAPE, not a measurement - research note
+        // 2026-09-26, section 5) sit closer to the root than to 277 Hz, so a
+        // smaller amount already reads convincing there regardless of its
+        // actual size - an artifact of where the note sits, not a competing
+        // verdict about the amount. Second, once combined with the wrap and
+        // the louder tarab, BODY 1 turned out to keep a muted string
+        // (DAMP 1) resonating through the body for about half a second
+        // (see `ks`'s DAMP=1 exception in TuningAccuracyTest) - narrow
+        // enough a concern that it went back to Josh as a direct A/B
+        // (`answer/mute_body`, today's date): TIGHT (BODY 0) against WITH
+        // BODY (BODY 1), both at DAMP 1, the exact tradeoff isolated. His
+        // call: "Hum is fine with body" - the fuller amount, confirmed
+        // rather than walked back to the .35 fallback. DAMP 0.5 gives a
+        // default budget of about 1.4 s (BODY 1 included, measured fresh at
+        // these final defaults), under the classifier's 1.5 s loop gate -
+        // the sympathetic strings pushed the old 0.35 DAMP default past it
+        // (1.82 s, read as LOOP; Task 4 ruling).
         PluckVoice.SITAR -> listOf(
             MacroSpec("TUNE", 0.5f), MacroSpec("DAMP", 0.5f), MacroSpec("PICK", 0.65f),
-            MacroSpec("STRIKE", 0.3f), MacroSpec("BODY", 0f), MacroSpec("DOUBLE", 0.4f),
+            MacroSpec("STRIKE", 0.3f), MacroSpec("BODY", 1f), MacroSpec("DOUBLE", 0.4f),
         )
     }
 
@@ -329,17 +344,18 @@ object Pluck {
     /**
      * Stiffness allpass coefficients (see [Strings.Loop]). SITAR's two
      * candidates put the tenth partial about 1 % and about 3 % sharp of
-     * harmonic, found by StiffnessTest's probe, not by hand; the low one
-     * ships until the gate chooses. KOTO and HARP carry zero: both passed a
-     * Phase 2 gate and do not change unheard (the audition offers them the
-     * low candidate). The coefficient is a raw z-domain value, so its delay
-     * is about 24 samples at any rate and the dispersion it produces scales
-     * with the render rate (RATE × OVERSAMPLE today); a reader deriving an
-     * inharmonicity coefficient from it must say which rate.
+     * harmonic, found by StiffnessTest's probe, not by hand; the high
+     * candidate ships (2026-09-28 gate, `p3a_stiff_high`). KOTO and HARP
+     * carry zero: both passed a Phase 2 gate and do not change unheard (the
+     * audition offers them the low candidate). The coefficient is a raw
+     * z-domain value, so its delay is about 24 samples at any rate and the
+     * dispersion it produces scales with the render rate (RATE × OVERSAMPLE
+     * today); a reader deriving an inharmonicity coefficient from it must
+     * say which rate.
      */
     internal const val SITAR_STIFFNESS_LOW = -0.92f    // measured: tenth partial 0.88 % sharp with the shipped jawari on (StiffnessTest's probe)
-    internal const val SITAR_STIFFNESS_HIGH = -0.953f  // measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); with the jawari at 0.3 the root note reads 5.6 c sharp (StiffnessTest measures it on every run), so if the gate chooses this candidate the drive steps down or the spec's fallback applies
-    internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_LOW
+    internal const val SITAR_STIFFNESS_HIGH = -0.953f  // ships. Measured: tenth partial 2.96 % sharp with the shipped jawari on (StiffnessTest's probe); the root note, at this stiffness together with the current wrap (0.010), reads 16.1 c sharp (measuredHz/cents, TuningAccuracyTest's own approach) - comfortably inside the quarter tone `the high stiffness candidate with the bridge on...` holds the whole sweep to
+    internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_HIGH
 
     internal fun stiffnessFor(voice: PluckVoice): Float = when (voice) {
         PluckVoice.SITAR -> SITAR_STIFFNESS
@@ -354,13 +370,26 @@ object Pluck {
      * measurement agree, independently: `harmonicsOverFundamental`
      * (2nd-8th harmonic over the fundamental, 0.15-0.35 s past onset -
      * `PluckSpectra`'s own KDoc names it the measure a jawari should be
-     * judged against) reads 4.4709 with no wrap at all, rises to 4.6422 at
-     * 0.010, and had already fallen back to 3.0152 by 0.015 - so 0.015,
-     * the depth an earlier gate chipped before anyone had measured this,
-     * was already past the peak. `the wrap adds harmonics over the
-     * fundamental at the shipped depth` (PluckTest) is that claim, now a
-     * real assertion. See the spec's "The jawari" for the three
-     * engineering rounds and the two gates in full.
+     * judged against) reads 1.3653 with no wrap at all and rises to 1.7966
+     * at 0.010 - `the wrap adds harmonics over the fundamental at the
+     * shipped depth` (PluckTest) is that claim, a real assertion. These
+     * numbers (re-measured 2026-09-28, at the final shipped configuration:
+     * stiffness HIGH, BODY forced to 0 in the test to isolate the wrap
+     * from BODY's own broadband resonance, the same isolation
+     * `the oversampled delay line still lands on pitch...` already uses
+     * for the same reason) replace an earlier set (4.4709/4.6422/3.0152)
+     * measured back when stiffness was still LOW and BODY did not yet
+     * exist. That earlier set is also where "0.015 already fell past its
+     * own peak" came from, part of why 0.010 was chipped over it - fresh
+     * at 0.015 under today's configuration this metric now reads 2.5485,
+     * higher than 0.010, not lower, so that specific shape no longer
+     * holds now that stiffness is in the mix. This does not reopen 0.010
+     * as the shipped depth: that was settled on a clean two-clip A/B
+     * against Josh's own ear (spec, "The jawari"), not solely on this
+     * metric, and the one claim this KDoc and its test still make - the
+     * wrap adds harmonic content over having none - holds at the current
+     * numbers too. See the spec's "The jawari" for the three engineering
+     * rounds and the two gates in full.
      *
      * This is a much smaller number than the old rail-driven mechanism's
      * 0.3, because it now scales a fractional-sample shortening
@@ -472,8 +501,10 @@ object Pluck {
         // these three modes are representative sitar/tanpura resonances
         // (a gourd's air resonance, the soundboard's main wood mode, a
         // bridge-region resonance) with t60 from a plausible Q by
-        // t60 = 2.2 Q / f. They are candidates: BODY's default is 0 until
-        // the gate chips one closer, and the note lists them as shapes.
+        // t60 = 2.2 Q / f. Still shapes, not measurements, but BODY now
+        // defaults to 1 - settled across two gates (2026-09-28), the second
+        // a direct listening A/B on a muted string's lingering body hum;
+        // see the SITAR default macro list above for both, in order.
         PluckVoice.SITAR -> listOf(
             Modes.fixed(110f, 1.00f, 0.20f),   // gourd air resonance - shape, Q ~ 10
             Modes.fixed(270f, 0.70f, 0.065f),  // soundboard main wood mode - shape, Q ~ 8
