@@ -138,13 +138,15 @@ Registration points, and this table is **not exhaustive** — Phase 1 learned th
 
 | File | Change |
 |---|---|
-| `Glint.kt` | three new mechanisms, BODY redefined, BLOOM's constants collapsed, `macrosFor` returns five for RATCHET and PLATE; `SNAP_FLOOR = 3f` added, `snapRatio` floored to `SNAP_FLOOR..SNAP_CEILING` |
+| `Glint.kt` | three new mechanisms, BODY redefined, BLOOM's constants collapsed, `macrosFor` returns six macros on every voice; `SNAP_FLOOR = 3f` added, `snapRatio` floored to `SNAP_FLOOR..SNAP_CEILING` |
 | `GlintTest.kt` | the new mechanisms' tests; existing tests re-pointed at six voices |
 | `Velocity.kt` | none — the fix lives in `Glint.kt`'s snap, not in how velocity computes its ratio |
 | `SynthScreen.kt` | nothing — voices come from `GlintVoice.entries`, and `drumClass` already maps every voice to TONAL |
 | `docs/SYNTH_ROADMAP.md` | amend the S10 row |
 
-Before implementation, grep for every exhaustive `when` over `Patch` and every hardcoded engine or voice list rather than trusting this table. Phase 1's "exhaustive" registration table missed `Velocity.macroSpecsFor`'s sealed `when` — which stops `:synth` compiling — and `shell`'s `UserPresetsTest` roster.
+**Correction, D2:** the row above used to say `macrosFor` returns "five for RATCHET and PLATE." That contradicted this document's own macro table (see **Macros — still six, unchanged names** above), whose **BLOOM** row spells out what BLOOM means on both RATCHET and PLATE — a macro the table defines is not one it also drops. The contradiction was found while building the D2 audition generator and checking this table's claims against `Glint.kt` directly: `macrosFor` does not branch on `voice` at all, so it returns the identical six-entry list for every voice, RATCHET and PLATE included. It was settled in favour of six on every voice, matching both the code and the macro table, and the line above is corrected accordingly; `GlintTest.kt`'s `every voice declares exactly the six macros` locks this down for all six voices going forward.
+
+Before implementation, grep for every exhaustive `when` over `Patch` and every hardcoded engine or voice list rather than trusting this table. Phase 1's "exhaustive" registration table missed `Velocity.macroSpecsFor`'s sealed `when` — which stops `:synth` compiling — and `shell`'s `UserPresetsTest` roster. This table's own "five for RATCHET and PLATE" line, above, is a second instance of the same failure mode — a claim in this document diverging from what the code and the document's other sections actually say.
 
 ## Testing
 
