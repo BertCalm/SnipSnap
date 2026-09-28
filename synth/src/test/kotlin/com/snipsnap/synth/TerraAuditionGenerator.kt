@@ -87,7 +87,7 @@ object TerraAuditionGenerator {
         sections.append(
             sectionJson(
                 id = "KIT", display = "THE TERRA KIT", body = "sixteen pads as the MPC gets them",
-                readout = listOf("A01-A05 MEMBRANE + CAVITY", "A06-A12 MORE MEMBRANE", "A13-A16 BELL + BAR"),
+                readout = listOf("A01-A12 MEMBRANE + CAVITY (A07 IS BAR)", "A13-A16 BELL + BAR"),
                 groups = listOf(Group("ALL SIXTEEN PADS", key = true, clips = kitClips)),
             ),
         )
