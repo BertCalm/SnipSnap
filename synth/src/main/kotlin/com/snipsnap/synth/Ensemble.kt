@@ -56,13 +56,16 @@ import kotlin.math.sqrt
  * `1/√3` where L = R). A mono input above [WIDTH_OFF] comes out with two
  * channels — the one section that
  * widens; see [FxChain]'s contract — and a stereo input keeps its image,
- * each channel through its own line and taps. AMT fades WIDTH to its
- * neutral 0, so a faded ensemble is a mono one.
+ * each channel through its own line and taps. WIDTH's neutral is 0, so
+ * AMT narrows the image toward the mono sum as it falls; the WAV stays a
+ * pair until the section is bypassed altogether at AMT 0.
  *
- * **A LOOP lands dry.** At 0.58 Hz a two-to-four-second loop holds one or
+ * **Keep a LOOP dry.** At 0.58 Hz a two-to-four-second loop holds one or
  * two slow cycles, so the delay jumps at the wrap — a pitch tick. The rack
- * does not know a pad is a LOOP; SIREN lands its LOOPs without ECHO for the
- * same reason, and a recipe that ensembles a LOOP is asking for the tick.
+ * cannot tell a LOOP from a one-shot (a `Snip` carries no loop metadata),
+ * so nothing here guards it: SIREN lands its own LOOPs without ECHO for
+ * the same reason, and a recipe that ensembles a LOOP is asking for the
+ * tick.
  *
  * Every constant below — the three delays, the two rates, the 6.5 kHz tone,
  * the stereo weights — is a listening value with no source: the starting
@@ -81,7 +84,7 @@ object Ensemble {
         // the base rates, and the neutral, so AMT leaves the speed alone.
         MacroSpec("RATE", 0.5f, neutral = 0.5f),
         // The mono sum at 0 (the WAV stays mono) to the stereo pair at 1;
-        // neutral 0, so AMT fades an ensembled pad back to mono.
+        // neutral 0, so AMT narrows the image toward the mono sum.
         MacroSpec("WIDTH", 1f, neutral = 0f),
     )
 
@@ -117,8 +120,11 @@ object Ensemble {
      */
     const val WIDE_Z = 0.150f
 
-    /** The far-tap weight at which L = R: `1/√3`. The family is defined up to here. */
-    const val WIDE_Z_MAX = 0.5773f
+    /** The mono sum's weight per tap — unit power for three uncorrelated taps, so WIDTH's crossfade holds level. */
+    internal val MONO_WEIGHT: Float = (1.0 / sqrt(3.0)).toFloat()
+
+    /** The far-tap weight at which L = R — the same `1/√3` as [MONO_WEIGHT], one number. The family is defined up to here. */
+    internal val WIDE_Z_MAX: Float = MONO_WEIGHT
     val WIDE_X: Float
     val WIDE_Y: Float
 
@@ -143,9 +149,6 @@ object Ensemble {
 
     /** The delay line: room for the deepest swing (10.75 ms) with margin. */
     private const val LINE_SECONDS = 0.025f
-
-    /** The mono sum's weight per tap — unit power for three uncorrelated taps, so WIDTH's crossfade holds level. */
-    private val MONO_WEIGHT = (1.0 / sqrt(3.0)).toFloat()
 
     fun defaults(): Map<String, Float> = MACROS.associate { it.name to it.default }
 

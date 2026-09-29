@@ -457,8 +457,8 @@
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
     <p>ENSEMBLE is a rack section, not an engine: three copies of the finished sound read off one delay line, swimming 120&deg; apart on two slow sines, each through its own tone, summed with no dry signal. It is the back half of a 1970s string machine — the part that made one sawtooth read as a section — dropped onto any pad the way TAPE and PHASE are.</p>
-    <p>Four sources, each dry first: a THUMP kick (the identity check — a kick through the section must still be a kick), VELVET's FANFARE and RESIN's WIDE SECTION (the brass presets a string machine would be built from), and a VOX CHOIR (already stereo — its image must survive). Then each at DEPTH .25 / .50 / 1 with WIDTH 0 (mono) and WIDTH 1 (stereo). Every stereo clip has its FOLD beside it (the CHOIR's dry and WIDTH 0 clips too, since a choir is stereo before the section touches it): the phone plays the fold on the instant loop, so the fold is what you will actually hear on a pad. Every clip here is a one-shot; a LOOP pad lands dry, because at 0.58 Hz a two-to-four-second loop holds one or two slow cycles and the delay would jump at the wrap &mdash; a pitch tick.</p>
-    <p>The pass rule is two questions. Does FANFARE through ENSEMBLE read as a string machine? And does the fold pump — swell and dip in level — more than the clip's readout says it should? Mark each KEEP, MEH or CUT. A CUT on a DEPTH means that depth goes too far; a CUT on a FOLD means the stereo version is not worth what the fold loses.</p>
+    <p>Four sources, each dry first: a THUMP kick (the identity check — a kick through the section must still be a kick), VELVET's FANFARE and RESIN's WIDE SECTION (the brass presets a string machine would be built from), and a VOX CHOIR (already stereo — its image must survive). Then each at DEPTH .25 / .50 / 1 with WIDTH 0 (the mono sum &mdash; one channel for a mono source; for the CHOIR one per side, so its WAV stays stereo) and WIDTH 1 (the stereo pair). Every stereo clip has its FOLD beside it (the CHOIR's dry and WIDTH 0 clips too, since a choir is stereo before the section touches it): the phone plays the fold on the instant loop, so the fold is what you will actually hear on a pad, and each fold's caption carries the measured loss, width and pump against the pair. Every clip here is a one-shot. Keep a LOOP pad dry: the rack cannot tell a LOOP from a one-shot, and at 0.58 Hz a two-to-four-second loop holds one or two slow cycles, so the delay would jump at the wrap &mdash; a pitch tick.</p>
+    <p>The pass rule is two questions. Does FANFARE through ENSEMBLE read as a string machine? And does the fold pump — swell and dip in level — more than its caption's swing figure says it does? Mark each KEEP, MEH or CUT. A CUT on a DEPTH means that depth goes too far; a CUT on a FOLD means the stereo version is not worth what the fold loses.</p>
   </div>
 
   <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
@@ -466,19 +466,19 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>FOUR QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
       <div class="ask">1 &middot; Does FANFARE (or WIDE SECTION) through ENSEMBLE read as a string machine? At which DEPTH?</div>
-      <textarea id="q_voices" placeholder="&hellip;"></textarea>
+      <textarea id="q_strings" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">2 &middot; The fold: does any FOLD clip pump or thin out against its stereo file more than you would accept on a pad? Is the kick still a kick?</div>
-      <textarea id="q_knobs" placeholder="&hellip;"></textarea>
+      <textarea id="q_fold" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">3 &middot; WIDTH 1 against WIDTH 0: is the stereo pair worth a doubled WAV on the MPC, or is the mono ensemble the one you would reach for?</div>
-      <textarea id="q_striker" placeholder="&hellip;"></textarea>
+      <textarea id="q_width" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
       <div class="ask">Anything else</div>
@@ -515,7 +515,7 @@
     { v: 'cut',  cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'CUT' }
   ];
 
-  var QUESTIONS = ['q_voices', 'q_knobs', 'q_striker', 'q_else'];
+  var QUESTIONS = ['q_strings', 'q_fold', 'q_width', 'q_else'];
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, cls, text) {
@@ -526,7 +526,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_voices: '', q_knobs: '', q_striker: '', q_else: '' } };
+  var state = { overall: { q_strings: '', q_fold: '', q_width: '', q_else: '' } };
 
   // ---------- build ----------
   var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +

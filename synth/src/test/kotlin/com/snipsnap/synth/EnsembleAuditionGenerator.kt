@@ -1,7 +1,6 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Cleanup
-import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
@@ -18,7 +17,8 @@ import kotlin.math.roundToInt
  * the section touches it), because the phone plays the fold on the instant
  * loop and the fold is what a pad is heard as. Clips share one loudness ([AuditionLevel]); a fold is
  * the fold of its levelled stereo file, not re-levelled, so what the fold
- * loses is audible rather than hidden. Writes `manifest.json`, which the
+ * loses is audible rather than hidden, and its caption is [FoldMeter]'s —
+ * the meter [FxTest] pins, so the page's numbers are the test's. Writes `manifest.json`, which the
  * page builds itself from, then copies the listening page from the test
  * resources. Run via `./gradlew :synth:generateEnsembleAudition`, then
  * publish the folder as the listening artifact.
@@ -79,12 +79,12 @@ object EnsembleAuditionGenerator {
                 count++
             }
 
-            /** The fold clip for a stereo [levelled] file, or nothing for a mono one. */
+            /** The fold clip for a stereo [levelled] file, or nothing for a mono one; its caption is [FoldMeter]'s, the same meter the test pins. */
             fun foldClipFor(id: String, levelled: Snip, what: String): List<Clip> {
                 if (levelled.channels != 2) return emptyList()
                 val foldId = id + "_fold"
                 writeFold(foldId, levelled)
-                return listOf(Clip(foldId, "↳ ITS FOLD", "$what averaged to mono — what the phone plays. Measured: ${foldCost(levelled)}"))
+                return listOf(Clip(foldId, "↳ ITS FOLD", "$what averaged to mono — what the phone plays. Measured: ${FoldMeter.caption(FoldMeter.report(levelled))}"))
             }
 
             val levelledDry = write("dry", dry)
@@ -102,16 +102,22 @@ object EnsembleAuditionGenerator {
                 listOf(Clip(id, "DEPTH ${fmt(depth)} · WIDTH 0", "the three taps summed to ${if (out.channels == 2) "each of the source's two channels — two mono ensembles, one per side" else "one channel"}; the WAV stays $chDry")) +
                     foldClipFor(id, out, "the same file")
             }
-            groups += Group("WIDTH 0 · THE MONO ENSEMBLE", key = false, clips = monoClips)
+            groups += Group(if (dry.channels == 2) "WIDTH 0 · TWO MONO ENSEMBLES, ONE PER SIDE" else "WIDTH 0 · THE MONO ENSEMBLE", key = false, clips = monoClips)
 
             val wideClips = mutableListOf<Clip>()
             for (depth in DEPTHS) {
                 val id = "depth_${tag(depth)}_width_1"
                 val out = write(id, Ensemble.process(dry, mapOf("DEPTH" to depth, "WIDTH" to 1f)))
                 val (slow, fast) = Ensemble.peakCents(depth, 1f)
+                val weights = "%.2f/%.2f/%.2f".format(Ensemble.WIDE_X, Ensemble.WIDE_Y, Ensemble.WIDE_Z)
+                val pair = if (dry.channels == 2) {
+                    "each channel through its own line and taps, the left's weighted L $weights over its taps and the right's mirrored"
+                } else {
+                    "the stereo pair (L $weights over the taps, R mirrored)"
+                }
                 wideClips += Clip(
                     id, "DEPTH ${fmt(depth)} · WIDTH 1",
-                    "the stereo pair (L 0.85/0.50/0.15 over the taps, R mirrored); per tap up to ${slow.roundToInt()} c on the swell and ${fast.roundToInt()} c on the shimmer",
+                    "$pair; per tap up to ${slow.roundToInt()} c on the swell and ${fast.roundToInt()} c on the shimmer",
                 )
                 wideClips += foldClipFor(id, out, "the same file")
             }
@@ -122,8 +128,8 @@ object EnsembleAuditionGenerator {
                 sectionJson(
                     id = source.id, display = source.display, body = source.body,
                     readout = source.readout + listOf(
-                        "RATE .50 (0.58 / 5.85 HZ) " + DOT + " TONE 6.5 KHZ " + DOT + " 100% WET",
-                        "ONE-SHOTS ONLY: A LOOP LANDS DRY, THE WRAP WOULD TICK",
+                        "RATE .50 (%.2f / %.2f HZ) ".format(Ensemble.SLOW_HZ, Ensemble.FAST_HZ) + DOT + " TONE %.1f KHZ ".format(Ensemble.TONE_HZ / 1000f) + DOT + " 100% WET",
+                        "ONE-SHOTS ONLY: KEEP A LOOP DRY, THE WRAP WOULD TICK",
                     ),
                     groups = groups,
                 ),
@@ -138,24 +144,6 @@ object EnsembleAuditionGenerator {
     }
 
     private const val DOT = "·"
-
-    /** What the fold loses against the pair, by the house meter, with how alike the pair is. */
-    private fun foldCost(stereo: Snip): String {
-        val l = Snip(FloatArray(stereo.frameCount) { stereo.samples[it * 2] }, 1, stereo.sampleRate)
-        val r = Snip(FloatArray(stereo.frameCount) { stereo.samples[it * 2 + 1] }, 1, stereo.sampleRate)
-        val fold = Cleanup.toMono(stereo)
-        val loss = 20.0 * kotlin.math.log10(Loudness.of(fold).toDouble() / ((Loudness.of(l) + Loudness.of(r)) / 2.0))
-        var sl = 0.0; var sr = 0.0
-        for (i in 0 until stereo.frameCount) { sl += l.samples[i]; sr += r.samples[i] }
-        val ml = sl / stereo.frameCount; val mr = sr / stereo.frameCount
-        var slr = 0.0; var sll = 0.0; var srr = 0.0
-        for (i in 0 until stereo.frameCount) {
-            val dl = l.samples[i] - ml; val dr = r.samples[i] - mr
-            slr += dl * dr; sll += dl * dl; srr += dr * dr
-        }
-        val corr = slr / kotlin.math.sqrt(sll * srr)
-        return "the fold sits %.1f dB against the pair; left and right correlate %.2f".format(loss, corr)
-    }
 
     private fun tag(v: Float): String = (v * 100).roundToInt().toString().padStart(3, '0')
 

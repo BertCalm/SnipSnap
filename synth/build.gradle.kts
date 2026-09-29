@@ -229,7 +229,7 @@ tasks.register<JavaExec>("generateTideKit") {
 /** Render the ENSEMBLE gate: four sources dry and through the section, stereo beside its fold, under testkit/ensemble-audition/. See EnsembleAuditionGenerator. */
 tasks.register<JavaExec>("generateEnsembleAudition") {
     group = "distribution"
-    description = "Render the ENSEMBLE rack section's four-clip gate, manifest and listening page under testkit/ensemble-audition/."
+    description = "Render the ENSEMBLE rack section's four-source gate, manifest and listening page under testkit/ensemble-audition/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.EnsembleAuditionGenerator")
     workingDir = projectDir
