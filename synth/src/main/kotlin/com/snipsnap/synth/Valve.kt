@@ -1,0 +1,180 @@
+package com.snipsnap.synth
+
+import com.snipsnap.audio.Snip
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.sqrt
+import kotlin.math.tanh
+import kotlin.random.Random
+
+/**
+ * VALVE - a tube amp and its speaker on any pad: a snare through a stack, a
+ * vocal chop through a combo, a synth pad driven until it breaks up. MAGNET's
+ * electric string lands through it by recipe; nothing about it is guitar-only
+ * (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
+ *
+ * DRIVE is the gain into an asymmetric tube curve (soft on the negative side,
+ * so it adds even harmonics as well as odd); SAG is the supply giving way on
+ * loud passages, biasing the tube further toward cutoff; TONE shapes what
+ * comes *out* of the tube (EQ sits before VALVE in the rack and shapes what
+ * goes in); CAB is the speaker, none at 0 growing to a dark closed wall at 1.
+ *
+ * Level-relative: the pad is normalised to peak 1 before the gain law and
+ * peak-matched after, so DRIVE means the same on a whisper and a slam. The
+ * snip's own peak is used for every channel, so a stereo image survives.
+ *
+ * The first section that oversamples. At the snip's rate a hot tube folds its
+ * harmonics back into the audible band: the Phase-0 spike measured a steady
+ * 247 Hz probe at DRIVE 1 with energy between harmonics only 31.9 dB down at
+ * 1x against 49.4 dB at 4x (an 8x reference read 50.9). The round trip is
+ * zero-stuffing interpolated by [Tide.bandLimit], never the general resampler,
+ * which cost 72 ms per rendered second on its own.
+ *
+ * Every number marked shape below is a listening value from the specification
+ * the owner attached, kept until the V1 listen moves it.
+ */
+object Valve {
+
+    val MACROS: List<MacroSpec> = listOf(
+        MacroSpec("DRIVE", 0.45f),
+        MacroSpec("SAG", 0.35f),
+        // 0.5 is flat, so the pad sheet's AMT fade lands on a flat tone.
+        MacroSpec("TONE", 0.5f, neutral = 0.5f),
+        MacroSpec("CAB", 0.6f),
+    )
+
+    /** The gain law's ends. 0.05 keeps the tube linear to about 0.1 % - the neutral point's near-copy. */
+    internal const val GAIN_MIN = 0.05f
+    internal const val GAIN_MAX = 35f
+
+    /** Grid sag: charges in 5 ms above the rail, recovers in 120 ms (shape). */
+    private const val SAG_ATTACK_SECONDS = 0.005f
+    private const val SAG_RELEASE_SECONDS = 0.120f
+    private const val SAG_DEPTH = 0.45f
+
+    /**
+     * The DC blocker after the asymmetric curve. 5 Hz, not the fleet's usual
+     * 20: a one-pole high-pass at 20 Hz is already 1 dB down at 40 Hz, which
+     * would break the neutral point's promise on a kick.
+     */
+    internal const val DC_HZ = 5f
+
+    fun defaults(): Map<String, Float> = MACROS.associate { it.name to it.default }
+
+    fun scramble(random: Random): Map<String, Float> = MACROS.associate { it.name to random.nextFloat() }
+
+    /** DRIVE's gain into the tube, on the pad normalised to peak 1. */
+    fun gainFor(drive: Float): Float = Dsp.expMap(drive.coerceIn(0f, 1f), GAIN_MIN, GAIN_MAX)
+
+    fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip = process(snip, macros, oversample = true)
+
+    /** [oversample] false exists only so the aliasing test can prove the probe sees fold-back. */
+    internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean): Snip {
+        val m = defaults().toMutableMap()
+        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        val inPeak = snip.peak()
+        if (inPeak <= 0f) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
+
+        val rate = snip.sampleRate
+        val channels = snip.channels
+        val frames = snip.frameCount
+        val workRate = if (oversample) rate * Dsp.OVERSAMPLE else rate
+        val outs = Array(channels) { ch ->
+            val x = FloatArray(frames) { f -> snip.samples[f * channels + ch] / inPeak }
+            val work = if (oversample) upsample(x, rate) else x
+            val y = stage(work, m, workRate)
+            if (oversample) {
+                Tide.bandLimit(y, workRate)
+                Dsp.decimate(y, rate)
+            } else {
+                y
+            }
+        }
+
+        val out = FloatArray(frames * channels)
+        for (f in 0 until frames) {
+            for (ch in 0 until channels) out[f * channels + ch] = outs[ch].getOrElse(f) { 0f }
+        }
+        var outPeak = 0f
+        for (v in out) {
+            val a = abs(v)
+            if (a > outPeak) outPeak = a
+        }
+        if (outPeak > 0f) {
+            val k = inPeak / outPeak
+            for (i in out.indices) out[i] *= k
+        }
+        return Snip(out, channels, rate)
+    }
+
+    /** Zero-stuffing by [Dsp.OVERSAMPLE], interpolated by the band-limiter the melodic engines already use before they decimate. */
+    internal fun upsample(x: FloatArray, rate: Int): FloatArray {
+        val n = Dsp.OVERSAMPLE
+        val up = FloatArray(x.size * n)
+        for (i in x.indices) up[i * n] = x[i] * n
+        Tide.bandLimit(up, rate * n)
+        return up
+    }
+
+    /** Gain, sag, the tube, the DC blocker, then TONE and CAB - one channel at [rate]. */
+    private fun stage(x: FloatArray, m: Map<String, Float>, rate: Int): FloatArray {
+        val g = gainFor(m.getValue("DRIVE"))
+        val sag = m.getValue("SAG")
+        val charge = 1f - exp(-1.0 / (SAG_ATTACK_SECONDS * rate)).toFloat()
+        val release = 1f - exp(-1.0 / (SAG_RELEASE_SECONDS * rate)).toFloat()
+        val dc = Dsp.OnePole(rate)
+        var vSag = 0f
+        val out = FloatArray(x.size)
+        for (i in x.indices) {
+            val v = x[i] * g
+            val a = abs(v)
+            vSag += if (a > 1f) charge * (a - 1f - vSag) else -release * vSag
+            val b = v - vSag * sag * SAG_DEPTH
+            val t = if (b >= 0f) tanh(b) else b / sqrt(1f + b * b)
+            out[i] = t - dc.lp(t, DC_HZ)
+        }
+        tone(out, m.getValue("TONE"), rate)
+        cabinet(out, m.getValue("CAB"), rate)
+        return out
+    }
+
+    /**
+     * The tone after the tube: 0 a mid scoop (-12 dB, around 380 Hz), 0.5
+     * flat, 1 mids (+6 dB, around 650 Hz) and top (+6 dB above 3 kHz)
+     * forward. Every gain is a signed distance from 0.5, so 0.5 is skipped
+     * outright rather than filtered at 0 dB (shape).
+     */
+    internal fun tone(buf: FloatArray, tone: Float, rate: Int) {
+        val d = tone - 0.5f
+        if (d == 0f) return
+        val midDb = if (d < 0f) 24f * d else 12f * d
+        val mid = Dsp.Biquad().apply { peaking(Dsp.lin(tone, 380f, 650f), midDb, 0.9f, rate) }
+        val top = Dsp.Biquad().apply { highShelf(3_000f, 12f * d, rate) }
+        for (i in buf.indices) buf[i] = top.process(mid.process(buf[i]))
+    }
+
+    /**
+     * The speaker: nothing at 0; the specification's network fading in over
+     * the first quarter of the knob and growing from a bright open-back
+     * combo to a dark closed wall - a cone thump falling from 110 to 78 Hz,
+     * the open-back cancellation notch filling in as the back closes, two
+     * cone-breakup resonances at 2.6 and 3.75 kHz, and the voice coil
+     * rolling the top off from 5.8 down to 4.5 kHz (shape).
+     */
+    internal fun cabinet(buf: FloatArray, cab: Float, rate: Int) {
+        if (cab <= 0f) return
+        val w = (cab / 0.25f).coerceAtMost(1f)
+        val thump = Dsp.Biquad().apply { peaking(Dsp.lin(cab, 110f, 78f), 6f * w, Dsp.lin(cab, 1.6f, 2.4f), rate) }
+        val notch = Dsp.Biquad().apply { peaking(Dsp.lin(1f - cab, 380f, 500f), -9f * (1f - cab) * w, 2f, rate) }
+        val breakup1 = Dsp.Biquad().apply { bandpass(2_600f, 3.5f, rate) }
+        val breakup2 = Dsp.Biquad().apply { bandpass(3_750f, 4f, rate) }
+        val coilHz = Dsp.expMap(1f - w, Dsp.lin(cab, 5_800f, 4_500f), 20_000f)
+        val coil = Dsp.OnePole(rate)
+        for (i in buf.indices) {
+            val s = buf[i]
+            val body = notch.process(thump.process(s))
+            val breakup = w * (0.35f * breakup1.process(s) + 0.25f * breakup2.process(s))
+            buf[i] = coil.lp(body + breakup, coilHz)
+        }
+    }
+}
