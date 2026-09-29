@@ -47,7 +47,13 @@ object Valve {
     internal const val GAIN_MIN = 0.05f
     internal const val GAIN_MAX = 35f
 
-    /** Grid sag: charges in 5 ms above the rail, recovers in 120 ms (shape). */
+    /**
+     * Supply sag (shape): a follower whose target is how far the signal goes
+     * over the rail (|v| - 1, or 0 under it). It charges toward a higher target
+     * with a 5 ms time constant and recovers toward a lower one with a 120 ms
+     * time constant, the same 120 ms whether the lower target is 0 or an
+     * overshoot that is only smaller.
+     */
     private const val SAG_ATTACK_SECONDS = 0.005f
     private const val SAG_RELEASE_SECONDS = 0.120f
     private const val SAG_DEPTH = 0.45f
@@ -120,22 +126,31 @@ object Valve {
     private fun stage(x: FloatArray, m: Map<String, Float>, rate: Int): FloatArray {
         val g = gainFor(m.getValue("DRIVE"))
         val sag = m.getValue("SAG")
-        val charge = 1f - exp(-1.0 / (SAG_ATTACK_SECONDS * rate)).toFloat()
-        val release = 1f - exp(-1.0 / (SAG_RELEASE_SECONDS * rate)).toFloat()
+        val v = FloatArray(x.size) { x[it] * g }
+        val vSag = sagTrack(v, rate)
         val dc = Dsp.OnePole(rate)
-        var vSag = 0f
         val out = FloatArray(x.size)
         for (i in x.indices) {
-            val v = x[i] * g
-            val a = abs(v)
-            vSag += if (a > 1f) charge * (a - 1f - vSag) else -release * vSag
-            val b = v - vSag * sag * SAG_DEPTH
+            val b = v[i] - vSag[i] * sag * SAG_DEPTH
             val t = if (b >= 0f) tanh(b) else b / sqrt(1f + b * b)
             out[i] = t - dc.lp(t, DC_HZ)
         }
         tone(out, m.getValue("TONE"), rate)
         cabinet(out, m.getValue("CAB"), rate)
         return out
+    }
+
+    /** The supply follower's value at every sample of [v], the signal after the gain. */
+    internal fun sagTrack(v: FloatArray, rate: Int): FloatArray {
+        val charge = 1f - exp(-1.0 / (SAG_ATTACK_SECONDS * rate)).toFloat()
+        val release = 1f - exp(-1.0 / (SAG_RELEASE_SECONDS * rate)).toFloat()
+        var vSag = 0f
+        return FloatArray(v.size) { i ->
+            val a = abs(v[i])
+            val target = if (a > 1f) a - 1f else 0f
+            vSag += (if (target > vSag) charge else release) * (target - vSag)
+            vSag
+        }
     }
 
     /**

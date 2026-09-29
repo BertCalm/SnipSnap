@@ -267,6 +267,28 @@ class ValveTest {
         assertTrue(rel > -40.0, "SAG 1 changed a DRIVE 1 kick by only ${"%.1f".format(rel)} dB")
     }
 
+    @Test
+    fun `SAG falls at its release rate while the signal is still above the rail`() {
+        // The follower's target is the overshoot |v| - 1 (0 under the rail). It
+        // charges toward a higher target in 5 ms and recovers toward a lower one,
+        // including one still above the rail, in 120 ms: from a steady overshoot
+        // of 2 down to one of 0.5, 100 ms in it is still near 0.5 + 1.5*e^(-100/120) = 1.15.
+        val hz = rate * Dsp.OVERSAMPLE
+        fun frames(seconds: Float) = (seconds * hz).toInt()
+        val first = frames(0.050f)
+        val v = FloatArray(first + frames(0.500f)) { if (it < first) 3f else 1.5f }
+        val track = Valve.sagTrack(v, hz)
+        val charged = track[first - 1]
+        val at100 = track[first + frames(0.100f)]
+        val at500 = track[v.size - 1]
+        val rise = Valve.sagTrack(FloatArray(frames(0.020f)) { -3f }, hz)[frames(0.007f)]
+        println("VALVE SAG follower: ${"%.3f".format(charged)} charged, ${"%.3f".format(at100)} 100 ms and ${"%.3f".format(at500)} 500 ms into a lower overshoot; ${"%.3f".format(rise)} 7 ms into a rise to 2")
+        assertTrue(charged > 1.9f, "the follower reached only $charged after 50 ms at an overshoot of 2")
+        assertTrue(at100 > 0.9f, "100 ms into the lower overshoot the follower is already down to $at100: it is not recovering at 120 ms")
+        assertTrue(at500 < 0.6f, "500 ms into the lower overshoot the follower is still at $at500")
+        assertTrue(rise >= 0.63f * 2f, "7 ms into a rise to 2 the follower is only at $rise")
+    }
+
     // ---------- the inputs a person will hand it ----------
 
     @Test
