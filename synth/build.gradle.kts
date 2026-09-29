@@ -264,6 +264,25 @@ tasks.register<JavaExec>("generateForkAudition") {
     args("${rootDir}/testkit/fork-audition")
 }
 
+tasks.register<JavaExec>("generateBoreKit") {
+    group = "distribution"
+    description = "Render the BORE blown-woodwind acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BoreKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the BORE round-one audition clips, manifest and page under testkit/bore-audition/. See BoreAuditionGenerator. */
+tasks.register<JavaExec>("generateBoreAudition") {
+    group = "distribution"
+    description = "Render the BORE audition clips, manifest and listening page under testkit/bore-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BoreAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/bore-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"

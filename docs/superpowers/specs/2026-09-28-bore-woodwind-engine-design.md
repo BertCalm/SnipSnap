@@ -2,7 +2,8 @@
 
 **Status:** design; brainstorm from the 2026-09-28 specification. **R0,
 the shared-toolkit change, is built** (2026-09-28; "R0, as built" below);
-R1, the engine, is not started. The spec's engine, transcribed and rendered, does not work
+R1, the engine, is built** (2026-09-29; "R1, as built" below), its presets
+provisional and its audition gate not yet run. **The spec's engine, transcribed and rendered, does not work
 (three of five voices NaN, one a DC limit cycle, one an octave up — "The
 specification, as reviewed"); the corrections below are measured, and
 the corrected model is a Phase-0 spike — a throwaway prototype built only
@@ -32,10 +33,10 @@ reused here (HOLD: the length knob for a sound that is held rather than
 struck; the LOOP top step: the knob's top position renders a seamless
 loop instead of a note; landing by recipe: a pad arrives with rack
 effects already written into its saved settings).
-**Roadmap:** the `SYNTH_ROADMAP.md` row (S17) is added when implementation
-starts, not now — the rule FATHOM, RESIN, GLINT, SILK and FORK followed
-(`docs/SYNTH_ROADMAP.md:271` is the last row today; S16 at `:270` is the
-highest number).
+**Roadmap:** the `SYNTH_ROADMAP.md` row is added when implementation
+starts, not before — the rule FATHOM, RESIN, GLINT, SILK and FORK followed.
+The design assumed S17; SILK's Phases 2 and 3 took S17 and S18 while it
+waited, so BORE's row is **S19** (added with R1).
 **Evidence:** six investigator reports read the specification against the
 tree at `20115ab` (an API audit, a DSP desk review with a Python replica, an
 empirical probe that transcribed the spec's Kotlin and rendered it, a
@@ -1150,7 +1151,7 @@ convention.
 | 20 | `BoreAuditionGenerator.kt` (new) + `audition/bore-audition.html` | ~200 + ~1000 (SIREN's PR) | the listening page, copied from `siren-audition.html` for its SURFACE stand-in (`:380`) | R1 |
 | 21 | `app/.../SynthScreen.kt` | +12/−2 | the `Engine` entry (`:1827`) and **seven** arms (`:1846-1953`: `voices`, `macrosFor`, `defaults`, `scramble`, `render`, `drumClass`, `buildPatch`), the landing line beside SIREN's (`:498`), the `→ SURFACE ▸` condition (`:1063`), the LOOP readout (`:1009`), the toast | **R1.1** — not compilable in a cloud session (no Android SDK; `:app` is outside the Gradle graph), and "a picker button guessed blind is worse than one left for a session that can verify it" (`fork spec:544-554`) |
 | 22 | `README.md` | +24/−4 | the engine paragraph and the count (`README.md:336-337`, "thirteen") | R1.1 |
-| 23 | `docs/SYNTH_ROADMAP.md` | +1 | row S17 at implementation time | R1 |
+| 23 | `docs/SYNTH_ROADMAP.md` | +1 | row S19 at implementation time (S17 and S18 were taken) | R1 |
 | 24 | this spec | +137 | "As built" in the same commit as the code | R1 |
 | 25 | `testkit/SnipSnap Bore Kit/` | 16 WAVs + `.xpm` | `./gradlew :synth:generateBoreKit` | R1 |
 | 26 | `testkit/Instruments/SnipSnap Bore.xty` + `_[TrackData]/`, `instruments.json`, the zips | 18 WAVs + `.xpm`, +209 | `./gradlew :synth:generateInstrumentSuite`, then `scripts/pack_testkit_zips.py`; the suite run regenerates unrelated instrument WAVs — revert those by hand, as FORK's commit did (house §1 E) | R2 |
@@ -1379,7 +1380,7 @@ BORE code.
 |---|---|---|
 | **0 — spike** (spike done, recorded in `../plans/2026-09-28-bore-phase-0-spike.md`; the gate not yet run on its full grid) | the corrected loop on the house's primitives, three shapes, six print-only tests, every number in Appendix B | **speaks *and* in tune**, in that order, per voice: a contiguous BREATH window at least half the knob wide at f0 across TUNE 0–24 at every LIP corner, then 5 cents at defaults. "The knob" is the spike's share axis (BREATH → 0.4–0.97 of the closing pressure) before the per-LIP window mapping R1 ships — measured there, not on raw pressure. Where it stands: HOLLOW is ±2 cents at all 13 speaking corners at 220 Hz and at 110 / 220 / 440 at LIP 0.5, but the TUNE 0–24 × LIP grid the rule asks for has not been run, and at LIP 1 its window is BREATH 0.65–1.0 (0.35 wide), so the rule as worded is met only after the window mapping; SAX speaks at 55/110/220 with the f0/25 blocker, ~5 cents flat, and has dead corners at LIP 1 / BREATH ≤ 0.65 and at LIP 0.5 / BREATH 0.3 — the window mapping at LIP 1 and the blocker question (f0/25 versus the apex allpass or a two-segment cone) remain; FLUTE locks at 440/880, its window edges, ceiling and low register remain. Nothing registered until each R1 voice passes |
 | **R0** (built 2026-09-28, "R0, as built") | the three `Strings.kt` additions, `StringsTest`'s new checks; no audio change | the frozen grids match sample for sample (SILK 1a): **met** — 384 and 108 cases unchanged, and the whole JVM suite green |
-| **R1** | `Bore.kt` (FLUTE and SAX, five macros, the LOOP render behind the seam test, `landingChain`, the thump), `BorePatch`, `BorePresets` (8 + 8, by ear against the built engine, frozen by the six-contract test), registration in `Patches`/`Presets`/`Velocity`, `SynthKits.bore()` and its testkit kit, the tests above, the blocklist terms, the audition page. Mono | **the audition** (below) |
+| **R1** | `Bore.kt` (FLUTE and SAX, five macros, the LOOP render behind the seam test, `landingChain`, the thump), `BorePatch`, `BorePresets` (8 + 8, by ear against the built engine, frozen by the six-contract test), registration in `Patches`/`Presets`/`Velocity`, `SynthKits.bore()` and its testkit kit, the tests above, the blocklist terms, the audition page. Mono — **built 2026-09-29** ("R1, as built"; presets provisional) | **the audition** (below) |
 | **R1.1** | the phone: the picker entry and seven arms, SEND TO PAD landing with tape, `→ SURFACE ▸` at LOOP, the toast; README's count | built in a session that can see `:app`; the gate's verdict is its precondition |
 | **R2** | `Keys.borePad` + `InstrumentSuite.renderBore` + `HeldSpec.Bore` (MAKE INSTRUMENT), the one-shot `Keys.bore` beside it, RUNS OUT, HOLLOW as a voice, the sixth macro (VIBRATO or OVERBLOW), the withheld LOOP if R1 withheld it | the instrument under two hands for ten seconds: the seam, and whether breath repeats audibly at the loop period |
 | **R3** | presets re-heard and extended, BASSOON as a reed family with a sourced formant row, stereo (U4, the upgrade document's stereo item — per-patch opt-in after a rack audit, `docs/SYNTH_UPGRADE.md:271-287`), DRONE TO LOOP (SIREN's fourth door) | each its own listen |
@@ -1657,7 +1658,7 @@ lines (R0 at its built ~390 in place of ~100), most of the difference the
 tests the design asked for.
 
 **Not done, on purpose.** No BORE code; no audio change of any kind; no
-roadmap row (S17 is added with R1, the house rule). R1's first open
+roadmap row (S19 is added with R1, the house rule). R1's first open
 question is unchanged: the cone's blocker corner, `f0/25` as measured or
 the apex allpass, now a parameter and no longer a `Strings` change.
 

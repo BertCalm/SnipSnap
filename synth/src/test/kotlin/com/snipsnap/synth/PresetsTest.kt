@@ -27,6 +27,8 @@ class PresetsTest {
         assertEquals(TidePresets.forVoice(TideVoice.BONGO), Presets.forVoice("TIDE", "BONGO"))
         assertEquals(SirenPresets.forVoice(SirenVoice.WAIL), Presets.forVoice("SIREN", "WAIL"))
         assertEquals(ForkPresets.forVoice(ForkVoice.TINE), Presets.forVoice("FORK", "TINE"))
+        assertEquals(BorePresets.forVoice(BoreVoice.FLUTE), Presets.forVoice("BORE", "FLUTE"))
+        assertEquals(BorePresets.forVoice(BoreVoice.SAX), Presets.forVoice("BORE", "SAX"))
     }
 
     @Test
@@ -45,7 +47,8 @@ class PresetsTest {
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
         val expected = ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
-            SkinPresets.all() + ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all()
+            SkinPresets.all() + ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
+            BorePresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }
