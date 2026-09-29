@@ -191,12 +191,17 @@ Cost, milliseconds per rendered second on the JVM (single machine, min of 3):
 | `Resampler.resample` 44.1 → 176.4 kHz | **72.2** |
 
 P3 as built costs 84–86 ms/s, almost all of it the general windowed-sinc
-upsampler. VALVE therefore does not call `Resampler`: it zero-stuffs 4× and
-interpolates with `Tide.bandLimit`'s own eighth-order low-pass (gain 4),
-which the band-limit-and-decimate figure above prices at a few ms/s. Target
-for V1, asserted as a printed number and gated at the listen: **≤ 20 ms per
-rendered second** on the JVM. A phone runs two to four times slower (BORE's
-estimate; no phone measured).
+upsampler. VALVE therefore does not call `Resampler` on the way up: it
+zero-stuffs 4× and interpolates with `Tide.bandLimit`'s own eighth-order
+low-pass (gain 4). The way down is the melodic engines' `Dsp.decimate` —
+`Resampler` twice by halves on its power-of-two fast path — priced in the
+band-limit-and-decimate figure above. Target for V1, printed on every run and
+gated at the listen: **≤ 20 ms per rendered mono second** on the JVM (the
+spike's 4× amp figure was mono). Measured: 16–18 ms per mono second, 62 % of
+it the two `Tide.bandLimit` passes; a stereo pad is two channels through the
+whole stage and costs about double, 31–35 ms per rendered second on a 4 s
+stereo pad. A phone runs two to four times slower (BORE's estimate; no phone
+measured).
 
 The CRUNCH rule's identity test passed on the spike: a THUMP kick and snare
 through P3 at DRIVE 0.6 still classify KICK and SNARE (the snare's centroid
@@ -220,9 +225,10 @@ MAGNET (engine, 176.4 kHz)
   landingChain(voice, macros) = FxChain().withSection("valve", voice's LANDING_VALVE)
 
 VALVE (rack section, the snip's rate, internally 4×)
-  per channel: normalise to peak 1 → zero-stuff ×4 → bandLimit (×4) →
-    gain(DRIVE) → grid sag(SAG) → asymmetric tube → DC blocker →
-    TONE (post-drive) → cabinet(CAB) → bandLimit → decimate → peak match to the input
+  normalise by the snip's joint peak (Snip.peak(), every channel together) →
+  per channel: zero-stuff ×4 → bandLimit (×4) →
+    gain(DRIVE) → grid sag(SAG) → asymmetric tube (the sag bias an offset on its input) → DC blocker (5 Hz) →
+    TONE (post-drive) → cabinet(CAB) → bandLimit → decimate → peak match to that same joint peak
 ```
 
 ### MAGNET, the engine
@@ -267,10 +273,11 @@ at the end of `FxChain`'s constructor; the order KDoc gains
 `→ SQUASH → VALVE → CRUNCH →`; `"amped"` appended to `Treatments.EXTRA`
 (never to `Shuffle.TREATMENTS`, which a seeded bank indexes).
 
-- **Level-relative drive.** Each channel is normalised to peak 1 before the
-  gain law and the output peak-matched to the input after, so DRIVE means the
-  same on a whispered vocal and a slammed kick. The spike's 0.68–1.50 input
-  spread is why.
+- **Level-relative drive.** The pad is normalised by its joint peak
+  (`Snip.peak()`, every channel together) before the gain law and
+  peak-matched to that same peak after, so DRIVE means the same on a
+  whispered vocal and a slammed kick and a quieter channel stays quieter. The
+  spike's 0.68–1.50 input spread is why.
 - **4× inside.** Zero-stuff, `Tide.bandLimit` as the interpolator, the tube
   and everything after it at 4×, `Tide.bandLimit` and `Dsp.decimate` back
   down. VALVE calls `Tide.bandLimit`; it does not copy it.
@@ -284,7 +291,12 @@ at the end of `FxChain`'s constructor; the order KDoc gains
   peak-matched). A saturated sound at equal peak is louder: the spike's rack
   placements landed a levelled string at 2.4× the melodic loudness target.
   That is character, as CRUNCH's and TAPE's is, and the owner decides whether
-  it stays (decision 3).
+  it stays (decision 3). The same single gain acts at the neutral point on a
+  pad whose peak is a click: the 4× round trip spreads a one-sample transient
+  and lowers its peak by about 2 dB (0.4–1.7 dB on band-limited clicks and
+  noisy onsets), and the match lifts the whole pad by that — so the near-copy
+  promise below is for pads whose peak is not a click, and the AMT fade's
+  first step carries that rise on clicky material (decision 3's territory).
 - **Mono in, mono out; stereo stays stereo** with identical channels intact,
   one sag state per channel.
 
@@ -324,9 +336,9 @@ VALVE's four, each `neutral` at its transparent point:
 | Macro | Moves | Mapping (shape until the V1 listen) | Default / neutral |
 |---|---|---|---|
 | **DRIVE** | gain into the tube | `expMap(DRIVE, 0.05, 35)` on the normalised input | 0.45 / 0 |
-| **SAG** | the supply giving way | `vSag` charges toward `|x| − 1` at 5 ms above the rail, recovers at 120 ms; bias `vSag · SAG · 0.45` | 0.35 / 0 |
-| **TONE** | the tone after the tube | 0 a mid scoop (−12 dB at 380 Hz), 0.5 flat, 1 mids and top forward; every band's gain a signed distance from 0.5 | 0.5 / 0.5 |
-| **CAB** | the speaker | 0 none; rising, the spec's network fades in and grows from a bright open-back combo to a dark closed wall (thump 110 → 78 Hz, the open-back notch filling in, breakup at 2.6 and 3.75 kHz, voice-coil roll-off 5.8 → 4.5 kHz) | 0.6 / 0 |
+| **SAG** | the supply giving way | a follower of the gained signal's overshoot (`\|v\| − 1` above the rail, 0 under it, `v = x · gain`) that charges toward a rising target with a 5 ms time constant and recovers toward a falling one with 120 ms — keyed on direction, not on the rail (09cceff6); bias `vSag · SAG · 0.45` toward cutoff, a plain offset on the tube's input (`curve(v − bias)`), so it moves the tube's rest point with it (known at V1: "Failure handling"). It acts only once the gained signal crosses the rail, DRIVE ≈ 0.46 on a normalised pad, so at the default DRIVE 0.45 (gain 0.95) the default SAG 0.35 is inert; at DRIVE 1 the overshoot reaches 34 and the bias holds the tube toward cutoff for ~120 ms (a gate item, F2) | 0.35 / 0 |
+| **TONE** | the tone after the tube | 0 a mid scoop (−12 dB around 380 Hz) with the top 6 dB back (a shelf above 3 kHz), 0.5 flat and skipped outright, 1 mids (+6 dB around 650 Hz) and top (+6 dB above 3 kHz) forward; the mid centre slides 380 → 650 Hz with the knob and every gain is a signed distance from 0.5, the cut side twice as steep as the boost side | 0.5 / 0.5 |
+| **CAB** | the speaker | 0 none (the whole network out of circuit); the network fades in over the first quarter of the knob — every gain and weight scales with CAB/0.25 and the voice coil's corner closes from the one-pole's own cap (0.45 × the work rate) toward 5.8 kHz, so CAB 0+ is transparent — and is fully in at 0.25 as a bright open-back combo: cone thump +6 dB at 102 Hz, the open-back notch −6.8 dB at 470 Hz, cone breakup at 2.6 and 3.75 kHz, the voice coil rolling off from 5.5 kHz; growing to a dark closed wall at 1: thump at 78 Hz, the notch filled in, the coil at 4.5 kHz. (The network's 110 Hz, 500 Hz, −9 dB and 5.8 kHz formula ends are its CAB 0 anchors, where it is bypassed.) | 0.6 / 0 |
 
 Landing chains, *shape*, heard at the R1 gate: JANGLE lands at DRIVE 0.25,
 TONE 0.55, CAB 0.35; CHUG at DRIVE 0.85, SAG 0.4, TONE 0.3, CAB 0.95.
@@ -358,10 +370,22 @@ a kit regenerates from the sidecar bit for bit. All additive:
 - **The combs** are bounded fractions of a period at every legal TUNE and
   BLEND; `dp` at TUNE 1 is 0.11, far inside 0.5.
 - **VALVE** is bounded by construction: the tube curve never exceeds 1, sag
-  charges toward a finite target, the DC blocker follows the asymmetry, the
-  normalise-then-restore skips a silent channel rather than dividing by zero,
-  and the zero-stuffed buffer is four times the snip — a 4 s stereo pad is
-  1.4 M floats.
+  charges toward a finite target, the normalise-then-restore returns a wholly
+  silent pad as a copy rather than dividing by zero and a silent channel
+  beside a live one passes through as zeros, and the zero-stuffed buffer is
+  four times the snip — a 4 s stereo pad is 1.4 M floats. The 5 Hz DC blocker
+  takes out the asymmetric curve's own DC; it does not follow the sag.
+  **Known at V1:** the sag bias is a plain offset on the tube's input, so at
+  DRIVE above about 0.46 with SAG above 0 it shifts the tube's rest point and
+  releases over 120 ms, slower than the 5 Hz blocker follows, and a hot pad
+  ends on a decaying DC step. Measured at CAB 0.6 and DRIVE 1: a kick at SAG
+  0.35 ends at 0.047 of its peak and at SAG 1 at 0.036, a snare at SAG 0.35 at
+  0.031 and at SAG 1 at 0.064; at CAB 0 the kick reaches 0.075; `amped`
+  (DRIVE 0.6) ends the kick at 0.0027 (−51 dB). Re-centring the curve about the
+  shifted rest point was tried and withdrawn: it removes the end step but
+  moves the DC to the onset while the hit clips both rails (a kick's first
+  20 ms from +0.20 to +0.52 of its peak). An open item for the V1 gate, to be
+  decided together with the bound on the sag bias (F2).
 - Every macro is coerced to 0..1 at entry, as everywhere.
 
 ## Testing
@@ -389,16 +413,33 @@ it, never loosen one without writing down why.
   its top — the new map is what passes it). Registered as the velocity macro
   only then.
 - **MUTE** shortens (render length at MUTE 1 under half MUTE 0's) and darkens.
-- **VALVE's aliasing floor**: a steady harmonic probe (harmonics of 247 Hz to
-  5 kHz at 1/k, 1.6 s, peak 0.99) through VALVE at DRIVE 1 reads clarity at
-  least 45 dB (spike at 4×: 49.4; at the snip rate: 31.9 — the test fails the
-  native-rate version, which is the point).
+- **VALVE's aliasing floor**: a steady harmonic probe (harmonics of
+  246.94 Hz to 5 kHz at 1/k, 2.0 s so a 65 536-sample window from 0.3 s fits,
+  peak 0.99) through the public `process` at DRIVE 1 with SAG 0, TONE 0.5 and
+  CAB 0 reads clarity at least 45 dB (spike at 4×: 49.4; built: 51.3; read
+  through the default speaker it was 55.1, the coil flattering it by ~4 dB),
+  and the same probe through the test-only native-rate path reads at least
+  6 dB worse (28.8): the snip rate fails, which is the point. The probe stops
+  at 5 kHz: images of brighter content pass the interpolator before the tube
+  at −45 dB (10 kHz) and −31.6 dB (15 kHz), printed and not asserted (open
+  item F1; the measured image table is in the appendix).
 - **VALVE's neutral**: DRIVE 0, SAG 0, TONE 0.5, CAB 0 on a THUMP snare and a
-  kick keeps the magnitude spectrum within 0.5 dB of the input from 40 Hz to
-  16 kHz and the RMS within 0.1 dB (the spike's un-neutral version: a residual
-  2.8 dB *above* the dry signal). Magnitude, not a sample residual: the 4×
-  round trip's filters shift phase near the top of the band without changing
-  what is heard, and a sample residual would fail on that alone.
+  kick keeps each third-octave's share of the 40 Hz–16 kHz energy within
+  0.5 dB of the input's (measured: every band within 0.08 dB; the kick skips
+  8 bands above 1.6 kHz it barely has, the snare none) and the RMS within
+  0.12 dB on the kick (measured 0.0985: −0.005 the round trip, +0.096 the 5 Hz
+  blocker moving which sample is the kick's peak, a quantity that swings
+  ±0.05 dB with THUMP's own macros, so the bound is the measurement plus 20 %
+  rather than the round 0.1) and 0.44 dB on the snare (measured 0.361: the 4×
+  round trip's phase shift near the top of the band lowers the snare's peak
+  0.75 dB and its RMS 0.38 dB, and the peak match lifts the RMS back). Band
+  share, not absolute level and not a sample residual: the round trip shifts
+  phase without changing what is heard, and the single peak-match gain is the
+  RMS clause's to judge. The round trip itself is flat within 0.3 dB from
+  20 Hz to 16 kHz and −2.4 dB at 18 kHz, −10 dB at 20 kHz at 44.1 kHz (Tide's
+  19.5 kHz band-limit twice plus the decimator; the 5 Hz blocker costs
+  −0.26 dB at 20 Hz, −0.07 at 40 Hz), at every DRIVE. (The spike's un-neutral
+  version: a residual 2.8 dB *above* the dry signal.)
 - **The CRUNCH rule**: a kick through VALVE at defaults is still a KICK; a
   snare still a SNARE (spike: both held at DRIVE 0.6).
 - **VALVE's cost** printed per rendered second on every run; the V1 listen
@@ -409,7 +450,11 @@ it, never loosen one without writing down why.
 - `FxTest`'s shared contract covers VALVE by construction (deterministic,
   clean, peak-matched, identical stereo channels intact, empty chain a true
   bypass) because it iterates `FxChain.SECTIONS`.
-- `TreatmentsTest`: `"amped"` exists, sets `valve`, is a bypass at AMT 0.
+- `FxTest` (beside `contoured`'s): `"amped"` exists, sets only `valve`, is a
+  bypass at AMT 0; `TreatmentsTest`'s ordered names list gains `amped`. The
+  chain sets DRIVE 0.6, SAG 0.35, CAB 0.6 and leaves TONE at its default,
+  which is its neutral — a macro set at its neutral is one AMT could never
+  move (`ensembled`'s RATE precedent).
 - MAGNET: deterministic, JSON round trip, unknown macro refused, every corner
   finite and in range, SCRAMBLE bounded, every preset's landing chain carries
   a `valve` section; `DeterminismTest` gains a canary; `PresetsTest` and
@@ -513,3 +558,19 @@ part A (the specification transcribed as `CoilProbe` and measured — four
 grids, 110 pitch readings) and part B (the corrected model as `CoilSpike` —
 seven grids and three extra probes), each with its complete Kotlin so it can
 be re-run. The spike code is not in the build.
+
+**VALVE's upsampler, measured on the built code (44.1 kHz snips, 4×).**
+Zero-stuff ×4 interpolated by `Tide.bandLimit` rejects a tone's first image
+(44 100 − f) by −50.6 dB at 8 kHz, −45.4 at 10 kHz, −40.0 at 12 kHz, −31.6 at
+15 kHz and −21.7 dB at 18 kHz (the TPT SVF's pre-warp beats the analog
+eighth-order Butterworth prediction by 2.5–7.7 dB). Through the tube those
+images intermodulate to in-band products (2f − (44 100 − f): 900 Hz from a
+15 kHz partial, at about −37 dB re the partial at DRIVE 1 and −37 to −39 dB at
+the default DRIVE where it is the dominant in-band artefact on an isolated
+bright tone); on pad material every third-octave from 125 Hz to 20 kHz lands
+within 0.71 dB of a linear-phase reference up leg (THUMP), 0.19 dB (VELVET),
+under 1 dB on a hat-like 8–18 kHz burst. The dominant artefact on bright
+full-scale tones at DRIVE 1 is the tube's own 11th harmonic folding at the 4×
+rate (176 400 − 165 000 = 11.4 kHz at −27 dB) — the 4× ceiling, not the
+upsampler. A second `Tide.bandLimit` pass on the up leg would take the 15 kHz
+image to −63 dB for about +5 ms/s and would not touch the fold; 8× would.

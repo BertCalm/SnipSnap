@@ -473,7 +473,11 @@ stretched head and REVERSE's flip included — sees the pitched sound), EQ
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
 hit's onset, on a pad that was never a synth), SQUASH
-(lookahead compressor: fast clamp is glue, slow clamp is punch), TAPE (the
+(lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
+tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
+giving way under it on loud passages, TONE after the tube, CAB from no
+cabinet to a closed wall — run four times over inside so a hot tube does
+not fold back), TAPE (the
 cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
 physics-lite nod to ChowDSP's AnalogTapeModel), ENSEMBLE (three taps off one
@@ -500,8 +504,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → squash → crunch → ring → dub → vinyl → tape →
-ensemble → phase → echo → spring → motion — owns
+spike → eq → contour → squash → valve → crunch → ring → dub → vinyl →
+tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies

@@ -8,12 +8,15 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → SQUASH → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
  * before phase, because the copies are made of the finished tone and the
  * sweep and the repeats then carry all three.
+ *
+ * valve after squash and before crunch: a compressor feeds an amp, and the
+ * sampler's damage happens to a sound that already existed.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -61,6 +64,7 @@ data class FxChain(
     val swell: Map<String, Float>? = null,
     val contour: Map<String, Float>? = null,
     val ensemble: Map<String, Float>? = null,
+    val valve: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -186,6 +190,7 @@ data class FxChain(
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
+            Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
