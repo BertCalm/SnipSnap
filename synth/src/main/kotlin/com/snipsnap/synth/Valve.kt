@@ -51,8 +51,8 @@ object Valve {
      * Supply sag (shape): a follower whose target is how far the signal goes
      * over the rail (|v| - 1, or 0 under it). It charges toward a higher target
      * with a 5 ms time constant and recovers toward a lower one with a 120 ms
-     * time constant, the same 120 ms whether the lower target is 0 or an
-     * overshoot that is only smaller.
+     * time constant (time constants, not completion times), the same 120 ms
+     * whether the lower target is 0 or an overshoot that is only smaller.
      */
     private const val SAG_ATTACK_SECONDS = 0.005f
     private const val SAG_RELEASE_SECONDS = 0.120f

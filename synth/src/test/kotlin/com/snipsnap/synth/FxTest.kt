@@ -14,6 +14,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -702,7 +703,11 @@ class FxTest {
 
         val with = FxChain(valve = Valve.defaults())
         assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
-        assertTrue(!with.process(snare).samples.contentEquals(snare.samples), "the valve section is a no-op in the chain")
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the valve section is a no-op in the chain")
+        // Only a RACK section is set: no TRANSPORT or ARRIVAL stage runs and capTail returns a
+        // same-length output untouched, so the chain must equal the module exactly.
+        assertContentEquals(Valve.process(snare, Valve.defaults()).samples, chained.samples, "the chain's valve row does not run Valve.process")
     }
 
     @Test
