@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * Renders VALVE's V1 listening clips
@@ -31,12 +32,15 @@ object ValveAuditionGenerator {
             "CHOIR" to Vox.render(VoxVoice.CHOIR),
         )
         val entries = mutableListOf<String>()
-        // AuditionLevel levels a mono buffer; VOX's CHOIR renders in stereo,
-        // so a stereo clip is folded by averaging (never summing) first.
+        // AuditionLevel meters a stereo clip on its mono fold and keeps both
+        // channels, so the fold here is not for levelling: the listening page
+        // and the phone play mono, so CHOIR is folded (averaged, never summed)
+        // to what the listener would hear.
         fun mono(s: Snip): Snip =
             if (s.channels == 1) s
             else Snip(FloatArray(s.frameCount) { f -> 0.5f * (s.samples[f * 2] + s.samples[f * 2 + 1]) }, 1, s.sampleRate)
         fun write(source: String, id: String, label: String, snip: Snip) {
+            check(listOf(source, id, label).none { s -> s.any { it == '"' || it == '\\' || it < ' ' } }) { "manifest field needs escaping: $source / $id / $label" }
             val dir = File(root, source).apply { mkdirs() }
             WavWriter.write(File(dir, "$id.wav"), AuditionLevel.level(mono(snip)), WavWriter.BitDepth.PCM_16)
             entries += """{"source":"$source","id":"$id","file":"$source/$id.wav","label":"$label"}"""
@@ -45,15 +49,16 @@ object ValveAuditionGenerator {
             write(name, "dry", "$name DRY", dry)
             for (drive in DRIVES) {
                 for (cab in CABS) {
-                    val id = "drive_%02d_cab_%02d".format((drive * 10).toInt(), (cab * 10).toInt())
-                    write(name, id, "$name DRIVE $drive CAB $cab", Valve.process(dry, mapOf("DRIVE" to drive, "CAB" to cab)))
+                    val id = "drive_%02d_cab_%02d".format((drive * 10).roundToInt(), (cab * 10).roundToInt())
+                    write(name, id, "$name DRIVE ${"%.1f".format(drive)} CAB ${"%.1f".format(cab)}", Valve.process(dry, mapOf("DRIVE" to drive, "CAB" to cab)))
                 }
             }
         }
         val snare = sources.getValue("SNARE")
         val hot = mapOf("DRIVE" to 1f, "CAB" to 0.5f)
-        write("FOLDBACK", "snare_1x", "SNARE DRIVE 1 AT THE SNIP RATE", Valve.process(snare, hot, oversample = false))
-        write("FOLDBACK", "snare_4x", "SNARE DRIVE 1 AT 4X", Valve.process(snare, hot, oversample = true))
+        write("FOLDBACK", "snare_1x", "SNARE DRIVE 1.0 CAB 0.5 - FOLD-BACK A/B: AT THE SNIP RATE (1X)", Valve.process(snare, hot, oversample = false))
+        write("FOLDBACK", "snare_4x", "SNARE DRIVE 1.0 CAB 0.5 - FOLD-BACK A/B: AT 4X", Valve.process(snare, hot, oversample = true))
+        check(entries.size == 42) { "expected 42 clips (4 sources x 10 + 2 fold-back), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         println("valve audition: ${entries.size} clips under ${root.absolutePath}")
     }

@@ -474,9 +474,10 @@ plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
 with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
 hit's onset, on a pad that was never a synth), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
-tube amp and its speaker: DRIVE into a curve that sags on loud passages,
-TONE after it, CAB from no cabinet to a closed wall — run four times over
-inside so a hot tube does not fold back), TAPE (the
+tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
+giving way under it on loud passages, TONE after the tube, CAB from no
+cabinet to a closed wall — run four times over inside so a hot tube does
+not fold back), TAPE (the
 cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
 physics-lite nod to ChowDSP's AnalogTapeModel), ENSEMBLE (three taps off one

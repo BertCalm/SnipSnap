@@ -27,8 +27,13 @@ import kotlin.random.Random
  * harmonics back into the audible band: the Phase-0 spike measured a steady
  * 247 Hz probe at DRIVE 1 with energy between harmonics only 31.9 dB down at
  * 1x against 49.4 dB at 4x (an 8x reference read 50.9). The round trip is
- * zero-stuffing interpolated by [Tide.bandLimit], never the general resampler,
- * which cost 72 ms per rendered second on its own.
+ * zero-stuffing interpolated by [Tide.bandLimit] on the way up (never the
+ * general resampler there, which cost 72 ms per rendered second on its own)
+ * and [Dsp.decimate] on the way down, the melodic engines' own - `Resampler`'s
+ * 2:1 fast path twice. The band-limit's 19.5 kHz corner is absolute, so the
+ * round trip assumes the rack's 44.1 kHz snips: below about 40 kHz the
+ * zero-stuffing images would enter the tube nearly unattenuated, and a 48 kHz
+ * snip loses its 19-24 kHz.
  *
  * Every number marked shape below is a listening value from the specification
  * the owner attached, kept until the V1 listen moves it.
@@ -53,6 +58,14 @@ object Valve {
      * with a 5 ms time constant and recovers toward a lower one with a 120 ms
      * time constant (time constants, not completion times), the same 120 ms
      * whether the lower target is 0 or an overshoot that is only smaller.
+     *
+     * Known at V1, open: the bias is a plain offset on the tube's input, so
+     * above the rail (DRIVE above about 0.46 on a normalised pad, SAG above 0)
+     * it shifts the tube's rest point and releases over 120 ms, slower than
+     * the 5 Hz blocker follows, and a hot pad ends on a decaying DC step - a
+     * kick at DRIVE 1 / SAG 0.35 on 0.047 of its peak, `amped` on 0.0027. It
+     * is for the V1 gate, with the bound on the sag bias (the spec's
+     * "Failure handling").
      */
     private const val SAG_ATTACK_SECONDS = 0.005f
     private const val SAG_RELEASE_SECONDS = 0.120f
@@ -154,10 +167,12 @@ object Valve {
     }
 
     /**
-     * The tone after the tube: 0 a mid scoop (-12 dB, around 380 Hz), 0.5
-     * flat, 1 mids (+6 dB, around 650 Hz) and top (+6 dB above 3 kHz)
-     * forward. Every gain is a signed distance from 0.5, so 0.5 is skipped
-     * outright rather than filtered at 0 dB (shape).
+     * The tone after the tube: 0 a mid scoop (-12 dB around 380 Hz) with the
+     * top 6 dB back (a shelf above 3 kHz), 0.5 flat and skipped outright
+     * rather than filtered at 0 dB, 1 mids (+6 dB around 650 Hz) and top
+     * (+6 dB above 3 kHz) forward. The mid centre slides 380 -> 650 Hz with
+     * the knob and every gain is a signed distance from 0.5, the cut side
+     * twice as steep as the boost side (shape).
      */
     internal fun tone(buf: FloatArray, tone: Float, rate: Int) {
         val d = tone - 0.5f
