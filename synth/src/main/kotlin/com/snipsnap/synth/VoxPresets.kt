@@ -3,7 +3,7 @@ package com.snipsnap.synth
 /**
  * VOX's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
- * Twelve presets per voice (seven voices, eighty-four total). The singers spread across
+ * Twelve presets per voice (eight voices, ninety-six total). The singers spread across
  * TUNE/VOWEL/BREATH/DECAY, and since round 1 SIZE (LOW and HIGH throats)
  * and GLIDE (SPEAK BOX's "wah", HIGH SIGH and LOW MOAN sighing toward
  * "ooh"). VOWEL walks the A→E→I→O→U morph `Vox.kt` defines; BREATH
@@ -13,7 +13,9 @@ package com.snipsnap.synth
  * hold, short growls and whistle blips to hit, and two yodels. WRAITH's
  * walk its six words as hits, chops in key and slowed pads. SWARM's are
  * crowd shouts to hit, chants and cheers, held stadium vowels, murmuring
- * and hushed rooms as pads, and stutters.
+ * and hushed rooms as pads, and stutters. SPEAK's count across its eight
+ * words: plain counts, the speech chip and the person, shouts and a hush,
+ * a giant and a child, stretched chops and stutters.
  * Authored from that DSP, not by ear, and checked by [VoxPresetsTest]'s
  * sanity/round-trip/spread suite.
  */
@@ -30,6 +32,7 @@ object VoxPresets {
         VoxVoice.THROAT -> throatPresets
         VoxVoice.WRAITH -> wraithPresets
         VoxVoice.SWARM -> swarmPresets
+        VoxVoice.SPEAK -> speakPresets
     }
 
     fun all(): List<VoxPatch> = VoxVoice.entries.flatMap { forVoice(it) }
@@ -149,5 +152,26 @@ object VoxPresets {
         p(VoxVoice.SWARM, "HUSHED ROOM", "CROWD" to 0.9f, "LOOSE" to 1f, "EFFORT" to 0f, "DECAY" to 1f),
         p(VoxVoice.SWARM, "SMALL TALK", "CROWD" to 0.2f, "LOOSE" to 1f, "EFFORT" to 0.45f, "DECAY" to 0.9f),
         p(VoxVoice.SWARM, "STUTTER HEY", "WORD" to say(VoxSwarm.Word.HEY), "CROWD" to 0.9f, "LOOSE" to 0f, "EFFORT" to 0.8f, "DECAY" to 0.25f, "STUTTER" to 0.75f),
+    )
+
+    /** WORD's position for one of SPEAK's numbers. */
+    private fun count(w: VoxSpeak.Word) = w.ordinal / (VoxSpeak.Word.entries.size - 1f)
+
+    /** STUTTER's position for this many false starts. */
+    private fun stumbles(n: Int) = n / 3f
+
+    private val speakPresets = listOf(
+        p(VoxVoice.SPEAK, "COUNT ONE", "WORD" to count(VoxSpeak.Word.ONE), "HUMAN" to 0.6f),
+        p(VoxVoice.SPEAK, "CHIP ONE", "WORD" to count(VoxSpeak.Word.ONE), "HUMAN" to 0f),
+        p(VoxVoice.SPEAK, "ROBOT FOUR", "TUNE" to 0.42f, "WORD" to count(VoxSpeak.Word.FOUR), "HUMAN" to 0f, "EFFORT" to 0.7f),
+        p(VoxVoice.SPEAK, "DANCE FIVE", "WORD" to count(VoxSpeak.Word.FIVE), "HUMAN" to 0.85f, "EFFORT" to 0.9f),
+        p(VoxVoice.SPEAK, "SHOUT EIGHT", "WORD" to count(VoxSpeak.Word.EIGHT), "HUMAN" to 0.8f, "EFFORT" to 1f),
+        p(VoxVoice.SPEAK, "HUSHED TWO", "WORD" to count(VoxSpeak.Word.TWO), "HUMAN" to 0.8f, "EFFORT" to 0f),
+        p(VoxVoice.SPEAK, "GIANT THREE", "TUNE" to 0.3f, "WORD" to count(VoxSpeak.Word.THREE), "HUMAN" to 0.6f, "SIZE" to 1f),
+        p(VoxVoice.SPEAK, "TINY SIX", "TUNE" to 0.75f, "WORD" to count(VoxSpeak.Word.SIX), "HUMAN" to 0.7f, "SIZE" to 0.15f),
+        p(VoxVoice.SPEAK, "FIIIVE CHOP", "WORD" to count(VoxSpeak.Word.FIVE), "HUMAN" to 0.3f, "DECAY" to 0.8f),
+        p(VoxVoice.SPEAK, "SEVEN HOLD", "WORD" to count(VoxSpeak.Word.SEVEN), "HUMAN" to 0f, "DECAY" to 1f),
+        p(VoxVoice.SPEAK, "STUTTER SIX", "WORD" to count(VoxSpeak.Word.SIX), "HUMAN" to 0.5f, "STUTTER" to stumbles(3)),
+        p(VoxVoice.SPEAK, "TRIPLE TWO", "WORD" to count(VoxSpeak.Word.TWO), "HUMAN" to 0.2f, "EFFORT" to 0.8f, "STUTTER" to stumbles(2)),
     )
 }

@@ -7,6 +7,7 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -121,6 +122,28 @@ class SilkTest {
     }
 
     /**
+     * PLUCK's own 5-cent rule, generalised, measured from 150 ms on (spec,
+     * "Testing", item 1: "SHAMISEN is measured after its built-in glide
+     * settles (from 150 ms)") - Task 2's own glide has fully settled onto
+     * the plucked degree by its own end (100 ms), so this is 50 ms of
+     * margin, not a tight bound.
+     */
+    @Test
+    fun `SHAMISEN is in tune at every degree of MIYAKO_BUSHI`() {
+        val root = Silk.rootFor(SilkVoice.SHAMISEN)
+        val scale = SilkScales.MIYAKO_BUSHI
+        val size = scale.cents.size
+        for (degree in 0..2 * size) {
+            val tune = degree / (2f * size)
+            val want = SilkScales.frequencyFor(root, scale, tune)
+            val snip = Silk.render(SilkVoice.SHAMISEN, mapOf("TUNE" to tune, "SAWARI" to 0f, "SLAP" to 0f))
+            val measured = measuredHz(snip, want, fromSec = 0.15f)
+            val off = cents(measured, want.toDouble())
+            assertTrue(abs(off) <= 5.0, "degree $degree (tune=$tune): wanted $want Hz, measured $measured Hz ($off cents)")
+        }
+    }
+
+    /**
      * PRESS (spec, "GUZHENG"): at each of its four snapped stops, the
      * pitch track starts on the plucked degree and settles 0/100/200/300
      * cents above it - measured well after the 0.12 s rise
@@ -139,6 +162,31 @@ class SilkTest {
             val off = cents(measured, target.toDouble())
             assertTrue(abs(off) <= 5.0, "PRESS=$press: wanted $target Hz (+$expectCents c), measured $measured Hz ($off cents)")
         }
+    }
+
+    /**
+     * SILK Phase 3, Task 2 (SHAMISEN's built-in glide): `Silk.shamisenLoop`
+     * tested directly - the SHAMISEN voice itself doesn't exist yet
+     * (Task 4), the same "internal fun, tested ahead of the full voice"
+     * precedent `Silk.washModesFor` set in Phase 2. G1: "starts about
+     * 3.5 % sharp ... falls to about 1.5 % within 100 ms" - the pitch
+     * track should read clearly sharp early on and be settled onto the
+     * plucked degree (not G1's own further ~0.8 % drift - see
+     * `SHAMISEN_GLIDE_SECONDS`'s own KDoc for why) by 150 ms (spec,
+     * "Testing", item 1).
+     */
+    @Test
+    fun `SHAMISEN's built-in glide reads sharp early and settles onto the degree`() {
+        val freq = 130.81f // C3, SHAMISEN's own root
+        val damping = Strings.damping(0.3f, 7000f)
+        val buf = Silk.shamisenLoop(
+            freq, pick = 1f, seconds = 0.6f, damping = damping, pickHz = 9000f, position = 1f / 6f,
+            jawari = 0f, dispersion = null, rate = Dsp.RATE, seed = 5,
+        )
+        val early = FineTuning.measuredHz(buf, Dsp.RATE, wantHz = freq * 1.03f, fromSec = 0.005f, bodySeconds = 0.03f)
+        val late = FineTuning.measuredHz(buf, Dsp.RATE, wantHz = freq, fromSec = 0.15f, bodySeconds = 0.3f)
+        assertTrue(early > freq * 1.005, "early in the glide ($early Hz) should still read clearly sharp of the target ($freq Hz)")
+        assertTrue(abs(cents(late.toDouble(), freq.toDouble())) <= 5.0, "after the glide settles: wanted $freq Hz, measured $late Hz")
     }
 
     /**
@@ -288,5 +336,59 @@ class SilkTest {
             val off = FineTuning.cents(measured, hz.toDouble())
             assertTrue(abs(off) <= 20.0, "expected a WASH peak near $hz Hz, measured $measured Hz ($off cents)")
         }
+    }
+
+    /**
+     * SILK Phase 3, Task 3 (SHAMISEN's SLAP): checked directly on
+     * [Silk.withSlap] - the same "internal fun, tested ahead of the full
+     * voice" precedent as [Silk.washModesFor] above. SLAP 0 is the plain
+     * string, byte for byte (every character macro's own "0 is the input"
+     * contract). Past `withSlap`'s own drive length (the burst plus the
+     * skin table's own pad), its wet contribution is exactly zero by
+     * construction, not merely decayed - so the render is byte-identical
+     * to the dry string there too, a stronger and cheaper check than a
+     * tail-RMS comparison.
+     */
+    @Test
+    fun `SLAP 0 is the plain string, and past its own burst SLAP 1 changes nothing`() {
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.3f, 7000f)
+        val string = Strings.pluck(130.81f, 0.6f, damping, 9000f, seed = 5, rate = rate)
+
+        val dry = Silk.withSlap(string, slap = 0f, rate = rate, seed = 9)
+        assertContentEquals(string, dry, "SLAP 0 should return the string untouched")
+
+        val wet = Silk.withSlap(string, slap = 1f, rate = rate, seed = 9)
+        val pastBurst = (0.2f * rate).toInt() // well past the ~20 ms burst plus the skin table's own pad
+        for (i in pastBurst until string.size) {
+            assertEquals(string[i], wet[i], "past the burst, SLAP should contribute nothing at sample $i")
+        }
+    }
+
+    /**
+     * The spec's own claim (spec, "Testing": "the first 20 ms gains
+     * broadband energy with SLAP; the tail does not").
+     */
+    @Test
+    fun `SLAP gains broadband energy in its first 20 ms, and nowhere past it`() {
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.3f, 7000f)
+        val string = Strings.pluck(130.81f, 0.6f, damping, 9000f, seed = 5, rate = rate)
+        val wet = Silk.withSlap(string, slap = 1f, rate = rate, seed = 9)
+
+        val window = (0.02f * rate).toInt()
+        fun rms(buf: FloatArray, from: Int, len: Int): Double {
+            var acc = 0.0
+            for (i in from until from + len) acc += buf[i].toDouble() * buf[i]
+            return kotlin.math.sqrt(acc / len)
+        }
+        val dryOnset = rms(string, 0, window)
+        val wetOnset = rms(wet, 0, window)
+        assertTrue(wetOnset > dryOnset, "the first 20 ms should gain broadband energy with SLAP: dry=$dryOnset wet=$wetOnset")
+
+        val tailFrom = (0.3f * rate).toInt()
+        val dryTail = rms(string, tailFrom, window)
+        val wetTail = rms(wet, tailFrom, window)
+        assertEquals(dryTail, wetTail, "well past the burst, SLAP should not still be adding energy")
     }
 }
