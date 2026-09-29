@@ -62,3 +62,7 @@ testkit/fork-audition/
 # The TERRA audition clips, manifest and page, rendered by :synth:generateTerraAudition
 # and published as the listening artifact; never committed.
 testkit/terra-audition/
+
+# The ENSEMBLE gate clips, manifest and page, rendered by :synth:generateEnsembleAudition
+# and published as the listening artifact; never committed.
+testkit/ensemble-audition/

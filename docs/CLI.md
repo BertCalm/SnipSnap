@@ -351,8 +351,11 @@ the same exemption `ghosted` carries), `vinyl` (the record under the
 hit: rumble, groove hiss and the crackle of every play before this one,
 scaled to the hit's own peak and seeded once per pad), `phased` (four
 allpasses swept by one slow sine and summed back with the dry, the
-notches sliding up and down the spectrum) and `pitched` (the transport
-itself: the same hit, played slower or faster, snapped to semitones).
+notches sliding up and down the spectrum), `pitched` (the transport
+itself: the same hit, played slower or faster, snapped to semitones),
+`contoured` (the ladder's own filter contour, swept from the hit's onset)
+and `ensembled` (three taps off the finished tone, swimming — the string
+machine's back half; its WIDTH widens a mono pad's WAV to stereo).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
@@ -360,8 +363,9 @@ phone the same characters sit on the PAD SHEET's TREATMENT card, six
 rows grouped by what an effect *does* rather than which family implements
 it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
 the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
-character once it is itself (PUNCH · RING · DUB · VINYL · PHASE), row
-four what happens to it in time (SLAP · WASH · ROLL · GATE), row five
+character once it is itself (PUNCH · RING · DUB · VINYL · PHASE ·
+CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
+GATE · ENSEMBLE), row five
 the machine's own transport (FLIP · STOP · START · PITCH), and row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
