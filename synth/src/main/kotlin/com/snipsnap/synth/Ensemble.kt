@@ -208,7 +208,7 @@ object Ensemble {
         val inChannels = snip.channels
         val wide = width > WIDTH_OFF
         // The one place a section changes the channel count: a mono pad at
-        // WIDTH > 0 comes out as the pair. A stereo pad keeps its two.
+        // WIDTH above WIDTH_OFF comes out as the pair. A stereo pad keeps its two.
         val widen = wide && inChannels == 1
         val outChannels = if (widen) 2 else inChannels
         val lineLen = (LINE_SECONDS * rate).toInt()
