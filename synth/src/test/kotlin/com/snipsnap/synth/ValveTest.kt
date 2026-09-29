@@ -166,13 +166,18 @@ class ValveTest {
     @Test
     fun `4x keeps the fold-back under the TIDE bar where the snip rate cannot`() {
         // Spike, part B, Extra A: 247 Hz at DRIVE 1 read 49.4 dB at 4x, 31.9 at 1x.
+        // SAG, TONE and CAB at their neutrals so the bar is read on the tube alone:
+        // through the default speaker (CAB 0.6, coil 5.0 kHz) the read was 55.1 dB at
+        // 4x / 32.9 at 1x, the coil stripping high spurs and flattering it by ~4 dB;
+        // pinned: 51.3 dB at 4x, 28.8 at 1x.
         val f0 = 246.94f
         val p = probe(f0, 2.0f)
         val start = (0.3f * rate).toInt()
+        val hot = mapOf("DRIVE" to 1f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
         // The 4x side goes through the public entry point, so the test also fails
         // if the default path stops oversampling.
-        val four = harmonicClarity(Valve.process(p, mapOf("DRIVE" to 1f)).samples, rate, f0, start)
-        val one = harmonicClarity(Valve.process(p, mapOf("DRIVE" to 1f), oversample = false).samples, rate, f0, start)
+        val four = harmonicClarity(Valve.process(p, hot).samples, rate, f0, start)
+        val one = harmonicClarity(Valve.process(p, hot, oversample = false).samples, rate, f0, start)
         println("VALVE aliasing at 247 Hz, DRIVE 1: 4x ${"%.1f".format(four)} dB, 1x ${"%.1f".format(one)} dB")
         assertTrue(four >= 45.0, "energy between harmonics is only ${"%.1f".format(four)} dB down at 4x")
         assertTrue(one < four - 6.0, "the probe cannot see fold-back: 1x ${"%.1f".format(one)} vs 4x ${"%.1f".format(four)}")
