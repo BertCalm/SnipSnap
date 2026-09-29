@@ -24,16 +24,18 @@ internal object AuditionLevel {
      * over silence it doesn't have and a long ring's energy over tail it
      * does, so at equal loudest-moment level a longer clip reads quieter by
      * whole-file RMS and gets over-boosted here; clip length must not be
-     * what decides the A/B. A peak guard keeps the file in range.
+     * what decides the A/B. A peak guard keeps the file in range. A stereo
+     * clip is metered on its fold, as [Loudness.of] always does, and keeps
+     * its two channels — the same gain on both, so the image is untouched.
      */
     fun level(snip: Snip): Snip {
         val out = snip.samples.copyOf()
-        val loudness = Loudness.of(Snip(out, channels = 1, sampleRate = snip.sampleRate))
+        val loudness = Loudness.of(snip)
         var g = AUDITION_LEVEL / loudness.coerceAtLeast(1e-9f)
         var peak = 0f
         for (v in out) peak = maxOf(peak, abs(v))
         if (peak * g > 0.99f) g = 0.99f / peak
         for (i in out.indices) out[i] *= g
-        return Snip(out, channels = 1, sampleRate = snip.sampleRate)
+        return Snip(out, channels = snip.channels, sampleRate = snip.sampleRate)
     }
 }

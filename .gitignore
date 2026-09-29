@@ -63,6 +63,10 @@ testkit/fork-audition/
 # and published as the listening artifact; never committed.
 testkit/terra-audition/
 
+# The ENSEMBLE gate clips, manifest and page, rendered by :synth:generateEnsembleAudition
+# and published as the listening artifact; never committed.
+testkit/ensemble-audition/
+
 # The BORE audition clips, manifest and page, rendered by :synth:generateBoreAudition
 # and published as the listening artifact; never committed.
 testkit/bore-audition/
