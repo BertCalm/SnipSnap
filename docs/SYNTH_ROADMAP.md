@@ -269,7 +269,7 @@ What follows from it:
 | S15 | **Phase 1a shipped** — SILK's string toolkit: PLUCK's Karplus-Strong loop lifted into `Strings.kt` (the tuning budget, the pick exciter, a per-sample `Loop`, the decay-following trim, the body drive) with no change to a single PLUCK sample — pinned render hashes per voice, and a frozen copy of the old loop matched sample for sample over 384 cases. SILK itself (OUD, GUZHENG, SANTUR, SHAMISEN; SCALE and INFLECT) is Phases 1b–4 — design in `docs/superpowers/specs/2026-09-27-silk-string-engine-design.md`, research in `docs/superpowers/plans/2026-09-27-silk-research.md`. **Note (2026-09-28):** the frozen copy is the pre-wrap PLUCK loop specifically — `Pluck.kt`'s own `ks` diverged from it the same day, on a parallel branch, when SITAR's jawari became the wrap (S13); `Strings.pluck`'s `jawari` is still the old soft-bend limiter. `Pluck.kt` intentionally does not call into `Strings` yet as a result — reconciling the two is a follow-on, not resolved here | S3.5 (PLUCK) |
 | S16 | **Phase 1b shipped** — SILK's SCALE and INFLECT (fifteen scale rows, TUNE walking degrees, a bounded centred cents nudge), `Strings.Dispersion` (the corrected Rauhala & Välimäki stiffness allpass), `Strings.Course` (N detuned loops), and `Strings.Loop.retune` (a pitch envelope carrying allpass/filter state through), plus its first two voices: OUD (course, slide, Erkut's two-mode body) and GUZHENG (the pressed semitone bend via retune; its own stiffness dispersion is wired through but, at GUZHENG's actual B, measures too weak to move a partial — a real, disclosed limitation, not a bug, left for a follow-on). Registered through `Patches.kt`'s JSON dispatch and `Velocity.kt`'s macro/brightness lookup, with canary coverage in `DeterminismTest`/`PadRecipeTest`/`VelocityGrooveShuffleTest`; `SynthScreen.kt`'s engine picker and `SilkPresets.kt` are deferred, the same as shipped TERRA (absent from `SynthScreen.kt`) and GLINT/TERRA (absent from `Presets.kt`) already are, and presets are Phase 4's own job regardless, once a voice is proven rather than authored blind. Both voices classify PERC by default (GUZHENG may also read SNARE) — a plucked string's own energy never crosses the classifier's bass-dominant gate, the same reason PLUCK's own defaults read PERC rather than TONAL. PLUCK's two Phase 1a proofs (the pinned renders, the frozen-copy grid) still hold. SANTUR and SHAMISEN are Phases 2–3 | S15 (SILK Phase 1a) |
 | S17 | **Phase 2 shipped** — SANTUR, a four-course mallet-driven voice: `Strings.course` and `Strings.pluck` both take a pluggable `Exciter` now (the burst that drives a loop is a parameter, not a hardcoded call), and SANTUR's own `Strings.mallet` is a raised-cosine pulse, not a pick burst, its onset width set from hardness the same way a piano hammer's own contact time sets its brightness (Askenfelt & Jansson's proxy, cited in the spec); the comb that shapes strike position (`positionComb`) is shared code, pulled out of the old pick-only path rather than duplicated. SANTUR's stiffness is fixed and sourced (`SANTUR_B = 3.1e-4`), not a knob, and its WASH is a sympathetic resonator bank built fresh per render from the current SCALE's own degrees across three octaves (`Silk.washModesFor`), tuned to the *un-inflected* table as the spec requires and deliberately deduplicated at the octave seams (a naive build was tried and shown, by a real failing test, to double-book a resonator at every seam; the shipped version does not). Two findings are disclosed rather than papered over: `Strings.course`'s per-loop feedback step, which the Phase 1b postmortem blamed for a multi-cent OUD detuning, could not be reproduced at its original value in either an excitation-isolated or a full end-to-end test — the step is shipped smaller anyway, as a costless precaution, but the real Phase 1b bug's cause is still open, and most likely lives in the U6 oversample/decimate path rather than in `course` itself; and SANTUR's own sourced B, like GUZHENG's in S16, measures too weak in the actual render to produce the partial-8 stretch its own physics predicts — the same disclosed limitation, now confirmed at a second, larger B. Registered through `Patches.kt`/`Velocity.kt` and a `DeterminismTest` canary; `PadRecipeTest.onePatchPerEngine()` and `VelocityGrooveShuffleTest`'s brightness list are genuinely one-per-*category* lists (GUZHENG, a fully shipped and macro-distinct S16 voice, was never added to either) and were deliberately left alone rather than padded with a redundant entry. `SynthScreen.kt` and `SilkPresets.kt` stay deferred, same as S16. The full render chain was verified by the test suite only — this sandbox cannot play audio, so SANTUR has not yet been listened to by ear, the same gate S16 and several other rows above flag open. SHAMISEN is Phase 3 | S16 (SILK Phase 1b) |
-| S11 | **Built, rounds 1-3** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER) — under S11 below | S3.7 + U6 |
+| S11 | **Built, rounds 1-4** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER); round 4's SPEAK (a talking voice counting one to eight, speech chip to person) — under S11 below | S3.7 + U6 |
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -1686,3 +1686,57 @@ held stadium vowels, murmuring and hushed rooms, and a stutter.
 
 That completes round 3, and with it S11: three rounds, prototyped and
 auditioned by ear before each was built.
+
+### Round 4, SPEAK as built — 2026-09-29
+
+Asked for after round 3: a voice that says short real words more
+clearly than WRAITH's and SWARM's abstract ones. The answers that shaped
+it: counting words; one knob from a talking machine to a person; for
+short pad hits and pitched chops both.
+
+**SPEAK** (`VoxSpeak`): TUNE, WORD, HUMAN, DECAY, SIZE, EFFORT, STUTTER.
+A small formant speech synthesizer in Klatt's mould: the buzz and a
+breath through five resonances in a chain (so a vowel's formants keep
+their natural balance), a separate hiss for s, f, th and v, short
+place-shaped bursts for t and k, a nasal pole and zero for n. Each word
+is a script of mouth targets. ONSET's "no pops" lesson carried over:
+every noise is set against the vowel's own level, not a fixed one.
+Mono; TUNE runs C2 to C4, its middle a man's talking pitch.
+
+- **WORD**: one to eight, for count-ins and "five, six, seven, eight".
+  All eight were heard clear at the first audition.
+- **HUMAN**. The first audition heard the ends "fairly similar": 4.3-4.7
+  on the difference measure, just over its noise floor, because pitch
+  movement and jitter barely move a long-term spectrum. The machine
+  became an 80s speech chip, a raw pulse bright to the top, its mouth
+  jumping every 22 ms, its sound held at 10 kHz and 48 levels: 8.3-10.7
+  from the person, the middle halfway (5.4-6.7 and 4.8-5.1) once the
+  tone was set to turn human later than the pitch does. The person's
+  pitch moves through the word (measured 5.5 semitones on "one"),
+  wanders and jitters, and the buzz rounds and breathes. Kept as heard.
+- **DECAY** stretches the vowels, never the consonants: "fiiive" as a
+  chop, about a second at most. Every word files PERC or SNARE at every
+  DECAY: SPEAK is hits and chops, not pads.
+- **SIZE**, child to giant, the same direction as VOX's. The giant at
+  VOX's own reach (formants to 0.47) was heard "muffled rather than
+  resonating": 8 dB under the normal voice over 2 kHz. Three takes were
+  auditioned; the pick stops the formants at 0.7, rings them on half the
+  bandwidth and puts a light chest resonance under them (4.8 dB under,
+  measured on "one"). The hisses barely move, so a big mouth still says
+  "s".
+- **EFFORT**, hushed, talking, shouting, with **INFLECT folded in**:
+  four knobs were asked for (SIZE, EFFORT, STUTTER, INFLECT) and the
+  budget has room for three. A calm word lifts and falls like a
+  statement; a shout opens the jaw, brightens the buzz and climbs
+  through the word like "EIGHT!". The machine stays on the note at any
+  effort, so a chop stays in key. Hushed keeps a voice under the breath,
+  SWARM's lesson.
+- **STUTTER**, up to three false starts. Heard slow twice: first at the
+  word's own pace (0.31 s a false start), then at 60% of it (0.18 s),
+  when "eight" sounded right and the hissing openings of five, six and
+  seven still dragged. Each false start is now capped at eight's length:
+  0.107-0.110 s on every word.
+
+Twelve presets: plain counts from the chip and the person, a robot, two
+shouts and a hush, a giant and a child, a stretched chop and a held
+word, two stutters. The longest render takes about 60 ms.

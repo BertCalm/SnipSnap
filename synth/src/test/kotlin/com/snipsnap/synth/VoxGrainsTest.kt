@@ -95,9 +95,10 @@ class VoxGrainsTest {
         // at round 3, 18 LOOP, 11 PERC, 1 SNARE, its low growls never a kick;
         // WRAITH 14 LOOP, 9 PERC, 6 SNARE, 1 TONAL; SWARM 16 LOOP, 9 PERC, 5
         // SNARE, once its first mouth was kept on time (two came back UNKNOWN
-        // before: two or three late talkers left the classifier's 93 ms silent).
+        // before: two or three late talkers left the classifier's 93 ms silent);
+        // SPEAK 19 PERC, 8 SNARE, 3 CLAP, every word a hit.
         // BEATBOX is a drum kit, where a kick is the point: its own test below.
-        for (voice in listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST, VoxVoice.THROAT, VoxVoice.WRAITH, VoxVoice.SWARM)) {
+        for (voice in listOf(VoxVoice.CHOIR, VoxVoice.ROBOT, VoxVoice.GHOST, VoxVoice.THROAT, VoxVoice.WRAITH, VoxVoice.SWARM, VoxVoice.SPEAK)) {
             repeat(30) { seed ->
                 val c = Classifier.classify(Vox.render(voice, Vox.scramble(voice, Random(seed))))
                 assertTrue(c.drumClass != DrumClass.KICK && c.drumClass != DrumClass.UNKNOWN, "$voice roll $seed read ${c.drumClass}")
@@ -393,7 +394,7 @@ class VoxGrainsTest {
         for (h in listOf(VoxBeatbox.Hit.TS, VoxBeatbox.Hit.T)) assertEquals(DrumClass.HAT_CLOSED, cls(h), "$h")
         assertEquals(DrumClass.HAT_OPEN, cls(VoxBeatbox.Hit.TSS))
         assertEquals(DrumClass.PERC, cls(VoxBeatbox.Hit.RIM))
-        for (voice in singers + VoxVoice.THROAT + VoxVoice.WRAITH + VoxVoice.SWARM) assertEquals(DrumClass.TONAL, Vox.drumClassFor(voice))
+        for (voice in singers + VoxVoice.THROAT + VoxVoice.WRAITH + VoxVoice.SWARM + VoxVoice.SPEAK) assertEquals(DrumClass.TONAL, Vox.drumClassFor(voice))
         // Every hit reachable, in order, from HIT's travel.
         assertEquals(VoxBeatbox.Hit.entries, (0..7).map { VoxBeatbox.hitFor(it / 7f) })
     }
@@ -773,6 +774,127 @@ class VoxGrainsTest {
             assertTrue(c in setOf(DrumClass.PERC, DrumClass.SNARE), "SWARM at DECAY $decay read as $c")
         }
         assertEquals(DrumClass.LOOP, Classifier.classify(swarm("DECAY" to 1f)).drumClass)
+    }
+
+    // ---------- VOX round 4: SPEAK ----------
+
+    private fun speak(vararg macros: Pair<String, Float>) = Vox.render(VoxVoice.SPEAK, macros.toMap())
+
+    private fun count(word: VoxSpeak.Word) = word.ordinal / (VoxSpeak.Word.entries.size - 1f)
+
+    /** Pitch in cents from [note], every 30 ms where the detector is sure. */
+    private fun centsAlong(s: Snip, note: Float, sure: Float = 0.8f): List<Float> {
+        val out = mutableListOf<Float>()
+        var t = 0f
+        while (t + 0.06f < s.durationSeconds) {
+            Pitch.detect(s, fromSec = t, windowSec = 0.06f)?.let { if (it.confidence > sure) out += 1200f * kotlin.math.log2(it.hz / note) }
+            t += 0.03f
+        }
+        return out
+    }
+
+    /** Level over [hz] against the whole, dB, averaged over the render. */
+    private fun overDb(s: Snip, hz: Float): Double {
+        var total = 0.0
+        var over = 0.0
+        var i = 0
+        while (i + 4096 <= s.samples.size) {
+            val spec = Fft.magnitudeSpectrum(s.samples.copyOfRange(i, i + 4096), 4096)
+            for ((k, m) in spec.withIndex()) {
+                total += m * m
+                if (Fft.binToHz(k, 4096, Dsp.RATE) > hz) over += m * m
+            }
+            i += 2048
+        }
+        return 10 * log10(over / total)
+    }
+
+    @Test
+    fun `SPEAK counts one to eight, each word a hit at any length`() {
+        assertEquals(VoxSpeak.Word.entries, (0..7).map { VoxSpeak.wordFor(it / 7f) })
+        assertEquals(1, Vox.channelsFor(VoxVoice.SPEAK))
+        val renders = VoxSpeak.Word.entries.map { speak("WORD" to count(it)) }
+        assertEquals(8, renders.map { it.samples.toList() }.toSet().size, "eight different words")
+        // Measured PERC for one, two and eight, SNARE for the hissing ones, at every DECAY: a spoken
+        // word, even stretched to about a second, is a hit or a chop, never a pad or a kick.
+        for (word in VoxSpeak.Word.entries) for (decay in listOf(0f, 0.5f, 1f)) {
+            val c = Classifier.classify(speak("WORD" to count(word), "DECAY" to decay)).drumClass
+            assertTrue(c in setOf(DrumClass.PERC, DrumClass.SNARE), "$word at DECAY $decay read as $c")
+        }
+    }
+
+    @Test
+    fun `HUMAN runs from a speech chip dead on the note to a person whose pitch moves`() {
+        val note = Vox.frequencyFor(VoxVoice.SPEAK, 0.5f)
+        for (word in listOf(VoxSpeak.Word.ONE, VoxSpeak.Word.EIGHT)) for (effort in listOf(0.5f, 1f)) {
+            // Measured +5 cents throughout (the detector reads the bright buzz an octave up now and then).
+            val machine = centsAlong(speak("WORD" to count(word), "HUMAN" to 0f, "EFFORT" to effort), note)
+            assertTrue(machine.isNotEmpty() && machine.all { abs(it - 1200f * Math.round(it / 1200f)) < 15f }, "the machine holds the note: $machine")
+        }
+        // The person's pitch moves through the word: measured a 5.5 semitone fall on "one".
+        val person = centsAlong(speak("WORD" to count(VoxSpeak.Word.ONE), "HUMAN" to 1f), note)
+        assertTrue(person.max() - person.min() > 250f, "a person's pitch moves: $person")
+        // The chip is bright to the top, the person round: measured −15.8 and −33.1 dB over 2 kHz.
+        assertTrue(overDb(speak("HUMAN" to 0f), 2000f) > overDb(speak("HUMAN" to 1f), 2000f) + 10, "the chip is brighter than the person")
+    }
+
+    @Test
+    fun `DECAY stretches the vowels, and a long word stays a one-shot`() {
+        for (word in VoxSpeak.Word.entries) {
+            val lengths = listOf(0f, 0.5f, 1f).map { speak("WORD" to count(word), "DECAY" to it).durationSeconds }
+            assertTrue(lengths.zipWithNext().all { (a, b) -> b > a + 0.05f }, "$word: $lengths")
+        }
+        val longest = speak("WORD" to count(VoxSpeak.Word.SEVEN), "DECAY" to 1f, "STUTTER" to 1f)
+        assertTrue(longest.durationSeconds < 2f, "the longest word is ${longest.durationSeconds} s")
+    }
+
+    @Test
+    fun `SIZE runs child to giant, and the giant still rings rather than muffles`() {
+        val centroids = listOf(0f, 0.5f, 1f).map { FeatureExtractor.extract(speak("SIZE" to it)).centroidHz }
+        assertTrue(centroids[0] > centroids[1] * 1.5f && centroids[1] > centroids[2] * 1.3f, "child, normal, giant: $centroids")
+        // VOX's own reach for SIZE (formants to 0.47) was heard "muffled rather than resonating", 8 dB under
+        // the normal voice over 2 kHz. The giant stops at 0.7 and rings: measured 4.8 dB under.
+        val normal = overDb(speak("SIZE" to 0.5f), 2000f)
+        val giant = overDb(speak("SIZE" to 1f), 2000f)
+        assertTrue(giant > normal - 6.5, "the giant is muffled: ${"%.1f".format(giant)} dB over 2 kHz against ${"%.1f".format(normal)}")
+    }
+
+    @Test
+    fun `EFFORT goes hushed, talking, shouting, and a shout climbs where a calm word falls`() {
+        val one = "WORD" to count(VoxSpeak.Word.ONE)
+        val hushed = speak(one, "HUMAN" to 0.8f, "EFFORT" to 0f)
+        val talk = speak(one, "HUMAN" to 0.8f, "EFFORT" to 0.5f)
+        val shout = speak(one, "HUMAN" to 0.8f, "EFFORT" to 1f)
+        // Hushed is breath over a soft voice, not a whisper (SWARM's whisper was heard as "demonic").
+        assertTrue(FeatureExtractor.extract(hushed).flatness > FeatureExtractor.extract(talk).flatness * 1.3f, "hushed is breathier")
+        assertTrue(centsAlong(hushed, Vox.frequencyFor(VoxVoice.SPEAK, 0.5f), sure = 0.3f).isNotEmpty(), "a hushed word still has a voice in it")
+        // Measured centroids 271 and 374 Hz.
+        assertTrue(FeatureExtractor.extract(shout).centroidHz > FeatureExtractor.extract(talk).centroidHz * 1.2f, "a shout is brighter")
+        // INFLECT, folded in: measured "one" falling 5.5 semitones calm and climbing 4.4 shouted.
+        val note = Vox.frequencyFor(VoxVoice.SPEAK, 0.5f)
+        for (word in listOf(VoxSpeak.Word.ONE, VoxSpeak.Word.EIGHT)) {
+            val calm = centsAlong(speak("WORD" to count(word), "HUMAN" to 1f, "EFFORT" to 0.5f), note)
+            val called = centsAlong(speak("WORD" to count(word), "HUMAN" to 1f, "EFFORT" to 1f), note)
+            assertTrue(calm.last() < calm.first() - 100f, "$word calm should fall: $calm")
+            assertTrue(called.last() > called.first() + 100f, "$word shouted should climb: $called")
+        }
+    }
+
+    @Test
+    fun `STUTTER puts up to three quick false starts before the word`() {
+        assertEquals(listOf(0, 1, 2, 3), listOf(0f, 0.34f, 0.67f, 1f).map { VoxSpeak.stuttersFor(it) })
+        // Each false start is as quick as eight's, whatever the word opens on: the audition heard eight's
+        // pace right and the hissing openings of five, six and seven slow. Measured 0.107-0.110 s each.
+        for (word in listOf(VoxSpeak.Word.ONE, VoxSpeak.Word.FIVE, VoxSpeak.Word.SIX, VoxSpeak.Word.EIGHT)) {
+            val lengths = (0..3).map { speak("WORD" to count(word), "STUTTER" to it / 3f).durationSeconds }
+            for ((a, b) in lengths.zipWithNext()) assertTrue(b - a in 0.09f..0.125f, "$word: each false start ${b - a} s")
+        }
+    }
+
+    @Test
+    fun `SPEAK regenerates to the byte`() {
+        val recipe = arrayOf("WORD" to 0.6f, "HUMAN" to 0.7f, "EFFORT" to 0.8f, "STUTTER" to 0.34f, "SIZE" to 0.8f)
+        assertTrue(speak(*recipe).samples.contentEquals(speak(*recipe).samples))
     }
 
     // ---------- GRAINS ----------
