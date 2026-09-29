@@ -149,12 +149,18 @@ object Fork {
 
     /**
      * NODE's own pitch glide (round three), at STRIKE 1: how many cents
-     * sharp the strike reads before it settles — a plausible starting
-     * point (comfortably past the few-cents JND, short of sounding like a
-     * pitch-bend gimmick), not a sourced figure. See [bank]'s own KDoc for
-     * the mechanism and why it is NODE-only for now.
+     * sharp the strike reads before it settles. Shipped at 15 first — a
+     * plausible, tasteful-sounding starting point — but two rounds of
+     * blind A/B against TINE (round two's pickup position, then this)
+     * both came back "too similar" by ear, so this is temporarily pushed
+     * to a deliberately exaggerated value as a diagnostic: confirm the
+     * mechanism is actually audible at all before concluding anything
+     * about FORK's own ceiling. 80 cents is comfortably past any
+     * ambiguity — most of a semitone — and not a candidate for the
+     * shipped default. See [bank]'s own KDoc for the mechanism and why
+     * it is NODE-only for now.
      */
-    const val GLIDE_CENTS = 15f
+    const val GLIDE_CENTS = 80f
 
     /** How long NODE's own glide takes to settle to the tuned pitch - a plausible fast attack-only window, open for the audition gate to move alongside [GLIDE_CENTS]. */
     const val GLIDE_TIME_SECONDS = 0.06f
