@@ -1,10 +1,16 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.Test
@@ -66,6 +72,11 @@ class FxTest {
             "(i.e. are genuinely different values, not just a sign-of-zero artifact, e.g. " +
             "frame 2: L=4.16e-10, R=-3.12e-10) - independently randomized per-channel phases " +
             "in the stretch wash, not a shared computation across channels",
+        "ensemble" to "left/right diverge by design: WIDTH 1 (the default) assigns the three taps to " +
+            "the two channels at different weights (L 0.852/0.501/0.150, R mirrored), the first " +
+            "section whose purpose is L != R; on the doubled kick at defaults the channels differ from " +
+            "frame 267 of 15262 (the first frame the taps' swing separates them; L=-2.45e-5, R=-1.39e-4) " +
+            "and 14995 of 15262 frames differ",
     )
 
     private val kick = Thump.render(ThumpVoice.KICK)
@@ -328,6 +339,204 @@ class FxTest {
                     "- delete its stereoExcluded entry",
             )
         }
+    }
+
+    // ---------- ENSEMBLE ----------
+
+    /** A steady mono tone at [hz]: a sawtooth (the string machine's own source) or a sine. */
+    private fun tone(hz: Float, seconds: Float, saw: Boolean, rate: Int = 44_100): Snip {
+        val n = (seconds * rate).toInt()
+        return Snip(
+            FloatArray(n) { i ->
+                val ph = (i.toDouble() * hz / rate) % 1.0
+                (if (saw) 2.0 * ph - 1.0 else sin(2.0 * PI * ph)).toFloat() * 0.5f
+            },
+            1, rate,
+        )
+    }
+
+    private fun channel(s: Snip, ch: Int): Snip =
+        Snip(FloatArray(s.frameCount) { s.samples[it * s.channels + ch] }, 1, s.sampleRate)
+
+    /** Pearson correlation over [from] onward. */
+    private fun correlation(a: FloatArray, b: FloatArray, from: Int): Double {
+        var sa = 0.0; var sb = 0.0
+        for (i in from until a.size) { sa += a[i]; sb += b[i] }
+        val n = a.size - from
+        val ma = sa / n; val mb = sb / n
+        var sab = 0.0; var saa = 0.0; var sbb = 0.0
+        for (i in from until a.size) {
+            val da = a[i] - ma; val db = b[i] - mb
+            sab += da * db; saa += da * da; sbb += db * db
+        }
+        return sab / sqrt(saa * sbb)
+    }
+
+    private fun db(ratio: Double): Double = 20.0 * log10(ratio)
+
+    /** Energy at exactly [hz] over a whole-second window starting at [fromSeconds], as a share of the energy within ±[bandHz]. */
+    private fun lineShare(s: Snip, hz: Int, bandHz: Int, fromSeconds: Float): Double {
+        val rate = s.sampleRate
+        val from = (fromSeconds * rate).toInt()
+        val n = rate // one second: 1 Hz bins, so an integer-Hz tone sits on one bin
+        fun bin(k: Int): Double {
+            var re = 0.0; var im = 0.0
+            for (i in 0 until n) {
+                val v = s.samples[(from + i) * s.channels].toDouble()
+                val arg = 2.0 * PI * k * i / n
+                re += v * cos(arg); im -= v * sin(arg)
+            }
+            return re * re + im * im
+        }
+        val line = bin(hz)
+        var band = 0.0
+        for (k in hz - bandHz..hz + bandHz) band += bin(k)
+        return line / band
+    }
+
+    @Test
+    fun `ENSEMBLE's constants say how far a tap swings, and the three swings cancel`() {
+        // From the constants, no audio: a delay changing at d/dt plays back at
+        // 1 + d/dt, and a sine's steepest slope is 2*pi*f*A.
+        val (slow, fast) = Ensemble.peakCents(1f, 1f)
+        assertEquals(17.6f, slow, 0.05f, "the swell's peak swing per tap")
+        assertEquals(28.4f, fast, 0.05f, "the shimmer's peak swing per tap")
+        val (halfSlow, halfFast) = Ensemble.peakCents(0.5f, 1f)
+        assertTrue(abs(halfSlow - slow / 2) < 0.1f && abs(halfFast - fast / 2) < 0.1f, "DEPTH is linear in the swing")
+        assertEquals(1f, Ensemble.rateMultiplier(0.5f), 1e-6f, "RATE's centre is exactly the base rates")
+        assertEquals(Ensemble.RATE_MIN, Ensemble.rateMultiplier(0f), 1e-6f)
+        assertEquals(Ensemble.RATE_MAX, Ensemble.rateMultiplier(1f), 1e-6f)
+
+        // The delay law: three taps 120 degrees apart on both sines, so the
+        // swings sum to zero at every instant while each tap moves.
+        val swing = Ensemble.SLOW_DEPTH_S + Ensemble.FAST_DEPTH_S
+        var maxDev = 0f
+        var t = 0f
+        while (t < 4f) {
+            val d = Ensemble.delaysAt(t, 1f, 1f)
+            assertEquals(3 * Ensemble.BASE_DELAY_S, d.sum(), 1e-6f, "the three swings do not cancel at t=$t")
+            for (k in 0 until 3) {
+                val dev = abs(d[k] - Ensemble.BASE_DELAY_S)
+                assertTrue(dev <= swing + 1e-6f, "tap $k outside its swing at t=$t")
+                if (dev > maxDev) maxDev = dev
+            }
+            t += 0.001f
+        }
+        assertTrue(maxDev > Ensemble.SLOW_DEPTH_S - Ensemble.FAST_DEPTH_S, "no tap ever reaches the swell's own swing: $maxDev")
+    }
+
+    @Test
+    fun `ENSEMBLE DEPTH 0 is a 7,5 ms delayed copy, and WIDTH 0 keeps a mono pad mono`() {
+        val src = tone(200f, 1f, saw = false)
+        val out = Ensemble.process(src, mapOf("DEPTH" to 0f, "WIDTH" to 0f))
+        assertEquals(1, out.channels, "WIDTH 0 must not widen")
+        assertEquals(src.frameCount, out.frameCount)
+        // The lag that best matches the input is the base delay (330.75
+        // samples at 44.1 kHz), and at that lag the two are the same tone.
+        val expected = (Ensemble.BASE_DELAY_S * src.sampleRate).toInt()
+        var bestLag = -1; var best = -2.0
+        for (lag in expected - 20..expected + 20) {
+            val from = (0.1f * src.sampleRate).toInt()
+            var sab = 0.0; var saa = 0.0; var sbb = 0.0
+            for (i in from until out.frameCount) {
+                val a = out.samples[i].toDouble(); val b = src.samples[i - lag].toDouble()
+                sab += a * b; saa += a * a; sbb += b * b
+            }
+            val c = sab / sqrt(saa * sbb)
+            if (c > best) { best = c; bestLag = lag }
+        }
+        assertTrue(abs(bestLag - expected) <= 1, "DEPTH 0 sits at $bestLag samples, not the base delay $expected")
+        assertTrue(best > 0.99, "DEPTH 0 is not a copy of the input: correlation $best at lag $bestLag")
+    }
+
+    @Test
+    fun `ENSEMBLE DEPTH spreads a tone into sidebands where DEPTH 0 leaves it a line`() {
+        val src = tone(1000f, 2.5f, saw = false)
+        val still = lineShare(Ensemble.process(src, mapOf("DEPTH" to 0f, "WIDTH" to 0f)), 1000, 30, 1.2f)
+        val moving = lineShare(Ensemble.process(src, mapOf("DEPTH" to 1f, "WIDTH" to 0f)), 1000, 30, 1.2f)
+        println("ENSEMBLE on a 1 kHz sine: share of the band at the line itself, DEPTH 0 $still, DEPTH 1 $moving")
+        assertTrue(still > 0.99, "DEPTH 0 should leave the tone a line: $still of the band")
+        assertTrue(moving < 0.1, "DEPTH 1 should spread the tone into sidebands: $moving of the band still on the line")
+    }
+
+    @Test
+    fun `an ensembled kick is still a kick`() {
+        assertEquals(DrumClass.KICK, Classifier.classify(Ensemble.process(kick)).drumClass)
+    }
+
+    @Test
+    fun `ENSEMBLE widens a mono pad by choice, and no other section widens by accident`() {
+        for (sec in FxChain.SECTIONS) {
+            if (sec.name == "ensemble") continue
+            val out = sec.run(kick, sec.macros.associate { it.name to it.default })
+            assertEquals(1, out.channels, "${sec.name} widened a mono kick")
+        }
+        assertEquals(2, Ensemble.process(kick).channels, "the default WIDTH widens a mono pad")
+        assertEquals(1, Ensemble.process(kick, mapOf("WIDTH" to 0f)).channels, "WIDTH 0 keeps the count")
+        val stereo = Snip(FloatArray(kick.frameCount * 2) { kick.samples[it / 2] }, 2, 44_100)
+        assertEquals(2, Ensemble.process(stereo, mapOf("WIDTH" to 0f)).channels, "a stereo pad is never narrowed")
+        assertEquals(2, Ensemble.process(stereo).channels)
+        // The pair reaches the end of the rack: everything after ENSEMBLE runs
+        // per channel, so a chain that ends in the room is still two channels
+        // that differ.
+        val chained = FxChain(ensemble = Ensemble.defaults(), phase = Phase.defaults(), echo = Echo.defaults(), spring = Spring.defaults()).process(kick)
+        assertEquals(2, chained.channels, "the pair was narrowed somewhere after ENSEMBLE")
+        var differ = 0
+        for (f in 0 until chained.frameCount) if (chained.samples[f * 2] != chained.samples[f * 2 + 1]) differ++
+        assertTrue(differ > chained.frameCount / 2, "the pair collapsed to mono on the way out: $differ of ${chained.frameCount} frames differ")
+    }
+
+    /** The fold's cost on [src] at defaults: fold loudness against the channels' mean, in dB, with the L/R correlation and the 100 ms level ripple of the fold. */
+    private fun foldReport(src: Snip, z: Float = Ensemble.WIDE_Z): Triple<Double, Double, Double> {
+        val out = Ensemble.process(src, Ensemble.defaults(), z)
+        assertEquals(2, out.channels)
+        val l = channel(out, 0); val r = channel(out, 1)
+        val fold = Cleanup.toMono(out)
+        val foldDb = db(Loudness.of(fold).toDouble() / ((Loudness.of(l) + Loudness.of(r)) / 2.0))
+        val from = (0.3f * out.sampleRate).toInt().coerceAtMost(out.frameCount / 2)
+        val corr = correlation(l.samples, r.samples, from)
+        val win = out.sampleRate / 10
+        var lo = Double.MAX_VALUE; var hi = 0.0
+        var start = from
+        while (start + win <= fold.frameCount) {
+            var sum = 0.0
+            for (i in start until start + win) sum += fold.samples[i].toDouble() * fold.samples[i]
+            val rms = sqrt(sum / win)
+            if (rms < lo) lo = rms
+            if (rms > hi) hi = rms
+            start += win / 2
+        }
+        return Triple(foldDb, corr, db(hi / lo))
+    }
+
+    @Test
+    fun `ENSEMBLE's fold is measured, not assumed - what the phone loses follows how alike the pair is`() {
+        // The phone folds (KitPreview averages, Loudness.of folds before it
+        // meters), so the fold is what a pad is heard as. Measured by
+        // averaging, never summing - Dsp.normalizeByAverageFold's rule - and
+        // by the house meter, whose 120 Hz cut is part of what the phone
+        // hears. The loss follows the L/R correlation the source decides,
+        // sqrt((1 + rho) / 2): a kick's three copies stay coherent where a
+        // kick lives; a bare saw's harmonics fall near half the tap spacing
+        // and cancel. These rows are the section's record; the gate page
+        // plays every stereo clip beside its fold so the trade is heard.
+        val kickRow = foldReport(kick)
+        val c3 = foldReport(tone(130.81f, 2f, saw = true))
+        val c4 = foldReport(tone(261.63f, 2f, saw = true))
+        println("ENSEMBLE at defaults, the fold against the channels: kick ${"%.2f".format(kickRow.first)} dB (L/R %.2f)".format(kickRow.second) +
+            ", saw C3 ${"%.2f".format(c3.first)} dB (L/R %.2f, ripple %.1f dB)".format(c3.second, c3.third) +
+            ", saw C4 ${"%.2f".format(c4.first)} dB (L/R %.2f, ripple %.1f dB)".format(c4.second, c4.third))
+        // The family's other rows on the C4 saw, for the record: a larger z is narrower and folds better.
+        for (z in listOf(0.25f, 0.35f)) {
+            val row = foldReport(tone(261.63f, 2f, saw = true), z)
+            println("ENSEMBLE z=$z on the C4 saw: fold ${"%.2f".format(row.first)} dB, L/R %.2f".format(row.second))
+        }
+        assertTrue(kickRow.first > -0.5, "a kick's fold should stay coherent: ${kickRow.first} dB")
+        assertTrue(kickRow.second > 0.9, "a kick's pair should stay alike: ${kickRow.second}")
+        assertTrue(c3.first > -2.5, "the C3 saw's fold lost more than its measured -2.1 dB allows: ${c3.first} dB")
+        assertTrue(c4.first > -3.6, "the C4 saw's fold lost more than its measured -3.2 dB allows: ${c4.first} dB")
+        assertTrue(c3.second < 0.9 && c4.second < 0.9, "the pair is not wide: L/R ${c3.second} / ${c4.second}")
+        assertTrue(c3.third < 6.0 && c4.third < 6.0, "the level ripple is not an ensemble's: ${c3.third} / ${c4.third} dB")
     }
 
     // ---------- the chain ----------

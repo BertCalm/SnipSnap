@@ -76,8 +76,13 @@ object PadSheet {
     /** Row three — what the hit sounds like once it is itself: the damage. */
     val CHARACTER_SEGMENTS: List<String> = listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR")
 
-    /** Row four — what happens to it in time: repeats, rooms, the grid. */
-    val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE")
+    /**
+     * Row four — what happens to it in time: repeats, rooms, the grid, and
+     * ENSEMBLE's three copies a few milliseconds late. It is a delay-line
+     * effect and reads as one; the character row was already at the six-chip
+     * ceiling, and the rows group by what an effect does, not by species.
+     */
+    val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE")
 
     /** Row five — the machine's own transport. */
     val TRANSPORT_SEGMENTS: List<String> = listOf("FLIP", "STOP", "START", "PITCH")
@@ -197,6 +202,8 @@ object PadSheet {
         "PITCH" to "pitched",
         // The ladder's own filter contour, swept from the hit's onset.
         "CONTOUR" to "contoured",
+        // Three taps off the finished tone, swimming: the string machine's back half.
+        "ENSEMBLE" to "ensembled",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )

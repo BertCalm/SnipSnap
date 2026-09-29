@@ -113,10 +113,10 @@ class PadSheetTest {
         assertEquals(listOf("NONE", "CRUSH", "TAPE", "DIRT", "SMEAR", "DUST"), PadSheet.SEGMENTS)
         assertEquals(listOf("SWELL", "TAIL", "SKIM", "GHOST", "SPIKE"), PadSheet.ANATOMY_SEGMENTS)
         assertEquals(listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR"), PadSheet.CHARACTER_SEGMENTS)
-        assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE"), PadSheet.TIME_SEGMENTS)
+        assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(29, PadSheet.ALL_SEGMENTS.size, "the card should draw 29 chips")
+        assertEquals(30, PadSheet.ALL_SEGMENTS.size, "the card should draw 30 chips")
     }
 
     /**
@@ -127,7 +127,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, and the merge's DUST makes twenty-nine`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine and ENSEMBLE thirty`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -142,9 +142,11 @@ class PadSheetTest {
             "SPIKE", "RING", "VINYL", "PHASE", "PITCH", "ROLL", "GATE",
             // the ladder's contour, from the RESIN plan
             "CONTOUR",
+            // the string machine's back half, from the ARCO design
+            "ENSEMBLE",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(29, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(30, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
