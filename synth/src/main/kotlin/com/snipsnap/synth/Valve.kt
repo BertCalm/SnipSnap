@@ -169,12 +169,16 @@ object Valve {
     }
 
     /**
-     * The speaker: nothing at 0; the specification's network fading in over
-     * the first quarter of the knob and growing from a bright open-back
-     * combo to a dark closed wall - a cone thump falling from 110 to 78 Hz,
-     * the open-back cancellation notch filling in as the back closes, two
-     * cone-breakup resonances at 2.6 and 3.75 kHz, and the voice coil
-     * rolling the top off from 5.8 down to 4.5 kHz (shape).
+     * The speaker: nothing at 0. The network fades in over the first quarter
+     * of the knob - every gain and weight scales with cab/0.25 and the voice
+     * coil's corner closes from the one-pole's own cap toward 5.8 kHz, so
+     * CAB 0+ is transparent - and is fully in at 0.25 as a bright open-back
+     * combo: cone thump +6 dB at 102 Hz, the open-back cancellation notch
+     * -6.8 dB at 470 Hz, two cone-breakup resonances at 2.6 and 3.75 kHz, the
+     * voice coil rolling the top off from 5.5 kHz. It grows to a dark closed
+     * wall at 1: thump at 78 Hz, the notch filled in as the back closes, the
+     * coil at 4.5 kHz. (The 110 Hz, 500 Hz, -9 dB and 5.8 kHz formula ends
+     * are the network's CAB 0 anchors, where it is bypassed; shape.)
      */
     internal fun cabinet(buf: FloatArray, cab: Float, rate: Int) {
         if (cab <= 0f) return
@@ -183,7 +187,10 @@ object Valve {
         val notch = Dsp.Biquad().apply { peaking(Dsp.lin(1f - cab, 380f, 500f), -9f * (1f - cab) * w, 2f, rate) }
         val breakup1 = Dsp.Biquad().apply { bandpass(2_600f, 3.5f, rate) }
         val breakup2 = Dsp.Biquad().apply { bandpass(3_750f, 4f, rate) }
-        val coilHz = Dsp.expMap(1f - w, Dsp.lin(cab, 5_800f, 4_500f), 20_000f)
+        // The map's open end is the one-pole's own cap (0.45 x the work rate, ~79 kHz at 4x),
+        // so CAB 0+ is transparent (-0.09 dB at 16 kHz): 20 kHz was a real corner at 176.4 kHz,
+        // a 2 dB step in the top octave where CAB 0 bypasses - the one discontinuity in the AMT fade.
+        val coilHz = Dsp.expMap(1f - w, Dsp.lin(cab, 5_800f, 4_500f), rate * 0.45f)
         val coil = Dsp.OnePole(rate)
         for (i in buf.indices) {
             val s = buf[i]

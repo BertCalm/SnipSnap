@@ -250,6 +250,41 @@ class ValveTest {
     }
 
     @Test
+    fun `CAB leaving 0 is continuous - a hundredth of CAB stays within half a dB of CAB 0 in every band`() {
+        // With the coil map opening only to 20 kHz, CAB 0.01 read -1.52 dB in the top
+        // third-octave (12.9-16 kHz) against CAB 0's exact bypass. Measured after the map
+        // opened to the one-pole's own cap: the top third-octave -0.10 dB, and the worst
+        // band 403-507 Hz at -0.32 dB - the network's notch fading in as it should
+        // (-9 dB x 0.04 = -0.36 dB at 500 Hz).
+        val a = Valve.process(snare, mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f))
+        val b = Valve.process(snare, mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0.01f))
+        val (pA, n) = power(a.samples)
+        val (pB, _) = power(b.samples)
+        val totA = bandEnergy(pA, n, 40f, 16_000f)
+        val totB = bandEnergy(pB, n, 40f, 16_000f)
+        var worst = 0.0
+        var worstBand = ""
+        var top = 0.0
+        var lo = 40f
+        while (lo < 16_000f) {
+            val hi = minOf(lo * 2f.pow(1f / 3f), 16_000f)
+            val eA = bandEnergy(pA, n, lo, hi)
+            if (eA / totA > 1e-6) {
+                val d = db(bandEnergy(pB, n, lo, hi) / totB, eA / totA)
+                if (abs(d) > abs(worst)) {
+                    worst = d
+                    worstBand = "${lo.toInt()}-${hi.toInt()} Hz"
+                }
+                if (hi == 16_000f) top = d
+            }
+            lo = hi
+        }
+        // Every band within half a dB is the worst band within half a dB; printed first.
+        println("VALVE CAB 0 -> 0.01: worst band $worstBand at ${"%.3f".format(worst)} dB, the top third-octave ${"%.3f".format(top)} dB")
+        assertTrue(abs(worst) <= 0.5, "CAB 0.01 moved $worstBand by ${"%.2f".format(worst)} dB against CAB 0")
+    }
+
+    @Test
     fun `TONE 0 scoops the mids`() {
         fun midShare(tone: Float): Double {
             val out = Valve.process(saw(110f, 1.0f), mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to tone, "CAB" to 0f))
