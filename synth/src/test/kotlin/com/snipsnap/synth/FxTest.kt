@@ -515,11 +515,14 @@ class FxTest {
         // meters), so the fold is what a pad is heard as. Measured by
         // averaging, never summing - Dsp.normalizeByAverageFold's rule - and
         // by the house meter, whose 120 Hz cut is part of what the phone
-        // hears. The loss follows the L/R correlation the source decides,
-        // sqrt((1 + rho) / 2): a kick's three copies stay coherent where a
-        // kick lives; a bare saw's harmonics fall near half the tap spacing
-        // and cancel. These rows are the section's record; the gate page
-        // plays every stereo clip beside its fold so the trade is heard.
+        // hears. For equal-window RMS the loss would be exactly
+        // sqrt((1 + rho) / 2) of the L/R correlation the source decides; the
+        // meter reads more, because its cut removes the coherent fundamental
+        // and it meters the loudest 200 ms window. A kick's three copies stay
+        // coherent where a kick lives; a bare saw's harmonics fall near half
+        // the tap spacing and cancel. These rows are the section's record;
+        // the gate page plays every stereo clip beside its fold so the trade
+        // is heard.
         val kickRow = foldReport(kick)
         val c3 = foldReport(tone(130.81f, 2f, saw = true))
         val c4 = foldReport(tone(261.63f, 2f, saw = true))

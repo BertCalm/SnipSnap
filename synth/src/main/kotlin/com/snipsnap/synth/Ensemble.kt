@@ -40,13 +40,17 @@ import kotlin.math.sqrt
  * the same: `L = 0.852·t0 + 0.501·t1 + 0.150·t2`, R the mirror. Both
  * weight sets are at unit power, so the crossfade holds level. What the
  * fold loses against either channel is set by how alike the two channels
- * are — `√((1 + ρ)/2)` for an L/R correlation ρ — and the source decides ρ:
- * three copies of a kick a few milliseconds apart stay coherent where a
- * kick lives (measured −0.2 dB, ρ 0.96 at DEPTH 0.5), a brass preset loses
- * about a decibel (VELVET's FANFARE: −1.0 dB by `Loudness.of`, ρ 0.65),
- * and a bare sawtooth loses two to three (−2.1 dB at C3, −3.2 dB at C4,
- * where the harmonics fall near half the tap spacing and the copies
- * cancel). `FxTest` pins those rows; the gate page plays every stereo clip
+ * are, and the source decides that. For equal-window RMS the loss is
+ * exactly `√((1 + ρ)/2)` for an L/R correlation ρ (−0.97 dB at ρ 0.60);
+ * by the house meter it is larger, because `Loudness.of` cuts below
+ * 120 Hz — removing the coherent fundamental and leaving the less coherent
+ * harmonics — and meters the loudest 200 ms window. By that meter, at
+ * DEPTH 0.5: three copies of a kick a few milliseconds apart stay
+ * coherent where a kick lives (−0.2 dB, ρ 0.96), a brass preset loses
+ * about a decibel (VELVET's FANFARE −1.0 dB, ρ 0.65), and a bare sawtooth
+ * loses two to three (−2.1 dB at C3 with ρ 0.60, −3.2 dB at C4 with
+ * ρ 0.19, where the harmonics fall near half the tap spacing and the
+ * copies cancel). `FxTest` pins those rows; the gate page plays every stereo clip
  * beside its fold so the trade is heard, not assumed, and `WIDE_Z` is the
  * knob that moves it (a larger z is narrower and folds better). A mono
  * input at WIDTH > 0 comes out with two channels — the one section that
