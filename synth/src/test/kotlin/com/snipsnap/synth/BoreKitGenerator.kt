@@ -10,8 +10,9 @@ import java.io.File
  *
  * The hardware check (docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md):
  * do FLUTE and SAX read as breath rather than as an oscillator with a tremolo, does
- * the triad play as a chord on the pads, and do the two LOOP pads hold when a finger
- * stays down?
+ * the triad play as a chord on the pads, and do the two LOOP pads (A12 and A16) end
+ * cleanly? A drum program plays them once through (`Loop=False`, as SIREN's LOOP pads do): the
+ * held wrap is R2's held instrument, and the audition page's REPEAT is where the wrap is heard now.
  */
 object BoreKitGenerator {
 

@@ -2,8 +2,8 @@
 
 **Status:** design; brainstorm from the 2026-09-28 specification. **R0,
 the shared-toolkit change, is built** (2026-09-28; "R0, as built" below);
-R1, the engine, is built** (2026-09-29; "R1, as built" below), its presets
-provisional and its audition gate not yet run. **The spec's engine, transcribed and rendered, does not work
+**R1, the engine, is built** (2026-09-29; "R1, as built" below), its presets
+provisional and its audition gate not yet run. The spec's engine, transcribed and rendered, does not work
 (three of five voices NaN, one a DC limit cycle, one an octave up — "The
 specification, as reviewed"); the corrections below are measured, and
 the corrected model is a Phase-0 spike — a throwaway prototype built only
@@ -1760,14 +1760,16 @@ the quantised jet, and the warm-up, in that order.
 
 Sixteen, eight per voice, from the measurements: FLUTE speaks everywhere (onset 0.04-0.31 s), so
 its presets differ by register, breath noise, brightness, attack and length; SAX is slow low down,
-so its short, hard-tongued reeds sit high and its low ones are swells and held notes. Two
-presets of each voice are HOLD 1 and therefore LOOPs. They are **provisional**: the six-contract
+so its short, hard-tongued reeds sit high and its low ones are swells and held notes. One
+preset of each voice is HOLD 1 and therefore a LOOP (STEADY LOOP, SOLO LOOP). They are **provisional**: the six-contract
 test freezes them as sound, not as good.
 
 The classifier reads every preset of the final roster PERC or LOOP; none reads a drum. (Two low
 SAX presets read TONAL at an intermediate setting, and the first roster read 8 of 16 as a snare or
-a clap; both are why the rule below is what it is.) The filed class is exact where the rule is exact — over 1.5 s is a LOOP — and files PERC
-below it. TONAL is the classifier's bass gate (over 55% of the head window's magnitude under
+a clap; both are why the rule below is what it is.) The filed class is exact where the rule is exact — over 1.5 s is a LOOP, decided by the same
+comparison the classifier makes (`frames.toFloat() / RATE > 1.5f`) on the exact frame count a render
+makes, not on a padded duration (review found the padded version filing a 1.49998 s note a LOOP; a
+boundary sweep and the real classifier now hold it) — and files PERC below it. TONAL is the classifier's bass gate (over 55% of the head window's magnitude under
 200 Hz, ringing past 500 ms), which a fundamental's own skirts supply at C3-A3; it depends on
 the spectrum, which macros alone do not promise, so `drumClassFor` does not predict it and the
 test accepts PERC or TONAL for a one-shot. Noisier settings than the roster's read as CLAP or
@@ -1793,6 +1795,9 @@ render to the loudness target and hide it.
 - **The phone:** no picker entry, no README count, no `→ SURFACE ▸`, no Web Audio stand-in on
   the listening page (R1.1, as designed). The page's clips are all rendered on the desktop.
 - **Held instrument and keys** (`Keys.borePad`, MAKE INSTRUMENT, the one-shot `Keys.bore`): R2.
+- **A drum program plays every pad once through, LOOP-class included** (`Loop=False`, as SIREN's
+  LOOP pads are): the kit's A12 and A16 end cleanly, they do not repeat while held. The wrap is
+  heard in the audition page's REPEAT now, and held on a pad once R2's held instrument exists.
 - **SAX is slow below about C4** (item 1) and its BREATH changes the 2nd harmonic (-11 to -19 dB)
   more than it brightens; a tight reed is quieter and slower than a loose one (raw level a fifth,
   onset 0.63 s at C3 at full breath).

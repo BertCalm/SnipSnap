@@ -314,9 +314,6 @@ object Bore {
      */
     const val LOOP_THRESHOLD_SECONDS = 1.5f
 
-    /** Added to the rendered length before it is compared to [LOOP_THRESHOLD_SECONDS]: the decimator and the tail trim it by a few samples. */
-    private const val TAIL_PAD_SECONDS = 0.01f
-
     // ---- the LOOP step -----------------------------------------------------
 
     /** A LOOP holds at least this long, in whole periods, so it is over the classifier's line with room. */
@@ -435,14 +432,23 @@ object Bore {
 
     fun isLoop(hold: Float): Boolean = hold >= LOOP_THRESHOLD
 
-    /** How long a one-shot at [macros] renders: the attack, the breath, the release. */
-    internal fun renderSeconds(macros: Map<String, Float>): Float =
-        attackSeconds(macros.getValue("CHIFF")) + holdSeconds(macros.getValue("HOLD")) + RELEASE_SECONDS
+    /**
+     * The exact number of frames a one-shot at [macros] renders at [RATE]: the gate's raw
+     * samples (the attack, the breath, the release - sized by [gateFor], the one place
+     * [blow] sizes them too), through the decimator's two floored 2:1 steps, which come to
+     * `n / OVERSAMPLE` for a whole-number OVERSAMPLE. The fade at the tail does not change
+     * the length. `BoreTest` pins this against a real render across the LOOP line, so a
+     * change to the decimator cannot move it silently.
+     */
+    internal fun renderFrames(macros: Map<String, Float>): Int =
+        gateFor(macros, RATE * Dsp.OVERSAMPLE, null).total / Dsp.OVERSAMPLE
 
     /**
-     * What a pad holding this sound is filed as. Derived from the *rendered*
-     * duration against the classifier's own 1.5 s line (the way
-     * [Fork.drumClassFor] does), never from a hard-coded knob position: a note is
+     * What a pad holding this sound is filed as. Derived from the *rendered frame
+     * count* against the classifier's own 1.5 s line - the same comparison it makes,
+     * `frames.toFloat() / RATE > 1.5f` - never from a hard-coded knob position, and never
+     * from a duration with padding added (a 10 ms pad here filed a note 1.49998 s long as a
+     * LOOP when the classifier reads it PERC): a note is
      * PERC below the line and a LOOP above it. The classifier may read a low SAX
      * note TONAL instead of PERC (its bass gate: over 55% of the head window's
      * magnitude under 200 Hz, ringing past 500 ms - a share the fundamental's own
@@ -452,7 +458,7 @@ object Bore {
      */
     fun drumClassFor(voice: BoreVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
-        val long = isLoop(m.getValue("HOLD")) || renderSeconds(m) + TAIL_PAD_SECONDS > LOOP_THRESHOLD_SECONDS
+        val long = isLoop(m.getValue("HOLD")) || renderFrames(m).toFloat() / RATE > LOOP_THRESHOLD_SECONDS
         return if (long) DrumClass.LOOP else DrumClass.PERC
     }
 
@@ -506,10 +512,15 @@ object Bore {
         pressure: Float? = null,
         pop: Float? = null,
     ): FloatArray {
+        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop)
+    }
+
+    /** A one-shot's gate in raw samples at [rate]: the one place its length is worked out, for [blow] and [renderFrames] alike. */
+    private fun gateFor(macros: Map<String, Float>, rate: Int, gateSeconds: Float?): Gate {
         val attackN = (attackSeconds(macros.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
         val holdN = ((gateSeconds ?: holdSeconds(macros.getValue("HOLD"))) * rate).toInt()
         val releaseN = (RELEASE_SECONDS * rate).toInt().coerceAtLeast(1)
-        return blow(voice, hz, macros, rate, Gate(attackN, holdN, releaseN, steady = false), turbulence, pressure, pop)
+        return Gate(attackN, holdN, releaseN, steady = false)
     }
 
     private fun blow(

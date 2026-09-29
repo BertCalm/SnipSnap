@@ -254,8 +254,11 @@ object SynthKits {
      * things: a breathy note, a hard tongue, a swell and a LOOP for FLUTE; a low honk, a
      * bite, a high stab and a LOOP for SAX. Every one-shot carries the landing's own TAPE
      * in its recipe ([Bore.landingChain]); every LOOP is dry and filed as the LOOP it is.
-     * Every pad carries its recipe. The presets are provisional (nothing in BORE has been
-     * heard yet); this kit is what the audition page's first section plays.
+     * A drum program plays every pad once through, LOOP or not (`Loop=False`, as SIREN's
+     * LOOP pads do): the wrap is heard in the audition page's REPEAT, and held on a pad
+     * once R2's held instrument exists. Every pad carries its recipe. The presets are
+     * provisional (nothing in BORE has been heard yet); this kit is what the audition
+     * page's first section plays.
      */
     fun bore(): List<ArrangedPad?> {
         fun note(voice: BoreVoice, n: Int, semitone: Int) = BorePatch(

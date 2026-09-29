@@ -4,7 +4,7 @@ package com.snipsnap.synth
  * BORE's factory roster: eight per voice, authored from the R1 measurements
  * (the speaking windows, onsets and timbre spans in [Bore]'s KDoc) - and
  * **provisional**: nothing here was listened to. The audition gate
- * (`docs/audition/bore-audition.html`) is where a human decides which of these
+ * (`./gradlew :synth:generateBoreAudition`, then `testkit/bore-audition/index.html`) is where a human decides which of these
  * is a woodwind and which is only a tone that measures like one; a name that
  * does not survive it is renamed or dropped, not defended.
  *

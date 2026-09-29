@@ -6,7 +6,7 @@ import kotlin.math.roundToInt
 
 /**
  * Renders the BORE audition (docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md,
- * the S17 gate) under testkit/bore-audition/ (gitignored): the sixteen-pad kit as it lands on
+ * the S19 gate) under testkit/bore-audition/ (gitignored): the sixteen-pad kit as it lands on
  * the MPC, then for each voice its default, BREATH/LIP/CHIFF/HOLD at both ends with the rest at
  * their defaults, all eight of its own presets, and the landing - the same note dry, with the
  * TAPE recipe every one-shot pad lands with, and with twice the wow. The LOOP step is a clip of
@@ -106,7 +106,7 @@ object BoreAuditionGenerator {
             write("loop", mapOf("HOLD" to 1f))
             groups += Group(
                 "THE LOOP STEP", key = false,
-                clips = listOf(Clip("loop", "HOLD 1 (LOOP)", "a seamless whole-period loop: dry, no vibrato, no breath noise; a pad held down repeats it")),
+                clips = listOf(Clip("loop", "HOLD 1 (LOOP)", "a seamless whole-period loop: dry, no vibrato, no breath noise; turn the page's REPEAT on to hear the wrap (on a drum pad it plays once through)")),
             )
 
             // The landing: the same note dry, landed with the recipe's TAPE, and with twice the wow

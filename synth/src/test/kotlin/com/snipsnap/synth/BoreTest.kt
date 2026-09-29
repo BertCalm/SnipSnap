@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
 import kotlin.math.abs
@@ -8,6 +9,7 @@ import kotlin.math.ln
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -280,8 +282,7 @@ class BoreTest {
         for (voice in BoreVoice.entries) {
             val m = Bore.defaults(voice) + ("HOLD" to 0.3f)
             val snip = Bore.render(voice, m)
-            val expected = Bore.renderSeconds(m)
-            assertTrue(abs(snip.frameCount / snip.sampleRate.toFloat() - expected) < 0.01f, "$voice renders ${snip.frameCount} frames for a ${expected}s gate")
+            assertEquals(Bore.renderFrames(m), snip.frameCount, "$voice: the predicted frame count is not what a render makes")
             val loop = Bore.render(voice, m + ("HOLD" to 1f))
             assertTrue(loop.frameCount >= 1.5f * loop.sampleRate, "$voice's LOOP is shorter than the classifier's 1.5 s line")
         }
@@ -342,14 +343,36 @@ class BoreTest {
     }
 
     @Test
-    fun `the filed class follows the rendered length`() {
+    fun `the filed class agrees with the classifier's own length line, to the frame`() {
+        // The classifier calls a render a LOOP when frameCount.toFloat() / sampleRate > 1.5f. The
+        // filed class must make the same comparison on the same frame count, not on a duration
+        // with padding added: a 10 ms pad filed HOLD 0.580306 (1.48998 s of audio, which the
+        // classifier reads as no LOOP) as a LOOP, the first review's boundary case. So this sweeps
+        // HOLD across the line in steps of 0.0003, and holds every step to the frame count a real
+        // render makes and to the class the comparison gives - and the two renders either side of
+        // the line to the real classifier itself.
         for (voice in BoreVoice.entries) {
             assertEquals(DrumClass.PERC, Bore.drumClassFor(voice, mapOf("HOLD" to 0.3f)))
             assertEquals(DrumClass.LOOP, Bore.drumClassFor(voice, mapOf("HOLD" to 1f)))
             assertEquals(DrumClass.LOOP, Bore.drumClassFor(voice, mapOf("HOLD" to 0.95f)), "a 3.6 s one-shot is over the classifier's line")
-            val m = Bore.defaults(voice)
-            assertEquals(if (Bore.renderSeconds(m) + 0.01f > 1.5f) DrumClass.LOOP else DrumClass.PERC, Bore.drumClassFor(voice, m))
         }
+        var lastUnder: Map<String, Float>? = null
+        var firstOver: Map<String, Float>? = null
+        for (i in 0..40) {
+            val m = Bore.defaults(BoreVoice.FLUTE) + ("HOLD" to 0.575f + i * 0.0003f)
+            val snip = Bore.render(BoreVoice.FLUTE, m)
+            assertEquals(snip.frameCount, Bore.renderFrames(m), "HOLD ${m["HOLD"]}: the predicted frame count is not what a render makes")
+            val over = snip.frameCount.toFloat() / snip.sampleRate > 1.5f
+            assertEquals(if (over) DrumClass.LOOP else DrumClass.PERC, Bore.drumClassFor(BoreVoice.FLUTE, m), "HOLD ${m["HOLD"]} (${snip.frameCount} frames)")
+            if (over && firstOver == null) firstOver = m
+            if (!over) lastUnder = m
+        }
+        assertTrue(lastUnder != null && firstOver != null, "the sweep did not cross the classifier's 1.5 s line")
+        val reviewCase = Bore.defaults(BoreVoice.FLUTE) + ("HOLD" to 0.580306f)
+        assertEquals(DrumClass.PERC, Bore.drumClassFor(BoreVoice.FLUTE, reviewCase), "1.48998 s is under the line")
+        assertNotEquals(DrumClass.LOOP, Classifier.classify(Bore.render(BoreVoice.FLUTE, lastUnder!!)).drumClass, "the last render under the line reads as a LOOP")
+        assertEquals(DrumClass.LOOP, Classifier.classify(Bore.render(BoreVoice.FLUTE, firstOver!!)).drumClass, "the first render over the line does not read as a LOOP")
+        assertNotEquals(DrumClass.LOOP, Classifier.classify(Bore.render(BoreVoice.SAX, reviewCase)).drumClass, "SAX at the review's boundary case reads as a LOOP")
     }
 
     @Test

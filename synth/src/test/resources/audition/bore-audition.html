@@ -380,7 +380,7 @@
   .verdict { margin: 0 12px 12px; }
   .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
   .q + .q { border-top: 1px dashed var(--field-border); }
-  .q .ask { font-size: 19px; color: var(--ink); line-height: 1.25; }
+  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
 
   .actions {
     display: grid;
@@ -441,7 +441,7 @@
 <div class="win">
   <div class="titlebar">
     <span>Bore Audition</span>
-    <span class="tag">S17 GATE, ROUND 1 &middot; TWO VALVES, ONE PIPE</span>
+    <span class="tag">S19 GATE, ROUND 1 &middot; TWO VALVES, ONE PIPE</span>
   </div>
 
   <div class="transport lcd">
@@ -469,19 +469,19 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Does FLUTE read as a flute and SAX as a reed instrument, or only as a tone with a breath on it? Which of the two is closer, and what is it missing?</div>
+      <label class="ask" for="q_voices">1 &middot; Does FLUTE read as a flute and SAX as a reed instrument, or only as a tone with a breath on it? Which of the two is closer, and what is it missing?</label>
       <textarea id="q_voices" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; The knobs: which end of BREATH, LIP, CHIFF or HOLD goes too far, or not far enough? Is the breath noise too little or too much? Are the defaults where you would start?</div>
+      <label class="ask" for="q_knobs">2 &middot; The knobs: which end of BREATH, LIP, CHIFF or HOLD goes too far, or not far enough? Is the breath noise too little or too much? Are the defaults where you would start?</label>
       <textarea id="q_knobs" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">3 &middot; The landing: does the TAPE recipe make it the tape-flute story, or is it only wobble? Dry, WOBBLE .1 or WOBBLE .2 &mdash; and does the LOOP hold up held down?</div>
+      <label class="ask" for="q_landing">3 &middot; The landing: does the TAPE recipe make it the tape-flute story, or is it only wobble? Dry, WOBBLE .1 or WOBBLE .2 &mdash; and does the LOOP wrap without a click when the page's REPEAT is on?</label>
       <textarea id="q_landing" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">Anything else</div>
+      <label class="ask" for="q_else">Anything else</label>
       <textarea id="q_else" placeholder="&hellip;"></textarea>
     </div>
     <div class="actions">
