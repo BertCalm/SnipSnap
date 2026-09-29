@@ -169,14 +169,31 @@ class StringsTest {
     /**
      * SILK Phase 3, Task 1 (SHAMISEN's SAWARI): the spec's own reasoning is
      * that sawari needs no new mechanism - it reuses [Strings.Loop]'s own
-     * `jawari` fold-back, the same one SITAR has shipped on since PLUCK
-     * Phase 3a, plus [Silk.SHAMISEN_B]'s small fixed dispersion (so the
-     * buzz has a precursor to build from - research §1, T8). This is the
-     * closest sourced analogue SILK has to a shamisen-specific sawari
-     * measurement: the biwa's own (a related, not identical, instrument)
-     * signature - higher partials boosted and longer-lived, so the whole
-     * render's own spectral centroid reads higher with the obstacle
-     * engaged than without it (research §1, S8/S8b).
+     * `jawari` fold-back, plus [Silk.SHAMISEN_B]'s small fixed dispersion
+     * (so the buzz has a precursor to build from - research §1, T8).
+     *
+     * A correction, caught by review rather than assumed away: this is
+     * **not** the mechanism SITAR's own production path uses today.
+     * `Pluck.ks`'s own jawari (`Pluck.kt`, ~line 764) dynamically
+     * *shortens the delay* as the envelope swings; `Strings.Loop`'s own
+     * jawari (used here) is the older, pre-wrap model - a one-sided
+     * fold-back that *attenuates* positive swings, proven equivalent to
+     * *that* legacy `ks` sample for sample (`Strings pluck reproduces
+     * PLUCK Phase 3a's stiffness and jawari, sample for sample`, above),
+     * not to the current wrap. `docs/SYNTH_ROADMAP.md`'s own S15 row
+     * already discloses the divergence ("`Pluck.kt`'s own `ks` diverged
+     * from it the same day... `Strings.pluck`'s `jawari` is still the old
+     * soft-bend limiter"). SAWARI reuses that real, sourced, and
+     * independently-tested older model - not an untested one, just not
+     * SITAR's own current one - the tests below check its own claims
+     * directly rather than borrowing SITAR's.
+     *
+     * The claim actually being tested: the closest sourced analogue SILK
+     * has to a shamisen-specific sawari measurement is the biwa's own (a
+     * related, not identical, instrument) signature - higher partials
+     * boosted and longer-lived, so the whole render's own spectral
+     * centroid reads higher with the obstacle engaged than without it
+     * (research §1, S8/S8b).
      */
     @Test
     fun `SAWARI reused from jawari reads brighter, the biwa measurement's own signature`() {
@@ -220,10 +237,24 @@ class StringsTest {
             for (i in start until end) acc += buf[i].toDouble() * buf[i]
             rms[b] = kotlin.math.sqrt(acc / (end - start))
         }
-        val peakIndex = rms.indices.maxByOrNull { rms[it] } ?: return
-        val peak = rms[peakIndex]
-        for (i in (peakIndex + 1) until blocks) {
-            assertTrue(rms[i] <= peak * 1.001, "block $i (${rms[i]}) exceeds the attack's own peak ($peak at block $peakIndex) - the envelope should never rise again after it")
+        // The attack window: comfortably past the exciter's own one-period
+        // burst plus its comb delay (well under 10 ms at this root), so a
+        // lossy KS loop's real onset peak - always its loudest block, since
+        // every later round trip is attenuated further by fb < 1 and
+        // jawari's own fold-back - is guaranteed to fall inside it.
+        // Established independently of the tail scan below: taking the
+        // peak as the plain global max over the *whole* buffer instead
+        // (as an earlier version of this test did) makes the assertion
+        // tautological - that peak, by definition, is never exceeded by
+        // anything, anywhere in the buffer, whether or not the envelope
+        // actually rose again after the attack. A real regression to
+        // jawari's own fold-back (letting it add energy) would move the
+        // *true* loudest block later, past this window, and this version
+        // catches that; the global-max version could not have.
+        val attackBlocks = (0.05f * Dsp.RATE / block).toInt().coerceIn(1, blocks)
+        val peak = (0 until attackBlocks).maxOf { rms[it] }
+        for (i in attackBlocks until blocks) {
+            assertTrue(rms[i] <= peak * 1.001, "block $i (${rms[i]}) exceeds the attack window's own peak ($peak, over the first $attackBlocks blocks) - the envelope should never rise again after it")
         }
     }
 
