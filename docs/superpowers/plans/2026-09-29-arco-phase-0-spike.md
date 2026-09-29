@@ -76,7 +76,7 @@ the files after the run; a `git status` that shows them is the reminder.
 
 ## Appendix A — the spike's report: the corrected bow on the house's primitives
 
-Worktree: `/home/user/SnipSnap/.claude/worktrees/wf_17fb7c2a-cfb-2` at `b8b8557` (two untracked files, nothing committed, no tracked file touched, main checkout untouched):
+Worktree: `.claude/worktrees/wf_17fb7c2a-cfb-2` at `b8b8557` (two untracked files, nothing committed, no tracked file touched, main checkout untouched):
 - `synth/src/test/kotlin/com/snipsnap/synth/BowSpike.kt` — 375 lines, `internal object BowSpike`, marked SPIKE (test source set, so `Strings.tune`, `Strings.Loop`, `Tide.bandLimit` resolve).
 - `synth/src/test/kotlin/com/snipsnap/synth/BowSpikeTest.kt` — 733 lines, one print-only test `spike()`; the only assertion is `assertTrue(true)`.
 
@@ -1507,7 +1507,7 @@ class BowSpikeTest {
 
 ## Appendix D — the probe's report: the specification's engine, as written
 
-**Tag:** empirical. **Tree:** worktree `/home/user/SnipSnap/.claude/worktrees/wf_17fb7c2a-cfb-1` at `b8b8557`, three untracked test-source files, nothing committed, main checkout untouched.
+**Tag:** empirical. **Tree:** worktree `.claude/worktrees/wf_17fb7c2a-cfb-1` at `b8b8557`, three untracked test-source files, nothing committed, main checkout untouched.
 **Files:** `synth/src/test/kotlin/com/snipsnap/synth/ArcoProbeV1.kt` (281 lines, spec part 1's `Arco.kt`), `ArcoProbeV2.kt` (332 lines, part 2's `SolinaEnsemble.kt` + `Arco.kt`), `ArcoProbeTest.kt` (635 lines, eight print-only tests, the only assertion is `assertTrue(true)`). Copies, the two gradle logs, both runs' tables (`empirical-tables-run1.txt`, `empirical-tables.txt`) and the JUnit XML are in `the session's scratchpad/`.
 **Command:** `./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.ArcoProbeTest'` — run 1 (fresh worktree, :json/:audio/:synth/:kit/:xpm/:mpc3 compiled from scratch): exit 0, 2 m 48 s wall, the suite itself 98.6 s; run 2 (after adding measurements): exit 0, 2 m 04 s wall, tests B 42.6 s / C 44.2 s / E 7.4 s / G 2.9 s / H ~4 s / D 1.0 s / F 0.5 s / A 0.01 s. Run 2 reproduced every number of run 1 outside the timing table (a `diff` of the first five columns of every table row: only the cost rows and the two rewritten sections differ) — the render is deterministic. Compiler warnings on the probe sources: one, the spec's own `private inline fun readInterpolated` ("expected performance impact from inlining is insignificant", ArcoProbeV2.kt:116).
 
