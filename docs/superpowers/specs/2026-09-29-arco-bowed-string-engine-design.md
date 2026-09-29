@@ -1304,25 +1304,31 @@ proposal (rack §1) is the source of every number below.
   | 0.20 | (0.833, 0.516, 0.20) | −0.97 dB | 0.60 |
   | the addendum | (0.707, 0.707, 0) | −1.25 dB | 0.50 |
 
-Proposed **z = 0.15**: the addendum's width and fold loss to two
-decimals, with every tap folded at 0.501 instead of the centre one
-doubled — the same picture on the phone's speaker, none of the
-lopsidedness. A gate choice among the rows, not a derivation. **Measured
-at PR-E1** (`FxTest`, by `Loudness.of` on the average fold —
-`Dsp.kt:585-587`'s rule; `Loudness.of(stereo) − Loudness.of(toMono)` is
-0.00 dB by construction and is therefore *not* the test, dsp F28): the
-fold's cost follows how alike the pair is, `√((1 + ρ)/2)`, and the
-source decides ρ — a kick −0.2 dB (ρ 0.96), VELVET's FANFARE −0.95 dB (ρ
-0.36), a bare saw −2.1 dB at C3 (ρ 0.60) and −3.2 dB at C4 (ρ 0.19),
-where the harmonics fall near half the tap spacing and the copies
-cancel. The model's 1.2 dB and the 1.5 dB bar this document first named
-were the uncorrelated case; the test pins the measured rows instead,
-prints the neighbouring z rows for the record (z 0.25: −2.3 dB, ρ 0.44
-at C4; z 0.35: narrower still), and the gate page plays every stereo
-clip beside its fold with the measured loss in its caption, so the row
-is chosen by ear with the number in view. The 100 ms level ripple of the
-fold on a steady saw is 1.5 dB at DEPTH 0.5 — the beating that *is* the
-ensemble (the addendum's stage pumped 3.5–4.6 dB).
+  Proposed **z = 0.15**: the addendum's width and fold loss to two
+  decimals, with every tap folded at 0.501 instead of the centre one
+  doubled — the same picture on the phone's speaker, none of the
+  lopsidedness. A gate choice among the rows, not a derivation.
+  **Measured at PR-E1** (`FxTest`, by `Loudness.of` on the average fold
+  — `Dsp.kt:585-587`'s rule; `Loudness.of(stereo) − Loudness.of(toMono)`
+  is 0.00 dB by construction and is therefore *not* the test, dsp F28):
+  the fold's cost is set by how alike the two channels are, and the
+  source decides that. For equal-window RMS it is exactly `√((1 + ρ)/2)`
+  for an L/R correlation ρ, and the plain-RMS rows follow it (−0.97 dB
+  at ρ 0.60, −2.27 dB at ρ 0.19); by the house meter it is larger,
+  because `Loudness.of` cuts below 120 Hz — removing the coherent
+  fundamental and leaving the less coherent harmonics — and meters the
+  loudest 200 ms window: a kick −0.2 dB (ρ 0.96), VELVET's FANFARE −1.0
+  dB (ρ 0.65 over the whole clip), a bare saw −2.1 dB at C3 (ρ 0.60) and
+  −3.2 dB at C4 (ρ 0.19), where the harmonics fall near half the tap
+  spacing and the copies cancel. The model's 1.2 dB and the 1.5 dB bar
+  this document first named were the uncorrelated case; the test pins
+  the measured rows instead, prints the neighbouring z rows for the
+  record (z 0.25: −2.3 dB, ρ 0.44 at C4; z 0.35: narrower still), and
+  the gate page plays every stereo clip beside its fold with the
+  measured loss in its caption, so the row is chosen by ear with the
+  number in view. The 100 ms level ripple of the fold on a steady saw is
+  1.5 dB at DEPTH 0.5 — the beating that *is* the ensemble (the
+  addendum's stage pumped 3.5–4.6 dB).
 - **A stereo Snip from a mono one** is unforbidden rather than allowed:
   no section changes the channel count today — TAPE, PHASE, CONTOUR,
   ECHO and SPRING iterate `snip.channels` and return it, SWELL folds its
