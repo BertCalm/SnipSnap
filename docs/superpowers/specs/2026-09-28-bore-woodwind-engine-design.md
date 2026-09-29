@@ -1665,7 +1665,8 @@ the apex allpass, now a parameter and no longer a `Strings` change.
 ## R1, as built — 2026-09-29
 
 R1 is the engine: `Bore.kt`, `BorePatch`, `BorePresets`, the registration, the kit and
-the audition. It is built and every test is green (the whole JVM build — nine modules, 3,323 tests, none failing, none skipped). **Nothing in it has been
+the audition. It is built and every test is green (the whole JVM build — nine modules, 3,323 tests, none failing, none skipped (3,330 on the
+merge with the default branch's VOX changes, the same result)). **Nothing in it has been
 heard.** The constants were measured, the presets were authored from the measurements, and
 the tests prove the loop speaks, in tune, bounded, and closes when it is asked to loop; none
 of that says it sounds like a woodwind. The audition (`generateBoreAudition`, then the page)
