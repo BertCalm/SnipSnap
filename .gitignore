@@ -70,3 +70,7 @@ testkit/ensemble-audition/
 # The BORE audition clips, manifest and page, rendered by :synth:generateBoreAudition
 # and published as the listening artifact; never committed.
 testkit/bore-audition/
+
+# The VALVE audition clips and manifest, rendered by :synth:generateValveAudition
+# and published as the listening artifact; never committed.
+testkit/valve-audition/
