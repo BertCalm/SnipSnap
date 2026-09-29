@@ -1307,13 +1307,30 @@ proposal (rack §1) is the source of every number below.
   Proposed **z = 0.15**: the addendum's width and fold loss to two
   decimals, with every tap folded at 0.501 instead of the centre one
   doubled — the same picture on the phone's speaker, none of the
-  lopsidedness. A gate choice among the rows, not a derivation. The test
-  bounds the fold at defaults to **1.5 dB**, measured by averaging never
-  summing (`Dsp.kt:585-587`'s rule) — `Loudness.of(stereo) −
-  Loudness.of(toMono)` is 0.00 dB by construction and is therefore *not*
-  the test (dsp F28) — and prints the L/R correlation as the width claim
-  and the 100 ms level ripple (the addendum's stage pumps 3.5–4.6 dB
-  every 170 ms; that *is* the ensemble, and the design says so).
+  lopsidedness. A gate choice among the rows, not a derivation.
+  **Measured at PR-E1** (`FxTest`, by `Loudness.of` on the average fold
+  — `Dsp.kt:585-587`'s rule; `Loudness.of(stereo) − Loudness.of(toMono)`
+  is 0.00 dB by construction and is therefore *not* the test, dsp F28):
+  the fold's cost is set by how alike the two channels are, and the
+  source decides that. For equal-window RMS it is exactly `√((1 + ρ)/2)`
+  for an L/R correlation ρ, and the plain-RMS rows follow it (−0.97 dB
+  at ρ 0.60, −2.27 dB at ρ 0.19); by the house meter it is larger,
+  because `Loudness.of` cuts below 120 Hz — removing the coherent
+  fundamental and leaving the less coherent harmonics — and meters the
+  loudest 200 ms window: a kick −0.2 dB (ρ 0.96), VELVET's FANFARE −0.95
+  dB (ρ 0.36), a bare saw −2.1 dB at C3 (ρ 0.60) and −3.2 dB at C4 (ρ
+  0.19), where the harmonics fall near half the tap spacing and the
+  copies cancel — one meter for the test and the gate page (`FoldMeter`,
+  correlation and pump measured after the first 300 ms), so the number a
+  caption shows is the number the test pins. The model's 1.2 dB and the
+  1.5 dB bar this document first named were the uncorrelated case; the
+  test pins the measured rows instead, prints the neighbouring z rows
+  for the record (z 0.25: −2.3 dB, ρ 0.44 at C4; z 0.35: narrower
+  still), and the gate page plays every stereo clip beside its fold with
+  the measured loss in its caption, so the row is chosen by ear with the
+  number in view. The 100 ms level ripple of the fold on a steady saw is
+  1.5 dB at DEPTH 0.5 — the beating that *is* the ensemble (the
+  addendum's stage pumped 3.5–4.6 dB).
 - **A stereo Snip from a mono one** is unforbidden rather than allowed:
   no section changes the channel count today — TAPE, PHASE, CONTOUR,
   ECHO and SPRING iterate `snip.channels` and return it, SWELL folds its
@@ -1353,12 +1370,14 @@ proposal (rack §1) is the source of every number below.
   `Dsp.kt`/`Tonewheel.kt` +12/−9 for the lifted tap, `FxChain.kt` +9/−1
   (the field, the row, the order line, the widening sentence),
   `Treatments.kt` +2 (`"ensembled"`), `PadSheet.kt` +3 (`ENSEMBLE` on
-  `CHARACTER_SEGMENTS` beside PHASE, `PadSheet.kt:77`, and the verb
-  map), `FxTest.kt` ~65, `TreatmentsTest.kt` +1, `PadSheetTest.kt` +3/−2
-  (the chip inventory), `README.md` +3/−1. CLI-reachable the day it lands
-  through `Treatments.names`. Cost: six sines per frame and three
-  one-poles per channel at the snip's own 44.1 kHz — TAPE's load three
-  times over, once, not at 4×.
+  `TIME_SEGMENTS`, `PadSheet.kt:80` — the character row beside PHASE was
+  already at the card's six-chip ceiling, `PadSheetTest.kt:189`, and
+  three copies a few milliseconds late is a delay-line effect that reads
+  as one — and the verb map), `FxTest.kt` ~65, `TreatmentsTest.kt` +1,
+  `PadSheetTest.kt` +3/−2 (the chip inventory), `README.md` +3/−1.
+  CLI-reachable the day it lands through `Treatments.names`. Cost: six
+  sines per frame and three one-poles per channel at the snip's own 44.1
+  kHz — TAPE's load three times over, once, not at 4×.
 - **Before the engine, as its own PR.** Yes — nothing in it depends on
   ARCO. **PR-E1** is the section, with its own four-clip gate through
   `AuditionLevel`: a THUMP kick, VELVET FANFARE, RESIN WIDE SECTION and
@@ -1485,10 +1504,10 @@ sheet): `Ensemble.kt` (new, ~140), `Dsp.kt` and `Tonewheel.kt` (the
 lifted `tap`, +12/−9), `FxChain.kt` (the field, the `SECTIONS` row, the
 order line at `:11` and its sentence (CONTOUR's own at `:13` is the
 shape), the widening sentence in the KDoc), `Treatments.kt`
-(`"ensembled"`), `PadSheet.kt` (`ENSEMBLE` on `CHARACTER_SEGMENTS` at
-`:77` beside PHASE, and the verb map), `FxTest.kt` (the section's own
-test, the identity test, the `stereoExcluded` entry at `:62-69`, the
-widening assertions, the fold bound), `TreatmentsTest.kt`,
+(`"ensembled"`), `PadSheet.kt` (`ENSEMBLE` on `TIME_SEGMENTS` at `:80`,
+the character row being full, and the verb map), `FxTest.kt` (the
+section's own test, the identity test, the `stereoExcluded` entry at
+`:62-69`, the widening assertions, the fold bound), `TreatmentsTest.kt`,
 `PadSheetTest.kt` (the chip inventory), README's rack list — about 240
 lines in ten files; and, for the STRING MACHINE presets of route (b),
 the landing table beside the roster (`Presets.landingFor`, ~60 lines)
