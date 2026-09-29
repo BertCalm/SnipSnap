@@ -1317,15 +1317,17 @@ proposal (rack §1) is the source of every number below.
   at ρ 0.60, −2.27 dB at ρ 0.19); by the house meter it is larger,
   because `Loudness.of` cuts below 120 Hz — removing the coherent
   fundamental and leaving the less coherent harmonics — and meters the
-  loudest 200 ms window: a kick −0.2 dB (ρ 0.96), VELVET's FANFARE −1.0
-  dB (ρ 0.65 over the whole clip), a bare saw −2.1 dB at C3 (ρ 0.60) and
-  −3.2 dB at C4 (ρ 0.19), where the harmonics fall near half the tap
-  spacing and the copies cancel. The model's 1.2 dB and the 1.5 dB bar
-  this document first named were the uncorrelated case; the test pins
-  the measured rows instead, prints the neighbouring z rows for the
-  record (z 0.25: −2.3 dB, ρ 0.44 at C4; z 0.35: narrower still), and
-  the gate page plays every stereo clip beside its fold with the
-  measured loss in its caption, so the row is chosen by ear with the
+  loudest 200 ms window: a kick −0.2 dB (ρ 0.96), VELVET's FANFARE −0.95
+  dB (ρ 0.36), a bare saw −2.1 dB at C3 (ρ 0.60) and −3.2 dB at C4 (ρ
+  0.19), where the harmonics fall near half the tap spacing and the
+  copies cancel — one meter for the test and the gate page (`FoldMeter`,
+  correlation and pump measured after the first 300 ms), so the number a
+  caption shows is the number the test pins. The model's 1.2 dB and the
+  1.5 dB bar this document first named were the uncorrelated case; the
+  test pins the measured rows instead, prints the neighbouring z rows
+  for the record (z 0.25: −2.3 dB, ρ 0.44 at C4; z 0.35: narrower
+  still), and the gate page plays every stereo clip beside its fold with
+  the measured loss in its caption, so the row is chosen by ear with the
   number in view. The 100 ms level ripple of the fold on a steady saw is
   1.5 dB at DEPTH 0.5 — the beating that *is* the ensemble (the
   addendum's stage pumped 3.5–4.6 dB).
