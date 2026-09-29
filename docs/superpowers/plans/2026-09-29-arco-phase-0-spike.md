@@ -1,7 +1,8 @@
 # ARCO — the Phase-0 record: the specification rendered, and the bow rebuilt
 
 **Status:** a record, not a plan. Nothing here is in the build. The two
-Kotlin pairs below ran once each in throwaway worktrees at `b8b8557` on
+Kotlin sources below ran in throwaway worktrees at `b8b8557` — the spike
+over five iterations, the probe twice — on
 2026-09-28/29 and were then discarded; they are kept as text so the
 numbers in the design's "The physics, measured" and its appendix tables
 can be re-run, the way BORE's spike record
@@ -36,7 +37,8 @@ its iteration log and its source:
 ## How to re-run
 
 Both pairs are test-source files (`synth/src/test/kotlin/com/snipsnap/synth/`),
-so `internal` members of `:synth` resolve. Copy a pair in, then:
+so `internal` members of `:synth` resolve. Copy a set in (the spike's two files, Appendices B–C; the probe's
+three, Appendices E–G), then:
 
 ```
 ./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.BowSpikeTest' -i
@@ -46,8 +48,7 @@ so `internal` members of `:synth` resolve. Copy a pair in, then:
 Each test is print-only — its one assertion is `assertTrue(true)` — and
 writes its tables to a file named in its source as well as to stdout
 (`-i` shows stdout). On the cloud session's four cores the spike took
-2 m 19 s and the probe 2 m 04 s after the first compile. Neither pair
-belongs in the tree: the probe reproduces an engine that does not work,
+2 m 19 s and the probe 2 m 04 s after the first compile. Neither set belongs in the tree: the probe reproduces an engine that does not work,
 and the spike's `BowSpike` is the design's shape without the design's
 budgeted `Strings.Bow`, its window-mapped GRIP or its output chain. Remove
 the files after the run; a `git status` that shows them is the reminder.
@@ -74,13 +75,22 @@ the files after the run; a `git status` that shows them is the reminder.
   bow stops the string, a lifted one lets it ring at the formula's t60;
   the string builds up over ~40 periods (A, tables (4), (5), (7)).
 
+
+One caution for a reader following the appendices' STK citations: the
+spike's and probe's reports cite `stk_Bowed.cpp` and `stk_BowTable.h` by
+the line numbers they recorded as they worked, and a later verification
+pass found several off by one to three lines (β at `:72`, not `:73`; the
+bow velocity at `:116`, not `:105`; the slope at `:155`, not `:152`;
+`bowDown_` at `:153-154`). The design carries the verified numbers; the
+appendices are left as written, as a record.
+
 ## Appendix A — the spike's report: the corrected bow on the house's primitives
 
 Worktree: `.claude/worktrees/wf_17fb7c2a-cfb-2` at `b8b8557` (two untracked files, nothing committed, no tracked file touched, main checkout untouched):
 - `synth/src/test/kotlin/com/snipsnap/synth/BowSpike.kt` — 375 lines, `internal object BowSpike`, marked SPIKE (test source set, so `Strings.tune`, `Strings.Loop`, `Tide.bandLimit` resolve).
 - `synth/src/test/kotlin/com/snipsnap/synth/BowSpikeTest.kt` — 733 lines, one print-only test `spike()`; the only assertion is `assertTrue(true)`.
 
-Copies, every run's gradle log and the tables were kept in the session's scratchpad (not in the tree) — `BowSpike.kt`, `BowSpikeTest.kt`, `spike-tables.txt` (the final run's 494 lines, written by the test itself), `iter1.log` … `iter5.log` (gradle `-i` stdout), `warm-build.log`.
+Copies, every run's gradle log and the tables were kept in the session's scratchpad, which is gone with the session; what survives is this appendix's text and the sources in Appendices B–C — `BowSpike.kt`, `BowSpikeTest.kt`, `spike-tables.txt` (the final run's 494 lines, written by the test itself), `iter1.log` … `iter5.log` (gradle `-i` stdout), `warm-build.log`.
 
 Build/run: `./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.BowSpikeTest' -i` → exit 0, `BUILD SUCCESSFUL in 2m 19s` on the final run (iter5.log:890); iteration 1 exited 1 (a helper crashed on a row with no f0 peak, fixed in iteration 2; no non-finite render anywhere). Every number below is copied from `spike-tables.txt` (iteration 5) unless a row says which earlier log it came from.
 
@@ -1508,7 +1518,7 @@ class BowSpikeTest {
 ## Appendix D — the probe's report: the specification's engine, as written
 
 **Tag:** empirical. **Tree:** worktree `.claude/worktrees/wf_17fb7c2a-cfb-1` at `b8b8557`, three untracked test-source files, nothing committed, main checkout untouched.
-**Files:** `synth/src/test/kotlin/com/snipsnap/synth/ArcoProbeV1.kt` (281 lines, spec part 1's `Arco.kt`), `ArcoProbeV2.kt` (332 lines, part 2's `SolinaEnsemble.kt` + `Arco.kt`), `ArcoProbeTest.kt` (635 lines, eight print-only tests, the only assertion is `assertTrue(true)`). Copies, the two gradle logs, both runs' tables (`empirical-tables-run1.txt`, `empirical-tables.txt`) and the JUnit XML are in `the session's scratchpad/`.
+**Files:** `synth/src/test/kotlin/com/snipsnap/synth/ArcoProbeV1.kt` (281 lines, spec part 1's `Arco.kt`), `ArcoProbeV2.kt` (332 lines, part 2's `SolinaEnsemble.kt` + `Arco.kt`), `ArcoProbeTest.kt` (635 lines, eight print-only tests, the only assertion is `assertTrue(true)`). Copies, the two gradle logs, both runs' tables (`empirical-tables-run1.txt`, `empirical-tables.txt`) and the JUnit XML were kept in the session's scratchpad, which is gone with the session; what survives is this appendix's text and the sources in Appendices E–G.
 **Command:** `./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.ArcoProbeTest'` — run 1 (fresh worktree, :json/:audio/:synth/:kit/:xpm/:mpc3 compiled from scratch): exit 0, 2 m 48 s wall, the suite itself 98.6 s; run 2 (after adding measurements): exit 0, 2 m 04 s wall, tests B 42.6 s / C 44.2 s / E 7.4 s / G 2.9 s / H ~4 s / D 1.0 s / F 0.5 s / A 0.01 s. Run 2 reproduced every number of run 1 outside the timing table (a `diff` of the first five columns of every table row: only the cost rows and the two rewritten sections differ) — the render is deterministic. Compiler warnings on the probe sources: one, the spec's own `private inline fun readInterpolated` ("expected performance impact from inlining is insignificant", ArcoProbeV2.kt:116).
 
 ### Headline

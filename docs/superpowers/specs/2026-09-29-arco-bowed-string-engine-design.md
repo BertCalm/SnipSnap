@@ -133,16 +133,24 @@ what the toolkit lacks and the whole of what this design adds.
 
 A few of the house's words, for the same reader. The **rack** is the
 per-pad effects chain (EQ, tape, echo and the rest) saved beside the pad
-in `kit.json`, in a fixed order (`FxChain.kt:11-13`). A **recipe** is
+in `kit.json`, in a fixed order (`FxChain.kt:9-11`). A **recipe** is
 what a synth pad regenerates from: its patch plus its rack section
-(`PadRecipe.kt:12-13, :23-25`). A **gate** is a listening session — a page of
-rendered clips with verdict buttons — whose verdict decides whether the
-next round starts at all. **HOLD** is a knob that means how long a
-sustained sound is held, whose top step renders a seamless **LOOP** for
-the SURFACE, the phone screen where a loop plays under a finger,
-pitched by where the finger sits (`Siren.kt:74-90`). A **claims test**
-is a test that measures the rendered audio for the property the design
-promises, so the promise is kept by CI rather than by a sentence.
+(`PadRecipe.kt:12-13, :23-25`). A **gate** is a listening session — a
+page of rendered clips with verdict buttons — whose verdict decides
+whether the next round starts at all. **HOLD** is a knob that means how
+long a sustained sound is held, whose top step renders a seamless
+**LOOP** for the SURFACE, the phone screen where a loop plays under a
+finger, pitched by where the finger sits (`Siren.kt:74-90`). A **claims
+test** is a test that measures the rendered audio for the property the
+design promises, so the promise is kept by CI rather than by a sentence.
+A **cent** is a hundredth of a semitone; five cents is about the
+smallest detune a listener notices. **DC** is a constant offset — the
+average of the wave sitting off zero — which a speaker cannot play and a
+classifier reads as energy. **CI** is the test run on every pull request
+(a **check run** is one of its jobs); a **worktree** is a scratch
+checkout of the repository. `lin(x, a, b)` maps a 0..1 knob to a..b in a
+straight line and `expMap` exponentially, so equal knob steps are equal
+ratios.
 
 ## The specification, as reviewed
 
@@ -246,10 +254,11 @@ and the ambition is right.
   "the string snaps back" (physics §Headline). Each is coded wrong in a
   way a single in-tune test would have caught.
 - **Cost is not a problem**: 35–72 ms per rendered second for part 1's
-  engine — 34–53 for four voices, inside BORE's 37–59, and 58–72 for
-  SARANGI's 0.935 s render because its seven `Pluck.ks` strings render 2
-  s each whatever the note length (empirical §E); the corrected bow's
-  bare loop is 9.9 (spike (8)).
+  engine — 34–53 for four voices, beside BORE's 37–59 for its finished
+  chain (`bore spec:218`; its bare spike was 26–49, `bore spec:439`),
+  and 58–72 for SARANGI's 0.935 s render because its seven `Pluck.ks`
+  strings render 2 s each whatever the note length (empirical §E); the
+  corrected bow's bare loop is 9.9 (spike (8)).
 - **The product ideas are good.** A cello stab beside a snare, a bowed
   pedal under a beat, an erhu line under a finger, a string machine —
   these are sounds this user reaches for and no engine makes (product
@@ -265,6 +274,25 @@ and the ambition is right.
   question").
 
 ## The physics, measured
+
+A few measurement words, for the same reader. **Slips per period**
+counts how many times the string breaks free of the bow in one cycle;
+the textbook note is exactly one, and two or more sounds an octave up
+and thin. A **Schelleng diagram** is the map, bow force against bow
+speed, of where that one-slip note exists — too little force and the
+string slips twice, too much and it goes raucous; this document's tables
+are rows of that map, measured. **t60** is how long a ring takes to fall
+60 dB — the tail's length. The **centroid** is the spectrum's centre of
+mass, the number that tracks "brighter". A **one-pole** is the simplest
+low-pass, a **corner** its cutoff frequency (the Helmholtz *corner* of
+the sawtooth is a different thing, the kink in the waveform, and the
+text says which), and an **allpass** a filter that delays without
+colouring, which the toolkit uses to tune a delay line by a fraction of
+a sample. A **limit cycle** is an oscillation a nonlinear loop settles
+into on its own — a bowed string's pitch is one, so it is measured, not
+set. **KDoc** is a Kotlin source comment, where this house keeps a
+constant's measurement beside the constant.
+
 
 Three things were measured, in this order: the documents' loop as
 written (the probe, Appendix D of the record); the reference model's
@@ -320,15 +348,15 @@ of the shape `Strings.Loop` has — an integer delay plus a first-order
 Jaffe–Smith allpass for the fraction (`Strings.kt:190-192`'s form) —
 with the total budgeted by `Strings.tune`'s closed form for the bridge
 one-pole's phase (`Strings.kt:113-117`; read back from `tune()` and
-agreeing with the closed form to four decimals in every row, spike
-table 0). Every constant is STK's, fetched: reflection 0.95, offset
-0.001, ρ clamped to [0.01, 0.98], β 0.127236, `v_bow = 0.03 +
-0.2·amplitude`, `slope = 5 − 4·pressure`, `ρ(Δv) = (|slope·(Δv +
-0.001)| + 0.75)^−4` (`stk_Bowed.cpp:48, :56, :72, :116, :155`; `stk_BowTable.h:26, :86-96`;
-`stk_BowTable.h:86-96`). A second fetched witness, the Faust physical-
-modelling library's bowed string, is the same model line for line
-(physics §2b). Two things the brief did not say had to be set before it
-played the textbook note (spike §Headline):
+agreeing with the closed form to four decimals in every row, spike table
+0). Every constant is STK's, fetched: reflection 0.95, offset 0.001, ρ
+clamped to [0.01, 0.98], β 0.127236, `v_bow = 0.03 + 0.2·amplitude`,
+`slope = 5 − 4·pressure`, `ρ(Δv) = (|slope·(Δv + 0.001)| + 0.75)^−4`
+(`stk_Bowed.cpp:48, :56, :72, :116, :155`; `stk_BowTable.h:26, :86-96`).
+A second fetched witness, the Faust physical- modelling library's bowed
+string, is the same model line for line (physics §2b). Two things the
+brief did not say had to be set before it played the textbook note
+(spike §Headline):
 
 1. **The bridge filter's corner, not its pole.** STK's `setPole(0.75 −
    0.2·22050/rate)` is not rate-invariant: the same formula at 176.4 kHz
@@ -424,13 +452,14 @@ the physics.
 
 **Onset** (spike (5); 20 ms velocity ramp): time to 90 % of steady RMS
 is 325–420 ms at C2 and E1 and 160–245 ms at A3 (half level in 10–165
-ms) — a 0.95-loss string builds up over about forty periods. The
-documents' "30–60 ms for the contrabass to stabilise" is what the
-single-ring relay does in reaching its chatter level, not what a string
-does; the 10–15 ms "to 50 %" cells at hard pressure are the first
-multiple-slip burst, not the note. This is the finding that matters
-most for a beatmaker's stab, where the attack is the sound ("Macros",
-BOW).
+ms) — a 0.95-loss string builds up over tens of periods — 21–27 at C2,
+35–54 at A3, so the count itself moves with pitch, which is why test 4
+prints both units. The documents' "30–60 ms for the contrabass to
+stabilise" is what the single-ring relay does in reaching its chatter
+level, not what a string does; the 10–15 ms "to 50 %" cells at hard
+pressure are the first multiple-slip burst, not the note. This is the
+finding that matters most for a beatmaker's stab, where the attack is
+the sound ("Macros", BOW).
 
 **Release** (spike (7); 130.81 Hz, 1 s hold, 50 ms ramp of the bow
 velocity to zero): with the bow *lifted* after the ramp (STK's
@@ -530,7 +559,7 @@ F17–F25; product §2):
 | Addendum part | The claim | The code | The tree | Verdict |
 |---|---|---|---|---|
 | the divide-down saw | "phase-locked … taps the fundamental of the physical waveguide"; "harmonic reinforcement" | a free phase accumulator at the macro's nominal f0, mixed into the *output* buffer after the delay-line write, never fed back; at SOLINA 1 it is 0.5·pressure of saw under 0.6 of string, un-normalised, so the balance depends on the loop's own level (dsp F17) | the same one-line `saw` VELVET, RESIN, FATHOM and ResinDrone each carry privately | an oscillator under a physical string — a product novelty, not DSP; engine-side if kept at all, because it needs f0 and the bow envelope; honestly named |
-| the formants | cello 320 Hz + a −12 dB shelf, viola 780/1800, violin 2600 with a bass cut — "passive RLC curves" | one chain, `peaking(380, +6 dB, Q 1.2)` → `peaking(2400, +5 dB, Q 1.5)`, on every voice, blended `raw·(1−0.5a) + shaped·0.8a` (dsp F18) | `Modes.fixed` rows through `bodyRing` as a fixed shape, or the rack's EQ as a tone control | rack material; every number recalled |
+| the formants | cello 320 Hz + a −12 dB shelf, viola 780/1800, violin 2600 with a bass cut — "passive RLC curves" | one chain, `peaking(380, +6 dB, Q 1.2)` → `peaking(2400, +5 dB, Q 1.5)`, on every voice, blended `raw·(1−0.5a) + shaped·0.8a` (dsp F18) | dropped from the section, carried by the recipe: ENSEMBLE stays a modulation section with no tone stage (one section, one job — PHASE and TAPE carry no EQ either); a register is the rack's EQ on the recipe, route (b)'s landing table pairing ENSEMBLE with an EQ setting per preset (DARK STRINGS a low shelf, THIN STRINGS a bass cut), route (a) taking it from the pad sheet's EQ chip | rack material; every number recalled, none ships (physics §7) |
 | the tri-phase chorus | three BBD lines at 120°, "net pitch deviation sums to zero … eliminates seasick wobbling" | three lines written with the *same* sample (one line, three taps); each tap swings ±17.6 c at 0.58 Hz and ±28.4 c at 5.85 Hz; L and R each carry two taps, so per channel nothing cancels — measured sd 32/28 c per window (dsp F19–F20; empirical §F1); the dry/wet crossfade is a comb with notches at 66.7 / 200 / 333 Hz that the modulation smears (dsp F21; empirical §F2: 9.3 dB at the first peak/notch pair at amount 0.5) | TAPE's per-channel modulated read, 100 % wet with no comb; TONEWHEEL's wrap-safe tap | **an ordinary chorus of ordinary depth** (TAPE's wow at full is ±38.5 c, the scanner ±33 — same arithmetic); its three-tap arrangement and stereo assignment are new, small, and rack-shaped |
 | the stereo sum | `L = (t0+t1)/√2, R = (t1+t2)/√2` | t1 doubled in the fold: `(L+R)/2` loses 1.68–1.85 dB against the channels at amounts 0.85–0.95, the presets' range (dsp F22; empirical §F1–F2), and then the mono-only `bandLimit` folds the stereo to −43 dB anyway (empirical §F4) | VOX's per-channel chain; `KeyNote` export is mono (`Keys.kt:250, :304`) | a stereo *engine* forecloses MAKE INSTRUMENT; width is the rack's after U4 |
 | the 6.5 kHz one-pole "BBD clock loss" | "analog warmth" | a constant with no source; a bucket brigade's bandwidth follows its clock and the era's units ran a compander — none modelled (dsp F25, recalled) | TAPE's AGE | a tone control |
@@ -538,7 +567,7 @@ F17–F25; product §2):
 
 The CRUNCH rule — an effect that improves more than one engine belongs
 in the rack, where it "works on captured snips exactly as on synthesized
-ones" (`README.md:162-170`) — has been applied three times to exactly
+ones" (`README.md:162-167`) — has been applied three times to exactly
 this shape, and the addendum gives no reason to make an exception:
 nothing is coupled, a held or LOOP render must be dry and un-modulated
 for its seam anyway (`Keys.kt:79-86`; `Siren.kt:121-124`), and a stereo
@@ -602,16 +631,17 @@ BOW", "HARP DOUBLE", "MEDIEVAL BOW", "ARPEGGIO PAD", "WARP", "DEEP HARP"
 — each checked by script against the old and new terms (rack §5).
 
 **Preset names, eight per round-one voice, as candidates only** —
-authored by ear after the gate, the settled rule — each ≤ 14 characters,
-uppercase, clean of every regex term and not among the 798 distinct
-shipped names (rack §8.3): CELLO — SLOW BOW · SHORT STAB · DEEP PEDAL ·
-GRIT BOW · DRY SCRAPE · CINEMA LOW · HORSEHAIR · LONG DRAW (and the
-documents' own SUITE C2 passes); ERHU — NASAL LINE · MOON FIDDLE · THIN
-SCRAPE · HIGH CRY · SLOW CRY · SNAKE FIDDLE · TWO STRING · TEA HOUSE.
-Four shipped SKIN RIDE presets already end in BOW (CUT BOW, ECHO BOW, PEAK
-BOW, WARM BOW, `SkinPresets.kt:236-248`), so ARCO's BOW names are new
-words, not new endings; TIGHT SKIN, LOOSE SKIN and SKIN FIDDLE are
-dropped because SKIN is an engine's name.
+authored by ear against the built engine once Phase 0's gate is passed
+(it is), and re-heard at R1's audition — the settled rule — each ≤ 14
+characters, uppercase, clean of every regex term and not among the 798
+distinct shipped names (rack §8.3): CELLO — SLOW BOW · SHORT STAB · DEEP
+PEDAL · GRIT BOW · DRY SCRAPE · CINEMA LOW · HORSEHAIR · LONG DRAW (and
+the documents' own SUITE C2 passes); ERHU — NASAL LINE · MOON FIDDLE ·
+THIN SCRAPE · HIGH CRY · SLOW CRY · SNAKE FIDDLE · TWO STRING · TEA
+HOUSE. Four shipped SKIN RIDE presets already end in BOW (CUT BOW, ECHO
+BOW, PEAK BOW, WARM BOW, `SkinPresets.kt:236-248`), so ARCO's BOW names
+are new words, not new endings; TIGHT SKIN, LOOSE SKIN and SKIN FIDDLE
+are dropped because SKIN is an engine's name.
 
 ## Architecture
 
@@ -662,7 +692,7 @@ a lag of 0.06 samples that the budget charges like any other — which
 answers the fleet's objection that two literal `Loop`s would pay the
 loop filter and its loss twice (fleet §3e): they pay the *bridge* filter
 and the 0.95 once, the nut's nothing that matters, and the spike's own
-Model A used a single tap per segment and used a single tap per segment
+Model A used a single tap per segment
 and attributes its residual to the corner effect, not the tap (spike,
 recommendation 1; BORE's spike found the two-tap average "made no
 measurable difference to tuning", `bore spec:875-877`). The `Exciter`
@@ -701,10 +731,20 @@ copy, 384 cases; one changed sample fails):
    it zero-mean — and only the single-ring bow needed a blocker, which
    is the model not to build.
 
-So **if BORE's R0 lands first, ARCO's R0 is one KDoc sentence and one
-test**; if ARCO's lands first, BORE inherits the same two additions.
-That shared PR is the integration insight of this brainstorm: the fleet's
-two sustained loops are built from one change to the toolkit.
+So **if BORE's R0 lands first, ARCO's R0 is one KDoc sentence and two
+tests** (the budget identity and the bare-Loop ring, "Testing"); if
+ARCO's lands first, BORE inherits the same two additions. That shared PR
+is the integration insight of this brainstorm: the fleet's two sustained
+loops are built from one change to the toolkit. Whichever engine lands
+R0 writes the one plan file for it
+(`docs/superpowers/plans/2026-09-xx-strings-r0.md`, SILK 1a's shape)
+and, in the same PR, edits the *other* design's R0 paragraph and effort
+row to say what remains — for BORE, addition #2 alone (its DC blocker,
+~40 lines and its own test) plus the +3 line-number drift fleet F18
+found in its `Strings.kt` cites; for ARCO, one KDoc sentence and two
+tests. Order: PR-E1 needs neither and may go first; R0 precedes any
+engine code from either design; ARCO R1 and BORE R1 are then
+independent.
 
 **`Strings.Bow`** (R1, in `Strings.kt`, the shared toolkit — reusable
 for a second bowed string, the hurdy-gurdy's bourdon and the erhu's
@@ -742,10 +782,14 @@ things the Loops do not have:
   at β ≈ 0.133 at C3 (toolkit §2.8) — the per-voice β is set from the
   loss × force map re-run on the built `Bow`, starting from 0.133, not
   copied. And `tune`'s `require` now guards each segment: `exact_b = β·T
-  − τ − 0.5 ≥ 2` gives a floor of β ≥ 0.072 at ERHU's top note (toolkit
-  §2.7), so a sul-ponticello axis cannot take β under about 0.07 there,
-  and a `Bow` built at every voice's top TUNE is a unit test, not a
-  discovery.
+  − τ − 0.5 ≥ 2` gives a floor of β ≥ (2.5 + τ)/T that moves with GRIP's
+  corner, because the bridge one-pole's delay τ is charged to the bridge
+  segment: at ERHU's top note (T = 150.2 samples) β ≥ 0.072 at the 3024
+  Hz corner (toolkit §2.7), 0.098 at 2000 Hz, 0.119 at 1500 Hz and 0.151
+  at 1000 Hz — so at β 0.133 ERHU's `c_lo` cannot go under about 1300 Hz
+  at D6, a sul-ponticello axis cannot take β under about 0.07 there, and
+  a `Bow` built at every voice's top TUNE **at GRIP 0**, the lowest
+  corner, is a unit test, not a discovery.
 - **The table.** `ρ(Δv) = clamp((|slope·(Δv + OFFSET)| + 0.75)^−4,
   RHO_MIN, RHO_MAX)`, STK's constants fetched: `OFFSET 0.001`, `RHO_MIN
   0.01`, `RHO_MAX 0.98` (`stk_BowTable.h:26, :86-96`; `stk_Bowed.cpp:48`).
@@ -853,22 +897,43 @@ mapping for BREATH, applied twice:
 
 ### The body
 
-`Strings.bodyRing` (`Strings.kt:722`) on the bridge wave — differentiated
-drive, RMS-matched to the string so BODY means "times the string",
-identity at 0 — with `Modes.fixed(hz, gain, t60)` rows (`Modes.kt:202`;
-t60 in seconds, never Q — a fixed Q ties ring time to pitch). The
-documents' wooden bodies as coded, converted by SILK's own `t60 =
-2.2·Q/f` (dsp F12): CELLO air 104 Hz, 0.254 s and wood 220 Hz, 0.180 s;
-CONTRABASS 58 Hz, 0.455 s and 110 Hz, 0.360 s — every one **labelled
-shape** (SILK's convention for a number chosen by ear rather than taken
-from a source, `Silk.kt:436-460`) until a citation lands, because
-`Modes.kt:121-125` forbids a recalled number in a body table and none of
-these has a source (physics §5: a cello's air resonance near 100 Hz and
-its main wood resonances around 170–220 Hz are plausible and unsourced;
-Jansson's KTH text, which the house has already read for the guitar, is
-the nearest sourced neighbour). Never inside the loop, never
-`Dsp.Biquad.bandpass` on a differentiated drive at −54 dB (dsp F10). The
-skinned body is ERHU's question ("Voices").
+`Strings.bodyRing` (`Strings.kt:722`) on the bridge wave —
+differentiated, and not for the reason PLUCK's KDoc gives: ARCO's wave
+is already velocity (STK taps it undifferentiated, `stk_Bowed.h:123`;
+physics F12), so the first difference is a +6 dB/oct tilt with no
+physical reading, kept because it is what makes `Modes.ring`'s `1/sin θ`
+onset peak cancel (`Modes.kt:65-83`, `Strings.kt:686-692`), the RMS
+match then takes the tilt's level back, and the table's GAIN column can
+undo the tilt per row; the KDoc says so, audition item 5 adds one clip
+per body with `differentiate = false` (the hook exists,
+`Strings.kt:726-727`) so the gate hears the undifferentiated drive with
+its onset thump beside the tilted one, and a claims test bounds the
+body's first 20 ms against its steady level either way — RMS-matched to
+the string so BODY means "times the string", identity at 0 — with
+`Modes.fixed(hz, gain, t60)` rows (`Modes.kt:202`; t60 in seconds, never
+Q — a fixed Q ties ring time to pitch). The documents' wooden bodies as
+coded, converted by SILK's own `t60 = 2.2·Q/f` (dsp F12): CELLO air 104
+Hz, 0.254 s and wood 220 Hz, 0.180 s; CONTRABASS 58 Hz, 0.455 s and 110
+Hz, 0.360 s — every one **labelled shape** (SILK's convention for a
+number chosen by ear rather than taken from a source, `Silk.kt:436-460`)
+until a citation lands, because `Modes.kt:121-125` forbids a recalled
+number in a body table and none of these has a source (physics §5: a
+cello's air resonance near 100 Hz and its main wood resonances around
+170–220 Hz are plausible and unsourced; Jansson's KTH text, which the
+house has already read for the guitar, is the nearest sourced
+neighbour). A research pass in SILK's form
+(`docs/superpowers/plans/2026-09-27-silk-research.md`: each value
+`confirmed` only when the verifier opened the source, `computed` with
+the working shown, else unused in code) runs between R1's gate and R2,
+targeting the three sources physics §7 rates reachable — Woodhouse's
+Euphonics pages for the cello's A0 and B1 and the regime bounds, Jansson
+ch. IV–V for the nearest sourced body, Guettler's KTH thesis for the
+attack — and the repositories SILK reached, for an erhu skin paper.
+Until it lands every body row stays *shape*; if it finds nothing, the
+rows stay shape permanently and the KDoc says so, SANTUR's placeholder
+rule. Never inside the loop, never `Dsp.Biquad.bandpass` on a
+differentiated drive at −54 dB (dsp F10). The skinned body is ERHU's
+question ("Voices").
 
 ### The output
 
@@ -900,7 +965,7 @@ defaults with the pinned share.
 **ERHU's body and knob, in R1** (rack §4). Three choices for the skin:
 no body until the gate hears the plain string — honest, but a BODY knob
 that does nothing is rule 1's dead knob, SANTUR's own reason for
-shipping "one placeholder mode, not an empty table" (`Silk.kt:452-457`);
+shipping "one placeholder mode, not an empty table" (`Silk.kt:453-460`);
 the MEMBRANE ratios at the documents' 293 Hz anchor, labelled shape — at
 least a sourced *membrane* shape, RMS-matched by `bodyRing` so BODY
 means "times the string", its known wrongness with a direction (the
@@ -909,9 +974,12 @@ TUNE 0 rings the body at f0 where TUNE 12 does not; or one `Modes.fixed`
 row, SANTUR's placeholder shape, at an anchor off every scale root.
 **This document ships the second and hears all three unlabelled at the
 gate** (audition item 5), the KDoc never calling the table "the erhu's
-skin"; the code cost of switching is one table. The nearest measured
-skin in the house's own research, the shamisen's, has its fundamental
-unresolved between ~152 Hz and ~766 Hz
+skin"; the code cost of switching is one table. The documents' nasal
+formant (1.2–2.2 kHz, unsourced) is not a fourth table but a candidate
+`Modes.fixed` row on top of whichever skin wins, heard at audition item
+5 as a fifth clip and kept only if the gate names it. The nearest
+measured skin in the house's own research, the shamisen's, has its
+fundamental unresolved between ~152 Hz and ~766 Hz
 (`docs/superpowers/plans/2026-09-27-silk-research.md:163, :261`), which
 is why no number here is called sourced. The knob: 24 semitones to D6
 with the speaks test at the top as the entry rule — the spike measured
@@ -930,7 +998,7 @@ the spike's table (4) shape, minutes of work — and a phone speaker does
 not play 41 Hz, so its pad is for the MPC, not the instant loop (product
 §3). **SARANGI** is ERHU's body at C3 plus **WASH** — SANTUR's
 sympathetic bank (`Silk.washModesFor`, `Silk.kt:500-510`, rung through
-`bodyRing` by `withWash`, `:427-431`: `Modes.fixed` rows from the
+`bodyRing` by `withWash`, `:428-432`: `Modes.fixed` rows from the
 scale's degrees, rung through `bodyRing` after the body, DC-free,
 RMS-matched, callable today) driven by the bridge wave for the whole
 note, which is what "continuously stimulated by differentiated bridge
@@ -946,7 +1014,18 @@ post-processing: a bourdon that follows TUNE at f0 and 1.5·f0 (a second
 `Bow`, `Strings.course`'s summing shape) and **BUZZ**, the chien —
 `Terra.applyBuzz`'s shape (`Terra.kt:284-285, :491-502`: a threshold on
 the render's own level, the excess into noise), never the documents'
-absolute 0.35 on an un-normalised buffer. R3, with DRONE TO LOOP.
+absolute 0.35 on an un-normalised buffer — applied to the *bourdon*
+`Bow`'s wave, not the melody's, and armed by the stroke: the real chien
+fires when the crank accelerates (physics F9 — a wrist flick lifts the
+loose bridge foot), and the only acceleration this model has is BOW's
+overshoot, so the threshold is referenced to the bourdon's steady level
+and the excess-into-noise is gated by the first 300 ms of the stroke at
+BOW above 0.5, a buzz on the attack and silence in the sustain, which is
+what a *coup de poignet* sounds like. A buzz that follows every note's
+level regardless (the documents' and TERRA's shape) is the sixth-slot
+BUZZ on any voice; the two are heard side by side at audition 11;
+re-articulating the buzz inside one note is bow reversal's problem ("Out
+of scope"). R3, with DRONE TO LOOP.
 
 The physics axes are one: the bow. What differs per voice is root, body
 and β; what the documents wrote as five mechanisms is one mechanism,
@@ -967,8 +1046,8 @@ given in "The specification, as reviewed".
 | **TUNE** | the note | 24 semitones from the voice's root, snapped through `Keys.midiHz` (`Fork.kt:256-258`); `neutral = 0.5` | 0.5 |
 | **BOW** | the stroke: how fast the bow gets to speed, and how hard it bites on the way | attack `expMap(BOW, 0.40 s, 0.010 s)` on the velocity ramp (400 ms at 0, 63 ms at 0.5, 44 ms at 0.6, 10 ms at 1), capped at 0.85 of the hold (SIREN's `SWEEP_HOLD_FRACTION`, `Siren.kt:72`); above 0.5 an overshoot — the velocity starts at up to 1.75× its sustain value (the amplitude-1 corner the spike bounded, spike (10)) and the pressure at the window's top, both relaxing with the attack's own time constant. The **sustain velocity is a per-voice constant** (CELLO 0.13, STK's `0.03 + 0.2·0.5`, `stk_Bowed.cpp:116`), so BOW never moves GRIP's window (spike (4)). Heard in the first 300 ms and nowhere else — level is `levelTo`'s. Whether the overshoot makes a C2 stab speak in under 100 ms is R1's first table, not a promise (spike (5): the plain ramp takes 325–420 ms) | 0.6 (44 ms, a 1.15× bite) |
 | **GRIP** | bow pressure and the bridge corner together: a light grip or digging in — the stick's share of the period, the corner's edge, the bite | `p = lin(GRIP, p_lo, p_hi)` over the **top single-slip island measured per voice** (spike (4): 0.90–1.00 at C3, single-slip at every velocity row except pressure 0.95 at amplitude 0.8 (three slips); edges re-measured at 0.01 steps at three TUNEs and pinned with the measurement in the KDoc), `slope = 5 − 4·p` (`stk_Bowed.cpp:155`); and `corner = expMap(GRIP, c_lo, 3024 Hz)` on the bridge one-pole, single-slip from 1000 Hz up at pressure ≥ 0.7 (the loss × force map) — the one brightness axis that keeps one slip, a shape standing in for the corner-sharpening a memoryless table lacks. Never a double-slip cell at either end; whether the top may reach the multi-slip region and whether 0 may reach the two-slip whistle are the gate's questions. `neutral = 0.5` | 0.6 |
-| **BODY** | the plate's or the skin's share | `Strings.bodyRing`'s `amount`: identity at 0, the body RMS-matched to the string at 1 (`Strings.kt:722-748`) | 0.5 |
-| **HOLD** | how long the bow is on the string; the top step is a LOOP | SIREN's mapping (`Siren.holdSeconds`, `Siren.kt:190`): `expMap(hold/0.99, 0.3, 4)` s, then a 50 ms ramp to zero, then the bow **lifts** and the string is **stopped** — `Bow.gain()` ramps the bridge reflection down over `release = clamp(0.5·hold, 0.15 s, t60(f0))` so a stab's tail is 0.15 s and a 4 s pad rings to its own t60, the way a player's hand stops a string (OUD's SLIDE precedent for a finger's damping as a lower loop gain, `Strings.kt:510-512`), because the free ring at 0.95 is 0.9–1.9 s at C3–C2 (spike (7); dsp F31) and would file every stab past the classifier's 1.5 s line as LOOP (`Classifier.kt:72`); `LOOP_THRESHOLD 0.99`, SCRAMBLE capped at 0.95 (`Siren.kt:83-84`); `drumClassFor` derived from the *rendered* duration — hold, release and stop — against the 1.5 s line the way `Fork.drumClassFor` derives it (`Fork.kt:219, :239-242`), the constant computed from the mapping at implementation, never typed (the documents' hard-coded 0.65 was wrong even for their own mapping: 1.39 s, under the line, api C2) | 0.4 (0.85 s of bow, 1.33 s rendered at C3, under the line; the line is crossed near HOLD 0.45, computed at implementation) |
+| **BODY** | the plate's or the skin's share — not the documents' plate-to-skin crossfade: each voice has one body, and a knob that fades a cello into a drumhead is a shape no instrument has, so BODY is "how much of this voice's box", SILK's meaning | `Strings.bodyRing`'s `amount`: identity at 0, the body RMS-matched to the string at 1 (`Strings.kt:722-748`) | 0.5 |
+| **HOLD** | how long the bow is on the string; the top step is a LOOP | SIREN's mapping (`Siren.holdSeconds`, `Siren.kt:190`): `expMap(hold/0.99, 0.3, 4)` s, then a 50 ms ramp to zero, then the bow **lifts** and the string is **stopped** — `Bow.gain()` ramps the bridge reflection down over `release = max(0.15 s, min(0.5·hold, t60(f0)))` — the floor wins where the free ring is shorter than it (ERHU above about G5, where t60 at the 3024 Hz corner is under 150 ms: 85 ms at A5, 48 ms at D6), which is why it is not a `coerceIn`, whose floor above its ceiling throws — so a stab's tail is 0.15 s and a 4 s pad rings to its own t60, the way a player's hand stops a string (OUD's SLIDE precedent for a finger's damping as a lower loop gain, `Strings.kt:510-512`), because the free ring at 0.95 is 0.9–1.9 s at C3–C2 (spike (7); dsp F31) and would file every stab past the classifier's 1.5 s line as LOOP (`Classifier.kt:72`); `LOOP_THRESHOLD 0.99`, SCRAMBLE capped at 0.95 (`Siren.kt:83-84`); `drumClassFor` derived from the *rendered* duration — hold, release and stop — against the 1.5 s line the way `Fork.drumClassFor` derives it (`Fork.kt:219, :239-242`), the constant computed from the mapping at implementation, never typed (the documents' hard-coded 0.65 was wrong even for their own mapping: 1.39 s, under the line, api C2) | 0.4 (0.85 s of bow, 1.33 s rendered at C3, under the line; the line is crossed near HOLD 0.45, computed at implementation) |
 
 Defaults: GRIP 0.6 sits inside the measured island at the voice's
 sustain velocity, so SCRAMBLE's neighbourhood plays one slip per period;
@@ -1163,7 +1242,7 @@ small document when it is built (the CONTOUR precedent: `Contour.kt`,
 proposal (rack §1) is the source of every number below.
 
 - **Where.** After TAPE and before PHASE in the fixed order
-  (`FxChain.kt:11-13`): an ensemble is the same species as PHASE — a
+  (`FxChain.kt:11`): an ensemble is the same species as PHASE — a
   modulation of the finished tone that the repeats should carry — and
   PHASE's own argument for its slot is the template ("the sweep happens
   to the finished tone, and ECHO's repeats then carry it at earlier points
@@ -1211,8 +1290,11 @@ proposal (rack §1) is the source of every number below.
   a fold that keeps all three taps at equal weight: write `L = (x, y,
   z)`, `R = (z, y, x)` over the taps at unit power; equal weight in the
   fold needs `y = (x + z)/2`, and width and fold loss then move together
-  on a straight line (rack §8.2, uncorrelated taps — the worst case;
-  real folds lose less):
+  on a straight line (rack §8.2, uncorrelated taps — a model, not a
+  bound: the addendum's own pair computes to −1.25 dB here and measured
+  −1.7 to −1.9 dB, because modulated copies of a pitched tone are partly
+  anti-correlated; the table orders the rows, the test measures the
+  fold):
 
   | z | L | fold loss | L/R correlation |
   |---|---|---|---|
@@ -1250,9 +1332,9 @@ proposal (rack §1) is the source of every number below.
   (`FxTest.kt:62-69`) — the first section whose *purpose* is L ≠ R,
   kept honest by the self-check at `:313`.
 - **The tests.** The CRUNCH rule's identity test — a kick through
-  ENSEMBLE at defaults still classifies KICK (`README.md:162-170`'s
-  rule; predicted to pass, since KICK is decided by the energy under
-  200 Hz and three copies of a 45 Hz kick under 3 ms apart are coherent
+  ENSEMBLE at defaults still classifies KICK (`README.md:162-167`'s
+  rule; predicted to pass, since KICK is decided by the energy under 200
+  Hz and three copies of a 45 Hz kick under 3 ms apart are coherent
   there; if it fails at DEPTH 0.5 the default moves, never the exemption
   RING has); the per-tap deviation asserted from the constants with no
   audio (17.6 and 28.4 c at DEPTH 1 — the replacement for the addendum's
@@ -1292,33 +1374,38 @@ VELVET BRASS FANFARE, HORN SECTION, WARM BRASS or SOFT BRASS
 (`VelvetPresets.kt:45-53`) and RESIN BRASS WIDE SECTION or SOFT HORN
 (`ResinPresets.kt:57-64`) sent to a pad and given the ENSEMBLE chip on
 the pad sheet: no new source DSP, no new preset, no plumbing, two taps
-on the phone. **Route (b)**, a preset that lands with a chain in one tap,
-needs plumbing the tree does not have — a `Patch` carries no chain, a
-factory preset is a `Patch`, and SEND TO PAD consults `landingChain` for
-SIREN alone (`SynthScreen.kt:498`) — and the right shape is neither
+on the phone. **Route (b)**, a preset that lands with a chain in one
+tap, needs plumbing the tree does not have — a `Patch` carries no chain,
+a factory preset is a `Patch`, and SEND TO PAD consults `landingChain`
+for SIREN alone (`SynthScreen.kt:498`) — and the right shape is neither
 SIREN's macro-keyed door (VELVET has no macro that means "string
 machine") nor a chain on `Patch` (sixteen sealed subtypes, a JSON schema
 that stores engine/version/name/voice/macros only, and the line
 `PadRecipe`'s KDoc draws between a patch and a recipe), but **a landing
 table beside the roster**: `VelvetPresets.landings: Map<String,
-FxChain>` keyed by preset name, one dispatcher `Presets.landingFor(engine,
-voice, name)`, consumed by SEND TO PAD, the CLI's `--preset` and a kit —
-about sixty lines, and the same table serves ARCO's own string-machine
-presets in R3 with no second mechanism. Two costs (b) carries that (a)
-does not: the twelve-per-voice law (`VelvetPresetsTest.kt`,
-`ResinPresetsTest.kt`), so two new presets on each BRASS voice means the
-count amended or two replaced; and the preview gap — the SYNTH panel's
-instant loop renders the `Patch` dry, so a STRING MACHINE preset would
-sound like mono brass until it lands (SIREN's ECHO has the same gap
-today, unnoticed because a siren is a siren dry), and closing it is
-`:app` work. Recommendation: (a) in PR-E1, (b) as PR-E2 once E1's gate
-says FANFARE through ENSEMBLE *is* the sound. Names for (b), ≤ 14
-characters and checked by script against the regex and the 798 distinct
-shipped preset names (rack §8.3): STRING MACHINE (14, the instrument
-class), DISCO STRINGS, SLOW STRINGS, WIDE STRINGS, DARK STRINGS, OCTAVE
-STRINGS, STRING PAD, THIN STRINGS; never STRING ENSEMBLE (15, and the
-product's other half-name), never anything with SOLINA, ARP, EMINENT or
-a year.
+FxChain>` keyed by preset name, one dispatcher
+`Presets.landingFor(engine, voice, name)`, consumed by SEND TO PAD, the
+CLI's `--preset` and a kit — about sixty lines, and the same table
+serves ARCO's own string-machine presets in R3 with no second mechanism.
+Two costs (b) carries that (a) does not: the twelve-per-voice law
+(`VelvetPresetsTest.kt`, `ResinPresetsTest.kt`), so two new presets on
+each BRASS voice means the count amended or two replaced; and the
+preview gap — the SYNTH panel's instant loop renders the `Patch` dry, so
+a STRING MACHINE preset would sound like mono brass until it lands
+(SIREN's ECHO has the same gap today, unnoticed because a siren is a
+siren dry), and closing it is `:app` work. Recommendation: (a) in PR-E1,
+(b) as PR-E2 once E1's gate says FANFARE through ENSEMBLE *is* the
+sound. Names for (b), ≤ 14 characters and checked by script against the
+regex and the 798 distinct shipped preset names (rack §8.3): STRING
+MACHINE (14, the instrument class), DISCO STRINGS, SLOW STRINGS, WIDE
+STRINGS, DARK STRINGS, OCTAVE STRINGS, STRING PAD, THIN STRINGS; never
+STRING ENSEMBLE (15, and the product's other half-name), never anything
+with SOLINA, ARP, EMINENT or a year. A register — the addendum's cello,
+viola and violin formants — is not the section's: ENSEMBLE stays a
+modulation section with no tone stage, and route (b)'s landing table
+pairs ENSEMBLE with the rack's EQ per preset (DARK STRINGS a low shelf,
+THIN STRINGS a bass cut, every number a listening value), while route
+(a) takes it from the pad sheet's EQ chip.
 
 **The ARCO landing** (rack §3): **dry**. The two landings that exist are
 stories an instrument tells about itself — a siren's onboard delay is
@@ -1330,12 +1417,14 @@ precedent: a recipe with a chain cannot re-render its velocity layers
 the engine whose soft layer could one day be the bow itself; a LOOP
 lands dry regardless, so a landing would make the one-shot and the LOOP
 of one preset different pads; and the FORK and SIREN kits skip
-`melodicMotion`'s tape (`SynthKits.kt:35-63`), so no second tape appears
-either. `Arco.landingChain(macros)` is `null` in R1 — the function exists
-so SEND TO PAD's line and the kit have one door — and the gate's A/B
-(audition item 10: SHORT STAB dry, through SPRING at MIX 0.2, through
-ENSEMBLE at DEPTH 0.5, level-matched on the bar line) can move SPRING
-into it with its numbers pinned, BORE's `LANDING_TAPE` shape.
+`melodicMotion`'s tape (`SynthKits.kt:37`, passed only by the pluck,
+stab and tines helpers, `:44-64`; `siren()` passes `Siren.landingChain`,
+`:208-215`, and `fork()` nothing, `:234-240`), so no second tape appears
+either. `Arco.landingChain(macros)` is `null` in R1 — the function
+exists so SEND TO PAD's line and the kit have one door — and the gate's
+A/B (audition item 10: SHORT STAB dry, through SPRING at MIX 0.2,
+through ENSEMBLE at DEPTH 0.5, level-matched on the bar line) can move
+SPRING into it with its numbers pinned, BORE's `LANDING_TAPE` shape.
 
 ## Data flow and compatibility
 
@@ -1361,7 +1450,7 @@ every other line is a convention.
 | 9 | `ArcoTest.kt` (new) | 577 | the claims tests | R1 |
 | 10 | `ArcoPresetsTest.kt` (new) | 112 | the six-contract preset test (`ForkPresetsTest.kt:19-107`) | R1 |
 | 11 | `ArcoKitGenerator.kt` (new) | 32 | `KitAssembler.assembleArranged` + `KitExporter.exportProgramFolder` | R1 |
-| 12 | `StringsTest.kt` | — | the frozen grid unchanged (`StringsTest.kt:23-40`, 384 cases); `next(x) == inject(x + reflected())` sample for sample; two bare Loops of β·T and (1−β)·T closed by hand at fb −1 and −1 ring at f within 5 cents | R0 |
+| 12 | `StringsTest.kt` | — | the frozen grid unchanged (`StringsTest.kt:23-40`, 384 cases); `next(x) == inject(x + reflected())` sample for sample; two bare Loops of β·T and (1−β)·T closed by hand at fb −1 and −1 ring at f within 5 cents; the budget identity — the two `exact`s sum to `T − τ_bridge − τ_nut − 1.0` within 1e-9 at seven roots | R0 |
 | 13 | `DeterminismTest.kt` | +8 | a canary: `patch.render()` twice, `assertContentEquals` (`DeterminismTest.kt:36, :51`'s shape), one-shot and LOOP | R1 |
 | 14 | `PresetsTest.kt` | +2/−1 | the `forVoice` list and the expected `all()` sum | R1 |
 | 15 | `PresetTestSupport.kt` | +4/−1 | `solina`, `eminent`, `\barp(?!eggi)`, `string\s*ensemble` as new alternatives, with the KDoc line ("The name") | R1 |
@@ -1377,23 +1466,25 @@ every other line is a convention.
 | 25 | `testkit/SnipSnap Arco Kit/` | 16 WAVs + `.xpm` | `./gradlew :synth:generateArcoKit` | R1 |
 | 26 | `testkit/Instruments/SnipSnap Arco.xty` + `_[TrackData]/`, `instruments.json`, the zips | 18 WAVs + `.xpm`, +209 | `./gradlew :synth:generateInstrumentSuite`, then `scripts/pack_testkit_zips.py`; the suite run regenerates unrelated instrument WAVs — revert those by hand, as FORK's commit did | R2 |
 
-The deferrals have precedent: TERRA and SILK are registered in
-`Patches` and `Velocity` and absent from the picker
-(`SynthScreen.kt:1828` lists thirteen); GLINT and TERRA are absent from
-`Presets.kt` (`docs/SYNTH_ROADMAP.md:265, :270`). ARCO registers in R1,
-ships presets in R1 because Phase 0 has already said both R1 shapes
-speak (the TIDE/SIREN/FORK way; SILK's "presets authored blind are
-disposable" is why the condition), and takes the picker in R1.1 from a
-session that can see `:app`. The CLI needs nothing for one-shots
-(`SynthCommand.kt:23-51`); `--instrument` and `--drone` are RESIN-only
-by name (`:29-32`) and stay so — ARCO's keys go through
-`InstrumentSuite` as FORK's did.
+The deferrals have precedent: TERRA and SILK are registered in `Patches`
+and `Velocity` and absent from the picker (`SynthScreen.kt:1828` lists
+thirteen); GLINT and TERRA are absent from `Presets.kt`
+(`docs/SYNTH_ROADMAP.md:265, :270`). ARCO registers in R1, ships presets
+in R1 because Phase 0 has already said both R1 shapes speak (the
+TIDE/SIREN/FORK way; SILK's "presets authored blind are disposable" is
+why the condition; both this and the LOOP in R1 are BORE's owner
+decisions 10 and 11 taken with their conditions met, "Decisions already
+taken"), and takes the picker in R1.1 from a session that can see
+`:app`. The CLI needs nothing for one-shots (`SynthCommand.kt:23-51`);
+`--instrument` and `--drone` are RESIN-only by name (`:29-32`) and stay
+so — ARCO's keys go through `InstrumentSuite` as FORK's did.
 
 **ENSEMBLE's own surfaces**, separately (rack §1f, from CONTOUR's
 landing, `git show --stat 298a759`: 5 files, +132/−2, then the pad
 sheet): `Ensemble.kt` (new, ~140), `Dsp.kt` and `Tonewheel.kt` (the
 lifted `tap`, +12/−9), `FxChain.kt` (the field, the `SECTIONS` row, the
-order line at `:13`, the widening sentence in the KDoc), `Treatments.kt`
+order line at `:11` and its sentence (CONTOUR's own at `:13` is the
+shape), the widening sentence in the KDoc), `Treatments.kt`
 (`"ensembled"`), `PadSheet.kt` (`ENSEMBLE` on `CHARACTER_SEGMENTS` at
 `:77` beside PHASE, and the verb map), `FxTest.kt` (the section's own
 test, the identity test, the `stereoExcluded` entry at `:62-69`, the
@@ -1404,28 +1495,35 @@ the landing table beside the roster (`Presets.landingFor`, ~60 lines)
 consumed by SEND TO PAD, which today consults `landingChain` for SIREN
 alone (`SynthScreen.kt:498`), by the CLI's `--preset` and by a kit — a
 `Patch` has no chain where a `PadRecipe` does (`PadRecipe.kt:12-13,
-:23-25`).
+:23`).
 
-The recipe: `ArcoPatch(name, voice, macros)`, `VERSION = 1`,
-round-trips through `Patches.fromJsonValue`; a pad lands dry, so
-`PadRecipe(patch, fx = null)` regenerates bit-for-bit; there is no `seed`
-argument anywhere (`Dsp.seedFor` only; api F9) — and the bow needs no
-noise at all (spike (10): 1 % on the bow velocity changes nothing), so
-determinism is the loop's own.
+The recipe: `ArcoPatch(name, voice, macros)`, `VERSION = 1`, round-trips
+through `Patches.fromJsonValue`; a pad lands dry, so `PadRecipe(patch,
+fx = null)` regenerates bit-for-bit; there is no `seed` argument
+anywhere (`Dsp.seedFor` only; api F9) — and the bow needs no noise at
+all (spike (10): 1 % on the bow velocity changes nothing), so
+determinism is the loop's own — which is why the documents' "dynamic air
+turbulence injection" on BOW is dropped (a bow has no jet; the spike's
+closing list), and a bow-hair noise layer returns only as a gate
+question with a level if audition item 4's blind test reads "synth".
 
 ## Failure handling
 
 - A macro outside 0..1 is coerced and an unknown key dropped,
   `Fork.settled`'s shape (`Fork.kt:260`); `ArcoPatch`'s `init` rejects
   both in a recipe (`Patches.kt:94-101`).
-- `Strings.tune`'s `require(exact >= MIN_LOOP_SAMPLES)` (`Strings.kt:181`)
-  is the loud floor, and it guards each *segment* because each segment is
-  its own `Loop` tuned by its own `tune` call. At ARCO's roots and ranges
-  it is never near: the bridge segment is β·T ≈ 85.8 samples at CELLO's
-  top (C4) and 19.1 at ERHU's (D6) with β 0.127 at 176.4 kHz; it would
-  bite only above about 11 kHz (fleet §3f). A design constant that moves
-  β toward the bridge is checked at design time against this, not by the
-  require.
+- `Strings.tune`'s `require(exact >= MIN_LOOP_SAMPLES)`
+  (`Strings.kt:181`) is the loud floor, and it guards each *segment*
+  because each segment is its own `Loop` tuned by its own `tune` call.
+  At ARCO's roots and ranges it is never near: the bridge segment is β·T
+  ≈ 85.8 samples at CELLO's top (C4) and 19.1 at ERHU's (D6) with β
+  0.127 at 176.4 kHz, less the bridge one-pole's delay and the two-tap
+  0.5 that the segment's own `tune` charges (8.4 + 0.5 at D6, leaving
+  10.2 samples); it would bite at about 2.2 kHz with the 3024 Hz corner
+  and, with GRIP's corner at 1000 Hz, at D6 itself ("The bow", the β
+  floor). A design constant that moves β toward the bridge, or `c_lo`
+  below about 1300 Hz on ERHU, is checked at design time against this,
+  not by the require.
 - The loop cannot run away, and the argument is measured, not proven —
   BORE's honesty about its own bound applies (toolkit §4). With the bow
   lifted the junction is a lossless crossing and the loop is linear with
@@ -1520,14 +1618,15 @@ opt-in table.
    32 c at D6). The spike gives +0.7 against +2.0 c across the whole
    pressure axis at a fixed corner.
 4. **BOW is heard only at the start.** The first 50 ms's centroid
-   differs between BOW 0 and BOW 1 by a named factor; past the voice's
-   onset time (0.5 s at C2, 0.3 s at A3 — spike (5) plus margin) the
-   spectra agree within 1 dB per band and slips per period is 1.0 in
+   differs between BOW 0 and BOW 1 by at least 1.5× (the bar set from
+   R1's first onset table and pinned in the test's KDoc); past the
+   voice's onset time (0.5 s at C2, 0.3 s at A3 — spike (5) plus margin)
+   the spectra agree within 1 dB per band and slips per period is 1.0 in
    both; loudness identical (`levelTo`). Beside it, **the onset table**:
    time to 90 % of steady RMS and time to the first window at one slip
    per period, at C2, E1 and A3, at BOW 1 with overshoots of 1.0 / 1.5 /
-   1.75 — in milliseconds *and* in periods — printed, not asserted, until
-   the gate has heard the stab.
+   1.75 — in milliseconds *and* in periods — printed, not asserted,
+   until the gate has heard the stab.
 5. **Monotonic where claimed.** GRIP's sustain centroid (from 0.5 s)
    non-decreasing over nine steps with FORK's 11 % ripple allowance
    (`ForkTest.kt:329`); BOW's onset centroid likewise. The velocity
@@ -1545,11 +1644,14 @@ opt-in table.
    reaches it and the tail rendered alone from the lift is the *free*
    string (t60 at the formula's slope), never the resting one (1.8 s of
    a string stopped at the bow, spike (7)).
-8. **The release rings at the formula's slope, or stops.** At HOLD 0.95
-   the 20 ms-window RMS falls at −0.45 dB per period within ±10 % after
-   the first 100 ms (spike (7): 900 ms against 1011 at C3; 2.0 s at C2
-   and 0.45 s at D4 predicted); at HOLD 0 the stopped tail reaches −60 dB
-   within `release` + 50 ms.
+8. **The release rings at the formula's slope, or stops.** On the `Bow`
+   alone, lifted with `gain()` untouched, the 20 ms-window RMS falls at
+   −0.45 dB per period within ±10 % after the first 100 ms (spike (7):
+   900 ms against 1011 at C3; 2.0 s at C2 and 0.42 s at D4 predicted);
+   on the rendered Snip, at HOLD 0 and at HOLD 0.95 alike, the stopped
+   tail reaches −60 dB within `release` + 50 ms, and at HOLD 0.95 no
+   faster than the formula's slope at any window — the ramp only ever
+   adds loss.
 9. **The series is a sawtooth.** At defaults and at GRIP 1, three TUNEs
    per voice, on the core at native rate: h2 within 3 dB of −6 dB re h1,
    the least-squares slope over h1..h8 between −5 and −8 dB per octave,
@@ -1638,7 +1740,7 @@ ARCO code; ENSEMBLE is its own PR and can go first.
 | **R0** (shared with BORE) | `tune(roundTrip)` fractional and carried by `Loop`/`retune`; `reflected()`/`inject()`; `StringsTest`'s three additions; **no audio change** — or, if BORE's R0 has landed, one KDoc sentence and two tests | the frozen-grid hashes match (SILK 1a) |
 | **R1** | `Strings.Bow` and its tests; `Arco.kt` (CELLO and ERHU, five macros, the stroke, the window-mapped grip, the lift and the stop, the LOOP render behind the seam test, no landing chain), `ArcoPatch`, `ArcoPresets` (8 + 8, by ear against the built engine), registration in `Patches`/`Presets`/`Velocity`, `SynthKits.arco()` and its testkit kit, the tests above, the blocklist terms, the audition page. Mono | **the audition** (below); each voice enters only by passing the entry rule — a contiguous single-slip GRIP window at least half the knob wide across TUNE 0–24, in tune within 5 cents at defaults |
 | **R1.1** | the phone: the picker entry and its arms, `→ SURFACE ▸` at LOOP, the LOOP readout, the toast; README's count | built in a session that can see `:app`; the gate's verdict is its precondition |
-| **R2** | `Keys.arcoPad` + `InstrumentSuite.renderArco` + `HeldSpec.Arco` (MAKE INSTRUMENT) with the one-shot `Keys.arco` beside it; SARANGI as ERHU + WASH; the sixth macro (BUZZ or β); the withheld LOOPs if R1 withheld any | the instrument under two hands for ten seconds: the seam, and whether the bow's stick-slip repeats audibly at the loop period |
+| **R2** | the research pass in SILK's form (`2026-09-2x-arco-research.md`), between R1's gate and this round; `Keys.arcoPad` + `InstrumentSuite.renderArco` + `HeldSpec.Arco` (MAKE INSTRUMENT) with the one-shot `Keys.arco` beside it; SARANGI as ERHU + WASH; the sixth macro (BUZZ or β); the withheld LOOPs if R1 withheld any | the instrument under two hands for ten seconds: the seam, and whether the bow's stick-slip repeats audibly at the loop period |
 | **R3** | CONTRABASS as a root; WHEEL with a TUNE-following bourdon and BUZZ; DRONE TO LOOP (SIREN's fourth door); stereo after U4's rack audit; presets re-heard and extended | each its own listen |
 | **ENSEMBLE** (independent; PR-E1 may precede R1; PR-E2 after E1's gate) | E1: the rack section, its `FxTest` entries and `stereoExcluded` row, the lifted `Dsp.tap`, the pad sheet, README's rack list; E2: the landing table beside the roster and the STRING MACHINE presets on VELVET BRASS and RESIN BRASS | E1: a four-clip page — a THUMP kick, VELVET FANFARE, RESIN WIDE SECTION, a VOX CHOIR, each dry and at DEPTH 0.25 / 0.5 / 1 with WIDTH 0 and 1, the stereo file beside its fold; FANFARE through ENSEMBLE must read "string machine", and the fold must not pump past the printed ripple. E2: E1's verdict; the engine's own gate then A/Bs the addendum's stage against E1 (audition item 9) |
 
@@ -1690,12 +1792,13 @@ tightened by the spike and the three proposals):
    and 1.75) and against the plain render through the rack's SPIKE at
    ATTACK 0.7 (`Treatments.kt:46`): does a stab need the engine to shape
    it, or the rack.
-9. **The string-machine A/B** — the documents' SOLINA 0.95 rendered on the
-   corrected engine and folded to mono, the same dry render through the
-   ENSEMBLE section at DEPTH 0.5, and VELVET FANFARE through ENSEMBLE,
-   level-matched by `Loudness.of`. If the owner cannot tell the first two
-   apart the in-engine stage is redundant; if the third reads "string
-   machine" the source question is closed and PR-E2 has its answer.
+9. **The string-machine A/B** — the documents' string-machine stage at
+   its macro's 0.95 rendered on the corrected engine and folded to mono,
+   the same dry render through the ENSEMBLE section at DEPTH 0.5, and
+   VELVET FANFARE through ENSEMBLE, level-matched by `Loudness.of`. If
+   the owner cannot tell the first two apart the in-engine stage is
+   redundant; if the third reads "string machine" the source question is
+   closed and PR-E2 has its answer.
 10. **The landing A/B** — CELLO SHORT STAB dry, through SPRING at MIX 0.2,
     through ENSEMBLE at DEPTH 0.5, on the bar line.
 11. **The tarab and the chien, as stand-ins** — SITAR's DOUBLE at 1 and
@@ -1719,10 +1822,10 @@ verdict is why FORK got a third voice). Presets are frozen per voice
 that passes; BOW's overshoot and the swell floor are set by 3, 5 and 8;
 ERHU's body table by 5; GRIP's ends by 6; HOLD's tail by 7; the string
 machine's home by 9; `landingChain` by 10; R2 is gated on 1 and 4; the
-sixth macro on 13. A voice that fails gets no roster and no picker entry
-— GLINT's state (built, registered, no presets, waiting on its audition,
-`docs/SYNTH_ROADMAP.md:265`), not
-worse.
+sixth macro on 13. A voice that fails gets no roster — GLINT's state
+(built, registered, in the picker, no presets, waiting on its audition,
+`docs/SYNTH_ROADMAP.md:265`) — and no picker entry, TERRA's and SILK's
+(`SynthScreen.kt:1828`), not worse.
 
 **Effort**, from footprints (`git show --stat`; toolkit §6, product §6).
 FORK R1: 60 files, +8464/−29, about 1,538 hand-written lines
@@ -1765,9 +1868,20 @@ R1 ~1,750, R2 ~530; CONTOUR, the newest rack section: 5 files, +132/−2
   of them as a second `Bow`; R3 with WHEEL.
 - **The fretless glide as an engine feature.** It is the SURFACE's
   gesture over a LOOP (product §1), not a timbre.
-- **The divide-down saw inside the engine, the formant filters, the
-  three-tap chorus** — a VELVET/RESIN preset family and the ENSEMBLE
-  section ("The string-machine question").
+- **Cross-synthesis (`Chimera.kt`: ARCO_TIDE, ARCO_TERRA).** Dropped,
+  for a reason the toolkit gives: a bow is a function of its own
+  string's state sample by sample ("The bow"), not an `Exciter` that
+  hands a buffer to another engine (`Strings.kt:30-31`), so "ARCO_TIDE"
+  would be TIDE's fold on ARCO's *finished* render — the rack's CRUNCH or
+  RING on an ARCO pad, one chip away today — and "ARCO_TERRA" is the
+  bridge wave into a `Modes` table, which is what BODY already does
+  through `bodyRing`, with TERRA's rows instead of a cello's. Neither
+  needs an engine; if a gate ever wants a bowed bar, it is a BODY table
+  swap in a later round, not a file.
+- **The divide-down saw inside the engine, the three-tap chorus** — a
+  VELVET/RESIN preset family and the ENSEMBLE section ("The
+  string-machine question"); **the formant filters** — the rack's EQ on
+  the recipe, never a section ("The string-machine question").
 - **Stereo** before U4's rack audit (`docs/SYNTH_UPGRADE.md:271-287`);
   **DRONE TO LOOP** before R2's seam is proven; **a real-time or native
   voice**.
@@ -1782,22 +1896,24 @@ the same three columns.
 
 | Question | Decision | By |
 |---|---|---|
-| Home | a `:synth` engine, Kotlin, offline, mono, one `Snip` per render | the documents themselves; FORK's four reasons (`fork spec:22-34`); BORE's restatement |
+| Home | a `:synth` engine, Kotlin, offline, one `Snip` per render (mono in R1; stereo is decision 15) | the documents themselves; FORK's four reasons (`fork spec:22-34`); BORE's restatement |
 | Topology | two string segments with the friction junction between them; never a single ring | the spike's measurement of every single-ring variant (spike (9)) and the physics (dsp F30–F33) |
 | The friction law | the reference model's reflection table `ρ(Δv) = (|slope·(Δv+offset)| + 0.75)^−4`, clamped; never the documents' relay | two fetched witnesses (STK, Faust — physics §2), and the relay's measured failure (empirical, dsp F2) |
 | The bridge filter | a **corner**, `BRIDGE_HZ ≈ 3023.6` at any rate, never STK's pole formula re-evaluated at 176.4 kHz | spike iteration 4: single-slip motion needs the loss STK's 44.1 kHz users hear |
-| The bow lifts | a release ramps the bow velocity to zero *and lifts the bow*; pressure 0 is a lifted bow, not slope 5 | spike (7), (4) |
+| The bow lifts | a release ramps the bow velocity to zero *and lifts the bow* (`bowDown = false`); lifting is never expressed through pressure — GRIP's window never reaches pressure 0, which in the table is slope 5 and still plays | spike (7), (4) |
 | The string toolkit | `Strings.Loop` with BORE's additions #1 (fractional) and #3, landed as R0 — **shared with BORE**; no #2 | spike's recommendation; fleet §3; the two-segment loop's mean ≤ 0.003 |
 | Tuning | `Strings.tune`'s exact budget plus a **per-voice pinned correction** measured on the corner effect; never STK's `−4` and never a published formula | spike iteration 5; BORE's residual-pull rule; `Dsp.Ladder`'s KDoc precedent |
 | String machine | the engine renders dry; ENSEMBLE is a rack section, its own PR first; the 1970s pad is the BRASS presets with the ENSEMBLE chip, then a STRING MACHINE preset family with a landing table (PR-E2) | the CRUNCH rule, applied to WOBBLE (`fork spec:88`), ECHO (siren spec) and TAPE (BORE); nothing in the addendum is coupled (fleet §5a) |
 | Length macro | HOLD, with a LOOP top step; not DECAY | SIREN's precedent (`siren spec:132-136`; `Siren.kt:74-90`) |
-| Output | `Tide.bandLimit → Dsp.decimate → mean removed → 20 Hz high-pass → Dsp.levelTo → fadeTail`; no PUNCH; mono | the melodic fleet (`Fork.kt:465-468`, `Tide.kt:549`; the mean removal and 20 Hz high-pass at `Fork.kt:407-413`, which FORK runs before `bandLimit`); `fork spec:305`; FORK's "the DC goes twice" |
+| Output | `Tide.bandLimit → Dsp.decimate → mean removed → 20 Hz high-pass → Dsp.levelTo → fadeTail`; no PUNCH | the melodic fleet (`Fork.kt:465-468`, `Tide.kt:549`; the mean removal and 20 Hz high-pass at `Fork.kt:407-413`, which FORK runs before `bandLimit`); `fork spec:305`; FORK's "the DC goes twice" |
 | DC | no in-loop blocker (the two-segment loop is zero-mean); the output's mean removal and high-pass stay | spike: mean ≤ 0.003 in every row |
 | Bodies | `Modes.fixed` rows through `Strings.bodyRing` after the loop, every number labelled *shape* until a source lands | `Modes.kt:121-125`; SILK's OUD convention (`Silk.kt:436-460`); physics §5 |
-| Names | ARCO; SOLINA, EMINENT, ARP and the part numbers off every surface; the blocklist grows with a bounded `arp` | `docs/SYNTH_ROADMAP.md:27-47`; api §D4's collision check (sixteen HARP/SHARP presets) |
-| Velocity | `soften` until a sweep passes; no `brightnessOverride` in R1 | the house's registration rule (`ForkTest.kt:329`; `Velocity.kt:238-253`) |
-| Presets | eight per voice, ≤ 14 characters, authored by ear after the gate; the documents' eleven not carried | `ForkPresetsTest.kt:70-74`; SILK's "authored blind are disposable" |
+| Names | the string machine's product, makers and part numbers off every surface; the blocklist grows with a bounded `arp` (the engine's own name is decision 1) | `docs/SYNTH_ROADMAP.md:27-47`; api §D4's collision check (sixteen HARP/SHARP presets) |
+| Velocity | no `brightnessOverride` without a passing sweep (whether to register BOW's line in R1 is decision 8) | the house's registration rule (`ForkTest.kt:329`; `Velocity.kt:238-253`) |
+| Presets | eight per voice, ≤ 14 characters, authored by ear against the built engine and re-heard at R1's audition; the documents' eleven not carried | `ForkPresetsTest.kt:70-74`; SILK's "authored blind are disposable" |
 | Roadmap row, README count | at implementation, not now; the row is S18 or later | the rule FATHOM, RESIN, GLINT, SILK, FORK and BORE followed; api F15 |
+| Presets in R1 | eight per voice, authored by ear against the built engine, in R1 | BORE's decision 10 with its condition met: Phase 0 measured both R1 shapes speaking and in tune, so SILK's "authored blind are disposable" risk does not apply; the presets are still frozen only per voice that passes the gate |
+| The LOOP in R1 | behind the seam test, withheld from the readout per voice × TUNE that fails after the retry | BORE's decision 11, the same default; the sawtooth's tighter cents budget ("Held, and the LOOP") is why the withheld path is expected at D6 |
 
 ## Decisions for the owner
 
@@ -1887,10 +2003,12 @@ BORE's list, with the new evidence folded in.
     a textbook sawtooth — and because those four sounds are the ones this
     user asks for that no engine makes.
 
+## Sharpening the ask
 
-
-The owner asked for this. Three ways one sentence would have turned a
-guess into a fact (product §8):
+The owner asked for this: which sentences would have changed this
+brainstorm most, and one habit for any spec brought to the house. Three
+ways one sentence would have turned a guess into a fact (product §8),
+and a fourth the reviews earned:
 
 - **Name the surface first.** "A cello stab on a pad", "a bowed note I can
   hold under a finger on the SURFACE" and "a bowed pedal under a beat"
@@ -1905,18 +2023,33 @@ guess into a fact (product §8):
   auditions, and the roster this document picks (CELLO and ERHU) is a
   guess at your ear that one line would have made a fact.
 
+- **Say what you have run and what you have not.** Both documents
+  present Kotlin and numbers as if measured; none had been compiled
+  (three edits to build, a `Dsp.saw` that does not exist) or rendered
+  (no note at any setting), and every hertz, Q and millisecond was
+  recalled (api F18; physics §7; empirical "Prose and code disagree",
+  twelve items). One line — "this is generated, unrun, and the numbers
+  are placeholders" — would have sent the reviewers straight to a render
+  on day one instead of a desk review, and lets the house label every
+  number *shape* from the start rather than discovering it.
+
 ## Appendices
 
 The measured tables live in the record,
 [`../plans/2026-09-29-arco-phase-0-spike.md`](../plans/2026-09-29-arco-phase-0-spike.md),
-so they can be re-run rather than trusted: **Appendix A** there is the
-spike's report — the two models as pseudo-code with every constant, the
-iteration log, and tables (0)–(10): the budget read-back, boundedness,
-pitch, the Helmholtz signature, the Schelleng rows, onset, bow position,
-release, cost, the single-ring comparison, the robustness corners;
-**Appendices B–C** are its Kotlin as run; **Appendix D** is the probe's
-report on the documents' engine — the compile changes, the per-voice
-tables, the SOLINA stage alone, the friction map's fixed-point scan, the
-tarab against TUNE, cost, "what the spec promised versus what it
-renders"; **Appendices E–G** are its transcription and test as run. The
-numbers quoted in "The physics, measured" are copied from those tables.
+so they can be re-run rather than trusted (the DSP desk review's
+pure-Python replica, dsp §13, is not in the record: its three numbers
+quoted here — the −4 to −6 cents on STK's −4 budget, the bridge node's
+AC 0.0005, the one period-doubled cell in 25 — stand on the report
+alone, and the spike's Kotlin re-measures the first two): **Appendix A**
+there is the spike's report — the two models as pseudo-code with every
+constant, the iteration log, and tables (0)–(10): the budget read-back,
+boundedness, pitch, the Helmholtz signature, the Schelleng rows, onset,
+bow position, release, cost, the single-ring comparison, the robustness
+corners; **Appendices B–C** are its Kotlin as run; **Appendix D** is the
+probe's report on the documents' engine — the compile changes, the
+per-voice tables, the SOLINA stage alone, the friction map's fixed-point
+scan, the tarab against TUNE, cost, "what the spec promised versus what
+it renders"; **Appendices E–G** are its transcription and test as run.
+The numbers quoted in "The physics, measured" are copied from those
+tables.
