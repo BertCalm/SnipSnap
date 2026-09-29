@@ -39,6 +39,17 @@ internal object Strings {
      */
     const val MIN_LOOP_SAMPLES = 2.0
 
+    /**
+     * The DC blocker's default corner, Hz. 2 Hz (not 20) is [tune]'s own
+     * measured choice for SITAR's jawari (see the comment on `dcDelay` there):
+     * the blocker's phase lead is budgeted at the fundamental only, so a
+     * higher corner leaves the upper partials off their harmonics. A caller
+     * that needs a different corner (a blown bore's cone, whose reed parks
+     * at a DC offset a 2 Hz blocker drains too slowly) passes it to [tune]
+     * and to [Loop] both, or the runtime and the budget disagree.
+     */
+    const val DC_BLOCK_HZ = 2f
+
     /** The loop's low-pass corner and feedback gain - DAMP's two parameters. */
     class Damping(val loopHz: Float, val fb: Float)
 
@@ -65,8 +76,44 @@ internal object Strings {
      * is one of those stages; [stiffness] (see [Loop]) and [jawari] (see
      * [Loop]) are two more, budgeted the same way, and skipped at 0 - the
      * SITAR voice (PLUCK Phase 3a) is what needs them.
+     *
+     * The last three parameters are the blown-bore additions (BORE's R0,
+     * docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md,
+     * "The bore"); each defaults to what every earlier caller already got,
+     * and StringsTest's frozen grids prove the defaults change no sample:
+     *  - [dcBlock] charges the DC blocker's phase lead, on its own instead of
+     *    only under [jawari] (default: `jawari > 0`, as before), because a
+     *    +1 loop driven by a steady pressure needs the blocker with no
+     *    bridge limiter anywhere near it. [dcHz] is its corner ([DC_BLOCK_HZ]
+     *    by default) and must be the same number the [Loop] runs.
+     *  - [roundTrip] is the fraction of a period one trip round the loop
+     *    takes, in (0, 1]: 1.0 for a loop whose reflection keeps its sign (a
+     *    string, a cone, an open pipe), 0.5 for one that inverts it (a closed
+     *    cylinder), whose wave needs two trips to come back in phase, so
+     *    its loop is half as long and its harmonics are the odd ones. It
+     *    multiplies the period only - never the filters' own delays, which
+     *    are what they are at the fundamental whatever the loop's length.
      */
-    fun tune(freq: Float, loopHz: Float, rate: Int, stiffness: Float = 0f, jawari: Float = 0f, dispersion: Dispersion? = null): Tuning {
+    fun tune(
+        freq: Float,
+        loopHz: Float,
+        rate: Int,
+        stiffness: Float = 0f,
+        jawari: Float = 0f,
+        dispersion: Dispersion? = null,
+        dcBlock: Boolean = jawari > 0f,
+        dcHz: Float = DC_BLOCK_HZ,
+        roundTrip: Double = 1.0,
+    ): Tuning {
+        // The round trip is a fraction of a period, so it is in (0, 1]. Outside that
+        // the budget is nonsense that fails somewhere else, under another name: a
+        // value at or below 0 makes `exact` negative and trips the Karplus-Strong
+        // minimum's message below, blaming a note that is too high; a value above 1
+        // is a loop longer than the note it is supposed to ring at; and a huge one
+        // overflows `exact` to infinity, which passes the minimum and hands back a
+        // Tuning nobody can build a ring from. NaN fails the comparisons and is
+        // refused with the rest.
+        require(roundTrip > 0.0 && roundTrip <= 1.0) { "roundTrip must be a fraction of a period in (0, 1], got $roundTrip" }
         // The loop length is almost never a whole number of samples, and
         // truncating it (the old `(rate / freq).toInt()`) detunes the
         // string by an amount that depends on the fractional remainder at
@@ -141,8 +188,8 @@ internal object Strings {
         // rounds `r` differently by the time it reaches atan2, and the drift
         // only crosses a bit boundary a couple hundred samples into the
         // loop, so a mismatch here is easy to miss on a short render.
-        val dcA = dcBlockerA(rate).toFloat()
-        val dcDelay = if (jawari > 0f) {
+        val dcDelay = if (dcBlock) {
+            val dcA = dcBlockerA(rate, dcHz).toFloat()
             val r = 1.0 - dcA
             val phase = atan2(sin(w), 1.0 - cos(w)) - atan2(r * sin(w), 1.0 - r * cos(w))
             -phase / w
@@ -161,7 +208,11 @@ internal object Strings {
             dispersion.count * (-phase / w)
         } else 0.0
 
-        val exact = (rate / freq) - filterDelay - stiffDelay - dcDelay - dispersionDelay - 0.5
+        // `rate / freq` stays a Float division and the round trip multiplies it as a
+        // Double: at 1.0 that is the same value the budget always computed, bit for
+        // bit (a Float widened to Double, times 1.0), which is what keeps PLUCK's and
+        // SILK's frozen grids green.
+        val exact = (rate / freq) * roundTrip - filterDelay - stiffDelay - dcDelay - dispersionDelay - 0.5
         // n and frac must come from the SAME exact - splitting them and
         // then independently coercing n up (the old `.coerceAtLeast(2)`)
         // decouples them: frac keeps whatever floor(exact) - n produced,
@@ -193,8 +244,20 @@ internal object Strings {
         return Tuning(exact, n, a)
     }
 
-    /** The DC blocker's one-pole coefficient (see [Loop], [tune]) - depends only on [rate]. */
-    private fun dcBlockerA(rate: Int): Double = 1.0 - exp(-2.0 * PI * 2.0 / rate)
+    /**
+     * The DC blocker's one-pole coefficient (see [Loop], [tune]) - depends on [rate] and the corner [hz].
+     *
+     * The corner has to be a frequency the loop can have: positive, finite and
+     * under Nyquist. An infinite one, or any finite one far enough past Nyquist
+     * that `exp(-2 pi hz / rate)` underflows to 0, makes the coefficient exactly 1 -
+     * a blocker that subtracts every sample it sees and silently kills the loop,
+     * where a refusal would have named the mistake. NaN fails the comparisons and
+     * is refused with the rest.
+     */
+    private fun dcBlockerA(rate: Int, hz: Float): Double {
+        require(hz > 0f && hz < rate / 2f) { "the DC blocker's corner must be a frequency above 0 Hz and under Nyquist ($rate Hz rate), got $hz Hz" }
+        return 1.0 - exp(-2.0 * PI * hz / rate)
+    }
 
     /**
      * A cascade of [count] identical first-order allpasses, sharing one
@@ -391,6 +454,15 @@ internal object Strings {
      * both are skipped at jawari 0. [jawariP0] is the reference peak (see
      * [burstPeak]) that a full swing on this string looks like, so the same
      * drive buzzes the same on every note.
+     *
+     * BORE's R0 additions, each off by default so no earlier caller moves:
+     * [dcBlock] runs the DC blocker on its own (it defaulted to riding on
+     * [jawari], and still does), at the corner [dcHz]; [roundTrip] is carried
+     * only so [retune] re-solves the budget at the same fraction of a period
+     * the loop was built at. All three must match what [tune] was given.
+     * A blown bore drives the loop in two steps instead of one - see
+     * [reflected] and [inject] - because its new sample is a nonlinear
+     * function of the wave coming back, not that wave plus an input.
      */
     class Loop(
         private var n: Int,
@@ -402,6 +474,9 @@ internal object Strings {
         private val jawari: Float = 0f,
         private val jawariP0: Float = 1e-6f,
         private val dispersion: Dispersion? = null,
+        private val dcBlock: Boolean = jawari > 0f,
+        private val dcHz: Float = DC_BLOCK_HZ,
+        private val roundTrip: Double = 1.0,
     ) {
         private val baseFb = fb
         private var fb = fb
@@ -420,8 +495,13 @@ internal object Strings {
         private var stX1 = 0f
         private var stY1 = 0f
         private val loopLp = Dsp.OnePole(rate)
-        private val dcA = dcBlockerA(rate).toFloat()
+        private val dcA = if (dcBlock) dcBlockerA(rate, dcHz).toFloat() else 0f
         private var dc = 0f
+
+        // One [reflected] per [inject]: the value is cached between the two so a
+        // caller that asks twice does not advance the loop's filters twice.
+        private var pending = false
+        private var pendingValue = 0f
 
         // Dispersion's own state: [dispersion.count] identical sections
         // chained, each carrying its own one-sample history - empty arrays,
@@ -429,9 +509,19 @@ internal object Strings {
         private val dispX1 = FloatArray(dispersion?.count ?: 0)
         private val dispY1 = FloatArray(dispersion?.count ?: 0)
 
-        fun next(x: Float): Float {
-            val y = if (i <= n) {
-                x
+        /**
+         * The wave coming back to the junction: everything in the loop from
+         * the tap `n` samples back through `fb * lp(...)`, ready to be added
+         * to an input ([next]) or handed to a nonlinear junction that decides
+         * the sample to write ([inject]). Silence for the first `n + 1`
+         * samples, while there is no history to feed back. Call it once per
+         * sample, then [inject] once; asking again before [inject] returns
+         * the same value rather than stepping the filters a second time.
+         */
+        fun reflected(): Float {
+            if (pending) return pendingValue
+            val r = if (i <= n) {
+                0f
             } else {
                 val d = 0.5f * (history[(i - n) % size] + history[(i - n - 1) % size])
                 // First-order allpass: y[i] = a*(x[i] - y[i-1]) + x[i-1]. Order
@@ -466,14 +556,42 @@ internal object Strings {
                 }
                 if (jawari > 0f) {
                     if (yy > 0f) yy -= jawari * min(yy, jawariP0) * yy / jawariP0
+                }
+                // The blocker was the second half of the jawari branch above; it
+                // is its own step now, in the same place in the chain, so a loop
+                // with the limiter on runs the same operations in the same order.
+                if (dcBlock) {
                     dc += dcA * (yy - dc)
                     yy -= dc
                 }
-                x + fb * yy
+                fb * yy
             }
+            pending = true
+            pendingValue = r
+            return r
+        }
+
+        /**
+         * Writes [y] as this sample's output - the one the loop will read back
+         * `n` samples from now - and steps the ring on. The other half of
+         * [reflected]; a plain string never calls it directly, [next] does.
+         */
+        fun inject(y: Float): Float {
             history[i % size] = y
             i++
+            pending = false
             return y
+        }
+
+        /**
+         * One sample of a string: the input plus the wave coming back. The
+         * input passes straight through until there is history, exactly as
+         * the loop always started - not `x + 0f`, which would turn a -0.0
+         * input into +0.0 and change a bit the frozen grids compare.
+         */
+        fun next(x: Float): Float {
+            val r = reflected()
+            return inject(if (i <= n) x else x + r)
         }
 
         /**
@@ -491,7 +609,7 @@ internal object Strings {
          * construct the [Loop] at the glide's lowest note, not its target.
          */
         fun retune(freq: Float) {
-            val t = tune(freq, loopHz, rate, stiffness, jawari, dispersion)
+            val t = tune(freq, loopHz, rate, stiffness, jawari, dispersion, dcBlock, dcHz, roundTrip)
             require(t.n <= maxN) {
                 "retune($freq) needs a loop of ${t.n} samples, past the $maxN this Loop was built for - " +
                     "construct it at the glide's lowest note, not the target it's moving toward"
