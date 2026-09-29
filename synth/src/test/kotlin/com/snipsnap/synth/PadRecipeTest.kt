@@ -32,6 +32,7 @@ class PadRecipeTest {
         SnapPatch("Photo Test", SnapVoice.ORBIT, mapOf("GRIT" to 0.4f), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
         GlintPatch("Glass Test", GlintVoice.BOTTLE, mapOf("PEAK" to 0.7f)),
         SilkPatch("Oud Test", SilkVoice.OUD, mapOf("DAMP" to 0.4f)),
+        BorePatch("Flute Test", BoreVoice.FLUTE, mapOf("BREATH" to 0.4f)),
     )
 
     @Test

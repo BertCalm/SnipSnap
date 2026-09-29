@@ -35,7 +35,12 @@ internal object PresetTestSupport {
             """|benidub""" +
             // FORK's brief named the electric piano makers directly
             // (docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md).
-            """|rhodes|wurlitzer|fender""",
+            """|rhodes|wurlitzer|fender""" +
+            // BORE's brief named the tape keyboard and the woodwind makers directly
+            // (docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md). "mello" alone would
+            // also refuse the word "mellow", which is a plain description and not a maker, so the
+            // lookahead lets "mellow" through and nothing that spells the keyboard.
+            """|mello(?!w)|heckel|chamberlin|selmer|yanagisawa""",
     )
 
     /**

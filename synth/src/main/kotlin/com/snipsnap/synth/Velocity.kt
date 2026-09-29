@@ -216,6 +216,7 @@ object Velocity {
         is ForkPatch -> Fork.macrosFor(patch.voice)
         is TerraPatch -> Terra.macrosFor(patch.voice)
         is SilkPatch -> Silk.macrosFor(patch.voice)
+        is BorePatch -> Bore.macrosFor(patch.voice)
     }
 
     /**
