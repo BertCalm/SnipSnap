@@ -1662,6 +1662,147 @@ roadmap row (S19 is added with R1, the house rule). R1's first open
 question is unchanged: the cone's blocker corner, `f0/25` as measured or
 the apex allpass, now a parameter and no longer a `Strings` change.
 
+## R1, as built — 2026-09-29
+
+R1 is the engine: `Bore.kt`, `BorePatch`, `BorePresets`, the registration, the kit and
+the audition. It is built and every test is green (the whole JVM build — nine modules, 3,323 tests, none failing, none skipped). **Nothing in it has been
+heard.** The constants were measured, the presets were authored from the measurements, and
+the tests prove the loop speaks, in tune, bounded, and closes when it is asked to loop; none
+of that says it sounds like a woodwind. The audition (`generateBoreAudition`, then the page)
+is the gate, and its first job is to say which of these guesses is wrong.
+
+**What landed.** `Bore.kt` (`BoreVoice { FLUTE, SAX }`, the five macros, `blow`/`render`, the
+LOOP step, `landingChain`, `drumClassFor`, `scramble`), `BorePatch.kt`, `BorePresets.kt` (8 + 8),
+registration in `Patches.kt` and `Presets.kt` and `Velocity.macroSpecsFor`, `SynthKits.bore()`
+and its testkit kit (`SnipSnap Bore Kit`, 16 pads, 2.5 MB), `BoreKitGenerator` and
+`BoreAuditionGenerator` with their two Gradle tasks and the listening page, the blocklist terms,
+`BoreTest` and `BorePresetsTest` plus the canaries in `DeterminismTest`, `PadRecipeTest`,
+`PresetsTest` and `SynthKitTest`, and roadmap row S19. `Velocity` needed no override: none of
+BORE's five macros is a brightness macro Velocity knows, so a soft note goes through `soften`,
+as VOX's does. No change to `Strings.kt`, `Keys.kt`, `Siren.kt` or the app.
+
+### What R1 measured, and what it changed in the design
+
+The design's Phase 0 proved the loop; R1 swept the knobs. A print-only probe (kept out of the
+tree, its method now in `BoreMeasure`) read BREATH, LIP and TUNE per voice on the raw loop:
+Hann-windowed harmonics, autocorrelation pitch, onset envelopes, aperiodicity. Eleven things
+came out different from the design, and each is in the KDoc of the constant it changed.
+
+1. **SAX's root is C3, not C2.** A reed's onset is a number of periods, so it is slow low down:
+   0.3-0.4 s to 80% of steady at 131 Hz at the default knobs (0.63 s at the tightest lip and
+   hardest breath), 0.4 s at 92 Hz, over 0.8 s at 65 Hz. A baritone's octave would be a stab
+   that never speaks. R2 needs a faster starter to bring it back.
+2. **LIP's tight end is offset 0.78, not 0.85.** At 0.85 the speaking window shrinks to a
+   sliver and the note to a tenth of the amplitude. The *measured* speaking threshold (a share
+   of the closing pressure) is 0.60 at the loose end to 0.82 at 0.85, not the small-signal
+   prediction's 0.55 to 0.675: BREATH's floor sits a margin above the fit, not the formula.
+3. **FLUTE's bore cutoff is a multiple of the note** (2x to 6x, LIP and BREATH moving it), not
+   a fixed 6 kHz. The jet's tanh is a hard limiter: with a fixed bell a C4's 3rd mode took over
+   above p = 0.8 and jumped an octave and a fifth; with the ratio the fundamental leads in all
+   175 combinations, and the timbre follows the note. The jet's rest offset is never 0: a jet
+   dead-centre on the edge is perfectly symmetric and stays silent.
+4. **The jet's delay is fractional.** Rounded to a whole sample it moved the played pitch in
+   quarter-percent steps, and the LOOP's measure-and-correct retune oscillated instead of
+   converging.
+5. **What is heard is the bore wave, not the sample the valve injects.** The injected sample
+   carries the mouth's DC pressure, which after the output high-pass is a sub-200 Hz swell at
+   every onset. The classifier read 8 of the first 16 presets as a snare or a clap (the head
+   window's magnitudes, summed, are what it counts). Tapping the wave returning from the bore,
+   which the loop's DC blocker has already cleaned, put all 16 on PERC or LOOP with no other
+   change, and is also plainly what an instrument radiates.
+6. **Vibrato is pitch, not pressure.** The spec's pressure wobble moved the pitch by under a
+   cent, and by the same with HOLD at 0 — dead code that claimed a feature. It is now the loop's
+   length, retuned every 64 samples through `Strings.Loop.retune`, ±20 cents at 5.2 Hz, scaled by
+   HOLD (measured 25-35 cents peak to peak at HOLD 0.98, 13-19 at 0.5, none at 0).
+7. **The breath noise had to be raised to be there.** At the spec's 0.02-0.06 the aperiodicity
+   was -46 to -55 dB, inaudible. FLUTE now runs 0.05 to 0.6 (about -50 to -28 dB at C5), the reed
+   0.03 to 0.3 (about -62 to -43 dB); above about 0.7 a tight reed stalls. Listening values.
+8. **Two starters were added, both measured.** A 4 ms pressure pulse when the swell reaches
+   speaking pressure (a reed's onset otherwise grows from a seed of about 1e-3 of its amplitude;
+   the pulse seeds it a hundred times higher: 0.43 s to 0.28 s at 185 Hz on the first noise
+   settings, and the test now takes every other seed away and asks for a saving of at least
+   50 ms), and a burst of breath noise on the front of the note scaled by CHIFF. With the noise
+   as high as it now is the noise seeds the reed too, so the pulse is for the soft end.
+9. **BREATH brightens the bore explicitly** (the bell's cutoff moves 0.8x to 1.3x on the reed,
+   0.9x to 1.2x on the flute). Loudness is levelled away, so a harder breath has to be timbre;
+   the reed's own nonlinearity moves the 2nd harmonic 8 dB and the jet's nothing.
+10. **The pitch is pinned**, not budgeted: the nonlinearity pulls SAX flat and FLUTE sharp, and
+    a fixed pin (+4 and -3 cents) leaves the worst case in the 175-combination sweep at
+    FLUTE -1.7..+3.5 cents and SAX -3.5..+4.1. The LOOP retunes exactly instead.
+11. **The seam check that meant something.** The obvious check, `Keys.seamError` on the loop
+    played twice, is tautological (a loop followed by itself is periodic whatever is in it) and
+    reported 0.00 on loops that were two whole periods off. The check that means something
+    compares the kept steady stretch with itself one loop later; see below.
+
+### The LOOP step
+
+HOLD's top step is a seamless two-second loop of the held note, in whole periods and whole
+frames, rendered dry: steady pressure, **no turbulence and no vibrato** (a loop cannot carry a
+signal that does not repeat), the warm-up discarded, the *played* pitch corrected until K
+periods fill the frames exactly, then cut where the two neighbours are smallest (SIREN's
+`bestCut`) and levelled. The pitch correction measures the loop's own length by climbing a
+ladder of lags (1, 2, 4, ... K periods): one jump from one period to K cannot be trusted, since
+a jet's near-square wave has a triangular correlation peak and a parabola through a triangle is a
+quarter sample off, which times 740 periods is a whole period. The warm-up scales with periods
+(at least 400), not seconds: a loose reed at full breath was still creeping at 131 Hz after
+3 s. A render that cannot close throws, rather than shipping a click.
+
+Measured on 70 corners (both voices, seven notes, five LIP/BREATH corners): the worst seam is
+1.8e-4 against the Organ's bar of 1e-3, and over `BoreLoopFuzzTest`'s 100 loops — every one of the
+25 TUNE steps of both voices, at the defaults and at a seeded random LIP, BREATH and CHIFF — the
+worst is 3.3e-4. A render takes 0.15-0.43 s, and the loop is exactly TUNE by construction (the
+retune's fixed point). The first build reported 23 of 60 corners over
+the bar, then 19, then 2, then 0: the wrong-period lock (a narrower search, then the ladder),
+the quantised jet, and the warm-up, in that order.
+
+### The presets, and what the classifier says
+
+Sixteen, eight per voice, from the measurements: FLUTE speaks everywhere (onset 0.04-0.31 s), so
+its presets differ by register, breath noise, brightness, attack and length; SAX is slow low down,
+so its short, hard-tongued reeds sit high and its low ones are swells and held notes. Two
+presets of each voice are HOLD 1 and therefore LOOPs. They are **provisional**: the six-contract
+test freezes them as sound, not as good.
+
+The classifier reads every preset of the final roster PERC or LOOP; none reads a drum. (Two low
+SAX presets read TONAL at an intermediate setting, and the first roster read 8 of 16 as a snare or
+a clap; both are why the rule below is what it is.) The filed class is exact where the rule is exact — over 1.5 s is a LOOP — and files PERC
+below it. TONAL is the classifier's bass gate (over 55% of the head window's magnitude under
+200 Hz, ringing past 500 ms), which a fundamental's own skirts supply at C3-A3; it depends on
+the spectrum, which macros alone do not promise, so `drumClassFor` does not predict it and the
+test accepts PERC or TONAL for a one-shot. Noisier settings than the roster's read as CLAP or
+SNARE (the reed's LOW HONK at BREATH 0.85 did): the roster stays at the settings that do not,
+which is a fact about the classifier's magnitude sums and not about the sound.
+
+### Verification
+
+`BoreTest` (22 claims), `BorePresetsTest` (10), `BoreLoopFuzzTest` (1), the kit test, and the
+canaries above. Each guard was broken in turn and the test that should catch it did (ten
+mutations, ten kills): no pitch correction in the LOOP (killed by the seam, steadiness and length
+tests), the flute's bell fixed at 6 kHz (the fundamental-leads and LIP tests), no pitch pin (the
+7-cent test), no tongue pop (the onset tests), no vibrato (the vibrato test), a thump below
+CHIFF's threshold (the thump test), the output tapped at the valve again (the preset
+classification test — the finding that changed the design), a BREATH floor under the speaking
+threshold (the onset, pop and LOOP tests), a whole-sample jet delay (the LOOP tests), and the
+warm-up counted in seconds only (the seam test).
+The measurement helpers (`BoreMeasure`) read the raw loop so `Dsp.levelTo` cannot lift a silent
+render to the loudness target and hide it.
+
+### Not done, on purpose, and known limits
+
+- **The phone:** no picker entry, no README count, no `→ SURFACE ▸`, no Web Audio stand-in on
+  the listening page (R1.1, as designed). The page's clips are all rendered on the desktop.
+- **Held instrument and keys** (`Keys.borePad`, MAKE INSTRUMENT, the one-shot `Keys.bore`): R2.
+- **SAX is slow below about C4** (item 1) and its BREATH changes the 2nd harmonic (-11 to -19 dB)
+  more than it brightens; a tight reed is quieter and slower than a loose one (raw level a fifth,
+  onset 0.63 s at C3 at full breath).
+- **FLUTE's LIP and BREATH move the timbre by 4-8 dB** in the 2nd-5th harmonics: audible,
+  moderate. The breath noise is what BREATH does most.
+- **The LOOP is dry, noiseless and vibrato-free** — a whole-period wrap cannot carry noise.
+  The audition asks whether a breathless loop is a pad or a synth.
+- **Guesses waiting for the audition:** the turbulence ranges, the chiff burst, the thump's level,
+  the reed's bell, `LANDING_TAPE` (WOBBLE .1 against .2 is on the page), the pop.
+- **CPU:** Phase 0 measured a one-shot at 26-60 ms per second of audio and R1 has not re-measured it; a LOOP takes 0.15-0.43 s to render (it renders 3-5 s of steady stretch, four times, to converge the pitch).
+
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 
 `Bore.kt` verbatim from the spec (its pages 5–11) with one `.toFloat()`,
