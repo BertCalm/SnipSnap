@@ -688,6 +688,31 @@ class FxTest {
         assertTrue(outPeak > 0.5f * inPeak && outPeak <= inPeak * 1.001f, "peak matched, never above: $inPeak -> $outPeak")
     }
 
+    // ---------- VALVE ----------
+
+    @Test
+    fun `VALVE sits after SQUASH and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("squash") + 1, names.indexOf("valve"), "VALVE is not right after SQUASH: $names")
+        assertEquals(names.indexOf("valve") + 1, names.indexOf("crunch"), "VALVE is not right before CRUNCH: $names")
+
+        val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
+        assertTrue(!without.toJsonText().contains("valve"), "no valve key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(valve = Valve.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        assertTrue(!with.process(snare).samples.contentEquals(snare.samples), "the valve section is a no-op in the chain")
+    }
+
+    @Test
+    fun `amped exists, sets only valve, and is a bypass at AMT 0`() {
+        assertTrue("amped" in Treatments.names)
+        val chain = Treatments.chain("amped")
+        assertEquals(listOf("valve"), FxChain.SECTION_NAMES.filter { chain.section(it) != null })
+        assertTrue(Treatments.chain("amped", 0f).isBypass)
+    }
+
     // ---------- GHOST + MOTION ----------
 
     /** Zero-crossing rate over a window: a cheap pitch reading for a tone. */
