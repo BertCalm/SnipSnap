@@ -13,9 +13,10 @@ import kotlin.math.roundToInt
  * "ENSEMBLE, the rack section") under testkit/ensemble-audition/
  * (gitignored): four sources — a THUMP kick, VELVET's FANFARE, RESIN's WIDE
  * SECTION and a VOX CHOIR — each dry, then at DEPTH .25 / .50 / 1 with
- * WIDTH 0 and WIDTH 1, every stereo clip with its mono fold beside it,
- * because the phone plays the fold on the instant loop and the fold is what
- * a pad is heard as. Clips share one loudness ([AuditionLevel]); a fold is
+ * WIDTH 0 and WIDTH 1, every stereo clip with its mono fold beside it (the
+ * CHOIR's dry and WIDTH 0 clips included, since a choir is stereo before
+ * the section touches it), because the phone plays the fold on the instant
+ * loop and the fold is what a pad is heard as. Clips share one loudness ([AuditionLevel]); a fold is
  * the fold of its levelled stereo file, not re-levelled, so what the fold
  * loses is audible rather than hidden. Writes `manifest.json`, which the
  * page builds itself from, then copies the listening page from the test
@@ -78,16 +79,28 @@ object EnsembleAuditionGenerator {
                 count++
             }
 
-            write("dry", dry)
+            /** The fold clip for a stereo [levelled] file, or nothing for a mono one. */
+            fun foldClipFor(id: String, levelled: Snip, what: String): List<Clip> {
+                if (levelled.channels != 2) return emptyList()
+                val foldId = id + "_fold"
+                writeFold(foldId, levelled)
+                return listOf(Clip(foldId, "↳ ITS FOLD", "$what averaged to mono — what the phone plays. Measured: ${foldCost(levelled)}"))
+            }
+
+            val levelledDry = write("dry", dry)
             val chDry = if (dry.channels == 2) "stereo" else "mono"
             val groups = mutableListOf(
-                Group("DRY", key = true, clips = listOf(Clip("dry", "DRY", "the source as it ships, $chDry, no section"))),
+                Group(
+                    "DRY", key = true,
+                    clips = listOf(Clip("dry", "DRY", "the source as it ships, $chDry, no section")) + foldClipFor("dry", levelledDry, "the source itself"),
+                ),
             )
 
-            val monoClips = DEPTHS.map { depth ->
+            val monoClips = DEPTHS.flatMap { depth ->
                 val id = "depth_${tag(depth)}_width_0"
                 val out = write(id, Ensemble.process(dry, mapOf("DEPTH" to depth, "WIDTH" to 0f)))
-                Clip(id, "DEPTH ${fmt(depth)} · WIDTH 0", "the three taps summed to ${if (out.channels == 2) "each of the source's two channels" else "one channel"}; the WAV stays $chDry")
+                listOf(Clip(id, "DEPTH ${fmt(depth)} · WIDTH 0", "the three taps summed to ${if (out.channels == 2) "each of the source's two channels — two mono ensembles, one per side" else "one channel"}; the WAV stays $chDry")) +
+                    foldClipFor(id, out, "the same file")
             }
             groups += Group("WIDTH 0 · THE MONO ENSEMBLE", key = false, clips = monoClips)
 
@@ -100,11 +113,7 @@ object EnsembleAuditionGenerator {
                     id, "DEPTH ${fmt(depth)} · WIDTH 1",
                     "the stereo pair (L 0.85/0.50/0.15 over the taps, R mirrored); per tap up to ${slow.roundToInt()} c on the swell and ${fast.roundToInt()} c on the shimmer",
                 )
-                if (out.channels == 2) {
-                    val foldId = id + "_fold"
-                    writeFold(foldId, out)
-                    wideClips += Clip(foldId, "↳ ITS FOLD", "the same file averaged to mono — what the phone plays. Measured: ${foldCost(out)}")
-                }
+                wideClips += foldClipFor(id, out, "the same file")
             }
             groups += Group("WIDTH 1 · THE STEREO PAIR, EACH WITH ITS FOLD", key = true, clips = wideClips)
 
@@ -112,7 +121,10 @@ object EnsembleAuditionGenerator {
             sections.append(
                 sectionJson(
                     id = source.id, display = source.display, body = source.body,
-                    readout = source.readout + listOf("RATE .50 (0.58 / 5.85 HZ) " + DOT + " TONE 6.5 KHZ " + DOT + " 100% WET"),
+                    readout = source.readout + listOf(
+                        "RATE .50 (0.58 / 5.85 HZ) " + DOT + " TONE 6.5 KHZ " + DOT + " 100% WET",
+                        "ONE-SHOTS ONLY: A LOOP LANDS DRY, THE WRAP WOULD TICK",
+                    ),
                     groups = groups,
                 ),
             )

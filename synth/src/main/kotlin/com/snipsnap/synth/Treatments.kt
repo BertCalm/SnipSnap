@@ -55,7 +55,9 @@ object Treatments {
         // The ladder's own contour, dropped onto a hit that was never a synth.
         "contoured" to FxChain(contour = mapOf("CUTOFF" to 0.3f, "CREAM" to 0.6f, "SWEEP" to 0.7f)),
         // Three taps off the finished tone, swimming: the string machine's
-        // back half. RATE is left at its centre — which is its neutral, so
+        // back half. DEPTH a step past the section's own 0.5, as "phased"
+        // and "contoured" sit past theirs: a character is tapped to be
+        // heard. RATE is left at its centre — which is its neutral, so
         // setting it here would be a macro AMT could never move.
         "ensembled" to FxChain(ensemble = mapOf("DEPTH" to 0.6f, "WIDTH" to 1f)),
     )

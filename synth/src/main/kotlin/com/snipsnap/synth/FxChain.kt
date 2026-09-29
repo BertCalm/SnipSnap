@@ -35,8 +35,8 @@ import com.snipsnap.json.JsonValue
  * A `null` section is a hard bypass. Serializes next to the pad's WAV in
  * `kit.json` so the recipe stays editable forever, same as synth patches.
  *
- * A section may widen a mono snip to stereo (ENSEMBLE does, at WIDTH > 0)
- * and never narrows one; every section after it in the order runs per
+ * A section may widen a mono snip to stereo (ENSEMBLE does, above its
+ * `WIDTH_OFF`) and never narrows one; every section after it in the order runs per
  * channel, so the pair it made reaches the WAV intact.
  */
 data class FxChain(

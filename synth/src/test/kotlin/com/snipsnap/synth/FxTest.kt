@@ -432,7 +432,8 @@ class FxTest {
         assertEquals(1, out.channels, "WIDTH 0 must not widen")
         assertEquals(src.frameCount, out.frameCount)
         // The lag that best matches the input is the base delay (330.75
-        // samples at 44.1 kHz), and at that lag the two are the same tone.
+        // samples at 44.1 kHz, plus the 6.5 kHz tone's 0.66-sample lag at
+        // low frequencies), and at that lag the two are the same tone.
         val expected = (Ensemble.BASE_DELAY_S * src.sampleRate).toInt()
         var bestLag = -1; var best = -2.0
         for (lag in expected - 20..expected + 20) {
@@ -524,9 +525,11 @@ class FxTest {
         // the gate page plays every stereo clip beside its fold so the trade
         // is heard.
         val kickRow = foldReport(kick)
+        val fanfare = foldReport(VelvetPresets.forVoice(VelvetVoice.BRASS).first { it.name == "FANFARE" }.render())
         val c3 = foldReport(tone(130.81f, 2f, saw = true))
         val c4 = foldReport(tone(261.63f, 2f, saw = true))
         println("ENSEMBLE at defaults, the fold against the channels: kick ${"%.2f".format(kickRow.first)} dB (L/R %.2f)".format(kickRow.second) +
+            ", FANFARE ${"%.2f".format(fanfare.first)} dB (L/R %.2f)".format(fanfare.second) +
             ", saw C3 ${"%.2f".format(c3.first)} dB (L/R %.2f, ripple %.1f dB)".format(c3.second, c3.third) +
             ", saw C4 ${"%.2f".format(c4.first)} dB (L/R %.2f, ripple %.1f dB)".format(c4.second, c4.third))
         // The family's other rows on the C4 saw, for the record: a larger z is narrower and folds better.
@@ -536,6 +539,7 @@ class FxTest {
         }
         assertTrue(kickRow.first > -0.5, "a kick's fold should stay coherent: ${kickRow.first} dB")
         assertTrue(kickRow.second > 0.9, "a kick's pair should stay alike: ${kickRow.second}")
+        assertTrue(fanfare.first > -1.5, "the string machine's own source lost more than its measured decibel allows: ${fanfare.first} dB")
         assertTrue(c3.first > -2.5, "the C3 saw's fold lost more than its measured -2.1 dB allows: ${c3.first} dB")
         assertTrue(c4.first > -3.6, "the C4 saw's fold lost more than its measured -3.2 dB allows: ${c4.first} dB")
         assertTrue(c3.second < 0.9 && c4.second < 0.9, "the pair is not wide: L/R ${c3.second} / ${c4.second}")

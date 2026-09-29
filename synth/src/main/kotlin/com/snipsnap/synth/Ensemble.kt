@@ -25,13 +25,13 @@ import kotlin.math.sqrt
  * and the fixed order picks one.
  *
  * **100 % wet, no dry mix** — TAPE's rule. A dry-plus-delayed sum is a
- * comb with notches every 133 Hz at 7.5 ms and a −15 dB ripple at half mix,
- * and that comb's low end survives the modulation; with no dry there is no
+ * comb with notches every 133 Hz at 7.5 ms, 11–14 dB deep at half mix with
+ * these weights, and that comb's low end survives the modulation; with no dry there is no
  * comb, and what is left is the three taps beating against each other,
  * which *is* the ensemble — a slow level ripple of a few dB on a steady
  * tone, printed by the test, not hidden. DEPTH 0 is therefore three
- * identical copies: a plain 7.5 ms delay, the only trace, as TAPE's
- * all-zeros is.
+ * identical copies: a 7.5 ms delay through the 6.5 kHz tone, the only
+ * trace, as TAPE's all-zeros is.
  *
  * **Stereo.** WIDTH crossfades from the equal sum of the three taps (one
  * channel — the WAV stays mono) to a pair assigned so the phone's mono
@@ -47,13 +47,14 @@ import kotlin.math.sqrt
  * harmonics — and meters the loudest 200 ms window. By that meter, at
  * DEPTH 0.5: three copies of a kick a few milliseconds apart stay
  * coherent where a kick lives (−0.2 dB, ρ 0.96), a brass preset loses
- * about a decibel (VELVET's FANFARE −1.0 dB, ρ 0.65), and a bare sawtooth
+ * about a decibel (VELVET's FANFARE −0.95 dB), and a bare sawtooth
  * loses two to three (−2.1 dB at C3 with ρ 0.60, −3.2 dB at C4 with
  * ρ 0.19, where the harmonics fall near half the tap spacing and the
  * copies cancel). `FxTest` pins those rows; the gate page plays every stereo clip
  * beside its fold so the trade is heard, not assumed, and `WIDE_Z` is the
- * knob that moves it (a larger z is narrower and folds better). A mono
- * input at WIDTH > 0 comes out with two channels — the one section that
+ * knob that moves it (a larger z is narrower and folds better, up to
+ * `1/√3` where L = R). A mono input above [WIDTH_OFF] comes out with two
+ * channels — the one section that
  * widens; see [FxChain]'s contract — and a stereo input keeps its image,
  * each channel through its own line and taps. AMT fades WIDTH to its
  * neutral 0, so a faded ensemble is a mono one.
@@ -115,6 +116,9 @@ object Ensemble {
      * weight. A gate choice among the rows, not a derivation.
      */
     const val WIDE_Z = 0.150f
+
+    /** The far-tap weight at which L = R: `1/√3`. The family is defined up to here. */
+    const val WIDE_Z_MAX = 0.5773f
     val WIDE_X: Float
     val WIDE_Y: Float
 
@@ -126,9 +130,13 @@ object Ensemble {
 
     /**
      * The family's row for a given far-tap weight [z]: `y = (x + z) / 2` for an
-     * equal-weight fold, `x² + y² + z² = 1` for unit power, solved for `x`.
+     * equal-weight fold, `x² + y² + z² = 1` for unit power, solved for `x`. The
+     * family is monotonic — a larger z narrower — only up to `1/√3 ≈ 0.577`,
+     * where x = y = z and L = R; past it the sides swap and the pair widens
+     * again, so the domain stops there.
      */
     internal fun wideWeights(z: Float): FloatArray {
+        require(z in 0f..WIDE_Z_MAX) { "z is 0..$WIDE_Z_MAX (1/sqrt 3, where L = R); got $z" }
         val x = ((-z / 2.0 + sqrt(5.0 - 6.0 * z * z)) / 2.5).toFloat()
         return floatArrayOf(x, (x + z) / 2f, z)
     }
