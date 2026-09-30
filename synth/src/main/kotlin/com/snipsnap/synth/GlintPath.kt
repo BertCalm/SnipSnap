@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import kotlin.math.abs
 import kotlin.math.pow
 
 /**
@@ -8,9 +9,11 @@ import kotlin.math.pow
  *
  * Every path is one number, `x`: 1 at the path's start, 0 on PEAK. The
  * one-shot runs `x` down on a clock (SWEEP, VOWEL), on the note's own level
- * (BRASS) or rung by rung (STEP); a held note's breath swings `x` either
- * side of 0 ([GlintHeld]). Two clocks, one path, so the held note and the
- * one-shot can never disagree about where a voice's formant goes.
+ * (BRASS) or rung by rung (STEP), and a held note's onset does the same
+ * ([ratios]), so the two can never disagree about where a voice's formant
+ * goes on its way to PEAK. The held note's breath then swings either side of
+ * PEAK by BLOOM's own depth ([breathRatios], [GlintHeld]): a quarter of the
+ * travel BLOOM asks for, not of what the one-shot's clamped start leaves.
  *
  * Every ratio this returns is read by its callers only at a phase wrap,
  * where the window is zero and a change is free.
@@ -40,34 +43,76 @@ internal class GlintPath private constructor(
 
     /**
      * Writes the burst ratios at path position [x] into `out[0]` (main) and
-     * `out[1]` (second burst). STEP reads `ladder[rung]` when [rung] ≥ 0 and
-     * otherwise rounds the continuous path to a whole harmonic — the held
-     * breath's case, which has no rung clock. VOWEL ignores [rung]: [x] walks
-     * the vowel line from BLOOM's start to PEAK's vowel, and both bursts are
-     * that vowel's F1 and F2 in Hz over the note.
+     * `out[1]` (second burst): the one-shot's read, and the held note's
+     * onset. STEP reads `ladder[rung]` when [rung] ≥ 0 and otherwise rounds
+     * the continuous path to a whole harmonic ([heldHarmonic]). VOWEL ignores
+     * [rung]: [x] walks the vowel line from BLOOM's start to PEAK's vowel,
+     * and both bursts are that vowel's F1 and F2 in Hz over the note.
      */
     fun ratios(x: Float, rung: Int, out: FloatArray) {
         if (voice == GlintVoice.VOWEL) {
-            // Formants are Hz, not harmonics: no snap, and a formant below the
-            // note pins to the fundamental instead of vanishing.
-            Glint.vowelAt(vowelPos + (vowelStart - vowelPos) * x, out)
-            out[0] = (out[0] * scale / f0).coerceIn(Glint.VOWEL_K_MIN, Glint.K_MAX)
-            out[1] = (out[1] * scale / f0).coerceIn(Glint.VOWEL_K_MIN, Glint.K_MAX)
+            vowelRatios(vowelPos + (vowelStart - vowelPos) * x, out)
             return
         }
         val continuous = (kBase * (kStart / kBase).pow(x)).coerceIn(Glint.K_MIN, Glint.K_MAX)
         out[0] = when {
             ladder != null && rung >= 0 -> ladder[rung.coerceAtMost(ladder.lastIndex)]
-            // The landing replaces its nearest whole harmonic, as the one-shot
-            // ladder's last rung does. (An exact x == 0f test would leave a
-            // still pad, where every x maps to kBase, rounded off PEAK.)
-            ladder != null -> {
-                val whole = Math.round(continuous)
-                if (whole == Math.round(kBase)) kBase else whole.toFloat().coerceIn(Glint.K_MIN, Glint.K_MAX)
-            }
+            ladder != null -> heldHarmonic(continuous)
             else -> continuous
         }
         out[1] = k2
+    }
+
+    /**
+     * The held breath's ratios, [swing] being the breath already scaled and
+     * signed: `BREATHE_SHARE` times a sine, and on BRASS times |s| as well,
+     * because its k follows its level (spec §2.2). This is spec §3, not
+     * [ratios] at a small x: the breath swings around PEAK by BLOOM's own
+     * depth, where [ratios] runs between PEAK and the one-shot's start, which
+     * the clamp to `K_MIN..K_MAX` (and on VOWEL, to the ends of the line)
+     * cuts short wherever PEAK sits near an end of its range.
+     *
+     * Path voices: `k = kBase · (1 + a)^swing` with `a = |s| · BLOOM_MAX`, so
+     * BLOOM 0.5 (a = 0) rests on PEAK exactly. A negative s swings the other
+     * way round, as the one-shot's path does (a louder BRASS is darker).
+     * STEP takes the whole harmonic ([heldHarmonic]). VOWEL: the position on
+     * the vowel line is `PEAK's vowel + swing · 4 · s`, which [Glint.vowelAt]
+     * clamps to the line.
+     */
+    fun breathRatios(swing: Float, out: FloatArray) {
+        if (voice == GlintVoice.VOWEL) {
+            vowelRatios(vowelPos + swing * Glint.VOWEL_LAST * bloom, out)
+            return
+        }
+        val a = abs(bloom) * Glint.BLOOM_MAX
+        val exponent = if (bloom < 0f) -swing else swing
+        val continuous = (kBase * (1f + a).pow(exponent)).coerceIn(Glint.K_MIN, Glint.K_MAX)
+        out[0] = if (ladder != null) heldHarmonic(continuous) else continuous
+        out[1] = k2
+    }
+
+    /**
+     * VOWEL's two bursts at [position] on the vowel line, BODY's vocal-tract
+     * size applied. Formants are Hz, not harmonics: no snap, and a formant
+     * below the note pins to the fundamental instead of vanishing.
+     */
+    private fun vowelRatios(position: Float, out: FloatArray) {
+        Glint.vowelAt(position, out)
+        out[0] = (out[0] * scale / f0).coerceIn(Glint.VOWEL_K_MIN, Glint.K_MAX)
+        out[1] = (out[1] * scale / f0).coerceIn(Glint.VOWEL_K_MIN, Glint.K_MAX)
+    }
+
+    /**
+     * STEP with no rung clock: the landing replaces its nearest whole
+     * harmonic, and every other value rounds to one. So a breath that swings
+     * across PEAK steps from the harmonic just below straight to the landing
+     * (15 to 16.28, skipping 16), and a still pad rests on PEAK, not on the
+     * whole harmonic beside it. (Testing for an exact landing instead would
+     * leave a still pad, where every value maps to kBase, rounded off PEAK.)
+     */
+    private fun heldHarmonic(continuous: Float): Float {
+        val whole = Math.round(continuous)
+        return if (whole == Math.round(kBase)) kBase else whole.toFloat().coerceIn(Glint.K_MIN, Glint.K_MAX)
     }
 
     companion object {

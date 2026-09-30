@@ -12,10 +12,12 @@ import kotlin.math.sin
  * BREATHE - GLINT held (docs/superpowers/specs/2026-09-29-glint-paths-design.md §3).
  *
  * The onset plays the voice's own path onto PEAK; then the formant breathes,
- * one breath per loop, `x = BREATHE_SHARE · sin(2π t / loop)` on the same
- * [GlintPath] the one-shot uses. Phase distortion is exactly periodic, so N
- * whole cycles in L whole frames close with no seam search: from the first
- * wrap of the loop on, phase, k and level are all functions of `i mod L`.
+ * one breath per loop: `swing = BREATHE_SHARE · sin(2π t / loop)` through
+ * [GlintPath.breathRatios], which swings it around PEAK by BLOOM's own depth
+ * (spec §3) and not between PEAK and the one-shot's start, whose clamp would
+ * cut the breath short. Phase distortion is exactly periodic, so N whole
+ * cycles in L whole frames close with no seam search: from the first wrap of
+ * the loop on, phase, k and level are all functions of `i mod L`.
  *
  * The render runs at `Dsp.OVERSAMPLE`x and decimates through a filter with
  * memory, so it synthesises three breaths and returns the onset, the first
@@ -80,18 +82,20 @@ internal object GlintHeld {
         var amp = 0f
         var x = 1f
         var rung = -1
+        var swing = 0f
         for (i in 0 until total) {
             if (i % CANCEL_CHECK_SAMPLES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
                 throw CancellationException("GLINT held render no longer wanted")
             }
             val attack = (i.toFloat() / rate / ATTACK_SECONDS).coerceAtMost(1f)
-            if (i >= w0) {
+            val breathing = i >= w0
+            if (breathing) {
                 // The breath: a function of (i - i0) mod loop only.
                 val b = sin(2.0 * PI * (i - i0) / rate / loopSeconds).toFloat()
-                // BRASS's k follows its own level (spec §2.2): e = (amp - rest) / (1 - rest).
-                x = if (voice == GlintVoice.BRASS) BREATHE_SHARE * depth * b else BREATHE_SHARE * b
+                // BRASS's k follows its own level (spec §2.2): e = (amp - rest) / (1 - rest),
+                // which breathRatios turns brighter for s > 0 and darker for s < 0.
+                swing = if (voice == GlintVoice.BRASS) BREATHE_SHARE * depth * b else BREATHE_SHARE * b
                 amp = if (voice == GlintVoice.BRASS) BRASS_REST * (1f + BREATHE_SHARE * depth * b) else 1f
-                rung = -1
             } else {
                 val t = i.toFloat() / rate
                 val fall = Dsp.envAt(t, Glint.BLOOM_T60)
@@ -100,7 +104,9 @@ internal object GlintHeld {
                 rung = if (path.ladder != null) (t / Glint.STEP_SECONDS).toInt() else -1
             }
             val phase = ((i.toLong() * n) % loopOs).toDouble() / loopOs
-            if (i == 0 || cycleOf(i.toLong()) != cycleOf(i.toLong() - 1)) path.ratios(x, rung, k)
+            if (i == 0 || cycleOf(i.toLong()) != cycleOf(i.toLong() - 1)) {
+                if (breathing) path.breathRatios(swing, k) else path.ratios(x, rung, k)
+            }
             val w = Glint.windowAt(phase.toFloat())
             val second = if (voice == GlintVoice.VOWEL) amp else attack
             out[i] = amp * w * sin(2.0 * PI * k[0] * phase).toFloat() +
@@ -110,22 +116,29 @@ internal object GlintHeld {
         val down = Dsp.decimate(out, Dsp.RATE)
         val loopStart = (i0 / os).toInt() + plan.loopFrames
         val audio = down.copyOfRange(0, loopStart + plan.loopFrames)
-        level(audio)
+        level(audio, loopStart)
         return Held(audio, loopStart)
     }
 
     /**
-     * One scalar gain for the whole file. `Dsp.levelTo` ends in a peak
+     * One scalar gain for the whole file, fitted so the loop - the sustained
+     * sound - sits at the melodic loudness target, as `Keys.resinPad` levels
+     * its pads. Fitting the whole file instead lets BRASS's fortepiano accent
+     * (twice its loop's level, and the loudest 200 ms in the file) pull its
+     * loop about 2 dB under every other voice's. `Dsp.levelTo` ends in a peak
      * limiter, and a limiter with memory would make the loop's first pass
      * differ from its repeats; a least-squares scalar fitted to what
-     * `levelTo` would have done keeps the loudness target and the seam.
+     * `levelTo` would have done to the loop keeps the loudness target and the
+     * seam. The peak guard runs over the whole file, where the onset can be
+     * the loudest part.
      */
-    private fun level(audio: FloatArray) {
-        val probe = audio.copyOf()
+    private fun level(audio: FloatArray, loopStart: Int) {
+        val loop = audio.copyOfRange(loopStart, audio.size)
+        val probe = loop.copyOf()
         Dsp.levelTo(probe, Dsp.RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         var num = 0.0
         var den = 0.0
-        for (i in audio.indices) { num += probe[i].toDouble() * audio[i]; den += audio[i].toDouble() * audio[i] }
+        for (i in loop.indices) { num += probe[i].toDouble() * loop[i]; den += loop[i].toDouble() * loop[i] }
         if (den <= 0.0) return
         var gain = (num / den).toFloat()
         val peak = audio.maxOf { abs(it) }
