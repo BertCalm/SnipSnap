@@ -15,8 +15,9 @@ class GlintTest {
      * a vowel line, not ratios: it has no FOLLOW and no kBase, so the fixtures
      * that read either do not apply. It joins the loops over
      * `GlintVoice.entries` (audio legality, DECAY, determinism, PEAK opens,
-     * velocity) except where a RULING PENDING comment says otherwise, and has
-     * its own tests in `GlintVowelTest`.
+     * velocity) except the two ruled exemptions marked in place, and has its
+     * own tests in `GlintVowelTest`, including the gates that stand in for
+     * what it is exempt from.
      */
     private val PATH_VOICES = GlintVoice.entries - GlintVoice.VOWEL
 
@@ -513,16 +514,12 @@ class GlintTest {
         // 0.03873.
         val corner = mapOf("PEAK" to 1f, "TUNE" to 1f, "BLOOM" to 0.5f, "BODY" to 0f, "FOLLOW" to 1f)
         for (voice in GlintVoice.entries) {
-            // RULING PENDING, and outside the 2026-09-29 pre-flight ruling,
-            // which names only the three centroid gates: VOWEL misses this
-            // bar by a wide margin. avgDiff is 2.2e-5 at this corner against
-            // 0.001, and 7.3e-6 to 2.9e-5 at the four corners tried (PEAK 1
-            // or 0.75, TUNE 0 or 1, BODY 0 or 1). Its formants are fixed Hz and top
-            // out near 2.7 kHz (EE's F2 at BODY 1), so none of its bursts
-            // nears Nyquist and there is no fold for this proof to measure.
-            // The bar is untouched. `render` is one function for every
-            // voice, so the other three still prove it dispatches through
-            // the oversampled path.
+            // Ruled exemption, 2026-09-29: VOWEL's formants top out near 2.7
+            // kHz (EE's F2 at BODY 1), so there is no fold to measure (avgDiff
+            // 2.2e-5 against 1e-3); `render` is one function, so SWEEP, STEP
+            // and BRASS prove the dispatch. At the four corners tried (PEAK 1
+            // or 0.75, TUNE 0 or 1, BODY 0 or 1) it reads 7.3e-6 to 2.9e-5.
+            // The bar is untouched.
             if (voice == GlintVoice.VOWEL) continue
             val actual = Glint.render(voice, corner)
             val direct = Glint.synthesize(voice, corner, Dsp.RATE)
@@ -1053,14 +1050,17 @@ class GlintTest {
         // centroid ratio at the 9-point grid: SWEEP 21.1x, STEP 21.1x, BRASS
         // 21.1x, against the 3x bar.
         for (voice in GlintVoice.entries) {
-            // RULING PENDING: VOWEL is out of this gate until the controller
-            // rules. Its centroid rises from OO to AH and then falls (EH and
-            // EE have lower F1s than AH), so both bars miss: it falls at
-            // step 5, and end to start is 1.76x against the 3x bar. The vowel
-            // table and both bars are untouched. Measured 2026-09-29 at this
-            // fixture, TUNE 0.4:
+            // Ruled exemption, 2026-09-29: VOWEL leaves this gate for good. Its
+            // centroid rises from OO to AH and then falls (EH and EE have lower
+            // F1s than AH), so both bars miss: it falls at step 5, and end to
+            // start is 1.76x against the 3x bar. Measured at this fixture,
+            // TUNE 0.4:
             //   PEAK sweep VOWEL: 324.9, 416.4, 529.7, 609.9, 694.8, 675.8, 680.6, 607.2, 571.1
             // OO and OH are not inverted, so the spec's swap is not the fix.
+            // The line is ordered on F2 presence, not on centroid, and
+            // `GlintVowelTest`'s `VOWEL's PEAK sweep is monotonic in F2
+            // presence, the axis the line is ordered on` gates VOWEL's PEAK on
+            // that instead.
             if (voice == GlintVoice.VOWEL) continue
             val still = mapOf("TUNE" to 0.4f, "BLOOM" to 0.5f, "BODY" to 0.3f, "FOLLOW" to 1f, "DECAY" to 0.6f)
             val readings = (0..8).map { i ->
@@ -1095,7 +1095,10 @@ class GlintTest {
         // it only checks SWEEP. This one earns its place by covering every
         // voice - a coarse "velocity is directionally correct everywhere" guard
         // that the routing test alone doesn't give. VOWEL passes here at its
-        // default PEAK only: see RULING PENDING under `PEAK sweep is monotonic`.
+        // default PEAK only, because by centroid its soft key reads brighter
+        // than its hard one above PEAK 0.5; `GlintVowelTest`'s `a soft VOWEL
+        // key sings a vowel with less F2, at every PEAK` covers the whole knob
+        // on F2 presence, the axis the line is ordered on.
         for (voice in GlintVoice.entries) {
             val patch = GlintPatch("Vel $voice", voice, Glint.defaults(voice))
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz

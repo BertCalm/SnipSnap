@@ -132,4 +132,68 @@ class GlintVowelTest {
         println("VOWEL one envelope, still EE: share above 1.5 kHz early $early, late $late")
         assertEquals(early, late, early * 0.1f, "F2 should fade with F1: share above 1.5 kHz $early early, $late late")
     }
+
+    /** The first 4096 samples of [snip], mono: the head `FeatureExtractor` takes its centroid over. */
+    private fun extractorHead(snip: Snip): Snip =
+        Snip(snip.samples.copyOfRange(0, minOf(snip.samples.size, 4096)), 1, snip.sampleRate)
+
+    /**
+     * VOWEL's own PEAK-sweep gate, in place of the generic `PEAK sweep is
+     * monotonic` in `GlintTest`, which VOWEL is exempt from. That gate reads
+     * centroid, and centroid does not order this line past AH: it rises OO to
+     * AH and then falls, because EH and EE have lower F1s than AH. The line is
+     * ordered on F2, the vowels' own brightness axis, and the share of power
+     * above 1.5 kHz is F2's presence. It must never fall across the nine PEAK
+     * steps and must rise at least 10x end to end, on the generic gate's
+     * fixture (TUNE 0.4) and again at the root note (TUNE 0). The readings
+     * print on every run.
+     */
+    @Test
+    fun `VOWEL's PEAK sweep is monotonic in F2 presence, the axis the line is ordered on`() {
+        for (tune in listOf(0.4f, 0f)) {
+            val still = mapOf("TUNE" to tune, "BLOOM" to 0.5f, "BODY" to 0.3f, "DECAY" to 0.6f)
+            val readings = (0..8).map { i ->
+                shareAbove1500(extractorHead(Glint.render(GlintVoice.VOWEL, still + ("PEAK" to i / 8f))))
+            }
+            println(
+                "VOWEL PEAK sweep TUNE $tune, share above 1.5 kHz: ${readings.joinToString(", ") { "%.5f".format(it) }}" +
+                    " (end/start ${"%.1f".format(readings.last() / readings.first())}x)",
+            )
+            for (i in 1 until readings.size) {
+                assertTrue(
+                    readings[i] >= readings[i - 1],
+                    "TUNE $tune: F2 presence fell at step $i: ${readings[i - 1]} -> ${readings[i]}",
+                )
+            }
+            assertTrue(
+                readings.last() >= readings.first() * 10f,
+                "TUNE $tune: F2 presence should rise at least 10x end to end: ${readings.first()} -> ${readings.last()}",
+            )
+        }
+    }
+
+    /**
+     * The generic `atVelocity is genuinely darker at low velocity` reads
+     * centroid, and VOWEL passes it only at its default PEAK: above PEAK 0.5 a
+     * soft key's centroid is higher than a hard key's, because centroid does
+     * not order the line past AH. Velocity scales PEAK, PEAK walks the vowel
+     * line, and what a soft key gives up is F2: it sings a vowel nearer OO,
+     * with less power above 1.5 kHz (`Velocity.atVelocity`, soft 0.25 against
+     * hard 1.0). So a soft key must carry no more of it than a hard one at
+     * every PEAK, and less than half as much where the hard key has reached EH
+     * or EE (PEAK 0.75 and up). The readings print on every run.
+     */
+    @Test
+    fun `a soft VOWEL key sings a vowel with less F2, at every PEAK`() {
+        for (peak in listOf(0.25f, 0.5f, 0.75f, 0.9f, 1f)) {
+            val patch = GlintPatch("Vel VOWEL", GlintVoice.VOWEL, Glint.defaults(GlintVoice.VOWEL) + ("PEAK" to peak))
+            val soft = shareAbove1500(extractorHead(Velocity.atVelocity(patch, 0.25f)))
+            val hard = shareAbove1500(extractorHead(Velocity.atVelocity(patch, 1f)))
+            println("VOWEL velocity PEAK $peak, share above 1.5 kHz: soft ${"%.5f".format(soft)}, hard ${"%.5f".format(hard)}")
+            assertTrue(soft <= hard, "PEAK $peak: a soft key should sing no more F2 than a hard one: soft $soft, hard $hard")
+            if (peak >= 0.75f) {
+                assertTrue(soft < hard * 0.5f, "PEAK $peak: a soft key should sing under half the F2 of a hard one: soft $soft, hard $hard")
+            }
+        }
+    }
 }

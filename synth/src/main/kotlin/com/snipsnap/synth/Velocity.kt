@@ -437,8 +437,9 @@ object Velocity {
      *
      * PEAK (GLINT) joins on a measured sweep — `GlintTest`'s `PEAK sweep is
      * monotonic` holds centroid non-decreasing across a nine-point PEAK sweep
-     * on every voice. That test is the gate; this doc does not repeat its
-     * numbers. Unlike SNAP, this is a flat entry rather than a
+     * on every path voice; VOWEL's PEAK is gated on F2 presence in
+     * `GlintVowelTest`. Those tests are the gate; this doc does not repeat
+     * their numbers. Unlike SNAP, this is a flat entry rather than a
      * [brightnessOverride]: no other engine exposes a macro named PEAK, so
      * there is no name collision to scope around.
      */

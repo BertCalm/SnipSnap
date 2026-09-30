@@ -136,7 +136,14 @@ object Glint {
     /** The last position on the vowel line (EE). */
     const val VOWEL_LAST = 4f
 
-    /** OO, OH, AH, EH, EE as (F1, F2) Hz - adult formants, ordered dark to bright so PEAK keeps meaning "how bright". */
+    /**
+     * OO, OH, AH, EH, EE as (F1, F2) Hz - adult formants, ordered dark to
+     * bright so PEAK keeps meaning "how bright". The order holds on F2, the
+     * vowels' own brightness axis (`GlintVowelTest` gates the share of power
+     * above 1.5 kHz as non-decreasing along the line); spectral centroid does
+     * not order it past AH (measured 2026-09-29: it rises OO to AH, then
+     * falls, because EH and EE have lower F1s than AH).
+     */
     private val VOWEL_LINE = arrayOf(
         floatArrayOf(300f, 870f),
         floatArrayOf(570f, 840f),
