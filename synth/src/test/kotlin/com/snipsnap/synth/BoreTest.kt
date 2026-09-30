@@ -156,12 +156,13 @@ class BoreTest {
     @Test
     fun `the reed has bite, and a looser lip has more of it`() {
         // Bite: the 1-4 kHz band against the fundamental, on the finished render (BoreMeasure.biteDb).
-        // Before the presence bell the default reed read -24 -22 -19 -16 -15 dB at C3 G3 C4 G4 C5 -
-        // "a bit more of the bite of the reed" was the first listening note; with it, -18.7 -16.4
-        // -13.4 -10.5 -9.7. The floors sit 2-3 dB under that, so the bell taken out fails C3 and G3
-        // and its gain halved fails the rest. LIP 0.1 against 0.9 read 13 dB apart at C4 (9 dB
-        // before, from the reed alone); the floor is 9.
-        val floors = listOf(0f to -21.0, 7f / 24 to -19.0, 0.5f to -16.0, 19f / 24 to -13.0, 1f to -12.0)
+        // The R1 reed read -24 -22 -19 -16 -15 dB at C3 G3 C4 G4 C5 and the first listening note
+        // asked for more of a reed's bite. The presence bell alone made it -18.7 -16.4 -13.4 -10.5
+        // -9.7, and the second note ("STRONG, +18 dB, still needs more ... buzzier and raspier") added
+        // the rasp: -9.5 -7.4 -5.4 -3.4 -2.6. The floors sit 2-3 dB under that, so the bell alone
+        // (what the first note shipped) and the rasp alone both fail every one of them. LIP 0.1
+        // against 0.9 read 10 dB apart at C4; the floor is 9.
+        val floors = listOf(0f to -12.0, 7f / 24 to -10.0, 0.5f to -8.0, 19f / 24 to -6.0, 1f to -5.5)
         for ((tune, floor) in floors) {
             val hz = Bore.frequencyFor(BoreVoice.SAX, tune)
             val note = Bore.render(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune, "HOLD" to 0.3f))
@@ -184,6 +185,42 @@ class BoreTest {
         assertEquals(Bore.BITE_DB, boosts.first(), 1e-4f)
         assertEquals(Bore.BITE_DB * Bore.BITE_TIGHT_SHARE, boosts.last(), 1e-4f)
         assertEquals(boosts.sortedDescending(), boosts, "the bell's gain rose with LIP: $boosts")
+    }
+
+    @Test
+    fun `the rasp makes harmonics the pipe did not, whatever the level, and none at amount 0`() {
+        // A pure sine through the bend: amount 0 leaves it a sine (every harmonic under -100 dB), and
+        // at the default knobs' amount (0.475) the 2nd, 3rd and 4th come up to -18.5, -12.4 and -22.1
+        // dB against the fundamental. The bias is what makes the even ones: with none, the 2nd is
+        // -33 dB. The same at a hundredth of the level and at half of it, because the wave is
+        // scaled by its own loudness first.
+        val rate = BoreMeasure.RAW_RATE
+        val hz = 441f
+        fun harmonics(amplitude: Float, amount: Float): List<Double> {
+            val x = FloatArray(rate) { (amplitude * kotlin.math.sin(2 * Math.PI * hz * it / rate)).toFloat() }
+            Bore.raspBend(x, rate, amount)
+            return BoreMeasure.harmonicsDb(x, hz, 0.2f, 0.9f, 4, rate)
+        }
+        val straight = harmonics(0.5f, 0f)
+        for (h in straight.drop(1)) assertTrue(h < -100.0, "amount 0 made a harmonic: $straight")
+        val loud = harmonics(0.5f, 0.475f)
+        val quiet = harmonics(0.01f, 0.475f)
+        val floors = listOf(-22.0, -16.0, -26.0)
+        for (i in floors.indices) assertTrue(loud[i + 1] >= floors[i], "the rasp's harmonic ${i + 2} is ${loud[i + 1]} dB, under ${floors[i]}: $loud")
+        for (i in loud.indices) assertEquals(loud[i], quiet[i], 1.0, "the rasp depends on the level: $loud against $quiet")
+    }
+
+    @Test
+    fun `the rasp is the loose, hard reed's, and never the flute's`() {
+        for (lip in listOf(0f, 0.5f, 1f)) for (breath in listOf(0f, 0.5f, 1f)) {
+            assertEquals(0f, Bore.raspAmount(BoreVoice.FLUTE, lip, breath), "the flute rasps at LIP $lip BREATH $breath")
+        }
+        assertEquals(1f, Bore.raspAmount(BoreVoice.SAX, 0f, 1f), 1e-5f)
+        assertEquals(Bore.RASP_TIGHT_SHARE * Bore.RASP_SOFT_SHARE, Bore.raspAmount(BoreVoice.SAX, 1f, 0f), 1e-5f)
+        val byLip = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { Bore.raspAmount(BoreVoice.SAX, it, 0.6f) }
+        val byBreath = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { Bore.raspAmount(BoreVoice.SAX, 0.5f, it) }
+        assertEquals(byLip.sortedDescending(), byLip, "the rasp rose as the lip tightened: $byLip")
+        assertEquals(byBreath.sorted(), byBreath, "the rasp fell as the breath hardened: $byBreath")
     }
 
     @Test
