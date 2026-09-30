@@ -565,6 +565,18 @@ class ValveTest {
     }
 
     @Test
+    fun `a 48 kHz pad renders finite and its own length`() {
+        // The round trip's band-limit corner is absolute (19.5 kHz), so a 48 kHz pad loses
+        // its 19-24 kHz (see the header KDoc); it must still render sanely at every DRIVE.
+        val pad = Snip(FloatArray(48_000) { (0.8 * sin(2 * PI * 220.0 * it / 48_000)).toFloat() }, 1, 48_000)
+        for (drive in listOf(0f, 0.3f, 0.7f, 1f)) {
+            val out = Valve.process(pad, mapOf("DRIVE" to drive))
+            assertEquals(pad.frameCount, out.frameCount)
+            assertTrue(out.samples.all { it.isFinite() && it in -1f..1f }, "DRIVE $drive at 48 kHz produced a bad sample")
+        }
+    }
+
+    @Test
     fun `a pad with a DC offset stays finite and in range, and the blocker drains the offset`() {
         val offset = Snip(FloatArray(snare.samples.size) { 0.5f * snare.samples[it] + 0.3f }, 1, rate)
         val out = Valve.process(offset, mapOf("DRIVE" to 1f))

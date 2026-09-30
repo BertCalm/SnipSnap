@@ -26,15 +26,23 @@ import kotlin.random.Random
  *
  * The first section that oversamples. At the snip's rate a hot tube folds its
  * harmonics back into the audible band: the Phase-0 spike measured a steady
- * 247 Hz probe at DRIVE 1 with energy between harmonics only 31.9 dB down at
- * 1x against 49.4 dB at 4x (an 8x reference read 50.9). The round trip is
- * zero-stuffing interpolated by [Tide.bandLimit] on the way up (never the
- * general resampler there, which cost 72 ms per rendered second on its own)
- * and [Dsp.decimate] on the way down, the melodic engines' own - `Resampler`'s
- * 2:1 fast path twice. The band-limit's 19.5 kHz corner is absolute, so the
- * round trip assumes the rack's 44.1 kHz snips: below about 40 kHz the
- * zero-stuffing images would enter the tube nearly unattenuated, and a 48 kHz
- * snip loses its 19-24 kHz.
+ * 247 Hz probe at DRIVE 1 on the V1 law (gain 35) with energy between
+ * harmonics only 31.9 dB down at 1x against 49.4 dB at 4x (an 8x reference
+ * read 50.9); on the V1.1 law DRIVE 1 is gain 1000 and ValveTest's steady
+ * probe reads 26.8 dB at 1x against 40.6 dB at 4x (its aliasing test prints
+ * both, and read 28.8 dB at 1x against 51.3 dB at 4x at gain 35).
+ * The round trip is zero-stuffing interpolated by [Tide.bandLimit] on the way
+ * up (never the general resampler there, which cost 72 ms per rendered second
+ * on its own) and [Dsp.decimate] on the way down, the melodic engines' own -
+ * `Resampler`'s 2:1 fast path twice. The round trip is always on: a gate that
+ * skips it at low DRIVE would save about 31 ms per rendered second (33.4 to
+ * 2.1, measured) but changes the speaker's tone, because the cabinet's
+ * filters run at the snip's rate on that path (a snare through CAB 0.5 steps
+ * 1.45 dB in its top third-octave; see
+ * docs/superpowers/plans/2026-09-30-valve-v1-1-spike.md). The band-limit's
+ * 19.5 kHz corner is absolute, so the round trip assumes the rack's 44.1 kHz
+ * snips: below about 40 kHz the zero-stuffing images would enter the tube
+ * nearly unattenuated, and a 48 kHz snip loses its 19-24 kHz.
  *
  * Every number marked shape below is a listening value: V1's from the
  * specification the owner attached, V1.1's chosen by the owner from candidate
@@ -76,7 +84,9 @@ object Valve {
      * step on hot pads (a kick at gain 35 ended on 3.6 % of its peak). This one
      * has no rest-point shift: SAG 1 adds no end step (the spike's kick at gain 35
      * ended on 0.08 %). The tube's own asymmetry still leaves about 1.7 % on a kick
-     * at gain 1000 whether SAG is up or not; the owner heard 1.7 % on a brass as clean.
+     * at gain 1000 whether SAG is up or not. The owner heard 1.7 % on a brass as
+     * clean before V1.1, but that was DRIVE 1 on the V1 law (the V1 gate's brass at
+     * gain 35, SAG 0.35); at gain 1000 the brass reads 0.255 % and 1.72 % is the kick's.
      *
      * K is 3, the top of the range the spike could reach: the kick's level 60-160 ms
      * after the hit, re its first 20 ms, falls 2.2 dB against SAG 0 at DRIVE 0.6 (gain

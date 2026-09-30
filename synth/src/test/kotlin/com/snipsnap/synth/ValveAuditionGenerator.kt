@@ -6,15 +6,19 @@ import java.io.File
 import kotlin.math.roundToInt
 
 /**
- * Renders VALVE's V1 listening clips
+ * Renders VALVE's listening clips under testkit/valve-audition/ (gitignored)
+ * on the grid the V1 gate used
  * (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "Phasing and
- * gates", the V1 row) under testkit/valve-audition/ (gitignored): four
- * sources - a THUMP kick, a THUMP snare, a VELVET brass stab, a VOX choir -
- * each dry and at DRIVE 0.3 / 0.6 / 1 by CAB 0 / 0.5 / 1, TONE and SAG at
- * their defaults; then the fold-back A/B, the snare at DRIVE 1 and CAB 0.5
- * through VALVE at the snip's rate and at 4x. Every clip shares one loudness
- * ([AuditionLevel]). Writes manifest.json, the one list of clips the page is
- * built from. Run via `./gradlew :synth:generateValveAudition`.
+ * gates", the V1 row): four sources - a THUMP kick, a THUMP snare, a VELVET
+ * brass stab, a VOX choir - each dry and at DRIVE 0.3 / 0.6 / 1 by CAB 0 /
+ * 0.5 / 1, TONE and SAG at their defaults; then the fold-back A/B, the snare
+ * at DRIVE 1 and CAB 0.5 through VALVE at the snip's rate and at 4x. The grid
+ * is V1's and the sound is whatever `Valve.process` renders now: on V1.1,
+ * DRIVE 1 is gain 1000 (V1's was 35), CAB 1 is two poles at 3.2 kHz (V1's was
+ * one at 4.5 kHz) and SAG is the supply sag (V1's was a bias). Every clip
+ * shares one loudness ([AuditionLevel]). Writes manifest.json, the one list
+ * of clips the page is built from.
+ * Run via `./gradlew :synth:generateValveAudition`.
  */
 object ValveAuditionGenerator {
 
