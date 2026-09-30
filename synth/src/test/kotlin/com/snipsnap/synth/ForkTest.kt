@@ -194,9 +194,9 @@ class ForkTest {
     }
 
     @Test
-    fun `five macros, the same on every voice, and the defaults say what the spec says`() {
+    fun `six macros, the same on every voice, and the defaults say what the spec says`() {
         for (voice in ForkVoice.entries) {
-            assertEquals(listOf("TUNE", "STRIKE", "BARK", "STIFF", "DECAY"), Fork.macrosFor(voice).map { it.name })
+            assertEquals(listOf("TUNE", "STRIKE", "BARK", "STIFF", "DECAY", "WIDTH"), Fork.macrosFor(voice).map { it.name })
         }
         val d = Fork.defaults(ForkVoice.TINE)
         assertEquals(0.5f, d.getValue("TUNE"))
@@ -204,6 +204,7 @@ class ForkTest {
         assertEquals(0.4f, d.getValue("BARK"))
         assertEquals(0.5f, d.getValue("STIFF"))
         assertEquals(0.5f, d.getValue("DECAY"))
+        assertEquals(0f, d.getValue("WIDTH"))
     }
 
     @Test
@@ -822,6 +823,110 @@ class ForkTest {
             it.dropLast(1) + ""","striker":[1,2,3]}"""
         }
         assertFailsWith<com.snipsnap.json.JsonException> { Patches.fromJsonText(bad) }
+    }
+
+    // ---------- WIDTH (stereo/residual split) ----------
+
+    @Test
+    fun `WIDTH 0 stays mono and WIDTH above it goes stereo, on every voice`() {
+        for (voice in ForkVoice.entries) {
+            val mono = Fork.render(voice, mapOf("WIDTH" to 0f))
+            assertEquals(1, mono.channels, "$voice: WIDTH 0 must stay mono - presets were auditioned there")
+            val wide = Fork.render(voice, mapOf("WIDTH" to 0.8f))
+            assertEquals(2, wide.channels, "$voice: WIDTH above zero should render stereo")
+        }
+    }
+
+    @Test
+    fun `every existing FORK preset still renders mono and unchanged`() {
+        // WIDTH defaults to 0 and no preset sets it, so this is the same
+        // regression guard `ThumpTest`'s own "every existing SNARE preset
+        // still renders mono and unchanged" takes: widening a preset
+        // silently would discard the listening work that shipped it.
+        for (voice in ForkVoice.entries) {
+            for (p in ForkPresets.forVoice(voice)) {
+                assertEquals(1, p.render().channels, "${p.name} silently went stereo")
+            }
+        }
+    }
+
+    private fun sideRatio(s: Snip): Float {
+        if (s.channels != 2) return 0f
+        var mid = 0.0
+        var side = 0.0
+        var f = 0
+        while (f < s.samples.size) {
+            val m = (s.samples[f] + s.samples[f + 1]) * 0.5
+            val d = (s.samples[f] - s.samples[f + 1]) * 0.5
+            mid += m * m; side += d * d; f += 2
+        }
+        return kotlin.math.sqrt(side / (mid + 1e-12)).toFloat()
+    }
+
+    @Test
+    fun `a wide FORK voice is actually wider than a narrow one, on every voice`() {
+        // Mode 0 (the fundamental) always lands dead centre - Modes.spread's
+        // own reach is exactly 0 there - so the side energy climbing with
+        // WIDTH comes entirely from the three overtones spreading wider,
+        // same shape ThumpTest's own "a wide SNARE is actually wider than a
+        // narrow one" measures for the body modes.
+        for (voice in ForkVoice.entries) {
+            val points = listOf(0.25f, 0.5f, 0.75f, 1f).map { sideRatio(Fork.render(voice, mapOf("WIDTH" to it))) }
+            for (i in 0 until points.size - 1) {
+                assertTrue(points[i + 1] > points[i] * 1.05f, "$voice: WIDTH did nothing from step $i to ${i + 1}: $points")
+            }
+        }
+    }
+
+    @Test
+    fun `WIDTH near 0 is nearly centred, on every voice`() {
+        for (voice in ForkVoice.entries) {
+            val low = sideRatio(Fork.render(voice, mapOf("WIDTH" to 0.02f)))
+            assertTrue(low < 0.1f, "$voice: WIDTH near 0 should still be nearly centred: $low")
+        }
+    }
+
+    @Test
+    fun `WIDTH combined with every other macro's extreme stays finite and in range, on every voice`() {
+        for (voice in ForkVoice.entries) {
+            for (spec in Fork.macrosFor(voice)) {
+                if (spec.name == "WIDTH") continue
+                for (extreme in listOf(0f, 1f)) {
+                    val s = Fork.render(voice, mapOf("WIDTH" to 1f, spec.name to extreme))
+                    assertEquals(2, s.channels, "$voice WIDTH=1 ${spec.name}=$extreme should still render stereo")
+                    assertTrue(
+                        s.samples.all { it.isFinite() && it in -1f..1f },
+                        "$voice WIDTH=1 ${spec.name}=$extreme broke range",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a wide FORK render is deterministic, and both channels carry energy`() {
+        // Unlike Thump.snare's own body (5 modes, a real even/odd asymmetry
+        // measured at R/L=1.087), FORK only rings 4 modes and the two that
+        // land on the same side (indices 1 and 3, both right) roughly
+        // balance the one on the other side (index 2) against mode 0's
+        // always-centred mass - MEASURED (this exact render, gradle exit 0):
+        // R/L is TINE 1.0005, BAR 0.9465, NODE 0.9997, REED 0.9999. Close
+        // enough to 1 on every voice that a fixed orientation threshold
+        // (THUMP's own R/L > 1.03) would not reliably catch an L/R swap
+        // here, so this only pins determinism and non-silence; the actual
+        // pan arithmetic is `ModesTest`'s own "a hard-panned mode lands on
+        // the side it was panned to" and `ringModesStereo`'s own KDoc.
+        for (voice in ForkVoice.entries) {
+            val macros = mapOf("WIDTH" to 1f)
+            val a = Fork.render(voice, macros)
+            val b = Fork.render(voice, macros)
+            assertContentEquals(a.samples, b.samples, "$voice wide render is not deterministic")
+            var l = 0.0
+            var r = 0.0
+            var f = 0
+            while (f < a.samples.size) { l += a.samples[f] * a.samples[f]; r += a.samples[f + 1] * a.samples[f + 1]; f += 2 }
+            assertTrue(l > 0.0 && r > 0.0, "$voice: a channel was empty at WIDTH 1: L=$l R=$r")
+        }
     }
 
 }

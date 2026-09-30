@@ -379,6 +379,12 @@ object Fork {
         MacroSpec("BARK", 0.4f),
         MacroSpec("STIFF", 0.5f, neutral = 0.5f),
         MacroSpec("DECAY", 0.5f),
+        // Defaults to 0 so every existing preset, auditioned in mono, stays
+        // byte-identical - widening them silently would discard that
+        // listening work (the same convention `Thump.macrosFor`'s own SNARE
+        // WIDTH takes). See `bank`'s own KDoc for where it spreads the modes
+        // and `render`'s for where mono/stereo forks structurally.
+        MacroSpec("WIDTH", 0f),
     )
 
     fun defaults(voice: ForkVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -518,8 +524,18 @@ object Fork {
      * the table says" and "higher modes die first" tests measure — the
      * clean resonator, before the pickup's harmonics are added on top of
      * it (see [strike] for where the pickup happens).
+     *
+     * [width] above 0 rings interleaved stereo instead: each mode gets its
+     * own pan via [Modes.spread] before ringing (mode 0, the fundamental,
+     * always lands dead centre - `spread`'s own `reach` is exactly 0 there -
+     * with every mode above it spread wider as [width] grows), fold-normalised
+     * ([Dsp.normalizeByFold]) rather than peak-normalised since this feeds
+     * [pickup]/[reedPickup]'s own nonlinearity next, same convention
+     * `Thump.snare`'s own WIDTH takes for the same reason. `width <= 0`
+     * (every existing preset) takes the untouched mono path below,
+     * unchanged from before WIDTH existed.
      */
-    internal fun bank(voice: ForkVoice, hz: Float, macros: Map<String, Float>, striker: FloatArray?, rate: Int): FloatArray {
+    internal fun bank(voice: ForkVoice, hz: Float, macros: Map<String, Float>, striker: FloatArray?, rate: Int, width: Float = 0f): FloatArray {
         val t60Fund = Dsp.expMap(macros.getValue("DECAY"), DECAY_MIN_SECONDS, DECAY_MAX_SECONDS)
         val frames = ((t60Fund + TAIL_PAD_SECONDS) * rate).toInt().coerceAtLeast((TAIL_PAD_SECONDS * rate).toInt())
         val strikeM = macros.getValue("STRIKE")
@@ -545,6 +561,12 @@ object Fork {
         // already uses.
         val glideCents = if (voice == ForkVoice.NODE) GLIDE_CENTS * strikeM else 0f
         val glideSamples = if (glideCents > 0f) (GLIDE_TIME_SECONDS * rate).toInt() else 0
+        if (width > 0f) {
+            val spread = Modes.spread(modes, width, Dsp.seedFor("FORK-SPREAD", voice, hz))
+            val rung = ringModesStereo(hz, spread, excitation, strikeM, frames, rate, glideCents, glideSamples)
+            Dsp.normalizeByFold(rung, channels = 2, target = 1f)
+            return rung
+        }
         val rung = ringModes(hz, modes, excitation, strikeM, frames, rate, glideCents, glideSamples)
         Dsp.normalize(rung, 1f)
         return rung
@@ -596,6 +618,57 @@ object Fork {
                 y2 = y1
                 y1 = y
                 rung[j] += y
+            }
+        }
+        return rung
+    }
+
+    /**
+     * [ringModes], interleaved stereo: each [mode]'s own `.pan` (already set
+     * by [Modes.spread] before this is called) splits that mode's ring
+     * linearly into L/R - `Modes.ringStereo`'s own convention, chosen there
+     * because it sums back to exactly the mono fold with no comb-notching,
+     * unlike equal-power panning. Not a call to `Modes.ringStereo` itself:
+     * that delegates to plain [Modes.ring], which cannot carry NODE's own
+     * per-sample gliding pole angle, so both of [ringModes]'s own branches
+     * (no-glide, glide) are mirrored here rather than shared.
+     */
+    internal fun ringModesStereo(hz: Float, modes: List<Modes.Mode>, excitation: FloatArray, strikeM: Float, frames: Int, rate: Int, glideCents: Float, glideSamples: Int): FloatArray {
+        val rung = FloatArray(frames * 2)
+        if (glideSamples <= 0) {
+            for ((i, mode) in modes.withIndex()) {
+                val boost = 1f + STRIKE_BRIGHT_BOOST * i * strikeM
+                val ringed = Modes.ring(excitation, hz, listOf(mode), rate)
+                val p = mode.pan.coerceIn(0f, 1f)
+                for (j in ringed.indices) {
+                    val y = ringed[j] * boost
+                    rung[j * 2] += y * (1f - p)
+                    rung[j * 2 + 1] += y * p
+                }
+            }
+            return rung
+        }
+        val nyquist = rate / 2f
+        for ((i, mode) in modes.withIndex()) {
+            val modeHz = hz * mode.ratio
+            if (modeHz <= 0f || modeHz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
+            val boost = 1f + STRIKE_BRIGHT_BOOST * i * strikeM
+            val g = mode.gain * boost
+            val p = mode.pan.coerceIn(0f, 1f)
+            val r = kotlin.math.exp(-6.9078 / (mode.t60.toDouble() * rate)).toFloat()
+            var y1 = 0f
+            var y2 = 0f
+            for (j in 0 until frames) {
+                val cents = if (j < glideSamples) glideCents * (1f - j.toFloat() / glideSamples) else 0f
+                val instHz = modeHz * 2f.pow(cents / 1200f)
+                val theta = 2.0 * Math.PI * instHz / rate
+                val a1 = (2.0 * r * kotlin.math.cos(theta)).toFloat()
+                val a2 = -(r * r)
+                val y = g * excitation[j] + a1 * y1 + a2 * y2
+                y2 = y1
+                y1 = y
+                rung[j * 2] += y * (1f - p)
+                rung[j * 2 + 1] += y * p
             }
         }
         return rung
@@ -711,23 +784,66 @@ object Fork {
      * place of the shared swing-then-[pickup] every other voice takes — since
      * its pickup is a different physical mechanism, not a retuned version of
      * the same one.
+     *
+     * WIDTH above 0 (`macros["WIDTH"]`) rings [bank] in interleaved stereo;
+     * the pickup stages below have no cross-channel physics of their own, so
+     * each channel runs the same mono [pickup]/[reedContact]/[reedPickup]
+     * independently, on its own deinterleaved array and its own fresh
+     * recursive state (mean, highpass, contact timing) - never a shared
+     * `prev`/`hp` walking both channels' history together. WIDTH 0 never
+     * deinterleaves at all, so it is byte-identical to before WIDTH existed.
      */
     internal fun strike(voice: ForkVoice, hz: Float, macros: Map<String, Float>, striker: FloatArray? = null, rate: Int = RATE * Dsp.OVERSAMPLE): FloatArray {
-        val rung = bank(voice, hz, macros, striker, rate)
+        val width = macros["WIDTH"] ?: 0f
+        val channels = if (width > 0f) 2 else 1
+        val rung = bank(voice, hz, macros, striker, rate, width)
         val swing = Dsp.lin(macros.getValue("STRIKE"), STRIKE_SWING_LOW, STRIKE_SWING_HIGH)
         if (voice == ForkVoice.REED) {
             val bark = macros.getValue("BARK")
             val strikeM = macros.getValue("STRIKE")
             val x = FloatArray(rung.size) { rung[it] * swing }
             val threshold = Dsp.lin(bark, REED_CONTACT_THRESHOLD_LOW_BARK, REED_CONTACT_THRESHOLD_HIGH_BARK)
-            val contacted = reedContact(x, threshold, rate, Dsp.seedFor("FORK-REED-CONTACT", hz))
             val driveCeiling = Dsp.lin(bark, REED_BARK_DRIVE_LOW, REED_BARK_DRIVE_HIGH)
             val driveTarget = Dsp.lin(strikeM, REED_DRIVE_AT_STRIKE_0, REED_DRIVE_AT_STRIKE_1) * driveCeiling
+            if (channels == 2) {
+                val (l, r) = deinterleave(x)
+                val seed = Dsp.seedFor("FORK-REED-CONTACT", hz)
+                val outL = reedPickup(reedContact(l, threshold, rate, seed), driveTarget, rate)
+                val outR = reedPickup(reedContact(r, threshold, rate, seed + 1), driveTarget, rate)
+                return interleave(outL, outR)
+            }
+            val contacted = reedContact(x, threshold, rate, Dsp.seedFor("FORK-REED-CONTACT", hz))
             return reedPickup(contacted, driveTarget, rate)
         }
         val closeness = Dsp.lin(macros.getValue("BARK"), BARK_MIN, BARK_MAX)
         val x = FloatArray(rung.size) { rung[it] * closeness * swing }
+        if (channels == 2) {
+            val (l, r) = deinterleave(x)
+            return interleave(pickup(l, rate), pickup(r, rate))
+        }
         return pickup(x, rate)
+    }
+
+    /** [buf]'s left/right channels, split from interleaved L/R pairs. */
+    private fun deinterleave(buf: FloatArray): Pair<FloatArray, FloatArray> {
+        val frames = buf.size / 2
+        val left = FloatArray(frames)
+        val right = FloatArray(frames)
+        for (f in 0 until frames) {
+            left[f] = buf[f * 2]
+            right[f] = buf[f * 2 + 1]
+        }
+        return left to right
+    }
+
+    /** [left]/[right] rewoven into one interleaved L/R buffer. */
+    private fun interleave(left: FloatArray, right: FloatArray): FloatArray {
+        val out = FloatArray(left.size * 2)
+        for (f in left.indices) {
+            out[f * 2] = left[f]
+            out[f * 2 + 1] = right[f]
+        }
+        return out
     }
 
     /**
@@ -757,17 +873,34 @@ object Fork {
      * The one-shot pad render: TUNE snapped to a semitone, decimated back
      * from [Dsp.OVERSAMPLE] (not optional — the pickup makes harmonics
      * above Nyquist by construction), levelled and tailed like every
-     * melodic engine.
+     * melodic engine. WIDTH above 0 renders interleaved stereo; every stage
+     * from here down ([Dsp.decimate], [Dsp.levelTo], [Dsp.fadeTail]) already
+     * takes a `channels` parameter, [bandLimitStereo] is this function's own
+     * wrapper for the one stage that doesn't ([Tide.bandLimit] is not
+     * channel-safe - a single filter run across interleaved L/R would mix
+     * the two channels' history).
      */
     fun render(voice: ForkVoice, macros: Map<String, Float> = emptyMap(), striker: FloatArray? = null): Snip {
         val m = settled(macros, voice)
         val hz = frequencyFor(m.getValue("TUNE"))
         val rate = RATE * Dsp.OVERSAMPLE
+        val channels = if (m.getValue("WIDTH") > 0f) 2 else 1
         val raw = strike(voice, hz, m, striker, rate)
-        Tide.bandLimit(raw, rate)
-        val out = Dsp.decimate(raw, RATE)
-        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-        Dsp.fadeTail(out)
-        return Snip(out, channels = 1, sampleRate = RATE)
+        if (channels == 2) bandLimitStereo(raw, rate) else Tide.bandLimit(raw, rate)
+        val out = Dsp.decimate(raw, RATE, channels)
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET, channels = channels)
+        Dsp.fadeTail(out, rate = RATE, channels = channels)
+        return Snip(out, channels = channels, sampleRate = RATE)
+    }
+
+    /** [Tide.bandLimit], run independently per channel on deinterleaved L/R. */
+    private fun bandLimitStereo(buf: FloatArray, rate: Int) {
+        val (left, right) = deinterleave(buf)
+        Tide.bandLimit(left, rate)
+        Tide.bandLimit(right, rate)
+        for (f in left.indices) {
+            buf[f * 2] = left[f]
+            buf[f * 2 + 1] = right[f]
+        }
     }
 }
