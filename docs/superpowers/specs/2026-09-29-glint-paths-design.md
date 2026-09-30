@@ -93,7 +93,7 @@ as the old BLOOM-at-high-PEAK clamp was.
 - **STEP:** the ladder runs from `kStart` to `kBase` in whole harmonics —
   descending for `s > 0`, ascending for `s < 0` — landing on PEAK. The
   bottom-rung/`snapRatio` rules in `ratchetLadder`'s doc carry over.
-- **BRASS:** `k(t) = kBase · (1 + a)^(sign(s) · e(t))`, where
+- **BRASS:** `k(t) = kBase · (kStart/kBase)^e(t)` (kStart is the clamped start ratio, as in SWEEP), where
   `e(t) = (amp(t) − rest) / (1 − rest)` and `rest` is the level the note
   settles at — 0 for a one-shot, which decays to silence, so `e = amp` and
   the note lands on PEAK as it dies. `s > 0` louder is brighter (brass);
