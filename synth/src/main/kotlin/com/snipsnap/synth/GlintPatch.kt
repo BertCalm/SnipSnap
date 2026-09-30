@@ -3,15 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 
-/**
- * A saved GLINT sound — same contract as [TinesPatch], different engine tag.
- *
- * Phase 2 adds a `window: IntArray?` field here for the TRACE voice, baked
- * into the patch the way [SnapPatch] bakes its table. Nothing references a
- * source file: a patch that points at external material falls out of the
- * "a kit regenerates from kit.json" guarantee and stays out, which is why
- * the GRAINS kit sits outside `PadRecipeTest`'s list to this day.
- */
+/** A saved GLINT sound — same contract as [TinesPatch], different engine tag. */
 data class GlintPatch(
     override val name: String,
     val voice: GlintVoice,
