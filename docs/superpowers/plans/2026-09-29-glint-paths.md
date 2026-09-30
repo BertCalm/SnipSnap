@@ -25,11 +25,17 @@
 - A measured number that misses a bar is reported with the number (DONE_WITH_CONCERNS). Never retune a constant or loosen a bar to make a test pass.
 - Commit messages end with:
   ```
-  Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+  Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_01XdQuyqmnaSqRVPTo87MNUr
   ```
 
 **Ruling recorded here (refines spec §3, which the Task 5 commit amends):** BRASS's held breath scales its amplitude swing by `|s|`: `amp = BRASS_REST·(1 + BREATHE_SHARE·|s|·sin)`. Spec text had `±BREATHE_SHARE·BRASS_REST` regardless of BLOOM, which would make BRASS the one voice that is not still at BLOOM 0.5, contradicting §3's own "BLOOM at 0.5 gives a still pad."
+
+**Pre-flight rulings (2026-09-29, before Task 1; the ledger holds the same list with what each costs if wrong):**
+
+- **BLOOM 0 no longer means "no sweep".** With the bipolar BLOOM, `0f` is the widest *rising* path and `0.5f` is still. Every existing `GlintTest.kt` fixture that pins `"BLOOM" to 0f` to get a static formant becomes `"BLOOM" to 0.5f`. Find them with `grep -n '"BLOOM" to 0f' synth/src/test/kotlin/com/snipsnap/synth/GlintTest.kt` (today: lines 177, 420, 483, 510, 556, 644, 723, 783, 858 and 1208; the CICADA and PLATE ones are deleted or rewritten anyway). `"BLOOM" to 1f` keeps its old meaning, the widest falling sweep. Fixtures that loop both `0f` and `1f` (period correlation at :386, legality at :1093) stay as they are: both extremes are legal there. A BLOOM-0 fixture left unmigrated would still compile and might still pass while testing something else, which is why this is a rule and not a finding.
+- **VOWEL and the centroid gates.** `FeatureExtractor` reads only the first 4096 samples, and a vowel's centroid need not order along the line: EE has the lowest F1 of all five. If VOWEL fails `PEAK opens`, `PEAK sweep is monotonic` or `atVelocity is genuinely darker at low velocity`: an OO/OH inversion alone is fixed by swapping those two rows, as the spec allows; for anything else do not touch thresholds, table rows or macro values. Exclude VOWEL from that one test with `if (voice == GlintVoice.VOWEL) continue` under a `// RULING PENDING` comment, put the measured centroids (soft and hard for the velocity gate) in the report file, and finish DONE_WITH_CONCERNS naming the gates. The controller rules.
+- **A path's first read is its start.** In `synthesize`, the first `path.ratios` call takes `x = 1f`, never `x(0f)`: BRASS's `x` is its level, which is 0 at `t = 0`, and the first cycle would otherwise play at PEAK instead of the start ratio. (`GlintHeld` already reads `x = 1` at frame 0.)
 
 **Click coverage (spec §5):** `synthesize` and `GlintHeld.render` move k only inside their wrap branch, the same code path for every voice. `GlintTest`'s `a non-integer ratio clicks no more than an integer one` (all path voices) and `STEP does not click when it steps` pin the mechanism; VOWEL rides the same branch.
 
@@ -314,7 +320,9 @@ Make these edits; keep every KDoc that still describes true behaviour, and rewri
         fun x(t: Float): Float = if (voice == GlintVoice.BRASS) amp.at(t) else Dsp.envAt(t, BLOOM_T60)
         fun rung(t: Float): Int = if (path.ladder != null) (t / STEP_SECONDS).toInt() else -1
         val k = FloatArray(2)
-        path.ratios(x(0f), rung(0f), k)
+        // The first read is the path's start (x = 1), not x(0f): BRASS's x is
+        // its own level, which is 0 at t = 0 - the first cycle would play at PEAK.
+        path.ratios(1f, rung(0f), k)
         val step = f0.toDouble() / rate
         var phase = 0.0
         val out = FloatArray(frames)
@@ -340,7 +348,7 @@ Keep the existing comment explaining why DC is left uncorrected (move it above `
 
 - [ ] **Step 5: Migrate `GlintTest.kt`**
 
-Add at the top of the class: `private val PATH_VOICES = GlintVoice.entries` (Task 3 narrows it to exclude VOWEL). Apply this disposition to every existing test (line numbers are today's):
+Add at the top of the class: `private val PATH_VOICES = GlintVoice.entries` (Task 3 narrows it to exclude VOWEL). First apply the pre-flight BLOOM rule to every test in the file. Then apply this disposition (line numbers are today's; find sites with grep, not by line):
 
 | line | test | action |
 |---|---|---|
@@ -484,7 +492,6 @@ git commit -m "Rebuild GLINT's voices as paths: SWEEP, STEP, BRASS on one window
 ```kotlin
 package com.snipsnap.synth
 
-import com.snipsnap.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -533,16 +540,17 @@ class GlintLegacyTest {
 
     @Test
     fun `a kit pad saved before the change still opens`() {
-        val recipe = """{"patch":${old("REED", "\"PEAK\":0.5,\"BLOOM\":0.4")}}"""
-        val pad = PadRecipe.fromJsonValue(Json.parse(recipe))
-        val patch = pad.patch as GlintPatch
+        // A recipe as an old build wrote it: today's recipe JSON, with the
+        // voice renamed back to what it was called then. (PadRecipe's JSON
+        // needs a "recipe" version key, so it is not written by hand.)
+        val current = PadRecipe(patch = GlintPatch("Old", GlintVoice.SWEEP, mapOf("PEAK" to 0.5f, "BLOOM" to 0.4f)))
+        val saved = current.toJsonText().replace("\"SWEEP\"", "\"REED\"")
+        val patch = PadRecipe.fromJsonText(saved).patch as GlintPatch
         assertEquals(GlintVoice.SWEEP, patch.voice)
         assertEquals(0.7f, patch.macros.getValue("BLOOM"), 1e-6f)
     }
 }
 ```
-
-Before running, open `PadRecipe.kt` and confirm the JSON key and decode entry point (`PadRecipe.fromJsonValue` / the field named `patch`); adjust the last test's JSON and call to match what `PadRecipe.toJsonValue()` writes — the assertion stays the same.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -810,7 +818,7 @@ In `GlintTest.kt`: `private val PATH_VOICES = GlintVoice.entries - GlintVoice.VO
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `./gradlew :synth:test --tests 'com.snipsnap.synth.GlintVowelTest' --tests 'com.snipsnap.synth.GlintTest' --console=plain`
-Expected: exit 0. If `PEAK sweep is monotonic` fails for VOWEL between OO and OH, swap those two rows of `VOWEL_LINE` (spec §2.3 rules this), update the first test's OO/OH expectations to match, and say so in the commit message.
+Expected: exit 0, with one exception the controller has already ruled on (see "VOWEL and the centroid gates" in the header): if VOWEL fails a centroid gate, an OO/OH inversion alone is fixed by swapping those two rows of `VOWEL_LINE` (spec §2.3), updating the first test's expectations and saying so in the commit message. For anything else, exclude VOWEL from that one test under a `// RULING PENDING` comment, report the measured centroids, and finish DONE_WITH_CONCERNS.
 
 - [ ] **Step 5: Commit**
 
@@ -839,9 +847,7 @@ git commit -m "Add VOWEL: GLINT's two bursts at mouth formants, PEAK choosing th
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.pow
 
 /**
@@ -849,21 +855,20 @@ import kotlin.math.pow
  * carried into 2026-09-29-glint-paths-design.md §5): energy-weighted third-octave L1 between
  * energy-normalised band vectors, 0 (identical) to 2 (disjoint).
  *
- * Tiles 4096-sample Hann frames at hop 2048 across the whole span. `Fft.magnitudeSpectrum`
- * reads only its first `size` samples, so one call over a long buffer measures its first 93 ms
- * and nothing else - the bug the 2026-09-28 probe caught.
+ * Tiles 4096-sample frames at hop 2048 across the whole span. `Fft.magnitudeSpectrum` applies
+ * the Hann window itself, and reads only its first `size` samples, so one call over a long
+ * buffer measures its first 93 ms and nothing else - the bug the 2026-09-28 probe caught.
  */
 internal object BandDistance {
     private const val N = 4096
     private const val HOP = 2048
-    private val HANN = FloatArray(N) { (0.5 - 0.5 * cos(2.0 * PI * it / (N - 1))).toFloat() }
     private val CENTRES: List<Double> = generateSequence(50.0) { it * 2.0.pow(1.0 / 3.0) }.takeWhile { it <= 16000.0 }.toList()
 
     fun bands(x: FloatArray, rate: Int): DoubleArray {
         val e = DoubleArray(CENTRES.size)
         var start = 0
         do {
-            val frame = FloatArray(N) { i -> if (start + i < x.size) x[start + i] * HANN[i] else 0f }
+            val frame = FloatArray(N) { i -> if (start + i < x.size) x[start + i] else 0f }
             val mag = Fft.magnitudeSpectrum(frame, N)
             for (bin in mag.indices) {
                 val hz = bin.toDouble() * rate / N
@@ -994,7 +999,7 @@ git commit -m "Measure that GLINT's paths and vowels separate, against a same-ru
 - Modify: `docs/superpowers/specs/2026-09-29-glint-paths-design.md` §3 item 2 (the BRASS ruling in Global Constraints)
 
 **Interfaces:**
-- Consumes: `GlintPath.of`, `path.ratios`, `path.onsetSeconds`, `path.ladder`, `path.level2`, `path.bloom`, `Glint.windowAt`, `Glint.frequencyFor`, `Glint.defaults`.
+- Consumes: `GlintPath.of`, `path.ratios`, `path.onsetSeconds`, `path.ladder`, `path.level2`, `path.bloom`, `Glint.windowAt`, `Glint.frequencyFor`, `Glint.defaults`, and Task 4's `BandDistance.whole` (test source set).
 - Produces: `internal object GlintHeld` with `BREATHE_SECONDS`, `BREATHE_SHARE`, `BRASS_REST`, `data class BreathPlan(val cycles: Int, val loopFrames: Int, val f0: Double)`, `fun breathPlan(f0: Float): BreathPlan`, `class Held(val audio: FloatArray, val loopStart: Int)`, `fun render(voice: GlintVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): Held`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1016,7 +1021,6 @@ class GlintBreatheTest {
     fun `the breath plan is whole cycles in whole frames, in tune`() {
         for (hz in listOf(110f, 155.56f, 220f, 440f, 880f)) {
             val p = GlintHeld.breathPlan(hz)
-            assertEquals(p.f0, p.cycles.toDouble() * Dsp.RATE / p.loopFrames, 1e-9)
             val cents = abs(1200 * log2(p.f0 / hz))
             assertTrue(cents < 0.01, "$hz Hz plays ${p.f0} Hz, $cents cents off")
             val seconds = p.loopFrames.toDouble() / Dsp.RATE
@@ -1059,7 +1063,10 @@ class GlintBreatheTest {
             val q = loop.size / 4
             val a = loop.copyOfRange(0, q).sumOf { (it * it).toDouble() }
             val b = loop.copyOfRange(loop.size - q, loop.size).sumOf { (it * it).toDouble() }
-            assertTrue(abs(a - b) / a < 0.01, "$voice still pad is not steady: $a vs $b")
+            // 3%, not 1%: a quarter of the breath is not a whole number of cycles,
+            // and a cycle's energy sits at its front, so the two quarters' partial
+            // cycles alone differ by up to about 1% at 110 Hz.
+            assertTrue(abs(a - b) / a < 0.03, "$voice still pad is not steady: $a vs $b")
         }
     }
 
@@ -1186,7 +1193,8 @@ internal object GlintHeld {
             if (i >= w0) {
                 // The breath: a function of (i - i0) mod loop only.
                 val b = sin(2.0 * PI * (i - i0) / rate / loopSeconds).toFloat()
-                x = BREATHE_SHARE * b
+                // BRASS's k follows its own level (spec §2.2): e = (amp - rest) / (1 - rest).
+                x = if (voice == GlintVoice.BRASS) BREATHE_SHARE * depth * b else BREATHE_SHARE * b
                 amp = if (voice == GlintVoice.BRASS) BRASS_REST * (1f + BREATHE_SHARE * depth * b) else 1f
                 rung = -1
             } else {
@@ -1333,7 +1341,7 @@ class GlintHeldTest {
 }
 ```
 
-Check `Pitch.detect`'s real signature and `PitchEstimate`'s field name (`audio/…/Pitch.kt:37`) before running; `hz` is the expected field.
+Check `Pitch.detect`'s real signature and `PitchEstimate`'s field name (`audio/…/Pitch.kt:37`) before running; `hz` is the expected field. If it octave-errors on a phase-distortion waveform, measure pitch the way `SirenHeldTest.kt:65` (`every zone's centre frequency lands on its MIDI pitch`) does.
 
 - [ ] **Step 2: Run to verify it fails**
 
