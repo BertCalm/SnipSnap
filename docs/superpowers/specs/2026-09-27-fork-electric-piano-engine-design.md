@@ -401,7 +401,7 @@ are the gate.
 | Round | Ships | Gate |
 |---|---|---|
 | **R1** | `synth/Fork.kt` (both voices, the hammer, the striker, the bank, the pickup), `ForkPatch` with its optional striker, `ForkPresets.kt` and its `Presets` branch, `Keys.fork` and `MAKE INSTRUMENT ▸`, the tests above, the blocklist terms, the testkit kit; the phone: FORK in the SYNTH picker, SEND TO PAD, STRIKE FROM ▸. Mono | **the physics question:** TINE or BAR is the electric piano; SLOPE 2 or 2.7; BARK's ceiling; the instrument under two hands; a drum hit rung through a tine |
-| **R2** | stereo: per-mode pan (fundamental centred, overtones and hammer spread), U4 opt-in per patch; `SPLIT TO PADS` landing harmonic and percussive renders on two pads | the split against the mono |
+| **R2** | stereo: per-mode pan (fundamental centred, overtones and hammer spread), U4 opt-in per patch — **shipped round five** below; `SPLIT TO PADS` landing harmonic and percussive renders on two pads — still open, app/UI scope | the split against the mono |
 
 The first draft staged this as four phases — engine, then keys, then
 stereo, then excite-from-pad last as the least certain to be musical.
@@ -768,3 +768,77 @@ and a fixed derivation respectively, the same "one physically-motivated
 spot, not the whole unpredictable range" call round two made for NODE's
 own pickup position. `ForkPresets.kt` ships eight presets spread across
 both sides of the contact threshold, some staying clean of it entirely.
+
+## Round five — 2026-09-30
+
+R2's own stereo half (`SPLIT TO PADS` stays out of scope — app/UI work,
+not this round's): a sixth macro, WIDTH, default 0, so every one of the
+thirty-two shipped presets stays mono and byte-identical. Above 0, [bank]
+rings interleaved stereo instead of mono, each of the four modes panned by
+[Modes.spread] before ringing — mode 0, the fundamental, always lands dead
+centre (`spread`'s own `reach` is exactly 0 there, by construction, for
+every voice and every WIDTH), the three overtones spread wider as WIDTH
+climbs. The same per-mode-pan mechanism the original design called for
+("fundamental centred, overtones and hammer spread"), and the same
+opt-in-per-patch convention U4 and `Thump.snare`'s own WIDTH already set.
+
+**Why not a call to `Modes.ringStereo`.** That function exists and does
+exactly this panning, but it delegates to plain `Modes.ring` internally,
+which cannot carry NODE's own per-sample gliding pole angle (round
+three's pitch glide). `Fork.ringModesStereo` mirrors `ringModes`'s own two
+branches (no-glide, glide) instead, panning each branch's per-sample
+output by the mode's own `.pan` rather than sharing that recurrence.
+
+**The pickup stages have no cross-channel physics of their own.** TINE/BAR/
+NODE's asymmetric `pickup` and REED's `reedContact`/`reedPickup` are both
+written over one channel's worth of recursive state (a first-difference
+`prev`, a DC-removal mean, a highpass; REED's contact timing and per-event
+noise/biquads too) — the natural, no-invention extension to stereo is two
+independent calls to the same mono function, one per deinterleaved
+channel, each with its own fresh state, rather than a hand-written
+two-channel rewrite of each. `Fork.strike` does exactly that: deinterleave,
+run the mono function twice (REED's own contact seed offset by one between
+channels so the two channels' knock timing and body/click color don't
+correlate), reinterleave. `Fork.render`'s own [Tide.bandLimit] gets the
+same treatment (`bandLimitStereo`) since it is not itself channel-safe — a
+single filter run across interleaved L/R would mix the two channels'
+history; every other stage downstream of it ([Dsp.decimate], [Dsp.levelTo],
+[Dsp.fadeTail]) was already channel-aware.
+
+**Normalisation convention**: `bank`'s stereo output is fold-normalised
+([Dsp.normalizeByFold]) rather than peak-normalised, the same convention
+`Thump.snare`'s own WIDTH takes and for the same reason — this buffer feeds
+a nonlinearity next (the reluctance pickup, or REED's drive), and a
+fold-vs-per-sample level mismatch would reshape the two paths' onsets
+differently by more than one gain. `channels <= 1` falls through to plain
+[Dsp.normalize], identical to before WIDTH existed.
+
+**Measured, not assumed, this exact build**: every voice's side/mid energy
+ratio climbs monotonically as WIDTH goes 0.25 → 0.5 → 0.75 → 1 (each step
+at least 5% wider than the last), and sits under 0.1 at WIDTH near 0 on
+every voice. The four-mode bank's own left/right energy split at WIDTH 1
+came back close to even on every voice (R/L: TINE 1.0005, BAR 0.9465, NODE
+0.9997, REED 0.9999) — unlike `Thump.snare`'s own 5-mode body (R/L 1.087),
+not asymmetric enough here to serve as an orientation pin; the pan
+arithmetic itself is `ModesTest`'s own "a hard-panned mode lands on the
+side it was panned to" and `ringModesStereo`'s own KDoc, not re-derived
+here. `ForkTest.kt` carries the full stereo-safety audit: every existing
+preset stays mono, WIDTH crosses from mono to stereo at exactly 0, WIDTH
+combined with every other macro's own extreme stays finite and in range on
+every voice, and a wide render is deterministic.
+
+**STRIKE FROM ▸'s own picker claim, corrected.** "The picker is GRAINS'"
+(above) does not hold against the current app: GRAINS has no voice entry
+in `SynthScreen.kt`'s `Engine` enum and no source-recording picker
+anywhere in `app/` — what existed at the time of writing was CLOUD's own
+destination-*pad* chooser (`SlotChooserOverlay`), not a source-recording
+picker, so it is not a literal reuse. STRIKE FROM ▸'s own wiring stays
+unbuilt (this environment has no Android SDK to build or test Compose UI
+against); a corrected, self-contained instruction set for it was handed to
+a desktop session directly rather than written here unverified.
+
+**What round five deliberately did not do**: `SPLIT TO PADS` (landing the
+harmonic and percussive renders on two separate pads) — an app/UI-layer
+feature, not this round's DSP/engine scope, and not gated on anything this
+round shipped. The design spec's own open question 5 (residual as a third
+pad) is still open for the same reason.
