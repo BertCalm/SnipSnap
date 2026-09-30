@@ -322,3 +322,13 @@ tasks.register<JavaExec>("generateTerraAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/terra-audition")
 }
+
+/** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */
+tasks.register<JavaExec>("generateValveAudition") {
+    group = "distribution"
+    description = "Render the VALVE V1 listening clips and manifest under testkit/valve-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ValveAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/valve-audition")
+}

@@ -60,6 +60,12 @@ object Treatments {
         // heard. RATE is left at its centre — which is its neutral, so
         // setting it here would be a macro AMT could never move.
         "ensembled" to FxChain(ensemble = mapOf("DEPTH" to 0.6f, "WIDTH" to 1f)),
+        // A tube amp and its speaker, on a hit that was never a guitar. TONE
+        // is left at its centre, which is its neutral and its default: setting
+        // it here would be a macro AMT could never move. Its default and
+        // neutral are both pinned at 0.5 by ValveTest's `the macros are the
+        // four the spec names, with their neutrals`.
+        "amped" to FxChain(valve = mapOf("DRIVE" to 0.6f, "SAG" to 0.35f, "CAB" to 0.6f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

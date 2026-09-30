@@ -1384,8 +1384,13 @@ proposal (rack §1) is the source of every number below.
   a VOX CHOIR, each dry and at DEPTH 0.25 / 0.5 / 1 with WIDTH 0 and 1,
   the stereo file beside its fold. Pass rule: FANFARE through ENSEMBLE
   reads "string machine" to the owner, and the fold does not pump past
-  what the printed ripple says. **PR-E2** is the string-machine presets
-  below, after E1's verdict.
+  what the printed ripple says. **E1's verdict, 2026-09-29:** the
+  section landed as #394 and the owner heard the gate page and reported
+  that it works — a pass in one sentence, with no chip verdicts saved on
+  the page and no depth, fold or width answer recorded, so PR-E2 takes
+  the section's defaults (DEPTH 0.5, WIDTH 1, z = 0.15) until a later
+  listen says otherwise. **PR-E2** is the string-machine presets below,
+  after E1's verdict.
 
 **STRING MACHINE without ARCO** (rack §2). The string machine exists the
 day PR-E1 lands, through a door that already exists — **route (a)**:

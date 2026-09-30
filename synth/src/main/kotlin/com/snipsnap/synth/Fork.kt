@@ -152,13 +152,14 @@ object Fork {
      * sharp the strike reads before it settles. Shipped at 15 first — a
      * plausible, tasteful-sounding starting point — but two rounds of
      * blind A/B against TINE (round two's pickup position, then this)
-     * both came back "too similar" by ear, so this is temporarily pushed
-     * to a deliberately exaggerated value as a diagnostic: confirm the
-     * mechanism is actually audible at all before concluding anything
-     * about FORK's own ceiling. 80 cents is comfortably past any
-     * ambiguity — most of a semitone — and not a candidate for the
-     * shipped default. See [bank]'s own KDoc for the mechanism and why
-     * it is NODE-only for now.
+     * both came back "too similar" by ear. Round three-B pushed this to
+     * 80 cents as a diagnostic, to rule out "not perceptually salient" as
+     * the explanation before concluding anything about FORK's own
+     * ceiling; the owner's call at that gate was to settle here rather
+     * than keep chasing a subtler value — FORK's pickup-and-bar
+     * architecture reads as its own instrument, not a piano emulation,
+     * and 80 cents is the shipped default. See [bank]'s own KDoc for the
+     * mechanism and why it is NODE-only for now.
      */
     const val GLIDE_CENTS = 80f
 

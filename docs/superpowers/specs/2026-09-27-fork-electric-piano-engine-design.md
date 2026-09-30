@@ -643,6 +643,33 @@ own glide-free onset read several cents "sharp" by this artifact alone.
 bit-exact check that the no-glide path is untouched for TINE, BAR, and
 NODE at STRIKE 0.
 
-**Not yet answered**: whether the glide is what NODE (or TINE) was
-actually missing — that is the next listening question, not something
-this round asserts.
+**Not yet answered** (at round three's own close): whether the glide is
+what NODE (or TINE) was actually missing — that was the next listening
+question, not something this round asserted.
+
+## Round three-B — 2026-09-29
+
+`GLIDE_CENTS` pushed from 15 to 80 (most of a semitone), as a diagnostic:
+rule out "15 cents over a noisy 60ms attack just isn't perceptually
+salient" before concluding FORK's pickup-and-bar architecture has a
+character ceiling small mechanism tweaks can't cross. Both listening
+pages regenerated at the new value.
+
+**The gate's own answer**: still too close to call by ear, even
+overcooked past any reasonable "is it real" threshold. That settles the
+open question two rounds up — not a measurement gap, a genuine ceiling.
+The pickup's own nonlinearity carries most of what a listener calls
+FORK's character, and it operates on the summed time-domain signal
+downstream of both mechanisms tried here (NODE's pickup position, then
+the glide); neither one gives it materially different raw material to
+work with.
+
+**The owner's call, not a further round**: keep 80 cents as NODE's
+shipped default rather than dial back toward the physically-motivated 15,
+or strip the mechanism. FORK is done chasing "closer to piano" for now —
+TINE and NODE stand as close cousins, BAR as its own marimba-adjacent
+voice, and all three ship as FORK's own instrument rather than an
+emulation of one. If the piano question is worth reopening, the reed
+voice noted under "Out of scope" (a different nonlinearity entirely, not
+a further tweak to this one) is the next real candidate, not another turn
+on `GLIDE_CENTS` or `NODE_PICKUP_XI`.
