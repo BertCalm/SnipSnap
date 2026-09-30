@@ -170,11 +170,14 @@ SIREN do.
 
 1. **Onset:** the voice's path plays and lands on PEAK. The amp envelope's
    decay is ignored in the held render — a held key sustains; the 2 ms attack
-   stays. Onset length is `BLOOM_T60` rounded up to whole cycles. BRASS's
+   stays. Onset length is `BLOOM_T60` rounded up to whole cycles; STEP's onset is its
+   whole ladder (`STEP_SECONDS` per rung, at most 31 rungs, so up to 4.65 s). BRASS's
    held onset is a fortepiano accent: amp peaks at 1 and settles to
    `BRASS_REST = 0.5` on the `BLOOM_T60` clock, so with `rest = 0.5` its
    exponent `e` runs from 1 to 0 and k lands on PEAK exactly as the level
-   settles. BODY's own envelope sustains too.
+   settles. BODY's own envelope sustains too, at full level against a main burst
+   settled at `BRASS_REST`, so BODY reads about twice as prominent as in the
+   one-shot's balance: a sound-design call for the audition.
 2. **Loop:** from the landing, the formant **breathes** — a sine in
    log-ratio around PEAK, one full breath per loop:
    `k(t) = kBase · 2^(d · sin(2π·t/Lsec))`, `d = BREATHE_SHARE · log2(1 + a)`,
@@ -197,9 +200,11 @@ SIREN do.
 **Oversampling caveat.** GLINT renders at `Dsp.OVERSAMPLE`× and decimates
 through `Resampler`, a filter with memory. A single decimated loop would
 carry the filter's start-up transient into its first samples. The held
-render therefore synthesises **three** copies of the loop at the oversampled
-rate (loop length exactly `OVERSAMPLE·L`), decimates, and keeps the middle
-copy. `Keys.requireSeam` (`MAX_SEAM_ERROR = 1e-3`) is the acceptance gate.
+render therefore synthesises the onset and **three** breaths at the oversampled
+rate (breath length exactly `OVERSAMPLE·L`), decimates, and keeps the onset and
+the first two breaths: the third exists only so the second's tail is filtered by
+real audio (the decimator reaches 48 oversampled samples). `Keys.requireSeam`
+(`MAX_SEAM_ERROR = 1e-3`) is the acceptance gate.
 
 **Levelling.** The held file is levelled by its **loop**: one gain, fitted so the
 loop hits `Dsp.MELODIC_LOUDNESS_TARGET`, applied to the whole file, with a peak guard
@@ -256,16 +261,23 @@ kits are affected.
   quarter must sit within the anchor, because both land on PEAK), SWEEP vs STEP
   (path form), and each adjacent pair of whole vowels at the root note (TUNE 0)
   and at the default TUNE 0.5.
-- **Clicks:** k changes only at wraps, all four voices (the existing RATCHET
-  guard, generalised).
+- **Clicks:** k changes only at wraps, in both renderers (`synthesize` and
+  `GlintHeld`), through one update site with no voice condition, so SWEEP, BRASS
+  and VOWEL are covered by construction. STEP's discrete rungs are the only path
+  that could make a mid-cycle jump, and `STEP does not click when it steps` (the
+  RATCHET guard, generalised) covers it.
 - **Held:** `requireSeam` passes for every voice at BLOOM 0.2, 0.5, 0.8 and
   the lowest and highest zone; pitch of `f0'` within 0.01 cent of MIDI;
   loop length within one cycle of `BREATHE_SECONDS`.
 - **Velocity:** `velocity always changes the render, at every PEAK` covers
-  VOWEL; the PEAK-monotone sweep includes VOWEL (see 2.3).
-- **Audition gate before merge:** one WAV per voice (SWEEP up and down,
-  STEP up and down, BRASS, VOWEL gliding), plus a held pad per voice at 10 s
-  so the loop repeats three times — sent to Josh's phone.
+  VOWEL; the centroid PEAK sweep covers the path voices, and VOWEL's PEAK sweep and
+  velocity direction are gated on F2 presence (see 2.3).
+- **Audition gate before merge:** one WAV per gesture (SWEEP up and down,
+  STEP up and down, BRASS, VOWEL gliding EE to AH and OO to AH), plus a held pad
+  per voice and one at VOWEL's top zone, each at least 10 s and always long enough
+  for the loop to be heard wrapping twice (STEP's ladder onset pushes its clip to
+  about 12 s), levelled to the repo's audition level (`AuditionLevel`, 0.03) like
+  every other engine's audition — sent to Josh's phone.
 
 ## 6. Out of scope
 
