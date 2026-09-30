@@ -179,7 +179,12 @@ SIREN do.
    log-ratio around PEAK, one full breath per loop:
    `k(t) = kBase · 2^(d · sin(2π·t/Lsec))`, `d = BREATHE_SHARE · log2(1 + a)`,
    `BREATHE_SHARE = 0.25` (a quarter of the onset's travel). BLOOM at 0.5
-   gives a still pad. VOWEL breathes its position: `pos ± BREATHE_SHARE · |s| · 4 · sin(…)`.
+   gives a still pad. VOWEL breathes its position: `pos + BREATHE_SHARE · 4 · s · sin(…)`
+   with the unclamped `s` (`vowelAt` clamps the position). The breath is signed like
+   the approach: it begins toward the side the onset began on (`s > 0` breathes up
+   first, `s < 0` down first), and its depth is this formula's, not the one-shot's
+   clamped start: at high PEAK the top of a path voice's swing clips at `K_MAX` but
+   the bottom still swings the full ratio.
    STEP's breath is quantised to whole harmonics at wraps. BRASS breathes its
    *amplitude* around `BRASS_REST` (±`BREATHE_SHARE · |s| · BRASS_REST`, so BLOOM 0.5 is still on BRASS too) and its k
    follows through `e(t)` — loudness and brightness together, like a player.
@@ -195,6 +200,14 @@ carry the filter's start-up transient into its first samples. The held
 render therefore synthesises **three** copies of the loop at the oversampled
 rate (loop length exactly `OVERSAMPLE·L`), decimates, and keeps the middle
 copy. `Keys.requireSeam` (`MAX_SEAM_ERROR = 1e-3`) is the acceptance gate.
+
+**Levelling.** The held file is levelled by its **loop**: one gain, fitted so the
+loop hits `Dsp.MELODIC_LOUDNESS_TARGET`, applied to the whole file, with a peak guard
+over the whole file. (`Keys.resinPad` levels by its loop too.) BRASS's accent therefore
+does not pull its sustained sound down, and every voice's pad sits at one loudness.
+DC is left in the held render; a one-pole blocker run through the three-breath trick
+is the fix if an audition or a chord shows an offset (VOWEL at the top of TUNE carries
+about 0.11 of peak).
 
 **Plumbing** (mirrors SIREN, `Keys.kt:295`):
 
