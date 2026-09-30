@@ -573,6 +573,9 @@ class ValveTest {
             val out = Valve.process(pad, mapOf("DRIVE" to drive))
             assertEquals(pad.frameCount, out.frameCount)
             assertTrue(out.samples.all { it.isFinite() && it in -1f..1f }, "DRIVE $drive at 48 kHz produced a bad sample")
+            // The length is set by construction (a short render is zero-padded) and the range by
+            // the peak match, so only the peak proves the render is not silent.
+            assertEquals(pad.peak(), out.peak(), 1e-4f, "DRIVE $drive at 48 kHz did not come back at the pad's peak")
         }
     }
 

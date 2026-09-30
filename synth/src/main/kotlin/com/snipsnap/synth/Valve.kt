@@ -26,11 +26,12 @@ import kotlin.random.Random
  *
  * The first section that oversamples. At the snip's rate a hot tube folds its
  * harmonics back into the audible band: the Phase-0 spike measured a steady
- * 247 Hz probe at DRIVE 1 on the V1 law (gain 35) with energy between
- * harmonics only 31.9 dB down at 1x against 49.4 dB at 4x (an 8x reference
- * read 50.9); on the V1.1 law DRIVE 1 is gain 1000 and ValveTest's steady
- * probe reads 26.8 dB at 1x against 40.6 dB at 4x (its aliasing test prints
- * both, and read 28.8 dB at 1x against 51.3 dB at 4x at gain 35).
+ * 247 Hz probe at DRIVE 1 with energy between harmonics only 31.9 dB down at
+ * 1x against 49.4 dB at 4x (an 8x reference read 50.9; that was the spike's own
+ * probe and model of the tube). ValveTest's steady probe reads 28.8 dB at 1x
+ * against 51.3 dB at 4x at gain 35 (DRIVE 1 on the V1 law), and on the V1.1 law,
+ * where DRIVE 1 is gain 1000, 26.8 dB at 1x against 40.6 dB at 4x (its aliasing
+ * test prints both).
  * The round trip is zero-stuffing interpolated by [Tide.bandLimit] on the way
  * up (never the general resampler there, which cost 72 ms per rendered second
  * on its own) and [Dsp.decimate] on the way down, the melodic engines' own -
