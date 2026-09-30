@@ -211,11 +211,12 @@ about 0.11 of peak).
 
 **Plumbing** (mirrors SIREN, `Keys.kt:295`):
 
-- `Glint.renderHeld(voice, macros, cancelled): Pair<FloatArray, FloatArray>`
-  — onset and loop, leveled with **one** gain.
-- `Keys.glintPad(voice, macros, midi, cancelled): KeyNote` — onset + loop +
-  loop, `loopStartFrame` at the second loop's start; `glintPadMidis()` every
-  3 semitones across TUNE.
+- `GlintHeld.render(voice, macros, cancelled): GlintHeld.Held(audio, loopStart)`
+  — the onset and two breaths, levelled with **one** gain fitted to the loop.
+- `Keys.glintPad(voice, macros, midi, cancelled): KeyNote` — onset + breath +
+  the same breath again, `loopStartFrame` at the second breath's start;
+  `Keys.glintPadMidis(voice)` every 3 semitones across TUNE from the voice's own
+  root.
 - `shell/…/GlintPadMaker.kt` — `spec / zoneMidis / renderZone / preview /
   export`, RELEASE knob as SIREN's.
 - `SynthScreen.heldSpec()` gains `Engine.GLINT -> HeldSpec.Glint(…)`.
