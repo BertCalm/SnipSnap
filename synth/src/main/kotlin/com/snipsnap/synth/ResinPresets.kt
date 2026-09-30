@@ -5,9 +5,17 @@ package com.snipsnap.synth
  *
  * Twelve per voice, thirty-six total, spread across STACK (thin → deep →
  * fat), CUTOFF, CREAM (the top sings) and CONTOUR (the wah, then the
- * snap). Authored from `Resin.kt`'s DSP, not by ear, and checked by
+ * snap), and two more on BRASS that land with a rack chain: WIDE STRINGS and
+ * DARK STRINGS (thirty-eight in all, see [landingFor]). Authored from
+ * `Resin.kt`'s DSP, not by ear, and checked by
  * [ResinPresetsTest]. Named for what they sound like — never for the
  * machine whose filter this is — per the naming rule.
+ *
+ * The two string-machine presets are the one place this roster is not
+ * twelve: RESIN's BRASS voice is a wide saw stack through a ladder filter,
+ * and the sound of a string machine is the ensemble chorus on top of that
+ * ([StringMachine]). They are short, decaying pads, not a held section - the
+ * voice's envelope always decays, in a little over a second at DECAY 0.85 (1.23 s).
  */
 object ResinPresets {
 
@@ -21,6 +29,19 @@ object ResinPresets {
     }
 
     fun all(): List<ResinPatch> = ResinVoice.entries.flatMap { forVoice(it) }
+
+    /**
+     * The rack chain a sound made from [macros] lands with when SEND TO PAD
+     * turns it into a pad, or null when it lands dry (every sound but the two
+     * string machines, exactly as authored - see [StringMachine.landing]).
+     */
+    fun landingFor(voice: ResinVoice, macros: Map<String, Float>): FxChain? =
+        if (voice == ResinVoice.BRASS) StringMachine.landing(brassPresets, brassLandings, macros) else null
+
+    private val brassLandings: Map<String, FxChain> = mapOf(
+        "WIDE STRINGS" to StringMachine.CLASSIC,
+        "DARK STRINGS" to StringMachine.DARK,
+    )
 
     private val bassPresets = listOf(
         p(ResinVoice.BASS, "DEEP CREAM", "TUNE" to 0.2f, "STACK" to 0.5f, "CUTOFF" to 0.3f, "CREAM" to 0.45f, "CONTOUR" to 0.35f, "DECAY" to 0.55f),
@@ -65,5 +86,8 @@ object ResinPresets {
         p(ResinVoice.BRASS, "QUICK BLAT", "TUNE" to 0.5f, "STACK" to 0.6f, "CUTOFF" to 0.5f, "CREAM" to 0.45f, "CONTOUR" to 1f, "DECAY" to 0.15f),
         p(ResinVoice.BRASS, "MELLOW WAH", "TUNE" to 0.3f, "STACK" to 0.4f, "CUTOFF" to 0.25f, "CREAM" to 0.55f, "CONTOUR" to 0.65f, "DECAY" to 0.65f),
         p(ResinVoice.BRASS, "SINGING HORN", "TUNE" to 0.45f, "STACK" to 0.45f, "CUTOFF" to 0.35f, "CREAM" to 0.95f, "CONTOUR" to 0.7f, "DECAY" to 0.45f),
+        // The string machine's two: the full stack with the wah and the snap out (CONTOUR near 0), left to ring; the rack's ENSEMBLE does the rest.
+        p(ResinVoice.BRASS, "WIDE STRINGS", "TUNE" to 0.5f, "STACK" to 0.9f, "CUTOFF" to 0.7f, "CREAM" to 0.1f, "CONTOUR" to 0.05f, "DECAY" to 0.85f),
+        p(ResinVoice.BRASS, "DARK STRINGS", "TUNE" to 0.3f, "STACK" to 0.8f, "CUTOFF" to 0.4f, "CREAM" to 0.15f, "CONTOUR" to 0.1f, "DECAY" to 0.85f),
     )
 }

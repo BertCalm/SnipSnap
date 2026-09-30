@@ -6,7 +6,8 @@ import kotlin.test.assertTrue
 
 /**
  * U1 of `docs/SYNTH_UPGRADE.md`, RESIN's turn: twelve presets per voice
- * (thirty-six total). No classifier identity check — every RESIN voice is
+ * (thirty-six total), and BRASS's two string machines after them (thirty-eight;
+ * their landings are [StringMachineTest]'s). No classifier identity check — every RESIN voice is
  * statically TONAL in `SynthScreen`'s mapping, like VELVET's — so this is
  * the rest of the playability contract: a real, clean sound; a faithful
  * JSON round-trip; listbox-legal names under the naming rule. Authored
@@ -44,7 +45,9 @@ class ResinPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in ResinVoice.entries) {
             val names = ResinPresets.forVoice(voice).map { it.name }
-            assertEquals(12, names.size, "$voice should ship 12 presets, has ${names.size}")
+            // Twelve, and BRASS's two string machines (StringMachine) after its twelve.
+            val expected = if (voice == ResinVoice.BRASS) 14 else 12
+            assertEquals(expected, names.size, "$voice should ship $expected presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")

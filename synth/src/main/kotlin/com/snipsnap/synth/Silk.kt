@@ -86,7 +86,19 @@ object Silk {
             MacroSpec("PICK", 0.5f),
             MacroSpec("STRIKE", 0.15f),
             MacroSpec("BODY", 0.3f),
-            MacroSpec("COURSE", 0.2f),
+            // The Phase 4 audition's own first finding: at COURSE 0.2
+            // (+-5 cents, spec's own unsourced shape default) OUD and
+            // GUZHENG's defaults read as the same instrument - neither
+            // voice's identity mechanism is doing anything at its own
+            // default (SLIDE is also 0 here). Unlike SLIDE/PRESS, which are
+            // performance gestures a real player doesn't apply to every
+            // note, a course's paired strings are *always* strung that way
+            // - raising the spread here is honest to the instrument, not a
+            // faked "liveliness". +-11.25 cents sits inside the range
+            // real paired-string instruments (12-string guitar, mandolin,
+            // oud course) actually drift by ear, strong enough to beat
+            // audibly rather than just thicken the pitch.
+            MacroSpec("COURSE", 0.45f),
             MacroSpec("SLIDE", 0f),
         )
         SilkVoice.GUZHENG -> listOf(
@@ -98,7 +110,18 @@ object Silk {
             MacroSpec("DAMP", 0.3f),
             MacroSpec("PICK", 0.7f),
             MacroSpec("STRIKE", 0.15f),
-            MacroSpec("BODY", 0.3f),
+            // Raised from OUD's own 0.3 (Phase 4 audition finding, see
+            // OUD's COURSE comment above): STIFF's inharmonicity is
+            // disclosed elsewhere in this file as inaudible at guzheng's
+            // own sourced B, so it carries none of the "this is a guzheng,
+            // not an oud" work at default. The body table is the other
+            // always-present, non-gestural difference between the two
+            // voices (GUZHENG's own 5 measured modes down to 83.7 Hz vs
+            // OUD's sparser 2), so this brings more of that richer body
+            // through at rest, widening the gap against OUD's own
+            // unchanged, sparser-bodied default rather than touching either
+            // voice's sourced PICK/DAMP values.
+            MacroSpec("BODY", 0.5f),
             // STIFF 0..1 maps to B 0..STIFF_B_MAX; the anchor default sits
             // at guzheng string 21's own computed B (research §3, ~3.5e-5).
             MacroSpec("STIFF", STIFF_B_ANCHOR / STIFF_B_MAX),

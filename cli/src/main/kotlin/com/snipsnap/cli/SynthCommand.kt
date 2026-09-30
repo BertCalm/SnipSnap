@@ -10,6 +10,7 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.ResinPadMaker
+import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.ResinDrone
@@ -25,6 +26,13 @@ import java.util.Locale
  * *heard* before it is judged; the engines' presets were authored without
  * one, which is the failure `docs/superpowers/specs/2026-09-18-synth-depth-design.md`
  * exists to correct.
+ *
+ * A preset that lands with a rack chain (the string machines - VELVET BRASS
+ * STRING MACHINE and THIN STRINGS, RESIN BRASS WIDE STRINGS and DARK STRINGS)
+ * renders through it, as SEND TO PAD would, and comes out a stereo file.
+ * `--instrument` and `--drone` rebuild from the preset's macros alone and stay
+ * dry: an instrument is nine held zones and a drone a loop, each with its own
+ * shape, and neither is a one-shot pad.
  *
  * `--instrument [--attack S] [--release S]` (RESIN only) renders the preset
  * held down instead: a keys instrument that sounds while a key is held.
@@ -89,11 +97,13 @@ object SynthCommand {
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
         for ((i, patch) in chosen.withIndex()) {
-            val snip = patch.render()
+            // What SEND TO PAD would make: the string machines take their ENSEMBLE, so the file you audition is the pad you would get.
+            val landing = Presets.landingFor(engine, voice, patch.macros)
+            val snip = if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, voice, i + 1, safe))
             FileOutputStream(file).use { WavWriter.write(it, snip) }
-            out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s")
+            out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s" + if (landing == null) "" else "  (lands with ENSEMBLE, stereo)")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
         return 0
