@@ -20,7 +20,7 @@ package com.snipsnap.synth
  * ensemble chorus on top ([StringMachine]); the roster's twelve stay twelve
  * because they are the sounds the voice makes on its own, and these are the
  * sounds it makes with the rack behind it. Both are short, decaying pads
- * (the voice's envelope always decays, about a second at DECAY 0.9), not a
+ * (the voice's envelope always decays: 0.88 s at DECAY 0.8, 1.05 s at 0.9), not a
  * held section.
  */
 object VelvetPresets {
@@ -78,7 +78,7 @@ object VelvetPresets {
         p(VelvetVoice.BRASS, "SHARP BRASS", "TUNE" to 0.7f, "SHAPE" to 0.25f, "FAT" to 0.6f, "CUTOFF" to 0.8f, "SQUEEZE" to 0.55f, "DECAY" to 0.3f),
         p(VelvetVoice.BRASS, "DETUNED HORN", "TUNE" to 0.45f, "SHAPE" to 0.1f, "FAT" to 0.9f, "CUTOFF" to 0.5f, "SQUEEZE" to 0.3f, "DECAY" to 0.45f),
         p(VelvetVoice.BRASS, "MELLOW BRASS", "TUNE" to 0.25f, "SHAPE" to 0.05f, "FAT" to 0.45f, "CUTOFF" to 0.35f, "SQUEEZE" to 0.2f, "DECAY" to 0.7f),
-        // The string machine's two: the saw stack held open (SQUEEZE 0 - no filter bite) and left to ring; the rack's ENSEMBLE does the rest.
+        // The string machine's two: the saw stack with SQUEEZE at its floor (the least resonance and the shallowest filter sweep the voice has), left to ring; the rack's ENSEMBLE does the rest.
         p(VelvetVoice.BRASS, "STRING MACHINE", "TUNE" to 0.5f, "SHAPE" to 0.1f, "FAT" to 0.5f, "CUTOFF" to 0.6f, "SQUEEZE" to 0f, "DECAY" to 0.9f),
         p(VelvetVoice.BRASS, "THIN STRINGS", "TUNE" to 0.62f, "SHAPE" to 0.1f, "FAT" to 0.3f, "CUTOFF" to 0.65f, "SQUEEZE" to 0f, "DECAY" to 0.8f),
     )

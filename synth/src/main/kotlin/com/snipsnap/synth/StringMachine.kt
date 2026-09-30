@@ -23,18 +23,20 @@ package com.snipsnap.synth
  * hand it the ENSEMBLE, and a key on the macros does not.
  *
  * The chain is ENSEMBLE alone. The design note paired two of the presets with
- * an EQ (a bass cut for THIN STRINGS, a shelf pair for DARK STRINGS); the
+ * an EQ (a bass cut for THIN STRINGS, a low shelf for DARK STRINGS); the
  * pairing was measured and dropped, because the rack's EQ is three fixed
  * bands (a 100 Hz shelf, a 900 Hz bell, an 8 kHz shelf) and these voices live
  * between them: with the bass cut at 0.3 THIN STRINGS' 40-200 Hz band moved
- * -0.9 dB against the same chain without it, and DARK STRINGS' air cut moved
- * its top band -0.6 dB, both inside what a listener could not name. An EQ
- * that changes nothing you can hear is a chip on the pad sheet that lies
- * about the sound, so the presets differ where the measurement says they
- * differ: their source macros, and how deep and how fast the copies swing.
+ * -0.9 dB against the same chain without it, and with the low shelf raised to
+ * 0.6 (and an air cut at 0.3 besides) DARK STRINGS' 40-200 Hz band moved
+ * +0.9 dB and its top band -0.6 dB, all of it small enough that a listener
+ * could not be expected to name it. An EQ that changes nothing you can hear
+ * is a chip on the pad sheet that lies about the sound, so the presets differ
+ * where the measurement says they differ: their source macros, and how deep
+ * and how fast the copies swing.
  *
  * The mono voice comes out as the stereo pair (WIDTH is 1), and every later
- * stage of the pad's life - `Snip.toMono` on the way to a mono consumer, the
+ * stage of the pad's life - `Cleanup.toMono` on the way to a mono consumer, the
  * preview, the audition - folds that pair with the measured cost the tests
  * hold each landing to.
  */
@@ -53,7 +55,7 @@ internal object StringMachine {
     fun chain(depth: Float = 0.5f, rate: Float = 0.5f): FxChain =
         FxChain().withSection("ensemble", mapOf("DEPTH" to depth, "RATE" to rate, "WIDTH" to 1f))
 
-    /** STRING MACHINE and WIDE STRINGS: [Ensemble]'s own defaults - the classic swell and shimmer (WIDE STRINGS' width comes from the ten-voice STACK it already is). */
+    /** STRING MACHINE and WIDE STRINGS: [Ensemble]'s own defaults - the classic swell and shimmer (WIDE STRINGS is already the widest source there is: its three-oscillator STACK at .90 leaves a pair that barely correlates). */
     val CLASSIC: FxChain = chain()
 
     /** THIN STRINGS: a shallower swing, a little quicker, so the section reads as shimmer and not as lushness. */

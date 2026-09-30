@@ -44,7 +44,7 @@ object StringMachineAuditionGenerator {
     private val MACHINES = listOf(
         Machine(
             "STRING_MACHINE", VelvetPatch.ENGINE, "BRASS", "STRING MACHINE", "FANFARE",
-            "the classic: VELVET's saw stack held open (no filter bite) and left to ring, through ENSEMBLE's own defaults. The question is whether this is the string machine FANFARE was almost being, or just a longer FANFARE",
+            "the classic: VELVET's saw stack with SQUEEZE at its floor (the least resonance and the shallowest filter sweep it has) and left to ring, through ENSEMBLE's own defaults. The question is whether this is the string machine FANFARE was almost being, or just a longer FANFARE",
         ),
         Machine(
             "THIN_STRINGS", VelvetPatch.ENGINE, "BRASS", "THIN STRINGS", "FANFARE",

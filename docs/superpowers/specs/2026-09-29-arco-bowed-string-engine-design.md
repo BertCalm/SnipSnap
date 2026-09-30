@@ -1447,8 +1447,9 @@ unmoved factory sound lands with the chain (same sound, same landing).
 **The EQ pairing is dropped.** The rack's EQ is three fixed bands (100 Hz
 shelf, 900 Hz bell, 8 kHz shelf) and these voices live between them: with
 the bass cut at 0.3 THIN STRINGS' 40-200 Hz band moved -0.9 dB against the
-same chain without it, and DARK STRINGS' air cut moved its top band -0.6 dB
-(a 900 Hz bell at 0.35 does move DARK STRINGS' 0.8-3 kHz band -3.4 dB, but
+same chain without it, and with DARK STRINGS' low shelf raised to 0.6 (and an
+air cut at 0.3 besides) its 40-200 Hz band moved +0.9 dB and its top band
+-0.6 dB (a 900 Hz bell at 0.35 does move DARK STRINGS' 0.8-3 kHz band -3.4 dB, but
 that is a different pairing from the shelves the sketch named, and nobody has
 heard it). A chip that changes nothing you can hear lies about the sound, so
 the landings are ENSEMBLE alone
@@ -1456,7 +1457,7 @@ and the presets differ in their source macros and in DEPTH and RATE
 (THIN STRINGS shallower and quicker, DARK STRINGS slower and deeper). **The
 presets are short decaying pads,** not a held section: a VELVET or RESIN
 one-shot has a fixed 3 ms attack and a decaying envelope of about a
-second at DECAY 0.85-0.9 (-20 dB by 0.24-0.36 s), which is what the
+second (0.88-1.23 s at DECAY 0.8-0.9, -20 dB by 0.20-0.36 s), which is what the
 engine is, and a pad that swells in and holds is ARCO's or a held-pad
 instrument's. Every macro value was chosen by rendering candidates and
 reading their length, brightness drift, root pitch and the fold's cost
