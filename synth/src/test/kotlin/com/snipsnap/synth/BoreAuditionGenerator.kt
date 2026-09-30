@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.File
 import kotlin.math.roundToInt
@@ -14,6 +15,11 @@ import kotlin.math.roundToInt
  * Writes `manifest.json`, which the page builds itself from, so the clip list lives here and
  * nowhere else, then copies the listening page from the test resources. Run via
  * `./gradlew :synth:generateBoreAudition`, then publish the folder as the listening artifact.
+ *
+ * The first section is the reed's bite (round 1.1, after the first listening note asked the SAX for
+ * more of a reed's edge): the same SAX phrase and two presets with the presence bell at nothing (round
+ * 1's sound), half, the shipped default and one and a half times it, so the strength is a choice made
+ * by ear. The first section's clips are one-shots; the bell on a LOOP is the shipped default only.
  *
  * Nothing in BORE has been heard by anyone when this is first run: it is the gate that decides
  * whether the measured engine is a woodwind. The page says so.
@@ -44,6 +50,49 @@ object BoreAuditionGenerator {
         root.mkdirs()
         var count = 0
         val sections = StringBuilder()
+
+        // The reed's bite, four strengths of the same thing.
+        val biteDir = File(root, "BITE")
+        val biteSteps = listOf(
+            Triple("0_before", 0f, "BEFORE" to "round 1's reed, no presence bell"),
+            Triple("1_mild", 0.5f, "MILD, +6 dB" to "half the shipped bell"),
+            Triple("2_now", 1f, "NOW, +12 dB" to "the shipped default: 12 dB at the loosest lip, less as it tightens"),
+            Triple("3_strong", 1.5f, "STRONG, +18 dB" to "one and a half times the shipped bell (not shipped: a step past it)"),
+        )
+        fun writeBite(id: String, snip: Snip) {
+            WavWriter.write(File(biteDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        val saxDefaults = Bore.defaults(BoreVoice.SAX)
+        check(renderBite(saxDefaults, 1f).samples.contentEquals(Bore.render(BoreVoice.SAX, saxDefaults).samples)) {
+            "the audition's shipped-strength clip is not what Bore.render makes"
+        }
+        val phrase = listOf(7f / 24, 0.5f, 19f / 24)
+        val phraseClips = biteSteps.map { (key, scale, label) ->
+            val gap = FloatArray((0.15f * Dsp.RATE).toInt())
+            val samples = phrase.flatMap { t ->
+                (renderBite(saxDefaults + mapOf("TUNE" to t, "HOLD" to 0.3f), scale).samples.toList() + gap.toList())
+            }.toFloatArray()
+            writeBite("phrase_$key", Snip(samples, channels = 1, sampleRate = Dsp.RATE))
+            Clip("phrase_$key", label.first, label.second)
+        }
+        fun presetClips(presetName: String, tag: String) = biteSteps.filter { it.second != 0.5f }.map { (key, scale, label) ->
+            val preset = BorePresets.forVoice(BoreVoice.SAX).first { it.name == presetName }
+            writeBite("${tag}_$key", renderBite(preset.macros, scale))
+            Clip("${tag}_$key", label.first, macroLine(BoreVoice.SAX, preset.macros))
+        }
+        sections.append(
+            sectionJson(
+                id = "BITE", display = "THE REED'S BITE", body = "the same SAX, four strengths of presence: is it bitey enough, or too much?",
+                readout = listOf("G3, C4, G4 " + DOT + " DEFAULT KNOBS", "1-4 KHZ AGAINST THE FUNDAMENTAL: +2.7 / +5.5 / +8 DB"),
+                groups = listOf(
+                    Group("THE SAME PHRASE, FOUR STRENGTHS", key = true, clips = phraseClips),
+                    Group("BITE PRESET (A LOOSE LIP, A HARD BREATH)", key = true, clips = presetClips("BITE", "bite_preset")),
+                    Group("HIGH STAB", key = false, clips = presetClips("HIGH STAB", "high_stab")),
+                ),
+            ),
+        )
+        sections.append(",\n")
 
         // The kit, as it lands: SynthKits.bore() is the one list of what is on which pad,
         // and each pad's own recipe names its patch.
@@ -145,6 +194,20 @@ object BoreAuditionGenerator {
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
         File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
+    }
+
+    /**
+     * A one-shot SAX note with the presence bell at [scale] times its shipped gain: 0 is round 1's
+     * sound, 1 is [Bore.render] exactly (checked above). One-shots only - a LOOP renders through
+     * [Bore.renderLoop], which has the shipped bell and no dial.
+     */
+    private fun renderBite(macros: Map<String, Float>, scale: Float): Snip {
+        val m = Bore.settled(macros, BoreVoice.SAX)
+        require(!Bore.isLoop(m.getValue("HOLD"))) { "renderBite is for one-shots" }
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")))
+        val boost = Bore.biteBoostDb(BoreVoice.SAX, m.getValue("LIP")) * scale
+        return Snip(Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate), rate, boost), channels = 1, sampleRate = Dsp.RATE)
     }
 
     private const val DOT = "\u00b7"
