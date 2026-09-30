@@ -342,6 +342,10 @@ VALVE's four, each `neutral` at its transparent point:
 
 Landing chains, *shape*, heard at the R1 gate: JANGLE lands at DRIVE 0.25,
 TONE 0.55, CAB 0.35; CHUG at DRIVE 0.85, SAG 0.4, TONE 0.3, CAB 0.95.
+(V1.1: these DRIVE values are on V1's gain law. V1.1 keeps that law up to DRIVE 0.6
+and runs steeper above it, so JANGLE's 0.25 is unchanged but CHUG's 0.85 was gain 13
+and would now be gain 106; the R1 gate re-derives each landing DRIVE by gain, and gain
+13 is DRIVE about 0.71 on the V1.1 law.)
 
 ## Data flow and compatibility
 
@@ -375,7 +379,8 @@ a kit regenerates from the sidecar bit for bit. All additive:
   beside a live one passes through as zeros, and the zero-stuffed buffer is
   four times the snip — a 4 s stereo pad is 1.4 M floats. The 5 Hz DC blocker
   takes out the asymmetric curve's own DC; it does not follow the sag.
-  **Known at V1:** the sag bias is a plain offset on the tube's input, so at
+  **Known at V1, resolved in V1.1** (the bias is replaced by the supply sag, which
+  adds no end step; see the V1.1 amendments): the sag bias is a plain offset on the tube's input, so at
   DRIVE above about 0.46 with SAG above 0 it shifts the tube's rest point and
   releases over 120 ms, slower than the 5 Hz blocker follows, and a hot pad
   ends on a decaying DC step. Measured at CAB 0.6 and DRIVE 1: a kick at SAG
@@ -384,8 +389,8 @@ a kit regenerates from the sidecar bit for bit. All additive:
   (DRIVE 0.6) ends the kick at 0.0027 (−51 dB). Re-centring the curve about the
   shifted rest point was tried and withdrawn: it removes the end step but
   moves the DC to the onset while the hit clips both rails (a kick's first
-  20 ms from +0.20 to +0.52 of its peak). An open item for the V1 gate, to be
-  decided together with the bound on the sag bias (F2).
+  20 ms from +0.20 to +0.52 of its peak). It was an open item for the V1 gate; the
+  owner chose the supply mechanism at the V1.1 listen and the bias is gone (F2).
 - Every macro is coerced to 0..1 at entry, as everywhere.
 
 ## Testing
