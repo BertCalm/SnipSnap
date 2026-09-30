@@ -28,6 +28,9 @@ class ValveTest {
     private val snare = Thump.render(ThumpVoice.SNARE)
     private val neutral = mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
 
+    /** The DRIVE 1 (gain 1000) steady-probe clarity at 4x, dB, as measured (Step 5); the aliasing test asserts it less 2 dB. */
+    private val MEASURED_DRIVE_1_CLARITY = 40.6
+
     // ---------- helpers ----------
 
     private fun rms(x: FloatArray): Double {
@@ -130,9 +133,29 @@ class ValveTest {
     fun `the macros are the four the spec names, with their neutrals`() {
         assertEquals(listOf("DRIVE", "SAG", "TONE", "CAB"), Valve.MACROS.map { it.name })
         assertEquals(mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f), Valve.MACROS.associate { it.name to it.neutral })
-        assertEquals(mapOf("DRIVE" to 0.45f, "SAG" to 0.35f, "TONE" to 0.5f, "CAB" to 0.6f), Valve.defaults())
+        assertEquals(mapOf("DRIVE" to 0.65f, "SAG" to 0.35f, "TONE" to 0.5f, "CAB" to 0.6f), Valve.defaults())
+    }
+
+    @Test
+    fun `the gain law is V1's up to DRIVE 0_6, then log-linear to 1000 at the top`() {
         assertEquals(0.05f, Valve.gainFor(0f), 1e-6f)
-        assertEquals(35f, Valve.gainFor(1f), 1e-3f)
+        // V1's law exactly at and below the pivot: 0.05 * 700^d.
+        for (d in listOf(0.1f, 0.3f, 0.45f, 0.6f)) {
+            assertEquals(0.05f * Math.pow(700.0, d.toDouble()).toFloat(), Valve.gainFor(d), 1e-4f * Valve.gainFor(d))
+        }
+        assertEquals(2.547f, Valve.gainFor(0.6f), 1e-3f)
+        assertEquals(1_000f, Valve.gainFor(1f), 1e-2f)
+        // The pivot has no kink in value, and the whole law is strictly rising.
+        assertEquals(Valve.gainFor(0.6f), Valve.gainFor(0.6001f), 0.01f)
+        var prev = Valve.gainFor(0f)
+        for (i in 1..100) {
+            val g = Valve.gainFor(i / 100f)
+            assertTrue(g > prev, "the gain law stops rising at DRIVE ${i / 100f}: $prev then $g")
+            prev = g
+        }
+        // The owner's two listened points on the new law: the choir's gain 100 at about DRIVE 0.845, and gain 4.90 (the V1 law's DRIVE 0.7) at about 0.644.
+        assertEquals(100f, Valve.gainFor(0.845f), 3f)
+        assertEquals(4.90f, Valve.gainFor(0.644f), 0.1f)
     }
 
     @Test
@@ -149,6 +172,8 @@ class ValveTest {
         // third-octave's share of its own 40 Hz-16 kHz energy, not absolute level: the
         // peak match's single gain is the RMS clause's to judge. The kick skips 8 bands
         // above 1.6 kHz it barely has (< 1e-6 of its energy); the snare skips none.
+        // All of these numbers are V1's: the V1.1 gain law, wall and supply leave the neutral
+        // point alone (DRIVE 0, SAG 0, CAB 0), and Task 2's oversampling gate changes them.
         for ((name, dry, rmsBound) in listOf(Triple("kick", kick, 0.12), Triple("snare", snare, 0.44))) {
             val out = Valve.process(dry, neutral)
             assertEquals(dry.frameCount, out.frameCount, "$name changed length")
@@ -181,23 +206,27 @@ class ValveTest {
     }
 
     @Test
-    fun `4x keeps the fold-back under the TIDE bar where the snip rate cannot`() {
-        // Spike, part B, Extra A: 247 Hz at DRIVE 1 read 49.4 dB at 4x, 31.9 at 1x.
-        // SAG, TONE and CAB at their neutrals so the bar is read on the tube alone:
-        // through the default speaker (CAB 0.6, coil 5.0 kHz) the read was 55.1 dB at
-        // 4x / 32.9 at 1x, the coil stripping high spurs and flattering it by ~4 dB;
-        // pinned: 51.3 dB at 4x, 28.8 at 1x.
+    fun `4x keeps the fold-back under the bar where the snip rate cannot`() {
+        // SAG, TONE and CAB at their neutrals so the bar is read on the tube alone.
+        // V1 pinned 51.3 dB at 4x / 28.8 at 1x at DRIVE 1 (gain 35). On the V1.1 law
+        // DRIVE 1 is gain 1000: measured 40.6 dB at 4x / 26.8 at 1x. The owner chose
+        // that top knowing the bar is missed there (V1.1 ruling 5); DRIVE 0.6 (gain 2.5,
+        // unchanged) keeps the 45 dB bar.
         val f0 = 246.94f
         val p = probe(f0, 2.0f)
         val start = (0.3f * rate).toInt()
-        val hot = mapOf("DRIVE" to 1f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
-        // The 4x side goes through the public entry point, so the test also fails
-        // if the default path stops oversampling.
-        val four = harmonicClarity(Valve.process(p, hot).samples, rate, f0, start)
-        val one = harmonicClarity(Valve.process(p, hot, oversample = false).samples, rate, f0, start)
-        println("VALVE aliasing at 247 Hz, DRIVE 1: 4x ${"%.1f".format(four)} dB, 1x ${"%.1f".format(one)} dB")
-        assertTrue(four >= 45.0, "energy between harmonics is only ${"%.1f".format(four)} dB down at 4x")
-        assertTrue(one < four - 6.0, "the probe cannot see fold-back: 1x ${"%.1f".format(one)} vs 4x ${"%.1f".format(four)}")
+        fun clarity(drive: Float, oversample: Boolean): Double {
+            val macros = mapOf("DRIVE" to drive, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
+            return harmonicClarity(Valve.process(p, macros, oversample).samples, rate, f0, start)
+        }
+        val four6 = clarity(0.6f, true)
+        val one6 = clarity(0.6f, false)
+        val four10 = clarity(1f, true)
+        val one10 = clarity(1f, false)
+        println("VALVE aliasing at 247 Hz: DRIVE 0.6 4x ${"%.1f".format(four6)} / 1x ${"%.1f".format(one6)} dB; DRIVE 1 4x ${"%.1f".format(four10)} / 1x ${"%.1f".format(one10)} dB")
+        assertTrue(four6 >= 45.0, "energy between harmonics is only ${"%.1f".format(four6)} dB down at 4x, DRIVE 0.6")
+        assertTrue(four10 >= MEASURED_DRIVE_1_CLARITY - 2.0, "DRIVE 1 at 4x fell to ${"%.1f".format(four10)} dB")
+        assertTrue(one10 < four10 - 6.0, "the probe cannot see fold-back: 1x ${"%.1f".format(one10)} vs 4x ${"%.1f".format(four10)}")
     }
 
     @Test
@@ -335,45 +364,137 @@ class ValveTest {
     }
 
     @Test
-    fun `SAG changes a hot sound`() {
-        // Measured -5.97 / -2.68 / -0.98 dB at SAG 0.25 / 0.5 / 1. A boolean or constant
-        // use of the macro would pass the -40 dB wiring bar, so the ordering is asserted too.
-        val a = Valve.process(kick, mapOf("DRIVE" to 1f, "SAG" to 0f)).samples
-        // The RMS of the difference from the SAG 0 render, re that render, on the kick at DRIVE 1.
-        fun diffDb(sag: Float): Double {
-            val b = Valve.process(kick, mapOf("DRIVE" to 1f, "SAG" to sag)).samples
-            val diff = FloatArray(a.size) { a[it] - b[it] }
-            return 20 * log10(rms(diff) / rms(a))
+    fun `SAG dips a driven sound and never leaves the rest point off zero`() {
+        // The V1.1 supply sag is post-tube: y = t / (1 + SAG * 3 * env(|t|)), env a 5 ms /
+        // 120 ms follower of the tube's own output. Measured on the kick at DRIVE 0.6:
+        // the kick's level 60-160 ms after the hit, re its first 20 ms, falls by about
+        // 2.2 dB at SAG 1 against SAG 0 (spike: 2.19), and it ends with no DC step
+        // (spike: under 0.02 % of peak), which the V1 bias mechanism did not (0.8 %, and 3.6 %
+        // at DRIVE 1).
+        fun level(x: FloatArray, from: Float, to: Float): Double =
+            rms(x.copyOfRange((from * rate).toInt(), (to * rate).toInt()))
+        fun dipDb(sag: Float): Double {
+            val out = Valve.process(kick, mapOf("DRIVE" to 0.6f, "SAG" to sag, "TONE" to 0.5f, "CAB" to 0.5f)).samples
+            return 20 * log10(level(out, 0.060f, 0.160f) / level(out, 0f, 0.020f))
         }
-        val d25 = diffDb(0.25f)
-        val d50 = diffDb(0.5f)
-        val d100 = diffDb(1f)
-        println("VALVE SAG at DRIVE 1: difference ${"%.2f".format(d25)} / ${"%.2f".format(d50)} / ${"%.2f".format(d100)} dB at SAG 0.25 / 0.5 / 1 re the SAG 0 render")
-        assertTrue(d100 > -40.0, "SAG 1 changed a DRIVE 1 kick by only ${"%.1f".format(d100)} dB")
-        assertTrue(d25 < d50 && d50 < d100, "SAG is not monotonic: 0.25 $d25, 0.5 $d50, 1 $d100 dB")
+        val d0 = dipDb(0f)
+        val d25 = dipDb(0.25f)
+        val d50 = dipDb(0.5f)
+        val d100 = dipDb(1f)
+        println("VALVE SAG at DRIVE 0.6: 60-160 ms re first 20 ms ${"%.2f".format(d0)} / ${"%.2f".format(d25)} / ${"%.2f".format(d50)} / ${"%.2f".format(d100)} dB at SAG 0 / 0.25 / 0.5 / 1")
+        assertTrue(d100 <= d0 - 1.5, "SAG 1 dipped the tail only ${"%.2f".format(d0 - d100)} dB")
+        assertTrue(d25 > d50 && d50 > d100, "SAG is not monotonic: 0.25 $d25, 0.5 $d50, 1 $d100 dB")
+        // The tube's own asymmetry leaves a step at gain 1000 whether SAG is up or not (1.7 % on
+        // the kick at SAG 0, DRIVE 1), so the claim is that SAG adds none: the V1 bias took the
+        // same kick from 0.06 % to 3.6 % at DRIVE 1 and would fail this.
+        fun endStep(drive: Float, sag: Float): Double {
+            val hot = Valve.process(kick, mapOf("DRIVE" to drive, "SAG" to sag, "TONE" to 0.5f, "CAB" to 0.5f)).samples
+            val tail = hot.copyOfRange(hot.size - (0.010f * rate).toInt(), hot.size)
+            return abs(mean(tail)) / hot.maxOf { abs(it) }
+        }
+        for (drive in listOf(0.6f, 1f)) {
+            val flat = endStep(drive, 0f)
+            val sagged = endStep(drive, 1f)
+            println("VALVE SAG end step at DRIVE $drive: ${"%.4f".format(flat)} of peak at SAG 0, ${"%.4f".format(sagged)} at SAG 1")
+            assertTrue(sagged <= flat + 0.005, "SAG 1 added a DC step at DRIVE $drive: $flat -> $sagged of peak, the rest point moved")
+        }
     }
 
     @Test
-    fun `SAG falls at its release rate while the signal is still above the rail`() {
-        // The follower's target is the overshoot |v| - 1 (0 under the rail). It
-        // charges toward a higher target with a 5 ms time constant and recovers with a
-        // 120 ms one (63 % of the way in one constant, not complete), including toward a
-        // lower target still above the rail: from a steady overshoot of 2 down to one
-        // of 0.5, 100 ms in it is still near 0.5 + 1.5*e^(-100/120) = 1.15.
+    fun `the supply follower charges in 5 ms, recovers in 120 ms, and reads the previous sample`() {
         val hz = rate * Dsp.OVERSAMPLE
         fun frames(seconds: Float) = (seconds * hz).toInt()
         val first = frames(0.050f)
-        val v = FloatArray(first + frames(0.500f)) { if (it < first) 3f else 1.5f }
-        val track = Valve.sagTrack(v, hz)
-        val charged = track[first - 1]
-        val at100 = track[first + frames(0.100f)]
-        val at500 = track[v.size - 1]
-        val rise = Valve.sagTrack(FloatArray(frames(0.020f)) { -3f }, hz)[frames(0.007f)]
-        println("VALVE SAG follower: ${"%.3f".format(charged)} charged, ${"%.3f".format(at100)} 100 ms and ${"%.3f".format(at500)} 500 ms into a lower overshoot; ${"%.3f".format(rise)} 7 ms into a rise to 2")
-        assertTrue(charged > 1.9f, "the follower reached only $charged after 50 ms at an overshoot of 2")
-        assertTrue(at100 > 0.9f, "100 ms into the lower overshoot the follower is already down to $at100: it is not recovering at 120 ms")
-        assertTrue(at500 < 0.6f, "500 ms into the lower overshoot the follower is still at $at500")
-        assertTrue(rise >= 0.63f * 2f, "7 ms into a rise to 2 the follower is only at $rise")
+        val t = FloatArray(first + frames(0.500f)) { if (it < first) 1f else 0f }
+        val env = Valve.supplyEnv(t, hz)
+        assertEquals(0f, env[0], "the first sample must see the follower at rest (previous-sample rule)")
+        val atFive = env[frames(0.005f) + 1]
+        val charged = env[first - 1]
+        val at120 = env[first + frames(0.120f)]
+        val at500 = env[t.size - 1]
+        println("VALVE supply follower: ${"%.3f".format(atFive)} at 5 ms, ${"%.3f".format(charged)} charged, ${"%.3f".format(at120)} 120 ms and ${"%.4f".format(at500)} 500 ms after the target drops to 0")
+        assertEquals(1f - Math.exp(-1.0).toFloat(), atFive, 0.02f, "5 ms is one attack time constant, about 63 %")
+        assertTrue(charged > 0.99f, "the follower reached only $charged after 50 ms")
+        assertEquals(charged * Math.exp(-1.0).toFloat(), at120, 0.02f, "120 ms is one release time constant, about 37 % of where it was")
+        assertTrue(at500 < 0.02f, "500 ms after the drop the follower is still at $at500")
+    }
+
+    @Test
+    fun `CAB 1 is a darker wall - noise centroid near 2050 Hz, falling steadily from CAB 0_6`() {
+        // Spike: seeded white noise through the whole chain at DRIVE 0 / SAG 0 / TONE 0.5:
+        // V1's wall (4500 Hz, one pole) 4480 Hz centroid and -3 dB at 5088 Hz; the chosen
+        // wall (3200 Hz, two poles) 2052 Hz centroid and -3 dB at 2934 Hz.
+        val rnd = java.util.Random(7)
+        val noise = Snip(FloatArray((0.5f * rate).toInt()) { (rnd.nextFloat() * 2f - 1f) * 0.9f }, 1, rate)
+        fun c(cab: Float) = centroid(Valve.process(noise, mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to cab)).samples)
+        val at06 = c(0.6f)
+        val at08 = c(0.8f)
+        val at10 = c(1f)
+        println("VALVE wall: noise centroid ${"%.0f".format(at06)} Hz at CAB 0.6, ${"%.0f".format(at08)} at 0.8, ${"%.0f".format(at10)} at 1")
+        assertTrue(at06 > at08 && at08 > at10, "the wall does not darken steadily: $at06, $at08, $at10")
+        assertEquals(2052.0, at10, 0.10 * 2052.0, "CAB 1 centroid moved from the chosen wall")
+    }
+
+    @Test
+    fun `CAB has no step at 0_6 or at 1 - a hundredth of CAB moves no band by more than 0_75 dB`() {
+        // The test's job is to catch a STEP in CAB, not to bound the ramp's slope. Above 0.6 the
+        // corner falls about 45 Hz per hundredth and the second pole fades in, so the top
+        // third-octave (12.9-16 kHz) falls about 0.52 dB per hundredth from 0.9 up (0.54 at 0.9 to
+        // 0.91); V1's own slope leaves 0.6 -> 0.61 at 0.497 dB in the 40-50 Hz band. Measured
+        // worst band per pair: 0.59 -> 0.6 0.108 dB (403-507 Hz), 0.6 -> 0.61 0.497 (40-50 Hz),
+        // 0.61 -> 0.62 0.287 (40-50 Hz), 0.98 -> 0.99 0.524 (12.9-16 kHz), 0.99 -> 1 0.517
+        // (12.9-16 kHz). The bound is 0.75 dB, 43 % over the worst. A snapped-in second pole
+        // would show as a step of 3 dB or more: the one-pole and two-pole 3.2 kHz walls differ by
+        // 5.1 dB at 5 kHz and 11.5 dB at 12 kHz on noise (spike). An earlier 0.5 dB bound failed
+        // 0.99 -> 1 at 0.517 dB on the slope alone and passed 0.6 -> 0.61 by 0.003 dB.
+        for ((a, b) in listOf(0.59f to 0.6f, 0.6f to 0.61f, 0.61f to 0.62f, 0.98f to 0.99f, 0.99f to 1f)) {
+            val x = Valve.process(snare, mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to a))
+            val y = Valve.process(snare, mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to b))
+            val (pX, n) = power(x.samples)
+            val (pY, _) = power(y.samples)
+            val totX = bandEnergy(pX, n, 40f, 16_000f)
+            val totY = bandEnergy(pY, n, 40f, 16_000f)
+            var worst = 0.0
+            var worstBand = ""
+            var lo = 40f
+            while (lo < 16_000f) {
+                val hi = minOf(lo * 2f.pow(1f / 3f), 16_000f)
+                val eX = bandEnergy(pX, n, lo, hi)
+                if (eX / totX > 1e-6) {
+                    val d = db(bandEnergy(pY, n, lo, hi) / totY, eX / totX)
+                    if (abs(d) > abs(worst)) {
+                        worst = d
+                        worstBand = "${lo.toInt()}-${hi.toInt()} Hz"
+                    }
+                }
+                lo = hi
+            }
+            println("VALVE CAB $a -> $b: worst band $worstBand at ${"%.3f".format(worst)} dB")
+            assertTrue(abs(worst) <= 0.75, "CAB $a -> $b moved $worstBand by ${"%.2f".format(worst)} dB")
+        }
+    }
+
+    @Test
+    fun `below DRIVE 0_6, SAG 0 and CAB 0_6 the sound is V1's`() {
+        // Golden values captured from the V1 code (base 1a2ec180) in Step 1: the RMS and six
+        // samples of the kick and snare at DRIVE 0.6 / CAB 0.6, DRIVE 0.3 / CAB 0.25 and
+        // DRIVE 0.6 / CAB 0.5, all SAG 0 and TONE 0.5, forced through the 4x path (the
+        // gate of Task 2 does not exist yet, and is independent of it after).
+        val goldens: List<Triple<String, Pair<Float, Float>, Pair<Double, List<Float>>>> = listOf(
+            Triple("kick", 0.6f to 0.6f, 0.23071308447352024 to listOf(0.66134125f, -0.7810704f, -0.3686499f, -0.0011201216f, 0.009041333f, 0.0016381168f)),
+            Triple("kick", 0.3f to 0.25f, 0.1926597508245963 to listOf(0.75100744f, -0.54861236f, -0.18609507f, 7.6583226E-4f, 0.00432172f, 7.611417E-4f)),
+            Triple("kick", 0.6f to 0.5f, 0.22948237884389408 to listOf(0.66986495f, -0.7467402f, -0.36712107f, -5.418543E-4f, 0.0090928925f, 0.0016371422f)),
+            Triple("snare", 0.6f to 0.6f, 0.13658699214066872 to listOf(0.14662017f, 0.20710678f, -0.05767708f, -0.0019851686f, -0.008956235f, 0.0014699006f)),
+            Triple("snare", 0.3f to 0.25f, 0.09143330077535367 to listOf(0.05193938f, 0.114540525f, -0.025876775f, -5.715725E-4f, -0.0042426726f, 6.932373E-4f)),
+            Triple("snare", 0.6f to 0.5f, 0.13423213247546018 to listOf(0.13764937f, 0.18671855f, -0.055957038f, -0.0018377537f, -0.008672879f, 0.0014205342f)),
+        )
+        for ((name, dc, want) in goldens) {
+            val dry = if (name == "kick") kick else snare
+            val out = Valve.process(dry, mapOf("DRIVE" to dc.first, "SAG" to 0f, "TONE" to 0.5f, "CAB" to dc.second), oversample = true).samples
+            assertEquals(want.first, rms(out), 1e-5, "$name at DRIVE ${dc.first} CAB ${dc.second}: rms")
+            val at = listOf(100, 1000, 3000, 6000, 9000, 12000).map { out[it] }
+            for (i in at.indices) assertEquals(want.second[i], at[i], 1e-5f, "$name at DRIVE ${dc.first} CAB ${dc.second}: sample ${listOf(100, 1000, 3000, 6000, 9000, 12000)[i]}")
+        }
     }
 
     // ---------- the inputs a person will hand it ----------
@@ -396,9 +517,10 @@ class ValveTest {
 
     @Test
     fun `identical channels stay identical with the sag live - one follower per channel`() {
-        // At the default DRIVE the follower never leaves 0 on these fixtures (gain 0.953,
-        // |v| < 1), so FxTest's identical-channels test runs VALVE with the sag dead. A
-        // follower carried from L into R would bias R from its first frame.
+        // The default DRIVE is now 0.65 (gain 5.4): the tube is over the rail on a normalised
+        // pad, so the supply follower is live at the defaults and FxTest's identical-channels
+        // test runs VALVE with the sag working. This test drives it harder, DRIVE 1 and SAG 1.
+        // A follower carried from L into R would sag R from its first frame.
         val frames = kick.frameCount
         val doubled = Snip(FloatArray(frames * 2) { i -> kick.samples[i / 2] }, 2, rate)
         val out = Valve.process(doubled, mapOf("DRIVE" to 1f, "SAG" to 1f))
@@ -435,13 +557,13 @@ class ValveTest {
         val out = Valve.process(offset, mapOf("DRIVE" to 1f))
         assertTrue(out.samples.all { it.isFinite() && it in -1f..1f })
         assertEquals(offset.peak(), out.peak(), 1e-4f)
-        // Measured 0.179 at DRIVE 1, so the bound is that plus about 20 %. Mutation check:
-        // with the `- dc.lp(t, DC_HZ)` term removed the ratio read 1.769 and this was the
-        // only test in ValveTest and FxTest to fail - the one assertion that the blocker
-        // is there.
+        // Measured 0.103 at DRIVE 1 (gain 1000, the V1.1 law's top; V1 read 0.179 at gain 35), so
+        // the bound is that plus about 20 %. V1 mutation check (not re-run on V1.1): with the
+        // blocker's subtraction removed the ratio read 1.769 and this was the only test in
+        // ValveTest and FxTest to fail - the one assertion that the blocker is there.
         val drained = abs(mean(out.samples)) / abs(mean(offset.samples))
         println("VALVE DC blocker: mean ${"%.4f".format(mean(offset.samples))} in, ${"%.4f".format(mean(out.samples))} out (ratio ${"%.3f".format(drained)})")
-        assertTrue(drained < 0.215, "the 5 Hz blocker left ${"%.3f".format(drained)} of the input's DC")
+        assertTrue(drained < 0.124, "the 5 Hz blocker left ${"%.3f".format(drained)} of the input's DC")
     }
 
     @Test
