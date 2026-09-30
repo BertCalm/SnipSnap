@@ -51,6 +51,8 @@ class GlintHeldTest {
         for (midi in zones) {
             val tune = (midi - zones.first()) / Glint.TUNE_SEMITONES.toFloat()
             val note = Keys.glintPad(voice, macros, midi)
+            assertEquals(Dsp.RATE, note.snip.sampleRate, "MIDI $midi: the pad's sample rate")
+            assertEquals(1, note.snip.channels, "MIDI $midi: the pad is mono")
             val direct = GlintHeld.render(voice, Glint.defaults(voice) + macros + ("TUNE" to tune))
             assertTrue(note.snip.samples.contentEquals(direct.audio), "MIDI $midi: the pad is not the held render at TUNE $tune")
             assertEquals(direct.loopStart.toLong(), note.loopStartFrame, "MIDI $midi: the marker moved")
@@ -68,7 +70,7 @@ class GlintHeldTest {
                 "GLINT SWEEP MIDI $midi: ${plan.cycles} cycles in ${plan.loopFrames} frames = %.4f Hz, want %.4f Hz, %.5f cents"
                     .format(Locale.ROOT, plan.f0, want, cents),
             )
-            assertTrue(cents < 5, "MIDI $midi plays ${plan.f0} Hz, $cents cents off")
+            assertTrue(cents < 0.01, "MIDI $midi plays ${plan.f0} Hz, $cents cents off (bar 0.01, spec §5)")
         }
     }
 
@@ -100,7 +102,7 @@ class GlintHeldTest {
                 // its rootHz fails here.
                 val want = 440.0 * 2.0.pow((midi - 69) / 12.0)
                 val cents = abs(1200 * log2(plan.f0 / want))
-                assertTrue(cents < 5, "$voice MIDI $midi plays ${plan.f0} Hz, $cents cents off")
+                assertTrue(cents < 0.01, "$voice MIDI $midi plays ${plan.f0} Hz, $cents cents off (bar 0.01, spec §5)")
                 // The loop's length can't say which TUNE the pad was rendered at: 110, 220, 440
                 // and 880 Hz all fill exactly 3 s, so a zone sent to TUNE 0.5 has the root's and
                 // the top's 132300-frame loop. The render comparison can.
