@@ -29,6 +29,20 @@ The owner accepted the aliasing cost: the page told them the steady-tone clean m
 
 Six rulings were made before execution (the owner can undo any). (1) The wall applies only above CAB 0.6: at or below 0.6 the coil corner and the one pole are V1's exactly, and from 0.6 to 1 the corner runs linearly from V1's 5020 Hz to 3200 Hz while a second identical pole fades in, so CAB 1 equals the spike's `w3` clip. (2) SAG changes character, not only mechanism: SUPPLY is post-tube and keyed on the tube's own output level, so at deep saturation (DRIVE above 0.85, gain above about 100) the follower sits near 1 and SAG becomes a near-constant level offset the peak match cancels; the owner heard SUPPLY only at gain 35 or below. (Measured after the build, on the real code at gain 1000: the drop did not shrink, see the SAG bullet in the spec's V1.1 amendments.) (3) The default DRIVE is 0.65, not 0.7: the owner's 0.7 was heard under the V1 law (gain 4.90), which is DRIVE 0.644 on the new law, and gain 5.37 is 0.65, the nearest clean knob value. (4) The 4x gate was to be set by measurement, at the lowest DRIVE step where the steady probe's clarity at 4x beats 1x by at least 6 dB, and not above 0.6. (5) The aliasing bar is re-pinned, not kept: DRIVE 1 at gain 1000 measures 40.6 dB at 4x, so the test keeps 45 dB at DRIVE 0.6 and pins DRIVE 1 at its measured value minus 2 dB. (6) The spec states V1's numbers until its V1.1 amendments land, so the plan, not the spec, is the reference for the tasks that come first. Rulings made during execution: (7) a confirmation listen of the combined V1.1 sound gates the PR, because each change was heard alone; (8) the CAB continuity test's bound is 0.75 dB per band per 0.01 of CAB, since the top band falls about 0.5 dB per 0.01 above CAB 0.87 (a slope of the darkening wall, not a step) and a snapped-in second pole would move it 5 dB or more; (9) the wall's acceptance check against the spike's `w3` clip reads -54.3 dB and is accepted against a -50 dB bar, because a one-float-step gain change alone moves the spike's own path by -56 dB through float noise in a low-frequency biquad at the 176.4 kHz work rate. After the gate measurement below blocked, Ruling 10 ordered that V1.1 keep the 4x round trip always on, so Ruling 4 produced a threshold (0.55) that was not shipped.
 
+## The confirmation listen (2026-09-30)
+
+Ruling 7's gate: the combined V1.1 sound, heard together for the first time. The owner answered 12 of 12.
+
+| Question | Answer | Consequence |
+|---|---|---|
+| The new default pad (DRIVE 0.65, gain 5.4) on kick, snare, brass, choir | "right" on all four | 0.65 kept the sound the owner heard under the V1 law |
+| DRIVE 0.65 against 0.7 (DRIVE 0.7 on the V1.1 law is gain 11.3) | **0.7** | the default is DRIVE 0.7 (gain 11.3) |
+| `amped` (DRIVE 0.6) against as-it-was, kick and snare | "same" | `amped` stays at DRIVE 0.6 |
+| SAG at DRIVE 1, SAG 0 / 0.35 / 1, kick and snare | "does nothing" | SAG is an effect of the lower and middle DRIVE range |
+| The closed wall under the hotter tube, snare, brass, choir | "right" | the two-pole 3.2 kHz wall stands |
+
+The default moved to 0.7 (commit `fix(valve): default DRIVE 0.7 after the confirmation listen`): the owner picked 0.7 twice, first heard on V1's law at gain 4.90 and then heard on the V1.1 law at gain 11.3 against 0.65, so Ruling 3 (0.65 as the nearest knob value to that gain) was made moot by the owner's own pick. `amped` stays at 0.6, below the default, because the owner heard it as the same as before. SAG does nothing audible at DRIVE 1: the measured steady offset of -1.6 dB at SAG 0.35 and -3.15 / -3.28 dB at SAG 1 on the kick and snare is levelled away in loudness-matched clips, so the owner had nothing to hear. The closed wall is right under the hotter tube. The 0.65 figures elsewhere in this record are historical: they are what was built and measured before the confirmation listen.
+
 ## Spike report
 
 ### VALVE V1.1 spike: candidate sets

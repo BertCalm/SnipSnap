@@ -52,9 +52,10 @@ import kotlin.random.Random
 object Valve {
 
     val MACROS: List<MacroSpec> = listOf(
-        // 0.65 is gain 5.4 on the V1.1 law; the owner picked "0.7" at the V1.1 listen under the V1
-        // law (gain 4.9), and 0.644 is that gain on this one.
-        MacroSpec("DRIVE", 0.65f),
+        // 0.7 is gain 11.3 on the V1.1 law. The owner chose 0.7 twice: first heard on V1's law at
+        // the round-two listen (gain 4.9), then heard on this one at the confirmation listen
+        // (gain 11.3) against 0.65 (gain 5.4), which had kept the first sound.
+        MacroSpec("DRIVE", 0.7f),
         MacroSpec("SAG", 0.35f),
         // 0.5 is flat, so the pad sheet's AMT fade lands on a flat tone.
         MacroSpec("TONE", 0.5f, neutral = 0.5f),
@@ -97,7 +98,9 @@ object Valve {
      * kick and 3.28 dB on the snare at SAG 1, and about 1.6 dB at SAG 0.35, flat from 20
      * to 160 ms: a steady level offset after the hit's first milliseconds, not a dip
      * and recovery, so it did not shrink from gain 35. The owner heard SUPPLY at gain
-     * 35 and below before this was measured.
+     * 35 and below before this was measured. At the confirmation listen the owner heard no
+     * effect from SAG at DRIVE 1 on the kick and snare (loudness-matched clips level away the
+     * steady offset), so SAG is an effect of the lower and middle DRIVE range.
      */
     private const val SUPPLY_K = 3f
     private const val SUPPLY_ATTACK_SECONDS = 0.005f

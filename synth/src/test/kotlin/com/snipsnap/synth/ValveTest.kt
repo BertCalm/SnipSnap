@@ -133,7 +133,7 @@ class ValveTest {
     fun `the macros are the four the spec names, with their neutrals`() {
         assertEquals(listOf("DRIVE", "SAG", "TONE", "CAB"), Valve.MACROS.map { it.name })
         assertEquals(mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f), Valve.MACROS.associate { it.name to it.neutral })
-        assertEquals(mapOf("DRIVE" to 0.65f, "SAG" to 0.35f, "TONE" to 0.5f, "CAB" to 0.6f), Valve.defaults())
+        assertEquals(mapOf("DRIVE" to 0.7f, "SAG" to 0.35f, "TONE" to 0.5f, "CAB" to 0.6f), Valve.defaults())
     }
 
     @Test
@@ -208,8 +208,8 @@ class ValveTest {
     @Test
     fun `4x keeps the fold-back under the bar where the snip rate cannot`() {
         // SAG, TONE and CAB at their neutrals so the bar is read on the tube alone.
-        // DRIVE 0.65 (the default, gain 5.4) is the case the test's name describes: 76.4 dB
-        // at 4x against 40.3 dB at 1x, either side of the 45 dB bar. The other two are pins:
+        // DRIVE 0.7 (the default, gain 11.3) is the case the test's name describes: 72.4 dB
+        // at 4x against 32.9 dB at 1x, either side of the 45 dB bar. The other two are pins:
         // at DRIVE 0.6 (gain 2.5) the 1x path also clears the bar, and at DRIVE 1 (gain
         // 1000; V1 pinned 51.3 dB at 4x / 28.8 at 1x at gain 35) the 4x path misses it,
         // 40.6 dB at 4x / 26.8 at 1x, and the owner chose that top knowing the bar is missed.
@@ -222,13 +222,13 @@ class ValveTest {
         }
         val four6 = clarity(0.6f, true)
         val one6 = clarity(0.6f, false)
-        val four65 = clarity(0.65f, true)
-        val one65 = clarity(0.65f, false)
+        val four7 = clarity(0.7f, true)
+        val one7 = clarity(0.7f, false)
         val four10 = clarity(1f, true)
         val one10 = clarity(1f, false)
-        println("VALVE aliasing at 247 Hz: DRIVE 0.6 4x ${"%.1f".format(four6)} / 1x ${"%.1f".format(one6)} dB; DRIVE 0.65 4x ${"%.1f".format(four65)} / 1x ${"%.1f".format(one65)} dB; DRIVE 1 4x ${"%.1f".format(four10)} / 1x ${"%.1f".format(one10)} dB")
-        assertTrue(four65 >= 45.0, "energy between harmonics is only ${"%.1f".format(four65)} dB down at 4x, DRIVE 0.65")
-        assertTrue(one65 < 45.0, "the probe cannot see fold-back at DRIVE 0.65: 1x reads ${"%.1f".format(one65)} dB, over the bar")
+        println("VALVE aliasing at 247 Hz: DRIVE 0.6 4x ${"%.1f".format(four6)} / 1x ${"%.1f".format(one6)} dB; DRIVE 0.7 4x ${"%.1f".format(four7)} / 1x ${"%.1f".format(one7)} dB; DRIVE 1 4x ${"%.1f".format(four10)} / 1x ${"%.1f".format(one10)} dB")
+        assertTrue(four7 >= 45.0, "energy between harmonics is only ${"%.1f".format(four7)} dB down at 4x, DRIVE 0.7")
+        assertTrue(one7 < 45.0, "the probe cannot see fold-back at DRIVE 0.7: 1x reads ${"%.1f".format(one7)} dB, over the bar")
         assertTrue(four6 >= 45.0, "energy between harmonics is only ${"%.1f".format(four6)} dB down at 4x, DRIVE 0.6")
         assertTrue(one6 < four6 - 6.0, "the probe cannot see fold-back at DRIVE 0.6: 1x ${"%.1f".format(one6)} vs 4x ${"%.1f".format(four6)}")
         assertTrue(four10 >= measuredDrive1Clarity - 2.0, "DRIVE 1 at 4x fell to ${"%.1f".format(four10)} dB")
@@ -240,7 +240,7 @@ class ValveTest {
         // The 4x round trip is always on through Valve.process(snip, macros). V1's aliasing
         // test used to send the 4x side through the public entry for this reason and now
         // forces the overload, so this test carries the promise that the default path oversamples.
-        for (drive in listOf(0f, 0.3f, 0.65f, 1f)) {
+        for (drive in listOf(0f, 0.3f, 0.7f, 1f)) {
             val m = mapOf("DRIVE" to drive, "SAG" to 0.35f, "TONE" to 0.5f, "CAB" to 0.5f)
             assertContentEquals(
                 Valve.process(snare, m).samples,
