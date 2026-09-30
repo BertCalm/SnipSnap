@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.ln
@@ -116,4 +117,24 @@ internal object BoreMeasure {
         }
         return steadyFrom
     }
+
+    /**
+     * A reed's bite, in dB: the energy from [BITE_BAND_LOW_HZ] to [BITE_BAND_HIGH_HZ] against the
+     * fundamental's, over [seconds] of a *rendered* note from [fromSec] on (past the attack). Higher
+     * is buzzier. Measured on the render, not the raw loop, because the bite is an output stage
+     * ([Bore.biteGain]). A Goertzel sweep in 16 Hz steps, each summing +-8 Hz, tiles the band.
+     */
+    fun biteDb(snip: Snip, f0: Float, fromSec: Float = 0.55f, seconds: Float = 0.25f): Double {
+        val start = (fromSec * snip.sampleRate).toInt()
+        require(snip.frameCount - start >= (seconds * snip.sampleRate).toInt()) { "biteDb: the render ends before the window" }
+        val slice = Snip(snip.samples.copyOfRange(start, snip.frameCount), channels = 1, sampleRate = snip.sampleRate)
+        var band = 0.0
+        var hz = BITE_BAND_LOW_HZ
+        while (hz < BITE_BAND_HIGH_HZ) { band += PluckSpectra.toneEnergy(slice, hz, seconds); hz += 16f }
+        val fundamental = PluckSpectra.toneEnergy(slice, f0, seconds)
+        return 10 * log10(band / (fundamental + 1e-12) + 1e-18)
+    }
+
+    const val BITE_BAND_LOW_HZ = 1_000f
+    const val BITE_BAND_HIGH_HZ = 4_000f
 }
