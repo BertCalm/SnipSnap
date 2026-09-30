@@ -79,11 +79,13 @@ object Valve {
      * at gain 1000 whether SAG is up or not; the owner heard 1.7 % on a brass as clean.
      *
      * K is 3, the top of the range the spike could reach: the kick's level 60-160 ms
-     * after the hit falls only about 3 dB against SAG 0 (the spike aimed at 4-6 dB;
-     * a slower charge, not more depth, is the likely lever, unmeasured). Because the
-     * follower reads the tube's output, deep saturation (DRIVE above about 0.85) parks
-     * it near 1 and SAG becomes a level offset the peak match cancels; the owner
-     * heard it only at gain 35 and below.
+     * after the hit, re its first 20 ms, falls 2.2 dB against SAG 0 at DRIVE 0.6 (gain
+     * 2.5) and about 3 dB at gain 35 (the spike, DRIVE 1 on the V1 law); the spike aimed
+     * at 4-6 dB, and a slower charge, not more depth, is the likely lever, unmeasured.
+     * Because the follower reads the tube's output, at higher gain it sits near 1 for
+     * longer, so the dip shrinks toward a level offset the peak match cancels; that is
+     * not measured above gain 35, and the owner's confirmation listen checks it. The
+     * owner heard SAG only at gain 35 and below.
      */
     private const val SUPPLY_K = 3f
     private const val SUPPLY_ATTACK_SECONDS = 0.005f
@@ -239,12 +241,12 @@ object Valve {
      * CAB 0+ is transparent - and is fully in at 0.25 as a bright open-back
      * combo: cone thump +6 dB at 102 Hz, the open-back cancellation notch
      * -6.8 dB at 470 Hz, two cone-breakup resonances at 2.6 and 3.75 kHz, the
-     * voice coil rolling the top off from 5.5 kHz. It grows to a closed wall at 0.6
-     * (V1's: thump at 78 Hz, the notch filled in, the coil at 5.0 kHz) and on to a
-     * darker one at 1: the coil at 3.2 kHz with a second identical pole faded in
-     * over the last 0.4 of the knob ([WALL_FROM], [WALL_HZ]; shape). (The 110 Hz,
-     * 500 Hz, -9 dB and 5.8 kHz formula ends are the network's CAB 0 anchors, where
-     * it is bypassed.)
+     * voice coil rolling the top off from 5.5 kHz. The network grows to V1's speaker
+     * at 0.6 (coil 5.0 kHz, thump 90.8 Hz, the notch 428 Hz at -3.6 dB), whose thump
+     * and notch keep moving to 78 Hz and filled in at CAB 1, while the coil runs to
+     * 3.2 kHz with a second identical pole faded in over 0.6-1 ([WALL_FROM],
+     * [WALL_HZ]; shape). (The 110 Hz, 500 Hz, -9 dB and 5.8 kHz formula ends are the
+     * network's CAB 0 anchors, where it is bypassed.)
      */
     internal fun cabinet(buf: FloatArray, cab: Float, rate: Int) {
         if (cab <= 0f) return

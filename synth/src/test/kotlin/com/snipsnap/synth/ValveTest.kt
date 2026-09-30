@@ -28,7 +28,7 @@ class ValveTest {
     private val snare = Thump.render(ThumpVoice.SNARE)
     private val neutral = mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
 
-    /** The DRIVE 1 (gain 1000) steady-probe clarity at 4x, dB, as measured (Step 5); the aliasing test asserts it less 2 dB. */
+    /** The DRIVE 1 (gain 1000) steady-probe clarity at 4x, dB: the measured value; the aliasing test asserts it less 2 dB. */
     private val MEASURED_DRIVE_1_CLARITY = 40.6
 
     // ---------- helpers ----------
@@ -172,8 +172,8 @@ class ValveTest {
         // third-octave's share of its own 40 Hz-16 kHz energy, not absolute level: the
         // peak match's single gain is the RMS clause's to judge. The kick skips 8 bands
         // above 1.6 kHz it barely has (< 1e-6 of its energy); the snare skips none.
-        // All of these numbers are V1's: the V1.1 gain law, wall and supply leave the neutral
-        // point alone (DRIVE 0, SAG 0, CAB 0), and Task 2's oversampling gate changes them.
+        // These numbers are those of the always-4x render (V1's): the V1.1 gain law, wall and
+        // supply leave the neutral point alone (DRIVE 0, SAG 0, CAB 0).
         for ((name, dry, rmsBound) in listOf(Triple("kick", kick, 0.12), Triple("snare", snare, 0.44))) {
             val out = Valve.process(dry, neutral)
             assertEquals(dry.frameCount, out.frameCount, "$name changed length")
@@ -225,7 +225,8 @@ class ValveTest {
         val one10 = clarity(1f, false)
         println("VALVE aliasing at 247 Hz: DRIVE 0.6 4x ${"%.1f".format(four6)} / 1x ${"%.1f".format(one6)} dB; DRIVE 1 4x ${"%.1f".format(four10)} / 1x ${"%.1f".format(one10)} dB")
         assertTrue(four6 >= 45.0, "energy between harmonics is only ${"%.1f".format(four6)} dB down at 4x, DRIVE 0.6")
-        assertTrue(four10 >= MEASURED_DRIVE_1_CLARITY - 2.0, "DRIVE 1 at 4x fell to ${"%.1f".format(four10)} dB")
+        assertTrue(one6 < four6 - 6.0, "the probe cannot see fold-back at DRIVE 0.6: 1x ${"%.1f".format(one6)} vs 4x ${"%.1f".format(four6)}")
+        assertTrue(four10 >=MEASURED_DRIVE_1_CLARITY - 2.0, "DRIVE 1 at 4x fell to ${"%.1f".format(four10)} dB")
         assertTrue(one10 < four10 - 6.0, "the probe cannot see fold-back: 1x ${"%.1f".format(one10)} vs 4x ${"%.1f".format(four10)}")
     }
 
@@ -366,11 +367,11 @@ class ValveTest {
     @Test
     fun `SAG dips a driven sound and never leaves the rest point off zero`() {
         // The V1.1 supply sag is post-tube: y = t / (1 + SAG * 3 * env(|t|)), env a 5 ms /
-        // 120 ms follower of the tube's own output. Measured on the kick at DRIVE 0.6:
-        // the kick's level 60-160 ms after the hit, re its first 20 ms, falls by about
+        // 120 ms follower of the tube's own output. Measured on the kick at DRIVE 0.6 (gain
+        // 2.5): the kick's level 60-160 ms after the hit, re its first 20 ms, falls by about
         // 2.2 dB at SAG 1 against SAG 0 (spike: 2.19), and it ends with no DC step
-        // (spike: under 0.02 % of peak), which the V1 bias mechanism did not (0.8 %, and 3.6 %
-        // at DRIVE 1).
+        // (spike: under 0.02 % of peak), which the V1 bias mechanism did not (0.8 % at DRIVE
+        // 0.6, and 3.6 % at gain 35, the spike's kick at DRIVE 1 on the V1 law).
         fun level(x: FloatArray, from: Float, to: Float): Double =
             rms(x.copyOfRange((from * rate).toInt(), (to * rate).toInt()))
         fun dipDb(sag: Float): Double {
@@ -385,8 +386,14 @@ class ValveTest {
         assertTrue(d100 <= d0 - 1.5, "SAG 1 dipped the tail only ${"%.2f".format(d0 - d100)} dB")
         assertTrue(d25 > d50 && d50 > d100, "SAG is not monotonic: 0.25 $d25, 0.5 $d50, 1 $d100 dB")
         // The tube's own asymmetry leaves a step at gain 1000 whether SAG is up or not (1.7 % on
-        // the kick at SAG 0, DRIVE 1), so the claim is that SAG adds none: the V1 bias took the
-        // same kick from 0.06 % to 3.6 % at DRIVE 1 and would fail this.
+        // the kick at SAG 0, DRIVE 1), so the claim is that SAG adds none. Mutation check, with
+        // `stage` put back to V1's bias mechanism: the dip assertion above fails (SAG 1 dips the
+        // tail only 0.34 dB, -11.90 to -12.24) and so does this one at DRIVE 0.6 (gain 2.5: 0.005 %
+        // of peak at SAG 0, 0.775 % at SAG 1, limit 0.505 %). The same mutant takes the kick from
+        // 0.06 % to 3.57 % at gain 35 (DRIVE 0.7755, not in this loop; the spike's 0.06 % to
+        // 3.6 %) and fails the condition there too, but it PASSES it at gain 1000 (1.72 % at SAG
+        // 0, 0.002 % at SAG 1), so the DRIVE 1 case guards SAG adding a step to the tube's own,
+        // not the old mechanism.
         fun endStep(drive: Float, sag: Float): Double {
             val hot = Valve.process(kick, mapOf("DRIVE" to drive, "SAG" to sag, "TONE" to 0.5f, "CAB" to 0.5f)).samples
             val tail = hot.copyOfRange(hot.size - (0.010f * rate).toInt(), hot.size)
@@ -423,7 +430,10 @@ class ValveTest {
     fun `CAB 1 is a darker wall - noise centroid near 2050 Hz, falling steadily from CAB 0_6`() {
         // Spike: seeded white noise through the whole chain at DRIVE 0 / SAG 0 / TONE 0.5:
         // V1's wall (4500 Hz, one pole) 4480 Hz centroid and -3 dB at 5088 Hz; the chosen
-        // wall (3200 Hz, two poles) 2052 Hz centroid and -3 dB at 2934 Hz.
+        // wall (3200 Hz, two poles) 2052 Hz centroid and -3 dB at 2934 Hz. This test's own
+        // noise (seed 7, 0.5 s) measures 2005 Hz at CAB 1, 2.3 % under the spike's 2052 (another
+        // noise realisation), 3273 Hz at 0.8 and 4863 Hz at 0.6; the bound is the spike's
+        // figure within 10 %.
         val rnd = java.util.Random(7)
         val noise = Snip(FloatArray((0.5f * rate).toInt()) { (rnd.nextFloat() * 2f - 1f) * 0.9f }, 1, rate)
         fun c(cab: Float) = centroid(Valve.process(noise, mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to cab)).samples)
@@ -476,10 +486,11 @@ class ValveTest {
 
     @Test
     fun `below DRIVE 0_6, SAG 0 and CAB 0_6 the sound is V1's`() {
-        // Golden values captured from the V1 code (base 1a2ec180) in Step 1: the RMS and six
-        // samples of the kick and snare at DRIVE 0.6 / CAB 0.6, DRIVE 0.3 / CAB 0.25 and
-        // DRIVE 0.6 / CAB 0.5, all SAG 0 and TONE 0.5, forced through the 4x path (the
-        // gate of Task 2 does not exist yet, and is independent of it after).
+        // Golden values captured from the V1 code (base 1a2ec180): the RMS and six samples of
+        // the kick and snare at DRIVE 0.6 / CAB 0.6, DRIVE 0.3 / CAB 0.25, DRIVE 0.6 / CAB 0.5
+        // and DRIVE 0.6 / CAB 0.1 (the last pins the ramp below CAB 0.25, where the network is
+        // only partly in), all SAG 0 and TONE 0.5, forced through the 4x path so the pin does
+        // not depend on any oversampling gate.
         val goldens: List<Triple<String, Pair<Float, Float>, Pair<Double, List<Float>>>> = listOf(
             Triple("kick", 0.6f to 0.6f, 0.23071308447352024 to listOf(0.66134125f, -0.7810704f, -0.3686499f, -0.0011201216f, 0.009041333f, 0.0016381168f)),
             Triple("kick", 0.3f to 0.25f, 0.1926597508245963 to listOf(0.75100744f, -0.54861236f, -0.18609507f, 7.6583226E-4f, 0.00432172f, 7.611417E-4f)),
@@ -487,6 +498,8 @@ class ValveTest {
             Triple("snare", 0.6f to 0.6f, 0.13658699214066872 to listOf(0.14662017f, 0.20710678f, -0.05767708f, -0.0019851686f, -0.008956235f, 0.0014699006f)),
             Triple("snare", 0.3f to 0.25f, 0.09143330077535367 to listOf(0.05193938f, 0.114540525f, -0.025876775f, -5.715725E-4f, -0.0042426726f, 6.932373E-4f)),
             Triple("snare", 0.6f to 0.5f, 0.13423213247546018 to listOf(0.13764937f, 0.18671855f, -0.055957038f, -0.0018377537f, -0.008672879f, 0.0014205342f)),
+            Triple("kick", 0.6f to 0.1f, 0.2853043012622534 to listOf(0.801458f, -0.8432499f, -0.4571536f, 0.010008363f, 0.01318882f, 0.0021314775f)),
+            Triple("snare", 0.6f to 0.1f, 0.13940423546424763 to listOf(-0.28726712f, 0.5657891f, 0.0013478531f, 0.008655398f, -0.00674964f, 9.2908967E-4f)),
         )
         for ((name, dc, want) in goldens) {
             val dry = if (name == "kick") kick else snare
