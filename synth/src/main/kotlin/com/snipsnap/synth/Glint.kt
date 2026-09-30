@@ -366,14 +366,14 @@ object Glint {
             val t = i.toFloat() / rate
             val w = windowAt(phase.toFloat())
             val burst = w * sin(2.0 * PI * k[0] * phase).toFloat()
-            // Left uncorrected on purpose. A windowed sine has DC for any
-            // window that isn't symmetric about phase 0.5, and the saw ramp
-            // isn't: it integrates to a nonzero mean. Subtracting a constant
-            // would stop the window reaching exactly zero at the wrap - the
-            // property this file's class doc calls the whole engine - and the
-            // residual is small (a few percent of peak in the head window at
-            // BODY 1) and decays with the second burst's envelope; see
-            // `BODY carries a small, bounded DC` in GlintTest.
+            // Left uncorrected on purpose. The saw ramp isn't symmetric about
+            // phase 0.5, so a saw-windowed burst carries 1/(2πk) of DC per
+            // cycle: a few percent of peak in the head window on the path
+            // voices (`BODY carries a small, bounded DC` in GlintTest), and up
+            // to about 0.12 on VOWEL at the top of TUNE, where F1 pins to
+            // k = 1. It decays with the note. Subtracting a constant would
+            // stop the window reaching exactly zero at the wrap - the
+            // property this file's class doc calls the whole engine.
             val second = path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
             out[i] = amp.at(t) * burst + env2.at(t) * second
             phase += step

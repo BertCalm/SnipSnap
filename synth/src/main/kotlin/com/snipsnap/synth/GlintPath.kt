@@ -44,8 +44,7 @@ internal class GlintPath private constructor(
     /**
      * Writes the burst ratios at path position [x] into `out[0]` (main) and
      * `out[1]` (second burst): the one-shot's read, and the held note's
-     * onset. STEP reads `ladder[rung]` when [rung] ≥ 0 and otherwise rounds
-     * the continuous path to a whole harmonic ([heldHarmonic]). VOWEL ignores
+     * onset. STEP reads `ladder[rung]` and needs a [rung] ≥ 0. VOWEL ignores
      * [rung]: [x] walks the vowel line from BLOOM's start to PEAK's vowel,
      * and both bursts are that vowel's F1 and F2 in Hz over the note.
      */
@@ -55,11 +54,10 @@ internal class GlintPath private constructor(
             return
         }
         val continuous = (kBase * (kStart / kBase).pow(x)).coerceIn(Glint.K_MIN, Glint.K_MAX)
-        out[0] = when {
-            ladder != null && rung >= 0 -> ladder[rung.coerceAtMost(ladder.lastIndex)]
-            ladder != null -> heldHarmonic(continuous)
-            else -> continuous
-        }
+        out[0] = if (ladder != null) {
+            require(rung >= 0) { "STEP reads its ladder by rung; the held breath goes through breathRatios" }
+            ladder[rung.coerceAtMost(ladder.lastIndex)]
+        } else continuous
         out[1] = k2
     }
 
@@ -103,12 +101,14 @@ internal class GlintPath private constructor(
     }
 
     /**
-     * STEP with no rung clock: the landing replaces its nearest whole
-     * harmonic, and every other value rounds to one. So a breath that swings
-     * across PEAK steps from the harmonic just below straight to the landing
-     * (15 to 16.28, skipping 16), and a still pad rests on PEAK, not on the
-     * whole harmonic beside it. (Testing for an exact landing instead would
-     * leave a still pad, where every value maps to kBase, rounded off PEAK.)
+     * STEP's held breath, for [breathRatios] only: with no rung clock the
+     * landing replaces its nearest whole harmonic, and every other value
+     * rounds to one. So a breath that swings across PEAK steps from the
+     * harmonic just below straight to the landing (15 to 16.28, skipping 16),
+     * and a still pad rests on PEAK, not on the whole harmonic beside it. The
+     * landing replaces its nearest whole harmonic, not only an exact hit, so
+     * that a small non-zero swing still rests on PEAK: an exact-landing test
+     * would round such a swing onto the harmonic beside PEAK.
      */
     private fun heldHarmonic(continuous: Float): Float {
         val whole = Math.round(continuous)

@@ -5,6 +5,7 @@ import com.snipsnap.audio.Snip
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class GlintTest {
@@ -104,6 +105,11 @@ class GlintTest {
         val free = Glint.stepLadder(16.28f, 20.5f)
         assertEquals(16.28f, free.last(), 1e-4f)
         assertTrue(free.dropLast(1).all { it == Math.round(it).toFloat() })
+        // STEP reads its ladder by rung: the held breath goes through breathRatios, not through a rung of -1.
+        assertFailsWith<IllegalArgumentException> {
+            GlintPath.of(GlintVoice.STEP, Glint.defaults(GlintVoice.STEP), Glint.frequencyFor(GlintVoice.STEP, 0.5f))
+                .ratios(0.5f, -1, FloatArray(2))
+        }
     }
 
     @Test
@@ -128,46 +134,6 @@ class GlintTest {
                 assertEquals(kBase, k[0], 1e-4f, "$voice BLOOM $bloom does not land on PEAK")
             }
         }
-    }
-
-    @Test
-    fun `held STEP off the rung clock rests on PEAK, not on its nearest whole harmonic`() {
-        // The held breath has no rung clock: `ratios(x, -1, out)` rounds the
-        // continuous path to a whole harmonic - except at the landing, which
-        // must replace its nearest whole harmonic instead of being rounded
-        // away (it stays unrounded outside SNAP_FLOOR..SNAP_CEILING, for the
-        // reason SNAP_FLOOR's doc gives). Testing for an exact x == 0f would
-        // rest a still pad (BLOOM 0.5 maps every x to kBase) on 16 for a PEAK
-        // of 16.28.
-        val voice = GlintVoice.STEP
-        val macros = Glint.defaults(voice) + mapOf("PEAK" to 0.7f, "TUNE" to 0.5f)
-        val f0 = Glint.frequencyFor(voice, macros.getValue("TUNE"))
-        val kBase = Glint.ratioFor(voice, macros.getValue("TUNE"), macros.getValue("PEAK"), macros.getValue("FOLLOW"))
-        assertTrue(
-            kBase > Glint.SNAP_CEILING && kBase != Math.round(kBase).toFloat(),
-            "test setup expected an unrounded kBase outside the snap band, got $kBase",
-        )
-        val k = FloatArray(2)
-
-        // Still: BLOOM 0.5 has no path, so every x is PEAK - whichever side
-        // of it, and however small.
-        val still = GlintPath.of(voice, macros + ("BLOOM" to 0.5f), f0)
-        for (x in listOf(0.25f, -0.25f, 1e-6f)) {
-            still.ratios(x, -1, k)
-            assertEquals(kBase, k[0], 1e-6f, "BLOOM 0.5 at x = $x should rest on PEAK ($kBase), not on ${Math.round(kBase)}")
-        }
-
-        // Moving: BLOOM 1, a quarter of the way in from the start, plays a
-        // whole harmonic that is not the landing's own nearest one (about 20
-        // here, against 16).
-        val falling = GlintPath.of(voice, macros + ("BLOOM" to 1f), f0)
-        falling.ratios(0.25f, -1, k)
-        assertTrue(k[0] == Math.round(k[0]).toFloat(), "a moving held STEP plays whole harmonics, got ${k[0]}")
-        assertTrue(k[0] != Math.round(kBase).toFloat(), "BLOOM 1 at x = 0.25 should be off the landing's harmonic ${Math.round(kBase)}, got ${k[0]}")
-        assertTrue(
-            k[0] > kBase && k[0] < Glint.startRatio(kBase, 1f),
-            "BLOOM 1 at x = 0.25 should sit between PEAK ($kBase) and the start, got ${k[0]}",
-        )
     }
 
     @Test
