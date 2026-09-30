@@ -44,10 +44,18 @@ internal object BandDistance {
         return x.indices.sumOf { abs(x[it] - y[it]) }
     }
 
-    fun path(a: FloatArray, b: FloatArray, rate: Int, segments: Int = 4): Double {
+    /**
+     * [whole] of each of [segments] equal consecutive spans, in time order: how far apart the
+     * two are at the start of the note, through it, and at the end.
+     */
+    fun segmentDistances(a: FloatArray, b: FloatArray, rate: Int, segments: Int = 4): DoubleArray {
         val len = minOf(a.size, b.size) / segments
-        return (0 until segments).sumOf { s ->
+        return DoubleArray(segments) { s ->
             whole(a.copyOfRange(s * len, (s + 1) * len), b.copyOfRange(s * len, (s + 1) * len), rate)
-        } / segments
+        }
     }
+
+    /** The mean of [segmentDistances]. */
+    fun path(a: FloatArray, b: FloatArray, rate: Int, segments: Int = 4): Double =
+        segmentDistances(a, b, rate, segments).average()
 }
