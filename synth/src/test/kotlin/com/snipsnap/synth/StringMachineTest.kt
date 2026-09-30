@@ -25,12 +25,12 @@ class StringMachineTest {
     /** Engine, voice, name, and the ENSEMBLE macros the landing names: the whole table, written out once. */
     private data class Machine(val engine: String, val voice: String, val name: String, val ensemble: Map<String, Float>)
 
-    private val classic = mapOf("DEPTH" to 0.5f, "RATE" to 0.5f, "WIDTH" to 1f)
+    private val classic = mapOf("DEPTH" to 0.5f, "RATE" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)
     private val machines = listOf(
         Machine(VelvetPatch.ENGINE, "BRASS", "STRING MACHINE", classic),
-        Machine(VelvetPatch.ENGINE, "BRASS", "THIN STRINGS", mapOf("DEPTH" to 0.35f, "RATE" to 0.6f, "WIDTH" to 1f)),
+        Machine(VelvetPatch.ENGINE, "BRASS", "THIN STRINGS", mapOf("DEPTH" to 0.35f, "RATE" to 0.6f, "WIDTH" to 1f, "SECTION" to 1f)),
         Machine(ResinPatch.ENGINE, "BRASS", "WIDE STRINGS", classic),
-        Machine(ResinPatch.ENGINE, "BRASS", "DARK STRINGS", mapOf("DEPTH" to 0.6f, "RATE" to 0.4f, "WIDTH" to 1f)),
+        Machine(ResinPatch.ENGINE, "BRASS", "DARK STRINGS", mapOf("DEPTH" to 0.6f, "RATE" to 0.4f, "WIDTH" to 1f, "SECTION" to 1f)),
     )
 
     private fun patch(m: Machine): Patch = requireNotNull(Presets.byName(m.engine, m.voice, m.name)) { "${m.engine}/${m.voice}/${m.name} is not on the roster" }
@@ -57,8 +57,8 @@ class StringMachineTest {
             assertEquals(m.ensemble, chain.section("ensemble"), "${m.name}: ENSEMBLE macros")
             assertTrue(!chain.reverse, "${m.name}: the landing reversed the pad")
         }
-        // The chorus's own three macros: SECTION (the six-player voicing) is left off here, and absent from the key so the recipe stays as it was.
-        assertEquals(Ensemble.defaults() - "SECTION", classic, "the classic landing is ENSEMBLE's own defaults, or the KDoc's claim is stale")
+        // ENSEMBLE's own DEPTH, RATE and WIDTH, with its SECTION turned all the way up: the six players, not the chorus.
+        assertEquals(Ensemble.defaults() + ("SECTION" to 1f), classic, "the classic landing is ENSEMBLE's own defaults with the players, or the KDoc's claim is stale")
     }
 
     @Test
@@ -114,7 +114,7 @@ class StringMachineTest {
     }
 
     @Test
-    fun `a landing's fold is measured - what the phone loses is bounded and the pair is genuinely wide`() {
+    fun `a landing's fold is measured - what the phone loses is bounded and the pair is still a pair`() {
         val rows = machines.map { m ->
             val pad = PadRecipe(patch(m), landing(m)).render()
             m to FoldMeter.report(pad)
@@ -123,12 +123,14 @@ class StringMachineTest {
             "${m.name} ${"%.2f".format(r.lossDb)} dB (L/R %.2f, pump against the pair %.1f dB)".format(r.correlation, r.pumpDb)
         })
         for ((m, r) in rows) {
-            // Measured: -0.92 / -1.08 / -1.49 / -1.32 dB, L/R 0.29 / 0.47 / 0.04 / 0.26, pump 1.7 / 1.3 / 2.6 / 2.3 dB
-            // (STRING MACHINE / THIN / WIDE / DARK). The allowances sit just past the worst of each, so a preset that
-            // drifts into a worse fold fails here, next to the number it drifted from.
-            assertTrue(r.lossDb > -1.8, "${m.name}: the fold loses ${r.lossDb} dB, more than the measured -1.5 dB allows")
-            assertTrue(r.pumpDb < 3.0, "${m.name}: the fold pumps ${r.pumpDb} dB against its pair, past the measured 2.6 dB")
-            assertTrue(r.correlation < 0.6, "${m.name}: the pair is not wide: L/R ${r.correlation}")
+            // Measured with the six players: -0.38 / -1.09 / -0.60 / -0.45 dB, L/R 0.74 / 0.80 / 0.74 / 0.58, pump 0.6 / 0.3 / 0.5 / 1.3 dB
+            // (STRING MACHINE / THIN / WIDE / DARK). With the chorus it was -0.92 / -1.08 / -1.49 / -1.32 dB, L/R 0.29 / 0.47 / 0.04 / 0.26,
+            // pump 1.7 / 1.3 / 2.6 / 2.3 dB: the players fold more gently and the pair is narrower, which is what the L/R allowance now
+            // watches. The allowances sit just past the worst of each, so a preset that drifts into a worse fold fails here, next to the
+            // number it drifted from.
+            assertTrue(r.lossDb > -1.4, "${m.name}: the fold loses ${r.lossDb} dB, more than the measured -1.1 dB allows")
+            assertTrue(r.pumpDb < 1.8, "${m.name}: the fold pumps ${r.pumpDb} dB against its pair, past the measured 1.3 dB")
+            assertTrue(r.correlation < 0.85, "${m.name}: the pair is barely wider than mono: L/R ${r.correlation}")
         }
     }
 
