@@ -236,6 +236,15 @@ tasks.register<JavaExec>("generateEnsembleAudition") {
     args("${rootDir}/testkit/ensemble-audition")
 }
 
+tasks.register<JavaExec>("generateStringMachineAudition") {
+    group = "distribution"
+    description = "Render the four string-machine presets' gate (as landed, bare voice, control), manifest and listening page under testkit/stringmachine-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StringMachineAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/stringmachine-audition")
+}
+
 /** Render the SIREN audition clips, manifest and page under testkit/siren-audition/. See SirenAuditionGenerator. */
 tasks.register<JavaExec>("generateSirenAudition") {
     group = "distribution"

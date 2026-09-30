@@ -1431,6 +1431,45 @@ pairs ENSEMBLE with the rack's EQ per preset (DARK STRINGS a low shelf,
 THIN STRINGS a bass cut, every number a listening value), while route
 (a) takes it from the pad sheet's EQ chip.
 
+**PR-E2, as built (2026-09-30).** Four presets landed: VELVET BRASS
+STRING MACHINE and THIN STRINGS, RESIN BRASS WIDE STRINGS and DARK
+STRINGS, appended after each roster's twelve (so `--preset N` and every
+`.first()` keep their meaning), with the twelve-per-voice law amended to
+twelve and BRASS's fourteen. Three things differ from the sketch above,
+each measured or found in the tree rather than chosen. **The key is the
+macro values, not the name.** `Presets.landingFor(engine, voice, macros)`
+finds the factory preset whose every macro equals the sound's and returns
+its chain, because `UserPresets` refuses a factory name only at save time:
+a player's saved "STRING MACHINE" from before this change would be a
+second chip with the same label, and a name key would hand their different
+sound the ENSEMBLE. A moved slider lands dry, and a saved copy of the
+unmoved factory sound lands with the chain (same sound, same landing).
+**The EQ pairing is dropped.** The rack's EQ is three fixed bands (100 Hz
+shelf, 900 Hz bell, 8 kHz shelf) and these voices live between them: with
+the bass cut at 0.3 THIN STRINGS' 40-200 Hz band moved -0.9 dB against the
+same chain without it, and DARK STRINGS' air cut moved its top band -0.6 dB
+(a 900 Hz bell at 0.35 does move DARK STRINGS' 0.8-3 kHz band -3.4 dB, but
+that is a different pairing from the shelves the sketch named, and nobody has
+heard it). A chip that changes nothing you can hear lies about the sound, so
+the landings are ENSEMBLE alone
+and the presets differ in their source macros and in DEPTH and RATE
+(THIN STRINGS shallower and quicker, DARK STRINGS slower and deeper). **The
+presets are short decaying pads,** not a held section: a VELVET or RESIN
+one-shot has a fixed 3 ms attack and a decaying envelope of about a
+second at DECAY 0.85-0.9 (-20 dB by 0.24-0.36 s), which is what the
+engine is, and a pad that swells in and holds is ARCO's or a held-pad
+instrument's. Every macro value was chosen by rendering candidates and
+reading their length, brightness drift, root pitch and the fold's cost
+(landed fold -0.9 / -1.1 / -1.5 / -1.3 dB, L/R 0.29 / 0.47 / 0.04 / 0.26,
+pump against the pair 1.7 / 1.3 / 2.6 / 2.3 dB; the tuner reads all four
+as confidently and to within 4 cents of the dry voice), never by ear: they
+are candidates until the owner has heard the gate page. Consumers: SEND TO
+PAD and the panel's own preview (inside the render's own dispatcher, and
+the audition plays the mono fold), and the CLI's `--preset`; SPREAD, MAKE
+INSTRUMENT and DRONE TO LOOP still render the voice dry, as SIREN's SPREAD
+does with its ECHO. The preview gap the paragraph above names is closed
+for these four presets only; SIREN's ECHO still previews dry.
+
 **The ARCO landing** (rack §3): **dry**. The two landings that exist are
 stories an instrument tells about itself — a siren's onboard delay is
 part of the sound (`Siren.kt:120-125`), a tape flute is the addendum's

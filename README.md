@@ -243,6 +243,18 @@ cycles in the loop, so the wrap repeats to the bit. A tempo change re-slices
 and re-renders it, and a drone still rendering is silence on its own track,
 never a stall on the other five.
 
+The string machine is two halves, and the rack has the second: a saw stack
+under a filter is the source, and ENSEMBLE (below) is the chorus that makes
+it a section. VELVET BRASS's STRING MACHINE and THIN STRINGS and RESIN
+BRASS's WIDE STRINGS and DARK STRINGS are the source half, and they carry
+the other half with them — SEND TO PAD lands one with ENSEMBLE already in
+its recipe (stereo, regenerated bit for bit like any synth pad), the panel
+auditions it through the same chain, and `snipsnap synth VELVET BRASS
+--preset 13` writes the same stereo file. The chain follows the sound, not
+its name: move a slider and it is your sound and lands dry. They are short,
+decaying pads, about a second, because a VELVET or RESIN one-shot always
+decays; SPREAD, MAKE INSTRUMENT and DRONE TO LOOP still make them dry.
+
 TIDE is the West Coast engine, S9 of the roadmap, and RESIN's opposite:
 where the ladder cuts harmonics out of a rich wave, TIDE builds them into a
 plain one. A sine is phase-modulated (WARP — phase, not frequency, so the
