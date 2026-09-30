@@ -16,7 +16,15 @@ third-octave distance (0–2 scale):
 | swap one window for another | 0.10 – 0.22 |
 | one semitone of pitch | 0.61 |
 | move the formant one harmonic | 1.51 – 1.56 |
-| sweep down vs sweep up (same note) | 1.70 |
+| sweep down vs sweep up, both landing on the same PEAK (whole note) | 1.79 |
+
+The sweep row was first read as 1.70 from a probe whose up-sweep rested on a
+different formant than its down-sweep. In the engine both gestures settle on
+PEAK, so the two notes differ only in the approach, about 0.3 s of a 0.9 s note:
+1.79 over the whole note, 1.82 in its first quarter, 0.00 in its last (measured
+in Task 4, 2026-09-30; equal-quarter path form averages the approach with three
+near-identical quarters and reads 0.51, which is why this pair is gated whole-note
+plus first and last quarter).
 
 The window slot is nearly inert. What GLINT can do that is audible is *where*
 the formant sits (k) and *how it moves*. Josh named the priorities: **captured
@@ -224,13 +232,16 @@ kits are affected.
 - **Legacy decode:** each of the six old names round-trips through
   `fromJsonText` to the table above, with BLOOM remapped.
 - **Paths separate:** a test helper holds the probe's measure (4-segment,
-  energy-weighted third-octave L1, 4096 Hann frames tiled — *not* a single
-  `Fft.magnitudeSpectrum` call, which reads only its first 4096 samples).
+  energy-weighted third-octave L1, 4096-sample frames tiled, the FFT applying its
+  own Hann window — *not* a single `Fft.magnitudeSpectrum` call over the buffer,
+  which reads only its first 4096 samples).
   Same-run anchor = the saw window vs a triangle window at k = 8, both
   rendered by the helper itself (BOTTLE's window no longer exists in
   `Glint.kt`). Bar: ≥ 0.55 and
-  ≥ 2× anchor for SWEEP-up vs SWEEP-down, SWEEP vs STEP, and each adjacent
-  pair of whole vowels at the root.
+  ≥ 2× anchor for SWEEP-up vs SWEEP-down (whole note and first quarter; the last
+  quarter must sit within the anchor, because both land on PEAK), SWEEP vs STEP
+  (path form), and each adjacent pair of whole vowels at the root note (TUNE 0)
+  and at the default TUNE 0.5.
 - **Clicks:** k changes only at wraps, all four voices (the existing RATCHET
   guard, generalised).
 - **Held:** `requireSeam` passes for every voice at BLOOM 0.2, 0.5, 0.8 and

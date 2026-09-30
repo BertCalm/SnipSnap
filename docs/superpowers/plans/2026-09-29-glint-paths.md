@@ -839,6 +839,8 @@ git commit -m "Add VOWEL: GLINT's two bursts at mouth formants, PEAK choosing th
 
 ### Task 4: The paths separate by ear — measured
 
+**As built (controller rulings, 2026-09-30; the code below is the first draft):** the SWEEP up/down test measured 0.5075 in path form against the 0.55 bar, because both gestures land on PEAK and differ only during the roughly 0.3 s approach (equal quarters 1.815 / 0.208 / 0.006 / 0.000; whole note 1.7855). It now asserts the whole-note distance and the first quarter against the bar and that the last quarter sits within the same-run anchor (they land together). `BandDistance` gained `segmentDistances`, and `path` is its mean. The vowel pairs are measured at TUNE 0 (the spec's root) and at TUNE 0.5. See commit 13ce9fb9.
+
 **Files:**
 - Create: `synth/src/test/kotlin/com/snipsnap/synth/BandDistance.kt`
 - Create: `synth/src/test/kotlin/com/snipsnap/synth/GlintSeparationTest.kt`
