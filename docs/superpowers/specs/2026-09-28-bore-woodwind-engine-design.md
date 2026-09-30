@@ -1809,6 +1809,132 @@ render to the loudness target and hide it.
   the reed's bell, `LANDING_TAPE` (WOBBLE .1 against .2 is on the page), the pop.
 - **CPU:** Phase 0 measured a one-shot at 26-60 ms per second of audio and R1 has not re-measured it; a LOOP takes 0.15-0.43 s to render (it renders 3-5 s of steady stretch, four times, to converge the pitch).
 
+## R1, the reed's bite — 2026-09-30
+
+The first note back from the audition owner: *the SAX needs a bit more of the bite of a reed.* Nobody
+has listened to the answer either; every number below is a measurement of the rendered audio.
+
+**What bite was measured as.** The energy from 1 to 4 kHz against the fundamental's, in dB, on the
+finished render (`BoreMeasure.biteDb`; a Goertzel sweep in 16 Hz steps). The R1 reed at the default
+knobs read -24 -22 -19 -16 -15 dB at C3 G3 C4 G4 C5.
+
+**What was tried, on the raw loop.** The reed's bell (2500 Hz) doubled: +6 to +11 dB of bite, uneven
+across the register, and the biggest lever. The loop gain 0.95 to 0.975: it raises the raw level and
+helps the high notes, small elsewhere. The reflection table's slope: **nothing tonal** (the output is
+levelled, so only the raw level moves); it was dropped. A looser LIP: a modest +1 to +2 dB.
+
+**Why the bell did not ship in the loop.** A brighter bell keeps more of the upper modes alive in the
+pipe, and the LOOP step then has more corners where the held note does not repeat. A scan of 117 SAX
+corners (TUNE every second semitone, LIP and BREATH each at 0, 0.5 and 1, HOLD 1) counted the corners
+that do not close as a loop: **2** at the bell R1 shipped (2500 Hz), 7 at 3500, 10 at 4000, 16 at 5000.
+The bite is better made where it cannot reach the loop.
+
+**What shipped: a presence bell on the output.** `Bore.BITE_DB` (12 dB) at `BITE_HZ` (2 kHz, Q 0.7),
+for the reed voice only, eased to `BITE_TIGHT_SHARE` (0.4) of that in dB as LIP goes from 0 to 1, so a
+pinched reed stays mellow and a loose one buzzes (LIP already dropped the 2nd harmonic 8 dB the same
+way). It sits after the pipe, in `condition`, a linear filter: a periodic wave through it is still
+periodic. At the default knobs the bite reads -18.7 -16.4 -13.4 -10.5 -9.7 dB, **+5.3 to +5.6 dB at
+every one of the five notes**; at LIP 0.1 it reads -13 -11 -9 -8 -6, at LIP 0.9 -26 -25 -20 -14 -14.
+The audition renders four strengths of the same phrase (none, half, this, one and a half times) so the
+gain is a choice made by ear. It is an output radiation stage, not a model of the reed's buzz, and it
+may sound like an equaliser; the audition's first question is whether it does.
+
+**What it cost, said plainly.**
+
+- The same 117-corner scan with the bell: 3 corners do not close (the 2 R1 already had, plus one
+  marginal at 1.3e-3 against the bar of 1e-3, at D3 with LIP 0 and BREATH 0), and 11 of the rest are
+  over 2.5e-4 (7 before). The fuzz test's worst seam is 5.1e-4 (3.3e-4 before). The claims test's
+  bound for its 18 corners went **from a quarter of the bar to half**: its worst corner (LIP 0,
+  BREATH 1, C4) reads 2.8e-4, and the bell weights the top partials, where a loose, hard reed's
+  residual drift shows first. The loop still closes at every corner the tests and the fuzz visit; the
+  margin is 2x, not 4x.
+- **A limit R1 already had and did not know.** At 2 of the 117 corners (C3 with LIP 0.5 and BREATH 1;
+  G#3 with LIP 1 and BREATH 1) the LOOP does not close, seam 0.54 and 0.09. The pitch correction
+  converged to 0.000 cents, so the length is right; the stretch simply does not repeat 262 periods
+  later. The reed's amplitude there wanders slowly (about 0.5% over roughly 3 s), and the guess is the
+  slow relaxation of the reed's operating point (`SAX_BLOCKER_DIVISOR`'s trade-off); the guess was not
+  tested. The render throws rather than ship a click, and the phone has no way to reach it in R1 (no
+  picker entry, no scramble into the LOOP step); a caller of `Bore.render` at HOLD 1 and those knobs
+  will see the exception. R1's "70 corners, worst 1.8e-4" was true of the corners it visited.
+- The classifier reads brightness: GROWL crossed its SNARE line (`highRatio` 0.50 against 0.5) and
+  LOW HONK reached 0.49. Both lost tongue (LOW HONK CHIFF 0.5 to 0.35; GROWL CHIFF 0.5 to 0.35 and
+  BREATH 0.85 to 0.75, still a hard reed): now 0.45 and 0.46, BITE 0.46. The margin is 0.04, thin, and
+  it is a fact about the classifier's magnitude sums and not about the sound.
+- The LOOP's pitch correction is now adaptive: up to five passes, stopping when the measured length is
+  within 3e-7 of the wanted one (three passes left 4e-7 at 262 periods). This did not move the worst
+  seam; it is kept because it costs nothing when the first passes converge.
+- **The committed testkit was stale.** Regenerating `testkit/SnipSnap Bore Kit` from the unmodified
+  code changed 15 of its files, flute pads included, so it had not been rebuilt after R1's last engine
+  edits. It is regenerated here, from this change's code.
+
+**Verification.** `BoreTest`'s "the reed has bite, and a looser lip has more of it" (floors 2-3 dB under
+the measured -18.7 to -9.7, and a 9 dB LIP span) and "the bite bell is the reed's, eases as LIP
+tightens, and never touches the flute" (arithmetic on `biteBoostDb`). Each guard was broken alone and a
+test named it: the bell at 0 dB, the bell the same at every lip, the bell on the flute too. The full
+JVM suite passes.
+
+### Round 1.2: the rasp — 2026-09-30
+
+The bell shipped, and the owner heard all four strengths of it, STRONG (+18 dB) included, and the note
+came back: *still needs more bite ... buzzier and raspier.* A bell can only lift what the pipe already
+made; a reed's buzz is *new* harmonics. So the second step makes some.
+
+**What shipped: a soft clip after the pipe, on one-shots.** `Bore.raspBend`: `tanh(drive * (x + bias))`,
+in place, at the oversampled rate and ahead of the band limit (what it makes above the audio band is
+filtered, not folded back), before the presence bell. The wave is first scaled by its own
+loudest-200-ms level, so the drive is a fact about the knobs and not about how hard the loop ran (a
+sine at 0.01 and at 0.5 come out the same to within 1 dB). Small-signal gain is 1. The amount is the
+reed's looseness times its breath (`raspAmount`: 1 at LIP 0 and BREATH 1, `RASP_TIGHT_SHARE` 0.25 of it
+at the tightest lip, `RASP_SOFT_SHARE` 0.4 at the softest breath), the drive runs from 1 to
+`1 + RASP_DRIVE` (3), and the flute has none.
+
+**The bias was measured, not chosen.** A symmetric `tanh` makes odd harmonics only, a clarinet's hollow
+sound. On a sine at the default knobs' amount (0.475), a bias of 0.15 left the 2nd at -27 dB and the 3rd
+at -11.9; 0.4 gives -18.5 and -12.4 with the 4th at -22 and the 5th at -22; 0.8 turns it over (2nd -12.5,
+3rd -14.7). `RASP_BIAS` is 0.4. The bite band barely tells them apart (the numbers below moved by
+0.1 dB), so this is a fact about the harmonics and not about the bite metric.
+
+**What it did, rendered SAX.** Bite at C3 G3 C4 G4 C5 (dB, 1-4 kHz against the fundamental):
+
+| | C3 | G3 | C4 | G4 | C5 |
+|---|---|---|---|---|---|
+| R1, no bell | -24.0 | -22.5 | -18.7 | -15.5 | -14.7 |
+| the bell (last round) | -18.7 | -16.4 | -13.4 | -10.5 | -9.7 |
+| bell and rasp (now) | -9.5 | -7.4 | -5.4 | -3.4 | -2.6 |
+| now, LIP 0.1 | -5.5 | -3.2 | -1.3 | -0.5 | +0.4 |
+| now, LIP 0.9 | -16.5 | -15.4 | -11.7 | -7.3 | -6.5 |
+
+That is 7 to 9 dB over the bell, a little more at the bottom of the register than the top, and 12 to 15 over R1. The gain saturates: at
+a tenth of the amount it is already 5.6 dB (a tenth still bends a wave normalised to its own loudness),
+at the full amount 9, and at twice it 10.7, which is why the audition's ladder is a tenth, 0.4 and 1, not
+1, 1.5 and 2. With the bell off the rasp alone reads -15.8 -13.9 -11.4 -8.8 -8.4 (measured at the earlier bias of
+0.15), about 6 dB under the two together; the audition includes it to ask whether the bell is still wanted.
+
+**What it cost, said plainly.**
+
+- **No rasp in a LOOP.** The bend keeps a periodic wave periodic, but it flattens the tops and steepens
+  the edges, and an edge is where timing error shows: the same slow drift that a sine hides moves a
+  clipped wave's edge by a step. On the 142-corner SAX scan (the 117 grid and the fuzz set) the corners
+  that do not close as a LOOP went from 3 with no rasp to 9 at 0.15 of the amount, 10 at 0.3 and 11 at
+  0.6, and at the full amount the fuzz test's SAX corner (step 1, LIP .33, BREATH .23) read 2.2e-3
+  against the bar of 1e-3. A LOOP therefore carries the bell and no rasp, and closes exactly as merged
+  (the fuzz test's worst seam is unchanged at 5.06e-4). SOLO LOOP is less raspy than the one-shots it
+  is named after. A bent loop wants a crossfaded wrap, which is R2's.
+- **The classifier's margin, again.** All seven SAX one-shot presets still read PERC or LOOP; the closest
+  to the SNARE line are GROWL 0.47, LOW HONK 0.46 and BITE 0.45 (line 0.5), where the bell alone left
+  0.46, 0.45 and 0.46. HIGH STAB's attack-burst count rose from 5 to 7, with flatness 0.19 against a
+  CLAP's 0.35.
+- **It may sound like a fuzz pedal.** LIP 0.1 reads a bite of about -1 dB, the band as loud as the
+  fundamental. Nobody has heard it. The rasp constants (`RASP_DRIVE`, `RASP_BIAS`) are guesses waiting
+  for the audition's ladder.
+
+**Verification.** `BoreTest`: the rasp's harmonics on a sine (none at amount 0; the 2nd, 3rd and 4th over
+-22, -16 and -26 dB at 0.475; the same at two levels), its amount (loose and hard, never the flute's),
+and the bite floors moved to -12 -10 -8 -6 -5.5 dB. Each guard was broken alone and a test named it: no
+rasp on the reed (the floors and the amount test), no bias (the sine test), no level scaling (the floors
+and the sine test), the rasp on the flute (the amount test), the rasp in the LOOP (the LOOP claims test
+and the fuzz test).
+
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 
 `Bore.kt` verbatim from the spec (its pages 5–11) with one `.toFloat()`,

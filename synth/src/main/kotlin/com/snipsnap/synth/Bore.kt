@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -10,6 +11,7 @@ import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.tanh
 import kotlin.math.tanh
 import kotlin.random.Random
 
@@ -104,6 +106,54 @@ object Bore {
      */
     const val BELL_BREATH_LOW = 0.8f
     const val BELL_BREATH_HIGH = 1.3f
+
+    /**
+     * The reed's bite: a presence bell on what the horn radiates, outside the pipe. A reed's
+     * edge lives at 1-4 kHz, where the loop's one-pole bell (a low-pass) leaves the partials
+     * 15-25 dB under the fundamental. The bell is [BITE_DB] at [BITE_HZ] for the loosest lip,
+     * eased to [BITE_TIGHT_SHARE] of that in dB at the tightest, so a pinched reed stays
+     * mellow and a loose one buzzes (LIP already drops the 2nd harmonic 8 dB the same way).
+     *
+     * Outside the loop on purpose. The first try was a brighter in-loop bell (2500 -> 5000 Hz),
+     * which did add the bite and also woke the pipe's upper modes: 16 of 117 corners of a
+     * SAX scan no longer held a steady pitch to close as a LOOP (2 of 117 do at 2500). A
+     * linear filter after the loop cannot do that to it, and a periodic wave through one is
+     * still periodic - the LOOP's seam is unmoved.
+     */
+    const val BITE_HZ = 2_000f
+    const val BITE_Q = 0.7f
+    const val BITE_DB = 12f
+    const val BITE_TIGHT_SHARE = 0.4f
+
+    /**
+     * The reed's rasp: a soft clip on the output, before the presence bell. The bell can only lift
+     * what the pipe already made (STRONG, +18 dB, was the first listening note's answer: "still
+     * needs more bite ... buzzier and raspier"), and a reed's buzz is *new* harmonics - the reed
+     * beating against the lay. A memoryless bend, `tanh(drive * (x + bias))`, makes them from
+     * whatever wave it is given, and because it has no memory a periodic wave stays periodic: the
+     * LOOP still closes on the same whole periods. The bend is asymmetric ([RASP_BIAS]) so it
+     * makes the even harmonics as well as the odd, and it runs at the oversampled rate, ahead of
+     * the band limit, so what it makes above the audio band is filtered rather than folded back.
+     *
+     * The wave is scaled by its own loudest-200-ms level first, so the drive is a fact about the
+     * knobs and not about how hard the loop happened to be running. Its amount, 0..1, is the
+     * reed's looseness ([RASP_TIGHT_SHARE] of it at the tightest lip) times its breath
+     * ([RASP_SOFT_SHARE] at the softest): a loose, hard reed rasps, a pinched or soft one stays
+     * clean. The drive runs from 1 (a gentle bend) to 1 + [RASP_DRIVE].
+     *
+     * **One-shots only.** A LOOP carries the presence bell and no rasp. The bend keeps a periodic
+     * wave periodic, but it flattens the tops and steepens the edges, and an edge is where a
+     * timing error shows: the reed's slow drift over a two-second loop (see the design doc's
+     * "R1, the reed's bite") moves a sine's zero crossing by a hair and a clipped wave's edge by
+     * a step. Measured on the SAX scan (142 corners: the 117
+     * grid and the fuzz set), the corners that do not close as a LOOP went from 3 with no rasp
+     * to 9 at 0.15 of the amount and 11 at 0.6, worst seam past the bar at the fuzz corner.
+     * Closing a bent loop wants a crossfaded wrap, which is R2.
+     */
+    const val RASP_DRIVE = 3f
+    const val RASP_BIAS = 0.4f
+    const val RASP_TIGHT_SHARE = 0.25f
+    const val RASP_SOFT_SHARE = 0.4f
 
     /**
      * The cone's DC blocker sits at `f0 / this`. The blocker's phase lead is
@@ -329,8 +379,14 @@ object Bore {
     const val LOOP_WARMUP_SECONDS = 1.5f
     const val LOOP_WARMUP_PERIODS = 400
 
-    /** How many times the loop's pitch is corrected so its whole periods fill its whole frames. */
-    private const val LOOP_PASSES = 3
+    /**
+     * The most times the loop's pitch is corrected so its whole periods fill its whole frames, and
+     * how close to 1 the measured length over the wanted one must be to stop early. The measure
+     * settles to about 1e-7 (a hundred-thousandth of a cent); three passes left 4e-7 at 262
+     * periods, and the bite bell weights the top partials, where that is a visible seam.
+     */
+    private const val LOOP_PASSES = 5
+    private const val LOOP_CONVERGED = 3e-7
 
     /** Frames of steady stretch kept past the loop, so the long-lag measurement has samples to look at. */
     private const val LOOP_PAD_FRAMES = 2048
@@ -357,7 +413,7 @@ object Bore {
 
     fun defaults(voice: BoreVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
-    private fun settled(macros: Map<String, Float>, voice: BoreVoice): Map<String, Float> {
+    internal fun settled(macros: Map<String, Float>, voice: BoreVoice): Map<String, Float> {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         return m
@@ -424,6 +480,31 @@ object Bore {
         } else {
             REED_BELL_HZ * Dsp.lin(breath, BELL_BREATH_LOW, BELL_BREATH_HIGH)
         }
+
+    /** The presence bell's gain in dB: the reed voice's [BITE_DB], eased down to [BITE_TIGHT_SHARE] of it as LIP tightens. The flute has none. */
+    internal fun biteBoostDb(voice: BoreVoice, lip: Float): Float =
+        if (voice == BoreVoice.FLUTE) 0f else BITE_DB * Dsp.lin(lip, 1f, BITE_TIGHT_SHARE)
+
+    /** The rasp's amount, 0..1 ([RASP_DRIVE]): the reed's looseness times its breath. The flute has none. */
+    internal fun raspAmount(voice: BoreVoice, lip: Float, breath: Float): Float =
+        if (voice == BoreVoice.FLUTE) 0f else Dsp.lin(lip, 1f, RASP_TIGHT_SHARE) * Dsp.lin(breath, RASP_SOFT_SHARE, 1f)
+
+    /**
+     * The rasp bend, in place, on the wave at [rate] (the oversampled one). [amount] 0 leaves it
+     * alone; the small-signal gain is 1 at every amount, so the level stage after it sees a
+     * wave of the same size and only the shape changes.
+     */
+    internal fun raspBend(buf: FloatArray, rate: Int, amount: Float) {
+        if (amount <= 0.001f) return
+        val ref = Loudness.of(Snip(buf, channels = 1, sampleRate = rate))
+        if (ref <= 1e-6f) return
+        val drive = 1f + RASP_DRIVE * amount
+        val bias = RASP_BIAS * amount
+        val rest = tanh(drive * bias)
+        val inv = 1f / ref
+        val back = ref / drive
+        for (i in buf.indices) buf[i] = (tanh(drive * (buf[i] * inv + bias)) - rest) * back
+    }
 
     fun attackSeconds(chiff: Float): Float = Dsp.expMap(chiff, ATTACK_SWELL_SECONDS, ATTACK_TONGUE_SECONDS)
 
@@ -641,7 +722,8 @@ object Bore {
      * decimator, the DC removed twice. The level and the tail come after, on the
      * kept part ([finish]), so a LOOP's warm-up never counts in its loudness.
      */
-    private fun condition(raw: FloatArray, rate: Int): FloatArray {
+    private fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float): FloatArray {
+        raspBend(raw, rate, rasp)
         Tide.bandLimit(raw, rate)
         val out = Dsp.decimate(raw, RATE)
         var mean = 0.0
@@ -652,11 +734,16 @@ object Bore {
             val x = out[i] - m
             out[i] = x - hp.lp(x, OUTPUT_DC_HZ)
         }
+        if (biteDb > 0.05f) {
+            val bell = Dsp.Biquad()
+            bell.peaking(BITE_HZ, biteDb, BITE_Q)
+            for (i in out.indices) out[i] = bell.process(out[i])
+        }
         return out
     }
 
-    internal fun finish(raw: FloatArray, rate: Int): FloatArray {
-        val out = condition(raw, rate)
+    internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f): FloatArray {
+        val out = condition(raw, rate, biteDb, rasp)
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
         return out
@@ -762,12 +849,14 @@ object Bore {
         val wanted = plan.frames.toDouble() * over
         var tuned = tunedHz(voice, target).toDouble()
         var raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
-        repeat(LOOP_PASSES) {
-            val actual = measureLoopSamples(raw, warm * over, wanted, plan.periods)
-            tuned *= actual / wanted
+        for (pass in 1..LOOP_PASSES) {
+            val ratio = measureLoopSamples(raw, warm * over, wanted, plan.periods) / wanted
+            if (abs(ratio - 1.0) < LOOP_CONVERGED) break
+            tuned *= ratio
             raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
         }
-        val conditioned = condition(raw, RATE * over)
+        // No rasp in a LOOP ([RASP_DRIVE]): a bent wave has steep edges, and the reed's slow drift moves them.
+        val conditioned = condition(raw, RATE * over, biteBoostDb(voice, m.getValue("LIP")), 0f)
         // The check that means something: the kept stretch against itself one loop later. (The loop
         // played twice is tautologically periodic - it would pass whatever was in it.)
         val seam = Keys.seamError(conditioned.copyOfRange(warm, warm + plan.frames + SEAM_FRAMES), SEAM_FRAMES)
@@ -785,6 +874,8 @@ object Bore {
         if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
         val hz = tunedHz(voice, frequencyFor(voice, m.getValue("TUNE")))
         val rate = RATE * Dsp.OVERSAMPLE
-        return Snip(finish(blow(voice, hz, m, rate), rate), channels = 1, sampleRate = RATE)
+        val bite = biteBoostDb(voice, m.getValue("LIP"))
+        val rasp = raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH"))
+        return Snip(finish(blow(voice, hz, m, rate), rate, bite, rasp), channels = 1, sampleRate = RATE)
     }
 }

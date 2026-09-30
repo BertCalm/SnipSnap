@@ -1,12 +1,11 @@
-<title>Bore Audition</title>
+<title>Silk Audition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
 <style>
-  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md,
-     the same page the PLUCK, TINES, SIREN and FORK auditions wear. The scheme is
-     dark by design (light shells were cut), so this page commits to one
-     theme and paints every surface explicitly. */
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md.
+     The scheme is dark by design (light shells were cut), so this page
+     commits to one theme and paints every surface explicitly. */
   :root {
     --desk1: #0C0618;
     --desk2: #140B24;
@@ -108,7 +107,7 @@
 
   .transport {
     position: sticky;
-    top: env(safe-area-inset-top, 0px);
+    top: 0;
     z-index: 5;
     display: grid;
     grid-template-columns: 1fr auto;
@@ -255,7 +254,10 @@
   .clip {
     display: grid;
     grid-template-columns: 44px 1fr;
-    grid-template-areas: "pad meta" "pad desc" "pad chips";
+    grid-template-areas:
+      "pad meta"
+      "pad desc"
+      "pad chips";
     gap: 4px 10px;
     align-items: center;
     padding: 6px 4px;
@@ -378,9 +380,11 @@
   textarea::placeholder { color: var(--ink3); }
 
   .verdict { margin: 0 12px 12px; }
+  .verdict .voice-hd h2 { color: var(--title-ink); }
   .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
   .q + .q { border-top: 1px dashed var(--field-border); }
-  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
+  .q .ask { font-size: 19px; color: var(--ink); line-height: 1.25; }
+  .q .sub { font-size: 15px; color: var(--ink2); }
 
   .actions {
     display: grid;
@@ -440,8 +444,8 @@
 
 <div class="win">
   <div class="titlebar">
-    <span>Bore Audition</span>
-    <span class="tag">S19 GATE, ROUND 1 &middot; TWO VALVES, ONE PIPE</span>
+    <span>Silk Audition</span>
+    <span class="tag">PHASE 4 &middot; ALL FOUR VOICES, FIRST LISTEN</span>
   </div>
 
   <div class="transport lcd">
@@ -456,33 +460,40 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>BORE is a blown pipe, not a struck one: a valve (an air jet for FLUTE, a single reed for SAX) opens and shuts against a column of air whose length sets the pitch, and above a certain breath the note sustains itself for as long as the player blows. There is no sample and no oscillator underneath: the breath noise, the way the note starts, and the pitch pulling with the breath all come out of the same loop.</p>
-    <p><b>Nothing here has been heard by anyone yet.</b> Every constant was measured (speaking windows, pitch, onset, harmonics) and every preset was authored from those measurements, but the measurements can only say the loop speaks in tune, not that it sounds like a woodwind. That is this page's whole job. If the FLUTE reads as a clarinet, or the SAX as a buzzy synth lead, say so plainly: the constants marked &ldquo;listening&rdquo; in the source (breath noise, the chiff burst, the thump, the reed's bell) are guesses waiting for exactly that.</p>
-    <p><b>New in this round, and first below: the reed&rsquo;s rasp.</b> The last round added a presence bell to the SAX, and the answer was &ldquo;still needs more bite &mdash; buzzier and raspier&rdquo;. A bell can only lift what the pipe already makes, so this round adds a soft clip after the pipe that <i>makes</i> new harmonics: louder for a loose lip and a hard breath, gone from the flute, and not in the held LOOP (a bent wave has steep edges, and the loop&rsquo;s wrap cannot hide them). The first card plays the same SAX phrase five ways &mdash; MERGED (last round&rsquo;s reed), LIGHT, MEDIUM and FULL rasp, then FULL with the bell off &mdash; then the BITE, GROWL and HIGH STAB presets. Say which is right, and whether FULL reads as a reed or as a fuzz pedal. It is measured (about 9 dB more of 1&ndash;4 kHz than the merged reed at the default knobs), not heard.</p>
-    <p>First the kit as it lands on the MPC, then each voice's default, then BREATH, LIP, CHIFF and HOLD at both ends, then that voice's own eight presets, then the landing: the same note dry, with the TAPE recipe every one-shot pad lands with (WOBBLE .1), and with twice the wow. The tape is the rack's, not the engine's; the question is whether it earns its place in the recipe. Known limits, so you do not have to find them: SAX speaks slowly below about C4 (a third of a second to full amplitude at C3), and the top step of HOLD is a seamless two-second LOOP with no vibrato and no breath noise. Mark each KEEP, MEH or CUT. A CUT on a knob end means that end goes too far.</p>
+    <p>None of SILK's four voices has actually been heard before this page: every macro default in Silk.kt is still an unverified placeholder, and phases 1b/2/3 each shipped with their own listening gate disclosed as open, not closed. This page closes all four at once.</p>
+    <p>Each voice gets the same shared sweep (BODY/DAMP/PICK/STRIKE/TUNE/INFLECT - the shape every voice carries) plus its own named extremes: OUD's COURSE/SLIDE (and the risha tick near the bridge), GUZHENG's STIFF/PRESS, SANTUR's COURSE/WASH, SHAMISEN's SAWARI/SLAP.</p>
+    <p>No presets are on this page. Presets get written after your verdict, from whatever this page confirms or corrects - not before.</p>
   </div>
 
-  <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
+  <div id="voices"></div>
 
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>FOUR VOICES &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <label class="ask" for="q_voices">1 &middot; Does FLUTE read as a flute and SAX as a reed instrument, or only as a tone with a breath on it? Which of the two is closer, and what is it missing?</label>
-      <textarea id="q_voices" placeholder="&hellip;"></textarea>
+      <div class="ask">1 &middot; OUD: does COURSE/SLIDE read as an oud, and is the risha tick audible near the bridge?</div>
+      <textarea id="q_oud" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_knobs">2 &middot; The knobs: which end of BREATH, LIP, CHIFF or HOLD goes too far, or not far enough? Is the breath noise too little or too much? Are the defaults where you would start?</label>
-      <textarea id="q_knobs" placeholder="&hellip;"></textarea>
+      <div class="ask">2 &middot; GUZHENG: does STIFF do anything you can hear, and does PRESS's bend feel right?</div>
+      <textarea id="q_guzheng" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_landing">3 &middot; The landing: does the TAPE recipe make it the tape-flute story, or is it only wobble? Dry, WOBBLE .1 or WOBBLE .2 &mdash; and does the LOOP wrap without a click when the page's REPEAT is on?</label>
-      <textarea id="q_landing" placeholder="&hellip;"></textarea>
+      <div class="ask">3 &middot; SANTUR: does WASH's sympathetic bank read as a santur, and is the mallet (PICK) range convincing?</div>
+      <textarea id="q_santur" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_else">Anything else</label>
+      <div class="ask">4 &middot; SHAMISEN: does SAWARI buzz correctly, and does SLAP's skin strike balance against the string?</div>
+      <textarea id="q_shamisen" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <div class="ask">5 &middot; The shared shape (BODY/DAMP/PICK/STRIKE) - any voice where it reads wrong?</div>
+      <textarea id="q_shared" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <div class="ask">Anything else</div>
       <textarea id="q_else" placeholder="&hellip;"></textarea>
     </div>
     <div class="actions">
@@ -492,9 +503,8 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generateBoreAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
-    THE PRESETS ARE MEASURED, NOT HEARD &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+    RENDERED BY generateSilkAudition &middot; PHASE 4 &middot; 16-BIT 44.1 KHZ &middot;
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE SIX ANSWERS.
   </div>
 </div>
 
@@ -502,21 +512,62 @@
 (function () {
   'use strict';
 
-  // Non-ASCII glyphs are escaped so the page reads the same whatever
-  // charset a host serves it under.
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
-  // The clip list is the generator's manifest.json, published beside this
-  // page - one list, written where the clips are rendered.
-  var VOICES = [];
+  var SHARED_GROUP = { label: 'SHAPE EVERY VOICE CARRIES', clips: [
+    ['default', 'DEFAULT', 'as it ships today'],
+    ['body_0', 'BODY 0', 'the string alone, no body table'],
+    ['body_1', 'BODY 1', 'the body table at its ceiling'],
+    ['damp_0', 'DAMP 0', 'rings out'],
+    ['damp_1', 'DAMP 1', 'the dead end'],
+    ['pick_0', 'PICK 0', 'the darkest excitation'],
+    ['pick_1', 'PICK 1', 'the brightest excitation'],
+    ['strike_bridge', 'STRIKE BRIDGE', 'excited near the bridge'],
+    ['strike_centre', 'STRIKE CENTRE', 'excited at the middle'],
+    ['tune_root', 'TUNE ROOT', "SCALE's own bottom degree"],
+    ['tune_top', 'TUNE TOP', "SCALE's own span, two periods up"],
+    ['inflect_low', 'INFLECT LOW', '-50 cents off the snapped degree'],
+    ['inflect_high', 'INFLECT HIGH', '+50 cents off the snapped degree']
+  ]};
 
-  var REACTIONS = [
-    { v: 'keep', cls: 'closer', g: String.fromCharCode(0x25B2), t: 'KEEP' },
-    { v: 'meh',  cls: 'same',   g: '=', t: 'MEH' },
-    { v: 'cut',  cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'CUT' }
+  var OUD_GROUP = { label: 'COURSE AND SLIDE', key: true, clips: [
+    ['course_0', 'COURSE 0', 'the pair tuned in unison'],
+    ['course_1', 'COURSE 1', 'the pair spread wide'],
+    ['slide_0', 'SLIDE 0', 'no glide in'],
+    ['slide_1', 'SLIDE 1', 'the full glide from a degree below'],
+    ['slide_1_strike_bridge', 'SLIDE 1 + STRIKE BRIDGE', 'the glide with the risha tick where it should be audible']
+  ]};
+  var GUZHENG_GROUP = { label: 'STIFF AND PRESS', key: true, clips: [
+    ['stiff_0', 'STIFF 0', 'no dispersion'],
+    ['stiff_1', 'STIFF 1', "the coefficient's own ceiling"],
+    ['press_0', 'PRESS 0', 'the plucked degree, unbent'],
+    ['press_1', 'PRESS 1', 'bent a snapped minor third up']
+  ]};
+  var SANTUR_GROUP = { label: 'COURSE AND WASH', key: true, clips: [
+    ['course_0', 'COURSE 0', 'the four loops in unison'],
+    ['course_1', 'COURSE 1', 'the four loops spread wide'],
+    ['wash_0', 'WASH 0', 'no sympathetic bank'],
+    ['wash_1', 'WASH 1', "the bank at its loudest and longest t60"]
+  ]};
+  var SHAMISEN_GROUP = { label: 'SAWARI AND SLAP', key: true, clips: [
+    ['sawari_0', 'SAWARI 0', 'the plain string, no buzz'],
+    ['sawari_1', 'SAWARI 1', 'the fold-back at its own ceiling'],
+    ['slap_0', 'SLAP 0', 'the string alone'],
+    ['slap_1', 'SLAP 1', "the bachi/skin layer at its loudest"]
+  ]};
+
+  var VOICES = [
+    { id: 'OUD', display: 'OUD', folder: 'OUD', note: 'the pad default', root: 'C2', macros: 'COURSE .20' + DOT + 'SLIDE 0', groups: [SHARED_GROUP, OUD_GROUP] },
+    { id: 'GUZHENG', display: 'GUZHENG', folder: 'GUZHENG', note: 'the pad default', root: 'D2', macros: 'STIFF (anchor B)' + DOT + 'PRESS 0', groups: [SHARED_GROUP, GUZHENG_GROUP] },
+    { id: 'SANTUR', display: 'SANTUR', folder: 'SANTUR', note: 'the pad default', root: 'E3', macros: 'COURSE .05' + DOT + 'WASH .20', groups: [SHARED_GROUP, SANTUR_GROUP] },
+    { id: 'SHAMISEN', display: 'SHAMISEN', folder: 'SHAMISEN', note: 'the pad default', root: 'C3', macros: 'SAWARI 0' + DOT + 'SLAP .20', groups: [SHARED_GROUP, SHAMISEN_GROUP] }
   ];
 
-  var QUESTIONS = ['q_voices', 'q_knobs', 'q_landing', 'q_else'];
+  var REACTIONS = [
+    { v: 'closer', cls: 'closer', g: String.fromCharCode(0x25B2), t: 'CLOSER' },
+    { v: 'same',   cls: 'same',   g: '=', t: 'SAME' },
+    { v: 'worse',  cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'WORSE' }
+  ];
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, cls, text) {
@@ -526,86 +577,80 @@
     return n;
   };
 
-  // ---------- state ----------
-  var state = { overall: { q_voices: '', q_knobs: '', q_landing: '', q_else: '' } };
+  var state = { overall: { q_oud: '', q_guzheng: '', q_santur: '', q_shamisen: '', q_shared: '', q_else: '' } };
+  VOICES.forEach(function (v) { state[v.id] = { reactions: {}, note: '' }; });
 
-  // ---------- build ----------
   var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
                  '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
 
-  function build() {
-    var host = $('voices');
-    host.textContent = '';
-    VOICES.forEach(function (v) {
-      state[v.id] = state[v.id] || { reactions: {}, note: '' };
-      var card = el('section', 'voice');
-      card.id = 'voice-' + v.id;
+  var host = $('voices');
+  VOICES.forEach(function (v) {
+    var card = el('section', 'voice');
+    card.id = 'voice-' + v.id;
 
-      var hd = el('div', 'voice-hd');
-      var h2 = el('h2', null, v.display);
-      var note = el('div', 'body-note', v.body);
-      var ro = el('div', 'readout');
-      (v.readout || []).forEach(function (r) { ro.appendChild(el('span', null, r)); });
-      hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
-      card.appendChild(hd);
+    var hd = el('div', 'voice-hd');
+    var h2 = el('h2', null, v.display);
+    var note = el('div', 'body-note', v.note);
+    var ro = el('div', 'readout');
+    ro.innerHTML = '<span>ROOT <b>' + v.root + '</b></span><span>' + v.macros + '</span>';
+    hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
+    card.appendChild(hd);
 
-      v.groups.forEach(function (g) {
-        var grp = el('div', 'group' + (g.key ? ' key' : ''));
-        grp.appendChild(el('div', 'group-hd', g.label));
-        g.clips.forEach(function (c) {
-          var fid = c[0], name = c[1], desc = c[2];
-          var row = el('div', 'clip');
-          row.id = 'clip-' + v.id + '-' + fid;
+    v.groups.forEach(function (g) {
+      var grp = el('div', 'group' + (g.key ? ' key' : ''));
+      grp.appendChild(el('div', 'group-hd', g.label));
+      g.clips.forEach(function (c) {
+        var fid = c[0], name = c[1], desc = c[2];
+        var row = el('div', 'clip');
+        row.id = 'clip-' + v.id + '-' + fid;
 
-          var pad = el('button', 'raised pad');
-          pad.type = 'button';
-          pad.setAttribute('aria-pressed', 'false');
-          pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
-          pad.innerHTML = PLAY_SVG;
-          pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
-          row.appendChild(pad);
+        var pad = el('button', 'raised pad');
+        pad.type = 'button';
+        pad.setAttribute('aria-pressed', 'false');
+        pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
+        pad.innerHTML = PLAY_SVG;
+        pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
+        row.appendChild(pad);
 
-          var meta = el('div', 'meta');
-          meta.appendChild(el('span', 'name', name));
-          var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
-          row.appendChild(meta);
-          row.appendChild(el('div', 'desc', desc));
+        var meta = el('div', 'meta');
+        meta.appendChild(el('span', 'name', name));
+        var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
+        row.appendChild(meta);
+        row.appendChild(el('div', 'desc', desc));
 
-          var chips = el('div', 'chips');
-          REACTIONS.forEach(function (r) {
-            var chip = el('button', 'chip ' + r.cls);
-            chip.type = 'button';
-            chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
-            chip.setAttribute('aria-pressed', 'false');
-            chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase());
-            chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
-            chip.addEventListener('click', function () { react(v.id, fid, r.v); });
-            chips.appendChild(chip);
-          });
-          row.appendChild(chips);
-          grp.appendChild(row);
+        var chips = el('div', 'chips');
+        REACTIONS.forEach(function (r) {
+          var chip = el('button', 'chip ' + r.cls);
+          chip.type = 'button';
+          chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
+          chip.setAttribute('aria-pressed', 'false');
+          chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase() + ' to the instrument');
+          chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
+          chip.addEventListener('click', function () { react(v.id, fid, r.v); });
+          chips.appendChild(chip);
         });
-        card.appendChild(grp);
+        row.appendChild(chips);
+        grp.appendChild(row);
       });
-
-      var notes = el('div', 'notes');
-      var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
-      var ta = el('textarea');
-      ta.id = 'note-' + v.id;
-      ta.placeholder = 'what it sounds like, in your words';
-      lab.htmlFor = ta.id;
-      ta.addEventListener('input', function () {
-        state[v.id].note = ta.value;
-        debounce(v.id, function () { persist(v.id); });
-      });
-      notes.appendChild(lab); notes.appendChild(ta);
-      card.appendChild(notes);
-
-      host.appendChild(card);
+      card.appendChild(grp);
     });
-  }
 
-  // ---------- audio ----------
+    var notes = el('div', 'notes');
+    var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
+    var ta = el('textarea');
+    ta.id = 'note-' + v.id;
+    ta.placeholder = 'what it sounds like, in your words';
+    lab.htmlFor = ta.id;
+    ta.addEventListener('input', function () {
+      state[v.id].note = ta.value;
+      debounce(v.id, function () { persist(v.id); });
+    });
+    notes.appendChild(lab); notes.appendChild(ta);
+    card.appendChild(notes);
+
+    host.appendChild(card);
+  });
+
   var audio = null, current = null, repeat = false;
   var nowEl = $('now');
 
@@ -623,8 +668,7 @@
     });
     audio.addEventListener('error', function () {
       setPlaying(null);
-      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
-      nowEl.classList.remove('idle');
+      showTrouble('COULD NOT LOAD THAT CLIP', mediaErr(audio));
     });
     audio.addEventListener('loadedmetadata', function () {
       if (current && current.row.durEl && isFinite(audio.duration)) {
@@ -659,17 +703,46 @@
       return;
     }
     a.pause();
-    a.src = voice.id + '/' + fid + '.wav';
-    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
-    a.play().catch(function () { setPlaying(null); });
+    a.src = (voice.folder || voice.id) + '/' + fid + '.wav';
+    var next = { voice: voice, fid: fid, name: name, pad: pad, row: row };
+    setPlaying(next);
+    a.play().catch(function (e) {
+      if (current !== next) return;
+      setPlaying(null);
+      showTrouble('PLAY BLOCKED', errName(e));
+    });
   }
+
+  var MEDIA_ERR = ['', 'ABORTED', 'NETWORK', 'DECODE', 'NOT SUPPORTED'];
+  function mediaErr(a) {
+    var e = a.error;
+    if (!e) return 'NO ERROR CODE';
+    return (MEDIA_ERR[e.code] || 'CODE ' + e.code) + (e.message ? DOT + e.message.toUpperCase() : '');
+  }
+  function errName(e) {
+    var n = (e && e.name) || 'no reason given';
+    return n.replace(/([a-z])([A-Z])/g, '$1 $2').toUpperCase();
+  }
+  function showTrouble(what, why) {
+    nowEl.textContent = what + DOT + why;
+    nowEl.classList.remove('idle');
+  }
+
+  (function probe() {
+    var v = VOICES[0], first = v.groups[0].clips[0][0];
+    var p = new Audio();
+    p.preload = 'metadata';
+    p.addEventListener('error', function () {
+      if (!current) showTrouble('CLIPS UNREACHABLE', mediaErr(p) + DOT + 'TAP A PAD ANYWAY');
+    });
+    p.src = (v.folder || v.id) + '/' + first + '.wav';
+  })();
 
   $('repeat').addEventListener('click', function () {
     repeat = !repeat;
     this.setAttribute('aria-pressed', repeat ? 'true' : 'false');
   });
 
-  // ---------- reactions ----------
   function react(voiceId, fid, value) {
     var cur = state[voiceId].reactions[fid];
     var next = cur === value ? null : value;
@@ -686,9 +759,6 @@
     });
   }
 
-  // A field being typed into wins over anything arriving from the store:
-  // state takes the live value instead, so the next save cannot re-save
-  // stale text over what was just typed.
   function paintVoice(voiceId) {
     var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
     if (voice) voice.groups.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
@@ -699,7 +769,7 @@
   }
 
   function paintOverall() {
-    QUESTIONS.forEach(function (k) {
+    ['q_oud', 'q_guzheng', 'q_santur', 'q_shamisen', 'q_shared', 'q_else'].forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
       if (ta === document.activeElement) { state.overall[k] = ta.value; }
@@ -707,9 +777,7 @@
     });
   }
 
-  // The answers keep a local draft as they are typed; only SAVE VERDICT
-  // writes them to the shared store.
-  QUESTIONS.forEach(function (k) {
+  ['q_oud', 'q_guzheng', 'q_santur', 'q_shamisen', 'q_shared', 'q_else'].forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
@@ -717,7 +785,6 @@
   });
   $('save').addEventListener('click', function () { persist('overall'); });
 
-  // ---------- persistence ----------
   var db = null;
   var statusEl = $('status'), statusV = $('statusv');
   var timers = {}, queues = {};
@@ -734,29 +801,23 @@
   }
 
   function snapshotOf(key) {
-    var data;
-    if (key === 'overall') {
-      data = {};
-      QUESTIONS.forEach(function (k) { data[k] = state.overall[k]; });
-    } else {
-      data = { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
-    }
+    var data = key === 'overall'
+      ? { q_oud: state.overall.q_oud, q_guzheng: state.overall.q_guzheng, q_santur: state.overall.q_santur, q_shamisen: state.overall.q_shamisen, q_shared: state.overall.q_shared, q_else: state.overall.q_else }
+      : { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
     data.savedAt = new Date().toISOString();
     return data;
   }
 
-  // Every round's verdicts live under their own prefix, so a later round's
-  // page never opens pre-filled with this one's notes and saves over them.
-  var PHASE = 'bore_r1';
+  var PHASE = 'p4';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
-    try { localStorage.setItem('bore-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+    try { localStorage.setItem('silk-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
   }
 
   function loadLocal(key) {
     try {
-      var raw = localStorage.getItem('bore-audition:' + PHASE + ':' + key);
+      var raw = localStorage.getItem('silk-audition:' + PHASE + ':' + key);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
@@ -764,7 +825,9 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      QUESTIONS.forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
+      ['q_oud', 'q_guzheng', 'q_santur', 'q_shamisen', 'q_shared', 'q_else'].forEach(function (k) {
+        if (typeof data[k] === 'string') state.overall[k] = data[k];
+      });
       paintOverall();
     } else if (state[key]) {
       if (data.reactions && typeof data.reactions === 'object') state[key].reactions = Object.assign({}, data.reactions);
@@ -789,9 +852,11 @@
     return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
 
-  var KEYS = ['overall'];
+  var KEYS = VOICES.map(function (v) { return v.id; }).concat(['overall']);
 
-  function connect() {
+  KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
+
+  (function connect() {
     var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
     Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
       .then(function (ns) {
@@ -803,24 +868,6 @@
         })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
       })
       .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
-  }
-
-  // The clip list first: every card, and every saved verdict's key, comes
-  // from it. Then the local copy so the page is never empty, then the
-  // shared store wins.
-  fetch('manifest.json')
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (m) {
-      VOICES = m.voices || [];
-      build();
-      KEYS = VOICES.map(function (v) { return v.id; }).concat(['overall']);
-      KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
-      connect();
-    })
-    .catch(function () {
-      $('voices').innerHTML = '<div class="guide lcd"><p>THE CLIP LIST DID NOT LOAD. RE-RENDER WITH generateBoreAudition.</p></div>';
-      KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
-      connect();
-    });
+  })();
 })();
 </script>

@@ -453,7 +453,15 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { engine.render(voice, macros) }
+            val rendered = withContext(Dispatchers.Default) {
+                val dry = engine.render(voice, macros)
+                // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
+                // STRINGS / DARK STRINGS) previews through the ENSEMBLE it will land
+                // with, so the audition is the pad and not the bare saw stack. Every
+                // other sound, SIREN's echo included, previews dry as before. Inside
+                // Default with the render: six sines a frame is not main-thread work.
+                Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
+            }
             snip = rendered
             if (touched) audition(rendered)
         } catch (e: CancellationException) {
@@ -493,9 +501,13 @@ fun SynthScreen(
                 val patch = engine.buildPatch(name, voice, macros)
                 // A SIREN one-shot carries the rack's ECHO in its recipe and
                 // renders through it; a SIREN LOOP lands dry, since the
-                // SURFACE's echo is its own (Siren.landingChain). Every other
-                // engine lands with no chain, exactly as before.
-                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else null
+                // SURFACE's echo is its own (Siren.landingChain). An unmoved
+                // string machine (VELVET / RESIN BRASS) carries its ENSEMBLE the
+                // same way, found from the macros so a moved slider or a
+                // player's own sound under a factory name lands dry
+                // (Presets.landingFor). Every other sound lands with no chain,
+                // exactly as before.
+                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
                 val padRecipe = PadRecipe(patch = patch, fx = fx)
                 val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)

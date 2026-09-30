@@ -67,6 +67,16 @@ tasks.register<JavaExec>("generatePluckAudition") {
     args("${rootDir}/testkit/pluck-audition")
 }
 
+/** Render the SILK Phase 4 audition clips and page under testkit/silk-audition/. See SilkAuditionGenerator. */
+tasks.register<JavaExec>("generateSilkAudition") {
+    group = "distribution"
+    description = "Render the SILK Phase 4 audition clips and listening page under testkit/silk-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SilkAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/silk-audition")
+}
+
 /** Render the GLINT Phase 1 audition clips and page under testkit/glint-audition/. See GlintAuditionGenerator. */
 tasks.register<JavaExec>("generateGlintAudition") {
     group = "distribution"
@@ -236,6 +246,15 @@ tasks.register<JavaExec>("generateEnsembleAudition") {
     args("${rootDir}/testkit/ensemble-audition")
 }
 
+tasks.register<JavaExec>("generateStringMachineAudition") {
+    group = "distribution"
+    description = "Render the four string-machine presets' gate (as landed, bare voice, control), manifest and listening page under testkit/stringmachine-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StringMachineAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/stringmachine-audition")
+}
+
 /** Render the SIREN audition clips, manifest and page under testkit/siren-audition/. See SirenAuditionGenerator. */
 tasks.register<JavaExec>("generateSirenAudition") {
     group = "distribution"
@@ -311,4 +330,14 @@ tasks.register<JavaExec>("generateTerraAudition") {
     mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/terra-audition")
+}
+
+/** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */
+tasks.register<JavaExec>("generateValveAudition") {
+    group = "distribution"
+    description = "Render the VALVE V1 listening clips and manifest under testkit/valve-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ValveAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/valve-audition")
 }
