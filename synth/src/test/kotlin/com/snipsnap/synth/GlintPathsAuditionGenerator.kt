@@ -13,10 +13,10 @@ import java.io.File
 object GlintPathsAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
-        val dir = File(args.firstOrNull() ?: "testkit/glint-paths-audition").apply { mkdirs() }
+        val dir = File(args.firstOrNull() ?: "../testkit/glint-paths-audition").apply { mkdirs() }
         var written = 0
         fun write(name: String, snip: Snip) {
-            WavWriter.write(File(dir, "$name.wav"), snip)
+            WavWriter.write(File(dir, "$name.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
             written++
         }
         val clips = linkedMapOf(
@@ -34,19 +34,23 @@ object GlintPathsAuditionGenerator {
             val note = Keys.glintPad(voice, mapOf("BLOOM" to 0.85f), midi)
             write("%02d-held-%s".format(8 + i, voice.name.lowercase()), heldFor(note, 10f))
         }
-        // The twelfth clip: VOWEL's pad at its top zone (MIDI 69), to hear where the vowel thins out.
-        val top = Keys.glintPadMidis(GlintVoice.VOWEL)[8]
+        // The twelfth clip: VOWEL's pad at its top zone, to hear where the vowel thins out.
+        val top = Keys.glintPadMidis(GlintVoice.VOWEL).last()
         val topNote = Keys.glintPad(GlintVoice.VOWEL, mapOf("BLOOM" to 0.85f), top)
         write("12-held-vowel-high", heldFor(topNote, 10f))
         println("wrote $written clips to ${dir.absolutePath}")
     }
 
-    /** Plays the note as a held key would: to the end, then the loop again until [seconds]. */
+    /**
+     * Plays the note as a held key would: to the end, then the loop again, for at
+     * least [seconds] and always two wraps.
+     */
     private fun heldFor(note: KeyNote, seconds: Float): Snip {
         val s = note.snip.samples
         val start = note.loopStartFrame.toInt()
-        val want = (seconds * note.snip.sampleRate).toInt()
-        val out = FloatArray(want) { i -> if (i < s.size) s[i] else s[start + (i - s.size) % (s.size - start)] }
+        val loop = s.size - start
+        val want = maxOf((seconds * note.snip.sampleRate).toInt(), s.size + loop + note.snip.sampleRate / 2)
+        val out = FloatArray(want) { i -> if (i < s.size) s[i] else s[start + (i - s.size) % loop] }
         return Snip(out, channels = 1, sampleRate = note.snip.sampleRate)
     }
 }
