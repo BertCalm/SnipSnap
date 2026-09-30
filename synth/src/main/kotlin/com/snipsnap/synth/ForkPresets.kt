@@ -3,7 +3,7 @@ package com.snipsnap.synth
 /**
  * FORK's factory presets — the roadmap's own rule (U1 of
  * `docs/SYNTH_UPGRADE.md`): preset-first, knobs-second. Eight per voice,
- * twenty-four total, spread across STRIKE, BARK, STIFF and DECAY so each
+ * thirty-two total, spread across STRIKE, BARK, STIFF and DECAY so each
  * bar's whole range gets heard rather than clustering near the defaults.
  * Named for what they sound like, never for a maker — the naming rule
  * `PresetTestSupport.trademarkBlocklist` now checks for the electric
@@ -18,6 +18,7 @@ object ForkPresets {
         ForkVoice.TINE -> tinePresets
         ForkVoice.BAR -> barPresets
         ForkVoice.NODE -> nodePresets
+        ForkVoice.REED -> reedPresets
     }
 
     fun all(): List<ForkPatch> = ForkVoice.entries.flatMap { forVoice(it) }
@@ -61,5 +62,26 @@ object ForkPresets {
         p(ForkVoice.NODE, "CLEAN STRIKE", "TUNE" to 0.6f, "STRIKE" to 0.7f, "BARK" to 0.5f, "STIFF" to 0.55f, "DECAY" to 0.35f),
         p(ForkVoice.NODE, "DEEP WARMTH", "TUNE" to 0.1f, "STRIKE" to 0.3f, "BARK" to 0.4f, "STIFF" to 0.45f, "DECAY" to 0.6f),
         p(ForkVoice.NODE, "BRIGHT NOTE", "TUNE" to 0.65f, "STRIKE" to 0.85f, "BARK" to 0.7f, "STIFF" to 0.6f, "DECAY" to 0.3f),
+    )
+
+    /**
+     * REED's own eight — round four's second electric-piano family, a
+     * Wurlitzer-style electrostatic comb pickup rather than a Rhodes-style
+     * magnetic one: a symmetric, odd-harmonic-dominant drive in place of
+     * TINE/BAR/NODE's asymmetric bark, plus a discrete mechanical-contact
+     * rattle at hard enough strikes and a close enough plate (high STRIKE,
+     * high BARK). Spread across both ends of that: some presets stay under
+     * the rattle's own threshold entirely (a clean, gentler reed tone),
+     * others are chosen specifically to cross it.
+     */
+    private val reedPresets = listOf(
+        p(ForkVoice.REED, "REED TONE", "TUNE" to 0.5f, "STRIKE" to 0.5f, "BARK" to 0.4f, "STIFF" to 0.5f, "DECAY" to 0.5f),
+        p(ForkVoice.REED, "SOFT BUZZ", "TUNE" to 0.4f, "STRIKE" to 0.2f, "BARK" to 0.3f, "STIFF" to 0.45f, "DECAY" to 0.55f),
+        p(ForkVoice.REED, "HARD RATTLE", "TUNE" to 0.5f, "STRIKE" to 0.9f, "BARK" to 0.85f, "STIFF" to 0.5f, "DECAY" to 0.45f),
+        p(ForkVoice.REED, "MELLOW REED", "TUNE" to 0.3f, "STRIKE" to 0.35f, "BARK" to 0.2f, "STIFF" to 0.5f, "DECAY" to 0.9f),
+        p(ForkVoice.REED, "BRIGHT BUZZ", "TUNE" to 0.65f, "STRIKE" to 0.75f, "BARK" to 0.6f, "STIFF" to 0.6f, "DECAY" to 0.4f),
+        p(ForkVoice.REED, "LOOSE PLATE", "TUNE" to 0.55f, "STRIKE" to 0.6f, "BARK" to 0.95f, "STIFF" to 0.55f, "DECAY" to 0.5f),
+        p(ForkVoice.REED, "DEEP REED", "TUNE" to 0.1f, "STRIKE" to 0.4f, "BARK" to 0.35f, "STIFF" to 0.4f, "DECAY" to 0.6f),
+        p(ForkVoice.REED, "SHORT REED", "TUNE" to 0.6f, "STRIKE" to 0.8f, "BARK" to 0.75f, "STIFF" to 0.65f, "DECAY" to 0.15f),
     )
 }

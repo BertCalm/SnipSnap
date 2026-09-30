@@ -9,10 +9,10 @@ import kotlin.math.roundToInt
  * Renders the FORK audition
  * (docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md,
  * the S14 gate) under testkit/fork-audition/ (gitignored): the sixteen-pad
- * kit as it lands on the MPC (TINE and BAR only — round two's third voice
- * did not change what ships on the kit), then for each of the three voices
- * its default, STRIKE/BARK/STIFF/DECAY at both ends of their travel with the
- * rest at their defaults, and all eight of its own presets, then one STRIKER
+ * kit as it lands on the MPC (TINE and BAR only — the later voices did not
+ * change what ships on the kit), then for each voice its default,
+ * STRIKE/BARK/STIFF/DECAY at both ends of their travel with the rest at
+ * their defaults, and all eight of its own presets, then one STRIKER
  * section comparing the noise hammer against a captured-snip hammer at both
  * a dull and a bright source (this environment has no real captured audio
  * to draw on, so the two sources are synthesised noise bursts, dull and
@@ -24,7 +24,9 @@ import kotlin.math.roundToInt
  * listening artifact.
  *
  * Round one's own gate (TINE, BAR): closer on TINE, but neither read as
- * "piano" outright — see [ForkVoice.NODE]'s own KDoc for round two's answer.
+ * "piano" outright — see [ForkVoice.NODE]'s own KDoc for round two's answer
+ * and [ForkVoice.REED]'s for round four's, a second electric-piano family
+ * entirely rather than another attempt at "closer to a Rhodes."
  */
 object ForkAuditionGenerator {
 
@@ -33,7 +35,7 @@ object ForkAuditionGenerator {
     /** The four sound-design knobs at both ends. TUNE is not a knob to audition: a note, like SIREN's own TUNE. */
     private val KNOBS = listOf(
         Knob("STRIKE", "a soft mallet: dull, quiet, long swing", "a hard hammer: bright, loud, short swing"),
-        Knob("BARK", "the pickup held back: a cleaner, rounder tone", "the pickup close: the even-harmonic growl at its strongest"),
+        Knob("BARK", "the pickup held back: a cleaner, rounder tone", "the pickup close: more edge at its strongest (REED: the contact rattle joins in too)"),
         Knob("STIFF", "a harmonic string: modes at 1-2-3-4x", "stretched half again past the voice's own bar"),
         Knob("DECAY", "the shortest ring: 0.4s at the fundamental", "the longest ring: 5s at the fundamental"),
     )
@@ -42,6 +44,7 @@ object ForkAuditionGenerator {
         ForkVoice.TINE to "a cantilever tine, like a real electric piano's — overtones far from the fundamental, gone in tens of milliseconds",
         ForkVoice.BAR to "a free-free bar, the vibraphone's own shape — overtones closer in, ringing longer",
         ForkVoice.NODE to "the same cantilever tine as TINE, read at its own second mode's node — that overtone silenced at the source, a purer and warmer tone",
+        ForkVoice.REED to "the same cantilever tine again, but a second electric-piano family entirely — an electrostatic comb pickup, odd-harmonic-dominant, with a discrete mechanical rattle at hard enough strikes and a close enough plate",
     )
 
     private class Clip(val id: String, val name: String, val desc: String)

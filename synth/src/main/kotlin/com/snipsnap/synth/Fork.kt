@@ -44,9 +44,28 @@ import kotlin.random.Random
  * own A/B against TINE (nine matched settings) came back too close to call
  * reliably: the pickup's own nonlinearity dominates the audible bark far
  * more than the pre-pickup modal balance does, so silencing one mode was a
- * real but largely masked difference. Round three tries a mechanism with
- * more perceptual weight instead — see [GLIDE_CENTS] and [bank]'s own
- * KDoc.
+ * real but largely masked difference. Round three's pitch glide, even
+ * pushed to a deliberately exaggerated 80 cents, came back the same way —
+ * the piano-ness gate closed there with FORK standing as its own
+ * instrument, not a piano emulation (see [GLIDE_CENTS]'s own KDoc).
+ *
+ * [ForkVoice.REED] is round four's answer to a different question: not
+ * "closer to a Rhodes" but a second real electric-piano family entirely —
+ * the Wurlitzer, whose reed is read by an electrostatic (capacitive)
+ * pickup rather than a magnetic one. Naively re-deriving that pickup gives
+ * FORK's own formula straight back (a capacitive pickup's charge and a
+ * magnetic pickup's flux both scale as 1/gap, and differentiating either
+ * produces the same curve) — not a new mechanism. The real, sourced
+ * difference is the comb-shaped electrode real units use (several plates
+ * at different positions shaping the overtones) and the reported sound
+ * (sharper, closer to a sawtooth, odd-harmonic-dominant, versus a magnetic
+ * pickup's even-harmonic bark) — a comb electrode does not skew asymmetric
+ * the way a single flat plate does, so a *symmetric* saturating curve is
+ * the physically appropriate model, not another asymmetric one. See
+ * [reedPickup]'s own KDoc for the mechanism, and [reedContact]'s for the
+ * discrete mechanical-contact rattle layered on top of it once a
+ * prototyping pass established that a curve alone reads as a different
+ * *tone*, not a different *character*.
  *
  * Same contract as every engine: macros are 0..1 mapped onto bounded
  * musical ranges (SCRAMBLE can't land on garbage), the DSP renders at
@@ -54,7 +73,7 @@ import kotlin.random.Random
  * the pickup's nonlinearity makes harmonics the linear resonator never
  * had — and TUNE snaps to semitones like every melodic engine.
  */
-enum class ForkVoice { TINE, BAR, NODE }
+enum class ForkVoice { TINE, BAR, NODE, REED }
 
 object Fork {
 
@@ -80,7 +99,7 @@ object Fork {
 
     /** [tableFor] internal for testability: [ForkTest] reads it directly rather than re-deriving the voice-to-table mapping. */
     internal fun tableFor(voice: ForkVoice): FloatArray = when (voice) {
-        ForkVoice.TINE, ForkVoice.NODE -> TINE_RATIOS
+        ForkVoice.TINE, ForkVoice.NODE, ForkVoice.REED -> TINE_RATIOS
         ForkVoice.BAR -> BAR_RATIOS
     }
 
@@ -145,6 +164,31 @@ object Fork {
     internal val NODE_POSITION_GAIN = FloatArray(CANTILEVER_BETA_L.size) { i ->
         val b = CANTILEVER_BETA_L[i]
         cantileverModeShape(b, NODE_PICKUP_XI) / cantileverModeShape(b, 1f)
+    }
+
+    /**
+     * REED's own "comb" read: a real electrostatic pickup's electrode is not
+     * one flat plate at one spot but several, shaping the overtone balance
+     * (the sourced "Tonal Design" claim [ForkVoice.REED]'s own KDoc cites).
+     * Modelled as a weighted sum of [cantileverModeShape] at two positions —
+     * the tip ([REED_TAP_XI_TIP], TINE's own read) and a point partway down
+     * the reed ([REED_TAP_XI_INNER]) — rather than NODE's single relocated
+     * tap, so REED's modal color is a genuinely different shape from both
+     * TINE's flat 1/ratio and NODE's single-node notch, not a retuned copy
+     * of either.
+     */
+    const val REED_TAP_XI_TIP = 1f
+    const val REED_TAP_XI_INNER = 0.35f
+    const val REED_TAP_WEIGHT_TIP = 0.4f
+    const val REED_TAP_WEIGHT_INNER = 0.6f
+
+    internal val REED_POSITION_GAIN = FloatArray(CANTILEVER_BETA_L.size) { i ->
+        val b = CANTILEVER_BETA_L[i]
+        val tip = cantileverModeShape(b, 1f)
+        (
+            REED_TAP_WEIGHT_TIP * cantileverModeShape(b, REED_TAP_XI_TIP) +
+                REED_TAP_WEIGHT_INNER * cantileverModeShape(b, REED_TAP_XI_INNER)
+            ) / tip
     }
 
     /**
@@ -214,6 +258,92 @@ object Fork {
 
     /** The pickup's DC-removal high-pass. */
     const val DC_HIGHPASS_HZ = 20f
+
+    /**
+     * REED's own drive, in place of TINE/BAR/NODE's asymmetric reluctance
+     * curve: [Dsp.drive] (a symmetric tanh, unity make-up) applied to the
+     * resonator's own rate of change, so a sine comes out with *odd*
+     * harmonics only — the sourced Wurlitzer signature — rather than the
+     * even-harmonic bark an asymmetric curve gives. [REED_DRIVE_RAMP_MS]
+     * ramps the amount up from zero over the first few milliseconds instead
+     * of applying it from sample zero: the resonator's own peak sits in the
+     * hammer's own broadband onset click, not the settled swing, and a
+     * prototyping pass measured that pushing that click straight into full
+     * saturation reads as a burst of harsh, static-like distortion with
+     * nothing to do with REED's own character. See [reedPickup].
+     */
+    const val REED_DRIVE_GAIN = 9f
+    const val REED_DRIVE_AT_STRIKE_0 = 0.12f
+    const val REED_DRIVE_AT_STRIKE_1 = 1f
+    const val REED_DRIVE_RAMP_MS = 8f
+
+    /**
+     * BARK, for REED: how close the electrode plate sits, same identity as
+     * every other voice's BARK, but two things move together instead of one
+     * closeness fraction — the drive's own ceiling (a closer plate is a more
+     * sensitive pickup), and [REED_CONTACT_THRESHOLD]'s own position (a
+     * closer plate is also physically nearer the reed, so contact happens
+     * more readily). BARK 0 keeps drive at a quarter of its STRIKE-coupled
+     * value rather than zero — a knob with a dead end at 0 is worse than one
+     * that keeps a little identity there, the same reasoning [DRIVE_AT_STRIKE_0]
+     * keeps STRIKE off zero.
+     */
+    const val REED_BARK_DRIVE_LOW = 0.25f
+    const val REED_BARK_DRIVE_HIGH = 1f
+
+    /**
+     * The physical stop past which the reed cannot swing further without
+     * touching the plate, as a fraction of [bank]'s own peak-normalised
+     * swing (the same space [STRIKE_SWING_LOW]/[STRIKE_SWING_HIGH] scale
+     * into) — high at BARK 0 (a distant plate, contact rare even at
+     * STRIKE 1) down to a readily-reached point at BARK 1. See
+     * [reedContact].
+     */
+    const val REED_CONTACT_THRESHOLD_LOW_BARK = 0.9f
+    const val REED_CONTACT_THRESHOLD_HIGH_BARK = 0.5f
+
+    /**
+     * [reedContact]'s own timing. [REED_CONTACT_GRACE_MS] holds the stop off
+     * for the excitation's own onset click (measured: the resonator's
+     * absolute peak sits there, not in the settled swing, so an ungated
+     * contact model was firing its very first, loudest knock right on top
+     * of the hammer's own transient). [REED_CONTACT_REFRACTORY_MS] then
+     * holds off retriggering for a stretch after each knock — an ungated
+     * version was firing once on nearly every half-cycle the swing stayed
+     * over threshold (measured: ~40-50 events for a single hard note), which
+     * reads as a sustained buzz rather than the occasional mechanical
+     * rattle a real plate contact would be.
+     */
+    const val REED_CONTACT_GRACE_MS = 4f
+    const val REED_CONTACT_REFRACTORY_MS = 20f
+
+    /**
+     * The knock itself: an impulse at each contact instant excites two
+     * short-ringing resonant filters rather than an enveloped noise burst —
+     * a real mechanical rattle has pitch and resonance, not just noise
+     * shaped by a volume curve, the same "impulse excites a resonant mode"
+     * shape [Modes.ring] already gives the bar itself, just two very short,
+     * very undamped modes standing in for the plate's own ring. The click
+     * ([REED_CLICK_F0_LOW]..[REED_CLICK_F0_HIGH]) sits below the 2-5kHz
+     * band the ear is most sensitive to — measured directly: a first attempt
+     * at 3-5kHz read as a piercing "ping" rather than a duller knock, for
+     * exactly that reason. The body ([REED_BODY_F0_LOW]..[REED_BODY_F0_HIGH])
+     * is a second, lower ring added underneath it: a single resonance reads
+     * as a thin click on its own, and a real knock has a thud under the
+     * clack, the same reason a struck object of any kind rings at more than
+     * one frequency. Both drift slightly per event (picked at random inside
+     * their own range) — a real contact does not strike the same spot at
+     * the same angle every time.
+     */
+    const val REED_IMPULSE_STRENGTH = 1f
+    const val REED_CLICK_Q = 9f
+    const val REED_CLICK_F0_LOW = 1_000f
+    const val REED_CLICK_F0_HIGH = 1_800f
+    const val REED_CLICK_GAIN = 1.6f
+    const val REED_BODY_Q = 7f
+    const val REED_BODY_F0_LOW = 350f
+    const val REED_BODY_F0_HIGH = 550f
+    const val REED_BODY_GAIN = 2.2f
 
     /** The exciter's second mode: a captured snip's head, kept in the recipe at this length and this sample rate — 882 numbers, the shape SNAP's table set for a 256-point wavetable, DRAW's for a 64-point envelope. */
     const val STRIKER_MS = 20f
@@ -315,14 +445,14 @@ object Fork {
      * claim to test — no spectral estimation needed to check the mapping
      * itself, only to check the render actually carries it.
      *
-     * [ForkVoice.NODE] applies [NODE_POSITION_GAIN] on top of the plain
-     * `1/ratio` every voice starts from — the same tine, same ratio table,
-     * only where the pickup reads it — indexed by mode position (0..3), not
-     * by the mode's own (possibly STIFF-stretched) ratio: [STRIKE_BRIGHT_BOOST]
-     * already takes that same "by index, not by current ratio" shape, since
-     * STIFF's morph is a sound-design liberty layered on top of the physics,
-     * not a claim that the modes stay real cantilever eigenmodes at every
-     * STIFF setting.
+     * [ForkVoice.NODE] applies [NODE_POSITION_GAIN] and [ForkVoice.REED]
+     * applies [REED_POSITION_GAIN] on top of the plain `1/ratio` every voice
+     * starts from — the same tine, same ratio table, only where the pickup
+     * reads it — indexed by mode position (0..3), not by the mode's own
+     * (possibly STIFF-stretched) ratio: [STRIKE_BRIGHT_BOOST] already takes
+     * that same "by index, not by current ratio" shape, since STIFF's morph
+     * is a sound-design liberty layered on top of the physics, not a claim
+     * that the modes stay real cantilever eigenmodes at every STIFF setting.
      */
     internal fun modesFor(voice: ForkVoice, macros: Map<String, Float>): List<Modes.Mode> {
         val table = tableFor(voice)
@@ -330,7 +460,11 @@ object Fork {
         val t60Fund = Dsp.expMap(macros.getValue("DECAY"), DECAY_MIN_SECONDS, DECAY_MAX_SECONDS)
         return table.mapIndexed { i, tableK ->
             val ratio = stiffRatio((i + 1).toFloat(), tableK, stiff)
-            val positionGain = if (voice == ForkVoice.NODE) NODE_POSITION_GAIN[i] else 1f
+            val positionGain = when (voice) {
+                ForkVoice.NODE -> NODE_POSITION_GAIN[i]
+                ForkVoice.REED -> REED_POSITION_GAIN[i]
+                else -> 1f
+            }
             Modes.Mode(
                 ratio = ratio,
                 gain = positionGain / ratio,
@@ -499,15 +633,99 @@ object Fork {
     }
 
     /**
+     * REED's own mechanical stop: past [threshold] the reed's own swing is
+     * a physical event, not just a bigger sample value, so on each
+     * rising-edge crossing (after [REED_CONTACT_GRACE_MS], and not again
+     * until [REED_CONTACT_REFRACTORY_MS] has passed) this excites the two
+     * short resonant rings [REED_CLICK_F0_LOW]/[REED_BODY_F0_LOW] describe.
+     * [x] itself is returned unclipped — an earlier version also hard-clipped
+     * every over-threshold sample, which measurably left a near-square-wave
+     * clip running for as long as the swing stayed over threshold (100ms+
+     * on a hard strike), feeding [reedPickup]'s own drive stage a sustained
+     * source of harmonics that had nothing to do with the discrete knock;
+     * the knock alone carries the "contact" character now.
+     */
+    internal fun reedContact(x: FloatArray, threshold: Float, rate: Int, seed: Int): FloatArray {
+        val out = x.copyOf()
+        val noise = Dsp.Noise(seed)
+        val click = Dsp.Biquad()
+        click.bandpass((REED_CLICK_F0_LOW + REED_CLICK_F0_HIGH) / 2f, REED_CLICK_Q, rate)
+        val body = Dsp.Biquad()
+        body.bandpass((REED_BODY_F0_LOW + REED_BODY_F0_HIGH) / 2f, REED_BODY_Q, rate)
+        val graceSamples = (REED_CONTACT_GRACE_MS / 1000f * rate).toInt()
+        val refractorySamples = (REED_CONTACT_REFRACTORY_MS / 1000f * rate).toInt()
+        var wasOver = false
+        var cooldownUntil = 0
+        for (i in out.indices) {
+            val raw = out[i]
+            val over = kotlin.math.abs(raw) > threshold
+            var impulse = 0f
+            if (over && !wasOver && i >= graceSamples && i >= cooldownUntil) {
+                val clickSpread = (noise.next() + 1f) / 2f
+                click.bandpass(REED_CLICK_F0_LOW + clickSpread * (REED_CLICK_F0_HIGH - REED_CLICK_F0_LOW), REED_CLICK_Q, rate)
+                val bodySpread = (noise.next() + 1f) / 2f
+                body.bandpass(REED_BODY_F0_LOW + bodySpread * (REED_BODY_F0_HIGH - REED_BODY_F0_LOW), REED_BODY_Q, rate)
+                impulse = REED_IMPULSE_STRENGTH * (if (raw < 0f) -1f else 1f)
+                cooldownUntil = i + refractorySamples
+            }
+            wasOver = over
+            out[i] += click.process(impulse * REED_CLICK_GAIN) + body.process(impulse * REED_BODY_GAIN)
+        }
+        return out
+    }
+
+    /**
+     * REED's own pickup: [Dsp.drive] (a symmetric tanh) on the rate of
+     * change, ramping in over [REED_DRIVE_RAMP_MS] — see this file's own
+     * class KDoc and [REED_DRIVE_GAIN]'s own KDoc for why symmetric and why
+     * ramped. Otherwise the same shape [pickup] takes: mean removed
+     * outright, then a [DC_HIGHPASS_HZ] one-pole for the slow residue.
+     */
+    internal fun reedPickup(x: FloatArray, driveTarget: Float, rate: Int): FloatArray {
+        val out = FloatArray(x.size)
+        var prev = 0f
+        val rampSamples = (REED_DRIVE_RAMP_MS / 1000f * rate).toInt()
+        for (i in x.indices) {
+            val v = x[i] - prev
+            prev = x[i]
+            val ramp = if (i < rampSamples) i.toFloat() / rampSamples else 1f
+            out[i] = Dsp.drive(v * REED_DRIVE_GAIN, driveTarget * ramp)
+        }
+        if (out.isNotEmpty()) {
+            var mean = 0.0
+            for (v in out) mean += v
+            val m = (mean / out.size).toFloat()
+            for (i in out.indices) out[i] -= m
+        }
+        val hp = Dsp.OnePole(rate)
+        for (i in out.indices) out[i] -= hp.lp(out[i], DC_HIGHPASS_HZ)
+        return out
+    }
+
+    /**
      * The full voice at [rate], exact [hz]: the bank, swung by BARK and
      * STRIKE together, through the pickup. This is what [render] decimates
      * and what [Keys.fork] calls directly at an exact keyboard pitch — the
-     * same shape [Tines.strike] gives [Keys.ep] and [Keys.musicBox].
+     * same shape [Tines.strike] gives [Keys.ep] and [Keys.musicBox]. REED
+     * takes its own path from here — [reedContact] then [reedPickup] in
+     * place of the shared swing-then-[pickup] every other voice takes — since
+     * its pickup is a different physical mechanism, not a retuned version of
+     * the same one.
      */
     internal fun strike(voice: ForkVoice, hz: Float, macros: Map<String, Float>, striker: FloatArray? = null, rate: Int = RATE * Dsp.OVERSAMPLE): FloatArray {
         val rung = bank(voice, hz, macros, striker, rate)
-        val closeness = Dsp.lin(macros.getValue("BARK"), BARK_MIN, BARK_MAX)
         val swing = Dsp.lin(macros.getValue("STRIKE"), STRIKE_SWING_LOW, STRIKE_SWING_HIGH)
+        if (voice == ForkVoice.REED) {
+            val bark = macros.getValue("BARK")
+            val strikeM = macros.getValue("STRIKE")
+            val x = FloatArray(rung.size) { rung[it] * swing }
+            val threshold = Dsp.lin(bark, REED_CONTACT_THRESHOLD_LOW_BARK, REED_CONTACT_THRESHOLD_HIGH_BARK)
+            val contacted = reedContact(x, threshold, rate, Dsp.seedFor("FORK-REED-CONTACT", hz))
+            val driveCeiling = Dsp.lin(bark, REED_BARK_DRIVE_LOW, REED_BARK_DRIVE_HIGH)
+            val driveTarget = Dsp.lin(strikeM, REED_DRIVE_AT_STRIKE_0, REED_DRIVE_AT_STRIKE_1) * driveCeiling
+            return reedPickup(contacted, driveTarget, rate)
+        }
+        val closeness = Dsp.lin(macros.getValue("BARK"), BARK_MIN, BARK_MAX)
         val x = FloatArray(rung.size) { rung[it] * closeness * swing }
         return pickup(x, rate)
     }

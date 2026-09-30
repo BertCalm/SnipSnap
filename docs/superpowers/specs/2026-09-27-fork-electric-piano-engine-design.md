@@ -673,3 +673,98 @@ emulation of one. If the piano question is worth reopening, the reed
 voice noted under "Out of scope" (a different nonlinearity entirely, not
 a further tweak to this one) is the next real candidate, not another turn
 on `GLIDE_CENTS` or `NODE_PICKUP_XI`.
+
+## Round four — 2026-09-30
+
+The reed voice, reopened the same day: not "closer to a Rhodes" (settled
+above) but a second real electric-piano family — the Wurlitzer, read by
+an electrostatic (capacitive) pickup rather than a magnetic one.
+
+**The finding that changed the plan before any code was written**: a
+naive derivation of the electrostatic pickup gives FORK's own existing
+formula straight back. A magnetic pickup's flux and a capacitive
+pickup's charge both scale as `1/gap`, so differentiating either produces
+the same `v/(1-x)²` curve — "swap the pickup law" is not a new mechanism,
+it is TINE again under a different name. Sourced instead (Wikipedia's
+"Electrostatic pickup" article, and independent descriptions of the two
+instruments' own reported sound): real units read the reed through a
+comb-shaped electrode, not one flat plate, and the reported tone is
+sharper, closer to a sawtooth, odd-harmonic-dominant — against a magnetic
+pickup's even-harmonic bark. A comb electrode does not skew asymmetric
+the way a single flat plate does, so the physically appropriate model is
+a *symmetric* saturating curve, genuinely different raw material for the
+pickup to work with rather than the same curve reshaped.
+
+**Prototyped before it was built**: a throwaway generator
+(`ReedPrototype.kt`, never committed — a temporary Gradle task and one
+test-scope file, removed after each listening round) rendered candidates
+straight to the owner as files rather than through a published audition
+page, twelve rounds in one sitting. The house testing philosophy —
+measure, don't guess — caught two real bugs this way that a first
+listen alone would not have separated from taste:
+
+- **The onset's own harshness was two unrelated causes, found one at a
+  time.** [Fork.bank]'s own peak sits in the excitation's broadband
+  click, not the settled swing (measured directly: peak in the first 2ms
+  equalled the peak overall). Pushing that straight through full
+  saturation read as static; [Fork.reedPickup]'s own
+  [Fork.REED_DRIVE_RAMP_MS] fixed it. The contact rattle was *still*
+  harsh afterward — isolating curve-only against with-contact (two
+  renders, one question) proved the base pickup was already clean and
+  the persistent stop-clip nobody had throttled (every over-threshold
+  sample, not just the trigger instant — a near-square wave running for
+  100ms+ on a hard strike) was the real remaining source. Removing it
+  fixed the harshness and silenced the rattle at the same time.
+- **The rattle going silent was a genuine logic bug, not a level.** Every
+  round had scaled the knock's own impulse by "overshoot" —
+  `abs(raw) - threshold`, read at the exact sample the rising edge
+  crosses the threshold, which by construction is a hair above zero, not
+  the swing's own size (confirmed directly in an old diagnostic log
+  without registering it at the time: `0.60049` at trigger against a
+  `0.6` threshold). The knock was only ever audible because it rode on
+  top of the persistent clip's own distortion floor; once that clip was
+  removed for the harshness fix above, the knock's true near-zero
+  amplitude had nothing left to hide behind. Fixed by scaling the
+  impulse to a fixed strength instead — contact already only fires when
+  the swing clears the threshold at all, which already is the "hard
+  enough" signal.
+
+**The shipped mechanism, three parts, not one**:
+
+1. **A comb-tap modal color** ([Fork.REED_POSITION_GAIN]): the same
+   [Fork.cantileverModeShape] derivation [ForkVoice.NODE] uses for one
+   tap position, extended to two (the tip and a point partway down the
+   reed) and blended — the sourced "several plates at different
+   positions" detail, not NODE's single relocated read repeated.
+2. **A symmetric, STRIKE-coupled drive** ([Fork.reedPickup]): [Dsp.drive]
+   on the resonator's own rate of change, ramping in over
+   [Fork.REED_DRIVE_RAMP_MS] rather than applying instantly, its own
+   ceiling set by BARK. Confirmed odd-harmonic-dominant directly
+   (measured against TINE's own -2.4dB odd/even ratio: REED reads +40 to
+   +60dB depending on drive, essentially all odd).
+3. **A discrete mechanical-contact rattle** ([Fork.reedContact]): past a
+   BARK-set threshold, an impulse excites two short resonant rings (a
+   "click" and a lower "body," both drifting slightly per event) rather
+   than an enveloped noise burst — a real rattle has pitch and
+   resonance, not noise shaped by a volume curve — gated by a grace
+   window (so it cannot land on the hammer's own onset click) and a
+   refractory period (so a hard strike's whole swing does not retrigger
+   it every half-cycle, which measured as 40-50 events and read as a
+   sustained buzz rather than an occasional knock).
+
+**Why three parts and not the first one that measured as "different"**:
+round one (the symmetric curve alone) already measured as genuinely
+odd-harmonic-dominant, a real spectral difference from TINE — and still
+came back "different tone, not different character" by ear. That is the
+same verdict NODE and the pitch glide got from static or smoothly-varying
+tweaks to a memoryless curve. The contact rattle is a genuinely different
+*kind* of thing — a discrete, non-smooth event, not a reshaped
+continuum — and reads as one: "I hear it now," confirmed after the two
+bugs above were fixed, is what shipped.
+
+**What round four deliberately did not do**: give REED its own macro for
+the contact threshold or the comb's own tap position — both ride on BARK
+and a fixed derivation respectively, the same "one physically-motivated
+spot, not the whole unpredictable range" call round two made for NODE's
+own pickup position. `ForkPresets.kt` ships eight presets spread across
+both sides of the contact threshold, some staying clean of it entirely.
