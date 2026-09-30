@@ -6,7 +6,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class GlintVoice { SWEEP, STEP, BRASS }
+enum class GlintVoice { SWEEP, STEP, BRASS, VOWEL }
 
 /**
  * GLINT — phase distortion, where the formant is generated rather than
@@ -28,6 +28,10 @@ enum class GlintVoice { SWEEP, STEP, BRASS }
  * the first. (An earlier version mixed the bare window back in instead; that
  * added the same harmonic series the burst already carries and was
  * inaudible however loud it was mixed.)
+ *
+ * VOWEL is the one voice that reads the two bursts differently: they are a
+ * mouth's first two formants, in fixed Hz and on one envelope, and BODY is
+ * the size of the mouth, scaling both together (see [VOWEL_LINE]).
  *
  * Design: `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`
  * (its voice list is superseded by the paths design above).
@@ -117,21 +121,65 @@ object Glint {
      * the 2026-09-26 audition marked KEEP on both voices tested.
      *
      * BLOOM sets how far the formant travels and which way (see [BLOOM_MAX]).
-     * Each voice supplies how it travels: SWEEP runs it on this clock, BRASS
-     * ties it to loudness and STEP takes it rung by rung ([STEP_SECONDS]).
+     * Each voice supplies how it travels: SWEEP and VOWEL run it on this
+     * clock, BRASS ties it to loudness and STEP takes it rung by rung
+     * ([STEP_SECONDS]).
      */
     const val BLOOM_T60 = 0.45f
 
-    fun macrosFor(voice: GlintVoice): List<MacroSpec> = listOf(
-        MacroSpec("TUNE", 0.5f, 0.5f),
-        MacroSpec("PEAK", 0.45f),
-        MacroSpec("FOLLOW", 0.8f),
-        MacroSpec("BODY", 0.4f),
-        // Bipolar: 0.5 is still, above falls into PEAK, below rises into it.
-        // 0.675 is the old default 0.35 through GlintPatch's legacy remap.
-        MacroSpec("BLOOM", 0.675f, 0.5f),
-        MacroSpec("DECAY", 0.5f),
+    /** VOWEL's own floor: a formant below the note pins to the fundamental rather than vanishing. */
+    const val VOWEL_K_MIN = 1f
+
+    /** F2's level against F1 - the 2026-09-29 audition's ratio ("It works"). */
+    const val VOWEL_LEVEL2 = 0.5f
+
+    /** The last position on the vowel line (EE). */
+    const val VOWEL_LAST = 4f
+
+    /** OO, OH, AH, EH, EE as (F1, F2) Hz - adult formants, ordered dark to bright so PEAK keeps meaning "how bright". */
+    private val VOWEL_LINE = arrayOf(
+        floatArrayOf(300f, 870f),
+        floatArrayOf(570f, 840f),
+        floatArrayOf(730f, 1090f),
+        floatArrayOf(530f, 1840f),
+        floatArrayOf(270f, 2290f),
     )
+
+    fun vowelPosition(peak: Float): Float = peak.coerceIn(0f, 1f) * VOWEL_LAST
+
+    /** F1 and F2 at [pos] on the vowel line, interpolated in log2(Hz). */
+    internal fun vowelAt(pos: Float, out: FloatArray) {
+        val p = pos.coerceIn(0f, VOWEL_LAST)
+        val i = kotlin.math.floor(p).toInt().coerceAtMost(VOWEL_LINE.size - 2)
+        val f = p - i
+        for (n in 0..1) {
+            val a = VOWEL_LINE[i][n]
+            val b = VOWEL_LINE[i + 1][n]
+            out[n] = a * (b / a).pow(f)
+        }
+    }
+
+    fun macrosFor(voice: GlintVoice): List<MacroSpec> = when (voice) {
+        // No FOLLOW: a vowel's formants are fixed Hz, so key tracking has
+        // nothing to do.
+        GlintVoice.VOWEL -> listOf(
+            MacroSpec("TUNE", 0.5f, 0.5f),
+            MacroSpec("PEAK", 0.5f),          // AH
+            MacroSpec("BODY", 0.5f, 0.5f),    // vocal-tract size, centred
+            MacroSpec("BLOOM", 0.6f, 0.5f),   // a short glide down into the vowel
+            MacroSpec("DECAY", 0.5f),
+        )
+        else -> listOf(
+            MacroSpec("TUNE", 0.5f, 0.5f),
+            MacroSpec("PEAK", 0.45f),
+            MacroSpec("FOLLOW", 0.8f),
+            MacroSpec("BODY", 0.4f),
+            // Bipolar: 0.5 is still, above falls into PEAK, below rises into it.
+            // 0.675 is the old default 0.35 through GlintPatch's legacy remap.
+            MacroSpec("BLOOM", 0.675f, 0.5f),
+            MacroSpec("DECAY", 0.5f),
+        )
+    }
 
     fun defaults(voice: GlintVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
@@ -156,6 +204,7 @@ object Glint {
         GlintVoice.SWEEP -> 110f  // A2
         GlintVoice.STEP -> 220f   // A3 - RATCHET's register
         GlintVoice.BRASS -> 110f  // A2
+        GlintVoice.VOWEL -> 110f  // A2
     }
 
     /** [rootHz] as a MIDI note, for the held pad's zones. */
@@ -288,10 +337,15 @@ object Glint {
         val path = GlintPath.of(voice, m, f0)
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
         // The second burst's own envelope - one envelope, not two composed
-        // (see BODY_DECAY_RATIO's doc).
-        val env2 = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60 * BODY_DECAY_RATIO)
-        // The one-shot clock: SWEEP runs x down on BLOOM_T60, BRASS on its
-        // own level (so it lands as the note dies), STEP by rung.
+        // (see BODY_DECAY_RATIO's doc). VOWEL's second burst is the same
+        // mouth as its first, so it rides the amp envelope.
+        val env2 = if (voice == GlintVoice.VOWEL) {
+            amp
+        } else {
+            Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60 * BODY_DECAY_RATIO)
+        }
+        // The one-shot clock: SWEEP and VOWEL run x down on BLOOM_T60, BRASS
+        // on its own level (so it lands as the note dies), STEP by rung.
         fun x(t: Float): Float = if (voice == GlintVoice.BRASS) amp.at(t) else Dsp.envAt(t, BLOOM_T60)
         fun rung(t: Float): Int = if (path.ladder != null) (t / STEP_SECONDS).toInt() else -1
         val k = FloatArray(2)

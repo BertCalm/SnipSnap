@@ -20,12 +20,20 @@ internal class GlintPath private constructor(
     private val kBase: Float,
     private val kStart: Float,
     private val k2: Float,
-    /** The second burst's level: BODY × [Glint.BODY_MIX] on the path voices. */
+    /** The second burst's level: BODY × [Glint.BODY_MIX] on the path voices, [Glint.VOWEL_LEVEL2] on VOWEL. */
     val level2: Float,
     /** STEP's rungs, start first, PEAK last; null on every other voice. */
     val ladder: FloatArray?,
     /** The sign value s = 2·BLOOM − 1. */
     val bloom: Float,
+    /** VOWEL: the note actually rendered, which turns a formant in Hz into a ratio. 0 on every other voice. */
+    private val f0: Float,
+    /** VOWEL: PEAK's position on the vowel line, where the path lands. 0 on every other voice. */
+    private val vowelPos: Float,
+    /** VOWEL: where BLOOM starts the path on the vowel line. 0 on every other voice. */
+    private val vowelStart: Float,
+    /** VOWEL: BODY's vocal-tract size, multiplying both formants. 1 on every other voice. */
+    private val scale: Float,
 ) {
     /** How long the one-shot path takes to arrive: the whole ladder on STEP, [Glint.BLOOM_T60] otherwise. */
     val onsetSeconds: Float = ladder?.let { it.size * Glint.STEP_SECONDS } ?: Glint.BLOOM_T60
@@ -34,9 +42,19 @@ internal class GlintPath private constructor(
      * Writes the burst ratios at path position [x] into `out[0]` (main) and
      * `out[1]` (second burst). STEP reads `ladder[rung]` when [rung] ≥ 0 and
      * otherwise rounds the continuous path to a whole harmonic — the held
-     * breath's case, which has no rung clock.
+     * breath's case, which has no rung clock. VOWEL ignores [rung]: [x] walks
+     * the vowel line from BLOOM's start to PEAK's vowel, and both bursts are
+     * that vowel's F1 and F2 in Hz over the note.
      */
     fun ratios(x: Float, rung: Int, out: FloatArray) {
+        if (voice == GlintVoice.VOWEL) {
+            // Formants are Hz, not harmonics: no snap, and a formant below the
+            // note pins to the fundamental instead of vanishing.
+            Glint.vowelAt(vowelPos + (vowelStart - vowelPos) * x, out)
+            out[0] = (out[0] * scale / f0).coerceIn(Glint.VOWEL_K_MIN, Glint.K_MAX)
+            out[1] = (out[1] * scale / f0).coerceIn(Glint.VOWEL_K_MIN, Glint.K_MAX)
+            return
+        }
         val continuous = (kBase * (kStart / kBase).pow(x)).coerceIn(Glint.K_MIN, Glint.K_MAX)
         out[0] = when {
             ladder != null && rung >= 0 -> ladder[rung.coerceAtMost(ladder.lastIndex)]
@@ -57,6 +75,19 @@ internal class GlintPath private constructor(
         fun of(voice: GlintVoice, macros: Map<String, Float>, f0: Float): GlintPath {
             val m = Glint.defaults(voice) + macros
             val s = Glint.bloomSign(m.getValue("BLOOM"))
+            // VOWEL has no FOLLOW and no ratio until it knows the note: its path
+            // is a position on the vowel line, and f0 turns it into ratios at
+            // each read.
+            if (voice == GlintVoice.VOWEL) {
+                val pos = Glint.vowelPosition(m.getValue("PEAK"))
+                return GlintPath(
+                    voice = voice, kBase = 0f, kStart = 0f, k2 = 0f,
+                    level2 = Glint.VOWEL_LEVEL2, ladder = null, bloom = s,
+                    f0 = f0, vowelPos = pos,
+                    vowelStart = (pos + s * Glint.VOWEL_LAST).coerceIn(0f, Glint.VOWEL_LAST),
+                    scale = 2f.pow(0.5f * (m.getValue("BODY") - 0.5f)),
+                )
+            }
             val kBase = Glint.ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
             val kStart = Glint.startRatio(kBase, s)
             return GlintPath(
@@ -67,6 +98,7 @@ internal class GlintPath private constructor(
                 level2 = m.getValue("BODY") * Glint.BODY_MIX,
                 ladder = if (voice == GlintVoice.STEP) Glint.stepLadder(kBase, kStart) else null,
                 bloom = s,
+                f0 = 0f, vowelPos = 0f, vowelStart = 0f, scale = 1f,
             )
         }
     }
