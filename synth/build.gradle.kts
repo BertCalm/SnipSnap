@@ -67,6 +67,16 @@ tasks.register<JavaExec>("generatePluckAudition") {
     args("${rootDir}/testkit/pluck-audition")
 }
 
+/** Render the SILK Phase 4 audition clips and page under testkit/silk-audition/. See SilkAuditionGenerator. */
+tasks.register<JavaExec>("generateSilkAudition") {
+    group = "distribution"
+    description = "Render the SILK Phase 4 audition clips and listening page under testkit/silk-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SilkAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/silk-audition")
+}
+
 /** Render the GLINT Phase 1 audition clips and page under testkit/glint-audition/. See GlintAuditionGenerator. */
 tasks.register<JavaExec>("generateGlintAudition") {
     group = "distribution"
