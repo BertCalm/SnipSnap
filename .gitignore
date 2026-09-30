@@ -67,6 +67,10 @@ testkit/terra-audition/
 # and published as the listening artifact; never committed.
 testkit/ensemble-audition/
 
+# The string-machine presets' gate clips, manifest and page, rendered by
+# :synth:generateStringMachineAudition and published as the listening artifact; never committed.
+testkit/stringmachine-audition/
+
 # The BORE audition clips, manifest and page, rendered by :synth:generateBoreAudition
 # and published as the listening artifact; never committed.
 testkit/bore-audition/

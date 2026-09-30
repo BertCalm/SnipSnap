@@ -25,6 +25,27 @@ class SynthCommandTest {
     }
 
     @Test
+    fun `a string machine renders as the stereo pad SEND TO PAD would make and a plain preset stays mono`() {
+        val dir = File.createTempFile("synthstring", "").let { it.delete(); it.mkdirs(); it }
+        try {
+            val bytes = ByteArrayOutputStream()
+            // STRING MACHINE is the 13th VELVET BRASS preset; FANFARE (the 1st) lands dry.
+            assertEquals(0, SynthCommand.run(listOf("VELVET", "BRASS", "--preset", "13", "--out", dir.path), PrintStream(bytes)))
+            assertEquals(0, SynthCommand.run(listOf("VELVET", "BRASS", "--preset", "1", "--out", dir.path), PrintStream(bytes)))
+            val landed = dir.listFiles { f -> f.name.contains("STRING_MACHINE") }!!.single()
+            val plain = dir.listFiles { f -> f.name.contains("FANFARE") }!!.single()
+            fun channels(f: File) = f.readBytes().let { (it[22].toInt() and 0xff) or ((it[23].toInt() and 0xff) shl 8) }
+            assertEquals(2, channels(landed), "the string machine is written as the pair its landing makes")
+            assertEquals(1, channels(plain), "a preset with no landing is still one channel")
+            val lines = bytes.toString().lines()
+            assertTrue(lines.any { "STRING_MACHINE" in it && "lands with ENSEMBLE" in it }, "stdout says the file landed: $bytes")
+            assertTrue(lines.none { "FANFARE" in it && "lands with" in it }, "and does not say so of a preset that did not: $bytes")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `a RESIN preset becomes a held instrument`() {
         val dir = File.createTempFile("synthinst", "").let { it.delete(); it.mkdirs(); it }
         try {
