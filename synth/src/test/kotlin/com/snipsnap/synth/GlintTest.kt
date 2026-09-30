@@ -67,11 +67,14 @@ class GlintTest {
     @Test
     fun `every path voice declares exactly the six macros`() {
         for (voice in PATH_VOICES) {
+            val macros = Glint.macrosFor(voice)
             assertEquals(
                 listOf("TUNE", "PEAK", "FOLLOW", "BODY", "BLOOM", "DECAY"),
-                Glint.macrosFor(voice).map { it.name },
+                macros.map { it.name },
                 "$voice's macro contract",
             )
+            assertEquals(listOf(0.5f, 0.45f, 0.8f, 0.4f, 0.675f, 0.5f), macros.map { it.default }, "$voice's defaults")
+            assertEquals(0.5f, macros.first { it.name == "BLOOM" }.neutral, "$voice's BLOOM is bipolar, neutral at its centre")
         }
     }
 

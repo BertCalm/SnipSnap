@@ -5,6 +5,7 @@ import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** docs/superpowers/specs/2026-09-29-glint-paths-design.md §2.3. */
@@ -23,7 +24,50 @@ class GlintVowelTest {
 
     @Test
     fun `VOWEL has no FOLLOW - its formants are fixed Hz`() {
-        assertEquals(listOf("TUNE", "PEAK", "BODY", "BLOOM", "DECAY"), Glint.macrosFor(GlintVoice.VOWEL).map { it.name })
+        val macros = Glint.macrosFor(GlintVoice.VOWEL)
+        assertEquals(listOf("TUNE", "PEAK", "BODY", "BLOOM", "DECAY"), macros.map { it.name })
+        assertEquals(listOf(0.5f, 0.5f, 0.5f, 0.6f, 0.5f), macros.map { it.default }, "VOWEL's defaults")
+        assertEquals(0.5f, macros.first { it.name == "BLOOM" }.neutral, "VOWEL's BLOOM is bipolar, neutral at its centre")
+    }
+
+    /**
+     * Spec §2.3: the path starts at `pos + s · 4`, clamped to the line, so BLOOM's own depth is
+     * how far from PEAK's vowel it starts: one vowel at BLOOM 0.625 (s = 0.25), and the whole
+     * line, clamped to its ends, at BLOOM 0 and 1.
+     */
+    @Test
+    fun `BLOOM starts the path s times the whole line from PEAK's vowel`() {
+        val m = Glint.defaults(GlintVoice.VOWEL) + mapOf("TUNE" to 0f, "PEAK" to 0.5f, "BODY" to 0.5f)
+        val f0 = 110f
+        val k = FloatArray(2)
+        fun at(bloom: Float, x: Float): FloatArray {
+            GlintPath.of(GlintVoice.VOWEL, m + ("BLOOM" to bloom), f0).ratios(x, -1, k)
+            return k.copyOf()
+        }
+        // BLOOM 0.625 from AH: starts on EH, lands on AH.
+        val eh = at(0.625f, 1f)
+        assertEquals(530f / 110f, eh[0], 1e-3f)
+        assertEquals(1840f / 110f, eh[1], 1e-3f)
+        val ah = at(0.625f, 0f)
+        assertEquals(730f / 110f, ah[0], 1e-3f)
+        assertEquals(1090f / 110f, ah[1], 1e-3f)
+        // BLOOM 0 and 1 travel the whole line, clamped to OO and EE.
+        val oo = at(0f, 1f)
+        assertEquals(300f / 110f, oo[0], 1e-3f)
+        assertEquals(870f / 110f, oo[1], 1e-3f)
+        val ee = at(1f, 1f)
+        assertEquals(270f / 110f, ee[0], 1e-3f)
+        assertEquals(2290f / 110f, ee[1], 1e-3f)
+    }
+
+    @Test
+    fun `a VOWEL patch saves and reloads as itself, and refuses FOLLOW`() {
+        val patch = GlintPatch("Vowel Test", GlintVoice.VOWEL, mapOf("PEAK" to 0.8f, "BODY" to 0.7f, "BLOOM" to 0.3f))
+        val loaded = Patches.fromJsonText(patch.toJsonText())
+        assertEquals(patch, loaded)
+        assertTrue(patch.render().samples.contentEquals(loaded.render().samples), "the reloaded patch renders other bytes")
+        // VOWEL has no key tracking: a FOLLOW macro on it is an unknown macro.
+        assertFailsWith<IllegalArgumentException> { GlintPatch("Bad", GlintVoice.VOWEL, mapOf("FOLLOW" to 0.5f)) }
     }
 
     @Test

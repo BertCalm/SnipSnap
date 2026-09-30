@@ -20,9 +20,11 @@ class GlintLegacyTest {
     @Test
     fun `every old voice name loads as the voice that replaced it`() {
         for ((name, voice) in REPLACED_BY) {
-            val patch = GlintPatch.fromJsonText(old(name, "\"PEAK\":0.6")) as GlintPatch
+            val patch = GlintPatch.fromJsonText(old(name, "\"PEAK\":0.6,\"BLOOM\":0.4")) as GlintPatch
             assertEquals(voice, patch.voice, name)
             assertEquals(0.6f, patch.macros.getValue("PEAK"), name)
+            // Old BLOOM 0.4 fell into PEAK on every voice but RATCHET, whose ladder climbed.
+            assertEquals(if (name == "RATCHET") 0.3f else 0.7f, patch.macros.getValue("BLOOM"), 1e-6f, name)
         }
     }
 
@@ -75,7 +77,8 @@ class GlintLegacyTest {
 
     @Test
     fun `no voice of today is called by an old name`() {
-        // Were one, that voice's own patches would be remapped on every load.
+        // Decode looks up today's names first, so a current voice named like an old
+        // one would swallow that name's old patches, which would then load unmigrated.
         val today = GlintVoice.entries.map { it.name }
         assertTrue(today.none { it in REPLACED_BY }, "a current voice shares an old name: $today")
     }
