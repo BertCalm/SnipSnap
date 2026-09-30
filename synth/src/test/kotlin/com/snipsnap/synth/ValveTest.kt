@@ -29,7 +29,7 @@ class ValveTest {
     private val neutral = mapOf("DRIVE" to 0f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
 
     /** The DRIVE 1 (gain 1000) steady-probe clarity at 4x, dB: the measured value; the aliasing test asserts it less 2 dB. */
-    private val MEASURED_DRIVE_1_CLARITY = 40.6
+    private val measuredDrive1Clarity = 40.6
 
     // ---------- helpers ----------
 
@@ -172,7 +172,7 @@ class ValveTest {
         // third-octave's share of its own 40 Hz-16 kHz energy, not absolute level: the
         // peak match's single gain is the RMS clause's to judge. The kick skips 8 bands
         // above 1.6 kHz it barely has (< 1e-6 of its energy); the snare skips none.
-        // These numbers are those of the always-4x render (V1's): the V1.1 gain law, wall and
+        // These numbers are those of the 4x render (V1's): the V1.1 gain law, wall and
         // supply leave the neutral point alone (DRIVE 0, SAG 0, CAB 0).
         for ((name, dry, rmsBound) in listOf(Triple("kick", kick, 0.12), Triple("snare", snare, 0.44))) {
             val out = Valve.process(dry, neutral)
@@ -208,10 +208,11 @@ class ValveTest {
     @Test
     fun `4x keeps the fold-back under the bar where the snip rate cannot`() {
         // SAG, TONE and CAB at their neutrals so the bar is read on the tube alone.
-        // V1 pinned 51.3 dB at 4x / 28.8 at 1x at DRIVE 1 (gain 35). On the V1.1 law
-        // DRIVE 1 is gain 1000: measured 40.6 dB at 4x / 26.8 at 1x. The owner chose
-        // that top knowing the bar is missed there (V1.1 ruling 5); DRIVE 0.6 (gain 2.5,
-        // unchanged) keeps the 45 dB bar.
+        // DRIVE 0.65 (the default, gain 5.4) is the case the test's name describes: 76.4 dB
+        // at 4x against 40.3 dB at 1x, either side of the 45 dB bar. The other two are pins:
+        // at DRIVE 0.6 (gain 2.5) the 1x path also clears the bar, and at DRIVE 1 (gain
+        // 1000; V1 pinned 51.3 dB at 4x / 28.8 at 1x at gain 35) the 4x path misses it,
+        // 40.6 dB at 4x / 26.8 at 1x, and the owner chose that top knowing the bar is missed.
         val f0 = 246.94f
         val p = probe(f0, 2.0f)
         val start = (0.3f * rate).toInt()
@@ -221,13 +222,32 @@ class ValveTest {
         }
         val four6 = clarity(0.6f, true)
         val one6 = clarity(0.6f, false)
+        val four65 = clarity(0.65f, true)
+        val one65 = clarity(0.65f, false)
         val four10 = clarity(1f, true)
         val one10 = clarity(1f, false)
-        println("VALVE aliasing at 247 Hz: DRIVE 0.6 4x ${"%.1f".format(four6)} / 1x ${"%.1f".format(one6)} dB; DRIVE 1 4x ${"%.1f".format(four10)} / 1x ${"%.1f".format(one10)} dB")
+        println("VALVE aliasing at 247 Hz: DRIVE 0.6 4x ${"%.1f".format(four6)} / 1x ${"%.1f".format(one6)} dB; DRIVE 0.65 4x ${"%.1f".format(four65)} / 1x ${"%.1f".format(one65)} dB; DRIVE 1 4x ${"%.1f".format(four10)} / 1x ${"%.1f".format(one10)} dB")
+        assertTrue(four65 >= 45.0, "energy between harmonics is only ${"%.1f".format(four65)} dB down at 4x, DRIVE 0.65")
+        assertTrue(one65 < 45.0, "the probe cannot see fold-back at DRIVE 0.65: 1x reads ${"%.1f".format(one65)} dB, over the bar")
         assertTrue(four6 >= 45.0, "energy between harmonics is only ${"%.1f".format(four6)} dB down at 4x, DRIVE 0.6")
         assertTrue(one6 < four6 - 6.0, "the probe cannot see fold-back at DRIVE 0.6: 1x ${"%.1f".format(one6)} vs 4x ${"%.1f".format(four6)}")
-        assertTrue(four10 >=MEASURED_DRIVE_1_CLARITY - 2.0, "DRIVE 1 at 4x fell to ${"%.1f".format(four10)} dB")
+        assertTrue(four10 >= measuredDrive1Clarity - 2.0, "DRIVE 1 at 4x fell to ${"%.1f".format(four10)} dB")
         assertTrue(one10 < four10 - 6.0, "the probe cannot see fold-back: 1x ${"%.1f".format(one10)} vs 4x ${"%.1f".format(four10)}")
+    }
+
+    @Test
+    fun `the public entry point runs the 4x path at every DRIVE`() {
+        // The 4x round trip is always on through Valve.process(snip, macros). V1's aliasing
+        // test used to send the 4x side through the public entry for this reason and now
+        // forces the overload, so this test carries the promise that the default path oversamples.
+        for (drive in listOf(0f, 0.3f, 0.65f, 1f)) {
+            val m = mapOf("DRIVE" to drive, "SAG" to 0.35f, "TONE" to 0.5f, "CAB" to 0.5f)
+            assertContentEquals(
+                Valve.process(snare, m).samples,
+                Valve.process(snare, m, oversample = true).samples,
+                "the public entry point is not the 4x path at DRIVE $drive",
+            )
+        }
     }
 
     @Test
@@ -365,7 +385,7 @@ class ValveTest {
     }
 
     @Test
-    fun `SAG dips a driven sound and never leaves the rest point off zero`() {
+    fun `SAG dips a driven sound and adds no end step`() {
         // The V1.1 supply sag is post-tube: y = t / (1 + SAG * 3 * env(|t|)), env a 5 ms /
         // 120 ms follower of the tube's own output. Measured on the kick at DRIVE 0.6 (gain
         // 2.5): the kick's level 60-160 ms after the hit, re its first 20 ms, falls by about
@@ -489,8 +509,7 @@ class ValveTest {
         // Golden values captured from the V1 code (base 1a2ec180): the RMS and six samples of
         // the kick and snare at DRIVE 0.6 / CAB 0.6, DRIVE 0.3 / CAB 0.25, DRIVE 0.6 / CAB 0.5
         // and DRIVE 0.6 / CAB 0.1 (the last pins the ramp below CAB 0.25, where the network is
-        // only partly in), all SAG 0 and TONE 0.5, forced through the 4x path so the pin does
-        // not depend on any oversampling gate.
+        // only partly in), all SAG 0 and TONE 0.5, forced through the 4x path.
         val goldens: List<Triple<String, Pair<Float, Float>, Pair<Double, List<Float>>>> = listOf(
             Triple("kick", 0.6f to 0.6f, 0.23071308447352024 to listOf(0.66134125f, -0.7810704f, -0.3686499f, -0.0011201216f, 0.009041333f, 0.0016381168f)),
             Triple("kick", 0.3f to 0.25f, 0.1926597508245963 to listOf(0.75100744f, -0.54861236f, -0.18609507f, 7.6583226E-4f, 0.00432172f, 7.611417E-4f)),
@@ -530,10 +549,10 @@ class ValveTest {
 
     @Test
     fun `identical channels stay identical with the sag live - one follower per channel`() {
-        // The default DRIVE is now 0.65 (gain 5.4): the tube is over the rail on a normalised
-        // pad, so the supply follower is live at the defaults and FxTest's identical-channels
-        // test runs VALVE with the sag working. This test drives it harder, DRIVE 1 and SAG 1.
-        // A follower carried from L into R would sag R from its first frame.
+        // The supply follower keys on the tube's own output at any level, so it is live at
+        // every DRIVE, the default included, and FxTest's identical-channels test runs VALVE
+        // with the sag working. This test drives it harder, DRIVE 1 and SAG 1. A follower
+        // carried from L into R would sag R from its first frame.
         val frames = kick.frameCount
         val doubled = Snip(FloatArray(frames * 2) { i -> kick.samples[i / 2] }, 2, rate)
         val out = Valve.process(doubled, mapOf("DRIVE" to 1f, "SAG" to 1f))

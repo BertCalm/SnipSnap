@@ -26,12 +26,12 @@ import kotlin.random.Random
  *
  * The first section that oversamples. At the snip's rate a hot tube folds its
  * harmonics back into the audible band: the Phase-0 spike measured a steady
- * 247 Hz probe at DRIVE 1 with energy between harmonics only 31.9 dB down at
- * 1x against 49.4 dB at 4x (an 8x reference read 50.9; that was the spike's own
- * probe and model of the tube). ValveTest's steady probe reads 28.8 dB at 1x
- * against 51.3 dB at 4x at gain 35 (DRIVE 1 on the V1 law), and on the V1.1 law,
- * where DRIVE 1 is gain 1000, 26.8 dB at 1x against 40.6 dB at 4x (its aliasing
- * test prints both).
+ * 247 Hz probe at its own DRIVE 1 (gain 35 on its law) with energy between
+ * harmonics only 31.9 dB down at 1x against 49.4 dB at 4x (an 8x reference read
+ * 50.9; that was the spike's own probe and model of the tube). ValveTest's
+ * steady probe reads 28.8 dB at 1x against 51.3 dB at 4x at gain 35 (DRIVE 1 on
+ * the V1 law), and on the V1.1 law, where DRIVE 1 is gain 1000, 26.8 dB at 1x
+ * against 40.6 dB at 4x (its aliasing test prints both).
  * The round trip is zero-stuffing interpolated by [Tide.bandLimit] on the way
  * up (never the general resampler there, which cost 72 ms per rendered second
  * on its own) and [Dsp.decimate] on the way down, the melodic engines' own -
@@ -89,14 +89,15 @@ object Valve {
      * clean before V1.1, but that was DRIVE 1 on the V1 law (the V1 gate's brass at
      * gain 35, SAG 0.35); at gain 1000 the brass reads 0.255 % and 1.72 % is the kick's.
      *
-     * K is 3, the top of the range the spike could reach: the kick's level 60-160 ms
-     * after the hit, re its first 20 ms, falls 2.2 dB against SAG 0 at DRIVE 0.6 (gain
-     * 2.5) and about 3 dB at gain 35 (the spike, DRIVE 1 on the V1 law); the spike aimed
-     * at 4-6 dB, and a slower charge, not more depth, is the likely lever, unmeasured.
-     * Because the follower reads the tube's output, at higher gain it sits near 1 for
-     * longer, so the dip shrinks toward a level offset the peak match cancels; that is
-     * not measured above gain 35, and the owner's confirmation listen checks it. The
-     * owner heard SAG only at gain 35 and below.
+     * K is 3, the top of the range the spike searched (0.8 to 3): the kick's level
+     * 60-160 ms after the hit, re its first 20 ms, falls 2.2 dB against SAG 0 at DRIVE
+     * 0.6 (gain 2.5) and about 3 dB at gain 35 (the spike, DRIVE 1 on the V1 law); the
+     * spike aimed at 4-6 dB, and a slower charge, not more depth, is the likely lever,
+     * unmeasured. At gain 1000 (DRIVE 1, CAB 0.6) the same level drops 3.15 dB on the
+     * kick and 3.28 dB on the snare at SAG 1, and about 1.6 dB at SAG 0.35, flat from 20
+     * to 160 ms: a steady level offset after the hit's first milliseconds, not a dip
+     * and recovery, so it did not shrink from gain 35. The owner heard SUPPLY at gain
+     * 35 and below before this was measured.
      */
     private const val SUPPLY_K = 3f
     private const val SUPPLY_ATTACK_SECONDS = 0.005f

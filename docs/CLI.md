@@ -358,7 +358,7 @@ itself: the same hit, played slower or faster, snapped to semitones),
 machine's back half; its WIDTH widens a mono pad's WAV to stereo) and
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
-cabinet — run four times over inside so a hot tube does not fold back).
+cabinet — run four times over inside so a hot tube folds back far less).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the
