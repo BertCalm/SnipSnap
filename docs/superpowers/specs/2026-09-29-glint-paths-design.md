@@ -181,7 +181,7 @@ SIREN do.
    `BREATHE_SHARE = 0.25` (a quarter of the onset's travel). BLOOM at 0.5
    gives a still pad. VOWEL breathes its position: `pos ± BREATHE_SHARE · |s| · 4 · sin(…)`.
    STEP's breath is quantised to whole harmonics at wraps. BRASS breathes its
-   *amplitude* around `BRASS_REST` (±`BREATHE_SHARE · BRASS_REST`) and its k
+   *amplitude* around `BRASS_REST` (±`BREATHE_SHARE · |s| · BRASS_REST`, so BLOOM 0.5 is still on BRASS too) and its k
    follows through `e(t)` — loudness and brightness together, like a player.
 3. **Exact closure:** choose N whole cycles so `L = round(N·rate/f0) ≈
    BREATHE_SECONDS (3.0 s)`, then run the carrier at `f0' = N·rate/L`
