@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -16,13 +17,22 @@ import kotlin.math.sqrt
  * oscillators in every string synthesizer of that decade, and what makes
  * one saw read as a section. Not a bucket-brigade emulation — no clock, no
  * compander, no clock noise; a three-tap chorus with a tone per tap, and
- * that is all it claims.
+ * that is all the chorus claims.
  *
  * Sits after TAPE and before PHASE. The copies are made of the finished
  * tone, and the sweep and the repeats then carry all three — PHASE's own
  * argument for its slot, one section earlier; before PHASE rather than
  * after because a phaser on a chorus notches three moving copies at once,
  * and the fixed order picks one.
+ *
+ * **SECTION.** Three taps on the same two sines read as one instrument
+ * being swirled, not as several playing: their pitch wobbles are locked
+ * together (every pair correlates at exactly −0.5) and the swell repeats
+ * every 1.72 s. SECTION crossfades, equal power, from that chorus (0, bit
+ * for bit what this section was before the macro existed, so a saved recipe
+ * without the key keeps its bytes) to [EnsemblePlayers] (1): six players, each
+ * with their own drift, vibrato, onset, tone and level flutter. DEPTH and RATE
+ * then scale the players as they scale the chorus, and WIDTH is shared.
  *
  * **100 % wet, no dry mix** — TAPE's rule. A dry-plus-delayed sum is a
  * comb with notches every 133 Hz at 7.5 ms, 11–14 dB deep at half mix with
@@ -71,21 +81,31 @@ import kotlin.math.sqrt
  * the stereo weights — is a listening value with no source: the starting
  * point for the section's own gate, claimed as no instrument's.
  *
- * Peak-matched, deterministic (both sines start at phase zero), no seed,
- * no tail; runs at the snip's own rate. Six sines per frame and three
- * one-poles per channel: TAPE's load three times over, once.
+ * Peak-matched, deterministic, no tail; runs at the snip's own rate. The
+ * chorus has no seed (both sines start at phase zero); the players' noise
+ * is seeded from literals. The chorus is six sines per frame and three
+ * one-poles per channel: TAPE's load three times over, once; the players
+ * cost about twice that, and a SECTION between 0 and 1 runs both.
  */
 object Ensemble {
 
     val MACROS: List<MacroSpec> = listOf(
-        // Both sines' swings together; 0 is three identical copies.
+        // Both sines' swings together; 0 is three identical copies. At SECTION 1 it
+        // scales the players' drift, vibrato and level flutter instead (twice DEPTH is
+        // their scale, so the default 0.5 is the depth they are written for).
         MacroSpec("DEPTH", 0.5f),
         // One multiplier on both rates, ×0.5 to ×2; the centre is exactly
-        // the base rates, and the neutral, so AMT leaves the speed alone.
+        // the base rates, and the neutral, so AMT leaves the speed alone. The
+        // players' drift and vibrato rates scale with it too.
         MacroSpec("RATE", 0.5f, neutral = 0.5f),
         // The mono sum at 0 (the WAV stays mono) to the stereo pair at 1;
         // neutral 0, so AMT narrows the image toward the mono sum.
         MacroSpec("WIDTH", 1f, neutral = 0f),
+        // The three-tap chorus at 0, six independent players at 1, an equal-power
+        // crossfade between. Last in the list, so the macros before it keep their
+        // places in every positional read; default and neutral 0, so a recipe
+        // without the key is the chorus and AMT fades the players away.
+        MacroSpec("SECTION", 0f, neutral = 0f),
     )
 
     /** The centre delay every tap swings around, seconds. */
@@ -109,6 +129,9 @@ object Ensemble {
 
     /** Below this WIDTH is off and the output keeps the input's channel count. */
     const val WIDTH_OFF = 0.001f
+
+    /** At or below this SECTION is off: the chorus runs alone, by the very code that ran before the macro existed. */
+    const val SECTION_OFF = 0.001f
 
     /**
      * The stereo pair's weights over the three taps: `L = (x, y, z)`, `R` the
@@ -195,25 +218,64 @@ object Ensemble {
 
     /** [process] with another row of the stereo family — the test's way of measuring the rows against each other. */
     internal fun process(snip: Snip, macros: Map<String, Float>, wideZ: Float): Snip {
-        val weights = wideWeights(wideZ)
-        val wx = weights[0]; val wy = weights[1]; val wz = weights[2]
+        wideWeights(wideZ)
         val m = defaults().toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         val depth = m.getValue("DEPTH")
         val rateMul = rateMultiplier(m.getValue("RATE"))
         val width = m.getValue("WIDTH")
+        val section = m.getValue("SECTION")
+
+        val inPeak = snip.peak()
+        // The one place a section changes the channel count: a mono pad at
+        // WIDTH above WIDTH_OFF comes out as the pair. A stereo pad keeps its two.
+        val outChannels = if (width > WIDTH_OFF && snip.channels == 1) 2 else snip.channels
+
+        if (section <= SECTION_OFF) {
+            val out = chorus(snip, depth, rateMul, width, wideZ)
+            matchPeak(out, inPeak)
+            return Snip(out, outChannels, snip.sampleRate)
+        }
+
+        val players = EnsemblePlayers.render(snip, depth, rateMul, width)
+        val weights = sectionWeights(section)
+        val out = if (weights[0] == 0f) {
+            players
+        } else {
+            val bed = chorus(snip, depth, rateMul, width, wideZ)
+            FloatArray(players.size) { weights[0] * bed[it] + weights[1] * players[it] }
+        }
+        // The players read the line behind the input, so the last of a render would otherwise cut mid-sound.
+        Dsp.fadeTail(out, rate = snip.sampleRate, channels = outChannels)
+        matchPeak(out, inPeak)
+        return Snip(out, outChannels, snip.sampleRate)
+    }
+
+    /**
+     * The chorus's equal-power weights at [section] between 0 and 1: `(chorus, players)`, unit power, exactly
+     * `(0, 1)` at 1 so the chorus is not rendered at all there. Below [SECTION_OFF] the chorus runs alone and
+     * this is not consulted.
+     */
+    internal fun sectionWeights(section: Float): FloatArray {
+        require(section in 0f..1f) { "SECTION is 0..1; got $section" }
+        if (section >= 1f) return floatArrayOf(0f, 1f)
+        val angle = section * PI / 2.0
+        return floatArrayOf(cos(angle).toFloat(), sin(angle).toFloat())
+    }
+
+    /** The chorus's output before the peak match: three taps off one line, unchanged since before SECTION existed. */
+    private fun chorus(snip: Snip, depth: Float, rateMul: Float, width: Float, wideZ: Float): FloatArray {
+        val weights = wideWeights(wideZ)
+        val wx = weights[0]; val wy = weights[1]; val wz = weights[2]
 
         val rate = snip.sampleRate
         val frames = snip.frameCount
         val inChannels = snip.channels
         val wide = width > WIDTH_OFF
-        // The one place a section changes the channel count: a mono pad at
-        // WIDTH above WIDTH_OFF comes out as the pair. A stereo pad keeps its two.
         val widen = wide && inChannels == 1
         val outChannels = if (widen) 2 else inChannels
         val lineLen = (LINE_SECONDS * rate).toInt()
 
-        val inPeak = snip.peak()
         val out = FloatArray(frames * outChannels)
         val lines = Array(inChannels) { FloatArray(lineLen) }
         val tones = Array(inChannels) { Array(3) { Dsp.OnePole(rate) } }
@@ -248,15 +310,19 @@ object Ensemble {
             }
             w = (w + 1) % lineLen
         }
+        return out
+    }
 
-        // TAPE's peak match: the input's peak over every sample, the output
-        // scaled to it, coerced so a match can never clip.
+    /**
+     * TAPE's peak match: the input's peak over every sample, the output
+     * scaled to it, coerced so a match can never clip.
+     */
+    private fun matchPeak(out: FloatArray, inPeak: Float) {
         var outPeak = 0f
         for (v in out) { val a = abs(v); if (a > outPeak) outPeak = a }
         if (inPeak > 1e-9f && outPeak > 1e-9f) {
             val g = inPeak / outPeak
             for (i in out.indices) out[i] = (out[i] * g).coerceIn(-1f, 1f)
         }
-        return Snip(out, outChannels, rate)
     }
 }
