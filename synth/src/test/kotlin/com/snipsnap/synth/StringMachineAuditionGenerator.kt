@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
  *   captioned by [FoldMeter], the meter [StringMachineTest] pins;
  * - the control: the sound the owner approved in PR-E1, VELVET's FANFARE or
  *   RESIN's WIDE SECTION through ENSEMBLE at its defaults, so "is this a
- *   better string machine than the two taps it already had" has a clip to
+ *   better string machine than the chorus it already had" has a clip to
  *   be answered against.
  *
  * Clips share one loudness ([AuditionLevel]); a fold is the fold of its
@@ -52,11 +52,11 @@ object StringMachineAuditionGenerator {
         ),
         Machine(
             "WIDE_STRINGS", ResinPatch.ENGINE, "BRASS", "WIDE STRINGS", "WIDE SECTION",
-            "RESIN's stacked oscillators through the ladder at STACK .90 with the wah and the snap out. It is the widest source there is, so its pair barely correlates: this is the one whose fold to mono is worth the closest listen",
+            "RESIN's stacked oscillators through the ladder at STACK .90 with the wah and the snap out. The same section as STRING MACHINE on a thicker source; the fold beside it is what the phone plays",
         ),
         Machine(
             "DARK_STRINGS", ResinPatch.ENGINE, "BRASS", "DARK STRINGS", "WIDE SECTION",
-            "a low, closed tone under a slower, deeper swing so the swell has room to be felt. It should read as the same instrument as WIDE STRINGS with the lights down, not as a different one",
+            "a low, closed tone under slower, deeper drift and vibrato so the section has room to be felt. It should read as the same instrument as WIDE STRINGS with the lights down, not as a different one",
         ),
     )
 

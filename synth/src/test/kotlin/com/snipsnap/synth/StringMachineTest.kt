@@ -137,10 +137,10 @@ class StringMachineTest {
     @Test
     fun `the landing does not cost a string machine its in-key tuning`() {
         // KitBuilder.assign retunes a TONAL pad into the kit's key from the mono fold of what it is handed, and
-        // leaves a pad it cannot pitch alone. At these landings' DEPTH and RATE the ENSEMBLE swings a tap's pitch
-        // by up to about 24 cents (Ensemble.peakCents, slow and fast sines summed), which could have dropped the
-        // detector under its bar; measured, the landed pair's confidence is within 0.02 of the voice's and it asks
-        // for the same tune within 4 cents (fine cents, dry / landed: -4 and -4, -1 and -1, -8 and -4, -4 and -4).
+        // leaves a pad it cannot pitch alone. The six players each wander in pitch by a few cents (drift 3-5 cents RMS,
+        // vibrato 3.5-6 cents RMS: EnsemblePlayers' tables, scaled by these landings' DEPTH), which could have dropped
+        // the detector under its bar; measured, the landed pair's confidence is within 0.02 of the voice's and it asks
+        // for the same tune within 4 cents (fine cents, dry / landed: -4 and 0, -1 and -1, -8 and -4, -4 and -4).
         for (m in machines) {
             val dry = patch(m).render()
             val landed = landing(m).process(dry)
@@ -148,6 +148,7 @@ class StringMachineTest {
             val tuned = assertNotNull(Tuner.inKey(landed, 9, Scale.MINOR), "${m.name}: the landing hid the pitch from the detector")
             assertEquals(plain.targetMidi, tuned.targetMidi, "${m.name}: the landed pad tunes to a different note")
             val centsApart = abs((plain.tuneCoarse * 100 + plain.tuneFine) - (tuned.tuneCoarse * 100 + tuned.tuneFine))
+            println("STRING MACHINE tuning ${m.name}: fine cents dry ${plain.tuneFine} landed ${tuned.tuneFine}, apart $centsApart, confidence ${"%.3f".format(java.util.Locale.ROOT, plain.confidence)} / ${"%.3f".format(java.util.Locale.ROOT, tuned.confidence)}")
             assertTrue(centsApart <= 6, "${m.name}: the landed pad asks for a tune ${centsApart} cents from the voice's")
             assertTrue(abs(plain.confidence - tuned.confidence) < 0.05f, "${m.name}: the detector is ${plain.confidence} sure of the voice and ${tuned.confidence} of the landed pad")
         }

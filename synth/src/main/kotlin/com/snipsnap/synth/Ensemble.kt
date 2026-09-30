@@ -20,9 +20,9 @@ import kotlin.math.sqrt
  * that is all the chorus claims.
  *
  * Sits after TAPE and before PHASE. The copies are made of the finished
- * tone, and the sweep and the repeats then carry all three — PHASE's own
+ * tone, and the sweep and the repeats then carry every copy — PHASE's own
  * argument for its slot, one section earlier; before PHASE rather than
- * after because a phaser on a chorus notches three moving copies at once,
+ * after because a phaser on a chorus notches the moving copies at once,
  * and the fixed order picks one.
  *
  * **SECTION.** Three taps on the same two sines read as one instrument
@@ -32,7 +32,12 @@ import kotlin.math.sqrt
  * for bit what this section was before the macro existed, so a saved recipe
  * without the key keeps its bytes) to [EnsemblePlayers] (1): six players, each
  * with their own drift, vibrato, onset, tone and level flutter. DEPTH and RATE
- * then scale the players as they scale the chorus, and WIDTH is shared.
+ * then scale the players as they scale the chorus, and WIDTH is shared. Between
+ * the two the bass is kept as one steady voice: the chorus bed gives up its own
+ * bass and the players' anchor is made up to full weight, because the bed's bass
+ * (a copy at 7.5 ms) and the anchor's (a copy at 17.7 ms) would otherwise cancel
+ * at 49 Hz and its odd multiples. The paragraphs below on the dry signal, DEPTH 0
+ * and the stereo rows describe the chorus; [EnsemblePlayers] has the players'.
  *
  * **100 % wet, no dry mix** — TAPE's rule. A dry-plus-delayed sum is a
  * comb with notches every 133 Hz at 7.5 ms, 11–14 dB deep at half mix with
@@ -237,18 +242,32 @@ object Ensemble {
             return Snip(out, outChannels, snip.sampleRate)
         }
 
-        val players = EnsemblePlayers.render(snip, depth, rateMul, width)
         val weights = sectionWeights(section)
         val out = if (weights[0] == 0f) {
-            players
+            EnsemblePlayers.render(snip, depth, rateMul, width)
         } else {
-            val bed = chorus(snip, depth, rateMul, width, wideZ)
-            FloatArray(players.size) { weights[0] * bed[it] + weights[1] * players[it] }
+            // The low band is one steady voice at every point of the crossfade: the anchor's weight is made up to one, and the bed
+            // brings only what is above its bass (two coherent copies of a bass note at different delays would cancel).
+            val players = EnsemblePlayers.render(snip, depth, rateMul, width, anchorExtra = 1f / weights[1] - 1f, anchorDelayS = EnsemblePlayers.anchorDelayAt(section))
+            underAnchor(chorus(snip, depth, rateMul, width, wideZ), players, weights, outChannels, snip.sampleRate)
         }
         // The players read the line behind the input, so the last of a render would otherwise cut mid-sound.
         Dsp.fadeTail(out, rate = snip.sampleRate, channels = outChannels)
         matchPeak(out, inPeak)
         return Snip(out, outChannels, snip.sampleRate)
+    }
+
+    /** The crossfade of the chorus [bed] with the [players]: each channel's bed less its own bass, weighted by [weights], plus the players weighted likewise. */
+    private fun underAnchor(bed: FloatArray, players: FloatArray, weights: FloatArray, channels: Int, rate: Int): FloatArray {
+        val coefficient = EnsemblePlayers.bedLowCoefficient(rate)
+        val low = FloatArray(channels)
+        val out = FloatArray(players.size)
+        for (i in out.indices) {
+            val c = i % channels
+            low[c] += coefficient * (bed[i] - low[c])
+            out[i] = weights[0] * (bed[i] - low[c]) + weights[1] * players[i]
+        }
+        return out
     }
 
     /**

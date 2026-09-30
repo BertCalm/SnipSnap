@@ -58,7 +58,7 @@ internal object StringMachine {
     fun chain(depth: Float = 0.5f, rate: Float = 0.5f, section: Float = 1f): FxChain =
         FxChain().withSection("ensemble", mapOf("DEPTH" to depth, "RATE" to rate, "WIDTH" to 1f, "SECTION" to section))
 
-    /** STRING MACHINE and WIDE STRINGS: [Ensemble]'s own DEPTH and RATE, with its six players (WIDE STRINGS is already the widest source there is: its three-oscillator STACK at .90 leaves a pair that barely correlates). */
+    /** STRING MACHINE and WIDE STRINGS: [Ensemble]'s own DEPTH and RATE, with its six players. */
     val CLASSIC: FxChain = chain()
 
     /** THIN STRINGS: a shallower swing, a little quicker, so the section reads as shimmer and not as lushness. */

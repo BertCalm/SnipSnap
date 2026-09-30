@@ -2,8 +2,6 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import java.security.MessageDigest
-import kotlin.math.PI
-import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

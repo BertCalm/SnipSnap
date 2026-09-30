@@ -1,9 +1,7 @@
 package com.snipsnap.synth
 
-import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.test.Test
@@ -116,12 +114,12 @@ class EnsembleSectionTest {
     }
 
     @Test
-    fun `the first seconds of a render do not depend on how long the snip is`() {
+    fun `every sample of a short render is the same sample of a longer one`() {
         val short = tone(196f, 2f)
         val long = tone(196f, 4f)
         val a = EnsemblePlayers.render(short, 0.5f, 1f, 1f)
         val b = EnsemblePlayers.render(long, 0.5f, 1f, 1f)
-        // The last frames of the short render are where its line has not seen more input; the rest must agree exactly.
+        // The render is causal and keeps no state from the input's length, so every sample of the short render is the same sample of the long one.
         for (i in 0 until a.size) assertEquals(a[i], b[i], "sample $i moved with the snip's length")
     }
 
@@ -142,9 +140,43 @@ class EnsembleSectionTest {
     }
 
     @Test
+    fun `DEPTH reaches the render - at zero a steady tone holds a steady level, at the default it does not`() {
+        // [delayTracks] is what the tests measure and [render] is what is heard; they share [EnsemblePlayers]'s one law, and this is the check on the render's side of it.
+        val sine = Snip(FloatArray(88_200) { (0.5 * sin(2 * PI * 440.0 * it / 44_100)).toFloat() }, 1, 44_100)
+        fun levelSpreadDb(depth: Float): Double {
+            val out = EnsemblePlayers.render(sine, depth, 1f, 0f)
+            val levels = (22_050 until out.size - 441 step 441).map { start ->
+                var e = 0.0
+                for (n in start until start + 441) e += out[n].toDouble() * out[n]
+                10.0 * kotlin.math.log10(e / 441 + 1e-12)
+            }
+            return levels.max() - levels.min()
+        }
+        val still = levelSpreadDb(0f)
+        val moving = levelSpreadDb(0.5f)
+        println("SECTION level spread of a steady 440 Hz tone, dB: DEPTH 0 ${"%.3f".format(java.util.Locale.ROOT, still)}, DEPTH 0.5 ${"%.2f".format(java.util.Locale.ROOT, moving)}")
+        assertTrue(still < 0.4, "at DEPTH 0 a steady tone's level still moves: $still dB")
+        assertTrue(moving > 3.0, "at DEPTH 0.5 a steady tone's level barely moves: $moving dB")
+    }
+
+    @Test
     fun `RATE and WIDTH mean what they meant, for the players`() {
         val renders = listOf(0f, 0.5f, 1f).map { rate -> section(1f, mapOf("RATE" to rate))(saw).samples.toList() }
         assertEquals(3, renders.toSet().size, "RATE left the players' sound alone")
+        // Direction: a faster RATE is more turns of every player's wobble in the same time.
+        fun turns(rate: Float): Int {
+            val tracks = EnsemblePlayers.delayTracks(1f, Ensemble.rateMultiplier(rate), 30, 1000)
+            var count = 0
+            for (track in tracks) {
+                val mean = track.average()
+                for (n in 1 until track.size) if ((track[n] - mean) * (track[n - 1] - mean) < 0) count++
+            }
+            return count
+        }
+        val slow = turns(0f)
+        val fast = turns(1f)
+        println("SECTION zero crossings of the six delay tracks over 30 s: RATE 0 $slow, RATE 1 $fast")
+        assertTrue(fast > 2 * slow, "RATE 1 is not clearly faster than RATE 0: $fast against $slow")
         fun correlation(width: Float): Double {
             val out = section(1f, mapOf("WIDTH" to width))(saw)
             val l = channel(out, 0); val r = channel(out, 1)
@@ -172,6 +204,18 @@ class EnsembleSectionTest {
     }
 
     @Test
+    fun `the stereo clauses hold across the crossfade too`() {
+        for (z in listOf(0.3f, 0.7f)) {
+            assertContentEquals(section(z)(saw).samples, section(z)(doubled(saw)).samples, "a doubled pair should come out as the widened mono at SECTION $z")
+            for (width in listOf(0f, 0.5f, 1f)) {
+                val left = section(z, mapOf("WIDTH" to width))(hardLeft(saw))
+                assertTrue(channel(left, 1).all { it == 0f }, "a hard-left input leaked into the right channel at SECTION $z, WIDTH $width")
+                assertTrue(channel(left, 0).any { it != 0f })
+            }
+        }
+    }
+
+    @Test
     fun `the players never outrun their line at the extremes of DEPTH and RATE`() {
         for (rate in listOf(0f, 0.5f, 1f)) {
             val tracks = EnsemblePlayers.delayTracks(1f, Ensemble.rateMultiplier(rate), 60, 1000)
@@ -180,6 +224,19 @@ class EnsembleSectionTest {
             println("SECTION delay range at DEPTH 1, RATE $rate: ${"%.2f".format(java.util.Locale.ROOT, low * 1000)} .. ${"%.2f".format(java.util.Locale.ROOT, high * 1000)} ms")
             assertTrue(low > 0.001, "a player's delay fell under 1 ms at RATE $rate: $low")
             assertTrue(high < 0.05, "a player's delay passed 50 ms (the line is 60) at RATE $rate: $high")
+        }
+    }
+
+    @Test
+    fun `at the extremes of DEPTH and RATE a render stays finite, the input's length and its peak`() {
+        // The delay lines are held by the read clamp in [EnsemblePlayers.render] (2 samples to the line's length less 2), not by the noise clamp
+        // alone: the clamp bounds the wander, and the low side of a delay can still fall near the floor at DEPTH 1.
+        val long = tone(130.81f, 8f)
+        for (depth in listOf(0f, 1f)) for (rate in listOf(0f, 1f)) {
+            val out = section(1f, mapOf("DEPTH" to depth, "RATE" to rate))(long)
+            assertEquals(long.frameCount, out.frameCount)
+            assertTrue(out.samples.all { it.isFinite() }, "DEPTH $depth RATE $rate is not finite")
+            assertEquals(long.peak(), out.peak(), 1e-5f, "DEPTH $depth RATE $rate is not peak-matched")
         }
     }
 
@@ -211,6 +268,32 @@ class EnsembleSectionTest {
     // ---------------------------------------------------------------- the property, measured
 
     @Test
+    fun `the pad sheet's default tap is the blend of chorus and players, and its fold is recorded`() {
+        // A chip tap at its default AMT is not SECTION 1: it is DEPTH .35, WIDTH .7, SECTION .7, the chorus still in it at cos(63 deg) of the level.
+        val macros = Treatments.chain("sectioned", 0.7f).section("ensemble")!!
+        assertEquals(mapOf("DEPTH" to 0.35f, "WIDTH" to 0.7f, "SECTION" to 0.7f), macros.mapValues { (it.value * 1000).toInt() / 1000f })
+        val folds = listOf(130.81f, 261.63f).map { FoldMeter.report(Ensemble.process(tone(it, 2f), macros)) }
+        println("SECTION chip AMT 0.7 fold C3 loss ${"%.2f".format(java.util.Locale.ROOT, folds[0].lossDb)} L/R ${"%.2f".format(java.util.Locale.ROOT, folds[0].correlation)} pump ${"%.2f".format(java.util.Locale.ROOT, folds[0].pumpDb)}; C4 loss ${"%.2f".format(java.util.Locale.ROOT, folds[1].lossDb)} L/R ${"%.2f".format(java.util.Locale.ROOT, folds[1].correlation)} pump ${"%.2f".format(java.util.Locale.ROOT, folds[1].pumpDb)}")
+        // Measured: -0.53 / -0.18 dB, L/R 0.72 / 0.89, pump 0.42 / 0.42 dB. The upper saw's pair is nearly mono at this tap (WIDTH 0.7 on a voice with few low partials).
+        for (f in folds) assertTrue(f.lossDb > -0.8 && f.pumpDb < 0.8 && f.correlation < 0.95, "the chip's default tap folds worse than measured: loss ${f.lossDb} pump ${f.pumpDb} L/R ${f.correlation}")
+    }
+
+    @Test
+    fun `the bass stays one steady voice across the crossfade - the chorus bed and the anchor do not cancel`() {
+        // The chorus bed's bass is a copy at 7.5 ms and the anchor's is a copy at 17.7: two coherent copies with a 10 ms offset cancel
+        // at 49 Hz and its odd multiples (-10.6 dB at 50 Hz, -15.6 at 130 Hz before the bed gave up its bass and the anchor kept its delay).
+        val tones = listOf(50.0, 100.0, 130.0, 165.0, 200.0, 260.0)
+        for (z in listOf(0.05f, 0.3f, 0.5f, 0.7f, 0.85f, 0.97f)) {
+            fun blend(snip: Snip): Snip = Ensemble.process(snip, mapOf("DEPTH" to 0.35f, "WIDTH" to 0.7f, "SECTION" to z))
+            val rows = tones.map { hz -> hz to SectionMeter.bassFold(hz, ::blend) }
+            println("SECTION crossfade $z bass fold dB vs dry, mean(worst 250 ms window): " + rows.joinToString("  ") { (hz, r) -> "${hz.toInt()} Hz ${"%.1f".format(java.util.Locale.ROOT, r.first)}(${"%.1f".format(java.util.Locale.ROOT, r.second)})" })
+            // Measured: within -5.0 mean and -7.7 worst from 0.05 to 0.85; at 0.97 the anchor is half way through its move from the bed's delay to its own, and 165 Hz reaches -5.4 (-10.8).
+            val (meanFloor, worstFloor) = if (z < 0.9f) -5.3 to -8.2 else -5.7 to -11.3
+            for ((hz, r) in rows) assertTrue(r.first >= meanFloor && r.second >= worstFloor, "SECTION $z folds a $hz Hz sine to mean ${r.first} dB, worst ${r.second} dB")
+        }
+    }
+
+    @Test
     fun `the players are independent where the chorus is locked`() {
         val chorus = SectionMeter.pitchCorrelation(SectionMeter.chorusTracks(60, 1000), 1000)
         val players = SectionMeter.pitchCorrelation(EnsemblePlayers.delayTracks(0.5f, 1f, 60, 1000), 1000)
@@ -226,6 +309,14 @@ class EnsembleSectionTest {
         val rows = listOf(100.0, 200.0, 300.0, 500.0, 1000.0).map { hz -> hz to SectionMeter.envelopePeriodicity(hz, section(1f)) }
         println("SECTION envelope line prominence, players: " + rows.joinToString("  ") { (hz, v) -> "${hz.toInt()} Hz ${"%.1f".format(java.util.Locale.ROOT, v)}" } + "  (chorus at 1 kHz ${"%.0f".format(java.util.Locale.ROOT, chorus)})")
         for ((hz, v) in rows) assertTrue(v <= 8.0, "the players' level repeats at $hz Hz: line prominence $v")
+    }
+
+    @Test
+    fun `the players' level does not repeat at the extremes of RATE either, and the lines there are recorded`() {
+        val rows = listOf(0f, 1f).flatMap { rate -> listOf(200.0, 1000.0).map { hz -> Triple(rate, hz, SectionMeter.envelopePeriodicity(hz, section(1f, mapOf("RATE" to rate)))) } }
+        println("SECTION envelope line prominence at the RATE extremes: " + rows.joinToString("  ") { (rate, hz, v) -> "RATE ${rate.toInt()} ${hz.toInt()} Hz ${"%.1f".format(java.util.Locale.ROOT, v)}" })
+        // Measured: 3.8 / 4.4 at RATE 0 and 8.7 / 3.4 at RATE 1 (200 / 1000 Hz), against 3.0-5.1 at the default RATE: the beating lines stand out a little more at the extremes.
+        for ((rate, hz, v) in rows) assertTrue(v <= 9.2, "the players' level repeats at RATE $rate, $hz Hz: line prominence $v")
     }
 
     @Test
@@ -245,8 +336,18 @@ class EnsembleSectionTest {
         val rows = listOf(40.0, 50.0, 65.0, 82.0, 100.0, 130.0, 165.0, 200.0, 260.0, 330.0).map { hz -> hz to SectionMeter.bassFold(hz, ::players) }
         println("SECTION bass fold dB vs dry, mean(worst 250 ms window): " + rows.joinToString("  ") { (hz, r) -> "${hz.toInt()} Hz ${"%.1f".format(java.util.Locale.ROOT, r.first)}(${"%.1f".format(java.util.Locale.ROOT, r.second)})" })
         for ((hz, r) in rows) {
-            assertTrue(r.first >= -7.0 && r.second >= -12.0, "the fold of a $hz Hz sine is hollow: mean ${r.first} dB, worst window ${r.second} dB")
+            assertTrue(r.first in -1.5..3.5 && r.second >= -4.2, "the fold of a $hz Hz sine is off the dry sine: mean ${r.first} dB, worst window ${r.second} dB")
         }
+    }
+
+    @Test
+    fun `above the anchor the mid-range is a comb, recorded so it is not mistaken for solved`() {
+        // The anchor is a 290 Hz low-pass and does nothing above it. A steady sine here folds hollower than the bass tones do; the rows
+        // are printed, and bounded just past what was measured, so a change that makes them worse fails and one that makes them better can say so.
+        fun players(snip: Snip): Snip = Snip(EnsemblePlayers.render(snip, 0.5f, 1f, 1f), 2, snip.sampleRate)
+        val rows = listOf(175.0, 240.0, 305.0, 380.0).map { hz -> hz to SectionMeter.bassFold(hz, ::players) }
+        println("SECTION mid-range fold dB vs dry, mean(worst 250 ms window): " + rows.joinToString("  ") { (hz, r) -> "${hz.toInt()} Hz ${"%.1f".format(java.util.Locale.ROOT, r.first)}(${"%.1f".format(java.util.Locale.ROOT, r.second)})" })
+        for ((hz, r) in rows) assertTrue(r.first >= -5.0 && r.second >= -12.4, "the fold of a $hz Hz sine: mean ${r.first} dB, worst window ${r.second} dB")
     }
 
     @Test
@@ -257,13 +358,16 @@ class EnsembleSectionTest {
         val rows = notes.map { FoldMeter.report(section(1f)(tone(it, 2f))) }
         val loss = rows.map { it.lossDb }.average()
         val correlation = rows.map { it.correlation }.average()
+        val chorusCorrelation = notes.map { FoldMeter.report(Ensemble.process(tone(it, 2f), emptyMap())).correlation }.average()
         val ripple = rows.map { it.rippleDb }.average()
         val pump = rows.map { it.pumpDb }.average()
         fun f(v: Double) = "%.2f".format(java.util.Locale.ROOT, v)
-        println("SECTION fold C3 saw ${f(c3.lossDb)} dB L/R ${f(c3.correlation)} ripple ${f(c3.rippleDb)} pump ${f(c3.pumpDb)}; C4 saw ${f(c4.lossDb)} dB L/R ${f(c4.correlation)} ripple ${f(c4.rippleDb)} pump ${f(c4.pumpDb)}; eight saws mean loss ${f(loss)} (worst ${f(rows.minOf { it.lossDb })}) L/R ${f(correlation)} ripple ${f(ripple)} pump ${f(pump)} (worst ${f(rows.maxOf { it.pumpDb })})")
+        println("SECTION fold C3 saw ${f(c3.lossDb)} dB L/R ${f(c3.correlation)} ripple ${f(c3.rippleDb)} pump ${f(c3.pumpDb)}; C4 saw ${f(c4.lossDb)} dB L/R ${f(c4.correlation)} ripple ${f(c4.rippleDb)} pump ${f(c4.pumpDb)}; eight saws mean loss ${f(loss)} (worst ${f(rows.minOf { it.lossDb })}) L/R ${f(correlation)} ripple ${f(ripple)} pump ${f(pump)} (worst ${f(rows.maxOf { it.pumpDb })}); the chorus's eight saws L/R ${f(chorusCorrelation)}")
         assertTrue(c3.lossDb > -1.2 && c4.lossDb > -1.2, "a saw's fold loses more than the players' measured -0.9 dB: ${c3.lossDb} / ${c4.lossDb}")
         assertTrue(loss > -0.8 && rows.minOf { it.lossDb } > -1.3, "the eight saws' fold loses more than measured: mean $loss worst ${rows.minOf { it.lossDb }}")
         assertTrue(c3.correlation < 0.75 && c4.correlation < 0.85 && correlation < 0.8, "the pair is not as wide as measured: ${c3.correlation} / ${c4.correlation} / $correlation")
+        assertEquals(0.43, chorusCorrelation, 0.02, "the chorus's own eight-saw pair moved")
+        assertTrue(chorusCorrelation < correlation, "the players' pair is meant to be the narrower one (the owned cost): chorus $chorusCorrelation, players $correlation")
         assertTrue(c3.pumpDb < 1.2 && c4.pumpDb < 2.4 && pump < 1.8 && rows.maxOf { it.pumpDb } < 2.5, "the fold pumps more than measured: ${c3.pumpDb} / ${c4.pumpDb} / $pump")
         assertTrue(c3.rippleDb < 2.5 && c4.rippleDb < 6.8 && ripple < 4.6, "the fold's level ripples more than measured: ${c3.rippleDb} / ${c4.rippleDb} / $ripple")
     }
