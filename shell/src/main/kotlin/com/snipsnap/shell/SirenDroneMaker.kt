@@ -50,12 +50,15 @@ object SirenDroneMaker {
      * Intervals the drone spans in [session]: the shortest of [DroneFit.SPANS]
      * whose nudge, read off [SirenDrone.nudgeCents], is within
      * [DroneFit.MAX_NUDGE_CENTS] — [DroneFit.spanFor]'s own search, over
-     * SIREN's own model rather than RESIN's.
+     * SIREN's own model rather than RESIN's. [cancelled] reaches every
+     * candidate's own fit (hardening finding on PR #373): each is a real
+     * integral, run from a UI thread's own coroutine, so a caller stepping
+     * ROOT quickly must be able to stop one before it starts the next.
      */
-    fun span(spec: SirenDrone.Spec, rootMidi: Int, session: Session): Int =
+    fun span(spec: SirenDrone.Spec, rootMidi: Int, session: Session, cancelled: () -> Boolean = { false }): Int =
         DroneFit.SPANS.firstOrNull { span ->
             val frames = span.toLong() * session.intervalFrames
-            abs(SirenDrone.nudgeCents(spec.voice, spec.macros, rootMidi, frames, session.sampleRate)) <= DroneFit.MAX_NUDGE_CENTS
+            abs(SirenDrone.nudgeCents(spec.voice, spec.macros, rootMidi, frames, session.sampleRate, cancelled)) <= DroneFit.MAX_NUDGE_CENTS
         } ?: DroneFit.SPANS.last()
 
     /** The whole drone for [session], the way [DroneMaker.render] renders RESIN's. */
@@ -65,14 +68,14 @@ object SirenDroneMaker {
         session: Session,
         cancelled: () -> Boolean = { false },
     ): FloatArray =
-        SirenDrone.render(spec, rootMidi, span(spec, rootMidi, session).toLong() * session.intervalFrames, session.sampleRate, cancelled)
+        SirenDrone.render(spec, rootMidi, span(spec, rootMidi, session, cancelled).toLong() * session.intervalFrames, session.sampleRate, cancelled)
 
     /** "A1 · 4 BARS · -1.97¢" — [DroneMaker.label]'s own readout, over SIREN's own span and nudge. */
-    fun label(spec: SirenDrone.Spec, rootMidi: Int, session: Session): String {
-        val span = span(spec, rootMidi, session)
+    fun label(spec: SirenDrone.Spec, rootMidi: Int, session: Session, cancelled: () -> Boolean = { false }): String {
+        val span = span(spec, rootMidi, session, cancelled)
         val bars = span * session.barsPerInterval
         val frames = span.toLong() * session.intervalFrames
-        val cents = SirenDrone.nudgeCents(spec.voice, spec.macros, rootMidi, frames, session.sampleRate)
+        val cents = SirenDrone.nudgeCents(spec.voice, spec.macros, rootMidi, frames, session.sampleRate, cancelled)
         return "%s · %d %s · %+.2f¢".format(java.util.Locale.ROOT, Scales.nameOf(rootMidi), bars, if (bars == 1) "BAR" else "BARS", cents)
     }
 }

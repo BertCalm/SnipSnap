@@ -401,7 +401,7 @@ are the gate.
 | Round | Ships | Gate |
 |---|---|---|
 | **R1** | `synth/Fork.kt` (both voices, the hammer, the striker, the bank, the pickup), `ForkPatch` with its optional striker, `ForkPresets.kt` and its `Presets` branch, `Keys.fork` and `MAKE INSTRUMENT ▸`, the tests above, the blocklist terms, the testkit kit; the phone: FORK in the SYNTH picker, SEND TO PAD, STRIKE FROM ▸. Mono | **the physics question:** TINE or BAR is the electric piano; SLOPE 2 or 2.7; BARK's ceiling; the instrument under two hands; a drum hit rung through a tine |
-| **R2** | stereo: per-mode pan (fundamental centred, overtones and hammer spread), U4 opt-in per patch; `SPLIT TO PADS` landing harmonic and percussive renders on two pads | the split against the mono |
+| **R2** | stereo: per-mode pan (fundamental centred, overtones and hammer spread), U4 opt-in per patch — **shipped round five** below; `SPLIT TO PADS` landing harmonic and percussive renders on two pads — still open, app/UI scope | the split against the mono |
 
 The first draft staged this as four phases — engine, then keys, then
 stereo, then excite-from-pad last as the least certain to be musical.
@@ -552,3 +552,293 @@ suite the spec named. Where the build departs from the design, and why:
   like SIREN's, since FORK has no LOOP render to distinguish from a
   one-shot). Both are small, and neither blocks the audition: presets,
   the kit, and the keys instrument all render and export today.
+
+## Round two — 2026-09-28
+
+R1's own audition (16 presets, both voices) came back: closer on TINE, but
+neither read as "piano" outright, and BAR read as its own thing — a
+marimba, worth keeping as a voice rather than chasing toward piano. Asked
+for at least one more voice option, aimed at the piano gap specifically.
+
+**`ForkVoice.NODE`** — the same cantilever tine as TINE (`TINE_RATIOS`
+unchanged), read at a different spot: its own second mode's internal
+node. A pickup there cannot see mode 2 at all, and modes 3 and 4 are
+strongly reduced too (their own shape function is simply small in that
+region) — a purer, more fundamental-forward tone than TINE's own tip
+read, without inventing a new physical claim to get there or touching the
+bar itself.
+
+The mechanism, not asserted: a cantilever's mode shape is derived from the
+Euler-Bernoulli fixed-free boundary conditions (`Fork.cantileverModeShape`
+— fixed end gives `φ(0)=φ'(0)=0`, collapsing the general solution to
+`A[cosh(βξ)−cos(βξ)] + B[sinh(βξ)−sin(βξ)]`; the free end's own two
+conditions then fix `B/A` and, requiring both to agree, *reproduce* the
+textbook characteristic equation `cosh(β)cos(β) = −1` — not assumed, a
+derivation that happened to land on the independently-known answer, which
+is the actual verification). The pickup position (`NODE_PICKUP_XI =
+0.783445`) is mode 2's own root of that shape function, found by
+bisection — not a chosen or fitted number, and it matches the value beam-
+vibration references already tabulate for a cantilever's second mode, a
+cross-check the derivation did not have to pass but did.
+
+`ForkTest` carries the check twice: once on the derivation itself (the
+tabulated eigenvalues satisfy `cosh(β)cos(β) = −1`, the mode shape is zero
+at the clamped root), and once on the audible claim (mode 2's own energy,
+measured on the clean resonator before the pickup's nonlinearity, is
+suppressed to under 15% of TINE's own at the identical macros).
+
+**What round two deliberately did not do**: touch `BARK`'s closeness
+mechanism, add a `POSITION` macro letting a player move the pickup
+themselves (the shape function crosses zero repeatedly across 0..1 — an
+exposed macro would wander through a landscape of arbitrary phase
+flips between modes, not a clean bright/warm dial, so this round bakes in
+the one physically-motivated spot rather than exposing the whole
+unpredictable range), or claim NODE "solves" the piano question — that is
+still the audition's own call, now with a third, purpose-built candidate
+to make it against. Eight presets shipped for NODE (`ForkPresets.kt`),
+named for the tone the mechanism gives, not for having arrived.
+
+## Round three — 2026-09-28
+
+Round two's own A/B (nine matched settings, NODE against TINE, blind,
+level-matched) came back too close to call: real per the measurements above,
+but largely masked in listening. The reason, on reflection, is the pickup's
+own nonlinearity — the thing that actually carries most of FORK's audible
+character — operates on the summed time-domain signal and does not care
+much how that sum was built mode by mode, so a change to the pre-pickup
+modal balance alone has less to work with than hoped.
+
+**NODE's own pitch glide**: every mode reads `GLIDE_CENTS` sharp right at
+the strike and settles to its tuned ratio over `GLIDE_TIME_SECONDS`,
+scaled by STRIKE (harder strike, bigger swing, bigger glide — the same
+lever every other STRIKE-linked mechanism here already uses, and zero at
+STRIKE 0). This is a real, if not precisely sourced, amplitude-dependent
+effect: large-amplitude vibration briefly stiffens a struck bar or string,
+raising its effective frequency, before it settles as the swing dies down.
+`GLIDE_CENTS = 15` and `GLIDE_TIME_SECONDS = 0.06` are a plausible
+starting point, not a measured figure — open for the audition gate to
+move, the same way `DECAY_SLOPE` started.
+
+**One real finding, the same testing-philosophy failure this project keeps
+catching early rather than late**: the first implementation modelled the
+glide as two full static-pitch renders (one a few cents sharp, one at the
+tuned pitch) crossfaded together. That broke an existing test —
+`higher modes die first`, which measures the composite decay's own
+envelope slope — because two near-identical frequencies briefly coexisting
+during a crossfade beat against each other, distorting the measured decay
+shape. The fix ships instead as a single continuously-swept two-pole
+resonator (`Fork.ringModes`, the pole angle recomputed every sample from
+the instantaneous, gliding frequency rather than held fixed for the whole
+call) — one coherent signal, never two overlapping ones. `Fork.bank`'s own
+KDoc carries the full account.
+
+Measuring the glide itself needed the same isolation the STIFF tests
+already lean on: on the full four-mode bank, `STRIKE_BRIGHT_BOOST` boosts
+the upper modes hardest at exactly the STRIKE that also maximises the
+glide, and their own fast zero-crossings dominate a naive pitch read in
+the first ~20ms regardless of what the fundamental is doing — even TINE's
+own glide-free onset read several cents "sharp" by this artifact alone.
+`ForkTest` measures the glide on the isolated fundamental instead (via
+`Fork.ringModes` directly, one mode, no competing partials), plus a
+bit-exact check that the no-glide path is untouched for TINE, BAR, and
+NODE at STRIKE 0.
+
+**Not yet answered** (at round three's own close): whether the glide is
+what NODE (or TINE) was actually missing — that was the next listening
+question, not something this round asserted.
+
+## Round three-B — 2026-09-29
+
+`GLIDE_CENTS` pushed from 15 to 80 (most of a semitone), as a diagnostic:
+rule out "15 cents over a noisy 60ms attack just isn't perceptually
+salient" before concluding FORK's pickup-and-bar architecture has a
+character ceiling small mechanism tweaks can't cross. Both listening
+pages regenerated at the new value.
+
+**The gate's own answer**: still too close to call by ear, even
+overcooked past any reasonable "is it real" threshold. That settles the
+open question two rounds up — not a measurement gap, a genuine ceiling.
+The pickup's own nonlinearity carries most of what a listener calls
+FORK's character, and it operates on the summed time-domain signal
+downstream of both mechanisms tried here (NODE's pickup position, then
+the glide); neither one gives it materially different raw material to
+work with.
+
+**The owner's call, not a further round**: keep 80 cents as NODE's
+shipped default rather than dial back toward the physically-motivated 15,
+or strip the mechanism. FORK is done chasing "closer to piano" for now —
+TINE and NODE stand as close cousins, BAR as its own marimba-adjacent
+voice, and all three ship as FORK's own instrument rather than an
+emulation of one. If the piano question is worth reopening, the reed
+voice noted under "Out of scope" (a different nonlinearity entirely, not
+a further tweak to this one) is the next real candidate, not another turn
+on `GLIDE_CENTS` or `NODE_PICKUP_XI`.
+
+## Round four — 2026-09-30
+
+The reed voice, reopened the same day: not "closer to a Rhodes" (settled
+above) but a second real electric-piano family — the Wurlitzer, read by
+an electrostatic (capacitive) pickup rather than a magnetic one.
+
+**The finding that changed the plan before any code was written**: a
+naive derivation of the electrostatic pickup gives FORK's own existing
+formula straight back. A magnetic pickup's flux and a capacitive
+pickup's charge both scale as `1/gap`, so differentiating either produces
+the same `v/(1-x)²` curve — "swap the pickup law" is not a new mechanism,
+it is TINE again under a different name. Sourced instead (Wikipedia's
+"Electrostatic pickup" article, and independent descriptions of the two
+instruments' own reported sound): real units read the reed through a
+comb-shaped electrode, not one flat plate, and the reported tone is
+sharper, closer to a sawtooth, odd-harmonic-dominant — against a magnetic
+pickup's even-harmonic bark. A comb electrode does not skew asymmetric
+the way a single flat plate does, so the physically appropriate model is
+a *symmetric* saturating curve, genuinely different raw material for the
+pickup to work with rather than the same curve reshaped.
+
+**Prototyped before it was built**: a throwaway generator
+(`ReedPrototype.kt`, never committed — a temporary Gradle task and one
+test-scope file, removed after each listening round) rendered candidates
+straight to the owner as files rather than through a published audition
+page, twelve rounds in one sitting. The house testing philosophy —
+measure, don't guess — caught two real bugs this way that a first
+listen alone would not have separated from taste:
+
+- **The onset's own harshness was two unrelated causes, found one at a
+  time.** [Fork.bank]'s own peak sits in the excitation's broadband
+  click, not the settled swing (measured directly: peak in the first 2ms
+  equalled the peak overall). Pushing that straight through full
+  saturation read as static; [Fork.reedPickup]'s own
+  [Fork.REED_DRIVE_RAMP_MS] fixed it. The contact rattle was *still*
+  harsh afterward — isolating curve-only against with-contact (two
+  renders, one question) proved the base pickup was already clean and
+  the persistent stop-clip nobody had throttled (every over-threshold
+  sample, not just the trigger instant — a near-square wave running for
+  100ms+ on a hard strike) was the real remaining source. Removing it
+  fixed the harshness and silenced the rattle at the same time.
+- **The rattle going silent was a genuine logic bug, not a level.** Every
+  round had scaled the knock's own impulse by "overshoot" —
+  `abs(raw) - threshold`, read at the exact sample the rising edge
+  crosses the threshold, which by construction is a hair above zero, not
+  the swing's own size (confirmed directly in an old diagnostic log
+  without registering it at the time: `0.60049` at trigger against a
+  `0.6` threshold). The knock was only ever audible because it rode on
+  top of the persistent clip's own distortion floor; once that clip was
+  removed for the harshness fix above, the knock's true near-zero
+  amplitude had nothing left to hide behind. Fixed by scaling the
+  impulse to a fixed strength instead — contact already only fires when
+  the swing clears the threshold at all, which already is the "hard
+  enough" signal.
+
+**The shipped mechanism, three parts, not one**:
+
+1. **A comb-tap modal color** ([Fork.REED_POSITION_GAIN]): the same
+   [Fork.cantileverModeShape] derivation [ForkVoice.NODE] uses for one
+   tap position, extended to two (the tip and a point partway down the
+   reed) and blended — the sourced "several plates at different
+   positions" detail, not NODE's single relocated read repeated.
+2. **A symmetric, STRIKE-coupled drive** ([Fork.reedPickup]): [Dsp.drive]
+   on the resonator's own rate of change, ramping in over
+   [Fork.REED_DRIVE_RAMP_MS] rather than applying instantly, its own
+   ceiling set by BARK. Confirmed odd-harmonic-dominant directly
+   (measured against TINE's own -2.4dB odd/even ratio: REED reads +40 to
+   +60dB depending on drive, essentially all odd).
+3. **A discrete mechanical-contact rattle** ([Fork.reedContact]): past a
+   BARK-set threshold, an impulse excites two short resonant rings (a
+   "click" and a lower "body," both drifting slightly per event) rather
+   than an enveloped noise burst — a real rattle has pitch and
+   resonance, not noise shaped by a volume curve — gated by a grace
+   window (so it cannot land on the hammer's own onset click) and a
+   refractory period (so a hard strike's whole swing does not retrigger
+   it every half-cycle, which measured as 40-50 events and read as a
+   sustained buzz rather than an occasional knock).
+
+**Why three parts and not the first one that measured as "different"**:
+round one (the symmetric curve alone) already measured as genuinely
+odd-harmonic-dominant, a real spectral difference from TINE — and still
+came back "different tone, not different character" by ear. That is the
+same verdict NODE and the pitch glide got from static or smoothly-varying
+tweaks to a memoryless curve. The contact rattle is a genuinely different
+*kind* of thing — a discrete, non-smooth event, not a reshaped
+continuum — and reads as one: "I hear it now," confirmed after the two
+bugs above were fixed, is what shipped.
+
+**What round four deliberately did not do**: give REED its own macro for
+the contact threshold or the comb's own tap position — both ride on BARK
+and a fixed derivation respectively, the same "one physically-motivated
+spot, not the whole unpredictable range" call round two made for NODE's
+own pickup position. `ForkPresets.kt` ships eight presets spread across
+both sides of the contact threshold, some staying clean of it entirely.
+
+## Round five — 2026-09-30
+
+R2's own stereo half (`SPLIT TO PADS` stays out of scope — app/UI work,
+not this round's): a sixth macro, WIDTH, default 0, so every one of the
+thirty-two shipped presets stays mono and byte-identical. Above 0, [bank]
+rings interleaved stereo instead of mono, each of the four modes panned by
+[Modes.spread] before ringing — mode 0, the fundamental, always lands dead
+centre (`spread`'s own `reach` is exactly 0 there, by construction, for
+every voice and every WIDTH), the three overtones spread wider as WIDTH
+climbs. The same per-mode-pan mechanism the original design called for
+("fundamental centred, overtones and hammer spread"), and the same
+opt-in-per-patch convention U4 and `Thump.snare`'s own WIDTH already set.
+
+**Why not a call to `Modes.ringStereo`.** That function exists and does
+exactly this panning, but it delegates to plain `Modes.ring` internally,
+which cannot carry NODE's own per-sample gliding pole angle (round
+three's pitch glide). `Fork.ringModesStereo` mirrors `ringModes`'s own two
+branches (no-glide, glide) instead, panning each branch's per-sample
+output by the mode's own `.pan` rather than sharing that recurrence.
+
+**The pickup stages have no cross-channel physics of their own.** TINE/BAR/
+NODE's asymmetric `pickup` and REED's `reedContact`/`reedPickup` are both
+written over one channel's worth of recursive state (a first-difference
+`prev`, a DC-removal mean, a highpass; REED's contact timing and per-event
+noise/biquads too) — the natural, no-invention extension to stereo is two
+independent calls to the same mono function, one per deinterleaved
+channel, each with its own fresh state, rather than a hand-written
+two-channel rewrite of each. `Fork.strike` does exactly that: deinterleave,
+run the mono function twice (REED's own contact seed offset by one between
+channels so the two channels' knock timing and body/click color don't
+correlate), reinterleave. `Fork.render`'s own [Tide.bandLimit] gets the
+same treatment (`bandLimitStereo`) since it is not itself channel-safe — a
+single filter run across interleaved L/R would mix the two channels'
+history; every other stage downstream of it ([Dsp.decimate], [Dsp.levelTo],
+[Dsp.fadeTail]) was already channel-aware.
+
+**Normalisation convention**: `bank`'s stereo output is fold-normalised
+([Dsp.normalizeByFold]) rather than peak-normalised, the same convention
+`Thump.snare`'s own WIDTH takes and for the same reason — this buffer feeds
+a nonlinearity next (the reluctance pickup, or REED's drive), and a
+fold-vs-per-sample level mismatch would reshape the two paths' onsets
+differently by more than one gain. `channels <= 1` falls through to plain
+[Dsp.normalize], identical to before WIDTH existed.
+
+**Measured, not assumed, this exact build**: every voice's side/mid energy
+ratio climbs monotonically as WIDTH goes 0.25 → 0.5 → 0.75 → 1 (each step
+at least 5% wider than the last), and sits under 0.1 at WIDTH near 0 on
+every voice. The four-mode bank's own left/right energy split at WIDTH 1
+came back close to even on every voice (R/L: TINE 1.0005, BAR 0.9465, NODE
+0.9997, REED 0.9999) — unlike `Thump.snare`'s own 5-mode body (R/L 1.087),
+not asymmetric enough here to serve as an orientation pin; the pan
+arithmetic itself is `ModesTest`'s own "a hard-panned mode lands on the
+side it was panned to" and `ringModesStereo`'s own KDoc, not re-derived
+here. `ForkTest.kt` carries the full stereo-safety audit: every existing
+preset stays mono, WIDTH crosses from mono to stereo at exactly 0, WIDTH
+combined with every other macro's own extreme stays finite and in range on
+every voice, and a wide render is deterministic.
+
+**STRIKE FROM ▸'s own picker claim, corrected.** "The picker is GRAINS'"
+(above) does not hold against the current app: GRAINS has no voice entry
+in `SynthScreen.kt`'s `Engine` enum and no source-recording picker
+anywhere in `app/` — what existed at the time of writing was CLOUD's own
+destination-*pad* chooser (`SlotChooserOverlay`), not a source-recording
+picker, so it is not a literal reuse. STRIKE FROM ▸'s own wiring stays
+unbuilt (this environment has no Android SDK to build or test Compose UI
+against); a corrected, self-contained instruction set for it was handed to
+a desktop session directly rather than written here unverified.
+
+**What round five deliberately did not do**: `SPLIT TO PADS` (landing the
+harmonic and percussive renders on two separate pads) — an app/UI-layer
+feature, not this round's DSP/engine scope, and not gated on anything this
+round shipped. The design spec's own open question 5 (residual as a third
+pad) is still open for the same reason.

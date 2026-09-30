@@ -58,11 +58,18 @@ import kotlin.random.Random
  *   a word together or talking over each other (LOOSE), hushed, talked
  *   or shouted (EFFORT), with STUTTER. Stereo, like CHOIR.
  *
+ * Round 4:
+ *
+ * - **SPEAK**, a talking voice that counts one to eight ([VoxSpeak]): a
+ *   formant speech synthesizer with real consonants, from an 80s speech
+ *   chip to a person (HUMAN), child to giant (SIZE), hushed to shouted
+ *   (EFFORT), with DECAY stretching the vowels and STUTTER.
+ *
  * TUNE snaps to semitones like every melodic engine here. Each note's
  * wobble, detune and onsets are seeded from its recipe, so a pad
  * regenerates to the byte.
  */
-enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT, WRAITH, SWARM }
+enum class VoxVoice { CHOIR, ROBOT, GHOST, BEATBOX, THROAT, WRAITH, SWARM, SPEAK }
 
 object Vox {
 
@@ -168,12 +175,16 @@ object Vox {
             MacroSpec("TUNE", 0.5f), MacroSpec("WORD", 0f), MacroSpec("CROWD", 0.75f), MacroSpec("LOOSE", 0.25f),
             MacroSpec("EFFORT", 0.55f), MacroSpec("DECAY", 0.5f), MacroSpec("STUTTER", 0f),
         )
+        VoxVoice.SPEAK -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("WORD", 0f), MacroSpec("HUMAN", 0.5f), MacroSpec("DECAY", 0.2f),
+            MacroSpec("SIZE", 0.5f), MacroSpec("EFFORT", 0.5f), MacroSpec("STUTTER", 0f),
+        )
     }
 
     fun defaults(voice: VoxVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
-    /** CHOIR and SWARM are many mouths, in stereo; ROBOT, GHOST, BEATBOX, THROAT and WRAITH are one, mono. */
+    /** CHOIR and SWARM are many mouths, in stereo; ROBOT, GHOST, BEATBOX, THROAT, WRAITH and SPEAK are one, mono. */
     fun channelsFor(voice: VoxVoice): Int = if (voice == VoxVoice.CHOIR || voice == VoxVoice.SWARM) 2 else 1
 
     /**
@@ -217,6 +228,8 @@ object Vox {
             VoxVoice.WRAITH -> 55f
             // The chant's note for the men, A1 to A3 (the women sing it an octave up); a murmur wanders around it.
             VoxVoice.SWARM -> 55f
+            // A speaking voice, C2 to C4: TUNE's middle is C3, a man's talking pitch, which the machine holds exactly.
+            VoxVoice.SPEAK -> 65.41f
         }
         val semis = Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
         return root * 2f.pow(semis / 12f)
@@ -382,6 +395,19 @@ object Vox {
                 loose = m.getValue("LOOSE"),
                 effort = m.getValue("EFFORT"),
                 decay = m.getValue("DECAY"),
+                stutter = m.getValue("STUTTER"),
+                seed = Dsp.seedFor("VOX", voice.name, m.toSortedMap().entries.joinToString(",")),
+                rate = rate,
+            )
+        }
+        if (voice == VoxVoice.SPEAK) {
+            return VoxSpeak.synthesize(
+                word = VoxSpeak.wordFor(m.getValue("WORD")),
+                noteHz = frequencyFor(voice, m.getValue("TUNE")),
+                human = m.getValue("HUMAN"),
+                decay = m.getValue("DECAY"),
+                size = m.getValue("SIZE"),
+                effort = m.getValue("EFFORT"),
                 stutter = m.getValue("STUTTER"),
                 seed = Dsp.seedFor("VOX", voice.name, m.toSortedMap().entries.joinToString(",")),
                 rate = rate,

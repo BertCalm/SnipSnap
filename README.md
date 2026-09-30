@@ -243,6 +243,18 @@ cycles in the loop, so the wrap repeats to the bit. A tempo change re-slices
 and re-renders it, and a drone still rendering is silence on its own track,
 never a stall on the other five.
 
+The string machine is two halves, and the rack has the second: a saw stack
+under a filter is the source, and ENSEMBLE (below) is the chorus that makes
+it a section. VELVET BRASS's STRING MACHINE and THIN STRINGS and RESIN
+BRASS's WIDE STRINGS and DARK STRINGS are the source half, and they carry
+the other half with them — SEND TO PAD lands one with ENSEMBLE already in
+its recipe (stereo, regenerated bit for bit like any synth pad), the panel
+auditions it through the same chain, and `snipsnap synth VELVET BRASS
+--preset 13` writes the same stereo file. The chain follows the sound, not
+its name: move a slider and it is your sound and lands dry. They are short,
+decaying pads, about a second, because a VELVET or RESIN one-shot always
+decays; SPREAD, MAKE INSTRUMENT and DRONE TO LOOP still make them dry.
+
 TIDE is the West Coast engine, S9 of the roadmap, and RESIN's opposite:
 where the ladder cuts harmonics out of a rich wave, TIDE builds them into a
 plain one. A sine is phase-modulated (WARP — phase, not frequency, so the
@@ -349,7 +361,10 @@ with a whistled melody on its harmonics, a growl an octave down and a
 yodel. WRAITH is sine-wave speech: three pure tones trace a word's
 formants, ghostly whistling you half hear as "why" or "hello", gliding
 or stepping in key. SWARM is a crowd: up to sixteen people shouting a
-word together, talking over each other or talking in hushed voices. GRAINS is
+word together, talking over each other or talking in hushed voices. SPEAK
+counts one to eight in a voice that runs from an 80s speech chip, dead on
+the note, to a person whose pitch rises and falls: child to giant, hushed
+to shouted, stretched into chops or stuttered. GRAINS is
 the engine that eats captures: granular resynthesis that rebuilds any
 source snip — a capture, a synth render — as a cloud (SIZE, SMEAR, DRIFT,
 snapped PITCH, SHINE), deterministic per seed, honest enough that a
@@ -468,11 +483,20 @@ the centre, running before everything else so the whole rack — SWELL's
 stretched head and REVERSE's flip included — sees the pitched sound), EQ
 (three
 plain-word bands — BASS shelf, MID bell, AIR shelf — RBJ cookbook biquads
-with 0.5 as the flat detent), SQUASH
-(lookahead compressor: fast clamp is glue, slow clamp is punch), TAPE (the
+with 0.5 as the flat detent), CONTOUR (RESIN's ladder swept from the
+hit's onset, on a pad that was never a synth), SQUASH
+(lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
+tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
+giving way under it on loud passages, TONE after the tube, CAB from no
+cabinet to a closed wall — run four times over inside so a hot tube folds
+back far less), TAPE (the
 cassette the whole app is dressed as: wow/flutter via a modulated
 fractional delay, hysteresis-flavored drive, head-wear HF loss — a
-physics-lite nod to ChowDSP's AnalogTapeModel), PHASE (four allpasses
+physics-lite nod to ChowDSP's AnalogTapeModel), ENSEMBLE (three taps off one
+delay line swimming 120° apart on two slow sines, each through its own
+tone, summed with no dry — the string machine's back half on any pad, and
+the one section that widens a mono pad to stereo, by choice, with the pair
+weighted so the phone's mono fold hears every tap the same), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,
@@ -492,8 +516,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → squash → crunch → ring → dub → vinyl → tape → phase → echo →
-spring → motion — owns
+spike → eq → contour → squash → valve → crunch → ring → dub → vinyl →
+tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies

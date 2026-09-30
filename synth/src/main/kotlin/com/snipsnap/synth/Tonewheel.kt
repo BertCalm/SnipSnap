@@ -81,23 +81,6 @@ object Tonewheel {
     private const val ROTARY_BRAKE_BELOW = 0.15f
 
     /**
-     * One interpolated tap off a circular delay line.
-     *
-     * The integer index is wrapped rather than the float read position: a
-     * position a hair below zero plus the buffer length rounds to exactly
-     * the length in float, which indexes one past the end.
-     */
-    private fun tap(line: FloatArray, writePos: Int, delay: Float): Float {
-        var rp = writePos - delay
-        while (rp < 0f) rp += line.size
-        val whole = rp.toInt()
-        val frac = rp - whole
-        val i0 = whole % line.size
-        val i1 = (i0 + 1) % line.size
-        return line[i0] * (1f - frac) + line[i1] * frac
-    }
-
-    /**
      * Per-voice nudge on top of [Dsp.MELODIC_LOUDNESS_TARGET], zeroed out
      * awaiting a listening pass (task-4-report.md) - a table edit here, not
      * a refactor of [render].
@@ -224,7 +207,7 @@ object Tonewheel {
             if (motion) {
                 scanLine[scanPos] = v
                 val d = scanDepth * (0.5f + 0.5f * sin(2.0 * PI * SCANNER_HZ * t).toFloat())
-                val wet = tap(scanLine, scanPos, d + 1f)
+                val wet = Dsp.tap(scanLine, scanPos, d + 1f)
                 scanPos = (scanPos + 1) % scanLine.size
                 v = (1f - SCANNER_MIX) * v + SCANNER_MIX * wet
             }
@@ -267,12 +250,12 @@ object Tonewheel {
                 hornLine[hornPos] = high
                 bassLine[hornPos] = low
                 val angle = 2.0 * PI * rotorHz * t
-                val delayedHigh = tap(
+                val delayedHigh = Dsp.tap(
                     hornLine,
                     hornPos,
                     hornBaseDelay + rotorDepth * hornDoppler * sin(angle).toFloat(),
                 )
-                val delayedLow = tap(bassLine, hornPos, hornBaseDelay)
+                val delayedLow = Dsp.tap(bassLine, hornPos, hornBaseDelay)
                 hornPos = (hornPos + 1) % hornLine.size
                 val hornAm = 1f + rotorDepth * ROTARY_HORN_AM * sin(angle + PI / 2).toFloat()
                 val bassAm = 1f + rotorDepth * ROTARY_BASS_AM * sin(2.0 * PI * bassHz * t).toFloat()

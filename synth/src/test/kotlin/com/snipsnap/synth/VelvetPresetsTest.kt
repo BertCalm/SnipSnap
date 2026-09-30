@@ -6,7 +6,8 @@ import kotlin.test.assertTrue
 
 /**
  * U1 of `docs/SYNTH_UPGRADE.md`, VELVET's turn: twelve presets per voice
- * (forty-eight total). No classifier "identity" check — every VELVET
+ * (forty-eight total), and BRASS's two string machines after them (fifty;
+ * their landings are [StringMachineTest]'s). No classifier "identity" check — every VELVET
  * voice is statically TONAL, not judged from its render — so this covers
  * the rest of the playability contract: a real, clean sound; a faithful
  * JSON round-trip; and listbox-legal names (including the naming rule,
@@ -46,7 +47,9 @@ class VelvetPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in VelvetVoice.entries) {
             val names = VelvetPresets.forVoice(voice).map { it.name }
-            assertEquals(12, names.size, "$voice should ship 12 presets, has ${names.size}")
+            // Twelve, and BRASS's two string machines (StringMachine) after its twelve.
+            val expected = if (voice == VelvetVoice.BRASS) 14 else 12
+            assertEquals(expected, names.size, "$voice should ship $expected presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")

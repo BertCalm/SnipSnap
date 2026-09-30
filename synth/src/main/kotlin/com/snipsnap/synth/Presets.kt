@@ -5,7 +5,7 @@ package com.snipsnap.synth
  *
  * Authored engine by engine, not all at once — THUMP was first (U1 of
  * `docs/SYNTH_UPGRADE.md`, PR #189) and SKIN was last, a whole wave after
- * the engine itself shipped. This dispatcher now covers all twelve
+ * the engine itself shipped. This dispatcher now covers all thirteen
  * registered engines with a roster.
  *
  * An unregistered engine name (or a future one with no roster yet)
@@ -63,14 +63,37 @@ object Presets {
             val v = ForkVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ForkPresets.forVoice(v)
         }
+        BorePatch.ENGINE -> {
+            val v = BoreVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            BorePresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
     fun byName(engine: String, voice: String, name: String): Patch? =
         forVoice(engine, voice).firstOrNull { it.name == name }
 
+    /**
+     * The rack chain a sound made from [macros] lands with when SEND TO PAD turns
+     * it into a pad, or null when it lands dry - which is nearly every sound.
+     * The string-machine presets ([StringMachine]) are the exception: they are
+     * half a source and half an ENSEMBLE, so the pad's recipe carries both.
+     *
+     * Keyed by engine, voice and the *macro values*, not a label: only a factory
+     * preset's exact values land with its chain, so a slider moved since the
+     * preset loaded, or a player's own sound saved under a factory name, lands
+     * dry, and a saved copy of the unmoved factory sound lands like the
+     * original. An unregistered engine or an unknown voice is null.
+     */
+    fun landingFor(engine: String, voice: String, macros: Map<String, Float>): FxChain? = when (engine) {
+        VelvetPatch.ENGINE -> VelvetVoice.entries.firstOrNull { it.name == voice }?.let { VelvetPresets.landingFor(it, macros) }
+        ResinPatch.ENGINE -> ResinVoice.entries.firstOrNull { it.name == voice }?.let { ResinPresets.landingFor(it, macros) }
+        else -> null
+    }
+
     fun all(): List<Patch> =
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
-            ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all()
+            ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
+            BorePresets.all()
 }

@@ -59,3 +59,27 @@ testkit/siren-audition/
 # The FORK audition clips, manifest and page, rendered by :synth:generateForkAudition
 # and published as the listening artifact; never committed.
 testkit/fork-audition/
+
+# The TERRA audition clips, manifest and page, rendered by :synth:generateTerraAudition
+# and published as the listening artifact; never committed.
+testkit/terra-audition/
+
+# The ENSEMBLE gate clips, manifest and page, rendered by :synth:generateEnsembleAudition
+# and published as the listening artifact; never committed.
+testkit/ensemble-audition/
+
+# The string-machine presets' gate clips, manifest and page, rendered by
+# :synth:generateStringMachineAudition and published as the listening artifact; never committed.
+testkit/stringmachine-audition/
+
+# The BORE audition clips, manifest and page, rendered by :synth:generateBoreAudition
+# and published as the listening artifact; never committed.
+testkit/bore-audition/
+
+# The SILK Phase 4 audition clips and page, rendered by :synth:generateSilkAudition
+# and published as the listening artifact; never committed.
+testkit/silk-audition/
+
+# The VALVE audition clips and manifest, rendered by :synth:generateValveAudition
+# and published as the listening artifact; never committed.
+testkit/valve-audition/

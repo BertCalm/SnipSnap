@@ -246,4 +246,35 @@ object SynthKits {
             bar("DEEP BAR"), bar("SHORT KNOCK"), bar("ROUND TONE"), bar("LOUD CLANG"),                           // A13-A16
         )
     }
+
+    /**
+     * The BORE acceptance kit: FLUTE and SAX each across a major triad and its octave
+     * (A01-A08, so the pads play a chord and a scale step apart, the way [tide]'s bongos
+     * climb), then four presets of each voice (A09-A16) chosen to be four different
+     * things: a breathy note, a hard tongue, a swell and a LOOP for FLUTE; a low honk, a
+     * bite, a high stab and a LOOP for SAX. Every one-shot carries the landing's own TAPE
+     * in its recipe ([Bore.landingChain]); every LOOP is dry and filed as the LOOP it is.
+     * A drum program plays every pad once through, LOOP or not (`Loop=False`, as SIREN's
+     * LOOP pads do): the wrap is heard in the audition page's REPEAT, and held on a pad
+     * once R2's held instrument exists. Every pad carries its recipe. The presets are
+     * provisional (nothing in BORE has been heard yet); this kit is what the audition
+     * page's first section plays.
+     */
+    fun bore(): List<ArrangedPad?> {
+        fun note(voice: BoreVoice, n: Int, semitone: Int) = BorePatch(
+            "${voice.name.lowercase().replaceFirstChar { it.uppercase() }} $n", voice,
+            Bore.defaults(voice) + ("TUNE" to semitone / Bore.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Bore.drumClassFor(it.voice, it.macros), Bore.landingChain(it.macros)) }
+        fun preset(voice: BoreVoice, name: String) = BorePresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Bore.drumClassFor(it.voice, it.macros), Bore.landingChain(it.macros)) }
+
+        return listOf(
+            note(BoreVoice.FLUTE, 1, 0), note(BoreVoice.FLUTE, 2, 4), note(BoreVoice.FLUTE, 3, 7), note(BoreVoice.FLUTE, 4, 12),   // A01-A04
+            note(BoreVoice.SAX, 1, 0), note(BoreVoice.SAX, 2, 4), note(BoreVoice.SAX, 3, 7), note(BoreVoice.SAX, 4, 12),           // A05-A08
+            preset(BoreVoice.FLUTE, "BREATHY"), preset(BoreVoice.FLUTE, "HARD TONGUE"),                                           // A09 A10
+            preset(BoreVoice.FLUTE, "SOFT SWELL"), preset(BoreVoice.FLUTE, "STEADY LOOP"),                                        // A11 A12
+            preset(BoreVoice.SAX, "LOW HONK"), preset(BoreVoice.SAX, "BITE"),                                                     // A13 A14
+            preset(BoreVoice.SAX, "HIGH STAB"), preset(BoreVoice.SAX, "SOLO LOOP"),                                               // A15 A16
+        )
+    }
 }

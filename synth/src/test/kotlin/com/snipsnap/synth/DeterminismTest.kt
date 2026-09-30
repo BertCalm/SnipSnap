@@ -106,4 +106,33 @@ class DeterminismTest {
         val patch = ForkPresets.forVoice(ForkVoice.TINE).first()
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
+
+    // SILK seeds its course detune and its exciters from Dsp.seedFor per
+    // voice and note (Silk.kt's oud/guzheng), so it joins the canaries
+    // above too - one per voice, since OUD's course and GUZHENG's
+    // dispersion/press are different code paths.
+    @Test
+    fun `SILK is byte-identical across renders, all four voices`() {
+        val oud = SilkPatch("Canary", SilkVoice.OUD, Silk.defaults(SilkVoice.OUD))
+        assertContentEquals(oud.render().samples, oud.render().samples)
+        val guzheng = SilkPatch("Canary", SilkVoice.GUZHENG, Silk.defaults(SilkVoice.GUZHENG))
+        assertContentEquals(guzheng.render().samples, guzheng.render().samples)
+        val santur = SilkPatch("Canary", SilkVoice.SANTUR, Silk.defaults(SilkVoice.SANTUR))
+        assertContentEquals(santur.render().samples, santur.render().samples)
+        val shamisen = SilkPatch("Canary", SilkVoice.SHAMISEN, Silk.defaults(SilkVoice.SHAMISEN))
+        assertContentEquals(shamisen.render().samples, shamisen.render().samples)
+    }
+
+    // BORE seeds its turbulence from Dsp.seedFor per voice and note (Bore.blow), and its LOOP step
+    // runs a measure-and-correct retune on top of the render - both are deterministic or a saved
+    // recipe would not regenerate. One per voice, one-shot and LOOP.
+    @Test
+    fun `BORE is byte-identical across renders, both voices, one-shot and loop`() {
+        for (voice in BoreVoice.entries) {
+            val shot = BorePatch("Canary", voice, Bore.defaults(voice))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot")
+            val loop = BorePatch("Canary", voice, Bore.defaults(voice) + ("HOLD" to 1f))
+            assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
+        }
+    }
 }

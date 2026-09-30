@@ -420,6 +420,24 @@ internal object Dsp {
         }
     }
 
+    /**
+     * One interpolated tap off a circular delay line, [delay] samples behind
+     * [writePos] — the slot just written. The integer index is wrapped rather
+     * than the float read position: a position a hair below zero plus the
+     * buffer length rounds to exactly the length in float, which indexes one
+     * past the end. TONEWHEEL's scanner and rotor read through this, and so
+     * do ENSEMBLE's three taps — one copy, so the wrap is right in both.
+     */
+    internal fun tap(line: FloatArray, writePos: Int, delay: Float): Float {
+        var rp = writePos - delay
+        while (rp < 0f) rp += line.size
+        val whole = rp.toInt()
+        val frac = rp - whole
+        val i0 = whole % line.size
+        val i1 = (i0 + 1) % line.size
+        return line[i0] * (1f - frac) + line[i1] * frac
+    }
+
     /** Soft saturation with unity make-up so DRIVE changes tone, not loudness. */
     fun drive(x: Float, amount: Float): Float {
         if (amount <= 0f) return x

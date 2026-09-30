@@ -454,7 +454,15 @@ fun SynthScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { engine.render(voice, macros) }
+            val rendered = withContext(Dispatchers.Default) {
+                val dry = engine.render(voice, macros)
+                // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
+                // STRINGS / DARK STRINGS) previews through the ENSEMBLE it will land
+                // with, so the audition is the pad and not the bare saw stack. Every
+                // other sound, SIREN's echo included, previews dry as before. Inside
+                // Default with the render: six sines a frame is not main-thread work.
+                Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
+            }
             snip = rendered
             if (touched) audition(rendered)
         } catch (e: CancellationException) {
@@ -494,9 +502,13 @@ fun SynthScreen(
                 val patch = engine.buildPatch(name, voice, macros)
                 // A SIREN one-shot carries the rack's ECHO in its recipe and
                 // renders through it; a SIREN LOOP lands dry, since the
-                // SURFACE's echo is its own (Siren.landingChain). Every other
-                // engine lands with no chain, exactly as before.
-                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else null
+                // SURFACE's echo is its own (Siren.landingChain). An unmoved
+                // string machine (VELVET / RESIN BRASS) carries its ENSEMBLE the
+                // same way, found from the macros so a moved slider or a
+                // player's own sound under a factory name lands dry
+                // (Presets.landingFor). Every other sound lands with no chain,
+                // exactly as before.
+                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
                 val padRecipe = PadRecipe(patch = patch, fx = fx)
                 val recipe = padRecipe.toJsonValue()
                 val cls = engine.drumClass(voice, macros)
@@ -731,6 +743,48 @@ fun SynthScreen(
         Engine.RESIN -> DroneSpec.Resin(voice as ResinVoice, macros, droneMotion, droneRate)
         Engine.SIREN -> DroneSpec.Siren(voice as SirenVoice, macros)
         else -> null
+    }
+
+    // The sheet's own readout. RESIN's own label is closed-form pitch
+    // arithmetic (DroneMaker.label, effectively free); SIREN's own reads
+    // its true carrier fit (SirenDroneMaker.label), an LFO phase integral
+    // over the candidate span's own frame count — at the grid's slowest
+    // tempo and longest bars this is real work, measured at ~850 ms per
+    // voice (SirenDroneMakerTest's own "span and label finish quickly
+    // even at the grid's slowest, longest setting"), so it runs off the
+    // main thread rather than inline in the composable body, the same
+    // reason droneSession itself does.
+    var droneLabel by remember { mutableStateOf("…") }
+    LaunchedEffect(droneOpen, droneRoot, droneSession, engine, voice, macros) {
+        // Reset before recomputing, not after: root or macros just moved,
+        // and the stale string is for a spec PREVIEW/SEND no longer read
+        // off the moment either changed — showing it a beat longer would
+        // name a note that is no longer the one either button plays.
+        droneLabel = "…"
+        val root = droneRoot
+        val session = droneSession
+        val spec = droneSpec()
+        if (droneOpen && root != null && session != null && spec != null) {
+            droneLabel = withContext(Dispatchers.Default) {
+                // cancelled reaches SirenDrone.fitCarrier's own check: a
+                // rapid run of ROOT taps must stop one computation before
+                // starting the next, not pile them up on the pool that
+                // runs them (review finding on PR #373). Falls back to
+                // the placeholder on any other failure — a readout that
+                // never lands is a worse sheet, not a crashed one; PREVIEW
+                // and SEND key off root/session directly, never off this
+                // string — but a cancellation is this effect's own
+                // restart, not a failure, and must keep propagating.
+                try {
+                    spec.label(root, session) { !isActive }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("SynthScreen", "drone label failed", e)
+                    "…"
+                }
+            }
+        }
     }
 
     LaunchedEffect(droneOpen, voice) {
@@ -1180,9 +1234,12 @@ fun SynthScreen(
         }
 
         if (droneOpen) {
-            // Recomputed here rather than cached, the same call [heldSpec]
-            // makes and for the same reason: cheap, and it must reflect
-            // whatever the panel holds right now.
+            // The spec itself is recomputed here rather than cached, the
+            // same call [heldSpec] makes and for the same reason: cheap
+            // (it is only a voice and a macro map, no rendering), and it
+            // must reflect whatever the panel holds right now. The
+            // readout is not recomputed here — [droneLabel] is, off the
+            // main thread, since SIREN's own is not free.
             droneSpec()?.let { spec ->
                 val root = droneRoot
                 val session = droneSession
@@ -1193,7 +1250,7 @@ fun SynthScreen(
                     hasMotion = spec.hasMotion,
                     root = root,
                     ready = ready,
-                    label = if (root != null && session != null) spec.label(root, session) else "…",
+                    label = droneLabel,
                     motion = droneMotion,
                     rate = droneRate,
                     previewing = dronePreviewing,
@@ -1602,7 +1659,7 @@ private sealed interface DroneSpec {
     val roots: IntRange
     val hasMotion: Boolean
     fun defaultRoot(key: KeySpec?): Int
-    fun label(root: Int, session: Session): String
+    fun label(root: Int, session: Session, cancelled: () -> Boolean): String
     fun render(root: Int, session: Session, cancelled: () -> Boolean): FloatArray
     fun toJson(): JsonValue
 
@@ -1611,7 +1668,7 @@ private sealed interface DroneSpec {
         override val roots get() = DroneMaker.roots(voice)
         override val hasMotion get() = true
         override fun defaultRoot(key: KeySpec?) = DroneMaker.defaultRoot(voice, key)
-        override fun label(root: Int, session: Session) = DroneMaker.label(root, session)
+        override fun label(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.label(root, session)
         override fun render(root: Int, session: Session, cancelled: () -> Boolean) = DroneMaker.render(spec, root, session, cancelled)
         override fun toJson() = spec.toJson()
     }
@@ -1621,7 +1678,7 @@ private sealed interface DroneSpec {
         override val roots get() = SirenDroneMaker.roots(voice)
         override val hasMotion get() = false
         override fun defaultRoot(key: KeySpec?) = SirenDroneMaker.defaultRoot(voice, key)
-        override fun label(root: Int, session: Session) = SirenDroneMaker.label(spec, root, session)
+        override fun label(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.label(spec, root, session, cancelled)
         override fun render(root: Int, session: Session, cancelled: () -> Boolean) = SirenDroneMaker.render(spec, root, session, cancelled)
         override fun toJson() = spec.toJson()
     }

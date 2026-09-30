@@ -51,6 +51,8 @@ object Patches {
             SirenPatch.ENGINE -> SirenPatch.fromJsonValue(value)
             ForkPatch.ENGINE -> ForkPatch.fromJsonValue(value)
             TerraPatch.ENGINE -> TerraPatch.fromJsonValue(value)
+            SilkPatch.ENGINE -> SilkPatch.fromJsonValue(value)
+            BorePatch.ENGINE -> BorePatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

@@ -373,14 +373,14 @@
           "samples": [
             {
               "sample": "Harp_E3_soft",
-              "frames": 102753,
+              "frames": 112896,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E3",
-              "frames": 102753,
+              "frames": 112896,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -395,14 +395,14 @@
           "samples": [
             {
               "sample": "Harp_G3_soft",
-              "frames": 84010,
+              "frames": 100327,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_G3",
-              "frames": 84010,
+              "frames": 100327,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -417,14 +417,14 @@
           "samples": [
             {
               "sample": "Harp_A#3_soft",
-              "frames": 72103,
+              "frames": 81585,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_A#3",
-              "frames": 72103,
+              "frames": 81585,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -439,14 +439,14 @@
           "samples": [
             {
               "sample": "Harp_C#4_soft",
-              "frames": 59314,
+              "frames": 67252,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_C#4",
-              "frames": 59314,
+              "frames": 67252,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -461,14 +461,14 @@
           "samples": [
             {
               "sample": "Harp_E4_soft",
-              "frames": 48069,
+              "frames": 54022,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E4",
-              "frames": 48069,
+              "frames": 54022,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -483,14 +483,14 @@
           "samples": [
             {
               "sample": "Harp_G4_soft",
-              "frames": 41233,
+              "frames": 45423,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_G4",
-              "frames": 41233,
+              "frames": 45423,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -505,14 +505,14 @@
           "samples": [
             {
               "sample": "Harp_A#4_soft",
-              "frames": 35059,
+              "frames": 37485,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_A#4",
-              "frames": 35059,
+              "frames": 37485,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -527,14 +527,14 @@
           "samples": [
             {
               "sample": "Harp_C#5_soft",
-              "frames": 28224,
+              "frames": 29988,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_C#5",
-              "frames": 28224,
+              "frames": 29988,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0
@@ -549,14 +549,14 @@
           "samples": [
             {
               "sample": "Harp_E5_soft",
-              "frames": 22711,
+              "frames": 24034,
               "velStart": 1,
               "velEnd": 63,
               "loopStartFrame": 0
             },
             {
               "sample": "Harp_E5",
-              "frames": 22711,
+              "frames": 24034,
               "velStart": 64,
               "velEnd": 127,
               "loopStartFrame": 0

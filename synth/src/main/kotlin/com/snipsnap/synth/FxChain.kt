@@ -8,10 +8,15 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → SQUASH → CRUNCH → RING → DUB → VINYL → TAPE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
- * peak rather than the peak riding over the squash.
+ * peak rather than the peak riding over the squash; ensemble after tape and
+ * before phase, because the copies are made of the finished tone and the
+ * sweep and the repeats then carry all three.
+ *
+ * valve after squash and before crunch: a compressor feeds an amp, and the
+ * sampler's damage happens to a sound that already existed.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -32,6 +37,10 @@ import com.snipsnap.json.JsonValue
  *
  * A `null` section is a hard bypass. Serializes next to the pad's WAV in
  * `kit.json` so the recipe stays editable forever, same as synth patches.
+ *
+ * A section may widen a mono snip to stereo (ENSEMBLE does, above its
+ * `WIDTH_OFF`) and never narrows one; every section after it in the order runs per
+ * channel, so the pair it made reaches the WAV intact.
  */
 data class FxChain(
     /** The transport: pitch is speed, and it runs before everything. */
@@ -54,6 +63,8 @@ data class FxChain(
     val vinyl: Map<String, Float>? = null,
     val swell: Map<String, Float>? = null,
     val contour: Map<String, Float>? = null,
+    val ensemble: Map<String, Float>? = null,
+    val valve: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -179,11 +190,13 @@ data class FxChain(
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
+            Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
             Section("vinyl", Vinyl.MACROS, { it.vinyl }, { c, m -> c.copy(vinyl = m) }, Vinyl::process),
             Section("tape", Tape.MACROS, { it.tape }, { c, m -> c.copy(tape = m) }, Tape::process),
+            Section("ensemble", Ensemble.MACROS, { it.ensemble }, { c, m -> c.copy(ensemble = m) }, Ensemble::process),
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),

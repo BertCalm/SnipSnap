@@ -87,6 +87,11 @@ object Terra {
             MacroSpec("DECAY", 0.5f),
             MacroSpec("FORCE", 0.5f),
             MacroSpec("POS", 0.25f),
+            // CLACK: an optional pre-strike squeeze (S3's "Agogô squeeze or
+            // pre-flam") - a short decaying noise burst before the mallet
+            // lands, the two-tone bell's own interlock click. Off by
+            // default: most bell presets are a plain strike.
+            MacroSpec("CLACK", 0f),
         )
         TerraVoice.TUNED_BAR -> listOf(
             MacroSpec("TUNE", 0.35f),
@@ -112,14 +117,44 @@ object Terra {
         // into the audible band - the source spec's own reference code ran
         // its nonlinear stages straight at 44.1kHz with no oversample.
         val renderRate = RATE * Dsp.OVERSAMPLE
-        val raw = when (voice) {
-            TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate)
-            TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate)
+        val (raw, clackFrames) = when (voice) {
+            TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate) to 0
+            TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate) to 0
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate)
-            TerraVoice.TUNED_BAR -> tunedBar(m, renderRate)
+            TerraVoice.TUNED_BAR -> tunedBar(m, renderRate) to 0
         }
-        val out = Dsp.decimate(raw, RATE)
-        Dsp.normalize(out)
+        // A fixed level into Punch.saturate's nonlinearity, same reason
+        // Thump.render normalizes raw before its own Punch call (Punch.kt's
+        // own KDoc on applyOversampled) - strikeAndModalBank's exciter/modal
+        // mix is otherwise an unbounded, preset-dependent amplitude. Done
+        // jointly, before any CLACK split below, so the click and the body
+        // stay level-consistent with each other.
+        Dsp.normalize(raw)
+        // Every other engine here runs its strike through some transient
+        // shaping; TERRA had none at all, which measured out as a real
+        // contributor to reading "small, meek, dull" next to Thump's own
+        // kick/snare (bare exciter+modal mix straight to decimate). A fixed
+        // internal amount, not a macro yet - the same "first-pass listening
+        // call" TERRA's exciter/modal mix ratio already is.
+        //
+        // Punch's own onset-boost always anchors at frame 0 of whatever
+        // buffer it's given (Punch.kt's own Window, no onset parameter) -
+        // fine for every voice except a CLACKed CONICAL_BELL, where frame 0
+        // is the pre-strike click, not the real strike. Measured: applying
+        // Punch to the whole buffer there put the click's own peak at the
+        // render's absolute ceiling regardless of CLACK_GAIN, inverting the
+        // "quiet click, then a real hit" the whole feature is for. Splitting
+        // at clackFrames and Punching only the body (decimated separately,
+        // the same reduced-context edge every render's own frame 0 already
+        // has) keeps the boost on the actual strike.
+        val out = if (clackFrames > 0) {
+            val preroll = Dsp.decimate(raw.copyOfRange(0, clackFrames), RATE)
+            val body = Punch.applyOversampled(raw.copyOfRange(clackFrames, raw.size), TERRA_PUNCH_AMOUNT, RATE)
+            preroll + body
+        } else {
+            Punch.applyOversampled(raw, TERRA_PUNCH_AMOUNT, RATE)
+        }
+        Dsp.limitPeak(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
     }
@@ -164,10 +199,62 @@ object Terra {
     private const val BUZZ_THRESHOLD = 0.12f
     private const val BUZZ_GAIN = 0.45f
 
+    // FLESH_PALM's own noise ceiling (see fleshPalmExciter's own KDoc):
+    // matched to HARD_STICK_NOISE_WEIGHT rather than held under it. A lower
+    // value (0.18f) measured as close to imperceptible - FORCE 0 vs 1 barely
+    // moved flatness/highRatio at all, on a macro whose whole job is to make
+    // hardness audible. Verified up to this value: absolute flatness on even
+    // the hardest hit stays two to three orders of magnitude under CLAP's
+    // 0.35 gate (no risk of reading as white noise), no kit pad's classifier
+    // drifted, no sample left -1..1.
+    private const val FLESH_NOISE_GAIN = 0.40f
+
     // HARD_STICK's own strike length (S4's sLen): shorter than FLESH_PALM's
     // shortest (0.003s at FORCE=1), a mallet's tick against a stick's own
     // seed keeps every HARD_STICK voice's own noise stream distinct.
     private const val HARD_STICK_SECONDS = 0.0018f
+
+    // HARD_STICK's own noise ceiling (see hardStickExciter's own KDoc).
+    // Verified: the isolated exciter's own grit still sits well short of a
+    // pure-noise ceiling at this value, and no kit pad's classifier drifted.
+    private const val HARD_STICK_NOISE_WEIGHT = 0.55f
+
+    // Every other engine here shapes its strike's transient (Thump.render
+    // always runs Punch.applyOversampled); TERRA never has, and measured out
+    // as a real contributor to reading dull next to Thump's own kick/snare -
+    // see Terra.render's own comment. Pushed to Punch's own ceiling (its
+    // boost/saturate scale as amount^3, so the 0.7-1.0 stretch carries most
+    // of the available effect): verified every voice's default and all 16
+    // shipped kit pads stay in -1..1 and keep their declared DrumClass at
+    // this value. Not a macro yet, the same "first-pass listening call"
+    // spirit as the exciter/modal mix ratio it sits beside.
+    //
+    // Pulling this back to buy more perceived body loudness was investigated
+    // and rejected (PR #384): even a 40% cut (down to 0.60, alongside an
+    // added pre-Punch attack compressor) only reduced Dsp.limitPeak's own
+    // rescale-down by roughly half, and that internal gain almost entirely
+    // failed to survive into anything a listener would call louder -
+    // AuditionLevel.level() (the audition tool's own fair-A/B renormalize)
+    // absorbs most of it regardless, while the crispness cost (crest factor,
+    // onset energy, spectral centroid all down double digits) was real and
+    // large. Four separate amount/compressor combinations measured this same
+    // trade; none paid for itself.
+    private const val TERRA_PUNCH_AMOUNT = 1.0f
+
+    // CLACK's own ceiling: the spec's own Agogô Clack preset (S5, pad 15)
+    // uses interlockClackMs = 20ms; 30ms gives the macro a little more
+    // travel above that without the pre-strike click starting to read as
+    // its own separate hit.
+    private const val CLACK_MAX_SECONDS = 0.03f
+
+    // A held-over 0.35f measured as a near-inaudible pre-roll: the click
+    // peaked at only ~16% of the struck body's own peak, a whisper under the
+    // hit rather than an audible squeeze - only the pre-roll's length scales
+    // with the CLACK macro, never its own loudness. Verified this value
+    // roughly doubles that to ~35%, still comfortably under the 50% ceiling
+    // "clack is quiet, and the bell only starts ringing after it" already
+    // holds it to.
+    private const val CLACK_GAIN = 0.8f
 
     private const val TWO_PI = (2.0 * Math.PI).toFloat()
 
@@ -199,17 +286,35 @@ object Terra {
         (t60Base * 1.4f * rate).toInt().coerceAtLeast(64)
 
     /**
-     * FLESH_PALM (S3's ExciterType): a soft, broad raised-cosine impulse, no
-     * noise. A harder strike is a shorter pulse.
+     * FLESH_PALM (S3's ExciterType): a soft, broad raised-cosine impulse. A
+     * harder strike is a shorter pulse, plus a touch of skin-contact grit
+     * scaled by [hardness] - measured (FeatureExtractor flatness/highRatio
+     * both pinned to 0.0000 across the whole FORCE range) as a real gap
+     * against every other exciter here: HARD_STICK already scales its own
+     * noise by hardness, and a hand slapping a drumhead is not perfectly
+     * smooth even softly struck. [FLESH_NOISE_GAIN] matches HARD_STICK's own
+     * [HARD_STICK_NOISE_WEIGHT] - a palm's grit isn't quieter than a
+     * mallet's, just a broader, longer pulse around it.
      */
-    private fun fleshPalmExciter(hardness: Float, rate: Int): (Int) -> Float {
+    private fun fleshPalmExciter(hardness: Float, rate: Int, seed: Int): (Int) -> Float {
         val pulseLen = (rate * (0.003f + (1f - hardness) * 0.009f)).toInt().coerceAtLeast(1)
-        return { i -> if (i < pulseLen) 0.5f * (1f - cos(TWO_PI * i / pulseLen)) else 0f }
+        val noise = Dsp.Noise(seed)
+        return { i ->
+            if (i < pulseLen) {
+                val pulse = 0.5f * (1f - cos(TWO_PI * i / pulseLen))
+                pulse * (1f - FLESH_NOISE_GAIN) + noise.next() * pulse * FLESH_NOISE_GAIN * hardness
+            } else {
+                0f
+            }
+        }
     }
 
     /**
      * HARD_STICK (S3/S4): a short raised-cosine pulse with a noise
      * component scaled by hardness - a mallet's tick, not a palm's push.
+     * [HARD_STICK_NOISE_WEIGHT]'s own isolated grit still sits short of a
+     * pure-noise ceiling at this value (measured against a no-tone-term
+     * reference), so it reads as a hard mallet's edge, not hiss.
      */
     private fun hardStickExciter(hardness: Float, rate: Int, seed: Int): (Int) -> Float {
         val stickLen = (rate * HARD_STICK_SECONDS).toInt().coerceAtLeast(1)
@@ -217,9 +322,29 @@ object Terra {
         return { i ->
             if (i < stickLen) {
                 val pulse = 0.5f * (1f - cos(TWO_PI * i / stickLen))
-                pulse * 0.6f + noise.next() * pulse * 0.4f * hardness
+                pulse * (1f - HARD_STICK_NOISE_WEIGHT) + noise.next() * pulse * HARD_STICK_NOISE_WEIGHT * hardness
             } else {
                 0f
+            }
+        }
+    }
+
+    /**
+     * Wraps [mainExciter] with an optional pre-strike squeeze (S3's CLACK):
+     * [clackSamples] of decaying noise, then [mainExciter] starting fresh
+     * right after it - the whole strike shifts later by [clackSamples], so
+     * the caller must size its buffer for that (see [conicalBell]).
+     * `clackSamples <= 0` returns [mainExciter] unchanged.
+     */
+    private fun withPreStrikeClack(clackSamples: Int, seed: Int, mainExciter: (Int) -> Float): (Int) -> Float {
+        if (clackSamples <= 0) return mainExciter
+        val noise = Dsp.Noise(seed)
+        return { i ->
+            if (i < clackSamples) {
+                val env = 1f - i.toFloat() / clackSamples
+                noise.next() * env * CLACK_GAIN
+            } else {
+                mainExciter(i - clackSamples)
             }
         }
     }
@@ -231,6 +356,13 @@ object Terra {
      * (S2.1; pass `droopDepth = 0f` for a topology with no membrane tension
      * to relax). [modes] is assumed already position-weighted (see
      * [Modes.atPosition]).
+     *
+     * [onsetSamples] is where the body actually starts ringing - 0 for every
+     * topology except a CLACKed CONICAL_BELL, where it's the clack's own
+     * pre-roll length. Before it, modalSum is exactly 0 (the bell hasn't
+     * been struck yet); the phase/decay clock then starts fresh at
+     * [onsetSamples], so a used CLACK is silent underneath the click rather
+     * than a bell already partway through decaying.
      */
     private fun strikeAndModalBank(
         modes: List<Modes.Mode>,
@@ -239,31 +371,34 @@ object Terra {
         frames: Int,
         rate: Int,
         exciterAt: (Int) -> Float,
+        onsetSamples: Int = 0,
     ): FloatArray {
         val out = FloatArray(frames)
         val phases = FloatArray(modes.size)
         val nyquist = rate / 2f
 
         for (i in out.indices) {
-            val t = i.toFloat() / rate
             val exciter = exciterAt(i)
-
-            // Tension droop (S2.1): the strike temporarily sharps the body,
-            // settling back exponentially onto fundamentalHz. droopDepth is
-            // 0 for a rigid body (CONICAL_BELL, TUNED_BAR), collapsing this
-            // to fundamentalHz exactly.
-            val currentF0 = fundamentalHz * (1f + droopDepth * exp(-t / DROOP_TAU_SECONDS))
-
             var modalSum = 0f
-            for (k in modes.indices) {
-                val mode = modes[k]
-                val hz = currentF0 * mode.ratio
-                // Skipped, not folded - same guard as Modes.ring's own.
-                if (hz <= 0f || hz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
-                phases[k] += TWO_PI * hz / rate
-                if (phases[k] >= TWO_PI) phases[k] -= TWO_PI
-                val decay = exp(-T60_NEPERS * t / mode.t60)
-                modalSum += sin(phases[k]) * mode.gain * decay
+            if (i >= onsetSamples) {
+                val t = (i - onsetSamples).toFloat() / rate
+
+                // Tension droop (S2.1): the strike temporarily sharps the
+                // body, settling back exponentially onto fundamentalHz.
+                // droopDepth is 0 for a rigid body (CONICAL_BELL,
+                // TUNED_BAR), collapsing this to fundamentalHz exactly.
+                val currentF0 = fundamentalHz * (1f + droopDepth * exp(-t / DROOP_TAU_SECONDS))
+
+                for (k in modes.indices) {
+                    val mode = modes[k]
+                    val hz = currentF0 * mode.ratio
+                    // Skipped, not folded - same guard as Modes.ring's own.
+                    if (hz <= 0f || hz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
+                    phases[k] += TWO_PI * hz / rate
+                    if (phases[k] >= TWO_PI) phases[k] -= TWO_PI
+                    val decay = exp(-T60_NEPERS * t / mode.t60)
+                    modalSum += sin(phases[k]) * mode.gain * decay
+                }
             }
             // First-pass mix, exciter-vs-body - a listening call for the
             // audition gate, not derived from anything.
@@ -296,7 +431,22 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 55f, 440f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Not a plain 0..1 pass-through: Modes.atPosition weights each mode
+        // by |sin(n*pi*p)|, which is exactly mirror-symmetric under
+        // p <-> 1-p for every integer n (|sin(n*pi*(1-p))| == |sin(n*pi*p)|
+        // is an algebraic identity) - a symmetric range like (0.02, 0.98)
+        // (Thump.snare's own STRIKE dodges the same |sin| edge-silence trap
+        // this way) hands POS=0 and POS=1 the identical per-mode weight
+        // magnitude, measured as an exact-to-the-float-digit null: two
+        // presets picking "opposite" strike positions (TerraKits' own
+        // Tabla Tin at POS=0.95 vs Tabla Tun at POS=0.05, meant to sound
+        // like rim vs center) rendered indistinguishably. Anchoring at 0.5
+        // instead breaks the mirror pairing: POS=0 lands on the formula's
+        // own true center (max fundamental weight, even harmonics silenced,
+        // matching this macro's documented "0 centre" meaning) and POS=1 on
+        // a genuine rim, so the two ends of the knob's travel actually
+        // diverge instead of both landing near-edge and canceling out.
+        val position = Dsp.lin(m.getValue("POS"), 0.5f, 0.98f)
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
 
         val baseModes = MEMBRANE_RATIOS.indices.map { i ->
@@ -305,7 +455,7 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
-        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
+        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 11))
     }
 
     private fun resonantCavity(m: Map<String, Float>, rate: Int): FloatArray {
@@ -314,7 +464,22 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 45f, 300f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Not a plain 0..1 pass-through: Modes.atPosition weights each mode
+        // by |sin(n*pi*p)|, which is exactly mirror-symmetric under
+        // p <-> 1-p for every integer n (|sin(n*pi*(1-p))| == |sin(n*pi*p)|
+        // is an algebraic identity) - a symmetric range like (0.02, 0.98)
+        // (Thump.snare's own STRIKE dodges the same |sin| edge-silence trap
+        // this way) hands POS=0 and POS=1 the identical per-mode weight
+        // magnitude, measured as an exact-to-the-float-digit null: two
+        // presets picking "opposite" strike positions (TerraKits' own
+        // Tabla Tin at POS=0.95 vs Tabla Tun at POS=0.05, meant to sound
+        // like rim vs center) rendered indistinguishably. Anchoring at 0.5
+        // instead breaks the mirror pairing: POS=0 lands on the formula's
+        // own true center (max fundamental weight, even harmonics silenced,
+        // matching this macro's documented "0 centre" meaning) and POS=1 on
+        // a genuine rim, so the two ends of the knob's travel actually
+        // diverge instead of both landing near-edge and canceling out.
+        val position = Dsp.lin(m.getValue("POS"), 0.5f, 0.98f)
         val droopDepth = Dsp.lin(m.getValue("DROOP"), 0f, 0.65f)
         val cavityMix = m.getValue("CAVITY")
         val buzzAmount = m.getValue("BUZZ")
@@ -325,7 +490,7 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
-        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate))
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 31))
 
         val cavity = Dsp.Biquad().apply { bandpass(CAVITY_FREQ_HZ, CAVITY_Q, rate) }
         val out = raw.copyOf()
@@ -340,13 +505,35 @@ object Terra {
         return applyBuzz(out, buzzAmount, seed = 13)
     }
 
-    private fun conicalBell(m: Map<String, Float>, rate: Int): FloatArray {
+    /**
+     * Returns the render alongside its own pre-strike clack length in
+     * [rate]-scale frames (0 when CLACK is off) - [render] needs it to keep
+     * Punch's onset-boost off the click and anchored on the real strike
+     * instead (see [render]'s own comment on why).
+     */
+    private fun conicalBell(m: Map<String, Float>, rate: Int): Pair<FloatArray, Int> {
         // Agogô territory: the spec's own presets span D5-A5 (587-880Hz):
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 13-15.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 500f, 950f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Not a plain 0..1 pass-through: Modes.atPosition weights each mode
+        // by |sin(n*pi*p)|, which is exactly mirror-symmetric under
+        // p <-> 1-p for every integer n (|sin(n*pi*(1-p))| == |sin(n*pi*p)|
+        // is an algebraic identity) - a symmetric range like (0.02, 0.98)
+        // (Thump.snare's own STRIKE dodges the same |sin| edge-silence trap
+        // this way) hands POS=0 and POS=1 the identical per-mode weight
+        // magnitude, measured as an exact-to-the-float-digit null: two
+        // presets picking "opposite" strike positions (TerraKits' own
+        // Tabla Tin at POS=0.95 vs Tabla Tun at POS=0.05, meant to sound
+        // like rim vs center) rendered indistinguishably. Anchoring at 0.5
+        // instead breaks the mirror pairing: POS=0 lands on the formula's
+        // own true center (max fundamental weight, even harmonics silenced,
+        // matching this macro's documented "0 centre" meaning) and POS=1 on
+        // a genuine rim, so the two ends of the knob's travel actually
+        // diverge instead of both landing near-edge and canceling out.
+        val position = Dsp.lin(m.getValue("POS"), 0.5f, 0.98f)
+        val clackSamples = (m.getValue("CLACK") * CLACK_MAX_SECONDS * rate).toInt()
 
         // gamma_m = 1 + 0.85*m^2 (S2.2's "high damping" row): the upper
         // partials of a struck cone die far faster than a linear curve
@@ -357,9 +544,16 @@ object Terra {
             Modes.Mode(ratio = BELL_RATIOS[i], gain = BELL_GAINS[i], t60 = t60Base / gamma)
         }
         val modes = Modes.atPosition(baseModes, position)
-        val frames = framesFor(t60Base, rate)
+        // Room for the clack pre-roll ahead of the strike, when CLACK asks
+        // for one - onsetSamples below holds the bell silent for exactly
+        // that long, so the click is heard on its own before the bell
+        // actually starts ringing, rather than underneath a ring that's
+        // already partway through decaying.
+        val frames = framesFor(t60Base, rate) + clackSamples
         // No DROOP: a forged bell has no membrane tension to relax.
-        return strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 17))
+        val exciter = withPreStrikeClack(clackSamples, seed = 29, hardStickExciter(hardness, rate, seed = 17))
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, exciter, onsetSamples = clackSamples)
+        return raw to clackSamples
     }
 
     private fun tunedBar(m: Map<String, Float>, rate: Int): FloatArray {
@@ -368,7 +562,22 @@ object Terra {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 180f, 400f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
-        val position = m.getValue("POS")
+        // Not a plain 0..1 pass-through: Modes.atPosition weights each mode
+        // by |sin(n*pi*p)|, which is exactly mirror-symmetric under
+        // p <-> 1-p for every integer n (|sin(n*pi*(1-p))| == |sin(n*pi*p)|
+        // is an algebraic identity) - a symmetric range like (0.02, 0.98)
+        // (Thump.snare's own STRIKE dodges the same |sin| edge-silence trap
+        // this way) hands POS=0 and POS=1 the identical per-mode weight
+        // magnitude, measured as an exact-to-the-float-digit null: two
+        // presets picking "opposite" strike positions (TerraKits' own
+        // Tabla Tin at POS=0.95 vs Tabla Tun at POS=0.05, meant to sound
+        // like rim vs center) rendered indistinguishably. Anchoring at 0.5
+        // instead breaks the mirror pairing: POS=0 lands on the formula's
+        // own true center (max fundamental weight, even harmonics silenced,
+        // matching this macro's documented "0 centre" meaning) and POS=1 on
+        // a genuine rim, so the two ends of the knob's travel actually
+        // diverge instead of both landing near-edge and canceling out.
+        val position = Dsp.lin(m.getValue("POS"), 0.5f, 0.98f)
         val buzzAmount = m.getValue("BUZZ")
 
         val baseModes = BAR_RATIOS.indices.map { i ->

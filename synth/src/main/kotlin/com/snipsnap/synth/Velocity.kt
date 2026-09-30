@@ -215,6 +215,8 @@ object Velocity {
         is SirenPatch -> Siren.macrosFor(patch.voice)
         is ForkPatch -> Fork.macrosFor(patch.voice)
         is TerraPatch -> Terra.macrosFor(patch.voice)
+        is SilkPatch -> Silk.macrosFor(patch.voice)
+        is BorePatch -> Bore.macrosFor(patch.voice)
     }
 
     /**
@@ -237,8 +239,12 @@ object Velocity {
     private fun brightnessOverride(patch: Patch): String? = when {
         patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
         // PICK is proven monotonic for every PLUCK voice by PluckTest's
-        // `PICK moves the centroid at every step of its travel`.
+        // `PICK moves the centroid at every step of its travel`. SILK's own
+        // PICK is the same exciter-brightness macro (Strings.pluckExciter's
+        // pick low-pass), registered here rather than left to the generic
+        // scan for the same reason PLUCK's is.
         patch is PluckPatch -> "PICK"
+        patch is SilkPatch -> "PICK"
         // STRIKE moves the hammer's cutoff, its own t60 and the tine's
         // swing together - none of BRIGHTNESS_MACROS' generic names, but
         // exactly what this function exists to find. Proven monotonic by

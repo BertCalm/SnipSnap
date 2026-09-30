@@ -69,6 +69,35 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the bore kit is a triad on each voice and eight presets, tape on the notes and dry on the loops`() {
+        val kit = SynthKits.bore()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a BORE render with its recipe")
+        for ((i, pad) in kit.withIndex()) {
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? BorePatch
+            assertTrue(patch != null, "pad ${i + 1} should be a BORE patch, got ${recipe.patch?.engine}")
+            val loop = Bore.isLoop(patch!!.macros.getValue("HOLD"))
+            assertEquals(Bore.drumClassFor(patch.voice, patch.macros), pad.drumClass, "pad ${i + 1} is filed wrongly")
+            if (loop) {
+                assertEquals(DrumClass.LOOP, pad.drumClass, "pad ${i + 1} is a LOOP and must be filed one")
+                assertEquals(null, recipe.fx, "pad ${i + 1} is a LOOP and lands dry")
+            } else {
+                assertEquals(Bore.LANDING_TAPE, recipe.fx?.tape, "pad ${i + 1} lands with the recipe's TAPE")
+            }
+        }
+        // The two rows play a chord: each ascends by the semitones the kit says, root C4 and C3.
+        for ((start, voice) in listOf(0 to BoreVoice.FLUTE, 4 to BoreVoice.SAX)) {
+            val pitches = (start until start + 4).map { TestPitch.estimate(kit[it]!!.snip, fromSec = 0.3f, windowSec = 0.3f) }
+            val expected = listOf(0, 4, 7, 12).map { Keys.midiHz(Bore.rootMidi(voice) + it) }
+            for (k in pitches.indices) {
+                val cents = 1200 * Math.log((pitches[k] / expected[k]).toDouble()) / Math.log(2.0)
+                assertTrue(Math.abs(cents) < 60.0, "$voice pad ${start + k + 1} plays ${pitches[k]} Hz, ${"%.0f".format(cents)} cents from ${expected[k]} Hz")
+            }
+        }
+    }
+
+    @Test
     fun `the chip kit is sixteen crunched pads that keep their identities`() {
         val kit = SynthKits.chip()
         assertEquals(16, kit.size)

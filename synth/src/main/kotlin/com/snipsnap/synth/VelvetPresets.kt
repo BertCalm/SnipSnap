@@ -4,13 +4,24 @@ package com.snipsnap.synth
  * VELVET's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
  * Twelve presets per voice (four voices, forty-eight total), spread across
- * TUNE/SHAPE/FAT/CUTOFF/SQUEEZE/DECAY. Authored from `Velvet.kt`'s DSP
+ * TUNE/SHAPE/FAT/CUTOFF/SQUEEZE/DECAY, and two more on BRASS that land with a
+ * rack chain: STRING MACHINE and THIN STRINGS (fifty in all, see [landingFor]).
+ * Authored from `Velvet.kt`'s DSP
  * (SHAPE's saw-to-PWM crossfade, SQUEEZE's joint resonance/envelope
  * mapping), not by ear, and checked by [VelvetPresetsTest]'s
  * sanity/round-trip/spread suite. SQUELCH's own resonant-acid character is
  * named for its sound (`WET SQUELCH`, `SCREAMER`, ...), never for the
  * genre or the trademarked family of machines that popularized it — the
  * word "acid" itself is on the naming rule's own blocklist.
+ *
+ * The two string-machine presets are the one place this roster is not
+ * twelve. VELVET's BRASS voice is a detuned saw stack under a low-pass,
+ * which is what a string machine's source is, and the sound of one is the
+ * ensemble chorus on top ([StringMachine]); the roster's twelve stay twelve
+ * because they are the sounds the voice makes on its own, and these are the
+ * sounds it makes with the rack behind it. Both are short, decaying pads
+ * (the voice's envelope always decays: 0.88 s at DECAY 0.8, 1.05 s at 0.9), not a
+ * held section.
  */
 object VelvetPresets {
 
@@ -25,6 +36,19 @@ object VelvetPresets {
     }
 
     fun all(): List<VelvetPatch> = VelvetVoice.entries.flatMap { forVoice(it) }
+
+    /**
+     * The rack chain a sound made from [macros] lands with when SEND TO PAD
+     * turns it into a pad, or null when it lands dry (every sound but the two
+     * string machines, exactly as authored - see [StringMachine.landing]).
+     */
+    fun landingFor(voice: VelvetVoice, macros: Map<String, Float>): FxChain? =
+        if (voice == VelvetVoice.BRASS) StringMachine.landing(brassPresets, brassLandings, macros) else null
+
+    private val brassLandings: Map<String, FxChain> = mapOf(
+        "STRING MACHINE" to StringMachine.CLASSIC,
+        "THIN STRINGS" to StringMachine.THIN,
+    )
 
     private val bassPresets = listOf(
         p(VelvetVoice.BASS, "SUB DEEP", "TUNE" to 0.1f, "SHAPE" to 0.1f, "FAT" to 0.2f, "CUTOFF" to 0.2f, "SQUEEZE" to 0.3f, "DECAY" to 0.6f),
@@ -54,6 +78,9 @@ object VelvetPresets {
         p(VelvetVoice.BRASS, "SHARP BRASS", "TUNE" to 0.7f, "SHAPE" to 0.25f, "FAT" to 0.6f, "CUTOFF" to 0.8f, "SQUEEZE" to 0.55f, "DECAY" to 0.3f),
         p(VelvetVoice.BRASS, "DETUNED HORN", "TUNE" to 0.45f, "SHAPE" to 0.1f, "FAT" to 0.9f, "CUTOFF" to 0.5f, "SQUEEZE" to 0.3f, "DECAY" to 0.45f),
         p(VelvetVoice.BRASS, "MELLOW BRASS", "TUNE" to 0.25f, "SHAPE" to 0.05f, "FAT" to 0.45f, "CUTOFF" to 0.35f, "SQUEEZE" to 0.2f, "DECAY" to 0.7f),
+        // The string machine's two: the saw stack with SQUEEZE at its floor (the least resonance and the shallowest filter sweep the voice has), left to ring; the rack's ENSEMBLE does the rest.
+        p(VelvetVoice.BRASS, "STRING MACHINE", "TUNE" to 0.5f, "SHAPE" to 0.1f, "FAT" to 0.5f, "CUTOFF" to 0.6f, "SQUEEZE" to 0f, "DECAY" to 0.9f),
+        p(VelvetVoice.BRASS, "THIN STRINGS", "TUNE" to 0.62f, "SHAPE" to 0.1f, "FAT" to 0.3f, "CUTOFF" to 0.65f, "SQUEEZE" to 0f, "DECAY" to 0.8f),
     )
 
     private val squelchPresets = listOf(
