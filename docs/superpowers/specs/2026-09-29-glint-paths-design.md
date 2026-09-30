@@ -118,8 +118,16 @@ change is free by construction.
 `PEAK 0..1` maps linearly to position `0..4`; between neighbours, F1 and F2
 interpolate in log2(Hz). Ordered dark to bright so PEAK keeps meaning "how
 bright" — velocity scales PEAK (`Velocity.BRIGHTNESS_MACROS`), so a soft key
-sings a darker vowel. **Plan must measure** that centroid rises monotonically
-along the line at the root note; if OO and OH invert, swap them.
+sings a darker vowel.
+
+**Measured 2026-09-29 (Task 3):** the line is ordered on *F2 presence*, the
+share of power above 1.5 kHz, which is non-decreasing at every one of nine PEAK
+points at TUNE 0 and TUNE 0.4 (116x and 58x end to end). Spectral centroid is
+not: it rises OO to AH and falls at EH and EE, because EE has the lowest F1 of
+the five while its F2 is what makes it bright. OO and OH are not inverted, so no
+swap applies. Centroid stays the repo's brightness proxy for every other voice;
+VOWEL's PEAK and its velocity are gated on F2 presence (`GlintVowelTest`): a soft
+key sings a vowel with less F2, at every PEAK.
 
 **BLOOM:** start position = `pos + s · 4`, clamped to `0..4`; the path moves
 from start to `pos` on the SWEEP clock: `p(t) = pos + (start − pos)·envAt(t, BLOOM_T60)`.
