@@ -40,7 +40,13 @@ internal class GlintPath private constructor(
         val continuous = (kBase * (kStart / kBase).pow(x)).coerceIn(Glint.K_MIN, Glint.K_MAX)
         out[0] = when {
             ladder != null && rung >= 0 -> ladder[rung.coerceAtMost(ladder.lastIndex)]
-            ladder != null -> if (x == 0f) kBase else Math.round(continuous).toFloat().coerceIn(Glint.K_MIN, Glint.K_MAX)
+            // The landing replaces its nearest whole harmonic, as the one-shot
+            // ladder's last rung does. (An exact x == 0f test would leave a
+            // still pad, where every x maps to kBase, rounded off PEAK.)
+            ladder != null -> {
+                val whole = Math.round(continuous)
+                if (whole == Math.round(kBase)) kBase else whole.toFloat().coerceIn(Glint.K_MIN, Glint.K_MAX)
+            }
             else -> continuous
         }
         out[1] = k2
