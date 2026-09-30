@@ -1,5 +1,7 @@
 # GLINT depth D4 — the window says *when*, the carrier says *what*
 
+> **Shelved 2026-09-29** — superseded by `2026-09-29-glint-paths-design.md`. Kept for the measurements in its section 7.
+
 **Status:** design. Not implemented.
 **Date:** 2026-09-28
 **Parent:** [`2026-09-26-glint-depth-design.md`](2026-09-26-glint-depth-design.md) — D1 and D2 shipped. This is the pass D2's audition demanded.
