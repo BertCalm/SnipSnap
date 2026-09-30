@@ -35,7 +35,8 @@ internal object BandDistance {
             start += HOP
         } while (start + N / 2 < x.size)
         val sum = e.sum()
-        if (sum > 0) for (b in e.indices) e[b] /= sum
+        require(sum > 0) { "BandDistance of a silent span" }
+        for (b in e.indices) e[b] /= sum
         return e
     }
 
