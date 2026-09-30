@@ -56,6 +56,12 @@ class GlintHeldTest {
             assertEquals(direct.loopStart.toLong(), note.loopStartFrame, "MIDI $midi: the marker moved")
 
             val plan = GlintHeld.breathPlan(Glint.frequencyFor(voice, tune))
+            // The plan for the zone's own pitch, worked out here from the engine's constants and
+            // never read back from the render. A render that ignored TUNE agrees with itself in the
+            // comparison above; the mid zones' loop lengths tell it apart (MIDI 48 wants 132152
+            // frames, 51 wants 132388, 60 wants 132321, 63 wants 132246).
+            val loop = note.snip.samples.size - note.loopStartFrame.toInt()
+            assertEquals(plan.loopFrames, loop, "$voice MIDI $midi: the loop is $loop frames, the plan for the zone's own pitch expects ${plan.loopFrames}")
             val want = 440.0 * 2.0.pow((midi - 69) / 12.0)
             val cents = abs(1200 * log2(plan.f0 / want))
             println(
@@ -101,7 +107,12 @@ class GlintHeldTest {
                 val direct = GlintHeld.render(voice, Glint.defaults(voice) + ("TUNE" to tune))
                 assertTrue(s.contentEquals(direct.audio), "$voice MIDI $midi: the pad is not the held render at TUNE $tune")
                 assertEquals(direct.loopStart, marker, "$voice MIDI $midi: the marker moved")
-                assertEquals(plan.loopFrames, s.size - marker, "$voice MIDI $midi: the file ends one breath after the marker")
+                // The file ends one breath after the marker, and the breath is the length the plan
+                // gives the zone's own pitch (worked out above from Glint.frequencyFor, not read
+                // back from the render). At the roots and tops every voice's loop is 132300 frames,
+                // so the length alone cannot separate TUNEs here; the nine-zone test's mid zones can.
+                val loop = s.size - marker
+                assertEquals(plan.loopFrames, loop, "$voice MIDI $midi: the loop is $loop frames, the plan for the zone's own pitch expects ${plan.loopFrames}")
                 assertTrue(marker > plan.loopFrames, "$voice MIDI $midi: an onset and a whole first breath come before the marker")
                 val seam = Keys.seamError(s, marker)
                 assertTrue(seam < Keys.MAX_SEAM_ERROR, "$voice MIDI $midi: seam $seam")
