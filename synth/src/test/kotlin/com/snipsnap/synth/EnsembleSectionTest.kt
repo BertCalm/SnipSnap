@@ -183,6 +183,31 @@ class EnsembleSectionTest {
         }
     }
 
+    // ---------------------------------------------------------------- the door from the pad sheet
+
+    @Test
+    fun `the sectioned character is the section at its own depth, and AMT fades it toward the chorus and then nothing`() {
+        assertEquals(mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f), Treatments.chain("sectioned", 1f).section("ensemble"))
+        val half = Treatments.chain("sectioned", 0.5f).section("ensemble")!!
+        assertEquals(0.25f, half.getValue("DEPTH"), 1e-6f)
+        assertEquals(0.5f, half.getValue("WIDTH"), 1e-6f)
+        assertEquals(0.5f, half.getValue("SECTION"), 1e-6f)
+        assertTrue(Treatments.chain("sectioned", 0f).isBypass, "AMT 0 is the section off altogether")
+        // The fade never invents the key for the chorus character: an ensembled pad stays the chorus at every AMT.
+        for (amount in listOf(0.2f, 0.5f, 0.7f)) {
+            assertTrue("SECTION" !in Treatments.chain("ensembled", amount).section("ensemble")!!, "AMT $amount gave the chorus a SECTION")
+        }
+    }
+
+    @Test
+    fun `sectioning a pad widens it, differs from ensembling it, and records the treatment`() {
+        val sectioned = Treatments.apply("sectioned", saw)
+        val ensembled = Treatments.apply("ensembled", saw)
+        assertEquals(2, sectioned.snip.channels)
+        assertNotEquals(ensembled.snip.samples.toList(), sectioned.snip.samples.toList(), "the two characters are the same sound")
+        assertTrue("sectioned" in sectioned.recipe.toString(), "the recipe does not name the treatment")
+    }
+
     // ---------------------------------------------------------------- the property, measured
 
     @Test

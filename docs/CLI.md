@@ -355,7 +355,10 @@ notches sliding up and down the spectrum), `pitched` (the transport
 itself: the same hit, played slower or faster, snapped to semitones),
 `contoured` (the ladder's own filter contour, swept from the hit's onset),
 `ensembled` (three taps off the finished tone, swimming — the string
-machine's back half; its WIDTH widens a mono pad's WAV to stereo) and
+machine's back half; its WIDTH widens a mono pad's WAV to stereo),
+`sectioned` (the same section with six independent players in place of
+three locked taps: each drifts, vibratos, enters and sounds on their own, so
+a note reads as several playing and not one swirled) and
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
 cabinet — run four times over inside so a hot tube does not fold back).
@@ -370,7 +373,7 @@ it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
 the hit's anatomy (SWELL · TAIL · SKIM · GHOST · SPIKE), row three its
 character once it is itself (PUNCH · RING · DUB · VINYL · PHASE ·
 CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
-GATE · ENSEMBLE), row five
+GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), and row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
