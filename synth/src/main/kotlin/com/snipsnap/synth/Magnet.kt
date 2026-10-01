@@ -24,7 +24,7 @@ enum class MagnetVoice { JANGLE, CHUG }
  * TUNE is two octaves snapped to semitones from the open string; MUTE damps the loop and shortens
  * the note; PICK is the exciter's low-pass corner, a thumb to a wire; BLEND weights the two pickups
  * (0 neck, 1 bridge). Every number marked shape is a listening value from the Phase-0 spike or the
- * specification, held until the R1 audition (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
+ * specification, to be re-heard by ear (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
  */
 object Magnet {
 
@@ -52,12 +52,17 @@ object Magnet {
     /** A humbucker's coil spacing over an open string, 18 mm of 648 mm (shape); it grows as the string shortens. */
     private const val COIL_SPACING = 0.0278f
 
-    /** Each coil of a humbucker, summed. */
+    /** Each coil of a humbucker, summed: the specification's humbucker sum (shape). */
     private const val HUMBUCKER_WEIGHT = 0.707f
 
-    /** The output chain's DC corner. */
+    /** The output chain's DC corner, the same corner as Bore's. */
     private const val OUTPUT_DC_HZ = 20f
 
+    /**
+     * One voice's numbers: the root note, the string loop's body corner, the pickup's resonance
+     * corner and damping, and whether the pickup is a humbucker. They are the specification's voice
+     * table and the Phase-0 spike's (shape).
+     */
     private class Spec(
         val rootMidi: Int,
         val bodyLoopHz: Float,
@@ -103,7 +108,7 @@ object Magnet {
     /** The note TUNE lands on: the one function the render, the seed and every tuning test read. */
     fun frequencyFor(voice: MagnetVoice, tune: Float): Float = Keys.midiHz(rootMidi(voice) + semitonesFor(tune))
 
-    /** A roll from the defaults (no preset roster exists yet to seed from); [near] pulls it toward a patch. */
+    /** A roll from the defaults (MAGNET has no preset roster to seed from); [near] pulls it toward a patch. */
     fun scramble(voice: MagnetVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
         val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
@@ -111,7 +116,7 @@ object Magnet {
     }
 
     /**
-     * The amp each voice lands through (shape, re-derived at the R1 audition). DRIVE is a gain on
+     * The amp each voice lands through (shape, to be re-derived by ear). DRIVE is a gain on
      * VALVE's law: CHUG's 0.71 is gain 13, which is what the specification meant by 0.85 when it was
      * written on VALVE V1's law (on the V1.1 law 0.85 is gain 106). JANGLE's chain sets no SAG, so VALVE's
      * default 0.35 applies.
