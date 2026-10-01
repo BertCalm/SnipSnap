@@ -25,8 +25,8 @@ class GlintVowelTest {
     @Test
     fun `VOWEL has no FOLLOW - its formants are fixed Hz`() {
         val macros = Glint.macrosFor(GlintVoice.VOWEL)
-        assertEquals(listOf("TUNE", "PEAK", "BODY", "BLOOM", "DECAY"), macros.map { it.name })
-        assertEquals(listOf(0.5f, 0.5f, 0.5f, 0.6f, 0.5f), macros.map { it.default }, "VOWEL's defaults")
+        assertEquals(listOf("TUNE", "PEAK", "BODY", "BLOOM", "DECAY", "DEPTH"), macros.map { it.name })
+        assertEquals(listOf(0.5f, 0.5f, 0.5f, 0.6f, 0.5f, 0f), macros.map { it.default }, "VOWEL's defaults")
         assertEquals(0.5f, macros.first { it.name == "BLOOM" }.neutral, "VOWEL's BLOOM is bipolar, neutral at its centre")
     }
 
