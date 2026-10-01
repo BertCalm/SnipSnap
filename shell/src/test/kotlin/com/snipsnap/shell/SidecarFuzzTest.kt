@@ -87,7 +87,7 @@ class SidecarFuzzTest {
      */
     private fun fuzz(name: String, valid: String, seed: Int, read: (String) -> Unit) {
         val rnd = Random(seed)
-        val tree = JsonValue.Obj(struckTree)
+        val tree = Json.parse(valid)
         val start = System.nanoTime()
         for (i in 0 until ROUNDS) {
             val (kind, mutant) = if (i % 2 == 0) {
