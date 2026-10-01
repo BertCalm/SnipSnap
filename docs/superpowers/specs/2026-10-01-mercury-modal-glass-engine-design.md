@@ -557,6 +557,12 @@ proof. The claims tests are in `ModesBankTest.kt`.
   free for it.
 - **Not touched.** The phone's picker, which is R1.1 and needs a machine
   with the SDK.
+- **One registration rule the map above missed.** `:shell`'s
+  `UserPresetsTest` requires every `<Engine>Presets.kt` to use the house
+  helper, `private fun p(voice, name, vararg macros: Pair<String, Float>)`.
+  That is the line `UserPresets.rosterLine` pastes into. R1's first roster
+  used positional parameters and failed it; the roster now uses the house
+  helper, with the same values, so nothing renders differently.
 
 **The object, as built.** It is Phase 0's iteration-3 object on
 `Modes.Bank`:
