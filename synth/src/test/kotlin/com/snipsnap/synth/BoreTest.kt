@@ -158,11 +158,12 @@ class BoreTest {
         // Bite: the 1-4 kHz band against the fundamental, on the finished render (BoreMeasure.biteDb).
         // The R1 reed read -24 -22 -19 -16 -15 dB at C3 G3 C4 G4 C5 and the first listening note
         // asked for more of a reed's bite. The presence bell alone made it -18.7 -16.4 -13.4 -10.5
-        // -9.7, and the second note ("STRONG, +18 dB, still needs more ... buzzier and raspier") added
-        // the rasp: -9.5 -7.4 -5.4 -3.4 -2.6. The floors sit 2-3 dB under that, so the bell alone
-        // (what the first note shipped) and the rasp alone both fail every one of them. LIP 0.1
-        // against 0.9 read 10 dB apart at C4; the floor is 9.
-        val floors = listOf(0f to -12.0, 7f / 24 to -10.0, 0.5f to -8.0, 19f / 24 to -6.0, 1f to -5.5)
+        // -9.7, the rasp (the second note: "buzzier and raspier") -9.5 -7.4 -5.4 -3.4 -2.6, and the
+        // voicing (measured against a real tenor, where the fundamental is the weakest of the
+        // strong partials) +6.0 +4.9 +3.9 +2.3 +1.8. The floors sit 2.5-3 dB under that, so taking
+        // out the voicing, the rasp or the bell fails every one of them. LIP 0.1 against 0.9 read
+        // 9.7 dB apart at C4; the floor is 8.
+        val floors = listOf(0f to 3.0, 7f / 24 to 2.0, 0.5f to 1.0, 19f / 24 to -0.5, 1f to -1.0)
         for ((tune, floor) in floors) {
             val hz = Bore.frequencyFor(BoreVoice.SAX, tune)
             val note = Bore.render(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune, "HOLD" to 0.3f))
@@ -175,7 +176,7 @@ class BoreTest {
         )
         val loose = biteAt(0.1f)
         val tight = biteAt(0.9f)
-        assertTrue(loose - tight >= 9.0, "LIP 0.1 has only ${loose - tight} dB more bite than LIP 0.9 ($loose against $tight)")
+        assertTrue(loose - tight >= 8.0, "LIP 0.1 has only ${loose - tight} dB more bite than LIP 0.9 ($loose against $tight)")
     }
 
     @Test
@@ -221,6 +222,49 @@ class BoreTest {
         val byBreath = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { Bore.raspAmount(BoreVoice.SAX, 0.5f, it) }
         assertEquals(byLip.sortedDescending(), byLip, "the rasp rose as the lip tightened: $byLip")
         assertEquals(byBreath.sorted(), byBreath, "the rasp fell as the breath hardened: $byBreath")
+    }
+
+    @Test
+    fun `the voicing puts the power where a saxophone has it, and is the reed's alone`() {
+        // A real tenor (UNSW, written D4 = our C3) holds the 50-250 Hz band 16 dB under the whole sound
+        // and has the 5th partial strongest; the merged reed held it at -1 dB. The voicing's cut of the
+        // fundamental region puts ours at -9.5 dB (C3) and -7.9 (G3), so the bound is -5. (C4's
+        // fundamental is over 250 Hz and the band is empty there; not measured.)
+        for (tune in listOf(0f, 7f / 24)) {
+            val note = Bore.render(BoreVoice.SAX, Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune, "HOLD" to 0.3f))
+            val share = BoreMeasure.shareDb(note, 50f, 250f, fromSec = 0.5f)
+            assertTrue(share <= -5.0, "the fundamental region holds $share dB of the C3/G3 reed (tune $tune), over -5: the voicing is not cutting it")
+        }
+        assertTrue(Bore.voicingFor(BoreVoice.FLUTE).none, "the flute has a voicing")
+        assertEquals(Bore.Voicing(Bore.VOICE_LOW_DB, Bore.VOICE_HIGH_DB), Bore.voicingFor(BoreVoice.SAX))
+    }
+
+    @Test
+    fun `the voicing opens with the note's loudness, so a note's first moments are not lifted`() {
+        // The voicing follows the envelope (Bore.voice): nothing at the start of a note, all of it at the
+        // loudest. Without that every SAX one-shot reads as a snare to the classifier (the head window is
+        // the pop and the breath burst while the tone grows) and lands in a drum's choke group. A 130 Hz
+        // and a 4 kHz tone ramped from nothing over 0.4 s: in the first 30 ms both pass within 2 dB
+        // (measured -0.4 and -1.0); at the steady end the 130 Hz is cut (-11.7 dB at -20, deeper now) and
+        // the 4 kHz lifted (+8.2).
+        val rate = Dsp.RATE
+        val x = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            val env = (t / 0.4).coerceIn(0.0, 1.0)
+            (env * (0.5 * kotlin.math.sin(2 * Math.PI * 130 * t) + 0.5 * kotlin.math.sin(2 * Math.PI * 4000 * t))).toFloat()
+        }
+        val y = x.copyOf()
+        Bore.voice(y, Bore.voicingFor(BoreVoice.SAX))
+        fun amplitude(b: FloatArray, a: Double, z: Double, hz: Double): Double {
+            var c = 0.0
+            var s = 0.0
+            for (i in (a * rate).toInt() until (z * rate).toInt()) { c += b[i] * kotlin.math.cos(2 * Math.PI * hz * i / rate); s += b[i] * kotlin.math.sin(2 * Math.PI * hz * i / rate) }
+            return 2 * kotlin.math.sqrt(c * c + s * s) / ((z - a) * rate)
+        }
+        fun gainDb(hz: Double, a: Double, z: Double) = 20 * kotlin.math.log10(amplitude(y, a, z, hz) / amplitude(x, a, z, hz))
+        assertTrue(abs(gainDb(130.0, 0.0, 0.03)) < 2.0 && abs(gainDb(4000.0, 0.0, 0.03)) < 2.0, "the voicing is already open in the first 30 ms: ${gainDb(130.0, 0.0, 0.03)} dB at 130 Hz, ${gainDb(4000.0, 0.0, 0.03)} dB at 4 kHz")
+        assertTrue(gainDb(130.0, 0.6, 0.9) <= -9.0, "the fundamental region is cut only ${gainDb(130.0, 0.6, 0.9)} dB at full level")
+        assertTrue(gainDb(4000.0, 0.6, 0.9) >= 6.0, "the highs are lifted only ${gainDb(4000.0, 0.6, 0.9)} dB at full level")
     }
 
     @Test

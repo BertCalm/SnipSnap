@@ -1935,6 +1935,82 @@ rasp on the reed (the floors and the amount test), no bias (the sine test), no l
 and the sine test), the rasp on the flute (the amount test), the rasp in the LOOP (the LOOP claims test
 and the fuzz test).
 
+### Round 1.3: the voicing — 2026-10-01
+
+The rasp merged, and the owner asked for research on what was still missing ("a missing ingredient that we
+haven't nailed"). The research was done against real instruments, not against the literature alone, and it
+changed what the SAX is trying to be.
+
+**What was measured.** UNSW's saxophone acoustics site (Wolfe's group) publishes recordings of a real tenor
+for every note (22.05 kHz, 16-bit mono) and the same note at four dynamics. Thirteen notes, written A#3 to F5,
+and the four A#3 dynamics were analysed the same way as our renders (the loudest 0.4 s, a Hann FFT, bands in dB
+against the whole sound). Against our SAX at the same pitch (their written D4 sounds C3 = our TUNE 0):
+
+| | centroid | 50-250 | 250-500 | 500-1k | 1-2k | 2-4k | 4-8k | strongest partial | onset to 80% |
+|---|---|---|---|---|---|---|---|---|---|
+| real tenor | 866 Hz | -16.0 | -7.9 | -2.1 | -9.2 | -12.0 | -18.2 | 5th | 0.07 s |
+| ours, R1 | 164 Hz | -0.5 | -10.4 | -16.3 | -25.6 | -39.9 | -54.5 | 1st | 0.45 s |
+| ours, with the bell and rasp | 300 Hz | -1.2 | -10.3 | -12.0 | -12.0 | -18.5 | -33.6 | 1st | 0.34 s |
+| ours, with the voicing | 1113 Hz | -9.2 | -7.0 | -6.4 | -5.4 | -8.4 | -18.8 | 3rd | 0.38 s |
+
+Across the thirteen real notes the fundamental was the strongest partial in **one** (the 2nd to 7th in the rest),
+the 50-250 Hz band held 12-16 dB less than the whole sound where the note's fundamental lay under 175 Hz, and the
+onset was 0.05-0.12 s (0.49 s for a very soft note). Across the four dynamics the brightness centroid went
+327, 566, 653, 711 Hz from very soft to very loud and the 4-8 kHz band went -35, -31, -22, -20 dB: the same note
+is much brighter the louder it is, which the UNSW page explains by the reed beating (it closes for part of the
+cycle and the wave is clipped on one side), and which our BREATH did not do (the centroid moved 285 to 310 Hz).
+The same page gives the tone-hole lattice's cutoff, about 800 Hz on a tenor and 1300 Hz on a soprano, above which
+"the harmonics fall off" in the low notes. Our brightness work until here (the bell at 2 kHz, the rasp) had been
+adding bite in one band of a spectrum whose whole shape was wrong: a strong fundamental with the rest far under it.
+
+**What shipped: a voicing on the output.** `Bore.voice`: a low shelf cutting the fundamental region
+(`VOICE_LOW_DB` -26 under `VOICE_LOW_HZ` 200) and a high shelf lifting everything over `VOICE_HIGH_HZ` 3 kHz by
+`VOICE_HIGH_DB` 18, rolled off above `VOICE_TOP_HZ` 9 kHz (a real recording has little there, and the 22 kHz of a
+44.1 kHz render is not a place to lift). The numbers are the owner's: a prototype filter on the rendered reed,
+at five settings, got KEEP for the deeper cut (-20 dB) and for the brighter lift (+18 dB), MEH for the plain cut
+and the plain lift, and CUT for the version without the rasp; the shipped values are the two keeps together, with
+the cut taken a little further to reach the real band balance (measured against the recording, not by ear).
+`voicingFor` gives it to the reed alone; the flute was not measured.
+
+**It follows the note's loudness.** The first build applied the shelves at full strength from the first sample,
+and every SAX one-shot preset then read as a SNARE or a CLAP to the drum classifier (a high-frequency share of
+0.67-0.89 against its line of 0.5). That matters here: when a pad lands, the app files it under the classifier's
+class, which sets its choke group, so a SAX read as a snare would mute real snares. The classifier looks at the first
+4096 samples, which for this reed (a 0.3-0.4 s onset) are the tongue's pop and the breath burst while the tone
+grows; lifting the highs at full strength lifts that noise. Nor was it the sample rate, the roll-off, or the
+chiff (a grid of two cuts by four lifts, with and without the burst, said the same). So the shelves open with
+the envelope (`VOICE_FOLLOW_HZ` 1 kHz tone, 10 ms smoothing, nothing at the start of the note and all of it at the
+loudest): which is also what the instrument does, brighter as it gets louder. On the same grid, the real tenor
+reads PERC or LOOP at its low notes (a high-frequency share of 0.36-0.47; two of thirteen notes read SNARE).
+
+**What it cost, said plainly.**
+
+- **No voicing in a LOOP.** On the 142-corner SAX scan (the 117 grid and the fuzz set) the corners that do not close
+  as a LOOP went from 3 (the merged reed, no rasp) to **19-21** with the voicing in the loop, with or without the
+  9 kHz roll-off, with fuzz corners at 3.2e-3 and 5.8e-3 against a bar of 1e-3. A LOOP carries the bell and neither the rasp nor the voicing,
+  so SOLO LOOP and the loops of the roster are darker than the one-shots they are named after. A bent, lifted loop
+  wants a crossfaded wrap; it is the same R2 item as the rasp's.
+- **The classifier's margin is thin and it is not monotonic.** With the voicing the SAX one-shot presets read
+  0.27-0.46 (BITE 0.46, HIGH STAB 0.39, SMOOTH 0.40, LOW HONK 0.43, GROWL 0.40, line 0.5), but a preset's reading
+  moves up and down by 0.03-0.05 with CHIFF (LOW HONK: 0.43 at 0.15, 0.50 at 0.45) and the next sound design step can
+  push one over. Two presets were retuned to sit lower, as provisional presets are: LOW HONK (BREATH 0.7 to 0.6,
+  CHIFF 0.35 to 0.15) and GROWL (BREATH 0.75 to 0.65, CHIFF 0.35 to 0.15).
+- **The attack is not fixed.** Ours is 0.34-0.45 s to 80% at C3 against the real 0.05-0.12 s, and it is the likely
+  root of the classifier problem above (a head window of pop and burst). A faster starter is R2.
+- **Not done, from the same measurements:** BREATH-linked brightness (the real centroid moved 327 to 711 Hz from
+  soft to loud; the voicing's loudness-following is within one note, not across the BREATH knob), and the noise
+  floor between the harmonics (valley to peak at 1-4 kHz: real -28 to -36 dB, ours -48 to -56 dB).
+- **One recording, one player.** Thirteen notes of one instrument, close-miked; the numbers above are the shape of
+  that instrument and not a law. The recordings are UNSW's; they are not in the repository.
+
+**Verification.** `BoreTest`: the bite floors moved to +3.0 +2.0 +1.0 -0.5 -1.0 dB (measured +6.0 +4.9 +3.9 +2.3
++1.8), the fundamental region at least 5 dB under the whole sound (measured -9.5 at C3 and -7.9 at G3, against -1 for
+the merged reed), the voicing's envelope (a 130 Hz and a 4 kHz tone ramped up over 0.4 s: within 2 dB of unity in the
+first 30 ms, the 130 Hz cut and the 4 kHz lifted at full level), and the flute's none. Each guard was broken alone and
+a test named it: no voicing (the floors, the share and the envelope tests), a static voicing with no envelope (the
+envelope test and the classifier test, SNARE), the voicing on the flute (the classifier and the share tests), the
+voicing in the LOOP (the LOOP claims test and the fuzz test), no rasp and no bell (the floors).
+
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 
 `Bore.kt` verbatim from the spec (its pages 5–11) with one `.toFloat()`,
