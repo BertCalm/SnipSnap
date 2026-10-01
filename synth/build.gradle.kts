@@ -312,6 +312,15 @@ tasks.register<JavaExec>("generateBoreAudition") {
     args("${rootDir}/testkit/bore-audition")
 }
 
+tasks.register<JavaExec>("generateMagnetKit") {
+    group = "distribution"
+    description = "Render the MAGNET electric-string acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MagnetKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"

@@ -277,4 +277,37 @@ object SynthKits {
             preset(BoreVoice.SAX, "HIGH STAB"), preset(BoreVoice.SAX, "SOLO LOOP"),                                               // A15 A16
         )
     }
+
+    /** The LEAD family's amp (shape): a hotter chain than CHUG's landing, written in the kit; the owner's gate decides what lands. */
+    private val LEAD_VALVE = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
+
+    private fun magnetNote(
+        voice: MagnetVoice,
+        semitone: Int,
+        name: String,
+        extra: Map<String, Float> = emptyMap(),
+        fx: FxChain = Magnet.landingChain(voice),
+    ) = pad(
+        MagnetPatch(name, voice, Magnet.defaults(voice) + mapOf("TUNE" to semitone / Magnet.TUNE_SEMITONES.toFloat()) + extra),
+        DrumClass.TONAL,
+        fx,
+    )
+
+    /**
+     * The MAGNET R1 kit: a roster of defaults plus TUNE, with no preset lookups. A01-A08 are a B minor
+     * riff on CHUG, A09-A14 an open E chord on JANGLE, A15-A16 the LEAD family: CHUG, BLEND toward the
+     * neck, a hotter amp. Every pad lands through its voice's VALVE chain ([Magnet.landingChain]) and
+     * carries its recipe.
+     */
+    fun magnet(): List<ArrangedPad?> {
+        val riff = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val chord = intArrayOf(0, 7, 12, 16, 19, 24)
+        val lead = intArrayOf(19, 24)
+        val leadChain = FxChain().withSection("valve", LEAD_VALVE)
+        return buildList {
+            riff.forEachIndexed { i, s -> add(magnetNote(MagnetVoice.CHUG, s, "Chug ${i + 1}")) }
+            chord.forEachIndexed { i, s -> add(magnetNote(MagnetVoice.JANGLE, s, "Jangle ${i + 1}")) }
+            lead.forEachIndexed { i, s -> add(magnetNote(MagnetVoice.CHUG, s, "Lead ${i + 1}", mapOf("BLEND" to 0.35f), leadChain)) }
+        }
+    }
 }
