@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Snip
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.test.Test
@@ -857,5 +858,73 @@ class StringsTest {
             assertContentEquals(a, b, "fb=$fb: inject(x + reflected()) must be next(x)")
             assertContentEquals(a, c, "fb=$fb: a second reflected() before inject must return the same wave, not step the filters again")
         }
+    }
+
+    // ---------- ARCO's use of the same R0: a bowed string is two loops that share one period ----------
+    // docs/superpowers/specs/2026-09-29-arco-bowed-string-engine-design.md, "The bow".
+
+    /** The one-pole's phase delay at [freq] in samples, in the closed form `tune`'s own budget uses. */
+    private fun onePoleDelay(freq: Float, loopHz: Float, rate: Int): Double {
+        val a = 1.0 - kotlin.math.exp(-2.0 * Math.PI * minOf(loopHz, rate * 0.45f) / rate)
+        val r = 1.0 - a
+        val w = 2.0 * Math.PI * freq / rate
+        return kotlin.math.atan2(r * kotlin.math.sin(w), 1.0 - r * kotlin.math.cos(w)) / w
+    }
+
+    /**
+     * A bow at position beta splits a string into two loops, one tuned for beta of the period and one for the rest.
+     * The two budgets must sum to exactly one period less both one-poles' delays and the two two-tap averages (a half
+     * sample each), at every pitch: that is what lets the bridge segment be tuned on its own and the nut's stages
+     * still be charged. `rate / freq` is a Float division inside `tune`, so the period here is too.
+     */
+    @Test
+    fun `a split string's two budgets sum to one period less every stage's own delay`() {
+        val beta = 0.127236
+        val nutHz = boreRate * 0.45f
+        for (freq in listOf(41.2f, 65.41f, 130.81f, 220f, 440f, 880f, 1174.66f)) {
+            val bridge = Strings.tune(freq, 3023.6f, boreRate, roundTrip = beta)
+            val nut = Strings.tune(freq, nutHz, boreRate, roundTrip = 1.0 - beta)
+            val period = (boreRate / freq).toDouble()
+            val want = period - onePoleDelay(freq, 3023.6f, boreRate) - onePoleDelay(freq, nutHz, boreRate) - 1.0
+            assertEquals(want, bridge.exact + nut.exact, 1e-9, "$freq Hz: the two segments do not sum to a period less their own delays")
+        }
+    }
+
+    /**
+     * Two bare loops closed by hand into a ring - the bridge's and the nut's, each inverting, crossing at the bow with
+     * a one-period burst put in - ring at the note, at four pitches, and `retune` on both moves them. No bow, no
+     * friction: this is the geometry alone, the claim the bow stands on.
+     */
+    @Test
+    fun `two bare loops closed by hand ring at the note, and retune moves them`() {
+        val beta = 0.127236
+        val nutHz = boreRate * 0.45f
+        fun ringAt(freq: Float, retuneTo: Float?): Double {
+            val bridgeTuning = Strings.tune(freq, 3023.6f, boreRate, roundTrip = beta)
+            val nutTuning = Strings.tune(freq, nutHz, boreRate, roundTrip = 1.0 - beta)
+            val bridge = Strings.Loop(bridgeTuning.n, bridgeTuning.a, -1f, 3023.6f, boreRate, roundTrip = beta)
+            val nut = Strings.Loop(nutTuning.n, nutTuning.a, -1f, nutHz, boreRate, roundTrip = 1.0 - beta)
+            val period = (boreRate / freq).toInt()
+            val out = FloatArray((0.5 * boreRate).toInt())
+            for (i in out.indices) {
+                if (i == boreRate / 20 && retuneTo != null) {
+                    bridge.retune(retuneTo)
+                    nut.retune(retuneTo)
+                }
+                val burst = if (i < period) kotlin.math.sin(2.0 * Math.PI * i / period).toFloat() else 0f
+                val fromBridge = bridge.reflected()
+                val fromNut = nut.reflected()
+                nut.inject(fromBridge + burst)
+                bridge.inject(fromNut + burst)
+                out[i] = fromNut + burst
+            }
+            return FineTuning.measuredHz(Snip(out, 1, boreRate), retuneTo ?: freq, fromSec = 0.15f, bodySeconds = 0.3f)
+        }
+        for (freq in listOf(110f, 220f, 440f, 880f)) {
+            val cents = FineTuning.cents(ringAt(freq, null), freq.toDouble())
+            assertTrue(abs(cents) <= 5.0, "two closed loops ring $cents cents from $freq Hz")
+        }
+        val cents = FineTuning.cents(ringAt(110f, 220f), 220.0)
+        assertTrue(abs(cents) <= 5.0, "after retune on both, the ring is $cents cents from 220 Hz")
     }
 }
