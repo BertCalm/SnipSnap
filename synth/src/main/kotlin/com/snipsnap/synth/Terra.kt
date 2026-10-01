@@ -429,7 +429,8 @@ object Terra {
      * factor on the droop line) are the two optional inputs HIT, BEND and
      * TALK fill, both indexed from [onsetSamples]; see [drivenBank]. With
      * neither, the loop below runs today's two expressions verbatim - the
-     * only form that is byte-identical by construction.
+     * only form that is byte-identical by construction. The loop in
+     * [drivenBank] repeats this one's shared rules and must change with it.
      */
     internal fun strikeAndModalBank(
         modes: List<Modes.Mode>,
@@ -489,6 +490,13 @@ object Terra {
      * whose level is 0 still advances its phase and reopens where it would
      * have been (spec, "Architecture"; TerraTest's `a mode held at zero
      * level reopens in phase`).
+     *
+     * This loop is a deliberate copy of [strikeAndModalBank]'s own, differing
+     * only in those two factors, because one loop with the factors hoisted
+     * would no longer run today's expressions verbatim. A change to a rule
+     * the two share (the Nyquist or t60 skip, the phase wrap, the mix) goes
+     * in both; TerraFrozenTest's `identity curves alone and together render
+     * the frozen TERRA` fails on all forty cases if they drift apart.
      */
     private fun drivenBank(
         modes: List<Modes.Mode>,
