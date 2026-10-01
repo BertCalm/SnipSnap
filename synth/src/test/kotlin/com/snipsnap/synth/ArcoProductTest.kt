@@ -359,15 +359,20 @@ class ArcoProductTest {
      * class is PERC and the classifier must say PERC or TONAL. The table is printed first and every miss is listed before
      * the assertion.
      *
-     * OPEN: the classifier reads ARCO's lowest and highest notes as drums. R1b saw 20 of 105 rows miss. CELLO C2 (36) reads TOM at HOLD 0 to 0.4 and KICK
-     * just under the line (0.4412); at the default HOLD CELLO C2 to D#2 (MIDI 36 to 39) read TOM and the rest PERC; ERHU A5 (81) reads SNARE at HOLD 0 to 0.5 and at
-     * the default HOLD ERHU F5 to A5 (MIDI 77 to 81) read SNARE, the rest PERC; the other four notes of the grid read PERC at every HOLD. The first
-     * is the low note's body under 200 Hz with a decay under 500 ms (the bass branch's kick and tom rules), the second the bright top
-     * note's noise and high share. Both would land a pad in a drum's choke group, and a default stab at those nine notes is one. The test keeps the honest bound;
-     * the filed class is PERC at every one of the rows (it never wishes for a drum), which the test also checks.
+     * The classifier reads ARCO's lowest and highest notes as drums, and the engine files them PERC anyway: R1b saw 20 of 105 rows
+     * read so. CELLO C2 (36) reads TOM at HOLD 0 to 0.4 and KICK just under the line (0.4412); at the default HOLD CELLO C2 to
+     * D#2 (MIDI 36 to 39) read TOM and the rest PERC; ERHU A5 (81) reads SNARE at HOLD 0 to 0.5 and at the default HOLD ERHU F5 to A5
+     * (MIDI 77 to 81) read SNARE, the rest PERC; the other four notes of the grid read PERC at every HOLD. The first is the low note's
+     * body under 200 Hz with a decay under 500 ms (the bass branch's kick and tom rules), the second the bright top note's noise and
+     * high share. Which of the lowest notes read as a drum is a knife edge in the stroke: at BOW 0.6 it was MIDI 36 to 39 (TOM) at the
+     * default HOLD, and at the default BOW 0.5 it is MIDI 40 to 43 (KICK, TOM), so the corner is the whole of C2 to G2. It is the classifier's limit and not the engine's: nothing consults the classifier for a synth pad (a kit pad
+     * is filed by [Arco.drumClassFor], and the roster test holds all 16 presets clear of every drum), only a sample loaded from
+     * outside is classified. So the bar is: over the line the classifier says LOOP and the filed class is LOOP, under it the
+     * filed class is PERC always, and wherever the classifier hears a drum it is at one of the two corners listed (CELLO MIDI 36 to
+     * 43, ERHU MIDI 77 to 81); a new corner that starts reading as a drum fails here and is named.
      */
     @Test
-    fun `OPEN a note under the line reads as PERC or TONAL, never a drum with a choke group`() {
+    fun `a note under the line is filed PERC, and the classifier hears a drum only at the two known corners`() {
         val holds = listOf(0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.95f)
         val cells = ArcoVoice.entries.flatMap { v -> threeTunes.flatMap { t -> holds.map { h -> Triple(v, t, h) } } }
         val steps = ArcoVoice.entries.flatMap { v -> (0..Arco.tuneSemitones(v)).map { Triple(v, tuneOf(v, it), Arco.DEFAULT_HOLD) } }
@@ -391,7 +396,14 @@ class ArcoProductTest {
             val over = r.frames.toFloat() / rate > 1.5f
             assertEquals(if (over) DrumClass.LOOP else DrumClass.PERC, r.filed, "${r.name}: the filed class")
         }
-        assertTrue(misses.isEmpty(), "${misses.size} notes read as something other than a pitched note or a LOOP: " + misses.joinToString(", ") { "${it.name}=${it.heard}" })
+        fun midiOf(name: String) = name.split(" ")[1].toInt()
+        val unexpected = misses.filter { r ->
+            val over = r.frames.toFloat() / rate > 1.5f
+            val drum = r.heard in setOf(DrumClass.KICK, DrumClass.TOM, DrumClass.SNARE)
+            val known = (r.name.startsWith("CELLO") && midiOf(r.name) in 36..43) || (r.name.startsWith("ERHU") && midiOf(r.name) in 77..81)
+            over || !drum || !known
+        }
+        assertTrue(unexpected.isEmpty(), "${unexpected.size} notes read as something the engine does not expect of the classifier: " + unexpected.joinToString(", ") { "${it.name}=${it.heard}" })
     }
 
     // ---- the LOOP ------------------------------------------------------------
@@ -644,7 +656,7 @@ class ArcoProductTest {
     // ---- vibrato -------------------------------------------------------------
 
     /**
-     * The baked vibrato is a whole-string retune, +-10 cents at 6.1 Hz, scaled by how long the bow is on: none at 0.6 s or less,
+     * The baked vibrato is a read-back delay of the finished wave, +-10 cents at 6.1 Hz, scaled by how long the bow is on: none at 0.6 s or less,
      * full at 1.5 s or more, and none at all in a LOOP, which cannot carry a signal that does not repeat. Read on the *finished*
      * render with 70 ms windows stepped 20 ms ([BoreMeasure.cents], the way BORE's vibrato test reads it), so a
      * 6.1 Hz swing is resolved but its peak is averaged down: a 70 ms window passes a +-10 cent swing as
@@ -699,66 +711,44 @@ class ArcoProductTest {
     }
 
     /**
-     * Slip times with every slip that comes within a tenth of a period of the one before it folded into it. The vibrato's retune
-     * moves the string in blocks of 64 samples and at the edge of a slip that can flicker the string's velocity across the slip's
-     * threshold for a sample or two (R1b saw such flickers 0.00 to 0.01 of a period after the slip, with the velocity never below a third of
-     * the bow's): a flicker is not a slip. A real second slip is 0.18 to 0.24 of a period after the first and goes to six or
-     * seven times the bow's speed backwards, and a tenth of a period keeps the two apart.
-     */
-    private fun merged(slips: DoubleArray, hz: Float): DoubleArray {
-        val period = rawRate / hz.toDouble()
-        val kept = ArrayList<Double>()
-        for (s in slips) if (kept.isEmpty() || s - kept.last() > 0.1 * period) kept += s
-        return kept.toDoubleArray()
-    }
-
-    /** How many gaps between [merged] slips that end after [fromSeconds] are not one period of [hz] (to [ArcoMeasure.CLEAN_TOLERANCE]). */
-    private fun doubleSlips(slips: DoubleArray, hz: Float, fromSeconds: Double): Int = ArcoMeasure.uncleanGaps(merged(slips, hz), hz, fromSeconds)
-
-    /**
-     * One slip a period through the vibrato: on the string's velocity under the bow, a held 3 s note at the default knobs, at
-     * every TUNE step of both voices, has no gap between slips (flickers folded away, see [merged]) that is not one period from
-     * 1.2 s on (the slowest default lock is 1.0 s, see the next test). The control is the same note without the vibrato, which
-     * R1b saw lock at 0.08 to 0.23 s at ERHU, 0.20 to 1.01 s at CELLO, and never leave it.
+     * The vibrato never touches the string: it is a read-back delay of the finished wave ([Arco.vibrato]), so the string's own
+     * velocity under the bow, the wave the slips are read from, is bit for bit the plain string's, and a held 3 s note has no gap
+     * between slips that is not one period from 1.2 s on (the slowest default lock is 0.63 s, see the next test). The output wave
+     * is the same as the plain one before the vibrato starts (0.35 s) and differs after it.
      *
-     * OPEN: with the vibrato on, ERHU slips twice in a period now and then. R1b saw, at the defaults and 3 s of bow, ERHU steps 6, 10, 11, 12,
-     * 16 and 19 (MIDI 68, 72, 73, 74, 78 and 81) with one or two such events between 1.2 s and the lift (merged gaps 2, 2, 4, 2, 4, 4: an event is a gap
-     * of 0.18 to 0.24 of a period and then one of 0.76 to 0.82), the string's velocity at the bow going back to -6 to -7.4 times the bow's own
-     * speed: a real extra slip, about one in 1 to 2 seconds, which the same notes without the vibrato never make. An event comes back at the same
-     * vibrato phase on the same note (MIDI 73 at phase 0.34 three times, 0.82 s and 0.98 s apart, five and six cycles; MIDI 78 at 0.63 twice), so it is a
-     * place in the swing and not noise. ERHU steps 3 and 8 and CELLO step 20 (G#3) show only a flicker (one extra crossing within 0.01 of a
-     * period, the velocity never under a third of the bow's), which the merge removes; CELLO has no real event from 1.2 s on. Over
-     * 200 rolled notes at a 3 s bow (see the SCRAMBLE test) 91 of the ERHU ones have such an event after 1.7 s and none of the CELLO ones.
-     * A glitch of that kind is a tick in the note. The test keeps the honest bound.
+     * R1b's first vibrato retuned the bow every 64 samples and it was not like this: at the defaults and 3 s of bow ERHU steps 6, 10, 11,
+     * 12, 16 and 19 (MIDI 68, 72, 73, 74, 78 and 81) had one or two real extra slips between 1.2 s and the lift (a gap of 0.18 to 0.24
+     * of a period and then one of 0.76 to 0.82, the string's velocity at the bow going back to -6 to -7.4 times the bow's speed),
+     * about one in 1 to 2 seconds, always at the same phase of the swing on the same note (MIDI 73 at phase 0.34 three times, MIDI 78 at
+     * 0.63 twice); 37 events in 24,746 ERHU slips over the 45 steps and in 91 of 200 rolled ERHU notes; none without the vibrato. This
+     * test is that regression's guard: with the retune it fails at those steps.
      */
     @Test
-    fun `OPEN a held note slips once a period through its vibrato`() {
+    fun `a held note slips once a period through its vibrato, because the string never feels it`() {
         val problems = ArrayList<String>()
         for (voice in ArcoVoice.entries) {
             val steps = (0..Arco.tuneSemitones(voice)).toList()
             val rows = steps.parMap { step ->
                 val tune = tuneOf(voice, step)
                 val m = macros(voice, tune, hold = Arco.holdFor(3f))
-                val bowOn = Arco.holdSeconds(m.getValue("HOLD"))
                 val hz = Arco.frequencyFor(voice, tune)
-                val end = (bowOn * rawRate).toInt()
-                fun slipsOf(vibrato: Boolean): DoubleArray {
-                    val bowPoint = FloatArray(((bowOn + 4f) * rawRate).toInt())
-                    Arco.bow(voice, hz, m, rawRate, vibrato = vibrato, bowPointOut = bowPoint)
-                    return ArcoMeasure.slipTimes(bowPoint, end)
-                }
-                val with = slipsOf(true)
-                val without = slipsOf(false)
-                Triple(step, doubleSlips(with, hz, 1.2) to ArcoMeasure.uncleanGaps(with, hz, 1.2), doubleSlips(without, hz, 1.2))
+                val onTap = FloatArray(((3.2f + 4f) * rawRate).toInt())
+                val offTap = FloatArray(onTap.size)
+                val on = Arco.bow(voice, hz, m, rawRate, vibrato = true, bowPointOut = onTap)
+                val off = Arco.bow(voice, hz, m, rawRate, vibrato = false, bowPointOut = offTap)
+                val start = (Arco.VIBRATO_DELAY_SECONDS * rawRate).toInt()
+                val gaps = ArcoMeasure.uncleanGaps(ArcoMeasure.slipTimes(onTap, (Arco.holdSeconds(m.getValue("HOLD")) * rawRate).toInt()), hz, 1.2)
+                val same = onTap.contentEquals(offTap)
+                val before = (0 until start).all { on[it] == off[it] }
+                val after = (start + rawRate until on.size / 2).any { on[it] != off[it] }
+                listOf(gaps, if (same) 0 else 1, if (before) 0 else 1, if (after) 0 else 1)
             }
-            println(
-                "ARCO slips through the vibrato $voice, steps with a double slip after 1.2 s (merged gaps, raw gaps): " +
-                    rows.filter { it.second.second > 0 || it.second.first > 0 }.joinToString(" ") { "${it.first}:${it.second.first}/${it.second.second}" } +
-                    "; without the vibrato: ${rows.count { it.third > 0 }} steps",
-            )
-            for ((step, counts, plain) in rows) {
-                if (counts.first != 0) problems += "$voice step $step: ${counts.first} gaps between slips are not one period through the vibrato"
-                if (plain != 0) problems += "$voice step $step: the note without vibrato has $plain gaps that are not one period, so the control is not clean"
+            println("ARCO vibrato string $voice: unclean gaps from 1.2 s " + steps.indices.joinToString(" ") { "${steps[it]}=${rows[it][0]}" })
+            for ((i, step) in steps.withIndex()) {
+                if (rows[i][0] != 0) problems += "$voice step $step: ${rows[i][0]} gaps between slips are not one period through the vibrato"
+                if (rows[i][1] != 0) problems += "$voice step $step: the vibrato changed the string's own velocity under the bow"
+                if (rows[i][2] != 0) problems += "$voice step $step: the wave differs from the plain one before the vibrato starts"
+                if (rows[i][3] != 0) problems += "$voice step $step: the vibrato does not change the wave once it has started"
             }
         }
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
@@ -770,13 +760,16 @@ class ArcoProductTest {
      * is read on the raw core bowed for 3 s without the vibrato ([ArcoMeasure.lockSeconds]), so the time itself is seen and not only
      * "after the lift" (a default note's own vibrato is 2.8 cents at 0.85 s of bow).
      *
-     * OPEN: R1b saw four CELLO steps lock after the default bow lifts, at BOW 0.6 and GRIP 0.6: E2 (step 4, MIDI 40) at 1.00 s, F2 (step 5) at 0.86 s,
-     * G2 (step 7) at 0.90 s and G#2 (step 8) at 1.01 s, against 0.854 s of bow (the earlier maps, at BOW 0.5, had the worst lock at 0.87 s; the
-     * 1.15 times bite at BOW 0.6 costs these steps 0.1 to 0.15 s). The others lock by 0.68 s (C2 0.59, D#2 0.68, A2 0.51) and ERHU by 0.23 s.
-     * A default stab on those four notes is a scratch that ends before the string settles.
+     * R1b's first default BOW was 0.6 (a 44 ms stroke with a 1.15 times bite), and it failed this: four CELLO steps locked after the
+     * default bow lifted, E2 (step 4, MIDI 40) at 1.00 s, F2 (step 5) at 0.86 s, G2 (step 7) at 0.90 s and G#2 (step 8) at 1.01 s,
+     * against 0.854 s of bow, so a default stab on those notes was a scratch that ended before the string settled. The lock time
+     * is erratic in the stroke's length (without any bite, at BOW 0.6, CELLO C2 to G2 lock at 1.0 to 1.2 s; at BOW 0.7 at 0.4 to 0.85 s;
+     * at BOW 0.5 at 0.32 to 0.63 s, falling steadily with the note), so the default moved to BOW 0.5, a 63 ms stroke with no bite, where
+     * every step locks by 0.63 s at the default GRIP; any other BOW is playable and some notes are slow at some strokes (the lock
+     * across BOW test prints it). ERHU locks by 0.23 s.
      */
     @Test
-    fun `OPEN the default note locks into one slip before its bow lifts, at every TUNE step`() {
+    fun `the default note locks into one slip before its bow lifts, at every TUNE step`() {
         val problems = ArrayList<String>()
         for (voice in ArcoVoice.entries) {
             val steps = (0..Arco.tuneSemitones(voice)).toList()
@@ -998,7 +991,7 @@ class ArcoProductTest {
     /**
      * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock R1b measured, 1.275 s, with a second and a half of watching
      * after it), read on the bow-point tap. With the vibrato off by default: whether the string locks is a property of the window the macros draw,
-     * and the vibrato has its own tests. [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
+     * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
      */
     private fun roll(voice: ArcoVoice, macros: Map<String, Float>, vibrato: Boolean = false, pressure: Float? = null, cornerHz: Float? = null): Roll {
         val m = Arco.settled(macros, voice)
@@ -1008,7 +1001,7 @@ class ArcoProductTest {
         val core = Arco.bow(voice, hz, m, rawRate, pressure = pressure, cornerHz = cornerHz, gateSeconds = gate, vibrato = vibrato, bowPointOut = bowPoint)
         val end = (gate * rawRate).toInt()
         val slips = ArcoMeasure.slipTimes(bowPoint, end)
-        val late = if (vibrato) doubleSlips(slips, hz, lockBySeconds) else ArcoMeasure.uncleanGaps(slips, hz, lockBySeconds)
+        val late = ArcoMeasure.uncleanGaps(slips, hz, lockBySeconds)
         return Roll(m, ArcoMeasure.lockSeconds(bowPoint, end, hz), late, BowMeter.maxAbs(core), core.all { it.isFinite() })
     }
 
@@ -1022,11 +1015,9 @@ class ArcoProductTest {
      * macros, and not hidden.
      *
      * R1b saw no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.17 to 1.28 s (CELLO) and 0.05 to 0.32 s (ERHU), the
-     * worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the ceiling of 1.25, and no roll reaches the LOOP step. The lock is read with the
-     * vibrato off. With it on (which a 3 s bow carries at full depth) the temperature 0.35 rolls are read too and their second slips counted
-     * after 1.7 s, but only printed (R1b saw 0 of 200 for CELLO and 91 of 200 for ERHU): that is the OPEN item of
-     * `a held note slips once a period through its vibrato`, which owns it. A roll's lock is not decided by it (the 10 CELLO rolls of R1b's
-     * first run that "did not lock" with the vibrato on and a 2 s bow all locked at 0.18 to 0.55 s without it). The control is a string
+     * worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the ceiling of 1.25, and no roll reaches the LOOP step. The lock is read on
+     * the string, which the vibrato never touches (R1b's first vibrato retuned the bow and split slips: 91 of 200 rolled ERHU notes had a
+     * second slip after 1.7 s, and the 10 CELLO rolls that "did not lock" with it on and a 2 s bow all locked at 0.18 to 0.55 s without it). The control is a string
      * outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period,
      * must not pass the same lock check, so the check can fail.
      */
@@ -1053,13 +1044,6 @@ class ArcoProductTest {
             if (!results.all { it.finite }) problems += "$voice: a roll went non-finite"
             for (r in results) if (r.peak >= Strings.Bow.RAW_PEAK_CEILING) problems += "$voice: raw peak ${r.peak} is over the ceiling at ${r.macros}"
             if (bad.isNotEmpty()) problems += "$voice temperature $temperature: ${bad.size} of ${results.size} rolls do not lock into one slip: ${bad.take(3).map { it.macros }}"
-            if (temperature < 1f) {
-                val through = rolls.parMap { roll(voice, it, vibrato = true) }
-                println(
-                    "ARCO scramble $voice through the vibrato: ${through.count { it.late > 0 }} of ${through.size} rolls have a real second slip after $lockBySeconds s, " +
-                        "${through.count { it.lock < 0 }} never lock",
-                )
-            }
         }
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }

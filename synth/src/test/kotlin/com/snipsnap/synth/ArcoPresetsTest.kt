@@ -199,19 +199,18 @@ class ArcoPresetsTest {
     private class Control(val voice: ArcoVoice, val label: String, val macros: Map<String, Float>)
 
     /**
-     * The guard above only means something if a bowed note really can land in a drum's class. Three renders
+     * The guard above only means something if a bowed note really can land in a drum's class. Two renders
      * R1b saw do, each the mechanism the roster steers around: a slow bow on a short bass note (CELLO C2, BOW 0,
-     * HOLD 0) reads KICK because its head is all low swell and it does not ring on, a hard bow on a thin box
-     * at the top of ERHU's span (G5, BODY 0.1) reads SNARE (0.53 of its head above 2 kHz), and a slow-ish bow on
-     * a 0.42 HOLD A2 reads KICK because its tail stops 441 ms past its peak (head under 200 Hz at 0.63), where
-     * DEEP PEDAL, a harder bow on the same note, has 0.44 and is PERC.
+     * HOLD 0) reads KICK because its head is all low swell and it does not ring on, and a hard bow on a thin box
+     * at the top of ERHU's span (G5, BODY 0.1) reads SNARE (0.53 of its head above 2 kHz). (A third, a slow-ish
+     * bow on a 0.42 HOLD A2, read KICK until the stop and the vibrato changed: whether a slow low swell reads a
+     * kick or a tone is a knife edge between neighbouring notes, which is why the roster is checked by name.)
      */
     @Test
     fun `the classifier guard can fail - the corners the roster avoids do read as drums`() {
         val controls = listOf(
             Control(ArcoVoice.CELLO, "C2 BOW 0 HOLD 0", mapOf("TUNE" to 0f, "BOW" to 0f, "GRIP" to 0.5f, "BODY" to 0.5f, "HOLD" to 0f)),
             Control(ArcoVoice.ERHU, "G5 BODY 0.1", mapOf("TUNE" to 17f / 19, "BOW" to 0.85f, "GRIP" to 0.5f, "BODY" to 0.1f, "HOLD" to 0.2f)),
-            Control(ArcoVoice.CELLO, "A2 BOW 0.4 GRIP 0.3", mapOf("TUNE" to 9f / 24, "BOW" to 0.4f, "GRIP" to 0.3f, "BODY" to 0.5f, "HOLD" to 0.42f)),
         )
         for (c in controls) {
             val heard = Classifier.classify(Arco.render(c.voice, c.macros)).drumClass

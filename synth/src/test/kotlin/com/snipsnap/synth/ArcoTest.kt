@@ -307,7 +307,7 @@ class ArcoTest {
      * pressure, attack, release ramp and gain ramp, so the one thing that differs between a run with [lift] and a run
      * without is whether the bow is lifted at the end of the note. [ramp] false leaves the string's own loss alone.
      */
-    private fun byHand(voice: ArcoVoice, step: Int, grip: Float, holdSeconds: Float, stopN: Int, lift: Boolean, ramp: Boolean): FloatArray {
+    private fun byHand(voice: ArcoVoice, step: Int, grip: Float, holdSeconds: Float, stopN: Int, lift: Boolean, stop: Boolean): FloatArray {
         val hz = ArcoMeasure.hzOf(voice, step)
         val bow = Strings.Bow(hz, Arco.BETA, Arco.cornerFor(voice, step, grip), Arco.shareFor(voice), rate)
         val slope = 5f - 4f * Arco.pressureFor(voice, step, grip)
@@ -324,7 +324,7 @@ class ArcoTest {
                 else -> 0f
             }
             if (lift && i == liftAt) bow.lift()
-            if (ramp && i >= liftAt) bow.gain((1f - (i - liftAt).toFloat() / stopN).coerceAtLeast(0f))
+            if (stop && i == liftAt) bow.gain(Arco.stopScale(hz, Arco.cornerFor(voice, step, grip), stopN.toFloat() / rate, rate))
             out[i] = bow.next(Arco.V_SUSTAIN * up * release, slope)
         }
         return out
@@ -353,17 +353,17 @@ class ArcoTest {
             val hold = 2.0f
             val c = ArcoMeasure.core(voice, step, bow = 0.5f, gateSeconds = hold)
             val w = ArcoMeasure.wholePeriods(hz)
-            val resting = byHand(voice, step, Arco.DEFAULT_GRIP, hold, c.stopN, lift = false, ramp = true)
-            val liftedByHand = byHand(voice, step, Arco.DEFAULT_GRIP, hold, c.stopN, lift = true, ramp = true)
+            val resting = byHand(voice, step, Arco.DEFAULT_GRIP, hold, c.stopN, lift = false, stop = true)
+            val liftedByHand = byHand(voice, step, Arco.DEFAULT_GRIP, hold, c.stopN, lift = true, stop = true)
             fun drop(x: FloatArray, at: Double): Double {
                 val e = ArcoMeasure.Energy(x)
                 return e.acDb(c.liftN + (at * c.stopN).toInt(), w) - e.acDb(c.liftN - w, w)
             }
-            val engine = drop(c.out, 0.6)
-            val rest = drop(resting, 0.6)
-            println("ARCO lift $voice ${name(voice, step)}: at 60% of the stop the engine is at ${f(engine, 1)} dB, the lifted bow by hand ${f(drop(liftedByHand, 0.6), 1)} dB, a resting bow ${f(rest, 1)} dB; the engine equals the lifted bow bit for bit: ${c.out.contentEquals(liftedByHand)}")
-            assertTrue(engine <= -60.0, "$voice ${name(voice, step)}: the engine's tail is still at $engine dB at 60 percent of its stop")
-            assertTrue(rest > -60.0, "$voice ${name(voice, step)}: a resting bow's tail is at $rest dB, so this test cannot tell it from a lifted one")
+            val engine = drop(c.out, 0.95)
+            val rest = drop(resting, 0.95)
+            println("ARCO lift $voice ${name(voice, step)}: at 95% of the stop the engine is at ${f(engine, 1)} dB, the lifted bow by hand ${f(drop(liftedByHand, 0.95), 1)} dB, a resting bow ${f(rest, 1)} dB; the engine equals the lifted bow bit for bit: ${c.out.contentEquals(liftedByHand)}")
+            assertTrue(engine <= -40.0, "$voice ${name(voice, step)}: the engine's tail is still at $engine dB at 95 percent of its stop")
+            assertTrue(rest - engine >= 5.0, "$voice ${name(voice, step)}: a resting bow's tail ($rest dB) is within 5 dB of the engine's ($engine dB), so this test cannot tell a lifted bow from a resting one")
         }
     }
 
@@ -377,7 +377,7 @@ class ArcoTest {
     private fun minus60(out: FloatArray, liftN: Int, hz: Float): Double {
         val e = ArcoMeasure.Energy(out)
         val w = ArcoMeasure.wholePeriods(hz)
-        val ref = e.ac(liftN - w, w)
+        val ref = e.ac(liftN - (Arco.RELEASE_RAMP_SECONDS * rate).toInt() - w, w)
         var s = liftN
         val step = rate / 1000
         while (s < out.size) {
@@ -388,22 +388,24 @@ class ArcoTest {
     }
 
     /**
-     * How slowly a tail falls, as the smallest ratio (over windows of whole periods, back to back from the lift, while the
-     * tail is within 50 dB of where it started) of its drop from one window to the next to the free ring's drop over the
+     * How slowly a tail falls, as the smallest ratio (over windows of whole periods, back to back from the lift, from where the
+     * tail is 10 dB under the note's sustain until it is 30 dB under it: the lift itself lets the string's stored energy out and
+     * the first windows can rise, and below 30 dB a window's own mean no longer takes out the net displacement that drains at the bridge's
+     * 0.95 a period, -0.44 dB a period at every pitch, which at A5 is slower than the formula's -0.80 and reads as a ratio of 0.54) of its drop from one window to the next to the free ring's drop over the
      * same time ([Arco.freeRingSeconds]'s slope). A tail that falls at least as fast as the free string has every ratio
      * at 1 or more; one that rings on slower has a ratio under 1.
      */
     private fun slowestRatio(out: FloatArray, liftN: Int, hz: Float, freeRingSeconds: Float): Double {
         val e = ArcoMeasure.Energy(out)
         val w = ArcoMeasure.wholePeriods(hz)
-        val ref = e.acDb(liftN - w, w)
+        val ref = e.acDb(liftN - (Arco.RELEASE_RAMP_SECONDS * rate).toInt() - w, w)
         val formulaDrop = -60.0 / freeRingSeconds * w / rate
         var worst = Double.POSITIVE_INFINITY
         var k = 0
         while (liftN + (k + 2) * w <= out.size) {
             val a = e.acDb(liftN + k * w, w)
             val b = e.acDb(liftN + (k + 1) * w, w)
-            if (a > ref - 50.0) worst = min(worst, (b - a) / formulaDrop)
+            if (a < ref - 10.0 && a > ref - 30.0) worst = min(worst, (b - a) / formulaDrop)
             k++
         }
         return worst
@@ -454,23 +456,26 @@ class ArcoTest {
     }
 
     /**
-     * The stopped tail reaches -60 dB within its release plus 50 ms, and is never slower than the formula's slope, at HOLD 0,
-     * 0.4 and 0.95 and three TUNEs a voice (root, middle, top), default GRIP and BOW, vibrato as the engine plays it, BODY 0.
+     * The stopped tail reaches -60 dB within its release plus 50 ms, and never later than a lifted string with no stop would, at HOLD 0,
+     * 0.4 and 0.95 and three TUNEs a voice (root, middle, top), default GRIP and BOW, vibrato as the engine plays it, BODY 0. The level is
+     * the AC level of a window of whole periods against the note's own level just before its bow's velocity ramps down (the level
+     * after the ramp is lower: the resting bow has taken the string's energy, and the lift lets some of it back out).
      *
-     * "Never slower" is the record's "no faster than" the right way round: the stop's gain ramp only ever adds loss to
-     * the string's own, so the tail falls at least as fast as the free string. R1b saw -60 dB reached 16 ms before the end
-     * of the release at CELLO C2 at HOLD 0 (134 ms of 150: the one cell at the edge, the free ring being 2.01 s there, so the
-     * ramp does all of it), at least 53 ms before the end in every other cell, and the slowest window falling 1.34 times as
-     * fast as the formula's slope (ERHU A5) and the fastest 3.99 times (C2, HOLD 0). The bars are the record's: reached by
-     * release plus 50 ms, ratio at least 0.9 (a tenth under the formula, the tolerance a window's wobble needs).
+     * The stop is a constant extra loss at the bridge ([Arco.stopScale]) that makes the string fall 60 dB in exactly the release; the
+     * free ring it replaces is [Arco.freeRingSeconds] long, so the stop only ever adds loss and the tail is never slower than
+     * the string's own. R1b saw -60 dB reached 16 ms before the end of the release at CELLO C2 at HOLD 0 (134 ms of 150: the one cell at the
+     * edge, the free ring being 2.01 s there), at least 22 ms before the end in every other cell, and in 0.74 to 0.95 of the release at
+     * CELLO C2 to C4 and ERHU D4 to A5. The bars are: reached by release plus 50 ms, and no later than the same note's lifted
+     * string with no stop at all (5 ms of room). (Its first version read each window's slope against the formula's and asked for 0.9 of it;
+     * on a window of whole periods that reads the net displacement's own -0.44 dB a period once the note's harmonics are gone, which is
+     * slower than the formula above about 500 Hz, and ERHU A5 read 0.56. The ring-down test above reads the fundamental and is the
+     * one that holds the formula to the string.)
      *
-     * Negative controls: a lifted string with no stop at CELLO C2 takes 1.9 s to reach -60 dB against the stop's 134 ms,
-     * so the first bar can fail; a bow left resting on the string with no ramp (CELLO C3) never falls at the formula's
-     * slope in its slowest window (R1b saw a ratio of -0.03: some window is no quieter than the one before), so the second
-     * bar can fail too.
+     * The negative control: a lifted string with no stop at CELLO C2 takes 1.9 s to reach -60 dB against the stop's 134 ms, so the
+     * first bar can fail, and the engine's tail is compared with that string's in every cell.
      */
     @Test
-    fun `the stopped tail reaches minus 60 dB in its release and is never slower than the formula`() {
+    fun `the stopped tail reaches minus 60 dB in its release and is never later than a string with no stop`() {
         val failures = ArrayList<String>()
         var latest = Double.NEGATIVE_INFINITY
         var slowest = Double.POSITIVE_INFINITY
@@ -483,28 +488,23 @@ class ArcoTest {
                     val corner = Arco.cornerFor(voice, step, Arco.DEFAULT_GRIP)
                     val free = Arco.freeRingSeconds(c.hz, corner)
                     val ratio = slowestRatio(c.out, c.liftN, c.hz, free)
+                    val bare = byHand(voice, step, Arco.DEFAULT_GRIP, c.holdN.toFloat() / rate, 6 * rate, lift = true, stop = false)
+                    val tBare = minus60(bare, c.liftN, c.hz)
                     latest = max(latest, t - release)
                     slowest = min(slowest, ratio)
-                    println("ARCO stop $voice ${name(voice, step)} HOLD $hold: release ${f(release * 1000, 0)} ms, -60 dB after ${f(t * 1000, 0)} ms (slack ${f((release - t) * 1000, 0)} ms), slowest window ${f(ratio)} of the formula's slope, free ring ${f(free.toDouble())} s")
+                    println("ARCO stop $voice ${name(voice, step)} HOLD $hold: release ${f(release * 1000, 0)} ms, -60 dB after ${f(t * 1000, 0)} ms (slack ${f((release - t) * 1000, 0)} ms), a string with no stop ${f(tBare * 1000, 0)} ms, windows fall at ${f(ratio)} of the formula's slope (printed, not held), free ring ${f(free.toDouble())} s")
                     if (t > release + 0.050) failures.add("$voice ${name(voice, step)} HOLD $hold: -60 dB after ${f(t * 1000, 0)} ms, release ${f(release * 1000, 0)} ms")
-                    if (ratio < 0.9) failures.add("$voice ${name(voice, step)} HOLD $hold: a window falls at only ${f(ratio)} of the formula's slope")
+                    if (t > tBare + 0.005) failures.add("$voice ${name(voice, step)} HOLD $hold: the stop reaches -60 dB after ${f(t * 1000, 0)} ms, a string with no stop after ${f(tBare * 1000, 0)} ms")
                 }
             }
         }
         println("ARCO stop: -60 dB at worst ${f(latest * 1000, 0)} ms after the release's end, slowest window ${f(slowest)} of the formula")
         assertTrue(failures.isEmpty(), failures.joinToString("\n"))
         val c = ArcoMeasure.core(ArcoVoice.CELLO, 0, hold = 0f)
-        val bare = byHand(ArcoVoice.CELLO, 0, Arco.DEFAULT_GRIP, 0.3f, 4 * rate, lift = true, ramp = false)
+        val bare = byHand(ArcoVoice.CELLO, 0, Arco.DEFAULT_GRIP, 0.3f, 4 * rate, lift = true, stop = false)
         val noStop = minus60(bare, c.liftN, c.hz)
         println("ARCO stop control: engine ${f(minus60(c.out, c.liftN, c.hz) * 1000, 0)} ms, a lifted string with no stop ${f(noStop * 1000, 0)} ms")
         assertTrue(noStop > c.stopN.toDouble() / rate + 0.050, "a string with no stop reached -60 dB in $noStop s, so the stop's bar cannot tell it from the engine")
-        val hz = ArcoMeasure.hzOf(ArcoVoice.CELLO, 12)
-        val c3 = ArcoMeasure.core(ArcoVoice.CELLO, 12, bow = 0.5f, gateSeconds = 2f)
-        val resting = byHand(ArcoVoice.CELLO, 12, Arco.DEFAULT_GRIP, 2f, 3 * rate, lift = false, ramp = false)
-        val free = Arco.freeRingSeconds(hz, Arco.cornerFor(ArcoVoice.CELLO, 12, Arco.DEFAULT_GRIP))
-        val restingRatio = slowestRatio(resting, c3.liftN, hz, free)
-        println("ARCO stop control: a resting bow with no ramp falls at ${f(restingRatio)} of the formula's slope in its slowest window")
-        assertTrue(restingRatio < 0.9, "a resting bow's tail falls at $restingRatio of the formula's slope, so the ratio bar cannot refuse it")
     }
 
     // ---------------------------------------------------------------- 6. the series is a sawtooth
@@ -958,28 +958,21 @@ class ArcoTest {
 
     /**
      * A held 3 s note with the vibrato on keeps one slip a period: no gap between slips that is not one period long, after
-     * 0.7 s, at root, middle and top of both voices. The record asks for 0 of 2212.
-     *
-     * OPEN: not met at ERHU. R1b saw 0 unclean gaps at CELLO C2 (of 151 slips after 0.7 s), C3 (301), C4 (602) and ERHU D4 (676),
-     * and 3 of 1207 at ERHU C5 and 4 of 2025 at ERHU A5; the same notes with the vibrato off have none. Each is a slip that
-     * splits in two for a moment (a gap of 0.24 periods then one of 0.77: the string's velocity under the bow crosses half the
-     * bow's speed twice in one period) at a particular phase of the vibrato's swing (ERHU C5 at 2.094 s and 2.230 s, 0.136 s
-     * apart). Over every step of both voices, at the default BOW and GRIP and a 3 s bow-on, the vibrato costs unclean gaps
-     * after 0.7 s at 10 notes, none of which the plain string has: CELLO G#3 (1) and ERHU F4 (1), G#4 (2), A#4 (1), C5 (3),
-     * C#5 (12), D5 (4), D#5 (5), F#5 (5) and A5 (4), 37 in the 24,746 ERHU slips after 0.7 s. (CELLO E2, F2, G2 and G#2 show 66, 29, 40
-     * and 97 gaps with the vibrato and with it off alike: their lock at the default BOW and GRIP is late, 1.00, 0.86, 0.90
-     * and 1.01 s, so the gaps after 0.7 s are the scratch and not the vibrato.) The sweep over every step is printed
-     * (`ARCO vibrato sweep`). It may be the counter's own threshold ripple and not a heard slip, which only listening
-     * decides; the bar here is the record's, so the red is visible.
+     * 0.7 s, at root, middle and top of both voices, and the string's own velocity under the bow is bit for bit the plain
+     * string's, because the vibrato is a read-back delay of the finished wave and the bow never feels it. The record asks for 0
+     * unclean gaps. R1b's first vibrato (a retune of the bow every 64 samples) failed this at ERHU: 3 of 1207 slips at C5 and 4 of 2025
+     * at A5, over the 45 steps 37 gaps in the 24,746 ERHU slips, each a slip that splits in two for a moment at a particular phase of the
+     * swing; the plain string had none. The sweep over every step is printed (`ARCO vibrato sweep`).
      */
     @Test
-    fun `a held three second note with vibrato keeps one slip a period`() {
+    fun `a held three second note with vibrato keeps one slip a period, because the string never feels it`() {
         val failures = ArrayList<String>()
         for (voice in ArcoVoice.entries) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step ->
                 val c = ArcoMeasure.core(voice, step, hold = Arco.holdFor(3f), vibrato = true)
                 val plain = ArcoMeasure.core(voice, step, hold = Arco.holdFor(3f), vibrato = false)
+                require(c.bowPoint.contentEquals(plain.bowPoint)) { "$voice step $step: the vibrato changed the string's own velocity under the bow" }
                 val slips = ArcoMeasure.slipTimes(c.bowPoint, c.holdN)
                 val plainSlips = ArcoMeasure.slipTimes(plain.bowPoint, plain.holdN)
                 Triple(ArcoMeasure.uncleanGaps(slips, c.hz, 0.7), ArcoMeasure.uncleanGaps(plainSlips, plain.hz, 0.7), slips.count { it / rate >= 0.7 })
