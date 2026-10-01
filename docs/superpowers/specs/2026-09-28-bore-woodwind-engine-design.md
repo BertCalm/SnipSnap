@@ -1800,7 +1800,8 @@ render to the loudness target and hide it.
   heard in the audition page's REPEAT now, and held on a pad once R2's held instrument exists.
 - **SAX is slow below about C4** (item 1) and its BREATH changes the 2nd harmonic (-11 to -19 dB)
   more than it brightens; a tight reed is quieter and slower than a loose one (raw level a fifth,
-  onset 0.63 s at C3 at full breath).
+  onset 0.63 s at C3 at full breath). *(Round 1.4's tongue's seed took the default notes to 0.10 s
+  at C3; the tight-reed corner was not re-measured, and its test bound is still the old 0.7 s.)*
 - **FLUTE's LIP and BREATH move the timbre by 4-8 dB** in the 2nd-5th harmonics: audible,
   moderate. The breath noise is what BREATH does most.
 - **The LOOP is dry, noiseless and vibrato-free** — a whole-period wrap cannot carry noise.

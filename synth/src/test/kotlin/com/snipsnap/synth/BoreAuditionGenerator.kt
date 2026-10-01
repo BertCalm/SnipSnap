@@ -44,7 +44,7 @@ object BoreAuditionGenerator {
 
     private val BODIES = mapOf(
         BoreVoice.FLUTE to "an air jet across a mouth hole, in a pipe: the fundamental leads at every breath, the note follows the pitch's own bore",
-        BoreVoice.SAX to "a single reed on a cone: the full harmonic series, slow to speak below about C4, buzzier the looser the lip",
+        BoreVoice.SAX to "a single reed on a cone: the full harmonic series, quick to speak (a tongue's seed starts it), buzzier the looser the lip",
     )
 
     private class Clip(val id: String, val name: String, val desc: String)

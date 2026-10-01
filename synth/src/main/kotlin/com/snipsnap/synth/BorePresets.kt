@@ -12,9 +12,11 @@ package com.snipsnap.synth
  *  - FLUTE speaks at every setting (onset 0.06-0.31 s, fundamental leading),
  *    so its presets differ by register, breath noise (BREATH), brightness (LIP),
  *    attack (CHIFF) and length (HOLD).
- *  - SAX is slow to speak below about C4 (0.3-0.5 s to full amplitude, R1's
- *    stated limit), so the short, hard-tongued reeds sit high (TUNE at or over
- *    0.75) and the low ones are swells and held notes, not stabs.
+ *  - SAX was slow to speak below about C4 in R1 (0.3-0.5 s to full amplitude),
+ *    so the short, hard-tongued reeds sit high (TUNE at or over 0.75) and the
+ *    low ones are swells and held notes, not stabs. Round 1.4's tongue's seed
+ *    took a default note to 0.10 s at C3 ([Bore.TONGUE_SEED]); the roster has
+ *    not been re-laid out for it, so a low stab is now possible and unauthored.
  *  - HOLD at 1.0 is a LOOP, rendered dry and seamless.
  *
  * Names are plain words: no maker, no model, no phone-book instrument.
