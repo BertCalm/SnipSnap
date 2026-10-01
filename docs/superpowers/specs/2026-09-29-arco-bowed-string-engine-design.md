@@ -1951,6 +1951,108 @@ that window per voice on the built engine, at the root and across TUNE, is the
 first job of R1b**, before any preset is written. The pitch is in tune at C2
 whatever the slip count (-0.6 and -0.7 cents).
 
+**R1b, as built (2026-10-01): the engine.** PR 2 of R1 is `Arco.kt` (the player on
+`Strings.Bow`), `ArcoPatch`, `ArcoPresets` (eight a voice), the registration
+(`Patches`, `Presets`, `Velocity`, `SynthKits.arco()`, the two generator tasks,
+the blocklist's four terms, roadmap row S20), the tests, the kit and the
+audition page. Where it differs from the record, and what building it found:
+
+*The window was drawn per voice and per semitone, and "single slip" had to mean
+"locks".* The first job (the record's, and R1a's) was the GRIP window on the built
+bow. Three things the record did not say. **A window checked every third
+semitone had holes**: pockets of two and three slips at C#2 to D#2, in the middle of
+the pressure range, at a pressure that climbs as the note falls. **A low string does
+not start in Helmholtz motion**: it begins in a multi-slip scratch and locks into one
+slip a period after a while (CELLO C2 0.5 to 0.9 s, G#2 and up under 0.75 s, ERHU under 0.4
+s), so a cell counts when it locks for good, and the dense map (3,330 cells) was read as
+lock times. **The slip counter miscounted**: ten nominal periods of a note a few cents off
+its pitch hold 9 or 11 slips one window in fifty, which made half the cells look
+unstable; the tests read the *gaps* between slips instead (a gap that is not one
+period long is a double slip, whatever the pitch error: `ArcoMeasure`). The path that
+came out: pressure 0.97 at C2 falling 0.02 a semitone to 0.85 for CELLO and 0.94 to 1.0
+for ERHU, corner 1000 Hz at GRIP 0 and 1500 Hz at GRIP 1 rising to 3023.6 by G#2 for CELLO,
+1500 Hz at the root rising to 3023.6 by 21 semitones at GRIP 0 and 3023.6 at GRIP 1 for ERHU.
+0 of 495 cells (45 steps by 11 GRIP points) fail; the slowest lock is 0.87 s (CELLO) and
+0.36 s (ERHU); the pitch is within 4.0 cents. ERHU's pressure floor is 0.94 and not
+0.85 for *pitch*: pressing harder raises a high string by about 30 cents a unit, and GRIP moved
+the note 6.7 cents across its travel, a knob that must not also be a tuning knob; narrowed it
+moves it 4.55 at most (CELLO 4.24).
+
+*Voices and the share.* CELLO C2 to C4 (24 semitones). **ERHU D4 to A5, 19 semitones,
+the record's own fallback**: the first maps found no cell at D6 that slips once a period at
+any pressure the grip can reach, B5 the last step that does. **One share for both
+voices, 0.85**: R1a's note that ERHU needs its own is superseded, because inside ERHU's window
+(pressure at least 0.94, the corner floor rising with the note) 0.85 holds all 20 steps
+within 4.0 cents (the D6 miss was outside the range it ships). The bridge's corner floor
+rises with ERHU's pitch because a high string cannot be given a dark corner: from D5 a 1500 Hz corner
+never locks, from F5 neither does 1750 Hz, at A5 neither does 2250 Hz.
+
+*The stroke.* BOW 0 is a 400 ms slow bow and 1 a 10 ms stab; above 0.5 the bow bites
+(velocity up to 1.75 times its sustain, the pressure to the window's top, relaxing with the
+attack). **The default BOW is 0.5, not the record's 0.6**: lock time is erratic in the
+stroke's length (at 0.6, with no bite at all, C2 to G2 lock at 1.0 to 1.2 s; at 0.7 at 0.4 to 0.85 s;
+at 0.5 at 0.32 to 0.63 s, falling steadily with the note), and at 0.6 a default CELLO note at E2 to G#2
+was still scratching when its 0.854 s bow lifted. The onset table (ms to 90 percent of the level, ms to one slip for
+good, BOW 0 / 0.5 / 0.6 / 0.8 / 1): CELLO C2 645 / 490 / 485 / 430 / 380 and 800 / 631 / 595 /
+496 / 504; C3 435 / 285 / 260 / 280 / 360 and 468 / 319 / 293 / 311 / 408; ERHU A5 365 / 115 / 100 / 60 / 45
+and 369 / 122 / 110 / 70 / 55. BOW 1 is slower than 0.8 at C3: the 1.75 times bite scratches. A stab at the
+bottom of CELLO is a swell: half its peak by 0.10 to 0.15 s, 90 percent by 0.25.
+
+*HOLD, the stop, and the DC.* HOLD is SIREN's mapping (0.3 to 4 s, attack inside it, the top step a
+LOOP, SCRAMBLE capped at 0.95). After the 50 ms ramp the bow lifts and **the string is stopped by a
+constant extra loss at the bridge that makes it fall 60 dB in exactly `max(0.15 s, min(0.5 hold, free ring))`**
+(`Arco.stopScale`). The first version ramped the bridge gain from 1 to 0 over the release, and a
+gain applied once a period compounds: the string was 60 dB down in 0.5 s of a 1.8 s release at C2, leaving
+more than a second of near silence in the render (the kit writer's numbers found it). Measured on the
+audible part of the wave, the constant stop is 40 dB down at about half the release and 60 dB down at
+0.85 to 1.0 of it at every pitch. **What the raw wave also carries is a static offset**: the onset leaves
+a net displacement that drains only at the bridge's own 0.95 a period, -0.44 dB a period at every
+pitch, so an RMS ring-down reads that and not the note (StringsBowTest's 3.2 s resting ring at C3 is this
+offset's; read on the fundamental the free-ring formula is within 1.2 percent of a lifted bow at six pitches). The output's mean
+removal and 20 Hz high-pass take it out, and a test of the raw wave's tail must too. A default note is
+0.85 s of bow and renders 1.33 s at CELLO, 1.05 to 1.30 s at ERHU (a note, not a LOOP, at every step);
+the 1.5 s line is crossed at HOLD 0.447 at C2 and C3 and up to 0.560 at A5.
+
+*The vibrato is a read-back delay of the finished wave, not a retune of the bow.* The record's
+(and R1a's) route, `Bow.retune` every 64 samples, was built first and was click-free. It was not
+glitch-free: on ERHU's short periods a slip split in two (gaps of 0.2 then 0.8 of a period) at the same
+phase of the swing every time, 37 events in 24,746 slips over the 45 steps and in 91 of 200 rolled ERHU
+notes, none without the vibrato: the friction is a hair trigger and a retune is a nudge. So the
+vibrato is the tape kind, +-10 cents at 6.1 Hz from 0.35 s and rising in over 0.2 s, scaled by the
+bow-on time (none at 0.6 s or less, full from 1.5 s), applied to the string's wave before the box with a
+four-point cubic; the string, and so the lock, never feel it, and a LOOP carries none.
+
+*The body.* CELLO: air 104 Hz t60 0.254 s and plate 220 Hz 0.180 s, gains 1.0 and 0.8, shape. ERHU: the
+house membrane at the open string's 293.66 Hz, shape, **its decay scaled by 0.25** (as dressed the first
+mode rings 1.2 s). **`Strings.bodyRing` follows the box's ring out past the string's end, which would make BODY
+change how long a note is** (a default CELLO would render 1.585 s and be filed a LOOP, and every ERHU stab 1.2 s longer than
+its string): the engine cuts the ring where the stopped string ends, so BODY never moves the length
+and `renderFrames` is closed-form (pinned to the real frame count in 60 of 60 cases).
+
+*The LOOP is BORE's route*: `Bore.planLoop` and `Bore.measureLoopSamples` reused (one quantity in one
+place), the stretch rendered fresh at `tuned * ratio` until the ratio is 1 to 3e-7, the seam read on the kept
+stretch against itself one loop later. A steady stretch has a fixed 63 ms stroke and no bite, so a LOOP does not depend on
+BOW. **Warm-up 2.0 s and 200 periods**: 1.0 s and 100 periods left ten GRIP-1 loops over the bar at C#2 to B2 (up to
+2e-2); with the longer one all 225 loops measured (every step of both voices at the default and four other
+corners) close, the worst at 2.5e-4 against the bar of 1e-3, and the fuzz test's 90 loops at 2.47e-4. A render takes 0.3 to 1.0 s.
+The record's "withheld per voice by TUNE" is not built: no loop failed, so `renderLoop` throws by name
+if one ever does, as BORE's does. The finished chain costs 43 ms (CELLO) and 54 ms (ERHU) a rendered second.
+
+*The roster, the kit, the page.* Eight presets a voice, two of them the LOOPs (ENDLESS DRAW, ENDLESS CRY), each
+checked by name against the classifier (the classifier reads CELLO C2 to G2 as a kick or tom and ERHU F5 and up as
+a snare for slow bows and short holds, a knife edge from note to note; the engine files every note PERC under the line and
+nothing consults the classifier for a synth pad, so the roster is held clear of every drum by test and the engine is held to
+the line to the frame). The kit is A01-A08 CELLO up the minor pentatonic at HOLD 0, A09-A14 six ERHU
+presets, A15-A16 the two LOOPs, all dry. The page's first card is the owner's pass rule (below).
+
+*What the tests found that changed the engine.* The slip-counter fix above; the stop's compounding; the DC; the default BOW;
+the vibrato's split slips (the physics writer's held-note test and the product writer's identity test found the
+same events from two directions); `bodyRing`'s length; the warm-up. *What stayed as the record had it*: `RHO_MAX`
+0.98, position 0.133, the sustain velocity 0.13 (one for both voices), the three-way split of body, grip and stroke.
+*Still open, for the owner's ears*: the stroke's bite (0.6 to 1 is a listening value and slower to lock at some
+notes), the box's gains, the vibrato's rate and depth, whether a HOLD 0 stab at the bottom of CELLO (a swell) is the
+pad anyone wants, the default HOLD, and the SECTION chip's default amount.
+
 **The audition page** (`ArcoAuditionGenerator`, the SIREN page's shape
 with its Web Audio SURFACE stand-in; every clip through `AuditionLevel`;
 TUNE and HOLD are not knobs to audition), in this order (product §5,
@@ -1963,15 +2065,15 @@ tightened by the spike and the three proposals):
 2. **The kit as it lands** — A01–A08 CELLO walking the pentatonic at a
    stab HOLD, A09–A14 six ERHU presets, A15–A16 the two LOOPs; every pad
    dry.
-3. **The stab A/B** — CELLO SHORT STAB at BOW 1 against BOW 0.5, and both
+3. **The stab A/B (the secondary check)** — CELLO SHORT STAB at BOW 1 against BOW 0.5, and both
    against VELVET BRASS STAB and RESIN PUNCHY STAB (`VelvetPresets.kt`,
    `ResinPresets.kt`) in a two-bar pattern at 90 bpm beside a THUMP
    snare, alternating on the bar line, level-matched — the audition
    spec's own rules (`docs/AUDITION_SPEC_2026_09.md:69-116`). Does the
    fast bow read as a bow; is a stab that blooms over 300 ms at C2 a
    stab.
-4. **Blind identity** — CELLO default at three TUNEs, unlabelled: bowed /
-   plucked / synth. ERHU default: fiddle / voice / synth.
+4. **Blind identity: the held note (the pass rule)** — three seconds of bow (HOLD 0.88) at three
+   TUNEs, unlabelled: CELLO bowed / plucked / synth; ERHU fiddle / voice / synth.
 5. **Each voice** — default, then BOW · GRIP · BODY at both ends with a
    plain-words line for each end (BOW 0 "a slow bow", BOW 1 "a stab";
    GRIP 0 "a light grip", GRIP 1 "digging in"), then all eight presets.
@@ -2015,17 +2117,17 @@ tightened by the spike and the three proposals):
     inside the shimmer (the bare loop alone is ~6 ms), a 4 s pad past it,
     a LOOP with its settles 0.2–1.0 s.
 
-**Pass rule.** Items 3 and 4 must pass: if the stab cannot be told from
-VELVET BRASS STAB the engine is redundant for this user, and if the
-cello reads "synth" the presets are not earned (FORK's own audition
-verdict is why FORK got a third voice). Presets are frozen per voice
-that passes; BOW's overshoot and the swell floor are set by 3, 5 and 8;
-ERHU's body table by 5; GRIP's ends by 6; HOLD's tail by 7; the string
-machine's home by 9; `landingChain` by 10; R2 is gated on 1 and 4; the
-sixth macro on 13. A voice that fails gets no roster — GLINT's state
-(built, registered, in the picker, no presets, waiting on its audition,
-`docs/SYNTH_ROADMAP.md:265`) — and no picker entry, TERRA's and SILK's
-(`SynthScreen.kt:1828`), not worse.
+**Pass rule (the owner's, 2026-10-01).** The engine passes or fails on **a three-second held note, bowed against a
+synth**, and the one-second stab is a secondary check. Item 4 is the pass: per voice, at three TUNEs, three unlabelled
+three-second clips (CELLO bowed, plucked, a sustaining synth; ERHU bowed, sung, a sustaining synth), and the engine fails if
+the bowed note cannot be picked out from the synth or itself reads "synth". Item 3, the stab against VELVET BRASS STAB, is
+the second check: if the stab cannot be told from it the engine is redundant as a stab, which is a smaller finding than the held note's.
+(The reason for the change is what a bowed string is: it speaks over 0.1 to 0.9 s, so a one-second note is
+mostly the onset, and a held note is where a bow is a bow.) Presets are frozen per voice that passes; BOW's
+overshoot and the swell floor are set by 3, 5 and 8; ERHU's body table by 5; GRIP's ends by 6; HOLD's tail by 7; the
+string machine's home by 9; `landingChain` by 10; R2 is gated on 1 and 4; the sixth macro on 13. A voice that fails gets
+no roster — GLINT's state (built, registered, in the picker, no presets, waiting on its audition,
+`docs/SYNTH_ROADMAP.md:265`) — and no picker entry, TERRA's and SILK's (`SynthScreen.kt:1828`), not worse.
 
 **Effort**, from footprints (`git show --stat`; toolkit §6, product §6).
 FORK R1: 60 files, +8464/−29, about 1,538 hand-written lines
