@@ -17,7 +17,8 @@ import kotlin.math.roundToInt
  * Writes `manifest.json`, which the page builds itself from, then copies
  * the listening page from the test resources. Run via
  * `./gradlew :synth:generateTerraAudition`, then publish the folder as the
- * listening artifact.
+ * listening artifact. With a second argument `r1` it renders R1's page
+ * instead ([renderR1]): HIT in the engine, ten clips and three questions.
  */
 object TerraAuditionGenerator {
 
@@ -68,6 +69,10 @@ object TerraAuditionGenerator {
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/terra-audition")
         root.mkdirs()
+        if (args.getOrNull(1) == "r1") {
+            renderR1(root)
+            return
+        }
         var count = 0
         val sections = StringBuilder()
 
@@ -165,4 +170,58 @@ object TerraAuditionGenerator {
     }
 
     private fun q(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+    /**
+     * R1's page (docs/superpowers/specs/2026-09-30-terra-hit-bend-talk-design.md,
+     * "Phasing and gates", "R1's page: HIT in the engine"): ten clips and
+     * three questions under [root]/R1, with their own manifest. Every clip
+     * is the render a struck pad's recipe gives, `TerraPatch.render`. Each
+     * striker is captured by `Terra.captureStriker`, as the phone will
+     * capture it. The BUZZ pad is A07 CAJON SLAP, the kit's most BUZZ: 0.75,
+     * against A16's 0.60 and A04's 0.15.
+     */
+    private fun renderR1(root: File) {
+        val dir = File(root, "R1").apply { mkdirs() }
+        val sources = TerraStrikers.ten(File(root.parentFile, "Expansions/SnipSnap Factory/Samples")).associateBy { it.id }
+        fun struck(id: String, hit: Float): TerraPatch.Striker {
+            val s = sources.getValue(id)
+            val head = Terra.captureStriker(s.snip) ?: error("${s.name} captured as silence")
+            return TerraPatch.Striker(head, hit, s.name)
+        }
+        val a07 = requireNotNull(TerraKits.classic()[6]) { "the terra kit has no A07" }
+        val buzzPad = PadRecipe.fromJsonValue(requireNotNull(a07.recipe) { "A07 carries no recipe" }).patch as TerraPatch
+        check(buzzPad.name == "Cajon Slap" && buzzPad.macros["BUZZ"] == 0.75f) { "A07 is ${buzzPad.name} ${buzzPad.macros}, not the BUZZ pad this page names" }
+        val membrane = TerraPatch("Membrane", TerraVoice.COMPOUND_MEMBRANE, emptyMap())
+        val cavity = TerraPatch("Cavity", TerraVoice.RESONANT_CAVITY, emptyMap())
+        val bell = TerraPatch("Bell", TerraVoice.CONICAL_BELL, emptyMap())
+        val bar = TerraPatch("Bar", TerraVoice.TUNED_BAR, emptyMap())
+        class R1Clip(val id: String, val label: String, val why: String, val patch: TerraPatch)
+        val clips = listOf(
+            R1Clip("01_membrane_today", "MEMBRANE $DOT TODAY", "the anchor", membrane),
+            R1Clip("02_membrane_hit05_thump_snare", "MEMBRANE $DOT HIT .5 $DOT THUMP SNARE", "subtle, bright head", membrane.copy(striker = struck("tsnare", 0.5f))),
+            R1Clip("03_membrane_hit1_thump_snare", "MEMBRANE $DOT HIT 1 $DOT THUMP SNARE", "strong, bright head", membrane.copy(striker = struck("tsnare", 1f))),
+            R1Clip("04_membrane_hit1_factory_kick", "MEMBRANE $DOT HIT 1 $DOT FACTORY KICK", "strong, bass head (the soft attack)", membrane.copy(striker = struck("kick01", 1f))),
+            R1Clip("05_cavity_today", "CAVITY $DOT TODAY", "the anchor", cavity),
+            R1Clip("06_cavity_hit05_wraith_word", "CAVITY $DOT HIT .5 $DOT WRAITH WORD", "the cavity's biggest move at subtle (+8 dB)", cavity.copy(striker = struck("wraith", 0.5f))),
+            R1Clip("07_bell_hit05_factory_clap", "BELL $DOT HIT .5 $DOT FACTORY CLAP", "a comb-shaped head on a bright voice", bell.copy(striker = struck("clap01", 0.5f))),
+            R1Clip("08_bar_hit05_beatbox_rim", "BAR $DOT HIT .5 $DOT BEATBOX RIM", "the bar's brightest striker", bar.copy(striker = struck("bbrim", 0.5f))),
+            R1Clip("09_kit_a07_today", "TERRA KIT A07 CAJON SLAP $DOT TODAY", "BUZZ as tuned (0.75, the kit's most)", buzzPad),
+            R1Clip("10_kit_a07_hit1_factory_hat", "THE SAME PAD $DOT HIT 1 $DOT FACTORY HAT", "BUZZ following a bright, light head (decision 2's default)", buzzPad.copy(striker = struck("hat01", 1f))),
+        )
+        val questions = listOf(
+            "Does HIT move from today through subtle to strong in steps you can hear, on every voice?",
+            "Is any voice wrong at HIT .5 (the bell or bar going thin under a dark head), so that HIT needs a floor?",
+            "Should the rattle follow the striker (clip 10, the default) or stay as today (decision 2)?",
+        )
+        check(clips.size <= 10 && questions.size <= 3) { "a gate page leads with at most ten clips and three questions" }
+        val entries = clips.map { c ->
+            WavWriter.write(File(dir, "${c.id}.wav"), AuditionLevel.level(c.patch.render()), WavWriter.BitDepth.PCM_16)
+            "{\"id\":${q(c.id)},\"file\":${q("${c.id}.wav")},\"label\":${q(c.label)},\"why\":${q(c.why)}}"
+        }
+        File(dir, "manifest.json").writeText(
+            "{\"page\":\"R1\",\"title\":\"HIT IN THE ENGINE\",\"clips\":[\n" + entries.joinToString(",\n") +
+                "\n],\"questions\":[\n" + questions.joinToString(",\n") { q(it) } + "\n]}\n",
+        )
+        println("terra R1: ${clips.size} clips and ${questions.size} questions under ${dir.absolutePath}")
+    }
 }

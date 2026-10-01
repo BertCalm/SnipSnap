@@ -332,6 +332,16 @@ tasks.register<JavaExec>("generateTerraAudition") {
     args("${rootDir}/testkit/terra-audition")
 }
 
+/** Render TERRA R1's listening clips (HIT in the engine) and manifest under testkit/terra-audition/R1/. See TerraAuditionGenerator.renderR1. */
+tasks.register<JavaExec>("generateTerraR1Audition") {
+    group = "distribution"
+    description = "Render the TERRA R1 (HIT) listening clips and manifest under testkit/terra-audition/R1/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/terra-audition", "r1")
+}
+
 /** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */
 tasks.register<JavaExec>("generateValveAudition") {
     group = "distribution"
