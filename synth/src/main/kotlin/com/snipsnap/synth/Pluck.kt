@@ -9,7 +9,6 @@ import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -734,11 +733,11 @@ object Pluck {
         // The coerceIn(1, n) clamp is unreachable in production: combDelay / n
         // <= ~0.5 * period/(period - lag), at most ~0.5 across the voice
         // table, and the lower bound needs position * period < 0.5 samples.
-        val combDelay = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
-        val excLen = min(n + combDelay, out.size)
+        val delay = if (position > 0f) Strings.combDelay(position, freq, rate).coerceIn(1, n) else 0
+        val excLen = min(n + delay, out.size)
         for (i in 0 until excLen) {
             val x = if (i < n) burst[i] else 0f
-            val xd = if (combDelay > 0 && i - combDelay in 0 until n) burst[i - combDelay] else 0f
+            val xd = if (delay > 0 && i - delay in 0 until n) burst[i - delay] else 0f
             out[i] = x - xd
         }
 
