@@ -87,3 +87,7 @@ testkit/silk-audition/
 # The VALVE audition clips and manifest, rendered by :synth:generateValveAudition
 # and published as the listening artifact; never committed.
 testkit/valve-audition/
+
+# The BECOME A1 gate's clips, manifest and page, rendered by :shell:generateBecomeAudition
+# and published as the listening artifact; never committed.
+testkit/become-audition/

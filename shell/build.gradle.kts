@@ -83,3 +83,13 @@ tasks.test {
             .withPathSensitivity(PathSensitivity.RELATIVE)
     }
 }
+
+/** Render the BECOME A1 gate's clips, manifest and listening page under testkit/become-audition/. See BecomeAuditionGenerator. */
+tasks.register<JavaExec>("generateBecomeAudition") {
+    group = "distribution"
+    description = "Render the BECOME A1 gate's ten clips, manifest and listening page under testkit/become-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BecomeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/become-audition")
+}
