@@ -1,10 +1,13 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Cleanup
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.tanh
 
@@ -734,5 +737,97 @@ object Terra {
         val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 19), level = inputs?.level, pitch = inputs?.pitch)
         if (bankOnly) return raw
         return applyBuzz(raw, buzzAmount, seed = 23)
+    }
+
+    // ---- HIT's capture: another pad's first 20 ms, once, at pick time ----
+
+    /**
+     * Below this a captured head is silence, not a hit: -80 dBFS, above a
+     * 16-bit file's own floor of about -96 dBFS. Tested on the aligned head's
+     * peak before normalising (decision 20: the brief's wording). The
+     * whole-source peak struck-motion M7 measured differs only for a quiet
+     * source that is louder after its first 20 ms.
+     */
+    const val SILENT_HEAD_PEAK = 1e-4f
+
+    /** The onset: the first finite sample at or above this fraction of the finite peak (within 40 dB). */
+    private const val ONSET_FRACTION = 0.01f
+
+    /** 1 ms of lead kept before the onset. */
+    private const val ONSET_LEAD_SAMPLES = RATE / 1000
+
+    /** How much of a foreign-rate source is resampled: from 10 ms before its onset to 100 ms after. */
+    private const val FOREIGN_LEAD_SECONDS = 0.01f
+    private const val FOREIGN_KEEP_SECONDS = 0.1f
+
+    /** FORK's striker fade, 2 ms at [RATE]: 88 samples (`Fork.kt:353`, `:864-868`). */
+    private val STRIKER_FADE_SAMPLES = (2f / 1000f * RATE).roundToInt()
+
+    /**
+     * Another pad's hit as a TERRA striker: [Fork.STRIKER_SAMPLES] samples at
+     * [RATE], peak-normalised, with FORK's 2 ms raised-cosine tail. Null when
+     * there is no hit to take; the pick is then refused, and a patch built
+     * without one renders today's body.
+     *
+     * The order is struck-motion M7's:
+     * 1. Fold to mono. A source at another rate is cut near its onset and
+     *    only then resampled.
+     * 2. Align to 1 ms before the onset, so lead silence of any length
+     *    still captures the hit.
+     * 3. Zero any non-finite sample.
+     * 4. Refuse a head under [SILENT_HEAD_PEAK].
+     * 5. Normalise and fade.
+     *
+     * On a mono 44.1 kHz source whose onset is within 1 ms of the start, the
+     * result equals [Fork.striker] bit for bit. [Fork.striker] itself is left
+     * untouched.
+     */
+    fun captureStriker(source: Snip): FloatArray? {
+        val mono = if (source.channels == 1) source else Cleanup.toMono(source)
+        val pk = finitePeak(mono.samples)
+        val x = if (mono.sampleRate == RATE) mono.samples else nearOnset(mono, pk)
+        val start = maxOf(0, onsetOf(x, pk) - ONSET_LEAD_SAMPLES)
+        val head = FloatArray(Fork.STRIKER_SAMPLES) { i -> x.getOrElse(start + i) { 0f }.let { v -> if (v.isFinite()) v else 0f } }
+        var headPeak = 0f
+        for (v in head) headPeak = maxOf(headPeak, abs(v))
+        if (headPeak < SILENT_HEAD_PEAK) return null
+        Dsp.normalize(head, 1f)
+        val fadeN = STRIKER_FADE_SAMPLES
+        for (i in 0 until fadeN) {
+            val g = 0.5f * (1f + cos(Math.PI.toFloat() * i / fadeN))
+            head[head.size - fadeN + i] *= g
+        }
+        return head
+    }
+
+    /** The loudest finite sample's magnitude: step 2's `pk`, always read on the whole source at its own rate. */
+    private fun finitePeak(x: FloatArray): Float {
+        var pk = 0f
+        for (v in x) if (v.isFinite()) pk = maxOf(pk, abs(v))
+        return pk
+    }
+
+    /** The first finite sample of [x] at or above [ONSET_FRACTION] of the source's finite peak [pk], or 0. */
+    private fun onsetOf(x: FloatArray, pk: Float): Int {
+        for (i in x.indices) if (x[i].isFinite() && abs(x[i]) >= ONSET_FRACTION * pk) return i
+        return 0
+    }
+
+    /**
+     * A source at another rate, cut to its own onset's neighbourhood with
+     * non-finite samples zeroed, and only then resampled to [RATE]: a whole
+     * 3 s file at 48 kHz cost 61 ms to resample, and the resampler would
+     * smear one NaN across its kernel. The onset is found again on the
+     * resampled window against the whole source's [pk], so a source that is
+     * loudest after its first 100 ms keeps the same 1 % line at both rates.
+     */
+    private fun nearOnset(mono: Snip, pk: Float): FloatArray {
+        val s = mono.samples
+        val onset = onsetOf(s, pk)
+        val from = maxOf(0, onset - (FOREIGN_LEAD_SECONDS * mono.sampleRate).toInt())
+        val to = minOf(s.size, onset + (FOREIGN_KEEP_SECONDS * mono.sampleRate).toInt())
+        if (to <= from) return FloatArray(0)
+        val window = FloatArray(to - from) { i -> s[from + i].let { v -> if (v.isFinite()) v else 0f } }
+        return Resampler.resample(Snip(window, 1, mono.sampleRate), RATE).samples
     }
 }
