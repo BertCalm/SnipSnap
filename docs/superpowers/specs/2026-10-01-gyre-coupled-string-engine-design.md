@@ -595,8 +595,9 @@ design:
    a mode lands at 154.9 Hz, on D#3 at 155.6 Hz). That is a **wolf note**:
    string and body lock together and split. A **wolf guard** scales the
    coupling down on that note only, until `(2c/N)·|H_m(f)| ≤ 0.05`. Every
-   corner measured is then within 4.7 cents, and the default coupling is
-   untouched (an unplucked string still answers at −16.8 dB).
+   corner the prototype tried is then within 4.7 cents (SPIN 0.5 included),
+   and the default coupling is untouched (an unplucked string still answers
+   at −16.8 dB). The built engine's figures are in item 8.
 3. **The octave guard holds.** With whole-number ratios, SYMPATHY 1 and
    BODY 1 never read an octave low at any TUNE step (G2).
 4. **FLICK's A4 read as a snare.** The classifier calls more than half the
@@ -609,7 +610,7 @@ design:
    barely there, and SYMPATHY moved it only 6.5 dB end to end. It needs
    about 20 dB more and a steeper law. Round one fits both to target
    shares and the gate decides whether those are right.
-6. **What already works:** a solo pluck reaches an unplucked string at
+6. **What already worked in the prototype:** a solo pluck reaches an unplucked string at
    −16.8 dB, and exactly 0 at coupling 0. The rotor at 1 Hz swings the
    spectral centroid by 117 Hz against 15 Hz for a tremolo of the same
    depth, 7.8 times. Every macro changes the sound, SPIN at 0.02 included
@@ -620,6 +621,26 @@ design:
    integer, so its readings repeat identically across both voices (+9.1
    cents at D#4 in each). Tuning tests use `FineTuning.measuredHz`, as
    SILK's do.
+
+8. **Re-measured on the built code** (the plan's `Gyre.kt`, with the
+   brightness ceiling, the bridge-phase tuning and the wolf guard together,
+   the rotor updated every 32 samples). These are the numbers the plan's
+   tests carry:
+   - **Tuning:** worst 3.3 cents over 25 notes × BODY 0/0.5/1 × SYMPATHY 0/1.
+   - **Strings answering:** an unplucked string answers at −25.1 dB (FLICK)
+     and −17.0 dB (HALO). The 5 kHz ceiling costs FLICK about 8 dB here.
+   - **The rotor:** a 102 Hz centroid swing, against 0.5 Hz for a tremolo
+     with the same log-level swing.
+   - **SYMPATHY's shares:** −21.7, −11.8, −7.7 and −4.7 dB at 0.3, 0.6, 0.8
+     and 1.
+   - **No growth:** across every macro at both ends (64 renders), nothing
+     after the attack is louder than it (0.596 at most), and the raw peak is
+     at most 0.767.
+   - **No drum class:** worst share over 2 kHz 0.39.
+   - **One defect, open:** at HOLD 0 and SYMPATHY 1, FLICK's render stops
+     while its sympathetic strings still ring, only about 14 dB under the
+     attack, because the note length does not follow their ring. The plan's
+     Task 3 fixes it by measurement.
 
 ## Decisions taken (2026-10-01)
 
