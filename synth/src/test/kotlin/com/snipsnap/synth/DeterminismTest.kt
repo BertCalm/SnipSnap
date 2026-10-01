@@ -135,4 +135,15 @@ class DeterminismTest {
             assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
         }
     }
+
+    // MAGNET seeds its pluck burst from Dsp.seedFor per voice and note, and nothing else in the
+    // render is random: a saved recipe must regenerate bit for bit.
+    @Test
+    fun `MAGNET is byte-identical across renders, both voices`() {
+        for (voice in MagnetVoice.entries) {
+            val a = MagnetPatch("Canary", voice, Magnet.defaults(voice))
+            val b = MagnetPatch("Canary", voice, Magnet.defaults(voice))
+            assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
 }
