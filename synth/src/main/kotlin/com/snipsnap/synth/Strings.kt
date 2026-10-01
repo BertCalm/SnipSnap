@@ -381,9 +381,13 @@ internal object Strings {
      * have different phase and no coil-spacing notch. Each comb is therefore delayed by
      * `(Dmax - D) / 2` samples (integer division on the delays as rounded, so the longest comb
      * is never shifted) to put every centre on the longest comb's; the sum is then
-     * `sin(pi k p1) + sin(pi k p2)` with its first spacing notch at `k = 1 / dp` (the Phase-0
-     * spike measured -49.4 dB at h18 for CHUG against none as briefed). Samples before the
-     * first tap read as zeros. Returns a new array of [y]'s length.
+     * `sin(pi k p1) + sin(pi k p2)` with its first spacing notch at `k = 1 / dp`. When the
+     * delays differ by an odd number the integer lead leaves the centres half a sample apart
+     * (about 0.03 rad at h18), which limits the notch's depth: the Phase-0 spike's geometry
+     * (an even difference, exactly centred) read -49.4 dB at h18 against none as briefed, and
+     * an odd difference of 97 samples reads about -32 dB under the single coil (see
+     * StringsPickupTest). Samples before the first tap read as zeros. Returns a new array of
+     * [y]'s length.
      */
     fun pickup(y: FloatArray, positions: FloatArray, weights: FloatArray, freq: Float, rate: Int): FloatArray {
         require(positions.isNotEmpty()) { "a pickup needs at least one position" }

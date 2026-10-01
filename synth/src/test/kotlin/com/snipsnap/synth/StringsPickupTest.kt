@@ -22,7 +22,7 @@ class StringsPickupTest {
     // ---------- the shared delay ----------
 
     @Test
-    fun `the comb delay is round(position * rate over freq), at least 1`() {
+    fun `the comb delay is the rounded position times rate over freq, at least 1`() {
         assertEquals(100, Strings.combDelay(0.5f, 100f, 20_000))
         assertEquals(10, Strings.combDelay(0.10f, 100f, 10_000))
         assertEquals(14, Strings.combDelay(0.14f, 100f, 10_000))
@@ -119,7 +119,10 @@ class StringsPickupTest {
         // rate 176.4 kHz, f0 100.8 Hz: period exactly 1750 samples, 40 harmonics at equal level,
         // a whole number of periods (so the correlation is exact). CHUG's geometry: p = 0.12,
         // dp = 1/18, so the first spacing notch is at about h18 (1750 / 97 = 18.04 on the
-        // delays as rounded). Spike, Extra C: -49.4 dB at h18 aligned, none as briefed.
+        // delays as rounded). The delays differ by an odd 97 (210 and 307), so the integer lead
+        // leaves the centres half a sample apart and the notch reads 32.2 dB under the single
+        // coil, not the -49.4 dB of the spike's evenly centred geometry (Extra C); the unaligned
+        // sum reads 3.0 dB over it. Measured by hand before the build: about 31 and -2.9.
         val rate = 176_400
         val f0 = 100.8f
         val periods = 40
