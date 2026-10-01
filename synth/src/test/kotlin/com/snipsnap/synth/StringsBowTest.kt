@@ -19,12 +19,16 @@ import kotlin.test.assertTrue
 /**
  * [Strings.Bow], the bowed string, on its own: the two [Strings.Loop]s with the friction junction between
  * them, before any voice, macro or body is put round it. Every number printed here (the lines that start
- * `BOW`) was measured on the built bow, not carried over from the Phase-0 spike, and every bound sits just
- * past what was measured so a change that makes the bow worse fails next to the number it drifted from.
+ * `BOW`) was measured on the built bow, not carried over from the Phase-0 spike, and every bound sits past
+ * what was measured, narrowly where the measure is steady and with room where it is a draw of the string's
+ * own motion (the margin is stated at the assert where it is wide), so a change that makes the bow worse
+ * fails next to the number it drifted from.
  *
  * The raw wave is measured at the rate the bow runs at ([BowMeter.RATE]); pitch is by autocorrelation, the
- * way the tuning share was pinned. The pressure the tests play at is inside a measured single-slip cell:
- * STK's own default pressure (0.5) is two slips a period at A3, so a test of "it speaks" cannot use it.
+ * way the tuning share was pinned. The speaking test plays only at pressures inside measured single-slip
+ * cells (STK's own default, 0.5, is two slips a period at A3); the in-tune test measures pitch only, in
+ * cells that include two- and three-slip ones (65 Hz, 220 Hz and 880 Hz at 0.5), because a string slipping
+ * twice a period is still at its note.
  */
 class StringsBowTest {
 
@@ -44,19 +48,19 @@ class StringsBowTest {
     // ---------------------------------------------------------------- it speaks
 
     @Test
-    fun `a bow at a pressure above 0_7 speaks in Helmholtz motion at two pitches`() {
-        for (f0 in listOf(130.81f, 220f)) for (pressure in listOf(0.7f, 0.9f)) {
+    fun `a bow at a pressure of 0_7 or more speaks in Helmholtz motion, and so does 0_5 at C3`() {
+        for ((f0, pressure) in listOf(130.81f to 0.5f, 130.81f to 0.7f, 130.81f to 0.9f, 220f to 0.7f, 220f to 0.9f)) {
             val run = BowMeter.play(f0, beta, pressure, 0.5f, 1.5f)
             val (hz, peak, end) = steady(run, f0)
             val period = rate / hz
             val slips = BowMeter.slipsPerPeriod(run.bowPoint, end, period, run.vMax)
             val h = BowMeter.harmonics(run.out, (1.2 * rate).toInt(), (0.3 * rate).toInt(), hz)
-            val (asymmetry, still) = BowMeter.sawtooth(run.out, end, period)
-            println("BOW speaks $f0 Hz p $pressure: ${f(hz)} Hz ${f(BowMeter.cents(hz, f0.toDouble()), 1)} c ac ${f(peak)} slips ${f(slips, 1)} h2..h4 ${h.slice(1..3).joinToString("/") { f(it, 1) }} dB asymmetry ${f(asymmetry)} still ${f(still)}")
+            val (riseToFall, slowFraction) = BowMeter.sawtooth(run.out, end, period)
+            println("BOW speaks $f0 Hz p $pressure: ${f(hz)} Hz ${f(BowMeter.cents(hz, f0.toDouble()), 1)} c ac ${f(peak)} slips ${f(slips, 1)} h2..h4 ${h.slice(1..3).joinToString("/") { f(it, 1) }} dB rise/fall ${f(riseToFall)} slow ${f(slowFraction)}")
             assertEquals(1.0, slips, 0.05, "$f0 Hz at pressure $pressure is not one slip a period")
             assertTrue(peak >= 0.9, "$f0 Hz at pressure $pressure does not repeat: autocorrelation $peak")
-            assertTrue(h[1] in -7.0..-5.0 && h[2] in -10.4..-8.2 && h[3] in -12.8..-10.4, "the harmonics are not a sawtooth's (-6, -9.5, -12 dB): ${h.slice(1..3)}")
-            assertTrue(asymmetry < 0.35 && still > 0.9, "the wave is not a sawtooth: flyback ratio $asymmetry, still $still")
+            assertTrue(h[1] in -6.5..-4.8 && h[2] in -10.0..-8.2 && h[3] in -12.4..-10.6, "the harmonics are not a sawtooth's (-6, -9.5, -12 dB): ${h.slice(1..3)}")
+            assertTrue(riseToFall < 0.25 && slowFraction > 0.9, "the wave is not a sawtooth: its fastest rise is $riseToFall of its fastest fall, slow for $slowFraction of the period")
         }
     }
 
@@ -85,7 +89,7 @@ class StringsBowTest {
             val row = listOf(0.5f, 0.9f).map { pressure ->
                 val run = BowMeter.play(f0, beta, pressure, 0.5f, 1.5f)
                 val (hz, peak, _) = steady(run, f0)
-                assertTrue(peak >= 0.9, "$f0 Hz at pressure $pressure does not speak: autocorrelation $peak")
+                assertTrue(peak >= 0.9, "$f0 Hz at pressure $pressure does not repeat: autocorrelation $peak")
                 BowMeter.cents(hz, f0.toDouble())
             }
             println("BOW   $f0 Hz: ${row.joinToString(" / ") { f(it, 1) }} c")
@@ -105,6 +109,29 @@ class StringsBowTest {
             println("BOW share 1.0 at 880 Hz, p $pressure: ${f(cents, 1)} c")
             assertTrue(cents > 5.0, "a full share should read sharp at 880 Hz (it does not, at pressure $pressure): $cents c")
         }
+    }
+
+    @Test
+    fun `the cents-by-share table is printed, and the CELLO share does not hold an ERHU's top note`() {
+        // The class KDoc quotes this table. The CELLO range's columns are held by the in-tune test above; here the table is
+        // printed so it can be re-derived, and the one claim made about its last column is asserted: at D6 the share that holds
+        // 65 to 880 Hz does not hold the note (+6.8 and +2.4 cents), while 0.8 does (+2.4 and -1.7), so an ERHU pins its own.
+        val roots = listOf(65.41f, 130.81f, 220f, 440f, 880f, 1174.66f)
+        val cents = HashMap<Pair<Float, Float>, List<Double>>()
+        println("BOW cents by share, p 0.5 / 0.9, at ${roots.joinToString(" ")} Hz:")
+        for (share in listOf(1f, 0.85f, 0.8f)) {
+            val row = roots.map { f0 ->
+                val c = listOf(0.5f, 0.9f).map { pressure ->
+                    BowMeter.cents(steady(BowMeter.play(f0, beta, pressure, 0.5f, 1.5f, share = share), f0).first, f0.toDouble())
+                }
+                cents[share to f0] = c
+                c.joinToString("/") { f(it, 1) }
+            }
+            println("BOW   share $share: ${row.joinToString("  ")}")
+        }
+        val top = cents.getValue(0.85f to 1174.66f)
+        assertTrue(top[0] > 5.0, "the CELLO share should not hold D6 at pressure 0.5 (it reads ${top[0]} cents)")
+        assertTrue(cents.getValue(0.8f to 1174.66f).all { abs(it) <= 5.0 }, "a share of 0.8 should hold D6: ${cents.getValue(0.8f to 1174.66f)}")
     }
 
     /** A bow built at [builtAt] and sounding at pressure 0.9; [step] is called each sample with the bow and the sample index (to retune it). */
@@ -175,10 +202,11 @@ class StringsBowTest {
     }
 
     @Test
-    fun `a lifted bow rings down at the formula's slope, and a bow left resting keeps the string stopped`() {
+    fun `a lifted bow rings down at the formula's slope, and a bow left resting rings much longer`() {
         val f0 = 130.81f
         val lifted = BowMeter.play(f0, beta, 0.9f, 0.5f, 3f, releaseAt = 1f)
-        val resting = BowMeter.play(f0, beta, 0.9f, 0.5f, 3f, releaseAt = 1f, noLift = true)
+        // long enough for the resting string to reach -60 dB inside the buffer: a cut-off crossing would be the buffer's length, not a ring time
+        val resting = BowMeter.play(f0, beta, 0.9f, 0.5f, 8f, releaseAt = 1f, noLift = true)
         val formula = 20.0 * log10(Strings.Bow.REFLECTION * onePoleMagnitude(f0, Strings.Bow.BRIDGE_HZ))
         val liftedSlope = dbPerPeriod(lifted.out, f0, 1.2, 1.8)
         val restingSlope = dbPerPeriod(resting.out, f0, 1.2, 1.8)
@@ -186,6 +214,7 @@ class StringsBowTest {
         val restingT60 = secondsToMinus60(resting.out, 1.15)
         println("BOW ring-down at 130.81 Hz: lifted ${f(liftedSlope, 3)} dB per period (formula ${f(formula, 3)}), -60 dB in ${f(liftedT60)} s; resting bow ${f(restingSlope, 3)} dB per period, ${f(restingT60)} s")
         assertEquals(formula, liftedSlope, abs(formula) * 0.10, "a lifted string does not ring down at the loop's own loss")
+        assertTrue(restingT60 < 8.0 - 1.15 - 0.1, "the resting string never reached -60 dB inside the buffer, so its ring time is not measured: $restingT60 s")
         assertTrue(restingT60 > 1.5 * liftedT60, "a bow left resting should keep ringing: ${restingT60} s against ${liftedT60} s lifted")
     }
 
@@ -221,6 +250,9 @@ class StringsBowTest {
                 it[i] = bow.next(if (i < rate) 0.13f * env else 0f, slope)
             }
         }
+        // The wave that leaves the bow toward the bridge is the nut's, for about 0.87 of a period after the lift; a gain on the bridge
+        // cannot touch it yet, and a gain that landed on the nut would change it from the first sample.
+        assertContentEquals(plain.copyOfRange(rate, rate + 1000), damped.copyOfRange(rate, rate + 1000), "gain reached the nut segment: the first 1000 samples after the lift moved")
         val extra = dbPerPeriod(damped, 130.81f, 1.3, 1.9) - dbPerPeriod(plain, 130.81f, 1.3, 1.9)
         println("BOW gain 0.9: ${f(extra, 3)} dB per period more than the string's own (want ${f(20.0 * log10(0.9), 3)})")
         assertEquals(20.0 * log10(0.9), extra, 0.15, "gain(0.9) should cost the bridge 0.9 of its reflection a period")
@@ -254,7 +286,7 @@ class StringsBowTest {
         val seconds = (System.nanoTime() - started) / 1e9
         println("BOW bounded, $cells cells: raw peak ${f(peak.toDouble(), 3)} ($peakAt), string velocity under the bow ${f(bowPointPeak.toDouble(), 3)}, worst mean ${f(worstMean, 4)}; ${f(seconds / (cells * 1.5) * 1000, 1)} ms per rendered second")
         assertTrue(peak < Strings.Bow.RAW_PEAK_CEILING, "a raw peak of $peak ($peakAt) is over the ceiling ${Strings.Bow.RAW_PEAK_CEILING}")
-        assertTrue(worstMean < 0.01, "the string is not zero-mean: $worstMean")
+        assertTrue(worstMean < 0.008, "the string is not zero-mean: $worstMean")
     }
 
     // ---------------------------------------------------------------- it is built at the top of a range, or refused
@@ -283,8 +315,15 @@ class StringsBowTest {
 
     @Test
     fun `a bow refuses a position or a share that is not a fraction`() {
-        for (bad in listOf(0f, 1f, -0.1f, 1.5f, Float.NaN)) assertFailsWith<IllegalArgumentException>("beta $bad") { Strings.Bow(130.81f, bad, rate = rate) }
-        for (bad in listOf(-0.1f, 1.1f, Float.NaN)) assertFailsWith<IllegalArgumentException>("share $bad") { Strings.Bow(130.81f, beta, share = bad, rate = rate) }
+        // the message is the bow's own: tune would refuse a bad position too, but under a name that blames a round trip
+        for (bad in listOf(0f, 1f, -0.1f, 1.5f, Float.NaN)) {
+            val e = assertFailsWith<IllegalArgumentException>("beta $bad") { Strings.Bow(130.81f, bad, rate = rate) }
+            assertTrue("beta must be in (0, 1)" in (e.message ?: ""), "beta $bad was refused by something other than the bow's own guard: ${e.message}")
+        }
+        for (bad in listOf(-0.1f, 1.1f, Float.NaN)) {
+            val e = assertFailsWith<IllegalArgumentException>("share $bad") { Strings.Bow(130.81f, beta, share = bad, rate = rate) }
+            assertTrue("share is a fraction" in (e.message ?: ""), "share $bad was refused by something other than the bow's own guard: ${e.message}")
+        }
     }
 
     // ---------------------------------------------------------------- the table and the repeat
@@ -303,6 +342,9 @@ class StringsBowTest {
             last = r
         }
         assertTrue(Strings.Bow.rho(0f, slope, rhoMax = 1f) > Strings.Bow.RHO_MAX, "rhoMax is not a runtime knob")
+        // two points of STK's formula, one on each side of zero (the offset 0.001 makes the table slightly asymmetric)
+        assertEquals(0.133939f, Strings.Bow.rho(0.3f, 3f), 1e-4f)
+        assertEquals(0.135902f, Strings.Bow.rho(-0.3f, 3f), 1e-4f)
         // pressure 0 is slope 5 and still has a plateau: only lifting stops the bow
         assertEquals(Strings.Bow.RHO_MAX, Strings.Bow.rho(0f, 5f))
     }

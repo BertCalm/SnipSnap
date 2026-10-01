@@ -1938,11 +1938,18 @@ that holds CELLO's range is not ERHU's. At D6 (1174.66 Hz) share 0.85 reads
 0.8 at 880 Hz reads -3.5 and -6.3: **the share is per voice, as the record said,
 and R1b has to pin ERHU's on the built engine** (the position floor at D6 is
 0.0724 with the 3023.6 Hz corner, so ERHU's lowest GRIP corner cannot go under
-about 1300 Hz at position 0.133, which the bow tests assert from both sides).
-The audition's pass rule moves from the stab to a held note: item 3 stays as a
-secondary check, and the primary is a three-second held note, bowed against
-synth, where the stab's blind spot (a listener cannot judge a one-second stab)
-does not apply.
+about 1300 Hz at position 0.133; the bow tests assert that a 1500 Hz corner
+builds there and a 1000 Hz one is refused). **And CELLO's root is not the
+single-slip note the table above assumed.** At C2 (65.41 Hz), position 0.133 and
+the full 3023.6 Hz corner, the built bow slips three times a period at
+pressure 0.5, 0.65 and 0.7, once at 0.8, and twice at 0.9 and 1.0; with a
+1000 or 1500 Hz corner it slips once across pressure 0.8 to 1.0 (G2, 98 Hz,
+slips once at every pressure from 0.5 to 1.0 with a corner of 1000 to 2000 Hz). So CELLO's GRIP window at its
+root sits at lower corners and higher pressures than the record's "single-slip
+from 1000 to 3024 Hz at pressure >= 0.7", which was measured at C3: **drawing
+that window per voice on the built engine, at the root and across TUNE, is the
+first job of R1b**, before any preset is written. The pitch is in tune at C2
+whatever the slip count (-0.6 and -0.7 cents).
 
 **The audition page** (`ArcoAuditionGenerator`, the SIREN page's shape
 with its Web Audio SURFACE stand-in; every clip through `AuditionLevel`;

@@ -162,8 +162,9 @@ internal object BowMeter {
 
     /**
      * A sawtooth's two signatures over the last whole period ending at [end]: the ratio of its fastest rise to its
-     * fastest fall (a sine is 1, a sawtooth's flyback puts it far from 1) and the fraction of the period the wave is
-     * nearly still (a sine is 0.13, a sawtooth close to 1).
+     * fastest fall (a sine is 1; a sawtooth's flyback is many times as steep as its ramp, so the ratio is small) and
+     * the fraction of the period the wave moves at under a fifth of its steepest step (a sine is 0.13; a sawtooth's
+     * long ramp puts it close to 1).
      */
     fun sawtooth(x: FloatArray, end: Int, periodSamples: Double): Pair<Double, Double> {
         val p = periodSamples.roundToInt()

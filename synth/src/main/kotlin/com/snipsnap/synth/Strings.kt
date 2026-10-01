@@ -642,7 +642,8 @@ internal object Strings {
      * The bow sits at [beta] of the way from the bridge: the bridge segment carries [beta] of a period,
      * the nut segment the rest. Each is a [Loop] built from its own [tune] with a fractional `roundTrip`,
      * so the two filters and the two two-tap averages are each charged to the segment that has them and
-     * the round trip through both is one period of [f]. Per sample the wave coming back from each end
+     * the round trip through both is one period of [f] (at a full [share]; a smaller one lengthens the
+     * bridge segment on purpose, see below). Per sample the wave coming back from each end
      * ([Loop.reflected]) meets under the bow, the string's velocity there is their sum, the bow adds
      * `deltaV * rho(deltaV)` against it (the reflection table, [rho]), and each side's wave crosses to the
      * other side with that push added ([Loop.inject]). Both ends invert (the bridge's loss is 0.95, the
@@ -650,7 +651,8 @@ internal object Strings {
      * toward the bridge; [bowPoint] is the string's velocity under the bow.
      *
      * The bridge corner [bridgeHz] is a frequency, not STK's pole: STK's formula is not rate-invariant,
-     * and at this rate it leaves a third of the loss a 44.1 kHz player hears, which is the difference
+     * and at this rate it puts the corner at 9028 Hz, three times as high as the 3023.6 Hz a 44.1 kHz
+     * player hears, so the upper harmonics are damped about a third as much, which is the difference
      * between one slip a period and two to four. [BRIDGE_HZ] is the value that sounds like STK.
      *
      * [share] is how much of the bridge filter's phase delay at [f] the tuning budget takes out of the
@@ -667,9 +669,15 @@ internal object Strings {
      *  - It speaks in Helmholtz motion, one slip a period, at pressure 0.7 and 0.9 at C3 and A3 and at 0.5
      *    at C3 (at A3 pressure 0.5 is two slips, so "speaks" is never tested there). At pressure 0.9 the
      *    harmonics 2 to 4 sit at -5.9, -9.3 and -11.6 dB against a sawtooth's -6.0, -9.5 and -12.0, the
-     *    flyback is 0.18 to 0.20 of the rise and the wave is nearly still for 0.95 to 0.98 of the period.
-     *  - Cents from the note by autocorrelation, at pressure 0.5 / 0.9, by share (1.174 kHz is the top of
-     *    an ERHU's range; it is printed and not asserted):
+     *    fastest rise is 0.18 to 0.20 of the fastest fall (the flyback is five times as steep as the
+     *    ramp) and the wave moves at under a fifth of its steepest step for 0.95 to 0.98 of the period.
+     *  - How many times a period the string slips depends on pitch, corner and pressure, and the map is
+     *    the engine's to draw, not the bow's. At C2 (65.41 Hz), position 0.133, with the full corner, it
+     *    slips three times a period at pressure 0.5 to 0.7, once at 0.8 and twice at 0.9 and 1.0; with
+     *    a 1000 to 1500 Hz corner it is one slip across pressure 0.8 to 1.0.
+     *  - Cents from the note by autocorrelation, at pressure 0.5 / 0.9, by share (the table is printed by
+     *    `StringsBowTest`; 1.174 kHz is the top of an ERHU's range, and there only the claim that the CELLO
+     *    share does not hold it is asserted):
      *
      *        share    65 Hz       131 Hz      220 Hz      440 Hz      880 Hz      1175 Hz
      *        1.0      0.3/0.4     1.0/1.6     1.1/2.8     6.1/5.8     10.9/8.6    19.6/13.9
@@ -680,7 +688,7 @@ internal object Strings {
      *    own rule, is 11 cents sharp at 880.
      *  - Lifted, it rings down at -0.439 dB a period at C3 against the loop's own -0.454 (the formula
      *    `20 log10(0.95 |H(f0)|)`), to -60 dB in 1.02 s against 1.011; a bow left resting on the string
-     *    stops it at the bow and rings for 1.84 s, so a release must [lift].
+     *    stops it at the bow and rings for 3.2 s, so a release must [lift].
      *  - Over 31 cells (pressure 0.3 to 1, amplitude 0.2 to 1, position 0.08 to 0.3 at C3, and C2 and A5
      *    at the extreme) every sample is finite, the mean is at most 0.0049, and the raw peak is at most
      *    1.169 (C2, pressure 1, amplitude 1, position 0.3), under [RAW_PEAK_CEILING].
@@ -689,8 +697,8 @@ internal object Strings {
      *    raises it (a bow at 0.133 builds at D6 with a 1500 Hz corner and is refused with a 1000 Hz one).
      *  - A retune of a vibrato's few cents, or small steps every 64 samples, does not click; a jump of
      *    semitones does (the delay line reads a different place), so a glide is steps and not a jump.
-     *  - About 22 to 28 ms per rendered second at this rate on the JVM (the bare bow; the spike's own
-     *    two-segment loop was 9.9).
+     *  - About 19 to 28 ms per rendered second at this rate on the JVM, through the tests' harness (the
+     *    spike's own two-segment loop was 9.9).
      *
      * Not here, on purpose: the bow's stroke and its overshoot, how hard it presses (the caller passes
      * [slope] and [vBow] each sample), the body, the output chain, vibrato, and the LOOP plan. [lift]

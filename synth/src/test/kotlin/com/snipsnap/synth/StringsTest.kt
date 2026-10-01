@@ -924,7 +924,11 @@ class StringsTest {
             val cents = FineTuning.cents(ringAt(freq, null), freq.toDouble())
             assertTrue(abs(cents) <= 5.0, "two closed loops ring $cents cents from $freq Hz")
         }
-        val cents = FineTuning.cents(ringAt(110f, 220f), 220.0)
-        assertTrue(abs(cents) <= 5.0, "after retune on both, the ring is $cents cents from 220 Hz")
+        // a fifth up, not an octave: an octave is a harmonic of the note the loops were built at, and a retune that did nothing would
+        // still read near it
+        val before = FineTuning.cents(ringAt(110f, null), 165.0)
+        assertTrue(abs(before) > 100.0, "the loops built at 110 Hz already ring near 165 Hz ($before cents): the test cannot tell a retune from none")
+        val cents = FineTuning.cents(ringAt(110f, 165f), 165.0)
+        assertTrue(abs(cents) <= 5.0, "after retune on both, the ring is $cents cents from 165 Hz")
     }
 }
