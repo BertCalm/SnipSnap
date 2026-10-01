@@ -9,6 +9,7 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.math.tanh
 
 /**
@@ -829,5 +830,119 @@ object Terra {
         if (to <= from) return FloatArray(0)
         val window = FloatArray(to - from) { i -> s[from + i].let { v -> if (v.isFinite()) v else 0f } }
         return Resampler.resample(Snip(window, 1, mono.sampleRate), RATE).samples
+    }
+
+    // ---- HIT: the other pad's first 20 ms colours how hard each mode rings ----
+
+    /** -60 dB in nepers, in double: HIT's running projection runs in double precision, as Phase 0 measured it. */
+    private const val T60_NEPERS_DOUBLE = 6.9078
+
+    /** A stored striker head ([Fork.STRIKER_SAMPLES] at [RATE]) at the render rate: 3528 samples, resampled once per render. */
+    internal fun upsample(head: FloatArray): FloatArray =
+        Resampler.resample(Snip(head, 1, RATE), RATE * Dsp.OVERSAMPLE).samples
+
+    /** [voice] struck by a stored [head] at HIT [hit], 0..1. HIT 0 is today's render, byte for byte, and computes nothing. */
+    internal fun renderStruck(voice: TerraVoice, macros: Map<String, Float>, head: FloatArray, hit: Float): Snip =
+        if (!(hit > 0f)) render(voice, macros) else renderStruckAt(voice, macros, upsample(head), hit)
+
+    /** [renderStruck] with the striker [x] already at the render rate; an impulse there is `floatArrayOf(1f)`. */
+    internal fun renderStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float): Snip =
+        renderWith(voice, macros, hitInputs(x, hit))
+
+    /** The bank alone ([bankWith]) struck by [x], already at the render rate, at HIT [hit]. */
+    internal fun bankStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float): FloatArray =
+        bankWith(voice, macros, hitInputs(x, hit))
+
+    /** HIT as the bank's input builder: null at HIT 0, so [renderWith] takes today's path without computing anything. */
+    private fun hitInputs(x: FloatArray, hit: Float): ((Body) -> BankInputs?)? {
+        if (!(hit > 0f)) return null
+        val inputs: (Body) -> BankInputs? = { body -> hitLevel(body, x, hit)?.let { BankInputs(level = it) } }
+        return inputs
+    }
+
+    /**
+     * HIT's level curve on [body]: round two's COLOURED candidate, in the
+     * gain domain, on TERRA's own bank (spec, "HIT, the design").
+     *
+     * Each mode's gain is multiplied by `G_k(n) = (1 - c) + c * s * |P_k(n)|`:
+     * - `|P_k(n)|` is the running magnitude of the striker [x] projected onto
+     *   mode k at its nominal pitch, droop ignored. It grows while the
+     *   striker plays and holds after its last non-zero sample, so a
+     *   short-lived mode is never inflated during the head.
+     * - `s` is the level match: the peak of today's body over the first three
+     *   periods, divided by the peak of the coloured body.
+     *
+     * The receiver's modes come from [body] at render, so a retuned pad is
+     * recoloured. Returns null - today's body - when [c] is not above 0, or
+     * when `s` is not finite because the coloured body has no peak (spec,
+     * "Failure handling").
+     *
+     * The arithmetic follows Phase 0's operation for operation, as the
+     * Phase-0 record's §8.1 quotes it (`TerraStruckR2.running` and
+     * `levelS`), which is what makes it the measured algorithm:
+     * - the projection in double precision;
+     * - a zero striker sample skipped, but its decay weight still advanced;
+     * - `s` divided in float and then widened.
+     * One deliberate difference: where the coloured body has no peak,
+     * Phase 0's `levelS` returned `s = 0.0` (every gain `1 - c`); this
+     * returns null, today's body, as the spec's failure rule asks. No
+     * Phase-0 case reached that branch.
+     */
+    internal fun hitLevel(body: Body, x: FloatArray, c: Float): Array<FloatArray>? {
+        if (!(c > 0f) || x.isEmpty() || body.modes.isEmpty()) return null
+        val run = runningMagnitudes(body, x)
+        val m = run[0].size
+        val ringFrames = body.frames - body.onsetSamples
+        val periods = (3f * body.rate / body.fundamentalHz).toInt()
+        val reference = strikeAndModalBank(body.modes, body.fundamentalHz, body.droopDepth, minOf(ringFrames, periods + 16), body.rate, { 0f })
+        val magnitudes = Array(run.size) { k -> FloatArray(m) { n -> run[k][n].toFloat() } }
+        val coloured = strikeAndModalBank(
+            body.modes, body.fundamentalHz, body.droopDepth, minOf(ringFrames, maxOf(periods, m) + 64), body.rate, { 0f },
+            level = magnitudes,
+        )
+        val colouredPeak = peakOf(coloured)
+        if (!(colouredPeak > 0f)) return null
+        val s = (peakOf(reference) / colouredPeak).toDouble()
+        if (!s.isFinite()) return null
+        val cd = c.coerceAtMost(1f).toDouble()
+        return Array(run.size) { k -> FloatArray(m) { n -> ((1.0 - cd) + cd * s * run[k][n]).toFloat() } }
+    }
+
+    /**
+     * `|P_k(n)|` for n below M (the striker's last non-zero sample, plus 1).
+     * A mode the bank would skip (at or past Nyquist, or with no t60) gets
+     * zeros.
+     */
+    private fun runningMagnitudes(body: Body, x: FloatArray): Array<DoubleArray> {
+        var last = 0
+        for (i in x.indices) if (x[i] != 0f) last = i
+        val m = last + 1
+        return Array(body.modes.size) { k ->
+            val mode = body.modes[k]
+            val hz = body.fundamentalHz * mode.ratio
+            val out = DoubleArray(m)
+            if (hz <= 0f || hz >= body.rate / 2f || mode.t60 <= 0f) return@Array out
+            val invR = 1.0 / exp(-T60_NEPERS_DOUBLE / (mode.t60.toDouble() * body.rate))
+            val theta = 2.0 * Math.PI * hz / body.rate
+            var re = 0.0
+            var im = 0.0
+            var w = 1.0
+            for (n in 0 until m) {
+                if (x[n] != 0f) {
+                    val phi = theta * n.toDouble()
+                    re += x[n] * w * cos(phi)
+                    im -= x[n] * w * sin(phi)
+                }
+                w *= invR
+                out[n] = sqrt(re * re + im * im)
+            }
+            out
+        }
+    }
+
+    private fun peakOf(x: FloatArray): Float {
+        var p = 0f
+        for (v in x) p = maxOf(p, abs(v))
+        return p
     }
 }

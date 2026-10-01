@@ -4,9 +4,12 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
 import kotlin.math.abs
+import kotlin.math.log10
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TerraTest {
@@ -380,5 +383,283 @@ class TerraTest {
         assertContentEquals(reference.copyOfRange(0, a), zeroed.copyOfRange(0, a), "a curve of ones changed the bank before the window")
         assertContentEquals(without.copyOfRange(a, b), zeroed.copyOfRange(a, b), "the zeroed mode still sounded inside the window")
         assertContentEquals(reference.copyOfRange(b, reference.size), zeroed.copyOfRange(b, zeroed.size), "the mode did not reopen in phase")
+    }
+
+    // ---------- HIT (spec "HIT, the design"; "Testing", tests 1, 2 and 8) ----------
+
+    private val impulse = floatArrayOf(1f)
+
+    /** Phase 0's G-P0d and G-P0e on the forty cases: HIT 0 with any head, and an impulse at subtle and strong, are today's TERRA bit for bit. */
+    @Test
+    fun `HIT 0 with any head and an impulse at subtle and strong render the frozen TERRA`() {
+        val heads = listOf("tkick", "tsnare", "wraith").map { TerraStrikers.head(it) }
+        var renders = 0
+        for (c in TerraCases.all) {
+            val frozen = LegacyTerraBank.render(c.voice, c.macros).samples
+            for (h in heads) {
+                assertContentEquals(frozen, Terra.renderStruck(c.voice, c.macros, h, 0f).samples, "${c.label}, HIT 0")
+                renders++
+            }
+            for (hit in listOf(0.5f, 1f)) {
+                assertContentEquals(frozen, Terra.renderStruckAt(c.voice, c.macros, impulse, hit).samples, "${c.label}, an impulse at HIT $hit")
+                renders++
+            }
+        }
+        assertEquals(200, renders)
+    }
+
+    /** Elsewhere (1 - c) + c may round once (spec); every gain an impulse gives stays within one ulp of 1. */
+    @Test
+    fun `an impulse leaves every gain within one ulp of 1 at any strength`() {
+        for (voice in TerraVoice.entries) {
+            val body = TerraMeasure.bodyOf(voice)
+            for (c in listOf(0.1f, 0.25f, 0.3f, 0.7f, 0.9f)) {
+                val gains = assertNotNull(Terra.hitLevel(body, impulse, c), "$voice c=$c")
+                for (curve in gains) for (g in curve) assertTrue(abs(g - 1f) <= Math.ulp(1f), "$voice c=$c: gain $g")
+            }
+        }
+    }
+
+    /** A coloured body with no peak gives a non-finite `s`; the striker renders as absent (spec, "Failure handling"). */
+    @Test
+    fun `a head with nothing in it renders today's body at HIT 1`() {
+        for (voice in TerraVoice.entries) {
+            val plain = Terra.render(voice).samples
+            val nothing = FloatArray(Fork.STRIKER_SAMPLES)
+            assertNull(Terra.hitLevel(TerraMeasure.bodyOf(voice), Terra.upsample(nothing), 1f), "$voice: a level match from nothing")
+            assertContentEquals(plain, Terra.renderStruck(voice, emptyMap(), nothing, 1f).samples, "$voice: an empty head changed the drum")
+        }
+    }
+
+    /**
+     * Recipe provenance, read before any claim below is blamed on HIT. The
+     * six synthesised strikers' macro values are not in the tree (see
+     * TerraStrikers), so this checks that the ten are still the ten Phase 0
+     * measured. It uses Phase 0's T2 (record, Appendix A): OB against
+     * unstruck, at defaults, over the ten strikers, as mean / min / max per
+     * voice. Every one of the ten moves the mean, so a drifted recipe or a
+     * changed factory WAV shows here even when the three named strikers'
+     * rows in the next test still pass.
+     *
+     * Asserted at HIT 0.5 within 0.5 dB, Phase 0's materiality rule: T2 may
+     * come from struck-shape's float path, which differs from the
+     * prototype's by up to 6e-4 per sample on the cavity (G-P0h). At HIT 1
+     * the extremes are printed only, because several sit within about 3 dB
+     * of T3's OB floor (cavity -14.61, bar -33.78), where a reading is
+     * distortion products, not mode energy.
+     *
+     * Each striker's source format, peak and onset are printed first, so a
+     * failure names which source changed.
+     */
+    @Test
+    fun `the ten strikers reproduce Phase 0's overtone spread at subtle - recipe provenance`() {
+        class Spread(val voice: TerraVoice, val at05: DoubleArray, val at1: DoubleArray)
+        val t2 = listOf(
+            Spread(TerraVoice.COMPOUND_MEMBRANE, doubleArrayOf(-0.33, -8.08, 3.48), doubleArrayOf(-0.67, -15.70, 6.87)),
+            Spread(TerraVoice.RESONANT_CAVITY, doubleArrayOf(2.99, -7.00, 12.13), doubleArrayOf(6.33, -14.61, 24.49)),
+            Spread(TerraVoice.CONICAL_BELL, doubleArrayOf(-1.12, -5.66, 3.31), doubleArrayOf(-2.86, -15.04, 8.41)),
+            Spread(TerraVoice.TUNED_BAR, doubleArrayOf(-1.61, -7.34, 6.74), doubleArrayOf(-9.45, -33.78, 27.10)),
+        )
+        for (s in TerraStrikers.TEN) {
+            val src = s.snip
+            println(
+                "TERRA striker ${s.id} ${s.name}: ${src.channels} ch, ${src.sampleRate} Hz, ${src.frameCount} frames, " +
+                    "peak ${"%.4f".format(src.peak())}, onset at sample ${TerraMeasure.onsetOf(src.samples)}",
+            )
+        }
+        for (row in t2) {
+            val nominal = TerraMeasure.bodyOf(row.voice).fundamentalHz
+            val today = TerraMeasure.ob(Terra.render(row.voice), nominal).toDouble()
+            for ((hit, phase0) in listOf(0.5f to row.at05, 1f to row.at1)) {
+                val moves = TerraStrikers.TEN.map { s ->
+                    TerraMeasure.ob(Terra.renderStruck(row.voice, emptyMap(), TerraStrikers.head(s.id), hit), nominal).toDouble() - today
+                }
+                val got = doubleArrayOf(moves.average(), moves.min(), moves.max())
+                println("TERRA HIT T2 ${row.voice} HIT $hit per striker: " + TerraStrikers.TEN.zip(moves).joinToString { (s, m) -> "${s.id} ${"%.2f".format(m)}" })
+                println(
+                    "TERRA HIT T2 ${row.voice} HIT $hit: mean / min / max ${got.joinToString(" / ") { "%.2f".format(it) }} dB " +
+                        "(Phase 0 ${phase0.joinToString(" / ") { "%.2f".format(it) }})",
+                )
+                if (hit == 0.5f) {
+                    for ((i, what) in listOf("mean", "min", "max").withIndex()) {
+                        assertEquals(phase0[i], got[i], 0.5, "${row.voice} HIT 0.5: the ten strikers' $what OB move is not Phase 0's")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * The build is the algorithm Phase 0 measured. OB is read from 20 ms
+     * on the float render, at defaults; the figures are spec "Testing" test
+     * 2's and the Phase-0 record's T3 and Appendix B. 0.5 dB is Phase 0's
+     * own materiality rule. A slip in the running projection, the level
+     * match's two windows or the hold-last lookup moves these by whole dB.
+     * A reading more than 0.05 dB off but inside 0.5 is printed, and should
+     * be explained before Task 5 starts.
+     */
+    @Test
+    fun `HIT reproduces the overtone balance Phase 0 measured`() {
+        class Row(val voice: TerraVoice, val striker: String?, val hit: Float, val ob: Double)
+        val rows = listOf(
+            Row(TerraVoice.COMPOUND_MEMBRANE, null, 0f, -18.12),
+            Row(TerraVoice.RESONANT_CAVITY, null, 0f, -37.83),
+            Row(TerraVoice.CONICAL_BELL, null, 0f, -46.10),
+            Row(TerraVoice.TUNED_BAR, null, 0f, -41.42),
+            Row(TerraVoice.COMPOUND_MEMBRANE, "tkick", 0.5f, -21.07),
+            Row(TerraVoice.COMPOUND_MEMBRANE, "tsnare", 0.5f, -15.23),
+            Row(TerraVoice.COMPOUND_MEMBRANE, "wraith", 0.5f, -14.64),
+            Row(TerraVoice.COMPOUND_MEMBRANE, "tkick", 1f, -25.23),
+            Row(TerraVoice.COMPOUND_MEMBRANE, "wraith", 1f, -11.25),
+            Row(TerraVoice.RESONANT_CAVITY, "tkick", 0.5f, -44.84),
+            Row(TerraVoice.RESONANT_CAVITY, "wraith", 0.5f, -29.67),
+            Row(TerraVoice.CONICAL_BELL, "tkick", 0.5f, -47.78),
+            Row(TerraVoice.CONICAL_BELL, "tsnare", 0.5f, -43.91),
+            Row(TerraVoice.TUNED_BAR, "tkick", 0.5f, -47.82),
+            Row(TerraVoice.TUNED_BAR, "wraith", 0.5f, -43.28),
+        )
+        for (r in rows) {
+            val nominal = TerraMeasure.bodyOf(r.voice).fundamentalHz
+            val snip = if (r.striker == null) Terra.render(r.voice) else Terra.renderStruck(r.voice, emptyMap(), TerraStrikers.head(r.striker), r.hit)
+            val ob = TerraMeasure.ob(snip, nominal).toDouble()
+            println("TERRA HIT OB ${r.voice} ${r.striker ?: "unstruck"} HIT ${r.hit}: ${"%.2f".format(ob)} dB (Phase 0 ${"%.2f".format(r.ob)})")
+            assertEquals(r.ob, ob, 0.5, "${r.voice} ${r.striker} HIT ${r.hit}")
+        }
+    }
+
+    /**
+     * Coupling, not layering (spec "Testing", test 2), measured as a band
+     * ratio and never the centroid, which barely moves (struck-r1). Phase 0,
+     * HIT 0.5:
+     * - membrane: THUMP KICK -21.07 against THUMP SNARE -15.23 dB;
+     * - cavity: THUMP KICK -44.84 against WRAITH WORD -29.67 dB;
+     * - bell: THUMP KICK -47.78 against THUMP SNARE -43.91 dB;
+     * - bar: THUMP KICK -47.82 against WRAITH WORD -43.28 dB.
+     *
+     * 3 dB is the spec's proposed bar. The fundamental moves 0.00 cents on
+     * membrane, bell and bar. The cavity's final render reads up to 2.11
+     * cents, because its fixed 75 Hz stage and a one-peak estimator move the
+     * reading while the bank is exact; so the cavity's claim is asserted on
+     * the bank, and the final reading is printed.
+     */
+    @Test
+    fun `HIT couples - a dull and a bright head move the overtone balance after 20 ms, not the tuning or the length`() {
+        val pairs = listOf(
+            Triple(TerraVoice.COMPOUND_MEMBRANE, "tkick", "tsnare"),
+            Triple(TerraVoice.RESONANT_CAVITY, "tkick", "wraith"),
+            Triple(TerraVoice.CONICAL_BELL, "tkick", "tsnare"),
+            Triple(TerraVoice.TUNED_BAR, "tkick", "wraith"),
+        )
+        for ((voice, dull, bright) in pairs) {
+            val body = TerraMeasure.bodyOf(voice)
+            val today = Terra.render(voice)
+            val struck = listOf(dull, bright).associateWith { Terra.renderStruck(voice, emptyMap(), TerraStrikers.head(it), 0.5f) }
+            val obDull = TerraMeasure.ob(struck.getValue(dull), body.fundamentalHz)
+            val obBright = TerraMeasure.ob(struck.getValue(bright), body.fundamentalHz)
+            println("TERRA HIT coupling $voice: $dull ${"%.2f".format(obDull)} dB, $bright ${"%.2f".format(obBright)} dB, ${"%.2f".format(obBright - obDull)} apart")
+            assertTrue(abs(obBright - obDull) >= 3.0, "$voice: the two heads moved the overtone balance only ${obBright - obDull} dB apart")
+            for ((id, s) in struck) assertEquals(today.frameCount, s.frameCount, "$voice $id changed the length")
+            val f0Today = TerraMeasure.f0(today.samples, today.sampleRate, body.fundamentalHz)
+            if (voice != TerraVoice.RESONANT_CAVITY) {
+                for ((id, s) in struck) {
+                    val cents = TerraMeasure.cents(TerraMeasure.f0(s.samples, s.sampleRate, body.fundamentalHz), f0Today)
+                    println("TERRA HIT tuning $voice $id: ${"%.2f".format(cents)} cents")
+                    assertTrue(abs(cents) <= 2.0, "$voice $id moved the fundamental $cents cents")
+                }
+            } else {
+                val bankToday = Terra.bankWith(voice, emptyMap(), null)
+                val f0BankToday = TerraMeasure.f0(bankToday, body.rate, body.fundamentalHz)
+                for ((id, s) in struck) {
+                    val bank = Terra.bankStruckAt(voice, emptyMap(), Terra.upsample(TerraStrikers.head(id)), 0.5f)
+                    val bankCents = TerraMeasure.cents(TerraMeasure.f0(bank, body.rate, body.fundamentalHz), f0BankToday)
+                    val finalCents = TerraMeasure.cents(TerraMeasure.f0(s.samples, s.sampleRate, body.fundamentalHz), f0Today)
+                    println("TERRA HIT tuning $voice $id: bank ${"%.2f".format(bankCents)} cents, final render ${"%.2f".format(finalCents)} cents (Phase 0: up to 2.11 at HIT 0.5)")
+                    assertTrue(abs(bankCents) <= 2.0, "$voice $id moved the bank's fundamental $bankCents cents")
+                }
+            }
+        }
+    }
+
+    /**
+     * Spec "Testing", test 8, over the ten strikers and c in {0, .25, .5,
+     * .75, 1}:
+     * - Every striker's OB moves monotonically on every voice (Phase 0: 10 of
+     *   10).
+     * - At 0.5 the drum class never changes, and the first-5-ms peak is
+     *   today's. Phase 0 read 1.000 on every voice; 0.005 is that figure's
+     *   rounding.
+     * - At 1 the class changes and the attack are printed beside Phase 0's
+     *   (record, Appendix A, T11/T12): 5 of 10 membrane renders TOM to PERC;
+     *   the first-5-ms peak's mean over the ten strikers, as a ratio and in
+     *   dB, is 0.815 / -2.22 dB on the membrane, 0.832 / -1.85 dB on the
+     *   cavity, 0.970 on the bell and 1.000 on the bar.
+     *
+     * Any future velocity registration of HIT needs this sweep first.
+     */
+    @Test
+    fun `HIT is monotone in its amount and keeps today's attack and class at subtle`() {
+        val strengths = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+        val phase0AtStrong = mapOf(
+            TerraVoice.COMPOUND_MEMBRANE to "0.815 / -2.22 dB",
+            TerraVoice.RESONANT_CAVITY to "0.832 / -1.85 dB",
+            TerraVoice.CONICAL_BELL to "0.970",
+            TerraVoice.TUNED_BAR to "1.000",
+        )
+        var flipsAtStrong = 0
+        var renders = 0
+        for (voice in TerraVoice.entries) {
+            val body = TerraMeasure.bodyOf(voice)
+            val today = Terra.render(voice)
+            val todayClass = Classifier.classify(today).drumClass
+            val todayPk5 = TerraMeasure.firstFiveMsPeak(today)
+            var strongRatioSum = 0.0
+            var strongDbSum = 0.0
+            var strongChangeDbSum = 0.0
+            for (s in TerraStrikers.TEN) {
+                val head = TerraStrikers.head(s.id)
+                val sweep = strengths.map { c -> if (c == 0f) today else Terra.renderStruck(voice, emptyMap(), head, c) }
+                renders += 4
+                val obs = sweep.map { TerraMeasure.ob(it, body.fundamentalHz).toDouble() }
+                val steps = obs.zipWithNext { x, y -> y - x }
+                println("TERRA HIT sweep $voice ${s.name}: OB ${obs.joinToString(" / ") { "%.2f".format(it) }}")
+                assertTrue(steps.all { it >= -0.01 } || steps.all { it <= 0.01 }, "$voice ${s.name}: OB is not monotone in HIT: $obs")
+                val subtle = sweep[2]
+                assertEquals(todayClass, Classifier.classify(subtle).drumClass, "$voice ${s.name}: HIT 0.5 changed the drum class")
+                val pk5 = TerraMeasure.firstFiveMsPeak(subtle)
+                assertTrue(abs(pk5 - todayPk5) <= 0.005f, "$voice ${s.name}: HIT 0.5 moved the first-5-ms peak to $pk5 from $todayPk5")
+                val strong = sweep[4]
+                val strongClass = Classifier.classify(strong).drumClass
+                if (strongClass != todayClass) flipsAtStrong++
+                val strongPk5 = TerraMeasure.firstFiveMsPeak(strong)
+                strongRatioSum += strongPk5
+                strongDbSum += 20.0 * log10(maxOf(strongPk5, 1e-6f).toDouble())
+                strongChangeDbSum += 20.0 * log10(maxOf(strongPk5, 1e-6f).toDouble() / maxOf(todayPk5, 1e-6f))
+                println("TERRA HIT 1 $voice ${s.name}: class $strongClass (today $todayClass), first-5-ms peak ${"%.3f".format(strongPk5)}")
+            }
+            val n = TerraStrikers.TEN.size
+            println(
+                "TERRA HIT 1 $voice attack: first-5-ms peak mean ${"%.3f".format(strongRatioSum / n)} / ${"%.2f".format(strongDbSum / n)} dB, " +
+                    "${"%.2f".format(strongChangeDbSum / n)} dB from today's ${"%.3f".format(todayPk5)} (Phase 0: ${phase0AtStrong.getValue(voice)})",
+            )
+        }
+        println("TERRA HIT 1: $flipsAtStrong class changes in 40 renders (Phase 0: 5, all membrane TOM to PERC)")
+        assertEquals(160, renders)
+    }
+
+    /** The pre-roll keeps under the 50 % ceiling `clack is quiet, and the bell only starts ringing after it` holds it to (Phase 0: 5.9 % today, 16.5 % at HIT 1 with THUMP KICK). */
+    @Test
+    fun `the CLACK pre-roll stays quiet under HIT`() {
+        val plainLength = Terra.render(TerraVoice.CONICAL_BELL, mapOf("CLACK" to 0f)).frameCount
+        for (id in listOf("tkick", "tsnare")) {
+            for (hit in listOf(0.5f, 1f)) {
+                val out = Terra.renderStruck(TerraVoice.CONICAL_BELL, mapOf("CLACK" to 1f), TerraStrikers.head(id), hit).samples
+                val clack = out.size - plainLength
+                assertTrue(clack > 0, "CLACK 1 should lengthen the render")
+                val preroll = out.copyOfRange(0, clack).maxOf { abs(it) }
+                val body = out.copyOfRange(clack, minOf(out.size, clack + 2000)).maxOf { abs(it) }
+                println("TERRA HIT CLACK $id HIT $hit: pre-roll ${"%.1f".format(100 * preroll / body)} % of the body")
+                assertTrue(preroll < body * 0.5f, "$id HIT $hit: the pre-roll is ${preroll / body} of the body")
+            }
+        }
     }
 }
