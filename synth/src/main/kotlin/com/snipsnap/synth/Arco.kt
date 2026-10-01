@@ -95,7 +95,7 @@ object Arco {
 
     // ---- the macros ---------------------------------------------------------
 
-    const val DEFAULT_BOW = 0.6f
+    const val DEFAULT_BOW = 0.5f
     const val DEFAULT_GRIP = 0.6f
     const val DEFAULT_BODY = 0.5f
 
@@ -334,16 +334,22 @@ object Arco {
     internal fun releaseSeconds(hz: Float, cornerHz: Float, holdSeconds: Float): Float =
         max(STOP_FLOOR_SECONDS, min(STOP_HOLD_SHARE * holdSeconds, freeRingSeconds(hz, cornerHz)))
 
-    // ---- vibrato: baked, a whole-string retune --------------------------------
+    // ---- vibrato: baked, a smooth wobble of the wave's own time --------------------------------
 
     /**
      * A player's finger rocks on the string: +-[VIBRATO_MAX_CENTS] cents at [VIBRATO_HZ] (STK's own
-     * default), starting after the string has begun to speak ([VIBRATO_DELAY_SECONDS]; C2 reaches 90 percent of its level at about
-     * half a second) and rising in over [VIBRATO_RISE_SECONDS]. Scaled by how long the note lasts: none at a
+     * default), starting after the string has begun to speak ([VIBRATO_DELAY_SECONDS]; C2 reaches 90 percent of its
+     * level at about half a second) and rising in over [VIBRATO_RISE_SECONDS]. Scaled by how long the note lasts: none at a
      * hold of [VIBRATO_HOLD_FROM_SECONDS] or less (a vibrato on a scratch is a wobble), full from
      * [VIBRATO_HOLD_FULL_SECONDS]. Off in a LOOP, which cannot carry a signal that does not repeat.
-     * [Strings.Bow.retune] moves both halves of the string together (there is no nut-only retune), so
-     * the swing is the pitch's own; it is done in blocks of [VIBRATO_BLOCK] samples, a step R1a measured as click-free.
+     *
+     * It is done to the string's wave, not to the string. R1b's first version retuned the bow ([Strings.Bow.retune], which
+     * R1a measured as click-free) every 64 samples, and the wave had no step. But the friction is a hair trigger: on ERHU's
+     * short periods a slip split in two (gaps of 0.2 then 0.8 of a period) at the same phase of the swing every time,
+     * 37 events in 24,746 slips over the 45 steps with the vibrato on and none with it off, and in the 200 rolled ERHU notes
+     * of the identity test 91 had one in the last 1.3 s of a three-second bow. So the vibrato is the plain tape-style one:
+     * the finished string wave is read back through a delay that swings by [vibratoDepthSamples] (a four-point cubic reads
+     * between samples), which moves every partial by the same ratio, as a finger does, and the bow never feels it.
      */
     const val VIBRATO_HZ = 6.1
     const val VIBRATO_MAX_CENTS = 10f
@@ -351,7 +357,47 @@ object Arco {
     const val VIBRATO_RISE_SECONDS = 0.2
     const val VIBRATO_HOLD_FROM_SECONDS = 0.6f
     const val VIBRATO_HOLD_FULL_SECONDS = 1.5f
-    private const val VIBRATO_BLOCK = 64
+
+    /** How many cents of vibrato a bow-on time of [holdSeconds] carries: none to [VIBRATO_HOLD_FROM_SECONDS], all from [VIBRATO_HOLD_FULL_SECONDS]. */
+    internal fun vibratoCentsFor(holdSeconds: Float): Float = VIBRATO_MAX_CENTS *
+        ((holdSeconds - VIBRATO_HOLD_FROM_SECONDS) / (VIBRATO_HOLD_FULL_SECONDS - VIBRATO_HOLD_FROM_SECONDS)).coerceIn(0f, 1f)
+
+    /**
+     * The delay's swing, in samples at [rate], that moves the pitch by [cents] at its fastest: a delay of `d sin(2 pi f t)` changes
+     * the pitch by `d 2 pi f` of itself at most, so `d = (2^(cents / 1200) - 1) / (2 pi f)` seconds.
+     */
+    internal fun vibratoDepthSamples(cents: Float, rate: Int): Double =
+        (2.0.pow(cents / 1200.0) - 1.0) / (2.0 * PI * VIBRATO_HZ) * rate
+
+    /**
+     * [buf] read back through the vibrato's swinging delay, the same length: sample `i` is the wave at `i - d(t)`, `d` zero until
+     * [VIBRATO_DELAY_SECONDS] (so everything before it is copied exactly), then the swing rising in over [VIBRATO_RISE_SECONDS].
+     * A four-point cubic (Catmull-Rom) reads between samples; the wave is at four times the rate its partials need, so the
+     * interpolation's own loss is far under -60 dB where the note's energy is.
+     */
+    internal fun vibrato(buf: FloatArray, cents: Float, rate: Int): FloatArray {
+        if (cents <= 0f) return buf
+        val depth = vibratoDepthSamples(cents, rate)
+        val out = FloatArray(buf.size)
+        val last = buf.size - 1
+        for (i in buf.indices) {
+            val t = i.toDouble() / rate
+            if (t <= VIBRATO_DELAY_SECONDS) {
+                out[i] = buf[i]
+                continue
+            }
+            val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
+            val pos = i - depth * rise * sin(2.0 * PI * VIBRATO_HZ * (t - VIBRATO_DELAY_SECONDS))
+            val k = Math.floor(pos).toInt()
+            val x = (pos - k).toFloat()
+            val p0 = buf[(k - 1).coerceIn(0, last)]
+            val p1 = buf[k.coerceIn(0, last)]
+            val p2 = buf[(k + 1).coerceIn(0, last)]
+            val p3 = buf[(k + 2).coerceIn(0, last)]
+            out[i] = p1 + 0.5f * x * (p2 - p0 + x * (2f * p0 - 5f * p1 + 4f * p2 - p3 + x * (3f * (p1 - p2) + p3 - p0)))
+        }
+        return out
+    }
 
     // ---- BODY: the box --------------------------------------------------------
 
@@ -501,9 +547,10 @@ object Arco {
      *
      * The overrides are for tests and probes, and the window is drawn with them: [pressure] replaces
      * GRIP's pressure, [cornerHz] its corner, [vBow] the voice's sustain velocity, [overshoot] BOW's bite,
-     * [gateSeconds] HOLD's bow-on time; [vibrato] false is a plain string; [lifted] never puts the bow
+     * [gateSeconds] HOLD's bow-on time; [vibrato] false is a plain wave; [lifted] never puts the bow
      * down; [bowPointOut] receives [Strings.Bow.bowPoint] each sample, the string's velocity under
-     * the bow, which is what the slips-per-period counter reads; [share] replaces the voice's tuning share.
+     * the bow, which is what the slips-per-period counter reads (the string itself, which the vibrato never touches);
+     * [share] replaces the voice's tuning share.
      */
     internal fun bow(
         voice: ArcoVoice,
@@ -519,15 +566,16 @@ object Arco {
         lifted: Boolean = false,
         bowPointOut: FloatArray? = null,
         share: Float? = null,
-    ): FloatArray = play(
-        voice, hz, macros, rate, gateFor(voice, hz, macros, rate, gateSeconds),
-        pressure, cornerHz, vBow, overshoot, vibrato, lifted, bowPointOut, share,
-    )
+    ): FloatArray {
+        val gate = gateFor(voice, hz, macros, rate, gateSeconds)
+        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share)
+        return if (vibrato) vibrato(tap, vibratoCentsFor(gate.holdN.toFloat() / rate), rate) else tap
+    }
 
     private fun play(
         voice: ArcoVoice, hz: Float, macros: Map<String, Float>, rate: Int, gate: Gate,
         pressure: Float?, cornerHz: Float?, vBow: Float?, overshoot: Float?,
-        vibrato: Boolean, lifted: Boolean, bowPointOut: FloatArray?, share: Float?,
+        lifted: Boolean, bowPointOut: FloatArray?, share: Float?,
     ): FloatArray {
         val semitone = semitoneFor(voice, macros.getValue("TUNE"))
         val grip = macros.getValue("GRIP")
@@ -541,14 +589,7 @@ object Arco {
         val pBite = Dsp.lin(biteShare, p, max(p, window.pressureHigh))
         val tau = gate.attackN.toDouble() / rate
 
-        val holdSec = gate.holdN.toFloat() / rate
-        val vibCents = if (steady || !vibrato) 0f else VIBRATO_MAX_CENTS *
-            ((holdSec - VIBRATO_HOLD_FROM_SECONDS) / (VIBRATO_HOLD_FULL_SECONDS - VIBRATO_HOLD_FROM_SECONDS)).coerceIn(0f, 1f)
-
-        // A retune may only shorten the segments the ring was built for, so the Bow is built for
-        // the lowest pitch of the swing and brought up to the note (BORE's rule).
-        val bow = Strings.Bow(f = hz * 2f.pow(-vibCents / 1200f), beta = BETA, bridgeHz = corner, share = share ?: shareFor(voice), rate = rate)
-        if (vibCents > 0f) bow.retune(hz)
+        val bow = Strings.Bow(f = hz, beta = BETA, bridgeHz = corner, share = share ?: shareFor(voice), rate = rate)
         if (lifted) bow.lift()
 
         val out = FloatArray(gate.total)
@@ -557,11 +598,6 @@ object Arco {
         val biteEnd = (BITE_TIME_CONSTANTS * gate.attackN).toInt()
         for (i in 0 until gate.total) {
             val t = i.toDouble() / rate
-            if (vibCents > 0f && i % VIBRATO_BLOCK == 0 && t > VIBRATO_DELAY_SECONDS) {
-                val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
-                val cents = vibCents * (rise * sin(2.0 * PI * VIBRATO_HZ * (t - VIBRATO_DELAY_SECONDS))).toFloat()
-                bow.retune(hz * 2f.pow(cents / 1200f))
-            }
             val ramp = if (i < gate.attackN) i.toFloat() / gate.attackN else 1f
             val relax = if (bite > 0.0 && i < biteEnd) exp(-t / tau) else 0.0
             val release = when {
@@ -632,7 +668,7 @@ object Arco {
         val rate = RATE * Dsp.OVERSAMPLE
         val total = (warmFrames + frames + LOOP_PAD_FRAMES) * Dsp.OVERSAMPLE
         val attackN = (LOOP_ATTACK_SECONDS * rate).toInt().coerceAtLeast(1)
-        return play(voice, tuned, macros, rate, Gate(total, attackN, 0, 0, steady = true), null, null, null, null, false, false, null, null)
+        return play(voice, tuned, macros, rate, Gate(total, attackN, 0, 0, steady = true), null, null, null, null, false, null, null)
     }
 
     /** A rendered LOOP and how well its stretch closes on itself ([Keys.seamError]). */
