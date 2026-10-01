@@ -321,6 +321,42 @@ object Keys {
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 
+    // ---------- GLINT, held ----------
+    // docs/superpowers/specs/2026-09-29-glint-paths-design.md §3 (BREATHE)
+
+    /**
+     * The nine GLINT pad zones: every minor third across the voice's own
+     * two-octave TUNE range from [Glint.rootMidi] - per voice, since STEP
+     * sits an octave above the rest.
+     */
+    fun glintPadMidis(voice: GlintVoice): List<Int> =
+        (0..Glint.TUNE_SEMITONES step 3).map { Glint.rootMidi(voice) + it }
+
+    /**
+     * GLINT held - [GlintHeld]'s file as a keys instrument: the onset, one
+     * breath, and the same breath again, with the loop marker at the second
+     * breath's start. Unlike [sirenPad]'s doubled loop, whose second copy is
+     * the first by construction, the two breaths here come out of one
+     * continuous render and match only if the loop truly closes, so
+     * [requireSeam] is a real check: the frames before the marker are the
+     * first breath's tail, and they must match the file's own tail for the
+     * wrap to be silent. TUNE is fixed by [midi]; DECAY plays no part in a
+     * held render (a held key sustains). [cancelled] reaches
+     * [GlintHeld.render]'s own check.
+     */
+    fun glintPad(voice: GlintVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        val low = glintPadMidis(voice).first()
+        require(midi - low in 0..Glint.TUNE_SEMITONES) {
+            "GLINT $voice pads are MIDI $low..${low + Glint.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Glint.defaults(voice)
+        val tune = (midi - low) / Glint.TUNE_SEMITONES.toFloat()
+        val m = defaults + macros.filterKeys { it in defaults } + ("TUNE" to tune)
+        val held = GlintHeld.render(voice, m, cancelled)
+        requireSeam("GLINT $voice at MIDI $midi", held.audio, held.loopStart)
+        return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
+    }
+
     // ---------- FORK ----------
     // docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md
 

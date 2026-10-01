@@ -2,12 +2,11 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
-import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class GlintVoice { REED, BOTTLE, KAZOO, CICADA, RATCHET, PLATE }
+enum class GlintVoice { SWEEP, STEP, BRASS, VOWEL }
 
 /**
  * GLINT — phase distortion, where the formant is generated rather than
@@ -20,13 +19,22 @@ enum class GlintVoice { REED, BOTTLE, KAZOO, CICADA, RATCHET, PLATE }
  * Only the window's *slope* jumps across the wrap, and that slope
  * discontinuity is the buzz the engine is made of. Do not smooth it.
  *
+ * A voice is the path the formant takes — see `GlintPath` and
+ * docs/superpowers/specs/2026-09-29-glint-paths-design.md. One window, the
+ * saw ramp.
+ *
  * BODY is a second burst under the same window, two and a half octaves below
  * the main formant and on its own envelope — a second source, not a copy of
  * the first. (An earlier version mixed the bare window back in instead; that
  * added the same harmonic series the burst already carries and was
  * inaudible however loud it was mixed.)
  *
- * Design: `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`.
+ * VOWEL is the one voice that reads the two bursts differently: they are a
+ * mouth's first two formants, in fixed Hz and on one envelope, and BODY is
+ * the size of the mouth, scaling both together (see [VOWEL_LINE]).
+ *
+ * Design: `docs/superpowers/specs/2026-09-25-glint-phase-distortion-design.md`
+ * (its voice list is superseded by the paths design above).
  */
 object Glint {
 
@@ -63,34 +71,6 @@ object Glint {
      */
     const val SNAP_FLOOR = 3f
 
-    /** KAZOO's trapezoid holds at full for this fraction of the cycle, then ramps out. */
-    const val KAZOO_FLAT = 0.7f
-
-    /**
-     * How many times CICADA's carrier re-clocks inside one cycle of `f0`.
-     * Integer by necessity - but not for the reason periodicity first
-     * suggests. Measured (D2 diagnostic, 2026-09-27): at N = 4.37 the
-     * engine-only one-period correlation is 0.9999999 - still exactly
-     * periodic - because `phase` wraps independently of the sub-clock, so
-     * `frac(N * phase)` repeats whenever `phase` does. A fractional N does
-     * NOT break periodicity at `f0`.
-     *
-     * What actually forces N to be an integer is the wrap: a fractional N
-     * leaves a truncated final sub-cycle, so the window does not reach zero
-     * at the instant the carrier restarts, and that restart clicks. Same
-     * diagnostic: worst adjacent jump goes 0.132858 -> 0.705022, a 5.3x
-     * jump at the truncated restart. This is the same zero-crossing promise
-     * `CICADA does not click at its inner restarts` already guards for the
-     * integer case (there, a window read at the wrong phase); a fractional
-     * N would break it from a different direction.
-     *
-     * Four gives a lattice dense enough to read as its own texture at the
-     * voice's A3 root (four edges per cycle, 880 edges a second) without the
-     * sub-rate climbing so far that the burst's own harmonics fold. A value
-     * to revisit at the audition, not a derived quantity.
-     */
-    const val CICADA_SUBCYCLES = 4
-
     /**
      * The second formant's t60 as a fraction of the amp t60. Single-
      * enveloped, unlike the body term this replaced: that one was scaled by
@@ -123,30 +103,11 @@ object Glint {
     const val BODY_MIX = 0.7f
 
     /**
-     * BLOOM's ceiling: the peak opens to 1 + this many times its settled
-     * ratio — 4x at full BLOOM.
-     *
-     * That 4x is clamped against [kCeilingFor] in `synthesize` (see its own
-     * `kCeiling` line) — voice-dependent, not the bare [K_MAX] this doc used
-     * to name — and the two interact: full BLOOM starts clipping against
-     * the ceiling once `kBase > kCeilingFor(voice) / 4`, and is entirely
-     * inert at PEAK 1, where `kBase` already equals the ceiling and has
-     * nowhere left to open. Not a bug — undocumented behaviour someone
-     * auditioning BLOOM at high PEAK would otherwise read as the knob being
-     * broken.
-     *
-     * Per voice, since `kBase = K_MIN * (kCeilingFor(voice) / K_MIN) ^
-     * PEAK` ([ratioAtReference]):
-     *   - Every voice but CICADA: [kCeilingFor] is [K_MAX] (40), so
-     *     clipping starts at `kBase > 10`, PEAK ≈ 0.54 — the top ~46% of
-     *     the knob.
-     *   - CICADA: [kCeilingFor] is 10 — [K_MAX] / [CICADA_SUBCYCLES], 4x
-     *     lower than every other voice's — so clipping starts at
-     *     `kBase > 2.5`, PEAK ≈ 0.1386 — the top ~86% of the knob. BLOOM is
-     *     partly inert across most of CICADA's own PEAK range, not the
-     *     ~46% every other voice sees, and CICADA is exactly the voice
-     *     where the "broken knob" misreading this doc exists to head off
-     *     is most likely.
+     * How far the path travels at full BLOOM either way: the start ratio is
+     * `kBase·(1 + BLOOM_MAX)` above PEAK or `kBase/(1 + BLOOM_MAX)` below —
+     * 4x either way — clamped to [K_MIN]..[K_MAX]. At low PEAK the rising
+     * side meets [K_MIN] early and travels less than the falling side; at
+     * high PEAK the falling side meets [K_MAX].
      */
     const val BLOOM_MAX = 3f
 
@@ -159,19 +120,73 @@ object Glint {
      * at 0.45 s it travels to 0.35x over 300 ms, which is the single change
      * the 2026-09-26 audition marked KEEP on both voices tested.
      *
-     * BLOOM now means how far the formant travels. Each voice supplies how
-     * it travels — D2's PLATE ties it to loudness and RATCHET steps it.
+     * BLOOM sets how far the formant travels and which way (see [BLOOM_MAX]).
+     * Each voice supplies how it travels: SWEEP and VOWEL run it on this
+     * clock, BRASS ties it to loudness and STEP takes it rung by rung
+     * ([STEP_SECONDS]).
      */
     const val BLOOM_T60 = 0.45f
 
-    fun macrosFor(voice: GlintVoice): List<MacroSpec> = listOf(
-        MacroSpec("TUNE", 0.5f, 0.5f),
-        MacroSpec("PEAK", 0.45f),
-        MacroSpec("FOLLOW", 0.8f),
-        MacroSpec("BODY", 0.4f),
-        MacroSpec("BLOOM", 0.35f),
-        MacroSpec("DECAY", 0.5f),
+    /** VOWEL's own floor: a formant below the note pins to the fundamental rather than vanishing. */
+    const val VOWEL_K_MIN = 1f
+
+    /** F2's level against F1 - the 2026-09-29 audition's ratio ("It works"). */
+    const val VOWEL_LEVEL2 = 0.5f
+
+    /** The last position on the vowel line (EE). */
+    const val VOWEL_LAST = 4f
+
+    /**
+     * OO, OH, AH, EH, EE as (F1, F2) Hz - adult formants, ordered dark to
+     * bright so PEAK keeps meaning "how bright". The order holds on F2, the
+     * vowels' own brightness axis (`GlintVowelTest` gates the share of power
+     * above 1.5 kHz as non-decreasing along the line); spectral centroid does
+     * not order it past AH (measured 2026-09-29: it rises OO to AH, then
+     * falls, because EH and EE have lower F1s than AH).
+     */
+    private val VOWEL_LINE = arrayOf(
+        floatArrayOf(300f, 870f),
+        floatArrayOf(570f, 840f),
+        floatArrayOf(730f, 1090f),
+        floatArrayOf(530f, 1840f),
+        floatArrayOf(270f, 2290f),
     )
+
+    fun vowelPosition(peak: Float): Float = peak.coerceIn(0f, 1f) * VOWEL_LAST
+
+    /** F1 and F2 at [pos] on the vowel line, interpolated in log2(Hz). */
+    internal fun vowelAt(pos: Float, out: FloatArray) {
+        val p = pos.coerceIn(0f, VOWEL_LAST)
+        val i = kotlin.math.floor(p).toInt().coerceAtMost(VOWEL_LINE.size - 2)
+        val f = p - i
+        for (n in 0..1) {
+            val a = VOWEL_LINE[i][n]
+            val b = VOWEL_LINE[i + 1][n]
+            out[n] = a * (b / a).pow(f)
+        }
+    }
+
+    fun macrosFor(voice: GlintVoice): List<MacroSpec> = when (voice) {
+        // No FOLLOW: a vowel's formants are fixed Hz, so key tracking has
+        // nothing to do.
+        GlintVoice.VOWEL -> listOf(
+            MacroSpec("TUNE", 0.5f, 0.5f),
+            MacroSpec("PEAK", 0.5f),          // AH
+            MacroSpec("BODY", 0.5f, 0.5f),    // vocal-tract size, centred
+            MacroSpec("BLOOM", 0.6f, 0.5f),   // a short glide down into the vowel
+            MacroSpec("DECAY", 0.5f),
+        )
+        else -> listOf(
+            MacroSpec("TUNE", 0.5f, 0.5f),
+            MacroSpec("PEAK", 0.45f),
+            MacroSpec("FOLLOW", 0.8f),
+            MacroSpec("BODY", 0.4f),
+            // Bipolar: 0.5 is still, above falls into PEAK, below rises into it.
+            // 0.675 is the old default 0.35 through GlintPatch's legacy remap.
+            MacroSpec("BLOOM", 0.675f, 0.5f),
+            MacroSpec("DECAY", 0.5f),
+        )
+    }
 
     fun defaults(voice: GlintVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
@@ -191,20 +206,18 @@ object Glint {
         return Dsp.scrambleNear(seed, temperature, random)
     }
 
-    /**
-     * The bottom of each voice's own two-octave TUNE range.
-     *
-     * For CICADA this sets the *cycle* rate, not the pitch heard: every
-     * sub-cycle is its own complete windowed grain, so CICADA sounds about
-     * two octaves above whatever this returns (see [CICADA_SUBCYCLES]).
-     */
+    /** The bottom of each voice's own two-octave TUNE range. */
     fun rootHz(voice: GlintVoice): Float = when (voice) {
-        GlintVoice.REED -> 110f     // A2
-        GlintVoice.BOTTLE -> 220f   // A3
-        GlintVoice.KAZOO -> 220f    // A3
-        GlintVoice.CICADA -> 220f   // A3 — heard ~2 octaves above; see doc above
-        GlintVoice.RATCHET -> 220f  // A3 — shares KAZOO's register with its window
-        GlintVoice.PLATE -> 110f    // A2 — a struck plate sits low, like REED
+        GlintVoice.SWEEP -> 110f  // A2
+        GlintVoice.STEP -> 220f   // A3 - RATCHET's register
+        GlintVoice.BRASS -> 110f  // A2
+        GlintVoice.VOWEL -> 110f  // A2
+    }
+
+    /** [rootHz] as a MIDI note, for the held pad's zones. */
+    fun rootMidi(voice: GlintVoice): Int = when (voice) {
+        GlintVoice.STEP -> 57
+        else -> 45
     }
 
     fun frequencyFor(voice: GlintVoice, tune: Float): Float {
@@ -213,86 +226,27 @@ object Glint {
     }
 
     /**
-     * The window at [phase] in [0, 1). Must reach exactly zero at phase 1 —
-     * every voice's definition below is written so that it does.
-     *
-     * The three Task 1 voices each reuse an existing shape rather than
-     * inventing one, per the spec's voice table — their distinguishing
-     * mechanism arrives in a later task, so for now the shape alone has to
-     * carry the pairing:
-     *   - CICADA takes the triangle (BOTTLE's) because it is the softest
-     *     base window here, so a later nested modulation supplies the edge
-     *     instead of doubling one the window already has.
-     *   - RATCHET takes the trapezoid (KAZOO's) because the toy, clicky
-     *     character that window already gives is the point of the voice.
-     *   - PLATE takes the saw (REED's) because a struck plate is brightest
-     *     right at the strike and decays from there, the same shape as a
-     *     ramp that opens at phase 0 and falls to zero.
+     * The one window: a ramp from 1 to exactly 0 at the cycle's end. It must
+     * reach exactly zero at phase 1, because that is the instant every change
+     * of k is scheduled on (see the class doc).
      */
-    fun windowAt(voice: GlintVoice, phase: Float): Float {
-        val p = phase.coerceIn(0f, 1f)
-        return when (voice) {
-            GlintVoice.REED, GlintVoice.PLATE -> 1f - p
-            GlintVoice.BOTTLE, GlintVoice.CICADA -> if (p < 0.5f) p * 2f else (1f - p) * 2f
-            GlintVoice.KAZOO, GlintVoice.RATCHET -> if (p < KAZOO_FLAT) 1f else (1f - p) / (1f - KAZOO_FLAT)
-        }
-    }
+    fun windowAt(phase: Float): Float = 1f - phase.coerceIn(0f, 1f)
 
     /**
-     * The ceiling PEAK maps to and the render loop's instantaneous k clamps
-     * against, per voice. K_MAX for every voice except CICADA.
-     *
-     * CICADA's real formant sits at roughly N * k, not k (see
-     * [CICADA_SUBCYCLES]), so capping its own k at K_MAX / CICADA_SUBCYCLES
-     * makes its *effective* ceiling - kCeiling * CICADA_SUBCYCLES - equal to
-     * every other voice's own K_MAX. That is an equalisation, not a
-     * restriction: it is what makes 10 the correct number here rather than
-     * a value tuned until some test passed.
-     *
-     * This is not standing in for an anti-aliasing clamp. [K_MAX]'s own doc
-     * is explicit that aliasing is not what bounds it - folding starts only
-     * around k*f0 ≈ 88 kHz, comfortably above any voice's own ceiling. What
-     * this equalises is the *musical* ceiling every voice's K_MAX already
-     * represents, which CICADA's re-clocking would otherwise let PEAK sail
-     * straight through.
-     *
-     * Applied in three places that must agree with each other -
-     * [ratioAtReference] (what PEAK maps to), [ratioFor]'s own clamp (what a
-     * note actually resolves to after FOLLOW), and [synthesize]'s per-sample
-     * clamp (what BLOOM can push the instantaneous k to). Only clamping the
-     * last of those left PEAK mapped across the full K_MIN..K_MAX band and
-     * then chopped after the fact - roughly the top half of PEAK's travel
-     * rendered one flat, saturated value, with BLOOM inert on top of it: "a
-     * dead macro on five of six voices is not defensible" applies here even
-     * though only one voice's ceiling moved. One definition, three call
-     * sites, so they cannot drift apart.
+     * How long STEP holds each rung. The one-shot renders `t60 * 1.35`
+     * seconds ([synthesize]), so a long ladder can outlast a short note and
+     * never be heard to its end.
      */
-    internal fun kCeilingFor(voice: GlintVoice): Float =
-        if (voice == GlintVoice.CICADA) K_MAX / CICADA_SUBCYCLES else K_MAX
-
-    /**
-     * How long RATCHET holds each rung before jumping to the next. The spec
-     * asks for "a hard jump every ~150 ms" against the *rendered* length,
-     * not the raw t60 — `synthesize` renders `t60 * 1.35` seconds (see its
-     * frame-count line) — so even the shortest DECAY (0.12 s t60) renders
-     * ~0.162 s, which is *longer* than one 150 ms step, not under it: the
-     * shortest note still crosses a single step boundary, in its final
-     * ~12 ms. Whether that crossing reaches an actual second rung depends
-     * on BLOOM — at BLOOM 0 [ratchetLadder] never climbs past its bottom
-     * rung regardless (see that function's own doc), so there is nothing
-     * there to jump to; a higher BLOOM can open a second rung for even the
-     * shortest note to reach right at its tail.
-     */
-    const val RATCHET_STEP_SECONDS = 0.15f
+    const val STEP_SECONDS = 0.15f
 
     /**
      * PEAK as a ratio at the voice's own reference note. Exponential,
      * because the ear judges the peak's position by interval, not by Hz.
-     * Maps onto [K_MIN]..[kCeilingFor] rather than the raw [K_MIN]..[K_MAX]
-     * band, so PEAK's full 0..1 travel reaches whatever ceiling the voice's
-     * own mechanism allows instead of running past it and being chopped.
+     * One map for every voice, onto [K_MIN]..[K_MAX], so PEAK's full 0..1
+     * travel reaches the same ceiling on each instead of running past it and
+     * being chopped.
      */
-    fun ratioAtReference(peak: Float, voice: GlintVoice): Float = Dsp.expMap(peak, K_MIN, kCeilingFor(voice))
+    fun ratioAtReference(peak: Float): Float = Dsp.expMap(peak, K_MIN, K_MAX)
 
     /**
      * Integers put the peak exactly on a harmonic — k=3 the octave-and-a-
@@ -307,10 +261,43 @@ object Glint {
      * the same flat ratio and rendered byte-identical. Quantization for the
      * ear, full resolution for the diff — never conflate them again.
      *
-     * The base ratio snaps; BLOOM modulates continuously on top of it. That
-     * is what makes the knob musical and the sweep smooth.
+     * The base ratio snaps; BLOOM's path runs continuously into it on SWEEP
+     * and BRASS, and in whole harmonics on STEP. That is what makes the knob
+     * musical and the sweep smooth.
      */
     fun snapRatio(k: Float): Float = if (k in SNAP_FLOOR..SNAP_CEILING) Math.round(k).toFloat() else k
+
+    /** BLOOM as a sign value: -1 fully below, 0 still, +1 fully above. */
+    fun bloomSign(bloom: Float): Float = 2f * bloom.coerceIn(0f, 1f) - 1f
+
+    /** Where the path starts for sign value [s]: symmetric in log-ratio, clamped to K_MIN..K_MAX. */
+    fun startRatio(kBase: Float, s: Float): Float {
+        val a = kotlin.math.abs(s) * BLOOM_MAX
+        val k = if (s >= 0f) kBase * (1f + a) else kBase / (1f + a)
+        return k.coerceIn(K_MIN, K_MAX)
+    }
+
+    /**
+     * STEP's rungs in time order: whole harmonics from [kStart] toward the
+     * landing, then the landing itself — [snapRatio]`(kBase)`, which stays
+     * unrounded outside SNAP_FLOOR..SNAP_CEILING for the reason
+     * [SNAP_FLOOR]'s own doc gives (two velocity layers must not collapse
+     * onto one rung). Falling for a start above PEAK, rising for one below,
+     * one rung for BLOOM 0.5.
+     */
+    internal fun stepLadder(kBase: Float, kStart: Float): FloatArray {
+        val landing = snapRatio(kBase.coerceIn(K_MIN, K_MAX))
+        val rungs = ArrayList<Float>()
+        if (kStart > landing) {
+            var k = kotlin.math.floor(kStart)
+            while (k > landing) { rungs.add(k); k -= 1f }
+        } else if (kStart < landing) {
+            var k = kotlin.math.ceil(kStart)
+            while (k < landing) { rungs.add(k); k += 1f }
+        }
+        rungs.add(landing)
+        return rungs.toFloatArray()
+    }
 
     /** The centre of the voice's own TUNE range — where FOLLOW has no work to do. */
     fun referenceHz(voice: GlintVoice): Float = frequencyFor(voice, 0.5f)
@@ -333,9 +320,9 @@ object Glint {
     fun ratioFor(voice: GlintVoice, tune: Float, peak: Float, follow: Float): Float {
         val reference = referenceHz(voice)
         val f0 = frequencyFor(voice, tune)
-        val peakHzAtReference = ratioAtReference(peak, voice) * reference
+        val peakHzAtReference = ratioAtReference(peak) * reference
         val peakHz = Dsp.keyTrack(peakHzAtReference, f0, reference, follow)
-        return snapRatio((peakHz / f0).coerceIn(K_MIN, kCeilingFor(voice)))
+        return snapRatio((peakHz / f0).coerceIn(K_MIN, K_MAX))
     }
 
     /**
@@ -349,221 +336,52 @@ object Glint {
      */
     internal fun bodyRatio(kBase: Float): Float = (kBase / BODY_RATIO_DIVISOR).coerceAtLeast(K_MIN)
 
-    /**
-     * The integer harmonics RATCHET steps through, bottom rung first.
-     *
-     * Every rung above the bottom is a whole number — "steps between fixed
-     * harmonics" is the mechanism, and a fractional rung would be a glide
-     * that happens to be quantised in time, a different and much duller
-     * thing. The bottom rung is the one exception: it is
-     * [snapRatio]`(kBase)`, not `Math.round(kBase)`. Below [SNAP_FLOOR],
-     * `snapRatio` is identity, so the bottom rung stays unrounded there —
-     * the same trade [SNAP_FLOOR]'s own doc already made for [ratioFor],
-     * now honoured here too instead of walked around.
-     *
-     * Rounding the bottom unconditionally was this function's first
-     * version, and it reintroduced [SNAP_FLOOR]'s bug on a second path: two
-     * kBase values inside `[K_MIN, SNAP_FLOOR)` that differ from each other
-     * — 2.0515814 and 2.1234918, PEAK 0.02's velocity-soft and
-     * velocity-hard values — both rounded to bottom rung 2 and produced
-     * byte-identical ladders `[2, 3, 4]`. Measured before this fix, at PEAK
-     * 0.02, 0.04 and 0.06: RATCHET was the one voice where a soft and a
-     * hard render came out identical, failing `velocity always changes the
-     * render, at every PEAK`. With the bottom rung left unrounded, the same
-     * two kBase values give `[2.0515814, 3, 4]` and `[2.1234918, 3, 4]` —
-     * different bottom rungs, different renders.
-     *
-     * Inside [SNAP_FLOOR]..[SNAP_CEILING] this changes nothing: [snapRatio]
-     * already rounds there, the same way `Math.round` did, so a `kBase`
-     * that arrives already snapped to an integer — every call from
-     * [synthesize] does, via [ratioFor] — produces the identical ladder
-     * either way. Measured at kBase=8 (inside the snap band): BLOOM
-     * 0.25/0.5/1 give the same rung counts and the same rungs,
-     * 8..14 / 8..20 / 8..32, before and after this change.
-     *
-     * Above [SNAP_CEILING] the same free-bottom-rung change applies as
-     * below [SNAP_FLOOR], for the identical reason: [snapRatio] is
-     * identity above the ceiling too, so a `kBase` up there stays
-     * unrounded rather than snapping to the nearest integer. Measured at
-     * PEAK 0.7, `TUNE` 0.5, `FOLLOW` 0.8 (`kBase` = 16.28362 — at `TUNE`
-     * 0.5 the note sits exactly at the voice's own reference, so `FOLLOW`
-     * has nothing to track and this reduces to plain [ratioAtReference]):
-     * the old, unconditional `Math.round` would have given a bottom rung
-     * of 16; this version keeps it at 16.28362.
-     *
-     * This is exactly what closes the remaining gap between RATCHET's and
-     * KAZOO's PEAK-sweep rows in `GlintTest`'s `PEAK sweep is monotonic`,
-     * whose own fixture (`TUNE` 0.4, `FOLLOW` 1) reduces to the same
-     * [ratioAtReference] mapping by the opposite route — `FOLLOW` 1 tracks
-     * the note fully, which cancels `TUNE`'s offset in [ratioFor]'s own
-     * `keyTrack` call. The three points that differed before this fix
-     * there — PEAK 0.625, 0.75 and 0.875, `kBase` 13.006898, 18.914833 and
-     * 27.506243 — are all above [SNAP_CEILING], not inside the snap band,
-     * same as this paragraph's own example.
-     *
-     * The ladder climbs from the bottom by whole harmonics up to `kBase *
-     * (1 + bloomAmount)`, BLOOM's extent.
-     *
-     * Bounded by [kCeilingFor] for [GlintVoice.RATCHET], not a bare [K_MAX]:
-     * the same ceiling [ratioFor] already clamped [kBase] to, so this can
-     * never ask for a rung a note could not otherwise reach. RATCHET is
-     * never CICADA, so this is [K_MAX] today, but the call stays rather than
-     * inlining the constant — see [kCeilingFor]'s own doc on why it has to
-     * be one definition shared by every site that bounds a ratio, not a
-     * value copied into a fourth place that could drift from the other
-     * three.
-     *
-     * Always at least one rung — the bottom is added unconditionally, not
-     * only when the climb finds nothing — so a note shorter than one step
-     * still has a ratio to render.
-     */
-    internal fun ratchetLadder(kBase: Float, bloomAmount: Float): FloatArray {
-        val kCeiling = kCeilingFor(GlintVoice.RATCHET)
-        val bottom = snapRatio(kBase.coerceIn(K_MIN, kCeiling))
-        val top = (kBase * (1f + bloomAmount)).coerceIn(K_MIN, kCeiling)
-        val rungs = ArrayList<Float>()
-        rungs.add(bottom)
-        var k = floor(bottom) + 1f
-        while (k <= top && rungs.size < kCeiling.toInt()) {
-            rungs.add(k)
-            k += 1f
-        }
-        return rungs.toFloatArray()
-    }
-
     internal fun synthesize(voice: GlintVoice, macros: Map<String, Float>, rate: Int): FloatArray {
         val m = defaults(voice) + macros
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 1.4f)
         val frames = (t60 * 1.35f * rate).toInt().coerceAtLeast(64)
-
-        val kBase = ratioFor(voice, m.getValue("TUNE"), m.getValue("PEAK"), m.getValue("FOLLOW"))
-        val bloomAmount = Dsp.lin(m.getValue("BLOOM"), 0f, BLOOM_MAX)
-        val bloomT60 = BLOOM_T60
-        // Equalises CICADA's effective ceiling against every other voice's
-        // K_MAX - see kCeilingFor's doc for why K_MAX / CICADA_SUBCYCLES is
-        // the right number, not a tuned one. Applied here so BLOOM's boost
-        // cannot push the instantaneous k past that ceiling either; measured
-        // without this, at TUNE 0.3 PEAK 0.4 BLOOM 1 the onset carrier
-        // reached ~36.9 kHz (kBase 7 boosted 4x by BLOOM, times the
-        // sub-clock's own 4x) against a 22.05 kHz output Nyquist, and the
-        // attack BLOOM is supposed to open collapsed instead.
-        //
-        // bodyRatio's k2 is not itself clamped by this - it is derived from
-        // kBase directly, below - but it is not unaffected: kCeilingFor also
-        // bounds kBase now (see ratioFor), and CICADA's kBase can never
-        // exceed 10, so bodyRatio(10) = 1.79 floors to K_MIN (2) at every
-        // PEAK. CICADA's BODY ratio is therefore pinned at K_MIN across its
-        // whole range, unlike every other voice, where the same floor only
-        // binds below kBase ≈ 11.2 (see BODY_RATIO_DIVISOR's doc). BODY's
-        // level still responds to the BODY macro; only its ratio is frozen
-        // for this one voice - a known consequence of the equalisation, not
-        // something resolved here.
-        val kCeiling = kCeilingFor(voice)
-
+        val path = GlintPath.of(voice, m, f0)
         val amp = Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60)
-        val bodyMix = m.getValue("BODY") * BODY_MIX
-        val bodyT60 = t60 * BODY_DECAY_RATIO
-        // Its own envelope, not the amp envelope times another one. The term
-        // this replaced was scaled twice — by its own decay and then by the
-        // amp's — so two exponentials composed and its real decay was ~0.31x
-        // t60 rather than the constant it claimed. One envelope now, with
-        // the same 2 ms attack so the onset does not click.
-        val bodyEnv = Dsp.Env(attackSeconds = 0.002f, decay2T60 = bodyT60)
-        // The second formant is pinned to the *base* ratio, not the
-        // bloom-modulated one: it is a separate resonance, not a shadow of
-        // the first.
-        val k2 = bodyRatio(kBase)
-        val step = f0 / rate
-        var phase = 0f
+        // The second burst's own envelope - one envelope, not two composed
+        // (see BODY_DECAY_RATIO's doc). VOWEL's second burst is the same
+        // mouth as its first, so it rides the amp envelope.
+        val env2 = if (voice == GlintVoice.VOWEL) {
+            amp
+        } else {
+            Dsp.Env(attackSeconds = 0.002f, decay2T60 = t60 * BODY_DECAY_RATIO)
+        }
+        // The one-shot clock: SWEEP and VOWEL run x down on BLOOM_T60, BRASS
+        // on its own level (so it lands as the note dies), STEP by rung.
+        fun x(t: Float): Float = if (voice == GlintVoice.BRASS) amp.at(t) else Dsp.envAt(t, BLOOM_T60)
+        fun rung(t: Float): Int = if (path.ladder != null) (t / STEP_SECONDS).toInt() else -1
+        val k = FloatArray(2)
+        // The first read is the path's start (x = 1), not x(0f): BRASS's x is
+        // its own level, which is 0 at t = 0 - the first cycle would play at PEAK.
+        path.ratios(1f, rung(0f), k)
+        val step = f0.toDouble() / rate
+        var phase = 0.0
         val out = FloatArray(frames)
-        // RATCHET resolves its whole ladder once, up front - BLOOM only sets
-        // how far it reaches, not a per-sample computation - and then only
-        // ever reads one rung of it per sample. `rung` advances exclusively
-        // at the phase wrap below; nothing in the per-sample body ever
-        // touches it.
-        val ladder = if (voice == GlintVoice.RATCHET) ratchetLadder(kBase, bloomAmount) else null
-        var rung = 0
-
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
-            // CICADA re-clocks the carrier inside every cycle: N nested copies
-            // of the window and burst, instead of one. The window is applied
-            // to the SUB-phase, which is what makes each inner restart land on
-            // silence — window it on `phase` and it clicks N times a cycle
-            // instead of never. Both the window and the burst are functions of
-            // this sub-phase alone, so the whole waveform repeats at N * f0 —
-            // CICADA's real fundamental, heard about two octaves above the
-            // note it plays (see rootHz's own doc for the same relationship
-            // at the root) — and, N being an integer, that period divides
-            // f0's own, so the pattern also repeats at f0. See
-            // CICADA_SUBCYCLES's own doc for what a fractional N would cost
-            // instead: a click at the truncated restart, not a pitch change
-            // — periodicity at f0 survives either way.
-            val carrier = if (voice == GlintVoice.CICADA) {
-                val scaled = phase * CICADA_SUBCYCLES
-                scaled - floor(scaled)
-            } else {
-                phase
-            }
-            val w = windowAt(voice, carrier)
-            val k = when (voice) {
-                // RATCHET's k only ever changes at the phase wrap below, not
-                // here: its trapezoid window is 1 at phase 0 (KAZOO_FLAT > 0)
-                // and only reaches zero at the cycle's end, so a k picked
-                // mid-cycle would multiply a wide-open window by a sine at an
-                // arbitrary phase for the OLD k one sample and the NEW k the
-                // next - a real discontinuity, once per step. Reading `rung`
-                // here is safe precisely because it is frozen for the whole
-                // cycle; only the wrap is allowed to move it.
-                GlintVoice.RATCHET -> ladder!![rung]
-                // PLATE has no clock of its own: the formant is a function of
-                // how loud the note currently is, so it falls exactly as the
-                // note falls and a longer DECAY holds the brightness longer
-                // in absolute time - a struck plate is brightest at the
-                // strike. BLOOM is the depth of that coupling, not a rate,
-                // which is why PLATE never reads bloomT60 (BLOOM_T60's own
-                // doc names this). amp.at(t) is called again here, not
-                // hoisted: Dsp.Env.at is pure (Dsp.kt), so a second call at
-                // the same t returns the same value as the one already taken
-                // for the output gain below.
-                GlintVoice.PLATE -> (kBase * (1f + bloomAmount * amp.at(t))).coerceIn(K_MIN, kCeiling)
-                // kBase is snapped; BLOOM modulates continuously on top of it,
-                // so the knob is musical and the sweep is smooth. k moves on
-                // the envelope's timescale, far slower than one cycle, so the
-                // inner sine stays effectively periodic while restarting at
-                // each wrap.
-                else -> (kBase * (1f + bloomAmount * Dsp.envAt(t, bloomT60))).coerceIn(K_MIN, kCeiling)
-            }
-            val burst = w * sin(2.0 * PI * k * carrier).toFloat()
-            // Not because a windowed sine has no DC — it does, for any
-            // window that isn't symmetric about phase 0.5: REED's ramp and
-            // KAZOO's trapezoid both integrate to a nonzero mean (BOTTLE's
-            // triangle is the one window here that nulls it). This stays
-            // uncorrected because subtracting a constant would stop it
-            // reaching exactly zero at the wrap — the property this file's
-            // class doc calls the whole engine — and the residual is small
-            // (a few percent of peak in the head window at BODY 1) and
-            // decays with bodyEnv; see `BODY carries a small, bounded DC`
-            // in GlintTest.
-            // The body rides the same carrier, for the same reason: a second
-            // formant still running on `phase` would be non-zero at every
-            // sub-boundary and would click there even though the burst is
-            // clean.
-            val body = bodyMix * w * sin(2.0 * PI * k2 * carrier).toFloat()
-            out[i] = amp.at(t) * burst + bodyEnv.at(t) * body
+            val w = windowAt(phase.toFloat())
+            val burst = w * sin(2.0 * PI * k[0] * phase).toFloat()
+            // Left uncorrected on purpose. The saw ramp isn't symmetric about
+            // phase 0.5, so a saw-windowed burst carries 1/(2πk) of DC per
+            // cycle: a few percent of peak in the head window on the path
+            // voices (`BODY carries a small, bounded DC` in GlintTest), and up
+            // to about 0.12 on VOWEL at the top of TUNE, where F1 pins to
+            // k = 1. It decays with the note. Subtracting a constant would
+            // stop the window reaching exactly zero at the wrap - the
+            // property this file's class doc calls the whole engine.
+            val second = path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
+            out[i] = amp.at(t) * burst + env2.at(t) * second
             phase += step
-            if (phase >= 1f) {
-                phase -= 1f
+            if (phase >= 1.0) {
+                phase -= 1.0
                 // The only instant a ratio change is free: the window has
-                // just reached zero, so any k starts the new cycle from
-                // silence instead of breaking a wide-open one. `t` is this
-                // sample's own time, not the wrapped-to sample's - RATCHET's
-                // ~150 ms step is long enough next to one cycle that which
-                // side of the wrap names the boundary is inaudible.
-                if (ladder != null) {
-                    rung = (t / RATCHET_STEP_SECONDS).toInt().coerceAtMost(ladder.size - 1)
-                }
+                // just reached zero. Every voice moves k here and only here.
+                path.ratios(x(t), rung(t), k)
             }
         }
         return out
