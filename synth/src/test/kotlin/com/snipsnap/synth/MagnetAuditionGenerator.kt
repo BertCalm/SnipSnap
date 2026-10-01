@@ -16,8 +16,8 @@ import kotlin.math.roundToInt
 /**
  * Renders MAGNET's R1 listening clips under testkit/magnet-audition/ (gitignored): the questions
  * the owner answers by ear before any preset is written
- * (docs/superpowers/plans/2026-09-30-magnet-r1.md, Task 5). Nothing in MAGNET has been heard when
- * this is first run.
+ * (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "Phasing and gates"): until they are
+ * heard, MAGNET's numbers are shape values.
  *
  * - KIT: the sixteen pads of [SynthKits.magnet] as they land.
  * - LAND: CHUG through VALVE at the three landing DRIVEs by two CABs, each labelled by the gain

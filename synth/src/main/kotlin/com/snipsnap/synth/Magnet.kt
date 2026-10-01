@@ -15,7 +15,8 @@ enum class MagnetVoice { JANGLE, CHUG }
  * MAGNET - an electric guitar string, dry, ready for VALVE (the rack's amp section).
  *
  * The string is [Strings.pluck] at a pick position of 0.085 of the string (the spike's 0.10 left a
- * fixed hole at the tenth harmonic on every note), trimmed to its decay, read through a pickup:
+ * fixed hole at the tenth harmonic on every note), trimmed to its decay and faded out over its
+ * last 150 ms where the trim cut it, read through a pickup:
  * Jaffe and Smith's position comb on the string's output ([Strings.pickup]), neck and bridge
  * weighted by BLEND, a humbucker as two aligned coils, then the pickup's resonance. The rest is the
  * melodic output chain. The amp is not in here: [landingChain] is the recipe that lands a pad
@@ -37,6 +38,19 @@ object Magnet {
     /** The string's budget and the trim's floor: the spike's rule (the only one with measurements behind it). */
     private const val STRING_SECONDS = 4.0f
     private const val FLOOR_SECONDS = 0.25f
+
+    /**
+     * The squared fade over the last milliseconds of a string whose trim ended it on its decay.
+     * [Strings.trimToDecay] cuts such a string 60 dB under its peak with no fade, and VALVE lifts
+     * that quiet end by its own gain (22 dB at CHUG's landing, 40 dB at gain 106), so a cut nobody
+     * hears dry ends abruptly through the amp; a fade before the amp survives it. 150 ms is the
+     * shortest of 50, 100, 150 and 200 ms that leaves a landed note's last 20 ms with a peak at
+     * least 50 dB under the note's peak at every TUNE step, through CHUG's landing (worst 67.5 dB
+     * under), CHUG at gain 106 (50.7), the kit's lead amp (57.3) and JANGLE's landing (97.5); 100 ms
+     * leaves gain 106 at 43.8. A string the ring ceiling or the budget cut is already faded by the
+     * trim and is left as it is.
+     */
+    private const val TAIL_FADE_MS = 150f
 
     /** The exciter's corner at PICK 0 and 1 (shape): a thumb to a wire, wider than the spike's 4.6x. */
     private const val PICK_MIN_HZ = 600f
@@ -129,7 +143,10 @@ object Magnet {
     /** The rack chain that lands a [voice] pad through VALVE. Never null: MAGNET has no loop mode. */
     fun landingChain(voice: MagnetVoice): FxChain = FxChain().withSection("valve", LANDING_VALVE.getValue(voice))
 
-    /** The dry electric string at [RENDER_RATE], before any pickup: trimmed to its decay. */
+    /**
+     * The dry electric string at [RENDER_RATE], before any pickup: trimmed to its decay and, where
+     * the trim ended it on its decay, faded over its last [TAIL_FADE_MS].
+     */
     internal fun string(voice: MagnetVoice, macros: Map<String, Float>): FloatArray {
         val m = settled(macros, voice)
         val spec = specFor(voice)
@@ -138,7 +155,21 @@ object Magnet {
         val pickHz = Dsp.expMap(m.getValue("PICK"), PICK_MIN_HZ, PICK_MAX_HZ)
         val seed = Dsp.seedFor("MAGNET", voice.name, f0)
         val raw = Strings.pluck(f0, STRING_SECONDS, damping, pickHz, seed, RENDER_RATE, position = PICK_POSITION)
-        return Strings.trimToDecay(raw, RENDER_RATE, FLOOR_SECONDS, STRING_SECONDS)
+        val trimmed = Strings.trimToDecay(raw, RENDER_RATE, FLOOR_SECONDS, STRING_SECONDS)
+        // A trim on the decay returns a shorter copy; a ceiling or budget cut returns [raw] itself, already faded.
+        if (trimmed.size < raw.size) fadeSquared(trimmed, TAIL_FADE_MS, RENDER_RATE)
+        return trimmed
+    }
+
+    /** A squared fade over the last [ms] of [buf], in place: the shape [Strings.trimToDecay] gives a string cut at the ring ceiling. */
+    private fun fadeSquared(buf: FloatArray, ms: Float, rate: Int) {
+        val n = minOf(buf.size, (ms / 1000f * rate).toInt())
+        if (n <= 0) return
+        val start = buf.size - n
+        for (i in 0 until n) {
+            val g = 1f - i.toFloat() / n
+            buf[start + i] *= g * g
+        }
     }
 
     /**
@@ -183,9 +214,13 @@ object Magnet {
      * The melodic output chain, copied from the other engines' (`Bore.condition` and `Bore.finish`
      * with rasp and bite at zero are the authority for the exact calls): band-limit, decimate to the
      * rack's rate, remove the mean and the DC corner, level to the melodic target, fade the tail.
-     * Works in place on [buf] and returns the rack-rate samples.
+     * Works in place on [buf] and returns the rack-rate samples. [buf] is at [RENDER_RATE] and no
+     * other rate: the decimator always brings it down to `Dsp.RATE` by the oversampling factor, so a
+     * buffer at another rate would be band-limited at one rate and decimated at another. [rate]
+     * stays a parameter to name what the caller believes it is passing.
      */
     internal fun finish(buf: FloatArray, rate: Int): FloatArray {
+        require(rate == RENDER_RATE) { "finish reads a buffer at RENDER_RATE ($RENDER_RATE Hz), not $rate Hz" }
         Tide.bandLimit(buf, rate)
         val out = Dsp.decimate(buf, Dsp.RATE)
         var sum = 0.0

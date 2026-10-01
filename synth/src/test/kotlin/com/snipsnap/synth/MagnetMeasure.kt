@@ -2,16 +2,14 @@ package com.snipsnap.synth
 
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * What MAGNET's measured tests read off the dry string at [Magnet.RENDER_RATE]. The second copy,
- * by ruling, of the correlation and the dB ratio that [StringsPickupTest] keeps privately (one
- * shared copy for MAGNET's tests), and the harmonic read the comb, the humbucker and BLEND claims
- * share.
+ * What MAGNET's measured tests read off the dry string at [Magnet.RENDER_RATE]: a copy of the
+ * correlation that [StringsPickupTest] keeps privately (one shared copy for MAGNET's tests), and
+ * the harmonic read the comb, the humbucker and BLEND claims share.
  */
 internal object MagnetMeasure {
 
@@ -26,8 +24,6 @@ internal object MagnetMeasure {
         }
         return 2 * sqrt(re * re + im * im) / y.size
     }
-
-    fun db(a: Double, b: Double) = 20 * log10(a.coerceAtLeast(1e-12) / b.coerceAtLeast(1e-12))
 
     /**
      * Levels of harmonics 1..[n] of [x] near [f0], between [from] and [to] seconds, in dB against

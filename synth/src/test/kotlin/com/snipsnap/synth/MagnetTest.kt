@@ -20,13 +20,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * MAGNET's contract (docs/superpowers/plans/2026-09-30-magnet-r1.md): the macros, the notes,
- * a deterministic clean render at every corner and every TUNE step, the output chain's DC
- * handling, the patch's refusals and round trip, the landing chain, and the velocity registration.
+ * MAGNET's contract (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "Testing"): the
+ * macros, the notes, a deterministic clean render at every corner and every TUNE step, the render
+ * as the dry string through the pickup and the output chain and nothing else, the output chain's
+ * DC handling, the patch's refusals and round trip, the landing chain, the end of a landed note,
+ * and the velocity registration.
  * The measured claims: every note within 5 cents on the dry string, the comb and humbucker notches,
- * BLEND's spectral swing, MUTE's length and centroid, PICK's centroid sweep (monotonic and at least
- * 1 percent per tenth at the defaults), the pitch through VALVE (within 10 cents at each landing),
- * and a landed pad regenerating bit for bit.
+ * BLEND's spectral swing, MUTE's length and centroid, PICK's centroid sweep (at least 1 percent per
+ * tenth at the defaults, never falling at the corners of MUTE, TUNE and BLEND), the pitch through
+ * VALVE (within 10 cents at each landing), and a landed pad regenerating bit for bit.
  */
 class MagnetTest {
 
@@ -73,6 +75,32 @@ class MagnetTest {
             assertEquals(1, a.channels)
             assertEquals(Dsp.RATE, a.sampleRate)
         }
+    }
+
+    @Test
+    fun `the render is the dry string through the pickup and the output chain and nothing else`() {
+        // Bit for bit, for both voices at the defaults and at an off-default set: the real call chain,
+        // string, then pickup, then finish. The arrays are copied before finish, which works in place.
+        val offDefault = mapOf("TUNE" to 0.3f, "MUTE" to 0.7f, "PICK" to 0.2f, "BLEND" to 0.8f)
+        for (v in voices) {
+            for ((name, macros) in listOf("defaults" to Magnet.defaults(v), "off default" to Magnet.defaults(v) + offDefault)) {
+                val m = Magnet.settled(macros, v)
+                val f0 = Magnet.frequencyFor(v, m.getValue("TUNE"))
+                val string = Magnet.string(v, m).copyOf()
+                val picked = Magnet.pickup(v, string, f0, m.getValue("BLEND")).copyOf()
+                val expected = Magnet.finish(picked, Magnet.RENDER_RATE)
+                assertContentEquals(expected, Magnet.render(v, macros).samples, "$v at $name")
+            }
+        }
+    }
+
+    @Test
+    fun `finish refuses a buffer at any rate but the render rate`() {
+        val e = assertFailsWith<IllegalArgumentException> { Magnet.finish(FloatArray(8), Dsp.RATE) }
+        assertTrue(
+            "${Magnet.RENDER_RATE}" in e.message.orEmpty() && "${Dsp.RATE}" in e.message.orEmpty(),
+            "the refusal does not name both rates: ${e.message}",
+        )
     }
 
     /**
@@ -236,6 +264,43 @@ class MagnetTest {
         val patch = MagnetPatch("Dry", MagnetVoice.CHUG, Magnet.defaults(MagnetVoice.CHUG))
         val landed = PadRecipe(patch, Magnet.landingChain(MagnetVoice.CHUG)).render()
         assertFalse(patch.render().samples.contentEquals(landed.samples), "the landing chain changed nothing")
+    }
+
+    /**
+     * The peak of [s]'s last 20 ms against the peak of the whole note, in dB (negative: under). The
+     * peak of the window, not its RMS: it is the stricter of the two, and the one that read a landed
+     * CHUG pad's end at 33.5 to 37.8 dB under before the string was faded ahead of the amp.
+     */
+    private fun endDb(s: Snip): Double {
+        val n = (0.02f * s.sampleRate).toInt()
+        var tail = 0f
+        for (i in s.samples.size - n until s.samples.size) tail = maxOf(tail, abs(s.samples[i]))
+        return 20 * log10(tail.coerceAtLeast(1e-9f) / s.peak().coerceAtLeast(1e-9f).toDouble())
+    }
+
+    @Test
+    fun `a landed CHUG note ends at least 50 dB under its peak at every TUNE step`() {
+        // All 25 steps at the defaults, through CHUG's landing chain and through gain 106 (DRIVE 0.85,
+        // the specification's original number on VALVE's present law). Trimming the string leaves its end
+        // 60 dB under its peak and the amp lifts that by its gain: the fade ahead of the amp is what ends it.
+        val v = MagnetVoice.CHUG
+        val landings = linkedMapOf(
+            "landing" to Magnet.landingChain(v),
+            "gain 106" to FxChain().withSection("valve", mapOf("DRIVE" to 0.85f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f)),
+        )
+        assertEquals(106f, Valve.gainFor(0.85f), 1f)
+        val worst = linkedMapOf<String, Pair<Double, Int>>()
+        val short = ArrayList<String>()
+        for (step in 0..Magnet.TUNE_SEMITONES) {
+            val dry = Magnet.render(v, Magnet.defaults(v) + ("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat()))
+            for ((name, chain) in landings) {
+                val db = endDb(chain.process(dry))
+                if (worst[name]?.let { db > it.first } != false) worst[name] = db to step
+                if (!(db <= -50.0)) short.add("$v TUNE step $step through $name ends ${MagnetMeasure.round(db)} dB under its peak")
+            }
+        }
+        println("MAGNET landed end: " + worst.entries.joinToString("; ") { "${it.key} worst ${MagnetMeasure.round(it.value.first)} dB at step ${it.value.second}" })
+        assertTrue(short.isEmpty(), "a landed note ends too loudly: ${short.take(5)} (${short.size} in all)")
     }
 
     @Test
@@ -457,6 +522,39 @@ class MagnetTest {
         assertTrue(falls.isEmpty(), "PICK lowers the centroid: $falls")
         assertTrue(flat.isEmpty(), "PICK does not raise the centroid end to end: $flat")
         assertTrue(short.isEmpty(), "PICK moves the centroid under 1 percent at a tenth: $short")
+    }
+
+    @Test
+    fun `PICK never lowers the centroid at the corners of MUTE, TUNE and BLEND`() {
+        // PICK is registered as velocity's brightness macro, so a softer hit must be darker wherever the
+        // other three macros sit, not only at the defaults. Each voice at four of the eight corners of MUTE,
+        // TUNE and BLEND (the long low note with the neck pickup, the short high note with the bridge, and
+        // the two mixed corners, so each macro is read at both ends twice), PICK 0 to 1 in tenths, the
+        // centroid read on the rendered note: it may not fall from one tenth to the next. The count of falls
+        // prints before the assertion runs. The other four corners cost as many renders again.
+        val tenths = (0..10).map { it / 10f }
+        val corners = listOf(
+            mapOf("MUTE" to 0f, "TUNE" to 0f, "BLEND" to 0f),
+            mapOf("MUTE" to 1f, "TUNE" to 1f, "BLEND" to 1f),
+            mapOf("MUTE" to 0f, "TUNE" to 1f, "BLEND" to 1f),
+            mapOf("MUTE" to 1f, "TUNE" to 0f, "BLEND" to 0f),
+        )
+        val falls = ArrayList<String>()
+        var worstFall = 0.0
+        for (v in voices) {
+            for (corner in corners) {
+                val hz = tenths.map { p -> FeatureExtractor.extract(Magnet.render(v, Magnet.defaults(v) + corner + ("PICK" to p))).centroidHz }
+                for (i in 1..10) {
+                    if (!(hz[i] >= hz[i - 1])) {
+                        falls.add("$v $corner PICK ${tenths[i - 1]} to ${tenths[i]}: ${hz[i - 1]} Hz to ${hz[i]} Hz")
+                        worstFall = maxOf(worstFall, 100.0 * (hz[i - 1] - hz[i]) / hz[i - 1])
+                    }
+                }
+                if (!(hz[10] > hz[0])) falls.add("$v $corner: PICK 1 reads ${hz[10]} Hz, not above PICK 0's ${hz[0]} Hz")
+            }
+        }
+        println("MAGNET PICK corners: ${voices.size * corners.size} voice and corner sweeps, ${falls.size} falls, worst fall ${MagnetMeasure.round(worstFall, 2)} percent")
+        assertTrue(falls.isEmpty(), "PICK lowers the centroid at a corner: ${falls.take(5)} (${falls.size} in all)")
     }
 
     /**
