@@ -27,7 +27,8 @@ FORK and MAGNET landed the same way) beside its sibling, the Group A spec, and
 the Phase-0 record.
 **Date:** 2026-09-30
 **Plan:** to be written per round: `docs/superpowers/plans/2026-09-30-terra-hook-r1.md`
-(HIT in the engine), `…-r2.md` (TERRA on the phone), `…-r3.md` (BEND and TALK),
+(HIT in the engine) and its addendum `docs/superpowers/plans/2026-10-01-terra-hook-r1b.md`
+(HIT's floor, the rattle pinned, R1b's page), `…-r2.md` (TERRA on the phone), `…-r3.md` (BEND and TALK),
 `…-r4.md` (the pad-sheet group and the shared chooser). The Phase-0 record is
 [`../plans/2026-09-30-chimera-phase-0-record.md`](../plans/2026-09-30-chimera-phase-0-record.md),
 kept outside the build as ARCO's was; it holds the experiments' method, the
@@ -573,7 +574,7 @@ the waveform after reopening, not a step (phase0 §3, §5 item 6).
 | A-D (read at the drooping pitch) | missed its per-mode gate by 1.9–3.5 dB at `75b550c1` (phase0 G-A4) | kept out of R1; first fix candidate if HIT 1 is heard as weak |
 | RUNG's impulse equivalence on the cavity | 0.0951 dB against a 0.06 target (phase0 G-B1) | RUNG is not adopted; no tolerance is widened |
 | The round-two page | 111 clips; the owner gave up | every gate: ≤ 10 clips, ≤ 3 questions |
-| The brief's "level match keeps BUZZ and CAVITY drive" | BUZZ 0.05–1.25× today at HIT 1 (phase0 §4.7) | an owner decision with a default; test 6 is printed, not pinned, until R1's page answers question 3, and then pins the measured per-striker figures |
+| The brief's "level match keeps BUZZ and CAVITY drive" | BUZZ 0.05–1.25× today at HIT 1 (phase0 §4.7) | an owner decision with a default, taken 2026-10-01 at R1's page (BUZZ follows the striker); test 6 was printed in R1 and is pinned in R1b to the measured per-striker figures |
 | The round-one clips as a reference | 3.6–15.9 dB darker than a correct ring (struck-r2-spec §8.1) | never used as "today" |
 
 ### Where this document departs from the brief
@@ -588,7 +589,7 @@ were not in the brief that was approved.
 
 | # | The brief says | What was measured or found | What this document does |
 |---|---|---|---|
-| 1 | HIT's algorithm: "s matches the peak of today's body". HIT's level match "keeps their [BUZZ's and CAVITY's] drive as today. Test it." The claims test: "BUZZ/CAVITY drive unchanged at the level match" | A peak match leaves the cavity's tanh within 4 % of linear but moves BUZZ's time above its threshold to 0.05–1.25 × today's at HIT 1 (phase0 §4.7). The two lines cannot both hold | **The one conflict.** Keeps the algorithm line (a peak match, the behaviour that was measured) and breaks the drive line for BUZZ; the default is **not owner-approved** and is decided at R1's page, question 3, before test 6 is pinned (decision 2) |
+| 1 | HIT's algorithm: "s matches the peak of today's body". HIT's level match "keeps their [BUZZ's and CAVITY's] drive as today. Test it." The claims test: "BUZZ/CAVITY drive unchanged at the level match" | A peak match leaves the cavity's tanh within 4 % of linear but moves BUZZ's time above its threshold to 0.05–1.25 × today's at HIT 1 (phase0 §4.7). The two lines cannot both hold | **The one conflict.** Keeps the algorithm line (a peak match, the behaviour that was measured) and breaks the drive line for BUZZ; the default was put to R1's page, question 3, and **taken 2026-10-01: "Follow the hit"**; test 6 is pinned in R1b (decision 2) |
 | 2 | "tuning stays within 2 cents", for every voice | Membrane, bell and bar read 0.00 cents at HIT 0.5. The cavity's final render reads up to 2.11 cents at 0.5 and 17.37 at 1, because the fixed 75 Hz stage and a one-peak estimator move the reading while the bank is exact (struck-r2-spec §8.9; phase0 T4) | The 2-cent claim is asserted on the cavity's bank before the cavity stage, and the final-render reading is printed (test 2) |
 | 3 | "the three-clip HIT-at-1 listening check" | Two strikers and two recipes need a pair each, and the heard RUNG clip has to be reproduced and rebuilt (phase0 §6) | Six clips were built, inside the ten-clip, three-question limit, and are **proposed, pending the owner's OK**; the default is the brief's three (`cm_unstruck`, `cm_hit1_wraith`, `cm_rung_wraith_heard`), which can ask question 1 only (decision 21; "Phasing and gates") |
 | 4 | A-D "missed its per-mode gate by 1.5–4.6 dB" | 1.85 / 3.47 / 2.33 dB, 1.9–3.5 at `75b550c1` (phase0 §3, G-A4) | Cites 1.9–3.5 dB; A-D stays out of R1 |
@@ -761,10 +762,10 @@ rattle follows the striker (0.05–1.25 times today's time above threshold at
 HIT 1). So the brief's algorithm line is kept and its drive line is broken for
 BUZZ, which is the one conflict ("Where this document departs from the brief",
 row 1). Whether BUZZ follows the striker (this document's default, the measured
-behaviour, **not owner-approved**) or is held near today's by a band-passed
-level match on the cavity (the drive line's intent, estimated and not
-measured) is the owner's decision 2, answered at R1's page before test 6 is
-pinned. TALK carries its own
+behaviour) or is held near today's by a band-passed level match on the cavity
+(the drive line's intent, estimated and not measured) was the owner's decision
+2. **Taken 2026-10-01 at R1's page: "Follow the hit"**, so BUZZ follows the
+striker, and R1b pins test 6 to it. TALK carries its own
 normalisation (the loudest mode keeps the unweighted loudest mode's level) and
 BEND does not change level at all.
 
@@ -818,7 +819,7 @@ refPeak  = peak of today's 0.65 · modalSum over the first 3·RR/f0 + 16 samples
 body_s   = TERRA's bank (droop, phases) with gains g_k · |P_k(n)|, no exciter,
            over the first max(3·RR/f0, M) + 64 samples
 s        = refPeak / peak(body_s)                                       the level match
-G_k(n)   = (1 − c) + c · s · |P_k(n)|                                   c = HIT
+G_k(n)   = (1 − c) + c · max(φ, s · |P_k(n)|)                           c = HIT, φ = HIT_FLOOR (R1b)
 bank     : modalSum += sin(phase_k) · (g_k · G_k(n)) · decay_k
 ```
 
@@ -830,6 +831,31 @@ bank     : modalSum += sin(phase_k) · (g_k · G_k(n)) · decay_k
   proved both on 40 cases each (phase0 G-P0d, G-P0e). At other values of `c`
   with an impulse, `(1 − c) + c` may differ from 1f by one rounding; the claims
   test states bit-identity at 0, 0.5 and 1 and a 1-ulp-of-gain bound elsewhere.
+- **The floor φ (R1b; decision 22).** R1's page answered its question 2 "Yes,
+  add a floor" (2026-10-01), so HIT's gain carries a floor:
+  `G_k(n) = (1 − c) + c · max(φ, s · |P_k(n)|)`. φ is a fraction of today's
+  per-mode level, so at HIT 1 no mode rings below φ × today's level, whatever
+  strikes the drum. `s` is computed exactly as R1 computes it, on the
+  unfloored `|P_k|`, and the floor is applied after it. φ = 0 is R1's HIT bit
+  for bit (a test pins it against a frozen copy of R1's colouring); `c = 0`
+  stays the null path at every φ, so the frozen 40-case guard is unchanged;
+  an impulse is untouched (`s · |P| = 1 ≥ φ`). φ applies on all four voices
+  and bites only where a mode would fall below it. Its value is a listening
+  value, picked on R1b's page from 0 (none), 0.125 (−18 dB), 0.25 (−12 dB)
+  and 0.5 (−6 dB); until then the code default is **0.25 (−12 dB),
+  provisional**. What it can do follows from the formula: at HIT 0.5 the
+  unfloored gain is already at least 0.5, so the floor lifts a mode by at most
+  a factor of 1 + φ (+1.0, +1.9 and +3.5 dB for the three non-zero choices),
+  and a striker's overtone balance moves by no more than that; at HIT 1 the
+  lift is unbounded in dB (a mode the head nearly misses rises from near
+  silence to φ). The floor also lifts every mode while `|P_k|` is still
+  rising through the head, so at HIT 1 it shortens the soft attack: decision
+  4's 14.0 ms and test 8's attack prints at HIT 1 are φ = 0 figures, and at
+  the default they read differently. The owner's question was asked about
+  subtle; the floor is auditioned at HIT 1, where it bites. φ is a code constant
+  (`Terra.HIT_FLOOR`), not recipe data, so a struck pad renders with whatever
+  φ the build holds; it settles before struck pads can be saved on the phone.
+  Every Phase-0 figure in this section is φ = 0.
 - **It keeps DROOP, CLACK, BUZZ and CAVITY natively**, because it is TERRA's
   own bank with its own phases, exciter, cavity stage, BUZZ, CLACK split and
   chain (struck-r2-spec §2 A).
@@ -1568,8 +1594,8 @@ from their recipes and the four factory WAVs.
 Which round first runs each: tests 1–3, 6–8 and 11 from R1; tests 4 and 5 from
 R1 on a patch with a striker only, **extended in R3** to a patch with all three
 drivers (test 1's `bend`/`talk`-absent cases arrive with those fields in R3);
-tests 9–10 are R3's. Test 6 is printed in R1 and pinned once R1's page, question
-3, is answered.
+tests 9–10 are R3's. Test 6 was printed in R1; R1's page answered question 3 on
+2026-10-01 ("Follow the hit"), and R1b pins it.
 
 1. **No inputs → byte-identical TERRA.** `Terra.render` equals the frozen
    `LegacyTerraBank` copy on the 40 cases (16 Terra Kit pads, four defaults, 20
@@ -1642,10 +1668,15 @@ tests 9–10 are R3's. Test 6 is printed in R1 and pinned once R1's page, questi
    bar 0.50–1.14 × and 0.05–1.24 ×) are printed per striker, each end within
    ±0.05 of its measured value. A change to `s`, to the bank's level or to the
    threshold moves these numbers and fails the test; a wide band would not.
-   The test encodes decision 2's default (BUZZ follows the striker, a peak
-   match). It is **printed, not pinned, in R1 until R1's page question 3 is
-   answered**; if the owner chooses the band-passed level match it is rewritten
-   as "within a stated ratio of today's" and pinned then.
+   The test encodes decision 2, **taken 2026-10-01** (BUZZ follows the
+   striker, a peak match). It was printed in R1 and is pinned in R1b under the
+   controller's ruling for R1b, which replaces the ±0.05 ratio bands above:
+   each figure within about ±20 % of its printed measurement, at φ = 0 against
+   R1's printed figures and at the floor default against figures recomputed
+   with the floor in place. The tanh cap (≤ 0.36, within 4 % of linear) stays
+   its own assertion. And at HIT 1 a dark head (THUMP KICK) keeps BUZZ above
+   its threshold longer than a bright one (WRAITH WORD), on the cavity and on
+   the bar, which is what "follows the striker" means.
 7. **A mode at zero level reopens in phase.** A level curve held at exactly 0
    for 20–60 ms on one membrane mode: the bank output inside the window equals
    the bank without that mode, and after reopening equals the no-curve bank
@@ -1732,7 +1763,8 @@ mono 44.1 kHz, levelled by `AuditionLevel.level`, written by
 | Phase | Ships | Gate |
 |---|---|---|
 | **0 — re-measure** (done, `phase0`; the record is `../plans/2026-09-30-chimera-phase-0-record.md`) | every TERRA number re-measured at `75b550c1`; `P0Bank`, the prototype of the two inputs; all numeric checks passed; one conflict escalated (BUZZ's drive) | **the HIT-at-1 listening check** below — pending the owner |
-| **R1 — HIT in the engine** | the frozen 40-case guard first; the two inputs and their null path; HIT's capture and colouring; `TerraPatch` with `Striker` and the version rule; claims tests 1–3, 7–8 and 11 (test 6 printed until R1's page, question 3), and tests 4–5 with a striker only | R1's page (10 clips, 3 questions) |
+| **R1 — HIT in the engine** | the frozen 40-case guard first; the two inputs and their null path; HIT's capture and colouring; `TerraPatch` with `Striker` and the version rule; claims tests 1–3, 7–8 and 11 (test 6 printed in R1, pinned in R1b), and tests 4–5 with a striker only | R1's page (10 clips, 3 questions; answered 2026-10-01) |
+| **R1b — HIT's floor and the rattle pinned** (from R1's answers) | the floor φ in HIT's gain (default 0.25, provisional), pinned bit for bit to R1's HIT at φ = 0; test 6 pinned to "BUZZ follows the striker" | R1b's page (10 clips, 2 questions) |
 | **R2 — TERRA on the phone** (may run alongside R1) | the precondition page first; then the 14th `Engine` entry, `TerraPresets` (8 per voice, by ear), `Terra.scramble`, `drumClassFor`, the starter kit, `PresetsTest`, README count, roadmap S20, the canaries | the precondition (10 clips, 3 questions), then R2's page (9 clips, 3 questions); the owner's phone is the final check of the picker |
 | **R3 — BEND and TALK** | G1 and F1 if Group A's SAY has not landed them; the pitch-track capture; TALK's bake and response; `bend` and `talk` on `TerraPatch`; claims tests 9–10, and tests 1, 4 and 5 extended to `bend` and `talk` | R3's page (10 clips, 3 questions) |
 | **R4 — the pad-sheet group and the shared chooser** | the chooser lifted from MUTATE (after Group A's BECOME); `TerraSheet`; the group on a TERRA pad's sheet; FORK's STRIKE FROM on a FORK pad's sheet | R4's page (6 clips) and a phone checklist, 3 questions |
@@ -1803,7 +1835,21 @@ renders, and the heard clip stands as the reference. Question 3 was kept
 rather than swapped for a HIT 0.5 question because the six clips are already
 rendered and none of them is HIT 0.5; the subtle step is heard on R1's page.
 
-### R1's page: HIT in the engine (10 clips)
+### R1's page: HIT in the engine (10 clips; answered 2026-10-01)
+
+**Answered 2026-10-01**, on the ten clips under `testkit/terra-audition/R1/`.
+The page asked its questions in these words, and the owner answered:
+1. "Does HIT move from today through subtle to strong in steps you can hear,
+   on every voice?" **"Can't tell".**
+2. "Does any voice go wrong at subtle (the bell or bar going thin with a dark
+   hit), so HIT needs a floor?" **"Yes, add a floor".**
+3. "Should the rattle follow what hits it (clip 10), or stay as it is today?"
+   **"Follow the hit (default)".**
+
+So decision 2 is taken (BUZZ follows the striker, and test 6 is pinned), HIT's
+gain takes a floor (decision 22), and the steps are asked again on R1b's page
+as one ladder on one voice. The table and questions below are the page as
+planned.
 
 | # | Clip | Why |
 |---|---|---|
@@ -1822,6 +1868,44 @@ Questions: (1) Does HIT move from today through subtle to strong in steps you
 can hear, on every voice? (2) Is any voice wrong at HIT .5 — the bell or bar
 going thin under a dark head — so that HIT needs a floor? (3) Should the rattle
 follow the striker (clip 10, the default) or stay as today (decision 2)?
+
+### R1b's page: HIT's ladder and its floor (10 clips, 2 questions)
+
+R1's question 1 came back "Can't tell" and its question 2 asked for a floor,
+so R1b's page asks both again, narrowly: one ladder on one voice, and the
+floor's four choices on the voice a dark hit thins most. `TerraAuditionGenerator`
+renders it under `testkit/terra-audition/R1B/`, with its own manifest in R1's
+shape. The ladder renders through a struck pad's recipe (`TerraPatch.render`;
+HIT 0 is a striker at strength 0) at the floor default; the floor clips render
+through an internal overload that takes φ.
+
+| # | Clip | Why |
+|---|---|---|
+| 1 | MEMBRANE · HIT 0 · THUMP SNARE | the ladder's foot: today's drum |
+| 2 | MEMBRANE · HIT .25 · THUMP SNARE | a quarter |
+| 3 | MEMBRANE · HIT .5 · THUMP SNARE | subtle |
+| 4 | MEMBRANE · HIT .75 · THUMP SNARE | three quarters |
+| 5 | MEMBRANE · HIT 1 · THUMP SNARE | strong |
+| 6 | BAR · TODAY | the floor's anchor |
+| 7 | BAR · HIT 1 · FACTORY KICK · NO FLOOR | φ = 0, R1's HIT, under a dark head |
+| 8 | BAR · HIT 1 · FACTORY KICK · FLOOR −18 dB | φ = 0.125 |
+| 9 | BAR · HIT 1 · FACTORY KICK · FLOOR −12 dB | φ = 0.25, the provisional default |
+| 10 | BAR · HIT 1 · FACTORY KICK · FLOOR −6 dB | φ = 0.5 |
+
+The factory kick is `A01_Kick_01.wav`, R1's clip 4 head. The generator prints
+each floor clip's per-mode levels against today's, measured on the bank before
+the output chain (the chain renormalises), puts them in the clip's line, and
+checks that each floor's held tone differs from the next one's (their first
+moments always differ, so the samples alone prove nothing).
+
+Questions: (1) Can you hear the steps from 0 to 1 on the ladder? (2) Which
+floor keeps the bar sounding right with a dark hit: none, −18, −12 or −6 dB?
+
+**What each answer does.** (1) "Yes": HIT's knob stands as built. "No": the
+knob's spacing is an owner question before R3, put on a page of its own, not
+a guess. (2) The chosen φ replaces the provisional 0.25 in `Terra.HIT_FLOOR`
+(one constant and its pin), and the list of choices leaves the code; "none"
+sets it to 0, which is R1's HIT bit for bit.
 
 ### R2's pages: TERRA on the phone
 
@@ -1926,7 +2010,8 @@ The brainstorm's record carries one date range, 2026-09-29–30, and no finer
 dates, so every row below carries that range and names the brief section that
 holds the decision: "Shared defaults", section 1 (the TERRA change and what a
 pad remembers), section 2 (the chooser and the pad-sheet group) or section 3
-(TERRA on the phone, tests, rounds).
+(TERRA on the phone, tests, rounds). Rows added after the brainstorm carry
+their own date and the gate that answered them.
 
 | Question | Decision | By |
 |---|---|---|
@@ -1955,6 +2040,9 @@ pad remembers), section 2 (the chooser and the pad-sheet group) or section 3
 | TERRA's reach | a reach round (14th `Engine` entry, 8 presets per voice by ear, scramble, class, starter kit, counts, S20), only after the owner OKs TERRA's plain sound | owner, brainstorm 2026-09-29–30, brief section 3; the house's audition-gate rule |
 | Gates | every gate ≤ 10 clips, ≤ 3 questions | the owner's standing preference (saved to memory; brief "How we got here", item 10) |
 | `:app` | not verifiable here; logic in `:synth`/`:shell` with tests; `ConventionTest` and the owner's phone check the screen | owner, brainstorm 2026-09-29–30, brief "Shared defaults" |
+| HIT's steps | "Can't tell" (R1's page, question 1: "Does HIT move from today through subtle to strong in steps you can hear, on every voice?"); asked again on R1b's page as one five-step ladder on the membrane | owner, R1's page, 2026-10-01 |
+| A floor for HIT | "Yes, add a floor" (R1's page, question 2: "Does any voice go wrong at subtle (the bell or bar going thin with a dark hit), so HIT needs a floor?"); HIT's gain takes a floor φ, whose value is decision 22 | owner, R1's page, 2026-10-01 |
+| BUZZ under HIT | "Follow the hit (default)" (R1's page, question 3: "Should the rattle follow what hits it (clip 10), or stay as it is today?"): BUZZ follows the striker, `s` stays a peak match, and test 6 is pinned in R1b (decision 2) | owner, R1's page, 2026-10-01 |
 
 ## Decisions for the owner
 
@@ -1964,7 +2052,7 @@ a gate overturns it.
 | # | Decision | Default | Alternatives | Where it is decided |
 |---|---|---|---|---|
 | 1 | What HIT 1 is | COLOURED 100 % | A-D (softer kick attack, per-mode gate missed by 1.9–3.5 dB); a different top | Phase 0's check, questions 1–2 (question 2 only if decision 21 takes the six; otherwise R1's page) **Taken 2026-09-30: "As strong"; see "Decisions already taken".** |
-| 2 | BUZZ (and the cavity's drive) under HIT. **The brief disagrees with itself here**: its algorithm line has `s` match the body's peak, its drive line has the level match keep BUZZ's and the cavity's drive as today, and Phase 0 measured that both cannot hold | **BUZZ follows the striker**: `s` stays a peak match, which keeps the brief's algorithm line and breaks its drive line for BUZZ; BUZZ's time above threshold runs 0.05–1.25 × today's at HIT 1, the cavity's tanh stays within 4 % of linear. **This default is not owner-approved**: it is the behaviour that was measured | a band-passed level match on the cavity (keeps the drive line's intent; holds the tanh input and BUZZ near today's; estimated, not measured, to lift a hat head's low modes by about 10 dB, phase0 §5 item 4) | R1's page, question 3, before test 6 is pinned |
+| 2 | BUZZ (and the cavity's drive) under HIT. **The brief disagrees with itself here**: its algorithm line has `s` match the body's peak, its drive line has the level match keep BUZZ's and the cavity's drive as today, and Phase 0 measured that both cannot hold | **BUZZ follows the striker**: `s` stays a peak match, which keeps the brief's algorithm line and breaks its drive line for BUZZ; BUZZ's time above threshold runs 0.05–1.25 × today's at HIT 1, the cavity's tanh stays within 4 % of linear. **This default is not owner-approved**: it is the behaviour that was measured | a band-passed level match on the cavity (keeps the drive line's intent; holds the tanh input and BUZZ near today's; estimated, not measured, to lift a hat head's low modes by about 10 dB, phase0 §5 item 4) | R1's page, question 3, before test 6 is pinned **Taken 2026-10-01: "Follow the hit"; see "Decisions already taken".** |
 | 3 | Where HIT's amount lives | inside the striker (no SYNTH-panel knob, never scrambled or averaged) | a TERRA macro `HIT` on all four voices (reachable by `Velocity`'s override path, but shown with no effect on unstruck pads and averaged by Breed) | here |
 | 4 | HIT's attack at 1 with a bass head | accepted as measured (14.0 ms peak, membrane, THUMP KICK) | keep more of today's attack (Phase 0 picks the fix) | Phase 0's check, question 2, if decision 21 takes the six; otherwise R1's page |
 | 5 | What the chooser offers TERRA and FORK | a pad on this kit, a pad on another kit, a file | add MUTATE's crate deal and room | R4's gate |
@@ -1984,6 +2072,7 @@ a gate overturns it.
 | 19 | Promoting a driven user preset to the roster | refused by the desk (`UserPresets.rosterLine` writes macros only, so promotion would drop the drivers); `renderAll` skips it with a line saying so | carry the drivers as data in the roster file, a new file shape | here |
 | 20 | Which peak the capture's silence floor tests | **the brief's wording**: the aligned 20 ms head's finite peak, before normalising, below 1e-4 ("HIT, the design", capture step 4); R1 re-runs struck-motion M7's hostile list with it | the whole source's finite peak, as struck-motion M7 measured; the two differ only for a quiet source (finite peak 1e-4 to 1e-2) that is louder after its first 20 ms | R1 |
 | 21 | The Phase-0 listening check: the brief's three clips or the six built | **the brief's three**: `cm_unstruck`, `cm_hit1_wraith`, `cm_rung_wraith_heard`, question 1 only (decision 4 and the strength reference then keep their defaults until R1's page) | the six as built, with questions 2 and 3, if the owner OKs the deviation | Phase 0's check **Taken 2026-09-30: the three were played.** |
+| 22 | HIT's floor (R1's page, question 2: "Yes, add a floor") | **φ = 0.25 (−12 dB), provisional**: `G_k(n) = (1 − c) + c · max(φ, s · |P_k(n)|)`, with `s` computed as R1 computes it, on the unfloored `|P_k|`, and the floor applied after it, so at HIT 1 no mode rings below φ × today's level whatever strikes the drum; φ = 0 is R1's HIT bit for bit; `c = 0` stays the null path; on all four voices, biting only where a mode would fall below φ (at HIT 0.5 it lifts a mode by at most 1 + φ). A code constant, `Terra.HIT_FLOOR`, not recipe data, so it settles before struck pads are saved on the phone | 0 (none: R1's HIT); 0.125 (−18 dB); 0.5 (−6 dB) | R1b's page, question 2 ("HIT, the design"; "Phasing and gates") |
 
 ## Appendices
 
