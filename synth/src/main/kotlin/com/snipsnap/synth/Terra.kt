@@ -945,4 +945,14 @@ object Terra {
         for (v in x) p = maxOf(p, abs(v))
         return p
     }
+
+    /**
+     * A TERRA pad's render: today's when [drivers] is null, otherwise struck
+     * by the striker's head at its HIT. The striker's `from` label is never
+     * read here. Named `drivers` as in the spec's `Terra.render(voice,
+     * macros, drivers)`: in R1 the only driver is the striker, and R3 widens
+     * the type to carry `bend` and `talk` without renaming the parameter.
+     */
+    internal fun render(voice: TerraVoice, macros: Map<String, Float>, drivers: TerraPatch.Striker?): Snip =
+        if (drivers == null) render(voice, macros) else renderStruck(voice, macros, drivers.head, drivers.hit)
 }

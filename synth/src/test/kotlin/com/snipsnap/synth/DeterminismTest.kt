@@ -167,4 +167,15 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
         }
     }
+
+    // A struck TERRA pad renders from the head stored in its recipe; the
+    // capture is data, so nothing else is read and every render must agree.
+    @Test
+    fun `TERRA struck by a stored head is byte-identical across renders`() {
+        val head = Terra.captureStriker(Thump.render(ThumpVoice.SNARE)) ?: error("a snare is not silent")
+        for (voice in TerraVoice.entries) {
+            val patch = TerraPatch("Canary", voice, Terra.defaults(voice), TerraPatch.Striker(head, 0.75f, "A02"))
+            assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
+        }
+    }
 }
