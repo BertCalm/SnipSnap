@@ -450,19 +450,34 @@ internal object Modes {
      *   decay.
      *
      * **Coupling** is a set of reciprocal springs between modes, [connect]ed in
-     * pairs. Each is applied as a velocity kick after the rotation. That kick is
-     * the exact flow of the spring potential, so the split stays passive even
-     * though the kick is explicit; Phase 0's trapezoid, coupled one sample late,
-     * diverged at COUPLE 0.3. The stiffness matrix is `K = diag(ω²) − A`: the
-     * springs `½·k·(q_i − q_j)²` sit on modes whose own stiffness is
-     * pre-reduced by the sum of their springs, so an uncoupled mode keeps its ω
-     * on the diagonal. Each edge's stiffness is `kappa·min(ω_i, ω_j)²`, and a
-     * mode's kappas must sum below [MAX_NODE_KAPPA]. That keeps K strictly
-     * diagonally dominant, and therefore positive definite, *at every tuning*:
-     * the bound is structural, not tuned by ear. Phase 0 also measured the
-     * plain form, `diag(ω²) + L`. It is equally passive but moves the note
-     * further, so it is not offered here.
+     * pairs. Each is applied as a velocity kick after the rotation, and that
+     * kick is the exact flow of the spring potential. The stiffness matrix is
+     * `K = diag(ω²) − A`: the springs `½·k·(q_i − q_j)²` sit on modes whose own
+     * stiffness is pre-reduced by the sum of their springs, so an uncoupled
+     * mode keeps its ω on the diagonal. Each edge's stiffness is
+     * `k_ij = kappa·min(ω_i, ω_j)²`. Phase 0 also measured the plain form,
+     * `diag(ω²) + L`. It is equally passive but moves the note further, so it
+     * is not offered here.
      *
+     * **Why the split is stable, and where it stops being.** Eliminating v
+     * turns the undamped rotate-then-kick step into a leapfrog recurrence,
+     * `M·(q_{n+1} − 2q_n + q_{n−1}) = −K̂·q_n`, with θ = ωT and
+     * - `M = diag(ω/(T·sin θ))`, which is positive while θ < π;
+     * - `K̂ = diag(2ω·tan(θ/2)/T) − A`.
+     *
+     * Such a recurrence is stable exactly when both `K̂` and `4M − K̂` are
+     * positive definite. With S_i the mode's kappa sum and `x = θ/2 = π·f/rate`,
+     * diagonal dominance gives each in turn:
+     * - `K̂` from `S_i < 1`, because `tan x ≥ x`. That is [MAX_NODE_KAPPA].
+     * - `4M − K̂`, whose diagonal is `2ω·cot(θ/2)/T`, from `S_i·x·tan x < 1`.
+     *
+     * The second bound only bites near Nyquist. At MERCURY's mode ceiling,
+     * 19 kHz at 176.4 kHz, `x·tan x` is 0.12; with S → 1 the bound sits at
+     * about 0.27·rate. [tune], [connect] and [setKappa] each refuse a change
+     * that would break either bound, and leave the bank untouched when they
+     * do. Damping only shrinks the rotation, and the damped claims tests show
+     * no energy rise.
+
      * **Springs move the coupled pitch.** Near modes repel, and COUPLE flattened
      * Phase 0's anchor by 13–85 cents. [coupledHz] is where the anchor really
      * rings. [anchorScale] is the factor between the anchor's tuning and that.
@@ -504,8 +519,9 @@ internal object Modes {
         fun tune(i: Int, hz: Double, t60: Double) {
             require(hz > 0.0 && hz < rate / 2.0) { "mode $i at $hz Hz is outside (0, ${rate / 2}) Hz" }
             require(t60 > 0.0) { "mode $i t60 must be positive: $t60" }
-            if (omega[i] == 0.0) untuned--
             val w = 2.0 * Math.PI * hz
+            requireStable(i, nodeKappa[i], w)
+            if (omega[i] == 0.0) untuned--
             omega[i] = w
             val r = exp(-T60_LN * dt / t60)
             cr[i] = r * cos(w * dt)
@@ -517,6 +533,9 @@ internal object Modes {
         fun connect(i: Int, j: Int, kappa: Double): Int {
             require(i != j && i in 0 until size && j in 0 until size) { "bad spring $i–$j in a bank of $size" }
             require(kappa >= 0.0) { "kappa must be non-negative: $kappa" }
+            // Validate before anything is appended, so a refused spring leaves no trace.
+            requireStable(i, nodeKappa[i] + kappa, omega[i])
+            requireStable(j, nodeKappa[j] + kappa, omega[j])
             edgeI = edgeI.copyOf(edgeI.size + 1).also { it[it.size - 1] = i }
             edgeJ = edgeJ.copyOf(edgeJ.size + 1).also { it[it.size - 1] = j }
             this.kappa = this.kappa.copyOf(this.kappa.size + 1)
@@ -525,7 +544,7 @@ internal object Modes {
             return this.kappa.size - 1
         }
 
-        /** Re-sets spring [edge]'s kappa, holding both of its modes' kappa sums under [MAX_NODE_KAPPA]. */
+        /** Re-sets spring [edge]'s kappa, holding both of its modes inside the bounds above. */
         fun setKappa(edge: Int, kappa: Double) {
             require(kappa >= 0.0) { "kappa must be non-negative: $kappa" }
             val i = edgeI[edge]
@@ -533,14 +552,25 @@ internal object Modes {
             val old = this.kappa[edge]
             val si = nodeKappa[i] - old + kappa
             val sj = nodeKappa[j] - old + kappa
-            require(si < MAX_NODE_KAPPA && sj < MAX_NODE_KAPPA) {
-                "spring $edge (modes $i–$j) at kappa $kappa takes a mode's kappa sum to ${maxOf(si, sj)}; " +
-                    "it must stay under $MAX_NODE_KAPPA for K to stay positive definite"
-            }
+            requireStable(i, si, omega[i])
+            requireStable(j, sj, omega[j])
             nodeKappa[i] = si
             nodeKappa[j] = sj
             this.kappa[edge] = kappa
             springsStale = true
+        }
+
+        /** Mode [i] at angular frequency [w] (0 = not yet tuned) with kappa sum [sum]: both bounds, or refuse. */
+        private fun requireStable(i: Int, sum: Double, w: Double) {
+            require(sum < MAX_NODE_KAPPA) {
+                "mode $i's kappa sum would be $sum; it must stay under $MAX_NODE_KAPPA for K to stay positive definite"
+            }
+            if (sum == 0.0 || w == 0.0) return
+            val x = w / (2.0 * rate)
+            require(sum * x * kotlin.math.tan(x) < 1.0) {
+                "mode $i at ${w / (2.0 * Math.PI)} Hz with kappa sum $sum is past the split's stability bound " +
+                    "(kappa sum × x·tan x must stay under 1, x = π·f/rate = $x)"
+            }
         }
 
         private fun refreshSprings() {
@@ -766,7 +796,7 @@ internal object Modes {
         return DoubleArray(n) { a[it][it] } to v
     }
 
-    /** A mode's kappa sum must stay under this, so K stays strictly diagonally dominant. */
+    /** A mode's kappa sum must stay under this, so K stays strictly diagonally dominant (see [Bank]). */
     const val MAX_NODE_KAPPA = 1.0
 
     /** ln(1000): the decay of 60 dB, in nepers. */

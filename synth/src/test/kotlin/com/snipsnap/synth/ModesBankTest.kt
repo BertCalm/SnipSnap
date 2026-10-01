@@ -174,6 +174,45 @@ class ModesBankTest {
         bank.setKappa(e, 0.39)
         assertFailsWith<IllegalArgumentException> { bank.connect(0, 0, 0.1) }
         assertFailsWith<IllegalArgumentException> { bank.connect(0, 2, -0.1) }
+        assertEquals(2, bank.edges, "a refused spring must leave nothing behind")
+    }
+
+    @Test
+    fun `the split's stability bound is enforced near Nyquist`() {
+        // The PR #428 review's case: two modes at 490 Hz at a 1 kHz rate with kappa 0.5. Each
+        // kappa sum is under 1, but x·tan x = 49 at x = 0.49π, so the rotate-then-kick step is
+        // unstable. It must be refused, atomically, from either direction.
+        val a = Modes.Bank(2, 1000)
+        a.tune(0, 490.0, 1e9); a.tune(1, 490.0, 1e9)
+        assertFailsWith<IllegalArgumentException> { a.connect(0, 1, 0.5) }
+        assertEquals(0, a.edges)
+        val b = Modes.Bank(2, 1000)
+        b.tune(0, 100.0, 1e9); b.tune(1, 100.0, 1e9)
+        b.connect(0, 1, 0.5)
+        assertFailsWith<IllegalArgumentException> { b.tune(1, 490.0, 1e9) }
+        assertEquals(100.0, b.coupledHz(1) * b.anchorScale(1), 1e-9, "a refused tune must leave the mode where it was")
+    }
+
+    @Test
+    fun `just inside the bound an undamped coupled bank stays bounded`() {
+        // At a low rate, so θ reaches far toward π: random tunings up to 0.48·rate, every mode's
+        // kappa sum at 0.98 of min(1, 1/(x·tan x)), no damping. The bound promises stability: the
+        // energy must stay within a constant factor, never grow without limit.
+        val r = 1000
+        val rnd = Random(13)
+        repeat(20) { trial ->
+            val n = 6
+            val hz = DoubleArray(n) { 20.0 + rnd.nextDouble() * 460.0 }
+            val bound = DoubleArray(n) { val x = PI * hz[it] / r; 0.98 * minOf(1.0, 1.0 / (x * kotlin.math.tan(x))) }
+            val bank = Modes.Bank(n, r)
+            for (i in 0 until n) bank.tune(i, hz[i], 1e12)
+            for (i in 0 until n - 1) bank.connect(i, i + 1, 0.4999 * minOf(bound[i], bound[i + 1]))
+            bank.drive(DoubleArray(n) { rnd.nextDouble() - 0.5 }, r.toDouble())
+            val e0 = bank.energy()
+            var hi = e0
+            repeat(50_000) { bank.step(); hi = maxOf(hi, bank.energy()) }
+            assertTrue(hi.isFinite() && hi < 100 * e0, "trial $trial grew: ${hi / e0}×")
+        }
     }
 
     @Test
