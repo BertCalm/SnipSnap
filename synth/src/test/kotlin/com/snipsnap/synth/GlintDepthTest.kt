@@ -154,4 +154,73 @@ class GlintDepthTest {
             }
         }
     }
+
+    /**
+     * Spec §4.2 and §4.6. The step across each wrap is never the largest step: the rounded window and
+     * the sine are both exactly zero there, so the wrap is not a click at any DEPTH. (Not "the biggest
+     * step shrinks as DEPTH rises": each render is levelled on its own, and normalised by RMS the saw
+     * and the rounded window do not differ that way.) Raw buffers, BLOOM still so that k is constant.
+     *
+     * The step into a cycle's last sample is not counted among the inner steps. A window that ends above
+     * zero, over the last sample alone, leaves a one-sample spike: its rising edge is the step into that
+     * last sample and its falling edge is the step across the wrap. Counted as an inner step, the rising
+     * edge lifts the largest inner step as high as the falling edge, so the two rise together and the
+     * click goes unseen. (Moving the shape table's last entry to 0.5 makes such a spike on VOWEL.)
+     */
+    @Test
+    fun `the wrap is never the largest step - no click at any DEPTH`() {
+        for (voice in GlintVoice.entries) {
+            for (depth in listOf(0.25f, 0.5f, 0.75f, 1f)) {
+                val f0 = Glint.frequencyFor(voice, Glint.defaults(voice).getValue("TUNE"))
+                val out = raw(voice, depth, mapOf("BLOOM" to 0.5f))
+                val starts = cycleStarts(f0, out.size).toHashSet()
+                var wrapStep = 0f
+                var innerStep = 0f
+                for (i in 1 until out.size) {
+                    val d = abs(out[i] - out[i - 1])
+                    if (i in starts) {
+                        wrapStep = maxOf(wrapStep, d)
+                    } else if ((i + 1) !in starts) {
+                        innerStep = maxOf(innerStep, d)
+                    }
+                }
+                assertTrue(
+                    wrapStep <= innerStep * 1.05f,
+                    "$voice DEPTH $depth: a step of $wrapStep across a wrap against $innerStep inside the cycles",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `a tiny DEPTH is a tiny change - the shaped path, not the saw`() {
+        for (voice in GlintVoice.entries) {
+            val saw = raw(voice, 0f)
+            val tiny = raw(voice, 1e-9f)
+            assertEquals(saw.size, tiny.size, "$voice")
+            var worst = 0f
+            for (i in saw.indices) worst = maxOf(worst, abs(saw[i] - tiny[i]))
+            // Measured worst on the engine: 1.1e-11. The window is a Float table, about 6e-8 per entry, so
+            // 1e-6 is still well above float noise, and it catches a subtle divergence between the shaped
+            // loop and the saw loop, not only a gross one.
+            assertTrue(worst < 1e-6f, "$voice: DEPTH 1e-9 moved the render by $worst")
+        }
+    }
+
+    @Test
+    fun `VOWEL at the top of TUNE with PEAK 0, where F1 pins to the fundamental, stays bounded`() {
+        // F1 pins to k = 1 (VOWEL_K_MIN): the burst and the sine are in phase at f0.
+        for (depth in listOf(0.6f, 0.75f, 0.9f, 1f)) {
+            val out = raw(GlintVoice.VOWEL, depth, mapOf("TUNE" to 1f, "PEAK" to 0f))
+            assertEquals(0f, out[0], "DEPTH $depth: the first sample")
+            assertTrue(out.all { it.isFinite() && abs(it) < 2f }, "DEPTH $depth: unbounded")
+        }
+    }
+
+    @Test
+    fun `STEP at the top of TUNE and PEAK renders clean at DEPTH 0_75`() {
+        val snip = Glint.render(GlintVoice.STEP, mapOf("TUNE" to 1f, "PEAK" to 1f, "DEPTH" to 0.75f))
+        assertTrue(snip.samples.all { it.isFinite() && it in -1f..1f }, "STEP broke range")
+        assertTrue(snip.peak() > 0.15f, "STEP is too quiet")
+    }
 }
