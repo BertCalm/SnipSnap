@@ -137,4 +137,23 @@ internal object BoreMeasure {
 
     const val BITE_BAND_LOW_HZ = 1_000f
     const val BITE_BAND_HIGH_HZ = 4_000f
+
+    /**
+     * [lowHz]..[highHz] of a rendered note against 50-10000 Hz of it, in dB, over [seconds] from [fromSec]:
+     * where the power sits. A real tenor saxophone at C3 holds the 50-250 Hz band 16 dB under the whole
+     * sound (UNSW recording, 22.05 kHz); a strong-fundamental reed holds it at about -1. The same 16 Hz
+     * Goertzel tiling as [biteDb].
+     */
+    fun shareDb(snip: Snip, lowHz: Float, highHz: Float, fromSec: Float = 0.5f, seconds: Float = 0.25f): Double {
+        val start = (fromSec * snip.sampleRate).toInt()
+        require(snip.frameCount - start >= (seconds * snip.sampleRate).toInt()) { "shareDb: the render ends before the window" }
+        val slice = Snip(snip.samples.copyOfRange(start, snip.frameCount), channels = 1, sampleRate = snip.sampleRate)
+        fun band(a: Float, b: Float): Double {
+            var e = 0.0
+            var hz = a
+            while (hz < b) { e += PluckSpectra.toneEnergy(slice, hz, seconds); hz += 16f }
+            return e
+        }
+        return 10 * log10(band(lowHz, highHz) / (band(50f, 10_000f) + 1e-12) + 1e-18)
+    }
 }

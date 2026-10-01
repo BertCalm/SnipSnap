@@ -16,12 +16,11 @@ import kotlin.math.roundToInt
  * nowhere else, then copies the listening page from the test resources. Run via
  * `./gradlew :synth:generateBoreAudition`, then publish the folder as the listening artifact.
  *
- * The first section is the reed's rasp (round 1.2, after the answer to the bite round was "still
- * needs more ... buzzier and raspier"): the same SAX phrase, and three presets, with the bend at
- * nothing (the merged presence bell alone, what the last round shipped), a light amount, a medium
- * one and the shipped one, then the shipped bend with no bell, so the strength - and whether the
- * bell is still wanted - is a choice made by ear. Its clips are one-shots; a LOOP carries the bell
- * and no rasp ([Bore.RASP_DRIVE]).
+ * The first section is the reed's voicing (round 1.3, after the last round's answer: a prototype filter
+ * on the rasped reed, measured against a real tenor, with the deeper cut and the brighter lift both kept):
+ * the same SAX phrase and three presets with no voicing (what the last round merged), a milder one, the
+ * shipped one and a stronger one, so its strength is a choice made by ear. The clips are one-shots; a LOOP
+ * carries the presence bell and no rasp or voicing ([Bore.RASP_DRIVE], [Bore.VOICE_LOW_DB]).
  *
  * Nothing in BORE has been heard by anyone when this is first run: it is the gate that decides
  * whether the measured engine is a woodwind. The page says so.
@@ -53,44 +52,42 @@ object BoreAuditionGenerator {
         var count = 0
         val sections = StringBuilder()
 
-        // The reed's rasp, five settings of the same thing.
-        val raspDir = File(root, "RASP")
-        // key, rasp share of the shipped amount, presence bell share of the shipped gain, label
-        val raspSteps = listOf(
-            Triple("0_merged", 0f to 1f, "MERGED" to "the last round's reed: the presence bell, no rasp"),
-            Triple("1_light", 0.1f to 1f, "LIGHT RASP" to "a tenth of the shipped amount, bell as merged"),
-            Triple("2_medium", 0.4f to 1f, "MEDIUM RASP" to "0.4 of the shipped amount, bell as merged"),
-            Triple("3_full", 1f to 1f, "FULL RASP" to "the shipped default: bell as merged, rasp at the full amount"),
-            Triple("4_no_bell", 1f to 0f, "FULL RASP, NO BELL" to "the same rasp with the presence bell off: is the bell still wanted?"),
+        // The reed's voicing, four strengths of the same thing.
+        val voiceDir = File(root, "VOICE")
+        val voiceSteps = listOf(
+            Triple("0_merged", Bore.Voicing.NONE, "MERGED" to "the last round's reed: the bell and the rasp, no voicing"),
+            Triple("1_milder", Bore.Voicing(-18f, 12f), "MILDER" to "the voicing at -18 dB under 200 Hz and +12 dB over 3 kHz"),
+            Triple("2_shipped", Bore.voicingFor(BoreVoice.SAX), "SHIPPED" to "the shipped default: -26 dB under 200 Hz, +18 dB over 3 kHz, opening with the note's loudness"),
+            Triple("3_stronger", Bore.Voicing(-32f, 24f), "STRONGER" to "-32 dB under 200 Hz and +24 dB over 3 kHz (not shipped: a step past it)"),
         )
-        fun writeRasp(id: String, snip: Snip) {
-            WavWriter.write(File(raspDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+        fun writeVoice(id: String, snip: Snip) {
+            WavWriter.write(File(voiceDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
             count++
         }
         val saxDefaults = Bore.defaults(BoreVoice.SAX)
-        check(renderRasp(saxDefaults, 1f, 1f).samples.contentEquals(Bore.render(BoreVoice.SAX, saxDefaults).samples)) {
+        check(renderVoiced(saxDefaults, Bore.voicingFor(BoreVoice.SAX)).samples.contentEquals(Bore.render(BoreVoice.SAX, saxDefaults).samples)) {
             "the audition's shipped-strength clip is not what Bore.render makes"
         }
         val phrase = listOf(7f / 24, 0.5f, 19f / 24)
-        val phraseClips = raspSteps.map { (key, shares, label) ->
+        val phraseClips = voiceSteps.map { (key, voicing, label) ->
             val gap = FloatArray((0.15f * Dsp.RATE).toInt())
             val samples = phrase.flatMap { t ->
-                (renderRasp(saxDefaults + mapOf("TUNE" to t, "HOLD" to 0.3f), shares.first, shares.second).samples.toList() + gap.toList())
+                (renderVoiced(saxDefaults + mapOf("TUNE" to t, "HOLD" to 0.3f), voicing).samples.toList() + gap.toList())
             }.toFloatArray()
-            writeRasp("phrase_$key", Snip(samples, channels = 1, sampleRate = Dsp.RATE))
+            writeVoice("phrase_$key", Snip(samples, channels = 1, sampleRate = Dsp.RATE))
             Clip("phrase_$key", label.first, label.second)
         }
-        fun presetClips(presetName: String, tag: String) = raspSteps.filter { it.first != "2_medium" }.map { (key, shares, label) ->
+        fun presetClips(presetName: String, tag: String) = voiceSteps.filter { it.first != "3_stronger" }.map { (key, voicing, label) ->
             val preset = BorePresets.forVoice(BoreVoice.SAX).first { it.name == presetName }
-            writeRasp("${tag}_$key", renderRasp(preset.macros, shares.first, shares.second))
+            writeVoice("${tag}_$key", renderVoiced(preset.macros, voicing))
             Clip("${tag}_$key", label.first, macroLine(BoreVoice.SAX, preset.macros))
         }
         sections.append(
             sectionJson(
-                id = "RASP", display = "THE REED'S RASP", body = "the same SAX with a buzz made after the pipe: is it a reed, or a fuzz pedal?",
-                readout = listOf("G3, C4, G4 " + DOT + " DEFAULT KNOBS", "1-4 KHZ AGAINST THE FUNDAMENTAL: -13 / -9 / -7 / -5 DB AT C4 (MERGED / LIGHT / MEDIUM / FULL)"),
+                id = "VOICE", display = "THE SAX'S VOICING", body = "measured against a real tenor sax: the fundamental weaker, the highs stronger, opening with the note",
+                readout = listOf("G3, C4, G4 " + DOT + " DEFAULT KNOBS", "REAL TENOR AT C3: 50-250 HZ 16 DB UNDER THE WHOLE SOUND; OURS BEFORE: 1"),
                 groups = listOf(
-                    Group("THE SAME PHRASE, FIVE SETTINGS", key = true, clips = phraseClips),
+                    Group("THE SAME PHRASE, FOUR STRENGTHS", key = true, clips = phraseClips),
                     Group("BITE PRESET (A LOOSE LIP, A HARD BREATH)", key = true, clips = presetClips("BITE", "bite_preset")),
                     Group("GROWL", key = false, clips = presetClips("GROWL", "growl")),
                     Group("HIGH STAB", key = false, clips = presetClips("HIGH STAB", "high_stab")),
@@ -202,19 +199,18 @@ object BoreAuditionGenerator {
     }
 
     /**
-     * A one-shot SAX note with the rasp at [raspShare] times its shipped amount and the presence
-     * bell at [bellShare] times its shipped gain: (1, 1) is [Bore.render] exactly (checked above),
-     * (0, 1) the last round's reed. One-shots only - a LOOP renders through [Bore.renderLoop], which
-     * has the shipped bell, no rasp and no dial.
+     * A one-shot SAX note with the bell and the rasp as shipped and [voicing] on the output: [Bore.Voicing.NONE]
+     * is the last round's reed, [Bore.voicingFor] is [Bore.render] exactly (checked above). One-shots only - a
+     * LOOP renders through [Bore.renderLoop], which has the bell and neither the rasp nor the voicing.
      */
-    private fun renderRasp(macros: Map<String, Float>, raspShare: Float, bellShare: Float): Snip {
+    private fun renderVoiced(macros: Map<String, Float>, voicing: Bore.Voicing): Snip {
         val m = Bore.settled(macros, BoreVoice.SAX)
-        require(!Bore.isLoop(m.getValue("HOLD"))) { "renderRasp is for one-shots" }
+        require(!Bore.isLoop(m.getValue("HOLD"))) { "renderVoiced is for one-shots" }
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")))
-        val bell = Bore.biteBoostDb(BoreVoice.SAX, m.getValue("LIP")) * bellShare
-        val rasp = Bore.raspAmount(BoreVoice.SAX, m.getValue("LIP"), m.getValue("BREATH")) * raspShare
-        return Snip(Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate), rate, bell, rasp), channels = 1, sampleRate = Dsp.RATE)
+        val bell = Bore.biteBoostDb(BoreVoice.SAX, m.getValue("LIP"))
+        val rasp = Bore.raspAmount(BoreVoice.SAX, m.getValue("LIP"), m.getValue("BREATH"))
+        return Snip(Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate), rate, bell, rasp, voicing), channels = 1, sampleRate = Dsp.RATE)
     }
 
     private const val DOT = "\u00b7"

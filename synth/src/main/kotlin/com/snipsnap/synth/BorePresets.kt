@@ -43,13 +43,13 @@ object BorePresets {
     )
 
     private val saxPresets = listOf(
-        p(BoreVoice.SAX, "LOW HONK", "TUNE" to 0.05f, "BREATH" to 0.7f, "LIP" to 0.15f, "CHIFF" to 0.35f, "HOLD" to 0.3f),
+        p(BoreVoice.SAX, "LOW HONK", "TUNE" to 0.05f, "BREATH" to 0.6f, "LIP" to 0.15f, "CHIFF" to 0.15f, "HOLD" to 0.3f),
         p(BoreVoice.SAX, "SMOOTH", "TUNE" to 0.35f, "BREATH" to 0.5f, "LIP" to 0.65f, "CHIFF" to 0.3f, "HOLD" to 0.5f),
         p(BoreVoice.SAX, "BITE", "TUNE" to 0.6f, "BREATH" to 0.75f, "LIP" to 0.1f, "CHIFF" to 0.7f, "HOLD" to 0.25f),
         p(BoreVoice.SAX, "AIRY REED", "TUNE" to 0.45f, "BREATH" to 0.3f, "LIP" to 0.7f, "CHIFF" to 0.15f, "HOLD" to 0.45f),
         p(BoreVoice.SAX, "HIGH STAB", "TUNE" to 0.85f, "BREATH" to 0.8f, "LIP" to 0.2f, "CHIFF" to 1f, "HOLD" to 0f),
         p(BoreVoice.SAX, "PAD REED", "TUNE" to 0.5f, "BREATH" to 0.55f, "LIP" to 0.5f, "CHIFF" to 0.1f, "HOLD" to 0.95f),
         p(BoreVoice.SAX, "SOLO LOOP", "TUNE" to 0.4f, "BREATH" to 0.6f, "LIP" to 0.45f, "CHIFF" to 0.35f, "HOLD" to 1f),
-        p(BoreVoice.SAX, "GROWL", "TUNE" to 0.12f, "BREATH" to 0.75f, "LIP" to 0f, "CHIFF" to 0.35f, "HOLD" to 0.4f),
+        p(BoreVoice.SAX, "GROWL", "TUNE" to 0.12f, "BREATH" to 0.65f, "LIP" to 0f, "CHIFF" to 0.15f, "HOLD" to 0.4f),
     )
 }
