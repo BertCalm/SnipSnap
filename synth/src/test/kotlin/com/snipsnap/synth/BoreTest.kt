@@ -8,6 +8,7 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -45,9 +46,10 @@ class BoreTest {
         pressure: Float? = null,
         pop: Float? = null,
         turbulence: Float? = null,
+        seed: Float? = null,
     ): FloatArray {
         val hz = Bore.frequencyFor(voice, tune)
-        return Bore.blow(voice, Bore.tunedHz(voice, hz), macros(voice, tune, breath, lip, chiff, hold), rate, turbulence = turbulence, gateSeconds = seconds, pressure = pressure, pop = pop)
+        return Bore.blow(voice, Bore.tunedHz(voice, hz), macros(voice, tune, breath, lip, chiff, hold), rate, turbulence = turbulence, gateSeconds = seconds, pressure = pressure, pop = pop, seed = seed)
     }
 
     // ---- speaking -----------------------------------------------------------
@@ -277,6 +279,37 @@ class BoreTest {
     }
 
     @Test
+    fun `the voicing blooms after the level and still reaches what it always did at the loudest`() {
+        // The shelves go as the envelope's square relative to the note's own ceiling (Bore.VOICE_BLOOM), so a
+        // fast attack's first moments are not a developed tone to the classifier (HIGH STAB read 0.63, a
+        // SNARE, with the gains following the level linearly) while the plateau stays what it was fitted at.
+        // The same 0.4 s ramp as above: halfway up (0.19-0.21 s) the 4 kHz lift was +3.4 dB and the 130 Hz
+        // cut -7.8 dB with the linear follower, and is +0.3 and -2.6 dB now; the plateau is +8.2 and -14.7
+        // either way. (Squaring the raw envelope instead took a low note's plateau to 0.51 of it: C3's bite
+        // fell from +6.0 dB to +1.8.)
+        val rate = Dsp.RATE
+        val x = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            val env = (t / 0.4).coerceIn(0.0, 1.0)
+            (env * (0.4 * kotlin.math.sin(2 * Math.PI * 130 * t) + 0.4 * kotlin.math.sin(2 * Math.PI * 4000 * t))).toFloat()
+        }
+        val y = x.copyOf()
+        Bore.voice(y, Bore.voicingFor(BoreVoice.SAX))
+        fun amplitude(b: FloatArray, a: Double, z: Double, hz: Double): Double {
+            var c = 0.0
+            var s = 0.0
+            for (i in (a * rate).toInt() until (z * rate).toInt()) { c += b[i] * kotlin.math.cos(2 * Math.PI * hz * i / rate); s += b[i] * kotlin.math.sin(2 * Math.PI * hz * i / rate) }
+            return 2 * kotlin.math.sqrt(c * c + s * s) / ((z - a) * rate)
+        }
+        fun gainDb(hz: Double, a: Double, z: Double) = 20 * kotlin.math.log10(amplitude(y, a, z, hz) / amplitude(x, a, z, hz))
+        val highFull = gainDb(4000.0, 0.6, 0.9)
+        val lowFull = gainDb(130.0, 0.6, 0.9)
+        assertTrue(gainDb(4000.0, 0.19, 0.21) < 0.25 * highFull, "halfway up the highs are already lifted ${gainDb(4000.0, 0.19, 0.21)} dB of ${highFull}")
+        assertTrue(gainDb(130.0, 0.19, 0.21) > 0.35 * lowFull, "halfway up the fundamental is already cut ${gainDb(130.0, 0.19, 0.21)} dB of $lowFull")
+        assertTrue(highFull >= 7.5 && lowFull <= -13.5, "the plateau moved: $highFull dB at 4 kHz, $lowFull dB at 130 Hz")
+    }
+
+    @Test
     fun `BREATH adds breath noise inside the loop`() {
         // Loudness is levelled away, so BREATH's audible part is timbre and noise: the turbulence
         // is multiplicative on the pressure, inside the loop, and grows with BREATH. Measured as
@@ -341,6 +374,64 @@ class BoreTest {
         val without = BoreMeasure.onsetSeconds(blow(BoreVoice.SAX, tune = 0.25f, breath = 0f, chiff = 0f, pop = 0f, turbulence = 0f, seconds = 1.6f), 1.2f, 1.6f)
         val with = BoreMeasure.onsetSeconds(blow(BoreVoice.SAX, tune = 0.25f, breath = 0f, chiff = 0f, turbulence = 0f, seconds = 1.6f), 1.2f, 1.6f)
         assertTrue(without - with >= 0.05f, "the pop saved only ${without - with} s of onset ($without -> $with)")
+    }
+
+    @Test
+    fun `a tongued reed note speaks in about a tenth of a second at the default knobs, and the seed does it`() {
+        // A real tenor reaches 80% of a note's level in 0.05-0.12 s (UNSW's recordings, a very soft note
+        // 0.49 s); this reed's growth from a tiny seed took 58 periods whatever the pressure - 0.44 s at C3,
+        // 0.11 s at C5 - so every one-shot swelled where a saxophone attacks. The tongue's seed (TONGUE_SEED)
+        // puts a short tone into the bore at the release: 0.10 0.07 0.06 0.05 0.04 s at C3 G3 C4 G4 C5.
+        // The bounds are the measured values with room; "without" is the same blow with the seed set to 0.
+        val tunes = listOf(0f, 7f / 24, 0.5f, 19f / 24, 1f)
+        for (tune in tunes) {
+            val with = BoreMeasure.onsetSeconds(blow(BoreVoice.SAX, tune, seconds = 1.4f), 1.0f, 1.4f)
+            val without = BoreMeasure.onsetSeconds(blow(BoreVoice.SAX, tune, seconds = 1.4f, seed = 0f), 1.0f, 1.4f)
+            val bound = if (tune < 0.25f) 0.16f else 0.12f
+            assertTrue(with <= bound, "SAX TUNE $tune takes $with s to speak at the default knobs (bound $bound)")
+            assertTrue(without - with >= 0.05f, "the seed saved only ${without - with} s at TUNE $tune ($without -> $with)")
+        }
+    }
+
+    @Test
+    fun `CHIFF is the tongue, so the attack goes from a swell to a stab, and a soft breath is a slower note`() {
+        // CHIFF 0 is the old swell (0.40 s at C3) and every step up the knob is quicker: 0.40 0.19 0.10
+        // 0.06 0.04 s at CHIFF 0 .2 .4 .7 1. BREATH 0 is a soft note and stays slow (0.31 s) against the
+        // default 0.10 and a hard breath's 0.07.
+        fun onset(chiff: Float = 0.4f, breath: Float = 0.6f) = BoreMeasure.onsetSeconds(blow(BoreVoice.SAX, 0f, breath = breath, chiff = chiff, seconds = 1.4f), 1.0f, 1.4f)
+        val steps = listOf(0f, 0.2f, 0.4f, 0.7f, 1f).map { onset(chiff = it) }
+        for (i in 1 until steps.size) assertTrue(steps[i] < steps[i - 1], "CHIFF's onset did not shorten at step $i: $steps")
+        assertTrue(steps.first() >= 0.3f, "CHIFF 0 is no swell now: ${steps.first()} s")
+        assertTrue(steps.last() <= 0.08f, "CHIFF 1 is not a stab: ${steps.last()} s")
+        val soft = onset(breath = 0f)
+        assertTrue(soft >= 0.2f, "a BREATH 0 note speaks in $soft s, as fast as a played one")
+        assertTrue(onset(breath = 1f) < soft, "a hard breath is not quicker than a soft one")
+    }
+
+    @Test
+    fun `the tongue's seed is the reed's, and the flute does not take it`() {
+        // The jet has its own onset (0.13 s at C3, seeded or not); a seed it does not use must not move a
+        // sample of it, so a flute blown with the seed forced to 0.5 is the flute blown with none. The reed's
+        // does move: forcing the seed to 0.5 changes it.
+        val plain = blow(BoreVoice.FLUTE, 0f, seconds = 0.5f, seed = 0f)
+        val forced = blow(BoreVoice.FLUTE, 0f, seconds = 0.5f, seed = 0.5f)
+        assertContentEquals(plain, forced, "the flute took the tongue's seed")
+        val reed = blow(BoreVoice.SAX, 0f, seconds = 0.5f, seed = 0f)
+        val reedSeeded = blow(BoreVoice.SAX, 0f, seconds = 0.5f, seed = 0.5f)
+        assertTrue(!reed.contentEquals(reedSeeded), "a forced seed did nothing to the reed")
+    }
+
+    @Test
+    fun `a LOOP's steady stretch takes no tongue seed, so loops are what they were`() {
+        // A loop cannot carry a signal that does not repeat, and with the seed let into the steady stretch every
+        // LOOP render changed sample for sample (the seam moved both ways, 4.9e-5 to 5.5e-7 and 8.7e-7 to 1.7e-5,
+        // still under the bar) though its warm-up is discarded. So the stretch with the seed forced on is the
+        // stretch with none, to the sample.
+        val m = Bore.settled(Bore.defaults(BoreVoice.SAX) + mapOf("HOLD" to 1f), BoreVoice.SAX)
+        val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, 0.25f))
+        val plain = Bore.stretch(BoreVoice.SAX, m, hz, warmFrames = 4000, frames = 4000, seed = 0f)
+        val forced = Bore.stretch(BoreVoice.SAX, m, hz, warmFrames = 4000, frames = 4000, seed = 0.5f)
+        assertContentEquals(plain, forced, "a LOOP's steady stretch took the tongue's seed")
     }
 
     @Test
