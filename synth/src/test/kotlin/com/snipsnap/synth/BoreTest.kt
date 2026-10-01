@@ -246,12 +246,16 @@ class BoreTest {
         // the pop and the breath burst while the tone grows) and lands in a drum's choke group. A 130 Hz
         // and a 4 kHz tone ramped from nothing over 0.4 s: in the first 30 ms both pass within 2 dB
         // (measured -0.4 and -1.0); at the steady end the 130 Hz is cut (-11.7 dB at -20, deeper now) and
-        // the 4 kHz lifted (+8.2).
+        // the 4 kHz lifted (+8.2). A third tone at 12 kHz, over the 9 kHz roll-off, is the exception on
+        // purpose: the roll-off is a fixed band limit, not part of what opens (blended in by the loudness
+        // instead, the onset's pop and breath burst keep their top end and BITE reads a SNARE), so it is
+        // rolled off from the first moment (about -9 dB for two poles at 9 kHz) and stays under the 4 kHz at full level (+6.1 against +8.3, the
+        // shelf's +18 still lifting it).
         val rate = Dsp.RATE
         val x = FloatArray(rate) { i ->
             val t = i.toDouble() / rate
             val env = (t / 0.4).coerceIn(0.0, 1.0)
-            (env * (0.5 * kotlin.math.sin(2 * Math.PI * 130 * t) + 0.5 * kotlin.math.sin(2 * Math.PI * 4000 * t))).toFloat()
+            (env * (0.4 * kotlin.math.sin(2 * Math.PI * 130 * t) + 0.4 * kotlin.math.sin(2 * Math.PI * 4000 * t) + 0.4 * kotlin.math.sin(2 * Math.PI * 12000 * t))).toFloat()
         }
         val y = x.copyOf()
         Bore.voice(y, Bore.voicingFor(BoreVoice.SAX))
@@ -262,7 +266,12 @@ class BoreTest {
             return 2 * kotlin.math.sqrt(c * c + s * s) / ((z - a) * rate)
         }
         fun gainDb(hz: Double, a: Double, z: Double) = 20 * kotlin.math.log10(amplitude(y, a, z, hz) / amplitude(x, a, z, hz))
-        assertTrue(abs(gainDb(130.0, 0.0, 0.03)) < 2.0 && abs(gainDb(4000.0, 0.0, 0.03)) < 2.0, "the voicing is already open in the first 30 ms: ${gainDb(130.0, 0.0, 0.03)} dB at 130 Hz, ${gainDb(4000.0, 0.0, 0.03)} dB at 4 kHz")
+        assertTrue(
+            abs(gainDb(130.0, 0.0, 0.03)) < 2.0 && abs(gainDb(4000.0, 0.0, 0.03)) < 2.0,
+            "the voicing is already open in the first 30 ms: ${gainDb(130.0, 0.0, 0.03)} dB at 130 Hz, ${gainDb(4000.0, 0.0, 0.03)} dB at 4 kHz",
+        )
+        assertTrue(gainDb(12000.0, 0.0, 0.03) < -3.0, "the 9 kHz roll-off is not a fixed band limit: ${gainDb(12000.0, 0.0, 0.03)} dB at 12 kHz at the start")
+        assertTrue(gainDb(12000.0, 0.6, 0.9) < gainDb(4000.0, 0.6, 0.9) - 1.0, "the 9 kHz roll-off is not there at full level: ${gainDb(12000.0, 0.6, 0.9)} dB at 12 kHz against ${gainDb(4000.0, 0.6, 0.9)} at 4 kHz")
         assertTrue(gainDb(130.0, 0.6, 0.9) <= -9.0, "the fundamental region is cut only ${gainDb(130.0, 0.6, 0.9)} dB at full level")
         assertTrue(gainDb(4000.0, 0.6, 0.9) >= 6.0, "the highs are lifted only ${gainDb(4000.0, 0.6, 0.9)} dB at full level")
     }

@@ -188,8 +188,9 @@ object Bore {
     /**
      * The voicing follows the note's own loudness. A saxophone is brighter the louder it plays (the
      * fundamental barely moves and the highs grow faster, UNSW's measured dynamics: a very soft tenor
-     * note's centroid is 327 Hz and a very loud one's is 711), so the shelves open with the envelope:
-     * nothing at the start of the note, all of it at the loudest. It is also what keeps a note's first
+     * note's centroid is 327 Hz and a very loud one's is 711), so the two shelves open with the envelope:
+     * nothing at the start of the note, all of it at the loudest. (The [VOICE_TOP_HZ] roll-off is not
+     * one of them: it is a fixed band limit that runs at every level, like a recording's own.) It is also what keeps a note's first
      * 93 ms - the classifier's whole look at it, and for this reed mostly the tongue's pop and breath
      * burst while the tone is still growing - from reading as a snare: at full strength from the
      * first sample the voicing took every SAX one-shot preset to a high-frequency share of 0.7-0.9
@@ -226,6 +227,9 @@ object Bore {
             amount += follow * ((env[b] / peak).coerceIn(0f, 1f) - amount)
             low.lowShelf(VOICE_LOW_HZ, v.lowDb * amount)
             high.highShelf(VOICE_HIGH_HZ, v.highDb * amount)
+            // The roll-off is a fixed band limit, not part of what opens with the loudness: a recording has
+            // nothing over its band at any level. Blended in by the amount instead it leaves the tongue's pop
+            // and the breath burst their top end at the start of the note, and BITE reads a SNARE (0.53).
             for (i in b * hop until minOf(buf.size, (b + 1) * hop)) buf[i] = top2.lp(top1.lp(high.process(low.process(buf[i])), VOICE_TOP_HZ), VOICE_TOP_HZ)
         }
     }

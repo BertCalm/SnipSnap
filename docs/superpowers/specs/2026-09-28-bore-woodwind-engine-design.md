@@ -1980,7 +1980,10 @@ class, which sets its choke group, so a SAX read as a snare would mute real snar
 grows; lifting the highs at full strength lifts that noise. Nor was it the sample rate, the roll-off, or the
 chiff (a grid of two cuts by four lifts, with and without the burst, said the same). So the shelves open with
 the envelope (`VOICE_FOLLOW_HZ` 1 kHz tone, 10 ms smoothing, nothing at the start of the note and all of it at the
-loudest): which is also what the instrument does, brighter as it gets louder. On the same grid, the real tenor
+loudest): which is also what the instrument does, brighter as it gets louder. Only the two shelves open; the 9 kHz
+roll-off is a fixed band limit at every level. Blending it in by the envelope too (Copilot's review suggested it, and it
+would make the note's start transparent at every frequency) was tried: the pop and the breath burst keep their top end
+and BITE reads a SNARE (0.53), LOW HONK 0.49, so it stays fixed, as a recording's own band limit is. On the same grid, the real tenor
 reads PERC or LOOP at its low notes (a high-frequency share of 0.36-0.47; two of thirteen notes read SNARE).
 
 **What it cost, said plainly.**
