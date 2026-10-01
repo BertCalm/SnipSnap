@@ -36,8 +36,10 @@ rule FATHOM, RESIN, GLINT, SILK, FORK and BORE followed.
 reaches something no engine in the tree can: a *sustained, friction-driven
 modal body whose modes move together*. That passes the house's "against the
 fleet" test on paper. Its central mechanism, though, is unproven anywhere in
-this repository. No resonator here is both high-Q and stable under
-per-sample frequency change, no code couples modes in both directions, and
+this repository. No *modal* resonator here is both high-Q and stable under
+per-sample frequency change (`Strings.Loop` is retunable and drivable, but it
+is one harmonic feedback loop per string, not a bank of independent
+inharmonic modes), no code couples modes in both directions, and
 the only friction model (ARCO's) exists as a spike on a waveguide, not on
 modes.
 
@@ -49,7 +51,7 @@ So the order is:
 3. An **R1** with three voices, not six, on the house's contract.
 4. **LOOP and the other three voices at R2**, behind the audition gate.
 
-Eleven places where the spec departs from the house are corrected below.
+Twelve places where the spec departs from the house are corrected below.
 Eleven decisions are left for the owner, each with a default.
 
 ## Why MERCURY
@@ -102,6 +104,7 @@ The departures:
 | 9 | §5–§10: base mode ratios "require tuning". | `Modes` forbids unsourced ratios: "do not adjust a value here without a source" (`Modes.kt:121-125`). There is no GLASS, BOWL, PLATE or SAW table (`Modes.kt:133`). | MERCURY's tables live in `Mercury.kt`, labelled as **designed** abstractions (which §1 says they are), with sourced starting points where a source opens. They are not added to `Modes.Material`. Owner decision 9. |
 | 10 | §11: "never clamp many high modes to the same frequency". | `Modes.ring` already *skips* modes above Nyquist (`Modes.kt:99`). | Keep that, but fade a mode out as it approaches the internal ceiling rather than cutting it, because BEND and WATER move modes across the line. |
 | 11 | §3: classifier must avoid KICK, SNARE, CLAP, HAT, TOM. | Correct, and it is a real risk. SKIN's ride BELL was built and dropped because it read as SNARE (roadmap :100-103). Bright, short sounds hit `highRatio > 0.5 → SNARE` (`Classifier.kt`). | PING and SHARD presets get BORE's preset contract (`BorePresetsTest.kt:39-63`) from R1, and the voicing is fixed musically, never by "appending an unrelated tone" (the spec's own §16). |
+| 12 | §4: five sound macros plus HOLD; no pitch control. `render` takes only voice and macros. | Pitched engines choose their note with a centred `TUNE` macro, snapped over `TUNE_SEMITONES` (`Bore.kt:72, :485-509`: `MacroSpec("TUNE", 0.5f, neutral = 0.5f)`, `midiFor`, `frequencyFor`). The kit's note pads are TUNE steps (`SynthKits.kt:263-266`). | Add `TUNE` first, BORE's way: snapped, per-voice `rootMidi`, `frequencyFor` feeding `hz`. That makes seven macros, the ceiling (roadmap :80). R2's fuzz runs over TUNE's steps. |
 
 ### What the spec got right
 
@@ -131,9 +134,12 @@ The departures:
 | `Modes.ring` (direct-form two-pole) | `Modes.kt:85-118` | no: coefficients fixed per call | yes | input only, no state access | no |
 | FORK's glide loop (same two-pole, retuned) | `Fork.kt:603-621` | yes, but amplitude moves when coefficients change | yes | input only | no |
 | `Dsp.TptSvf` (trapezoidal SVF) | `Dsp.kt:208-260` | yes, "clean under fast modulation" | **no**: `k.coerceAtLeast(0.1f)` caps Q near 10 (`:244`); SKIN rejected it for long rings | yes | possible |
+| `Strings.Loop` (feedback waveguide) | `Strings.kt:523-675`, `retune` :667, `reflected`/`inject` :577/:635 | yes, state-preserving | yes | yes (BORE drives it) | one loop is one harmonic series; several loops summed are not coupled (`Strings.course`) |
 | TERRA / SKIN phase-accumulator sines | `Terra.kt:367-408`, `Skin.kt:174-207` | yes, perfectly | yes | **no**: not resonators | no |
 
-None does all four. So the one genuinely new piece of DSP is a **per-mode
+None does all four *as a bank of independent inharmonic modes*. `Strings.Loop`
+comes closest, but its partials are tied to one delay line, so BEND cannot
+move them separately and WATER cannot load them one by one. So the one genuinely new piece of DSP is a **per-mode
 resonator that keeps its energy under frequency change, can be read for
 velocity and driven by force every sample, and can exchange energy with
 its neighbours.**
@@ -192,6 +198,7 @@ for SILK and BORE:
 
 ```
 Mercury.render(voice, macros): Snip            // Bore.render's shape, Bore.kt:958
+  hz = frequencyFor(voice, TUNE)                // Bore.kt:507-509
   └─ internal sound(voice, hz, macros, rate = RATE*OVERSAMPLE, …): FloatArray   // raw, unlevelled, for tests
        per sample, fixed order, preallocated:
          geometry   c(t) → BEND gesture toward cTarget = 2·BEND−1 (§7)
@@ -206,10 +213,11 @@ Mercury.render(voice, macros): Snip            // Bore.render's shape, Bore.kt:9
 ```
 
 **Macros** (`macrosFor`, house `MacroSpec`; order fixed for patches and
-UI): BEND .50/.50, RUB .35/.35, WATER .20 default / .00 neutral,
-GLASS .60/.55, COUPLE .30/.25, HOLD `DEFAULT_HOLD`. That is six macros:
-within "3–6, never a patchbay" (roadmap :174) and under the seven-macro
-ceiling.
+UI): TUNE .50/.50 (BORE's), BEND .50/.50, RUB .35/.35, WATER .20 default / .00 neutral,
+GLASS .60/.55, COUPLE .30/.25, HOLD `DEFAULT_HOLD`. That is seven macros: past "3–6, never a
+patchbay" (roadmap :174) by one, and at the seven that roadmap :80 treats as
+the ceiling. TUNE is the one the spec forgot (correction 12), so any further
+macro has to replace one, not add to them.
 
 **One-shot lifecycle:** strike at 0, contact for HOLD's seconds
 (`HOLD_MIN..MAX`), contact release, then free ring until a windowed energy
@@ -247,10 +255,16 @@ crossfade (correction 1).
 
 ## Registration: every touch point (from [api], BORE as reference)
 
-Compile-enforced:
-1. `Patches.fromJsonValue` arm (`Patches.kt:55`).
-2. `Velocity.macroSpecsFor` arm (`Velocity.kt:219`), an exhaustive `when`.
-   `:synth` will not compile without it.
+Compile-enforced (the only one):
+1. `Velocity.macroSpecsFor` arm (`Velocity.kt:219`), an exhaustive `when`
+   over the sealed `Patch`. `:synth` will not compile without it.
+
+Test-enforced, not compile-enforced:
+2. `Patches.fromJsonValue` arm (`Patches.kt:55`). It dispatches on the
+   engine *string* and ends in `else -> throw JsonException`
+   (`Patches.kt:57`), so a missing arm compiles. It is caught only by a
+   JSON round-trip test (`MercuryPresetsTest`, `PadRecipeTest`
+   `onePatchPerEngine`).
 
 Test-enforced or by convention, in `:synth`:
 
