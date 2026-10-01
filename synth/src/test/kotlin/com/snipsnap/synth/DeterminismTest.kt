@@ -150,4 +150,21 @@ class DeterminismTest {
             assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
         }
     }
+
+    // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29) and
+    // BUZZ's noise (13, 23) per voice (Terra.kt), so a saved pad
+    // regenerates only if all of them stay fixed. One per voice, with BUZZ
+    // and CLACK up so the noise paths run.
+    @Test
+    fun `TERRA is byte-identical across renders, all four voices`() {
+        for (voice in TerraVoice.entries) {
+            val loud = when (voice) {
+                TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR -> mapOf("BUZZ" to 1f)
+                TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
+                TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
+            }
+            val patch = TerraPatch("Canary", voice, Terra.defaults(voice) + loud)
+            assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
+        }
+    }
 }

@@ -33,6 +33,7 @@ class PadRecipeTest {
         GlintPatch("Glass Test", GlintVoice.SWEEP, mapOf("PEAK" to 0.7f)),
         SilkPatch("Oud Test", SilkVoice.OUD, mapOf("DAMP" to 0.4f)),
         BorePatch("Flute Test", BoreVoice.FLUTE, mapOf("BREATH" to 0.4f)),
+        TerraPatch("Djembe Test", TerraVoice.COMPOUND_MEMBRANE, mapOf("POS" to 0.4f)),
         ArcoPatch("Cello Test", ArcoVoice.CELLO, mapOf("GRIP" to 0.4f)),
     )
 
@@ -113,6 +114,7 @@ class PadRecipeTest {
             "melodic" to SynthKits.melodic(),
             "chip" to SynthKits.chip(),
             "tide" to SynthKits.tide(),
+            "terra" to TerraKits.classic(),
         )) {
             kit.forEachIndexed { i, pad ->
                 if (pad == null) return@forEachIndexed
