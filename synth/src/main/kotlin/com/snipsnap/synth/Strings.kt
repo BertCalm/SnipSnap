@@ -875,6 +875,141 @@ internal object Strings {
     }
 
     /**
+     * GYRE's membrane: a few constant-peak (RBJ) bandpass modes, summed with weights that are
+     * each at least 0 and together at most 1. That shape is what makes [Bridge] passive: this
+     * bandpass has `Re H = |H|^2` at every frequency, and a sum with non-negative weights adding
+     * to at most 1 keeps `Re H >= |H|^2` (Cauchy-Schwarz needs the signs), which is exactly
+     * `|1 - 2c H| <= 1` for every `c` in [0, 1]. A peak gain of 1 alone would not do: an
+     * inverting filter has gain 1 and makes `|1 + 2c|`. So weights outside that shape are
+     * refused, loudly, at [tune] and at every [weigh].
+     *
+     * The modes run in Double, not on [Dsp.Biquad]: with Float coefficients a narrow mode is no
+     * longer the filter it was designed as (measured at 176.4 kHz: `Re H - |H|^2` reaches -9.8e-4
+     * at 110 Hz, Q 3000, and -4.6e-4 at 440 Hz, Q 300), which is more than a string's own loss
+     * at GYRE's ceiling (`1 - fb` = 5e-4) and would let the bridge add energy. [MAX_Q] keeps the
+     * modes far from that corner too; a membrane is a broad resonator, and GYRE's run Q 3 to 12.
+     */
+    class Membrane(private val rate: Int) {
+        private var b0 = DoubleArray(0)
+        private var a1 = DoubleArray(0)
+        private var a2 = DoubleArray(0)
+        private var x1 = DoubleArray(0)
+        private var x2 = DoubleArray(0)
+        private var y1 = DoubleArray(0)
+        private var y2 = DoubleArray(0)
+        private var weights = DoubleArray(0)
+
+        val size: Int get() = b0.size
+
+        /** Sets the modes: centre [hz], [q] (at most [MAX_Q]), and their [weights] (each >= 0, summing to <= 1). State is cleared. */
+        fun tune(hz: FloatArray, q: FloatArray, weights: FloatArray) {
+            require(hz.size == q.size && hz.size == weights.size) { "membrane: ${hz.size} modes, ${q.size} Qs, ${weights.size} weights" }
+            for (h in hz) require(h > 0f && h < 0.45f * rate) { "membrane mode at $h Hz is outside (0, 0.45 x $rate)" }
+            for (v in q) require(v > 0f && v <= MAX_Q) { "membrane Q must be in (0, $MAX_Q], got $v" }
+            val k = hz.size
+            b0 = DoubleArray(k); a1 = DoubleArray(k); a2 = DoubleArray(k)
+            x1 = DoubleArray(k); x2 = DoubleArray(k); y1 = DoubleArray(k); y2 = DoubleArray(k)
+            for (i in 0 until k) {
+                val w0 = 2.0 * PI * hz[i] / rate
+                val alpha = sin(w0) / (2.0 * q[i])
+                val a0 = 1.0 + alpha
+                b0[i] = alpha / a0
+                a1[i] = -2.0 * cos(w0) / a0
+                a2[i] = (1.0 - alpha) / a0
+            }
+            this.weights = DoubleArray(k)
+            weigh(weights)
+        }
+
+        /**
+         * Re-weights the modes without touching their state (the rotor's emphasis); the same rule as
+         * [tune]. A sum within [WEIGHT_SLACK] over 1 is Float rounding and is accepted, then scaled
+         * back to exactly 1, so the weights the membrane runs with never sum past 1.
+         */
+        fun weigh(weights: FloatArray) {
+            require(weights.size == size) { "membrane: ${weights.size} weights for $size modes" }
+            var sum = 0.0
+            for (w in weights) {
+                require(w >= 0f) { "a membrane weight must not be negative (the bridge bound needs it), got $w" }
+                sum += w
+            }
+            require(sum <= 1.0 + WEIGHT_SLACK) { "membrane weights must sum to at most 1 (the bridge bound needs it), got $sum" }
+            val scale = if (sum > 1.0) 1.0 / sum else 1.0
+            for (i in weights.indices) this.weights[i] = weights[i] * scale
+        }
+
+        /** One sample: each mode `b0 (x - x[-2]) - a1 y[-1] - a2 y[-2]` (the RBJ bandpass, b1 = 0, b2 = -b0), weighted and summed. */
+        fun process(x: Float): Float {
+            val xd = x.toDouble()
+            var y = 0.0
+            for (i in b0.indices) {
+                val yi = b0[i] * (xd - x2[i]) - a1[i] * y1[i] - a2[i] * y2[i]
+                x2[i] = x1[i]; x1[i] = xd
+                y2[i] = y1[i]; y1[i] = yi
+                y += weights[i] * yi
+            }
+            return y.toFloat()
+        }
+
+        /** The membrane's response at [hz] as `[re, im]`, from the coefficients it runs with - a measuring tool. */
+        internal fun response(hz: Double): DoubleArray {
+            val w = 2.0 * PI * hz / rate
+            val c1 = cos(w); val s1 = -sin(w)
+            val c2 = cos(2 * w); val s2 = -sin(2 * w)
+            var re = 0.0; var im = 0.0
+            for (i in b0.indices) {
+                val nr = b0[i] * (1.0 - c2); val ni = -b0[i] * s2
+                val dr = 1.0 + a1[i] * c1 + a2[i] * c2; val di = a1[i] * s1 + a2[i] * s2
+                val den = dr * dr + di * di
+                re += weights[i] * (nr * dr + ni * di) / den
+                im += weights[i] * (ni * dr - nr * di) / den
+            }
+            return doubleArrayOf(re, im)
+        }
+
+        companion object {
+            /** A membrane is broad; past this a mode is a tuned string, not a body, and precision starts to cost. */
+            const val MAX_Q = 100f
+
+            /** Float rounding room on the weights' sum; a sum inside it is scaled back to 1 ([weigh]). */
+            const val WEIGHT_SLACK = 1e-6
+        }
+    }
+
+    /**
+     * GYRE's shared bridge: [n] strings meet one [membrane]. Each sample, every string's
+     * returning wave ([Loop.reflected]) comes in, and what goes back to string `i` is
+     * `r_i - (2c/n) * m`, where `m` is the membrane rung by the sum of the returning waves.
+     * That is the matrix `I - (2c/n) H 1 1^T`: identity on everything but the strings' common
+     * motion, and on that `1 - 2c H`, whose size is at most 1 for a [Membrane]. So the bridge
+     * moves energy between strings and never adds any; with every loop's own `fb < 1` the
+     * network decays at any fixed [c] in [0, 1]. A [c] that moves (GYRE's rotor) is outside
+     * that argument, and is held to a measured bound instead (`StringsBridgeTest`).
+     */
+    class Bridge(val n: Int, val membrane: Membrane) {
+        init { require(n >= 1) { "a bridge needs at least one string, got $n" } }
+
+        /**
+         * Couples one sample: [reflected] (one wave per string) into [out] (what to inject back),
+         * at coupling [c] in [0, 1]. Returns the membrane's output `m`, the bridge's own sound.
+         * At [c] 0 [out] is [reflected], value for value.
+         */
+        fun couple(reflected: FloatArray, c: Float, out: FloatArray): Float {
+            require(c in 0f..1f) { "bridge coupling must be in [0, 1], got $c" }
+            var sum = 0f
+            for (i in 0 until n) sum += reflected[i]
+            val m = membrane.process(sum)
+            if (c == 0f) {
+                reflected.copyInto(out, 0, 0, n)
+                return m
+            }
+            val k = 2f * c / n * m
+            for (i in 0 until n) out[i] = reflected[i] - k
+            return m
+        }
+    }
+
+    /**
      * The 1983 plucked string: an [exciter] (default [pluckExciter], the
      * pick burst) into a [Loop] tuned by [tune]. [stiffness] and [jawari]
      * are SITAR's dispersion and buzz; both default to 0, which
