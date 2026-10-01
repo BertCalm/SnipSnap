@@ -136,7 +136,7 @@ class VelocityGrooveShuffleTest {
             "THUMP SNARE (SNAP)" to ThumpPresets.forVoice(ThumpVoice.SNARE).first(),
             "THUMP HAT_CLOSED (METAL)" to ThumpPresets.forVoice(ThumpVoice.HAT_CLOSED).first(),
             "TONEWHEEL FULL (PERC)" to TonewheelPresets.forVoice(TonewheelVoice.FULL).first(),
-            "GLINT REED (PEAK)" to GlintPatch("Vel Canary", GlintVoice.REED, Glint.defaults(GlintVoice.REED)),
+            "GLINT SWEEP (PEAK)" to GlintPatch("Vel Canary", GlintVoice.SWEEP, Glint.defaults(GlintVoice.SWEEP)),
             "SILK OUD (PICK)" to SilkPatch("Vel Canary", SilkVoice.OUD, Silk.defaults(SilkVoice.OUD)),
             "MAGNET JANGLE (PICK)" to MagnetPatch("Vel Canary", MagnetVoice.JANGLE, Magnet.defaults(MagnetVoice.JANGLE)),
             "MAGNET CHUG (PICK)" to MagnetPatch("Vel Canary", MagnetVoice.CHUG, Magnet.defaults(MagnetVoice.CHUG)),

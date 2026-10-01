@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
  *   captioned by [FoldMeter], the meter [StringMachineTest] pins;
  * - the control: the sound the owner approved in PR-E1, VELVET's FANFARE or
  *   RESIN's WIDE SECTION through ENSEMBLE at its defaults, so "is this a
- *   better string machine than the two taps it already had" has a clip to
+ *   better string machine than the chorus it already had" has a clip to
  *   be answered against.
  *
  * Clips share one loudness ([AuditionLevel]); a fold is the fold of its

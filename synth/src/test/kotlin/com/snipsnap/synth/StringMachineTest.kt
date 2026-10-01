@@ -57,7 +57,8 @@ class StringMachineTest {
             assertEquals(m.ensemble, chain.section("ensemble"), "${m.name}: ENSEMBLE macros")
             assertTrue(!chain.reverse, "${m.name}: the landing reversed the pad")
         }
-        assertEquals(Ensemble.defaults(), classic, "the classic landing is ENSEMBLE's own defaults, or the KDoc's claim is stale")
+        // The chorus's own three macros: SECTION (the six-player voicing) is left off here, and absent from the key so the recipe stays as it was.
+        assertEquals(Ensemble.defaults() - "SECTION", classic, "the classic landing is ENSEMBLE's own defaults, or the KDoc's claim is stale")
     }
 
     @Test

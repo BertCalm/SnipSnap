@@ -496,7 +496,10 @@ physics-lite nod to ChowDSP's AnalogTapeModel), ENSEMBLE (three taps off one
 delay line swimming 120° apart on two slow sines, each through its own
 tone, summed with no dry — the string machine's back half on any pad, and
 the one section that widens a mono pad to stereo, by choice, with the pair
-weighted so the phone's mono fold hears every tap the same), PHASE (four allpasses
+weighted so the phone's mono fold hears every tap the same; its SECTION
+macro swaps the locked taps for six independent players, each with their own
+pitch drift, vibrato, onset, tone and level, which is the difference between
+one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,

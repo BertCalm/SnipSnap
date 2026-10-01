@@ -1471,6 +1471,98 @@ INSTRUMENT and DRONE TO LOOP still render the voice dry, as SIREN's SPREAD
 does with its ECHO. The preview gap the paragraph above names is closed
 for these four presets only; SIREN's ECHO still previews dry.
 
+**PR-E3, as built (2026-09-30): ENSEMBLE's SECTION macro.** The owner
+heard E2's string machines and said they sound good but not like several
+instruments. The measurement agrees, and says why: the shipped section is
+three taps on the *same* two sines 120° apart, so the three pitch wobbles
+are locked (every pair correlates at exactly -0.5, the set has rank two)
+and the swell comes round almost exactly every 1.7 s. A section of
+players is the opposite of that: each drifts on its own, vibratos at its
+own rate, and comes in a few milliseconds late. Prototypes of independent
+players were A/B'd against the chorus on a real bowed note and a bowed
+chord and the owner chose the staggered six ("Chord is especially good").
+**The macro.** `SECTION` (default 0, neutral 0, the last of ENSEMBLE's
+four) crossfades equal-power from the chorus at 0 to six players at 1.
+At 0, or at or below `Ensemble.SECTION_OFF`, the output is the shipped
+section bit for bit, and `EnsembleBytesTest` holds that: it pins the
+SHA-256 of the float bits on five signals x five macro sets, two rows of
+the wide-weight family and a recipe read from JSON, and was written on the
+unedited tree before `SECTION` existed. A recipe without the key reads
+back as it did. `EnsemblePlayers` is the voicing: six players with seeded
+smoothed-noise drift (corners 0.4-1.45 Hz), their own vibrato (5.08-6.45
+Hz, own phase, own entry delay), base delays from 7.5 to 33.0 ms, and a
+little tone, tilt and level flutter each, spread over the pair by the
+ramp-weight family at an L/R correlation of 0.51. `DEPTH` scales the
+players' depth, `RATE` their rates, `WIDTH` the shared spread; the one
+peak match runs on the mixture, as on the chorus path. **The bass
+anchor.** Six equal players spread over 25 ms are a static comb with
+bass holes: at 65 Hz the phone's fold was 13 dB down on average and 22 dB
+in its worst 250 ms window. Every candidate that kept all six in the bass (tilted weights, a
+narrower stagger, a lead voice, a hybrid bed, one player alone in the low
+band) failed the fold gate; the one that held replaces the players'
+bass with the dry signal delayed 17.7 ms through a 290 Hz low-pass, less
+the players' own 145 Hz low band (`LP290(x delayed) - LP145(sum of
+players)`), so the section's low end is one steady voice and the stagger
+lives above it. After it, all ten tones from 40 to 330 Hz fold within
+-3.6 dB in the worst 250 ms window (the worst is 260 Hz). The anchor is a
+290 Hz low-pass and does nothing above it: a steady sine at 175, 240, 305 or
+380 Hz still folds up to 12 dB down in its worst window (380 Hz, -11.9 dB),
+which the tests record and bound. **In the crossfade** (found by review, not
+by the first pass: the tests only looked at 0 and 1) the chorus bed's bass
+(a copy at 7.5 ms) and the anchor's (a copy at 17.7 ms) cancel at 49 Hz and
+its odd multiples, so the chip's default blend folded a 50 Hz sine 10.6 dB
+down. Between 0 and 1 the bed now gives up its own bass and the anchor is
+made up to full weight, at the bed's own delay until the last twentieth of
+the macro; a first version that kept the anchor at 17.7 ms put a 15 dB
+notch at 130 Hz, so the delay is part of the rule. Measured, the blends
+from 0.05 to 0.85 fold within -5.0 dB on average and -7.7 in the worst
+window at 50-260 Hz, and 165 Hz reaches -10.8 dB in its worst window at
+0.97, where the anchor is half way between its two delays; 0 and 1 are
+unchanged. **What it
+measures** (`EnsembleSectionTest`, each bound just past the number
+recorded next to it): pairwise pitch-deviation correlation 0.02 mean and
+0.05 at worst against the chorus's 0.500; envelope line prominence of a
+steady sine 3.0-5.1 at 100-1000 Hz against the chorus's above 100; click
+onset spread (5th to 95th percentile of the click's energy) at least 18 ms
+where the chorus's is under 5. **What it costs,** all known: the pair is
+narrower on the low and middle (the L/R correlation of eight saws goes
+0.43 to 0.74), the level ripples less (the swell the chorus gave is
+gone), the envelope's line prominence is worse at `RATE`'s extremes than
+at its default (up to 8.7 against 3.0-5.1), `DEPTH` 0 is a static
+comb in the mid-range (the chorus at `DEPTH` 0 is three identical copies, a
+7.5 ms delay and no comb), the section is a
+one-shot's (the last 7.5 ms of its input never emerge, as the chorus's do;
+the 7.5 to 33 ms before that come out only through the earlier players, so
+it fades its last 4 ms), a
+stereo input gets the anchor per channel (an approximation), and a build
+from before this change refuses a recipe that carries the key (the rack's
+`VERSION` stays 1; the pad degrades softly, as any unknown-macro recipe
+does). **Reach.** A pad-sheet chip, SECTION, beside ENSEMBLE (`sectioned`:
+`DEPTH` 0.5, `WIDTH` 1, `SECTION` 1, faded toward the neutrals by AMT, so
+its 0.7 default is DEPTH 0.35, WIDTH 0.7, SECTION 0.7, a blend); ENSEMBLE's
+own chip and the `ensembled` treatment are untouched, so every old recipe
+replays unchanged. **The landings stay on the chorus.** They were first
+switched to `SECTION` 1 in a commit of their own (`b53e4b4`), and that commit
+was reverted after the owner listened: on the four string machines' short
+decaying pads (about a second each) the chorus and the players sounded the
+same ("these are stab type sounds so difficult to really determine, but I hear
+no difference"), while the players cost a narrower pair, a landed L/R of
+0.74 / 0.80 / 0.74 / 0.58 against the chorus's 0.29 / 0.47 / 0.04 / 0.26, for
+a gentler fold (-0.4 / -1.1 / -0.6 / -0.5 dB against -0.9 / -1.1 / -1.5 /
+-1.3, pump 0.6 / 0.3 / 0.5 / 1.3 dB against 1.7 / 1.3 / 2.6 / 2.3). A
+benefit nobody can hear does not pay for a measured cost, so E2's landings are
+as they were merged, and `SECTION` is reached from the pad sheet's chip. The
+likely reason, not measured: the players' independent drift (0.4-1.45 Hz corners)
+and vibrato entries (0.10-0.45 s) have little time to show in a one-second stab,
+where the bowed C3-G3-E4 chord they were chosen on runs three seconds. **What the
+owner's ear said** (the listening page, 2026-10-01): on that chord the
+prototype they had chosen sounded the same as the chorus on this round's
+page, and the built `SECTION` 1 with the bass anchor sounded *more* like
+several players than the chorus, and better than the prototype ("3 is
+better"); nothing was said about the bass reading as a lump, which is taken as
+no objection. Putting the landings back on the players is one commit, if a
+held-pad instrument ever wants it.
+
 **The ARCO landing** (rack §3): **dry**. The two landings that exist are
 stories an instrument tells about itself — a siren's onboard delay is
 part of the sound (`Siren.kt:120-125`), a tape flute is the addendum's
@@ -1814,6 +1906,50 @@ edges, the corner floor, the per-voice β, `RHO_MAX`), then the stroke
 and the onset table, then the LOOP with the iterated retune, then the
 kit and the page — SILK's nonlinear-risk-last rule inverted, as BORE
 inverted it, because here the nonlinearity is the note.
+
+**R1a, as built (2026-10-01): `Strings.Bow`.** PR 1 of R1 is the bow in the
+shared toolkit and nothing else: no audio change (the two frozen grids in
+`StringsTest` stay green untouched), no voice, no macro. R0 was already done,
+because BORE landed the fractional `roundTrip`, `reflected()` and `inject()`
+first, so the toolkit half is one class, one KDoc sentence on `tune`'s
+`roundTrip`, and the two R0 tests the record still owed (the two budgets sum to
+a period less every stage's own delay at seven pitches to 1e-9, and two bare
+loops closed by hand ring at the note to within 5 cents). Where the built class
+differs from the sketch: **three `tune` calls**, not two (one to read the bridge
+filter's delay back, then one per segment); `bowPoint` exposes the string's
+velocity under the bow, which the slips-per-period measure needs; `rhoMax` is a
+constructor argument, so decision 7's grid can be re-run without editing a
+constant; `share` and the bridge corner are constructor arguments with the
+measured 0.85 and 3023.6 Hz as documented defaults (a voice pins its own);
+`retune(f)` re-solves both segments and there is no nut-only retune (vibrato's
+few cents and a glide's 64-sample steps are click-free through it, a jump of
+semitones clicks and is not what it is for). **The spike's numbers were its own
+model's, and they were re-measured on the built bow** (the Loops add a two-tap
+average and a nut one-pole the spike's rings did not, and the returned tap is
+the wave leaving the bow, not the bridge's): single slip at pressure 0.7 and 0.9
+at C3 and A3 with the same sawtooth signature (harmonics 2 to 4 at -5.9, -9.3,
+-11.6 dB); pitch within 3.8 cents from 65 to 880 Hz at share 0.85 (the spike's
+worst was 2.8); a lifted bow's ring-down at -0.439 dB a period against the
+formula's -0.454; 31 cells finite with a raw peak of at most 1.169 (so
+`RAW_PEAK_CEILING` 1.25 has 7 percent over the worst, not 12 over 1.11), the
+mean at most 0.0049. **What it found that the record did not say:** the share
+that holds CELLO's range is not ERHU's. At D6 (1174.66 Hz) share 0.85 reads
++6.8 and +2.4 cents at pressure 0.5 and 0.9, and 0.8 reads +2.4 and -1.7, while
+0.8 at 880 Hz reads -3.5 and -6.3: **the share is per voice, as the record said,
+and R1b has to pin ERHU's on the built engine** (the position floor at D6 is
+0.0724 with the 3023.6 Hz corner, so ERHU's lowest GRIP corner cannot go under
+about 1300 Hz at position 0.133; the bow tests assert that a 1500 Hz corner
+builds there and a 1000 Hz one is refused). **And CELLO's root is not the
+single-slip note the table above assumed.** At C2 (65.41 Hz), position 0.133 and
+the full 3023.6 Hz corner, the built bow slips three times a period at
+pressure 0.5, 0.65 and 0.7, once at 0.8, and twice at 0.9 and 1.0; with a
+1000 or 1500 Hz corner it slips once across pressure 0.8 to 1.0 (G2, 98 Hz,
+slips once at every pressure from 0.5 to 1.0 with a corner of 1000 to 2000 Hz). So CELLO's GRIP window at its
+root sits at lower corners and higher pressures than the record's "single-slip
+from 1000 to 3024 Hz at pressure >= 0.7", which was measured at C3: **drawing
+that window per voice on the built engine, at the root and across TUNE, is the
+first job of R1b**, before any preset is written. The pitch is in tune at C2
+whatever the slip count (-0.6 and -0.7 cents).
 
 **The audition page** (`ArcoAuditionGenerator`, the SIREN page's shape
 with its Web Audio SURFACE stand-in; every clip through `AuditionLevel`;

@@ -33,20 +33,21 @@ design/*/*.html
 # and published as the listening artifact; never committed.
 testkit/pluck-audition/
 
-# The GLINT audition clips and page, rendered by :synth:generateGlintAudition
-# and published as the listening artifact; never committed.
+# Left over from the GLINT Phase 1 audition generator, which has been removed.
+# Old generated copies can still exist on a machine; never committed.
 testkit/glint-audition/
 
-# The GLINT D1 depth-pass audition clips and page, rendered by
-# :synth:generateGlintD1Audition; never committed. The clips land under
-# clips/ and the page is copied in as index.html — this pattern still
-# covers both since it ignores the whole directory.
+# Left over from the GLINT D1 depth-pass audition generator, which has been
+# removed. Old generated copies can still exist on a machine; never committed.
 testkit/glint-d1-audition/
 
-# The GLINT D2 audition clips and page, rendered by
-# :synth:generateGlintD2Audition; never committed. Same layout as D1: clips
-# under clips/, the page copied in as index.html.
+# Left over from the GLINT D2 audition generator, which has been removed. Old
+# generated copies can still exist on a machine; never committed.
 testkit/glint-d2-audition/
+
+# The GLINT paths audition clips, rendered by :synth:generateGlintPathsAudition
+# and sent to the phone for the listening gate; never committed.
+testkit/glint-paths-audition/
 
 # The TINES audition phrases and page, rendered by :synth:generateTinesAudition
 # and published as the listening artifact; never committed.
