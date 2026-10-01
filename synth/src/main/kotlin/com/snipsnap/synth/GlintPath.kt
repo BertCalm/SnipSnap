@@ -98,7 +98,9 @@ internal class GlintPath private constructor(
      * being the RMS over one cycle of the fully rounded burst pair,
      * `w₁(p) · (sin(2π·k0·p) + level2 · sin(2π·k1·p))`, at this path's resting ratios (the breath's
      * centre: [breathRatios] at 0), by numerical integration. It is one number for a note whose ratios
-     * move along their path, so it is right at rest and within about a dB elsewhere.
+     * move along their path: right at rest, an approximation elsewhere. The spec expects it within
+     * about a dB there, which has been measured only at the SWEEP and VOWEL probe setups (defaults,
+     * BLOOM 0.85).
      */
     fun sineGain(): Float {
         val k = FloatArray(2)
