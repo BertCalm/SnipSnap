@@ -106,10 +106,41 @@ object Terra {
     fun defaults(voice: TerraVoice): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
+    /**
+     * What one voice hands the shared bank, after POS ([Modes.atPosition])
+     * and before any input: its modes, its note, its droop depth, its buffer
+     * length (a CLACK pre-roll included), the render rate and where the
+     * strike lands. HIT's colouring is computed from this at render, so a
+     * driven pad that is retuned or re-pitched is recoloured from its new
+     * modes.
+     */
+    internal class Body(
+        val modes: List<Modes.Mode>,
+        val fundamentalHz: Float,
+        val droopDepth: Float,
+        val frames: Int,
+        val rate: Int,
+        val onsetSamples: Int,
+    )
+
+    /**
+     * The bank's two optional inputs, both indexed from the strike and both
+     * holding their last value past their end: [level] is one curve per
+     * mode, a factor on that mode's table gain; [pitch] is a factor on the
+     * droop line, clamped to [PITCH_MIN]..[PITCH_MAX].
+     */
+    internal class BankInputs(val level: Array<FloatArray>? = null, val pitch: FloatArray? = null)
+
     /** Render [voice] with [macros]; missing macros fall back to defaults. */
-    fun render(voice: TerraVoice, macros: Map<String, Float> = emptyMap()): Snip {
-        val m = defaults(voice).toMutableMap()
-        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+    fun render(voice: TerraVoice, macros: Map<String, Float> = emptyMap()): Snip = renderWith(voice, macros, inputsFor = null)
+
+    /**
+     * [render] with the bank's two optional inputs, built from the voice's own
+     * [Body] by [inputsFor]. A null [inputsFor], or one that returns null, is
+     * today's render, byte for byte (TerraFrozenTest).
+     */
+    internal fun renderWith(voice: TerraVoice, macros: Map<String, Float>, inputsFor: ((Body) -> BankInputs?)?): Snip {
+        val m = settled(voice, macros)
         // U6 (docs/SYNTH_UPGRADE.md): render at 4x RATE, same contract as
         // every other engine, so the exciters' pulse edges and (on
         // RESONANT_CAVITY/TUNED_BAR) the cavity's tanh saturator and the
@@ -118,10 +149,10 @@ object Terra {
         // its nonlinear stages straight at 44.1kHz with no oversample.
         val renderRate = RATE * Dsp.OVERSAMPLE
         val (raw, clackFrames) = when (voice) {
-            TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate) to 0
-            TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate) to 0
-            TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate)
-            TerraVoice.TUNED_BAR -> tunedBar(m, renderRate) to 0
+            TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate, inputsFor) to 0
+            TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor) to 0
+            TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor)
+            TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor) to 0
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -157,6 +188,29 @@ object Terra {
         Dsp.limitPeak(out)
         Dsp.fadeTail(out)
         return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /**
+     * The bank alone for [voice], with the same optional inputs as
+     * [renderWith]: before the cavity stage, BUZZ and the output chain, at the
+     * render rate. The physics claims read this, as ForkTest reads `Fork.bank`.
+     */
+    internal fun bankWith(voice: TerraVoice, macros: Map<String, Float>, inputsFor: ((Body) -> BankInputs?)?): FloatArray {
+        val m = settled(voice, macros)
+        val renderRate = RATE * Dsp.OVERSAMPLE
+        return when (voice) {
+            TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate, inputsFor)
+            TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor, bankOnly = true)
+            TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor).first
+            TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, bankOnly = true)
+        }
+    }
+
+    /** [macros] over [voice]'s defaults, each clamped to 0..1; names the voice does not have are ignored. */
+    private fun settled(voice: TerraVoice, macros: Map<String, Float>): Map<String, Float> {
+        val m = defaults(voice).toMutableMap()
+        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        return m
     }
 
     // Mode ratios, gains, and damping curves: TERRA_World_Percussion_Synth_Spec.md
@@ -267,6 +321,13 @@ object Terra {
     // yet, and the spec's own default (20ms) sits at this range's centre.
     private const val DROOP_TAU_SECONDS = 0.020f
 
+    // The pitch input's clamp, applied before the skip guard: two octaves
+    // either way, so a downward curve can never reach hz <= 0 and the top
+    // mode at TUNE 1 stays far under the render rate's Nyquist (440 Hz x
+    // 5.92 x 4 x 1.65 is about 17 kHz against 88.2 kHz).
+    internal const val PITCH_MIN = 0.25f
+    internal const val PITCH_MAX = 4f
+
     // DECAY as RT60 (the house convention - see Dsp.Env's decay2T60), shared
     // by every topology: the fundamental mode (gamma=1) falls 60dB by
     // t60Base exactly. Sizing a render buffer at 1.4x it (see [framesFor],
@@ -363,8 +424,14 @@ object Terra {
      * been struck yet); the phase/decay clock then starts fresh at
      * [onsetSamples], so a used CLACK is silent underneath the click rather
      * than a bell already partway through decaying.
+     *
+     * [level] (one curve per mode, a factor on `mode.gain`) and [pitch] (a
+     * factor on the droop line) are the two optional inputs HIT, BEND and
+     * TALK fill, both indexed from [onsetSamples]; see [drivenBank]. With
+     * neither, the loop below runs today's two expressions verbatim - the
+     * only form that is byte-identical by construction.
      */
-    private fun strikeAndModalBank(
+    internal fun strikeAndModalBank(
         modes: List<Modes.Mode>,
         fundamentalHz: Float,
         droopDepth: Float,
@@ -372,7 +439,10 @@ object Terra {
         rate: Int,
         exciterAt: (Int) -> Float,
         onsetSamples: Int = 0,
+        level: Array<FloatArray>? = null,
+        pitch: FloatArray? = null,
     ): FloatArray {
+        if (level != null || pitch != null) return drivenBank(modes, fundamentalHz, droopDepth, frames, rate, exciterAt, onsetSamples, level, pitch)
         val out = FloatArray(frames)
         val phases = FloatArray(modes.size)
         val nyquist = rate / 2f
@@ -408,6 +478,67 @@ object Terra {
     }
 
     /**
+     * [strikeAndModalBank] with at least one input. The level factor
+     * multiplies the table gain before the sine, `sin * (gain * level) *
+     * decay`, and the pitch factor multiplies the droop line before f0,
+     * `f0 * (droop * pitch)`. Both groupings are Phase 0's `P0Bank`'s
+     * (Phase-0 record, Appendix B.1), so an input of exactly 1f changes no
+     * bit and a curve through this bank matches the prototype's. (The spec
+     * writes the pitch half left to right; `P0Bank` does not, and this
+     * follows `P0Bank`.) The skip guard reads the table gain only: a mode
+     * whose level is 0 still advances its phase and reopens where it would
+     * have been (spec, "Architecture"; TerraTest's `a mode held at zero
+     * level reopens in phase`).
+     */
+    private fun drivenBank(
+        modes: List<Modes.Mode>,
+        fundamentalHz: Float,
+        droopDepth: Float,
+        frames: Int,
+        rate: Int,
+        exciterAt: (Int) -> Float,
+        onsetSamples: Int,
+        level: Array<FloatArray>?,
+        pitch: FloatArray?,
+    ): FloatArray {
+        if (level != null) require(level.size == modes.size && level.all { it.isNotEmpty() }) { "a level curve per mode (${modes.size}), each at least one value long" }
+        if (pitch != null) require(pitch.isNotEmpty()) { "a pitch curve has at least one value" }
+        val out = FloatArray(frames)
+        val phases = FloatArray(modes.size)
+        val nyquist = rate / 2f
+        for (i in out.indices) {
+            val exciter = exciterAt(i)
+            var modalSum = 0f
+            if (i >= onsetSamples) {
+                val n = i - onsetSamples
+                val t = n.toFloat() / rate
+                val currentF0 = if (pitch == null) {
+                    fundamentalHz * (1f + droopDepth * exp(-t / DROOP_TAU_SECONDS))
+                } else {
+                    val p = pitch[minOf(n, pitch.size - 1)].coerceIn(PITCH_MIN, PITCH_MAX)
+                    fundamentalHz * ((1f + droopDepth * exp(-t / DROOP_TAU_SECONDS)) * p)
+                }
+                for (k in modes.indices) {
+                    val mode = modes[k]
+                    val hz = currentF0 * mode.ratio
+                    if (hz <= 0f || hz >= nyquist || mode.t60 <= 0f || mode.gain == 0f) continue
+                    phases[k] += TWO_PI * hz / rate
+                    if (phases[k] >= TWO_PI) phases[k] -= TWO_PI
+                    val decay = exp(-T60_NEPERS * t / mode.t60)
+                    modalSum += if (level == null) {
+                        sin(phases[k]) * mode.gain * decay
+                    } else {
+                        val curve = level[k]
+                        sin(phases[k]) * (mode.gain * curve[minOf(n, curve.size - 1)]) * decay
+                    }
+                }
+            }
+            out[i] = 0.35f * exciter + 0.65f * modalSum
+        }
+        return out
+    }
+
+    /**
      * Parasitic contact buzz (S2.4), shared by RESONANT_CAVITY and
      * TUNED_BAR: only the part of [raw] above [BUZZ_THRESHOLD] rattles,
      * scaled by [amount]. A no-op copy below the 0.001 gate a patch's
@@ -427,7 +558,7 @@ object Terra {
         return out
     }
 
-    private fun compoundMembrane(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun compoundMembrane(m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)? = null): FloatArray {
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 55f, 440f)
         val t60Base = t60BaseFor(m)
         val hardness = m.getValue("FORCE")
@@ -455,10 +586,11 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
-        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 11))
+        val inputs = inputsFor?.invoke(Body(modes, fundamentalHz, droopDepth, frames, rate, onsetSamples = 0))
+        return strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 11), level = inputs?.level, pitch = inputs?.pitch)
     }
 
-    private fun resonantCavity(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun resonantCavity(m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)? = null, bankOnly: Boolean = false): FloatArray {
         // Udu/cajón territory: the spec's own presets sit at 55-60Hz: see
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 01 and 04.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 45f, 300f)
@@ -490,7 +622,9 @@ object Terra {
         }
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
-        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 31))
+        val inputs = inputsFor?.invoke(Body(modes, fundamentalHz, droopDepth, frames, rate, onsetSamples = 0))
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, fleshPalmExciter(hardness, rate, seed = 31), level = inputs?.level, pitch = inputs?.pitch)
+        if (bankOnly) return raw
 
         val cavity = Dsp.Biquad().apply { bandpass(CAVITY_FREQ_HZ, CAVITY_Q, rate) }
         val out = raw.copyOf()
@@ -511,7 +645,7 @@ object Terra {
      * Punch's onset-boost off the click and anchored on the real strike
      * instead (see [render]'s own comment on why).
      */
-    private fun conicalBell(m: Map<String, Float>, rate: Int): Pair<FloatArray, Int> {
+    private fun conicalBell(m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)? = null): Pair<FloatArray, Int> {
         // Agogô territory: the spec's own presets span D5-A5 (587-880Hz):
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 13-15.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 500f, 950f)
@@ -552,11 +686,12 @@ object Terra {
         val frames = framesFor(t60Base, rate) + clackSamples
         // No DROOP: a forged bell has no membrane tension to relax.
         val exciter = withPreStrikeClack(clackSamples, seed = 29, hardStickExciter(hardness, rate, seed = 17))
-        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, exciter, onsetSamples = clackSamples)
+        val inputs = inputsFor?.invoke(Body(modes, fundamentalHz, 0f, frames, rate, onsetSamples = clackSamples))
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, exciter, onsetSamples = clackSamples, level = inputs?.level, pitch = inputs?.pitch)
         return raw to clackSamples
     }
 
-    private fun tunedBar(m: Map<String, Float>, rate: Int): FloatArray {
+    private fun tunedBar(m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)? = null, bankOnly: Boolean = false): FloatArray {
         // Balafon territory: the spec's own presets sit at 220-330Hz:
         // TERRA_World_Percussion_Synth_Spec.md S5, pads 07 and 16.
         val fundamentalHz = Dsp.expMap(m.getValue("TUNE"), 180f, 400f)
@@ -587,7 +722,9 @@ object Terra {
         val modes = Modes.atPosition(baseModes, position)
         val frames = framesFor(t60Base, rate)
         // No DROOP: a wooden bar has no membrane tension to relax.
-        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 19))
+        val inputs = inputsFor?.invoke(Body(modes, fundamentalHz, 0f, frames, rate, onsetSamples = 0))
+        val raw = strikeAndModalBank(modes, fundamentalHz, droopDepth = 0f, frames, rate, hardStickExciter(hardness, rate, seed = 19), level = inputs?.level, pitch = inputs?.pitch)
+        if (bankOnly) return raw
         return applyBuzz(raw, buzzAmount, seed = 23)
     }
 }

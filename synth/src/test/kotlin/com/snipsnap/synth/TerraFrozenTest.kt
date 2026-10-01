@@ -2,9 +2,12 @@ package com.snipsnap.synth
 
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
  * TERRA with no driver renders exactly as it did before HIT, BEND and TALK
@@ -103,6 +106,96 @@ class TerraFrozenTest {
             val stored = requireNotNull(kit[i]?.recipe?.entries?.get("patch")) { "pad ${pad.slot} has no patch in its recipe" }
             assertEquals(today, Json.write(stored), "pad ${pad.slot}'s stored recipe")
         }
+    }
+
+    // ---------- the bank's two inputs at identity ----------
+
+    @Test
+    fun `identity curves alone and together render the frozen TERRA`() {
+        val ones: (Terra.Body) -> Terra.BankInputs = { b -> Terra.BankInputs(level = Array(b.modes.size) { floatArrayOf(1f) }) }
+        val unity: (Terra.Body) -> Terra.BankInputs = { Terra.BankInputs(pitch = floatArrayOf(1f)) }
+        val both: (Terra.Body) -> Terra.BankInputs = { b -> Terra.BankInputs(level = Array(b.modes.size) { floatArrayOf(1f) }, pitch = floatArrayOf(1f)) }
+        var renders = 0
+        for (c in TerraCases.all) {
+            val frozen = LegacyTerraBank.render(c.voice, c.macros).samples
+            for ((label, inputs) in listOf("level" to ones, "pitch" to unity, "level and pitch" to both)) {
+                assertContentEquals(frozen, Terra.renderWith(c.voice, c.macros, inputs).samples, "${c.label}, identity $label")
+                renders++
+            }
+            assertContentEquals(frozen, Terra.renderWith(c.voice, c.macros) { null }.samples, "${c.label}, inputs that decline")
+            renders++
+        }
+        assertEquals(160, renders)
+    }
+
+    /**
+     * Every finite pitch value is clamped before the skip guard, so a
+     * downward curve cannot reach `hz <= 0` (Phase-0 record, §7 item 8: 0,
+     * -3, 1e9 and 1e-9 all render finite once clamped). NaN passes
+     * coerceIn, which is why stored curves are finite-checked where they are
+     * stored, never here.
+     */
+    @Test
+    fun `a pitch curve is clamped to a quarter and four times before the skip guard`() {
+        val v = TerraVoice.COMPOUND_MEMBRANE
+        fun at(p: Float) = Terra.renderWith(v, emptyMap()) { Terra.BankInputs(pitch = floatArrayOf(p)) }.samples
+        val floor = at(Terra.PITCH_MIN)
+        val ceiling = at(Terra.PITCH_MAX)
+        assertContentEquals(floor, at(0f), "0")
+        assertContentEquals(floor, at(-3f), "-3")
+        assertContentEquals(floor, at(1e-9f), "1e-9")
+        assertContentEquals(ceiling, at(1e9f), "1e9")
+        val plain = Terra.render(v)
+        for (x in listOf(floor, ceiling)) {
+            assertEquals(plain.samples.size, x.size)
+            assertTrue(x.all { it.isFinite() && abs(it) <= 1f }, "a clamped pitch rendered a sample out of range")
+        }
+    }
+
+    /**
+     * Each short curve ends on a value unlike the rest, so only holding the
+     * last value reproduces the explicit full-length curve: a curve that
+     * wrapped, or read zero past its end, would differ.
+     */
+    @Test
+    fun `a curve shorter than the render holds its last value, and every mode needs its own curve`() {
+        val v = TerraVoice.CONICAL_BELL
+        val m = mapOf("CLACK" to 1f)
+        var body: Terra.Body? = null
+        Terra.bankWith(v, m) { body = it; null }
+        val b = requireNotNull(body)
+        val length = b.frames - b.onsetSamples
+        fun pitchAt(n: Int) = if (n < 6) 1.5f else 1.25f
+        fun levelAt(n: Int) = if (n < 9) 0.5f else 0.75f
+        val held = Terra.renderWith(v, m) { Terra.BankInputs(level = Array(it.modes.size) { FloatArray(10) { n -> levelAt(n) } }, pitch = FloatArray(7) { n -> pitchAt(n) }) }
+        val full = Terra.renderWith(v, m) { Terra.BankInputs(level = Array(it.modes.size) { FloatArray(length) { n -> levelAt(n) } }, pitch = FloatArray(length) { n -> pitchAt(n) }) }
+        assertContentEquals(full.samples, held.samples)
+        assertFailsWith<IllegalArgumentException> {
+            Terra.renderWith(v, emptyMap()) { b -> Terra.BankInputs(level = Array(b.modes.size - 1) { floatArrayOf(1f) }) }
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Terra.renderWith(v, emptyMap()) { Terra.BankInputs(pitch = FloatArray(0)) }
+        }
+    }
+
+    /**
+     * The curves start at the strike, not at frame 0, so a CLACKed bell's
+     * pre-roll lands first and the curve shapes the body (spec,
+     * "Architecture", the clock). A curve indexed from frame 0 would spend
+     * its silent stretch on the pre-roll, where the bank is already silent,
+     * and this would see no difference at all.
+     */
+    @Test
+    fun `curves start at the strike, so CLACK's pre-roll lands first`() {
+        val v = TerraVoice.CONICAL_BELL
+        val m = mapOf("CLACK" to 1f)
+        var onset = -1
+        val plain = Terra.bankWith(v, m) { b -> onset = b.onsetSamples; null }
+        assertTrue(onset > 100, "CLACK 1 should give a pre-roll: onset $onset")
+        val gated = Terra.bankWith(v, m) { b -> Terra.BankInputs(level = Array(b.modes.size) { FloatArray(101) { n -> if (n < 100) 0f else 1f } }) }
+        assertContentEquals(plain.copyOfRange(0, onset), gated.copyOfRange(0, onset), "the curve reached into the pre-roll")
+        assertTrue((onset until onset + 100).any { gated[it] != plain[it] }, "the curve's silent stretch did not land on the strike")
+        assertContentEquals(plain.copyOfRange(onset + 100, plain.size), gated.copyOfRange(onset + 100, gated.size), "after the stretch the modes did not come back in phase")
     }
 
     /**

@@ -5,6 +5,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
 import kotlin.math.abs
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -349,5 +350,35 @@ class TerraTest {
             buzzed.centroidHz > dry.centroidHz,
             "BUZZ should raise the centroid: dry=${dry.centroidHz} buzzed=${buzzed.centroidHz}",
         )
+    }
+
+    // ---------- the bank's level input (spec "Testing", test 7) ----------
+
+    /**
+     * A mode held at exactly 0 must keep its phase running, so it reopens
+     * where it would have been. The wrong guard (skipping on gain x level,
+     * before the phase accumulates) shows as a phase error after reopening,
+     * not a click: Phase 0 measured up to 0.33 of a 0.82 bank peak, with a
+     * largest first difference of 0.0004 against 0.0003. So this compares
+     * waveforms after the window, sample for sample, not a step.
+     */
+    @Test
+    fun `a mode held at zero level reopens in phase`() {
+        var captured: Terra.Body? = null
+        Terra.bankWith(TerraVoice.COMPOUND_MEMBRANE, emptyMap()) { captured = it; null }
+        val body = requireNotNull(captured)
+        val a = (0.020f * body.rate).toInt()
+        val b = (0.060f * body.rate).toInt()
+        val k = 2
+        val window = FloatArray(b + 1) { n -> if (n in a until b) 0f else 1f }
+        val level = Array(body.modes.size) { m -> if (m == k) window else floatArrayOf(1f) }
+        fun bank(modes: List<Modes.Mode>, level: Array<FloatArray>?) =
+            Terra.strikeAndModalBank(modes, body.fundamentalHz, body.droopDepth, body.frames, body.rate, { 0f }, body.onsetSamples, level = level)
+        val reference = bank(body.modes, null)
+        val zeroed = bank(body.modes, level)
+        val without = bank(body.modes.filterIndexed { m, _ -> m != k }, null)
+        assertContentEquals(reference.copyOfRange(0, a), zeroed.copyOfRange(0, a), "a curve of ones changed the bank before the window")
+        assertContentEquals(without.copyOfRange(a, b), zeroed.copyOfRange(a, b), "the zeroed mode still sounded inside the window")
+        assertContentEquals(reference.copyOfRange(b, reference.size), zeroed.copyOfRange(b, zeroed.size), "the mode did not reopen in phase")
     }
 }
