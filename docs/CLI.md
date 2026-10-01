@@ -361,7 +361,7 @@ three locked taps: each drifts, vibratos, enters and sounds on their own, so
 a note reads as several playing and not one swirled) and
 `amped` (a tube amp and its speaker on a hit that was never a guitar:
 DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
-cabinet — run four times over inside so a hot tube does not fold back).
+cabinet — run four times over inside so a hot tube folds back far less).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical. On the

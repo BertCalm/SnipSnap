@@ -77,33 +77,14 @@ tasks.register<JavaExec>("generateSilkAudition") {
     args("${rootDir}/testkit/silk-audition")
 }
 
-/** Render the GLINT Phase 1 audition clips and page under testkit/glint-audition/. See GlintAuditionGenerator. */
-tasks.register<JavaExec>("generateGlintAudition") {
+/** Render the GLINT paths audition (WAVs only) under testkit/glint-paths-audition/. See GlintPathsAuditionGenerator. */
+tasks.register<JavaExec>("generateGlintPathsAudition") {
     group = "distribution"
-    description = "Render the GLINT Phase 1 audition clips and listening page under testkit/glint-audition/."
+    description = "Render the GLINT paths audition clips under testkit/glint-paths-audition/."
     classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("com.snipsnap.synth.GlintAuditionGenerator")
+    mainClass.set("com.snipsnap.synth.GlintPathsAuditionGenerator")
     workingDir = projectDir
-    args("${rootDir}/testkit/glint-audition")
-}
-
-/** Render the GLINT D1 depth-pass audition clips (WAVs only) under testkit/glint-d1-audition/. See GlintD1AuditionGenerator. */
-tasks.register<JavaExec>("generateGlintD1Audition") {
-    group = "distribution"
-    description = "Render the GLINT D1 depth-pass audition clips under testkit/glint-d1-audition/."
-    classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("com.snipsnap.synth.GlintD1AuditionGenerator")
-    workingDir = projectDir
-    args("${rootDir}/testkit/glint-d1-audition")
-}
-
-tasks.register<JavaExec>("generateGlintD2Audition") {
-    group = "distribution"
-    description = "Render the GLINT D2 audition clips and listening page under testkit/glint-d2-audition/."
-    classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("com.snipsnap.synth.GlintD2AuditionGenerator")
-    workingDir = projectDir
-    args("${rootDir}/testkit/glint-d2-audition")
+    args("${rootDir}/testkit/glint-paths-audition")
 }
 
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */

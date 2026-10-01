@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.sqrt
 import kotlin.math.tanh
 import kotlin.random.Random
@@ -14,10 +15,10 @@ import kotlin.random.Random
  * (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
  *
  * DRIVE is the gain into an asymmetric tube curve (soft on the negative side,
- * so it adds even harmonics as well as odd); SAG is the supply giving way on
- * loud passages, biasing the tube further toward cutoff; TONE shapes what
- * comes *out* of the tube (EQ sits before VALVE in the rack and shapes what
- * goes in); CAB is the speaker, none at 0 growing to a dark closed wall at 1.
+ * so it adds even harmonics as well as odd); SAG is the supply giving way after
+ * a loud hit, a level dip on the tube's own output; TONE shapes what comes
+ * *out* of the tube (EQ sits before VALVE in the rack and shapes what goes
+ * in); CAB is the speaker, none at 0 growing to a dark closed wall at 1.
  *
  * Level-relative: the pad is normalised to peak 1 before the gain law and
  * peak-matched after, so DRIVE means the same on a whisper and a slam. The
@@ -25,23 +26,36 @@ import kotlin.random.Random
  *
  * The first section that oversamples. At the snip's rate a hot tube folds its
  * harmonics back into the audible band: the Phase-0 spike measured a steady
- * 247 Hz probe at DRIVE 1 with energy between harmonics only 31.9 dB down at
- * 1x against 49.4 dB at 4x (an 8x reference read 50.9). The round trip is
- * zero-stuffing interpolated by [Tide.bandLimit] on the way up (never the
- * general resampler there, which cost 72 ms per rendered second on its own)
- * and [Dsp.decimate] on the way down, the melodic engines' own - `Resampler`'s
- * 2:1 fast path twice. The band-limit's 19.5 kHz corner is absolute, so the
- * round trip assumes the rack's 44.1 kHz snips: below about 40 kHz the
- * zero-stuffing images would enter the tube nearly unattenuated, and a 48 kHz
- * snip loses its 19-24 kHz.
+ * 247 Hz probe at its own DRIVE 1 (gain 35 on its law) with energy between
+ * harmonics only 31.9 dB down at 1x against 49.4 dB at 4x (an 8x reference read
+ * 50.9; that was the spike's own probe and model of the tube). ValveTest's
+ * steady probe reads 28.8 dB at 1x against 51.3 dB at 4x at gain 35 (DRIVE 1 on
+ * the V1 law), and on the V1.1 law, where DRIVE 1 is gain 1000, 26.8 dB at 1x
+ * against 40.6 dB at 4x (its aliasing test prints both).
+ * The round trip is zero-stuffing interpolated by [Tide.bandLimit] on the way
+ * up (never the general resampler there, which cost 72 ms per rendered second
+ * on its own) and [Dsp.decimate] on the way down, the melodic engines' own -
+ * `Resampler`'s 2:1 fast path twice. The round trip is always on: a gate that
+ * skips it at low DRIVE would save about 31 ms per rendered second (33.4 to
+ * 2.1, measured) but changes the speaker's tone, because the cabinet's
+ * filters run at the snip's rate on that path (a snare through CAB 0.5 steps
+ * 1.45 dB in its top third-octave; see
+ * docs/superpowers/plans/2026-09-30-valve-v1-1-spike.md). The band-limit's
+ * 19.5 kHz corner is absolute, so the round trip assumes the rack's 44.1 kHz
+ * snips: below about 40 kHz the zero-stuffing images would enter the tube
+ * nearly unattenuated, and a 48 kHz snip loses its 19-24 kHz.
  *
- * Every number marked shape below is a listening value from the specification
- * the owner attached, kept until the V1 listen moves it.
+ * Every number marked shape below is a listening value: V1's from the
+ * specification the owner attached, V1.1's chosen by the owner from candidate
+ * clips (docs/superpowers/plans/2026-09-30-valve-v1-1.md).
  */
 object Valve {
 
     val MACROS: List<MacroSpec> = listOf(
-        MacroSpec("DRIVE", 0.45f),
+        // 0.7 is gain 11.3 on the V1.1 law. The owner chose 0.7 twice: first heard on V1's law at
+        // the round-two listen (gain 4.9), then heard on this one at the confirmation listen
+        // (gain 11.3) against 0.65 (gain 5.4), which had kept the first sound.
+        MacroSpec("DRIVE", 0.7f),
         MacroSpec("SAG", 0.35f),
         // 0.5 is flat, so the pad sheet's AMT fade lands on a flat tone.
         MacroSpec("TONE", 0.5f, neutral = 0.5f),
@@ -50,26 +64,57 @@ object Valve {
 
     /** The gain law's ends. 0.05 keeps the tube linear to about 0.1 % - the neutral point's near-copy. */
     internal const val GAIN_MIN = 0.05f
-    internal const val GAIN_MAX = 35f
+
+    /** V1's top, kept as the law's shape at and below [GAIN_PIVOT]: 0.05 * 700^DRIVE. */
+    private const val V1_GAIN_TOP = 35f
+
+    /** The V1.1 top (shape): the owner picked gain 1000 on kick, snare and brass at the round-two listen; the choir's 100 sits at DRIVE about 0.845. */
+    internal const val GAIN_MAX = 1_000f
+
+    /** DRIVE at which the law leaves V1's curve for the steeper run to [GAIN_MAX] (shape); everything the owner heard at or below it is unchanged. */
+    internal const val GAIN_PIVOT = 0.6f
 
     /**
-     * Supply sag (shape): a follower whose target is how far the signal goes
-     * over the rail (|v| - 1, or 0 under it). It charges toward a higher target
-     * with a 5 ms time constant and recovers toward a lower one with a 120 ms
-     * time constant (time constants, not completion times), the same 120 ms
-     * whether the lower target is 0 or an overshoot that is only smaller.
+     * Supply sag (shape; the owner chose it from three mechanisms at the V1.1
+     * listen): a post-tube gain reduction, `y = t / (1 + SAG * K * env)`, where
+     * `env` follows the tube's own output level `|t|` with a 5 ms attack and a
+     * 120 ms release (time constants, not completion times) and the previous
+     * sample's value sets this sample's gain, so there is no algebraic loop.
      *
-     * Known at V1, open: the bias is a plain offset on the tube's input, so
-     * above the rail (DRIVE above about 0.46 on a normalised pad, SAG above 0)
-     * it shifts the tube's rest point and releases over 120 ms, slower than
-     * the 5 Hz blocker follows, and a hot pad ends on a decaying DC step - a
-     * kick at DRIVE 1 / SAG 0.35 on 0.047 of its peak, `amped` on 0.0027. It
-     * is for the V1 gate, with the bound on the sag bias (the spec's
-     * "Failure handling").
+     * It replaces V1's bias, which moved the tube's rest point and released
+     * over 120 ms, slower than the 5 Hz blocker follows, leaving a decaying DC
+     * step on hot pads (a kick at gain 35 ended on 3.6 % of its peak). This one
+     * has no rest-point shift: SAG 1 adds no end step (the spike's kick at gain 35
+     * ended on 0.08 %). The tube's own asymmetry still leaves about 1.7 % on a kick
+     * at gain 1000 whether SAG is up or not. The owner heard 1.7 % on a brass as
+     * clean before V1.1, but that was DRIVE 1 on the V1 law (the V1 gate's brass at
+     * gain 35, SAG 0.35); at gain 1000 the brass reads 0.255 % and 1.72 % is the kick's.
+     *
+     * K is 3, the top of the range the spike searched (0.8 to 3): the kick's level
+     * 60-160 ms after the hit, re its first 20 ms, falls 2.2 dB against SAG 0 at DRIVE
+     * 0.6 (gain 2.5) and about 3 dB at gain 35 (the spike, DRIVE 1 on the V1 law); the
+     * spike aimed at 4-6 dB, and a slower charge, not more depth, is the likely lever,
+     * unmeasured. At gain 1000 (DRIVE 1, CAB 0.6) the same level drops 3.15 dB on the
+     * kick and 3.28 dB on the snare at SAG 1, and about 1.6 dB at SAG 0.35, flat from 20
+     * to 160 ms: a steady level offset after the hit's first milliseconds, not a dip
+     * and recovery, so it did not shrink from gain 35. The owner heard SUPPLY at gain
+     * 35 and below before this was measured. At the confirmation listen the owner heard no
+     * effect from SAG at DRIVE 1 on the kick and snare (loudness-matched clips level away the
+     * steady offset), so SAG is an effect of the lower and middle DRIVE range.
      */
-    private const val SAG_ATTACK_SECONDS = 0.005f
-    private const val SAG_RELEASE_SECONDS = 0.120f
-    private const val SAG_DEPTH = 0.45f
+    private const val SUPPLY_K = 3f
+    private const val SUPPLY_ATTACK_SECONDS = 0.005f
+    private const val SUPPLY_RELEASE_SECONDS = 0.120f
+
+    /**
+     * The closed wall (shape; the owner chose 3.2 kHz with two poles at the V1.1
+     * listen). CAB at or below [WALL_FROM] is V1's speaker exactly; above it the
+     * voice coil's corner runs from V1's 5.02 kHz to [WALL_HZ] at CAB 1 and a
+     * second identical pole fades in, so CAB 1 is two poles at 3.2 kHz (-3 dB at
+     * about 2.9 kHz on noise, against 5.1 kHz for V1's wall).
+     */
+    private const val WALL_FROM = 0.6f
+    private const val WALL_HZ = 3_200f
 
     /**
      * The DC blocker after the asymmetric curve. 5 Hz, not the fleet's usual
@@ -82,8 +127,16 @@ object Valve {
 
     fun scramble(random: Random): Map<String, Float> = MACROS.associate { it.name to random.nextFloat() }
 
-    /** DRIVE's gain into the tube, on the pad normalised to peak 1. */
-    fun gainFor(drive: Float): Float = Dsp.expMap(drive.coerceIn(0f, 1f), GAIN_MIN, GAIN_MAX)
+    /**
+     * DRIVE's gain into the tube, on the pad normalised to peak 1: V1's `0.05 * 700^DRIVE`
+     * up to [GAIN_PIVOT] (gain 2.55), then log-linear from there to [GAIN_MAX] at DRIVE 1.
+     */
+    fun gainFor(drive: Float): Float {
+        val d = drive.coerceIn(0f, 1f)
+        if (d <= GAIN_PIVOT) return Dsp.expMap(d, GAIN_MIN, V1_GAIN_TOP)
+        val atPivot = Dsp.expMap(GAIN_PIVOT, GAIN_MIN, V1_GAIN_TOP).toDouble()
+        return (atPivot * exp(ln(GAIN_MAX / atPivot) * ((d - GAIN_PIVOT) / (1f - GAIN_PIVOT)))).toFloat()
+    }
 
     fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip = process(snip, macros, oversample = true)
 
@@ -135,34 +188,39 @@ object Valve {
         return up
     }
 
-    /** Gain, sag, the tube, the DC blocker, then TONE and CAB - one channel at [rate]. */
+    private fun curve(b: Float): Float = if (b >= 0f) tanh(b) else b / sqrt(1f + b * b)
+
+    /** Gain, the tube, the supply, the DC blocker, then TONE and CAB - one channel at [rate]. */
     private fun stage(x: FloatArray, m: Map<String, Float>, rate: Int): FloatArray {
         val g = gainFor(m.getValue("DRIVE"))
         val sag = m.getValue("SAG")
-        val v = FloatArray(x.size) { x[it] * g }
-        val vSag = sagTrack(v, rate)
+        val t = FloatArray(x.size) { curve(x[it] * g) }
+        val env = supplyEnv(t, rate)
         val dc = Dsp.OnePole(rate)
         val out = FloatArray(x.size)
         for (i in x.indices) {
-            val b = v[i] - vSag[i] * sag * SAG_DEPTH
-            val t = if (b >= 0f) tanh(b) else b / sqrt(1f + b * b)
-            out[i] = t - dc.lp(t, DC_HZ)
+            val y = t[i] * (1f / (1f + sag * SUPPLY_K * env[i]))
+            out[i] = y - dc.lp(y, DC_HZ)
         }
         tone(out, m.getValue("TONE"), rate)
         cabinet(out, m.getValue("CAB"), rate)
         return out
     }
 
-    /** The supply follower's value at every sample of [v], the signal after the gain. */
-    internal fun sagTrack(v: FloatArray, rate: Int): FloatArray {
-        val charge = 1f - exp(-1.0 / (SAG_ATTACK_SECONDS * rate)).toFloat()
-        val release = 1f - exp(-1.0 / (SAG_RELEASE_SECONDS * rate)).toFloat()
-        var vSag = 0f
-        return FloatArray(v.size) { i ->
-            val a = abs(v[i])
-            val target = if (a > 1f) a - 1f else 0f
-            vSag += (if (target > vSag) charge else release) * (target - vSag)
-            vSag
+    /**
+     * The supply follower's value *before* it sees sample i of [t], the tube's output: the
+     * previous sample's value sets this sample's gain. Charges toward a higher `|t|` with a
+     * 5 ms time constant and recovers toward a lower one with 120 ms.
+     */
+    internal fun supplyEnv(t: FloatArray, rate: Int): FloatArray {
+        val charge = 1f - exp(-1.0 / (SUPPLY_ATTACK_SECONDS * rate)).toFloat()
+        val release = 1f - exp(-1.0 / (SUPPLY_RELEASE_SECONDS * rate)).toFloat()
+        var env = 0f
+        return FloatArray(t.size) { i ->
+            val used = env
+            val a = abs(t[i])
+            env += (if (a > env) charge else release) * (a - env)
+            used
         }
     }
 
@@ -183,6 +241,14 @@ object Valve {
         for (i in buf.indices) buf[i] = top.process(mid.process(buf[i]))
     }
 
+    /** The voice coil's corner: V1's 5.8 kHz to 4.5 kHz map up to [WALL_FROM], then linearly to [WALL_HZ] at CAB 1. */
+    private fun coilCorner(cab: Float): Float =
+        if (cab <= WALL_FROM) {
+            Dsp.lin(cab, 5_800f, 4_500f)
+        } else {
+            Dsp.lin((cab - WALL_FROM) / (1f - WALL_FROM), Dsp.lin(WALL_FROM, 5_800f, 4_500f), WALL_HZ)
+        }
+
     /**
      * The speaker: nothing at 0. The network fades in over the first quarter
      * of the knob - every gain and weight scales with cab/0.25 and the voice
@@ -190,10 +256,12 @@ object Valve {
      * CAB 0+ is transparent - and is fully in at 0.25 as a bright open-back
      * combo: cone thump +6 dB at 102 Hz, the open-back cancellation notch
      * -6.8 dB at 470 Hz, two cone-breakup resonances at 2.6 and 3.75 kHz, the
-     * voice coil rolling the top off from 5.5 kHz. It grows to a dark closed
-     * wall at 1: thump at 78 Hz, the notch filled in as the back closes, the
-     * coil at 4.5 kHz. (The 110 Hz, 500 Hz, -9 dB and 5.8 kHz formula ends
-     * are the network's CAB 0 anchors, where it is bypassed; shape.)
+     * voice coil rolling the top off from 5.5 kHz. The network grows to V1's speaker
+     * at 0.6 (coil 5.0 kHz, thump 90.8 Hz, the notch 428 Hz at -3.6 dB), whose thump
+     * and notch keep moving to 78 Hz and filled in at CAB 1, while the coil runs to
+     * 3.2 kHz with a second identical pole faded in over 0.6-1 ([WALL_FROM],
+     * [WALL_HZ]; shape). (The 110 Hz, 500 Hz, -9 dB and 5.8 kHz formula ends are the
+     * network's CAB 0 anchors, where it is bypassed.)
      */
     internal fun cabinet(buf: FloatArray, cab: Float, rate: Int) {
         if (cab <= 0f) return
@@ -205,13 +273,25 @@ object Valve {
         // The map's open end is the one-pole's own cap (0.45 x the work rate, ~79 kHz at 4x),
         // so CAB 0+ is transparent (-0.09 dB at 16 kHz): 20 kHz was a real corner at 176.4 kHz,
         // a 2 dB step in the top octave where CAB 0 bypasses - the one discontinuity in the AMT fade.
-        val coilHz = Dsp.expMap(1f - w, Dsp.lin(cab, 5_800f, 4_500f), rate * 0.45f)
+        val coilHz = Dsp.expMap(1f - w, coilCorner(cab), rate * 0.45f)
+        val second = ((cab - WALL_FROM) / (1f - WALL_FROM)).coerceIn(0f, 1f)
         val coil = Dsp.OnePole(rate)
-        for (i in buf.indices) {
-            val s = buf[i]
-            val body = notch.process(thump.process(s))
-            val breakup = w * (0.35f * breakup1.process(s) + 0.25f * breakup2.process(s))
-            buf[i] = coil.lp(body + breakup, coilHz)
+        if (second == 0f) {
+            for (i in buf.indices) {
+                val s = buf[i]
+                val body = notch.process(thump.process(s))
+                val breakup = w * (0.35f * breakup1.process(s) + 0.25f * breakup2.process(s))
+                buf[i] = coil.lp(body + breakup, coilHz)
+            }
+        } else {
+            val coil2 = Dsp.OnePole(rate)
+            for (i in buf.indices) {
+                val s = buf[i]
+                val body = notch.process(thump.process(s))
+                val breakup = w * (0.35f * breakup1.process(s) + 0.25f * breakup2.process(s))
+                val one = coil.lp(body + breakup, coilHz)
+                buf[i] = one + second * (coil2.lp(one, coilHz) - one)
+            }
         }
     }
 }
