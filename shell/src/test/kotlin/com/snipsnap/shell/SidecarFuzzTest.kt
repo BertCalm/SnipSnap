@@ -87,7 +87,7 @@ class SidecarFuzzTest {
      */
     private fun fuzz(name: String, valid: String, seed: Int, read: (String) -> Unit) {
         val rnd = Random(seed)
-        val tree = Json.parse(valid)
+        val tree = JsonValue.Obj(struckTree)
         val start = System.nanoTime()
         for (i in 0 until ROUNDS) {
             val (kind, mutant) = if (i % 2 == 0) {
@@ -556,6 +556,20 @@ class SidecarFuzzTest {
         ),
     ).toJsonText()
 
+    /** The struck recipe's tree, its patch and its striker, parsed once and only ever copied, never edited. */
+    private val struckTree: Map<String, JsonValue> by lazy { Json.parse(struckTerraJson()).obj() }
+    private val struckPatch: Map<String, JsonValue> get() = struckTree.getValue("patch").obj()
+    private val struckStriker: Map<String, JsonValue> get() = struckPatch.getValue("striker").obj()
+
+    /** A copy of the struck recipe whose patch has been through `edit`. */
+    private fun withPatch(edit: (LinkedHashMap<String, JsonValue>) -> Unit): JsonValue.Obj = JsonValue.Obj(
+        LinkedHashMap(struckTree).also { r -> r["patch"] = JsonValue.Obj(LinkedHashMap(struckPatch).also(edit)) },
+    )
+
+    /** A copy of the struck recipe whose striker has been through `edit`. */
+    private fun withStriker(edit: (LinkedHashMap<String, JsonValue>) -> Unit): JsonValue.Obj =
+        withPatch { p -> p["striker"] = JsonValue.Obj(LinkedHashMap(struckStriker).also(edit)) }
+
     /**
      * The struck recipe under random mutation, through every reader the spec
      * names except R4's `TerraSheet.read`: `PadRecipe` (a parse or a typed
@@ -602,24 +616,14 @@ class SidecarFuzzTest {
      */
     @Test
     fun `the spec's hostile struck TERRA seeds are refused by every reader`() {
-        val tree = Json.parse(struckTerraJson()).obj()
-        val patch = tree.getValue("patch").obj()
-        val st = patch.getValue("striker").obj()
-        val head = st.getValue("head").arr()
-        fun withStriker(edit: (LinkedHashMap<String, JsonValue>) -> Unit): JsonValue.Obj = JsonValue.Obj(
-            LinkedHashMap(tree).also { r ->
-                r["patch"] = JsonValue.Obj(LinkedHashMap(patch).also { p -> p["striker"] = JsonValue.Obj(LinkedHashMap(st).also(edit)) })
-            },
-        )
+        val head = struckStriker.getValue("head").arr()
         val seeds = linkedMapOf(
             "a head one sample short" to withStriker { it["head"] = JsonValue.Arr(head.dropLast(1)) },
             "a head one sample long" to withStriker { it["head"] = JsonValue.Arr(head + JsonValue.Num(0.0)) },
             "NaN as a string in the head" to withStriker { it["head"] = JsonValue.Arr(head.toMutableList().also { l -> l[7] = JsonValue.Str("NaN") }) },
             "Infinity as a string in the head" to withStriker { it["head"] = JsonValue.Arr(head.toMutableList().also { l -> l[7] = JsonValue.Str("Infinity") }) },
             "an object where the head belongs" to withStriker { it["head"] = JsonValue.Obj(mapOf("0" to JsonValue.Num(0.5))) },
-            "a version-1 patch carrying a striker" to JsonValue.Obj(
-                LinkedHashMap(tree).also { r -> r["patch"] = JsonValue.Obj(LinkedHashMap(patch).also { p -> p["version"] = JsonValue.Num(1.0) }) },
-            ),
+            "a version-1 patch carrying a striker" to withPatch { it["version"] = JsonValue.Num(1.0) },
         )
         for ((label, bad) in seeds) {
             try {
@@ -638,16 +642,9 @@ class SidecarFuzzTest {
     /** The four hostile labels the spec names: a number, an object, 25 characters, a control character. Each is refused typed, everywhere. */
     @Test
     fun `a struck TERRA recipe with a hostile label is refused by every reader`() {
-        val tree = Json.parse(struckTerraJson()).obj()
-        val patch = tree.getValue("patch").obj()
-        val st = patch.getValue("striker").obj()
         val labels = listOf(JsonValue.Num(3.0), JsonValue.Obj(emptyMap()), JsonValue.Str("A".repeat(25)), JsonValue.Str("A\u0001"))
         for (label in labels) {
-            val bad = JsonValue.Obj(
-                LinkedHashMap(tree).also { r ->
-                    r["patch"] = JsonValue.Obj(LinkedHashMap(patch).also { p -> p["striker"] = JsonValue.Obj(LinkedHashMap(st).also { it["from"] = label }) })
-                },
-            )
+            val bad = withStriker { it["from"] = label }
             try {
                 PadRecipe.fromJsonText(Json.write(bad))
                 fail("a struck recipe with from = ${Json.write(label)} was read")
