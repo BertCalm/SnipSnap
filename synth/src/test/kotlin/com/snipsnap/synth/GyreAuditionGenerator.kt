@@ -63,22 +63,24 @@ object GyreAuditionGenerator {
 
         // 2. The claim: strings answering strings.
         sections += section(
-            "ANSWER", "STRINGS ANSWERING STRINGS", "only the first string is plucked; the other three answer through the bridge",
+            "ANSWER", "STRINGS ANSWERING STRINGS", "only the first string is plucked; the other three answer through the bridge (sympathetic strings off in both, so only the bridge differs)",
             listOf("BRIDGE ON: THE OTHERS RING IN", "BRIDGE OFF: THE SAME PLUCK, ALONE"),
             GyreVoice.entries.map { voice ->
                 val d = Gyre.defaults(voice)
-                write("ANSWER", "${tag(voice)}_on", probed(voice, d, Gyre.Probe(solo = 0)))
-                write("ANSWER", "${tag(voice)}_off", probed(voice, d, Gyre.Probe(solo = 0, coupling = 0f)))
+                // The sympathetic strings listen to the bridge whatever its coupling, so both clips leave
+                // them out: the only difference between ON and OFF is the bridge.
+                write("ANSWER", "${tag(voice)}_on", probed(voice, d, Gyre.Probe(solo = 0, sympathy = false)))
+                write("ANSWER", "${tag(voice)}_off", probed(voice, d, Gyre.Probe(solo = 0, coupling = 0f, sympathy = false)))
                 Group(voice.name, key = true, clips = listOf(
                     Clip("${tag(voice)}_on", "BRIDGE ON", "one string plucked; the others answer"),
-                    Clip("${tag(voice)}_off", "BRIDGE OFF", "the same string, with nothing to answer it"),
+                    Clip("${tag(voice)}_off", "BRIDGE OFF", "the same string alone: nothing to answer it"),
                 ))
             },
         )
 
         // 3-6. Each knob at five settings, both voices; SYMPATHY also alone, SPIN also against a tremolo.
         val shares = mapOf(0f to "none", 0.3f to "subtle, about -22 dB", 0.6f to "clear, about -12 dB", 0.8f to "a halo, about -8 dB", 1f to "a cloud, about -5 dB")
-        sections += knob("SYMPATHY", listOf(0f, 0.3f, 0.6f, 0.8f, 1f), { "the sympathetic strings: " + shares.getValue(it) }, ::write) { voice, groups ->
+        sections += knob("SYMPATHY", listOf(0f, 0.3f, 0.6f, 0.8f, 1f), { _, v -> "the sympathetic strings: " + shares.getValue(v) }, ::write) { voice, groups ->
             val m = Gyre.defaults(voice)
             val on = Gyre.play(voice, m).raw
             val off = Gyre.play(voice, m, Gyre.Probe(sympathy = false)).raw
@@ -88,11 +90,11 @@ object GyreAuditionGenerator {
                 Clip("${tag(voice)}_alone", "ALONE", "at the default SYMPATHY " + fmt(m.getValue("SYMPATHY")) + ": the strings nobody plucked"),
             ))
         }
-        sections += knob("BODY", listOf(0f, 0.25f, 0.5f, 0.75f, 1f), {
-            "membrane at %.0f Hz".format(java.util.Locale.ROOT, Gyre.membraneHz(it)) + if (it <= 0f) ", small and tight" else if (it >= 1f) ", large and loose" else ""
+        sections += knob("BODY", listOf(0f, 0.25f, 0.5f, 0.75f, 1f), { _, v ->
+            "membrane at %.0f Hz".format(java.util.Locale.ROOT, Gyre.membraneHz(v)) + if (v <= 0f) ", small and tight" else if (v >= 1f) ", large and loose" else ""
         }, ::write)
-        sections += knob("SPIN", listOf(0f, 0.02f, 0.25f, 0.45f, 0.75f, 1f), {
-            if (it <= 0f) "the rotor still" else "the rotor at %.2f Hz".format(java.util.Locale.ROOT, Gyre.rotorHz(it))
+        sections += knob("SPIN", listOf(0f, 0.02f, 0.25f, 0.45f, 0.75f, 1f), { _, v ->
+            if (v <= 0f) "the rotor still" else "the rotor at %.2f Hz".format(java.util.Locale.ROOT, Gyre.rotorHz(v))
         }, ::write) { voice, groups ->
             if (voice != GyreVoice.HALO) return@knob
             val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f, "HOLD" to 0.9f)
@@ -108,7 +110,7 @@ object GyreAuditionGenerator {
                 Clip("halo_tremolo", "TREMOLO", "the still sound with its volume swung by the same amount: only the level moves"),
             ))
         }
-        sections += knob("HOLD", listOf(0f, 0.5f, 0.95f), { "the hand lands after %.2f s".format(java.util.Locale.ROOT, Gyre.dampSeconds(GyreVoice.FLICK, it)) + " (FLICK)" }, ::write)
+        sections += knob("HOLD", listOf(0f, 0.5f, 0.95f), { voice, v -> "the hand lands after %.2f s".format(java.util.Locale.ROOT, Gyre.dampSeconds(voice, v)) }, ::write)
 
         // 7. Together.
         fun corners(a: String, b: String): List<Group> = GyreVoice.entries.map { voice ->
@@ -151,7 +153,7 @@ object GyreAuditionGenerator {
     private fun knob(
         name: String,
         values: List<Float>,
-        describe: (Float) -> String,
+        describe: (GyreVoice, Float) -> String,
         write: (String, String, Snip) -> Unit,
         extra: (GyreVoice, MutableList<Group>) -> Unit = { _, _ -> },
     ): String {
@@ -160,7 +162,7 @@ object GyreAuditionGenerator {
             groups += Group("${voice.name} ${DOT} DEFAULT " + fmt(Gyre.defaults(voice).getValue(name)), key = true, clips = values.map { v ->
                 val id = voice.name.lowercase() + "_" + fmt(v).trimStart('.')
                 write(name, id, Gyre.render(voice, mapOf(name to v)))
-                Clip(id, "$name ${fmt(v)}", describe(v))
+                Clip(id, "$name ${fmt(v)}", describe(voice, v))
             })
             extra(voice, groups)
         }
