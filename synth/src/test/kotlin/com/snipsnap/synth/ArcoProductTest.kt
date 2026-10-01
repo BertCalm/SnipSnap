@@ -359,13 +359,15 @@ class ArcoProductTest {
      * class is PERC and the classifier must say PERC or TONAL. The table is printed first and every miss is listed before
      * the assertion.
      *
-     * The classifier reads ARCO's lowest and highest notes as drums, and the engine files them PERC anyway: R1b saw 20 of 105 rows
-     * read so. CELLO C2 (36) reads TOM at HOLD 0 to 0.4 and KICK just under the line (0.4412); at the default HOLD CELLO C2 to
-     * D#2 (MIDI 36 to 39) read TOM and the rest PERC; ERHU A5 (81) reads SNARE at HOLD 0 to 0.5 and at the default HOLD ERHU F5 to A5
-     * (MIDI 77 to 81) read SNARE, the rest PERC; the other four notes of the grid read PERC at every HOLD. The first is the low note's
-     * body under 200 Hz with a decay under 500 ms (the bass branch's kick and tom rules), the second the bright top note's noise and
-     * high share. Which of the lowest notes read as a drum is a knife edge in the stroke: at BOW 0.6 it was MIDI 36 to 39 (TOM) at the
-     * default HOLD, and at the default BOW 0.5 it is MIDI 40 to 43 (KICK, TOM), so the corner is the whole of C2 to G2. It is the classifier's limit and not the engine's: nothing consults the classifier for a synth pad (a kit pad
+     * The classifier reads ARCO's lowest and highest notes as drums, and the engine files them PERC anyway: the misses line the
+     * test prints counts 24 of 105 rows so (CELLO C2 and ERHU A5 at HOLD 0.4 are in both sweeps, so each counts twice).
+     * CELLO C2 (MIDI 36) reads KICK at HOLD 0 to 0.4 and TONAL just under the line (HOLD 0.4472); at the default HOLD CELLO
+     * MIDI 36 to 42 read KICK, 43 reads TOM, and the rest read PERC. ERHU A5 (81) reads SNARE at HOLD 0 to 0.5, and at the
+     * default HOLD ERHU MIDI 77 to 81 read SNARE and the rest PERC. The other four notes of the grid (CELLO C3 and C4, ERHU D4 and C5) read PERC
+     * at every HOLD under the line. The low reads are the low note's body under 200 Hz with a decay under 500 ms
+     * (the bass branch's kick and tom rules), the high reads the bright top note's noise and high share. Exactly which of the
+     * lowest notes read as a drum depends on the stroke, which is why the bar below is the two corners and not that list.
+     * It is the classifier's limit and not the engine's: nothing consults the classifier for a synth pad (a kit pad
      * is filed by [Arco.drumClassFor], and the roster test holds all 16 presets clear of every drum), only a sample loaded from
      * outside is classified. So the bar is: over the line the classifier says LOOP and the filed class is LOOP, under it the
      * filed class is PERC always, and wherever the classifier hears a drum it is at one of the two corners listed (CELLO MIDI 36 to
@@ -542,15 +544,17 @@ class ArcoProductTest {
     }
 
     /**
-     * What `Arco.renderLoop` refuses is a seam over the Organ's bar, and it refuses by [Keys.requireSeam] with the label "ARCO <voice>
-     * <note>". This tests **Keys' refusal and not Arco's wrapper**: no macro setting makes a real ARCO loop fail to close
-     * (that is the point of [ArcoLoopFuzzTest]), and the wrapper's seam and bar are not injectable without editing the engine. So the
-     * test is what [ResinHeldTest] does: half a period of a sine left over at the wrap is a seam that cannot close, and
-     * the refusal must be an IllegalArgumentException that names the loop. Beside it, `renderLoop` on a real note returns exactly the
-     * loop `renderLoopMeasured` measured: the wrapper adds a check and nothing else.
+     * The shared seam check's refusal, and not Arco's own. [Keys.requireSeam] refuses a loop whose seam is over the Organ's bar
+     * with an IllegalArgumentException that names the loop and says it does not close. [Arco.renderLoop] has a `require` of its
+     * own with the same message form ("ARCO <voice> <note>: the loop does not close"), and this test does not reach it: no macro
+     * setting makes a real ARCO loop fail to close (that is the point of [ArcoLoopFuzzTest]), and the wrapper's seam and bar
+     * cannot be injected without editing the engine, so Arco's own refusal path is untested. What the first half does is
+     * [ResinHeldTest]'s check of the message form: half a period of a sine left over at the wrap is a seam that cannot close,
+     * and the refusal must name the loop and say why. The second half is a real check on the wrapper: `renderLoop` on a real
+     * note returns exactly the loop `renderLoopMeasured` measured, so the wrapper adds a check and nothing else.
      */
     @Test
-    fun `a seam that does not close is refused by name, and the wrapper passes a good loop through`() {
+    fun `the shared seam check refuses a loop that does not close by name, and renderLoop passes a good loop through unchanged`() {
         val period = 100
         val loopStart = 2_000
         val s = FloatArray(loopStart + period * 10 + period / 2) { sin(2.0 * PI * it / period).toFloat() }
@@ -572,7 +576,7 @@ class ArcoProductTest {
      * the 0.99 ceiling, DC-free, not a whisper, and filed LOOP by [Arco.drumClassFor] and by the real classifier (over 3 s is far
      * past its line). Its length is the bow's 3 s, the 0.05 s ramp and the stop: at least 3.2 s (the stop's floor is 0.15 s) and at
      * most 4.55 s (the stop is never longer than half the hold, 1.5 s). R1b saw 3.200 s at A5, 4.550 s at C2 (the cap: the
-     * free ring there is longer than it), and 4.036 s at C3 ("about 4 s": the bound there is 3.9 to 4.25); peaks 0.348 to 0.661
+     * free ring there is longer than it), and 4.036 s at C3 ("about 4 s": the bound there is 3.9 to 4.25); peaks 0.348 to 0.659
      * (the render is levelled for loudness, not for peak, so the bound is under the quietest of them, 0.25) and a mean of 2e-6 (bound 0.01).
      * The tone of a 3 s note is the physics tests'; this is its length and its level.
      */
@@ -613,12 +617,12 @@ class ArcoProductTest {
      * (where a long ring is cut), D4 and A5 (where the steps are biggest). The steps in the bow's own 50 ms release ramp
      * are held to the same bar.
      *
-     * R1b saw 1.65 times at C2, at 13 ms after the lift (the free string's corner is sharper than the bowed one's, which the
-     * friction rounds: a change of tone at the lift and not a spike; it leaves 20 percent to the bar), 0.73 at D4 and 0.69 at A5, and
-     * 0.97 to 1.01 in the ramp. The control is a click: one sample just after the lift, at the note's loudest, pushed away from its
-     * neighbour by the note's own peak. It steps 8.7 times the steady step at C2, 4.05 at D4 and 2.85 at A5, so the bar can be
-     * failed at all three. (A hard cut to silence cannot be the control at the top: a flyback there is most of the note's
-     * height, a cut steps by under 2 times the steady step at D4 and A5, and the 2 times bar could not see it.)
+     * Printed by the test: after the lift the steepest step is 0.73 times the steady note's at C2, 0.78 at D4 and 0.67 at A5, so
+     * the bar of 2 times has room for a factor of 2.6 or more, and in the ramp it is 0.97 to 1.00 times. The control is a click:
+     * one sample just after the lift, at the note's loudest, pushed away from its neighbour by the note's own peak. It steps
+     * 9.03 times the steady step at C2, 4.05 at D4 and 2.66 at A5, so the bar can be failed at all three. (A hard cut to silence
+     * cannot be the control at the top: a flyback there is most of the note's height, a cut steps by under 2 times the steady
+     * step at D4 and A5, and the 2 times bar could not see it.)
      */
     @Test
     fun `the stop does not click, at the bottom, the middle and the top of the range`() {
@@ -720,7 +724,7 @@ class ArcoProductTest {
      * 12, 16 and 19 (MIDI 68, 72, 73, 74, 78 and 81) had one or two real extra slips between 1.2 s and the lift (a gap of 0.18 to 0.24
      * of a period and then one of 0.76 to 0.82, the string's velocity at the bow going back to -6 to -7.4 times the bow's speed),
      * about one in 1 to 2 seconds, always at the same phase of the swing on the same note (MIDI 73 at phase 0.34 three times, MIDI 78 at
-     * 0.63 twice); 37 events in 24,746 ERHU slips over the 45 steps and in 91 of 200 rolled ERHU notes; none without the vibrato. This
+     * 0.63 twice); 37 events in 24,746 ERHU slips (CELLO: 1 in 8,337) and in 91 of 200 rolled ERHU notes; none without the vibrato. This
      * test is that regression's guard: with the retune it fails at those steps.
      */
     @Test
@@ -853,7 +857,7 @@ class ArcoProductTest {
      * the vibrato switched off in the core (a vibrato spreads each of an A5's harmonics by far more than 8 Hz) from 1.0 s, a
      * 1.49 s window that is wholly sustain: no onset, no stop. The finished note of a hold of 0.59 s of bow (HOLD 0.26, the
      * longest with no vibrato) cannot be read this way at all, and the printed line says so: the window is longer than the note,
-     * most of it the stop's fall (-60 dB in the last 0.15 to 0.4 s) and the build-up, and every line smears; R1b saw 14.6 to 11.1 dB
+     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1b saw 14.6 to 11.1 dB
      * (CELLO) and 13.5 to 10.0 (ERHU) from 0.2 s to 0.4 s, which is the window and not the aliasing.
      *
      * R1b saw 76.7 dB (CELLO C4, the series fitting at +0.25 c) and 69.1 (ERHU A5, +0.5 c), 24 dB over the record's 45. The bar is 60, so a floor
@@ -955,9 +959,9 @@ class ArcoProductTest {
      * No dead knob (playability rule 1): each of TUNE, BOW, GRIP, BODY and HOLD, moved alone from its default (to 0.1 if the default is over a
      * half, else to 0.9), changes the finished render, and by a measured amount: the RMS of the difference over the RMS of the note, with
      * the tail of the longer one counted as difference. BODY is the one a quiet engine loses first, so it is named: BODY from its
-     * default 0.5 to 0.9 moves the note by 0.23 (CELLO) and 0.24 (ERHU), and from 0 to 1 by 0.70 and 0.71. R1b saw the other four at
-     * 1.1 to 1.9 of the note (TUNE 1.36 and 1.40, BOW 1.68 and 1.58, GRIP 1.23 and 1.14, HOLD 1.86 and 1.73: a different note, a different attack,
-     * a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
+     * default 0.5 to 0.9 moves the note by 0.23 (CELLO) and 0.24 (ERHU), and from 0 to 1 by 0.70 and 0.71. The printed line has the other four at
+     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.08 and 1.79, GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
+     * different attack, a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
      */
@@ -985,11 +989,17 @@ class ArcoProductTest {
 
     private class Roll(val macros: Map<String, Float>, val lock: Double, val late: Int, val peak: Float, val finite: Boolean)
 
-    /** Where a rolled note must have locked by, in seconds, and so where "late" begins. R1b's slowest rolled lock without vibrato was 1.275 s (CELLO, 400 rolls); the bound leaves a third over it, and the 3 s bow 1.3 s of watching after it. */
-    private val lockBySeconds = 1.7
+    /**
+     * Where a rolled note must have locked by, in seconds, and so where "late" begins: 2.0 s, the bar the lock-across-BOW test
+     * (in ArcoTest) holds CELLO to. The slowest rolled lock without vibrato is 1.426 s (CELLO, 400 rolls over both temperatures;
+     * ERHU's is 0.329 s), so the bound leaves 0.57 s (40 percent) over it, and the 3 s bow leaves 1.0 s of watching after the
+     * bound. The temperature 0.35 rolls are drawn around the factory presets, so a change to the roster re-rolls them and can
+     * move the slowest lock: the range the test prints is where to look.
+     */
+    private val lockBySeconds = 2.0
 
     /**
-     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock R1b measured, 1.275 s, with a second and a half of watching
+     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, 1.426 s, with over a second and a half of watching
      * after it), read on the bow-point tap. With the vibrato off by default: whether the string locks is a property of the window the macros draw,
      * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
      */
@@ -1008,16 +1018,18 @@ class ArcoProductTest {
     /**
      * SCRAMBLE is the engine's dice (`Arco.scramble`, around a factory preset, then HOLD held short of the LOOP step), and an
      * identity claim rests on it: every roll is a bowed note, whatever the dice said. 200 rolls per voice are bowed on the raw
-     * core for 3 s (a bow-on long enough for the lock) and each must: lock into one slip a period (`ArcoMeasure.lockSeconds` found,
-     * at or before 1.7 s) with no gap that is not one period after that, stay under `Strings.Bow.RAW_PEAK_CEILING` and be finite,
+     * core for 3 s (a bow-on long enough for the lock) and each must: lock into one slip a period (`ArcoMeasure.lockSeconds` finds
+     * the lock, at or before 2.0 s; `late` counts the gaps that are not one period after the same 2.0 s, none for a roll that locks
+     * in time, and it is what the HOLE line prints for one that does not), stay under `Strings.Bow.RAW_PEAK_CEILING` and be finite,
      * and never land on the LOOP step (HOLD under 0.99). Then 200 more per voice at temperature 1, where every macro is a uniform roll
      * and the dice go to the corners no preset visits. A roll that does not lock is a hole in the window and is listed with its
      * macros, and not hidden.
      *
-     * R1b saw no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.17 to 1.28 s (CELLO) and 0.05 to 0.32 s (ERHU), the
-     * worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the ceiling of 1.25, and no roll reaches the LOOP step. The lock is read on
-     * the string, which the vibrato never touches (R1b's first vibrato retuned the bow and split slips: 91 of 200 rolled ERHU notes had a
-     * second slip after 1.7 s, and the 10 CELLO rolls that "did not lock" with it on and a 2 s bow all locked at 0.18 to 0.55 s without it). The control is a string
+     * The printed run shows no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.135 to 1.426 s (CELLO) and 0.051 to
+     * 0.329 s (ERHU), so the 2.0 s bound leaves 0.57 s over the slowest, the worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the
+     * ceiling of 1.25, and no roll reaches the LOOP step. The slowest lock is at temperature 0.35, whose rolls are drawn around the factory
+     * presets, so it depends on the roster. The lock is read on the string, which the vibrato never touches (the vibrato is a read-back
+     * delay of the finished wave), so it is the same with the vibrato on or off. The control is a string
      * outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period,
      * must not pass the same lock check, so the check can fail.
      */

@@ -127,15 +127,17 @@ object Arco {
      * and low enough that the bow's reflection table, at the pressures [gripFor] reaches,
      * speaks once a period. It is also bounded below for a high note: the bridge segment must be at
      * least the filter's delay and two and a half samples long ([Strings.tune]'s own guard), so the
-     * position's floor is (2.5 + the delay in samples) over the period - 0.119 at D6 with a 1500 Hz
-     * corner, 0.151 with 1000 Hz (R1a measured it). 0.133 builds across ERHU's whole range at the corner
-     * floor [gripFor] gives it, and a 1000 Hz corner would be refused near the top.
+     * position's floor is (2.5 + the delay in samples) over the period - at D6 (1174.66 Hz, past ERHU's top)
+     * 0.119 with a 1500 Hz corner and 0.151 with 1000 Hz (R1a measured it). 0.133 builds across ERHU's whole
+     * range at the corner floor [gripFor] gives it. A 1000 Hz corner would still build up to A#5 and is refused
+     * from B5 (987.77 Hz) up, so the position does not limit ERHU's corner: the lock does (see
+     * [ERHU_CORNER_LOW_ROOT_HZ]).
      */
     const val BETA = 0.133f
 
     /**
      * The bow's velocity at sustain, in the string's own units: STK's `0.03 + 0.2 * 0.5` for an
-     * amplitude of one half. A constant per voice, not a macro, so BOW is heard only as the stroke
+     * amplitude of one half. One constant for both voices, not a macro, so BOW is heard only as the stroke
      * (the first few hundred milliseconds) and never moves GRIP's window under it.
      */
     const val V_SUSTAIN = 0.13f
@@ -154,14 +156,14 @@ object Arco {
      * counts when the string *locks* into one slip a period for good, not when it starts there: a low string
      * begins in a multi-slip scratch (C2 takes 0.5 to 0.9 s to lock, G#2 and up under 0.75 s, ERHU under 0.4 s).
      * The numbers below are the path that locks at every one of the 25 CELLO and 20 ERHU steps, GRIP in tenths:
-     * 0 of 495 cells fail, the slowest lock is 0.87 s (CELLO) and 0.36 s (ERHU), the pitch stays within 4.0 cents
-     * of the note. See [CELLO_CORNER_RISE_SEMITONES] and [ERHU_CORNER_RISE_SEMITONES] for what each voice's corner does.
+     * 0 of 495 cells fail, at BOW 0.5 the slowest lock is 0.87 s (CELLO, D#2 at GRIP 1) and 0.24 s (ERHU), the
+     * pitch stays within 4.0 cents of the note. See [CELLO_CORNER_RISE_SEMITONES] and [ERHU_CORNER_RISE_SEMITONES] for what each voice's corner does.
      */
     internal class Grip(val pressureLow: Float, val pressureHigh: Float, val cornerLow: Float, val cornerHigh: Float)
 
     /**
      * The grip's pressure ceiling is 1.0 for both voices: the friction table's own limit for what a bow can press.
-     * CELLO's floor is 0.85 from G2 up, and higher below it: at C2 pressures of 0.88 to 0.94 hold the
+     * CELLO's floor is 0.85 from F#2 up, and higher below it: at C2 pressures of 0.88 to 0.94 hold the
      * string in a three-slip scratch for over a second, and the pressure that locks fastest at each of the
      * lowest semitones climbs as the note falls, so CELLO's floor is [CELLO_PRESSURE_LOW_ROOT] at C2 and falls by
      * [CELLO_PRESSURE_LOW_FALL] a semitone until it meets [PRESSURE_LOW].
@@ -174,24 +176,27 @@ object Arco {
     /**
      * ERHU's floor is 0.94, not 0.85, for pitch's sake and not the string's: pressing harder raises a high
      * string's pitch by about 30 cents per unit of pressure (4.6 cents over the 0.15 from 0.85 to 1.0 at C#5), and
-     * with the corner's own share of it GRIP moved the note by 6.7 cents across its travel (5.7 with a floor of 0.90). A knob that is
-     * a brightness and a grip must not also be a tuning knob, so ERHU's GRIP travels mostly in the corner,
-     * which is the brightness, and the pressure only a little.
+     * with the corner's own share of it a floor of 0.85 would have GRIP move the note by 5.92 cents at C#5, 6.60 at F5
+     * and 6.35 at F#5 across its travel (the control in ArcoTest's GRIP-is-not-a-pitch-knob test), over its 5 cent
+     * bar; at 0.94 the worst is 4.50 cents at F5 (CELLO's is 4.13 at C4). A knob that is a brightness and a grip must
+     * not also be a tuning knob, so ERHU's GRIP travels mostly in the corner, which is the brightness, and the
+     * pressure only a little.
      */
     const val ERHU_PRESSURE_LOW = 0.94f
 
     /**
      * CELLO's corner at GRIP 0: 1000 Hz, a dark, close-held string. The low strings need a lower
      * corner than the full 3023.6 Hz to lock quickly - the bridge's loss per period at f0 is what the
-     * friction has to beat, and at 65 Hz the one-pole's loss per period is a third of what it is at 131 Hz,
-     * so a corner that gives C3 its single slip is far too bright for C2 (it locks, but after 1.3 s at the full
-     * corner, against 0.55 s at 1000 Hz, both at a pressure of 1.0).
+     * friction has to beat, and at 65 Hz the one-pole's loss per period is a quarter of what it is at 131 Hz
+     * (0.019 and 0.074 dB a period at a 1000 Hz corner), so a corner that gives C3 its single slip is far too bright
+     * for C2 (it locks, but after 1.3 s at the full corner, against 0.55 s at 1000 Hz, both at a pressure of 1.0).
      */
     const val CELLO_CORNER_LOW_HZ = 1000f
 
     /**
      * CELLO's corner at GRIP 1 is 1500 Hz at the root and rises with the note, reaching the full
-     * [Strings.Bow.BRIDGE_HZ] by [CELLO_CORNER_RISE_SEMITONES] semitones up (G#2), where every corner locks within half a second.
+     * [Strings.Bow.BRIDGE_HZ] by [CELLO_CORNER_RISE_SEMITONES] semitones up (G#2). Along GRIP at BOW 0.5 a G#2 note
+     * locks in 0.45 to 0.57 s (ArcoTest's lock table).
      */
     const val CELLO_CORNER_HIGH_ROOT_HZ = 1500f
     const val CELLO_CORNER_RISE_SEMITONES = 8
@@ -200,8 +205,9 @@ object Arco {
      * ERHU's corner at GRIP 0 is 1500 Hz at its root and rises to the full corner by
      * [ERHU_CORNER_RISE_SEMITONES] semitones up; GRIP 1 is the full corner everywhere. The floor rises because a
      * high string cannot be given a dark corner: from D5 a 1500 Hz corner never locks at any pressure, from F5
-     * 1750 Hz does not, and at A5 neither does 2250 Hz (the string falls silent or slips twice), and 1000 Hz
-     * cannot even be built there (see [BETA]). The rising floor stays above that line at every step.
+     * 1750 Hz does not, and at A5 neither does 2250 Hz (the string falls silent or slips twice). The lock is the
+     * whole reason: a 1000 Hz corner would still build in ERHU's range (see [BETA]). The rising floor stays above
+     * that line at every step.
      */
     const val ERHU_CORNER_LOW_ROOT_HZ = 1500f
     const val ERHU_CORNER_RISE_SEMITONES = 21
@@ -220,7 +226,10 @@ object Arco {
     }
 
     /**
-     * The share of the bridge filter's delay the tuning budget takes out ([Strings.Bow]'s own constant, 0.85, for CELLO), per voice.
+     * The share of the bridge filter's delay the tuning budget takes out: one share for both voices, [Strings.Bow.SHARE]
+     * (0.85). R1a saw 0.85 miss by +6.8 cents at D6 and thought ERHU needed its own, but D6 is past ERHU's top, and
+     * inside ERHU's window (pressure 0.94 and up, the corner floor rising with the note) 0.85 holds all 20 steps
+     * within 4.0 cents (ArcoTest's tuning table: worst 3.1). So the two arms below are the same constant on purpose.
      */
     internal fun shareFor(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> Strings.Bow.SHARE
@@ -250,8 +259,9 @@ object Arco {
 
     /**
      * Above BOW 0.5 the stroke bites: the bow's velocity starts higher than it will hold, up to
-     * [OVERSHOOT_MAX] times at BOW 1 (a player's accent), and the pressure starts at the top of the
-     * window; both relax with the attack's own time constant. 0.6 is a 1.15 times bite. Listening values.
+     * [OVERSHOOT_MAX] times at BOW 1 (a player's accent), and the pressure starts partway to the top of the
+     * window, in step with the velocity's bite, reaching it at BOW 1; both relax with the attack's own time
+     * constant. 0.6 is a 1.15 times bite. Listening values.
      */
     const val OVERSHOOT_FROM = 0.5f
     const val OVERSHOOT_MAX = 1.75f
@@ -292,8 +302,10 @@ object Arco {
      * its floor being above its ceiling). Without the stop a lifted C2 rings for two seconds and files every stab
      * past the classifier's 1.5 s line as a LOOP. Measured on the audible part of the wave (the raw tap also
      * carries a static offset that decays at the bridge's own 0.95 a period whatever the pitch, which the output's
-     * 20 Hz high-pass removes), the tail is 40 dB down at about half the release and 60 dB down at 0.85 to 1.0 of it
-     * at every pitch tried.
+     * 20 Hz high-pass removes), the tail is 60 dB down, against the note's own level just before its velocity ramps
+     * down (the level at the lift is already lower), at 0.63 to 0.89 of the release at CELLO C2, C3 and C4 and ERHU D4,
+     * C5 and A5 at HOLD 0, 0.4 and 0.95 (ArcoTest's stopped-tail test; where the free ring is no longer than the
+     * release the stop adds nothing and it is the string's own ring that was measured).
      */
     const val STOP_FLOOR_SECONDS = 0.15f
     const val STOP_HOLD_SHARE = 0.5f
@@ -341,13 +353,13 @@ object Arco {
      * default), starting after the string has begun to speak ([VIBRATO_DELAY_SECONDS]; C2 reaches 90 percent of its
      * level at about half a second) and rising in over [VIBRATO_RISE_SECONDS]. Scaled by how long the note lasts: none at a
      * hold of [VIBRATO_HOLD_FROM_SECONDS] or less (a vibrato on a scratch is a wobble), full from
-     * [VIBRATO_HOLD_FULL_SECONDS]. Off in a LOOP, which cannot carry a signal that does not repeat.
+     * [VIBRATO_HOLD_FULL_SECONDS]. Off in a LOOP, which cannot carry a signal that does not repeat. Listening values.
      *
      * It is done to the string's wave, not to the string. R1b's first version retuned the bow ([Strings.Bow.retune], which
      * R1a measured as click-free) every 64 samples, and the wave had no step. But the friction is a hair trigger: on ERHU's
      * short periods a slip split in two (gaps of 0.2 then 0.8 of a period) at the same phase of the swing every time,
-     * 37 events in 24,746 slips over the 45 steps with the vibrato on and none with it off, and in the 200 rolled ERHU notes
-     * of the identity test 91 had one in the last 1.3 s of a three-second bow. So the vibrato is the plain tape-style one:
+     * 37 events in 24,746 ERHU slips (CELLO: 1 in 8,337) with the vibrato on and none with it off, and in the 200 rolled
+     * ERHU notes of the identity test 91 had one in the last 1.3 s of a three-second bow. So the vibrato is the plain tape-style one:
      * the finished string wave is read back through a delay that swings by [vibratoDepthSamples] (a four-point cubic reads
      * between samples), which moves every partial by the same ratio, as a finger does, and the bow never feels it.
      */
@@ -415,8 +427,8 @@ object Arco {
     /**
      * ERHU's box: the house membrane's five mode ratios on the open string, shape again - the
      * ratios are too spread for a real python skin and the table has no formant. Its
-     * decay is the table's scaled by [ERHU_BODY_T60_SCALE]: as dressed the first mode rings for 1.2 s, a
-     * skin's tail longer than the string that struck it.
+     * decay is the table's scaled by [ERHU_BODY_T60_SCALE]: the table's first mode rings for 1.2 s, a
+     * skin's tail longer than the string that struck it, and scaled by 0.25 it rings for 0.3 s. Listening values.
      */
     const val ERHU_BODY_ANCHOR_HZ = 293.66f
     const val ERHU_BODY_T60_SCALE = 0.25f
@@ -450,7 +462,11 @@ object Arco {
 
     // ---- the output chain -----------------------------------------------------
 
-    /** The DC goes twice (FORK's rule): the string is zero-mean already; the mean and this high-pass go before the level. */
+    /**
+     * The DC goes twice (FORK's rule), before the level: the onset leaves a net displacement in the raw string
+     * (its mean reaches 0.09 over the first half second of a C2 note, and 0.07 at most over ArcoTest's grid) that
+     * drains only at the bridge's own 0.95 a period, so the mean is taken off and this high-pass takes the rest.
+     */
     const val OUTPUT_DC_HZ = 20f
 
     private fun condition(raw: FloatArray, rate: Int): FloatArray {
@@ -501,8 +517,8 @@ object Arco {
 
     /**
      * The exact frames a one-shot at [macros] renders at [RATE]: bow on, the ramp, the stop, through the
-     * decimator's floored 2:1 steps. ArcoTest pins it against a real render across the LOOP line, so a
-     * change to the decimator or the body cannot move it silently.
+     * decimator's floored 2:1 steps. ArcoProductTest pins it against a real render and against the classifier's
+     * own length line, so a change to the decimator or the body cannot move it silently.
      */
     internal fun renderFrames(voice: ArcoVoice, macros: Map<String, Float>): Int {
         val m = settled(macros, voice)
@@ -580,8 +596,8 @@ object Arco {
         val semitone = semitoneFor(voice, macros.getValue("TUNE"))
         val grip = macros.getValue("GRIP")
         val window = gripFor(voice, semitone)
-        val p = pressure ?: Dsp.lin(grip, window.pressureLow, window.pressureHigh)
-        val corner = cornerHz ?: Dsp.expMap(grip, window.cornerLow, window.cornerHigh)
+        val p = pressure ?: pressureFor(voice, semitone, grip)
+        val corner = cornerHz ?: cornerFor(voice, semitone, grip)
         val vSustain = vBow ?: V_SUSTAIN
         val steady = gate.steady
         val over = if (steady) 1f else overshoot ?: overshootFor(macros.getValue("BOW"))
@@ -644,8 +660,9 @@ object Arco {
 
     /**
      * The most times the loop's pitch is corrected so its whole periods fill its whole frames, and how close to
-     * 1 the measured length over the wanted one must be to stop early (BORE's numbers, inside the sawtooth's
-     * tighter budget at D6: 3e-7 of the loop is a tenth of a raw sample, 0.0007 of a period there).
+     * 1 the measured length over the wanted one must be to stop early (BORE's numbers, which hold at ARCO's top
+     * note too: 3e-7 of a two second loop is about a tenth of a raw sample, 0.0005 of a period at A5, ERHU's top,
+     * where a period is 200 raw samples).
      */
     private const val LOOP_PASSES = 5
     private const val LOOP_CONVERGED = 3e-7

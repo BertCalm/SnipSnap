@@ -142,26 +142,22 @@ internal object ArcoMeasure {
 
     /**
      * What a note's first [Core.holdN] samples did: [lock] seconds until one slip a period for good (-1 never), [slips]
-     * in all, [gapsAfterLock] gaps that are not one period long after it, [tailPeriods] from the last slip to the end
-     * of the bow-on (a string that fell silent has a long one), and [peak] the autocorrelation peak of the last 0.3 s.
+     * in all, [tailPeriods] from the last slip to the end of the bow-on (a string that fell silent has a long one), and
+     * [peak] the autocorrelation peak of the last 0.3 s. There is no count of unclean gaps after the lock: [lock] is the
+     * first slip after the last unclean gap, so that count is zero for every note that locks, and a note whose last gap
+     * is still unclean has no lock (-1) and fails on that.
      */
-    class Verdict(val lock: Double, val slips: Int, val gapsAfterLock: Int, val tailPeriods: Double, val peak: Double)
+    class Verdict(val lock: Double, val slips: Int, val tailPeriods: Double, val peak: Double)
 
     fun verdict(c: Core): Verdict {
         val end = c.holdN
         val lock = lockSeconds(c.bowPoint, end, c.hz)
         val slips = slipTimes(c.bowPoint, end)
-        var gaps = 0
-        if (lock >= 0) {
-            for (i in 1 until slips.size) if (slips[i - 1] / RATE >= lock - 1e-9 && unclean(slips, i, c.hz)) gaps++
-        } else {
-            gaps = -1
-        }
         val period = RATE / c.hz.toDouble()
         val tail = if (slips.isEmpty()) Double.POSITIVE_INFINITY else (end - slips.last()) / period
         val len = (0.3 * RATE).toInt().coerceAtMost(end)
         val peak = BowMeter.pitch(c.out, end - len, len, c.hz).second
-        return Verdict(lock, slips.size, gaps, tail, peak)
+        return Verdict(lock, slips.size, tail, peak)
     }
 
     // ---- pitch ------------------------------------------------------------------------------------------------

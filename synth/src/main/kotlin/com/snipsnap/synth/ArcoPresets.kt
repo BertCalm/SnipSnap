@@ -16,8 +16,8 @@ package com.snipsnap.synth
  *    at C2 and C3; the longest CELLO notes here, HOLD 0.43, render 1.44 s), and a loop is HOLD 1.0, dry and seamless.
  *  - The classifier reads the spectrum of the first 93 ms of a render. A slow bow's first 93 ms is its slow swell, which
  *    reads as a low note: TONAL if the note then rings more than 500 ms past its peak, a KICK or a TOM if it does not.
- *    So every slow-bow preset (BOW 0.3 or under) has a HOLD of 0.42 or more, and every other preset has a BOW of 0.45
- *    or more.
+ *    So every slow-bow preset (BOW 0.3 or under) has a HOLD of 0.42 or more, and every other one-shot has a BOW of
+ *    0.45 or more. A loop is the exception: it discards its stroke, so its BOW (ENDLESS DRAW's is 0.4) is not heard.
  *  - The top of ERHU's range is bright enough that a hard bow on a thin box puts over half of that head above 2 kHz,
  *    which reads as a SNARE. Up there only a swell-in (TONAL) or a box of half or more keeps a note out of the drums,
  *    and HIGH CRY swells in.
@@ -40,9 +40,9 @@ object ArcoPresets {
     private val celloPresets = listOf(
         // D3 (14 of 24), the open D string: the slowest stroke (400 ms to full speed) into a 0.9 s bow, a long lyrical note.
         p(ArcoVoice.CELLO, "SLOW BOW", "TUNE" to 0.583f, "BOW" to 0.0f, "GRIP" to 0.7f, "BODY" to 0.5f, "HOLD" to 0.43f),
-        // A3 (21 of 24), the open A string: the hardest bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.19 s.
+        // A3 (21 of 24), the open A string: a hard bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.19 s.
         p(ArcoVoice.CELLO, "SHORT STAB", "TUNE" to 0.875f, "BOW" to 0.9f, "GRIP" to 0.7f, "BODY" to 0.4f, "HOLD" to 0.0f),
-        // A2 (9 of 24): a dark, boxy pedal tone under a pad, locking at 0.47 s of its 0.95 s of bow.
+        // A2 (9 of 24): a dark, boxy pedal tone under a pad, locking at 0.47 s of its 0.92 s of bow.
         p(ArcoVoice.CELLO, "DEEP PEDAL", "TUNE" to 0.375f, "BOW" to 0.5f, "GRIP" to 0.4f, "BODY" to 0.8f, "HOLD" to 0.43f),
         // F#2 (6 of 24), under G#2: a hard bite that starts in a scratch and only locks into the note after 0.4 s of its 0.6.
         p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.85f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f),
@@ -63,7 +63,7 @@ object ArcoPresets {
         p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.85f, "HOLD" to 0.42f),
         // A#4 (8 of 19): the hardest bow on a light grip with hardly any box, 0.34 s of it: a thin, bright flick.
         p(ArcoVoice.ERHU, "THIN SCRAPE", "TUNE" to 0.421f, "BOW" to 1.0f, "GRIP" to 0.05f, "BODY" to 0.2f, "HOLD" to 0.05f),
-        // G5 (17 of 19): the top of the span, swelling in over 0.16 s under a firm grip and a held bow: the cry.
+        // G5 (17 of 19): near the top of the span, swelling in over 0.16 s under a firm grip and a held bow: the cry.
         p(ArcoVoice.ERHU, "HIGH CRY", "TUNE" to 0.895f, "BOW" to 0.25f, "GRIP" to 0.9f, "BODY" to 0.6f, "HOLD" to 0.44f),
         // B4 (9 of 19): the same cry eight semitones lower, a 0.19 s swell into the longest note a one-shot may be.
         p(ArcoVoice.ERHU, "SLOW CRY", "TUNE" to 0.474f, "BOW" to 0.2f, "GRIP" to 0.7f, "BODY" to 0.55f, "HOLD" to 0.44f),

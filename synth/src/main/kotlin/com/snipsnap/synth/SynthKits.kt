@@ -280,16 +280,18 @@ object SynthKits {
 
     /**
      * HOLD for the ARCO kit's CELLO row: the bottom of the knob, 0.3 s of bow ([Arco.HOLD_MIN_SECONDS]),
-     * the shortest stab the engine makes. Read off what the engine does there: the stroke is only 44 ms at
-     * the default BOW, so the clamp to 0.85 of the hold never bites; the vibrato is scaled by how long the
+     * the shortest stab the engine makes. Read off what the engine does there: the stroke at the default BOW
+     * ([Arco.attackSeconds], 63 ms at BOW 0.5) is far under 0.85 of 0.3 s (0.255 s), so the
+     * clamp ([Arco.ATTACK_HOLD_FRACTION]) never bites; the vibrato is scaled by how long the
      * note lasts and is nothing at 0.6 s of bow or less ([Arco.VIBRATO_HOLD_FROM_SECONDS]), so a stab is a
      * plain note and not a wobble; the stop after the bow lifts is its 0.15 s floor
      * ([Arco.STOP_FLOOR_SECONDS], and half the hold is the same 0.15), so the whole pad is 0.50 s, well
      * under the classifier's 1.5 s line, which files it PERC. Any longer HOLD would make the pad a held
      * note, which a pad that is struck wants least: the held note is the audition page's three-second set,
      * and the long note on this kit is its LOOP pad (A15). What it costs, measured on the rendered pads
-     * (C2 to F3, in 25 ms windows): the string builds over the whole bow, so the level is half of its peak
-     * by 0.10 to 0.15 s and 90 percent of it by 0.23 to 0.25 s, with the bow lifting just after, so each pad
+     * (A01-A08, C2 to F3, the default BOW 0.5, in 25 ms windows): the string builds over the whole bow, so
+     * the level is half of its peak at 0.11 to 0.16 s and 90 percent of it at 0.22 to 0.27 s, and the peak
+     * comes at 0.27 to 0.29 s of a pad that is 0.500 s long, with the bow lifting just after, so each pad
      * is a swell cut at its top and not a hit.
      */
     private const val ARCO_STAB_HOLD = 0.0f

@@ -28,8 +28,10 @@ import kotlin.math.sqrt
  *
  *  - **Bowed** is this engine at HOLD [Arco.holdFor] of three seconds (0.88) with every other macro
  *    at its default, so it is what a pad on the default knobs held for three seconds sounds like, vibrato
- *    and all. The file is longer than three seconds because the render keeps the string's stop (up to
- *    1.5 s at C2), most of which is inaudible: the other two clips are cut or padded to the same frame count.
+ *    and all. The file is longer than three seconds because the render keeps the string's stop (a release of up
+ *    to 1.5 s at C2). The stop is 60 dB down at 0.63 to 0.89 of the release, so the last stretch of the file is
+ *    silent and the audible end is earlier still ([audibleEnd] reads it): the other two clips are cut or padded to
+ *    the same frame count.
  *  - **CELLO's plucked comparator is SILK's OUD**, in the CHROMATIC scale at DAMP 0 (it rings as long as it can)
  *    and COURSE 0 (one string, not a pair beating). Why it and not PLUCK: PLUCK's lowest root is A2 (110 Hz)
  *    and CELLO's TUNE starts at C2 (65.4 Hz), so no PLUCK voice reaches the root step; OUD's own root is
@@ -45,12 +47,26 @@ import kotlin.math.sqrt
  *    note). The answer key says so.
  *  - **The synth comparator is RESIN's held pad** ([Resin.renderHeld], the renderer MAKE INSTRUMENT holds
  *    keys with): a three-oscillator saw stack through the ladder, flat for the whole three seconds, BASS for
- *    CELLO (its range is the cello's) and LEAD for ERHU, at the exact pitch (`baseHz`). Its attack is the
- *    bow's own stroke at the default BOW ([Arco.attackSeconds]), so the onset does not tell the two apart, and
- *    it lets go where the bowed clip's own tail falls out of hearing ([audibleEnd]), so the length does not either. VELVET cannot
- *    be the held synth: its longest note is a 0.9 s decay. It is plain on purpose, a synth with no vibrato,
- *    no chorus and no noise, because those would be new machinery on this page; the bowed note's vibrato is
- *    therefore a tell the page does not hide, and the vibrato A/B card at the end of each voice is where it is judged.
+ *    CELLO (nearly the cello's range) and LEAD for ERHU, at the exact pitch (`baseHz`). VELVET cannot be the
+ *    held synth: its longest note is a 0.9 s decay.
+ *
+ *    The synth's onset is matched to the bowed clip's, not left at the bow's stroke. The stroke
+ *    ([Arco.attackSeconds], 63 ms at the default BOW) is only how fast the bow's speed rises; the string takes
+ *    longer than that to speak up, and a synth that reached full level in 63 ms would give the bowed clip away in
+ *    its first half second. ArcoTest's onset table (BOW 0.5, no box, no vibrato) has the string at 90 percent of its
+ *    level after about 0.12 s at ERHU's A5 and 0.55 s at CELLO's C2. So for each set this generator measures the
+ *    bowed clip's time to 90 percent of its steady level ([secondsToNinety]: 25 ms windows, the steady level read
+ *    from 2.0 to 2.8 s) and gives the synth an attack that reaches 90 percent at the same time: set first from
+ *    the arithmetic of a straight ramp, then corrected once from the synth's own measured time, and kept inside
+ *    what [Resin.Held] takes. The log prints both times for every set. The synth also lets go where the bowed clip's
+ *    own tail falls out of hearing ([audibleEnd]), so the length does not tell them apart either.
+ *
+ *    What still differs, and the page says so: the synth has no vibrato, no chorus and no noise (plain on purpose,
+ *    because those would be new machinery on this page), so the bowed note's vibrato is a tell, and the vibrato A/B
+ *    card at the end of each voice is where it is judged; the synth rises in a straight line, so only its time to
+ *    90 percent is matched and not the shape of the rise; the plucked comparator begins with a strike and the sung
+ *    one with a vowel, each its own onset by nature; and the sung clip holds its vowel for 1.8 s and is 40 dB down
+ *    by 2.6 s, where the others hold three seconds.
  *
  * The three clips of a set have exactly the same frame count, every clip goes through [AuditionLevel.level],
  * and the file names carry only the voice, the TUNE and the letter. The page takes the labels from the
@@ -84,28 +100,35 @@ import kotlin.math.sqrt
  */
 object ArcoAuditionGenerator {
 
-    private class Knob(val name: String, val low: String, val high: String)
+    private class Knob(val name: String, val low: (ArcoVoice) -> String, val high: (ArcoVoice) -> String)
 
     /**
-     * The knobs at both ends, in the order the SYNTH screen lists them. TUNE is a note, not a knob to audition.
-     * HOLD's top end is a LOOP, so it has its own clip and this one stops short of it.
+     * The TUNE step a voice's default note is on. The knob clips are rendered there, so GRIP's pressure is read
+     * there: CELLO's floor depends on the note (0.97 at C2, 0.85 from F#2 up) and ERHU's is 0.94 at every step.
+     */
+    private fun defaultSemitone(voice: ArcoVoice) = Arco.semitoneFor(voice, Arco.defaults(voice).getValue("TUNE"))
+
+    /**
+     * The knobs at both ends, in the order the SYNTH screen lists them, each end's text built for the voice it is
+     * shown under. TUNE is a note, not a knob to audition. HOLD's top end is a LOOP, so it has its own clip and this
+     * one stops short of it.
      */
     private val KNOBS = listOf(
         Knob(
             "BOW",
-            "a slow bow: ${ms(Arco.attackSeconds(0f))} ms to full speed, no bite",
-            "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.OVERSHOOT_MAX)} times too fast and presses at the top of the window",
+            { "a slow bow: ${ms(Arco.attackSeconds(0f))} ms to full speed, no bite" },
+            { "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.OVERSHOOT_MAX)} times too fast and presses at the top of the window" },
         ),
         Knob(
             "GRIP",
-            "a light grip: the lowest bow pressure (${f2(Arco.PRESSURE_LOW)}) and the bridge closed down, a dark, close-held string",
-            "digging in: full bow pressure (${f2(Arco.PRESSURE_HIGH)}) and the bridge opened up, the brightest the string goes",
+            { voice -> "a light grip: the lowest bow pressure this note takes (${f2(Arco.pressureFor(voice, defaultSemitone(voice), 0f))}) and the bridge closed down, a dark, close-held string" },
+            { voice -> "digging in: full bow pressure (${f2(Arco.pressureFor(voice, defaultSemitone(voice), 1f))}) and the bridge opened up, the brightest the string goes" },
         ),
-        Knob("BODY", "the string alone, no box", "the box: its ring as loud as the string itself"),
+        Knob("BODY", { "the string alone, no box" }, { "the box: its ring as loud as the string itself" }),
         Knob(
             "HOLD",
-            "the shortest bow: ${f1(Arco.HOLD_MIN_SECONDS)} s of note",
-            "the longest one-shot: ${f1(Arco.holdSeconds(Arco.SCRAMBLE_HOLD_CEILING))} s of bow, with its vibrato; one step above is the LOOP, which has its own clip",
+            { "the shortest bow: ${f1(Arco.HOLD_MIN_SECONDS)} s of note" },
+            { "the longest one-shot: ${f1(Arco.holdSeconds(Arco.SCRAMBLE_HOLD_CEILING))} s of bow, with its vibrato; one step above is the LOOP, which has its own clip" },
         ),
     )
 
@@ -150,7 +173,8 @@ object ArcoAuditionGenerator {
      * RESIN's held pad for each voice, as macros: a saw stack with a little of the sub-octave and the detuned
      * square, a mid cutoff, little feedback and a gentle filter envelope, so after the first fraction of a second
      * it is a steady, plain synth note. BASS for CELLO, whose notes (C2 to A-sharp3) sit in BASS's own range
-     * (A1 to A3); LEAD for ERHU (D4 to G5, LEAD's A3 to A5). Authored for a fair comparison, not tuned by ear.
+     * (A1 to A3) but for the top one, a semitone over it; LEAD for ERHU (D4 to G5, LEAD's A3 to A5). Authored for a
+     * fair comparison, not tuned by ear.
      */
     private val SYNTH_MACROS = mapOf(
         ArcoVoice.CELLO to mapOf("STACK" to 0.6f, "CUTOFF" to 0.5f, "CREAM" to 0.2f, "CONTOUR" to 0.25f, "DECAY" to 0.5f),
@@ -180,12 +204,33 @@ object ArcoAuditionGenerator {
 
         // The synth lets go where the bowed note falls out of hearing, not where the bow's stop ends: see [audibleEnd].
         val end = maxOf(audibleEnd(bowed.samples), HELD_SECONDS + Arco.RELEASE_RAMP_SECONDS)
-        val synthRaw = Resin.renderHeld(
-            SYNTH_VOICES.getValue(voice), SYNTH_MACROS.getValue(voice),
-            Resin.Held(attackSeconds = Arco.attackSeconds(Arco.DEFAULT_BOW), seconds = frames.toFloat() / Dsp.RATE, baseHz = hz.toDouble()),
-        ).samples
-        val synth = fit(release(synthRaw, HELD_SECONDS, end), frames)
         println("ARCO held ${voice.name} $note: the bowed clip is ${f2(frames.toFloat() / Dsp.RATE)} s and falls out of hearing at ${f2(end)} s")
+
+        // The synth rises as slowly as the bowed note does, not in the bow's 63 ms stroke: see [secondsToNinety].
+        val bowedRise = secondsToNinety(bowed.samples)
+        check(bowedRise > 0f) { "the bowed clip of ${voice.name} $note never reaches 90 percent of its steady level" }
+        fun synthWithAttack(attack: Float): FloatArray {
+            val raw = Resin.renderHeld(
+                SYNTH_VOICES.getValue(voice), SYNTH_MACROS.getValue(voice),
+                Resin.Held(attackSeconds = attack, seconds = frames.toFloat() / Dsp.RATE, baseHz = hz.toDouble()),
+            ).samples
+            return fit(release(raw, HELD_SECONDS, end), frames)
+        }
+        fun attackRange(seconds: Float) = seconds.coerceIn(Resin.ATTACK_MIN_SECONDS, Resin.ATTACK_MAX_SECONDS)
+        // A straight ramp is at 90 percent after nine tenths of its length; the ladder moves that a little, so the
+        // synth's own time is measured and the attack corrected once by the ratio.
+        var attack = attackRange(bowedRise / 0.9f)
+        var synth = synthWithAttack(attack)
+        val firstRise = secondsToNinety(synth)
+        if (firstRise > 0f) {
+            attack = attackRange(attack * bowedRise / firstRise)
+            synth = synthWithAttack(attack)
+        }
+        val synthRise = secondsToNinety(synth)
+        println(
+            "ARCO held ${voice.name} $note: time to 90 percent of its steady level: the bowed clip ${f2(bowedRise)} s, " +
+                "the synth ${f2(synthRise)} s with an attack of ${f2(attack)} s",
+        )
 
         val other: FloatArray
         val otherName: String
@@ -233,7 +278,8 @@ object ArcoAuditionGenerator {
             trueDescs = mapOf(
                 Kind.BOWED to "this engine, $note: HOLD ${fmt(HELD_HOLD)} (${f1(HELD_SECONDS)} s of bow), every other knob at its default, the vibrato as shipped",
                 Kind.OTHER to otherDesc,
-                Kind.SYNTH to "RESIN's held pad (${SYNTH_VOICES.getValue(voice)}), a saw stack through the ladder at $note, flat for ${f1(HELD_SECONDS)} s, then let go over ${f2(end - HELD_SECONDS)} s, where the bowed note's own tail falls away",
+                Kind.SYNTH to "RESIN's held pad (${SYNTH_VOICES.getValue(voice)}), a saw stack through the ladder at $note, rising over ${f2(attack)} s to reach 90 percent of its level when the bowed note does (${f2(bowedRise)} s), " +
+                    "flat for ${f1(HELD_SECONDS)} s, then let go over ${f2(end - HELD_SECONDS)} s, where the bowed note's own tail falls away",
             ),
         )
     }
@@ -249,10 +295,11 @@ object ArcoAuditionGenerator {
 
     /**
      * The second at which [samples] have fallen out of hearing: the end of the last 20 ms window within 40 dB of the
-     * loudest one. The bow's stop is a gain on the string's loss, which grows every period, so a note's audible tail
-     * is a fraction of the stop the render keeps (R1 saw the bowed C2 of this page fall 34 dB in 0.35 s inside a
-     * 1.5 s stop): a comparator that let go over the whole stop would be heard to fade for a second after the bowed
-     * note had gone, and that would tell them apart for the wrong reason.
+     * loudest one. The bow's stop is one constant extra loss on the string from the lift, so the tail falls at a steady
+     * rate in dB and is 60 dB down at 0.63 to 0.89 of the release (ArcoTest's test of the stopped tail, which prints it
+     * at CELLO C2 to C4 and ERHU D4 to A5), and the render keeps all of the release: a comparator that let go over
+     * all of it would be heard to fade after the bowed note had gone, and that would tell them apart for the wrong
+     * reason. The log line "falls out of hearing at" prints where this lands for each set.
      */
     private fun audibleEnd(samples: FloatArray): Float {
         val win = (0.02f * Dsp.RATE).toInt()
@@ -266,6 +313,26 @@ object ArcoAuditionGenerator {
         }
         val loudest = levels.maxOrNull() ?: 0f
         return (levels.indexOfLast { it >= loudest * 0.01f } + 1) * win.toFloat() / Dsp.RATE
+    }
+
+    /**
+     * The seconds until [samples] first hold 90 percent of their steady level: the centre of the first 25 ms window
+     * (taken a window at a time) whose RMS is at least 0.9 of the RMS read from 2.0 to 2.8 s, which is inside the
+     * three seconds of bow and past the slowest build of any set. It is the number a bowed note's onset is judged by,
+     * and it is the same measure for the bowed clip and for the synth, so the two are compared like with like.
+     * Returns -1 when no window gets there.
+     */
+    private fun secondsToNinety(samples: FloatArray): Float {
+        val win = (0.025f * Dsp.RATE).toInt()
+        val steady = rmsBetween(samples, 2.0f, 2.8f)
+        var i = 0
+        while (i + win <= samples.size) {
+            var acc = 0.0
+            for (j in i until i + win) acc += samples[j].toDouble() * samples[j]
+            if (sqrt(acc / win) >= 0.9 * steady) return (i + win / 2).toFloat() / Dsp.RATE
+            i += win
+        }
+        return -1f
     }
 
     /** [samples] cut or zero-padded to [frames]; a cut ends in the 4 ms fade every render ends in. */
@@ -441,7 +508,7 @@ object ArcoAuditionGenerator {
                 render(hi, mapOf(knob.name to if (knob.name == "HOLD") Arco.SCRAMBLE_HOLD_CEILING else 1f))
                 groups += Group(
                     knob.name + " " + DOT + " DEFAULT " + fmt(defaults.getValue(knob.name)), key = false,
-                    clips = listOf(Clip(lo, "${knob.name} 0", knob.low), Clip(hi, "${knob.name} 1", knob.high)),
+                    clips = listOf(Clip(lo, "${knob.name} 0", knob.low(voice)), Clip(hi, "${knob.name} 1", knob.high(voice))),
                 )
             }
 
@@ -551,10 +618,13 @@ object ArcoAuditionGenerator {
         }
         val pairClips = pairs.map { (id, ab, samples) ->
             write("STAB", id, out(samples))
+            // Bar one is the same in all three pairs, so the name leads with what changes: the page cuts a long name short at the right.
+            val first = ab.first.name.replace("CELLO SHORT STAB, ", "CELLO ")
+            val second = ab.second.name.replace("CELLO SHORT STAB, ", "CELLO ")
             Clip(
                 id,
-                "BAR 1 " + ab.first.name.replace("CELLO SHORT STAB, ", "CELLO ") + " " + DOT + " BAR 2 " + ab.second.name.replace("CELLO SHORT STAB, ", "CELLO "),
-                "the two-bar pattern with the candidate changing on the bar line; REPEAT keeps it alternating",
+                "$second ON BAR 2 $DOT $first ON BAR 1",
+                "bar 1 is ${ab.first.desc}; bar 2 is ${ab.second.desc}. The candidate changes on the bar line; REPEAT keeps it alternating",
             )
         }
         println("ARCO stab pattern: ${PATTERN_FRAMES} frames (${f2(PATTERN_FRAMES.toFloat() / Dsp.RATE)} s) at $BPM bpm, snare share ${f2(SNARE_SHARE)}, guard ${f2(guard)}")
@@ -641,8 +711,8 @@ object ArcoAuditionGenerator {
             }
             val mid = 20f * log10(rmsBetween(snip.samples, 1.4f, 1.9f).coerceAtLeast(1e-9f) / best)
             val hz = if (kind == Kind.OTHER && voice == ArcoVoice.ERHU) 0.0 else FineTuning.measuredHz(snip, want, fromSec = 0.4f, bodySeconds = 0.5f)
-            val cents = if (hz > 0.0) f1(FineTuning.cents(hz, want.toDouble()).toFloat()) else "n/a"
-            "$kind[${f2(snip.samples.size.toFloat() / Dsp.RATE)}s ${cents}c mid ${f1(mid)}dB rms ${f3(loud)}]"
+            val cents = if (hz > 0.0) f1(FineTuning.cents(hz, want.toDouble()).toFloat()) + "c" else "n/a"
+            "$kind[${f2(snip.samples.size.toFloat() / Dsp.RATE)}s $cents mid ${f1(mid)}dB rms ${f3(loud)}]"
         }
     }
 

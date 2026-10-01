@@ -4,7 +4,6 @@ import kotlin.math.abs
 import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,8 +23,6 @@ import kotlin.test.assertTrue
  * printed on lines that start `ARCO`, so a change that moves a number can be read against the old one in the log.
  * A claim that could not fail proves nothing, so each test either carries a negative control (a cell, a bow or a
  * signal the same judgement must refuse) or states the margin that shows it can.
- *
- * Tests marked OPEN assert a bar the engine does not meet today; they are left red on purpose and say by how much.
  */
 class ArcoTest {
 
@@ -54,11 +51,14 @@ class ArcoTest {
      */
     private val lockBar = mapOf(ArcoVoice.CELLO to 1.2, ArcoVoice.ERHU to 0.5)
 
-    /** What it takes to count as speaking: a lock inside the voice's bar, one slip a period after it to the end, and a wave that repeats. */
+    /**
+     * What it takes to count as speaking: a lock inside the voice's bar, a last slip within 1.5 periods of the end, and a wave
+     * that repeats. The lock is the first slip after the last unclean gap ([ArcoMeasure.lockSeconds]), so a note that locks
+     * inside the bar has one slip a period from there to the end of the bow-on, and a note whose last gap is unclean has no lock.
+     */
     private fun speakingProblems(v: ArcoMeasure.Verdict, bar: Double): List<String> = buildList {
         if (v.lock < 0) add("never locks into one slip a period")
         else if (v.lock > bar) add("locks only after ${f(v.lock)} s (bar ${f(bar)})")
-        if (v.gapsAfterLock > 0) add("${v.gapsAfterLock} unclean gaps after the lock")
         if (v.tailPeriods > 1.5) add("the last slip is ${f(v.tailPeriods, 1)} periods before the end of the bow-on")
         if (v.peak <= 0.9) add("autocorrelation peak ${f(v.peak)}")
     }
@@ -148,9 +148,10 @@ class ArcoTest {
 
     /**
      * How the settled pitch is read: a bow-on long enough to be well past the lock, and a window inside it. CELLO's slowest
-     * lock in these cells is 1.38 s (D2, BOW 0.6, GRIP 1) so its window starts at 2.0 s (1.0 s long, in a 3.2 s bow-on);
-     * ERHU's is 0.42 s so its window starts at 0.8 s (0.7 s long, in 1.6 s). Each cell asserts the window starts at least
-     * 0.3 s past its own lock, so a slower engine fails here and not in the cents.
+     * lock in these cells (BOW 0, default and 1 at GRIP 0, default and 1) is 1.35 s (A2, BOW 0, GRIP 0) so its window starts
+     * at 2.0 s (1.0 s long, in a 3.2 s bow-on); ERHU's is 0.42 s (A4, BOW 0, GRIP 0) so its window starts at 0.8 s (0.7 s long,
+     * in 1.6 s). Each cell asserts the window starts at least 0.3 s past its own lock, so a slower engine fails here and
+     * not in the cents.
      */
     private val tunedBowOn = mapOf(ArcoVoice.CELLO to 3.2f, ArcoVoice.ERHU to 1.6f)
     private val tunedFrom = mapOf(ArcoVoice.CELLO to 2.0f, ArcoVoice.ERHU to 0.8f)
@@ -171,9 +172,9 @@ class ArcoTest {
      * printed beside it.
      *
      * R1b saw the FFT within 3.48 cents at CELLO (C4 at GRIP 0) and 3.10 cents at ERHU, autocorrelation within 3.40 and
-     * 3.16, and the two measures within 0.51 cents of each other at CELLO and 0.14 at ERHU: so a 5 cent bar on each and a
-     * 1 cent bar on their disagreement. BOW does not move the settled pitch (the three BOW columns in a row agree to the
-     * printed tenth of a cent): the stroke is over long before the window opens. The FFT bin on the finished
+     * 3.14, and the two measures within 0.47 cents of each other at CELLO and 0.14 at ERHU: so a 5 cent bar on each and a
+     * 1 cent bar on their disagreement. BOW does not move the settled pitch (the three BOW columns in a row agree to within
+     * a tenth of a cent): the stroke is over long before the window opens. The FFT bin on the finished
      * render is 0.67 Hz, 1 percent of C2, so its parabolic peak is good to a fraction of a cent, which is why the 1 cent
      * agreement holds even at the lowest note.
      */
@@ -185,7 +186,7 @@ class ArcoTest {
         for (voice in ArcoVoice.entries) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step -> grips.flatMap { g -> bows.map { b -> tunedRead(voice, step, g, b) } } }
-            println("ARCO cents by FFT on the finished render ($voice), BOW 0 / 0.6 / 1 at GRIP 0, then at GRIP 0.6, then at GRIP 1; ac is the autocorrelation's worst:")
+            println("ARCO cents by FFT on the finished render ($voice), BOW 0 / 0.5 / 1 at GRIP 0, then at GRIP 0.6, then at GRIP 1; ac is the autocorrelation's worst:")
             var worstFft = 0.0
             var worstAc = 0.0
             var worstDiff = 0.0
@@ -225,11 +226,12 @@ class ArcoTest {
      * share of the bridge filter's delay that tunes the string is a share of the corner's own delay, so a fixed count would
      * not hold). Read at three TUNEs a voice, the worst two measured among them.
      *
-     * R1b saw the travel (GRIP 1 minus GRIP 0, by FFT; autocorrelation within 0.1 cents of it) at CELLO C2 -0.08, C3 0.22
+     * R1b saw the travel (GRIP 1 minus GRIP 0, by FFT; autocorrelation within 0.11 cents of it) at CELLO C2 -0.08, C3 0.22
      * and C4 4.13 cents, and at ERHU D4 -0.55, F5 4.50 and A5 2.80 cents; the bar is the record's 5 cents, 0.5 cents above the
      * worst. Why ERHU's pressure floor is 0.94 and not 0.85 is this test's negative control: a high string's pitch rises
-     * with pressure (about 30 cents per unit), so with the floor at 0.85 the same knob would have moved ERHU F5 by 6.60
-     * cents (6.62 at E5), measured here by handing [Arco.bow] a pressure of 0.85 at GRIP 0, and that is over the bar.
+     * with pressure, so with the floor at 0.85 the same knob would have moved ERHU C#5 by 5.92, F5 by 6.60 (against 4.50 with
+     * the shipped floor) and F#5 by 6.35 cents, measured here by handing [Arco.bow] a pressure of 0.85 at GRIP 0, and all
+     * three are over the bar.
      */
     @Test
     fun `GRIP is not a pitch knob, and a lower ERHU pressure floor would have made it one`() {
@@ -282,7 +284,7 @@ class ArcoTest {
     /**
      * GRIP never reaches pressure 0, and pressure 0 is not bow-up. The reflection table is a plateau at slope 5, which is
      * what a pressure of 0 maps to ([Strings.Bow]'s KDoc), so a bow at pressure 0 still drives the string: only [Strings.Bow.lift]
-     * lifts it. R1b saw a raw peak of 0.212 from CELLO C3 at pressure 0 (a quiet, scratchy note, but not silence); the
+     * lifts it. R1b saw a raw peak of 0.284 from CELLO C3 at pressure 0 (a quiet, scratchy note, but not silence); the
      * bar is "louder than 0.05". [Arco.pressureFor] is above 0 at every step of both voices at GRIP 0, 0.5 and 1 (the lowest is
      * [Arco.PRESSURE_LOW]), so the knob can never fall into the one place where the bow is not on the string.
      */
@@ -304,8 +306,9 @@ class ArcoTest {
 
     /**
      * The engine's no-vibrato, no-bite note played on a bare [Strings.Bow] by hand, with the engine's own corner, share,
-     * pressure, attack, release ramp and gain ramp, so the one thing that differs between a run with [lift] and a run
-     * without is whether the bow is lifted at the end of the note. [ramp] false leaves the string's own loss alone.
+     * pressure, attack, release ramp and, when [stop] is true, its stop (the constant extra bridge loss that [Arco.stopScale]
+     * works out for a tail of [stopN] samples), so the one thing that differs between a run with [lift] and a run without is
+     * whether the bow is lifted at the end of the note. [stop] false leaves the string's own loss alone.
      */
     private fun byHand(voice: ArcoVoice, step: Int, grip: Float, holdSeconds: Float, stopN: Int, lift: Boolean, stop: Boolean): FloatArray {
         val hz = ArcoMeasure.hzOf(voice, step)
@@ -331,16 +334,19 @@ class ArcoTest {
     }
 
     /**
-     * The engine lifts the bow at the end of the note, so its stop is the free string's and not a resting string's. Played
-     * for 2 s at BOW 0.5 (no bite) at CELLO C3, C2 and ERHU G4, the engine's tail is compared at 60 percent of its stop, in
-     * dB against the level just before the lift, with the same note played by hand on a bare [Strings.Bow] that rests
-     * on the string instead of lifting (same gain ramp, same everything else).
+     * The engine lifts the bow at the end of the note, so its tail is the free string's and not a resting string's. Played
+     * for 2 s at BOW 0.5 (no bite) at CELLO C3, C2 and ERHU G4, the engine's tail is read at 95 percent of its stop, in dB
+     * against the level of the window that ends at the lift, beside the same note played by hand on a bare [Strings.Bow] that
+     * rests on the string instead of lifting (same attack, release ramp and stop loss, so the lift is the one difference).
+     * At C3 and G4 the free ring is under half of the 2 s hold, so the stop's release is the free ring itself and
+     * [Arco.stopScale] adds no loss to speak of; at C2, whose free ring is 2.01 s, the stop adds loss.
      *
-     * R1b saw the engine's tail at -218, -224 and -215 dB there (exact silence: the ramp's gain, applied once a period,
-     * multiplies up to nothing) against -50, -41 and -54 dB for the resting bow, and the engine's output bit for bit the
-     * lifted bow's. The bars are: the engine at or under -60 dB, the resting bow over -60 dB. The levels are the AC level of a
-     * window of whole periods (the window's own mean taken out): a string's net displacement from the onset rings on at the
-     * bridge's own 0.95 a period, -0.44 dB a period whatever the pitch, and is not the note.
+     * R1b saw the engine's tail at -62.3, -59.2 and -45.2 dB (C3, C2, G4) against -55.6, -44.8 and -23.3 dB for the resting bow,
+     * and the engine's output bit for bit the lifted bow's by hand. The bars are the engine at or under -40 dB, and the resting
+     * bow at least 5 dB above the engine. The room is thin in two cells: the engine's -45.2 dB at G4 is 5.2 dB under the first
+     * bar, and the resting bow is 6.7 dB above the engine at C3 (14.4 dB at C2, 21.9 dB at G4), 1.7 dB over the second. The
+     * levels are the AC level of a window of whole periods (the window's own mean taken out): a string's net displacement from
+     * the onset rings on at the bridge's own 0.95 a period, -0.44 dB a period whatever the pitch, and is not the note.
      *
      * Why a lifted bow matters: left resting, the string is stopped at the bow and a stab's tail does not end where the
      * stop says it does. (StringsBowTest's 3.2 s resting ring at C3 is that net displacement's: with the mean taken out R1b
@@ -362,6 +368,7 @@ class ArcoTest {
             val engine = drop(c.out, 0.95)
             val rest = drop(resting, 0.95)
             println("ARCO lift $voice ${name(voice, step)}: at 95% of the stop the engine is at ${f(engine, 1)} dB, the lifted bow by hand ${f(drop(liftedByHand, 0.95), 1)} dB, a resting bow ${f(rest, 1)} dB; the engine equals the lifted bow bit for bit: ${c.out.contentEquals(liftedByHand)}")
+            assertTrue(c.out.contentEquals(liftedByHand), "$voice ${name(voice, step)}: the engine's wave is not the lifted bow's played by hand from the same pressure, corner and stop")
             assertTrue(engine <= -40.0, "$voice ${name(voice, step)}: the engine's tail is still at $engine dB at 95 percent of its stop")
             assertTrue(rest - engine >= 5.0, "$voice ${name(voice, step)}: a resting bow's tail ($rest dB) is within 5 dB of the engine's ($engine dB), so this test cannot tell a lifted bow from a resting one")
         }
@@ -391,7 +398,7 @@ class ArcoTest {
      * How slowly a tail falls, as the smallest ratio (over windows of whole periods, back to back from the lift, from where the
      * tail is 10 dB under the note's sustain until it is 30 dB under it: the lift itself lets the string's stored energy out and
      * the first windows can rise, and below 30 dB a window's own mean no longer takes out the net displacement that drains at the bridge's
-     * 0.95 a period, -0.44 dB a period at every pitch, which at A5 is slower than the formula's -0.80 and reads as a ratio of 0.54) of its drop from one window to the next to the free ring's drop over the
+     * 0.95 a period, -0.44 dB a period at every pitch, which at A5 is slower than the formula's -0.80 and reads as a ratio of 0.56) of its drop from one window to the next to the free ring's drop over the
      * same time ([Arco.freeRingSeconds]'s slope). A tail that falls at least as fast as the free string has every ratio
      * at 1 or more; one that rings on slower has a ratio under 1.
      */
@@ -463,15 +470,21 @@ class ArcoTest {
      *
      * The stop is a constant extra loss at the bridge ([Arco.stopScale]) that makes the string fall 60 dB in exactly the release; the
      * free ring it replaces is [Arco.freeRingSeconds] long, so the stop only ever adds loss and the tail is never slower than
-     * the string's own. R1b saw -60 dB reached 16 ms before the end of the release at CELLO C2 at HOLD 0 (134 ms of 150: the one cell at the
-     * edge, the free ring being 2.01 s there), at least 22 ms before the end in every other cell, and in 0.74 to 0.95 of the release at
-     * CELLO C2 to C4 and ERHU D4 to A5. The bars are: reached by release plus 50 ms, and no later than the same note's lifted
-     * string with no stop at all (5 ms of room). (Its first version read each window's slope against the formula's and asked for 0.9 of it;
+     * the string's own. Where the free ring is no longer than the release the stop adds nothing: 9 of the 18 cells here run with the
+     * stop disengaged (CELLO C3 and C4 at HOLD 0.95, ERHU D4 and C5 at HOLD 0.4 and 0.95, ERHU A5 at all three), and in those the
+     * engine's time is the string with no stop's to the millisecond; the other 9 are where the stop acts.
+     *
+     * R1b saw -60 dB reached in 0.63 to 0.89 of the release over the 18 cells: CELLO C4 at HOLD 0.95 (274 of 438 ms) the earliest, and
+     * CELLO C2 at HOLD 0 (134 of 150 ms) the latest, 16 ms before the end of the release and the one cell at the edge (the free ring
+     * being 2.01 s there), with at least 22 ms to spare in every other cell. It is under the whole release because the level it is read
+     * against is the note's before its velocity ramps down, which is higher than the level the stop's own 60 dB runs from at the lift.
+     * The bars are: reached by release plus 50 ms, and no later than the same note's lifted string with no stop at all (5 ms of room).
+     * (Its first version read each window's slope against the formula's and asked for 0.9 of it;
      * on a window of whole periods that reads the net displacement's own -0.44 dB a period once the note's harmonics are gone, which is
      * slower than the formula above about 500 Hz, and ERHU A5 read 0.56. The ring-down test above reads the fundamental and is the
      * one that holds the formula to the string.)
      *
-     * The negative control: a lifted string with no stop at CELLO C2 takes 1.9 s to reach -60 dB against the stop's 134 ms, so the
+     * The negative control: a lifted string with no stop at CELLO C2 takes 1.76 s to reach -60 dB against the stop's 134 ms, so the
      * first bar can fail, and the engine's tail is compared with that string's in every cell.
      */
     @Test
@@ -532,16 +545,16 @@ class ArcoTest {
      * R1b saw, over the 12 cells (CELLO C2, C3, C4, ERHU D4, A#4, A5, each at GRIP 0.6 and 1): h2 between -5.8 and -5.9 dB,
      * so the band is -6.5 to -5.3; the slope between -4.93 (CELLO C3 at GRIP 1) and -9.51 (ERHU A5 at GRIP 0.6), so the band
      * is -10.0 to -4.5, wider than the record's -5 to -8; rise over fall between 0.19 and 0.29, so the bar is under 0.35;
-     * and slow for between 0.76 (ERHU A5) and 0.97 of the period, so the bar is over 0.7, not the record's 0.9, because an
+     * and slow for between 0.77 (ERHU A5) and 0.97 of the period, so the bar is over 0.7, not the record's 0.9, because an
      * 880 Hz period is 200 samples and a fifth of the steepest step is a larger share of a coarser wave. Why the slope
      * leaves the record's band: the bow sits at 0.133 of the string, so harmonic 7.5 is a node, harmonic 7 stands above a
-     * sawtooth's line (-10 to -17 dB against -16.9) and harmonic 8 far under it (-18 to -38 dB against -18.1), which bends a
+     * sawtooth's line (-10 to -17 dB against -16.9, at every note but A5) and harmonic 8 far under it (-18 to -38 dB against -18.1), which bends a
      * line fitted through all eight (the slope over harmonics 1 to 6 alone is -5.3 to -5.5 at every note but A5); and at
      * ERHU's top the bridge's corner is under the fourth harmonic, so everything above falls an octave faster (-7.5 to -8.1).
      *
      * The negative controls are signals the same judgement must refuse: a sine at 130.81 Hz (h2 at -118 dB, rise over fall
-     * 1.0, slow for 0.13) and CELLO C2 at the full corner at pressure 0.5 and 0.7, the three-slip scratch (h2 at -2.5 and
-     * -5.5 dB, slope -3.2 and -1.6 dB an octave, rise over fall 1.77 and 1.63).
+     * 1.0, slow for 0.13) and CELLO C2 at the full corner at pressure 0.5 and 0.7, the scratch of several slips a period (R1b
+     * saw h2 at -3.5 and -4.2 dB, slope -2.1 and -3.3 dB an octave, rise over fall 1.76 and 1.48).
      */
     @Test
     fun `the series is a sawtooth, at defaults and at GRIP 1`() {
@@ -588,22 +601,27 @@ class ArcoTest {
         val finPeak: Float, val finMean: Double,
     )
 
-    /** The largest raw |mean| a note may have, per voice: R1b saw 0.0649 (CELLO) and 0.0133 (ERHU), both on the 0.3 s note at BOW 0 and GRIP 1. */
+    /** The largest raw |mean| a note may have, per voice: R1b saw 0.0714 (CELLO) and 0.0130 (ERHU), both on the 0.3 s note at BOW 0 and GRIP 1. */
     private val rawMeanBar = mapOf(ArcoVoice.CELLO to 0.09, ArcoVoice.ERHU to 0.02)
+
+    /** The finished peak must stay under this, clear of the 0.99 where [Dsp.levelTo] starts turning a peak down: a limited note sits at exactly 0.99, and fails. */
+    private val finishedPeakBar = 0.95f
 
     /**
      * Bounded, pinned and DC-free over the grid: TUNE, BOW, GRIP and BODY each at 0, 0.5 and 1, HOLD at 0 and 0.5 (HOLD 1 is a
      * LOOP and has its own seam test), vibrato as the engine plays it: 162 renders a voice. On every one: nothing
      * non-finite (the raw wave, its tap or the finished render), the raw peak under [Strings.Bow.RAW_PEAK_CEILING], the
-     * finished peak no more than 0.99 and the finished mean under 0.05. The raw mean is held to a bound per voice and
+     * finished peak under [finishedPeakBar] and the finished mean under 0.05. The raw mean is held to a bound per voice and
      * explained by [the raw mean is the onset's displacement and drains away].
      *
-     * R1b saw: no non-finite sample; the raw peak at most 0.737 at CELLO (C3, BOW 0.5, GRIP 1, HOLD 0.5) and 0.623 at ERHU (D4,
+     * R1b saw: no non-finite sample; the raw peak at most 0.736 at CELLO (C3, BOW 0.5, GRIP 1, HOLD 0.5) and 0.623 at ERHU (D4,
      * BOW 0, GRIP 1, HOLD 0) against the ceiling 1.25, which has room because the overshoot's worst corner (BOW 1 at the
-     * window's top) is inside the grid; the finished peak at most 0.826 and 0.763 (so [Dsp.levelTo]'s limiter never acts, and
-     * the 0.99 bar is its ceiling and a guard that it stays idle); the finished mean at most 0.0037 and 0.0002 against 0.05.
-     * The raw mean reached 0.0649 at CELLO (C2, BOW 0, GRIP 1, HOLD 0) and 0.0133 at ERHU (D4, BOW 0, GRIP 1, HOLD 0); the
-     * bars are 0.09 and 0.02.
+     * window's top) is inside the grid; the finished peak at most 0.840 (CELLO C2, BOW 0, GRIP 0, HOLD 0) and 0.763 (ERHU A5, BOW 0,
+     * GRIP 0.5, BODY 1, HOLD 0), 0.11 under the 0.95 bar. [Dsp.levelTo] sets the level by loudness and turns a peak down only
+     * when it passes 0.99, so a note the limiter had acted on would sit at exactly 0.99 and fail the bar: that is what makes "the
+     * limiter stays idle" a claim this test can fail, where a bar at 0.99 itself never could. The finished mean is at most 0.0042
+     * and 0.0002 against 0.05. The raw mean reached 0.0714 at CELLO (C2, BOW 0, GRIP 1, HOLD 0) and 0.0130 at ERHU (D4, BOW 0,
+     * GRIP 1, HOLD 0); the bars are 0.09 and 0.02, which leaves 0.0186 of room at CELLO and 0.0070 at ERHU.
      */
     @Test
     fun `bounded, finite, pinned and DC-free across the grid`() {
@@ -632,7 +650,7 @@ class ArcoTest {
             println("ARCO   raw mean ${f(byMean.rawMean, 4)} at ${byMean.label}")
             println("ARCO   finished peak ${f(byFinPeak.finPeak.toDouble(), 3)} at ${byFinPeak.label}; finished mean ${f(byFinMean.finMean, 5)} at ${byFinMean.label}")
             val bad = cells.filter {
-                !it.finite || it.rawPeak >= Strings.Bow.RAW_PEAK_CEILING || it.finPeak > 0.99f + 1e-6f ||
+                !it.finite || it.rawPeak >= Strings.Bow.RAW_PEAK_CEILING || it.finPeak >= finishedPeakBar ||
                     abs(it.finMean) >= 0.05 || abs(it.rawMean) >= rawMeanBar.getValue(voice)
             }
             assertEquals(162, cells.size, "the grid is 3 x 3 x 3 x 3 x 2")
@@ -646,7 +664,7 @@ class ArcoTest {
      * one way before the slips balance it, and a loop whose two ends both invert has no DC blocker, so that net
      * displacement drains only at the bridge's loss of 0.95 a period (-0.44 dB a period: 2 s at C2). A 0.3 s note at C2 is 20
      * periods long and is all onset, which is why it is the cell with the largest raw mean in the grid; the finished render
-     * takes the mean out (it is the 0.0037 above) and the high-pass takes the rest.
+     * takes the mean out (it is the 0.0042 above) and the high-pass takes the rest.
      *
      * Read over a 3 s note at BOW 0 and GRIP 1 at each root, the mean of each half second: CELLO 0.0919, -0.0058, -0.0104,
      * -0.0015, 0.0024, -0.0020 and ERHU 0.0185, -0.0004, 0.0002, 0.0003, 0.0000, -0.0003. The bars: the first half second over
@@ -670,17 +688,18 @@ class ArcoTest {
     // ---------------------------------------------------------------- 8. the entry rule
 
     /**
-     * A [Strings.Bow] is built at every TUNE step of both voices, at GRIP 0, 0.5 and 1, with the engine's own position
-     * ([Arco.BETA]), corner ([Arco.cornerFor]) and share, the way the engine builds it: at the lowest pitch of the vibrato's swing
-     * (10 cents under the note) and then retuned up to the note and to 10 cents over it, which a bow may do only if it
-     * was built long enough. 45 steps by 3 GRIPs = 135 bows, none refused. It is the record's "a unit test, not a discovery":
-     * the bridge segment is [Arco.BETA] of a period and has to be at least two samples long after the bridge filter's delay
-     * and half a sample, which a high note with a dark corner cannot manage.
+     * A [Strings.Bow] is built at every TUNE step of both voices, at GRIP 0, 0.5 and 1, at the note's own pitch with the engine's
+     * own position ([Arco.BETA]), corner ([Arco.cornerFor]) and share, the way [Arco.bow] builds it: one construction, no retune
+     * (the vibrato is a read-back delay of the finished wave, so the string is never moved off the note). 45 steps by 3 GRIPs =
+     * 135 bows, none refused. It is the record's "a unit test, not a discovery": the bridge segment is [Arco.BETA] of a period and
+     * has to be at least two samples long after the bridge filter's delay and half a sample, which a high note with a dark
+     * corner cannot manage.
      *
-     * R1b saw the least room at ERHU A5 at GRIP 0 (corner 2828 Hz): [Arco.BETA] 0.0753 over the position floor, that is 0.133
+     * R1b saw the least room at ERHU A5 at GRIP 0 (corner 2828 Hz): [Arco.BETA] 0.0750 over the position floor, that is 0.133
      * against a floor of 0.058; the bar is 0.05 of room. The negative control is the span the design asked for first: D6
      * (1174.66 Hz, the 24th semitone from ERHU's root) at CELLO's 1000 Hz corner is refused, naming the Karplus-Strong minimum
-     * (R1b saw a loop of -0.717 samples), which is what the 19-semitone span and the rising corner floor of [Arco.gripFor] avoid.
+     * (R1b saw a loop of -0.717 samples). The 19-semitone span is what keeps ERHU clear of it: a 1000 Hz corner still builds at
+     * every ERHU step up to A#5 and is refused only from B5 (987.8 Hz, step 21) up, so ERHU's top, A5, stops two semitones short.
      */
     @Test
     fun `a Bow is built at every TUNE step at the engine's constants, and refused where the old span went`() {
@@ -691,14 +710,11 @@ class ArcoTest {
                 for (grip in listOf(0f, 0.5f, 1f)) {
                     val hz = ArcoMeasure.hzOf(voice, step)
                     val corner = Arco.cornerFor(voice, step, grip)
-                    val low = hz * 2f.pow(-Arco.VIBRATO_MAX_CENTS / 1200f)
-                    val bow = Strings.Bow(low, Arco.BETA, corner, Arco.shareFor(voice), rate)
-                    bow.retune(hz)
-                    bow.retune(hz * 2f.pow(Arco.VIBRATO_MAX_CENTS / 1200f))
-                    val period = rate / low.toDouble()
+                    Strings.Bow(f = hz, beta = Arco.BETA, bridgeHz = corner, share = Arco.shareFor(voice), rate = rate) // throws if it cannot be built
+                    val period = rate / hz.toDouble()
                     val a = 1.0 - kotlin.math.exp(-2.0 * Math.PI * min(corner, rate * 0.45f) / rate)
                     val r = 1.0 - a
-                    val w = 2.0 * Math.PI * low / rate
+                    val w = 2.0 * Math.PI * hz / rate
                     val delay = kotlin.math.atan2(r * kotlin.math.sin(w), 1.0 - r * kotlin.math.cos(w)) / w
                     val floor = (Strings.MIN_LOOP_SAMPLES + 0.5 + delay) / period
                     if (Arco.BETA - floor < minMargin) {
@@ -726,7 +742,7 @@ class ArcoTest {
      * R1b saw 90 cells all finite; the raw peak at most 0.822 at CELLO (F#2, GRIP 1) and 0.600 at ERHU (D4, GRIP 1), against the
      * ceiling 1.25 (at the three notes: CELLO C2 0.658, C3 0.673, C4 0.611; ERHU D4 0.600, C5 0.585, A5 0.505); and the lock at most 1.12 s
      * at CELLO (F2 at GRIP 0.6, the bar being 1.5 s) and 0.17 s at ERHU (the bar 0.8 s). The CELLO peak is above the grid's
-     * 0.737 below, which takes only three notes and a bow-on of 1.1 s: the grid is not the engine's worst corner.
+     * 0.736 below, which takes only three notes and a bow-on of 1.1 s: the grid is not the engine's worst corner.
      */
     @Test
     fun `the stroke's overshoot row locks at every TUNE step`() {
@@ -770,11 +786,13 @@ class ArcoTest {
      * 0 / 0.3 / 0.6 / 0.8 / 1 with the GRIP it fell at. This is wider than the speaks table's BOW 0.5, and the string is
      * slower there: R1b saw CELLO lock as late as 1.66 s (A2 at BOW 0.8, GRIP 1), 1.49 s (D#2, BOW 0.8, GRIP 1), 1.38 s (D2,
      * BOW 0.6, GRIP 1) and 1.35 s (A2, BOW 0, GRIP 0), against 0.87 s at BOW 0.5, and ERHU as late as 0.42 s (A4, BOW 0,
-     * GRIP 0). The bars are 2.0 s (CELLO) and 0.6 s (ERHU): they hold today and they are not the speaks table's.
+     * GRIP 0). The bars are 2.0 s (CELLO) and 0.6 s (ERHU): they hold today and they are not the speaks table's. They are the
+     * measurement with room and not the design's bound; the 1.2 s the speaks table sets for BOW 0.5 does not hold across BOW.
      *
-     * OPEN: at CELLO's default BOW (0.6) and GRIP 1 a stab at D2 to E2 does not lock until 1.3 s, past a default HOLD's
-     * 0.85 s of bow, so the whole of a short note at those settings is the scratch. The bar here is the measurement with
-     * room and not the design's bound; the bound the speaks table sets for BOW 0.5 (1.2 s) does not hold across BOW.
+     * A default HOLD is 0.85 s of bow, and some of these locks are later than that: at BOW 0.6 the CELLO notes D2 to E2 lock at
+     * 1.27 to 1.38 s (all at GRIP 1), and at BOW 0.8 D#2 and A2 lock at 1.49 s and 1.66 s (GRIP 1), so a default-HOLD note at
+     * those settings is the scratch from end to end. At the default BOW 0.5 the slowest lock is 0.868 s (D#2, GRIP 1, in the speaks
+     * table), 14 ms past a default HOLD's 0.854 s.
      */
     @Test
     fun `the lock across BOW is printed and bounded`() {
@@ -849,7 +867,7 @@ class ArcoTest {
      *  - CELLO's pressure floor [Arco.CELLO_PRESSURE_LOW_ROOT] 0.97 at C2 falling [Arco.CELLO_PRESSURE_LOW_FALL] 0.02 a semitone
      *    to [Arco.PRESSURE_LOW] 0.85 (reached at F#2, the sixth semitone), its corner [Arco.CELLO_CORNER_LOW_HZ] 1000 Hz at
      *    GRIP 0 and 1500 Hz at GRIP 1 at the root, rising to [Strings.Bow.BRIDGE_HZ] by the eighth semitone (G#2).
-     *  - ERHU's pressure floor [Arco.ERHU_PRESSURE_LOW] 0.94 (the 4.50 cent GRIP travel; 0.85 gives 6.62) and its corner from
+     *  - ERHU's pressure floor [Arco.ERHU_PRESSURE_LOW] 0.94 (the 4.50 cent GRIP travel at F5; 0.85 gives 6.60) and its corner from
      *    1500 Hz at D4 rising to 2828.3 Hz at A5 at GRIP 0, and the full 3023.6 Hz at GRIP 1 everywhere.
      *  - the spans: 24 semitones (C2 to C4) and 19 (D4 to A5; B5 at 21 is the last that speaks, two semitones of margin).
      */
@@ -922,8 +940,8 @@ class ArcoTest {
      * [Strings.Bow.RAW_PEAK_CEILING], and the pitch excursion small: on 120 ms windows stepped 40 ms from 0.8 s to the end of the
      * bow-on, read by autocorrelation, the largest distance of any window's pitch from the mean of them.
      *
-     * R1b saw the raw peak at most 0.632 (CELLO C2); the excursion 3.5 to 5.0 cents with the vibrato on (CELLO C2 5.0, C3 4.6,
-     * C4 3.8, ERHU 3.5 at all three) and 0.1 to 0.9 cents with it off, the same cells, which is the measure's own floor
+     * R1b saw the raw peak at most 0.652 (CELLO C2); the excursion 3.4 to 6.0 cents with the vibrato on (CELLO C2 6.0, C3 4.4,
+     * C4 3.7; ERHU D4 3.4, C5 3.6, A5 3.5) and 0.1 to 0.7 cents with it off, the same cells, which is the measure's own floor
      * (at C2 a 120 ms window is only 8 periods). The bar is the record's 15 cents. The vibrato is +-10 cents at 6.1 Hz, and a
      * 120 ms window is 0.73 of a vibrato cycle long, so it averages most of the swing away (to 0.32 of it): a bar of 15
      * does not need that margin to be tight. The lower bar is that the vibrato is there at all: at least 2 cents, with the same
@@ -961,8 +979,8 @@ class ArcoTest {
      * 0.7 s, at root, middle and top of both voices, and the string's own velocity under the bow is bit for bit the plain
      * string's, because the vibrato is a read-back delay of the finished wave and the bow never feels it. The record asks for 0
      * unclean gaps. R1b's first vibrato (a retune of the bow every 64 samples) failed this at ERHU: 3 of 1207 slips at C5 and 4 of 2025
-     * at A5, over the 45 steps 37 gaps in the 24,746 ERHU slips, each a slip that splits in two for a moment at a particular phase of the
-     * swing; the plain string had none. The sweep over every step is printed (`ARCO vibrato sweep`).
+     * at A5, 37 gaps in the 24,746 slips of ERHU's 20 steps (CELLO had 1 in 8,337), each a slip that splits in two for a moment at a
+     * particular phase of the swing; the plain string had none. The sweep over every step is printed (`ARCO vibrato sweep`).
      */
     @Test
     fun `a held three second note with vibrato keeps one slip a period, because the string never feels it`() {
