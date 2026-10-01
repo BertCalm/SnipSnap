@@ -901,11 +901,16 @@ internal object Strings {
 
         val size: Int get() = b0.size
 
-        /** Sets the modes: centre [hz], [q] (at most [MAX_Q]), and their [weights] (each >= 0, summing to <= 1). State is cleared. */
+        /**
+         * Sets the modes: centre [hz], [q] (at most [MAX_Q]), and their [weights] (each >= 0, summing
+         * to <= 1). State is cleared. Everything is checked before anything changes, so a refused
+         * call leaves the membrane as it was.
+         */
         fun tune(hz: FloatArray, q: FloatArray, weights: FloatArray) {
             require(hz.size == q.size && hz.size == weights.size) { "membrane: ${hz.size} modes, ${q.size} Qs, ${weights.size} weights" }
             for (h in hz) require(h > 0f && h < 0.45f * rate) { "membrane mode at $h Hz is outside (0, 0.45 x $rate)" }
             for (v in q) require(v > 0f && v <= MAX_Q) { "membrane Q must be in (0, $MAX_Q], got $v" }
+            val w = passive(weights)
             val k = hz.size
             b0 = DoubleArray(k); a1 = DoubleArray(k); a2 = DoubleArray(k)
             x1 = DoubleArray(k); x2 = DoubleArray(k); y1 = DoubleArray(k); y2 = DoubleArray(k)
@@ -917,8 +922,7 @@ internal object Strings {
                 a1[i] = -2.0 * cos(w0) / a0
                 a2[i] = (1.0 - alpha) / a0
             }
-            this.weights = DoubleArray(k)
-            weigh(weights)
+            this.weights = w
         }
 
         /**
@@ -928,6 +932,11 @@ internal object Strings {
          */
         fun weigh(weights: FloatArray) {
             require(weights.size == size) { "membrane: ${weights.size} weights for $size modes" }
+            passive(weights).copyInto(this.weights)
+        }
+
+        /** [weights] checked for the passive shape (each >= 0, sum <= 1 within [WEIGHT_SLACK]) and scaled back to a sum of 1 if over it; nothing is stored. */
+        private fun passive(weights: FloatArray): DoubleArray {
             var sum = 0.0
             for (w in weights) {
                 require(w >= 0f) { "a membrane weight must not be negative (the bridge bound needs it), got $w" }
@@ -935,7 +944,7 @@ internal object Strings {
             }
             require(sum <= 1.0 + WEIGHT_SLACK) { "membrane weights must sum to at most 1 (the bridge bound needs it), got $sum" }
             val scale = if (sum > 1.0) 1.0 / sum else 1.0
-            for (i in weights.indices) this.weights[i] = weights[i] * scale
+            return DoubleArray(weights.size) { weights[it] * scale }
         }
 
         /** One sample: each mode `b0 (x - x[-2]) - a1 y[-1] - a2 y[-2]` (the RBJ bandpass, b1 = 0, b2 = -b0), weighted and summed. */
@@ -983,8 +992,10 @@ internal object Strings {
      * That is the matrix `I - (2c/n) H 1 1^T`: identity on everything but the strings' common
      * motion, and on that `1 - 2c H`, whose size is at most 1 for a [Membrane]. So the bridge
      * moves energy between strings and never adds any; with every loop's own `fb < 1` the
-     * network decays at any fixed [c] in [0, 1]. A [c] that moves (GYRE's rotor) is outside
-     * that argument, and is held to a measured bound instead (`StringsBridgeTest`).
+     * network decays at any fixed [c] in [0, 1] and fixed membrane weights. A [c] or weights that
+     * move ([Membrane.weigh]; GYRE's rotor moves both) are outside that argument: a time-varying
+     * filter can release energy it stored. That case is held to a measured bound instead
+     * (`StringsBridgeTest`, and GYRE's own tests at its rotor's settings).
      */
     class Bridge(val n: Int, val membrane: Membrane) {
         init { require(n >= 1) { "a bridge needs at least one string, got $n" } }
@@ -996,6 +1007,7 @@ internal object Strings {
          */
         fun couple(reflected: FloatArray, c: Float, out: FloatArray): Float {
             require(c in 0f..1f) { "bridge coupling must be in [0, 1], got $c" }
+            require(reflected.size >= n && out.size >= n) { "bridge of $n strings given ${reflected.size} waves and room for ${out.size}" }
             var sum = 0f
             for (i in 0 until n) sum += reflected[i]
             val m = membrane.process(sum)

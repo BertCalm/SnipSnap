@@ -47,6 +47,29 @@ class StringsBridgeTest {
         assertTrue(hypot(h[0], h[1]) <= 1.0 + 1e-12, "accepted rounding made the membrane louder than 1: ${hypot(h[0], h[1])}")
     }
 
+    @Test
+    fun `a refused update leaves the membrane and the bridge as they were`() {
+        val m = Strings.Membrane(rate)
+        m.tune(floatArrayOf(200f, 330f), floatArrayOf(4f, 4f), floatArrayOf(0.6f, 0.4f))
+        val before = m.response(250.0)
+        assertFailsWith<IllegalArgumentException> { m.tune(floatArrayOf(500f, 900f), floatArrayOf(4f, 4f), floatArrayOf(0.8f, -0.1f)) }
+        assertFailsWith<IllegalArgumentException> { m.tune(floatArrayOf(500f, 900f), floatArrayOf(4f, 4f), floatArrayOf(0.7f, 0.4f)) }
+        assertTrue(before.contentEquals(m.response(250.0)), "a refused tune changed the membrane")
+        assertFailsWith<IllegalArgumentException> { m.weigh(floatArrayOf(0.9f, 0.2f)) }
+        assertTrue(before.contentEquals(m.response(250.0)), "a refused weigh changed the membrane")
+
+        // A bridge with buffers too short refuses before its membrane moves: the next sample is
+        // what it would have been had the bad call never happened.
+        val a = Strings.Bridge(4, Strings.Membrane(rate).also { it.tune(floatArrayOf(300f), floatArrayOf(4f), floatArrayOf(1f)) })
+        val b = Strings.Bridge(4, Strings.Membrane(rate).also { it.tune(floatArrayOf(300f), floatArrayOf(4f), floatArrayOf(1f)) })
+        val r = floatArrayOf(0.3f, -0.2f, 0.1f, 0.4f)
+        val out = FloatArray(4)
+        assertEquals(a.couple(r, 0.5f, out), b.couple(r, 0.5f, out))
+        assertFailsWith<IllegalArgumentException> { a.couple(r, 0.5f, FloatArray(3)) }
+        assertFailsWith<IllegalArgumentException> { a.couple(FloatArray(2), 0.5f, out) }
+        assertEquals(b.couple(r, 0.5f, out), a.couple(r, 0.5f, out), "a refused couple advanced the membrane")
+    }
+
     // ---------- the bound, as a frequency response ----------
 
     private fun grid(extra: FloatArray): DoubleArray {
