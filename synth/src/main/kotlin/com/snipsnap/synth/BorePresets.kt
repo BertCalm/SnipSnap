@@ -12,9 +12,11 @@ package com.snipsnap.synth
  *  - FLUTE speaks at every setting (onset 0.06-0.31 s, fundamental leading),
  *    so its presets differ by register, breath noise (BREATH), brightness (LIP),
  *    attack (CHIFF) and length (HOLD).
- *  - SAX is slow to speak below about C4 (0.3-0.5 s to full amplitude, R1's
- *    stated limit), so the short, hard-tongued reeds sit high (TUNE at or over
- *    0.75) and the low ones are swells and held notes, not stabs.
+ *  - SAX was slow to speak below about C4 in R1 (0.3-0.5 s to full amplitude),
+ *    so the short, hard-tongued reeds sit high (TUNE at or over 0.75) and the
+ *    low ones are swells and held notes, not stabs. Round 1.4's tongue's seed
+ *    took a default note to 0.10 s at C3 ([Bore.TONGUE_SEED]); the roster has
+ *    not been re-laid out for it, so a low stab is now possible and unauthored.
  *  - HOLD at 1.0 is a LOOP, rendered dry and seamless.
  *
  * Names are plain words: no maker, no model, no phone-book instrument.
@@ -43,13 +45,13 @@ object BorePresets {
     )
 
     private val saxPresets = listOf(
-        p(BoreVoice.SAX, "LOW HONK", "TUNE" to 0.05f, "BREATH" to 0.7f, "LIP" to 0.15f, "CHIFF" to 0.35f, "HOLD" to 0.3f),
+        p(BoreVoice.SAX, "LOW HONK", "TUNE" to 0.05f, "BREATH" to 0.6f, "LIP" to 0.15f, "CHIFF" to 0.15f, "HOLD" to 0.3f),
         p(BoreVoice.SAX, "SMOOTH", "TUNE" to 0.35f, "BREATH" to 0.5f, "LIP" to 0.65f, "CHIFF" to 0.3f, "HOLD" to 0.5f),
         p(BoreVoice.SAX, "BITE", "TUNE" to 0.6f, "BREATH" to 0.75f, "LIP" to 0.1f, "CHIFF" to 0.7f, "HOLD" to 0.25f),
         p(BoreVoice.SAX, "AIRY REED", "TUNE" to 0.45f, "BREATH" to 0.3f, "LIP" to 0.7f, "CHIFF" to 0.15f, "HOLD" to 0.45f),
         p(BoreVoice.SAX, "HIGH STAB", "TUNE" to 0.85f, "BREATH" to 0.8f, "LIP" to 0.2f, "CHIFF" to 1f, "HOLD" to 0f),
         p(BoreVoice.SAX, "PAD REED", "TUNE" to 0.5f, "BREATH" to 0.55f, "LIP" to 0.5f, "CHIFF" to 0.1f, "HOLD" to 0.95f),
         p(BoreVoice.SAX, "SOLO LOOP", "TUNE" to 0.4f, "BREATH" to 0.6f, "LIP" to 0.45f, "CHIFF" to 0.35f, "HOLD" to 1f),
-        p(BoreVoice.SAX, "GROWL", "TUNE" to 0.12f, "BREATH" to 0.75f, "LIP" to 0f, "CHIFF" to 0.35f, "HOLD" to 0.4f),
+        p(BoreVoice.SAX, "GROWL", "TUNE" to 0.12f, "BREATH" to 0.65f, "LIP" to 0f, "CHIFF" to 0.15f, "HOLD" to 0.4f),
     )
 }

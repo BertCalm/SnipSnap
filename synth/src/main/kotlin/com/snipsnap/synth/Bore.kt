@@ -7,6 +7,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
@@ -154,6 +155,105 @@ object Bore {
     const val RASP_BIAS = 0.4f
     const val RASP_TIGHT_SHARE = 0.25f
     const val RASP_SOFT_SHARE = 0.4f
+
+    /**
+     * The reed's voicing: where the horn puts its sound. Measured against real recordings (UNSW's
+     * tenor saxophone, 13 notes, 22.05 kHz; see the design doc's "Round 1.3: the voicing"): the
+     * fundamental is the strongest partial in only 1 note of 13 and the 5th-7th are, the power sits
+     * at 250-1000 Hz (the brightness centroid at C3 is 866 Hz, against 300 Hz for ours), the fundamental
+     * region holds 10-16 dB less power than the whole sound (ours: 1 dB), and the 3-8 kHz bands
+     * hold 10-20 dB more than ours did. A synthesized reed on a cone is a strong fundamental with the
+     * rest far below it; a saxophone radiates through its tone holes and bell, which high-pass what
+     * the bore holds (the tone-hole lattice's cutoff is about 800 Hz on a tenor, 1300 Hz on a
+     * soprano) and radiate the highs well. So the output is two shelves: the fundamental region cut
+     * ([VOICE_LOW_DB] under [VOICE_LOW_HZ]) and everything above [VOICE_HIGH_HZ] lifted
+     * ([VOICE_HIGH_DB]). The audition owner heard the cut at -12 (meh) and -20 (keep) and the lift at
+     * +12 (meh) and +18 (keep), and cut the version without the rasp; the shipped numbers are the two
+     * keeps together. Reed voice only: the flute has its own radiation story and was not measured.
+     */
+    const val VOICE_LOW_HZ = 200f
+    const val VOICE_LOW_DB = -26f
+    const val VOICE_HIGH_HZ = 3_000f
+    const val VOICE_HIGH_DB = 18f
+    const val VOICE_TOP_HZ = 9_000f
+    private const val VOICE_HOP = 64
+    private const val VOICE_FOLLOW_HZ = 1_000f
+    private const val VOICE_SMOOTH_SECONDS = 0.04f
+    private const val VOICE_BLOOM = 2f
+
+    /** The two shelves, in dB: [lowDb] under [VOICE_LOW_HZ] and [highDb] over [VOICE_HIGH_HZ]. 0 and 0 is no voicing. */
+    internal data class Voicing(val lowDb: Float, val highDb: Float) {
+        val none: Boolean get() = abs(lowDb) < 0.05f && abs(highDb) < 0.05f
+        companion object { val NONE = Voicing(0f, 0f) }
+    }
+
+    /**
+     * The voicing follows the note's own loudness. A saxophone is brighter the louder it plays (the
+     * fundamental barely moves and the highs grow faster, UNSW's measured dynamics: a very soft tenor
+     * note's centroid is 327 Hz and a very loud one's is 711), so the two shelves open with the envelope:
+     * nothing at the start of the note, all of it at the loudest. (The [VOICE_TOP_HZ] roll-off is not
+     * one of them: it is a fixed band limit that runs at every level, like a recording's own.) It is also what keeps a note's first
+     * 93 ms - the classifier's whole look at it, and for this reed mostly the tongue's pop and breath
+     * burst while the tone is still growing - from reading as a snare: at full strength from the
+     * first sample the voicing took every SAX one-shot preset to a high-frequency share of 0.7-0.9
+     * against the line at 0.5. The envelope is read from the tone (under [VOICE_FOLLOW_HZ]) so a noise
+     * burst does not open it. The shelves' gains go as the envelope to the power [VOICE_BLOOM] relative to
+     * the note's own ceiling, after [VOICE_SMOOTH_SECONDS] of smoothing: brightness blooms *faster* than
+     * the level and a little after it (UNSW: a louder note's harmonics grow faster than its fundamental),
+     * and the voicing at the note's loudest is what it always was. With a fast attack the classifier's
+     * first 93 ms is a developed tone, and with the gains following the level linearly HIGH STAB read
+     * 0.63 (a SNARE).
+     * Block by block ([VOICE_HOP] samples) the gains are set and the filters keep their state.
+     */
+    internal fun voice(buf: FloatArray, v: Voicing) {
+        if (v.none || buf.isEmpty()) return
+        val hop = VOICE_HOP
+        val blocks = (buf.size + hop - 1) / hop
+        val toneLp = Dsp.OnePole(RATE)
+        val env = FloatArray(blocks)
+        var peak = 0f
+        run {
+            var sum = 0.0
+            var n = 0
+            var b = 0
+            for (i in buf.indices) {
+                val t = toneLp.lp(buf[i], VOICE_FOLLOW_HZ)
+                sum += t.toDouble() * t
+                n++
+                if (n == hop || i == buf.size - 1) { env[b] = Math.sqrt(sum / n).toFloat(); peak = max(peak, env[b]); b++; sum = 0.0; n = 0 }
+            }
+        }
+        if (peak <= 1e-9f) return
+        val follow = 1f - exp(-hop.toFloat() / (VOICE_SMOOTH_SECONDS * RATE))
+        val low = Dsp.Biquad()
+        val high = Dsp.Biquad()
+        val top1 = Dsp.OnePole(RATE)
+        val top2 = Dsp.OnePole(RATE)
+        // The smoothed amount first, then its shape: the shelves go as the amount to the bloom power *relative
+        // to the note's own ceiling*, so the plateau is the plain amount (what the voicing was fitted and the
+        // bite floors measured at) and only the way there and back is bent. (The ceiling is under 1: a raw
+        // block RMS of a low tone ripples within its cycle - 64 samples against a 339 sample period at C3 -
+        // and the smoothed mean sits at 0.72 of the raw peak there, 0.95 at G4. Squaring the amount itself
+        // took the C3 plateau to 0.51 and its bite from +6.0 dB to +1.8.)
+        val trace = FloatArray(blocks)
+        var amount = 0f
+        var ceiling = 0f
+        for (b in 0 until blocks) {
+            amount += follow * ((env[b] / peak).coerceIn(0f, 1f) - amount)
+            trace[b] = amount
+            ceiling = max(ceiling, amount)
+        }
+        if (ceiling <= 1e-9f) return
+        for (b in 0 until blocks) {
+            val shaped = trace[b] * (trace[b] / ceiling).pow(VOICE_BLOOM - 1f)
+            low.lowShelf(VOICE_LOW_HZ, v.lowDb * shaped)
+            high.highShelf(VOICE_HIGH_HZ, v.highDb * shaped)
+            // The roll-off is a fixed band limit, not part of what opens with the loudness: a recording has
+            // nothing over its band at any level. Blended in by the amount instead it leaves the tongue's pop
+            // and the breath burst their top end at the start of the note, and BITE reads a SNARE (0.53).
+            for (i in b * hop until minOf(buf.size, (b + 1) * hop)) buf[i] = top2.lp(top1.lp(high.process(low.process(buf[i])), VOICE_TOP_HZ), VOICE_TOP_HZ)
+        }
+    }
 
     /**
      * The cone's DC blocker sits at `f0 / this`. The blocker's phase lead is
@@ -313,6 +413,36 @@ object Bore {
     const val POP_LEVEL = 0.3f
     const val POP_SECONDS = 0.004
     const val POP_AT = 0.75f
+
+    /**
+     * The tongue's seed: a short tone at the note's own pitch, put straight into the bore as the
+     * pressure reaches speaking level. A reed's onset is growth from whatever seed the loop holds, and
+     * at every pressure, overshoot and loop gain tried it takes the same number of periods: about 58 to
+     * 80% of steady, so 0.44 s at C3, 0.30 at G3, 0.22 at C4, 0.16 at G4 and 0.11 at C5 - against a real
+     * tenor's 0.05-0.12 s (UNSW's recordings; 0.49 s only for a very soft note). Raising the mouth
+     * pressure did nothing (0.8 to 0.95 of the closing pressure: 0.42 to 0.44 s at C3), nor did the
+     * pressure's overshoot (0.1 to 0.5, over 0.03 to 0.12 s) or the loop gain. A seed does: put in
+     * through the mouth pressure it enters the bore at weight 1 - r, about 0.07 where the reed sits, and
+     * half the mouth pressure for six periods only took C3 to 0.28 s; put into the bore it took C3 to
+     * 0.19 s at 0.2 for four periods and to 0.10 s for eight, with the played pitch and the steady level
+     * unchanged to a cent and a percent. Its amplitude is [TONGUE_SEED] times CHIFF to the
+     * [TONGUE_SEED_CHIFF_CURVE] (a swell has no tongue and stays slow: the attack is the pressure's
+     * ramp; the curve is under 1 so a hard tongue is an accent and not a blat: linear it overshot the
+     * steady level 1.65 times at CHIFF 1), times BREATH's weight from [TONGUE_SEED_SOFT] (a soft note
+     * speaks slowly, as a real one does), times the square of the mouth pressure over
+     * [TONGUE_SEED_PRESSURE] (the loop's steady level goes about as that square: its rms was 0.30, 0.71
+     * and 1.21 at LIP 1, 0.5 and 0, whose pressures are 0.66, 1.04 and 1.38; a fixed seed overshot a
+     * tight reed's 1.7 to 2 times), capped at [TONGUE_SEED_MAX] (past it, at the loosest lip with the hardest
+     * breath and tongue, the raw peak went from 2.3 to 3.9 and 4.1 against the test's bound of 3; at the cap
+     * it is the steady 2.3), over [TONGUE_SEED_PERIODS] periods under a raised-cosine window.
+     * Reeds only: the jet starts fast on its own. Listening value.
+     */
+    const val TONGUE_SEED = 0.54f
+    const val TONGUE_SEED_CHIFF_CURVE = 0.6f
+    const val TONGUE_SEED_SOFT = 0.1f
+    const val TONGUE_SEED_PRESSURE = 1.04f
+    const val TONGUE_SEED_MAX = 0.5f
+    const val TONGUE_SEED_PERIODS = 8f
 
     /** A blown note ends when the breath does: a short linear release, a cut without a click. */
     const val RELEASE_SECONDS = 0.08f
@@ -485,6 +615,10 @@ object Bore {
     internal fun biteBoostDb(voice: BoreVoice, lip: Float): Float =
         if (voice == BoreVoice.FLUTE) 0f else BITE_DB * Dsp.lin(lip, 1f, BITE_TIGHT_SHARE)
 
+    /** The output voicing ([VOICE_LOW_DB], [VOICE_HIGH_DB]): the reed's; the flute has none. */
+    internal fun voicingFor(voice: BoreVoice): Voicing =
+        if (voice == BoreVoice.FLUTE) Voicing.NONE else Voicing(VOICE_LOW_DB, VOICE_HIGH_DB)
+
     /** The rasp's amount, 0..1 ([RASP_DRIVE]): the reed's looseness times its breath. The flute has none. */
     internal fun raspAmount(voice: BoreVoice, lip: Float, breath: Float): Float =
         if (voice == BoreVoice.FLUTE) 0f else Dsp.lin(lip, 1f, RASP_TIGHT_SHARE) * Dsp.lin(breath, RASP_SOFT_SHARE, 1f)
@@ -592,8 +726,9 @@ object Bore {
         gateSeconds: Float? = null,
         pressure: Float? = null,
         pop: Float? = null,
+        seed: Float? = null,
     ): FloatArray {
-        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop)
+        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop, seed)
     }
 
     /** A one-shot's gate in raw samples at [rate]: the one place its length is worked out, for [blow] and [renderFrames] alike. */
@@ -613,6 +748,7 @@ object Bore {
         turbulence: Float?,
         pressure: Float?,
         pop: Float? = null,
+        seed: Float? = null,
     ): FloatArray {
         val flute = voice == BoreVoice.FLUTE
         val breath = macros.getValue("BREATH")
@@ -656,6 +792,12 @@ object Bore {
         val popLevel = if (steady || flute) 0f else pop ?: POP_LEVEL
         val popStart = (gate.attackN * POP_AT).toInt()
         val popN = (POP_SECONDS * rate).toInt().coerceAtLeast(2)
+        val seedAmp = if (steady || flute) 0f else seed ?: run {
+            val level = pMax / TONGUE_SEED_PRESSURE
+            (TONGUE_SEED * chiff.pow(TONGUE_SEED_CHIFF_CURVE) * Dsp.lin(breath, TONGUE_SEED_SOFT, 1f) * level * level).coerceAtMost(TONGUE_SEED_MAX)
+        }
+        val seedStart = (gate.attackN * POP_AT).toInt()
+        val seedN = (TONGUE_SEED_PERIODS * rate / hz).toInt().coerceAtLeast(2)
 
         val out = FloatArray(gate.total)
         for (i in 0 until gate.total) {
@@ -693,7 +835,11 @@ object Bore {
                 val r = (offset + REED_SLOPE * delta).coerceIn(-1f, 1f)
                 pm + delta * r
             }
-            loop.inject(y)
+            // The tongue's seed goes into the bore, not into the mouth pressure (see [TONGUE_SEED]).
+            val tongue = if (seedAmp > 0f && i >= seedStart && i < seedStart + seedN) {
+                seedAmp * (0.5f - 0.5f * cos(2.0 * PI * (i - seedStart) / seedN).toFloat()) * sin(2.0 * PI * hz * (i - seedStart) / rate).toFloat()
+            } else 0f
+            loop.inject(y + tongue)
             // What is heard is the wave in the bore, not the sample the valve injects: `y` carries the
             // mouth's DC pressure, which after the output high-pass is a sub-200 Hz swell at every
             // onset (the classifier read it as a snare or a clap: R1's first preset roster had 8 of 16
@@ -722,7 +868,7 @@ object Bore {
      * decimator, the DC removed twice. The level and the tail come after, on the
      * kept part ([finish]), so a LOOP's warm-up never counts in its loudness.
      */
-    private fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float): FloatArray {
+    private fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing): FloatArray {
         raspBend(raw, rate, rasp)
         Tide.bandLimit(raw, rate)
         val out = Dsp.decimate(raw, RATE)
@@ -739,11 +885,12 @@ object Bore {
             bell.peaking(BITE_HZ, biteDb, BITE_Q)
             for (i in out.indices) out[i] = bell.process(out[i])
         }
+        voice(out, voicing)
         return out
     }
 
-    internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f): FloatArray {
-        val out = condition(raw, rate, biteDb, rasp)
+    internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f, voicing: Voicing = Voicing.NONE): FloatArray {
+        val out = condition(raw, rate, biteDb, rasp, voicing)
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
         return out
@@ -809,12 +956,12 @@ object Bore {
         return s
     }
 
-    /** The steady stretch: attack, then constant pressure to the end. */
-    internal fun stretch(voice: BoreVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int): FloatArray {
+    /** The steady stretch: attack, then constant pressure to the end. [seed] is the tongue's seed override, for a test: a steady stretch takes none. */
+    internal fun stretch(voice: BoreVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int, seed: Float? = null): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
         val attackN = (attackSeconds(macros.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
         val total = (warmFrames + frames + LOOP_PAD_FRAMES) * Dsp.OVERSAMPLE
-        return blow(voice, tuned, macros, rate, Gate(attackN, total - attackN, 0, steady = true), null, null)
+        return blow(voice, tuned, macros, rate, Gate(attackN, total - attackN, 0, steady = true), null, null, seed = seed)
     }
 
     /**
@@ -855,8 +1002,10 @@ object Bore {
             tuned *= ratio
             raw = stretch(voice, m, tuned.toFloat(), warm, plan.frames)
         }
-        // No rasp in a LOOP ([RASP_DRIVE]): a bent wave has steep edges, and the reed's slow drift moves them.
-        val conditioned = condition(raw, RATE * over, biteBoostDb(voice, m.getValue("LIP")), 0f)
+        // No rasp and no voicing in a LOOP ([RASP_DRIVE], [VOICE_LOW_DB]): a bent wave has steep edges and a
+        // lifted top weights the loop's slow drift, and on the 142-corner SAX scan the corners that do not close
+        // went from 3 to 11 with the rasp and to 19 with the voicing.
+        val conditioned = condition(raw, RATE * over, biteBoostDb(voice, m.getValue("LIP")), 0f, Voicing.NONE)
         // The check that means something: the kept stretch against itself one loop later. (The loop
         // played twice is tautologically periodic - it would pass whatever was in it.)
         val seam = Keys.seamError(conditioned.copyOfRange(warm, warm + plan.frames + SEAM_FRAMES), SEAM_FRAMES)
@@ -876,6 +1025,6 @@ object Bore {
         val rate = RATE * Dsp.OVERSAMPLE
         val bite = biteBoostDb(voice, m.getValue("LIP"))
         val rasp = raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH"))
-        return Snip(finish(blow(voice, hz, m, rate), rate, bite, rasp), channels = 1, sampleRate = RATE)
+        return Snip(finish(blow(voice, hz, m, rate), rate, bite, rasp, voicingFor(voice)), channels = 1, sampleRate = RATE)
     }
 }

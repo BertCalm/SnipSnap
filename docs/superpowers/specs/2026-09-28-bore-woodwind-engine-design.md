@@ -1800,7 +1800,8 @@ render to the loudness target and hide it.
   heard in the audition page's REPEAT now, and held on a pad once R2's held instrument exists.
 - **SAX is slow below about C4** (item 1) and its BREATH changes the 2nd harmonic (-11 to -19 dB)
   more than it brightens; a tight reed is quieter and slower than a loose one (raw level a fifth,
-  onset 0.63 s at C3 at full breath).
+  onset 0.63 s at C3 at full breath). *(Round 1.4's tongue's seed took the default notes to 0.10 s
+  at C3; the tight-reed corner was not re-measured, and its test bound is still the old 0.7 s.)*
 - **FLUTE's LIP and BREATH move the timbre by 4-8 dB** in the 2nd-5th harmonics: audible,
   moderate. The breath noise is what BREATH does most.
 - **The LOOP is dry, noiseless and vibrato-free** — a whole-period wrap cannot carry noise.
@@ -1934,6 +1935,167 @@ and the bite floors moved to -12 -10 -8 -6 -5.5 dB. Each guard was broken alone 
 rasp on the reed (the floors and the amount test), no bias (the sine test), no level scaling (the floors
 and the sine test), the rasp on the flute (the amount test), the rasp in the LOOP (the LOOP claims test
 and the fuzz test).
+
+### Round 1.3: the voicing — 2026-10-01
+
+The rasp merged, and the owner asked for research on what was still missing ("a missing ingredient that we
+haven't nailed"). The research was done against real instruments, not against the literature alone, and it
+changed what the SAX is trying to be.
+
+**What was measured.** UNSW's saxophone acoustics site (Wolfe's group) publishes recordings of a real tenor
+for every note (22.05 kHz, 16-bit mono) and the same note at four dynamics. Thirteen notes, written A#3 to F5,
+and the four A#3 dynamics were analysed the same way as our renders (the loudest 0.4 s, a Hann FFT, bands in dB
+against the whole sound). Against our SAX at the same pitch (their written D4 sounds C3 = our TUNE 0):
+
+| | centroid | 50-250 | 250-500 | 500-1k | 1-2k | 2-4k | 4-8k | strongest partial | onset to 80% |
+|---|---|---|---|---|---|---|---|---|---|
+| real tenor | 866 Hz | -16.0 | -7.9 | -2.1 | -9.2 | -12.0 | -18.2 | 5th | 0.07 s |
+| ours, R1 | 164 Hz | -0.5 | -10.4 | -16.3 | -25.6 | -39.9 | -54.5 | 1st | 0.45 s |
+| ours, with the bell and rasp | 300 Hz | -1.2 | -10.3 | -12.0 | -12.0 | -18.5 | -33.6 | 1st | 0.34 s |
+| ours, with the voicing | 1113 Hz | -9.2 | -7.0 | -6.4 | -5.4 | -8.4 | -18.8 | 3rd | 0.38 s |
+
+Across the thirteen real notes the fundamental was the strongest partial in **one** (the 2nd to 7th in the rest),
+the 50-250 Hz band held 12-16 dB less than the whole sound where the note's fundamental lay under 175 Hz, and the
+onset was 0.05-0.12 s (0.49 s for a very soft note). Across the four dynamics the brightness centroid went
+327, 566, 653, 711 Hz from very soft to very loud and the 4-8 kHz band went -35, -31, -22, -20 dB: the same note
+is much brighter the louder it is, which the UNSW page explains by the reed beating (it closes for part of the
+cycle and the wave is clipped on one side), and which our BREATH did not do (the centroid moved 285 to 310 Hz).
+The same page gives the tone-hole lattice's cutoff, about 800 Hz on a tenor and 1300 Hz on a soprano, above which
+"the harmonics fall off" in the low notes. Our brightness work until here (the bell at 2 kHz, the rasp) had been
+adding bite in one band of a spectrum whose whole shape was wrong: a strong fundamental with the rest far under it.
+
+**What shipped: a voicing on the output.** `Bore.voice`: a low shelf cutting the fundamental region
+(`VOICE_LOW_DB` -26 under `VOICE_LOW_HZ` 200) and a high shelf lifting everything over `VOICE_HIGH_HZ` 3 kHz by
+`VOICE_HIGH_DB` 18, rolled off above `VOICE_TOP_HZ` 9 kHz (a real recording has little there, and the 22 kHz of a
+44.1 kHz render is not a place to lift). The numbers are the owner's: a prototype filter on the rendered reed,
+at five settings, got KEEP for the deeper cut (-20 dB) and for the brighter lift (+18 dB), MEH for the plain cut
+and the plain lift, and CUT for the version without the rasp; the shipped values are the two keeps together, with
+the cut taken a little further to reach the real band balance (measured against the recording, not by ear).
+`voicingFor` gives it to the reed alone; the flute was not measured.
+
+**It follows the note's loudness.** The first build applied the shelves at full strength from the first sample,
+and every SAX one-shot preset then read as a SNARE or a CLAP to the drum classifier (a high-frequency share of
+0.67-0.89 against its line of 0.5). That matters here: when a pad lands, the app files it under the classifier's
+class, which sets its choke group, so a SAX read as a snare would mute real snares. The classifier looks at the first
+4096 samples, which for this reed (a 0.3-0.4 s onset) are the tongue's pop and the breath burst while the tone
+grows; lifting the highs at full strength lifts that noise. Nor was it the sample rate, the roll-off, or the
+chiff (a grid of two cuts by four lifts, with and without the burst, said the same). So the shelves open with
+the envelope (`VOICE_FOLLOW_HZ` 1 kHz tone, 10 ms smoothing - 40 ms and a bloom since Round 1.4 - nothing at the start of the note and all of it at the
+loudest): which is also what the instrument does, brighter as it gets louder. Only the two shelves open; the 9 kHz
+roll-off is a fixed band limit at every level. Blending it in by the envelope too (Copilot's review suggested it, and it
+would make the note's start transparent at every frequency) was tried: the pop and the breath burst keep their top end
+and BITE reads a SNARE (0.53), LOW HONK 0.49, so it stays fixed, as a recording's own band limit is. On the same grid, the real tenor
+reads PERC or LOOP at its low notes (a high-frequency share of 0.36-0.47; two of thirteen notes read SNARE).
+
+**What it cost, said plainly.**
+
+- **No voicing in a LOOP.** On the 142-corner SAX scan (the 117 grid and the fuzz set) the corners that do not close
+  as a LOOP went from 3 (the merged reed, no rasp) to **19-21** with the voicing in the loop, with or without the
+  9 kHz roll-off, with fuzz corners at 3.2e-3 and 5.8e-3 against a bar of 1e-3. A LOOP carries the bell and neither the rasp nor the voicing,
+  so SOLO LOOP and the loops of the roster are darker than the one-shots they are named after. A bent, lifted loop
+  wants a crossfaded wrap; it is the same R2 item as the rasp's.
+- **The classifier's margin is thin and it is not monotonic.** With the voicing the SAX one-shot presets read
+  0.27-0.46 (BITE 0.46, HIGH STAB 0.39, SMOOTH 0.40, LOW HONK 0.43, GROWL 0.40, line 0.5), but a preset's reading
+  moves up and down by 0.03-0.05 with CHIFF (LOW HONK: 0.43 at 0.15, 0.50 at 0.45) and the next sound design step can
+  push one over. Two presets were retuned to sit lower, as provisional presets are: LOW HONK (BREATH 0.7 to 0.6,
+  CHIFF 0.35 to 0.15) and GROWL (BREATH 0.75 to 0.65, CHIFF 0.35 to 0.15).
+- **The attack is not fixed.** Ours is 0.34-0.45 s to 80% at C3 against the real 0.05-0.12 s, and it is the likely
+  root of the classifier problem above (a head window of pop and burst). A faster starter is R2. *(Done in Round 1.4: 0.04-0.10 s.)*
+- **Not done, from the same measurements:** BREATH-linked brightness (the real centroid moved 327 to 711 Hz from
+  soft to loud; the voicing's loudness-following is within one note, not across the BREATH knob), and the noise
+  floor between the harmonics (valley to peak at 1-4 kHz: real -28 to -36 dB, ours -48 to -56 dB).
+- **One recording, one player.** Thirteen notes of one instrument, close-miked; the numbers above are the shape of
+  that instrument and not a law. The recordings are UNSW's; they are not in the repository.
+
+**Verification.** `BoreTest`: the bite floors moved to +3.0 +2.0 +1.0 -0.5 -1.0 dB (measured +6.0 +4.9 +3.9 +2.3
++1.8), the fundamental region at least 5 dB under the whole sound (measured -9.5 at C3 and -7.9 at G3, against -1 for
+the merged reed), the voicing's envelope (a 130 Hz and a 4 kHz tone ramped up over 0.4 s: within 2 dB of unity in the
+first 30 ms, the 130 Hz cut and the 4 kHz lifted at full level), and the flute's none. Each guard was broken alone and
+a test named it: no voicing (the floors, the share and the envelope tests), a static voicing with no envelope (the
+envelope test and the classifier test, SNARE), the voicing on the flute (the classifier and the share tests), the
+voicing in the LOOP (the LOOP claims test and the fuzz test), no rasp and no bell (the floors).
+
+### Round 1.4: the attack — 2026-10-01
+
+The voicing merged, and the owner chose the attack as the next fix: "Let's fix the attack speed next". Round 1.3
+had measured it as the largest remaining gap between this reed and a real one, and as the likely root of the
+classifier's thin margin (the head window is the tongue's pop and the breath burst while the tone grows).
+
+**What was wrong.** A real tenor reaches 80% of a note's level in 0.05-0.12 s (a very soft note, 0.49 s). This
+reed took 0.44 0.30 0.22 0.16 0.11 s at C3 G3 C4 G4 C5 at the default knobs, and the same number of *periods*
+(about 58) at every pressure, overshoot and loop gain that was tried: a reed that starts from a tiny seed grows by
+a fixed factor per period, so a low note is slow in seconds. CHIFF's attack ramp, the pop and the breath burst did
+not help, because the growth, not the drive, was the clock. Every one-shot swelled where a saxophone attacks.
+
+**What shipped: the tongue's seed.** A short tone at the note's own frequency is put straight into the bore at the
+tongue's release (`TONGUE_SEED`, 8 periods under a raised-cosine window, starting at the pop). It starts the growth far
+above the turbulence's seed (about 1e-3 of the steady level), which takes the onset to 0.10 0.07 0.06 0.05 0.04 s at
+the same notes, with the played pitch and the steady level unchanged to a cent and a percent. Its amplitude is the tongue's: `TONGUE_SEED x CHIFF^0.6 x lin(BREATH, 0.1, 1) x (pressure / 1.04)^2`, so
+CHIFF 0 is still the old slow swell (0.40 s at C3; the tongue's release is what speeds a note, and it does not
+tongue), 0.19 0.10 0.06 0.04 s at CHIFF 0.2 0.4 0.7 1, and a BREATH 0 note stays soft and slow (0.31 s; 0.07 s at
+BREATH 1). The squared pressure term is the reed's own level (the loop's steady level goes about as that square): a
+fixed seed overshot a tight reed's steady level 1.7 to 2 times; and the CHIFF curve is under 1 because a seed linear in
+CHIFF overshot 1.65 times at CHIFF 1. It is capped at `TONGUE_SEED_MAX` 0.5: past it,
+at the loosest lip with the hardest breath and tongue, the raw peak went from the steady 2.3 to 3.9 and 4.1 against
+the test's bound of 3.
+
+One thing that did not work, kept so it is not tried again: the seed through the mouth pressure. The pressure
+enters the bore with the weight (1 - r), about 0.07 where the reed table sits, so half the mouth pressure for six
+periods only took C3 to 0.28 s; put into the bore the same tone took it to 0.19 s at 0.2 for four periods and to
+0.10 s for eight. The FLUTE takes no seed (the jet has its own onset, 0.13 s at
+C3, seeded or not), nor does a LOOP's steady stretch: a loop cannot carry a signal that does not repeat, and its
+warm-up is discarded anyway.
+
+**The classifier, and a first attempt that was wrong.** With the tone arriving in 0.1 s, the first 93 ms (all the
+classifier looks at) is a developed tone, and HIGH STAB, the brightest preset, read 0.63, a
+SNARE: the voicing followed the loudness linearly, so it was already half open at 40 ms. The tone should not be
+fully bright until it is fully loud, and the UNSW recordings say the same (the harmonics grow faster than the
+fundamental as a note gets louder), so brightness now follows the level to a power: `VOICE_BLOOM` 2, with the
+smoothing lengthened from 10 to 40 ms. (Broken alone, the two are held by different tests: the 10 ms smoothing
+fails the classifier test, while a linear follower with the 40 ms still passes it, and is held by the bloom test.) The first version took the square of the plain envelope-to-peak, and two
+existing tests named what it broke: C3's bite fell from +6.0 dB to +1.8 and the voicing's full-level lift from
++8.2 to +5.8. The envelope follower reads a *raw* block RMS (64 samples) of a low tone, which ripples within the
+cycle (a period is 339 samples at C3), so its smoothed mean sits at 0.72 of the raw peak at C3, 0.88 at C4, 0.95 at
+G4: a low note never reached "full" voicing, and squaring that took C3's plateau to 0.51. So the bloom is relative
+to the note's own ceiling, `a x (a / ceiling)^(BLOOM - 1)`: the plateau is the plain amount, exactly what the voicing
+was fitted at and the bite floors measured at, and only the way up and down is bent. On the voicing test's ramp the
+4 kHz lift at the halfway point is +0.3 dB (it was +3.4) and the plateau +8.2 dB is unchanged.
+
+**Measured.**
+
+| | C3 | G3 | C4 | G4 | C5 |
+|---|---|---|---|---|---|
+| onset to 80%, before | 0.44 s | 0.30 s | 0.22 s | 0.16 s | 0.11 s |
+| onset to 80%, the seed | 0.10 s | 0.07 s | 0.06 s | 0.05 s | 0.04 s |
+| bite (1-4 kHz vs the fundamental), from 0.5 s | +6.2 dB | +5.0 | +3.9 | +2.2 | +1.8 |
+
+The bite row is the voicing round's own (+6.0 +4.9 +3.9 +2.3 +1.8), unchanged to the measurement. The six SAX
+one-shot presets read PERC at 0.16-0.44 against the line at 0.5 (HIGH STAB 0.44, LOW HONK 0.37, GROWL 0.36, BITE 0.31,
+AIRY REED 0.21, SMOOTH 0.16); PAD REED, the loop, reads LOOP.
+
+**What it cost, said plainly.**
+
+- **The classifier's margin is still thin where it was thin.** HIGH STAB, the brightest knobs, reads 0.44 against 0.5;
+  the readings are better than the voicing round's overall (0.16-0.44 against 0.27-0.46), but a preset that is both
+  loud and bright is one design step from a SNARE.
+- **Not heard.** The numbers say the attack is a tenor's; whether it sounds like one is the audition's question (the
+  new section, ATTACK, is the same phrase at no seed, a light one, the shipped one and a stronger one, and the
+  kit's SAX pads).
+- **A hard tongue is an accent now.** At CHIFF 1 the note overshoots its steady level (about 1.3 times) before
+  settling, since the seed arrives while the reed is still being pushed; the level stage hides it, but it is in the
+  raw wave, and the bounded test's 3 is a ceiling with room.
+- **The high notes are slightly fast.** 0.04 s at C5 against the real 0.05-0.12 s; the same seed is a share of a
+  shorter note.
+- **Still open, from the same measurements:** BREATH-linked brightness (the real centroid moved 327 to 711 Hz from
+  soft to loud across a player's dynamics; ours moves within a note, not across the knob), the noise floor between
+  the harmonics, and the crossfaded wrap that would let a LOOP carry the rasp and the voicing (so loops are still
+  darker than the one-shots).
+
+**Verification.** `BoreTest`: a note at the default knobs speaks within 0.16 s at C3 and 0.12 s elsewhere, and the
+seed saves at least 0.05 s at all five; CHIFF's onset shortens at every step (0.40 to 0.04 s) and a BREATH 0 note
+is still slow; a flute blown with the seed forced on is the flute without it, to the sample; the voicing's bloom
+(the 4 kHz lift halfway up is under a quarter of the plateau's, the plateau at least +7.5 dB and -13.5 dB). Each
+guard was broken alone and a test named it; the list is in the pull request.
 
 ## Appendix A — the probe's tables (the spec's engine, as transcribed)
 

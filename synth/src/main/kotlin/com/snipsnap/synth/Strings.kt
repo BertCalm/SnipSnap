@@ -367,6 +367,62 @@ internal object Strings {
         positionComb(rawBurst(n, pickHz, seed, rate), n, freq, position, rate, maxLen)
 
     /**
+     * The comb's delay in samples: `round(position * rate / freq)`, at least 1, over the
+     * string's physical period `rate / freq`. The one place this arithmetic lives: the
+     * exciter's comb ([positionComb]) and the output pickup ([pickup]) both read it, so the
+     * two cannot drift.
+     */
+    fun combDelay(position: Float, freq: Float, rate: Int): Int =
+        (position * rate / freq).roundToInt().coerceAtLeast(1)
+
+    /**
+     * A pickup: Jaffe & Smith's position comb read off the string's output, one comb per entry
+     * of [positions] (fractions of the physical period at [freq]), `c(y, p)[n] = y[n] - y[n - D]`
+     * with `D` from [combDelay], each scaled by its entry of [weights] and summed. The loop is
+     * linear, so the comb commutes to wherever a pickup sits. A single coil is one position; a
+     * humbucker is two (`p` and `p + dp`) and they must be time-aligned: a comb `1 - z^-D`
+     * carries a linear-phase term `z^(-D/2)`, so two combs of different `D` summed as written
+     * have different phase and no coil-spacing notch. Each comb is therefore delayed by
+     * `(Dmax - D) / 2` samples (integer division on the delays as rounded, so the longest comb
+     * is never shifted) to put every centre on the longest comb's; the sum is then
+     * `sin(pi k p1) + sin(pi k p2)`, with its first spacing notch at `period / (D2 - D1)` on
+     * the rounded delays (about `1 / dp`).
+     *
+     * When the delays differ by an odd number the integer lead leaves the centres half a
+     * sample apart, a phase error of `pi k f0 / rate` radians (0.032 rad at h18 for f0 100.8 Hz
+     * at 176.4 kHz), and that limits the notch's depth. The Phase-0 spike (Extra C, "aligned d
+     * meas"; docs/superpowers/plans/2026-09-29-magnet-phase-0-spike.md) read 34.1 dB under the
+     * single coil at h18 with an even difference of 80 samples (h18 is 0.14 off its notch at
+     * 17.86). StringsPickupTest's geometry (delays 210 and 307, an odd difference of 97, notch
+     * at 1750 / 97 = 18.04) reads 32.2 dB, where ideal fractional centring would read about
+     * 40.7 dB by an independent model. Samples before the first tap read as zeros. Returns a
+     * new array of [y]'s length.
+     */
+    fun pickup(y: FloatArray, positions: FloatArray, weights: FloatArray, freq: Float, rate: Int): FloatArray {
+        require(positions.isNotEmpty()) { "a pickup needs at least one position" }
+        require(positions.size == weights.size) { "${positions.size} positions but ${weights.size} weights" }
+        require(rate > 0) { "rate must be positive, was $rate" }
+        require(freq.isFinite() && freq > 0f) { "freq must be finite and positive, was $freq" }
+        require(positions.all { it.isFinite() && it > 0f }) { "a pickup position must be finite and positive" }
+        require(weights.all { it.isFinite() }) { "a pickup weight must be finite" }
+        val delays = IntArray(positions.size) { combDelay(positions[it], freq, rate) }
+        var dMax = 0
+        for (d in delays) if (d > dMax) dMax = d
+        val out = FloatArray(y.size)
+        for (t in positions.indices) {
+            val d = delays[t]
+            val lead = (dMax - d) / 2
+            val w = weights[t]
+            for (n in y.indices) {
+                val a = n - lead
+                val b = a - d
+                out[n] += w * ((if (a >= 0) y[a] else 0f) - (if (b >= 0) y[b] else 0f))
+            }
+        }
+        return out
+    }
+
+    /**
      * Jaffe & Smith's pick-position comb (1983), shared by every exciter:
      * [raw] (one period, `n` samples) minus a copy of itself delayed by
      * [position] of one physical period. The comb's notches fall on every
@@ -384,15 +440,15 @@ internal object Strings {
      * [raw] sample for sample. The coerceIn(1, n) clamp is unreachable in
      * production: combDelay / n <= ~0.5 * period/(period - lag), at most
      * ~0.5 across the voice table, and the lower bound needs position *
-     * period < 0.5 samples.
+     * period < 0.5 samples. The delay is [combDelay], shared with [pickup].
      */
     private fun positionComb(raw: FloatArray, n: Int, freq: Float, position: Float, rate: Int, maxLen: Int): FloatArray {
-        val combDelay = if (position > 0f) (position * rate / freq).roundToInt().coerceIn(1, n) else 0
-        val excLen = min(n + combDelay, maxLen)
+        val delay = if (position > 0f) combDelay(position, freq, rate).coerceIn(1, n) else 0
+        val excLen = min(n + delay, maxLen)
         val out = FloatArray(excLen)
         for (i in 0 until excLen) {
             val x = if (i < n) raw[i] else 0f
-            val xd = if (combDelay > 0 && i - combDelay in 0 until n) raw[i - combDelay] else 0f
+            val xd = if (delay > 0 && i - delay in 0 until n) raw[i - delay] else 0f
             out[i] = x - xd
         }
         return out

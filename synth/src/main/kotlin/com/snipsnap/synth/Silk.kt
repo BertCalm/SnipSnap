@@ -142,7 +142,21 @@ object Silk {
             // factory SANTUR pad still carries a trace of the "prompt
             // then aftersound" coupled-string character the spec asks for.
             MacroSpec("COURSE", 0.05f),
-            MacroSpec("WASH", 0.2f),
+            // Raised again, to 0.85 from 0.45 (round 2 of the Phase 4
+            // listening pass: "WASH's sympathetic bank is too quiet/absent"
+            // persisted even after the first bump above). The first fix
+            // was real but couldn't go further: WASH's two levers were
+            // coupled then, so pushing level also pushed t60, and 0.7+ on
+            // that single knob measured past Classifier.LOOP_MIN_SECONDS
+            // (2.06s+, misclassified LOOP). [withWash]'s own KDoc covers
+            // the fix - decoupling the two levers (own t60/amount ranges,
+            // see [WASH_T60_FLOOR]/[WASH_AMOUNT_CEILING]) - which is what
+            // let this default move at all: measured directly, 0.85 lands
+            // the tail (RMS from 0.6s on) about 23% above the old default's
+            // own level, with real room left on the knob (1.0 measures a
+            // further 51% over the old default), and the render itself at
+            // 1.26s, a 240ms/16% margin under the 1.5s LOOP line.
+            MacroSpec("WASH", 0.85f),
         )
         SilkVoice.SHAMISEN -> listOf(
             MacroSpec("TUNE", 0.3f),
@@ -155,8 +169,24 @@ object Silk {
             // of its length ... STRIKE's default is 1/6" (research §1, A5).
             MacroSpec("STRIKE", 1f / 6f),
             MacroSpec("BODY", 0.3f),
-            // Every character macro's own "0 is the plain string" convention.
-            MacroSpec("SAWARI", 0f),
+            // Raised from 0 (Phase 4 audition finding). Unlike OUD's SLIDE
+            // or GUZHENG's PRESS, SAWARI is not a performance gesture - a
+            // real sawari bridge buzzes on every note once engaged, the
+            // same always-present-trait case as SANTUR's COURSE and this
+            // voice's own SLAP, so defaulting it on is honest to the
+            // instrument, not a faked liveliness. 0.35 is a modest trace,
+            // not the ceiling: that ceiling is itself weak (measured:
+            // SAWARI 1 adds only ~1.1% high-frequency energy over SAWARI 0's
+            // ~0.7%, in the same spectral-energy window), because jawariP0
+            // (see Strings.burstPeak's own KDoc) is deliberately the
+            // excitation's own full-swing peak, so the fold-back fades
+            // quadratically weaker as the note decays below it - the exact
+            // mechanism SITAR already ships, reused verbatim, not a
+            // SHAMISEN-specific miscalibration. Raising the ceiling itself
+            // would mean recalibrating that shared reference against a
+            // second voice's own PICK/loop parameters with no measurement
+            // to aim at - a follow-on question, not solved here.
+            MacroSpec("SAWARI", 0.35f),
             // A nonzero shape default, the same reasoning SANTUR's own
             // nonzero COURSE default uses - a factory pad still carries a
             // trace of the skin strike rather than reading as a dead knob.
@@ -581,27 +611,54 @@ object Silk {
         return shamisenLoop(freq, pick, seconds, damping, pickHz, position, sawari, dispersion, rate, seed)
     }
 
-    private const val WASH_T60_FLOOR = 0.5f
-    private const val WASH_T60_CEILING = 3f
+    // Decoupled from the level range below - a deliberate departure from
+    // the spec's own stated design ("WASH sets the bank's level and its
+    // t60 together"), forced by something the spec couldn't have known:
+    // Classifier.LOOP_MIN_SECONDS reads length *first*, before any
+    // spectral check, so a long enough WASH tail silently reclassifies
+    // the whole pad from a drum hit to a LOOP regardless of what it
+    // sounds like. Measured directly: SANTUR's own dry+body length before
+    // WASH is ~0.71s, and the Phase 4 listening pass's own first WASH
+    // bump (0.2 -> 0.45, t60 0.5-3s linear) already put that default at
+    // 1.49s - a hair under the 1.5s line - while 0.5 alone (1.62s) was
+    // already over it, and 0.7+ (2.06s+) landed well past it. 0.3-1.1s
+    // keeps the total safely under 1.5s at every WASH setting including
+    // 1 (measured 1.37s, a 130ms/9% margin), not just the default.
+    private const val WASH_T60_FLOOR = 0.3f
+    private const val WASH_T60_CEILING = 1.1f
+
+    // The level lever WASH now drives on its own, freed from the length
+    // budget above: 8 lets the bank's own RMS-matched mix (see
+    // Strings.bodyRing's own "amount" contract) land several times louder
+    // than the string's own level at WASH 1, not just match it. Diminishing
+    // returns past here are real, not a guess: Silk.render's own final
+    // stage (Dsp.levelTo) renormalizes the WHOLE buffer to one fixed
+    // loudness target, so past a few multiples the extra amount just
+    // reshapes how that fixed loudness is split between the attack and
+    // the tail rather than adding headroom - measured directly, pushing
+    // this to 20 moved the default's own tail level by under 10%.
+    private const val WASH_AMOUNT_CEILING = 8f
 
     /**
      * SANTUR's WASH, applied after [withBody] (architecture diagram:
      * `body (Modes) -> [sympathetic bank]`): [washModesFor] built fresh
      * from [scale]/[root] every call - SCALE-following, not a fixed
      * table - rung via [Strings.bodyRing], the same function [withBody]
-     * calls, a second time with a dynamic one. WASH drives both the
-     * bank's level ([Strings.bodyRing]'s own `amount`) and its t60
-     * together (spec, "SANTUR": "WASH sets the bank's level and its t60
-     * together"); the "a few seconds" range is unsourced ("no santur t60
-     * is measured") - shape, like this file's other placeholder ranges.
-     * [root]/[scale] carry no INFLECT bend - the un-inflected table the
-     * spec asks for ("WASH's sympathetic bank stays on the *un-inflected*
-     * table - the santur's strings are tuned to the dastgah").
+     * calls, a second time with a dynamic one. WASH no longer drives the
+     * bank's level and its t60 together (see [WASH_T60_FLOOR]'s own KDoc
+     * for why the Phase 4 listening pass split them); the "a few seconds"
+     * range is unsourced ("no santur t60 is measured") - shape, like this
+     * file's other placeholder ranges, now a shorter shape than the spec's
+     * own first guess. [root]/[scale] carry no INFLECT bend - the
+     * un-inflected table the spec asks for ("WASH's sympathetic bank stays
+     * on the *un-inflected* table - the santur's strings are tuned to the
+     * dastgah").
      */
     private fun withWash(string: FloatArray, scale: SilkScales.Scale, root: Float, wash: Float, rate: Int): FloatArray {
         val t60 = Dsp.lin(wash, WASH_T60_FLOOR, WASH_T60_CEILING)
+        val amount = Dsp.lin(wash, 0f, WASH_AMOUNT_CEILING)
         val modes = washModesFor(root, scale, gain = 1f, t60 = t60)
-        return Strings.bodyRing(string, modes, wash, rate, RING_CEILING_SECONDS)
+        return Strings.bodyRing(string, modes, amount, rate, RING_CEILING_SECONDS)
     }
 
     /** The fixed body of each voice - see [Pluck.bodyFor]'s own KDoc for the drive's reasoning, shared via [Strings.bodyRing]. */
@@ -724,7 +781,18 @@ object Silk {
             for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
             return kotlin.math.sqrt(acc / len.coerceAtLeast(1)).toFloat()
         }
-        val g = rms(string, string.size) / rms(wet, wet.size).coerceAtLeast(1e-9f)
+        // Matched over the burst's own short window, not the string's full
+        // duration: a plucked string's RMS averaged over its whole decay is
+        // dominated by its own long, quiet tail, while the burst lands
+        // entirely inside the loud attack - comparing against the full-note
+        // average silently undersized the burst by roughly the string's own
+        // peak-to-average ratio (a real bug, caught by the owner's own ear:
+        // "I don't hear any difference in slap", confirmed by measuring
+        // withSlap's own numbers directly - rms(string) over the full note
+        // came out three orders of magnitude smaller than rms(wet), so even
+        // at SLAP 1 the burst was inaudibly quiet against the attack it
+        // actually overlaps).
+        val g = rms(string, wet.size) / rms(wet, wet.size).coerceAtLeast(1e-9f)
 
         val outLen = maxOf(string.size, drive.size)
         val out = FloatArray(outLen)
