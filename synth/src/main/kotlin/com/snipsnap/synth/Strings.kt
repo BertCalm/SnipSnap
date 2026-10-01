@@ -381,19 +381,26 @@ internal object Strings {
      * have different phase and no coil-spacing notch. Each comb is therefore delayed by
      * `(Dmax - D) / 2` samples (integer division on the delays as rounded, so the longest comb
      * is never shifted) to put every centre on the longest comb's; the sum is then
-     * `sin(pi k p1) + sin(pi k p2)` with its first spacing notch at `k = 1 / dp`. When the
-     * delays differ by an odd number the integer lead leaves the centres half a sample apart
-     * (about 0.03 rad at h18), which limits the notch's depth: the Phase-0 spike's geometry
-     * (an even difference, exactly centred) read -49.4 dB at h18 against none as briefed, and
-     * an odd difference of 97 samples reads about -32 dB under the single coil (see
-     * StringsPickupTest). Samples before the first tap read as zeros. Returns a new array of
-     * [y]'s length.
+     * `sin(pi k p1) + sin(pi k p2)`, with its first spacing notch at `period / (D2 - D1)` on
+     * the rounded delays (about `1 / dp`).
+     *
+     * When the delays differ by an odd number the integer lead leaves the centres half a
+     * sample apart, a phase error of `pi k f0 / rate` radians (0.032 rad at h18 for f0 100.8 Hz
+     * at 176.4 kHz), and that limits the notch's depth. The Phase-0 spike (Extra C, "aligned d
+     * meas"; docs/superpowers/plans/2026-09-29-magnet-phase-0-spike.md) read 34.1 dB under the
+     * single coil at h18 with an even difference of 80 samples (h18 is 0.14 off its notch at
+     * 17.86). StringsPickupTest's geometry (delays 210 and 307, an odd difference of 97, notch
+     * at 1750 / 97 = 18.04) reads 32.2 dB, where ideal fractional centring would read about
+     * 40.7 dB by an independent model. Samples before the first tap read as zeros. Returns a
+     * new array of [y]'s length.
      */
     fun pickup(y: FloatArray, positions: FloatArray, weights: FloatArray, freq: Float, rate: Int): FloatArray {
         require(positions.isNotEmpty()) { "a pickup needs at least one position" }
         require(positions.size == weights.size) { "${positions.size} positions but ${weights.size} weights" }
-        require(freq > 0f) { "freq must be positive, was $freq" }
-        require(positions.all { it > 0f }) { "a pickup position must be positive" }
+        require(rate > 0) { "rate must be positive, was $rate" }
+        require(freq.isFinite() && freq > 0f) { "freq must be finite and positive, was $freq" }
+        require(positions.all { it.isFinite() && it > 0f }) { "a pickup position must be finite and positive" }
+        require(weights.all { it.isFinite() }) { "a pickup weight must be finite" }
         val delays = IntArray(positions.size) { combDelay(positions[it], freq, rate) }
         var dMax = 0
         for (d in delays) if (d > dMax) dMax = d

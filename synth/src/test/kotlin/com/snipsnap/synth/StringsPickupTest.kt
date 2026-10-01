@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * R0's claims (docs/superpowers/plans/2026-09-30-magnet-r0.md): the comb's delay
  * exists once, the pickup is the Jaffe-Smith comb read off the string's output,
  * and a humbucker's two combs are time-aligned so the coil spacing notches.
- * The "no audio change" claim is StringsTest's frozen grids, unedited.
+ * The "no audio change" claim is StringsTest's frozen grids.
  */
 class StringsPickupTest {
 
@@ -33,16 +33,26 @@ class StringsPickupTest {
 
     @Test
     fun `the exciter's comb and the pickup read the same delay`() {
-        // pluckExciter grows the burst by the comb's delay (n + D while under maxLen), so its
-        // length pins the exciter's delay to combDelay: one quantity, one place.
-        val n = 100
+        // pluckExciter grows the burst by the comb's delay (n + D while under maxLen) and
+        // subtracts the burst delayed by D, so its length and its samples pin the exciter's
+        // delay to combDelay: one quantity, one place. n = 90 against a period of 100 keeps the
+        // loop length and the string's period apart, as in production.
+        val n = 90
         val rate = 10_000
-        for (position in listOf(0.085f, 0.12f, 0.3f, 0.5f)) {
-            val exc = Strings.pluckExciter(n, 100f, 4_000f, position, seed = 7, rate = rate, maxLen = 10_000)
-            assertEquals(n + Strings.combDelay(position, 100f, rate), exc.size, "position $position")
+        val freq = 100f
+        // position 0 is no comb at all: the raw burst itself.
+        val raw = Strings.pluckExciter(n, freq, 4_000f, 0f, seed = 7, rate = rate, maxLen = 10_000)
+        assertEquals(n, raw.size)
+        // 0.085 is the half-way case: 8.5 rounds up to 9.
+        for ((position, d) in listOf(0.123f to 12, 0.127f to 13, 0.085f to 9)) {
+            assertEquals(d, Strings.combDelay(position, freq, rate), "position $position")
+            val exc = Strings.pluckExciter(n, freq, 4_000f, position, seed = 7, rate = rate, maxLen = 10_000)
+            assertEquals(n + d, exc.size, "position $position")
+            for (i in 0 until n + d) {
+                val want = (if (i < n) raw[i] else 0f) - (if (i - d in 0 until n) raw[i - d] else 0f)
+                assertEquals(want, exc[i], "position $position, sample $i")
+            }
         }
-        // position 0 is no comb at all.
-        assertEquals(n, Strings.pluckExciter(n, 100f, 4_000f, 0f, seed = 7, rate = rate, maxLen = 10_000).size)
     }
 
     // ---------- the pickup ----------
@@ -80,6 +90,27 @@ class StringsPickupTest {
     }
 
     @Test
+    fun `an odd delay difference rounds the lead down`() {
+        // rate 10 kHz, 100 Hz: 0.10 -> D 10 and 0.13 -> D 13.
+        // lead1 = (13 - 10) / 2 = 1 (integer division, not rounded up), lead2 = 0:
+        // h[n] = w1 (d[n-1] - d[n-11]) + w2 (d[n] - d[n-13]).
+        assertEquals(10, Strings.combDelay(0.10f, 100f, 10_000))
+        assertEquals(13, Strings.combDelay(0.13f, 100f, 10_000))
+        val y = FloatArray(40).also { it[0] = 1f }
+        val out = Strings.pickup(y, floatArrayOf(0.10f, 0.13f), floatArrayOf(0.5f, 0.25f), 100f, 10_000)
+        val want = FloatArray(40)
+        want[1] += 0.5f; want[11] -= 0.5f
+        want[0] += 0.25f; want[13] -= 0.25f
+        assertContentEquals(want, out)
+    }
+
+    @Test
+    fun `an empty signal gives an empty result`() {
+        val out = Strings.pickup(FloatArray(0), floatArrayOf(0.1f, 0.14f), floatArrayOf(1f, 1f), 100f, 10_000)
+        assertContentEquals(FloatArray(0), out)
+    }
+
+    @Test
     fun `two taps that round to the same delay are not shifted`() {
         val y = FloatArray(60).also { it[0] = 1f }
         // 0.100 and 0.104 both give D 10 at period 100... check the premise, then the claim.
@@ -96,6 +127,11 @@ class StringsPickupTest {
         assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(0.1f, 0.2f), floatArrayOf(1f), 100f, 10_000) }
         assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(0.1f), floatArrayOf(1f), 0f, 10_000) }
         assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(0f), floatArrayOf(1f), 100f, 10_000) }
+        assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(0.1f), floatArrayOf(1f), 100f, 0) }
+        assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(0.1f), floatArrayOf(1f), Float.POSITIVE_INFINITY, 10_000) }
+        assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(Float.NaN), floatArrayOf(1f), 100f, 10_000) }
+        assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(Float.POSITIVE_INFINITY), floatArrayOf(1f), 100f, 10_000) }
+        assertFailsWith<IllegalArgumentException> { Strings.pickup(y, floatArrayOf(0.1f), floatArrayOf(Float.NaN), 100f, 10_000) }
     }
 
     // ---------- the humbucker's coil-spacing notch ----------
@@ -118,11 +154,14 @@ class StringsPickupTest {
     fun `an aligned pair notches at k = 1 over dp and an unaligned sum does not`() {
         // rate 176.4 kHz, f0 100.8 Hz: period exactly 1750 samples, 40 harmonics at equal level,
         // a whole number of periods (so the correlation is exact). CHUG's geometry: p = 0.12,
-        // dp = 1/18, so the first spacing notch is at about h18 (1750 / 97 = 18.04 on the
-        // delays as rounded). The delays differ by an odd 97 (210 and 307), so the integer lead
-        // leaves the centres half a sample apart and the notch reads 32.2 dB under the single
-        // coil, not the -49.4 dB of the spike's evenly centred geometry (Extra C); the unaligned
-        // sum reads 3.0 dB over it. Measured by hand before the build: about 31 and -2.9.
+        // dp = 1/18, so the first spacing notch is at period / (D2 - D1) = 1750 / 97 = 18.04 on
+        // the delays as rounded (210 and 307), close to h18. The difference is odd, so the
+        // integer lead leaves the centres half a sample apart (a phase error of pi k f0 / rate,
+        // 0.032 rad at h18): the aligned pair reads 32.2 dB under the single coil, where ideal
+        // fractional centring would read about 40.7 dB by an independent model, and the unaligned
+        // sum reads 3.0 dB over it. The Phase-0 spike read 34.1 dB under the single coil at h18
+        // with an even difference of 80 samples (Extra C, "aligned d meas";
+        // docs/superpowers/plans/2026-09-29-magnet-phase-0-spike.md).
         val rate = 176_400
         val f0 = 100.8f
         val periods = 40
