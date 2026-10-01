@@ -25,10 +25,11 @@ import kotlin.test.assertTrue
  * as the dry string through the pickup and the output chain and nothing else, the output chain's
  * DC handling, the patch's refusals and round trip, the landing chain, the end of a landed note,
  * and the velocity registration.
- * The measured claims: every note within 5 cents on the dry string, the comb and humbucker notches,
+ * The measured claims: every note within 5 cents on the raw pickup buffer at the render rate, the comb and humbucker notches,
  * BLEND's spectral swing, MUTE's length and centroid, PICK's centroid sweep (at least 1 percent per
- * tenth at the defaults, never falling at the corners of MUTE, TUNE and BLEND), the pitch through
- * VALVE (within 10 cents at each landing), and a landed pad regenerating bit for bit.
+ * tenth at the defaults, and never falling from one tenth to the next at four of the eight corners of
+ * MUTE, TUNE and BLEND on each voice), the pitch through VALVE (within 10 cents at each landing), and a
+ * landed pad regenerating bit for bit.
  */
 class MagnetTest {
 
@@ -655,7 +656,7 @@ class MagnetTest {
     private companion object {
         /**
          * What the clean-render checks guard: an audible DC offset (1e-4 is about -80 dBFS). The
-         * corners read at most 4.4e-7 because the pickup comb has no DC gain and the output chain's
+         * corners read at most 8.6e-9 because the pickup comb has no DC gain and the output chain's
          * 20 Hz high-pass removes the rest. These checks do not prove the output chain's DC stage: that
          * is `finish removes a constant offset` and `finish attenuates a slow drift`, which read
          * [Magnet.finish] on an input that carries an offset.
