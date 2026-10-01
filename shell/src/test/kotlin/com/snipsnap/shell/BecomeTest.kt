@@ -8,6 +8,7 @@ import com.snipsnap.synth.TinesVoice
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * BECOME (docs/superpowers/specs/2026-09-30-become-strung-say-design.md,
@@ -31,11 +32,14 @@ class BecomeTest {
         )
 
     /**
-     * Three pairs that reach every branch of the frozen path: a mono kick
-     * into a mono bell; a stereo snare (WIDTH above 0, so `toStereo` passes
-     * it through untouched) into a kick; and a pad at 48 kHz into a parent at
-     * 44.1 kHz, so `resampled` runs and `morph` and PGHI both run at a rate
-     * that is not 44.1 kHz.
+     * Three pairs, binding by the spec. They reach `toStereo`'s mono and
+     * stereo branches (a mono kick into a mono bell; a stereo snare, WIDTH
+     * above 0, into a kick) and `resampled`'s two branches (a 48 kHz tone
+     * into a 44.1 kHz one, so `morph` and PGHI also run off 44.1 kHz). They
+     * do NOT reach `alignToOnset` past its first exit: `Transients.detect`
+     * finds no onset in any of these sounds, so each case returns at the
+     * `?: return snip` and the trim is never run. The trim is held by
+     * [BECOME 0 trims leading room exactly as MORPH does].
      */
     private val pairs: List<Triple<String, Snip, Snip>> by lazy {
         listOf(
@@ -61,5 +65,38 @@ class BecomeTest {
         }
         println("BECOME 0 against the frozen MORPH: $cases cases")
         assertEquals(12, cases)
+    }
+
+    /**
+     * `alignToOnset`'s trim, the branch the three pairs above never reach: a
+     * pad and a parent each led by 150 ms of silence (the construction of
+     * the leading-room test) have their room cut, so MORPH renders them
+     * within half the lead of the same sounds without the room (the onset
+     * backoff leaves a few frames), not 150 ms longer. The precondition is
+     * about the input: if it fails, the detector or its backoff moved and
+     * the construction no longer reaches the trim - fix the input, not
+     * `Mutate.kt`.
+     */
+    @Test
+    fun `BECOME 0 trims leading room exactly as MORPH does`() {
+        val lead = FloatArray(150 * rate / 1000)
+        val base = Snip(lead + tone(300.0, rate).samples, 1, rate)
+        val parent = Snip(lead + tone(1200.0, rate).samples, 1, rate)
+        var cases = 0
+        for (amount in listOf(0f, 0.25f, 0.5f, 1f)) {
+            val untrimmed = LegacyMorph.render(tone(300.0, rate), tone(1200.0, rate), amount)
+            val then = LegacyMorph.render(base, parent, amount)
+            assertTrue(
+                Math.abs(then.frameCount - untrimmed.frameCount) <= lead.size / 2,
+                "alignToOnset did not trim the room on this construction at $amount " +
+                    "(${then.frameCount} frames against ${untrimmed.frameCount} unleaded): fix the input",
+            )
+            val now = Mutate.render(base, listOf(Mutate.Source("parent", parent)), Mutate.Mode.MORPH, morphAmount = amount).snip
+            assertEquals(then.channels, now.channels, "leaded at $amount: channels")
+            assertEquals(then.sampleRate, now.sampleRate, "leaded at $amount: rate")
+            assertContentEquals(then.samples, now.samples, "leaded at $amount: the trim moved")
+            cases++
+        }
+        println("BECOME 0 trim against the frozen MORPH: $cases cases")
     }
 }
