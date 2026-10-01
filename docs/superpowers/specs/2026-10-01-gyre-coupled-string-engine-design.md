@@ -64,8 +64,9 @@ to change (see "The document, as reviewed"). The bow change is the
 biggest. ARCO's spike measured that a bow cannot ride a single
 `Strings.Loop` ring (ARCO `:490-519`), and the document's bow sits on one.
 
-**Not first:** GYRE's bow is ARCO's `Strings.Bow`. That class is planned
-for ARCO's round one and is not built. So GYRE is phased with the bow last
+**Not first:** GYRE's bow is ARCO's `Strings.Bow`. That class was planned
+for ARCO's round one and not built when this was written (it has since
+landed: see "Decisions taken"). So GYRE is phased with the bow last
 rather than first: its pluck side, bridge, sympathetic bank and rotor need
 nothing from ARCO and can start now. The bow joins when ARCO's lands. See
 "Phasing and gates".
@@ -213,6 +214,9 @@ membranes (1-5 modes, 40 Hz-8 kHz, Q 0.5-200, at 176.4 kHz) and c from 0.25
 to 1, the worst `|1 − 2c·H_m|` was 1.000 (weights drawn non-negative). R0
 turns this into a unit test, and its random membranes include the sign
 constraint: `GyrePatch` and the voice tables reject a negative weight.
+**Measured since:** that check used ideal coefficients. `Dsp.Biquad` runs
+Float ones, and at narrow modes those are not passive, so the membrane runs
+its own bandpass in Double ("Round one's Phase-0 measurements", item 1).
 
 While c moves with the rotor, the frequency argument above no longer
 strictly applies. Moving c slowly through a set of states that are each
@@ -449,7 +453,7 @@ measurement or a listen backs it, as ARCO does.
 | Bow | | `Strings.Bow`: two segments, STK reflection table, pitch pin (ARCO R1, `:675-826`) | |
 | Stiffness for TENSION | `Strings.Dispersion` (`:274`) | | |
 | Coupled bridge | | | the `‖M‖ ≤ 1` coupling junction (G3) |
-| Membrane | `Dsp.Biquad.bandpass` (`Dsp.kt:374`), per sample, constant peak gain; `Modes.Mode`/`Modes.fixed` (`Modes.kt:34`, `:202`) for the tables | | non-negative weights summing to ≤ 1 (G3) |
+| Membrane | the RBJ bandpass, in Double (`Dsp.Biquad.bandpass`'s Float coefficients are not passive at narrow modes; see "Round one's Phase-0 measurements") | | `Strings.Membrane`: non-negative weights summing to ≤ 1, Q ≤ 100 (G3) |
 | Sympathetic bank | `Dsp.Biquad.bandpass`; `Silk.washModesFor` (`Silk.kt:808`) for tuning tables; `Pluck.sympathetic` (`Pluck.kt:910`, private) | ARCO R2 SARANGI's tarab, from WASH | driven by the bridge, rotor-weighted |
 | Body | `Strings.bodyRing` (`Strings.kt:896`), after the loop, feed-forward | | |
 | Rotor | | | phase, quantised for LOOP, Hz/ratio split (G4) |
@@ -530,13 +534,13 @@ listened. This sandbox cannot play audio.
 |---|---|---|---|
 | **R0** | Toolkit only, no audio change: the coupling junction over N `Loop`s, with unit tests for the bound (`|1 − 2c·H_m| ≤ 1` over random membranes; energy never rises in a coupled network with no input). Existing render hashes unchanged. | nothing | none (no sound) |
 | **R1** | The engine, pluck side only. FLICK and HALO; TOUCH pinned low; TUNE, SYMPATHY, SPIN, BODY, HOLD (one-shot only). Single-ring strings, the bridge, a listen-only sympathetic bank, the rotor below the split. Patch, `Patches`/`Velocity` arms, determinism canaries, audition generator. Round-one probes (§31) set the numeric bounds. | R0 | §32's questions 2-4: does BODY sound like a shared body, SYMPATHY like strings answering strings, SPIN like part of the object? |
-| **R2** | The bridge port on `Strings.Bow` first, as its own change with no audio change to ARCO (proven by a frozen grid of ARCO renders). Then TOUCH's bow half; strings become two segments; DRAWN and BOURDON. | **ARCO R1** (`Strings.Bow`) | §32's questions 1 and 5: does TOUCH sound like changing mechanics? Can FLICK and DRAWN make useful samples with no FX? |
+| **R2** | The bridge port on `Strings.Bow` first (the bow itself landed in ARCO R1a, PR #420), as its own change with no audio change to ARCO (proven by a frozen grid of ARCO renders). Then TOUCH's bow half; strings become two segments; DRAWN and BOURDON. | `Strings.Bow` (built) and its bridge port | §32's questions 1 and 5: does TOUCH sound like changing mechanics? Can FLICK and DRAWN make useful samples with no FX? |
 | **R3** | Impossible territory: the circular bow (rotating contact weight, fixed β) and LATHE; SPIN above the split (note-locked); WIRE; two-way sympathetic return; then a moving-β experiment. | R2 | §33: one continuous move from plausible to impossible, with no abrupt switch |
 | **R4** | HOLD's LOOP top step (G5); LOOP fuzz test. | R2 (a bowed LOOP needs a bow) | §34's difficult seams |
 | **R5** | Presets by ear (8 per voice), `GyrePresets`, `Presets` branch, `SynthKits.gyre()`, the testkit kit, the roadmap row's "as built". | R4 | the production roster |
 | **R5.1** | The phone: `SynthScreen.kt`'s picker and its seven arms, README. Built in a session that can compile `:app`. | R5 | |
 
-R0 and R1 can run beside ARCO's work. Only R2 waits on it.
+R0 and R1 can run beside ARCO's work. R2 needs only `Strings.Bow`, which exists, and its bridge port.
 
 The integration surfaces for R1 and R5 follow BORE's registration table
 (`2026-09-28-bore-woodwind-engine-design.md:1120-1175`). In short:
@@ -562,25 +566,101 @@ CLI needs nothing: `snipsnap synth GYRE <VOICE>` resolves through
   BORE and ARCO defer theirs.
 - Sampled audio of any kind (the document's own non-goal).
 
-## Decisions for the owner
+## Round one's Phase-0 measurements (2026-10-01)
 
-1. **Order against ARCO.** *Recommended:* GYRE R0 and R1 now, beside ARCO;
-   GYRE's bow waits for ARCO R1. *Alternative A:* finish ARCO first, then
-   GYRE in full. This is simpler, but nothing new is heard for longer.
-   *Alternative B:* GYRE builds `Strings.Bow` itself. This makes ARCO wait
-   on GYRE, and the bow would be designed for the stranger engine first.
-2. **The macro set.** *Recommended:* TUNE · TOUCH · SYMPATHY · SPIN · BODY
-   · HOLD, with TENSION part of each voice. *Alternative:* keep TENSION as
-   a seventh macro and accept breaking rule 1.
-3. **Names.** SPIN or WHIRL for the macro. FLICK, DRAWN, LATHE and BOURDON
-   for the colliding voices, or the owner's own.
-4. **ARCO's WHEEL and GYRE's circular bow.** *Recommended:* both exist.
-   ARCO's WHEEL is a real wheel on one string, steady and linear. GYRE's
-   LATHE is a contact sweeping round several coupled strings.
-   *Alternative:* LATHE replaces ARCO's WHEEL, and ARCO's roster shrinks.
-5. **The bullroarer.** *Recommended:* off every product surface (G8).
-6. **A bridge port on ARCO's `Strings.Bow`.** *Recommended:* ARCO's round
-   one builds the bow with the bridge reflection as a pluggable step that
-   defaults to its own (G3), which costs ARCO nothing audible.
-   *Alternative:* GYRE's R2 adds the port afterwards, as a no-audio-change
-   refactor proven by a frozen grid of ARCO renders.
+Before round one's plan was written, a throwaway prototype (a scratch
+worktree, never committed) built R0's bridge and R1's coupled pluck and
+measured them. The plan
+([`../plans/2026-10-01-gyre-round-1.md`](../plans/2026-10-01-gyre-round-1.md))
+carries the code and every number. What the measurements changed in this
+design:
+
+1. **The membrane cannot run on `Dsp.Biquad`.** With Float coefficients, a
+   narrow mode stops being the filter it was designed as: `Re H − |H|²`
+   reached −9.8e-4 at 110 Hz, Q 3000, and −4.6e-4 at 440 Hz, Q 300, at
+   176.4 kHz. That is more than a string's own loss at GYRE's feedback
+   ceiling (`1 − fb` = 5e-4), so the bridge could add energy. G3's numeric
+   check passed only because its random tables missed those corners. So
+   `Strings.Membrane` runs its own RBJ bandpass in Double (worst
+   `Re H − |H|²` −1.3e-11), with Q capped at 100. A membrane is broad:
+   GYRE's run Q 3 to 12. The listen-only sympathetic bank stays on
+   `Dsp.Biquad`, because it is outside every loop.
+2. **Coupling moves pitch, as G3 warned, and it is cancelled analytically.**
+   With coupling off the strings are within 0.2 cents of the note. At the
+   defaults they drift up to 8.9 cents, and FLICK at BODY 1 drifts 31.
+   Pre-tuning each string by the bridge's own phase at its note,
+   `f' = f · 2π / (2π + arg(1 − (2c/N) H_m(f)))`, read from
+   `Membrane.response`, brings the defaults to 0.7 (FLICK) and 3.0 (HALO)
+   cents. One case is left: a membrane mode sitting on the note (at BODY 1
+   a mode lands at 154.9 Hz, on D#3 at 155.6 Hz). That is a **wolf note**:
+   string and body lock together and split. A **wolf guard** scales the
+   coupling down on that note only, until `(2c/N)·|H_m(f)| ≤ 0.05`. Every
+   corner the prototype tried is then within 4.7 cents (SPIN 0.5 included),
+   and the default coupling is untouched (an unplucked string still answers
+   at −16.8 dB). The built engine's figures are in item 8.
+3. **The octave guard holds.** With whole-number ratios, SYMPATHY 1 and
+   BODY 1 never read an octave low at any TUNE step (G2).
+4. **FLICK's A4 read as a snare.** The classifier calls more than half the
+   energy above 2 kHz a snare, and the upper strings' loop filters reached
+   18 kHz. Key-tracking the pick did not help. A brightness ceiling on the
+   loop filters did: at 8 kHz the snare reading is gone with no margin
+   (0.49 against the line's 0.50); at **5 kHz** the worst reading is 0.36,
+   with no drum class at any note or corner, on either voice.
+5. **The sympathetic bank was 28-37 dB under the strings**, which is
+   barely there, and SYMPATHY moved it only 6.5 dB end to end. It needs
+   about 20 dB more and a steeper law. Round one fits both to target
+   shares and the gate decides whether those are right.
+6. **What already worked in the prototype:** a solo pluck reaches an unplucked string at
+   −16.8 dB, and exactly 0 at coupling 0. The rotor at 1 Hz swings the
+   spectral centroid by 117 Hz against 15 Hz for a tremolo of the same
+   depth, 7.8 times. Every macro changes the sound, SPIN at 0.02 included
+   (2.6% different from SPIN 0). Every corner is finite, peaks at 0.95 at
+   most, and decays by 8,000 times or more. A FLICK note renders in about
+   0.4 s and a HALO note in about 0.8 s, on a desktop JVM, unwarmed.
+7. **The house detector cannot test 5 cents.** `Pitch.detect`'s lag is an
+   integer, so its readings repeat identically across both voices (+9.1
+   cents at D#4 in each). Tuning tests use `FineTuning.measuredHz`, as
+   SILK's do.
+
+8. **Re-measured on the built code** (the plan's `Gyre.kt`, with the
+   brightness ceiling, the bridge-phase tuning and the wolf guard together,
+   the rotor updated every 32 samples). These are the numbers the plan's
+   tests carry:
+   - **Tuning:** worst 3.3 cents over 25 notes × BODY 0/0.5/1 × SYMPATHY 0/1.
+   - **Strings answering:** an unplucked string answers at −25.1 dB (FLICK)
+     and −17.0 dB (HALO). The 5 kHz ceiling costs FLICK about 8 dB here.
+   - **The rotor:** a 102 Hz centroid swing, against 0.5 Hz for a tremolo
+     with the same log-level swing.
+   - **SYMPATHY's shares:** −21.7, −11.8, −7.7 and −4.7 dB at 0.3, 0.6, 0.8
+     and 1.
+   - **No growth:** across every macro at both ends (64 renders), nothing
+     after the attack is louder than it (0.596 at most), and the raw peak is
+     at most 0.767.
+   - **No drum class:** worst share over 2 kHz 0.39.
+   - **One defect, open:** at HOLD 0 and SYMPATHY 1, FLICK's render stops
+     while its sympathetic strings still ring, only about 14 dB under the
+     attack, because the note length does not follow their ring. The plan's
+     Task 3 fixes it by measurement.
+
+## Decisions taken (2026-10-01)
+
+The owner took every recommendation:
+
+1. **Order:** GYRE R0 and R1 now, beside ARCO. GYRE's bow comes in R2.
+2. **Macros:** TUNE · TOUCH · SYMPATHY · SPIN · BODY · HOLD. TENSION is part
+   of each voice. R1 has no TOUCH (it plucks only), and a recipe without
+   TOUCH decodes as TOUCH 0, a pure pluck, so R1 recipes still sound the
+   same after R2.
+3. **Names:** SPIN for the rotor knob. Voices FLICK, DRAWN, LATHE and
+   BOURDON replace PLUCK, ARC, WHEEL and DRONE. HALO and WIRE stay.
+4. **WHEEL:** ARCO keeps its WHEEL; GYRE's circular bow is LATHE.
+5. **The bullroarer:** off every product surface (G8).
+6. **The bridge port on `Strings.Bow`:** taken, and then overtaken. ARCO's
+   bow landed (ARCO R1a, PR #420, `Strings.kt:763`) while this review was
+   open, with the bridge reflection inside the bridge `Loop`
+   (`fb = −REFLECTION`) and no port. So "build it with the port from the
+   start" is no longer possible. The port lands as a no-audio-change
+   change to `Strings.Bow` before GYRE R2 needs it, proven by
+   `StringsBowTest` and a frozen grid of bow renders. ARCO R1b may land it
+   first if that is convenient. Round one does not need it. GYRE R2's
+   dependency on ARCO is otherwise met: `Strings.Bow` exists.

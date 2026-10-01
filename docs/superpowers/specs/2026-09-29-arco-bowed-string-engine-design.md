@@ -1951,6 +1951,19 @@ that window per voice on the built engine, at the root and across TUNE, is the
 first job of R1b**, before any preset is written. The pitch is in tune at C2
 whatever the slip count (-0.6 and -0.7 cents).
 
+**A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
+(`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
+taken") couples four strings through a shared bridge. Its R2 bows those
+strings with this class, unchanged in its friction law and junction. But
+the bridge reflection (`−REFLECTION` through the `BRIDGE_HZ` low-pass) lives
+inside the bridge `Loop`, so there is no place at the physical bridge to
+apply GYRE's coupling. The owner's decision is that the port lands as a
+no-audio-change change before GYRE R2: the bridge segment becomes an
+out-and-back pair with a pluggable far-end reflection whose default is
+exactly today's, proven by `StringsBowTest` and a frozen grid of bow
+renders. R1b may land it if convenient. Nothing in ARCO's sound or
+roadmap changes.
+
 **The audition page** (`ArcoAuditionGenerator`, the SIREN page's shape
 with its Web Audio SURFACE stand-in; every clip through `AuditionLevel`;
 TUNE and HOLD are not knobs to audition), in this order (product §5,
