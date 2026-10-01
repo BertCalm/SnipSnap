@@ -321,6 +321,16 @@ tasks.register<JavaExec>("generateMagnetKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the MAGNET R1 audition clips and manifest under testkit/magnet-audition/. See MagnetAuditionGenerator. */
+tasks.register<JavaExec>("generateMagnetAudition") {
+    group = "distribution"
+    description = "Render the MAGNET R1 audition clips and manifest under testkit/magnet-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MagnetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/magnet-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"
