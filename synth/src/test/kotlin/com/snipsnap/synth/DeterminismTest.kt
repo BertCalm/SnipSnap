@@ -135,4 +135,19 @@ class DeterminismTest {
             assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
         }
     }
+
+    // ARCO has no seed at all (a bow needs no noise: the render is a pure function of the macros), so this
+    // canary does not guard a seed. It guards the float arithmetic of the friction table and the bow loop (a
+    // limit cycle, where one stray last bit in a sum would move a note's lock-in and every sample after it), and
+    // the measure-and-correct LOOP retune, which renders the bow, reads its own output twice and renders it
+    // again at a corrected pitch. One per voice, one-shot and LOOP.
+    @Test
+    fun `ARCO is byte-identical across renders, both voices, one-shot and loop`() {
+        for (voice in ArcoVoice.entries) {
+            val shot = ArcoPatch("Canary", voice, Arco.defaults(voice))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot")
+            val loop = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("HOLD" to 1f))
+            assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
+        }
+    }
 }
