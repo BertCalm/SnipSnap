@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 /**
  * MAGNET's contract (docs/superpowers/plans/2026-09-30-magnet-r1.md): the macros, the notes,
  * a deterministic clean render at every corner and every TUNE step, the output chain's DC
- * handling, the patch's refusals and round trip, the landing chain, and the velocity fallback.
+ * handling, the patch's refusals and round trip, the landing chain, and the velocity registration.
  */
 class MagnetTest {
 
@@ -241,16 +241,16 @@ class MagnetTest {
     }
 
     @Test
-    fun `velocity softens through the fallback until PICK is registered`() {
-        // No PICK override is registered (the 1 percent clause of PICK's sweep is unproven on the built
-        // engine), and none of MAGNET's macro names is one of Velocity's brightness macros, so atVelocity
-        // falls back to soften and a soft note is a dulled one. This test flips, on purpose, in the commit
-        // that registers `patch is MagnetPatch -> "PICK"` in Velocity.brightnessOverride.
+    fun `velocity re-renders MAGNET at PICK, softer is darker`() {
+        // PICK is registered in Velocity.brightnessOverride because its sweep at the defaults moves the
+        // centroid at least 1 percent per tenth on both voices (smallest 1.77 percent on JANGLE, 2.03
+        // percent on CHUG: the numbers `PICK never lowers the centroid across its eleven steps on both
+        // voices` prints), so a soft hit is a re-render with a lower PICK. This reaches a bare patch only:
+        // a landed pad's velocity layers still fall back to soften, because the layer builder requires
+        // its fx to be null.
         for (voice in voices) {
             val patch = MagnetPatch("Vel Canary", voice, Magnet.defaults(voice))
-            val viaFallback = Velocity.atVelocity(patch, 0.3f)
-            val viaSoften = Velocity.soften(patch.render(), 0.7f)
-            assertTrue(viaFallback.samples.contentEquals(viaSoften.samples), "$voice: atVelocity is not the soften fallback")
+            assertEquals("PICK", Velocity.brightnessSpec(patch)?.name, "$voice did not resolve PICK as its brightness macro")
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
             val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
             assertTrue(soft < hard, "$voice: soft centroid $soft should be below hard centroid $hard")
@@ -400,9 +400,9 @@ class MagnetTest {
         // Each voice at PICK 0 to 1 in tenths, the other macros at their defaults, the centroid read on the
         // rendered note. The monotonic clause is asserted at every step. The specification's second clause,
         // each tenth of travel at least 1 percent, is printed with its count and not asserted: it is the
-        // gate for registering PICK as velocity's brightness macro, and the velocity test above pins the
-        // fallback until that is proven on this engine. The corner is the exciter's low-pass corner,
-        // Dsp.expMap over Magnet's 600 to 16000 Hz.
+        // evidence behind registering PICK as velocity's brightness macro (every tenth passes on both
+        // voices at the defaults). The corner is the exciter's low-pass corner, Dsp.expMap over Magnet's
+        // 600 to 16000 Hz.
         val tenths = (0..10).map { it / 10f }
         val lines = ArrayList<String>()
         val falls = ArrayList<String>()
