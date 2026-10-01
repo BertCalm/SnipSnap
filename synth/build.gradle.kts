@@ -312,6 +312,16 @@ tasks.register<JavaExec>("generateArcoAudition") {
     args("${rootDir}/testkit/arco-audition")
 }
 
+/** Render the GYRE round-one audition clips, manifest and page under testkit/gyre-audition/. See GyreAuditionGenerator. */
+tasks.register<JavaExec>("generateGyreAudition") {
+    group = "distribution"
+    description = "Render the GYRE audition clips, manifest and listening page under testkit/gyre-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GyreAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/gyre-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"

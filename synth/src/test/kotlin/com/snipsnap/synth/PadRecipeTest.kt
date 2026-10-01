@@ -34,6 +34,7 @@ class PadRecipeTest {
         SilkPatch("Oud Test", SilkVoice.OUD, mapOf("DAMP" to 0.4f)),
         BorePatch("Flute Test", BoreVoice.FLUTE, mapOf("BREATH" to 0.4f)),
         ArcoPatch("Cello Test", ArcoVoice.CELLO, mapOf("GRIP" to 0.4f)),
+        GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
     )
 
     @Test

@@ -1,0 +1,210 @@
+package com.snipsnap.synth
+
+import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
+import java.io.File
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+/**
+ * Renders the GYRE round-one audition (docs/superpowers/specs/2026-10-01-gyre-coupled-string-engine-design.md,
+ * the round-one gate; the clip list is the plan's Task 4) under testkit/gyre-audition/ (gitignored): both
+ * voices at three notes, the round's own claim as sound (one string plucked with the others answering, and
+ * with the bridge off), each knob at five settings, the sympathetic strings alone, the rotor beside a tremolo
+ * of the same depth, the knobs together, and the edges. Clips share one loudness ([AuditionLevel]). Writes
+ * `manifest.json`, which the page builds itself from, then copies the listening page from the test resources.
+ * Run via `./gradlew :synth:generateGyreAudition`.
+ *
+ * Nothing in GYRE has been heard by anyone when this is first run: the page is the gate that decides whether
+ * the measured engine sounds like an instrument.
+ */
+object GyreAuditionGenerator {
+
+    private class Clip(val id: String, val name: String, val desc: String)
+    private class Group(val label: String, val key: Boolean, val clips: List<Clip>)
+
+    private const val DOT = "·"
+    private val PHRASE = listOf(7f / 24, 12f / 24, 19f / 24)
+    private val NOTES = listOf("G3", "C4", "G4")
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val root = File(args.firstOrNull() ?: "../testkit/gyre-audition")
+        root.mkdirs()
+        var count = 0
+        val sections = mutableListOf<String>()
+
+        fun write(section: String, id: String, snip: Snip) {
+            WavWriter.write(File(File(root, section), "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        fun render(voice: GyreVoice, macros: Map<String, Float>) = Gyre.render(voice, macros)
+        fun probed(voice: GyreVoice, macros: Map<String, Float>, probe: Gyre.Probe) =
+            Snip(Gyre.finish(Gyre.play(voice, macros, probe).raw), channels = 1, sampleRate = Dsp.RATE)
+        fun tag(voice: GyreVoice) = voice.name.lowercase()
+
+        // 1. The voices, three notes each.
+        sections += section(
+            "VOICES", "THE VOICES", "each voice at its defaults, three notes",
+            listOf("FLICK: A DRY, PLUCKED STRING ON A SMALL BODY", "HALO: SOFTER, LONGER, A CLOUD OF SYMPATHETIC STRINGS"),
+            GyreVoice.entries.map { voice ->
+                Group(voice.name, key = true, clips = PHRASE.mapIndexed { i, t ->
+                    val id = "${tag(voice)}_${NOTES[i].lowercase()}"
+                    write("VOICES", id, render(voice, mapOf("TUNE" to t)))
+                    Clip(id, "${voice.name} ${NOTES[i]}", "every knob at its default")
+                })
+            },
+        )
+
+        // 2. The claim: strings answering strings.
+        sections += section(
+            "ANSWER", "STRINGS ANSWERING STRINGS", "only the first string is plucked; the other three answer through the bridge",
+            listOf("BRIDGE ON: THE OTHERS RING IN", "BRIDGE OFF: THE SAME PLUCK, ALONE"),
+            GyreVoice.entries.map { voice ->
+                val d = Gyre.defaults(voice)
+                write("ANSWER", "${tag(voice)}_on", probed(voice, d, Gyre.Probe(solo = 0)))
+                write("ANSWER", "${tag(voice)}_off", probed(voice, d, Gyre.Probe(solo = 0, coupling = 0f)))
+                Group(voice.name, key = true, clips = listOf(
+                    Clip("${tag(voice)}_on", "BRIDGE ON", "one string plucked; the others answer"),
+                    Clip("${tag(voice)}_off", "BRIDGE OFF", "the same string, with nothing to answer it"),
+                ))
+            },
+        )
+
+        // 3-6. Each knob at five settings, both voices; SYMPATHY also alone, SPIN also against a tremolo.
+        val shares = mapOf(0f to "none", 0.3f to "subtle, about -22 dB", 0.6f to "clear, about -12 dB", 0.8f to "a halo, about -8 dB", 1f to "a cloud, about -5 dB")
+        sections += knob("SYMPATHY", listOf(0f, 0.3f, 0.6f, 0.8f, 1f), { "the sympathetic strings: " + shares.getValue(it) }, ::write) { voice, groups ->
+            val m = Gyre.defaults(voice)
+            val on = Gyre.play(voice, m).raw
+            val off = Gyre.play(voice, m, Gyre.Probe(sympathy = false)).raw
+            val alone = FloatArray(on.size) { on[it] - off[it] }
+            write("SYMPATHY", "${tag(voice)}_alone", Snip(Gyre.finish(alone), channels = 1, sampleRate = Dsp.RATE))
+            groups += Group("${voice.name}: THE SYMPATHETIC STRINGS ALONE", key = false, clips = listOf(
+                Clip("${tag(voice)}_alone", "ALONE", "at the default SYMPATHY " + fmt(m.getValue("SYMPATHY")) + ": the strings nobody plucked"),
+            ))
+        }
+        sections += knob("BODY", listOf(0f, 0.25f, 0.5f, 0.75f, 1f), {
+            "membrane at %.0f Hz".format(java.util.Locale.ROOT, Gyre.membraneHz(it)) + if (it <= 0f) ", small and tight" else if (it >= 1f) ", large and loose" else ""
+        }, ::write)
+        sections += knob("SPIN", listOf(0f, 0.02f, 0.25f, 0.45f, 0.75f, 1f), {
+            if (it <= 0f) "the rotor still" else "the rotor at %.2f Hz".format(java.util.Locale.ROOT, Gyre.rotorHz(it))
+        }, ::write) { voice, groups ->
+            if (voice != GyreVoice.HALO) return@knob
+            val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f, "HOLD" to 0.9f)
+            val spun = render(voice, m)
+            val still = render(voice, m + ("SPIN" to 0f)).samples
+            val hz = Gyre.rotorHz(0.45f).toDouble()
+            val depth = logSwing(spun.samples, hz)
+            val tremolo = FloatArray(still.size) { i -> (still[i] * exp(depth * sin(2 * PI * hz * i / Dsp.RATE))).toFloat() }
+            write("SPIN", "halo_rotor", spun)
+            write("SPIN", "halo_tremolo", Snip(tremolo, channels = 1, sampleRate = Dsp.RATE))
+            groups += Group("HALO: THE ROTOR AGAINST A TREMOLO", key = true, clips = listOf(
+                Clip("halo_rotor", "ROTOR", "SPIN .45, about 1 Hz: the rotor inside the instrument"),
+                Clip("halo_tremolo", "TREMOLO", "the still sound with its volume swung by the same amount: only the level moves"),
+            ))
+        }
+        sections += knob("HOLD", listOf(0f, 0.5f, 0.95f), { "the hand lands after %.2f s".format(java.util.Locale.ROOT, Gyre.dampSeconds(GyreVoice.FLICK, it)) + " (FLICK)" }, ::write)
+
+        // 7. Together.
+        fun corners(a: String, b: String): List<Group> = GyreVoice.entries.map { voice ->
+            Group("${voice.name}: $a ${DOT} $b", key = false, clips = listOf(0f to 0f, 1f to 0f, 0f to 1f, 1f to 1f).map { (x, y) ->
+                val id = "${tag(voice)}_${a.lowercase()}${fmt(x).trimStart('.')}_${b.lowercase()}${fmt(y).trimStart('.')}"
+                write("TOGETHER", id, render(voice, mapOf(a to x, b to y)))
+                Clip(id, "$a ${fmt(x)} $b ${fmt(y)}", "the rest at the defaults")
+            })
+        }
+        sections += section(
+            "TOGETHER", "THE KNOBS TOGETHER", "each pair at its four corners",
+            listOf("SYMPATHY X BODY: A BIGGER BODY FEEDS THE SYMPATHETIC STRINGS MORE", "SYMPATHY X SPIN: THE ROTOR PICKS WHICH SYMPATHETIC STRING ANSWERS"),
+            corners("SYMPATHY", "BODY") + corners("SYMPATHY", "SPIN"),
+        )
+
+        // 8. The edges.
+        val edges = listOf(
+            "sym1" to mapOf("SYMPATHY" to 1f), "body1" to mapOf("BODY" to 1f), "spin1" to mapOf("SPIN" to 1f),
+            "all1" to mapOf("SYMPATHY" to 1f, "BODY" to 1f, "SPIN" to 1f),
+        )
+        sections += section(
+            "EDGES", "THE EDGES", "every knob at its top, then all of them",
+            listOf("BOUNDED BY CONSTRUCTION: NOTHING HERE CAN RUN AWAY"),
+            GyreVoice.entries.map { voice ->
+                Group(voice.name, key = false, clips = edges.map { (id, m) ->
+                    write("EDGES", "${tag(voice)}_$id", render(voice, m))
+                    Clip("${tag(voice)}_$id", m.keys.joinToString(" ") { "$it 1" }, "the rest at the defaults")
+                })
+            },
+        )
+
+        File(root, "manifest.json").writeText("{\"voices\": [\n" + sections.joinToString(",\n") + "\n]}\n")
+        val page = GyreAuditionGenerator::class.java.getResourceAsStream("/audition/gyre-audition.html")
+            ?: error("the listening page is missing from synth/src/test/resources/audition/")
+        File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
+        println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
+    }
+
+    /** One knob at [values] on both voices, the rest at the defaults; [extra] may add groups for a voice. */
+    private fun knob(
+        name: String,
+        values: List<Float>,
+        describe: (Float) -> String,
+        write: (String, String, Snip) -> Unit,
+        extra: (GyreVoice, MutableList<Group>) -> Unit = { _, _ -> },
+    ): String {
+        val groups = mutableListOf<Group>()
+        for (voice in GyreVoice.entries) {
+            groups += Group("${voice.name} ${DOT} DEFAULT " + fmt(Gyre.defaults(voice).getValue(name)), key = true, clips = values.map { v ->
+                val id = voice.name.lowercase() + "_" + fmt(v).trimStart('.')
+                write(name, id, Gyre.render(voice, mapOf(name to v)))
+                Clip(id, "$name ${fmt(v)}", describe(v))
+            })
+            extra(voice, groups)
+        }
+        return section(name, name, "$name at ${values.size} settings, the other knobs at their defaults", listOf("BOTH VOICES"), groups)
+    }
+
+    /** The swing of the log level at [hz] (20 ms blocks, a linear trend removed): the rotor's level movement, for the tremolo control. */
+    private fun logSwing(x: FloatArray, hz: Double): Double {
+        val block = (0.02 * Dsp.RATE).toInt()
+        val n = x.size / block
+        val lv = DoubleArray(n) { b ->
+            var s = 0.0
+            for (i in b * block until (b + 1) * block) s += x[i].toDouble() * x[i]
+            ln(sqrt(s / block) + 1e-9)
+        }
+        val mt = (n - 1) / 2.0
+        val my = lv.average()
+        var sxy = 0.0; var sxx = 0.0
+        for (i in 0 until n) { sxy += (i - mt) * (lv[i] - my); sxx += (i - mt) * (i - mt) }
+        val slope = sxy / sxx
+        var re = 0.0; var im = 0.0
+        val bs = block.toDouble() / Dsp.RATE
+        for (i in 0 until n) {
+            val r = lv[i] - (my + slope * (i - mt))
+            re += r * cos(2 * PI * hz * i * bs); im += r * sin(2 * PI * hz * i * bs)
+        }
+        return 2 * sqrt(re * re + im * im) / n
+    }
+
+    /** A macro value the way the app's sliders read it: `0`, `.35`, `1`. */
+    private fun fmt(v: Float) = when {
+        v <= 0f -> "0"
+        v >= 1f -> "1"
+        else -> "." + (v * 100).roundToInt().toString().padStart(2, '0')
+    }
+
+    private fun section(id: String, display: String, body: String, readout: List<String>, groups: List<Group>): String {
+        val g = groups.joinToString(",") { grp ->
+            val c = grp.clips.joinToString(",") { "[${q(it.id)},${q(it.name)},${q(it.desc)}]" }
+            "{\"label\":${q(grp.label)},\"key\":${grp.key},\"clips\":[$c]}"
+        }
+        val r = readout.joinToString(",") { q(it) }
+        return "{\"id\":${q(id)},\"display\":${q(display)},\"body\":${q(body)},\"readout\":[$r],\"groups\":[$g]}"
+    }
+
+    private fun q(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+}
