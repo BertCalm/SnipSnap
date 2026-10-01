@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.fail
 
 /**
@@ -96,5 +97,68 @@ class GlintFrozenReferenceTest {
             assertEquals(omitted.loopStart, zero.loopStart, "$voice held loop marker")
             assertBitIdentical(omitted.audio, zero.audio, "$voice held")
         }
+    }
+
+    // The test above compares production with production: a change that moved an explicit 0 and an
+    // omitted key together would leave them equal. The three below hold the frozen copy to an explicit
+    // 0 (the copy is fed the same corner without a DEPTH key) and to a patch file that has no DEPTH.
+
+    @Test
+    fun `the one-shot loop is the frozen copy at an explicit DEPTH 0, at both render rates`() {
+        var cases = 0
+        for (voice in GlintVoice.entries) {
+            for ((name, macros) in cornersFor(voice)) {
+                for (rate in listOf(Dsp.RATE, Dsp.RATE * Dsp.OVERSAMPLE)) {
+                    assertBitIdentical(
+                        LegacyGlint.synthesize(voice, macros, rate),
+                        Glint.synthesize(voice, macros + ("DEPTH" to 0f), rate),
+                        "$voice $name with an explicit DEPTH 0 at $rate",
+                    )
+                    cases++
+                }
+            }
+        }
+        assertEquals(4 * 7 * 2, cases)
+    }
+
+    @Test
+    fun `render is the frozen copy at an explicit DEPTH 0`() {
+        var cases = 0
+        for (voice in GlintVoice.entries) {
+            for ((name, macros) in cornersFor(voice)) {
+                assertBitIdentical(
+                    LegacyGlint.render(voice, macros),
+                    Glint.render(voice, macros + ("DEPTH" to 0f)).samples,
+                    "$voice $name render with an explicit DEPTH 0",
+                )
+                cases++
+            }
+        }
+        assertEquals(4 * 7, cases)
+    }
+
+    /**
+     * A patch file saved before DEPTH existed reaches the engine through the loader, not through
+     * [GlintPatch]'s constructor, which is how `render is the frozen copy ...` builds its patch.
+     */
+    @Test
+    fun `a patch file saved without DEPTH, loaded through the JSON path, renders as the frozen copy`() {
+        var cases = 0
+        for (voice in GlintVoice.entries) {
+            for ((name, corner) in cornersFor(voice)) {
+                // A patch only holds macros its voice has (VOWEL has no FOLLOW).
+                val macros = corner.filterKeys { it in Glint.defaults(voice) }
+                val json = GlintPatch("Old", voice, macros).toJsonText()
+                assertFalse("DEPTH" in json, "$voice $name: the saved text must not name DEPTH")
+                val loaded = Patches.fromJsonText(json) as GlintPatch
+                assertBitIdentical(
+                    LegacyGlint.render(voice, macros),
+                    loaded.render().samples,
+                    "$voice $name, a patch file loaded without DEPTH",
+                )
+                cases++
+            }
+        }
+        assertEquals(4 * 7, cases)
     }
 }

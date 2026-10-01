@@ -7,14 +7,27 @@ import kotlin.math.sin
 
 /**
  * GLINT's two render loops exactly as they stood before DEPTH existed (the
- * default branch at b5b8f5ae, 2026-10-01), frozen here so nothing can change
- * what DEPTH 0 sounds like without a test saying so. [GlintFrozenReferenceTest]
- * holds the production code to them, sample for sample.
+ * default branch at b5b8f5ae, 2026-10-01), frozen here so that the edits DEPTH
+ * makes to those loops cannot change what they produce at DEPTH 0 unseen.
+ * [GlintFrozenReferenceTest] holds the production code to them, sample for
+ * sample.
  *
- * Copied, not shared. The window is this file's own `1f - phase`, not
- * [Glint.windowAt], so an edit to `windowAt` is caught as well. What the loops
- * call that DEPTH does not touch ([GlintPath], [Dsp], [GlintHeld.breathPlan])
- * is production code. Cancellation is left out: it never changes a sample.
+ * What the guard covers: the two render loops, the window they multiply by,
+ * and the arithmetic copied around them (frame counts, the held loop's
+ * placement and levelling, the order `render` decimates, levels and fades).
+ * The window is this file's own `1f - phase`, not [Glint.windowAt], so an edit
+ * to `windowAt` is caught as well.
+ *
+ * What it does not cover: whatever the copy still calls in production, so an
+ * edit to any of it moves both sides together and the test stays green.
+ * That is [GlintPath.of] and the members of the path the loops read
+ * ([GlintPath.ratios], [GlintPath.breathRatios], `level2`, `ladder`,
+ * `onsetSeconds`, `bloom`); [Glint.defaults] and [Glint.frequencyFor]; [Dsp]
+ * (`Env`, `expMap`, `envAt`, `decimate`, `levelTo`, `fadeTail` and its rate and
+ * loudness constants); [GlintHeld.breathPlan]; and the constants
+ * [Glint.BODY_DECAY_RATIO], [Glint.BLOOM_T60], [Glint.STEP_SECONDS],
+ * [GlintHeld.BRASS_REST] and [GlintHeld.BREATHE_SHARE]. Cancellation is left
+ * out: it never changes a sample.
  */
 internal object LegacyGlint {
     private const val ATTACK_SECONDS = 0.002f
