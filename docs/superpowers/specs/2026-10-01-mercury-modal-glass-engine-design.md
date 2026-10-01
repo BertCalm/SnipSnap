@@ -377,7 +377,7 @@ Each has a default. Silence means the default.
 
 The record, with every table and both throwaway sources, is
 [`../plans/2026-10-01-mercury-phase-0-spike.md`](../plans/2026-10-01-mercury-phase-0-spike.md).
-It took three iterations, and everything was measured; nothing was heard.
+It took four iterations (the fourth answers the review on #423), and everything was measured; nothing was heard.
 It settles R0 and changes R1's mapping.
 
 **The gate passes on the rotation bank:**
@@ -402,18 +402,23 @@ bound and the anchor fix:
   rotated by `r·e^{iωT}`, with `r` from t60 and `ω` retunable per sample
   (Phase 0 retuned every 8 samples).
 - **Coupling.** Reciprocal spring kicks, `v_i += T·Σ k_ij·q_j`, with
-  `k_ij = κ·COUPLE·min(ω_i, ω_j)²`. The node degree is at most 4 and the
-  effective κ at most 0.2, so K stays strictly diagonally dominant, and
-  therefore positive definite, at every setting.
+  `k_ij = κ·COUPLE·min(ω_i, ω_j)²`. That is `K = diag(ω²) − A`: springs
+  `½·k_ij·(q_i − q_j)²` on modes whose own stiffness is pre-reduced by
+  `Σ_j k_ij`, so an uncoupled mode keeps ω_i. The node degree is at most 4
+  and the effective κ at most 0.2, so K stays strictly diagonally dominant,
+  and therefore positive definite, at every setting. The plain form,
+  `diag(ω²) + L`, was measured too (iteration 4). It is equally passive,
+  but it moves the note further (+48 to +121 cents against −13 to −85), so
+  the compensated form is kept.
 - **Contact.** A contact-vector API: read `Σ b_i·v_i`, then apply a force
   back through `b`. The friction is solved by a scalar Newton step against
   the velocity it changes.
 - **The anchor fix.** Solve K's eigenvalues once per note (Jacobi, 16×16).
   Scale every mode so the eigenvector that is mostly mode 0 sits on the
-  note. Without it, COUPLE flattens the note by 13–60 cents; with it, the
+  note. Without it, COUPLE flattens the note by 13–85 cents; with it, the
   error is 0.02.
 
-**R1's mapping changes** (iterations 2 and 3):
+**R1's mapping changes** (iterations 2–4):
 - **Pressure** comes from a target linear e-fold,
   `P = (γ₀ + 1/τ)/(|φ′(v_B)|·b₀²)`, not from a multiple of the threshold.
   A multiple of the threshold made onset depend on GLASS.
@@ -423,8 +428,11 @@ bound and the anchor fix:
 - **A contact-patch taper,** `b_i = ratio_i^(−0.5)`. A finger averages out
   short wavelengths, and with the taper mode 0 wins everywhere.
 - **The tap seeds the rub.** With it, onset is 60–205 ms; without it,
-  334–1,127 ms. The spec's `tapWeight = cos(π·RUB/2)` is 0 at RUB 1, so R1
-  gives the finger's landing a floor and measures how big it must be.
+  334–1,127 ms.
+  - The spec's `tapWeight = cos(π·RUB/2)` is 0 at RUB 1, so R1 gives the
+    finger's landing a floor: `max(cos(π·RUB/2)·tap, 0.2)`.
+  - That floor measured 95–534 ms at RUB 1 (iteration 4).
+  - A floor of 0.05 is slower than none at MIDI 36.
 - **WATER's depth is ∝ √WATER, and its rate is 0.6 + 2.4·WATER Hz.** Linear
   depth left WATER 0.05 at 1/30 of a small BEND step.
 - **Vessel modes sit 3.5–7 % from their primary partners.** That is what

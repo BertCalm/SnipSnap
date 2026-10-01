@@ -2,7 +2,7 @@
 
 **Status:** a record, not a plan. Nothing here is in the build. The two
 Kotlin sources below were run in the test source set at `01b1ff9` on
-2026-10-01, over three iterations, and then deleted. They are kept as text
+2026-10-01, over four iterations, and then deleted. They are kept as text
 so the numbers can be re-run, as ARCO's and BORE's spike records keep
 theirs
 ([`2026-09-29-arco-phase-0-spike.md`](2026-09-29-arco-phase-0-spike.md),
@@ -55,8 +55,9 @@ measurement. The sonic claims wait for R1's audition.
 - **Designed numbers** are marked as such in the source: the vessel
   detunes, BEND coefficients, GLASS curves, κ and the mass oscillator.
 - **The probes** (Appendix C, `MercurySpikeTest.kt`). Print-only; the one
-  assertion is `assertTrue(true)`. Three `@Test` methods (`spike`,
-  `iteration2`, `iteration3`) each write a report.
+  assertion is `assertTrue(true)`. Four `@Test` methods (`spike`,
+  `iteration2`, `iteration3`, `iteration4`) each write a report. Iteration
+  4 answers the review on #423.
 - **The reports** (Appendix A), verbatim.
 
 ## How to re-run
@@ -65,16 +66,17 @@ Copy Appendices B and C into `synth/src/test/kotlin/com/snipsnap/synth/`,
 so that `internal` members of `:synth` resolve. Then:
 
 ```
-MERCURY_SPIKE_OUT=/tmp/m1.md MERCURY_SPIKE_OUT2=/tmp/m2.md MERCURY_SPIKE_OUT3=/tmp/m3.md \
+MERCURY_SPIKE_OUT=/tmp/m1.md MERCURY_SPIKE_OUT2=/tmp/m2.md MERCURY_SPIKE_OUT3=/tmp/m3.md MERCURY_SPIKE_OUT4=/tmp/m4.md \
   ./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.MercurySpikeTest' -i
 ```
 
-All three methods took 169 s of wall time on the cloud session's four
+All four methods took 208 s of wall time on the cloud session's four
 cores, including Gradle start-up. The final source reproduces every table
 in Appendix A identically except P9's wall-clock timings. That was checked
-by re-running all three methods from the final source and diffing them
-against the three iteration runs. Remove the files afterwards; if
-`git status` still shows them, that is the reminder.
+by re-running all four methods from the final source and diffing the
+first three against their original runs. The only other difference is
+I3b's heading, which the review on #423 corrected (see item 6). Remove the
+files afterwards; if `git status` still shows them, that is the reminder.
 
 Iterations 2 and 3 are flags on `Params`, and their defaults reproduce
 iteration 1:
@@ -83,6 +85,8 @@ iteration 1:
 - `waterSqrt`
 - `contactTaper`
 - `onsetPeriods`
+- `plainLaplacian`
+- `tapFloor`
 
 ## What the numbers settled
 
@@ -111,9 +115,31 @@ iteration 1:
 3. **The springs flatten the note; one eigen-solve per note fixes it (P6,
    I2d).**
    - The vessel modes sit 3.5–7 % from their partners, and the springs
-     repel them. The fundamental falls 13 cents at COUPLE 0.3 and 60 cents
-     at COUPLE 1 (P6). At the voice defaults it is 6.6–19.8 cents flat
+     repel them. The fundamental falls 13 cents at COUPLE 0.3 and 85 cents
+     at COUPLE 1 (I4a). At the voice defaults it is 6.6–19.8 cents flat
      (P3).
+   - **P6's "−60.00" is a clipped reading.** P6 scanned only ±60 cents, so
+     its COUPLE 1 rows read the edge of the scan. I4a re-measured with a
+     ±600-cent scan and got −85.3.
+   - **The springs' form.** Iterations 1–3 use `K = diag(ω²) − A`. These are
+     the springs `½·k_ij·(q_i − q_j)²` on modes whose own stiffness is
+     pre-reduced to `ω_i² − Σ_j k_ij`, so an uncoupled mode keeps ω_i on the
+     diagonal. The energy the probes track is exactly `½vᵀv + ½qᵀKq` for
+     that K. K is positive definite because the effective κ times the
+     degree is at most 0.8, which keeps it strictly diagonally dominant.
+   - **Plain springs measured too (I4a, I4b).** The review on #423 asked
+     whether the results were artifacts of that choice, so iteration 4 ran
+     the plain form, `K = diag(ω²) + L`:
+     - It is passive as well: no energy rise at COUPLE 0.3, 0.6 or 1.
+     - It moves the note the other way, +48 to +121 cents, because the
+       springs add stiffness.
+     - The anchor fix takes it to 0.02–0.03 cents.
+     - The voices land within 1.4 cents, on mode 0, from MIDI 36 to 84.
+
+     So no conclusion depends on the form. The compensated form is kept
+     because its correction is smaller. TRAPEZOID was not re-run with
+     plain springs: its divergence comes from the one-sample lag, which
+     both forms share.
    - **Fix:** solve K's eigenvalues once at the settled shape (Jacobi,
      16×16). Then scale every mode so the eigenvector that is mostly mode 0
      sits on the note. Because `k ∝ ω²`, a uniform scale is exact.
@@ -151,8 +177,19 @@ iteration 1:
      (I2b). With the e-fold in periods it takes 334–1,127 ms (I3b).
    - With RUB 0.7 (tap weight 0.45), onset is 60–205 ms across MIDI 36–84.
    - At RUB 1 the spec's `tapWeight = cos(π·RUB/2)` is exactly 0, so R1
-     needs a floor: the finger has to land. The floor's size is R1's to
-     measure; this spike only brackets it.
+     needs a floor: the finger has to land. I3b's "RUB 1" column is
+     therefore unseeded. Its first heading said "minimum seed", which was
+     wrong; the review on #423 caught it, and the heading is corrected.
+   - **The floor, measured (I4c):** `tapWeight = max(cos(π·RUB/2)·tap,
+     floor)`.
+     - **0.2** brings RUB 1's onset to 95–534 ms across MIDI 36–84, on mode
+       0, within 0.6 cents. The 534 ms is MIDI 36, where the 12-period
+       e-fold is 183 ms by design.
+     - **0.1** gives 130–1,093 ms.
+     - **0.05 is worse than nothing at MIDI 36** (1,407 vs 1,127 ms): a
+       landing that small works against the finger's own start-up
+       transient instead of seeding it.
+     - R1 starts from 0.2 and confirms it by ear.
 7. **WATER needs √ at the bottom (P5, I2c).**
    - Linear depth makes WATER 0.05 almost nothing. Its level-aligned
      spectral distance from WATER 0 is 0.002, about 1/30 of a BEND step of
@@ -199,6 +236,7 @@ iteration 1:
 | 1 | Both banks; spec-shaped excitation (pressure as a multiple of the threshold, linear WATER) | Choose a bank; find out where the spec's model breaks | ROTATION passive, bounded and retune-safe; TRAPEZOID diverges with coupling. Rub sustains on mode 0 but slowly; COUPLE flattens; WATER 0.05 near zero |
 | 2 | `anchorFix`, `onsetSeconds` (40 ms), `waterSqrt` | Items 3, 4 and 7 above | Pitch exact under COUPLE; onset 0.1–0.7 s; WATER 0.05 is a quarter of a BEND step. New failures: low-note flattening up to −41 cents, and mode-1 capture on SING 36/48 |
 | 3 | `contactTaper` 0.5, `onsetPeriods` 12 | Item 5 | Every gate passes: pitch ±2.2 cents, mode 0 everywhere, onset 60–205 ms with the tap, every corner bounded |
+| 4 | `plainLaplacian`, `tapFloor`; I3b relabelled | The review on #423: was the coupling form an artifact, and was RUB 1's seed ever tested? | Plain springs are also passive and also fixed by the anchor solve (+48 to +121 cents before it, 0.02 after), so no conclusion moves. A 0.2 landing floor gives RUB 1 an onset of 95–534 ms. P6's −60 was a clipped scan; the true value is −85 |
 
 ## Appendix A — the reports
 
@@ -530,7 +568,7 @@ Scale: the driver moves at 0.03; a mode rung at that speed has state ≈ 0.03.
 | BLADE | 72 | -14.7 | 0.99 | -1.9 | 0 | 0.76 |
 | BLADE | 84 | 5.8 | 0.99 | -0.2 | 0 | 0.86 |
 
-#### I3b. Onset (WATER 0, GLASS as voice, COUPLE 0.25): RUB 1 with the strike's minimum seed vs RUB 0.7 with its tap
+#### I3b. Onset (WATER 0, GLASS as voice, COUPLE 0.25): RUB 1, unseeded (its tap weight is cos 90° = 0), vs RUB 0.7 with its tap
 
 | table | MIDI | e-fold ms | onset ms RUB 1 | cents | mode | onset ms RUB 0.7 | cents | mode |
 |---|---|---|---|---|---|---|---|---|
@@ -551,6 +589,54 @@ Scale: the driver moves at 0.03; a mode rung at that speed has state ≈ 0.03.
 |---|---|---|---|---|
 | RING | true | 3.91e-02 | B1 R1 W1 G1 C1, 84 | 32 / 32 |
 | BEAM | true | 4.88e-02 | B1 R1 W1 G1 C1, 84 | 32 / 32 |
+
+### A4. Iteration 4 (`iteration4`)
+
+#### MERCURY Phase-0 spike — iteration 4 (review: plain springs vs the compensated form; a real landing floor)
+
+#### I4a. Coupling form (RING, MIDI 60, strike only, WATER 0, BEND centred)
+
+'compensated' is iterations 1–3 (K = diag(ω²) − A); 'plain' is K = diag(ω²) + L. Energy rises are counted as in P1; pitch is the fundamental partial 0.2–0.6 s against the note, without and with the anchor fix; share is the vessel's at 300 ms.
+
+| form | COUPLE | rises | worst ratio | pitch cents, no fix | pitch cents, fix | vessel share 300 ms |
+|---|---|---|---|---|---|---|
+| compensated | 0.30 | 0 | 0.996796398 | -13.4 | 0.02 | 0.1150 |
+| compensated | 0.60 | 0 | 0.996802004 | -40.9 | 0.02 | 0.3100 |
+| compensated | 1.00 | 0 | 0.997162000 | -85.3 | 0.02 | 0.2413 |
+| plain | 0.30 | 0 | 0.996931562 | 48.0 | 0.03 | 0.0896 |
+| plain | 0.60 | 0 | 0.997027945 | 82.1 | 0.02 | 0.1670 |
+| plain | 1.00 | 0 | 0.997221764 | 121.0 | 0.02 | 0.2375 |
+
+#### I4b. Plain springs at the iteration-3 voice settings (anchor fix on), measured 1.4–1.8 s
+
+| voice | MIDI | partial cents | dominant mode |
+|---|---|---|---|
+| PING | 36 | 1.1 | 0 |
+| PING | 60 | 1.1 | 0 |
+| PING | 84 | 1.1 | 0 |
+| SING | 36 | 0.5 | 0 |
+| SING | 60 | 0.2 | 0 |
+| SING | 84 | 0.6 | 0 |
+| BLADE | 36 | -0.5 | 0 |
+| BLADE | 60 | -0.2 | 0 |
+| BLADE | 84 | 1.4 | 0 |
+
+#### I4c. RUB 1 with a landing floor under the tap weight (iteration-3 settings, WATER 0, COUPLE 0.25)
+
+Onset as in I3b. Floor 0 is I3b's unseeded RUB 1.
+
+| table | MIDI | floor 0 | floor 0.05 | floor 0.1 | floor 0.2 | cents at 0.2 | mode at 0.2 |
+|---|---|---|---|---|---|---|---|
+| RING | 36 | 1127 | 1407 | 1023 | 534 | -0.3 | 0 |
+| RING | 48 | 913 | 619 | 439 | 259 | -0.6 | 0 |
+| RING | 60 | 544 | 309 | 234 | 155 | -0.6 | 0 |
+| RING | 72 | 334 | 170 | 135 | 95 | -0.6 | 0 |
+| RING | 84 | 339 | 160 | 130 | 95 | -0.2 | 0 |
+| BEAM | 36 | 1068 | 1432 | 1093 | 534 | 0.1 | 0 |
+| BEAM | 48 | 898 | 639 | 439 | 259 | -0.4 | 0 |
+| BEAM | 60 | 544 | 309 | 229 | 155 | -0.5 | 0 |
+| BEAM | 72 | 334 | 170 | 135 | 95 | -0.5 | 0 |
+| BEAM | 84 | 339 | 180 | 145 | 115 | -0.2 | 0 |
 
 ## Appendix B — the model (`MercurySpike.kt`)
 
@@ -640,6 +726,14 @@ internal object MercurySpike {
         val contactTaper: Double = 0.0,
         /** Iteration 3: e-fold = max([onsetSeconds], onsetPeriods / hz). */
         val onsetPeriods: Double = 0.0,
+        /**
+         * Iteration 4: plain springs, K = diag(ω²) + L. The default (iterations 1–3) is the
+         * compensated form K = diag(ω²) − A: the same springs on modes whose own stiffness is
+         * pre-reduced by Σ_j k_ij, so an uncoupled mode keeps ω_i on the diagonal.
+         */
+        val plainLaplacian: Boolean = false,
+        /** Iteration 4: the finger's landing, a floor under the tap weight (RUB 1 has cos 90° = 0). */
+        val tapFloor: Double = 0.0,
     )
 
     class Result(
@@ -756,6 +850,9 @@ internal object MercurySpike {
             if (isVessel[i]) 0.6 + 1.4 * p.glass else max(0.02, t60Fund * ratio0[i].pow(-alpha))
         }
         // Springs: primary neighbours, and each vessel to its partner and the next primary. Max degree 4.
+        // Default form: K = diag(ω²) − A, i.e. springs ½·k·(q_i − q_j)² on modes whose own stiffness
+        // is ω_i² − Σ_j k_ij; PD because κ_eff·degree ≤ 0.8 < 1 (strict diagonal dominance).
+        // [Params.plainLaplacian]: K = diag(ω²) + L, the same springs with nothing pre-reduced.
         val ei = ArrayList<Int>()
         val ej = ArrayList<Int>()
         for (i in 0 until np - 1) { ei += i; ej += i + 1 }
@@ -768,7 +865,7 @@ internal object MercurySpike {
         val eJ = ej.toIntArray()
         val kEdge = DoubleArray(ne)
 
-        val tapW = cos(PI * p.rub / 2) * p.tap
+        val tapW = max(cos(PI * p.rub / 2) * p.tap, p.tapFloor)
         val rubW = sin(PI * p.rub / 2)
         val pThr = 2 * LN1000 / (t60Fund * abs(dphi(BOW_V)) * contact[0] * contact[0])
         val gamma0 = 2 * LN1000 / t60Fund
@@ -802,6 +899,7 @@ internal object MercurySpike {
                 val i = ei[e]; val j = ej[e]
                 val kk = KAPPA * p.couple * min(w[i], w[j]).let { it * it }
                 k[i][j] -= kk; k[j][i] -= kk
+                if (p.plainLaplacian) { k[i][i] += kk; k[j][j] += kk }
             }
             val (vals, vecs) = jacobi(k)
             var best = 0
@@ -913,7 +1011,11 @@ internal object MercurySpike {
                     q[i] = re[i] / omega[i]
                 }
                 fc.fill(0.0)
-                for (e in 0 until ne) { fc[eI[e]] += kEdge[e] * q[eJ[e]]; fc[eJ[e]] += kEdge[e] * q[eI[e]] }
+                for (e in 0 until ne) {
+                    val i = eI[e]; val j = eJ[e]
+                    if (p.plainLaplacian) { fc[i] += kEdge[e] * (q[j] - q[i]); fc[j] += kEdge[e] * (q[i] - q[j]) }
+                    else { fc[i] += kEdge[e] * q[j]; fc[j] += kEdge[e] * q[i] }
+                }
                 var vS = 0.0
                 for (i in 0 until n) { im[i] -= fc[i] * dt; vS += b[i] * -im[i] }
                 val f = if (pNow > 0) pNow * phi(solve(vB - vS, pNow * cSum)) else 0.0
@@ -925,7 +1027,11 @@ internal object MercurySpike {
                 }
             } else {
                 fc.fill(0.0)
-                for (e in 0 until ne) { fc[eI[e]] += kEdge[e] * q[eJ[e]]; fc[eJ[e]] += kEdge[e] * q[eI[e]] }
+                for (e in 0 until ne) {
+                    val i = eI[e]; val j = eJ[e]
+                    if (p.plainLaplacian) { fc[i] += kEdge[e] * (q[j] - q[i]); fc[j] += kEdge[e] * (q[i] - q[j]) }
+                    else { fc[i] += kEdge[e] * q[j]; fc[j] += kEdge[e] * q[i] }
+                }
                 var vS0 = 0.0
                 for (i in 0 until n) {
                     val x0 = (fc[i] + b[i] * fs) / (omega[i] * omega[i])
@@ -955,7 +1061,10 @@ internal object MercurySpike {
                     e += ei2
                     if (isVessel[i]) ve += ei2
                 }
-                for (k in 0 until ne) e -= kEdge[k] * q[eI[k]] * q[eJ[k]]
+                for (k in 0 until ne) {
+                    val qi = q[eI[k]]; val qj = q[eJ[k]]
+                    e += if (p.plainLaplacian) 0.5 * kEdge[k] * (qi - qj) * (qi - qj) else -kEdge[k] * qi * qj
+                }
                 eAcc += e; veAcc += ve
                 if ((t + 1) % blockLen == 0) {
                     val bi = (t + 1) / blockLen - 1
@@ -1200,13 +1309,13 @@ class MercurySpikeTest {
             line("| ${v.name} | $m | ${est?.let { f(cents(it.hz.toDouble(), hz), 1) } ?: "none"} | ${est?.let { f(it.confidence.toDouble()) } ?: "-"} | ${f(cents(ph, hz), 1)} | $dm | ${f(share)} |")
         }
         line()
-        line("## I3b. Onset (WATER 0, GLASS as voice, COUPLE 0.25): RUB 1 with the strike's minimum seed vs RUB 0.7 with its tap")
+        line("## I3b. Onset (WATER 0, GLASS as voice, COUPLE 0.25): RUB 1, unseeded (its tap weight is cos 90° = 0), vs RUB 0.7 with its tap")
         line()
         line("| table | MIDI | e-fold ms | onset ms RUB 1 | cents | mode | onset ms RUB 0.7 | cents | mode |")
         line("|---|---|---|---|---|---|---|---|---|")
         for ((table, glass) in listOf(Table.RING to 0.85, Table.BEAM to 0.45)) for (m in listOf(36, 48, 60, 72, 84)) {
             val hz = midiHz(m)
-            val res = listOf(1.0 to 0.0, 1.0 to 0.25, 0.7 to 1.0).map { (rub, tap) ->
+            val res = listOf(1.0 to 0.0, 0.7 to 1.0).map { (rub, tap) ->
                 val r = MercurySpike.render(Params(hz = hz, table = table, seconds = 1.7, contactSeconds = 1.6, rub = rub, tap = tap, water = 0.0, bend = 0.5, glass = glass, couple = 0.25, onsetSeconds = 0.02, onsetPeriods = 12.0, anchorFix = true, contactTaper = 0.5))
                 val d = MercurySpike.condition(r.raw)
                 val a = (1.3 * out44).toInt(); val z = (1.6 * out44).toInt()
@@ -1219,8 +1328,7 @@ class MercurySpikeTest {
                 Triple(onset, cents(ph, hz), dm)
             }
             val tau = 1000 * max(0.02, 12 / hz)
-            // RUB 1 has no tap weight (cos 90° = 0), so 'tap' there is a deliberate floor: see the record.
-            line("| $table | $m | ${f(tau, 0)} | ${f(res[0].first, 0)} | ${f(res[0].second, 1)} | ${res[0].third} | ${f(res[2].first, 0)} | ${f(res[2].second, 1)} | ${res[2].third} |")
+            line("| $table | $m | ${f(tau, 0)} | ${f(res[0].first, 0)} | ${f(res[0].second, 1)} | ${res[0].third} | ${f(res[1].first, 0)} | ${f(res[1].second, 1)} | ${res[1].third} |")
         }
         line()
         line("## I3c. Corners again with the iteration-3 settings (ROTATION; 32 corners × MIDI 36, 84; tap 1)")
@@ -1245,6 +1353,68 @@ class MercurySpikeTest {
         }
         line()
         val path = System.getenv("MERCURY_SPIKE_OUT3") ?: "build/mercury-spike-3.md"
+        File(path).writeText(sb.toString())
+        assertTrue(true)
+    }
+
+    @Test
+    fun iteration4() {
+        repeat(2) { MercurySpike.render(Params(hz = 262.0, seconds = 1.0)) }
+        line("# MERCURY Phase-0 spike — iteration 4 (review: plain springs vs the compensated form; a real landing floor)")
+        line()
+        line("## I4a. Coupling form (RING, MIDI 60, strike only, WATER 0, BEND centred)")
+        line()
+        line("'compensated' is iterations 1–3 (K = diag(ω²) − A); 'plain' is K = diag(ω²) + L. Energy rises are counted as in P1; pitch is the fundamental partial 0.2–0.6 s against the note, without and with the anchor fix; share is the vessel's at 300 ms.")
+        line()
+        line("| form | COUPLE | rises | worst ratio | pitch cents, no fix | pitch cents, fix | vessel share 300 ms |")
+        line("|---|---|---|---|---|---|---|")
+        val hz = midiHz(60)
+        for (plain in listOf(false, true)) for (c in listOf(0.3, 0.6, 1.0)) {
+            val base = Params(hz = hz, rub = 0.0, couple = c, water = 0.0, plainLaplacian = plain, trackEnergy = true)
+            val r = MercurySpike.render(base)
+            var rises = 0; var worst = 0.0
+            for (k in 3 until r.energy.size - 1) { val ratio = r.energy[k + 1] / r.energy[k]; if (ratio > 1 + 1e-12) rises++; worst = max(worst, ratio) }
+            val d0 = MercurySpike.condition(r.raw)
+            val d1 = dec(base.copy(anchorFix = true))
+            val from = (0.2 * out44).toInt(); val len = (0.4 * out44).toInt()
+            val c0 = cents(fine(d0, hz, from, len, span = 600.0, step = 1.0).first, hz)
+            val c1 = cents(fine(d1, hz, from, len).first, hz)
+            line("| ${if (plain) "plain" else "compensated"} | ${f(c)} | $rises | ${f(worst, 9)} | ${f(c0, 1)} | ${f(c1, 2)} | ${f(r.vesselEnergy[300] / r.energy[300], 4)} |")
+        }
+        line()
+        line("## I4b. Plain springs at the iteration-3 voice settings (anchor fix on), measured 1.4–1.8 s")
+        line()
+        line("| voice | MIDI | partial cents | dominant mode |")
+        line("|---|---|---|---|")
+        for (v in voices) for (m in listOf(36, 60, 84)) {
+            val hz2 = midiHz(m)
+            val r = MercurySpike.render(v3(v, hz2).copy(plainLaplacian = true))
+            val d = MercurySpike.condition(r.raw)
+            val from = (1.4 * out44).toInt(); val len = (0.4 * out44).toInt()
+            line("| ${v.name} | $m | ${f(cents(fine(d, hz2, from, len).first, hz2), 1)} | ${dominant(d, r.settledHz, from, len).first} |")
+        }
+        line()
+        line("## I4c. RUB 1 with a landing floor under the tap weight (iteration-3 settings, WATER 0, COUPLE 0.25)")
+        line()
+        line("Onset as in I3b. Floor 0 is I3b's unseeded RUB 1.")
+        line()
+        line("| table | MIDI | floor 0 | floor 0.05 | floor 0.1 | floor 0.2 | cents at 0.2 | mode at 0.2 |")
+        line("|---|---|---|---|---|---|---|---|")
+        for ((table, glass) in listOf(Table.RING to 0.85, Table.BEAM to 0.45)) for (m in listOf(36, 48, 60, 72, 84)) {
+            val hz2 = midiHz(m)
+            val res = listOf(0.0, 0.05, 0.1, 0.2).map { fl ->
+                val r = MercurySpike.render(Params(hz = hz2, table = table, seconds = 1.7, contactSeconds = 1.6, rub = 1.0, tap = 1.0, tapFloor = fl, water = 0.0, bend = 0.5, glass = glass, couple = 0.25, onsetSeconds = 0.02, onsetPeriods = 12.0, anchorFix = true, contactTaper = 0.5))
+                val d = MercurySpike.condition(r.raw)
+                val a = (1.3 * out44).toInt(); val z = (1.6 * out44).toInt()
+                val steady = rms(d, a, z); val w = out44 / 200
+                var s = 0; var onset = -1.0
+                while (s + w < z) { if (rms(d, s, s + w) >= 0.9 * steady) { onset = 1000.0 * s / out44; break }; s += w }
+                Triple(onset, cents(fine(d, hz2, a, z - a).first, hz2), dominant(d, r.settledHz, a, z - a).first)
+            }
+            line("| $table | $m | ${f(res[0].first, 0)} | ${f(res[1].first, 0)} | ${f(res[2].first, 0)} | ${f(res[3].first, 0)} | ${f(res[3].second, 1)} | ${res[3].third} |")
+        }
+        line()
+        val path = System.getenv("MERCURY_SPIKE_OUT4") ?: "build/mercury-spike-4.md"
         File(path).writeText(sb.toString())
         assertTrue(true)
     }
