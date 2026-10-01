@@ -1907,6 +1907,50 @@ and the onset table, then the LOOP with the iterated retune, then the
 kit and the page — SILK's nonlinear-risk-last rule inverted, as BORE
 inverted it, because here the nonlinearity is the note.
 
+**R1a, as built (2026-10-01): `Strings.Bow`.** PR 1 of R1 is the bow in the
+shared toolkit and nothing else: no audio change (the two frozen grids in
+`StringsTest` stay green untouched), no voice, no macro. R0 was already done,
+because BORE landed the fractional `roundTrip`, `reflected()` and `inject()`
+first, so the toolkit half is one class, one KDoc sentence on `tune`'s
+`roundTrip`, and the two R0 tests the record still owed (the two budgets sum to
+a period less every stage's own delay at seven pitches to 1e-9, and two bare
+loops closed by hand ring at the note to within 5 cents). Where the built class
+differs from the sketch: **three `tune` calls**, not two (one to read the bridge
+filter's delay back, then one per segment); `bowPoint` exposes the string's
+velocity under the bow, which the slips-per-period measure needs; `rhoMax` is a
+constructor argument, so decision 7's grid can be re-run without editing a
+constant; `share` and the bridge corner are constructor arguments with the
+measured 0.85 and 3023.6 Hz as documented defaults (a voice pins its own);
+`retune(f)` re-solves both segments and there is no nut-only retune (vibrato's
+few cents and a glide's 64-sample steps are click-free through it, a jump of
+semitones clicks and is not what it is for). **The spike's numbers were its own
+model's, and they were re-measured on the built bow** (the Loops add a two-tap
+average and a nut one-pole the spike's rings did not, and the returned tap is
+the wave leaving the bow, not the bridge's): single slip at pressure 0.7 and 0.9
+at C3 and A3 with the same sawtooth signature (harmonics 2 to 4 at -5.9, -9.3,
+-11.6 dB); pitch within 3.8 cents from 65 to 880 Hz at share 0.85 (the spike's
+worst was 2.8); a lifted bow's ring-down at -0.439 dB a period against the
+formula's -0.454; 31 cells finite with a raw peak of at most 1.169 (so
+`RAW_PEAK_CEILING` 1.25 has 7 percent over the worst, not 12 over 1.11), the
+mean at most 0.0049. **What it found that the record did not say:** the share
+that holds CELLO's range is not ERHU's. At D6 (1174.66 Hz) share 0.85 reads
++6.8 and +2.4 cents at pressure 0.5 and 0.9, and 0.8 reads +2.4 and -1.7, while
+0.8 at 880 Hz reads -3.5 and -6.3: **the share is per voice, as the record said,
+and R1b has to pin ERHU's on the built engine** (the position floor at D6 is
+0.0724 with the 3023.6 Hz corner, so ERHU's lowest GRIP corner cannot go under
+about 1300 Hz at position 0.133; the bow tests assert that a 1500 Hz corner
+builds there and a 1000 Hz one is refused). **And CELLO's root is not the
+single-slip note the table above assumed.** At C2 (65.41 Hz), position 0.133 and
+the full 3023.6 Hz corner, the built bow slips three times a period at
+pressure 0.5, 0.65 and 0.7, once at 0.8, and twice at 0.9 and 1.0; with a
+1000 or 1500 Hz corner it slips once across pressure 0.8 to 1.0 (G2, 98 Hz,
+slips once at every pressure from 0.5 to 1.0 with a corner of 1000 to 2000 Hz). So CELLO's GRIP window at its
+root sits at lower corners and higher pressures than the record's "single-slip
+from 1000 to 3024 Hz at pressure >= 0.7", which was measured at C3: **drawing
+that window per voice on the built engine, at the root and across TUNE, is the
+first job of R1b**, before any preset is written. The pitch is in tune at C2
+whatever the slip count (-0.6 and -0.7 cents).
+
 **The audition page** (`ArcoAuditionGenerator`, the SIREN page's shape
 with its Web Audio SURFACE stand-in; every clip through `AuditionLevel`;
 TUNE and HOLD are not knobs to audition), in this order (product §5,
