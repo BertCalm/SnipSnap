@@ -3,8 +3,12 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.Snip
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.log10
+import kotlin.math.sin
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -660,6 +664,180 @@ class TerraTest {
                 println("TERRA HIT CLACK $id HIT $hit: pre-roll ${"%.1f".format(100 * preroll / body)} % of the body")
                 assertTrue(preroll < body * 0.5f, "$id HIT $hit: the pre-roll is ${preroll / body} of the body")
             }
+        }
+    }
+
+    // ---------- robustness, and the drive HIT hands the cavity and BUZZ (spec "Testing", tests 3 and 6) ----------
+
+    /** All ten strikers in the printed BUZZ and drive table when TERRA_FULL=1; the three named ones otherwise (CI minutes are metered). The cost test does not read it. */
+    private val full = System.getenv("TERRA_FULL") == "1"
+
+    @Test
+    fun `every hostile source renders a real hit or today's body, on every voice`() {
+        var renders = 0
+        for (h in TerraStrikers.hostile()) {
+            val head = Terra.captureStriker(h.snip)
+            for (voice in TerraVoice.entries) {
+                val plain = Terra.render(voice)
+                val out = TerraPatch("Hostile", voice, emptyMap(), head?.let { TerraPatch.Striker(it, 1f) }).render()
+                assertEquals(plain.frameCount, out.frameCount, "${h.label} on $voice changed the length")
+                assertTrue(out.samples.all { it.isFinite() && abs(it) <= 1f }, "${h.label} on $voice: a sample is not finite or is over full scale")
+                assertTrue(out.peak() > 0f, "${h.label} on $voice rendered silence")
+                if (head == null) assertContentEquals(plain.samples, out.samples, "${h.label} on $voice: no striker, yet not today's body")
+                renders++
+            }
+        }
+        println("TERRA hostile renders: $renders at HIT 1")
+    }
+
+    /** One random striker source: a THUMP voice at scrambled macros, noise and sine bursts at any level after any lead silence, a single sample, NaN- and Inf-laced noise, or silence and DC. */
+    private fun randomSource(r: Random, kind: Int): Snip {
+        val rate = Dsp.RATE
+        fun level() = Math.pow(10.0, -6.0 + 6.0 * r.nextDouble()).toFloat()
+        fun lead() = FloatArray(r.nextInt(0, rate / 5))
+        return when (kind) {
+            0 -> {
+                val v = ThumpVoice.entries[r.nextInt(ThumpVoice.entries.size)]
+                Thump.render(v, Thump.scramble(v, r))
+            }
+            1 -> {
+                val a = level()
+                Snip(lead() + FloatArray(r.nextInt(rate / 200, rate / 3)) { (r.nextFloat() * 2f - 1f) * a }, 1, rate)
+            }
+            2 -> {
+                val a = level()
+                val hz = 40.0 + 7960.0 * r.nextDouble()
+                Snip(lead() + FloatArray(r.nextInt(rate / 100, rate / 2)) { i -> (a * sin(2.0 * PI * hz * i / rate)).toFloat() }, 1, rate)
+            }
+            3 -> Snip(FloatArray(10_000).also { it[r.nextInt(10_000)] = level() }, 1, rate)
+            4 -> {
+                val a = level()
+                Snip(FloatArray(rate / 5) { if (r.nextInt(50) == 0) Float.NaN else if (r.nextInt(200) == 0) Float.POSITIVE_INFINITY else (r.nextFloat() * 2f - 1f) * a }, 1, rate)
+            }
+            else -> when (r.nextInt(3)) {
+                0 -> Snip(FloatArray(0), 1, rate)
+                1 -> Snip(FloatArray(rate / 10), 1, rate)
+                else -> Snip(FloatArray(rate / 10) { 0.4f }, 1, rate)
+            }
+        }
+    }
+
+    /**
+     * Struck-motion M7.2's sweep: 200 random strikers on random TERRA pads at
+     * random HIT, through the patch the phone would save. The capture rule's
+     * promise: no render is non-finite, silent, off-length or over full scale
+     * (M7.2: 0 / 0 / 0 with the rule, against 14 silent for the raw capture).
+     * Fallbacks - a source with no hit to take - are counted and printed.
+     */
+    @Test
+    fun `200 random strikers on random TERRA pads - never non-finite, silent, off-length or over full scale`() {
+        var nonFinite = 0
+        var silent = 0
+        var offLength = 0
+        var over = 0
+        var fallbacks = 0
+        for (i in 0 until 200) {
+            val r = Random(9_000 + i)
+            val voice = TerraVoice.entries[r.nextInt(TerraVoice.entries.size)]
+            val macros = Terra.macrosFor(voice).associate { it.name to r.nextFloat() }
+            val head = Terra.captureStriker(randomSource(r, i % 6))
+            val hit = r.nextFloat()
+            if (head == null) fallbacks++
+            val plain = Terra.render(voice, macros)
+            val out = TerraPatch("Sweep", voice, macros, head?.let { TerraPatch.Striker(it, hit) }).render()
+            if (!out.samples.all { it.isFinite() }) nonFinite++
+            if (out.peak() <= 0f) silent++
+            if (out.frameCount != plain.frameCount) offLength++
+            if (out.samples.any { abs(it) > 1f }) over++
+            if (head == null) assertContentEquals(plain.samples, out.samples, "case $i: no striker, yet not today's body")
+        }
+        println("TERRA sweep: 200 cases, $nonFinite non-finite, $silent silent, $offLength off-length, $over over full scale, $fallbacks fell back to today's body (M7.2 had 15 on its own random set)")
+        assertEquals(0, nonFinite, "non-finite renders")
+        assertEquals(0, silent, "silent renders")
+        assertEquals(0, offLength, "renders whose length moved")
+        assertEquals(0, over, "renders over full scale")
+    }
+
+    /** Phase 0's G-P0f: HIT 1 with THUMP KICK on the forty cases keeps TERRA's length, finite and within full scale. */
+    @Test
+    fun `HIT 1 with a kick head keeps all forty cases finite, in range and the same length`() {
+        val head = TerraStrikers.head("tkick")
+        for (c in TerraCases.all) {
+            val frozen = LegacyTerraBank.render(c.voice, c.macros)
+            val out = Terra.renderStruck(c.voice, c.macros, head, 1f)
+            assertEquals(frozen.frameCount, out.frameCount, c.label)
+            assertTrue(out.samples.all { it.isFinite() && abs(it) <= 1f }, c.label)
+        }
+    }
+
+    /**
+     * Spec "Testing", test 6, and decision 2. The level match `s` matches
+     * the body's peak, not the 75 Hz band-passed level the cavity's tanh
+     * sees nor the 0.12 threshold BUZZ gates on. So under HIT, BUZZ follows
+     * the striker. That is the default, and it is not owner-approved.
+     *
+     * This is printed, not pinned, until R1's page answers question 3. It is
+     * then rewritten to pin each striker's ratio to today's within ±0.05
+     * (BUZZ follows the striker), or to "within a stated ratio of today's"
+     * (a band-passed level match).
+     *
+     * Phase 0's figures at BUZZ 1, THUMP KICK / THUMP SNARE / WRAITH WORD:
+     * - cavity, today 55.6 ms above: 63.7 / 40.0 / 32.2 ms at HIT 0.5, and
+     *   69.3 / 24.7 / 14.2 ms at HIT 1;
+     * - bar, today 53.2 ms: 55.2 / 47.8 / 35.7 ms at HIT 0.5, and 54.2 /
+     *   41.3 / 13.3 ms at HIT 1;
+     * - the cavity's tanh input, today 0.3075: 0.3260 / 0.2468 / 0.2381 at
+     *   HIT 0.5, and 0.3571 / 0.2049 / 0.1867 at HIT 1. At 0.357, tanh is
+     *   within 4 % of linear.
+     */
+    @Test
+    fun `BUZZ and the cavity's drive under HIT are printed until R1's page answers decision 2`() {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val buzz = mapOf("BUZZ" to 1f)
+        val mix = Terra.defaults(TerraVoice.RESONANT_CAVITY).getValue("CAVITY")
+        val cavityToday = TerraMeasure.msAbove(TerraMeasure.cavityStage(Terra.bankWith(TerraVoice.RESONANT_CAVITY, buzz, null), mix, rate), 0.12f, rate)
+        val barToday = TerraMeasure.msAbove(Terra.bankWith(TerraVoice.TUNED_BAR, buzz, null), 0.12f, rate)
+        val tanhToday = TerraMeasure.tanhInput(Terra.bankWith(TerraVoice.RESONANT_CAVITY, emptyMap(), null), rate)
+        println("TERRA drive today: cavity ${"%.1f".format(cavityToday)} ms and bar ${"%.1f".format(barToday)} ms above 0.12 at BUZZ 1, cavity tanh input ${"%.4f".format(tanhToday)} (Phase 0: 55.6, 53.2, 0.3075)")
+        val ids = if (full) TerraStrikers.TEN.map { it.id } else listOf("tkick", "tsnare", "wraith")
+        for (id in ids) {
+            val x = Terra.upsample(TerraStrikers.head(id))
+            for (hit in listOf(0.5f, 1f)) {
+                val cavity = TerraMeasure.msAbove(TerraMeasure.cavityStage(Terra.bankStruckAt(TerraVoice.RESONANT_CAVITY, buzz, x, hit), mix, rate), 0.12f, rate)
+                val bar = TerraMeasure.msAbove(Terra.bankStruckAt(TerraVoice.TUNED_BAR, buzz, x, hit), 0.12f, rate)
+                val tanhIn = TerraMeasure.tanhInput(Terra.bankStruckAt(TerraVoice.RESONANT_CAVITY, emptyMap(), x, hit), rate)
+                println(
+                    "TERRA drive $id HIT $hit: cavity ${"%.1f".format(cavity)} ms (x${"%.2f".format(cavity / cavityToday)}), " +
+                        "bar ${"%.1f".format(bar)} ms (x${"%.2f".format(bar / barToday)}), tanh input ${"%.4f".format(tanhIn)} (x${"%.2f".format(tanhIn / tanhToday)})",
+                )
+                assertTrue(cavity.isFinite() && bar.isFinite() && tanhIn.isFinite(), "$id HIT $hit: a drive figure is not finite")
+            }
+        }
+    }
+
+    /**
+     * Render time beside Phase 0's two figures (spec, "Architecture", Cost;
+     * record, Appendix A): HIT at 1.4-1.7x an unstruck render, capture work
+     * counted, and the neutral path at 0.98-1.05x. Neutral here is today's
+     * `Terra.render`, now routed through `renderWith`, against the frozen
+     * `LegacyTerraBank.render`, which is the claim the null path rests on.
+     * Median of 7 after 3 warm-ups, as Phase 0 timed it. Printed, not
+     * asserted: timing on a shared runner is not a property of the code.
+     */
+    @Test
+    fun `the cost of a struck render is printed`() {
+        val head = TerraStrikers.head("tkick")
+        fun medianMs(block: () -> Unit): Double {
+            repeat(3) { block() }
+            val times = (0 until 7).map { val t0 = System.nanoTime(); block(); (System.nanoTime() - t0) / 1e6 }.sorted()
+            return times[3]
+        }
+        for (voice in TerraVoice.entries) {
+            val legacy = medianMs { LegacyTerraBank.render(voice, emptyMap()) }
+            val plain = medianMs { Terra.render(voice) }
+            val struck = medianMs { Terra.renderStruck(voice, emptyMap(), head, 0.5f) }
+            println("TERRA cost $voice: neutral ${"%.1f".format(plain)} ms against the frozen copy's ${"%.1f".format(legacy)} ms (${"%.2f".format(plain / legacy)}x; Phase 0 0.98-1.05x)")
+            println("TERRA cost $voice: unstruck ${"%.1f".format(plain)} ms, HIT 0.5 ${"%.1f".format(struck)} ms (${"%.2f".format(struck / plain)}x; Phase 0 1.4-1.7x)")
         }
     }
 }
