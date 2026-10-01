@@ -1651,7 +1651,7 @@ Run: `./gradlew :synth:generateGlintDepthAudition --console=plain` (foreground, 
 Expected: exit 0 and the last line `wrote 10 clips to <the repo>/testkit/glint-depth-audition`.
 
 Run: `ls -l testkit/glint-depth-audition`
-Expected: ten files `01-sweep-depth000.wav` through `10-vowel-depth090.wav`, each about 530 KB (6 s, 16-bit mono at 44.1 kHz, plus the loop's two wraps).
+Expected: ten files `01-sweep-depth000.wav` through `10-vowel-depth090.wav`, each about 880 KB (about 10 s of 16-bit mono at 44.1 kHz: `heldFor` plays the onset and two breaths, then the loop once more, and never less than the 6 s asked for).
 
 Run: `git status --short`
 Expected: the modified files and the new generator only. `testkit/glint-depth-audition/` does not appear (it is ignored).
