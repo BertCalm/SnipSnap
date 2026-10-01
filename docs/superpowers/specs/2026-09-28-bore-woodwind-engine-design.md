@@ -2050,7 +2050,8 @@ classifier looks at) is a developed tone, and HIGH STAB, the brightest preset, r
 SNARE: the voicing followed the loudness linearly, so it was already half open at 40 ms. The tone should not be
 fully bright until it is fully loud, and the UNSW recordings say the same (the harmonics grow faster than the
 fundamental as a note gets louder), so brightness now follows the level to a power: `VOICE_BLOOM` 2, with the
-smoothing lengthened from 10 to 40 ms. The first version took the square of the plain envelope-to-peak, and two
+smoothing lengthened from 10 to 40 ms. (Broken alone, the two are held by different tests: the 10 ms smoothing
+fails the classifier test, while a linear follower with the 40 ms still passes it, and is held by the bloom test.) The first version took the square of the plain envelope-to-peak, and two
 existing tests named what it broke: C3's bite fell from +6.0 dB to +1.8 and the voicing's full-level lift from
 +8.2 to +5.8. The envelope follower reads a *raw* block RMS (64 samples) of a low tone, which ripples within the
 cycle (a period is 339 samples at C3), so its smoothed mean sits at 0.72 of the raw peak at C3, 0.88 at C4, 0.95 at

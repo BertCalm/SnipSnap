@@ -422,6 +422,19 @@ class BoreTest {
     }
 
     @Test
+    fun `a LOOP's steady stretch takes no tongue seed, so loops are what they were`() {
+        // A loop cannot carry a signal that does not repeat, and with the seed let into the steady stretch every
+        // LOOP render changed sample for sample (the seam moved both ways, 4.9e-5 to 5.5e-7 and 8.7e-7 to 1.7e-5,
+        // still under the bar) though its warm-up is discarded. So the stretch with the seed forced on is the
+        // stretch with none, to the sample.
+        val m = Bore.settled(Bore.defaults(BoreVoice.SAX) + mapOf("HOLD" to 1f), BoreVoice.SAX)
+        val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, 0.25f))
+        val plain = Bore.stretch(BoreVoice.SAX, m, hz, warmFrames = 4000, frames = 4000, seed = 0f)
+        val forced = Bore.stretch(BoreVoice.SAX, m, hz, warmFrames = 4000, frames = 4000, seed = 0.5f)
+        assertContentEquals(plain, forced, "a LOOP's steady stretch took the tongue's seed")
+    }
+
+    @Test
     fun `vibrato is a pitch swing that grows with HOLD and is absent without it`() {
         // The spec's pressure vibrato moved the pitch by under a cent (R1's first build, and with
         // HOLD at 0 as well - it was dead code), so vibrato is the loop's length, retuned. Swings

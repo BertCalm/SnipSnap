@@ -956,12 +956,12 @@ object Bore {
         return s
     }
 
-    /** The steady stretch: attack, then constant pressure to the end. */
-    internal fun stretch(voice: BoreVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int): FloatArray {
+    /** The steady stretch: attack, then constant pressure to the end. [seed] is the tongue's seed override, for a test: a steady stretch takes none. */
+    internal fun stretch(voice: BoreVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int, seed: Float? = null): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
         val attackN = (attackSeconds(macros.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
         val total = (warmFrames + frames + LOOP_PAD_FRAMES) * Dsp.OVERSAMPLE
-        return blow(voice, tuned, macros, rate, Gate(attackN, total - attackN, 0, steady = true), null, null)
+        return blow(voice, tuned, macros, rate, Gate(attackN, total - attackN, 0, steady = true), null, null, seed = seed)
     }
 
     /**

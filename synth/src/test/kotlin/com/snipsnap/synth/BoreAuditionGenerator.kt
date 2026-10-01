@@ -16,7 +16,12 @@ import kotlin.math.roundToInt
  * nowhere else, then copies the listening page from the test resources. Run via
  * `./gradlew :synth:generateBoreAudition`, then publish the folder as the listening artifact.
  *
- * The first section is the reed's voicing (round 1.3, after the last round's answer: a prototype filter
+ * The first section is the reed's attack (round 1.4, after the voicing: "let's fix the attack speed next"): the same
+ * notes with the tongue's seed off (the swell, 0.44 s to 80% at C3), light, as shipped and strong, then CHIFF's
+ * range and a soft breath at C3, then the two presets a fast attack could have tipped over. Every description
+ * carries the onset measured on that very note, so the page says what the clip is, not what it was meant to be.
+ *
+ * The second section is the reed's voicing (round 1.3, after the last round's answer: a prototype filter
  * on the rasped reed, measured against a real tenor, with the deeper cut and the brighter lift both kept):
  * the same SAX phrase and three presets with no voicing (what the last round merged), a milder one, the
  * shipped one and a stronger one, so its strength is a choice made by ear. The clips are one-shots; a LOOP
@@ -52,6 +57,74 @@ object BoreAuditionGenerator {
         var count = 0
         val sections = StringBuilder()
 
+        val phrase = listOf(7f / 24, 0.5f, 19f / 24)
+        // The reed's attack: the tongue's seed at four strengths on the same notes, and what CHIFF and BREATH do to it.
+        val attackDir = File(root, "ATTACK")
+        val attackSteps = listOf<Triple<String, Float?, Pair<String, String>>>(
+            Triple("0_none", 0f, "NO SEED" to "the swell, the attack before this round"),
+            Triple("1_light", 0.1f, "LIGHT" to "the tongue's seed at 0.1"),
+            Triple("2_shipped", null, "SHIPPED" to "the shipped seed: the tongue's, scaled by CHIFF, BREATH and the reed's level"),
+            Triple("3_strong", 0.4f, "STRONG" to "the seed at 0.4, near its cap of 0.5 (not shipped)"),
+        )
+        fun writeAttack(id: String, snip: Snip) {
+            WavWriter.write(File(attackDir, "$id.wav"), AuditionLevel.level(snip), WavWriter.BitDepth.PCM_16)
+            count++
+        }
+        val saxBase = Bore.defaults(BoreVoice.SAX) + mapOf("HOLD" to 0.3f)
+        // The default TUNE is the middle of the range (C4); the C3 groups say so by setting it.
+        val c3Base = saxBase + mapOf("TUNE" to 0f)
+        check(renderSeeded(saxBase, null).samples.contentEquals(Bore.render(BoreVoice.SAX, saxBase).samples)) {
+            "the audition's shipped-seed clip is not what Bore.render makes"
+        }
+        fun onsetText(macros: Map<String, Float>, seed: Float?) = "%.2f s to 80%%".format(java.util.Locale.ROOT, seededOnset(macros, seed))
+        val attackPhrase = attackSteps.map { (key, seed, label) ->
+            val gap = FloatArray((0.15f * Dsp.RATE).toInt())
+            val samples = phrase.flatMap { t -> renderSeeded(saxBase + mapOf("TUNE" to t), seed).samples.toList() + gap.toList() }.toFloatArray()
+            writeAttack("phrase_$key", Snip(samples, channels = 1, sampleRate = Dsp.RATE))
+            Clip("phrase_$key", label.first, label.second + ": " + phrase.joinToString(" ") { t -> "%.2f".format(java.util.Locale.ROOT, seededOnset(saxBase + mapOf("TUNE" to t), seed)) } + " s at G3 C4 G4")
+        }
+        val c3Seeds = attackSteps.map { (key, seed, label) ->
+            writeAttack("c3_$key", renderSeeded(c3Base, seed))
+            Clip("c3_$key", label.first, label.second + ": " + onsetText(c3Base, seed))
+        }
+        val chiffClips = listOf(0f, 0.4f, 1f).map { chiff ->
+            val m = c3Base + mapOf("CHIFF" to chiff)
+            val id = "chiff_" + fmt(chiff).trimStart('.')
+            writeAttack(id, renderSeeded(m, null))
+            Clip(id, "CHIFF " + fmt(chiff), (if (chiff == 0f) "no tongue: the swell stays" else if (chiff >= 1f) "a hard tongue: a stab, with its breath burst and key thump" else "the default") + ": " + onsetText(m, null))
+        }
+        val breathClips = listOf(0f, 0.6f, 1f).map { breath ->
+            val m = c3Base + mapOf("BREATH" to breath)
+            val id = "breath_" + fmt(breath).trimStart('.')
+            writeAttack(id, renderSeeded(m, null))
+            Clip(id, "BREATH " + fmt(breath), (if (breath == 0f) "the softest note: it speaks slowly, as a soft note does" else if (breath >= 1f) "the hardest breath" else "the default") + ": " + onsetText(m, null))
+        }
+        fun attackPreset(presetName: String, tag: String) = listOf(attackSteps.first(), attackSteps[2]).map { (key, seed, label) ->
+            val preset = BorePresets.forVoice(BoreVoice.SAX).first { it.name == presetName }
+            writeAttack("${tag}_$key", renderSeeded(preset.macros, seed))
+            Clip("${tag}_$key", label.first, macroLine(BoreVoice.SAX, preset.macros) + " " + DOT + " " + onsetText(preset.macros, seed))
+        }
+        val c3Shipped = seededOnset(c3Base, null)
+        val c3None = seededOnset(c3Base, 0f)
+        sections.append(
+            sectionJson(
+                id = "ATTACK", display = "THE SAX'S ATTACK", body = "how fast a note speaks: a real tenor reaches 80% of its level in 0.05-0.12 s, ours took 0.44 s at C3",
+                readout = listOf(
+                    "C3 " + DOT + " DEFAULT KNOBS " + DOT + " NO SEED %.2f S, SHIPPED %.2f S".format(java.util.Locale.ROOT, c3None, c3Shipped),
+                    "REAL TENOR 0.05-0.12 S (A VERY SOFT NOTE 0.49 S)",
+                ),
+                groups = listOf(
+                    Group("THE SAME PHRASE, FOUR SEEDS", key = true, clips = attackPhrase),
+                    Group("C3 ALONE, WHERE IT WAS SLOWEST", key = true, clips = c3Seeds),
+                    Group("CHIFF AT C3, THE SHIPPED SEED", key = false, clips = chiffClips),
+                    Group("A SOFT BREATH STAYS SLOW", key = false, clips = breathClips),
+                    Group("HIGH STAB (A HARD TONGUE ON A BRIGHT REED)", key = false, clips = attackPreset("HIGH STAB", "high_stab")),
+                    Group("LOW HONK", key = false, clips = attackPreset("LOW HONK", "low_honk")),
+                ),
+            ),
+        )
+        sections.append(",\n")
+
         // The reed's voicing, four strengths of the same thing.
         val voiceDir = File(root, "VOICE")
         val voiceSteps = listOf(
@@ -68,7 +141,6 @@ object BoreAuditionGenerator {
         check(renderVoiced(saxDefaults, Bore.voicingFor(BoreVoice.SAX)).samples.contentEquals(Bore.render(BoreVoice.SAX, saxDefaults).samples)) {
             "the audition's shipped-strength clip is not what Bore.render makes"
         }
-        val phrase = listOf(7f / 24, 0.5f, 19f / 24)
         val phraseClips = voiceSteps.map { (key, voicing, label) ->
             val gap = FloatArray((0.15f * Dsp.RATE).toInt())
             val samples = phrase.flatMap { t ->
@@ -211,6 +283,28 @@ object BoreAuditionGenerator {
         val bell = Bore.biteBoostDb(BoreVoice.SAX, m.getValue("LIP"))
         val rasp = Bore.raspAmount(BoreVoice.SAX, m.getValue("LIP"), m.getValue("BREATH"))
         return Snip(Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate), rate, bell, rasp, voicing), channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    /**
+     * A one-shot SAX note as [Bore.render] makes it, with the tongue's [seed] overridden: null is the shipped one
+     * ([Bore.blow] computes it), 0 is none - the swell this round replaced.
+     */
+    private fun renderSeeded(macros: Map<String, Float>, seed: Float?): Snip {
+        val m = Bore.settled(macros, BoreVoice.SAX)
+        require(!Bore.isLoop(m.getValue("HOLD"))) { "renderSeeded is for one-shots" }
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")))
+        val bell = Bore.biteBoostDb(BoreVoice.SAX, m.getValue("LIP"))
+        val rasp = Bore.raspAmount(BoreVoice.SAX, m.getValue("LIP"), m.getValue("BREATH"))
+        return Snip(Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate, seed = seed), rate, bell, rasp, Bore.voicingFor(BoreVoice.SAX)), channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    /** Seconds to 80% of the raw note's steady level, read the way BoreTest reads it (the blown wave, 1.4 s of gate). */
+    private fun seededOnset(macros: Map<String, Float>, seed: Float?): Float {
+        val m = Bore.settled(macros, BoreVoice.SAX)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")))
+        return BoreMeasure.onsetSeconds(Bore.blow(BoreVoice.SAX, hz, m, rate, gateSeconds = 1.4f, seed = seed), 1.0f, 1.4f)
     }
 
     private const val DOT = "\u00b7"
