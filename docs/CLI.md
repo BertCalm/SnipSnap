@@ -507,6 +507,18 @@ voices in one hit; length and level interpolate too). Amount 0 is the
 pad, 1 is the parent, and the amount rides the recipe like every
 mutate parameter.
 
+**`--become <ms>`** rides on `--morph` and nothing else (a `--become`
+without `--morph` is refused, `--become 0` included): the hit starts as
+the pad and turns into the `--amount` blend over that many milliseconds
+from the aligned onset, 0..2000, where 0 is today's morph byte for
+byte. The ramp is linear in amount, one step per spectral hop (5.8 ms
+at 44.1 kHz), each step read through a 23 ms window, so a ramp shorter
+than about 23 ms reads as a step. The result is as long as the end
+blend and brought to its level: a kick that becomes a bell rings as
+long as the bell, at the bell's level. The recipe records `become`
+beside `amount`, and the report adds `becomes it over 400 ms - the
+first beat is the pad`. `drift` never takes it.
+
 Sound design by **recombination** — where `treat` and `era` transform a
 single sound, mutate breeds a new one. Parents are pad refs (`A03`),
 another kit's pads (`path/to/kit:B02`), or bare `.wav` files; mono

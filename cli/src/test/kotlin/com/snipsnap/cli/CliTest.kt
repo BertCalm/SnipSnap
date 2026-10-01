@@ -3075,6 +3075,71 @@ class CliTest {
     }
 
     @Test
+    fun `morph --become turns the pad into the parent over time, and rides only on --morph`() {
+        val rate = 44_100
+        val out = File(temp, "becomekit")
+        val wav = writeBreak(File(temp, "becomesrc.wav"))
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "Becomer").first)
+        val kitDir = File(out, "Becomer")
+        val model = com.snipsnap.shell.KitBuilderModel.open(kitDir)
+        val pad = model.kit.pads.minBy { it.slot }
+        fun toneHit(hz: Double): FloatArray = FloatArray(rate) { i ->
+            val t = i.toDouble() / rate
+            (0.6 * Math.sin(2.0 * Math.PI * hz * t) * Math.exp(-5.0 * t)).toFloat()
+        }
+        WavWriter.write(File(kitDir, pad.sampleFile), Snip(toneHit(300.0), 1, rate))
+        val parent = File(temp, "become parent.wav")
+        WavWriter.write(parent, Snip(toneHit(1200.0), 1, rate))
+        val padRef = "A%02d".format(java.util.Locale.ROOT, pad.slot)
+        fun mutateRecipe(): Map<String, com.snipsnap.json.JsonValue> =
+            (KitStore.load(kitDir).pads.first { it.slot == pad.slot }.recipe!!.entries["mutate"] as com.snipsnap.json.JsonValue.Obj).entries
+
+        // Today's morph: its report and its recipe are the baseline BECOME must not move.
+        val flat = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--amount", "1")
+        assertEquals(0, flat.first, flat.third)
+        assertTrue("becomes it over" !in flat.second, "a BECOME line without --become: ${flat.second}")
+        assertEquals(listOf("mode", "with", "amount"), mutateRecipe().keys.toList())
+        assertEquals(0, cli("mutate", kitDir.path, padRef, "--undo").first)
+
+        // --become 0 is today's morph: the same report, no key.
+        val zero = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--amount", "1", "--become", "0")
+        assertEquals(0, zero.first, zero.third)
+        assertEquals(flat.second, zero.second, "--become 0 changed the report")
+        assertEquals(listOf("mode", "with", "amount"), mutateRecipe().keys.toList())
+        assertEquals(0, cli("mutate", kitDir.path, padRef, "--undo").first)
+
+        val (code, stdout, stderr) = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--amount", "1", "--become", "400")
+        assertEquals(0, code, stderr)
+        val lines = stdout.lines()
+        assertEquals(flat.second.lines().first(), lines.first(), "the first report line is today's, byte for byte")
+        assertEquals("  becomes it over 400 ms - the first beat is the pad", lines[1])
+        assertEquals(listOf("mode", "with", "amount", "become"), mutateRecipe().keys.toList())
+        assertEquals(400.0, (mutateRecipe()["become"] as com.snipsnap.json.JsonValue.Num).value)
+        assertEquals(0, cli("mutate", kitDir.path, padRef, "--undo").first)
+
+        // The refusals: exit 2, in words, nothing touched.
+        val padFile = File(kitDir, KitStore.load(kitDir).pads.first { it.slot == pad.slot }.sampleFile)
+        val before = padFile.readBytes()
+        val (noMorph, _, noMorphErr) = cli("mutate", kitDir.path, padRef, "--with", parent.path, "--become", "400")
+        assertEquals(2, noMorph)
+        assertContains(noMorphErr, "--become rides on --morph - add it")
+        val (zeroSplice, _, zeroSpliceErr) = cli("mutate", kitDir.path, padRef, "--with", parent.path, "--splice", "--become", "0")
+        assertEquals(2, zeroSplice, "--become 0 without --morph is still a contradiction")
+        assertContains(zeroSpliceErr, "--become rides on --morph - add it")
+        val (tooLong, _, tooLongErr) = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--become", "3000")
+        assertEquals(2, tooLong)
+        assertContains(tooLongErr, "--become wants 0..2000 ms, got 3000")
+        val (notNumber, _, notNumberErr) = cli("mutate", kitDir.path, padRef, "--morph", "--with", parent.path, "--become", "x")
+        assertEquals(2, notNumber)
+        assertContains(notNumberErr, "--become wants a number, got 'x'")
+        // DRIFT never takes BECOME: the flag is not one of its options (DriftCommand is unchanged).
+        val (drift, _, driftErr) = cli("drift", kitDir.path, padRef, "--become", "400")
+        assertEquals(2, drift)
+        assertContains(driftErr, "unknown option '--become'")
+        assertTrue(before.contentEquals(padFile.readBytes()), "a refusal touched the pad")
+    }
+
+    @Test
     fun `clean --declip names the rebuild and leaves unclipped audio alone`() {
         val rate = 44_100
         val hit = FloatArray(rate) { i ->
