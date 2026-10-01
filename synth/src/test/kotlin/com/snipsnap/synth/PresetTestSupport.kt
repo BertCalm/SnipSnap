@@ -40,7 +40,10 @@ internal object PresetTestSupport {
             // (docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md). "mello" alone would
             // also refuse the word "mellow", which is a plain description and not a maker, so the
             // lookahead lets "mellow" through and nothing that spells the keyboard.
-            """|mello(?!w)|heckel|chamberlin|selmer|yanagisawa""",
+            """|mello(?!w)|heckel|chamberlin|selmer|yanagisawa""" +
+            // MAGNET's amp and speaker: "rectifier" is a near-miss of an amplifier line and "oxford" a
+            // speaker maker (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "The name").
+            """|rectifier|oxford""",
     )
 
     /**

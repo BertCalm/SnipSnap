@@ -1,8 +1,12 @@
 # MAGNET — the electric string, and VALVE, its amp on any pad
 
-**Status:** design; brainstorm from the 2026-09-28 specification ("COIL:
-Physical String Excitation × Vacuum Tube / Cabinet Synthesis Engine"); not
-implemented. The specification's engine, transcribed and rendered, is flat
+**Status:** design and build record; brainstorm from the 2026-09-28
+specification ("COIL: Physical String Excitation × Vacuum Tube / Cabinet
+Synthesis Engine"). **Built:** VALVE V1 and V1.1 (the rack section; "V1.1
+amendments"), R0 (`Strings.pickup`, no audio change) and **R1, the engine**
+(2026-09-30; "R1, as built" below). R1's audition gate has not been run:
+nothing in MAGNET has been heard, no presets exist and the phone (R1.1) is
+not built. The specification's engine, transcribed and rendered, is flat
 by up to 69 cents, its pickup-position control is a delay with no audible
 effect, and its amp leaves up to 6 % DC in the WAV ("The specification, as
 reviewed"). The corrected model — the house's own string, a real pickup
@@ -10,19 +14,24 @@ comb, the amp measured in three placements — was built in a Phase-0 spike (a
 throwaway prototype, kept as a record outside the build,
 [`../plans/2026-09-29-magnet-phase-0-spike.md`](../plans/2026-09-29-magnet-phase-0-spike.md))
 and works: in tune to about a cent, the comb notching what the physics says,
-and the amp's aliasing at the 8× reference once it runs at 4×. No engine code
-is committed; V1 and R1 rebuild from this document. It lands as a docs-only
-PR (zero check runs by design, as FORK, BORE and ARCO did).
+and the amp's aliasing at the 8× reference once it runs at 4×. VALVE, R0 and
+R1 rebuilt it from this document and are in the tree; the spike's code is not.
 **Date:** 2026-09-29
-**Plan:** to be written per phase (`docs/superpowers/plans/2026-09-29-valve-v1.md`, then `…-magnet-round-N.md`)
+**Plan:** one per phase, under `docs/superpowers/plans/`:
+[`../plans/2026-09-29-valve-v1.md`](../plans/2026-09-29-valve-v1.md),
+[`../plans/2026-09-30-valve-v1-1.md`](../plans/2026-09-30-valve-v1-1.md),
+[`../plans/2026-09-30-magnet-r0.md`](../plans/2026-09-30-magnet-r0.md),
+[`../plans/2026-09-30-magnet-r1.md`](../plans/2026-09-30-magnet-r1.md)
 **Related:** [`2026-09-28-bore-woodwind-engine-design.md`](2026-09-28-bore-woodwind-engine-design.md)
 and ARCO's design (PR #391) are the model for this document's shape — an
 external spec reviewed against the tree, measured, corrected, the fleet
 table, claims tests, rounds with gates. [`2026-09-27-silk-string-engine-design.md`](2026-09-27-silk-string-engine-design.md)
 built the `Strings` toolkit MAGNET's string is. [`2026-09-24-resin-ladder-engine-design.md`](2026-09-24-resin-ladder-engine-design.md)
 paired an engine with a rack section (CONTOUR), the precedent for VALVE.
-**Roadmap:** rows are added when implementation starts, not now — the rule
-FATHOM, RESIN, GLINT, SILK, FORK and BORE followed.
+**Roadmap:** row S20 in [`../../SYNTH_ROADMAP.md`](../../SYNTH_ROADMAP.md),
+added with R1 and naming both MAGNET and VALVE (rows are added when
+implementation starts, the rule FATHOM, RESIN, GLINT, SILK, FORK and BORE
+followed).
 
 ## Why MAGNET, and why VALVE first
 
@@ -477,9 +486,9 @@ Every phase ends the house way: stop and listen.
 | Phase | Ships | Gate |
 |---|---|---|
 | **0** (done) | the spike, recorded in [`../plans/2026-09-29-magnet-phase-0-spike.md`](../plans/2026-09-29-magnet-phase-0-spike.md) | in tune, the comb works, the placement numbers — all met |
-| **V1** | `Valve.kt`, its `FxChain` row, `"amped"`, `FxTest` / `TreatmentsTest` entries, README's rack list | a short page: a THUMP kick, a THUMP snare, a VELVET saw stab and a VOX choir, each dry and at DRIVE 0.3 / 0.6 / 1 × CAB 0 / 0.5 / 1, plus the same snare at the snip rate against 4× (can the owner hear the fold-back) |
-| **R0** | `Strings.pickup`, no audio change | the frozen grids match |
-| **R1** | `Magnet.kt`, `MagnetPatch.kt`, registration, landing chains, `SynthKits.magnet()` and its testkit kit, the tests above, the blocklist terms, `MagnetAuditionGenerator`; presets by ear **after** the gate, eight per voice | the audition (below) |
+| **V1** (built; V1.1 amends it) | `Valve.kt`, its `FxChain` row, `"amped"`, `FxTest` / `TreatmentsTest` entries, README's rack list | a short page: a THUMP kick, a THUMP snare, a VELVET saw stab and a VOX choir, each dry and at DRIVE 0.3 / 0.6 / 1 × CAB 0 / 0.5 / 1, plus the same snare at the snip rate against 4× (can the owner hear the fold-back) |
+| **R0** (built) | `Strings.pickup`, no audio change | the frozen grids match |
+| **R1** (built; the gate is not yet run, "R1, as built") | `Magnet.kt`, `MagnetPatch.kt`, registration, landing chains, `SynthKits.magnet()` and its testkit kit, the tests above, the blocklist terms, `MagnetAuditionGenerator`; presets by ear **after** the gate, eight per voice | the audition (below) |
 | **R1.1** | the phone: picker entry and its arms, the chip decision, README's engine count | built where `:app` compiles |
 | **R2** | MAKE INSTRUMENT as a decaying one-shot keygroup with PICK layers — `Keys.fork`'s cheap path, since a plucked note needs no loop seam; then the addendum's items, each behind its own listen: pitch droop on a hard pick (`Strings.Loop.retune` from sharp to the note), fret buzz (the jawari's one-sided barrier, already in `Strings.Loop`), sympathetic strings on the open E–A–D–G–B–E set (SITAR's tarab), pick scrape (new, small) | the instrument under two hands |
 
@@ -593,3 +602,137 @@ The V1.1 change followed the owner's round-two listen of 2026-09-30. The plan is
 - **The SAG mechanism.** A supply sag after the tube replaces V1's bias: `y = t / (1 + SAG · K · env)` with K 3, `env` following the tube's own output level with a 5 ms attack and a 120 ms release, and the previous sample's value setting this sample's gain. The bias moved the tube's rest point and released more slowly than the 5 Hz blocker follows, leaving a decaying DC step on hot pads (a kick at DRIVE 1 on gain 35, SAG 1, ended on 3.568 % of its peak); the supply has no rest-point shift (0.079 % on the same clip), so that defect is gone. (The tube's own asymmetry still leaves about 1.7 % on a kick at gain 1000; SAG adds at most 0.2 points to the kick's end step there (1.76 % at SAG 0, 1.94 % at SAG 0.35, 1.25 % at SAG 1). The 1.7 % step the owner heard as clean was the V1 gate's brass at gain 35 with SAG 0.35, recorded in the V1 gate's answers (the owner's "clean" verdict on the V1 listening page's `end_brass_hot`).) The kick's level 60-160 ms after the hit, re its first 20 ms, falls 3.05 dB against SAG 0 at gain 35 (2.19 dB at DRIVE 0.6); the aim was 4-6 dB, which K in 0.8 to 3 did not reach. At gain 1000 (DRIVE 1, CAB 0.6) the same level drops 3.15 dB on the kick and 3.28 dB on the snare at SAG 1, and about 1.6 dB at SAG 0.35, flat from 20 to 160 ms: a steady level offset after the hit's first milliseconds, not a dip and recovery, so it did not shrink from gain 35 (the peak match does not cancel it, because the first few milliseconds pass before the supply charges and they set the peak); the owner heard SUPPLY at gain 35 and below before this was measured. At the confirmation listen the owner heard SAG at DRIVE 1 as doing nothing on the kick and snare (the clips were loudness-matched, which levels away that steady offset), and it is an effect of the lower and middle DRIVE range.
 - **The oversampling is unchanged: the 4x round trip stays always on.** The owner's answer "only when driven" was measured and blocked. By the plan's rule (the lowest DRIVE step where the steady probe's clarity at 4x beats 1x by at least 6 dB) the threshold is 0.55 (a 4.8 dB gap at 0.50, 14.0 dB at 0.55), but the cabinet runs at a different rate on the 1x path and the sound changes: a snare through CAB 0.5 steps 1.45 dB in its top third-octave at every DRIVE including 0, the noise centroid at DRIVE 0 rises +25 % at CAB 0.6 and +27 % at CAB 0.8, and CAB 0 to 0.01 reads -0.72 dB in the top band at 1x against -0.10 at 4x. At CAB 0 the snare's render step also exceeds 0.5 dB from DRIVE 0.55 up (0.75 dB). Decision 4 above therefore stands at its default (always 4x). A gate is a follow-up for the owner to order: it needs a cabinet whose 1x response is within 0.5 dB per third-octave of the 4x one, and a threshold chosen by render difference; it would save about 31 ms per rendered second (33.4 to 2.1, measured on a 4 s stereo kick) below the threshold.
 - **`amped` stays at DRIVE 0.6.** At the confirmation listen the owner heard `amped` (DRIVE 0.6, gain 2.5) as the same as before on kick and snare, so it stays at 0.6, below the default (DRIVE 0.7, gain 11.3), where V1's sat above it (0.6 against 0.45). The other characters sit a step past their section's default; `amped` is the exception by the owner's ear.
+
+## R1, as built
+
+R1 is the engine: `Magnet.kt`, `MagnetPatch.kt`, the registration, the kit and the audition generator, on R0's `Strings.pickup` and the rack's VALVE. It was built on 2026-09-30 and every test is green (synth 1 126, shell 910, cli 97 tests; none failing, none skipped; `MagnetTest` is 23 of the synth tests). **Nothing in it has been heard.** The tests prove that the string is in tune, that the comb and the humbucker notch what the physics says, that BLEND, MUTE and PICK move what they claim to, and that the amp does not move the pitch. None of that says the result sounds like a guitar. The audition (`generateMagnetAudition`, then the listening page) is the gate, and its first job is to say which of the numbers marked *shape* is wrong. Where the plan or the design text above differs from the build, this section states the build. The design text differs in these places: "Data flow and compatibility" promises an arm in `Presets` and "Testing" says `PresetsTest` and `UserPresetsTest` gain the roster, and neither was added because MAGNET has no roster; "Macros" gives CHUG's landing DRIVE as 0.85, and the build lands it at 0.71 (the V1.1 note in that paragraph); "Phasing and gates" lists seven audition items, and the generator adds the LAND, PICKDEF and length-matched CHUGAB sections and BLIND at both PICK defaults. The design's conditional PICK registration was followed: the sweep passed and PICK is registered. The plan's ruling 3 is the text that differed (ruling 3 below).
+
+### What landed
+
+- `Magnet.kt` (211 lines: `MagnetVoice { JANGLE, CHUG }`, the four macros, `frequencyFor`, `string`, `pickup`, `finish`, `render`, `landingChain`, `scramble`) and `MagnetPatch.kt` (32 lines).
+- Registration: an arm in `Patches.fromJsonValue`, an arm in the exhaustive `Velocity.macroSpecsFor`, and `patch is MagnetPatch -> "PICK"` in `Velocity.brightnessOverride`. No `Presets` arm: MAGNET has no roster, and `MagnetTest` pins both the dispatcher's knowledge of MAGNET and the empty roster.
+- `SynthKits.magnet()` and `testkit/SnipSnap Magnet Kit/`; `MagnetKitGenerator` and `generateMagnetKit`.
+- `MagnetAuditionGenerator` and `generateMagnetAudition`: 87 clips, 21 MB, all mono 16-bit 44.1 kHz.
+- Tests: `MagnetTest` (23), `MagnetMeasure` (the measurement helpers), a canary each in `DeterminismTest` and `PadRecipeTest`, the kit's test in `SynthKitTest`, and two MAGNET entries in `VelocityGrooveShuffleTest`.
+- The blocklist terms ("The names, as checked"), and row S20 in `docs/SYNTH_ROADMAP.md`.
+- No change to `Strings.kt`, `Valve.kt`, `FxChain.kt` or the phone.
+- Size at the last code commit: 1 347 added lines outside the plan and the kit's files, 285 of them engine and registration, 1 039 tests, generators and measures, 23 build wiring and ignore rules, against this document's estimate of about 1 400 less the amp. The listening page is built by hand from the generator's clips and is not in the repository.
+
+### The rulings, as built
+
+The plan made twelve rulings before it was executed and the build added three. Each is as planned except where it says it differs.
+
+1. **f0 is `Keys.midiHz(rootMidi + snapped semitones)`** (JANGLE root MIDI 40, CHUG 35), the route FORK and BORE use; `Magnet.frequencyFor` feeds the render, the seed and every tuning test. It differs from the spike's literal root Hz by 0.065 cents (E2) and 0.129 cents (B1).
+2. **The string budget** is the spike's: `Strings.pluck(f0, 4.0, ...)`, then `Strings.trimToDecay(raw, rate, 0.25, 4.0)`.
+3. **PICK is `Dsp.expMap(PICK, 600, 16 000)` on both voices, and it differs from the plan in what was done with it.** The plan printed the 1 % clause, asserted only the monotonic one, and made no velocity registration, projecting that the top one or two tenths would fail. The measurement showed the clause passing at every tenth on both voices (smallest 1.77 % on JANGLE and 2.03 % on CHUG, at the defaults), so `patch is MagnetPatch -> "PICK"` **is** registered in `Velocity.brightnessOverride` and the clause **is** asserted (at the defaults only). The projection was extrapolated from the spike's table (exciter position 0.10, a narrower map, an unaligned humbucker) and was wrong. A landed pad's velocity layers still fall back to `soften`: `canUseAtVelocity` requires `fx == null`, so the override reaches a bare patch only.
+4. **BLEND weights are linear, positions fixed.** The neck group sits at 0.42 weighted `1 - BLEND`, the bridge group at 0.12 weighted `BLEND`. Each group is one `Strings.pickup` call; a humbucker group is its two coils (`dp = 0.0278 · f0 / rootHz`, 0.707 each), aligned inside the group and never aligned between neck and bridge. A call whose weight is exactly 0 is skipped. One `Dsp.TptSvf` resonance follows the sum.
+5. **The output chain is copied into `Magnet.finish`**: `Tide.bandLimit`, `Dsp.decimate`, mean removal and a 20 Hz one-pole high-pass, `Dsp.levelTo` the melodic target, `Dsp.fadeTail`.
+6. **`scramble` is the defaults-only form** (MAGNET has no roster to seed from); all four macros roll, TUNE included.
+7. **The landing chain is `Magnet.landingChain(voice)`**, never null, never routed through `Presets.landingFor`. JANGLE: DRIVE 0.25, TONE 0.55, CAB 0.35 (SAG left at VALVE's default 0.35). CHUG: DRIVE 0.71 (gain 13.2), SAG 0.4, TONE 0.3, CAB 0.95. The spec's CHUG DRIVE 0.85 was written on V1's gain law, where it meant gain 13; on the V1.1 law it is gain 106. Every value is *shape*.
+8. **Pitch is read two ways.** The dry claim is read on the raw 176.4 kHz buffer with `FineTuning`; the through-VALVE claim is the interpolated `BoreMeasure.cents` on the dry and wet renders, because `Pitch.detect` is integer-lag (one step is up to 12.9 cents at JANGLE E4).
+9. **One copy of the measurement helpers**: `MagnetMeasure` (`amplitudeAt`, `db`, rounding for the prints); `MagnetTest`'s own `amplitudeAt` delegates to it.
+10. **Humbucker parity**: the tests read `Strings.combDelay` at run time and print the parity. CHUG's real cell is even (D2 - D1 = 80).
+11. **The kit is built inline** from defaults plus TUNE, all pads `DrumClass.TONAL`, no preset lookups; A15 and A16 are CHUG at BLEND 0.35 with a hotter chain written in the kit.
+12. **The audition page is built by hand**; the generator writes WAVs and a flat manifest only.
+13. **The DC bound is 1e-4 (about -80 dBFS), and it differs from the plan's reading of it.** The first build set it at the measured worst plus 20 % (5.3e-7), which is float-residue scale and would trip on any later change to a shape value. The pickup comb has no DC gain and the output chain's 20 Hz high-pass removes the rest, so the corner test cannot tell whether the DC stage exists. Two direct `Magnet.finish` tests are the guards (below).
+14. **The audition has 87 clips, not 47 or 83** (KIT 16, LAND 6, CHUGAB 10, BLIND 9, CHUG 14, JANGLE 14, PICKDEF 8, PLACE 4, AMPPADS 6). The spec's PICK defaults (0.6 and 0.55) are 0.94 and 0.48 octave darker than the spike's exciter corners, so a dull default could fail item 3 for the wrong reason: PICKDEF and BLIND carry both defaults. And as played the MAGNET chug stab rings 1.98 s against the saw stab's 0.51 s, so the as-played pair can be told apart by duration alone: CHUGAB adds a length-matched pair (ruling 15).
+15. **The length-matched chug stab is a palm mute, not a cut.** It is CHUG at MUTE 0.85, the lowest MUTE (0.05 steps from 0.60 to 1.00) whose dry render, trimmed to the saw stab's length, ends under 1 % of its peak over its last 5 ms; trimmed, faded over 40 ms, run through the same VALVE chain and scaled to the saw stab's `Loudness.of`.
+
+### What R1 measured
+
+Each test prints its numbers in one line before it asserts. All of these are from the printed lines on a desktop JVM at the source of the commits named in the task reports.
+
+**In tune.** 450 cells (2 voices × 25 TUNE steps × MUTE {0, 0.5, 1} × BLEND {0, 0.5, 1}) read on the dry render: JANGLE -1.07 to +1.11 cents, CHUG -1.66 to +1.51. The worst cell is 1.66 cents (CHUG, TUNE step 1, MUTE 0, BLEND 1, -1.6591337687515584), against the 5-cent bar and the specification engine's -69. The spike read -0.62 to +1.11 over 36 cells.
+
+**The single-coil comb** (JANGLE, TUNE 0.5, default MUTE, resonance off, neck alone). At pickup position 0.5, h2 is 41.2 dB and h4 43.3 dB under their neighbours (h1 to h8 re h1: 0.0, -43.7, -2.5, -45.8, 11.4, -40.2, 7.6, -44.1); at 0.25, h4 is 37.2 dB (0.0, 9.8, -2.6, -39.7, 11.5, 9.4, 7.5, -36.2). The bar is 20 dB. The spike read 52, 54 and 47: **this engine's notches are about 10 dB shallower, and the cause is not isolated.** The exciter's position (0.085 here, 0.10 in the spike) was the first guess and was not tested.
+
+**The humbucker** (CHUG, TUNE 0.5, BLEND 1, resonance off). `dp` 0.0556, k 18, D1 171, D2 251, D2 - D1 even (80), string 1.98 s. The aligned pair puts h18 34.1 dB under the single coil re h1; the naive sum puts it 1.4 dB under. The bar is 20 dB aligned and under 20 dB naive; the spike read 34 dB aligned. R0's odd-difference read was 32.2 dB aligned and 3.0 dB unaligned on a synthetic 100.8 Hz comb. The aligned read is also pinned bit for bit against a direct `Strings.pickup` call. Reverting the alignment alone fails only this test (1.4 dB).
+
+**BLEND** (full pickup with resonance, TUNE 0.5, default MUTE and PICK, neck alone against bridge alone). JANGLE swings 18.0 dB, peaking at h5 (h2 to h8: 11.5, 10.3, 9.9, 18.0, 6.2, 17.2, 8.1), the spike's 18 dB at h5; CHUG swings 14.7 dB, peaking at h2 (14.7, 7.8, 10.8, 7.5, 0.7, 4.9, 1.7). The bar is 6 dB. Setting the neck position equal to the bridge's fails only this test (0.0 dB).
+
+**MUTE** (TUNE 0.5). JANGLE: MUTE 0 renders 4.0 s (176 400 samples), MUTE 1 renders 21 388 samples (0.485 s), a length ratio of 0.121, and the centroid falls from 2738 to 920 Hz. CHUG: 4.0 s against 29 106 samples (0.66 s), a ratio of 0.165, and the centroid falls from 1261 to 518 Hz. The bar is a ratio under 0.5 and a falling centroid.
+
+**PICK** (the other macros at their defaults: TUNE 0.5 and each voice's default MUTE and BLEND). The centroid is `FeatureExtractor`'s over the whole rendered note, not the spike's windowed read over 0.05 to 0.3 s, so these are not comparable with the spike's 1459 to 1618 Hz and 719 to 835 Hz. The corner is `expMap(PICK, 600, 16 000)`. **Ten of ten tenths are at least 1 % on both voices; none is under.**
+
+| PICK | corner Hz | JANGLE centroid Hz | change % | CHUG centroid Hz | change % |
+|---|---|---|---|---|---|
+| 0.0 | 600.0 | 1189.7854 | | 530.8605 | |
+| 0.1 | 833.2 | 1333.5963 | 12.09 | 583.4560 | 9.91 |
+| 0.2 | 1157.0 | 1522.9944 | 14.20 | 650.87134 | 11.55 |
+| 0.3 | 1606.7 | 1765.6786 | 15.93 | 737.4728 | 13.31 |
+| 0.4 | 2231.2 | 2047.9021 | 15.98 | 844.7558 | 14.55 |
+| 0.5 | 3098.4 | 2334.7556 | 14.01 | 965.64026 | 14.31 |
+| 0.6 | 4302.6 | 2588.7034 | 10.88 | 1083.1449 | 12.17 |
+| 0.7 | 5974.9 | 2787.3335 | 7.67 | 1179.7838 | 8.92 |
+| 0.8 | 8297.1 | 2926.8381 | 5.00 | 1248.3416 | 5.81 |
+| 0.9 | 11521.9 | 3016.2725 | 3.06 | 1292.0935 | 3.50 |
+| 1.0 | 16000.0 | 3069.5803 | 1.77 | 1318.3434 | 2.03 |
+
+The smallest step is JANGLE's 0.9 to 1.0 at 1.77 %, then CHUG's at 2.03 %. The centroid spans 2.58× on JANGLE and 2.48× on CHUG end to end. The steps shrink toward the top and the cause was not investigated. The clause is measured at the defaults of the other macros only, so it is not a proof for every note, mute and blend; a soft hit (velocity 0.25) re-rendered at PICK is darker than a hard one (velocity 1) on both voices.
+
+**The pitch through the amp** (interpolated `BoreMeasure.cents`, 0.05 to 0.25 s at `Dsp.RATE`, other macros at their defaults). The landing is `Magnet.LANDING_VALVE`; gain 1000 is DRIVE 1, SAG 0, TONE 0.5, CAB 0 on VALVE's current law (the specification's bar was written on V1's law, where DRIVE 1 was gain 35). Cents are against `Magnet.frequencyFor`.
+
+| voice | TUNE | Hz | dry cents | landing cents | landing wet minus dry | gain-1000 cents | gain-1000 wet minus dry |
+|---|---|---|---|---|---|---|---|
+| JANGLE | 0.0 | 82.41 | 0.12 | 0.11 | -0.01 | 0.19 | 0.07 |
+| JANGLE | 0.5 | 164.81 | 0.20 | 0.14 | -0.06 | 0.01 | -0.20 |
+| JANGLE | 1.0 | 329.63 | 0.12 | 0.27 | 0.14 | -0.15 | -0.27 |
+| CHUG | 0.0 | 61.74 | 0.22 | 0.17 | -0.05 | 0.28 | 0.06 |
+| CHUG | 0.5 | 123.47 | 0.21 | 0.31 | 0.10 | 0.40 | 0.19 |
+| CHUG | 1.0 | 246.94 | 0.17 | 0.11 | -0.05 | 0.00 | -0.17 |
+
+The worst wet-minus-dry is **0.14 cents at the landing maps** (asserted, bar 10) and 0.27 cents at gain 1000 (printed only). A landed pad regenerates bit for bit from its recipe through the JSON round trip: JANGLE 131 638 samples, CHUG 87 318.
+
+**DC.** The corner test (all 16 corners of both voices) reads a worst DC of 4.382e-7 and the TUNE-step test (all 25 steps of both voices at the defaults) 8.303e-8, against the bound of 1e-4; the 0.25 s length floor holds at every corner and step. The two `Magnet.finish` tests drive the stage directly. A constant offset of 0.1 leaves 1.99e-8 of the output's peak between 0.4 and 0.6 s (bound 0.01). A 2 Hz drift ends 19.87 dB under the same drift on the un-filtered decimation (bound 15 dB). Mutation checks: deleting the mean subtraction and the high-pass fails both tests (0.256 of peak left; 0.0012 dB of attenuation); deleting the high-pass alone fails only the drift test (0.36 dB), since mean subtraction alone removes a constant offset.
+
+**Cost** (a desktop JVM, not the phone). The dry render reads 11.3, 11.9 and 22.2 ms per rendered second in three runs (4.0 s in 45.0, 47.8 and 88.8 ms; the factor of two is a JIT and load effect on a one-shot timing, which is why nothing asserts on it), and VALVE on it 18.9, 19.8 and 18.8 ms per rendered second. The audition generator's median of three after a warm-up, on a 4 s JANGLE (TUNE 0, MUTE 0, the full budget): the render 47.7 ms (11.9 ms per rendered second) and `Valve.process` on it 72.5 ms (18.1 ms per rendered second), against V1's target of at most 20 ms per rendered mono second. A phone runs two to four times slower on BORE's estimate; the phone timing is audition item 7 and is not measured.
+
+**The kit.** `SynthKits.magnet()` is 16 pads, every pad TONAL, every recipe carrying its `valve` section and regenerating bit for bit: A01 to A08 CHUG at MIDI 35 38 40 42 45 47 50 52 (B1 to E3), A09 to A14 JANGLE at 40 47 52 56 59 64 (E2 to E4), A15 and A16 CHUG at BLEND 0.35 through a hotter chain (DRIVE 0.78, SAG 0.4, TONE 0.5, CAB 0.95) at 54 and 59 (F#3, B3). Pitch is read on the dry patch render, never the landed pad: worst 0.06 cents against the 10-cent bound. `testkit/SnipSnap Magnet Kit/` is 5.1 MiB (BORE's 2.4, FORK's 3.4). A01, A09 and A10 run the full 4.0 s budget, so their tails end at the engine's ceiling fade and not where the decay ended (A02 is 3.475 s).
+
+### The audition generator
+
+`generateMagnetAudition` writes 87 clips and a manifest to `testkit/magnet-audition/` (git-ignored). Every clip is finite and non-silent before and after levelling, and the blind ids and labels carry no voice word (the generator checks).
+
+| Section | Clips | Serves |
+|---|---|---|
+| KIT | 16 | item 1: the kit as it lands |
+| LAND | 6 | CHUG's landing: DRIVE 0.71, 0.78, 0.85 (gain 13, 37, 106) against CAB 0.6, 0.95 |
+| CHUGAB | 10 | item 2: three stabs (each voice as played, and the length-matched MAGNET stab), their bars on the bar line beside a snare, and two blind pairs of bars (as played, and length-matched; positions alternated) |
+| BLIND | 9 | item 3: JANGLE at three notes, landed, at both PICK defaults, and dry |
+| CHUG, JANGLE | 14 each | item 4: default and each of MUTE, PICK and BLEND at both ends, dry and landed |
+| PICKDEF | 8 | each voice at the spec default PICK against the spike-brightness default (0.8 and 0.65, the map's values nearest the spike's corners), dry and landed |
+| PLACE | 4 | item 5: the amp inside the render against the split, at B2 and B3 |
+| AMPPADS | 6 | item 6: a snare and a VOX line, dry and through each voice's landing amp |
+
+The length-matched chug stab. As played, the MAGNET stab rings 1.98 s (87 318 frames) and the saw stab 0.51 s (22 684 frames). The matched stab is CHUG at MUTE 0.85, trimmed to 22 684 frames (0.5144 s), where the generator measured the end level (last 5 ms peak over the peak, before the 40 ms fade): MUTE 0.60 -30.2 dB, 0.65 -32.4, 0.70 -34.6, 0.75 -36.8, 0.80 -39.2 (0.01097, just over the 1 % bar), 0.85 -41.7 (0.00821), 0.90 -44.6, 0.95 -48.1, 1.00 -52.4. The kit default MUTE 0.35 cut at the same length ends at -20.0 dB (0.09980). The match: a gap of 0 frames, `Loudness.of` 0.2531 on both stabs (ratio 1.0000); the generator fails above a gap of 4 frames or a ratio more than 0.5 % off.
+
+### The names, as checked
+
+`PresetTestSupport.trademarkBlocklist` gains decision 6's two alternatives, with a comment citing "The name"; `ThumpPresetsTest`'s near-miss list gains the two near-miss strings of "The name" and its clean list gains JANGLE, CHUG, PALM MUTE and WIRE PICK. A search of `synth/src`, `shell/src` and `app/src` for either term, before the edit, found no shipped name and no other source line that matches, so nothing shipped was renamed. The thirteen per-engine blocklist tests run in `:synth:test`.
+
+### What R1 did not do
+
+- **No presets.** MAGNET has no `Presets` roster; presets are authored by ear after the gate, eight per voice, for each voice that passes.
+- **No phone.** No picker entry, no `Engine` arm in `SynthScreen`, no chip decision, no README engine count: that is R1.1. The section is reachable through `treat` and through landing recipes, as CONTOUR was.
+- **No PICK defaults chosen.** The defaults are the spec's 0.6 (JANGLE) and 0.55 (CHUG), and the audition carries both defaults.
+- **No LEAD preset and no landing value heard.** The LEAD family is CHUG at BLEND 0.35 through a chain written in the kit, and every landing value (the two landing chains, the lead chain, the roots, the resonances, the body corners, the coil spacing, the pick position) is *shape*.
+- No velocity layers through a landed pad (the `fx == null` fallback above), no MAKE INSTRUMENT keygroup (R2), no listening of any kind.
+
+### Open items for the gate
+
+1. **The PICK defaults are 0.94 and 0.48 octave darker than the spike's.** At the spec's 0.6 and 0.55 the exciter corners are 4303 and 3651 Hz; the spike's were 8253 and 5099 Hz. Everything the spike measured at its defaults was measured at a brighter exciter. PICKDEF and BLIND carry the spec's defaults against 0.8 and 0.65, so a dull default cannot fail item 3 unseen.
+2. **The exciter at 0.085 trades the h10 hole for a 22 to 31 dB dip at h12.** At the spike's 0.10 the comb holds h10 31 to 82 dB under its own peak in every cell of both voices; at 0.085 the first notch sits at k = 11.71 to 11.89 and the worst harmonic to h20 is h12, 22 to 31 dB under the comb's peak (no cell deeper than 30.9 dB on JANGLE at TUNE 1 or 27.5 dB on CHUG). These are the comb's magnitude at the exciter's delay, computed per cell, not read from a render. A real pick does the same; the fixed artefact is moved, not removed.
+3. **The comb notches read about 10 dB shallower than the spike's** (41.2 and 43.3 dB against 52 and 54 at position 0.5, 37.2 against 47 at 0.25), cause unisolated. The 20 dB bar is met with margin.
+4. **A voice that fails the gate cannot lose its enum constant after the kit ships.** `MagnetVoice.JANGLE` and `MagnetVoice.CHUG` are named by `SynthKits.magnet()` and by saved patches (`MagnetPatch` decodes by voice name); removing one breaks both. The gate therefore changes R1.1 (a failed voice gets no picker entry) and the presets (no roster), not R1's enum.
+5. **The f0 route differs from the spike's literal Hz** by 0.065 cents (E2) and 0.129 cents (B1); the seed hashes `f0`, so the spike's renders are not reproduced bit for bit.
+6. **The matched chug stab is a tighter palm mute (MUTE 0.85) than the kit default (0.35)**, and it is cut 41.7 dB under its peak and then faded over 40 ms, where the saw stab has decayed fully. If the owner cannot tell `bar_xm_*` apart, that supports the string engine being redundant for a short chug; if they can, the cue is timbre at a more muted setting than the default, not duration or a cut. The as-played pair (`bar_x_*`) carries a duration cue of about 4 to 1 and answers nothing about timbre.
+7. **Several blind clips are byte-identical to labelled ones** (BLIND `clip_1` to `clip_3` equal KIT A09, A11 and A14; the `bar_x_*` and `bar_xm_*` bars equal the labelled bars). The page plays BLIND and the blind bars before any labelled section and hides ids and file names.
+8. **The landing, lead and shape values** (CHUG's DRIVE 0.71 at gain 13.2 and CAB 0.95, JANGLE's chain, the lead chain's four values, the pickup resonances, the roots) are re-derived by ear; the lead chain's four values are a literal in `SynthKitTest` because `LEAD_VALVE` is private in `SynthKits.kt`, so changing it is a one-line test change.
+9. **The kit's three full-length tails** (A01, A09, A10) end at the ceiling fade.
+10. **The phone cost** (audition item 7) is not measured; the JVM numbers are above.
+
+**Pass rule, unchanged.** Items 2 and 3 must pass. Item 2 tests CHUG and item 3 tests JANGLE, so each voice has one must-pass item. Presets are authored by ear after the gate for each voice that passes; a voice that fails gets no roster and no picker entry.
+
+### Verification
+
+`./gradlew --no-daemon :synth:test :shell:test :cli:test`, after `./gradlew --no-daemon :shell:cleanTest :cli:cleanTest`: `:shell:test` and `:cli:test` report up to date after a change confined to `:synth`'s sources, because they do not declare those test sources as inputs, so the four source-scanning laws in `:shell` (`Locale.ROOT` on `format`, stranded KDoc, a literal 44 100 in main source, the comment-terminator sequence) run only if forced. Counts at the last task: synth 1 126, shell 910, cli 97, none failing or skipped.
