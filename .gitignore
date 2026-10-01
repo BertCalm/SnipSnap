@@ -76,6 +76,10 @@ testkit/stringmachine-audition/
 # and published as the listening artifact; never committed.
 testkit/bore-audition/
 
+# The ARCO audition clips, manifest and page, rendered by :synth:generateArcoAudition
+# and published as the listening artifact; never committed.
+testkit/arco-audition/
+
 # The SILK Phase 4 audition clips and page, rendered by :synth:generateSilkAudition
 # and published as the listening artifact; never committed.
 testkit/silk-audition/
