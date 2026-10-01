@@ -1731,3 +1731,17 @@ Record in the report: the median held render times at each DEPTH (a DEPTH above 
 The clips are `testkit/glint-depth-audition/*.wav` from Task 7 (regenerate with `./gradlew :synth:generateGlintDepthAudition` if the tree has changed since). The owner listens to the real engine at DEPTH 0, 0.25, 0.5, 0.75 and 0.9 on a SWEEP and a VOWEL pad and says whether it sounds like the round 2 probe clips he approved. Nothing is pushed, no PR is opened and nothing is merged until he has answered; then the controller asks before pushing `claude/glint-depth-macro`.
 
 If he hears a voice sitting wrong, the cheapest fix is a per-voice constant on `GlintPath.sineGain` (spec §9). That would be a new task, reviewed like the others.
+
+---
+
+## As built
+
+What differs from the plan above, in the order the tasks ran (the run's ledger is deleted with its workspace; git history and this section are the record). All commits are on `claude/glint-depth-macro`.
+
+- **Task 1** (b44d41de) and **Task 2** (f052b3a4): as planned.
+- **Task 3** (b0f23c83, bf157790): as planned, plus a fix round. The `sineGain` KDoc said the gain was "within about a dB elsewhere" as if measured; it now says right at rest, an approximation elsewhere, the spec expecting about a dB, measured only at the SWEEP and VOWEL probe setups (BLOOM 0.85). A reviewer's static model (inferred, not measured on the engine) put the burst RMS along a path as much as +5.7 dB and -6.4 dB off the resting value at low PEAK with high BODY.
+- **Task 4** (eaa07bab, eee31bfc): a first commit strengthened Task 1's reference before the engine moved: every corner also runs with an explicit `DEPTH 0f`, a DEPTH-less JSON patch is loaded through `Patches.fromJsonText`, and LegacyGlint's KDoc says what it shares with production. Then the plan's Task 4.
+- **Task 5** (6c849aac, c6672d7f): a first commit widened the held side of the reference (BLOOM 0.15, BODY 0, the all-zeros and all-ones corners, each also with an explicit `DEPTH 0f`) and corrected one KDoc; then the plan's Task 5. A zero-BODY map does not catch a skipped zero term (the held loop makes no `-0f` sample), and no test pins the `sineWeight != 0f` gate in either loop: code review holds it.
+- **Task 6** (e5d5421e): two measured findings made the plan's Task 6 wrong as written. The wrap test could not see a one-sample spike, so it now leaves the step into each cycle's last sample out of the inner maximum, and the plan's own table-end mutation makes it fail (VOWEL 9.28, 15.36 and 14.10 against the bar of 1.05; unmutated worst 1.0002 at STEP, DEPTH 1). The level guard's 5 dB bar failed at 5.54 dB (STEP, DECAY 0, DEPTH 1), so the bar is 6 dB, with the engine's measured table and the cause in the test's KDoc and in the spec (sections 2.4, 4.6, 4.7 and 9). The tiny-DEPTH bound went from 1e-4 to 1e-6 (measured worst 1.1e-11).
+- **Task 7** (92fa62bb): as planned, plus three comment fixes (the sine comes in above DEPTH 0.5, not from it).
+- **Task 8:** nothing committed. `./gradlew --no-daemon test`: exit 0, 364 suites, 3556 tests, 0 failures, 0 errors, 0 skipped; `:app:compileDebugKotlin` with `ANDROID_HOME` set: exit 0. Measured once on a loaded machine (warm-up, median of three): a SWEEP held render takes 59, 58, 66 and 65 ms at DEPTH 0, 0.5, 0.75 and 1; the held loop's DC (|mean| over peak, VOWEL at the top of TUNE) is 0.108, 0.055 and 0 at DEPTH 0, 0.5 and 1.
