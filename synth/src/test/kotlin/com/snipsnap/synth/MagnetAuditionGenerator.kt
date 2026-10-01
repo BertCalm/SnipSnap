@@ -24,13 +24,13 @@ import kotlin.math.roundToInt
  *   it is, the one number a DRIVE means on VALVE's law.
  * - CHUGAB: a CHUG stab through its landing chain against a VELVET saw stab through the same
  *   VALVE map, the two stabs matched to each other by [Loudness.of], bare and as two bars with a
- *   snare, then the two bars again as a blind pair in swapped order. As played the CHUG stab rings
- *   about four times longer, so duration alone tells them apart; the section therefore repeats the
- *   comparison with a palm-muted CHUG stab: MUTE is the lowest step from 0.60 to 1.00 at which the
- *   dry render, trimmed to the saw stab's length, has ended by itself (its last 5 ms peak is at most
- *   1 percent of its peak), then a 40 ms fade, the amp, and the saw stab's loudness. The stab, the
- *   bar and a second blind pair come in the opposite order (the saw bar first in one pair, the CHUG
- *   bar first in the other).
+ *   snare. As played the CHUG stab rings about four times longer, so duration alone tells them
+ *   apart; the section therefore repeats the comparison with a palm-muted CHUG stab: the dry render
+ *   is trimmed to the saw stab's length, run through the amp, and MUTE is the lowest step from 0.60
+ *   to 1.00 whose amped end level is at most 3 percent of its peak (the amp lifts a quiet tail, so
+ *   the end level is measured after it); a 100 ms release follows the amp, then the saw stab's
+ *   loudness. The matched stab, its bar, and two blind pairs of bars under neutral ids, the
+ *   matched pair first, the saw bar in the opposite position in each pair.
  * - BLIND: JANGLE at three notes and two PICK defaults as landed, and three notes dry, with no
  *   word in a label that names the sound; the manifest's truth field carries the key.
  * - CHUG and JANGLE: each voice's default and both ends of MUTE, PICK and BLEND, dry and landed.
@@ -49,7 +49,7 @@ import kotlin.math.roundToInt
  */
 object MagnetAuditionGenerator {
 
-    /** Clips per section, in the order they are written; the sum is the final count. */
+    /** Clips per section; the sum is the final count. */
     private val SECTION_COUNTS = linkedMapOf(
         "KIT" to 16, "LAND" to 6, "CHUGAB" to 10, "BLIND" to 9, "CHUG" to 14, "JANGLE" to 14,
         "PICKDEF" to 8, "PLACE" to 4, "AMPPADS" to 6,
@@ -58,10 +58,16 @@ object MagnetAuditionGenerator {
     /** A levelled file is silent below this peak: the audition level puts every real clip far above it. */
     private const val SILENT_PEAK = 0.01f
 
-    /** A matched stab must have ended by itself: its last 5 ms peak is at most this share of its peak (about -40 dB). */
-    private const val END_LEVEL = 0.01f
+    /** The amped matched stab should end by itself: its last 5 ms peak, before the release, is at most this share of its peak (about -30 dB). */
+    private const val END_LEVEL = 0.03f
 
-    /** Words that name a voice or an engine; none may appear in a blind clip's id or label. */
+    /** The release applied to the matched stab after the amp, in milliseconds. */
+    private const val RELEASE_MS = 100f
+
+    /** Sections whose name states the question, not which clip is which: CHUG in CHUGAB is allowed in a blind row's section and directory. */
+    private val QUESTION_SECTIONS = setOf("CHUGAB")
+
+    /** Words that name a voice or an engine; none may appear in a blind clip's section, id, file name or label. */
     private val VOICE_WORDS = listOf("JANGLE", "CHUG", "GUITAR", "HARP", "SYNTH", "STRING", "MAGNET", "VELVET", "SAW", "BRASS", "VALVE", "AMP", "PICK", "MUTE", "BLEND")
     private val NOTE_NAME = Regex("""\b[A-G]#?[0-9]\b""")
 
@@ -76,6 +82,9 @@ object MagnetAuditionGenerator {
         End("blend_0", "BLEND", 0f, "the neck pickup alone, round"),
         End("blend_1", "BLEND", 1f, "the bridge pickup alone, thin and twangy"),
     )
+
+    /** One MUTE candidate for the matched stab: its dry render, the amped cut and the amped cut's end level. */
+    private class Muted(val mute: Float, val dry: Snip, val wet: Snip, val end: Float)
 
     private class Row(val path: String, val peak: Float, val frames: Int, val seconds: Float)
 
@@ -101,6 +110,9 @@ object MagnetAuditionGenerator {
 
     private fun f5(v: Float) = String.format(Locale.ROOT, "%.5f", v)
 
+    /** How far under its peak a level is, as a positive number of dB with one decimal. */
+    private fun dbUnder(ratio: Float) = String.format(Locale.ROOT, "%.1f", -20.0 * log10(ratio.toDouble()))
+
     private fun dbOf(ratio: Float) = if (ratio > 0f) String.format(Locale.ROOT, "%.1f", 20.0 * log10(ratio.toDouble())) else "-inf"
 
     @JvmStatic
@@ -119,9 +131,10 @@ object MagnetAuditionGenerator {
                 "manifest field needs escaping: $section / $id / $label / $truth"
             }
             if (section == "BLIND" || truth.isNotEmpty()) {
-                val named = (VOICE_WORDS.filter { w -> w in label.uppercase() || w in id.uppercase() }) +
-                    listOfNotNull(NOTE_NAME.find(label.uppercase())?.value)
-                check(named.isEmpty()) { "blind clip $id names the sound in its id or label: $named" }
+                val shown = listOf(label, id, file.substringAfter('/'))
+                val named = VOICE_WORDS.filter { w -> (shown + (if (section in QUESTION_SECTIONS) "" else section)).any { w in it.uppercase() } } +
+                    shown.mapNotNull { NOTE_NAME.find(it.uppercase())?.value }
+                check(named.isEmpty()) { "blind clip $file names the sound in its section, id, file or label: $named" }
             }
             val mono = Cleanup.toMono(snip)
             check(mono.samples.all { it.isFinite() } && mono.peak() > 0f) { "$file cannot be rendered finite and non-silent" }
@@ -179,58 +192,69 @@ object MagnetAuditionGenerator {
         write("CHUGAB", "stab_velvet", "VELVET SAW STAB ($stabNote) THROUGH THE SAME AMP, AS PLAYED, MATCHED TO THE MAGNET STAB IN LOUDNESS", velvetStab)
         write("CHUGAB", "bar_magnet", "MAGNET BAR, AS PLAYED (THE STAB RINGS LONGER): $barWords", barMagnet)
         write("CHUGAB", "bar_velvet", "VELVET BAR, AS PLAYED: $barWords", barVelvet)
-        write("CHUGAB", "bar_x_a", "BAR X A, AS PLAYED: $barWords", barVelvet, truth = "VELVET saw stab through the same amp; B is MAGNET")
-        write("CHUGAB", "bar_x_b", "BAR X B, AS PLAYED: $barWords", barMagnet, truth = "MAGNET CHUG stab through its landing amp; A is VELVET")
 
-        // CHUGAB, length-matched: a chug is a palm-muted note, so the stab's shortness comes from the engine's own MUTE, not from a
-        // cut. MUTE is the lowest step from 0.60 to 1.00 whose dry render, trimmed to the dry saw stab's length, has ended by itself
-        // (its last 5 ms peak at most END_LEVEL of its peak). The trimmed render then gets a 40 ms fade, goes through the amp and is
-        // scaled to the saw stab's loudness (the saw stab is the reference).
+        // CHUGAB, length-matched: a chug is a palm-muted note, so the stab's shortness comes from the engine's own MUTE. The dry
+        // render is trimmed to the dry saw stab's length (no fade) and run through the amp, and the end level is measured on that
+        // amped buffer: the amp's gain lifts a quiet tail, so the dry render's end level says nothing about what is heard. MUTE is
+        // the lowest step from 0.60 to 1.00 whose amped end level is at most END_LEVEL (MUTE 1.00 and a stated residual if none
+        // is). The release is applied after the amp, then the stab is scaled to the saw stab's loudness as heard.
         val cutFrames = velvetDry.frameCount
         val endFrames = (0.005f * chugDry.sampleRate).toInt()
+        val releaseFrames = (RELEASE_MS / 1000f * chugDry.sampleRate).toInt()
+        fun peakIn(buf: FloatArray, from: Int, to: Int): Float {
+            var peak = 0f
+            for (k in from until to) peak = maxOf(peak, abs(buf[k]))
+            return peak
+        }
         fun endLevel(buf: FloatArray): Float {
-            val peak = buf.maxOf { abs(it) }
-            var end = 0f
-            for (i in maxOf(0, buf.size - endFrames) until buf.size) end = maxOf(end, abs(buf[i]))
-            return if (peak > 0f) end / peak else 0f
+            val peak = peakIn(buf, 0, buf.size)
+            return if (peak > 0f) peakIn(buf, buf.size - endFrames, buf.size) / peak else 0f
         }
-        fun mutedChug(mute: Float) = Magnet.render(MagnetVoice.CHUG, Magnet.defaults(MagnetVoice.CHUG) + mapOf("TUNE" to 0.5f, "MUTE" to mute))
-        val reference = mutedChug(Magnet.defaults(MagnetVoice.CHUG).getValue("MUTE"))
-        println("chugab matched mute: reference MUTE ${Magnet.defaults(MagnetVoice.CHUG).getValue("MUTE")}: natural ${reference.frameCount} frames, end level ${f5(endLevel(reference.samples.copyOf(cutFrames)))} (${dbOf(endLevel(reference.samples.copyOf(cutFrames)))} dB)")
-        val candidates = (12..20).map { step ->
-            val mute = step / 20f
-            val dry = mutedChug(mute)
-            val level = endLevel(dry.samples.copyOf(cutFrames))
-            println("chugab matched mute: candidate MUTE $mute: natural ${dry.frameCount} frames (${f4(dry.durationSeconds)} s), end level ${f5(level)} (${dbOf(level)} dB)")
-            Triple(mute, dry, level)
+        fun muted(mute: Float): Muted {
+            val dry = Magnet.render(MagnetVoice.CHUG, Magnet.defaults(MagnetVoice.CHUG) + mapOf("TUNE" to 0.5f, "MUTE" to mute))
+            check(dry.frameCount >= cutFrames) { "the CHUG render at MUTE $mute is ${dry.frameCount} frames, shorter than the saw stab's $cutFrames" }
+            val wet = Valve.process(Snip(dry.samples.copyOf(cutFrames), dry.channels, dry.sampleRate), chugAmp)
+            return Muted(mute, dry, wet, endLevel(wet.samples))
         }
-        val unmet = candidates.none { it.third <= END_LEVEL }
-        if (unmet) println("chugab matched mute: WARNING no MUTE up to 1.0 ends within $END_LEVEL of its peak by the saw stab's length; using MUTE 1.0")
-        val (mute, mutedDry, matchedEnd) = candidates.firstOrNull { it.third <= END_LEVEL } ?: candidates.last()
-        println(
-            "chugab matched mute: chosen MUTE $mute, natural length ${mutedDry.frameCount} frames (${f4(mutedDry.durationSeconds)} s), " +
-                "end-level ratio ${f5(matchedEnd)} (${dbOf(matchedEnd)} dB; last 5 ms peak over peak of the trimmed render, before the fade)",
+        fun logMuted(label: String, m: Muted) = println(
+            "chugab matched mute: $label MUTE ${m.mute}: dry natural ${m.dry.frameCount} frames (${f4(m.dry.durationSeconds)} s), " +
+                "amped end level ${f5(m.end)} (${dbOf(m.end)} dB re peak, last 5 ms of the amped cut, before any release)",
         )
-        check(matchedEnd <= END_LEVEL || mute == 1f) { "MUTE $mute leaves the cut stab at ${f5(matchedEnd)} of its peak, above $END_LEVEL" }
-        check(mutedDry.frameCount >= cutFrames) { "the CHUG render at MUTE $mute is shorter than the saw stab, so there is nothing to cut" }
-        val cutDry = mutedDry.samples.copyOf(cutFrames).also { Dsp.fadeTail(it, ms = 40f, rate = mutedDry.sampleRate) }
-        val cutWet = Valve.process(Snip(cutDry, mutedDry.channels, mutedDry.sampleRate), chugAmp)
-        val matchedStab = scaled(cutWet, Loudness.of(velvetStab) / Loudness.of(cutWet))
+        logMuted("reference (the kit default)", muted(Magnet.defaults(MagnetVoice.CHUG).getValue("MUTE")))
+        val candidates = (12..20).map { step -> muted(step / 20f).also { logMuted("candidate", it) } }
+        val chosen = candidates.firstOrNull { it.end <= END_LEVEL } ?: candidates.last()
+        if (chosen.end > END_LEVEL) {
+            println("chugab matched mute: WARNING no MUTE up to 1.0 leaves the amped stab within $END_LEVEL (${dbOf(END_LEVEL)} dB) of its peak at the cut; using MUTE 1.0, whose residual is ${dbOf(chosen.end)} dB re peak")
+        }
+        logMuted("chosen", chosen)
+        val releaseStart = chosen.wet.frameCount - releaseFrames
+        val startLevel = peakIn(chosen.wet.samples, releaseStart - endFrames, releaseStart) / chosen.wet.peak()
+        println(
+            "chugab matched mute: the ${RELEASE_MS.roundToInt()} ms release begins at ${dbOf(startLevel)} dB re peak " +
+                "(the last 5 ms before it); the amped end level above is the last 5 ms of the buffer, where the release is already near zero",
+        )
+        val released = Snip(chosen.wet.samples.copyOf().also { Dsp.fadeTail(it, ms = RELEASE_MS, rate = chosen.wet.sampleRate) }, chosen.wet.channels, chosen.wet.sampleRate)
+        val matchedStab = scaled(released, Loudness.of(velvetStab) / Loudness.of(released))
         val barMatched = bar(matchedStab)
         val lengthGap = matchedStab.frameCount - velvetStab.frameCount
-        val loudnessRatio = Loudness.of(matchedStab) / Loudness.of(velvetStab)
         println(
             "chugab matched: stab ${matchedStab.frameCount} frames (${f4(matchedStab.durationSeconds)} s) against the saw stab's ${velvetStab.frameCount} " +
                 "(${f4(velvetStab.durationSeconds)} s), a gap of $lengthGap frames; Loudness.of matched ${f4(Loudness.of(matchedStab))}, " +
-                "saw ${f4(Loudness.of(velvetStab))}, ratio ${f4(loudnessRatio)}",
+                "saw ${f4(Loudness.of(velvetStab))}, ratio ${f4(Loudness.of(matchedStab) / Loudness.of(velvetStab))}",
         )
         check(abs(lengthGap) <= 4) { "the matched stab is $lengthGap frames from the saw stab's length" }
-        check(abs(loudnessRatio - 1f) <= 0.005f) { "the matched stab's loudness is ${f4(loudnessRatio)} of the saw stab's, outside 0.5 percent" }
-        val matchedWords = "PALM-MUTED (MUTE $mute) AND CUT TO THE SAW STAB'S LENGTH"
-        write("CHUGAB", "stab_magnet_matched", "MAGNET CHUG STAB ($stabNote), $matchedWords, THROUGH ITS LANDING AMP, MATCHED TO THE SAW STAB IN LOUDNESS", matchedStab)
+        val residual = "STARTING ${dbUnder(startLevel)} DB UNDER ITS PEAK, ENDS ${dbUnder(chosen.end)} DB UNDER ITS PEAK BEFORE THE RELEASE"
+        val matchedWords = "PALM-MUTED (MUTE ${chosen.mute}), CUT TO THE SAW STAB'S LENGTH, ${RELEASE_MS.roundToInt()} MS RELEASE $residual"
+        val matchedTruth = "MAGNET (palm-muted, MUTE ${chosen.mute}, ${RELEASE_MS.roundToInt()} ms release starting ${dbUnder(startLevel)} dB under its peak, ends ${dbUnder(chosen.end)} dB under its peak before the release)"
+        write("CHUGAB", "stab_magnet_matched", "MAGNET CHUG STAB ($stabNote) THROUGH ITS LANDING AMP, $matchedWords, MATCHED TO THE SAW STAB IN LOUDNESS", matchedStab)
         write("CHUGAB", "bar_magnet_matched", "MAGNET BAR, THE STAB $matchedWords: $barWords", barMatched)
-        write("CHUGAB", "bar_xm_a", "BAR XM A, BOTH STABS THE SAME LENGTH: $barWords", barMatched, truth = "MAGNET (palm-muted, MUTE $mute, length-matched); B is VELVET")
-        write("CHUGAB", "bar_xm_b", "BAR XM B, BOTH STABS THE SAME LENGTH: $barWords", barVelvet, truth = "VELVET; A is MAGNET (palm-muted, MUTE $mute, length-matched)")
+
+        // The blind pairs, under neutral ids and file names: the matched pair first (it is the evidence for the gate's item 2), then
+        // the as-played pair. The same saw bar is in both; the positions alternate between the pairs.
+        write("CHUGAB", "blind_1", "BAR XM A, BOTH STABS THE SAME LENGTH: $barWords", barMatched, truth = "$matchedTruth; B is VELVET")
+        write("CHUGAB", "blind_2", "BAR XM B, BOTH STABS THE SAME LENGTH: $barWords", barVelvet, truth = "VELVET; A is $matchedTruth")
+        write("CHUGAB", "blind_3", "BAR X A, AS PLAYED: $barWords", barVelvet, truth = "VELVET saw stab through the same amp; B is MAGNET")
+        write("CHUGAB", "blind_4", "BAR X B, AS PLAYED: $barWords", barMagnet, truth = "MAGNET CHUG stab through its landing amp; A is VELVET")
 
         // BLIND: JANGLE as landed at the specified PICK default and at the spike's brighter one, then the specified default dry.
         val blindTunes = listOf(0f, 0.5f, 1f)
@@ -238,11 +262,11 @@ object MagnetAuditionGenerator {
         for ((pick, key) in listOf(0.6f to "spec default PICK 0.6", 0.80f to "bright default PICK 0.80")) {
             for (tune in blindTunes) {
                 n++
-                write("BLIND", "clip_$n", "CLIP $n", landed(MagnetVoice.JANGLE, mapOf("TUNE" to tune, "PICK" to pick)), truth = "JANGLE ${noteOf(MagnetVoice.JANGLE, tune)} $key")
+                write("BLIND", "blind_a$n", "CLIP $n", landed(MagnetVoice.JANGLE, mapOf("TUNE" to tune, "PICK" to pick)), truth = "JANGLE ${noteOf(MagnetVoice.JANGLE, tune)} $key")
             }
         }
         for ((i, tune) in blindTunes.withIndex()) {
-            write("BLIND", "dry_${i + 1}", "CLIP ${n + i + 1}", Magnet.render(MagnetVoice.JANGLE, mapOf("TUNE" to tune, "PICK" to 0.6f)), truth = "JANGLE ${noteOf(MagnetVoice.JANGLE, tune)} spec default PICK 0.6 dry")
+            write("BLIND", "blind_a${n + i + 1}", "CLIP ${n + i + 1}", Magnet.render(MagnetVoice.JANGLE, mapOf("TUNE" to tune, "PICK" to 0.6f)), truth = "JANGLE ${noteOf(MagnetVoice.JANGLE, tune)} spec default PICK 0.6 dry")
         }
 
         // CHUG and JANGLE: the default, then each macro's two ends with the rest at the defaults; dry, then landed.

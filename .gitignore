@@ -83,6 +83,6 @@ testkit/silk-audition/
 # and published as the listening artifact; never committed.
 testkit/valve-audition/
 
-# The MAGNET audition clips, manifest and page, rendered by :synth:generateMagnetAudition
+# The MAGNET audition clips and manifest, rendered by :synth:generateMagnetAudition
 # and published as the listening artifact; never committed.
 testkit/magnet-audition/
