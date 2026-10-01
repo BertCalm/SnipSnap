@@ -40,11 +40,12 @@ import kotlin.random.Random
  * growl and no period doubling), the two polarisations, bow reversal, and any noise: a bow
  * needs none, and the render is a pure function of the macros.
  *
- * **What every constant below was measured against.** R1b drew the knobs on the built bow: slips
- * per period (falling crossings of half the bow velocity, read on the string velocity under
- * the bow), autocorrelation pitch, onset and ring-down, at the raw 176.4 kHz rate, and then
- * the same on the finished render. Nothing here was *listened to* - the audition gate decides
- * whether it is a bow - and every value marked "listening" is a first guess for it.
+ * **What every constant below was measured against.** R1b drew the knobs on the built bow, at the
+ * raw 176.4 kHz rate and then again on the finished render: how long the string takes to lock into
+ * one slip a period (read on the string's velocity under the bow, as the gaps between slips), the
+ * autocorrelation pitch, the onset and the ring-down, at every TUNE step of both voices. Nothing here
+ * was *listened to* - the audition gate decides whether it is a bow - and every value marked
+ * "listening" is a first guess for it.
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
@@ -66,8 +67,9 @@ object Arco {
     /**
      * ERHU's TUNE travel: 19 semitones, D4 to A5 (880 Hz), not the two octaves the other voices
      * have. The design asked for 24 and named this as the fallback if the speaks test failed at the top:
-     * at D6 (1174.66 Hz) the bow has no cell that slips once a period at any pressure the grip can
-     * reach, and B5 (987.77 Hz, 21 semitones) is the last step that does. Two semitones of margin.
+     * R1b's first maps on the bare bow found no cell at D6 (1174.66 Hz) that slips once a period at any
+     * pressure the grip can reach, and B5 (987.77 Hz, 21 semitones) the last step that does; ERHU stops two
+     * semitones short of that edge, at A5.
      */
     const val ERHU_TUNE_SEMITONES = 19
 
@@ -123,10 +125,11 @@ object Arco {
      * Where the bow sits, as a fraction of the string from the bridge: STK's 0.127 is 0.133 once the
      * string's own length is counted geometrically. Bridge-ward of the middle, where a bow lives,
      * and low enough that the bow's reflection table, at the pressures [gripFor] reaches,
-     * speaks once a period. It is also the position's floor for a high note: the bridge segment must
-     * be at least the filter's delay and two and a half samples long ([Strings.tune]'s own guard),
-     * which at 1500 Hz and 880 Hz is 0.104 of the period - so 0.133 builds across ERHU's whole
-     * range and 1000 Hz would be refused at its top.
+     * speaks once a period. It is also bounded below for a high note: the bridge segment must be at
+     * least the filter's delay and two and a half samples long ([Strings.tune]'s own guard), so the
+     * position's floor is (2.5 + the delay in samples) over the period - 0.119 at D6 with a 1500 Hz
+     * corner, 0.151 with 1000 Hz (R1a measured it). 0.133 builds across ERHU's whole range at the corner
+     * floor [gripFor] gives it, and a 1000 Hz corner would be refused near the top.
      */
     const val BETA = 0.133f
 
@@ -145,10 +148,14 @@ object Arco {
      * The record's window was one pressure island at CELLO's C3, with the corner at STK's full 3023.6 Hz.
      * On the built bow that is not one slip at CELLO's own root: at C2 and the full corner the string
      * slips three times a period at pressures 0.5-0.7, once at 0.8, twice at 0.9-1.0 (R1a). So the
-     * window was drawn per voice, along the path GRIP actually travels, at every TUNE step, and the
-     * numbers below are the path that stayed one slip at every cell of the grid (eleven GRIP points
-     * at each of nine CELLO steps, eleven at each of eight ERHU steps) - see [CELLO_CORNER_RISE_SEMITONES]
-     * and [ERHU_CORNER_RISE_SEMITONES] for what each voice's corner does.
+     * window was drawn per voice, along the path GRIP actually travels, and drawn at *every* TUNE step:
+     * a first window checked every third semitone had holes at C#2 to D#2, pockets of two and three slips in
+     * the middle of the pressure range that sit at a pressure which climbs as the note falls. And a cell
+     * counts when the string *locks* into one slip a period for good, not when it starts there: a low string
+     * begins in a multi-slip scratch (C2 takes 0.5 to 0.9 s to lock, G#2 and up under 0.75 s, ERHU under 0.4 s).
+     * The numbers below are the path that locks at every one of the 25 CELLO and 20 ERHU steps, GRIP in tenths:
+     * 0 of 495 cells fail, the slowest lock is 0.87 s (CELLO) and 0.36 s (ERHU), the pitch stays within 4.0 cents
+     * of the note. See [CELLO_CORNER_RISE_SEMITONES] and [ERHU_CORNER_RISE_SEMITONES] for what each voice's corner does.
      */
     internal class Grip(val pressureLow: Float, val pressureHigh: Float, val cornerLow: Float, val cornerHigh: Float)
 
@@ -177,7 +184,8 @@ object Arco {
      * CELLO's corner at GRIP 0: 1000 Hz, a dark, close-held string. The low strings need a lower
      * corner than the full 3023.6 Hz to lock quickly - the bridge's loss per period at f0 is what the
      * friction has to beat, and at 65 Hz the one-pole's loss per period is a third of what it is at 131 Hz,
-     * so a corner that gives C3 its single slip is far too bright for C2 (it locks, but after 1.3 s, against 0.55 s at 1000 Hz).
+     * so a corner that gives C3 its single slip is far too bright for C2 (it locks, but after 1.3 s at the full
+     * corner, against 0.55 s at 1000 Hz, both at a pressure of 1.0).
      */
     const val CELLO_CORNER_LOW_HZ = 1000f
 
@@ -191,9 +199,9 @@ object Arco {
     /**
      * ERHU's corner at GRIP 0 is 1500 Hz at its root and rises to the full corner by
      * [ERHU_CORNER_RISE_SEMITONES] semitones up; GRIP 1 is the full corner everywhere. The floor rises because a
-     * high string cannot be given a dark corner: below about 1750 Hz at C#5 and 2250 Hz at G#5 the string
-     * will not sustain at all (it falls silent or slips twice), and 1000 Hz cannot even be built there (see [BETA]).
-     * The rising floor stays above that line at every step.
+     * high string cannot be given a dark corner: from D5 a 1500 Hz corner never locks at any pressure, from F5
+     * 1750 Hz does not, and at A5 neither does 2250 Hz (the string falls silent or slips twice), and 1000 Hz
+     * cannot even be built there (see [BETA]). The rising floor stays above that line at every step.
      */
     const val ERHU_CORNER_LOW_ROOT_HZ = 1500f
     const val ERHU_CORNER_RISE_SEMITONES = 21
@@ -309,8 +317,8 @@ object Arco {
 
     /**
      * A player's finger rocks on the string: +-[VIBRATO_MAX_CENTS] cents at [VIBRATO_HZ] (STK's own
-     * default), starting after the string has built up ([VIBRATO_DELAY_SECONDS], a CELLO's C2 takes
-     * 0.35 s) and rising in over [VIBRATO_RISE_SECONDS]. Scaled by how long the note lasts: none at a
+     * default), starting after the string has begun to speak ([VIBRATO_DELAY_SECONDS]; C2 reaches 90 percent of its level at about
+     * half a second) and rising in over [VIBRATO_RISE_SECONDS]. Scaled by how long the note lasts: none at a
      * hold of [VIBRATO_HOLD_FROM_SECONDS] or less (a vibrato on a scratch is a wobble), full from
      * [VIBRATO_HOLD_FULL_SECONDS]. Off in a LOOP, which cannot carry a signal that does not repeat.
      * [Strings.Bow.retune] moves both halves of the string together (there is no nut-only retune), so
@@ -361,8 +369,9 @@ object Arco {
      * The string through the box at the oversampled [rate], and *no longer than the string*: [Strings.bodyRing]
      * follows the box's ring out past the string's end, which would make BODY change how long a note is
      * (the default CELLO would render 1.585 s and be filed a LOOP) - so the ring is cut where the stopped
-     * string ends, and the 4 ms fade at the end of the render finishes it. The ring is silent by then:
-     * the stop has taken the string, and with it the drive, to nothing. BODY 0 is the string itself.
+     * string ends, and the 4 ms fade at the end of the render finishes it. What the cut takes is the box's
+     * own tail, a few hundred milliseconds of a ring the stop has already faded to near nothing (the stop
+     * takes the drive to nothing over at least 150 ms). BODY 0 is the string itself.
      */
     internal fun withBody(raw: FloatArray, voice: ArcoVoice, amount: Float, rate: Int): FloatArray {
         val rung = Strings.bodyRing(raw, bodyFor(voice), amount, rate, BODY_CEILING_SECONDS)
@@ -554,12 +563,16 @@ object Arco {
 
     // ---- the LOOP -------------------------------------------------------------
 
-    /** A LOOP holds at least this long, in whole periods, so it is over the classifier's line with room. */
-    const val LOOP_SECONDS = 2f
+    /** A LOOP holds at least this long, in whole periods, so it is over the classifier's line with room: BORE's number, which is the plan this file reuses. */
+    const val LOOP_SECONDS = Bore.LOOP_SECONDS
 
     /**
      * The steady state is reached and settled this long before a LOOP is cut: at least this many seconds and at least
-     * [LOOP_WARMUP_PERIODS] periods. A bow builds in a number of periods (21-27 to 90 percent at C2), not of seconds.
+     * [LOOP_WARMUP_PERIODS] periods. A bow builds in a number of periods, not of seconds, and a string that locks late
+     * (a bright corner on a low note: 1.3 s at C2) is still settling after it has locked. With 1.0 s and 100 periods ten
+     * loops were over the seam bar, up to 2e-2 (GRIP 1 at C#2 to B2); with 2.0 s and 200 periods all 225 loops
+     * measured (every TUNE step of both voices at the default and four other corners) close, the worst at 2.5e-4
+     * against the bar of 1e-3.
      */
     const val LOOP_WARMUP_SECONDS = 2.0f
     const val LOOP_WARMUP_PERIODS = 200
@@ -584,6 +597,11 @@ object Arco {
     /** The frames [Keys.seamError] looks at before the loop start: its own window. */
     private const val SEAM_FRAMES = 256
 
+    /**
+     * [Bore]'s plan, which has no voice in it: whole periods of the note, at least [LOOP_SECONDS] long, in whole frames.
+     * ARCO reuses it, and [Bore.measureLoopSamples] below, rather than carrying a second copy: one quantity computed in two
+     * places is the house defect.
+     */
     internal fun planLoop(hz: Float): Bore.LoopPlan = Bore.planLoop(hz)
 
     /** The steady stretch: a short stroke, then constant velocity and pressure to the end. No bite, no vibrato, no stop. */
