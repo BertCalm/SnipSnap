@@ -162,7 +162,13 @@ class MagnetTest {
     }
 
     private companion object {
-        /** The worst corner's mean read 4.38e-7 after the 20 Hz high-pass (all 32 corners); the bound is that plus 20 percent, rounded up. */
-        const val DC_BOUND = 5.3e-7
+        /**
+         * The worst corner's mean reads 4.4e-7 (all 32 corners): the output chain subtracts the
+         * mean outright, so what is left is float residue, and a bound at that scale would trip on
+         * a different platform's math intrinsics. 1e-4 (about -80 dBFS) is what the test guards: the
+         * DC stage removed, the mean the specification's transcribed engine left (0.016) reads 100
+         * times over it.
+         */
+        const val DC_BOUND = 1e-4
     }
 }
