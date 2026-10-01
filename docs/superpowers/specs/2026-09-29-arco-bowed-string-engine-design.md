@@ -1541,17 +1541,27 @@ does). **Reach.** A pad-sheet chip, SECTION, beside ENSEMBLE (`sectioned`:
 `DEPTH` 0.5, `WIDTH` 1, `SECTION` 1, faded toward the neutrals by AMT, so
 its 0.7 default is DEPTH 0.35, WIDTH 0.7, SECTION 0.7, a blend); ENSEMBLE's
 own chip and the `ensembled` treatment are untouched, so every old recipe
-replays unchanged. **The landings** then moved to `SECTION` 1 in a
-commit of their own: the four string machines keep their DEPTH and RATE,
-and their landed fold is now -0.4 / -1.1 / -0.6 / -0.5 dB, L/R 0.74 /
-0.80 / 0.74 / 0.58, pump 0.6 / 0.3 / 0.5 / 1.3 dB (E2's chorus landings
-above were -0.9 / -1.1 / -1.5 / -1.3 dB, L/R 0.29 / 0.47 / 0.04 / 0.26):
-a gentler fold and a narrower pair. Reverting that one commit puts the
-landings back on the chorus and leaves the macro and the chip in place.
-What the measurement cannot say, and the owner's ear has to: whether the
-anchor reads as a solid bass under the players or as a mono lump (the
-owner heard the prototype *without* it), and whether the narrower pair is
-a fair price for the players.
+replays unchanged. **The landings stay on the chorus.** They were first
+switched to `SECTION` 1 in a commit of their own (`b53e4b4`), and that commit
+was reverted after the owner listened: on the four string machines' short
+decaying pads (about a second each) the chorus and the players sounded the
+same ("these are stab type sounds so difficult to really determine, but I hear
+no difference"), while the players cost a narrower pair, a landed L/R of
+0.74 / 0.80 / 0.74 / 0.58 against the chorus's 0.29 / 0.47 / 0.04 / 0.26, for
+a gentler fold (-0.4 / -1.1 / -0.6 / -0.5 dB against -0.9 / -1.1 / -1.5 /
+-1.3, pump 0.6 / 0.3 / 0.5 / 1.3 dB against 1.7 / 1.3 / 2.6 / 2.3). A
+benefit nobody can hear does not pay for a measured cost, so E2's landings are
+as they were merged, and `SECTION` is reached from the pad sheet's chip. The
+likely reason, not measured: the players' independent drift (0.4-1.45 Hz corners)
+and vibrato entries (0.10-0.45 s) have little time to show in a one-second stab,
+where the bowed C3-G3-E4 chord they were chosen on runs three seconds. **What the
+owner's ear said** (the listening page, 2026-10-01): on that chord the
+prototype they had chosen sounded the same as the chorus on this round's
+page, and the built `SECTION` 1 with the bass anchor sounded *more* like
+several players than the chorus, and better than the prototype ("3 is
+better"); nothing was said about the bass reading as a lump, which is taken as
+no objection. Putting the landings back on the players is one commit, if a
+held-pad instrument ever wants it.
 
 **The ARCO landing** (rack §3): **dry**. The two landings that exist are
 stories an instrument tells about itself — a siren's onboard delay is

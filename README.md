@@ -244,12 +244,11 @@ and re-renders it, and a drone still rendering is silence on its own track,
 never a stall on the other five.
 
 The string machine is two halves, and the rack has the second: a saw stack
-under a filter is the source, and ENSEMBLE (below) is what makes it a
-section: with its SECTION macro up, six independent players instead of one
-chorus. VELVET BRASS's STRING MACHINE and THIN STRINGS and RESIN
+under a filter is the source, and ENSEMBLE (below) is the chorus that makes
+it a section. VELVET BRASS's STRING MACHINE and THIN STRINGS and RESIN
 BRASS's WIDE STRINGS and DARK STRINGS are the source half, and they carry
 the other half with them — SEND TO PAD lands one with ENSEMBLE already in
-its recipe (stereo, six players, regenerated bit for bit like any synth pad), the panel
+its recipe (stereo, regenerated bit for bit like any synth pad), the panel
 auditions it through the same chain, and `snipsnap synth VELVET BRASS
 --preset 13` writes the same stereo file. The chain follows the sound, not
 its name: move a slider and it is your sound and lands dry. They are short,

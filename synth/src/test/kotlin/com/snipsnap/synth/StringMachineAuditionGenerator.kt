@@ -44,7 +44,7 @@ object StringMachineAuditionGenerator {
     private val MACHINES = listOf(
         Machine(
             "STRING_MACHINE", VelvetPatch.ENGINE, "BRASS", "STRING MACHINE", "FANFARE",
-            "the classic: VELVET's saw stack with SQUEEZE at its floor (the least resonance and the shallowest filter sweep it has) and left to ring, through ENSEMBLE's own DEPTH and RATE with its six players (the control below is the chorus it replaced). The question is whether this is the string machine FANFARE was almost being, or just a longer FANFARE",
+            "the classic: VELVET's saw stack with SQUEEZE at its floor (the least resonance and the shallowest filter sweep it has) and left to ring, through ENSEMBLE's own defaults. The question is whether this is the string machine FANFARE was almost being, or just a longer FANFARE",
         ),
         Machine(
             "THIN_STRINGS", VelvetPatch.ENGINE, "BRASS", "THIN STRINGS", "FANFARE",
@@ -52,11 +52,11 @@ object StringMachineAuditionGenerator {
         ),
         Machine(
             "WIDE_STRINGS", ResinPatch.ENGINE, "BRASS", "WIDE STRINGS", "WIDE SECTION",
-            "RESIN's stacked oscillators through the ladder at STACK .90 with the wah and the snap out. The same section as STRING MACHINE on a thicker source; the fold beside it is what the phone plays",
+            "RESIN's stacked oscillators through the ladder at STACK .90 with the wah and the snap out. It is the widest source there is, so its pair barely correlates: this is the one whose fold to mono is worth the closest listen",
         ),
         Machine(
             "DARK_STRINGS", ResinPatch.ENGINE, "BRASS", "DARK STRINGS", "WIDE SECTION",
-            "a low, closed tone under slower, deeper drift and vibrato so the section has room to be felt. It should read as the same instrument as WIDE STRINGS with the lights down, not as a different one",
+            "a low, closed tone under a slower, deeper swing so the swell has room to be felt. It should read as the same instrument as WIDE STRINGS with the lights down, not as a different one",
         ),
     )
 
