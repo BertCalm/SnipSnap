@@ -140,7 +140,7 @@ class TerraPatchTest {
         assertEquals(plain, TerraPatch.fromJsonValue(plainWithNull), "an explicit null striker on a plain patch reads as none")
     }
 
-    /** What an older build runs: the shared version-1 decode refuses a struck patch by its version (`Patches.kt:84-85`). */
+    /** What an older build runs: the shared version-1 decode refuses a struck patch by its version (`Patches.kt:85-86`). */
     @Test
     fun `the decode an older build runs refuses a struck patch by version`() {
         val thrown = assertFailsWith<JsonException> {
