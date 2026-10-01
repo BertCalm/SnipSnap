@@ -142,7 +142,15 @@ object Silk {
             // factory SANTUR pad still carries a trace of the "prompt
             // then aftersound" coupled-string character the spec asks for.
             MacroSpec("COURSE", 0.05f),
-            MacroSpec("WASH", 0.2f),
+            // Raised from 0.2 (Phase 4 audition finding: measured directly,
+            // the default render ran only 0.96s against WASH 0's own 0.71s -
+            // the bank was real but essentially inaudible at its own
+            // default, while WASH 1 measured a genuine, smoothly decaying
+            // 2.8s tail. 0.45 pushes both of WASH's own levers at once -
+            // Dsp.lin's own t60 (0.5-3s) and bodyRing's own mix amount -
+            // enough that a factory pad already carries an audible "prompt
+            // then aftersound", not just the shipped-at-max version of it.
+            MacroSpec("WASH", 0.45f),
         )
         SilkVoice.SHAMISEN -> listOf(
             MacroSpec("TUNE", 0.3f),
@@ -155,8 +163,24 @@ object Silk {
             // of its length ... STRIKE's default is 1/6" (research §1, A5).
             MacroSpec("STRIKE", 1f / 6f),
             MacroSpec("BODY", 0.3f),
-            // Every character macro's own "0 is the plain string" convention.
-            MacroSpec("SAWARI", 0f),
+            // Raised from 0 (Phase 4 audition finding). Unlike OUD's SLIDE
+            // or GUZHENG's PRESS, SAWARI is not a performance gesture - a
+            // real sawari bridge buzzes on every note once engaged, the
+            // same always-present-trait case as SANTUR's COURSE and this
+            // voice's own SLAP, so defaulting it on is honest to the
+            // instrument, not a faked liveliness. 0.35 is a modest trace,
+            // not the ceiling: that ceiling is itself weak (measured:
+            // SAWARI 1 adds only ~1.1% high-frequency energy over SAWARI 0's
+            // ~0.7%, in the same spectral-energy window), because jawariP0
+            // (see Strings.burstPeak's own KDoc) is deliberately the
+            // excitation's own full-swing peak, so the fold-back fades
+            // quadratically weaker as the note decays below it - the exact
+            // mechanism SITAR already ships, reused verbatim, not a
+            // SHAMISEN-specific miscalibration. Raising the ceiling itself
+            // would mean recalibrating that shared reference against a
+            // second voice's own PICK/loop parameters with no measurement
+            // to aim at - a follow-on question, not solved here.
+            MacroSpec("SAWARI", 0.35f),
             // A nonzero shape default, the same reasoning SANTUR's own
             // nonzero COURSE default uses - a factory pad still carries a
             // trace of the skin strike rather than reading as a dead knob.
@@ -724,7 +748,18 @@ object Silk {
             for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
             return kotlin.math.sqrt(acc / len.coerceAtLeast(1)).toFloat()
         }
-        val g = rms(string, string.size) / rms(wet, wet.size).coerceAtLeast(1e-9f)
+        // Matched over the burst's own short window, not the string's full
+        // duration: a plucked string's RMS averaged over its whole decay is
+        // dominated by its own long, quiet tail, while the burst lands
+        // entirely inside the loud attack - comparing against the full-note
+        // average silently undersized the burst by roughly the string's own
+        // peak-to-average ratio (a real bug, caught by the owner's own ear:
+        // "I don't hear any difference in slap", confirmed by measuring
+        // withSlap's own numbers directly - rms(string) over the full note
+        // came out three orders of magnitude smaller than rms(wet), so even
+        // at SLAP 1 the burst was inaudibly quiet against the attack it
+        // actually overlaps).
+        val g = rms(string, wet.size) / rms(wet, wet.size).coerceAtLeast(1e-9f)
 
         val outLen = maxOf(string.size, drive.size)
         val out = FloatArray(outLen)
