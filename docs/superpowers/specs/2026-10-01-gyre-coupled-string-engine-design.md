@@ -120,9 +120,12 @@ period (ARCO `:157-197`). The document's law is the same kind: a force,
 added, with no impedance. Its slope at Δv = 0 is `pressure`, so it would
 also have to stay below 1 to keep the junction passive.
 
-**Change:** GYRE's bow is ARCO's `Strings.Bow`, used unchanged. TOUCH,
-SPIN (G6) and velocity drive its inputs (bow velocity, pressure, β). GYRE
-does not get its own friction law. One bow in the tree, measured once.
+**Change:** GYRE's bow is ARCO's `Strings.Bow`, with its friction law and
+bow junction unchanged. TOUCH, SPIN (G6) and velocity drive its inputs
+(bow velocity, pressure, β). GYRE does not get its own friction law. One
+bow in the tree, measured once. What GYRE does need is a way into the
+bow's *bridge end*, which ARCO's design seals inside a `Loop` (see
+"Where the bridge is, once there is a bow", under G3).
 
 What this costs the document: ARCO found single-slip (clean) motion only
 in patchy "islands" of pressure (ARCO `:424-440`). Some values of β are
@@ -148,11 +151,12 @@ Measured with a Python copy of the detector's own rule, on steady sines at
 
 | Partials | Companions at −20 dB | −14 dB | −11 dB | −6 dB |
 |---|---|---|---|---|
-| 1, 1.5 | 220 | 220 | 220 | 110 at −8 dB |
+| 1, 1.5 | 220 | 220 | 220 | 110 |
 | 1, 2, 1.5, 0.5 (the document's default) | 220 | 220 | **110** | **110** |
 | 1, 2, 3, 4 | 220 | 220 | 220 | 220 |
 
-A real string is not a steady sine, so the exact crossover will differ.
+The 1, 1.5 pair flips between −11 dB (220) and −8 dB (110). A real
+string is not a steady sine, so the exact crossover will differ.
 The direction will not. The document's "high SYMPATHY: a cloud of ringing
 partials" puts the half-integer sympathetics exactly where this happens.
 Every TUNE test, every keygroup root, and SPREAD all go through this
@@ -198,12 +202,17 @@ bound then needs `|1 − 2c·H_m(ω)| ≤ 1` at every frequency, which is
 `c·|H_m|² ≤ Re H_m`. **A peak gain of at most 1 is not enough.** A filter
 that inverts (H = −1) has gain 1 and gives `|1 + 2c|`, which is 3 at c = 1.
 What is enough is a membrane built as a weighted sum of `Dsp.Biquad.bandpass`
-resonators (`Dsp.kt:374`, the RBJ constant-peak-gain bandpass) with weights
-summing to at most 1. That bandpass has `Re H = |H|²` exactly, and a
-weighted sum with weights adding to 1 or less keeps `Re H ≥ |H|²`, so the
-bound holds for every c in [0, 1]. Checked numerically: over 200 random
+resonators (`Dsp.kt:374`, the RBJ constant-peak-gain bandpass) with
+**non-negative** weights summing to at most 1. That bandpass has
+`Re H = |H|²` exactly, and a sum with weights `wₖ ≥ 0`, `Σ wₖ ≤ 1` keeps
+`Re H ≥ |H|²` (by Cauchy-Schwarz, which needs the weights non-negative), so
+the bound holds for every c in [0, 1]. The sign constraint is not a
+technicality: weights of +1 and −1 sum to 0 and break the bound, so a
+mode cannot be given a negative gain to shape the membrane. Checked numerically: over 200 random
 membranes (1-5 modes, 40 Hz-8 kHz, Q 0.5-200, at 176.4 kHz) and c from 0.25
-to 1, the worst `|1 − 2c·H_m|` was 1.000. R0 turns this into a unit test.
+to 1, the worst `|1 − 2c·H_m|` was 1.000 (weights drawn non-negative). R0
+turns this into a unit test, and its random membranes include the sign
+constraint: `GyrePatch` and the voice tables reject a negative weight.
 
 While c moves with the rotor, the frequency argument above no longer
 strictly applies. Moving c slowly through a set of states that are each
@@ -217,6 +226,33 @@ This keeps the document's "controlled instability" (§17). Near c = 1 and
 bloom, cyclic build-up. It just cannot grow without bound. SYMPATHY's
 "near-feedback string cloud" (§13.2) gets the same treatment if the
 sympathetic bank returns energy (G9).
+
+**Where the bridge is, once there is a bow.** In round one each string
+is one ring, and its one junction can stand for the bridge. In ARCO's
+bow it cannot. ARCO calls both segments' `reflected()` and `inject()` at
+the *bow* (ARCO `:652-660`). The bridge reflection itself (the −0.95 loss
+and the `BRIDGE_HZ` low-pass) happens inside the bridge-side `Loop`, with
+no hook. So there is nowhere at the physical bridge to apply `M`.
+Applying `M` at the bow instead would mix waves that left the bridge at
+different times. That is a different, untested system, not the same
+coupling moved.
+
+**Change:** R2 starts by giving `Strings.Bow` a bridge port. The bridge
+segment becomes an explicit out-and-back pair of one-way delays with a
+junction at the far end, like the bow's, and the reflection there is a
+pluggable step. Its default is ARCO's own reflection (−0.95 through the
+`BRIDGE_HZ` low-pass), so ARCO's renders do not change, sample for
+sample. That is proven the way BORE's and MAGNET's R0s were: a frozen grid
+of ARCO renders before and after. GYRE plugs `M` into that step, across all
+four strings at once. The tuning budget is unchanged in total: the two
+one-way delays sum to the bridge segment's `β·T`, and the low-pass is
+charged once, as now.
+
+Cheapest if ARCO's round one builds `Strings.Bow` with the port from the
+start, so this is raised with ARCO as a decision (see "Decisions for the
+owner"). The alternative, coupling at the bow junction as an
+approximation, is possible but would need its own design and its own
+bound test before anything relies on it.
 
 Two consequences:
 
@@ -251,11 +287,28 @@ match.
 - **Below about 10 Hz, the rotor runs in Hz.** That is gesture: wheel,
   tremolo, rhythm. Hz is right here, because a 3 Hz pulse should be 3 Hz
   on every key.
-- **Above that, the rotor locks to a ratio of the note.** Snap to musical
-  ratios (1/4, 1/2, 1, 3/2, 2), the way TINES snaps its FM ratio.
-  Sidebands then land on harmonics, the pitch stays readable, keygroup
-  zones match, and the rotation really does become part of the pitch
-  spectrum.
+- **Above that, the rotor moves toward the note, continuously.** The
+  rate glides in log steps from the split to three times the note:
+  `rate = split^(1 − u) · (3f)^u`, with u running 0 to 1 over the top of
+  SPIN, outside the plateaus below. There is no jump anywhere on the knob, which the R3 gate
+  ("no abrupt switch") requires.
+- **Harmonic plateaus at whole-number ratios only: 1, 2 and 3 times the
+  note.** SPIN holds the rate exactly there over a stretch of the knob, so
+  presets and SCRAMBLE land on them easily. Modulating a partial `k·f` at
+  a rate `m·f` puts sidebands at `(k ± m)·f`, which are harmonics. A
+  fractional ratio does not: 1/2 gives half-integer sidebands (0.5f,
+  1.5f), 3/2 gives half-integer ones too (0.5f, 2.5f), and 1/4 gives
+  quarter-integer ones (0.75f, 1.25f). Those make the waveform repeat at
+  `f/2` or lower, which is G2's octave error again. So fractional ratios
+  are not plateaus. A voice may opt into one only if it passes G2's
+  octave-guard test.
+- **What this buys and what it does not.** On a plateau, sidebands are
+  harmonic, the pitch stays readable, keygroup zones match, and the
+  rotation becomes part of the pitch spectrum. Between plateaus, the
+  sidebands are inharmonic and the rate partly tracks the note (as
+  `f^u`), so neighbouring keygroup zones differ slightly. That is the
+  honest "rough, impossible" region of the knob. Presets meant for a keys
+  instrument sit below the split or on a plateau.
 
 The circular bow's moving contact (§12) also moves β, the bow position.
 A `Loop` cannot grow past the size it was built at (`Strings.kt:540-547`),
@@ -396,7 +449,7 @@ measurement or a listen backs it, as ARCO does.
 | Bow | | `Strings.Bow`: two segments, STK reflection table, pitch pin (ARCO R1, `:675-826`) | |
 | Stiffness for TENSION | `Strings.Dispersion` (`:274`) | | |
 | Coupled bridge | | | the `‖M‖ ≤ 1` coupling junction (G3) |
-| Membrane | `Dsp.Biquad.bandpass` (`Dsp.kt:374`), per sample, constant peak gain; `Modes.Mode`/`Modes.fixed` (`Modes.kt:34`, `:202`) for the tables | | weights summing to ≤ 1 (G3) |
+| Membrane | `Dsp.Biquad.bandpass` (`Dsp.kt:374`), per sample, constant peak gain; `Modes.Mode`/`Modes.fixed` (`Modes.kt:34`, `:202`) for the tables | | non-negative weights summing to ≤ 1 (G3) |
 | Sympathetic bank | `Dsp.Biquad.bandpass`; `Silk.washModesFor` (`Silk.kt:808`) for tuning tables; `Pluck.sympathetic` (`Pluck.kt:910`, private) | ARCO R2 SARANGI's tarab, from WASH | driven by the bridge, rotor-weighted |
 | Body | `Strings.bodyRing` (`Strings.kt:896`), after the loop, feed-forward | | |
 | Rotor | | | phase, quantised for LOOP, Hz/ratio split (G4) |
@@ -419,7 +472,7 @@ into the same segments, and the engine around them.
  (TOUCH low)  ├─► string n  (nut segment ─ bow at β_n ─ bridge segment)
  bow, Strings.Bow ┘   n = 1..4, ratios 1,2,3,4            │
  (TOUCH high,                                             ▼
-  pressure × w_n)                          bridge: reflected waves → M(c, H_m), H_m = Σ wₖ·bandpass, Σ wₖ ≤ 1
+  pressure × w_n)                          bridge: reflected waves → M(c, H_m), H_m = Σ wₖ·bandpass, wₖ ≥ 0, Σ wₖ ≤ 1
                                                           │          │
                                      inject back into every string ◄─┘
                                                           │
@@ -431,9 +484,10 @@ into the same segments, and the engine around them.
 ```
 
 - **Round one strings are single rings.** A pluck works on one ring, and
-  the bridge is the ring's junction (`reflected()`/`inject()`). Round two
-  swaps each string for ARCO's two segments. The bridge segment's junction
-  is still the bridge, so the coupling code does not change.
+  the ring's one junction (`reflected()`/`inject()`) stands for the
+  bridge. Round two swaps each string for ARCO's two segments plus the
+  bridge port (G3). The coupling matrix's code carries over; where it
+  plugs in does not, so R2 re-measures pitch and re-runs the bound test.
 - **TOUCH** crossfades two inputs into the *same* segments: the pluck
   burst's level falls as `cos(TOUCH · π/2)`, and the bow's pressure rises
   as `sin(TOUCH · π/2)`, as §6 proposes. Because both feed one string, a
@@ -464,7 +518,7 @@ Tests that carry GYRE's own claims:
 | TOUCH is a continuum (§6) | Adjacent TOUCH steps (0.0, 0.1, ..., 1.0) are each closer to their neighbours than the ends are to each other, by the house's macro distance. The midpoint is far from a 50/50 mix of the two end renders. |
 | Pitch survives coupling (G3) | At moderate settings, `Pitch.detect` reads every TUNE step within the tolerance round one measures, across BODY and SYMPATHY. |
 | No octave error (G2) | At every voice's SYMPATHY ceiling, `Pitch.detect` does not read half the note. |
-| The rotor locks to the note (G4) | Above the split, sidebands land on harmonics: inharmonic energy stays under a bound. |
+| The rotor locks to the note (G4) | On each plateau (1, 2, 3 times the note), sidebands land on harmonics: inharmonic energy stays under a bound, and `Pitch.detect` reads the note. Across the whole of SPIN, the rotor rate is continuous: no step between adjacent macro values is larger than a bound. |
 | HOLD closes (G5) | The rotor completes a whole number of turns in the kept loop, and the seam is measured one loop later. |
 
 ## Phasing and gates
@@ -476,7 +530,7 @@ listened. This sandbox cannot play audio.
 |---|---|---|---|
 | **R0** | Toolkit only, no audio change: the coupling junction over N `Loop`s, with unit tests for the bound (`|1 − 2c·H_m| ≤ 1` over random membranes; energy never rises in a coupled network with no input). Existing render hashes unchanged. | nothing | none (no sound) |
 | **R1** | The engine, pluck side only. FLICK and HALO; TOUCH pinned low; TUNE, SYMPATHY, SPIN, BODY, HOLD (one-shot only). Single-ring strings, the bridge, a listen-only sympathetic bank, the rotor below the split. Patch, `Patches`/`Velocity` arms, determinism canaries, audition generator. Round-one probes (§31) set the numeric bounds. | R0 | §32's questions 2-4: does BODY sound like a shared body, SYMPATHY like strings answering strings, SPIN like part of the object? |
-| **R2** | TOUCH's bow half on ARCO's `Strings.Bow`; strings become two segments; DRAWN and BOURDON. | **ARCO R1** (`Strings.Bow`) | §32's questions 1 and 5: does TOUCH sound like changing mechanics? Can FLICK and DRAWN make useful samples with no FX? |
+| **R2** | The bridge port on `Strings.Bow` first, as its own change with no audio change to ARCO (proven by a frozen grid of ARCO renders). Then TOUCH's bow half; strings become two segments; DRAWN and BOURDON. | **ARCO R1** (`Strings.Bow`) | §32's questions 1 and 5: does TOUCH sound like changing mechanics? Can FLICK and DRAWN make useful samples with no FX? |
 | **R3** | Impossible territory: the circular bow (rotating contact weight, fixed β) and LATHE; SPIN above the split (note-locked); WIRE; two-way sympathetic return; then a moving-β experiment. | R2 | §33: one continuous move from plausible to impossible, with no abrupt switch |
 | **R4** | HOLD's LOOP top step (G5); LOOP fuzz test. | R2 (a bowed LOOP needs a bow) | §34's difficult seams |
 | **R5** | Presets by ear (8 per voice), `GyrePresets`, `Presets` branch, `SynthKits.gyre()`, the testkit kit, the roadmap row's "as built". | R4 | the production roster |
@@ -525,3 +579,8 @@ CLI needs nothing: `snipsnap synth GYRE <VOICE>` resolves through
    LATHE is a contact sweeping round several coupled strings.
    *Alternative:* LATHE replaces ARCO's WHEEL, and ARCO's roster shrinks.
 5. **The bullroarer.** *Recommended:* off every product surface (G8).
+6. **A bridge port on ARCO's `Strings.Bow`.** *Recommended:* ARCO's round
+   one builds the bow with the bridge reflection as a pluggable step that
+   defaults to its own (G3), which costs ARCO nothing audible.
+   *Alternative:* GYRE's R2 adds the port afterwards, as a no-audio-change
+   refactor proven by a frozen grid of ARCO renders.
