@@ -285,29 +285,50 @@ object Arco {
     const val RELEASE_RAMP_SECONDS = 0.05f
 
     /**
-     * After the bow lifts the string is *stopped*, the way a player's hand stops it, over
-     * `max(STOP_FLOOR_SECONDS, min(STOP_HOLD_SHARE * hold, [freeRingSeconds]))`: a stab's tail is
-     * 0.15 s, a long note rings out to its own free decay at the lowest, and the floor wins above
-     * about 630 Hz, where the free ring is shorter than it (a `coerceIn` would throw there, its floor being above its ceiling).
-     * Without the stop a lifted C2 rings for two seconds and files every stab past the classifier's
-     * 1.5 s line as a LOOP.
+     * After the bow lifts the string is *stopped*, the way a player's hand stops it: its bridge loss is raised
+     * so that it falls 60 dB over `max(STOP_FLOOR_SECONDS, min(STOP_HOLD_SHARE * hold, [freeRingSeconds]))`
+     * (see [stopScale]). A stab's tail is 0.15 s, a long note rings out in about its own free decay at the lowest, and
+     * the floor wins above about 630 Hz, where the free ring is shorter than it (a `coerceIn` would throw there,
+     * its floor being above its ceiling). Without the stop a lifted C2 rings for two seconds and files every stab
+     * past the classifier's 1.5 s line as a LOOP. Measured on the audible part of the wave (the raw tap also
+     * carries a static offset that decays at the bridge's own 0.95 a period whatever the pitch, which the output's
+     * 20 Hz high-pass removes), the tail is 40 dB down at about half the release and 60 dB down at 0.85 to 1.0 of it
+     * at every pitch tried.
      */
     const val STOP_FLOOR_SECONDS = 0.15f
     const val STOP_HOLD_SHARE = 0.5f
 
     /**
-     * How long a lifted string at [hz] takes to fall 60 dB with the bridge's corner at [cornerHz]:
-     * `60 / -(20 log10(0.95 * |H(f0)|))` periods, H the bridge's one-pole at the fundamental, exactly
-     * [Strings.tune]'s own filter. R1a measured the real ring-down against it (-0.439 dB a period
-     * against -0.454 at C3, -60 dB in 1.02 s against 1.011).
+     * What a lifted string at [hz] keeps of its wave each round trip, with the bridge's corner at [cornerHz]:
+     * `0.95 * |H(f0)|`, H the bridge's one-pole at the fundamental, exactly [Strings.tune]'s own filter.
      */
-    internal fun freeRingSeconds(hz: Float, cornerHz: Float, rate: Int = RATE * Dsp.OVERSAMPLE): Float {
+    internal fun periodGain(hz: Float, cornerHz: Float, rate: Int = RATE * Dsp.OVERSAMPLE): Double {
         val a = 1.0 - exp(-2.0 * PI * min(cornerHz, rate * 0.45f) / rate)
         val pole = 1.0 - a
         val w = 2.0 * PI * hz / rate
         val h = a / sqrt(1.0 - 2.0 * pole * cos(w) + pole * pole)
-        val dbPerPeriod = 20.0 * log10(Strings.Bow.REFLECTION * h)
-        return (-60.0 / dbPerPeriod / hz).toFloat()
+        return Strings.Bow.REFLECTION * h
+    }
+
+    /**
+     * How long a lifted string at [hz] takes to fall 60 dB with the bridge's corner at [cornerHz]:
+     * `60 / -(20 log10([periodGain]))` periods. R1a measured the real ring-down against it (-0.439 dB a period
+     * against -0.454 at C3, -60 dB in 1.02 s against 1.011).
+     */
+    internal fun freeRingSeconds(hz: Float, cornerHz: Float, rate: Int = RATE * Dsp.OVERSAMPLE): Float =
+        (-60.0 / (20.0 * log10(periodGain(hz, cornerHz, rate))) / hz).toFloat()
+
+    /**
+     * The bridge's loss, as a multiple of its own, that makes a lifted string fall 60 dB in exactly [releaseSeconds]: the
+     * stop. It is one constant from the lift to the end, so the tail is a plain exponential (a straight line
+     * in dB) that reaches -60 dB where the release ends, and never a ramp: a gain that went from 1 to 0 over the
+     * release compounds every period and had the string 60 dB down long before the end (at C2, in 0.5 s of a
+     * 1.8 s release), leaving more than a second of the render near silence. Never above 1: where the free
+     * ring is already shorter than the release (the floor won) the string is left to ring on its own.
+     */
+    internal fun stopScale(hz: Float, cornerHz: Float, releaseSeconds: Float, rate: Int = RATE * Dsp.OVERSAMPLE): Float {
+        val wanted = 10.0.pow(-3.0 / (releaseSeconds * hz))
+        return min(1.0, wanted / periodGain(hz, cornerHz, rate)).toFloat()
     }
 
     internal fun releaseSeconds(hz: Float, cornerHz: Float, holdSeconds: Float): Float =
@@ -550,8 +571,10 @@ object Arco {
             }
             val v = vSustain * ramp * (1f + (bite * relax).toFloat()) * release
             val pNow = p + (pBite - p) * relax.toFloat()
-            if (!steady && !lifted && i == liftAt) bow.lift()
-            if (!steady && i >= liftAt) bow.gain((1f - (i - liftAt).toFloat() / gate.stopN).coerceAtLeast(0f))
+            if (!steady && !lifted && i == liftAt) {
+                bow.lift()
+                bow.gain(stopScale(hz, corner, gate.stopN.toFloat() / rate, rate))
+            }
             out[i] = bow.next(v, 5f - 4f * pNow)
             if (bowPointOut != null) bowPointOut[i] = bow.bowPoint
         }
