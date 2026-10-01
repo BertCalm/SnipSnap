@@ -71,12 +71,23 @@ steer and talk families (`bold-steer`, `bold-talk`); the design maps written at
 attack compressor, which every struck spike had copied. Tags of the form
 `(empirical §A2)`, `(dsp F5)`, `(struck-shape S1)`, `(struck-motion M7)`,
 `(verify-r2 §3)`, `(bold-talk §4)`, `(phase0 T11)` or `(map pad-drive §4)` name
-the report and its section. The reports are local scratch, not in the tree, so
-every fact they back is restated here in full and the tag records only which
-report measured it. Every code citation is a repo-relative `file:line` read at
-**`75b550c1`** for this document (`tree check`); cites the evidence took at
-`5e3f5f3e` or `1a2ec180` were re-read there and corrected where the lines
-moved. Owner answers are quoted from the brainstorm of 2026-09-29–30.
+the report and its section. The reports are local files in the evidence folder
+(Appendix A), not in the tree, so every fact they back is restated here in full and
+the tag records only which report measured it. Every code citation is a
+repo-relative `file:line` read at **`75b550c1`** for this document (`tree check`);
+cites the evidence took at `5e3f5f3e` or `1a2ec180` were re-read there and
+corrected where the lines moved. Owner answers are quoted from the brainstorm of
+2026-09-29–30. Rechecked at `129bc48e` just before landing: of the files this
+document names, `SynthScreen.kt`, `PadSheet.kt`, `Velocity.kt`, `Keys.kt`,
+`Dsp.kt`, `DeterminismTest.kt`, `PadRecipeTest.kt`, `README.md`,
+`docs/SYNTH_ROADMAP.md` and `synth/build.gradle.kts` moved; none of the cited
+claims changed, and the cites keep their `75b550c1` lines (`SynthScreen.kt` and
+`PadSheet.kt` by +1 to +16, `synth/build.gradle.kts` by −19; `Velocity.kt` lost
+only a doc comment, so `BRIGHTNESS_MACROS`, still with no TERRA macro, is at
+`:463` and not `:500`). The `Engine` enum is still thirteen entries, TERRA is
+still in neither `DeterminismTest` nor `PadRecipeTest`, S19 is still the
+roadmap's highest row, and `Terra.kt`, `TerraPatch.kt`, `Patches.kt`, `Fork.kt`,
+`Thump.kt` and `VoxSpeak.kt` are byte-identical, so no Phase-0 number moves.
 
 ## Why the TERRA hook
 
@@ -446,7 +457,8 @@ the bold round's nine clips are this document's BEND and TALK.
   candidates) NCC 0.166, the rack's SPEED on plain TERRA (bold-talk §4). Two
   spike-only deviations: every mode's t60 × 1.6 and the membrane's damping step
   0.65 → 0.30, with a 1.4 s render, because with TERRA's own decays the upper
-  modes are 30–40 dB down before the vowel has moved (bold-talk §4).
+  modes are 30–40 dB down before the vowel has moved (bold-talk §4). The built
+  TALK keeps both as its ring ("TALK, the design").
 
 The owner's answer: "**keep Steer, Ring and Talk**".
 
@@ -567,11 +579,12 @@ the waveform after reopening, not a step (phase0 §3, §5 item 6).
 ### Where this document departs from the brief
 
 The brief is the single source of truth and this document keeps every decision
-in it. Seven places say something the brief does not say, or say it more
-narrowly once Phase 0 or a check of the code had measured it. Only the first is
-a conflict (two lines of the brief that cannot both hold); the rest are
-restatements, listed so the owner can see which figures and rules were not in
-the brief that was approved.
+in it; where a sentence of the brief paraphrases a clip the owner kept by ear
+(row 6), the clip is the decision. Seven places say something the brief does not
+say, or say it more narrowly once Phase 0 or a check of the code had measured
+it. Only the first is a conflict (two lines of the brief that cannot both hold);
+the rest are restatements, listed so the owner can see which figures and rules
+were not in the brief that was approved.
 
 | # | The brief says | What was measured or found | What this document does |
 |---|---|---|---|
@@ -580,7 +593,7 @@ the brief that was approved.
 | 3 | "the three-clip HIT-at-1 listening check" | Two strikers and two recipes need a pair each, and the heard RUNG clip has to be reproduced and rebuilt (phase0 §6) | Six clips were built, inside the ten-clip, three-question limit, and are **proposed, pending the owner's OK**; the default is the brief's three (`cm_unstruck`, `cm_hit1_wraith`, `cm_rung_wraith_heard`), which can ask question 1 only (decision 21; "Phasing and gates") |
 | 4 | A-D "missed its per-mode gate by 1.5–4.6 dB" | 1.85 / 3.47 / 2.33 dB, 1.9–3.5 at `75b550c1` (phase0 §3, G-A4) | Cites 1.9–3.5 dB; A-D stays out of R1 |
 | 5 | "~20–30 KB per driven pad (FORK's striker costs the same)" | Arithmetic from the JSON writer, inferred and not measured: about 31 KB for a striker, 2 KB for BEND, 13 KB for TALK, so about 46 KB with all three | Says "about 31 KB, inferred" for a struck pad and gives the three-driver figure ("Data flow and compatibility") |
-| 6 | "under TALK the modes ring about 1.6× longer" | The heard clip stepped the membrane's damping 0.65 → 0.30 as well and rendered a fixed 1.4 s, so its modes 2–6 ring 1.3–1.7 × as long as t60 × 1.6 alone gives (bold-talk §4) | Default t60 × 1.6 on every mode and a render 1.6 × as long (about 2.0 s at DECAY 1), labelled a new listening value that is **not the clip the owner heard**; the heard clip exactly is decision 7's alternative |
+| 6 | "under TALK the modes ring about 1.6× longer" | The heard clip stepped the membrane's damping 0.65 → 0.30 as well and rendered a fixed 1.4 s, so its modes ring 1.6, 2.03, 2.30, 2.48, 2.62 and 2.72 × as long as TERRA's own, and modes 2–6 1.3–1.7 × as long as t60 × 1.6 alone gives (bold-talk §4) | **Now follows the heard clip.** Default: the per-mode ratio 1.6·(1 + 0.65k)/(1 + 0.30k) on each t60, and a render 10/9 as long as TERRA's own (1.4 s at DECAY 1, the clip's). The brief's "about 1.6×" is read as a paraphrase of the clip the owner approved by ear (its mode-1 figure), not a separate decision; the brief read literally, a uniform t60 × 1.6 and a render 1.6 × as long (about 2.0 s), is decision 7's alternative and rings modes 2–6 21–41 % shorter than the clip |
 | 7 | "KEEP is undoable (bin-backed `replaceAudio`)" | The bin brings the audio back; every undo door in the house also clears the recipe, and the treatment card's UNDO does not fire on a synth-patch recipe at all | States what undo does to the recipe (the group's own UNDO clears it; the takes history restores it) and asks the owner whether UNDO should restore the previous recipe (decision 17) |
 
 ## Against the fleet
@@ -999,37 +1012,55 @@ instead of run as a filter. Because the response is read at the *bent*
 frequency, BEND and TALK interact: a pitch curve sweeps each mode through the
 vowel (map terra-hook §4.3).
 
-**Under TALK the modes ring longer**, every mode's t60 × `TALK_RING` = 1.6 and
-the frame count × the same, so the vowel outlasts the hit (a listening value,
-TALK only; owner's decision 7). With TERRA's own decays the upper modes have
-fallen 30–40 dB before the vowel has moved and the word is inaudible after
-about 250 ms (bold-talk §4).
+**Under TALK the modes ring longer, as the clip the owner heard rang them**, so
+the vowel outlasts the hit (a listening value, TALK only; owner's decision 7).
+With TERRA's own decays the upper modes have fallen 30–40 dB before the vowel
+has moved and the word is inaudible after about 250 ms (bold-talk §4). Two
+things carry the clip's ring, both from `TalkClips.kt` (bold-talk §4):
 
-**The default is not the clip the owner heard.** The spike made two deviations,
-not one: every mode's t60 × 1.6 *and* the membrane's damping step 0.65 → 0.30,
-in a fixed 1.4 s render. Its six modes decayed in 1.44, 1.11, 0.90, 0.76, 0.65
-and 0.58 s (t60) against TERRA's own 0.90, 0.55, 0.39, 0.31, 0.25 and 0.21
-(bold-talk §4). This document's default, t60 × 1.6 with TERRA's own damping
-step, gives 1.44, 0.87, 0.63, 0.49, 0.40 and 0.34 s (arithmetic from
-`Terra.kt:169, :453-454`): the lowest mode matches, and modes 2–6 are 21–42 %
-shorter than the heard clip's, which is the problem the spike was built to fix
-(the upper modes dying before the vowel moves), less severe than plain TERRA's
-and more severe than the clip's. The render is also longer, 1.6 × `framesFor`
-(`Terra.kt:285-286`), about 2.0 s at DECAY 1, against the spike's 1.4 s. So the
-default's length, its per-mode decays and its test-10 figures are **new
-listening values**, not a reproduction. The heard clip exactly (t60 × 1.6,
-damping step 0.30, 1.4 s) is decision 7's alternative, and R3's page puts the
-built TALKS FIVE (clip 7) beside the heard clip (clip 9) so the owner can say
-which. Phase 0 reproduced the heard clip through the prototype's two inputs, to
-a −116 dB residual (largest sample difference 3e−7) (phase0 §4.8), with the
-spike's own decays and 1.4 s, the longer ring expressed as a decay ratio in the
-level curve; R3 keeps that as a reference test of the *hook* (the internal bank
-driven with the spike's explicit per-mode decays, level curve, pitch curve and
-length reproduces the clip's frozen samples), and it says nothing about
-TALK's defaults, which are pinned by their own printed table. The
-damping-step change is not carried by default (owner's decision 7). **TALK
-changes the render length**; "length unchanged" is HIT's claim and BEND's, not
-TALK's.
+- **The per-mode t60.** Mode k's t60 (k counted from 0) is multiplied by
+  `TALK_RING_k` = 1.6 · (1 + 0.65·k) / (1 + 0.30·k): the 1.6 together with the
+  clip's step in the membrane's damping, 0.65 → 0.30. The ratios are 1.60, 2.03,
+  2.30, 2.48, 2.62 and 2.72 for modes 1 to 6 (`TalkClips.kt:103`, `:108`), so at
+  DECAY 1 the six t60 are 1.44, 1.11, 0.90, 0.76, 0.65 and 0.58 s where TERRA's
+  own are 0.90, 0.55, 0.39, 0.31, 0.25 and 0.21 s (arithmetic from `Terra.kt:169,
+  :453-454`). The ratio depends on the mode's index alone, so the cavity (four
+  modes, its own damping step 1.2, `Terra.kt:173`) takes the first four, 1.60,
+  2.03, 2.30 and 2.48. That is an extension of the clip, which was a membrane, and
+  nothing measured it (the Phase-0 record, §11): R3 prints it. TERRA's own damping
+  step is not changed for any pad.
+- **The render length.** The clip rendered a fixed 1.4 s (`TalkClips.kt:104`),
+  where TERRA's own render at that DECAY is 1.26 s (`Terra.kt:285-286`). A fixed
+  length cannot follow DECAY, so the build's rule is the frame count ×
+  `TALK_LENGTH` = 1.4 / 1.26 = 10/9: the clip's 1.4 s at the clip's DECAY 1 (to
+  within a frame), and longer or shorter with the t60 base elsewhere.
+
+**The default is the clip the owner heard; the alternative is the brief's
+paraphrase.** The brief says "under TALK the modes ring about 1.6× longer".
+That sentence paraphrases the approved clip by its mode-1 figure; it is not a
+separate decision, and the clip's modes do not all ring 1.6× longer (the ratios
+run 1.6 to 2.7). The owner kept the clip by ear, so the clip wins and the
+paraphrase read literally is decision 7's alternative: `TALK_RING` 1.6 on every
+mode's t60 and on the frame count, with TERRA's own damping step. It gives t60 of
+1.44, 0.87, 0.63, 0.49, 0.40 and 0.34 s at DECAY 1 (arithmetic from `Terra.kt:169,
+:453-454`) and a render of 1.6 × `framesFor`, about 2.0 s: the lowest mode
+matches the clip, and modes 2–6 are 21–41 % shorter than the heard clip's, which
+is the problem the spike was built to fix (the upper modes dying before the vowel
+moves), less severe than plain TERRA's and more severe than the clip's. R3's page
+puts the built TALKS FIVE (clip 7) beside the heard clip (clip 9), so the owner
+can hear that the build is the clip, and renders the alternative as a reference
+clip below the lead block. The default reproduces the clip's ring and length at
+the clip's settings; it is not the clip exactly, because the track is baked on a
+64-frame grid and the chain is today's. Phase 0 reproduced the heard clip through
+the prototype's two inputs, to a −116 dB residual (largest sample difference
+3e−7) (phase0 §4.8), with the spike's own decays and 1.4 s, the longer ring
+expressed as a decay ratio in the level curve; R3 keeps that as a reference test
+of the *hook* (the internal bank driven with the spike's explicit per-mode decays,
+level curve, pitch curve and length reproduces the clip's frozen samples), and
+compares the built default with the clip and prints the difference (test 10). The
+damping-step change is carried only as that ring ratio, under TALK, and never
+moves a TERRA pad that has no TALK. **TALK changes the render length**; "length
+unchanged" is HIT's claim and BEND's, not TALK's.
 
 **Stored data: the track, baked.** `talk: TerraPatch.Talk(word: String,
 seconds: Float, frames: FloatArray(64 × 6))` — 64 frames evenly spaced over the
@@ -1080,7 +1111,7 @@ the whole of `VoxSpeak.kt` at `75b550c1` in test sources, and a test that
 (`2026-09-30-become-strung-say-design.md`, "Shared groundwork"). Then the
 resonator, anti-resonator, tract and track move into one `internal object
 Formant` in `Formant.kt`, float operation order verbatim; what else F1 moves (the
-size arithmetic as one shared function, the track's two added arguments) and what
+size arithmetic as one shared function, the track's added argument) and what
 stays out of `Formant` are fixed by the Group A spec ("Shared groundwork"), which
 owns both G1's grid and F1's contents. **Whichever of SAY and
 this document's R3 reaches it first lands G1 and F1**; the other adds only its
@@ -1507,8 +1538,8 @@ expansion writers read no recipe (map pad-drive §6); they bake the audio.
 - **A mode whose level reaches 0** keeps accumulating phase (the skip guard
   reads the table gain), so it reopens in phase (phase0 §3).
 - **Length.** HIT and BEND never change the frame count (`framesFor`,
-  `Terra.kt:285-286`); TALK lengthens it by `TALK_RING` (about 2.0 s at DECAY 1
-  against 1.26 s), by design. A curve
+  `Terra.kt:285-286`); TALK lengthens it by `TALK_LENGTH` = 10/9 (1.4 s at DECAY 1
+  against 1.26 s, the heard clip's length), by design. A curve
   shorter than the render holds its last value; a longer one is cut.
 - **No pitch to follow** (a hat, a noise burst, a chord) refuses BENT BY at pick
   time by name, by the same rule: the row keeps its previous source and the pad
@@ -1636,9 +1667,11 @@ tests 9–10 are R3's. Test 6 is printed in R1 and pinned once R1's page, questi
    against `f0 × bend(t)` over 10–200 ms, worst relative error ≤ 1 % (bold-steer
    G4 measured 0.5 % for the copied curve against a real kick).
 10. **TALK's vowel response.** On the talking-drum recipe (TUNE 0.7222, DECAY
-    1.0, FIVE), **in the heard clip's configuration** (the spike's decays and
-    1.4 s; the figures below were measured there, so R3 re-measures them on the
-    shipped default, "TALK, the design", before it pins any): per-mode measured
+    1.0, FIVE), **in the heard clip's configuration**, which is TALK's default
+    ("TALK, the design": the clip's per-mode decays and 1.4 s). The figures below
+    were measured on the spike there, so they bind the shipped default directly;
+    R3 re-measures them on the built, 64-frame-baked track and today's chain,
+    prints the difference from the clip, and only then pins them: per-mode measured
     level against intended (gain × weight × own decay), Pearson r ≥ 0.97 for
     every mode (proposed; spike 0.98–1.00); pitch against the intended glide
     median within 6 cents and worst within 20 (proposed; spike 5 / −14, bold-talk
@@ -1704,7 +1737,16 @@ mono 44.1 kHz, levelled by `AuditionLevel.level`, written by
 | **R3 — BEND and TALK** | G1 and F1 if Group A's SAY has not landed them; the pitch-track capture; TALK's bake and response; `bend` and `talk` on `TerraPatch`; claims tests 9–10, and tests 1, 4 and 5 extended to `bend` and `talk` | R3's page (10 clips, 3 questions) |
 | **R4 — the pad-sheet group and the shared chooser** | the chooser lifted from MUTATE (after Group A's BECOME); `TerraSheet`; the group on a TERRA pad's sheet; FORK's STRIKE FROM on a FORK pad's sheet | R4's page (6 clips) and a phone checklist, 3 questions |
 
-### Phase 0: the HIT-at-1 listening check (pending)
+### Phase 0: the HIT-at-1 listening check (answered: "as strong")
+
+**Answered 2026-09-30.** The owner heard the brief's three clips (decision 21's
+default) in the order today's drum, `cm_rung_wraith_heard` (labelled "the strong
+clip you picked", byte-identical to the start-here page's strong clip) and
+`cm_hit1_wraith` (labelled "HIT at full"), and answered question 1: **"As
+strong"**. HIT 1 is COLOURED 100 % and stands into R1, so decision 1 is taken.
+Questions 2 and 3 were not asked, and their subjects keep their defaults until
+R1's page (decision 4). The text below records the check as it was planned.
+
 
 The brief planned a three-clip check; Phase 0 built six — a HIT 1 and RUNG pair
 for each of two strikers, today's drum, and the RUNG clip as heard — still
@@ -1712,8 +1754,8 @@ inside the ten-clip limit. Six is a deviation, **proposed and pending the
 owner's OK** (decision 21). The default is the brief's three: `cm_unstruck`,
 `cm_hit1_wraith` and `cm_rung_wraith_heard`, which can ask question 1 only;
 questions 2 and 3 below are asked only if the owner OKs the six. Six clips, mono 44.1 kHz, `AuditionLevel.level` then
-16-bit, in `chimera-audition/PHASE0/`, fragment `chimera-audition/fragments-phase0.json`
-(phase0 §6; both are in the session scratchpad, not the evidence folder, Appendix A). HIT 1 is COLOURED 100 % read at the nominal pitch, through the
+16-bit, in `phase0/PHASE0/`, fragment `phase0/fragments-phase0.json`, both in the
+evidence folder (phase0 §6; Appendix A). HIT 1 is COLOURED 100 % read at the nominal pitch, through the
 prototype bank, asserted bit-identical to round two's `renderA`; RUNG is round
 two's recipe. Because the chain changed under RUNG, the WRAITH WORD RUNG clip is
 given twice: rebuilt on today's chain, and as heard (byte-identical to round
@@ -1811,9 +1853,12 @@ does a TERRA render land on a pad without a wait you notice?
 | 9 | A TALKING DRUM · AS YOU HEARD IT | the bold clip, byte for byte |
 | 10 | MEMBRANE · BENT BY THUMP KICK + TALKS FIVE | both pitch drivers at once |
 
+Below the ten, as reference: MEMBRANE · TALKS FIVE with the uniform 1.6 ring, which
+is decision 7's alternative.
+
 Questions: (1) Does BENT BY read as the kick bending the drum, as the bold clip
-did? (2) Does TALKS read as a talking drum — and does the longer ring help or
-hurt? (3) Should a pad be allowed to bend and talk at once?
+did? (2) Does TALKS (clip 7) read as the talking drum you heard (clip 9) — and does
+the longer ring help or hurt? (3) Should a pad be allowed to bend and talk at once?
 
 ### R4's gate: the group and the chooser
 
@@ -1869,9 +1914,9 @@ the extraction); R4 ~600 (the chooser lift ~150, `TerraSheet` ~200, the screen
   bit-identical to `Resampler.resample` (largest difference 0.0) that cuts the up-conversion-bound hybrid path from 2.6–9.1× to 1.3–2.5× its costliest part, 2–4× faster (hybrid-r2-spec §1 C1, §6).
 - **A SYNTH-side driver picker** before SEND: the destination is unknown there
   ("The chooser and the pad-sheet group").
-- **A TALK depth or BEND amount knob**, **TALK's damping-step change**, and
-  **BEND and TALK on the bell and bar**: not in this round; each is one gate
-  question away.
+- **A TALK depth or BEND amount knob**, **a change to TERRA's own damping step**
+  (TALK's longer ring is a ratio on the t60 under TALK alone), and **BEND and
+  TALK on the bell and bar**: not in this round; each is one gate question away.
 - **Velocity registration of HIT** before a monotonic sweep passes and a path
   for a non-macro override exists.
 
@@ -1887,6 +1932,7 @@ pad remembers), section 2 (the chooser and the pad-sheet group) or section 3
 |---|---|---|
 | Engine or not | No CHIMERA meta-engine; the one new idea goes into TERRA as data | the six-lens review (synthesis §7); the owner's regrouping, 2026-09-29–30 |
 | Struck TERRA's control | "A knob between them" (today → subtle → strong): HIT | owner, Q1, 2026-09-29–30 |
+| What HIT 1 is | COLOURED 100 %: "As strong" as the strong clip, heard on the brief's three clips | owner, the Phase-0 check, 2026-09-30 |
 | How far | "I think we could go further/bolder"; after the bold round, "keep Steer, Ring and Talk" | owner, Q2 and the bold round, 2026-09-29–30 |
 | Grouping and order | Group B = HIT, BEND, TALK; "A alongside B"; Group C later; "snare rings the tines" parked for FORK | owner, 2026-09-29–30 |
 | This design | approved in three sections; "Yes, write the specs" | owner, 2026-09-29–30 |
@@ -1897,7 +1943,7 @@ pad remembers), section 2 (the chooser and the pad-sheet group) or section 3
 | HIT's algorithm | round two's COLOURED candidate A, gain domain, running magnitude, level match `s`; "strong" = 100 %, pending the Phase-0 check | owner, brainstorm 2026-09-29–30, brief section 1; struck-shape S6b; verify-r2 |
 | HIT's capture | the safe capture rule, struck-motion M7 | owner, brainstorm 2026-09-29–30, brief section 1 |
 | BEND's data | a fixed-length 64-point curve from a new pitch-track capture, tested against THUMP's kick curve; multiplier clamped (0.25–4) | owner, brainstorm 2026-09-29–30, brief section 1 |
-| TALK's algorithm and data | `TalkDrum`'s per-mode vowel response at the bent frequency, floored at −26 dB, 1 ms smoothing, droop × `2^(semis/12)`; the track baked as fixed-length data; ~1.6× ring under TALK | owner, brainstorm 2026-09-29–30, brief section 1; bold-talk §4 |
+| TALK's algorithm and data | `TalkDrum`'s per-mode vowel response at the bent frequency, floored at −26 dB, 1 ms smoothing, droop × `2^(semis/12)`; the track baked as fixed-length data; the heard clip's ring under TALK (the brief's "~1.6×" is a paraphrase of it, its mode-1 figure; decision 7) | owner, brainstorm 2026-09-29–30, brief section 1; bold-talk §4 |
 | Voices | HIT on all four; BEND and TALK on the membrane and the cavity first | owner, brainstorm 2026-09-29–30, brief section 1 |
 | Names | HIT (not STRIKE), BEND, TALK; STRUCK BY, BENT BY, TALKS | owner, brainstorm 2026-09-29–30, brief section 1; `Terra.kt:55-60` |
 | Storage | data in the recipe (the `ForkPatch.striker` precedent), never a pointer; `TerraPatch` a non-data class with optional fields | owner, brainstorm 2026-09-29–30, brief "Shared defaults" |
@@ -1917,13 +1963,13 @@ a gate overturns it.
 
 | # | Decision | Default | Alternatives | Where it is decided |
 |---|---|---|---|---|
-| 1 | What HIT 1 is | COLOURED 100 % | A-D (softer kick attack, per-mode gate missed by 1.9–3.5 dB); a different top | Phase 0's check, questions 1–2 (question 2 only if decision 21 takes the six; otherwise R1's page) |
+| 1 | What HIT 1 is | COLOURED 100 % | A-D (softer kick attack, per-mode gate missed by 1.9–3.5 dB); a different top | Phase 0's check, questions 1–2 (question 2 only if decision 21 takes the six; otherwise R1's page) **Taken 2026-09-30: "As strong"; see "Decisions already taken".** |
 | 2 | BUZZ (and the cavity's drive) under HIT. **The brief disagrees with itself here**: its algorithm line has `s` match the body's peak, its drive line has the level match keep BUZZ's and the cavity's drive as today, and Phase 0 measured that both cannot hold | **BUZZ follows the striker**: `s` stays a peak match, which keeps the brief's algorithm line and breaks its drive line for BUZZ; BUZZ's time above threshold runs 0.05–1.25 × today's at HIT 1, the cavity's tanh stays within 4 % of linear. **This default is not owner-approved**: it is the behaviour that was measured | a band-passed level match on the cavity (keeps the drive line's intent; holds the tanh input and BUZZ near today's; estimated, not measured, to lift a hat head's low modes by about 10 dB, phase0 §5 item 4) | R1's page, question 3, before test 6 is pinned |
 | 3 | Where HIT's amount lives | inside the striker (no SYNTH-panel knob, never scrambled or averaged) | a TERRA macro `HIT` on all four voices (reachable by `Velocity`'s override path, but shown with no effect on unstruck pads and averaged by Breed) | here |
 | 4 | HIT's attack at 1 with a bass head | accepted as measured (14.0 ms peak, membrane, THUMP KICK) | keep more of today's attack (Phase 0 picks the fix) | Phase 0's check, question 2, if decision 21 takes the six; otherwise R1's page |
 | 5 | What the chooser offers TERRA and FORK | a pad on this kit, a pad on another kit, a file | add MUTATE's crate deal and room | R4's gate |
 | 6 | Data resolutions and starting bars | BEND 64 points, `t_j = 0.4 s · (j/63)²`; TALK 64 frames over the word. Starting bars, not measurements: BEND is refused under 4 periods in `BEND_SPAN`, outside 20–2000 Hz settled, or above 0.10 period jitter; the baked-against-live TALK weights within 1.0 dB worst and 0.3 dB median | other counts, spacings or bars, set by R3's first printed tables | R3 |
-| 7 | TALK's listening values | `TALK_RING` 1.6 on every t60 and on the frame count (about 2.0 s at DECAY 1), `TALK_SPEED` 1.5, `TALK_GLIDE` 1.4, floor −26 dB, 1 ms smoothing; the spike's damping step 0.65 → 0.30 and its fixed 1.4 s render **not** carried. **So the default is not the clip the owner heard**: its modes 2–6 are 21–42 % shorter (t60 1.44, 0.87, 0.63, 0.49, 0.40, 0.34 s against 1.44, 1.11, 0.90, 0.76, 0.65, 0.58 s) | **the heard clip exactly** (t60 × 1.6, damping step 0.30, 1.4 s); carry the damping step alone; a different ring | R3's page, clips 7 and 9, question 2 |
+| 7 | TALK's listening values | **The heard clip's ring and length**: each mode's t60 × `TALK_RING_k` = 1.6·(1 + 0.65k)/(1 + 0.30k) (1.60, 2.03, 2.30, 2.48, 2.62, 2.72 for modes 1 to 6; t60 1.44, 1.11, 0.90, 0.76, 0.65, 0.58 s at DECAY 1), and the frame count × `TALK_LENGTH` 10/9 (1.4 s at DECAY 1, the clip's fixed length; it follows DECAY elsewhere); `TALK_SPEED` 1.5, `TALK_GLIDE` 1.4, floor −26 dB, 1 ms smoothing. The ratios apply by mode index, so the cavity takes the first four (unmeasured). The brief's "about 1.6×" is a paraphrase of this clip, so the clip wins | **the brief's paraphrase read literally**: `TALK_RING` 1.6 on every t60 and on the frame count (about 2.0 s at DECAY 1), TERRA's own damping step; a new listening value that rings modes 2–6 21–41 % shorter than the heard clip (t60 1.44, 0.87, 0.63, 0.49, 0.40, 0.34 s); or a different ring | R3's page, clips 7 and 9 (the built default beside the heard clip), question 2; the alternative is rendered as a reference clip below the lead block |
 | 8 | BEND and TALK on the bell and the bar | not in R3 ('—' row) | add them (a pitch curve owns f0 there) | after R3's gate |
 | 9 | Bend and talk at once; HIT and TALK at once | allowed; pitch factors and level factors multiply | one pitch driver at a time | R3's page, question 3 |
 | 10 | A silent source | refused at pick; the row and the pad's current sound stay as they were (code that builds a patch without the sheet stores no driver, so the pad renders today's body) | FORK's "silent in, silent out" | here |
@@ -1937,7 +1983,7 @@ a gate overturns it.
 | 18 | Is the Terra Kit a starter | a `StarterKits` entry on SKIN's precedent: ten starters, so `app/README.md:56`, `KitsScreen.kt:86` and the tests that iterate `ALL` change ("TERRA on the phone") | a `SynthKits` and testkit item only: no picker entry, none of those edits | R2 |
 | 19 | Promoting a driven user preset to the roster | refused by the desk (`UserPresets.rosterLine` writes macros only, so promotion would drop the drivers); `renderAll` skips it with a line saying so | carry the drivers as data in the roster file, a new file shape | here |
 | 20 | Which peak the capture's silence floor tests | **the brief's wording**: the aligned 20 ms head's finite peak, before normalising, below 1e-4 ("HIT, the design", capture step 4); R1 re-runs struck-motion M7's hostile list with it | the whole source's finite peak, as struck-motion M7 measured; the two differ only for a quiet source (finite peak 1e-4 to 1e-2) that is louder after its first 20 ms | R1 |
-| 21 | The Phase-0 listening check: the brief's three clips or the six built | **the brief's three**: `cm_unstruck`, `cm_hit1_wraith`, `cm_rung_wraith_heard`, question 1 only (decision 4 and the strength reference then keep their defaults until R1's page) | the six as built, with questions 2 and 3, if the owner OKs the deviation | Phase 0's check |
+| 21 | The Phase-0 listening check: the brief's three clips or the six built | **the brief's three**: `cm_unstruck`, `cm_hit1_wraith`, `cm_rung_wraith_heard`, question 1 only (decision 4 and the strength reference then keep their defaults until R1's page) | the six as built, with questions 2 and 3, if the owner OKs the deviation | Phase 0's check **Taken 2026-09-30: the three were played.** |
 
 ## Appendices
 
@@ -1946,33 +1992,38 @@ a gate overturns it.
 is the durable home of Phase 0: it holds the method, the adopted candidates'
 formulas and code excerpts (HIT's coloured gain, the safe capture, TALK, BEND),
 the BEFORE/AFTER tables, the prototype source and the paths of the spike
-patches. Two kinds of source sit outside the tree, and they are not alike.
+patches. The files behind it sit outside the tree, in one local, read-only
+evidence folder, `~/Documents/snipsnap-chimera-evidence-2026-09-29/`. Phase 0's
+own files had been in the session scratchpad and were copied into it on
+2026-09-30.
 
-- **Durable (local, read-only): the evidence folder**
-  `~/Documents/snipsnap-chimera-evidence-2026-09-29/` holds `chimera-source.md`
-  (the PDFs verbatim); `chimera-reports/synthesis.md` and the six lenses;
+- **The earlier evidence** is `chimera-source.md` (the PDFs verbatim);
+  `chimera-reports/synthesis.md` and the six lenses;
   `chimera-experiments/struck-shape/report.md`, `struck-motion/results/m1.txt`
   – `m7.txt`, `struck-r2-spec.md`, `hybrid-r2-spec.md`, `bold/steer/notes.md`,
   `bold/talk/notes.md`; `chimera-audition/notes-STRUCK.md`, `verify-r2.md`, the
   manifests and the earlier clips; and `spikes/` with each throwaway worktree's
-  patch. **It does not hold Phase 0.**
-- **Not durable: Phase 0's own files live in the session scratchpad only**
-  (`.../scratchpad/phase0-work/` with `data/`, `data-legacy/`, `p0/`,
-  `tables.md`, `findings.json` and a copy of every new test source and the build
-  diffs in `code/`; the six clips in `.../scratchpad/chimera-audition/PHASE0/`;
-  `.../scratchpad/chimera-audition/fragments-phase0.json`). The Gradle tasks
-  `:synth:phase0` and `:synth:phase0Shape` exist only in the throwaway worktree
+  patch, to apply on `5e3f5f3e`.
+- **Phase 0, copied on 2026-09-30:** `phase0/phase0-work/` (the harness code,
+  `Phase0Bank.kt` among it, with `data/`, `data-legacy/`, `p0/`, `tables.md`,
+  `findings.json` and a copy of every new test source and the build diffs in
+  `code/`); `phase0/PHASE0/` (the six clips); `phase0/fragments-phase0.json`;
+  `phase0/design-and-maps/` (`phase0.md`, the Phase-0 report, with the design
+  brief, the design maps and the critic); and `spikes/phase0/` (`changes.patch`
+  and `new-files/`, to apply on `75b550c1`). The Gradle tasks `:synth:phase0` and
+  `:synth:phase0Shape` were registered only in the throwaway worktree
   `snipsnap-phase0` at `75b550c1` (`grep phase0 synth/build.gradle.kts
-  shell/build.gradle.kts` is empty on the tree), with the same task text kept in
-  `phase0-work/code/`. A scratchpad does not outlive its session: **copying
-  `phase0-work/`, `PHASE0/` and `fragments-phase0.json` into the evidence folder
-  is an open step**, outside this document's reach, and until it is done Phase 0
-  can be rebuilt from the record and the evidence `spikes/`, not replayed.
+  shell/build.gradle.kts` is empty on the tree); their text is in
+  `spikes/phase0/changes.patch`, the same as `phase0/phase0-work/code/`'s build
+  diff. Those two tasks write to the session scratchpad by absolute path, so a
+  rebuild must change that path. With these, Phase 0 can be replayed and not
+  only rebuilt from the record.
 
 Where the reproduction commands apply, they are `./gradlew --offline
 :synth:phase0 -Plegacy=true|false -Pmode=replay,gates,buzz,timing,bold,clips`
 (`-Plegacy=true` is the BEFORE chain) and `:synth:phase0Shape -Plegacy=false
--Poutsub=data -Psections=all`, run in that worktree (phase0 §7).
+-Poutsub=data -Psections=all`, run in a worktree at `75b550c1` with
+`spikes/phase0/` applied (phase0 §7).
 
 **B. The round-two clips the owner heard, BEFORE / AFTER** (OB from 20 ms, float
 render, dB; time to peak, ms; phase0 T6):

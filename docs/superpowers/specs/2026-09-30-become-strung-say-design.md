@@ -54,9 +54,10 @@ missed; and a tree check done for this document at `75b550c1` (`tree check`:
 every cite below was re-read there, and the diff from the evidence's pin
 `5e3f5f3e` to `75b550c1` was listed file by file). Tags of the form
 `bold-talk §2`, `bold-ring clip 3`, `map rack-sections §4`, `critic` name the
-report and its section. The reports are local scratch, not in the tree, so
-every fact they back is restated in full and the tag records only which
-report measured it; the spikes' own code and clips are kept with them.
+report and its section. The reports are local files in the evidence folder
+(Appendix B), not in the tree, so every fact they back is restated in full and
+the tag records only which report measured it; the spikes' own code and clips
+are kept with them.
 
 ## Why Group A, and in this order
 
@@ -108,10 +109,11 @@ formants (the resonant peaks that make a vowel a vowel) move along the path of
 one of VOX SPEAK's eight words, after the engine, on any pad. WORD picks the
 word, SPEED stretches it, SIZE scales the throat from child to giant, MIX is
 dry to wet. The strike is kept (a short dry lead), the word is spoken through
-whatever the pad rings with, and when the word is over the filter settles back to the
-last vowel (the table in "The filter", step 3, names it for each of the eight words) and
-holds it. It is a filter, not a voice: the consonants' noise and bursts are not made, so a
-gong says "wuh-n" through its own partials and then rests on the vowel.
+whatever the pad rings with, and when the word is over the filter holds where the word
+ended, its final formant frame, as the clip the owner kept did ("The filter", step 3, names
+that frame for each of the eight words; for ONE and SEVEN it is the closing n, a hum). It is
+a filter, not a voice: the consonants' noise and bursts are not made, so a gong says
+"wuh-n" through its own partials and then hums on the n.
 
 ### Tree check
 
@@ -135,9 +137,24 @@ So **the three sounds' numbers need no re-measurement**, and none is taken from
 the Phase-0 record, whose numbers are the Group B spec's. The code cites in this document were re-read at `75b550c1`; the
 maps' cites for `PadSheetScreen.kt` had drifted 13 to 31 lines (critic §2), so
 that file is cited by symbol with the line only as a pointer.
-Rechecked at `129bc48e` just before landing: of every file this document names, only
-`PadSheet.kt` moved. SECTION took the TIME row's last slot (commit `8fd72ae3`), which
-moves SAY's chip to the anatomy row (Decision 17) and raises the chip counts by one.
+Rechecked at `129bc48e` just before landing: of the files this document names,
+`PadSheet.kt`, `PadSheetTest.kt`, `Treatments.kt`, `TreatmentsTest.kt`, `SynthScreen.kt`,
+`Ensemble.kt`, `Dsp.kt`, `Velocity.kt`, `README.md`, `docs/CLI.md`, `docs/SYNTH_ROADMAP.md`,
+`synth/build.gradle.kts` and the ARCO design moved.
+One change reaches this design: SECTION took the TIME row's last slot (commit `8fd72ae3`),
+which moves SAY's chip to the anatomy row (Decision 17) and raises the chip counts by one.
+In the others only lines moved, and the cites keep their `75b550c1` lines: `Treatments.kt`
+by +9 after line 68 (SECTION's `sectioned` treatment, appended last to the extras, so
+`TreatmentsTest.kt`'s names list now ends `amped`, `sectioned`, and `said` follows),
+`Ensemble.kt` (the chorus's one clock per frame is now at `:305`, and the new players keep
+the rule), `SynthScreen.kt` by +1 to +16 (GLINT's MAKE INSTRUMENT), `Velocity.kt` (a doc
+comment only, after the lines cited), `Dsp.kt` (one comment), `README.md` and `docs/CLI.md`
+(SECTION's lines, +1 to +4 and +3), `docs/SYNTH_ROADMAP.md` (the S10 row rewritten in place, so
+the lines cited hold), `synth/build.gradle.kts` (−19 lines from line 80: the task cited at
+`:336-343` is at `:317-324`) and the ARCO design (+82 lines at `:1474`; the ruling cited at
+`:1947-1948` is at `:2029-2030`). `FxChain.kt`, `VoxSpeak.kt`, `Mutate.kt`, `Pluck.kt` and
+the rest of what the three sounds are made from are byte-identical, so the three sounds'
+numbers still need no re-measurement.
 
 ## The sounds, measured
 
@@ -264,15 +281,16 @@ gates exist to hear the built sounds.
   clip is, mechanically, is a time-varying formant filter, which the app does
   not have" (bold-talk §2). This is the evidence that SAY can be a rack section
   and TIDE need not change.
-- **What the spike held.** The spike held the word's **final** formant frame past its end
-  (`TalkWord.Track.at`: the index stops at `size − 2` and `x` clamps to 1), which for ONE
-  is the closing nasal, a hum (`VoxSpeak.kt:115`, nasal 1 and damp 2.5; SEVEN's is `:185`).
-  Every figure above was measured so, the weak closing stretch included. The brief's rule
-  is that after the word SAY holds the last vowel ("The filter", step 3), so the shipped
-  section plays the same word and then returns to the vowel where the clip stayed on the
-  hum: what is measured above about the word still holds. Phase 0 measures the return and
-  the hold (items 1 and 2), and the gate's clip 7 is the spike's own, so the owner can
-  hear the difference.
+- **What the spike held, and what SAY holds.** The spike held the word's **final** formant
+  frame past its end (`TalkWord.Track.at`: the index stops at `size − 2` and `x` clamps to
+  1), which for ONE is the closing nasal, a hum (`VoxSpeak.kt:115`, nasal 1 and damp 2.5;
+  SEVEN's is `:185`). Every figure above was measured so, the weak closing stretch
+  included, and the owner kept that clip by ear. SAY's default does the same: after the
+  word the track holds its final frame ("The filter", step 3), so what is measured above
+  about the word and its ending holds as measured. The brief's "holds the last vowel" is a
+  paraphrase of that clip, not a separate decision; read literally, as a return to the last
+  open vowel, it is Decision 8's alternative, which Phase 0 measures beside the default
+  (items 1 and 2) and the gate's clip 8 lets the owner hear.
 - **Level and cost.** The wet level against the plain gong per 100 ms, dB: −1.4,
   1.0, −0.9, −0.6, −5.1, −2.6, −0.6, 0.9, −1.7, −2.1, 2.0, −1.5, −2.5; the −5.1
   is 400 to 500 ms, the closing n. Both paths together cost 146.5 ms against
@@ -390,12 +408,15 @@ the Group B spec's TALK.**
   the `ring` argument `Tract.set` already takes (`:319-322`; VOX SPEAK passes the giant's
   `ring`, SAY passes `ring × 1.5`); the 0.45 × rate clamp is applied by SAY to the
   formant array it hands `Tract.set`; the ε in the level follower is SAY's own
-  arithmetic. The shared track function gains two arguments, the chip-frame length
-  and a list of targets to append after the retimed script, and VOX SPEAK passes what it
-  uses today (the value it computes at `:464` and an empty list); SAY passes 0 and one
-  target, its word's held vowel placed 80 ms after the script's last ("The filter",
-  step 3), so the track's own end-of-list clamp (`:466-469`) is the hold and nothing is
-  added inside the loop.
+  arithmetic. The shared track function gains one argument, the chip-frame length (VOX
+  SPEAK passes the value it computes at `:464`, SAY passes 0). The default hold needs
+  nothing more: the track's own end-of-list clamp (`:466-469`: the index search stops one
+  short of the end and `x` clamps to 1) holds the script's last target, so nothing is
+  appended and nothing is added inside the loop. The alternative hold (Decision 8) would
+  add a second argument, a list of targets to append after the retimed script (VOX SPEAK
+  passing an empty list, SAY one target, its word's last vowel placed 80 ms after the
+  script's last, "The filter", step 3), and F1 carries it only if Decision 8 takes that
+  alternative.
   The size arithmetic (`:421-425`: from SIZE the `throat`, the `ring` and the
   `chest`) is extracted as one function both call, so VOX SPEAK and SAY cannot
   disagree about what SIZE means; SAY reads `throat` and `ring` and ignores `chest`
@@ -1030,37 +1051,43 @@ identical channels stay identical (the rule ENSEMBLE and CONTOUR follow,
    The jaw is fixed at 1 (EFFORT is VOX SPEAK's, not a macro). The giant's chest resonator
    (`VoxSpeak.kt:425-426`, `:509-510`) is left out: it is a low boom added to a *voiced
    source*, SAY has no source, and a low boost on a pad is the rack's EQ's job.
-3. **The hold: after the word, the last vowel.** The brief says that after the word ends the
-   filter holds the last vowel, and that is the rule. The whole word plays as the script has
-   it, closing frames included (the n, v, k, s and t are formant frames only: the filter makes
-   no noise); then the filter **returns to the word's last vowel over 80 ms** and holds it. The
-   80 ms is *this spec's* listening value (the brief gives no number; VOX SPEAK's own tail
-   past a word's last target is the same 80 ms, `VoxSpeak.kt:436`). It is built as one more
-   target appended after the retimed script, 80 ms after the script's last, carrying the
-   vowel's frame (nasal 0, damp 1, full voice), so the track's own end-of-list clamp
-   (`VoxSpeak.kt:466-469`: the index search stops one short of the end and `x` clamps to 1)
-   holds it and the loop gains nothing. Which frame is "the last vowel" is not derivable from
-   the script by one rule that fits all eight words (a voice-level threshold takes FOUR's
-   "r", the script's `stretch` mark takes a frame partway through the vowel of FIVE, SEVEN
-   and EIGHT), so **the table is the definition**: eight constants, each the last open
-   frame before the word's closing consonant, read off the script at `75b550c1` (natural
-   speed, before SPEED retimes the script):
+3. **The hold: after the word, its final frame.** The whole word plays as the script has it,
+   closing frames included (the n, v, k, s and t are formant frames only: the filter makes no
+   noise), and then the filter **holds the script's final frame**, as the approved gong-speaks
+   clip does. Nothing is appended: the track's own end-of-list clamp (`VoxSpeak.kt:466-469`: the
+   index search stops one short of the end and `x` clamps to 1) is the hold, and the loop gains
+   nothing. For ONE and SEVEN that frame is the closing nasal, a hum; for TWO and THREE it is the
+   vowel's own formants (the voice switching off, which a filter does not hear); for the other
+   four it is the closing sound's frame. The brief says that after the word ends the filter
+   "holds the last vowel". That is a paraphrase of the approved clip, whose hold is the final
+   frame, so the clip wins; read literally, as a return to the last open vowel, it is Decision 8's
+   alternative. The table gives both, read off the script at `75b550c1` (natural speed, before
+   SPEED retimes the script):
 
-   | Word | Held vowel: script time, line | F1 / F2 / F3 (Hz) | Played after it, before the return |
+   | Word | Final frame, the default's hold: line, F1 / F2 / F3 (Hz) | Last open vowel, the alternative's hold: script time, line, F1 / F2 / F3 (Hz) | Played between them |
    |---|---|---|---|
-   | ONE | 0.28 s (`:112`) | 600 / 1250 / 2450 | the closing n, 0.33 s on (`:113-115`) |
-   | TWO | 0.33 s (`:123`) | 310 / 900 / 2250 | the voice switching off (`:124`) |
-   | THREE | 0.42 s (`:133`) | 270 / 2300 / 3000 | the voice switching off (`:134`) |
-   | FOUR | 0.30 s (`:142`) | 520 / 950 / 2200 | the "r", F3 down to 1650 (`:143`), then the voice switching off (`:144`) |
-   | FIVE | 0.42 s (`:153`) | 420 / 1950 / 2550 | the closing v, 0.46 s on (`:154-156`) |
-   | SIX | 0.28 s (`:164`) | 380 / 2050 / 2600 | the closing k and s, 0.31 s on (`:165-170`) |
-   | SEVEN | 0.42 s (`:182`) | 480 / 1450 / 2450 | the closing n, 0.45 s on (`:183-185`) |
-   | EIGHT | 0.28 s (`:192`) | 330 / 2250 / 2850 | the closing t, 0.31 s on (`:193-197`) |
+   | ONE | `:115`, 260 / 1500 / 2500, nasal 1, damp 2.5: the closing n, a hum | 0.28 s (`:112`), 600 / 1250 / 2450 | the closing n, 0.33 s on (`:113-115`) |
+   | TWO | `:124`, 310 / 900 / 2250: the vowel's own | 0.33 s (`:123`), 310 / 900 / 2250 | the voice switching off (`:124`) |
+   | THREE | `:134`, 270 / 2300 / 3000: the vowel's own | 0.42 s (`:133`), 270 / 2300 / 3000 | the voice switching off (`:134`) |
+   | FOUR | `:144`, 430 / 1200 / 1600: the "r" | 0.30 s (`:142`), 520 / 950 / 2200 | the "r", F3 down to 1650 (`:143`), then the voice switching off (`:144`) |
+   | FIVE | `:156`, 350 / 1500 / 2400, damp 1.5: the closing v | 0.42 s (`:153`), 420 / 1950 / 2550 | the closing v, 0.46 s on (`:154-156`) |
+   | SIX | `:170`, 350 / 2200 / 2800: the closing s | 0.28 s (`:164`), 380 / 2050 / 2600 | the closing k and s, 0.31 s on (`:165-170`) |
+   | SEVEN | `:185`, 280 / 1600 / 2500, nasal 1, damp 2.5: the closing n, a hum | 0.42 s (`:182`), 480 / 1450 / 2450 | the closing n, 0.45 s on (`:183-185`) |
+   | EIGHT | `:197`, 350 / 1800 / 2700: the t's release | 0.28 s (`:192`), 330 / 2250 / 2850 | the closing t, 0.31 s on (`:193-197`) |
 
-   A test pins each row against VoxSpeak's script by time and formants, so a later change to
-   a word fails there and is not a silent change to SAY ("Testing"). The spike held the
-   word's *final* frame instead, which for ONE and SEVEN is a nasal hum ("What the spike
-   held"); how the hold is reached is Decision 8.
+   **The alternative, a return to the last open vowel.** The word plays as above, then the filter
+   **returns to the word's last open vowel over 80 ms** and holds it. The 80 ms is *this spec's*
+   listening value (the brief gives no number; VOX SPEAK's own tail past a word's last target is
+   the same 80 ms, `VoxSpeak.kt:436`). It is built as one more target appended after the retimed
+   script, 80 ms after the script's last, carrying the vowel's frame (nasal 0, damp 1, full
+   voice), so the same end-of-list clamp holds it. Which frame is "the last open vowel" is not
+   derivable from the script by one rule that fits all eight words (a voice-level threshold of
+   0.8 takes FOUR's "r", 0.40 s on, voice 0.9; the script's `stretch` mark takes a frame partway
+   through the vowel of FIVE, SEVEN and EIGHT), so **for the alternative the table's third column
+   is the definition**: eight constants, each the last open frame before the word's closing
+   consonant. A test pins each row used (the final frames, and the vowels if Decision 8 takes the
+   alternative) against VoxSpeak's script by time and formants, so a later change to a word fails
+   there and is not a silent change to SAY ("Testing"). How the hold is reached is Decision 8.
 4. **Consonants are ignored.** The filter has no excitation, so the noise and
    burst fields of the script (`ah`, `af`, `fc`, `fbw`, the bursts) mean nothing
    and are not made: SIX's "s" and EIGHT's "t" do not appear unless the pad already
@@ -1140,15 +1167,16 @@ document), because the spike measured one word on one source:
 1. **The rack pass at the snip's rate.** The same gong through `Say.process` at
    44.1 kHz against the ablation at 176.4 kHz: formant slots within the
    ablation's own 40 Hz and NCC at least 0.95 to it (*this spec's* bar, set at
-   the ablation's 0.956). Run with the spike's hold (the final frame, which the ablation had) so
-   the comparison is like for like; the brief's vowel hold is then run beside it and the
-   difference printed.
+   the ablation's 0.956). Run with the default hold (the final frame, which the ablation had) so
+   the comparison is like for like; Decision 8's alternative, the return to the last open
+   vowel, is then run beside it and the difference printed.
 2. **Other words.** Only ONE was measured as a filter ("I did not compare words
    by measurement for this clip", bold-talk §2). The eight words through the
    same noise probe as the claims test: every word's F1 and F2 tracks against
-   its own table. Run with the brief's hold: each word's F1 and F2 tracks are read through the
-   word, and after the return the held frame is checked against the table in "The filter",
-   step 3.
+   its own script. Run with the default hold: each word's F1 and F2 tracks are read through the
+   word, and after it the held frame is checked against the script's final frame (the table's
+   second column, "The filter", step 3). With the alternative, the return and the vowel it
+   holds are read the same way, against the table's third column.
 3. **Other sources.** The spike's gong is a fold of sparse partials 98 Hz apart.
    Phase 0 runs the prototype on a snare, a kick, a VOX choir line, a held RESIN
    pad and a TINES bell and records, per source: the formant tracking where the
@@ -1179,7 +1207,7 @@ document), because the spike measured one word on one source:
 | The character | `Treatments.kt:30-69` | `said` appended to `EXTRA` |
 | The chip | `PadSheet.kt:74` at `129bc48e` (`ANATOMY_SEGMENTS`), `:169-209` (`CHARACTER_FOR`), KDoc `:73` | `SAY`, six on the row (Decision 17) |
 | The card, `treat`, replay | `PadSheetScreen.kt:2400`; `TreatCommand.kt` (names are `Treatments.names`); `RecipeReplay.kt:90-91` | none |
-| Docs | `README.md:476-521` (the rack paragraph and the order line); `docs/CLI.md:341-377` (the `treat` list, row four, the phone sentence) | `said`, the order, SAY on row four |
+| Docs | `README.md:476-521` (the rack paragraph and the order line); `docs/CLI.md:341-377` (the `treat` list, row two, the phone sentence) | `said`, the order, SAY on row two |
 | Listening | `SayAuditionGenerator.kt` (test), a `generateSayAudition` task beside `synth/build.gradle.kts:336-343`, a `.gitignore` line (`testkit/say-audition/`) | the gate's clips and page |
 | Tests | `FxTest.kt` (a SAY block; the generic ones are free), `TreatmentsTest.kt:30-35` (the names list), `PadSheetTest.kt:116-149`, `BreedFxTest.kt`, `BreedTest.kt`, `SidecarFuzzTest.kt:335-337` (a `say` seed), new `SayTest`, `FormantTest`, `VoxSpeakFrozenTest` | see "Testing" |
 | Auto-pass, confirm green | `UatSimTest.kt:357-382` (every chip through its door at AMT 0.7, failures reported as findings); `PersonalityTest.kt:199-203` (the `TREATMENT <label>…` busy line at most 40 characters for every chip); `PadSheetTest.kt:262-270` (every chip tappable); `Retrim.kt:71` (reads the segment's label) | none |
@@ -1482,17 +1510,23 @@ from it, never loosen one without writing down why (`2026-09-29-magnet-valve-des
   all eight words. The spike measured one word on a gong; this measures all eight on
   noise, where the source cannot hide the filter.
 - **After the word, the filter holds.** On 2 s of noise at SPEED 1 (the script's last target falls
-  at 0.42 to 0.63 s and the return ends 80 ms after it), the effective response (the same ratio) at 1.0 to 1.2 s equals
+  at 0.42 to 0.63 s), the effective response (the same ratio) at 1.0 to 1.2 s equals
   the one at 1.6 to 1.8 s within a bound printed and pinned at the build, per
-  third-octave band above 250 Hz: held, not looped and not bypassed, and the held ratio's F1 and F2 peaks sit within 40 Hz of
-  that word's row of the table (the last vowel, not a closing frame). The comparison
-  is of the two ratios, not of absolute band levels, so the noise's own fluctuation
-  cancels.
-- **The hold is the table:** each of the eight rows of step 3's table equals the script's
-  target at that time (formants, nasal 0, damp 1, `av` 1), so a later change to a word fails
-  here; the appended target sits 80 ms after the script's last, and the track ends on it.
-- **SPEED and SIZE:** the time the track reaches the held vowel (the word's retimed end plus the 80 ms return) scales as natural + vowel interval ×
-  (`5^(1 − SPEED)` − 1) + 80 ms; the peaks at SIZE 0.25 sit above those at 0.75 by the throat
+  third-octave band above 250 Hz: held, not looped and not bypassed. The held ratio matches the
+  tract's own analytic response at that word's final frame within a bound printed and pinned at the
+  build (compared whole: a nasal's wide, damped resonances blur an F1 and F2 peak read). The
+  comparison is of ratios, not of absolute band levels, so the noise's own fluctuation cancels.
+  If Decision 8 takes the alternative, the same test holds with the return ended 80 ms after the
+  script's last target and the held ratio's F1 and F2 peaks within 40 Hz of that word's last open
+  vowel (the table's third column).
+- **The hold is the script's final frame:** for each of the eight words the track's value past its end
+  equals the script's last target (formants, nasal, damp; the table's second column of step 3), so a
+  later change to a word fails here, and nothing is appended. If Decision 8 takes the alternative:
+  each of the eight vowels in the table's third column equals the script's target at that time
+  (formants, nasal 0, damp 1, `av` 1); the appended target sits 80 ms after the script's last, and the
+  track ends on it.
+- **SPEED and SIZE:** the time the track reaches its final frame (the word's retimed end) scales as natural + vowel interval ×
+  (`5^(1 − SPEED)` − 1), plus 80 ms to the last open vowel if Decision 8 takes the alternative; the peaks at SIZE 0.25 sit above those at 0.75 by the throat
   ratio, within 3 %; SIZE 0.5 is throat 1.
 - **The strike is kept:** the first 12 ms equal the input times one constant, the k of step 6
   (k = inPeak / outPeak, which may be above 1: the word can come out quieter than the
@@ -1532,7 +1566,7 @@ from it, never loosen one without writing down why (`2026-09-29-magnet-valve-des
   SAY (it meets both clauses); if it did not, the exclusion would be written with
   its measurement.
 - Docs: `README.md`'s rack paragraph and order line, `docs/CLI.md` (the `treat` list,
-  row four, row six, the `strung` section, the `--become` paragraph), and one
+  row two for SAY, row six for STRUNG, the `strung` section, the `--become` paragraph), and one
   `docs/FEATURE_PLAN.md` row each for BECOME and STRUNG.
 
 ## Phasing and gates
@@ -1652,16 +1686,18 @@ own, and the owner is asked whether the chip stays anyway (Decision 14).
 Sources: the spike's TIDE GONG (the TEMPLE GONG preset with GLOW 1, WARP .55, FOLD .3,
 TUNE .29, DECAY .7, bold-talk §2), a THUMP snare and kick at defaults, and VOX
 SPEAK's COUNT ONE. Every gong clip is cut to 1.5 s with a 250 ms raised-cosine fade,
-as the spike's was (bold-talk §2), so the comparison with clip 7 is fair. Seven clips:
+as the spike's was (bold-talk §2), so the comparison with clip 7 is fair. Eight clips:
 
 1. the gong dry;
-2. SAY ONE at the defaults (SPEED .5, SIZE .5, MIX 1), the word then returning to and holding its last vowel;
+2. SAY ONE at the defaults (SPEED .5, SIZE .5, MIX 1), the word then holding its final frame, the closing n's hum, as 7 does;
 3. SAY FIVE at the same settings;
 4. the snare and 5. the kick through the chip's chain at AMT 0.7 (the generator builds
    `FxChain(say = {MIX: 0.7})` directly: the treatment `said` lands only in A2b);
 6. VOX SPEAK's COUNT ONE, the voice the word is read from;
 7. the spike's own clip 1, the tract inside the engine, levelled the same way: what the
-   owner heard in the bold round, which holds the word's final frame (the closing hum).
+   owner heard in the bold round, which holds the word's final frame (the closing hum);
+8. SAY ONE at the same settings with Decision 8's alternative hold: the word then returning
+   to its last open vowel over 80 ms and holding it (the brief's "the last vowel" read literally).
 
 Questions (three, one decision each):
 
@@ -1672,9 +1708,9 @@ Questions (three, one decision each):
 
 SPEED 1 and SIZE .85 are not on the page: the defaults stand unless the owner says
 otherwise (the house's rule that every number marked *shape* is a listening value the
-gate may move, `Valve.kt:48-50`), and Phase 0 measures them. The word's ending is the
-brief's, the last vowel; clip 7 lets the owner hear the spike's, and a wish for it would
-be a change to a row of "Decisions already taken", which only the owner makes.
+gate may move, `Valve.kt:48-50`), and Phase 0 measures them. The word's ending is the approved
+clip's, the final frame, which clips 2, 3 and 7 share; clip 8 lets the owner hear what the brief's
+"the last vowel", read literally, would do, and taking it is Decision 8's, the owner's to make.
 
 **Stop answer.** Question 1 on 2 and 7 together: if 2 does not say "one" as clearly as 7
 did, A2b (`said` and the chip) is not built and the owner is asked (Decision 14). G1
@@ -1744,7 +1780,7 @@ table does not date them more finely than the brief does.
 | STRUNG: BODY and PLUCK | BODY untouched with a frozen-copy byte guard; PLUCK's `sympathetic()` lifted into one shared `:synth` helper with a frozen-copy guard on PLUCK's own sound (the `StringsTest` / `LegacyPluckLoop` pattern) | owner, 2026-09-29–30 |
 | STRUNG: listening values | detune ±0.2 %, coupling 0.15, feedback 0.98 (house 0.995), fed from about 40 ms after the hit, tail cap about 1.5 s, a one-pole DC high-pass (`Pluck.kt:272-289`'s lesson) | owner, 2026-09-29–30 (the spike's) |
 | STRUNG: module rule and surfaces | Keyed (`:shell`) may import `:synth`, `Body` (`:audio`) cannot; `Keyed.NAMES`, `PadSheet.KEYED_SEGMENTS` and `KEYED_FOR`, `PadSheetTest` counts, the CLI command and `docs/CLI.md`, RecipeReplay defaults; the degenerate-input doors meet BBB6 (`docs/FEATURE_PLAN.md:1509`, the plan row that runs every door over one-sample, tiny, silent, DC, square, low-rate, stereo and noise inputs) | owner, 2026-09-29–30 |
-| SAY: the section | a time-varying formant filter after the engine on any pad, following one of VOX SPEAK's eight words; macros WORD (a selector, snaps to a word), SPEED (word stretch), SIZE (throat scale), MIX (dry/wet; MIX or AMT 0 is a bypass); after the word it holds the last vowel; consonant energy ignored; a dry lead of about 12 ms keeps the strike; peak-matched; per channel; at the snip's rate | owner, 2026-09-29–30 |
+| SAY: the section | a time-varying formant filter after the engine on any pad, following one of VOX SPEAK's eight words; macros WORD (a selector, snaps to a word), SPEED (word stretch), SIZE (throat scale), MIX (dry/wet; MIX or AMT 0 is a bypass); after the word it holds where the word ended, the approved clip's final formant frame (the brief's "holds the last vowel" is a paraphrase of that clip: Decision 8); consonant energy ignored; a dry lead of about 12 ms keeps the strike; peak-matched; per channel; at the snip's rate | owner, 2026-09-29–30 |
 | SAY: the name | **SAY, not SPEAK** (`VoxVoice.SPEAK` and the "SPEAK BOX" preset exist); the JSON key `say` is permanent | owner, 2026-09-29–30 |
 | SAY: placement | after CONTOUR, before SQUASH, "shape, then drive"; the rationale goes in the `FxChain` KDoc | owner, 2026-09-29–30 |
 | SAY: the selector | WORD is the rack's first selector macro and must be exempt from `Treatments.fade` sliding and from `Breed.crossMacros` averaging; the spec states the rule (a flag on `MacroSpec`) | owner, 2026-09-29–30 (a flag on `MacroSpec` is the brief's example form) |
@@ -1764,7 +1800,8 @@ gate overturns it. Nothing here reopens a row of the table above except as Decis
 says: a stop answer at a gate is the one thing that puts an approved item back to the
 owner. Decisions 15 and 16 record places where this document fills a gap the brief leaves
 or reads a brief value one way when it could be read two. Decision 17 records a chip row
-that filled between the brief and landing.
+that filled between the brief and landing, and Decision 8 a sentence of the brief that
+paraphrases the clip the owner kept, where the clip wins.
 
 | # | Decision | Default | Alternatives | What it costs |
 |---|---|---|---|---|
@@ -1775,7 +1812,7 @@ that filled between the brief and landing.
 | 5 | STRUNG's AMT | **The strings added to the untouched hit at AMT × 2.5** (AMT 1 is the clip the owner heard) | BODY's law: a crossfade from the dry hit to the ring, peak-matched, which replaces the hit at AMT 1 | The crossfade is what BODY already is; the added-strings law is what makes STRUNG a different thing |
 | 6 | STRUNG's ring | **Up to 1.5 s past the hit, no dial** (the brief's "tail cap ~1.5 s" read as a cap on the tail; the spike's buffer was the clap plus 1.1 s, cut at 1.352 s total) | 1.5 s in total from the strike (the spike's ceiling as it was written; a pad already longer than that gets no ring, since the pad is never cut); or a CLI-only `--decay` on a new `Keyed.Dials` field | The total cap shortens the ring on long pads; a dial is an additive change to the recipe and to `RecipeReplay` |
 | 7 | SAY's word on the phone | **The chip says ONE; the other seven words by recipe, landing chain or breed** | A `--word` flag on `treat` (CLI only; replay is by name, so a paste would then need the last alternative); a second tap on a lit SAY chip stepping the word (an `:app` design with no precedent on this card); PASTE refusing a `said` recipe whose stored chain is not the treatment's own | This is the question the brief's phone reach leaves open |
-| 8 | How SAY's hold is reached | **The word plays through, then the filter returns to the last vowel over 80 ms and holds it** (the table in "The filter", step 3) | The track stops at the last vowel and holds it, so the word's closing frames (ONE's n, FIVE's v, SIX's k and s, EIGHT's t) are never reached | The return is one more listening value (80 ms, *this spec's*) and a filter that moves after the word; the stop is the simpler build, but ONE then says "wuh" and the word never ends |
+| 8 | How SAY's hold is reached (the brief's "holds the last vowel" paraphrases the approved clip, which holds the word's final frame) | **The word plays through, then the filter holds its final formant frame**, as the approved clip does (the table's second column in "The filter", step 3; a nasal hum for ONE and SEVEN) | The brief's words read literally: return to the last open vowel over 80 ms and hold it (the table's third column; the gate's clip 8); or the track stops at the last vowel, so the word's closing frames (ONE's n, FIVE's v, SIX's k and s, EIGHT's t) are never reached | The default adds nothing to the track and is the sound the owner kept; the return is one more listening value (80 ms, *this spec's*), a second argument on the shared track function and a filter that moves after the word, and ONE then ends on its vowel and not on the hum; the stop is the simpler build, but ONE then says "wuh" and the word never ends |
 | 9 | Breed's selector rule | **On the third draw (the mean) a child takes A's word** (the stream stays one draw long; A's word comes up two times in three) | A fair coin: one more draw, only for a section that has a selector | A fair coin changes the draw count for a selector section |
 | 10 | SAY and identity | **SAY may change a hit's class, as GHOST and RING do; the kick and snare class is printed at the gate** | SAY is held to "a kick through it is still a kick" and the chip's MIX comes down until it is | Holding the rule weakens the word on kicks |
 | 11 | SPEED's direction | **SPEED 1 is natural speed, 0 the slowest, resting at 0.5 (×2.24)** | SPEED 0 natural and 1 slowest, the direction VOX SPEAK's DECAY runs | An owner who knows SPEAK's presets reads it the other way round |
@@ -1855,11 +1892,12 @@ for (i in dry.indices) {
 }
 ```
 
-SAY differs from it in five ways, each stated above: ε added to both followers and the
+SAY differs from it in four ways, each stated above: ε added to both followers and the
 arithmetic in double (the 0/0 hazard); the mix weight times MIX; the final joint-peak
-match; per-channel state with one clock; and the hold, a return to the word's last vowel (80 ms after the
-last target) and not the word's final frame. The spike held the word's final frame past the
-end (`TalkWord.Track.at`: the index stops at `size − 2` and `x` clamps to 1).
+match; and per-channel state with one clock. The hold is the spike's: the word's final
+frame past the end (`TalkWord.Track.at`: the index stops at `size − 2` and `x` clamps to 1),
+which Decision 8's alternative, a return to the word's last open vowel 80 ms after the last
+target, would change.
 
 ### Appendix B: where the numbers live
 
@@ -1872,7 +1910,10 @@ end (`TalkWord.Track.at`: the index stops at `size − 2` and `x` clamps to 1).
   nearest-in-app tables, render time, what a real build needs, caveats; its code in
   `bold/ring/code/` and the clip `chimera-audition/BOLD/ring_clap_sympathetic.wav`.
 - The maps and the critic (`map mutate-morph`, `map rack-sections`, `map
-  body-treatment`, `critic`): scratch files under the session's `chimera-design/`;
-  their facts are restated in this document and their stale cites corrected.
+  body-treatment`, `critic`) are in `phase0/design-and-maps/` of the evidence folder, with the
+  design brief and the Phase-0 report; their facts are restated in this document and their
+  stale cites corrected.
 - Everything is under `~/Documents/snipsnap-chimera-evidence-2026-09-29/` (the spikes'
-  patches under `spikes/`, apply on `5e3f5f3e`) except the maps and the tree check.
+  patches under `spikes/`, apply on `5e3f5f3e`; Phase 0's under `spikes/phase0/`, apply on
+  `75b550c1`) except the tree check, a read of the tree at `75b550c1` that is restated in
+  this document and was not kept as a file.

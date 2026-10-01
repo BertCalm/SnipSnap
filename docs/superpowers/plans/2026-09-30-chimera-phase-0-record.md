@@ -2,24 +2,30 @@
 
 **Status:** a record, not a plan. Nothing here is in the build. Every program below ran in a throwaway worktree
 (the spikes at `5e3f5f3e`, the Phase-0 re-measure at `75b550c1`) and was then discarded; the sources are kept
-as text and as patches, as far as "Durability" and "How to re-run" say, the way the ARCO record
+as text and as patches ("Durability" and "How to re-run" say where), the way the ARCO record
 ([`2026-09-29-arco-phase-0-spike.md`](2026-09-29-arco-phase-0-spike.md)) and BORE's
 ([`2026-09-28-bore-phase-0-spike.md`](2026-09-28-bore-phase-0-spike.md)) keep theirs. The specs build from their
 own designs rather than copying anything here. Every excerpt below is labelled **spike, not for the build**.
 **Date:** 2026-09-30
 **Tree for code cites:** `75b550c1`. Evidence was measured at `5e3f5f3e` (and design maps at `1a2ec180`); every
-`file:line` below was re-read at `75b550c1`.
+`file:line` below was re-read at `75b550c1`. Rechecked at `129bc48e` just before landing: of the files this record names,
+`Dsp.kt` (one comment line), `Treatments.kt`, `StringMachine.kt`, `ResinPresets.kt`, `VelvetPresets.kt`, `DeterminismTest.kt`
+and `PadRecipeTest.kt` moved; none of the cited claims changed. TERRA's source and everything else the Phase-0 prototype and
+spikes read (`Terra.kt`, `Modes.kt`, `Punch.kt`, `Fork.kt`, `Thump.kt`, `Vox.kt`) are byte-identical across the range, bar that
+one `Dsp.kt` comment, so no Phase-0 number moves; and the test claim that TERRA is in neither `DeterminismTest` nor
+`PadRecipeTest` (§11) still holds, since both changed only their GLINT voice.
 **Related:** the Group A spec
 [`../specs/2026-09-30-become-strung-say-design.md`](../specs/2026-09-30-become-strung-say-design.md) (BECOME, STRUNG,
 SAY) and the Group B spec for the TERRA hook (HIT, BEND, TALK)
 [`../specs/2026-09-30-terra-hit-bend-talk-design.md`](../specs/2026-09-30-terra-hit-bend-talk-design.md). "The brief",
-used below, is the owner-approved design brief the two specs were written from (a session working file, not in the tree); each
+used below, is the owner-approved design brief the two specs were written from (kept in the evidence folder as
+`phase0/design-and-maps/design-brief.md`, not in the tree); each
 spec restates the owner's decisions in its "Decisions already taken". This record adds measurements and method. It changes no
 decision. Where a measurement shows that a sentence of the owner-approved design is inexact or cannot hold as worded,
 this record says so plainly and asks the owner in its closing table; the list is in "What the numbers settled".
 **Evidence (local, read-only, not in the tree):**
-`~/Documents/snipsnap-chimera-evidence-2026-09-29/` (README there); Phase-0 working files in the session scratchpad
-(see "Durability" below).
+`~/Documents/snipsnap-chimera-evidence-2026-09-29/` (README there); Phase 0's own files are in its `phase0/` and
+`spikes/phase0/` folders (see "Durability" below).
 
 ## What this file holds
 
@@ -40,22 +46,28 @@ Then the formulas and short excerpts of the adopted techniques (§8), the load-b
 (§9), what was rejected and why (§10), what was not measured (§11), and the appendices: the Phase-0 tables restated
 in full (A), the Phase-0 prototype source (B), the spike map and patches (C), and the Phase-0 listening page (D).
 
-## Durability: what survives and what does not
+## Durability: what survives
 
-- **In the evidence folder:** the six-lens reports, every audition clip and note, the struck, hybrid and bold experiment
-  folders, and `spikes/` (the patches and new files of the eight spike worktrees). It does **not** hold Phase 0.
-- **Not in the evidence folder:** Phase 0's own files live in the session scratchpad
-  (`.../scratchpad/phase0-work/`, `.../scratchpad/chimera-audition/PHASE0/`, the throwaway worktree `snipsnap-phase0`).
-  They are: the twenty-two test sources (twenty in `:synth`, two in `:shell`) and the build diff (`phase0-work/code/`), the tables and findings
-  (`tables.md`, `findings.json`), the data folders, the six listening clips and their page fragment
-  (`fragments-phase0.json`). A scratchpad does not outlive its session, so this record keeps what it can in text:
-  the Phase-0 tables (Appendix A), the prototype source in full and the harness switch (Appendix B), and the lists of
-  sources and tasks in "How to re-run". **What is not embedded:** the harness itself (`Phase0.kt`, `Phase0Bold.kt`), which exists only
-  in the scratchpad, and the spike sources it builds on, which can be rebuilt from the evidence `spikes/` plus the switch in
-  Appendix B. Until the harness is copied into the evidence folder, "re-run Phase 0" is a rebuild of the spikes and a rewrite
-  of the harness, not a replay, and the six Phase-0 clips (Appendix D) are not in the evidence folder either.
-- **Tags used below:** `(phase0 §N)` and `(phase0 G-xx)` cite a section number or gate name of the Phase-0 report, a
-  scratchpad file that is not durable. Every figure so tagged is restated in §7 or in Appendix A, whose table headings carry
+The files this record relies on are all in the durable evidence folder. Phase 0's own files were copied into it on 2026-09-30; they
+had been in the session scratchpad and the throwaway worktree `snipsnap-phase0`. The folder is local, read-only and not in the tree.
+
+- **The earlier evidence:** the six-lens reports, every audition clip and note, the struck, hybrid and bold experiment
+  folders, and `spikes/` (the patches and new files of the eight spike worktrees, to apply on `5e3f5f3e`).
+- **Phase 0, copied on 2026-09-30:**
+  - `phase0/phase0-work/` holds the harness code in `code/` (the twenty-two test sources, twenty in `:synth` and two in `:shell`,
+    `Phase0Bank.kt` among them, and the build diff `build-gradle-and-tracked.diff`), the tables and findings (`tables.md`,
+    `findings.json`) and the data folders (`data/`, `data-legacy/`, `p0/`);
+  - `phase0/PHASE0/` holds the six listening clips (Appendix D) and `phase0/fragments-phase0.json` their page fragment;
+  - `phase0/design-and-maps/` holds `phase0.md`, the Phase-0 report, with the design brief, the design maps and the critic;
+  - `spikes/phase0/` holds the Phase-0 worktree's code as `changes.patch` (the gradle tasks) and `new-files/` (the twenty-two test
+    sources), to apply on `75b550c1`.
+- **What this record still carries in text,** so that it reads without the folder: the Phase-0 tables (Appendix A), the
+  prototype source in full and the harness switch (Appendix B), and the lists of sources and tasks in "How to re-run". The
+  harness itself (`Phase0.kt`, `Phase0Bold.kt`) is not embedded here; it is in `phase0/phase0-work/code/` and `spikes/phase0/new-files/`.
+  With those, "re-run Phase 0" is a replay (apply the patch, copy the files, run the tasks, after changing the output path that
+  "How to re-run" names), not a rebuild of the spikes and a rewrite of the harness.
+- **Tags used below:** `(phase0 §N)` and `(phase0 G-xx)` cite a section number or gate name of the Phase-0 report
+  (`phase0/design-and-maps/phase0.md`). Every figure so tagged is restated in §7 or in Appendix A, whose table headings carry
   the section number (for example "§4.2"), so each tag can be resolved inside this record; `(phase0 T#)` is a table of that
   report. `(struck-shape S#)`, `(struck-motion M#)`, `(struck-r2)`, `(verify)`, `(verify-r2)`, `(hybrid-r2)`,
   `(bold-steer)`, `(bold-ring)`, `(bold-talk)` are the evidence reports of those names; `(synthesis §N)` is the six-lens
@@ -69,7 +81,7 @@ in full (A), the Phase-0 prototype source (B), the spike map and patches (C), an
 
 ## How to re-run
 
-**The spikes (all at `5e3f5f3e`).** Each spike is a worktree's tracked edits (`changes.patch`, which is only one
+**The spikes (all at `5e3f5f3e`, except `phase0`, which is at `75b550c1`).** Each spike is a worktree's tracked edits (`changes.patch`, which is only one
 or two appended gradle tasks) plus its untracked files (`new-files/`). To rebuild one: check out `5e3f5f3e` in a
 scratch worktree, `git apply spikes/<name>/changes.patch`, copy `new-files/` over the tree, then run its task.
 Every spike lives in the test source sets (`synth/src/test/...`, and `shell/src/test/...` for the "nearest in the
@@ -85,13 +97,16 @@ app" runners) because it needs `internal` members of `:synth`. None belongs in t
 | `bold-steer` | bold round, steer | `steerSpike`, `steerNearest` (:shell) |
 | `bold-ring` | bold round, ring | `generateRing`, `generateRingNearest` (:shell) |
 | `bold-talk` | bold round, talk | `talkRender`, `talkNearest` (:shell) |
+| `phase0` | Phase 0, at `75b550c1` (below) | `phase0Shape`, `phase0`, `steerNearestP0` (:shell), `talkNearestP0` (:shell) |
 
 Example (from `bold-steer/notes.md`): `./gradlew --offline :synth:steerSpike` writes the three clips and the exact
 macros of every part; `./gradlew --offline :shell:steerNearest` scores each against the nearest thing the app can
 already make. Run every task offline and one at a time; each prints its tables to stdout and to a file named in its source.
 
-**Phase 0 (at `75b550c1`).** Make a detached worktree at `75b550c1` and copy these into the test source sets. They are the
-twenty-two files of the scratchpad's `phase0-work/code/`; see "Durability" for where that is.
+**Phase 0 (at `75b550c1`).** `spikes/phase0/` is kept in the same form as the others and is written for `75b550c1`: make a
+detached worktree there, `git apply spikes/phase0/changes.patch` and copy `new-files/` over the tree. The same files are in
+`phase0/phase0-work/code/`, with the build diff ("Durability"). They are the twenty-two test sources, which go in the test
+source sets:
 - `synth/src/test/kotlin/com/snipsnap/synth/`: the prototype `Phase0Bank` (Appendix B, in full); the harness `Phase0`
   (modes `replay gates buzz timing bold clips hit1 s1`) and `Phase0Bold`; the struck spikes `TerraStruckSpike`,
   `TerraStruckShape`, `TerraStruckShapeRunner`, `TerraStruckShapeCandidates`, `StruckMetrics`, `TerraStruckMotion` (the
@@ -100,10 +115,12 @@ twenty-two files of the scratchpad's `phase0-work/code/`; see "Durability" for w
 - `shell/src/test/kotlin/com/snipsnap/shell/`: the nearest-in-the-app runners `SteerNearest` and `TalkNearest`.
 - The spike sources are the evidence's `spikes/struck`, `struck2`, `bold-steer` and `bold-talk` files, rebased by one switch,
   `TerraStruckSpike.legacyCompressor` (default off): off is today's output chain, on re-creates the chain before
-  `a6dcb87e`. The switch is in no evidence spike; Appendix B.2 gives its text.
-- Four gradle tasks, in the build diff (`build-gradle-and-tracked.diff`): `:synth:phase0Shape`, `:synth:phase0`,
-  `:shell:steerNearestP0`, `:shell:talkNearestP0`. They pass `-Plegacy` to the switch as the system property `p0.legacy`,
-  and `phase0` and `phase0Shape` hard-code the scratchpad as their output folder, so a rebuild must edit that path.
+  `a6dcb87e`. The switch is in none of those four (they are at `5e3f5f3e`); it is in the Phase-0 copy of `TerraStruckSpike.kt`
+  under `spikes/phase0/new-files/` (`:37`, `:271`, `:286`), and Appendix B.2 gives its text.
+- Four gradle tasks, in `spikes/phase0/changes.patch` (the same text as `phase0/phase0-work/code/build-gradle-and-tracked.diff`):
+  `:synth:phase0Shape`, `:synth:phase0`, `:shell:steerNearestP0`, `:shell:talkNearestP0`. They pass `-Plegacy` to the switch as
+  the system property `p0.legacy`. `phase0` and `phase0Shape` write to the session scratchpad by absolute path (the `base`
+  constant in the patch), so a rebuild must change that path; the two `:shell` tasks take their folder from `-Proot`.
 
 Commands as run: `./gradlew --offline :synth:phase0Shape -Plegacy=false -Poutsub=data -Psections=all` and
 `./gradlew --offline :synth:phase0 -Plegacy=true|false -Pmode=replay,gates,buzz,timing,bold,clips`
@@ -126,7 +143,8 @@ Commands as run: `./gradlew --offline :synth:phase0Shape -Plegacy=false -Poutsub
   zero-gain item, which changes only what its test compares (a spec instruction, not a decision):
   - "BUZZ/CAVITY drive unchanged at the level match" cannot hold, because the level match is a peak match on the whole body (§7.4);
   - a zero gain that freezes the phase "then clicks on reopen": the measured effect is a phase error, not a click (§7.6);
-  - "rings about 1.6 times longer under TALK" is the mode-1 figure only: the measured clip uses ratios of 1.6 to 2.7 (§8.4);
+  - "rings about 1.6 times longer under TALK" is the mode-1 figure only: the measured clip uses ratios of 1.6 to 2.7 (§8.4); the
+    Group B spec follows the clip and reads the brief's wording as a paraphrase of it (its decision 7);
   - the capture fallback "when the head peak is below 1e-4": the measured rule tests the whole-source peak (§8.2);
   - the three-clip HIT-at-1 check was built as six clips (§7, "The listening check").
   One more item conflicts with a round-2 target and not with the brief (§7.5).
@@ -475,7 +493,7 @@ measurement differs from the brief's wording; no brief sentence is rewritten her
 and TALK's bake** (build round R3 builds them; Phase 0 only confirmed that the pitch input and the two-input form reproduce the spikes,
 and that with DROOP 0 "compose" equals "replace": bit-identical to the spike's bank).
 
-**The listening check.** The brief asks for a three-clip HIT-at-1 check. Phase 0 built **six** clips. **That is a deviation
+**The listening check.** Answered on 2026-09-30: the owner heard the three-clip subset named below and said HIT 1 is **"As strong"** as the strong clip, so COLOURED 100 % stands. The brief asks for a three-clip HIT-at-1 check. Phase 0 built **six** clips. **That is a deviation
 from the brief and needs the owner's OK**: six stays inside the owner's standing limit of at most 10 clips and at most 3
 questions, but it is not the three the owner approved, so the closing table asks. The brief does not name its three clips; a
 three-clip subset that answers question 1 is today's drum, HIT 1 with WRAITH WORD, and the strong "rung" clip with WRAITH WORD
@@ -699,12 +717,14 @@ control.
   worst error, and the 0.856 "glide only" ablation, all depend on it.
 - **widen** (a multiplier on every formant bandwidth) **1.0** for the drum (the word's own bandwidths), against 1.5 for the
   gong clip (`TalkClips.kt:99`, `:41`; §8.7).
-- A 1.4 s render instead of 1.26 s, word FIVE at speed 1.5.
+- A fixed 1.4 s render (`TalkClips.kt:104`, `:108`) instead of TERRA's own 1.26 s at this DECAY, word FIVE at speed 1.5.
 
 Reason, measured: with TERRA's own decays the upper modes have fallen 30-40 dB by the time the vowel has moved, and the
 upper-mode vowel swing (36 dB at mode 6) depends on the longer upper tails. **The brief's "rings about 1.6 times longer under
 TALK" is the mode-1 figure only.** A uniform factor of 1.6 does not reproduce the clip; the per-mode table does, and the data
-to reproduce is that formula. Which to build is an owner and listening decision in the closing table. Phase 0 shows the
+to reproduce is that formula. The owner approved the clip by ear, and the brief's wording is a paraphrase of it, not a separate
+decision: so the Group B spec's default is the clip's ring (the per-mode table, and a render that is the clip's 1.4 s at its
+DECAY 1; the spec's decision 7 states the rule) and the uniform 1.6 is the alternative, in the closing table. Phase 0 shows the
 clip is expressible as data: the two-input prototype (level = vowel gain times the per-mode decay ratio, pitch = the glide)
 reproduces the spike's clip to **-116 dB** (maximum sample difference 3e-7).
 
@@ -885,7 +905,7 @@ Each row names its report. "Moved" means Phase 0 re-measured it; both figures ar
 
 ---
 
-## Appendix A — the Phase-0 tables, restated (from the Phase-0 report; the report itself is in the scratchpad)
+## Appendix A — the Phase-0 tables, restated (from the Phase-0 report, `phase0/design-and-maps/phase0.md` in the evidence folder)
 
 Definitions as in §3.1: OB in dB against unstruck, float render, from 20 ms; the OB floor is a one-mode control; BEFORE is the
 round-2 build as published (reproduced by the legacy chain), AFTER is `75b550c1`. COLOURED = HIT; RUNG = the strong reference.
@@ -1128,14 +1148,17 @@ fun terra(voice: TerraVoice, macros: Map<String, Float> = emptyMap()): Snip =
 ```
 
 The `phase0` and `phase0Shape` gradle tasks set the property from `-Plegacy` (`systemProperty("p0.legacy", ...)`). The tasks are in
-the build diff (`phase0-work/code/build-gradle-and-tracked.diff`, in the scratchpad, see "Durability"), together with
-`steerNearestP0` and `talkNearestP0` in `:shell`; they write to the scratchpad by absolute path.
+the build diff (`phase0/phase0-work/code/build-gradle-and-tracked.diff` in the evidence folder, the same text as
+`spikes/phase0/changes.patch`, see "Durability"), together with `steerNearestP0` and `talkNearestP0` in `:shell`. `phase0` and
+`phase0Shape` write to the session scratchpad by absolute path (the patch's `base` constant), so a rebuild must change that path;
+the two `:shell` tasks take their folder from `-Proot`.
 
 ## Appendix C — where the full spikes live
 
 **`~/Documents/snipsnap-chimera-evidence-2026-09-29/spikes/`** (local; apply on `5e3f5f3e`; never on `75b550c1` without the Phase-0
-rebase switch of Appendix B.2). Phase 0's own files (the harness, `Phase0Bank.kt`) are not in this folder; see "Durability". Each folder holds `changes.patch` (tracked edits, the gradle tasks in the table under "How to re-run") and
-`new-files/` (untracked sources). Map to what is in this record:
+rebase switch of Appendix B.2; `phase0/` alone is written for `75b550c1`). Phase 0's own files are here too, in `spikes/phase0/`
+(the harness, `Phase0Bank.kt`), and in `phase0/` beside this folder; see "Durability". Each folder holds `changes.patch` (tracked
+edits, the gradle tasks in the table under "How to re-run") and `new-files/` (untracked sources). Map to what is in this record:
 
 | folder | the files that matter here |
 |---|---|
@@ -1144,6 +1167,7 @@ rebase switch of Appendix B.2). Phase 0's own files (the harness, `Phase0Bank.kt
 | `bold-steer` | `SteerSpike` (`kickCurve`, clips), `SteerTerra` (`curvedBank`), `SteerTide`, `SteerNearest` (:shell) |
 | `bold-ring` | `RingSpike` (`sympathetic`, `bloom`, `kickCycles`, `Contour`, `kickStringDive`), `RingNearest` (:shell) |
 | `bold-talk` | `TalkWord` (track, tract copy, `response`), `TalkDrum`, `TalkGong` (in-engine and `postHoc`), `TalkKick` (morph), `TalkClips`, `TalkMeasure`, `TalkUtil`, `TalkNearest` (:shell) |
+| `phase0` | `Phase0` and `Phase0Bold` (the harness), `Phase0Bank` (`P0Bank` and `P0Hit`, the prototype of Appendix B.1), the rebased copies of the struck, steer and talk spikes above (with the `legacyCompressor` switch of Appendix B.2), `SteerNearest` and `TalkNearest` (:shell); `changes.patch` is the four gradle tasks |
 | `empirical`, `hybrid2` | `Chimera*.kt` (the proposal, compile-fixed), `ChimeraTest`, `ChimeraProbeTest`, `ChimeraVerifyTest`, `HybridLab`, `HybridTuneH1`-`H3`, `HybridMacrosExperiment`, `HybridR2Generator` |
 | `mutate` | `MutateAuditionSpike` (:shell), `MutateVoxKickSpike` |
 
@@ -1177,8 +1201,8 @@ that answers question 1.
 Questions (three at most; the closing table gives each a default and an alternative): (1) Does HIT 1 sound as strong as the RUNG
 clip you heard? (2) Is the soft attack of HIT 1 with the kick head acceptable, or should the drum keep more of today's attack
 at 1? (3) Do the two RUNG WRAITH clips, the one you heard and the one rebuilt on today's output stage, sound the same to you?
-With only the three-clip subset, question 1 is the only one the page can ask. The page and its fragment (six clips) are not
-in the durable evidence folder (see "Durability").
+With only the three-clip subset, question 1 is the only one the page can ask. The six clips are in `phase0/PHASE0/` and the page
+fragment is `phase0/fragments-phase0.json`, in the evidence folder (see "Durability").
 
 ## Owner decisions this record raises (for the specs' "Decisions for the owner")
 
@@ -1188,10 +1212,10 @@ marked "proposed" is not approved until the owner says so.
 | decision | default | alternative |
 |---|---|---|
 | BUZZ and the cavity's drive under HIT's level match (§7.4). The brief's "keeps their drive as today" and "s matches the peak of today's body" cannot both hold | **proposed, pending the owner's OK:** Option A, BUZZ and the tanh follow the striker (relaxes "keeps their drive as today"); the test pins the measured ranges and equality at HIT 0 | Option B: a band-passed-peak level match on the cavity (relaxes "s matches the peak of today's body"; holds drive and BUZZ near today's; brighter heads get a different overtone balance, with the low modes lifted about 10 dB, an estimate) |
-| HIT at 1 (Phase-0 listening check, question 1) | "strong" (1) = coloured 100 % | if heard as weaker than the strong clip: try A-D first, which is not free (attack); decide the fix before build round R1 |
+| HIT at 1 (Phase-0 listening check, question 1) | "strong" (1) = coloured 100 % | if heard as weaker than the strong clip: try A-D first, which is not free (attack); decide the fix before build round R1 **Answered 2026-09-30: "As strong".** |
 | The soft attack of HIT 1 with a bass head (question 2; §7.3) | accept: HIT 1 is not "today's attack plus colour" for a bass head, and the spec names the strength in every claim about attack | keep more of today's attack at 1; A-D is the first candidate and its attack is not free either (peak 8.7 ms with THUMP KICK, against HIT 1's 14.0) |
 | The two RUNG WRAITH clips (question 3; §7.2) | treat the 0.6 dB difference in the first 5 ms as small and cite the rebuilt clip | if the owner hears them differently, judge HIT 1 against the clip as heard (`cm_rung_wraith_heard`) and re-state RUNG's figures on the old chain |
 | Six clips or the brief's three (Group B spec, decision 21) | three clips (a subset: today's drum, HIT 1 with WRAITH WORD, RUNG with WRAITH WORD as heard); question 1 only | the six as built, with questions 2 and 3, if the owner OKs the deviation |
-| TALK's ring length (§8.4): the brief says "about 1.6 times longer" | the brief's wording, as the Group B spec takes it (its decision 7): a uniform 1.6 on every t60 and on the length; unmeasured, it does not reproduce the clip and shortens the upper-mode vowel tails, so it is a new listening value | the clip as heard: the measured per-mode table, `1.6 * (1 + 0.65k) / (1 + 0.30k)` (1.60 to 2.72), with the damping step .30 and the fixed 1.4 s render; it matches the clip and the -116 dB bake |
+| TALK's ring length (§8.4): the brief says "about 1.6 times longer", a paraphrase of the clip the owner heard | **the heard clip's ring**, as the Group B spec takes it (its decision 7): the measured per-mode ratio on each mode's t60, `1.6 * (1 + 0.65k) / (1 + 0.30k)` (1.60, 2.03, 2.30, 2.48, 2.62, 2.72 for modes 1 to 6: the damping step .30 together with the 1.6), and a render of `framesFor * 10/9`, which is the clip's fixed 1.4 s at its DECAY 1 and follows DECAY elsewhere; it matches the clip's ring and length and, in the prototype, the -116 dB bake (the 64-frame bake of the track is still unmeasured) | the brief's paraphrase read literally: a uniform 1.6 on every t60 and on the length (about 2.0 s at DECAY 1); unmeasured, it does not reproduce the clip and rings modes 2 to 6 21-41 % shorter than the heard clip, so it is a new listening value |
 | Which peak the capture fallback tests (§8.2; Group B spec, decision 20) | the brief's wording: the peak of the aligned, sanitised 20 ms head, before normalising (re-run the hostile list with it) | the whole-source finite peak, as measured (struck-motion M7); differs only for quiet sources, peak 1e-4 to 1e-2 |
 | What BEND stores (§6.1, §8.3) | the pitch curve only, as the brief defines it; HIT from the same pad supplies an attack; the clip's layered 15 ms kick head is not built; the range [1, 3] is a spike limit and the build clamp is the brief's 0.25-4 | also store or layer a kick head (not in the brief; a new decision) |
