@@ -2077,7 +2077,10 @@ R1 ~1,750, R2 ~530; CONTOUR, the newest rack section: 5 files, +132/−2
   bridge wave into a `Modes` table, which is what BODY already does
   through `bodyRing`, with TERRA's rows instead of a cello's. Neither
   needs an engine; if a gate ever wants a bowed bar, it is a BODY table
-  swap in a later round, not a file.
+  swap in a later round, not a file. *Superseded 2026-10-01 (owner):
+  bowed and rubbed modal bodies belong to MERCURY, on its R0 modal bank
+  ([`2026-10-01-mercury-modal-glass-engine-design.md`](2026-10-01-mercury-modal-glass-engine-design.md),
+  decision 4). ARCO stays strings.*
 - **The divide-down saw inside the engine, the three-tap chorus** — a
   VELVET/RESIN preset family and the ENSEMBLE section ("The
   string-machine question"); **the formant filters** — the rack's EQ on

@@ -336,9 +336,10 @@ Each has a default. Silence means the default.
    BORE's and ARCO's specs already do.*
 3. **MERCURY versus STRIKE.** PING overlaps STRIKE's planned GLASS voice.
    *Default: if both are ever built, STRIKE drops GLASS and both share the
-   R0 bank.*
+   R0 bank.* **Taken by the owner 2026-10-01.**
 4. **MERCURY versus ARCO's bowed bar** (`arco spec:2033-2036`). *Default:
-   bowed modal bodies belong to MERCURY. ARCO stays strings.*
+   bowed modal bodies belong to MERCURY. ARCO stays strings.* **Taken by
+   the owner 2026-10-01.**
 5. **Voices at R1.** *Default: three (PING, SING, BLADE). EDDY, VESSEL and
    SHARD at R2 only if R1's gate passes.*
 6. **Renames.** *Default: SAW → BLADE, TIDE → EDDY, SLOW TIDE → SLOW CURRENT.*
