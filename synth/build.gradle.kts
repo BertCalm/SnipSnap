@@ -312,6 +312,25 @@ tasks.register<JavaExec>("generateArcoAudition") {
     args("${rootDir}/testkit/arco-audition")
 }
 
+tasks.register<JavaExec>("generateMercuryKit") {
+    group = "distribution"
+    description = "Render the MERCURY modal-glass acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MercuryKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the MERCURY audition clips, manifest and page under testkit/mercury-audition/. See MercuryAuditionGenerator. */
+tasks.register<JavaExec>("generateMercuryAudition") {
+    group = "distribution"
+    description = "Render the MERCURY audition clips, manifest and listening page under testkit/mercury-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MercuryAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/mercury-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"

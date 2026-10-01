@@ -80,6 +80,10 @@ testkit/bore-audition/
 # and published as the listening artifact; never committed.
 testkit/arco-audition/
 
+# The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
+# and published as the listening artifact; never committed.
+testkit/mercury-audition/
+
 # The SILK Phase 4 audition clips and page, rendered by :synth:generateSilkAudition
 # and published as the listening artifact; never committed.
 testkit/silk-audition/

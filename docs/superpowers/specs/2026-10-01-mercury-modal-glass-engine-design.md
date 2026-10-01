@@ -4,8 +4,10 @@
 (2026-10-01; "Phase 0, as measured" below): the rotation bank speaks, is in
 tune, decays passively and stays bounded. **R0, the shared toolkit, is built**
 (2026-10-01; "R0, as built" below): `Modes.Bank`, `Modes.Friction` and
-`Modes.symmetricEigen`, with no change to any existing render. **The
-engine itself (R1) is not built, and nothing has been heard.** This document reads the external *Mercury Engine — Engineering
+`Modes.symmetricEigen`, with no change to any existing render. **R1, the
+engine, is built** (2026-10-01; "R1, as built" below): PING, SING and
+BLADE, 24 presets, a kit and an audition page, roadmap row **S21**.
+**Nothing has been heard;** the audition gate is next. This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -534,4 +536,90 @@ proof. The claims tests are in `ModesBankTest.kt`.
 - 24 presets;
 - registration, a kit, and an audition page for the owner's listening gate;
 - the mapping changes from "Phase 0, as measured".
+
+## R1, as built — 2026-10-01
+
+**What landed:**
+- **The engine and its patch.** `Mercury.kt`, `MercuryPatch.kt` and
+  `MercuryPresets.kt` (8 per voice).
+- **Registration.** `Patches.fromJsonValue`, `Velocity.macroSpecsFor` and
+  `Presets` (`forVoice`, `all()`; the KDoc count is now fifteen).
+- **The kit.** `SynthKits.mercury()`, `MercuryKitGenerator` and
+  `testkit/SnipSnap Mercury Kit/`.
+- **The audition.** `MercuryAuditionGenerator` and
+  `audition/mercury-audition.html`, with the gradle tasks
+  `generateMercuryKit` and `generateMercuryAudition`;
+  `testkit/mercury-audition/` is gitignored.
+- **Tests.** The claims (`MercuryTest`), the preset contract
+  (`MercuryPresetsTest`), and an arm each in `DeterminismTest`,
+  `PadRecipeTest`, `PresetsTest` and `SynthKitTest`.
+- **The roadmap row, S21.** GYRE's review expected "S21 or later", so S22 is
+  free for it.
+- **Not touched.** The phone's picker, which is R1.1 and needs a machine
+  with the SDK.
+
+**The object, as built.** It is Phase 0's iteration-3 object on
+`Modes.Bank`:
+- PING runs C4–C6; SING and BLADE G3–G5.
+- Up to 12 primary modes and 4 vessel modes. A mode that could reach
+  40 kHz at the widest bend is dropped, so a high note has fewer modes.
+  That keeps every mode far inside the bank's split bound: `x·tan x` is
+  0.62 at 40 kHz, and the kappa sum is under 0.77.
+- Every mode fades out between 14 and 19 kHz.
+- The control rate is 8 samples.
+- The friction is `Modes.Friction(5000)`, with the finger at 0.03.
+
+**Where R1 differs from the plan, and why:**
+- **GLASS also roughens the contact.** On a rubbed voice, friction locks
+  onto the fundamental, so GLASS's damping and tilt barely changed the
+  sound. By band energy, SING's GLASS 0 against 1 was 0.001.
+  - The spec asks GLASS to change the friction too ("low GLASS should
+    favour broader, more damped motion"). So the pressure now jitters by
+    up to `ROUGHNESS` 0.6 at GLASS 0 and not at all at GLASS 1.
+  - The jitter is seeded noise smoothed below 2 kHz. Listening values.
+- **Pressure goes as RUB².** Linear in RUB, the rub crossed its sustain
+  threshold at RUB 0.05, so PING's default of 0.08 would have been a weak,
+  slow rub. As RUB² it crosses at about 0.19 at C4. Below that, RUB is a
+  tap with a slightly longer ring.
+- **HOLD is the contact, then the object rings out.**
+  - The ring is half the fundamental's t60, clamped to 0.4–2.5 s.
+  - It is released on a raised cosine over the ring's last 40 %: a
+    documented release, not a cut.
+  - At the default GLASS, every render is past the classifier's 1.5 s
+    line and so is filed LOOP by length. The shortest MERCURY (GLASS 0,
+    HOLD 0) is 0.93 s, is filed PERC, and the classifier hears PERC.
+  - The committed kit is 7.8 MB, the largest, because glass rings.
+- **PING's HOLD is mostly length.** A tap has nothing to hold, so HOLD on
+  PING moves the sound by 0.13 on ARCO's measure, against 0.5–1.4 for every
+  other knob. It clears the bar, and its meaning on a tap is a question for
+  the gate.
+- **Velocity falls back to `soften`,** as BORE's does (decision 8). No
+  override is registered until a monotonic centroid sweep earns one.
+
+**The claims, measured** (`MercuryTest`):
+
+| Claim | Measured |
+|---|---|
+| In tune (BEND centred, no water), every voice at TUNE 0, .5 and 1 | within 0.53 cents |
+| The bend gesture | BEND 1 starts +161 cents and BEND 0 −166 cents in the first 0.1 s; both settle within 0.54 cents after 2.5 s |
+| No dead knob, on ARCO's measure (bar 0.1) | every knob 0.13 (PING's HOLD) to 1.45; WATER 0.05 against 0, 1.18–1.29 |
+| RUB turns a tap into a rub | level at the end of a 2.4 s contact over its start: tap 0.07 / 0.01, rub 1.15 / 1.25 (SING / BLADE) |
+| The rub locks on the note at the bottom of the range, at both ends of GLASS, COUPLE 1 | within 0.42 cents |
+| The anchor fix at COUPLE 1 | within 0.41 cents |
+| Every corner of the knobs, both ends of TUNE, raw | 192 renders, all finite, worst raw peak 0.043 |
+| The filed class follows the length line | the shortest is 0.93 s, filed and heard PERC; the default is filed and heard LOOP |
+| Determinism, length, clamping, refusal, velocity fallback | all hold |
+
+**The roster** (`MercuryPresetsTest`). All 24 presets render clean at the
+melodic loudness, round-trip through JSON, carry all seven knobs, and
+spread apart. None is named after an engine, a voice (R2's EDDY, VESSEL
+and SHARD included) or a rack section. Each lands on the note its comment
+names, and the classifier hears none of them as a drum: all are LOOP by
+length.
+
+**Next.** The owner's audition. The page is the kit, then each voice's
+range, a phrase, three velocities, every knob's ends, the dead-zone
+probes and its presets, then the five interaction grids: 166 clips in all.
+Then R1.1 (the phone) and R2 (LOOP, `Keys.mercuryPad`, EDDY, VESSEL and
+SHARD).
 

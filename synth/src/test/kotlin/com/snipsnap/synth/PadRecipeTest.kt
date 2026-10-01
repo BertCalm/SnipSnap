@@ -34,6 +34,7 @@ class PadRecipeTest {
         SilkPatch("Oud Test", SilkVoice.OUD, mapOf("DAMP" to 0.4f)),
         BorePatch("Flute Test", BoreVoice.FLUTE, mapOf("BREATH" to 0.4f)),
         ArcoPatch("Cello Test", ArcoVoice.CELLO, mapOf("GRIP" to 0.4f)),
+        MercuryPatch("Ping Test", MercuryVoice.PING, mapOf("GLASS" to 0.4f)),
     )
 
     @Test

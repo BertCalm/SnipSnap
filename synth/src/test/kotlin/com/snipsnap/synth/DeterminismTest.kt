@@ -150,4 +150,18 @@ class DeterminismTest {
             assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
         }
     }
+
+    // MERCURY seeds its strike burst, its contact roughness and its water's start from the voice and the note
+    // (Dsp.seedFor), and solves its friction implicitly every sample, so this canary guards both: the seeds, and
+    // the float arithmetic of a coupled bank driven by a nonlinear contact, where one stray last bit would move
+    // every sample after it. One per voice, at its defaults and with every knob moved.
+    @Test
+    fun `MERCURY is byte-identical across renders, every voice`() {
+        for (voice in MercuryVoice.entries) {
+            val shot = MercuryPatch("Canary", voice, Mercury.defaults(voice))
+            assertContentEquals(shot.render().samples, shot.render().samples, "$voice defaults")
+            val moved = MercuryPatch("Canary", voice, mapOf("TUNE" to 0.3f, "BEND" to 0.8f, "RUB" to 0.6f, "WATER" to 0.7f, "GLASS" to 0.2f, "COUPLE" to 0.9f, "HOLD" to 0.2f))
+            assertContentEquals(moved.render().samples, moved.render().samples, "$voice moved")
+        }
+    }
 }
