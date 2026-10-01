@@ -153,48 +153,70 @@ object Arco {
     internal class Grip(val pressureLow: Float, val pressureHigh: Float, val cornerLow: Float, val cornerHigh: Float)
 
     /**
-     * The grip's pressure travel, the same for both voices: 0.85 to 1.0. Below 0.85 CELLO's root
-     * slips more than once and ERHU's top note slips at all irregularly; 1.0 is the table's own
-     * ceiling for what a bow can press.
+     * The grip's pressure ceiling is 1.0 for both voices: the friction table's own limit for what a bow can press.
+     * CELLO's floor is 0.85 from G2 up, and higher below it: at C2 pressures of 0.88 to 0.94 hold the
+     * string in a three-slip scratch for over a second, and the pressure that locks fastest at each of the
+     * lowest semitones climbs as the note falls, so CELLO's floor is [CELLO_PRESSURE_LOW_ROOT] at C2 and falls by
+     * [CELLO_PRESSURE_LOW_FALL] a semitone until it meets [PRESSURE_LOW].
      */
     const val PRESSURE_LOW = 0.85f
     const val PRESSURE_HIGH = 1.0f
+    const val CELLO_PRESSURE_LOW_ROOT = 0.97f
+    const val CELLO_PRESSURE_LOW_FALL = 0.02f
+
+    /**
+     * ERHU's floor is 0.94, not 0.85, for pitch's sake and not the string's: pressing harder raises a high
+     * string's pitch by about 30 cents per unit of pressure (4.6 cents over the 0.15 from 0.85 to 1.0 at C#5), and
+     * with the corner's own share of it GRIP moved the note by 6.7 cents across its travel (5.7 with a floor of 0.90). A knob that is
+     * a brightness and a grip must not also be a tuning knob, so ERHU's GRIP travels mostly in the corner,
+     * which is the brightness, and the pressure only a little.
+     */
+    const val ERHU_PRESSURE_LOW = 0.94f
 
     /**
      * CELLO's corner at GRIP 0: 1000 Hz, a dark, close-held string. The low strings need a lower
-     * corner than the full 3023.6 Hz to slip once - the bridge's loss per period at f0 is what the
+     * corner than the full 3023.6 Hz to lock quickly - the bridge's loss per period at f0 is what the
      * friction has to beat, and at 65 Hz the one-pole's loss per period is a third of what it is at 131 Hz,
-     * so a corner that gives C3 its single slip is far too bright for C2.
+     * so a corner that gives C3 its single slip is far too bright for C2 (it locks, but after 1.3 s, against 0.55 s at 1000 Hz).
      */
     const val CELLO_CORNER_LOW_HZ = 1000f
 
     /**
      * CELLO's corner at GRIP 1 is 1500 Hz at the root and rises with the note, reaching the full
-     * [Strings.Bow.BRIDGE_HZ] by [CELLO_CORNER_RISE_SEMITONES] semitones up (G#2). At C2 any corner above about
-     * 1500 Hz is a double slip at the top of the pressure range; by G#2 none is.
+     * [Strings.Bow.BRIDGE_HZ] by [CELLO_CORNER_RISE_SEMITONES] semitones up (G#2), where every corner locks within half a second.
      */
     const val CELLO_CORNER_HIGH_ROOT_HZ = 1500f
     const val CELLO_CORNER_RISE_SEMITONES = 8
 
     /**
      * ERHU's corner at GRIP 0 is 1500 Hz at its root and rises to the full corner by
-     * [ERHU_CORNER_RISE_SEMITONES] semitones up; GRIP 1 is the full corner everywhere. 1500 Hz is the floor:
-     * the bridge segment cannot be built below it at the top of the range (see [BETA]).
+     * [ERHU_CORNER_RISE_SEMITONES] semitones up; GRIP 1 is the full corner everywhere. The floor rises because a
+     * high string cannot be given a dark corner: below about 1750 Hz at C#5 and 2250 Hz at G#5 the string
+     * will not sustain at all (it falls silent or slips twice), and 1000 Hz cannot even be built there (see [BETA]).
+     * The rising floor stays above that line at every step.
      */
     const val ERHU_CORNER_LOW_ROOT_HZ = 1500f
     const val ERHU_CORNER_RISE_SEMITONES = 21
 
     internal fun gripFor(voice: ArcoVoice, semitone: Int): Grip = when (voice) {
         ArcoVoice.CELLO -> Grip(
-            PRESSURE_LOW, PRESSURE_HIGH,
+            max(PRESSURE_LOW, CELLO_PRESSURE_LOW_ROOT - CELLO_PRESSURE_LOW_FALL * semitone), PRESSURE_HIGH,
             CELLO_CORNER_LOW_HZ,
             Dsp.expMap(min(semitone.toFloat() / CELLO_CORNER_RISE_SEMITONES, 1f), CELLO_CORNER_HIGH_ROOT_HZ, Strings.Bow.BRIDGE_HZ),
         )
         ArcoVoice.ERHU -> Grip(
-            PRESSURE_LOW, PRESSURE_HIGH,
+            ERHU_PRESSURE_LOW, PRESSURE_HIGH,
             Dsp.expMap(min(semitone.toFloat() / ERHU_CORNER_RISE_SEMITONES, 1f), ERHU_CORNER_LOW_ROOT_HZ, Strings.Bow.BRIDGE_HZ),
             Strings.Bow.BRIDGE_HZ,
         )
+    }
+
+    /**
+     * The share of the bridge filter's delay the tuning budget takes out ([Strings.Bow]'s own constant, 0.85, for CELLO), per voice.
+     */
+    internal fun shareFor(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> Strings.Bow.SHARE
+        ArcoVoice.ERHU -> Strings.Bow.SHARE
     }
 
     /** GRIP -> the bow's pressure at this TUNE step. */
@@ -451,7 +473,7 @@ object Arco {
      * GRIP's pressure, [cornerHz] its corner, [vBow] the voice's sustain velocity, [overshoot] BOW's bite,
      * [gateSeconds] HOLD's bow-on time; [vibrato] false is a plain string; [lifted] never puts the bow
      * down; [bowPointOut] receives [Strings.Bow.bowPoint] each sample, the string's velocity under
-     * the bow, which is what the slips-per-period counter reads.
+     * the bow, which is what the slips-per-period counter reads; [share] replaces the voice's tuning share.
      */
     internal fun bow(
         voice: ArcoVoice,
@@ -466,15 +488,16 @@ object Arco {
         vibrato: Boolean = true,
         lifted: Boolean = false,
         bowPointOut: FloatArray? = null,
+        share: Float? = null,
     ): FloatArray = play(
         voice, hz, macros, rate, gateFor(voice, hz, macros, rate, gateSeconds),
-        pressure, cornerHz, vBow, overshoot, vibrato, lifted, bowPointOut,
+        pressure, cornerHz, vBow, overshoot, vibrato, lifted, bowPointOut, share,
     )
 
     private fun play(
         voice: ArcoVoice, hz: Float, macros: Map<String, Float>, rate: Int, gate: Gate,
         pressure: Float?, cornerHz: Float?, vBow: Float?, overshoot: Float?,
-        vibrato: Boolean, lifted: Boolean, bowPointOut: FloatArray?,
+        vibrato: Boolean, lifted: Boolean, bowPointOut: FloatArray?, share: Float?,
     ): FloatArray {
         val semitone = semitoneFor(voice, macros.getValue("TUNE"))
         val grip = macros.getValue("GRIP")
@@ -494,7 +517,7 @@ object Arco {
 
         // A retune may only shorten the segments the ring was built for, so the Bow is built for
         // the lowest pitch of the swing and brought up to the note (BORE's rule).
-        val bow = Strings.Bow(f = hz * 2f.pow(-vibCents / 1200f), beta = BETA, bridgeHz = corner, rate = rate)
+        val bow = Strings.Bow(f = hz * 2f.pow(-vibCents / 1200f), beta = BETA, bridgeHz = corner, share = share ?: shareFor(voice), rate = rate)
         if (vibCents > 0f) bow.retune(hz)
         if (lifted) bow.lift()
 
@@ -538,8 +561,8 @@ object Arco {
      * The steady state is reached and settled this long before a LOOP is cut: at least this many seconds and at least
      * [LOOP_WARMUP_PERIODS] periods. A bow builds in a number of periods (21-27 to 90 percent at C2), not of seconds.
      */
-    const val LOOP_WARMUP_SECONDS = 1.0f
-    const val LOOP_WARMUP_PERIODS = 100
+    const val LOOP_WARMUP_SECONDS = 2.0f
+    const val LOOP_WARMUP_PERIODS = 200
 
     /**
      * How a LOOP's stroke runs: a fixed 63 ms, BOW 0.5's, with no bite - so a LOOP does not depend on BOW
@@ -568,7 +591,7 @@ object Arco {
         val rate = RATE * Dsp.OVERSAMPLE
         val total = (warmFrames + frames + LOOP_PAD_FRAMES) * Dsp.OVERSAMPLE
         val attackN = (LOOP_ATTACK_SECONDS * rate).toInt().coerceAtLeast(1)
-        return play(voice, tuned, macros, rate, Gate(total, attackN, 0, 0, steady = true), null, null, null, null, false, false, null)
+        return play(voice, tuned, macros, rate, Gate(total, attackN, 0, 0, steady = true), null, null, null, null, false, false, null, null)
     }
 
     /** A rendered LOOP and how well its stretch closes on itself ([Keys.seamError]). */
