@@ -140,7 +140,11 @@ object Valve {
 
     fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip = process(snip, macros, oversample = true)
 
-    /** [oversample] false exists only so the aliasing test can prove the probe sees fold-back. */
+    /**
+     * [oversample] false runs the amp at the snip's own rate, with no 4x round trip. It exists for two
+     * callers: the aliasing test, to prove its probe sees fold-back, and the MAGNET audition's P1 clips,
+     * which run the amp at the engine's render rate (already oversampled) before the output chain.
+     */
     internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean): Snip {
         val m = defaults().toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
