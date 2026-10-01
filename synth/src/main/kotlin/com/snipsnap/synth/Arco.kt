@@ -262,14 +262,39 @@ object Arco {
      * [OVERSHOOT_MAX] times at BOW 1 (a player's accent), and the pressure starts partway to the top of the
      * window, in step with the velocity's bite, reaching it at BOW 1; both relax with the attack's own time
      * constant. 0.6 is a 1.15 times bite. Listening values.
+     *
+     * The bite is per voice since the owner heard CELLO's BOW 1 as "nearly" and "not enough bite" while ERHU's was a yes. A
+     * bite that relaxes on the attack's own time constant is over in about 20 ms at BOW 1 (a hump of 1.3 times the
+     * velocity at its highest, though 1.75 is the number it starts from), and a bass string, which needs many milliseconds to
+     * build a period, never shows it: R1c measured CELLO's bite against the same stroke with none and the first 400 ms were
+     * within 0.4 dB of it at C2, C3 and C4, and ERHU's 0.3 to 1.1 dB. CELLO's bite is bigger ([OVERSHOOT_MAX_CELLO]) and lasts at
+     * least [BITE_SECONDS_CELLO] whatever the stroke, so it is an accent the note carries into its first few periods: +0.6 to
+     * +3.9 dB over the first 200 ms at F2 and up, and a changed scratch at C2 (3.6 dB over 200 to 400 ms). ERHU's is as it was
+     * ([BITE_SECONDS_ERHU] is zero: the attack's own time constant). 2.0 times with 30 ms locked too late (D#2 at 2.36 s against
+     * the 2.0 s bar); 3.0 times with 60 ms locks no later than the old bite (1.47 s at its worst, against 1.66 s).
      */
     const val OVERSHOOT_FROM = 0.5f
-    const val OVERSHOOT_MAX = 1.75f
+    const val OVERSHOOT_MAX_ERHU = 1.75f
+    const val OVERSHOOT_MAX_CELLO = 3.0f
+    const val BITE_SECONDS_ERHU = 0f
+    const val BITE_SECONDS_CELLO = 0.06f
 
     fun attackSeconds(bow: Float): Float = Dsp.expMap(bow, ATTACK_SLOW_SECONDS, ATTACK_FAST_SECONDS)
 
-    internal fun overshootFor(bow: Float): Float =
-        1f + (OVERSHOOT_MAX - 1f) * ((bow - OVERSHOOT_FROM) / (1f - OVERSHOOT_FROM)).coerceIn(0f, 1f)
+    /** BOW 1's bite, as a multiple of the sustain velocity, for [voice]. */
+    internal fun overshootMax(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> OVERSHOOT_MAX_CELLO
+        ArcoVoice.ERHU -> OVERSHOOT_MAX_ERHU
+    }
+
+    /** The least time the bite takes to relax, for [voice]: its own time constant is the longer of this and the stroke's attack. */
+    internal fun biteSeconds(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> BITE_SECONDS_CELLO
+        ArcoVoice.ERHU -> BITE_SECONDS_ERHU
+    }
+
+    internal fun overshootFor(voice: ArcoVoice, bow: Float): Float =
+        1f + (overshootMax(voice) - 1f) * ((bow - OVERSHOOT_FROM) / (1f - OVERSHOOT_FROM)).coerceIn(0f, 1f)
 
     // ---- HOLD: how long the bow is on the string -----------------------------
 
@@ -387,7 +412,7 @@ object Arco {
      * A four-point cubic (Catmull-Rom) reads between samples; the wave is at four times the rate its partials need, so the
      * interpolation's own loss is far under -60 dB where the note's energy is.
      */
-    internal fun vibrato(buf: FloatArray, cents: Float, rate: Int): FloatArray {
+    internal fun vibrato(buf: FloatArray, cents: Float, rate: Int, shape: VibratoShape = VIBRATO_PLAIN): FloatArray {
         if (cents <= 0f) return buf
         val depth = vibratoDepthSamples(cents, rate)
         val out = FloatArray(buf.size)
@@ -398,8 +423,9 @@ object Arco {
                 out[i] = buf[i]
                 continue
             }
-            val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
-            val pos = i - depth * rise * sin(2.0 * PI * VIBRATO_HZ * (t - VIBRATO_DELAY_SECONDS))
+            val u = t - VIBRATO_DELAY_SECONDS
+            val rise = (u / shape.riseSeconds).coerceAtMost(1.0)
+            val pos = i - depth * rise * vibratoUnit(u, shape)
             val k = Math.floor(pos).toInt()
             val x = (pos - k).toFloat()
             val p0 = buf[(k - 1).coerceIn(0, last)]
@@ -409,6 +435,62 @@ object Arco {
             out[i] = p1 + 0.5f * x * (p2 - p0 + x * (2f * p0 - 5f * p1 + 4f * p2 - p3 + x * (3f * (p1 - p2) + p3 - p0)))
         }
         return out
+    }
+
+    /**
+     * How a voice's finger moves. [VIBRATO_PLAIN] is a sine at [VIBRATO_HZ] that swells in over [VIBRATO_RISE_SECONDS], the same at every
+     * swing: ERHU's, which the owner heard as a yes. [VIBRATO_HUMAN] is CELLO's, which the owner heard as "nearly" and "too
+     * mechanical": the rate drifts by up to [rateWander] of itself, the depth by up to [depthWander] of itself, the swing leans
+     * by [skew] (a second harmonic, so the up and the down are not mirror images), and it swells in over a longer
+     * [riseSeconds]. Every drift is a sum of three slow sines at frequencies that share no period, so the swing is never the same
+     * twice in a note and no two notes differ: it is a function of the time since the vibrato began and nothing else, so a
+     * render is the same every time and no seed is carried. Listening values.
+     */
+    internal class VibratoShape(val riseSeconds: Double, val rateWander: Double, val depthWander: Double, val skew: Double)
+
+    internal val VIBRATO_PLAIN = VibratoShape(VIBRATO_RISE_SECONDS, 0.0, 0.0, 0.0)
+    internal val VIBRATO_HUMAN = VibratoShape(HUMAN_RISE_SECONDS, 0.07, 0.18, 0.06)
+
+    internal fun vibratoShapeFor(voice: ArcoVoice): VibratoShape = when (voice) {
+        ArcoVoice.CELLO -> VIBRATO_HUMAN
+        ArcoVoice.ERHU -> VIBRATO_PLAIN
+    }
+
+    /** A cellist's vibrato swells in over about half a second, against [VIBRATO_RISE_SECONDS]'s fifth. */
+    const val HUMAN_RISE_SECONDS = 0.5
+
+    private val RATE_WANDER_HZ = doubleArrayOf(0.21, 0.47, 1.13)
+    private val RATE_WANDER_WEIGHT = doubleArrayOf(0.5, 0.35, 0.15)
+    private val RATE_WANDER_PHASE = doubleArrayOf(0.7, 2.1, 4.0)
+    private val DEPTH_WANDER_HZ = doubleArrayOf(0.29, 0.67, 1.37)
+    private val DEPTH_WANDER_WEIGHT = doubleArrayOf(0.5, 0.35, 0.15)
+    private val DEPTH_WANDER_PHASE = doubleArrayOf(1.3, 3.1, 5.2)
+    private const val SKEW_PHASE = 0.9
+
+    /**
+     * The unit swing, `-1.. 1` and a little over with the skew, [u] seconds after the vibrato began: `sin` of a phase that advances
+     * at [VIBRATO_HZ] times (1 + the rate's drift), times (1 + the depth's drift), plus the skew's second harmonic. The rise is not in
+     * it ([vibrato] applies it). With no wander and no skew it is `sin(2 pi [VIBRATO_HZ] u)` exactly, term for term, so [VIBRATO_PLAIN] is
+     * the vibrato this file had before the drift existed, bit for bit (ArcoProductTest holds that).
+     */
+    internal fun vibratoUnit(u: Double, shape: VibratoShape): Double {
+        var phase = u
+        if (shape.rateWander != 0.0) {
+            var drift = 0.0
+            for (k in RATE_WANDER_HZ.indices) {
+                val w = 2.0 * PI * RATE_WANDER_HZ[k]
+                drift += RATE_WANDER_WEIGHT[k] * (cos(RATE_WANDER_PHASE[k]) - cos(w * u + RATE_WANDER_PHASE[k])) / w
+            }
+            phase = u + shape.rateWander * drift
+        }
+        var g = 1.0
+        if (shape.depthWander != 0.0) {
+            var s = 0.0
+            for (k in DEPTH_WANDER_HZ.indices) s += DEPTH_WANDER_WEIGHT[k] * sin(2.0 * PI * DEPTH_WANDER_HZ[k] * u + DEPTH_WANDER_PHASE[k])
+            g = 1.0 + shape.depthWander * s
+        }
+        val angle = 2.0 * PI * VIBRATO_HZ * phase
+        return g * (sin(angle) + shape.skew * sin(2.0 * angle + SKEW_PHASE))
     }
 
     // ---- BODY: the box --------------------------------------------------------
@@ -453,9 +535,21 @@ object Arco {
      * takes the drive to nothing over at least 150 ms). BODY 0 is the string itself.
      */
     internal fun withBody(raw: FloatArray, voice: ArcoVoice, amount: Float, rate: Int): FloatArray {
-        val rung = Strings.bodyRing(raw, bodyFor(voice), amount, rate, BODY_CEILING_SECONDS)
+        val rung = Strings.bodyRing(raw, bodyFor(voice), boxAmountFor(amount), rate, BODY_CEILING_SECONDS)
         return if (rung.size == raw.size) rung else rung.copyOf(raw.size)
     }
+
+    /**
+     * BODY is how loud the box rings against the string ([Strings.bodyRing]'s `amount`, the box's RMS over the string's own),
+     * and the owner heard BODY 1 as "nearly" and "not enough" in both voices: at 1 the box was only as loud as the string. So
+     * the knob is unchanged up to [BODY_KNEE] (the default BODY 0.5 and every preset at or under it render exactly as they did)
+     * and above it climbs more steeply, to [BODY_TOP] times the string at BODY 1, 4.9 dB over it. Listening values.
+     */
+    const val BODY_KNEE = 0.5f
+    const val BODY_TOP = 1.75f
+
+    internal fun boxAmountFor(body: Float): Float =
+        if (body <= BODY_KNEE) body else BODY_KNEE + (body - BODY_KNEE) * (BODY_TOP - BODY_KNEE) / (1f - BODY_KNEE)
 
     /** The longest string plus the box's ring, with room: [Strings.bodyRing]'s own ceiling. */
     const val BODY_CEILING_SECONDS = 8f
@@ -566,7 +660,8 @@ object Arco {
      * [gateSeconds] HOLD's bow-on time; [vibrato] false is a plain wave; [lifted] never puts the bow
      * down; [bowPointOut] receives [Strings.Bow.bowPoint] each sample, the string's velocity under
      * the bow, which is what the slips-per-period counter reads (the string itself, which the vibrato never touches);
-     * [share] replaces the voice's tuning share.
+     * [share] replaces the voice's tuning share, [biteSeconds] the least time the bite takes to relax (the voice's own, [biteSeconds] the
+     * function, otherwise), [vibratoShape] the finger's movement ([vibratoShapeFor] the voice otherwise).
      */
     internal fun bow(
         voice: ArcoVoice,
@@ -582,16 +677,18 @@ object Arco {
         lifted: Boolean = false,
         bowPointOut: FloatArray? = null,
         share: Float? = null,
+        biteSeconds: Float? = null,
+        vibratoShape: VibratoShape? = null,
     ): FloatArray {
         val gate = gateFor(voice, hz, macros, rate, gateSeconds)
-        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share)
-        return if (vibrato) vibrato(tap, vibratoCentsFor(gate.holdN.toFloat() / rate), rate) else tap
+        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share, biteSeconds)
+        return if (vibrato) vibrato(tap, vibratoCentsFor(gate.holdN.toFloat() / rate), rate, vibratoShape ?: vibratoShapeFor(voice)) else tap
     }
 
     private fun play(
         voice: ArcoVoice, hz: Float, macros: Map<String, Float>, rate: Int, gate: Gate,
         pressure: Float?, cornerHz: Float?, vBow: Float?, overshoot: Float?,
-        lifted: Boolean, bowPointOut: FloatArray?, share: Float?,
+        lifted: Boolean, bowPointOut: FloatArray?, share: Float?, biteSecondsOverride: Float? = null,
     ): FloatArray {
         val semitone = semitoneFor(voice, macros.getValue("TUNE"))
         val grip = macros.getValue("GRIP")
@@ -600,10 +697,11 @@ object Arco {
         val corner = cornerHz ?: cornerFor(voice, semitone, grip)
         val vSustain = vBow ?: V_SUSTAIN
         val steady = gate.steady
-        val over = if (steady) 1f else overshoot ?: overshootFor(macros.getValue("BOW"))
-        val biteShare = ((over - 1f) / (OVERSHOOT_MAX - 1f)).coerceIn(0f, 1f)
+        val over = if (steady) 1f else overshoot ?: overshootFor(voice, macros.getValue("BOW"))
+        val biteShare = ((over - 1f) / (overshootMax(voice) - 1f)).coerceIn(0f, 1f)
         val pBite = Dsp.lin(biteShare, p, max(p, window.pressureHigh))
-        val tau = gate.attackN.toDouble() / rate
+        val biteN = max(gate.attackN, ((biteSecondsOverride ?: biteSeconds(voice)) * rate).toInt())
+        val tau = biteN.toDouble() / rate
 
         val bow = Strings.Bow(f = hz, beta = BETA, bridgeHz = corner, share = share ?: shareFor(voice), rate = rate)
         if (lifted) bow.lift()
@@ -611,7 +709,7 @@ object Arco {
         val out = FloatArray(gate.total)
         val liftAt = gate.holdN + gate.rampN
         val bite = if (over > 1f) (over - 1f).toDouble() else 0.0
-        val biteEnd = (BITE_TIME_CONSTANTS * gate.attackN).toInt()
+        val biteEnd = BITE_TIME_CONSTANTS * biteN
         for (i in 0 until gate.total) {
             val t = i.toDouble() / rate
             val ramp = if (i < gate.attackN) i.toFloat() / gate.attackN else 1f

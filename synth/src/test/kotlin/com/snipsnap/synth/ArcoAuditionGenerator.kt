@@ -117,14 +117,14 @@ object ArcoAuditionGenerator {
         Knob(
             "BOW",
             { "a slow bow: ${ms(Arco.attackSeconds(0f))} ms to full speed, no bite" },
-            { "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.OVERSHOOT_MAX)} times too fast and presses at the top of the window" },
+            { voice -> "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.overshootMax(voice))} times too fast and presses at the top of the window" + (if (Arco.biteSeconds(voice) > 0f) ", and the bite takes at least ${ms(Arco.biteSeconds(voice))} ms to settle" else "") },
         ),
         Knob(
             "GRIP",
             { voice -> "a light grip: the lowest bow pressure this note takes (${f2(Arco.pressureFor(voice, defaultSemitone(voice), 0f))}) and the bridge closed down, a dark, close-held string" },
             { voice -> "digging in: full bow pressure (${f2(Arco.pressureFor(voice, defaultSemitone(voice), 1f))}) and the bridge opened up, the brightest the string goes" },
         ),
-        Knob("BODY", { "the string alone, no box" }, { "the box: its ring as loud as the string itself" }),
+        Knob("BODY", { "the string alone, no box" }, { "the box: its ring ${f2(Arco.BODY_TOP)} times as loud as the string itself (the knob is as it was up to ${f2(Arco.BODY_KNEE)}, where the box is ${f2(Arco.BODY_KNEE)} times the string)" }),
         Knob(
             "HOLD",
             { "the shortest bow: ${f1(Arco.HOLD_MIN_SECONDS)} s of note" },
