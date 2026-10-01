@@ -391,4 +391,34 @@ class SilkTest {
         val wetTail = rms(wet, tailFrom, window)
         assertEquals(dryTail, wetTail, "well past the burst, SLAP should not still be adding energy")
     }
+
+    /**
+     * Copilot's own finding on PR #414: the two tests above only check
+     * that SLAP adds *some* energy, which also passed under the bug this
+     * PR fixed (a three-orders-of-magnitude-too-small gain) - neither
+     * would catch a regression back to it. This checks the actual
+     * magnitude against [withSlap]'s own convention ("this many multiples
+     * of the string's own loudness"): at SLAP 1, the isolated wet
+     * contribution's RMS over the burst-plus-pad window should land near
+     * the *string's* RMS over that same window, not three orders under it
+     * (the string's RMS over its own much longer, quieter-on-average full
+     * note - the exact mismatch the bug had).
+     */
+    @Test
+    fun `SLAP 1's own contribution matches the string's own loudness, not three orders under it`() {
+        val rate = Dsp.RATE
+        val damping = Strings.damping(0.9f, 7000f)
+        val string = Strings.pluck(130.81f, 1.5f, damping, 9000f, seed = 5, rate = rate)
+        val wet = Silk.withSlap(string, slap = 1f, rate = rate, seed = 9)
+
+        val window = (0.17f * rate).toInt() // the burst (20 ms) plus the skin table's own pad (150 ms t60)
+        fun rms(buf: FloatArray, len: Int): Double {
+            var acc = 0.0
+            for (i in 0 until len) acc += buf[i].toDouble() * buf[i]
+            return kotlin.math.sqrt(acc / len)
+        }
+        val contribution = FloatArray(window) { wet[it] - string[it] }
+        val ratio = rms(contribution, window) / rms(string, window)
+        assertTrue(ratio in 0.5..2.0, "SLAP 1's own contribution should land within 2x of the string's own loudness over the same window: ratio=$ratio")
+    }
 }
