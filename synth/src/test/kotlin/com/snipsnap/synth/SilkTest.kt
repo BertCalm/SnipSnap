@@ -271,6 +271,28 @@ class SilkTest {
     }
 
     /**
+     * Copilot review, PR #416: the factory-default test above only renders
+     * WASH at its own 0.85 default, and [withWash]'s t60/amount ranges -
+     * decoupled from one another precisely so WASH could move past its old
+     * single-lever ceiling without the render crossing
+     * [Classifier.LOOP_MIN_SECONDS] - have no guard of their own past that
+     * default. A future widening of [Silk.washModesFor]'s t60 range (or
+     * any other constant feeding [withWash]) could silently push WASH 1
+     * back over the 1.5s line the way the old mapping's own 0.7 already
+     * did once (2.06s, measured during this round's own tuning). Checked
+     * at the knob's own top, not just the shipped default.
+     */
+    @Test
+    fun `WASH 1, the knob's own ceiling, still classifies as PERC`() {
+        val c = Classifier.classify(Silk.render(SilkVoice.SANTUR, mapOf("WASH" to 1f)))
+        assertEquals(
+            DrumClass.PERC,
+            c.drumClass,
+            "SANTUR WASH 1 classified ${c.drumClass} at ${c.features.durationSeconds}s, expected PERC under Classifier.LOOP_MIN_SECONDS",
+        )
+    }
+
+    /**
      * [Silk.washModesFor] (SILK Phase 2, SANTUR's WASH): every mode's own
      * frequency must be distinct - the plan review round's own finding
      * was that naively adding a separate "top-of-period" degree on top of
