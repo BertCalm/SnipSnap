@@ -2066,6 +2066,21 @@ same events from two directions); `bodyRing`'s length; the warm-up. *What stayed
 *Still open, for the owner's ears*: the stroke's bite (0.6 to 1 is a listening value and slower to lock at some
 notes), the box's gains, the vibrato's rate and depth, whether a HOLD 0 stab at the bottom of CELLO (a swell) is the
 pad anyone wants, the default HOLD, and the SECTION chip's default amount.
+*Not built here*: the bridge port GYRE asks for in the next note. R1b leaves `Strings.Bow` exactly as R1a landed it
+(no `Strings*` file is in this PR), so the port still lands as its own no-audio-change change before GYRE R2.
+
+**A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
+(`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
+taken") couples four strings through a shared bridge. Its R2 bows those
+strings with this class, unchanged in its friction law and junction. But
+the bridge reflection (`−REFLECTION` through the `BRIDGE_HZ` low-pass) lives
+inside the bridge `Loop`, so there is no place at the physical bridge to
+apply GYRE's coupling. The owner's decision is that the port lands as a
+no-audio-change change before GYRE R2: the bridge segment becomes an
+out-and-back pair with a pluggable far-end reflection whose default is
+exactly today's, proven by `StringsBowTest` and a frozen grid of bow
+renders. R1b may land it if convenient. Nothing in ARCO's sound or
+roadmap changes.
 
 **The audition page** (`ArcoAuditionGenerator`, the SIREN page's shape
 with its Web Audio SURFACE stand-in; every clip through `AuditionLevel`;
@@ -2207,7 +2222,10 @@ R1 ~1,750, R2 ~530; CONTOUR, the newest rack section: 5 files, +132/−2
   bridge wave into a `Modes` table, which is what BODY already does
   through `bodyRing`, with TERRA's rows instead of a cello's. Neither
   needs an engine; if a gate ever wants a bowed bar, it is a BODY table
-  swap in a later round, not a file.
+  swap in a later round, not a file. *Superseded 2026-10-01 (owner):
+  bowed and rubbed modal bodies belong to MERCURY, on its R0 modal bank
+  ([`2026-10-01-mercury-modal-glass-engine-design.md`](2026-10-01-mercury-modal-glass-engine-design.md),
+  decision 4). ARCO stays strings.*
 - **The divide-down saw inside the engine, the three-tap chorus** — a
   VELVET/RESIN preset family and the ENSEMBLE section ("The
   string-machine question"); **the formant filters** — the rack's EQ on

@@ -777,6 +777,12 @@ structurally cannot, and follows the PLUCK pattern of naming a voice for its
 excitation. It ships last, after the primitive has proven itself inside an
 existing engine.
 
+*Decided 2026-10-01 (owner): if STRIKE is built, it drops GLASS, because
+MERCURY's PING covers struck glass, and it builds on MERCURY's R0 modal
+bank rather than a bank of its own
+([`2026-10-01-mercury-modal-glass-engine-design.md`](2026-10-01-mercury-modal-glass-engine-design.md),
+decision 3).*
+
 Naming follows `SYNTH_ROADMAP.md:27` — no trademarks, no near-misses.
 
 ## Testing
