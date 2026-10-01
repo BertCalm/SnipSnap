@@ -17,7 +17,7 @@ package com.snipsnap.synth
  * The two string-machine presets are the one place this roster is not
  * twelve. VELVET's BRASS voice is a detuned saw stack under a low-pass,
  * which is what a string machine's source is, and the sound of one is the
- * ensemble chorus on top ([StringMachine]); the roster's twelve stay twelve
+ * ensemble on top ([StringMachine]); the roster's twelve stay twelve
  * because they are the sounds the voice makes on its own, and these are the
  * sounds it makes with the rack behind it. Both are short, decaying pads
  * (the voice's envelope always decays: 0.88 s at DECAY 0.8, 1.05 s at 0.9), not a

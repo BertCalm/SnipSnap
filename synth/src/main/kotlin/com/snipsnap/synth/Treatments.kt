@@ -66,6 +66,15 @@ object Treatments {
         // neutral are both pinned at 0.5 by ValveTest's `the macros are the
         // four the spec names, with their neutrals`.
         "amped" to FxChain(valve = mapOf("DRIVE" to 0.6f, "SAG" to 0.35f, "CAB" to 0.6f)),
+        // The same section with six independent players in place of three locked
+        // taps: SECTION at 1 and DEPTH at the players' own 0.5, so the full
+        // character is the depth they are written for (AMT fades DEPTH, WIDTH and
+        // SECTION together toward their neutrals, so a lower AMT is the chorus
+        // coming in under the same six players, all of it shallower and narrower).
+        // RATE is left at its
+        // centre, its neutral, as "ensembled" leaves it. Appended last: the
+        // names list is pinned in order.
+        "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

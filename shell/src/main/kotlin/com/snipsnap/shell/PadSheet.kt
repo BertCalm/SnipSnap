@@ -78,11 +78,12 @@ object PadSheet {
 
     /**
      * Row four — what happens to it in time: repeats, rooms, the grid, and
-     * ENSEMBLE's three copies a few milliseconds late. It is a delay-line
-     * effect and reads as one; the character row was already at the six-chip
-     * ceiling, and the rows group by what an effect does, not by species.
+     * ENSEMBLE's three copies a few milliseconds late, and SECTION's six
+     * independent players a few to a few tens of milliseconds late. Both are
+     * delay-line effects and read as such; the character row was already at the
+     * six-chip ceiling, and the rows group by what an effect does, not by species.
      */
-    val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE")
+    val TIME_SEGMENTS: List<String> = listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION")
 
     /** Row five — the machine's own transport. */
     val TRANSPORT_SEGMENTS: List<String> = listOf("FLIP", "STOP", "START", "PITCH")
@@ -204,6 +205,8 @@ object PadSheet {
         "CONTOUR" to "contoured",
         // Three taps off the finished tone, swimming: the string machine's back half.
         "ENSEMBLE" to "ensembled",
+        // The same section as six independent players: one instrument swirled, or several playing.
+        "SECTION" to "sectioned",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
     )

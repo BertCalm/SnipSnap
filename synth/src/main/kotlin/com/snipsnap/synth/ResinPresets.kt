@@ -13,7 +13,7 @@ package com.snipsnap.synth
  *
  * The two string-machine presets are the one place this roster is not
  * twelve: RESIN's BRASS voice is a wide saw stack through a ladder filter,
- * and the sound of a string machine is the ensemble chorus on top of that
+ * and the sound of a string machine is the ensemble on top of that
  * ([StringMachine]). They are short, decaying pads, not a held section - the
  * voice's envelope always decays, in a little over a second at DECAY 0.85 (1.23 s).
  */
