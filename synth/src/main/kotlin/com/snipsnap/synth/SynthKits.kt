@@ -277,4 +277,56 @@ object SynthKits {
             preset(BoreVoice.SAX, "HIGH STAB"), preset(BoreVoice.SAX, "SOLO LOOP"),                                               // A15 A16
         )
     }
+
+    /**
+     * HOLD for the ARCO kit's CELLO row: the bottom of the knob, 0.3 s of bow ([Arco.HOLD_MIN_SECONDS]),
+     * the shortest stab the engine makes. Read off what the engine does there: the stroke at the default BOW
+     * ([Arco.attackSeconds], 63 ms at BOW 0.5) is far under 0.85 of 0.3 s (0.255 s), so the
+     * clamp ([Arco.ATTACK_HOLD_FRACTION]) never bites; the vibrato is scaled by how long the
+     * note lasts and is nothing at 0.6 s of bow or less ([Arco.VIBRATO_HOLD_FROM_SECONDS]), so a stab is a
+     * plain note and not a wobble; the stop after the bow lifts is its 0.15 s floor
+     * ([Arco.STOP_FLOOR_SECONDS], and half the hold is the same 0.15), so the whole pad is 0.50 s, well
+     * under the classifier's 1.5 s line, which files it PERC. Any longer HOLD would make the pad a held
+     * note, which a pad that is struck wants least: the held note is the audition page's three-second set,
+     * and the long note on this kit is its LOOP pad (A15). What it costs, measured on the rendered pads
+     * (A01-A08, C2 to F3, the default BOW 0.5, in 25 ms windows): the string builds over the whole bow, so
+     * the level is half of its peak at 0.11 to 0.16 s and 90 percent of it at 0.22 to 0.27 s, and the peak
+     * comes at 0.27 to 0.29 s of a pad that is 0.500 s long, with the bow lifting just after, so each pad
+     * is a swell cut at its top and not a hit.
+     */
+    private const val ARCO_STAB_HOLD = 0.0f
+
+    /**
+     * The ARCO acceptance kit: CELLO walking the minor pentatonic up the first two rows
+     * (A01-A08, the root C2 first, the way [melodic] and [tide] climb) as stabs, so the pads play a
+     * bass line and a tune a step apart; then the six ERHU presets (A09-A14); then the two LOOP
+     * presets, CELLO's ENDLESS DRAW and ERHU's ENDLESS CRY (A15, A16). Every other macro on the
+     * CELLO row is at its default, so the row is what the knobs sound like before anyone touches
+     * them. Every pad is dry (a bowed note's own tail is its stop, and ARCO has no landing chain),
+     * filed by [Arco.drumClassFor] (PERC for the stabs, LOOP for the two loops, and by its length
+     * rule either for a preset: PERC under 1.5 s of render, LOOP over it), and carries its recipe. A drum program plays every pad once through, LOOP or not
+     * (`Loop=False`, as BORE's and SIREN's LOOP pads do): the wrap is heard in the audition page's
+     * REPEAT and its SURFACE stand-in. The presets are provisional until the audition gate; this
+     * kit is what the page's kit section plays.
+     */
+    fun arco(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = ArcoPatch(
+            "Cello $n", ArcoVoice.CELLO,
+            Arco.defaults(ArcoVoice.CELLO) + mapOf(
+                "TUNE" to semitone / Arco.CELLO_TUNE_SEMITONES.toFloat(),
+                "HOLD" to ARCO_STAB_HOLD,
+            ),
+        ).let { pad(it, Arco.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: ArcoVoice, name: String) = ArcoPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Arco.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),   // A01-A04
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),   // A05-A08
+            preset(ArcoVoice.ERHU, "NASAL LINE"), preset(ArcoVoice.ERHU, "MOON FIDDLE"),                      // A09 A10
+            preset(ArcoVoice.ERHU, "THIN SCRAPE"), preset(ArcoVoice.ERHU, "HIGH CRY"),                        // A11 A12
+            preset(ArcoVoice.ERHU, "SLOW CRY"), preset(ArcoVoice.ERHU, "TEA HOUSE"),                          // A13 A14
+            preset(ArcoVoice.CELLO, "ENDLESS DRAW"), preset(ArcoVoice.ERHU, "ENDLESS CRY"),                   // A15 A16
+        )
+    }
 }

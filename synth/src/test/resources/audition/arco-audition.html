@@ -1,0 +1,1191 @@
+<title>Arco Audition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md,
+     the same page the PLUCK, TINES, SIREN and BORE auditions wear. The scheme
+     is dark by design (light shells were cut), so this page commits to one
+     theme and paints every surface explicitly. */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised1: #221A34;
+    --raised2: #161020;
+    --gray-hi: #40306A;
+    --lcd: #0A0714;
+    --lcd-ink: #C8B2F8;
+    --lcd-glow: rgba(154, 108, 240, .9);
+    --cyan: #40E0E8;
+    --cyan-glow: rgba(64, 224, 232, .8);
+    --warn: #FFB000;
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --accent: #E040C8;
+    --bin-red: #C86050;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    --f-marker: "Rock Salt", "Comic Sans MS", cursive;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 48px;
+    padding-inline: 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      repeating-linear-gradient(90deg, rgba(90, 42, 224, .12) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(224, 64, 200, .08) 0 1px, transparent 1px 22px),
+      repeating-conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 17px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .win {
+    max-width: 430px;
+    margin: 0 auto;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background:
+      linear-gradient(var(--win), var(--win2)) padding-box,
+      var(--oil) border-box;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+
+  .titlebar {
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .titlebar .tag {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    opacity: .85;
+  }
+
+  .lcd {
+    position: relative;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    text-shadow: 0 0 6px var(--lcd-glow);
+  }
+  .lcd::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px);
+  }
+  .lcd > * { position: relative; z-index: 1; }
+
+  .transport {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--field-border);
+  }
+  .transport > div { min-width: 0; }
+  .transport .label {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    text-shadow: none;
+  }
+  .transport .now {
+    font-size: 22px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .transport .now.idle { color: var(--lcd-ink); text-shadow: 0 0 6px var(--lcd-glow); }
+
+  .raised {
+    appearance: none;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible, input[type="range"]:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  .toggle {
+    min-height: 44px;
+    min-width: 88px;
+    padding-inline: 12px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .toggle .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ink3);
+  }
+  .toggle[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+  .toggle[aria-pressed="true"] .dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+
+  .guide {
+    margin: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .guide p { margin: 0; }
+  .guide p + p { margin-top: 6px; }
+  .guide .hd {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+    margin-bottom: 6px;
+  }
+
+  .voice {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    overflow: hidden;
+  }
+  .voice-hd {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 4px 12px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .voice-hd h2 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--title-ink);
+    text-wrap: balance;
+  }
+  .voice-hd .readout {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 17px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .voice-hd .readout b { font-weight: 400; color: var(--ink); }
+  .voice-hd .body-note {
+    font-family: var(--f-marker);
+    font-size: 11px;
+    color: var(--ink2);
+    text-align: right;
+    max-width: 160px;
+  }
+
+  .group { padding: 8px 8px 4px; }
+  .group + .group { border-top: 1px dashed var(--field-border); }
+  .group-hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px 6px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+  .group.key .group-hd { color: var(--accent); }
+  .group.key .group-hd::before {
+    content: "";
+    width: 3px; height: 12px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  .clip {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-areas: "pad meta" "pad desc" "pad chips";
+    gap: 4px 10px;
+    align-items: center;
+    padding: 6px 4px;
+    border-radius: 6px;
+  }
+  .clip.playing { background: rgba(64, 224, 232, .06); }
+
+  .pad {
+    grid-area: pad;
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    font-family: var(--f-pixel);
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    align-self: center;
+  }
+  .pad .ico { display: block; width: 14px; height: 14px; }
+  .pad .ico path, .pad .ico rect { fill: currentColor; }
+  .pad .stop { display: none; }
+  .pad[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
+  }
+  .pad[aria-pressed="true"] .play { display: none; }
+  .pad[aria-pressed="true"] .stop { display: block; }
+
+  .meta {
+    grid-area: meta;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .meta .name {
+    font-size: 18px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .meta .dur {
+    margin-left: auto;
+    flex: none;
+    font-size: 15px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .desc {
+    grid-area: desc;
+    font-size: 15px;
+    color: var(--ink2);
+    line-height: 1.2;
+  }
+
+  .chips {
+    grid-area: chips;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .chip {
+    appearance: none;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink2);
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip .g { font-family: var(--f-lcd); font-size: 15px; line-height: 1; }
+  .chip.worse .g { color: var(--bin-red); }
+  .chip.closer .g { color: var(--cyan); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--title-ink);
+    box-shadow: 0 0 10px rgba(224, 64, 200, .45);
+  }
+  .chip[aria-pressed="true"] .g { color: var(--title-ink); }
+  .chip:disabled { opacity: .5; cursor: default; }
+
+  /* A blind card: the clips carry neutral letters, one pick chip each, and this
+     bar under them takes how sure you are and the reveal. The reveal is a
+     one-way door, so it stays shut until a pick and a confidence are in. */
+  .blindbar {
+    display: grid;
+    gap: 6px;
+    padding: 4px 4px 8px;
+  }
+  .blindbar .k {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+  .blindbar .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .blindbar .result { font-size: 17px; color: var(--cyan); text-shadow: 0 0 6px var(--cyan-glow); line-height: 1.25; }
+  .clip.answer { background: rgba(224, 64, 200, .1); }
+
+  .notes {
+    padding: 8px 12px 12px;
+    border-top: 1px solid var(--field-border);
+    display: grid;
+    gap: 6px;
+  }
+  .notes label {
+    font-family: var(--f-marker);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  textarea {
+    width: 100%;
+    min-height: 64px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    font-family: var(--f-lcd);
+    font-size: 19px;
+    line-height: 1.25;
+    caret-color: var(--cyan);
+  }
+  textarea::placeholder { color: var(--ink3); }
+
+  /* The SURFACE stand-in: the two loops you hold, a pitch axis, an echo. */
+  .surface { margin: 0 12px 12px; }
+  .surface .field {
+    padding: 10px 12px 12px;
+    display: grid;
+    gap: 10px;
+  }
+  .holds {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  .hold {
+    min-height: 72px;
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    padding: 6px 4px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  .hold .sub { font-family: var(--f-lcd); font-size: 14px; color: var(--ink2); letter-spacing: 0; }
+  .hold[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 18px rgba(64, 224, 232, .7), inset 0 0 12px rgba(64, 224, 232, .3);
+  }
+  .hold[aria-pressed="true"] .sub { color: var(--cyan); }
+  .hold:disabled { opacity: .5; cursor: default; }
+  .axis {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .axis .k, .axis .v {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+  .axis .v { color: var(--cyan); min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    width: 100%;
+    min-height: 44px;
+    accent-color: var(--cyan);
+    background: transparent;
+  }
+  .surface .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+  .surface .hint { font-size: 15px; color: var(--ink2); line-height: 1.25; }
+
+  .verdict { margin: 0 12px 12px; }
+  .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
+  .q + .q { border-top: 1px dashed var(--field-border); }
+  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
+
+  .actions {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--field-border);
+  }
+  .primary {
+    appearance: none;
+    min-height: 52px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background:
+      linear-gradient(#0C2426, #081418) padding-box,
+      var(--oil) border-box;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 20px rgba(64, 224, 232, .35);
+  }
+  .primary:disabled { opacity: .6; cursor: default; box-shadow: none; }
+  .status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .status .k { font-family: var(--f-pixel); font-size: 8px; letter-spacing: .5px; color: var(--ink2); text-shadow: none; align-self: center; }
+  .status.warn .v { color: var(--warn); text-shadow: 0 0 8px rgba(255, 176, 0, .6); }
+  .status.ok .v { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+
+  .foot {
+    margin: 4px 12px 12px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink3);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pad[aria-pressed="true"], .hold[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25); }
+      50% { box-shadow: 0 0 22px rgba(64, 224, 232, .85), inset 0 0 14px rgba(64, 224, 232, .35); }
+    }
+  }
+</style>
+
+<div class="win">
+  <div class="titlebar">
+    <span>Arco Audition</span>
+    <span class="tag">R1 GATE &middot; THE THREE-SECOND NOTE</span>
+  </div>
+
+  <div class="transport lcd">
+    <div>
+      <div class="label">NOW PLAYING</div>
+      <div class="now idle" id="now">TAP A PAD TO PLAY</div>
+    </div>
+    <button class="raised toggle" id="repeat" type="button" aria-pressed="false">
+      <span class="dot"></span>REPEAT
+    </button>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">THE PASS BAR</div>
+    <p><b>ARCO passes or fails on a three-second held note, bowed against a synth, not on a one-second stab.</b> If you cannot pick the bowed note out from the synth, or the bowed note itself sounds like a synth, the engine fails.</p>
+    <p>That is the first card below. For each voice, at three pitches (the root, the middle and a high step), you get three clips of three seconds of bow each, unlabelled: A, B and C. For CELLO one is bowed (this engine), one plucked and one a sustaining synth; for ERHU one is bowed, one a sung voice and one a sustaining synth. Press the pick on the one you think is bowed, say how sure you are, then press REVEAL: it shows what each clip was and whether you were right, and locks your pick. Do all six before reading anything else.</p>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">WHAT YOU ARE LISTENING FOR</div>
+    <p>ARCO is a bowed string, not a struck one: a bow drags a string, the hair grips it and carries it along, the string's own tension pulls it back until the grip lets go, and that stick and slip, once every period, is the note. There is no sample and no oscillator under it, and no noise: the same knobs always make the same sound.</p>
+    <p><b>Nothing here has been heard by anyone yet.</b> Every constant was measured (the string speaks once a period, is in tune, starts and stops where it should) and the measurements can say that, not that it sounds like a bow. That is this page's whole job. The constants marked &ldquo;listening&rdquo; in the source (the stroke's bite, the box, the vibrato) are guesses waiting for you.</p>
+    <p>After the held notes comes the one-second stab check: the cello stab at BOW 1 and BOW 0.5 beside a brass stab from each of two synths, in a two-bar pattern at 90 bpm with a snare on the backbeat, every stab at the same loudness; the pairs alternate on the bar line. Then HOLD THE SURFACE: press and hold a loop, slide PITCH while it sounds, let go. Then the kit as it lands on the MPC, then each voice's default, BOW, GRIP, BODY and HOLD at both ends, its eight presets, its LOOP and the vibrato with and without. Mark each YES (it sounds like the bowed string it says), NEARLY, or NO.</p>
+    <p>Known limits, so you do not have to find them: a low CELLO note takes a third of a second to build under the bow, so the lowest stab blooms; the LOOP step has no vibrato; ERHU spans 19 semitones, D4 to A5, not 24 (D6, the 24th semitone, has no bow pressure that slips once a period, and ERHU stops two semitones short of the last step that does); and the comparators are plain: the synth is set to rise as slowly as the bowed note does (the reveal says how long that is) but rises in a straight line and has no vibrato, the plucked CELLO comparator begins with a strike and rings out the way a plucked string does, and the sung ERHU comparator begins with a vowel, holds it for only about 1.8 s and has faded away by about 2.6 s, an octave low at the middle and high steps. The reveal says which is which.</p>
+  </div>
+
+  <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
+
+  <section class="voice surface" id="surface">
+    <div class="voice-hd">
+      <h2>Hold the surface</h2>
+      <div class="body-note">the two LOOP renders, held under a finger</div>
+      <div class="readout"><span>PRESS AND HOLD</span><span>LIFT TO LET GO</span><span>ECHO 220 ms FREE &middot; FEEDBACK .35</span></div>
+    </div>
+    <div class="field lcd">
+      <div class="holds" id="holds"><button class="raised hold" type="button" disabled>LOADING</button></div>
+      <div class="axis">
+        <span class="k">PITCH</span>
+        <input type="range" id="pitch" min="-12" max="12" step="1" value="0" aria-label="Pitch, semitones, the surface's X axis">
+        <span class="v" id="pitchv">0 ST</span>
+      </div>
+      <div class="row">
+        <button class="raised toggle" id="echo" type="button" aria-pressed="false"><span class="dot"></span>ECHO</button>
+        <span class="hint">The loop wraps exactly, as the SURFACE plays it. PITCH resamples the whole loop, so the box climbs with the finger the way the surface's X axis does: does that read as a fiddle, or as a tape? The echo is off here so the wrap and the string are bare; turn it on to hear it as the phone does.</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="voice verdict" id="verdict">
+    <div class="voice-hd">
+      <h2>Verdict</h2>
+      <div class="readout"><span>SIX QUESTIONS &middot; THEN SAVE</span></div>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_held">1 &middot; The held notes: could you pick the bowed one out from the synth, at the low, the middle and the high step, for CELLO and for ERHU? How sure were you? Once you knew which was bowed, does it still sound like a synth anywhere?</label>
+      <textarea id="q_held" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_stab">2 &middot; The stab check: in the pattern, beside the two brass stabs, does the cello stab read as a bow? BOW 1 or BOW 0.5? Is a stab that blooms over a third of a second at the bottom of the cello still a stab?</label>
+      <textarea id="q_stab" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_surface">3 &middot; Held under a finger, does the wrap click? Does the loop sound like a tape or a fiddle as you slide PITCH? Is it fun?</label>
+      <textarea id="q_surface" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_voices">4 &middot; The kit and the presets: does CELLO read as a cello and ERHU as a fiddle, and not as a violin or a synth lead? Which ERHU BODY clip is the most like an erhu? Does the vibrato help the held note or get in the way?</label>
+      <textarea id="q_voices" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_knobs">5 &middot; The knobs: which end of BOW, GRIP, BODY or HOLD goes too far, or not far enough? Are the defaults where you would start?</label>
+      <textarea id="q_knobs" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_else">Anything else</label>
+      <textarea id="q_else" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="save" type="button">Save verdict</button>
+      <div class="status lcd" id="status"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    RENDERED BY generateArcoAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
+    THE PRESETS ARE MEASURED, NOT HEARD &middot; EVERY ARCO CLIP IS DRY &middot;
+    CHIP TAPS, PICKS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE SIX ANSWERS.
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Non-ASCII glyphs are escaped so the page reads the same whatever
+  // charset a host serves it under.
+  var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
+
+  // The clip list is the generator's manifest.json, published beside this
+  // page - one list, written where the clips are rendered.
+  var VOICES = [];
+  var LOOPS = [];
+  // The id of the card the SURFACE stand-in sits after; null leaves it where the page has it.
+  var SURFACE_AFTER = null;
+
+  var REACTIONS = [
+    { v: 'yes',    cls: 'closer', g: String.fromCharCode(0x25B2), t: 'YES' },
+    { v: 'nearly', cls: 'same',   g: '=', t: 'NEARLY' },
+    { v: 'no',     cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'NO' }
+  ];
+
+  var QUESTIONS = ['q_held', 'q_stab', 'q_surface', 'q_voices', 'q_knobs', 'q_else'];
+
+  // How sure you were of a blind pick, said before the reveal.
+  var CONFIDENCE = [
+    { v: 'sure',   t: 'SURE' },
+    { v: 'unsure', t: 'NOT SURE' },
+    { v: 'guess',  t: 'GUESSING' }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  // ---------- state ----------
+  var state = { overall: { q_held: '', q_stab: '', q_surface: '', q_voices: '', q_knobs: '', q_else: '' } };
+
+  // ---------- build ----------
+  var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
+                 '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
+
+  function build() {
+    var host = $('voices');
+    var surface = $('surface');
+    host.textContent = '';
+    VOICES.forEach(function (v) {
+      state[v.id] = state[v.id] || { reactions: {}, note: '' };
+      var card = el('section', 'voice');
+      card.id = 'voice-' + v.id;
+
+      var hd = el('div', 'voice-hd');
+      var h2 = el('h2', null, v.display);
+      var note = el('div', 'body-note', v.body);
+      var ro = el('div', 'readout');
+      (v.readout || []).forEach(function (r) { ro.appendChild(el('span', null, r)); });
+      hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
+      card.appendChild(hd);
+
+      v.groups.forEach(function (g, gi) {
+        var grp = el('div', 'group' + (g.key ? ' key' : ''));
+        grp.id = 'group-' + v.id + '-' + gi;
+        grp.appendChild(el('div', 'group-hd', g.label));
+        g.clips.forEach(function (c) {
+          var fid = c[0], name = c[1], desc = c[2];
+          var row = el('div', 'clip');
+          row.id = 'clip-' + v.id + '-' + fid;
+
+          var pad = el('button', 'raised pad');
+          pad.type = 'button';
+          pad.setAttribute('aria-pressed', 'false');
+          pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
+          pad.innerHTML = PLAY_SVG;
+          pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
+          row.appendChild(pad);
+
+          var meta = el('div', 'meta');
+          var nameEl = el('span', 'name', name);
+          meta.appendChild(nameEl); row.nameEl = nameEl;
+          var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
+          row.appendChild(meta);
+          var descEl = el('div', 'desc', desc);
+          row.appendChild(descEl); row.descEl = descEl;
+
+          var chips = el('div', 'chips');
+          if (g.blind) {
+            // A blind clip has one chip: this is the one. The labels stay in the manifest until REVEAL.
+            var pick = el('button', 'chip closer');
+            pick.type = 'button';
+            pick.id = 'chip-' + v.id + '-' + fid + '-pick';
+            pick.setAttribute('aria-pressed', 'false');
+            pick.setAttribute('aria-label', v.display + ' ' + name + ': ' + (g.blind.pick || 'this one').toLowerCase());
+            pick.innerHTML = '<span class="g">' + String.fromCharCode(0x25B2) + '</span>' + (g.blind.pick || 'THIS ONE');
+            pick.addEventListener('click', function () { blindSet(v.id, gi, 'pick', fid); });
+            chips.appendChild(pick);
+          } else {
+            REACTIONS.forEach(function (r) {
+              var chip = el('button', 'chip ' + r.cls);
+              chip.type = 'button';
+              chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
+              chip.setAttribute('aria-pressed', 'false');
+              chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase());
+              chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
+              chip.addEventListener('click', function () { react(v.id, fid, r.v); });
+              chips.appendChild(chip);
+            });
+          }
+          row.appendChild(chips);
+          grp.appendChild(row);
+        });
+        if (g.blind) grp.appendChild(blindBar(v, g, gi));
+        card.appendChild(grp);
+      });
+
+      var notes = el('div', 'notes');
+      var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
+      var ta = el('textarea');
+      ta.id = 'note-' + v.id;
+      ta.placeholder = 'what it sounds like, in your words';
+      lab.htmlFor = ta.id;
+      ta.addEventListener('input', function () {
+        state[v.id].note = ta.value;
+        debounce(v.id, function () { persist(v.id); });
+      });
+      notes.appendChild(lab); notes.appendChild(ta);
+      card.appendChild(notes);
+
+      host.appendChild(card);
+      v.groups.forEach(function (g, gi) { if (g.blind) paintBlind(v.id, gi); });
+      if (v.id === SURFACE_AFTER && surface) host.appendChild(surface);
+    });
+  }
+
+  // ---------- blind picks ----------
+  // A blind group is a set of clips that carry only a letter. You pick one,
+  // say how sure you are, and only then may you reveal: the reveal puts the
+  // real labels (the clip's 4th and 5th manifest entries) on the rows, scores
+  // the pick against the group's answer, and locks the pick. Everything lives
+  // in the voice's reactions under blind_g<group>_pick / _sure / _seen, so it
+  // saves and restores with the chips.
+  function blindKey(gi, field) { return 'blind_g' + gi + '_' + field; }
+
+  function blindBar(v, g, gi) {
+    var bar = el('div', 'blindbar');
+    bar.appendChild(el('div', 'k', 'HOW SURE ARE YOU?'));
+    var row = el('div', 'row');
+    CONFIDENCE.forEach(function (cf) {
+      var chip = el('button', 'chip');
+      chip.type = 'button';
+      chip.id = 'conf-' + v.id + '-g' + gi + '-' + cf.v;
+      chip.setAttribute('aria-pressed', 'false');
+      chip.setAttribute('aria-label', v.display + ' ' + g.label + ': ' + cf.t.toLowerCase());
+      chip.textContent = cf.t;
+      chip.addEventListener('click', function () { blindSet(v.id, gi, 'sure', cf.v); });
+      row.appendChild(chip);
+    });
+    var reveal = el('button', 'chip');
+    reveal.type = 'button';
+    reveal.id = 'reveal-' + v.id + '-g' + gi;
+    reveal.setAttribute('aria-pressed', 'false');
+    reveal.setAttribute('aria-label', v.display + ' ' + g.label + ': reveal');
+    reveal.textContent = 'REVEAL';
+    reveal.addEventListener('click', function () { blindSet(v.id, gi, 'seen', '1'); });
+    row.appendChild(reveal);
+    bar.appendChild(row);
+    var result = el('div', 'result');
+    result.id = 'result-' + v.id + '-g' + gi;
+    bar.appendChild(result);
+    return bar;
+  }
+
+  function blindSet(voiceId, gi, field, value) {
+    var r = state[voiceId].reactions;
+    if (r[blindKey(gi, 'seen')]) return;
+    var k = blindKey(gi, field);
+    if (field === 'seen') {
+      if (!r[blindKey(gi, 'pick')] || !r[blindKey(gi, 'sure')]) return;
+      r[k] = '1';
+    } else if (r[k] === value) {
+      delete r[k];
+    } else {
+      r[k] = value;
+    }
+    paintBlind(voiceId, gi);
+    persist(voiceId);
+  }
+
+  function paintBlind(voiceId, gi) {
+    var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
+    var g = voice && voice.groups[gi];
+    if (!g || !g.blind) return;
+    var r = state[voiceId].reactions;
+    var pick = r[blindKey(gi, 'pick')] || null;
+    var sure = r[blindKey(gi, 'sure')] || null;
+    var seen = !!r[blindKey(gi, 'seen')];
+    var picked = null, answer = null;
+    g.clips.forEach(function (c) {
+      var fid = c[0];
+      if (fid === pick) picked = c;
+      if (fid === g.blind.answer) answer = c;
+      var chip = $('chip-' + voiceId + '-' + fid + '-pick');
+      if (chip) { chip.setAttribute('aria-pressed', pick === fid ? 'true' : 'false'); chip.disabled = seen; }
+      var row = $('clip-' + voiceId + '-' + fid);
+      if (row && row.nameEl) {
+        row.nameEl.textContent = seen && c[3] ? c[3] : c[1];
+        row.descEl.textContent = seen && c[4] ? c[4] : c[2];
+        row.classList.toggle('answer', seen && g.blind.answer === fid);
+      }
+    });
+    var label = '';
+    CONFIDENCE.forEach(function (cf) {
+      var chip = $('conf-' + voiceId + '-g' + gi + '-' + cf.v);
+      if (chip) { chip.setAttribute('aria-pressed', sure === cf.v ? 'true' : 'false'); chip.disabled = seen; }
+      if (sure === cf.v) label = cf.t;
+    });
+    var reveal = $('reveal-' + voiceId + '-g' + gi);
+    if (reveal) { reveal.setAttribute('aria-pressed', seen ? 'true' : 'false'); reveal.disabled = seen || !(pick && sure); }
+    var res = $('result-' + voiceId + '-g' + gi);
+    if (!res) return;
+    if (!seen || !picked) { res.textContent = ''; return; }
+    // The letter alone: a blind clip is named like "CELLO C3 . B", and the letter is what you heard it as.
+    var letter = function (c) { return c[1].split(DOT).pop(); };
+    if (answer) {
+      res.textContent = picked === answer
+        ? 'RIGHT' + DOT + 'YOU PICKED ' + letter(picked) + ', ' + label
+        : 'NOT THIS TIME' + DOT + 'YOU PICKED ' + letter(picked) + ', ' + label + DOT + 'THE BOWED ONE WAS ' + letter(answer);
+    } else {
+      res.textContent = 'YOU PICKED ' + letter(picked) + ', ' + label + DOT + (picked[3] || '');
+    }
+  }
+
+  // ---------- the surface stand-in ----------
+  // The SURFACE screen loops a pad's WAV whole, restarts it on touch-down,
+  // closes a 3 ms gain glide on lift, and feeds its echo the gated signal
+  // so the tail rings on. Web Audio can do exactly that: a looping buffer
+  // source wraps sample-accurately, a gain node is the gate, a delay with
+  // feedback is the echo (SurfaceEngine's own 220 ms FREE time and 0.35).
+  var ctx = null, dry = null, echoSend = null, echoOn = false, semis = 0;
+  var loopBuffers = {};
+  var holding = null;
+
+  function ensureCtx() {
+    if (ctx) return ctx;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC();
+    dry = ctx.createGain(); dry.gain.value = 0.9; dry.connect(ctx.destination);
+    var delay = ctx.createDelay(2);
+    delay.delayTime.value = 0.22;
+    var fb = ctx.createGain(); fb.gain.value = 0.35;
+    var tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 3200;
+    var wet = ctx.createGain(); wet.gain.value = 0.55;
+    echoSend = ctx.createGain(); echoSend.gain.value = echoOn ? 1 : 0;
+    echoSend.connect(delay); delay.connect(tone); tone.connect(fb); fb.connect(delay); tone.connect(wet); wet.connect(ctx.destination);
+    return ctx;
+  }
+
+  function loadLoop(loop) {
+    if (loopBuffers[loop.id]) return loopBuffers[loop.id];
+    var c = ensureCtx();
+    loopBuffers[loop.id] = fetch(loop.file).then(function (r) { return r.arrayBuffer(); })
+      .then(function (ab) { return c.decodeAudioData(ab); });
+    return loopBuffers[loop.id];
+  }
+
+  function rate() { return Math.pow(2, semis / 12); }
+
+  function holdDown(loop, btn) {
+    var c = ensureCtx();
+    if (c.state === 'suspended') c.resume();
+    if (holding) holdUp();
+    btn.setAttribute('aria-pressed', 'true');
+    nowEl.textContent = 'HOLDING' + DOT + loop.name;
+    nowEl.classList.remove('idle');
+    var mine = { loop: loop, btn: btn, src: null, gain: null, released: false };
+    holding = mine;
+    loadLoop(loop).then(function (buf) {
+      if (mine.released) return;
+      var src = c.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.playbackRate.value = rate();
+      var g = c.createGain();
+      g.gain.setValueAtTime(0, c.currentTime);
+      g.gain.linearRampToValueAtTime(1, c.currentTime + 0.003);
+      src.connect(g); g.connect(dry); g.connect(echoSend);
+      src.start();
+      mine.src = src; mine.gain = g;
+    }, function () {
+      nowEl.textContent = 'COULD NOT LOAD THAT LOOP';
+      holdUp();
+    });
+  }
+
+  function holdUp() {
+    var h = holding;
+    if (!h) return;
+    holding = null;
+    h.released = true;
+    h.btn.setAttribute('aria-pressed', 'false');
+    if (h.src && h.gain && ctx) {
+      var t = ctx.currentTime;
+      h.gain.gain.cancelScheduledValues(t);
+      h.gain.gain.setValueAtTime(h.gain.gain.value, t);
+      h.gain.gain.linearRampToValueAtTime(0, t + 0.003);
+      h.src.stop(t + 0.02);
+    }
+    if (!current) { nowEl.textContent = 'TAP A PAD TO PLAY'; nowEl.classList.add('idle'); }
+  }
+
+  function buildHolds() {
+    var host = $('holds');
+    host.textContent = '';
+    LOOPS.forEach(function (loop) {
+      var btn = el('button', 'raised hold');
+      btn.type = 'button';
+      btn.id = 'hold-' + loop.id;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', 'Hold ' + loop.name);
+      btn.appendChild(el('span', null, loop.name));
+      btn.appendChild(el('span', 'sub', loop.sub || ''));
+      btn.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        try { btn.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
+        holdDown(loop, btn);
+      });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (evt) {
+        btn.addEventListener(evt, function () { if (holding && holding.btn === btn) holdUp(); });
+      });
+      // A keyboard holds too: space or enter down, then up.
+      btn.addEventListener('keydown', function (e) {
+        if ((e.key === ' ' || e.key === 'Enter') && !(holding && holding.btn === btn)) { e.preventDefault(); holdDown(loop, btn); }
+      });
+      btn.addEventListener('keyup', function (e) {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (holding && holding.btn === btn) holdUp(); }
+      });
+      btn.addEventListener('blur', function () { if (holding && holding.btn === btn) holdUp(); });
+      host.appendChild(btn);
+    });
+  }
+
+  $('pitch').addEventListener('input', function () {
+    semis = parseInt(this.value, 10) || 0;
+    $('pitchv').textContent = (semis > 0 ? '+' : '') + semis + ' ST';
+    if (holding && holding.src) holding.src.playbackRate.setTargetAtTime(rate(), ctx.currentTime, 0.015);
+  });
+
+  $('echo').addEventListener('click', function () {
+    echoOn = !echoOn;
+    this.setAttribute('aria-pressed', echoOn ? 'true' : 'false');
+    if (echoSend && ctx) echoSend.gain.setTargetAtTime(echoOn ? 1 : 0, ctx.currentTime, 0.02);
+  });
+
+  // ---------- one-shot audio ----------
+  var audio = null, current = null, repeat = false;
+  var nowEl = $('now');
+
+  function ensureAudio() {
+    if (audio) return audio;
+    audio = new Audio();
+    audio.preload = 'auto';
+    audio.addEventListener('ended', function () {
+      if (repeat && current) {
+        audio.currentTime = 0;
+        audio.play().catch(function () { setPlaying(null); });
+      } else {
+        setPlaying(null);
+      }
+    });
+    audio.addEventListener('error', function () {
+      setPlaying(null);
+      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
+      nowEl.classList.remove('idle');
+    });
+    audio.addEventListener('loadedmetadata', function () {
+      if (current && current.row.durEl && isFinite(audio.duration)) {
+        current.row.durEl.textContent = audio.duration.toFixed(2) + ' S';
+      }
+    });
+    return audio;
+  }
+
+  function setPlaying(next) {
+    if (current) {
+      current.pad.setAttribute('aria-pressed', 'false');
+      current.row.classList.remove('playing');
+    }
+    current = next;
+    if (next) {
+      next.pad.setAttribute('aria-pressed', 'true');
+      next.row.classList.add('playing');
+      nowEl.textContent = next.voice.display + DOT + next.name;
+      nowEl.classList.remove('idle');
+    } else if (!holding) {
+      nowEl.textContent = 'TAP A PAD TO PLAY';
+      nowEl.classList.add('idle');
+    }
+  }
+
+  function toggle(voice, fid, name, pad, row) {
+    var a = ensureAudio();
+    if (holding) holdUp();
+    if (current && current.pad === pad) {
+      a.pause();
+      setPlaying(null);
+      return;
+    }
+    a.pause();
+    a.src = voice.id + '/' + fid + '.wav';
+    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
+    a.play().catch(function () { setPlaying(null); });
+  }
+
+  $('repeat').addEventListener('click', function () {
+    repeat = !repeat;
+    this.setAttribute('aria-pressed', repeat ? 'true' : 'false');
+  });
+
+  // ---------- reactions ----------
+  function react(voiceId, fid, value) {
+    var cur = state[voiceId].reactions[fid];
+    var next = cur === value ? null : value;
+    if (next) state[voiceId].reactions[fid] = next; else delete state[voiceId].reactions[fid];
+    paintChips(voiceId, fid);
+    persist(voiceId);
+  }
+
+  function paintChips(voiceId, fid) {
+    var cur = state[voiceId].reactions[fid] || null;
+    REACTIONS.forEach(function (r) {
+      var chip = $('chip-' + voiceId + '-' + fid + '-' + r.v);
+      if (chip) chip.setAttribute('aria-pressed', cur === r.v ? 'true' : 'false');
+    });
+  }
+
+  // A field being typed into wins over anything arriving from the store:
+  // state takes the live value instead, so the next save cannot re-save
+  // stale text over what was just typed.
+  function paintVoice(voiceId) {
+    var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
+    if (voice) voice.groups.forEach(function (g, gi) {
+      g.clips.forEach(function (c) { paintChips(voiceId, c[0]); });
+      if (g.blind) paintBlind(voiceId, gi);
+    });
+    var ta = $('note-' + voiceId);
+    if (!ta) return;
+    if (ta === document.activeElement) { state[voiceId].note = ta.value; }
+    else if (ta.value !== state[voiceId].note) { ta.value = state[voiceId].note; }
+  }
+
+  function paintOverall() {
+    QUESTIONS.forEach(function (k) {
+      var ta = $(k);
+      if (!ta) return;
+      if (ta === document.activeElement) { state.overall[k] = ta.value; }
+      else if (ta.value !== state.overall[k]) { ta.value = state.overall[k]; }
+    });
+  }
+
+  // The answers keep a local draft as they are typed; only SAVE VERDICT
+  // writes them to the shared store.
+  QUESTIONS.forEach(function (k) {
+    $(k).addEventListener('input', function () {
+      state.overall[k] = this.value;
+      debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
+    });
+  });
+  $('save').addEventListener('click', function () { persist('overall'); });
+
+  // ---------- persistence ----------
+  var db = null;
+  var statusEl = $('status'), statusV = $('statusv');
+  var timers = {}, queues = {};
+
+  function setStatus(kind, text) {
+    statusEl.classList.remove('warn', 'ok');
+    if (kind) statusEl.classList.add(kind);
+    statusV.textContent = text;
+  }
+
+  function debounce(key, fn) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(fn, 700);
+  }
+
+  function snapshotOf(key) {
+    var data;
+    if (key === 'overall') {
+      data = {};
+      QUESTIONS.forEach(function (k) { data[k] = state.overall[k]; });
+    } else {
+      data = { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
+    }
+    data.savedAt = new Date().toISOString();
+    return data;
+  }
+
+  // Every round's verdicts live under their own prefix, so a later round's
+  // page never opens pre-filled with this one's notes and saves over them.
+  var PHASE = 'arco_r1';
+  function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
+
+  function saveLocal(key, data) {
+    try { localStorage.setItem('arco-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+  }
+
+  function loadLocal(key) {
+    try {
+      var raw = localStorage.getItem('arco-audition:' + PHASE + ':' + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function apply(key, data) {
+    if (!data) return;
+    if (key === 'overall') {
+      QUESTIONS.forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
+      paintOverall();
+    } else if (state[key]) {
+      if (data.reactions && typeof data.reactions === 'object') state[key].reactions = Object.assign({}, data.reactions);
+      if (typeof data.note === 'string') state[key].note = data.note;
+      paintVoice(key);
+    }
+  }
+
+  function persist(key) {
+    var data = snapshotOf(key);
+    saveLocal(key, data);
+    if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    setStatus(null, 'SAVING...');
+    queues[key] = (queues[key] || Promise.resolve())
+      .then(function () { return db.doc(docPath(key)).set(data); })
+      .then(function () { setStatus('ok', 'SAVED ' + clock()); },
+            function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
+  }
+
+  function clock() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  function keys() { return VOICES.map(function (v) { return v.id; }).concat(['overall']); }
+
+  function connect() {
+    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+    Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
+      .then(function (ns) {
+        if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
+        return Promise.all(keys().map(function (k) {
+          return ns.doc(docPath(k)).get().then(function (snap) {
+            if (snap && snap.exists) apply(k, snap.data());
+          }, function () { /* keep the local copy */ });
+        })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
+      })
+      .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
+  }
+
+  // The manifest first, then local copies so the page is never empty,
+  // then the shared store, which wins.
+  apply('overall', loadLocal('overall'));
+  fetch('manifest.json').then(function (r) { return r.json(); }).then(function (m) {
+    VOICES = m.voices || [];
+    LOOPS = m.loops || [];
+    SURFACE_AFTER = m.surfaceAfter || null;
+    build();
+    buildHolds();
+    VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
+    connect();
+  }, function () {
+    $('loading').innerHTML = '<p>COULD NOT LOAD THE CLIP LIST. RE-RENDER WITH generateArcoAudition.</p>';
+    $('holds').innerHTML = '';
+    connect();
+  });
+})();
+</script>

@@ -98,6 +98,55 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the arco kit is eight cello stabs up the pentatonic, six erhu presets and a loop for each voice, all dry`() {
+        val kit = SynthKits.arco()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is an ARCO render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? ArcoPatch
+            assertTrue(patch != null, "pad ${i + 1} should be an ARCO patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: ARCO has no landing chain")
+            patch!!
+        }
+        // The kit files every pad with Arco.drumClassFor, so comparing to that call would pass whatever it said: the expected
+        // class is written out. Fourteen notes under the 1.5 s line are PERC and the last two pads are the loops.
+        for (k in 0 until 16) {
+            val expected = if (k >= 14) DrumClass.LOOP else DrumClass.PERC
+            assertEquals(expected, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        }
+        // A01-A08: CELLO up the minor pentatonic from its root, every stab a note and not a LOOP. The stab's HOLD is the bottom of the
+        // knob (SynthKits.ARCO_STAB_HOLD is private, so the test writes 0) and every other macro is at its default: the row is what
+        // the knobs sound like before anyone touches them.
+        val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val defaults = Arco.defaults(ArcoVoice.CELLO)
+        for (k in 0 until 8) {
+            val macros = patches[k].macros
+            assertEquals(ArcoVoice.CELLO, patches[k].voice, "pad ${k + 1} is CELLO")
+            assertEquals("Cello ${k + 1}", patches[k].name, "pad ${k + 1}'s patch name")
+            assertEquals(Arco.rootMidi(ArcoVoice.CELLO) + walk[k], Arco.midiFor(ArcoVoice.CELLO, macros.getValue("TUNE")), "pad ${k + 1} is the ${walk[k]}th semitone")
+            assertEquals(0f, macros.getValue("HOLD"), "pad ${k + 1} is a stab: HOLD at the bottom of the knob")
+            for ((name, default) in defaults) {
+                if (name == "TUNE" || name == "HOLD") continue
+                assertEquals(default, macros.getValue(name), "pad ${k + 1}: $name is at its default")
+            }
+        }
+        // A09-A14: the six ERHU presets, in this order; A15 and A16 the two loops, one a voice.
+        val erhu = listOf("NASAL LINE", "MOON FIDDLE", "THIN SCRAPE", "HIGH CRY", "SLOW CRY", "TEA HOUSE")
+        for (k in 8 until 14) {
+            assertEquals(ArcoVoice.ERHU, patches[k].voice, "pad ${k + 1} is ERHU")
+            assertEquals(erhu[k - 8], patches[k].name, "pad ${k + 1} is the preset ${erhu[k - 8]}")
+        }
+        assertEquals(ArcoVoice.CELLO to "ENDLESS DRAW", patches[14].voice to patches[14].name, "A15 is CELLO's LOOP")
+        assertEquals(ArcoVoice.ERHU to "ENDLESS CRY", patches[15].voice to patches[15].name, "A16 is ERHU's LOOP")
+        for (k in 14..15) {
+            val hz = Arco.frequencyFor(patches[k].voice, patches[k].macros.getValue("TUNE"))
+            val cents = FineTuning.cents(FineTuning.measuredHz(kit[k]!!.snip, hz, fromSec = 0.1f, bodySeconds = 1.4f), hz.toDouble())
+            assertTrue(Math.abs(cents) < 5.0, "the LOOP on pad ${k + 1} plays ${"%.2f".format(java.util.Locale.ROOT, cents)} cents from its note")
+        }
+    }
+
+    @Test
     fun `the chip kit is sixteen crunched pads that keep their identities`() {
         val kit = SynthKits.chip()
         assertEquals(16, kit.size)
