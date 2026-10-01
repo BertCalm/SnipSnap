@@ -1,7 +1,9 @@
 # MERCURY — a rubbed, bent, water-loaded modal object: the handoff, reviewed against the tree
 
-**Status:** review and decision; **nothing is built and nothing has been
-rendered.** This document reads the external *Mercury Engine — Engineering
+**Status:** review and decision. **Phase 0 has run and passed**
+(2026-10-01; "Phase 0, as measured" below): the rotation bank speaks, is in
+tune, decays passively and stays bounded. **No engine code is built and
+nothing has been heard.** This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -10,7 +12,8 @@ line that were read. The doc lands as a docs-only PR (zero check runs by
 design, `.github/workflows/tests.yml` `paths-ignore`). The commit message
 names no maker or machine.
 **Date:** 2026-10-01
-**Plan:** Phase 0 record first (`docs/superpowers/plans/2026-10-0x-mercury-phase-0-spike.md`),
+**Plan:** the Phase 0 record is
+[`../plans/2026-10-01-mercury-phase-0-spike.md`](../plans/2026-10-01-mercury-phase-0-spike.md);
 then one plan per round.
 **Related:**
 - [`2026-09-28-bore-woodwind-engine-design.md`](2026-09-28-bore-woodwind-engine-design.md):
@@ -22,6 +25,8 @@ then one plan per round.
   STRIKE and its GLASS voice (design only) and the "No tenth engine" line.
 - [`2026-09-30-terra-hit-bend-talk-design.md`](2026-09-30-terra-hit-bend-talk-design.md):
   per-mode level and pitch curves (design only).
+- [`2026-10-01-gyre-coupled-string-engine-design.md`](2026-10-01-gyre-coupled-string-engine-design.md):
+  GYRE, the coupled-string engine, which is in progress separately (decision 11).
 **Roadmap:** no `SYNTH_ROADMAP.md` row until implementation starts, the
 rule FATHOM, RESIN, GLINT, SILK, FORK and BORE followed.
 **Evidence:** three read-only investigator passes over the tree at
@@ -144,7 +149,8 @@ resonator that keeps its energy under frequency change, can be read for
 velocity and driven by force every sample, and can exchange energy with
 its neighbours.**
 
-Two candidates should be compared in Phase 0. Neither is chosen here:
+Two candidates were compared in Phase 0, and **the rotation resonator won**
+("Phase 0, as measured"):
 - A **complex one-pole / rotation resonator**: state `z ← r·e^{iθ}·z + b·x`,
   with `r` from t60 and `θ` from the instantaneous Hz. A rotation keeps
   |z|, so BEND and WATER do not pump amplitude the way the two-pole does.
@@ -297,7 +303,7 @@ R2 (held keys): `Keys.mercuryPad`, `InstrumentSuite` / `InstrumentSidecar`
 
 | Phase | Ships | Gate |
 |---|---|---|
-| **0 — spike** (throwaway, recorded in `plans/`) | Candidate R0 banks, 12+4 modes, reciprocal friction, coupling, BEND/WATER motion; probes at MIDI 36/60/84 | **Speaks, in tune, decays.** Rub onset reliable across pitch and pressure. Excitation off with geometry fixed: energy falls monotonically at every COUPLE. A BEND sweep does not pump amplitude. WATER 0.05 is measurable inside a 2 s note. Raw states bounded at every corner. If friction will not sustain on modes, stop here and say so. |
+| **0 — spike** (throwaway, recorded in `plans/`). **Passed 2026-10-01.** | Candidate R0 banks, 12+4 modes, reciprocal friction, coupling, BEND/WATER motion; probes at MIDI 36/60/84 | **Speaks, in tune, decays.** Rub onset reliable across pitch and pressure. Excitation off with geometry fixed: energy falls monotonically at every COUPLE. A BEND sweep does not pump amplitude. WATER 0.05 is measurable inside a 2 s note. Raw states bounded at every corner. If friction will not sustain on modes, stop here and say so. |
 | **R0** | The chosen bank as a `Modes` class, with its own claims tests | No existing render changes (DeterminismTest and frozen grids byte-identical) |
 | **R1** | MERCURY with PING, SING, BLADE: patch, 24 presets, registration, kit, audition page (macro sweeps, the five interaction grids of §10, BEND .40/.50/.60 and WATER 0/.05/.10/.20 dead-zone probes) | **The audition.** Blind identity, plus A/B against TINES CHIME and FORK BAR; NCC < 0.9 against the nearest render |
 | **R1.1** | Picker entry and README count, on a machine with the SDK | R1's verdict |
@@ -321,16 +327,19 @@ Each has a default. Silence means the default.
    audition gate" (TIDE, GLINT, SIREN, BORE; SILK "not heard") and three
    designed-but-unbuilt ones (STRIKE, ARCO, MAGNET). MERCURY adds a sixth
    gate to clear. *Default: yes, but only Phase 0 now. Nothing past it
-   until the spike speaks.*
+   until the spike speaks.* **Taken by the owner 2026-10-01:** "start the
+   Mercury Phase 0 spike with the defaults". Every other default below
+   stands unless the owner says otherwise.
 2. **"No tenth engine"** (`synth-depth spec:818`) has been overtaken in
    practice: FORK, SILK, TERRA and BORE came after it. *Default: record
    here that admission is by the fleet table plus the audition gate, as
    BORE's and ARCO's specs already do.*
 3. **MERCURY versus STRIKE.** PING overlaps STRIKE's planned GLASS voice.
    *Default: if both are ever built, STRIKE drops GLASS and both share the
-   R0 bank.*
+   R0 bank.* **Taken by the owner 2026-10-01.**
 4. **MERCURY versus ARCO's bowed bar** (`arco spec:2033-2036`). *Default:
-   bowed modal bodies belong to MERCURY. ARCO stays strings.*
+   bowed modal bodies belong to MERCURY. ARCO stays strings.* **Taken by
+   the owner 2026-10-01.**
 5. **Voices at R1.** *Default: three (PING, SING, BLADE). EDDY, VESSEL and
    SHARD at R2 only if R1's gate passes.*
 6. **Renames.** *Default: SAW → BLADE, TIDE → EDDY, SLOW TIDE → SLOW CURRENT.*
@@ -340,11 +349,103 @@ Each has a default. Silence means the default.
    GLASS) only after a monotonic centroid sweep, per the house rule.*
 9. **Mode tables: designed or sourced?** *Default: designed, labelled as
    such and kept in `Mercury.kt`, seeded from a source where one opens.
-   `Modes.Material` stays sourced-only.*
+   `Modes.Material` stays sourced-only.* Phase 0 seeded both tables from
+   Rayleigh's closed forms: the thin ring's inextensional bending modes
+   (PING, SING) and the free-free beam (BLADE; its first four ratios are
+   `Modes.METAL_BAR`'s). The vessel, BEND and GLASS numbers stay designed.
 10. **LOOP on a tap.** At RUB 0 the sound decays, so what does LOOP loop?
     *Default: LOOP always sustains contact at a floor pressure, and the
     tap goes into the warm-up.*
 11. **Gyre.** The spec names "Gyre" as a separate coupled-string
-    rotational engine. Nothing by that name is in the tree.
-    *Default: no action until a Gyre spec arrives. If it does, it shares
-    R0's bank rather than growing its own.*
+    rotational engine. **Answered 2026-10-01:** GYRE is in progress
+    separately. Its design review is
+    [`2026-10-01-gyre-coupled-string-engine-design.md`](2026-10-01-gyre-coupled-string-engine-design.md)
+    (#419), and nothing of it is built here.
+    - **No shared R0.** GYRE builds its membrane and sympathetic bank from
+      `Dsp.Biquad.bandpass`, and couples its strings through a
+      `‖M‖ ≤ 1` junction on `Strings.Loop`. Neither needs MERCURY's bank.
+    - **No overlapping files.** MERCURY's R0 lands in `Modes`; GYRE's lands
+      in `Strings`/`Dsp`.
+    - **Both are bowed.** GYRE's bow is ARCO's `Strings.Bow` (STK's
+      reflection table on a waveguide). MERCURY's friction is a force law
+      on modal velocity.
+    - **The same correction twice.** Both reviews replace their brief's
+      crossfaded wrap with the house's exact loop (GYRE's G5, MERCURY's
+      correction 1).
+
+## Phase 0, as measured — 2026-10-01
+
+The record, with every table and both throwaway sources, is
+[`../plans/2026-10-01-mercury-phase-0-spike.md`](../plans/2026-10-01-mercury-phase-0-spike.md).
+It took four iterations (the fourth answers the review on #423), and everything was measured; nothing was heard.
+It settles R0 and changes R1's mapping.
+
+**The gate passes on the rotation bank:**
+
+| Gate item | Measured |
+|---|---|
+| Speaks | Mode 0 wins in all 15 voice renders. A rub sustains on mode 0 in all 20 onset renders and in 64 of 64 rubbed corners. |
+| In tune | Every R1 voice is within 2.2 cents from MIDI 36 to 84 (fundamental partial). A rub's pitch pull is under 0.6 cents. |
+| Decays | Strike only, geometry fixed: no energy rise in any 1 ms block, at any COUPLE, on either table. There was also none with BEND, WATER and COUPLE all at 1 and moving. |
+| No pumping | A ±12-semitone, 2 Hz sweep holds energy within 0.9990–0.9997 and the pickup within ±0.35 dB. |
+| WATER 0.05 | 4–6 cents of slow drift, where WATER 0 gives 0.4–2.6 (PING and SING). Its spectral distance is about a quarter of a +0.05 BEND step. |
+| Bounded | All 128 corners are finite; the worst state is 0.049, against a finger speed of 0.03. |
+
+The trapezoidal candidate, with its coupling one sample late, diverges at
+COUPLE ≥ 0.3 and pumps ±6 dB under the sweep. A passive trapezoid needs
+the full coupled implicit solve, and it was not pursued.
+
+**R0, now concrete.** One new `Modes` class carries everything below, with
+claims tests for passive decay, sweep invariance, the diagonal-dominance
+bound and the anchor fix:
+- **Modes.** Each mode is a complex state `z = ωq − i·v`. Every step, it is
+  rotated by `r·e^{iωT}`, with `r` from t60 and `ω` retunable per sample
+  (Phase 0 retuned every 8 samples).
+- **Coupling.** Reciprocal spring kicks, `v_i += T·Σ k_ij·q_j`, with
+  `k_ij = κ·COUPLE·min(ω_i, ω_j)²`. That is `K = diag(ω²) − A`: springs
+  `½·k_ij·(q_i − q_j)²` on modes whose own stiffness is pre-reduced by
+  `Σ_j k_ij`, so an uncoupled mode keeps ω_i. The node degree is at most 4
+  and the effective κ at most 0.2, so K stays strictly diagonally dominant,
+  and therefore positive definite, at every setting. The plain form,
+  `diag(ω²) + L`, was measured too (iteration 4). It is equally passive,
+  but it moves the note further (+48 to +121 cents against −13 to −85), so
+  the compensated form is kept.
+- **Contact.** A contact-vector API: read `Σ b_i·v_i`, then apply a force
+  back through `b`. The friction is solved by a scalar Newton step against
+  the velocity it changes.
+- **The anchor fix.** Solve K's eigenvalues once per note (Jacobi, 16×16).
+  Scale every mode so the eigenvector that is mostly mode 0 sits on the
+  note. Without it, COUPLE flattens the note by 13–85 cents; with it, the
+  error is 0.02.
+
+**R1's mapping changes** (iterations 2–4):
+- **Pressure** comes from a target linear e-fold,
+  `P = (γ₀ + 1/τ)/(|φ′(v_B)|·b₀²)`, not from a multiple of the threshold.
+  A multiple of the threshold made onset depend on GLASS.
+- **The e-fold is set in periods,** `τ = max(20 ms, 12/f)`. A 20–40 ms
+  e-fold pulled MIDI 36 flat by 19–41 cents, and let mode 1 capture SING's
+  low notes.
+- **A contact-patch taper,** `b_i = ratio_i^(−0.5)`. A finger averages out
+  short wavelengths, and with the taper mode 0 wins everywhere.
+- **The tap seeds the rub.** With it, onset is 60–205 ms; without it,
+  334–1,127 ms.
+  - The spec's `tapWeight = cos(π·RUB/2)` is 0 at RUB 1, so R1 gives the
+    finger's landing a floor: `max(cos(π·RUB/2)·tap, 0.2)`.
+  - That floor measured 95–534 ms at RUB 1 (iteration 4).
+  - A floor of 0.05 is slower than none at MIDI 36.
+- **WATER's depth is ∝ √WATER, and its rate is 0.6 + 2.4·WATER Hz.** Linear
+  depth left WATER 0.05 at 1/30 of a small BEND step.
+- **Vessel modes sit 3.5–7 % from their primary partners.** That is what
+  makes COUPLE audible as energy exchange: the vessel's share reaches
+  0.12–0.62, sloshing by up to 0.82, and WATER moves the share at COUPLE
+  0.6 from 0.31 to 0.53 at 300 ms.
+- **Cost.** An 8 s note renders in under 0.5 s, so 24 modes stay
+  affordable if the audition asks for them.
+
+**Still open, as designed:**
+- LOOP (R2), with the friction-lock-under-WATER risk above;
+- velocity;
+- an aliasing measurement;
+- GLASS's friction selectivity;
+- every sonic claim, which waits for R1's audition.
+
