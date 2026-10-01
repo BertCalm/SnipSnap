@@ -13,7 +13,7 @@ import kotlin.math.sqrt
  * render loops (`Glint.synthesize`, `GlintHeld.render`) then run their own
  * literal saw-window lines, because the two associate their multiplies
  * differently and no helper can reproduce both. Above 0 the window's edge is
- * rounded, fully so by DEPTH 0.5, and from there a plain sine at f0, scaled to
+ * rounded, fully so by DEPTH 0.5, and above 0.5 a plain sine at f0, scaled to
  * the burst's loudness, takes over by an equal-power law until at DEPTH 1 it
  * is all that is left. The rounded window and the sine are both exactly zero
  * at every wrap, so `k` still changes for free and only there.
