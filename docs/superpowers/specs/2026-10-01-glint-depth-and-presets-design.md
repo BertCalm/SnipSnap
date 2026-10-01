@@ -70,7 +70,7 @@ burstWeight = sqrt(1 − u²)          (1 when u = 0)
 sineWeight  = u · sineGain          (0 when u = 0; the term is then skipped, not zeroed)
 ```
 
-`sineGain = rB / rS = √2 · rB`, where `rB` is the RMS over one cycle of `w_1(p) · (sin(2π·k0·p) + level2 · sin(2π·k1·p))` at the path's resting ratios, computed by numerical integration once per patch inside `GlintPath` (which owns `kBase`, `k2`, `f0` and `level2`). It matches the sine to the burst the way the round 2 probe did, by measured RMS and not by a guess. It is one scalar for a note whose `k` moves along its path, so it is right at rest and within about a dB elsewhere; that tolerance is why the real engine is listened to before anything merges (§4).
+`sineGain = rB / rS = √2 · rB`, where `rB` is the RMS over one cycle of `w_1(p) · (sin(2π·k0·p) + level2 · sin(2π·k1·p))` at the path's resting ratios, computed by numerical integration once per patch inside `GlintPath` (which owns `kBase`, `k2`, `f0` and `level2`). It matches the sine to the burst the way the round 2 probe did, by measured RMS and not by a guess. It is one scalar for a note whose `k` moves along its path, so it is right at rest; elsewhere it is expected to be within about a dB, which has been measured only at the two probe setups (SWEEP 0.0 dB and VOWEL 0.5 dB off the probe's breath-averaged figure). That is why the real engine is listened to before anything merges (§4).
 
 Output is exactly zero at every wrap, so `k` still changes for free and only there. With `u = 1` the output is `amp · sineGain · sin(2π·p)`: a bare sine at f0.
 
@@ -82,7 +82,7 @@ Both. The sine rides the main amplitude envelope (`amp`); the second burst keeps
 
 Nothing is built for it, deliberately. Rounding the edge costs the burst about 10 dB of RMS (the window's power at `e = 1` is 0.03617 against the saw's 0.33333, −9.64 dB; the probe's burst RMS fell 9.64 dB on SWEEP and 10.71 dB on VOWEL). The engine already levels every sound after it is rendered: `Glint.render` runs `Dsp.levelTo` to `MELODIC_LOUDNESS_TARGET` and `GlintHeld.level` fits the loop to the same target. A per-patch gain is cancelled by both, so none is added.
 
-What can still move the final level is the 0.99 peak ceiling, which depends on crest factor, not scale. Estimated by a replica of the engine (validated against the repo's own recorded all-ones corner peak, 0.896 against 0.8965, so a replica estimate and not an engine measurement): about a 2.7 dB spread across DEPTH at default settings (DEPTH 0.5 about 1 dB under DEPTH 0, DEPTH 1 about 1.7 dB over), 4.8 dB at DECAY 0, flat at DECAY 1. The plan's first measurement replaces the estimate with the engine's own figures, and the regression guard (§4) is set from those.
+What can still move the final level is the 0.99 peak ceiling, which depends on crest factor, not scale. Estimated by a replica of the engine (validated against the repo's own recorded all-ones corner peak, 0.896 against 0.8965, so a replica estimate and not an engine measurement): about a 2.7 dB spread across DEPTH at default settings (DEPTH 0.5 about 1 dB under DEPTH 0, DEPTH 1 about 1.7 dB over), 4.8 dB at DECAY 0, flat at DECAY 1. The plan measures the engine's own figures, and the regression guard (§4.7) is a fixed bar of 5 dB against DEPTH 0 (the replica's worst case was 3.7 dB) that fails loudly if the engine exceeds it. A failure is a finding about the engine, and the bar is not raised to make it pass.
 
 ### 2.5 Velocity
 
@@ -136,8 +136,8 @@ Each gate is a test that fails with a message naming the guard, and where a guar
 3. **Held loops still close exactly** at DEPTH 0.5 and 1: seam 0 and the second breath bit-identical to the first (extends `GlintBreatheTest` and `GlintHeldTest`), on a path voice and on VOWEL, and through `GlintPadMaker`'s nine zones for one patch.
 4. **DEPTH 1 is a bare sine** at the note's pitch: at least 99.9% of a held loop's energy within two FFT bins of f0, and the levelled loop is the same to within float rounding whatever PEAK, BLOOM, FOLLOW and BODY say (`sineGain` differs between those settings, and the levelling cancels it).
 5. **The sine follows the law:** the sine-to-burst power ratio at DEPTH 0.75 and 0.9 is `u²/(1 − u²)` within a dB (1/3 and 16/9), measured by rendering the two components apart. And `sineGain` agrees with the probe's measured `rB·√2` within 1 dB at the probe's setups (SWEEP and VOWEL defaults with BLOOM 0.85: `rB` 0.139636 and 0.134822).
-6. **No new clicks:** the largest step between adjacent raw samples, over the signal's RMS, only falls as DEPTH rises, per voice, at defaults.
-7. **Level stays within a band:** the one-shot's final loudness across DEPTH stays within the spread the plan's first measurement records, with a margin. It is a regression guard on today's behaviour, not a promise.
+6. **No new clicks:** the step across each wrap is never larger than the largest step inside the cycles, on raw buffers at DEPTH 0.25, 0.5, 0.75 and 1, per voice. (This replaces a first wording, that the largest step falls as DEPTH rises: true of the listening probe's unlevelled output, but each real render is levelled on its own, and normalised by RMS the saw and the rounded window do not differ that way: SWEEP's step over RMS is about 0.21 at DEPTH 0, 0.22 at 0.25 and 0.20 at 0.5, from the probe's own readout.)
+7. **Level stays within a band:** the one-shot's final loudness at DEPTH 0.25 to 1 stays within 5 dB of DEPTH 0, at DECAY 0, 0.5 and 1, on every voice. It is a regression guard, not a promise.
 8. **Lists and the corner:** the macro lists are updated (`GlintTest` around `:67-79` and `GlintVowelTest` around `:25-31` pin the macro names and defaults), and the all-ones corner (`GlintTest.kt:52`) pins DEPTH 0, because with a new trailing macro all-ones becomes a bare sine and the corner silently loses its buzzy case.
 9. **Edge cases:** DEPTH 1e-9 (shaped path, not saw); exactly 0.5; VOWEL at the top of TUNE, where F1 pins to k = 1 and the burst and the sine are in phase at f0 (the mix still reaches 0 at the wrap and stays bounded); STEP at its 880 Hz top; DECAY 0 and 1; PEAK at both ends (k up to 40, which the numerical `sineGain` must resolve).
 10. **Builds:** `./gradlew --no-daemon test`, and `:app:compileDebugKotlin` with `ANDROID_HOME` set on the command line (the slider appears with no app code). No native code is touched.
@@ -199,7 +199,7 @@ Before each push: `./gradlew --no-daemon test` (with `ANDROID_HOME` set on the c
 ## 9. Risks and what is not known
 
 - `sineGain` is one stationary scalar: within about a dB of the probe, settled by the listen in §4.11. If the listen says a voice sits wrong, the cheapest fix is a per-voice constant on `sineGain`.
-- The loudness spread in §2.4 is a replica estimate until the plan's first measurement.
+- The loudness spread in §2.4 is a replica estimate until the plan's level test has run against the engine.
 - Whether "underwater" at full DEPTH is partly a playback artefact is untested; the ruling does not depend on it.
 - Device-run items from the paths work are still open and are not made worse by DEPTH except in render time, which the plan measures: nine held zones in parallel on a phone, a VOWEL chord on the top keys, opening an old kit.
 - The roster's quality is exactly the quality of Josh's picks from a blind spread: a voice may come up short of eight, which is what the second round is for.
