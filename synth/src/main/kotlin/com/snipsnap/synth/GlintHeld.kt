@@ -40,6 +40,10 @@ import kotlin.math.sin
  * file's first sample. Measured |mean| / peak over the loop at BLOOM 0.5 and
  * default macros: 0.024 to 0.056 everywhere but VOWEL at TUNE 1, which is
  * 0.108 (0.19 at TUNE 1, PEAK 0, BODY 0).
+ *
+ * DEPTH (docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md) is one value for
+ * the whole render, so the loop stays periodic: the rounded window and the sine are pure
+ * functions of phase, and at DEPTH 0 the loop is today's, line for line.
  */
 internal object GlintHeld {
     const val BREATHE_SECONDS = 3f
@@ -69,6 +73,9 @@ internal object GlintHeld {
         val n = plan.cycles.toLong()
         val path = GlintPath.of(voice, m, plan.f0.toFloat())
         val depth = abs(path.bloom)
+        // `depth` above is BLOOM's own travel. DEPTH the macro is the shape below: null at DEPTH 0, and the
+        // loop is then today's, line for line (see GlintShape).
+        val shape = GlintShape.of(m.getValue("DEPTH")) { path.sineGain() }
 
         // w0: the first phase wrap at or after the onset's end - from here on
         // everything is periodic. i0: the next frame boundary at the output
@@ -114,10 +121,22 @@ internal object GlintHeld {
             if (i == 0 || cycleOf(i.toLong()) != cycleOf(i.toLong() - 1)) {
                 if (breathing) path.breathRatios(swing, k) else path.ratios(x, rung, k)
             }
-            val w = Glint.windowAt(phase.toFloat())
-            val second = if (voice == GlintVoice.VOWEL) amp else attack
-            out[i] = amp * w * sin(2.0 * PI * k[0] * phase).toFloat() +
-                second * path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
+            if (shape == null) {
+                val w = Glint.windowAt(phase.toFloat())
+                val second = if (voice == GlintVoice.VOWEL) amp else attack
+                out[i] = amp * w * sin(2.0 * PI * k[0] * phase).toFloat() +
+                    second * path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
+            } else {
+                val w = shape.window(phase.toFloat())
+                val second = if (voice == GlintVoice.VOWEL) amp else attack
+                var v = shape.burstWeight * (
+                    amp * w * sin(2.0 * PI * k[0] * phase).toFloat() +
+                        second * path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
+                    )
+                // The sine rides the main level and is a pure function of phase, so the loop still closes.
+                if (shape.sineWeight != 0f) v += shape.sineWeight * amp * sin(2.0 * PI * phase).toFloat()
+                out[i] = v
+            }
         }
 
         val down = Dsp.decimate(out, Dsp.RATE)
