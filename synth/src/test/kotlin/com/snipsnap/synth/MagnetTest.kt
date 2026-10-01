@@ -396,6 +396,112 @@ class MagnetTest {
     }
 
     @Test
+    fun `PICK never lowers the centroid across its eleven steps on both voices`() {
+        // Each voice at PICK 0 to 1 in tenths, the other macros at their defaults, the centroid read on the
+        // rendered note. The monotonic clause is asserted at every step. The specification's second clause,
+        // each tenth of travel at least 1 percent, is printed with its count and not asserted: it is the
+        // gate for registering PICK as velocity's brightness macro, and the velocity test above pins the
+        // fallback until that is proven on this engine. The corner is the exciter's low-pass corner,
+        // Dsp.expMap over Magnet's 600 to 16000 Hz.
+        val tenths = (0..10).map { it / 10f }
+        val lines = ArrayList<String>()
+        val falls = ArrayList<String>()
+        for (v in voices) {
+            val hz = tenths.map { p -> FeatureExtractor.extract(Magnet.render(v, mapOf("PICK" to p))).centroidHz }
+            var passing = 0
+            val steps = ArrayList<String>()
+            for (i in 1..10) {
+                val pct = 100.0 * (hz[i] - hz[i - 1]) / hz[i - 1]
+                val atLeastOne = pct >= 1.0
+                if (atLeastOne) passing++
+                if (!(hz[i] >= hz[i - 1])) falls.add("$v PICK ${tenths[i - 1]} to ${tenths[i]}: ${hz[i - 1]} Hz to ${hz[i]} Hz")
+                steps.add(
+                    "${tenths[i]} corner ${MagnetMeasure.round(Dsp.expMap(tenths[i], 600f, 16_000f).toDouble())} Hz " +
+                        "centroid ${hz[i]} Hz ${MagnetMeasure.round(pct, 2)} percent ${if (atLeastOne) "at least 1" else "under 1"}",
+                )
+            }
+            lines.add(
+                "$v PICK 0.0 corner ${Dsp.expMap(0f, 600f, 16_000f)} Hz centroid ${hz[0]} Hz; ${steps.joinToString("; ")}; " +
+                    "$passing of 10 tenths at least 1 percent",
+            )
+        }
+        println("MAGNET PICK: ${lines.joinToString(" || ")}")
+        assertTrue(falls.isEmpty(), "PICK lowers the centroid: $falls")
+    }
+
+    /**
+     * Cents of [x] against [f0] by the interpolated autocorrelation, over 0.05 to 0.25 s at the rack's
+     * rate. A note shorter than the window is read to its own end, never past it.
+     */
+    private fun centsOf(x: Snip, f0: Float): Double {
+        val to = min(0.25f, x.durationSeconds)
+        require(to - 0.05f >= 0.1f) { "a ${x.durationSeconds} s note is too short to read for pitch" }
+        return BoreMeasure.cents(x.samples, f0, 0.05f, to, Dsp.RATE)
+    }
+
+    @Test
+    fun `the pitch through VALVE stays within ten cents at the landing and is printed at gain 1000`() {
+        // Both voices at TUNE 0, 0.5 and 1 with the other macros at their defaults: the dry note, then the
+        // same note through each voice's landing amp (asserted, the specification's 10 cents) and through
+        // DRIVE 1 with no SAG, flat TONE and no cabinet (VALVE's gain 1000, the case the specification's bar
+        // was written against; printed only). The pitch is the interpolated autocorrelation, never
+        // Pitch.detect: its integer lag steps up to 12.9 cents at JANGLE's E4 and a hot amp can hand it an
+        // octave or nothing.
+        val hot = mapOf("DRIVE" to 1f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
+        val cells = ArrayList<String>()
+        val over = ArrayList<String>()
+        var worstLanding = 0.0
+        var worstHot = 0.0
+        for (v in voices) {
+            val landing = Magnet.LANDING_VALVE.getValue(v)
+            for (tune in listOf(0f, 0.5f, 1f)) {
+                val f0 = Magnet.frequencyFor(v, tune)
+                val dry = Magnet.render(v, Magnet.defaults(v) + ("TUNE" to tune))
+                val dryCents = centsOf(dry, f0)
+                val landedCents = centsOf(Valve.process(dry, landing), f0)
+                val hotCents = centsOf(Valve.process(dry, hot), f0)
+                val landedShift = landedCents - dryCents
+                val hotShift = hotCents - dryCents
+                worstLanding = maxOf(worstLanding, abs(landedShift))
+                worstHot = maxOf(worstHot, abs(hotShift))
+                val cell = "$v TUNE $tune (${MagnetMeasure.round(f0.toDouble(), 2)} Hz)"
+                if (abs(landedShift) > 10.0) over.add("$cell at ${MagnetMeasure.round(landedShift, 2)} cents")
+                cells.add(
+                    "$cell dry ${MagnetMeasure.round(dryCents, 2)} cents, landing ${MagnetMeasure.round(landedCents, 2)} cents " +
+                        "(wet minus dry ${MagnetMeasure.round(landedShift, 2)}), gain ${Valve.gainFor(hot.getValue("DRIVE"))} " +
+                        "${MagnetMeasure.round(hotCents, 2)} cents (wet minus dry ${MagnetMeasure.round(hotShift, 2)})",
+                )
+            }
+        }
+        println(
+            "MAGNET pitch through VALVE: ${cells.joinToString("; ")}; worst |wet minus dry| " +
+                "${MagnetMeasure.round(worstLanding, 2)} cents at the landing, ${MagnetMeasure.round(worstHot, 2)} cents at gain 1000",
+        )
+        assertTrue(over.isEmpty(), "the landing amp moves the pitch by more than 10 cents: $over")
+    }
+
+    @Test
+    fun `a landed pad regenerates bit for bit from its recipe`() {
+        // The recipe a kit pad stores: the voice's default patch and its landing chain. Written to JSON and
+        // read back, it renders the same samples, so the pad's WAV is always reproducible.
+        val lines = ArrayList<String>()
+        val renders = ArrayList<Pair<MagnetVoice, Pair<Snip, Snip>>>()
+        for (v in voices) {
+            val recipe = PadRecipe(MagnetPatch("Landing ${v.name}", v, Magnet.defaults(v)), Magnet.landingChain(v))
+            val first = recipe.render()
+            val back = PadRecipe.fromJsonValue(recipe.toJsonValue()).render()
+            lines.add("$v ${first.samples.size} samples, regenerated ${back.samples.size} samples, identical ${first.samples.contentEquals(back.samples)}")
+            renders.add(v to (first to back))
+        }
+        println("MAGNET landing: ${lines.joinToString("; ")}")
+        for ((v, pair) in renders) {
+            assertContentEquals(pair.first.samples, pair.second.samples, "$v")
+            assertEquals(pair.first.sampleRate, pair.second.sampleRate, "$v")
+            assertEquals(pair.first.channels, pair.second.channels, "$v")
+        }
+    }
+
+    @Test
     fun `cost of a four second JANGLE render and its trip through VALVE is printed`() {
         // Print only: timing on a shared runner is not a property of the code. The owner's phone number
         // is recorded at the audition gate.
