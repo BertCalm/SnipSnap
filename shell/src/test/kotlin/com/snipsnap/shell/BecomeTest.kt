@@ -32,6 +32,13 @@ class BecomeTest {
 
     private val rate = 44_100
 
+    /**
+     * [worstSeam]'s bound: measured 0.0327 for the BECOME 400 ramp and 0.0380
+     * for the flat blend (the baseline of a smooth mix), so 0.04, just over
+     * the flat figure; the hard-cut control measures 0.2553, six times over.
+     */
+    private val seamBound = 0.04
+
     /** A decaying sine - the construction of CliTest's morph test (`CliTest.kt:3027-3030`). */
     private fun tone(hz: Double, sampleRate: Int, seconds: Float = 1f): Snip =
         Snip(
@@ -196,26 +203,63 @@ class BecomeTest {
         return Math.hypot(c, s) / (to - from).coerceAtLeast(1)
     }
 
+    /**
+     * The seam probe. [Transients.detect] finds no onset in these decaying
+     * sines (see [pairs]), so it cannot see a seam; this reads the signal
+     * itself. Per 1 ms block, the RMS of the second difference over the RMS
+     * of the signal: for a smooth mix of the two lines it is a small constant
+     * (it grows as (2 pi f / sr)^2, about 0.03 at 1200 Hz), and a splice's
+     * jump shows as a spike many times that. Blocks under 0.1 % of the peak
+     * are skipped (float noise over silence). Returns the worst block.
+     */
+    private fun worstSeam(x: FloatArray, sr: Int): Double {
+        val block = sr / 1000
+        val peak = x.maxOf { Math.abs(it) }
+        var worst = 0.0
+        var i = 2
+        while (i + block <= x.size) {
+            var e = 0.0
+            var d = 0.0
+            for (k in i until i + block) {
+                e += x[k].toDouble() * x[k]
+                val d2 = x[k].toDouble() - 2.0 * x[k - 1] + x[k - 2]
+                d += d2 * d2
+            }
+            val rms = Math.sqrt(e / block)
+            if (rms >= 1e-3 * peak) worst = maxOf(worst, Math.sqrt(d / block) / rms)
+            i += block
+        }
+        return worst
+    }
+
     @Test
-    fun `early frames are the pad, late frames the parent, and it is still one hit`() {
+    fun `early frames are the pad, late frames the parent, and the hand-over has no seam`() {
         // CliTest.kt:3019-3074's construction: a 300 Hz pad, a 1200 Hz parent, BECOME 400 at MIX 1.
-        // The bounds are the spec's ("Testing"), from CliTest.kt:3054 (5x), :3062 (0.2) and :3064 (one onset).
+        // The 5x and 0.2 bounds are the spec's ("Testing"), from CliTest.kt:3054 and :3062. The spec's "one onset" (:3064) is
+        // replaced by worstSeam: Transients.detect finds no onset in these decaying sines, so it could never see a seam.
         // Measured (44.1 kHz): head ratio 24.3 against the 5x bound; at 200 ms the smaller line is 0.993 of the larger
-        // against the 0.2 bound; late ratio 1514 against 5x; Transients.detect finds no onset (frames []), within "one".
+        // against the 0.2 bound; late ratio 1514 against 5x; worst seam block 0.0327 (flat blend 0.0380, hard-cut control 0.2553) against the 0.04 bound.
         val x = left(becomeRender(tone(300.0, rate), tone(1200.0, rate), 1f, 400))
         val head = line(x, 300.0, rate, 0, 30) to line(x, 1200.0, rate, 0, 30)
         val mid = line(x, 300.0, rate, 180, 220) to line(x, 1200.0, rate, 180, 220)
         val late = line(x, 300.0, rate, 600, 900) to line(x, 1200.0, rate, 600, 900)
-        val onsets = Transients.detect(Snip(x, 1, rate))
+        val seam = worstSeam(x, rate)
+        // The probe's control: the same two sounds joined by a hard cut at 200 ms, which is a seam by construction.
+        val cutPad = left(becomeRender(tone(300.0, rate), tone(1200.0, rate), 1f, 0))
+        val spliced = FloatArray(x.size) { if (it < 200 * rate / 1000) x[it] else cutPad[it].coerceIn(-1f, 1f) }
+        val splicedSeam = worstSeam(spliced, rate)
+        val flatSeam = worstSeam(left(becomeRender(tone(300.0, rate), tone(1200.0, rate), 1f, 0)), rate)
         println(
             "BECOME 400 ms at MIX 1, 300/1200 Hz lines: first 30 ms $head (ratio ${head.first / head.second}), " +
                 "at 200 ms $mid (smaller/larger ${minOf(mid.first, mid.second) / maxOf(mid.first, mid.second)}), " +
-                "from 600 ms $late (ratio ${late.second / late.first}), onsets at frames ${onsets.map { it.frame }}",
+                "from 600 ms $late (ratio ${late.second / late.first}), " +
+                "worst seam $seam (flat $flatSeam, hard-cut control $splicedSeam)",
         )
         assertTrue(head.first >= 5 * head.second, "the first 30 ms are not the pad: $head")
         assertTrue(late.second >= 5 * late.first, "from 600 ms it is not the parent: $late")
         assertTrue(minOf(mid.first, mid.second) > 0.2 * maxOf(mid.first, mid.second), "at 200 ms both should be audible: $mid")
-        assertTrue(onsets.size <= 1, "one hit, not a seam: ${onsets.size} onsets")
+        assertTrue(splicedSeam > seamBound, "the probe cannot see a hard cut: $splicedSeam against bound $seamBound")
+        assertTrue(seam <= seamBound, "a seam in the hand-over: worst block $seam against bound $seamBound")
     }
 
     @Test
