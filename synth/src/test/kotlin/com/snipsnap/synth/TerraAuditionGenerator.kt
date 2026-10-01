@@ -202,7 +202,7 @@ object TerraAuditionGenerator {
             R1Clip("03_membrane_hit1_thump_snare", "MEMBRANE $DOT HIT 1 $DOT THUMP SNARE", "strong, bright head", membrane.copy(striker = struck("tsnare", 1f))),
             R1Clip("04_membrane_hit1_factory_kick", "MEMBRANE $DOT HIT 1 $DOT FACTORY KICK", "strong, bass head (the soft attack)", membrane.copy(striker = struck("kick01", 1f))),
             R1Clip("05_cavity_today", "CAVITY $DOT TODAY", "the anchor", cavity),
-            R1Clip("06_cavity_hit05_wraith_word", "CAVITY $DOT HIT .5 $DOT WRAITH WORD", "the cavity's biggest move at subtle (+8 dB)", cavity.copy(striker = struck("wraith", 0.5f))),
+            R1Clip("06_cavity_hit05_wraith_word", "CAVITY $DOT HIT .5 $DOT WRAITH WORD", "the cavity under a bright head at subtle (+8 dB; THUMP SNARE moves it +12)", cavity.copy(striker = struck("wraith", 0.5f))),
             R1Clip("07_bell_hit05_factory_clap", "BELL $DOT HIT .5 $DOT FACTORY CLAP", "a comb-shaped head on a bright voice", bell.copy(striker = struck("clap01", 0.5f))),
             R1Clip("08_bar_hit05_beatbox_rim", "BAR $DOT HIT .5 $DOT BEATBOX RIM", "the bar's brightest striker", bar.copy(striker = struck("bbrim", 0.5f))),
             R1Clip("09_kit_a07_today", "TERRA KIT A07 CAJON SLAP $DOT TODAY", "BUZZ as tuned (0.75, the kit's most)", buzzPad),
