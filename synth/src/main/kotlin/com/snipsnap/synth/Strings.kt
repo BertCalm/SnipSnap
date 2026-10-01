@@ -715,6 +715,8 @@ internal object Strings {
         private val nutHz = rate * 0.45f
         private val bridge: Loop
         private val nut: Loop
+        private val bridgeCapacity: Int
+        private val nutCapacity: Int
         private var bowDown = true
 
         /** The string's velocity under the bow after the last [next]: the sum of the two arriving waves plus the bow's push. */
@@ -728,6 +730,8 @@ internal object Strings {
             val tn = tune(f, nutHz, rate, roundTrip = 1.0 - beta)
             bridge = Loop(tb.n, tb.a, -REFLECTION, bridgeHz, rate, roundTrip = beta.toDouble())
             nut = Loop(tn.n, tn.a, -1f, nutHz, rate, roundTrip = 1.0 - beta)
+            bridgeCapacity = tb.n
+            nutCapacity = tn.n
         }
 
         /**
@@ -767,9 +771,17 @@ internal object Strings {
 
         /**
          * Both segments re-solved for a new [f], the filters' and allpasses' state carried (no click).
-         * Build the [Bow] at the lowest pitch it will be asked for: a [Loop]'s ring never grows.
+         * Build the [Bow] at the lowest pitch it will be asked for: a [Loop]'s ring never grows, and a
+         * [f] that needs a longer ring in either segment is refused before either segment is touched,
+         * so a caller who catches the refusal still has a bow whose two halves are tuned to the same note.
          */
         fun retune(f: Float) {
+            val bridgeNeeds = tune(bridgeFreq(f), bridgeHz, rate, roundTrip = beta.toDouble()).n
+            val nutNeeds = tune(f, nutHz, rate, roundTrip = 1.0 - beta).n
+            require(bridgeNeeds <= bridgeCapacity && nutNeeds <= nutCapacity) {
+                "retune($f) needs segments of $bridgeNeeds (bridge) and $nutNeeds (nut) samples, past the $bridgeCapacity and " +
+                    "$nutCapacity this Bow was built for - construct it at the lowest note it will play, not the one it is moving toward"
+            }
             bridge.retune(bridgeFreq(f))
             nut.retune(f)
         }

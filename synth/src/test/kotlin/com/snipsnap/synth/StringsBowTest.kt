@@ -177,6 +177,23 @@ class StringsBowTest {
         assertTrue(abs(cents) <= 5.0, "the glide landed $cents cents from its note")
     }
 
+    @Test
+    fun `a retune the bow cannot make is refused before either segment is touched`() {
+        // Built at 65.01 Hz the bridge and nut segments have 352 and 2351 samples at this rate; 65.00 Hz keeps the bridge's length
+        // (only its allpass moves) and needs 2352 in the nut. Without a check ahead of both, the bridge would be retuned and the
+        // nut would refuse, leaving the two halves of the string tuned to different notes.
+        val low = 65.01f
+        val refused = Strings.Bow(low, beta, rate = rate)
+        val untouched = Strings.Bow(low, beta, rate = rate)
+        val e = assertFailsWith<IllegalArgumentException> { refused.retune(65.00f) }
+        assertTrue("construct it at the lowest note" in (e.message ?: ""), "the refusal does not say what to do: ${e.message}")
+        val slope = 5f - 4f * 0.9f
+        val attack = (0.020 * rate).toInt()
+        val a = FloatArray((0.5 * rate).toInt()) { i -> refused.next(0.13f * (if (i < attack) i.toFloat() / attack else 1f), slope) }
+        val b = FloatArray(a.size) { i -> untouched.next(0.13f * (if (i < attack) i.toFloat() / attack else 1f), slope) }
+        assertContentEquals(b, a, "a refused retune changed the bow")
+    }
+
     // ---------------------------------------------------------------- it lifts, and it rings
 
     private fun onePoleMagnitude(f0: Float, hz: Float): Double {
