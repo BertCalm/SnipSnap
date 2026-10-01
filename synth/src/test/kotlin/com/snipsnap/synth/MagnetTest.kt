@@ -23,6 +23,10 @@ import kotlin.test.assertTrue
  * MAGNET's contract (docs/superpowers/plans/2026-09-30-magnet-r1.md): the macros, the notes,
  * a deterministic clean render at every corner and every TUNE step, the output chain's DC
  * handling, the patch's refusals and round trip, the landing chain, and the velocity registration.
+ * The measured claims: every note within 5 cents on the dry string, the comb and humbucker notches,
+ * BLEND's spectral swing, MUTE's length and centroid, PICK's centroid sweep (monotonic and at least
+ * 1 percent per tenth at the defaults), the pitch through VALVE (within 10 cents at each landing),
+ * and a landed pad regenerating bit for bit.
  */
 class MagnetTest {
 
@@ -244,20 +248,25 @@ class MagnetTest {
     fun `velocity re-renders MAGNET at PICK, softer is darker`() {
         // PICK is registered in Velocity.brightnessOverride because its sweep at the defaults moves the
         // centroid at least 1 percent per tenth on both voices (smallest 1.77 percent on JANGLE, 2.03
-        // percent on CHUG: the numbers `PICK never lowers the centroid across its eleven steps on both
-        // voices` prints), so a soft hit is a re-render with a lower PICK. This reaches a bare patch only:
-        // a landed pad's velocity layers still fall back to soften, because the layer builder requires
-        // its fx to be null.
+        // percent on CHUG: the numbers `PICK raises the centroid by at least 1 percent at every tenth on
+        // both voices` asserts), so a soft hit is a re-render with a lower PICK. This reaches a bare patch
+        // only: a landed pad's velocity layers still fall back to soften, because `layerAt` and
+        // `canUseAtVelocity` require its fx to be null.
         for (voice in voices) {
             val patch = MagnetPatch("Vel Canary", voice, Magnet.defaults(voice))
             assertEquals("PICK", Velocity.brightnessSpec(patch)?.name, "$voice did not resolve PICK as its brightness macro")
+            // The route is the re-render, not the soften fallback: the two give different samples.
+            assertFalse(
+                Velocity.atVelocity(patch, 0.3f).samples.contentEquals(Velocity.soften(patch.render(), 0.7f).samples),
+                "$voice: atVelocity is the soften fallback",
+            )
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
             val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
             assertTrue(soft < hard, "$voice: soft centroid $soft should be below hard centroid $hard")
         }
     }
 
-    // ---------- the measured claims on the dry string ----------
+    // ---------- the measured claims: the dry string, PICK's sweep, the pitch through VALVE, the landing ----------
 
     @Test
     fun `every note of both voices is within five cents on the dry string`() {
@@ -285,7 +294,7 @@ class MagnetTest {
                         lowest[v] = min(lowest[v] ?: cents, cents)
                         highest[v] = maxOf(highest[v] ?: cents, cents)
                         if (abs(cents) > worst) { worst = abs(cents); worstCell = "$cell at $cents cents" }
-                        if (abs(cents) > 5.0) over.add("$cell at $cents cents")
+                        if (!(abs(cents) <= 5.0)) over.add("$cell at $cents cents") // negated (<=): a NaN read fails too
                     }
                 }
             }
@@ -352,7 +361,14 @@ class MagnetTest {
         println(
             "MAGNET humbucker: dp ${MagnetMeasure.round(dp.toDouble(), 4)}, k $k, D1 $d1, D2 $d2, D2 - D1 $parity (${d2 - d1}), " +
                 "string ${MagnetMeasure.round(string.size.toDouble() / rate, 2)} s, " +
-                "h$k aligned ${MagnetMeasure.round(gapAligned)} dB under the single coil, naive ${MagnetMeasure.round(gapNaive)} dB (spike: 34 dB aligned)",
+                "h$k aligned ${MagnetMeasure.round(gapAligned)} dB under the single coil re h1, naive ${MagnetMeasure.round(gapNaive)} dB (spike: 34 dB aligned)",
+        )
+        // The hand-built pair is the engine's own: the constants repeated above (the 0.707 weight, the
+        // spacing law) are pinned by the aligned call matching it to the bit.
+        assertContentEquals(
+            Strings.pickup(string, floatArrayOf(Magnet.BRIDGE, second), floatArrayOf(0.707f, 0.707f), f0, rate),
+            aligned,
+            "the engine's aligned humbucker is not the pair this test builds",
         )
         assertTrue(gapAligned >= 20.0, "the aligned humbucker is only $gapAligned dB under the single coil at h$k")
         assertTrue(gapNaive < 20.0, "the unaligned sum notches too ($gapNaive dB at h$k): this test cannot tell alignment from none")
@@ -362,7 +378,8 @@ class MagnetTest {
     fun `BLEND moves the spectrum by at least 6 dB at some harmonic on both voices`() {
         // The full pickup with its resonance, TUNE 0.5 and the default MUTE and PICK, neck alone against
         // bridge alone. relH1 is dB against each render's own h1, so entry j is harmonic j + 1 and entries
-        // 1 to 7 are h2 to h8.
+        // 1 to 7 are h2 to h8. Both voices print before the assertion runs.
+        val weak = ArrayList<String>()
         for (v in voices) {
             val f0 = Magnet.frequencyFor(v, 0.5f)
             val string = Magnet.string(v, Magnet.defaults(v) + ("TUNE" to 0.5f))
@@ -371,15 +388,19 @@ class MagnetTest {
             val swings = (1..7).map { abs(bridge[it] - neck[it]) }
             val swing = swings.max()
             val at = swings.indexOf(swing) + 2
-            println("MAGNET BLEND $v: swing ${MagnetMeasure.round(swing)} dB, peaks at h$at (h2..h8 ${MagnetMeasure.round(swings)}) (spike: 18 dB at JANGLE's h5)")
-            assertTrue(swing >= 6.0, "$v: BLEND moves no harmonic in h2 to h8 by 6 dB, the most is $swing dB at h$at")
+            val spike = if (v == MagnetVoice.JANGLE) " (spike: 18 dB at JANGLE's h5)" else ""
+            println("MAGNET BLEND $v: swing ${MagnetMeasure.round(swing)} dB, peaks at h$at (h2..h8 ${MagnetMeasure.round(swings)})$spike")
+            if (!(swing >= 6.0)) weak.add("$v: BLEND moves no harmonic in h2 to h8 by 6 dB, the most is $swing dB at h$at")
         }
+        assertTrue(weak.isEmpty(), weak.joinToString("; "))
     }
 
     @Test
     fun `MUTE shortens and darkens both voices`() {
         // MUTE 1 against MUTE 0 at TUNE 0.5 on the rendered note: under half the length, and a lower
-        // centroid. The spike read 0.26 to 1.33 s at MUTE 1 against the 4 s ceiling.
+        // centroid. The spike read 0.26 to 1.33 s at MUTE 1 against the 4 s ceiling. Both voices print
+        // before the assertion runs.
+        val wrong = ArrayList<String>()
         for (v in voices) {
             val open = Magnet.render(v, Magnet.defaults(v) + mapOf("TUNE" to 0.5f, "MUTE" to 0f))
             val damped = Magnet.render(v, Magnet.defaults(v) + mapOf("TUNE" to 0.5f, "MUTE" to 1f))
@@ -390,22 +411,26 @@ class MagnetTest {
                     "(${damped.durationSeconds} s), ratio ${MagnetMeasure.round(damped.samples.size.toDouble() / open.samples.size, 3)}; " +
                     "centroid ${openHz} Hz at MUTE 0 and ${dampedHz} Hz at MUTE 1 (spike: 0.26 to 1.33 s at MUTE 1)",
             )
-            assertTrue(damped.samples.size < 0.5 * open.samples.size, "$v: MUTE 1 is ${damped.samples.size} samples against MUTE 0's ${open.samples.size}")
-            assertTrue(dampedHz < openHz, "$v: MUTE 1's centroid $dampedHz Hz is not under MUTE 0's $openHz Hz")
+            if (!(damped.samples.size < 0.5 * open.samples.size)) wrong.add("$v: MUTE 1 is ${damped.samples.size} samples against MUTE 0's ${open.samples.size}")
+            if (!(dampedHz < openHz)) wrong.add("$v: MUTE 1's centroid $dampedHz Hz is not under MUTE 0's $openHz Hz")
         }
+        assertTrue(wrong.isEmpty(), wrong.joinToString("; "))
     }
 
     @Test
-    fun `PICK never lowers the centroid across its eleven steps on both voices`() {
+    fun `PICK raises the centroid by at least 1 percent at every tenth on both voices`() {
         // Each voice at PICK 0 to 1 in tenths, the other macros at their defaults, the centroid read on the
-        // rendered note. The monotonic clause is asserted at every step. The specification's second clause,
-        // each tenth of travel at least 1 percent, is printed with its count and not asserted: it is the
-        // evidence behind registering PICK as velocity's brightness macro (every tenth passes on both
-        // voices at the defaults). The corner is the exciter's low-pass corner, Dsp.expMap over Magnet's
-        // 600 to 16000 Hz.
+        // rendered note. Asserted, the specification's two clauses: the centroid never falls between steps
+        // and PICK 1 sits above PICK 0, and each tenth of travel moves it at least 1 percent (smallest read:
+        // 1.77 percent on JANGLE, 2.03 percent on CHUG). The second clause is the one PICK is registered as
+        // velocity's brightness macro on, and it is asserted at the defaults only: nothing here sweeps the
+        // other macros. The whole table prints before the assertions run. The corner column mirrors
+        // Magnet's private PICK_MIN_HZ and PICK_MAX_HZ (600 and 16000 Hz) and is print-only.
         val tenths = (0..10).map { it / 10f }
         val lines = ArrayList<String>()
         val falls = ArrayList<String>()
+        val short = ArrayList<String>()
+        val flat = ArrayList<String>()
         for (v in voices) {
             val hz = tenths.map { p -> FeatureExtractor.extract(Magnet.render(v, mapOf("PICK" to p))).centroidHz }
             var passing = 0
@@ -414,12 +439,15 @@ class MagnetTest {
                 val pct = 100.0 * (hz[i] - hz[i - 1]) / hz[i - 1]
                 val atLeastOne = pct >= 1.0
                 if (atLeastOne) passing++
-                if (!(hz[i] >= hz[i - 1])) falls.add("$v PICK ${tenths[i - 1]} to ${tenths[i]}: ${hz[i - 1]} Hz to ${hz[i]} Hz")
+                val step = "$v PICK ${tenths[i - 1]} to ${tenths[i]}: ${hz[i - 1]} Hz to ${hz[i]} Hz"
+                if (!(hz[i] >= hz[i - 1])) falls.add(step)
+                if (!atLeastOne) short.add("$step, ${MagnetMeasure.round(pct, 2)} percent")
                 steps.add(
                     "${tenths[i]} corner ${MagnetMeasure.round(Dsp.expMap(tenths[i], 600f, 16_000f).toDouble())} Hz " +
                         "centroid ${hz[i]} Hz ${MagnetMeasure.round(pct, 2)} percent ${if (atLeastOne) "at least 1" else "under 1"}",
                 )
             }
+            if (!(hz[10] > hz[0])) flat.add("$v: PICK 1 reads ${hz[10]} Hz, not above PICK 0's ${hz[0]} Hz")
             lines.add(
                 "$v PICK 0.0 corner ${Dsp.expMap(0f, 600f, 16_000f)} Hz centroid ${hz[0]} Hz; ${steps.joinToString("; ")}; " +
                     "$passing of 10 tenths at least 1 percent",
@@ -427,6 +455,8 @@ class MagnetTest {
         }
         println("MAGNET PICK: ${lines.joinToString(" || ")}")
         assertTrue(falls.isEmpty(), "PICK lowers the centroid: $falls")
+        assertTrue(flat.isEmpty(), "PICK does not raise the centroid end to end: $flat")
+        assertTrue(short.isEmpty(), "PICK moves the centroid under 1 percent at a tenth: $short")
     }
 
     /**
@@ -443,13 +473,15 @@ class MagnetTest {
     fun `the pitch through VALVE stays within ten cents at the landing and is printed at gain 1000`() {
         // Both voices at TUNE 0, 0.5 and 1 with the other macros at their defaults: the dry note, then the
         // same note through each voice's landing amp (asserted, the specification's 10 cents) and through
-        // DRIVE 1 with no SAG, flat TONE and no cabinet (VALVE's gain 1000, the case the specification's bar
-        // was written against; printed only). The pitch is the interpolated autocorrelation, never
-        // Pitch.detect: its integer lag steps up to 12.9 cents at JANGLE's E4 and a hot amp can hand it an
-        // octave or nothing.
+        // DRIVE 1 with no SAG, flat TONE and no cabinet (gain 1000 on VALVE's current law; the specification's
+        // bar was written on V1's law, where DRIVE 1 was gain 35; printed only). The pitch is the
+        // interpolated autocorrelation, never Pitch.detect: its integer lag steps up to 12.9 cents at
+        // JANGLE's E4 and a hot amp can hand it an octave or nothing. A silent or NaN render reads as NaN
+        // cents and fails the finite check, and a NaN shift fails the bar too.
         val hot = mapOf("DRIVE" to 1f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
         val cells = ArrayList<String>()
         val over = ArrayList<String>()
+        val unread = ArrayList<String>()
         var worstLanding = 0.0
         var worstHot = 0.0
         for (v in voices) {
@@ -465,7 +497,8 @@ class MagnetTest {
                 worstLanding = maxOf(worstLanding, abs(landedShift))
                 worstHot = maxOf(worstHot, abs(hotShift))
                 val cell = "$v TUNE $tune (${MagnetMeasure.round(f0.toDouble(), 2)} Hz)"
-                if (abs(landedShift) > 10.0) over.add("$cell at ${MagnetMeasure.round(landedShift, 2)} cents")
+                if (!(dryCents.isFinite() && landedCents.isFinite())) unread.add("$cell dry $dryCents cents, landing $landedCents cents")
+                if (!(abs(landedShift) <= 10.0)) over.add("$cell at ${MagnetMeasure.round(landedShift, 2)} cents")
                 cells.add(
                     "$cell dry ${MagnetMeasure.round(dryCents, 2)} cents, landing ${MagnetMeasure.round(landedCents, 2)} cents " +
                         "(wet minus dry ${MagnetMeasure.round(landedShift, 2)}), gain ${Valve.gainFor(hot.getValue("DRIVE"))} " +
@@ -477,6 +510,7 @@ class MagnetTest {
             "MAGNET pitch through VALVE: ${cells.joinToString("; ")}; worst |wet minus dry| " +
                 "${MagnetMeasure.round(worstLanding, 2)} cents at the landing, ${MagnetMeasure.round(worstHot, 2)} cents at gain 1000",
         )
+        assertTrue(unread.isEmpty(), "the pitch cannot be read (silent or NaN render): $unread")
         assertTrue(over.isEmpty(), "the landing amp moves the pitch by more than 10 cents: $over")
     }
 

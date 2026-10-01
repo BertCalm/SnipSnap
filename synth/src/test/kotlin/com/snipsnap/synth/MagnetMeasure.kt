@@ -8,9 +8,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * What MAGNET's measured tests read off the dry string at [Magnet.RENDER_RATE]. The one copy of
- * the correlation and the dB ratio the string tests keep privately ([StringsPickupTest]), and the
- * harmonic read the comb, the humbucker and BLEND claims share.
+ * What MAGNET's measured tests read off the dry string at [Magnet.RENDER_RATE]. The second copy,
+ * by ruling, of the correlation and the dB ratio that [StringsPickupTest] keeps privately (one
+ * shared copy for MAGNET's tests), and the harmonic read the comb, the humbucker and BLEND claims
+ * share.
  */
 internal object MagnetMeasure {
 

@@ -255,8 +255,8 @@ object Velocity {
         // (Dsp.expMap over 600 to 16000 Hz). At the defaults every tenth of
         // its travel moves the rendered centroid by at least 1 percent on
         // both voices (smallest 1.77 percent JANGLE, 2.03 percent CHUG), as
-        // MagnetTest's `PICK never lowers the centroid across its eleven
-        // steps on both voices` prints.
+        // MagnetTest's `PICK raises the centroid by at least 1 percent at
+        // every tenth on both voices` asserts.
         patch is MagnetPatch -> "PICK"
         else -> null
     }
