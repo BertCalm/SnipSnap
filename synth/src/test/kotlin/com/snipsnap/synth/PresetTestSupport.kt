@@ -40,7 +40,14 @@ internal object PresetTestSupport {
             // (docs/superpowers/specs/2026-09-28-bore-woodwind-engine-design.md). "mello" alone would
             // also refuse the word "mellow", which is a plain description and not a maker, so the
             // lookahead lets "mellow" through and nothing that spells the keyboard.
-            """|mello(?!w)|heckel|chamberlin|selmer|yanagisawa""",
+            """|mello(?!w)|heckel|chamberlin|selmer|yanagisawa""" +
+            // ARCO's brief named the string-machine makers directly
+            // (docs/superpowers/specs/2026-09-29-arco-bowed-string-engine-design.md). The arp term is
+            // word-bounded on purpose: a bare "arp" would also refuse HARP, SHARP and WARP (sixteen shipped
+            // names), the same trap "mello" has with "mellow". A word start before a letter fires at a space or
+            // the start of the name (the hole above is a digit running into a letter, which this is not), and the
+            // lookahead lets "arpeggio" through.
+            """|solina|eminent|string\s*ensemble|\barp(?!eggi)""",
     )
 
     /**

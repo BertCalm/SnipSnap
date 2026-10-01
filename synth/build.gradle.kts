@@ -303,6 +303,25 @@ tasks.register<JavaExec>("generateBoreAudition") {
     args("${rootDir}/testkit/bore-audition")
 }
 
+tasks.register<JavaExec>("generateArcoKit") {
+    group = "distribution"
+    description = "Render the ARCO bowed-string acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the ARCO audition clips, manifest and page under testkit/arco-audition/. See ArcoAuditionGenerator. */
+tasks.register<JavaExec>("generateArcoAudition") {
+    group = "distribution"
+    description = "Render the ARCO audition clips, manifest and listening page under testkit/arco-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"
