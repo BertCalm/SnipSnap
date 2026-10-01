@@ -244,11 +244,12 @@ and re-renders it, and a drone still rendering is silence on its own track,
 never a stall on the other five.
 
 The string machine is two halves, and the rack has the second: a saw stack
-under a filter is the source, and ENSEMBLE (below) is the chorus that makes
-it a section. VELVET BRASS's STRING MACHINE and THIN STRINGS and RESIN
+under a filter is the source, and ENSEMBLE (below) is what makes it a
+section: with its SECTION macro up, six independent players instead of one
+chorus. VELVET BRASS's STRING MACHINE and THIN STRINGS and RESIN
 BRASS's WIDE STRINGS and DARK STRINGS are the source half, and they carry
 the other half with them — SEND TO PAD lands one with ENSEMBLE already in
-its recipe (stereo, regenerated bit for bit like any synth pad), the panel
+its recipe (stereo, six players, regenerated bit for bit like any synth pad), the panel
 auditions it through the same chain, and `snipsnap synth VELVET BRASS
 --preset 13` writes the same stereo file. The chain follows the sound, not
 its name: move a slider and it is your sound and lands dry. They are short,
@@ -496,7 +497,10 @@ physics-lite nod to ChowDSP's AnalogTapeModel), ENSEMBLE (three taps off one
 delay line swimming 120° apart on two slow sines, each through its own
 tone, summed with no dry — the string machine's back half on any pad, and
 the one section that widens a mono pad to stereo, by choice, with the pair
-weighted so the phone's mono fold hears every tap the same), PHASE (four allpasses
+weighted so the phone's mono fold hears every tap the same; its SECTION
+macro swaps the locked taps for six independent players, each with their own
+pitch drift, vibrato, onset, tone and level, which is the difference between
+one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade), SPRING (a Schroeder network,

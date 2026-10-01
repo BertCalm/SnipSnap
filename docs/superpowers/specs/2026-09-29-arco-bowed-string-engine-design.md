@@ -1471,6 +1471,88 @@ INSTRUMENT and DRONE TO LOOP still render the voice dry, as SIREN's SPREAD
 does with its ECHO. The preview gap the paragraph above names is closed
 for these four presets only; SIREN's ECHO still previews dry.
 
+**PR-E3, as built (2026-09-30): ENSEMBLE's SECTION macro.** The owner
+heard E2's string machines and said they sound good but not like several
+instruments. The measurement agrees, and says why: the shipped section is
+three taps on the *same* two sines 120° apart, so the three pitch wobbles
+are locked (every pair correlates at exactly -0.5, the set has rank two)
+and the swell comes round almost exactly every 1.7 s. A section of
+players is the opposite of that: each drifts on its own, vibratos at its
+own rate, and comes in a few milliseconds late. Prototypes of independent
+players were A/B'd against the chorus on a real bowed note and a bowed
+chord and the owner chose the staggered six ("Chord is especially good").
+**The macro.** `SECTION` (default 0, neutral 0, the last of ENSEMBLE's
+four) crossfades equal-power from the chorus at 0 to six players at 1.
+At 0, or at or below `Ensemble.SECTION_OFF`, the output is the shipped
+section bit for bit, and `EnsembleBytesTest` holds that: it pins the
+SHA-256 of the float bits on five signals x five macro sets, two rows of
+the wide-weight family and a recipe read from JSON, and was written on the
+unedited tree before `SECTION` existed. A recipe without the key reads
+back as it did. `EnsemblePlayers` is the voicing: six players with seeded
+smoothed-noise drift (corners 0.4-1.45 Hz), their own vibrato (5.08-6.45
+Hz, own phase, own entry delay), base delays from 7.5 to 33.0 ms, and a
+little tone, tilt and level flutter each, spread over the pair by the
+ramp-weight family at an L/R correlation of 0.51. `DEPTH` scales the
+players' depth, `RATE` their rates, `WIDTH` the shared spread; the one
+peak match runs on the mixture, as on the chorus path. **The bass
+anchor.** Six equal players spread over 25 ms are a static comb with
+bass holes: at 65 Hz the phone's fold was 13 dB down on average and 22 dB
+in its worst 250 ms window. Every candidate that kept all six in the bass (tilted weights, a
+narrower stagger, a lead voice, a hybrid bed, one player alone in the low
+band) failed the fold gate; the one that held replaces the players'
+bass with the dry signal delayed 17.7 ms through a 290 Hz low-pass, less
+the players' own 145 Hz low band (`LP290(x delayed) - LP145(sum of
+players)`), so the section's low end is one steady voice and the stagger
+lives above it. After it, all ten tones from 40 to 330 Hz fold within
+-3.6 dB in the worst 250 ms window (the worst is 260 Hz). The anchor is a
+290 Hz low-pass and does nothing above it: a steady sine at 175, 240, 305 or
+380 Hz still folds up to 12 dB down in its worst window (380 Hz, -11.9 dB),
+which the tests record and bound. **In the crossfade** (found by review, not
+by the first pass: the tests only looked at 0 and 1) the chorus bed's bass
+(a copy at 7.5 ms) and the anchor's (a copy at 17.7 ms) cancel at 49 Hz and
+its odd multiples, so the chip's default blend folded a 50 Hz sine 10.6 dB
+down. Between 0 and 1 the bed now gives up its own bass and the anchor is
+made up to full weight, at the bed's own delay until the last twentieth of
+the macro; a first version that kept the anchor at 17.7 ms put a 15 dB
+notch at 130 Hz, so the delay is part of the rule. Measured, the blends
+from 0.05 to 0.85 fold within -5.0 dB on average and -7.7 in the worst
+window at 50-260 Hz, and 165 Hz reaches -10.8 dB in its worst window at
+0.97, where the anchor is half way between its two delays; 0 and 1 are
+unchanged. **What it
+measures** (`EnsembleSectionTest`, each bound just past the number
+recorded next to it): pairwise pitch-deviation correlation 0.02 mean and
+0.05 at worst against the chorus's 0.500; envelope line prominence of a
+steady sine 3.0-5.1 at 100-1000 Hz against the chorus's above 100; click
+onset spread (5th to 95th percentile of the click's energy) at least 18 ms
+where the chorus's is under 5. **What it costs,** all known: the pair is
+narrower on the low and middle (the L/R correlation of eight saws goes
+0.43 to 0.74), the level ripples less (the swell the chorus gave is
+gone), the envelope's line prominence is worse at `RATE`'s extremes than
+at its default (up to 8.7 against 3.0-5.1), `DEPTH` 0 is a static
+comb in the mid-range (the chorus at `DEPTH` 0 is three identical copies, a
+7.5 ms delay and no comb), the section is a
+one-shot's (the last 7.5 ms of its input never emerge, as the chorus's do;
+the 7.5 to 33 ms before that come out only through the earlier players, so
+it fades its last 4 ms), a
+stereo input gets the anchor per channel (an approximation), and a build
+from before this change refuses a recipe that carries the key (the rack's
+`VERSION` stays 1; the pad degrades softly, as any unknown-macro recipe
+does). **Reach.** A pad-sheet chip, SECTION, beside ENSEMBLE (`sectioned`:
+`DEPTH` 0.5, `WIDTH` 1, `SECTION` 1, faded toward the neutrals by AMT, so
+its 0.7 default is DEPTH 0.35, WIDTH 0.7, SECTION 0.7, a blend); ENSEMBLE's
+own chip and the `ensembled` treatment are untouched, so every old recipe
+replays unchanged. **The landings** then moved to `SECTION` 1 in a
+commit of their own: the four string machines keep their DEPTH and RATE,
+and their landed fold is now -0.4 / -1.1 / -0.6 / -0.5 dB, L/R 0.74 /
+0.80 / 0.74 / 0.58, pump 0.6 / 0.3 / 0.5 / 1.3 dB (E2's chorus landings
+above were -0.9 / -1.1 / -1.5 / -1.3 dB, L/R 0.29 / 0.47 / 0.04 / 0.26):
+a gentler fold and a narrower pair. Reverting that one commit puts the
+landings back on the chorus and leaves the macro and the chip in place.
+What the measurement cannot say, and the owner's ear has to: whether the
+anchor reads as a solid bass under the players or as a mono lump (the
+owner heard the prototype *without* it), and whether the narrower pair is
+a fair price for the players.
+
 **The ARCO landing** (rack §3): **dry**. The two landings that exist are
 stories an instrument tells about itself — a siren's onboard delay is
 part of the sound (`Siren.kt:120-125`), a tape flute is the addendum's

@@ -94,6 +94,7 @@ import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
+import com.snipsnap.shell.GlintPadMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -218,7 +219,7 @@ fun SynthScreen(
     shelfRoot: File,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
-    // MAKE INSTRUMENT (RESIN, held) writes beside the kits; App's instrument
+    // MAKE INSTRUMENT (RESIN, SIREN or GLINT, held) writes beside the kits; App's instrument
     // list is not reactive to that folder, so this tells it to re-read -
     // PadSheetScreen's own parameter of the same name, for the same reason.
     onShelfAssetWritten: () -> Unit,
@@ -592,10 +593,11 @@ fun SynthScreen(
         }
     }
 
-    // ---- MAKE INSTRUMENT: RESIN and SIREN, held ----
-    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN) and
+    // ---- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----
+    // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
-    // (SIREN). Zones render off the main thread, in parallel, with a
+    // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
+    // (GLINT). Zones render off the main thread, in parallel, with a
     // progress bar the whole way (the author's call: a slow phone shows
     // work, it does not drop zones); the package is written once every zone
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
@@ -624,13 +626,16 @@ fun SynthScreen(
         }
     }
 
-    // MAKE INSTRUMENT's two engines behind one shape, so the render/export
-    // orchestration below (identical for both) is written once: RESIN's
+    // MAKE INSTRUMENT's three engines behind one shape, so the render/export
+    // orchestration below (identical for all) is written once: RESIN's
     // spec carries an ATTACK; SIREN's LOOP render has none to carry
-    // (Keys.sirenPad's own KDoc), so [HeldSpec.Siren] simply has none.
+    // (Keys.sirenPad's own KDoc) and neither does GLINT's (its onset and
+    // breath come from the patch), so [HeldSpec.Siren] and [HeldSpec.Glint]
+    // simply have none.
     fun heldSpec(): HeldSpec? = when (engine) {
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
+        Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, holdRelease))
         else -> null
     }
 
@@ -1084,13 +1089,13 @@ fun SynthScreen(
                         showChooser = true
                     }
                 }
-                // RESIN or SIREN, held: the sound as a keys instrument -
-                // the two engines whose held render closes its own loop.
+                // RESIN, SIREN or GLINT, held: the sound as a keys instrument -
+                // the three engines whose held render closes its own loop.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
                 // same way it ignores RESIN's one-shot DECAY.
-                if (engine == Engine.RESIN || engine == Engine.SIREN) {
+                if (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT) {
                     LabButton(
                         "MAKE INSTRUMENT ▸",
                         scheme,
@@ -1201,7 +1206,7 @@ fun SynthScreen(
             BackHandler(onBack = closeBin)
         }
 
-        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN)) {
+        if (makingInstrument && (engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT)) {
             // Recomputed here rather than cached: cheap (a Spec is a data
             // class, no rendering), and it must reflect whatever the panel
             // holds right now, the same as every value below it.
@@ -1515,21 +1520,23 @@ private fun PresetNameDialog(
     }
 }
 
-// ---------- MAKE INSTRUMENT: RESIN and SIREN, held ----------
+// ---------- MAKE INSTRUMENT: RESIN, SIREN and GLINT, held ----------
 
 /**
- * MAKE INSTRUMENT's two engines behind one shape, so the render/export
- * orchestration in [SynthScreen] (identical for both — render every zone,
+ * MAKE INSTRUMENT's three engines behind one shape, so the render/export
+ * orchestration in [SynthScreen] (identical for all — render every zone,
  * show progress, write the package once every zone has landed) is written
  * once. RESIN's spec carries an ATTACK the sheet draws a slider for;
- * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc), so
- * [Siren.hasAttack] is false and its slider never appears.
+ * SIREN's LOOP render has none to carry (`Keys.sirenPad`'s own KDoc) and
+ * neither does GLINT's (`Keys.glintPad`: the onset and the breath come from
+ * the patch), so [Siren.hasAttack] and [Glint.hasAttack] are false and their
+ * slider never appears.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
 
-    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec], never the raw stepper fractions again. */
+    /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
     fun renderZone(midi: Int, cancelled: () -> Boolean): KeyNote
     fun preview(cancelled: () -> Boolean): Snip
@@ -1554,13 +1561,22 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = SirenPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<KeyNote>, destRoot: File) = SirenPadMaker.export(name, spec, notes, destRoot)
     }
+
+    class Glint(private val spec: GlintPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = GlintPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${GlintPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = GlintPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = GlintPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<KeyNote>, destRoot: File) = GlintPadMaker.export(name, spec, notes, destRoot)
+    }
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN or SIREN): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN or GLINT): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
- * slider for an engine with none to dial (SIREN); RELEASE always shows,
+ * slider for an engine with none to dial (SIREN, GLINT); RELEASE always shows,
  * and [knobLabel] spells out whichever of the two apply in seconds. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says

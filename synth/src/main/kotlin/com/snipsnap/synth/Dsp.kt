@@ -426,7 +426,7 @@ internal object Dsp {
      * than the float read position: a position a hair below zero plus the
      * buffer length rounds to exactly the length in float, which indexes one
      * past the end. TONEWHEEL's scanner and rotor read through this, and so
-     * do ENSEMBLE's three taps — one copy, so the wrap is right in both.
+     * do ENSEMBLE's taps (the chorus's and the players') — one copy, so the wrap is right in both.
      */
     internal fun tap(line: FloatArray, writePos: Int, delay: Float): Float {
         var rp = writePos - delay
