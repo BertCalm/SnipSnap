@@ -6,11 +6,11 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonException
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.log10
+import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -129,16 +129,7 @@ class MagnetTest {
     }
 
     /** Amplitude of [y]'s component at [hz], by correlation over [y]'s whole length. */
-    private fun amplitudeAt(y: FloatArray, hz: Double, rate: Int): Double {
-        var re = 0.0
-        var im = 0.0
-        for (i in y.indices) {
-            val ph = 2 * PI * hz * i / rate
-            re += y[i] * cos(ph)
-            im += y[i] * sin(ph)
-        }
-        return 2 * sqrt(re * re + im * im) / y.size
-    }
+    private fun amplitudeAt(y: FloatArray, hz: Double, rate: Int): Double = MagnetMeasure.amplitudeAt(y, hz, rate)
 
     @Test
     fun `finish removes a constant offset`() {
@@ -264,6 +255,163 @@ class MagnetTest {
             val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
             assertTrue(soft < hard, "$voice: soft centroid $soft should be below hard centroid $hard")
         }
+    }
+
+    // ---------- the measured claims on the dry string ----------
+
+    @Test
+    fun `every note of both voices is within five cents on the dry string`() {
+        // Read on the raw 176.4 kHz buffer with FineTuning, before the output chain: both voices, all 25
+        // TUNE steps, MUTE and BLEND each at 0, 0.5 and 1 (450 cells). The string does not read BLEND, so
+        // one string serves the three blends of a cell. PICK stays at its default.
+        val grid = listOf(0f, 0.5f, 1f)
+        var cells = 0
+        var worst = 0.0
+        var worstCell = ""
+        val lowest = mutableMapOf<MagnetVoice, Double>()
+        val highest = mutableMapOf<MagnetVoice, Double>()
+        val over = ArrayList<String>()
+        for (v in voices) {
+            for (step in 0..Magnet.TUNE_SEMITONES) {
+                val tune = step / Magnet.TUNE_SEMITONES.toFloat()
+                val f0 = Magnet.frequencyFor(v, tune)
+                for (mute in grid) {
+                    val string = Magnet.string(v, Magnet.defaults(v) + mapOf("TUNE" to tune, "MUTE" to mute))
+                    for (blend in grid) {
+                        val dry = Magnet.pickup(v, string, f0, blend)
+                        val cents = FineTuning.cents(FineTuning.measuredHz(dry, Magnet.RENDER_RATE, f0), f0.toDouble())
+                        val cell = "$v TUNE step $step MUTE $mute BLEND $blend"
+                        cells++
+                        lowest[v] = min(lowest[v] ?: cents, cents)
+                        highest[v] = maxOf(highest[v] ?: cents, cents)
+                        if (abs(cents) > worst) { worst = abs(cents); worstCell = "$cell at $cents cents" }
+                        if (abs(cents) > 5.0) over.add("$cell at $cents cents")
+                    }
+                }
+            }
+        }
+        val ranges = voices.joinToString("; ") { "$it ${MagnetMeasure.round(lowest.getValue(it), 2)} to ${MagnetMeasure.round(highest.getValue(it), 2)}" }
+        println("MAGNET in tune: $cells cells, cents $ranges, worst |cents| ${MagnetMeasure.round(worst, 2)} at $worstCell (spike: -0.62 to 1.11 over 36 cells)")
+        assertEquals(450, cells)
+        assertTrue(over.isEmpty(), "${over.size} cells are over 5 cents, the first: ${over.take(5)}")
+    }
+
+    @Test
+    fun `the single coil comb notches h2 and h4 at half way and h4 at a quarter`() {
+        // JANGLE at TUNE 0.5 and the default MUTE, no resonance, neck coil alone at 0.5 of the string
+        // (kills h2 and h4) and then at 0.25 (kills h4). A notch must sit 20 dB under the quieter of its
+        // two neighbours. The string's own exciter comb sits near h11.8 (1 / 0.085), outside h2 to h8.
+        val v = MagnetVoice.JANGLE
+        val f0 = Magnet.frequencyFor(v, 0.5f)
+        val string = Magnet.string(v, Magnet.defaults(v) + ("TUNE" to 0.5f))
+        fun read(neck: Float) = MagnetMeasure.relH1(Magnet.pickup(v, string, f0, 0f, resonance = false, neck = neck), f0, 0.05f, 0.35f, 8)
+        val half = read(0.5f)
+        val quarter = read(0.25f)
+        // h[i] is harmonic i + 1: harmonic j sits at index j - 1 and its neighbours at j - 2 and j.
+        fun gap(h: List<Double>, j: Int) = min(h[j - 2], h[j]) - h[j - 1]
+        val halfH2 = gap(half, 2)
+        val halfH4 = gap(half, 4)
+        val quarterH4 = gap(quarter, 4)
+        println(
+            "MAGNET comb: neck 0.5 h2 ${MagnetMeasure.round(halfH2)} dB and h4 ${MagnetMeasure.round(halfH4)} dB under their neighbours " +
+                "(h1..h8 ${MagnetMeasure.round(half)}); neck 0.25 h4 ${MagnetMeasure.round(quarterH4)} dB (h1..h8 ${MagnetMeasure.round(quarter)}); " +
+                "spike: 52, 54 and 47 dB",
+        )
+        assertTrue(halfH2 >= 20.0, "neck 0.5: h2 is only $halfH2 dB under its neighbours")
+        assertTrue(halfH4 >= 20.0, "neck 0.5: h4 is only $halfH4 dB under its neighbours")
+        assertTrue(quarterH4 >= 20.0, "neck 0.25: h4 is only $quarterH4 dB under its neighbours")
+    }
+
+    @Test
+    fun `the humbucker notches at the coil spacing on the real string and a naive sum does not`() {
+        // CHUG at TUNE 0.5, bridge group alone (BLEND 1), no resonance. The coil spacing dp puts the
+        // pair's first spacing notch near harmonic k = round(1 / dp). The reference is the single bridge
+        // coil; the naive sum is the two coils as two unaligned single-position calls. Harmonic levels
+        // are against h1 of their own render, so the gap is a ratio of ratios.
+        val v = MagnetVoice.CHUG
+        val rate = Magnet.RENDER_RATE
+        val f0 = Magnet.frequencyFor(v, 0.5f)
+        val dp = 0.0278f * f0 / Keys.midiHz(Magnet.rootMidi(v))
+        val second = Magnet.BRIDGE + dp
+        val d1 = Strings.combDelay(Magnet.BRIDGE, f0, rate)
+        val d2 = Strings.combDelay(second, f0, rate)
+        val parity = if ((d2 - d1) % 2 == 0) "even" else "odd"
+        val k = (1f / dp).roundToInt()
+        val string = Magnet.string(v, Magnet.defaults(v) + ("TUNE" to 0.5f))
+        val single = Strings.pickup(string, floatArrayOf(Magnet.BRIDGE), floatArrayOf(1f), f0, rate)
+        val aligned = Magnet.pickup(v, string, f0, 1f, resonance = false)
+        val coilA = Strings.pickup(string, floatArrayOf(Magnet.BRIDGE), floatArrayOf(0.707f), f0, rate)
+        val coilB = Strings.pickup(string, floatArrayOf(second), floatArrayOf(0.707f), f0, rate)
+        val naive = FloatArray(string.size) { coilA[it] + coilB[it] }
+        fun read(x: FloatArray) = MagnetMeasure.relH1(x, f0, 0.05f, 0.35f, k + 1)
+        val hSingle = read(single)
+        // The notch's depth under the single coil, h1 to h[k]: the first term is the single coil's own.
+        fun gap(x: List<Double>) = (hSingle[k - 1] - hSingle[0]) - (x[k - 1] - x[0])
+        val gapAligned = gap(read(aligned))
+        val gapNaive = gap(read(naive))
+        println(
+            "MAGNET humbucker: dp ${MagnetMeasure.round(dp.toDouble(), 4)}, k $k, D1 $d1, D2 $d2, D2 - D1 $parity (${d2 - d1}), " +
+                "string ${MagnetMeasure.round(string.size.toDouble() / rate, 2)} s, " +
+                "h$k aligned ${MagnetMeasure.round(gapAligned)} dB under the single coil, naive ${MagnetMeasure.round(gapNaive)} dB (spike: 34 dB aligned)",
+        )
+        assertTrue(gapAligned >= 20.0, "the aligned humbucker is only $gapAligned dB under the single coil at h$k")
+        assertTrue(gapNaive < 20.0, "the unaligned sum notches too ($gapNaive dB at h$k): this test cannot tell alignment from none")
+    }
+
+    @Test
+    fun `BLEND moves the spectrum by at least 6 dB at some harmonic on both voices`() {
+        // The full pickup with its resonance, TUNE 0.5 and the default MUTE and PICK, neck alone against
+        // bridge alone. relH1 is dB against each render's own h1, so entry j is harmonic j + 1 and entries
+        // 1 to 7 are h2 to h8.
+        for (v in voices) {
+            val f0 = Magnet.frequencyFor(v, 0.5f)
+            val string = Magnet.string(v, Magnet.defaults(v) + ("TUNE" to 0.5f))
+            val neck = MagnetMeasure.relH1(Magnet.pickup(v, string, f0, 0f), f0, 0.05f, 0.35f, 8)
+            val bridge = MagnetMeasure.relH1(Magnet.pickup(v, string, f0, 1f), f0, 0.05f, 0.35f, 8)
+            val swings = (1..7).map { abs(bridge[it] - neck[it]) }
+            val swing = swings.max()
+            val at = swings.indexOf(swing) + 2
+            println("MAGNET BLEND $v: swing ${MagnetMeasure.round(swing)} dB, peaks at h$at (h2..h8 ${MagnetMeasure.round(swings)}) (spike: 18 dB at JANGLE's h5)")
+            assertTrue(swing >= 6.0, "$v: BLEND moves no harmonic in h2 to h8 by 6 dB, the most is $swing dB at h$at")
+        }
+    }
+
+    @Test
+    fun `MUTE shortens and darkens both voices`() {
+        // MUTE 1 against MUTE 0 at TUNE 0.5 on the rendered note: under half the length, and a lower
+        // centroid. The spike read 0.26 to 1.33 s at MUTE 1 against the 4 s ceiling.
+        for (v in voices) {
+            val open = Magnet.render(v, Magnet.defaults(v) + mapOf("TUNE" to 0.5f, "MUTE" to 0f))
+            val damped = Magnet.render(v, Magnet.defaults(v) + mapOf("TUNE" to 0.5f, "MUTE" to 1f))
+            val openHz = FeatureExtractor.extract(open).centroidHz
+            val dampedHz = FeatureExtractor.extract(damped).centroidHz
+            println(
+                "MAGNET MUTE $v: MUTE 0 ${open.samples.size} samples (${open.durationSeconds} s), MUTE 1 ${damped.samples.size} samples " +
+                    "(${damped.durationSeconds} s), ratio ${MagnetMeasure.round(damped.samples.size.toDouble() / open.samples.size, 3)}; " +
+                    "centroid ${openHz} Hz at MUTE 0 and ${dampedHz} Hz at MUTE 1 (spike: 0.26 to 1.33 s at MUTE 1)",
+            )
+            assertTrue(damped.samples.size < 0.5 * open.samples.size, "$v: MUTE 1 is ${damped.samples.size} samples against MUTE 0's ${open.samples.size}")
+            assertTrue(dampedHz < openHz, "$v: MUTE 1's centroid $dampedHz Hz is not under MUTE 0's $openHz Hz")
+        }
+    }
+
+    @Test
+    fun `cost of a four second JANGLE render and its trip through VALVE is printed`() {
+        // Print only: timing on a shared runner is not a property of the code. The owner's phone number
+        // is recorded at the audition gate.
+        val macros = mapOf("MUTE" to 0f)
+        val valve = checkNotNull(Magnet.landingChain(MagnetVoice.JANGLE).valve)
+        Valve.process(Magnet.render(MagnetVoice.JANGLE, macros), valve) // warm-up of both stages
+        val start = System.nanoTime()
+        val dry = Magnet.render(MagnetVoice.JANGLE, macros)
+        val rendered = System.nanoTime()
+        val landed = Valve.process(dry, valve)
+        val processed = System.nanoTime()
+        val seconds = dry.durationSeconds.toDouble()
+        val renderMs = (rendered - start) / 1e6
+        val valveMs = (processed - rendered) / 1e6
+        println("MAGNET cost: dry render ${MagnetMeasure.round(renderMs / seconds)} ms per rendered second (${MagnetMeasure.round(seconds, 2)} s in ${MagnetMeasure.round(renderMs)} ms)")
+        println("MAGNET cost: VALVE ${MagnetMeasure.round(valveMs / seconds)} ms per rendered second (${landed.samples.size} samples in ${MagnetMeasure.round(valveMs)} ms)")
     }
 
     private companion object {
