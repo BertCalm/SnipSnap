@@ -57,7 +57,11 @@ internal class GlintShape private constructor(
         /** The DEPTH at which the edge is fully rounded and the sine begins to come in. */
         const val EDGE_FULL_AT = 0.5f
 
-        /** The spec's `w_e(p)` for an edge rounding [edge] above 0, in `Double`. The table and the tests both read it. */
+        /**
+         * The spec's `w_e(p)` for an edge rounding [edge] above 0, in `Double`. [GlintPath.sineGain] and
+         * the tests read it; the table and [window] compute the same two formulas on their own, which is
+         * what lets the tests hold them to this.
+         */
         fun analyticWindow(phase: Double, edge: Double): Double {
             val p = phase.coerceIn(0.0, 1.0)
             val span = 0.5 * edge

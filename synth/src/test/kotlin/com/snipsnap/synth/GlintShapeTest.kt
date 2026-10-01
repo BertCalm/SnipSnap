@@ -96,8 +96,10 @@ class GlintShapeTest {
     fun `the attack is a raised cosine over the first half of e`() {
         // DEPTH 0.5: e = 1, so the attack spans the first half of the cycle.
         val s = shape(0.5f)
-        // A quarter of the way through the attack the cosine is at its midpoint: 0.5 * (1 - 0.25)^2.
+        // Halfway through the attack (it spans [0, 0.5]) the raised cosine is at its midpoint: 0.5 * (1 - 0.25)^2.
         assertEquals(0.5f * 0.5625f, s.window(0.25f), 1e-4f)
+        // A quarter of the way through it tells a raised cosine (0.1464) from a linear ramp (0.25): times (1 - 0.125)^2.
+        assertEquals(0.112123f, s.window(0.125f), 1e-5f)
         // And where the attack ends it has reached 1, so the window is the fall alone: (1 - 0.5)^2.
         assertEquals(0.25f, s.window(0.5f), 1e-4f)
     }

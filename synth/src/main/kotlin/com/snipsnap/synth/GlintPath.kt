@@ -98,9 +98,12 @@ internal class GlintPath private constructor(
      * being the RMS over one cycle of the fully rounded burst pair,
      * `w₁(p) · (sin(2π·k0·p) + level2 · sin(2π·k1·p))`, at this path's resting ratios (the breath's
      * centre: [breathRatios] at 0), by numerical integration. It is one number for a note whose ratios
-     * move along their path: right at rest, an approximation elsewhere. The spec expects it within
-     * about a dB there, which has been measured only at the SWEEP and VOWEL probe setups (defaults,
-     * BLOOM 0.85).
+     * move along their path: right at rest wherever both bursts ride one level (the held SWEEP, STEP and
+     * VOWEL pads, a one-shot's start), an approximation elsewhere. The spec expects it within about a dB
+     * there, which has been measured only at the SWEEP and VOWEL probe setups (defaults, BLOOM 0.85).
+     * BRASS's held pad keeps its second burst at full level under a main burst at
+     * `GlintHeld.BRASS_REST`, so there the burst sits about 0.9 dB over this match at the default BODY
+     * and PEAK and 3 dB at BODY 1 (inferred from the formulas, not measured on the engine).
      */
     fun sineGain(): Float {
         val k = FloatArray(2)

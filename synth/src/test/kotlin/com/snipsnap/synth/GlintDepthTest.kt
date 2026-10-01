@@ -156,10 +156,13 @@ class GlintDepthTest {
     }
 
     /**
-     * Spec §4.2 and §4.6. The step across each wrap is never the largest step: the rounded window and
-     * the sine are both exactly zero there, so the wrap is not a click at any DEPTH. (Not "the biggest
-     * step shrinks as DEPTH rises": each render is levelled on its own, and normalised by RMS the saw
-     * and the rounded window do not differ that way.) Raw buffers, BLOOM still so that k is constant.
+     * Spec §4.2 and §4.6. The step across each wrap is no larger than the largest step inside the
+     * cycles, within 5%: the rounded window and the sine are both exactly zero there, so the wrap is not
+     * a click at any DEPTH. The 5% is for DEPTH 1, where a bare sine's steepest step is its zero
+     * crossing, which is where the wrap is: measured worst 1.0002 (STEP), 0.96 on the other voices. (Not
+     * "the biggest step shrinks as DEPTH rises": each render is levelled on its own, and normalised by
+     * RMS the saw and the rounded window do not differ that way.) Raw buffers, BLOOM still so that k is
+     * constant.
      *
      * The step into a cycle's last sample is not counted among the inner steps. A window that ends above
      * zero, over the last sample alone, leaves a one-sample spike: its rising edge is the step into that
@@ -168,7 +171,7 @@ class GlintDepthTest {
      * click goes unseen. (Moving the shape table's last entry to 0.5 makes such a spike on VOWEL.)
      */
     @Test
-    fun `the wrap is never the largest step - no click at any DEPTH`() {
+    fun `the wrap is no larger than the largest inner step - no click at any DEPTH`() {
         for (voice in GlintVoice.entries) {
             for (depth in listOf(0.25f, 0.5f, 0.75f, 1f)) {
                 val f0 = Glint.frequencyFor(voice, Glint.defaults(voice).getValue("TUNE"))

@@ -33,8 +33,10 @@ class GlintFrozenReferenceTest {
      * and at 1, so TUNE sits at each end of its range and BLOOM at each extreme of its sign), a rising
      * BLOOM (the negative-BLOOM branch of the breath, and on BRASS the `depth = abs(path.bloom)` that
      * sets how far its level breathes) and a zero BODY (on the path voices the second burst's level is
-     * then 0f, so the held second term is a signed zero; VOWEL's second burst has a fixed level, and
-     * its BODY scales the formants instead).
+     * then 0f, so the held second term is a zero product. This runs that input through both loops; it
+     * does not guard a dropped zero term, because the first term is non-zero wherever the second is -0f,
+     * so the sum is the same either way. VOWEL's second burst has a fixed level, and its BODY scales
+     * the formants instead).
      */
     private fun heldMapsFor(voice: GlintVoice): List<Pair<String, Map<String, Float>>> {
         val corner = cornersFor(voice).toMap()

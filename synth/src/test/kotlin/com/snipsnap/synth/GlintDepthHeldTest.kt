@@ -11,20 +11,24 @@ class GlintDepthHeldTest {
 
     @Test
     fun `every voice's loop closes at DEPTH 0_3, 0_75 and 1 - the seam and the second breath`() {
-        for (voice in GlintVoice.entries) {
-            for (depth in listOf(0.3f, 0.75f, 1f)) {
-                for (tune in listOf(0f, 1f)) {
-                    val held = GlintHeld.render(voice, mapOf("BLOOM" to 0.8f, "TUNE" to tune, "DEPTH" to depth))
-                    val what = "$voice DEPTH $depth TUNE $tune"
-                    assertTrue(Keys.seamError(held.audio, held.loopStart) < Keys.MAX_SEAM_ERROR, "$what: the loop does not close")
-                    // The second breath is the first, sample for sample, from its 64th frame on
-                    // (see GlintBreatheTest: by then the decimator has forgotten the onset).
-                    val len = held.audio.size - held.loopStart
-                    var maxDiff = 0f
-                    for (j in 64 until len) {
-                        maxDiff = maxOf(maxDiff, abs(held.audio[held.loopStart - len + j] - held.audio[held.loopStart + j]))
+        // BLOOM both ways: 0.8 falls into PEAK and 0.2 rises into it. A rising BLOOM runs STEP's ladder
+        // upward and takes the negative-BLOOM branch of every voice's breath, BRASS's included.
+        for (bloom in listOf(0.8f, 0.2f)) {
+            for (voice in GlintVoice.entries) {
+                for (depth in listOf(0.3f, 0.75f, 1f)) {
+                    for (tune in listOf(0f, 1f)) {
+                        val held = GlintHeld.render(voice, mapOf("BLOOM" to bloom, "TUNE" to tune, "DEPTH" to depth))
+                        val what = "$voice DEPTH $depth TUNE $tune BLOOM $bloom"
+                        assertTrue(Keys.seamError(held.audio, held.loopStart) < Keys.MAX_SEAM_ERROR, "$what: the loop does not close")
+                        // The second breath is the first, sample for sample, from its 64th frame on
+                        // (see GlintBreatheTest: by then the decimator has forgotten the onset).
+                        val len = held.audio.size - held.loopStart
+                        var maxDiff = 0f
+                        for (j in 64 until len) {
+                            maxDiff = maxOf(maxDiff, abs(held.audio[held.loopStart - len + j] - held.audio[held.loopStart + j]))
+                        }
+                        assertEquals(0f, maxDiff, "$what: the second breath differs from the first")
                     }
-                    assertEquals(0f, maxDiff, "$what: the second breath differs from the first")
                 }
             }
         }

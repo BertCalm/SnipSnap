@@ -42,8 +42,9 @@ import kotlin.math.sin
  * 0.108 (0.19 at TUNE 1, PEAK 0, BODY 0).
  *
  * DEPTH (docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md) is one value for
- * the whole render, so the loop stays periodic: the rounded window and the sine are pure
- * functions of phase, and at DEPTH 0 the loop is today's, line for line.
+ * the whole render, so the loop stays periodic: the rounded window is a pure function of phase, and
+ * the sine is a function of phase times the main level, which repeats with the loop (BRASS's
+ * breathes). At DEPTH 0 the loop runs its own literal saw lines and is today's, sample for sample.
  */
 internal object GlintHeld {
     const val BREATHE_SECONDS = 3f
@@ -74,7 +75,7 @@ internal object GlintHeld {
         val path = GlintPath.of(voice, m, plan.f0.toFloat())
         val depth = abs(path.bloom)
         // `depth` above is BLOOM's own travel. DEPTH the macro is the shape below: null at DEPTH 0, and the
-        // loop is then today's, line for line (see GlintShape).
+        // `shape == null` branch below is then today's loop body, line for line (see GlintShape).
         val shape = GlintShape.of(m.getValue("DEPTH")) { path.sineGain() }
 
         // w0: the first phase wrap at or after the onset's end - from here on
@@ -133,7 +134,8 @@ internal object GlintHeld {
                     amp * w * sin(2.0 * PI * k[0] * phase).toFloat() +
                         second * path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
                     )
-                // The sine rides the main level and is a pure function of phase, so the loop still closes.
+                // The sine rides the main level: a function of phase times a level that repeats with the
+                // loop, so the loop still closes.
                 if (shape.sineWeight != 0f) v += shape.sineWeight * amp * sin(2.0 * PI * phase).toFloat()
                 out[i] = v
             }
