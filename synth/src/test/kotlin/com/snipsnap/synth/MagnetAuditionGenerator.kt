@@ -33,9 +33,16 @@ import kotlin.math.roundToInt
  *   the saw stab's length, so the comparison is also made the other way: the saw stab's DECAY is
  *   raised until its dry render is as long as the as-played CHUG stab (or as long as DECAY 1.00
  *   allows, with the shortfall stated), through the same amp and loudness-matched to the CHUG stab,
- *   with no cut at all. The section holds the three stabs and bars, and three blind pairs of bars
- *   under neutral ids (cut-matched, decay-matched, as played). By id number the first bar is CHUG,
- *   saw, CHUG (blind_1, blind_3, blind_5); in the page's order it is CHUG, CHUG, saw.
+ *   with no cut at all. The cut-matched pair is not symmetric (its release begins on the guitar side
+ *   alone), so a fourth comparison cuts both as-played stabs at the same short length after the amp,
+ *   with the same release: the longest of 0.35, 0.30, 0.25 and 0.20 s at which both stabs still ring,
+ *   loudness-matched after the release. The section holds the stabs and bars, the two short stabs,
+ *   and four blind pairs of bars under neutral ids (cut-matched, both-cut, decay-matched, as
+ *   played); the decay-matched and as-played pairs are length-confounded controls. By id number the
+ *   first bar of each pair is CHUG, saw, CHUG, saw (blind_1, blind_3, blind_5, blind_7); in the
+ *   page's order (blind_1, blind_7, blind_5, blind_3) it is CHUG, saw, CHUG, saw. The manifest is
+ *   the answer key: the page must not display `label` or `truth` for blind rows, and shows neither
+ *   their ids nor the generator's A and B letters.
  * - BLIND: JANGLE at three notes and two PICK defaults as landed, and three notes dry, with no
  *   word in a label that names the sound; the manifest's truth field carries the key.
  * - CHUG and JANGLE: each voice's default and both ends of MUTE, PICK and BLEND, dry and landed.
@@ -50,7 +57,7 @@ import kotlin.math.roundToInt
  * Writes `manifest.json`, `{"clips":[{"section","id","file","label","truth","order"}]}`, the one list
  * of clips the listening page is built from; `truth` is empty except on the blind clips and `order`
  * is the sequence the page presents a section's clips in (the blind bars of CHUGAB come first, in
- * the order cut-matched, decay-matched, as played). Prints each
+ * the order cut-matched, both-cut, decay-matched, as played). Prints each
  * clip's peak and length and, last, the JVM cost per rendered second of a 4 s JANGLE and of VALVE
  * on it. Run via `./gradlew :synth:generateMagnetAudition`.
  */
@@ -58,7 +65,7 @@ object MagnetAuditionGenerator {
 
     /** Clips per section; the sum is the final count. */
     private val SECTION_COUNTS = linkedMapOf(
-        "KIT" to 16, "LAND" to 6, "CHUGAB" to 14, "BLIND" to 9, "CHUG" to 14, "JANGLE" to 14,
+        "KIT" to 16, "LAND" to 6, "CHUGAB" to 18, "BLIND" to 9, "CHUG" to 14, "JANGLE" to 14,
         "PICKDEF" to 8, "PLACE" to 4, "AMPPADS" to 6,
     )
 
@@ -68,8 +75,14 @@ object MagnetAuditionGenerator {
     /** The amped matched stab should end by itself: its last 5 ms peak, before the release, is at most this share of its peak (about -30 dB). */
     private const val END_LEVEL = 0.03f
 
-    /** The release applied to the matched stab after the amp, in milliseconds. */
+    /** The release applied to the matched stab and to the symmetric pair's two cuts, after the amp, in milliseconds. */
     private const val RELEASE_MS = 100f
+
+    /** The symmetric pair's cut lengths in seconds, longest first: the longest at which both stabs still ring is used. */
+    private val SHORT_CUT_SECONDS = listOf(0.35f, 0.30f, 0.25f, 0.20f)
+
+    /** Still ringing at a cut: the peak of the 5 ms before it is at least this share of the stab's own peak (about -25 dB). */
+    private const val RINGING_LEVEL = 0.0562f
 
     /** Sections whose name states the question, not which clip is which: CHUG in CHUGAB is allowed in a blind row's section and directory. */
     private val QUESTION_SECTIONS = setOf("CHUGAB")
@@ -92,6 +105,11 @@ object MagnetAuditionGenerator {
 
     /** One MUTE candidate for the matched stab: its dry render, the amped cut and the amped cut's end level. */
     private class Muted(val mute: Float, val dry: Snip, val wet: Snip, val end: Float)
+
+    /** One cut length for the symmetric pair, with each as-played stab's level over the 5 ms before it. */
+    private class ShortCut(val seconds: Float, val frames: Int, val magnetLevel: Float, val velvetLevel: Float) {
+        val ringing: Boolean get() = magnetLevel >= RINGING_LEVEL && velvetLevel >= RINGING_LEVEL
+    }
 
     private class Row(val path: String, val peak: Float, val frames: Int, val seconds: Float)
 
@@ -116,6 +134,8 @@ object MagnetAuditionGenerator {
     private fun f4(v: Float) = String.format(Locale.ROOT, "%.4f", v)
 
     private fun f5(v: Float) = String.format(Locale.ROOT, "%.5f", v)
+
+    private fun f2(v: Float) = String.format(Locale.ROOT, "%.2f", v)
 
     /** How far under its peak a level is, as a positive number of dB with one decimal. */
     private fun dbUnder(ratio: Float) = String.format(Locale.ROOT, "%.1f", -20.0 * log10(ratio.toDouble()))
@@ -197,10 +217,10 @@ object MagnetAuditionGenerator {
                 "velvet after the scale ${f4(Loudness.of(velvetStab))}",
         )
         val stabNote = noteOf(MagnetVoice.CHUG, 0.5f)
-        write("CHUGAB", "stab_magnet", "MAGNET CHUG STAB ($stabNote) THROUGH ITS LANDING AMP, AS PLAYED: IT RINGS LONGER THAN THE SAW STAB", magnetStab, order = 7)
-        write("CHUGAB", "stab_velvet", "VELVET SAW STAB ($stabNote) THROUGH THE SAME AMP, AS PLAYED, MATCHED TO THE MAGNET STAB IN LOUDNESS", velvetStab, order = 8)
-        write("CHUGAB", "bar_magnet", "MAGNET BAR, AS PLAYED (THE STAB RINGS LONGER): $barWords", barMagnet, order = 9)
-        write("CHUGAB", "bar_velvet", "VELVET BAR, AS PLAYED: $barWords", barVelvet, order = 10)
+        write("CHUGAB", "stab_magnet", "MAGNET CHUG STAB ($stabNote) THROUGH ITS LANDING AMP, AS PLAYED: IT RINGS LONGER THAN THE SAW STAB", magnetStab, order = 9)
+        write("CHUGAB", "stab_velvet", "VELVET SAW STAB ($stabNote) THROUGH THE SAME AMP, AS PLAYED, MATCHED TO THE MAGNET STAB IN LOUDNESS", velvetStab, order = 10)
+        write("CHUGAB", "bar_magnet", "MAGNET BAR, AS PLAYED (THE STAB RINGS LONGER): $barWords", barMagnet, order = 11)
+        write("CHUGAB", "bar_velvet", "VELVET BAR, AS PLAYED: $barWords", barVelvet, order = 12)
 
         // CHUGAB, length-matched: a chug is a palm-muted note, so the stab's shortness comes from the engine's own MUTE. The dry
         // render is trimmed to the dry saw stab's length (no fade) and run through the amp, and the end level is measured on that
@@ -255,8 +275,8 @@ object MagnetAuditionGenerator {
         val residual = "STARTING ${dbUnder(startLevel)} DB UNDER ITS PEAK, ENDS ${dbUnder(chosen.end)} DB UNDER ITS PEAK BEFORE THE RELEASE"
         val matchedWords = "PALM-MUTED (MUTE ${chosen.mute}), CUT TO THE SAW STAB'S LENGTH, ${RELEASE_MS.roundToInt()} MS RELEASE $residual"
         val matchedTruth = "MAGNET (palm-muted, MUTE ${chosen.mute}, ${RELEASE_MS.roundToInt()} ms release starting ${dbUnder(startLevel)} dB under its peak, ends ${dbUnder(chosen.end)} dB under its peak before the release)"
-        write("CHUGAB", "stab_magnet_matched", "MAGNET CHUG STAB ($stabNote) THROUGH ITS LANDING AMP, $matchedWords, MATCHED TO THE SAW STAB IN LOUDNESS", matchedStab, order = 11)
-        write("CHUGAB", "bar_magnet_matched", "MAGNET BAR, THE STAB $matchedWords: $barWords", barMatched, order = 12)
+        write("CHUGAB", "stab_magnet_matched", "MAGNET CHUG STAB ($stabNote) THROUGH ITS LANDING AMP, $matchedWords, MATCHED TO THE SAW STAB IN LOUDNESS", matchedStab, order = 13)
+        write("CHUGAB", "bar_magnet_matched", "MAGNET BAR, THE STAB $matchedWords: $barWords", barMatched, order = 14)
 
         // CHUGAB, decay-matched: the comparison the other way. The amp lifts a quiet string tail, so the CHUG stab cannot be made to
         // end by itself in the saw stab's length; the saw stab's DECAY is raised instead until its dry render is as long as the
@@ -286,22 +306,69 @@ object MagnetAuditionGenerator {
         )
         val longShort = if (tooShort) ", RINGS $shortfall PERCENT SHORTER EVEN AT DECAY 1.0" else ""
         val longWords = "WITH ITS DECAY RAISED TO RING AS LONG AS THE GUITAR STAB (DECAY $longDecay$longShort)"
-        write("CHUGAB", "stab_velvet_long", "VELVET SAW STAB ($stabNote) $longWords, THROUGH THE SAME AMP, MATCHED TO THE MAGNET STAB IN LOUDNESS", longStab, order = 13)
-        write("CHUGAB", "bar_velvet_long", "VELVET BAR, THE SAW STAB $longWords: $barWords", barLong, order = 14)
+        write("CHUGAB", "stab_velvet_long", "VELVET SAW STAB ($stabNote) $longWords, THROUGH THE SAME AMP, MATCHED TO THE MAGNET STAB IN LOUDNESS", longStab, order = 15)
+        write("CHUGAB", "bar_velvet_long", "VELVET BAR, THE SAW STAB $longWords: $barWords", barLong, order = 16)
         val longTruth = "VELVET saw stab with DECAY $longDecay (${f4(longDry.durationSeconds)} s dry against the MAGNET stab's ${f4(chugDry.durationSeconds)} s" +
             (if (tooShort) ", $shortfall percent shorter, the DECAY ceiling" else "") + ")"
         val longBlind = if (tooShort) "THE RENDERED LENGTHS DIFFER BY $shortfall PERCENT" else "BOTH STABS RING ABOUT AS LONG"
 
+        // CHUGAB, symmetric: the control for the cut-matched pair, whose release begins on the guitar side alone. Both as-played stabs
+        // (the amped CHUG stab and the loudness-matched saw stab) are cut at the same short length, after the amp, and given the same
+        // release, so the ending is on both sides and the length is equal. The cut is the longest candidate at which both stabs are still
+        // ringing (the peak of the 5 ms before it at least RINGING_LEVEL of each stab's own peak); none qualifying is an error. After the
+        // release the guitar cut is scaled to the saw cut's loudness, as the matched stab is.
+        check(velvetStab.sampleRate == magnetStab.sampleRate) { "the two stabs are at ${magnetStab.sampleRate} and ${velvetStab.sampleRate} Hz" }
+        val shortRate = magnetStab.sampleRate
+        val shortCuts = SHORT_CUT_SECONDS.map { seconds ->
+            val frames = (seconds * shortRate).toInt()
+            check(frames > endFrames && frames <= minOf(magnetStab.frameCount, velvetStab.frameCount)) { "a cut at $seconds s does not fit both stabs" }
+            ShortCut(
+                seconds, frames,
+                peakIn(magnetStab.samples, frames - endFrames, frames) / magnetStab.peak(),
+                peakIn(velvetStab.samples, frames - endFrames, frames) / velvetStab.peak(),
+            )
+        }
+        for (c in shortCuts) {
+            println(
+                "chugab short cut: candidate ${f2(c.seconds)} s (${c.frames} frames): CHUG stab ${dbOf(c.magnetLevel)} dB, saw stab ${dbOf(c.velvetLevel)} dB re each " +
+                    "stab's own peak over the 5 ms before the cut; ${if (c.ringing) "both ringing (at least ${dbOf(RINGING_LEVEL)} dB)" else "not both ringing"}",
+            )
+        }
+        val shortCut = checkNotNull(shortCuts.firstOrNull { it.ringing }) {
+            "no cut of $SHORT_CUT_SECONDS s leaves both stabs within ${dbOf(RINGING_LEVEL)} dB of their own peaks"
+        }
+        fun cutAndReleased(stab: Snip) =
+            Snip(stab.samples.copyOf(shortCut.frames).also { Dsp.fadeTail(it, ms = RELEASE_MS, rate = stab.sampleRate) }, stab.channels, stab.sampleRate)
+        val velvetCut = cutAndReleased(velvetStab)
+        val magnetReleased = cutAndReleased(magnetStab)
+        val magnetCut = scaled(magnetReleased, Loudness.of(velvetCut) / Loudness.of(magnetReleased))
+        check(magnetCut.frameCount == velvetCut.frameCount) { "the two cuts are ${magnetCut.frameCount} and ${velvetCut.frameCount} frames" }
+        val cutRatio = Loudness.of(magnetCut) / Loudness.of(velvetCut)
+        check(abs(cutRatio - 1f) <= 0.01f) { "the two cuts are not within 1 percent in Loudness.of: ratio $cutRatio" }
+        val barMagnetCut = bar(magnetCut)
+        val barVelvetCut = bar(velvetCut)
+        check(barMagnetCut.frameCount == barVelvetCut.frameCount) { "the two short bars are ${barMagnetCut.frameCount} and ${barVelvetCut.frameCount} frames" }
+        println(
+            "chugab short: chosen ${f2(shortCut.seconds)} s, ${shortCut.frames} frames each (${magnetCut.frameCount} CHUG, ${velvetCut.frameCount} saw), ${RELEASE_MS.roundToInt()} ms release on both; " +
+                "Loudness.of CHUG cut ${f4(Loudness.of(magnetCut))}, saw cut ${f4(Loudness.of(velvetCut))}, ratio ${f4(cutRatio)}; bars ${barMagnetCut.frameCount} and ${barVelvetCut.frameCount} frames",
+        )
+        val shortWords = "BOTH STABS CUT TO THE SAME LENGTH WITH THE SAME ${RELEASE_MS.roundToInt()} MS RELEASE"
+        val shortTruth = "cut to ${f2(shortCut.seconds)} s after the amp with a ${RELEASE_MS.roundToInt()} ms release, the same on both stabs"
+        write("CHUGAB", "stab_magnet_short", "MAGNET CHUG STAB ($stabNote) THROUGH ITS LANDING AMP, CUT TO ${f2(shortCut.seconds)} S WITH A ${RELEASE_MS.roundToInt()} MS RELEASE AFTER THE AMP, MATCHED TO THE SAW CUT IN LOUDNESS", magnetCut, order = 17)
+        write("CHUGAB", "stab_velvet_short", "VELVET SAW STAB ($stabNote) THROUGH THE SAME AMP, CUT TO ${f2(shortCut.seconds)} S WITH THE SAME ${RELEASE_MS.roundToInt()} MS RELEASE", velvetCut, order = 18)
+
         // The blind pairs, under neutral ids and file names, written in the order the page presents them: cut-matched (blind_1,
-        // blind_2), decay-matched (blind_5, blind_6), as played (blind_3, blind_4). The short saw bar is in the first and third pairs and
-        // the as-played CHUG bar in the second and third. The first element is CHUG, saw, CHUG by id number and CHUG, CHUG, saw in the
-        // order written here.
+        // blind_2), both-cut (blind_7, blind_8), decay-matched (blind_5, blind_6), as played (blind_3, blind_4). The first bar of each
+        // pair is CHUG, saw, CHUG, saw by id number (blind_1, blind_3, blind_5, blind_7) and CHUG, saw, CHUG, saw in the order written
+        // here (blind_1, blind_7, blind_5, blind_3). The decay-matched and as-played pairs are length-confounded controls.
         write("CHUGAB", "blind_1", "BAR XM A, BOTH STABS THE SAME LENGTH: $barWords", barMatched, truth = "$matchedTruth; B is VELVET", order = 1)
         write("CHUGAB", "blind_2", "BAR XM B, BOTH STABS THE SAME LENGTH: $barWords", barVelvet, truth = "VELVET; A is $matchedTruth", order = 2)
-        write("CHUGAB", "blind_5", "BAR XL A, $longBlind: $barWords", barMagnet, truth = "MAGNET CHUG stab through its landing amp, as played; B is $longTruth", order = 3)
-        write("CHUGAB", "blind_6", "BAR XL B, $longBlind: $barWords", barLong, truth = "$longTruth; A is MAGNET CHUG stab through its landing amp, as played", order = 4)
-        write("CHUGAB", "blind_3", "BAR X A, AS PLAYED: $barWords", barVelvet, truth = "VELVET saw stab through the same amp; B is MAGNET", order = 5)
-        write("CHUGAB", "blind_4", "BAR X B, AS PLAYED: $barWords", barMagnet, truth = "MAGNET CHUG stab through its landing amp; A is VELVET", order = 6)
+        write("CHUGAB", "blind_7", "BAR XS A, $shortWords: $barWords", barVelvetCut, truth = "VELVET saw stab $shortTruth; B is MAGNET CHUG stab, $shortTruth", order = 3)
+        write("CHUGAB", "blind_8", "BAR XS B, $shortWords: $barWords", barMagnetCut, truth = "MAGNET CHUG stab $shortTruth; A is VELVET saw stab, $shortTruth", order = 4)
+        write("CHUGAB", "blind_5", "BAR XL A, $longBlind: $barWords", barMagnet, truth = "MAGNET CHUG stab through its landing amp, as played; B is $longTruth", order = 5)
+        write("CHUGAB", "blind_6", "BAR XL B, $longBlind: $barWords", barLong, truth = "$longTruth; A is MAGNET CHUG stab through its landing amp, as played", order = 6)
+        write("CHUGAB", "blind_3", "BAR X A, AS PLAYED: $barWords", barVelvet, truth = "VELVET saw stab through the same amp; B is MAGNET", order = 7)
+        write("CHUGAB", "blind_4", "BAR X B, AS PLAYED: $barWords", barMagnet, truth = "MAGNET CHUG stab through its landing amp; A is VELVET", order = 8)
 
         // BLIND: JANGLE as landed at the specified PICK default and at the spike's brighter one, then the specified default dry.
         val blindTunes = listOf(0f, 0.5f, 1f)
@@ -369,7 +436,7 @@ object MagnetAuditionGenerator {
         }
 
         check(sectionCounts == SECTION_COUNTS) { "section counts $sectionCounts, expected $SECTION_COUNTS" }
-        check(entries.size == 91) { "expected 91 clips, wrote ${entries.size}" }
+        check(entries.size == 95) { "expected 95 clips, wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
 
         println("magnet audition: ${entries.size} clips under ${root.absolutePath}")
