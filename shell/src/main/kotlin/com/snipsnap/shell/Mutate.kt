@@ -183,7 +183,7 @@ object Mutate {
             Mode.STACK -> stack(baseAligned, parents, flipped)
             Mode.SPLICE -> splice(baseAligned, parents.single().snip, spliceAtMs, rate)
             Mode.SPLIT -> split(baseAligned, parents.single().snip, crossoverHz, rate)
-            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, rate)
+            Mode.MORPH -> morph(baseAligned, parents.single().snip, morphAmount, becomeMs = 0, rate = rate)
             Mode.ROOM -> room(baseAligned, parents.single().snip, roomMix, rate)
             Mode.TRANSPLANT -> com.snipsnap.audio.Transplant.apply(baseAligned, parents.single().snip, bands)
         }
@@ -333,13 +333,33 @@ object Mutate {
     }
 
     /**
+     * MORPH's amount at STFT frame [frame], the BECOME ramp: 0 for every
+     * frame centred at or before the aligned onset, rising linearly in
+     * amount (not in dB) to [amount] at [becomeMs], and exactly [amount] from
+     * there on. [com.snipsnap.audio.Spectral] pads one frame ahead of the
+     * sound, so frame f reads samples f·HOP − FRAME up to f·HOP and is
+     * centred on f·HOP − FRAME/2. [rate] is the base pad's, so a 96 kHz pad
+     * ramps in its own time. [becomeMs] 0 is [amount] at every frame, which
+     * is today's MORPH.
+     */
+    internal fun becomeAmount(frame: Int, amount: Float, becomeMs: Int, rate: Int): Float {
+        if (becomeMs == 0) return amount
+        val centre = frame.toLong() * com.snipsnap.audio.Spectral.HOP - com.snipsnap.audio.Spectral.FRAME / 2
+        val r = (centre * 1000.0 / (rate.toDouble() * becomeMs)).coerceIn(0.0, 1.0)
+        return if (r >= 1.0) amount else (amount * r).toFloat()
+    }
+
+    /**
      * The Séance's move, done properly on the spectral door: both
      * parents' magnitude spectrograms (transient-aligned by the caller)
      * interpolated bin by bin at [amount], phases re-invented by
      * [com.snipsnap.audio.Pghi] — a sound *between* the parents, not a
-     * crossfade of them. Length and level interpolate too.
+     * crossfade of them. Length and level interpolate too. With [becomeMs]
+     * above 0 each frame mixes at its own [becomeAmount], so the hit starts
+     * as the pad and turns into the blend; length and level still follow
+     * [amount], the end of the blend.
      */
-    private fun morph(base: Snip, parent: Snip, amount: Float, rate: Int): Snip {
+    private fun morph(base: Snip, parent: Snip, amount: Float, becomeMs: Int, rate: Int): Snip {
         fun monoMags(s: Snip): Pair<List<FloatArray>, Int> {
             val mono = Snip(
                 FloatArray(s.frameCount) { f -> (s.samples[f * 2] + s.samples[f * 2 + 1]) / 2f },
@@ -357,7 +377,10 @@ object Mutate {
         for (f in 0 until frames) {
             val a = ma.getOrElse(f) { silence }
             val b = mb.getOrElse(f) { silence }
-            mixed.add(FloatArray(a.size) { i -> a[i] * (1f - amount) + b[i] * amount })
+            // This frame's share of the parent. At BECOME 0 it is `amount`
+            // itself, so the expression below is today's, operand for operand.
+            val k = becomeAmount(f, amount, becomeMs, rate)
+            mixed.add(FloatArray(a.size) { i -> a[i] * (1f - k) + b[i] * k })
         }
         val outFrames = Math.round(la * (1f - amount) + lb * amount)
         val morphed = com.snipsnap.audio.Pghi.invert(mixed, outFrames, rate)

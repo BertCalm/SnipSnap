@@ -1,10 +1,12 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.Spectral
 import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpVoice
 import com.snipsnap.synth.Tines
 import com.snipsnap.synth.TinesVoice
+import kotlin.math.ceil
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -98,5 +100,48 @@ class BecomeTest {
             cases++
         }
         println("BECOME 0 trim against the frozen MORPH: $cases cases")
+    }
+
+    @Test
+    fun `the ramp is 0 up to the onset, never falls, is linear between, and MIX from BECOME on`() {
+        val amount = 0.8f
+        var checked = 0
+        for (sr in listOf(44_100, 48_000, 96_000)) {
+            // 1 ms is the CLI's floor and shorter than one analysis window: it reads as a step, and must not divide by zero.
+            for (ms in listOf(1, 50, 400, 2000)) {
+                val ramp = ms * sr / 1000.0 // samples
+                var prev = 0f
+                var f = 0
+                while (true) {
+                    val centre = f.toLong() * Spectral.HOP - Spectral.FRAME / 2
+                    val a = Mutate.becomeAmount(f, amount, ms, sr)
+                    if (centre <= 0) assertEquals(0f, a, "$sr Hz, $ms ms, frame $f: at or before the onset is the pad alone")
+                    assertTrue(a >= prev, "$sr Hz, $ms ms: the ramp fell at frame $f ($prev -> $a)")
+                    if (centre >= ramp) {
+                        assertTrue(a == amount, "$sr Hz, $ms ms, frame $f: from BECOME on it must be MIX itself, got $a")
+                        break
+                    }
+                    prev = a
+                    f++
+                }
+                assertTrue(Mutate.becomeAmount(f + 1000, amount, ms, sr) == amount, "$sr Hz, $ms ms: long after BECOME it is MIX")
+                for (p in listOf(0.0, 0.25, 0.5, 0.75, 1.0)) {
+                    // The first frame centred at or after p of the ramp.
+                    val at = ceil((p * ramp + Spectral.FRAME / 2) / Spectral.HOP).toInt()
+                    val centre = at.toLong() * Spectral.HOP - Spectral.FRAME / 2
+                    val expected = (amount * (centre / ramp).coerceIn(0.0, 1.0)).toFloat()
+                    val got = Mutate.becomeAmount(at, amount, ms, sr)
+                    assertEquals(expected, got, 1e-6f, "$sr Hz, $ms ms at ${(p * 100).toInt()}%: not linear in amount")
+                    if (p < 1.0) {
+                        // ...and within one hop of p itself, so "linear" means the spec's points, not only the formula.
+                        assertTrue(got >= amount * p - 1e-6 && got <= amount * (p + Spectral.HOP / ramp) + 1e-6, "$sr Hz, $ms ms: $got is not near ${amount * p}")
+                    }
+                    checked++
+                }
+            }
+        }
+        assertEquals(60, checked)
+        // BECOME 0 is the amount itself at every frame, the ones before the onset included: today's loop.
+        for (f in listOf(0, 1, 2, 3, 100)) assertTrue(Mutate.becomeAmount(f, 0.37f, 0, 44_100) == 0.37f, "frame $f at BECOME 0")
     }
 }
