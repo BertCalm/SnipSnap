@@ -8,7 +8,8 @@ import kotlin.math.abs
  * The loudness every audition clip is rendered at - a copy of `:synth`'s
  * test-source `AuditionLevel`, which is internal to that module, so a
  * `:shell` page (MUTATE's BECOME gate) is heard at the same level, by the
- * same rule, as every `:synth` page. Keep the two identical.
+ * same rule, as every `:synth` page. `AuditionCopiesTest` fails if the two
+ * stop matching in code.
  */
 internal object AuditionLevel {
 

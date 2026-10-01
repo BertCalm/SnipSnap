@@ -162,6 +162,7 @@ object BecomeAuditionGenerator {
             out[i] = yo
         }
         // The synth's 4 ms tail fade, restated: its Dsp object is internal to :synth, out of this module's reach.
+        // AuditionCopiesTest reads Dsp.fadeTail as text and fails if this stops saying the same thing.
         val fade = minOf(out.size, (4f / 1000f * rate).toInt())
         for (i in 0 until fade) out[out.size - 1 - i] *= i.toFloat() / fade
         return Snip(out, 1, rate)
