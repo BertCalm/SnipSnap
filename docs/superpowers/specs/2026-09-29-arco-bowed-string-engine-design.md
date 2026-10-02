@@ -2079,39 +2079,45 @@ were yes; **BODY 1 (both voices), CELLO BOW 1 and CELLO's vibrato were nearly**,
 enough bite, too mechanical. ERHU's box: B, the box as shipped, unsure, so its table stays. Everything the owner did not mark (the presets,
 the kit, the loops, the knobs' low ends) is unheard, not approved.
 
-R1c changes those three and nothing else, and what it found:
+R1c changes those three, and re-authors two presets the changes moved. **It is not "nothing else changes": the bigger CELLO bite changes the
+BOW 1 stab the owner marked YES** (below). What it found:
 
 * **BODY.** `Strings.bodyRing`'s `amount` is the box's RMS over the string's, and BODY was it, so BODY 1 was a box exactly as loud as the string.
-  BODY is now the same up to `BODY_KNEE` 0.5 (the default and every preset at or under 0.5 render to the bit as before: kit pads A01 to A08,
-  A11 and A16 are byte-identical) and climbs to `BODY_TOP` 1.75 times the string at BODY 1 (measured 0.50, 1.12 and 1.75 at BODY 0.5, 0.75 and
-  1 in both voices, finished peaks at most 0.66). A louder box moved ERHU MOON FIDDLE at BODY 0.85 (now 1.375 times the string) from a
+  BODY is now the same up to `BODY_KNEE` 0.5 (the box call is R1b's to the bit at the default and at every preset at or under 0.5, in both voices; kit
+  pads A01 to A08, A11 and A16 are byte-identical) and climbs to `BODY_TOP` 1.75 times the string at BODY 1 (measured 0.50, 1.12 and 1.75 at BODY
+  0.5, 0.75 and 1 in both voices, finished peaks at most 0.66). A louder box moved ERHU MOON FIDDLE at BODY 0.85 (now 1.375 times the string) from a
   classifier ring of 813 ms to 522 ms, 22 ms from the 500 ms line, so that preset's BODY is 0.8.
-* **The bite.** R1b's CELLO bite changed the first 200 ms by 0.3 to 0.5 dB against the same stroke with none, at F2, C3, G3 and C4: the
-  bite relaxed on the attack's own 10 ms time constant (a hump of 1.3 times the velocity, over in 20 ms), and a bass string needs many
-  milliseconds to build a period, so it never showed. The bite is per voice now (ERHU's numbers are as they were) and CELLO's has three:
-  `OVERSHOOT_MAX_CELLO` 2.5 times the velocity, `BITE_SECONDS_CELLO` at least 120 ms to relax, and `BITE_PRESSURE_CELLO` a quarter of the
-  bite's share pressing the string toward the window's top (the rest of the accent is speed alone). That is +3.5, +3.2, +4.1 and +3.1 dB over
-  the first 200 ms at those notes. **Two earlier settings were wrong, and each broke something the first measurement had not looked at.**
-  3.0 times with 60 ms never locked SHORT STAB in its 0.30 s stab (ArcoPresetsTest). 2.75 times with 60 ms passed the roster but put
-  C3's BOW 1 at 600 ms to reach 90 percent against BOW 0's 448 (the onset claim): the pressure's climb held the low notes in their scratch.
-  The answer was to take most of the pressure out of the bite. A few hundred settings (velocity 2.0 to 3.5 times, 20 to 140 ms, a pressure
-  share of 0 to 1) were run against the overshoot row (1.5 s), the onset claim, the roster's locks, the lock across BOW (2.0 s) and the
-  gain; with a quarter of the share in the pressure, 2.5 times for 120 ms keeps them all with room (the row at most 1.31 s, the lock grid
-  1.41 s, C3 at 342 ms against 448, GRIT BOW and HORSEHAIR as authored) and SHORT STAB's BOW is 0.8, not 0.9. **The one claim nothing kept**
-  is that all 400 of the scramble test's random CELLO rolls lock within 2 s: any bite loud enough to hear leaves about one roll in 200 at
-  temperature 1 that does not (G2, BOW 0.91, GRIP 0.47, locking at 2.68 s of a 3 s bow), and which roll it is moves with every change to
-  the numbers, because the lock is chaotic in the macros. The claim is restated: at most 2 of 200 per temperature, each a roll with a bite
-  (BOW above 0.5), every one locking before its bow ends; the rolls with no bite are still held to the strict bar, and ERHU's is unchanged.
-  The cluster of low notes (E2 to A2, C#3 to E3) where BOW 1 is not sooner than BOW 0 at the default GRIP is wider than R1b's (F2 to A2).
+* **The bite.** R1b's CELLO bite hardly showed: against the same stroke with none, the best of the 0-50, 50-100 and 100-200 ms windows was within
+  0.5 dB at F2, C3, G3 and C4 (0.3, 0.5, 0.5, 0.4; over the whole 200 ms it was +0.2, -0.2, +0.4, -0.6). It relaxed with the attack's own 10 ms
+  time constant (a hump of 1.28 times the velocity, over in 27 ms) and a bass string needs many milliseconds to build a period. The bite is per
+  voice now (ERHU's numbers are as they were) and CELLO's has three: `OVERSHOOT_MAX_CELLO` 3.0 times the velocity, `BITE_SECONDS_CELLO` a 60 ms
+  time constant (at least; the attack's if longer), and `BITE_PRESSURE_CELLO` half of the bite's share pressing the string toward the window's top
+  (the rest of the accent is speed alone). That is +2.0, +2.9, +3.0 and +2.7 dB in the best 50 to 100 ms window at those notes.
+  **Three settings were tried before it, and each broke something the search had not yet looked at**: 3.0 times for 60 ms with all of the share in
+  the pressure never locked SHORT STAB in its 0.30 s stab; 2.75 times for 60 ms passed the roster but put C3's BOW 1 at 600 ms to reach 90 percent
+  against BOW 0's 448; 2.5 times for 120 ms with a quarter of the share in the pressure kept both but let only 18 of the 25 TUNE steps lock inside
+  a default note at BOW 1 (R1b: 23) and left one scramble roll in 200 late. A few hundred settings (velocity 1.75 to 3.5 times, 20 to 140 ms, a
+  pressure share of 0 to 1) were run against the overshoot row (1.5 s), the onset claim, the roster's locks, the lock across BOW (2.0 s), the
+  scramble test, the default-note count and a gain of at least 1.5 dB. 3.0 times for 60 ms with half of the share in the pressure keeps them: the row
+  at most 1.44 s, the lock grid 1.47 s, C3 at 434 ms against 448 (a thin margin), 22 of 25 default-note steps locking, none of the 400 scramble rolls
+  late (so the original strict claim stands), SHORT STAB at its authored BOW 0.9 (0.22 s), and the steps where BOW 1 is not sooner than BOW 0 down to
+  F#2, G2 and G#2. GRIT BOW's BOW is 0.65, not 0.85 (at 0.85 it no longer locks inside its bow; at 0.65 it locks at 0.45 s of 0.58), and DRY SCRAPE,
+  which R1b read as never locking, now locks at 0.33 s of its 0.34 s bow, a scrape in all but its last 10 ms (its test clause says so).
+  **What no setting kept is the BOW 1 stab the owner marked YES**: SHORT STAB's macros at BOW 1 on the figure's three pitches (C3 C3 E-flat3 G3 G3
+  E-flat3 C3, 0.3 s each). G3 still locks (0.21 s, R1b 0.214), C3 never did, and **E-flat3 locked at 0.189 s and is now a three-slip scrape for its
+  whole 0.3 s**; every one of the 80 settings run against it loses it, because R1b's bite was so small that this note only just locked. Across all 25
+  steps the HOLD-0 stab at GRIP 0.7 and BOW 1 that locks by 0.255 s falls from 10 steps to 6. The retune page plays that stab before and now so the
+  owner can say whether the extra bite is worth it.
 * **The vibrato.** R1b's was a constant: every swing 10.0 or 10.1 cents at exactly 6.10 Hz, which is what "mechanical" measures as. CELLO's is
-  now `VIBRATO_HUMAN`: the rate drifts by up to 7 percent, the depth by up to 18 percent (each a sum of three slow sines at periods that
-  share none, so it is never the same twice and still a pure function of time: no seed), the swing leans a little (a second harmonic) and it
-  swells in over half a second, against a fifth. Measured swing peaks 8.1 to 12.1 cents, half-swing rates 5.7 to 6.9 Hz, mean pitch
-  -0.02 cents. ERHU keeps `VIBRATO_PLAIN`, the old sine term for term, held bit for bit by a test.
-* **Still open for the owner's ears**: all three amounts (`BODY_TOP`, the bite's two numbers, the drift's two), whether CELLO's default-HOLD
-  notes (0.85 s of bow, 2.8 cents of vibrato, which now drifts) are better or worse for it, the stab against the two brass stabs, whether the
-  bowed note still reads as a synth, and the unheard half of the roster. `generateArcoRetune` writes the small before-and-now page for
-  exactly these three (BODY 1, CELLO BOW 1 with a stronger step beside it, CELLO's vibrato).
+  now `VIBRATO_HUMAN`: the rate drifts by up to 7 percent, the depth by up to 18 percent (each a sum of three slow sines whose frequencies share
+  no period inside a note, so it is never the same twice and still a pure function of time: no seed), the swing leans a little (a second
+  harmonic) and it swells in over half a second, against a fifth. Measured swing peaks 8.1 to 11.8 cents (12.75 at its highest over four
+  seconds), half-swing rates 5.7 to 6.9 Hz, mean pitch -0.02 cents. ERHU keeps `VIBRATO_PLAIN`, the old sine term for term, held bit for bit by a test.
+* **Still open for the owner's ears**: all three amounts (`BODY_TOP`, the bite's three numbers, the drift's two), whether the stab's extra bite is worth
+  E-flat3 and its neighbours scraping, whether CELLO's default-HOLD notes (0.85 s of bow, 2.8 cents of vibrato, which now drifts) are better or worse
+  for it, the stab against the two brass stabs, whether the bowed note still reads as a synth, and the unheard half of the roster.
+  `generateArcoRetune` writes the small before-and-now page for exactly these (BODY 1, CELLO BOW 1 with a stronger step beside it, the BOW 1 stab,
+  CELLO's vibrato).
 
 **A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
 (`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
