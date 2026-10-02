@@ -1,7 +1,10 @@
 package com.snipsnap.synth
 
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Where GLINT's two bursts sit at one point along a voice's path
@@ -90,6 +93,32 @@ internal class GlintPath private constructor(
     }
 
     /**
+     * The amplitude of the sine DEPTH mixes in, chosen so that sine and burst carry equal power
+     * (docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md §2.2). It is `√2 · rB`, `rB`
+     * being the RMS over one cycle of the fully rounded burst pair,
+     * `w₁(p) · (sin(2π·k0·p) + level2 · sin(2π·k1·p))`, at this path's resting ratios (the breath's
+     * centre: [breathRatios] at 0), by numerical integration. It is one number for a note whose ratios
+     * move along their path: right at rest wherever both bursts ride one level (the held SWEEP, STEP and
+     * VOWEL pads, a one-shot's start), an approximation elsewhere. The spec expects it within about a dB
+     * there, which has been measured only at the SWEEP and VOWEL probe setups (defaults, BLOOM 0.85).
+     * BRASS's held pad keeps its second burst at full level under a main burst at
+     * `GlintHeld.BRASS_REST`, so there the burst sits about 0.9 dB over this match at the default BODY
+     * and PEAK and 3 dB at BODY 1 (inferred from the formulas, not measured on the engine).
+     */
+    fun sineGain(): Float {
+        val k = FloatArray(2)
+        breathRatios(0f, k)
+        var sum = 0.0
+        for (i in 0 until SINE_GAIN_STEPS) {
+            val p = (i + 0.5) / SINE_GAIN_STEPS
+            val v = GlintShape.analyticWindow(p, 1.0) *
+                (sin(2.0 * PI * k[0] * p) + level2 * sin(2.0 * PI * k[1] * p))
+            sum += v * v
+        }
+        return sqrt(2.0 * sum / SINE_GAIN_STEPS).toFloat()
+    }
+
+    /**
      * VOWEL's two bursts at [position] on the vowel line, BODY's vocal-tract
      * size applied. Formants are Hz, not harmonics: no snap, and a formant
      * below the note pins to the fundamental instead of vanishing.
@@ -116,6 +145,9 @@ internal class GlintPath private constructor(
     }
 
     companion object {
+        /** Midpoints per cycle in [sineGain]'s integral: 51 per cycle even at k = 40. */
+        private const val SINE_GAIN_STEPS = 2048
+
         /** [macros] already merged over [Glint.defaults]; [f0] the note actually rendered. */
         fun of(voice: GlintVoice, macros: Map<String, Float>, f0: Float): GlintPath {
             val m = Glint.defaults(voice) + macros

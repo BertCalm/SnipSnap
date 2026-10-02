@@ -87,6 +87,16 @@ tasks.register<JavaExec>("generateGlintPathsAudition") {
     args("${rootDir}/testkit/glint-paths-audition")
 }
 
+/** Render the GLINT DEPTH audition (held pads, WAVs only) under testkit/glint-depth-audition/. See GlintDepthAuditionGenerator. */
+tasks.register<JavaExec>("generateGlintDepthAudition") {
+    group = "distribution"
+    description = "Render the GLINT DEPTH audition pads under testkit/glint-depth-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintDepthAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-depth-audition")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"
@@ -320,6 +330,16 @@ tasks.register<JavaExec>("generateArcoRetune") {
     mainClass.set("com.snipsnap.synth.ArcoRetuneGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/arco-retune")
+}
+
+/** Render the GYRE round-one audition clips, manifest and page under testkit/gyre-audition/. See GyreAuditionGenerator. */
+tasks.register<JavaExec>("generateGyreAudition") {
+    group = "distribution"
+    description = "Render the GYRE audition clips, manifest and listening page under testkit/gyre-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GyreAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/gyre-audition")
 }
 
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */

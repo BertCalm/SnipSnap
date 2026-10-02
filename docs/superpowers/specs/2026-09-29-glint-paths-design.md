@@ -282,7 +282,8 @@ kits are affected.
 ## 6. Out of scope
 
 DEPTH; factory presets (authored by ear after the audition, per the synth
-depth reversal); registering GLINT with DE-SAMPLE; stereo.
+depth reversal); registering GLINT with DE-SAMPLE; stereo. DEPTH and the
+presets are designed in `2026-10-01-glint-depth-and-presets-design.md`.
 
 ## 7. Housekeeping in the same branch
 

@@ -17,11 +17,15 @@ enum class GlintVoice { SWEEP, STEP, BRASS, VOWEL }
  * at the wrap, so `k` need not be an integer and can slide continuously
  * without a click — the formant sweeps while the pitch does not move at all.
  * Only the window's *slope* jumps across the wrap, and that slope
- * discontinuity is the buzz the engine is made of. Do not smooth it.
+ * discontinuity is the buzz the engine is made of. At DEPTH 0 nothing is
+ * smoothed: do not smooth it. DEPTH relaxes it on purpose (see `GlintShape`
+ * and docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md):
+ * it rounds the window's edge and then fades a plain sine in, and the window
+ * still reaches exactly zero at the wrap, which is the property that matters.
  *
  * A voice is the path the formant takes — see `GlintPath` and
- * docs/superpowers/specs/2026-09-29-glint-paths-design.md. One window, the
- * saw ramp.
+ * docs/superpowers/specs/2026-09-29-glint-paths-design.md. At DEPTH 0 one
+ * window, the saw ramp.
  *
  * BODY is a second burst under the same window, two and a half octaves below
  * the main formant and on its own envelope — a second source, not a copy of
@@ -175,6 +179,8 @@ object Glint {
             MacroSpec("BODY", 0.5f, 0.5f),    // vocal-tract size, centred
             MacroSpec("BLOOM", 0.6f, 0.5f),   // a short glide down into the vowel
             MacroSpec("DECAY", 0.5f),
+            // Rounds the window's edge, then fades a plain sine in (GlintShape). 0 is today's sound.
+            MacroSpec("DEPTH", 0f),
         )
         else -> listOf(
             MacroSpec("TUNE", 0.5f, 0.5f),
@@ -185,6 +191,8 @@ object Glint {
             // 0.675 is the old default 0.35 through GlintPatch's legacy remap.
             MacroSpec("BLOOM", 0.675f, 0.5f),
             MacroSpec("DECAY", 0.5f),
+            // Rounds the window's edge, then fades a plain sine in (GlintShape). 0 is today's sound.
+            MacroSpec("DEPTH", 0f),
         )
     }
 
@@ -226,9 +234,10 @@ object Glint {
     }
 
     /**
-     * The one window: a ramp from 1 to exactly 0 at the cycle's end. It must
-     * reach exactly zero at phase 1, because that is the instant every change
-     * of k is scheduled on (see the class doc).
+     * The DEPTH 0 window, the saw: a ramp from 1 to exactly 0 at the cycle's
+     * end. It must reach exactly zero at phase 1, because that is the instant
+     * every change of k is scheduled on (see the class doc). Above DEPTH 0 the
+     * render loops use [GlintShape.window], which ends at zero too.
      */
     fun windowAt(phase: Float): Float = 1f - phase.coerceIn(0f, 1f)
 
@@ -362,20 +371,36 @@ object Glint {
         val step = f0.toDouble() / rate
         var phase = 0.0
         val out = FloatArray(frames)
+        // DEPTH. Null at 0, and then the `shape == null` branch below is exactly the saw-window loop
+        // this file has always had: its expressions are left as they were, because adding a zero term
+        // can turn a -0f sample into +0f. Above 0 the shaped branch rounds the window (fully by
+        // DEPTH 0.5) and, above 0.5, mixes the sine in (GlintShape).
+        val shape = GlintShape.of(m.getValue("DEPTH")) { path.sineGain() }
         for (i in 0 until frames) {
             val t = i.toFloat() / rate
-            val w = windowAt(phase.toFloat())
-            val burst = w * sin(2.0 * PI * k[0] * phase).toFloat()
-            // Left uncorrected on purpose. The saw ramp isn't symmetric about
-            // phase 0.5, so a saw-windowed burst carries 1/(2πk) of DC per
-            // cycle: a few percent of peak in the head window on the path
-            // voices (`BODY carries a small, bounded DC` in GlintTest), and up
-            // to about 0.12 on VOWEL at the top of TUNE, where F1 pins to
-            // k = 1. It decays with the note. Subtracting a constant would
-            // stop the window reaching exactly zero at the wrap - the
-            // property this file's class doc calls the whole engine.
-            val second = path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
-            out[i] = amp.at(t) * burst + env2.at(t) * second
+            if (shape == null) {
+                val w = windowAt(phase.toFloat())
+                val burst = w * sin(2.0 * PI * k[0] * phase).toFloat()
+                // Left uncorrected on purpose. The saw ramp isn't symmetric about
+                // phase 0.5, so a saw-windowed burst carries 1/(2πk) of DC per
+                // cycle: a few percent of peak in the head window on the path
+                // voices (`BODY carries a small, bounded DC` in GlintTest), and up
+                // to about 0.12 on VOWEL at the top of TUNE, where F1 pins to
+                // k = 1. It decays with the note. Subtracting a constant would
+                // stop the window reaching exactly zero at the wrap - the
+                // property this file's class doc calls the whole engine.
+                val second = path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
+                out[i] = amp.at(t) * burst + env2.at(t) * second
+            } else {
+                val w = shape.window(phase.toFloat())
+                val burst = w * sin(2.0 * PI * k[0] * phase).toFloat()
+                val second = path.level2 * w * sin(2.0 * PI * k[1] * phase).toFloat()
+                val main = amp.at(t)
+                var v = shape.burstWeight * (main * burst + env2.at(t) * second)
+                // The sine rides the main envelope. It is skipped, not zeroed, at and below DEPTH 0.5.
+                if (shape.sineWeight != 0f) v += shape.sineWeight * main * sin(2.0 * PI * phase).toFloat()
+                out[i] = v
+            }
             phase += step
             if (phase >= 1.0) {
                 phase -= 1.0

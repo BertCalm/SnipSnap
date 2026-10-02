@@ -2,8 +2,10 @@
 
 **Status:** review and decision. **Phase 0 has run and passed**
 (2026-10-01; "Phase 0, as measured" below): the rotation bank speaks, is in
-tune, decays passively and stays bounded. **No engine code is built and
-nothing has been heard.** This document reads the external *Mercury Engine — Engineering
+tune, decays passively and stays bounded. **R0, the shared toolkit, is built**
+(2026-10-01; "R0, as built" below): `Modes.Bank`, `Modes.Friction` and
+`Modes.symmetricEigen`, with no change to any existing render. **The
+engine itself (R1) is not built, and nothing has been heard.** This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -448,4 +450,88 @@ bound and the anchor fix:
 - an aliasing measurement;
 - GLASS's friction selectivity;
 - every sonic claim, which waits for R1's audition.
+
+## R0, as built — 2026-10-01
+
+**What landed.** R0 is purely additive to `synth/src/main/kotlin/com/snipsnap/synth/Modes.kt`:
+no existing line changed, so no existing render can move. The full JVM
+suite, `./gradlew --no-daemon test`, including `DeterminismTest`, is the
+proof. The claims tests are in `ModesBankTest.kt`.
+
+- **`Modes.Bank(size, rate)`**, the rotation bank:
+  - `tune(i, hz, t60)`: retunable on any sample, with the mode's state, and
+    so its energy, kept.
+  - `connect(i, j, kappa)` / `setKappa(edge, kappa)`: reciprocal springs.
+  - `step()`: rotate, then spring kicks.
+  - `drive(b, force)`: a force through a participation vector, landing as
+    velocity.
+  - `velocity(i)`, `displacement(i)`, `velocityAlong(w)` (the pickup, or
+    the contact speed), `compliance(b)` and `energy()`.
+  - `anchorScale(anchor)` and `coupledHz(anchor)`.
+- **`Modes.Friction(a)`**, the contact: `curve`, `slope`, `steepestFall`,
+  and `force(driver, surface, pressure, compliance)`.
+- **`Modes.symmetricEigen`**, a cyclic Jacobi solve for the once-per-note
+  anchor fix.
+- **`Modes.MAX_NODE_KAPPA = 1`.**
+
+**Where it differs from the spike, and why:**
+- **The stability bounds are enforced, not chosen.** `tune`, `connect` and
+  `setKappa` refuse any change that breaks either bound, and a refused call
+  leaves the bank untouched. This is the same structural style as GYRE's
+  `‖M‖ ≤ 1` junction.
+  - **Where the bounds come from.** Eliminating v turns the undamped
+    rotate-then-kick step into a leapfrog recurrence,
+    `M·(q_{n+1} − 2q_n + q_{n−1}) = −K̂·q_n`, with θ = ωT,
+    `M = diag(ω/(T·sin θ))` and `K̂ = diag(2ω·tan(θ/2)/T) − A`. It is stable
+    exactly when `K̂` and `4M − K̂` are both positive definite. Diagonal
+    dominance, with S a mode's kappa sum and `x = π·f/rate`, gives the two
+    bounds:
+    - **`S < 1`** (because `tan x ≥ x`). This also keeps K itself positive
+      definite.
+    - **`S·x·tan x < 1`.** The first version of R0 had only `S < 1`, which
+      makes K positive definite but does not make the split stable near
+      Nyquist. The review on #428 found a pair of modes at 490 Hz with a
+      1 kHz rate and kappa 0.5 that diverged.
+  - **The second bound is tight.** A symmetric mode pair 3 % inside it
+    stays bounded for 200,000 undamped steps; 3 % outside, it reaches 10¹²
+    within 60–240 steps (at 300, 400 and 450 Hz at a 1 kHz rate).
+  - **MERCURY never meets it.** At its 19 kHz mode ceiling at 176.4 kHz,
+    `x·tan x` is 0.12.
+- **The friction solve is bracketed.** The spike's plain 8-step Newton
+  failed the new claims test near the unique-root bound: the slope tends
+  to 0 there, and Newton oscillates. `|φ| ≤ 1` puts the root within ±p·c of
+  the free slip, so `force` runs Newton inside that bracket and bisects
+  when a step would leave it. At the pressures MERCURY uses, the bracket
+  is about 10⁻⁵ wide and the answer is the spike's to rounding.
+- **`anchorScale` is a ratio, so it is invariant.** After the retune it
+  returns the same factor. `coupledHz` reads where the anchor really rings,
+  and that is the number to check: it lands on the note.
+- **`tune` costs an exp, a cos and a sin.** The spike retuned every 8
+  samples. R1 decides its own control rate; the class allows every
+  sample.
+
+**The claims, measured on the shipped class** (`ModesBankTest`, 14 tests):
+
+| Claim | Test | Measured |
+|---|---|---|
+| A free mode is an exact damped rotation | 20,000 steps against `r^n·cos(nθ)` | velocity error 6.3×10⁻¹³, displacement error 1.9×10⁻¹⁶ |
+| Retuning does not pump energy | ±12 semitones at 2 Hz, every sample, against the unswept bank | energy ratio within 1.4×10⁻¹¹ of 1 |
+| A coupled bank never gains energy | Phase 0's object at kappa 0.036 / 0.072 / 0.12 / 0.24 (the last puts the busiest modes at a kappa sum of 0.96) | no 1 ms block above its predecessor; worst block ratio 0.9973 |
+| Passive at random tunings at the bound | 6 random 16-mode tunings (40 Hz–20 kHz, t60 0.05–8 s), kappa 0.24 | no rise |
+| K stays positive definite | 200 random tunings over 10 octaves, kappa sum 0.96 | every eigenvalue > 0 |
+| The bound is enforced | `connect` / `setKappa` past 1, a self-loop, negative kappa | each refused, and a refused spring leaves no edge behind |
+| The split's bound is enforced near Nyquist | the review's 490 Hz / 1 kHz / kappa 0.5 case, by `connect` and by retuning a connected mode | both refused; the bank is unchanged |
+| Just inside the bound, it is stable | 20 random undamped 6-mode chains up to 0.48·rate, each kappa sum at 0.98 of its bound, 50,000 steps | energy stays within 100× of its start; it never diverges |
+| The anchor fix | COUPLE 1, MIDI 60 | −85.3 cents uncorrected (Phase 0: −85.3); `coupledHz` on the note to 10⁻¹²; rendered 0.005 cents |
+| Friction solves its own equation | 500 random contacts up to 0.9 of the unique-root bound | force consistent with its slip to 10⁻¹² |
+| A rubbed bank sings on its anchor | Phase 0's iteration-3 rub at MIDI 60, COUPLE 0.25, 0.2 landing floor | −0.65 cents (Phase 0: −0.6); level change over the last 0.3 s 1.0004×; anchor 1.5×10⁵ × mode 1; peak 0.027 |
+| Deterministic | the rub twice | identical |
+| Guarded | stepping an untuned bank; tuning at Nyquist or t60 0 | refused |
+
+**Next: R1, the engine.** Design and plan are as above:
+- PING, SING and BLADE;
+- seven macros (TUNE, BEND, RUB, WATER, GLASS, COUPLE, HOLD);
+- 24 presets;
+- registration, a kit, and an audition page for the owner's listening gate;
+- the mapping changes from "Phase 0, as measured".
 

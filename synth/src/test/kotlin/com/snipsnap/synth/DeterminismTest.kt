@@ -157,4 +157,14 @@ class DeterminismTest {
             assertContentEquals(loop.render().samples, loop.render().samples, "$voice loop")
         }
     }
+
+    // GYRE seeds each string's pluck from Dsp.seedFor per voice, note and string, and its rotor
+    // starts at phase 0 on every render - a saved recipe regenerates bit for bit.
+    @Test
+    fun `GYRE is byte-identical across renders, both voices`() {
+        for (voice in GyreVoice.entries) {
+            val p = GyrePatch("Canary", voice, Gyre.defaults(voice) + ("SPIN" to 0.6f))
+            assertContentEquals(p.render().samples, p.render().samples, "$voice")
+        }
+    }
 }
