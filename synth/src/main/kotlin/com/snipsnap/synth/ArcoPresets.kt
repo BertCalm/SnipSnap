@@ -40,8 +40,9 @@ object ArcoPresets {
     private val celloPresets = listOf(
         // D3 (14 of 24), the open D string: the slowest stroke (400 ms to full speed) into a 0.9 s bow, a long lyrical note.
         p(ArcoVoice.CELLO, "SLOW BOW", "TUNE" to 0.583f, "BOW" to 0.0f, "GRIP" to 0.7f, "BODY" to 0.5f, "HOLD" to 0.43f),
-        // A3 (21 of 24), the open A string: a hard bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.19 s.
-        p(ArcoVoice.CELLO, "SHORT STAB", "TUNE" to 0.875f, "BOW" to 0.9f, "GRIP" to 0.7f, "BODY" to 0.4f, "HOLD" to 0.0f),
+        // A3 (21 of 24), the open A string: a hard bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.21 s. BOW 0.8, not the
+        // 0.9 it was written at: R1c's CELLO bite is bigger and longer, and at BOW 0.9 the stab no longer locks inside its 0.3 s.
+        p(ArcoVoice.CELLO, "SHORT STAB", "TUNE" to 0.875f, "BOW" to 0.8f, "GRIP" to 0.7f, "BODY" to 0.4f, "HOLD" to 0.0f),
         // A2 (9 of 24): a dark, boxy pedal tone under a pad, locking at 0.47 s of its 0.92 s of bow.
         p(ArcoVoice.CELLO, "DEEP PEDAL", "TUNE" to 0.375f, "BOW" to 0.5f, "GRIP" to 0.4f, "BODY" to 0.8f, "HOLD" to 0.43f),
         // F#2 (6 of 24), under G#2: a hard bite that starts in a scratch and only locks into the note after 0.4 s of its 0.6.

@@ -267,23 +267,32 @@ object Arco {
      * bite that relaxes on the attack's own time constant is over in about 20 ms at BOW 1 (a hump of 1.3 times the
      * velocity at its highest, though 1.75 is the number it starts from), and a bass string, which needs many milliseconds to
      * build a period, never shows it: R1c measured R1b's CELLO bite against the same stroke with none and the first 200 ms were
-     * within 0.5 dB of it at F2, C3, G3 and C4 (0.3, 0.5, 0.5 and 0.4), and ERHU's, which the owner heard as a yes, is 0.3 to 1.1 dB. CELLO's bite is bigger ([OVERSHOOT_MAX_CELLO]) and lasts at
-     * least [BITE_SECONDS_CELLO] whatever the stroke, so it is an accent the note carries into its first few periods: R1c measured
-     * +2.5, +2.5, +3.4 and +2.9 dB over the first 200 ms at F2, C3, G3 and C4. ERHU's is as it was ([BITE_SECONDS_ERHU] is zero:
-     * the attack's own time constant).
+     * within 0.5 dB of it at F2, C3, G3 and C4 (0.3, 0.5, 0.5 and 0.4), and ERHU's, which the owner heard as a yes, is 0.3 to 1.1 dB.
+     * ERHU's bite is as it was ([OVERSHOOT_MAX_ERHU], [BITE_SECONDS_ERHU] zero: the attack's own time constant, [BITE_PRESSURE_ERHU]
+     * all of the bite's share). CELLO's has three numbers of its own: [OVERSHOOT_MAX_CELLO] the velocity's, [BITE_SECONDS_CELLO] the least
+     * time it takes to relax, whatever the stroke, and [BITE_PRESSURE_CELLO] the part of its share that presses the string toward
+     * the window's top (the rest of the accent is speed alone). Together they are +3.5, +3.2, +4.1 and +3.1 dB over the first 200 ms
+     * at F2, C3, G3 and C4.
      *
-     * The pair was searched, not guessed, because the lock is chaotic in it and the roster has bars of its own. R1c ran twenty settings
-     * (2.0 to 3.0 times, 30 to 80 ms) against the overshoot row (every TUNE step at BOW 1, GRIP 0.6 and 1, within 1.5 s), SHORT STAB
-     * (A3, a 0.30 s bow-on, within 85 percent of it, 0.255 s), GRIT BOW (F#2, between 0.3 and 0.49 s), the lock across BOW (2.0 s) and the
-     * gain (at least 1.5 dB at all four notes). 3.0 times with 60 ms, the first guess, never locks SHORT STAB in its stab; 2.25 times and
-     * under lock the row too late (1.9 s and more); 2.5 times with 30 ms is too weak at three notes. 2.75 times with 60 ms keeps all of
-     * them: the row at most 1.36 s (G2, GRIP 1), SHORT STAB at 0.24 s (R1b's bite: 0.19 s), GRIT BOW at 0.45 s (R1b: 0.42 s).
+     * The three were searched, not guessed, because the lock is chaotic in them and the roster has bars of its own. R1c ran a few
+     * hundred settings (velocity 2.0 to 3.5 times, 20 to 140 ms, a pressure share of 0 to 1) against: the overshoot row (every TUNE step at
+     * BOW 1, GRIP 0.6 and 1, locked within 1.5 s), the onset claim (BOW 1 sooner than BOW 0 at C2, C3 and C4), SHORT STAB, GRIT BOW and
+     * HORSEHAIR locking inside their bow-on, DRY SCRAPE still a scrape, the lock across BOW (2.0 s) and a gain of at least 1.5 dB at four notes.
+     * Nothing with all of the bite in the pressure survived: 3.0 times with 60 ms never locked SHORT STAB in its 0.30 s, and 2.75 times
+     * with 60 ms put C3's BOW 1 at 600 ms to reach 90 percent against BOW 0's 448, because the pressure's climb held the low notes in
+     * their scratch. With a quarter of the share in the pressure, 2.5 times with 120 ms keeps every bar but one with room: the row at most
+     * 1.31 s, the lock grid at most 1.41 s, C3 at 342 ms against 448, and GRIT BOW and HORSEHAIR as authored (SHORT STAB's BOW is 0.8, not 0.9).
+     * The one bar nothing kept is that all 400 of the scramble test's random rolls lock within 2 s: with any bite loud enough to hear
+     * one roll in 200 at temperature 1 does not (R1c: G2, BOW 0.91, GRIP 0.47, locking at 2.68 s of a 3 s bow), and which roll it is moves with
+     * every change to the numbers. It is always a roll with a bite (BOW above [OVERSHOOT_FROM]); the rolls with none all lock, as in R1b.
      */
     const val OVERSHOOT_FROM = 0.5f
     const val OVERSHOOT_MAX_ERHU = 1.75f
-    const val OVERSHOOT_MAX_CELLO = 2.75f
+    const val OVERSHOOT_MAX_CELLO = 2.5f
     const val BITE_SECONDS_ERHU = 0f
-    const val BITE_SECONDS_CELLO = 0.06f
+    const val BITE_SECONDS_CELLO = 0.12f
+    const val BITE_PRESSURE_ERHU = 1f
+    const val BITE_PRESSURE_CELLO = 0.25f
 
     fun attackSeconds(bow: Float): Float = Dsp.expMap(bow, ATTACK_SLOW_SECONDS, ATTACK_FAST_SECONDS)
 
@@ -297,6 +306,12 @@ object Arco {
     internal fun biteSeconds(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> BITE_SECONDS_CELLO
         ArcoVoice.ERHU -> BITE_SECONDS_ERHU
+    }
+
+    /** How much of the bite's share goes into the pressure's climb toward the window's top, for [voice]: ERHU's is all of it (as it was). */
+    internal fun bitePressure(voice: ArcoVoice): Float = when (voice) {
+        ArcoVoice.CELLO -> BITE_PRESSURE_CELLO
+        ArcoVoice.ERHU -> BITE_PRESSURE_ERHU
     }
 
     internal fun overshootFor(voice: ArcoVoice, bow: Float, max: Float = overshootMax(voice)): Float =
@@ -688,9 +703,10 @@ object Arco {
         biteSeconds: Float? = null,
         vibratoShape: VibratoShape? = null,
         overshootMax: Float? = null,
+        pressureBite: Float? = null,
     ): FloatArray {
         val gate = gateFor(voice, hz, macros, rate, gateSeconds)
-        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share, biteSeconds, overshootMax)
+        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share, biteSeconds, overshootMax, pressureBite)
         return if (vibrato) vibrato(tap, vibratoCentsFor(gate.holdN.toFloat() / rate), rate, vibratoShape ?: vibratoShapeFor(voice)) else tap
     }
 
@@ -698,6 +714,7 @@ object Arco {
         voice: ArcoVoice, hz: Float, macros: Map<String, Float>, rate: Int, gate: Gate,
         pressure: Float?, cornerHz: Float?, vBow: Float?, overshoot: Float?,
         lifted: Boolean, bowPointOut: FloatArray?, share: Float?, biteSecondsOverride: Float? = null, overshootMaxOverride: Float? = null,
+        pressureBiteOverride: Float? = null,
     ): FloatArray {
         val semitone = semitoneFor(voice, macros.getValue("TUNE"))
         val grip = macros.getValue("GRIP")
@@ -709,7 +726,7 @@ object Arco {
         val biteMax = overshootMaxOverride ?: overshootMax(voice)
         val over = if (steady) 1f else overshoot ?: overshootFor(voice, macros.getValue("BOW"), biteMax)
         val biteShare = ((over - 1f) / (biteMax - 1f)).coerceIn(0f, 1f)
-        val pBite = Dsp.lin(biteShare, p, max(p, window.pressureHigh))
+        val pBite = Dsp.lin(biteShare * (pressureBiteOverride ?: bitePressure(voice)), p, max(p, window.pressureHigh))
         val biteN = max(gate.attackN, ((biteSecondsOverride ?: biteSeconds(voice)) * rate).toInt())
         val tau = biteN.toDouble() / rate
 
