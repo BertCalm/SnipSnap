@@ -109,6 +109,50 @@ class MercuryTest {
     }
 
     /**
+     * WATER as an ear hears it: what it adds to the same note held still, as pitch drift and as level swell. ARCO's
+     * waveform measure (the test below) scored round 1's WATER 0.05 at 1.2, yet the owner could not hear WATER 0.05-0.2
+     * on SING or BLADE (2026-10-02): a waveform difference counts any phase shift, and round 1's WATER added only 4-10
+     * cents and under 0.6 dB. So the bar is in the ear's units, read every 20 ms over 60 ms windows against WATER 0 with
+     * BEND flat: WATER 0.05 adds at least 8 cents of drift and 1.2 dB of swell on every voice, and more WATER never adds
+     * less. Round 2 measured 10-21 cents and 1.6-2.6 dB at 0.05, and about 50 cents and 7-11 dB at 1.
+     */
+    @Test
+    fun `a little water is heard as drift and swell, and more water moves more`() {
+        fun series(snip: Snip, hz: Float, from: Double, to: Double): Pair<DoubleArray, DoubleArray> {
+            val c = ArrayList<Double>()
+            val d = ArrayList<Double>()
+            var t = from
+            while (t + 0.06 < to) {
+                c += FineTuning.cents(FineTuning.measuredHz(snip, hz, t.toFloat(), 0.06f), hz.toDouble())
+                d += 20 * kotlin.math.log10(rms(snip.samples, t, t + 0.06) + 1e-12)
+                t += 0.02
+            }
+            return c.toDoubleArray() to d.toDoubleArray()
+        }
+        fun spread(a: DoubleArray, b: DoubleArray): Double {
+            val x = DoubleArray(minOf(a.size, b.size)) { a[it] - b[it] }
+            return x.max() - x.min()
+        }
+        for (voice in MercuryVoice.entries) {
+            val hz = Mercury.frequencyFor(voice, 0.5f)
+            val still = render(voice, "WATER" to 0f, "BEND" to 0.5f)
+            val to = minOf(still.samples.size.toDouble() / rate - 0.3, 2.3)
+            val (c0, d0) = series(still, hz, 0.3, to)
+            val moved = listOf(0.05f, 0.2f, 1f).map { w ->
+                val (c, d) = series(render(voice, "WATER" to w, "BEND" to 0.5f), hz, 0.3, to)
+                spread(c, c0) to spread(d, d0)
+            }
+            println("MERCURY WATER $voice: 0.05 / 0.2 / 1 add " + moved.joinToString(" / ") { "${f(it.first, 1)} cents ${f(it.second, 1)} dB" })
+            assertTrue(moved[0].first >= 8.0, "$voice: WATER 0.05 adds only ${f(moved[0].first, 1)} cents of drift")
+            assertTrue(moved[0].second >= 1.2, "$voice: WATER 0.05 adds only ${f(moved[0].second, 1)} dB of swell")
+            for (k in 1 until moved.size) {
+                assertTrue(moved[k].first >= moved[k - 1].first, "$voice: more WATER drifts less (${moved.map { f(it.first, 1) }})")
+                assertTrue(moved[k].second >= moved[k - 1].second, "$voice: more WATER swells less (${moved.map { f(it.second, 1) }})")
+            }
+        }
+    }
+
+    /**
      * No dead knob (playability rule 1), on ARCO's measure: each knob moved alone from its default (to 0.1 if the default is
      * over a half, else to 0.9) changes the finished render by over 0.1 of the note. WATER is held to the spec's own harder
      * claim too: 0.05 against 0, by the same bar. R1 measured every knob at 0.13 (PING's HOLD, which on a tapped voice is
@@ -265,18 +309,48 @@ class MercuryTest {
         }
     }
 
+    /** Spectral centroid of the first 2048 samples (46 ms): the strike and the contact's first periods. */
+    private fun onsetCentroid(snip: Snip): Double {
+        val n = 2048
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until minOf(n, snip.samples.size)) re[i] = snip.samples[i] * (0.5f - 0.5f * kotlin.math.cos(2 * Math.PI * i / (n - 1)).toFloat())
+        com.snipsnap.audio.Fft.forward(re, im)
+        var num = 0.0
+        var den = 0.0
+        for (b in 1 until n / 2) {
+            val m = kotlin.math.hypot(re[b].toDouble(), im[b].toDouble())
+            num += m * b * rate / n
+            den += m
+        }
+        return num / den
+    }
+
     /**
-     * Velocity with no brightness macro falls back to `soften` (BORE's case): MERCURY registers no override until a
-     * monotonic centroid sweep earns one (decision 8 of the design). The layer must still be softer when it is quieter.
+     * Velocity (decision 8). At the first audition the owner heard PING's and BLADE's soften layers as MEH and asked for
+     * a harder hit to be brighter (2026-10-02); level is the pad's velocity curve, not the render's. So PING and BLADE
+     * register GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset centroid
+     * rises at every tenth of velocity's travel, and by at least 15% over all of it. Round 2 measured 544 to 710 Hz on
+     * PING (+31%) and 540 to 654 Hz on BLADE (+21%). SING keeps soften: its GLASS darkens the held body as it brightens
+     * the onset, and the owner kept SING's soften layers.
      */
     @Test
-    fun `velocity falls back to soften, and a soft layer is darker than a hard one`() {
-        for (voice in MercuryVoice.entries) {
+    fun `velocity moves GLASS on PING and BLADE, brighter at every step, and SING keeps soften`() {
+        for (voice in listOf(MercuryVoice.PING, MercuryVoice.BLADE)) {
             val patch = MercuryPatch("Velocity", voice, Mercury.defaults(voice))
-            assertContentEquals(Velocity.soften(patch.render(), 0.7f).samples, Velocity.atVelocity(patch, 0.3f).samples, "$voice: atVelocity is not the soften fallback")
-            val soft = com.snipsnap.audio.FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
-            val hard = com.snipsnap.audio.FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
-            assertTrue(soft < hard, "$voice: soft centroid $soft should be below hard centroid $hard")
+            assertEquals("GLASS", Velocity.brightnessSpec(patch)?.name, "$voice: velocity is not on GLASS")
+            val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(patch, it / 10f)) }
+            println("MERCURY velocity $voice onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
+            for (k in 1 until centroids.size) {
+                assertTrue(centroids[k] >= centroids[k - 1], "$voice: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
+            }
+            assertTrue(centroids.last() >= centroids.first() * 1.15, "$voice: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x")
         }
+        val sing = MercuryPatch("Velocity", MercuryVoice.SING, Mercury.defaults(MercuryVoice.SING))
+        assertEquals(null, Velocity.brightnessSpec(sing), "SING: velocity left soften")
+        assertContentEquals(Velocity.soften(sing.render(), 0.7f).samples, Velocity.atVelocity(sing, 0.3f).samples, "SING: atVelocity is not the soften fallback")
+        val soft = com.snipsnap.audio.FeatureExtractor.extract(Velocity.atVelocity(sing, 0.25f)).centroidHz
+        val hard = com.snipsnap.audio.FeatureExtractor.extract(Velocity.atVelocity(sing, 1f)).centroidHz
+        assertTrue(soft < hard, "SING: soft centroid $soft should be below hard centroid $hard")
     }
 }

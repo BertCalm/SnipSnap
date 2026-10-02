@@ -7,7 +7,8 @@ tune, decays passively and stays bounded. **R0, the shared toolkit, is built**
 `Modes.symmetricEigen`, with no change to any existing render. **R1, the
 engine, is built** (2026-10-01; "R1, as built" below): PING, SING and
 BLADE, 24 presets, a kit and an audition page, roadmap row **S21**.
-**Nothing has been heard;** the audition gate is next. This document reads the external *Mercury Engine — Engineering
+**The first audition is in** (2026-10-02; "The audition, round 1" below):
+144 of 166 clips kept, none cut. Round 2 fixes WATER and velocity. This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -628,4 +629,87 @@ range, a phrase, three velocities, every knob's ends, the dead-zone
 probes and its presets, then the five interaction grids: 166 clips in all.
 Then R1.1 (the phone) and R2 (LOOP, `Keys.mercuryPad`, EDDY, VESSEL and
 SHARD).
+
+## The audition, round 1 — 2026-10-02
+
+The owner rated all 166 clips: **144 KEEP, 22 MEH, 0 CUT**. Every kit pad
+and every preset was kept. The MEHs fell into three groups:
+- **WATER on SING and BLADE.** The dead-zone probes (.05, .10, .20), SING's
+  WATER 1, and the grid squares with WATER at .5 or 1. Asked, the owner
+  said: *"couldn't hear it"*. On PING the probes were kept.
+- **Velocity on PING and BLADE,** all six clips. Asked what a harder hit
+  should do: *"brighter and louder"*.
+- **SING's range,** all three TUNE clips. The owner does not remember
+  marking these, and the middle clip is the same render as SING's
+  default, which was kept. Treated as unrated. The page's code was read:
+  each button writes only its own clip, so no fault was found there.
+
+### Why WATER was not heard
+
+ARCO's waveform measure scored WATER 0.05 at 1.2, well over the 0.1 bar,
+but that measure counts any phase shift. Measured as an ear hears it
+(what WATER adds to the same note held still, read every 20 ms):
+
+| WATER adds, round 1 | .05 | .20 | 1 |
+|---|---|---|---|
+| PING | 3.9 cents, 0.3 dB | 7.6 cents, 0.6 dB | 15 cents, 2.4 dB |
+| SING | 3.8 cents, 0.2 dB | 7.8 cents, 0.4 dB | 14 cents, 1.5 dB |
+| BLADE | 10 cents, 0.5 dB | 21 cents, 1.1 dB | 49 cents, 3.8 dB |
+
+Three causes:
+1. **It was a flutter, not a drift.** A ring mode read the mass through
+   `cos((k + 2)·angle)`, so the fundamental's load moved at four times
+   the 0.6–3 Hz orbit (2.4–12 Hz), and the upper modes faster still.
+2. **The rub locks the partials.** Friction holds a rubbed voice to one
+   period, so modes drifting apart cannot be heard as such; only the
+   fundamental's few cents were left.
+3. **√WATER put .05 at 0.22 of the depth,** and the ring's load only
+   reached 0.36.
+
+### Round 2's WATER
+
+- The mass orbits at 0.25–1 Hz, and a ring mode k reads it at
+  `cos(angle − 0.9·k)`, so every mode rises and falls at 0.5–2 Hz, each
+  in its own phase. The ring's load is normalised to swing 0–1, like the
+  beam's.
+- The depth goes as WATER^0.25 (.05 at 0.47 of the full depth).
+- **The water moves what each mode radiates:** a loaded mode's pickup
+  rises and an unloaded one's falls by up to 0.7 × WATER^0.25. The rub
+  cannot lock levels, so this is heard on SING and BLADE.
+- The full depth (0.06) is unchanged, so WATER 1 still drifts about 50
+  cents. The kappa bound still holds: every load stays at or under 1, so
+  the busiest mode's sum is still under 0.77.
+
+| WATER adds, round 2 | .05 | .20 | 1 |
+|---|---|---|---|
+| PING | 13 cents, 2.6 dB | 27 cents, 5.6 dB | 51 cents, 10.9 dB |
+| SING | 10 cents, 2.2 dB | 24 cents, 5.3 dB | 50 cents, 10.7 dB |
+| BLADE | 21 cents, 1.6 dB | 30 cents, 3.0 dB | 50 cents, 6.9 dB |
+
+`MercuryTest` now holds WATER to the ear's units: .05 adds at least 8
+cents and 1.2 dB on every voice, and more WATER never adds less. Round 1
+fails it (3.8 cents on SING).
+
+**Every default and preset carries WATER (.10–.15 at the defaults), so
+every clip changed.** Round 2's question is whether the defaults are now
+too wet.
+
+### Round 2's velocity (decision 8, answered)
+
+PING and BLADE register **GLASS** as their velocity macro
+(`Velocity.brightnessOverride`). GLASS shortens the strike (a harder
+mallet) and tilts the pickup bright. The house's sweep holds: the onset
+centroid rises at every tenth of velocity's travel, 544 to 710 Hz on PING
+(+31%) and 540 to 654 Hz on BLADE (+21%). "Louder" is the pad's velocity
+curve on the MPC: `Velocity.layerAt` peak-matches every layer.
+
+**SING keeps `soften`.** Its GLASS brightens the onset but darkens the
+held body (437 to 423 Hz over velocity's travel), and the owner kept
+SING's soften layers.
+
+A side effect: GLASS also sets the ring's length, so a soft hit on PING
+rings shorter. FORK's STRIKE does the same.
+
+**Next.** Round 2 of the audition, on the same page, with its verdicts
+kept apart (`mercury_r2`).
 

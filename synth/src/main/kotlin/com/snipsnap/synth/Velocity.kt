@@ -252,6 +252,13 @@ object Velocity {
         // exactly what this function exists to find. Proven monotonic by
         // ForkTest's `STRIKE moves the onset centroid at every step`.
         patch is ForkPatch -> "STRIKE"
+        // MERCURY's GLASS shortens the strike (a harder mallet) and tilts the
+        // pickup bright. Proven monotonic for PING and BLADE by MercuryTest's
+        // `velocity moves GLASS on PING and BLADE`: the onset brightens at
+        // every step. SING stays on soften: there GLASS brightens the onset
+        // but darkens the held body, and the owner kept SING's soften layers
+        // at the first audition (2026-10-02).
+        patch is MercuryPatch && patch.voice != MercuryVoice.SING -> "GLASS"
         else -> null
     }
 

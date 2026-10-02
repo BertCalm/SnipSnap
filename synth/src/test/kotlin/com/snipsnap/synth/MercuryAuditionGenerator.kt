@@ -27,7 +27,7 @@ object MercuryAuditionGenerator {
     private val KNOBS = listOf(
         Knob("BEND", "concave: the object bends in from below the note, its upper modes pulled one way", "convex: it bends in from above, its upper modes pulled the other way"),
         Knob("RUB", "a tap: one strike, then the object rings and decays", "a rub: a finger on the rim, sustained friction for the whole contact"),
-        Knob("WATER", "still: no mass moving, the object exactly as struck", "a lot of water: the mass swirls fast and deep, every mode drifts and damps together"),
+        Knob("WATER", "still: no mass moving, the object exactly as struck", "a lot of water: the mass sloshes slow and deep, every mode drifts, swells and damps in its own phase"),
         Knob("GLASS", "a damped, flexible, rough surface: short highs, a gritty rub", "clear glass: long, selective ringing, a pure rub"),
         Knob("COUPLE", "the modes independent: the vessel never answers", "strong springs: the vessel blooms after the hit, energy sloshes and beats"),
         Knob("HOLD", "the shortest contact: 0.3 s, then the ring", "the longest: 4 s of contact, then the ring"),
@@ -105,7 +105,8 @@ object MercuryAuditionGenerator {
             val vel = listOf(0.3f to "SOFT", 0.65f to "MEDIUM", 1f to "HARD").map { (v, label) ->
                 val id = "velocity_" + fmt(v).trimStart('.')
                 writeSnip(id, Velocity.atVelocity(patch, v))
-                Clip(id, label, "velocity ${fmt(v)}: softened (no knob is wired to velocity yet, the design's decision 8)")
+                val how = if (Velocity.brightnessSpec(patch) != null) "GLASS scaled down: a softer mallet, a darker ring" else "softened, as round 1"
+                Clip(id, label, "velocity ${fmt(v)}: $how")
             }
             groups += Group("VELOCITY", key = false, clips = vel)
 
@@ -129,7 +130,7 @@ object MercuryAuditionGenerator {
             val waterProbe = listOf(0f, 0.05f, 0.1f, 0.2f).map { w ->
                 val id = "water_probe_" + fmt(w).trimStart('.').ifEmpty { "0" }
                 write(id, mapOf("WATER" to w))
-                Clip(id, "WATER ${fmt(w)}", if (w == 0f) "still" else "a little water: should already move")
+                Clip(id, "WATER ${fmt(w)}", if (w == 0f) "still" else "a little water: round 2 should be heard drifting and swelling")
             }
             groups += Group("A LITTLE WATER (NO DEAD ZONE?)", key = false, clips = waterProbe)
 

@@ -43,7 +43,7 @@ import kotlin.random.Random
  * - a contact-patch taper, `b_i = ratio^−0.5`, keeps mode 1 from capturing a
  *   low note;
  * - the tap weight has a 0.2 floor, so even RUB 1 has a finger landing;
- * - WATER's depth goes with √WATER;
+ * - WATER's depth goes with WATER^0.25 (round 2: √WATER was not heard below 0.2);
  * - the coupled anchor is put back on the note once per note
  *   ([Modes.Bank.anchorScale]).
  *
@@ -166,12 +166,35 @@ object Mercury {
 
     // ---- WATER --------------------------------------------------------------
 
-    /** WATER's mass depth is this times √WATER (Phase 0 iteration 2). */
+    /** WATER's mass depth is this times WATER^[WATER_CURVE] (Phase 0 iteration 2's depth). */
     const val WATER_DEPTH = 0.06
 
-    /** The mass orbits at RATE_LOW + RATE_SPAN·WATER Hz. */
-    const val WATER_RATE_LOW = 0.6
-    const val WATER_RATE_SPAN = 2.4
+    /**
+     * WATER's curve. Round 1 used √WATER, and the owner could not hear WATER 0.05–0.2 on SING or BLADE
+     * (2026-10-02). The steeper start puts WATER 0.05 at about 0.47 of the full depth. Listening value.
+     */
+    const val WATER_CURVE = 0.25
+
+    /**
+     * The mass orbits at RATE_LOW + RATE_SPAN·WATER Hz, and a mode's load rises and falls twice per orbit:
+     * 0.5–2 Hz, a drift. Round 1's 0.6–3 Hz orbit, read through `cos((k + 2)·angle)`, moved the fundamental
+     * at 2.4–12 Hz and the upper modes faster still: a flutter the ear does not hear as water.
+     */
+    const val WATER_RATE_LOW = 0.25
+    const val WATER_RATE_SPAN = 0.75
+
+    /** A ring mode k reads the mass at its own angle, k times this many radians round. Designed. */
+    const val RING_LOAD_PHASE = 0.9
+
+    /** The steady orbit's ρ², the ring's load at full swing, so a ring is loaded as deeply as the beam. */
+    const val RING_ORBIT_LOAD = 0.36
+
+    /**
+     * The water moves what each mode radiates: a loaded mode's pickup rises and an unloaded one's falls by up to
+     * this share, times WATER^[WATER_CURVE]. Friction locks a rubbed voice's partials to one period, so the
+     * water cannot be heard as the partials drifting apart; it is heard as their levels moving. Designed.
+     */
+    const val WATER_SHIMMER = 0.7
 
     /** WATER's loading shortens a mode's t60 by 1 + this·μ·load. */
     const val WATER_DAMPING = 4.0
@@ -377,8 +400,11 @@ object Mercury {
         var my = 0.3 * massRng.next()
         var mvx = 0.0
         var mvy = 0.0
-        val mu = WATER_DEPTH * sqrt(water)
-        val anchorNominal = 1.0 / sqrt(1 + mu * 0.18)
+        val waterCurve = if (water > 0.0) water.pow(WATER_CURVE) else 0.0
+        val mu = WATER_DEPTH * waterCurve
+        val shimmer = WATER_SHIMMER * waterCurve
+        // Every load swings between 0 and 1 and averages about a half; the pitch is centred there.
+        val anchorNominal = 1.0 / sqrt(1 + mu * 0.5)
         val load = DoubleArray(n)
         val ctrlDt = CTRL * dt
 
@@ -423,14 +449,14 @@ object Mercury {
                     load[i] = when {
                         mu == 0.0 -> 0.0
                         isVessel[i] -> 0.5 * rho2
-                        isRing(voice) -> rho2 * cos((modeIndex[i] + 2) * ang).let { it * it }
+                        isRing(voice) -> min(1.0, rho2 / RING_ORBIT_LOAD) * cos(ang - RING_LOAD_PHASE * modeIndex[i]).let { it * it }
                         else -> beamShape(modeIndex[i], xm).let { it * it }
                     }
                     val f = (hz * pitchFix * excursion * ratioAt(i, c) / sqrt(1 + mu * load[i]) / anchorNominal)
                         .coerceAtMost(MODE_CEILING_HZ)
                     val fade = fade(f)
                     contact[i] = contact0[i] * fade * (1 - WATER_CONTACT * water * load[i])
-                    pickup[i] = pickup0[i] * fade
+                    pickup[i] = pickup0[i] * fade * (if (isVessel[i]) 1.0 else 1 + shimmer * (2 * load[i] - 1))
                     bank.tune(i, f, t60Base[i] / (1 + WATER_DAMPING * mu * load[i]))
                 }
                 if (water > 0.0) {
