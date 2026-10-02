@@ -634,6 +634,7 @@
       lab.htmlFor = ta.id;
       ta.addEventListener('input', function () {
         state[v.id].note = ta.value;
+        dirty[v.id] = true;
         debounce(v.id, function () { persist(v.id); });
       });
       notes.appendChild(lab); notes.appendChild(ta);
@@ -653,8 +654,9 @@
     audio.preload = 'auto';
     audio.addEventListener('ended', function () {
       if (repeat && current) {
+        var again = current;
         audio.currentTime = 0;
-        audio.play().catch(function () { setPlaying(null); });
+        audio.play().catch(function () { if (current === again) setPlaying(null); });
       } else {
         setPlaying(null);
       }
@@ -698,8 +700,12 @@
     }
     a.pause();
     a.src = voice.id + '/' + fid + '.wav';
-    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
-    a.play().catch(function () { setPlaying(null); });
+    // Changing src makes the browser reject the previous play() with an
+    // AbortError, and that rejection arrives after this call has already
+    // selected the newer clip: only the clip that asked may be cleared.
+    var mine = { voice: voice, fid: fid, name: name, pad: pad, row: row };
+    setPlaying(mine);
+    a.play().catch(function () { if (current === mine) setPlaying(null); });
   }
 
   $('repeat').addEventListener('click', function () {
@@ -752,6 +758,7 @@
   QUESTIONS.forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
+      dirty.overall = true;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
     });
   });
@@ -761,6 +768,11 @@
   var db = null;
   var statusEl = $('status'), statusV = $('statusv');
   var timers = {}, queues = {};
+  // The page is usable before the shared store has answered, so two sets of
+  // keys are kept. dirty: edited on this page, so an older snapshot arriving
+  // from the store must not replace it. unsaved: saved only locally because
+  // there was no store yet, so they are saved again once there is one.
+  var dirty = {}, unsaved = {}, started = false;
 
   function setStatus(kind, text) {
     statusEl.classList.remove('warn', 'ok');
@@ -816,8 +828,9 @@
 
   function persist(key) {
     var data = snapshotOf(key);
+    dirty[key] = true;
     saveLocal(key, data);
-    if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    if (!db) { unsaved[key] = true; setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
     setStatus(null, 'SAVING...');
     queues[key] = (queues[key] || Promise.resolve())
       .then(function () { return db.doc(docPath(key)).set(data); })
@@ -833,15 +846,20 @@
   function keys() { return VOICES.map(function (v) { return v.id; }).concat(['overall']); }
 
   function connect() {
-    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+    if (started) return;
+    started = true;
+    var use =window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
     Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
       .then(function (ns) {
         if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
         return Promise.all(keys().map(function (k) {
           return ns.doc(docPath(k)).get().then(function (snap) {
-            if (snap && snap.exists) apply(k, snap.data());
+            if (snap && snap.exists && !dirty[k]) apply(k, snap.data());
           }, function () { /* keep the local copy */ });
-        })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
+        })).then(function () {
+          setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE');
+          Object.keys(unsaved).forEach(function (k) { delete unsaved[k]; persist(k); });
+        });
       })
       .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
   }
@@ -849,16 +867,27 @@
   // The manifest first, then local copies so the page is never empty,
   // then the shared store, which wins.
   apply('overall', loadLocal('overall'));
-  fetch('manifest.json').then(function (r) { return r.json(); }).then(function (m) {
-    VOICES = m.voices || [];
-    buildIntro(m.intro);
-    fillFacts(m.facts);
-    build();
-    VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
-    connect();
-  }, function () {
-    $('loading').innerHTML = '<p>COULD NOT LOAD THE CLIP LIST. RE-RENDER WITH generateArcoRetune.</p>';
-    connect();
-  });
+  var built = false;
+  fetch('manifest.json')
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (m) {
+      VOICES = m.voices || [];
+      buildIntro(m.intro);
+      fillFacts(m.facts);
+      build();
+      built = true;
+      VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
+      connect();
+    })
+    .catch(function () {
+      // build() removes the loading card before it throws on a bad list,
+      // so this handler must not assume the card is still there.
+      if (!built) {
+        var msg = '<p>COULD NOT LOAD THE CLIP LIST. RE-RENDER WITH generateArcoRetune.</p>';
+        var card = $('loading');
+        if (card) card.innerHTML = msg; else $('voices').innerHTML = '<div class="guide lcd">' + msg + '</div>';
+      }
+      connect();
+    });
 })();
 </script>
