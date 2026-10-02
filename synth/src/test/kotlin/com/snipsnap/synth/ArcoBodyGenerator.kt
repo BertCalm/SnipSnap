@@ -319,17 +319,16 @@ object ArcoBodyGenerator {
 
     /**
      * The manifest's intro cards. The page carries its own cards for what it is, the clips and how to listen (WHAT YOU SAID, THE CLIPS, HOW TO LISTEN, with the honest sentence that nobody has listened),
-     * so this adds only what the page does not know, the speaker: plain words, no design names, no numbers of the ruler. Every clip is level with THE PLAIN ONE by the engine's own measure, which counts
-     * the low notes a phone speaker does not play; through a 300 Hz high-pass the CELLO C3 clips differ from THE PLAIN ONE by up to 6 dB (the review's measurement; the key file carries each clip's own figure),
-     * so the card says so rather than saying the clips are level.
+     * so this adds only what the page does not know, the speaker: plain words, no design names, no numbers of the ruler. The page's THE CLIPS card says once that the clips are level by the engine's own measure and
+     * that a speaker may still make some sound louder or quieter: that measure counts the low notes a phone speaker does not play, and through a 300 Hz high-pass the CELLO C3 clips differ from THE PLAIN ONE by
+     * up to 6 dB (the review's measurement; the key file carries each clip's own figure).
      */
     private fun introBlocks(): List<Block> = listOf(
         Block(
             "SPEAKER OR HEADPHONES",
             listOf(
                 "A phone speaker plays low notes thinly, and a cello's low notes most of all, so CELLO C3 may sound thin on a speaker. CELLO C4 is higher and may be easier to judge there. " +
-                    "Every clip is level with THE PLAIN ONE by the engine's own measure, but that measure counts low notes a speaker cannot play, so on a speaker some clips may still sound louder or quieter than THE PLAIN ONE. " +
-                    "If one does, say which in the notes box. Say in box 4 whether you used the speaker or headphones.",
+                    "Say in box 4 whether you used the speaker or headphones.",
             ),
         ),
     )

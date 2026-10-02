@@ -125,13 +125,18 @@
     color: var(--ink2);
     text-shadow: none;
   }
+  /* PLAIN, THEN WHAT YOU HEARD LAST TIME is long, and its last word is the one that
+     matters: it wraps instead of ending in an ellipsis. Two lines are always
+     reserved, so the page below does not jump when a clip starts or stops. */
   .transport .now {
-    font-size: 22px;
+    display: flex;
+    align-items: center;
+    min-height: 2.1em;
+    font-size: 20px;
+    line-height: 1.05;
     color: var(--cyan);
     text-shadow: 0 0 8px var(--cyan-glow);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
     min-width: 0;
   }
   .transport .now.idle { color: var(--lcd-ink); text-shadow: 0 0 6px var(--lcd-glow); }
@@ -146,7 +151,7 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible {
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible, .pair:focus-visible {
     outline: 2px solid var(--cyan);
     outline-offset: 2px;
   }
@@ -255,7 +260,7 @@
   .clip {
     display: grid;
     grid-template-columns: 44px 1fr;
-    grid-template-areas: "pad meta" "pad desc" "pad chips";
+    grid-template-areas: "pad meta" "pad desc" "ans ans";
     gap: 4px 10px;
     align-items: center;
     padding: 6px 4px;
@@ -275,14 +280,14 @@
   }
   .pad .ico { display: block; width: 14px; height: 14px; }
   .pad .ico path, .pad .ico rect { fill: currentColor; }
-  .pad .stop { display: none; }
+  .pad .stop, .pair .stop { display: none; }
   .pad[aria-pressed="true"] {
     border-color: var(--cyan);
     color: var(--cyan);
     box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
   }
-  .pad[aria-pressed="true"] .play { display: none; }
-  .pad[aria-pressed="true"] .stop { display: block; }
+  .pad[aria-pressed="true"] .play, .pair[aria-pressed="true"] .play { display: none; }
+  .pad[aria-pressed="true"] .stop, .pair[aria-pressed="true"] .stop { display: block; }
 
   .meta {
     grid-area: meta;
@@ -313,34 +318,76 @@
     line-height: 1.2;
   }
 
-  .chips {
-    grid-area: chips;
-    display: flex;
-    flex-wrap: wrap;
+  /* Under each row: the PLAIN, THEN THIS button, then the four answers as a 2 by 2
+     grid across the whole row. The reference rows carry only a tag. */
+  .answers {
+    grid-area: ans;
+    display: grid;
     gap: 8px;
-    padding-top: 2px;
+    padding-top: 4px;
+    min-width: 0;
   }
-  .chip {
-    appearance: none;
+  .pair {
+    width: 100%;
+    min-width: 44px;
     min-height: 44px;
     padding: 0 10px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pair .ico { flex: none; width: 14px; height: 14px; }
+  .pair .ico path, .pair .ico rect { fill: currentColor; }
+  .pair[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
+  }
+  .ref {
+    justify-self: start;
+    padding: 5px 8px 4px;
+    border: 1px dashed var(--field-border);
+    border-radius: 4px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    user-select: none;
+  }
+  .chips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  /* All four chips wear the same colours: nothing about a chip leans toward an answer. */
+  .chip {
+    appearance: none;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 6px;
     border: 1px solid var(--field-border);
     border-radius: 6px;
     background: linear-gradient(var(--raised1), var(--raised2));
     color: var(--ink2);
     font-family: var(--f-pixel);
-    font-size: 8px;
+    font-size: 9px;
     letter-spacing: .5px;
+    line-height: 1.2;
+    text-align: center;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
   }
-  .chip .g { font-family: var(--f-lcd); font-size: 15px; line-height: 1; }
-  .chip.worse .g { color: var(--bin-red); }
-  .chip.closer .g { color: var(--cyan); }
+  .chip .g { flex: none; font-family: var(--f-lcd); font-size: 15px; line-height: 1; color: var(--ink2); }
   .chip[aria-pressed="true"] {
     background: var(--accent);
     border-color: var(--accent);
@@ -464,12 +511,15 @@
 
   <div class="guide lcd">
     <div class="hd">THE CLIPS</div>
-    <p>Each set is one voice on one note, and its label says which. <b>THE PLAIN ONE</b> is the default, BODY .50: judge every other clip against it. <b>WHAT YOU HEARD LAST TIME</b> is BODY 1 as the engine has it now. The clips with only a letter are unlabelled on purpose, and their order means nothing.</p>
+    <p>Each set is one voice on one note, and its label says which. <b>THE PLAIN ONE</b> is the default, BODY .50, and it is the reference: judge every other clip against it. <b>WHAT YOU HEARD LAST TIME</b> is BODY 1 as the engine has it now. The clips with only a letter are unlabelled on purpose, and their order means nothing. One or two of the lettered clips may be exactly the same as another clip.</p>
+    <p>Every clip is level with THE PLAIN ONE by the engine's own measure. On a phone speaker some can still sound louder or quieter; if one does, say so in the notes box.</p>
   </div>
 
   <div class="guide lcd">
     <div class="hd">HOW TO LISTEN</div>
-    <p>Tap a pad to play a clip, then tap MORE BOX, SAME or LESS BOX, each against THE PLAIN ONE. <b>Tap MORE BOX only if you hear a wooden box under the note.</b> If you cannot tell the difference, SAME is a real answer. In the notes box for each voice, say which way and what it sounds like, in a few words. Every clip is dry and mono, at one loudness by the engine's own measure; if one still sounds louder or quieter than THE PLAIN ONE, say so. At the end, say whether you listened on a speaker or on headphones.</p>
+    <p>Tap a pad to play a clip, then tap one answer under it, each against THE PLAIN ONE. The button PLAIN, THEN THIS plays THE PLAIN ONE, waits a moment, then plays that clip. Tap the pad again, or the button again, to stop.</p>
+    <p><b>SAME</b> only if you cannot tell it from THE PLAIN ONE.<br><b>DIFFERENT</b> if you hear a change that is not more box (duller, louder, nasal, brighter, anything).<br><b>MORE BOX</b> only if you hear a wooden box under the note, more than in THE PLAIN ONE.<br><b>LESS BOX</b> if there is less.</p>
+    <p>In the notes box for each voice, name the letters: which clips, and what you hear. Every clip is dry and mono.</p>
     <p><b>Nobody here has listened to these.</b> Some of these may sound worse than what you heard before. That is what this page is for.</p>
   </div>
 
@@ -478,18 +528,18 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>FIVE QUESTIONS &middot; SAY THE LETTER OF THE CLIP &middot; THEN SAVE</span></div>
+      <div class="readout"><span>FIVE QUESTIONS &middot; WHERE IT ASKS, SAY THE VOICE AND THE LETTER &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <label class="ask" for="q_first">1 &middot; Which was the first clip where BODY starts to do something? (say the letter)</label>
+      <label class="ask" for="q_first">1 &middot; Which clips sound like they have a wooden box under the note? (say the voice and the letters)</label>
       <textarea id="q_first" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_keep">2 &middot; Which one would you keep for BODY at the top of the knob?</label>
+      <label class="ask" for="q_keep">2 &middot; Which one would you keep for BODY at the top of the knob, for ERHU and for CELLO? (say the voice and the letter, or THE PLAIN ONE, or WHAT YOU HEARD LAST TIME)</label>
       <textarea id="q_keep" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_toomuch">3 &middot; Which was too much?</label>
+      <label class="ask" for="q_toomuch">3 &middot; Was any clip too much: too loud, too boxy, or too much of something else? (say the voice and the letter)</label>
       <textarea id="q_toomuch" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
@@ -507,9 +557,9 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generateArcoBody &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
+    RENDERED BY generateArcoBody &middot; LEVEL BY THE ENGINE'S MEASURE &middot; 16-BIT 44.1 KHZ &middot;
     EVERY ARCO CLIP IS DRY &middot; THE EARLIER PAGES' VERDICTS ARE KEPT UNDER THEIR OWN NAMES AND THIS PAGE DOES NOT TOUCH THEM &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
+    CHIP TAPS, NOTES AND A COUNT OF YOUR PLAYS SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
   </div>
 </div>
 
@@ -528,14 +578,19 @@
   // its questions, and ignores all three.
   var VOICES = [];
 
-  // Every clip is judged against the plain one. The three chip styles are the
-  // page's existing ones (closer, same, worse) and carry no verdict on a clip:
-  // more box, same, less box.
+  // Every clip with chips is judged against the plain one. The four chips share
+  // one neutral style (one glyph colour, one text colour) and lean toward no
+  // answer; the page only names them: more box, same, less box, different.
+  // The plain clip of a group (its id ends in _plain) is the reference: it has
+  // no chips and no verdict.
   var REACTIONS = [
-    { v: 'more', cls: 'closer', g: String.fromCharCode(0x25B2), t: 'MORE BOX' },
-    { v: 'same', cls: 'same',   g: '=', t: 'SAME' },
-    { v: 'less', cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'LESS BOX' }
+    { v: 'more', g: String.fromCharCode(0x25B2), t: 'MORE BOX' },
+    { v: 'same', g: '=', t: 'SAME' },
+    { v: 'less', g: String.fromCharCode(0x25BC), t: 'LESS BOX' },
+    { v: 'diff', g: String.fromCharCode(0x2260), t: 'DIFFERENT' }
   ];
+
+  function isPlain(fid) { return /_plain$/.test(fid); }
 
   var QUESTIONS = ['q_first', 'q_keep', 'q_toomuch', 'q_device', 'q_else'];
 
@@ -570,7 +625,7 @@
     var host = $('voices');
     host.textContent = '';
     VOICES.forEach(function (v) {
-      state[v.id] = state[v.id] || { reactions: {}, note: '' };
+      state[v.id] = state[v.id] || { reactions: {}, note: '', plays: {} };
       var card = el('section', 'voice');
       card.id = 'voice-' + v.id;
 
@@ -586,6 +641,9 @@
         var grp = el('div', 'group' + (g.key ? ' key' : ''));
         grp.id = 'group-' + v.id + '-' + gi;
         grp.appendChild(el('div', 'group-hd', g.label));
+        // the group's plain clip: the one whose id ends _plain
+        var plainId = null;
+        g.clips.forEach(function (c) { if (plainId === null && isPlain(c[0])) plainId = c[0]; });
         g.clips.forEach(function (c) {
           var fid = c[0], name = c[1], desc = c[2];
           var row = el('div', 'clip');
@@ -596,7 +654,7 @@
           pad.setAttribute('aria-pressed', 'false');
           pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + g.label + ' ' + name);
           pad.innerHTML = PLAY_SVG;
-          pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
+          pad.addEventListener('click', function () { tapPad(v, fid, name, pad, row); });
           row.appendChild(pad);
 
           var meta = el('div', 'meta');
@@ -605,18 +663,37 @@
           row.appendChild(meta);
           row.appendChild(el('div', 'desc', desc));
 
-          var chips = el('div', 'chips');
-          REACTIONS.forEach(function (r) {
-            var chip = el('button', 'chip ' + r.cls);
-            chip.type = 'button';
-            chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
-            chip.setAttribute('aria-pressed', 'false');
-            chip.setAttribute('aria-label', v.display + ' ' + g.label + ' ' + name + ': ' + r.t.toLowerCase());
-            chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
-            chip.addEventListener('click', function () { react(v.id, fid, r.v); });
-            chips.appendChild(chip);
-          });
-          row.appendChild(chips);
+          var answers = el('div', 'answers');
+          if (isPlain(fid)) {
+            // the reference: nothing to answer, nothing saved
+            var tag = el('span', 'ref', 'THE REFERENCE');
+            tag.id = 'ref-' + v.id + '-' + fid;
+            answers.appendChild(tag);
+          } else {
+            if (plainId !== null) {
+              var pair = el('button', 'raised pair');
+              pair.type = 'button';
+              pair.id = 'pair-' + v.id + '-' + fid;
+              pair.setAttribute('aria-pressed', 'false');
+              pair.setAttribute('aria-label', 'Play THE PLAIN ONE, then ' + v.display + ' ' + g.label + ' ' + name);
+              pair.innerHTML = PLAY_SVG + '<span class="lbl">PLAIN, THEN THIS</span>';
+              pair.addEventListener('click', function () { tapPair(v, plainId, fid, name, pair, row); });
+              answers.appendChild(pair);
+            }
+            var chips = el('div', 'chips');
+            REACTIONS.forEach(function (r) {
+              var chip = el('button', 'chip');
+              chip.type = 'button';
+              chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
+              chip.setAttribute('aria-pressed', 'false');
+              chip.setAttribute('aria-label', v.display + ' ' + g.label + ' ' + name + ': ' + r.t.toLowerCase());
+              chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
+              chip.addEventListener('click', function () { react(v.id, fid, r.v); });
+              chips.appendChild(chip);
+            });
+            answers.appendChild(chips);
+          }
+          row.appendChild(answers);
           grp.appendChild(row);
         });
         card.appendChild(grp);
@@ -626,7 +703,7 @@
       var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
       var ta = el('textarea');
       ta.id = 'note-' + v.id;
-      ta.placeholder = 'which way, and what it sounds like, in a few words';
+      ta.placeholder = 'name the letters: which clips, and what you hear (more box, duller, louder, thinner...)';
       lab.htmlFor = ta.id;
       ta.addEventListener('input', function () {
         state[v.id].note = ta.value;
@@ -640,46 +717,51 @@
     });
   }
 
-  // ---------- one-shot audio ----------
-  var audio = null, current = null, repeat = false;
+  // ---------- audio: one sequence at a time ----------
+  // A sequence is one pad tap (one clip) or one PLAIN, THEN THIS start (THE
+  // PLAIN ONE, a short gap, then the clip). It owns an Audio element made in
+  // the tap, and the second clip of a pair reuses that element, so a phone
+  // that allowed the tap lets the second clip play without another one. Every
+  // callback a sequence leaves behind (an ended, a rejected play(), an error,
+  // the gap timer) checks that its sequence is still the current one: a
+  // stopped or replaced sequence can no longer touch the page. current is the
+  // token, as it was for play() in 4062b4b.
+  var current = null, repeat = false;
   var nowEl = $('now');
+  // the pause between THE PLAIN ONE and the clip (a listening value, 0.4 s)
+  var GAP_MS = 400;
 
-  function ensureAudio() {
-    if (audio) return audio;
-    audio = new Audio();
-    audio.preload = 'auto';
-    audio.addEventListener('ended', function () {
-      if (repeat && current) {
-        var again = current;
-        audio.currentTime = 0;
-        audio.play().catch(function () { if (current === again) setPlaying(null); });
-      } else {
-        setPlaying(null);
-      }
-    });
-    audio.addEventListener('error', function () {
-      setPlaying(null);
-      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
-      nowEl.classList.remove('idle');
-    });
-    audio.addEventListener('loadedmetadata', function () {
-      if (current && current.row.durEl && isFinite(audio.duration)) {
-        current.row.durEl.textContent = audio.duration.toFixed(2) + ' S';
-      }
-    });
-    return audio;
+  function srcOf(voice, fid) { return voice.id + '/' + fid + '.wav'; }
+
+  // the row that sounds now (none during the gap)
+  function light(seq, row) {
+    if (seq.lit) seq.lit.classList.remove('playing');
+    seq.lit = row || null;
+    if (seq.lit) seq.lit.classList.add('playing');
+  }
+
+  function mark(seq, on) {
+    (seq.btn || seq.pad).setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (!on) light(seq, null);
+  }
+
+  // silence a sequence: no sound, no pending gap timer
+  function silence(seq) {
+    clearTimeout(seq.timer);
+    seq.timer = null;
+    seq.waiting = false;
+    var a = seq.audio;
+    seq.audio = null;
+    if (a) { try { a.pause(); } catch (e) { /* nothing to stop */ } }
   }
 
   function setPlaying(next) {
-    if (current) {
-      current.pad.setAttribute('aria-pressed', 'false');
-      current.row.classList.remove('playing');
-    }
+    var old = current;
     current = next;
+    if (old) { silence(old); mark(old, false); }
     if (next) {
-      next.pad.setAttribute('aria-pressed', 'true');
-      next.row.classList.add('playing');
-      nowEl.textContent = next.voice.display + DOT + next.name;
+      mark(next, true);
+      nowEl.textContent = next.label;
       nowEl.classList.remove('idle');
     } else {
       nowEl.textContent = 'TAP A PAD TO PLAY';
@@ -687,21 +769,90 @@
     }
   }
 
-  function toggle(voice, fid, name, pad, row) {
-    var a = ensureAudio();
-    if (current && current.pad === pad) {
-      a.pause();
+  // A rejected play() (a src change makes the browser reject the previous one
+  // with an AbortError, and that rejection arrives after a newer sequence was
+  // selected): only the sequence that asked may be cleared.
+  function start(seq, a) {
+    var p = a.play();
+    if (p && typeof p.catch === 'function') p.catch(function () { if (current === seq) setPlaying(null); });
+  }
+
+  function playStep(seq, i) {
+    var a = seq.audio;
+    if (current !== seq || !a) return;
+    seq.step = i;
+    seq.waiting = false;
+    light(seq, seq.steps[i].row);
+    a.src = seq.steps[i].src;
+    start(seq, a);
+  }
+
+  function onEnded(seq) {
+    // an old sequence's, or a second 'ended' while the gap is already running
+    if (current !== seq || seq.waiting) return;
+    if (seq.step < seq.steps.length - 1) {
+      // THE PLAIN ONE is over: a short gap, then the clip
+      light(seq, null);
+      seq.waiting = true;
+      var next = seq.step + 1;
+      seq.timer = setTimeout(function () {
+        if (current === seq) playStep(seq, next);
+      }, GAP_MS);
+    } else if (repeat && seq.steps.length > 1) {
+      playStep(seq, 0);                // REPEAT repeats the whole pair
+    } else if (repeat) {
+      seq.audio.currentTime = 0;
+      start(seq, seq.audio);
+    } else {
       setPlaying(null);
-      return;
     }
-    a.pause();
-    a.src = voice.id + '/' + fid + '.wav';
-    // Changing src makes the browser reject the previous play() with an
-    // AbortError, and that rejection arrives after this call has already
-    // selected the newer clip: only the clip that asked may be cleared.
-    var mine = { voice: voice, fid: fid, name: name, pad: pad, row: row };
-    setPlaying(mine);
-    a.play().catch(function () { if (current === mine) setPlaying(null); });
+  }
+
+  function begin(seq) {
+    setPlaying(seq);                   // stops what sounded or waited before
+    countPlay(seq.voice.id, seq.fid);
+    var a = new Audio();
+    a.preload = 'auto';
+    seq.audio = a;
+    a.addEventListener('ended', function () { onEnded(seq); });
+    a.addEventListener('error', function () {
+      if (current !== seq) return;
+      setPlaying(null);
+      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
+      nowEl.classList.remove('idle');
+    });
+    a.addEventListener('loadedmetadata', function () {
+      var row = seq.steps[seq.step].row;
+      if (current === seq && row.durEl && isFinite(a.duration)) {
+        row.durEl.textContent = a.duration.toFixed(2) + ' S';
+      }
+    });
+    playStep(seq, 0);
+  }
+
+  function tapPad(voice, fid, name, pad, row) {
+    if (current && current.pad === pad) { setPlaying(null); return; }
+    begin({ voice: voice, fid: fid, pad: pad, btn: null, audio: null, step: 0, waiting: false, timer: null, lit: null,
+            label: voice.display + DOT + name, steps: [{ src: srcOf(voice, fid), row: row }] });
+  }
+
+  // THE PLAIN ONE, then (after GAP_MS) this clip. A second tap on the same
+  // button stops it; any other pad or button stops it and starts its own.
+  function tapPair(voice, plainId, fid, name, btn, row) {
+    if (current && current.btn === btn) { setPlaying(null); return; }
+    begin({ voice: voice, fid: fid, pad: null, btn: btn, audio: null, step: 0, waiting: false, timer: null, lit: null,
+            label: 'PLAIN, THEN ' + name,
+            steps: [{ src: srcOf(voice, plainId), row: $('clip-' + voice.id + '-' + plainId) },
+                    { src: srcOf(voice, fid), row: row }] });
+  }
+
+  // How often each clip was started: a pad tap that starts it, or a PLAIN,
+  // THEN THIS start on its row. A tap that stops a clip is not a play.
+  function countPlay(voiceId, fid) {
+    var plays = state[voiceId].plays;
+    plays[fid] = (plays[fid] || 0) + 1;
+    dirty[voiceId] = true;
+    debounce(voiceId, function () { persist(voiceId); });
   }
 
   $('repeat').addEventListener('click', function () {
@@ -711,6 +862,7 @@
 
   // ---------- reactions ----------
   function react(voiceId, fid, value) {
+    if (isPlain(fid)) return;          // the reference has no verdict
     var cur = state[voiceId].reactions[fid];
     var next = cur === value ? null : value;
     if (next) state[voiceId].reactions[fid] = next; else delete state[voiceId].reactions[fid];
@@ -787,7 +939,7 @@
       data = {};
       QUESTIONS.forEach(function (k) { data[k] = state.overall[k]; });
     } else {
-      data = { reactions: Object.assign({}, state[key].reactions), note: state[key].note };
+      data = { reactions: Object.assign({}, state[key].reactions), note: state[key].note, plays: Object.assign({}, state[key].plays) };
     }
     data.savedAt = new Date().toISOString();
     return data;
@@ -810,14 +962,38 @@
     } catch (e) { return null; }
   }
 
+  function hasChips(voiceId, fid) {
+    return VOICES.some(function (v) {
+      return v.id === voiceId && v.groups.some(function (g) {
+        return g.clips.some(function (c) { return c[0] === fid && !isPlain(fid); });
+      });
+    });
+  }
+
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
       QUESTIONS.forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
       paintOverall();
     } else if (state[key]) {
-      if (data.reactions && typeof data.reactions === 'object') state[key].reactions = Object.assign({}, data.reactions);
+      if (data.reactions && typeof data.reactions === 'object' && !Array.isArray(data.reactions)) {
+        // only a known answer on a clip that has chips (never the reference)
+        var kept = {};
+        Object.keys(data.reactions).forEach(function (fid) {
+          if (hasChips(key, fid) && REACTIONS.some(function (r) { return r.v === data.reactions[fid]; })) kept[fid] = data.reactions[fid];
+        });
+        state[key].reactions = kept;
+      }
       if (typeof data.note === 'string') state[key].note = data.note;
+      // plays: an object of numbers; an older doc has none, and anything else is ignored
+      if (data.plays && typeof data.plays === 'object' && !Array.isArray(data.plays)) {
+        var plays = {};
+        Object.keys(data.plays).forEach(function (fid) {
+          var n = data.plays[fid];
+          if (typeof n === 'number' && isFinite(n) && n >= 0) plays[fid] = n;
+        });
+        state[key].plays = plays;
+      }
       paintVoice(key);
     }
   }
