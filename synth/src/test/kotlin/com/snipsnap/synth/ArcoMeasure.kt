@@ -111,13 +111,14 @@ internal object ArcoMeasure {
      * test can say "past the lock" and "after the lift" in samples. The bow is on for [gateSeconds] (else HOLD's
      * seconds), vibrato is OFF unless asked for (a physics test reads a plain string), and [pressure], [cornerHz]
      * and [overshoot] replace what GRIP and BOW would have chosen. The stop's length is still worked out from
-     * GRIP's corner, whatever [cornerHz] says: that is what the engine does.
+     * GRIP's corner, whatever [cornerHz] says: that is what the engine does. [overshootMax] and [biteSeconds] replace the voice's
+     * own bite ([Arco.bow]'s probe overrides): `overshootMax = 1.75f, biteSeconds = 0f` is R1b's CELLO stroke.
      */
     fun core(
         voice: ArcoVoice, step: Int,
         bow: Float = Arco.DEFAULT_BOW, grip: Float = Arco.DEFAULT_GRIP, body: Float = 0f, hold: Float = Arco.DEFAULT_HOLD,
         gateSeconds: Float? = null, pressure: Float? = null, cornerHz: Float? = null, overshoot: Float? = null,
-        vibrato: Boolean = false, lifted: Boolean = false,
+        vibrato: Boolean = false, lifted: Boolean = false, overshootMax: Float? = null, biteSeconds: Float? = null,
     ): Core {
         val hz = hzOf(voice, step)
         val holdSeconds = gateSeconds ?: Arco.holdSeconds(hold)
@@ -128,7 +129,7 @@ internal object ArcoMeasure {
         val out = Arco.bow(
             voice, hz, macros(voice, step, bow, grip, body, hold), RATE,
             pressure = pressure, cornerHz = cornerHz, overshoot = overshoot, gateSeconds = gateSeconds,
-            vibrato = vibrato, lifted = lifted, bowPointOut = tap,
+            vibrato = vibrato, lifted = lifted, bowPointOut = tap, overshootMax = overshootMax, biteSeconds = biteSeconds,
         )
         require(out.size < tap.size) { "the tap buffer is shorter than the render" }
         return Core(voice, step, hz, out, tap.copyOf(out.size), holdN, liftN)

@@ -1164,12 +1164,12 @@ class ArcoProductTest {
      * the vibrato switched off in the core (a vibrato spreads each of an A5's harmonics by far more than 8 Hz) from 1.0 s, a
      * 1.49 s window that is wholly sustain: no onset, no stop. The finished note of a hold of 0.59 s of bow (HOLD 0.26, the
      * longest with no vibrato) cannot be read this way at all, and the printed line says so: the window is longer than the note,
-     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1b saw 14.6 to 11.1 dB
-     * (CELLO) and 13.5 to 10.0 (ERHU) from 0.2 s to 0.4 s, which is the window and not the aliasing.
+     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1c saw 12.4 to 8.5 dB
+     * (CELLO; R1b's bite read 14.6 to 11.1) and 13.5 to 10.0 (ERHU) from 0.2 s to 0.4 s, which is the window and not the aliasing.
      *
-     * R1b saw 76.7 dB (CELLO C4, the series fitting at +0.25 c) and 69.1 (ERHU A5, +0.5 c), 24 dB over the record's 45. The bar is 60, so a floor
+     * R1c saw 76.9 dB (CELLO C4, the series fitting at +0.25 c; R1b saw 76.7, before CELLO's bite grew) and 69.1 (ERHU A5, +0.5 c), 24 dB over the record's 45. The bar is 60, so a floor
      * 9 dB worse than today's fails, and the record's 45 is met with 24 dB to spare. The control is the same render with white noise added at
-     * -55 dB of its own level, which read 56.6 and 55.7 dB: it must fall under 60 (5 dB under it, 13 dB under the measurement), so the bar
+     * -55 dB of its own level, which read 56.4 and 55.7 dB (R1b: 56.6 and 55.7): it must fall under 60 (3.6 and 4.3 dB under it, 20 and 13 dB under the measurements), so the bar
      * is one the measure can fail.
      */
     @Test
@@ -1268,7 +1268,7 @@ class ArcoProductTest {
      * the tail of the longer one counted as difference. BODY is the one a quiet engine loses first, so it is named: BODY from its
      * default 0.5 to 0.9 moves the note by 0.44 (CELLO) and 0.45 (ERHU), and from 0 to 1 by 0.92 and 0.92 (R1c's curve: 0.9 rings the box at 1.5 times the
      * string and 1 at 1.75; R1b's were 0.23 and 0.24, and 0.70 and 0.71). The printed line has the other four at
-     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.78 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
+     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.76 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
      * different attack, a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
@@ -1299,15 +1299,15 @@ class ArcoProductTest {
 
     /**
      * Where a rolled note must have locked by, in seconds, and so where "late" begins: 2.0 s, the bar the lock-across-BOW test
-     * (in ArcoTest) holds CELLO to. The slowest rolled lock without vibrato is 1.585 s (R1c saw CELLO's, 400 rolls over both temperatures, at temperature 1;
-     * R1b's was 1.426 s before CELLO's bite grew; ERHU's is 0.329 s), so the bound leaves 0.415 s (26 percent) over it, and the 3 s bow leaves 1.0 s of watching after the
-     * bound. The temperature 0.35 rolls are drawn around the factory presets, so a change to the roster re-rolls them and can
-     * move the slowest lock: the range the test prints is where to look.
+     * (in ArcoTest) holds CELLO to. The slowest rolled lock without vibrato is 2.051 s (R1c saw CELLO's, 400 rolls over both temperatures, at temperature 1: one roll, D#2 at
+     * BOW 0.535 and GRIP 0.38, which is 51 ms over the bound; the slowest at temperature 0.35 is 1.806 s; R1b's slowest was 1.426 s at temperature 0.35 and 1.080 s at 1,
+     * R1c's first guess of 3.0 times for 60 ms 1.585 s; ERHU's is 0.329 s), and the 3 s bow leaves 0.95 s of watching after that lock. The temperature 0.35 rolls are drawn
+     * around the factory presets, so a change to the roster re-rolls them and can move the slowest lock: the range the test prints is where to look.
      */
     private val lockBySeconds = 2.0
 
     /**
-     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, 1.585 s, with over a second and a third of watching
+     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, 2.051 s, with 0.95 s of watching
      * after it), read on the bow-point tap. With the vibrato off by default: whether the string locks is a property of the window the macros draw,
      * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
      */
@@ -1333,10 +1333,12 @@ class ArcoProductTest {
      * and the dice go to the corners no preset visits. A roll that does not lock is a hole in the window and is listed with its
      * macros, and not hidden.
      *
-     * The printed run shows no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.128 to 1.585 s (CELLO) and 0.051 to
-     * 0.329 s (ERHU) (R1c's run; R1b's CELLO went to 1.426 s), so the 2.0 s bound leaves 0.415 s over the slowest, the worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the
-     * ceiling of 1.25, and no roll reaches the LOOP step. The slowest locks are 1.585 s at temperature 1 and 1.554 s at temperature 0.35, whose rolls are drawn around the factory
-     * presets, so that one depends on the roster. The lock is read on the string, which the vibrato never touches (the vibrato is a read-back
+     * The printed run shows one hole under the shipped bite (2.75 times, 60 ms): the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.116 to 2.051 s (CELLO) and 0.051 to
+     * 0.329 s (ERHU) (R1c's run; R1b's CELLO went to 1.426 s), and one of the 200 CELLO rolls at temperature 1 (TUNE 0.1316, BOW 0.5353, GRIP 0.3799, BODY 0.958, HOLD 0.95) locks at 2.051 s,
+     * 51 ms over the 2.0 s bound, with 8 unclean gaps after the 2.0 s mark and before the lock; the worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the
+     * ceiling of 1.25, and no roll reaches the LOOP step. The slowest locks are 2.051 s at temperature 1 and 1.806 s at temperature 0.35, whose rolls are drawn around the factory
+     * presets, so that one depends on the roster. The lock is chaotic in the bite (the same 400 CELLO rolls under R1c's first 3.0 times for 60 ms lock by 1.585 s, under R1b's by 1.426 s),
+     * and BOW 0.535 is a bite of 1.12 times. The lock is read on the string, which the vibrato never touches (the vibrato is a read-back
      * delay of the finished wave), so it is the same with the vibrato on or off. The control is a string
      * outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period,
      * must not pass the same lock check, so the check can fail.

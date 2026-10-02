@@ -25,7 +25,8 @@ import kotlin.test.fail
  * where that is decided.
  *
  * The numbers below are what R1b's roster pass saw (the engine at the work-in-progress commit), each
- * with its bar beside it.
+ * with its bar beside it, and R1c's where its retunes moved them (CELLO's bite of 2.75 times for 60 ms, the box that
+ * rings louder than the string above BODY 0.5, and MOON FIDDLE's BODY of 0.8): the KDoc says which.
  */
 class ArcoPresetsTest {
 
@@ -160,15 +161,16 @@ class ArcoPresetsTest {
     }
 
     /**
-     * R1b saw, over the fourteen one-shots: PERC readings with a head under 200 Hz share of at most 0.44 (DEEP PEDAL; the
-     * classifier's line is 0.55) and a head above 2 kHz of at most 0.42 (TWO STRING; the line is 0.5), TONAL readings that
-     * ring at least 627 ms past their peak (SLOW BOW and CINEMA LOW; the line is 500), and a longest note of 1.436 s (the
-     * line is 1.5). Each bar sits between the measurement and the line, so a small change in the engine moves a note toward
-     * its line without turning it into something else, and a large one fails here by name instead of in a kit.
+     * R1c saw, over the fourteen one-shots: PERC readings with a head under 200 Hz share of at most 0.45 (DEEP PEDAL; the
+     * classifier's line is 0.55; R1b saw 0.44, before the box above BODY 0.5 rang louder) and a head above 2 kHz of at most 0.41 (TWO STRING; the line is 0.5;
+     * R1b saw 0.42), TONAL readings that ring at least 627 ms past their peak (SLOW BOW and CINEMA LOW, as R1b's; the line is 500), and a
+     * longest note of 1.44 s (R1b's 1.436; the line is 1.5). Each bar sits between the measurement and the line, so a small change in the engine moves a note toward
+     * its line without turning it into something else, and a large one fails here by name instead of in a kit. MOON FIDDLE reads TONAL at 813 ms at its BODY of 0.8
+     * (at 0.85 the louder box brought it to 522 ms, 22 ms from the line, which is why the roster's BODY went down a notch).
      *
      * The knife-edge is real, which is why the bars exist: at CELLO's G#2 a swell of BOW 0.3 and BODY 1 at HOLD 0.44 is TONAL at
-     * GRIP 0.7 (580 ms past its peak) and KICK at GRIP 0.5 (488 ms), so CINEMA LOW sits at A#2, where the same swell stays clear
-     * of the line (627 ms).
+     * GRIP 0.7 (575 ms past its peak) and KICK at GRIP 0.5 (441 ms; R1b's box, only as loud as the string, read 580 and 488), so CINEMA LOW sits at A#2,
+     * where the same swell stays clear of the line (627 ms, R1c and R1b alike).
      */
     @Test
     fun `every classifier reading keeps its room to its line`() {
@@ -361,12 +363,14 @@ class ArcoPresetsTest {
     }
 
     /**
-     * What the roster says about each note's character, held to the raw bow at the preset's own macros. R1b saw: every
-     * one-shot but DRY SCRAPE lock into one slip a period inside its bow-on time (the latest is GRIT BOW at 0.42 s of 0.58, 0.72 of
-     * its bow; the bar is 0.85), DRY SCRAPE never does in its 0.34 s (at E2, below G#2, the scratch outlasts a short bow),
-     * and GRIT BOW locks no earlier than 0.4 s, so its first stretch is a scratch (the bar is 0.3 s). The locked ones are the
-     * negative control for the scrape and the other way round (a stab on A3 locks at 0.19 s, so DRY SCRAPE moved up there would
-     * fail its clause): either claim failing means a preset stopped being what its name says.
+     * What the roster says about each note's character, held to the raw bow at the preset's own macros. R1c saw: every
+     * one-shot but DRY SCRAPE lock into one slip a period inside its bow-on time (the latest, relative to its bow, is SHORT STAB at 0.24 s of 0.30, 0.80 of
+     * its bow, where the bar is 0.85, that is 0.255 s: 15 ms of room, and R1b's bite had it at 0.19 s; then GRIT BOW at 0.45 s of 0.58, 0.78 of its bow, R1b's at 0.42 s; HORSEHAIR is at 0.18 s),
+     * DRY SCRAPE never does in its 0.34 s (at E2, below G#2, the scratch outlasts a short bow),
+     * and GRIT BOW locks no earlier than 0.3 s (R1c saw 0.45 s, R1b 0.42 s), so its first stretch is a scratch (the bar is 0.3 s). The locked ones are the
+     * negative control for the scrape and the other way round (a stab on A3 locks at 0.24 s, so DRY SCRAPE moved up there would
+     * fail its clause): either claim failing means a preset stopped being what its name says. CELLO's bite of 2.75 times for 60 ms is the setting
+     * that keeps SHORT STAB under its bar (3.0 times for 60 ms never locked it in its stab).
      */
     @Test
     fun `the scrapes scrape and the clean presets lock`() {
@@ -407,9 +411,9 @@ class ArcoPresetsTest {
     }
 
     /**
-     * R1b saw both loops close well under [Keys.MAX_SEAM_ERROR] (CELLO's at 5.9e-05, ERHU's at 1.2e-05, against 1e-3; the seam is
-     * read on the kept stretch against itself one loop later, never on the loop played twice) and sound their note to within
-     * 0.07 cents (the bar is 5, the engine's own).
+     * R1c saw both loops close well under [Keys.MAX_SEAM_ERROR] (CELLO's at 5.1e-05, ERHU's at 1.2e-05, against 1e-3; R1b saw CELLO's at 5.9e-05, before
+     * ENDLESS DRAW's BODY of 0.6 rang louder; the seam is read on the kept stretch against itself one loop later, never on the loop played twice) and sound their
+     * note to within 0.06 cents (R1b's 0.07; the bar is 5, the engine's own).
      */
     @Test
     fun `the two loops close and sound their note`() {
