@@ -9,8 +9,9 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * Renders the ARCO R1d BODY listening page under testkit/arco-body/ (gitignored): `manifest.json`, which the page builds itself from, the clips, `key.json` and a copy of
- * the page from the test resources. Run via `./gradlew :synth:generateArcoBody`, then publish the folder WITHOUT `key.json`: it says which letter is which design, and the page is blind on purpose.
+ * Renders the ARCO R1d BODY listening page under testkit/arco-body/ (gitignored): `manifest.json`, which the page builds itself from, the clips and a copy of
+ * the page from the test resources. Run via `./gradlew :synth:generateArcoBody`, then publish the folder whole. The key (`testkit/arco-body-key.json`, a sibling of the folder and never in it) says which
+ * letter is which design, and the page is blind on purpose.
  *
  * The owner heard R1c's BODY 1 (the box ringing 1.75 times the string) and wrote "Body doesn't seem to do anything" and "Body still seems a little light". R1d built three designs for
  * a box a held bowed note can hear and measured them with a ruler ([ArcoBodyMeasure]); nobody can listen but the owner, so the engine change waits for the owner's ears. This page
@@ -27,12 +28,14 @@ import kotlin.math.max
  *    the louder-box control. No repeat and no BEFORE here. **No letter is used twice on the page**, so one letter in an answer or a notes box names one clip.
  *
  * **The shuffle is fixed and hard-coded**, a pure function with no seed: [Spec.order] lists, for each group, the clip behind each letter in the letters' order. ERHU C5, letters C to
- * H: broad 6, bed 0.62, REPEAT, louder, broad 2, bed 1. CELLO C3, J K L M N P: louder, broad 2, bed 1, REPEAT, bed 0.62, broad 6. CELLO C4, Q R S: broad 6, louder, bed 1. It is chosen so
- * that no group is in order of strength or of design, the repeat is never first or last, and the same design does not sit in the same place in two groups. `key.json` is the key: letter to
- * design, setting and D (the clip's own note, and the candidate's median over the ruler's ten-note grid). The CELLO C4 group has three lettered clips and no repeat.
+ * H: broad 6, bed 0.62, REPEAT, louder, broad 2, bed 1. CELLO C3, J K L M N P: louder, broad 2, bed 1, REPEAT, bed 0.62, broad 6. CELLO C4, Q R S: bed 1, broad 6, louder. It is chosen so
+ * that no group is in order of strength or of design, the repeat is never first or last, and the same design does not sit in the same slot in two groups (checked by hand against the three orders above). The key file is the key: letter to
+ * design, setting, D (the clip's own note, and the candidate's median over the ruler's ten-note grid) and the clip's level against THE PLAIN ONE as heard, whole and through a 300 and a 500 Hz high-pass.
+ * The CELLO C4 group has three lettered clips and no repeat.
  *
- * **The in-run checks throw** (nothing is written when one fails): the page's render path is [Arco.render] to the sample for THE PLAIN ONE (BODY 0.5) and WHAT YOU HEARD LAST TIME (BODY 1)
- * at every clip's note and at the ruler's whole grid; the repeat is bit-identical to THE PLAIN ONE (and so are its two files); every candidate is finite, under a peak of 0.95 and the
+ * **The in-run checks throw**, and a re-run starts by emptying the output folder and deleting the key, so a failed check never leaves a page of an earlier run behind (the checks that need the written
+ * files run last, so a failure there leaves a partial folder: do not publish after a failure): the page's render path is [Arco.render] to the sample for THE PLAIN ONE (BODY 0.5) and WHAT YOU HEARD LAST TIME (BODY 1)
+ * at every clip's note and at the ruler's whole grid; the repeat is bit-identical to THE PLAIN ONE (and so are its two files); every candidate is finite, under a peak of 0.95 (at the three notes of the page) and the
  * length of THE PLAIN ONE; no two clips but the repeat and THE PLAIN ONE are the same; and **each candidate's median D over the ten-note grid is the competition's within 0.05 dB**
  * (A 0.62 5.98, A 1.0 8.66, B 2.0 6.09, B 6.0 8.46, the louder box 7.92, R1c's own BODY 1 2.617: [ArcoBodyMeasure]'s baseline). The D table is printed on `ARCO` lines.
  */
@@ -79,7 +82,7 @@ object ArcoBodyGenerator {
     private val SPECS = listOf(
         Spec(ERHU, defaultTune(ERHU), "C5", "ERHU, C5 (THE DEFAULT NOTE)", "CDEFGH", listOf(Kind.B6, Kind.A62, Kind.REPEAT, Kind.LOUD, Kind.B2, Kind.A100), withLast = true),
         Spec(CELLO, defaultTune(CELLO), "C3", "CELLO, C3 (THE DEFAULT NOTE)", "JKLMNP", listOf(Kind.LOUD, Kind.B2, Kind.A100, Kind.REPEAT, Kind.A62, Kind.B6), withLast = true),
-        Spec(CELLO, CELLO_C4_TUNE, "C4", "CELLO, C4 (ONE OCTAVE UP)", "QRS", listOf(Kind.B6, Kind.LOUD, Kind.A100), withLast = false),
+        Spec(CELLO, CELLO_C4_TUNE, "C4", "CELLO, C4 (ONE OCTAVE UP)", "QRS", listOf(Kind.A100, Kind.B6, Kind.LOUD), withLast = false),
     )
 
     private const val NOTE_CHECKED_PEAK = 0.95f
@@ -200,7 +203,7 @@ object ArcoBodyGenerator {
         for ((i, kind) in spec.order.withIndex()) {
             val snip = candidateOf(kind)?.let { ArcoBodyCandidates.renderThrough(voice, macros, it.box) } ?: repeat
             val letter = spec.letters[i]
-            clips += Built("${spec.prefix}_${letter.lowercaseChar()}", "CLIP $letter", "new, unlabelled on purpose", kind, snip)
+            clips += Built("${spec.prefix}_${letter.lowercaseChar()}", "CLIP $letter", "unlabelled on purpose", kind, snip)
         }
         return BuiltGroup(spec, noteOf(voice, spec.tune), clips)
     }
@@ -231,6 +234,10 @@ object ArcoBodyGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/arco-body")
+        // The key is a sibling of the published folder, so publishing the folder whole cannot publish it. A re-run starts from nothing: no clip, manifest or page of an earlier run survives a failed check.
+        val keyFile = File(root.absoluteFile.parentFile, root.name + "-key.json")
+        root.deleteRecursively()
+        keyFile.delete()
         root.mkdirs()
 
         check(ArcoBodyCandidates.R1C_BODY_KNEE == Arco.BODY_KNEE && ArcoBodyCandidates.R1C_BODY_TOP == Arco.BODY_TOP) {
@@ -245,9 +252,11 @@ object ArcoBodyGenerator {
         checkClips(groups)
 
         var count = 0
+        val heard = HashMap<String, FloatArray>()
         fun write(dir: String, clip: Built) {
             val snip = clip.snip
             val levelled = AuditionLevel.level(snip)
+            heard[clip.id] = levelled.samples
             WavWriter.write(File(File(root, dir), "${clip.id}.wav"), levelled, WavWriter.BitDepth.PCM_16)
             var at = 0
             for (i in snip.samples.indices) if (abs(snip.samples[i]) > abs(snip.samples[at])) at = i
@@ -279,6 +288,8 @@ object ArcoBodyGenerator {
             check(plainBytes.contentEquals(repeatBytes)) { "${g.spec.label}: the repeat's file is not THE PLAIN ONE's, byte for byte" }
         }
 
+        val offsets = levelOffsets(groups, heard)
+
         val pageText = (ArcoBodyGenerator::class.java.getResourceAsStream("/audition/arco-body.html")
             ?: error("the BODY page is missing from synth/src/test/resources/audition/")).use { it.readBytes() }.toString(Charsets.UTF_8)
 
@@ -286,10 +297,10 @@ object ArcoBodyGenerator {
             "{\"surfaceAfter\":null,\"voices\": [\n" + sections.joinToString(",\n") { sectionJson(it) } + "\n],\"loops\": []," +
                 "\"intro\":[" + introBlocks().joinToString(",") { blockJson(it) } + "],\"facts\":{}}\n",
         )
-        File(root, "key.json").writeText(keyJson(groups, grid, medians))
+        keyFile.writeText(keyJson(groups, grid, medians, offsets))
         File(root, "index.html").writeText(pageText)
-        println("ARCO body key.json is in ${root.absolutePath}: do not publish it (letter to design, setting and D)")
-        println("wrote $count clips + manifest.json + key.json + index.html under ${root.absolutePath}")
+        println("ARCO body the key is ${keyFile.absolutePath}, beside the folder and not in it: letter to design, setting, D and level through a phone-like high-pass")
+        println("wrote $count clips + manifest.json + index.html under ${root.absolutePath} (publish that folder whole; the key is not in it)")
     }
 
     // ---- the manifest's words ------------------------------------------------------------
@@ -298,7 +309,7 @@ object ArcoBodyGenerator {
 
     private fun sectionOf(voice: ArcoVoice, groups: List<BuiltGroup>): Section {
         val notes = groups.joinToString(" $DOT ") { it.note }
-        val letters = groups.joinToString(" $DOT ") { "${it.note}: THE PLAIN ONE, ${if (it.spec.withLast) "LAST TIME, " else ""}CLIPS ${it.spec.letters.first()} TO ${it.spec.letters.last()}" }
+        val letters = groups.joinToString(" $DOT ") { "${it.note}: THE PLAIN ONE, ${if (it.spec.withLast) "LAST TIME, " else ""}CLIPS ${it.spec.letters.toList().joinToString(" ")}" }
         return Section(
             id = voice.name, display = voice.name, body = "BODY at the top of the knob: is there a box under the note?",
             readout = listOf("$notes $DOT EVERY OTHER KNOB AT ITS DEFAULT", letters.uppercase()),
@@ -308,14 +319,17 @@ object ArcoBodyGenerator {
 
     /**
      * The manifest's intro cards. The page carries its own cards for what it is, the clips and how to listen (WHAT YOU SAID, THE CLIPS, HOW TO LISTEN, with the honest sentence that nobody has listened),
-     * so this adds only the one thing the page does not know, which is the speaker: plain words, no design names, no numbers of the ruler.
+     * so this adds only what the page does not know, the speaker: plain words, no design names, no numbers of the ruler. Every clip is level with THE PLAIN ONE by the engine's own measure, which counts
+     * the low notes a phone speaker does not play; through a 300 Hz high-pass the CELLO C3 clips differ from THE PLAIN ONE by up to 6 dB (the review's measurement; the key file carries each clip's own figure),
+     * so the card says so rather than saying the clips are level.
      */
     private fun introBlocks(): List<Block> = listOf(
         Block(
             "SPEAKER OR HEADPHONES",
             listOf(
-                "Most phone speakers play very little below about 300 Hz, and CELLO C3's lowest notes sit under that, so its clips may sound thin on a speaker. The CELLO C4 clips are an octave higher for that reason. " +
-                    "Say in the last box whether you used the speaker or headphones.",
+                "A phone speaker plays low notes thinly, and a cello's low notes most of all, so CELLO C3 may sound thin on a speaker. CELLO C4 is higher and may be easier to judge there. " +
+                    "Every clip is level with THE PLAIN ONE by the engine's own measure, but that measure counts low notes a speaker cannot play, so on a speaker some clips may still sound louder or quieter than THE PLAIN ONE. " +
+                    "If one does, say which in the notes box. Say in box 4 whether you used the speaker or headphones.",
             ),
         ),
     )
@@ -338,11 +352,59 @@ object ArcoBodyGenerator {
 
     private fun q(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
+    private class Offsets(val full: Double, val hp300: Double, val hp500: Double)
+
+    /** RMS of [x] after a 2nd-order Butterworth high-pass at [hz] (RBJ cookbook, Q one over root two) at the clips' own rate. */
+    private fun highpassRms(x: FloatArray, hz: Double): Double {
+        val w0 = 2.0 * Math.PI * hz / Dsp.RATE
+        val alpha = Math.sin(w0) / (2.0 * 0.7071067811865476)
+        val cw = Math.cos(w0)
+        val a0 = 1.0 + alpha
+        val b0 = (1.0 + cw) / 2.0 / a0
+        val b1 = -(1.0 + cw) / a0
+        val b2 = b0
+        val a1 = -2.0 * cw / a0
+        val a2 = (1.0 - alpha) / a0
+        var x1 = 0.0; var x2 = 0.0; var y1 = 0.0; var y2 = 0.0
+        var acc = 0.0
+        for (v in x) {
+            val xn = v.toDouble()
+            val y = b0 * xn + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = xn; y2 = y1; y1 = y
+            acc += y * y
+        }
+        return Math.sqrt(acc / x.size)
+    }
+
+    private fun rmsOf(x: FloatArray): Double {
+        var acc = 0.0
+        for (v in x) acc += v.toDouble() * v
+        return Math.sqrt(acc / x.size)
+    }
+
+    /** Each clip's level against THE PLAIN ONE of its group in dB, as heard (after the page level): whole, through a 300 Hz high-pass and through a 500 Hz one. */
+    private fun levelOffsets(groups: List<BuiltGroup>, heard: Map<String, FloatArray>): Map<String, Offsets> {
+        val out = HashMap<String, Offsets>()
+        for (g in groups) {
+            val plain = heard.getValue(g.clips.first { it.kind == Kind.PLAIN }.id)
+            val full = rmsOf(plain); val h3 = highpassRms(plain, 300.0); val h5 = highpassRms(plain, 500.0)
+            for (c in g.clips) {
+                val x = heard.getValue(c.id)
+                out[c.id] = Offsets(
+                    20.0 * Math.log10(rmsOf(x) / full),
+                    20.0 * Math.log10(highpassRms(x, 300.0) / h3),
+                    20.0 * Math.log10(highpassRms(x, 500.0) / h5),
+                )
+            }
+        }
+        return out
+    }
+
     /**
      * The key, for the lead and not for the page: each lettered clip's design, its setting, its D at its own note (the ruler's, against THE PLAIN ONE) and the candidate's
      * median over the ten-note grid. The labelled clips and the repeat are in it too.
      */
-    private fun keyJson(groups: List<BuiltGroup>, grid: Map<String, List<Reading>>, medians: Map<String, Double>): String {
+    private fun keyJson(groups: List<BuiltGroup>, grid: Map<String, List<Reading>>, medians: Map<String, Double>, offsets: Map<String, Offsets>): String {
         val rows = groups.joinToString(",\n") { g ->
             val step = Arco.semitoneFor(g.spec.voice, g.spec.tune)
             val clips = g.clips.joinToString(",\n") { c ->
@@ -358,10 +420,10 @@ object ArcoBodyGenerator {
                     else -> "${candidate!!.design}, ${candidate.setting}"
                 }
                 val d = key?.let { k -> grid.getValue(k).firstOrNull { it.voice == g.spec.voice && it.step == step }?.d }
-                "    {\"id\":${q(c.id)},\"name\":${q(c.name)},\"design\":${q(design)},\"dAtThisNote\":${d?.let { f3(it) } ?: "null"},\"dMedianTenNotes\":${key?.let { f3(medians.getValue(it)) } ?: "null"}}"
+                "    {\"id\":${q(c.id)},\"name\":${q(c.name)},\"design\":${q(design)},\"dAtThisNote\":${d?.let { f3(it) } ?: "null"},\"dMedianTenNotes\":${key?.let { f3(medians.getValue(it)) } ?: "null"},\"fullBandDbVsPlain\":${f2(offsets.getValue(c.id).full)},\"hp300DbVsPlain\":${f2(offsets.getValue(c.id).hp300)},\"hp500DbVsPlain\":${f2(offsets.getValue(c.id).hp500)}}"
             }
             "  {\"voice\":${q(g.spec.voice.name)},\"note\":${q(g.note)},\"label\":${q(g.spec.label)},\"clips\":[\n$clips\n  ]}"
         }
-        return "{\"note\":${q("the key to the BODY page: do not publish. D is the ruler's colour distance in dB of BODY 1 against the default, a ruler and not audibility.")},\"groups\":[\n$rows\n]}\n"
+        return "{\"note\":${q("the key to the BODY page: do not publish. D is the ruler's colour distance in dB of BODY 1 against the default, a ruler and not audibility. fullBandDbVsPlain, hp300DbVsPlain and hp500DbVsPlain are each clip's RMS against THE PLAIN ONE of its group as the owner hears it (after the page level), whole and through a 2nd-order 300 Hz and 500 Hz high-pass (a phone speaker): the page levels full band, so a CELLO verdict on a speaker is read against these.")},\"groups\":[\n$rows\n]}\n"
     }
 }

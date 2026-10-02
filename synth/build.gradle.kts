@@ -332,10 +332,10 @@ tasks.register<JavaExec>("generateArcoRetune") {
     args("${rootDir}/testkit/arco-retune")
 }
 
-/** Render the ARCO R1d BODY listening clips, manifest, key and page under testkit/arco-body/. See ArcoBodyGenerator. */
+/** Render the ARCO R1d BODY listening clips, manifest and page under testkit/arco-body/ and the key beside it. See ArcoBodyGenerator. */
 tasks.register<JavaExec>("generateArcoBody") {
     group = "distribution"
-    description = "Render the ARCO R1d BODY listening clips, manifest and listening page under testkit/arco-body/ (key.json is the key: do not publish it)."
+    description = "Render the ARCO R1d BODY listening clips, manifest and listening page under testkit/arco-body/ and the key to it beside the folder as testkit/arco-body-key.json."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ArcoBodyGenerator")
     workingDir = projectDir
