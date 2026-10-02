@@ -196,4 +196,42 @@ class SynthKitTest {
             assertEquals(TinesVoice.KALIMBA, patch!!.voice, "pad ${i + 1} voice")
         }
     }
+
+    @Test
+    fun `the mercury kit is eight pings up the pentatonic, four sing and four blade presets, all dry`() {
+        val kit = SynthKits.mercury()
+        assertEquals(16, kit.size)
+        assertTrue(kit.all { it != null && it.recipe != null }, "every pad is a MERCURY render with its recipe")
+        val patches = kit.mapIndexed { i, pad ->
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? MercuryPatch
+            assertTrue(patch != null, "pad ${i + 1} should be a MERCURY patch, got ${recipe.patch?.engine}")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: MERCURY has no landing chain")
+            patch!!
+        }
+        // Written out, not read back from Mercury.drumClassFor: every pad here is its contact plus a ringing tail past the
+        // classifier's 1.5 s line, so the length rule files every one LOOP.
+        for (k in 0 until 16) assertEquals(DrumClass.LOOP, kit[k]!!.drumClass, "pad ${k + 1} is filed ${kit[k]!!.drumClass}")
+        val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val defaults = Mercury.defaults(MercuryVoice.PING)
+        for (k in 0 until 8) {
+            val macros = patches[k].macros
+            assertEquals(MercuryVoice.PING, patches[k].voice, "pad ${k + 1} is PING")
+            assertEquals("Ping ${k + 1}", patches[k].name, "pad ${k + 1}'s patch name")
+            assertEquals(Mercury.rootMidi(MercuryVoice.PING) + walk[k], Mercury.midiFor(MercuryVoice.PING, macros.getValue("TUNE")), "pad ${k + 1} is the ${walk[k]}th semitone")
+            for ((name, default) in defaults) {
+                if (name == "TUNE") continue
+                assertEquals(default, macros.getValue(name), "pad ${k + 1}: $name is at its default")
+            }
+        }
+        val names = patches.drop(8).map { "${it.voice} ${it.name}" }
+        assertEquals(
+            listOf(
+                "SING LONG RUB", "SING SINGING EDGE", "SING GLASS CURRENT", "SING LOW HUM",
+                "BLADE BENT RIBBON", "BLADE WHISTLE BEND", "BLADE DOWN BEND", "BLADE WOBBLE STEEL",
+            ),
+            names,
+        )
+        for (k in 8 until 16) assertEquals(MercuryPresets.forVoice(patches[k].voice).first { it.name == patches[k].name }, patches[k], "pad ${k + 1} is the preset itself")
+    }
 }

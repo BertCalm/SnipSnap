@@ -329,4 +329,31 @@ object SynthKits {
             preset(ArcoVoice.CELLO, "ENDLESS DRAW"), preset(ArcoVoice.ERHU, "ENDLESS CRY"),                   // A15 A16
         )
     }
+
+    /**
+     * The MERCURY acceptance kit: PING up the minor pentatonic from its root, C4, on the first two rows
+     * (A01-A08), every knob but TUNE at its default, so the row is the bell before anyone touches it;
+     * then four SING presets (A09-A12) and four BLADE presets (A13-A16). Every pad is dry (MERCURY has no
+     * landing chain) and filed by [Mercury.drumClassFor]. Every MERCURY render is its contact plus a
+     * ringing tail of at least 0.4 s, and at the default GLASS that is past the classifier's 1.5 s line, so
+     * the length rule files these pads LOOP; a drum program plays every pad once through either way. The
+     * presets are provisional until the audition gate; this kit is what the page's kit section plays.
+     */
+    fun mercury(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = MercuryPatch(
+            "Ping $n", MercuryVoice.PING,
+            Mercury.defaults(MercuryVoice.PING) + ("TUNE" to semitone / Mercury.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Mercury.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: MercuryVoice, name: String) = MercuryPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Mercury.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),   // A01-A04
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),   // A05-A08
+            preset(MercuryVoice.SING, "LONG RUB"), preset(MercuryVoice.SING, "SINGING EDGE"),                 // A09 A10
+            preset(MercuryVoice.SING, "GLASS CURRENT"), preset(MercuryVoice.SING, "LOW HUM"),                 // A11 A12
+            preset(MercuryVoice.BLADE, "BENT RIBBON"), preset(MercuryVoice.BLADE, "WHISTLE BEND"),            // A13 A14
+            preset(MercuryVoice.BLADE, "DOWN BEND"), preset(MercuryVoice.BLADE, "WOBBLE STEEL"),              // A15 A16
+        )
+    }
 }
