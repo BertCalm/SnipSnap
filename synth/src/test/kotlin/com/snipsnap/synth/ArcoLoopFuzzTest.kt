@@ -65,7 +65,7 @@ class ArcoLoopFuzzTest {
             println("ARCO loop fuzz $voice $corner: ${row.size} loops, worst seam ${"%.2e".format(java.util.Locale.ROOT, worst.seam)} at step ${worst.case.step}, highest peak ${"%.3f".format(java.util.Locale.ROOT, row.maxOf { it.peak })}")
         }
         for (o in outcomes) {
-            val where ="${o.case.voice} step ${o.case.step} ${o.case.macros}"
+            val where = "${o.case.voice} step ${o.case.step} ${o.case.macros}"
             assertTrue(o.seam < Keys.MAX_SEAM_ERROR, "$where: the loop does not close (seam ${o.seam})")
             assertTrue(o.finite, "$where: the loop is not finite or clips")
             assertTrue(o.frames >= 2 * Dsp.RATE, "$where: the loop is ${o.frames} frames, under 2 s")

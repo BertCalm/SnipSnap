@@ -784,7 +784,8 @@ class ArcoProductTest {
      *
      * R1c saw, at CELLO C3 (the human vibrato) and ERHU C5 (the plain one): 3.34 and 3.20 c at 1 s of bow (44 percent of the depth, as the ramp from 0.6 s
      * to 1.5 s says), 8.53 and 7.69 at 1.5 s and 8.65 and 7.90 at 3 s, and 8.52 and 7.90 about the note's own mean, a little over the 7.3 the window arithmetic gives
-     * (CELLO's drifts of depth and rate put it up to 0.8 c above ERHU's; R1b printed 3.5 at 1 s, 7.9 to 8.1 at 1.5 s, 7.95 to 8.05 at 3 s and 8.3 and 7.95 about the mean).
+     * (CELLO's drifts of depth and rate put it up to 0.8 c above ERHU's). ERHU's vibrato is R1b's merged one, bit for bit (the plain shape, held to it below), so ERHU's 3.20, 7.69, 7.90 and 7.90 are R1b's figures too. The 3.5, 7.9 to 8.1, 7.95 to 8.05 and
+     * 8.3 and 7.95 that R1b's version of this KDoc quoted were read on R1b's first vibrato, a retune of the bow every 64 samples, which the read-back delay replaced (commit 2d75455) before R1b merged; they were never re-measured and are not a comparator.
      * The bars: 2 to 5.5 c at 1 s, 6 to 10 at 1.5 s and 3 s (CELLO's 8.65 has 1.35 c of room), growing between 1 s and 1.5 s by over 2 c; and the record's, at most 15 c peak at 3 s.
      */
     @Test
@@ -1038,17 +1039,21 @@ class ArcoProductTest {
         return found
     }
 
-    private class Wander(val peakLow: Double, val peakHigh: Double, val rateLow: Double, val rateHigh: Double, val swings: Int) {
-        val peaks get() = peakHigh / peakLow
-        val rates get() = rateHigh / rateLow
-    }
+    /**
+     * How much one swing differs from the next *in the same direction*, which is what a mechanical vibrato does not do. [peaks] is the ratio of the highest to the lowest maximum of the pitch track (and, separately, of the
+     * highest to the lowest minimum: the smaller of the two ratios is kept, so both directions must vary) and [periods] the ratio of the longest to the shortest full cycle, a maximum to the next maximum or a minimum to the next
+     * minimum. A lean in the swing (the skew's second harmonic) makes the up swing taller and quicker than the down one, but makes every up swing the same: comparing an up swing with a down one, as the first version of this
+     * measure did, counts that lean as a difference, and a drift-free skewed wave read 1.15 on it. Comparing like with like reads 1.000 on it.
+     */
+    private class Cycles(val peaks: Double, val periods: Double, val maxima: Int, val minima: Int)
 
-    /** How much the swings differ from one another: the |cents| of each turning point, and the rate of each half-swing, `1 / (2 * seconds from one turning point to the next)`. */
-    private fun wander(track: DoubleArray, from: Double, to: Double): Wander {
+    private fun cycles(track: DoubleArray, from: Double, to: Double): Cycles {
         val t = turns(track, from, to)
-        val peaks = t.map { abs(it.cents) }
-        val rates = t.zipWithNext().map { (a, b) -> 1.0 / (2.0 * (b.at - a.at)) }
-        return Wander(peaks.min(), peaks.max(), rates.min(), rates.max(), t.size)
+        val up = t.filter { it.cents > 0.0 }
+        val down = t.filter { it.cents < 0.0 }
+        fun spread(heights: List<Double>) = heights.max() / heights.min()
+        val full = (up.zipWithNext() + down.zipWithNext()).map { (a, b) -> b.at - a.at }
+        return Cycles(minOf(spread(up.map { it.cents }), spread(down.map { -it.cents })), full.max() / full.min(), up.size, down.size)
     }
 
     private fun maxCents(track: DoubleArray, from: Double, to: Double): Double = (((from * rawRate).toInt()) until minOf(track.size, (to * rawRate).toInt())).maxOf { abs(track[it]) }
@@ -1056,33 +1061,40 @@ class ArcoProductTest {
     private fun meanCents(track: DoubleArray, from: Double, to: Double): Double = (((from * rawRate).toInt()) until minOf(track.size, (to * rawRate).toInt())).sumOf { track[it] } / (((to - from) * rawRate).toInt())
 
     /**
-     * The human vibrato is not mechanical and the plain one is: the pitch track of each shape at the full 10 cents, over 4 s from the start of the vibrato.
-     * Over u = 0.9 to 3.6 s (after the rise of either) HUMAN's swing peaks differ from one another by at least 15 percent (the largest |cents| of a turning
-     * point over the smallest) and its half-swing rates by at least 6 percent (the fastest over the slowest). R1c saw 32 turning points at 8.12 to 11.76 cents (a ratio
-     * of 1.448, so 45 percent) and half-swing rates of 5.10 to 7.12 Hz (a ratio of 1.397; the turning points are those of the exact pitch track, so the skew's
-     * alternation of the up and the down swing is in the rates; the brief's own reading of them was 8.1 to 12.1 cents and 5.7 to 6.9 Hz). PLAIN is the control, a sine: its
-     * peaks differ by under 1.5 percent (R1c saw 10.00 to 10.06, 0.58 percent: the log of the pitch ratio is a little lopsided) and its rate by under 0.5 percent
-     * (6.100 Hz at all 33 turning points, a ratio of 1.00000), so the same measure calls a sine mechanical and the drift not.
+     * The human vibrato is not mechanical and the plain one is: the pitch track of each shape at the full 10 cents, over 4 s from the start of the vibrato, read swing to swing *in the same direction* ([cycles]).
+     * Over u = 0.9 to 3.6 s (after the rise of either) HUMAN's swings differ from one another in height by at least 10 percent (the highest maximum of the pitch track over the lowest, and the same for the minima, the smaller of the two
+     * kept) and its full cycles in length by at least 5 percent (the longest, from one maximum to the next or one minimum to the next, over the shortest). R1c saw 16 maxima and 16 minima, the heights differing x1.248 (25 percent)
+     * and the cycles x1.0996 (10 percent), so the bars have 0.148 and 0.050 of room.
      *
-     * The rest of what makes it a finger and not a fault: its peak |cents| from 1.2 s on stays under 15 (R1c saw 12.75 over the 4 s, the brief's 12.1 was over 3.65 s; the held-note bar is
+     * There are two controls, read with the same measure, each under 1 percent. PLAIN, a sine, reads x1.0000 and x1.0000 (R1c saw 17 maxima and 16 minima). The skewed wave with no drift, `VibratoShape(HUMAN's rise, 0.0, 0.0, HUMAN's skew)`,
+     * reads x1.0000 and x1.0000 as well, and it is the one that matters: HUMAN's lean (the skew's second harmonic) alone makes the up swing taller and quicker than the down one while every up swing is the same, so a vibrato with
+     * the lean and no drift is mechanical, and the first version of this measure, which compared every turning point of the pitch track with every other, called it varied: it read that drift-free wave at x1.1536 on peaks, over its bar of 1.15 by
+     * 0.004, so the test passed whether or not the rate and depth drift were there. Compared like with like the lean is not counted, and the bars hold the drift alone.
+     *
+     * The rest of what makes it a finger and not a fault: its peak |cents| from 1.2 s on stays under 15 (R1c saw 12.75 over the 4 s; the held-note bar is
      * the same 15); its mean over each whole second from 1 s to 4 s stays within 0.3 cents of nought (R1c saw +0.186, -0.103 and -0.109, PLAIN -0.110, -0.014 and +0.081; a bounded
      * delay cannot give much more than 0.7 over a second), with a delay that drifts by one thousandth of a sample a sample, which is about 1.7 cents of pitch (R1c saw it read -1.55 over 1
      * to 2 s, with the swing's own +0.19), as the control that the mean can be seen to fail; and it swells in: the peak over its first 0.25 s is under half the peak from 1.0 s on
-     * (R1c saw 5.27 against 12.75, 0.41, 0.09 of room; the brief's 3.9 to 5.3 against 12.1 is the same swing) while PLAIN's first 0.25 s is already at least 0.9 of its steady swing (10.00 against 10.06).
+     * (R1c saw 5.27 against 12.75, 0.41, 0.09 of room) while PLAIN's first 0.25 s is already at least 0.9 of its steady swing (10.00 against 10.06).
      */
     @Test
     fun `the human vibrato wanders, swells in and stays centred, and the plain one is a sine`() {
         val human = pitchTrack(Arco.VIBRATO_HUMAN, 4.0)
         val plain = pitchTrack(Arco.VIBRATO_PLAIN, 4.0)
-        val h = wander(human, 0.9, 3.6)
-        val p = wander(plain, 0.9, 3.6)
-        println("ARCO vibrato HUMAN: ${h.swings} turning points from 0.9 to 3.6 s, |cents| ${f(h.peakLow)} to ${f(h.peakHigh)} (x${f(h.peaks, 3)}), half-swing rate ${f(h.rateLow)} to ${f(h.rateHigh)} Hz (x${f(h.rates, 3)})")
-        println("ARCO vibrato PLAIN: ${p.swings} turning points from 0.9 to 3.6 s, |cents| ${f(p.peakLow)} to ${f(p.peakHigh)} (x${f(p.peaks, 4)}), half-swing rate ${f(p.rateLow, 3)} to ${f(p.rateHigh, 3)} Hz (x${f(p.rates, 5)})")
-        assertTrue(h.peaks >= 1.15, "the human swings differ by only ${f((h.peaks - 1) * 100, 1)} percent, under 15")
-        assertTrue(h.rates >= 1.06, "the human half-swing rates differ by only ${f((h.rates - 1) * 100, 1)} percent, under 6")
-        assertTrue(p.peaks < 1.015, "the plain swings differ by ${f((p.peaks - 1) * 100, 2)} percent, so the measure cannot call a sine mechanical")
-        assertTrue(p.rates < 1.005, "the plain half-swing rates differ by ${f((p.rates - 1) * 100, 2)} percent")
-        assertTrue(p.swings > 25 && h.swings > 25, "too few turning points to say: ${p.swings}, ${h.swings}")
+        val skewed = pitchTrack(Arco.VibratoShape(Arco.HUMAN_RISE_SECONDS, 0.0, 0.0, Arco.VIBRATO_HUMAN.skew), 4.0)
+        val h = cycles(human, 0.9, 3.6)
+        val p = cycles(plain, 0.9, 3.6)
+        val k = cycles(skewed, 0.9, 3.6)
+        for ((name, c) in listOf("HUMAN" to h, "PLAIN" to p, "SKEWED, no drift" to k)) {
+            println("ARCO vibrato $name: ${c.maxima} maxima and ${c.minima} minima from 0.9 to 3.6 s, peaks differ x${f(c.peaks, 4)} (like with like), full cycles differ x${f(c.periods, 4)}")
+        }
+        val every = turns(skewed, 0.9, 3.6).map { abs(it.cents) }
+        println("ARCO vibrato SKEWED, no drift, the first version of the measure (every turning point against every other): peaks differ x${f(every.max() / every.min(), 4)}")
+        assertTrue(h.peaks >= 1.10, "the human swings differ by only ${f((h.peaks - 1) * 100, 1)} percent from one to the next in the same direction, under 10")
+        assertTrue(h.periods >= 1.05, "the human full cycles differ by only ${f((h.periods - 1) * 100, 1)} percent, under 5")
+        assertTrue(p.peaks < 1.01 && p.periods < 1.01, "the plain vibrato's swings differ by ${f((p.peaks - 1) * 100, 2)} percent and its cycles by ${f((p.periods - 1) * 100, 2)}: the measure cannot call a sine mechanical")
+        assertTrue(k.peaks < 1.01 && k.periods < 1.01, "the skewed wave with no drift is called varied (peaks x${f(k.peaks, 3)}, cycles x${f(k.periods, 3)}): the measure counts the lean as wander, so the human drift is not what passes it")
+        assertTrue(minOf(p.maxima, p.minima, h.maxima, h.minima, k.maxima, k.minima) > 12, "too few turning points to say: ${p.maxima} ${p.minima} ${h.maxima} ${h.minima} ${k.maxima} ${k.minima}")
 
         val loudest = maxCents(human, 1.2, 4.0)
         val early = maxCents(human, 0.0, 0.25)
@@ -1164,12 +1176,12 @@ class ArcoProductTest {
      * the vibrato switched off in the core (a vibrato spreads each of an A5's harmonics by far more than 8 Hz) from 1.0 s, a
      * 1.49 s window that is wholly sustain: no onset, no stop. The finished note of a hold of 0.59 s of bow (HOLD 0.26, the
      * longest with no vibrato) cannot be read this way at all, and the printed line says so: the window is longer than the note,
-     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1c saw 12.3 to 8.4 dB
+     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1c saw 12.4 to 8.6 dB
      * (CELLO; R1b's bite read 14.6 to 11.1) and 13.5 to 10.0 (ERHU) from 0.2 s to 0.4 s, which is the window and not the aliasing.
      *
-     * R1c saw 76.8 dB (CELLO C4, the series fitting at +0.25 c; R1b saw 76.7, before CELLO's bite grew) and 69.1 (ERHU A5, +0.5 c), 24 dB over the record's 45. The bar is 60, so a floor
-     * 9 dB worse than today's fails, and the record's 45 is met with 24 dB to spare. The control is the same render with white noise added at
-     * -55 dB of its own level, which read 56.3 and 55.7 dB (R1b: 56.6 and 55.7): it must fall under 60 (3.7 and 4.3 dB under it, 20 and 13 dB under the measurements), so the bar
+     * R1c saw 77.2 dB (CELLO C4, the series fitting at +0.5 c; R1b saw 76.7, before CELLO's bite grew) and 69.1 (ERHU A5, +0.5 c), 32 and 24 dB over the record's 45. The bar is 60, so a floor
+     * 9 dB worse than ERHU's today fails, and the record's 45 is met with 24 dB to spare at the least. The control is the same render with white noise added at
+     * -55 dB of its own level, which read 56.5 and 55.7 dB (R1b: 56.6 and 55.7): it must fall under 60 (3.5 and 4.3 dB under it, 21 and 13 dB under the measurements), so the bar
      * is one the measure can fail.
      */
     @Test
@@ -1268,7 +1280,7 @@ class ArcoProductTest {
      * the tail of the longer one counted as difference. BODY is the one a quiet engine loses first, so it is named: BODY from its
      * default 0.5 to 0.9 moves the note by 0.44 (CELLO) and 0.45 (ERHU), and from 0 to 1 by 0.92 and 0.92 (R1c's curve: 0.9 rings the box at 1.5 times the
      * string and 1 at 1.75; R1b's were 0.23 and 0.24, and 0.70 and 0.71). The printed line has the other four at
-     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.75 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
+     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.78 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
      * different attack, a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
@@ -1298,66 +1310,52 @@ class ArcoProductTest {
     private class Roll(val macros: Map<String, Float>, val lock: Double, val late: Int, val peak: Float, val finite: Boolean)
 
     /**
-     * Where a rolled note must have locked by, in seconds, and so where "late" begins: 2.0 s, the bar the lock-across-BOW test
-     * (in ArcoTest) holds CELLO to. R1c saw CELLO's slowest rolled lock without vibrato at 2.677 s (400 rolls over both temperatures, at temperature 1: one roll, G2 at
-     * BOW 0.909 and GRIP 0.473, a bite roll) and the slowest at temperature 0.35 at 1.83 s; R1b's slowest was 1.426 s at temperature 0.35 and 1.080 s at 1, and ERHU's is 0.329 s.
-     * The 3 s bow leaves 0.32 s of watching after CELLO's slowest lock. The temperature 0.35 rolls are drawn
-     * around the factory presets, so a change to the roster re-rolls them and can move the slowest lock: the range the test prints is where to look.
+     * Where a rolled note must have locked by, in seconds: 2.0 s, the bar the lock-across-BOW test (in ArcoTest) holds CELLO to. R1c saw CELLO's slowest rolled lock without vibrato at 1.906 s (at temperature 1; 400 rolls over both temperatures)
+     * and the slowest at temperature 0.35 at 1.723 s; R1b's slowest was 1.426 s (at temperature 0.35) and 1.080 s (at 1), and ERHU's is 0.329 s. The bound leaves 0.094 s over R1c's slowest CELLO roll, the
+     * thinnest margin in this file (R1b's left 0.57 s), and the 3 s bow leaves 1.0 s of watching after the bound. The temperature 0.35 rolls are drawn around the factory presets, so a change to the roster re-rolls them
+     * and can move the slowest lock: the range the test prints is where to look.
      */
     private val lockBySeconds = 2.0
 
-    /** The bow-on of a rolled note, in seconds: the bow the lock must happen inside of. */
-    private val rollGateSeconds = 3f
-
-    /** A roll's lock is late when it never comes, comes after [lockBySeconds], or leaves a gap that is not one period after it. */
-    private fun late(r: Roll) = r.lock < 0 || r.lock > lockBySeconds || r.late != 0
-
-    /** A roll with a bite: BOW above [Arco.OVERSHOOT_FROM], where the stroke's overshoot starts. At or under it there is none and the stroke is R1b's. */
-    private fun biteRoll(r: Roll) = r.macros.getValue("BOW") > Arco.OVERSHOOT_FROM
-
     /**
-     * The raw core of a rolled sound, bowed for [rollGateSeconds] (long enough for the slowest lock measured, 2.677 s, with 0.32 s of watching
+     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, with a second of watching
      * after it), read on the bow-point tap. With the vibrato off by default: whether the string locks is a property of the window the macros draw,
-     * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window,
-     * and [overshoot] replaces the bite the BOW would have chosen (1 is no bite at all).
+     * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
      */
-    private fun roll(voice: ArcoVoice, macros: Map<String, Float>, vibrato: Boolean = false, pressure: Float? = null, cornerHz: Float? = null, overshoot: Float? = null): Roll {
+    private fun roll(voice: ArcoVoice, macros: Map<String, Float>, vibrato: Boolean = false, pressure: Float? = null, cornerHz: Float? = null): Roll {
         val m = Arco.settled(macros, voice)
         val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
-        val bowPoint = FloatArray(((rollGateSeconds + 4f) * rawRate).toInt())
-        val core = Arco.bow(voice, hz, m, rawRate, pressure = pressure, cornerHz = cornerHz, overshoot = overshoot, gateSeconds = rollGateSeconds, vibrato = vibrato, bowPointOut = bowPoint)
-        val end = (rollGateSeconds * rawRate).toInt()
+        val gate = 3f
+        val bowPoint = FloatArray(((gate + 4f) * rawRate).toInt())
+        val core = Arco.bow(voice, hz, m, rawRate, pressure = pressure, cornerHz = cornerHz, gateSeconds = gate, vibrato = vibrato, bowPointOut = bowPoint)
+        val end = (gate * rawRate).toInt()
         val slips = ArcoMeasure.slipTimes(bowPoint, end)
         val late = ArcoMeasure.uncleanGaps(slips, hz, lockBySeconds)
         return Roll(m, ArcoMeasure.lockSeconds(bowPoint, end, hz), late, BowMeter.maxAbs(core), core.all { it.isFinite() })
     }
 
+    /** A roll that does not lock into one slip a period by [lockBySeconds]: it never locks, locks late, or leaves a gap that is not one period after it. */
+    private fun late(r: Roll) = r.lock < 0 || r.lock > lockBySeconds || r.late != 0
+
     /**
      * SCRAMBLE is the engine's dice (`Arco.scramble`, around a factory preset, then HOLD held short of the LOOP step), and an
      * identity claim rests on it: every roll is a bowed note, whatever the dice said. 200 rolls per voice are bowed on the raw
-     * core for 3 s (a bow-on long enough for the lock) at temperature 0.35 and 200 more at temperature 1, where every macro is a uniform roll
-     * and the dice go to the corners no preset visits. Every roll, of both voices, must be finite, stay under `Strings.Bow.RAW_PEAK_CEILING`, never land on the LOOP step (HOLD under 0.99)
-     * and lock into one slip a period before its bow ends (`ArcoMeasure.lockSeconds` finds the lock: at least 0 and under the 3 s gate). Past that the claim is the voice's own:
-     *  - ERHU's is strict, as it was in R1b: every roll locks at or before 2.0 s (`late` counts the gaps that are not one period after the same 2.0 s, none for a roll that
-     *    locks in time, and it is what the HOLE line prints for one that does not).
-     *  - CELLO's is that at most 1 percent of the rolls at each temperature (2 of 200) lock after 2.0 s or leave an unclean gap after it, and that every one that does is a bite roll,
-     *    BOW above [Arco.OVERSHOOT_FROM], where the bite is the only reason: the rolls at or under it (no bite: R1b's stroke) are held to the strict 2.0 s bar with none late. A roll that is late is
-     *    played again with the bite removed (`overshoot = 1`, which also takes the pressure's share of the bite away) and must then lock in time with none late, so the bite is shown to be the
-     *    reason and not assumed. A late roll is a hole in the window and is listed with its macros on an `ARCO scramble HOLE` line, and not hidden.
+     * core for 3 s (a bow-on long enough for the lock) and each must: lock into one slip a period (`ArcoMeasure.lockSeconds` finds
+     * the lock, at or before 2.0 s; `late` counts the gaps that are not one period after the same 2.0 s, none for a roll that locks
+     * in time, and it is what the HOLE line prints for one that does not), stay under `Strings.Bow.RAW_PEAK_CEILING` and be finite,
+     * and never land on the LOOP step (HOLD under 0.99). Then 200 more per voice at temperature 1, where every macro is a uniform roll
+     * and the dice go to the corners no preset visits. The claim is strict for both voices, as it was in R1b. A roll that does not lock
+     * is a hole in the window and is listed with its macros, and not hidden.
      *
-     * R1c saw, with CELLO's bite at 2.5 times for 120 ms with a quarter of it in the pressure: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.139 to 2.677 s (CELLO) and 0.051 to 0.329 s (ERHU)
-     * (R1b's CELLO went to 1.426 s); at temperature 0.35 the slowest CELLO lock is 1.83 s and none of the 200 is late, at temperature 1 one of the 200 is
-     * (TUNE 0.2848, BOW 0.9089, GRIP 0.4733, BODY 0.0237, HOLD 0.6773: G2, a bite of 2.1 times, locking at 2.677 s of a 3 s bow, with 194 unclean gaps after the 2.0 s mark), and with the bite removed it locks at 0.382 s with none.
-     * Of the CELLO rolls 91 (temperature 0.35) and 99 (temperature 1) have no bite and none of them is late; ERHU has none late at either temperature. The worst raw peak is
-     * 0.800 (CELLO) and 0.616 (ERHU) against the ceiling of 1.25, and no roll reaches the LOOP step. Why the claim is restated and the engine not hunted for another bite: the lock is chaotic in
-     * the macros, and R1c searched a few hundred bite settings for one under which all 400 CELLO rolls still lock by 2.0 s while the bite is loud enough to hear. Every setting with an audible bite had at least one such roll
-     * (2.75 times for 60 ms had D#2 at 2.051 s; 3.0 times for 60 ms had none past 1.585 s but never locked SHORT STAB in its stab), and which roll it is moves with every change to the numbers, so "none" was a property of settings too weak
-     * to hear. What survives is what the evidence supports: the late rolls are all bite rolls, at most 1 percent of them, and they still lock before the bow ends. The lock is read on the string, which the vibrato never
-     * touches (the vibrato is a read-back delay of the finished wave), so it is the same with the vibrato on or off.
+     * R1c saw no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.139 to 1.906 s (CELLO; the slowest at temperature 0.35 is 1.723 s) and 0.051 to 0.329 s (ERHU), so the 2.0 s bound
+     * leaves 0.094 s over the slowest CELLO roll (R1b's slowest was 1.426 s, 0.57 s of room: CELLO's bigger bite, 3.0 times for 60 ms with half of its share in the pressure, took most of it, and that margin is the one that moves with the engine),
+     * the worst raw peak is 0.833 (CELLO, temperature 0.35) and 0.616 (ERHU) against the ceiling of 1.25 (R1b's 0.80 and 0.62), and no roll reaches the LOOP step. The lock is read on the string, which the vibrato never
+     * touches (the vibrato is a read-back delay of the finished wave), so it is the same with the vibrato on or off. The bite is chaotic in the macros, and this is the bar that decides between bites: R1c's interim settings,
+     * 2.75 times for 60 ms and 2.5 times for 120 ms with a quarter of the share in the pressure, each left one of the 400 CELLO rolls late (at 2.05 s and at 2.68 s), which is why the bite's three numbers were searched against this test as well as the roster's other bars.
      *
-     * The controls are two strings outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period, at the default BOW 0.5 (no bite: R1c saw it never lock, with 196 unclean gaps) and
-     * at BOW 1 (a bite: it locks at 2.263 s with 45 unclean gaps). Both must be late by the judgement the rolls go through, so it can fail; the first must also be refused by the strict clause (late, and not a bite roll), so a late roll with no bite is not
-     * excused, and the second is the one the clause tolerates (late, and a bite roll), so the split can tell the two apart.
+     * The control is a string outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period, at the default BOW 0.5 (no bite: R1c saw it never lock, with 196 unclean gaps).
+     * It must fail the judgement the rolls go through, so the judgement can fail. (The same string at BOW 1 is not a control for the shipped bite: the bite's climb of the pressure carries it toward the window and it locks at 1.085 s with none late,
+     * where the interim 2.5 times, 120 ms bite left it locking at 2.263 s with 45 unclean gaps, so it is only the BOW 0.5 string, which has no bite to rescue it, that tests the judgement.)
      */
     @Test
     fun `every scramble roll locks into one slip, is unclipped, and never lands on the LOOP step`() {
@@ -1365,12 +1363,10 @@ class ArcoProductTest {
         val outside = roll(ArcoVoice.CELLO, macros(ArcoVoice.CELLO, tune = 0f), pressure = 0.6f, cornerHz = Strings.Bow.BRIDGE_HZ)
         val outsideBite = roll(ArcoVoice.CELLO, macros(ArcoVoice.CELLO, tune = 0f, bow = 1f), pressure = 0.6f, cornerHz = Strings.Bow.BRIDGE_HZ)
         println(
-            "ARCO scramble control: CELLO C2 at pressure 0.6 and the full corner locks at ${f(outside.lock, 3)} s, ${outside.late} unclean gaps after $lockBySeconds s (a bite roll: ${biteRoll(outside)}); " +
-                "at BOW 1 it locks at ${f(outsideBite.lock, 3)} s, ${outsideBite.late} unclean gaps (a bite roll: ${biteRoll(outsideBite)})",
+            "ARCO scramble control: CELLO C2 at pressure 0.6 and the full corner locks at ${f(outside.lock, 3)} s, ${outside.late} unclean gaps after $lockBySeconds s; " +
+                "at BOW 1 (printed, not a control) it locks at ${f(outsideBite.lock, 3)} s, ${outsideBite.late} unclean gaps",
         )
         if (!late(outside)) problems += "a string outside the window passes the lock check, so the check cannot fail"
-        if (biteRoll(outside)) problems += "the control string's BOW is over ${Arco.OVERSHOOT_FROM}: it is a bite roll, so the strict clause could not refuse it"
-        if (!late(outsideBite) || !biteRoll(outsideBite)) problems += "the bite control is not a late bite roll, so the split between the clauses cannot be told"
         for (voice in ArcoVoice.entries) for ((temperature, seed) in listOf(0.35f to 20260930, 1f to 20261001)) {
             val rolls = (0 until 200).map { i -> Arco.scramble(voice, Random(seed + i), temperature) }
             for (macros in rolls) {
@@ -1378,31 +1374,16 @@ class ArcoProductTest {
                 if (macros.getValue("HOLD") > Arco.SCRAMBLE_HOLD_CEILING || Arco.isLoop(macros.getValue("HOLD"))) problems += "$voice scrambled into the LOOP step: $macros"
             }
             val results = rolls.parMap { roll(voice, it) }
-            val lateRolls = results.filter { late(it) }
-            val noBite = results.filter { !biteRoll(it) }
+            val bad = results.filter { late(it) }
             val locks = results.map { it.lock }.filter { it >= 0 }
             println(
                 "ARCO scramble $voice temperature $temperature: ${results.size} rolls, lock ${f(locks.min(), 3)} .. ${f(locks.max(), 3)} s, " +
-                    "worst raw peak ${f(results.maxOf { it.peak }.toDouble(), 3)} (ceiling ${Strings.Bow.RAW_PEAK_CEILING}), ${lateRolls.size} that do not lock by $lockBySeconds s, " +
-                    "${noBite.size} with no bite (BOW at most ${Arco.OVERSHOOT_FROM}), ${lateRolls.count { !biteRoll(it) }} of those late",
+                    "worst raw peak ${f(results.maxOf { it.peak }.toDouble(), 3)} (ceiling ${Strings.Bow.RAW_PEAK_CEILING}), ${bad.size} that do not lock by $lockBySeconds s",
             )
-            for (r in lateRolls) println("ARCO scramble HOLE $voice: lock ${f(r.lock, 3)} s, ${r.late} unclean gaps late, ${r.macros}")
+            for (r in bad) println("ARCO scramble HOLE $voice: lock ${f(r.lock, 3)} s, ${r.late} unclean gaps late, ${r.macros}")
             if (!results.all { it.finite }) problems += "$voice: a roll went non-finite"
             for (r in results) if (r.peak >= Strings.Bow.RAW_PEAK_CEILING) problems += "$voice: raw peak ${r.peak} is over the ceiling at ${r.macros}"
-            for (r in results) if (r.lock < 0 || r.lock >= rollGateSeconds) problems += "$voice temperature $temperature: a roll never locks inside its $rollGateSeconds s bow (lock ${f(r.lock, 3)} s): ${r.macros}"
-            if (voice == ArcoVoice.ERHU) {
-                if (lateRolls.isNotEmpty()) problems += "$voice temperature $temperature: ${lateRolls.size} of ${results.size} rolls do not lock into one slip by $lockBySeconds s: ${lateRolls.take(3).map { it.macros }}"
-            } else {
-                if (lateRolls.size > results.size / 100) problems += "$voice temperature $temperature: ${lateRolls.size} of ${results.size} rolls lock after $lockBySeconds s (over 1 percent): ${lateRolls.take(3).map { it.macros }}"
-                val noBiteLate = lateRolls.filter { !biteRoll(it) }
-                if (noBiteLate.isNotEmpty()) problems += "$voice temperature $temperature: ${noBiteLate.size} rolls with no bite lock after $lockBySeconds s: ${noBiteLate.take(3).map { it.macros }}"
-                if (noBite.size < 10) problems += "$voice temperature $temperature: only ${noBite.size} rolls have no bite, too few for the strict clause to mean anything"
-                val withoutBite = lateRolls.map { roll(voice, it.macros, overshoot = 1f) }
-                for ((r, again) in lateRolls.zip(withoutBite)) {
-                    println("ARCO scramble HOLE $voice with the bite removed: lock ${f(again.lock, 3)} s, ${again.late} unclean gaps late (with the bite ${f(r.lock, 3)} s)")
-                    if (late(again)) problems += "$voice temperature $temperature: a late roll is still late with the bite removed, so the bite is not the only reason: ${r.macros}"
-                }
-            }
+            if (bad.isNotEmpty()) problems += "$voice temperature $temperature: ${bad.size} of ${results.size} rolls do not lock into one slip: ${bad.take(3).map { it.macros }}"
         }
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }

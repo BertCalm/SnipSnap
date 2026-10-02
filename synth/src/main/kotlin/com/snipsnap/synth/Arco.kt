@@ -285,7 +285,7 @@ object Arco {
      * most 1.44 s, the lock grid 1.47 s, C3 at 434 ms against 448, 22 of 25 default-note steps locking, none of the 400 scramble rolls late, and the
      * steps where BOW 1 is not sooner than BOW 0 down to F#2, G2 and G#2. **What no setting kept** is the BOW 1 stab at SHORT STAB's macros and the
      * figure the owner marked YES (C3 C3 E-flat3 G3 G3 E-flat3 C3, 0.3 s each): R1b's bite was so small that E-flat3 locked at 0.189 s, and every
-     * setting loud enough to hear (all 80 run against it) leaves it a three-slip scrape for the whole stab; the HOLD-0 stab count of 25 steps
+     * setting that kept the other bars (19 of the 80 searched in the last round passed them, and each of the 19 loses it) leaves it a three-slip scrape for the whole stab; the HOLD-0 stab count of 25 steps
      * locking by 0.255 s falls from 10 to 6.
      */
     const val OVERSHOOT_FROM = 0.5f

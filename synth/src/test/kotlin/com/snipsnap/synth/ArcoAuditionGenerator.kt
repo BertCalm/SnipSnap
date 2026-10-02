@@ -117,7 +117,7 @@ object ArcoAuditionGenerator {
         Knob(
             "BOW",
             { "a slow bow: ${ms(Arco.attackSeconds(0f))} ms to full speed, no bite" },
-            { voice -> "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.overshootMax(voice))} times too fast and presses at the top of the window" + (if (Arco.biteSeconds(voice) > 0f) ", and the bite takes at least ${ms(Arco.biteSeconds(voice))} ms to settle" else "") },
+            { voice -> "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.overshootMax(voice))} times too fast, ${pressureClause(Arco.bitePressure(voice))}, and the excess relaxes with a ${ms(maxOf(Arco.attackSeconds(1f), Arco.biteSeconds(voice)))} ms time constant" },
         ),
         Knob(
             "GRIP",
@@ -131,6 +131,28 @@ object ArcoAuditionGenerator {
             { "the longest one-shot: ${f1(Arco.holdSeconds(Arco.SCRAMBLE_HOLD_CEILING))} s of bow, with its vibrato; one step above is the LOOP, which has its own clip" },
         ),
     )
+
+    /** What the bite's pressure share does, as the BOW line says it: ERHU's is all of it (as it was), CELLO's is [Arco.BITE_PRESSURE_CELLO] of it. */
+    private fun pressureClause(share: Float) = when {
+        share >= 1f -> "all of it presses the string toward the top of the window"
+        abs(share - 0.5f) < 1e-4f -> "half of it presses the string toward the top of the window"
+        abs(share - 0.25f) < 1e-4f -> "a quarter of it presses the string toward the top of the window"
+        else -> "${(share * 100).roundToInt()} percent of it presses the string toward the top of the window"
+    }
+
+    /** The vibrato clip's caption, from the voice's own finger ([Arco.vibratoShapeFor]): CELLO's drifts and swells in, ERHU's is the constant sine. */
+    private fun vibratoCaption(voice: ArcoVoice): String {
+        val shape = Arco.vibratoShapeFor(voice)
+        val cents = Arco.VIBRATO_MAX_CENTS.roundToInt()
+        val hz = f1(Arco.VIBRATO_HZ.toFloat())
+        val full = f1(Arco.VIBRATO_HOLD_FULL_SECONDS)
+        return if (shape.rateWander == 0.0 && shape.depthWander == 0.0 && shape.skew == 0.0) {
+            "the default: ${f1(HELD_SECONDS)} s of bow with the baked-in rock of $cents cents at $hz Hz, the same at every swing, fully in at $full s of bow"
+        } else {
+            "the default: ${f1(HELD_SECONDS)} s of bow with the baked-in vibrato of $cents cents at $hz Hz on average, the rate drifting by up to ${(shape.rateWander * 100).roundToInt()} percent " +
+                "and the depth by up to ${(shape.depthWander * 100).roundToInt()} percent, a slight lean, a swell-in over ${f1(shape.riseSeconds.toFloat())} s, fully in at $full s of bow"
+        }
+    }
 
     private val BODIES = mapOf(
         ArcoVoice.CELLO to "a bow dragging the bottom string, into a box with an air hum and a plate hum: a low, slow-building, woody note",
@@ -361,7 +383,7 @@ object ArcoAuditionGenerator {
     private val PATTERN_FRAMES = 2 * STEPS_PER_BAR * EIGHTH_FRAMES
 
     /** (eighth note from the top of bar one, MIDI note): C3, C3, E-flat3 in bar one, G3, G3, E-flat3, C3 in bar two. */
-    private val STAB_FIGURE = listOf(0 to 48, 3 to 48, 6 to 51, 8 to 55, 11 to 55, 14 to 51, 15 to 48)
+    internal val STAB_FIGURE = listOf(0 to 48, 3 to 48, 6 to 51, 8 to 55, 11 to 55, 14 to 51, 15 to 48)
 
     /** THUMP's snare on beats two and four of both bars. */
     private val SNARE_STEPS = listOf(2, 6, 10, 14)
@@ -538,7 +560,7 @@ object ArcoAuditionGenerator {
             groups += Group(
                 "VIBRATO: THE HELD NOTE, WITH AND WITHOUT", key = true,
                 clips = listOf(
-                    Clip("vibrato_on", "VIBRATO ON", "the default: ${f1(HELD_SECONDS)} s of bow with the baked-in rock of " + Arco.VIBRATO_MAX_CENTS.roundToInt() + " cents at " + f1(Arco.VIBRATO_HZ.toFloat()) + " Hz, fully in at " + f1(Arco.VIBRATO_HOLD_FULL_SECONDS) + " s of bow"),
+                    Clip("vibrato_on", "VIBRATO ON", vibratoCaption(voice)),
                     Clip("vibrato_off", "VIBRATO OFF", "the same note on a plain string: the same bow, the same box, no pitch movement"),
                 ),
             )

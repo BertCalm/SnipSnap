@@ -146,7 +146,7 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible, input[type="range"]:focus-visible {
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible {
     outline: 2px solid var(--cyan);
     outline-offset: 2px;
   }
@@ -426,7 +426,7 @@
     font-family: var(--f-pixel);
     font-size: 8px;
     letter-spacing: .5px;
-    color: var(--ink3);
+    color: var(--ink2);
     line-height: 1.6;
   }
 
@@ -464,7 +464,7 @@
 
   <div class="guide lcd">
     <div class="hd">HOW TO LISTEN</div>
-    <p>Three cards, a before and a now for each, labelled: this is not a blind test. BEFORE is what you heard last time, made again; NOW is the engine as it stands. Every clip is dry and mono at one loudness, so BODY 1 NOW is a bigger box beside a quieter string, not a louder clip. Mark each YES, NEARLY or NO. <b>When it is NEARLY, say which way and roughly how much, in a few words, in the notes box</b>: that is the information the boxes did not have last round.</p>
+    <p>Four cards, a before and a now for each, labelled: this is not a blind test. BEFORE is the old engine made again (at the default note, what you heard last time; the BOW card's root clips and the stab's hits are the same recipe at notes you did not hear); NOW is the engine as it stands. Every clip is dry and mono at one loudness, so BODY 1 NOW is a bigger box beside a quieter string, not a louder clip. Mark each YES, NEARLY or NO. <b>When it is NEARLY, say which way and roughly how much, in a few words, in the notes box</b>: that is the information the boxes did not have last round.</p>
     <p><b>Nothing here has been heard by anyone yet.</b> The numbers above were measured, and a measurement can say a bite is bigger, not that it sounds like a bow.</p>
   </div>
 
@@ -473,7 +473,7 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>FOUR QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>FIVE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
       <label class="ask" for="q_body">1 &middot; BODY: is the new box (<span data-fact="bodyTop">1.75</span> times the string at BODY 1) right, too much, or still not enough? CELLO and ERHU. If it is NEARLY, which way and how much, in a few words?</label>
@@ -484,23 +484,27 @@
       <textarea id="q_bow" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_vibrato">3 &middot; VIBRATO: does NOW sound like a player and not a machine? Is the swell-in right? If it is NEARLY, which way and how much, in a few words?</label>
+      <label class="ask" for="q_stab">3 &middot; THE STAB: the figure you marked YES now has the bigger bite, and <span data-fact="stabLost">E-flat3</span> goes from a note to a scrape. Is the extra bite worth that? If not, which way, in a few words?</label>
+      <textarea id="q_stab" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_vibrato">4 &middot; VIBRATO: does NOW sound like a player and not a machine? Is the swell-in right? If it is NEARLY, which way and how much, in a few words?</label>
       <textarea id="q_vibrato" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_else">4 &middot; Anything else</label>
+      <label class="ask" for="q_else">5 &middot; Anything else</label>
       <textarea id="q_else" placeholder="&hellip;"></textarea>
     </div>
     <div class="actions">
       <button class="primary" id="save" type="button">Save verdict</button>
-      <div class="status lcd" id="status"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+      <div class="status lcd" id="status" role="status" aria-live="polite"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
     </div>
   </div>
 
   <div class="foot">
     RENDERED BY generateArcoRetune &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
     EVERY ARCO CLIP IS DRY &middot; THE FIRST ROUND'S VERDICTS ARE KEPT UNDER THEIR OWN NAME AND THIS PAGE DOES NOT TOUCH THEM &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
   </div>
 </div>
 
@@ -525,7 +529,7 @@
     { v: 'no',     cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'NO' }
   ];
 
-  var QUESTIONS = ['q_body', 'q_bow', 'q_vibrato', 'q_else'];
+  var QUESTIONS = ['q_body', 'q_bow', 'q_stab', 'q_vibrato', 'q_else'];
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, cls, text) {
@@ -536,7 +540,7 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_body: '', q_bow: '', q_vibrato: '', q_else: '' } };
+  var state = { overall: { q_body: '', q_bow: '', q_stab: '', q_vibrato: '', q_else: '' } };
 
   // ---------- build ----------
   var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +

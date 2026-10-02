@@ -25,7 +25,7 @@ import kotlin.test.fail
  * where that is decided.
  *
  * The numbers below are what R1b's roster pass saw (the engine at the work-in-progress commit), each
- * with its bar beside it, and R1c's where its retunes moved them (CELLO's bite of 2.5 times for 120 ms with a quarter of it in the pressure, SHORT STAB's BOW of 0.8, the box that
+ * with its bar beside it, and R1c's where its retunes moved them (CELLO's bite of 3.0 times for 60 ms with half of it in the pressure, GRIT BOW's BOW of 0.65, the box that
  * rings louder than the string above BODY 0.5, and MOON FIDDLE's BODY of 0.8): the KDoc says which.
  */
 class ArcoPresetsTest {
@@ -169,8 +169,10 @@ class ArcoPresetsTest {
      * (at 0.85 the louder box brought it to 522 ms, 22 ms from the line, which is why the roster's BODY went down a notch).
      *
      * The knife-edge is real, which is why the bars exist: at CELLO's G#2 a swell of BOW 0.3 and BODY 1 at HOLD 0.44 is TONAL at
-     * GRIP 0.7 (575 ms past its peak) and KICK at GRIP 0.5 (441 ms; R1b's box, only as loud as the string, read 580 and 488), so CINEMA LOW sits at A#2,
-     * where the same swell stays clear of the line (627 ms, R1c and R1b alike).
+     * GRIP 0.7 (575 ms past its peak) and KICK at GRIP 0.5 (441 ms), so CINEMA LOW sits at A#2,
+     * where the same swell stays clear of the line (627 ms, R1c and R1b alike). R1b's own render of that swell (its bite, its plain vibrato and its box at the macro BODY, the four-override recipe
+     * [the G sharp 2 swell is on the classifier's line, and what moved it] plays) read 569 and 557 ms, TONAL at both GRIPs: the KICK at GRIP 0.5 is new with R1c, a 57 ms margin over the line turned into 59 ms under it, and it is the louder box
+     * and the drifting vibrato together that did it, neither alone (that test prints all four readings).
      */
     @Test
     fun `every classifier reading keeps its room to its line`() {
@@ -198,6 +200,62 @@ class ArcoPresetsTest {
         }
         println("ARCO roster room: PERC low <= ${f2(worstLow)} (line 0.55, bar $MAX_PERC_LOW), PERC high <= ${f2(worstHigh)} (line 0.5, bar $MAX_PERC_HIGH), TONAL decay >= ${leastDecay.roundToInt()} ms (line 500, bar $MIN_TONAL_DECAY_MS), longest ${f2(longest)} s (line 1.5, bar $MAX_ONE_SHOT_SECONDS)")
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
+    }
+
+    /** The classifier's reading of [snip]: the class it files it as and how long it rings past its peak, in ms. */
+    private fun heardOf(snip: Snip): Pair<DrumClass, Int> {
+        val features = FeatureExtractor.extract(snip)
+        return Classifier.classify(features).drumClass to features.decayMs.roundToInt()
+    }
+
+    /**
+     * A CELLO note as R1b rendered it, from the engine's own probe overrides: the bite `overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f` and the vibrato `vibratoShape = Arco.VIBRATO_PLAIN` (R1b's sine), through R1b's box,
+     * `Strings.bodyRing` at the macro BODY itself (not [Arco.boxAmountFor] of it) cut to the string's length, then the same finish. With [humanVibrato] true the vibrato is CELLO's own, and with [louderBox] true the box is R1c's:
+     * one or the other put back, which is how the test says which of the two moved a reading.
+     */
+    private fun r1bRender(macros: Map<String, Float>, humanVibrato: Boolean = false, louderBox: Boolean = false): Snip {
+        val voice = ArcoVoice.CELLO
+        val m = Arco.settled(macros, voice)
+        val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val raw = Arco.bow(voice, hz, m, rate, overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f, vibratoShape = if (humanVibrato) null else Arco.VIBRATO_PLAIN)
+        val boxed = if (louderBox) {
+            Arco.withBody(raw, voice, m.getValue("BODY"), rate)
+        } else {
+            val rung = Strings.bodyRing(raw, Arco.bodyFor(voice), m.getValue("BODY"), rate, Arco.BODY_CEILING_SECONDS)
+            if (rung.size == raw.size) rung else rung.copyOf(raw.size)
+        }
+        return Snip(Arco.finish(boxed, rate), channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    /**
+     * The knife edge under CINEMA LOW's A#2, read four ways. A CELLO swell at G#2 (BOW 0.3, BODY 1, HOLD 0.44) is on the classifier's KICK/TONAL line: TONAL when it rings more than 500 ms past its peak, KICK when it does not,
+     * and GRIP moves it across. R1c saw, at GRIP 0.7 then 0.5, the shipped engine at 575 ms (TONAL) and 441 ms (KICK); R1b's exact render (`r1bRender`: its bite, its plain vibrato, its box at the macro BODY) at 569 ms (TONAL) and 557 ms
+     * (TONAL), so **R1b's swell was TONAL at both GRIPs and R1c's GRIP 0.5 swell is KICK**: the knife edge is newly created at that macro setting, 57 ms over the line before and 59 ms under it now. Neither change alone does it: at GRIP 0.5 R1c's louder
+     * box with R1b's plain vibrato reads 575 ms (TONAL; 563 ms at GRIP 0.7) and R1b's box with CELLO's drifting vibrato 557 ms (TONAL; 569 ms at GRIP 0.7, the same as R1b's own at both GRIPs: the drift alone moves nothing here), and the two
+     * together read 441 ms, so it is the louder box and the drifting vibrato together that move the swell across (BOW 0.3 has no bite, so the bite is not in it), and not by adding two small moves (+18 ms and 0). The reading is a decay time
+     * measured on a note that is nearly on the line, and a change that does nothing alone can move it together with another. That is why CINEMA LOW sits at A#2, where the same swell is clear of the line (627 ms), and why the classifier
+     * reading is a bar of the roster and not a thing to leave to chance. Asserted: the shipped swell at GRIP 0.7 is TONAL and at GRIP 0.5 reads a choking class (the corner the roster stays out of, so it is a control for
+     * [the classifier guard can fail - the corners the roster avoids do read as drums]), and R1b's render is TONAL at both. The other two are printed.
+     */
+    @Test
+    fun `the G sharp 2 swell is on the classifier's line, and what moved it`() {
+        val g2 = Arco.defaults(ArcoVoice.CELLO) + mapOf("TUNE" to 8f / 24, "BOW" to 0.3f, "BODY" to 1f, "HOLD" to 0.44f)
+        val rows = listOf(0.7f, 0.5f).map { grip ->
+            val macros = g2 + ("GRIP" to grip)
+            grip to listOf(
+                "shipped" to heardOf(Arco.render(ArcoVoice.CELLO, macros)),
+                "R1b exact" to heardOf(r1bRender(macros)),
+                "R1c box, plain vibrato" to heardOf(r1bRender(macros, louderBox = true)),
+                "R1b box, human vibrato" to heardOf(r1bRender(macros, humanVibrato = true)),
+            )
+        }
+        for ((grip, readings) in rows) println("ARCO G#2 swell GRIP $grip: " + readings.joinToString(", ") { (name, r) -> "$name ${r.first} ${r.second} ms" })
+        val shipped = rows.map { (_, readings) -> readings[0].second }
+        val r1b = rows.map { (_, readings) -> readings[1].second }
+        assertEquals(DrumClass.TONAL, shipped[0].first, "the shipped G#2 swell at GRIP 0.7 reads ${shipped[0]}, not TONAL")
+        assertTrue(shipped[1].first in choking, "the shipped G#2 swell at GRIP 0.5 reads ${shipped[1]}, not a drum: the line this test names has moved")
+        for ((i, grip) in listOf(0.7f, 0.5f).withIndex()) assertEquals(DrumClass.TONAL, r1b[i].first, "R1b's G#2 swell at GRIP $grip reads ${r1b[i]}, not TONAL")
     }
 
     private class Control(val voice: ArcoVoice, val label: String, val macros: Map<String, Float>)
@@ -362,16 +420,34 @@ class ArcoPresetsTest {
         }
     }
 
+    /** A note is a scrape when it never locks into one slip a period, or locks only in the last tenth of its bow-on: that is no note, the string is in its scratch for all but a moment. */
+    private fun scrapes(lockSeconds: Double, holdSeconds: Float) = lockSeconds < 0 || lockSeconds >= 0.9 * holdSeconds
+
+    /**
+     * When the string locks, in seconds, on the raw core at [macros] on [voice] (-1 never): the roster's own reading ([Reading.lockSeconds]) for macros that are not a preset's, and, with [r1bBite], for the CELLO stroke
+     * as R1b played it (`overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f`).
+     */
+    private fun lockOf(voice: ArcoVoice, macros: Map<String, Float>, r1bBite: Boolean = false): Double {
+        val m = Arco.settled(macros, voice)
+        val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
+        val bowPoint = FloatArray((Arco.renderFrames(voice, m) + 3) * Dsp.OVERSAMPLE)
+        if (r1bBite) Arco.bow(voice, hz, m, bowPointOut = bowPoint, overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f) else Arco.bow(voice, hz, m, bowPointOut = bowPoint)
+        return ArcoMeasure.lockSeconds(bowPoint, (Arco.holdSeconds(m.getValue("HOLD")) * ArcoMeasure.RATE).toInt(), hz)
+    }
+
     /**
      * What the roster says about each note's character, held to the raw bow at the preset's own macros. R1c saw: every
-     * one-shot but DRY SCRAPE lock into one slip a period inside its bow-on time (the latest, relative to its bow, is GRIT BOW at 0.43 s of 0.58, 0.74 of its bow, where the bar is 0.85, that is 0.49 s:
-     * 63 ms of room, and R1b's at 0.42 s; then SHORT STAB at 0.21 s of 0.30, 0.70 of its bow, the bar 0.255 s: about 45 ms of room, and R1b's bite had it at 0.19 s at the BOW 0.9 it was then written at;
-     * HORSEHAIR is at 0.23 s of 0.62),
-     * DRY SCRAPE never does in its 0.34 s (at E2, below G#2, the scratch outlasts a short bow),
-     * and GRIT BOW locks no earlier than 0.3 s (R1c saw 0.43 s, R1b 0.42 s), so its first stretch is a scratch (the bar is 0.3 s). The locked ones are the
-     * negative control for the scrape and the other way round (a stab on A3 locks at 0.21 s, so DRY SCRAPE moved up there would
-     * fail its clause): either claim failing means a preset stopped being what its name says. CELLO's bite of 2.5 times for 120 ms with a quarter of it in the pressure, with SHORT STAB's BOW at 0.8,
-     * is what keeps SHORT STAB under its bar: at BOW 0.9 the stab no longer locks inside its 0.30 s with this bite (the comment in [ArcoPresets]), and the earlier 3.0 times for 60 ms never locked it in its stab at all.
+     * one-shot but DRY SCRAPE lock into one slip a period inside its bow-on time (the latest, relative to its bow, is GRIT BOW at 0.45 s of 0.58, 0.78 of its bow, where the bar is 0.85, that is 0.49 s:
+     * about 40 ms of room, and R1b's was 0.42 s at the BOW 0.85 it was then written at; then SHORT STAB at 0.22 s of 0.30, the bar 0.255 s: about 35 ms of room, and R1b's stroke had it at 0.19 s at the same BOW 0.9;
+     * HORSEHAIR is at 0.15 s of 0.62). DRY SCRAPE is a scrape: R1b read it never locking in its 0.34 s (-1; at E2, below G#2, the scratch outlasts a short bow), and R1c reads it locking at 0.33 s, in the last
+     * 10 ms of the 0.34 s, so it is still a scrape in all but its last moment (R1c's bigger bite lets it lock at the very end) and the clause is "never locks, or locks no earlier than 0.9 of its bow-on" (0.31 s), which both
+     * engines meet. GRIT BOW locks no earlier than 0.3 s (R1c saw 0.45 s, R1b 0.42 s), so its first stretch is a scratch (the bar is 0.3 s). The clean presets are the
+     * negative control for the scrape clause and the other way round: SHORT STAB, a stab on A3 of the same short bow-on, locks at 0.22 s, and DRY SCRAPE moved up there would fail its clause (it must scrape: 0.9 of 0.30 s is 0.27 s,
+     * and the test asserts that SHORT STAB is not a scrape by that clause); either claim failing means a preset stopped being what its name says.
+     *
+     * SHORT STAB is at its authored BOW 0.9 and locks at 0.22 s (R1b's stroke, 0.19 s); the interim bite (3.0 times for 60 ms with all of its share in the pressure) never locked it in its stab at all. GRIT BOW is
+     * re-authored to BOW 0.65, because at its authored BOW 0.85 the shipped bite no longer locks it inside its bow (R1c saw it never lock in the 0.58 s; at 0.65 it locks at 0.45 s, and R1b's stroke at 0.65 never locks, so the preset's BOW and the
+     * bite are one pair: both are printed below). It is the one preset whose BOW moved.
      */
     @Test
     fun `the scrapes scrape and the clean presets lock`() {
@@ -379,7 +455,7 @@ class ArcoPresetsTest {
         for (r in readings.filter { !it.loop }) {
             println("ARCO lock ${r.label} ${noteName(r.midi)} bow-on=${f2(r.holdSeconds)}s lock=${f2(r.lockSeconds)}s cents=${r.cents?.let { f2(it) } ?: "-"}")
             if (r.preset.name == "DRY SCRAPE") {
-                if (r.lockSeconds >= 0) problems += "${r.label} locked at ${f2(r.lockSeconds)} s: it is no longer a scrape"
+                if (!scrapes(r.lockSeconds, r.holdSeconds)) problems += "${r.label} locked at ${f2(r.lockSeconds)} s of ${f2(r.holdSeconds)} s, before 0.9 of its bow-on (${f2(0.9 * r.holdSeconds)} s): it is no longer a scrape"
             } else if (r.lockSeconds < 0) {
                 problems += "${r.label} never locks into one slip a period in its ${f2(r.holdSeconds)} s"
             } else if (r.lockSeconds > 0.85 * r.holdSeconds) {
@@ -388,6 +464,18 @@ class ArcoPresetsTest {
         }
         val grit = readings.first { it.preset.name == "GRIT BOW" }
         if (grit.lockSeconds < 0.3) problems += "GRIT BOW locks at ${f2(grit.lockSeconds)} s, too early to be a scratch"
+        val gritAuthored = lockOf(ArcoVoice.CELLO, grit.preset.macros + ("BOW" to 0.85f))
+        println("ARCO lock GRIT BOW as R1b authored it, at BOW 0.85 (bow-on ${f2(grit.holdSeconds)}s): lock=${if (gritAuthored < 0) "never" else "${f2(gritAuthored)}s"}; at the shipped BOW ${grit.preset.macros["BOW"]}: ${f2(grit.lockSeconds)}s")
+        val gritR1b = lockOf(ArcoVoice.CELLO, grit.preset.macros + ("BOW" to 0.85f), r1bBite = true)
+        println("ARCO lock GRIT BOW as R1b shipped it (BOW 0.85, R1b's stroke): ${if (gritR1b < 0) "never" else "${f2(gritR1b)}s"}")
+        for (name in listOf("SHORT STAB", "GRIT BOW", "DRY SCRAPE")) {
+            val r = readings.first { it.preset.name == name }
+            val r1b = lockOf(ArcoVoice.CELLO, r.preset.macros, r1bBite = true)
+            println("ARCO lock $name with R1b's stroke at the shipped macros (BOW ${r.preset.macros["BOW"]}): ${if (r1b < 0) "never" else "${f2(r1b)}s"}; shipped ${f2(r.lockSeconds)}s of ${f2(r.holdSeconds)}s")
+        }
+        val stab = readings.first { it.preset.name == "SHORT STAB" }
+        println("ARCO lock the control: SHORT STAB scrapes by the DRY SCRAPE clause: ${scrapes(stab.lockSeconds, stab.holdSeconds)} (lock ${f2(stab.lockSeconds)}s of ${f2(stab.holdSeconds)}s, the clause is at ${f2(0.9 * stab.holdSeconds)}s)")
+        if (scrapes(stab.lockSeconds, stab.holdSeconds)) problems += "SHORT STAB scrapes by the clause DRY SCRAPE is held to (lock ${f2(stab.lockSeconds)} s of ${f2(stab.holdSeconds)} s), so the clause cannot tell a note from a scrape"
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }
 

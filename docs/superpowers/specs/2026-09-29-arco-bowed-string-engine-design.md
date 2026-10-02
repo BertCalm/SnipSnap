@@ -2105,7 +2105,7 @@ BOW 1 stab the owner marked YES** (below). What it found:
   which R1b read as never locking, now locks at 0.33 s of its 0.34 s bow, a scrape in all but its last 10 ms (its test clause says so).
   **What no setting kept is the BOW 1 stab the owner marked YES**: SHORT STAB's macros at BOW 1 on the figure's three pitches (C3 C3 E-flat3 G3 G3
   E-flat3 C3, 0.3 s each). G3 still locks (0.21 s, R1b 0.214), C3 never did, and **E-flat3 locked at 0.189 s and is now a three-slip scrape for its
-  whole 0.3 s**; every one of the 80 settings run against it loses it, because R1b's bite was so small that this note only just locked. Across all 25
+  whole 0.3 s**; of the 80 settings in the last search, 19 kept the other bars and every one of those 19 loses it, because R1b's bite was so small that this note only just locked. Across all 25
   steps the HOLD-0 stab at GRIP 0.7 and BOW 1 that locks by 0.255 s falls from 10 steps to 6. The retune page plays that stab before and now so the
   owner can say whether the extra bite is worth it.
 * **The vibrato.** R1b's was a constant: every swing 10.0 or 10.1 cents at exactly 6.10 Hz, which is what "mechanical" measures as. CELLO's is
