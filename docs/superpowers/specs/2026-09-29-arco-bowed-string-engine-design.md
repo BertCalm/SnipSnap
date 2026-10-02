@@ -2128,11 +2128,13 @@ overall "Yes" (ERHU's unchanged control was not marked). *BODY*: the note reads 
 still seems a little light", so **BODY is still nearly, and 1.75 times was not the fix**. Two of the three R1c changes are therefore settled
 and the third is open.
 
-Why BODY 1 moved so little is not a constant to turn up further, and the measurement says so. On the BODY page's CELLO note the band
-levels of BODY 1 NOW against the default (0.5) are +1.0 dB at 50-150 Hz, +0.4 at 150-300 and **-3.6 to -5.0 dB at 300 Hz and above**, and ERHU's differ
-by 3 dB at most: the louder box shows as a darker note after the render's level conditioning, not as a box. The working diagnosis, to be measured
+Why BODY 1 moved so little is not a constant to turn up further, and the measurement says so. On the BODY page's CELLO note (C3, 130.75 Hz) the band
+levels of BODY 1 NOW against the default (0.5) are +1.0 dB at 50-150 Hz, +0.4 at 150-300 and **-3.6 to -5.0 dB at 300 Hz and above**; ERHU's note
+(C5, 524 Hz) moves +0.7 dB at 300-600 Hz, -1.2 at 600-1200, -3.7 at 1.2-2.4 kHz and -4.6 at 2.4-5 kHz (its two bands under 300 Hz hold almost
+nothing). The three clips of each voice have the same RMS (0.0253 to 0.0259 CELLO, 0.0259 ERHU), so what the louder box adds the top of the note
+gives up: it shows as a darker note, not as a box. The working diagnosis, to be measured
 and not yet settled: CELLO's box is two narrow resonances (104 Hz, Q about 12; 220 Hz, Q about 18, so about 9 and 12 Hz wide), and a held bowed
-note is only harmonics, so a resonance changes the steady note only where a harmonic lands within a few hertz of it (on C3 the nearest partials are 27 and 42 Hz away),
+note is only harmonics, so a resonance changes the steady note only where a harmonic lands within a few hertz of it (on C3 the first partial is 27 Hz from the 104 Hz resonance and the second 42 Hz from the 220 Hz one),
 and it otherwise rings only in the transients and is cut where the string ends. A box that a held note can hear has to be broad (a spectral
 envelope the harmonics sit on), which is a different shape and not a bigger amount. That is R1d's work, and **the first thing it must keep is
 everything at or under BODY 0.5, to the bit** (the default, the kit and the presets that were not heard to be wrong).
