@@ -104,7 +104,7 @@ class GyreTest {
     fun `every note ends at least 40 dB under its attack`() {
         // The hand lands at HOLD and the render runs until both the played and the sympathetic
         // strings are END_DB down, so no note is cut off while it still rings. Measured: the quietest
-        // ending is 43.1 dB under its attack (before the hand: 14 dB, FLICK at HOLD 0 and SYMPATHY 1).
+        // ending is 50.0 dB under its attack (before the hand: 14 dB, FLICK at HOLD 0 and SYMPATHY 1).
         var worst = Double.POSITIVE_INFINITY
         for (voice in GyreVoice.entries) for (tune in floatArrayOf(0f, 1f)) for (sym in floatArrayOf(0f, 1f)) for (spin in floatArrayOf(0f, 1f))
             for (body in floatArrayOf(0f, 1f)) for (hold in floatArrayOf(0f, 1f)) {

@@ -661,7 +661,15 @@ from the round-one plan. Where the build differs from the plan, and why:
   than their own ring). The note renders until both are 45 dB down, so its length is still exact
   and `drumClassFor`'s LOOP line still follows from the macros. Neither of the plan's two options was
   needed: the tail follows the sympathetic strings' release, not their full ring, so FLICK stays a
-  short pluck (1.35 s at its defaults, PERC).
+  short pluck (1.35 s at its defaults, PERC; 1.46 s once SYMPATHY sets the ring-out, below).
+
+- **SYMPATHY sets how long the sympathetic strings ring out** (the owner's first listen: "FLICK
+  sympathy cuts at the end"). With a fixed 0.3 s release, FLICK's cloud at SYMPATHY 1 was choked
+  about 10 dB every 50 ms once the hand landed, which read as a cut. The release now rises from the
+  voice's own tight value at SYMPATHY 0 to a 2.5 s t60 at SYMPATHY 1, along SYMPATHY squared, so the
+  low end stays tight (FLICK's default tail 0.33 s, the note 1.46 s, still PERC) and the top rings
+  out (FLICK at SYMPATHY 1: a 3.0 s note, falling about 1 dB every 50 ms at its end). HALO, at its
+  default SYMPATHY of 0.8, rings out a little longer than before (4.87 s at C4).
 
 Measured on the built code (`GyreTest`, 14 tests):
 
@@ -669,14 +677,14 @@ Measured on the built code (`GyreTest`, 14 tests):
 |---|---|
 | An unplucked string answers | FLICK −25.1 dB, HALO −17.0 dB; exactly 0 with the bridge off |
 | Never grows (every macro at both ends, both voices, 64 renders) | nothing after the attack louder than it; raw peak at most 0.767 |
-| Every note ends quietly (the same 64) | the quietest ending 43.1 dB under its attack |
+| Every note ends quietly (the same 64) | the quietest ending 50.0 dB under its attack |
 | In tune (25 notes × BODY 0, 0.5, 1 × SYMPATHY 0, 1) | worst 3.3 cents |
 | Never an octave low (SYMPATHY 1, BODY 1, all 25 notes) | every note within its own semitone |
 | The rotor is not tremolo | 102 Hz centroid swing against 0.5 Hz |
 | SYMPATHY's shares | −21.7, −11.8, −7.8, −4.8 dB at 0.3, 0.6, 0.8, 1 |
 | No drum class (2 voices × 25 notes × 6 corners) | none; worst share over 2 kHz 0.39 |
 | SPIN's low end | 0.02 against 0: 1.9% (FLICK), 2.7% (HALO) |
-| Render time, warmed, desktop JVM | FLICK 72 ms for 1.35 s; HALO 213 ms for 4.39 s |
+| Render time, warmed, desktop JVM (before the ring-out change) | FLICK 72 ms for 1.35 s; HALO 213 ms for 4.39 s |
 
 The audition (`./gradlew :synth:generateGyreAudition`, 76 clips in eight sections) is the gate.
 Nothing in GYRE has been heard yet.

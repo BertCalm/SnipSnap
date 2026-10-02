@@ -106,15 +106,24 @@ object Gyre {
     /**
      * HOLD is when a hand lands on the instrument. The played strings are stopped to this t60
      * (every string the same time, whatever its pitch: a per-period loss would let a low string
-     * linger), over [DAMPER_RAMP_SECONDS]; the sympathetic strings get a lighter touch, to their
-     * voice's [Shape.releaseT60]. The render ends when both are [END_DB] down, so no note is cut
-     * off while it still rings (measured before this: FLICK at HOLD 0 and SYMPATHY 1 ended only
-     * 14 dB under its attack).
+     * linger), over [DAMPER_RAMP_SECONDS]; the sympathetic strings get a lighter touch, which
+     * SYMPATHY lengthens ([releaseT60]). The render ends when both are [END_DB] down, so no note
+     * is cut off while it still rings (measured before this: FLICK at HOLD 0 and SYMPATHY 1 ended
+     * only 14 dB under its attack).
      */
     const val DAMPER_T60 = 0.15f
     const val DAMPER_RAMP_SECONDS = 0.02f
     const val HOLD_SHORT_SECONDS = 0.25f
     const val END_DB = 45f
+
+    /**
+     * How long the sympathetic strings ring out after the hand lands, at SYMPATHY 1: more sympathy
+     * is more ring. From the voice's own tight release ([Shape.releaseT60]) at SYMPATHY 0 to this,
+     * along SYMPATHY^[RING_OUT_CURVE], so the low end stays tight and the top rings out. The owner's
+     * first listen: FLICK's cloud at SYMPATHY 1 sounded cut off when the hand stopped it in 0.3 s.
+     */
+    const val RING_OUT_T60 = 2.5f
+    const val RING_OUT_CURVE = 2f
 
     /** HOLD's top step, reserved for the LOOP (R4). */
     const val LOOP_THRESHOLD = 0.99f
@@ -197,8 +206,15 @@ object Gyre {
     /** The sympathetic strings' ring at [sympathy], before the hand lands. */
     internal fun sympathyT60(sympathy: Float): Float = Dsp.lin(sympathy, SYMPATHY_T60_LOW, SYMPATHY_T60_HIGH)
 
-    /** The sympathetic strings' t60 once the hand has landed: the lighter touch, never longer than their own ring. */
-    internal fun releaseT60(voice: GyreVoice, sympathy: Float): Float = minOf(shapeOf(voice).releaseT60, sympathyT60(sympathy))
+    /**
+     * The sympathetic strings' t60 once the hand has landed: the voice's tight release at SYMPATHY 0,
+     * rising to [RING_OUT_T60] at SYMPATHY 1, and never longer than their own ring before the hand.
+     */
+    internal fun releaseT60(voice: GyreVoice, sympathy: Float): Float {
+        val tight = shapeOf(voice).releaseT60
+        val s = sympathy.coerceIn(0f, 1f).pow(RING_OUT_CURVE)
+        return minOf(tight + (maxOf(RING_OUT_T60, tight) - tight) * s, sympathyT60(sympathy))
+    }
 
     /** After the hand lands, until the slower of the two is [END_DB] down. */
     internal fun tailSeconds(voice: GyreVoice, sympathy: Float): Float =
