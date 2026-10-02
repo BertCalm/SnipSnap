@@ -2088,15 +2088,21 @@ R1c changes those three and nothing else, and what it found:
   classifier ring of 813 ms to 522 ms, 22 ms from the 500 ms line, so that preset's BODY is 0.8.
 * **The bite.** R1b's CELLO bite changed the first 200 ms by 0.3 to 0.5 dB against the same stroke with none, at F2, C3, G3 and C4: the
   bite relaxed on the attack's own 10 ms time constant (a hump of 1.3 times the velocity, over in 20 ms), and a bass string needs many
-  milliseconds to build a period, so it never showed. The bite is per voice now (ERHU's numbers are as they were): CELLO's is
-  `OVERSHOOT_MAX_CELLO` 2.75 times and takes at least `BITE_SECONDS_CELLO` 60 ms to relax, which is +2.5, +2.5, +3.4 and +2.9 dB over the
-  first 200 ms at those notes. **The first guess, 3.0 times with 60 ms, was wrong**: it never locked SHORT STAB in its 0.30 s stab. The
-  pair was searched: twenty settings (2.0 to 3.0 times, 30 to 80 ms) against the overshoot row (every TUNE step at BOW 1, within 1.5 s),
-  SHORT STAB (within 85 percent of its bow-on, 0.255 s), GRIT BOW (between 0.3 and 0.49 s), the lock across BOW (2.0 s) and a gain of at
-  least 1.5 dB at four notes. Five pass the locks; 2.5 times with 30 ms is too weak at three notes; 2.75 times with 60 ms was taken for its
-  gain (2.5 to 3.4 dB) and because it keeps a margin on every bar (the row at most 1.36 s). 2.5 and 2.75 times with 80 ms bite harder (2.8
-  to 3.4 and 3.1 to 3.7 dB) but leave the row at 1.46 s and SHORT STAB 5 ms from its bar. The lock is chaotic in the pair (a small step moves a cell by half a second), which is why it was
-  searched, not tuned by ear, and why the margins at SHORT STAB (0.24 s of 0.255) and GRIT BOW (0.45 s of 0.49) are thin.
+  milliseconds to build a period, so it never showed. The bite is per voice now (ERHU's numbers are as they were) and CELLO's has three:
+  `OVERSHOOT_MAX_CELLO` 2.5 times the velocity, `BITE_SECONDS_CELLO` at least 120 ms to relax, and `BITE_PRESSURE_CELLO` a quarter of the
+  bite's share pressing the string toward the window's top (the rest of the accent is speed alone). That is +3.5, +3.2, +4.1 and +3.1 dB over
+  the first 200 ms at those notes. **Two earlier settings were wrong, and each broke something the first measurement had not looked at.**
+  3.0 times with 60 ms never locked SHORT STAB in its 0.30 s stab (ArcoPresetsTest). 2.75 times with 60 ms passed the roster but put
+  C3's BOW 1 at 600 ms to reach 90 percent against BOW 0's 448 (the onset claim): the pressure's climb held the low notes in their scratch.
+  The answer was to take most of the pressure out of the bite. A few hundred settings (velocity 2.0 to 3.5 times, 20 to 140 ms, a pressure
+  share of 0 to 1) were run against the overshoot row (1.5 s), the onset claim, the roster's locks, the lock across BOW (2.0 s) and the
+  gain; with a quarter of the share in the pressure, 2.5 times for 120 ms keeps them all with room (the row at most 1.31 s, the lock grid
+  1.41 s, C3 at 342 ms against 448, GRIT BOW and HORSEHAIR as authored) and SHORT STAB's BOW is 0.8, not 0.9. **The one claim nothing kept**
+  is that all 400 of the scramble test's random CELLO rolls lock within 2 s: any bite loud enough to hear leaves about one roll in 200 at
+  temperature 1 that does not (G2, BOW 0.91, GRIP 0.47, locking at 2.68 s of a 3 s bow), and which roll it is moves with every change to
+  the numbers, because the lock is chaotic in the macros. The claim is restated: at most 2 of 200 per temperature, each a roll with a bite
+  (BOW above 0.5), every one locking before its bow ends; the rolls with no bite are still held to the strict bar, and ERHU's is unchanged.
+  The cluster of low notes (E2 to A2, C#3 to E3) where BOW 1 is not sooner than BOW 0 at the default GRIP is wider than R1b's (F2 to A2).
 * **The vibrato.** R1b's was a constant: every swing 10.0 or 10.1 cents at exactly 6.10 Hz, which is what "mechanical" measures as. CELLO's is
   now `VIBRATO_HUMAN`: the rate drifts by up to 7 percent, the depth by up to 18 percent (each a sum of three slow sines at periods that
   share none, so it is never the same twice and still a pure function of time: no seed), the swing leans a little (a second harmonic) and it
