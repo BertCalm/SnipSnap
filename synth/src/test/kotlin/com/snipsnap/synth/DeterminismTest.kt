@@ -140,14 +140,17 @@ class DeterminismTest {
     // canary does not guard a seed. It guards the float arithmetic of the friction table and the bow loop (a
     // limit cycle, where one stray last bit in a sum would move a note's lock-in and every sample after it), and
     // the measure-and-correct LOOP retune, which renders the bow, reads its own output twice and renders it
-    // again at a corrected pitch. One per voice, one-shot and LOOP. And a held 3 s note, which carries the vibrato at
-    // its full depth: CELLO's finger drifts in rate, depth and lean, each a sum of three slow sines of the time since the
+    // again at a corrected pitch. One per voice, one-shot and LOOP. And a one-shot at BOW 1, where R1c's bite (CELLO's
+    // longer and bigger one included) is at its largest: the bite is a relaxation in the velocity and the pressure, one more sum
+    // in the loop. And a held 3 s note, which carries the vibrato at its full depth: CELLO's finger drifts in rate, depth and lean, each a sum of three slow sines of the time since the
     // vibrato began and nothing else, so it needs no seed either and must not read a clock or a random draw.
     @Test
     fun `ARCO is byte-identical across renders, both voices, one-shot and loop`() {
         for (voice in ArcoVoice.entries) {
             val shot = ArcoPatch("Canary", voice, Arco.defaults(voice))
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot")
+            val bitten = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("BOW" to 1f))
+            assertContentEquals(bitten.render().samples, bitten.render().samples, "$voice one-shot at BOW 1, with the bite at its largest")
             val held = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("HOLD" to Arco.holdFor(3f)))
             assertContentEquals(held.render().samples, held.render().samples, "$voice held 3 s, with the vibrato at full depth")
             val loop = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("HOLD" to 1f))

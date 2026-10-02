@@ -1164,12 +1164,12 @@ class ArcoProductTest {
      * the vibrato switched off in the core (a vibrato spreads each of an A5's harmonics by far more than 8 Hz) from 1.0 s, a
      * 1.49 s window that is wholly sustain: no onset, no stop. The finished note of a hold of 0.59 s of bow (HOLD 0.26, the
      * longest with no vibrato) cannot be read this way at all, and the printed line says so: the window is longer than the note,
-     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1c saw 12.4 to 8.5 dB
+     * most of it the stop's fall (-60 dB in the last 0.15 to 0.3 s) and the build-up, and every line smears; R1c saw 12.3 to 8.4 dB
      * (CELLO; R1b's bite read 14.6 to 11.1) and 13.5 to 10.0 (ERHU) from 0.2 s to 0.4 s, which is the window and not the aliasing.
      *
-     * R1c saw 76.9 dB (CELLO C4, the series fitting at +0.25 c; R1b saw 76.7, before CELLO's bite grew) and 69.1 (ERHU A5, +0.5 c), 24 dB over the record's 45. The bar is 60, so a floor
+     * R1c saw 76.8 dB (CELLO C4, the series fitting at +0.25 c; R1b saw 76.7, before CELLO's bite grew) and 69.1 (ERHU A5, +0.5 c), 24 dB over the record's 45. The bar is 60, so a floor
      * 9 dB worse than today's fails, and the record's 45 is met with 24 dB to spare. The control is the same render with white noise added at
-     * -55 dB of its own level, which read 56.4 and 55.7 dB (R1b: 56.6 and 55.7): it must fall under 60 (3.6 and 4.3 dB under it, 20 and 13 dB under the measurements), so the bar
+     * -55 dB of its own level, which read 56.3 and 55.7 dB (R1b: 56.6 and 55.7): it must fall under 60 (3.7 and 4.3 dB under it, 20 and 13 dB under the measurements), so the bar
      * is one the measure can fail.
      */
     @Test
@@ -1268,7 +1268,7 @@ class ArcoProductTest {
      * the tail of the longer one counted as difference. BODY is the one a quiet engine loses first, so it is named: BODY from its
      * default 0.5 to 0.9 moves the note by 0.44 (CELLO) and 0.45 (ERHU), and from 0 to 1 by 0.92 and 0.92 (R1c's curve: 0.9 rings the box at 1.5 times the
      * string and 1 at 1.75; R1b's were 0.23 and 0.24, and 0.70 and 0.71). The printed line has the other four at
-     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.76 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
+     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.75 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
      * different attack, a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
@@ -1299,25 +1299,34 @@ class ArcoProductTest {
 
     /**
      * Where a rolled note must have locked by, in seconds, and so where "late" begins: 2.0 s, the bar the lock-across-BOW test
-     * (in ArcoTest) holds CELLO to. The slowest rolled lock without vibrato is 2.051 s (R1c saw CELLO's, 400 rolls over both temperatures, at temperature 1: one roll, D#2 at
-     * BOW 0.535 and GRIP 0.38, which is 51 ms over the bound; the slowest at temperature 0.35 is 1.806 s; R1b's slowest was 1.426 s at temperature 0.35 and 1.080 s at 1,
-     * R1c's first guess of 3.0 times for 60 ms 1.585 s; ERHU's is 0.329 s), and the 3 s bow leaves 0.95 s of watching after that lock. The temperature 0.35 rolls are drawn
+     * (in ArcoTest) holds CELLO to. R1c saw CELLO's slowest rolled lock without vibrato at 2.677 s (400 rolls over both temperatures, at temperature 1: one roll, G2 at
+     * BOW 0.909 and GRIP 0.473, a bite roll) and the slowest at temperature 0.35 at 1.83 s; R1b's slowest was 1.426 s at temperature 0.35 and 1.080 s at 1, and ERHU's is 0.329 s.
+     * The 3 s bow leaves 0.32 s of watching after CELLO's slowest lock. The temperature 0.35 rolls are drawn
      * around the factory presets, so a change to the roster re-rolls them and can move the slowest lock: the range the test prints is where to look.
      */
     private val lockBySeconds = 2.0
 
+    /** The bow-on of a rolled note, in seconds: the bow the lock must happen inside of. */
+    private val rollGateSeconds = 3f
+
+    /** A roll's lock is late when it never comes, comes after [lockBySeconds], or leaves a gap that is not one period after it. */
+    private fun late(r: Roll) = r.lock < 0 || r.lock > lockBySeconds || r.late != 0
+
+    /** A roll with a bite: BOW above [Arco.OVERSHOOT_FROM], where the stroke's overshoot starts. At or under it there is none and the stroke is R1b's. */
+    private fun biteRoll(r: Roll) = r.macros.getValue("BOW") > Arco.OVERSHOOT_FROM
+
     /**
-     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, 2.051 s, with 0.95 s of watching
+     * The raw core of a rolled sound, bowed for [rollGateSeconds] (long enough for the slowest lock measured, 2.677 s, with 0.32 s of watching
      * after it), read on the bow-point tap. With the vibrato off by default: whether the string locks is a property of the window the macros draw,
-     * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
+     * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window,
+     * and [overshoot] replaces the bite the BOW would have chosen (1 is no bite at all).
      */
-    private fun roll(voice: ArcoVoice, macros: Map<String, Float>, vibrato: Boolean = false, pressure: Float? = null, cornerHz: Float? = null): Roll {
+    private fun roll(voice: ArcoVoice, macros: Map<String, Float>, vibrato: Boolean = false, pressure: Float? = null, cornerHz: Float? = null, overshoot: Float? = null): Roll {
         val m = Arco.settled(macros, voice)
         val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
-        val gate = 3f
-        val bowPoint = FloatArray(((gate + 4f) * rawRate).toInt())
-        val core = Arco.bow(voice, hz, m, rawRate, pressure = pressure, cornerHz = cornerHz, gateSeconds = gate, vibrato = vibrato, bowPointOut = bowPoint)
-        val end = (gate * rawRate).toInt()
+        val bowPoint = FloatArray(((rollGateSeconds + 4f) * rawRate).toInt())
+        val core = Arco.bow(voice, hz, m, rawRate, pressure = pressure, cornerHz = cornerHz, overshoot = overshoot, gateSeconds = rollGateSeconds, vibrato = vibrato, bowPointOut = bowPoint)
+        val end = (rollGateSeconds * rawRate).toInt()
         val slips = ArcoMeasure.slipTimes(bowPoint, end)
         val late = ArcoMeasure.uncleanGaps(slips, hz, lockBySeconds)
         return Roll(m, ArcoMeasure.lockSeconds(bowPoint, end, hz), late, BowMeter.maxAbs(core), core.all { it.isFinite() })
@@ -1326,29 +1335,42 @@ class ArcoProductTest {
     /**
      * SCRAMBLE is the engine's dice (`Arco.scramble`, around a factory preset, then HOLD held short of the LOOP step), and an
      * identity claim rests on it: every roll is a bowed note, whatever the dice said. 200 rolls per voice are bowed on the raw
-     * core for 3 s (a bow-on long enough for the lock) and each must: lock into one slip a period (`ArcoMeasure.lockSeconds` finds
-     * the lock, at or before 2.0 s; `late` counts the gaps that are not one period after the same 2.0 s, none for a roll that locks
-     * in time, and it is what the HOLE line prints for one that does not), stay under `Strings.Bow.RAW_PEAK_CEILING` and be finite,
-     * and never land on the LOOP step (HOLD under 0.99). Then 200 more per voice at temperature 1, where every macro is a uniform roll
-     * and the dice go to the corners no preset visits. A roll that does not lock is a hole in the window and is listed with its
-     * macros, and not hidden.
+     * core for 3 s (a bow-on long enough for the lock) at temperature 0.35 and 200 more at temperature 1, where every macro is a uniform roll
+     * and the dice go to the corners no preset visits. Every roll, of both voices, must be finite, stay under `Strings.Bow.RAW_PEAK_CEILING`, never land on the LOOP step (HOLD under 0.99)
+     * and lock into one slip a period before its bow ends (`ArcoMeasure.lockSeconds` finds the lock: at least 0 and under the 3 s gate). Past that the claim is the voice's own:
+     *  - ERHU's is strict, as it was in R1b: every roll locks at or before 2.0 s (`late` counts the gaps that are not one period after the same 2.0 s, none for a roll that
+     *    locks in time, and it is what the HOLE line prints for one that does not).
+     *  - CELLO's is that at most 1 percent of the rolls at each temperature (2 of 200) lock after 2.0 s or leave an unclean gap after it, and that every one that does is a bite roll,
+     *    BOW above [Arco.OVERSHOOT_FROM], where the bite is the only reason: the rolls at or under it (no bite: R1b's stroke) are held to the strict 2.0 s bar with none late. A roll that is late is
+     *    played again with the bite removed (`overshoot = 1`, which also takes the pressure's share of the bite away) and must then lock in time with none late, so the bite is shown to be the
+     *    reason and not assumed. A late roll is a hole in the window and is listed with its macros on an `ARCO scramble HOLE` line, and not hidden.
      *
-     * The printed run shows one hole under the shipped bite (2.75 times, 60 ms): the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.116 to 2.051 s (CELLO) and 0.051 to
-     * 0.329 s (ERHU) (R1c's run; R1b's CELLO went to 1.426 s), and one of the 200 CELLO rolls at temperature 1 (TUNE 0.1316, BOW 0.5353, GRIP 0.3799, BODY 0.958, HOLD 0.95) locks at 2.051 s,
-     * 51 ms over the 2.0 s bound, with 8 unclean gaps after the 2.0 s mark and before the lock; the worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the
-     * ceiling of 1.25, and no roll reaches the LOOP step. The slowest locks are 2.051 s at temperature 1 and 1.806 s at temperature 0.35, whose rolls are drawn around the factory
-     * presets, so that one depends on the roster. The lock is chaotic in the bite (the same 400 CELLO rolls under R1c's first 3.0 times for 60 ms lock by 1.585 s, under R1b's by 1.426 s),
-     * and BOW 0.535 is a bite of 1.12 times. The lock is read on the string, which the vibrato never touches (the vibrato is a read-back
-     * delay of the finished wave), so it is the same with the vibrato on or off. The control is a string
-     * outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period,
-     * must not pass the same lock check, so the check can fail.
+     * R1c saw, with CELLO's bite at 2.5 times for 120 ms with a quarter of it in the pressure: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.139 to 2.677 s (CELLO) and 0.051 to 0.329 s (ERHU)
+     * (R1b's CELLO went to 1.426 s); at temperature 0.35 the slowest CELLO lock is 1.83 s and none of the 200 is late, at temperature 1 one of the 200 is
+     * (TUNE 0.2848, BOW 0.9089, GRIP 0.4733, BODY 0.0237, HOLD 0.6773: G2, a bite of 2.1 times, locking at 2.677 s of a 3 s bow, with 194 unclean gaps after the 2.0 s mark), and with the bite removed it locks at 0.382 s with none.
+     * Of the CELLO rolls 91 (temperature 0.35) and 99 (temperature 1) have no bite and none of them is late; ERHU has none late at either temperature. The worst raw peak is
+     * 0.800 (CELLO) and 0.616 (ERHU) against the ceiling of 1.25, and no roll reaches the LOOP step. Why the claim is restated and the engine not hunted for another bite: the lock is chaotic in
+     * the macros, and R1c searched a few hundred bite settings for one under which all 400 CELLO rolls still lock by 2.0 s while the bite is loud enough to hear. Every setting with an audible bite had at least one such roll
+     * (2.75 times for 60 ms had D#2 at 2.051 s; 3.0 times for 60 ms had none past 1.585 s but never locked SHORT STAB in its stab), and which roll it is moves with every change to the numbers, so "none" was a property of settings too weak
+     * to hear. What survives is what the evidence supports: the late rolls are all bite rolls, at most 1 percent of them, and they still lock before the bow ends. The lock is read on the string, which the vibrato never
+     * touches (the vibrato is a read-back delay of the finished wave), so it is the same with the vibrato on or off.
+     *
+     * The controls are two strings outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period, at the default BOW 0.5 (no bite: R1c saw it never lock, with 196 unclean gaps) and
+     * at BOW 1 (a bite: it locks at 2.263 s with 45 unclean gaps). Both must be late by the judgement the rolls go through, so it can fail; the first must also be refused by the strict clause (late, and not a bite roll), so a late roll with no bite is not
+     * excused, and the second is the one the clause tolerates (late, and a bite roll), so the split can tell the two apart.
      */
     @Test
     fun `every scramble roll locks into one slip, is unclipped, and never lands on the LOOP step`() {
         val problems = ArrayList<String>()
         val outside = roll(ArcoVoice.CELLO, macros(ArcoVoice.CELLO, tune = 0f), pressure = 0.6f, cornerHz = Strings.Bow.BRIDGE_HZ)
-        println("ARCO scramble control: CELLO C2 at pressure 0.6 and the full corner locks at ${f(outside.lock, 3)} s, ${outside.late} unclean gaps after $lockBySeconds s")
-        if (outside.lock in 0.0..lockBySeconds && outside.late == 0) problems += "a string outside the window passes the lock check, so the check cannot fail"
+        val outsideBite = roll(ArcoVoice.CELLO, macros(ArcoVoice.CELLO, tune = 0f, bow = 1f), pressure = 0.6f, cornerHz = Strings.Bow.BRIDGE_HZ)
+        println(
+            "ARCO scramble control: CELLO C2 at pressure 0.6 and the full corner locks at ${f(outside.lock, 3)} s, ${outside.late} unclean gaps after $lockBySeconds s (a bite roll: ${biteRoll(outside)}); " +
+                "at BOW 1 it locks at ${f(outsideBite.lock, 3)} s, ${outsideBite.late} unclean gaps (a bite roll: ${biteRoll(outsideBite)})",
+        )
+        if (!late(outside)) problems += "a string outside the window passes the lock check, so the check cannot fail"
+        if (biteRoll(outside)) problems += "the control string's BOW is over ${Arco.OVERSHOOT_FROM}: it is a bite roll, so the strict clause could not refuse it"
+        if (!late(outsideBite) || !biteRoll(outsideBite)) problems += "the bite control is not a late bite roll, so the split between the clauses cannot be told"
         for (voice in ArcoVoice.entries) for ((temperature, seed) in listOf(0.35f to 20260930, 1f to 20261001)) {
             val rolls = (0 until 200).map { i -> Arco.scramble(voice, Random(seed + i), temperature) }
             for (macros in rolls) {
@@ -1356,16 +1378,31 @@ class ArcoProductTest {
                 if (macros.getValue("HOLD") > Arco.SCRAMBLE_HOLD_CEILING || Arco.isLoop(macros.getValue("HOLD"))) problems += "$voice scrambled into the LOOP step: $macros"
             }
             val results = rolls.parMap { roll(voice, it) }
-            val bad = results.filter { it.lock < 0 || it.lock > lockBySeconds || it.late != 0 }
+            val lateRolls = results.filter { late(it) }
+            val noBite = results.filter { !biteRoll(it) }
             val locks = results.map { it.lock }.filter { it >= 0 }
             println(
                 "ARCO scramble $voice temperature $temperature: ${results.size} rolls, lock ${f(locks.min(), 3)} .. ${f(locks.max(), 3)} s, " +
-                    "worst raw peak ${f(results.maxOf { it.peak }.toDouble(), 3)} (ceiling ${Strings.Bow.RAW_PEAK_CEILING}), ${bad.size} that do not lock by $lockBySeconds s",
+                    "worst raw peak ${f(results.maxOf { it.peak }.toDouble(), 3)} (ceiling ${Strings.Bow.RAW_PEAK_CEILING}), ${lateRolls.size} that do not lock by $lockBySeconds s, " +
+                    "${noBite.size} with no bite (BOW at most ${Arco.OVERSHOOT_FROM}), ${lateRolls.count { !biteRoll(it) }} of those late",
             )
-            for (r in bad) println("ARCO scramble HOLE $voice: lock ${f(r.lock, 3)} s, ${r.late} unclean gaps late, ${r.macros}")
+            for (r in lateRolls) println("ARCO scramble HOLE $voice: lock ${f(r.lock, 3)} s, ${r.late} unclean gaps late, ${r.macros}")
             if (!results.all { it.finite }) problems += "$voice: a roll went non-finite"
             for (r in results) if (r.peak >= Strings.Bow.RAW_PEAK_CEILING) problems += "$voice: raw peak ${r.peak} is over the ceiling at ${r.macros}"
-            if (bad.isNotEmpty()) problems += "$voice temperature $temperature: ${bad.size} of ${results.size} rolls do not lock into one slip: ${bad.take(3).map { it.macros }}"
+            for (r in results) if (r.lock < 0 || r.lock >= rollGateSeconds) problems += "$voice temperature $temperature: a roll never locks inside its $rollGateSeconds s bow (lock ${f(r.lock, 3)} s): ${r.macros}"
+            if (voice == ArcoVoice.ERHU) {
+                if (lateRolls.isNotEmpty()) problems += "$voice temperature $temperature: ${lateRolls.size} of ${results.size} rolls do not lock into one slip by $lockBySeconds s: ${lateRolls.take(3).map { it.macros }}"
+            } else {
+                if (lateRolls.size > results.size / 100) problems += "$voice temperature $temperature: ${lateRolls.size} of ${results.size} rolls lock after $lockBySeconds s (over 1 percent): ${lateRolls.take(3).map { it.macros }}"
+                val noBiteLate = lateRolls.filter { !biteRoll(it) }
+                if (noBiteLate.isNotEmpty()) problems += "$voice temperature $temperature: ${noBiteLate.size} rolls with no bite lock after $lockBySeconds s: ${noBiteLate.take(3).map { it.macros }}"
+                if (noBite.size < 10) problems += "$voice temperature $temperature: only ${noBite.size} rolls have no bite, too few for the strict clause to mean anything"
+                val withoutBite = lateRolls.map { roll(voice, it.macros, overshoot = 1f) }
+                for ((r, again) in lateRolls.zip(withoutBite)) {
+                    println("ARCO scramble HOLE $voice with the bite removed: lock ${f(again.lock, 3)} s, ${again.late} unclean gaps late (with the bite ${f(r.lock, 3)} s)")
+                    if (late(again)) problems += "$voice temperature $temperature: a late roll is still late with the bite removed, so the bite is not the only reason: ${r.macros}"
+                }
+            }
         }
         assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }

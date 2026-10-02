@@ -25,7 +25,7 @@ import kotlin.test.fail
  * where that is decided.
  *
  * The numbers below are what R1b's roster pass saw (the engine at the work-in-progress commit), each
- * with its bar beside it, and R1c's where its retunes moved them (CELLO's bite of 2.75 times for 60 ms, the box that
+ * with its bar beside it, and R1c's where its retunes moved them (CELLO's bite of 2.5 times for 120 ms with a quarter of it in the pressure, SHORT STAB's BOW of 0.8, the box that
  * rings louder than the string above BODY 0.5, and MOON FIDDLE's BODY of 0.8): the KDoc says which.
  */
 class ArcoPresetsTest {
@@ -364,13 +364,14 @@ class ArcoPresetsTest {
 
     /**
      * What the roster says about each note's character, held to the raw bow at the preset's own macros. R1c saw: every
-     * one-shot but DRY SCRAPE lock into one slip a period inside its bow-on time (the latest, relative to its bow, is SHORT STAB at 0.24 s of 0.30, 0.80 of
-     * its bow, where the bar is 0.85, that is 0.255 s: 15 ms of room, and R1b's bite had it at 0.19 s; then GRIT BOW at 0.45 s of 0.58, 0.78 of its bow, R1b's at 0.42 s; HORSEHAIR is at 0.18 s),
+     * one-shot but DRY SCRAPE lock into one slip a period inside its bow-on time (the latest, relative to its bow, is GRIT BOW at 0.43 s of 0.58, 0.74 of its bow, where the bar is 0.85, that is 0.49 s:
+     * 63 ms of room, and R1b's at 0.42 s; then SHORT STAB at 0.21 s of 0.30, 0.70 of its bow, the bar 0.255 s: about 45 ms of room, and R1b's bite had it at 0.19 s at the BOW 0.9 it was then written at;
+     * HORSEHAIR is at 0.23 s of 0.62),
      * DRY SCRAPE never does in its 0.34 s (at E2, below G#2, the scratch outlasts a short bow),
-     * and GRIT BOW locks no earlier than 0.3 s (R1c saw 0.45 s, R1b 0.42 s), so its first stretch is a scratch (the bar is 0.3 s). The locked ones are the
-     * negative control for the scrape and the other way round (a stab on A3 locks at 0.24 s, so DRY SCRAPE moved up there would
-     * fail its clause): either claim failing means a preset stopped being what its name says. CELLO's bite of 2.75 times for 60 ms is the setting
-     * that keeps SHORT STAB under its bar (3.0 times for 60 ms never locked it in its stab).
+     * and GRIT BOW locks no earlier than 0.3 s (R1c saw 0.43 s, R1b 0.42 s), so its first stretch is a scratch (the bar is 0.3 s). The locked ones are the
+     * negative control for the scrape and the other way round (a stab on A3 locks at 0.21 s, so DRY SCRAPE moved up there would
+     * fail its clause): either claim failing means a preset stopped being what its name says. CELLO's bite of 2.5 times for 120 ms with a quarter of it in the pressure, with SHORT STAB's BOW at 0.8,
+     * is what keeps SHORT STAB under its bar: at BOW 0.9 the stab no longer locks inside its 0.30 s with this bite (the comment in [ArcoPresets]), and the earlier 3.0 times for 60 ms never locked it in its stab at all.
      */
     @Test
     fun `the scrapes scrape and the clean presets lock`() {
