@@ -2119,6 +2119,24 @@ BOW 1 stab the owner marked YES** (below). What it found:
   `generateArcoRetune` writes the small before-and-now page for exactly these (BODY 1, CELLO BOW 1 with a stronger step beside it, the BOW 1 stab,
   CELLO's vibrato).
 
+**R1c heard (2026-10-02): the retune page's verdicts** (`verdicts/arco_r1c_*` on its own store, saved 17:38 to 17:40 UTC). The owner marked no chip on
+BODY or BOW and wrote in the note boxes instead. *BOW* (CELLO's bite): the note reads "Stronger" and the overall answer "Now is good", so NOW's
+bite is accepted; the one word "Stronger" is read as a description of NOW against BEFORE, not a request for the stronger step beside it, and
+the owner is asked to say so if that is wrong. *The stab*: C3, E-flat3 and G3 NOW all yes, "Good" and "Works for me", so **the E-flat3 that
+the bigger bite turned into a scrape is accepted** (R1c's open cost above is closed). *CELLO's vibrato*: C2 and C3 NOW yes, "Now versions are good",
+overall "Yes" (ERHU's unchanged control was not marked). *BODY*: the note reads "Body doesn't seem to do anything" and the overall answer "Body
+still seems a little light", so **BODY is still nearly, and 1.75 times was not the fix**. Two of the three R1c changes are therefore settled
+and the third is open.
+
+Why BODY 1 moved so little is not a constant to turn up further, and the measurement says so. On the BODY page's CELLO note the band
+levels of BODY 1 NOW against the default (0.5) are +1.0 dB at 50-150 Hz, +0.4 at 150-300 and **-3.6 to -5.0 dB at 300 Hz and above**, and ERHU's differ
+by 3 dB at most: the louder box shows as a darker note after the render's level conditioning, not as a box. The working diagnosis, to be measured
+and not yet settled: CELLO's box is two narrow resonances (104 Hz, Q about 12; 220 Hz, Q about 18, so about 9 and 12 Hz wide), and a held bowed
+note is only harmonics, so a resonance changes the steady note only where a harmonic lands within a few hertz of it (on C3 the nearest partials are 27 and 42 Hz away),
+and it otherwise rings only in the transients and is cut where the string ends. A box that a held note can hear has to be broad (a spectral
+envelope the harmonics sit on), which is a different shape and not a bigger amount. That is R1d's work, and **the first thing it must keep is
+everything at or under BODY 0.5, to the bit** (the default, the kit and the presets that were not heard to be wrong).
+
 **A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
 (`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
 taken") couples four strings through a shared bridge. Its R2 bows those
