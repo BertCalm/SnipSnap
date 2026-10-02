@@ -6,7 +6,7 @@ tune, decays passively and stays bounded. **R0, the shared toolkit, is built**
 (2026-10-01; "R0, as built" below): `Modes.Bank`, `Modes.Friction` and
 `Modes.symmetricEigen`, with no change to any existing render. **R1, the
 engine, is built** (2026-10-01; "R1, as built" below): PING, SING and
-BLADE, 24 presets, a kit and an audition page, roadmap row **S21**.
+BLADE, 24 presets, a kit and an audition page, roadmap row **S22**.
 **The first audition is in** (2026-10-02; "The audition, round 1" below):
 144 of 166 clips kept, none cut. Round 2 fixes WATER and velocity. This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
@@ -554,8 +554,9 @@ proof. The claims tests are in `ModesBankTest.kt`.
 - **Tests.** The claims (`MercuryTest`), the preset contract
   (`MercuryPresetsTest`), and an arm each in `DeterminismTest`,
   `PadRecipeTest`, `PresetsTest` and `SynthKitTest`.
-- **The roadmap row, S21.** GYRE's review expected "S21 or later", so S22 is
-  free for it.
+- **The roadmap row, S22.** R1 first took S21, but GYRE's R1 merged to the
+  default branch first under S21, so MERCURY moved to S22 when the base
+  was merged in (2026-10-02).
 - **Not touched.** The phone's picker, which is R1.1 and needs a machine
   with the SDK.
 - **One registration rule the map above missed.** `:shell`'s

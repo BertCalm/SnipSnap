@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
 
 /**
  * Renders the MERCURY audition (docs/superpowers/specs/2026-10-01-mercury-modal-glass-engine-design.md,
- * the S21 gate, the spec's §17 listening set) under testkit/mercury-audition/ (gitignored):
+ * the S22 gate, the spec's §17 listening set) under testkit/mercury-audition/ (gitignored):
  * - the sixteen-pad kit as it lands on the MPC;
  * - for each voice: its default, the bottom, middle and top of TUNE, a short phrase whose notes ring
  *   into each other, three velocities, each knob at both ends, the spec's dead-zone probes (BEND

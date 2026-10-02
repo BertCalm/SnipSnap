@@ -219,6 +219,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
+        is GyrePatch -> Gyre.macrosFor(patch.voice)
     }
 
     /**

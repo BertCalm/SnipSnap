@@ -1,4 +1,4 @@
-<title>Mercury Audition</title>
+<title>Gyre Audition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
@@ -440,8 +440,8 @@
 
 <div class="win">
   <div class="titlebar">
-    <span>Mercury Audition</span>
-    <span class="tag">S22 GATE, ROUND 2 &middot; ONE OBJECT, TAPPED OR RUBBED</span>
+    <span>Gyre Audition</span>
+    <span class="tag">ROUND 1 GATE &middot; STRINGS THAT PLAY EACH OTHER</span>
   </div>
 
   <div class="transport lcd">
@@ -456,11 +456,9 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>MERCURY is one imaginary object, part glass and part bent steel, with water moving inside it. It can be tapped (PING), rubbed like the rim of a wine glass (SING), or bowed like a bent blade (BLADE). There is no sample and no oscillator: every sound is a set of ringing modes, driven by a strike and by friction through the same contact, coupled by springs, bent by BEND and loaded by a moving mass (WATER).</p>
-    <p><b>Round 2: two things changed since round 1.</b> Round 1 kept 144 of 166 clips and cut none. Its MEHs were WATER that could not be heard on SING and BLADE, and velocity on PING and BLADE.</p>
-    <p><b>WATER</b> now moves slowly (a rise and fall every half second to two seconds, where round 1 fluttered at up to 12 times a second). It starts steeper, so WATER .05 already adds about 10&ndash;20 cents of drift and a 2 dB swell, where round 1 added 4&ndash;10 cents and under 0.6 dB. It also moves each overtone&rsquo;s level, which the rub cannot lock. Every default and preset carries some WATER, so <b>every clip has changed a little</b>. Listen first to A LITTLE WATER, the WATER ends, the defaults and the presets: is it heard now, and is any of it now too wet?</p>
-    <p><b>Velocity</b> on PING and BLADE now moves GLASS: a harder hit is a harder mallet and a brighter ring (about 30% brighter onset on PING, 20% on BLADE). Loudness stays with the pad&rsquo;s velocity curve on the MPC, so these clips are levelled alike. SING keeps the round 1 velocity you kept.</p>
-    <p>First the kit as it lands on the MPC; then each voice: its default, the range (bottom, middle and top of TUNE), a short phrase whose notes ring into each other, three velocities, each knob at both ends, the spec&rsquo;s dead-zone probes (BEND .40/.50/.60 and WATER 0/.05/.10/.20, which should already move), and its own eight presets. Last, the five interactions the design claims, each a 3&times;3 grid. Known limits, so you do not have to find them: there is no seamless LOOP yet (that is R2), every sound is a one-shot that rings out, and SING&rsquo;s velocity only softens. Round 1&rsquo;s verdicts are kept apart; this page starts empty. Mark each KEEP, MEH or CUT. A CUT on a knob end means that end goes too far.</p>
+    <p>GYRE is four plucked strings that share one bridge. The bridge sits on a small membrane, so what one string does reaches the others and comes back: pluck one and the rest answer. Eight more strings that nobody plucks (the sympathetic strings) listen to the bridge and ring with whatever reaches them. A rotor turns inside the instrument, moving how strongly the strings are coupled, which part of the membrane is loudest, how fast each string loses energy and which sympathetic string answers. It never touches the volume. There is no sample underneath: everything comes out of the same coupled strings.</p>
+    <p><b>Nothing here has been heard by anyone yet.</b> Every number was measured (tuning within 3.3 cents everywhere, no note reading as a drum, the rotor moving the tone 200 times more than a tremolo would), but measurements cannot say whether it sounds like an instrument. That is this page's whole job. Round one plucks only: the bow, the circular bow and the seamless held loop are later rounds.</p>
+    <p>First the two voices at three notes each. Then the round's own claim as sound: one string plucked with its neighbours answering, and the same pluck with the bridge switched off. Then each knob at five settings, the sympathetic strings on their own, the rotor beside a tremolo of the same depth, the knobs together, and the edges. Mark each KEEP, MEH or CUT. A CUT on a knob setting means it goes too far.</p>
   </div>
 
   <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
@@ -471,15 +469,15 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <label class="ask" for="q_voices">1 &middot; The object: do the clean tap (PING) and the pure rub (SING) sound useful with no effects? Does SING sustain like a rubbed glass and not like a hidden oscillator? Does BLADE&rsquo;s bend read as a body changing shape, not only a pitch slide?</label>
+      <label class="ask" for="q_voices">1 &middot; BODY: does turning it sound like changing the instrument's body, a different box under the strings, or only like a filter?</label>
       <textarea id="q_voices" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_knobs">2 &middot; The knobs: does WATER feel like something moving inside the object rather than a wobble on top? Does COUPLE make the second modes answer? Which end of BEND, RUB, WATER, GLASS, COUPLE or HOLD goes too far, or not far enough? Are the defaults where you would start?</label>
+      <label class="ask" for="q_knobs">2 &middot; SYMPATHY: does it sound like strings answering strings, or like reverb or longer sustain? Are 0.3, 0.6, 0.8 and 1 the right steps (subtle, clear, a halo, a cloud)?</label>
       <textarea id="q_knobs" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_landing">3 &middot; The interactions and the extremes: do the grids change the object rather than only its pitch or level? Do the extreme corners stay intentional and usable? Which presets would you keep?</label>
+      <label class="ask" for="q_landing">3 &middot; SPIN: does the rotor sound like part of the instrument, or like something done to it afterwards? And does FLICK sound too dark? (Its strings stop at 5 kHz so its A4 is not mistaken for a snare.)</label>
       <textarea id="q_landing" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
@@ -493,8 +491,8 @@
   </div>
 
   <div class="foot">
-    RENDERED BY generateMercuryAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
-    THE PRESETS ARE MEASURED, NOT HEARD &middot;
+    RENDERED BY generateGyreAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
+    MEASURED, NOT HEARD &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -748,16 +746,16 @@
 
   // Every round's verdicts live under their own prefix, so a later round's
   // page never opens pre-filled with this one's notes and saves over them.
-  var PHASE = 'mercury_r2';
+  var PHASE = 'gyre_r1';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
-    try { localStorage.setItem('mercury-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+    try { localStorage.setItem('gyre-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
   }
 
   function loadLocal(key) {
     try {
-      var raw = localStorage.getItem('mercury-audition:' + PHASE + ':' + key);
+      var raw = localStorage.getItem('gyre-audition:' + PHASE + ':' + key);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
@@ -819,7 +817,7 @@
       connect();
     })
     .catch(function () {
-      $('voices').innerHTML = '<div class="guide lcd"><p>THE CLIP LIST DID NOT LOAD. RE-RENDER WITH generateMercuryAudition.</p></div>';
+      $('voices').innerHTML = '<div class="guide lcd"><p>THE CLIP LIST DID NOT LOAD. RE-RENDER WITH generateGyreAudition.</p></div>';
       KEYS.forEach(function (k) { apply(k, loadLocal(k)); });
       connect();
     });
