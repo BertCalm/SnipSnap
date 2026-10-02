@@ -9,6 +9,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.log10
+import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -23,7 +24,7 @@ import kotlin.test.assertTrue
 /**
  * ARCO's product claims: what a player gets, not what the string does (docs/superpowers/specs/2026-09-29-arco-bowed-string-engine-design.md).
  * The finished 44.1 kHz render, the length of a note, the LOOP, the recipe. Every bound is on a number R1b's
- * own probe *saw*, with room, and the KDoc of the test says what the number was, so a bound that moves can be
+ * own probe *saw* (or R1c's, where the KDoc says R1c: the box's curve and the vibrato's shape are R1c's), with room, and the KDoc of the test says what the number was, so a bound that moves can be
  * read against the measurement it came from. The tables a bound was set from are printed, one line each
  * starting `ARCO `, so the next person reads them from the log and not from a guess.
  *
@@ -262,22 +263,131 @@ class ArcoProductTest {
     /**
      * BODY is the box's ring and must not make a note longer: [Strings.bodyRing] follows the box out past the string's
      * end (CELLO's box adds 0.254 s, ERHU's as dressed 0.3 s), which once rendered the default CELLO 1.585 s and
-     * filed it a LOOP, so [Arco.withBody] cuts the ring where the stopped string ends. BODY 0, 0.5 and 1 render
-     * the same number of frames at three TUNEs of each voice and three HOLDs, and the notes themselves differ (the control: if BODY
-     * did nothing the frame count could not be the evidence of anything). R1b saw BODY 0 against 1 differ by 0.35 (ERHU D4) to 0.88
-     * (CELLO C2 at HOLD 0) of the note, and the bar is 0.2.
+     * filed it a LOOP, so [Arco.withBody] cuts the ring where the stopped string ends. BODY 0, 0.5, 0.75 (past the knee, where R1c's
+     * curve rings the box 1.125 times the string) and 1 render the same number of frames at three TUNEs of each voice and three HOLDs, and the notes themselves differ (the control: if BODY
+     * did nothing the frame count could not be the evidence of anything). R1c saw BODY 0 against 1 differ by 0.44 (ERHU D4 at HOLD 0.6) to 1.05
+     * (CELLO C2 at HOLD 0) of the note (R1b saw 0.35 to 0.88, with a box only as loud as the string at BODY 1), and the bar is 0.2.
      */
     @Test
     fun `BODY does not change the length of a note`() {
         val cases = ArcoVoice.entries.flatMap { v -> threeTunes.flatMap { t -> listOf(0f, Arco.DEFAULT_HOLD, 0.6f).map { h -> Triple(v, t, h) } } }
         val rows = cases.parMap { (voice, tune, hold) ->
-            val renders = listOf(0f, 0.5f, 1f).map { body -> Arco.render(voice, macros(voice, tune, body = body, hold = hold)) }
-            Triple("${label(voice, tune)} HOLD $hold", renders.map { it.frameCount }, relativeDifference(renders[0].samples, renders[2].samples))
+            val renders = listOf(0f, 0.5f, 0.75f, 1f).map { body -> Arco.render(voice, macros(voice, tune, body = body, hold = hold)) }
+            Triple("${label(voice, tune)} HOLD $hold", renders.map { it.frameCount }, relativeDifference(renders[0].samples, renders[3].samples))
         }
         for ((name, frames, diff) in rows) {
-            println("ARCO body length $name: frames at BODY 0/0.5/1 = $frames, BODY 0 against 1 differ by ${f(diff, 3)} of the note")
+            println("ARCO body length $name: frames at BODY 0/0.5/0.75/1 = $frames, BODY 0 against 1 differ by ${f(diff, 3)} of the note")
             assertEquals(1, frames.distinct().size, "$name: BODY changed the length: $frames")
             assertTrue(diff > 0.2, "$name: BODY 0 and 1 are nearly the same note (${f(diff, 4)}), so the length check proves nothing")
+        }
+    }
+
+    // ---- BODY's curve (R1c) ------------------------------------------------------
+
+    /** What [Arco.withBody] is given: a voice's raw string at one TUNE and the default knobs, before the box, with no vibrato. */
+    private fun rawString(voice: ArcoVoice, tune: Float): FloatArray =
+        Arco.bow(voice, Arco.frequencyFor(voice, tune), macros(voice, tune), rawRate, vibrato = false)
+
+    private fun rmsOf(x: FloatArray): Double = sqrt(x.sumOf { it.toDouble() * it } / x.size)
+
+    /** The box's RMS over the string's: the RMS of `boxed - raw` over the string's length against the RMS of [raw]. */
+    private fun boxOverString(raw: FloatArray, boxed: FloatArray): Double = rmsOf(FloatArray(raw.size) { boxed[it] - raw[it] }) / rmsOf(raw)
+
+    /**
+     * The curve of BODY ([Arco.boxAmountFor]: how many strings the box rings at): the owner heard BODY 1 as "nearly" and "not enough" in both voices,
+     * because at 1 the box was only as loud as the string. It is the identity up to [Arco.BODY_KNEE] 0.5 (equal to its argument exactly at 0, 0.1, 0.25 and
+     * 0.5, so the default BODY and every preset at or under it are what they were), reaches [Arco.BODY_TOP] 1.75 at BODY 1, is strictly increasing in hundredths
+     * of BODY and is continuous at the knee (the value a hair over 0.5 and a hair under it are both within 1e-5 of 0.5). The control that the climb is a climb:
+     * BODY 0.75 is 1.125 (R1c saw it so) and not the 0.75 of the identity, and the bar for it is over 1.4 times its argument.
+     */
+    @Test
+    fun `the box's curve is the identity to its knee, climbs to 1 point 75 at BODY 1, and is continuous`() {
+        assertEquals(0.5f, Arco.BODY_KNEE)
+        assertEquals(1.75f, Arco.BODY_TOP)
+        for (body in listOf(0f, 0.1f, 0.25f, 0.5f)) assertEquals(body, Arco.boxAmountFor(body), "BODY $body: the box is not what it was at or under the knee")
+        assertEquals(Arco.BODY_TOP, Arco.boxAmountFor(1f), 1e-6f, "BODY 1 is not BODY_TOP")
+        val hundredths = (0..100).map { it / 100f }
+        for ((a, b) in hundredths.zipWithNext()) assertTrue(Arco.boxAmountFor(b) > Arco.boxAmountFor(a), "the box does not get louder from BODY $a to $b")
+        assertTrue(abs(Arco.boxAmountFor(0.5000001f) - 0.5f) < 1e-5f, "the curve jumps over the knee: ${Arco.boxAmountFor(0.5000001f)}")
+        assertTrue(abs(Arco.boxAmountFor(0.4999999f) - 0.5f) < 1e-5f, "the curve jumps under the knee: ${Arco.boxAmountFor(0.4999999f)}")
+        println("ARCO BODY curve at 0 0.25 0.5 0.6 0.75 0.9 1: ${listOf(0f, 0.25f, 0.5f, 0.6f, 0.75f, 0.9f, 1f).joinToString(" ") { f(Arco.boxAmountFor(it).toDouble(), 3) }}")
+        assertEquals(1.125f, Arco.boxAmountFor(0.75f), 0.01f, "the climb past the knee is not the one measured")
+        assertTrue(Arco.boxAmountFor(0.75f) > 1.4f * 0.75f, "the climb is no steeper than the identity")
+    }
+
+    private class BoxRow(
+        val name: String, val dryIsString: Boolean, val quarterIsR1b: Boolean, val halfIsR1b: Boolean,
+        val half: Double, val threeQuarters: Double, val one: Double, val r1bOne: Double,
+    )
+
+    /**
+     * [Arco.withBody] rings the box at [Arco.boxAmountFor] of BODY, and up to the knee that is the call R1b made. At CELLO's and ERHU's root, middle and top, on the
+     * raw string at the default knobs: BODY 0 hands back the string's contents unchanged (and does not touch the string), and BODY 0.25 and 0.5 are, sample for
+     * sample, R1b's call, `Strings.bodyRing(raw, bodyFor(voice), BODY, rate, BODY_CEILING_SECONDS)` cut to the string's length, so the default and every preset at or under 0.5
+     * render as they did. Above the knee the box is louder against the string: its RMS over the string's, which `bodyRing` makes the amount it is given, is
+     * 0.50 at BODY 0.5, 1.125 at 0.75 and 1.75 at 1 (R1c saw 0.50 and 1.75 at all six notes, and 1.12 at 0.75), held to 0.50 within 0.02, 1.125 within 0.05 and
+     * 1.75 within 0.05. The control is R1b's figure: at BODY 1 the box was 1.0 times the string, and the bar for "louder" is over 1.2, which R1b's own call
+     * (made here, by `bodyRing` itself, and read the same way) fails.
+     */
+    @Test
+    fun `the box rings at the curve's amount, and up to the knee exactly as it did`() {
+        val rows = ArcoVoice.entries.flatMap { v -> threeTunes.map { v to it } }.parMap { (voice, tune) ->
+            val raw = rawString(voice, tune)
+            val before = raw.copyOf()
+            fun r1b(body: Float): FloatArray {
+                val rung = Strings.bodyRing(raw, Arco.bodyFor(voice), body, rawRate, Arco.BODY_CEILING_SECONDS)
+                return if (rung.size == raw.size) rung else rung.copyOf(raw.size)
+            }
+            BoxRow(
+                label(voice, tune),
+                dryIsString = Arco.withBody(raw, voice, 0f, rawRate).contentEquals(before) && raw.contentEquals(before),
+                quarterIsR1b = r1b(0.25f).contentEquals(Arco.withBody(raw, voice, 0.25f, rawRate)),
+                halfIsR1b = r1b(0.5f).contentEquals(Arco.withBody(raw, voice, 0.5f, rawRate)),
+                half = boxOverString(raw, Arco.withBody(raw, voice, 0.5f, rawRate)),
+                threeQuarters = boxOverString(raw, Arco.withBody(raw, voice, 0.75f, rawRate)),
+                one = boxOverString(raw, Arco.withBody(raw, voice, 1f, rawRate)),
+                r1bOne = boxOverString(raw, r1b(1f)),
+            )
+        }
+        for (r in rows) {
+            println(
+                "ARCO box ${r.name}: BODY 0 is the string ${r.dryIsString}, BODY 0.25 is R1b's ${r.quarterIsR1b}, BODY 0.5 is R1b's ${r.halfIsR1b}; " +
+                    "box over string at BODY 0.5 / 0.75 / 1: ${f(r.half, 3)} ${f(r.threeQuarters, 3)} ${f(r.one, 3)}, R1b's BODY 1 ${f(r.r1bOne, 3)}",
+            )
+            assertTrue(r.dryIsString, "${r.name}: BODY 0 is not the string's contents")
+            assertTrue(r.quarterIsR1b, "${r.name}: BODY 0.25 is not what R1b's call made")
+            assertTrue(r.halfIsR1b, "${r.name}: BODY 0.5 is not what R1b's call made")
+            assertEquals(0.5, r.half, 0.02, "${r.name}: the box at BODY 0.5 is ${f(r.half, 3)} times the string")
+            assertEquals(1.125, r.threeQuarters, 0.05, "${r.name}: the box at BODY 0.75 is ${f(r.threeQuarters, 3)} times the string")
+            assertEquals(1.75, r.one, 0.05, "${r.name}: the box at BODY 1 is ${f(r.one, 3)} times the string")
+            assertTrue(r.one > 1.2, "${r.name}: BODY 1 is not clearly louder than R1b's")
+            assertTrue(r.r1bOne < 1.2, "${r.name}: R1b's own call at BODY 1 reads ${f(r.r1bOne, 3)}, over 1.2, so the bar cannot tell R1b's box from the new one")
+        }
+    }
+
+    /** The finished peak bar at BODY 1: [Dsp.levelTo] turns a peak down only past 0.99, so a limited note sits at exactly 0.99 and fails 0.95, where a bar at 0.99 could not fail. */
+    private val bodyPeakBar = 0.95f
+
+    /**
+     * Nothing clips or goes non-finite at BODY 1: every TUNE step of both voices (25 and 20), defaults otherwise, through the whole render. Every sample is finite
+     * and the peak is at most [bodyPeakBar], the bar ArcoTest's grid holds the finished peak to. R1c saw the highest finished peaks at 0.577 (CELLO, step 1) and
+     * 0.521 (ERHU, step 4), 0.37 and 0.43 under the bar, all samples finite (the grid's 162 cells a voice in ArcoTest, which take BODY at 0, 0.5 and 1, read at most 0.761 at ERHU A5
+     * with the louder box), so the bar has room and a limited note, which sits at 0.99, would fail it.
+     */
+    @Test
+    fun `at BODY 1 nothing clips or goes non-finite, at any TUNE step of either voice`() {
+        for (voice in ArcoVoice.entries) {
+            val steps = (0..Arco.tuneSemitones(voice)).toList()
+            val rows = steps.parMap { step ->
+                val snip = Arco.render(voice, macros(voice, tuneOf(voice, step), body = 1f))
+                Triple(step, snip.samples.all { it.isFinite() }, snip.peak())
+            }
+            val worst = rows.maxByOrNull { it.third }!!
+            println("ARCO BODY 1 $voice: ${rows.size} steps, finite ${rows.all { it.second }}, highest finished peak ${f(worst.third.toDouble(), 3)} at step ${worst.first} (bar $bodyPeakBar)")
+            for ((step, finite, peak) in rows) {
+                assertTrue(finite, "$voice step $step at BODY 1: not finite")
+                assertTrue(peak <= bodyPeakBar, "$voice step $step at BODY 1: finished peak $peak, over $bodyPeakBar")
+            }
         }
     }
 
@@ -529,7 +639,7 @@ class ArcoProductTest {
     /**
      * A LOOP does not depend on BOW or on how far past the LOOP step HOLD is: the stroke is a fixed 63 ms with no bite and the
      * warm-up is thrown away, so the loop is the same loop. Two settings, bit for bit; BODY, which a loop does carry,
-     * is the control: it changes the samples (R1b saw BODY 0 against 1 differ by 0.78 of the loop at CELLO and 0.84 at ERHU; the bar is 0.3).
+     * is the control: it changes the samples (R1c saw BODY 0 against 1 differ by 0.73 of the loop at CELLO and 0.83 at ERHU, R1b 0.78 and 0.84; the bar is 0.3).
      */
     @Test
     fun `a LOOP is the same loop whatever BOW and HOLD say, and BODY changes it`() {
@@ -660,7 +770,8 @@ class ArcoProductTest {
     // ---- vibrato -------------------------------------------------------------
 
     /**
-     * The baked vibrato is a read-back delay of the finished wave, +-10 cents at 6.1 Hz, scaled by how long the bow is on: none at 0.6 s or less,
+     * The baked vibrato is a read-back delay of the finished wave, +-10 cents at 6.1 Hz (ERHU's, a sine; CELLO's drifts about that, in rate, depth and
+     * lean, and swells in over half a second: [the human vibrato wanders, swells in and stays centred, and the plain one is a sine]), scaled by how long the bow is on: none at 0.6 s or less,
      * full at 1.5 s or more, and none at all in a LOOP, which cannot carry a signal that does not repeat. Read on the *finished*
      * render with 70 ms windows stepped 20 ms ([BoreMeasure.cents], the way BORE's vibrato test reads it), so a
      * 6.1 Hz swing is resolved but its peak is averaged down: a 70 ms window passes a +-10 cent swing as
@@ -671,9 +782,10 @@ class ArcoProductTest {
      * "None" is then exact: up to 0.6 s of bow the two are the same render, bit for bit (the control: at the default
      * HOLD, 0.85 s, they are not).
      *
-     * R1b saw, at CELLO C3 and ERHU C5: 3.5 c at 1 s of bow (44 percent of the depth, as the ramp from 0.6 s to 1.5 s says), 7.9 to 8.1 at 1.5 s
-     * and 7.95 to 8.05 at 3 s, and 8.3 and 7.95 about the note's own mean, a little over the 7.3 the window arithmetic gives. The bars:
-     * 2 to 5.5 c at 1 s, 6 to 10 at 1.5 s and 3 s, growing between 1 s and 1.5 s by over 2 c; and the record's, at most 15 c peak at 3 s.
+     * R1c saw, at CELLO C3 (the human vibrato) and ERHU C5 (the plain one): 3.34 and 3.20 c at 1 s of bow (44 percent of the depth, as the ramp from 0.6 s
+     * to 1.5 s says), 8.53 and 7.69 at 1.5 s and 8.65 and 7.90 at 3 s, and 8.52 and 7.90 about the note's own mean, a little over the 7.3 the window arithmetic gives
+     * (CELLO's drifts of depth and rate put it up to 0.8 c above ERHU's; R1b printed 3.5 at 1 s, 7.9 to 8.1 at 1.5 s, 7.95 to 8.05 at 3 s and 8.3 and 7.95 about the mean).
+     * The bars: 2 to 5.5 c at 1 s, 6 to 10 at 1.5 s and 3 s (CELLO's 8.65 has 1.35 c of room), growing between 1 s and 1.5 s by over 2 c; and the record's, at most 15 c peak at 3 s.
      */
     @Test
     fun `vibrato is none at a short hold, grows with HOLD, and stays under 15 cents at three seconds`() {
@@ -796,7 +908,7 @@ class ArcoProductTest {
      * A LOOP carries no vibrato: its pitch over time is flat to the measure's own floor. Read as the vibrato test reads a note
      * (70 ms windows, 20 ms apart) on three copies of the loop played end to end, away from the first and last 0.3 s. A
      * vibrato would show as +-8 cents; R1b saw the loop's spread, the largest distance of any window from the mean, at 0.99 c
-     * (CELLO C3) and 0.59 (ERHU C5), and the bar is 2 cents. The 3 s note's own spread (8.3 and 7.95) is the control: it is
+     * (CELLO C3) and 0.59 (ERHU C5), and the bar is 2 cents. The 3 s note's own spread (R1c saw 8.52 and 7.90) is the control: it is
      * far over 2.5 times the bar, so a loop that carried the vibrato would fail.
      */
     @Test
@@ -814,6 +926,201 @@ class ArcoProductTest {
             println("ARCO loop vibrato $voice: loop spread ${f(spread, 2)} c over ${cents.size} windows, the held 3 s note's ${f(heldSpread, 2)} c")
             assertTrue(spread <= 2.0, "$voice: the loop's pitch wanders $spread cents")
             assertTrue(heldSpread > 2.5 * 2.0, "$voice: the 3 s note's vibrato ($heldSpread c) is not far over the loop's bar: the check cannot fail")
+        }
+    }
+
+    // ---- the vibrato's shape (R1c) --------------------------------------------
+
+    /**
+     * R1b's vibrato, copied from the engine as it stood before R1c: a sine at [Arco.VIBRATO_HZ], rising in over [Arco.VIBRATO_RISE_SECONDS] from
+     * [Arco.VIBRATO_DELAY_SECONDS], read back through a four-point cubic. The reference [Arco.VIBRATO_PLAIN] is held to, bit for bit.
+     */
+    private fun r1bVibrato(buf: FloatArray, cents: Float, rate: Int): FloatArray {
+        val depth = Arco.vibratoDepthSamples(cents, rate)
+        val out = FloatArray(buf.size)
+        val last = buf.size - 1
+        for (i in buf.indices) {
+            val t = i.toDouble() / rate
+            if (t <= Arco.VIBRATO_DELAY_SECONDS) {
+                out[i] = buf[i]
+                continue
+            }
+            val rise = ((t - Arco.VIBRATO_DELAY_SECONDS) / Arco.VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
+            val pos = i - depth * rise * sin(2.0 * PI * Arco.VIBRATO_HZ * (t - Arco.VIBRATO_DELAY_SECONDS))
+            val k = Math.floor(pos).toInt()
+            val x = (pos - k).toFloat()
+            val p0 = buf[(k - 1).coerceIn(0, last)]
+            val p1 = buf[k.coerceIn(0, last)]
+            val p2 = buf[(k + 1).coerceIn(0, last)]
+            val p3 = buf[(k + 2).coerceIn(0, last)]
+            out[i] = p1 + 0.5f * x * (p2 - p0 + x * (2f * p0 - 5f * p1 + 4f * p2 - p3 + x * (3f * (p1 - p2) + p3 - p0)))
+        }
+        return out
+    }
+
+    /** A busy wave at the raw rate, [seconds] long: three sines and a sawtooth, so a read at the wrong place is a different sample. */
+    private fun busyWave(seconds: Double): FloatArray = FloatArray((seconds * rawRate).toInt()) { i ->
+        val t = i.toDouble() / rawRate
+        (0.4 * sin(2 * PI * 130.8 * t) + 0.25 * sin(2 * PI * 391.9 * t + 0.4) + 0.15 * sin(2 * PI * 1046.5 * t + 1.1) + 0.2 * (2.0 * ((t * 261.6) % 1.0) - 1.0)).toFloat()
+    }
+
+    /**
+     * [Arco.VIBRATO_PLAIN] is R1b's vibrato bit for bit, so ERHU's (the one the owner heard as a yes) is untouched. R1b's loop is copied into
+     * this file ([r1bVibrato]) and held against [Arco.vibrato] called with no shape and with [Arco.VIBRATO_PLAIN], on a 3.2 s busy wave at the raw rate
+     * and 10 cents (the delay is 0.35 s and the rise 0.2 s, so 2.65 s of it is full swing): equal to the last bit by `contentEquals`, and not by a tolerance.
+     * The control is [Arco.VIBRATO_HUMAN] on the same wave, which must not equal it (R1c saw it differ from R1b's by 0.31 of the wave's RMS, and the plain one
+     * by 0.0000): so the same comparison refuses a vibrato that is not R1b's. Two calls of either give the same array, and a cents of 0 hands the buffer back.
+     */
+    @Test
+    fun `the plain vibrato is R1b's, bit for bit, and the human one is not`() {
+        val buf = busyWave(3.2)
+        val r1b = r1bVibrato(buf, 10f, rawRate)
+        assertContentEquals(r1b, Arco.vibrato(buf, 10f, rawRate), "the default shape is not R1b's vibrato")
+        assertContentEquals(r1b, Arco.vibrato(buf, 10f, rawRate, Arco.VIBRATO_PLAIN), "VIBRATO_PLAIN is not R1b's vibrato")
+        val human = Arco.vibrato(buf, 10f, rawRate, Arco.VIBRATO_HUMAN)
+        println("ARCO vibrato shapes: the human one differs from R1b's by ${f(relativeDifference(r1b, human), 4)} of the wave's RMS; the plain one by ${f(relativeDifference(r1b, Arco.vibrato(buf, 10f, rawRate, Arco.VIBRATO_PLAIN)), 4)}")
+        assertTrue(!r1b.contentEquals(human), "VIBRATO_HUMAN is R1b's vibrato: the comparison cannot tell a different vibrato")
+        assertContentEquals(human, Arco.vibrato(buf, 10f, rawRate, Arco.VIBRATO_HUMAN), "the human vibrato is not a pure function of its input")
+        assertTrue(Arco.vibrato(buf, 0f, rawRate, Arco.VIBRATO_HUMAN) === buf, "no cents is no vibrato")
+    }
+
+    /**
+     * The engine uses the shape of its voice ([Arco.vibratoShapeFor]): CELLO the human one, ERHU the plain one. A 3 s hold at the middle of each voice's TUNE is
+     * rendered by [Arco.bow] with the vibrato on and compared, bit for bit, with the same raw string without it put through [Arco.vibrato] at
+     * [Arco.vibratoCentsFor] 3 s and the voice's shape (the cents are 10: a hold past 1.5 s is full depth); and the CELLO render is not what the plain shape
+     * makes of the same string, nor the ERHU render what the human shape makes (the two controls: a wiring of both voices to one shape fails one of them).
+     */
+    @Test
+    fun `each voice's engine vibrato is its own shape's`() {
+        assertTrue(Arco.vibratoShapeFor(ArcoVoice.CELLO) === Arco.VIBRATO_HUMAN, "CELLO's shape is not the human one")
+        assertTrue(Arco.vibratoShapeFor(ArcoVoice.ERHU) === Arco.VIBRATO_PLAIN, "ERHU's shape is not the plain one")
+        val cents = Arco.vibratoCentsFor(3f)
+        assertEquals(Arco.VIBRATO_MAX_CENTS, cents, "a 3 s hold is not full depth")
+        for (voice in ArcoVoice.entries) {
+            val m = macros(voice, 0.5f, hold = Arco.holdFor(3f))
+            val hz = Arco.frequencyFor(voice, 0.5f)
+            val on = Arco.bow(voice, hz, m, rawRate, gateSeconds = 3f, vibrato = true)
+            val dry = Arco.bow(voice, hz, m, rawRate, gateSeconds = 3f, vibrato = false)
+            val own = Arco.vibrato(dry, cents, rawRate, Arco.vibratoShapeFor(voice))
+            val other = Arco.vibrato(dry, cents, rawRate, if (voice == ArcoVoice.CELLO) Arco.VIBRATO_PLAIN else Arco.VIBRATO_HUMAN)
+            println("ARCO vibrato wiring $voice: equals its own shape's ${on.contentEquals(own)}, equals the other shape's ${on.contentEquals(other)}, the two shapes differ by ${f(relativeDifference(own, other), 4)} of the note's RMS")
+            assertContentEquals(own, on, "$voice: the engine's vibrato is not its shape's")
+            assertTrue(!on.contentEquals(other), "$voice: the engine's vibrato is the other voice's shape: the wiring cannot be told")
+        }
+    }
+
+    /**
+     * What a shape does to the pitch, in cents against the plain note, one value a raw sample for [seconds] from the start of the vibrato (u = 0 is
+     * [Arco.VIBRATO_DELAY_SECONDS] into the note). The read is delayed by `depth * rise * unit` samples ([Arco.vibrato]), and a delay that grows by d' a
+     * sample slows the read by d', so the pitch is `1200 log2(1 - d')`. [extraSlope] adds a steady drift of the delay, which a control uses.
+     */
+    private fun pitchTrack(shape: Arco.VibratoShape, seconds: Double, extraSlope: Double = 0.0): DoubleArray {
+        val depth = Arco.vibratoDepthSamples(Arco.VIBRATO_MAX_CENTS, rawRate)
+        val n = (seconds * rawRate).toInt()
+        val delay = DoubleArray(n + 1) { i ->
+            val u = i.toDouble() / rawRate
+            depth * (u / shape.riseSeconds).coerceAtMost(1.0) * Arco.vibratoUnit(u, shape) + extraSlope * i
+        }
+        return DoubleArray(n) { i -> 1200.0 * log2(1.0 - (delay[i + 1] - delay[i])) }
+    }
+
+    private class Turn(val at: Double, val cents: Double)
+
+    /** The swing's turning points between [from] and [to] seconds: where the pitch track changes direction, never less than 40 ms apart. */
+    private fun turns(track: DoubleArray, from: Double, to: Double): List<Turn> {
+        val found = ArrayList<Turn>()
+        for (i in 1 until track.size - 1) {
+            if ((track[i] - track[i - 1]) * (track[i + 1] - track[i]) < 0.0) {
+                val at = i.toDouble() / rawRate
+                if (at in from..to && (found.isEmpty() || at - found.last().at >= 0.04)) found.add(Turn(at, track[i]))
+            }
+        }
+        return found
+    }
+
+    private class Wander(val peakLow: Double, val peakHigh: Double, val rateLow: Double, val rateHigh: Double, val swings: Int) {
+        val peaks get() = peakHigh / peakLow
+        val rates get() = rateHigh / rateLow
+    }
+
+    /** How much the swings differ from one another: the |cents| of each turning point, and the rate of each half-swing, `1 / (2 * seconds from one turning point to the next)`. */
+    private fun wander(track: DoubleArray, from: Double, to: Double): Wander {
+        val t = turns(track, from, to)
+        val peaks = t.map { abs(it.cents) }
+        val rates = t.zipWithNext().map { (a, b) -> 1.0 / (2.0 * (b.at - a.at)) }
+        return Wander(peaks.min(), peaks.max(), rates.min(), rates.max(), t.size)
+    }
+
+    private fun maxCents(track: DoubleArray, from: Double, to: Double): Double = (((from * rawRate).toInt()) until minOf(track.size, (to * rawRate).toInt())).maxOf { abs(track[it]) }
+
+    private fun meanCents(track: DoubleArray, from: Double, to: Double): Double = (((from * rawRate).toInt()) until minOf(track.size, (to * rawRate).toInt())).sumOf { track[it] } / (((to - from) * rawRate).toInt())
+
+    /**
+     * The human vibrato is not mechanical and the plain one is: the pitch track of each shape at the full 10 cents, over 4 s from the start of the vibrato.
+     * Over u = 0.9 to 3.6 s (after the rise of either) HUMAN's swing peaks differ from one another by at least 15 percent (the largest |cents| of a turning
+     * point over the smallest) and its half-swing rates by at least 6 percent (the fastest over the slowest). R1c saw 32 turning points at 8.12 to 11.76 cents (a ratio
+     * of 1.448, so 45 percent) and half-swing rates of 5.10 to 7.12 Hz (a ratio of 1.397; the turning points are those of the exact pitch track, so the skew's
+     * alternation of the up and the down swing is in the rates; the brief's own reading of them was 8.1 to 12.1 cents and 5.7 to 6.9 Hz). PLAIN is the control, a sine: its
+     * peaks differ by under 1.5 percent (R1c saw 10.00 to 10.06, 0.58 percent: the log of the pitch ratio is a little lopsided) and its rate by under 0.5 percent
+     * (6.100 Hz at all 33 turning points, a ratio of 1.00000), so the same measure calls a sine mechanical and the drift not.
+     *
+     * The rest of what makes it a finger and not a fault: its peak |cents| from 1.2 s on stays under 15 (R1c saw 12.75 over the 4 s, the brief's 12.1 was over 3.65 s; the held-note bar is
+     * the same 15); its mean over each whole second from 1 s to 4 s stays within 0.3 cents of nought (R1c saw +0.186, -0.103 and -0.109, PLAIN -0.110, -0.014 and +0.081; a bounded
+     * delay cannot give much more than 0.7 over a second), with a delay that drifts by one thousandth of a sample a sample, which is about 1.7 cents of pitch (R1c saw it read -1.55 over 1
+     * to 2 s, with the swing's own +0.19), as the control that the mean can be seen to fail; and it swells in: the peak over its first 0.25 s is under half the peak from 1.0 s on
+     * (R1c saw 5.27 against 12.75, 0.41, 0.09 of room; the brief's 3.9 to 5.3 against 12.1 is the same swing) while PLAIN's first 0.25 s is already at least 0.9 of its steady swing (10.00 against 10.06).
+     */
+    @Test
+    fun `the human vibrato wanders, swells in and stays centred, and the plain one is a sine`() {
+        val human = pitchTrack(Arco.VIBRATO_HUMAN, 4.0)
+        val plain = pitchTrack(Arco.VIBRATO_PLAIN, 4.0)
+        val h = wander(human, 0.9, 3.6)
+        val p = wander(plain, 0.9, 3.6)
+        println("ARCO vibrato HUMAN: ${h.swings} turning points from 0.9 to 3.6 s, |cents| ${f(h.peakLow)} to ${f(h.peakHigh)} (x${f(h.peaks, 3)}), half-swing rate ${f(h.rateLow)} to ${f(h.rateHigh)} Hz (x${f(h.rates, 3)})")
+        println("ARCO vibrato PLAIN: ${p.swings} turning points from 0.9 to 3.6 s, |cents| ${f(p.peakLow)} to ${f(p.peakHigh)} (x${f(p.peaks, 4)}), half-swing rate ${f(p.rateLow, 3)} to ${f(p.rateHigh, 3)} Hz (x${f(p.rates, 5)})")
+        assertTrue(h.peaks >= 1.15, "the human swings differ by only ${f((h.peaks - 1) * 100, 1)} percent, under 15")
+        assertTrue(h.rates >= 1.06, "the human half-swing rates differ by only ${f((h.rates - 1) * 100, 1)} percent, under 6")
+        assertTrue(p.peaks < 1.015, "the plain swings differ by ${f((p.peaks - 1) * 100, 2)} percent, so the measure cannot call a sine mechanical")
+        assertTrue(p.rates < 1.005, "the plain half-swing rates differ by ${f((p.rates - 1) * 100, 2)} percent")
+        assertTrue(p.swings > 25 && h.swings > 25, "too few turning points to say: ${p.swings}, ${h.swings}")
+
+        val loudest = maxCents(human, 1.2, 4.0)
+        val early = maxCents(human, 0.0, 0.25)
+        val steady = maxCents(human, 1.0, 4.0)
+        println("ARCO vibrato HUMAN: peak |cents| from 1.2 s ${f(loudest)}, from 1.0 s ${f(steady)}, over the first 0.25 s ${f(early)} (${f(early / steady, 2)} of it); PLAIN first 0.25 s ${f(maxCents(plain, 0.0, 0.25))} of ${f(maxCents(plain, 1.0, 4.0))}")
+        assertTrue(loudest < 15.0, "the human vibrato reaches ${f(loudest)} cents")
+        assertTrue(early < 0.5 * steady, "the human vibrato's first 0.25 s reaches ${f(early)} cents against ${f(steady)} later: it does not swell in")
+        assertTrue(maxCents(plain, 0.0, 0.25) >= 0.9 * maxCents(plain, 1.0, 4.0), "the plain vibrato has not reached its full swing by 0.25 s")
+
+        for (second in 1..3) {
+            val hm = meanCents(human, second.toDouble(), second + 1.0)
+            val pm = meanCents(plain, second.toDouble(), second + 1.0)
+            println("ARCO vibrato mean pitch over ${second}..${second + 1} s from the start: HUMAN ${f(hm, 3)} c, PLAIN ${f(pm, 3)} c")
+            assertTrue(abs(hm) < 0.3, "the human vibrato's pitch sits ${f(hm, 3)} cents off the note over ${second} to ${second + 1} s")
+        }
+        val drifting = pitchTrack(Arco.VIBRATO_HUMAN, 4.0, extraSlope = 0.001)
+        val drift = meanCents(drifting, 1.0, 2.0)
+        println("ARCO vibrato control: a delay drifting by 0.001 a sample reads ${f(drift, 2)} c of mean pitch over 1 to 2 s")
+        assertTrue(abs(drift) > 1.0, "the mean's measure does not see a drift of 1.7 cents: ${f(drift, 3)}")
+    }
+
+    /**
+     * Nothing of the vibrato is heard before it begins, in either shape: with [Arco.VIBRATO_DELAY_SECONDS] of the note copied sample for sample,
+     * the first sample that differs is after it, and some sample in the second after it does differ (a vibrato that only copied would pass the first
+     * half, so the second half is its control). A unit swing is a pure function of the time since the vibrato began: two calls give the same value.
+     */
+    @Test
+    fun `no vibrato before its delay, in either shape, and a swing is a pure function of time`() {
+        val buf = busyWave(2.0)
+        val delayN = (Arco.VIBRATO_DELAY_SECONDS * rawRate).toInt()
+        for ((name, shape) in listOf("PLAIN" to Arco.VIBRATO_PLAIN, "HUMAN" to Arco.VIBRATO_HUMAN)) {
+            val out = Arco.vibrato(buf, 10f, rawRate, shape)
+            val first = buf.indices.first { out[it] != buf[it] }
+            println("ARCO vibrato $name: copies the note exactly up to sample $first (the delay is $delayN)")
+            assertTrue((0 until delayN).all { out[it] == buf[it] }, "$name: the note changed before the vibrato's delay")
+            assertTrue(first >= delayN, "$name: the first changed sample is $first, before the delay at $delayN")
+            assertTrue((delayN until delayN + rawRate).any { out[it] != buf[it] }, "$name: the vibrato changes nothing in the second after its delay")
+            for (u in listOf(0.0, 0.123, 1.0, 2.5, 3.9)) assertEquals(Arco.vibratoUnit(u, shape), Arco.vibratoUnit(u, shape), "$name: the unit swing at $u is not a function of the time")
         }
     }
 
@@ -959,8 +1266,9 @@ class ArcoProductTest {
      * No dead knob (playability rule 1): each of TUNE, BOW, GRIP, BODY and HOLD, moved alone from its default (to 0.1 if the default is over a
      * half, else to 0.9), changes the finished render, and by a measured amount: the RMS of the difference over the RMS of the note, with
      * the tail of the longer one counted as difference. BODY is the one a quiet engine loses first, so it is named: BODY from its
-     * default 0.5 to 0.9 moves the note by 0.23 (CELLO) and 0.24 (ERHU), and from 0 to 1 by 0.70 and 0.71. The printed line has the other four at
-     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.08 and 1.79, GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
+     * default 0.5 to 0.9 moves the note by 0.44 (CELLO) and 0.45 (ERHU), and from 0 to 1 by 0.92 and 0.92 (R1c's curve: 0.9 rings the box at 1.5 times the
+     * string and 1 at 1.75; R1b's were 0.23 and 0.24, and 0.70 and 0.71). The printed line has the other four at
+     * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.78 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
      * different attack, a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the
      * measure can tell "did nothing" from "did something".
@@ -991,15 +1299,15 @@ class ArcoProductTest {
 
     /**
      * Where a rolled note must have locked by, in seconds, and so where "late" begins: 2.0 s, the bar the lock-across-BOW test
-     * (in ArcoTest) holds CELLO to. The slowest rolled lock without vibrato is 1.426 s (CELLO, 400 rolls over both temperatures;
-     * ERHU's is 0.329 s), so the bound leaves 0.57 s (40 percent) over it, and the 3 s bow leaves 1.0 s of watching after the
+     * (in ArcoTest) holds CELLO to. The slowest rolled lock without vibrato is 1.585 s (R1c saw CELLO's, 400 rolls over both temperatures, at temperature 1;
+     * R1b's was 1.426 s before CELLO's bite grew; ERHU's is 0.329 s), so the bound leaves 0.415 s (26 percent) over it, and the 3 s bow leaves 1.0 s of watching after the
      * bound. The temperature 0.35 rolls are drawn around the factory presets, so a change to the roster re-rolls them and can
      * move the slowest lock: the range the test prints is where to look.
      */
     private val lockBySeconds = 2.0
 
     /**
-     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, 1.426 s, with over a second and a half of watching
+     * The raw core of a rolled sound, bowed for 3 s (long enough for the slowest lock measured, 1.585 s, with over a second and a third of watching
      * after it), read on the bow-point tap. With the vibrato off by default: whether the string locks is a property of the window the macros draw,
      * and the vibrato has its own tests (it never touches the string, so the lock is the same either way). [pressure] and [cornerHz] are the core's own overrides, for the control that leaves the window.
      */
@@ -1025,10 +1333,10 @@ class ArcoProductTest {
      * and the dice go to the corners no preset visits. A roll that does not lock is a hole in the window and is listed with its
      * macros, and not hidden.
      *
-     * The printed run shows no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.135 to 1.426 s (CELLO) and 0.051 to
-     * 0.329 s (ERHU), so the 2.0 s bound leaves 0.57 s over the slowest, the worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the
-     * ceiling of 1.25, and no roll reaches the LOOP step. The slowest lock is at temperature 0.35, whose rolls are drawn around the factory
-     * presets, so it depends on the roster. The lock is read on the string, which the vibrato never touches (the vibrato is a read-back
+     * The printed run shows no hole: the 800 rolls (CELLO and ERHU, both temperatures) lock at 0.128 to 1.585 s (CELLO) and 0.051 to
+     * 0.329 s (ERHU) (R1c's run; R1b's CELLO went to 1.426 s), so the 2.0 s bound leaves 0.415 s over the slowest, the worst raw peak is 0.80 (CELLO) and 0.62 (ERHU) against the
+     * ceiling of 1.25, and no roll reaches the LOOP step. The slowest locks are 1.585 s at temperature 1 and 1.554 s at temperature 0.35, whose rolls are drawn around the factory
+     * presets, so that one depends on the roster. The lock is read on the string, which the vibrato never touches (the vibrato is a read-back
      * delay of the finished wave), so it is the same with the vibrato on or off. The control is a string
      * outside the window: CELLO C2 at a pressure of 0.6 and the full 3023.6 Hz corner, which R1a measured slipping three times a period,
      * must not pass the same lock check, so the check can fail.

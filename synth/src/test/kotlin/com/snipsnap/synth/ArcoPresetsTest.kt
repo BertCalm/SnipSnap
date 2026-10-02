@@ -176,24 +176,26 @@ class ArcoPresetsTest {
         var worstHigh = 0f
         var leastDecay = Float.MAX_VALUE
         var longest = 0f
+        val problems = ArrayList<String>()
         for (r in readings.filter { !it.loop }) {
             longest = maxOf(longest, r.seconds)
-            assertTrue(r.seconds <= MAX_ONE_SHOT_SECONDS, "${r.label} renders ${f2(r.seconds)} s, too near the classifier's 1.5 s LOOP line")
+            if (r.seconds > MAX_ONE_SHOT_SECONDS) problems += "${r.label} renders ${f2(r.seconds)} s, too near the classifier's 1.5 s LOOP line"
             when (r.heard) {
                 DrumClass.PERC -> {
                     worstLow = maxOf(worstLow, r.features.lowRatio)
                     worstHigh = maxOf(worstHigh, r.features.highRatio)
-                    assertTrue(r.features.lowRatio <= MAX_PERC_LOW, "${r.label}: head under 200 Hz is ${f2(r.features.lowRatio)}, near the 0.55 that reads bass")
-                    assertTrue(r.features.highRatio <= MAX_PERC_HIGH, "${r.label}: head over 2 kHz is ${f2(r.features.highRatio)}, near the 0.5 that reads SNARE")
+                    if (r.features.lowRatio > MAX_PERC_LOW) problems += "${r.label}: head under 200 Hz is ${f2(r.features.lowRatio)}, near the 0.55 that reads bass"
+                    if (r.features.highRatio > MAX_PERC_HIGH) problems += "${r.label}: head over 2 kHz is ${f2(r.features.highRatio)}, near the 0.5 that reads SNARE"
                 }
                 DrumClass.TONAL -> {
                     leastDecay = minOf(leastDecay, r.features.decayMs)
-                    assertTrue(r.features.decayMs >= MIN_TONAL_DECAY_MS, "${r.label}: rings ${r.features.decayMs.roundToInt()} ms past its peak, near the 500 ms that separates a note from a KICK")
+                    if (r.features.decayMs < MIN_TONAL_DECAY_MS) problems += "${r.label}: rings ${r.features.decayMs.roundToInt()} ms past its peak, near the 500 ms that separates a note from a KICK"
                 }
                 else -> fail("${r.label} read as ${r.heard}")
             }
         }
         println("ARCO roster room: PERC low <= ${f2(worstLow)} (line 0.55, bar $MAX_PERC_LOW), PERC high <= ${f2(worstHigh)} (line 0.5, bar $MAX_PERC_HIGH), TONAL decay >= ${leastDecay.roundToInt()} ms (line 500, bar $MIN_TONAL_DECAY_MS), longest ${f2(longest)} s (line 1.5, bar $MAX_ONE_SHOT_SECONDS)")
+        assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }
 
     private class Control(val voice: ArcoVoice, val label: String, val macros: Map<String, Float>)
@@ -368,17 +370,20 @@ class ArcoPresetsTest {
      */
     @Test
     fun `the scrapes scrape and the clean presets lock`() {
+        val problems = ArrayList<String>()
         for (r in readings.filter { !it.loop }) {
             println("ARCO lock ${r.label} ${noteName(r.midi)} bow-on=${f2(r.holdSeconds)}s lock=${f2(r.lockSeconds)}s cents=${r.cents?.let { f2(it) } ?: "-"}")
             if (r.preset.name == "DRY SCRAPE") {
-                assertTrue(r.lockSeconds < 0, "${r.label} locked at ${f2(r.lockSeconds)} s: it is no longer a scrape")
-            } else {
-                assertTrue(r.lockSeconds >= 0, "${r.label} never locks into one slip a period in its ${f2(r.holdSeconds)} s")
-                assertTrue(r.lockSeconds <= 0.85 * r.holdSeconds, "${r.label} locks at ${f2(r.lockSeconds)} s of ${f2(r.holdSeconds)} s, too late to be a note")
+                if (r.lockSeconds >= 0) problems += "${r.label} locked at ${f2(r.lockSeconds)} s: it is no longer a scrape"
+            } else if (r.lockSeconds < 0) {
+                problems += "${r.label} never locks into one slip a period in its ${f2(r.holdSeconds)} s"
+            } else if (r.lockSeconds > 0.85 * r.holdSeconds) {
+                problems += "${r.label} locks at ${f2(r.lockSeconds)} s of ${f2(r.holdSeconds)} s, too late to be a note"
             }
         }
         val grit = readings.first { it.preset.name == "GRIT BOW" }
-        assertTrue(grit.lockSeconds >= 0.3, "GRIT BOW locks at ${f2(grit.lockSeconds)} s, too early to be a scratch")
+        if (grit.lockSeconds < 0.3) problems += "GRIT BOW locks at ${f2(grit.lockSeconds)} s, too early to be a scratch"
+        assertTrue(problems.isEmpty(), problems.joinToString("\n"))
     }
 
     /**

@@ -312,6 +312,16 @@ tasks.register<JavaExec>("generateArcoAudition") {
     args("${rootDir}/testkit/arco-audition")
 }
 
+/** Render the ARCO R1c re-listen clips, manifest and page under testkit/arco-retune/. See ArcoRetuneGenerator. */
+tasks.register<JavaExec>("generateArcoRetune") {
+    group = "distribution"
+    description = "Render the ARCO R1c re-listen clips, manifest and listening page under testkit/arco-retune/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoRetuneGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-retune")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"

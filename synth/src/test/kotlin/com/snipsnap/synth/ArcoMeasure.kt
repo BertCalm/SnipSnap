@@ -256,6 +256,26 @@ internal object ArcoMeasure {
         return -1.0
     }
 
+    // ---- the bite (R1c) ------------------------------------------------------------------------------------------
+
+    /** The windows the bite is read over, in seconds from the start of the stroke: 0 to 50, 50 to 100, 100 to 200 and 200 to 400 ms. */
+    val BITE_WINDOWS: List<Pair<Double, Double>> = listOf(0.0 to 0.05, 0.05 to 0.10, 0.10 to 0.20, 0.20 to 0.40)
+
+    /**
+     * The gain in dB of [stroke] over [plain] (the same stroke with no bite) in the RMS of the raw string over [fromSeconds] to [toSeconds]. It is the RMS
+     * over the whole window and not a sliding one, so a bite that is over in 20 ms is averaged with the sustain that follows it in the window.
+     */
+    fun windowGainDb(stroke: FloatArray, plain: FloatArray, fromSeconds: Double, toSeconds: Double): Double {
+        val from = (fromSeconds * RATE).toInt()
+        val to = (toSeconds * RATE).toInt()
+        fun rms(x: FloatArray): Double {
+            var acc = 0.0
+            for (i in from until to) acc += x[i].toDouble() * x[i]
+            return sqrt(acc / (to - from))
+        }
+        return 20.0 * log10(max(rms(stroke), 1e-12) / max(rms(plain), 1e-12))
+    }
+
     // ---- the series ----------------------------------------------------------------------------------------------
 
     /**
