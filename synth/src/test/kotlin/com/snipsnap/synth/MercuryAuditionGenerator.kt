@@ -105,7 +105,7 @@ object MercuryAuditionGenerator {
             val vel = listOf(0.3f to "SOFT", 0.65f to "MEDIUM", 1f to "HARD").map { (v, label) ->
                 val id = "velocity_" + fmt(v).trimStart('.')
                 writeSnip(id, Velocity.atVelocity(patch, v))
-                val how = if (Velocity.brightnessSpec(patch) != null) "GLASS scaled down: a softer mallet, a darker ring" else "softened, as round 1"
+                val how = if (Velocity.brightnessSpec(patch) != null) "GLASS scaled down: a softer mallet, a darker ring" else "the touch: a soft rub swells in, a hard one catches with a scrape"
                 Clip(id, label, "velocity ${fmt(v)}: $how")
             }
             groups += Group("VELOCITY", key = false, clips = vel)

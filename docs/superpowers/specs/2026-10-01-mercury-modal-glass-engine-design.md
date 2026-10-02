@@ -8,7 +8,9 @@ tune, decays passively and stays bounded. **R0, the shared toolkit, is built**
 engine, is built** (2026-10-01; "R1, as built" below): PING, SING and
 BLADE, 24 presets, a kit and an audition page, roadmap row **S22**.
 **The first audition is in** (2026-10-02; "The audition, round 1" below):
-144 of 166 clips kept, none cut. Round 2 fixes WATER and velocity. This document reads the external *Mercury Engine — Engineering
+144 of 166 clips kept, none cut. Round 2 fixed WATER (heard, kept) and
+PING's velocity (kept); SING's and BLADE's velocity became the touch (a
+soft rub swells in, a hard one bites), for round 3. This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -713,4 +715,60 @@ rings shorter. FORK's STRIKE does the same.
 
 **Next.** Round 2 of the audition, on the same page, with its verdicts
 kept apart (`mercury_r2`).
+
+## The audition, round 2 — 2026-10-02
+
+The owner rated the clips round 2 changed for a reason:
+- **A little WATER** (.05, .10, .20, and SING's 0): **all 10 KEEP**, on
+  every voice. These are the same clips SING and BLADE marked MEH in
+  round 1, so the ear-units fix works by ear.
+- **Velocity:** **PING's three KEEP**; SING's and BLADE's three each MEH.
+  The owner: *"I really only hear a difference in ping."*
+
+### Why the rubbed voices' velocity was not heard
+
+A rubbed glass or a bowed blade is close to a pure tone: the rub sustains
+the fundamental, and the upper modes are not harmonics of it, so the
+locked motion barely drives them. GLASS moved only the first 50 ms (the
+finger landing), and `soften`'s low-pass sits well above the body.
+
+A steeper contact taper for a soft touch (0.5 to 1.5) was tried and
+measured: the held body's centroid moved only 4% on SING (412 to
+427 Hz) and 13% on BLADE (410 to 463 Hz). How the note starts did show.
+Offered "attack and bite", "attack only" or "loudness only", the owner
+chose **attack and bite** (decision 8, final).
+
+### Velocity, as built
+
+- **PING:** GLASS, as in round 2 (+31% onset centroid, monotonic).
+- **SING and BLADE:** velocity is a render parameter, as on PLUCK
+  (`Mercury.render(voice, macros, velocity)`), and `Velocity` renders it
+  directly (`touchedVelocity`), with no macro moved and no `soften`.
+  - **The swell.** The finger or bow comes up to speed up to 31 times
+    slower (`VELOCITY_RAMP` 30 on the 20 ms ramp). Time to half level, soft
+    to hard: SING 0.38 / 0.27 / 0.17 / 0.08 s, BLADE 0.35 / 0.28 / 0.19 /
+    0.09 s at velocity 0 / .3 / .65 / 1.
+  - **The bite.** A hard touch catches with a scrape: seeded contact noise,
+    0.4–1.5 kHz, 12 dB under the held tone at full velocity and dying over
+    40 ms. Its amplitude goes with velocity (about 10 dB quieter at 0.3).
+  - **Two findings on the way.** Friction roughness fed through the
+    contact cannot make a scrape: the high-Q modes filter it into tone (a
+    3x rougher catch left the 1–6 kHz flatness at zero). So the scrape is
+    added after the modes, and is over by 0.3 s, so the held tone is the
+    same to the bit. And at 1–6 kHz it made the shortest SING (GLASS 0,
+    HOLD 0) read as SNARE to the classifier, which counts the magnitude
+    above 2 kHz. Under 1.5 kHz, with two poles on the top edge, every short
+    note is heard PERC again.
+- **1, the default, is a full touch.** So the SING and BLADE kit pads and
+  presets now carry the scrape; nothing else in them changed.
+- `MercuryTest` holds all of it: PING's sweep; the swell at every step and
+  at least 3x; the scrape's flatness (0.20 and 0.16 against 0.0001) and
+  the held tone to the bit. With the touch switched off, that test fails
+  by name.
+
+**Next.** Round 3 of the audition: SING's and BLADE's velocity, and the
+kit's SING and BLADE pads with the scrape. The WATER ends and the
+defaults' wetness were not rated in round 2 and are still open. Then R1.1
+(the phone's picker, which needs an SDK) and R2 (LOOP, `Keys.mercuryPad`,
+EDDY, VESSEL and SHARD).
 

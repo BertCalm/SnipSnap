@@ -129,6 +129,29 @@ object Mercury {
     /** The contact-patch taper: b_i = ratio^(−this). */
     const val CONTACT_TAPER = 0.5
 
+    /**
+     * Velocity, a render parameter (not a knob) that only the rubbed voices read; PING's velocity is GLASS
+     * (`Velocity.brightnessOverride`). A rubbed body is close to a pure tone, so a harder touch cannot be heard as
+     * brighter (a steeper contact taper moved the held body 4–13%); it is heard in how the note starts. The owner
+     * chose "attack and bite" (2026-10-02). A soft touch: the finger or bow comes up to speed up to this many times
+     * slower than [DRIVER_RAMP_SECONDS], so the note swells in. Listening value.
+     */
+    const val VELOCITY_RAMP = 30.0
+
+    /**
+     * A hard touch catches with a scrape: the contact's own noise, this many dB under the held tone at full velocity
+     * (its amplitude goes with velocity), dying over [SCRAPE_SECONDS]. It is added after the modes, because friction
+     * noise fed through the contact comes out as tone: the high-Q modes filter it, so a 3x rougher catch left the
+     * 1–6 kHz spectral flatness at zero. Listening value.
+     *
+     * The band stays under 2 kHz, the classifier's SNARE line (its share of magnitude above 2 kHz): at 1–6 kHz the
+     * shortest SING (GLASS 0, HOLD 0) was heard as SNARE. Two poles on the top edge keep the leak above it small.
+     */
+    const val SCRAPE_DB = -12.0
+    const val SCRAPE_SECONDS = 0.04
+    const val SCRAPE_LOW_HZ = 400f
+    const val SCRAPE_HIGH_HZ = 1500f
+
     /** The tap's weight never falls under this, even at RUB 1: the finger lands (Phase 0 I4c, 95–534 ms onset). */
     const val TAP_FLOOR = 0.2
 
@@ -326,17 +349,23 @@ object Mercury {
 
     // ---- the render ---------------------------------------------------------
 
-    fun render(voice: MercuryVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    /**
+     * [velocity] is a render parameter, as on PLUCK: no knob, no preset. SING and BLADE read it as the touch
+     * ([VELOCITY_RAMP], [SCRAPE_DB]); PING ignores it, since its velocity is GLASS. 1, the default, is a full
+     * touch, so a kit pad or a preset renders the hard version.
+     */
+    fun render(voice: MercuryVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         val m = settled(macros, voice)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
-        return Snip(finish(sound(voice, hz, m), tailSeconds(m.getValue("GLASS"))), channels = 1, sampleRate = RATE)
+        val touch = if (voice == MercuryVoice.PING) 1.0 else velocity.coerceIn(0f, 1f).toDouble()
+        return Snip(finish(sound(voice, hz, m, touch), tailSeconds(m.getValue("GLASS"))), channels = 1, sampleRate = RATE)
     }
 
     /**
      * The object, rung at [hz] for [macros] (settled), at the oversampled rate: raw, unlevelled,
      * so tests can read the physics. Its length is [rawFrames].
      */
-    internal fun sound(voice: MercuryVoice, hz: Double, m: Map<String, Float>): FloatArray {
+    internal fun sound(voice: MercuryVoice, hz: Double, m: Map<String, Float>, velocity: Double = 1.0, scrape: Boolean = true): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
         val dt = 1.0 / rate
         val bend = m.getValue("BEND").toDouble()
@@ -417,7 +446,8 @@ object Mercury {
         val pressure = rubW * rubW * (gamma0 + 1 / onsetTau) / (abs(friction.slope(DRIVER_SPEED)) * contact0[0] * contact0[0])
         val contactFrames = (holdSeconds(m.getValue("HOLD")) * rate).toInt()
         val releaseFrames = (CONTACT_RELEASE_SECONDS * rate).toInt()
-        val rampFrames = (DRIVER_RAMP_SECONDS * rate).toInt()
+        val rampFrames = (DRIVER_RAMP_SECONDS * (1 + VELOCITY_RAMP * (1 - velocity)) * rate).toInt()
+
         val strikeFrames = ((STRIKE_MS_HARD + (STRIKE_MS_SOFT - STRIKE_MS_HARD) * (1 - glass)) * 1e-3 * rate).toInt().coerceAtLeast(2)
         val strikePeak = STRIKE_IMPULSE * tapW * PI / (2 * strikeFrames * dt)
         val noiseFrames = (STRIKE_NOISE_SECONDS * rate).toInt()
@@ -485,7 +515,38 @@ object Mercury {
             }
             out[t] = bank.velocityAlong(pickup).toFloat()
         }
+        if (scrape && voice != MercuryVoice.PING && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
         return out
+    }
+
+    /**
+     * The hard touch's scrape ([SCRAPE_DB]), on the raw output: band-passed seeded noise under a 1 ms rise and a
+     * [SCRAPE_SECONDS] fall, levelled against the held tone's RMS over 0.3–0.6 s. It is over by 0.3 s, so the held
+     * tone is untouched.
+     */
+    private fun addScrape(out: FloatArray, voice: MercuryVoice, hz: Double, velocity: Double, rate: Int) {
+        val from = (0.3 * rate).toInt().coerceAtMost(out.size)
+        val to = (0.6 * rate).toInt().coerceAtMost(out.size)
+        if (to <= from) return
+        var e = 0.0
+        for (i in from until to) e += out[i].toDouble() * out[i]
+        val body = sqrt(e / (to - from))
+        val gain = body * 10.0.pow(SCRAPE_DB / 20) * velocity
+        if (gain <= 0.0) return
+        val noise = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "scrape"))
+        val low = Dsp.OnePole(rate)
+        val high = Dsp.OnePole(rate)
+        val high2 = Dsp.OnePole(rate)
+        val frames = min(from, (6 * SCRAPE_SECONDS * rate).toInt())
+        // Noise has RMS 1/√3; the band keeps about the share of it between the edges.
+        val norm = sqrt(3.0 * rate / 2 / (SCRAPE_HIGH_HZ - SCRAPE_LOW_HZ))
+        for (i in 0 until frames) {
+            val x = high2.lp(high.lp(noise.next(), SCRAPE_HIGH_HZ), SCRAPE_HIGH_HZ)
+            val band = x - low.lp(x, SCRAPE_LOW_HZ)
+            val tSec = i.toDouble() / rate
+            val env = (1 - exp(-tSec / 0.001)) * exp(-tSec / SCRAPE_SECONDS)
+            out[i] += (gain * norm * env * band).toFloat()
+        }
     }
 
     private fun fade(f: Double) = when {

@@ -326,31 +326,73 @@ class MercuryTest {
         return num / den
     }
 
+    /** Seconds until the 10 ms RMS first reaches half its peak over the first 1.5 s: how fast the note comes in. */
+    private fun halfRise(snip: Snip): Double {
+        val w = rate / 100
+        val levels = (0 until (1.5 * rate).toInt() / w).map { k -> rms(snip.samples, k * 0.01, (k + 1) * 0.01) }
+        return levels.indexOfFirst { it >= 0.5 * levels.max() } * 0.01
+    }
+
+    /** Spectral flatness (geometric over arithmetic mean power) between [lo] and [hi] Hz of [n] samples from [from]: 1 is noise, 0 is pure tones. */
+    private fun flatness(x: FloatArray, sampleRate: Int, from: Int, n: Int, lo: Double, hi: Double): Double {
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        for (i in 0 until n) re[i] = (if (from + i < x.size) x[from + i] else 0f) * (0.5f - 0.5f * kotlin.math.cos(2 * Math.PI * i / (n - 1)).toFloat())
+        com.snipsnap.audio.Fft.forward(re, im)
+        val p = (0 until n / 2).filter { it.toDouble() * sampleRate / n in lo..hi }.map { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] + 1e-30 }
+        return kotlin.math.exp(p.sumOf { kotlin.math.ln(it) } / p.size) / p.average()
+    }
+
     /**
-     * Velocity (decision 8). At the first audition the owner heard PING's and BLADE's soften layers as MEH and asked for
-     * a harder hit to be brighter (2026-10-02); level is the pad's velocity curve, not the render's. So PING and BLADE
-     * register GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset centroid
-     * rises at every tenth of velocity's travel, and by at least 15% over all of it. Round 2 measured 544 to 710 Hz on
-     * PING (+31%) and 540 to 654 Hz on BLADE (+21%). SING keeps soften: its GLASS darkens the held body as it brightens
-     * the onset, and the owner kept SING's soften layers.
+     * Velocity (decision 8), as the owner heard it (2026-10-02).
+     *
+     * PING registers GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset
+     * centroid rises at every tenth of velocity's travel, and by at least 15% over all of it (544 to 710 Hz, +31%).
+     * The owner heard it and kept it.
+     *
+     * SING and BLADE take velocity as the touch, the owner's choice of "attack and bite". A rubbed body is close to a
+     * pure tone, so a harder touch is heard in how the note starts, not in brightness:
+     * - the swell: the time to half level falls at every step from soft to hard, and the softest is at least three
+     *   times the hardest (measured 0.35-0.38 s against 0.07-0.08 s);
+     * - the bite: at full velocity, the first 46 ms carry the scrape, noise under the classifier's 2 kHz SNARE line,
+     *   with a 0.4-1.5 kHz spectral flatness of at least 0.1 where the same note without it has none (measured
+     *   0.20 against 0.0001; the note's own partials share the band, so it is not 1), and from 0.3 s on the scraped
+     *   and unscraped notes are the same to the bit, so the held tone is untouched;
+     * - and Velocity renders exactly that, with no macro moved and no soften.
      */
     @Test
-    fun `velocity moves GLASS on PING and BLADE, brighter at every step, and SING keeps soften`() {
-        for (voice in listOf(MercuryVoice.PING, MercuryVoice.BLADE)) {
-            val patch = MercuryPatch("Velocity", voice, Mercury.defaults(voice))
-            assertEquals("GLASS", Velocity.brightnessSpec(patch)?.name, "$voice: velocity is not on GLASS")
-            val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(patch, it / 10f)) }
-            println("MERCURY velocity $voice onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
-            for (k in 1 until centroids.size) {
-                assertTrue(centroids[k] >= centroids[k - 1], "$voice: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
-            }
-            assertTrue(centroids.last() >= centroids.first() * 1.15, "$voice: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x")
+    fun `velocity brightens PING, and swells or bites SING and BLADE`() {
+        val ping = MercuryPatch("Velocity", MercuryVoice.PING, Mercury.defaults(MercuryVoice.PING))
+        assertEquals("GLASS", Velocity.brightnessSpec(ping)?.name, "PING: velocity is not on GLASS")
+        val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(ping, it / 10f)) }
+        println("MERCURY velocity PING onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
+        for (k in 1 until centroids.size) {
+            assertTrue(centroids[k] >= centroids[k - 1], "PING: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
         }
-        val sing = MercuryPatch("Velocity", MercuryVoice.SING, Mercury.defaults(MercuryVoice.SING))
-        assertEquals(null, Velocity.brightnessSpec(sing), "SING: velocity left soften")
-        assertContentEquals(Velocity.soften(sing.render(), 0.7f).samples, Velocity.atVelocity(sing, 0.3f).samples, "SING: atVelocity is not the soften fallback")
-        val soft = com.snipsnap.audio.FeatureExtractor.extract(Velocity.atVelocity(sing, 0.25f)).centroidHz
-        val hard = com.snipsnap.audio.FeatureExtractor.extract(Velocity.atVelocity(sing, 1f)).centroidHz
-        assertTrue(soft < hard, "SING: soft centroid $soft should be below hard centroid $hard")
+        assertTrue(centroids.last() >= centroids.first() * 1.15, "PING: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x")
+
+        val raw = rate * Dsp.OVERSAMPLE
+        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) {
+            val macros = Mercury.defaults(voice)
+            val patch = MercuryPatch("Velocity", voice, macros)
+            assertEquals(null, Velocity.brightnessSpec(patch), "$voice: velocity has a brightness macro")
+            assertContentEquals(Mercury.render(voice, macros, velocity = 0.3f).samples, Velocity.atVelocity(patch, 0.3f).samples, "$voice: Velocity does not render the touch")
+
+            val rises = listOf(0f, 0.3f, 0.65f, 1f).map { halfRise(Mercury.render(voice, macros, velocity = it)) }
+            println("MERCURY velocity $voice half-level rise at 0 / .3 / .65 / 1: " + rises.joinToString(" / ") { f(it, 2) } + " s")
+            for (k in 1 until rises.size) assertTrue(rises[k] < rises[k - 1], "$voice: a harder touch does not come in faster ($rises)")
+            assertTrue(rises.first() >= 3 * rises.last(), "$voice: the softest swell (${rises.first()} s) is not three times the hardest (${rises.last()} s)")
+
+            val m = Mercury.settled(macros, voice)
+            val hz = Mercury.frequencyFor(voice, m.getValue("TUNE")).toDouble()
+            val scraped = Mercury.sound(voice, hz, m, 1.0, scrape = true)
+            val clean = Mercury.sound(voice, hz, m, 1.0, scrape = false)
+            val on = flatness(scraped, raw, 0, 8192, 400.0, 1500.0)
+            val off = flatness(clean, raw, 0, 8192, 400.0, 1500.0)
+            println("MERCURY velocity $voice scrape: 0.4-1.5 kHz flatness in the first 46 ms ${f(on, 3)}, without it ${f(off, 4)}")
+            assertTrue(on >= 0.1 && off < 0.01, "$voice: the hard touch's first 46 ms are not a scrape (flatness ${f(on, 3)} against ${f(off, 4)})")
+            val after = (0.3 * raw).toInt()
+            assertContentEquals(clean.copyOfRange(after, clean.size), scraped.copyOfRange(after, scraped.size), "$voice: the scrape reaches the held tone")
+        }
     }
 }
