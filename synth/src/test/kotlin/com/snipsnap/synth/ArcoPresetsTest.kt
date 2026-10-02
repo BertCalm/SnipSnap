@@ -172,7 +172,7 @@ class ArcoPresetsTest {
      * GRIP 0.7 (575 ms past its peak) and KICK at GRIP 0.5 (441 ms), so CINEMA LOW sits at A#2,
      * where the same swell stays clear of the line (627 ms, R1c and R1b alike). R1b's own render of that swell (its bite, its plain vibrato and its box at the macro BODY, the four-override recipe
      * [the G sharp 2 swell is on the classifier's line, and what moved it] plays) read 569 and 557 ms, TONAL at both GRIPs: the KICK at GRIP 0.5 is new with R1c, a 57 ms margin over the line turned into 59 ms under it, and it is the louder box
-     * and the drifting vibrato together that did it, neither alone (that test prints all four readings).
+     * and the drifting vibrato together that did it, neither alone (that test prints all four readings). R1b's own KDoc here quoted 580 and 488 ms (KICK) for this swell: that was read on the block-retune vibrato before it became a read-back delay and was never re-measured; the 569 and 557 ms of the exact R1b engine are the figure for what merged.
      */
     @Test
     fun `every classifier reading keeps its room to its line`() {

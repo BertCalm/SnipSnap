@@ -42,8 +42,8 @@ import kotlin.math.roundToInt
  * engine called with the four overrides and to not being NOW. The default-note BEFORE clips (BODY in both voices, BOW at C3, VIBRATO at C3)
  * and the ERHU controls are byte-identical PCM to the clips R1b's page wrote, and so is VIBRATO's root (C2) BEFORE to R1b's held-note
  * round's bowed clip at C2 (heard there unlabelled); that comparison is made outside this generator (the R1b clips are not in the
- * repository). The BOW card's C2 BEFORE clips and the stab's are the same recipe at notes R1b's page never rendered, so the page calls
- * them "the old stroke" and not "what you heard".
+ * repository). The BOW card's C2 BEFORE clips are the same recipe at a note R1b's page never rendered, so the page calls them "the old stroke"
+ * and not "what you heard"; the stab's hits are the figure's own hits, which R1b's page played inside its two-bar pattern, here one at a time.
  *
  * Nothing here has been heard by anyone yet. The page says so.
  */
@@ -255,8 +255,9 @@ object ArcoRetuneGenerator {
     /** The pitches of the stab figure the owner marked YES, low to high (C3, E-flat3, G3): [ArcoAuditionGenerator.STAB_FIGURE]'s own. */
     private val STAB_PITCHES: List<Int> = ArcoAuditionGenerator.STAB_FIGURE.map { it.second }.distinct().sorted()
 
-    /** How many bite settings R1c ran against the stab figure before it said none that is loud enough to hear keeps every note (Arco's own account of the search). */
+    /** The last search's own figures (Arco's KDoc on the bite): bite settings run against the stab figure, and how many of them kept every other bar the engine is held to. */
     private const val STAB_SETTINGS_SEARCHED = 80
+    private const val STAB_SETTINGS_KEPT_THE_OTHER_BARS = 19
 
     /** SHORT STAB's own knobs at [midi], BOW forced to 1 as in the figure the owner marked (HOLD 0: a 0.3 s hit). */
     private fun stabMacros(midi: Int): Map<String, Float> {
@@ -542,7 +543,7 @@ object ArcoRetuneGenerator {
                         "A bass string needs many milliseconds to build a period, and a bite with a ${ms(before.tauSeconds)} ms time constant had mostly gone before it did. At BOW ${fmt(Arco.OVERSHOOT_FROM)} and under there is still no bite.",
                     "CELLO's vibrato was a plain sine, ${Arco.VIBRATO_MAX_CENTS.roundToInt()} cents at ${f1(Arco.VIBRATO_HZ.toFloat())} Hz, every swing the same, in over ${f1(Arco.VIBRATO_RISE_SECONDS.toFloat())} s. Now the rate drifts by up to ${pct(h.rateWander)} and the depth by up to ${pct(h.depthWander)} (swings of about ${lo.roundToInt()} to ${hi.roundToInt()} cents), the swing leans a little (a second harmonic of ${f2(h.skew.toFloat())}), and it swells in over ${f1(h.riseSeconds.toFloat())} s. The drift depends on time alone, so a note renders the same every time.",
                     "The stab figure you marked YES (SHORT STAB's knobs at BOW 1, ${f2(bowOn.toFloat())} s a hit, on ${STAB_PITCHES.joinToString(", ") { spell(it) }}) is changed by the bigger bite, and not for free. Lock readings, BEFORE to NOW: $stabChanges. " +
-                        "A scrape is the string failing to settle into one slip a period inside the hit. R1c ran $STAB_SETTINGS_SEARCHED bite settings against the figure and none that is loud enough to hear kept ${spell(stabLost().single())} a note. The STAB card plays each pitch alone, so you can judge whether the extra bite is worth it.",
+                        "A scrape is the string failing to settle into one slip a period inside the hit. R1c ran $STAB_SETTINGS_SEARCHED bite settings against the figure; $STAB_SETTINGS_KEPT_THE_OTHER_BARS of them kept every other bar the engine is held to, and none of those $STAB_SETTINGS_KEPT_THE_OTHER_BARS kept ${spell(stabLost().single())} a note. The STAB card plays each pitch alone, so you can judge whether the extra bite is worth it.",
                 ),
             ),
             Block(
@@ -550,7 +551,7 @@ object ArcoRetuneGenerator {
                 listOf(
                     "ERHU's bite (${f2(Arco.OVERSHOOT_MAX_ERHU)} times, ${shareOf(Arco.BITE_PRESSURE_ERHU)} of it pressing the string, in the stroke's own time), ERHU's vibrato (the plain sine) and ERHU's box shape. Every knob's default. The box at or under BODY ${fmt(Arco.BODY_KNEE)}, so every preset at or under it keeps its box to the bit.",
                     "Two things to know. CELLO's default note is ${f2(Arco.holdSeconds(defaultHold))} s of bow and carries ${f1(defaultCents)} cents of vibrato, so the CELLO default clip has the new drift in it too, far too faint to matter. CELLO presets with a BOW above ${fmt(Arco.OVERSHOOT_FROM)} get the new bite, and those held over ${f1(Arco.VIBRATO_HOLD_FROM_SECONDS)} s the new vibrato; this page plays only the stab among them.",
-                    "The BEFORE clips are the engine made to play as it did last time: the old bite, the old vibrato and the old box. At the default note they are, to the bit, the clips of the last page (and so is the vibrato at the root, which its held-note round played); the BOW clips at the root and the stab's are the same recipe at notes that page did not render.",
+                    "The BEFORE clips are the engine made to play as it did last time: the old bite, the old vibrato and the old box. At the default note they are, to the bit, the clips of the last page (and so is the vibrato at the root, which its held-note round played); the BOW clips at the root are the same recipe at a note that page did not render, and the stab's hits are the figure's own hits (you heard them inside the two-bar pattern), here one at a time.",
                 ),
             ),
         )
@@ -580,8 +581,8 @@ object ArcoRetuneGenerator {
      * the excess is left after one) and the share of it that presses the string.
      */
     private fun biteWords(b: Bite): String =
-        "the bow starts ${f2(b.max)} times too fast and its speed peaks at ${f2(peakSpeed(b))} times the sustain speed; the excess relaxes with a time constant of ${ms(b.tauSeconds)} ms " +
-            "(${pct(exp(-1.0))} of it is left after that long); ${shareOf(b.pressure)} of it presses the string" + (if (b.pressure < 1f) ", the rest is speed alone" else "")
+        "a bite of ${f2(b.max)} times the sustain speed (the speed itself peaks at ${f2(peakSpeed(b))} times it, since the stroke is still rising); the excess relaxes with a time constant of ${ms(b.tauSeconds)} ms " +
+            "(${pct(exp(-1.0))} of it is left after that long); ${shareOf(b.pressure)} of that accent presses the string" + (if (b.pressure < 1f) ", the rest is speed alone" else "")
 
     /**
      * The most the bow's speed reaches in a stroke with bite [b], as a multiple of the sustain speed: the maximum of

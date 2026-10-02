@@ -35,7 +35,7 @@ class ArcoLoopFuzzTest {
     private class Outcome(val case: Case, val seam: Double, val frames: Int, val finite: Boolean, val peak: Float)
 
     @Test
-    fun `every note of both voices closes as a loop, at the defaults and at a random corner`() {
+    fun `every note of both voices closes as a loop, at the defaults, at a random corner and at BODY 1`() {
         val random = Random(20261001)
         val cases = ArcoVoice.entries.flatMap { voice ->
             (0..Arco.tuneSemitones(voice)).flatMap { step ->

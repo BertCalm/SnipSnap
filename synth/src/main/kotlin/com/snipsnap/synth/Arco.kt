@@ -44,8 +44,9 @@ import kotlin.random.Random
  * raw 176.4 kHz rate and then again on the finished render: how long the string takes to lock into
  * one slip a period (read on the string's velocity under the bow, as the gaps between slips), the
  * autocorrelation pitch, the onset and the ring-down, at every TUNE step of both voices. Nothing here
- * was *listened to* - the audition gate decides whether it is a bow - and every value marked
- * "listening" is a first guess for it.
+ * was *listened to* when R1b was written. The owner has since heard R1b's held notes, a stab and the knob ends (the bowed note was
+ * picked out six times in six; BODY 1, CELLO's BOW 1 and CELLO's vibrato were "nearly", which R1c retunes), and has not heard the
+ * retune, the presets, the kit or the loops; every value marked "listening" is a first guess for the ears that have not.
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
@@ -262,7 +263,7 @@ object Arco {
      * (a player's accent), and the pressure starts part of the way to the top of the window in step with it (the part is
      * [bitePressure], of the bite's share, so at BOW 1 a voice whose [bitePressure] is 1 starts at the window's top); both relax
      * exponentially, with a time constant of the longer of the attack and [biteSeconds]. Each voice has its own three numbers.
-     * ERHU's are R1b's: 1.75 times, the attack's own time constant (a 10 ms stroke's bite is over in about 27 ms, a hump of 1.28 times
+     * ERHU's are R1b's: 1.75 times, the attack's own time constant (a 10 ms stroke's bite is down to 5 percent over the sustain in about 27 ms, a hump of 1.28 times
      * the velocity at its highest, since the stroke is still rising), all of the share in the pressure; 0.6 is a 1.15 times bite. Listening values.
      *
      * The bite is per voice since the owner heard CELLO's BOW 1 as "nearly" and "not enough bite" while ERHU's was a yes. R1b's bite on a
@@ -270,14 +271,14 @@ object Arco {
      * windows is within 0.5 dB of it at F2, C3, G3 and C4 (0.3, 0.5, 0.5 and 0.4; over the whole 200 ms the figure is +0.2, -0.2, +0.4 and -0.6),
      * and ERHU's, which the owner heard as a yes, is 0.3 to 1.1 dB. CELLO's has three numbers of its own: [OVERSHOOT_MAX_CELLO] the velocity's,
      * [BITE_SECONDS_CELLO] the least time constant it relaxes with, and [BITE_PRESSURE_CELLO] the part of its share that presses the string toward
-     * the window's top (the rest of the accent is speed alone). Together they are +2.0, +2.9, +3.0 and +2.7 dB in the best 50 to 100 ms window at
+     * the window's top (the rest of the accent is speed alone). Together they are +2.0, +2.9, +3.0 and +2.7 dB in the best of the 0-50, 50-100 and 100-200 ms windows at
      * F2, C3, G3 and C4.
      *
      * The three were searched, not guessed, because the lock is chaotic in them and the roster has bars of its own. R1c ran a few hundred
      * settings (velocity 1.75 to 3.5 times, 20 to 140 ms, a pressure share of 0 to 1) against: the overshoot row (every TUNE step at BOW 1,
      * GRIP 0.6 and 1, locked within 1.5 s), the onset claim (BOW 1 sooner than BOW 0 at C2, C3 and C4), SHORT STAB, GRIT BOW and HORSEHAIR
      * locking inside their bow-on, DRY SCRAPE still a scrape, the lock across BOW (2.0 s), the scramble test's 400 random rolls, how many TUNE
-     * steps still lock at BOW 1 in a default note, and a gain of at least 1.5 dB at four notes. Two earlier settings were wrong, each in
+     * steps still lock at BOW 1 in a default note, and a gain of at least 1.5 dB at four notes. Three earlier settings were wrong, each in
      * something the search had not yet looked at. 3.0 times for 60 ms with all of the share in the pressure never locked SHORT STAB in its
      * 0.30 s stab. 2.75 times for 60 ms passed the roster but put C3's BOW 1 at 600 ms to reach 90 percent against BOW 0's 448. 2.5 times for 120 ms
      * with a quarter of the share in the pressure kept those but let only 18 of 25 TUNE steps lock inside a default note at BOW 1 (R1b: 23) and left

@@ -45,9 +45,9 @@ object ArcoPresets {
         // A2 (9 of 24): a dark, boxy pedal tone under a pad, locking at 0.47 s of its 0.92 s of bow.
         p(ArcoVoice.CELLO, "DEEP PEDAL", "TUNE" to 0.375f, "BOW" to 0.5f, "GRIP" to 0.4f, "BODY" to 0.8f, "HOLD" to 0.43f),
         // F#2 (6 of 24), under G#2: a hard bite that starts in a scratch and only locks into the note after 0.4 s of its 0.6. BOW 0.65, not the
-        // 0.85 it was written at: R1c's bite is bigger, and at BOW 0.85 this note no longer locks inside its bow at all (at 0.65 it locks at 0.44 s).
+        // 0.85 it was written at: R1c's bite is bigger, and at BOW 0.85 this note no longer locks inside its bow at all (at 0.65 it locks at 0.45 s).
         p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.65f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f),
-        // E2 (4 of 24), the string alone (BODY 0): a stab too low to lock, so it never leaves the scratch; a scrape for the percussion pads.
+        // E2 (4 of 24), the string alone (BODY 0): a stab too low to lock before the last 10 ms of its 0.34 s, so a scrape in all but a moment (R1b's bite never let it lock at all); for the percussion pads.
         p(ArcoVoice.CELLO, "DRY SCRAPE", "TUNE" to 0.167f, "BOW" to 1.0f, "GRIP" to 0.5f, "BODY" to 0.0f, "HOLD" to 0.05f),
         // A#2 (10 of 24): the whole box (BODY 1) under a 0.13 s bow-in that settles by 0.4 s, as long as a one-shot may be.
         p(ArcoVoice.CELLO, "CINEMA LOW", "TUNE" to 0.417f, "BOW" to 0.3f, "GRIP" to 0.5f, "BODY" to 1.0f, "HOLD" to 0.43f),

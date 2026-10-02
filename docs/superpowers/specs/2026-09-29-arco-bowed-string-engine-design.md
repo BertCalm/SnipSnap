@@ -2092,7 +2092,7 @@ BOW 1 stab the owner marked YES** (below). What it found:
   time constant (a hump of 1.28 times the velocity, over in 27 ms) and a bass string needs many milliseconds to build a period. The bite is per
   voice now (ERHU's numbers are as they were) and CELLO's has three: `OVERSHOOT_MAX_CELLO` 3.0 times the velocity, `BITE_SECONDS_CELLO` a 60 ms
   time constant (at least; the attack's if longer), and `BITE_PRESSURE_CELLO` half of the bite's share pressing the string toward the window's top
-  (the rest of the accent is speed alone). That is +2.0, +2.9, +3.0 and +2.7 dB in the best 50 to 100 ms window at those notes.
+  (the rest of the accent is speed alone). That is +2.0, +2.9, +3.0 and +2.7 dB in the best of the 0-50, 50-100 and 100-200 ms windows at those notes.
   **Three settings were tried before it, and each broke something the search had not yet looked at**: 3.0 times for 60 ms with all of the share in
   the pressure never locked SHORT STAB in its 0.30 s stab; 2.75 times for 60 ms passed the roster but put C3's BOW 1 at 600 ms to reach 90 percent
   against BOW 0's 448; 2.5 times for 120 ms with a quarter of the share in the pressure kept both but let only 18 of the 25 TUNE steps lock inside
@@ -2112,7 +2112,7 @@ BOW 1 stab the owner marked YES** (below). What it found:
   now `VIBRATO_HUMAN`: the rate drifts by up to 7 percent, the depth by up to 18 percent (each a sum of three slow sines whose frequencies share
   no period inside a note, so it is never the same twice and still a pure function of time: no seed), the swing leans a little (a second
   harmonic) and it swells in over half a second, against a fifth. Measured swing peaks 8.1 to 11.8 cents (12.75 at its highest over four
-  seconds), half-swing rates 5.7 to 6.9 Hz, mean pitch -0.02 cents. ERHU keeps `VIBRATO_PLAIN`, the old sine term for term, held bit for bit by a test.
+  seconds), half-swing rates 5.1 to 7.1 Hz, mean pitch -0.02 cents. ERHU keeps `VIBRATO_PLAIN`, the old sine term for term, held bit for bit by a test.
 * **Still open for the owner's ears**: all three amounts (`BODY_TOP`, the bite's three numbers, the drift's two), whether the stab's extra bite is worth
   E-flat3 and its neighbours scraping, whether CELLO's default-HOLD notes (0.85 s of bow, 2.8 cents of vibrato, which now drifts) are better or worse
   for it, the stab against the two brass stabs, whether the bowed note still reads as a synth, and the unheard half of the roster.

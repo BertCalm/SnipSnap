@@ -18,8 +18,9 @@ import kotlin.test.assertTrue
  * exception: they read the finished 44.1 kHz render with a windowed FFT, which is what a player hears and what
  * [FineTuning] was built for, and are cross-checked by autocorrelation on the raw wave.
  *
- * Every number asserted here was measured on the built engine by R1b, or by R1c where a test is about R1c's bite (the figure is in the KDoc of the test that
- * holds it, "R1b saw X; the bound is Y") and every bound sits past the measurement with room. The measured tables are
+ * Every number asserted here was measured on the built engine by R1b, or by R1c where the KDoc says so (R1c retuned the bite, the box and CELLO's vibrato; the figure is in the KDoc of the test that
+ * holds it, "R1b saw X; the bound is Y") and every bound sits past the measurement with room, except where that KDoc says the margin is thin or none (the HOLD-0 stab count, the
+ * default-note count, C3's onset, the overshoot row). "The interim bite" in this file is the 2.5 times, 120 ms, quarter-of-the-share setting of R1c's fix round (`INTERIM`), history. The measured tables are
  * printed on lines that start `ARCO`, so a change that moves a number can be read against the old one in the log.
  * A claim that could not fail proves nothing, so each test either carries a negative control (a cell, a bow or a
  * signal the same judgement must refuse) or states the margin that shows it can.
@@ -744,7 +745,7 @@ class ArcoTest {
      * R1c saw 90 cells all finite; the raw peak at most 0.753 at CELLO (G#2, GRIP 1; R1b's 0.822 at F#2) and 0.600 at ERHU (D4, GRIP 1), against the
      * ceiling 1.25 (at the three notes: CELLO C2 0.633, C3 0.678, C4 0.668, R1b's 0.658, 0.673 and 0.611; ERHU D4 0.600, C5 0.585, A5 0.505, ERHU's unchanged); and the lock
      * at most 1.44 s at CELLO (G2, GRIP 1; against R1b's 1.12 s at F2 at GRIP 0.6, which R1c's bite locks at 0.49 s) and 0.17 s at ERHU (D4, GRIP 0.6; the bar 0.8 s). The CELLO bar is 1.5 s, so the bigger bite
-     * has taken all but 0.06 s of the room the lock had here (the interim 2.5 times, 120 ms bite left 0.19 s; the 2.75 times, 60 ms one 0.14 s); the lock-across-BOW test below keeps 0.53 s of its own. The CELLO peak is above the grid's
+     * has taken all but 0.06 s of the room the lock had here (the interim 2.5 times / 120 ms / quarter-share bite left 0.19 s; the earlier 2.75 times / 60 ms one 0.14 s); the lock-across-BOW test below keeps 0.53 s of its own. The CELLO peak is above the grid's
      * 0.737 in the bounded-and-pinned grid, which takes only three notes: the grid is not the engine's worst corner.
      */
     @Test
@@ -797,7 +798,7 @@ class ArcoTest {
      * measurement with room and not the design's bound; the 1.2 s the speaks table sets for BOW 0.5 does not hold across BOW.
      * R1b saw CELLO as late as 1.66 s (A2 at BOW 0.8, GRIP 1), 1.49 s (D#2, BOW 0.8, GRIP 1) and 1.38 s (D2, BOW 0.6, GRIP 1); R1c's bigger
      * CELLO bite moved the late notes about (those three cells now lock at 0.47 s, 0.47 s and 0.58 s, and the late ones are E2 to G2 at BOW 0.6 and F2 to G#2 at
-     * BOW 1) and the worst is 1.47 s, which leaves 0.53 s under the 2.0 s bar where R1b's had 0.34 s (the interim bites: 0.59 s at 2.5 times for 120 ms, 0.35 s at 2.75 times for 60 ms).
+     * BOW 1) and the worst is 1.47 s, which leaves 0.53 s under the 2.0 s bar where R1b's had 0.34 s (two earlier settings: 0.59 s at 2.5 times with a 120 ms time constant, 0.35 s at 2.75 times with a 60 ms one).
      *
      * A default HOLD is 0.85 s of bow, and some of these locks are later than that (each the latest of the three GRIPs): at BOW 0.6 the CELLO notes E2 to G2 lock at
      * 1.00 to 1.47 s (all at GRIP 1) and B2 at 1.06 s (GRIP 0.6), at BOW 1 F2 to G#2 at 1.18 to 1.44 s and A2 at 1.07 s (all at GRIP 1), at BOW 0 C#2, F#2, A2 and B2 at 0.92, 0.89, 1.35 and 1.03 s (GRIP 1, 0, 0 and 0),
@@ -844,7 +845,7 @@ class ArcoTest {
      * The one honest assertion: BOW 1's 10 ms attack reaches 90 percent sooner than BOW 0's 400 ms at every note sampled.
      * R1c saw (ms to 90 percent, BOW 0 against BOW 1) CELLO C2 704 and 269, C3 448 and 434, C4 359 and 123; ERHU D4 358 and
      * 161, G#4 361 and 95, A5 370 and 52 (R1b saw CELLO C2 704 and 422, C3 448 and 372, C4 359 and 177: ERHU's are as they were). BOW 1 is sooner by 435, 14 and 236 ms at the three CELLO notes (R1b's: 282, 76 and 182),
-     * so **C3's margin is thin, 14 ms**, the least of the six notes and the one this bar has: a small change to the bite moves it across (the assertion failed there on the interim 2.75 times, 60 ms bite, whose BOW 1 reached 90 percent at 600 ms,
+     * so **C3's margin is thin, 14 ms**, the least of the six notes and the one this bar has: a small change to the bite moves it across (the assertion failed there on an earlier 2.75 times / 60 ms bite, whose BOW 1 reached 90 percent at 600 ms,
      * 152 ms after BOW 0 did, which is why the bite's later searches read this table). It is not monotone in between (at C3 BOW 1's 434 ms is slower
      * than BOW 0.5's 298 ms and BOW 0.8's 272 ms, and its lock is at 478 ms), which is why only the two ends are asserted. It is not true of every CELLO step either: the probe over
      * all 25 steps at the default GRIP is printed (the `ARCO onset CELLO all steps` line) and reads BOW 1 no sooner than BOW 0 at F#2 (565 ms against 667), G2 (527 against 612) and G#2 (498 against 590), so the three notes asserted are the ones the claim is made for (the interim 2.5 times, 120 ms bite read ten: E2, F2, F#2, G2, G#2, A2, C#3, D3, D#3 and E3).
@@ -885,9 +886,9 @@ class ArcoTest {
      * constant, [Arco.BITE_PRESSURE_ERHU] 1, all of the bite's share in the pressure) and CELLO's are three numbers of its own: [Arco.OVERSHOOT_MAX_CELLO]
      * 3.0 times, [Arco.BITE_SECONDS_CELLO] 60 ms (the least time constant the bite relaxes with: it is not the time the bite takes to be gone, 37 percent of it is left at one time constant and
      * 5 percent at three) and [Arco.BITE_PRESSURE_CELLO] 0.5, half of the share in the pressure. R1c searched them
-     * (a few hundred settings) because each of its earlier settings broke a bar of the roster, which is history and why these are asserted exactly: 3.0 times for 60 ms with all of the
-     * share in the pressure never locked SHORT STAB in its stab, 2.75 times for 60 ms put C3's BOW 1 at 600 ms to reach 90 percent against BOW 0's 448 (the pressure's climb held the low notes in their scratch),
-     * and 2.5 times for 120 ms with a quarter of the share in the pressure let only 18 of the 25 TUNE steps lock inside a default note at BOW 1 (R1b: 23) and left one scramble roll in 200 late at temperature 1.
+     * (a few hundred settings) because each of its earlier settings broke a bar of the roster, which is history and why these are asserted exactly: 3.0 times with a 60 ms time constant and all of the
+     * share in the pressure never locked SHORT STAB in its stab, 2.75 times with a 60 ms one put C3's BOW 1 at 600 ms to reach 90 percent against BOW 0's 448 (the pressure's climb held the low notes in their scratch),
+     * and 2.5 times with a 120 ms time constant and a quarter of the share in the pressure let only 18 of the 25 TUNE steps lock inside a default note at BOW 1 (R1b: 23) and left one scramble roll in 200 late at temperature 1.
      * [Arco.overshootFor] is 1 (no bite) at and under [Arco.OVERSHOOT_FROM], the voice's own maximum at BOW 1 and strictly climbing between them, read in
      * hundredths of BOW for both voices, and its third argument is the maximum the probe overrides replace. [Arco.bitePressure] and [Arco.biteSeconds] are
      * the voice's own, and the pressure's share is a share: between 0 and 1 for both.

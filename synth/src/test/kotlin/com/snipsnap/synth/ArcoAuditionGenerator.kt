@@ -117,7 +117,7 @@ object ArcoAuditionGenerator {
         Knob(
             "BOW",
             { "a slow bow: ${ms(Arco.attackSeconds(0f))} ms to full speed, no bite" },
-            { voice -> "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, the bow starts ${f2(Arco.overshootMax(voice))} times too fast, ${pressureClause(Arco.bitePressure(voice))}, and the excess relaxes with a ${ms(maxOf(Arco.attackSeconds(1f), Arco.biteSeconds(voice)))} ms time constant" },
+            { voice -> "a stab with a bite: ${ms(Arco.attackSeconds(1f))} ms to full speed, a bite of ${f2(Arco.overshootMax(voice))} times the sustain speed, ${pressureClause(Arco.bitePressure(voice))}, and the excess relaxes with a ${ms(maxOf(Arco.attackSeconds(1f), Arco.biteSeconds(voice)))} ms time constant" },
         ),
         Knob(
             "GRIP",
@@ -150,7 +150,7 @@ object ArcoAuditionGenerator {
             "the default: ${f1(HELD_SECONDS)} s of bow with the baked-in rock of $cents cents at $hz Hz, the same at every swing, fully in at $full s of bow"
         } else {
             "the default: ${f1(HELD_SECONDS)} s of bow with the baked-in vibrato of $cents cents at $hz Hz on average, the rate drifting by up to ${(shape.rateWander * 100).roundToInt()} percent " +
-                "and the depth by up to ${(shape.depthWander * 100).roundToInt()} percent, a slight lean, a swell-in over ${f1(shape.riseSeconds.toFloat())} s, fully in at $full s of bow"
+                "and the depth by up to ${(shape.depthWander * 100).roundToInt()} percent, a slight lean, a swell-in over ${f1(shape.riseSeconds.toFloat())} s, at full depth for any bow of $full s or more"
         }
     }
 
@@ -667,7 +667,8 @@ object ArcoAuditionGenerator {
     /**
      * ERHU's BODY as three unlabelled clips on the default note: the membrane box as shipped, no box, and one
      * placeholder resonator row, all at BODY's default amount. The first is [Arco.render] to the sample (checked
-     * in [checkReRender]); the other two replace only the table [Strings.bodyRing] rings.
+     * in [checkReRender]); the other two replace only the table [Strings.bodyRing] rings, at the macro BODY itself, which at the default 0.5
+     * is what the engine rings too (the box curve is the identity up to [Arco.BODY_KNEE]).
      */
     private fun erhuBodyGroup(write: (String, String, Snip) -> Unit): Group {
         val voice = ArcoVoice.ERHU
