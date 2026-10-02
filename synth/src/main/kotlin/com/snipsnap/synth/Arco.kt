@@ -259,23 +259,29 @@ object Arco {
 
     /**
      * Above BOW 0.5 the stroke bites: the bow's velocity starts higher than it will hold, up to
-     * [OVERSHOOT_MAX] times at BOW 1 (a player's accent), and the pressure starts partway to the top of the
+     * [overshootMax] times at BOW 1 (a player's accent), and the pressure starts partway to the top of the
      * window, in step with the velocity's bite, reaching it at BOW 1; both relax with the attack's own time
      * constant. 0.6 is a 1.15 times bite. Listening values.
      *
      * The bite is per voice since the owner heard CELLO's BOW 1 as "nearly" and "not enough bite" while ERHU's was a yes. A
      * bite that relaxes on the attack's own time constant is over in about 20 ms at BOW 1 (a hump of 1.3 times the
      * velocity at its highest, though 1.75 is the number it starts from), and a bass string, which needs many milliseconds to
-     * build a period, never shows it: R1c measured CELLO's bite against the same stroke with none and the first 400 ms were
-     * within 0.4 dB of it at C2, C3 and C4, and ERHU's 0.3 to 1.1 dB. CELLO's bite is bigger ([OVERSHOOT_MAX_CELLO]) and lasts at
-     * least [BITE_SECONDS_CELLO] whatever the stroke, so it is an accent the note carries into its first few periods: +0.6 to
-     * +3.9 dB over the first 200 ms at F2 and up, and a changed scratch at C2 (3.6 dB over 200 to 400 ms). ERHU's is as it was
-     * ([BITE_SECONDS_ERHU] is zero: the attack's own time constant). 2.0 times with 30 ms locked too late (D#2 at 2.36 s against
-     * the 2.0 s bar); 3.0 times with 60 ms locks no later than the old bite (1.47 s at its worst, against 1.66 s).
+     * build a period, never shows it: R1c measured R1b's CELLO bite against the same stroke with none and the first 200 ms were
+     * within 0.5 dB of it at F2, C3, G3 and C4 (0.3, 0.5, 0.5 and 0.4), and ERHU's, which the owner heard as a yes, is 0.3 to 1.1 dB. CELLO's bite is bigger ([OVERSHOOT_MAX_CELLO]) and lasts at
+     * least [BITE_SECONDS_CELLO] whatever the stroke, so it is an accent the note carries into its first few periods: R1c measured
+     * +2.5, +2.5, +3.4 and +2.9 dB over the first 200 ms at F2, C3, G3 and C4. ERHU's is as it was ([BITE_SECONDS_ERHU] is zero:
+     * the attack's own time constant).
+     *
+     * The pair was searched, not guessed, because the lock is chaotic in it and the roster has bars of its own. R1c ran twenty settings
+     * (2.0 to 3.0 times, 30 to 80 ms) against the overshoot row (every TUNE step at BOW 1, GRIP 0.6 and 1, within 1.5 s), SHORT STAB
+     * (A3, a 0.30 s bow-on, within 85 percent of it, 0.255 s), GRIT BOW (F#2, between 0.3 and 0.49 s), the lock across BOW (2.0 s) and the
+     * gain (at least 1.5 dB at all four notes). 3.0 times with 60 ms, the first guess, never locks SHORT STAB in its stab; 2.25 times and
+     * under lock the row too late (1.9 s and more); 2.5 times with 30 ms is too weak at three notes. 2.75 times with 60 ms keeps all of
+     * them: the row at most 1.36 s (G2, GRIP 1), SHORT STAB at 0.24 s (R1b's bite: 0.19 s), GRIT BOW at 0.45 s (R1b: 0.42 s).
      */
     const val OVERSHOOT_FROM = 0.5f
     const val OVERSHOOT_MAX_ERHU = 1.75f
-    const val OVERSHOOT_MAX_CELLO = 3.0f
+    const val OVERSHOOT_MAX_CELLO = 2.75f
     const val BITE_SECONDS_ERHU = 0f
     const val BITE_SECONDS_CELLO = 0.06f
 
@@ -293,8 +299,8 @@ object Arco {
         ArcoVoice.ERHU -> BITE_SECONDS_ERHU
     }
 
-    internal fun overshootFor(voice: ArcoVoice, bow: Float): Float =
-        1f + (overshootMax(voice) - 1f) * ((bow - OVERSHOOT_FROM) / (1f - OVERSHOOT_FROM)).coerceIn(0f, 1f)
+    internal fun overshootFor(voice: ArcoVoice, bow: Float, max: Float = overshootMax(voice)): Float =
+        1f + (max - 1f) * ((bow - OVERSHOOT_FROM) / (1f - OVERSHOOT_FROM)).coerceIn(0f, 1f)
 
     // ---- HOLD: how long the bow is on the string -----------------------------
 
@@ -661,7 +667,9 @@ object Arco {
      * down; [bowPointOut] receives [Strings.Bow.bowPoint] each sample, the string's velocity under
      * the bow, which is what the slips-per-period counter reads (the string itself, which the vibrato never touches);
      * [share] replaces the voice's tuning share, [biteSeconds] the least time the bite takes to relax (the voice's own, [biteSeconds] the
-     * function, otherwise), [vibratoShape] the finger's movement ([vibratoShapeFor] the voice otherwise).
+     * function, otherwise), [vibratoShape] the finger's movement ([vibratoShapeFor] the voice otherwise), [overshootMax] BOW 1's bite for
+     * this note (both the velocity's and, in step with it, the pressure's: [overshoot] sets only the velocity's, and takes the pressure's share
+     * of the window from the voice's own maximum).
      */
     internal fun bow(
         voice: ArcoVoice,
@@ -679,16 +687,17 @@ object Arco {
         share: Float? = null,
         biteSeconds: Float? = null,
         vibratoShape: VibratoShape? = null,
+        overshootMax: Float? = null,
     ): FloatArray {
         val gate = gateFor(voice, hz, macros, rate, gateSeconds)
-        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share, biteSeconds)
+        val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share, biteSeconds, overshootMax)
         return if (vibrato) vibrato(tap, vibratoCentsFor(gate.holdN.toFloat() / rate), rate, vibratoShape ?: vibratoShapeFor(voice)) else tap
     }
 
     private fun play(
         voice: ArcoVoice, hz: Float, macros: Map<String, Float>, rate: Int, gate: Gate,
         pressure: Float?, cornerHz: Float?, vBow: Float?, overshoot: Float?,
-        lifted: Boolean, bowPointOut: FloatArray?, share: Float?, biteSecondsOverride: Float? = null,
+        lifted: Boolean, bowPointOut: FloatArray?, share: Float?, biteSecondsOverride: Float? = null, overshootMaxOverride: Float? = null,
     ): FloatArray {
         val semitone = semitoneFor(voice, macros.getValue("TUNE"))
         val grip = macros.getValue("GRIP")
@@ -697,8 +706,9 @@ object Arco {
         val corner = cornerHz ?: cornerFor(voice, semitone, grip)
         val vSustain = vBow ?: V_SUSTAIN
         val steady = gate.steady
-        val over = if (steady) 1f else overshoot ?: overshootFor(voice, macros.getValue("BOW"))
-        val biteShare = ((over - 1f) / (overshootMax(voice) - 1f)).coerceIn(0f, 1f)
+        val biteMax = overshootMaxOverride ?: overshootMax(voice)
+        val over = if (steady) 1f else overshoot ?: overshootFor(voice, macros.getValue("BOW"), biteMax)
+        val biteShare = ((over - 1f) / (biteMax - 1f)).coerceIn(0f, 1f)
         val pBite = Dsp.lin(biteShare, p, max(p, window.pressureHigh))
         val biteN = max(gate.attackN, ((biteSecondsOverride ?: biteSeconds(voice)) * rate).toInt())
         val tau = biteN.toDouble() / rate

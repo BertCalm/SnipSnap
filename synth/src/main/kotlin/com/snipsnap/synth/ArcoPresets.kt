@@ -59,8 +59,10 @@ object ArcoPresets {
     private val erhuPresets = listOf(
         // C#5 (11 of 19): the middle-high voice of the line, a nasal edge from a firm grip and a box that is mostly there.
         p(ArcoVoice.ERHU, "NASAL LINE", "TUNE" to 0.579f, "BOW" to 0.5f, "GRIP" to 0.8f, "BODY" to 0.7f, "HOLD" to 0.38f),
-        // G4 (5 of 19): a soft round note, a dark light grip into nearly all box, bowed in over 0.19 s.
-        p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.85f, "HOLD" to 0.42f),
+        // G4 (5 of 19): a soft round note, a dark light grip into nearly all box, bowed in over 0.19 s. BODY 0.8, not the 0.85 it was
+        // written at: since R1c a BODY 0.85 box (1.375 times the string) is loud enough that the render's ring from its peak falls from
+        // 813 ms to 522 ms, within 22 ms of the classifier's 500 ms line, so a louder box moves the preset's BODY down a notch.
+        p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.8f, "HOLD" to 0.42f),
         // A#4 (8 of 19): the hardest bow on a light grip with hardly any box, 0.34 s of it: a thin, bright flick.
         p(ArcoVoice.ERHU, "THIN SCRAPE", "TUNE" to 0.421f, "BOW" to 1.0f, "GRIP" to 0.05f, "BODY" to 0.2f, "HOLD" to 0.05f),
         // G5 (17 of 19): near the top of the span, swelling in over 0.16 s under a firm grip and a held bow: the cry.
