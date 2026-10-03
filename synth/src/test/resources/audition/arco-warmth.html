@@ -125,7 +125,7 @@
     color: var(--ink2);
     text-shadow: none;
   }
-  /* A pair label such as PLAIN, THEN CLIP K can be long on a narrow phone, and its last
+  /* A pair label (PLAIN, THEN and the clip name) can be long on a narrow phone, and its last
      word is the one that matters: it wraps instead of ending in an ellipsis. Two lines are
      always reserved, so the page below does not jump when a clip starts or stops. */
   .transport .now {
@@ -427,8 +427,10 @@
 
   .verdict { margin: 0 12px 12px; }
   .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
-  .q + .q { border-top: 1px dashed var(--field-border); }
+  .q + .q, #pairsq .q { border-top: 1px dashed var(--field-border); }
   .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
+  /* question 6 only: the pairs, one line after the question, in the manifest's order */
+  .q .ask .pairs { display: block; margin-top: 6px; color: var(--lcd-ink); overflow-wrap: anywhere; }
 
   .actions {
     display: grid;
@@ -504,13 +506,13 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU SAID</div>
-    <p>You listened to the last page and wrote <b>&ldquo;Body just seems to be dull and muffled rather than full and resonant&rdquo;</b>. Every clip on that page, whichever way it was made, came back marked DIFFERENT, and none came back as more box.</p>
+    <p>You listened to the last page. Your answer to which one you would keep was <b>&ldquo;Body just seems to be dull and muffled rather than full and resonant&rdquo;</b>. Every new design on that page came back marked DIFFERENT, and none came back as more box.</p>
   </div>
 
   <div class="guide lcd">
     <div class="hd">WHAT THIS PAGE TRIES</div>
-    <p>You asked BODY at the top of the knob for warmth and weight, and said louder is fine. This time the body is added on top of the note, so the note is meant to keep its bright top end and to be somewhat louder than THE PLAIN ONE.</p>
-    <p>The clips are NOT level on purpose. Some may be louder only, and nothing more.</p>
+    <p>You asked BODY at the top of the knob for warmth and weight, and said louder is fine. This time the body is added on top of the note instead of trading against its top end.</p>
+    <p>The clips are NOT level on purpose. Some are a little louder than THE PLAIN ONE, and one or two are a lot louder. Nothing was turned down to match, so keep your volume at one setting for the whole page. Some may be louder only.</p>
     <p><b>Nobody here has listened to these.</b> Some of these may sound worse than THE PLAIN ONE. That is what this page is for. Headphones please.</p>
   </div>
 
@@ -533,7 +535,7 @@
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>FIVE QUESTIONS &middot; WHERE IT ASKS, SAY THE VOICE AND THE LETTER &middot; THEN SAVE</span></div>
+      <div class="readout"><span id="qcount">FIVE QUESTIONS &middot; WHERE IT ASKS, SAY THE VOICE AND THE LETTER &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
       <label class="ask" for="q_full">1 &middot; Which clips sound fuller and warmer, in the way you meant? (say the voice and the letters)</label>
@@ -555,6 +557,7 @@
       <label class="ask" for="q_else">5 &middot; Anything else</label>
       <textarea id="q_else" placeholder="&hellip;"></textarea>
     </div>
+    <div id="pairsq"></div>
     <div class="actions">
       <button class="primary" id="save" type="button">Save verdict</button>
       <div class="status lcd" id="status" role="status" aria-live="polite"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
@@ -564,7 +567,7 @@
   <div class="foot">
     RENDERED BY generateArcoWarmth &middot; THE CLIPS ARE NOT LEVEL ON PURPOSE &middot; 16-BIT 44.1 KHZ &middot;
     EVERY ARCO CLIP IS DRY &middot; THE EARLIER PAGES' VERDICTS ARE KEPT UNDER THEIR OWN NAMES AND THIS PAGE DOES NOT TOUCH THEM &middot;
-    CHIP TAPS, NOTES AND A COUNT OF YOUR PLAYS SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
+    CHIP TAPS, NOTES AND A COUNT OF YOUR PLAYS SAVE ON THEIR OWN. SAVE VERDICT WRITES YOUR ANSWERS TO THE QUESTIONS.
   </div>
 </div>
 
@@ -576,12 +579,14 @@
   // charset a host serves it under.
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
-  // The clip list (and an optional intro) is the generator's manifest.json,
-  // published beside this page - one list, written where the clips are
-  // rendered. The manifest may also carry `surfaceAfter`, `loops` and `facts`
-  // (the retune page's); this page has no such section, quotes no figure in
-  // its questions, and ignores all three. The page does not count the clips:
-  // it shows however many groups, and clips in a group, the manifest lists.
+  // The clip list is the generator's manifest.json, published beside this
+  // page - one list, written where the clips are rendered. It may also carry
+  // `pairs` (see below), an `intro` (this page's own text covers the level and
+  // the headphones, so the manifest's is empty and no card is expected), and
+  // `surfaceAfter`, `loops` and `facts` (the retune page's); this page has no
+  // such section, quotes no figure in its questions, and ignores those three.
+  // The page does not count the clips or name a letter: it shows however many
+  // groups, and clips in a group, the manifest lists.
   var VOICES = [];
 
   // Every clip with chips is judged against the plain one. The four chips share
@@ -599,7 +604,10 @@
 
   function isPlain(fid) { return /_plain$/.test(fid); }
 
+  // The five questions the markup holds. Question 6 (q_pairs) exists only when the
+  // manifest lists pairs, so it joins QUESTIONS when it is built (buildPairs).
   var QUESTIONS = ['q_full', 'q_keep', 'q_toomuch', 'q_device', 'q_else'];
+  var PAIRS_KEY = 'q_pairs';
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, cls, text) {
@@ -610,13 +618,14 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_full: '', q_keep: '', q_toomuch: '', q_device: '', q_else: '' } };
+  var state = { overall: { q_full: '', q_keep: '', q_toomuch: '', q_device: '', q_else: '', q_pairs: '' } };
 
   // ---------- build ----------
   var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
                  '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
 
-  // Optional intro cards from the manifest (this page's own are in the markup).
+  // Optional intro cards from the manifest. None is expected: this page's own
+  // cards are in the markup and carry the level and headphones text.
   function buildIntro(blocks) {
     var host = $('intro');
     host.textContent = '';
@@ -626,6 +635,42 @@
       (b.p || []).forEach(function (text) { card.appendChild(el('p', null, text)); });
       host.appendChild(card);
     });
+  }
+
+  // Question 6, from the manifest's `pairs`: [{voice, a, b}, ...], the letters of two
+  // clips that are about as loud as each other, so a difference between the two
+  // is not just level. The page names no letter itself. It is shown only when at
+  // least one entry has a voice, an a and a b (an entry without them is skipped),
+  // and it is the last question, with its own key, q_pairs.
+  var Q6 = '6' + DOT + 'Some clips are about as loud as each other. For each pair, which sounds fuller or warmer: the first, the second, or neither?';
+
+  function pairLines(pairs) {
+    return (Array.isArray(pairs) ? pairs : []).filter(function (p) {
+      return p && typeof p === 'object' && ['voice', 'a', 'b'].every(function (k) {
+        return typeof p[k] === 'string' && p[k].trim() !== '';
+      });
+    }).map(function (p) { return p.voice.trim() + ': ' + p.a.trim() + ' then ' + p.b.trim(); });
+  }
+
+  function buildPairs(pairs) {
+    var host = $('pairsq');
+    host.textContent = '';
+    QUESTIONS = QUESTIONS.filter(function (k) { return k !== PAIRS_KEY; });
+    var lines = pairLines(pairs);
+    $('qcount').textContent = (lines.length ? 'SIX' : 'FIVE') + ' QUESTIONS' + DOT + 'WHERE IT ASKS, SAY THE VOICE AND THE LETTER' + DOT + 'THEN SAVE';
+    if (!lines.length) return;
+    var q = el('div', 'q');
+    var lab = el('label', 'ask', Q6 + ' ');
+    lab.htmlFor = PAIRS_KEY;
+    lab.appendChild(el('span', 'pairs', lines.join(DOT)));
+    var ta = el('textarea');
+    ta.id = PAIRS_KEY;
+    ta.placeholder = String.fromCharCode(0x2026);
+    q.appendChild(lab); q.appendChild(ta);
+    host.appendChild(q);
+    QUESTIONS.push(PAIRS_KEY);
+    wireQuestion(PAIRS_KEY);
+    paintOverall();                    // an answer kept on this phone or in the store comes back into it
   }
 
   function build() {
@@ -910,13 +955,14 @@
 
   // The answers keep a local draft as they are typed; only SAVE VERDICT
   // writes them to the shared store.
-  QUESTIONS.forEach(function (k) {
+  function wireQuestion(k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
       dirty.overall = true;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
     });
-  });
+  }
+  QUESTIONS.forEach(wireQuestion);
   $('save').addEventListener('click', function () { persist('overall'); });
 
   // ---------- persistence ----------
@@ -981,7 +1027,8 @@
   function apply(key, data) {
     if (!data) return;
     if (key === 'overall') {
-      QUESTIONS.forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
+      // q_pairs too: a copy kept on this phone is read before the manifest has said whether question 6 exists
+      QUESTIONS.concat([PAIRS_KEY]).forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
       paintOverall();
     } else if (state[key]) {
       if (data.reactions && typeof data.reactions === 'object' && !Array.isArray(data.reactions)) {
@@ -1055,6 +1102,7 @@
       buildIntro(m.intro);
       build();
       built = true;
+      buildPairs(m.pairs);
       VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
       connect();
     })

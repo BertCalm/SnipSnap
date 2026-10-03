@@ -25,14 +25,27 @@ import kotlin.math.pow
  *
  * **What the ceiling does.** If the added energy pushes a sample past 0.99 the engine's ceiling would act ([Rendered.ceilingWouldAct]) and, since [Dsp.limitPeak] scales the whole clip, the string is no longer at the plain's level:
  * the clip is ducked by [Rendered.duckDb] and the page would be testing the limiter, not the warmth. [render] therefore takes `engineCeiling`: true is the engine's own path (the ceiling then acts and [Rendered.ceilingActed] says so),
- * false renders the candidate as it would sound if the engine had the headroom; either way [Rendered.peakBeforeCeiling] is the peak the string at the plain's level needs. [ArcoWarmthGenerator] renders its page and its ruler with
- * `engineCeiling` false, prints every clip that would need the ceiling and by how much; a design that needs the ceiling has to be backed off or given headroom by the engine step. The plain itself must not be ceiling-limited
- * (the gain would no longer be one number); [note] throws if it is.
+ * false renders the candidate as it would sound if the engine had the headroom; either way [Rendered.peakBeforeCeiling] is the peak the string at the plain's level needs. [ArcoWarmthGenerator] renders every grid and page clip without the ceiling
+ * except **one**: CELLO F#2's BOTH-LARGE, which it renders **with** it, because that is the clip the engine could actually make (the string at the plain's level peaks at 1.277, x2.04 the plain's 0.625, so the ceiling takes
+ * 2.2 dB off the whole clip and the string is ducked by that much). It prints every other clip that would need the ceiling and by how much; a design that needs the ceiling has to be backed off or given headroom by the engine step.
+ * The plain itself must not be ceiling-limited (the gain would no longer be one number); [note] throws if it is. [CEILING] is [Dsp.levelTo]'s unnamed default argument copied, and [ceilingFailures] is the control that ties it
+ * to the engine: a hot buffer through [Dsp.levelTo] and through [Arco.finish] must equal the same buffer through the gain then [Dsp.limitPeak] at [CEILING], and a ceiling 0.01 off must be told apart.
  *
- * **The numbers** are the physics scout's, copied: the rung is +3.5 dB per element (small) and +6.0 dB per element (large), so that where the two skirts overlap the sum at the loudest
- * partials is about +4.0 and +7.0 dB (elements at +4 and +7 would sum to about +4.6 and +8.3 on the cello's lowest partials, the boomy zone). CELLO: WEIGHT a low shelf at 200 Hz, WARMTH a bell at 300 Hz, Q 0.8.
+ * **The engine step (read this before it starts).** (1) The bit-identity proof above runs at generation time only (`:synth:generateArcoWarmth`, which is not in CI: nothing here is a test), so it does not guard the engine;
+ * the engine step should delete these three files, or replace them with a test that compares the engine's BODY-above-the-knee render to this helper. (2) The engine step will meet [ArcoTest]'s finished-peak bar of 0.95
+ * (`finishedPeakBar`, over the BODY grid) at CELLO C2: the shaped string at the plain's level peaks above it (BOTH-SMALL 1.023 and BOTH-LARGE 1.429 there, the plain 0.656), so the step must back the rung off on the low CELLO notes,
+ * give headroom, or accept a ceiling duck on them; it must never loosen the bar.
+ *
+ * **The numbers** are the physics scout's, copied: the rung is +3.5 dB per element (small), +6.0 dB per element (large) and +1.75 dB per element (half), so that where the two skirts overlap the sum at the loudest
+ * partials is about +4.0, +7.0 and +2.0 dB (elements at +4 and +7 would sum to about +4.6 and +8.3 on the cello's lowest partials, the boomy zone). CELLO: WEIGHT a low shelf at 200 Hz, WARMTH a bell at 300 Hz, Q 0.8.
  * ERHU: WEIGHT a low shelf at 600 Hz (a shelf at 450 Hz lifts C5's fundamental only +1.4 dB, under the 2 to 3 dB a listener needs), WARMTH a bell at 800 Hz, Q 1.0 (on the 650 to 820 Hz box region of one laser study).
- * BLOOM is a high shelf at 3500 Hz, +1.5 dB, on the small rung only. Every corner, centre and Q here is a guess (listening): the region is supported, the exact numbers are not.
+ * BLOOM is BOTH-SMALL plus a high shelf at 2500 Hz, +3.0 dB (the first R1e page had 3500 Hz and +1.5 dB, which read only +0.75 (ERHU C5) and +0.85 (CELLO C3), +0.75 to +0.96 over the grid, dB over BOTH-SMALL in 3 to 8 kHz: too little to test whether a little sparkle matters; this one is built so
+ * that band reads at least +1.5 dB over BOTH-SMALL, and the generator throws if it does not). Every corner, centre and Q here is a guess (listening): the region is supported, the exact numbers are not.
+ *
+ * **LOUDER-ONLY is matched to the ear's weighting, not to the engine's meter.** [Loudness.of] is a gentle low cut (one pole at 120 Hz, taking out 0.7 of the low-pass) and then the loudest 200 ms RMS, so it barely discounts the 130 to 300 Hz region that
+ * WEIGHT and WARMTH boost: matched on it, the flat gain read 1.2 to 1.9 dB louder than BOTH-SMALL by ear on CELLO (it was about as loud as BOTH-LARGE). [louderGainDb] therefore takes BOTH-SMALL's **A-weighted** rise
+ * ([ArcoWarmthMeasure.aRiseDb]: the standard analogue prototype through the bilinear transform, run over the finished clips, RMS over the steady part), and the flat gain is that rise. The engine meter's rise for the same two clips is then
+ * not equal, and the generator prints the gap; the key carries the [Loudness.of] rise, the whole-clip RMS rise and the A-weighted rise of every clip.
  */
 internal object ArcoWarmthCandidates {
 
@@ -53,13 +66,17 @@ internal object ArcoWarmthCandidates {
     private fun f1(v: Float) = "%.1f".format(Locale.ROOT, v)
     private fun s1(v: Float) = "%+.1f".format(Locale.ROOT, v)
 
-    /** The rung, per element, in dB: small and large (the physics scout's: the sum at the loudest partials is about +4.0 and +7.0). */
+    /** The rung, per element, in dB: small and large (the physics scout's: the sum at the loudest partials is about +4.0 and +7.0), and half of the small (about +2.0). */
     const val SMALL_DB = 3.5f
     const val LARGE_DB = 6.0f
+    const val HALF_DB = SMALL_DB / 2f
 
-    /** BLOOM, on the small rung of both voices: a high shelf's corner and boost (guesses, listening: supported only as "a little sparkle kept"). */
-    const val BLOOM_HZ = 3500f
-    const val BLOOM_DB = 1.5f
+    /**
+     * BLOOM, on the small rung of both voices: a high shelf's corner and boost (guesses, listening: supported only as "a little sparkle added"). The shelf is [Dsp.Biquad]'s S = 1 one, which reaches +0.88 dB
+     * of its +3.0 at 2 kHz, +1.5 at the corner, +2.0 at 3 kHz, +2.6 at 4 kHz and +2.97 at 8 kHz, so the 3 to 8 kHz harmonics read about +2 to +3 dB over BOTH-SMALL.
+     */
+    const val BLOOM_HZ = 2500f
+    const val BLOOM_DB = 3.0f
 
     /** CELLO's corners (guesses, listening): the shelf, the bell and the bell's Q. */
     private const val CELLO_WEIGHT_HZ = 200f
@@ -89,16 +106,17 @@ internal object ArcoWarmthCandidates {
     /** What a clip of the page is. [PLAIN] and [REPEAT] have no shaping, [LOUD] is the flat gain, the rest are the shapings below. */
     enum class Kind(val key: String) {
         PLAIN("PLAIN"), REPEAT("REPEAT"), LOUD("LOUDER-ONLY"),
-        WEIGHT("WEIGHT"), WARMTH("WARMTH"), BOTH_SMALL("BOTH-SMALL"), BOTH_LARGE("BOTH-LARGE"), BLOOM("BOTH-SMALL+BLOOM"),
+        WEIGHT("WEIGHT"), WARMTH("WARMTH"), BOTH_HALF("BOTH-HALF"), BOTH_SMALL("BOTH-SMALL"), BOTH_LARGE("BOTH-LARGE"), BLOOM("BOTH-SMALL+BLOOM"),
     }
 
-    /** The five shaped candidates, in the order the tables list them. */
-    val SHAPED: List<Kind> = listOf(Kind.WEIGHT, Kind.WARMTH, Kind.BOTH_SMALL, Kind.BOTH_LARGE, Kind.BLOOM)
+    /** The six shaped candidates, in the order the tables list them. */
+    val SHAPED: List<Kind> = listOf(Kind.WEIGHT, Kind.WARMTH, Kind.BOTH_HALF, Kind.BOTH_SMALL, Kind.BOTH_LARGE, Kind.BLOOM)
 
     /** The shaping of a shaped [kind] for [voice]: stages in series, in this order. */
     fun shapeOf(kind: Kind, voice: ArcoVoice): List<Stage> = when (kind) {
         Kind.WEIGHT -> listOf(weight(voice, SMALL_DB))
         Kind.WARMTH -> listOf(warmth(voice, SMALL_DB))
+        Kind.BOTH_HALF -> listOf(weight(voice, HALF_DB), warmth(voice, HALF_DB))
         Kind.BOTH_SMALL -> listOf(weight(voice, SMALL_DB), warmth(voice, SMALL_DB))
         Kind.BOTH_LARGE -> listOf(weight(voice, LARGE_DB), warmth(voice, LARGE_DB))
         Kind.BLOOM -> listOf(weight(voice, SMALL_DB), warmth(voice, SMALL_DB), bloom())
@@ -109,7 +127,7 @@ internal object ArcoWarmthCandidates {
     fun settingOf(kind: Kind, voice: ArcoVoice): String = when (kind) {
         Kind.PLAIN -> "the default, BODY 0.5 (the engine's own render)"
         Kind.REPEAT -> "an exact repeat of the plain, rendered again"
-        Kind.LOUD -> "the plain with one flat gain, the finished loudness rise of BOTH-SMALL"
+        Kind.LOUD -> "the plain with one flat gain, BOTH-SMALL's A-weighted loudness rise on the finished clip"
         else -> shapeOf(kind, voice).joinToString("; ") { it.words() }
     }
 
@@ -152,7 +170,7 @@ internal object ArcoWarmthCandidates {
         return p
     }
 
-    /** [Loudness.of] of a finished mono clip: the engine's own meter. */
+    /** [Loudness.of] of a finished mono clip: the engine's own meter (a gentle 120 Hz low cut, then the loudest 200 ms RMS). */
     fun loudnessOf(x: FloatArray): Float = Loudness.of(Snip(x, channels = 1, sampleRate = Dsp.RATE))
 
     /**
@@ -166,12 +184,14 @@ internal object ArcoWarmthCandidates {
 
     /**
      * A finished candidate and the ceiling: [peakBeforeCeiling] is the largest sample after the plain's gain (and any flat gain), [ceilingApplied] whether this render ran the engine's ceiling at all.
-     * [ceilingWouldAct] is whether [CEILING] is below that peak (the engine would cut the whole clip), [ceilingActed] whether it did here, [duckDb] how many dB the engine's ceiling would take off the whole clip (0 if it would not act).
+     * [ceilingWouldAct] is whether [CEILING] is below that peak (the engine would cut the whole clip), [ceilingActed] whether it did here, [duckDb] the dB (negative) the engine's ceiling would take off the whole clip
+     * (0 if it would not act) and [tookOffDb] the same as a positive number, 0 unless the ceiling actually acted on this render.
      */
     class Rendered(val snip: Snip, val peakBeforeCeiling: Float, val ceilingApplied: Boolean) {
         val ceilingWouldAct: Boolean get() = peakBeforeCeiling > CEILING
         val ceilingActed: Boolean get() = ceilingApplied && ceilingWouldAct
         val duckDb: Double get() = if (ceilingWouldAct) 20.0 * log10(CEILING.toDouble() / peakBeforeCeiling) else 0.0
+        val tookOffDb: Double get() = if (ceilingActed) -duckDb else 0.0
         val peak: Float get() = peakOf(snip.samples)
     }
 
@@ -215,13 +235,66 @@ internal object ArcoWarmthCandidates {
     fun render(note: Note, kind: Kind, engineCeiling: Boolean = true): Rendered = render(note, shapeOf(kind, note.voice), engineCeiling = engineCeiling)
 
     /**
-     * The LOUDER-ONLY control's gain in dB for this note: the finished [Loudness.of] rise of BOTH-SMALL over THE PLAIN ONE, the engine's own meter. (The whole-clip RMS rise is a little different:
-     * [ArcoWarmthGenerator] prints both and reports the gap.)
+     * The LOUDER-ONLY control's gain in dB for this note: the **A-weighted** rise of BOTH-SMALL over THE PLAIN ONE on the finished clips ([ArcoWarmthMeasure.aRiseDb], steady part), not the engine meter's: [Loudness.of] ignores
+     * too little of the 130 to 300 Hz region the shaping boosts. A flat gain moves every frequency by the same amount, so the flat clip's A-weighted rise is exactly this gain and equals BOTH-SMALL's; the generator proves it on the
+     * rendered clips to [ArcoWarmthGenerator]'s bar and prints how far apart the [Loudness.of] rises are.
      */
-    fun louderGainDb(note: Note, bothSmall: Rendered): Double =
-        20.0 * log10(loudnessOf(bothSmall.snip.samples).toDouble() / loudnessOf(note.plain.snip.samples).toDouble())
+    fun louderGainDb(note: Note, bothSmall: Rendered): Double = ArcoWarmthMeasure.aRiseDb(bothSmall.snip.samples, note.plain.snip.samples)
 
     /** The LOUDER-ONLY render: THE PLAIN ONE times one flat gain of [gainDb]. */
     fun renderLouder(note: Note, gainDb: Double, engineCeiling: Boolean = true): Rendered =
         render(note, emptyList(), flat = 10.0.pow(gainDb / 20.0).toFloat(), engineCeiling = engineCeiling)
+
+    // ---- the control that ties CEILING to the engine -------------------------------------------
+
+    /** A hot clip: a sparse spike train on a faint bed, deterministic, whose crest factor (about 8) is high enough that the engine's loudness target needs a gain that takes the peak past [CEILING]. [period] is in samples. */
+    private fun hotBuffer(n: Int, period: Int, rate: Int): FloatArray {
+        val buf = FloatArray(n) { 0.02f * kotlin.math.sin(2.0 * Math.PI * 220.0 * it / rate).toFloat() }
+        var i = period / 2
+        while (i < n) { buf[i] += 0.5f; i += period }
+        return buf
+    }
+
+    /**
+     * What is wrong with [CEILING] as a copy of the engine's (empty: nothing). Two hot buffers, each of which must need the ceiling to act (the control checks the peak it needs): one at [Dsp.RATE] through [Dsp.levelTo]
+     * (its default ceiling) must equal the same buffer through the gain `target / Loudness.of` then [Dsp.limitPeak] at [CEILING], to the sample; the other, at the raw rate, through [Arco.finish] must equal [condition], that gain,
+     * [Dsp.limitPeak] at [CEILING] and [Dsp.fadeTail]. The control that must fail: the same chain with a ceiling of 0.98 must NOT equal the engine's. A [CEILING] the engine changed (or a [condition] that drifted) fails the first two.
+     */
+    fun ceilingFailures(): List<String> {
+        val out = ArrayList<String>()
+        val target = Dsp.MELODIC_LOUDNESS_TARGET
+        val hot = hotBuffer(Dsp.RATE, 64, Dsp.RATE)
+        val measured = loudnessOf(hot.copyOf())
+        val needs = peakOf(hot) * target / measured
+        if (needs <= CEILING * 1.05f) out += "the hot buffer needs a peak of $needs at the engine's gain: it does not exercise the ceiling (want over ${CEILING * 1.05f})"
+        val viaEngine = hot.copyOf()
+        Dsp.levelTo(viaEngine, Dsp.RATE, target)
+        val viaHelper = hot.copyOf()
+        for (i in viaHelper.indices) viaHelper[i] *= target / measured
+        Dsp.limitPeak(viaHelper, CEILING)
+        if (!viaEngine.contentEquals(viaHelper)) out += "Dsp.levelTo's default ceiling is not CEILING $CEILING: the same buffer through the gain and limitPeak(CEILING) differs"
+        if (abs(peakOf(viaEngine) - CEILING) > 1e-6f) out += "the ceiling did not land on CEILING: peak ${peakOf(viaEngine)}"
+        val wrong = hot.copyOf()
+        for (i in wrong.indices) wrong[i] *= target / measured
+        Dsp.limitPeak(wrong, 0.98f)
+        if (wrong.contentEquals(viaEngine)) out += "control failed to fail: a ceiling of 0.98 is bit-identical to the engine's, so this control cannot see a ceiling 0.01 off"
+
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val rawHot = hotBuffer(rate, 64 * Dsp.OVERSAMPLE, rate)
+        val finished = Arco.finish(rawHot.copyOf(), rate)
+        val c = condition(rawHot.copyOf(), rate)
+        val gain = target / loudnessOf(c.copyOf())
+        for (i in c.indices) c[i] *= gain
+        val rawNeeds = peakOf(c)
+        if (rawNeeds <= CEILING * 1.05f) out += "the hot raw buffer needs a peak of $rawNeeds at the engine's gain: it does not exercise the ceiling in Arco.finish"
+        Dsp.limitPeak(c, CEILING)
+        Dsp.fadeTail(c)
+        if (!finished.contentEquals(c)) out += "Arco.finish is not the helper's condition, gain, limitPeak(CEILING), fadeTail on a hot buffer"
+        val wrongFinish = condition(rawHot.copyOf(), rate)
+        for (i in wrongFinish.indices) wrongFinish[i] *= gain
+        Dsp.limitPeak(wrongFinish, 0.98f)
+        Dsp.fadeTail(wrongFinish)
+        if (finished.contentEquals(wrongFinish)) out += "control failed to fail: Arco.finish equals the helper's chain with a ceiling of 0.98"
+        return out
+    }
 }
