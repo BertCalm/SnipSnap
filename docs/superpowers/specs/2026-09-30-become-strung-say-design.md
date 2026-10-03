@@ -18,10 +18,10 @@ cross-correlation (NCC, 1.0 = the same wave) 0.589 for BECOME against its
 nearest MUTATE render (bold-talk §3), 0.487 for STRUNG (bold-ring clip 3) and
 0.568 for SAY (bold-talk §2). All three are below the 0.9 bar the round set,
 and all three carry an honest caveat, set out in "The sounds, measured". No
-code is committed. This document lands as a docs-only PR (zero check runs by
-design, `.github/workflows/tests.yml`; ARCO, BORE, FORK and MAGNET landed the
-same way) beside its sibling, the Group B spec (the TERRA hook: HIT, BEND,
-TALK), and the Phase-0 record.
+code was committed when this document was written. It landed as a docs-only PR
+(zero check runs by design, `.github/workflows/tests.yml`; ARCO, BORE, FORK and
+MAGNET landed the same way) beside its sibling, the Group B spec (the TERRA
+hook: HIT, BEND, TALK), and the Phase-0 record; A1 has since committed code.
 
 **Date:** 2026-09-30
 **Plan:** to be written per phase and named for it:
@@ -664,7 +664,8 @@ between moves a smell (`design/mutate-v2/README.md:26`) while keeping the move
   takes BECOME; `DriftCommand` is unchanged). If the card went on showing a
   remembered `BECOME 400` after a DRIFT tap, it would show a value the drift did
   not use: J24's own bug, value shown against value used. So `onDrift` sets
-  `pendingBecome = 0f` on its own line after the `if (!onMorph) { … }` block
+  `pendingBecome = 0f` (the code writes `MutateSheet.BECOME.defaultFraction`, which
+  equals 0; the A1b plan's Global Constraints record the spelling) on its own line after the `if (!onMorph) { … }` block
   (not inside it, so the pinned block stays as the law reads it, and for every tap,
   because DRIFT from MORPH has the same divergence), and a **sibling law** in
   `ConventionTest` pins it by the same source-text method ("Testing").

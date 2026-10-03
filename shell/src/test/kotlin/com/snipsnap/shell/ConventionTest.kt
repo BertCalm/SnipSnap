@@ -2103,7 +2103,7 @@ class ConventionTest {
         val src = padSheetScreen.readText(Charsets.UTF_8)
         assertTrue(
             Regex("""val\s+becomeKnob\s*=\s*MutateSheet\.becomeFor\(\s*MutateSheet\.modeFor\(\s*mutateMode\s*\)\s*\)""")
-                .containsMatchIn(src),
+                .containsMatchIn(codeOnly(src)),
             "expected `val becomeKnob = MutateSheet.becomeFor(MutateSheet.modeFor(mutateMode))` - the row's " +
                 "knob, MORPH's alone.",
         )

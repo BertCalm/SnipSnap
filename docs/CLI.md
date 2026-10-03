@@ -550,9 +550,9 @@ the output, the spin recorded in the recipe beside the parent it
 dealt. Deterministic per (crate, seed); combines with `--splice` and
 `--split` like any parent.
 
-On the phone the same verb is the PAD SHEET's MUTATE card: the four
+On the phone the same verb is the PAD SHEET's MUTATE card: the six
 moves, a partner tapped off the kit's own grid or dealt by ROULETTE
-from the shelf, the move's one knob (AT · HZ · MIX), MORPH's second
+from the shelf, the move's one knob (AT · HZ · MIX · WET · BANDS), MORPH's second
 knob BECOME (how long the hit takes to turn into the blend), MUTATE and
 UNDO — the same recipe, provenance and bin as the terminal.
 

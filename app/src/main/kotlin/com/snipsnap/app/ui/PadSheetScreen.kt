@@ -3493,14 +3493,14 @@ private fun ShapeCard(
 
 /**
  * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
- * MORPH), a partner — a pad on this kit from the mini grid, or the deal
- * ROULETTE spins off the shelf — the move's one knob when it has one,
- * and under it MORPH's second, BECOME (how long the hit takes to turn
- * from the pad into the blend; a disabled `—` row on every other move,
- * so the card never jumps), then HEAR or MUTATE. The line under the
- * title says what the pad
- * already is ("SPLICE: Kit:A02") so a mutated pad never reads as an
- * original; UNDO pulls the pre-mutation sound back out of the bin.
+ * MORPH · ROOM · TRANSPLANT), a partner — a pad on this kit from the
+ * mini grid, or the deal ROULETTE spins off the shelf — the move's one
+ * knob when it has one, and under it MORPH's second, BECOME (how long
+ * the hit takes to turn from the pad into the blend; a disabled `—`
+ * row on every other move, so the card never jumps), then HEAR or
+ * MUTATE. The line under the title says what the pad already is
+ * ("SPLICE: Kit:A02") so a mutated pad never reads as an original;
+ * UNDO pulls the pre-mutation sound back out of the bin.
  * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
  * same recipe, same provenance, same bin.
  *
