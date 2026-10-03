@@ -43,9 +43,13 @@ import kotlin.test.assertTrue
  * ring law and PICK ask for together held to the toolkit's own clamp with every note still in tune).
  *
  * The three long sweeps (the end grid, the clean ends, the in-tune cells) and the pitch through VALVE
- * spread their cells over a small pool ([SWEEP_THREADS]) and read the results back in the cells' own
- * order, so what each prints, counts and asserts is what a plain loop gives; the renders that the end
- * grid and the clean ends both read are made once ([dryRender]).
+ * spread their cells over a small pool ([SWEEP_THREADS], min(4, cores) threads: the cells are
+ * independent and deterministic, and the engine's render path has no shared mutable state) and read the
+ * results back in the cells' own order, so what each prints, counts and asserts is what a plain loop
+ * gives; the renders that the end grid and the clean ends both read are made once ([dryRender], whose
+ * cache holds finished notes and hands every caller a copy). The CPU work is the same as a plain loop's,
+ * so on a single core the class takes about 62 s: the pool buys wall time on a machine with cores, not
+ * less work.
  */
 class MagnetTest {
 
@@ -277,8 +281,12 @@ class MagnetTest {
             assertTrue(Magnet.LANDING_VALVE.getValue(v).values.all { it in 0f..1f }, "$v")
         }
         assertTrue(Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE) != Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG))
-        // The owner's picks by ear (CHUG's at the gate, 2026-10-01; JANGLE's at the second listen, 2026-10-01/02),
-        // each pinned as the four literals it is:
+        // What the record says: CHUG's gain 106 was the owner's pick at the gate (2026-10-01, the LAND
+        // question). For JANGLE the owner's recorded answer, at the second listen (2026-10-01/02), was VALVE's
+        // default amp with the long ring (m2_ring_amp, c8) while "which would you keep" of the old-ring amps was
+        // "none of them", and the controller adopted the long ring with VALVE's default amp on those partial
+        // answers, before the owner's explicit "pass" (m2_verdict_jangle) came in. Each amp is pinned as the
+        // four literals it is:
         // CHUG's DRIVE 0.85 is gain 106 on VALVE's law (the number Magnet.LANDING_VALVE's KDoc states), and
         // JANGLE's is VALVE's default amp written out in full, so a change to VALVE's defaults cannot move it.
         assertEquals(mapOf("DRIVE" to 0.85f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f), Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG))
@@ -340,7 +348,12 @@ class MagnetTest {
         // 264 and 119: the spectrum the amp lifts moves with BLEND by 14.7 to 18.0 dB at some harmonic, and
         // it moves the ranking (in a one-off sweep of the whole grid at BLEND 0, 0.25, 0.75 and 1, 1 056
         // cells, the worst read was CHUG's landing at step 4, MUTE 1 and PICK 0.55 at BLEND 0, -54.6 dB,
-        // which is only the 16th worst of that landing's 144 cells at its own BLEND). Mutations: with the
+        // which is only the 16th worst of that landing's 144 cells at its own BLEND). The BLEND check has no
+        // headroom and its evidence is not committed: the 16 worst cells per landing are ranked at the
+        // landing's own BLEND and the worst BLEND-0 cell is exactly the 16th of CHUG's 144, so a re-ranking
+        // (a change to the engine or the fades) could leave the cell that is worst at BLEND 0 or 1 just
+        // outside the 16, unread; the sweep that chose 16 was a scratch run, recorded in task-9-report.md
+        // in the git-ignored workspace and in no committed print. Mutations: with the
         // ceiling fade deleted the worst cell is -20.1 dB (CHUG, step 3, MUTE 0, PICK 0) and 80 of the 264
         // cells fail; with the ceiling fade back at its first choice (squared, 250 ms) the worst is -50.1 dB
         // (CHUG, step 2, MUTE 0, PICK 0.15) and 3 cells fail; with it at fourth power 200 ms the worst is
@@ -705,8 +718,9 @@ class MagnetTest {
         // is what this proves, and the string and the finished note equal the path built without the map
         // (both voices, four macro sets, dry), using the engine's own ring law and end fades. It does NOT
         // prove the render is bit for bit the build before the map: the ring-ceiling fade was re-chosen with
-        // the map, and 316 of 1 200 ring-ceiling cells differ from 8a's engine in their last quarter second
-        // (see [unmappedString]). Just either side of the default must differ (else this test could not tell
+        // the map, and of the 1 200 cells of the 8b comparison (25 TUNE steps x 6 MUTEs x 4 BLENDs per voice,
+        // 884 of them on the decay path) the 316 ring-ceiling cells differ from 8a's engine in their last
+        // quarter second (see [unmappedString]). Just either side of the default must differ (else this test could not tell
         // the map from none). The four neutral values are read first and reported with the cells. Mutations:
         // the corner's centre read from 15 999 instead of 16 000 Hz fails the corner (4302.454 against
         // 4302.615 Hz on JANGLE) and the string and note cells, and CHUG's hand-built string in the ring
@@ -1039,8 +1053,10 @@ class MagnetTest {
         // rate (79 380 Hz) that Dsp.OnePole.lp and Strings.tune both clamp at, and that is the whole of the
         // ceiling. A lower ceiling of the engine's own (0.40 down to 0.25 of the rate) was measured, in the
         // PICK-ends task's report, to shift the cents by 0.00 at every cell it changed, to change no length
-        // and to leave every landed end as it was (JANGLE's landing: -92.3 dB without a ceiling, -92.7 at
-        // 0.40); and every cell of the in-tune test is within its bar (1.66 cents at the worst). Asserted:
+        // and to move nothing the bars read. Only JANGLE's landing was measured for the landed end, and its
+        // worst end moved by 0.3 to 0.4 dB (-92.3 dB without a ceiling against -92.7 at 0.40, and -88.3
+        // against -88.6 at 0.25), far inside the bar; and every cell of the in-tune test is within its bar
+        // (1.66 cents at the worst). Asserted:
         // the tuning budget at the asked corner is the budget at the clamp, and the string the engine builds
         // there is the string built by hand with the corner given as exactly the clamp. Mutations: the
         // engine handing the loop a corner of 0.4 of the rate fails the string check (the first differing
@@ -1128,7 +1144,8 @@ class MagnetTest {
         // never Pitch.detect: its integer lag steps up to 12.9 cents at JANGLE's E4 and a hot amp can hand
         // it an octave or nothing. A silent or NaN render reads as NaN cents and fails the finite check, and
         // a NaN shift fails the bar too. Mutation: the thumb's corner floor at 0 Hz reads NaN at every PICK
-        // 0 cell and fails the finite check there alone.
+        // 0 cell and fails the checks there alone: the 6 PICK 0 cells fail, each counted twice (once as
+        // unread, by the finite check, and once as over, by the bar), 12 failure entries in all.
         val hot = mapOf("DRIVE" to 1f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
         class PitchCell(val v: MagnetVoice, val pick: Float, val tune: Float)
         class PitchRead(val dryCents: Double, val landedCents: Double, val hotCents: Double)
@@ -1222,8 +1239,11 @@ class MagnetTest {
         const val DC_BOUND = 1e-4
 
         /**
-         * The threads a long sweep's cells are spread over: four at most (the test JVM's heap is the
-         * Gradle default of 512 MiB, and each cell holds a few 176.4 kHz buffers while it runs).
+         * The threads a long sweep's cells are spread over: min(4, cores), four at most (the test JVM's
+         * heap is the Gradle default of 512 MiB, and each cell holds a few 176.4 kHz buffers while it
+         * runs). The cells are independent and deterministic and the engine's render path has no shared
+         * mutable state. The CPU work is the same at any thread count, so on a single core the class
+         * takes about 62 s, and a runner with fewer cores gets less of the wall-time gain.
          */
         val SWEEP_THREADS = maxOf(1, minOf(4, Runtime.getRuntime().availableProcessors()))
 

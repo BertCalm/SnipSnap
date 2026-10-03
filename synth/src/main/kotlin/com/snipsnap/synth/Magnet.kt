@@ -82,11 +82,11 @@ object Magnet {
      * under (3 cells of 900 short of the margin). Over the three landings, 25 TUNE steps, MUTE 0, the
      * default and 1, and PICK 0, 0.15, the default and 1 (900 cells, 416 on the ring ceiling) the
      * shortest fade that holds every ceiling cell 3 dB inside the bar is the fourth power at 225 ms
-     * (worst 55.8 dB under: CHUG at gain 106, MUTE 0, step 2, PICK 0.15; the fourth power at 200 ms and
-     * the cubed at 225 ms both end 52.7 dB under there, cubed 250 ms reads 55.1 and squared 300 ms
-     * 53.4). It also takes least of the tail: with the trim's fade the note is -10 dB 225 ms and -20
-     * dB 186 ms before its end (237 and 178 ms for the squared 250 ms; 225 and 126 ms with the trim's
-     * alone). The fade starts 3.775 s into a 4 s note.
+     * (worst 55.8 dB under, each landing at its own BLEND: CHUG at gain 106, MUTE 0, step 2, PICK 0.15;
+     * the fourth power at 200 ms and the cubed at 225 ms both end 52.7 dB under there, cubed 250 ms
+     * reads 55.1 and squared 300 ms 53.4). It also takes least of the tail: with the trim's fade the
+     * note is -10 dB 225 ms and -20 dB 186 ms before its end (237 and 178 ms for the squared 250 ms;
+     * 225 and 126 ms with the trim's alone). The fade starts 3.775 s into a 4 s note.
      */
     private val CEILING_FADE = EndFade(ms = 225f, power = 4)
 
@@ -105,8 +105,9 @@ object Magnet {
      * `expMap(PICK, 600, 16000)` (4303 Hz on JANGLE, 3651 Hz on CHUG), so the map is neutral at the
      * default: it asks the corner the first build and task 8a asked there. (That is the map, not the
      * whole render: the ring-ceiling fade was re-chosen with the map, and a ring-ceiling note's last
-     * quarter second differs from 8a's.) These are the first build's ends, now only the source of that
-     * one number. A shape value, not a physical one.
+     * quarter second differs from 8a's.) These are the first build's ends: from the default PICK up the
+     * corner is that curve to the digit (the old map is the upper half of the new one), and below it
+     * the curve matters only as the source of the default's number. A shape value, not a physical one.
      */
     private const val PICK_CENTER_FROM_HZ = 600f
     private const val PICK_CENTER_TO_HZ = 16_000f
@@ -294,9 +295,11 @@ object Magnet {
      * ([loopScale]; the ring law then multiplies the corner by the square root of r). The corner asked
      * of the loop is not clamped here: the toolkit's own clamp at 0.45 of the render rate is the only
      * ceiling on it (at E4, MUTE 0 and PICK 1 it asks 89.6 kHz and gets 79.4). A lower ceiling of the engine's own,
-     * measured at 0.40 down to 0.25 of the rate, moved neither the tuning nor a landed end and only
-     * shaved the top of PICK 1's onset, so there is none. [compensate] is the voice's [Spec.compensate]
-     * unless a test overrides it, to read the same chain with the ring law off.
+     * measured at 0.40 down to 0.25 of the rate, moved nothing the bars read (a shift of 0.00 cents, no
+     * change of length; the worst landed end of JANGLE's landing, the only one measured, moved by 0.3
+     * to 0.4 dB: -92.3 dB against -92.7, and -88.3 against -88.6) and only shaved the top of PICK 1's
+     * onset, so there is none. [compensate] is the voice's [Spec.compensate] unless a test overrides
+     * it, to read the same chain with the ring law off.
      */
     internal fun string(voice: MagnetVoice, macros: Map<String, Float>, compensate: Boolean = specFor(voice).compensate): FloatArray {
         val m = settled(macros, voice)
