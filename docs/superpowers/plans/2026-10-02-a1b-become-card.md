@@ -1027,7 +1027,8 @@ This plan ends here.
   - Task 1 Step 4: each of the three `:shell` mutations exited 1 with the messages now quoted in that step, and nothing else failed in `MutateSheetTest` or `BecomeTest`. The lower-case-label mutation as the review proposed it (label only) fails on the OFF assertion with `<0%>`, because `MutateSheet.label` dispatches on the label, so the step now changes the `when` branch too.
   - Task 2 Step 3: exactly the two named laws failed, with the named messages. Step 8: `ConventionTest` exit 0. Step 9: all three reset mutations failed only that law, with the named messages, and restoring the line gave exit 0.
   - Task 3 Step 2: exactly the one named law failed, with the named message. Step 8: exit 0. Step 9: all three row mutations failed only that law, with the named messages, and restoring gave exit 0.
-  - The full `./gradlew test` was not re-run after these fixes. The reviewer's run of the earlier version exited 0, and the fixes touch only the two test files run above.
+  - The full `./gradlew test` was not re-run after these fixes. The reviewer's run of the earlier version (Tasks 1-3 applied) exited 0, and the code these fixes change lives in the two test files run above.
+  - Task 4's two markdown edits (QQ4's new opening, `docs/CLI.md`'s paragraph) were not applied or run here. No test reads either file: the only Kotlin mention of `FEATURE_PLAN` under any `src/test` is a comment in `ConventionTest.kt`, and `CLI.md` has none. The find text of the `docs/CLI.md` edit was checked to occur exactly once.
   - `:app` was not compiled (no SDK). `android-build` is the first compiler to see the screen.
 - **Review Focus:** each of the five lines names a test or law that Task 1, 2 or 3 writes. The snap line now says what is actually pinned: the literal on the screen (Task 3), the sweep of that literal (Task 1).
 - **Review findings (2026-10-02), applied:**
