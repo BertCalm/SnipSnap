@@ -158,6 +158,34 @@ class DeterminismTest {
         }
     }
 
+    // TERRA seeds its exciters (11, 31, 17, 19), CLACK's noise (29) and
+    // BUZZ's noise (13, 23) per voice (Terra.kt), so a saved pad
+    // regenerates only if all of them stay fixed. One per voice, with BUZZ
+    // and CLACK up so the noise paths run.
+    @Test
+    fun `TERRA is byte-identical across renders, all four voices`() {
+        for (voice in TerraVoice.entries) {
+            val loud = when (voice) {
+                TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR -> mapOf("BUZZ" to 1f)
+                TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
+                TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
+            }
+            val patch = TerraPatch("Canary", voice, Terra.defaults(voice) + loud)
+            assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
+        }
+    }
+
+    // A struck TERRA pad renders from the head stored in its recipe; the
+    // capture is data, so nothing else is read and every render must agree.
+    @Test
+    fun `TERRA struck by a stored head is byte-identical across renders`() {
+        val head = Terra.captureStriker(Thump.render(ThumpVoice.SNARE)) ?: error("a snare is not silent")
+        for (voice in TerraVoice.entries) {
+            val patch = TerraPatch("Canary", voice, Terra.defaults(voice), TerraPatch.Striker(head, 0.75f, "A02"))
+            assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
+        }
+    }
+
     // MERCURY seeds its strike burst, its contact roughness and its water's start from the voice and the note
     // (Dsp.seedFor), and solves its friction implicitly every sample, so this canary guards both: the seeds, and
     // the float arithmetic of a coupled bank driven by a nonlinear contact, where one stray last bit would move
@@ -179,6 +207,17 @@ class DeterminismTest {
         for (voice in GyreVoice.entries) {
             val p = GyrePatch("Canary", voice, Gyre.defaults(voice) + ("SPIN" to 0.6f))
             assertContentEquals(p.render().samples, p.render().samples, "$voice")
+        }
+    }
+
+    // MAGNET seeds its pluck burst from Dsp.seedFor per voice and note, and nothing else in the
+    // render is random: a saved recipe must regenerate bit for bit.
+    @Test
+    fun `MAGNET is byte-identical across renders, both voices`() {
+        for (voice in MagnetVoice.entries) {
+            val a = MagnetPatch("Canary", voice, Magnet.defaults(voice))
+            val b = MagnetPatch("Canary", voice, Magnet.defaults(voice))
+            assertContentEquals(a.render().samples, b.render().samples, "$voice")
         }
     }
 }

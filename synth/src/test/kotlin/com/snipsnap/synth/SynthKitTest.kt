@@ -147,6 +147,46 @@ class SynthKitTest {
     }
 
     @Test
+    fun `the magnet kit is a chug riff, a jangle chord and a lead pair, each landed through its amp`() {
+        val kit = SynthKits.magnet()
+        assertEquals(16, kit.size)
+        assertTrue(kit.none { it == null }, "no empty pad in the magnet kit")
+        // The notes the kit plays (MIDI): B1 D2 E2 F#2 A2 B2 D3 E3 on CHUG, E2 B2 E3 G#3 B3 E4 on JANGLE,
+        // then F#3 and B3 on CHUG for the lead pair.
+        val expectedMidi = listOf(35, 38, 40, 42, 45, 47, 50, 52) + listOf(40, 47, 52, 56, 59, 64) + listOf(54, 59)
+        val leadValve = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
+        for (i in kit.indices) {
+            val n = i + 1
+            val pad = kit[i]!!
+            assertEquals(DrumClass.TONAL, pad.drumClass, "pad $n is a note")
+            val recipe = PadRecipe.fromJsonValue(pad.recipe ?: error("pad $n carries no recipe"))
+            val patch = recipe.patch as? MagnetPatch ?: error("pad $n should be a MAGNET patch, got ${recipe.patch?.engine}")
+
+            val voice = patch.voice
+            val expectedVoice = if (i in 8..13) MagnetVoice.JANGLE else MagnetVoice.CHUG
+            assertEquals(expectedVoice, voice, "pad $n is the wrong voice")
+            val lead = i >= 14
+            assertEquals(if (lead) 0.35f else Magnet.defaults(voice).getValue("BLEND"), patch.macros.getValue("BLEND"), "pad $n BLEND")
+            assertTrue(recipe.fx?.valve != null, "pad $n lands through VALVE")
+            assertEquals(if (lead) leadValve else Magnet.LANDING_VALVE.getValue(voice), recipe.fx?.valve, "pad $n amp")
+
+            // The pitch is read on the dry patch render: pad.snip has been through the landing VALVE.
+            val tune = patch.macros.getValue("TUNE")
+            assertEquals(expectedMidi[i], Magnet.rootMidi(voice) + Magnet.semitonesFor(tune), "pad $n plays the wrong note")
+            val want = Magnet.frequencyFor(voice, tune)
+            val dry = patch.render()
+            assertEquals(Dsp.RATE, dry.sampleRate, "pad $n dry render rate")
+            val cents = FineTuning.cents(FineTuning.measuredHz(dry.samples, Dsp.RATE, want), want.toDouble())
+            val rounded = Math.round(cents * 100.0) / 100.0
+            println("MAGNET kit pad $n $voice midi ${expectedMidi[i]} $want Hz, dry read $rounded cents")
+            assertTrue(Math.abs(cents) <= 10.0, "pad $n ($voice) reads $rounded cents from $want Hz")
+
+            val regenerated = recipe.render()
+            assertTrue(regenerated.samples.contentEquals(pad.snip.samples), "pad $n does not regenerate bit for bit from its recipe")
+        }
+    }
+
+    @Test
     fun `the chip kit is sixteen crunched pads that keep their identities`() {
         val kit = SynthKits.chip()
         assertEquals(16, kit.size)
