@@ -2069,6 +2069,76 @@ pad anyone wants, the default HOLD, and the SECTION chip's default amount.
 *Not built here*: the bridge port GYRE asks for in the next note. R1b leaves `Strings.Bow` exactly as R1a landed it
 (no `Strings*` file is in this PR), so the port still lands as its own no-audio-change change before GYRE R2.
 
+**R1c (2026-10-02): the owner's first listen, and what it changed.** The owner listened to R1b's page and the verdicts are on the page's own
+store (`verdicts/arco_r1_*`). *The pass rule*: the bowed note was picked out of three unlabelled three-second clips **six times out of six**
+(CELLO C2, C3, A#3; ERHU D4, C5, G5; sure on four, unsure on ERHU C5, no confidence set on CELLO A#3), so both voices pass the held-note
+gate and, per the rule above, their presets stand. Not answered: whether the bowed note still reads as a synth once you know it is bowed (the
+second half of the rule; the note boxes were all empty). *The stab*: BOW 1 yes, BOW 0.5 nearly; the two brass comparison clips and the
+question about a swell at the bottom of CELLO were not answered. *The knobs*: GRIP 1 and HOLD 1 (both voices), ERHU BOW 1 and ERHU's vibrato
+were yes; **BODY 1 (both voices), CELLO BOW 1 and CELLO's vibrato were nearly**, and asked which way, the owner said not enough box, not
+enough bite, too mechanical. ERHU's box: B, the box as shipped, unsure, so its table stays. Everything the owner did not mark (the presets,
+the kit, the loops, the knobs' low ends) is unheard, not approved.
+
+R1c changes those three, and re-authors two presets the changes moved. **It is not "nothing else changes": the bigger CELLO bite changes the
+BOW 1 stab the owner marked YES** (below). What it found:
+
+* **BODY.** `Strings.bodyRing`'s `amount` is the box's RMS over the string's, and BODY was it, so BODY 1 was a box exactly as loud as the string.
+  BODY is now the same up to `BODY_KNEE` 0.5 (the box call is R1b's to the bit at the default and at every preset at or under 0.5, in both voices; kit
+  pads A01 to A08, A11 and A16 are byte-identical) and climbs to `BODY_TOP` 1.75 times the string at BODY 1 (measured 0.50, 1.12 and 1.75 at BODY
+  0.5, 0.75 and 1 in both voices, finished peaks at most 0.66). A louder box moved ERHU MOON FIDDLE at BODY 0.85 (now 1.375 times the string) from a
+  classifier ring of 813 ms to 522 ms, 22 ms from the 500 ms line, so that preset's BODY is 0.8.
+* **The bite.** R1b's CELLO bite hardly showed: against the same stroke with none, the best of the 0-50, 50-100 and 100-200 ms windows was within
+  0.5 dB at F2, C3, G3 and C4 (0.3, 0.5, 0.5, 0.4; over the whole 200 ms it was +0.2, -0.2, +0.4, -0.6). It relaxed with the attack's own 10 ms
+  time constant (a hump of 1.28 times the velocity, over in 27 ms) and a bass string needs many milliseconds to build a period. The bite is per
+  voice now (ERHU's numbers are as they were) and CELLO's has three: `OVERSHOOT_MAX_CELLO` 3.0 times the velocity, `BITE_SECONDS_CELLO` a 60 ms
+  time constant (at least; the attack's if longer), and `BITE_PRESSURE_CELLO` half of the bite's share pressing the string toward the window's top
+  (the rest of the accent is speed alone). That is +2.0, +2.9, +3.0 and +2.7 dB in the best of the 0-50, 50-100 and 100-200 ms windows at those notes.
+  **Three settings were tried before it, and each broke something the search had not yet looked at**: 3.0 times for 60 ms with all of the share in
+  the pressure never locked SHORT STAB in its 0.30 s stab; 2.75 times for 60 ms passed the roster but put C3's BOW 1 at 600 ms to reach 90 percent
+  against BOW 0's 448; 2.5 times for 120 ms with a quarter of the share in the pressure kept both but let only 18 of the 25 TUNE steps lock inside
+  a default note at BOW 1 (R1b: 23) and left one scramble roll in 200 late. A few hundred settings (velocity 1.75 to 3.5 times, 20 to 140 ms, a
+  pressure share of 0 to 1) were run against the overshoot row (1.5 s), the onset claim, the roster's locks, the lock across BOW (2.0 s), the
+  scramble test, the default-note count and a gain of at least 1.5 dB. 3.0 times for 60 ms with half of the share in the pressure keeps them: the row
+  at most 1.44 s, the lock grid 1.47 s, C3 at 434 ms against 448 (a thin margin), 22 of 25 default-note steps locking, none of the 400 scramble rolls
+  late (so the original strict claim stands), SHORT STAB at its authored BOW 0.9 (0.22 s), and the steps where BOW 1 is not sooner than BOW 0 down to
+  F#2, G2 and G#2. GRIT BOW's BOW is 0.65, not 0.85 (at 0.85 it no longer locks inside its bow; at 0.65 it locks at 0.45 s of 0.58), and DRY SCRAPE,
+  which R1b read as never locking, now locks at 0.33 s of its 0.34 s bow, a scrape in all but its last 10 ms (its test clause says so).
+  **What no setting kept is the BOW 1 stab the owner marked YES**: SHORT STAB's macros at BOW 1 on the figure's three pitches (C3 C3 E-flat3 G3 G3
+  E-flat3 C3, 0.3 s each). G3 still locks (0.21 s, R1b 0.214), C3 never did, and **E-flat3 locked at 0.189 s and is now a three-slip scrape for its
+  whole 0.3 s**; of the 80 settings in the last search, 19 kept the other bars and every one of those 19 loses it, because R1b's bite was so small that this note only just locked. Across all 25
+  steps the HOLD-0 stab at GRIP 0.7 and BOW 1 that locks by 0.255 s falls from 10 steps to 6. The retune page plays that stab before and now so the
+  owner can say whether the extra bite is worth it.
+* **The vibrato.** R1b's was a constant: every swing 10.0 or 10.1 cents at exactly 6.10 Hz, which is what "mechanical" measures as. CELLO's is
+  now `VIBRATO_HUMAN`: the rate drifts by up to 7 percent, the depth by up to 18 percent (each a sum of three slow sines whose frequencies share
+  no period inside a note, so it is never the same twice and still a pure function of time: no seed), the swing leans a little (a second
+  harmonic) and it swells in over half a second, against a fifth. Measured swing peaks 8.1 to 11.8 cents (12.75 at its highest over four
+  seconds), half-swing rates 5.1 to 7.1 Hz, mean pitch -0.02 cents. ERHU keeps `VIBRATO_PLAIN`, the old sine term for term, held bit for bit by a test.
+* **Still open for the owner's ears**: all three amounts (`BODY_TOP`, the bite's three numbers, the drift's two), whether the stab's extra bite is worth
+  E-flat3 and its neighbours scraping, whether CELLO's default-HOLD notes (0.85 s of bow, 2.8 cents of vibrato, which now drifts) are better or worse
+  for it, the stab against the two brass stabs, whether the bowed note still reads as a synth, and the unheard half of the roster.
+  `generateArcoRetune` writes the small before-and-now page for exactly these (BODY 1, CELLO BOW 1 with a stronger step beside it, the BOW 1 stab,
+  CELLO's vibrato).
+
+**R1c heard (2026-10-02): the retune page's verdicts** (`verdicts/arco_r1c_*` on its own store, saved 17:38 to 17:40 UTC). The owner marked no chip on
+BODY or BOW and wrote in the note boxes instead. *BOW* (CELLO's bite): the note reads "Stronger" and the overall answer "Now is good", so NOW's
+bite is accepted; the one word "Stronger" is read as a description of NOW against BEFORE, not a request for the stronger step beside it, and
+the owner is asked to say so if that is wrong. *The stab*: C3, E-flat3 and G3 NOW all yes, "Good" and "Works for me", so **the E-flat3 that
+the bigger bite turned into a scrape is accepted** (R1c's open cost above is closed). *CELLO's vibrato*: C2 and C3 NOW yes, "Now versions are good",
+overall "Yes" (ERHU's unchanged control was not marked). *BODY*: the note reads "Body doesn't seem to do anything" and the overall answer "Body
+still seems a little light", so **BODY is still nearly, and 1.75 times was not the fix**. Two of the three R1c changes are therefore settled
+and the third is open.
+
+Why BODY 1 moved so little is not a constant to turn up further, and the measurement says so. On the BODY page's CELLO note (C3, 130.75 Hz) the band
+levels of BODY 1 NOW against the default (0.5) are +1.0 dB at 50-150 Hz, +0.4 at 150-300 and **-3.6 to -5.0 dB at 300 Hz and above**; ERHU's note
+(C5, 524 Hz) moves +0.7 dB at 300-600 Hz, -1.2 at 600-1200, -3.7 at 1.2-2.4 kHz and -4.6 at 2.4-5 kHz (its two bands under 300 Hz hold almost
+nothing). The three clips of each voice have the same RMS (0.0253 to 0.0259 CELLO, 0.0259 ERHU), so what the louder box adds the top of the note
+gives up: it shows as a darker note, not as a box. The working diagnosis, to be measured
+and not yet settled: CELLO's box is two narrow resonances (104 Hz, Q about 12; 220 Hz, Q about 18, so about 9 and 12 Hz wide), and a held bowed
+note is only harmonics, so a resonance changes the steady note only where a harmonic lands within a few hertz of it (on C3 the first partial is 27 Hz from the 104 Hz resonance and the second 42 Hz from the 220 Hz one),
+and it otherwise rings only in the transients and is cut where the string ends. A box that a held note can hear has to be broad (a spectral
+envelope the harmonics sit on), which is a different shape and not a bigger amount. That is R1d's work, and **the first thing it must keep is
+everything at or under BODY 0.5, to the bit** (the default, the kit and the presets that were not heard to be wrong).
+
 **A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
 (`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
 taken") couples four strings through a shared bridge. Its R2 bows those

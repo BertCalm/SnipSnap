@@ -111,13 +111,14 @@ internal object ArcoMeasure {
      * test can say "past the lock" and "after the lift" in samples. The bow is on for [gateSeconds] (else HOLD's
      * seconds), vibrato is OFF unless asked for (a physics test reads a plain string), and [pressure], [cornerHz]
      * and [overshoot] replace what GRIP and BOW would have chosen. The stop's length is still worked out from
-     * GRIP's corner, whatever [cornerHz] says: that is what the engine does.
+     * GRIP's corner, whatever [cornerHz] says: that is what the engine does. [overshootMax], [biteSeconds] and [pressureBite] replace the
+     * voice's own bite ([Arco.bow]'s probe overrides): `overshootMax = 1.75f, biteSeconds = 0f, pressureBite = 1f` is R1b's CELLO stroke.
      */
     fun core(
         voice: ArcoVoice, step: Int,
         bow: Float = Arco.DEFAULT_BOW, grip: Float = Arco.DEFAULT_GRIP, body: Float = 0f, hold: Float = Arco.DEFAULT_HOLD,
         gateSeconds: Float? = null, pressure: Float? = null, cornerHz: Float? = null, overshoot: Float? = null,
-        vibrato: Boolean = false, lifted: Boolean = false,
+        vibrato: Boolean = false, lifted: Boolean = false, overshootMax: Float? = null, biteSeconds: Float? = null, pressureBite: Float? = null,
     ): Core {
         val hz = hzOf(voice, step)
         val holdSeconds = gateSeconds ?: Arco.holdSeconds(hold)
@@ -128,7 +129,7 @@ internal object ArcoMeasure {
         val out = Arco.bow(
             voice, hz, macros(voice, step, bow, grip, body, hold), RATE,
             pressure = pressure, cornerHz = cornerHz, overshoot = overshoot, gateSeconds = gateSeconds,
-            vibrato = vibrato, lifted = lifted, bowPointOut = tap,
+            vibrato = vibrato, lifted = lifted, bowPointOut = tap, overshootMax = overshootMax, biteSeconds = biteSeconds, pressureBite = pressureBite,
         )
         require(out.size < tap.size) { "the tap buffer is shorter than the render" }
         return Core(voice, step, hz, out, tap.copyOf(out.size), holdN, liftN)
@@ -254,6 +255,26 @@ internal object ArcoMeasure {
             s += step
         }
         return -1.0
+    }
+
+    // ---- the bite (R1c) ------------------------------------------------------------------------------------------
+
+    /** The windows the bite is read over, in seconds from the start of the stroke: 0 to 50, 50 to 100, 100 to 200 and 200 to 400 ms. */
+    val BITE_WINDOWS: List<Pair<Double, Double>> = listOf(0.0 to 0.05, 0.05 to 0.10, 0.10 to 0.20, 0.20 to 0.40)
+
+    /**
+     * The gain in dB of [stroke] over [plain] (the same stroke with no bite) in the RMS of the raw string over [fromSeconds] to [toSeconds]. It is the RMS
+     * over the whole window and not a sliding one, so a bite that is over in 20 ms is averaged with the sustain that follows it in the window.
+     */
+    fun windowGainDb(stroke: FloatArray, plain: FloatArray, fromSeconds: Double, toSeconds: Double): Double {
+        val from = (fromSeconds * RATE).toInt()
+        val to = (toSeconds * RATE).toInt()
+        fun rms(x: FloatArray): Double {
+            var acc = 0.0
+            for (i in from until to) acc += x[i].toDouble() * x[i]
+            return sqrt(acc / (to - from))
+        }
+        return 20.0 * log10(max(rms(stroke), 1e-12) / max(rms(plain), 1e-12))
     }
 
     // ---- the series ----------------------------------------------------------------------------------------------

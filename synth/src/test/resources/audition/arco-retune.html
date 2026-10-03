@@ -1,12 +1,12 @@
-<title>Siren Audition</title>
+<title>Arco Retune</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
 <style>
   /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md,
-     the same page the PLUCK and TINES auditions wear. The scheme is dark
-     by design (light shells were cut), so this page commits to one theme
-     and paints every surface explicitly. */
+     the same page the PLUCK, TINES, SIREN and BORE auditions wear. The scheme
+     is dark by design (light shells were cut), so this page commits to one
+     theme and paints every surface explicitly. */
   :root {
     --desk1: #0C0618;
     --desk2: #140B24;
@@ -146,7 +146,7 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible, input[type="range"]:focus-visible {
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible {
     outline: 2px solid var(--cyan);
     outline-offset: 2px;
   }
@@ -348,6 +348,7 @@
     box-shadow: 0 0 10px rgba(224, 64, 200, .45);
   }
   .chip[aria-pressed="true"] .g { color: var(--title-ink); }
+  .chip:disabled { opacity: .5; cursor: default; }
 
   .notes {
     padding: 8px 12px 12px;
@@ -377,71 +378,10 @@
   }
   textarea::placeholder { color: var(--ink3); }
 
-  /* The SURFACE stand-in: four pads you hold, a pitch axis, an echo. */
-  .surface { margin: 0 12px 12px; }
-  .surface .field {
-    padding: 10px 12px 12px;
-    display: grid;
-    gap: 10px;
-  }
-  .holds {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  .hold {
-    min-height: 72px;
-    display: grid;
-    place-items: center;
-    gap: 4px;
-    padding: 6px 4px;
-    font-family: var(--f-pixel);
-    font-size: 9px;
-    letter-spacing: .5px;
-    text-align: center;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: none;
-  }
-  .hold .sub { font-family: var(--f-lcd); font-size: 14px; color: var(--ink2); letter-spacing: 0; }
-  .hold[aria-pressed="true"] {
-    border-color: var(--cyan);
-    color: var(--cyan);
-    box-shadow: 0 0 18px rgba(64, 224, 232, .7), inset 0 0 12px rgba(64, 224, 232, .3);
-  }
-  .hold[aria-pressed="true"] .sub { color: var(--cyan); }
-  .hold:disabled { opacity: .5; cursor: default; }
-  .axis {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 10px;
-  }
-  .axis .k, .axis .v {
-    font-family: var(--f-pixel);
-    font-size: 8px;
-    letter-spacing: .5px;
-    color: var(--ink2);
-  }
-  .axis .v { color: var(--cyan); min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
-  input[type="range"] {
-    width: 100%;
-    min-height: 44px;
-    accent-color: var(--cyan);
-    background: transparent;
-  }
-  .surface .row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
-  }
-  .surface .hint { font-size: 15px; color: var(--ink2); line-height: 1.25; }
-
   .verdict { margin: 0 12px 12px; }
   .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
   .q + .q { border-top: 1px dashed var(--field-border); }
-  .q .ask { font-size: 19px; color: var(--ink); line-height: 1.25; }
+  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
 
   .actions {
     display: grid;
@@ -486,12 +426,12 @@
     font-family: var(--f-pixel);
     font-size: 8px;
     letter-spacing: .5px;
-    color: var(--ink3);
+    color: var(--ink2);
     line-height: 1.6;
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .pad[aria-pressed="true"], .hold[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
+    .pad[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
     @keyframes breathe {
       0%, 100% { box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25); }
       50% { box-shadow: 0 0 22px rgba(64, 224, 232, .85), inset 0 0 14px rgba(64, 224, 232, .35); }
@@ -501,8 +441,8 @@
 
 <div class="win">
   <div class="titlebar">
-    <span>Siren Audition</span>
-    <span class="tag">S12 GATE &middot; FOUR VOICES, ONE KIT</span>
+    <span>Arco Retune</span>
+    <span class="tag">R1C &middot; THE THREE NEARLYS</span>
   </div>
 
   <div class="transport lcd">
@@ -516,64 +456,55 @@
   </div>
 
   <div class="guide lcd">
-    <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>SIREN is the first engine that is a movement rather than a strike: a square-wave tone whose pitch a slow oscillator throws up and down. A voice is the oscillator's shape.</p>
-    <p>HOLD THE SURFACE first: press and hold a loop, slide PITCH while it sounds, let go and hear the echo carry it. That is the siren-box gesture the phone's SURFACE screen gives you. Then the kit as it lands on the MPC, then each voice's knobs at both ends. Mark each YES (it is the sound its name says), NEARLY, or NO.</p>
+    <div class="hd">WHAT YOU SAID</div>
+    <p>You listened to ARCO and marked three things NEARLY. <b>BODY 1, in both voices: not enough</b>, the box should be louder at the top of the knob. <b>CELLO's BOW 1: not enough bite.</b> <b>CELLO's vibrato: too mechanical.</b> ERHU's BOW 1 and ERHU's vibrato were a YES, and they stay as they were.</p>
   </div>
 
-  <section class="voice surface" id="surface">
-    <div class="voice-hd">
-      <h2>Hold the surface</h2>
-      <div class="body-note">the four LOOP renders, held under a finger</div>
-      <div class="readout"><span>PRESS AND HOLD</span><span>LIFT TO LET GO</span><span>ECHO 220 ms FREE &middot; FEEDBACK .35</span></div>
-    </div>
-    <div class="field lcd">
-      <div class="holds" id="holds"><button class="raised hold" type="button" disabled>LOADING</button></div>
-      <div class="axis">
-        <span class="k">PITCH</span>
-        <input type="range" id="pitch" min="-12" max="12" step="1" value="0" aria-label="Pitch, semitones, the surface's X axis">
-        <span class="v" id="pitchv">0 ST</span>
-      </div>
-      <div class="row">
-        <button class="raised toggle" id="echo" type="button" aria-pressed="true"><span class="dot"></span>ECHO</button>
-        <span class="hint">The loop wraps exactly, as the SURFACE plays it. PITCH resamples the whole loop, so the wail speeds up as it rises, the way the surface's X axis does.</span>
-      </div>
-    </div>
-  </section>
+  <div id="intro"></div>
+
+  <div class="guide lcd">
+    <div class="hd">HOW TO LISTEN</div>
+    <p>Four cards, a before and a now for each, labelled: this is not a blind test. BEFORE is the old engine made again (at the default note, what you heard last time; the BOW card's root clips are the same recipe at a note you did not hear, and the stab's hits are the figure's own hits, which you heard last time inside the two-bar pattern, here one at a time); NOW is the engine as it stands. Every clip is dry and mono at one loudness, so BODY 1 NOW is a bigger box beside a quieter string, not a louder clip. Mark each YES, NEARLY or NO. <b>When it is NEARLY, say which way and roughly how much, in a few words, in the notes box</b>: that is the information the boxes did not have last round.</p>
+    <p><b>Nothing here has been heard by anyone yet.</b> The numbers above were measured, and a measurement can say a bite is bigger, not that it sounds like a bow.</p>
+  </div>
 
   <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
 
   <div class="voice verdict" id="verdict">
     <div class="voice-hd">
       <h2>Verdict</h2>
-      <div class="readout"><span>FOUR QUESTIONS &middot; THEN SAVE</span></div>
+      <div class="readout"><span>FIVE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <div class="ask">1 &middot; Held under a finger with the echo on, does a loop feel like a siren box in the hand? What is missing, if anything?</div>
-      <textarea id="q_surface" placeholder="&hellip;"></textarea>
+      <label class="ask" for="q_body">1 &middot; BODY: is the new box (<span data-fact="bodyTop">1.75</span> times the string at BODY 1) right, too much, or still not enough? CELLO and ERHU. If it is NEARLY, which way and how much, in a few words?</label>
+      <textarea id="q_body" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">2 &middot; Which voices read as the sound their name says? WAIL as the air raid, TRILL as two tones, LASER as the ray gun, BIRD as the chirp.</div>
-      <textarea id="q_voices" placeholder="&hellip;"></textarea>
+      <label class="ask" for="q_bow">2 &middot; BOW: BEFORE, NOW or STRONGER, which reads as a bowed stab with a bite? And does the root (C2) still speak? If it is NEARLY, which way and how much, in a few words?</label>
+      <textarea id="q_bow" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">3 &middot; The knobs: which end of RATE, DEPTH, SWEEP or GRIT goes too far, or not far enough? Are the defaults where you would start?</div>
-      <textarea id="q_knobs" placeholder="&hellip;"></textarea>
+      <label class="ask" for="q_stab">3 &middot; THE STAB: the figure you marked YES now has the bigger bite, and <span data-fact="stabLost">E-flat3</span> goes from a note to a scrape. Is the extra bite worth that? If not, which way, in a few words?</label>
+      <textarea id="q_stab" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <div class="ask">Anything else</div>
+      <label class="ask" for="q_vibrato">4 &middot; VIBRATO: does NOW sound like a player and not a machine? Is the swell-in right? If it is NEARLY, which way and how much, in a few words?</label>
+      <textarea id="q_vibrato" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_else">5 &middot; Anything else</label>
       <textarea id="q_else" placeholder="&hellip;"></textarea>
     </div>
     <div class="actions">
       <button class="primary" id="save" type="button">Save verdict</button>
-      <div class="status lcd" id="status"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+      <div class="status lcd" id="status" role="status" aria-live="polite"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
     </div>
   </div>
 
   <div class="foot">
-    RENDERED BY generateSirenAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
-    THE KIT PADS CARRY THE RACK'S ECHO AS THEY LAND; THE LOOPS ARE DRY, THE ECHO HERE IS THE PAGE'S OWN &middot;
-    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
+    RENDERED BY generateArcoRetune &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
+    EVERY ARCO CLIP IS DRY &middot; THE FIRST ROUND'S VERDICTS ARE KEPT UNDER THEIR OWN NAME AND THIS PAGE DOES NOT TOUCH THEM &middot;
+    CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
   </div>
 </div>
 
@@ -585,10 +516,12 @@
   // charset a host serves it under.
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
-  // The clip list is the generator's manifest.json, published beside this
-  // page - one list, written where the clips are rendered.
+  // The clip list, the intro's numbers and the facts the questions quote are
+  // the generator's manifest.json, published beside this page - one list,
+  // written where the clips are rendered. The manifest also carries
+  // `surfaceAfter` and `loops` (the big page's SURFACE stand-in); this page has
+  // no such section and ignores both.
   var VOICES = [];
-  var LOOPS = [];
 
   var REACTIONS = [
     { v: 'yes',    cls: 'closer', g: String.fromCharCode(0x25B2), t: 'YES' },
@@ -596,7 +529,7 @@
     { v: 'no',     cls: 'worse',  g: String.fromCharCode(0x25BC), t: 'NO' }
   ];
 
-  var QUESTIONS = ['q_surface', 'q_voices', 'q_knobs', 'q_else'];
+  var QUESTIONS = ['q_body', 'q_bow', 'q_stab', 'q_vibrato', 'q_else'];
 
   var $ = function (id) { return document.getElementById(id); };
   var el = function (tag, cls, text) {
@@ -607,11 +540,35 @@
   };
 
   // ---------- state ----------
-  var state = { overall: { q_surface: '', q_voices: '', q_knobs: '', q_else: '' } };
+  var state = { overall: { q_body: '', q_bow: '', q_stab: '', q_vibrato: '', q_else: '' } };
 
   // ---------- build ----------
   var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
                  '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
+
+  // What changed and what did not, as the generator wrote it from the engine's
+  // own constants, so the text cannot drift from them.
+  function buildIntro(blocks) {
+    var host = $('intro');
+    host.textContent = '';
+    (blocks || []).forEach(function (b) {
+      var card = el('div', 'guide lcd');
+      card.appendChild(el('div', 'hd', b.hd));
+      (b.p || []).forEach(function (text) { card.appendChild(el('p', null, text)); });
+      host.appendChild(card);
+    });
+  }
+
+  // The questions quote a number or two; the manifest's copy wins over the
+  // page's own, so a question never states a figure the engine has moved off.
+  function fillFacts(facts) {
+    if (!facts) return;
+    var nodes = document.querySelectorAll('[data-fact]');
+    for (var i = 0; i < nodes.length; i++) {
+      var v = facts[nodes[i].getAttribute('data-fact')];
+      if (v != null) nodes[i].textContent = v;
+    }
+  }
 
   function build() {
     var host = $('voices');
@@ -629,8 +586,9 @@
       hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
       card.appendChild(hd);
 
-      v.groups.forEach(function (g) {
+      v.groups.forEach(function (g, gi) {
         var grp = el('div', 'group' + (g.key ? ' key' : ''));
+        grp.id = 'group-' + v.id + '-' + gi;
         grp.appendChild(el('div', 'group-hd', g.label));
         g.clips.forEach(function (c) {
           var fid = c[0], name = c[1], desc = c[2];
@@ -640,7 +598,7 @@
           var pad = el('button', 'raised pad');
           pad.type = 'button';
           pad.setAttribute('aria-pressed', 'false');
-          pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + name);
+          pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + g.label + ' ' + name);
           pad.innerHTML = PLAY_SVG;
           pad.addEventListener('click', function () { toggle(v, fid, name, pad, row); });
           row.appendChild(pad);
@@ -657,7 +615,7 @@
             chip.type = 'button';
             chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
             chip.setAttribute('aria-pressed', 'false');
-            chip.setAttribute('aria-label', v.display + ' ' + name + ': ' + r.t.toLowerCase());
+            chip.setAttribute('aria-label', v.display + ' ' + g.label + ' ' + name + ': ' + r.t.toLowerCase());
             chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
             chip.addEventListener('click', function () { react(v.id, fid, r.v); });
             chips.appendChild(chip);
@@ -672,10 +630,11 @@
       var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
       var ta = el('textarea');
       ta.id = 'note-' + v.id;
-      ta.placeholder = 'what it sounds like, in your words';
+      ta.placeholder = 'which way, and how much, in a few words';
       lab.htmlFor = ta.id;
       ta.addEventListener('input', function () {
         state[v.id].note = ta.value;
+        dirty[v.id] = true;
         debounce(v.id, function () { persist(v.id); });
       });
       notes.appendChild(lab); notes.appendChild(ta);
@@ -684,127 +643,6 @@
       host.appendChild(card);
     });
   }
-
-  // ---------- the surface stand-in ----------
-  // The SURFACE screen loops a pad's WAV whole, restarts it on touch-down,
-  // closes a 3 ms gain glide on lift, and feeds its echo the gated signal
-  // so the tail rings on. Web Audio can do exactly that: a looping buffer
-  // source wraps sample-accurately, a gain node is the gate, a delay with
-  // feedback is the echo (SurfaceEngine's own 220 ms FREE time and 0.35).
-  var ctx = null, dry = null, echoSend = null, echoOn = true, semis = 0;
-  var loopBuffers = {};
-  var holding = null;
-
-  function ensureCtx() {
-    if (ctx) return ctx;
-    var AC = window.AudioContext || window.webkitAudioContext;
-    ctx = new AC();
-    dry = ctx.createGain(); dry.gain.value = 0.9; dry.connect(ctx.destination);
-    var delay = ctx.createDelay(2);
-    delay.delayTime.value = 0.22;
-    var fb = ctx.createGain(); fb.gain.value = 0.35;
-    var tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 3200;
-    var wet = ctx.createGain(); wet.gain.value = 0.55;
-    echoSend = ctx.createGain(); echoSend.gain.value = echoOn ? 1 : 0;
-    echoSend.connect(delay); delay.connect(tone); tone.connect(fb); fb.connect(delay); tone.connect(wet); wet.connect(ctx.destination);
-    return ctx;
-  }
-
-  function loadLoop(loop) {
-    if (loopBuffers[loop.id]) return loopBuffers[loop.id];
-    var c = ensureCtx();
-    loopBuffers[loop.id] = fetch(loop.file).then(function (r) { return r.arrayBuffer(); })
-      .then(function (ab) { return c.decodeAudioData(ab); });
-    return loopBuffers[loop.id];
-  }
-
-  function rate() { return Math.pow(2, semis / 12); }
-
-  function holdDown(loop, btn) {
-    var c = ensureCtx();
-    if (c.state === 'suspended') c.resume();
-    if (holding) holdUp();
-    btn.setAttribute('aria-pressed', 'true');
-    nowEl.textContent = 'HOLDING' + DOT + loop.name;
-    nowEl.classList.remove('idle');
-    var mine = { loop: loop, btn: btn, src: null, gain: null, released: false };
-    holding = mine;
-    loadLoop(loop).then(function (buf) {
-      if (mine.released) return;
-      var src = c.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      src.playbackRate.value = rate();
-      var g = c.createGain();
-      g.gain.setValueAtTime(0, c.currentTime);
-      g.gain.linearRampToValueAtTime(1, c.currentTime + 0.003);
-      src.connect(g); g.connect(dry); g.connect(echoSend);
-      src.start();
-      mine.src = src; mine.gain = g;
-    }, function () {
-      nowEl.textContent = 'COULD NOT LOAD THAT LOOP';
-      holdUp();
-    });
-  }
-
-  function holdUp() {
-    var h = holding;
-    if (!h) return;
-    holding = null;
-    h.released = true;
-    h.btn.setAttribute('aria-pressed', 'false');
-    if (h.src && h.gain && ctx) {
-      var t = ctx.currentTime;
-      h.gain.gain.cancelScheduledValues(t);
-      h.gain.gain.setValueAtTime(h.gain.gain.value, t);
-      h.gain.gain.linearRampToValueAtTime(0, t + 0.003);
-      h.src.stop(t + 0.02);
-    }
-    if (!current) { nowEl.textContent = 'TAP A PAD TO PLAY'; nowEl.classList.add('idle'); }
-  }
-
-  function buildHolds() {
-    var host = $('holds');
-    host.textContent = '';
-    LOOPS.forEach(function (loop) {
-      var btn = el('button', 'raised hold');
-      btn.type = 'button';
-      btn.id = 'hold-' + loop.id;
-      btn.setAttribute('aria-pressed', 'false');
-      btn.setAttribute('aria-label', 'Hold ' + loop.name);
-      btn.appendChild(el('span', null, loop.name));
-      btn.appendChild(el('span', 'sub', loop.sub || ''));
-      btn.addEventListener('pointerdown', function (e) {
-        e.preventDefault();
-        try { btn.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
-        holdDown(loop, btn);
-      });
-      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (evt) {
-        btn.addEventListener(evt, function () { if (holding && holding.btn === btn) holdUp(); });
-      });
-      // A keyboard holds too: space or enter down, then up.
-      btn.addEventListener('keydown', function (e) {
-        if ((e.key === ' ' || e.key === 'Enter') && !(holding && holding.btn === btn)) { e.preventDefault(); holdDown(loop, btn); }
-      });
-      btn.addEventListener('keyup', function (e) {
-        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (holding && holding.btn === btn) holdUp(); }
-      });
-      btn.addEventListener('blur', function () { if (holding && holding.btn === btn) holdUp(); });
-      host.appendChild(btn);
-    });
-  }
-
-  $('pitch').addEventListener('input', function () {
-    semis = parseInt(this.value, 10) || 0;
-    $('pitchv').textContent = (semis > 0 ? '+' : '') + semis + ' ST';
-    if (holding && holding.src) holding.src.playbackRate.setTargetAtTime(rate(), ctx.currentTime, 0.015);
-  });
-
-  $('echo').addEventListener('click', function () {
-    echoOn = !echoOn;
-    this.setAttribute('aria-pressed', echoOn ? 'true' : 'false');
-    if (echoSend && ctx) echoSend.gain.setTargetAtTime(echoOn ? 1 : 0, ctx.currentTime, 0.02);
-  });
 
   // ---------- one-shot audio ----------
   var audio = null, current = null, repeat = false;
@@ -816,8 +654,9 @@
     audio.preload = 'auto';
     audio.addEventListener('ended', function () {
       if (repeat && current) {
+        var again = current;
         audio.currentTime = 0;
-        audio.play().catch(function () { setPlaying(null); });
+        audio.play().catch(function () { if (current === again) setPlaying(null); });
       } else {
         setPlaying(null);
       }
@@ -846,7 +685,7 @@
       next.row.classList.add('playing');
       nowEl.textContent = next.voice.display + DOT + next.name;
       nowEl.classList.remove('idle');
-    } else if (!holding) {
+    } else {
       nowEl.textContent = 'TAP A PAD TO PLAY';
       nowEl.classList.add('idle');
     }
@@ -854,7 +693,6 @@
 
   function toggle(voice, fid, name, pad, row) {
     var a = ensureAudio();
-    if (holding) holdUp();
     if (current && current.pad === pad) {
       a.pause();
       setPlaying(null);
@@ -862,8 +700,12 @@
     }
     a.pause();
     a.src = voice.id + '/' + fid + '.wav';
-    setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
-    a.play().catch(function () { setPlaying(null); });
+    // Changing src makes the browser reject the previous play() with an
+    // AbortError, and that rejection arrives after this call has already
+    // selected the newer clip: only the clip that asked may be cleared.
+    var mine = { voice: voice, fid: fid, name: name, pad: pad, row: row };
+    setPlaying(mine);
+    a.play().catch(function () { if (current === mine) setPlaying(null); });
   }
 
   $('repeat').addEventListener('click', function () {
@@ -893,7 +735,9 @@
   // stale text over what was just typed.
   function paintVoice(voiceId) {
     var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
-    if (voice) voice.groups.forEach(function (g) { g.clips.forEach(function (c) { paintChips(voiceId, c[0]); }); });
+    if (voice) voice.groups.forEach(function (g) {
+      g.clips.forEach(function (c) { paintChips(voiceId, c[0]); });
+    });
     var ta = $('note-' + voiceId);
     if (!ta) return;
     if (ta === document.activeElement) { state[voiceId].note = ta.value; }
@@ -914,6 +758,7 @@
   QUESTIONS.forEach(function (k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
+      dirty.overall = true;
       debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
     });
   });
@@ -923,6 +768,11 @@
   var db = null;
   var statusEl = $('status'), statusV = $('statusv');
   var timers = {}, queues = {};
+  // The page is usable before the shared store has answered, so two sets of
+  // keys are kept. dirty: edited on this page, so an older snapshot arriving
+  // from the store must not replace it. unsaved: saved only locally because
+  // there was no store yet, so they are saved again once there is one.
+  var dirty = {}, unsaved = {}, started = false;
 
   function setStatus(kind, text) {
     statusEl.classList.remove('warn', 'ok');
@@ -949,16 +799,17 @@
 
   // Every round's verdicts live under their own prefix, so a later round's
   // page never opens pre-filled with this one's notes and saves over them.
-  var PHASE = 'siren_s12';
+  // The first round's are under arco_r1; this round starts clean.
+  var PHASE = 'arco_r1c';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
-    try { localStorage.setItem('siren-audition:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+    try { localStorage.setItem('arco-retune:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
   }
 
   function loadLocal(key) {
     try {
-      var raw = localStorage.getItem('siren-audition:' + PHASE + ':' + key);
+      var raw = localStorage.getItem('arco-retune:' + PHASE + ':' + key);
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
@@ -977,8 +828,9 @@
 
   function persist(key) {
     var data = snapshotOf(key);
+    dirty[key] = true;
     saveLocal(key, data);
-    if (!db) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    if (!db) { unsaved[key] = true; setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
     setStatus(null, 'SAVING...');
     queues[key] = (queues[key] || Promise.resolve())
       .then(function () { return db.doc(docPath(key)).set(data); })
@@ -994,15 +846,20 @@
   function keys() { return VOICES.map(function (v) { return v.id; }).concat(['overall']); }
 
   function connect() {
-    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+    if (started) return;
+    started = true;
+    var use =window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
     Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
       .then(function (ns) {
         if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
         return Promise.all(keys().map(function (k) {
           return ns.doc(docPath(k)).get().then(function (snap) {
-            if (snap && snap.exists) apply(k, snap.data());
+            if (snap && snap.exists && !dirty[k]) apply(k, snap.data());
           }, function () { /* keep the local copy */ });
-        })).then(function () { setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE'); });
+        })).then(function () {
+          setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE');
+          Object.keys(unsaved).forEach(function (k) { delete unsaved[k]; persist(k); });
+        });
       })
       .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
   }
@@ -1010,17 +867,27 @@
   // The manifest first, then local copies so the page is never empty,
   // then the shared store, which wins.
   apply('overall', loadLocal('overall'));
-  fetch('manifest.json').then(function (r) { return r.json(); }).then(function (m) {
-    VOICES = m.voices || [];
-    LOOPS = m.loops || [];
-    build();
-    buildHolds();
-    VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
-    connect();
-  }, function () {
-    $('loading').innerHTML = '<p>COULD NOT LOAD THE CLIP LIST. RE-RENDER WITH generateSirenAudition.</p>';
-    $('holds').innerHTML = '';
-    connect();
-  });
+  var built = false;
+  fetch('manifest.json')
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (m) {
+      VOICES = m.voices || [];
+      buildIntro(m.intro);
+      fillFacts(m.facts);
+      build();
+      built = true;
+      VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
+      connect();
+    })
+    .catch(function () {
+      // build() removes the loading card before it throws on a bad list,
+      // so this handler must not assume the card is still there.
+      if (!built) {
+        var msg = '<p>COULD NOT LOAD THE CLIP LIST. RE-RENDER WITH generateArcoRetune.</p>';
+        var card = $('loading');
+        if (card) card.innerHTML = msg; else $('voices').innerHTML = '<div class="guide lcd">' + msg + '</div>';
+      }
+      connect();
+    });
 })();
 </script>
