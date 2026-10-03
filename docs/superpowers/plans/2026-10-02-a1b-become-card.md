@@ -19,7 +19,7 @@
 - "Decisions already taken": the three A1 gate rows.
 - "Decisions for the owner": Decisions 1 and 2 (taken 2026-10-02), Decision 3 at its default, and Decision 14 (not triggered).
 
-The plan it follows is [`2026-09-30-a1-become.md`](2026-09-30-a1-become.md). Its Task 4 interfaces and its closing A1b note set this plan's surfaces. Code cites are at this branch's head, `28523f4b`. Line numbers move as each task edits the screen, so every edit below is located by its quoted text, and the line numbers are a guide only.
+The plan it follows is [`2026-09-30-a1-become.md`](2026-09-30-a1-become.md). Its Task 4 interfaces and its closing A1b note set this plan's surfaces. Code cites are at `28523f4b`. The branch head when this plan was reviewed, `e45bea47`, adds only docs on top of it, so every cited line of code is unchanged. Line numbers move as each task edits the screen, so every edit below is located by its quoted text, and the line numbers are a guide only.
 
 ## Global Constraints
 
@@ -27,7 +27,8 @@ The plan it follows is [`2026-09-30-a1-become.md`](2026-09-30-a1-become.md). Its
 - **Recorded deviation (from the A1 plan's closing note and the preflight ruling):** the BECOME row's enabled state keys on `becomeLabel != null` (MORPH only), not on `knobLabel` as the spec words it, because `knobLabel` is non-null for SPLICE, SPLIT, ROOM and TRANSPLANT, which ignore BECOME. The row is `enabled = !busy && becomeLabel != null`, and a ConventionTest law pins it, so it is not left to review by eye.
 - The holder is `var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }`, declared beside `mutateKnobs`.
 - `mutateKnobs` stays declared exactly as J24's law reads it: `val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }`. `remember(slot, mutateMode)` is never written.
-- DRIFT's reset is `pendingBecome = MutateSheet.BECOME.defaultFraction`. It goes on its own line after `onDrift`'s `if (!onMorph) { … }` block and before `appScope.launch`, and it runs for every tap. The `if (!onMorph)` block is not edited, because J24's `law - DRIFT leaves the knob showing the blend it actually used` reads it.
+- DRIFT's reset is `pendingBecome = MutateSheet.BECOME.defaultFraction`. It goes on its own line directly after `onDrift`'s `if (!onMorph) { … }` block (nothing but comments between the block's `}` and the reset), at the function body's own depth, and before `appScope.launch`, so it runs for every tap. The `if (!onMorph)` block is not edited, because J24's `law - DRIFT leaves the knob showing the blend it actually used` reads it. Task 2's law pins all three placements: the reset alone on its line, adjacent to the block, at `val kitDir`'s brace depth.
+- The reset runs before the write is launched, so a DRIFT that then fails (the `CRATE_EMPTY` toast, an empty crate) has still put BECOME back to OFF and landed the card on MORPH. That is intended: the spec prescribes the reset in `onDrift`, and `mutateKnobs`' write in the `if (!onMorph)` block already behaves the same way. Phone check line 11 exercises it.
 - The reset is spelled as the knob's own default, where the spec writes `pendingBecome = 0f`. That keeps the opening value and the reset as one quantity in one place, and Task 1 pins it at 0, OFF.
 - Both doors read `val becomeFraction = pendingBecome` beside `val fraction = pendingMutateKnob`, before their coroutine starts.
   - KEEP calls `MutateSheet.apply(f, slot, who, move, fraction, becomeFraction)`.
@@ -55,6 +56,8 @@ The plan it follows is [`2026-09-30-a1-become.md`](2026-09-30-a1-become.md). Its
 - J24's two laws (`law - a move's dialled knob is remembered per move, not reset by switching move`, `law - DRIFT leaves the knob showing the blend it actually used`) pass unedited.
 - Never skip, disable or loosen a test or a law. A law is proved by watching it fail with its own message before the edit.
 - Commit titles are plain declarative prose (no `feat:`). No maker or product names and no model identifier appear in code, comments, commits or PR text.
+- Every commit message ends with the single line `Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY`, after a blank line, and carries no Co-Authored-By line. Every commit block below already ends with it; copy the blocks whole.
+- A guard is proved by reverting it alone and watching its test fail with its own message (`.claude/skills/steward/SKILL.md`, "Claims, and what backs them"). The mutation steps in Tasks 1, 2 and 3 do that. Each mutation is temporary: make it, run, read the message, then undo it before going on. A file with no uncommitted work of the task's own (the `:shell` sources in Task 1) is undone with `git checkout -- <file>` and checked with `git diff --exit-code -- <file>`. The screen, which holds the task's uncommitted edits in Tasks 2 and 3, is undone by editing the line back exactly, then re-running the task's passing command. No mutation is ever committed.
 - A KDoc block sits directly above its declaration (`a doc-comment is never stranded above another doc-comment`), and notes inside function bodies are `//`. No KDoc line puts two asterisks next to a slash (`no Kotlin source ends a doc comment by accident`).
 
 ## Review Focus
@@ -62,7 +65,7 @@ The plan it follows is [`2026-09-30-a1-become.md`](2026-09-30-a1-become.md). Its
 - **A dropped argument that still compiles.** `preview` and `apply` default `becomeFraction` to 0, so a door that forgets it compiles and plays a flat MORPH while the row says 400 ms, and no `:shell` test can see it. Pinned in Task 2 (`law - HEAR and KEEP hand MutateSheet the BECOME the card shows`).
 - **A row copied from the knob row.** The likely slip is `enabled = !busy && knobLabel != null`, which lights BECOME on four moves that ignore it. Pinned in Task 3 (`law - MUTATE draws BECOME's row on every move, enabled by BECOME's own label`), which also refuses `knobLabel` anywhere in BECOME's row.
 - **DRIFT leaves a ramp on screen.** DRIFT is a flat morph. If BECOME kept a remembered 400 after a DRIFT tap, the card would show a value the drift did not use, which is J24's bug again. Pinned in Task 2 (`law - BECOME is remembered per pad, and DRIFT puts it back to OFF`) and in Task 1 (`a DRIFT from the card carries no BECOME, so the row's reset to OFF tells the truth`).
-- **A snap that lands between steps.** If the BECOME row snapped differently from the knob row, a thumb could land on 26 ms, under one 23 ms analysis window, where a ramp reads as a step. Pinned in Task 1 (`the BECOME row opens OFF, lands on 50 ms steps wherever a thumb lets go, and shouts its label`) and in Task 3's law, which holds the two snaps equal.
+- **A snap that lands between steps.** If the BECOME row snapped finer than 1/40 (say 1/100, 20 ms steps), a thumb could land under one 23 ms analysis window, where a ramp reads as a step. The literal is pinned once, on the screen: Task 3's law asserts that BECOME's `onBecomeChange` snap is exactly the text `(f * 40f).roundToInt() / 40f`, and that the knob row's `onKnobChange` snap equals it. Task 1's sweep (`the BECOME row opens OFF, lands on 50 ms steps wherever a thumb lets go, and shouts its label`) proves that same text lands only on whole 50 ms steps. The test's copy of the expression is held to the screen's by that literal assert, so the two copies cannot drift apart silently. Task 3's mutation step shows the law failing when both rows snap at 1/100.
 - **The text and the fraction from two places.** The row's readout and its fraction must both come from `pendingBecome`, and the holder must be one value per pad, never one per move. Pinned in Task 3's law (`becomeText` reads `pendingBecome`) and in Task 2's law (the holder's exact declaration). A1's `a BECOME left dialled does nothing to a move that is not MORPH` covers the stale value on another move.
 
 ---
@@ -71,10 +74,11 @@ The plan it follows is [`2026-09-30-a1-become.md`](2026-09-30-a1-become.md). Its
 
 | File | Responsibility |
 |---|---|
-| Modify `shell/src/test/kotlin/com/snipsnap/shell/MutateSheetTest.kt` (before the closing brace, `:453`) | two pins of what the row leans on: the opening value reads OFF, the snap lands on 50 ms steps, the words follow the house style, and a DRIFT carries no BECOME |
+| Modify `shell/src/test/kotlin/com/snipsnap/shell/MutateSheetTest.kt` (before the closing brace, `:453`) | two pins of what the row leans on: the opening value reads OFF, the snap lands on 50 ms steps from any thumb, the label shouts, and a DRIFT through the sheet's door carries no BECOME |
 | Modify `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt` (after `law - DRIFT leaves the knob showing the blend it actually used`, `:1901-1912`) | three laws: the holder and DRIFT's reset; HEAR and KEEP passing BECOME; the row and its call |
 | Modify `app/src/main/kotlin/com/snipsnap/app/ui/PadSheetScreen.kt` | `pendingBecome` and `becomeKnob` beside `mutateKnobs` (`:1240-1242`); `onMutate` (`:1264`); `onHear` (`:1328`); `onDrift` (`:1400`, after the `if (!onMorph)` block at `:1432-1445`); the card call (`:2548-2577`); `MutateCard`'s KDoc (`:3473-3487`), parameters (`:3506-3510`) and second `StepperSlider` (after `:3722-3732`) |
-| Modify `docs/FEATURE_PLAN.md` (row QQ4, `:1173`) | the opening after A1b lands, and again after the phone check |
+| Modify `docs/FEATURE_PLAN.md` (row QQ4, `:1173`) | the opening once A1b is built (CI compile and phone check pending), and again after the phone check |
+| Modify `docs/CLI.md` (the phone paragraph of `mutate`, `:553-556`) | the MUTATE card now has MORPH's second knob, BECOME, beside "the move's one knob" |
 
 Not touched:
 - `MutateSheet.kt`, `Mutate.kt`, `Knob.kt`, `MutateCommand.kt`: A1 landed their part.
@@ -92,7 +96,9 @@ A1 built and tested the knob, its readout and the stale-knob rule. The card adds
 - The screen's 1/40 snap must land only on whole 50 ms steps, wherever a thumb lets go, not just at the exact `step / 40f` points A1's test walks.
 - A DRIFT through the sheet's own door must carry no ramp, which is what makes the reset to OFF true.
 
-These pins are of A1's code, so they are **green before and after**: there is no production edit for them to wait on, as with A1's Task 4 Step 1. A red run here means A1 regressed. Stop and report it; do not edit the test to pass.
+What A1's tests already state is not restated here. `BECOME is MORPH's second knob - linear 0 to 2000 ms, OFF at rest, 50 ms steps` (`MutateSheetTest.kt:346-366`) pins the default 0, `OFF` at 0, and the `50 ms`, `500 ms` and `2000 ms` readouts. `knobs open at the verb's defaults…` (`:179`) pins AT's `40 ms`. `BecomeTest.kt:343` pins `Mutate.drift`'s key list. The new coverage is the composed claim that the holder's opening fraction reads OFF, the arbitrary-thumb snap sweep, the label's shout and length, and the `MutateSheet.drift` door.
+
+These pins are of A1's code, so they **do not fail before**: there is no production edit for them to wait on, as with A1's Task 4 Step 1. That falls short of "each `:shell` test fails before and passes after", so Step 4 proves them the other way, the steward's way: it breaks each guarded fact in `:shell` alone, temporarily, and watches the new test fail with its own message. A red run at Step 3 means A1 regressed. Stop and report it; do not edit the test to pass.
 
 **Files:**
 - Test: `shell/src/test/kotlin/com/snipsnap/shell/MutateSheetTest.kt`
@@ -122,20 +128,26 @@ In `shell/src/test/kotlin/com/snipsnap/shell/MutateSheetTest.kt`, before the cla
      *
      * The row opens on `BECOME.defaultFraction` and DRIFT puts it back
      * there (ConventionTest's BECOME laws read both off the screen), so
-     * that fraction must read OFF. The screen snaps the row with the knob
-     * row's own expression (a law again), and that snap must only ever
-     * land on whole 50 ms steps, the first of which clears one 23 ms
-     * analysis window. The words live here and not in `Copy`, where
-     * PersonalityTest's shout law cannot see them, so this holds them to
-     * the house style instead.
+     * that fraction must read OFF. ConventionTest's row law holds the
+     * screen's snap to exactly the text `(f * 40f).roundToInt() / 40f`,
+     * and this sweep proves that text only ever lands on whole 50 ms
+     * steps, the first of which clears one 23 ms analysis window. The
+     * label lives here and not in `Copy`, where PersonalityTest's shout
+     * law cannot see it, so this holds it to the house style instead.
+     * BECOME's own test above already pins the default, OFF and the
+     * 50/500/2000 ms readouts; this does not restate them.
      */
     @Test
     fun `the BECOME row opens OFF, lands on 50 ms steps wherever a thumb lets go, and shouts its label`() {
         val b = MutateSheet.BECOME
-        assertEquals(0f, b.defaultFraction, "the row's holder opens on this fraction and DRIFT puts it back here")
-        assertEquals("OFF", MutateSheet.label(b, MutateSheet.value(b, b.defaultFraction)))
+        assertEquals(
+            "OFF",
+            MutateSheet.label(b, MutateSheet.value(b, b.defaultFraction)),
+            "the row's holder opens on BECOME.defaultFraction and DRIFT puts it back there, so that fraction must read OFF",
+        )
 
-        // The screen's snap, restated; ConventionTest holds the BECOME row's expression equal to the knob row's.
+        // The screen's snap. ConventionTest's BECOME row law asserts the screen's expression is exactly this text,
+        // so this sweep is a proof about the phone's snap, not about a private copy of it.
         fun snap(f: Float): Float = (f * 40f).roundToInt() / 40f
         val readouts = mutableListOf<String>()
         for (i in 0..1000) {
@@ -143,17 +155,19 @@ In `shell/src/test/kotlin/com/snipsnap/shell/MutateSheetTest.kt`, before the cla
             val ms = MutateSheet.value(b, snap(thumb))
             assertEquals(0, ms.roundToInt() % 50, "a thumb let go at $thumb landed on $ms ms, between steps")
             val text = MutateSheet.label(b, ms)
+            // The lowercase unit is this card's own precedent (AT reads "40 ms", pinned above), not a slip.
             assertTrue(text == "OFF" || Regex("""[1-9]\d* ms""").matches(text), "a thumb at $thumb reads '$text'")
             readouts += text
         }
-        assertEquals("50 ms", readouts.first { it != "OFF" }, "the first step above OFF")
-        assertEquals("2000 ms", readouts.last(), "the far end")
+        assertEquals("50 ms", readouts.first { it != "OFF" }, "the first step a thumb reaches above OFF")
+        assertEquals("2000 ms", readouts.last(), "a thumb let go at the far end")
 
-        // House style by hand: a label that shouts and fits the 44 dp column ATTACK and CUTOFF already fill.
         assertEquals(b.label.uppercase(), b.label, "a card label shouts")
-        assertTrue(b.label.length <= "ATTACK".length, "'${b.label}' is wider than the label column's widest word")
-        // The lowercase unit is this card's own precedent (AT reads "40 ms"), not a slip.
-        assertEquals("40 ms", MutateSheet.label(MutateSheet.knobFor(Mutate.Mode.SPLICE)!!, 40f))
+        // A coarse proxy only. The label font is Silkscreen (TapeTheme.kt:59), which is proportional, and
+        // BECOME's M is wider than any letter of ATTACK, so a letter count cannot see a pixel overflow of the
+        // 44 dp label column. The phone check (line 3, "BECOME is not cut off") is the real gate; this
+        // catches only a longer word.
+        assertTrue(b.label.length <= "ATTACK".length, "'${b.label}' has more letters than ATTACK, the label column's longest word")
     }
 ```
 
@@ -177,8 +191,8 @@ Add, before the class's closing brace:
         val mutate = (d.outcome.pad.recipe!!.entries["mutate"] as JsonValue.Obj).entries
         assertTrue("become" !in mutate, "DRIFT wrote a ramp: ${mutate.keys}")
         val applied = MutateSheet.read(d.outcome.pad.recipe)!!
-        assertEquals(0, applied.becomeMs)
-        assertEquals("DRIFT", applied.word)
+        assertEquals(0, applied.becomeMs, "the drifted pad reads back a ramp, so the card's OFF would be a lie")
+        assertEquals("DRIFT", applied.word, "the drifted pad reads back as ${applied.word}, not DRIFT")
     }
 ```
 
@@ -187,7 +201,32 @@ Add, before the class's closing brace:
 Run: `./gradlew --no-daemon :shell:test --tests "com.snipsnap.shell.MutateSheetTest"; echo "exit=$?"`
 Expected: `exit=0`, with both new tests passing on their first run. They pin A1's code; see the task's opening paragraph.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Break each guarded fact alone, and watch its test fail**
+
+Three mutations, one at a time. Each edits a `:shell` production file that this plan otherwise leaves untouched, so each is reverted before the next (Global Constraints). For each one, run
+
+`./gradlew --no-daemon :shell:test --tests "com.snipsnap.shell.MutateSheetTest" --tests "com.snipsnap.shell.BecomeTest"; echo "exit=$?"`
+
+and expect a non-zero exit with the new test failing on the message named below. A1's own tests may fail beside it, as listed; that is expected, and nothing else should fail.
+
+1. **The opening value.** In `shell/src/main/kotlin/com/snipsnap/shell/MutateSheet.kt` (`:70`), change `Knob("BECOME", 0f, Mutate.MAX_BECOME_MS.toFloat(), 0f, exponential = false)` to `Knob("BECOME", 0f, Mutate.MAX_BECOME_MS.toFloat(), 400f, exponential = false)`.
+   - `the BECOME row opens OFF, …` fails with `the row's holder opens on BECOME.defaultFraction and DRIFT puts it back there, so that fraction must read OFF ==> expected: <OFF> but was: <400 ms>`.
+   - A1's `BECOME is MORPH's second knob - …` fails beside it, on `assertEquals(0f, b.default)` (`expected: <0.0> but was: <400.0>`).
+   - Revert: `git checkout -- shell/src/main/kotlin/com/snipsnap/shell/MutateSheet.kt && git diff --exit-code -- shell/src/main/kotlin/com/snipsnap/shell/MutateSheet.kt; echo "clean=$?"`, expecting `clean=0`.
+2. **The shout.** `MutateSheet.label` dispatches on the knob's label (`"BECOME" -> if (value <= 0f) "OFF" else …`, `:99`), so lower-casing the label alone also breaks the readout, and the test then fails on its OFF assertion (`… but was: <0%>`) before it reaches the shout. Change both together: `Knob("BECOME", 0f,` to `Knob("Become", 0f,` (`:70`), and `        "BECOME" -> if (value <= 0f)` to `        "Become" -> if (value <= 0f)` (`:99`).
+   - `the BECOME row opens OFF, …` fails with `a card label shouts ==> expected: <BECOME> but was: <Become>`.
+   - A1's `BECOME is MORPH's second knob - …` fails beside it, on `assertEquals("BECOME", b.label)`.
+   - Revert as in 1.
+3. **No ramp on a drift.** In `shell/src/main/kotlin/com/snipsnap/shell/Mutate.kt`, in `fun drift(`'s `apply(` call (`:276-288`), add the line `becomeMs = 400,` directly after `morphAmount = amount,`. `MutateSheet.drift` has no way to pass a ramp itself, so this breaks the door at the one place it could break. Do **not** mutate with a `"become"` key in `extraRecipe` instead: `Mutate.kt:227` refuses that with a throw, so the test would fail on an exception rather than its own message.
+   - `a DRIFT from the card carries no BECOME, …` fails with `DRIFT wrote a ramp: [mode, with, amount, become, roulette, drift]`.
+   - `BecomeTest`'s `an extra recipe field named become is refused before anything moves, and DRIFT writes none` fails beside it, on its key-list assertion at `:343`.
+   - Revert: `git checkout -- shell/src/main/kotlin/com/snipsnap/shell/Mutate.kt && git diff --exit-code -- shell/src/main/kotlin/com/snipsnap/shell/Mutate.kt; echo "clean=$?"`, expecting `clean=0`.
+
+There is no snap mutation here. The snap lives on the screen, not in `:shell`. Task 3's law holds the screen's snap literal to this sweep's, and Task 3's own mutation step shows it failing.
+
+After the three, re-run Step 3's command and expect `exit=0`, and `git status --short` lists only `MutateSheetTest.kt`.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add shell/src/test/kotlin/com/snipsnap/shell/MutateSheetTest.kt
@@ -197,9 +236,18 @@ The MUTATE card's second row opens on BECOME's default fraction and a
 DRIFT tap puts it back there, so that fraction must read OFF, and a
 DRIFT through the sheet's door must carry no become key for the reset
 to be true. The screen's 1/40 snap lands only on whole 50 ms steps from
-any thumb position, the first reading 50 ms. The label shouts and fits
-the column ATTACK fills; the lowercase ms is AT's own precedent. Both
-tests pin code A1 landed, so they pass on their first run."
+any thumb position, the first reading 50 ms; ConventionTest will hold
+the screen's snap to that exact expression. The label shouts, and has
+no more letters than ATTACK, a coarse proxy whose real gate is the
+phone check. Facts A1's tests already state are not restated.
+
+Both tests pin code A1 landed, so they pass on their first run. They
+were proved instead by breaking each fact alone in :shell (BECOME's
+default at 400, its label and label()'s branch in lower case, a 400 ms
+ramp in Mutate.drift)
+and watching each fail with its own message, then reverting.
+
+Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
 ```
 
 ---
@@ -247,8 +295,14 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, after the closi
      * takes a ramp: if the card went on showing a remembered `BECOME 400`
      * after a DRIFT tap, that would be J24's bug again, a value shown
      * against a value used. So `onDrift` puts BECOME back to OFF for every
-     * tap, on its own line after the `if (!onMorph)` block (which stays as
-     * the DRIFT law above reads it) and before the write is launched.
+     * tap, on its own line directly after the `if (!onMorph)` block (which
+     * stays as the DRIFT law above reads it), at the body's own depth, and
+     * before the write is launched. "Every tap" is checked three ways,
+     * because each catches a guard the others miss: the reset's line holds
+     * nothing else (a braceless `if (…) pendingBecome = …`), nothing but
+     * comments stands between the block's `}` and the reset (a guard on
+     * the line before, or an `else`), and its brace depth is `val kitDir`'s
+     * (a braced `if`).
      */
     @Test
     fun `law - BECOME is remembered per pad, and DRIFT puts it back to OFF`() {
@@ -256,7 +310,7 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, after the closi
         assertTrue(
             Regex(
                 """var\s+pendingBecome\s+by\s+remember\(slot\)\s*\{\s*mutableFloatStateOf\(\s*MutateSheet\.BECOME\.defaultFraction\s*\)\s*\}""",
-            ).containsMatchIn(src),
+            ).containsMatchIn(codeOnly(src)),
             "expected `var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }` " +
                 "- BECOME's one value per pad, opening OFF, reset only when the pad itself changes.",
         )
@@ -267,8 +321,8 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, after the closi
             "BECOME's reset sits inside `if (!onMorph)`, so a DRIFT tap made from MORPH keeps a ramp the drift " +
                 "does not use. Put it on its own line after the block, so it runs for every tap.",
         )
-        val reset = Regex("""pendingBecome\s*=\s*MutateSheet\.BECOME\.defaultFraction""")
-            .find(drift, drift.indexOf(toMorph) + toMorph.length)
+        val afterBlock = drift.indexOf(toMorph) + toMorph.length
+        val reset = Regex("""pendingBecome\s*=\s*MutateSheet\.BECOME\.defaultFraction""").find(drift, afterBlock)
         val launch = drift.indexOf("appScope.launch")
         assertTrue(launch >= 0, "expected `onDrift` to launch its write with `appScope.launch`")
         assertTrue(
@@ -276,6 +330,29 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, after the closi
             "DRIFT never takes BECOME, but `onDrift` does not put BECOME back to OFF after the switch to MORPH " +
                 "and before the write: the card would show a ramp the drift did not use, J24's value-shown/" +
                 "value-used divergence. Write `pendingBecome = MutateSheet.BECOME.defaultFraction` there.",
+        )
+        val at = reset!!.range.first
+        val line = drift.substring(drift.lastIndexOf('\n', at) + 1, drift.indexOf('\n', at).let { if (it < 0) drift.length else it })
+        assertEquals(
+            "pendingBecome = MutateSheet.BECOME.defaultFraction",
+            line.trim(),
+            "BECOME's reset shares its line with something else, so it may not run for every DRIFT tap. " +
+                "Give it a line of its own.",
+        )
+        assertTrue(
+            drift.substring(afterBlock, at).isBlank(),
+            "something stands between the end of `if (!onMorph) { … }` and BECOME's reset " +
+                "(`${normalizeSpan(drift.substring(afterBlock, at))}`), so the reset may be guarded and skip " +
+                "some taps. Put it directly after the block.",
+        )
+        fun depth(i: Int) = drift.substring(0, i).count { it == '{' } - drift.substring(0, i).count { it == '}' }
+        val kitDir = drift.indexOf("val kitDir")
+        assertTrue(kitDir >= 0, "expected `onDrift` to declare `val kitDir`")
+        assertEquals(
+            depth(kitDir),
+            depth(at),
+            "BECOME's reset sits inside a block `val kitDir` is not in, so some DRIFT taps skip it. " +
+                "Write it at `onDrift`'s own depth.",
         )
     }
 ```
@@ -458,7 +535,17 @@ Expected: `exit=0`. Both new laws pass, J24's two pass unedited, and so do `a do
 
 The screen should still compile: `pendingBecome` is read by `onMutate` and `onHear` and written by `onDrift`, the same capture pattern `onDrift` already uses for `mutateMode`. CI's `android-build` is the proof, so do not claim it here.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 9: Guard the reset against a guard**
+
+Three mutations of the line Step 7 wrote, one at a time, each run with Step 8's command and each expected to exit non-zero with only `law - BECOME is remembered per pad, and DRIFT puts it back to OFF` failing:
+
+1. Change `        pendingBecome = MutateSheet.BECOME.defaultFraction` to `        if (spins > 0) pendingBecome = MutateSheet.BECOME.defaultFraction`. The law fails with `BECOME's reset shares its line with something else`.
+2. Change it to `        if (spins > 0) {` / `            pendingBecome = MutateSheet.BECOME.defaultFraction` / `        }` (three lines). The law fails with ``something stands between the end of `if (!onMorph) { … }` and BECOME's reset``, naming `if (spins > 0) {`.
+3. Change it to `        if (spins > 0)` / `            pendingBecome = MutateSheet.BECOME.defaultFraction` (two lines, braceless). The law fails with the same message, naming `if (spins > 0)`.
+
+After each, put the line back exactly as Step 7 wrote it (by an edit, not `git checkout`: the screen holds this task's uncommitted work) and re-run Step 8's command, expecting `exit=0`. The depth assertion is a third net behind these two; no single mutation reaches it without tripping one of them first.
+
+- [ ] **Step 10: Commit**
 
 ```bash
 git add shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt app/src/main/kotlin/com/snipsnap/app/ui/PadSheetScreen.kt
@@ -470,8 +557,11 @@ coroutines start and hand it to MutateSheet as the sixth argument; the
 argument defaults to 0, so a dropped one would compile and play flat,
 and a law now refuses that. onDrift resets it on its own line after the
 if (!onMorph) block and before the write, for every tap, since DRIFT
-never takes a ramp. A sibling of J24's laws pins both. Nothing draws
-the value yet."
+never takes a ramp. A sibling of J24's laws pins both, and refuses a
+guarded reset three ways: a line of its own, nothing between it and the
+block, the body's own brace depth. Nothing draws the value yet.
+
+Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
 ```
 
 ---
@@ -517,10 +607,15 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, directly after 
      *   BECOME, so a row copied from the knob's would be live on four moves
      *   where it does nothing. That copy is the likely slip, so it is
      *   refused here rather than left to review by eye.
+     * - It is drawn unconditionally: its `StepperSlider(` stands alone on
+     *   its line, directly after the knob row's closing `)`, so no inline
+     *   or braceless guard (`if (…) StepperSlider(`) can hide it on some
+     *   moves.
      * - Its fraction and its readout both read `pendingBecome`, and it
-     *   snaps with the knob row's own expression: `MutateSheetTest` proves
-     *   that snap lands only on whole 50 ms steps, and this keeps the
-     *   screen using it.
+     *   snaps with exactly `(f * 40f).roundToInt() / 40f`, the knob row's
+     *   own expression: `MutateSheetTest` sweeps that exact text and proves
+     *   it lands only on whole 50 ms steps, so the literal is pinned here,
+     *   on the screen, and not only as the two rows' equality.
      */
     @Test
     fun `law - MUTATE draws BECOME's row on every move, enabled by BECOME's own label`() {
@@ -552,6 +647,16 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, directly after 
                 "would be live on four moves that ignore BECOME. Key it on `becomeLabel` (the recorded " +
                 "deviation from the spec's wording).",
         )
+        val lineStart = card.lastIndexOf('\n', second) + 1
+        val lineEnd = card.indexOf('\n', second).let { if (it < 0) card.length else it }
+        val previous = card.substring(0, lineStart).lines().lastOrNull { it.isNotBlank() }?.trim()
+        assertTrue(
+            card.substring(lineStart, lineEnd).trim() == "StepperSlider(" && previous == ")",
+            "BECOME's row is guarded, so it is drawn only for some moves and the card jumps when the move " +
+                "changes. Its `StepperSlider(` must stand alone on its line, directly after the knob row's " +
+                "closing `)`; found `${card.substring(lineStart, lineEnd).trim()}` after `$previous`. Draw it " +
+                "for every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+        )
         assertFalse(
             Regex("""becomeLabel\s*!=\s*null\s*\)\s*\{|becomeLabel\?\.let""").containsMatchIn(card),
             "BECOME's row is drawn only for some moves, so the card jumps when the move changes. Draw it for " +
@@ -581,10 +686,17 @@ In `shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt`, directly after 
         val becomeSnap = Regex("""onBecomeChange = \{ f -> pendingBecome = (.+?) \}""").find(call)?.groupValues?.get(1)
         assertTrue(knobSnap != null, "expected the knob row's `onKnobChange = { f -> mutateKnobs[mutateMode] = … }`")
         assertEquals(
+            "(f * 40f).roundToInt() / 40f",
+            becomeSnap,
+            "BECOME's row does not snap at 1/40. MutateSheetTest sweeps exactly `(f * 40f).roundToInt() / 40f` " +
+                "and proves it lands on whole 50 ms steps; a finer snap (1/100 is 20 ms) lands under one 23 ms " +
+                "analysis window, where a ramp is a step.",
+        )
+        assertEquals(
             knobSnap,
             becomeSnap,
-            "BECOME's row does not snap with the knob row's expression. MutateSheetTest proves only that one " +
-                "lands on whole 50 ms steps; any other can land under one analysis window, where a ramp is a step.",
+            "BECOME's row does not snap with the knob row's expression; the card's two rows would step " +
+                "differently under the same thumb.",
         )
     }
 ```
@@ -712,14 +824,24 @@ The next line, ` * already is ("SPLICE: Kit:A02") so a mutated pad never reads a
 Run: `./gradlew --no-daemon :shell:test --tests "com.snipsnap.shell.ConventionTest"; echo "exit=$?"`
 Expected: `exit=0`. All three BECOME laws pass, J24's two pass unedited, and so do the doc-comment laws.
 
-- [ ] **Step 9: Re-read the screen diff adversarially**
+- [ ] **Step 9: Break the row's guards, one at a time**
+
+Three mutations of the screen, each run with Step 8's command, each expected to exit non-zero with only `law - MUTATE draws BECOME's row on every move, enabled by BECOME's own label` failing, on the message named:
+
+1. **A finer snap on both rows.** In the `MutateCard(` call, change both `(f * 40f).roundToInt() / 40f` (in `onKnobChange` and `onBecomeChange`) to `(f * 100f).roundToInt() / 100f`. The law fails with `BECOME's row does not snap at 1/40`. (The two rows still agree, so the equality assertion alone would pass: this is the hole the literal closes.)
+2. **An inline guard.** In `MutateCard`, change BECOME's `        StepperSlider(` line to `        if (becomeLabel != null) StepperSlider(`. The law fails with `BECOME's row is guarded`.
+3. **A guard on the line before.** Instead, insert the line `        if (becomeLabel != null)` directly above BECOME's `        StepperSlider(`. The law fails with `BECOME's row is guarded`.
+
+After each, edit the screen back exactly as Steps 4 and 6 wrote it (not `git checkout`: the screen holds this task's uncommitted work) and re-run Step 8's command, expecting `exit=0`.
+
+- [ ] **Step 10: Re-read the screen diff adversarially**
 
 `:app` is compiled only by CI, so read `git diff app/src/main/kotlin/com/snipsnap/app/ui/PadSheetScreen.kt` once against this list before committing. A speculative fix pushed for a job you cannot run costs a full CI cycle.
 - Every name the diff uses exists at the place it is used. `becomeKnob` and `pendingBecome` sit in the composable scope above `onMutate`, and `MutateCard`'s four new parameters are passed by name at its one call site.
 - No import is needed: `mutableFloatStateOf` (`:35`) and `roundToInt` (`:117`) are already imported, and `MutateSheet` and `Mutate` are already in use.
 - No `44_100`, no `/**` added inside a function body, and no Copy string.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add shell/src/test/kotlin/com/snipsnap/shell/ConventionTest.kt app/src/main/kotlin/com/snipsnap/app/ui/PadSheetScreen.kt
@@ -731,23 +853,31 @@ shows on every other move, so the card never jumps. It is enabled on
 its own label, not on knobLabel as the spec words it, because knobLabel
 is set on four moves that ignore BECOME; a law refuses the copy. The
 fraction and the readout both read pendingBecome, and the row snaps with
-the knob row's own expression, which the sheet test proves lands on
-whole 50 ms steps."
+exactly the knob row's (f * 40f).roundToInt() / 40f, the expression the
+sheet test sweeps and proves lands on whole 50 ms steps; the law pins
+that literal, not only the two rows' equality. The row's StepperSlider
+must stand alone on its line after the knob row's close, so no guard,
+inline or on the line before, can hide it on some moves.
+
+Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
 ```
 
 ---
 
-### Task 4: The whole suite, and the plan row
+### Task 4: The whole suite, the plan row and the CLI doc
 
 **Files:**
 - Modify: `docs/FEATURE_PLAN.md` (row QQ4)
+- Modify: `docs/CLI.md` (the phone paragraph of `mutate`)
 
 - [ ] **Step 1: Run the whole JVM suite**
 
 Run: `./gradlew --no-daemon test; echo "exit=$?"`. In a session where `./gradlew --no-daemon projects` lists `:app`, run `./gradlew --no-daemon test -x :app:test` instead; that is what CI runs.
 Expected: `exit=0`. This includes `MutateSheetTest`, `BecomeTest`, `ConventionTest` and `PersonalityTest`, the last unchanged because no `Copy` string was added. The native block (`cmake … ctest`) need not run: nothing under `app/src/main/cpp` changed.
 
-- [ ] **Step 2: Flip QQ4's opening to "built, phone check pending"**
+- [ ] **Step 2: Flip QQ4's opening to "built, CI compile and phone check pending"**
+
+"Landed" would read as a compile claim, and no compiler has seen Tasks 2 and 3 yet: `android-build` is the first. So the row says built, and Task 5 flips it only after CI is green and the phone check passes.
 
 In `docs/FEATURE_PLAN.md`, row QQ4, replace the opening
 
@@ -758,7 +888,7 @@ In `docs/FEATURE_PLAN.md`, row QQ4, replace the opening
 with
 
 ```markdown
-| QQ4 | A1 and A1b landed; the owner's phone check of the MUTATE card's BECOME row is pending (`docs/superpowers/plans/2026-10-02-a1b-become-card.md`). The A1 gate (2026-10-02)
+| QQ4 | A1 landed; A1b built, CI compile and the owner's phone check pending: the MUTATE card's BECOME row (`docs/superpowers/plans/2026-10-02-a1b-become-card.md`). The A1 gate (2026-10-02)
 ```
 
 and in the same row's exit-test column replace
@@ -773,21 +903,46 @@ with
 --become without --morph refused; drift unchanged; the card's laws: BECOME's row drawn on every move and enabled by its own label, read by HEAR and KEEP before their launch, put back to OFF by DRIFT |
 ```
 
-Run: `grep -c 'A1 and A1b landed' docs/FEATURE_PLAN.md; grep -c "the card's laws: BECOME's row" docs/FEATURE_PLAN.md`
+Run: `grep -c 'A1b built, CI compile and the owner' docs/FEATURE_PLAN.md; grep -c "the card's laws: BECOME's row" docs/FEATURE_PLAN.md`
 Expected: `1` and `1`.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: The CLI doc's phone paragraph**
 
-```bash
-git add docs/FEATURE_PLAN.md
-git commit -m "QQ4 records the card row built and the owner's phone check pending
+`docs/CLI.md`'s `mutate` section says the phone's card has "the move's one knob (AT · HZ · MIX)". After A1b, MORPH has a second, so that line would go stale. In `docs/CLI.md` (`:553-556`), replace
 
-A1b drew BECOME's row on the MUTATE card under three ConventionTest
-laws. The sound was approved at the A1 gate, so the phone check is the
-last gate, and the row stays short of done until it passes."
+```markdown
+from the shelf, the move's one knob (AT · HZ · MIX), MUTATE and UNDO —
+the same recipe, provenance and bin as the terminal.
 ```
 
-- [ ] **Step 4: What CI will run**
+with
+
+```markdown
+from the shelf, the move's one knob (AT · HZ · MIX), MORPH's second
+knob BECOME (how long the hit takes to turn into the blend), MUTATE and
+UNDO — the same recipe, provenance and bin as the terminal.
+```
+
+Run: `grep -c "MORPH's second" docs/CLI.md; grep -c 'knob BECOME (how long the hit takes' docs/CLI.md`
+Expected: `1` and `1`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/FEATURE_PLAN.md docs/CLI.md
+git commit -m "QQ4 records the card row built, with CI's compile and the owner's phone check pending
+
+A1b wrote BECOME's row on the MUTATE card under three ConventionTest
+laws, but no compiler has seen the screen yet: android-build is the
+first, so the row says built, not landed. The sound was approved at the
+A1 gate, so after CI the phone check is the last gate, and the row stays
+short of done until it passes. The CLI doc's phone paragraph now names
+MORPH's second knob, BECOME, beside the move's one knob.
+
+Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
+```
+
+- [ ] **Step 5: What CI will run**
 
 The PR touches `app/**`, so it gets `jvm-tests`, `android-build`, `native-tests` and `emulator-tests`, the last taking ten to fifteen minutes. `android-build` is the first compiler to see Tasks 2 and 3. If it fails, read its log and reason about the Kotlin; do not push a guess. A three-second failure with no log is the metered-minutes case, not the diff (`.claude/skills/steward/SKILL.md`, "Reading CI").
 
@@ -810,16 +965,17 @@ On a kit with at least two pads, open a pad's PAD SHEET and its MUTATE box:
 7. **BECOME 400 ms on MORPH, then DRIFT:** the row reads `OFF` and the title line says DRIFT. Then, starting from SPLICE with BECOME at 400 ms remembered on MORPH, tap DRIFT: the card lands on MORPH with MIX 50% and BECOME `OFF`.
 8. **The ◄ ► pad arrows:** the next pad opens with BECOME `OFF`.
 9. **UNDO after a BECOME mutate:** the original comes back.
-10. **TalkBack on MORPH:** the row reads "BECOME" and its value, and it can be adjusted. On any other move it reads as disabled.
+10. **TalkBack on MORPH:** the row reads "BECOME" and its value, and it can be adjusted. On any other move it reads as disabled, and the dead `—` rows (two on STACK, identical) announce sensibly or are skipped, not read out as a bare dash twice.
+11. **DRIFT with an empty crate:** on a kit whose shelf has nothing to deal, from SPLICE with BECOME 400 ms remembered on MORPH, tap DRIFT. The toast says the crate is empty, and the card lands on MORPH with BECOME `OFF` (and MIX 50%), the pad unchanged. That reset before the write is intended (Global Constraints), so a yes here means it behaved as described, and a no that the owner would rather keep the dialled BECOME is a spec question, not a card fix.
 
 - [ ] **Step 2: STOP and act on the answers**
 
 Record the owner's answers verbatim in the PR description.
 
-**All yes:** in `docs/FEATURE_PLAN.md` row QQ4, replace the opening
+**All yes, with `android-build` and `emulator-tests` green on the PR:** in `docs/FEATURE_PLAN.md` row QQ4, replace the opening
 
 ```markdown
-| QQ4 | A1 and A1b landed; the owner's phone check of the MUTATE card's BECOME row is pending (`docs/superpowers/plans/2026-10-02-a1b-become-card.md`). The A1 gate (2026-10-02)
+| QQ4 | A1 landed; A1b built, CI compile and the owner's phone check pending: the MUTATE card's BECOME row (`docs/superpowers/plans/2026-10-02-a1b-become-card.md`). The A1 gate (2026-10-02)
 ```
 
 with
@@ -834,13 +990,15 @@ then run `grep -c '✓ done (A1 and A1b' docs/FEATURE_PLAN.md` (expected `1`) an
 git add docs/FEATURE_PLAN.md
 git commit -m "QQ4 is done: the owner's phone check passed BECOME's card row
 
-Every line of the A1b phone check came back yes; the answers are in the
-pull request."
+Every line of the A1b phone check came back yes, and android-build
+compiled the screen; the answers are in the pull request.
+
+Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
 ```
 
 **Any no:** QQ4 is not flipped.
-- A no on lines 1, 2, 3 or 10 is a card fix. Write the law that would have caught it first, watch it fail, then edit the screen, as in Tasks 2 and 3.
-- A no on lines 4 to 9 is a fault in what HEAR, KEEP, DRIFT or the holder do. Find the failing claim among Task 2's laws, or among A1's `MutateSheetTest` and `BecomeTest` pins, before changing anything.
+- A no on lines 1, 2, 3 or 10 is a card fix. (A no on line 10 about the dead rows' announcement is a card fix too, outside the three laws: the law to write first is the one that pins what the fix adds.) Write the law that would have caught it first, watch it fail, then edit the screen, as in Tasks 2 and 3.
+- A no on lines 4 to 9, or a no on line 11 that the card did something other than described, is a fault in what HEAR, KEEP, DRIFT or the holder do. Find the failing claim among Task 2's laws, or among A1's `MutateSheetTest` and `BecomeTest` pins, before changing anything.
 - A no that is about the sound itself rather than the card goes back to the owner as one question. It reopens the A1 gate's answers, which this plan does not do on its own.
 
 This plan ends here.
@@ -864,10 +1022,23 @@ This plan ends here.
   - `val becomeKnob: Knob?`, `var pendingBecome: Float`, `val becomeFraction` (local)
 
   Every `:shell` symbol consumed exists at `28523f4b` with the signature cited: `MutateSheet.preview`/`apply` with `becomeFraction: Float = 0f`, `becomeFor`, `label`, `value`, `drift`, `read`, `Applied.becomeMs`/`word`, `Knob.defaultFraction`.
-- **Laws against today's tree:** while writing, a Python mirror of the three laws' text matching (not `ConventionTest` itself, which this plan's executor runs) was run against `PadSheetScreen.kt` at `28523f4b` and against a copy with Tasks 2 and 3's edits applied. It failed on the first and passed on the second, and found:
-  - `fun onMutate() {`, `fun onHear() {`, `fun onDrift() {` and `if (!onMorph) {` each occur once, and brace-match to their own bodies.
-  - The first `MutateCard(` in comment-stripped code is the call (`:2548`).
-  - `MutateCard` draws one `StepperSlider` today.
-
-  So each law fails first with the message named in its run step, not with a crash.
-- **Review Focus:** each of the five lines names a test or law that Task 1, 2 or 3 writes.
+- **Laws and tests against today's tree (re-run after the review fixes, 2026-10-02):** the worktree was copied to a scratch directory (no `.git`, no build dirs), and every Task 1-3 block was applied from this plan's fenced code by a script that requires each find anchor to match exactly once. All matched. Then, with `./gradlew --no-daemon --offline` and the exit code as the verdict:
+  - Task 1 Step 3: `MutateSheetTest` exit 0, both new tests passing on first run.
+  - Task 1 Step 4: each of the three `:shell` mutations exited 1 with the messages now quoted in that step, and nothing else failed in `MutateSheetTest` or `BecomeTest`. The lower-case-label mutation as the review proposed it (label only) fails on the OFF assertion with `<0%>`, because `MutateSheet.label` dispatches on the label, so the step now changes the `when` branch too.
+  - Task 2 Step 3: exactly the two named laws failed, with the named messages. Step 8: `ConventionTest` exit 0. Step 9: all three reset mutations failed only that law, with the named messages, and restoring the line gave exit 0.
+  - Task 3 Step 2: exactly the one named law failed, with the named message. Step 8: exit 0. Step 9: all three row mutations failed only that law, with the named messages, and restoring gave exit 0.
+  - The full `./gradlew test` was not re-run after these fixes. The reviewer's run of the earlier version exited 0, and the fixes touch only the two test files run above.
+  - `:app` was not compiled (no SDK). `android-build` is the first compiler to see the screen.
+- **Review Focus:** each of the five lines names a test or law that Task 1, 2 or 3 writes. The snap line now says what is actually pinned: the literal on the screen (Task 3), the sweep of that literal (Task 1).
+- **Review findings (2026-10-02), applied:**
+  - The 1/40 literal was pinned nowhere. Task 3's law now asserts BECOME's snap is exactly `(f * 40f).roundToInt() / 40f`, as well as equal to the knob row's, and the Review Focus line says so. Task 3 Step 9 shows both rows at 1/100 failing it.
+  - Task 1's tests do not fail before. That is disclosed in Task 1's opening, and Step 4 now proves each guard by mutation in `:shell`, reverted each time. The restatements of `MutateSheetTest.kt:346-366` and `:179` were trimmed: the bare `defaultFraction == 0` and the AT `40 ms` assertions. Kept: the composed "the holder's opening fraction reads OFF" assertion, which is the one claim the card leans on, now with a message. Also kept: the sweep's first (`50 ms`) and last (`2000 ms`) readouts. They come through the snap from arbitrary thumbs, so they are not restatements of A1's literal-value labels. Every kept assertion carries a message.
+  - The row's "every move" guard: the second `StepperSlider(` must be alone on its trimmed line, as proposed. Beyond the proposed fix, the previous non-blank code line must be `)`, the knob row's close, because an exact-line check alone passes a braceless guard on the line before (Step 9 mutation 3). The old regex stays as a further net.
+  - DRIFT's reset: the holder regex now runs over `codeOnly(src)`, and the reset is checked at `val kitDir`'s brace depth, as proposed. Beyond the proposed fix, the reset's trimmed line must be exactly `pendingBecome = MutateSheet.BECOME.defaultFraction`, and only comments may stand between the `if (!onMorph)` block and the reset. The depth check alone passes the review's own example, a braceless `if (spins > 0) pendingBecome = …`, at depth 1. The adjacency check also catches a guard on the line before. Global Constraints now says "directly after the block" to match.
+  - Commit trailer: a Global Constraints line, plus the trailer on every commit block.
+  - QQ4 now reads "A1 landed; A1b built, CI compile and the owner's phone check pending" until Task 5. Task 5 flips it to done only with `android-build` and `emulator-tests` green and every phone-check line yes. Task 4's commit body no longer says the row was drawn.
+  - `docs/CLI.md`'s phone paragraph gains MORPH's second knob, BECOME (Task 4 Step 3, File Structure table).
+  - The label-width check's comment no longer claims a pixel fit. It calls the check a coarse letter-count proxy, and phone check line 3 is the real gate.
+  - Phone check: line 10 now asks that the dead `—` rows announce sensibly or are skipped. A new line 11 exercises a DRIFT with an empty crate. Global Constraints states that the reset before the write is intended.
+- **Review findings, skipped:** none wholly. Two are applied in part, as recorded above. First, the review's lower-case-label mutation alone cannot reach the shout assertion, so it changes the `when` branch too. Second, the composed OFF assertion is kept rather than trimmed, because it is the claim the holder and the DRIFT reset lean on, and A1's test states its two halves only separately.
+- **Gate answers carried:** the owner's A1 gate answers (2026-10-02: Q1 "They all do", Q2 "A different sound", Q3 "6 is as good or better") stand in Global Constraints unchanged. So does the recorded deviation, the row enabled on `becomeLabel != null` and not on `knobLabel`.
