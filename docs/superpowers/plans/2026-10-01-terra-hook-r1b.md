@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Act on the owner's three answers on R1's page (2026-10-01). Give HIT's gain a floor, so that at full HIT no mode rings below a fraction φ of today's level whatever hits the drum (default 0.25, provisional), while φ = 0 stays R1's HIT bit for bit. Pin test 6 to "BUZZ follows the striker". Render R1b's ten-clip page (HIT's ladder on one voice, and the floor's four choices on the bar), then stop for the owner.
+**Goal:** Act on the owner's three answers on R1's page (2026-10-01). Give HIT's gain a floor, so that at full HIT no mode rings below a fraction φ of today's level whatever hits the drum (default 0.25, provisional), while φ = 0 stays R1's HIT bit for bit. Pin test 6 to "BUZZ follows the striker". Render R1b's nine-clip page (HIT's ladder on one voice, the bar today, and the floor's three choices on the bar), then stop for the owner.
 
 **Architecture:** A frozen copy of R1's colouring (`LegacyTerraHit`) lands with the floor's tests, so φ = 0 is compared against the colouring the owner heard, not against itself. `Terra.hitLevel` gains a `hitFloor` parameter, defaulting to `Terra.HIT_FLOOR` (0.25). It keeps R1's expression verbatim wherever `s · |P_k(n)|` is at or above the floor, and gives `(1 − c) + c · φ` below it. `s` is still computed on the unfloored `|P_k|`. `renderStruck`, `renderStruckAt` and `bankStruckAt` pass the floor through as the "internal overload taking φ". `TerraPatch`, its JSON and the null path do not change. Test 6 is rewritten from printed to pinned. A new generator branch renders R1b's page.
 
@@ -26,6 +26,7 @@
   - HIT FLOOR: per-mode gain G_k(n) = (1 - c) + c * max(phi, s * |P_k(n)|), where phi (HIT_FLOOR) is a fraction of today's per-mode level, so at full HIT no mode rings below phi x today's level whatever hits the drum. The level match s is computed exactly as R1 computes it (on the unfloored |P_k|), then the floor is applied. phi = 0 must reproduce R1's HIT bit for bit (a test pins it). c = 0 stays the null path (the frozen 40-case guard unchanged). phi applies to all four voices (it only bites where a mode would fall below it). phi's value is a listening value chosen at the follow-up page from {0 (none), 0.125 (-18 dB), 0.25 (-12 dB), 0.5 (-6 dB)}; the code default until that answer is 0.25 (-12 dB), labelled provisional; the generator renders the choices through an internal overload taking phi.
   - BUZZ: decision 2 is taken: BUZZ follows the striker. Pin test 6 (the BUZZ/cavity drive test that R1 left print-only) to that behaviour: bounds = R1's printed measurements +/- about 20 %, recomputed with the floor default in place.
   - FOLLOW-UP PAGE (at most 10 clips, at most 3 questions), a new generator page under testkit/terra-audition/R1B/ with its own manifest in the same shape as R1's: (a) the HIT ladder — COMPOUND_MEMBRANE struck by the THUMP SNARE head at HIT 0, .25, .5, .75, 1 (5 clips; floor at the default); (b) the floor — TUNED_BAR today (1 clip) and TUNED_BAR at HIT 1 struck by the factory kick sample (A01_Kick_01.wav, a dark head) with phi = 0, 0.125, 0.25, 0.5 (4 clips). Two questions: "Can you hear the steps from 0 to 1 on the ladder?" and "Which floor keeps the bar sounding right with a dark hit: none, -18, -12 or -6 dB?". Print the per-mode levels of the four floor clips.
+  - AMENDED 2026-10-02 (controller rulings 1-4, below; these replace the verbatim text above where they differ): the floor choices are {0 (none), 0.125 (-18 dB), 0.25 (-12 dB)}, with no 0.5; the page has 9 clips (the ladder 5, the bar today, and the bar at HIT 1 under the dark kick with phi = 0, 0.125, 0.25); its second question is "Which floor keeps the bar sounding right with a dark hit: none, -18 or -12 dB?"; the generator prints the per-mode levels of the three floor clips.
   - The claims tests must still hold with the floor default: the coupling claim (overtone-balance spread across strikers >= the spec's bar on the membrane at HIT .5) — if the floor default breaks it, report the measurement, do not loosen.
 - The floor's reach, from the formula: at HIT 0.5 the unfloored gain is already at least 0.5, so a floor lifts a mode by at most a factor of 1 + φ (+1.9 dB at 0.25), and one striker's overtone balance moves by no more than that. At HIT 1 the lift is unbounded in dB. Measured by plan review with this plan's code (scratch copy of `58757f10`), the coupling gaps at HIT 0.5 at the default are membrane 5.83, cavity 12.65, bell 3.76 and bar 4.38 dB (Phase 0, floor 0: 5.84 / 15.17 / 3.87 / 4.54), so the coupling claim holds at 0.25 and the ruling's "report the measurement" trigger is not hit there.
 - The floor removes decision 4's soft attack at HIT 1; it does not merely shorten it. It lifts every mode while `|P_k|` is still rising through the head. At the default the first-5-ms peak mean over the ten strikers at HIT 1 is 1.000 on the membrane (Phase 0: 0.815 / −2.22 dB), which test 8 prints before it throws. Plan review's probe read the rest, which test 8 does not reach before the ruling (see the notice below): 1.000 on the bell (0.970), 0.833 on the cavity (0.832) and 1.000 on the bar (1.000), and 4 class changes in 40 at HIT 1 (Phase 0: 5). Decision 4's 14.0 ms and test 8's attack and class prints at HIT 1 are φ = 0 figures. At the default they differ from Phase 0's; that is expected, and it is not a failure (they are printed, not bounded). The top rung of R1b's ladder (clip 5) is therefore not what the owner heard as R1's clip 3, though both are the membrane struck by THUMP SNARE at HIT 1.
@@ -51,40 +52,27 @@
 - **`c = 0` is the null path at every floor.** Pinned in Task 1 (`HIT 0 at every floor, and an impulse under the highest floor, render the frozen TERRA`), beside the unchanged 40-case guard.
 - **The coupling claim at the floor default.** Pinned by R1's `HIT couples - a dull and a bright head move the overtone balance after 20 ms, not the tuning or the length`, which is left at the default and unchanged. Plan review measured it passing at 0.25 (5.83 / 12.65 / 3.76 / 4.38 dB; the bell's 3.76 is the closest to the 3 dB bar). Task 1 Step 6 stops and reports if it fails.
 - **Test 6 pinned to "BUZZ follows the striker".** Each figure is held within ±20 % of its measurement: at φ = 0 against R1's printed figures, and at the default against Step 1's. The tanh cap of 0.36 is kept, and at HIT 1 a dark head must rattle longer than a bright one. Pinned in Task 2 (`BUZZ follows the striker - the cavity's and the bar's drive under HIT, pinned`).
-- **Test 8's monotone claim at the floor default fails, and needs a controller ruling before execution.** See the notice below.
+- **Test 8's monotone claim at the floor default: ruled 2026-10-02.** A curve whose total OB move across the knob is under 0.5 dB is exempt from the step check, printed as "exempt" with its span; every curve that moves 0.5 dB or more is still held to 0.01 dB. See "Controller rulings, applied" below.
 
-## Before execution: a controller ruling is needed
+## Controller rulings, applied (2026-10-02)
 
-**This plan is blocked at Task 1 Step 6 until the controller rules.** Plan review implemented Task 1 verbatim in a scratch copy of `58757f10` and ran `:synth:test` and `:shell:test`. The only failure is test 8 (`HIT is monotone in its amount and keeps today's attack and class at subtle`), read at the floor default as this plan prescribes:
+Plan review implemented Task 1 verbatim in a scratch copy of `58757f10` and found that test 8 (`HIT is monotone in its amount and keeps today's attack and class at subtle`) fails at the floor default on RESONANT_CAVITY × BEATBOX RIM (`bbrim`): OB −37.825 / −37.797 / −37.813 / −37.772 / −37.670 dB at c = 0 / .25 / .5 / .75 / 1, a step of −0.016 dB from .25 to .5 against the 0.01 dB tolerance. The first implementer reproduced it and stopped. The controller ruled:
 
-```
-RESONANT_CAVITY BEATBOX RIM: OB is not monotone in HIT: [-37.82512283325195, -37.797203063964844, -37.81308364868164, -37.772193908691406, -37.67024230957031]
-```
+1. **Test 8's step check exempts a curve whose total OB move is under 0.5 dB** (`|OB(1) − OB(0)|` and the max−min span both). Each exempted curve prints with the word "exempt" and its span. Every curve that moves 0.5 dB or more is checked at the existing 0.01 dB tolerance. The measurements go into the test's comment: BEATBOX RIM on the cavity at φ = 0.25 reads −37.825 / −37.797 / −37.813 / −37.772 / −37.670 (span 0.155 dB), and at φ = 0.125 its span is 0.41 dB. Test 8 is not moved to φ = 0, and the 0.01 dB tolerance for moving curves is not changed.
+2. **The floor choices are 0 (none), 0.125 (−18 dB) and 0.25 (−12 dB) only.** `Terra.HIT_FLOOR_CHOICES` is `[0, 0.125, 0.25]`, and its KDoc says why: φ = 0.5 breaks the bell's coupling bar (2.50 dB against 3 dB) and the cavity's tanh cap (0.3661 against 0.36). R1b's page has 9 clips: the ladder 5, the bar today, and the bar at HIT 1 under the dark kick at φ = 0, 0.125 and 0.25.
+3. **HIT 1's soft attack disappears at the default floor** (the membrane's first-5-ms peak, mean over the ten strikers: 1.000 against Phase 0's 0.815). Accepted. The page's clip line for the ladder's top rung says "HIT 1 now keeps today's attack", and the commit message carries the figures.
+4. **Task 2's table uses the measured rows at φ = 0.25.** It already does (Task 2 Step 1). Note the tanh cap's margin at the default: 0.3598 against 0.36.
 
-At c = 0, .25, .5, .75 and 1 the cavity's OB under BEATBOX RIM (`bbrim`) reads −37.825 / −37.797 / −37.813 / −37.772 / −37.670 dB. The step from .25 to .5 is −0.016 dB, against the test's 0.01 dB tolerance. The floor flattens a near-flat curve until it moves less than the tolerance. Plan review's probe found no other voice or striker non-monotone. Test 8 throws at that striker, so its later checks and prints never run in the test: the subtle class and first-5-ms checks on BEATBOX RIM itself, on the cavity's eight later strikers, and on the bell and the bar, and the HIT 1 attack and class prints for the cavity, the bell and the bar. Those first run inside the test, at the default, only after the ruling. The cavity, bell and bar figures quoted under Global Constraints, and the 4-in-40 class changes, come from plan review's probe, not from test output.
-
-The monotone claim is a spec claim (test 8), and this plan never re-thresholds one (Global Constraints). It does not loosen the 0.01 dB tolerance, and it does not move test 8 to φ = 0.
-
-The four floor choices against the three claims at risk, measured by plan review with this plan's code:
+Plan review's measurements of the choices that were on the table, kept as the record of why:
 
 | φ | test 8, cavity × BEATBOX RIM: OB at c = 0 / .25 / .5 / .75 / 1 (dB) | bell coupling at HIT .5 (bar: ≥ 3 dB) | cavity tanh input, THUMP KICK at HIT 1 (cap: ≤ 0.36) |
 |---|---|---|---|
-| 0 (none) | −37.825 / −37.745 / −37.539 / −36.983 / −33.213: **passes** | 3.87: **passes** | 0.3571: **passes** |
-| 0.125 (−18 dB) | −37.825 / −37.820 / −37.837 / −37.762 / −37.412 (steps +0.005, −0.017): **fails** | 3.85: passes | 0.3569: passes |
-| 0.25 (−12 dB, the provisional default) | −37.825 / −37.797 / −37.813 / −37.772 / −37.670 (step −0.016): **fails** | 3.76: passes | 0.3598: passes, 0.0002 under the cap |
-| 0.5 (−6 dB) | −37.825 / −37.821 / −37.806 / −37.808 / −37.795 (worst step −0.002): passes | 2.50: **fails** | 0.3661: **fails** |
+| 0 (none) | −37.825 / −37.745 / −37.539 / −36.983 / −33.213 | 3.87: passes | 0.3571: passes |
+| 0.125 (−18 dB) | −37.825 / −37.820 / −37.837 / −37.762 / −37.412 (steps +0.005, −0.017; span 0.41) | 3.85: passes | 0.3569: passes |
+| 0.25 (−12 dB, the provisional default) | −37.825 / −37.797 / −37.813 / −37.772 / −37.670 (step −0.016; span 0.155) | 3.76: passes | 0.3598: passes, 0.0002 under the cap |
+| 0.5 (−6 dB), removed | −37.825 / −37.821 / −37.806 / −37.808 / −37.795 | 2.50: **fails** | 0.3661: **fails** |
 
-On these figures only φ = 0 passes all three claims as the spec writes them. Choices 0.125 and 0.25 both fail test 8, so moving the default between them cannot dodge the failure. 0 and 0.5 pass test 8, but 0 is no floor and 0.5 fails the bell's bar and the tanh cap. Choice 0.5 fails the bell's coupling bar and the tanh cap. The other coupling claims hold at every choice: membrane 5.84 / 5.83 / 5.83 / 5.64 dB, cavity 15.17 / 14.44 / 12.65 / 9.50 dB and bar 4.54 / 4.38 / 4.38 / 3.03 dB at φ = 0 / .125 / .25 / .5 (the bar's 3.03 is marginal). This plan recommends none of the choices. The controller, and through the controller the owner, should see this table before R1b's page ships, because the page offers all four.
-
-Plan review named two options for the controller. The plan writes code for neither until the controller rules:
-- **(a)** A recorded, measured exemption in test 8 for the cavity striker whose OB total move is under 0.2 dB, with the measurements above written in the test's comment. As worded, (a) covers φ = 0.25 (total move 0.155 dB). It does **not** cover φ = 0.125 (total move 0.425 dB, from −37.837 to −37.412). If the owner then picks −18 dB, test 8 fails again.
-- **(b)** A tolerance scaled to each curve's total span. To pass, the fraction must be at least 0.103 of the span at φ = 0.25 (0.016 of 0.155 dB) and at least 0.040 at φ = 0.125 (0.017 of 0.425 dB). Choosing that fraction is a re-threshold, so the controller sets it.
-
-Two further notes for the controller, from plan review:
-- The page auditions the floor at HIT 1 on the bar, where it bites hard. The owner's complaint arose at subtle (R1's question 2), and at 0.25 the floor lifts a mode there by at most +1.9 dB.
-- At any non-zero floor the bar's modes 2 to 4 collapse to exactly φ under the factory kick (held gains with no floor: 1.354 / 0.010 / 0.005 / 0.001). So clips 8 to 10 differ only in one flat overtone level: −18.1, −12.0 or −6.0 dB on modes 2 to 4, with mode 1 at +2.6 dB in every floor clip.
-
-Once the controller rules, Task 1 Step 6's stop rule for test 8 says where the ruling is applied. The rest of the plan stands as written.
+Two notes: the page auditions the floor at HIT 1 on the bar, where it bites hard, while the owner's complaint arose at subtle (R1's question 2), and at 0.25 the floor lifts a mode there by at most +1.9 dB. At any non-zero floor the bar's modes 2 to 4 collapse to exactly φ under the factory kick (held gains with no floor: 1.354 / 0.010 / 0.005 / 0.001), so the three floor clips differ only in one flat overtone level: −39.7 / −46.3 / −57.3 dB (none), −18.1 dB or −12.0 dB on modes 2 to 4, with mode 1 at +2.6 dB in every floor clip.
 
 ---
 
@@ -121,7 +109,7 @@ Line numbers are the head's, `58757f10`. Each step that edits a file quotes the 
   - `TerraMeasure.bodyOf` and `TerraMeasure.BODY_FROM_FRAMES` (R1 Task 4); `Dsp.OVERSAMPLE` (`const val`, 4).
 - Produces, in `object Terra`:
   - `internal const val HIT_FLOOR = 0.25f`
-  - `internal val HIT_FLOOR_CHOICES: List<Float>`, which is `[0, 0.125, 0.25, 0.5]`
+  - `internal val HIT_FLOOR_CHOICES: List<Float>`, which is `[0, 0.125, 0.25]`
   - `internal fun hitLevel(body: Body, x: FloatArray, c: Float, hitFloor: Float = HIT_FLOOR): Array<FloatArray>?`
   - `internal fun renderStruck(voice: TerraVoice, macros: Map<String, Float>, head: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): Snip`
   - `internal fun renderStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): Snip`
@@ -291,11 +279,11 @@ Insert after the test `a head with nothing in it renders today's body at HIT 1` 
 
     // ---------- HIT's floor (R1b; spec "HIT, the design", decision 22) ----------
 
-    /** The provisional default until R1b's page answers, among the four choices the page offers; a floor outside 0..1 is refused. */
+    /** The provisional default until R1b's page answers, among the three choices the page offers (none, -18 and -12 dB; -6 dB is out, see `Terra.HIT_FLOOR_CHOICES`); a floor outside 0..1 is refused. */
     @Test
-    fun `HIT's floor defaults to a quarter of today's level, provisionally, among R1b's four choices`() {
+    fun `HIT's floor defaults to a quarter of today's level, provisionally, among R1b's three choices`() {
         assertEquals(0.25f, Terra.HIT_FLOOR, "the provisional default is -12 dB until R1b's page answers")
-        assertEquals(listOf(0f, 0.125f, 0.25f, 0.5f), Terra.HIT_FLOOR_CHOICES)
+        assertEquals(listOf(0f, 0.125f, 0.25f), Terra.HIT_FLOOR_CHOICES)
         assertTrue(Terra.HIT_FLOOR in Terra.HIT_FLOOR_CHOICES)
         val body = TerraMeasure.bodyOf(TerraVoice.TUNED_BAR)
         for (bad in listOf(-0.01f, 1.01f, Float.NaN)) {
@@ -359,7 +347,7 @@ Insert after the test `a head with nothing in it renders today's body at HIT 1` 
      * At phi = 0 at least one bar mode's held gain must fall more than
      * 0.5 dB below the smallest non-zero choice (0.125 x 10^(-0.5/20),
      * about 0.118), the same 0.5 dB gap the page generator checks between
-     * floors. Otherwise at least two of the four floor clips on R1b's page
+     * floors. Otherwise at least two of the floor clips on R1b's page
      * hold the same tone after 20 ms, and the plan stops. Measured by plan
      * review: the held gains are 1.354 / 0.010 / 0.005 / 0.001.
      */
@@ -405,10 +393,11 @@ Insert after the test `a head with nothing in it renders today's body at HIT 1` 
         }
     }
 
-    /** `c = 0` is the null path at every floor (the controller's ruling), and an impulse (`s · |P| = 1`) is untouched even under the highest choice. */
+    /** `c = 0` is the null path at every floor (the controller's ruling), and an impulse (`s · |P| = 1`) is untouched even under the highest choice (0.25). */
     @Test
     fun `HIT 0 at every floor, and an impulse under the highest floor, render the frozen TERRA`() {
         val head = TerraStrikers.head("kick01")
+        val highest = Terra.HIT_FLOOR_CHOICES.max()
         var renders = 0
         for (c in TerraCases.all) {
             val frozen = LegacyTerraBank.render(c.voice, c.macros).samples
@@ -416,10 +405,10 @@ Insert after the test `a head with nothing in it renders today's body at HIT 1` 
                 assertContentEquals(frozen, Terra.renderStruck(c.voice, c.macros, head, 0f, hitFloor = phi).samples, "${c.label}, HIT 0 at floor $phi")
                 renders++
             }
-            assertContentEquals(frozen, Terra.renderStruckAt(c.voice, c.macros, impulse, 1f, hitFloor = 0.5f).samples, "${c.label}, an impulse at HIT 1 under floor 0.5")
+            assertContentEquals(frozen, Terra.renderStruckAt(c.voice, c.macros, impulse, 1f, hitFloor = highest).samples, "${c.label}, an impulse at HIT 1 under floor $highest")
             renders++
         }
-        assertEquals(200, renders)
+        assertEquals(160, renders)
     }
 ```
 
@@ -483,6 +472,27 @@ to
             val snip = if (r.striker == null) Terra.render(r.voice) else Terra.renderStruck(r.voice, emptyMap(), TerraStrikers.head(r.striker), r.hit, hitFloor = 0f)
 ```
 
+Last, apply the controller's ruling 1 to test 8, `HIT is monotone in its amount and keeps today's attack and class at subtle`. In its KDoc, after the first bullet's `10 of\n     *   10).`, record the exemption and the measurements (the ruling, the 0.5 dB rule, and: BEATBOX RIM on the cavity at φ = 0.25 reads OB −37.825 / −37.797 / −37.813 / −37.772 / −37.670 dB at HIT 0 / .25 / .5 / .75 / 1, a span of 0.155 dB with a 0.016 dB step backwards, and at φ = 0.125 its span is 0.41 dB). Add `var exempt = 0` beside `renders`, and replace the monotone assertion
+
+```kotlin
+                assertTrue(steps.all { it >= -0.01 } || steps.all { it <= 0.01 }, "$voice ${s.name}: OB is not monotone in HIT: $obs")
+```
+
+with
+
+```kotlin
+                val span = obs.max() - obs.min()
+                val travel = abs(obs.last() - obs.first())
+                if (travel < 0.5 && span < 0.5) {
+                    println("TERRA HIT sweep $voice ${s.name}: exempt from the step check, OB span ${"%.3f".format(span)} dB (|OB(1) - OB(0)| ${"%.3f".format(travel)} dB), under 0.5 dB")
+                    exempt++
+                } else {
+                    assertTrue(steps.all { it >= -0.01 } || steps.all { it <= 0.01 }, "$voice ${s.name}: OB is not monotone in HIT: $obs")
+                }
+```
+
+and after the `TERRA HIT 1: $flipsAtStrong class changes` print, add `println("TERRA HIT sweep: $exempt of 40 curves exempt from the step check (total OB move under 0.5 dB)")`. The test stays at the default floor, and the 0.01 dB step tolerance for a curve that moves 0.5 dB or more is unchanged.
+
 - [ ] **Step 4: Run the tests to see them fail**
 
 Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.TerraTest" -i`
@@ -518,8 +528,14 @@ with:
      */
     internal const val HIT_FLOOR = 0.25f
 
-    /** The floors R1b's page offers: none, -18, -12 and -6 dB. Removed once the owner picks one. */
-    internal val HIT_FLOOR_CHOICES = listOf(0f, 0.125f, 0.25f, 0.5f)
+    /**
+     * The floors R1b's page offers: none, -18 and -12 dB. Removed once the
+     * owner picks one. There is no -6 dB (0.5) choice: at phi 0.5 the bell's
+     * coupling bar fails (the two heads sit 2.50 dB apart, under the 3 dB the
+     * test holds) and the cavity's tanh drive passes its cap (0.3661 against
+     * 0.36). The controller ruled it out, 2026-10-02.
+     */
+    internal val HIT_FLOOR_CHOICES = listOf(0f, 0.125f, 0.25f)
 
     /** [voice] struck by a stored [head] at HIT [hit], 0..1, under the floor [hitFloor]. HIT 0 is today's render, byte for byte, and computes nothing, at any floor. */
     internal fun renderStruck(voice: TerraVoice, macros: Map<String, Float>, head: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): Snip =
@@ -608,21 +624,13 @@ Then replace `hitLevel`, its KDoc and its body, from the `/**` above `HIT's leve
     }
 ```
 
-- [ ] **Step 6: Run the tests, and the claims at the default (expected: STOP on test 8)**
+- [ ] **Step 6: Run the tests, and the claims at the default (expected: exit code 0)**
 
 Run: `./gradlew --no-daemon :synth:test --tests "com.snipsnap.synth.TerraTest" --tests "com.snipsnap.synth.TerraFrozenTest" --tests "com.snipsnap.synth.TerraPatchTest" --tests "com.snipsnap.synth.TerraCaptureTest" --tests "com.snipsnap.synth.DeterminismTest" -i`
-Expected, until the controller rules (see "Before execution: a controller ruling is needed"): a non-zero exit code, with exactly one failing test, `HIT is monotone in its amount and keeps today's attack and class at subtle`, and this message:
-
-```
-RESONANT_CAVITY BEATBOX RIM: OB is not monotone in HIT: [-37.82512283325195, -37.797203063964844, -37.81308364868164, -37.772193908691406, -37.67024230957031]
-```
-
-That is the expected STOP. Do not loosen the 0.01 dB tolerance, do not move test 8 to φ = 0, and do not change `Terra.HIT_FLOOR` to dodge it (0.125 fails the same way; 0.5 fails the bell's coupling bar and the tanh cap instead). Report the message and the `TERRA HIT sweep RESONANT_CAVITY BEATBOX RIM` line to the orchestrator, then STOP. Do not run Steps 7 and 8, or Tasks 2 and 3, until the controller's ruling has been applied to test 8 in `TerraTest.kt` and recorded in the test's comment with the figures above. After that, re-run this step and expect exit code 0.
-
-Every other test in the run is expected to pass. Read and keep these for the commit message:
-- the `TERRA HIT floor` lines: the bar's held gains under the kick with no floor, then each floor's per-mode levels against today's. Plan review measured 1.354 / 0.010 / 0.005 / 0.001 with no floor, then modes 1 to 4 at +2.6 / −39.7 / −46.3 / −57.3 dB at φ = 0, +2.6 / −18.1 / −18.1 / −18.1 at 0.125, +2.6 / −12.0 / −12.0 / −12.0 at 0.25 and +2.6 / −6.0 / −6.0 / −6.0 at 0.5;
+Expected: exit code 0, with test 8 carrying the controller's ruling (Step 3's last paragraph). Do not loosen the 0.01 dB tolerance for a curve that moves 0.5 dB or more, do not move test 8 to φ = 0, and do not change `Terra.HIT_FLOOR` to dodge a failure. Read and keep these for the commit message:
+- the `TERRA HIT floor` lines: the bar's held gains under the kick with no floor, then each floor's per-mode levels against today's. Plan review measured 1.354 / 0.010 / 0.005 / 0.001 with no floor, then modes 1 to 4 at +2.6 / −39.7 / −46.3 / −57.3 dB at φ = 0, +2.6 / −18.1 / −18.1 / −18.1 at 0.125 and +2.6 / −12.0 / −12.0 / −12.0 at 0.25;
 - the `TERRA HIT coupling` lines at the default. Plan review measured membrane 5.83, cavity 12.65, bell 3.76 and bar 4.38 dB apart (Phase 0, floor 0: 5.84, 15.17, 3.87, 4.54);
-- the `TERRA HIT sweep` and `TERRA HIT 1` lines. Before the ruling, test 8 prints only the membrane's ten strikers, its attack line, the cavity's two BEATBOX KICK lines and its BEATBOX RIM sweep line, then throws. The membrane's first-5-ms peak mean at HIT 1 reads 1.000 (Phase 0: 0.815 / −2.22 dB): the floor removes decision 4's soft attack at HIT 1, because it lifts every mode while `|P_k|` rises. After the ruling, expect what plan review's probe read: 1.000 on the bell (Phase 0: 0.970), 0.833 on the cavity (0.832), 1.000 on the bar (1.000), and 4 class changes in 40 (Phase 0: 5). They are printed, not bounded;
+- the `TERRA HIT sweep` and `TERRA HIT 1` lines, including each "exempt" line with its span (the first run printed two: the membrane's BEATBOX RIM at 0.002 dB and the cavity's at 0.155 dB). The first-5-ms peak mean at HIT 1 reads 1.000 on the membrane (Phase 0: 0.815 / −2.22 dB): the floor removes decision 4's soft attack at HIT 1, because it lifts every mode while `|P_k|` rises. The first run also read 0.833 on the cavity (Phase 0: 0.832), 1.000 on the bell (0.970) and 1.000 on the bar (1.000), and 4 class changes in 40 (Phase 0: 5). They are printed, not bounded;
 - the `TERRA HIT CLACK` ratios;
 - the `TERRA drive` lines. They are R1's test 6 still printing, now at the default floor, and Task 2 Step 1 reads them again.
 
@@ -631,9 +639,9 @@ The `TERRA HIT OB` and `TERRA HIT T2` lines read φ = 0 and must still match Pha
 If a test fails, act by which one:
 - **`a floor of 0 is R1's HIT bit for bit`:** the floored branch is not R1's expression where it should be, or the null and `s` conditions moved. Compare `hitLevel` with `LegacyTerraHit.level` line by line. The only additions allowed are the `require`, `floor` and the `if`. Never edit `LegacyTerraHit`.
 - **`HIT couples…` on any voice** (plan review measured it passing at the default: 5.83 / 12.65 / 3.76 / 4.38 dB, the bell closest to the 3 dB bar): this is the controller's named claim. Do not loosen the 3 dB bar, and do not move the test to φ = 0. Print and report the measured gap per voice at the default. Then STOP: the default floor is the owner's to reconsider, not this plan's.
-- **`HIT is monotone…`** (test 8): a spec claim at the default. The cavity × BEATBOX RIM failure above is expected until the controller rules, and its handling is the controller's ruling. Any other failure of test 8, before or after the ruling (another striker's monotone check, or the class or first-5-ms check at subtle), is a new finding. Report the printed values and STOP. Do not re-threshold it.
+- **`HIT is monotone…`** (test 8): a spec claim at the default, with the controller's exemption for curves that move under 0.5 dB. Any failure of a curve that moves 0.5 dB or more, or of the class or first-5-ms check at subtle, is a new finding. Report the printed values and STOP. Do not re-threshold it.
 - **`the CLACK pre-roll stays quiet under HIT`, the hostile renders, the 200-case sweep or the forty cases at HIT 1:** the floor broke a safety property. Report and STOP.
-- **`at full HIT no bar mode rings below the floor…`, on its `lowest < smallest * tolerance` premise (about 0.118, 0.5 dB under 0.125):** under this head the floor does not bite at every choice on the bar's held tone, so R1b's page cannot ask its question 2 with four distinct clips. Report the printed held gains and STOP.
+- **`at full HIT no bar mode rings below the floor…`, on its `lowest < smallest * tolerance` premise (about 0.118, 0.5 dB under 0.125):** under this head the floor does not bite at every choice on the bar's held tone, so R1b's page cannot ask its question 2 with three distinct floor clips. Report the printed held gains and STOP.
 - **The same test, on the 0.5 dB bank readings, while the exact level-curve checks pass:** print both readings. The measure, not the floor, is off: check the window (`MODE_FROM_FRAMES` must be at or past the head's last sample). Record the measured difference in the KDoc and set the tolerance from it plus about 20 %.
 
 - [ ] **Step 7: Show the exact check catches a floor taken before the level match**
@@ -654,14 +662,14 @@ git add synth/src/main/kotlin/com/snipsnap/synth/Terra.kt synth/src/test/kotlin/
 git commit -m "HIT has a floor: at full strength no TERRA mode rings below a quarter of today's level" -m "R1's page asked for one. Each mode's gain is (1 - c) + c * max(phi, s * |P|),
 with the level match taken from the unfloored projection as before and phi a
 fraction of today's per-mode level. The default, 0.25 (-12 dB), is provisional
-until R1b's page picks among none, -18, -12 and -6 dB. A floor of 0 is R1's
+until R1b's page picks among none, -18 and -12 dB. A floor of 0 is R1's
 HIT bit for bit against a frozen copy of R1's colouring, HIT 0 is today's
 TERRA at every floor, and struck by the factory kick at HIT 1 every bar mode
 holds at least the floor. The Phase-0 reproductions read a floor of 0; every
 other HIT claim reads the default." -m "Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
 ```
 
-Before running it, add one more `-m "..."` argument, before the `Claude-Session` one, that holds the lines Step 6 printed after the controller's ruling was applied, copied from the test output: the bar's held gains and per-mode levels at each floor, the four coupling gaps at the default, HIT 1's class changes and attack means, and the CLACK ratios. Say in that paragraph that the floor removes decision 4's soft attack at HIT 1 (the first-5-ms peak means against Phase 0's 0.815 / 0.832 / 0.970 / 1.000), and name the controller's ruling on test 8 in one sentence. Copy only figures the test printed; plan review's probe figures are not test output.
+Before running it, add one more `-m "..."` argument, before the `Claude-Session` one, that holds the lines Step 6 printed after the controller's ruling was applied, copied from the test output: the bar's held gains and per-mode levels at each floor, the four coupling gaps at the default, HIT 1's class changes and attack means, and the CLACK ratios. Say in that paragraph that the floor removes decision 4's soft attack at HIT 1 (the first-5-ms peak means against Phase 0's 0.815 / 0.832 / 0.970 / 1.000), and name the controller's rulings (test 8's exemption under 0.5 dB, the choices without 0.5) in one sentence each. Copy only figures the test printed; plan review's probe figures are not test output.
 
 ---
 
@@ -698,7 +706,7 @@ Expected: exit code 0, then seven lines:
 
 The widest move from R1's figure is wraith at HIT 1 on the cavity, 16.6 ms against 14.2 (+17 %). That is why the floored table is pinned separately and does not reuse R1's.
 
-The tanh cap's margin at the default is thin: THUMP KICK at HIT 1 reads 0.3598 against the cap of 0.36, a margin of 0.0002. At φ = 0.5 the same figure is 0.3661, past the cap (see "Before execution: a controller ruling is needed").
+The tanh cap's margin at the default is thin: THUMP KICK at HIT 1 reads 0.3598 against the cap of 0.36, a margin of 0.0002. At φ = 0.5 the same figure is 0.3661, past the cap, which is why 0.5 is not a choice (see "Controller rulings, applied").
 
 If a printed figure differs from the table, print both and check Task 1's `hitLevel` against Step 5's code before going on. If a printed tanh input is above 0.36, the floor broke the spec's cap. Report it and STOP: the cap is not re-thresholded here.
 
@@ -886,8 +894,8 @@ Before running it, add one more `-m "..."` argument, before the `Claude-Session`
   - `AuditionLevel.level(snip)` and `WavWriter.write(file, snip, WavWriter.BitDepth.PCM_16)`.
   - The generator's own `DOT` and `q`.
 - Produces:
-  - `testkit/terra-audition/R1B/<id>.wav`: ten clips, mono 44.1 kHz, levelled, 16-bit.
-  - `testkit/terra-audition/R1B/manifest.json`: the clips and two questions, in R1's shape. The orchestrator turns it into R1b's page.
+  - `testkit/terra-audition/R1B/<id>.wav`: nine clips, mono 44.1 kHz, levelled, 16-bit.
+  - `testkit/terra-audition/R1B/manifest.json`: the nine clips and two questions, in R1's shape. The orchestrator turns it into R1b's page.
   - The Gradle task `generateTerraR1BAudition`.
 
 - [ ] **Step 1: Confirm the output folder is ignored**
@@ -918,7 +926,7 @@ to
  * listening artifact. With a second argument `r1` it renders R1's page
  * instead ([renderR1]): HIT in the engine, ten clips and three questions.
  * With `r1b` it renders R1b's page ([renderR1B]): HIT's ladder and its
- * floor, ten clips and two questions.
+ * floor, nine clips and two questions.
  */
 ```
 
@@ -946,7 +954,7 @@ Before the object's closing brace, after `renderR1`, insert:
 
     /**
      * R1b's page (docs/superpowers/specs/2026-09-30-terra-hit-bend-talk-design.md,
-     * "Phasing and gates", "R1b's page: HIT's ladder and its floor"): ten clips
+     * "Phasing and gates", "R1b's page: HIT's ladder and its floor"): nine clips
      * and two questions under [root]/R1B, with a manifest in R1's shape.
      * - The ladder: COMPOUND_MEMBRANE struck by THUMP SNARE at HIT 0, .25, .5,
      *   .75 and 1. Each clip is the render its recipe gives
@@ -982,7 +990,7 @@ Before the object's closing brace, after `renderR1`, insert:
             Step(0.25f, ".25", "hit025", "a quarter"),
             Step(0.5f, ".5", "hit05", "subtle"),
             Step(0.75f, ".75", "hit075", "three quarters"),
-            Step(1f, "1", "hit1", "strong"),
+            Step(1f, "1", "hit1", "strong; HIT 1 now keeps today's attack (the soft attack R1's page had is gone at the default floor)"),
         ).mapIndexed { i, st ->
             R1BClip(
                 "%02d_membrane_%s_thump_snare".format(i + 1, st.tag),
@@ -997,7 +1005,6 @@ Before the object's closing brace, after `renderR1`, insert:
             Floor(0f, "NO FLOOR", "no_floor", "R1's HIT under a dark head"),
             Floor(0.125f, "FLOOR -18 DB", "floor_18db", "a floor at -18 dB"),
             Floor(0.25f, "FLOOR -12 DB", "floor_12db", "a floor at -12 dB, the provisional default"),
-            Floor(0.5f, "FLOOR -6 DB", "floor_6db", "a floor at -6 dB"),
         )
         check(floors.map { it.phi } == Terra.HIT_FLOOR_CHOICES) { "the page's floors are not Terra.HIT_FLOOR_CHOICES" }
         val bar = TerraVoice.TUNED_BAR
@@ -1030,7 +1037,7 @@ Before the object's closing brace, after `renderR1`, insert:
         val clips = ladder + R1BClip("06_bar_today", "BAR $DOT TODAY", "the floor's anchor", Terra.render(bar)) + floorClips
         val questions = listOf(
             "Can you hear the steps from 0 to 1 on the ladder?",
-            "Which floor keeps the bar sounding right with a dark hit: none, -18, -12 or -6 dB?",
+            "Which floor keeps the bar sounding right with a dark hit: none, -18 or -12 dB?",
         )
         check(clips.size <= 10 && questions.size <= 3) { "a gate page leads with at most ten clips and three questions" }
         val entries = clips.map { c ->
@@ -1067,11 +1074,11 @@ tasks.register<JavaExec>("generateTerraR1BAudition") {
 Run: `./gradlew --no-daemon :synth:generateTerraR1BAudition`, then `echo "exit=$?"; ls testkit/terra-audition/R1B/; grep -c '"id"' testkit/terra-audition/R1B/manifest.json`
 Expected:
 - `exit=0`;
-- four `terra R1B floor` lines, the per-mode levels of the four floor clips, then `terra R1B: 10 clips and 2 questions`;
-- ten `.wav` files and `manifest.json` in the listing;
-- the count `10`.
+- three `terra R1B floor` lines, the per-mode levels of the three floor clips, then `terra R1B: 9 clips and 2 questions`;
+- nine `.wav` files and `manifest.json` in the listing;
+- the count `9`.
 
-Keep the four `terra R1B floor` lines for the commit message and the page. They should agree with Task 1's `TERRA HIT floor` lines to the printed digit: the same bank, head and window. Plan review read +2.6 / −39.7 / −46.3 / −57.3, then +2.6 / −18.1 / −18.1 / −18.1, then +2.6 / −12.0 / −12.0 / −12.0, then +2.6 / −6.0 / −6.0 / −6.0 dB. At any non-zero floor, modes 2 to 4 sit exactly at φ, so clips 8 to 10 differ in one flat overtone level.
+Keep the three `terra R1B floor` lines for the commit message and the page. They should agree with Task 1's `TERRA HIT floor` lines to the printed digit: the same bank, head and window. Plan review read +2.6 / −39.7 / −46.3 / −57.3, then +2.6 / −18.1 / −18.1 / −18.1, then +2.6 / −12.0 / −12.0 / −12.0 dB. At any non-zero floor, modes 2 to 4 sit exactly at φ, so clips 8 and 9 differ in one flat overtone level.
 
 Clip 5 (the membrane struck by THUMP SNARE at HIT 1) is not R1's clip 3, though it has the same voice, striker and HIT. It renders under the floor default, which removes the soft attack the owner heard at HIT 1 on R1's page (the membrane's first-5-ms peak mean over the ten strikers: 1.000 at the default, 0.815 on R1's). The orchestrator should not present the ladder's top rung as R1's clip.
 
@@ -1081,15 +1088,15 @@ Do not re-run `:synth:generateTerraR1Audition`. Its struck clips now render unde
 
 ```bash
 git add synth/src/test/kotlin/com/snipsnap/synth/TerraAuditionGenerator.kt synth/build.gradle.kts
-git commit -m "The TERRA R1b listening page: HIT's steps on one drum, and four floors for the bar" -m "Renders under testkit/terra-audition/R1B/ with a manifest of its own: the
+git commit -m "The TERRA R1b listening page: HIT's steps on one drum, and three floors for the bar" -m "Renders under testkit/terra-audition/R1B/ with a manifest of its own: the
 membrane struck by a snare at HIT 0, .25, .5, .75 and 1, then the bar today
 and struck at HIT 1 by the factory kick with no floor and with floors at -18,
--12 and -6 dB. Each floor clip's per-mode levels against today's are printed
+and -12 dB. Each floor clip's per-mode levels against today's are printed
 and written into its line. Two questions: whether the steps can be heard, and
 which floor keeps the bar right under a dark hit." -m "Claude-Session: https://claude.ai/code/session_01JttZq5ZXbhD6LNXvRhJbJY"
 ```
 
-Before running it, add one more `-m "..."` argument, before the `Claude-Session` one, that holds the four `terra R1B floor` lines Step 4 printed.
+Before running it, add one more `-m "..."` argument, before the `Claude-Session` one, that holds the three `terra R1B floor` lines Step 4 printed.
 
 - [ ] **Step 6: Run the whole JVM suite, and stop for R1b's gate**
 
@@ -1101,14 +1108,12 @@ Do not push, open a PR or merge. Report to the orchestrator:
 - Task 1's printed floor and coupling lines, and the controller's ruling on test 8 as applied;
 - Task 2's floored drive table beside R1's;
 - the path `testkit/terra-audition/R1B/manifest.json`;
-- the table under "Before execution: a controller ruling is needed", re-read from this run where the tests print it: −6 dB fails the bell's coupling bar (2.50 dB against 3) and the tanh cap (0.3661 against 0.36), and −18 dB fails test 8 unless the ruling covers it. The controller decides whether the page ships with all four choices;
-- that clip 5 is not R1's clip 3 (the floor removes the soft attack at HIT 1), and that the page auditions the floor at HIT 1, not at subtle, where the owner's complaint arose.
+- the controller's rulings as applied ("Controller rulings, applied"): the choices are none, −18 and −12 dB (−6 dB broke the bell's coupling bar, 2.50 dB against 3, and the tanh cap, 0.3661 against 0.36), and test 8 exempts curves that move under 0.5 dB, printed as "exempt" with their spans;
+- that clip 5 is not R1's clip 3 (the floor removes the soft attack at HIT 1; accepted by the controller, and its clip line says "HIT 1 now keeps today's attack"), and that the page auditions the floor at HIT 1, not at subtle, where the owner's complaint arose.
 
 **Stop here for R1b's gate.** The orchestrator publishes the page from `testkit/terra-audition/R1B/`. The owner's two answers decide what happens next:
 1. **The ladder.** "Yes": HIT's knob stands as built. "No": the knob's spacing becomes an owner question before R3, on a page of its own, not a guess.
-2. **The floor.** The chosen φ replaces 0.25 in `Terra.HIT_FLOOR`, and `HIT_FLOOR_CHOICES` leaves the code. Change the floor-default test's pin. Measure Task 2's floored table again at the new value by Task 2 Step 1 (if the answer is "none", that table becomes R1's). Re-run Task 1 Step 6's claims. "None" sets the floor to 0, which is R1's HIT bit for bit. Measured by plan review, two answers reopen spec claims, and neither is re-thresholded here:
-   - **−6 dB (0.5)** fails the bell's coupling bar (2.50 dB against 3 dB) and the cavity's tanh cap (0.3661 against 0.36, THUMP KICK at HIT 1). Picking it reopens those two claims, and test 6's tanh assertion fails at the new default. Report and STOP for the controller; do not loosen either.
-   - **−18 dB (0.125)** fails test 8 on the cavity × BEATBOX RIM (steps +0.005, −0.017 dB; total move 0.425 dB). Option (a) as worded (a total move under 0.2 dB) does not cover it, so it needs the controller's ruling again unless the ruling already covers it.
+2. **The floor.** The chosen φ replaces 0.25 in `Terra.HIT_FLOOR`, and `HIT_FLOOR_CHOICES` leaves the code. Change the floor-default test's pin. Measure Task 2's floored table again at the new value by Task 2 Step 1 (if the answer is "none", that table becomes R1's). Re-run Task 1 Step 6's claims. "None" sets the floor to 0, which is R1's HIT bit for bit. Test 8 holds at every choice: at −18 dB (0.125) the cavity × BEATBOX RIM curve moves 0.41 dB in total, under the controller's 0.5 dB exemption. −6 dB is not a choice, so no answer reopens a claim.
 
 R2 may run alongside. R3 (BEND and TALK) and R4 (the group and the chooser) do not start before this verdict.
 
@@ -1124,14 +1129,14 @@ R2 may run alongside. R3 (BEND and TALK) and R4 (the group and the chooser) do n
   | φ = 0 is R1's HIT bit for bit (a test pins it) | Task 1, `a floor of 0 is R1's HIT bit for bit`, against the frozen `LegacyTerraHit` |
   | `c = 0` stays the null path; the 40-case guard unchanged | Task 1, `HIT 0 at every floor…`; `TerraFrozenTest` runs untouched in Step 6 |
   | φ on all four voices, biting only below it | `hitLevel` serves every voice; the floor-0 test covers all four, and the floor test reads the bar, where it bites |
-  | Default 0.25, provisional; the four choices | `Terra.HIT_FLOOR`, `Terra.HIT_FLOOR_CHOICES`, pinned in Task 1 |
+  | Default 0.25, provisional; the three choices (none, −18, −12 dB) | `Terra.HIT_FLOOR`, `Terra.HIT_FLOOR_CHOICES`, pinned in Task 1 |
   | The internal overload taking φ | `renderStruck`, `renderStruckAt` and `bankStruckAt`'s `hitFloor` (Task 1); used by Task 3 |
   | Every bar mode at HIT 1 under the dark kick head ≥ φ × today, within a stated tolerance | Task 1: exact on the level curves, and 0.5 dB on the bank |
   | The coupling claim at the floor default | R1's coupling test, unchanged, run in Task 1 Step 6 with a stop rule |
   | Test 6 pinned to "BUZZ follows the striker", ±20 %, recomputed with the floor | Task 2 |
-  | R1b's page: five ladder clips, the bar today, four floors, two questions, the per-mode levels printed | Task 3 |
+  | R1b's page: five ladder clips, the bar today, three floors, two questions, the per-mode levels printed | Task 3 |
 
-- **Placeholders.** Every code block is complete and compiles as written. Task 2's `floored` table and its KDoc list hold the figures plan review measured at the default, and Task 2 Step 1 confirms them on the built code; nothing is filled in by hand. The one open item is not a placeholder but a gate: test 8's handling waits on the controller's ruling ("Before execution: a controller ruling is needed"), and the plan writes no code for it until then. Each commit that should carry printed figures says so in a sentence after its command.
+- **Placeholders.** Every code block is complete and compiles as written. Task 2's `floored` table and its KDoc list hold the figures plan review measured at the default, and Task 2 Step 1 confirms them on the built code; nothing is filled in by hand. Test 8's handling is the controller's ruling, applied in Task 1 Step 3 ("Controller rulings, applied"). Each commit that should carry printed figures says so in a sentence after its command.
 - **Type consistency.** `HIT_FLOOR`, `HIT_FLOOR_CHOICES`, `hitLevel`'s `hitFloor`, and the overloads of `renderStruck`, `renderStruckAt` and `bankStruckAt` come from Task 1, as do `LegacyTerraHit.level`, `TerraMeasure.modeLevels`, `MODE_FROM_FRAMES` and `MODE_WINDOW`. Every other symbol was read at `58757f10`:
   - `Terra.Body` and `Terra.BankInputs(level = …)` (internal classes with public constructors);
   - `Terra.renderWith(voice, macros, inputsFor)` and `Terra.strikeAndModalBank(modes, fundamentalHz, droopDepth, frames, rate, exciterAt, onsetSamples = 0, level = null, pitch = null)`;
@@ -1146,7 +1151,7 @@ R2 may run alongside. R3 (BEND and TALK) and R4 (the group and the chooser) do n
   `kotlin.math.floor` is not imported in `Terra.kt`, so the local `val floor` shadows nothing.
 - **Review Focus.** Each line's pinning test is in the task that owns the code: φ = 0, `s` before the floor, and `c = 0` in Task 1; coupling in Task 1 Step 6; test 6 in Task 2.
 - **Line numbers** are the head's (`58757f10`). Every edit also quotes the text it replaces.
-- **What R1b does not decide.** The floor's value is the owner's, on R1b's page. How test 8 treats the cavity × BEATBOX RIM curve at a non-zero floor is the controller's. Plan review measured the bell's coupling gap at the default as 3.76 dB (3.87 at a floor of 0), so it survives 0.25; at 0.5 it is 2.50 dB and fails. If a claim fails, the plan stops rather than loosening it.
+- **What R1b does not decide.** The floor's value is the owner's, on R1b's page. How test 8 treats the cavity × BEATBOX RIM curve at a non-zero floor was the controller's, ruled 2026-10-02. Plan review measured the bell's coupling gap at the default as 3.76 dB (3.87 at a floor of 0), so it survives 0.25; at 0.5 it is 2.50 dB and fails. If a claim fails, the plan stops rather than loosening it.
 - **Plan review (2026-10-01), applied.**
   - The blocker (test 8 fails at the default on RESONANT_CAVITY × BEATBOX RIM): a notice before Task 1, "Before execution: a controller ruling is needed", with the measured table over the four choices. Task 1 Step 6 now expects that failure as the STOP, with its message and figures, instead of exit code 0.
   - −6 dB breaks the bell's coupling bar and the tanh cap: in the notice's table, in Task 2 Step 1 (with the 0.3598 against 0.36 margin at the default), in test 6's KDoc, in Task 3's report to the orchestrator, and in Task 3's post-gate step 2.
@@ -1157,7 +1162,7 @@ R2 may run alongside. R3 (BEND and TALK) and R4 (the group and the chooser) do n
   - Stale forecasts of the coupling gaps (Global Constraints, Review Focus, Step 6's coupling stop rule, this list) are replaced with the measured 5.83 / 12.65 / 3.76 / 4.38 dB.
 - **Plan review, skipped, and why.**
   - Choosing option (a) or (b) for test 8, and any code for either: the fix asks for a controller ruling before execution. Code for (b) would pick a span fraction, which is a re-threshold this plan forbids. Code for (a) would pre-empt the ruling, so (a) is described, not written. The notice records that (a) as worded covers 0.25 but not 0.125.
-  - Dropping 0.5 from `HIT_FLOOR_CHOICES` and from the page: that changes the controller's ruling, which lists all four choices. The plan keeps 0.5 and records that picking it reopens the two claims.
   - The spec's own wording that the floor "shortens" the soft attack ("HIT, the design", the floor bullet): this fix edits only the plan, so the spec's wording is left for the controller.
   - Writing the flat-overtone shape into the floor clips' `why` lines (finding 5's optional part): the page text is the controller's ruling, and each line already prints the four per-mode levels, which show it. It is noted in Task 3 Step 4 and in the notice instead.
   - The review notes on what is sound (finding 7): no action was asked. The worktree code was not touched.
+  - Controller rulings 1-4 (2026-10-02) applied afterwards: test 8's 0.5 dB exemption, the choices without 0.5 (so a nine-clip page), the accepted loss of HIT 1's soft attack, and Task 2's measured table. They supersede the notice and skipped items above where they differ.
