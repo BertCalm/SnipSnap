@@ -689,6 +689,73 @@ Measured on the built code (`GyreTest`, 14 tests):
 The audition (`./gradlew :synth:generateGyreAudition`, 76 clips in eight sections) is the gate.
 Nothing in GYRE has been heard yet.
 
+## R1b, after the first listen (2026-10-03)
+
+The owner's first listen (saved on the audition page, `verdicts/gyre_r1_*`) kept SYMPATHY and HOLD
+and sent two knobs back: BODY ("All sounds the same", "Body doesn't make an impact") and SPIN
+("Noticable at higher intensity", "Spin not noticable on short notes"). Measured on the audition's
+own clips, BODY 0 to 1 moved the octave bands 3.6 dB on average (FLICK) and 3.4 (HALO), against
+SYMPATHY's 13.3 and 12.4: BODY moved only the membrane, which is heard quietly and mostly below the
+note. SPIN's rotor turned at 0.15 to about 1 Hz over the knob's first half, slower than a FLICK note
+lasts, and moved only the quiet parts (the coupling, the membrane, the sympathetic strings).
+
+- **BODY sizes a box** that everything leaves through: four resonant peaks and two shelves, from a
+  small, thin, nasal box (modes 520 Hz to 1.9 kHz, the lows shelved 12 dB down) to a large, hollow,
+  warm one (modes 105 to 420 Hz, the top shelved 15 dB down), along `BODY^0.7` so the knob's first
+  half moves too. The box also loads the strings: a large box makes them darker (the loop
+  brightness ×1.35 to ×0.6, the 5 kHz ceiling lowered to 3 kHz) and shorter (t60 ×1.1 to ×0.75).
+  The box rings into the tail, which now runs until it too is 45 dB down: its time is read from
+  the six sections' own poles at the largest gain SPIN's swell gives each peak (a boosted peak rings
+  `10^(dB/40)` times longer than a band-pass of its Q; BODY 1 at SPIN 1 rings 0.51 s, Copilot's
+  review of #434), and a test rings the box to check it. A trim (0.7) keeps the raw
+  peak under its ceiling; the output stage sets the loudness as before.
+- **SPIN turns at least 0.8 Hz** (was 0.15), so at 0.25 it is 1.5 Hz and gets 0.8 of a turn round a
+  0.53 s FLICK note (was 0.23). It gains two destinations the main sound carries: which of the three
+  upper strings is loudest (a quarter turn apart, up to ×2 and down to silence at full depth, the
+  first string holding the level; a string's level has no phase, so this never bends the pitch),
+  and how big each of the box's peaks is (spread over half a turn, so the box's balance tilts).
+  Three things were tried and dropped on the way, each measured: sweeping the box's modes in
+  frequency bent the pitch (11 cents, HALO, near a low mode); a swept low-pass on each string moved
+  almost nothing (FLICK's C4 has little over 2 kHz); and the box's tilt the other way round cancelled
+  the bridge's own swing (HALO's centroid swing fell to 7% of its mean, against round one's 12%).
+- **The strings are retuned at every rotor step.** A faster rotor made the coupling's and the
+  membrane's swing a vibrato near a membrane mode (D3 at BODY 1 read 5.2 cents sharp at HALO's
+  default SPIN). Each step now re-solves the bridge-phase pre-tuning for the bridge as it is, so the
+  rotor never bends the pitch through the bridge (on the built code, HALO at BODY 1 and SYMPATHY 1
+  reads at worst 2.3 cents over all 25 notes); the strings are built 3% low so the retune has room
+  either way.
+- **The wolf guard gained a decay rule** (`WOLF_T60`, 1 s): the bridge may not drain a note's
+  fundamental faster than that. The box made a weakness visible that round one already had: F4 sits
+  on BODY 1's top membrane mode (353 Hz), its fundamental died 41 dB under its octave (HALO) and the
+  house detector read 700 Hz. The cost: HALO's C4 also sits on a membrane mode at its default BODY,
+  so its third string now answers at −26.9 dB, not −17.0 (FLICK −26.4, was −25.1).
+- **SYMPATHY's gain refitted** (8.4 to 6.2) to the same target shares under the box.
+
+Open, not fixed here: each string's pluck is one random period of noise, so how much fundamental a
+note starts with is a draw per note. HALO's F4 string, alone and with the bridge off, starts 24 dB
+under its own octave, and away from the corners the tests check (BODY 0.5, SYMPATHY 0) the house
+detector reads it an octave high, as it did in round one. R2's TOUCH replaces the exciter; it should
+fix the draw.
+
+Measured on the built code (`GyreTest`, 16 tests; the two new ones are BODY's and SPIN's):
+
+| Claim | Round one | R1b |
+|---|---|---|
+| BODY 0 to 1, octave bands' mean shift (3 notes × 2 voices) | 0.6 to 4.1 dB, each half 0.2 to 2.3 | 8.1 to 14.4 dB, each half at least 3.2 |
+| SPIN 0.25 on a short note, median partial swing | 5.5 dB (FLICK), 2.7 (HALO) | 11.0 (FLICK), 6.1 (HALO) |
+| The rotor is not tremolo (HALO, SPIN 0.45) | 102 Hz centroid swing (12% of its mean) against 0.5 Hz | 164 Hz (28%) against 0.4 Hz |
+| SPIN's low end, 0.02 against 0 | 1.9% (FLICK), 2.7% (HALO) | 4.8%, 5.7% |
+| In tune (25 notes × BODY 0, 0.5, 1 × SYMPATHY 0, 1) | worst 3.3 cents | worst 3.4 cents |
+| An unplucked string answers | FLICK −25.1 dB, HALO −17.0 | FLICK −26.4, HALO −26.9 |
+| Never grows; raw peak (64 renders) | 0.596 of the attack; 0.767 | 0.443; 0.985 |
+| The quietest ending under its attack | 50.0 dB | 55.1 dB |
+| SYMPATHY's shares at 0.3, 0.6, 0.8, 1 | −21.7, −11.8, −7.8, −4.8 dB | −22.4, −12.5, −8.4, −5.3 dB |
+| No drum class; worst share over 2 kHz | none; 0.39 | none; 0.41 (the snare line is 0.5) |
+| Render time, warmed, desktop JVM, defaults | FLICK 72 ms for 1.35 s; HALO 213 ms for 4.39 s (before the ring-out) | FLICK 83 ms for 1.46 s; HALO 345 ms for 4.87 s |
+
+The audition is re-rendered for a second listen (78 clips: SPIN gains a short FLICK note, still and
+at 0.25), and its verdicts save under `verdicts/gyre_r1b_*`, beside the first listen's.
+
 ## Decisions taken (2026-10-01)
 
 The owner took every recommendation:

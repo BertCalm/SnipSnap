@@ -456,8 +456,8 @@
 
   <div class="guide lcd">
     <div class="hd">WHAT YOU ARE LISTENING FOR</div>
-    <p>GYRE is four plucked strings that share one bridge. The bridge sits on a small membrane, so what one string does reaches the others and comes back: pluck one and the rest answer. Eight more strings that nobody plucks (the sympathetic strings) listen to the bridge and ring with whatever reaches them. A rotor turns inside the instrument, moving how strongly the strings are coupled, which part of the membrane is loudest, how fast each string loses energy and which sympathetic string answers. It never touches the volume. There is no sample underneath: everything comes out of the same coupled strings.</p>
-    <p><b>Nothing here has been heard by anyone yet.</b> Every number was measured (tuning within 3.3 cents everywhere, no note reading as a drum, the rotor moving the tone 200 times more than a tremolo would), but measurements cannot say whether it sounds like an instrument. That is this page's whole job. Round one plucks only: the bow, the circular bow and the seamless held loop are later rounds.</p>
+    <p>GYRE is four plucked strings that share one bridge. The bridge sits on a small membrane, so what one string does reaches the others and comes back: pluck one and the rest answer. Eight more strings that nobody plucks (the sympathetic strings) listen to the bridge and ring with whatever reaches them. Everything leaves through a box under the strings, which BODY sizes. A rotor turns inside the instrument, moving which of the upper strings is loudest, which of the box's resonances swells, how strongly the strings are coupled and which sympathetic string answers. It never touches the overall volume. There is no sample underneath: everything comes out of the same coupled strings.</p>
+    <p><b>Round 1b: BODY and SPIN rebuilt after your first listen.</b> SYMPATHY and HOLD were kept and are unchanged in kind. BODY now sizes a real box: BODY 0 is a small, thin, nasal box and BODY 1 a large, hollow, warm one, and a big box also makes the strings darker and shorter. Measured, BODY 0 to 1 now moves the sound 7 to 15 dB across its octave bands, where it moved 1 to 4. SPIN now turns at least 0.8 Hz, so it gets most of the way round even a short note, and it moves the main sound (the upper strings and the box) rather than only the quiet parts. On a short FLICK note at SPIN 0.25, each partial now swings about 11 dB, where it swung about 5. Tuning stays within 3.4 cents everywhere.</p>
     <p>First the two voices at three notes each. Then the round's own claim as sound: one string plucked with its neighbours answering, and the same pluck with the bridge switched off. Then each knob at five settings, the sympathetic strings on their own, the rotor beside a tremolo of the same depth, the knobs together, and the edges. Mark each KEEP, MEH or CUT. A CUT on a knob setting means it goes too far.</p>
   </div>
 
@@ -469,15 +469,15 @@
       <div class="readout"><span>THREE QUESTIONS &middot; THEN SAVE</span></div>
     </div>
     <div class="q">
-      <label class="ask" for="q_voices">1 &middot; BODY: does turning it sound like changing the instrument's body, a different box under the strings, or only like a filter?</label>
+      <label class="ask" for="q_voices">1 &middot; BODY: does each step now sound like a different instrument, a smaller or bigger box under the strings? Is any end too much (BODY 0 too thin, BODY 1 too boomy)?</label>
       <textarea id="q_voices" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_knobs">2 &middot; SYMPATHY: does it sound like strings answering strings, or like reverb or longer sustain? Are 0.3, 0.6, 0.8 and 1 the right steps (subtle, clear, a halo, a cloud)?</label>
+      <label class="ask" for="q_knobs">2 &middot; SPIN: on the short FLICK note, do you hear SPIN .25 move? Is the low end (.02, .25) now noticeable, and is the top (.75, 1) still pleasant or now too much?</label>
       <textarea id="q_knobs" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
-      <label class="ask" for="q_landing">3 &middot; SPIN: does the rotor sound like part of the instrument, or like something done to it afterwards? And does FLICK sound too dark? (Its strings stop at 5 kHz so its A4 is not mistaken for a snare.)</label>
+      <label class="ask" for="q_landing">3 &middot; The rest: do the voices and STRINGS ANSWERING STRINGS still sound right with the box in place? (The answer is a little quieter than in round one: a note sitting on a membrane resonance no longer pours its fundamental into the other strings.)</label>
       <textarea id="q_landing" placeholder="&hellip;"></textarea>
     </div>
     <div class="q">
@@ -492,7 +492,7 @@
 
   <div class="foot">
     RENDERED BY generateGyreAudition &middot; ONE LOUDNESS FOR EVERY CLIP &middot; 16-BIT 44.1 KHZ &middot;
-    MEASURED, NOT HEARD &middot;
+    ROUND 1B &middot; BODY AND SPIN REBUILT &middot;
     CHIP TAPS AND NOTES SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FOUR ANSWERS.
   </div>
 </div>
@@ -746,7 +746,7 @@
 
   // Every round's verdicts live under their own prefix, so a later round's
   // page never opens pre-filled with this one's notes and saves over them.
-  var PHASE = 'gyre_r1';
+  var PHASE = 'gyre_r1b';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
   function saveLocal(key, data) {
