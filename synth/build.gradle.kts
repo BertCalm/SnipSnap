@@ -342,6 +342,16 @@ tasks.register<JavaExec>("generateArcoBody") {
     args("${rootDir}/testkit/arco-body")
 }
 
+/** Render the ARCO R1e warmth listening clips, manifest and page under testkit/arco-warmth/ and the key beside it. See ArcoWarmthGenerator. */
+tasks.register<JavaExec>("generateArcoWarmth") {
+    group = "distribution"
+    description = "Render the ARCO R1e warmth listening clips, manifest and listening page under testkit/arco-warmth/ and the key to it beside the folder as testkit/arco-warmth-key.json."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoWarmthGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-warmth")
+}
+
 tasks.register<JavaExec>("generateMercuryKit") {
     group = "distribution"
     description = "Render the MERCURY modal-glass acceptance kit under testkit/."

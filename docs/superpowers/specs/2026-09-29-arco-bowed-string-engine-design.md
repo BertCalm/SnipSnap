@@ -2139,6 +2139,28 @@ and it otherwise rings only in the transients and is cut where the string ends. 
 envelope the harmonics sit on), which is a different shape and not a bigger amount. That is R1d's work, and **the first thing it must keep is
 everything at or under BODY 0.5, to the bit** (the default, the kit and the presets that were not heard to be wrong).
 
+**R1d heard (2026-10-03): the BODY page, and what it taught.** The page (`generateArcoBody`, merged in #432) played twenty clips (ERHU C5, CELLO C3, CELLO C4)
+blind: THE PLAIN ONE (BODY 0.5), a hidden exact repeat of it, design A (a bank of broad peaking filters) and design B (one broad modal row) at two strengths
+each, and a control (R1c's narrow box at 12 times the string). The owner answered on headphones (`verdicts/arco_r1d_*`, 01:03 to 01:07 UTC): **both hidden repeats
+SAME; every one of the thirteen candidates DIFFERENT; none MORE BOX; none LESS BOX**; WHAT YOU HEARD LAST TIME was not marked. In words: "Body just seems to be dull
+and muffled rather than full and resonant" (which one to keep) and "Sounds muffled when different than original" (too much). Asked what BODY should add, the owner
+picked **Warmth and Weight** (not Ring, not Space), and said **louder is fine**.
+
+What the clips measured (steady part, share of the clip's energy against THE PLAIN ONE, dB): every candidate cut the content above 3 kHz by 7 to 20 dB (ERHU C5: B 6.0 -19.1,
+A 1.0 -16.0, the control -13.2; CELLO C3: the control -19.5, B 6.0 -17.9, A 1.0 -10.7), and R1c's own BODY 1 by 2 to 5 dB. **The page levelled every clip to the same loudness, so any
+boost of the low and mid harmonics ducked the top: a duller note, and that is what the owner heard.** The three designs, the ruler and the judge panel all missed it, because
+the ruler (D, a spectral-envelope distance with the loudness equalised) *rewards* that darkening: "D is not audibility" was written into the page's brief and still steered the
+ranking. Two other beliefs of this round did not survive the answers: the phone-speaker explanation of R1c's "does nothing" (the owner uses headphones) and design C's
+snapping (never put on the page). What did survive: the repeat caught nothing wrong (the owner's ears were reliable), the narrow box does not colour a held note, and
+the knee at 0.5 is untouched by all of it.
+
+**The principle R1e carries: the body is added on top of the string, at the plain's own gain, and the note is allowed to be louder.** A real body radiates more, it does not trade
+the string's top end away. The warmth page (`generateArcoWarmth`, test-side only) builds that from a low shelf (weight) and a broad bell (warmth) at +3.5 and +6 dB, with the
+string at THE PLAIN ONE's gain (the helper reproduces `Arco.render` at BODY 0.5 bit for bit), a louder-only control matched to the shaped clip's loudness, and chips FULLER, SAME,
+DULLER, DIFFERENT. **Engine hand-off, not done yet**: `Arco.finish` must level BODY above the knee from the plain's gain and not from the boxed signal; the shaped string at the plain's
+level peaks above ArcoTest's finished-peak bar of 0.95 at CELLO C2 and F#2, so the engine step must back the rung off on low CELLO notes, give headroom or accept a ceiling duck, and
+never loosen the bar; ERHU's fixed corners (600 and 800 Hz) are the scout's and untested on its highest notes (WEIGHT alone reads only +0.6 dB on A5 against +2.2 on C5).
+
 **A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
 (`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
 taken") couples four strings through a shared bridge. Its R2 bows those
