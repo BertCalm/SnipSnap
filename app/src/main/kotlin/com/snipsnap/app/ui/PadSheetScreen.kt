@@ -1229,6 +1229,8 @@ fun PadSheetScreen(
         }
     }
     val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
+    // MORPH's second knob, null on every other move: the card's BECOME row.
+    val becomeKnob = MutateSheet.becomeFor(MutateSheet.modeFor(mutateMode))
     // One dialled value per move, not one shared value wiped by switching
     // move (J24). Each move's knob means its own thing — SPLICE's `AT` is a
     // time in milliseconds, MORPH's is a blend — so the value cannot simply
@@ -1240,6 +1242,13 @@ fun PadSheetScreen(
     val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
     val pendingMutateKnob =
         mutateKnobs[mutateMode] ?: (mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
+    // MORPH's second knob, BECOME: how long the hit takes to turn from the
+    // pad into the MIX blend. Only MORPH reads it (every other move ignores
+    // it in HEAR and KEEP alike, MutateSheet's `knobs`), so it is one value
+    // per pad, not one per move, and it sits beside `mutateKnobs` rather
+    // than inside it, so J24's law reads that map exactly as before. It
+    // opens OFF, and DRIFT puts it back there (`onDrift`).
+    var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }
 
     /**
      * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
@@ -1274,6 +1283,7 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val move = MutateSheet.modeFor(mutateMode)
         val fraction = pendingMutateKnob
+        val becomeFraction = pendingBecome
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
@@ -1284,7 +1294,7 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
-                        MutateSheet.apply(f, slot, who, move, fraction)
+                        MutateSheet.apply(f, slot, who, move, fraction, becomeFraction)
                         applied = true
                     }
                 }
@@ -1336,10 +1346,11 @@ fun PadSheetScreen(
         }
         val move = MutateSheet.modeFor(mutateMode)
         val fraction = pendingMutateKnob
+        val becomeFraction = pendingBecome
         scope.launch {
             busy = true
             try {
-                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction) }
+                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                     audition(rendered, p.level, p)
                 }
@@ -1443,6 +1454,12 @@ fun PadSheetScreen(
             // true readout of the last thing that happened.
             mutateKnobs[Mutate.Mode.MORPH.name] = MutateSheet.DRIFT_FRACTION
         }
+        // DRIFT is a flat morph: `MutateSheet.drift` never takes BECOME. So
+        // the card puts BECOME back to OFF on every DRIFT tap, from MORPH as
+        // well as from any other move. A remembered `BECOME 400` left on
+        // screen would be a value shown against a value used, the exact
+        // divergence the block above exists to prevent for MIX.
+        pendingBecome = MutateSheet.BECOME.defaultFraction
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
@@ -2566,6 +2583,10 @@ fun PadSheetScreen(
                 knobFraction = pendingMutateKnob,
                 knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
                 onKnobChange = { f -> mutateKnobs[mutateMode] = (f * 40f).roundToInt() / 40f },
+                becomeLabel = becomeKnob?.label,
+                becomeFraction = pendingBecome,
+                becomeText = becomeKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingBecome)) } ?: "",
+                onBecomeChange = { f -> pendingBecome = (f * 40f).roundToInt() / 40f },
                 mutated = MutateSheet.read(pad.recipe),
                 canUndo = binDaysLeft != null,
                 onHear = ::onHear,
@@ -3472,11 +3493,14 @@ private fun ShapeCard(
 
 /**
  * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
- * MORPH), a partner — a pad on this kit from the mini grid, or the deal
- * ROULETTE spins off the shelf — the move's one knob when it has one,
- * then HEAR or MUTATE. The line under the title says what the pad
- * already is ("SPLICE: Kit:A02") so a mutated pad never reads as an
- * original; UNDO pulls the pre-mutation sound back out of the bin.
+ * MORPH · ROOM · TRANSPLANT), a partner — a pad on this kit from the
+ * mini grid, or the deal ROULETTE spins off the shelf — the move's one
+ * knob when it has one, and under it MORPH's second, BECOME (how long
+ * the hit takes to turn from the pad into the blend; a disabled `—`
+ * row on every other move, so the card never jumps), then HEAR or
+ * MUTATE. The line under the title says what the pad already is
+ * ("SPLICE: Kit:A02") so a mutated pad never reads as an original;
+ * UNDO pulls the pre-mutation sound back out of the bin.
  * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
  * same recipe, same provenance, same bin.
  *
@@ -3507,6 +3531,10 @@ private fun MutateCard(
     knobFraction: Float,
     knobText: String,
     onKnobChange: (Float) -> Unit,
+    becomeLabel: String?,
+    becomeFraction: Float,
+    becomeText: String,
+    onBecomeChange: (Float) -> Unit,
     mutated: MutateSheet.Applied?,
     canUndo: Boolean,
     onHear: () -> Unit,
@@ -3728,6 +3756,22 @@ private fun MutateCard(
             scheme = scheme,
             enabled = !busy && knobLabel != null,
             onFractionChange = onKnobChange,
+            onFractionCommit = {},
+        )
+
+        // MORPH's second knob, BECOME: how long the hit takes to turn from
+        // the pad into the MIX blend, OFF at 0. Every other move draws the
+        // same disabled "—" row STACK's knob shows above, so the card never
+        // jumps. It is enabled on BECOME's own label, not on `knobLabel`:
+        // SPLICE, SPLIT, ROOM and TRANSPLANT have a first knob and no BECOME.
+        StepperSlider(
+            label = becomeLabel ?: "—",
+            fraction = if (becomeLabel == null) 0f else becomeFraction,
+            valueText = becomeText,
+            fillColor = padColor,
+            scheme = scheme,
+            enabled = !busy && becomeLabel != null,
+            onFractionChange = onBecomeChange,
             onFractionCommit = {},
         )
 

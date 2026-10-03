@@ -27,6 +27,8 @@ import kotlin.math.roundToInt
  * takes `--with hit.wav`). One parent, one move, one knob: STACK has
  * none, SPLICE has AT (where the pad's transient hands over), SPLIT has
  * HZ (the crossover), MORPH has MIX, ROOM has WET, TRANSPLANT has BANDS.
+ * MORPH alone has a second knob, BECOME: how many milliseconds the hit
+ * takes to turn from the pad into the MIX blend, OFF at 0 ([becomeFor]).
  * The knob's range is the verb's own, mapped exponentially where the ear
  * hears ratios. DRIFT is the card's one-tap move: the crate deals and
  * MORPH blends, MIX how far ([drift]).
@@ -58,6 +60,19 @@ object MutateSheet {
     fun knobFor(mode: Mutate.Mode): Knob? = KNOBS[mode]
 
     /**
+     * MORPH's second knob: the milliseconds the hit takes to turn from the
+     * pad into the MIX blend ([Mutate.becomeAmount]). Linear, because its
+     * `lo` is 0 and [Knob.value]'s exponential form is `lo × (hi/lo)^f`,
+     * NaN for every fraction above 0 there. The phone's 1/40 snap makes it
+     * 50 ms steps, and the first, 50 ms, already clears one analysis window
+     * (23 ms at 44.1 kHz), under which a ramp reads as a step.
+     */
+    val BECOME = Knob("BECOME", 0f, Mutate.MAX_BECOME_MS.toFloat(), 0f, exponential = false)
+
+    /** [BECOME] for MORPH, null for every other move: no other move reads it. */
+    fun becomeFor(mode: Mutate.Mode): Knob? = if (mode == Mutate.Mode.MORPH) BECOME else null
+
+    /**
      * The blend DRIFT uses when the card is not already on MORPH — MORPH's
      * own knob default, matching [knobs]'s `morphAmount` fallback for the
      * same situation.
@@ -76,11 +91,12 @@ object MutateSheet {
     /** The knob's value → stepper fraction; the inverse of [value]. */
     fun fraction(knob: Knob, value: Float): Float = knob.fraction(value)
 
-    /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%", "16 bands". */
+    /** What the value column reads: "40 ms", "200 Hz" / "1.2k", "50%", "16 bands", BECOME's "OFF" / "400 ms". */
     fun label(knob: Knob, value: Float): String = when (knob.label) {
         "AT" -> "${value.roundToInt()} ms"
         "HZ" -> if (value >= 1000f) "%.1fk".format(java.util.Locale.ROOT, value / 1000f) else "${value.roundToInt()} Hz"
         "BANDS" -> "${value.roundToInt()} bands"
+        "BECOME" -> if (value <= 0f) "OFF" else "${value.roundToInt()} ms"
         else -> "${(value * 100).roundToInt()}%"
     }
 
@@ -166,10 +182,14 @@ object MutateSheet {
     /** The assigned pads of another kit, slot order - the picker's second row. */
     fun padsOf(kit: OtherKit): List<KitPad> = KitStore.load(kit.dir).pads.sortedBy { it.slot }
 
-    /** What a mutated pad carries: the move and the parents' labels, read from the `mutate` recipe; DRIFT reads as its own word. */
-    data class Applied(val mode: String, val parents: List<String>, val drifted: Boolean = false) {
-        /** "DRIFT" for a drift, else the move. */
-        val word: String get() = if (drifted) "DRIFT" else mode
+    /** What a mutated pad carries: the move, the parents' labels and any BECOME ramp, read from the `mutate` recipe; DRIFT and BECOME read as their own words. */
+    data class Applied(val mode: String, val parents: List<String>, val drifted: Boolean = false, val becomeMs: Int = 0) {
+        /** "DRIFT" for a drift, "BECOME" for a MORPH with a ramp, else the move. */
+        val word: String get() = when {
+            drifted -> "DRIFT"
+            becomeMs > 0 -> "BECOME"
+            else -> mode
+        }
     }
 
     /**
@@ -181,7 +201,13 @@ object MutateSheet {
         val mode = (m.entries["mode"] as? JsonValue.Str)?.value ?: return null
         val with = (m.entries["with"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value } ?: emptyList()
         val drifted = (m.entries["drift"] as? JsonValue.Bool)?.value == true
-        return Applied(mode.uppercase(), with, drifted)
+        // BECOME is MORPH's alone and 1..MAX_BECOME_MS; anything else a hand
+        // or another build left (a string, NaN, a negative, a huge number, a
+        // ramp on another move) reads as no ramp, never a throw.
+        val becomeMs = (m.entries["become"] as? JsonValue.Num)?.value
+            ?.takeIf { mode.uppercase() == Mutate.Mode.MORPH.name && it.isFinite() && it >= 1.0 && it <= Mutate.MAX_BECOME_MS }
+            ?.roundToInt() ?: 0
+        return Applied(mode.uppercase(), with, drifted, becomeMs)
     }
 
     /**
@@ -226,7 +252,7 @@ object MutateSheet {
     }
 
     /**
-     * The card's one stepper as the five knob slots [Mutate.render] and
+     * The card's two steppers as the six knob slots [Mutate.render] and
      * [Mutate.apply] take.
      *
      * One place, because HEAR and KEEP have to agree exactly: a preview
@@ -234,6 +260,7 @@ object MutateSheet {
      * then did not make, which is the whole promise of auditioning first.
      * The move's knob fills its own slot; every other slot keeps the
      * verb's default, since a move never reads a knob that is not its.
+     * BECOME is MORPH's second slot and 0 for every other move.
      */
     private data class Knobs(
         val spliceAtMs: Int,
@@ -241,9 +268,10 @@ object MutateSheet {
         val morphAmount: Float,
         val roomMix: Float,
         val bands: Int,
+        val becomeMs: Int,
     )
 
-    private fun knobs(mode: Mutate.Mode, fraction: Float): Knobs {
+    private fun knobs(mode: Mutate.Mode, fraction: Float, becomeFraction: Float): Knobs {
         val v = knobFor(mode)?.let { value(it, fraction) }
         return Knobs(
             spliceAtMs = if (mode == Mutate.Mode.SPLICE) v!!.roundToInt() else Mutate.DEFAULT_SPLICE_MS,
@@ -251,6 +279,7 @@ object MutateSheet {
             morphAmount = if (mode == Mutate.Mode.MORPH) v!! else 0.5f,
             roomMix = if (mode == Mutate.Mode.ROOM) v!! else 0.5f,
             bands = if (mode == Mutate.Mode.TRANSPLANT) v!!.roundToInt() else com.snipsnap.audio.Transplant.DEFAULT_BANDS,
+            becomeMs = becomeFor(mode)?.let { value(it, becomeFraction).roundToInt() } ?: 0,
         )
     }
 
@@ -265,16 +294,17 @@ object MutateSheet {
      * It refuses what [apply] refuses, and for the same reasons, so a
      * player never hears a move the keep would then decline: a pad cannot
      * parent itself, a move that takes one parent gets one, and a knob out
-     * of range is out of range here too.
+     * of range is out of range here too. [becomeFraction] is the BECOME
+     * stepper's position, read by MORPH alone.
      */
-    fun preview(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float): Snip {
+    fun preview(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float, becomeFraction: Float = 0f): Snip {
         require(partner !is Partner.Pad || partner.slot != slot) { "a pad can't be its own parent" }
         // The rewrite's own gate, not a copy of it: a velocity-layered pad
         // or a round-robin chain refuses here exactly as it refuses inside
         // `replaceAudio`, so HEAR never plays a move KEEP would decline.
         val pad = model.requireRewritable(slot)
         val base = WavReader.read(File(model.kitDir, pad.sampleFile))
-        val k = knobs(mode, fraction)
+        val k = knobs(mode, fraction, becomeFraction)
         return Mutate.render(
             base, listOf(source(model, partner)), mode,
             spliceAtMs = k.spliceAtMs,
@@ -282,16 +312,18 @@ object MutateSheet {
             morphAmount = k.morphAmount,
             roomMix = k.roomMix,
             bands = k.bands,
+            becomeMs = k.becomeMs,
         ).snip
     }
 
     /**
      * MUTATE: [slot] and [partner] become one hit by [mode]; [fraction] is
-     * the stepper's position on the move's knob (ignored by STACK). Through
+     * the stepper's position on the move's knob (ignored by STACK), and
+     * [becomeFraction] the BECOME stepper's (read by MORPH alone). Through
      * [Mutate.apply], so the bin, the recipe and the provenance are exactly
      * the CLI's; a roulette deal records its seed like `--roulette` does.
      */
-    fun apply(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float): Mutate.Outcome {
+    fun apply(model: KitBuilderModel, slot: Int, partner: Partner, mode: Mutate.Mode, fraction: Float, becomeFraction: Float = 0f): Mutate.Outcome {
         require(partner !is Partner.Pad || partner.slot != slot) { "a pad can't be its own parent" }
         val extra = when (partner) {
             is Partner.Deal -> mapOf(
@@ -307,7 +339,7 @@ object MutateSheet {
             // Nothing beyond the label, exactly as the CLI records a .wav parent.
             is Partner.Wav, is Partner.Pad -> emptyMap()
         }
-        val k = knobs(mode, fraction)
+        val k = knobs(mode, fraction, becomeFraction)
         return Mutate.apply(
             model, slot, listOf(source(model, partner)), mode,
             spliceAtMs = k.spliceAtMs,
@@ -315,6 +347,7 @@ object MutateSheet {
             morphAmount = k.morphAmount,
             roomMix = k.roomMix,
             bands = k.bands,
+            becomeMs = k.becomeMs,
             extraRecipe = extra,
         )
     }
