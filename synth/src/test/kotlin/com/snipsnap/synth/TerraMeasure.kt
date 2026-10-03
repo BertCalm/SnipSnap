@@ -7,6 +7,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.log10
+import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.tanh
 
@@ -129,4 +130,41 @@ internal object TerraMeasure {
 
     /** Time above [threshold], in ms at [rate] (BUZZ gates on 0.12). */
     fun msAbove(x: FloatArray, threshold: Float, rate: Int): Double = x.count { abs(it) > threshold } * 1000.0 / rate
+
+    /** Where the per-mode reading starts on a bank at the render rate: 20 ms, the head's own length (3528 frames at 176.4 kHz). */
+    const val MODE_FROM_FRAMES = BODY_FROM_FRAMES * Dsp.OVERSAMPLE
+
+    /** The per-mode reading's length on a bank at the render rate: 8192 frames, about 46 ms, a 21.5 Hz bin. */
+    const val MODE_WINDOW = 8192
+
+    /**
+     * Each mode's amplitude in [bank] (the bank alone, at [Terra.Body.rate])
+     * over [length] frames from [from]: the Hann-windowed projection onto the
+     * mode's nominal frequency, f0 x ratio. On a rigid body (droop 0: the bell
+     * and the bar) the bank's modes ring exactly there, and a struck bank and
+     * today's share their phases, their decays and (after the 1.8 ms stick)
+     * a silent exciter. So a struck bank's reading over today's is that mode's
+     * level against today's, the held HIT gain: the bar's closest modes are
+     * more than 50 bins apart, so no mode leaks into another's reading. A mode
+     * the bank skips (at or past
+     * Nyquist, no t60, or no table gain) reads 0.
+     */
+    fun modeLevels(bank: FloatArray, body: Terra.Body, from: Int, length: Int): DoubleArray {
+        val n = minOf(length, bank.size - from)
+        require(n >= 64) { "a per-mode reading needs at least 64 frames, got $n" }
+        return DoubleArray(body.modes.size) { k ->
+            val mode = body.modes[k]
+            val hz = body.fundamentalHz * mode.ratio
+            if (hz <= 0f || hz >= body.rate / 2f || mode.t60 <= 0f || mode.gain == 0f) return@DoubleArray 0.0
+            val w = 2.0 * PI * hz / body.rate
+            var re = 0.0
+            var im = 0.0
+            for (i in 0 until n) {
+                val v = bank[from + i] * (0.5 - 0.5 * cos(2.0 * PI * i / (n - 1)))
+                re += v * cos(w * i)
+                im -= v * sin(w * i)
+            }
+            4.0 * sqrt(re * re + im * im) / n
+        }
+    }
 }

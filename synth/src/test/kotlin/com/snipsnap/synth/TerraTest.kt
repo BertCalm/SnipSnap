@@ -12,6 +12,7 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -435,6 +436,140 @@ class TerraTest {
         }
     }
 
+    // ---------- HIT's floor (R1b; spec "HIT, the design", decision 22) ----------
+
+    /** The provisional default until R1b's page answers, among the three choices the page offers (none, -18 and -12 dB; -6 dB is out, see Terra.HIT_FLOOR_CHOICES); a floor outside 0..1 is refused. */
+    @Test
+    fun `HIT's floor defaults to a quarter of today's level, provisionally, among R1b's three choices`() {
+        assertEquals(0.25f, Terra.HIT_FLOOR, "the provisional default is -12 dB until R1b's page answers")
+        assertEquals(listOf(0f, 0.125f, 0.25f), Terra.HIT_FLOOR_CHOICES)
+        assertTrue(Terra.HIT_FLOOR in Terra.HIT_FLOOR_CHOICES)
+        val body = TerraMeasure.bodyOf(TerraVoice.TUNED_BAR)
+        for (bad in listOf(-0.01f, 1.01f, Float.NaN)) {
+            assertFailsWith<IllegalArgumentException>("floor $bad") { Terra.hitLevel(body, impulse, 1f, hitFloor = bad) }
+        }
+    }
+
+    /**
+     * The controller's ruling for R1b: phi = 0 must reproduce R1's HIT bit for
+     * bit. Compared with LegacyTerraHit, R1's colouring frozen at 58757f10,
+     * not with the floored code itself: every level curve on the four voices,
+     * the ten strikers and four strengths, then the forty cases rendered at
+     * HIT 1 with a dark and a bright head.
+     */
+    @Test
+    fun `a floor of 0 is R1's HIT bit for bit`() {
+        var curves = 0
+        for (voice in TerraVoice.entries) {
+            val body = TerraMeasure.bodyOf(voice)
+            for (s in TerraStrikers.TEN) {
+                val x = Terra.upsample(TerraStrikers.head(s.id))
+                for (c in listOf(0.25f, 0.5f, 0.75f, 1f)) {
+                    val r1 = assertNotNull(LegacyTerraHit.level(body, x, c), "$voice ${s.id} c=$c: R1's colouring")
+                    val now = assertNotNull(Terra.hitLevel(body, x, c, hitFloor = 0f), "$voice ${s.id} c=$c: the floored colouring at 0")
+                    assertEquals(r1.size, now.size, "$voice ${s.id} c=$c: mode count")
+                    for (k in r1.indices) assertContentEquals(r1[k], now[k], "$voice ${s.id} c=$c mode ${k + 1}")
+                    curves++
+                }
+            }
+        }
+        assertEquals(160, curves)
+        var renders = 0
+        for (id in listOf("kick01", "tsnare")) {
+            val x = Terra.upsample(TerraStrikers.head(id))
+            for (c in TerraCases.all) {
+                val r1 = Terra.renderWith(c.voice, c.macros) { body -> LegacyTerraHit.level(body, x, 1f)?.let { Terra.BankInputs(level = it) } }
+                assertContentEquals(r1.samples, Terra.renderStruckAt(c.voice, c.macros, x, 1f, hitFloor = 0f).samples, "${c.label}, $id at HIT 1")
+                renders++
+            }
+        }
+        assertEquals(80, renders)
+    }
+
+    /**
+     * The floor's promise, on the voice a dark head thins most (R1's page,
+     * question 2): at HIT 1, struck by the factory kick (A01_Kick_01.wav), no
+     * bar mode rings below phi x today's level, for every choice R1b's page
+     * offers.
+     *
+     * Three readings:
+     * - exactly, on the level curves: every floored value equals the floor-0
+     *   value wherever that value is at least phi, and equals phi exactly
+     *   elsewhere. That pins `s` taken from the unfloored |P_k| and the floor
+     *   applied after it.
+     * - on the bank: each mode's amplitude against today's (TerraMeasure.
+     *   modeLevels, from 20 ms) is at least phi less 0.5 dB, Phase 0's
+     *   materiality rule;
+     * - the same reading matches the held gain within 0.5 dB, so the measure
+     *   reads what the floor did.
+     *
+     * At phi = 0 at least one bar mode's held gain must fall more than
+     * 0.5 dB below the smallest non-zero choice (0.125 x 10^(-0.5/20),
+     * about 0.118), the same 0.5 dB gap the page generator checks between
+     * floors. Otherwise at least two of the floor clips on R1b's page
+     * hold the same tone after 20 ms, and the plan stops. Measured by plan
+     * review: the held gains are 1.354 / 0.010 / 0.005 / 0.001.
+     */
+    @Test
+    fun `at full HIT no bar mode rings below the floor, struck by the factory kick`() {
+        val voice = TerraVoice.TUNED_BAR
+        val body = TerraMeasure.bodyOf(voice)
+        val x = Terra.upsample(TerraStrikers.head("kick01"))
+        val from = TerraMeasure.MODE_FROM_FRAMES
+        val window = TerraMeasure.MODE_WINDOW
+        val today = TerraMeasure.modeLevels(Terra.bankWith(voice, emptyMap(), null), body, from, window)
+        for ((k, level) in today.withIndex()) assertTrue(level > 0.0, "bar mode ${k + 1} is silent today")
+        val unfloored = assertNotNull(Terra.hitLevel(body, x, 1f, hitFloor = 0f))
+        println("TERRA HIT floor: the factory kick at HIT 1 with no floor holds the bar's modes at ${unfloored.joinToString(" / ") { "%.3f".format(it.last()) }} of today's")
+        val tolerance = Math.pow(10.0, -0.5 / 20.0)
+        val lowest = unfloored.minOf { it.last() }
+        val smallest = Terra.HIT_FLOOR_CHOICES.filter { it > 0f }.min()
+        assertTrue(lowest < smallest * tolerance, "no bar mode holds 0.5 dB below $smallest of today's under the factory kick at HIT 1 (lowest $lowest), so some of R1b's floor clips would hold one tone")
+        for (phi in Terra.HIT_FLOOR_CHOICES) {
+            val gains = assertNotNull(Terra.hitLevel(body, x, 1f, hitFloor = phi), "floor $phi")
+            for (k in gains.indices) {
+                for (n in gains[k].indices) {
+                    val u = unfloored[k][n]
+                    if (u >= phi) {
+                        assertEquals(u, gains[k][n], "floor $phi mode ${k + 1} at $n: not R1's gain where the floor does not bite")
+                    } else {
+                        assertEquals(phi, gains[k][n], "floor $phi mode ${k + 1} at $n: not the floor where it bites")
+                    }
+                }
+            }
+            val struck = TerraMeasure.modeLevels(Terra.bankStruckAt(voice, emptyMap(), x, 1f, hitFloor = phi), body, from, window)
+            val ratios = DoubleArray(today.size) { k -> struck[k] / today[k] }
+            println(
+                "TERRA HIT floor $phi: bar mode levels against today's " +
+                    ratios.joinToString(" / ") { "%.3f (%+.1f dB)".format(it, 20 * log10(maxOf(it, 1e-9))) } +
+                    ", held gains " + gains.joinToString(" / ") { "%.3f".format(it.last()) },
+            )
+            for (k in ratios.indices) {
+                val held = gains[k].last().toDouble()
+                assertTrue(ratios[k] >= phi * tolerance, "floor $phi: bar mode ${k + 1} rings at ${ratios[k]} of today's, under the floor")
+                assertTrue(abs(ratios[k] - held) <= 0.06 * maxOf(held, 0.01), "floor $phi: bar mode ${k + 1} reads ${ratios[k]} on the bank against a held gain of $held")
+            }
+        }
+    }
+
+    /** `c = 0` is the null path at every floor (the controller's ruling), and an impulse (`s · |P| = 1`) is untouched even under the highest choice (0.25). */
+    @Test
+    fun `HIT 0 at every floor, and an impulse under the highest floor, render the frozen TERRA`() {
+        val head = TerraStrikers.head("kick01")
+        val highest = Terra.HIT_FLOOR_CHOICES.max()
+        var renders = 0
+        for (c in TerraCases.all) {
+            val frozen = LegacyTerraBank.render(c.voice, c.macros).samples
+            for (phi in Terra.HIT_FLOOR_CHOICES) {
+                assertContentEquals(frozen, Terra.renderStruck(c.voice, c.macros, head, 0f, hitFloor = phi).samples, "${c.label}, HIT 0 at floor $phi")
+                renders++
+            }
+            assertContentEquals(frozen, Terra.renderStruckAt(c.voice, c.macros, impulse, 1f, hitFloor = highest).samples, "${c.label}, an impulse at HIT 1 under floor $highest")
+            renders++
+        }
+        assertEquals(160, renders)
+    }
+
     /**
      * Recipe provenance, read before any claim below is blamed on HIT. The
      * six synthesised strikers' macro values are not in the tree (see
@@ -454,6 +589,11 @@ class TerraTest {
      *
      * Each striker's source format, peak and onset are printed first, so a
      * failure names which source changed.
+     *
+     * Read at a floor of 0 (`hitFloor = 0f`): this pins the algorithm Phase 0
+     * measured, which R1b's floor leaves bit for bit at 0 (`a floor of 0 is
+     * R1's HIT bit for bit`). The floor default's own claims are the coupling
+     * and monotone tests below, which read the default.
      */
     @Test
     fun `the ten strikers reproduce Phase 0's overtone spread at subtle - recipe provenance`() {
@@ -476,7 +616,7 @@ class TerraTest {
             val today = TerraMeasure.ob(Terra.render(row.voice), nominal).toDouble()
             for ((hit, phase0) in listOf(0.5f to row.at05, 1f to row.at1)) {
                 val moves = TerraStrikers.TEN.map { s ->
-                    TerraMeasure.ob(Terra.renderStruck(row.voice, emptyMap(), TerraStrikers.head(s.id), hit), nominal).toDouble() - today
+                    TerraMeasure.ob(Terra.renderStruck(row.voice, emptyMap(), TerraStrikers.head(s.id), hit, hitFloor = 0f), nominal).toDouble() - today
                 }
                 val got = doubleArrayOf(moves.average(), moves.min(), moves.max())
                 println("TERRA HIT T2 ${row.voice} HIT $hit per striker: " + TerraStrikers.TEN.zip(moves).joinToString { (s, m) -> "${s.id} ${"%.2f".format(m)}" })
@@ -494,7 +634,8 @@ class TerraTest {
     }
 
     /**
-     * The build is the algorithm Phase 0 measured. OB is read from 20 ms
+     * The build is the algorithm Phase 0 measured, read at a floor of 0
+     * (`hitFloor = 0f`, R1's HIT bit for bit). OB is read from 20 ms
      * on the float render, at defaults; the figures are spec "Testing" test
      * 2's and the Phase-0 record's T3 and Appendix B. 0.5 dB is Phase 0's
      * own materiality rule. A slip in the running projection, the level
@@ -524,7 +665,7 @@ class TerraTest {
         )
         for (r in rows) {
             val nominal = TerraMeasure.bodyOf(r.voice).fundamentalHz
-            val snip = if (r.striker == null) Terra.render(r.voice) else Terra.renderStruck(r.voice, emptyMap(), TerraStrikers.head(r.striker), r.hit)
+            val snip = if (r.striker == null) Terra.render(r.voice) else Terra.renderStruck(r.voice, emptyMap(), TerraStrikers.head(r.striker), r.hit, hitFloor = 0f)
             val ob = TerraMeasure.ob(snip, nominal).toDouble()
             println("TERRA HIT OB ${r.voice} ${r.striker ?: "unstruck"} HIT ${r.hit}: ${"%.2f".format(ob)} dB (Phase 0 ${"%.2f".format(r.ob)})")
             assertEquals(r.ob, ob, 0.5, "${r.voice} ${r.striker} HIT ${r.hit}")
@@ -588,7 +729,18 @@ class TerraTest {
      * Spec "Testing", test 8, over the ten strikers and c in {0, .25, .5,
      * .75, 1}:
      * - Every striker's OB moves monotonically on every voice (Phase 0: 10 of
-     *   10).
+     *   10), at the 0.01 dB step tolerance, except a curve that moves under
+     *   0.5 dB across the whole knob: |OB(1) - OB(0)| and the max-min span
+     *   both under 0.5 dB, Phase 0's materiality rule. Such a curve has no
+     *   audible effect to be monotone in, and is printed with the word
+     *   "exempt" and its span. Every curve that moves 0.5 dB or more is
+     *   checked at 0.01 dB. The controller's ruling (2026-10-02), from this
+     *   measurement at the default floor: RESONANT_CAVITY struck by BEATBOX
+     *   RIM at phi 0.25 reads OB -37.825 / -37.797 / -37.813 / -37.772 /
+     *   -37.670 dB at HIT 0 / .25 / .5 / .75 / 1, a span of 0.155 dB with a
+     *   0.016 dB step backwards; at phi 0.125 its span is 0.41 dB. The test
+     *   stays at the default floor (not phi = 0), and the step tolerance for
+     *   moving curves stays at 0.01 dB.
      * - At 0.5 the drum class never changes, and the first-5-ms peak is
      *   today's. Phase 0 read 1.000 on every voice; 0.005 is that figure's
      *   rounding.
@@ -611,6 +763,7 @@ class TerraTest {
         )
         var flipsAtStrong = 0
         var renders = 0
+        var exempt = 0
         for (voice in TerraVoice.entries) {
             val body = TerraMeasure.bodyOf(voice)
             val today = Terra.render(voice)
@@ -626,7 +779,14 @@ class TerraTest {
                 val obs = sweep.map { TerraMeasure.ob(it, body.fundamentalHz).toDouble() }
                 val steps = obs.zipWithNext { x, y -> y - x }
                 println("TERRA HIT sweep $voice ${s.name}: OB ${obs.joinToString(" / ") { "%.2f".format(it) }}")
-                assertTrue(steps.all { it >= -0.01 } || steps.all { it <= 0.01 }, "$voice ${s.name}: OB is not monotone in HIT: $obs")
+                val span = obs.max() - obs.min()
+                val travel = abs(obs.last() - obs.first())
+                if (travel < 0.5 && span < 0.5) {
+                    println("TERRA HIT sweep $voice ${s.name}: exempt from the step check, OB span ${"%.3f".format(span)} dB (|OB(1) - OB(0)| ${"%.3f".format(travel)} dB), under 0.5 dB")
+                    exempt++
+                } else {
+                    assertTrue(steps.all { it >= -0.01 } || steps.all { it <= 0.01 }, "$voice ${s.name}: OB is not monotone in HIT: $obs")
+                }
                 val subtle = sweep[2]
                 assertEquals(todayClass, Classifier.classify(subtle).drumClass, "$voice ${s.name}: HIT 0.5 changed the drum class")
                 val pk5 = TerraMeasure.firstFiveMsPeak(subtle)
@@ -647,6 +807,7 @@ class TerraTest {
             )
         }
         println("TERRA HIT 1: $flipsAtStrong class changes in 40 renders (Phase 0: 5, all membrane TOM to PERC)")
+        println("TERRA HIT sweep: $exempt of 40 curves exempt from the step check (total OB move under 0.5 dB)")
         assertEquals(160, renders)
     }
 

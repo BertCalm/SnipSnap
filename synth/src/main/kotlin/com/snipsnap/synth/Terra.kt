@@ -841,41 +841,69 @@ object Terra {
     internal fun upsample(head: FloatArray): FloatArray =
         Resampler.resample(Snip(head, 1, RATE), RATE * Dsp.OVERSAMPLE).samples
 
-    /** [voice] struck by a stored [head] at HIT [hit], 0..1. HIT 0 is today's render, byte for byte, and computes nothing. */
-    internal fun renderStruck(voice: TerraVoice, macros: Map<String, Float>, head: FloatArray, hit: Float): Snip =
-        if (!(hit > 0f)) render(voice, macros) else renderStruckAt(voice, macros, upsample(head), hit)
+    /**
+     * HIT's floor, phi (spec, "HIT, the design"; decision 22): a fraction of
+     * today's per-mode level that no mode falls below at HIT 1, whatever
+     * strikes the drum. 0.25 is -12 dB and **provisional**: R1b's page picks
+     * the value from [HIT_FLOOR_CHOICES], and the answer replaces it here. It
+     * is a code constant, not recipe data, so a saved struck pad renders with
+     * the build's floor.
+     */
+    internal const val HIT_FLOOR = 0.25f
+
+    /**
+     * The floors R1b's page offers: none, -18 and -12 dB. Removed once the
+     * owner picks one. There is no -6 dB (0.5) choice: at phi 0.5 the bell's
+     * coupling bar fails (the two heads sit 2.50 dB apart, under the 3 dB the
+     * test holds) and the cavity's tanh drive passes its cap (0.3661 against
+     * 0.36). The controller ruled it out, 2026-10-02.
+     */
+    internal val HIT_FLOOR_CHOICES = listOf(0f, 0.125f, 0.25f)
+
+    /** [voice] struck by a stored [head] at HIT [hit], 0..1, under the floor [hitFloor]. HIT 0 is today's render, byte for byte, and computes nothing, at any floor. */
+    internal fun renderStruck(voice: TerraVoice, macros: Map<String, Float>, head: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): Snip =
+        if (!(hit > 0f)) render(voice, macros) else renderStruckAt(voice, macros, upsample(head), hit, hitFloor)
 
     /** [renderStruck] with the striker [x] already at the render rate; an impulse there is `floatArrayOf(1f)`. */
-    internal fun renderStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float): Snip =
-        renderWith(voice, macros, hitInputs(x, hit))
+    internal fun renderStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): Snip =
+        renderWith(voice, macros, hitInputs(x, hit, hitFloor))
 
-    /** The bank alone ([bankWith]) struck by [x], already at the render rate, at HIT [hit]. */
-    internal fun bankStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float): FloatArray =
-        bankWith(voice, macros, hitInputs(x, hit))
+    /** The bank alone ([bankWith]) struck by [x], already at the render rate, at HIT [hit] under the floor [hitFloor]. */
+    internal fun bankStruckAt(voice: TerraVoice, macros: Map<String, Float>, x: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): FloatArray =
+        bankWith(voice, macros, hitInputs(x, hit, hitFloor))
 
     /** HIT as the bank's input builder: null at HIT 0, so [renderWith] takes today's path without computing anything. */
-    private fun hitInputs(x: FloatArray, hit: Float): ((Body) -> BankInputs?)? {
+    private fun hitInputs(x: FloatArray, hit: Float, hitFloor: Float): ((Body) -> BankInputs?)? {
         if (!(hit > 0f)) return null
-        val inputs: (Body) -> BankInputs? = { body -> hitLevel(body, x, hit)?.let { BankInputs(level = it) } }
+        val inputs: (Body) -> BankInputs? = { body -> hitLevel(body, x, hit, hitFloor)?.let { BankInputs(level = it) } }
         return inputs
     }
 
     /**
      * HIT's level curve on [body]: round two's COLOURED candidate, in the
-     * gain domain, on TERRA's own bank (spec, "HIT, the design").
+     * gain domain, on TERRA's own bank (spec, "HIT, the design"), with R1b's
+     * floor.
      *
-     * Each mode's gain is multiplied by `G_k(n) = (1 - c) + c * s * |P_k(n)|`:
+     * Each mode's gain is multiplied by
+     * `G_k(n) = (1 - c) + c * max(phi, s * |P_k(n)|)`:
      * - `|P_k(n)|` is the running magnitude of the striker [x] projected onto
      *   mode k at its nominal pitch, droop ignored. It grows while the
      *   striker plays and holds after its last non-zero sample, so a
      *   short-lived mode is never inflated during the head.
      * - `s` is the level match: the peak of today's body over the first three
-     *   periods, divided by the peak of the coloured body.
+     *   periods, divided by the peak of the coloured body. It is taken from
+     *   the unfloored `|P_k|`, exactly as R1 took it.
+     * - `phi` is [hitFloor], a fraction of today's per-mode level: at HIT 1
+     *   no mode rings below phi x today's. It is applied after `s`. Where
+     *   `s * |P_k(n)|` is at or above it, the value is R1's expression,
+     *   verbatim. At a floor of 0 that is every value, because `s > 0` and
+     *   `|P| >= 0`, so a floor of 0 is R1's HIT bit for bit (TerraTest's `a
+     *   floor of 0 is R1's HIT bit for bit`, against LegacyTerraHit).
      *
      * The receiver's modes come from [body] at render, so a retuned pad is
      * recoloured. Returns null - today's body - when [c] is not above 0, or
      * when `s` is not finite because the coloured body has no peak (spec,
-     * "Failure handling").
+     * "Failure handling"). A floor outside 0..1, or NaN, is refused.
      *
      * The arithmetic follows Phase 0's operation for operation, as the
      * Phase-0 record's §8.1 quotes it (`TerraStruckR2.running` and
@@ -888,7 +916,8 @@ object Terra {
      * returns null, today's body, as the spec's failure rule asks. No
      * Phase-0 case reached that branch.
      */
-    internal fun hitLevel(body: Body, x: FloatArray, c: Float): Array<FloatArray>? {
+    internal fun hitLevel(body: Body, x: FloatArray, c: Float, hitFloor: Float = HIT_FLOOR): Array<FloatArray>? {
+        require(hitFloor >= 0f && hitFloor <= 1f) { "HIT's floor is a fraction of today's level, 0..1, got $hitFloor" }
         if (!(c > 0f) || x.isEmpty() || body.modes.isEmpty()) return null
         val run = runningMagnitudes(body, x)
         val m = run[0].size
@@ -905,7 +934,12 @@ object Terra {
         val s = (peakOf(reference) / colouredPeak).toDouble()
         if (!s.isFinite()) return null
         val cd = c.coerceAtMost(1f).toDouble()
-        return Array(run.size) { k -> FloatArray(m) { n -> ((1.0 - cd) + cd * s * run[k][n]).toFloat() } }
+        val floor = hitFloor.toDouble()
+        return Array(run.size) { k ->
+            FloatArray(m) { n ->
+                if (s * run[k][n] < floor) ((1.0 - cd) + cd * floor).toFloat() else ((1.0 - cd) + cd * s * run[k][n]).toFloat()
+            }
+        }
     }
 
     /**
