@@ -305,7 +305,7 @@ class MagnetTest {
         // 400 ms fade and Magnet's own on top of it; the amp lifts either end by its gain. The ten TUNE steps
         // are the whole grid's binding cells and the ends of the range (the full 25-step search found, at
         // gain 106: the ceiling cells at steps 0 to 4 and 12 at MUTE 0, the decay cells at MUTE 1 at steps
-        // 3, 4, 18, 21 and 24), so the runtime stays at a few seconds. Mutation: with the ceiling fade
+        // 3, 4, 18, 21 and 24), so the test runs in about nine seconds. Mutation: with the ceiling fade
         // deleted the worst cell is -28.1 dB (CHUG, step 2, MUTE 0), with the decay fade back at 150 ms
         // squared it is -47.5 dB (CHUG, step 3, MUTE 1).
         val leadValve = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
