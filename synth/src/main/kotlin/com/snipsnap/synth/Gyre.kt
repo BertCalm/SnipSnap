@@ -19,10 +19,12 @@ import kotlin.random.Random
  * Four plucked strings at whole-number ratios of the note (1, 2, 3, 4: G2, so the waveform repeats
  * at the note and never at half of it) meet one bridge ([Strings.Bridge]) on a small membrane
  * ([Strings.Membrane]). What one string does reaches the others through the bridge and comes back:
- * a pluck on the first string sets the third ringing, which nothing else in the fleet does. A
- * rotor turns inside the instrument, not after it: it moves how strongly the strings are coupled,
+ * a pluck on the first string sets the third ringing, which nothing else in the fleet does. Eight
+ * sympathetic strings listen to the bridge and ring with what reaches them, and everything leaves
+ * through a box that BODY sizes. A rotor turns inside the instrument, not after it: it moves which
+ * upper string is loudest, which of the box's peaks swells, how strongly the strings are coupled,
  * which membrane mode is loudest, each string's loss and which sympathetic string answers, never
- * the output level. Eight sympathetic strings listen to the bridge and ring with what reaches them.
+ * the output level, and the strings are retuned at every step of it so it never bends the pitch.
  *
  * Round one plucks only (no TOUCH, no bow: R2), and its rotor stays under [SPIN_FAST_HZ] (the
  * note-locked top of SPIN is R3). HOLD's top step is reserved for the LOOP (R4) and renders as the
@@ -59,22 +61,83 @@ object Gyre {
     const val RADIATION_LARGE = 1.5f
 
     /**
+     * The box the strings sit on, which BODY sizes: every sound the instrument makes leaves through
+     * it. A small box (BODY 0) is thin and nasal: little below its lowest mode, its modes in the
+     * middle. A large box (BODY 1) is hollow and warm: low modes that ring, a dull top. Four modes,
+     * each a peak the size of [BOX_SMALL_DB] to [BOX_LARGE_DB], and two shelves for what a box of
+     * that size does to the lows and the top. All shape: the owner's first listen measured the
+     * membrane alone moving the octave bands 3.6 dB from BODY 0 to 1 ("Body doesn't make an impact").
+     */
+    val BOX_SMALL_HZ = floatArrayOf(520f, 860f, 1_300f, 1_900f)
+    val BOX_LARGE_HZ = floatArrayOf(105f, 180f, 270f, 420f)
+    val BOX_SMALL_DB = floatArrayOf(9f, 7f, 6f, 5f)
+    val BOX_LARGE_DB = floatArrayOf(12f, 9f, 7f, 5f)
+    const val BOX_Q_SMALL = 4f
+    const val BOX_Q_LARGE = 7f
+    const val BOX_LOW_SHELF_HZ = 250f
+    const val BOX_LOW_SMALL_DB = -12f
+    const val BOX_LOW_LARGE_DB = 4f
+    const val BOX_HIGH_SHELF_HZ = 1_800f
+    const val BOX_HIGH_SMALL_DB = 4f
+    const val BOX_HIGH_LARGE_DB = -15f
+
+    /** The box's size along BODY: `BODY^BOX_CURVE`, so the knob's first half moves it too (measured: each half at least 3.2 dB in the octave bands, the first the smaller). */
+    const val BOX_CURVE = 0.7f
+
+    internal fun boxSize(body: Float): Float = body.coerceIn(0f, 1f).pow(BOX_CURVE)
+
+    /** The box's peaks add level; this takes it back so the raw peak stays under [RAW_PEAK_CEILING]. The output stage sets the loudness. */
+    const val BOX_TRIM = 0.7f
+
+    /** How long the box rings once nothing drives it: its lowest mode, the slowest, for the tail. */
+    internal fun boxT60(body: Float): Float {
+        val size = boxSize(body)
+        val hz = Dsp.expMap(size, BOX_SMALL_HZ[0], BOX_LARGE_HZ[0])
+        return (Dsp.lin(size, BOX_Q_SMALL, BOX_Q_LARGE) * ln(1000.0) / (PI * hz)).toFloat()
+    }
+
+    /**
+     * The box loads the strings: a large box draws more from them, so they ring darker and shorter;
+     * a small one leaves them bright and long. Scales on the voice's own loop brightness and t60.
+     */
+    const val LOAD_BRIGHT_SMALL = 1.35f
+    const val LOAD_BRIGHT_LARGE = 0.6f
+    const val LOAD_T60_SMALL = 1.1f
+    const val LOAD_T60_LARGE = 0.75f
+
+    /** A large box also lowers the strings' brightness ceiling ([BRIGHT_CEILING_HZ]) by this, so it is heard on the top notes too. Never raised. */
+    const val LOAD_CEILING_LARGE = 0.6f
+
+    /**
      * The wolf guard: on a note that sits on a membrane mode, the coupling is scaled down until the
-     * bridge's own term at the note, `(2c/N)|H(f)|`, is at most this. Measured: 0.1 left a 31-cent
+     * bridge's own term at the note, `(2c/N)|H(f)|`, is at most this (and at most [WOLF_T60]'s bound). Measured: 0.1 left a 31-cent
      * wolf at D3# and BODY 1; 0.05 held every corner the Phase-0 prototype tried within 4.7 cents
      * (SPIN 0.5 included) and leaves the default coupling untouched. The built engine's worst over
-     * the tuning test's corners is 3.3 cents (`GyreTest`).
+     * the tuning test's corners is 3.4 cents (`GyreTest`; 3.3 in round one).
      */
     const val WOLF_GUARD = 0.05f
+
+    /**
+     * The wolf guard's second rule: the bridge may not drain the note's fundamental faster than this
+     * t60, so `(2c/N)|H(f)|` is also at most `ln(1000) / (f * WOLF_T60)`. The first rule guards the
+     * pitch, this one the note: measured on the merged round one, F4 sat on BODY 1's top membrane
+     * mode (353 Hz) and its fundamental died 41 dB under its octave (HALO), so the house detector
+     * read 700 Hz. Low notes keep [WOLF_GUARD]; it binds from about 140 Hz up. Shape.
+     */
+    const val WOLF_T60 = 1f
 
     /** No string's loop keeps more than this per period. The bridge's slack is far under `1 - FB_CEILING`. */
     const val FB_CEILING = 0.9995f
 
-    /** The strings' loop filters stop here: past it, FLICK's A4 read as a snare (more than half its energy over 2 kHz). Measured: 8 kHz cleared it with no margin, 5 kHz with the worst at 0.36. */
+    /** The strings' loop filters stop here: past it, FLICK's A4 read as a snare (more than half its energy over 2 kHz). Measured: 8 kHz cleared it with no margin, 5 kHz with the worst at 0.36 (0.41 with round 1b's box, whose small end lifts the top). */
     const val BRIGHT_CEILING_HZ = 5_000f
 
-    /** SPIN's rotor in round one: stationary at 0, then [SPIN_SLOW_HZ] to [SPIN_FAST_HZ]; depth rises fast and saturates at [SPIN_DEPTH]. */
-    const val SPIN_SLOW_HZ = 0.15f
+    /**
+     * SPIN's rotor in round one: stationary at 0, then [SPIN_SLOW_HZ] to [SPIN_FAST_HZ]; depth rises
+     * fast and saturates at [SPIN_DEPTH]. The slow end was 0.15 Hz until the owner's first listen
+     * ("Spin not noticable on short notes"): a rotor slower than the note never got round once.
+     */
+    const val SPIN_SLOW_HZ = 0.8f
     const val SPIN_FAST_HZ = 10f
     const val SPIN_DEPTH = 0.8f
     const val SPIN_DEPTH_KNEE = 0.2f
@@ -85,6 +148,30 @@ object Gyre {
     const val SWING_MEMBRANE = 0.7f
     const val SWING_SYMPATHY = 0.8f
 
+    /**
+     * The two destinations the main sound carries, added after the owner's first listen ("Spin not
+     * noticable on short notes"); the others move what is quiet. [SWING_HEARD]: the rotor faces the
+     * three upper strings in turn, a quarter turn apart like [SWING_DAMPING] (the note's partials 2
+     * to 4), the one it faces up to this much louder and the one behind it quieter, while the first
+     * string holds the level. A string's level has no phase, so this moves the timbre and never the
+     * pitch. [SWING_BOX]: each of the box's peaks swells and shrinks by this fraction of its size,
+     * spread over half a turn so the lowest and highest swing opposite: the box's balance tilts with
+     * the rotor, in the same direction as the bridge's own swing (the other way round they cancelled:
+     * HALO's centroid swing fell to 7% of its mean, against round one's 12%; now 28%). Measured on
+     * the way: sweeping the box's modes in frequency bent the pitch (11 cents, HALO, near a low mode),
+     * a swept low-pass on each string moved almost nothing (FLICK's C4 has little over 2 kHz). Shape.
+     */
+    const val SWING_HEARD = 1.25f
+    const val SWING_BOX = 1f
+
+    /**
+     * The strings are built this far below their note so the rotor can retune them either way: each
+     * rotor step re-solves [bridgeTuned] for the bridge as it is now, so no swing of the coupling or
+     * the membrane bends the pitch. Measured before: with the rotor at 1.2 Hz (HALO's default SPIN),
+     * D3 at BODY 1 and SYMPATHY 1 read 5.2 cents sharp.
+     */
+    const val RETUNE_HEADROOM = 0.97f
+
     /** The rotor is a control signal: its destinations move every this many samples (5.5 kHz at 176.4 kHz). */
     const val ROTOR_BLOCK = 32
 
@@ -93,7 +180,7 @@ object Gyre {
     const val SYMPATHY_T60_HIGH = 6f
 
     /** The sympathetic bank's level: `SYMPATHY_GAIN * SYMPATHY^SYMPATHY_CURVE`. Fitted in round one to the target shares (Task 5). */
-    const val SYMPATHY_GAIN = 8.4f
+    const val SYMPATHY_GAIN = 6.2f
     const val SYMPATHY_CURVE = 2f
 
     /** Each sympathetic string's detune in cents, one-shots only (a LOOP zeroes them, R4). Shape. */
@@ -134,7 +221,7 @@ object Gyre {
 
     const val OUTPUT_DC_HZ = 20f
 
-    /** The raw (pre-level) peak a render may reach. Measured worst in Phase 0: 0.95. */
+    /** The raw (pre-level) peak a render may reach. Measured worst in Phase 0: 0.95; round 1b, with the box and [BOX_TRIM]: 0.985. */
     const val RAW_PEAK_CEILING = 1.25f
 
     /**
@@ -216,14 +303,15 @@ object Gyre {
         return minOf(tight + (maxOf(RING_OUT_T60, tight) - tight) * s, sympathyT60(sympathy))
     }
 
-    /** After the hand lands, until the slower of the two is [END_DB] down. */
-    internal fun tailSeconds(voice: GyreVoice, sympathy: Float): Float =
-        END_DB / 60f * maxOf(DAMPER_T60, releaseT60(voice, sympathy))
+    /** After the hand lands, until the slowest of the strings, the sympathetic strings and the box is [END_DB] down. */
+    internal fun tailSeconds(voice: GyreVoice, sympathy: Float, body: Float): Float =
+        END_DB / 60f * maxOf(DAMPER_T60, releaseT60(voice, sympathy), boxT60(body))
 
     /** Samples at the oversampled rate: exactly what [play] renders. */
     internal fun rawFrames(voice: GyreVoice, macros: Map<String, Float>): Int {
         val m = settled(macros, voice)
-        return ((dampSeconds(voice, m.getValue("HOLD")) + tailSeconds(voice, m.getValue("SYMPATHY"))) * RATE * Dsp.OVERSAMPLE).toInt()
+        val tail = tailSeconds(voice, m.getValue("SYMPATHY"), m.getValue("BODY"))
+        return ((dampSeconds(voice, m.getValue("HOLD")) + tail) * RATE * Dsp.OVERSAMPLE).toInt()
     }
 
     /** Frames at [RATE] a render has: the decimator's two floored 2:1 steps come to `raw / OVERSAMPLE`. */
@@ -244,12 +332,13 @@ object Gyre {
 
     /**
      * The bridge's coupling at the note [f] with the wolf guard applied: [c] scaled down only where
-     * a membrane mode sits on the note, until `(2c/N)|H(f)|` is at most [WOLF_GUARD].
+     * a membrane mode sits on the note, until `(2c/N)|H(f)|` is at most [WOLF_GUARD] and [WOLF_T60]'s bound.
      */
     internal fun wolfGuarded(c: Float, f: Float, membrane: Strings.Membrane): Float {
         val h = membrane.response(f.toDouble())
         val own = 2.0 * c / STRINGS * kotlin.math.hypot(h[0], h[1])
-        return if (own > WOLF_GUARD) (c * WOLF_GUARD / own).toFloat() else c
+        val most = minOf(WOLF_GUARD.toDouble(), ln(1000.0) / (f * WOLF_T60))
+        return if (own > most) (c * most / own).toFloat() else c
     }
 
     /**
@@ -297,18 +386,21 @@ object Gyre {
         val c0 = probe.coupling ?: wolfGuarded(couplingFor(body), f, membrane)
         val cMean = c0 * (1f - depth * SWING_COUPLING / 2f)
 
+        val bright = shape.brightRatio * Dsp.lin(body, LOAD_BRIGHT_SMALL, LOAD_BRIGHT_LARGE)
+        val t60 = shape.t60 * Dsp.lin(body, LOAD_T60_SMALL, LOAD_T60_LARGE)
+        val ceiling = BRIGHT_CEILING_HZ * Dsp.lin(body, 1f, LOAD_CEILING_LARGE)
         val loops = Array(STRINGS) { k ->
             val fk = f * RATIOS[k]
-            val loopHz = minOf(fk * shape.brightRatio, BRIGHT_CEILING_HZ)
-            val fb = 10f.pow(-3f / (shape.t60 * fk)).coerceAtMost(FB_CEILING)
-            val t = Strings.tune(bridgeTuned(fk, cMean, membrane), loopHz, rate)
-            Strings.Loop(t.n, t.a, fb, loopHz, rate)
+            val loopHz = minOf(fk * bright, ceiling)
+            val fb = 10f.pow(-3f / (t60 * fk)).coerceAtMost(FB_CEILING)
+            val low = Strings.tune(bridgeTuned(fk, cMean, membrane) * RETUNE_HEADROOM, loopHz, rate)
+            Strings.Loop(low.n, low.a, fb, loopHz, rate).also { it.retune(bridgeTuned(fk, cMean, membrane)) }
         }
         val bursts = Array(STRINGS) { k ->
             if (probe.solo != null && probe.solo != k) FloatArray(0)
             else {
                 val fk = f * RATIOS[k]
-                val n = Strings.tune(fk, minOf(fk * shape.brightRatio, BRIGHT_CEILING_HZ), rate).n
+                val n = Strings.tune(fk, minOf(fk * bright, ceiling), rate).n
                 Strings.pluckExciter(n, fk, shape.pickHz, PICK_POSITIONS[k], Dsp.seedFor("GYRE", voice.name, midi, k), rate, len)
                     .also { b -> for (i in b.indices) b[i] *= shape.levels[k] }
             }
@@ -323,12 +415,21 @@ object Gyre {
         // at its own pitch. Never above 1 (the hand only takes energy away).
         val stopped = FloatArray(STRINGS) { k ->
             val fk = f * RATIOS[k]
-            val fb = 10f.pow(-3f / (shape.t60 * fk)).coerceAtMost(FB_CEILING)
+            val fb = 10f.pow(-3f / (t60 * fk)).coerceAtMost(FB_CEILING)
             (10f.pow(-3f / (DAMPER_T60 * fk)) / fb).coerceAtMost(1f)
         }
         val gSym = if (probe.sympathy) sympathyGain(sympathy) else 0f
         val beta = Dsp.lin(body, SYMPATHY_BODY_SMALL, SYMPATHY_BODY_LARGE)
         val gRad = Dsp.lin(body, RADIATION_SMALL, RADIATION_LARGE)
+        val size = boxSize(body)
+        val boxQ = Dsp.lin(size, BOX_Q_SMALL, BOX_Q_LARGE)
+        val box = Array(BOX_SMALL_HZ.size + 2) { Dsp.Biquad() }
+        val boxHz = FloatArray(BOX_SMALL_HZ.size) { Dsp.expMap(size, BOX_SMALL_HZ[it], BOX_LARGE_HZ[it]) }
+        val boxDb = FloatArray(BOX_SMALL_HZ.size) { Dsp.lin(size, BOX_SMALL_DB[it], BOX_LARGE_DB[it]) }
+        val heard = FloatArray(STRINGS) { 1f }
+        for (j in boxHz.indices) box[j].peaking(boxHz[j], boxDb[j], boxQ, rate)
+        box[BOX_SMALL_HZ.size].lowShelf(BOX_LOW_SHELF_HZ, Dsp.lin(size, BOX_LOW_SMALL_DB, BOX_LOW_LARGE_DB), rate)
+        box[BOX_SMALL_HZ.size + 1].highShelf(BOX_HIGH_SHELF_HZ, Dsp.lin(size, BOX_HIGH_SMALL_DB, BOX_HIGH_LARGE_DB), rate)
 
         val out = FloatArray(len)
         val per = if (probe.record) Array(STRINGS) { FloatArray(len) } else null
@@ -352,11 +453,17 @@ object Gyre {
                 }
                 for (k in 0 until STRINGS) {
                     val damp = 1f + (stopped[k] - 1f) * hand
-                    loops[k].gain((1f - depth * SWING_DAMPING * (1f + cos(phase - k * PI / 2).toFloat()) / 2f) * damp)
+                    val facing = cos(phase - k * PI / 2).toFloat()
+                    loops[k].gain((1f - depth * SWING_DAMPING * (1f + facing) / 2f) * damp)
+                    if (k > 0) heard[k] = 1f + depth * SWING_HEARD * facing
+                }
+                if (depth > 0f) for (j in boxHz.indices) {
+                    box[j].peaking(boxHz[j], boxDb[j] * (1f - depth * SWING_BOX * sin(phase - PI * j / (boxHz.size - 1)).toFloat()), boxQ, rate)
                 }
                 for (k in 0 until modes) w[k] = MEMBRANE_WEIGHTS[k] * (1f - depth * SWING_MEMBRANE * (1f + cos(phase - 2 * PI * k / modes).toFloat()) / 2f)
                 membrane.weigh(w)
                 c = (c0 * (1f - depth * SWING_COUPLING * (1f + sin(phase).toFloat()) / 2f)).coerceIn(0f, 1f)
+                if (depth > 0f) for (k in 0 until STRINGS) loops[k].retune(bridgeTuned(f * RATIOS[k], c, membrane))
                 for (j in 0 until SYMPATHETIC) {
                     val cj = max(0f, cos(phase - 2 * PI * j / SYMPATHETIC).toFloat())
                     emphasis[j] = 1f - depth * SWING_SYMPATHY * (1f - cj * cj)
@@ -373,7 +480,7 @@ object Gyre {
                 val x = bursts[k].let { if (i < it.size) it[i] else 0f }
                 val v = loops[k].inject(x + back[k])
                 if (per != null) per[k][i] = v
-                y += v
+                y += heard[k] * v
             }
             y += gRad * radiated
             if (gSym > 0f) {
@@ -382,7 +489,8 @@ object Gyre {
                 for (j in 0 until SYMPATHETIC) ys += emphasis[j] * bands[j].process(drive)
                 y += gSym * ys
             }
-            out[i] = y
+            for (b in box) y = b.process(y)
+            out[i] = BOX_TRIM * y
             phase += step
         }
         return Played(out, per)
