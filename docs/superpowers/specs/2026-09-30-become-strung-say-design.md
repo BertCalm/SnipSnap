@@ -1141,15 +1141,30 @@ identical channels stay identical (the rule ENSEMBLE and CONTOUR follow,
   body") is the one row with room whose grouping fits a filter that reshapes the hit's
   body over time. The row is Decision 17, with no chip as the alternative. The card needs
   no `:app` edit (`PadSheetScreen.kt:2400`, `:913`).
-- **Reach.** The chip and `treat said` give **one word**, ONE: the phone has one
-  AMT, and a selector has no amount (`TreatCommand.kt:15` takes `--amount` only).
-  The other seven words reach a pad through a recipe (a hand-written or
-  generated `fx` block, a synth patch's landing chain, `SynthCommand.kt:100-102`'s
-  `PadRecipe(patch, landing)`) or by breeding two pads that carry them. Said
-  plainly, because a section whose eight-way selector cannot be turned from the
-  phone is a fair thing to ask about: that is the brief's phone reach, and
-  Decision 7 lists the ways to widen it (a `--word` flag on `treat`, a second tap
-  that steps the word) and what each costs.
+- **Reach: a second tap steps the word** (owner, 2026-10-01; Decision 7, taken).
+  The first tap on SAY treats the pad with the word ONE at the AMT on screen, like
+  every chip. A re-tap of the lit chip keeps the card's oldest gesture, re-treating
+  at the AMT on screen (`PadSheet.kt:377-380`), with one addition for SAY alone:
+  - **AMT unchanged since the last SAY tap:** the re-tap steps the word
+    (ONE → TWO → … → EIGHT → ONE) and re-treats.
+  - **AMT moved:** the re-tap re-treats at the new AMT and keeps the word.
+
+  So a re-tap never changes both at once. The status line names the word on
+  every SAY tap (a Copy line under the PersonalityTest laws). The chip label
+  stays `SAY`, so the row's width and `PadSheetTest`'s labels do not move.
+  - **Storage:** the word goes into the pad's recipe as an optional `word` key
+    beside `treatment: "said"`. It is read with `as?`, and a missing key means
+    ONE, so a replay, a paste, a take or a breed keeps the word instead of
+    falling back to ONE by name. `RecipeReplay.kt:90-91` reads it, and a
+    SidecarFuzzTest seed carries a hostile `word`.
+  - **CLI parity:** `treat said --word 1..8` (`TreatCommand.kt:15`; refused for
+    any other treatment) and the `docs/CLI.md` line.
+  - **Precedent:** this is the first chip whose re-tap means more than "re-treat".
+    The rule is pinned in `:shell` (a PadSheet function the screen calls, unit
+    tested), so ConventionTest is not the only guard on an `:app` change that
+    cannot be compiled here.
+
+  Recipes and breeding still carry all eight words as before.
 
 ### Phase 0, what was done and what is open
 
@@ -1206,7 +1221,7 @@ document), because the spike measured one word on one source:
 | The selector | `Thump.kt:33` (`MacroSpec`); `Treatments.kt:95-109`; `Breed.kt:198-215`, `:274-276` | `selector` flag; `fade`; `pick` and `crossMacros` |
 | The character | `Treatments.kt:30-69` | `said` appended to `EXTRA` |
 | The chip | `PadSheet.kt:74` at `129bc48e` (`ANATOMY_SEGMENTS`), `:169-209` (`CHARACTER_FOR`), KDoc `:73` | `SAY`, six on the row (Decision 17) |
-| The card, `treat`, replay | `PadSheetScreen.kt:2400`; `TreatCommand.kt` (names are `Treatments.names`); `RecipeReplay.kt:90-91` | none |
+| The card, `treat`, replay | `PadSheetScreen.kt:2400` (the SAY re-tap branch); `PadSheet.kt` (the re-tap rule as a tested function); `TreatCommand.kt:15` (`--word`); `RecipeReplay.kt:90-91` (reads `word`, default ONE) | the second tap that steps the word, the `word` key (Decision 7, taken) |
 | Docs | `README.md:476-521` (the rack paragraph and the order line); `docs/CLI.md:341-377` (the `treat` list, row two, the phone sentence) | `said`, the order, SAY on row two |
 | Listening | `SayAuditionGenerator.kt` (test), a `generateSayAudition` task beside `synth/build.gradle.kts:336-343`, a `.gitignore` line (`testkit/say-audition/`) | the gate's clips and page |
 | Tests | `FxTest.kt` (a SAY block; the generic ones are free), `TreatmentsTest.kt:30-35` (the names list), `PadSheetTest.kt:116-149`, `BreedFxTest.kt`, `BreedTest.kt`, `SidecarFuzzTest.kt:335-337` (a `say` seed), new `SayTest`, `FormantTest`, `VoxSpeakFrozenTest` | see "Testing" |
@@ -1601,7 +1616,7 @@ Nothing approved is dropped without the owner saying so.
 | **G1 and F1** | G1, the VoxSpeak guard (green against the unchanged source), then F1, `Formant.kt` (green again): no audio change | the guard; shared with the Group B spec's R3 |
 | **A2-V0** | SAY's Phase 0: the five open measurements ("SAY, the design") | printed and recorded in the SAY plan's own spike note; **stop** if the rack pass at the snip's rate misses the bar |
 | **A2** | SAY's logic: `Say`, the section row, the selector flag, the audition generator, tests | the A2 gate |
-| **A2b** | SAY's treatment `said`, its chip on the anatomy row (Decision 17), the `README.md` and `docs/CLI.md` lines | after the A2 gate, unless its stop answer is given (Decision 14) |
+| **A2b** | SAY's treatment `said`, its chip on the anatomy row (Decision 17), the second tap that steps the word with its `word` recipe key and `treat said --word` (Decision 7, taken), the `README.md` and `docs/CLI.md` lines | after the A2 gate, unless its stop answer is given (Decision 14) |
 
 **Effort**, from footprints and the spikes' own estimates: BECOME is about 40 lines
 of DSP, the recipe field and a slider (bold-talk §6, "half a day"), plus about
@@ -1748,8 +1763,8 @@ uses them.
   VOX SPEAK.
 - **SAY inside an engine.** The ablation (NCC 0.956) says the rack pass hears the
   same, and TIDE's GONG and FLARE have no room for an eighth macro (bold-talk §6).
-- **A word chooser on the phone beyond one word, and words other than the eight**
-  (Decision 7).
+- **A word list or picker on the phone beyond the second-tap step, and words other than
+  the eight** (Decision 7 is taken as the second tap; a list is a later card design).
 - **Engine WORD macros under breed.** VOX SPEAK's, SWARM's and WRAITH's WORD macros are
   averaged by `Breed.cross` today (`Breed.kt:251-253`); SAY's flag does not touch that path,
   and marking those engines' specs is a change to shipped engines.
@@ -1769,6 +1784,7 @@ table does not date them more finely than the brief does.
 
 | Question | Decision | By |
 |---|---|---|
+| SAY's word on the phone | A second tap on the lit SAY chip steps the word when AMT has not moved since the last SAY tap; the word is stored as a `word` recipe key ("Reach") | owner, 2026-10-01 |
 | Is CHIMERA built as an engine? | No. Group A reuses MUTATE, the keyed family and the rack; the Group B spec lists CHIMERA as an engine out of scope, with the measurement (post-render hybrids equal MUTATE or TERRA alone after 20 ms, NCC 0.9993 to 1.0000, `hybrid-r2-spec`) | the owner's approval of the grouping, 2026-09-29–30 |
 | How far should a hybrid go | "I think we could go further/bolder"; the bold round ran | owner, 2026-09-29–30 |
 | Which bold families | **Keep Steer, Ring and Talk** | owner, 2026-09-29–30, after the bold round |
@@ -1811,7 +1827,7 @@ paraphrases the clip the owner kept, where the clip wins.
 | 4 | STRUNG with no key | **The open voicing: the low fifth (root − 5), the root, the fifth, the octave; no third** (`Body.modes`'s chromatic rule, `BodyTest.kt:76-77`) | A major third; or a refusal that asks for a key | A third makes a keyless kit sound major; a refusal leaves the chip dead until a key is set |
 | 5 | STRUNG's AMT | **The strings added to the untouched hit at AMT × 2.5** (AMT 1 is the clip the owner heard) | BODY's law: a crossfade from the dry hit to the ring, peak-matched, which replaces the hit at AMT 1 | The crossfade is what BODY already is; the added-strings law is what makes STRUNG a different thing |
 | 6 | STRUNG's ring | **Up to 1.5 s past the hit, no dial** (the brief's "tail cap ~1.5 s" read as a cap on the tail; the spike's buffer was the clap plus 1.1 s, cut at 1.352 s total) | 1.5 s in total from the strike (the spike's ceiling as it was written; a pad already longer than that gets no ring, since the pad is never cut); or a CLI-only `--decay` on a new `Keyed.Dials` field | The total cap shortens the ring on long pads; a dial is an additive change to the recipe and to `RecipeReplay` |
-| 7 | SAY's word on the phone | **The chip says ONE; the other seven words by recipe, landing chain or breed** | A `--word` flag on `treat` (CLI only; replay is by name, so a paste would then need the last alternative); a second tap on a lit SAY chip stepping the word (an `:app` design with no precedent on this card); PASTE refusing a `said` recipe whose stored chain is not the treatment's own | This is the question the brief's phone reach leaves open |
+| 7 | SAY's word on the phone | **The chip says ONE; the other seven words by recipe, landing chain or breed** | A `--word` flag on `treat` (CLI only; replay is by name, so a paste would then need the last alternative); a second tap on a lit SAY chip stepping the word (an `:app` design with no precedent on this card); PASTE refusing a `said` recipe whose stored chain is not the treatment's own | This is the question the brief's phone reach leaves open **Taken 2026-10-01: a second tap on the lit SAY chip steps the word (see "Reach" and "Decisions already taken").** |
 | 8 | How SAY's hold is reached (the brief's "holds the last vowel" paraphrases the approved clip, which holds the word's final frame) | **The word plays through, then the filter holds its final formant frame**, as the approved clip does (the table's second column in "The filter", step 3; a nasal hum for ONE and SEVEN) | The brief's words read literally: return to the last open vowel over 80 ms and hold it (the table's third column; the gate's clip 8); or the track stops at the last vowel, so the word's closing frames (ONE's n, FIVE's v, SIX's k and s, EIGHT's t) are never reached | The default adds nothing to the track and is the sound the owner kept; the return is one more listening value (80 ms, *this spec's*), a second argument on the shared track function and a filter that moves after the word, and ONE then ends on its vowel and not on the hum; the stop is the simpler build, but ONE then says "wuh" and the word never ends |
 | 9 | Breed's selector rule | **On the third draw (the mean) a child takes A's word** (the stream stays one draw long; A's word comes up two times in three) | A fair coin: one more draw, only for a section that has a selector | A fair coin changes the draw count for a selector section |
 | 10 | SAY and identity | **SAY may change a hit's class, as GHOST and RING do; the kick and snare class is printed at the gate** | SAY is held to "a kick through it is still a kick" and the chip's MIX comes down until it is | Holding the rule weakens the word on kicks |

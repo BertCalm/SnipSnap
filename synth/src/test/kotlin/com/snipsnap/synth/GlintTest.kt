@@ -46,10 +46,12 @@ class GlintTest {
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
         for (voice in GlintVoice.entries) {
+            // DEPTH is pinned to 0 in the all-ones corner: at 1 it is a bare sine, and this corner exists to
+            // exercise the buzzy window. GlintDepthTest renders DEPTH's own corners.
             val cases = listOf(
                 emptyMap<String, Float>() to 0.5f,
                 Glint.macrosFor(voice).associate { it.name to 0f } to 0.5f,
-                Glint.macrosFor(voice).associate { it.name to 1f } to 0.35f,
+                Glint.macrosFor(voice).associate { it.name to (if (it.name == "DEPTH") 0f else 1f) } to 0.35f,
             )
             for ((macros, peakFloor) in cases) {
                 val snip = Glint.render(voice, macros)
@@ -63,17 +65,17 @@ class GlintTest {
         }
     }
 
-    // VOWEL declares five, without FOLLOW: `GlintVowelTest` holds its list.
+    // VOWEL declares six, without FOLLOW: `GlintVowelTest` holds its list.
     @Test
-    fun `every path voice declares exactly the six macros`() {
+    fun `every path voice declares exactly the seven macros`() {
         for (voice in PATH_VOICES) {
             val macros = Glint.macrosFor(voice)
             assertEquals(
-                listOf("TUNE", "PEAK", "FOLLOW", "BODY", "BLOOM", "DECAY"),
+                listOf("TUNE", "PEAK", "FOLLOW", "BODY", "BLOOM", "DECAY", "DEPTH"),
                 macros.map { it.name },
                 "$voice's macro contract",
             )
-            assertEquals(listOf(0.5f, 0.45f, 0.8f, 0.4f, 0.675f, 0.5f), macros.map { it.default }, "$voice's defaults")
+            assertEquals(listOf(0.5f, 0.45f, 0.8f, 0.4f, 0.675f, 0.5f, 0f), macros.map { it.default }, "$voice's defaults")
             assertEquals(0.5f, macros.first { it.name == "BLOOM" }.neutral, "$voice's BLOOM is bipolar, neutral at its centre")
         }
     }

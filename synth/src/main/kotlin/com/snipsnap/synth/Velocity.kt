@@ -217,6 +217,9 @@ object Velocity {
         is TerraPatch -> Terra.macrosFor(patch.voice)
         is SilkPatch -> Silk.macrosFor(patch.voice)
         is BorePatch -> Bore.macrosFor(patch.voice)
+        is ArcoPatch -> Arco.macrosFor(patch.voice)
+        is MercuryPatch -> Mercury.macrosFor(patch.voice)
+        is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
     }
 
@@ -251,6 +254,12 @@ object Velocity {
         // exactly what this function exists to find. Proven monotonic by
         // ForkTest's `STRIKE moves the onset centroid at every step`.
         patch is ForkPatch -> "STRIKE"
+        // MERCURY PING's GLASS shortens the strike (a harder mallet) and tilts
+        // the pickup bright. Proven monotonic by MercuryTest's `velocity
+        // brightens PING at every step`; the owner heard it and kept it
+        // (2026-10-02). SING and BLADE take velocity as a number instead
+        // ([touchedVelocity]).
+        patch is MercuryPatch && patch.voice == MercuryVoice.PING -> "GLASS"
         // MAGNET's PICK is a thumb to a wire: the string exciter's low-pass
         // corner (150 to 16000 Hz, pinned at the voice's default) with a
         // second pole below the default and the loop's and the pickup's
@@ -262,6 +271,23 @@ object Velocity {
         patch is MagnetPatch -> "PICK"
         else -> null
     }
+
+    /**
+     * Voices that take velocity as a number on their own render, with no
+     * macro moved and no [soften]: MERCURY SING and BLADE, where velocity is
+     * the touch (`Mercury.VELOCITY_RAMP`, `Mercury.SCRAPE_DB`): a soft rub
+     * swells in, a hard one catches at once with a short scrape.
+     *
+     * A rubbed glass or a bowed blade is close to a pure tone: the rub
+     * sustains the fundamental, and the upper modes are not harmonics of it,
+     * so a harder touch barely brightens the held body (4% on SING and 13%
+     * on BLADE, measured with a steeper contact taper). Round 2's GLASS moved
+     * only the first 50 ms, and soften is a low-pass well above the body; the
+     * owner heard no difference in either, and chose attack and bite
+     * (2026-10-02).
+     */
+    private fun touchedVelocity(patch: Patch): Boolean =
+        patch is MercuryPatch && patch.voice != MercuryVoice.PING
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -281,6 +307,7 @@ object Velocity {
     /** [atVelocity] with [spec] already resolved — see that function and [brightnessSpec]. */
     fun atVelocity(patch: Patch, velocity: Float, spec: MacroSpec?): Snip {
         val v = velocity.coerceIn(0f, 1f)
+        if (touchedVelocity(patch)) return Mercury.render((patch as MercuryPatch).voice, patch.macros, velocity = v)
         spec ?: return soften(patch.render(), 1f - v)
         val asked = patch.macros[spec.name] ?: spec.default
         // A macro parked at (or near) 0 has no ceiling to scale down from -

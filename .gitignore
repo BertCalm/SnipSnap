@@ -49,6 +49,10 @@ testkit/glint-d2-audition/
 # and sent to the phone for the listening gate; never committed.
 testkit/glint-paths-audition/
 
+# The GLINT DEPTH audition pads, rendered by :synth:generateGlintDepthAudition
+# and sent to the phone for the listening gate; never committed.
+testkit/glint-depth-audition/
+
 # The TINES audition phrases and page, rendered by :synth:generateTinesAudition
 # and published as the listening artifact; never committed.
 testkit/tines-audition/
@@ -75,6 +79,21 @@ testkit/stringmachine-audition/
 # The BORE audition clips, manifest and page, rendered by :synth:generateBoreAudition
 # and published as the listening artifact; never committed.
 testkit/bore-audition/
+
+# The ARCO audition clips, manifest and page, rendered by :synth:generateArcoAudition
+# and published as the listening artifact; never committed.
+testkit/arco-audition/
+
+# The ARCO R1c re-listen clips, manifest and page, rendered by :synth:generateArcoRetune
+testkit/arco-retune/
+# The ARCO R1d BODY listening clips, manifest and page, rendered by :synth:generateArcoBody (the key is a sibling file, never in the published folder)
+testkit/arco-body/
+testkit/arco-body-key.json
+# The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
+# and published as the listening artifact; never committed.
+testkit/mercury-audition/
+# The GYRE audition clips, manifest and page, rendered by :synth:generateGyreAudition
+testkit/gyre-audition/
 
 # The SILK Phase 4 audition clips and page, rendered by :synth:generateSilkAudition
 # and published as the listening artifact; never committed.

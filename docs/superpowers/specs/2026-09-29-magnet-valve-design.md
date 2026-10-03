@@ -28,7 +28,7 @@ external spec reviewed against the tree, measured, corrected, the fleet
 table, claims tests, rounds with gates. [`2026-09-27-silk-string-engine-design.md`](2026-09-27-silk-string-engine-design.md)
 built the `Strings` toolkit MAGNET's string is. [`2026-09-24-resin-ladder-engine-design.md`](2026-09-24-resin-ladder-engine-design.md)
 paired an engine with a rack section (CONTOUR), the precedent for VALVE.
-**Roadmap:** row S20 in [`../../SYNTH_ROADMAP.md`](../../SYNTH_ROADMAP.md),
+**Roadmap:** row S23 in [`../../SYNTH_ROADMAP.md`](../../SYNTH_ROADMAP.md),
 added with R1 and naming both MAGNET and VALVE (rows are added when
 implementation starts, the rule FATHOM, RESIN, GLINT, SILK, FORK and BORE
 followed).
@@ -653,7 +653,7 @@ R1 is the engine: `Magnet.kt`, `MagnetPatch.kt`, the registration, the kit and t
 - `SynthKits.magnet()` and `testkit/SnipSnap Magnet Kit/`; `MagnetKitGenerator` and `generateMagnetKit`.
 - `MagnetAuditionGenerator` and `generateMagnetAudition`: 95 clips, 25.5 MB (25 504 668 bytes; 22.3 MB, 22 310 936 bytes, at the first build), all mono 16-bit 44.1 kHz.
 - Tests: `MagnetTest` (27 at the first build, 32 after task 8a, 39 after task 8b), `MagnetMeasure` (the measurement helpers, with the ring reads task 8a added), a canary each in `DeterminismTest` and `PadRecipeTest`, the kit's test in `SynthKitTest`, and two MAGNET entries in `VelocityGrooveShuffleTest`.
-- The blocklist terms ("The names, as checked"), and row S20 in `docs/SYNTH_ROADMAP.md`.
+- The blocklist terms ("The names, as checked"), and row S23 in `docs/SYNTH_ROADMAP.md`.
 - No change to `Strings.kt`, `FxChain.kt` or the phone, and none to `Valve.kt`'s behaviour (its KDoc on the native-rate `process` overload now names the MAGNET audition's P1 clips as a second user).
 - Size, counted by `git diff --numstat` from `421074ed` (the commit the R1 work started from) over the branch's own commits (the first-parent line; the base branch merged in at `d8485afe` is not the branch's own, so a count over the merged tree would include its changes, and the files the base also touched are counted before the merge plus the branch's own change after it), as added lines outside the plan, this document, the roadmap and the kit's files: 2 578 in all at task 9's code commit (2 403 after task 8b), 514 of them engine and registration (`Magnet.kt` 433, `MagnetPatch.kt` 32, and the arms and kit in `Patches.kt`, `Velocity.kt` and `SynthKits.kt`; `Valve.kt`'s comment lines not counted), 2 041 tests, generators and measures (`MagnetTest` 1 331, `MagnetAuditionGenerator` 474, `MagnetMeasure` 144), 23 build wiring and ignore rules, against this document's estimate of about 1 400 less the amp (the engine and the tests grew with the review rounds, the owner's picks, the PICK map and the final review's fixes; at the first build the count was 1 622, 320 of them engine and registration, 1 279 tests, generators and measures). The listening page is built by hand from the generator's clips and is not in the repository.
 
