@@ -844,21 +844,11 @@ object Terra {
     /**
      * HIT's floor, phi (spec, "HIT, the design"; decision 22): a fraction of
      * today's per-mode level that no mode falls below at HIT 1, whatever
-     * strikes the drum. 0.25 is -12 dB and **provisional**: R1b's page picks
-     * the value from [HIT_FLOOR_CHOICES], and the answer replaces it here. It
-     * is a code constant, not recipe data, so a saved struck pad renders with
-     * the build's floor.
+     * strikes the drum. 0.25 is -12 dB, the owner's choice from R1b's page
+     * (2026-10-02). It is a code constant, not recipe data, so a saved struck
+     * pad renders with the build's floor.
      */
     internal const val HIT_FLOOR = 0.25f
-
-    /**
-     * The floors R1b's page offers: none, -18 and -12 dB. Removed once the
-     * owner picks one. There is no -6 dB (0.5) choice: at phi 0.5 the bell's
-     * coupling bar fails (the two heads sit 2.50 dB apart, under the 3 dB the
-     * test holds) and the cavity's tanh drive passes its cap (0.3661 against
-     * 0.36). The controller ruled it out, 2026-10-02.
-     */
-    internal val HIT_FLOOR_CHOICES = listOf(0f, 0.125f, 0.25f)
 
     /** [voice] struck by a stored [head] at HIT [hit], 0..1, under the floor [hitFloor]. HIT 0 is today's render, byte for byte, and computes nothing, at any floor. */
     internal fun renderStruck(voice: TerraVoice, macros: Map<String, Float>, head: FloatArray, hit: Float, hitFloor: Float = HIT_FLOOR): Snip =

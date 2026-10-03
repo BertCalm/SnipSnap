@@ -840,10 +840,10 @@ bank     : modalSum += sin(phase_k) · (g_k · G_k(n)) · decay_k
   for bit (a test pins it against a frozen copy of R1's colouring); `c = 0`
   stays the null path at every φ, so the frozen 40-case guard is unchanged;
   an impulse is untouched (`s · |P| = 1 ≥ φ`). φ applies on all four voices
-  and bites only where a mode would fall below it. Its value is a listening
+  and bites only where a mode would fall below it. Its value was a listening
   value, picked on R1b's page from 0 (none), 0.125 (−18 dB) and 0.25
-  (−12 dB); until then the code default is **0.25 (−12 dB),
-  provisional**. (0.5, −6 dB, was a choice until the controller's ruling of
+  (−12 dB); the owner chose **0.25 (−12 dB)** on 2026-10-02, and it is the
+  code default. (0.5, −6 dB, was a choice until the controller's ruling of
   2026-10-02: it breaks the bell's coupling bar at HIT 0.5, 2.50 dB against
   3, and the cavity's tanh cap, 0.3661 against 0.36.) What it can do follows
   from the formula: at HIT 0.5 the unfloored gain is already at least 0.5, so
@@ -1781,7 +1781,7 @@ mono 44.1 kHz, levelled by `AuditionLevel.level`, written by
 |---|---|---|
 | **0 — re-measure** (done, `phase0`; the record is `../plans/2026-09-30-chimera-phase-0-record.md`) | every TERRA number re-measured at `75b550c1`; `P0Bank`, the prototype of the two inputs; all numeric checks passed; one conflict escalated (BUZZ's drive) | **the HIT-at-1 listening check** below — pending the owner |
 | **R1 — HIT in the engine** | the frozen 40-case guard first; the two inputs and their null path; HIT's capture and colouring; `TerraPatch` with `Striker` and the version rule; claims tests 1–3, 7–8 and 11 (test 6 printed in R1, pinned in R1b), and tests 4–5 with a striker only | R1's page (10 clips, 3 questions; answered 2026-10-01) |
-| **R1b — HIT's floor and the rattle pinned** (from R1's answers) | the floor φ in HIT's gain (default 0.25, provisional), pinned bit for bit to R1's HIT at φ = 0; test 6 pinned to "BUZZ follows the striker" | R1b's page (9 clips, 2 questions) |
+| **R1b — HIT's floor and the rattle pinned** (from R1's answers) | the floor φ in HIT's gain (0.25, −12 dB, the owner's choice), pinned bit for bit to R1's HIT at φ = 0; test 6 pinned to "BUZZ follows the striker" | R1b's page (9 clips, 2 questions; answered 2026-10-02) |
 | **R2 — TERRA on the phone** (may run alongside R1) | the precondition page first; then the 14th `Engine` entry, `TerraPresets` (8 per voice, by ear), `Terra.scramble`, `drumClassFor`, the starter kit, `PresetsTest`, README count, roadmap S20, the canaries | the precondition (10 clips, 3 questions), then R2's page (9 clips, 3 questions); the owner's phone is the final check of the picker |
 | **R3 — BEND and TALK** | G1 and F1 if Group A's SAY has not landed them; the pitch-track capture; TALK's bake and response; `bend` and `talk` on `TerraPatch`; claims tests 9–10, and tests 1, 4 and 5 extended to `bend` and `talk` | R3's page (10 clips, 3 questions) |
 | **R4 — the pad-sheet group and the shared chooser** | the chooser lifted from MUTATE (after Group A's BECOME); `TerraSheet`; the group on a TERRA pad's sheet; FORK's STRIKE FROM on a FORK pad's sheet | R4's page (6 clips) and a phone checklist, 3 questions |
@@ -1906,7 +1906,7 @@ through an internal overload that takes φ.
 | 6 | BAR · TODAY | the floor's anchor |
 | 7 | BAR · HIT 1 · FACTORY KICK · NO FLOOR | φ = 0, R1's HIT, under a dark head |
 | 8 | BAR · HIT 1 · FACTORY KICK · FLOOR −18 dB | φ = 0.125 |
-| 9 | BAR · HIT 1 · FACTORY KICK · FLOOR −12 dB | φ = 0.25, the provisional default |
+| 9 | BAR · HIT 1 · FACTORY KICK · FLOOR −12 dB | φ = 0.25, the default |
 
 The factory kick is `A01_Kick_01.wav`, R1's clip 4 head. The generator prints
 each floor clip's per-mode levels against today's, measured on the bank before
@@ -1919,9 +1919,12 @@ floor keeps the bar sounding right with a dark hit: none, −18 or −12 dB?
 
 **What each answer does.** (1) "Yes": HIT's knob stands as built. "No": the
 knob's spacing is an owner question before R3, put on a page of its own, not
-a guess. (2) The chosen φ replaces the provisional 0.25 in `Terra.HIT_FLOOR`
-(one constant and its pin), and the list of choices leaves the code; "none"
-sets it to 0, which is R1's HIT bit for bit.
+a guess. (2) The chosen φ is `Terra.HIT_FLOOR`
+(one constant and its pin), and the list of choices leaves the engine's code
+(it now lives in the page generator); "none" would have set it to 0, which is
+R1's HIT bit for bit. **Answered 2026-10-02:** (1) "Yes, I hear the steps";
+(2) "−12 dB", which is 0.25, the value the code already held; see "Decisions
+already taken" and decision 22.
 
 ### R2's pages: TERRA on the phone
 
@@ -2058,6 +2061,8 @@ their own date and the gate that answered them.
 | `:app` | not verifiable here; logic in `:synth`/`:shell` with tests; `ConventionTest` and the owner's phone check the screen | owner, brainstorm 2026-09-29–30, brief "Shared defaults" |
 | HIT's steps | "Can't tell" (R1's page, question 1: "Does HIT move from today through subtle to strong in steps you can hear, on every voice?"); asked again on R1b's page as one five-step ladder on the membrane | owner, R1's page, 2026-10-01 |
 | A floor for HIT | "Yes, add a floor" (R1's page, question 2: "Does any voice go wrong at subtle (the bell or bar going thin with a dark hit), so HIT needs a floor?"); HIT's gain takes a floor φ, whose value is decision 22 | owner, R1's page, 2026-10-01 |
+| HIT's ladder, on one drum | "Yes, I hear the steps" (R1b's page, question 1: "Can you hear the steps from 0 to 1 on the ladder?"); HIT's knob stands as built, and the spacing is not an owner question | owner, R1b's page, 2026-10-02 |
+| HIT's floor | "-12 dB" (R1b's page, question 2: "Which floor keeps the bar sounding right with a dark hit: none, −18 or −12 dB?"): φ = 0.25 is `Terra.HIT_FLOOR`, decision 22 taken | owner, R1b's page, 2026-10-02 |
 | BUZZ under HIT | "Follow the hit (default)" (R1's page, question 3: "Should the rattle follow what hits it (clip 10), or stay as it is today?"): BUZZ follows the striker, `s` stays a peak match, and test 6 is pinned in R1b (decision 2) | owner, R1's page, 2026-10-01 |
 
 ## Decisions for the owner
@@ -2088,7 +2093,7 @@ a gate overturns it.
 | 19 | Promoting a driven user preset to the roster | refused by the desk (`UserPresets.rosterLine` writes macros only, so promotion would drop the drivers); `renderAll` skips it with a line saying so | carry the drivers as data in the roster file, a new file shape | here |
 | 20 | Which peak the capture's silence floor tests | **the brief's wording**: the aligned 20 ms head's finite peak, before normalising, below 1e-4 ("HIT, the design", capture step 4); R1 re-runs struck-motion M7's hostile list with it | the whole source's finite peak, as struck-motion M7 measured; the two differ only for a quiet source (finite peak 1e-4 to 1e-2) that is louder after its first 20 ms | R1 |
 | 21 | The Phase-0 listening check: the brief's three clips or the six built | **the brief's three**: `cm_unstruck`, `cm_hit1_wraith`, `cm_rung_wraith_heard`, question 1 only (decision 4 and the strength reference then keep their defaults until R1's page) | the six as built, with questions 2 and 3, if the owner OKs the deviation | Phase 0's check **Taken 2026-09-30: the three were played.** |
-| 22 | HIT's floor (R1's page, question 2: "Yes, add a floor") | **φ = 0.25 (−12 dB), provisional**: `G_k(n) = (1 − c) + c · max(φ, s · |P_k(n)|)`, with `s` computed as R1 computes it, on the unfloored `|P_k|`, and the floor applied after it, so at HIT 1 no mode rings below φ × today's level whatever strikes the drum; φ = 0 is R1's HIT bit for bit; `c = 0` stays the null path; on all four voices, biting only where a mode would fall below φ (at HIT 0.5 it lifts a mode by at most 1 + φ). A code constant, `Terra.HIT_FLOOR`, not recipe data, so it settles before struck pads are saved on the phone | 0 (none: R1's HIT); 0.125 (−18 dB). Not 0.5 (−6 dB), removed by the controller's ruling 2 for R1b (2026-10-02): it breaks the bell's coupling bar at HIT 0.5 (2.50 dB against 3) and the cavity's tanh cap (0.3661 against 0.36) | R1b's page, question 2 ("HIT, the design"; "Phasing and gates") |
+| 22 | HIT's floor (R1's page, question 2: "Yes, add a floor") | **φ = 0.25 (−12 dB), taken 2026-10-02 (R1b's page, question 2: "−12 dB")**: `G_k(n) = (1 − c) + c · max(φ, s · |P_k(n)|)`, with `s` computed as R1 computes it, on the unfloored `|P_k|`, and the floor applied after it, so at HIT 1 no mode rings below φ × today's level whatever strikes the drum; φ = 0 is R1's HIT bit for bit; `c = 0` stays the null path; on all four voices, biting only where a mode would fall below φ (at HIT 0.5 it lifts a mode by at most 1 + φ). A code constant, `Terra.HIT_FLOOR`, not recipe data, so it settles before struck pads are saved on the phone | 0 (none: R1's HIT); 0.125 (−18 dB). Not 0.5 (−6 dB), removed by the controller's ruling 2 for R1b (2026-10-02): it breaks the bell's coupling bar at HIT 0.5 (2.50 dB against 3) and the cavity's tanh cap (0.3661 against 0.36) | R1b's page, question 2 ("HIT, the design"; "Phasing and gates") **Taken 2026-10-02: "−12 dB" (φ = 0.25); see "Decisions already taken".** |
 
 ## Appendices
 

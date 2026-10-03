@@ -26,6 +26,17 @@ import kotlin.math.roundToInt
  */
 object TerraAuditionGenerator {
 
+    /**
+     * The floors R1b's page offered: none, -18 and -12 dB. The owner picked
+     * -12 dB (2026-10-02), which is [Terra.HIT_FLOOR]; the list stays so the
+     * page renders the same nine clips. There is no -6 dB (0.5) choice: at
+     * phi 0.5 the bell's coupling bar fails (the two heads sit 2.50 dB apart,
+     * under the 3 dB the test holds) and the cavity's tanh drive passes its
+     * cap (0.3661 against 0.36). The controller ruled it out, 2026-10-02.
+     * Internal, not private, because TerraTest's floor tests iterate it.
+     */
+    internal val R1B_FLOOR_CHOICES = listOf(0f, 0.125f, 0.25f)
+
     private class Knob(val name: String, val low: String, val high: String)
 
     private val DECAY_KNOB = Knob("DECAY", "the shortest ring: 0.08s at the fundamental", "the longest ring: 0.9s at the fundamental")
@@ -242,7 +253,7 @@ object TerraAuditionGenerator {
      *   (`TerraPatch.render`), so at the floor default. HIT 0 is a striker at
      *   strength 0, today's drum.
      * - The floor: TUNED_BAR today, then at HIT 1 struck by the factory kick
-     *   (A01_Kick_01.wav, a dark head) at each of [Terra.HIT_FLOOR_CHOICES].
+     *   (A01_Kick_01.wav, a dark head) at each of [R1B_FLOOR_CHOICES].
      *   These render through `Terra.renderStruck`'s floor overload, because a
      *   recipe carries no floor.
      * Each floor clip's per-mode levels against today's are measured on the
@@ -285,9 +296,9 @@ object TerraAuditionGenerator {
         val floors = listOf(
             Floor(0f, "NO FLOOR", "no_floor", "R1's HIT under a dark head"),
             Floor(0.125f, "FLOOR -18 DB", "floor_18db", "a floor at -18 dB"),
-            Floor(0.25f, "FLOOR -12 DB", "floor_12db", "a floor at -12 dB, the provisional default"),
+            Floor(0.25f, "FLOOR -12 DB", "floor_12db", "a floor at -12 dB, the default"),
         )
-        check(floors.map { it.phi } == Terra.HIT_FLOOR_CHOICES) { "the page's floors are not Terra.HIT_FLOOR_CHOICES" }
+        check(floors.map { it.phi } == R1B_FLOOR_CHOICES) { "the page's floors are not R1B_FLOOR_CHOICES" }
         val bar = TerraVoice.TUNED_BAR
         val kick = head("kick01")
         val body = TerraMeasure.bodyOf(bar)

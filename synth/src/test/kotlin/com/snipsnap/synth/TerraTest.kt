@@ -438,12 +438,12 @@ class TerraTest {
 
     // ---------- HIT's floor (R1b; spec "HIT, the design", decision 22) ----------
 
-    /** The provisional default until R1b's page answers, among the three choices the page offers (none, -18 and -12 dB; -6 dB is out, see Terra.HIT_FLOOR_CHOICES); a floor outside 0..1 is refused. */
+    /** The default is the owner's choice from R1b's page (-12 dB, 2026-10-02), among the three choices the page offered (none, -18 and -12 dB; -6 dB was out, see TerraAuditionGenerator.R1B_FLOOR_CHOICES); a floor outside 0..1 is refused. */
     @Test
-    fun `HIT's floor defaults to a quarter of today's level, provisionally, among R1b's three choices`() {
-        assertEquals(0.25f, Terra.HIT_FLOOR, "the provisional default is -12 dB until R1b's page answers")
-        assertEquals(listOf(0f, 0.125f, 0.25f), Terra.HIT_FLOOR_CHOICES)
-        assertTrue(Terra.HIT_FLOOR in Terra.HIT_FLOOR_CHOICES)
+    fun `HIT's floor defaults to a quarter of today's level, the owner's choice among R1b's three`() {
+        assertEquals(0.25f, Terra.HIT_FLOOR, "the default is -12 dB, the owner's choice from R1b's page")
+        assertEquals(listOf(0f, 0.125f, 0.25f), TerraAuditionGenerator.R1B_FLOOR_CHOICES)
+        assertTrue(Terra.HIT_FLOOR in TerraAuditionGenerator.R1B_FLOOR_CHOICES)
         val body = TerraMeasure.bodyOf(TerraVoice.TUNED_BAR)
         for (bad in listOf(-0.01f, 1.01f, Float.NaN)) {
             assertFailsWith<IllegalArgumentException>("floor $bad") { Terra.hitLevel(body, impulse, 1f, hitFloor = bad) }
@@ -523,9 +523,9 @@ class TerraTest {
         println("TERRA HIT floor: the factory kick at HIT 1 with no floor holds the bar's modes at ${unfloored.joinToString(" / ") { "%.3f".format(it.last()) }} of today's")
         val tolerance = Math.pow(10.0, -0.5 / 20.0)
         val lowest = unfloored.minOf { it.last() }
-        val smallest = Terra.HIT_FLOOR_CHOICES.filter { it > 0f }.min()
+        val smallest = TerraAuditionGenerator.R1B_FLOOR_CHOICES.filter { it > 0f }.min()
         assertTrue(lowest < smallest * tolerance, "no bar mode holds 0.5 dB below $smallest of today's under the factory kick at HIT 1 (lowest $lowest), so some of R1b's floor clips would hold one tone")
-        for (phi in Terra.HIT_FLOOR_CHOICES) {
+        for (phi in TerraAuditionGenerator.R1B_FLOOR_CHOICES) {
             val gains = assertNotNull(Terra.hitLevel(body, x, 1f, hitFloor = phi), "floor $phi")
             for (k in gains.indices) {
                 for (n in gains[k].indices) {
@@ -556,11 +556,11 @@ class TerraTest {
     @Test
     fun `HIT 0 at every floor, and an impulse under the highest floor, render the frozen TERRA`() {
         val head = TerraStrikers.head("kick01")
-        val highest = Terra.HIT_FLOOR_CHOICES.max()
+        val highest = TerraAuditionGenerator.R1B_FLOOR_CHOICES.max()
         var renders = 0
         for (c in TerraCases.all) {
             val frozen = LegacyTerraBank.render(c.voice, c.macros).samples
-            for (phi in Terra.HIT_FLOOR_CHOICES) {
+            for (phi in TerraAuditionGenerator.R1B_FLOOR_CHOICES) {
                 assertContentEquals(frozen, Terra.renderStruck(c.voice, c.macros, head, 0f, hitFloor = phi).samples, "${c.label}, HIT 0 at floor $phi")
                 renders++
             }
@@ -944,7 +944,7 @@ class TerraTest {
      * tables:
      * - at a floor of 0, R1's HIT, against R1's printed figures (commit
      *   19ff3762), which equal Phase 0's to the printed digit;
-     * - at the floor default ([Terra.HIT_FLOOR], 0.25, provisional), against
+     * - at the floor default ([Terra.HIT_FLOOR], 0.25, the owner's choice), against
      *   the figures measured with the floor in place (R1b's plan review,
      *   confirmed by its Task 2 Step 1).
      *
@@ -959,7 +959,7 @@ class TerraTest {
      *
      * THUMP KICK at HIT 1 holds the tanh input 0.0002 under the cap at the
      * default (0.3598); at a floor of 0.5 it reads 0.3661, past it, which is
-     * why 0.5 is not one of [Terra.HIT_FLOOR_CHOICES].
+     * why 0.5 is not one of [TerraAuditionGenerator.R1B_FLOOR_CHOICES].
      *
      * Two claims sit beside the bands and are never re-thresholded:
      * - the cavity's tanh input stays at or under 0.36 (within 4 % of linear,
