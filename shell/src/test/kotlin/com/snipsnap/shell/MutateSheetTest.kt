@@ -450,4 +450,71 @@ class MutateSheetTest {
         // Built positionally, as PadSheetBoxesTest.kt:48-50 builds it, a plain MORPH still reads MORPH.
         assertEquals("MORPH", MutateSheet.Applied("MORPH", listOf("Soul:A03")).word)
     }
+
+    // ---------- BECOME's card row (A1b) ----------
+
+    /**
+     * What the MUTATE card's second row leans on, pinned at the sheet.
+     *
+     * The row opens on `BECOME.defaultFraction` and DRIFT puts it back
+     * there (ConventionTest's BECOME laws read both off the screen), so
+     * that fraction must read OFF. ConventionTest's row law holds the
+     * screen's snap to exactly the text `(f * 40f).roundToInt() / 40f`,
+     * and this sweep proves that text only ever lands on whole 50 ms
+     * steps, the first of which clears one 23 ms analysis window. The
+     * label lives here and not in `Copy`, where PersonalityTest's shout
+     * law cannot see it, so this holds it to the house style instead.
+     * BECOME's own test above already pins the default, OFF and the
+     * 50/500/2000 ms readouts; this does not restate them.
+     */
+    @Test
+    fun `the BECOME row opens OFF, lands on 50 ms steps wherever a thumb lets go, and shouts its label`() {
+        val b = MutateSheet.BECOME
+        assertEquals(
+            "OFF",
+            MutateSheet.label(b, MutateSheet.value(b, b.defaultFraction)),
+            "the row's holder opens on BECOME.defaultFraction and DRIFT puts it back there, so that fraction must read OFF",
+        )
+
+        // The screen's snap. ConventionTest's BECOME row law asserts the screen's expression is exactly this text,
+        // so this sweep is a proof about the phone's snap, not about a private copy of it.
+        fun snap(f: Float): Float = (f * 40f).roundToInt() / 40f
+        val readouts = mutableListOf<String>()
+        for (i in 0..1000) {
+            val thumb = i / 1000f
+            val ms = MutateSheet.value(b, snap(thumb))
+            assertEquals(0, ms.roundToInt() % 50, "a thumb let go at $thumb landed on $ms ms, between steps")
+            val text = MutateSheet.label(b, ms)
+            // The lowercase unit is this card's own precedent (AT reads "40 ms", pinned above), not a slip.
+            assertTrue(text == "OFF" || Regex("""[1-9]\d* ms""").matches(text), "a thumb at $thumb reads '$text'")
+            readouts += text
+        }
+        assertEquals("50 ms", readouts.first { it != "OFF" }, "the first step a thumb reaches above OFF")
+        assertEquals("2000 ms", readouts.last(), "a thumb let go at the far end")
+
+        assertEquals(b.label.uppercase(), b.label, "a card label shouts")
+        // A coarse proxy only. The label font is Silkscreen (TapeTheme.kt:59), which is proportional, and
+        // BECOME's M is wider than any letter of ATTACK, so a letter count cannot see a pixel overflow of the
+        // 44 dp label column. The phone check (line 3, "BECOME is not cut off") is the real gate; this
+        // catches only a longer word.
+        assertTrue(b.label.length <= "ATTACK".length, "'${b.label}' has more letters than ATTACK, the label column's longest word")
+    }
+
+    /**
+     * DRIFT is a flat morph: the sheet's own door never hands it a ramp.
+     * That is what makes the card's reset of BECOME to OFF on a DRIFT tap
+     * a true readout rather than a guess (`Mutate.drift` is pinned the
+     * same way in BecomeTest; this pins the door the phone calls).
+     */
+    @Test
+    fun `a DRIFT from the card carries no BECOME, so the row's reset to OFF tells the truth`() {
+        val m = model("Dbec")
+        model("Dbec2")
+        val d = MutateSheet.drift(m, 1, root = temp, seed = 2, fraction = 0.5f)
+        val mutate = (d.outcome.pad.recipe!!.entries["mutate"] as JsonValue.Obj).entries
+        assertTrue("become" !in mutate, "DRIFT wrote a ramp: ${mutate.keys}")
+        val applied = MutateSheet.read(d.outcome.pad.recipe)!!
+        assertEquals(0, applied.becomeMs, "the drifted pad reads back a ramp, so the card's OFF would be a lie")
+        assertEquals("DRIFT", applied.word, "the drifted pad reads back as ${applied.word}, not DRIFT")
+    }
 }
