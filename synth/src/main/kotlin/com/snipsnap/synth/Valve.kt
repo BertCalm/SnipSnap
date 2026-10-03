@@ -140,7 +140,13 @@ object Valve {
 
     fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip = process(snip, macros, oversample = true)
 
-    /** [oversample] false exists only so the aliasing test can prove the probe sees fold-back. */
+    /**
+     * [oversample] false runs the amp at the snip's own rate, with no 4x round trip. It is for callers
+     * that need the native-rate path: the aliasing test, which proves its probe sees fold-back, and the
+     * audition generators' native-rate clips (the MAGNET audition's P1 clips, which run the amp at the
+     * engine's render rate, already oversampled, before the output chain, and the VALVE audition's
+     * FOLDBACK `snare_1x`, which plays the fold-back at the snip rate).
+     */
     internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean): Snip {
         val m = defaults().toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)

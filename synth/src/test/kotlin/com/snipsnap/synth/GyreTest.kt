@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Pitch
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -22,6 +23,15 @@ import kotlin.test.assertTrue
  * Phase-0 or Task-5 measurement with room, and each test prints what it measured.
  */
 class GyreTest {
+
+    private companion object {
+        /** BODY 0 to 1, and each half of it, in the octave bands' mean shift. */
+        const val BODY_SHIFT_DB = 7.0
+        const val BODY_HALF_DB = 2.5
+
+        /** SPIN 0.25 on a short note, in the median partial's swing. */
+        const val SPIN_SWING_DB = 5.0
+    }
 
     private fun rms(x: FloatArray, from: Int = 0, to: Int = x.size): Double {
         var s = 0.0
@@ -48,7 +58,7 @@ class GyreTest {
 
     @Test
     fun `SPIN's low end is not dead`() {
-        // G9: the first stretch of SPIN must move something. Measured: 0.02 against 0 differs by 1.9% (FLICK), 2.7% (HALO).
+        // G9: the first stretch of SPIN must move something. Measured: 0.02 against 0 differs by 4.8% (FLICK), 5.7% (HALO).
         for (voice in GyreVoice.entries) {
             val still = Gyre.render(voice, Gyre.defaults(voice) + ("SPIN" to 0f)).samples
             val turning = Gyre.render(voice, Gyre.defaults(voice) + ("SPIN" to 0.02f)).samples
@@ -60,11 +70,139 @@ class GyreTest {
         }
     }
 
+    /**
+     * Each octave band's share of the energy, in dB, over [size] samples from [from] (60 Hz to 8 kHz,
+     * seven bands): the yardstick the owner's first listen was measured with.
+     */
+    private fun bandShares(x: FloatArray, from: Int, size: Int): DoubleArray {
+        val re = FloatArray(size) { i -> if (from + i < x.size) x[from + i] * (0.5f - 0.5f * cos(2 * PI * i / size).toFloat()) else 0f }
+        val im = FloatArray(size)
+        Fft.forward(re, im)
+        val edges = doubleArrayOf(60.0, 125.0, 250.0, 500.0, 1_000.0, 2_000.0, 4_000.0, 8_000.0)
+        val e = DoubleArray(edges.size - 1)
+        var total = 1e-30
+        for (k in 1 until size / 2) {
+            val p = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            total += p
+            val hz = k.toDouble() * RATE / size
+            for (b in e.indices) if (hz >= edges[b] && hz < edges[b + 1]) e[b] += p
+        }
+        return DoubleArray(e.size) { 10 * log10(e[it] / total + 1e-6) }
+    }
+
+    private fun meanShift(a: DoubleArray, b: DoubleArray): Double = a.indices.sumOf { abs(a[it] - b[it]) } / a.size
+
+    @Test
+    fun `BODY changes the instrument as much as SYMPATHY does`() {
+        // The owner's first listen: "Body doesn't make an impact". Measured then, on the audition's clips,
+        // BODY 0 to 1 moved the octave bands 3.6 dB on average (FLICK) and 3.4 (HALO), against SYMPATHY's
+        // 13.3 and 12.4; here, 0.6 to 4.1 dB over the three notes, each half 0.2 to 2.3. With the box:
+        // 8.1 to 14.4, each half at least 3.2.
+        val from = (0.05f * RATE).toInt()
+        for (voice in GyreVoice.entries) for (tune in floatArrayOf(0f, 0.5f, 1f)) {
+            val m = Gyre.defaults(voice) + ("TUNE" to tune)
+            val small = bandShares(Gyre.render(voice, m + ("BODY" to 0f)).samples, from, 32_768)
+            val middle = bandShares(Gyre.render(voice, m + ("BODY" to 0.5f)).samples, from, 32_768)
+            val large = bandShares(Gyre.render(voice, m + ("BODY" to 1f)).samples, from, 32_768)
+            val whole = meanShift(small, large)
+            val halves = minOf(meanShift(small, middle), meanShift(middle, large))
+            println("$voice TUNE $tune: BODY 0 to 1 moves the bands ${"%.1f".format(whole)} dB, each half at least ${"%.1f".format(halves)}")
+            assertTrue(whole >= BODY_SHIFT_DB, "$voice TUNE $tune: BODY 0 to 1 moves the bands only $whole dB")
+            assertTrue(halves >= BODY_HALF_DB, "$voice TUNE $tune: one half of BODY moves the bands only $halves dB")
+        }
+    }
+
+    /** The level in dB of each of the note's first [count] partials over [block] samples from [from]. */
+    private fun partials(x: FloatArray, from: Int, block: Int, f: Double, count: Int): DoubleArray = DoubleArray(count) { h ->
+        val hz = f * (h + 1)
+        var re = 0.0; var im = 0.0
+        for (i in 0 until block) {
+            val v = x[from + i] * (0.5 - 0.5 * cos(2 * PI * i / block))
+            re += v * cos(2 * PI * hz * i / RATE); im += v * sin(2 * PI * hz * i / RATE)
+        }
+        20 * log10(sqrt(re * re + im * im) + 1e-9)
+    }
+
+    @Test
+    fun `the tail waits for the box, at the loudest swell SPIN gives it`() {
+        // Copilot's review of #434: a peak rings A = 10^(dB/40) times longer than a band-pass of its
+        // Q, and SPIN's swell boosts it further. The box's six sections at the largest gain the rotor
+        // gives each peak, rung by an impulse: the time its 10 ms level takes to fall 60 dB from its
+        // loudest, against boxT60. Measured: within boxT60 everywhere, to the 10 ms window (BODY 1, SPIN 1:
+        // 0.43 s against 0.51; the band-pass formula this replaced allowed 0.15).
+        val rate = RATE * Dsp.OVERSAMPLE
+        val window = (0.01 * rate).toInt()
+        for (body in floatArrayOf(0f, 0.5f, 1f)) for (spin in floatArrayOf(0f, 0.25f, 1f)) {
+            val size = Gyre.boxSize(body)
+            val q = Dsp.lin(size, Gyre.BOX_Q_SMALL, Gyre.BOX_Q_LARGE)
+            val swell = 1f + Gyre.spinDepth(spin) * Gyre.SWING_BOX
+            val box = Array(Gyre.BOX_SMALL_HZ.size + 2) { Dsp.Biquad() }
+            for (j in Gyre.BOX_SMALL_HZ.indices) box[j].peaking(
+                Dsp.expMap(size, Gyre.BOX_SMALL_HZ[j], Gyre.BOX_LARGE_HZ[j]),
+                Dsp.lin(size, Gyre.BOX_SMALL_DB[j], Gyre.BOX_LARGE_DB[j]) * swell, q, rate,
+            )
+            box[Gyre.BOX_SMALL_HZ.size].lowShelf(Gyre.BOX_LOW_SHELF_HZ, Dsp.lin(size, Gyre.BOX_LOW_SMALL_DB, Gyre.BOX_LOW_LARGE_DB), rate)
+            box[Gyre.BOX_SMALL_HZ.size + 1].highShelf(Gyre.BOX_HIGH_SHELF_HZ, Dsp.lin(size, Gyre.BOX_HIGH_SMALL_DB, Gyre.BOX_HIGH_LARGE_DB), rate)
+            val t60 = Gyre.boxT60(body, spin)
+            val y = FloatArray(((t60 * 2f + 0.05f) * rate).toInt()) { i -> var v = if (i == 0) 1f else 0f; for (b in box) v = b.process(v); v }
+            // The impulse's own sample is the dry path; the ring is what follows it.
+            val levels = DoubleArray(y.size / window) { rms(y, maxOf(1, it * window), (it + 1) * window) }
+            val loudest = levels.indices.maxBy { levels[it] }
+            val down = (loudest until levels.size).first { levels[it] < levels[loudest] * 1e-3 }
+            val measured = (down - loudest) * window.toDouble() / rate
+            println("BODY $body SPIN $spin: the box falls 60 dB in ${"%.3f".format(measured)} s, boxT60 ${"%.3f".format(t60)} s")
+            assertTrue(measured <= t60 * 1.05 + 0.01, "BODY $body SPIN $spin: the box rings ${measured} s, the tail allows $t60")
+        }
+    }
+
+    @Test
+    fun `SPIN is heard on a short note at a quarter turn`() {
+        // The owner's first listen: "Spin not noticable on short notes". Each partial's level against
+        // the still note, block by block while the note rings (before the hand lands), with the slow
+        // drift taken out: what is left is the rotor's swing. Octave bands hide it (partials 2 and 3
+        // share a band and turn in opposite phase). Measured before the fix: a median swing of 5.5 dB
+        // (FLICK, one partial near a notch carrying most of it) and 2.7 (HALO), the rotor 0.23 of a
+        // turn round in FLICK's 0.53 s.
+        val block = 2_048
+        val hold = 0.3f
+        assertTrue(Gyre.rotorHz(0.25f) * Gyre.dampSeconds(GyreVoice.FLICK, hold) >= 0.75f, "SPIN 0.25 does not get round a short note")
+        for (voice in GyreVoice.entries) {
+            val m = Gyre.defaults(voice) + ("HOLD" to hold)
+            val f = Gyre.frequencyFor(voice, m.getValue("TUNE")).toDouble()
+            val still = Gyre.render(voice, m + ("SPIN" to 0f)).samples
+            val spun = Gyre.render(voice, m + ("SPIN" to 0.25f)).samples
+            val end = (Gyre.dampSeconds(voice, hold) * RATE).toInt()
+            val diff = ArrayList<DoubleArray>()
+            val level = ArrayList<DoubleArray>()
+            var b = (0.05f * RATE).toInt()
+            while (b + block <= end) {
+                val x = partials(still, b, block, f, 8)
+                val y = partials(spun, b, block, f, 8)
+                diff.add(DoubleArray(8) { y[it] - x[it] }); level.add(x)
+                b += block / 2
+            }
+            val mean = DoubleArray(8) { h -> level.sumOf { it[h] } / level.size }
+            val swings = (0 until 8).filter { mean[it] > mean.max() - 30.0 }.map { h ->
+                val n = diff.size
+                val tm = (n - 1) / 2.0
+                val ym = diff.sumOf { it[h] } / n
+                val slope = (0 until n).sumOf { (it - tm) * (diff[it][h] - ym) } / (0 until n).sumOf { (it - tm) * (it - tm) }
+                val rest = DoubleArray(n) { diff[it][h] - ym - slope * (it - tm) }
+                rest.max() - rest.min()
+            }.sorted()
+            val median = swings[swings.size / 2]
+            println("$voice SPIN 0.25 on a ${"%.2f".format(Gyre.dampSeconds(voice, hold))} s note: partials swing ${swings.joinToString(" ") { "%.1f".format(it) }} dB, median ${"%.1f".format(median)}")
+            assertTrue(median >= SPIN_SWING_DB, "$voice: SPIN 0.25 swings a short note's partials only $median dB (median)")
+        }
+    }
+
     // ---- the strings play each other ------------------------------------------
 
     @Test
     fun `a plucked string sets the others ringing, through the bridge only`() {
-        // Measured: FLICK's third string answers its first at -25.1 dB, HALO's at -17.0; with the bridge off, exactly 0.
+        // Measured: FLICK's third string answers its first at -26.4 dB, HALO's at -26.9; with the bridge off,
+        // exactly 0. HALO answered at -17.0 in round one, when its C4 sat on a membrane mode and poured its
+        // fundamental into the others; the wolf guard's decay rule (WOLF_T60) keeps that fundamental now.
         for (voice in GyreVoice.entries) {
             val coupled = Gyre.play(voice, Gyre.defaults(voice), Gyre.Probe(solo = 0, record = true)).strings!!
             val apart = Gyre.play(voice, Gyre.defaults(voice), Gyre.Probe(solo = 0, record = true, coupling = 0f)).strings!!
@@ -81,8 +219,8 @@ class GyreTest {
     fun `every corner is finite, bounded and never grows`() {
         // Every macro at both ends, both voices (64 renders). The bridge may move energy between
         // strings but never add it, so no 50 ms stretch after the attack is louder than the attack's
-        // own loudest. Measured: the loudest later stretch is 0.596 of the attack (HALO, SYMPATHY 1, the
-        // sympathetic strings blooming); the raw peak at most 0.767.
+        // own loudest. Measured: the loudest later stretch is 0.443 of the attack (FLICK, SYMPATHY 1, the
+        // sympathetic strings blooming); the raw peak at most 0.985 (round one: 0.596 and 0.767; the box adds level, BOX_TRIM takes it back).
         for (voice in GyreVoice.entries) for (tune in floatArrayOf(0f, 1f)) for (sym in floatArrayOf(0f, 1f)) for (spin in floatArrayOf(0f, 1f))
             for (body in floatArrayOf(0f, 1f)) for (hold in floatArrayOf(0f, 1f)) {
             val m = mapOf("TUNE" to tune, "SYMPATHY" to sym, "SPIN" to spin, "BODY" to body, "HOLD" to hold)
@@ -104,7 +242,7 @@ class GyreTest {
     fun `every note ends at least 40 dB under its attack`() {
         // The hand lands at HOLD and the render runs until both the played and the sympathetic
         // strings are END_DB down, so no note is cut off while it still rings. Measured: the quietest
-        // ending is 50.0 dB under its attack (before the hand: 14 dB, FLICK at HOLD 0 and SYMPATHY 1).
+        // ending is 55.1 dB under its attack (before the hand: 14 dB, FLICK at HOLD 0 and SYMPATHY 1).
         var worst = Double.POSITIVE_INFINITY
         for (voice in GyreVoice.entries) for (tune in floatArrayOf(0f, 1f)) for (sym in floatArrayOf(0f, 1f)) for (spin in floatArrayOf(0f, 1f))
             for (body in floatArrayOf(0f, 1f)) for (hold in floatArrayOf(0f, 1f)) {
@@ -124,7 +262,8 @@ class GyreTest {
 
     @Test
     fun `every note is in tune, coupling and all`() {
-        // Measured: worst 3.3 cents (FLICK, BODY 1, SYMPATHY 1), with the bridge's phase cancelled and the wolf guard.
+        // Measured: worst 3.4 cents (HALO, BODY 1, SYMPATHY 0), with the bridge's phase cancelled (and re-cancelled
+        // at every rotor step) and the wolf guard.
         for (voice in GyreVoice.entries) for (body in floatArrayOf(0f, 0.5f, 1f)) for (sym in floatArrayOf(0f, 1f)) {
             var worst = 0.0
             for (step in 0..Gyre.TUNE_SEMITONES) {
@@ -189,7 +328,8 @@ class GyreTest {
 
     @Test
     fun `the rotor moves the timbre, which a tremolo cannot`() {
-        // A centroid does not move when only the level does. Measured: 102 Hz of swing against 0.5 Hz
+        // A centroid does not move when only the level does. Measured: 164 Hz of swing at 2.5 Hz (12% of
+        // the mean centroid in round one, 28% now) against 0.4 Hz
         // for a tremolo of the same depth on the still sound.
         val voice = GyreVoice.HALO
         val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f, "HOLD" to 0.9f)
