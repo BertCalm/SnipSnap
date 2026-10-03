@@ -1910,6 +1910,127 @@ class ConventionTest {
                 "KDoc was written to end. Write it into the move's memory alongside the switch.",
         )
     }
+
+    // ---- Law: BECOME on the MUTATE card (A1b) ----
+
+    /**
+     * BECOME's card row, A1b of the BECOME spec
+     * (`docs/superpowers/specs/2026-09-30-become-strung-say-design.md`, "The
+     * card and the sheet"): the sibling of J24's two laws above.
+     *
+     * BECOME is MORPH's second knob and no other move reads it, so it is
+     * one value per pad, held beside `mutateKnobs` rather than inside it
+     * (the J24 law above reads that map exactly as it was), and it opens
+     * on the knob's own default, OFF. DRIFT is a flat morph that never
+     * takes a ramp: if the card went on showing a remembered `BECOME 400`
+     * after a DRIFT tap, that would be J24's bug again, a value shown
+     * against a value used. So `onDrift` puts BECOME back to OFF for every
+     * tap, on its own line directly after the `if (!onMorph)` block (which
+     * stays as the DRIFT law above reads it), at the body's own depth, and
+     * before the write is launched. "Every tap" is checked three ways,
+     * because each catches a guard the others miss: the reset's line holds
+     * nothing else (a braceless `if (…) pendingBecome = …`), nothing but
+     * comments stands between the block's `}` and the reset (a guard on
+     * the line before, or an `else`), and its brace depth is `val kitDir`'s
+     * (a braced `if`).
+     */
+    @Test
+    fun `law - BECOME is remembered per pad, and DRIFT puts it back to OFF`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            Regex(
+                """var\s+pendingBecome\s+by\s+remember\(slot\)\s*\{\s*mutableFloatStateOf\(\s*MutateSheet\.BECOME\.defaultFraction\s*\)\s*\}""",
+            ).containsMatchIn(codeOnly(src)),
+            "expected `var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }` " +
+                "- BECOME's one value per pad, opening OFF, reset only when the pad itself changes.",
+        )
+        val drift = codeOnly(blockAfter(src, "fun onDrift() {"))
+        val toMorph = blockAfter(drift, "if (!onMorph) {")
+        assertFalse(
+            "pendingBecome" in toMorph,
+            "BECOME's reset sits inside `if (!onMorph)`, so a DRIFT tap made from MORPH keeps a ramp the drift " +
+                "does not use. Put it on its own line after the block, so it runs for every tap.",
+        )
+        val afterBlock = drift.indexOf(toMorph) + toMorph.length
+        val reset = Regex("""pendingBecome\s*=\s*MutateSheet\.BECOME\.defaultFraction""").find(drift, afterBlock)
+        val launch = drift.indexOf("appScope.launch")
+        assertTrue(launch >= 0, "expected `onDrift` to launch its write with `appScope.launch`")
+        assertTrue(
+            reset != null && reset.range.first < launch,
+            "DRIFT never takes BECOME, but `onDrift` does not put BECOME back to OFF after the switch to MORPH " +
+                "and before the write: the card would show a ramp the drift did not use, J24's value-shown/" +
+                "value-used divergence. Write `pendingBecome = MutateSheet.BECOME.defaultFraction` there.",
+        )
+        val at = reset!!.range.first
+        val line = drift.substring(drift.lastIndexOf('\n', at) + 1, drift.indexOf('\n', at).let { if (it < 0) drift.length else it })
+        assertEquals(
+            "pendingBecome = MutateSheet.BECOME.defaultFraction",
+            line.trim(),
+            "BECOME's reset shares its line with something else, so it may not run for every DRIFT tap. " +
+                "Give it a line of its own.",
+        )
+        assertTrue(
+            drift.substring(afterBlock, at).isBlank(),
+            "something stands between the end of `if (!onMorph) { … }` and BECOME's reset " +
+                "(`${normalizeSpan(drift.substring(afterBlock, at))}`), so the reset may be guarded and skip " +
+                "some taps. Put it directly after the block.",
+        )
+        fun depth(i: Int) = drift.substring(0, i).count { it == '{' } - drift.substring(0, i).count { it == '}' }
+        val kitDir = drift.indexOf("val kitDir")
+        assertTrue(kitDir >= 0, "expected `onDrift` to declare `val kitDir`")
+        assertEquals(
+            depth(kitDir),
+            depth(at),
+            "BECOME's reset sits inside a block `val kitDir` is not in, so some DRIFT taps skip it. " +
+                "Write it at `onDrift`'s own depth.",
+        )
+    }
+
+    /**
+     * HEAR and KEEP both hand `MutateSheet` the BECOME the card shows.
+     *
+     * `MutateSheet.preview` and `MutateSheet.apply` take `becomeFraction`
+     * with a default of 0, which kept the phone's calls compiling while A1
+     * landed. The same default means a door that drops the argument still
+     * compiles and still plays, flat: HEAR or KEEP would ignore the row
+     * the player dialled, and no `:shell` test can see it, the gap the
+     * TAPE view law below names. Each door reads the fraction before its
+     * coroutine starts, as it reads `fraction`, so the value used is the
+     * value on screen at the tap.
+     */
+    @Test
+    fun `law - HEAR and KEEP hand MutateSheet the BECOME the card shows`() {
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        val doors = listOf(
+            Triple(
+                "fun onMutate() {",
+                """MutateSheet\.apply\(\s*f\s*,\s*slot\s*,\s*who\s*,\s*move\s*,\s*fraction\s*,\s*becomeFraction\s*\)""",
+                "appScope.launch",
+            ),
+            Triple(
+                "fun onHear() {",
+                """MutateSheet\.preview\(\s*m\s*,\s*slot\s*,\s*who\s*,\s*move\s*,\s*fraction\s*,\s*becomeFraction\s*\)""",
+                "scope.launch",
+            ),
+        )
+        for ((door, call, launcher) in doors) {
+            val body = codeOnly(blockAfter(src, door))
+            val read = Regex("""val\s+becomeFraction\s*=\s*pendingBecome\b""").find(body)
+            val launch = body.indexOf(launcher)
+            assertTrue(launch >= 0, "expected `$door` to start its work with `$launcher`")
+            assertTrue(
+                read != null && read.range.first < launch,
+                "`$door` does not read `val becomeFraction = pendingBecome` before `$launcher`, so the BECOME it " +
+                    "uses is not the one on screen at the tap.",
+            )
+            assertTrue(
+                Regex(call).containsMatchIn(body),
+                "`$door` calls MutateSheet without the card's BECOME. The argument defaults to 0, so this " +
+                    "compiles and plays a flat MORPH while the row says otherwise. Pass `becomeFraction` as the " +
+                    "sixth argument.",
+            )
+        }
+    }
     /**
      * J22. `TapeDeckViewTest` proves the carrier carries; this proves TAPE
      * still uses it.

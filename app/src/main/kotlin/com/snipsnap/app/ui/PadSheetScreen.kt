@@ -1240,6 +1240,13 @@ fun PadSheetScreen(
     val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
     val pendingMutateKnob =
         mutateKnobs[mutateMode] ?: (mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
+    // MORPH's second knob, BECOME: how long the hit takes to turn from the
+    // pad into the MIX blend. Only MORPH reads it (every other move ignores
+    // it in HEAR and KEEP alike, MutateSheet's `knobs`), so it is one value
+    // per pad, not one per move, and it sits beside `mutateKnobs` rather
+    // than inside it, so J24's law reads that map exactly as before. It
+    // opens OFF, and DRIFT puts it back there (`onDrift`).
+    var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }
 
     /**
      * MUTATE. The verb refuses layered and chained pads itself; the GHOSTS
@@ -1274,6 +1281,7 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val move = MutateSheet.modeFor(mutateMode)
         val fraction = pendingMutateKnob
+        val becomeFraction = pendingBecome
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
@@ -1284,7 +1292,7 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
-                        MutateSheet.apply(f, slot, who, move, fraction)
+                        MutateSheet.apply(f, slot, who, move, fraction, becomeFraction)
                         applied = true
                     }
                 }
@@ -1336,10 +1344,11 @@ fun PadSheetScreen(
         }
         val move = MutateSheet.modeFor(mutateMode)
         val fraction = pendingMutateKnob
+        val becomeFraction = pendingBecome
         scope.launch {
             busy = true
             try {
-                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction) }
+                val rendered = withContext(Dispatchers.IO) { MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                     audition(rendered, p.level, p)
                 }
@@ -1443,6 +1452,12 @@ fun PadSheetScreen(
             // true readout of the last thing that happened.
             mutateKnobs[Mutate.Mode.MORPH.name] = MutateSheet.DRIFT_FRACTION
         }
+        // DRIFT is a flat morph: `MutateSheet.drift` never takes BECOME. So
+        // the card puts BECOME back to OFF on every DRIFT tap, from MORPH as
+        // well as from any other move. A remembered `BECOME 400` left on
+        // screen would be a value shown against a value used, the exact
+        // divergence the block above exists to prevent for MIX.
+        pendingBecome = MutateSheet.BECOME.defaultFraction
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         appScope.launch {
