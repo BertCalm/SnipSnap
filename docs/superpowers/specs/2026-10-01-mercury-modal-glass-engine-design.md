@@ -804,10 +804,16 @@ The owner chose "make it subtle":
   hears every short note PERC, and the held tone is the same to the bit.
 
 Per 5 ms in the first 80 ms, the scrape is now 16–30 dB under the note at
-velocity 1 (SING; BLADE 16–32) and 20–34 dB under at .65. `MercuryTest`
-holds that gap: at least 14 dB under the note in every 5 ms, at velocity 1
-and .65, and still there (within 22 dB of the note at its loudest, at
-full velocity). Round 3's scrape fails it by name, at +2.4 dB.
+velocity 1 (SING; BLADE 16–32) and 20–34 dB under at .65, at the
+defaults. Over every SING and BLADE preset (the kit's A09–A16 among them)
+the closest it comes is 14.8 dB under (BLADE TAPPED STEEL, velocity 1).
+`MercuryTest` holds that gap on the defaults and on all 16 presets: at
+least 14 dB under the note in every 5 ms, at velocity 1 and .65, and still
+there (within 22 dB of the note at its loudest, at full velocity). The
+scrape alone is noise (0.4–1.5 kHz flatness 0.63 on SING, 0.65 on BLADE).
+Round 3's scrape fails the gap by name, at +2.4 dB. The gap is read with
+HOLD 0 for speed; the test shows, to the bit, that HOLD does not move the
+first 80 ms.
 
 Only the SING and BLADE kit pads (A09–A16) change.
 
