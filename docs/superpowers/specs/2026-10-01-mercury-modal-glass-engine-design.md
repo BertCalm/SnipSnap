@@ -2,8 +2,15 @@
 
 **Status:** review and decision. **Phase 0 has run and passed**
 (2026-10-01; "Phase 0, as measured" below): the rotation bank speaks, is in
-tune, decays passively and stays bounded. **No engine code is built and
-nothing has been heard.** This document reads the external *Mercury Engine — Engineering
+tune, decays passively and stays bounded. **R0, the shared toolkit, is built**
+(2026-10-01; "R0, as built" below): `Modes.Bank`, `Modes.Friction` and
+`Modes.symmetricEigen`, with no change to any existing render. **R1, the
+engine, is built** (2026-10-01; "R1, as built" below): PING, SING and
+BLADE, 24 presets, a kit and an audition page, roadmap row **S22**.
+**The first audition is in** (2026-10-02; "The audition, round 1" below):
+144 of 166 clips kept, none cut. Round 2 fixed WATER (heard, kept) and
+PING's velocity (kept); SING's and BLADE's velocity became the touch (a
+soft rub swells in, a hard one bites), for round 3. This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -448,4 +455,320 @@ bound and the anchor fix:
 - an aliasing measurement;
 - GLASS's friction selectivity;
 - every sonic claim, which waits for R1's audition.
+
+## R0, as built — 2026-10-01
+
+**What landed.** R0 is purely additive to `synth/src/main/kotlin/com/snipsnap/synth/Modes.kt`:
+no existing line changed, so no existing render can move. The full JVM
+suite, `./gradlew --no-daemon test`, including `DeterminismTest`, is the
+proof. The claims tests are in `ModesBankTest.kt`.
+
+- **`Modes.Bank(size, rate)`**, the rotation bank:
+  - `tune(i, hz, t60)`: retunable on any sample, with the mode's state, and
+    so its energy, kept.
+  - `connect(i, j, kappa)` / `setKappa(edge, kappa)`: reciprocal springs.
+  - `step()`: rotate, then spring kicks.
+  - `drive(b, force)`: a force through a participation vector, landing as
+    velocity.
+  - `velocity(i)`, `displacement(i)`, `velocityAlong(w)` (the pickup, or
+    the contact speed), `compliance(b)` and `energy()`.
+  - `anchorScale(anchor)` and `coupledHz(anchor)`.
+- **`Modes.Friction(a)`**, the contact: `curve`, `slope`, `steepestFall`,
+  and `force(driver, surface, pressure, compliance)`.
+- **`Modes.symmetricEigen`**, a cyclic Jacobi solve for the once-per-note
+  anchor fix.
+- **`Modes.MAX_NODE_KAPPA = 1`.**
+
+**Where it differs from the spike, and why:**
+- **The stability bounds are enforced, not chosen.** `tune`, `connect` and
+  `setKappa` refuse any change that breaks either bound, and a refused call
+  leaves the bank untouched. This is the same structural style as GYRE's
+  `‖M‖ ≤ 1` junction.
+  - **Where the bounds come from.** Eliminating v turns the undamped
+    rotate-then-kick step into a leapfrog recurrence,
+    `M·(q_{n+1} − 2q_n + q_{n−1}) = −K̂·q_n`, with θ = ωT,
+    `M = diag(ω/(T·sin θ))` and `K̂ = diag(2ω·tan(θ/2)/T) − A`. It is stable
+    exactly when `K̂` and `4M − K̂` are both positive definite. Diagonal
+    dominance, with S a mode's kappa sum and `x = π·f/rate`, gives the two
+    bounds:
+    - **`S < 1`** (because `tan x ≥ x`). This also keeps K itself positive
+      definite.
+    - **`S·x·tan x < 1`.** The first version of R0 had only `S < 1`, which
+      makes K positive definite but does not make the split stable near
+      Nyquist. The review on #428 found a pair of modes at 490 Hz with a
+      1 kHz rate and kappa 0.5 that diverged.
+  - **The second bound is tight.** A symmetric mode pair 3 % inside it
+    stays bounded for 200,000 undamped steps; 3 % outside, it reaches 10¹²
+    within 60–240 steps (at 300, 400 and 450 Hz at a 1 kHz rate).
+  - **MERCURY never meets it.** At its 19 kHz mode ceiling at 176.4 kHz,
+    `x·tan x` is 0.12.
+- **The friction solve is bracketed.** The spike's plain 8-step Newton
+  failed the new claims test near the unique-root bound: the slope tends
+  to 0 there, and Newton oscillates. `|φ| ≤ 1` puts the root within ±p·c of
+  the free slip, so `force` runs Newton inside that bracket and bisects
+  when a step would leave it. At the pressures MERCURY uses, the bracket
+  is about 10⁻⁵ wide and the answer is the spike's to rounding.
+- **`anchorScale` is a ratio, so it is invariant.** After the retune it
+  returns the same factor. `coupledHz` reads where the anchor really rings,
+  and that is the number to check: it lands on the note.
+- **`tune` costs an exp, a cos and a sin.** The spike retuned every 8
+  samples. R1 decides its own control rate; the class allows every
+  sample.
+
+**The claims, measured on the shipped class** (`ModesBankTest`, 14 tests):
+
+| Claim | Test | Measured |
+|---|---|---|
+| A free mode is an exact damped rotation | 20,000 steps against `r^n·cos(nθ)` | velocity error 6.3×10⁻¹³, displacement error 1.9×10⁻¹⁶ |
+| Retuning does not pump energy | ±12 semitones at 2 Hz, every sample, against the unswept bank | energy ratio within 1.4×10⁻¹¹ of 1 |
+| A coupled bank never gains energy | Phase 0's object at kappa 0.036 / 0.072 / 0.12 / 0.24 (the last puts the busiest modes at a kappa sum of 0.96) | no 1 ms block above its predecessor; worst block ratio 0.9973 |
+| Passive at random tunings at the bound | 6 random 16-mode tunings (40 Hz–20 kHz, t60 0.05–8 s), kappa 0.24 | no rise |
+| K stays positive definite | 200 random tunings over 10 octaves, kappa sum 0.96 | every eigenvalue > 0 |
+| The bound is enforced | `connect` / `setKappa` past 1, a self-loop, negative kappa | each refused, and a refused spring leaves no edge behind |
+| The split's bound is enforced near Nyquist | the review's 490 Hz / 1 kHz / kappa 0.5 case, by `connect` and by retuning a connected mode | both refused; the bank is unchanged |
+| Just inside the bound, it is stable | 20 random undamped 6-mode chains up to 0.48·rate, each kappa sum at 0.98 of its bound, 50,000 steps | energy stays within 100× of its start; it never diverges |
+| The anchor fix | COUPLE 1, MIDI 60 | −85.3 cents uncorrected (Phase 0: −85.3); `coupledHz` on the note to 10⁻¹²; rendered 0.005 cents |
+| Friction solves its own equation | 500 random contacts up to 0.9 of the unique-root bound | force consistent with its slip to 10⁻¹² |
+| A rubbed bank sings on its anchor | Phase 0's iteration-3 rub at MIDI 60, COUPLE 0.25, 0.2 landing floor | −0.65 cents (Phase 0: −0.6); level change over the last 0.3 s 1.0004×; anchor 1.5×10⁵ × mode 1; peak 0.027 |
+| Deterministic | the rub twice | identical |
+| Guarded | stepping an untuned bank; tuning at Nyquist or t60 0 | refused |
+
+**Next: R1, the engine.** Design and plan are as above:
+- PING, SING and BLADE;
+- seven macros (TUNE, BEND, RUB, WATER, GLASS, COUPLE, HOLD);
+- 24 presets;
+- registration, a kit, and an audition page for the owner's listening gate;
+- the mapping changes from "Phase 0, as measured".
+
+## R1, as built — 2026-10-01
+
+**What landed:**
+- **The engine and its patch.** `Mercury.kt`, `MercuryPatch.kt` and
+  `MercuryPresets.kt` (8 per voice).
+- **Registration.** `Patches.fromJsonValue`, `Velocity.macroSpecsFor` and
+  `Presets` (`forVoice`, `all()`; the KDoc count is now fifteen).
+- **The kit.** `SynthKits.mercury()`, `MercuryKitGenerator` and
+  `testkit/SnipSnap Mercury Kit/`.
+- **The audition.** `MercuryAuditionGenerator` and
+  `audition/mercury-audition.html`, with the gradle tasks
+  `generateMercuryKit` and `generateMercuryAudition`;
+  `testkit/mercury-audition/` is gitignored.
+- **Tests.** The claims (`MercuryTest`), the preset contract
+  (`MercuryPresetsTest`), and an arm each in `DeterminismTest`,
+  `PadRecipeTest`, `PresetsTest` and `SynthKitTest`.
+- **The roadmap row, S22.** R1 first took S21, but GYRE's R1 merged to the
+  default branch first under S21, so MERCURY moved to S22 when the base
+  was merged in (2026-10-02).
+- **Not touched.** The phone's picker, which is R1.1 and needs a machine
+  with the SDK.
+- **One registration rule the map above missed.** `:shell`'s
+  `UserPresetsTest` requires every `<Engine>Presets.kt` to use the house
+  helper, `private fun p(voice, name, vararg macros: Pair<String, Float>)`.
+  That is the line `UserPresets.rosterLine` pastes into. R1's first roster
+  used positional parameters and failed it; the roster now uses the house
+  helper, with the same values, so nothing renders differently.
+
+**The object, as built.** It is Phase 0's iteration-3 object on
+`Modes.Bank`:
+- PING runs C4–C6; SING and BLADE G3–G5.
+- Up to 12 primary modes and 4 vessel modes. A mode that could reach
+  40 kHz at the widest bend is dropped, so a high note has fewer modes.
+  That keeps every mode far inside the bank's split bound: `x·tan x` is
+  0.62 at 40 kHz, and the kappa sum is under 0.77.
+- Every mode fades out between 14 and 19 kHz.
+- The control rate is 8 samples.
+- The friction is `Modes.Friction(5000)`, with the finger at 0.03.
+
+**Where R1 differs from the plan, and why:**
+- **GLASS also roughens the contact.** On a rubbed voice, friction locks
+  onto the fundamental, so GLASS's damping and tilt barely changed the
+  sound. By band energy, SING's GLASS 0 against 1 was 0.001.
+  - The spec asks GLASS to change the friction too ("low GLASS should
+    favour broader, more damped motion"). So the pressure now jitters by
+    up to `ROUGHNESS` 0.6 at GLASS 0 and not at all at GLASS 1.
+  - The jitter is seeded noise smoothed below 2 kHz. Listening values.
+- **Pressure goes as RUB².** Linear in RUB, the rub crossed its sustain
+  threshold at RUB 0.05, so PING's default of 0.08 would have been a weak,
+  slow rub. As RUB² it crosses at about 0.19 at C4. Below that, RUB is a
+  tap with a slightly longer ring.
+- **HOLD is the contact, then the object rings out.**
+  - The ring is half the fundamental's t60, clamped to 0.4–2.5 s.
+  - It is released on a raised cosine over the ring's last 40 %: a
+    documented release, not a cut.
+  - At the default GLASS, every render is past the classifier's 1.5 s
+    line and so is filed LOOP by length. The shortest MERCURY (GLASS 0,
+    HOLD 0) is 0.93 s, is filed PERC, and the classifier hears PERC.
+  - The committed kit is 7.8 MB, the largest, because glass rings.
+- **PING's HOLD is mostly length.** A tap has nothing to hold, so HOLD on
+  PING moves the sound by 0.13 on ARCO's measure, against 0.5–1.4 for every
+  other knob. It clears the bar, and its meaning on a tap is a question for
+  the gate.
+- **Velocity falls back to `soften`,** as BORE's does (decision 8). No
+  override is registered until a monotonic centroid sweep earns one.
+
+**The claims, measured** (`MercuryTest`):
+
+| Claim | Measured |
+|---|---|
+| In tune (BEND centred, no water), every voice at TUNE 0, .5 and 1 | within 0.53 cents |
+| The bend gesture | BEND 1 starts +161 cents and BEND 0 −166 cents in the first 0.1 s; both settle within 0.54 cents after 2.5 s |
+| No dead knob, on ARCO's measure (bar 0.1) | every knob 0.13 (PING's HOLD) to 1.45; WATER 0.05 against 0, 1.18–1.29 |
+| RUB turns a tap into a rub | level at the end of a 2.4 s contact over its start: tap 0.07 / 0.01, rub 1.15 / 1.25 (SING / BLADE) |
+| The rub locks on the note at the bottom of the range, at both ends of GLASS, COUPLE 1 | within 0.42 cents |
+| The anchor fix at COUPLE 1 | within 0.41 cents |
+| Every corner of the knobs, both ends of TUNE, raw | 192 renders, all finite, worst raw peak 0.043 |
+| The filed class follows the length line | the shortest is 0.93 s, filed and heard PERC; the default is filed and heard LOOP |
+| Determinism, length, clamping, refusal, velocity fallback | all hold |
+
+**The roster** (`MercuryPresetsTest`). All 24 presets render clean at the
+melodic loudness, round-trip through JSON, carry all seven knobs, and
+spread apart. None is named after an engine, a voice (R2's EDDY, VESSEL
+and SHARD included) or a rack section. Each lands on the note its comment
+names, and the classifier hears none of them as a drum: all are LOOP by
+length.
+
+**Next.** The owner's audition. The page is the kit, then each voice's
+range, a phrase, three velocities, every knob's ends, the dead-zone
+probes and its presets, then the five interaction grids: 166 clips in all.
+Then R1.1 (the phone) and R2 (LOOP, `Keys.mercuryPad`, EDDY, VESSEL and
+SHARD).
+
+## The audition, round 1 — 2026-10-02
+
+The owner rated all 166 clips: **144 KEEP, 22 MEH, 0 CUT**. Every kit pad
+and every preset was kept. The MEHs fell into three groups:
+- **WATER on SING and BLADE.** The dead-zone probes (.05, .10, .20), SING's
+  WATER 1, and the grid squares with WATER at .5 or 1. Asked, the owner
+  said: *"couldn't hear it"*. On PING the probes were kept.
+- **Velocity on PING and BLADE,** all six clips. Asked what a harder hit
+  should do: *"brighter and louder"*.
+- **SING's range,** all three TUNE clips. The owner does not remember
+  marking these, and the middle clip is the same render as SING's
+  default, which was kept. Treated as unrated. The page's code was read:
+  each button writes only its own clip, so no fault was found there.
+
+### Why WATER was not heard
+
+ARCO's waveform measure scored WATER 0.05 at 1.2, well over the 0.1 bar,
+but that measure counts any phase shift. Measured as an ear hears it
+(what WATER adds to the same note held still, read every 20 ms):
+
+| WATER adds, round 1 | .05 | .20 | 1 |
+|---|---|---|---|
+| PING | 3.9 cents, 0.3 dB | 7.6 cents, 0.6 dB | 15 cents, 2.4 dB |
+| SING | 3.8 cents, 0.2 dB | 7.8 cents, 0.4 dB | 14 cents, 1.5 dB |
+| BLADE | 10 cents, 0.5 dB | 21 cents, 1.1 dB | 49 cents, 3.8 dB |
+
+Three causes:
+1. **It was a flutter, not a drift.** A ring mode read the mass through
+   `cos((k + 2)·angle)`, so the fundamental's load moved at four times
+   the 0.6–3 Hz orbit (2.4–12 Hz), and the upper modes faster still.
+2. **The rub locks the partials.** Friction holds a rubbed voice to one
+   period, so modes drifting apart cannot be heard as such; only the
+   fundamental's few cents were left.
+3. **√WATER put .05 at 0.22 of the depth,** and the ring's load only
+   reached 0.36.
+
+### Round 2's WATER
+
+- The mass orbits at 0.25–1 Hz, and a ring mode k reads it at
+  `cos(angle − 0.9·k)`, so every mode rises and falls at 0.5–2 Hz, each
+  in its own phase. The ring's load is normalised to swing 0–1, like the
+  beam's.
+- The depth goes as WATER^0.25 (.05 at 0.47 of the full depth).
+- **The water moves what each mode radiates:** a loaded mode's pickup
+  rises and an unloaded one's falls by up to 0.7 × WATER^0.25. The rub
+  cannot lock levels, so this is heard on SING and BLADE.
+- The full depth (0.06) is unchanged, so WATER 1 still drifts about 50
+  cents. The kappa bound still holds: every load stays at or under 1, so
+  the busiest mode's sum is still under 0.77.
+
+| WATER adds, round 2 | .05 | .20 | 1 |
+|---|---|---|---|
+| PING | 13 cents, 2.6 dB | 27 cents, 5.6 dB | 51 cents, 10.9 dB |
+| SING | 10 cents, 2.2 dB | 24 cents, 5.3 dB | 50 cents, 10.7 dB |
+| BLADE | 21 cents, 1.6 dB | 30 cents, 3.0 dB | 50 cents, 6.9 dB |
+
+`MercuryTest` now holds WATER to the ear's units: .05 adds at least 8
+cents and 1.2 dB on every voice, and more WATER never adds less. Round 1
+fails it (3.8 cents on SING).
+
+**Every default and preset carries WATER (.10–.15 at the defaults), so
+every clip changed.** Round 2's question is whether the defaults are now
+too wet.
+
+### Round 2's velocity (decision 8, answered)
+
+PING and BLADE register **GLASS** as their velocity macro
+(`Velocity.brightnessOverride`). GLASS shortens the strike (a harder
+mallet) and tilts the pickup bright. The house's sweep holds: the onset
+centroid rises at every tenth of velocity's travel, 544 to 710 Hz on PING
+(+31%) and 540 to 654 Hz on BLADE (+21%). "Louder" is the pad's velocity
+curve on the MPC: `Velocity.layerAt` peak-matches every layer.
+
+**SING keeps `soften`.** Its GLASS brightens the onset but darkens the
+held body (437 to 423 Hz over velocity's travel), and the owner kept
+SING's soften layers.
+
+A side effect: GLASS also sets the ring's length, so a soft hit on PING
+rings shorter. FORK's STRIKE does the same.
+
+**Next.** Round 2 of the audition, on the same page, with its verdicts
+kept apart (`mercury_r2`).
+
+## The audition, round 2 — 2026-10-02
+
+The owner rated the clips round 2 changed for a reason:
+- **A little WATER** (.05, .10, .20, and SING's 0): **all 10 KEEP**, on
+  every voice. These are the same clips SING and BLADE marked MEH in
+  round 1, so the ear-units fix works by ear.
+- **Velocity:** **PING's three KEEP**; SING's and BLADE's three each MEH.
+  The owner: *"I really only hear a difference in ping."*
+
+### Why the rubbed voices' velocity was not heard
+
+A rubbed glass or a bowed blade is close to a pure tone: the rub sustains
+the fundamental, and the upper modes are not harmonics of it, so the
+locked motion barely drives them. GLASS moved only the first 50 ms (the
+finger landing), and `soften`'s low-pass sits well above the body.
+
+A steeper contact taper for a soft touch (0.5 to 1.5) was tried and
+measured: the held body's centroid moved only 4% on SING (412 to
+427 Hz) and 13% on BLADE (410 to 463 Hz). How the note starts did show.
+Offered "attack and bite", "attack only" or "loudness only", the owner
+chose **attack and bite** (decision 8, final).
+
+### Velocity, as built
+
+- **PING:** GLASS, as in round 2 (+31% onset centroid, monotonic).
+- **SING and BLADE:** velocity is a render parameter, as on PLUCK
+  (`Mercury.render(voice, macros, velocity)`), and `Velocity` renders it
+  directly (`touchedVelocity`), with no macro moved and no `soften`.
+  - **The swell.** The finger or bow comes up to speed up to 31 times
+    slower (`VELOCITY_RAMP` 30 on the 20 ms ramp). Time to half level, soft
+    to hard: SING 0.38 / 0.27 / 0.17 / 0.08 s, BLADE 0.35 / 0.28 / 0.19 /
+    0.09 s at velocity 0 / .3 / .65 / 1.
+  - **The bite.** A hard touch catches with a scrape: seeded contact noise,
+    0.4–1.5 kHz, 12 dB under the held tone at full velocity and dying over
+    40 ms. Its amplitude goes with velocity (about 10 dB quieter at 0.3).
+  - **Two findings on the way.** Friction roughness fed through the
+    contact cannot make a scrape: the high-Q modes filter it into tone (a
+    3x rougher catch left the 1–6 kHz flatness at zero). So the scrape is
+    added after the modes, and is over by 0.3 s, so the held tone is the
+    same to the bit. And at 1–6 kHz it made the shortest SING (GLASS 0,
+    HOLD 0) read as SNARE to the classifier, which counts the magnitude
+    above 2 kHz. Under 1.5 kHz, with two poles on the top edge, every short
+    note is heard PERC again.
+- **1, the default, is a full touch.** So the SING and BLADE kit pads and
+  presets now carry the scrape; nothing else in them changed.
+- `MercuryTest` holds all of it: PING's sweep; the swell at every step and
+  at least 3x; the scrape's flatness (0.20 and 0.16 against 0.0001) and
+  the held tone to the bit. With the touch switched off, that test fails
+  by name.
+
+**Next.** Round 3 of the audition: SING's and BLADE's velocity, and the
+kit's SING and BLADE pads with the scrape. The WATER ends and the
+defaults' wetness were not rated in round 2 and are still open. Then R1.1
+(the phone's picker, which needs an SDK) and R2 (LOOP, `Keys.mercuryPad`,
+EDDY, VESSEL and SHARD).
 

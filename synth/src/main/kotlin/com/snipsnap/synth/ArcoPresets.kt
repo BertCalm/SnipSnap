@@ -40,13 +40,14 @@ object ArcoPresets {
     private val celloPresets = listOf(
         // D3 (14 of 24), the open D string: the slowest stroke (400 ms to full speed) into a 0.9 s bow, a long lyrical note.
         p(ArcoVoice.CELLO, "SLOW BOW", "TUNE" to 0.583f, "BOW" to 0.0f, "GRIP" to 0.7f, "BODY" to 0.5f, "HOLD" to 0.43f),
-        // A3 (21 of 24), the open A string: a hard bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.19 s.
+        // A3 (21 of 24), the open A string: a hard bow with a bite and 0.3 s of it, a spiccato accent that locks in 0.22 s.
         p(ArcoVoice.CELLO, "SHORT STAB", "TUNE" to 0.875f, "BOW" to 0.9f, "GRIP" to 0.7f, "BODY" to 0.4f, "HOLD" to 0.0f),
         // A2 (9 of 24): a dark, boxy pedal tone under a pad, locking at 0.47 s of its 0.92 s of bow.
         p(ArcoVoice.CELLO, "DEEP PEDAL", "TUNE" to 0.375f, "BOW" to 0.5f, "GRIP" to 0.4f, "BODY" to 0.8f, "HOLD" to 0.43f),
-        // F#2 (6 of 24), under G#2: a hard bite that starts in a scratch and only locks into the note after 0.4 s of its 0.6.
-        p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.85f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f),
-        // E2 (4 of 24), the string alone (BODY 0): a stab too low to lock, so it never leaves the scratch; a scrape for the percussion pads.
+        // F#2 (6 of 24), under G#2: a hard bite that starts in a scratch and only locks into the note after 0.4 s of its 0.6. BOW 0.65, not the
+        // 0.85 it was written at: R1c's bite is bigger, and at BOW 0.85 this note no longer locks inside its bow at all (at 0.65 it locks at 0.45 s).
+        p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.65f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f),
+        // E2 (4 of 24), the string alone (BODY 0): a stab too low to lock before the last 10 ms of its 0.34 s, so a scrape in all but a moment (R1b's bite never let it lock at all); for the percussion pads.
         p(ArcoVoice.CELLO, "DRY SCRAPE", "TUNE" to 0.167f, "BOW" to 1.0f, "GRIP" to 0.5f, "BODY" to 0.0f, "HOLD" to 0.05f),
         // A#2 (10 of 24): the whole box (BODY 1) under a 0.13 s bow-in that settles by 0.4 s, as long as a one-shot may be.
         p(ArcoVoice.CELLO, "CINEMA LOW", "TUNE" to 0.417f, "BOW" to 0.3f, "GRIP" to 0.5f, "BODY" to 1.0f, "HOLD" to 0.43f),
@@ -59,8 +60,10 @@ object ArcoPresets {
     private val erhuPresets = listOf(
         // C#5 (11 of 19): the middle-high voice of the line, a nasal edge from a firm grip and a box that is mostly there.
         p(ArcoVoice.ERHU, "NASAL LINE", "TUNE" to 0.579f, "BOW" to 0.5f, "GRIP" to 0.8f, "BODY" to 0.7f, "HOLD" to 0.38f),
-        // G4 (5 of 19): a soft round note, a dark light grip into nearly all box, bowed in over 0.19 s.
-        p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.85f, "HOLD" to 0.42f),
+        // G4 (5 of 19): a soft round note, a dark light grip into nearly all box, bowed in over 0.19 s. BODY 0.8, not the 0.85 it was
+        // written at: since R1c a BODY 0.85 box (1.375 times the string) is loud enough that the render's ring from its peak falls from
+        // 813 ms to 522 ms, within 22 ms of the classifier's 500 ms line, so a louder box moves the preset's BODY down a notch.
+        p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.8f, "HOLD" to 0.42f),
         // A#4 (8 of 19): the hardest bow on a light grip with hardly any box, 0.34 s of it: a thin, bright flick.
         p(ArcoVoice.ERHU, "THIN SCRAPE", "TUNE" to 0.421f, "BOW" to 1.0f, "GRIP" to 0.05f, "BODY" to 0.2f, "HOLD" to 0.05f),
         // G5 (17 of 19): near the top of the span, swelling in over 0.16 s under a firm grip and a held bow: the cry.
