@@ -15,6 +15,9 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Terra
+import com.snipsnap.synth.TerraPatch
+import com.snipsnap.synth.TerraVoice
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
 import java.io.File
@@ -199,7 +202,14 @@ class DegenerateDoorsTest {
                 "robin" to JsonValue.Obj(linkedMapOf<String, JsonValue>("takes" to JsonValue.Num(3.0), "seed" to JsonValue.Num(1.0))),
             ),
         )
-        return listOf("era" to era, "character" to character, "smear" to smear, "keyed" to keyed, "patch" to patch, "robin x3" to robin)
+        // DO IT AGAIN on a struck TERRA pad renders the striker from the recipe alone, on every degenerate destination.
+        val struck = PadRecipe(
+            patch = TerraPatch(
+                "Seed", TerraVoice.COMPOUND_MEMBRANE, mapOf("TUNE" to 0.3f),
+                TerraPatch.Striker(requireNotNull(Terra.captureStriker(DrumSynth.snare())), 0.5f, "A01"),
+            ),
+        ).toJsonValue()
+        return listOf("era" to era, "character" to character, "smear" to smear, "keyed" to keyed, "patch" to patch, "struck terra" to struck, "robin x3" to robin)
     }
 
     @Test
