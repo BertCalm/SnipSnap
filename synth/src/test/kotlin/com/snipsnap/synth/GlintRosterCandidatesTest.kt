@@ -54,11 +54,14 @@ class GlintRosterCandidatesTest {
     }
 
     @Test
-    fun `TUNE, DECAY and every macro that is not varied stay at their defaults`() {
+    fun `TUNE, DECAY, FOLLOW and every macro that is not varied stay at their defaults`() {
         for (voice in GlintVoice.entries) {
             val defaults = Glint.defaults(voice)
             val varied = GlintRosterCandidates.varied(voice)
-            assertTrue("TUNE" !in varied && "DECAY" !in varied, "$voice: TUNE and DECAY are not to be varied")
+            assertTrue(
+                "TUNE" !in varied && "DECAY" !in varied && "FOLLOW" !in varied,
+                "$voice: TUNE, DECAY and FOLLOW are not to be varied; none can be heard at the clips' one zone",
+            )
             for (c in GlintRosterCandidates.forVoice(voice)) {
                 for ((name, value) in c.macros) {
                     if (name !in varied) assertEquals(defaults.getValue(name), value, "$voice-${c.number}: $name left its default")
@@ -70,8 +73,7 @@ class GlintRosterCandidatesTest {
     @Test
     fun `the varied macros are the spec's, and each is one its voice has`() {
         for (voice in GlintVoice.entries) {
-            val want = if (voice == GlintVoice.VOWEL) listOf("PEAK", "BODY", "BLOOM", "DEPTH")
-            else listOf("PEAK", "FOLLOW", "BODY", "BLOOM", "DEPTH")
+            val want = listOf("PEAK", "BODY", "BLOOM", "DEPTH")
             assertEquals(want, GlintRosterCandidates.varied(voice), "$voice: the varied macros")
             val has = Glint.macrosFor(voice).map { it.name }
             assertTrue(want.all { it in has }, "$voice: a varied macro that the voice does not have")

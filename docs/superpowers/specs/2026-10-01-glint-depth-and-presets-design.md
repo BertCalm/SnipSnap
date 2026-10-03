@@ -165,12 +165,12 @@ A second PR, after DEPTH has merged and Josh has heard it in the engine.
 No value in the roster comes from Claude's taste ("No agent invents a preset value", the THUMP SNARE precedent). The process:
 
 1. **16 candidates per voice** (64 clips), rendered by the real engine as held pads on one zone near the middle of the keyboard, the sound MAKE INSTRUMENT gives, levelled by the repo's audition rule, 5 s each, named `<VOICE>-01` to `-16`.
-2. **The values are a stratified spread, not a choice.** The varied macros are PEAK, FOLLOW, BODY, BLOOM and DEPTH (VOWEL: PEAK, BODY, BLOOM, DEPTH). Each takes 16 evenly spaced levels (`i/15`) exactly once across the 16 candidates, shuffled per macro by a recorded seed, so both ends of every range appear (the ugly end included). DEPTH's levels span 0 to 0.9, never 1.0, which is the same sine on every voice. TUNE and DECAY are not varied: TUNE is overridden per zone in a pad, and held pads ignore DECAY, so any value would be unheard.
+2. **The values are a stratified spread, not a choice.** The varied macros are PEAK, BODY, BLOOM and DEPTH, on every voice. Each takes 16 evenly spaced levels (`i/15`) exactly once across the 16 candidates, shuffled per macro by a recorded seed, so both ends of every range appear (the ugly end included). DEPTH's levels span 0 to 0.9, never 1.0, which is the same sine on every voice. TUNE, DECAY and FOLLOW are not varied: TUNE is overridden per zone in a pad, held pads ignore DECAY, and FOLLOW is key tracking, which pivots on the pitch of TUNE 0.5 (`Glint.referenceHz`), exactly the zone near the middle that the clips use, so there it changes nothing, bit for bit. Any value of the three would be unheard. (FOLLOW was first listed as varied; the final review of the candidate tooling measured it inert at this zone, and the tooling now pins that.)
 3. **Sent to Josh's phone; he replies with the numbers to keep.** If a voice comes up short of eight, a second round of variants near his keeps (seeded jitter) is rendered for that voice.
 4. **Names:** Claude proposes them from the settings, Josh vetoes.
-5. **Before the PR:** Josh hears the final 32 once more, as pads and as one-shots (`snipsnap synth GLINT <VOICE> --all --out <dir>`).
+5. **Before the PR:** Josh hears the final 32 once more, as pads played at a low, a middle and a top zone (FOLLOW is only heard between keys) and as one-shots (`snipsnap synth GLINT <VOICE> --all --out <dir>`).
 
-TUNE and DECAY ship at their defaults unless Josh's review of the final listen says otherwise; those two are the only values in the roster not chosen by ear, and they are flagged.
+TUNE, DECAY and FOLLOW ship at their defaults unless Josh's review of the final listen says otherwise; those three are the only values in the roster not chosen by ear, and they are flagged. FOLLOW is the one of them the final listen can actually play (across the zones), so it is the one he is most likely to move.
 
 ### 6.3 Wiring and gates
 

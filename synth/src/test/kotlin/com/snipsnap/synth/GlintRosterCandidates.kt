@@ -8,8 +8,8 @@ import java.util.Random
  * evenly spaced levels, `i / 15`, exactly once across the sixteen candidates, in an order shuffled per macro
  * by a recorded seed, so both ends of every range are heard, the ugly end included. DEPTH's levels are scaled
  * to 0 through [DEPTH_MAX], never 1: full DEPTH is the same bare sine on every voice. Nothing here comes from
- * anyone's taste. TUNE is not varied (a pad overrides it per zone) and neither is DECAY (a held pad ignores
- * it); both stay at their defaults, as does any macro this does not name.
+ * anyone's taste. TUNE is not varied (a pad overrides it per zone), DECAY is not (a held pad ignores it) and
+ * FOLLOW is not (see [varied]); all three stay at their defaults, as does any macro this does not name.
  *
  * The owner hears the clips ([GlintRosterAuditionGenerator]) and replies with the numbers to keep; those
  * candidates' values become the roster. The numbering is therefore a contract with whatever was sent: change
@@ -30,10 +30,19 @@ internal object GlintRosterCandidates {
 
     class Candidate(val number: Int, val macros: Map<String, Float>)
 
-    /** The macros whose levels are spread, in the order their shuffles are drawn. VOWEL has no FOLLOW. */
-    fun varied(voice: GlintVoice): List<String> =
-        if (voice == GlintVoice.VOWEL) listOf("PEAK", "BODY", "BLOOM", "DEPTH")
-        else listOf("PEAK", "FOLLOW", "BODY", "BLOOM", "DEPTH")
+    /**
+     * The macros whose levels are spread, in the order their shuffles are drawn: the four every voice has and a
+     * clip can show. FOLLOW is not among them. It is key tracking, and every clip is rendered at the pitch the
+     * tracking pivots on ([GlintRosterAuditionGenerator.zoneMidi]), where it changes nothing, bit for bit; a
+     * value nobody can hear is no pick by ear, so it stays at its default like TUNE and DECAY.
+     */
+    fun varied(voice: GlintVoice): List<String> {
+        val has = Glint.macrosFor(voice).map { it.name }.toSet()
+        require(VARIED.all { it in has }) { "$voice has no ${VARIED.filter { it !in has }}, which the spread varies" }
+        return VARIED
+    }
+
+    private val VARIED = listOf("PEAK", "BODY", "BLOOM", "DEPTH")
 
     /** The sixteen candidates for [voice], numbered 1 to [COUNT]. Every macro of the voice is set. */
     fun forVoice(voice: GlintVoice): List<Candidate> {

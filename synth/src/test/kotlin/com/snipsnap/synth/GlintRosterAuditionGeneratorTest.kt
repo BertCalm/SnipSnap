@@ -5,6 +5,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -67,5 +68,38 @@ class GlintRosterAuditionGeneratorTest {
         } finally {
             dir.deleteRecursively()
         }
+    }
+
+    @Test
+    fun `every varied macro is audible at the clips' zone, and FOLLOW, which is not varied, is not`() {
+        for (voice in GlintVoice.entries) {
+            val midi = GlintRosterAuditionGenerator.zoneMidi(voice)
+            val defaults = Glint.defaults(voice)
+            fun pad(name: String, value: Float): FloatArray = Keys.glintPad(voice, defaults + (name to value), midi).snip.samples
+            for (name in GlintRosterCandidates.varied(voice)) {
+                val top = if (name == "DEPTH") GlintRosterCandidates.DEPTH_MAX else 1f
+                val change = relativeChange(pad(name, 0f), pad(name, top))
+                assertTrue(change > 0.01f, "$voice $name: 0 and $top sound alike at the clips' zone (relative change $change), so the owner cannot pick on it")
+            }
+            if ("FOLLOW" in defaults) {
+                assertTrue(
+                    pad("FOLLOW", 0f).contentEquals(pad("FOLLOW", 1f)),
+                    "$voice: FOLLOW now changes the sound at the clips' zone; reconsider varying it (spec 6.2.2)",
+                )
+            }
+        }
+    }
+
+    /** The RMS of the difference over the RMS of [a]; 1 when the pads differ in length, since a different timing is a different sound. */
+    private fun relativeChange(a: FloatArray, b: FloatArray): Float {
+        if (a.size != b.size) return 1f
+        var diff = 0.0
+        var reference = 0.0
+        for (i in a.indices) {
+            val d = (a[i] - b[i]).toDouble()
+            diff += d * d
+            reference += a[i].toDouble() * a[i]
+        }
+        return sqrt(diff / reference).toFloat()
     }
 }

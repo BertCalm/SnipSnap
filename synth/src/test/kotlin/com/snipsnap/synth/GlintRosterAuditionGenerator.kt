@@ -59,12 +59,19 @@ object GlintRosterAuditionGenerator {
         String.format(Locale.ROOT, "%s-%02d.wav", voice.name, number)
 
     /**
+     * The MIDI note every clip of [voice] is rendered at. It is TUNE 0.5, the pitch GLINT's key tracking pivots
+     * on ([Glint.referenceHz]), so FOLLOW has nothing to do here and cannot be heard: that is why the spread
+     * leaves it at its default.
+     */
+    internal fun zoneMidi(voice: GlintVoice): Int = Keys.glintPadMidis(voice)[ZONE]
+
+    /**
      * The candidate's held pad as the owner hears it: the first [SECONDS] of the key's onset and breaths, the
      * last [FADE_SECONDS] faded to nothing (the held render runs on, so the cut lands mid-waveform), then
      * levelled. The fade comes first; the level is one gain, so the order does not change the loudness.
      */
     internal fun clipFor(voice: GlintVoice, candidate: GlintRosterCandidates.Candidate): Snip {
-        val note = Keys.glintPad(voice, candidate.macros, Keys.glintPadMidis(voice)[ZONE])
+        val note = Keys.glintPad(voice, candidate.macros, zoneMidi(voice))
         val played = GlintPathsAuditionGenerator.heldFor(note, SECONDS)
         val samples = played.samples.copyOf((SECONDS * played.sampleRate).toInt())
         val fade = (FADE_SECONDS * played.sampleRate).toInt()
@@ -85,8 +92,8 @@ object GlintRosterAuditionGenerator {
 
     private fun manifestHeader(): String = buildString {
         appendLine("GLINT roster candidates (docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md §6.2)")
-        appendLine("seed ${GlintRosterCandidates.SEED} plus the voice's ordinal; DEPTH spans 0 to ${GlintRosterCandidates.DEPTH_MAX}; TUNE and DECAY at their defaults")
-        appendLine("zone MIDI: " + GlintVoice.entries.joinToString(", ") { "${it.name} ${Keys.glintPadMidis(it)[ZONE]}" })
+        appendLine("seed ${GlintRosterCandidates.SEED} plus the voice's ordinal; DEPTH spans 0 to ${GlintRosterCandidates.DEPTH_MAX}; TUNE, DECAY and FOLLOW (VOWEL has none) at their defaults")
+        appendLine("zone MIDI: " + GlintVoice.entries.joinToString(", ") { "${it.name} ${zoneMidi(it)}" })
         appendLine()
     }
 }
