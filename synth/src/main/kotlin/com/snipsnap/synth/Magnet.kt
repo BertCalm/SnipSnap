@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -26,9 +27,12 @@ enum class MagnetVoice { JANGLE, CHUG }
  * through VALVE, and the engine's own render is dry.
  *
  * TUNE is two octaves snapped to semitones from the open string; MUTE damps the loop and shortens
- * the note; PICK is the exciter's low-pass corner, a thumb to a wire; BLEND weights the two pickups
- * (0 neck, 1 bridge). Every number marked shape is a listening value from the Phase-0 spike or the
- * specification, to be re-heard by ear (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
+ * the note; PICK is a thumb to a wire, the exciter's low-pass corner plus what the contact does to
+ * the string and the pickup around it (a soft thumb adds a second pole to the exciter, a hard pick
+ * opens the loop's body corner and the pickup's resonance; all of it pinned so the default PICK
+ * renders as it always did); BLEND weights the two pickups (0 neck, 1 bridge). Every number marked
+ * shape is a listening value from the Phase-0 spike or the specification, to be re-heard by ear
+ * (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
  */
 object Magnet {
 
@@ -58,7 +62,8 @@ object Magnet {
      * gain 106 ended 50.7 dB under its peak, 0.7 dB inside the bar) and misses at MUTE 1 (47.5 dB, TUNE
      * step 3). Cubed 150 ms is the shortest and mildest of the squared, cubed and fourth-power shapes
      * at 150, 250, 400 and 600 ms that holds every cell of the grid at least 3 dB inside the bar
-     * (worst 58.5 dB under: CHUG at gain 106, MUTE 1, TUNE step 24). Squared would need 250 ms, which
+     * (worst 58.5 dB under: CHUG at gain 106, MUTE 1, TUNE step 24, and the same at PICK 0, 0.15 and 1,
+     * where the decay path's worst cells are 60.6, 62.5 and 62.0 dB). Squared would need 250 ms, which
      * starts 10 ms into CHUG's shortest string (260 ms). Its fade is -10 dB 102 ms and -20 dB 70 ms
      * before the end (squared 150 ms: 84 and 47 ms).
      */
@@ -69,19 +74,50 @@ object Magnet {
      * ms squared fade ends such a string with a quiet but not silent tail, which VALVE lifts: at
      * CHUG's gain 106, TUNE step 2 and MUTE 0 the landed note ended only 28.1 dB under its peak, and
      * JANGLE's pitch compensation sends more notes to the ceiling (50 of its 75 TUNE and MUTE cells
-     * reach it, 33 without the law). A squared fade of 250 ms on top of the trim's is the shortest and
-     * mildest of the squared, cubed and fourth-power shapes at 150, 250, 400 and 600 ms that keeps the
-     * whole grid (CHUG at gain 106, the kit's lead amp and JANGLE's landing, 25 TUNE steps, MUTE 0,
-     * the default and 1) at least 3 dB inside the bar: at 150 ms the worst cell is 47.6 dB under
-     * (squared), 49.8 (cubed) and 50.9 (fourth power), at 250 ms squared 56.4. The fade starts 3.75 s
-     * into a 4 s note; together with the trim's fade the note is -10 dB 237 ms and -20 dB 178 ms
-     * before its end (225 and 126 ms with the trim's alone).
+     * reach it, 33 without the law). The first choice, a squared fade of 250 ms, held the grid at the
+     * default PICK 3 dB inside the bar (worst 56.4 dB) but not on the thumb side of PICK, where the
+     * exciter is a soft two-pole burst and the string that rings on to the ceiling is mostly low
+     * partials, which the amp lifts: CHUG at gain 106, MUTE 0, TUNE step 2 and PICK 0.15 ended 50.1 dB
+     * under (3 cells of 900 short of the margin). Over the three landings, 25 TUNE steps, MUTE 0, the
+     * default and 1, and PICK 0, 0.15, the default and 1 (900 cells, 416 on the ring ceiling) the
+     * shortest fade that holds every ceiling cell 3 dB inside the bar is the fourth power at 225 ms
+     * (worst 55.8 dB under: CHUG at gain 106, MUTE 0, step 2, PICK 0.15; the fourth power at 200 ms and
+     * the cubed at 225 ms both end 52.7 dB under there, cubed 250 ms reads 55.1 and squared 300 ms
+     * 53.4). It also takes least of the tail: with the trim's fade the note is -10 dB 225 ms and -20
+     * dB 186 ms before its end (237 and 178 ms for the squared 250 ms; 225 and 126 ms with the trim's
+     * alone). The fade starts 3.775 s into a 4 s note.
      */
-    private val CEILING_FADE = EndFade(ms = 250f, power = 2)
+    private val CEILING_FADE = EndFade(ms = 225f, power = 4)
 
-    /** The exciter's corner at PICK 0 and 1 (shape): a thumb to a wire, wider than the spike's 4.6x. */
-    private const val PICK_MIN_HZ = 600f
-    private const val PICK_MAX_HZ = 16_000f
+    /**
+     * The exciter's low-pass corner at PICK 0 and at PICK 1 (shape, the owner's pick of the PICK ends,
+     * 2026-10-02: candidate "B" of the spike's three): a soft thumb at 150 Hz to a wire at 16 kHz,
+     * [Dsp.around] pinned at the voice's default PICK so that the default reads the corner it always
+     * read (see [PICK_CENTER_FROM_HZ]). Below about 150 Hz the exciter's floor turns back up, so a lower
+     * PICK would read brighter at some corners (a draft at 100 Hz broke the corner sweep's test).
+     */
+    private const val PICK_THUMB_HZ = 150f
+    private const val PICK_WIRE_HZ = 16_000f
+
+    /**
+     * The exciter's corner at the voice's default PICK is the first build's map read there,
+     * `expMap(PICK, 600, 16000)` (4303 Hz on JANGLE, 3651 Hz on CHUG), so every pad and patch that sits
+     * at the default renders as before; these are the first build's ends, now only the source of that
+     * one number. A shape value, not a physical one.
+     */
+    private const val PICK_CENTER_FROM_HZ = 600f
+    private const val PICK_CENTER_TO_HZ = 16_000f
+
+    /**
+     * What PICK 1 asks of the loop's body corner and of the pickup resonance's corner (shape, the
+     * owner's pick, [Dsp.around] pinned at the default PICK, 1 at and below it): a wire lets go of the
+     * string cleanly, so the upper partials keep ringing (x4 on the loop), and the resonance opens with
+     * it (x2.5, voicing and not physics). With only the exciter widened the brightness never reached
+     * the ear above the default: the loop's corner and the resonance together held it (the PICK-ends
+     * spike, 1.37 octaves of centroid from a 4.7 octave exciter).
+     */
+    private const val PICK_LOOP_OPEN = 4f
+    private const val PICK_RESONANCE_OPEN = 2.5f
 
     /** Where the pick plucks, as a fraction of the string (shape): the exciter's first comb notch falls between harmonics. */
     private const val PICK_POSITION = 0.085f
@@ -177,21 +213,111 @@ object Magnet {
     /** The rack chain that lands a [voice] pad through VALVE. Never null: MAGNET has no loop mode. */
     fun landingChain(voice: MagnetVoice): FxChain = FxChain().withSection("valve", LANDING_VALVE.getValue(voice))
 
+    /** The voice's default PICK: the one point the PICK map is pinned at, where every part of it is its neutral value. */
+    private fun defaultPick(voice: MagnetVoice): Float = defaults(voice).getValue("PICK")
+
     /**
-     * The dry electric string at [RENDER_RATE], before any pickup: trimmed to its decay and faded
-     * out over its end, by [DECAY_FADE] where the trim ended it on its decay and by [CEILING_FADE]
-     * (after the trim's own fade) where the ring ceiling cut it. [compensate] is the voice's
-     * [Spec.compensate] unless a test overrides it, to read the same chain with the ring law off.
+     * The exciter's low-pass corner at [pick]: [PICK_THUMB_HZ] at 0, [PICK_WIRE_HZ] at 1 and, exactly,
+     * the first build's `expMap(default, 600, 16000)` at the voice's default.
+     */
+    internal fun pickCornerHz(voice: MagnetVoice, pick: Float): Float {
+        val d = defaultPick(voice)
+        return Dsp.around(pick, PICK_THUMB_HZ, Dsp.expMap(d, PICK_CENTER_FROM_HZ, PICK_CENTER_TO_HZ), PICK_WIRE_HZ, d)
+    }
+
+    /**
+     * The weight of the exciter's second pole at [pick]: `(d - pick) / d` below the default `d` (a
+     * thumb is a soft wide contact, two poles deep), 0 at and above it (today's single pole).
+     */
+    internal fun secondPoleWeight(voice: MagnetVoice, pick: Float): Float {
+        val d = defaultPick(voice)
+        return if (pick < d) (d - pick) / d else 0f
+    }
+
+    /** What multiplies the loop's body corner at [pick]: 1 at and below the default, [PICK_LOOP_OPEN] at PICK 1. */
+    internal fun loopScale(voice: MagnetVoice, pick: Float): Float {
+        val d = defaultPick(voice)
+        return Dsp.around(pick, 1f, 1f, PICK_LOOP_OPEN, d)
+    }
+
+    /**
+     * What multiplies the pickup resonance's corner at the PICK of [macros]: 1 at and below the
+     * default, [PICK_RESONANCE_OPEN] at PICK 1. [render] passes it to [pickup], and so must a test
+     * that chains [string] and [pickup] by hand to read what [render] reads.
+     */
+    internal fun resonanceScale(voice: MagnetVoice, macros: Map<String, Float>): Float {
+        val d = defaultPick(voice)
+        return Dsp.around(settled(macros, voice).getValue("PICK"), 1f, 1f, PICK_RESONANCE_OPEN, d)
+    }
+
+    /**
+     * A pick burst through one low-pass pole, or through two blended in by [mix] (0 one pole, 1 two),
+     * zero-meaned and combed by the pick position: [Strings.pluckExciter] with a second pole. It is
+     * a copy of that function's two private helpers (`rawBurst` and `positionComb`) plus the second
+     * pole, and a copy because the toolkit's helpers are private and the toolkit is frozen by pinned
+     * hashes: `pluck` takes an [Exciter], so this is handed to it, and the toolkit is not touched.
+     * At [mix] 0 it is [Strings.pluckExciter] sample for sample (a test holds it to that, which is why
+     * it is internal); the engine does not even call it there.
+     */
+    internal fun twoPoleExciter(mix: Float): Exciter = { n, freq, pickHz, position, seed, rate, maxLen ->
+        val noise = Dsp.Noise(seed)
+        val lp1 = Dsp.OnePole(rate)
+        val lp2 = Dsp.OnePole(rate)
+        val burst = FloatArray(n)
+        for (i in 0 until n) {
+            val a = lp1.lp(noise.next(), pickHz)
+            val b = lp2.lp(a, pickHz)
+            burst[i] = a + mix * (b - a)
+        }
+        var mean = 0f
+        for (v in burst) mean += v
+        mean /= n
+        for (i in 0 until n) burst[i] -= mean
+        val delay = if (position > 0f) Strings.combDelay(position, freq, rate).coerceIn(1, n) else 0
+        val excLen = min(n + delay, maxLen)
+        val out = FloatArray(excLen)
+        for (i in 0 until excLen) {
+            val x = if (i < n) burst[i] else 0f
+            val xd = if (delay > 0 && i - delay in 0 until n) burst[i - delay] else 0f
+            out[i] = x - xd
+        }
+        out
+    }
+
+    /**
+     * The dry electric string at [RENDER_RATE], before any pickup: [ended] from the plucked loop.
+     * PICK reads three places here: the exciter's corner and second pole, and the loop's body corner
+     * ([loopScale]; the ring law then multiplies the corner by the square root of r). The corner asked
+     * of the loop is not clamped here: the toolkit's own clamp at 0.45 of the render rate is the only
+     * ceiling on it (at E4, MUTE 0 and PICK 1 it asks 89.6 kHz and gets 79.4). A lower ceiling of the engine's own,
+     * measured at 0.40 down to 0.25 of the rate, moved neither the tuning nor a landed end and only
+     * shaved the top of PICK 1's onset, so there is none. [compensate] is the voice's [Spec.compensate]
+     * unless a test overrides it, to read the same chain with the ring law off.
      */
     internal fun string(voice: MagnetVoice, macros: Map<String, Float>, compensate: Boolean = specFor(voice).compensate): FloatArray {
         val m = settled(macros, voice)
         val spec = specFor(voice)
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
-        val base = Strings.damping(m.getValue("MUTE"), spec.bodyLoopHz)
+        val pick = m.getValue("PICK")
+        val base = Strings.damping(m.getValue("MUTE"), spec.bodyLoopHz * loopScale(voice, pick))
         val damping = if (compensate) compensated(base, f0.toDouble() / Keys.midiHz(spec.rootMidi)) else base
-        val pickHz = Dsp.expMap(m.getValue("PICK"), PICK_MIN_HZ, PICK_MAX_HZ)
+        val pickHz = pickCornerHz(voice, pick)
         val seed = Dsp.seedFor("MAGNET", voice.name, f0)
-        val raw = Strings.pluck(f0, STRING_SECONDS, damping, pickHz, seed, RENDER_RATE, position = PICK_POSITION)
+        val pole = secondPoleWeight(voice, pick)
+        val raw = if (pole == 0f) {
+            Strings.pluck(f0, STRING_SECONDS, damping, pickHz, seed, RENDER_RATE, position = PICK_POSITION)
+        } else {
+            Strings.pluck(f0, STRING_SECONDS, damping, pickHz, seed, RENDER_RATE, position = PICK_POSITION, exciter = twoPoleExciter(pole))
+        }
+        return ended(raw)
+    }
+
+    /**
+     * [raw] trimmed to its decay and faded out over its end, by [DECAY_FADE] where the trim ended it
+     * on its decay and by [CEILING_FADE] (after the trim's own fade) where the ring ceiling cut it.
+     * Split out of [string] so a test can build the string by hand and end it the way the engine does.
+     */
+    internal fun ended(raw: FloatArray): FloatArray {
         val trimmed = Strings.trimToDecay(raw, RENDER_RATE, FLOOR_SECONDS, STRING_SECONDS)
         // A trim on the decay returns a shorter copy; a ceiling or budget cut returns [raw] itself, already faded
         // by the trim. Either way the string then ends on its own fade, the path's own (the amp lifts a quiet end).
@@ -231,7 +357,9 @@ object Magnet {
      * neck group at [neck] weighted `1 - blend`, the bridge group at [bridge] weighted `blend`, each
      * ONE [Strings.pickup] call (a humbucker group is its two coils, aligned; the two groups are
      * never aligned to each other), summed, then the pickup's resonance unless [resonance] is false.
-     * The position and resonance arguments exist so a test can read the comb alone.
+     * The position and resonance arguments exist so a test can read the comb alone. [resonanceScale]
+     * multiplies the resonance's corner (1 is the voice's own; [resonanceScale] of the macros is what
+     * [render] passes).
      */
     internal fun pickup(
         voice: MagnetVoice,
@@ -241,6 +369,7 @@ object Magnet {
         resonance: Boolean = true,
         neck: Float = NECK,
         bridge: Float = BRIDGE,
+        resonanceScale: Float = 1f,
     ): FloatArray {
         val spec = specFor(voice)
         val dp = COIL_SPACING * f0 / Keys.midiHz(spec.rootMidi)
@@ -258,7 +387,7 @@ object Magnet {
         if (!resonance) return out
         val svf = Dsp.TptSvf(RENDER_RATE)
         for (i in out.indices) {
-            svf.process(out[i], spec.resonanceHz, spec.resonanceDamping)
+            svf.process(out[i], spec.resonanceHz * resonanceScale, spec.resonanceDamping)
             out[i] = svf.low
         }
         return out
@@ -294,7 +423,7 @@ object Magnet {
     fun render(voice: MagnetVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = settled(macros, voice)
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
-        val picked = pickup(voice, string(voice, m), f0, m.getValue("BLEND"))
+        val picked = pickup(voice, string(voice, m), f0, m.getValue("BLEND"), resonanceScale = resonanceScale(voice, m))
         return Snip(finish(picked, RENDER_RATE), channels = 1, sampleRate = Dsp.RATE)
     }
 }

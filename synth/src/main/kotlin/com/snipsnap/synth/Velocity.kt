@@ -251,10 +251,12 @@ object Velocity {
         // exactly what this function exists to find. Proven monotonic by
         // ForkTest's `STRIKE moves the onset centroid at every step`.
         patch is ForkPatch -> "STRIKE"
-        // MAGNET's PICK is the string exciter's low-pass corner
-        // (Dsp.expMap over 600 to 16000 Hz). At the defaults every tenth of
-        // its travel moves the rendered centroid by at least 1 percent on
-        // both voices (smallest 1.61 percent JANGLE, 2.03 percent CHUG), as
+        // MAGNET's PICK is a thumb to a wire: the string exciter's low-pass
+        // corner (150 to 16000 Hz, pinned at the voice's default) with a
+        // second pole below the default and the loop's and the pickup's
+        // corners opening above it. At the defaults every tenth of its
+        // travel moves the rendered centroid by at least 1 percent on both
+        // voices (smallest 16.82 percent JANGLE, 13.85 percent CHUG), as
         // MagnetTest's `PICK raises the centroid by at least 1 percent at
         // every tenth on both voices` asserts.
         patch is MagnetPatch -> "PICK"

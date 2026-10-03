@@ -125,7 +125,7 @@ object MagnetAuditionGenerator {
         val voice = MagnetVoice.CHUG
         val m = Magnet.settled(macros, voice)
         val f0 = Magnet.frequencyFor(voice, m.getValue("TUNE"))
-        val picked = Magnet.pickup(voice, Magnet.string(voice, macros), f0, m.getValue("BLEND"))
+        val picked = Magnet.pickup(voice, Magnet.string(voice, macros), f0, m.getValue("BLEND"), resonanceScale = Magnet.resonanceScale(voice, m))
         val wet = Valve.process(Snip(picked, 1, Magnet.RENDER_RATE), Magnet.LANDING_VALVE.getValue(voice), oversample = false)
         return Snip(Magnet.finish(wet.samples, Magnet.RENDER_RATE), 1, Dsp.RATE)
     }
