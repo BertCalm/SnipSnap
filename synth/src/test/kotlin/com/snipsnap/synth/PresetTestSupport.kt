@@ -47,7 +47,10 @@ internal object PresetTestSupport {
             // names), the same trap "mello" has with "mellow". A word start before a letter fires at a space or
             // the start of the name (the hole above is a digit running into a letter, which this is not), and the
             // lookahead lets "arpeggio" through.
-            """|solina|eminent|string\s*ensemble|\barp(?!eggi)""",
+            """|solina|eminent|string\s*ensemble|\barp(?!eggi)""" +
+            // MAGNET's amp and speaker: "rectifier" is a near-miss of an amplifier line and "oxford" a
+            // speaker maker (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "The name").
+            """|rectifier|oxford""",
     )
 
     /**
