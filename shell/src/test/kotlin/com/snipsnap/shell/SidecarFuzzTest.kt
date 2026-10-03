@@ -348,7 +348,7 @@ class SidecarFuzzTest {
         val valid = Json.parse(
             """
             {"recipe":1,"era":"1993","amount":0.5,"treatment":"crushed","keyed":"in key",
-             "mutate":{"mode":"morph","with":["Kit:A03","Other:B02"],"drift":true,
+             "mutate":{"mode":"morph","with":["Kit:A03","Other:B02"],"drift":true,"become":400,
                        "outside":{"move":"hop","lagMs":23,"confidence":0.87,"inverted":true}},
              "outside":{"move":"lean","lagMs":12,"confidence":0.4,"inverted":false}}
             """.trimIndent(),

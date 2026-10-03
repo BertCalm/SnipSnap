@@ -3,9 +3,12 @@ package com.snipsnap.shell
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.json.JsonValue
 import java.io.File
+import kotlin.math.roundToInt
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -336,5 +339,182 @@ class MutateSheetTest {
         m.eraPad(1, "tape", 0.5f)
         assertNull(MutateSheet.read(m.pad(1)!!.recipe))
         assertNull(MutateSheet.read(null))
+    }
+
+    // ---------- BECOME ----------
+
+    @Test
+    fun `BECOME is MORPH's second knob - linear 0 to 2000 ms, OFF at rest, 50 ms steps`() {
+        val b = MutateSheet.BECOME
+        assertEquals("BECOME", b.label)
+        assertEquals(0f, b.lo)
+        assertEquals(2000f, b.hi)
+        assertEquals(0f, b.default)
+        assertEquals(0f, b.defaultFraction)
+        assertEquals(b, MutateSheet.becomeFor(Mutate.Mode.MORPH))
+        for (mode in Mutate.Mode.values().filter { it != Mutate.Mode.MORPH }) {
+            assertNull(MutateSheet.becomeFor(mode), "$mode has no BECOME")
+        }
+        assertEquals("MIX", MutateSheet.knobFor(Mutate.Mode.MORPH)!!.label, "BECOME is a second knob, not MORPH's first")
+        // The phone snaps the stepper to 1/40 (PadSheetScreen's onKnobChange): every step is 50 ms.
+        for (step in 0..40) assertEquals(50 * step, MutateSheet.value(b, step / 40f).roundToInt(), "step $step")
+        assertEquals(0f, MutateSheet.value(b, Float.NaN), "a fraction that is not a number reads as OFF")
+        assertEquals("OFF", MutateSheet.label(b, 0f))
+        assertEquals("50 ms", MutateSheet.label(b, 50f))
+        assertEquals("500 ms", MutateSheet.label(b, MutateSheet.value(b, 0.25f)))
+        assertEquals("2000 ms", MutateSheet.label(b, 2000f))
+    }
+
+    @Test
+    fun `HEAR is KEEP with BECOME on, and BECOME rides the recipe`() {
+        for (f in listOf(0f, 0.25f, 1f)) {
+            val m = model("Become${(f * 100).roundToInt()}")
+            val partner = MutateSheet.Partner.Pad(2)
+            val heard = MutateSheet.preview(m, 1, partner, Mutate.Mode.MORPH, 0.5f, f)
+            val outcome = MutateSheet.apply(m, 1, partner, Mutate.Mode.MORPH, 0.5f, f)
+            val kept = WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile))
+            assertEquals(heard.channels, kept.channels, "BECOME fraction $f: channels")
+            assertEquals(heard.samples.size, kept.samples.size, "BECOME fraction $f: length")
+            var worst = 0f
+            for (i in heard.samples.indices) worst = maxOf(worst, Math.abs(heard.samples[i] - kept.samples[i]))
+            assertTrue(worst <= 2f / 8_388_607f, "BECOME fraction $f: heard and kept differ by $worst, more than the file's own step")
+            val mutate = (outcome.pad.recipe!!.entries["mutate"] as JsonValue.Obj).entries
+            val applied = MutateSheet.read(outcome.pad.recipe)!!
+            val ms = (f * Mutate.MAX_BECOME_MS).roundToInt()
+            if (ms == 0) {
+                assertTrue("become" !in mutate, "BECOME OFF writes no key: ${mutate.keys}")
+                assertEquals(0, applied.becomeMs)
+                assertEquals("MORPH", applied.word)
+            } else {
+                assertEquals(ms.toDouble(), (mutate["become"] as JsonValue.Num).value)
+                assertEquals(ms, applied.becomeMs)
+                assertEquals("BECOME", applied.word)
+            }
+        }
+    }
+
+    @Test
+    fun `a BECOME left dialled does nothing to a move that is not MORPH`() {
+        // The card keeps one BECOME value across move switches; only MORPH may read it.
+        for (mode in Mutate.Mode.values().filter { it != Mutate.Mode.MORPH }) {
+            val m = model("Stale$mode")
+            val partner = MutateSheet.Partner.Pad(2)
+            val plain = MutateSheet.preview(m, 1, partner, mode, 0.5f, 0f)
+            val stale = MutateSheet.preview(m, 1, partner, mode, 0.5f, 0.5f)
+            assertContentEquals(plain.samples, stale.samples, "$mode heard a BECOME it does not read")
+            val outcome = MutateSheet.apply(m, 1, partner, mode, 0.5f, 0.5f)
+            val mutate = (outcome.pad.recipe!!.entries["mutate"] as JsonValue.Obj).entries
+            assertTrue("become" !in mutate, "$mode wrote a BECOME it does not read: ${mutate.keys}")
+            assertEquals(mode.name, MutateSheet.read(outcome.pad.recipe)!!.word)
+        }
+    }
+
+    @Test
+    fun `a ramped pad reads BECOME everywhere the move label goes, and a hostile become reads as none`() {
+        fun recipe(mode: String, become: JsonValue?, drift: Boolean = false): JsonValue.Obj {
+            val m = linkedMapOf<String, JsonValue>(
+                "mode" to JsonValue.Str(mode),
+                "with" to JsonValue.Arr(listOf(JsonValue.Str("Soul:A03"))),
+            )
+            if (drift) m["drift"] = JsonValue.Bool(true)
+            if (become != null) m["become"] = become
+            return JsonValue.Obj(linkedMapOf<String, JsonValue>("mutate" to JsonValue.Obj(m)))
+        }
+        val ramped = recipe("morph", JsonValue.Num(400.0))
+        val applied = MutateSheet.read(ramped)!!
+        assertEquals(400, applied.becomeMs)
+        assertEquals("MORPH", applied.mode)
+        assertEquals("BECOME", applied.word)
+        // The strip, the takes diff and the replay refusal all read the move label (Decision 3).
+        assertEquals("BECOME × SOUL A03", PadSheetBoxes.mutate(applied))
+        assertEquals("MUTATED: BECOME", KitDiff.recipeName(ramped))
+        assertEquals(
+            RecipeReplay.Plan.Refused("MUTATE (BECOME WITH SOUL A03) NEEDS ITS PARENT - NOT CARRIED."),
+            RecipeReplay.plan(ramped),
+        )
+
+        val hostile = listOf(
+            JsonValue.Str("400"), JsonValue.Num(Double.NaN), JsonValue.Num(Double.POSITIVE_INFINITY),
+            JsonValue.Num(-5.0), JsonValue.Num(0.0), JsonValue.Num(1e9), JsonValue.Bool(true), JsonValue.Null,
+        )
+        for (h in hostile) {
+            val a = MutateSheet.read(recipe("morph", h))!!
+            assertEquals(0, a.becomeMs, "become = $h")
+            assertEquals("MORPH", a.word, "become = $h")
+        }
+        val onSplice = MutateSheet.read(recipe("splice", JsonValue.Num(400.0)))!!
+        assertEquals(0, onSplice.becomeMs, "a ramp on SPLICE is no ramp")
+        assertEquals("SPLICE", onSplice.word)
+        // DRIFT never takes BECOME; a hand-written ramp on a drift still reads DRIFT, the drift's word coming first.
+        assertEquals("DRIFT", MutateSheet.read(recipe("morph", JsonValue.Num(400.0), drift = true))!!.word)
+        // Built positionally, as PadSheetBoxesTest.kt:48-50 builds it, a plain MORPH still reads MORPH.
+        assertEquals("MORPH", MutateSheet.Applied("MORPH", listOf("Soul:A03")).word)
+    }
+
+    // ---------- BECOME's card row (A1b) ----------
+
+    /**
+     * What the MUTATE card's second row leans on, pinned at the sheet.
+     *
+     * The row opens on `BECOME.defaultFraction` and DRIFT puts it back
+     * there (ConventionTest's BECOME laws read both off the screen), so
+     * that fraction must read OFF. ConventionTest's row law holds the
+     * screen's snap to exactly the text `(f * 40f).roundToInt() / 40f`,
+     * and this sweep proves that text only ever lands on whole 50 ms
+     * steps, the first of which clears one 23 ms analysis window. The
+     * label lives here and not in `Copy`, where PersonalityTest's shout
+     * law cannot see it, so this holds it to the house style instead.
+     * BECOME's own test above already pins the default, OFF and the
+     * 50/500/2000 ms readouts; this does not restate them.
+     */
+    @Test
+    fun `the BECOME row opens OFF, lands on 50 ms steps wherever a thumb lets go, and shouts its label`() {
+        val b = MutateSheet.BECOME
+        assertEquals(
+            "OFF",
+            MutateSheet.label(b, MutateSheet.value(b, b.defaultFraction)),
+            "the row's holder opens on BECOME.defaultFraction and DRIFT puts it back there, so that fraction must read OFF",
+        )
+
+        // The screen's snap. ConventionTest's BECOME row law asserts the screen's expression is exactly this text,
+        // so this sweep is a proof about the phone's snap, not about a private copy of it.
+        fun snap(f: Float): Float = (f * 40f).roundToInt() / 40f
+        val readouts = mutableListOf<String>()
+        for (i in 0..1000) {
+            val thumb = i / 1000f
+            val ms = MutateSheet.value(b, snap(thumb))
+            assertEquals(0, ms.roundToInt() % 50, "a thumb let go at $thumb landed on $ms ms, between steps")
+            val text = MutateSheet.label(b, ms)
+            // The lowercase unit is this card's own precedent (AT reads "40 ms", pinned above), not a slip.
+            assertTrue(text == "OFF" || Regex("""[1-9]\d* ms""").matches(text), "a thumb at $thumb reads '$text'")
+            readouts += text
+        }
+        assertEquals("50 ms", readouts.first { it != "OFF" }, "the first step a thumb reaches above OFF")
+        assertEquals("2000 ms", readouts.last(), "a thumb let go at the far end")
+
+        assertEquals(b.label.uppercase(), b.label, "a card label shouts")
+        // A coarse proxy only. The label font is Silkscreen (TapeTheme.kt:59), which is proportional, and
+        // BECOME's M is wider than any letter of ATTACK, so a letter count cannot see a pixel overflow of the
+        // 44 dp label column. The phone check (line 3, "BECOME is not cut off") is the real gate; this
+        // catches only a longer word.
+        assertTrue(b.label.length <= "ATTACK".length, "'${b.label}' has more letters than ATTACK, the label column's longest word")
+    }
+
+    /**
+     * DRIFT is a flat morph: the sheet's own door never hands it a ramp.
+     * That is what makes the card's reset of BECOME to OFF on a DRIFT tap
+     * a true readout rather than a guess (`Mutate.drift` is pinned the
+     * same way in BecomeTest; this pins the door the phone calls).
+     */
+    @Test
+    fun `a DRIFT from the card carries no BECOME, so the row's reset to OFF tells the truth`() {
+        val m = model("Dbec")
+        model("Dbec2")
+        val d = MutateSheet.drift(m, 1, root = temp, seed = 2, fraction = 0.5f)
+        val mutate = (d.outcome.pad.recipe!!.entries["mutate"] as JsonValue.Obj).entries
+        assertTrue("become" !in mutate, "DRIFT wrote a ramp: ${mutate.keys}")
+        val applied = MutateSheet.read(d.outcome.pad.recipe)!!
+        assertEquals(0, applied.becomeMs, "the drifted pad reads back a ramp, so the card's OFF would be a lie")
+        assertEquals("DRIFT", applied.word, "the drifted pad reads back as ${applied.word}, not DRIFT")
     }
 }

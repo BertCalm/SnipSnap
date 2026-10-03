@@ -12,8 +12,10 @@ import java.io.PrintStream
  * design by recombination: one hit from many parents. Default is the
  * transient-aligned **stack**; `--splice [--at ms]` mashes the pad's
  * attack onto the parent's body; `--split [--hz N]` takes the pad's
- * lows and the parent's highs; `--room [--amount]` plays the pad inside
- * the parent's tail; `--transplant [--bands N]` dresses the pad's attack
+ * lows and the parent's highs; `--morph [--amount] [--become ms]` makes
+ * the sound between them, and with `--become` the hit starts as the pad
+ * and turns into it over that many milliseconds; `--room [--amount]` plays
+ * the pad inside the parent's tail; `--transplant [--bands N]` dresses the pad's attack
  * in the parent's long-term tone. Parents are pad refs (`A03`,
  * `other/kit:B02`) or `.wav` files. `--undo` restores the single
  * original byte-identical.
@@ -23,7 +25,7 @@ object MutateCommand {
     fun run(args: List<String>, out: PrintStream): Int {
         val opts = Options.parse(
             args,
-            valued = setOf("--with", "--at", "--hz", "--seed", "--root", "--amount", "--bands"),
+            valued = setOf("--with", "--at", "--hz", "--seed", "--root", "--amount", "--bands", "--become"),
             boolean = setOf("--splice", "--split", "--morph", "--room", "--transplant", "--undo", "--roulette", "--wild"),
         )
         val dirArg = opts.positional.getOrNull(0)
@@ -59,6 +61,14 @@ object MutateCommand {
         if (opts["--bands"] != null && mode != Mutate.Mode.TRANSPLANT) {
             throw CliError("--bands rides on --transplant - add it")
         }
+        // BECOME is MORPH's alone, and `--become 0` without `--morph` is still
+        // refused: the flag names a move the command is not making.
+        if (opts["--become"] != null && mode != Mutate.Mode.MORPH) {
+            throw CliError("--become rides on --morph - add it")
+        }
+        val becomeMs = opts.int("--become")?.also {
+            if (it !in 0..Mutate.MAX_BECOME_MS) throw CliError("--become wants 0..${Mutate.MAX_BECOME_MS} ms, got $it")
+        } ?: 0
         val bands = opts["--bands"]?.let {
             it.toIntOrNull()?.takeIf { n -> n in com.snipsnap.audio.Transplant.MIN_BANDS..com.snipsnap.audio.Transplant.MAX_BANDS }
                 ?: throw CliError("--bands wants ${com.snipsnap.audio.Transplant.MIN_BANDS}..${com.snipsnap.audio.Transplant.MAX_BANDS}, got '$it'")
@@ -110,6 +120,7 @@ object MutateCommand {
             morphAmount = morphAmount,
             roomMix = roomMix,
             bands = bands,
+            becomeMs = becomeMs,
             extraRecipe = extraRecipe,
         )
         model.save()
@@ -123,6 +134,7 @@ object MutateCommand {
             Mutate.Mode.TRANSPLANT -> "dressed in $bands bands of the tone of"
         }
         out.println("pad $padArg $what ${sources.joinToString(", ") { it.label }} - one hit, ${sources.size + 1} parents")
+        if (becomeMs > 0) out.println("  becomes it over $becomeMs ms - the first beat is the pad")
         outcome.flipped.forEach { out.println("  polarity: flipped '$it' - it was cancelling the pad") }
         out.println("  recipe recorded; the original waits in the bin (undo: --undo)")
         return 0

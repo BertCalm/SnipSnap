@@ -142,7 +142,9 @@ object Cli {
         |                        --split (pad lows + parent highs, --hz N),
         |                        --morph [--amount 0..1] (the sound BETWEEN
         |                        the parents: interpolated spectra, PGHI
-        |                        phases - one onset, both voices), --room
+        |                        phases - one onset, both voices; --become
+        |                        ms starts as the pad and turns into it over
+        |                        that long, 0..2000), --room
         |                        [--amount] (the pad inside the parent's
         |                        tail), or --transplant [--bands N] (the
         |                        pad's attack wearing the parent's tone);
