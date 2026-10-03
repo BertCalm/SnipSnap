@@ -104,6 +104,23 @@ object BoreAuditionGenerator {
             writeAttack("${tag}_$key", renderSeeded(preset.macros, seed))
             Clip("${tag}_$key", label.first, macroLine(BoreVoice.SAX, preset.macros) + " " + DOT + " " + onsetText(preset.macros, seed))
         }
+        // Sharper listening: the notes held 1.2 s after 0.3 s of silence (a device that swallows the first moments of a
+        // short clip, and a 0.3 s note that is mostly its own attack, both hide a start), and the seed alone: CHIFF 0 and
+        // no pop, so there is no tongue noise at all, only the tone beginning slowly or at once.
+        val longClips = listOf(0f to "C3", 0.5f to "C4").flatMap { (tune, note) ->
+            val m = saxBase + mapOf("TUNE" to tune)
+            listOf(attackSteps.first(), attackSteps[2]).map { (key, seed, label) ->
+                val id = "long_${note.lowercase()}_$key"
+                writeAttack(id, renderSeeded(m, seed, gateSeconds = 1.2f, leadInSeconds = 0.3f))
+                Clip(id, "$note ${label.first}", "held 1.2 s after 0.3 s of silence: " + onsetText(m, seed))
+            }
+        }
+        val aloneBase = c3Base + mapOf("CHIFF" to 0f)
+        val aloneClips = listOf(0f to "NO SEED", 0.2f to "SEED 0.2").map { (seed, name) ->
+            val id = if (seed == 0f) "alone_none" else "alone_seed"
+            writeAttack(id, renderSeeded(aloneBase, seed, gateSeconds = 1.2f, pop = 0f, leadInSeconds = 0.3f))
+            Clip(id, name, "C3, CHIFF 0, no pop, held 1.2 s after 0.3 s of silence: %.2f s to 80%%".format(java.util.Locale.ROOT, seededOnset(aloneBase, seed, pop = 0f)))
+        }
         val c3Shipped = seededOnset(c3Base, null)
         val c3None = seededOnset(c3Base, 0f)
         sections.append(
@@ -114,6 +131,8 @@ object BoreAuditionGenerator {
                     "REAL TENOR 0.05-0.12 S (A VERY SOFT NOTE 0.49 S)",
                 ),
                 groups = listOf(
+                    Group("LONG NOTES, WITH A QUIET LEAD-IN: ONLY THE START DIFFERS", key = true, clips = longClips),
+                    Group("THE SEED ALONE: NO POP, NO CHIFF", key = true, clips = aloneClips),
                     Group("THE SAME PHRASE, FOUR SEEDS", key = true, clips = attackPhrase),
                     Group("C3 ALONE, WHERE IT WAS SLOWEST", key = true, clips = c3Seeds),
                     Group("CHIFF AT C3, THE SHIPPED SEED", key = false, clips = chiffClips),
@@ -289,22 +308,23 @@ object BoreAuditionGenerator {
      * A one-shot SAX note as [Bore.render] makes it, with the tongue's [seed] overridden: null is the shipped one
      * ([Bore.blow] computes it), 0 is none - the swell this round replaced.
      */
-    private fun renderSeeded(macros: Map<String, Float>, seed: Float?): Snip {
+    private fun renderSeeded(macros: Map<String, Float>, seed: Float?, gateSeconds: Float? = null, pop: Float? = null, leadInSeconds: Float = 0f): Snip {
         val m = Bore.settled(macros, BoreVoice.SAX)
         require(!Bore.isLoop(m.getValue("HOLD"))) { "renderSeeded is for one-shots" }
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")))
         val bell = Bore.biteBoostDb(BoreVoice.SAX, m.getValue("LIP"))
         val rasp = Bore.raspAmount(BoreVoice.SAX, m.getValue("LIP"), m.getValue("BREATH"))
-        return Snip(Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate, seed = seed), rate, bell, rasp, Bore.voicingFor(BoreVoice.SAX)), channels = 1, sampleRate = Dsp.RATE)
+        val note = Bore.finish(Bore.blow(BoreVoice.SAX, hz, m, rate, gateSeconds = gateSeconds, pop = pop, seed = seed), rate, bell, rasp, Bore.voicingFor(BoreVoice.SAX))
+        return Snip(FloatArray((leadInSeconds * Dsp.RATE).toInt()) + note, channels = 1, sampleRate = Dsp.RATE)
     }
 
     /** Seconds to 80% of the raw note's steady level, read the way BoreTest reads it (the blown wave, 1.4 s of gate). */
-    private fun seededOnset(macros: Map<String, Float>, seed: Float?): Float {
+    private fun seededOnset(macros: Map<String, Float>, seed: Float?, pop: Float? = null): Float {
         val m = Bore.settled(macros, BoreVoice.SAX)
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val hz = Bore.tunedHz(BoreVoice.SAX, Bore.frequencyFor(BoreVoice.SAX, m.getValue("TUNE")))
-        return BoreMeasure.onsetSeconds(Bore.blow(BoreVoice.SAX, hz, m, rate, gateSeconds = 1.4f, seed = seed), 1.0f, 1.4f)
+        return BoreMeasure.onsetSeconds(Bore.blow(BoreVoice.SAX, hz, m, rate, gateSeconds = 1.4f, pop = pop, seed = seed), 1.0f, 1.4f)
     }
 
     private const val DOT = "\u00b7"
