@@ -1229,6 +1229,8 @@ fun PadSheetScreen(
         }
     }
     val mutateKnob = MutateSheet.knobFor(MutateSheet.modeFor(mutateMode))
+    // MORPH's second knob, null on every other move: the card's BECOME row.
+    val becomeKnob = MutateSheet.becomeFor(MutateSheet.modeFor(mutateMode))
     // One dialled value per move, not one shared value wiped by switching
     // move (J24). Each move's knob means its own thing — SPLICE's `AT` is a
     // time in milliseconds, MORPH's is a blend — so the value cannot simply
@@ -2581,6 +2583,10 @@ fun PadSheetScreen(
                 knobFraction = pendingMutateKnob,
                 knobText = mutateKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingMutateKnob)) } ?: "",
                 onKnobChange = { f -> mutateKnobs[mutateMode] = (f * 40f).roundToInt() / 40f },
+                becomeLabel = becomeKnob?.label,
+                becomeFraction = pendingBecome,
+                becomeText = becomeKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingBecome)) } ?: "",
+                onBecomeChange = { f -> pendingBecome = (f * 40f).roundToInt() / 40f },
                 mutated = MutateSheet.read(pad.recipe),
                 canUndo = binDaysLeft != null,
                 onHear = ::onHear,
@@ -3489,7 +3495,10 @@ private fun ShapeCard(
  * MUTATE: one hit from two parents. A move (STACK · SPLICE · SPLIT ·
  * MORPH), a partner — a pad on this kit from the mini grid, or the deal
  * ROULETTE spins off the shelf — the move's one knob when it has one,
- * then HEAR or MUTATE. The line under the title says what the pad
+ * and under it MORPH's second, BECOME (how long the hit takes to turn
+ * from the pad into the blend; a disabled `—` row on every other move,
+ * so the card never jumps), then HEAR or MUTATE. The line under the
+ * title says what the pad
  * already is ("SPLICE: Kit:A02") so a mutated pad never reads as an
  * original; UNDO pulls the pre-mutation sound back out of the bin.
  * Everything behind it is `MutateSheet` over the CLI's own `Mutate` —
@@ -3522,6 +3531,10 @@ private fun MutateCard(
     knobFraction: Float,
     knobText: String,
     onKnobChange: (Float) -> Unit,
+    becomeLabel: String?,
+    becomeFraction: Float,
+    becomeText: String,
+    onBecomeChange: (Float) -> Unit,
     mutated: MutateSheet.Applied?,
     canUndo: Boolean,
     onHear: () -> Unit,
@@ -3743,6 +3756,22 @@ private fun MutateCard(
             scheme = scheme,
             enabled = !busy && knobLabel != null,
             onFractionChange = onKnobChange,
+            onFractionCommit = {},
+        )
+
+        // MORPH's second knob, BECOME: how long the hit takes to turn from
+        // the pad into the MIX blend, OFF at 0. Every other move draws the
+        // same disabled "—" row STACK's knob shows above, so the card never
+        // jumps. It is enabled on BECOME's own label, not on `knobLabel`:
+        // SPLICE, SPLIT, ROOM and TRANSPLANT have a first knob and no BECOME.
+        StepperSlider(
+            label = becomeLabel ?: "—",
+            fraction = if (becomeLabel == null) 0f else becomeFraction,
+            valueText = becomeText,
+            fillColor = padColor,
+            scheme = scheme,
+            enabled = !busy && becomeLabel != null,
+            onFractionChange = onBecomeChange,
             onFractionCommit = {},
         )
 

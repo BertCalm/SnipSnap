@@ -2031,6 +2031,111 @@ class ConventionTest {
             )
         }
     }
+
+    /**
+     * BECOME's row on the MUTATE card: drawn for every move, enabled by
+     * BECOME's own label, fed from the one holder, snapped like the knob.
+     *
+     * - Every move draws it: MORPH as BECOME, every other move as the same
+     *   disabled `—` row STACK's knob shows, so the card never jumps.
+     * - It is enabled on `becomeLabel != null`, not on `knobLabel` as the
+     *   spec words it (the A1 plan's recorded deviation): `knobLabel` is
+     *   non-null on SPLICE, SPLIT, ROOM and TRANSPLANT, which ignore
+     *   BECOME, so a row copied from the knob's would be live on four moves
+     *   where it does nothing. That copy is the likely slip, so it is
+     *   refused here rather than left to review by eye.
+     * - It is drawn unconditionally: its `StepperSlider(` stands alone on
+     *   its line, directly after the knob row's closing `)`, so no inline
+     *   or braceless guard (`if (…) StepperSlider(`) can hide it on some
+     *   moves.
+     * - Its fraction and its readout both read `pendingBecome`, and it
+     *   snaps with exactly `(f * 40f).roundToInt() / 40f`, the knob row's
+     *   own expression: `MutateSheetTest` sweeps that exact text and proves
+     *   it lands only on whole 50 ms steps, so the literal is pinned here,
+     *   on the screen, and not only as the two rows' equality.
+     */
+    @Test
+    fun `law - MUTATE draws BECOME's row on every move, enabled by BECOME's own label`() {
+        val card = codeOnly(topLevelFun(padSheetScreen, "MutateCard"))
+        val first = card.indexOf("StepperSlider(")
+        val second = card.indexOf("StepperSlider(", first + 1)
+        assertTrue(
+            first >= 0 && second > first && card.indexOf("StepperSlider(", second + 1) < 0,
+            "expected MutateCard to draw exactly two StepperSliders: the move's knob, then BECOME under it",
+        )
+        val knobRow = normalizeSpan(blockAfterList(card, "StepperSlider("))
+        assertTrue(
+            "label = knobLabel ?: \"—\"" in knobRow,
+            "the move's knob row is no longer MutateCard's first StepperSlider:\n  $knobRow",
+        )
+        val becomeRow = normalizeSpan(blockAfterList(card.substring(second), "StepperSlider("))
+        for (want in listOf(
+            "label = becomeLabel ?: \"—\"",
+            "fraction = if (becomeLabel == null) 0f else becomeFraction",
+            "valueText = becomeText",
+            "enabled = !busy && becomeLabel != null",
+            "onFractionChange = onBecomeChange",
+        )) {
+            assertTrue(want in becomeRow, "BECOME's row lacks `$want`:\n  $becomeRow")
+        }
+        assertFalse(
+            "knobLabel" in becomeRow,
+            "BECOME's row reads `knobLabel`, which is non-null on SPLICE, SPLIT, ROOM and TRANSPLANT: the row " +
+                "would be live on four moves that ignore BECOME. Key it on `becomeLabel` (the recorded " +
+                "deviation from the spec's wording).",
+        )
+        val lineStart = card.lastIndexOf('\n', second) + 1
+        val lineEnd = card.indexOf('\n', second).let { if (it < 0) card.length else it }
+        val previous = card.substring(0, lineStart).lines().lastOrNull { it.isNotBlank() }?.trim()
+        assertTrue(
+            card.substring(lineStart, lineEnd).trim() == "StepperSlider(" && previous == ")",
+            "BECOME's row is guarded, so it is drawn only for some moves and the card jumps when the move " +
+                "changes. Its `StepperSlider(` must stand alone on its line, directly after the knob row's " +
+                "closing `)`; found `${card.substring(lineStart, lineEnd).trim()}` after `$previous`. Draw it " +
+                "for every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+        )
+        assertFalse(
+            Regex("""becomeLabel\s*!=\s*null\s*\)\s*\{|becomeLabel\?\.let""").containsMatchIn(card),
+            "BECOME's row is drawn only for some moves, so the card jumps when the move changes. Draw it for " +
+                "every move and let `becomeLabel ?: \"—\"` show the disabled row.",
+        )
+
+        val src = padSheetScreen.readText(Charsets.UTF_8)
+        assertTrue(
+            Regex("""val\s+becomeKnob\s*=\s*MutateSheet\.becomeFor\(\s*MutateSheet\.modeFor\(\s*mutateMode\s*\)\s*\)""")
+                .containsMatchIn(src),
+            "expected `val becomeKnob = MutateSheet.becomeFor(MutateSheet.modeFor(mutateMode))` - the row's " +
+                "knob, MORPH's alone.",
+        )
+        val call = normalizeSpan(blockAfterList(src, "MutateCard("))
+        for (want in listOf(
+            "becomeLabel = becomeKnob?.label",
+            "becomeFraction = pendingBecome",
+            "becomeText = becomeKnob?.let { MutateSheet.label(it, MutateSheet.value(it, pendingBecome)) } ?: \"\"",
+        )) {
+            assertTrue(
+                want in call,
+                "the MutateCard call lacks `$want`. The row's fraction and its readout must both come from " +
+                    "`pendingBecome`, or the card shows one value and plays another.\n  $call",
+            )
+        }
+        val knobSnap = Regex("""onKnobChange = \{ f -> mutateKnobs\[mutateMode\] = (.+?) \}""").find(call)?.groupValues?.get(1)
+        val becomeSnap = Regex("""onBecomeChange = \{ f -> pendingBecome = (.+?) \}""").find(call)?.groupValues?.get(1)
+        assertTrue(knobSnap != null, "expected the knob row's `onKnobChange = { f -> mutateKnobs[mutateMode] = … }`")
+        assertEquals(
+            "(f * 40f).roundToInt() / 40f",
+            becomeSnap,
+            "BECOME's row does not snap at 1/40. MutateSheetTest sweeps exactly `(f * 40f).roundToInt() / 40f` " +
+                "and proves it lands on whole 50 ms steps; a finer snap (1/100 is 20 ms) lands under one 23 ms " +
+                "analysis window, where a ramp is a step.",
+        )
+        assertEquals(
+            knobSnap,
+            becomeSnap,
+            "BECOME's row does not snap with the knob row's expression; the card's two rows would step " +
+                "differently under the same thumb.",
+        )
+    }
     /**
      * J22. `TapeDeckViewTest` proves the carrier carries; this proves TAPE
      * still uses it.
