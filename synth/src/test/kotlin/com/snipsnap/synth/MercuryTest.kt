@@ -333,16 +333,6 @@ class MercuryTest {
         return levels.indexOfFirst { it >= 0.5 * levels.max() } * 0.01
     }
 
-    /** Spectral flatness (geometric over arithmetic mean power) between [lo] and [hi] Hz of [n] samples from [from]: 1 is noise, 0 is pure tones. */
-    private fun flatness(x: FloatArray, sampleRate: Int, from: Int, n: Int, lo: Double, hi: Double): Double {
-        val re = FloatArray(n)
-        val im = FloatArray(n)
-        for (i in 0 until n) re[i] = (if (from + i < x.size) x[from + i] else 0f) * (0.5f - 0.5f * kotlin.math.cos(2 * Math.PI * i / (n - 1)).toFloat())
-        com.snipsnap.audio.Fft.forward(re, im)
-        val p = (0 until n / 2).filter { it.toDouble() * sampleRate / n in lo..hi }.map { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] + 1e-30 }
-        return kotlin.math.exp(p.sumOf { kotlin.math.ln(it) } / p.size) / p.average()
-    }
-
     /**
      * Velocity (decision 8), as the owner heard it (2026-10-02).
      *
@@ -354,10 +344,12 @@ class MercuryTest {
      * pure tone, so a harder touch is heard in how the note starts, not in brightness:
      * - the swell: the time to half level falls at every step from soft to hard, and the softest is at least three
      *   times the hardest (measured 0.35-0.38 s against 0.07-0.08 s);
-     * - the bite: at full velocity, the first 46 ms carry the scrape, noise under the classifier's 2 kHz SNARE line,
-     *   with a 0.4-1.5 kHz spectral flatness of at least 0.1 where the same note without it has none (measured
-     *   0.20 against 0.0001; the note's own partials share the band, so it is not 1), and from 0.3 s on the scraped
-     *   and unscraped notes are the same to the bit, so the held tone is untouched;
+     * - the bite: a hard touch catches with a scrape that rides the note's own swell. Round 3 levelled it against
+     *   the held tone, so in the first tens of milliseconds, while the note was still coming in, it was 2-7.6 dB
+     *   louder than the note, and the owner heard "a little snare or clap" (2026-10-03). So the claim is the gap
+     *   itself: in every 5 ms of the first 80 ms, at velocity 1 and .65, the scrape is at least 14 dB under the note
+     *   (measured 16-41 dB). It is there: at full velocity its loudest 5 ms in the first 40 ms is within 22 dB of the
+     *   note (measured 16). From 0.3 s on the scraped and unscraped notes are the same to the bit;
      * - and Velocity renders exactly that, with no macro moved and no soften.
      */
     @Test
@@ -385,14 +377,19 @@ class MercuryTest {
 
             val m = Mercury.settled(macros, voice)
             val hz = Mercury.frequencyFor(voice, m.getValue("TUNE")).toDouble()
-            val scraped = Mercury.sound(voice, hz, m, 1.0, scrape = true)
-            val clean = Mercury.sound(voice, hz, m, 1.0, scrape = false)
-            val on = flatness(scraped, raw, 0, 8192, 400.0, 1500.0)
-            val off = flatness(clean, raw, 0, 8192, 400.0, 1500.0)
-            println("MERCURY velocity $voice scrape: 0.4-1.5 kHz flatness in the first 46 ms ${f(on, 3)}, without it ${f(off, 4)}")
-            assertTrue(on >= 0.1 && off < 0.01, "$voice: the hard touch's first 46 ms are not a scrape (flatness ${f(on, 3)} against ${f(off, 4)})")
-            val after = (0.3 * raw).toInt()
-            assertContentEquals(clean.copyOfRange(after, clean.size), scraped.copyOfRange(after, scraped.size), "$voice: the scrape reaches the held tone")
+            val block = (0.005 * raw).toInt()
+            fun blockRms(x: FloatArray, k: Int) = sqrt((k * block until (k + 1) * block).sumOf { x[it].toDouble() * x[it] } / block)
+            for (touch in listOf(1.0, 0.65)) {
+                val scraped = Mercury.sound(voice, hz, m, touch, scrape = true)
+                val clean = Mercury.sound(voice, hz, m, touch, scrape = false)
+                val scrape = FloatArray(scraped.size) { scraped[it] - clean[it] }
+                val gaps = (0 until 16).map { k -> 20 * kotlin.math.log10(blockRms(scrape, k) / blockRms(clean, k)) }
+                println("MERCURY velocity $voice $touch scrape under the note, per 5 ms: " + gaps.joinToString(" ") { f(it, 1) } + " dB")
+                assertTrue(gaps.all { it <= -14.0 }, "$voice: at velocity $touch the scrape comes within 14 dB of the note (${gaps.map { f(it, 1) }})")
+                if (touch == 1.0) assertTrue(gaps.take(8).max() >= -22.0, "$voice: the scrape is not there (${gaps.map { f(it, 1) }})")
+                val after = (0.3 * raw).toInt()
+                assertContentEquals(clean.copyOfRange(after, clean.size), scraped.copyOfRange(after, scraped.size), "$voice: the scrape reaches the held tone")
+            }
         }
     }
 }

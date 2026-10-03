@@ -139,16 +139,24 @@ object Mercury {
     const val VELOCITY_RAMP = 30.0
 
     /**
-     * A hard touch catches with a scrape: the contact's own noise, this many dB under the held tone at full velocity
-     * (its amplitude goes with velocity), dying over [SCRAPE_SECONDS]. It is added after the modes, because friction
-     * noise fed through the contact comes out as tone: the high-Q modes filter it, so a 3x rougher catch left the
-     * 1–6 kHz spectral flatness at zero. Listening value.
+     * A hard touch catches with a scrape: the contact's own noise, this many dB under the note itself at that moment
+     * at full velocity (its amplitude goes with velocity), dying over [SCRAPE_SECONDS]. It is added after the modes,
+     * because friction noise fed through the contact comes out as tone: the high-Q modes filter it, so a 3x rougher
+     * catch left the 1–6 kHz spectral flatness at zero. Listening value.
+     *
+     * It rides the note's own envelope, read every [SCRAPE_BLOCK_SECONDS]. Round 3 levelled it against the held
+     * tone instead, 12 dB under, and the owner heard "a little snare or clap" (2026-10-03): the note is still
+     * swelling in its first tens of milliseconds, so the scrape was 2–4 dB over it at full velocity and up to
+     * 7.6 dB over it for 75 ms at velocity .65. A burst of noise over a near-silent start is a clap. It also rose
+     * in 1 ms, a click; it now rises over [SCRAPE_RISE_SECONDS].
      *
      * The band stays under 2 kHz, the classifier's SNARE line (its share of magnitude above 2 kHz): at 1–6 kHz the
      * shortest SING (GLASS 0, HOLD 0) was heard as SNARE. Two poles on the top edge keep the leak above it small.
      */
     const val SCRAPE_DB = -12.0
     const val SCRAPE_SECONDS = 0.04
+    const val SCRAPE_RISE_SECONDS = 0.008
+    const val SCRAPE_BLOCK_SECONDS = 0.0025
     const val SCRAPE_LOW_HZ = 400f
     const val SCRAPE_HIGH_HZ = 1500f
 
@@ -520,32 +528,40 @@ object Mercury {
     }
 
     /**
-     * The hard touch's scrape ([SCRAPE_DB]), on the raw output: band-passed seeded noise under a 1 ms rise and a
-     * [SCRAPE_SECONDS] fall, levelled against the held tone's RMS over 0.3–0.6 s. It is over by 0.3 s, so the held
-     * tone is untouched.
+     * The hard touch's scrape ([SCRAPE_DB]), on the raw output: band-passed seeded noise riding the note's own
+     * envelope (the RMS of each [SCRAPE_BLOCK_SECONDS] block, read before the scrape is added and interpolated
+     * between block centres), under a raised-cosine [SCRAPE_RISE_SECONDS] rise and a [SCRAPE_SECONDS] fall. It is
+     * over by 0.3 s, so the held tone is untouched.
      */
     private fun addScrape(out: FloatArray, voice: MercuryVoice, hz: Double, velocity: Double, rate: Int) {
-        val from = (0.3 * rate).toInt().coerceAtMost(out.size)
-        val to = (0.6 * rate).toInt().coerceAtMost(out.size)
-        if (to <= from) return
-        var e = 0.0
-        for (i in from until to) e += out[i].toDouble() * out[i]
-        val body = sqrt(e / (to - from))
-        val gain = body * 10.0.pow(SCRAPE_DB / 20) * velocity
-        if (gain <= 0.0) return
+        val frames = min((0.3 * rate).toInt(), min(out.size, (6 * SCRAPE_SECONDS * rate).toInt()))
+        val scale = 10.0.pow(SCRAPE_DB / 20) * velocity
+        if (frames <= 0 || scale <= 0.0) return
+        val block = max(1, (SCRAPE_BLOCK_SECONDS * rate).toInt())
+        val blocks = (frames + block - 1) / block
+        val level = DoubleArray(blocks) { k ->
+            val a = k * block
+            val b = min(out.size, a + block)
+            var e = 0.0
+            for (i in a until b) e += out[i].toDouble() * out[i]
+            sqrt(e / (b - a))
+        }
         val noise = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "scrape"))
         val low = Dsp.OnePole(rate)
         val high = Dsp.OnePole(rate)
         val high2 = Dsp.OnePole(rate)
-        val frames = min(from, (6 * SCRAPE_SECONDS * rate).toInt())
         // Noise has RMS 1/√3; the band keeps about the share of it between the edges.
         val norm = sqrt(3.0 * rate / 2 / (SCRAPE_HIGH_HZ - SCRAPE_LOW_HZ))
+        val rise = SCRAPE_RISE_SECONDS * rate
         for (i in 0 until frames) {
             val x = high2.lp(high.lp(noise.next(), SCRAPE_HIGH_HZ), SCRAPE_HIGH_HZ)
             val band = x - low.lp(x, SCRAPE_LOW_HZ)
-            val tSec = i.toDouble() / rate
-            val env = (1 - exp(-tSec / 0.001)) * exp(-tSec / SCRAPE_SECONDS)
-            out[i] += (gain * norm * env * band).toFloat()
+            val pos = (i.toDouble() / block - 0.5).coerceIn(0.0, blocks - 1.0)
+            val k = pos.toInt().coerceAtMost(blocks - 1)
+            val note = if (k + 1 < blocks) level[k] + (level[k + 1] - level[k]) * (pos - k) else level[k]
+            val attack = if (i < rise) 0.5 * (1 - cos(PI * i / rise)) else 1.0
+            val env = attack * exp(-i.toDouble() / rate / SCRAPE_SECONDS)
+            out[i] += (note * scale * norm * env * band).toFloat()
         }
     }
 
