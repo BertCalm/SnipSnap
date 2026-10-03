@@ -63,8 +63,10 @@ object Magnet {
      * gain 106 ended 50.7 dB under its peak, 0.7 dB inside the bar) and misses at MUTE 1 (47.5 dB, TUNE
      * step 3). Cubed 150 ms is the shortest and mildest of the squared, cubed and fourth-power shapes
      * at 150, 250, 400 and 600 ms that holds every cell of the grid at least 3 dB inside the bar
-     * (worst 58.5 dB under: CHUG at gain 106, MUTE 1, TUNE step 24, and the same at PICK 0, 0.15 and 1,
-     * where the decay path's worst cells are 60.6, 62.5 and 62.0 dB). Squared would need 250 ms, which
+     * (worst 58.5 dB under at each landing's own BLEND: CHUG at gain 106, MUTE 1, TUNE step 24, and the
+     * same at PICK 0, 0.15 and 1, where the decay path's worst cells are 60.6, 62.5 and 62.0 dB; the
+     * end grid's extra BLEND check reads 54.6 dB at CHUG's landing, step 4, MUTE 1, PICK 0.55, BLEND 0,
+     * still inside the bar). Squared would need 250 ms, which
      * starts 10 ms into CHUG's shortest string (260 ms). Its fade is -10 dB 102 ms and -20 dB 70 ms
      * before the end (squared 150 ms: 84 and 47 ms).
      */
