@@ -759,7 +759,9 @@
       lab.htmlFor = ta.id;
       ta.addEventListener('input', function () {
         state[v.id].note = ta.value;
-        dirty[v.id] = true;
+        pending[v.id] = true;
+        touch(v.id);
+        saveLocal(v.id);
         debounce(v.id, function () { persist(v.id); });
       });
       notes.appendChild(lab); notes.appendChild(ta);
@@ -900,11 +902,20 @@
 
   // How often each clip was started: a pad tap that starts it, or a PLAIN,
   // THEN THIS start on its row. A tap that stops a clip is not a play.
+  // Plays are not answers: this sets playsPending and never pending, so a play
+  // before the store's first read cannot make the stored reactions and note be
+  // skipped. The store is written only once the voice has been reconciled.
   function countPlay(voiceId, fid) {
     var plays = state[voiceId].plays;
     plays[fid] = (plays[fid] || 0) + 1;
-    dirty[voiceId] = true;
-    debounce(voiceId, function () { persist(voiceId); });
+    if (!reconciled[voiceId]) {
+      var early = earlyPlays[voiceId] = earlyPlays[voiceId] || {};
+      early[fid] = (early[fid] || 0) + 1;
+    }
+    playsPending[voiceId] = true;
+    touch(voiceId);
+    saveLocal(voiceId);
+    debounce(voiceId, function () { if (reconciled[voiceId]) persist(voiceId); });
   }
 
   $('repeat').addEventListener('click', function () {
@@ -918,6 +929,8 @@
     var cur = state[voiceId].reactions[fid];
     var next = cur === value ? null : value;
     if (next) state[voiceId].reactions[fid] = next; else delete state[voiceId].reactions[fid];
+    pending[voiceId] = true;
+    touch(voiceId);
     paintChips(voiceId, fid);
     persist(voiceId);
   }
@@ -940,7 +953,7 @@
     });
     var ta = $('note-' + voiceId);
     if (!ta) return;
-    if (ta === document.activeElement) { state[voiceId].note = ta.value; }
+    if (ta === document.activeElement && pending[voiceId]) { state[voiceId].note = ta.value; }
     else if (ta.value !== state[voiceId].note) { ta.value = state[voiceId].note; }
   }
 
@@ -948,32 +961,59 @@
     QUESTIONS.forEach(function (k) {
       var ta = $(k);
       if (!ta) return;
-      if (ta === document.activeElement) { state.overall[k] = ta.value; }
+      if (ta === document.activeElement && pending.overall) { state.overall[k] = ta.value; }
       else if (ta.value !== state.overall[k]) { ta.value = state.overall[k]; }
     });
   }
 
-  // The answers keep a local draft as they are typed; only SAVE VERDICT
-  // writes them to the shared store.
+  // The answers keep a local draft as they are typed (pending, saved on this
+  // phone only); only SAVE VERDICT writes them to the shared store. SAVE is
+  // also remembered (submit) until a write has succeeded, so a SAVE made while
+  // the store is away, or one that fails, is made again at the next connect.
   function wireQuestion(k) {
     $(k).addEventListener('input', function () {
       state.overall[k] = this.value;
-      dirty.overall = true;
-      debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
+      pending.overall = true;
+      touch('overall');
+      saveLocal('overall');
     });
   }
   QUESTIONS.forEach(wireQuestion);
-  $('save').addEventListener('click', function () { persist('overall'); });
+  $('save').addEventListener('click', function () {
+    pending.overall = true;
+    submit = true;
+    submitVer++;
+    persist('overall');
+  });
 
   // ---------- persistence ----------
   var db = null;
   var statusEl = $('status'), statusV = $('statusv');
   var timers = {}, queues = {};
-  // The page is usable before the shared store has answered, so two sets of
-  // keys are kept. dirty: edited on this page, so an older snapshot arriving
-  // from the store must not replace it. unsaved: saved only locally because
-  // there was no store yet, so they are saved again once there is one.
-  var dirty = {}, unsaved = {}, started = false;
+  // The page is usable before the shared store has answered, and a reload must
+  // not forget what the store never got. So, per key (each voice id, and
+  // 'overall'), these flags say what this phone holds that the store may not.
+  // They live here and in the local copy beside the content, and are never
+  // sent to the store.
+  //   pending       answers changed since the last successful store write: a
+  //                 voice's reactions and note; the answers to the questions
+  //                 (a draft, until SAVE VERDICT)
+  //   playsPending  a voice's play counts changed since the last successful write
+  //   submit        SAVE VERDICT was pressed and has not been written yet
+  // Plays are not answers: a play sets playsPending and never pending.
+  var pending = {}, playsPending = {}, submit = false;
+  // ver is bumped on every change of a key's content, submitVer on every SAVE.
+  // A write clears the flags only if neither has moved since the write began,
+  // and only after the store accepted it. busy counts the writes in flight.
+  var ver = {}, submitVer = 0, busy = {};
+  // storeState: 'pending' (the store has not answered), 'ready' or 'off' (none).
+  // reconciled: the key's first store read was applied or skipped. Nothing is
+  // written to the store for a key before that, or an early tap or play would
+  // write blank answers over a verdict the store holds. unread: that read
+  // failed. earlyPlays: plays counted before the read, certainly not in the
+  // store, which are added to its count and not merged into it as a maximum.
+  var storeState = 'pending', reconciled = {}, unread = {}, earlyPlays = {};
+  var started = false;
 
   function setStatus(kind, text) {
     statusEl.classList.remove('warn', 'ok');
@@ -986,6 +1026,10 @@
     timers[key] = setTimeout(fn, 700);
   }
 
+  function touch(key) { ver[key] = (ver[key] || 0) + 1; }
+
+  // What the store holds for a key: the content and a time, and nothing else
+  // (the flags are never sent).
   function snapshotOf(key) {
     var data;
     if (key === 'overall') {
@@ -998,6 +1042,15 @@
     return data;
   }
 
+  // What this phone keeps: the same, and the flags beside it.
+  function localOf(key) {
+    var data = snapshotOf(key);
+    data.pending = !!pending[key];
+    data.playsPending = !!playsPending[key];
+    data.submit = key === 'overall' && submit;
+    return data;
+  }
+
   // Every round's verdicts live under their own prefix, so a later round's
   // page never opens pre-filled with this one's notes and saves over them.
   // The earlier rounds' are under arco_r1, arco_r1c and arco_r1d (the box page's
@@ -1005,8 +1058,8 @@
   var PHASE = 'arco_r1e';
   function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
 
-  function saveLocal(key, data) {
-    try { localStorage.setItem('arco-warmth:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+  function saveLocal(key) {
+    try { localStorage.setItem('arco-warmth:' + PHASE + ':' + key, JSON.stringify(localOf(key))); } catch (e) { /* private mode: fine */ }
   }
 
   function loadLocal(key) {
@@ -1024,45 +1077,135 @@
     });
   }
 
-  function apply(key, data) {
-    if (!data) return;
+  // The answers a copy holds for a voice, kept only when they are known ones:
+  // a known answer on a clip that has chips (never the reference).
+  function cleanReactions(key, obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    var kept = {};
+    Object.keys(obj).forEach(function (fid) {
+      if (hasChips(key, fid) && REACTIONS.some(function (r) { return r.v === obj[fid]; })) kept[fid] = obj[fid];
+    });
+    return kept;
+  }
+
+  // plays: an object of numbers; an older doc has none, and anything else is ignored
+  function cleanPlays(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    var plays = {};
+    Object.keys(obj).forEach(function (fid) {
+      var n = obj[fid];
+      if (typeof n === 'number' && isFinite(n) && n >= 0) plays[fid] = n;
+    });
+    return plays;
+  }
+
+  // The copy kept on this phone is applied first, so the page is never empty,
+  // and its flags are restored: a reload does not forget unsynced work. A copy
+  // without flags (an older page's) counts as synced.
+  function applyLocal(key, data) {
+    if (!data || typeof data !== 'object') return;
     if (key === 'overall') {
       // q_pairs too: a copy kept on this phone is read before the manifest has said whether question 6 exists
       QUESTIONS.concat([PAIRS_KEY]).forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
       paintOverall();
+      submit = data.submit === true;
     } else if (state[key]) {
-      if (data.reactions && typeof data.reactions === 'object' && !Array.isArray(data.reactions)) {
-        // only a known answer on a clip that has chips (never the reference)
-        var kept = {};
-        Object.keys(data.reactions).forEach(function (fid) {
-          if (hasChips(key, fid) && REACTIONS.some(function (r) { return r.v === data.reactions[fid]; })) kept[fid] = data.reactions[fid];
-        });
-        state[key].reactions = kept;
-      }
+      var reactions = cleanReactions(key, data.reactions);
+      if (reactions) state[key].reactions = reactions;
       if (typeof data.note === 'string') state[key].note = data.note;
-      // plays: an object of numbers; an older doc has none, and anything else is ignored
-      if (data.plays && typeof data.plays === 'object' && !Array.isArray(data.plays)) {
-        var plays = {};
-        Object.keys(data.plays).forEach(function (fid) {
-          var n = data.plays[fid];
-          if (typeof n === 'number' && isFinite(n) && n >= 0) plays[fid] = n;
-        });
-        state[key].plays = plays;
-      }
+      var plays = cleanPlays(data.plays);
+      if (plays) state[key].plays = plays;
       paintVoice(key);
+      playsPending[key] = data.playsPending === true;
+    } else {
+      return;
     }
+    pending[key] = data.pending === true;
   }
 
-  function persist(key) {
-    var data = snapshotOf(key);
-    dirty[key] = true;
-    saveLocal(key, data);
-    if (!db) { unsaved[key] = true; setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+  // The store's first answer for a key (snap), or none: no doc, or the read
+  // failed. What this phone holds that the store lacks is kept, not replaced:
+  //   a voice: pending keeps this phone's reactions and note, otherwise the
+  //   store's are applied; plays are the larger count per clip, plus the plays
+  //   counted before this answer (those are certainly not in the store)
+  //   overall: pending (a draft) keeps the draft, otherwise the store's
+  //   answers are applied
+  // The key then counts as reconciled, and connect writes what is due.
+  function reconcile(key, snap, failed) {
+    try {
+      var S = snap && snap.exists ? snap.data() : null;
+      if (!S || typeof S !== 'object') S = null;
+      if (key === 'overall') {
+        if (S && !pending.overall) {
+          QUESTIONS.concat([PAIRS_KEY]).forEach(function (k) { if (typeof S[k] === 'string') state.overall[k] = S[k]; });
+          paintOverall();
+        }
+      } else if (state[key]) {
+        var cur = state[key], early = earlyPlays[key] || {};
+        if (S && !pending[key]) {
+          var reactions = cleanReactions(key, S.reactions);
+          if (reactions) cur.reactions = reactions;
+          if (typeof S.note === 'string') cur.note = S.note;
+        }
+        var stored = S && cleanPlays(S.plays);
+        if (stored) {
+          var merged = {};
+          Object.keys(cur.plays).concat(Object.keys(stored)).forEach(function (fid) {
+            merged[fid] = Math.max(stored[fid] || 0, (cur.plays[fid] || 0) - (early[fid] || 0)) + (early[fid] || 0);
+          });
+          cur.plays = merged;
+        }
+        paintVoice(key);
+      }
+      if (S) saveLocal(key);
+    } catch (e) { failed = true; /* keep this phone's copy */ }
+    earlyPlays[key] = {};
+    unread[key] = !!failed;
+    reconciled[key] = true;
+  }
+
+  // Is there anything to write for this key? A voice: answers pending, or plays
+  // pending (not when its read failed: a doc of plays alone would write blank
+  // answers over what could not be read). The overall: only a SAVE not yet
+  // written; a draft stays on this phone.
+  function due(key) {
+    if (key === 'overall') return submit;
+    return !!pending[key] || (!!playsPending[key] && !unread[key]);
+  }
+
+  // One write. The flags are cleared only after the store accepted it, and only
+  // if nothing changed since it began (a newer persist follows in that case);
+  // a failed write leaves every flag set, for the next persist or connect.
+  function write(key) {
+    var data = snapshotOf(key), at = ver[key] || 0, sat = submitVer;
+    busy[key] = (busy[key] || 0) + 1;
     setStatus(null, 'SAVING...');
     queues[key] = (queues[key] || Promise.resolve())
       .then(function () { return db.doc(docPath(key)).set(data); })
-      .then(function () { setStatus('ok', 'SAVED ' + clock()); },
-            function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
+      .then(function () {
+        busy[key]--;
+        if ((ver[key] || 0) === at && (key !== 'overall' || submitVer === sat)) { pending[key] = false; playsPending[key] = false; }
+        if (key === 'overall' && submitVer === sat) submit = false;
+        saveLocal(key);
+        // SAVED only when nothing else is still owed: another key's failed write stays visible
+        var owed = keys().some(function (k) { return reconciled[k] && due(k) && !busy[k]; });
+        if (owed) setStatus('warn', 'NOT ALL SAVED' + DOT + 'TRYING AGAIN');
+        else setStatus('ok', 'SAVED ' + clock());
+      }, function (e) {
+        busy[key]--;
+        setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase());
+        // one retry every ten seconds while the key is still owed, so a dropped connection mends itself
+        clearTimeout(timers['retry:' + key]);
+        timers['retry:' + key] = setTimeout(function () { if (due(key) && !busy[key]) write(key); }, 10000);
+      });
+  }
+
+  // A change to keep. The local copy first, with its flags; the store only when
+  // it is ready and this key has been reconciled, and only if something is due.
+  function persist(key) {
+    saveLocal(key);
+    if (storeState !== 'ready' || !reconciled[key]) { setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    if (due(key)) write(key);
   }
 
   function clock() {
@@ -1078,22 +1221,25 @@
     var use =window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
     Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
       .then(function (ns) {
-        if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
-        return Promise.all(keys().map(function (k) {
-          return ns.doc(docPath(k)).get().then(function (snap) {
-            if (snap && snap.exists && !dirty[k]) apply(k, snap.data());
-          }, function () { /* keep the local copy */ });
+        if (!ns) { storeState = 'off'; setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
+        storeState = 'ready';
+        var ks = keys();
+        // every key's first read is applied or skipped (reconcile) before anything is written for it
+        return Promise.all(ks.map(function (k) {
+          return new Promise(function (res) { res(ns.doc(docPath(k)).get()); })
+            .then(function (snap) { reconcile(k, snap, false); }, function () { reconcile(k, null, true); });
         })).then(function () {
           setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE');
-          Object.keys(unsaved).forEach(function (k) { delete unsaved[k]; persist(k); });
+          // what this phone holds that the store lacks (a write already in flight carries it)
+          ks.forEach(function (k) { if (due(k) && !busy[k]) write(k); });
         });
       })
       .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
   }
 
-  // The manifest first, then local copies so the page is never empty,
-  // then the shared store, which wins.
-  apply('overall', loadLocal('overall'));
+  // The manifest first, then local copies (and their flags) so the page is
+  // never empty, then the shared store, reconciled key by key.
+  applyLocal('overall', loadLocal('overall'));
   var built = false;
   fetch('manifest.json')
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -1103,7 +1249,7 @@
       build();
       built = true;
       buildPairs(m.pairs);
-      VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
+      VOICES.forEach(function (v) { applyLocal(v.id, loadLocal(v.id)); });
       connect();
     })
     .catch(function () {
