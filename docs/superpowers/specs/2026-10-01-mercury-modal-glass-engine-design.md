@@ -10,7 +10,8 @@ BLADE, 24 presets, a kit and an audition page, roadmap row **S22**.
 **The first audition is in** (2026-10-02; "The audition, round 1" below):
 144 of 166 clips kept, none cut. Round 2 fixed WATER (heard, kept) and
 PING's velocity (kept); SING's and BLADE's velocity became the touch (a
-soft rub swells in, a hard one bites), for round 3. This document reads the external *Mercury Engine — Engineering
+soft rub swells in, a hard one bites). Round 3's bite was heard as "a little
+snare or clap", and now rides under the note (round 4). This document reads the external *Mercury Engine — Engineering
 Specification* (v1.0, 2026-10-01; musical saw + glass harmonica +
 waterphone) against the checkout at `e11c178`. It does the spec's own
 "Round 0 — repository alignment" and decides how the idea enters SnipSnap.
@@ -749,8 +750,9 @@ chose **attack and bite** (decision 8, final).
     to hard: SING 0.38 / 0.27 / 0.17 / 0.08 s, BLADE 0.35 / 0.28 / 0.19 /
     0.09 s at velocity 0 / .3 / .65 / 1.
   - **The bite.** A hard touch catches with a scrape: seeded contact noise,
-    0.4–1.5 kHz, 12 dB under the held tone at full velocity and dying over
-    40 ms. Its amplitude goes with velocity (about 10 dB quieter at 0.3).
+    0.4–1.5 kHz, dying over 40 ms, its amplitude going with velocity. As
+    built for round 3 it was levelled 12 dB under the *held* tone; see
+    round 3 below for why that was a clap, and what replaced it.
   - **Two findings on the way.** Friction roughness fed through the
     contact cannot make a scrape: the high-Q modes filter it into tone (a
     3x rougher catch left the 1–6 kHz flatness at zero). So the scrape is
@@ -762,13 +764,61 @@ chose **attack and bite** (decision 8, final).
 - **1, the default, is a full touch.** So the SING and BLADE kit pads and
   presets now carry the scrape; nothing else in them changed.
 - `MercuryTest` holds all of it: PING's sweep; the swell at every step and
-  at least 3x; the scrape's flatness (0.20 and 0.16 against 0.0001) and
-  the held tone to the bit. With the touch switched off, that test fails
-  by name.
+  at least 3x; the scrape (as round 3 below now states it) and the held
+  tone to the bit. With the touch switched off, that test fails by name.
 
 **Next.** Round 3 of the audition: SING's and BLADE's velocity, and the
-kit's SING and BLADE pads with the scrape. The WATER ends and the
-defaults' wetness were not rated in round 2 and are still open. Then R1.1
-(the phone's picker, which needs an SDK) and R2 (LOOP, `Keys.mercuryPad`,
-EDDY, VESSEL and SHARD).
+kit's SING and BLADE pads with the scrape.
+
+## The audition, round 3 — 2026-10-03
+
+Before rating, the owner asked: *"Is it supposed to sound like a hit like a
+little snare or clap"*. No: the scrape is meant to be texture on the
+attack, felt more than heard.
+
+### Why it was a clap
+
+The scrape was levelled against the *held* tone (12 dB under its RMS over
+0.3–0.6 s). But it plays in the first tens of milliseconds, while the note
+is still swelling, and nothing measured it against the note *there*. Per
+5 ms against the note itself:
+- **Velocity 1:** 2.4 and 3.4 dB *over* the note in the first 10 ms (SING;
+  BLADE 3.8 and 4.2), and within 12 dB of it until 35 ms.
+- **Velocity .65:** worse, 3–7.6 dB over the note for the whole first
+  75 ms on SING. A softer touch swells in slower, so the note is quieter,
+  while the scrape only fell with velocity.
+
+A burst of band noise over a near-silent start, rising in 1 ms, is a clap.
+The round-3 tests checked that it *was* noise (flatness) and that it stayed
+off the held tone, not how loud it was against the note at the moment it
+played.
+
+### Round 4's scrape
+
+The owner chose "make it subtle":
+- It **rides the note's own envelope**: the RMS of the note (before the
+  scrape) in each 2.5 ms block, interpolated, times `SCRAPE_DB` (−12) and
+  velocity. So it can never lead the note; it swells in with it.
+- It **rises over 8 ms** (a raised cosine), not 1 ms: no click.
+- Band, decay and the 0.3 s cut are unchanged, so the classifier still
+  hears every short note PERC, and the held tone is the same to the bit.
+
+Per 5 ms in the first 80 ms, the scrape is now 16–30 dB under the note at
+velocity 1 (SING; BLADE 16–32) and 20–34 dB under at .65, at the
+defaults. Over every SING and BLADE preset (the kit's A09–A16 among them)
+the closest it comes is 14.8 dB under (BLADE TAPPED STEEL, velocity 1).
+`MercuryTest` holds that gap on the defaults and on all 16 presets: at
+least 14 dB under the note in every 5 ms, at velocity 1 and .65, and still
+there (within 22 dB of the note at its loudest, at full velocity). The
+scrape alone is noise (0.4–1.5 kHz flatness 0.63 on SING, 0.65 on BLADE).
+Round 3's scrape fails the gap by name, at +2.4 dB. The gap is read with
+HOLD 0 for speed; the test shows, to the bit, that HOLD does not move the
+first 80 ms.
+
+Only the SING and BLADE kit pads (A09–A16) change.
+
+**Next.** Round 4 of the audition: SING's and BLADE's velocity and the
+kit's A09–A16. The WATER ends and the defaults' wetness are still
+unrated. Then R1.1 (the phone's picker, which needs an SDK) and R2 (LOOP,
+`Keys.mercuryPad`, EDDY, VESSEL and SHARD).
 
