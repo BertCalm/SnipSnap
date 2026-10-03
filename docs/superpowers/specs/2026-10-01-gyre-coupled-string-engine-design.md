@@ -704,7 +704,10 @@ lasts, and moved only the quiet parts (the coupling, the membrane, the sympathet
   warm one (modes 105 to 420 Hz, the top shelved 15 dB down), along `BODY^0.7` so the knob's first
   half moves too. The box also loads the strings: a large box makes them darker (the loop
   brightness ×1.35 to ×0.6, the 5 kHz ceiling lowered to 3 kHz) and shorter (t60 ×1.1 to ×0.75).
-  The box rings into the tail, which now runs until it too is 45 dB down. A trim (0.7) keeps the raw
+  The box rings into the tail, which now runs until it too is 45 dB down: its time is read from
+  the six sections' own poles at the largest gain SPIN's swell gives each peak (a boosted peak rings
+  `10^(dB/40)` times longer than a band-pass of its Q; BODY 1 at SPIN 1 rings 0.51 s, Copilot's
+  review of #434), and a test rings the box to check it. A trim (0.7) keeps the raw
   peak under its ceiling; the output stage sets the loudness as before.
 - **SPIN turns at least 0.8 Hz** (was 0.15), so at 0.25 it is 1.5 Hz and gets 0.8 of a turn round a
   0.53 s FLICK note (was 0.23). It gains two destinations the main sound carries: which of the three
@@ -718,8 +721,9 @@ lasts, and moved only the quiet parts (the coupling, the membrane, the sympathet
 - **The strings are retuned at every rotor step.** A faster rotor made the coupling's and the
   membrane's swing a vibrato near a membrane mode (D3 at BODY 1 read 5.2 cents sharp at HALO's
   default SPIN). Each step now re-solves the bridge-phase pre-tuning for the bridge as it is, so the
-  rotor never bends the pitch through the bridge (worst 3.9 cents with it at that corner, the same as
-  with the rotor still); the strings are built 3% low so the retune has room either way.
+  rotor never bends the pitch through the bridge (on the built code, HALO at BODY 1 and SYMPATHY 1
+  reads at worst 2.3 cents over all 25 notes); the strings are built 3% low so the retune has room
+  either way.
 - **The wolf guard gained a decay rule** (`WOLF_T60`, 1 s): the bridge may not drain a note's
   fundamental faster than that. The box made a weakness visible that round one already had: F4 sits
   on BODY 1's top membrane mode (353 Hz), its fundamental died 41 dB under its octave (HALO) and the

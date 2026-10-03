@@ -89,11 +89,45 @@ object Gyre {
     /** The box's peaks add level; this takes it back so the raw peak stays under [RAW_PEAK_CEILING]. The output stage sets the loudness. */
     const val BOX_TRIM = 0.7f
 
-    /** How long the box rings once nothing drives it: its lowest mode, the slowest, for the tail. */
-    internal fun boxT60(body: Float): Float {
+    /**
+     * How long the box rings once nothing drives it, for the tail: the slowest pole of its six
+     * sections, read from the same RBJ denominators `Dsp.Biquad` builds them with. A peak's poles
+     * sit at a bandwidth of `alpha / A`, so a boost rings `A = 10^(dB/40)` times longer than a
+     * band-pass of its Q, and [spin]'s swell boosts it further: each peak is taken at the largest
+     * gain the rotor gives it. (Copilot's review of #434: the band-pass `Q / (pi f)` read 0.147 s
+     * for BODY 1's 105 Hz mode, which rings 0.29 s, and up to 0.51 s at the top of the swell.)
+     */
+    internal fun boxT60(body: Float, spin: Float): Float {
+        val rate = RATE * Dsp.OVERSAMPLE
         val size = boxSize(body)
-        val hz = Dsp.expMap(size, BOX_SMALL_HZ[0], BOX_LARGE_HZ[0])
-        return (Dsp.lin(size, BOX_Q_SMALL, BOX_Q_LARGE) * ln(1000.0) / (PI * hz)).toFloat()
+        val q = Dsp.lin(size, BOX_Q_SMALL, BOX_Q_LARGE).toDouble()
+        val swell = 1.0 + spinDepth(spin) * SWING_BOX
+        var slowest = 0.0
+        for (j in BOX_SMALL_HZ.indices) {
+            val w0 = 2.0 * PI * Dsp.expMap(size, BOX_SMALL_HZ[j], BOX_LARGE_HZ[j]) / rate
+            val a = 10.0.pow(Dsp.lin(size, BOX_SMALL_DB[j], BOX_LARGE_DB[j]) * swell / 40.0)
+            val alpha = sin(w0) / (2.0 * q)
+            slowest = max(slowest, poleT60(1.0 + alpha / a, -2.0 * cos(w0), 1.0 - alpha / a, rate))
+        }
+        for ((hz, low) in listOf(BOX_LOW_SHELF_HZ to true, BOX_HIGH_SHELF_HZ to false)) {
+            val db = if (low) Dsp.lin(size, BOX_LOW_SMALL_DB, BOX_LOW_LARGE_DB) else Dsp.lin(size, BOX_HIGH_SMALL_DB, BOX_HIGH_LARGE_DB)
+            val a = 10.0.pow(db / 40.0)
+            val w0 = 2.0 * PI * hz / rate
+            val cw = if (low) cos(w0) else -cos(w0)
+            val k = 2.0 * kotlin.math.sqrt(a) * sin(w0) / 2.0 * kotlin.math.sqrt(2.0)
+            val a1 = if (low) -2.0 * ((a - 1) + (a + 1) * cos(w0)) else 2.0 * ((a - 1) - (a + 1) * cos(w0))
+            slowest = max(slowest, poleT60((a + 1) + (a - 1) * cw + k, a1, (a + 1) + (a - 1) * cw - k, rate))
+        }
+        return slowest.toFloat()
+    }
+
+    /** The 60 dB time of the slower pole of `a0 + a1 z^-1 + a2 z^-2`, at [rate]. */
+    private fun poleT60(a0: Double, a1: Double, a2: Double, rate: Int): Double {
+        val p = a1 / a0
+        val q = a2 / a0
+        val disc = p * p - 4 * q
+        val radius = if (disc < 0) kotlin.math.sqrt(q) else (kotlin.math.abs(p) + kotlin.math.sqrt(disc)) / 2
+        return if (radius <= 0.0) 0.0 else -3.0 * ln(10.0) / (rate * ln(radius))
     }
 
     /**
@@ -304,13 +338,13 @@ object Gyre {
     }
 
     /** After the hand lands, until the slowest of the strings, the sympathetic strings and the box is [END_DB] down. */
-    internal fun tailSeconds(voice: GyreVoice, sympathy: Float, body: Float): Float =
-        END_DB / 60f * maxOf(DAMPER_T60, releaseT60(voice, sympathy), boxT60(body))
+    internal fun tailSeconds(voice: GyreVoice, sympathy: Float, body: Float, spin: Float): Float =
+        END_DB / 60f * maxOf(DAMPER_T60, releaseT60(voice, sympathy), boxT60(body, spin))
 
     /** Samples at the oversampled rate: exactly what [play] renders. */
     internal fun rawFrames(voice: GyreVoice, macros: Map<String, Float>): Int {
         val m = settled(macros, voice)
-        val tail = tailSeconds(voice, m.getValue("SYMPATHY"), m.getValue("BODY"))
+        val tail = tailSeconds(voice, m.getValue("SYMPATHY"), m.getValue("BODY"), m.getValue("SPIN"))
         return ((dampSeconds(voice, m.getValue("HOLD")) + tail) * RATE * Dsp.OVERSAMPLE).toInt()
     }
 

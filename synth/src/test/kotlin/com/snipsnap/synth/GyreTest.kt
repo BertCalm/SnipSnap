@@ -124,6 +124,38 @@ class GyreTest {
     }
 
     @Test
+    fun `the tail waits for the box, at the loudest swell SPIN gives it`() {
+        // Copilot's review of #434: a peak rings A = 10^(dB/40) times longer than a band-pass of its
+        // Q, and SPIN's swell boosts it further. The box's six sections at the largest gain the rotor
+        // gives each peak, rung by an impulse: the time its 10 ms level takes to fall 60 dB from its
+        // loudest, against boxT60. Measured: within boxT60 everywhere, to the 10 ms window (BODY 1, SPIN 1:
+        // 0.43 s against 0.51; the band-pass formula this replaced allowed 0.15).
+        val rate = RATE * Dsp.OVERSAMPLE
+        val window = (0.01 * rate).toInt()
+        for (body in floatArrayOf(0f, 0.5f, 1f)) for (spin in floatArrayOf(0f, 0.25f, 1f)) {
+            val size = Gyre.boxSize(body)
+            val q = Dsp.lin(size, Gyre.BOX_Q_SMALL, Gyre.BOX_Q_LARGE)
+            val swell = 1f + Gyre.spinDepth(spin) * Gyre.SWING_BOX
+            val box = Array(Gyre.BOX_SMALL_HZ.size + 2) { Dsp.Biquad() }
+            for (j in Gyre.BOX_SMALL_HZ.indices) box[j].peaking(
+                Dsp.expMap(size, Gyre.BOX_SMALL_HZ[j], Gyre.BOX_LARGE_HZ[j]),
+                Dsp.lin(size, Gyre.BOX_SMALL_DB[j], Gyre.BOX_LARGE_DB[j]) * swell, q, rate,
+            )
+            box[Gyre.BOX_SMALL_HZ.size].lowShelf(Gyre.BOX_LOW_SHELF_HZ, Dsp.lin(size, Gyre.BOX_LOW_SMALL_DB, Gyre.BOX_LOW_LARGE_DB), rate)
+            box[Gyre.BOX_SMALL_HZ.size + 1].highShelf(Gyre.BOX_HIGH_SHELF_HZ, Dsp.lin(size, Gyre.BOX_HIGH_SMALL_DB, Gyre.BOX_HIGH_LARGE_DB), rate)
+            val t60 = Gyre.boxT60(body, spin)
+            val y = FloatArray(((t60 * 2f + 0.05f) * rate).toInt()) { i -> var v = if (i == 0) 1f else 0f; for (b in box) v = b.process(v); v }
+            // The impulse's own sample is the dry path; the ring is what follows it.
+            val levels = DoubleArray(y.size / window) { rms(y, maxOf(1, it * window), (it + 1) * window) }
+            val loudest = levels.indices.maxBy { levels[it] }
+            val down = (loudest until levels.size).first { levels[it] < levels[loudest] * 1e-3 }
+            val measured = (down - loudest) * window.toDouble() / rate
+            println("BODY $body SPIN $spin: the box falls 60 dB in ${"%.3f".format(measured)} s, boxT60 ${"%.3f".format(t60)} s")
+            assertTrue(measured <= t60 * 1.05 + 0.01, "BODY $body SPIN $spin: the box rings ${measured} s, the tail allows $t60")
+        }
+    }
+
+    @Test
     fun `SPIN is heard on a short note at a quarter turn`() {
         // The owner's first listen: "Spin not noticable on short notes". Each partial's level against
         // the still note, block by block while the note rings (before the hand lands), with the slow
