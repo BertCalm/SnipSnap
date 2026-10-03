@@ -932,46 +932,119 @@ class TerraTest {
     }
 
     /**
-     * Spec "Testing", test 6, and decision 2. The level match `s` matches
-     * the body's peak, not the 75 Hz band-passed level the cavity's tanh
-     * sees nor the 0.12 threshold BUZZ gates on. So under HIT, BUZZ follows
-     * the striker. That is the default, and it is not owner-approved.
+     * Spec "Testing", test 6, pinned to decision 2 as R1's page took it on
+     * 2026-10-01 (question 3, "Follow the hit"): BUZZ follows the striker. The
+     * level match `s` matches the body's peak, not the 75 Hz band-passed level
+     * the cavity's tanh sees nor the 0.12 threshold BUZZ gates on. So a dark
+     * head keeps the rattle about as long as today's, and a bright head
+     * shortens it.
      *
-     * This is printed, not pinned, until R1's page answers question 3. It is
-     * then rewritten to pin each striker's ratio to today's within ±0.05
-     * (BUZZ follows the striker), or to "within a stated ratio of today's"
-     * (a band-passed level match).
+     * Each figure is pinned within ±20 % of its measurement (the controller's
+     * ruling for R1b, which replaces the spec's ±0.05 ratio bands), in two
+     * tables:
+     * - at a floor of 0, R1's HIT, against R1's printed figures (commit
+     *   19ff3762), which equal Phase 0's to the printed digit;
+     * - at the floor default ([Terra.HIT_FLOOR], 0.25, provisional), against
+     *   the figures measured with the floor in place (R1b's plan review,
+     *   confirmed by its Task 2 Step 1).
      *
-     * Phase 0's figures at BUZZ 1, THUMP KICK / THUMP SNARE / WRAITH WORD:
-     * - cavity, today 55.6 ms above: 63.7 / 40.0 / 32.2 ms at HIT 0.5, and
-     *   69.3 / 24.7 / 14.2 ms at HIT 1;
-     * - bar, today 53.2 ms: 55.2 / 47.8 / 35.7 ms at HIT 0.5, and 54.2 /
-     *   41.3 / 13.3 ms at HIT 1;
-     * - the cavity's tanh input, today 0.3075: 0.3260 / 0.2468 / 0.2381 at
-     *   HIT 0.5, and 0.3571 / 0.2049 / 0.1867 at HIT 1. At 0.357, tanh is
-     *   within 4 % of linear.
+     * Measured at the default, against R1's floor-0 figures (cavity ms / bar
+     * ms / tanh input). Each row reads "floored, against R1's":
+     * - THUMP KICK HIT 0.5: 63.9 / 55.2 / 0.3277, against 63.7 / 55.2 / 0.3260;
+     * - THUMP KICK HIT 1: 69.8 / 55.3 / 0.3598, against 69.3 / 54.2 / 0.3571;
+     * - THUMP SNARE HIT 0.5: 40.1 / 47.8 / 0.2471, against 40.0 / 47.8 / 0.2468;
+     * - THUMP SNARE HIT 1: 24.8 / 41.5 / 0.2053, against 24.7 / 41.3 / 0.2049;
+     * - WRAITH WORD HIT 0.5: 35.4 / 35.8 / 0.2413, against 32.2 / 35.7 / 0.2381;
+     * - WRAITH WORD HIT 1: 16.6 / 13.7 / 0.1936, against 14.2 / 13.3 / 0.1867.
+     *
+     * THUMP KICK at HIT 1 holds the tanh input 0.0002 under the cap at the
+     * default (0.3598); at a floor of 0.5 it reads 0.3661, past it, which is
+     * why 0.5 is not one of [Terra.HIT_FLOOR_CHOICES].
+     *
+     * Two claims sit beside the bands and are never re-thresholded:
+     * - the cavity's tanh input stays at or under 0.36 (within 4 % of linear,
+     *   the spec's cap) in both tables;
+     * - at HIT 1, at the default, THUMP KICK keeps BUZZ above 0.12 longer
+     *   than WRAITH WORD, on the cavity and on the bar. That is "follows the
+     *   striker": a band-passed level match would hold the two near each
+     *   other and near today's.
+     *
+     * The other seven strikers are printed, not pinned, when TERRA_FULL=1.
+     * When R1b's page picks a floor other than 0.25, the floored table is
+     * measured again at the new value by the same step.
      */
     @Test
-    fun `BUZZ and the cavity's drive under HIT are printed until R1's page answers decision 2`() {
+    fun `BUZZ follows the striker - the cavity's and the bar's drive under HIT, pinned`() {
+        class Drive(val id: String, val hit: Float, val cavityMs: Double, val barMs: Double, val tanhIn: Double)
+        val r1 = listOf(
+            Drive("tkick", 0.5f, 63.7, 55.2, 0.3260),
+            Drive("tkick", 1f, 69.3, 54.2, 0.3571),
+            Drive("tsnare", 0.5f, 40.0, 47.8, 0.2468),
+            Drive("tsnare", 1f, 24.7, 41.3, 0.2049),
+            Drive("wraith", 0.5f, 32.2, 35.7, 0.2381),
+            Drive("wraith", 1f, 14.2, 13.3, 0.1867),
+        )
+        // Measured at Terra.HIT_FLOOR = 0.25 (R1b's plan review; confirmed by R1b Task 2 Step 1).
+        val floored = listOf(
+            Drive("tkick", 0.5f, 63.9, 55.2, 0.3277),
+            Drive("tkick", 1f, 69.8, 55.3, 0.3598),
+            Drive("tsnare", 0.5f, 40.1, 47.8, 0.2471),
+            Drive("tsnare", 1f, 24.8, 41.5, 0.2053),
+            Drive("wraith", 0.5f, 35.4, 35.8, 0.2413),
+            Drive("wraith", 1f, 16.6, 13.7, 0.1936),
+        )
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val buzz = mapOf("BUZZ" to 1f)
         val mix = Terra.defaults(TerraVoice.RESONANT_CAVITY).getValue("CAVITY")
+        fun near(expected: Double, got: Double, what: String) =
+            assertTrue(abs(got - expected) <= 0.2 * abs(expected), "$what: $got, pinned at $expected ± 20 %")
+        fun measure(id: String, hit: Float, floor: Float): DoubleArray {
+            val x = Terra.upsample(TerraStrikers.head(id))
+            val cavity = TerraMeasure.msAbove(TerraMeasure.cavityStage(Terra.bankStruckAt(TerraVoice.RESONANT_CAVITY, buzz, x, hit, floor), mix, rate), 0.12f, rate)
+            val bar = TerraMeasure.msAbove(Terra.bankStruckAt(TerraVoice.TUNED_BAR, buzz, x, hit, floor), 0.12f, rate)
+            val tanhIn = TerraMeasure.tanhInput(Terra.bankStruckAt(TerraVoice.RESONANT_CAVITY, emptyMap(), x, hit, floor), rate).toDouble()
+            return doubleArrayOf(cavity, bar, tanhIn)
+        }
+
         val cavityToday = TerraMeasure.msAbove(TerraMeasure.cavityStage(Terra.bankWith(TerraVoice.RESONANT_CAVITY, buzz, null), mix, rate), 0.12f, rate)
         val barToday = TerraMeasure.msAbove(Terra.bankWith(TerraVoice.TUNED_BAR, buzz, null), 0.12f, rate)
-        val tanhToday = TerraMeasure.tanhInput(Terra.bankWith(TerraVoice.RESONANT_CAVITY, emptyMap(), null), rate)
-        println("TERRA drive today: cavity ${"%.1f".format(cavityToday)} ms and bar ${"%.1f".format(barToday)} ms above 0.12 at BUZZ 1, cavity tanh input ${"%.4f".format(tanhToday)} (Phase 0: 55.6, 53.2, 0.3075)")
-        val ids = if (full) TerraStrikers.TEN.map { it.id } else listOf("tkick", "tsnare", "wraith")
-        for (id in ids) {
-            val x = Terra.upsample(TerraStrikers.head(id))
-            for (hit in listOf(0.5f, 1f)) {
-                val cavity = TerraMeasure.msAbove(TerraMeasure.cavityStage(Terra.bankStruckAt(TerraVoice.RESONANT_CAVITY, buzz, x, hit), mix, rate), 0.12f, rate)
-                val bar = TerraMeasure.msAbove(Terra.bankStruckAt(TerraVoice.TUNED_BAR, buzz, x, hit), 0.12f, rate)
-                val tanhIn = TerraMeasure.tanhInput(Terra.bankStruckAt(TerraVoice.RESONANT_CAVITY, emptyMap(), x, hit), rate)
+        val tanhToday = TerraMeasure.tanhInput(Terra.bankWith(TerraVoice.RESONANT_CAVITY, emptyMap(), null), rate).toDouble()
+        println("TERRA drive today: cavity ${"%.1f".format(cavityToday)} ms and bar ${"%.1f".format(barToday)} ms above 0.12 at BUZZ 1, cavity tanh input ${"%.4f".format(tanhToday)} (R1 and Phase 0: 55.6, 53.2, 0.3075)")
+        near(55.6, cavityToday, "today: cavity ms above 0.12")
+        near(53.2, barToday, "today: bar ms above 0.12")
+        near(0.3075, tanhToday, "today: cavity tanh input")
+
+        val got = mutableMapOf<String, DoubleArray>()
+        for ((floor, table) in listOf(0f to r1, Terra.HIT_FLOOR to floored)) {
+            for (row in table) {
+                val (cavity, bar, tanhIn) = measure(row.id, row.hit, floor).also { got["$floor ${row.id} ${row.hit}"] = it }
                 println(
-                    "TERRA drive $id HIT $hit: cavity ${"%.1f".format(cavity)} ms (x${"%.2f".format(cavity / cavityToday)}), " +
+                    "TERRA drive floor $floor ${row.id} HIT ${row.hit}: cavity ${"%.1f".format(cavity)} ms (x${"%.2f".format(cavity / cavityToday)}), " +
                         "bar ${"%.1f".format(bar)} ms (x${"%.2f".format(bar / barToday)}), tanh input ${"%.4f".format(tanhIn)} (x${"%.2f".format(tanhIn / tanhToday)})",
                 )
-                assertTrue(cavity.isFinite() && bar.isFinite() && tanhIn.isFinite(), "$id HIT $hit: a drive figure is not finite")
+                val what = "floor $floor ${row.id} HIT ${row.hit}"
+                near(row.cavityMs, cavity, "$what: cavity ms above 0.12")
+                near(row.barMs, bar, "$what: bar ms above 0.12")
+                near(row.tanhIn, tanhIn, "$what: cavity tanh input")
+                assertTrue(tanhIn <= 0.36, "$what: the cavity's tanh input $tanhIn is past 0.36, more than 4 % from linear")
+            }
+        }
+
+        val kick = got.getValue("${Terra.HIT_FLOOR} tkick 1.0")
+        val wraith = got.getValue("${Terra.HIT_FLOOR} wraith 1.0")
+        assertTrue(kick[0] > wraith[0], "HIT 1: the cavity rattles ${kick[0]} ms under THUMP KICK and ${wraith[0]} ms under WRAITH WORD; BUZZ does not follow the striker")
+        assertTrue(kick[1] > wraith[1], "HIT 1: the bar rattles ${kick[1]} ms under THUMP KICK and ${wraith[1]} ms under WRAITH WORD; BUZZ does not follow the striker")
+
+        if (full) {
+            for (s in TerraStrikers.TEN.filter { it.id !in setOf("tkick", "tsnare", "wraith") }) {
+                for (hit in listOf(0.5f, 1f)) {
+                    val (cavity, bar, tanhIn) = measure(s.id, hit, Terra.HIT_FLOOR)
+                    println(
+                        "TERRA drive floor ${Terra.HIT_FLOOR} ${s.id} HIT $hit (printed, not pinned): cavity x${"%.2f".format(cavity / cavityToday)}, " +
+                            "bar x${"%.2f".format(bar / barToday)}, tanh input x${"%.2f".format(tanhIn / tanhToday)}",
+                    )
+                    assertTrue(cavity.isFinite() && bar.isFinite() && tanhIn.isFinite(), "${s.id} HIT $hit: a drive figure is not finite")
+                }
             }
         }
     }
