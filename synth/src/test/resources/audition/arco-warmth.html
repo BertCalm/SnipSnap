@@ -1,0 +1,1072 @@
+<title>Arco Warmth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md,
+     the same page the PLUCK, TINES, SIREN and BORE auditions wear. The scheme
+     is dark by design (light shells were cut), so this page commits to one
+     theme and paints every surface explicitly. */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised1: #221A34;
+    --raised2: #161020;
+    --gray-hi: #40306A;
+    --lcd: #0A0714;
+    --lcd-ink: #C8B2F8;
+    --lcd-glow: rgba(154, 108, 240, .9);
+    --cyan: #40E0E8;
+    --cyan-glow: rgba(64, 224, 232, .8);
+    --warn: #FFB000;
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --accent: #E040C8;
+    --bin-red: #C86050;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    --f-marker: "Rock Salt", "Comic Sans MS", cursive;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 48px;
+    padding-inline: 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      repeating-linear-gradient(90deg, rgba(90, 42, 224, .12) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(224, 64, 200, .08) 0 1px, transparent 1px 22px),
+      repeating-conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 17px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .win {
+    max-width: 430px;
+    margin: 0 auto;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background:
+      linear-gradient(var(--win), var(--win2)) padding-box,
+      var(--oil) border-box;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+
+  .titlebar {
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .titlebar .tag {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    opacity: .85;
+  }
+
+  .lcd {
+    position: relative;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    text-shadow: 0 0 6px var(--lcd-glow);
+  }
+  .lcd::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px);
+  }
+  .lcd > * { position: relative; z-index: 1; }
+
+  .transport {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--field-border);
+  }
+  .transport > div { min-width: 0; }
+  .transport .label {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    text-shadow: none;
+  }
+  /* A pair label such as PLAIN, THEN CLIP K can be long on a narrow phone, and its last
+     word is the one that matters: it wraps instead of ending in an ellipsis. Two lines are
+     always reserved, so the page below does not jump when a clip starts or stops. */
+  .transport .now {
+    display: flex;
+    align-items: center;
+    min-height: 2.1em;
+    font-size: 20px;
+    line-height: 1.05;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .transport .now.idle { color: var(--lcd-ink); text-shadow: 0 0 6px var(--lcd-glow); }
+
+  .raised {
+    appearance: none;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .raised:focus-visible, .chip:focus-visible, textarea:focus-visible, .primary:focus-visible, .pair:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  .toggle {
+    min-height: 44px;
+    min-width: 88px;
+    padding-inline: 12px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .toggle .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ink3);
+  }
+  .toggle[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+  .toggle[aria-pressed="true"] .dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+
+  .guide {
+    margin: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .guide p { margin: 0; }
+  .guide p + p { margin-top: 6px; }
+  .guide .hd {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+    margin-bottom: 6px;
+  }
+
+  .voice {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    overflow: hidden;
+  }
+  .voice-hd {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 4px 12px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .voice-hd h2 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--title-ink);
+    text-wrap: balance;
+  }
+  .voice-hd .readout {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 17px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .voice-hd .readout b { font-weight: 400; color: var(--ink); }
+  .voice-hd .body-note {
+    font-family: var(--f-marker);
+    font-size: 11px;
+    color: var(--ink2);
+    text-align: right;
+    max-width: 160px;
+  }
+
+  .group { padding: 8px 8px 4px; }
+  .group + .group { border-top: 1px dashed var(--field-border); }
+  .group-hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px 6px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+  .group.key .group-hd { color: var(--accent); }
+  .group.key .group-hd::before {
+    content: "";
+    width: 3px; height: 12px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  .clip {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-areas: "pad meta" "pad desc" "ans ans";
+    gap: 4px 10px;
+    align-items: center;
+    padding: 6px 4px;
+    border-radius: 6px;
+  }
+  .clip.playing { background: rgba(64, 224, 232, .06); }
+
+  .pad {
+    grid-area: pad;
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    font-family: var(--f-pixel);
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    align-self: center;
+  }
+  .pad .ico { display: block; width: 14px; height: 14px; }
+  .pad .ico path, .pad .ico rect { fill: currentColor; }
+  .pad .stop, .pair .stop { display: none; }
+  .pad[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
+  }
+  .pad[aria-pressed="true"] .play, .pair[aria-pressed="true"] .play { display: none; }
+  .pad[aria-pressed="true"] .stop, .pair[aria-pressed="true"] .stop { display: block; }
+
+  .meta {
+    grid-area: meta;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  /* A clip name has to be read whole on a phone (and in the fallback font),
+     so it wraps instead of ending in an ellipsis. */
+  .meta .name {
+    font-size: 18px;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .meta .dur {
+    margin-left: auto;
+    flex: none;
+    font-size: 15px;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
+  }
+  .desc {
+    grid-area: desc;
+    font-size: 15px;
+    color: var(--ink2);
+    line-height: 1.2;
+  }
+
+  /* Under each row: the PLAIN, THEN THIS button, then the four answers as a 2 by 2
+     grid across the whole row. The reference rows carry only a tag. */
+  .answers {
+    grid-area: ans;
+    display: grid;
+    gap: 8px;
+    padding-top: 4px;
+    min-width: 0;
+  }
+  .pair {
+    width: 100%;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 10px;
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    text-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pair .ico { flex: none; width: 14px; height: 14px; }
+  .pair .ico path, .pair .ico rect { fill: currentColor; }
+  .pair[aria-pressed="true"] {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25);
+  }
+  .ref {
+    justify-self: start;
+    padding: 5px 8px 4px;
+    border: 1px dashed var(--field-border);
+    border-radius: 4px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    user-select: none;
+  }
+  .chips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  /* All four chips wear the same colours: nothing about a chip leans toward an answer. */
+  .chip {
+    appearance: none;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 6px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: linear-gradient(var(--raised1), var(--raised2));
+    color: var(--ink2);
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .chip .g { flex: none; font-family: var(--f-lcd); font-size: 15px; line-height: 1; color: var(--ink2); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--title-ink);
+    box-shadow: 0 0 10px rgba(224, 64, 200, .45);
+  }
+  .chip[aria-pressed="true"] .g { color: var(--title-ink); }
+  .chip:disabled { opacity: .5; cursor: default; }
+
+  .notes {
+    padding: 8px 12px 12px;
+    border-top: 1px solid var(--field-border);
+    display: grid;
+    gap: 6px;
+  }
+  .notes label {
+    font-family: var(--f-marker);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  textarea {
+    width: 100%;
+    min-height: 64px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    font-family: var(--f-lcd);
+    font-size: 19px;
+    line-height: 1.25;
+    caret-color: var(--cyan);
+  }
+  textarea::placeholder { color: var(--ink3); }
+
+  .verdict { margin: 0 12px 12px; }
+  .q { padding: 10px 12px 4px; display: grid; gap: 6px; }
+  .q + .q { border-top: 1px dashed var(--field-border); }
+  .q .ask { display: block; font-size: 19px; color: var(--ink); line-height: 1.25; }
+
+  .actions {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--field-border);
+  }
+  .primary {
+    appearance: none;
+    min-height: 52px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background:
+      linear-gradient(#0C2426, #081418) padding-box,
+      var(--oil) border-box;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-family: var(--f-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 20px rgba(64, 224, 232, .35);
+  }
+  .primary:disabled { opacity: .6; cursor: default; box-shadow: none; }
+  .status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .status .k { font-family: var(--f-pixel); font-size: 8px; letter-spacing: .5px; color: var(--ink2); text-shadow: none; align-self: center; }
+  .status.warn .v { color: var(--warn); text-shadow: 0 0 8px rgba(255, 176, 0, .6); }
+  .status.ok .v { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+
+  .foot {
+    margin: 4px 12px 12px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pad[aria-pressed="true"] { animation: breathe 1.2s ease-in-out infinite; }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 14px rgba(64, 224, 232, .6), inset 0 0 10px rgba(64, 224, 232, .25); }
+      50% { box-shadow: 0 0 22px rgba(64, 224, 232, .85), inset 0 0 14px rgba(64, 224, 232, .35); }
+    }
+  }
+</style>
+
+<div class="win">
+  <div class="titlebar">
+    <span>Arco Warmth</span>
+    <span class="tag">R1E &middot; WARMTH AND WEIGHT, BY EAR</span>
+  </div>
+
+  <div class="transport lcd">
+    <div>
+      <div class="label">NOW PLAYING</div>
+      <div class="now idle" id="now">TAP A PAD TO PLAY</div>
+    </div>
+    <button class="raised toggle" id="repeat" type="button" aria-pressed="false">
+      <span class="dot"></span>REPEAT
+    </button>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">WHAT YOU SAID</div>
+    <p>You listened to the last page and wrote <b>&ldquo;Body just seems to be dull and muffled rather than full and resonant&rdquo;</b>. Every clip on that page, whichever way it was made, came back marked DIFFERENT, and none came back as more box.</p>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">WHAT THIS PAGE TRIES</div>
+    <p>You asked BODY at the top of the knob for warmth and weight, and said louder is fine. This time the body is added on top of the note, so the note is meant to keep its bright top end and to be somewhat louder than THE PLAIN ONE.</p>
+    <p>The clips are NOT level on purpose. Some may be louder only, and nothing more.</p>
+    <p><b>Nobody here has listened to these.</b> Some of these may sound worse than THE PLAIN ONE. That is what this page is for. Headphones please.</p>
+  </div>
+
+  <div id="intro"></div>
+
+  <div class="guide lcd">
+    <div class="hd">THE CLIPS</div>
+    <p>Each set is one voice on one note, and its label says which. <b>THE PLAIN ONE</b> is the default, BODY .50, and it is the reference: judge every other clip against it. The clips with only a letter are unlabelled on purpose, and their order means nothing. One or two of the lettered clips may be exactly the same as another clip.</p>
+  </div>
+
+  <div class="guide lcd">
+    <div class="hd">HOW TO LISTEN</div>
+    <p>Tap a pad to play a clip, then tap one answer under it, each against THE PLAIN ONE. The button PLAIN, THEN THIS plays THE PLAIN ONE, waits a moment, then plays that clip. Tap the pad again, or the button again, to stop.</p>
+    <p><b>FULLER</b> if it has more weight or warmth than THE PLAIN ONE, in the way you meant.<br><b>SAME</b> only if you cannot tell it from THE PLAIN ONE.<br><b>DULLER</b> if it is more muffled or less bright than THE PLAIN ONE.<br><b>DIFFERENT</b> if you hear a change that is none of those (louder only, boomy, harsh, thin, anything).</p>
+    <p>In the notes box for each voice, name the letters: which clips, and what you hear. Every clip is dry and mono.</p>
+  </div>
+
+  <div id="voices"><div class="guide lcd" id="loading"><p>LOADING THE CLIP LIST&hellip;</p></div></div>
+
+  <div class="voice verdict" id="verdict">
+    <div class="voice-hd">
+      <h2>Verdict</h2>
+      <div class="readout"><span>FIVE QUESTIONS &middot; WHERE IT ASKS, SAY THE VOICE AND THE LETTER &middot; THEN SAVE</span></div>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_full">1 &middot; Which clips sound fuller and warmer, in the way you meant? (say the voice and the letters)</label>
+      <textarea id="q_full" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_keep">2 &middot; Which one would you keep for BODY at the top of the knob, for ERHU and for CELLO? (say the voice and the letter, or THE PLAIN ONE)</label>
+      <textarea id="q_keep" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_toomuch">3 &middot; Was any clip too much: too boomy, too loud, or too thick? (say the voice and the letter)</label>
+      <textarea id="q_toomuch" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_device">4 &middot; Speaker or headphones?</label>
+      <textarea id="q_device" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="q">
+      <label class="ask" for="q_else">5 &middot; Anything else</label>
+      <textarea id="q_else" placeholder="&hellip;"></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="save" type="button">Save verdict</button>
+      <div class="status lcd" id="status" role="status" aria-live="polite"><span class="k">SAVE</span><span class="v" id="statusv">CHECKING&hellip;</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    RENDERED BY generateArcoWarmth &middot; THE CLIPS ARE NOT LEVEL ON PURPOSE &middot; 16-BIT 44.1 KHZ &middot;
+    EVERY ARCO CLIP IS DRY &middot; THE EARLIER PAGES' VERDICTS ARE KEPT UNDER THEIR OWN NAMES AND THIS PAGE DOES NOT TOUCH THEM &middot;
+    CHIP TAPS, NOTES AND A COUNT OF YOUR PLAYS SAVE ON THEIR OWN. SAVE VERDICT WRITES THE FIVE ANSWERS.
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Non-ASCII glyphs are escaped so the page reads the same whatever
+  // charset a host serves it under.
+  var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
+
+  // The clip list (and an optional intro) is the generator's manifest.json,
+  // published beside this page - one list, written where the clips are
+  // rendered. The manifest may also carry `surfaceAfter`, `loops` and `facts`
+  // (the retune page's); this page has no such section, quotes no figure in
+  // its questions, and ignores all three. The page does not count the clips:
+  // it shows however many groups, and clips in a group, the manifest lists.
+  var VOICES = [];
+
+  // Every clip with chips is judged against the plain one. The four chips share
+  // one neutral style (one glyph colour, one text colour) and lean toward no
+  // answer; the page only names them: fuller, same, duller, different. Each has a
+  // glyph that says up, equal, down or not equal, and nothing else.
+  // The plain clip of a group (its id ends in _plain) is the reference: it has
+  // no chips and no verdict.
+  var REACTIONS = [
+    { v: 'fuller', g: String.fromCharCode(0x25B2), t: 'FULLER' },
+    { v: 'same', g: '=', t: 'SAME' },
+    { v: 'duller', g: String.fromCharCode(0x25BC), t: 'DULLER' },
+    { v: 'diff', g: String.fromCharCode(0x2260), t: 'DIFFERENT' }
+  ];
+
+  function isPlain(fid) { return /_plain$/.test(fid); }
+
+  var QUESTIONS = ['q_full', 'q_keep', 'q_toomuch', 'q_device', 'q_else'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  // ---------- state ----------
+  var state = { overall: { q_full: '', q_keep: '', q_toomuch: '', q_device: '', q_else: '' } };
+
+  // ---------- build ----------
+  var PLAY_SVG = '<svg class="ico play" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1.5v11l10-5.5z"/></svg>' +
+                 '<svg class="ico stop" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>';
+
+  // Optional intro cards from the manifest (this page's own are in the markup).
+  function buildIntro(blocks) {
+    var host = $('intro');
+    host.textContent = '';
+    (blocks || []).forEach(function (b) {
+      var card = el('div', 'guide lcd');
+      card.appendChild(el('div', 'hd', b.hd));
+      (b.p || []).forEach(function (text) { card.appendChild(el('p', null, text)); });
+      host.appendChild(card);
+    });
+  }
+
+  function build() {
+    var host = $('voices');
+    host.textContent = '';
+    VOICES.forEach(function (v) {
+      state[v.id] = state[v.id] || { reactions: {}, note: '', plays: {} };
+      var card = el('section', 'voice');
+      card.id = 'voice-' + v.id;
+
+      var hd = el('div', 'voice-hd');
+      var h2 = el('h2', null, v.display);
+      var note = el('div', 'body-note', v.body);
+      var ro = el('div', 'readout');
+      (v.readout || []).forEach(function (r) { ro.appendChild(el('span', null, r)); });
+      hd.appendChild(h2); hd.appendChild(note); hd.appendChild(ro);
+      card.appendChild(hd);
+
+      v.groups.forEach(function (g, gi) {
+        var grp = el('div', 'group' + (g.key ? ' key' : ''));
+        grp.id = 'group-' + v.id + '-' + gi;
+        grp.appendChild(el('div', 'group-hd', g.label));
+        // the group's plain clip: the one whose id ends _plain
+        var plainId = null;
+        g.clips.forEach(function (c) { if (plainId === null && isPlain(c[0])) plainId = c[0]; });
+        g.clips.forEach(function (c) {
+          var fid = c[0], name = c[1], desc = c[2];
+          var row = el('div', 'clip');
+          row.id = 'clip-' + v.id + '-' + fid;
+
+          var pad = el('button', 'raised pad');
+          pad.type = 'button';
+          pad.setAttribute('aria-pressed', 'false');
+          pad.setAttribute('aria-label', 'Play ' + v.display + ' ' + g.label + ' ' + name);
+          pad.innerHTML = PLAY_SVG;
+          pad.addEventListener('click', function () { tapPad(v, fid, name, pad, row); });
+          row.appendChild(pad);
+
+          var meta = el('div', 'meta');
+          meta.appendChild(el('span', 'name', name));
+          var durEl = el('span', 'dur', ''); meta.appendChild(durEl); row.durEl = durEl;
+          row.appendChild(meta);
+          row.appendChild(el('div', 'desc', desc));
+
+          var answers = el('div', 'answers');
+          if (isPlain(fid)) {
+            // the reference: nothing to answer, nothing saved
+            var tag = el('span', 'ref', 'THE REFERENCE');
+            tag.id = 'ref-' + v.id + '-' + fid;
+            answers.appendChild(tag);
+          } else {
+            if (plainId !== null) {
+              var pair = el('button', 'raised pair');
+              pair.type = 'button';
+              pair.id = 'pair-' + v.id + '-' + fid;
+              pair.setAttribute('aria-pressed', 'false');
+              pair.setAttribute('aria-label', 'Play THE PLAIN ONE, then ' + v.display + ' ' + g.label + ' ' + name);
+              pair.innerHTML = PLAY_SVG + '<span class="lbl">PLAIN, THEN THIS</span>';
+              pair.addEventListener('click', function () { tapPair(v, plainId, fid, name, pair, row); });
+              answers.appendChild(pair);
+            }
+            var chips = el('div', 'chips');
+            REACTIONS.forEach(function (r) {
+              var chip = el('button', 'chip');
+              chip.type = 'button';
+              chip.id = 'chip-' + v.id + '-' + fid + '-' + r.v;
+              chip.setAttribute('aria-pressed', 'false');
+              chip.setAttribute('aria-label', v.display + ' ' + g.label + ' ' + name + ': ' + r.t.toLowerCase());
+              chip.innerHTML = '<span class="g">' + r.g + '</span>' + r.t;
+              chip.addEventListener('click', function () { react(v.id, fid, r.v); });
+              chips.appendChild(chip);
+            });
+            answers.appendChild(chips);
+          }
+          row.appendChild(answers);
+          grp.appendChild(row);
+        });
+        card.appendChild(grp);
+      });
+
+      var notes = el('div', 'notes');
+      var lab = el('label', null, v.display.charAt(0) + v.display.slice(1).toLowerCase() + ' notes');
+      var ta = el('textarea');
+      ta.id = 'note-' + v.id;
+      ta.placeholder = 'name the letters: which clips, and what you hear (fuller, duller, louder, thinner...)';
+      lab.htmlFor = ta.id;
+      ta.addEventListener('input', function () {
+        state[v.id].note = ta.value;
+        dirty[v.id] = true;
+        debounce(v.id, function () { persist(v.id); });
+      });
+      notes.appendChild(lab); notes.appendChild(ta);
+      card.appendChild(notes);
+
+      host.appendChild(card);
+    });
+  }
+
+  // ---------- audio: one sequence at a time ----------
+  // A sequence is one pad tap (one clip) or one PLAIN, THEN THIS start (THE
+  // PLAIN ONE, a short gap, then the clip). It owns an Audio element made in
+  // the tap, and the second clip of a pair reuses that element, so a phone
+  // that allowed the tap lets the second clip play without another one. Every
+  // callback a sequence leaves behind (an ended, a rejected play(), an error,
+  // the gap timer) checks that its sequence is still the current one: a
+  // stopped or replaced sequence can no longer touch the page. current is the
+  // token, as it was for play() in 4062b4b.
+  var current = null, repeat = false;
+  var nowEl = $('now');
+  // the pause between THE PLAIN ONE and the clip (a listening value, 0.4 s)
+  var GAP_MS = 400;
+
+  function srcOf(voice, fid) { return voice.id + '/' + fid + '.wav'; }
+
+  // the row that sounds now (none during the gap)
+  function light(seq, row) {
+    if (seq.lit) seq.lit.classList.remove('playing');
+    seq.lit = row || null;
+    if (seq.lit) seq.lit.classList.add('playing');
+  }
+
+  function mark(seq, on) {
+    (seq.btn || seq.pad).setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (!on) light(seq, null);
+  }
+
+  // silence a sequence: no sound, no pending gap timer
+  function silence(seq) {
+    clearTimeout(seq.timer);
+    seq.timer = null;
+    seq.waiting = false;
+    var a = seq.audio;
+    seq.audio = null;
+    if (a) { try { a.pause(); } catch (e) { /* nothing to stop */ } }
+  }
+
+  function setPlaying(next) {
+    var old = current;
+    current = next;
+    if (old) { silence(old); mark(old, false); }
+    if (next) {
+      mark(next, true);
+      nowEl.textContent = next.label;
+      nowEl.classList.remove('idle');
+    } else {
+      nowEl.textContent = 'TAP A PAD TO PLAY';
+      nowEl.classList.add('idle');
+    }
+  }
+
+  // A rejected play() (a src change makes the browser reject the previous one
+  // with an AbortError, and that rejection arrives after a newer sequence was
+  // selected): only the sequence that asked may be cleared.
+  function start(seq, a) {
+    var p = a.play();
+    if (p && typeof p.catch === 'function') p.catch(function () { if (current === seq) setPlaying(null); });
+  }
+
+  function playStep(seq, i) {
+    var a = seq.audio;
+    if (current !== seq || !a) return;
+    seq.step = i;
+    seq.waiting = false;
+    light(seq, seq.steps[i].row);
+    a.src = seq.steps[i].src;
+    start(seq, a);
+  }
+
+  function onEnded(seq) {
+    // an old sequence's, or a second 'ended' while the gap is already running
+    if (current !== seq || seq.waiting) return;
+    if (seq.step < seq.steps.length - 1) {
+      // THE PLAIN ONE is over: a short gap, then the clip
+      light(seq, null);
+      seq.waiting = true;
+      var next = seq.step + 1;
+      seq.timer = setTimeout(function () {
+        if (current === seq) playStep(seq, next);
+      }, GAP_MS);
+    } else if (repeat && seq.steps.length > 1) {
+      playStep(seq, 0);                // REPEAT repeats the whole pair
+    } else if (repeat) {
+      seq.audio.currentTime = 0;
+      start(seq, seq.audio);
+    } else {
+      setPlaying(null);
+    }
+  }
+
+  function begin(seq) {
+    setPlaying(seq);                   // stops what sounded or waited before
+    countPlay(seq.voice.id, seq.fid);
+    var a = new Audio();
+    a.preload = 'auto';
+    seq.audio = a;
+    a.addEventListener('ended', function () { onEnded(seq); });
+    a.addEventListener('error', function () {
+      if (current !== seq) return;
+      setPlaying(null);
+      nowEl.textContent = 'COULD NOT LOAD THAT CLIP';
+      nowEl.classList.remove('idle');
+    });
+    a.addEventListener('loadedmetadata', function () {
+      var row = seq.steps[seq.step].row;
+      if (current === seq && row.durEl && isFinite(a.duration)) {
+        row.durEl.textContent = a.duration.toFixed(2) + ' S';
+      }
+    });
+    playStep(seq, 0);
+  }
+
+  function tapPad(voice, fid, name, pad, row) {
+    if (current && current.pad === pad) { setPlaying(null); return; }
+    begin({ voice: voice, fid: fid, pad: pad, btn: null, audio: null, step: 0, waiting: false, timer: null, lit: null,
+            label: voice.display + DOT + name, steps: [{ src: srcOf(voice, fid), row: row }] });
+  }
+
+  // THE PLAIN ONE, then (after GAP_MS) this clip. A second tap on the same
+  // button stops it; any other pad or button stops it and starts its own.
+  function tapPair(voice, plainId, fid, name, btn, row) {
+    if (current && current.btn === btn) { setPlaying(null); return; }
+    begin({ voice: voice, fid: fid, pad: null, btn: btn, audio: null, step: 0, waiting: false, timer: null, lit: null,
+            label: 'PLAIN, THEN ' + name,
+            steps: [{ src: srcOf(voice, plainId), row: $('clip-' + voice.id + '-' + plainId) },
+                    { src: srcOf(voice, fid), row: row }] });
+  }
+
+  // How often each clip was started: a pad tap that starts it, or a PLAIN,
+  // THEN THIS start on its row. A tap that stops a clip is not a play.
+  function countPlay(voiceId, fid) {
+    var plays = state[voiceId].plays;
+    plays[fid] = (plays[fid] || 0) + 1;
+    dirty[voiceId] = true;
+    debounce(voiceId, function () { persist(voiceId); });
+  }
+
+  $('repeat').addEventListener('click', function () {
+    repeat = !repeat;
+    this.setAttribute('aria-pressed', repeat ? 'true' : 'false');
+  });
+
+  // ---------- reactions ----------
+  function react(voiceId, fid, value) {
+    if (isPlain(fid)) return;          // the reference has no verdict
+    var cur = state[voiceId].reactions[fid];
+    var next = cur === value ? null : value;
+    if (next) state[voiceId].reactions[fid] = next; else delete state[voiceId].reactions[fid];
+    paintChips(voiceId, fid);
+    persist(voiceId);
+  }
+
+  function paintChips(voiceId, fid) {
+    var cur = state[voiceId].reactions[fid] || null;
+    REACTIONS.forEach(function (r) {
+      var chip = $('chip-' + voiceId + '-' + fid + '-' + r.v);
+      if (chip) chip.setAttribute('aria-pressed', cur === r.v ? 'true' : 'false');
+    });
+  }
+
+  // A field being typed into wins over anything arriving from the store:
+  // state takes the live value instead, so the next save cannot re-save
+  // stale text over what was just typed.
+  function paintVoice(voiceId) {
+    var voice = VOICES.filter(function (x) { return x.id === voiceId; })[0];
+    if (voice) voice.groups.forEach(function (g) {
+      g.clips.forEach(function (c) { paintChips(voiceId, c[0]); });
+    });
+    var ta = $('note-' + voiceId);
+    if (!ta) return;
+    if (ta === document.activeElement) { state[voiceId].note = ta.value; }
+    else if (ta.value !== state[voiceId].note) { ta.value = state[voiceId].note; }
+  }
+
+  function paintOverall() {
+    QUESTIONS.forEach(function (k) {
+      var ta = $(k);
+      if (!ta) return;
+      if (ta === document.activeElement) { state.overall[k] = ta.value; }
+      else if (ta.value !== state.overall[k]) { ta.value = state.overall[k]; }
+    });
+  }
+
+  // The answers keep a local draft as they are typed; only SAVE VERDICT
+  // writes them to the shared store.
+  QUESTIONS.forEach(function (k) {
+    $(k).addEventListener('input', function () {
+      state.overall[k] = this.value;
+      dirty.overall = true;
+      debounce('overall', function () { saveLocal('overall', snapshotOf('overall')); });
+    });
+  });
+  $('save').addEventListener('click', function () { persist('overall'); });
+
+  // ---------- persistence ----------
+  var db = null;
+  var statusEl = $('status'), statusV = $('statusv');
+  var timers = {}, queues = {};
+  // The page is usable before the shared store has answered, so two sets of
+  // keys are kept. dirty: edited on this page, so an older snapshot arriving
+  // from the store must not replace it. unsaved: saved only locally because
+  // there was no store yet, so they are saved again once there is one.
+  var dirty = {}, unsaved = {}, started = false;
+
+  function setStatus(kind, text) {
+    statusEl.classList.remove('warn', 'ok');
+    if (kind) statusEl.classList.add(kind);
+    statusV.textContent = text;
+  }
+
+  function debounce(key, fn) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(fn, 700);
+  }
+
+  function snapshotOf(key) {
+    var data;
+    if (key === 'overall') {
+      data = {};
+      QUESTIONS.forEach(function (k) { data[k] = state.overall[k]; });
+    } else {
+      data = { reactions: Object.assign({}, state[key].reactions), note: state[key].note, plays: Object.assign({}, state[key].plays) };
+    }
+    data.savedAt = new Date().toISOString();
+    return data;
+  }
+
+  // Every round's verdicts live under their own prefix, so a later round's
+  // page never opens pre-filled with this one's notes and saves over them.
+  // The earlier rounds' are under arco_r1, arco_r1c and arco_r1d (the box page's
+  // local copies also have a prefix of their own); this round starts clean.
+  var PHASE = 'arco_r1e';
+  function docPath(key) { return 'verdicts/' + PHASE + '_' + key; }
+
+  function saveLocal(key, data) {
+    try { localStorage.setItem('arco-warmth:' + PHASE + ':' + key, JSON.stringify(data)); } catch (e) { /* private mode: fine */ }
+  }
+
+  function loadLocal(key) {
+    try {
+      var raw = localStorage.getItem('arco-warmth:' + PHASE + ':' + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function hasChips(voiceId, fid) {
+    return VOICES.some(function (v) {
+      return v.id === voiceId && v.groups.some(function (g) {
+        return g.clips.some(function (c) { return c[0] === fid && !isPlain(fid); });
+      });
+    });
+  }
+
+  function apply(key, data) {
+    if (!data) return;
+    if (key === 'overall') {
+      QUESTIONS.forEach(function (k) { if (typeof data[k] === 'string') state.overall[k] = data[k]; });
+      paintOverall();
+    } else if (state[key]) {
+      if (data.reactions && typeof data.reactions === 'object' && !Array.isArray(data.reactions)) {
+        // only a known answer on a clip that has chips (never the reference)
+        var kept = {};
+        Object.keys(data.reactions).forEach(function (fid) {
+          if (hasChips(key, fid) && REACTIONS.some(function (r) { return r.v === data.reactions[fid]; })) kept[fid] = data.reactions[fid];
+        });
+        state[key].reactions = kept;
+      }
+      if (typeof data.note === 'string') state[key].note = data.note;
+      // plays: an object of numbers; an older doc has none, and anything else is ignored
+      if (data.plays && typeof data.plays === 'object' && !Array.isArray(data.plays)) {
+        var plays = {};
+        Object.keys(data.plays).forEach(function (fid) {
+          var n = data.plays[fid];
+          if (typeof n === 'number' && isFinite(n) && n >= 0) plays[fid] = n;
+        });
+        state[key].plays = plays;
+      }
+      paintVoice(key);
+    }
+  }
+
+  function persist(key) {
+    var data = snapshotOf(key);
+    dirty[key] = true;
+    saveLocal(key, data);
+    if (!db) { unsaved[key] = true; setStatus('warn', 'SAVING OFF' + DOT + 'KEPT ON THIS PHONE'); return; }
+    setStatus(null, 'SAVING...');
+    queues[key] = (queues[key] || Promise.resolve())
+      .then(function () { return db.doc(docPath(key)).set(data); })
+      .then(function () { setStatus('ok', 'SAVED ' + clock()); },
+            function (e) { setStatus('warn', 'SAVE FAILED' + DOT + ((e && e.code) || 'unavailable').toUpperCase()); });
+  }
+
+  function clock() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  function keys() { return VOICES.map(function (v) { return v.id; }).concat(['overall']); }
+
+  function connect() {
+    if (started) return;
+    started = true;
+    var use =window.claude && typeof window.claude.use === 'function' ? window.claude.use('db') : Promise.resolve(null);
+    Promise.resolve(use).then(function (ns) { db = ns || null; return db; }, function () { db = null; return null; })
+      .then(function (ns) {
+        if (!ns) { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); return; }
+        return Promise.all(keys().map(function (k) {
+          return ns.doc(docPath(k)).get().then(function (snap) {
+            if (snap && snap.exists && !dirty[k]) apply(k, snap.data());
+          }, function () { /* keep the local copy */ });
+        })).then(function () {
+          setStatus('ok', 'READY' + DOT + 'SAVES TO CLAUDE');
+          Object.keys(unsaved).forEach(function (k) { delete unsaved[k]; persist(k); });
+        });
+      })
+      .catch(function () { setStatus('warn', 'SAVING OFF' + DOT + 'TELL ME IN CHAT'); });
+  }
+
+  // The manifest first, then local copies so the page is never empty,
+  // then the shared store, which wins.
+  apply('overall', loadLocal('overall'));
+  var built = false;
+  fetch('manifest.json')
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (m) {
+      VOICES = m.voices || [];
+      buildIntro(m.intro);
+      build();
+      built = true;
+      VOICES.forEach(function (v) { apply(v.id, loadLocal(v.id)); });
+      connect();
+    })
+    .catch(function () {
+      // build() removes the loading card before it throws on a bad list,
+      // so this handler must not assume the card is still there.
+      if (!built) {
+        var msg = '<p>COULD NOT LOAD THE CLIP LIST. RE-RENDER WITH generateArcoWarmth.</p>';
+        var card = $('loading');
+        if (card) card.innerHTML = msg; else $('voices').innerHTML = '<div class="guide lcd">' + msg + '</div>';
+      }
+      connect();
+    });
+})();
+</script>
