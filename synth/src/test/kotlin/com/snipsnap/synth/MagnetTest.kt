@@ -5,6 +5,9 @@ import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonException
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
@@ -33,9 +36,16 @@ import kotlin.test.assertTrue
  * landed pad regenerating bit for bit, the end of a landed note at three landings (at least 53 dB under
  * its peak, across MUTE, PICK and sampled TUNE steps), JANGLE's pitch-compensated ring (the open string
  * unchanged, the fundamental's loss per second flat across the range, E4's t-20, a stable loop) with
- * CHUG's ring left as it was, and PICK's map (the owner's pick of the ends: the default render bit for
- * bit the first build's, the ends octaves apart at the kit's notes, the loop corner the ring law and PICK
- * ask for together held to the toolkit's own clamp with every note still in tune).
+ * CHUG's ring left as it was, and PICK's map (the owner's pick of the ends: neutral at the default PICK,
+ * every coupled value exactly its neutral number and the string and note equal to the path built without
+ * the map, which is not a claim that the render is bit for bit the build before the map, since the
+ * ring-ceiling fade was re-chosen with it; the ends octaves apart at the kit's notes, the loop corner the
+ * ring law and PICK ask for together held to the toolkit's own clamp with every note still in tune).
+ *
+ * The three long sweeps (the end grid, the clean ends, the in-tune cells) and the pitch through VALVE
+ * spread their cells over a small pool ([SWEEP_THREADS]) and read the results back in the cells' own
+ * order, so what each prints, counts and asserts is what a plain loop gives; the renders that the end
+ * grid and the clean ends both read are made once ([dryRender]).
  */
 class MagnetTest {
 
@@ -295,71 +305,92 @@ class MagnetTest {
         return 20 * log10(tail.coerceAtLeast(1e-9f) / s.peak().coerceAtLeast(1e-9f).toDouble())
     }
 
-    /**
-     * One amp a landed note is read through: the voice, the macros it overrides on top of the defaults,
-     * the VALVE macros, and the TUNE steps read at it (the cells that bound it in the full search, and
-     * the ends of the range).
-     */
-    private class EndLanding(val name: String, val voice: MagnetVoice, val macros: Map<String, Float>, val valve: Map<String, Float>, val steps: List<Int>)
+    /** One end-grid read: the note through its landing's amp, and whether the trim left its string to the ring ceiling. */
+    private class EndRead(val db: Double, val ceiling: Boolean)
 
     /**
-     * The PICK values the end grid reads for [v]: both ends of the knob, the default, and 0.15. The map
-     * moves the exciter's corner, the second pole, the loop's corner and the resonance with PICK (the
-     * owner's pick of the ends), and each changes how long the string rings and what the amp lifts at its
-     * end. The binding PICK is not an end: the search over PICK 0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
-     * 0.4 and the default found the worst cell of the ceiling path at 0.15 (CHUG at gain 106, MUTE 0, TUNE
-     * step 2), so 0.15 is read here.
+     * [c]'s note at [macros] (the cell's own, or with BLEND moved) through the cell's landing amp. One
+     * render serves both reads: a string the ring ceiling cut is the whole 4 s budget, so the finished
+     * note is the whole 4 s at the rack's rate (decimation floors the length, so a string a sample or
+     * two short of the budget reads as short); a string the trim ended on its decay is shorter.
      */
-    private fun endPicks(v: MagnetVoice): List<Float> = listOf(0f, 0.15f, Magnet.defaults(v).getValue("PICK"), 1f)
+    private fun endRead(c: EndCell, macros: Map<String, Float>): EndRead {
+        val rendered = dryRender(c.landing.voice, macros)
+        val ceiling = rendered.samples.size >= (4f * Dsp.RATE).toInt()
+        return EndRead(endDb(FxChain().withSection("valve", c.landing.valve).process(rendered)), ceiling)
+    }
 
     @Test
     fun `a landed note ends at least 53 dB under its peak at every landing, MUTE, PICK and sampled TUNE step`() {
         // The three amps a MAGNET note lands through: CHUG's landing (DRIVE 0.85, gain 106), the kit's lead
-        // amp (DRIVE 0.78, CHUG at BLEND 0.35: a literal, as in SynthKitTest, because the kit's LEAD_VALVE
-        // is private) and JANGLE's landing. The bar is the review's -50 dB on the peak of the last 20 ms with
-        // 3 dB to spare (so -53), for MUTE 0, the voice's default and 1 at PICK 0, 0.15, the default and 1.
-        // A string whose trim ended it on its decay ends on Magnet's decay fade, one the ring ceiling cut on
-        // the trim's 400 ms fade and Magnet's own on top of it; the amp lifts either end by its gain. The
-        // TUNE steps are, per landing, the binding cells of the full search (all 25 steps, 900 cells; at gain
-        // 106 the ceiling cells at steps 1, 2, 7, 8, 12 and 18 at MUTE 0, the decay cells at MUTE 1 at steps
-        // 3, 4, 18, 21, 22 and 24) and the ends of the range, so the test runs in about 25 seconds (264
-        // cells, 119 on the ring ceiling). Mutations: with the ceiling fade deleted the worst cell is -20.1
-        // dB (CHUG, step 3, MUTE 0, PICK 0) and 80 of the 264 cells fail; with the ceiling fade back at its
-        // first choice (squared, 250 ms) the worst is -50.1 dB (CHUG, step 2, MUTE 0, PICK 0.15) and 3 cells
-        // fail; with it at fourth power 200 ms the worst is -52.7 dB (the same cell) and 1 fails; with the
-        // decay fade back at 150 ms squared the worst is -47.5 dB (CHUG, step 3, MUTE 1, PICK 0.55) and 26
-        // cells fail.
-        val leadValve = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
-        val landings = listOf(
-            EndLanding("CHUG landing", MagnetVoice.CHUG, emptyMap(), Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG), listOf(0, 1, 2, 3, 4, 7, 8, 12, 18, 21, 22, 24)),
-            EndLanding("kit lead amp", MagnetVoice.CHUG, mapOf("BLEND" to 0.35f), leadValve, listOf(0, 1, 2, 4, 6, 24)),
-            EndLanding("JANGLE landing", MagnetVoice.JANGLE, emptyMap(), Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE), listOf(0, 2, 5, 24)),
-        )
+        // amp (DRIVE 0.78, gain 37, CHUG at BLEND 0.35: a literal, as in SynthKitTest, because the kit's
+        // LEAD_VALVE is private) and JANGLE's landing. The bar is the review's -50 dB on the peak of the last
+        // 20 ms with 3 dB to spare (so -53), for MUTE 0, the voice's default and 1 at PICK 0, 0.15, the
+        // default and 1. A string whose trim ended it on its decay ends on Magnet's decay fade, one the ring
+        // ceiling cut on the trim's 400 ms fade and Magnet's own on top of it; the amp lifts either end by its
+        // gain. The TUNE steps are, per landing, the binding cells of the full search (all 25 steps, 900
+        // cells; at gain 106 the ceiling cells at steps 1, 2, 7, 8, 12 and 18 at MUTE 0, the decay cells at
+        // MUTE 1 at steps 3, 4, 18, 21, 22 and 24) and the ends of the range (264 cells, 119 on the ring
+        // ceiling), and each cell is one render and one pass through the amp, about 8 seconds for the test on
+        // four threads and about 28 seconds on one. Asserted besides the bar: the grid is the 264 cells and
+        // at least 119 of them take the ring-ceiling path (a refactor that sent every string down the decay
+        // path, or shrank the grid, would otherwise leave the ceiling fade untested and the test green).
+        // BLEND is held at each landing's own in the grid (CHUG's landing 1, the lead amp 0.35, JANGLE's
+        // 0.5), so the 16 worst cells of each landing are read again at BLEND 0 and at BLEND 1, outside the
+        // 264 and 119: the spectrum the amp lifts moves with BLEND by 14.7 to 18.0 dB at some harmonic, and
+        // it moves the ranking (in a one-off sweep of the whole grid at BLEND 0, 0.25, 0.75 and 1, 1 056
+        // cells, the worst read was CHUG's landing at step 4, MUTE 1 and PICK 0.55 at BLEND 0, -54.6 dB,
+        // which is only the 16th worst of that landing's 144 cells at its own BLEND). Mutations: with the
+        // ceiling fade deleted the worst cell is -20.1 dB (CHUG, step 3, MUTE 0, PICK 0) and 80 of the 264
+        // cells fail; with the ceiling fade back at its first choice (squared, 250 ms) the worst is -50.1 dB
+        // (CHUG, step 2, MUTE 0, PICK 0.15) and 3 cells fail; with it at fourth power 200 ms the worst is
+        // -52.7 dB (the same cell) and 1 fails; with the decay fade back at 150 ms squared the worst is -47.5
+        // dB (CHUG, step 3, MUTE 1, PICK 0.55) and 26 cells fail; with the PICK map as the first build had it
+        // only 116 cells take the ring-ceiling path and the coverage check fails.
         val bar = -50.0
         val margin = 3.0
+        val cells = endCells()
+        val reads = sweep(cells) { endRead(it, it.macros) }
         val worst = linkedMapOf<String, Pair<Double, String>>()
         val short = ArrayList<String>()
-        var cells = 0
         var ceilingCells = 0
-        for (l in landings) {
-            val v = l.voice
-            for (step in l.steps) for (mute in listOf(0f, Magnet.defaults(v).getValue("MUTE"), 1f)) for (pick in endPicks(v)) {
-                val macros = Magnet.defaults(v) + l.macros + mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to mute, "PICK" to pick)
-                val ceiling = Magnet.string(v, macros).size >= (4f * Magnet.RENDER_RATE).toInt()
-                val db = endDb(FxChain().withSection("valve", l.valve).process(Magnet.render(v, macros)))
-                val cell = "${l.name} TUNE step $step MUTE $mute PICK $pick (${if (ceiling) "ring ceiling" else "decay"})"
-                cells++
-                if (ceiling) ceilingCells++
-                if (worst[l.name]?.let { db > it.first } != false) worst[l.name] = db to cell
-                if (!(db <= bar - margin)) short.add("$cell ends ${MagnetMeasure.round(db)} dB under its peak")
-            }
+        for ((c, r) in cells.zip(reads)) {
+            val cell = "${c.landing.name} TUNE step ${c.step} MUTE ${c.mute} PICK ${c.pick} (${if (r.ceiling) "ring ceiling" else "decay"})"
+            if (r.ceiling) ceilingCells++
+            if (worst[c.landing.name]?.let { r.db > it.first } != false) worst[c.landing.name] = r.db to cell
+            if (!(r.db <= bar - margin)) short.add("$cell ends ${MagnetMeasure.round(r.db)} dB under its peak")
         }
         println(
-            "MAGNET landed end: $cells cells ($ceilingCells on the ring ceiling), worst " +
+            "MAGNET landed end: ${cells.size} cells ($ceilingCells on the ring ceiling), worst " +
                 worst.entries.joinToString("; ") { "${it.key} ${MagnetMeasure.round(it.value.first)} dB at ${it.value.second}" },
         )
-        assertEquals(106f, Valve.gainFor(landings[0].valve.getValue("DRIVE")), 1f)
-        assertTrue(short.isEmpty(), "a landed note ends within ${margin} dB of the ${-bar} dB bar: ${short.take(5)} (${short.size} of $cells cells)")
+        // The worst cells of each landing, at BLEND 0 and 1 (sortedByDescending is stable: a tie keeps the
+        // first). A read at the cell's own BLEND (CHUG's landing is at 1) is the grid's read, not a new render.
+        val worstCells = END_LANDINGS.flatMap { l -> cells.indices.filter { cells[it].landing === l }.sortedByDescending { reads[it].db }.take(BLEND_CELLS_PER_LANDING) }
+        val blendPairs = worstCells.flatMap { i -> listOf(0f, 1f).map { b -> i to b } }
+        val blendReads = sweep(blendPairs) { (i, b) -> if (cells[i].macros.getValue("BLEND") == b) reads[i].db else endRead(cells[i], cells[i].macros + ("BLEND" to b)).db }
+        val blendShort = ArrayList<String>()
+        val blendWorst = linkedMapOf<String, Pair<Double, String>>()
+        var blendRenders = 0
+        for ((k, pair) in blendPairs.withIndex()) {
+            val c = cells[pair.first]
+            val db = blendReads[k]
+            if (c.macros.getValue("BLEND") != pair.second) blendRenders++
+            val cell = "${c.landing.name} TUNE step ${c.step} MUTE ${c.mute} PICK ${c.pick} BLEND ${pair.second}"
+            if (blendWorst[c.landing.name]?.let { db > it.first } != false) blendWorst[c.landing.name] = db to cell
+            if (!(db <= bar - margin)) blendShort.add("$cell ends ${MagnetMeasure.round(db)} dB under its peak")
+        }
+        println(
+            "MAGNET landed end BLEND: ${blendPairs.size} reads at BLEND 0 and 1 of the worst $BLEND_CELLS_PER_LANDING cells of each landing ($blendRenders of them new renders), worst " +
+                blendWorst.entries.joinToString("; ") { "${it.key} ${MagnetMeasure.round(it.value.first)} dB at ${it.value.second}" } +
+                "; ${sharedRenderCount()} renders of the grid are shared with the clean ends",
+        )
+        assertEquals(264, cells.size, "the end grid is not the 264 cells it is stated to be")
+        assertTrue(ceilingCells >= 119, "only $ceilingCells of the ${cells.size} cells take the ring-ceiling path, the grid is stated to have 119: the ceiling fade is under-tested")
+        assertEquals(106f, Valve.gainFor(END_LANDINGS[0].valve.getValue("DRIVE")), 1f)
+        assertEquals(37f, Valve.gainFor(END_LANDINGS[1].valve.getValue("DRIVE")), 1f)
+        assertTrue(short.isEmpty(), "a landed note ends within ${margin} dB of the ${-bar} dB bar: ${short.take(5)} (${short.size} of ${cells.size} cells)")
+        assertTrue(blendShort.isEmpty(), "a landed note at BLEND 0 or 1 ends within ${margin} dB of the ${-bar} dB bar: ${blendShort.take(5)} (${blendShort.size} of ${blendPairs.size} reads)")
     }
 
     @Test
@@ -386,6 +417,7 @@ class MagnetTest {
             )
             val soft = FeatureExtractor.extract(Velocity.atVelocity(patch, 0.25f)).centroidHz
             val hard = FeatureExtractor.extract(Velocity.atVelocity(patch, 1f)).centroidHz
+            println("MAGNET velocity $voice: onset centroid ${soft} Hz at velocity 0.25 and ${hard} Hz at velocity 1, a ratio of ${MagnetMeasure.round(hard.toDouble() / soft, 2)}")
             assertTrue(soft < hard, "$voice: soft centroid $soft should be below hard centroid $hard")
         }
     }
@@ -399,7 +431,8 @@ class MagnetTest {
         // first build read the default PICK only, 450). PICK 1 is where the loop's corner is widest (x4, and
         // on JANGLE x2 more from the ring law, past the toolkit's own clamp at E4 and MUTE 0) and PICK 0
         // where the exciter is two 150 Hz poles. The string does not read BLEND, so one string serves the
-        // three blends of a cell; the pickup takes the macros' resonance scale, as the render does. Mutation:
+        // three blends of a cell, and the 450 strings are spread over the sweep's threads; the pickup takes the
+        // macros' resonance scale, as the render does. Mutation:
         // the thumb's corner floor at 0 Hz instead of 150 reads NaN at every PICK 0 cell (450 of the 1 350
         // cells fail); the default-PICK reads alone could not see it.
         val grid = listOf(0f, 0.5f, 1f)
@@ -409,28 +442,30 @@ class MagnetTest {
         val lowest = linkedMapOf<String, Double>()
         val highest = linkedMapOf<String, Double>()
         val over = ArrayList<String>()
-        for (v in voices) {
-            for (pick in listOf(0f, Magnet.defaults(v).getValue("PICK"), 1f)) {
-                val key = "$v PICK $pick"
-                for (step in 0..Magnet.TUNE_SEMITONES) {
-                    val tune = step / Magnet.TUNE_SEMITONES.toFloat()
-                    val f0 = Magnet.frequencyFor(v, tune)
-                    for (mute in grid) {
-                        val macros = Magnet.defaults(v) + mapOf("TUNE" to tune, "MUTE" to mute, "PICK" to pick)
-                        val string = Magnet.string(v, macros)
-                        val scale = Magnet.resonanceScale(v, macros)
-                        for (blend in grid) {
-                            val dry = Magnet.pickup(v, string, f0, blend, resonanceScale = scale)
-                            val cents = FineTuning.cents(FineTuning.measuredHz(dry, Magnet.RENDER_RATE, f0), f0.toDouble())
-                            val cell = "$v TUNE step $step MUTE $mute PICK $pick BLEND $blend"
-                            cells++
-                            lowest[key] = min(lowest[key] ?: cents, cents)
-                            highest[key] = maxOf(highest[key] ?: cents, cents)
-                            if (abs(cents) > worst) { worst = abs(cents); worstCell = "$cell at $cents cents" }
-                            if (!(abs(cents) <= 5.0)) over.add("$cell at $cents cents") // negated (<=): a NaN read fails too
-                        }
-                    }
-                }
+        // One cell per string (voice, PICK, TUNE step, MUTE); its three BLENDs are read off the one string.
+        class TuneCell(val v: MagnetVoice, val pick: Float, val step: Int, val mute: Float)
+        val strings = ArrayList<TuneCell>()
+        for (v in voices) for (pick in listOf(0f, Magnet.defaults(v).getValue("PICK"), 1f)) for (step in 0..Magnet.TUNE_SEMITONES) for (mute in grid) strings.add(TuneCell(v, pick, step, mute))
+        val reads = sweep(strings) { c ->
+            val tune = c.step / Magnet.TUNE_SEMITONES.toFloat()
+            val f0 = Magnet.frequencyFor(c.v, tune)
+            val macros = Magnet.defaults(c.v) + mapOf("TUNE" to tune, "MUTE" to c.mute, "PICK" to c.pick)
+            val string = Magnet.string(c.v, macros)
+            val scale = Magnet.resonanceScale(c.v, macros)
+            DoubleArray(grid.size) { b ->
+                val dry = Magnet.pickup(c.v, string, f0, grid[b], resonanceScale = scale)
+                FineTuning.cents(FineTuning.measuredHz(dry, Magnet.RENDER_RATE, f0), f0.toDouble())
+            }
+        }
+        for ((c, centsByBlend) in strings.zip(reads)) {
+            val key = "${c.v} PICK ${c.pick}"
+            for ((b, cents) in centsByBlend.withIndex()) {
+                val cell = "${c.v} TUNE step ${c.step} MUTE ${c.mute} PICK ${c.pick} BLEND ${grid[b]}"
+                cells++
+                lowest[key] = min(lowest[key] ?: cents, cents)
+                highest[key] = maxOf(highest[key] ?: cents, cents)
+                if (abs(cents) > worst) { worst = abs(cents); worstCell = "$cell at $cents cents" }
+                if (!(abs(cents) <= 5.0)) over.add("$cell at $cents cents") // negated (<=): a NaN read fails too
             }
         }
         val ranges = lowest.keys.joinToString("; ") { "$it ${MagnetMeasure.round(lowest.getValue(it), 2)} to ${MagnetMeasure.round(highest.getValue(it), 2)}" }
@@ -556,7 +591,8 @@ class MagnetTest {
         // Each voice at PICK 0 to 1 in tenths, the other macros at their defaults, the centroid read on the
         // rendered note. Asserted, the specification's two clauses: the centroid never falls between steps
         // and PICK 1 sits above PICK 0, and each tenth of travel moves it at least 1 percent (smallest read:
-        // 16.82 percent on JANGLE, 13.85 percent on CHUG; the first build's map read 1.61 and 2.03). The
+        // 16.82 percent on JANGLE, 13.85 percent on CHUG; the map before ruling 23 read 1.61 on JANGLE, after
+        // the ring law of ruling 20 (1.77 at the first build, which had no ring law), and 2.03 on CHUG). The
         // second clause is the one PICK is registered as velocity's brightness macro on, and it is asserted
         // at the defaults only: nothing here sweeps the other macros. The whole table prints before the
         // assertions run; its corner column is the map's own exciter corner, [Magnet.pickCornerHz] (print only).
@@ -629,18 +665,20 @@ class MagnetTest {
     // ---------- PICK's map: the owner's pick of the ends (candidate "B" of the PICK-ends spike) ----------
 
     /**
-     * The string the first build gave (8a's engine, before the PICK map): the exciter's corner is
-     * `expMap(PICK, 600, 16000)` through one pole, the loop's body corner is the voice's own, and the
-     * toolkit's own exciter and loop do the rest. Built from the toolkit, [Magnet.compensated] and
-     * [Magnet.ended], so what this reference pins is the part the map changed (the exciter, the loop's
-     * corner and, in [firstBuildRender], the pickup resonance's corner), and the end fades are the engine's
-     * ([Magnet.ended]), not 8a's. The 8b run also compared whole renders against a verbatim copy of 8a's
-     * `Magnet.kt` (both voices, TUNE 25 x MUTE 6 x BLEND 4 = 1 200 cells, strings, dry notes and landed
-     * notes): with the end fades as 8a had them all 1 200 were equal; with the ceiling fade re-tuned (see
-     * `CEILING_FADE`) the 884 decay-path cells are still equal and the 316 ring-ceiling cells differ only
-     * from 3.75 s into the 4 s note on.
+     * The string the engine would give without the PICK map: the exciter's corner is
+     * `expMap(PICK, 600, 16000)` through one pole (the first build's and 8a's map), the loop's body corner
+     * is the voice's own, and the toolkit's own exciter and loop do the rest. Built from the toolkit,
+     * [Magnet.compensated] and [Magnet.ended], so the ring law and the end fades are the engine's own and
+     * this reference pins only the part the map changed (the exciter, the loop's corner and, in
+     * [unmappedRender], the pickup resonance's corner): it proves the map is neutral at the default, and
+     * it cannot see a change to the ring law or to the fades, which both sides share. It is not the build
+     * before the map. The 8b run compared whole renders against a verbatim copy of 8a's `Magnet.kt` (both
+     * voices, TUNE 25 x MUTE 6 x BLEND 4 = 1 200 cells, strings, dry notes and landed notes): with the end
+     * fades as 8a had them all 1 200 were equal, and with the ceiling fade re-chosen (see `CEILING_FADE`)
+     * the 884 decay-path cells are still equal and the 316 ring-ceiling cells differ from 3.75 s into the
+     * 4 s note on.
      */
-    private fun firstBuildString(v: MagnetVoice, macros: Map<String, Float>): FloatArray {
+    private fun unmappedString(v: MagnetVoice, macros: Map<String, Float>): FloatArray {
         val m = Magnet.settled(macros, v)
         val f0 = Magnet.frequencyFor(v, m.getValue("TUNE"))
         val base = Strings.damping(m.getValue("MUTE"), if (v == MagnetVoice.JANGLE) 7_000f else 5_500f)
@@ -652,23 +690,26 @@ class MagnetTest {
         return Magnet.ended(raw)
     }
 
-    /** The dry note the first build gave: [firstBuildString] through the pickup with its resonance unscaled and the output chain. */
-    private fun firstBuildRender(v: MagnetVoice, macros: Map<String, Float>): Snip {
+    /** The dry note the engine would give without the PICK map: [unmappedString] through the pickup with its resonance unscaled and the output chain. */
+    private fun unmappedRender(v: MagnetVoice, macros: Map<String, Float>): Snip {
         val m = Magnet.settled(macros, v)
         val f0 = Magnet.frequencyFor(v, m.getValue("TUNE"))
-        val picked = Magnet.pickup(v, firstBuildString(v, m), f0, m.getValue("BLEND"))
+        val picked = Magnet.pickup(v, unmappedString(v, m), f0, m.getValue("BLEND"))
         return Snip(Magnet.finish(picked, Magnet.RENDER_RATE), channels = 1, sampleRate = Dsp.RATE)
     }
 
     @Test
-    fun `at its default PICK each voice renders the first build's string and note bit for bit`() {
+    fun `the PICK map is neutral at the default PICK, every coupled value exactly its neutral number`() {
         // The map is pinned at the default (Dsp.around): the exciter's corner, the second pole's weight, the
-        // loop's multiplier and the resonance's multiplier are each exactly their neutral value there, so every
-        // pad and patch at the default PICK is unchanged. Both voices, four macro sets, dry: the string, then the
-        // finished note, against the first build's. Just either side of the default must differ (else this test
-        // could not tell the map from none). The four neutral values are read first and reported with the
-        // cells. Mutations: the corner's centre read from 15 999 instead of 16 000 Hz fails the corner (4302.454
-        // against 4302.615 Hz on JANGLE) and the string and note cells, and CHUG's hand-built string in the ring
+        // loop's multiplier and the resonance's multiplier are each exactly their neutral value there. That
+        // is what this proves, and the string and the finished note equal the path built without the map
+        // (both voices, four macro sets, dry), using the engine's own ring law and end fades. It does NOT
+        // prove the render is bit for bit the build before the map: the ring-ceiling fade was re-chosen with
+        // the map, and 316 of 1 200 ring-ceiling cells differ from 8a's engine in their last quarter second
+        // (see [unmappedString]). Just either side of the default must differ (else this test could not tell
+        // the map from none). The four neutral values are read first and reported with the cells. Mutations:
+        // the corner's centre read from 15 999 instead of 16 000 Hz fails the corner (4302.454 against
+        // 4302.615 Hz on JANGLE) and the string and note cells, and CHUG's hand-built string in the ring
         // test; a resonance multiplier of 1.0001 at the default fails the multiplier and the four finished
         // notes of JANGLE and none of its strings.
         val sets = listOf(
@@ -691,16 +732,16 @@ class MagnetTest {
             for ((name, set) in sets) {
                 val macros = Magnet.defaults(v) + set + ("PICK" to d)
                 cells++
-                if (!Magnet.string(v, macros).contentEquals(firstBuildString(v, macros))) bad.add("$v ($name): the string")
-                if (!Magnet.render(v, macros).samples.contentEquals(firstBuildRender(v, macros).samples)) bad.add("$v ($name): the finished note")
+                if (!Magnet.string(v, macros).contentEquals(unmappedString(v, macros))) bad.add("$v ($name): the string")
+                if (!Magnet.render(v, macros).samples.contentEquals(unmappedRender(v, macros).samples)) bad.add("$v ($name): the finished note")
             }
             for (p in listOf(d - 0.05f, d + 0.05f)) {
                 val macros = Magnet.defaults(v) + ("PICK" to p)
-                if (Magnet.string(v, macros).contentEquals(firstBuildString(v, macros))) bad.add("$v at PICK $p: the string equals the first build's, the map does nothing there")
+                if (Magnet.string(v, macros).contentEquals(unmappedString(v, macros))) bad.add("$v at PICK $p: the string equals the unmapped one, the map does nothing there")
             }
         }
-        println("MAGNET PICK map: $cells cells (both voices, ${sets.size} macro sets) equal the first build's string and note bit for bit at the default PICK, ${bad.size} differences")
-        assertTrue(bad.isEmpty(), "the default PICK no longer renders as the first build did: ${bad.take(5)}")
+        println("MAGNET PICK map: the four coupled values are exactly neutral at the default PICK, and $cells cells (both voices, ${sets.size} macro sets) equal the path built without the map, string and note bit for bit, ${bad.size} differences")
+        assertTrue(bad.isEmpty(), "the PICK map is not neutral at the default PICK: ${bad.take(5)}")
     }
 
     @Test
@@ -833,16 +874,12 @@ class MagnetTest {
         // MagnetTest.assertClean's criteria at the ends the map moved: both voices, all 25 steps, MUTE 0 (the
         // longest ring, and where JANGLE's loop corner is asked past the toolkit's clamp at PICK 1) and the
         // voice's default MUTE, PICK 0 and PICK 1, BLEND at its default. The whole TUNE x MUTE x PICK x BLEND
-        // grid (900 renders) was read in the 8b run: 0 problems. Mutation: the thumb's corner floor at 0 Hz
-        // fails the first PICK 0 cell (a bad sample).
-        var worstDc = 0.0
-        var cells = 0
-        for (v in voices) for (step in 0..Magnet.TUNE_SEMITONES) for (mute in listOf(0f, Magnet.defaults(v).getValue("MUTE"))) for (pick in listOf(0f, 1f)) {
-            val macros = Magnet.defaults(v) + mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to mute, "PICK" to pick)
-            worstDc = maxOf(worstDc, assertClean(Magnet.render(v, macros), "$v TUNE step $step MUTE $mute PICK $pick"))
-            cells++
-        }
-        println("MAGNET PICK ends: $cells renders clean, worst DC $worstDc (bound $DC_BOUND)")
+        // grid (900 renders) was read in the 8b run: 0 problems. The renders the end grid takes too are
+        // made once ([dryRender]). Mutation: the thumb's corner floor at 0 Hz fails the first PICK 0 cell (a
+        // bad sample).
+        val cells = cleanEndsCells()
+        val dcs = sweep(cells) { c -> assertClean(dryRender(c.voice, c.macros), "${c.voice} TUNE step ${c.step} MUTE ${c.mute} PICK ${c.pick}") }
+        println("MAGNET PICK ends: ${cells.size} renders clean, worst DC ${dcs.max()} (bound $DC_BOUND)")
     }
 
     // ---------- JANGLE's ring: the pitch-compensated loop (law L2), and CHUG left as it was ----------
@@ -933,9 +970,10 @@ class MagnetTest {
         // sqrt r, is never under the corner PICK alone asks for (it is asked past the toolkit's 0.45 of the
         // render rate at PICK 1 where E4's x2 meets MUTE near 0: the count prints). Rendered, MUTE 0 (the
         // longest ring) at all 25 steps and at the default PICK and PICK 1: every string finite, inside
-        // -4..4 (the raw string is before the output chain's levelling: its peak is 0.87 at the default PICK
-        // and 1.51 at PICK 1, where the exciter is 16 kHz of burst; the bound is the stability proxy, the
-        // decay check below the real one), no longer than the 4 s budget, and decaying (the RMS over 3.0 to
+        // -1..1 at the default PICK (8a's bound; the raw string is before the output chain's levelling, its
+        // peak reads 0.87 there) and inside -4..4 at PICK 1 (its peak reads 1.51, the exciter being 16 kHz
+        // of burst; the bound is the stability proxy there, the decay check below the real one, and the
+        // peaks print), no longer than the 4 s budget, and decaying (the RMS over 3.0 to
         // 3.5 s under the RMS over 0.25 to 0.75 s; the spike's worst ratio was 0.44 at the default PICK).
         // Mutation: the law's feedback plus 0.0007 fails the analytic check from TUNE step 19 up at MUTE 0 (fb' 1.00003
         // at step 19, more above), at every PICK.
@@ -962,6 +1000,8 @@ class MagnetTest {
         }
         var worstRatio = 0.0
         var worstRatioAtWire = 0.0
+        var peakAtDefault = 0f
+        var peakAtWire = 0f
         fun rms(x: FloatArray, from: Double, to: Double): Double {
             val a = (from * rate).toInt()
             val b = minOf(x.size, (to * rate).toInt())
@@ -972,7 +1012,11 @@ class MagnetTest {
         for (pick in listOf(dPick, 1f)) for (step in 0..Magnet.TUNE_SEMITONES) {
             val string = Magnet.string(v, Magnet.defaults(v) + mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to 0f, "PICK" to pick))
             val cell = "step $step MUTE 0 PICK $pick"
-            if (!string.all { it.isFinite() && abs(it) <= 4f }) bad.add("$cell: a sample is not finite or is outside -4..4")
+            // 8a's bound (-1..1) at the default PICK; PICK 1 is where the raw string is allowed more (-4..4).
+            val bound = if (pick == dPick) 1f else 4f
+            val peak = if (string.all { it.isFinite() }) string.maxOf { abs(it) } else Float.POSITIVE_INFINITY
+            if (pick == dPick) peakAtDefault = maxOf(peakAtDefault, peak) else peakAtWire = maxOf(peakAtWire, peak)
+            if (!(peak <= bound)) bad.add("$cell: the raw string's peak is $peak (a sample not finite reads infinite), outside -$bound..$bound")
             if (string.size > (4f * rate).toInt()) bad.add("$cell: ${string.size} samples is past the 4 s budget")
             val ratio = rms(string, 3.0, 3.5) / rms(string, 0.25, 0.75)
             if (pick == 1f) worstRatioAtWire = maxOf(worstRatioAtWire, ratio) else worstRatio = maxOf(worstRatio, ratio)
@@ -980,7 +1024,8 @@ class MagnetTest {
         }
         println(
             "MAGNET ring law: largest fb' ${MagnetMeasure.round(largest, 6)} (spike: 0.9995), worst late over early RMS ${MagnetMeasure.round(worstRatio, 3)} " +
-                "at the default PICK (spike: 0.436) and ${MagnetMeasure.round(worstRatioAtWire, 3)} at PICK 1; the largest loop corner asked is " +
+                "at the default PICK (spike: 0.436) and ${MagnetMeasure.round(worstRatioAtWire, 3)} at PICK 1, raw string peak ${MagnetMeasure.round(peakAtDefault.toDouble(), 2)} " +
+                "at the default PICK (bound 1) and ${MagnetMeasure.round(peakAtWire.toDouble(), 2)} at PICK 1 (bound 4); the largest loop corner asked is " +
                 "${MagnetMeasure.round(largestCorner, 0)} Hz (${MagnetMeasure.round(largestCorner / rate, 3)} of the render rate), $pastClamp of $asked cells are asked past the toolkit's 0.45",
         )
         assertTrue(pastClamp > 0, "no cell is asked past the toolkit's clamp: the test of that corner has nothing to read")
@@ -992,14 +1037,17 @@ class MagnetTest {
         // The engine states no corner ceiling of its own: JANGLE at E4, MUTE 0 and PICK 1 asks the loop for
         // 89 600 Hz (the body's 7 000 x 1.6 at MUTE 0, x4 PICK, x2 the ring law), past the 0.45 of the render
         // rate (79 380 Hz) that Dsp.OnePole.lp and Strings.tune both clamp at, and that is the whole of the
-        // ceiling, measured to change nothing audible against a lower one (the PICK-ends task's report: tuning
-        // within a cent at every cell, every end 88 dB down or more). Asserted: the tuning budget at the asked
-        // corner is the budget at the clamp, and the string the engine builds there is the string built by hand
-        // with the corner given as exactly the clamp. Mutations: the engine handing the loop a corner of 0.4 of
-        // the rate fails the string check (the first differing sample is 535); Strings.tune's own clamp removed
-        // (a budget computed at the asked corner while the filter is clamped) fails the budget check (the
-        // allpass coefficient reads 0.2449 and not 0.2606), and the in-tune test does not see it: its cells
-        // read the same cents to the printed digit, the shift is about 0.05 cent.
+        // ceiling. A lower ceiling of the engine's own (0.40 down to 0.25 of the rate) was measured, in the
+        // PICK-ends task's report, to shift the cents by 0.00 at every cell it changed, to change no length
+        // and to leave every landed end as it was (JANGLE's landing: -92.3 dB without a ceiling, -92.7 at
+        // 0.40); and every cell of the in-tune test is within its bar (1.66 cents at the worst). Asserted:
+        // the tuning budget at the asked corner is the budget at the clamp, and the string the engine builds
+        // there is the string built by hand with the corner given as exactly the clamp. Mutations: the
+        // engine handing the loop a corner of 0.4 of the rate fails the string check (the first differing
+        // sample is 535); Strings.tune's own clamp removed (a budget computed at the asked corner while the
+        // filter is clamped) fails the budget check (the allpass coefficient reads 0.2449 and not 0.2606),
+        // and the in-tune test does not see it: its cells read the same cents to the printed digit, the
+        // shift is about 0.05 cent.
         val v = MagnetVoice.JANGLE
         val rate = Magnet.RENDER_RATE
         val macros = Magnet.defaults(v) + mapOf("TUNE" to 1f, "MUTE" to 0f, "PICK" to 1f)
@@ -1027,9 +1075,11 @@ class MagnetTest {
         // The owner passed CHUG's voice, so the law is JANGLE's alone: at TUNE 0.5 and 1 and three MUTEs the
         // string and the render equal the same chain with the law off (the spec flag, off for CHUG), and the
         // string equals a hand-built one, Strings.damping read directly, everywhere but its last 600 ms
-        // (the fades' reach: the trim's 400 ms and the ceiling fade's 200, summed to be safe, though they
-        // overlap), so nothing but the law's choice is tested to be old. At the default PICK, where the map
-        // is neutral. Mutation: CHUG's compensate flag turned on fails the first two checks.
+        // (the fades' reach: every fade is put on the last samples of the string, so they overlap and the
+        // reach is the longest, the trim's 400 ms; the ceiling fade is 225 ms and the decay fade 150 ms;
+        // 600 ms is that with margin), so nothing but the law's choice is tested to be old. At the default
+        // PICK, where the map is neutral. Mutation: CHUG's compensate flag turned on fails the first two
+        // checks.
         val v = MagnetVoice.CHUG
         val rate = Magnet.RENDER_RATE
         val reach = (0.6f * rate).toInt()
@@ -1069,44 +1119,53 @@ class MagnetTest {
 
     @Test
     fun `the pitch through VALVE stays within ten cents at the landing and is printed at gain 1000`() {
-        // Both voices at TUNE 0, 0.5 and 1 with the other macros at their defaults: the dry note, then the
-        // same note through each voice's landing amp (asserted, the specification's 10 cents) and through
-        // DRIVE 1 with no SAG, flat TONE and no cabinet (gain 1000 on VALVE's current law; the specification's
-        // bar was written on V1's law, where DRIVE 1 was gain 35; printed only). The pitch is the
-        // interpolated autocorrelation, never Pitch.detect: its integer lag steps up to 12.9 cents at
-        // JANGLE's E4 and a hot amp can hand it an octave or nothing. A silent or NaN render reads as NaN
-        // cents and fails the finite check, and a NaN shift fails the bar too.
+        // Both voices at TUNE 0, 0.5 and 1, at PICK 0, the voice's default and 1 (a wire note has a loop at
+        // x4 and a resonance at x2.5, a thumb note is a soft two-pole burst: the notes the amp could pull
+        // off pitch), the other macros at their defaults: the dry note, then the same note through each
+        // voice's landing amp (asserted, the specification's 10 cents) and through DRIVE 1 with no SAG, flat
+        // TONE and no cabinet (gain 1000 on VALVE's current law; the specification's bar was written on V1's
+        // law, where DRIVE 1 was gain 35; printed only). The pitch is the interpolated autocorrelation,
+        // never Pitch.detect: its integer lag steps up to 12.9 cents at JANGLE's E4 and a hot amp can hand
+        // it an octave or nothing. A silent or NaN render reads as NaN cents and fails the finite check, and
+        // a NaN shift fails the bar too. Mutation: the thumb's corner floor at 0 Hz reads NaN at every PICK
+        // 0 cell and fails the finite check there alone.
         val hot = mapOf("DRIVE" to 1f, "SAG" to 0f, "TONE" to 0.5f, "CAB" to 0f)
+        class PitchCell(val v: MagnetVoice, val pick: Float, val tune: Float)
+        class PitchRead(val dryCents: Double, val landedCents: Double, val hotCents: Double)
+        val pitchCells = voices.flatMap { v -> listOf(0f, Magnet.defaults(v).getValue("PICK"), 1f).flatMap { pick -> listOf(0f, 0.5f, 1f).map { tune -> PitchCell(v, pick, tune) } } }
+        val reads = sweep(pitchCells) { c ->
+            val f0 = Magnet.frequencyFor(c.v, c.tune)
+            val dry = Magnet.render(c.v, Magnet.defaults(c.v) + mapOf("TUNE" to c.tune, "PICK" to c.pick))
+            PitchRead(centsOf(dry, f0), centsOf(Valve.process(dry, Magnet.LANDING_VALVE.getValue(c.v)), f0), centsOf(Valve.process(dry, hot), f0))
+        }
         val cells = ArrayList<String>()
         val over = ArrayList<String>()
         val unread = ArrayList<String>()
         var worstLanding = 0.0
         var worstHot = 0.0
-        for (v in voices) {
-            val landing = Magnet.LANDING_VALVE.getValue(v)
-            for (tune in listOf(0f, 0.5f, 1f)) {
-                val f0 = Magnet.frequencyFor(v, tune)
-                val dry = Magnet.render(v, Magnet.defaults(v) + ("TUNE" to tune))
-                val dryCents = centsOf(dry, f0)
-                val landedCents = centsOf(Valve.process(dry, landing), f0)
-                val hotCents = centsOf(Valve.process(dry, hot), f0)
-                val landedShift = landedCents - dryCents
-                val hotShift = hotCents - dryCents
-                worstLanding = maxOf(worstLanding, abs(landedShift))
-                worstHot = maxOf(worstHot, abs(hotShift))
-                val cell = "$v TUNE $tune (${MagnetMeasure.round(f0.toDouble(), 2)} Hz)"
-                if (!(dryCents.isFinite() && landedCents.isFinite())) unread.add("$cell dry $dryCents cents, landing $landedCents cents")
-                if (!(abs(landedShift) <= 10.0)) over.add("$cell at ${MagnetMeasure.round(landedShift, 2)} cents")
-                cells.add(
-                    "$cell dry ${MagnetMeasure.round(dryCents, 2)} cents, landing ${MagnetMeasure.round(landedCents, 2)} cents " +
-                        "(wet minus dry ${MagnetMeasure.round(landedShift, 2)}), gain ${Valve.gainFor(hot.getValue("DRIVE"))} " +
-                        "${MagnetMeasure.round(hotCents, 2)} cents (wet minus dry ${MagnetMeasure.round(hotShift, 2)})",
-                )
-            }
+        val byPick = linkedMapOf<String, Pair<Double, Double>>()
+        for ((c, r) in pitchCells.zip(reads)) {
+            val f0 = Magnet.frequencyFor(c.v, c.tune)
+            val landedShift = r.landedCents - r.dryCents
+            val hotShift = r.hotCents - r.dryCents
+            worstLanding = maxOf(worstLanding, abs(landedShift))
+            worstHot = maxOf(worstHot, abs(hotShift))
+            val pickName = when (c.pick) { 0f -> "PICK 0"; 1f -> "PICK 1"; else -> "the default PICK" }
+            val soFar = byPick[pickName] ?: (0.0 to 0.0)
+            byPick[pickName] = maxOf(soFar.first, abs(landedShift)) to maxOf(soFar.second, abs(hotShift))
+            val cell = "${c.v} PICK ${c.pick} TUNE ${c.tune} (${MagnetMeasure.round(f0.toDouble(), 2)} Hz)"
+            if (!(r.dryCents.isFinite() && r.landedCents.isFinite())) unread.add("$cell dry ${r.dryCents} cents, landing ${r.landedCents} cents")
+            if (!(abs(landedShift) <= 10.0)) over.add("$cell at ${MagnetMeasure.round(landedShift, 2)} cents")
+            cells.add(
+                "$cell dry ${MagnetMeasure.round(r.dryCents, 2)} cents, landing ${MagnetMeasure.round(r.landedCents, 2)} cents " +
+                    "(wet minus dry ${MagnetMeasure.round(landedShift, 2)}), gain ${Valve.gainFor(hot.getValue("DRIVE"))} " +
+                    "${MagnetMeasure.round(r.hotCents, 2)} cents (wet minus dry ${MagnetMeasure.round(hotShift, 2)})",
+            )
         }
         println(
             "MAGNET pitch through VALVE: ${cells.joinToString("; ")}; worst |wet minus dry| " +
-                "${MagnetMeasure.round(worstLanding, 2)} cents at the landing, ${MagnetMeasure.round(worstHot, 2)} cents at gain 1000",
+                "${MagnetMeasure.round(worstLanding, 2)} cents at the landing, ${MagnetMeasure.round(worstHot, 2)} cents at gain 1000; by PICK (landing, gain 1000): " +
+                byPick.entries.joinToString("; ") { "${it.key} ${MagnetMeasure.round(it.value.first, 2)}, ${MagnetMeasure.round(it.value.second, 2)}" },
         )
         assertTrue(unread.isEmpty(), "the pitch cannot be read (silent or NaN render): $unread")
         assertTrue(over.isEmpty(), "the landing amp moves the pitch by more than 10 cents: $over")
@@ -1155,11 +1214,118 @@ class MagnetTest {
     private companion object {
         /**
          * What the clean-render checks guard: an audible DC offset (1e-4 is about -80 dBFS). The
-         * corners read at most 8.6e-9 because the pickup comb has no DC gain and the output chain's
-         * 20 Hz high-pass removes the rest. These checks do not prove the output chain's DC stage: that
-         * is `finish removes a constant offset` and `finish attenuates a slow drift`, which read
-         * [Magnet.finish] on an input that carries an offset.
+         * corners read at most 8.4e-10 (the PICK-ends cells 8.6e-10) because the pickup comb has no DC
+         * gain and the output chain's 20 Hz high-pass removes the rest. These checks do not prove the
+         * output chain's DC stage: that is `finish removes a constant offset` and `finish attenuates a
+         * slow drift`, which read [Magnet.finish] on an input that carries an offset.
          */
         const val DC_BOUND = 1e-4
+
+        /**
+         * The threads a long sweep's cells are spread over: four at most (the test JVM's heap is the
+         * Gradle default of 512 MiB, and each cell holds a few 176.4 kHz buffers while it runs).
+         */
+        val SWEEP_THREADS = maxOf(1, minOf(4, Runtime.getRuntime().availableProcessors()))
+
+        /**
+         * [f] over [cells], on up to [threads] threads, the results in the cells' own order: a sweep reads
+         * them back with a plain loop, so what it prints, counts and asserts (and which failing cell is
+         * the first) is what the single-threaded loop gave. [f] must be a pure function of its cell. A
+         * cell that throws throws here, when its turn in the order comes.
+         */
+        fun <T, R> sweep(cells: List<T>, threads: Int = SWEEP_THREADS, f: (T) -> R): List<R> {
+            if (threads <= 1 || cells.size <= 1) return cells.map(f)
+            val pool = Executors.newFixedThreadPool(threads)
+            try {
+                val pending = cells.map { cell -> pool.submit(Callable { runCatching { f(cell) } }) }
+                return pending.map { it.get().getOrThrow() }
+            } finally {
+                pool.shutdownNow()
+            }
+        }
+
+        /**
+         * One amp a landed note is read through: the voice, the macros it overrides on top of the
+         * defaults, the VALVE macros, and the TUNE steps read at it (the cells that bound it in the
+         * full search, and the ends of the range).
+         */
+        class EndLanding(val name: String, val voice: MagnetVoice, val macros: Map<String, Float>, val valve: Map<String, Float>, val steps: List<Int>)
+
+        /**
+         * The three amps the end grid reads: CHUG's landing, the kit's lead amp (a literal, as in
+         * SynthKitTest, because the kit's LEAD_VALVE is private) and JANGLE's landing.
+         */
+        val END_LANDINGS: List<EndLanding> = listOf(
+            EndLanding("CHUG landing", MagnetVoice.CHUG, emptyMap(), Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG), listOf(0, 1, 2, 3, 4, 7, 8, 12, 18, 21, 22, 24)),
+            EndLanding("kit lead amp", MagnetVoice.CHUG, mapOf("BLEND" to 0.35f), mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f), listOf(0, 1, 2, 4, 6, 24)),
+            EndLanding("JANGLE landing", MagnetVoice.JANGLE, emptyMap(), Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE), listOf(0, 2, 5, 24)),
+        )
+
+        /**
+         * The PICK values the end grid reads for [v]: both ends of the knob, the default, and 0.15. The
+         * map moves the exciter's corner, the second pole, the loop's corner and the resonance with PICK
+         * (the owner's pick of the ends), and each changes how long the string rings and what the amp
+         * lifts at its end. The binding PICK is not an end: the search over PICK 0, 0.02, 0.05, 0.1, 0.15,
+         * 0.2, 0.25, 0.3, 0.4 and the default found the worst cell of the ceiling path at 0.15 (CHUG at
+         * gain 106, MUTE 0, TUNE step 2), so 0.15 is read here.
+         */
+        fun endPicks(v: MagnetVoice): List<Float> = listOf(0f, 0.15f, Magnet.defaults(v).getValue("PICK"), 1f)
+
+        /** How many of the end grid's worst cells per landing are read again at BLEND 0 and 1. */
+        const val BLEND_CELLS_PER_LANDING = 16
+
+        /** One cell of the end grid: a landing, a TUNE step, a MUTE and a PICK (BLEND the landing's own). */
+        class EndCell(val landing: EndLanding, val step: Int, val mute: Float, val pick: Float) {
+            val macros: Map<String, Float> = Magnet.defaults(landing.voice) + landing.macros +
+                mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to mute, "PICK" to pick)
+        }
+
+        /** The end grid's cells, landing by landing, then step, MUTE (0, the default, 1) and PICK. */
+        fun endCells(): List<EndCell> = END_LANDINGS.flatMap { l ->
+            val v = l.voice
+            l.steps.flatMap { step ->
+                listOf(0f, Magnet.defaults(v).getValue("MUTE"), 1f).flatMap { mute -> endPicks(v).map { pick -> EndCell(l, step, mute, pick) } }
+            }
+        }
+
+        /** One cell of the clean-ends sweep: a voice, a TUNE step, a MUTE (0 or the default) and a PICK (0 or 1), BLEND the default. */
+        class CleanCell(val voice: MagnetVoice, val step: Int, val mute: Float, val pick: Float) {
+            val macros: Map<String, Float> = Magnet.defaults(voice) +
+                mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to mute, "PICK" to pick)
+        }
+
+        /** The clean-ends cells: voice, then every TUNE step, then MUTE and PICK. */
+        fun cleanEndsCells(): List<CleanCell> = MagnetVoice.entries.flatMap { v ->
+            (0..Magnet.TUNE_SEMITONES).flatMap { step ->
+                listOf(0f, Magnet.defaults(v).getValue("MUTE")).flatMap { mute -> listOf(0f, 1f).map { pick -> CleanCell(v, step, mute, pick) } }
+            }
+        }
+
+        private fun renderKey(v: MagnetVoice, macros: Map<String, Float>): Pair<MagnetVoice, Map<String, Float>> = v to Magnet.settled(macros, v)
+
+        /**
+         * The renders the end grid and the clean ends both read: found by intersecting their two cell
+         * lists, so a change to either grid moves it. The in-tune sweep reads strings and pickups, not
+         * finished notes, so it shares none of them.
+         */
+        private val SHARED_RENDERS: Set<Pair<MagnetVoice, Map<String, Float>>> by lazy {
+            endCells().map { renderKey(it.landing.voice, it.macros) }.toSet() intersect cleanEndsCells().map { renderKey(it.voice, it.macros) }.toSet()
+        }
+
+        /** The finished dry notes of [SHARED_RENDERS], by voice and settled macros; filled on first read, cleared nowhere. */
+        private val sharedRenders = ConcurrentHashMap<Pair<MagnetVoice, Map<String, Float>>, Snip>()
+
+        fun sharedRenderCount(): Int = SHARED_RENDERS.size
+
+        /**
+         * [Magnet.render] of [macros], made once if the end grid and the clean ends both read it. A
+         * caller gets its own copy of the samples, so nothing a caller does to its note reaches the next.
+         */
+        fun dryRender(v: MagnetVoice, macros: Map<String, Float>): Snip {
+            val key = renderKey(v, macros)
+            if (key !in SHARED_RENDERS) return Magnet.render(v, macros)
+            val cached = sharedRenders[key] ?: Magnet.render(v, macros).also { sharedRenders[key] = it }
+            return Snip(cached.samples.copyOf(), cached.channels, cached.sampleRate)
+        }
     }
 }

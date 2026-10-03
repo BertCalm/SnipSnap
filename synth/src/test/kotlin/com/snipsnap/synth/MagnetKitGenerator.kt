@@ -11,8 +11,8 @@ import java.io.File
  * The hardware check: does the CHUG riff (A01-A08) read as a palm-muted
  * electric string through an amp rather than a plucked string with distortion
  * on it, does the JANGLE chord (A09-A14) ring as an open chord played pad by
- * pad, and do A15-A16, CHUG with BLEND toward the neck through a hotter amp,
- * sit apart from the riff as a lead.
+ * pad, and do A15-A16, CHUG with BLEND toward the neck through the lead amp
+ * (DRIVE 0.78, TONE 0.5), sit apart from the riff as a lead.
  */
 object MagnetKitGenerator {
 

@@ -29,10 +29,10 @@ enum class MagnetVoice { JANGLE, CHUG }
  * TUNE is two octaves snapped to semitones from the open string; MUTE damps the loop and shortens
  * the note; PICK is a thumb to a wire, the exciter's low-pass corner plus what the contact does to
  * the string and the pickup around it (a soft thumb adds a second pole to the exciter, a hard pick
- * opens the loop's body corner and the pickup's resonance; all of it pinned so the default PICK
- * renders as it always did); BLEND weights the two pickups (0 neck, 1 bridge). Every number marked
- * shape is a listening value from the Phase-0 spike or the specification, to be re-heard by ear
- * (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
+ * opens the loop's body corner and the pickup's resonance; all of it pinned so that at the default
+ * PICK every coupled value is exactly its neutral number); BLEND weights the two pickups (0 neck, 1
+ * bridge). Every number marked shape is a listening value from the Phase-0 spike or the
+ * specification, to be re-heard by ear (docs/superpowers/specs/2026-09-29-magnet-valve-design.md).
  */
 object Magnet {
 
@@ -49,7 +49,8 @@ object Magnet {
     /**
      * A fade over the last [ms] of a string, [power] the exponent of the ramp `1 - i/n`: 2 is the
      * squared fade [Strings.trimToDecay] gives a string it cuts at the ring ceiling, and each step up
-     * is steeper at its end and gentler at its start.
+     * falls faster from the start (the slope there is [power] times the linear ramp's) and sits lower
+     * everywhere (it is [power] times the linear ramp's decibels).
      */
     private class EndFade(val ms: Float, val power: Int)
 
@@ -101,8 +102,10 @@ object Magnet {
 
     /**
      * The exciter's corner at the voice's default PICK is the first build's map read there,
-     * `expMap(PICK, 600, 16000)` (4303 Hz on JANGLE, 3651 Hz on CHUG), so every pad and patch that sits
-     * at the default renders as before; these are the first build's ends, now only the source of that
+     * `expMap(PICK, 600, 16000)` (4303 Hz on JANGLE, 3651 Hz on CHUG), so the map is neutral at the
+     * default: it asks the corner the first build and task 8a asked there. (That is the map, not the
+     * whole render: the ring-ceiling fade was re-chosen with the map, and a ring-ceiling note's last
+     * quarter second differs from 8a's.) These are the first build's ends, now only the source of that
      * one number. A shape value, not a physical one.
      */
     private const val PICK_CENTER_FROM_HZ = 600f
@@ -195,15 +198,16 @@ object Magnet {
     }
 
     /**
-     * The amp each voice lands through, both the owner's picks by ear: CHUG's at the gate
-     * (2026-10-01), JANGLE's at the second listen (2026-10-01/02); the numbers stay *shape*, a later
-     * listen may move them. DRIVE is a gain on
-     * VALVE's law. CHUG's DRIVE 0.85 is gain 106 on the V1.1 law, the number the specification
-     * wrote for it when it was written on V1's law (an earlier build landed it at 0.71, gain 13, and
-     * the owner chose gain 106 over it). JANGLE's is VALVE's own default amp, written out in
-     * full so that a change to VALVE's defaults cannot move it: the earlier JANGLE amp (DRIVE 0.25,
-     * TONE 0.55, CAB 0.35) was a plain filter, a gain of 0.257 into a tube that is linear there,
-     * and the owner chose this one with the ring of [string]'s pitch compensation.
+     * The amp each voice lands through; the numbers stay *shape*, a later listen may move them.
+     * CHUG's is the owner's pick at the gate (2026-10-01); JANGLE's is VALVE's default amp, the one
+     * the owner picked with the long ring at the second listen (2026-10-01/02), adopted by the
+     * controller's ruling there (the owner called the amps with the old ring "none of them"). DRIVE
+     * is a gain on VALVE's law. CHUG's DRIVE 0.85 is gain 106 on the V1.1 law, the number the
+     * specification wrote for it when it was written on V1's law (an earlier build landed it at 0.71,
+     * gain 13, and the owner chose gain 106 over it). JANGLE's is VALVE's own default amp, written
+     * out in full so that a change to VALVE's defaults cannot move it: the earlier JANGLE amp (DRIVE
+     * 0.25, TONE 0.55, CAB 0.35) was a plain filter, a gain of 0.257 into a tube that is linear
+     * there, and this one was picked with the ring of [string]'s pitch compensation.
      */
     val LANDING_VALVE: Map<MagnetVoice, Map<String, Float>> = mapOf(
         MagnetVoice.JANGLE to mapOf("DRIVE" to 0.70f, "SAG" to 0.35f, "TONE" to 0.50f, "CAB" to 0.60f),

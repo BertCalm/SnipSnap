@@ -278,7 +278,12 @@ object SynthKits {
         )
     }
 
-    /** The LEAD family's amp (shape): a hotter chain than CHUG's landing, written in the kit; the owner's gate decides what lands. */
+    /**
+     * The LEAD family's amp (shape), written in the kit: DRIVE 0.78 is gain 37 on VALVE's law, a
+     * cooler drive than CHUG's landing (DRIVE 0.85, gain 106; it was hotter than the first build's
+     * gain 13), with SAG and CAB as CHUG's and TONE 0.5 (flat) against CHUG's 0.3. The owner heard
+     * the lead pads at the gate and called them usable; the chain was left as built.
+     */
     private val LEAD_VALVE = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
 
     private fun magnetNote(
@@ -296,8 +301,8 @@ object SynthKits {
     /**
      * The MAGNET R1 kit: a roster of defaults plus TUNE, with no preset lookups. A01-A08 are a B minor
      * riff on CHUG, A09-A14 an open E chord on JANGLE, A15-A16 the LEAD family: CHUG, BLEND toward the
-     * neck, a hotter amp. Every pad lands through its voice's VALVE chain ([Magnet.landingChain]) and
-     * carries its recipe.
+     * neck, through the lead amp above. Every pad lands through its voice's VALVE chain
+     * ([Magnet.landingChain]) and carries its recipe.
      */
     fun magnet(): List<ArrangedPad?> {
         val riff = intArrayOf(0, 3, 5, 7, 10, 12, 15, 17)
