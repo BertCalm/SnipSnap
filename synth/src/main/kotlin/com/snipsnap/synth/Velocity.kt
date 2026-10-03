@@ -254,7 +254,7 @@ object Velocity {
         // MAGNET's PICK is the string exciter's low-pass corner
         // (Dsp.expMap over 600 to 16000 Hz). At the defaults every tenth of
         // its travel moves the rendered centroid by at least 1 percent on
-        // both voices (smallest 1.77 percent JANGLE, 2.03 percent CHUG), as
+        // both voices (smallest 1.61 percent JANGLE, 2.03 percent CHUG), as
         // MagnetTest's `PICK raises the centroid by at least 1 percent at
         // every tenth on both voices` asserts.
         patch is MagnetPatch -> "PICK"

@@ -28,8 +28,11 @@ import kotlin.test.assertTrue
  * The measured claims: every note within 5 cents on the raw pickup buffer at the render rate, the comb and humbucker notches,
  * BLEND's spectral swing, MUTE's length and centroid, PICK's centroid sweep (at least 1 percent per
  * tenth at the defaults, and never falling from one tenth to the next at four of the eight corners of
- * MUTE, TUNE and BLEND on each voice), the pitch through VALVE (within 10 cents at each landing), and a
- * landed pad regenerating bit for bit.
+ * MUTE, TUNE and BLEND on each voice), the pitch through VALVE (within 10 cents at each landing), a
+ * landed pad regenerating bit for bit, the end of a landed note at three landings (at least 53 dB under
+ * its peak, across MUTE and sampled TUNE steps), and JANGLE's pitch-compensated ring (the open string
+ * unchanged, the fundamental's loss per second flat across the range, E4's t-20, a stable loop) with
+ * CHUG's ring left as it was.
  */
 class MagnetTest {
 
@@ -256,8 +259,12 @@ class MagnetTest {
             assertTrue(Magnet.LANDING_VALVE.getValue(v).values.all { it in 0f..1f }, "$v")
         }
         assertTrue(Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE) != Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG))
-        // CHUG's DRIVE 0.71 is gain 13 on VALVE's law (the number Magnet.LANDING_VALVE's KDoc states).
-        assertEquals(13.2f, Valve.gainFor(Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG).getValue("DRIVE")), 0.3f)
+        // The owner's picks by ear (the second listen, 2026-10-01/02), each pinned as the four literals it is:
+        // CHUG's DRIVE 0.85 is gain 106 on VALVE's law (the number Magnet.LANDING_VALVE's KDoc states), and
+        // JANGLE's is VALVE's default amp written out in full, so a change to VALVE's defaults cannot move it.
+        assertEquals(mapOf("DRIVE" to 0.85f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f), Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG))
+        assertEquals(mapOf("DRIVE" to 0.70f, "SAG" to 0.35f, "TONE" to 0.50f, "CAB" to 0.60f), Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE))
+        assertEquals(106f, Valve.gainFor(Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG).getValue("DRIVE")), 1f)
     }
 
     @Test
@@ -279,29 +286,60 @@ class MagnetTest {
         return 20 * log10(tail.coerceAtLeast(1e-9f) / s.peak().coerceAtLeast(1e-9f).toDouble())
     }
 
+    /** One amp a landed note is read through: the voice, the macros it overrides on top of the defaults, and the VALVE macros. */
+    private class EndLanding(val name: String, val voice: MagnetVoice, val macros: Map<String, Float>, val valve: Map<String, Float>)
+
+    /**
+     * The PICK values the end grid reads for [v]: the default only. A list, so that a change that moves
+     * the exciter's corner (the PICK map) adds its own ends here and the grid reads them.
+     */
+    private fun endPicks(v: MagnetVoice): List<Float> = listOf(Magnet.defaults(v).getValue("PICK"))
+
     @Test
-    fun `a landed CHUG note ends at least 50 dB under its peak at every TUNE step`() {
-        // All 25 steps at the defaults, through CHUG's landing chain and through gain 106 (DRIVE 0.85,
-        // the specification's original number on VALVE's present law). Trimming the string leaves its end
-        // 60 dB under its peak and the amp lifts that by its gain: the fade ahead of the amp is what ends it.
-        val v = MagnetVoice.CHUG
-        val landings = linkedMapOf(
-            "landing" to Magnet.landingChain(v),
-            "gain 106" to FxChain().withSection("valve", mapOf("DRIVE" to 0.85f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f)),
+    fun `a landed note ends at least 53 dB under its peak at every landing, MUTE and sampled TUNE step`() {
+        // The three amps a MAGNET note lands through: CHUG's landing (DRIVE 0.85, gain 106), the kit's lead
+        // amp (DRIVE 0.78, CHUG at BLEND 0.35: a literal, as in SynthKitTest, because the kit's LEAD_VALVE
+        // is private) and JANGLE's landing. The bar is the review's -50 dB on the peak of the last 20 ms with
+        // 3 dB to spare (so -53), for MUTE 0, the voice's default and 1 at the default PICK. A string whose
+        // trim ended it on its decay ends on Magnet's decay fade, one the ring ceiling cut on the trim's
+        // 400 ms fade and Magnet's own on top of it; the amp lifts either end by its gain. The ten TUNE steps
+        // are the whole grid's binding cells and the ends of the range (the full 25-step search found, at
+        // gain 106: the ceiling cells at steps 0 to 4 and 12 at MUTE 0, the decay cells at MUTE 1 at steps
+        // 3, 4, 18, 21 and 24), so the runtime stays at a few seconds. Mutation: with the ceiling fade
+        // deleted the worst cell is -28.1 dB (CHUG, step 2, MUTE 0), with the decay fade back at 150 ms
+        // squared it is -47.5 dB (CHUG, step 3, MUTE 1).
+        val leadValve = mapOf("DRIVE" to 0.78f, "SAG" to 0.4f, "TONE" to 0.5f, "CAB" to 0.95f)
+        val landings = listOf(
+            EndLanding("CHUG landing", MagnetVoice.CHUG, emptyMap(), Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG)),
+            EndLanding("kit lead amp", MagnetVoice.CHUG, mapOf("BLEND" to 0.35f), leadValve),
+            EndLanding("JANGLE landing", MagnetVoice.JANGLE, emptyMap(), Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE)),
         )
-        assertEquals(106f, Valve.gainFor(0.85f), 1f)
-        val worst = linkedMapOf<String, Pair<Double, Int>>()
+        val steps = listOf(0, 1, 2, 3, 4, 7, 12, 18, 21, 24)
+        val bar = -50.0
+        val margin = 3.0
+        val worst = linkedMapOf<String, Pair<Double, String>>()
         val short = ArrayList<String>()
-        for (step in 0..Magnet.TUNE_SEMITONES) {
-            val dry = Magnet.render(v, Magnet.defaults(v) + ("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat()))
-            for ((name, chain) in landings) {
-                val db = endDb(chain.process(dry))
-                if (worst[name]?.let { db > it.first } != false) worst[name] = db to step
-                if (!(db <= -50.0)) short.add("$v TUNE step $step through $name ends ${MagnetMeasure.round(db)} dB under its peak")
+        var cells = 0
+        var ceilingCells = 0
+        for (l in landings) {
+            val v = l.voice
+            for (step in steps) for (mute in listOf(0f, Magnet.defaults(v).getValue("MUTE"), 1f)) for (pick in endPicks(v)) {
+                val macros = Magnet.defaults(v) + l.macros + mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to mute, "PICK" to pick)
+                val ceiling = Magnet.string(v, macros).size >= (4f * Magnet.RENDER_RATE).toInt()
+                val db = endDb(FxChain().withSection("valve", l.valve).process(Magnet.render(v, macros)))
+                val cell = "${l.name} TUNE step $step MUTE $mute PICK $pick (${if (ceiling) "ring ceiling" else "decay"})"
+                cells++
+                if (ceiling) ceilingCells++
+                if (worst[l.name]?.let { db > it.first } != false) worst[l.name] = db to cell
+                if (!(db <= bar - margin)) short.add("$cell ends ${MagnetMeasure.round(db)} dB under its peak")
             }
         }
-        println("MAGNET landed end: " + worst.entries.joinToString("; ") { "${it.key} worst ${MagnetMeasure.round(it.value.first)} dB at step ${it.value.second}" })
-        assertTrue(short.isEmpty(), "a landed note ends too loudly: ${short.take(5)} (${short.size} in all)")
+        println(
+            "MAGNET landed end: $cells cells ($ceilingCells on the ring ceiling), worst " +
+                worst.entries.joinToString("; ") { "${it.key} ${MagnetMeasure.round(it.value.first)} dB at ${it.value.second}" },
+        )
+        assertEquals(106f, Valve.gainFor(landings[0].valve.getValue("DRIVE")), 1f)
+        assertTrue(short.isEmpty(), "a landed note ends within ${margin} dB of the ${-bar} dB bar: ${short.take(5)} (${short.size} of $cells cells)")
     }
 
     @Test
@@ -313,7 +351,7 @@ class MagnetTest {
     @Test
     fun `velocity re-renders MAGNET at PICK, softer is darker`() {
         // PICK is registered in Velocity.brightnessOverride because its sweep at the defaults moves the
-        // centroid at least 1 percent per tenth on both voices (smallest 1.77 percent on JANGLE, 2.03
+        // centroid at least 1 percent per tenth on both voices (smallest 1.61 percent on JANGLE, 2.03
         // percent on CHUG: the numbers `PICK raises the centroid by at least 1 percent at every tenth on
         // both voices` asserts), so a soft hit is a re-render with a lower PICK. This reaches a bare patch
         // only: a landed pad's velocity layers still fall back to soften, because `layerAt` and
@@ -488,7 +526,7 @@ class MagnetTest {
         // Each voice at PICK 0 to 1 in tenths, the other macros at their defaults, the centroid read on the
         // rendered note. Asserted, the specification's two clauses: the centroid never falls between steps
         // and PICK 1 sits above PICK 0, and each tenth of travel moves it at least 1 percent (smallest read:
-        // 1.77 percent on JANGLE, 2.03 percent on CHUG). The second clause is the one PICK is registered as
+        // 1.61 percent on JANGLE, 2.03 percent on CHUG). The second clause is the one PICK is registered as
         // velocity's brightness macro on, and it is asserted at the defaults only: nothing here sweeps the
         // other macros. The whole table prints before the assertions run. The corner column mirrors
         // Magnet's private PICK_MIN_HZ and PICK_MAX_HZ (600 and 16000 Hz) and is print-only.
@@ -556,6 +594,160 @@ class MagnetTest {
         }
         println("MAGNET PICK corners: ${voices.size * corners.size} voice and corner sweeps, ${falls.size} falls, worst fall ${MagnetMeasure.round(worstFall, 2)} percent")
         assertTrue(falls.isEmpty(), "PICK lowers the centroid at a corner: ${falls.take(5)} (${falls.size} in all)")
+    }
+
+    // ---------- JANGLE's ring: the pitch-compensated loop (law L2), and CHUG left as it was ----------
+
+    /** The render [v] gives with the ring law off: the string with `compensate = false`, then the pickup and the output chain. */
+    private fun renderWithoutLaw(v: MagnetVoice, macros: Map<String, Float>): Snip {
+        val m = Magnet.settled(macros, v)
+        val f0 = Magnet.frequencyFor(v, m.getValue("TUNE"))
+        val picked = Magnet.pickup(v, Magnet.string(v, m, compensate = false), f0, m.getValue("BLEND"))
+        return Snip(Magnet.finish(picked, Magnet.RENDER_RATE), channels = 1, sampleRate = Dsp.RATE)
+    }
+
+    @Test
+    fun `JANGLE's open string is the uncompensated string bit for bit and the law moves every other note`() {
+        // TUNE 0 is r = 1, where every operation of the law is exact: the string and the finished render
+        // equal the same chain with the law off, at four MUTEs and three PICKs. The other steps must differ
+        // (else this test could not tell the law from no law). Mutation: reading the open string as the
+        // first fret in `Magnet.string` (the reference one semitone up) fails the first loop.
+        val v = MagnetVoice.JANGLE
+        val unmoved = ArrayList<String>()
+        val bad = ArrayList<String>()
+        for (mute in listOf(0f, Magnet.defaults(v).getValue("MUTE"), 0.5f, 1f)) for (pick in listOf(0f, Magnet.defaults(v).getValue("PICK"), 1f)) {
+            val macros = Magnet.defaults(v) + mapOf("TUNE" to 0f, "MUTE" to mute, "PICK" to pick)
+            if (!Magnet.string(v, macros, compensate = true).contentEquals(Magnet.string(v, macros, compensate = false))) bad.add("string at MUTE $mute PICK $pick")
+            if (!Magnet.render(v, macros).samples.contentEquals(renderWithoutLaw(v, macros).samples)) bad.add("render at MUTE $mute PICK $pick")
+        }
+        val moved = ArrayList<Int>()
+        for (step in listOf(1, 7, 12, 19, 24)) {
+            val macros = Magnet.defaults(v) + ("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat())
+            if (!Magnet.string(v, macros, compensate = true).contentEquals(Magnet.string(v, macros, compensate = false))) moved.add(step)
+            else unmoved.add("TUNE step $step")
+        }
+        println("MAGNET ring law: the open string equals the uncompensated one at 12 cells (${bad.size} differences); the law moves the string at steps $moved")
+        assertTrue(bad.isEmpty(), "the open string is not the uncompensated string: $bad")
+        assertTrue(unmoved.isEmpty(), "the law leaves these notes as they were: $unmoved")
+    }
+
+    @Test
+    fun `JANGLE's fundamental loses the same decibels per second at E2, E3 and E4`() {
+        // The fundamental's loss between 0.1 and 0.4 s, on the finished note at the defaults (the sustain
+        // spike's read and numbers: 7.7, 7.8 and 8.1 dB per second with the law, 7.7, 15.6 and 32.4 without).
+        // The loop loses a fixed amount per round trip, so without the law a note twice as high loses twice
+        // as much per second; asserted, E3 and E4 within 25 percent of E2's with the law, and, so that the
+        // test can tell the law from none, E4's loss at least twice E2's without it. Mutation: the law's
+        // exponent halved (fb^(1/sqrt r)) leaves E4 at about twice E2's.
+        val v = MagnetVoice.JANGLE
+        val tunes = listOf(0f, 0.5f, 1f)
+        fun loss(law: Boolean, tune: Float): Double {
+            val macros = Magnet.defaults(v) + ("TUNE" to tune)
+            val note = if (law) Magnet.render(v, macros) else renderWithoutLaw(v, macros)
+            return MagnetMeasure.h1LossDbPerSec(note.samples, Magnet.frequencyFor(v, tune).toDouble())
+        }
+        val on = tunes.map { loss(true, it) }
+        val off = tunes.map { loss(false, it) }
+        println("MAGNET ring law: the fundamental's loss at E2, E3 and E4 is ${MagnetMeasure.round(on)} dB per second with the law (spike: 7.7, 7.8, 8.1) and ${MagnetMeasure.round(off)} without (spike: 7.7, 15.6, 32.4)")
+        assertTrue(on.all { it.isFinite() } && off.all { it.isFinite() }, "a loss could not be read: $on, $off")
+        for ((name, i) in listOf("E3" to 1, "E4" to 2)) {
+            assertTrue(abs(on[i] - on[0]) <= 0.25 * on[0], "$name loses ${on[i]} dB per second, E2 ${on[0]}: not within 25 percent")
+        }
+        assertTrue(off[2] >= 2.0 * off[0], "without the law E4 loses only ${off[2]} dB per second against E2's ${off[0]}: the premise is gone")
+    }
+
+    @Test
+    fun `JANGLE's E4 rings to 20 dB down for at least 0 point 9 s and not much less than E3`() {
+        // t-20: the seconds from the envelope's peak until a 40 ms RMS sits 20 dB under it, on the finished
+        // dry note at the defaults (spike: E4 1.20 s and E3 1.34 s with the law, 0.32 and 0.71 s before it;
+        // E2's is 1.10). Asserted: E4 at least 0.9 s, and E4 not shorter than E3 by more than a factor 1.3.
+        val v = MagnetVoice.JANGLE
+        fun t20(tune: Float, law: Boolean = true): Double {
+            val macros = Magnet.defaults(v) + ("TUNE" to tune)
+            return MagnetMeasure.fallSeconds((if (law) Magnet.render(v, macros) else renderWithoutLaw(v, macros)).samples, 20.0)
+        }
+        val e3 = t20(0.5f)
+        val e4 = t20(1f)
+        println(
+            "MAGNET ring law: t-20 at E3 ${MagnetMeasure.round(e3, 2)} s and E4 ${MagnetMeasure.round(e4, 2)} s with the law " +
+                "(spike: 1.34, 1.20), ${MagnetMeasure.round(t20(0.5f, law = false), 2)} and ${MagnetMeasure.round(t20(1f, law = false), 2)} s without (spike: 0.71, 0.32)",
+        )
+        assertTrue(e4 >= 0.9, "E4 rings only $e4 s to 20 dB down")
+        assertTrue(e4 * 1.3 >= e3, "E4's t-20 ($e4 s) is more than a factor 1.3 under E3's ($e3 s)")
+    }
+
+    @Test
+    fun `the compensated loop keeps its feedback under 1 and every open ring inside the ceiling`() {
+        // Analytic over all 25 steps and four MUTEs: fb' = fb^(1/r) stays under 1 (the spike's largest was
+        // 0.9995, at E4 and MUTE 0) and never falls below fb. Rendered, MUTE 0 (the longest ring) at all 25
+        // steps: every string finite, inside -1..1, no longer than the 4 s budget, and decaying (the RMS over
+        // 3.0 to 3.5 s under the RMS over 0.25 to 0.75 s; the spike's worst ratio was 0.44).
+        val v = MagnetVoice.JANGLE
+        val fRef = Keys.midiHz(Magnet.rootMidi(v)).toDouble()
+        var largest = 0.0
+        val bad = ArrayList<String>()
+        for (step in 0..Magnet.TUNE_SEMITONES) {
+            val f0 = Magnet.frequencyFor(v, step / Magnet.TUNE_SEMITONES.toFloat()).toDouble()
+            for (mute in listOf(0f, 0.15f, 0.5f, 1f)) {
+                val base = Strings.damping(mute, 7_000f)
+                val law = Magnet.compensated(base, f0 / fRef)
+                largest = maxOf(largest, law.fb.toDouble())
+                if (!(law.fb < 1f && law.fb >= base.fb && law.loopHz >= base.loopHz)) bad.add("step $step MUTE $mute: fb ${base.fb} to ${law.fb}, loop ${base.loopHz} to ${law.loopHz} Hz")
+            }
+        }
+        var worstRatio = 0.0
+        val rate = Magnet.RENDER_RATE
+        fun rms(x: FloatArray, from: Double, to: Double): Double {
+            val a = (from * rate).toInt()
+            val b = minOf(x.size, (to * rate).toInt())
+            var sum = 0.0
+            for (i in a until b) sum += x[i].toDouble() * x[i]
+            return Math.sqrt(sum / (b - a))
+        }
+        for (step in 0..Magnet.TUNE_SEMITONES) {
+            val string = Magnet.string(v, Magnet.defaults(v) + mapOf("TUNE" to step / Magnet.TUNE_SEMITONES.toFloat(), "MUTE" to 0f))
+            if (!string.all { it.isFinite() && it in -1f..1f }) bad.add("step $step MUTE 0: a sample is not finite or is outside -1..1")
+            if (string.size > (4f * rate).toInt()) bad.add("step $step MUTE 0: ${string.size} samples is past the 4 s budget")
+            val ratio = rms(string, 3.0, 3.5) / rms(string, 0.25, 0.75)
+            worstRatio = maxOf(worstRatio, ratio)
+            if (!(ratio < 1.0)) bad.add("step $step MUTE 0: the ring does not decay (late over early RMS $ratio)")
+        }
+        println("MAGNET ring law: largest fb' ${MagnetMeasure.round(largest, 6)} (spike: 0.9995), worst late over early RMS ${MagnetMeasure.round(worstRatio, 3)} (spike: 0.436)")
+        assertTrue(bad.isEmpty(), "the compensated loop is unstable or runs past its ceiling: ${bad.take(5)}")
+    }
+
+    @Test
+    fun `CHUG's ring is not compensated`() {
+        // The owner passed CHUG's voice, so the law is JANGLE's alone: at TUNE 0.5 and 1 and three MUTEs the
+        // string and the render equal the same chain with the law off (the spec flag, off for CHUG), and the
+        // string equals a hand-built one, Strings.damping read directly, everywhere but its last 650 ms
+        // (the fades' reach: the trim's 400 ms and the ceiling fade's 250), so nothing but the law's choice is
+        // tested to be old. Mutation: CHUG's compensate flag turned on fails the first two checks.
+        val v = MagnetVoice.CHUG
+        val rate = Magnet.RENDER_RATE
+        val reach = (0.65f * rate).toInt()
+        val bad = ArrayList<String>()
+        var handBuilt = 0
+        for (tune in listOf(0.5f, 1f)) for (mute in listOf(0f, Magnet.defaults(v).getValue("MUTE"), 1f)) {
+            val macros = Magnet.defaults(v) + mapOf("TUNE" to tune, "MUTE" to mute)
+            val cell = "TUNE $tune MUTE $mute"
+            val string = Magnet.string(v, macros)
+            if (!string.contentEquals(Magnet.string(v, macros, compensate = false))) bad.add("$cell: the string is not the uncompensated one")
+            if (!Magnet.render(v, macros).samples.contentEquals(renderWithoutLaw(v, macros).samples)) bad.add("$cell: the render is not the uncompensated one")
+            val f0 = Magnet.frequencyFor(v, tune)
+            val raw = Strings.pluck(
+                f0, 4.0f, Strings.damping(mute, 5_500f), Dsp.expMap(macros.getValue("PICK"), 600f, 16_000f),
+                Dsp.seedFor("MAGNET", v.name, f0), rate, position = 0.085f,
+            )
+            val upTo = string.size - reach
+            if (upTo > rate / 20) {
+                handBuilt++
+                for (i in 0 until upTo) if (string[i] != raw[i]) { bad.add("$cell: the string differs from the hand-built one at sample $i"); break }
+            }
+        }
+        println("MAGNET ring law: CHUG's strings equal the uncompensated chain at 6 cells and the hand-built one before their last 650 ms at $handBuilt of them (${bad.size} differences)")
+        assertTrue(handBuilt >= 4, "the hand-built comparison ran on only $handBuilt cells")
+        assertTrue(bad.isEmpty(), "CHUG's ring changed: ${bad.take(5)}")
     }
 
     /**

@@ -1,7 +1,9 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -15,8 +17,9 @@ enum class MagnetVoice { JANGLE, CHUG }
  * MAGNET - an electric guitar string, dry, ready for VALVE (the rack's amp section).
  *
  * The string is [Strings.pluck] at a pick position of 0.085 of the string (the spike's 0.10 left a
- * fixed hole at the tenth harmonic on every note), trimmed to its decay and faded out over its
- * last 150 ms where the trim cut it, read through a pickup:
+ * fixed hole at the tenth harmonic on every note), its loop's damping pitch-compensated on JANGLE
+ * (a higher note rings as long as the open string does, not a fraction of it), trimmed to its decay
+ * and faded out over its end, read through a pickup:
  * Jaffe and Smith's position comb on the string's output ([Strings.pickup]), neck and bridge
  * weighted by BLEND, a humbucker as two aligned coils, then the pickup's resonance. The rest is the
  * melodic output chain. The amp is not in here: [landingChain] is the recipe that lands a pad
@@ -40,17 +43,41 @@ object Magnet {
     private const val FLOOR_SECONDS = 0.25f
 
     /**
-     * The squared fade over the last milliseconds of a string whose trim ended it on its decay.
-     * [Strings.trimToDecay] cuts such a string 60 dB under its peak with no fade, and VALVE lifts
-     * that quiet end by its own gain (22 dB at CHUG's landing, 40 dB at gain 106), so a cut nobody
-     * hears dry ends abruptly through the amp; a fade before the amp survives it. 150 ms is the
-     * shortest of 50, 100, 150 and 200 ms that leaves a landed note's last 20 ms with a peak at
-     * least 50 dB under the note's peak at every TUNE step, through CHUG's landing (worst 67.5 dB
-     * under), CHUG at gain 106 (50.7), the kit's lead amp (57.3) and JANGLE's landing (97.5); 100 ms
-     * leaves gain 106 at 43.8. A string the ring ceiling or the budget cut is already faded by the
-     * trim and is left as it is.
+     * A fade over the last [ms] of a string, [power] the exponent of the ramp `1 - i/n`: 2 is the
+     * squared fade [Strings.trimToDecay] gives a string it cuts at the ring ceiling, and each step up
+     * is steeper at its end and gentler at its start.
      */
-    private const val TAIL_FADE_MS = 150f
+    private class EndFade(val ms: Float, val power: Int)
+
+    /**
+     * The fade over the last milliseconds of a string whose trim ended it on its decay.
+     * [Strings.trimToDecay] cuts such a string 60 dB under its peak with no fade, and VALVE lifts
+     * that quiet end by its own gain (22 dB at the first CHUG landing, 40 dB at gain 106), so a cut
+     * nobody hears dry ends abruptly through the amp; a fade before the amp survives it. The first
+     * build's squared 150 ms was the shortest of 50, 100, 150 and 200 ms at the default MUTE (CHUG at
+     * gain 106 ended 50.7 dB under its peak, 0.7 dB inside the bar) and misses at MUTE 1 (47.5 dB, TUNE
+     * step 3). Cubed 150 ms is the shortest and mildest of the squared, cubed and fourth-power shapes
+     * at 150, 250, 400 and 600 ms that holds every cell of the grid at least 3 dB inside the bar
+     * (worst 58.5 dB under: CHUG at gain 106, MUTE 1, TUNE step 24). Squared would need 250 ms, which
+     * starts 10 ms into CHUG's shortest string (260 ms). Its fade is -10 dB 102 ms and -20 dB 70 ms
+     * before the end (squared 150 ms: 84 and 47 ms).
+     */
+    private val DECAY_FADE = EndFade(ms = 150f, power = 3)
+
+    /**
+     * The fade added after [Strings.trimToDecay] to a string the ring ceiling cut. The trim's own 400
+     * ms squared fade ends such a string with a quiet but not silent tail, which VALVE lifts: at
+     * CHUG's gain 106, TUNE step 2 and MUTE 0 the landed note ended only 28.1 dB under its peak, and
+     * JANGLE's pitch compensation sends more notes to the ceiling (50 of its 75 TUNE and MUTE cells
+     * reach it, 33 without the law). A squared fade of 250 ms on top of the trim's is the shortest and
+     * mildest of the squared, cubed and fourth-power shapes at 150, 250, 400 and 600 ms that keeps the
+     * whole grid (CHUG at gain 106, the kit's lead amp and JANGLE's landing, 25 TUNE steps, MUTE 0,
+     * the default and 1) at least 3 dB inside the bar: at 150 ms the worst cell is 47.6 dB under
+     * (squared), 49.8 (cubed) and 50.9 (fourth power), at 250 ms squared 56.4. The fade starts 3.75 s
+     * into a 4 s note; together with the trim's fade the note is -10 dB 237 ms and -20 dB 178 ms
+     * before its end (225 and 126 ms with the trim's alone).
+     */
+    private val CEILING_FADE = EndFade(ms = 250f, power = 2)
 
     /** The exciter's corner at PICK 0 and 1 (shape): a thumb to a wire, wider than the spike's 4.6x. */
     private const val PICK_MIN_HZ = 600f
@@ -74,7 +101,8 @@ object Magnet {
 
     /**
      * One voice's numbers: the root note, the string loop's body corner, the pickup's resonance
-     * corner and damping, and whether the pickup is a humbucker. They are the specification's voice
+     * corner and damping, whether the pickup is a humbucker, and whether the loop's damping is
+     * pitch-compensated ([compensated]: JANGLE yes, CHUG no). They are the specification's voice
      * table and the Phase-0 spike's (shape).
      */
     private class Spec(
@@ -83,11 +111,12 @@ object Magnet {
         val resonanceHz: Float,
         val resonanceDamping: Float,
         val humbucker: Boolean,
+        val compensate: Boolean,
     )
 
     private fun specFor(voice: MagnetVoice): Spec = when (voice) {
-        MagnetVoice.JANGLE -> Spec(rootMidi = 40, bodyLoopHz = 7_000f, resonanceHz = 4_500f, resonanceDamping = 0.40f, humbucker = false)
-        MagnetVoice.CHUG -> Spec(rootMidi = 35, bodyLoopHz = 5_500f, resonanceHz = 2_800f, resonanceDamping = 0.55f, humbucker = true)
+        MagnetVoice.JANGLE -> Spec(rootMidi = 40, bodyLoopHz = 7_000f, resonanceHz = 4_500f, resonanceDamping = 0.40f, humbucker = false, compensate = true)
+        MagnetVoice.CHUG -> Spec(rootMidi = 35, bodyLoopHz = 5_500f, resonanceHz = 2_800f, resonanceDamping = 0.55f, humbucker = true, compensate = false)
     }
 
     fun macrosFor(voice: MagnetVoice): List<MacroSpec> = when (voice) {
@@ -130,45 +159,69 @@ object Magnet {
     }
 
     /**
-     * The amp each voice lands through (shape, to be re-derived by ear). DRIVE is a gain on
-     * VALVE's law: CHUG's 0.71 is gain 13, which is what the specification meant by 0.85 when it was
-     * written on VALVE V1's law (on the V1.1 law 0.85 is gain 106). JANGLE's chain sets no SAG, so VALVE's
-     * default 0.35 applies.
+     * The amp each voice lands through, both the owner's picks by ear at the second listen of
+     * 2026-10-01/02 (the numbers stay *shape*: a later listen may move them). DRIVE is a gain on
+     * VALVE's law. CHUG's DRIVE 0.85 is gain 106 on the V1.1 law, the number the specification
+     * wrote for it when it was written on V1's law (an earlier build landed it at 0.71, gain 13, and
+     * the owner chose gain 106 over it). JANGLE's is VALVE's own default amp, written out in
+     * full so that a change to VALVE's defaults cannot move it: the earlier JANGLE amp (DRIVE 0.25,
+     * TONE 0.55, CAB 0.35) was a plain filter, a gain of 0.257 into a tube that is linear there,
+     * and the owner chose this one with the ring of [string]'s pitch compensation.
      */
     val LANDING_VALVE: Map<MagnetVoice, Map<String, Float>> = mapOf(
-        MagnetVoice.JANGLE to mapOf("DRIVE" to 0.25f, "TONE" to 0.55f, "CAB" to 0.35f),
-        MagnetVoice.CHUG to mapOf("DRIVE" to 0.71f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f),
+        MagnetVoice.JANGLE to mapOf("DRIVE" to 0.70f, "SAG" to 0.35f, "TONE" to 0.50f, "CAB" to 0.60f),
+        MagnetVoice.CHUG to mapOf("DRIVE" to 0.85f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f),
     )
 
     /** The rack chain that lands a [voice] pad through VALVE. Never null: MAGNET has no loop mode. */
     fun landingChain(voice: MagnetVoice): FxChain = FxChain().withSection("valve", LANDING_VALVE.getValue(voice))
 
     /**
-     * The dry electric string at [RENDER_RATE], before any pickup: trimmed to its decay and, where
-     * the trim ended it on its decay, faded over its last [TAIL_FADE_MS].
+     * The dry electric string at [RENDER_RATE], before any pickup: trimmed to its decay and faded
+     * out over its end, by [DECAY_FADE] where the trim ended it on its decay and by [CEILING_FADE]
+     * (after the trim's own fade) where the ring ceiling cut it. [compensate] is the voice's
+     * [Spec.compensate] unless a test overrides it, to read the same chain with the ring law off.
      */
-    internal fun string(voice: MagnetVoice, macros: Map<String, Float>): FloatArray {
+    internal fun string(voice: MagnetVoice, macros: Map<String, Float>, compensate: Boolean = specFor(voice).compensate): FloatArray {
         val m = settled(macros, voice)
         val spec = specFor(voice)
         val f0 = frequencyFor(voice, m.getValue("TUNE"))
-        val damping = Strings.damping(m.getValue("MUTE"), spec.bodyLoopHz)
+        val base = Strings.damping(m.getValue("MUTE"), spec.bodyLoopHz)
+        val damping = if (compensate) compensated(base, f0.toDouble() / Keys.midiHz(spec.rootMidi)) else base
         val pickHz = Dsp.expMap(m.getValue("PICK"), PICK_MIN_HZ, PICK_MAX_HZ)
         val seed = Dsp.seedFor("MAGNET", voice.name, f0)
         val raw = Strings.pluck(f0, STRING_SECONDS, damping, pickHz, seed, RENDER_RATE, position = PICK_POSITION)
         val trimmed = Strings.trimToDecay(raw, RENDER_RATE, FLOOR_SECONDS, STRING_SECONDS)
-        // A trim on the decay returns a shorter copy; a ceiling or budget cut returns [raw] itself, already faded.
-        if (trimmed.size < raw.size) fadeSquared(trimmed, TAIL_FADE_MS, RENDER_RATE)
+        // A trim on the decay returns a shorter copy; a ceiling or budget cut returns [raw] itself, already faded
+        // by the trim. Either way the string then ends on its own fade, the path's own (the amp lifts a quiet end).
+        fade(trimmed, if (trimmed.size < raw.size) DECAY_FADE else CEILING_FADE, RENDER_RATE)
         return trimmed
     }
 
-    /** A squared fade over the last [ms] of [buf], in place: the shape [Strings.trimToDecay] gives a string cut at the ring ceiling. */
-    private fun fadeSquared(buf: FloatArray, ms: Float, rate: Int) {
-        val n = minOf(buf.size, (ms / 1000f * rate).toInt())
+    /**
+     * [base]'s damping with the string's pitch compensated: [r] is the note over the open string
+     * (1 or more), the loop loses a fixed amount per round trip and a note r times higher makes r
+     * times the trips per second, so the feedback is `fb^(1/r)` (the fundamental then loses the same
+     * decibels per second at every pitch) and the loop's low-pass corner rises with the square root
+     * of r (the upper partials, which a fixed corner kills in the first tenths of a second, ring on
+     * with it). At r = 1 every operation is exact, so the open string is [base] bit for bit. The
+     * spike's law L2 (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "R1, as built").
+     */
+    internal fun compensated(base: Strings.Damping, r: Double): Strings.Damping = Strings.Damping(
+        loopHz = (base.loopHz * sqrt(r)).toFloat(),
+        fb = base.fb.toDouble().pow(1.0 / r).toFloat(),
+    )
+
+    /** [fade] over the end of [buf], in place: the ramp `1 - i/n` over the last `ms`, raised to the power. */
+    private fun fade(buf: FloatArray, fade: EndFade, rate: Int) {
+        val n = minOf(buf.size, (fade.ms / 1000f * rate).toInt())
         if (n <= 0) return
         val start = buf.size - n
         for (i in 0 until n) {
             val g = 1f - i.toFloat() / n
-            buf[start + i] *= g * g
+            var w = g
+            repeat(fade.power - 1) { w *= g }
+            buf[start + i] *= w
         }
     }
 

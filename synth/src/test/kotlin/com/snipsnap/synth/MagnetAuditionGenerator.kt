@@ -20,7 +20,8 @@ import kotlin.math.roundToInt
  * heard, MAGNET's numbers are shape values.
  *
  * - KIT: the sixteen pads of [SynthKits.magnet] as they land.
- * - LAND: CHUG through VALVE at the three landing DRIVEs by two CABs, each labelled by the gain
+ * - LAND: CHUG through VALVE at the three DRIVEs the owner compared (0.71, 0.78 and 0.85: gain 13,
+ *   37 and 106; the landing is now the last, picked by ear) by two CABs, each labelled by the gain
  *   it is, the one number a DRIVE means on VALVE's law.
  * - CHUGAB: a CHUG stab through its landing chain against a VELVET saw stab through the same
  *   VALVE map, the two stabs matched to each other by [Loudness.of], bare and as two bars with a
@@ -186,7 +187,7 @@ object MagnetAuditionGenerator {
             write("KIT", tag.lowercase() + "_" + patch.name.lowercase().replace(' ', '_'), "$tag ${patch.name.uppercase()} ($note)", arranged.snip)
         }
 
-        // LAND: CHUG at TUNE 0.5 through the landing amp, DRIVE by CAB, labelled by the gain DRIVE is.
+        // LAND: CHUG at TUNE 0.5 through the landing amp's SAG and TONE at three DRIVEs by two CABs, labelled by the gain DRIVE is (the landing is DRIVE 0.85, CAB 0.95).
         val chugAmp = Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG)
         val chugDry = Magnet.render(MagnetVoice.CHUG, mapOf("TUNE" to 0.5f))
         for (drive in listOf(0.71f, 0.78f, 0.85f)) {
