@@ -159,8 +159,9 @@ object Magnet {
     }
 
     /**
-     * The amp each voice lands through, both the owner's picks by ear at the second listen of
-     * 2026-10-01/02 (the numbers stay *shape*: a later listen may move them). DRIVE is a gain on
+     * The amp each voice lands through, both the owner's picks by ear: CHUG's at the gate
+     * (2026-10-01), JANGLE's at the second listen (2026-10-01/02); the numbers stay *shape*, a later
+     * listen may move them. DRIVE is a gain on
      * VALVE's law. CHUG's DRIVE 0.85 is gain 106 on the V1.1 law, the number the specification
      * wrote for it when it was written on V1's law (an earlier build landed it at 0.71, gain 13, and
      * the owner chose gain 106 over it). JANGLE's is VALVE's own default amp, written out in

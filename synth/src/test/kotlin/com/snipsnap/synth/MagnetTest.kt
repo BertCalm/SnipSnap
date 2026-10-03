@@ -259,7 +259,8 @@ class MagnetTest {
             assertTrue(Magnet.LANDING_VALVE.getValue(v).values.all { it in 0f..1f }, "$v")
         }
         assertTrue(Magnet.LANDING_VALVE.getValue(MagnetVoice.JANGLE) != Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG))
-        // The owner's picks by ear (the second listen, 2026-10-01/02), each pinned as the four literals it is:
+        // The owner's picks by ear (CHUG's at the gate, 2026-10-01; JANGLE's at the second listen, 2026-10-01/02),
+        // each pinned as the four literals it is:
         // CHUG's DRIVE 0.85 is gain 106 on VALVE's law (the number Magnet.LANDING_VALVE's KDoc states), and
         // JANGLE's is VALVE's default amp written out in full, so a change to VALVE's defaults cannot move it.
         assertEquals(mapOf("DRIVE" to 0.85f, "SAG" to 0.4f, "TONE" to 0.3f, "CAB" to 0.95f), Magnet.LANDING_VALVE.getValue(MagnetVoice.CHUG))
