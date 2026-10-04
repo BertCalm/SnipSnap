@@ -226,6 +226,17 @@ class DeterminismTest {
         }
     }
 
+    // MERCURY held: a key is the loop, doubled, so the pad inherits the loop's guarantees (the LOOP canary above holds
+    // every voice) and adds nothing random. This one takes the corner `MercuryLoopTest` proves walks the nudge ladder,
+    // SING's bottom key at low GLASS with COUPLE and WATER high: several renders of one zone, each a fresh retune,
+    // all of which must land on the same bits.
+    @Test
+    fun `MERCURY held is byte-identical across renders, the nudged corner included`() {
+        val hard = mapOf("GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f)
+        val low = Keys.mercuryPadMidis(MercuryVoice.SING).first()
+        assertContentEquals(Keys.mercuryPad(MercuryVoice.SING, hard, low).snip.samples, Keys.mercuryPad(MercuryVoice.SING, hard, low).snip.samples, "SING hard corner, MIDI $low")
+    }
+
     // GYRE seeds each string's pluck from Dsp.seedFor per voice, note and string, and its rotor
     // starts at phase 0 on every render - a saved recipe regenerates bit for bit.
     @Test
@@ -259,6 +270,17 @@ class DeterminismTest {
         for (voice in MagnetVoice.entries) {
             val a = MagnetPatch("Canary", voice, Magnet.defaults(voice))
             val b = MagnetPatch("Canary", voice, Magnet.defaults(voice))
+            assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
+
+    // FLOTILLA seeds geometry from the voice, the note and the hull knobs, and the
+    // aquatic noise from a second seed. A saved recipe has to come back bit for bit.
+    @Test
+    fun `FLOTILLA is byte-identical across renders, every voice`() {
+        for (voice in FlotillaVoice.entries) {
+            val a = FlotillaPatch("Canary", voice, Flotilla.defaults(voice), midi = 67)
+            val b = FlotillaPatch("Canary", voice, Flotilla.defaults(voice), midi = 67)
             assertContentEquals(a.render().samples, b.render().samples, "$voice")
         }
     }

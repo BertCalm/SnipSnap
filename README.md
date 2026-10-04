@@ -338,6 +338,14 @@ the hammer (kept in the recipe, so a struck kit still regenerates from
 `kit.json`). Design:
 `docs/superpowers/specs/2026-09-27-fork-electric-piano-engine-design.md`.
 
+FLOTILLA is pitched emitters on a circular pool: RIPPLE, KNOCK, HOLLOW,
+CROSSWAVE, DRIFT and GATHER, with PULSE, CROSSING, FLOTILLA, VESSEL,
+SURFACE, SKIN and HOLD. The note is the source. The pool is a few damped
+modes, the vessels float on it, and a warm dome sits over the top. HOLD at
+the top is a stationary loop (the slider reads LOOP), not a claim the
+hulls sailed home. Fourteen presets and a sixteen-pad kit. Design:
+`docs/superpowers/specs/2026-10-04-flotilla-engine-design.md`.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -345,8 +353,8 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK and GRAINS round out the lineup — thirteen engines in the `Engine` picker
-counting SKIN, RESIN, TIDE, GLINT, SIREN and FORK; GRAINS is a fourteenth thing entirely, out of the
+VOX, FORK, FLOTILLA and GRAINS round out the lineup — fourteen engines in the `Engine` picker
+counting SKIN, RESIN, TIDE, GLINT, SIREN, FORK and FLOTILLA; GRAINS is a fifteenth thing entirely, out of the
 picker's scope since it has no voice enum and works on a source snip
 instead of picking one. VOX is formant vocal
 synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs

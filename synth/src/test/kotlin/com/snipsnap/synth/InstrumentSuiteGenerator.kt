@@ -19,8 +19,8 @@ import java.io.File
  * ```
  *
  * MPC 3 opens the `.xty`; an MPC 2 machine browses into `_[TrackData]/` and
- * finds a bare program folder. The organ and the RESIN pad carry mathematically-cut sustain
- * loops in both formats. Run via `./gradlew :synth:generateInstrumentSuite`.
+ * finds a bare program folder. The organ, the RESIN pad and the three MERCURY instruments carry
+ * mathematically-cut sustain loops in both formats. Run via `./gradlew :synth:generateInstrumentSuite`.
  */
 object InstrumentSuiteGenerator {
 
@@ -36,7 +36,7 @@ object InstrumentSuiteGenerator {
             "SnipSnap Music Box" to InstrumentSuite::renderMusicBox,
             "SnipSnap Resin Pad" to InstrumentSuite::renderResinPad,
             "SnipSnap Fork" to InstrumentSuite::renderFork,
-        )
+        ) + MercuryVoice.entries.map { voice -> InstrumentSuite.mercuryName(voice) to { dir: File -> InstrumentSuite.renderMercury(voice, dir) } }
 
         var samples = 0
         val programs = mutableListOf<KeygroupProgram>()

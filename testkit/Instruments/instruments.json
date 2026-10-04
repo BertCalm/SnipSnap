@@ -1063,6 +1063,441 @@
           ]
         }
       ]
+    },
+    {
+      "name": "SnipSnap Mercury Ping",
+      "engine": "mercury-held-ping",
+      "layers": [
+        "single layer; PING at its defaults, HOLD's top step (the seamless loop), doubled with the marker at the second copy"
+      ],
+      "volumeRelease": 0.6000000238418579,
+      "zones": [
+        {
+          "rootMidi": 60,
+          "note": "C4",
+          "lowNote": 51,
+          "highNote": 61,
+          "samples": [
+            {
+              "sample": "MercuryPing_C4",
+              "frames": 271384,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135692
+            }
+          ]
+        },
+        {
+          "rootMidi": 63,
+          "note": "D#4",
+          "lowNote": 62,
+          "highNote": 64,
+          "samples": [
+            {
+              "sample": "MercuryPing_D#4",
+              "frames": 271296,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135648
+            }
+          ]
+        },
+        {
+          "rootMidi": 66,
+          "note": "F#4",
+          "lowNote": 65,
+          "highNote": 67,
+          "samples": [
+            {
+              "sample": "MercuryPing_F#4",
+              "frames": 271280,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135640
+            }
+          ]
+        },
+        {
+          "rootMidi": 69,
+          "note": "A4",
+          "lowNote": 68,
+          "highNote": 70,
+          "samples": [
+            {
+              "sample": "MercuryPing_A4",
+              "frames": 271416,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135708
+            }
+          ]
+        },
+        {
+          "rootMidi": 72,
+          "note": "C5",
+          "lowNote": 71,
+          "highNote": 73,
+          "samples": [
+            {
+              "sample": "MercuryPing_C5",
+              "frames": 271384,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135692
+            }
+          ]
+        },
+        {
+          "rootMidi": 75,
+          "note": "D#5",
+          "lowNote": 74,
+          "highNote": 76,
+          "samples": [
+            {
+              "sample": "MercuryPing_D#5",
+              "frames": 271436,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135718
+            }
+          ]
+        },
+        {
+          "rootMidi": 78,
+          "note": "F#5",
+          "lowNote": 77,
+          "highNote": 79,
+          "samples": [
+            {
+              "sample": "MercuryPing_F#5",
+              "frames": 271396,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135698
+            }
+          ]
+        },
+        {
+          "rootMidi": 81,
+          "note": "A5",
+          "lowNote": 80,
+          "highNote": 82,
+          "samples": [
+            {
+              "sample": "MercuryPing_A5",
+              "frames": 271416,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135708
+            }
+          ]
+        },
+        {
+          "rootMidi": 84,
+          "note": "C6",
+          "lowNote": 83,
+          "highNote": 93,
+          "samples": [
+            {
+              "sample": "MercuryPing_C6",
+              "frames": 271384,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 135692
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Mercury Sing",
+      "engine": "mercury-held-sing",
+      "layers": [
+        "single layer; SING at its defaults, HOLD's top step (the seamless loop), doubled with the marker at the second copy"
+      ],
+      "volumeRelease": 0.6000000238418579,
+      "zones": [
+        {
+          "rootMidi": 55,
+          "note": "G3",
+          "lowNote": 46,
+          "highNote": 56,
+          "samples": [
+            {
+              "sample": "MercurySing_G3",
+              "frames": 259204,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129602
+            }
+          ]
+        },
+        {
+          "rootMidi": 58,
+          "note": "A#3",
+          "lowNote": 57,
+          "highNote": 59,
+          "samples": [
+            {
+              "sample": "MercurySing_A#3",
+              "frames": 259588,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129794
+            }
+          ]
+        },
+        {
+          "rootMidi": 61,
+          "note": "C#4",
+          "lowNote": 60,
+          "highNote": 62,
+          "samples": [
+            {
+              "sample": "MercurySing_C#4",
+              "frames": 259336,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129668
+            }
+          ]
+        },
+        {
+          "rootMidi": 64,
+          "note": "E4",
+          "lowNote": 63,
+          "highNote": 65,
+          "samples": [
+            {
+              "sample": "MercurySing_E4",
+              "frames": 259280,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129640
+            }
+          ]
+        },
+        {
+          "rootMidi": 67,
+          "note": "G4",
+          "lowNote": 66,
+          "highNote": 68,
+          "samples": [
+            {
+              "sample": "MercurySing_G4",
+              "frames": 259428,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129714
+            }
+          ]
+        },
+        {
+          "rootMidi": 70,
+          "note": "A#4",
+          "lowNote": 69,
+          "highNote": 71,
+          "samples": [
+            {
+              "sample": "MercurySing_A#4",
+              "frames": 259400,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129700
+            }
+          ]
+        },
+        {
+          "rootMidi": 73,
+          "note": "C#5",
+          "lowNote": 72,
+          "highNote": 74,
+          "samples": [
+            {
+              "sample": "MercurySing_C#5",
+              "frames": 259336,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129668
+            }
+          ]
+        },
+        {
+          "rootMidi": 76,
+          "note": "E5",
+          "lowNote": 75,
+          "highNote": 77,
+          "samples": [
+            {
+              "sample": "MercurySing_E5",
+              "frames": 259412,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129706
+            }
+          ]
+        },
+        {
+          "rootMidi": 79,
+          "note": "G5",
+          "lowNote": 78,
+          "highNote": 88,
+          "samples": [
+            {
+              "sample": "MercurySing_G5",
+              "frames": 259428,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 129714
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SnipSnap Mercury Blade",
+      "engine": "mercury-held-blade",
+      "layers": [
+        "single layer; BLADE at its defaults, HOLD's top step (the seamless loop), doubled with the marker at the second copy"
+      ],
+      "volumeRelease": 0.6000000238418579,
+      "zones": [
+        {
+          "rootMidi": 55,
+          "note": "G3",
+          "lowNote": 46,
+          "highNote": 56,
+          "samples": [
+            {
+              "sample": "MercuryBlade_G3",
+              "frames": 243452,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121726
+            }
+          ]
+        },
+        {
+          "rootMidi": 58,
+          "note": "A#3",
+          "lowNote": 57,
+          "highNote": 59,
+          "samples": [
+            {
+              "sample": "MercuryBlade_A#3",
+              "frames": 243316,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121658
+            }
+          ]
+        },
+        {
+          "rootMidi": 61,
+          "note": "C#4",
+          "lowNote": 60,
+          "highNote": 62,
+          "samples": [
+            {
+              "sample": "MercuryBlade_C#4",
+              "frames": 243424,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121712
+            }
+          ]
+        },
+        {
+          "rootMidi": 64,
+          "note": "E4",
+          "lowNote": 63,
+          "highNote": 65,
+          "samples": [
+            {
+              "sample": "MercuryBlade_E4",
+              "frames": 243224,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121612
+            }
+          ]
+        },
+        {
+          "rootMidi": 67,
+          "note": "G4",
+          "lowNote": 66,
+          "highNote": 68,
+          "samples": [
+            {
+              "sample": "MercuryBlade_G4",
+              "frames": 243228,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121614
+            }
+          ]
+        },
+        {
+          "rootMidi": 70,
+          "note": "A#4",
+          "lowNote": 69,
+          "highNote": 71,
+          "samples": [
+            {
+              "sample": "MercuryBlade_A#4",
+              "frames": 243316,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121658
+            }
+          ]
+        },
+        {
+          "rootMidi": 73,
+          "note": "C#5",
+          "lowNote": 72,
+          "highNote": 74,
+          "samples": [
+            {
+              "sample": "MercuryBlade_C#5",
+              "frames": 243264,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121632
+            }
+          ]
+        },
+        {
+          "rootMidi": 76,
+          "note": "E5",
+          "lowNote": 75,
+          "highNote": 77,
+          "samples": [
+            {
+              "sample": "MercuryBlade_E5",
+              "frames": 243360,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121680
+            }
+          ]
+        },
+        {
+          "rootMidi": 79,
+          "note": "G5",
+          "lowNote": 78,
+          "highNote": 88,
+          "samples": [
+            {
+              "sample": "MercuryBlade_G5",
+              "frames": 243340,
+              "velStart": 0,
+              "velEnd": 127,
+              "loopStartFrame": 121670
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -222,6 +222,7 @@ object Velocity {
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
+        is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
     }
 
@@ -301,6 +302,7 @@ object Velocity {
     /** [atVelocity] with [spec] already resolved — see that function and [brightnessSpec]. */
     fun atVelocity(patch: Patch, velocity: Float, spec: MacroSpec?): Snip {
         val v = velocity.coerceIn(0f, 1f)
+        if (patch is FlotillaPatch) return Flotilla.render(patch.voice, patch.macros, patch.midi, velocity = v)
         if (touchedVelocity(patch)) {
             return when (patch) {
                 is MercuryPatch -> Mercury.render(patch.voice, patch.macros, velocity = v)

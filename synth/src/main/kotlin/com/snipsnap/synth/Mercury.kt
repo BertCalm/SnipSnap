@@ -426,9 +426,18 @@ object Mercury {
     /**
      * The object, rung at [hz] for [macros] (settled), at the oversampled rate: raw, unlevelled,
      * so tests can read the physics. Its length is [rawFrames], or [Steady.total] for a LOOP's
-     * stretch ([steady]).
+     * stretch ([steady]). [cancelled] stops it part-way with a `CancellationException`, checked every
+     * [CANCEL_CHECK_FRAMES] raw samples: a held zone's loop is seconds of audio rendered several times over.
      */
-    internal fun sound(voice: MercuryVoice, hz: Double, m: Map<String, Float>, velocity: Double = 1.0, scrape: Boolean = true, steady: Steady? = null): FloatArray {
+    internal fun sound(
+        voice: MercuryVoice,
+        hz: Double,
+        m: Map<String, Float>,
+        velocity: Double = 1.0,
+        scrape: Boolean = true,
+        steady: Steady? = null,
+        cancelled: () -> Boolean = { false },
+    ): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
         val dt = 1.0 / rate
         val bend = m.getValue("BEND").toDouble()
@@ -527,6 +536,9 @@ object Mercury {
         var compliance = 0.0
         val out = FloatArray(frames)
         for (t in 0 until frames) {
+            if (t % CANCEL_CHECK_FRAMES == 0 && (cancelled() || Thread.currentThread().isInterrupted)) {
+                throw java.util.concurrent.CancellationException("MERCURY render no longer wanted")
+            }
             if (t % CTRL == 0) {
                 val time = t * dt
                 if (mu > 0.0 && steady != null) {
@@ -693,11 +705,13 @@ object Mercury {
     /**
      * The held note as one seamless loop (see [renderLoopMeasured]). If it does not close as asked, GLASS and COUPLE
      * are nudged toward [NUDGE_GLASS] and [NUDGE_COUPLE] in [NUDGE_STEPS] steps and the first that closes is kept. A
-     * loop that still will not close throws: a click shipped silently is the worse failure.
+     * loop that still will not close throws: a click shipped silently is the worse failure. [cancelled] stops it
+     * part-way with a `CancellationException` (the nudge ladder lets it through).
      */
-    internal fun renderLoop(voice: MercuryVoice, macros: Map<String, Float>): FloatArray = renderLoopNudged(voice, macros).loop
+    internal fun renderLoop(voice: MercuryVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): FloatArray =
+        renderLoopNudged(voice, macros, cancelled).loop
 
-    internal fun renderLoopNudged(voice: MercuryVoice, macros: Map<String, Float>): LoopRender {
+    internal fun renderLoopNudged(voice: MercuryVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): LoopRender {
         val m = settled(macros, voice)
         val glass = m.getValue("GLASS")
         val couple = m.getValue("COUPLE")
@@ -707,7 +721,7 @@ object Mercury {
             if (k > 0 && glass >= NUDGE_GLASS && couple <= NUDGE_COUPLE) break
             val tried = m + ("GLASS" to (if (glass < NUDGE_GLASS) glass + (NUDGE_GLASS - glass) * s else glass)) +
                 ("COUPLE" to (if (couple > NUDGE_COUPLE) couple + (NUDGE_COUPLE - couple) * s else couple))
-            val r = renderLoopMeasured(voice, tried)
+            val r = renderLoopMeasured(voice, tried, cancelled)
             if (r.seam < Keys.MAX_SEAM_ERROR) return LoopRender(r.loop, r.seam, r.passes, s)
             last = r
         }
@@ -754,13 +768,16 @@ object Mercury {
 
     private const val LOOP_LAG_WINDOW_SECONDS = 0.5
 
+    /** How often a render asks whether it is still wanted: every 2^15 raw samples, under 0.2 s of audio at the oversampled rate. */
+    internal const val CANCEL_CHECK_FRAMES = 1 shl 15
+
     /**
      * The held note as one loop, rendered as asked (no nudge): the steady stretch ([Steady]), the warm-up
      * discarded, the note retuned until its periods fill the loop's frames ([loopLag]), then cut where the
      * neighbours are smallest ([Siren.bestCut]) and levelled. The seam is measured on the conditioned stretch
      * against itself one loop later, before the cut.
      */
-    internal fun renderLoopMeasured(voice: MercuryVoice, macros: Map<String, Float>): LoopRender {
+    internal fun renderLoopMeasured(voice: MercuryVoice, macros: Map<String, Float>, cancelled: () -> Boolean = { false }): LoopRender {
         val m = settled(macros, voice)
         val target = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val plan = planLoop(target, m.getValue("WATER").toDouble())
@@ -770,13 +787,13 @@ object Mercury {
         val steady = Steady((warm + plan.frames + plan.frames / 8 + LOOP_PAD_FRAMES + (LOOP_LAG_WINDOW_SECONDS * RATE).toInt()) * over, plan.frames * over, plan.orbitHz)
         val wanted = plan.frames.toDouble() * over
         var tuned = plan.periods * RATE.toDouble() / plan.frames
-        var raw = sound(voice, tuned, m, steady = steady)
+        var raw = sound(voice, tuned, m, steady = steady, cancelled = cancelled)
         var passes = 0
         for (pass in 1..LOOP_PASSES) {
             val ratio = loopLag(raw, warm * over, wanted, wanted / plan.periods) / wanted
             if (abs(ratio - 1.0) < LOOP_CONVERGED) break
             tuned *= ratio
-            raw = sound(voice, tuned, m, steady = steady)
+            raw = sound(voice, tuned, m, steady = steady, cancelled = cancelled)
             passes = pass
         }
         val conditioned = condition(raw)
