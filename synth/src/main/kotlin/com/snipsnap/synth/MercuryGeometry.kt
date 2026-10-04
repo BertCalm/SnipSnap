@@ -150,10 +150,10 @@ internal object BowlGeometry : Geometry() {
         DoubleArray(Mercury.PRIMARIES) { i -> (if (i % 2 == 0) LOWER[i / 2] else UPPER[i / 2]) / LOWER[0] }
 
     /** A doublet's own spring, a small share of kappa: its split is the bowl's, and COUPLE moves it only through the vessel. */
-    @Volatile internal var pairKappa = 0.04
+    const val PAIR_KAPPA = 0.04
 
     /** The upper member's grip on the contact against the lower's: a pair that locks must still be excited, a struck one must still beat. */
-    @Volatile internal var partnerContact = 0.7
+    const val PARTNER_CONTACT = 0.7
 
     /** The pickup's angle round the rim, radians. The members must differ here or the water's complementary swing cancels in a locked pair. */
     const val PICKUP_THETA = 0.15
@@ -161,29 +161,28 @@ internal object BowlGeometry : Geometry() {
     /**
      * How far the mass swings a pair apart: its loads are 0.5 +/- 0.5 times this times the mass's reach, so the pair's
      * mean stays one half. At 1 the members swing 2.7% apart, leave the friction's lock range and hop, and the loop stops
-     * closing; 0.6 closed every default corner in the probe, and the WATER bar (8 cents at 0.05) wants it as high as it goes.
+     * closing; 0.6 closed the bottom of the range but missed the bar at five scattered keys, 0.5 closes every key
+     * the probe tried (worst seam 2e-4 against the bar's 1e-3). The WATER bar wants it as high as it goes.
      */
-    @Volatile internal var pairSwing = 0.6
+    const val PAIR_SWING = 0.5
 
     /**
      * EDDY's WATER curve is steeper at the start than the other voices' (0.25): the pair's centre never moves, so the
-     * cents come only from the members hopping, and at 0.25 WATER 0.05 added 6 cents against the 8 a listener needs.
-     * WATER 1 is unchanged by any curve.
+     * cents come only from the members hopping, and at 0.25 WATER 0.05 added 6 cents against the 8 a listener needs
+     * (0.10 gave 8.8, 0.06 gives about 10). WATER 1 is unchanged by any curve.
      */
-    @Volatile internal var curve = 0.10
-    override val waterCurve: Double get() = curve
+    override val waterCurve = 0.06
 
     override fun vesselHost(v: Int) = 2 * v
 
     /** The first vessel sits 4.05% above its host, not 3.5: the host's upper member is 0.455% above it, and the rule is 3.5% from every primary. */
     override val vesselDetune = doubleArrayOf(0.0405, -0.045, 0.06, -0.07)
     override val vesselSpringsToNext = false
-    @Volatile internal var vesselKappa = 0.5
-    override val vesselKappaScale: Double get() = vesselKappa
+    override val vesselKappaScale = 0.5
 
-    override fun neighbourScale(i: Int) = if (i % 2 == 0) pairKappa else 1.0
+    override fun neighbourScale(i: Int) = if (i % 2 == 0) PAIR_KAPPA else 1.0
 
-    override fun contact(i: Int, ratio: Double) = ratio.pow(-Mercury.CONTACT_TAPER) * (if (i % 2 == 1) partnerContact else 1.0)
+    override fun contact(i: Int, ratio: Double) = ratio.pow(-Mercury.CONTACT_TAPER) * (if (i % 2 == 1) PARTNER_CONTACT else 1.0)
 
     override fun pickup(i: Int, ratio: Double, tilt: Double): Double {
         val n = i / 2 + 2
@@ -192,7 +191,7 @@ internal object BowlGeometry : Geometry() {
 
     override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
         val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
-        val swing = 0.5 * pairSwing * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
+        val swing = 0.5 * PAIR_SWING * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
         return if (i % 2 == 0) 0.5 + swing else 0.5 - swing
     }
 
@@ -232,13 +231,17 @@ internal object ShellGeometry : Geometry() {
 
     override val ratios = doubleArrayOf(1.0, 1.4797, 2.2144, 2.6993, 4.3255, 6.3219, 8.6835, 11.4091, 14.4983, 15.9969, 17.9511, 21.7673)
 
-    /** Every vessel above its partner, the physical sign (a seam or the water lowers the struck cos mode), ascending so the beat rates climb. */
-    @Volatile internal var detuneScale = 1.0
-    override val vesselDetune: DoubleArray get() = doubleArrayOf(0.035, 0.045, 0.055, 0.065).map { it * detuneScale }.toDoubleArray()
+    /**
+     * Every vessel above its partner, the physical sign (a seam or the water lowers the struck cos mode), ascending so
+     * the beat rates climb: 5.25, 6.75, 8.25 and 9.75%, wider than the other voices' 3.5 to 7%. At A2 the object is low
+     * and rings long, and with the vessels at 3.5 to 6.5% the rub sustained the fundamental and the hybrid together at
+     * the four lowest keys, two unrelated lines that no loop closes (seams of 3 to 5). At 1.4 times the gaps the lowest
+     * key closes at 3e-4 and every other at 2e-5 or better.
+     */
+    override val vesselDetune = doubleArrayOf(0.0525, 0.0675, 0.0825, 0.0975)
 
-    /** A vessel rings 0.9 as long as its partner: a lossier one is a damper on the partner it is coupled to. */
-    @Volatile internal var t60Factor = 0.9
-    override fun vesselT60(glass: Double, hostT60: Double) = t60Factor * hostT60
+    /** A vessel rings as long as its partner, no less: a lossier one is a damper on the partner it is coupled to, and at the bottom of the range it also let the loop fail. */
+    override fun vesselT60(glass: Double, hostT60: Double) = VESSEL_T60_FACTOR * hostT60
 
     /** The pickup hears the sin partners at the angle it sits at, 0.35 rad round the shell. */
     override fun vesselPickup(v: Int) = 0.4 * sin(PICKUP_THETA * ORDER[v])
@@ -273,6 +276,9 @@ internal object ShellGeometry : Geometry() {
     override fun bendB(i: Int, n: Int, primaries: Int) = 0.02 * hostOf(i, primaries) / 11 + (if (i >= primaries) 0.015 else 0.0)
 
     const val PICKUP_THETA = 0.35
+
+    /** A vessel rings this share of its partner's t60. */
+    const val VESSEL_T60_FACTOR = 1.0
 }
 
 /**
