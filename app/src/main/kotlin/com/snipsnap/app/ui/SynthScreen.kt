@@ -108,6 +108,7 @@ import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Patches
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Fathom
@@ -262,6 +263,13 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
+    // Some patches carry state outside the macro map (FLOTILLA's note and
+    // velocity). Keep that state through preview, editing, saving and placing.
+    val loadedPatchesByVoice = remember { mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>() }
+    val loadedPatch = loadedPatchesByVoice[engine to voice]
+    fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
+        Patches.edited(it, name, macros)
+    } ?: engine.buildPatch(name, voice, macros)
     // Which preset (if any) the current macro values for this (engine,
     // voice) still match — U1's own framing (`docs/SYNTH_UPGRADE.md`) is
     // "a starting point to wreck, not a locked sound", so this clears the
@@ -285,6 +293,7 @@ fun SynthScreen(
     }
     fun loadPreset(patch: Patch) {
         touched = true
+        loadedPatchesByVoice[engine to voice] = patch
         // Merged over the engine's own defaults, same as macrosByVoice's own
         // seeding above: a preset only has to name the macros it cares
         // about (PUNCH, added after every existing THUMP preset was
@@ -391,7 +400,7 @@ fun SynthScreen(
         // engine cycle or a slider drag can move them under the write.
         val savedEngine = engine
         val savedVoice = voice
-        val patch = engine.buildPatch(name, voice, macros)
+        val patch = buildCurrentPatch(name)
         appScope.launch {
             try {
                 val (saved, all) = withContext(Dispatchers.IO) {
@@ -453,12 +462,13 @@ fun SynthScreen(
     // with clearTimeout/setTimeout in the prototype. Keyed on `engine` too
     // now — switching engines must cancel an in-flight render exactly like
     // switching voices always has.
-    LaunchedEffect(engine, voice, macros) {
+    LaunchedEffect(engine, voice, macros, loadedPatch) {
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
             val rendered = withContext(Dispatchers.Default) {
-                val dry = engine.render(voice, macros)
+                val dry = if (loadedPatch != null) buildCurrentPatch(engine.patchDisplayName(voice)).render()
+                    else engine.render(voice, macros)
                 // A string machine (an unmoved STRING MACHINE / THIN STRINGS / WIDE
                 // STRINGS / DARK STRINGS) previews through the ENSEMBLE it will land
                 // with, so the audition is the pad and not the bare saw stack. Every
@@ -502,7 +512,7 @@ fun SynthScreen(
                 // but constructing it inside the try means an unexpected
                 // failure toasts honestly instead of crashing the screen.
                 val name = engine.patchDisplayName(voice)
-                val patch = engine.buildPatch(name, voice, macros)
+                val patch = buildCurrentPatch(name)
                 // A SIREN one-shot carries the rack's ECHO in its recipe and
                 // renders through it; a SIREN LOOP lands dry, since the
                 // SURFACE's echo is its own (Siren.landingChain). An unmoved
@@ -859,7 +869,7 @@ fun SynthScreen(
     fun openSpread() {
         if (spreadOpening || sendBusy || entry == null) return
         spreadOpening = true
-        val patch = engine.buildPatch(engine.patchDisplayName(voice), voice, macros)
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = engine.drumClass(voice, macros)
         scope.launch {
             try {

@@ -4,12 +4,22 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** JSON contract for a FLOTILLA patch: the note and the model ride beside the macros. */
 class FlotillaPatchTest {
+    @Test
+    fun `editing a loaded sound retains pitch velocity and model in its saved recipe`() {
+        val source = FlotillaPatch("Low", FlotillaVoice.HOLLOW, Flotilla.defaults(FlotillaVoice.HOLLOW), midi = 36, velocity = 0.3f)
+        val macros = source.macros + ("VESSEL" to 0.2f)
+        val edited = Patches.edited(source, "My Low", macros) as FlotillaPatch
+        assertEquals(source.copy(name = "My Low", macros = macros), edited)
+        assertEquals(edited, Patches.fromJsonText(edited.toJsonText()))
+        assertContentEquals(Flotilla.render(source.voice, macros, source.midi, source.velocity).samples, edited.render().samples)
+    }
 
     private val patch = FlotillaPatch(
         "Wake",

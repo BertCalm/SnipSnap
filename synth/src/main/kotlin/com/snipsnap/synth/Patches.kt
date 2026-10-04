@@ -31,6 +31,13 @@ object Patches {
 
     const val VERSION = 1
 
+    /** Edit the common fields while retaining engine-specific state such as FLOTILLA's pitch and velocity. */
+    fun edited(patch: Patch, name: String, macros: Map<String, Float>): Patch {
+        val obj = LinkedHashMap(patch.withMacros(macros).toJsonValue().entries)
+        obj["name"] = JsonValue.Str(name)
+        return fromJsonValue(JsonValue.Obj(obj))
+    }
+
     fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
 
     fun fromJsonValue(value: JsonValue): Patch {
