@@ -135,9 +135,9 @@ internal object ArcoMeasure {
         return Core(voice, step, hz, out, tap.copyOf(out.size), holdN, liftN)
     }
 
-    /** What [Arco.render] does to a raw wave after the core: the box, the band limit, the decimator, the DC, the level and the fade. The raw wave is not touched. */
+    /** What [Arco.render] does to a raw wave after the core, as the engine's one function, [Arco.finished]: the box, the band limit, the decimator, the DC, the level (with the lift above the knee) and the fade. The raw wave is not touched. */
     fun finished(raw: FloatArray, voice: ArcoVoice, body: Float): FloatArray =
-        Arco.finish(Arco.withBody(raw.copyOf(), voice, body, RATE), RATE)
+        Arco.finished(raw.copyOf(), voice, body, RATE)
 
     // ---- speaking: the judgement the speaks test and its negative control share ---------------------------------
 
