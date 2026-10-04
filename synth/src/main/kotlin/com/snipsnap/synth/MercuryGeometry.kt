@@ -164,14 +164,15 @@ internal object BowlGeometry : Geometry() {
      * closing; 0.6 closed the bottom of the range but missed the bar at five scattered keys, 0.5 closes every key
      * the probe tried (worst seam 2e-4 against the bar's 1e-3). The WATER bar wants it as high as it goes.
      */
-    const val PAIR_SWING = 0.5
+    @Volatile internal var pairSwing = 0.5
 
     /**
      * EDDY's WATER curve is steeper at the start than the other voices' (0.25): the pair's centre never moves, so the
      * cents come only from the members hopping, and at 0.25 WATER 0.05 added 6 cents against the 8 a listener needs
      * (0.10 gave 8.8, 0.06 gives about 10). WATER 1 is unchanged by any curve.
      */
-    override val waterCurve = 0.06
+    @Volatile internal var curve = 0.06
+    override val waterCurve: Double get() = curve
 
     override fun vesselHost(v: Int) = 2 * v
 
@@ -191,7 +192,7 @@ internal object BowlGeometry : Geometry() {
 
     override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
         val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
-        val swing = 0.5 * PAIR_SWING * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
+        val swing = 0.5 * pairSwing * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
         return if (i % 2 == 0) 0.5 + swing else 0.5 - swing
     }
 
