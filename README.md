@@ -6,10 +6,13 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, ten
-synth engines, and writers for both MPC generations, **hardware-verified on
-an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
-play). No Android layer yet.
+**Status:** a tested Kotlin core — capture buffer, cleanup DSP, the synth
+engines, and writers for both MPC generations — **hardware-verified on an
+MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and play).
+The Android shell (`:app`) is built: capture, the tape deck, the kit and
+chop flow, PLAY / KEYS / SURFACE / GROOVE on the native engine, SYNTH, and
+the export wizard. What is unproven is the phone-in-hand exit tests in
+[`docs/BENCH.md`](docs/BENCH.md).
 
 ## The loop
 
@@ -33,8 +36,13 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 2403 tests across nine modules
+./gradlew test                 # the nine JVM modules; no SDK needed
+./gradlew test -x :app:test    # the same, when an Android SDK is present
 ```
+
+Do not hard-code a test count here — it drifts. Gradle's summary is the
+number. A session without an SDK must drop the `-x :app:test` (there is
+no `:app` in that graph). See [`docs/README.md`](docs/README.md).
 
 ### `:audio`
 
@@ -537,8 +545,9 @@ stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
 Reads **and writes** the MPC 3 container: gzip + five-line ACVS header + JSON.
 `MpcFormats.detect` tells the generations apart by content (both use `.xpj`),
 `Acvs.read` opens a container, and `Mpc3Project` gives tolerant accessors over
-projects and standalone tracks alike — checked against 59 real projects and 13
-real track files in `reference/golden/`.
+projects and standalone tracks alike — checked against 59 real projects
+and the harvested tracks in `reference/golden/` (this clone keeps the
+annotated subset, not the full project corpus).
 
 **`Mpc3TrackWriter`** is the native writer — the primary-format target, real:
 a [`DrumProgram`] becomes a standalone `.xtd` drum track, templated
@@ -590,7 +599,7 @@ door): note-ranged instruments with velocity layers (8 slots, as real
 keygroups carry), real per-zone root notes, `KeyTrack=False`, and the
 maps-then-`Keygroup*` program tail — the shape corrected line-by-line against
 the commercial keygroup programs in `reference/golden/keygroup/`
-(see [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md#what-keygroupwriter-gets-wrong)).
+(see [`docs/XPM_STRUCTURE.md`](docs/XPM_STRUCTURE.md#what-keygroupwriter-used-to-get-wrong)).
 `testkit/SnipSnap Keys` is the remaining on-hardware acceptance check.
 
 ### `:cli`
@@ -608,8 +617,9 @@ classifies every slice, auto-places the kit, and fans out to any export
 format the writers speak. `classify` prints class + confidence + the
 features behind the verdict — the calibration tool for tuning thresholds
 on real captures. `export` runs the format fan-out over any existing kit
-folder. It means kits can be made from a desktop today, and it's the first
-place the classifier meets real audio instead of synthetic test material.
+folder. It means kits can be made from a desktop, the same pipeline the phone
+runs, without a phone in the way — and it is the first place the
+classifier meets real audio instead of synthetic test material.
 
 ### `:shell`
 
@@ -619,7 +629,7 @@ UI layer. What lives here:
 
 - **`Schemes`/`Type`/`Layout`/`Motion`** — the eight TapeOS scheme token
   tables as data (verbatim from the design system), pad-label ink tables
-  for dark schemes and CLEAR, and the layout/motion constants from the
+  for the dark schemes, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.
 - **`PeaksPyramid`** — min/max waveform mips with *exact* queries at any
@@ -675,9 +685,13 @@ follow-up.
 
 ## Docs
 
+The full map, including dated reviews and the spec/plan archive, is
+[`docs/README.md`](docs/README.md). The ones a new reader wants first:
+
 - [`docs/CONCEPT.md`](docs/CONCEPT.md) — product shape, MVP cut, architecture
-- [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — **the remaining work, scoped**: the Android app milestone by milestone, the hardware queue, and the odds and ends
+- [`docs/APP_PLAN.md`](docs/APP_PLAN.md) — **where the project stands**, milestone by milestone, and the hardware queue
 - [`docs/FEATURE_PLAN.md`](docs/FEATURE_PLAN.md) — the six product features ranked by ROI, each planned to done with owners and exit tests
+- [`docs/BENCH.md`](docs/BENCH.md) — the phone-and-card exit tests, with a line to write each answer on
 - [`docs/ANDROID_CAPTURE.md`](docs/ANDROID_CAPTURE.md) — how capture actually works and where it breaks
 - [`docs/CLI.md`](docs/CLI.md) — the SnipSnap CLI: chop a file into a kit from any desktop
 - [`docs/ORBITS.md`](docs/ORBITS.md) — ORBIT, the circular sequencer: polymeter and polyrhythm as rings of different lengths
@@ -688,7 +702,7 @@ follow-up.
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
 - [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the developer's tools behind a knock on SETUP, SEND TO BENCH first, and the list after it
-- [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
+- [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — how the synth engines were built, phase by phase
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
 ## Next step
@@ -710,6 +724,6 @@ file in `reference/golden/liveiii-36/` — the last word on what firmware
 itself writes. Procedure in [`reference/README.md`](reference/README.md).
 
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
-— nobody here owns an MPC One or a 2.x Live II — but `:xpm` is live regardless,
-since it is the only thing producing loadable output today and MPC 3 loads MPC 2
-content.
+— nobody here owns an MPC One or a 2.x Live II — but `:xpm` stays live:
+it is the compatibility path, and MPC 3 loads MPC 2 content. Native
+`.xtd` / `.xty` via `:mpc3` is the verified shipping path on the Live III.

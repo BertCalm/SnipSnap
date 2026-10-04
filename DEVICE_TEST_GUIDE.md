@@ -1,14 +1,19 @@
 # SnipSnap device-test guide
 
-Everything in this build passed compile, 1971 JVM tests, and code review. The
-`:app` module has NO unit tests at all, so every UI change in it is verified by
-compilation, diff review and screenshots only — never by a test. This guide is keyed to exactly what desk review
-could NOT verify. Test in this order; each item names what "wrong" looks like.
+The JVM suites and the native host harness prove the engines. `:app` has
+no host Kotlin test source set, so UI changes there are proved by
+`android-build`, the `emulator-tests` Compose suites when `app/` changes,
+and this pass on a phone. Playback is the native `PadEngine` (Oboe), not
+SoundPool. The ordered hardware checklist with a line to write each
+answer on is [`docs/BENCH.md`](docs/BENCH.md). This guide is keyed to
+exactly what desk review could NOT verify. Test in this order; each item
+names what "wrong" looks like.
 
 ## First five minutes
-1. **NEW KIT ▸ STARTERS → any starter → tap pads.** Do hits feel instant? SoundPool
-   latency varies wildly per device; if taps feel spongy everywhere, say so —
-   that's an engine-swap conversation, not a bug fix.
+1. **NEW KIT ▸ STARTERS → any starter → tap pads.** Do hits feel instant?
+   `PadEngine` opens Exclusive, then Shared. If taps feel spongy everywhere,
+   check the header for `SHARED` and the logcat `PadEngine` line — that is
+   a device-path conversation, not a missing player.
 2. **KIT → tap the closed hat, then the open hat, then closed again.**
    The open hat must CUT OFF when the closed hat fires (choke group). If both
    ring together, chokes are broken on your device.
@@ -115,8 +120,8 @@ could NOT verify. Test in this order; each item names what "wrong" looks like.
 - LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears on
   the shelf), but it is still the least walked in the app: a TEMPO −/+ stepper
   and a block tap (WHAT IS THIS BLOCK) shipped since, both worth a device pass.
-- **Screen readers are the biggest blind spot.** 105 controls now carry
-  accessibility labels (up from 14), and a disabled control correctly reports as
+- **Screen readers are the biggest blind spot.** Most controls carry
+  accessibility labels, and a disabled control correctly reports as
   disabled rather than vanishing. But an emulator tree dump shows those labels on
   nodes marked non-focusable, beside the clickable ones — Compose may merge them
   at runtime, or may not, and `uiautomator` cannot tell the two apart. **Turn

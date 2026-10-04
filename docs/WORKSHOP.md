@@ -519,8 +519,8 @@ handed to BACKUP in `KitShelf` and counted by both toasts.
 Sizes as `docs/APP_PLAN.md` uses them (S under a day, M a few days).
 Every tool's logic lands in `:shell` with tests and `:app` only binds
 Compose to it — the repo's one architectural rule, and here it matters
-twice: `:app` has no test source set, and a cloud session cannot compile
-it.
+twice: `:app` has no host test source set, and a session without an
+Android SDK never compiles it (CI does, when the job runs).
 
 | # | Tool | Size | What it answers | Exit test |
 |---|---|---|---|---|

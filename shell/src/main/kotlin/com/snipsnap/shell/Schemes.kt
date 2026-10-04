@@ -6,7 +6,9 @@ import com.snipsnap.audio.DrumClass
 /**
  * The TapeOS scheme system as data — the single Kotlin source for what
  * `design/Schemes.dc.html` keeps as CSS custom properties (`.t-metal` …
- * `.t-vapor`) and what the two working prototypes render live.
+ * `.t-vapor`) and what the Oilslick prototype
+ * (`design/TapeOS Oilslick.dc.html`, plus `prototype/` for feel) renders
+ * live. The CLEAR prototype was deleted with the light schemes.
  *
  * The app's theme object reads these tables; the design files remain the
  * visual reference, but a colour that exists only in a design file cannot

@@ -1,5 +1,10 @@
 # Synth upgrade — from lab to instrument
 
+> **Read this as a 2026 snapshot of the gap, not current SYNTH.** U1
+> shipped the factory preset library; U8 shipped SAVE AS PRESET
+> (`docs/WORKSHOP.md` WS5). The "Presets: 0" line under "The gap" is why
+> that work happened, not what SYNTH looks like today.
+
 `docs/SYNTH_ROADMAP.md` is done: S1–S5 all shipped, eight engines, thirty
 voices, the FX rack, keygroup export, the instrument suite. This document is
 what comes after, and it starts from a different question than the roadmap

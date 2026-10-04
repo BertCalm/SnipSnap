@@ -124,15 +124,15 @@ wrong value truncates or over-runs the pad.
 
 ### Four layers, always — in drum programs
 
-Every drum instrument carries `<Layer number="1">` through `4`. We only fill
-layer 1 (velocity layers and round robins are a later feature), but the empty
-three are still emitted.
+Every drum instrument carries `<Layer number="1">` through `4`. A one-layer
+pad fills slot 1 and leaves the rest empty; a pad with velocity layers
+fills the later slots. The empty ones are still emitted.
 
 **Keygroup programs use 8, not 4.** Confirmed against all three harvested
 Ambient Box programs (`type="Keygroup"`): every instrument carries
 `<Layer number="1">` through `8`, unanimously, filled or not. `KeygroupWriter`
 now writes 8 (it assumed 4 until the corpus corrected it). See
-[What `KeygroupWriter` gets wrong](#what-keygroupwriter-gets-wrong) below.
+[What `KeygroupWriter` used to get wrong](#what-keygroupwriter-used-to-get-wrong) below.
 
 ### The ProgramPads blob
 
@@ -377,7 +377,7 @@ on every layer, differentiated by `SliceIncrement` / `SliceIncrementRngSeed` /
 [MPC3_FORMAT.md](MPC3_FORMAT.md) for the drum-side examples, which use
 vendor-chosen uneven bands rather than this even division.
 
-## What `KeygroupWriter` gets wrong
+## What `KeygroupWriter` used to get wrong
 
 Checked directly against
 [`xpm/src/main/kotlin/com/snipsnap/xpm/KeygroupWriter.kt`](../xpm/src/main/kotlin/com/snipsnap/xpm/KeygroupWriter.kt)

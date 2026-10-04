@@ -11,8 +11,9 @@ import java.io.File
  * tree is always reachable for anything these accessors don't cover.
  *
  * The field paths were originally taken from a community `.xpj` write-up and
- * are now checked against `reference/golden/` — 59 real projects and 13 real
- * track files. Several of that write-up's claims were wrong and are corrected
+ * are now checked against `reference/golden/` — 59 real projects at the
+ * time of the probe (this clone keeps the annotated subset) and the
+ * harvested tracks. Several of that write-up's claims were wrong and are corrected
  * in `docs/MPC3_FORMAT.md`; the ones this class depends on survived.
  */
 class Mpc3Project(val container: AcvsContainer) {

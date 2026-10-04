@@ -1,10 +1,15 @@
-# :app — the Android shell (M0, pre-written)
+# :app — the Android shell
 
-This tree is APP_PLAN.md's **M0 walking skeleton**, written ahead of time
-by the cloud session — which **cannot compile it**: that environment has
-no Android SDK and its network policy blocks `dl.google.com`. Every other
-module on this branch is tested; this one is carefully written, reviewed
-Kotlin that has **never been through a compiler**. Treat it accordingly.
+Compose bindings over the tested JVM modules, plus the native Oboe
+engines. CI compiles this (`android-build` in `.github/workflows/tests.yml`)
+and keeps a debug APK. A session without an Android SDK never sees
+`:app` in the Gradle graph (`settings.gradle.kts`) — that is not the same
+as "never been through a compiler."
+
+The tree began as [`docs/APP_PLAN.md`](../docs/APP_PLAN.md)'s M0 walking
+skeleton, written ahead of the first desktop compile. M0–M5 are built.
+What is unproven is every milestone's phone-in-hand exit test
+([`docs/BENCH.md`](../docs/BENCH.md)).
 
 ## Building (desktop session or any machine with an Android SDK)
 
@@ -52,10 +57,10 @@ flight. What needs an ear stays in the pass.
 
 ## M0's exit test (from docs/APP_PLAN.md)
 
-Browse kits on a phone, tap pads, hear WAVs (interim `SoundPool`), flip
-schemes in Tape Properties. The FRESH TAPE menu (nine starters from
-`StarterKits`, rendered by the `:synth` engines on-device) makes the
-shelf useful before capture (M1) exists.
+Browse kits on a phone, tap pads, hear WAVs (`PadEngine`), flip
+schemes in Tape Properties. The FRESH TAPE menu (`StarterKits`, rendered
+by the `:synth` engines on-device) makes the shelf useful before anything
+has been captured.
 
 ## What's here
 
@@ -77,9 +82,9 @@ against the hardware checks and gives each one a line to answer on. The
 list here stays the per-feature detail — what to look at, and which
 logcat tag to grab when something is wrong.
 
-- **SoundPool vs the kit WAVs**: starters render standard PCM WAVs;
+- **Starters vs the kit WAVs**: starters render standard PCM WAVs;
   confirm depth/rate decode cleanly. If any pad is silent, check the
-  logcat `SoundPool` line first.
+  logcat `PadEngine` line first.
 - **Scheme flip repaint**: every colour flows from `LocalScheme`, so a
   SETUP flip should repaint the whole window instantly; a stale surface
   means a colour got captured outside the composition local.
@@ -125,7 +130,7 @@ logcat tag to grab when something is wrong.
   `PadEngine` line.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
   grid — same engine PLAY uses, so it should feel just as tight, not
-  the SoundPool preview's decode lag. A closed hat should still cut a
+  a decode-on-tap lag. A closed hat should still cut a
   ringing open one (the mute group chokes here too); tapping the same
   pad rapidly should retrigger cleanly rather than layering forever;
   editing a pad on PAD SHEET and coming back to KIT should play the

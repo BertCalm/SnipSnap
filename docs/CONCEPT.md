@@ -93,23 +93,27 @@ One bank. One velocity layer per pad. No auto-anything.
 That is a complete loop from "I heard something" to "it's on my MPC," and
 everything below is additive on top of a thing that already works.
 
-## Deliberately v2
+## What used to be "deliberately v2"
 
-- **Auto-chop UI** — the detection and slicing themselves are done and tested
-  (`Transients`, `Chopper` in `:audio`); what's left is the gesture and the
-  review screen
-- **Auto-place UI** — the classifier and layout logic are done and tested
-  (`Classifier`, `AutoPlace` in `:audio`); what's left is showing the result
-  and making it obvious it can be overridden. Thresholds are calibrated against
-  synthetic material and want a pass over real captures.
-- **BPM + key detection** on loop-length snips, written into the filename
-- **Velocity layers and round robins**
-- **Banks B–D**
-- **Expansion-format export** (browsable in the MPC's Expansion tab)
-- **Keygroup programs**
-- **Synth engines** — generate drum sounds and (later) keys in-app, rendered
-  offline through the same kit pipeline. Roadmapped in
-  [`SYNTH_ROADMAP.md`](SYNTH_ROADMAP.md).
+These sat under that heading when the concept was written. They landed in
+`:audio`, `:kit`, `:xpm`, `:mpc3` and `:synth` while `:app` was being built,
+and they are not leftover:
+
+- **Auto-chop and auto-place** — `Transients`, `Chopper`, `Classifier`,
+  `AutoPlace`, and the CHOP review screen
+- **BPM + key** — tempo-fit and the key picker, written into the kit
+- **Velocity layers** — `KitLayer`, written through both generations
+- **Expansion-format export** — `ExpansionWriter` and `.xpn`
+- **Keygroup programs** — `KeygroupWriter` and native `.xty`
+- **Synth engines** — the SYNTH picker and the instrument suite.
+  [`SYNTH_ROADMAP.md`](SYNTH_ROADMAP.md) is the history of that work.
+
+Still open, and collected in [`BENCH.md`](BENCH.md):
+
+- **Banks B–D as a first-class surface** — Shuffle already writes bank B
+  (pads 17–32); the Live III check is still on the bench
+- **Hardware verification** of keys, `.xpn` import, the Expansion tile,
+  and a firmware save from the Live III itself
 
 ## Architecture
 
@@ -150,7 +154,7 @@ halfway with a half-written kit on the user's SD card.
 | Android 14+ requires consent per capture session | Design around long-lived sessions rather than per-snip capture; one dialog per session, not per snip |
 | Play Store policy | Never market as recording a named service. Frame as "sample your own sources." No URL downloader, ever. No root/Xposed capture-policy overrides. |
 | XPM format drift across firmware | Golden-file tests per target device; target the MPC 2-era format as the common denominator |
-| Scope creep into keygroups / expansions / layers | Three separate rabbit holes, all explicitly v2 |
+| Scope creep into keygroups / expansions / layers | Those three shipped in the core; the remaining risk is treating every new engine as equally necessary |
 
 ## Open questions
 

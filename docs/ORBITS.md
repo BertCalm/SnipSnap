@@ -257,7 +257,6 @@ set never reaches the rings' meeting, which is what arranging it did.
 
 ## Not yet
 
-- **Hardware verification** of the Android screen: the cloud session
-  cannot compile `:app` (see `app/README.md`), so the screen is reviewed
-  Kotlin until CI's `android-build` job or a desktop build has been through
-  it.
+- **Hardware verification** of the Android screen: CI's `android-build`
+  compiles it; what a compiler cannot prove is how the rings feel under
+  a finger. That is a bench row.

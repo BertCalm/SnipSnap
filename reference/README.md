@@ -103,7 +103,7 @@ while MPC 3 is the only target.
   real keygroup program; [`golden/keygroup/`](golden/keygroup/) now holds
   three, and the writer has since been corrected against them (all the
   definite defects in
-  [`../docs/XPM_STRUCTURE.md`](../docs/XPM_STRUCTURE.md#what-keygroupwriter-gets-wrong)
+  [`../docs/XPM_STRUCTURE.md`](../docs/XPM_STRUCTURE.md#what-keygroupwriter-used-to-get-wrong)
   are fixed), so its *structure* is referenceable. What a hardware save would still add is
   firmware provenance — those three are one vendor's output, and a vendor can
   be idiosyncratic without being wrong.

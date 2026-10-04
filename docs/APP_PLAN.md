@@ -1,9 +1,12 @@
 # The remaining work, scoped
 
 Everything left between here and a shipped product, sized and ordered.
-(The same work cut by product feature instead of by milestone, with the
-ROI ranking and per-feature exit tests, lives in
-[`FEATURE_PLAN.md`](FEATURE_PLAN.md).)
+**The status table below is the current picture.** Finished-milestone
+prose further down is a record of what that milestone did at the time
+(six modules, six schemes, interim SoundPool) and is not rewritten to
+match today. The same work cut by product feature instead of by
+milestone, with the ROI ranking and per-feature exit tests, lives in
+[`FEATURE_PLAN.md`](FEATURE_PLAN.md).
 Written after the format milestone: both MPC generations' writers are
 implemented, corpus-guarded, and — for drums — **hardware-verified on the
 Live III**. Sizes are working sessions (S ≈ under a day, M ≈ 1–3 days,
@@ -16,9 +19,9 @@ L ≈ a week-plus of sessions).
 | Capture/conditioning core (`:audio`) | done, tested — ring buffer, cleanup, transients, chopper, classifier, auto-place, pitch/scales/tuner, loudness, resampler + bake path |
 | Kit pipeline (`:kit`) | done, tested — kit folders, preflight, balance, in-key, velocity layers, recipes, every export driver |
 | Formats (`:xpm`, `:mpc3`) | done, tested, corpus-guarded — `.xpm`, keygroups, expansions, `.xpn`, `.xtd`, `.xty`, clips, `.xpj` projects; drums hardware-verified |
-| Synthesis (`:synth`) | done, tested — eight engines, FX rack, recipes, groove, S5 instrument suite with loop points |
-| Design | done — TapeOS system, eight schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
-| Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
+| Synthesis (`:synth`) | done, tested — the SYNTH engines, FX rack, recipes, groove, instrument suite with loop points |
+| Design | done — TapeOS system, eight schemes, artboards in `design/`, working phone-frame prototype in `design/TapeOS Oilslick.dc.html` (the CLEAR prototype was deleted with the light schemes) |
+| Acceptance artifacts (`testkit/`) | done — the downloadable hardware checks, from the diag kit to the Session project, plus later engine kits on disk |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
 | **The Android app** | **M0–M5 built** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models, card write included. What is *unproven* is every milestone's exit test: each needs a phone in a hand and none has been run — `docs/BENCH.md` §A is that list |
@@ -97,9 +100,10 @@ test-first.
 - **`ui-tooling` is deliberately absent** — it drags
   `androidx.compose.material` onto the debug classpath. A milestone that
   wants `@Preview` should re-add it with an `exclude`.
-- **Untested by design:** `@Composable` functions and the `SoundPool`
-  adapter. There is no Compose or Robolectric harness; M1 should decide
-  whether to add one rather than inherit the gap silently.
+- **Untested by design, then:** `@Composable` functions and the interim
+  `SoundPool` adapter. The adapter is gone (`PadEngine` replaced it).
+  `app/src/androidTest` now holds Compose UI suites; there is still no
+  host Kotlin test source set under `:app`.
 - **Deferred, with reasons:** the KGP "loaded multiple times" warning
   (wants a repo-wide version catalog); IME padding in `NewTapeDialog`
   (latent at the verified screen size); glyph fallback for ▶ ■ ⟳, which

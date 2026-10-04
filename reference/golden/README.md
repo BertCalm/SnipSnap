@@ -46,9 +46,10 @@ harvested — same reasoning as the `.gitignore` here, and the same reasoning th
 
 ### `mpc3-track/`
 
-The MPC 3 program container, eight real examples across six exporter builds and
-two host OSes. Each is gzip; decompressed, five lines of ACVS header precede the
-JSON body:
+The MPC 3 program container. The table annotates the ones whose headers
+or fields earned a note; the folder holds every harvested track, not
+only these, across several exporter builds and two host OSes. Each is
+gzip; decompressed, five lines of ACVS header precede the JSON body:
 
 | File | Header lines 1–5 |
 |---|---|

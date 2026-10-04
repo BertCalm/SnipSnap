@@ -1,9 +1,9 @@
 # The six features, planned to done
 
-The ROI-ranked feature list, mapped onto concrete work. This is the
-product-facing cut of the plan; [`APP_PLAN.md`](APP_PLAN.md) stays the
-authoritative milestone view of the app build — work items below reference
-its milestones rather than restating them.
+The ROI-ranked feature list, mapped onto concrete work. **Current status**
+is [`APP_PLAN.md`](APP_PLAN.md) §Where the project stands; this file is
+the product-facing cut of the same work. Work items below reference its
+milestones rather than restating them.
 
 **Owners.** `APP` = the desktop session building `:app` (Android SDK,
 Compose, services). `CORE` = the cloud session (pure Kotlin/JVM modules —
@@ -36,10 +36,10 @@ already done and hardware-verified for drums.
 
 | # | Work | Size | Exit test |
 |---|---|---|---|
-| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
+| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid; M0 used `PadPlayer`, now `PadEngine`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
 | F1.2 | ✓ done: M1 capture — the always-listening ring (`MicSessionService`, a foreground session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip) now reads either source: ARM TAPE (the mic) or ARM INSIDE (another app's audio via MediaProjection consent + `AudioPlaybackCapture`, stereo folded to the mono ring). Dead-air detection (`SilenceWatch`, :audio): three seconds of digital zeros while the phone reports music playing means the app on top opts out, and the TAPE JAM box says so. The platform ending a projection (lock screen, the stop chip) is a routine end with its own toast. The quick-settings tile (`SnipTileService`): SNIP while armed, opens the app to arm otherwise — arming needs a visible Activity (background FGS starts and the consent dialog both), so the tile hands over rather than pretending. Bench: the emulator can't do playback capture; a real phone proves the INSIDE path | L | snip YouTube from inside YouTube (bench); snip the room (✓); share a video in (F3.2) |
 | F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
-| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
+| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator` and the native `PadEngine` (EEE3; EEE10 retired the SoundPool `PadPlayer` that first shipped). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
 | F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
@@ -1541,14 +1541,14 @@ The Android side is written blind for CI's compiler, as :app always is.
 ## Wave EEE — M4, the pads on the native engine (APP + CORE)
 
 The latency milestone the app plan named first and shipped last: PLAY's
-pads leave SoundPool for the native engine the Surface brought. Every
+pads left SoundPool for the native engine the Surface brought. Every
 pad semantic stays on the JVM under test — which layer a velocity taps,
 which slice a chain steps to, level and pan as the MPC means them, tune
 as a ratio — and the native voice only ever hears "this sample, these
 frames, these gains, this speed". The engine reports each voice's end,
 so the allocator learns of an ending when it happens instead of from a
-timer. KIT's grid keeps the SoundPool player until the native voice has
-been heard on a phone; then it follows in one small PR.
+timer. KIT's grid followed once the native voice had been heard on a
+phone (EEE4), and EEE10 retired `PadPlayer` with GROOVE.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
@@ -1902,7 +1902,7 @@ APP (reconciled against the app 2026-09-07 — the milestones landed
     · ✓ X1.3 MELODIC · ✓ X2.3 TAKES + BIN · ✓ KEYS (the phone plays the
     instruments it makes) · ✓ W4.3 EVIL TWINS button · ✓ X4.4 consent row
     · ✓ F2.2 INSTANT KIT
-  ✓ M4 (F1.4, SoundPool not Oboe)
+  ✓ M4 (F1.4, then EEE onto PadEngine)
   ✓ M5 (F1.5 + F4.3) · ✓ Y3.3 SESSION export · ✓ F6.3 share flow · ✓ X3.3
     share/backup action
   ✓ W12 pad waveforms on the KIT grid

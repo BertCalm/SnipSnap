@@ -1,5 +1,10 @@
 # Prototypes
 
+`:app` exists and is the product. These HTML files are still the place to
+iterate on *feel* without a compile — tape drag, pad grid latency, DSP
+A/B in thumplab — and to regress an interaction against the browser
+version that already felt right. They are not a second app.
+
 ## tapedeck.html — the trim interaction, for real
 
 A self-contained touchable prototype of the Tape Deck screen. Open it in any
@@ -28,7 +33,8 @@ for the deck's opinions.
 ## playmode.html — the 16-pad grid, playable
 
 Full-screen dark-LCD pad grid with a synthesized demo kit, for answering "does
-finger-drumming feel right" before any app exists.
+finger-drumming feel right" in a browser — still useful as a feel reference
+against the native `PadEngine` path.
 
 What's real: pre-rendered buffers triggered on pointerdown (multi-touch), the
 hat choke (A03 kills A04), mono bass (choke group 3), a self-choking loop pad,

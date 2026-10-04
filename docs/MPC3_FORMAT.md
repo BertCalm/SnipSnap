@@ -61,7 +61,7 @@ is, and that is now confirmed rather than inferred:
 
 | Line 3 | Written to | Seen in |
 |---|---|---|
-| `SerialisableProjectData` | `.xpj` | 59 real projects; [`reference/golden/mpc3-project/`](../reference/golden/mpc3-project/) |
+| `SerialisableProjectData` | `.xpj` | 59 real projects at the time of the probe — this clone keeps the annotated subset in [`reference/golden/mpc3-project/`](../reference/golden/mpc3-project/) |
 | `SerialisableTrackData` | `.xtd`, `.xty` | [`reference/golden/mpc3-track/`](../reference/golden/mpc3-track/) |
 | `SerialisableAC50ExportData` | `.mpcsample` | [`reference/golden/mpc3-project/`](../reference/golden/mpc3-project/) |
 
