@@ -8,16 +8,17 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** The roster candidates' clips (docs/superpowers/specs/2026-10-01-glint-depth-and-presets-design.md §6.2): what is sent must be what the manifest says. */
 class GlintRosterAuditionGeneratorTest {
 
     @Test
-    fun `a clip is five seconds, ends at silence, is finite, and sits at the audition level`() {
+    fun `a clip is at least five seconds, ends at silence, is finite, and sits at the audition level`() {
         for (voice in GlintVoice.entries) {
             val clip = GlintRosterAuditionGenerator.clipFor(voice, GlintRosterCandidates.forVoice(voice).first())
-            assertEquals(5 * clip.sampleRate, clip.frameCount, "$voice: length in frames")
+            assertTrue(clip.frameCount >= 5 * clip.sampleRate, "$voice: ${clip.frameCount} frames is under five seconds")
             assertTrue(clip.samples.all { it.isFinite() }, "$voice: a sample is not finite")
             assertTrue(abs(clip.samples.last()) < 1e-6f, "$voice: the clip ends at ${clip.samples.last()}, not at zero")
             val peak = clip.samples.maxOf { abs(it) }
@@ -25,6 +26,23 @@ class GlintRosterAuditionGeneratorTest {
             val loudness = Loudness.of(clip)
             assertTrue(abs(loudness - 0.03f) < 5e-4f, "$voice: loudness $loudness is not the audition level 0.03")
         }
+    }
+
+    @Test
+    fun `a clip is five seconds, or exactly as long as its onset and one whole breath when that is longer`() {
+        fun candidate(voice: GlintVoice, overrides: Map<String, Float>) =
+            GlintRosterCandidates.Candidate(0, Glint.defaults(voice) + overrides)
+
+        val sweep = GlintRosterAuditionGenerator.clipFor(GlintVoice.SWEEP, candidate(GlintVoice.SWEEP, emptyMap()))
+        assertEquals(5 * sweep.sampleRate, sweep.frameCount, "SWEEP: a short onset leaves the clip at five seconds")
+
+        // STEP climbs a ladder of whole harmonics before it holds, 0.15 s a rung: PEAK high and BLOOM falling
+        // from far above is a long climb, so the owner would hear little else in five seconds.
+        val climb = candidate(GlintVoice.STEP, mapOf("PEAK" to 0.933f, "BLOOM" to 0.133f))
+        val held = Keys.glintPad(GlintVoice.STEP, climb.macros, GlintRosterAuditionGenerator.zoneMidi(GlintVoice.STEP)).loopStartFrame
+        val clip = GlintRosterAuditionGenerator.clipFor(GlintVoice.STEP, climb)
+        assertTrue(held > 5L * clip.sampleRate, "this STEP setting's onset and first breath must run past five seconds ($held frames), or the test checks nothing")
+        assertEquals(held.toInt(), clip.frameCount, "STEP with a long climb: the clip runs to the end of the first whole breath after it")
     }
 
     @Test
@@ -60,11 +78,23 @@ class GlintRosterAuditionGeneratorTest {
             val stale = listOf("SWEEP-01.wav", "VOWEL-16.wav", "manifest.txt")
             // Each kept name differs from every stale one by more than case: macOS's file system is
             // case-insensitive, so "sweep-01.wav" would be the very file "SWEEP-01.wav".
-            val keep = listOf("notes.txt", "SWEEP-01.mp3", "sweep-02.wav", "SWEEP-1.wav")
+            val keep = listOf("notes.txt", "SWEEP-01.mp3", "sweep-02.wav", "SWEEP-1.wav", "NOTES-01.wav")
             for (name in stale + keep) File(dir, name).writeText("x")
             GlintRosterAuditionGenerator.prepare(dir)
             for (name in stale) assertTrue(!File(dir, name).exists(), "$name was left behind")
             for (name in keep) assertTrue(File(dir, name).exists(), "$name was deleted, and it is not this tool's")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `preparing the folder stops when a stale file cannot be removed, and names it`() {
+        val dir = Files.createTempDirectory("glint-roster").toFile()
+        try {
+            File(dir, "SWEEP-01.wav").writeText("x")
+            val failure = assertFailsWith<IllegalStateException> { GlintRosterAuditionGenerator.prepare(dir) { false } }
+            assertTrue("SWEEP-01.wav" in (failure.message ?: ""), "the refusal does not name the file: ${failure.message}")
         } finally {
             dir.deleteRecursively()
         }
