@@ -65,9 +65,9 @@ remembered: a knock is a gesture, not a setting.
 
 What it is not, and why:
 
-- **Not a thirteenth tab.** The menu row's own comment says a menu of
-  twelve fits no phone, and a tab promises every player that the screen
-  behind it is for them.
+- **Not another menu tab.** The row already holds thirteen, and its own
+  comment says a menu of thirteen fits no phone. A tab also promises every
+  player that the screen behind it is for them.
 - **Not `BuildConfig.DEBUG`.** A debug APK is the only build anyone
   installs today, so a build-type gate would be a gate that is always
   open. When a release path exists this can be revisited; the knock costs

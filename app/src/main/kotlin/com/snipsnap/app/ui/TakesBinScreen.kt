@@ -73,9 +73,9 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  * still have to cohabit one screen regardless of what either is called.
  *
  * Routed as KIT-scoped overlay state in `App`, the same way PAD SHEET is —
- * not an [AppScreen] entry. MenuRow's items are fixed at ten and TAKES+BIN
- * isn't one of them; it's only reachable from the KIT action row, exactly
- * like PAD SHEET is only reachable by long-pressing a pad.
+ * not an [AppScreen] entry. It is not a menu tab; it's only reachable
+ * from the KIT action row, exactly like PAD SHEET is only reachable by
+ * long-pressing a pad.
  *
  * Opens its own [KitBuilderModel] on [entry]'s folder, same as PAD SHEET,
  * and reports every successful restore back up via [onKitUpdated] so

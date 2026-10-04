@@ -1840,11 +1840,11 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
 /**
  * The screen's own multi-engine adapter — file-private, per the brief ("the
  * engine abstraction stays file-private to the screen — :synth is not to
- * change"). All ten registered engines already converge on one shape (an
+ * change"). All thirteen engines in this enum already converge on one shape (an
  * `<X>Voice` enum, `macrosFor`/`defaults`/`scramble`/`render`, and an
  * `<X>Patch(name, voice, macros)` constructor registered in Patches.kt) —
- * this just gives the screen one dispatch point instead of ten near-
- * identical call sites, adapting to that convergence rather than the other
+ * this just gives the screen one dispatch point instead of one near-
+ * identical call site per engine, adapting to that convergence rather than the other
  * way around. Voices are held as `Enum<*>` (not each engine's own sealed
  * voice type) because the screen keeps "the current voice" as a single piece
  * of state that survives an engine switch; every `when (this)` branch below

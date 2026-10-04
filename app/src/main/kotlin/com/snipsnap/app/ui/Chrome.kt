@@ -98,12 +98,12 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** Not a menu tab: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
     KEYS("KEYS"),
 
     /**
      * Nor is this one: reached from KIT's action row on the pad you want
-     * taken apart, and left by its own ◄ KIT. A menu of twelve fits no
+     * taken apart, and left by its own ◄ KIT. A menu of thirteen fits no
      * phone, and SPLIT is something you do *to a pad* — which is what KIT
      * is for.
      */
@@ -263,13 +263,14 @@ data class MenuItem(val label: String, val screen: AppScreen)
 // now read TAPE ▸ CHOP ▸ KIT ▸ EXPORT, matching the stated order exactly,
 // still inside the same visible run.
 //
-// J12: the twelve tabs are four groups, and the row now says so with a
+// J12: the tabs are four groups, and the row now says so with a
 // [Layout.MENU_GROOVE_W] rule between them. The order above was already
 // doing the grouping's work - the four flow tabs in their stated order,
-// then the instruments, then the two utilities - but nothing drew the
-// seams, so a strip of twelve equal words read as one undifferentiated
-// run and the reordering's whole point was legible only to someone who
-// already knew the loop.
+// then the ways to play, then the two utilities - but nothing drew the
+// seams, so a strip of equal words read as one undifferentiated run and
+// the reordering's whole point was legible only to someone who already
+// knew the loop. J12 grouped twelve; SNAP has since made thirteen, and
+// the groups below are the current row.
 //
 // The groups are nested here rather than marked by a boundary index or a
 // `groupStart` flag on [MenuItem], because either of those is the order
@@ -277,11 +278,11 @@ data class MenuItem(val label: String, val screen: AppScreen)
 // the old seam, silently. Nesting makes the order and the grouping the
 // same declaration, so they cannot disagree. `ConventionTest`'s
 // "first-run loop names real menu tabs" law reads `MenuItem("...")` by
-// regex, so it sees all twelve through the nesting unchanged.
+// regex, so it sees every MenuItem through the nesting unchanged.
 //
 // There is no flattened `MENU_ITEMS` beside this any more: `MenuRow` was
-// its only reader, and a second spelling of the same twelve tabs kept
-// only for tidiness is the shape this file has just finished removing.
+// its only reader, and a second spelling of the same tabs kept only for
+// tidiness is the shape this file has just finished removing.
 val MENU_GROUPS = listOf(
     // Where you arrive, and the only tab that is a place rather than a
     // thing you do to a sound.
@@ -339,7 +340,7 @@ private fun MenuEdge(glyph: String, showing: Boolean) {
 }
 
 /**
- * The twelve tabs, and the two things September UAT found wrong with
+ * The thirteen tabs, and the two things September UAT found wrong with
  * them.
  *
  * Finding 9: the row was 26dp tall and each tab's tap area was its text

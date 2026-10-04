@@ -368,7 +368,7 @@ object Layout {
      * cue — the arrow that says there are more tabs that way (September
      * UAT, finding 10).
      *
-     * Narrow on purpose. The twelve tabs already run past the usable width
+     * Narrow on purpose. The menu tabs already run past the usable width
      * at the design frame, so every dp spent here hides a little more of
      * what it is pointing at.
      *
@@ -380,7 +380,7 @@ object Layout {
 
     /**
      * The vertical rule between two groups of menu tabs (J12): the shelf,
-     * the four flow tabs, the five instruments, the two utilities.
+     * the four flow tabs, the six play tabs, the two utilities.
      *
      * Two dp, because that is what a Win9x toolbar separator is - a shadow
      * line and a highlight line, one dp each - and because the row cannot

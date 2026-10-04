@@ -1,5 +1,15 @@
 # Synth upgrade — from lab to instrument
 
+> **The gap below is historical.** It was written when SYNTH had one
+> hardcoded `defaults()` per voice and no preset concept. `Presets`
+> (`synth/src/main/kotlin/com/snipsnap/synth/Presets.kt`) now rosters
+> sixteen engines, the SYNTH screen's picker has thirteen, and U8
+> (SAVE AS PRESET) has shipped — see that section. "Presets: 0" and the
+> voice count under it describe the gap this document was opened to
+> close, not the tree as it stands. The header's "eight engines, thirty
+> voices" is the same snapshot; the parenthetical two lines down already
+> says the roadmap outgrew it.
+
 `docs/SYNTH_ROADMAP.md` is done: S1–S5 all shipped, eight engines, thirty
 voices, the FX rack, keygroup export, the instrument suite. This document is
 what comes after, and it starts from a different question than the roadmap

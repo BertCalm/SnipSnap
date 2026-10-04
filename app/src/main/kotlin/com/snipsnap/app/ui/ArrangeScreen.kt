@@ -54,7 +54,7 @@ import kotlinx.coroutines.withContext
  * instead of cycled one at a time. When the kit has a user program the
  * variation section is that, not a derived clip: `Arranger` reads it from
  * the sidecar itself, so nothing here has to pass it in. Reached from GROOVE's own "SONG ▸"
- * button, not one of MenuRow's fixed ten — same GROOVE-scoped-overlay shape
+ * button, not a menu tab — same GROOVE-scoped-overlay shape
  * as PAD SHEET's GRAIN FIELD (see `App.kt`'s `arrangeOpen`).
  *
  * The plan (`Arranger.arrange`) is cheap — pure note-list arithmetic over

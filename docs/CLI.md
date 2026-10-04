@@ -12,7 +12,7 @@ java -jar snipsnap.jar chop break.wav --balance --export xtd
 
 It exists for three reasons:
 
-1. **Kits can be made from a desktop today**, before the Android app ships.
+1. **Kits can be made from a desktop.** The Android app is built; this jar runs the same writers on a machine that has no device.
 2. It is the first place the classifier meets **real audio** rather than
    synthetic test material — the calibration pass `CONCEPT.md` asks for.
    `snipsnap classify` prints the features next to every verdict for

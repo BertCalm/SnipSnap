@@ -358,9 +358,9 @@ fun App(shelf: KitShelf) {
     var busy by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over KIT. Not an
-    // AppScreen of its own — MenuRow's nine items are fixed and this isn't
-    // one of them; it's KIT-scoped overlay state instead, cleared whenever
-    // the user navigates to another tab (see `MenuRow`'s `onSelect` below).
+    // AppScreen of its own — it is not a menu tab; it's KIT-scoped overlay
+    // state instead, cleared whenever the user navigates to another tab
+    // (see `MenuRow`'s `onSelect` below).
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
 
     /**
@@ -410,21 +410,21 @@ fun App(shelf: KitShelf) {
     // pad opens on the same bench; a new kit starts with every box closed.
     var padSheetBox by remember(open?.dir) { mutableStateOf<String?>(null) }
     // TAKES + BIN (X2.3): same shape as PAD SHEET above — reachable only
-    // from the KIT action row, not one of MenuRow's fixed ten, so it's
+    // from the KIT action row, not a menu tab, so it's
     // KIT-scoped overlay state rather than its own AppScreen entry.
     var takesBinOpen by remember { mutableStateOf(false) }
     // PAD CAPTURE (capture-to-pad): same shape as PAD SHEET/TAKES+BIN — a
     // long-press on an *empty* pad opens this instead, so it's KIT-scoped
-    // overlay state too, not one of MenuRow's fixed ten.
+    // overlay state too, not a menu tab.
     var padCaptureSlot by remember { mutableStateOf<Int?>(null) }
     // GRAIN FIELD: same shape as PAD SHEET/TAKES+BIN/PAD CAPTURE above — only
-    // reachable from PAD SHEET's own action row, not one of MenuRow's fixed
-    // ten, so it's KIT-scoped overlay state too. Opening it closes PAD SHEET
+    // reachable from PAD SHEET's own action row, not a menu tab, so it's
+    // KIT-scoped overlay state too. Opening it closes PAD SHEET
     // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
     // two overlays are never both non-null for the same KIT composition.
     var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
     // TAPE SPLICE: same shape as GRAIN FIELD above — only reachable from
-    // PAD SHEET's own action row, not one of MenuRow's fixed ten, so it's
+    // PAD SHEET's own action row, not a menu tab, so it's
     // KIT-scoped overlay state too. Opening it closes PAD SHEET the same
     // way GRAIN FIELD's own onGrainField does below.
     var spliceSlot by remember { mutableStateOf<Int?>(null) }
@@ -438,8 +438,8 @@ fun App(shelf: KitShelf) {
     // `Int?` one-shot request, same shape as `kitBankRequest` below.
     var auditionArmSlot by remember { mutableStateOf<Int?>(null) }
     // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
-    // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
-    // fixed ten, so a boolean here rather than its own AppScreen entry.
+    // reachable only from GROOVE's own "SONG ▸" button, not a menu tab,
+    // so a boolean here rather than its own AppScreen entry.
     var arrangeOpen by remember { mutableStateOf(false) }
     // GROOVE's own swing/feel at the moment SONG ▸ was tapped — carried
     // across so ARRANGE plans the groove this screen is actually showing,

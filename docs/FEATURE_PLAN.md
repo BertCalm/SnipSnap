@@ -36,10 +36,10 @@ already done and hardware-verified for drums.
 
 | # | Work | Size | Exit test |
 |---|---|---|---|
-| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + the ten-tab `MenuRow`, `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid over `PadPlayer`), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
+| F1.1 | ✓ done: M0 walking skeleton — `TapeTheme` + `MenuRow` (thirteen tabs: SHELF, TAPE, CHOP, KIT, EXPORT, PLAY, GROOVE, ORBIT, SYNTH, SURFACE, SNAP, SETUP, HELP), `KitsScreen` (the shelf over `KitShelf`/`KitStore`), `KitScreen` (the 4×4 grid on `PadEngine`; M0's `PadPlayer` is gone, see EEE10), `PropertiesScreen` (the live scheme picker) | M | browse kits, tap pads, hear WAVs, flip schemes |
 | F1.2 | ✓ done: M1 capture — the always-listening ring (`MicSessionService`, a foreground session with ARM / SNIP / EJECT, `BubbleOverlay`, the TAPE screen's retroactive snip) now reads either source: ARM TAPE (the mic) or ARM INSIDE (another app's audio via MediaProjection consent + `AudioPlaybackCapture`, stereo folded to the mono ring). Dead-air detection (`SilenceWatch`, :audio): three seconds of digital zeros while the phone reports music playing means the app on top opts out, and the TAPE JAM box says so. The platform ending a projection (lock screen, the stop chip) is a routine end with its own toast. The quick-settings tile (`SnipTileService`): SNIP while armed, opens the app to arm otherwise — arming needs a visible Activity (background FGS starts and the consent dialog both), so the tile hands over rather than pretending. Bench: the emulator can't do playback capture; a real phone proves the INSIDE path | L | snip YouTube from inside YouTube (bench); snip the room (✓); share a video in (F3.2) |
 | F1.3 | ✓ done: M2 tape deck — `TapeScreen` over `TapeDeckModel` and `PeaksPyramid`, `TapeVoice` for audition, a snip handed to CHOP | M | a YouTube snip becomes a clean one-shot, cut on the hit |
-| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator`, `PadPlayer` on SoundPool (Oboe deliberately not wired — `PadPlayer`'s own note: effort on a component the pads don't need yet). The exit test is a bench row: USER | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
+| F1.4 | ✓ done: M4 play mode — `PlayScreen` over `VoiceAllocator` and the native `PadEngine`. M0's SoundPool `PadPlayer` was the interim and was deleted with its last caller (EEE10); the bench row below is that native engine, not the interim | M | finger drumming feels tight on a mid-range phone (✓ bench 2026-09-08, 8–11 ms exclusive) |
 | F1.5 | ✓ done: M5 export wizard — `ExportScreen` over `ExportWizardModel`, the format cycler (kit, expansion, MPC SESSION (`.xpj`)), SAF create-document through `MainActivity`; "the Live III plays it" stays a bench row | M | the card writes (✓); the Live III plays it (bench) |
 
 M3 is feature F2 below. Risks and their standing: APP_PLAN's table.
@@ -77,10 +77,12 @@ on desktop today. The risk table's opt-out mitigation depends on this.
 
 ## F4 — Synth starter kits
 
-**Done:** the most finished feature. Eight engines + FX, `SynthKits` /
+**Done:** the most finished feature. The synth engines and the FX rack, `SynthKits` /
 `ThumpKits` / `Shuffle` are **main-source** (the app can call them
 directly), recipes rebuild kits bit-for-bit from `kit.json`, SCRAMBLE is
-bounded macro rolls, and two generated kits are hardware-verified.
+bounded macro rolls, and two generated kits are hardware-verified. How
+many engines the SYNTH picker shows, and how many `Presets` rosters, is
+the synthesis row of [`APP_PLAN.md`](APP_PLAN.md).
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|

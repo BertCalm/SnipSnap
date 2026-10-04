@@ -91,18 +91,19 @@ one.
 **But it does not cover `app/src/main/cpp/CMakeLists.txt`.** There are two
 CMake files and they share nothing: the production one is what
 `app/build.gradle.kts` points `externalNativeBuild` at, while the test one
-is standalone and names the engine sources itself
-(`${ENGINE_DIR}/SurfaceEngine.cpp`, `PadEngine.cpp`, `jni.cpp`). So a new
-`.cpp` has to be added to *both* or the host suite silently stops covering
-it, and a production-CMake edit can leave `native-tests` green while
+is standalone and names the engine sources itself (`${ENGINE_DIR}/….cpp`).
+A new `.cpp` has to be added to *both* or the host suite silently stops
+covering it. `SourceListAgreementTest` in `:shell` fails when those two
+`.cpp` lists disagree — it reads the files, it does not compile them. A
+production-CMake edit can still leave `native-tests` green while
 `:app:assembleDebug` breaks. That one is proved only by `android-build`,
 or by an SDK-backed `./gradlew :app:assembleDebug` — the local run is not
 available in a cloud session, so read that job's log rather than trusting
 green native tests.
 
 This is the repo's recurring defect shape (one quantity in two places)
-wearing a build system: the source list exists twice, and nothing checks
-that the copies agree.
+wearing a build system: the source list exists twice. The test checks the
+names. It does not check that the production file still configures.
 
 There is **no linter and no formatter** in this build — no ktlint, no
 detekt, no spotless. Don't go looking for a `check` task that does more
@@ -159,16 +160,14 @@ costs a full CI cycle. Re-read the diff adversarially instead.
 Also worth knowing: PR runs are cancel-in-progress, so a superseded run
 showing "cancelled" after you pushed again is expected.
 
-**One comment in that workflow is stale — don't reason from it.** It says
-the Android SDK is required "from the moment `:app` exists" because AGP
-resolves it at configuration time, and that without it every module fails
-to configure. That was true when it was written (`a0a8fb0`, 2026-08-24),
-when `:app` was included unconditionally. The conditional include landed
-five days later (`982f103`) and inverts it: with no SDK, `settings.gradle.kts`
-simply leaves `:app` out and the nine JVM modules configure perfectly well
-— which is what a cloud session does every day. What `setup-android` buys
-`jvm-tests` is that `:app` *is* in the graph there, which is why that job
-can exclude it. A no-SDK run is not a configuration failure.
+**`setup-android` is there so `:app` can be excluded, not because the JVM
+modules need an SDK.** `settings.gradle.kts` includes `:app` only when it
+finds one. With no SDK the nine JVM modules configure, and `-x :app:test`
+fails because there is no `:app` to exclude. The comment on that step in
+`tests.yml` says this. An older wording claimed the opposite — no SDK,
+every module fails to configure — and was already wrong once the
+conditional include landed (`982f103`). A no-SDK run is not a
+configuration failure.
 
 ## When CI is red
 

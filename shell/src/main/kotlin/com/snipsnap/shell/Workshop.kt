@@ -18,9 +18,9 @@ package com.snipsnap.shell
  * BENCH ([BenchExport]) is a button, pressed on purpose, through the same
  * chooser BACKUP uses.
  *
- * Why not a tab: the menu row holds twelve and its own comment says a
- * thirteenth fits no phone; and a tab is a promise to every player that
- * the screen behind it is for them. Why not a build type: a debug APK is
+ * Why not a tab: the menu row holds thirteen and its own comment says a
+ * menu of thirteen fits no phone; and a tab is a promise to every player
+ * that the screen behind it is for them. Why not a build type: a debug APK is
  * the only build anyone installs today, so `BuildConfig.DEBUG` would be a
  * gate that is always open, which is no gate.
  */

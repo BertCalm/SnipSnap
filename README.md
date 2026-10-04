@@ -6,10 +6,16 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, ten
-synth engines, and writers for both MPC generations, **hardware-verified on
-an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
-play). No Android layer yet.
+**Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
+synth engines, and writers for both MPC generations — **and the Android app
+those modules were written for**. Drums are hardware-verified on an MPC
+Live III (native `.xtd` and compatibility `.xpm` kits load and play).
+`:app` is built through M5: capture, the tape deck, chop, the kit,
+PLAY/KEYS/SURFACE/GROOVE, SYNTH, SNAP, and export. CI compiles it on
+`android-build` and, when `app/` changes, runs the Compose suites on an
+emulator. PLAY's feel check is closed
+([`docs/BENCH.md`](docs/BENCH.md) A1, 2026-09-08); the rest of that phone
+list is still open.
 
 ## The loop
 
@@ -33,7 +39,8 @@ All plain Kotlin/JVM with no Android APIs, so the fiddly parts are unit tested
 on a normal JVM and the Android layer stays a thin shell over proven code.
 
 ```
-./gradlew test    # 2403 tests across nine modules
+./gradlew test    # JVM suites for the nine modules. :app joins the build
+                  # only when an SDK is present, and it has no host tests
 ```
 
 ### `:audio`
@@ -690,6 +697,8 @@ follow-up.
 - [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the developer's tools behind a knock on SETUP, SEND TO BENCH first, and the list after it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
+- [`docs/BENCH.md`](docs/BENCH.md) — the phone and Live III checks, in the order a session with the hardware should run them
+- [`DEVICE_TEST_GUIDE.md`](DEVICE_TEST_GUIDE.md) — the older desk-review checklist; the bench is the pass, this file is the failure shapes it still names
 
 ## Next step
 
@@ -710,6 +719,7 @@ file in `reference/golden/liveiii-36/` — the last word on what firmware
 itself writes. Procedure in [`reference/README.md`](reference/README.md).
 
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
-— nobody here owns an MPC One or a 2.x Live II — but `:xpm` is live regardless,
-since it is the only thing producing loadable output today and MPC 3 loads MPC 2
-content.
+— nobody here owns an MPC One or a 2.x Live II. `:xpm` still writes the
+compatibility format the Live III already loaded, and the native `.xtd`
+path is the one that played on 2026-08-23. MPC 3 loads MPC 2 content
+either way.

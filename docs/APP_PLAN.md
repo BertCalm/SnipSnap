@@ -16,12 +16,12 @@ L ≈ a week-plus of sessions).
 | Capture/conditioning core (`:audio`) | done, tested — ring buffer, cleanup, transients, chopper, classifier, auto-place, pitch/scales/tuner, loudness, resampler + bake path |
 | Kit pipeline (`:kit`) | done, tested — kit folders, preflight, balance, in-key, velocity layers, recipes, every export driver |
 | Formats (`:xpm`, `:mpc3`) | done, tested, corpus-guarded — `.xpm`, keygroups, expansions, `.xpn`, `.xtd`, `.xty`, clips, `.xpj` projects; drums hardware-verified |
-| Synthesis (`:synth`) | done, tested — eight engines, FX rack, recipes, groove, S5 instrument suite with loop points |
+| Synthesis (`:synth`) | done, tested — SYNTH's picker registers thirteen engines (`SynthScreen`'s `Engine`: THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK). `Presets` rosters sixteen, and four of those (BORE, ARCO, MERCURY, TREMOR) are not in the picker; GLINT is in the picker and has an empty roster. FX rack, recipes, groove, S5 instrument suite with loop points |
 | Design | done — TapeOS system, eight schemes, ten artboards, **two fully working phone-frame prototypes** (Oilslick, Clear) |
 | Acceptance artifacts (`testkit/`) | done — 14 downloadable checks, from the diag kit to the one-file Session project |
 | CLI (`:cli`) | done, tested — `snipsnap.jar`: chop → classify → place → export from any desktop; the classifier's real-audio calibration tool (`docs/CLI.md`) |
 | View-models (`:shell`) | done, tested — scheme tables, peaks pyramid, tape-deck transport physics, voice allocation, chop review, kit builder, export wizard, personality system; `:app` binds Compose to these |
-| **The Android app** | **M0–M5 built** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models, card write included. What is *unproven* is every milestone's exit test: each needs a phone in a hand and none has been run — `docs/BENCH.md` §A is that list |
+| **The Android app** | **M0–M5 built** — capture (mic, inside, share-in), the tape deck, the kit and chop flow, PLAY/KEYS/SURFACE/GROOVE/SPLIT on the native engine, SYNTH, and the export wizard over `:shell`'s tested models, card write included. PLAY's exit test is closed (`docs/BENCH.md` A1, 2026-09-08, 8–11 ms exclusive). The rest of that phone list is open |
 | Hardware verification | drums passed; keys, instruments, `.xpn`, tile, Session pending (user) |
 
 The concept doc's "deliberately v2" list (velocity layers, expansions,

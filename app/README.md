@@ -1,10 +1,16 @@
-# :app — the Android shell (M0, pre-written)
+# :app — the Android shell
 
-This tree is APP_PLAN.md's **M0 walking skeleton**, written ahead of time
-by the cloud session — which **cannot compile it**: that environment has
-no Android SDK and its network policy blocks `dl.google.com`. Every other
-module on this branch is tested; this one is carefully written, reviewed
-Kotlin that has **never been through a compiler**. Treat it accordingly.
+M0–M5 are in this tree: the shelf, capture, the tape deck, chop, the kit,
+PLAY/KEYS/SURFACE/GROOVE, SYNTH, SNAP, and the export wizard. CI's
+`android-build` job compiles it (`:app:assembleDebug`). `app/src/androidTest`
+is the Compose suite, run by `emulator-tests` when something under `app/`
+changes. There is still no host test source set — `app/src/test` does not
+exist — so `./gradlew test` says nothing about this module's Kotlin.
+
+A cloud session cannot compile `:app` locally. `settings.gradle.kts`
+includes the module only when it finds an SDK (`local.properties`
+`sdk.dir`, then `ANDROID_HOME` / `ANDROID_SDK_ROOT`), and that session
+cannot reach `dl.google.com`. The JVM modules build without it.
 
 ## Building (desktop session or any machine with an Android SDK)
 
@@ -18,11 +24,10 @@ Kotlin that has **never been through a compiler**. Treat it accordingly.
 
 2. `./gradlew :app:assembleDebug`
 
-3. Fix what the compiler finds. The likely nit categories, in honesty
-   order: Compose API drift against the pinned BOM (2024.12.01), an
-   import the blind write missed, a modifier-order surprise. The
-   architecture is deliberately boring — no algorithm lives here, every
-   screen binds to `:shell`/`:kit` code that is already tested.
+3. The architecture is deliberately boring — no algorithm lives here,
+   every screen binds to `:shell`/`:kit` code that is already tested.
+   A compiler failure is a defect in this tree, not an expected
+   first-compile nit: `android-build` already takes it through AGP.
 
 4. Install: `adb install app/build/outputs/apk/debug/app-debug.apk`
    (or copy the APK to the phone and tap it).
@@ -63,8 +68,8 @@ shelf useful before capture (M1) exists.
 |---|---|
 | Scaffold | `build.gradle.kts` (AGP 8.7.3, Kotlin 2.0.21 + Compose plugin, minSdk 29, foundation-only Compose — no Material; TapeOS draws itself) |
 | Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers; OILSLICK sweep |
-| Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
-| Screens | SHELF (the shelf + FRESH TAPE), KIT (4×4 bank A, MPC geometry: A13 top-left, A01 bottom-left), SETUP (live scheme picker + PERSONALITY), HELP, honest stubs naming M2–M5 |
+| Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, thirteen-tab menu row (SHELF, TAPE, CHOP, KIT, EXPORT, PLAY, GROOVE, ORBIT, SYNTH, SURFACE, SNAP, SETUP, HELP), 3-cell status bar with `Copy` quips, toast overlay |
+| Screens | Those thirteen tabs, plus overlays that are not tabs (PAD SHEET, KEYS, SPLIT, and the pad-sheet doors). KIT is the 4×4, MPC geometry: A13 top-left, A01 bottom-left. SETUP is the live scheme picker plus PERSONALITY |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
 | Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
@@ -77,9 +82,10 @@ against the hardware checks and gives each one a line to answer on. The
 list here stays the per-feature detail — what to look at, and which
 logcat tag to grab when something is wrong.
 
-- **SoundPool vs the kit WAVs**: starters render standard PCM WAVs;
-  confirm depth/rate decode cleanly. If any pad is silent, check the
-  logcat `SoundPool` line first.
+- **Kit WAVs through PadEngine**: starters render standard PCM WAVs;
+  confirm depth/rate decode cleanly. The SoundPool interim (`PadPlayer`)
+  is gone — every screen that makes a sound goes through `PadEngine`.
+  If any pad is silent, check the logcat `PadEngine` line first.
 - **Scheme flip repaint**: every colour flows from `LocalScheme`, so a
   SETUP flip should repaint the whole window instantly; a stale surface
   means a colour got captured outside the composition local.
@@ -614,7 +620,6 @@ logcat tag to grab when something is wrong.
 
 ## Fonts / licensing
 
-The four faces were fetched from Google Fonts (open licenses — OFL /
-Apache 2.0 families). Fine for development and sideloaded test builds;
-before any public release, confirm each family's license on its Google
-Fonts page and bundle the license texts.
+The four faces are vendored under `res/font/`, with the license texts in
+`licenses/` (see `licenses/README.md`): SIL Open Font License 1.1 for
+VT323, Silkscreen, and Michroma; Apache License 2.0 for Permanent Marker.
