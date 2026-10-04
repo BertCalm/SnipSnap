@@ -665,7 +665,7 @@
     audio.addEventListener('ended', function () {
       if (repeat && current) {
         audio.currentTime = 0;
-        audio.play().catch(function () { setPlaying(null); });
+        playCurrent(audio);
       } else {
         setPlaying(null);
       }
@@ -700,6 +700,13 @@
     }
   }
 
+  function playCurrent(a) {
+    var playing = current;
+    a.play().catch(function () {
+      if (current === playing) setPlaying(null);
+    });
+  }
+
   function toggle(voice, fid, name, pad, row) {
     var a = ensureAudio();
     if (current && current.pad === pad) {
@@ -710,7 +717,7 @@
     a.pause();
     a.src = voice.id + '/' + fid + '.wav';
     setPlaying({ voice: voice, fid: fid, name: name, pad: pad, row: row });
-    a.play().catch(function () { setPlaying(null); });
+    playCurrent(a);
   }
 
   $('repeat').addEventListener('click', function () {

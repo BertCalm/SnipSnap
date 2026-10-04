@@ -482,6 +482,7 @@ object Aerostat {
         val contactNoise = Dsp.Noise(seed xor 0x27bb2ee6)
         val quick = Whistle(internal, quick = true, noiseQ)
         val heavy = Whistle(internal, quick = false, noiseH)
+        val heavyRatio = centsToRatio(HEAVY_DETUNE_CENTS)
         val tubes = TubePair(freq, internal)
         var lip = 0.0
         var i = 0
@@ -505,18 +506,19 @@ object Aerostat {
                     // One pole keeps the contact under 2 kHz so the head is not a snare.
                     tex = tubes.shapeContact(tex)
                 }
-                val tube = tubes.sample(contact, dt)
+                val tubeQ = tubes.sampleQuick(contact, dt)
+                val tubeH = tubes.sampleHeavy(contact, dt)
                 val wQ = quick.sample(flowQ, freq * ratio, puff, dt)
-                val wH = heavy.sample(flowH, freq * ratio * centsToRatio(HEAVY_DETUNE_CENTS), puff, dt)
+                val wH = heavy.sample(flowH, freq * ratio * heavyRatio, puff, dt)
                 // The tube is the knock. It has to be audible, and it has to lose
                 // to the whistle once the valve is open, or the note files as a tom.
                 val tubeScale = 0.42
                 val mixed = when (tap) {
-                    AerostatTap.TUBE -> (tube.first + tube.second + tex) * tubeScale
+                    AerostatTap.TUBE -> (tubeQ + tubeH + tex) * tubeScale
                     AerostatTap.FLOW -> wQ + wH
-                    AerostatTap.QUICK -> tube.first * tubeScale + tex * tubeScale + wQ
-                    AerostatTap.HEAVY -> tube.second * tubeScale + wH
-                    AerostatTap.FULL -> (tube.first + tube.second + tex) * tubeScale + wQ + wH
+                    AerostatTap.QUICK -> tubeQ * tubeScale + tex * tubeScale + wQ
+                    AerostatTap.HEAVY -> tubeH * tubeScale + wH
+                    AerostatTap.FULL -> (tubeQ + tubeH + tex) * tubeScale + wQ + wH
                 }
                 val open = (height * lift).coerceIn(0.0, 1.0)
                 val cutoff = 650.0 + 8000.0 * open
@@ -638,11 +640,9 @@ object Aerostat {
         private var contactLp = 0.0
         private val contactA = 1.0 - exp(-2.0 * PI * 900.0 / rate)
 
-        fun sample(contact: Double, dt: Double): Pair<Double, Double> {
-            val q = quick.tick(contact, dt)
-            val h = heavy.tick(contact * 0.85, dt)
-            return q to h
-        }
+        fun sampleQuick(contact: Double, dt: Double): Double = quick.tick(contact, dt)
+
+        fun sampleHeavy(contact: Double, dt: Double): Double = heavy.tick(contact * 0.85, dt)
 
         fun shapeContact(x: Double): Double {
             contactLp += contactA * (x - contactLp)
@@ -698,6 +698,8 @@ object Aerostat {
         private val buf = DoubleArray(8192)
         private var w = 0
         private var lp = 0.0
+        private val sustainDecay = exp(-1.0 / (rate * 6.0))
+        private val ringDecay = exp(-6.907755 / ((if (quick) 0.42 else 0.62) * rate))
 
         fun prime(freq: Double) {
             val n = (rate / freq).roundToInt().coerceIn(8, buf.size - 2)
@@ -733,12 +735,9 @@ object Aerostat {
             val kick = if (flowing) puff * 0.12 else 0.0
             val written = if (speaking > 0.02) {
                 val jet = 1.35 + 2.8 * speaking
-                val hold = exp(-1.0 / (rate * 6.0))
-                hold * tanh(jet * bore + breath + kick)
+                sustainDecay * tanh(jet * bore + breath + kick)
             } else {
-                val t60 = if (quick) 0.42 else 0.62
-                val ring = exp(-6.907755 / (t60 * rate))
-                ring * bore + breath + kick
+                ringDecay * bore + breath + kick
             }
             write(written)
             if (!flowing && abs(bore) < 1e-10) return 0.0
