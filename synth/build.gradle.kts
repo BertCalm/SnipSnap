@@ -361,6 +361,16 @@ tasks.register<JavaExec>("generateMercuryKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render the AEROSTAT audition clips, manifest and page under testkit/aerostat-audition/. See AerostatAuditionGenerator. */
+tasks.register<JavaExec>("generateAerostatAudition") {
+    group = "distribution"
+    description = "Render the AEROSTAT audition clips, manifest and listening page under testkit/aerostat-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AerostatAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/aerostat-audition")
+}
+
 /** Render the MERCURY audition clips, manifest and page under testkit/mercury-audition/. See MercuryAuditionGenerator. */
 tasks.register<JavaExec>("generateMercuryAudition") {
     group = "distribution"
