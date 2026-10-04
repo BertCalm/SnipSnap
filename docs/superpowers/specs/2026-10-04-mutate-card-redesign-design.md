@@ -1,6 +1,6 @@
 # MUTATE — the card redesign: words, layout, and an honest KEEP
 
-**Status:** design. Between 2026-10-03 and 2026-10-04 the owner approved the
+**Status:** design, approved by the owner on 2026-10-04 (PR #448). Between 2026-10-03 and 2026-10-04 the owner approved the
 design brief this document follows, in two sections: section 1 (what the card
 shows and the words it uses) and section 2 (its buttons, its safety, and the
 three rounds that ship it). Nothing here is implemented. The redesign keeps every capability
@@ -555,7 +555,7 @@ example `KEEP · SPLICE × B07`.
   TAPE's KEEP on other screens. The default is KEEP, since the house rule is one
   meaning per word on a card (`2026-09-13-fx-rack-expansion-design.md:164-168`).
   The alternative is SAVE, which DRIFT's new label already uses for the same act
-  (Decision 1).
+  (Decision 1). The owner chose KEEP on 2026-10-04.
 
 **DRIFT moves beside KEEP and is relabelled to say it saves:**
 `DRIFT · BLEND & SAVE`, 20 characters. It picks a partner at random off the shelf,
@@ -688,7 +688,7 @@ and the strip reflect what the pad actually holds.
   had, read from its tombstone. So after UNDO the TREATMENT box, the MUTATE strip
   and the card read what the pad holds, including a treatment applied before the
   mutate.
-- **Which take: owner answer required before the M3 plan is written (Decision 4).**
+- **Which take: the original (Decision 4, answered by the owner on 2026-10-04).**
   The brief says UNDO returns the pad to its original. The default follows it:
   UNDO restores the entry the bin records as the original, found as KEEP finds it,
   directly. In the common case (KEEPs with BUILD ON THIS off, no DRIFT on top) that
@@ -701,8 +701,8 @@ and the strip reflect what the pad actually holds.
   (`KB:526-529`, `KB:607-610`). So if the original carried a treatment, a later
   treatment UNDO would bring back a stale mutate result. The alternative is one step
   back in those cases (`UNDO · ONE STEP BACK`), which keeps the bin's order but
-  does not do what the brief's label says. M3 as specified here is therefore
-  narrower than the brief until the owner answers.
+  does not do what the brief's label says. The owner chose the original on
+  2026-10-04, with this cost.
 - UNDO has four states, computed by `MutateSheet.undoState` ("Architecture"):
 
   | State | When | Button | On tap |
@@ -1559,7 +1559,7 @@ approved at the A1 gate on 2026-10-02.
 |---|---|---|
 | **M1 · words and honesty** | the move lines; the knob's meanings and its move under the move line; the dead rows as words (`KnobRow`, `CT:2058` re-proved); PARTNER everywhere; HEAR and KEEP dimmed, not disabled, with toasts; the commit verb KEEP and DRIFT beside it as `DRIFT · BLEND & SAVE`; the result playing after KEEP and DRIFT; the typed refusals; ROULETTE and A FILE undimmed; the polarity flip and the length note in the toasts (with the `lengthMs` seam); UNDO dimmed with a toast; the pairing line as the status line. Also BECOME's own phone check (A1b), folded in, all eleven lines kept as steps | M1's phone check, below. A pass with CI green also flips QQ4 to done (`docs/FEATURE_PLAN.md:1173`), because every A1b line is one of its steps |
 | **M2 · layout** | the pairing line with `▶ MINE` and `▶ THEIRS`; the folded picker, `PARTNER · <name>  CHANGE ▸`, opening `PadChooserPanel` over `PadChooser` (the component TERRA's R4 reuses); KEEP stating its outcome (one or two lines, never without its partner); the first-tap rule, with a KEEP leaving the settings unheard, and KEEP lit when heard; the panel chips' spoken state; `roomKept` and `roomLanded` reworded; the title row removed; UNDO on the bottom row | M2's phone check |
-| **M3 · safety** | KEEP from the original by default (restore-first from the entry the tombstones mark, the five `Base` cases); BUILD ON THIS, never outliving the mutate; the base in the first-tap rule; the tombstone seam; the honest UNDO (`undoState`, the restored recipe); the MUTATE strip asking `carriesMutate`; recipe regenerability, with its tests; `CT:2002` re-proved. **As specified, M3 is narrower than the brief in two places**: UNDO's behaviour after a chain or a DRIFT waits on Decision 4, which needs the owner's answer before the M3 plan is written; and a pad mutated before M3 cannot start from its original, because its bin records none (FROM_BEFORE, ONE_STEP) | M3's phone check, after Decision 4 is answered |
+| **M3 · safety** | KEEP from the original by default (restore-first from the entry the tombstones mark, the five `Base` cases); BUILD ON THIS, never outliving the mutate; the base in the first-tap rule; the tombstone seam; the honest UNDO (`undoState`, the restored recipe); the MUTATE strip asking `carriesMutate`; recipe regenerability, with its tests; `CT:2002` re-proved. UNDO back to the original after a chain or a DRIFT too (Decision 4, answered 2026-10-04). **As specified, M3 is narrower than the brief in one place**: a pad mutated before M3 cannot start from its original, because its bin records none (FROM_BEFORE, ONE_STEP) | M3's phone check |
 
 **Effort**, from footprints (*estimate*): M1 is about 170 lines in `:shell`
 (`MutateSheet` words and refusals, `Copy`, `Mutate.RouletteRefused`, the `lengthMs`
@@ -1743,8 +1743,7 @@ Yes if every line the card showed matched what you heard.
 4. Tap BUILD ON THIS to turn it off, tap MORPH and KEEP twice. The toast says
    `MADE FROM THE ORIGINAL. THE LAST RESULT IS REPLACED.`: no splice and no stack in
    it.
-5. Tap UNDO. What the bottom row reads and what comes back are Decision 4's answer;
-   the M3 plan writes this step from it. Under the default the row reads
+5. Tap UNDO. The bottom row reads
    `UNDO · BACK TO THE ORIGINAL` and your original pad comes back, and BUILD ON THIS
    is off.
 
@@ -1814,21 +1813,26 @@ documents carry their own dates.
 | HEAR == KEEP | preview and apply share one mapping and one render | house (`MST:96`; BECOME spec) |
 | Where the logic lives | `:app` cannot be compiled here, so logic is in `:shell` with tests; `ConventionTest`, CI and the owner's phone check `:app` | the environment |
 | Landing | a docs-only PR, zero check runs by design | house, as BECOME and MAGNET |
+| This document | approved, with the defaults of the decisions below except where answered | owner, 2026-10-04, in review of PR #448 |
+| The commit verb (Decision 1) | KEEP | owner, 2026-10-04, in review of PR #448 |
+| UNDO after a BUILD ON THIS chain or a DRIFT on a kept pad (Decision 4) | back to the original, restored directly, with the cost Decision 4 records | owner, 2026-10-04, in review of PR #448 |
 
 ## Decisions for the owner
 
 Each with the default this document takes (in bold). A default stands until the
 owner says otherwise. Decision 1 alone is the brief's own default (KEEP or SAVE);
 the rest are places where this document had to choose something the brief leaves
-open, or where following the brief has a cost the owner should see. **Decision 4
-needs the owner's answer before the M3 plan is written.**
+open, or where following the brief has a cost the owner should see. **The owner
+approved this document on 2026-10-04, answered Decisions 1 and 4 (KEEP; back to
+the original), and took the other defaults.** Each still stands only until the
+owner says otherwise.
 
 | # | Decision | Default | Alternatives | What it costs |
 |---|---|---|---|---|
-| 1 | The commit verb | **KEEP** (the card rule is one meaning per word on a card) | SAVE | KEEP also means KEEP ROOM on OUTSIDE (`COPY:1605-1606`) and TAPE's KEEP, on other screens. SAVE matches DRIFT's new label, `BLEND & SAVE`, which describes the same act, so SAVE gives the card one verb instead of two |
+| 1 | The commit verb. **Answered by the owner, 2026-10-04: KEEP** | **KEEP** (the card rule is one meaning per word on a card) | SAVE | KEEP also means KEEP ROOM on OUTSIDE (`COPY:1605-1606`) and TAPE's KEEP, on other screens. SAVE matches DRIFT's new label, `BLEND & SAVE`, which describes the same act, so SAVE gives the card one verb instead of two |
 | 2 | BUILD ON THIS | **Off by default, held per pad, opening off on every pad** | Remembered per kit; or on by default (today's chaining) | Per kit carries a deliberate chain onto pads that never asked for one; on by default keeps bug 7 as the common path |
 | 3 | The chained-pad line. **The brief's "says how to unchain" is not met on the phone**: no phone control unchains a pad, and sending the chop again makes new pads, leaving this one chained | **`THIS PAD PLAYS ITS SLICES IN TURN. MUTATE WANTS ONE SAMPLE - SEND THE CHOP AGAIN IN CLASSIC FOR PADS OF ONE SAMPLE.`** | Also name the CLI's `robin --undo`; or name nothing and say only that it cannot be mutated; or build a phone unchain control (out of scope) | Copy shouts, so a CLI command in it reads `ROBIN --UNDO`, which does not run as typed (the flag is lower case, `KB:1190`), and `robin --undo` does not undo a `--break-pad` chain (`ChopCommand.kt:316-319`, also `dig` and `beat`). Naming nothing breaks "say the next step". The default is true for every chain but leaves the pad chained |
-| 4 | **Owner answer needed before the M3 plan.** What UNDO restores after a BUILD ON THIS chain or a DRIFT on a kept pad, where the newest take is not the original | **The brief's: `UNDO · BACK TO THE ORIGINAL`, restoring the entry the tombstones mark as the original, directly** | `UNDO · ONE STEP BACK`, restoring the newest take | The direct restore does not re-bin the original, so the chain's in-between results become the newest takes of the pad's file, and newest-first restores (TREATMENT's UNDO, `untreatPad`; DUST's and SMEAR's restore-first) can then bring back a stale mutate result when the original carried a treatment. One step back keeps the bin's order but does not do what the brief's label says |
+| 4 | **Answered by the owner, 2026-10-04: back to the original.** What UNDO restores after a BUILD ON THIS chain or a DRIFT on a kept pad, where the newest take is not the original | **The brief's: `UNDO · BACK TO THE ORIGINAL`, restoring the entry the tombstones mark as the original, directly** | `UNDO · ONE STEP BACK`, restoring the newest take | The direct restore does not re-bin the original, so the chain's in-between results become the newest takes of the pad's file, and newest-first restores (TREATMENT's UNDO, `untreatPad`; DUST's and SMEAR's restore-first) can then bring back a stale mutate result when the original carried a treatment. One step back keeps the bin's order but does not do what the brief's label says |
 | 5 | What a second KEEP does to the last result | **Replaced, not binned** (DUST's and SMEAR's restore-first idiom) | Bin it too | Binning it puts the last result into the bin as a mutate take that newest-first restores can find after a later UNDO (Decision 4's cost). Replacing it loses the last result's bytes; its recipe can rebuild it while its partner exists |
 | 6 | Does DRIFT start from the original too? | **No**: DRIFT builds on what the pad holds, as today | Restore-first for DRIFT as for KEEP | The brief keeps DRIFT unchanged, and its tests and laws stay; the cost is that a DRIFT on a kept pad builds on the result, so its UNDO depends on Decision 4 |
 | 7 | The recipe a BUILD ON THIS keep writes | **The last step only**, as the CLI's chaining and every treatment write it; no new key | A `built` flag inside `mutate` (written only when true) so the strip can read `· BUILT ON` | The `mutate` keys are permanent and shared by several writers (BECOME spec `:585-592`); a new one needs the extras guard (`MU:227`) widened and every reader to tolerate it |
