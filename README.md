@@ -352,11 +352,11 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK and GRAINS round out the lineup — thirteen engines in the `Engine` picker
-counting SKIN, RESIN, TIDE, GLINT, SIREN and FORK; GRAINS is a fourteenth thing entirely, out of the
-picker's scope since it has no voice enum and works on a source snip
-instead of picking one. VOX is formant vocal
-synthesis — the shopping-mall-keyboard choir, proudly: a VOWEL knob morphs
+VOX, FORK and GRAINS round out the lineup — thirteen engines in the `Engine`
+picker counting SKIN, RESIN, TIDE, GLINT, SIREN and FORK. GRAINS sits outside
+that picker: it has no voice enum and works on a source snip instead of
+picking one. VOX is formant vocal synthesis — the shopping-mall-keyboard
+choir, proudly: a VOWEL knob morphs
 continuously through A→E→I→O→U over CHOIR/ROBOT/GHOST throats. It sings
 through a vocal-cord pulse with vibrato; CHOIR is seven singers in
 sections, in stereo; a long DECAY holds; SIZE scales the throat from
@@ -378,9 +378,9 @@ snapped PITCH, SHINE), deterministic per seed, honest enough that a
 texture classifies as the LOOP it is. `SynthKits.cloud()` is the
 atmosphere kit both of them make together.
 
-SNAP is the twelfth thing, and the other half of the name: a photo becomes
-a pad. A picture is already mathematical data — three numbers per pixel —
-so the engine only decides which numbers to read and in what order. One
+SNAP is the other half of the name: a photo becomes a pad. A picture is
+already mathematical data — three numbers per pixel — so the engine only
+decides which numbers to read and in what order. One
 line through the photo is one cycle of a wavetable (HORIZON reads across,
 each column averaged so it is the picture's silhouette rather than one
 noisy row; PLUMB reads down; ORBIT walks a circle round the centre, which
