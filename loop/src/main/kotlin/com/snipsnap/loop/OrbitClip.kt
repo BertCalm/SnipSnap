@@ -43,7 +43,10 @@ object OrbitClip {
      */
     val MAX_BOUNCE_FRAMES: Long = OrbitEngine.MAX_RENDER_FRAMES.toLong()
 
-    /** The clip's bar is always 16 sixteenths: [Mpc3Clip] has bars but no time signature. */
+    /**
+     * Sixteenths in the 4/4 container a track file still pads to.
+     * A project clip declares the set's own bar via [declaredBarPulses].
+     */
     const val CLIP_BAR_STEPS = 16
 
     /** Every ORBIT clip's name starts with this, so saving replaces the last one and the GROOVE screen can tell it apart. */

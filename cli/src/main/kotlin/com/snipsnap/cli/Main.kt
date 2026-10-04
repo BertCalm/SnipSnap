@@ -20,11 +20,11 @@ class CliError(message: String) : Exception(message)
  * format the writers speak — MPC 2 program folder, browsable expansion,
  * one-file `.xpn`, native MPC 3 `.xtd`, or a whole `.xpj` project.
  *
- * It exists for three reasons: kits can be made from a desktop today,
- * before the Android app ships; it is the first place the classifier
- * meets *real* audio rather than synthetic test material (the calibration
- * pass docs/CONCEPT.md asks for); and when the app misbehaves, this is
- * the same pipeline with no phone in the way.
+ * It exists for three reasons: kits can be made on a desktop, through the
+ * same pipeline the app uses; it is the first place the classifier meets
+ * *real* audio rather than synthetic test material (the calibration pass
+ * docs/CONCEPT.md asks for); and when the app misbehaves, this is the
+ * same pipeline with no phone in the way.
  */
 object Cli {
 
