@@ -10,8 +10,9 @@ import java.io.File
 
 /**
  * The S5 instrument suite: nine playable key instruments (six classic, three MERCURY) rendered from the
- * synth engines at exact MIDI pitch, multisampled every minor third across
- * two octaves, packaged as keygroup programs.
+ * synth engines at exact MIDI pitch (the MERCURY three with WATER still; at their defaults WATER moves the pitch
+ * by design and the mean sits within about 3 cents of the key, `MercuryHeldTest`), multisampled every minor third
+ * across two octaves, packaged as keygroup programs.
  *
  * | Instrument | Engine | Range | Velocity | Sustain |
  * |---|---|---|---|---|

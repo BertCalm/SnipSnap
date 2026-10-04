@@ -207,8 +207,9 @@ Resin Pad still sustain inside the project.
 
 ### Instruments/ — the S5 suite, dual-generation
 
-Nine playable key instruments (six classic, three MERCURY), engines at exact MIDI pitch, multisampled
-every minor third across two octaves: **SnipSnap EP** (TINES electric piano
+Nine playable key instruments (six classic, three MERCURY), engines at exact MIDI pitch (the MERCURY three
+with WATER still; at their defaults the water moves the pitch by design, and the average sits within about
+3 cents of the key), multisampled every minor third across two octaves: **SnipSnap EP** (TINES electric piano
 — soft hits are *rendered darker*, not attenuated), **SnipSnap Organ**
 (TONEWHEEL held down, with a sustain loop cut at an exact whole number of
 waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
