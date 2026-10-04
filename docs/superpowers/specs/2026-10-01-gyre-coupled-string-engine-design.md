@@ -756,6 +756,47 @@ Measured on the built code (`GyreTest`, 16 tests; the two new ones are BODY's an
 The audition is re-rendered for a second listen (78 clips: SPIN gains a short FLICK note, still and
 at 0.25), and its verdicts save under `verdicts/gyre_r1b_*`, beside the first listen's.
 
+## R1c, after the second listen (2026-10-04)
+
+The second listen (`verdicts/gyre_r1b_*`) passed BODY ("Yes better") and SPIN ("Better"), kept every
+clip in TOGETHER and EDGES, and said of HOLD: "I don't hear the distinction". Measured, round one's
+HOLD ran every voice from 0.25 s to a fixed ring (FLICK 3 s, HALO 6 s), but a note falls 40 dB in
+about half a second plus whatever the sympathetic strings add. FLICK's hand landed 25 dB under the
+attack at HOLD 0, 50 dB at 0.5 and 108 dB at 0.95 (HALO 14, 32, 77): above about 0.3 the note had
+rung out before the hand came, and the steps were the same sound.
+
+Asked what HOLD should feel like, the owner chose "short and choked up to fully open":
+
+- **HOLD runs from a choke to an open note.** At 0 the hand lands 0.04 s after the pluck; at the
+  step below the LOOP it lands when the note has rung out on its own, so it stops nothing; between,
+  evenly in log time.
+- **"Rung out" follows SYMPATHY, not the voice.** Measured with no hand, to 40 dB down: the played
+  strings take 0.46 to 0.73 s whatever the voice, note or BODY (HALO at SYMPATHY 0: 0.49 s), and the
+  sympathetic strings carry the rest (both voices about 2.7 s at SYMPATHY 1, HALO 2.0 s at its default
+  0.8). So the open end is `0.55 + 2.75 × SYMPATHY²` seconds, and the voice's fixed ring is gone.
+- **The defaults sit near open** (FLICK 0.9, HALO 0.92), where the voices were approved: the hand
+  lands about 38 dB down. FLICK's default note is 0.88 s (PERC), HALO's 3.34 s (still LOOP, a little
+  shorter than R1b's 4.87 s: the hand now lands at 1.73 s, not 3.8, but 35 dB down either way).
+- SPIN's short-note test now names its note by length (the hand 0.55 s after the pluck), not by a
+  HOLD value, since HOLD's seconds moved. HALO's median partial swing on that note is 5.2 dB (6.1 on
+  R1b's 0.65 s note); FLICK's 11.0.
+
+A new test holds the shape: at SYMPATHY 0, the default and 1, both voices, five steps, the hand
+lands within 15 dB of the attack at HOLD 0 (measured 2 to 4 dB down) and at least 33 dB down at
+the top (41 to 45), lower at every step (about 10 dB a step), and each step
+changes the sound (the difference against the louder render) by at least −36 dB (measured −10.8 to
+−33.0, the top step least: near open it trims a quiet tail). Measured alongside, no step at any of those
+corners reads as a drum (the classifier test already covers HOLD 0 at every note). Every other GyreTest figure is unchanged.
+
+The audition is re-rendered for a third listen (82 clips: HOLD at five settings), saving under
+`verdicts/gyre_r1c_*`.
+
+**The third listen passed HOLD** (2026-10-04, in chat, recorded as `verdicts/gyre_r1c_overall`):
+"Sounds good", confirming it runs from choked to open with each step heard. With SYMPATHY and HOLD
+kept on the first listen, BODY and SPIN passed on the second and HOLD on the third, every round-one
+knob on FLICK and HALO has passed the audition gate. Still open from R1b: the pluck's random
+fundamental (R2's TOUCH replaces the exciter).
+
 ## Decisions taken (2026-10-01)
 
 The owner took every recommendation:

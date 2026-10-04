@@ -817,8 +817,53 @@ first 80 ms.
 
 Only the SING and BLADE kit pads (A09–A16) change.
 
-**Next.** Round 4 of the audition: SING's and BLADE's velocity and the
-kit's A09–A16. The WATER ends and the defaults' wetness are still
-unrated. Then R1.1 (the phone's picker, which needs an SDK) and R2 (LOOP,
-`Keys.mercuryPad`, EDDY, VESSEL and SHARD).
+## The audition, round 4 — 2026-10-04: R1's gate passes
+
+The owner, on round 4: *"I think they're sounding fine. Velocity at one has
+a little scrape which is purposeful."* WATER, including its ends and the
+defaults' wetness, was checked too: *"I checked water and it's good."*
+
+The kit stays one full-touch sample per pad. A09–A16 all carry the
+scrape, because a kit pad is a velocity-1 render and its other three layer
+slots are empty; on the MPC a softer hit plays the same sample quieter.
+Velocity layers (soft swell, no scrape) were offered and declined: *"It's
+fine as is."* Velocity's touch still reaches every layer the app builds
+itself (Robin's zones, KitBuilder's ghost layers, the VELOCITY starter).
+
+**R1 is done.** Next: R1.1 on a desktop session (below), and R2 here.
+
+## R1.1, for a desktop session — the phone's picker
+
+R1.1 needs `:app` to compile, so it needs a machine with the Android SDK
+(`settings.gradle.kts` only adds `:app` when it finds one; a cloud session
+has none). The owner asked for it to be done there (2026-10-04).
+
+**What to add,** all in `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`:
+1. `MERCURY` in `private enum class Engine` (`:1855`), with the KDoc's
+   cycle line (`… → FORK → …`) updated to match.
+2. A `MERCURY ->` arm in each of the enum's `when` blocks, the same shape
+   as FORK's (`:1861-1990`):
+   - `voices()`: `MercuryVoice.entries`
+   - `macrosFor()`: `Mercury.macrosFor(voice as MercuryVoice)`
+   - `defaults()`: `Mercury.defaults(voice as MercuryVoice)`
+   - `scramble()`: `Mercury.scramble(voice as MercuryVoice, random)`
+   - `render()`: `Mercury.render(voice as MercuryVoice, macros)`
+   - `drumClass()`: `Mercury.drumClassFor(voice as MercuryVoice, macros)`
+   - `buildPatch()`: `MercuryPatch(name, voice as MercuryVoice, macros)`
+   - and whatever arms the enum has grown by then (read the whole enum).
+3. The imports: `Mercury`, `MercuryVoice`, `MercuryPatch`.
+4. The README's engine count (`README.md:348`, "thirteen engines in the
+   `Engine` picker").
+
+**Not in R1.1:** HOLD's LOOP readout and the held-instrument path (the
+`Engine.SIREN` / `RESIN` / `GLINT` branches at `:511-1209`). Those wait for
+R2's LOOP and `Keys.mercuryPad`.
+
+**How to check it:** `./gradlew :app:assembleDebug` on the SDK machine,
+then the `android-build` and `emulator-tests` jobs on the PR. A cloud
+session's `./gradlew test` does not compile `:app`.
+
+**Worth knowing:** the picker stops at FORK. TERRA, SILK, BORE, ARCO,
+GYRE and MAGNET are not in it either, so the same desktop session may want
+to add them together. Each engine's own spec says what its entry needs.
 
