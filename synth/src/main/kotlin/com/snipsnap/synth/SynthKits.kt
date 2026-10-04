@@ -394,4 +394,30 @@ object SynthKits {
             lead.forEachIndexed { i, s -> add(magnetNote(MagnetVoice.CHUG, s, "Lead ${i + 1}", mapOf("BLEND" to 0.35f), leadChain)) }
         }
     }
+
+    /**
+     * The TREMOR kit. A01–A08 are HIDE walking the minor pentatonic from C2, every knob but TUNE at
+     * the voice default, so the row is the drum before anyone touches it. A09–A14 are one-shot
+     * presets (four hands, beads, a passive cage, a powered bloom, a late wire, a dense fault).
+     * A15–A16 are the two held presets.
+     *
+     * Every pad is dry and filed by [Tremor.drumClassFor]. Export leaves the mute group at 0: a
+     * tuned drum rings through the next hit, and hat-style choke is the wrong contract for this
+     * instrument. Held pads are still one-shots in the program (the wrap is the sample's own loop,
+     * proved by the seam gate, the way MERCURY's long pads are filed LOOP and played once).
+     */
+    fun tremor(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = TremorPatch(
+            "Hide $n", TremorVoice.HIDE,
+            Tremor.defaults(TremorVoice.HIDE) + ("TUNE" to semitone / Tremor.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Tremor.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = TremorPresets.all().first { it.name == name }
+            .let { pad(it, Tremor.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("FOUR HANDS"), preset("SETTLING BED"), preset("DRY CAGE"), preset("CHARGED TAIL"),
+            preset("LATE STRAND"), preset("BROKEN RETURN"), preset("HELD DRUM"), preset("HELD BLOOM"),
+        )
+    }
 }
