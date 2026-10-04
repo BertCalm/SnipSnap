@@ -32,6 +32,7 @@ class PresetsTest {
         assertEquals(ArcoPresets.forVoice(ArcoVoice.CELLO), Presets.forVoice("ARCO", "CELLO"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.ERHU), Presets.forVoice("ARCO", "ERHU"))
         for (voice in MercuryVoice.entries) assertEquals(MercuryPresets.forVoice(voice), Presets.forVoice("MERCURY", voice.name))
+        for (voice in GlintVoice.entries) assertEquals(GlintPresets.forVoice(voice), Presets.forVoice("GLINT", voice.name))
     }
 
     @Test
@@ -47,11 +48,18 @@ class PresetsTest {
     }
 
     @Test
+    fun `byName finds a GLINT preset by voice and name`() {
+        assertEquals("STILL AH", Presets.byName("GLINT", "VOWEL", "STILL AH")?.name)
+        assertEquals(GlintPresets.forVoice(GlintVoice.SWEEP).first(), Presets.byName("GLINT", "SWEEP", "WARM DRIFT"))
+        assertEquals(null, Presets.byName("GLINT", "SWEEP", "NOT A PRESET"))
+    }
+
+    @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
         val expected = ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all()
+            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + GlintPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }
