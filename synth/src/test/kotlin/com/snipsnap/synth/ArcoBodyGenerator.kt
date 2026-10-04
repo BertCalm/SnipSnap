@@ -18,7 +18,7 @@ import kotlin.math.max
  * plays [ArcoBodyCandidates]'s candidates beside the default and beside R1c's BODY 1, blind, and asks for MORE BOX, SAME or LESS BOX under each. The page is test-side only: `Arco` is not changed.
  * Nothing here has been heard by anyone yet. The page says so.
  *
- * Three groups, every knob but TUNE at its default and every clip dry and mono, each rendered by [Arco.render]'s own path ([ArcoBodyCandidates.renderThrough]: the bow, the box, [Arco.finish],
+ * Three groups, every knob but TUNE at its default and every clip dry and mono, each rendered by [Arco.render]'s own path ([ArcoBodyCandidates.renderThrough]: the bow, the box, [Arco.finished],
  * so no clip is levelled by hand) and then through [AuditionLevel.level], the re-listen page's own level (one loudness for every clip, as on the last page):
  *  - ERHU C5 (its default note), eight clips: THE PLAIN ONE (BODY 0.5, the default), WHAT YOU HEARD LAST TIME (R1c's BODY 1), and six lettered clips C to H, unlabelled on purpose: the
  *    formant bed at two strengths, the broad box at two amounts, the louder-box control, and an exact repeat of THE PLAIN ONE (a catch: if the owner hears the repeat as different,
@@ -34,8 +34,8 @@ import kotlin.math.max
  * The CELLO C4 group has three lettered clips and no repeat.
  *
  * **The in-run checks throw**, and a re-run starts by emptying the output folder and deleting the key, so a failed check never leaves a page of an earlier run behind (the checks that need the written
- * files run last, so a failure there leaves a partial folder: do not publish after a failure): the page's render path is [Arco.render] to the sample for THE PLAIN ONE (BODY 0.5) and WHAT YOU HEARD LAST TIME (BODY 1)
- * at every clip's note and at the ruler's whole grid; the repeat is bit-identical to THE PLAIN ONE (and so are its two files); every candidate is finite, under a peak of 0.95 (at the three notes of the page) and the
+ * files run last, so a failure there leaves a partial folder: do not publish after a failure): the page's render path is [Arco.render] to the sample for THE PLAIN ONE (BODY 0.5)
+ * at every clip's note and at the ruler's whole grid (R1g retired the same check for WHAT YOU HEARD LAST TIME, R1c's BODY 1: the engine's BODY 1 is the lift now); the repeat is bit-identical to THE PLAIN ONE (and so are its two files); every candidate is finite, under a peak of 0.95 (at the three notes of the page) and the
  * length of THE PLAIN ONE; no two clips but the repeat and THE PLAIN ONE are the same; and **each candidate's median D over the ten-note grid is the competition's within 0.05 dB**
  * (A 0.62 5.98, A 1.0 8.66, B 2.0 6.09, B 6.0 8.46, the louder box 7.92, R1c's own BODY 1 2.617: [ArcoBodyMeasure]'s baseline). The D table is printed on `ARCO` lines.
  */
@@ -132,7 +132,7 @@ object ArcoBodyGenerator {
                 out[key] = Reading(voice, step, ArcoBodyMeasure.colour(x.samples, plain.samples, f0).d, peakOf(x))
             }
             val last = ArcoBodyCandidates.renderThrough(voice, macros, ArcoBodyCandidates::last)
-            check(last.samples.contentEquals(ArcoBodyMeasure.viaArco(voice, step, 1f))) { "R1c's BODY 1 at $voice step $step is not Arco.render at BODY 1" }
+            // R1g retired the check that R1c's BODY 1 is Arco.render at BODY 1: BODY 1 is the lift now, so it would throw by design. R1c's box is this page's own ([ArcoBodyCandidates.last]).
             read(R1C_KEY, last)
             for (c in ArcoBodyCandidates.ALL) read(c.key, ArcoBodyCandidates.renderThrough(voice, macros, c.box))
             out
@@ -185,9 +185,9 @@ object ArcoBodyGenerator {
         val plain = ArcoBodyCandidates.renderThrough(voice, macros, ArcoBodyCandidates::plain)
         val last = ArcoBodyCandidates.renderThrough(voice, macros, ArcoBodyCandidates::last)
         val repeat = ArcoBodyCandidates.renderThrough(voice, macros, ArcoBodyCandidates::plain)
-        // The page's render path is the engine's, to the sample, for THE PLAIN ONE and WHAT YOU HEARD LAST TIME at this note (and at the voice's no-macro default where the note is its default).
+        // The page's render path is the engine's, to the sample, for THE PLAIN ONE at this note (and at the voice's no-macro default where the note is its default).
         check(same(plain, Arco.render(voice, macrosAt(spec.tune, 0.5f)))) { "${spec.label}: THE PLAIN ONE is not Arco.render at BODY 0.5" }
-        check(same(last, Arco.render(voice, macrosAt(spec.tune, 1f)))) { "${spec.label}: WHAT YOU HEARD LAST TIME is not Arco.render at BODY 1" }
+        // R1g retired the check that WHAT YOU HEARD LAST TIME is Arco.render at BODY 1: BODY 1 is the lift now, so it would throw by design (R1c's box is ArcoBodyCandidates.last's own).
         if (spec.tune == defaultTune(voice)) check(same(plain, Arco.render(voice))) { "${spec.label}: THE PLAIN ONE is not the engine's default render" }
         check(same(repeat, plain)) { "${spec.label}: the repeat is not bit-identical to THE PLAIN ONE" }
         check(!same(last, plain)) { "${spec.label}: WHAT YOU HEARD LAST TIME is THE PLAIN ONE" }
@@ -240,8 +240,9 @@ object ArcoBodyGenerator {
         keyFile.delete()
         root.mkdirs()
 
-        check(ArcoBodyCandidates.R1C_BODY_KNEE == Arco.BODY_KNEE && ArcoBodyCandidates.R1C_BODY_TOP == Arco.BODY_TOP) {
-            "the engine's box curve is no longer R1c's (knee ${Arco.BODY_KNEE}, top ${Arco.BODY_TOP}): this page's WHAT YOU HEARD LAST TIME is not what the owner heard"
+        // R1g retired BODY_TOP and the check of R1c's top against it (the engine's box now stays at the knee's size above the knee); the knee is still the engine's and is still checked.
+        check(ArcoBodyCandidates.R1C_BODY_KNEE == Arco.BODY_KNEE) {
+            "the engine's knee (${Arco.BODY_KNEE}) is no longer R1c's: THE PLAIN ONE is not what the owner heard"
         }
         for (spec in SPECS) check(noteOf(spec.voice, spec.tune) == spec.note) { "${spec.label} is on ${noteOf(spec.voice, spec.tune)}" }
 
