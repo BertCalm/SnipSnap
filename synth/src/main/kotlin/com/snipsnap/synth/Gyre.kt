@@ -218,6 +218,15 @@ object Gyre {
     const val SWING_BOX = 1f
 
     /**
+     * With a bow on the strings the rotor also moves how hard each upper string is bowed (round two, the
+     * spec's contact weight): the string it faces keeps the whole TOUCH contact and those behind it ease off
+     * by up to `depth * SWING_CONTACT` of it, a quarter turn apart like [SWING_HEARD], so the contact never
+     * goes above the TOUCH curve's own and the push stays the bow's. The first string holds its contact, as
+     * it holds the level there: the rotor moves the timbre and never the loudness. Shape.
+     */
+    const val SWING_CONTACT = 0.5f
+
+    /**
      * The strings are built this far below their note so the rotor can retune them either way: each
      * rotor step re-solves [bridgeTuned] for the bridge as it is now, so no swing of the coupling or
      * the membrane bends the pitch. Measured before: with the rotor at 1.2 Hz (HALO's default SPIN),
@@ -718,6 +727,7 @@ object Gyre {
         val boxHz = FloatArray(BOX_SMALL_HZ.size) { Dsp.expMap(size, BOX_SMALL_HZ[it], BOX_LARGE_HZ[it]) }
         val boxDb = FloatArray(BOX_SMALL_HZ.size) { Dsp.lin(size, BOX_SMALL_DB[it], BOX_LARGE_DB[it]) }
         val heard = FloatArray(STRINGS) { 1f }
+        val contacts = FloatArray(STRINGS) { contact }
         for (j in boxHz.indices) box[j].peaking(boxHz[j], boxDb[j], boxQ, rate)
         box[BOX_SMALL_HZ.size].lowShelf(BOX_LOW_SHELF_HZ, Dsp.lin(size, BOX_LOW_SMALL_DB, BOX_LOW_LARGE_DB), rate)
         box[BOX_SMALL_HZ.size + 1].highShelf(BOX_HIGH_SHELF_HZ, Dsp.lin(size, BOX_HIGH_SMALL_DB, BOX_HIGH_LARGE_DB), rate)
@@ -754,7 +764,10 @@ object Gyre {
                     val damp = 1f + (stopped[k] - 1f) * hand
                     val facing = cos(phase - k * PI / 2).toFloat()
                     bows[k].gain(feedback[k] * (1f - depth * SWING_DAMPING * (1f + facing) / 2f) * damp)
-                    if (k > 0) heard[k] = 1f + depth * SWING_HEARD * facing
+                    if (k > 0) {
+                        heard[k] = 1f + depth * SWING_HEARD * facing
+                        contacts[k] = contact * minOf(1f, 1f + depth * SWING_CONTACT * facing)
+                    }
                 }
                 if (depth > 0f) for (j in boxHz.indices) {
                     box[j].peaking(boxHz[j], boxDb[j] * (1f - depth * SWING_BOX * sin(phase - PI * j / (boxHz.size - 1)).toFloat()), boxQ, rate)
@@ -786,7 +799,7 @@ object Gyre {
                 // sound is taken there too: round one's `inject(x + back[k])` and what it returned.
                 val v = back[k] + x
                 bows[k].toBridge(v)
-                bows[k].next(bowSpeed * shape.levels[k] * ramp, slope, 0f, contact)
+                bows[k].next(bowSpeed * shape.levels[k] * ramp, slope, 0f, contacts[k])
                 if (per != null) per[k][i] = v
                 y += heard[k] * v
             }

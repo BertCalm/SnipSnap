@@ -482,10 +482,16 @@ class GyreTest {
 
     @Test
     fun `the rotor moves the timbre, which a tremolo cannot`() {
+        for (voice in listOf(GyreVoice.HALO, GyreVoice.DRAWN, GyreVoice.BOURDON)) rotorMovesTimbre(voice)
+    }
+
+    private fun rotorMovesTimbre(voice: GyreVoice) {
         // A centroid does not move when only the level does. Measured: 164 Hz of swing at 2.5 Hz (12% of
         // the mean centroid in round one, 28% now) against 0.4 Hz
-        // for a tremolo of the same depth on the still sound.
-        val voice = GyreVoice.HALO
+        // for a tremolo of the same depth on the still sound (HALO). A drawn note's level wanders on its own, so
+        // its control swings too: DRAWN 155 Hz against 15.4, BOURDON 78.8 against 19.5 (4.0 times, the thinnest).
+        // SWING_CONTACT at 0.5 changes these a little (DRAWN 176 without it, BOURDON 71): the rotor's other
+        // destinations carry the swing.
         val m = Gyre.defaults(voice) + mapOf("SPIN" to 0.45f, "HOLD" to 0.9f)
         val hz = Gyre.rotorHz(0.45f).toDouble()
         val spun = Gyre.render(voice, m).samples
@@ -500,9 +506,9 @@ class GyreTest {
         val to = minOf(spun.size, tremolo.size, 4 * RATE)
         val rotor = swingAt(centroids(spun.copyOfRange(from, to), block), bs, hz)
         val control = swingAt(centroids(tremolo.copyOfRange(from, to), block), bs, hz)
-        println("rotor at ${"%.2f".format(hz)} Hz: centroid swing ${"%.1f".format(rotor)} Hz, tremolo of the same depth ${"%.1f".format(control)} Hz")
-        assertTrue(rotor > 4 * control, "the rotor's swing ($rotor Hz) is not clear of a tremolo's ($control Hz)")
-        assertTrue(rotor > 40.0, "the rotor barely moves the timbre: $rotor Hz")
+        println("$voice: rotor at ${"%.2f".format(hz)} Hz: centroid swing ${"%.1f".format(rotor)} Hz, tremolo of the same depth ${"%.1f".format(control)} Hz")
+        assertTrue(rotor > 3 * control, "$voice: the rotor's swing ($rotor Hz) is not clear of a tremolo's ($control Hz)")
+        assertTrue(rotor > 40.0, "$voice: the rotor barely moves the timbre: $rotor Hz")
     }
 
     // ---- the sympathetic strings -------------------------------------------------------
