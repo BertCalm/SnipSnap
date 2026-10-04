@@ -2,9 +2,9 @@
 // is located, so a session with none does not configure it at all. CI's
 // android-build job assembles it. See app/README.md.
 plugins {
-    id("com.android.application") version "8.7.3"
-    kotlin("android") version "2.0.21"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    id("com.android.application")
+    kotlin("android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 repositories {

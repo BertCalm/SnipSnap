@@ -101,8 +101,7 @@ test-first.
   and the `SoundPool` adapter was deleted with `PadPlayer` (EEE10).
   `app/src/androidTest` is the Compose suite, run on a device by
   `emulator-tests`. There is still no `app/src/test`.
-- **Deferred, with reasons:** the KGP "loaded multiple times" warning
-  (wants a repo-wide version catalog); IME padding in `NewTapeDialog`
+- **Deferred, with reasons:** IME padding in `NewTapeDialog`
   (latent at the verified screen size); glyph fallback for ▶ ■ ⟳, which
   no bundled font carries — it is invisible for ⚙ at menu size and will
   not be at M2/M4 transport size.
