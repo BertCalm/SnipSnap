@@ -8,7 +8,7 @@ import kotlin.math.roundToInt
 /**
  * Renders the MERCURY audition (docs/superpowers/specs/2026-10-01-mercury-modal-glass-engine-design.md,
  * the S22 gate, the spec's §17 listening set) under testkit/mercury-audition/ (gitignored):
- * - the sixteen-pad kit as it lands on the MPC;
+ * - the sixteen-pad kit as it lands on the MPC, and the second one (R2c's EDDY, VESSEL and SHARD);
  * - for each voice: its default, the bottom, middle and top of TUNE, a short phrase whose notes ring
  *   into each other, three velocities, each knob at both ends, the spec's dead-zone probes (BEND
  *   .40/.50/.60, WATER 0/.05/.10/.20), and its own eight presets;
@@ -39,6 +39,9 @@ object MercuryAuditionGenerator {
         MercuryVoice.PING to "struck glass: a rim tapped once, its modes Rayleigh's thin ring, the vessel answering through the springs",
         MercuryVoice.SING to "rubbed glass: a wet finger on the rim, friction locking the fundamental, the glass harmonica's sustain",
         MercuryVoice.BLADE to "bowed steel: a free-free blade, a gesture bending it into the note, the musical saw's glide",
+        MercuryVoice.EDDY to "a rubbed singing bowl: six families of doublets, measured on a real bowl, that drift, swell and beat as the water loads their two halves in opposite phases",
+        MercuryVoice.VESSEL to "a hollow steel shell, a pipe or a tank: ring modes, a breathing mode and the tube's flexure, each with a quadrature partner that COUPLE feeds",
+        MercuryVoice.SHARD to "a free plate, cut a little off square: dense, irregular modes, a hard strike and a bend that moves some modes up and others down",
     )
 
     private class Clip(val id: String, val name: String, val desc: String)
@@ -71,6 +74,31 @@ object MercuryAuditionGenerator {
                     Group("PING, THE PENTATONIC", key = true, clips = kitClips.subList(0, 8)),
                     Group("SING PRESETS", key = true, clips = kitClips.subList(8, 12)),
                     Group("BLADE PRESETS", key = true, clips = kitClips.subList(12, 16)),
+                ),
+            ),
+        )
+
+        // The second kit (R2c): EDDY, VESSEL and SHARD, as the MPC gets them.
+        val kit2Dir = File(root, "KIT2")
+        val kit2Clips = SynthKits.mercury2().mapIndexed { i, pad ->
+            val arranged = requireNotNull(pad) { "the second mercury kit has an empty pad at ${i + 1}" }
+            val recipe = PadRecipe.fromJsonValue(requireNotNull(arranged.recipe) { "kit 2 pad ${i + 1} carries no recipe" })
+            val patch = requireNotNull(recipe.patch) as MercuryPatch
+            val tag = "A%02d".format(i + 1)
+            val id = tag.lowercase() + "_" + patch.name.lowercase().replace(' ', '_')
+            WavWriter.write(File(kit2Dir, "$id.wav"), AuditionLevel.level(arranged.snip), WavWriter.BitDepth.PCM_16)
+            count++
+            Clip(id, "$tag ${patch.name.uppercase()}", patch.voice.name + " " + DOT + " " + noteName(Mercury.midiFor(patch.voice, patch.macros.getValue("TUNE"))) + " " + DOT + " " + macroLine(patch.voice, patch.macros))
+        }
+        sections.append(",\n")
+        sections.append(
+            sectionJson(
+                id = "KIT2", display = "THE SECOND KIT", body = "EDDY, VESSEL and SHARD, sixteen pads as the MPC gets them",
+                readout = listOf("A01-A05 EDDY PRESETS", "A06-A10 VESSEL PRESETS", "A11-A16 SHARD PRESETS"),
+                groups = listOf(
+                    Group("EDDY PRESETS", key = true, clips = kit2Clips.subList(0, 5)),
+                    Group("VESSEL PRESETS", key = true, clips = kit2Clips.subList(5, 10)),
+                    Group("SHARD PRESETS", key = true, clips = kit2Clips.subList(10, 16)),
                 ),
             ),
         )
