@@ -326,7 +326,7 @@ class ArcoBodyLiftTest {
         (1 until series.size).mapNotNull { i -> if (series[i] - series[i - 1] < -toleranceDb) i to series[i - 1] - series[i] else null }
 
     /**
-     * The knob never goes backwards: the finished clip's rms (dB, whole clip, [Arco.render]) is non-decreasing in BODY from 0.5 to 1.0 in steps of 0.05, within 0.01 dB, on all 45 TUNE steps (25 CELLO, 20 ERHU) at default knobs. It holds because
+     * The knob never goes backwards: the finished clip's rms (dB, whole clip, [Arco.finished] on each note's own raw string, which [Arco.render] is checked to equal on three notes) is non-decreasing in BODY from 0.5 to 1.0 in steps of 0.05, within 0.01 dB, on all 45 TUNE steps (25 CELLO, 20 ERHU) at default knobs. It holds because
      * the cap on the lift is a property of the note and not of BODY (the lift is the smaller of what BODY asks and the note's cap), so a larger BODY is never a smaller lift. R1f saw design C's version (a different curve) on the same 45 steps and
      * predicted +0.8 dB over the plain at BODY 0.55, +1.5 to +1.6 at 0.6, +3.5 to +3.7 at 0.75, +4.5 to +5.5 at 0.9 and +6.2 to +6.9 at 1.0 at the notes where the cap is idle; the bound is a fall of at most 0.01 dB from one BODY to the next
      * (the table of the rise over the plain, min / median / max over the steps, is printed). R1g saw a worst fall of 0.0000 dB on all 45 steps, and the rise over the plain (min / median / max over the steps of both voices) +0.74 to +0.87 dB at BODY 0.55, +1.47 to +1.71 at 0.6, +2.86 (CELLO C2 at its cap) to +4.03 at 0.75, +2.86 to +5.97 at 0.9 and +2.86 to +7.03 at 1.0. Controls that must fail: the sweep reversed (BODY 1 down to 0.5) must fall on every step, and the sweep with its last two values swapped must fall
@@ -337,10 +337,23 @@ class ArcoBodyLiftTest {
         val tolerance = 0.01
         class Sweep(val voice: ArcoVoice, val step: Int, val rmsDb: DoubleArray)
         val cells = ArcoVoice.entries.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }
+        // The raw bowed string does not depend on BODY ([Arco.bow] never reads it), so each note is bowed once and finished at every BODY of the sweep: 45 bowings and 495 finishes, not 495 bowings.
+        // Copilot's review of #445 asked for this; the end-to-end route, [Arco.render], is checked against the same finish on a few cells just below, so the sweep still reads the engine's own pipeline.
         val sweeps = with(ArcoLiftRig) {
-            cells.pmap { (voice, step) -> Sweep(voice, step, DoubleArray(sweepBodies.size) { rmsDb(Arco.render(voice, macros(voice, step, sweepBodies[it])).samples) }) }
+            cells.pmap { (voice, step) ->
+                val raw = rawOf(voice, macros(voice, step, Arco.DEFAULT_BODY))
+                Sweep(voice, step, DoubleArray(sweepBodies.size) { rmsDb(Arco.finished(raw.copyOf(), voice, sweepBodies[it], RAW_RATE)) })
+            }
         }
         assertEquals(45, sweeps.size, "the sweep is every TUNE step of both voices")
+        // End to end: Arco.render at BODY 0.75 and 1 on CELLO C2, C3 and ERHU C5 is the same samples as the finish of that note's own raw string, so the sweep above reads what render plays.
+        for ((voice, step) in listOf(ArcoVoice.CELLO to 0, ArcoVoice.CELLO to 12, ArcoVoice.ERHU to 10)) {
+            val raw = ArcoLiftRig.rawOf(voice, ArcoLiftRig.macros(voice, step, Arco.DEFAULT_BODY))
+            for (body in listOf(0.75f, 1f)) {
+                val viaFinished = Arco.finished(raw.copyOf(), voice, body, ArcoLiftRig.RAW_RATE)
+                assertTrue(viaFinished.contentEquals(ArcoLiftRig.render(voice, step, body)), "$voice ${ArcoLiftRig.name(voice, step)} BODY $body: Arco.render is not the finish of the note's own raw string, so the sweep would read a pipeline the engine does not play")
+            }
+        }
         val problems = ArrayList<String>()
         var worstFall = 0.0
         var worstWhere = ""
