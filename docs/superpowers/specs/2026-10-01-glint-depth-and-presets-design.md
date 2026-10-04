@@ -172,6 +172,8 @@ No value in the roster comes from Claude's taste ("No agent invents a preset val
 
 TUNE, DECAY and FOLLOW ship at their defaults unless Josh's review of the final listen says otherwise; those three are the only values in the roster not chosen by ear, and they are flagged. FOLLOW is the one of them the final listen can actually play (across the zones), so it is the one he is most likely to move.
 
+**As run.** Hearing 64 clips and choosing 32 was more than the owner wanted to do, so he had the eight per voice ranked for him and kept the veto: this is a waiver of "No value in the roster comes from Claude's taste", by the owner, for this step. The ranking is a stated rule applied to measurements of each clip's sustained breath (its last three seconds): drop the shrill (a spectral centroid over 5 kHz, or over 85% of the power above 4 kHz), drop the nearly-plain-sine (DEPTH 0.84 or more, or over 45% of the power in the fundamental), then take the eight whose settings differ most, starting from the most typical, which is the roster order. The rule used measurements, not ears, and no measurement says a sound is good; the owner heard the eight per voice as one reel each and approved them, and hears all 32 again at the final listen. Six names changed afterwards because the house naming rule forbids a word that is a voice, an engine or a rack section (`GlintPresetsTest`).
+
 ### 6.3 Wiring and gates
 
 - `Presets.forVoice` gains a GLINT branch and `Presets.all` gains `GlintPresets.all()`; the hand-listed engine lists in `PresetsTest` are updated; app chips and the CLI follow from `Presets.forVoice` with no app or CLI code.
