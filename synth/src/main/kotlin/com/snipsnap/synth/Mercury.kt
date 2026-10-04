@@ -6,6 +6,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
@@ -50,8 +51,9 @@ import kotlin.random.Random
  * Every value marked "listening" is a first guess for the audition. The engine
  * renders **dry**, with no landing chain.
  *
- * **R1 has no LOOP.** HOLD is the contact length, and its whole travel is a
- * one-shot; the LOOP top step is R2.
+ * **HOLD's top step is a LOOP** (R2, [LOOP_THRESHOLD]): the held rub as one seamless loop, whole periods of
+ * the note and whole orbits of the WATER mass, retuned until it closes and checked against the seam bar
+ * ([renderLoopNudged]). Below the step HOLD is the contact length of a one-shot, as in R1.
  */
 enum class MercuryVoice { PING, SING, BLADE }
 
@@ -214,6 +216,9 @@ object Mercury {
     const val WATER_RATE_LOW = 0.25
     const val WATER_RATE_SPAN = 0.75
 
+    /** The mass's orbit, Hz, at [water]: [WATER_RATE_LOW] + [WATER_RATE_SPAN]·WATER. */
+    fun orbitHz(water: Double): Double = WATER_RATE_LOW + WATER_RATE_SPAN * water
+
     /** A ring mode k reads the mass at its own angle, k times this many radians round. Designed. */
     const val RING_LOAD_PHASE = 0.9
 
@@ -253,6 +258,38 @@ object Mercury {
 
     /** The classifier's own length rule: past this, a render's duration alone reads LOOP. */
     const val LOOP_THRESHOLD_SECONDS = 1.5f
+
+    // ---- the LOOP (R2) --------------------------------------------------------
+
+    /** HOLD at or above this is a LOOP (the top step of the knob); SCRAMBLE never lands there. BORE's and SIREN's numbers. */
+    const val LOOP_THRESHOLD = 0.99f
+
+    /** SCRAMBLE's HOLD stays under this: the top step is a choice, not a roll. */
+    const val SCRAMBLE_HOLD_CEILING = 0.95f
+
+    /**
+     * Where a LOOP that will not close is nudged toward (the owner's choice, 2026-10-04): GLASS up to this, COUPLE
+     * down to that, in [NUDGE_STEPS] equal steps, the first that closes kept. At the bottom of the range, low GLASS
+     * with high COUPLE or WATER lets the rub sustain two neighbouring resonances at once, and two unrelated
+     * frequencies never close; everything at GLASS 0.6 and COUPLE 0.5 did. WATER is never nudged (the spec's
+     * §13.4: its motion is not silently rounded away). One-shots are never nudged.
+     */
+    const val NUDGE_GLASS = 0.6f
+    const val NUDGE_COUPLE = 0.5f
+    const val NUDGE_STEPS = 4
+
+    /**
+     * A LOOP always rubs, at least this hard, so even PING sustains (the design's decision 10). At 0.4, PING at
+     * GLASS 0 died away inside the warm-up at every TUNE; 0.6 sustains it everywhere. Listening value.
+     */
+    const val LOOP_RUB_FLOOR = 0.6
+
+    /** A LOOP is at least this long; with WATER moving it is whole orbits of the mass, so it can run to 4 s. */
+    const val LOOP_SECONDS = 2.0
+
+    /** The steady stretch settles at least this long, or this share of the fundamental's t60, before the loop is cut. */
+    const val LOOP_WARMUP_SECONDS = 2.0
+    const val LOOP_WARMUP_T60_SHARE = 0.6
 
     /** Control rate: the shape, the water and the tuning move every this many samples at the oversampled rate. */
     private const val CTRL = 8
@@ -296,7 +333,13 @@ object Mercury {
 
     fun frequencyFor(voice: MercuryVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
 
-    fun holdSeconds(hold: Float): Float = Dsp.expMap(hold.coerceIn(0f, 1f), HOLD_MIN_SECONDS, HOLD_MAX_SECONDS)
+    /**
+     * A one-shot's contact, seconds. HOLD's top step is the LOOP ([LOOP_THRESHOLD]), so a one-shot's longest is HOLD
+     * just under it. Below the step the mapping is R1's, unchanged, so no one-shot render moved when the LOOP came.
+     */
+    fun holdSeconds(hold: Float): Float = Dsp.expMap(hold.coerceIn(0f, LOOP_THRESHOLD), HOLD_MIN_SECONDS, HOLD_MAX_SECONDS)
+
+    fun isLoop(hold: Float): Boolean = hold >= LOOP_THRESHOLD
 
     fun t60Fundamental(glass: Float): Double = T60_LOW + (T60_HIGH - T60_LOW) * glass
 
@@ -312,12 +355,13 @@ object Mercury {
     internal fun renderFrames(macros: Map<String, Float>): Int = rawFrames(macros) / Dsp.OVERSAMPLE
 
     /**
-     * What a pad holding this sound is filed as: LOOP past the classifier's own 1.5 s length line,
-     * PERC under it. Derived from the rendered frame count, the comparison the classifier makes.
+     * What a pad holding this sound is filed as: a LOOP at HOLD's top step, else LOOP past the classifier's own
+     * 1.5 s length line and PERC under it, derived from the rendered frame count, the comparison the classifier makes.
      */
     fun drumClassFor(voice: MercuryVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
-        return if (renderFrames(m).toFloat() / RATE > LOOP_THRESHOLD_SECONDS) DrumClass.LOOP else DrumClass.PERC
+        val long = isLoop(m.getValue("HOLD")) || renderFrames(m).toFloat() / RATE > LOOP_THRESHOLD_SECONDS
+        return if (long) DrumClass.LOOP else DrumClass.PERC
     }
 
     fun scramble(voice: MercuryVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
@@ -327,7 +371,9 @@ object Mercury {
             temperature >= 1f -> base
             else -> base + MercuryPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
         }
-        return Dsp.scrambleNear(seed, temperature, random)
+        val rolled = Dsp.scrambleNear(seed, temperature, random).toMutableMap()
+        rolled["HOLD"] = rolled.getValue("HOLD").coerceAtMost(SCRAMBLE_HOLD_CEILING)
+        return rolled
     }
 
     // ---- the object's tables -----------------------------------------------
@@ -364,24 +410,33 @@ object Mercury {
      */
     fun render(voice: MercuryVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip {
         val m = settled(macros, voice)
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val touch = if (voice == MercuryVoice.PING) 1.0 else velocity.coerceIn(0f, 1f).toDouble()
         return Snip(finish(sound(voice, hz, m, touch), tailSeconds(m.getValue("GLASS"))), channels = 1, sampleRate = RATE)
     }
 
     /**
-     * The object, rung at [hz] for [macros] (settled), at the oversampled rate: raw, unlevelled,
-     * so tests can read the physics. Its length is [rawFrames].
+     * A LOOP's steady stretch, in raw samples at the oversampled rate: [total] long, the loop [loop] long, the
+     * WATER mass on its steady orbit at exactly [orbitHz] (whole orbits per loop). No strike, no scrape, the BEND
+     * settled from the start, the contact never released, RUB at least [LOOP_RUB_FLOOR], and no roughness.
      */
-    internal fun sound(voice: MercuryVoice, hz: Double, m: Map<String, Float>, velocity: Double = 1.0, scrape: Boolean = true): FloatArray {
+    internal class Steady(val total: Int, val loop: Int, val orbitHz: Double)
+
+    /**
+     * The object, rung at [hz] for [macros] (settled), at the oversampled rate: raw, unlevelled,
+     * so tests can read the physics. Its length is [rawFrames], or [Steady.total] for a LOOP's
+     * stretch ([steady]).
+     */
+    internal fun sound(voice: MercuryVoice, hz: Double, m: Map<String, Float>, velocity: Double = 1.0, scrape: Boolean = true, steady: Steady? = null): FloatArray {
         val rate = RATE * Dsp.OVERSAMPLE
         val dt = 1.0 / rate
         val bend = m.getValue("BEND").toDouble()
-        val rub = m.getValue("RUB").toDouble()
+        val rub = m.getValue("RUB").toDouble().let { if (steady != null) max(it, LOOP_RUB_FLOOR) else it }
         val water = m.getValue("WATER").toDouble()
         val glass = m.getValue("GLASS").toDouble()
         val couple = m.getValue("COUPLE").toDouble()
-        val frames = rawFrames(m)
+        val frames = steady?.total ?: rawFrames(m)
 
         // Which modes take part: those that cannot reach the ceiling at the widest bend.
         val base = if (isRing(voice)) ringRatios(PRIMARIES) else beamRatios(PRIMARIES)
@@ -432,7 +487,7 @@ object Mercury {
 
         // WATER: one damped, circularly forced mass that every mode reads.
         val massRng = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "mass"))
-        val om = 2 * PI * (WATER_RATE_LOW + WATER_RATE_SPAN * water)
+        val om = 2 * PI * (steady?.orbitHz ?: orbitHz(water))
         var mx = 0.3 * massRng.next()
         var my = 0.3 * massRng.next()
         var mvx = 0.0
@@ -452,7 +507,7 @@ object Mercury {
         val onsetTau = max(ONSET_SECONDS, ONSET_PERIODS / hz)
         val gamma0 = 2 * T60_LN / t60Base[0]
         val pressure = rubW * rubW * (gamma0 + 1 / onsetTau) / (abs(friction.slope(DRIVER_SPEED)) * contact0[0] * contact0[0])
-        val contactFrames = (holdSeconds(m.getValue("HOLD")) * rate).toInt()
+        val contactFrames = if (steady != null) Int.MAX_VALUE else (holdSeconds(m.getValue("HOLD")) * rate).toInt()
         val releaseFrames = (CONTACT_RELEASE_SECONDS * rate).toInt()
         val rampFrames = (DRIVER_RAMP_SECONDS * (1 + VELOCITY_RAMP * (1 - velocity)) * rate).toInt()
 
@@ -462,7 +517,10 @@ object Mercury {
         val noise = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "strike"))
         val grain = Dsp.Noise(Dsp.seedFor("MERCURY", voice, hz, "contact"))
         val grainLp = Dsp.OnePole(rate)
-        val roughness = ROUGHNESS * (1 - glass)
+        // A LOOP carries no roughness. Even repeating every loop, the jittered pressure made the stick-slip settle
+        // into motion that did not repeat: 16 of 90 corners missed the seam bar with it, 5 without (all PING at
+        // RUB's old floor, fixed by [LOOP_RUB_FLOOR]). BORE's turbulence leaves its LOOP for the same reason.
+        val roughness = if (steady != null) 0.0 else ROUGHNESS * (1 - glass)
 
         val contact = DoubleArray(n)
         val pickup = DoubleArray(n)
@@ -471,7 +529,11 @@ object Mercury {
         for (t in 0 until frames) {
             if (t % CTRL == 0) {
                 val time = t * dt
-                if (mu > 0.0) {
+                if (mu > 0.0 && steady != null) {
+                    // The steady orbit, exactly: what the forced mass below settles to (x = 0.6 sin ωt, y = −0.6 cos ωt).
+                    mx = 0.6 * sin(om * time)
+                    my = -0.6 * cos(om * time)
+                } else if (mu > 0.0) {
                     val ax = -om * mvx - om * om * mx + om * om * 0.6 * cos(om * time)
                     val ay = -om * mvy - om * om * my + om * om * 0.6 * sin(om * time)
                     mvx += ax * ctrlDt; mvy += ay * ctrlDt
@@ -480,7 +542,7 @@ object Mercury {
                 val rho2 = (mx * mx + my * my).coerceAtMost(1.0)
                 val ang = atan2(my, mx)
                 val xm = (0.5 + 0.45 * mx).coerceIn(0.0, 1.0)
-                val env = exp(-time / tau)
+                val env = if (steady != null) 0.0 else exp(-time / tau)
                 val c = cTarget * (1 - env)
                 val excursion = 2.0.pow(BEND_EXCURSION_SEMITONES * cTarget * env / 12)
                 for (i in 0 until n) {
@@ -507,8 +569,8 @@ object Mercury {
             bank.step()
             // The strike: a half-sine through the contact vector, with a short seeded burst on it.
             var fs = 0.0
-            if (t < strikeFrames) fs = strikePeak * sin(PI * t / strikeFrames)
-            if (t < noiseFrames) fs += STRIKE_NOISE * strikePeak * noise.next() * (1 - t.toDouble() / noiseFrames)
+            if (steady == null && t < strikeFrames) fs = strikePeak * sin(PI * t / strikeFrames)
+            if (steady == null && t < noiseFrames) fs += STRIKE_NOISE * strikePeak * noise.next() * (1 - t.toDouble() / noiseFrames)
             if (fs != 0.0) bank.drive(contact, fs)
             // The rub: the finger at its speed, its pressure lifting off at the end of the contact.
             val p = when {
@@ -523,7 +585,7 @@ object Mercury {
             }
             out[t] = bank.velocityAlong(pickup).toFloat()
         }
-        if (scrape && voice != MercuryVoice.PING && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
+        if (steady == null && scrape && voice != MercuryVoice.PING && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
         return out
     }
 
@@ -577,6 +639,17 @@ object Mercury {
      * over the last [TAIL_FADE_SHARE] of the [tail] and the 4 ms fade every render ends on.
      */
     internal fun finish(raw: FloatArray, tail: Double): FloatArray {
+        val out = condition(raw)
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        val n = (TAIL_FADE_SHARE * tail * RATE).toInt().coerceIn(1, out.size)
+        val from = out.size - n
+        for (k in 0 until n) out[from + k] *= (0.5 + 0.5 * cos(PI * k / n)).toFloat()
+        Dsp.fadeTail(out)
+        return out
+    }
+
+    /** The band limit, the decimator and the DC removed twice: [finish] before its level and release, and the LOOP's chain. */
+    private fun condition(raw: FloatArray): FloatArray {
         Tide.bandLimit(raw, RATE * Dsp.OVERSAMPLE)
         val out = Dsp.decimate(raw, RATE)
         var mean = 0.0
@@ -587,11 +660,131 @@ object Mercury {
             val x = out[i] - mm
             out[i] = x - hp.lp(x, OUTPUT_DC_HZ)
         }
-        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-        val n = (TAIL_FADE_SHARE * tail * RATE).toInt().coerceIn(1, out.size)
-        val from = out.size - n
-        for (k in 0 until n) out[from + k] *= (0.5 + 0.5 * cos(PI * k / n)).toFloat()
-        Dsp.fadeTail(out)
         return out
+    }
+
+    // ---- the LOOP ----------------------------------------------------------
+
+    /**
+     * A LOOP's shape: [frames] whole frames at [RATE] (even, so the 8-sample control grid lands on the same samples
+     * every loop), [periods] whole periods of the note, and the mass's orbit at [orbitHz], whole orbits per loop.
+     */
+    internal data class LoopPlan(val frames: Int, val periods: Int, val orbitHz: Double)
+
+    internal fun planLoop(hz: Double, water: Double): LoopPlan {
+        val moving = water > 0.0
+        val f0 = orbitHz(water)
+        val orbits = if (moving) ceil(LOOP_SECONDS * f0).toInt().coerceAtLeast(1) else 0
+        val seconds = if (moving) orbits / f0 else LOOP_SECONDS
+        // The note stays exact and the loop bends to it: whole periods first, then the frames they fill (to within
+        // a frame, rounded to an even count), then the orbit snapped to whole orbits of those frames. Snapping the
+        // note to a fixed loop instead moved a low C by 2.6 cents.
+        val periods = Math.round(seconds * hz).toInt().coerceAtLeast(1)
+        val frames = (Math.round(periods * RATE / hz / 2.0) * 2).toInt()
+        return LoopPlan(frames, periods, if (moving) orbits * RATE.toDouble() / frames else f0)
+    }
+
+    /**
+     * A rendered LOOP and how well its stretch closes on itself ([Keys.seamError]), how many retunes it took, and
+     * how far toward [NUDGE_GLASS] / [NUDGE_COUPLE] it was nudged (0: rendered as asked).
+     */
+    internal class LoopRender(val loop: FloatArray, val seam: Double, val passes: Int, val nudge: Float = 0f)
+
+    /**
+     * The held note as one seamless loop (see [renderLoopMeasured]). If it does not close as asked, GLASS and COUPLE
+     * are nudged toward [NUDGE_GLASS] and [NUDGE_COUPLE] in [NUDGE_STEPS] steps and the first that closes is kept. A
+     * loop that still will not close throws: a click shipped silently is the worse failure.
+     */
+    internal fun renderLoop(voice: MercuryVoice, macros: Map<String, Float>): FloatArray = renderLoopNudged(voice, macros).loop
+
+    internal fun renderLoopNudged(voice: MercuryVoice, macros: Map<String, Float>): LoopRender {
+        val m = settled(macros, voice)
+        val glass = m.getValue("GLASS")
+        val couple = m.getValue("COUPLE")
+        var last: LoopRender? = null
+        for (k in 0..NUDGE_STEPS) {
+            val s = k / NUDGE_STEPS.toFloat()
+            if (k > 0 && glass >= NUDGE_GLASS && couple <= NUDGE_COUPLE) break
+            val tried = m + ("GLASS" to (if (glass < NUDGE_GLASS) glass + (NUDGE_GLASS - glass) * s else glass)) +
+                ("COUPLE" to (if (couple > NUDGE_COUPLE) couple + (NUDGE_COUPLE - couple) * s else couple))
+            val r = renderLoopMeasured(voice, tried)
+            if (r.seam < Keys.MAX_SEAM_ERROR) return LoopRender(r.loop, r.seam, r.passes, s)
+            last = r
+        }
+        throw IllegalArgumentException(
+            "MERCURY $voice ${midiFor(voice, m.getValue("TUNE"))}: the loop does not close, even nudged (seam %.2e, bar %.0e)"
+                .format(java.util.Locale.ROOT, last?.seam ?: Double.NaN, Keys.MAX_SEAM_ERROR),
+        )
+    }
+
+    private const val LOOP_PASSES = 8
+    private const val LOOP_CONVERGED = 3e-7
+    private const val LOOP_PAD_FRAMES = 2048
+    private const val SEAM_FRAMES = 256
+
+    /**
+     * Where [x] from [from] best matches itself about one loop ([wanted] samples) later: the lag within half a
+     * period ([period]) of it with the largest correlation over [LOOP_LAG_WINDOW_SECONDS], refined between samples.
+     * BORE's ladder ([Bore.measureLoopSamples]) climbs from one period, which WATER's pitch movement makes unequal
+     * along the loop; this reads the whole loop's lag directly. Half a period, not one: a rubbed note is near a
+     * sine, so the neighbouring periods' peaks are as tall as the right one, and a window holding them made the
+     * retune chase a period's slip forever (the ratio stuck at 1 ± 1/periods).
+     */
+    internal fun loopLag(x: FloatArray, from: Int, wanted: Double, period: Double): Double {
+        val lo = (wanted - period / 2).toInt().coerceAtLeast(1)
+        val hi = (wanted + period / 2).toInt() + 1
+        val window = min((LOOP_LAG_WINDOW_SECONDS * RATE * Dsp.OVERSAMPLE).toInt(), x.size - from - hi - 2)
+        require(window >= 256) { "no room to measure a loop: ${x.size - from} samples past the warm-up, lag up to $hi" }
+        fun r(lag: Int): Double {
+            var s = 0.0
+            for (i in from until from + window) s += x[i].toDouble() * x[i + lag]
+            return s
+        }
+        var bestLag = lo
+        var best = Double.NEGATIVE_INFINITY
+        for (lag in lo..hi) {
+            val c = r(lag)
+            if (c > best) { best = c; bestLag = lag }
+        }
+        val a = r(bestLag - 1)
+        val c = r(bestLag + 1)
+        val d = a - 2 * best + c
+        return if (abs(d) < 1e-30) bestLag.toDouble() else bestLag + 0.5 * (a - c) / d
+    }
+
+    private const val LOOP_LAG_WINDOW_SECONDS = 0.5
+
+    /**
+     * The held note as one loop, rendered as asked (no nudge): the steady stretch ([Steady]), the warm-up
+     * discarded, the note retuned until its periods fill the loop's frames ([loopLag]), then cut where the
+     * neighbours are smallest ([Siren.bestCut]) and levelled. The seam is measured on the conditioned stretch
+     * against itself one loop later, before the cut.
+     */
+    internal fun renderLoopMeasured(voice: MercuryVoice, macros: Map<String, Float>): LoopRender {
+        val m = settled(macros, voice)
+        val target = frequencyFor(voice, m.getValue("TUNE")).toDouble()
+        val plan = planLoop(target, m.getValue("WATER").toDouble())
+        val over = Dsp.OVERSAMPLE
+        val warmSeconds = max(LOOP_WARMUP_SECONDS, LOOP_WARMUP_T60_SHARE * t60Fundamental(m.getValue("GLASS")))
+        val warm = (Math.round(warmSeconds * RATE / 2.0) * 2).toInt()
+        val steady = Steady((warm + plan.frames + plan.frames / 8 + LOOP_PAD_FRAMES + (LOOP_LAG_WINDOW_SECONDS * RATE).toInt()) * over, plan.frames * over, plan.orbitHz)
+        val wanted = plan.frames.toDouble() * over
+        var tuned = plan.periods * RATE.toDouble() / plan.frames
+        var raw = sound(voice, tuned, m, steady = steady)
+        var passes = 0
+        for (pass in 1..LOOP_PASSES) {
+            val ratio = loopLag(raw, warm * over, wanted, wanted / plan.periods) / wanted
+            if (abs(ratio - 1.0) < LOOP_CONVERGED) break
+            tuned *= ratio
+            raw = sound(voice, tuned, m, steady = steady)
+            passes = pass
+        }
+        val conditioned = condition(raw)
+        val seam = Keys.seamError(conditioned.copyOfRange(warm - SEAM_FRAMES, warm + plan.frames), SEAM_FRAMES)
+        val one = conditioned.copyOfRange(warm, warm + plan.frames)
+        val cut = Siren.bestCut(one, plan.frames)
+        val loop = one.copyOfRange(cut, plan.frames) + one.copyOfRange(0, cut)
+        Dsp.levelTo(loop, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        return LoopRender(loop, seam, passes)
     }
 }
