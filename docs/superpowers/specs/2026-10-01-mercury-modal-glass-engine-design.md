@@ -956,6 +956,77 @@ throws rather than ship a click.
 0, WATER 1 and the hard corner, each loop played eight times end to end (the
 spec's eight-wrap listen), with its seam and any nudge printed beside it.
 
-**Next.** The owner's listen to the loops; then R2b (`Keys.mercuryPad`, the
-held keys) and R2c (EDDY, VESSEL and SHARD).
+**Heard (2026-10-04): the loops passed round 5.** The owner listened to the
+LOOP groups and approved them. R2a is closed.
+
+## R2b, as built — 2026-10-04: the held keys
+
+A MERCURY patch is now a keys instrument that sounds while a key is down
+(`Keys.mercuryPad`, `MercuryPadMaker`, three instruments in
+`testkit/Instruments`). The pad is HOLD's top step: the loop of R2a, doubled.
+
+**`Keys.mercuryPadMidis(voice)`**: nine zones, every minor third across the
+two-octave TUNE range from the voice's own root (PING C4 to C6; SING and BLADE
+G3 to G5), as GLINT's are per voice.
+
+**`Keys.mercuryPad(voice, macros, midi, cancelled)`** renders `Mercury.renderLoop`
+with TUNE fixed by the key and **HOLD forced to its top step**, so a patch's own
+HOLD plays no part (the way SIREN's SWEEP and HOLD play none in its loop). RUB
+plays at least `LOOP_RUB_FLOOR`; BEND is the upper modes' fixed deformation,
+without the gesture into the note, since a loop has no onset. The loop is
+rendered once and **doubled, the marker at the second copy**, SIREN's idiom
+(`loopStartFrame` 0 means no loop in the keygroup format). The first pass
+plays copy one and then repeats copy two, which is exactly the audio the loop
+alone makes. A zone that does not close as asked is nudged as in the one loop,
+so on a hard patch the lowest zones can ring a little longer, and couple a
+little less, than the rest.
+
+**Cancellation.** A zone is seconds of audio rendered several times over (the
+retune's passes, the nudge ladder), the slowest of any held engine, so
+`Mercury.sound`, `renderLoopMeasured`, `renderLoopNudged` and `renderLoop` take
+a `cancelled` and throw `CancellationException` (checked every
+`CANCEL_CHECK_FRAMES`, 2^15 raw samples).
+
+**`MercuryPadMaker`** (shell) is `SirenPadMaker`'s shape: RELEASE alone (0.1 to
+1.5 s, default 0.6 s), nine zones per voice, edge zones reaching nine semitones
+past the ends, `assemble` / `export` never rendering, `preview` the middle zone.
+
+**The instruments** (`InstrumentSuite.renderMercury`): SnipSnap Mercury Ping,
+Sing and Blade, each the voice at its defaults (the macros the round-5 listen
+approved), one layer, the 0.6 s release. They are the three MERCURY entries in
+`InstrumentSidecar`'s `RECIPES`, in `instruments.json` and in
+`SnipSnap_Instruments.zip`. `renderAll` stays the six classic instruments, which
+`SessionProjectGenerator` puts on the session's tracks; `renderMercuryAll` is the
+three. Each zone is about 6 s doubled (a 3 s loop: whole sways of WATER's slow
+orbit), 0.6 to 0.8 MB, so an instrument is 6 to 7 MB.
+
+**Measured** (`MercuryHeldTest`, all 27 zones at the voice's defaults):
+
+| Claim | Measured |
+|---|---|
+| Pitch, WATER 0, read over the loop | worst 0.29 cents (bar 3) |
+| Level, loudness of each zone against the melodic target | worst 0.00 dB (bar 1) |
+| The played wrap (copy two's last sample into its first): the step across it against the loop's steepest step | worst 0.92 (bar 1) |
+| The same wrap's change of step against the loop's largest change of step (a kink) | worst 0.32 (bar 1) |
+| Copy two is `Mercury.renderLoop`'s own output; a patch's HOLD changes nothing | byte-identical |
+| Cancelled | `CancellationException` |
+
+`Keys.seamError` cannot see the wrap of a doubled file (copy one's tail and copy
+two's are the same samples by construction, as `SirenHeldTest` explains), so the
+pad's own claim is the played wrap above, and the loop's closure stays
+`MercuryLoopTest`'s. The step across the wrap sits near 0.9 of the steepest
+step because the cut is where the neighbours are smallest, a zero crossing,
+where a sine's step is at its steepest: it is a step the loop makes everywhere
+else, not a click.
+
+**The audition (round 6)** adds a HELD KEYS group to each voice: the nine zones
+up the keyboard (each held 1.4 s, the key lifting as the next goes down), four
+zones held together as a diminished seventh for 5 s, and the middle zone held
+through four wraps, all played the way the keygroup plays the file (the first
+pass, the loop from its marker, the 0.6 s release).
+
+**Not done in R2b, for the desktop session:** the app's own MAKE INSTRUMENT
+path (R1.1 item 6 above).
+
+**Next.** R2c: EDDY, VESSEL and SHARD.
 
