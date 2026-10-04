@@ -234,8 +234,27 @@ object Gyre {
      */
     const val DAMPER_T60 = 0.15f
     const val DAMPER_RAMP_SECONDS = 0.02f
-    const val HOLD_SHORT_SECONDS = 0.25f
     const val END_DB = 45f
+
+    /**
+     * HOLD runs from choked to open (the owner's word for it, after the second listen: "I don't
+     * hear the distinction"). At 0 the hand lands [CHOKE_SECONDS] after the pluck; at the step below
+     * the LOOP it lands when the note has rung out on its own ([openSeconds]), so it stops nothing.
+     * Round one ran every voice from 0.25 s to a fixed ring (FLICK 3 s, HALO 6 s), but a note falls
+     * 40 dB long before that: FLICK's hand landed 50 dB down at HOLD 0.5 and 108 dB down at 0.95,
+     * so half the knob did nothing anyone could hear.
+     */
+    const val CHOKE_SECONDS = 0.04f
+
+    /**
+     * When a note has rung out (40 dB down, measured with no hand): the played strings take about
+     * [OPEN_STRINGS_SECONDS] whatever the voice, the note or BODY (FLICK 0.46 to 0.73 s, HALO 0.49
+     * at SYMPATHY 0), and the sympathetic strings add up to [OPEN_SYMPATHY_SECONDS] along SYMPATHY
+     * squared (both voices about 2.7 s at SYMPATHY 1, HALO 2.0 at its default 0.8). Shape: the
+     * strings' figure carries a fifth more than the measured 0.47 s, for the 45 dB the render keeps.
+     */
+    const val OPEN_STRINGS_SECONDS = 0.55f
+    const val OPEN_SYMPATHY_SECONDS = 2.75f
 
     /**
      * How long the sympathetic strings ring out after the hand lands, at SYMPATHY 1: more sympathy
@@ -260,8 +279,9 @@ object Gyre {
 
     /**
      * A voice: its range, how long and bright its strings ring, how hard they are plucked, how
-     * long it may ring before the damper and after it, and its macro defaults. Tension is part of
-     * the voice (decision 2): brighter, faster strings are a tighter instrument.
+     * long its sympathetic strings ring after the damper, and its macro defaults (HOLD's sit near
+     * the open end, where the voices were approved: the hand lands about 38 dB down). Tension is
+     * part of the voice (decision 2): brighter, faster strings are a tighter instrument.
      */
     internal class Shape(
         val rootMidi: Int,
@@ -269,7 +289,6 @@ object Gyre {
         val brightRatio: Float,
         val pickHz: Float,
         val levels: FloatArray,
-        val ringSeconds: Float,
         val releaseT60: Float,
         val sympathy: Float,
         val spin: Float,
@@ -278,8 +297,8 @@ object Gyre {
     )
 
     internal fun shapeOf(voice: GyreVoice): Shape = when (voice) {
-        GyreVoice.FLICK -> Shape(48, 2.5f, 14f, 4_000f, floatArrayOf(1f, 0.35f, 0.25f, 0.18f), 3f, 0.3f, 0.25f, 0.05f, 0.4f, 0.6f)
-        GyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 6f, 1.5f, 0.8f, 0.15f, 0.65f, 0.8f)
+        GyreVoice.FLICK -> Shape(48, 2.5f, 14f, 4_000f, floatArrayOf(1f, 0.35f, 0.25f, 0.18f), 0.3f, 0.25f, 0.05f, 0.4f, 0.9f)
+        GyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 1.5f, 0.8f, 0.15f, 0.65f, 0.92f)
     }
 
     fun macrosFor(voice: GyreVoice): List<MacroSpec> {
@@ -320,9 +339,18 @@ object Gyre {
 
     internal fun sympathyGain(sympathy: Float): Float = SYMPATHY_GAIN * sympathy.coerceIn(0f, 1f).pow(SYMPATHY_CURVE)
 
-    /** When the damper falls. HOLD's top step is the LOOP's (R4); here it is the step below. */
-    fun dampSeconds(voice: GyreVoice, hold: Float): Float =
-        Dsp.expMap(hold.coerceAtMost(LOOP_THRESHOLD) / LOOP_THRESHOLD, HOLD_SHORT_SECONDS, shapeOf(voice).ringSeconds)
+    /** When a note at [sympathy] has rung out on its own: the top of HOLD's range. */
+    fun openSeconds(sympathy: Float): Float =
+        OPEN_STRINGS_SECONDS + OPEN_SYMPATHY_SECONDS * sympathy.coerceIn(0f, 1f).pow(2)
+
+    /**
+     * When the hand lands: from [CHOKE_SECONDS] at HOLD 0 to [openSeconds] at the step below the
+     * LOOP, evenly in log time (a note's level in dB falls fastest just after the pluck, so equal
+     * ratios of time land at roughly equal steps of level). HOLD's top step is the LOOP's (R4);
+     * here it is the step below.
+     */
+    fun dampSeconds(hold: Float, sympathy: Float): Float =
+        Dsp.expMap(hold.coerceAtMost(LOOP_THRESHOLD) / LOOP_THRESHOLD, CHOKE_SECONDS, openSeconds(sympathy))
 
     /** The sympathetic strings' ring at [sympathy], before the hand lands. */
     internal fun sympathyT60(sympathy: Float): Float = Dsp.lin(sympathy, SYMPATHY_T60_LOW, SYMPATHY_T60_HIGH)
@@ -345,7 +373,7 @@ object Gyre {
     internal fun rawFrames(voice: GyreVoice, macros: Map<String, Float>): Int {
         val m = settled(macros, voice)
         val tail = tailSeconds(voice, m.getValue("SYMPATHY"), m.getValue("BODY"), m.getValue("SPIN"))
-        return ((dampSeconds(voice, m.getValue("HOLD")) + tail) * RATE * Dsp.OVERSAMPLE).toInt()
+        return ((dampSeconds(m.getValue("HOLD"), m.getValue("SYMPATHY")) + tail) * RATE * Dsp.OVERSAMPLE).toInt()
     }
 
     /** Frames at [RATE] a render has: the decimator's two floored 2:1 steps come to `raw / OVERSAMPLE`. */
@@ -472,7 +500,7 @@ object Gyre {
         val w = FloatArray(modes)
         val emphasis = FloatArray(SYMPATHETIC)
         val step = 2.0 * PI * rotorHz(spin) / rate
-        val dampN = (dampSeconds(voice, m.getValue("HOLD")) * rate).toInt()
+        val dampN = (dampSeconds(m.getValue("HOLD"), sympathy) * rate).toInt()
         val rampN = (DAMPER_RAMP_SECONDS * rate).toInt().coerceAtLeast(1)
         var phase = 0.0
         var c = c0
