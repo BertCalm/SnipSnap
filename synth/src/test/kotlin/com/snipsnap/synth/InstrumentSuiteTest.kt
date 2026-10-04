@@ -95,6 +95,45 @@ class InstrumentSuiteTest {
         }
     }
 
+    /**
+     * The factory MERCURY instruments are `Keys.mercuryPad` at each voice's defaults: nine zones on the voice's own
+     * root, every one looped (the doubled loop, the marker at the second copy) and each on its MIDI pitch.
+     */
+    @Test
+    fun `the Mercury instruments are the held pads, looped in every zone`() {
+        for (voice in MercuryVoice.entries) {
+            val pad = InstrumentSuite.renderMercury(voice, File(temp, "mercury-$voice"))
+            assertEquals(InstrumentSuite.mercuryName(voice), pad.name)
+            zonesTile(pad)
+            assertEquals(Keys.mercuryPadMidis(voice), pad.keygroups.map { it.rootNote })
+            assertEquals(InstrumentSuite.MERCURY_PAD_RELEASE_SECONDS, pad.volumeRelease)
+            pad.keygroups.forEach { kg ->
+                val layer = kg.layers.single()
+                assertEquals(layer.frameCount / 2, layer.loopStartFrame, "$voice ${kg.rootNote}: the marker sits at the second copy")
+            }
+        }
+    }
+
+    /** The sidecar knows the MERCURY three too: it refuses a program with no recipe, and records every zone's loop point. */
+    @Test
+    fun `the sidecar records the Mercury instruments and their loop points`() {
+        val programs = InstrumentSuite.renderMercuryAll(File(temp, "mercury-sidecar"))
+        val root = InstrumentSidecar.describe(programs)
+        val instruments = (root.entries["instruments"] as com.snipsnap.json.JsonValue.Arr).items
+        assertEquals(3, instruments.size)
+        instruments.forEachIndexed { i, inst ->
+            val entries = (inst as com.snipsnap.json.JsonValue.Obj).entries
+            assertEquals(programs[i].name, (entries["name"] as com.snipsnap.json.JsonValue.Str).value)
+            val zones = (entries["zones"] as com.snipsnap.json.JsonValue.Arr).items
+            assertEquals(9, zones.size)
+            zones.forEach { zone ->
+                val sample = ((zone as com.snipsnap.json.JsonValue.Obj).entries["samples"] as com.snipsnap.json.JsonValue.Arr).items.single() as com.snipsnap.json.JsonValue.Obj
+                val frames = (sample.entries["frames"] as com.snipsnap.json.JsonValue.Num).value
+                assertEquals(frames / 2, (sample.entries["loopStartFrame"] as com.snipsnap.json.JsonValue.Num).value, "the marker sits at the second copy")
+            }
+        }
+    }
+
     @Test
     fun `the EP's soft layer is darker not just quieter`() {
         val soft = Keys.ep(53, bright = 0.35f)

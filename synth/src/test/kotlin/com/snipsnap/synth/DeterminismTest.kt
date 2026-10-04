@@ -202,6 +202,18 @@ class DeterminismTest {
         }
     }
 
+    // MERCURY held: a key is the loop, doubled, so the pad inherits the loop's guarantees and adds nothing random.
+    // The canary takes the bottom key at the hard corner, the one that walks the nudge ladder: several renders of
+    // one zone, each a fresh retune, all of which must land on the same bits.
+    @Test
+    fun `MERCURY held is byte-identical across renders, every voice, the nudged corner included`() {
+        val hard = mapOf("GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f)
+        for (voice in MercuryVoice.entries) {
+            val low = Keys.mercuryPadMidis(voice).first()
+            assertContentEquals(Keys.mercuryPad(voice, hard, low).snip.samples, Keys.mercuryPad(voice, hard, low).snip.samples, "$voice hard corner, MIDI $low")
+        }
+    }
+
     // GYRE seeds each string's pluck from Dsp.seedFor per voice, note and string, and its rotor
     // starts at phase 0 on every render - a saved recipe regenerates bit for bit.
     @Test

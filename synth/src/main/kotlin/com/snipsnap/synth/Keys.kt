@@ -304,6 +304,46 @@ object Keys {
         return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
+    // ---------- MERCURY, held ----------
+    // docs/superpowers/specs/2026-10-01-mercury-modal-glass-engine-design.md, R2b
+
+    /**
+     * The nine MERCURY pad zones: every minor third across the two-octave TUNE range from [Mercury.rootMidi],
+     * per voice (PING's root is C4, SING's and BLADE's G3).
+     */
+    fun mercuryPadMidis(voice: MercuryVoice): List<Int> =
+        (0..Mercury.TUNE_SEMITONES step 3).map { Mercury.rootMidi(voice) + it }
+
+    /**
+     * MERCURY held - a MERCURY patch as a keys instrument that sounds while a key is down. The loop is
+     * [Mercury.renderLoop], HOLD's top step, which closes on itself ([Mercury.renderLoopNudged]'s own promise, held to
+     * [MAX_SEAM_ERROR] by `MercuryLoopTest`), so there is no attack to settle and no per-zone seam to cut: the loop
+     * just is the note, as [sirenPad]'s does. A held key is therefore the loop however HOLD is set; HOLD is forced to
+     * its top step here and a patch's own HOLD plays no part. RUB plays at least [Mercury.LOOP_RUB_FLOOR], and BEND
+     * is the upper modes' fixed deformation without the gesture into the note (a loop has no onset).
+     *
+     * A keygroup layer's `loopStartFrame` of `0` means *no loop* ([VelocityLayer]'s own KDoc), so, as in [sirenPad],
+     * the loop is rendered once and doubled: two bit-identical copies, the marker at the start of the second. The
+     * first pass plays copy one and then repeats copy two forever, which is exactly the audio [Mercury.renderLoop]
+     * produces, through a marker the format can express. TUNE is fixed by [midi]; the zone sits on its MIDI pitch
+     * exactly, since the loop's whole periods are fitted to the note and not the note to the loop.
+     *
+     * A zone that does not close as asked is nudged ([Mercury.NUDGE_GLASS], [Mercury.NUDGE_COUPLE]) as in the one
+     * loop, so on a hard patch the lowest zones can ring a little longer, and couple a little less, than the rest. [cancelled]
+     * reaches [Mercury.renderLoop]'s own check; a held zone is seconds of audio rendered several times over.
+     */
+    fun mercuryPad(voice: MercuryVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        val low = mercuryPadMidis(voice).first()
+        require(midi - low in 0..Mercury.TUNE_SEMITONES) {
+            "MERCURY $voice pads are MIDI $low..${low + Mercury.TUNE_SEMITONES}, got $midi"
+        }
+        val defaults = Mercury.defaults(voice)
+        val tune = (midi - low) / Mercury.TUNE_SEMITONES.toFloat()
+        val m = defaults + macros.filterKeys { it in defaults } + mapOf("TUNE" to tune, "HOLD" to 1f)
+        val loop = Mercury.renderLoop(voice, m, cancelled)
+        return KeyNote(Snip(loop + loop, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
+    }
+
     /**
      * Music box — the TINES chime recipe held to exact pitch: an
      * inharmonic 3.5-ratio strike and a barely-detuned twin beating

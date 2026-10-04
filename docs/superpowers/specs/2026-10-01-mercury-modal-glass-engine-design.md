@@ -838,7 +838,7 @@ R1.1 needs `:app` to compile, so it needs a machine with the Android SDK
 (`settings.gradle.kts` only adds `:app` when it finds one; a cloud session
 has none). The owner asked for it to be done there (2026-10-04).
 
-**What to add.** Items 1–3 are in `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`; item 4 is in
+**What to add.** Items 1–3, 5 and 6 are in `app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt`; item 4 is in
 `README.md`:
 1. `MERCURY` in `private enum class Engine` (`:1855`), with the KDoc's
    cycle line (`… → FORK → …`) updated to match.
@@ -862,8 +862,16 @@ has none). The owner asked for it to be done there (2026-10-04).
    `Mercury.isLoop(macros.getValue("HOLD"))`, the way SIREN's is shown
    (`SynthScreen.kt:1026`, `:1080`).
 
-**Not in R1.1:** the held-instrument path (the `Engine.SIREN` / `RESIN` /
-`GLINT` branches at `:511-1209`). That waits for `Keys.mercuryPad` (R2b).
+6. **The held path** (R2b built `Keys.mercuryPad` and `MercuryPadMaker`, so it
+   is no longer waiting): the same shape as SIREN's, in `SynthScreen.kt`.
+   - `heldSpec()` (`:635`): `Engine.MERCURY -> HeldSpec.Mercury(MercuryPadMaker.spec(voice as MercuryVoice, macros, holdRelease))`.
+   - `HeldSpec` (`:1535`): a `class Mercury(private val spec: MercuryPadMaker.Spec) : HeldSpec`, `HeldSpec.Siren`'s
+     body (`:1556-1563`) with `MercuryPadMaker` in place of `SirenPadMaker`.
+   - The two gates that show MAKE INSTRUMENT and its sheet (`:1098` and `:1209`, `engine == Engine.RESIN ||
+     Engine.SIREN || Engine.GLINT`): add `Engine.MERCURY`. Not `:1111`, which is DRONE TO LOOP (R2 has none).
+   - The import: `com.snipsnap.shell.MercuryPadMaker`.
+   - A zone is the slowest render of any held engine (seconds of audio, rendered several times over), so the
+     sheet's progress line matters more here than for SIREN; `renderZone`'s `cancelled` reaches the render.
 
 **How to check it:** `./gradlew :app:assembleDebug` on the SDK machine,
 then the `android-build` and `emulator-tests` jobs on the PR. A cloud

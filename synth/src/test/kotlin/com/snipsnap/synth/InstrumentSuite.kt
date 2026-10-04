@@ -9,7 +9,7 @@ import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 
 /**
- * The S5 instrument suite: six playable key instruments rendered from the
+ * The S5 instrument suite: nine playable key instruments (six classic, three MERCURY) rendered from the
  * synth engines at exact MIDI pitch, multisampled every minor third across
  * two octaves, packaged as keygroup programs.
  *
@@ -21,6 +21,7 @@ import java.io.File
  * | SnipSnap Music Box | TINES 3.5-ratio twins | C4–C6 | none (one dynamic, wistful) | decays |
  * | SnipSnap Resin Pad | RESIN BRASS WIDE SECTION, held | A2–A4 | none | **looped** — holds forever |
  * | SnipSnap Fork | FORK TINE, the DINNER JAZZ preset | C3–C5 | two true renders — soft is darker | decays |
+ * | SnipSnap Mercury Ping / Sing / Blade | MERCURY at each voice's defaults, held (HOLD's top step) | PING C4–C6, SING and BLADE G3–G5 | none | **looped** — holds forever |
  *
  * Each `render*` writes its WAVs into [dir] and returns the program; the
  * generator packages them dual-generation (`.xty` beside `_[TrackData]/`
@@ -89,8 +90,29 @@ object InstrumentSuite {
         )
     }
 
+    /**
+     * MERCURY held, as `MAKE INSTRUMENT` would make it at the voice's own defaults (the macros the round-5 listen
+     * approved, so what the MPC plays is what the audition played): nine zones every minor third, each the loop
+     * doubled with the marker at the second copy ([Keys.mercuryPad]), the same 0.6 s release the sheet defaults to.
+     * One instrument per voice, since the three are different objects (a struck glass, a sung bowl, a bent blade).
+     */
+    fun renderMercury(voice: MercuryVoice, dir: File): KeygroupProgram {
+        val midis = Keys.mercuryPadMidis(voice)
+        return build(mercuryName(voice), dir, low = midis.first(), count = midis.size, release = MERCURY_PAD_RELEASE_SECONDS) { midi, stem ->
+            val note = Keys.mercuryPad(voice, emptyMap(), midi)
+            listOf(Layered(stem, note.snip, 0, 127, note.loopStartFrame))
+        }
+    }
+
+    fun mercuryName(voice: MercuryVoice): String = "SnipSnap Mercury " + voice.name.lowercase().replaceFirstChar { it.uppercase() }
+
+    const val MERCURY_PAD_RELEASE_SECONDS = 0.6f
+
+    /** The six classic instruments, which `SessionProjectGenerator` puts on the session's tracks; the MERCURY three are [renderMercuryAll]. */
     fun renderAll(dir: File): List<KeygroupProgram> =
         listOf(renderEp(dir), renderOrgan(dir), renderHarp(dir), renderMusicBox(dir), renderResinPad(dir), renderFork(dir))
+
+    fun renderMercuryAll(dir: File): List<KeygroupProgram> = MercuryVoice.entries.map { renderMercury(it, dir) }
 
     private class Layered(
         val stem: String,
