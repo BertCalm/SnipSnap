@@ -244,6 +244,32 @@ class GlintTest {
     }
 
     @Test
+    fun `a scramble with no near patch rolls around a factory preset, and is exactly one at temperature 0`() {
+        for (voice in GlintVoice.entries) {
+            val presets = GlintPresets.forVoice(voice).map { it.macros }.toSet()
+            for (seed in 0L until 12L) {
+                val rolled = Glint.scramble(voice, Random(seed), temperature = 0f)
+                assertTrue(rolled in presets, "$voice seed $seed: temperature 0 gave $rolled, which is no factory preset")
+            }
+            val seen = (0L until 40L).map { Glint.scramble(voice, Random(it), temperature = 0f) }.toSet()
+            assertTrue(seen.size > 1, "$voice: every seed picked the same preset")
+        }
+    }
+
+    @Test
+    fun `an explicit near patch seeds the roll, and temperature 1 is the flat roll that spends no draw on a preset`() {
+        for (voice in GlintVoice.entries) {
+            val near = GlintPresets.forVoice(voice).last()
+            assertEquals(near.macros, Glint.scramble(voice, Random(5), temperature = 0f, near = near), "$voice: near was ignored")
+            assertEquals(
+                Dsp.scrambleNear(Glint.defaults(voice), 1f, Random(3)),
+                Glint.scramble(voice, Random(3), temperature = 1f),
+                "$voice: temperature 1 is not the flat roll",
+            )
+        }
+    }
+
+    @Test
     fun `PEAK opens`() {
         for (voice in GlintVoice.entries) {
             val still = mapOf("BLOOM" to 0.5f, "BODY" to 0.2f)
