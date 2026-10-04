@@ -153,6 +153,24 @@ and the low/mid/high band split. When the classifier is wrong about a real
 capture, this is where the wrongness becomes a number you can move a
 threshold by.
 
+### `synth <ENGINE> <VOICE>` — hear a factory preset
+
+```
+snipsnap synth TINES BELL --all --out <dir>
+snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
+snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
+```
+
+Renders the voice's factory presets to WAV (`Presets.forVoice`). `--all`
+writes every preset; `--preset N` writes one, counting from 1; with
+neither, the first preset. A string-machine preset that lands with
+ENSEMBLE is written stereo, the same chain SEND TO PAD would bake.
+`--instrument` and `--drone` are RESIN only: a held nine-zone instrument
+(`.xty` plus the `.xpm` twin), or one loop-grid drone. SIREN and GLINT
+hold on the phone's MAKE INSTRUMENT; this command refuses them. An
+engine with a roster and no picker entry (BORE, ARCO, MERCURY, TREMOR)
+still renders here.
+
 ### `crate <root>` — the library as a collection
 
 Your whole output treated as one crate: an index of every kit pad's
@@ -379,6 +397,13 @@ the machine's own transport (FLIP · STOP · START · PITCH), and row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below); tapping any
 of them changes every file the pad references, velocity layers included.
+
+### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again
+
+Replays the source pad's last treatment on the destination, through the
+same doors the model uses. A recipe that only names something the replay
+would need (a MUTATE parent, SPLICE's takes, a room) is refused by name.
+A pad with no recipe is refused the same way.
 
 ### `era <kit-dir> <machine>` — the Time Machine
 
@@ -1119,7 +1144,7 @@ card or USB drive as-is.
 
 | Format | What lands | Notes |
 |---|---|---|
-| `folder` | `<Kit>/<Kit>.xpm` + WAVs | MPC 2-era program folder — loads on every generation |
+| `folder` | `<Kit>/<Kit>.xpm` + WAVs | MPC 2-era program folder. The Live III loaded it. An MPC One or a 2.x Live II has not been in hand |
 | `expansion` | `Expansions/<Kit>/` | browsable in the Expansion tab, tile + manifest |
 | `xpn` | `<Kit>.xpn` | one-file archive for sharing |
 | `xtd` | `<Kit>.xtd` + `<Kit>_[TrackData]/` | MPC 3 native drum track — the hardware-verified primary format |

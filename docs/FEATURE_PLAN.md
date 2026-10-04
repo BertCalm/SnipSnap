@@ -1524,7 +1524,7 @@ later. The arithmetic (axes, pinch depth, corner weights, the one-pole
 smoother) is pure JVM and tested; the engine is the repo's one native
 library — Oboe under a C++ callback, because a finger wants its sound
 under 10 ms and AudioTrack's blocking-write clock is the opposite trade.
-The Android side is written blind for CI's compiler, as :app always is.
+The Android side is Compose over those models. CI's `android-build` compiles it.
 
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|

@@ -533,6 +533,14 @@ and serializes per-pad next to the WAV.
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
+That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
+THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, FATHOM, RESIN, TIDE,
+GLINT, SIREN, FORK, plus GRAINS, SNAP and DRAW, which sit beside the
+picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
+MERCURY and TREMOR have preset rosters, so `snipsnap synth` renders them.
+TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
+no roster entry. Each file's own KDoc names its spec.
+
 The filters got a generational upgrade from the DSP literature: `Dsp.TptSvf`
 is a topology-preserving (trapezoidal) state-variable filter after Andy
 Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
@@ -671,14 +679,15 @@ The circular sequencer ([`docs/ORBITS.md`](docs/ORBITS.md)): a bar taped
 end to end into a ring, a longer snip taped into a bigger ring around it,
 one needle speed driving them all so the inner ring comes round first. Each
 ring is a pad pattern or a snip from the shelf, any length from 1 to 64
-steps, with a per-ring toggle between **SPEED** (same needle speed — a
-16-step ring against a 20-step ring is 4/4 against 5/4, meeting every five
-bars) and **LAP** (once a bar whatever the steps — three even hits against
-four). `OrbitClock` is the arithmetic, every position a function of one
+steps. **SPAN FREE** keeps one needle speed, so a 16-step ring against a
+20-step ring is 4/4 against 5/4. **SPAN ½ BAR** through **4 BARS** makes
+one turn of the ring that many laps of the bar, so three steps across one
+bar is a triplet. `OrbitClock` is the arithmetic, every position a function of one
 frame count; `OrbitEngine` plays it through the same `AudioSink` the loop
 grid uses; `OrbitStore` keeps `orbits.json` beside the kit. Reached from
-GROOVE's **ORBIT ▸**. Phone-side only for now — export is a listed
-follow-up.
+the ORBIT menu item, and from GROOVE's **ORBIT ▸**. **CLIP ▸ KIT** writes
+the set into the kit's `groove.json`, and the native export takes that
+clip to the MPC. [`docs/ORBITS.md`](docs/ORBITS.md) is the arithmetic.
 
 ### `:app`
 
