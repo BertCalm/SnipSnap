@@ -17,6 +17,17 @@ as a docs-only PR (zero check runs by design,
 its commit message names the string machine's product and its makers
 only to say they are kept off every surface, as the blocklist's own
 commit did ("the blocklist gained rhodes/wurlitzer/fender").
+
+*Superseded (2026-10-04; the Status above, "No engine code is committed" and the
+Roadmap line below are as written on 2026-09-29 and are kept).* ARCO is built.
+The bow landed as `Strings.Bow` (R1a), the engine as `Arco.kt` with its presets
+and its kit (R1b), the retune (R1c) and BODY above the middle of the knob as a
+lift on the plain's own gain (R1g); the roadmap row exists, as S20
+(`docs/SYNTH_ROADMAP.md`). The owner has listened to it on several pages: see
+the "heard" paragraphs. The paragraphs "R1a, as built" to "R1h heard" under
+"Phasing and gates" hold the state as built, and a sentence below that
+describes ARCO's BODY as R1c's climbing box carries its own note.
+
 **Date:** 2026-09-29
 **Plan:** to be written per round (`docs/superpowers/plans/2026-09-29-arco-round-N.md`)
 **Related:** [`2026-09-28-bore-woodwind-engine-design.md`](2026-09-28-bore-woodwind-engine-design.md)
@@ -662,6 +673,10 @@ GRIP ─▶ slope = 5 − 4·p, BRIDGE_HZ      p = GRIP over the voice's measure
    Tide.bandLimit (19.5 kHz at 176.4 kHz) ─▶ Dsp.decimate ─▶ mean removed ─▶ 20 Hz high-pass ─▶ Dsp.levelTo(MELODIC_LOUDNESS_TARGET) ─▶ Dsp.fadeTail
 ```
 
+*Superseded above BODY 0.5 (R1g, 2026-10-04; see "R1g built" below, kept as the design wrote it).* The diagram is the engine as built at and under BODY 0.5, to the sample.
+Above 0.5 `bodyRing` is called at `min(BODY, 0.5)` (the box never rings louder than it does at the knee) and BODY adds a low shelf and a broad bell after the conditioning, at
+the plain's own gain, in place of `Dsp.levelTo` on the boxed note. `Arco.finished` is the one entry for all of it.
+
 Rendered at `Dsp.RATE * Dsp.OVERSAMPLE` and decimated, like every engine,
 and not optionally: a friction table's kink mints harmonics up to the
 ring's bandwidth (spike (3): h10 at −22 dB in single-slip motion, raw
@@ -933,6 +948,9 @@ rule. Never inside the loop, never `Dsp.Biquad.bandpass` on a
 differentiated drive at −54 dB (dsp F10). The skinned body is ERHU's
 question ("Voices").
 
+*Superseded above BODY 0.5 (R1c, then R1g; see "R1g built" below).* "BODY means 'times the string'" holds only up to the knee: the box is RMS-matched and rung at
+`min(BODY, 0.5)` times the string, and what BODY adds above 0.5 is a lift on the note, not a bigger box. "Identity at 0" is as built.
+
 ### The output
 
 `Tide.bandLimit` at the oversampled rate (`Tide.kt:533`), `Dsp.decimate`
@@ -943,6 +961,10 @@ PUNCH; no `normalizeByFold`; no `limitPeak(1f)`. Loudness: GRIP and BOW
 change tone and attack, not level, the promise `levelTo` keeps on every
 melodic pad; on keys the layers are velocity-true, `Keys.fork`'s
 `Dsp.normalize` (`Keys.kt:354`), never levelled per render.
+
+*Superseded above BODY 0.5 (R1g; see "R1g built" below).* `Dsp.levelTo` is the finish at and under BODY 0.5. Above it BODY changes the level on purpose: the note keeps
+the gain `levelTo` would give the plain note (`Arco.plainGain`, `levelTo`'s own arithmetic) and the lift is added on top of it, so BODY 1 is louder than the plain by the lift's own
+energy (+6.15 to +7.03 dB rms on the 36 TUNE steps where nothing is capped, measured in R1g's sweep).
 
 ## Voices
 
@@ -966,7 +988,7 @@ that does nothing is rule 1's dead knob, SANTUR's own reason for
 shipping "one placeholder mode, not an empty table" (`Silk.kt:453-460`);
 the MEMBRANE ratios at the documents' 293 Hz anchor, labelled shape — at
 least a sourced *membrane* shape, RMS-matched by `bodyRing` so BODY
-means "times the string", its known wrongness with a direction (the
+means "times the string" (*up to BODY 0.5 only since R1g*), its known wrongness with a direction (the
 ratios too spread, physics F11) and its anchor on the open string, so
 TUNE 0 rings the body at f0 where TUNE 12 does not; or one `Modes.fixed`
 row, SANTUR's placeholder shape, at an anchor off every scale root.
@@ -1044,7 +1066,7 @@ given in "The specification, as reviewed".
 | **TUNE** | the note | 24 semitones from the voice's root, snapped through `Keys.midiHz` (`Fork.kt:256-258`); `neutral = 0.5` | 0.5 |
 | **BOW** | the stroke: how fast the bow gets to speed, and how hard it bites on the way | attack `expMap(BOW, 0.40 s, 0.010 s)` on the velocity ramp (400 ms at 0, 63 ms at 0.5, 44 ms at 0.6, 10 ms at 1), capped at 0.85 of the hold (SIREN's `SWEEP_HOLD_FRACTION`, `Siren.kt:72`); above 0.5 an overshoot — the velocity starts at up to 1.75× its sustain value (the amplitude-1 corner the spike bounded, spike (10)) and the pressure at the window's top, both relaxing with the attack's own time constant. The **sustain velocity is a per-voice constant** (CELLO 0.13, STK's `0.03 + 0.2·0.5`, `stk_Bowed.cpp:116`), so BOW never moves GRIP's window (spike (4)). Heard in the first 300 ms and nowhere else — level is `levelTo`'s. Whether the overshoot makes a C2 stab speak in under 100 ms is R1's first table, not a promise (spike (5): the plain ramp takes 325–420 ms) | 0.6 (44 ms, a 1.15× bite) |
 | **GRIP** | bow pressure and the bridge corner together: a light grip or digging in — the stick's share of the period, the corner's edge, the bite | `p = lin(GRIP, p_lo, p_hi)` over the **top single-slip island measured per voice** (spike (4): 0.90–1.00 at C3, single-slip at every velocity row except pressure 0.95 at amplitude 0.8 (three slips); edges re-measured at 0.01 steps at three TUNEs and pinned with the measurement in the KDoc), `slope = 5 − 4·p` (`stk_Bowed.cpp:155`); and `corner = expMap(GRIP, c_lo, 3024 Hz)` on the bridge one-pole, single-slip from 1000 Hz up at pressure ≥ 0.7 (the loss × force map) — the one brightness axis that keeps one slip, a shape standing in for the corner-sharpening a memoryless table lacks. Never a double-slip cell at either end; whether the top may reach the multi-slip region and whether 0 may reach the two-slip whistle are the gate's questions. `neutral = 0.5` | 0.6 |
-| **BODY** | the plate's or the skin's share — not the documents' plate-to-skin crossfade: each voice has one body, and a knob that fades a cello into a drumhead is a shape no instrument has, so BODY is "how much of this voice's box", SILK's meaning | `Strings.bodyRing`'s `amount`: identity at 0, the body RMS-matched to the string at 1 (`Strings.kt:722-748`) | 0.5 |
+| **BODY** | the plate's or the skin's share — not the documents' plate-to-skin crossfade: each voice has one body, and a knob that fades a cello into a drumhead is a shape no instrument has, so BODY is "how much of this voice's box", SILK's meaning | `Strings.bodyRing`'s `amount`: identity at 0, the body RMS-matched to the string at 1 (`Strings.kt:722-748`). **Superseded (R1c, then R1g; see "R1g built"):** the box's amount is `min(BODY, 0.5)` times the string, so BODY 1 is not a box as loud as the string, and above 0.5 BODY adds a low shelf and a broad bell on the note at the plain's own gain, 3.5 dB each at 0.75 and 6.0 dB each at 1, backed off per note where the peak bar leaves no room | 0.5 |
 | **HOLD** | how long the bow is on the string; the top step is a LOOP | SIREN's mapping (`Siren.holdSeconds`, `Siren.kt:190`): `expMap(hold/0.99, 0.3, 4)` s, then a 50 ms ramp to zero, then the bow **lifts** and the string is **stopped** — `Bow.gain()` ramps the bridge reflection down over `release = max(0.15 s, min(0.5·hold, t60(f0)))` — the floor wins where the free ring is shorter than it (ERHU above about G5, where t60 at the 3024 Hz corner is under 150 ms: 85 ms at A5, 48 ms at D6), which is why it is not a `coerceIn`, whose floor above its ceiling throws — so a stab's tail is 0.15 s and a 4 s pad rings to its own t60, the way a player's hand stops a string (OUD's SLIDE precedent for a finger's damping as a lower loop gain, `Strings.kt:510-512`), because the free ring at 0.95 is 0.9–1.9 s at C3–C2 (spike (7); dsp F31) and would file every stab past the classifier's 1.5 s line as LOOP (`Classifier.kt:72`); `LOOP_THRESHOLD 0.99`, SCRAMBLE capped at 0.95 (`Siren.kt:83-84`); `drumClassFor` derived from the *rendered* duration — hold, release and stop — against the 1.5 s line the way `Fork.drumClassFor` derives it (`Fork.kt:219, :239-242`), the constant computed from the mapping at implementation, never typed (the documents' hard-coded 0.65 was wrong even for their own mapping: 1.39 s, under the line, api C2) | 0.4 (0.85 s of bow, 1.33 s rendered at C3, under the line; the line is crossed near HOLD 0.45, computed at implementation) |
 
 Defaults: GRIP 0.6 sits inside the measured island at the voice's
@@ -2087,6 +2109,9 @@ BOW 1 stab the owner marked YES** (below). What it found:
   pads A01 to A08, A11 and A16 are byte-identical) and climbs to `BODY_TOP` 1.75 times the string at BODY 1 (measured 0.50, 1.12 and 1.75 at BODY
   0.5, 0.75 and 1 in both voices, finished peaks at most 0.66). A louder box moved ERHU MOON FIDDLE at BODY 0.85 (now 1.375 times the string) from a
   classifier ring of 813 ms to 522 ms, 22 ms from the 500 ms line, so that preset's BODY is 0.8.
+  *Superseded (R1g, 2026-10-04; see "R1g built" below, kept as R1c wrote it):* the climb to `BODY_TOP` 1.75 is gone (`BODY_TOP` is retired and `boxAmountFor` is `min(BODY, 0.5)`), so BODY 1 rings the box
+  at 0.5 times the string, not 1.75, and the finished peak at BODY 1 is at most 0.940 (the cap), not 0.66. MOON FIDDLE's BODY stays 0.8, but the climb that moved it is gone; R1g saw its ring at 807 ms
+  at 0.8 and did not re-measure 0.85. The sentence on kit pad A16 is marked too: the committed A16 file was found stale at the base commit when the kit was regenerated (R1g record), cause not traced here.
 * **The bite.** R1b's CELLO bite hardly showed: against the same stroke with none, the best of the 0-50, 50-100 and 100-200 ms windows was within
   0.5 dB at F2, C3, G3 and C4 (0.3, 0.5, 0.5, 0.4; over the whole 200 ms it was +0.2, -0.2, +0.4, -0.6). It relaxed with the attack's own 10 ms
   time constant (a hump of 1.28 times the velocity, over in 27 ms) and a bass string needs many milliseconds to build a period. The bite is per
@@ -2113,7 +2138,7 @@ BOW 1 stab the owner marked YES** (below). What it found:
   no period inside a note, so it is never the same twice and still a pure function of time: no seed), the swing leans a little (a second
   harmonic) and it swells in over half a second, against a fifth. Measured swing peaks 8.1 to 11.8 cents (12.75 at its highest over four
   seconds), half-swing rates 5.1 to 7.1 Hz, mean pitch -0.02 cents. ERHU keeps `VIBRATO_PLAIN`, the old sine term for term, held bit for bit by a test.
-* **Still open for the owner's ears**: all three amounts (`BODY_TOP`, the bite's three numbers, the drift's two), whether the stab's extra bite is worth
+* **Still open for the owner's ears**: all three amounts (`BODY_TOP` *(retired by R1g)*, the bite's three numbers, the drift's two), whether the stab's extra bite is worth
   E-flat3 and its neighbours scraping, whether CELLO's default-HOLD notes (0.85 s of bow, 2.8 cents of vibrato, which now drifts) are better or worse
   for it, the stab against the two brass stabs, whether the bowed note still reads as a synth, and the unheard half of the roster.
   `generateArcoRetune` writes the small before-and-now page for exactly these (BODY 1, CELLO BOW 1 with a stronger step beside it, the BOW 1 stab,
@@ -2157,9 +2182,119 @@ the knee at 0.5 is untouched by all of it.
 **The principle R1e carries: the body is added on top of the string, at the plain's own gain, and the note is allowed to be louder.** A real body radiates more, it does not trade
 the string's top end away. The warmth page (`generateArcoWarmth`, test-side only) builds that from a low shelf (weight) and a broad bell (warmth) at +3.5 and +6 dB, with the
 string at THE PLAIN ONE's gain (the helper reproduces `Arco.render` at BODY 0.5 bit for bit), a louder-only control matched to the shaped clip's loudness, and chips FULLER, SAME,
-DULLER, DIFFERENT. **Engine hand-off, not done yet**: `Arco.finish` must level BODY above the knee from the plain's gain and not from the boxed signal; the shaped string at the plain's
+DULLER, DIFFERENT. **Engine hand-off, not done yet** *(done by R1g, 2026-10-04: see "R1g built" below; the sentence is kept as R1e wrote it, and `Arco.finish` no longer exists, `Arco.finished` replaced it)*: `Arco.finish` must level BODY above the knee from the plain's gain and not from the boxed signal; the shaped string at the plain's
 level peaks above ArcoTest's finished-peak bar of 0.95 at CELLO C2 and F#2, so the engine step must back the rung off on low CELLO notes, give headroom or accept a ceiling duck, and
 never loosen the bar; ERHU's fixed corners (600 and 800 Hz) are the scout's and untested on its highest notes (WEIGHT alone reads only +0.6 dB on A5 against +2.2 on C5).
+
+**R1f (2026-10-03 night to 2026-10-04): the owner's R1e answers, a look at GYRE's BODY, and what the finish did to the box.** After the warmth page the owner wrote: "You might want to review Gyre in the repo. I think we
+figured out body over there." R1f read GYRE's BODY, its pages and its verdicts, measured both engines with one ruler, and listened to nothing.
+
+*What the owner said about the warmth page* (HEARD, `verdicts/arco_r1e_*`, saved 23:17 to 23:19 UTC on 2026-10-03): ERHU "Very hard to tell so I'm not confident in my picks", CELLO "Again hard to tell"; the six overall
+questions, the pairs question among them, were left blank; both hidden exact repeats of the plain were SAME. Of the 18 chips, 7 were FULLER and 11 SAME. Read afterwards against the private key with `ArcoWarmthMeasure` (MEASURED,
+the whole-clip rms rise over the plain, at the plain's own gain): the nine marked clips under +2.3 dB all read SAME (the highest +2.24 dB); of the nine clips at +3.2 dB or more, seven read FULLER (+3.23 to +6.38 dB) and two SAME
+(ERHU's small rung with the bloom, +3.77 dB, and CELLO C3's large rung, +6.49 dB, which has no recorded play, so it is probably a mis-tap on a neighbouring row: INFERRED). ERHU C5's flat louder-only clip (+3.23 dB, no change of
+shape) read FULLER, so on ERHU "fuller" may only have been louder; at CELLO F#2 the shaped small rung read FULLER and the flat clip of the same A-weighted loudness read SAME, the one place the shape and not the level seems to
+have been heard (both INFERRED); the shaped clip also had 1.44 dB more whole-clip rms (+3.65 against +2.21 dB, MEASURED from the key), so this is a weak hint of shape beyond loudness at best. CELLO C3's louder-only clip got no chip. The owner's own account is low confidence.
+
+*What the owner said and kept about GYRE* (HEARD, `gyre_r1_*` and `gyre_r1b_*` on that page's store). Round 1, BODY from the membrane alone (the roadmap's S21 row: BODY 0 to 1 moved the octave bands 0.6 to 4.1 dB): all ten BODY
+clips "meh", the note "All sounds the same" (2026-10-02, 17:43 UTC). Round 1b, BODY rebuilt as a box that BODY sizes (S21: 8.1 to 14.4 dB): all 16 TOGETHER clips and all 8 EDGES clips "keep", BODY 0 and BODY 1 alike, and "Yes better" to the
+BODY question (2026-10-03, 18:05 to 18:06 UTC). The BODY question was "does each step now sound like a different instrument, a smaller or bigger box under the strings? Is any end too much (BODY 0 too thin, BODY 1 too boomy)?"
+(`gyre-audition.html` at 30ed1c3, line 472), and the same page had told the owner, above the questions, that "BODY 0 to 1 now moves the sound 7 to 15 dB across its octave bands, where it moved 1 to 4" (line 460). Care in reading it:
+"keep" on both ends does not say the ends differ; the five-step BODY section got no marks in round 1b (there is no `gyre_r1b_BODY` document, and why is not known); the page's "Better" was the answer to the SPIN question, not to BODY; "Yes better" is
+the one direct BODY answer. The change from "meh" to "keep" on the BODY 1 clips is the best sign that GYRE's box was audible (INFERRED).
+
+*What the two engines measured* (MEASURED, by a replica of GYRE's page chain at C4 and the repo ruler, in a scratch test that is not in the repo; one note a voice, and a ruler is not an ear). GYRE's page was level-matched too: every
+BODY clip was written to `Loudness.of` 0.0300 through `AuditionLevel`, and the whole-clip rms of the five BODY clips on the published page (MEASURED on the page's own clips, not on the replica) spread by only 0.24 dB (FLICK) and 0.06 dB (HALO) over the five; the replica reads +0.24 dB and +0.03 dB, BODY 1 against BODY 0. So level matching alone is not what made ARCO's BODY read as nothing. What differs is
+the size of the swing: in the first 0.4 s, BODY 1 against BODY 0 moves GYRE's 80-300 Hz band by +23.79 dB (FLICK) and +21.04 dB (HALO), against +1.36 dB (CELLO C3) and +2.87 dB (ERHU C5) for ARCO's BODY 1 as R1c left it.
+GYRE's kept BODY also takes its top down (3-8 kHz in the first 0.4 s, -8.67 dB FLICK and -11.99 dB HALO against BODY 0, as heard), so a lower top is not by itself what the owner turned down in ARCO (INFERRED; a pluck's strike and a held
+note's steady window are different measures). The roadmap's 0.6 to 4.1 and 8.1 to 14.4 dB were not reproduced: that metric is not the ruler's. On ARCO's own engine as R1c left it (CELLO C3 and ERHU C5, BODY 1 against BODY 0.5): at the
+plain's own gain the 1.75 times box added +5.22 dB rms (CELLO) and +5.19 dB (ERHU), and +5.85 dB in CELLO's 80-300 Hz band, with the 3-8 kHz band up by only +0.04 dB (CELLO) and +0.43 dB (ERHU); `Dsp.levelTo` in the finish then took
+5.00 dB and 5.18 dB back off, leaving +0.22 dB and +0.01 dB rms and the 3-8 kHz band 4.96 dB (CELLO) and 4.75 dB (ERHU) down. For scale, the R1e clips that read FULLER had +3.2 dB or more at the plain's gain, and BODY 1 without the
+finish's levelling had +5.2 dB. INFERRED: "Body doesn't seem to do anything" fits the finish cancelling what the box added, and not a box too small to matter; the same levelling turned R1d's low and mid boosts into 3-8 kHz cuts of 7.3 to
+19.4 dB.
+
+*The owner's decisions* (HEARD, 2026-10-04, through the question tool): BODY at the top of the knob is to be **"Louder and fuller, treble untouched"** (the build's brief reads that as: not a GYRE-style tilt); the nine presets and the six
+kit pads that set BODY above the middle may change; the merge was to wait until the owner had heard a listening page (the owner heard one: see "R1h heard").
+
+**R1g built (2026-10-04): BODY above the middle is a lift on the plain.** Only `Arco.kt` changed in `src/main` (the roster's comments aside); `Strings.kt`, `Dsp.kt`, the bow and every preset value are as they were.
+
+* **At and under BODY 0.5 the sound is R1c's, to the sample.** `Arco.finished` takes a branch there (today's statements in today's order), not a 0 dB filter. MEASURED: `ArcoFrozenR1cTest`, a never-edited verbatim copy of R1c's
+  conditioning, finish and loop lines, reads 0 differing samples against `Arco.render` and `renderLoopMeasured` at BODY 0, 0.25 and 0.5 on 135 one-shot cells (all 45 TUNE steps, 25 CELLO and 20 ERHU, at the three BODY values) and 51 loops,
+  on 96 corner macro sets and on the seven presets at or under 0.5; its control, the same comparison above the knee, differs. A separate check by MD5 of every sample against a git archive of the base commit 316bfe9 found 135 of 135 one-shots identical.
+* **Above 0.5 the box is frozen and BODY adds a lift.** `boxAmountFor` is `min(BODY, BODY_KNEE)`; `BODY_TOP` and the climb to 1.75 are retired. The lift is a low shelf and then a broad bell in series, each `liftDbFor(BODY)` dB, on a copy of
+  the conditioned note at `Dsp.RATE`, at the plain's own gain (`plainGain`, `Dsp.levelTo`'s own arithmetic, held equal to it by a test): nothing re-levels the lift away, and there is no high shelf and no treble cut. CELLO: shelf 200 Hz,
+  bell 300 Hz Q 0.8. ERHU: shelf 600 Hz, bell 800 Hz Q 1.0. (R1e's scouts, kept.) The curve is the one quadratic through 0 dB at the knee, 3.5 dB at BODY 0.75 and 6.0 dB at BODY 1 (R1e's two rungs, `LIFT_HALF_DB` and `LIFT_TOP_DB`), `8u - 2u^2`
+  with u = (BODY - 0.5) / 0.5: 0.78 dB at 0.55, 1.52 at 0.6, 2.22 at 0.65, 2.88 at 0.7, 4.08 at 0.8, 5.12 at 0.9, 5.58 at 0.95. The cap: `PEAK_CAP` 0.94 is the bar `FINISHED_PEAK_BAR` 0.95 less 0.01 (one number that the engine,
+  ArcoTest and ArcoProductTest all read; the bar is not loosened). Each note's lift is backed off only as far as its finished peak needs (the top lift is tried first, else 20 bisection steps), and that cap does not depend on BODY, so a larger
+  BODY is never a smaller lift; `Dsp.limitPeak` never runs above the knee. A LOOP lifts the whole stretch before the seam is read, the cut is chosen on the lifted window, and the seam, cut and rotate tail is one helper for both branches.
+* **One finish.** `Arco.finished(raw, voice, body, rate)` is the only entry; the old public two-argument `Arco.finish` is removed, and every test, probe and generator copy of it that the compiler listed was re-pointed at the new one
+  (the declared exceptions: the frozen reference, the cap-off controls, the CI-equality rebuild, and the R1e helper's own conditioning, which exists to be compared with the engine). `Arco.render` equals the finish of its own bowed string at
+  BODY 0.75 and 1 on five notes (CELLO C2, F#2, C3; ERHU C5, A5), sample for sample, and a loop equals the loop built from the engine's own pieces on four (CELLO C2, C3; ERHU C5, A5), with the same seam.
+* **What the build changed from the design on paper: one thing.** The lift's filters run in Double (a private `LiftSection`: the same formulas, corners, Q and order), because the Float `Dsp.Biquad` at 200 to 600 Hz and 44.1 kHz left
+  rounding of up to 2.09e-4 of the peak (CELLO step 9), which broke the knee's bar of 1e-5 of the peak at BODY 0.5000001. After it the largest difference over all 45 steps is 3.64e-07 (CELLO) and 3.55e-07 (ERHU). The cause (poles close to
+  1 at those corners) is the review's reading and was not isolated.
+
+MEASURED from the real engine, and nobody had listened to any of it (`ArcoBodyLiftTest`, `ArcoBodyLiftPeakTest`, `ArcoBodyLiftTableTest`, `ArcoTest`, `ArcoProductTest`, `ArcoPresetsTest`, `ArcoLoopFuzzTest`, `DeterminismTest`):
+
+* **The prediction table.** R1f's predictions against `Arco.render` on the ten grid notes: 99 numbers compared (bands and rms within 0.1 dB, peak within 0.005), 0 missed. The first run listed six misses; the
+  four that mattered, each since fixed or restated and none argued: the knee (above); the rise at BODY 0.9 on ERHU F5 (+5.81 dB against a written "about +4.5 to +5.5": the written range was low, and the test's bound is now 4.4 to
+  6.1 dB, marked a listening-value pin); the engine against R1e's helper sample by sample (up to 3.5e-3 of the peak, 13 of 17 pairs over 1e-3, against a prediction of "about 1e-3" that set no bar; how much is the helper's Float
+  noise and how much the 44.1 kHz placement was not isolated); and SLOW CRY's ring (842 ms against 836).
+* **Rise over the plain** (rms, on the 36 TUNE steps where the cap is idle): +0.74 to +0.87 dB at BODY 0.55, +1.47 to +1.71 at 0.6, +3.48 to +4.03 at 0.75, +5.20 to +5.97 at 0.9, +6.15 to +7.03 at 1.0. No step goes backwards from one
+  BODY step to the next (the worst fall is 0.0000 dB over 45 steps and ten BODY steps). CELLO C3 at BODY 1: rms +6.48 dB, A-weighted +4.23 dB, the 80-300 Hz band +7.00 dB, peak 0.928.
+* **The top is not ducked.** At BODY 0.75 and 1.0 on the ten notes the lowest upper band is +0.03 dB over the plain (CELLO C2, 3-8 kHz); 3-8 kHz reads +0.03 to +0.07 dB (CELLO) and +0.15 to +0.36 dB (ERHU). The control, the same shelf
+  and bell put through today's `Dsp.levelTo`, reads +0.63 / -2.78 / -6.01 / -6.30 dB in the four bands on CELLO C3 (80-300, 300-1k, 1-3k, 3-8k) and +0.79 / -2.47 / -6.01 dB on ERHU C5 (300-1k, 1-3k, 3-8k): R1c's signature, and the
+  top-band bar fails on it, as it should.
+* **Peaks.** The finished peak is at most 0.940 on all 45 TUNE steps at BODY 0.75, 0.9 and 1.0 (highest 0.940000, on the cap itself; the tests print 0.940) and in ArcoTest's 54-cell knob grids; the halving count is 0 everywhere. The cap-off control (the same lift with the cap
+  removed) reads 31 of 54 CELLO cells and 9 of 54 ERHU cells over 0.95 at BODY 1, worst 1.763 and 1.527, so the cap is what holds the bar.
+* **The low CELLO notes.** The cap acts at exactly nine steps, C2 to G#2, and at no ERHU step. At C2 the cap is 2.86 dB per element, reached at BODY 0.70, so BODY 0.70 to 1.0 is one sound there (identical samples): rms +3.02 dB,
+  A-weighted +2.24 dB, peak 0.940 (cap-off 1.429). F#2: cap 3.63 dB, rms +3.79 dB at BODY 1. G#2: +5.98 dB at BODY 1, flat only above BODY 0.95. From A2 up the knob rises to 1.
+* **Loops.** The lift is carried and loops close: at the default knobs, over the BODY 0.75 and BODY 1 rows, the worst seam is 1.09e-4 (CELLO) and 8.25e-6 (ERHU) against the bar of 1e-3; the row with random GRIP, BOW and BODY (a sixth of its BODY draws at 1 and about a third more between 0.5 and 1)
+  reads worse, 2.37e-4 (CELLO) and 8.51e-5 (ERHU), still under the bar; the loop peak is at most 0.940, and the rise at BODY 1 over the BODY 0.5 loop is +6.31 to
+  +6.66 dB on the 16 idle CELLO steps and +6.16 to +7.04 dB on the 20 ERHU steps.
+* **The presets and the kit.** Nine presets sit above the knee and change; their Loudness.of rise over the base commit is CINEMA LOW +6.45 dB, TEA HOUSE +5.62, DEEP PEDAL +4.42, MOON FIDDLE +4.41, NASAL LINE +2.91, ENDLESS DRAW (the loop)
+  +1.57, HIGH CRY +1.55, TWO STRING +0.81 and SLOW CRY +0.80. `ArcoPresetsTest` (20 of 20) keeps every roster bar, and no preset value was changed; the seven presets at or under 0.5 are bit-identical. The committed kit was
+  regenerated after the engine step (`39bcf87`): pads A09, A10, A12, A13 and A14 changed with the engine (+0.8 to +5.6 dB; CINEMA LOW's +6.5 dB is on no pad), A15 ENDLESS DRAW for two reasons (its committed file was already stale at
+  the base commit, and the lift moves it), and A16 ENDLESS CRY was stale only (the engine's output for it is unchanged). A01 to A08, A11 and the program file did not change.
+* **The full suite**, run by the lead: 2568 PASSED (the count is the lead's; its log is not among the files this record was written from).
+
+**R1h heard (2026-10-04): the blind page, and what came back.** The page (`generateArcoBodyGate`, with its answer-reader `decodeArcoBodyGate`; test-side only) played 24 clips blind, each the real `Arco.render` times one gain per note group (the gain
+that puts THE PLAIN ONE at `Loudness.of` 0.03, never levelled clip by clip, so the lift's extra sound stays in): CELLO C3 (10: the plain; BODY 0.6, 0.75, 0.9 and 1.0; two louder-only twins, the plain times one flat gain, one matched to BODY 1's
+rms and one to its A-weighted loudness, each within 0.1 dB; OLD-WAY, BODY 1 re-levelled to the plain's loudness, R1c's reading; a top-cut control, the plain through a high shelf of about -12 dB at 2 kHz, re-levelled; and a hidden exact
+repeat of the plain), ERHU C5 (7), CELLO C2 (4: the plain, BODY 0.75, BODY 1.0 and the louder-only twin; BODY 0.75 and 1.0 are the same samples there, by design, a free noise check) and ERHU A5 (3). The owner picks one chip a clip (SAME AS THE
+PLAIN, FULLER, DULLER, TOO MUCH, DIFFERENT, CAN'T SAY), enabled only after that clip has been played; four forced pairs (BODY 1 against the rms-matched louder-only clip, at C3 and C5, each in both orders: which "sounds more like a bigger
+instrument, and not just a louder one"); an ordering question at C3; which BODY to keep at the top of the knob, for each voice; and the device question first. No numbers, "box" or "EQ" and no expected direction are on the page. The pass rule
+P1 to P5, the reading rules and the fix map were written, and the reader was run on made-up answers, before the page was published (R1f's LISTENING GATE): P1, both hidden repeats SAME and the two identical C2 clips given the same chip, or the
+page is void; P2, BODY 1 FULLER at C3 and C5 and at one or more of C2 and A5; P3, no DULLER and no TOO MUCH on BODY 0.75 or 1.0 at C3 or C5; P4, at C3 no inversion among 0.5, 0.75 and 1.0 and BODY 1 ranked fullest or tied with 0.9; P5, the
+top-cut control called DULLER or DIFFERENT, and neither OLD-WAY clip called FULLER. The builders' checks of the page were headless Chromium 141 with a stand-in store only: no real phone, no Safari or iOS, no real artifact host. The owner's own run saved to the real host (the answer files below carry the saved times and the play counts), but which phone and browser it was is not recorded (`q_device` is the audio device: headphones). Nobody but the owner has listened to it.
+
+The owner answered on headphones (`verdicts/arco_r1h_*`, 14:02 to 14:03 UTC; all 20 chips, all four pairs, the order and both keeps answered; the note box left empty). **By the rules written before the owner listened, the page is VOID.**
+P1 failed: the two identical-sample C2 clips got different chips (BODY 1.0 SAME after one play, BODY 0.75 FULLER after two). P5 failed: the top-cut control was called FULLER (after three plays). P4 failed narrowly: BODY 0.9
+was ranked fullest, above BODY 1.0, though there is no inversion among 0.5, 0.75 and 1.0. P2 and P3 pass on paper. The decoder prints P2 to P5 for the record and says they are not to be read. This record states that and does not argue it.
+
+What is still worth recording, as HEARD with exactly that caveat (the plays in brackets):
+
+* both hidden repeats SAME (C3 and C5), so 6 of 6 repeats over R1d, R1e and R1h;
+* BODY 1.0 FULLER at C3 (10 plays), C5 (5) and A5 (1), SAME at C2 (1); BODY 0.9 FULLER at C3 (5); BODY 0.75 SAME at C3 (4), FULLER at C5 (3) and at C2 (2); BODY 0.6 SAME at C3 (5); no DULLER and no TOO MUCH on any clip at BODY 0.75 or above;
+* the louder-only twins DIFFERENT at C3 (both), C5 (both) and A5, never FULLER, and SAME at C2;
+* OLD-WAY DULLER at C3 and at C5 (one play each). (INFERRED, weak: these are single chips on a page that is void by P1 and P5, and the same page's top-cut control, also a re-levelled treble loss, was called FULLER; so this matches R1f's diagnosis of the levelling and does not confirm it);
+* the four forced pairs: at C3 and at C5 one order picked BODY 1 and the other said can't tell, and none preferred the louder-only twin; a pair counts only if both orders agree, so neither pair is a pass;
+* the C3 order, least full to fullest: the plain, BODY 0.75, BODY 0.6, BODY 1.0, BODY 0.9, with the plain, BODY 0.6 and BODY 0.75 said to sound the same;
+* keep at the top of the knob: BODY 1.0, for both CELLO and ERHU.
+
+What the page could not show. *Shape heard beyond loudness*: the page is void, the pairs were not decisive, and the rms-matched louder-only clip is louder than BODY 1 by the ear's A-weighting by 2.26 dB at C3 and 0.64 dB at C5 (MEASURED, from the
+key), so a pair answer that steers away from it says less; the ordering and keep questions also list a note's BODY clips together, so the owner could tell which clips were one family. The reading rule written beforehand for this outcome is that
+if BODY 1 does not beat the louder-only clip in both orders, BODY above the middle is called a level step with a tilt, and not argued; the owner asked for louder. *C2*: the two identical clips drew two chips, which is noise, and C2 is the
+peak-capped end. *The owner's single chips are noisy* (INFERRED): the top-cut control was called FULLER here, while R1d's clips with 3-8 kHz cuts of 7.3 to 19.4 dB drew "dull and muffled" on another page.
+
+The fix map as the decoder printed it, nothing in it argued: TOO MUCH, not triggered (no BODY clip at C3 or C5 was called TOO MUCH); SAME at BODY 0.75, not triggered (SAME at C3 but FULLER at C5; the rule needs both default notes); DULLER on
+BODY 1, not triggered (the condition that stops the build); SAME or not clear at C2, **triggered**: "try more bell and less shelf on the lowest CELLO notes, or R1c's box at the plain's gain on those notes".
+
+The owner's decision after the answers were read (HEARD, 2026-10-04): "Merge it, record the result, fix C2 later." **The owner merged #445 on 2026-10-04 at 14:22 UTC** (MEASURED, GitHub: merged_at 14:22:41Z, merge commit `6887f73c`). The merge's second parent is `3248d883`, the page commit, so the kit regeneration `39bcf87` and this record were not in #445. This record is the result the owner asked for; it merges nothing itself.
+
+*Open, stated*: the C2 to about G#2 steps are peak-capped (about +3 dB rms at C2) and have not been heard in a way that can be read, and the fix map's entry for C2 is the follow-up; ERHU above C5 has been lightly heard (A5: one play of BODY 1.0); the
+6.0 dB top stop was heard on ERHU C5 and, with a 2.2 dB duck, at CELLO F#2 in R1e (and, on the void page, at C3 and C5); the builders did not try the page on Safari, iOS or a real phone, and the device and browser of the owner's own run were not recorded; the R1e generator and candidates stay in the test tree as history, re-pointed at
+`Arco.finished`. The 3.5 and 6.0 dB rungs (`LIFT_HALF_DB`, `LIFT_TOP_DB`), the corners and `PEAK_CAP` are still listening values.
 
 **A request from GYRE (2026-10-01): a bridge port on `Strings.Bow`.** GYRE
 (`2026-10-01-gyre-coupled-string-engine-design.md`, G3 and "Decisions
@@ -2345,7 +2480,7 @@ the same three columns.
 | Tuning | `Strings.tune`'s exact budget plus a **per-voice pinned correction** measured on the corner effect; never STK's `−4` and never a published formula | spike iteration 5; BORE's residual-pull rule; `Dsp.Ladder`'s KDoc precedent |
 | String machine | the engine renders dry; ENSEMBLE is a rack section, its own PR first; the 1970s pad is the BRASS presets with the ENSEMBLE chip, then a STRING MACHINE preset family with a landing table (PR-E2) | the CRUNCH rule, applied to WOBBLE (`fork spec:88`), ECHO (siren spec) and TAPE (BORE); nothing in the addendum is coupled (fleet §5a) |
 | Length macro | HOLD, with a LOOP top step; not DECAY | SIREN's precedent (`siren spec:132-136`; `Siren.kt:74-90`) |
-| Output | `Tide.bandLimit → Dsp.decimate → mean removed → 20 Hz high-pass → Dsp.levelTo → fadeTail`; no PUNCH | the melodic fleet (`Fork.kt:465-468`, `Tide.kt:549`; the mean removal and 20 Hz high-pass at `Fork.kt:407-413`, which FORK runs before `bandLimit`); `fork spec:305`; FORK's "the DC goes twice" |
+| Output | `Tide.bandLimit → Dsp.decimate → mean removed → 20 Hz high-pass → Dsp.levelTo → fadeTail`; no PUNCH *(as built at and under BODY 0.5; above it R1g puts the lift after the conditioning and the plain's own gain in place of `Dsp.levelTo` on the boxed note)* | the melodic fleet (`Fork.kt:465-468`, `Tide.kt:549`; the mean removal and 20 Hz high-pass at `Fork.kt:407-413`, which FORK runs before `bandLimit`); `fork spec:305`; FORK's "the DC goes twice" |
 | DC | no in-loop blocker (the two-segment loop is zero-mean); the output's mean removal and high-pass stay | spike: mean ≤ 0.003 in every row |
 | Bodies | `Modes.fixed` rows through `Strings.bodyRing` after the loop, every number labelled *shape* until a source lands | `Modes.kt:121-125`; SILK's OUD convention (`Silk.kt:436-460`); physics §5 |
 | Names | the string machine's product, makers and part numbers off every surface; the blocklist grows with a bounded `arp` (the engine's own name is decision 1) | `docs/SYNTH_ROADMAP.md:27-47`; api §D4's collision check (sixteen HARP/SHARP presets) |
