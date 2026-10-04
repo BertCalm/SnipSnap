@@ -115,10 +115,11 @@ object MercuryAuditionGenerator {
                 val hi = knob.name.lowercase() + "_1"
                 write(lo, mapOf(knob.name to 0f))
                 // HOLD's top step is the LOOP (its own group below), so HOLD's high end is the longest one-shot.
-                write(hi, mapOf(knob.name to if (knob.name == "HOLD") 0.98f else 1f))
+                val top = if (knob.name == "HOLD") 0.98f else 1f
+                write(hi, mapOf(knob.name to top))
                 groups += Group(
                     knob.name + " " + DOT + " DEFAULT " + fmt(defaults.getValue(knob.name)), key = false,
-                    clips = listOf(Clip(lo, "${knob.name} 0", knob.low), Clip(hi, "${knob.name} 1", knob.high)),
+                    clips = listOf(Clip(lo, "${knob.name} 0", knob.low), Clip(hi, "${knob.name} ${fmt(top)}", knob.high)),
                 )
             }
 

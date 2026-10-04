@@ -272,14 +272,16 @@ class MercuryTest {
 
     /**
      * HOLD is the contact's length: the render grows by exactly HOLD's seconds and nothing else moves its length. Its
-     * top step is the LOOP (`MercuryLoopTest`), so the longest one-shot is HOLD .98, read through [Mercury.holdSeconds].
+     * top step is the LOOP (`MercuryLoopTest`), so the longest one-shot is HOLD .98. The expectation is R1's own mapping
+     * (0.3 s to 4 s, exponential), written out here rather than read back through [Mercury.holdSeconds], so a rescaled
+     * one-shot fails this test instead of moving with it.
      */
     @Test
     fun `HOLD sets the contact's length and GLASS the tail's`() {
         for (voice in MercuryVoice.entries) {
             val short = render(voice, "HOLD" to 0f).frameCount
             val long = render(voice, "HOLD" to 0.98f).frameCount
-            val expected = (Mercury.holdSeconds(0.98f) - Mercury.HOLD_MIN_SECONDS) * rate
+            val expected = (0.3 * Math.pow(4.0 / 0.3, 0.98) - 0.3) * rate
             assertTrue(abs((long - short) - expected) <= 2, "$voice: HOLD 0 to .98 added ${long - short} frames, expected $expected")
             assertEquals(render(voice, "COUPLE" to 0f).frameCount, render(voice, "COUPLE" to 1f).frameCount, "$voice: COUPLE moved the length")
             assertTrue(render(voice, "GLASS" to 1f).frameCount > render(voice, "GLASS" to 0f).frameCount, "$voice: GLASS should lengthen the ring")
