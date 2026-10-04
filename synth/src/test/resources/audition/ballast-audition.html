@@ -504,8 +504,10 @@
   // charset a host serves it under.
   var DOT = ' ' + String.fromCharCode(0xB7) + ' ';
 
-  // The clip list is the generator's manifest.json, published beside this
-  // page - one list, written where the clips are rendered.
+  // The generator writes the clip list into INLINE, so this page opens from the
+  // folder it was rendered into (a double-clicked file) as well as from a server.
+  // null means fetch manifest.json, which is what a server publish does.
+  var INLINE = null;
   var VOICES = [];
 
   var REACTIONS = [
@@ -806,8 +808,10 @@
   // The clip list first: every card, and every saved verdict's key, comes
   // from it. Then the local copy so the page is never empty, then the
   // shared store wins.
-  fetch('manifest.json')
-    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+  var manifest = INLINE
+    ? Promise.resolve(INLINE)
+    : fetch('manifest.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  manifest
     .then(function (m) {
       VOICES = m.voices || [];
       build();

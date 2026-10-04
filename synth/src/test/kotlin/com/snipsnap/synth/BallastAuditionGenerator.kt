@@ -198,10 +198,18 @@ object BallastAuditionGenerator {
             ),
         )
 
-        File(root, "manifest.json").writeText("{\"voices\": [\n$sections\n]}\n")
+        val manifestFile = File(root, "manifest.json")
+        manifestFile.writeText("{\"voices\": [\n$sections\n]}\n")
         val page = BallastAuditionGenerator::class.java.getResourceAsStream("/audition/ballast-audition.html")
             ?: error("the listening page is missing from synth/src/test/resources/audition/")
-        File(root, "index.html").outputStream().use { out -> page.use { it.copyTo(out) } }
+        val pageFile = File(root, "index.html")
+        pageFile.outputStream().use { out -> page.use { it.copyTo(out) } }
+        // The clip list is written into the page, so opening index.html from this folder plays the clips.
+        // A server publish still has manifest.json beside it.
+        val html = pageFile.readText()
+        val marker = "var INLINE = null;"
+        require(html.contains(marker)) { "the listening page has no place to write the clip list" }
+        pageFile.writeText(html.replace(marker, "var INLINE = ${manifestFile.readText()};"))
         println("wrote $count clips + manifest.json + index.html under ${root.absolutePath}")
     }
 
