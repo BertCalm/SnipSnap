@@ -113,3 +113,7 @@ testkit/become-audition/
 # The MAGNET audition clips and manifest, rendered by :synth:generateMagnetAudition
 # and published as the listening artifact; never committed.
 testkit/magnet-audition/
+
+# The TREMOR audition clips, manifest and page, rendered by :synth:generateTremorAudition
+# and published as the listening artifact; never committed.
+testkit/tremor-audition/
