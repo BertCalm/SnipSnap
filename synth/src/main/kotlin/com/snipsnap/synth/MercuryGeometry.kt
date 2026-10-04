@@ -70,6 +70,25 @@ internal abstract class Geometry {
     /** The fundamental's mean load: the pitch is centred there ([Mercury.sound]'s `anchorNominal`), so the water bends the note about it and not off it. */
     open val anchorMeanLoad: Double = 0.5
 
+    /**
+     * Whether the coupled anchor is solved where the water leaves the bank *on average* (every mode at its mean load,
+     * every spring lifted by the mean of its two ends) and not at the dry shape. The dry anchor puts the note on pitch
+     * with WATER 0 and is all the stock voices need (their COUPLE is .2 to .3 and their WATER .1 to .15); at COUPLE .65
+     * and WATER .4 the lifted springs and the loaded modes leave the coupled mode 6 to 9 cents flat on average.
+     */
+    open val anchorAtMeanWater: Boolean = false
+
+    /** A mode's mean unit load over one orbit of the steady mass (squared radius [Mercury.RING_ORBIT_LOAD]): primary [i], or vessel [i] - [primaries]. */
+    internal fun meanUnitLoad(i: Int, primaries: Int): Double {
+        val steps = 32
+        var sum = 0.0
+        for (k in 0 until steps) {
+            val ang = 2 * PI * k / steps
+            sum += if (i < primaries) unitLoad(i, Mercury.RING_ORBIT_LOAD, ang, 0.5) else vesselUnitLoad(i - primaries, Mercury.RING_ORBIT_LOAD, ang)
+        }
+        return sum / steps
+    }
+
     // ---- BEND, the gesture, the strike and the water ------------------------------
 
     /**
@@ -265,6 +284,8 @@ internal object ShellGeometry : Geometry() {
     /** The fundamental's mean load: its weight times the half every unit load averages. */
     override val anchorMeanLoad = 0.375
 
+    override val anchorAtMeanWater = true
+
     // The signs alternate so BEND reshapes the spacing between neighbours (the object changes) and does not stretch
     // the table. Order-preserving by construction (the smallest successive gap over BEND is 6.3%); the top four share
     // one sign so the 10 and 12% gaps cannot cross. A vessel follows its partner's, plus a little, which opens its split.
@@ -332,6 +353,8 @@ internal object PlateGeometry : Geometry() {
 
     /** A uniform 2% stiffening of every upper mode against the anchor: a common factor leaves the gaps alone. */
     override fun bendB(i: Int, n: Int, primaries: Int) = if (hostOf(i, primaries) == 0) 0.0 else 0.02
+
+    override val anchorAtMeanWater = true
 
     /** A bigger excursion than the other voices' two semitones, as the external spec allows a shard (a plate is struck hard and bends hard), and a quick gesture. */
     override val bendExcursionSemitones = 4.0

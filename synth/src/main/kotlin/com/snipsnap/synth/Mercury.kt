@@ -522,6 +522,17 @@ object Mercury {
         }
         for (i in 0 until n) bank.tune(i, (hz * ratioAt(i, cTarget)).coerceAtMost(MODE_CEILING_HZ), t60Base[i])
         val edges = IntArray(edgeI.size) { e -> bank.connect(edgeI[e], edgeJ[e], kappa * edgeScale[e]) }
+        // WATER's depth is needed here for the anchor, and below for the loads.
+        val waterCurve = if (water > 0.0) water.pow(geo.waterCurve) else 0.0
+        val mu = WATER_DEPTH * waterCurve
+        if (geo.anchorAtMeanWater && mu > 0.0) {
+            // Solve the anchor where the water leaves the bank on average, so the note sits on its pitch with the
+            // water moving and not only without it (the bank is retuned at the first control step anyway).
+            val meanLoad = DoubleArray(n) { geo.loadWeight(hostOf(it)) * geo.meanUnitLoad(it, primaries) }
+            val dry = sqrt(1 + mu * geo.anchorMeanLoad)
+            for (i in 0 until n) bank.tune(i, (hz * ratioAt(i, cTarget) * dry / sqrt(1 + mu * meanLoad[i])).coerceAtMost(MODE_CEILING_HZ), t60Base[i])
+            for (e in edges.indices) bank.setKappa(edges[e], kappa * edgeScale[e] * (1 + KAPPA_WATER_LIFT * water * (meanLoad[edgeI[e]] + meanLoad[edgeJ[e]])))
+        }
         val pitchFix = bank.anchorScale()
 
         // WATER: one damped, circularly forced mass that every mode reads.
@@ -531,8 +542,6 @@ object Mercury {
         var my = 0.3 * massRng.next()
         var mvx = 0.0
         var mvy = 0.0
-        val waterCurve = if (water > 0.0) water.pow(geo.waterCurve) else 0.0
-        val mu = WATER_DEPTH * waterCurve
         val shimmer = WATER_SHIMMER * waterCurve
         // Every load swings between 0 and 1 and averages about a half; the pitch is centred on the fundamental's mean.
         val anchorNominal = 1.0 / sqrt(1 + mu * geo.anchorMeanLoad)
