@@ -92,7 +92,7 @@ import kotlin.math.sqrt
  * held note with and without vibrato. ERHU's BODY is also three unlabelled clips on one note: the
  * membrane box as shipped, no box, and one placeholder resonator row (a single resonance at twice the open string
  * with a short ring, authored for this question, not sourced). Those two are rendered here with [Strings.bodyRing]
- * on [Arco.bow] and [Arco.finish], as [Arco.render] does, and the generator checks that the shipped
+ * on [Arco.bow] and [Arco.finished], as [Arco.render] does, and the generator checks that the shipped
  * path through its own helper is [Arco.render] to the sample, so the other two are the engine with one thing changed.
  *
  * Nothing in ARCO has been heard by anyone when this is first run: it is the gate that decides whether the
@@ -124,7 +124,7 @@ object ArcoAuditionGenerator {
             { voice -> "a light grip: the lowest bow pressure this note takes (${f2(Arco.pressureFor(voice, defaultSemitone(voice), 0f))}) and the bridge closed down, a dark, close-held string" },
             { voice -> "digging in: full bow pressure (${f2(Arco.pressureFor(voice, defaultSemitone(voice), 1f))}) and the bridge opened up, the brightest the string goes" },
         ),
-        Knob("BODY", { "the string alone, no box" }, { "the box: its ring ${f2(Arco.BODY_TOP)} times as loud as the string itself (the knob is as it was up to ${f2(Arco.BODY_KNEE)}, where the box is ${f2(Arco.BODY_KNEE)} times the string)" }),
+        Knob("BODY", { "the string alone, no box" }, { "the box as it is at the middle of the knob (${f2(Arco.BODY_KNEE)} times the string) with a low shelf and a bell added on top, ${f1(Arco.LIFT_TOP_DB)} dB each, at the middle's own level (R1g: the box no longer climbs above the middle)" }),
         Knob(
             "HOLD",
             { "the shortest bow: ${f1(Arco.HOLD_MIN_SECONDS)} s of note" },
@@ -691,8 +691,8 @@ object ArcoAuditionGenerator {
 
     /**
      * A one-shot ARCO note the way [Arco.render] makes it, with [vibrato] and the box's [table] as the two things
-     * this page may change: null is [Arco.bodyFor]'s own table through [Arco.withBody]; otherwise [Strings.bodyRing] rings
-     * [table] (an empty one is no box) and is cut where the stopped string ends, as [Arco.withBody] cuts it. The macros
+     * this page may change: null is [Arco.bodyFor]'s own table through [Arco.finished]; otherwise [Strings.bodyRing] rings
+     * [table] (an empty one is no box) and is cut where the stopped string ends, as [Arco.withBody] cuts it, then finished by [Arco.finished] at BODY 0. The macros
      * must not reach a LOOP, which [Arco.render] makes another way.
      */
     private fun renderWith(voice: ArcoVoice, macros: Map<String, Float>, vibrato: Boolean, table: List<Modes.Mode>?): Snip {
@@ -700,13 +700,14 @@ object ArcoAuditionGenerator {
         require(!Arco.isLoop(m.getValue("HOLD"))) { "renderWith is for one-shots" }
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val raw = Arco.bow(voice, Arco.frequencyFor(voice, m.getValue("TUNE")), m, rate, vibrato = vibrato)
-        val rung = if (table == null) {
-            Arco.withBody(raw, voice, m.getValue("BODY"), rate)
+        val finished = if (table == null) {
+            Arco.finished(raw, voice, m.getValue("BODY"), rate)
         } else {
             val ring = Strings.bodyRing(raw, table, m.getValue("BODY"), rate, Arco.BODY_CEILING_SECONDS)
-            if (ring.size == raw.size) ring else ring.copyOf(raw.size)
+            // BODY 0 hands an already-boxed string back untouched, so this is the engine's one finish ([Arco.finished]) of [ring] alone.
+            Arco.finished(if (ring.size == raw.size) ring else ring.copyOf(raw.size), voice, 0f, rate)
         }
-        return Snip(Arco.finish(rung, rate), channels = 1, sampleRate = Dsp.RATE)
+        return Snip(finished, channels = 1, sampleRate = Dsp.RATE)
     }
 
     /** This page's own render path must be the engine's, to the sample, for the default and for the held note, in both voices. */

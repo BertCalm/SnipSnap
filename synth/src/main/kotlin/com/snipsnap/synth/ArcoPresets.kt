@@ -21,6 +21,9 @@ package com.snipsnap.synth
  *  - The top of ERHU's range is bright enough that a hard bow on a thin box puts over half of that head above 2 kHz,
  *    which reads as a SNARE. Up there only a swell-in (TONAL) or a box of half or more keeps a note out of the drums,
  *    and HIGH CRY swells in.
+ *  - BODY is two things (R1g): up to 0.5 it is how loud the box rings against the string, and above 0.5 the box stays at its size
+ *    at 0.5 and BODY adds a low lift on the note at the plain's own gain, so a comment below that says "most of the box" or "a half-box"
+ *    at a BODY over 0.5 means that much lift on the plain's box.
  *
  * ArcoPresetsTest holds all of this to the real classifier, with the room each reading has to its line printed.
  *
@@ -49,7 +52,7 @@ object ArcoPresets {
         p(ArcoVoice.CELLO, "GRIT BOW", "TUNE" to 0.25f, "BOW" to 0.65f, "GRIP" to 0.8f, "BODY" to 0.3f, "HOLD" to 0.25f),
         // E2 (4 of 24), the string alone (BODY 0): a stab too low to lock before the last 10 ms of its 0.34 s, so a scrape in all but a moment (R1b's bite never let it lock at all); for the percussion pads.
         p(ArcoVoice.CELLO, "DRY SCRAPE", "TUNE" to 0.167f, "BOW" to 1.0f, "GRIP" to 0.5f, "BODY" to 0.0f, "HOLD" to 0.05f),
-        // A#2 (10 of 24): the whole box (BODY 1) under a 0.13 s bow-in that settles by 0.4 s, as long as a one-shot may be.
+        // A#2 (10 of 24): BODY 1, the top of the lift (since R1g a low lift at the plain's own gain on a box frozen at the knee, no longer R1c's whole box) under a 0.13 s bow-in that settles by 0.4 s, as long as a one-shot may be.
         p(ArcoVoice.CELLO, "CINEMA LOW", "TUNE" to 0.417f, "BOW" to 0.3f, "GRIP" to 0.5f, "BODY" to 1.0f, "HOLD" to 0.43f),
         // C4 (24 of 24), the top of the span: a bright, light-boxed bow where the hair is heard (GRIP 0.85, BODY 0.2).
         p(ArcoVoice.CELLO, "HORSEHAIR", "TUNE" to 1.0f, "BOW" to 0.7f, "GRIP" to 0.85f, "BODY" to 0.2f, "HOLD" to 0.28f),
@@ -60,9 +63,10 @@ object ArcoPresets {
     private val erhuPresets = listOf(
         // C#5 (11 of 19): the middle-high voice of the line, a nasal edge from a firm grip and a box that is mostly there.
         p(ArcoVoice.ERHU, "NASAL LINE", "TUNE" to 0.579f, "BOW" to 0.5f, "GRIP" to 0.8f, "BODY" to 0.7f, "HOLD" to 0.38f),
-        // G4 (5 of 19): a soft round note, a dark light grip into nearly all box, bowed in over 0.19 s. BODY 0.8, not the 0.85 it was
-        // written at: since R1c a BODY 0.85 box (1.375 times the string) is loud enough that the render's ring from its peak falls from
-        // 813 ms to 522 ms, within 22 ms of the classifier's 500 ms line, so a louder box moves the preset's BODY down a notch.
+        // G4 (5 of 19): a soft round note, a dark light grip with a low lift on it, bowed in over 0.19 s. BODY 0.8, kept from R1c, which moved it down
+        // from the 0.85 it was written at: R1c's louder box (1.375 times the string at BODY 0.85) took the render's ring from its peak from 813 ms to 522 ms,
+        // within 22 ms of the classifier's 500 ms line. R1g retired that box (above BODY 0.5 the box stays at the knee's size and BODY adds a low lift at the
+        // plain's own gain), so that reason is gone and was not re-measured at 0.85; the value stays because R1g saw the ring at about 807 ms at 0.8.
         p(ArcoVoice.ERHU, "MOON FIDDLE", "TUNE" to 0.263f, "BOW" to 0.2f, "GRIP" to 0.3f, "BODY" to 0.8f, "HOLD" to 0.42f),
         // A#4 (8 of 19): the hardest bow on a light grip with hardly any box, 0.34 s of it: a thin, bright flick.
         p(ArcoVoice.ERHU, "THIN SCRAPE", "TUNE" to 0.421f, "BOW" to 1.0f, "GRIP" to 0.05f, "BODY" to 0.2f, "HOLD" to 0.05f),

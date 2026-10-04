@@ -352,6 +352,34 @@ tasks.register<JavaExec>("generateArcoWarmth") {
     args("${rootDir}/testkit/arco-warmth")
 }
 
+/**
+ * Render the ARCO R1h body gate clips, manifest and page under testkit/arco-body-gate/ and the key beside it. See ArcoBodyGateGenerator. The full run refuses a missing or placeholder page;
+ * `-PclipsOnly` is the development mode (clips, manifest and key, no index.html).
+ */
+tasks.register<JavaExec>("generateArcoBodyGate") {
+    group = "distribution"
+    description = "Render the ARCO R1h body gate clips, manifest and listening page under testkit/arco-body-gate/ and the key to it beside the folder as testkit/arco-body-gate-key.json. -PclipsOnly skips the page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBodyGateGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-body-gate")
+    if (project.hasProperty("clipsOnly")) args("--clips-only")
+}
+
+/**
+ * Read the saved verdicts of the ARCO R1h body gate page and print the pass rule P1 to P5, the reading rules and the fix map, using the key testkit/arco-body-gate-key.json.
+ * `-PgateVerdicts=<folder or file>[,<folder or file>...]` names what to read. See ArcoBodyGateDecoder.
+ */
+tasks.register<JavaExec>("decodeArcoBodyGate") {
+    group = "distribution"
+    description = "Decode the saved verdicts of the ARCO R1h body gate page (-PgateVerdicts=<folder or file>[,<folder or file>...]) against testkit/arco-body-gate-key.json."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ArcoBodyGateDecoder")
+    workingDir = projectDir
+    args("${rootDir}/testkit/arco-body-gate-key.json")
+    (project.findProperty("gateVerdicts") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.forEach { args(it) }
+}
+
 tasks.register<JavaExec>("generateMercuryKit") {
     group = "distribution"
     description = "Render the MERCURY modal-glass acceptance kit under testkit/."
@@ -448,6 +476,16 @@ tasks.register<JavaExec>("generateTerraR1BAudition") {
     mainClass.set("com.snipsnap.synth.TerraAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/terra-audition", "r1b")
+}
+
+/** Render the TREMOR audition clips, manifest and page under testkit/tremor-audition/. See TremorAuditionGenerator. */
+tasks.register<JavaExec>("generateTremorAudition") {
+    group = "distribution"
+    description = "Render the TREMOR audition clips, manifest and listening page under testkit/tremor-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TremorAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tremor-audition")
 }
 
 /** Render the VALVE V1 listening clips and manifest under testkit/valve-audition/. See ValveAuditionGenerator. */

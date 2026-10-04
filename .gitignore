@@ -92,6 +92,9 @@ testkit/arco-body-key.json
 # The ARCO R1e warmth listening clips, manifest and page, rendered by :synth:generateArcoWarmth (the key is a sibling file, never in the published folder)
 testkit/arco-warmth/
 testkit/arco-warmth-key.json
+# The ARCO R1h BODY gate clips, manifest and page, rendered by :synth:generateArcoBodyGate (the key is a sibling file, never in the published folder)
+testkit/arco-body-gate/
+testkit/arco-body-gate-key.json
 # The MERCURY audition clips, manifest and page, rendered by :synth:generateMercuryAudition
 # and published as the listening artifact; never committed.
 testkit/mercury-audition/
@@ -116,3 +119,7 @@ testkit/become-audition/
 # The MAGNET audition clips and manifest, rendered by :synth:generateMagnetAudition
 # and published as the listening artifact; never committed.
 testkit/magnet-audition/
+
+# The TREMOR audition clips, manifest and page, rendered by :synth:generateTremorAudition
+# and published as the listening artifact; never committed.
+testkit/tremor-audition/

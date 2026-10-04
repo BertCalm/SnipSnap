@@ -222,6 +222,7 @@ object Velocity {
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
+        is TremorPatch -> Tremor.macrosFor(patch.voice)
     }
 
     /**
@@ -275,12 +276,12 @@ object Velocity {
 
     /**
      * Voices that take velocity as a number on their own render, with no
-     * macro moved and no [soften]. MERCURY SING and BLADE: velocity is the
-     * touch. AEROSTAT: velocity is the strike's event energy, and STRIKE
-     * stays the contact's hardness inside that event.
+     * macro moved and no [soften]. MERCURY SING and BLADE use velocity as
+     * touch; AEROSTAT uses it as strike energy; TREMOR uses it as the blow.
      */
     private fun touchedVelocity(patch: Patch): Boolean =
-        patch is MercuryPatch && patch.voice != MercuryVoice.PING || patch is AerostatPatch
+        (patch is MercuryPatch && patch.voice != MercuryVoice.PING) ||
+            patch is AerostatPatch || patch is TremorPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -301,8 +302,12 @@ object Velocity {
     fun atVelocity(patch: Patch, velocity: Float, spec: MacroSpec?): Snip {
         val v = velocity.coerceIn(0f, 1f)
         if (touchedVelocity(patch)) {
-            if (patch is AerostatPatch) return Aerostat.render(patch.voice, patch.macros, velocity = v)
-            return Mercury.render((patch as MercuryPatch).voice, patch.macros, velocity = v)
+            return when (patch) {
+                is MercuryPatch -> Mercury.render(patch.voice, patch.macros, velocity = v)
+                is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
+                is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+                else -> error("no velocity render for ${patch.engine}")
+            }
         }
         spec ?: return soften(patch.render(), 1f - v)
         val asked = patch.macros[spec.name] ?: spec.default

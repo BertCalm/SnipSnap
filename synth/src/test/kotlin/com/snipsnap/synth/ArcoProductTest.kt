@@ -135,7 +135,7 @@ class ArcoProductTest {
     private fun finishedCore(voice: ArcoVoice, m: Map<String, Float>, vibrato: Boolean = true, bowPoint: FloatArray? = null): FloatArray {
         val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
         val raw = Arco.bow(voice, hz, m, rawRate, vibrato = vibrato, bowPointOut = bowPoint)
-        return Arco.finish(Arco.withBody(raw, voice, m.getValue("BODY"), rawRate), rawRate)
+        return Arco.finished(raw, voice, m.getValue("BODY"), rawRate)
     }
 
     // ---- TUNE ---------------------------------------------------------------
@@ -263,10 +263,10 @@ class ArcoProductTest {
     /**
      * BODY is the box's ring and must not make a note longer: [Strings.bodyRing] follows the box out past the string's
      * end (CELLO's box adds 0.254 s, ERHU's as dressed 0.3 s), which once rendered the default CELLO 1.585 s and
-     * filed it a LOOP, so [Arco.withBody] cuts the ring where the stopped string ends. BODY 0, 0.5, 0.75 (past the knee, where R1c's
-     * curve rings the box 1.125 times the string) and 1 render the same number of frames at three TUNEs of each voice and three HOLDs, and the notes themselves differ (the control: if BODY
+     * filed it a LOOP, so [Arco.withBody] cuts the ring where the stopped string ends. BODY 0, 0.5, 0.75 (past the knee, where the box stays at the knee's size and BODY adds the lift) and 1 render the same number of frames at three TUNEs of each voice and three HOLDs, and the notes themselves differ (the control: if BODY
      * did nothing the frame count could not be the evidence of anything). R1c saw BODY 0 against 1 differ by 0.44 (ERHU D4 at HOLD 0.6) to 1.05
-     * (CELLO C2 at HOLD 0) of the note (R1b saw 0.35 to 0.88, with a box only as loud as the string at BODY 1), and the bar is 0.2.
+     * (CELLO C2 at HOLD 0) of the note (R1b saw 0.35 to 0.88, with a box only as loud as the string at BODY 1), and the bar is 0.2. R1g saw the frame counts equal at all four BODY values in all 18 cells and BODY 0 against 1 differ by 0.73 (CELLO C2 at HOLD 0.6) to 1.66 (ERHU A5 at HOLD 0.4) of the note,
+     * larger than R1c's because the lift is added at the plain's own gain and is not levelled away; the bar is unchanged.
      */
     @Test
     fun `BODY does not change the length of a note`() {
@@ -294,43 +294,75 @@ class ArcoProductTest {
     private fun boxOverString(raw: FloatArray, boxed: FloatArray): Double = rmsOf(FloatArray(raw.size) { boxed[it] - raw[it] }) / rmsOf(raw)
 
     /**
-     * The curve of BODY ([Arco.boxAmountFor]: how many strings the box rings at): the owner heard BODY 1 as "nearly" and "not enough" in both voices,
-     * because at 1 the box was only as loud as the string. It is the identity up to [Arco.BODY_KNEE] 0.5 (equal to its argument exactly at 0, 0.1, 0.25 and
-     * 0.5, so the default BODY and every preset at or under it are what they were), reaches [Arco.BODY_TOP] 1.75 at BODY 1, is strictly increasing in hundredths
-     * of BODY and is continuous at the knee (the value a hair over 0.5 and a hair under it are both within 1e-5 of 0.5). The control that the climb is a climb:
-     * BODY 0.75 is 1.125 (R1c saw it so) and not the 0.75 of the identity, and the bar for it is over 1.4 times its argument.
+     * The curve of BODY, in its two halves. The box ([Arco.boxAmountFor]: how many strings the box rings at) is the identity up to [Arco.BODY_KNEE] 0.5 (equal to its argument exactly at 0, 0.1, 0.25 and 0.5, so the default BODY and every
+     * preset at or under it are what they were) and frozen at the knee's size above it: `min(BODY, 0.5)` at 0, 0.1, 0.25, 0.5, 0.75 and 1, with no step over the knee (the value a hair over 0.5 and a hair under it are both within 1e-5 of 0.5).
+     * R1c climbed it to 1.75 at BODY 1 (BODY 0.75 was 1.125) and the level step after the box took the climb back (the owner then wrote "Body doesn't seem to do anything"); R1g froze it, and what BODY adds above the knee is the lift.
+     * The lift ([Arco.liftDbFor], dB for the shelf and the same again for the bell) is 0 at and under the knee, 3.5 dB at BODY 0.75 (R1e's small rung, within 0.02), 6.0 at BODY 1 (R1e's large rung, within 0.001), 1.52 at BODY 0.6 (within 0.02),
+     * and the one quadratic through them: 0.78 at 0.55, 2.22 at 0.65, 2.88 at 0.7, 4.08 at 0.8, 5.12 at 0.9 and 5.58 at 0.95, each within 0.02. It is strictly increasing in hundredths of BODY, has no step at the knee (a hair over 0.5 is within
+     * 1e-3 dB of 0), and keeps rising as long as 3 T is more than 4 H, which the constants satisfy (18 against 14).
+     * R1f's design saw those values; the bound on each is the tolerance beside it. The controls run the very predicate they protect: the frozen-box check and the strictly-increasing check are each one local function, called on the engine (which must pass it) and on a
+     * control (which must fail it). The frozen-box predicate is called on R1c's climbed box (BODY 0.75 at 1.125 times the string, 1.75 at BODY 1), which it must flag at every hundredth of BODY over the knee, and the strictly-increasing predicate on the same
+     * quadratic with 4 H over 3 T (H 5.0, T 6.0), which turns over before BODY 1 and which it must flag; a third call on the quadratic with the engine's own constants must agree with the engine to 1e-5 dB and pass, so the control's quadratic is the engine's curve and not another one.
+     * R1g saw the engine pass both and both controls fail them: R1c's box flagged at all 50 hundredths over the knee, the H 5.0 quadratic not rising at 6 steps of BODY, the first from 0.94 to 0.95.
      */
     @Test
-    fun `the box's curve is the identity to its knee, climbs to 1 point 75 at BODY 1, and is continuous`() {
+    fun `the box's curve is the identity to its knee and frozen above it, and the lift's curve rises from nothing at the knee to its two stops`() {
         assertEquals(0.5f, Arco.BODY_KNEE)
-        assertEquals(1.75f, Arco.BODY_TOP)
-        for (body in listOf(0f, 0.1f, 0.25f, 0.5f)) assertEquals(body, Arco.boxAmountFor(body), "BODY $body: the box is not what it was at or under the knee")
-        assertEquals(Arco.BODY_TOP, Arco.boxAmountFor(1f), 1e-6f, "BODY 1 is not BODY_TOP")
-        val hundredths = (0..100).map { it / 100f }
-        for ((a, b) in hundredths.zipWithNext()) assertTrue(Arco.boxAmountFor(b) > Arco.boxAmountFor(a), "the box does not get louder from BODY $a to $b")
+        for (body in listOf(0f, 0.1f, 0.25f, 0.5f, 0.75f, 1f)) assertEquals(minOf(body, 0.5f), Arco.boxAmountFor(body), "BODY $body: the box is not min(BODY, the knee)")
         assertTrue(abs(Arco.boxAmountFor(0.5000001f) - 0.5f) < 1e-5f, "the curve jumps over the knee: ${Arco.boxAmountFor(0.5000001f)}")
         assertTrue(abs(Arco.boxAmountFor(0.4999999f) - 0.5f) < 1e-5f, "the curve jumps under the knee: ${Arco.boxAmountFor(0.4999999f)}")
-        println("ARCO BODY curve at 0 0.25 0.5 0.6 0.75 0.9 1: ${listOf(0f, 0.25f, 0.5f, 0.6f, 0.75f, 0.9f, 1f).joinToString(" ") { f(Arco.boxAmountFor(it).toDouble(), 3) }}")
-        assertEquals(1.125f, Arco.boxAmountFor(0.75f), 0.01f, "the climb past the knee is not the one measured")
-        assertTrue(Arco.boxAmountFor(0.75f) > 1.4f * 0.75f, "the climb is no steeper than the identity")
+        val hundredths = (0..100).map { it / 100f }
+        // The two predicates the curve is held to, written once each and called on the engine and on its control, so a control can only fail by the very check that guards the engine.
+        /** The hundredths of BODY over the knee at which [box] is not the knee's own 0.5: empty means the box is frozen above the knee. */
+        fun thawed(box: (Float) -> Float): List<Float> = hundredths.filter { it > 0.5f && box(it) != 0.5f }
+        /** The steps (from, to) of hundredths of BODY from the knee up over which [lift] does not rise: empty means strictly increasing from the knee to BODY 1. */
+        fun notRising(lift: (Float) -> Float): List<Pair<Float, Float>> = hundredths.filter { it >= 0.5f }.zipWithNext().filter { (a, b) -> lift(b) <= lift(a) }
+
+        for ((a, b) in hundredths.zipWithNext()) if (b <= 0.5f) assertTrue(Arco.boxAmountFor(b) > Arco.boxAmountFor(a), "the box does not get louder from BODY $a to $b, under the knee")
+        assertEquals(emptyList(), thawed { Arco.boxAmountFor(it) }, "the box is not frozen at the knee's 0.5 at these BODY values over the knee")
+        // The control for the box: R1c's own curve (the knob's value to the knee, then straight to R1C_BODY_TOP times the string at BODY 1) through the same predicate must be flagged at every hundredth over the knee.
+        fun r1cBox(body: Float) = if (body <= 0.5f) body else 0.5f + (body - 0.5f) * (ArcoBodyCandidates.R1C_BODY_TOP - 0.5f) / (1f - 0.5f)
+        assertEquals(1.125f, r1cBox(0.75f), 1e-6f)
+        assertEquals(1.75f, r1cBox(1f), 1e-6f)
+        val climbed = thawed { r1cBox(it) }
+        println("ARCO BODY curve control: R1c's box reads ${r1cBox(0.75f)} at BODY 0.75 and ${r1cBox(1f)} at 1 against the engine's ${Arco.boxAmountFor(0.75f)} and ${Arco.boxAmountFor(1f)}; the frozen-box check flags R1c's curve at ${climbed.size} of the 50 hundredths over the knee")
+        assertEquals(50, climbed.size, "the frozen-box check does not flag R1c's climbed box at every BODY over the knee, so it cannot see a climb")
+
+        val expected = listOf(0.55f to 0.78f, 0.6f to 1.52f, 0.65f to 2.22f, 0.7f to 2.88f, 0.75f to 3.5f, 0.8f to 4.08f, 0.9f to 5.12f, 0.95f to 5.58f, 1f to 6f)
+        println("ARCO BODY curve, the box at BODY 0 0.25 0.5 0.75 1 (times the string): ${listOf(0f, 0.25f, 0.5f, 0.75f, 1f).joinToString(" ") { f(Arco.boxAmountFor(it).toDouble(), 3) }}")
+        println("ARCO BODY curve, the lift in dB per element at BODY ${expected.joinToString(" ") { (b, _) -> "$b: ${f(Arco.liftDbFor(b).toDouble(), 3)}" }}")
+        for (body in listOf(0f, 0.1f, 0.25f, 0.5f)) assertEquals(0f, Arco.liftDbFor(body), "BODY $body: the lift is not nothing at or under the knee")
+        for ((body, db) in expected) assertEquals(db, Arco.liftDbFor(body), 0.02f, "BODY $body: the lift is ${Arco.liftDbFor(body)} dB per element, R1f's table says $db")
+        assertEquals(Arco.LIFT_HALF_DB, Arco.liftDbFor(0.75f), 0.02f, "BODY 0.75 is not R1e's small rung")
+        assertEquals(Arco.LIFT_TOP_DB, Arco.liftDbFor(1f), 0.001f, "BODY 1 is not R1e's large rung")
+        assertEquals(emptyList(), notRising { Arco.liftDbFor(it) }, "the lift does not rise at these steps of BODY, from the knee to BODY 1")
+        assertTrue(abs(Arco.liftDbFor(0.5000001f)) < 1e-3f, "the lift jumps over the knee: ${Arco.liftDbFor(0.5000001f)}")
+        assertTrue(3f * Arco.LIFT_TOP_DB > 4f * Arco.LIFT_HALF_DB, "3 T is not more than 4 H, so the lift's curve turns over before BODY 1")
+
+        // The control: the same quadratic through (0, 0), (0.5, H) and (1, T). With the engine's own H and T it must agree with the engine and pass the strictly-increasing predicate (so it is the engine's curve); with H 5.0 and T 6.0 (4 H over 3 T) it turns over, and the same predicate must flag it.
+        fun quadratic(h: Float, t: Float): (Float) -> Float = { body -> if (body <= 0.5f) 0f else (4f * h - t) * ((body - 0.5f) / 0.5f) + (2f * t - 4f * h) * ((body - 0.5f) / 0.5f) * ((body - 0.5f) / 0.5f) }
+        val same = quadratic(Arco.LIFT_HALF_DB, Arco.LIFT_TOP_DB)
+        for (body in hundredths) assertEquals(Arco.liftDbFor(body), same(body), 1e-5f, "BODY $body: the control's quadratic is not the engine's")
+        assertEquals(emptyList(), notRising(same), "the control's quadratic with the engine's own H and T does not rise: it is not the engine's curve")
+        val turned = notRising(quadratic(5f, 6f))
+        println("ARCO BODY curve control: the lift with H 5.0 and T 6.0 does not rise at ${turned.size} steps of BODY, the first from ${turned.firstOrNull()?.first} to ${turned.firstOrNull()?.second}")
+        assertTrue(turned.isNotEmpty(), "the control with 4 H over 3 T does not turn over, so the strictly-increasing check could not fail")
     }
 
     private class BoxRow(
-        val name: String, val dryIsString: Boolean, val quarterIsR1b: Boolean, val halfIsR1b: Boolean,
-        val half: Double, val threeQuarters: Double, val one: Double, val r1bOne: Double,
+        val name: String, val dryIsString: Boolean, val quarterIsR1b: Boolean, val halfIsR1b: Boolean, val frozen: Boolean,
+        val half: Double, val threeQuarters: Double, val one: Double, val r1cTop: Double,
     )
 
     /**
-     * [Arco.withBody] rings the box at [Arco.boxAmountFor] of BODY, and up to the knee that is the call R1b made. At CELLO's and ERHU's root, middle and top, on the
-     * raw string at the default knobs: BODY 0 hands back the string's contents unchanged (and does not touch the string), and BODY 0.25 and 0.5 are, sample for
-     * sample, R1b's call, `Strings.bodyRing(raw, bodyFor(voice), BODY, rate, BODY_CEILING_SECONDS)` cut to the string's length, so the default and every preset at or under 0.5
-     * render as they did. Above the knee the box is louder against the string: its RMS over the string's, which `bodyRing` makes the amount it is given, is
-     * 0.50 at BODY 0.5, 1.125 at 0.75 and 1.75 at 1 (R1c saw 0.50 and 1.75 at all six notes, and 1.12 at 0.75), held to 0.50 within 0.02, 1.125 within 0.05 and
-     * 1.75 within 0.05. The control is R1b's figure: at BODY 1 the box was 1.0 times the string, and the bar for "louder" is over 1.2, which R1b's own call
-     * (made here, by `bodyRing` itself, and read the same way) fails.
+     * [Arco.withBody] rings the box at [Arco.boxAmountFor] of BODY, and up to the knee that is the call R1b made. At CELLO's and ERHU's root, middle and top, on the raw string at the default knobs: BODY 0 hands back the string's contents unchanged
+     * (and does not touch the string), and BODY 0.25 and 0.5 are, sample for sample, R1b's call, `Strings.bodyRing(raw, bodyFor(voice), BODY, rate, BODY_CEILING_SECONDS)` cut to the string's length, so the default and every preset at or under 0.5
+     * render as they did. Above the knee the box is frozen at the size it has there: [Arco.withBody] at BODY 0.75 and at BODY 1 is [Arco.withBody] at BODY 0.5 to the sample, and the box's RMS over the string's, which `bodyRing` makes the amount it is
+     * given, is 0.50 at BODY 0.5, 0.75 and 1, each held to 0.50 within 0.02 (R1c saw 0.50 at BODY 0.5 and 1.125 and 1.75 at 0.75 and 1; R1b's own call at BODY 1 read 1.0). The control is R1c's climb: the same measure on `bodyRing` rung at R1c's
+     * 1.75 reads 1.75 within 0.05, over 1.2, so a box that climbed again fails the 0.50 bar by more than a factor of three. R1g saw the lift, not the box, carry BODY above the knee: the box at BODY 0.75 and 1 is bit for bit the one at 0.5.
      */
     @Test
-    fun `the box rings at the curve's amount, and up to the knee exactly as it did`() {
+    fun `the box rings at the curve's amount, exactly as it did up to the knee and frozen at the knee's size above it`() {
         val rows = ArcoVoice.entries.flatMap { v -> threeTunes.map { v to it } }.parMap { (voice, tune) ->
             val raw = rawString(voice, tune)
             val before = raw.copyOf()
@@ -338,41 +370,45 @@ class ArcoProductTest {
                 val rung = Strings.bodyRing(raw, Arco.bodyFor(voice), body, rawRate, Arco.BODY_CEILING_SECONDS)
                 return if (rung.size == raw.size) rung else rung.copyOf(raw.size)
             }
+            val atKnee = Arco.withBody(raw, voice, 0.5f, rawRate)
             BoxRow(
                 label(voice, tune),
                 dryIsString = Arco.withBody(raw, voice, 0f, rawRate).contentEquals(before) && raw.contentEquals(before),
                 quarterIsR1b = r1b(0.25f).contentEquals(Arco.withBody(raw, voice, 0.25f, rawRate)),
-                halfIsR1b = r1b(0.5f).contentEquals(Arco.withBody(raw, voice, 0.5f, rawRate)),
-                half = boxOverString(raw, Arco.withBody(raw, voice, 0.5f, rawRate)),
+                halfIsR1b = r1b(0.5f).contentEquals(atKnee),
+                frozen = atKnee.contentEquals(Arco.withBody(raw, voice, 0.75f, rawRate)) && atKnee.contentEquals(Arco.withBody(raw, voice, 1f, rawRate)),
+                half = boxOverString(raw, atKnee),
                 threeQuarters = boxOverString(raw, Arco.withBody(raw, voice, 0.75f, rawRate)),
                 one = boxOverString(raw, Arco.withBody(raw, voice, 1f, rawRate)),
-                r1bOne = boxOverString(raw, r1b(1f)),
+                r1cTop = boxOverString(raw, r1b(ArcoBodyCandidates.R1C_BODY_TOP)),
             )
         }
         for (r in rows) {
             println(
-                "ARCO box ${r.name}: BODY 0 is the string ${r.dryIsString}, BODY 0.25 is R1b's ${r.quarterIsR1b}, BODY 0.5 is R1b's ${r.halfIsR1b}; " +
-                    "box over string at BODY 0.5 / 0.75 / 1: ${f(r.half, 3)} ${f(r.threeQuarters, 3)} ${f(r.one, 3)}, R1b's BODY 1 ${f(r.r1bOne, 3)}",
+                "ARCO box ${r.name}: BODY 0 is the string ${r.dryIsString}, BODY 0.25 is R1b's ${r.quarterIsR1b}, BODY 0.5 is R1b's ${r.halfIsR1b}, BODY 0.75 and 1 are BODY 0.5's ${r.frozen}; " +
+                    "box over string at BODY 0.5 / 0.75 / 1: ${f(r.half, 3)} ${f(r.threeQuarters, 3)} ${f(r.one, 3)}, R1c's top ${f(r.r1cTop, 3)}",
             )
             assertTrue(r.dryIsString, "${r.name}: BODY 0 is not the string's contents")
             assertTrue(r.quarterIsR1b, "${r.name}: BODY 0.25 is not what R1b's call made")
             assertTrue(r.halfIsR1b, "${r.name}: BODY 0.5 is not what R1b's call made")
+            assertTrue(r.frozen, "${r.name}: the box at BODY 0.75 or 1 is not the box at BODY 0.5, to the sample")
             assertEquals(0.5, r.half, 0.02, "${r.name}: the box at BODY 0.5 is ${f(r.half, 3)} times the string")
-            assertEquals(1.125, r.threeQuarters, 0.05, "${r.name}: the box at BODY 0.75 is ${f(r.threeQuarters, 3)} times the string")
-            assertEquals(1.75, r.one, 0.05, "${r.name}: the box at BODY 1 is ${f(r.one, 3)} times the string")
-            assertTrue(r.one > 1.2, "${r.name}: BODY 1 is not clearly louder than R1b's")
-            assertTrue(r.r1bOne < 1.2, "${r.name}: R1b's own call at BODY 1 reads ${f(r.r1bOne, 3)}, over 1.2, so the bar cannot tell R1b's box from the new one")
+            assertEquals(0.5, r.threeQuarters, 0.02, "${r.name}: the box at BODY 0.75 is ${f(r.threeQuarters, 3)} times the string, not the frozen 0.50")
+            assertEquals(0.5, r.one, 0.02, "${r.name}: the box at BODY 1 is ${f(r.one, 3)} times the string, not the frozen 0.50")
+            assertEquals(1.75, r.r1cTop, 0.05, "${r.name}: the control's R1c top reads ${f(r.r1cTop, 3)} times the string, not 1.75")
+            assertTrue(r.r1cTop > 1.2, "${r.name}: R1c's climb reads ${f(r.r1cTop, 3)}, under 1.2, so the 0.50 bar cannot tell a climbed box from the frozen one")
         }
     }
 
     /** The finished peak bar at BODY 1: [Dsp.levelTo] turns a peak down only past 0.99, so a limited note sits at exactly 0.99 and fails 0.95, where a bar at 0.99 could not fail. */
-    private val bodyPeakBar = 0.95f
+    private val bodyPeakBar = Arco.FINISHED_PEAK_BAR
 
     /**
      * Nothing clips or goes non-finite at BODY 1: every TUNE step of both voices (25 and 20), defaults otherwise, through the whole render. Every sample is finite
      * and the peak is at most [bodyPeakBar], the bar ArcoTest's grid holds the finished peak to. R1c saw the highest finished peaks at 0.577 (CELLO, step 1) and
      * 0.521 (ERHU, step 4), 0.37 and 0.43 under the bar, all samples finite (the grid's 162 cells a voice in ArcoTest, which take BODY at 0, 0.5 and 1, read at most 0.761 at ERHU A5
-     * with the louder box), so the bar has room and a limited note, which sits at 0.99, would fail it.
+     * with the louder box), so the bar had room and a limited note, which sits at 0.99, would fail it. R1g saw the highest finished peak at 0.940 (CELLO, on the cap: several of the lowest steps tie to three places, step 3 printed) and 0.871 (ERHU, step 3), all samples finite, which is 0.01 and 0.079 under
+     * the bar: at BODY 1 the bar has 0.01 of room at the capped CELLO steps, because the lift is capped to leave exactly that much ([Arco.PEAK_CAP] is the bar less 0.01), which is why it is capped; the bound is a peak at most [bodyPeakBar] and a limited note at 0.99 would still fail it.
      */
     @Test
     fun `at BODY 1 nothing clips or goes non-finite, at any TUNE step of either voice`() {
@@ -1279,7 +1315,8 @@ class ArcoProductTest {
      * half, else to 0.9), changes the finished render, and by a measured amount: the RMS of the difference over the RMS of the note, with
      * the tail of the longer one counted as difference. BODY is the one a quiet engine loses first, so it is named: BODY from its
      * default 0.5 to 0.9 moves the note by 0.44 (CELLO) and 0.45 (ERHU), and from 0 to 1 by 0.92 and 0.92 (R1c's curve: 0.9 rings the box at 1.5 times the
-     * string and 1 at 1.75; R1b's were 0.23 and 0.24, and 0.70 and 0.71). The printed line has the other four at
+     * string and 1 at 1.75; R1b's were 0.23 and 0.24, and 0.70 and 0.71); R1g saw 0.945 and 0.955 from 0.5 to 0.9 and 1.480 and 1.495 from 0 to 1 (above the knee the box no longer climbs, and the lift is added at the plain's own gain, 5.12 dB per element at BODY 0.9 and 6.0 at BODY 1, so the
+     * note moves more, not less). The printed line has the other four at
      * 1.0 to 1.9 of the note (CELLO and ERHU: TUNE 1.37 and 1.41, BOW 1.78 and 1.79 (R1b: 1.08 at CELLO, before its bite grew), GRIP 1.02 and 1.16, HOLD 1.89 and 1.75: a different note, a
      * different attack, a different bridge, a different length). The bars are 0.1 of the note for every knob and 0.3 for BODY's two ends, under the
      * smallest of them with room. The control is a key the engine does not have, which must change nothing at all, to the bit, so the

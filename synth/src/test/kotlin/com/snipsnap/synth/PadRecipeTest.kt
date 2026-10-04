@@ -39,6 +39,7 @@ class PadRecipeTest {
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
         AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),
+        TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
     )
 
     @Test
