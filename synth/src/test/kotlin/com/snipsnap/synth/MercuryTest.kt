@@ -109,6 +109,29 @@ class MercuryTest {
     }
 
     /**
+     * The same gesture on every voice, R2c's three included. BEND 1 starts above the note and BEND 0 below, by the voice's
+     * own excursion (two semitones, SHARD's four) times how much of it is left in the first tenth of a second (its
+     * gesture's time constant sets that), and each settles on the note by the end of a long contact. Read at RUB .85 so a
+     * tapped voice sustains through the window too.
+     */
+    @Test
+    fun `every voice's bend gesture glides into the note and settles on it`() {
+        for (voice in MercuryVoice.entries) for ((bend, sign) in listOf(1f to 1.0, 0f to -1.0)) {
+            val snip = render(voice, "TUNE" to 0.5f, "BEND" to bend, "WATER" to 0f, "RUB" to 0.85f, "HOLD" to 0.98f)
+            val tau = Mercury.gestureSeconds(voice)
+            // What is left of the excursion, averaged over 0.03-0.13 s: centre the read there, since FineTuning looks one semitone either side.
+            val left = tau / 0.1 * (Math.exp(-0.03 / tau) - Math.exp(-0.13 / tau))
+            val centre = Mercury.geometryOf(voice).bendExcursionSemitones * left
+            val hz = Mercury.frequencyFor(voice, 0.5f)
+            val early = FineTuning.cents(FineTuning.measuredHz(snip, (hz * Math.pow(2.0, sign * centre / 12)).toFloat(), 0.03f, 0.1f), hz.toDouble())
+            val late = cents(voice, snip, 0.5f, 3.2, 0.4)
+            println("MERCURY bend $voice $bend: early ${f(early)} cents, late ${f(late)} cents")
+            assertTrue(sign * early > 40.0, "$voice BEND $bend should start well ${if (sign > 0) "above" else "below"} the note: ${f(early)} cents")
+            assertTrue(abs(late) < 3.0, "$voice BEND $bend should settle on the note: ${f(late)} cents")
+        }
+    }
+
+    /**
      * WATER as an ear hears it: what it adds to the same note held still, as pitch drift and as level swell. ARCO's
      * waveform measure (the test below) scored round 1's WATER 0.05 at 1.2, yet the owner could not hear WATER 0.05-0.2
      * on SING or BLADE (2026-10-02): a waveform difference counts any phase shift, and round 1's WATER added only 4-10
@@ -180,11 +203,12 @@ class MercuryTest {
     /**
      * RUB turns a tap into a rub on the same object: at RUB 0 the note decays through its contact, at RUB 1 it sustains.
      * Read as the level over the last 0.2 s of a 2.4 s contact against the 0.2 s after the strike. R1 measured the tap at
-     * 0.07 and the rub at 1.15 (SING), and 0.01 and 1.25 (BLADE).
+     * 0.07 and the rub at 1.15 (SING), and 0.01 and 1.25 (BLADE). PING is the voice that is a tap by default and has its
+     * own claims; the five that rub (R2c's EDDY, VESSEL and SHARD among them) are read here.
      */
     @Test
     fun `RUB turns a decaying tap into a sustained rub`() {
-        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) {
+        for (voice in MercuryVoice.entries.filter { it != MercuryVoice.PING }) {
             val hold = Mercury.holdSeconds(0.8f).toDouble()
             fun ratio(rub: Float): Double {
                 val s = render(voice, "RUB" to rub, "HOLD" to 0.8f, "WATER" to 0f).samples
@@ -202,10 +226,11 @@ class MercuryTest {
      * The rub sings on the fundamental, not on mode 1, at the bottom of each rubbed voice and at both ends of GLASS (the
      * selective, long-ringing end and the rough end), with the springs at COUPLE 1. Phase 0 saw mode 1 capture SING's low
      * notes before the contact taper and the period-scaled onset; this is the guard. R1 measured within 0.42 cents.
+     * EDDY and VESSEL start at A2, and the bar is why: EDDY's bowl sat +5.3 cents sharp at F2, +3.3 at A2, so its root is A2.
      */
     @Test
     fun `the rub locks onto the note at the bottom of the range, at both ends of GLASS, coupled`() {
-        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) for (glass in listOf(0f, 1f)) {
+        for (voice in MercuryVoice.entries.filter { it != MercuryVoice.PING }) for (glass in listOf(0f, 1f)) {
             val snip = render(voice, "TUNE" to 0f, "RUB" to 1f, "BEND" to 0.5f, "WATER" to 0f, "GLASS" to glass, "COUPLE" to 1f, "HOLD" to 0.8f)
             val hold = Mercury.holdSeconds(0.8f).toDouble()
             val c = cents(voice, snip, 0f, hold - 0.5, 0.4)
@@ -341,12 +366,13 @@ class MercuryTest {
     /**
      * Velocity (decision 8), as the owner heard it (2026-10-02).
      *
-     * PING registers GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset
-     * centroid rises at every tenth of velocity's travel, and by at least 15% over all of it (544 to 710 Hz, +31%).
-     * The owner heard it and kept it.
+     * The struck voices (PING, and R2c's VESSEL and SHARD, whose default is mostly a tap: [Mercury.velocityKind]) register
+     * GLASS, which shortens the strike and tilts the pickup bright, after the house's sweep: the onset centroid rises at
+     * every tenth of velocity's travel, and by at least 15% over all of it (PING 544 to 710 Hz, +31%). The owner heard
+     * PING's and kept it.
      *
-     * SING and BLADE take velocity as the touch, the owner's choice of "attack and bite". A rubbed body is close to a
-     * pure tone, so a harder touch is heard in how the note starts, not in brightness:
+     * The rubbed ones (SING and BLADE, and R2c's EDDY) take velocity as the touch, the owner's choice of "attack and
+     * bite". A rubbed body is close to a pure tone, so a harder touch is heard in how the note starts, not in brightness:
      * - the swell: the time to half level falls at every step from soft to hard, and the softest is at least three
      *   times the hardest (measured 0.35-0.38 s against 0.07-0.08 s);
      * - the bite: a hard touch catches with a scrape that rides the note's own swell. Round 3 levelled it against
@@ -361,18 +387,20 @@ class MercuryTest {
      * - and Velocity renders exactly that, with no macro moved and no soften.
      */
     @Test
-    fun `velocity brightens PING, and swells or bites SING and BLADE`() {
-        val ping = MercuryPatch("Velocity", MercuryVoice.PING, Mercury.defaults(MercuryVoice.PING))
-        assertEquals("GLASS", Velocity.brightnessSpec(ping)?.name, "PING: velocity is not on GLASS")
-        val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(ping, it / 10f)) }
-        println("MERCURY velocity PING onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
-        for (k in 1 until centroids.size) {
-            assertTrue(centroids[k] >= centroids[k - 1], "PING: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
+    fun `velocity brightens the struck voices, and swells or bites the rubbed ones`() {
+        for (voice in MercuryVoice.entries.filter { Mercury.velocityKind(it) == Mercury.VelocityKind.GLASS }) {
+            val struck = MercuryPatch("Velocity", voice, Mercury.defaults(voice))
+            assertEquals("GLASS", Velocity.brightnessSpec(struck)?.name, "$voice: velocity is not on GLASS")
+            val centroids = (0..10).map { onsetCentroid(Velocity.atVelocity(struck, it / 10f)) }
+            println("MERCURY velocity $voice onset centroid: " + centroids.joinToString(" ") { f(it, 0) })
+            for (k in 1 until centroids.size) {
+                assertTrue(centroids[k] >= centroids[k - 1], "$voice: velocity ${k / 10f} is darker than ${(k - 1) / 10f} (${centroids.map { f(it, 0) }})")
+            }
+            assertTrue(centroids.last() >= centroids.first() * 1.15, "$voice: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x")
         }
-        assertTrue(centroids.last() >= centroids.first() * 1.15, "PING: velocity brightens the onset by only ${f(centroids.last() / centroids.first(), 3)}x")
 
         val raw = rate * Dsp.OVERSAMPLE
-        for (voice in listOf(MercuryVoice.SING, MercuryVoice.BLADE)) {
+        for (voice in MercuryVoice.entries.filter { Mercury.velocityKind(it) == Mercury.VelocityKind.TOUCH }) {
             val macros = Mercury.defaults(voice)
             val patch = MercuryPatch("Velocity", voice, macros)
             assertEquals(null, Velocity.brightnessSpec(patch), "$voice: velocity has a brightness macro")
