@@ -56,8 +56,10 @@ import kotlin.random.Random
  * vibrato were "nearly"), R1c's retune of those three (the bite, the stab and the vibrato yes;
  * BODY 1 still "doesn't seem to do anything"), and three BODY pages (R1d, R1e and R1h; R1g rebuilt
  * BODY from the answers, and the design record's R1h paragraph says the last page came back void
- * by its own rules). The owner has not heard the presets, the kit or the loops; every value marked
- * "listening" is a first guess for the ears that have not.
+ * by its own rules). The owner has not heard the presets, the kit or the loops. Every value marked
+ * "listening" is provisional: the BODY lift's two sizes were played on R1e's and R1h's pages (the
+ * last of them void by its own rules, so it settles little), and the rest are first guesses for
+ * ears that have not heard them.
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
