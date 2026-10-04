@@ -1,6 +1,5 @@
 package com.snipsnap.synth
 
-import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
@@ -11,35 +10,24 @@ import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sin
-import kotlin.random.Random
 
 /**
- * GYRE - coupled strings and a rotor (docs/superpowers/specs/2026-10-01-gyre-coupled-string-engine-design.md).
+ * GYRE as round one's third pass (R1c) built it, frozen at `0ba9b05`: the reference for TOUCH 0
+ * (docs/superpowers/specs/2026-10-01-gyre-coupled-string-engine-design.md, "R2"). Round two
+ * rebuilds every string as a `Strings.Bow` with a bridge port; at TOUCH 0 that must sound as this
+ * does, and `GyreTest` measures how closely. Never edit it to make a test pass: if the new engine
+ * drifts from it, the new engine is what moves.
  *
- * Four plucked strings at whole-number ratios of the note (1, 2, 3, 4: G2, so the waveform repeats
- * at the note and never at half of it) meet one bridge ([Strings.Bridge]) on a small membrane
- * ([Strings.Membrane]). What one string does reaches the others through the bridge and comes back:
- * a pluck on the first string sets the third ringing, which nothing else in the fleet does. Eight
- * sympathetic strings listen to the bridge and ring with what reaches them, and everything leaves
- * through a box that BODY sizes. A rotor turns inside the instrument, not after it: it moves which
- * upper string is loudest, which of the box's peaks swells, how strongly the strings are coupled,
- * which membrane mode is loudest, each string's loss and which sympathetic string answers, never
- * the output level, and the strings are retuned at every step of it so it never bends the pitch.
- *
- * Round two puts a bow on every string (TOUCH). Each string is a `Strings.Bow`: two segments of
- * string either side of the bow, with a bridge port at the far end of the bridge segment, where
- * the pluck goes in, the bridge couples and the sound is taken, as round one's single ring did.
- * TOUCH 0 is that pluck (the bow lifted, and the render matches round one's within the bounds
- * `GyreTest` measures); TOUCH 1 is a bow alone; between, the pluck dies away as the bow is lowered
- * onto the strings, so the middle is a bowed pluck, not a crossfade of two instruments.
- *
- * The rotor stays under [SPIN_FAST_HZ] (the note-locked top of SPIN is R3). HOLD's top step is
- * reserved for the LOOP (R4) and renders as the step below it here. Every constant marked "shape"
- * is a first value from Phase-0 measurements, not a sourced one; the audition gate decides.
+ * It keeps `play`, `finish` and `render` and the constants and helpers they read, and nothing
+ * else (no scramble, no classifier rules). Its strings are [LegacyLoop], the loop as it was, so a
+ * later change to `Strings.Loop` cannot move both sides of a comparison. It has its own voice
+ * type, [LegacyGyreVoice]: its `when (voice)` branches are exhaustive over FLICK and HALO, so
+ * round two's DRAWN and BOURDON would otherwise break its compile and force an edit. Tests map a
+ * voice across by name (`LegacyGyreVoice.valueOf(voice.name)`), for FLICK and HALO only.
  */
-enum class GyreVoice { FLICK, HALO }
+internal enum class LegacyGyreVoice { FLICK, HALO }
 
-object Gyre {
+internal object LegacyGyre {
 
     const val TUNE_SEMITONES = 24
     const val STRINGS = 4
@@ -212,21 +200,6 @@ object Gyre {
      */
     const val RETUNE_HEADROOM = 0.97f
 
-    /**
-     * TOUCH: the bow lowered onto the strings. `bow = sin(TOUCH pi/2)` and the pluck is `cos(TOUCH
-     * pi/2)` of its burst (the document's section 6). The bow's contact is `bow^CONTACT_CURVE`:
-     * contact, not speed, carries the morph, and the cube keeps every 0.1 step of TOUCH within
-     * 0.34 of the end-to-end colour distance (Phase 0, finding 3: a linear contact jumped at its
-     * first steps because the bow's push is nonlinear in it). The bow draws at its full speed at
-     * any TOUCH above 0, up to a ramp of [BOW_ATTACK_SECONDS]. Shape.
-     */
-    const val CONTACT_CURVE = 3f
-    const val BOW_ATTACK_SECONDS = 0.08f
-
-    /** Where the bow sits on every string (ARCO's own) and how hard it presses (`slope = 5 - 4 * pressure`). */
-    const val BOW_POSITION = Arco.BETA
-    const val BOW_PRESSURE = 0.9f
-
     /** The rotor is a control signal: its destinations move every this many samples (5.5 kHz at 176.4 kHz). */
     const val ROTOR_BLOCK = 32
 
@@ -288,10 +261,6 @@ object Gyre {
 
     /** HOLD's top step, reserved for the LOOP (R4). */
     const val LOOP_THRESHOLD = 0.99f
-    const val SCRAMBLE_HOLD_CEILING = 0.95f
-
-    /** The classifier's own length rule: past this a render reads LOOP. [drumClassFor] derives from it. */
-    const val LOOP_THRESHOLD_SECONDS = 1.5f
 
     const val OUTPUT_DC_HZ = 20f
 
@@ -315,21 +284,17 @@ object Gyre {
         val spin: Float,
         val body: Float,
         val hold: Float,
-        val touch: Float,
-        val bowSpeed: Float,
-        val stroke: Float,
     )
 
-    internal fun shapeOf(voice: GyreVoice): Shape = when (voice) {
-        GyreVoice.FLICK -> Shape(48, 2.5f, 14f, 4_000f, floatArrayOf(1f, 0.35f, 0.25f, 0.18f), 0.3f, 0.25f, 0.05f, 0.4f, 0.9f, 0f, 0.13f, 3f)
-        GyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 1.5f, 0.8f, 0.15f, 0.65f, 0.92f, 0f, 0.13f, 6f)
+    internal fun shapeOf(voice: LegacyGyreVoice): Shape = when (voice) {
+        LegacyGyreVoice.FLICK -> Shape(48, 2.5f, 14f, 4_000f, floatArrayOf(1f, 0.35f, 0.25f, 0.18f), 0.3f, 0.25f, 0.05f, 0.4f, 0.9f)
+        LegacyGyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 1.5f, 0.8f, 0.15f, 0.65f, 0.92f)
     }
 
-    fun macrosFor(voice: GyreVoice): List<MacroSpec> {
+    fun macrosFor(voice: LegacyGyreVoice): List<MacroSpec> {
         val s = shapeOf(voice)
         return listOf(
             MacroSpec("TUNE", 0.5f, neutral = 0.5f),
-            MacroSpec("TOUCH", s.touch, neutral = 0.35f),
             MacroSpec("SYMPATHY", s.sympathy, neutral = 0.3f),
             MacroSpec("SPIN", s.spin, neutral = 0f),
             MacroSpec("BODY", s.body, neutral = 0.4f),
@@ -337,20 +302,16 @@ object Gyre {
         )
     }
 
-    fun defaults(voice: GyreVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
+    fun defaults(voice: LegacyGyreVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
-    internal fun settled(macros: Map<String, Float>, voice: GyreVoice): Map<String, Float> {
+    internal fun settled(macros: Map<String, Float>, voice: LegacyGyreVoice): Map<String, Float> {
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         return m
     }
 
-    fun rootMidi(voice: GyreVoice): Int = shapeOf(voice).rootMidi
-
     /** The snapped MIDI note TUNE lands on. */
-    fun midiFor(voice: GyreVoice, tune: Float): Int = rootMidi(voice) + Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
-
-    fun frequencyFor(voice: GyreVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
+    fun midiFor(voice: LegacyGyreVoice, tune: Float): Int = shapeOf(voice).rootMidi + Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES)
 
     internal fun membraneHz(body: Float): Float = Dsp.expMap(body, MEMBRANE_SMALL_HZ, MEMBRANE_LARGE_HZ)
 
@@ -363,18 +324,6 @@ object Gyre {
     internal fun spinDepth(spin: Float): Float = SPIN_DEPTH * (1f - exp(-spin / SPIN_DEPTH_KNEE))
 
     internal fun sympathyGain(sympathy: Float): Float = SYMPATHY_GAIN * sympathy.coerceIn(0f, 1f).pow(SYMPATHY_CURVE)
-
-    /** How much of the pluck's burst TOUCH leaves: 1 at 0, nothing at 1 (exactly, not `cos(pi/2)`'s 6e-17). */
-    internal fun pluckAmount(touch: Float): Float = if (touch >= 1f) 0f else cos(touch.coerceIn(0f, 1f) * PI / 2).toFloat()
-
-    /** How far the bow is lowered: 0 at TOUCH 0 (lifted), 1 at TOUCH 1. */
-    internal fun bowAmount(touch: Float): Float = sin(touch.coerceIn(0f, 1f) * PI / 2).toFloat()
-
-    /** The bow's contact on the string, as the Bow takes it: [bowAmount] cubed ([CONTACT_CURVE]). */
-    internal fun contactFor(touch: Float): Float = bowAmount(touch).pow(CONTACT_CURVE)
-
-    /** The bowed string's tuning share: the bow's own [Strings.Bow.SHARE] correction only as far as the bow is down; 1 is a free string's. */
-    internal fun shareFor(touch: Float): Float = 1f - (1f - Strings.Bow.SHARE) * bowAmount(touch)
 
     /** When a note at [sympathy] has rung out on its own: the top of HOLD's range. */
     fun openSeconds(sympathy: Float): Float =
@@ -396,37 +345,21 @@ object Gyre {
      * The sympathetic strings' t60 once the hand has landed: the voice's tight release at SYMPATHY 0,
      * rising to [RING_OUT_T60] at SYMPATHY 1, and never longer than their own ring before the hand.
      */
-    internal fun releaseT60(voice: GyreVoice, sympathy: Float): Float {
+    internal fun releaseT60(voice: LegacyGyreVoice, sympathy: Float): Float {
         val tight = shapeOf(voice).releaseT60
         val s = sympathy.coerceIn(0f, 1f).pow(RING_OUT_CURVE)
         return minOf(tight + (maxOf(RING_OUT_T60, tight) - tight) * s, sympathyT60(sympathy))
     }
 
     /** After the hand lands, until the slowest of the strings, the sympathetic strings and the box is [END_DB] down. */
-    internal fun tailSeconds(voice: GyreVoice, sympathy: Float, body: Float, spin: Float): Float =
+    internal fun tailSeconds(voice: LegacyGyreVoice, sympathy: Float, body: Float, spin: Float): Float =
         END_DB / 60f * maxOf(DAMPER_T60, releaseT60(voice, sympathy), boxT60(body, spin))
 
     /** Samples at the oversampled rate: exactly what [play] renders. */
-    internal fun rawFrames(voice: GyreVoice, macros: Map<String, Float>): Int {
+    internal fun rawFrames(voice: LegacyGyreVoice, macros: Map<String, Float>): Int {
         val m = settled(macros, voice)
         val tail = tailSeconds(voice, m.getValue("SYMPATHY"), m.getValue("BODY"), m.getValue("SPIN"))
         return ((dampSeconds(m.getValue("HOLD"), m.getValue("SYMPATHY")) + tail) * RATE * Dsp.OVERSAMPLE).toInt()
-    }
-
-    /** Frames at [RATE] a render has: the decimator's two floored 2:1 steps come to `raw / OVERSAMPLE`. */
-    internal fun renderFrames(macros: Map<String, Float>, voice: GyreVoice): Int = rawFrames(voice, macros) / Dsp.OVERSAMPLE
-
-    /** The classifier's length rule, exactly: LOOP past [LOOP_THRESHOLD_SECONDS], else PERC. */
-    fun drumClassFor(voice: GyreVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
-        if (renderFrames(macros, voice).toFloat() / RATE > LOOP_THRESHOLD_SECONDS) DrumClass.LOOP else DrumClass.PERC
-
-    /** SCRAMBLE around the voice's defaults or [near]; HOLD is capped short of the LOOP step. No presets until R5. */
-    fun scramble(voice: GyreVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
-        val base = defaults(voice)
-        val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
-        val rolled = Dsp.scrambleNear(seed, temperature, random).toMutableMap()
-        rolled["HOLD"] = rolled.getValue("HOLD").coerceAtMost(SCRAMBLE_HOLD_CEILING)
-        return rolled
     }
 
     /**
@@ -463,7 +396,7 @@ object Gyre {
      */
     internal class Probe(val coupling: Float? = null, val solo: Int? = null, val sympathy: Boolean = true, val record: Boolean = false)
 
-    internal fun play(voice: GyreVoice, macros: Map<String, Float>, probe: Probe = Probe()): Played {
+    internal fun play(voice: LegacyGyreVoice, macros: Map<String, Float>, probe: Probe = Probe()): Played {
         val m = settled(macros, voice)
         val shape = shapeOf(voice)
         val rate = RATE * Dsp.OVERSAMPLE
@@ -488,19 +421,12 @@ object Gyre {
         val bright = shape.brightRatio * Dsp.lin(body, LOAD_BRIGHT_SMALL, LOAD_BRIGHT_LARGE)
         val t60 = shape.t60 * Dsp.lin(body, LOAD_T60_SMALL, LOAD_T60_LARGE)
         val ceiling = BRIGHT_CEILING_HZ * Dsp.lin(body, 1f, LOAD_CEILING_LARGE)
-        val touch = m.getValue("TOUCH")
-        val pluck = pluckAmount(touch)
-        val bowAmt = bowAmount(touch)
-        val contact = contactFor(touch)
-        val share = shareFor(touch)
-        // The string's loss as the Bow takes it: the bridge segment keeps REFLECTION of the wave and
-        // [Strings.Bow.gain] scales that, so the loop's own feedback over REFLECTION is what R1's Loop kept.
-        val feedback = FloatArray(STRINGS) { k -> 10f.pow(-3f / (t60 * f * RATIOS[k])).coerceAtMost(FB_CEILING) / Strings.Bow.REFLECTION }
-        val bows = Array(STRINGS) { k ->
+        val loops = Array(STRINGS) { k ->
             val fk = f * RATIOS[k]
             val loopHz = minOf(fk * bright, ceiling)
-            Strings.Bow(bridgeTuned(fk, cMean, membrane) * RETUNE_HEADROOM, BOW_POSITION, bridgeHz = loopHz, share = share, rate = rate)
-                .also { it.retune(bridgeTuned(fk, cMean, membrane)); if (bowAmt <= 0f) it.lift() }
+            val fb = 10f.pow(-3f / (t60 * fk)).coerceAtMost(FB_CEILING)
+            val low = Strings.tune(bridgeTuned(fk, cMean, membrane) * RETUNE_HEADROOM, loopHz, rate)
+            LegacyLoop(low.n, low.a, fb, loopHz, rate).also { it.retune(bridgeTuned(fk, cMean, membrane)) }
         }
         val bursts = Array(STRINGS) { k ->
             if (probe.solo != null && probe.solo != k) FloatArray(0)
@@ -549,13 +475,6 @@ object Gyre {
         var phase = 0.0
         var c = c0
         var released = false
-        var lifted = bowAmt <= 0f
-        val attackN = (BOW_ATTACK_SECONDS * rate).toInt().coerceAtLeast(1)
-        val slope = 5f - 4f * BOW_PRESSURE
-        // Every port needs something in flight before the strings are written to: run them silent for
-        // the longest bridgeAge (a lifted bow, or contact 0) and start the note after. The render's
-        // length is the note's, as before.
-        repeat(bows.maxOf { it.bridgeAge }) { for (b in bows) b.next(0f, slope, 0f, 0f) }
         for (i in 0 until len) {
             if (i % ROTOR_BLOCK == 0) {
                 val hand = if (i < dampN) 0f else ((i - dampN).toFloat() / rampN).coerceAtMost(1f)
@@ -567,7 +486,7 @@ object Gyre {
                 for (k in 0 until STRINGS) {
                     val damp = 1f + (stopped[k] - 1f) * hand
                     val facing = cos(phase - k * PI / 2).toFloat()
-                    bows[k].gain(feedback[k] * (1f - depth * SWING_DAMPING * (1f + facing) / 2f) * damp)
+                    loops[k].gain((1f - depth * SWING_DAMPING * (1f + facing) / 2f) * damp)
                     if (k > 0) heard[k] = 1f + depth * SWING_HEARD * facing
                 }
                 if (depth > 0f) for (j in boxHz.indices) {
@@ -576,11 +495,7 @@ object Gyre {
                 for (k in 0 until modes) w[k] = MEMBRANE_WEIGHTS[k] * (1f - depth * SWING_MEMBRANE * (1f + cos(phase - 2 * PI * k / modes).toFloat()) / 2f)
                 membrane.weigh(w)
                 c = (c0 * (1f - depth * SWING_COUPLING * (1f + sin(phase).toFloat()) / 2f)).coerceIn(0f, 1f)
-                if (depth > 0f) for (k in 0 until STRINGS) bows[k].retune(bridgeTuned(f * RATIOS[k], c, membrane))
-                if (hand > 0f && !lifted) {
-                    for (b in bows) b.lift()
-                    lifted = true
-                }
+                if (depth > 0f) for (k in 0 until STRINGS) loops[k].retune(bridgeTuned(f * RATIOS[k], c, membrane))
                 for (j in 0 until SYMPATHETIC) {
                     val cj = max(0f, cos(phase - 2 * PI * j / SYMPATHETIC).toFloat())
                     emphasis[j] = 1f - depth * SWING_SYMPATHY * (1f - cj * cj)
@@ -588,19 +503,14 @@ object Gyre {
             }
             var sum = 0f
             for (k in 0 until STRINGS) {
-                r[k] = bows[k].atBridge()
+                r[k] = loops[k].reflected()
                 sum += r[k]
             }
             val radiated = bridge.couple(r, c, back)
-            val ramp = if (i < attackN) i.toFloat() / attackN else 1f
             var y = 0f
             for (k in 0 until STRINGS) {
-                val x = pluck * bursts[k].let { if (i < it.size) it[i] else 0f }
-                // The pluck goes in at the bridge with what the bridge sends back, and the string's
-                // sound is taken there too: round one's `inject(x + back[k])` and what it returned.
-                val v = back[k] + x
-                bows[k].toBridge(v)
-                bows[k].next(shape.bowSpeed * shape.levels[k] * ramp, slope, 0f, contact)
+                val x = bursts[k].let { if (i < it.size) it[i] else 0f }
+                val v = loops[k].inject(x + back[k])
                 if (per != null) per[k][i] = v
                 y += heard[k] * v
             }
@@ -636,6 +546,6 @@ object Gyre {
         return out
     }
 
-    fun render(voice: GyreVoice, macros: Map<String, Float> = emptyMap()): Snip =
+    fun render(voice: LegacyGyreVoice, macros: Map<String, Float> = emptyMap()): Snip =
         Snip(finish(play(voice, macros).raw), channels = 1, sampleRate = RATE)
 }

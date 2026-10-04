@@ -476,9 +476,43 @@ class GyreTest {
     }
 
     @Test
-    fun `a patch round-trips through JSON, and an R1 recipe has no TOUCH`() {
+    fun `a patch round-trips through JSON, and an R1 recipe is a pure pluck`() {
+        // A round-one recipe has no TOUCH key; it decodes at the voice's default, which is 0 for FLICK and
+        // HALO (decision 1), so it renders as it did and stays a pluck.
         val p = GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f, "SPIN" to 0.3f))
         assertEquals(p, Patches.fromJsonText(p.toJsonText()))
-        assertTrue(Gyre.macrosFor(GyreVoice.FLICK).none { it.name == "TOUCH" })
+        for (voice in listOf(GyreVoice.FLICK, GyreVoice.HALO)) assertEquals(0f, Gyre.defaults(voice).getValue("TOUCH"), "$voice")
+        assertEquals(listOf("TUNE", "TOUCH", "SYMPATHY", "SPIN", "BODY", "HOLD"), Gyre.macrosFor(GyreVoice.FLICK).map { it.name })
+    }
+
+    // ---- TOUCH 0 is round one --------------------------------------------------------------
+
+    @Test
+    fun `TOUCH 0 is the approved R1c, within the bounds`() {
+        // The strings are Bows now, the pluck goes in and the sound is taken at the bridge port, and the
+        // note starts after a silent pre-roll. At TOUCH 0 the bow is lifted and that must sound as the
+        // frozen R1c engine (LegacyGyre) did. Each voice at G3, C4 and G4, defaults otherwise, TOUCH absent
+        // (decodes as 0): the pitch to 0.2 cents, the waveform's difference at least 40 dB under the
+        // legacy render's energy, the octave bands' mean shift under 0.5 dB, the length identical.
+        // Phase 0 on the prototype: the same pitch to its 0.1-cent resolution, -50.4 to -57.6 dB, 0.01 to
+        // 0.12 dB, identical lengths.
+        val from = (0.05f * RATE).toInt()
+        for (voice in listOf(GyreVoice.FLICK, GyreVoice.HALO)) for (steps in intArrayOf(7, 12, 19)) {
+            val m = Gyre.defaults(voice) + ("TUNE" to steps / 24f)
+            val now = Gyre.render(voice, m)
+            val then = LegacyGyre.render(LegacyGyreVoice.valueOf(voice.name), m)
+            assertEquals(then.samples.size, now.samples.size, "$voice TUNE $steps: the length moved")
+            val f = Gyre.frequencyFor(voice, steps / 24f)
+            val cents = FineTuning.cents(FineTuning.measuredHz(now, f, 0.1f, 0.4f), f.toDouble()) -
+                FineTuning.cents(FineTuning.measuredHz(then, f, 0.1f, 0.4f), f.toDouble())
+            var d = 0.0; var e = 0.0
+            for (i in now.samples.indices) { val x = now.samples[i] - then.samples[i].toDouble(); d += x * x; e += then.samples[i].toDouble() * then.samples[i] }
+            val diff = 10 * log10(d / e)
+            val shift = meanShift(bandShares(now.samples, from, 32_768), bandShares(then.samples, from, 32_768))
+            println("$voice TUNE $steps: pitch ${"%.2f".format(cents)} cents from R1c, waveform ${"%.1f".format(diff)} dB, bands ${"%.2f".format(shift)} dB")
+            assertTrue(abs(cents) <= 0.2, "$voice TUNE $steps: $cents cents from R1c")
+            assertTrue(diff <= -40.0, "$voice TUNE $steps: the waveform differs only $diff dB under R1c")
+            assertTrue(shift <= 0.5, "$voice TUNE $steps: the octave bands moved $shift dB")
+        }
     }
 }
