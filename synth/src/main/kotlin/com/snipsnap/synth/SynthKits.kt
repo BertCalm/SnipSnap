@@ -358,6 +358,33 @@ object SynthKits {
     }
 
     /**
+     * The BALLAST acceptance kit: ROOT up the minor pentatonic from C2 on the first four pads (A01-A04), every knob but
+     * TUNE at its default, so the row is the bass before anyone touches it; then two presets each of WIRE, DEEP, GLINT,
+     * BLOOM and SWARM (A05-A14) and a DEEP and a BLOOM preset with a long gate (A15-A16). Every pad is dry (BALLAST has no
+     * landing chain) and filed by [Ballast.drumClassFor]: the gate plus the structure's own ring runs past the
+     * classifier's 1.5 s line on most of them, which files them LOOP by length, and a drum program plays every pad once
+     * through either way. The presets are provisional until the audition gate; this kit is what the page's kit section plays.
+     */
+    fun ballast(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = BallastPatch(
+            "Root $n", BallastVoice.ROOT,
+            Ballast.defaults(BallastVoice.ROOT) + ("TUNE" to (12 + semitone) / Ballast.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Ballast.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: BallastVoice, name: String) = BallastPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Ballast.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),   // A01-A04
+            preset(BallastVoice.WIRE, "LONG STRING"), preset(BallastVoice.WIRE, "UPPER HALO"),                // A05 A06
+            preset(BallastVoice.DEEP, "LOWER ECHO"), preset(BallastVoice.DEEP, "LOOSE MOUNT"),                // A07 A08
+            preset(BallastVoice.GLINT, "GLASS WAKE"), preset(BallastVoice.GLINT, "DENSE TILES"),              // A09 A10
+            preset(BallastVoice.BLOOM, "DELAYED OPEN"), preset(BallastVoice.BLOOM, "SLOW SWELL"),             // A11 A12
+            preset(BallastVoice.SWARM, "DENSE RATTLE"), preset(BallastVoice.SWARM, "TILE STORM"),             // A13 A14
+            preset(BallastVoice.DEEP, "LOW WELL"), preset(BallastVoice.BLOOM, "WARM SWELL"),                  // A15 A16
+        )
+    }
+
+    /**
      * The LEAD family's amp (shape), written in the kit: DRIVE 0.78 is gain 37 on VALVE's law, a
      * cooler drive than CHUG's landing (DRIVE 0.85, gain 106; it was hotter than the first build's
      * gain 13), with SAG and CAB as CHUG's and TONE 0.5 (flat) against CHUG's 0.3. The owner heard

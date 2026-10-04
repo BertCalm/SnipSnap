@@ -371,6 +371,25 @@ tasks.register<JavaExec>("generateMercuryAudition") {
     args("${rootDir}/testkit/mercury-audition")
 }
 
+tasks.register<JavaExec>("generateBallastKit") {
+    group = "distribution"
+    description = "Render the BALLAST structure-bass acceptance kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render the BALLAST audition clips, manifest and page under testkit/ballast-audition/. See BallastAuditionGenerator. */
+tasks.register<JavaExec>("generateBallastAudition") {
+    group = "distribution"
+    description = "Render the BALLAST audition clips, manifest and listening page under testkit/ballast-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-audition")
+}
+
 /** Render the GYRE round-one audition clips, manifest and page under testkit/gyre-audition/. See GyreAuditionGenerator. */
 tasks.register<JavaExec>("generateGyreAudition") {
     group = "distribution"

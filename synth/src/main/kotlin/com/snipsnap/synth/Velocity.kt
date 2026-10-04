@@ -219,6 +219,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
+        is BallastPatch -> Ballast.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
     }
@@ -287,7 +288,7 @@ object Velocity {
      * (2026-10-02).
      */
     private fun touchedVelocity(patch: Patch): Boolean =
-        patch is MercuryPatch && patch.voice != MercuryVoice.PING
+        (patch is MercuryPatch && patch.voice != MercuryVoice.PING) || patch is BallastPatch
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and
@@ -307,7 +308,10 @@ object Velocity {
     /** [atVelocity] with [spec] already resolved — see that function and [brightnessSpec]. */
     fun atVelocity(patch: Patch, velocity: Float, spec: MacroSpec?): Snip {
         val v = velocity.coerceIn(0f, 1f)
-        if (touchedVelocity(patch)) return Mercury.render((patch as MercuryPatch).voice, patch.macros, velocity = v)
+        if (touchedVelocity(patch)) {
+            return if (patch is BallastPatch) Ballast.render(patch.voice, patch.macros, velocity = v)
+            else Mercury.render((patch as MercuryPatch).voice, patch.macros, velocity = v)
+        }
         spec ?: return soften(patch.render(), 1f - v)
         val asked = patch.macros[spec.name] ?: spec.default
         // A macro parked at (or near) 0 has no ceiling to scale down from -

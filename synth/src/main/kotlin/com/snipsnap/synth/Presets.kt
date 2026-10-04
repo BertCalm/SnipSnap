@@ -75,6 +75,10 @@ object Presets {
             val v = MercuryVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MercuryPresets.forVoice(v)
         }
+        BallastPatch.ENGINE -> {
+            val v = BallastVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            BallastPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -103,5 +107,5 @@ object Presets {
         ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all()
+            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() + BallastPresets.all()
 }
