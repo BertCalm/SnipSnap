@@ -107,7 +107,7 @@ tasks.register<JavaExec>("generateGlintRosterAudition") {
     args("${rootDir}/testkit/glint-roster-candidates")
 }
 
-/** Render the GLINT roster's final listen (each preset as a one-shot and two pads, WAVs and a manifest) under testkit/glint-roster-final/. See GlintRosterListenGenerator. */
+/** Render the GLINT roster's final listen (each preset as a one-shot and three pads, WAVs and a manifest) under testkit/glint-roster-final/. See GlintRosterListenGenerator. */
 tasks.register<JavaExec>("generateGlintRosterListen") {
     group = "distribution"
     description = "Render the GLINT roster's final listen (one file per preset) under testkit/glint-roster-final/."

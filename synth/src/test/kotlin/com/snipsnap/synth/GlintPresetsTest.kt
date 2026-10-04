@@ -67,7 +67,7 @@ class GlintPresetsTest {
             ThumpPatch.ENGINE, SkinPatch.ENGINE, TinesPatch.ENGINE, PluckPatch.ENGINE, TonewheelPatch.ENGINE, VelvetPatch.ENGINE,
             FathomPatch.ENGINE, ResinPatch.ENGINE, TidePatch.ENGINE, VoxPatch.ENGINE, SnapPatch.ENGINE, GlintPatch.ENGINE,
             SirenPatch.ENGINE, ForkPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, BorePatch.ENGINE, ArcoPatch.ENGINE,
-            MercuryPatch.ENGINE,
+            MercuryPatch.ENGINE, GyrePatch.ENGINE,
         ) + FxChain.SECTION_NAMES.map { it.uppercase() } + GlintVoice.entries.map { it.name }
         assertTrue(taken.size > 30, "the list of taken names lost its rack sections")
         for (preset in GlintPresets.all()) {

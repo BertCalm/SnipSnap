@@ -57,7 +57,7 @@ testkit/glint-depth-audition/
 # :synth:generateGlintRosterAudition and sent to the phone for the owner to pick from; never committed.
 testkit/glint-roster-candidates/
 
-# The GLINT roster's final-listen files (one per preset: the one-shot and two pads), rendered by
+# The GLINT roster's final-listen files (one per preset: the one-shot and three pads), rendered by
 # :synth:generateGlintRosterListen and sent to the phone for the owner's last check; never committed.
 testkit/glint-roster-final/
 
