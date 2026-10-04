@@ -981,6 +981,16 @@ alone makes. A zone that does not close as asked is nudged as in the one loop,
 so on a hard patch the lowest zones can ring a little longer, and couple a
 little less, than the rest.
 
+**Pitch under WATER.** The loop's whole periods are fitted to the note (`planLoop`,
+within 0.1 cent), so with WATER still a zone is on its pitch. Under WATER the
+pitch moves by design (about 8 cents of swing at the defaults), and the retune
+(`loopLag`) then locks the loop to the whole cycles nearest the model's own mean
+pitch, which sits a few cents from the plan where the mean load is not 0.5
+(`anchorNominal` assumes it is; BLADE's beam load is not). Kept, not changed: it
+is what the owner approved by ear in rounds 1 to 5, and the one-shot has the
+same offset. The review of R2b found the KDoc overstating this ("exactly"); it
+now says so and a test guards the mean at the defaults.
+
 **Cancellation.** A zone is seconds of audio rendered several times over (the
 retune's passes, the nudge ladder), the slowest of any held engine, so
 `Mercury.sound`, `renderLoopMeasured`, `renderLoopNudged` and `renderLoop` take
@@ -1004,7 +1014,8 @@ orbit), 0.6 to 0.8 MB, so an instrument is 6 to 7 MB.
 
 | Claim | Measured |
 |---|---|
-| Pitch, WATER 0, read over the loop | worst 0.29 cents (bar 3) |
+| Pitch, WATER 0, read over the loop: the ends and middle of each voice's keyboard | worst 0.29 cents (bar 3) |
+| Pitch at the voice's defaults (WATER moving), the mean over the whole loop, all 27 zones | worst 3.10 cents (bar 6); BLADE's top zone is the sharpest, as the one-shot's mean is |
 | Level, loudness of each zone against the melodic target | worst 0.00 dB (bar 1) |
 | The played wrap (copy two's last sample into its first): the step across it against the loop's steepest step | worst 0.92 (bar 1) |
 | The same wrap's change of step against the loop's largest change of step (a kink) | worst 0.32 (bar 1) |
