@@ -156,7 +156,7 @@ object MercuryAuditionGenerator {
             // HELD KEYS (R2b): the instrument as the MPC plays it. Each zone is the pad's own file, played the way a
             // keygroup does: the first pass, then the second copy from the marker for as long as the key is down, and
             // the release fade after it lifts (the MAKE INSTRUMENT default, 0.6 s).
-            val pads = Keys.mercuryPadMidis(voice).associateWith { Keys.mercuryPad(voice, emptyMap(), it) }
+            val pads = Keys.mercuryPadMidis(voice).associateWith { MercuryPadZones.note(voice, it) }
             val release = InstrumentSuite.MERCURY_PAD_RELEASE_SECONDS
             val keys = listOf(
                 Triple("keys_scale", "THE NINE ZONES, UP", "every zone held 1.4 s and let go, each key lifting as the next goes down"),

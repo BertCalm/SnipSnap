@@ -196,7 +196,7 @@ the pads, and soft hits use the darker layer.
 ### SnipSnap Session — the whole thing in one file
 
 The capstone artifact: `SnipSnap Session.xpj` beside its flat
-`SnipSnap Session_[ProjectData]/` — the factory kit, all six suite
+`SnipSnap Session_[ProjectData]/` — the factory kit, the six classic suite
 instruments and the demo groove as **one MPC 3 project**. Open the `.xpj`
 and the entire session should be standing there: kit on track 1 in class
 colours, EP/Organ/Harp/Music Box/Resin Pad/Fork on their own tracks, "SnipSnap Groove"
@@ -207,7 +207,7 @@ Resin Pad still sustain inside the project.
 
 ### Instruments/ — the S5 suite, dual-generation
 
-Six playable key instruments, engines at exact MIDI pitch, multisampled
+Nine playable key instruments (six classic, three MERCURY), engines at exact MIDI pitch, multisampled
 every minor third across two octaves: **SnipSnap EP** (TINES electric piano
 — soft hits are *rendered darker*, not attenuated), **SnipSnap Organ**
 (TONEWHEEL held down, with a sustain loop cut at an exact whole number of
@@ -215,7 +215,11 @@ waveform periods — hold a pad and it sings forever), **SnipSnap Harp**
 (PLUCK), **SnipSnap Music Box** (TINES chime twins), **SnipSnap Resin
 Pad** (RESIN held, looped like the organ; see below), **SnipSnap Fork**
 (FORK TINE at the DINNER JAZZ preset, the modal electric piano — soft hits
-rendered darker, like the EP). Regenerate with
+rendered darker, like the EP), and **SnipSnap Mercury Ping**, **Sing** and
+**Blade** (MERCURY held: each voice at its defaults, HOLD's top step, the
+loop doubled with the marker at the second copy, so a key sustains for as long
+as it is held; PING spans C4–C6, SING and BLADE G3–G5; one layer, a 0.6 s
+release; a zone is about 6 s, so each instrument is 6–7 MB). Regenerate with
 `./gradlew :synth:generateInstrumentSuite`.
 
 Each instrument ships the Timeless Glow dual-generation layout: the `.xty`
@@ -225,7 +229,10 @@ folder root — engine, zones, velocity layers, and the loop points,
 recorded from the actual renders — so the folder can rebuild itself (the
 renders are deterministic). Things to confirm: each loads, plays in tune
 chromatically, the EP's soft hits sound darker, and — the big one —
-**held organ pads sustain indefinitely** with no audible loop seam.
+**held organ pads sustain indefinitely** with no audible loop seam. For the
+MERCURY three: hold a key and it keeps singing with no click at the wrap,
+neighbouring zones sit at one level and one character, and a lifted key dies
+away over about 0.6 s.
 
 ### RESIN held pads — SnipSnap Resin Pad
 

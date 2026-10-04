@@ -99,7 +99,7 @@ object InstrumentSuite {
     fun renderMercury(voice: MercuryVoice, dir: File): KeygroupProgram {
         val midis = Keys.mercuryPadMidis(voice)
         return build(mercuryName(voice), dir, low = midis.first(), count = midis.size, release = MERCURY_PAD_RELEASE_SECONDS) { midi, stem ->
-            val note = Keys.mercuryPad(voice, emptyMap(), midi)
+            val note = MercuryPadZones.note(voice, midi)
             listOf(Layered(stem, note.snip, 0, 127, note.loopStartFrame))
         }
     }

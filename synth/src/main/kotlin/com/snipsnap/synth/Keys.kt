@@ -325,8 +325,12 @@ object Keys {
      * A keygroup layer's `loopStartFrame` of `0` means *no loop* ([VelocityLayer]'s own KDoc), so, as in [sirenPad],
      * the loop is rendered once and doubled: two bit-identical copies, the marker at the start of the second. The
      * first pass plays copy one and then repeats copy two forever, which is exactly the audio [Mercury.renderLoop]
-     * produces, through a marker the format can express. TUNE is fixed by [midi]; the zone sits on its MIDI pitch
-     * exactly, since the loop's whole periods are fitted to the note and not the note to the loop.
+     * produces, through a marker the format can express. TUNE is fixed by [midi], and the loop's whole periods are
+     * fitted to the note and not the note to the loop (`Mercury.planLoop` holds it within 0.1 cent), so with WATER
+     * still a zone sits on its MIDI pitch (`MercuryHeldTest`: within 0.3 cents). Under WATER the pitch moves by
+     * design, and the retune then locks the loop to the whole cycles nearest the model's own mean pitch, which can
+     * sit a few cents from the plan (BLADE's top zone at its default WATER measures about 3 cents sharp; the
+     * one-shot has the same offset); `MercuryHeldTest` guards that at the defaults too.
      *
      * A zone that does not close as asked is nudged ([Mercury.NUDGE_GLASS], [Mercury.NUDGE_COUPLE]) as in the one
      * loop, so on a hard patch the lowest zones can ring a little longer, and couple a little less, than the rest. [cancelled]

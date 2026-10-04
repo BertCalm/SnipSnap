@@ -202,16 +202,15 @@ class DeterminismTest {
         }
     }
 
-    // MERCURY held: a key is the loop, doubled, so the pad inherits the loop's guarantees and adds nothing random.
-    // The canary takes the bottom key at the hard corner, the one that walks the nudge ladder: several renders of
-    // one zone, each a fresh retune, all of which must land on the same bits.
+    // MERCURY held: a key is the loop, doubled, so the pad inherits the loop's guarantees (the LOOP canary above holds
+    // every voice) and adds nothing random. This one takes the corner `MercuryLoopTest` proves walks the nudge ladder,
+    // SING's bottom key at low GLASS with COUPLE and WATER high: several renders of one zone, each a fresh retune,
+    // all of which must land on the same bits.
     @Test
-    fun `MERCURY held is byte-identical across renders, every voice, the nudged corner included`() {
+    fun `MERCURY held is byte-identical across renders, the nudged corner included`() {
         val hard = mapOf("GLASS" to 0.1f, "COUPLE" to 1f, "WATER" to 1f)
-        for (voice in MercuryVoice.entries) {
-            val low = Keys.mercuryPadMidis(voice).first()
-            assertContentEquals(Keys.mercuryPad(voice, hard, low).snip.samples, Keys.mercuryPad(voice, hard, low).snip.samples, "$voice hard corner, MIDI $low")
-        }
+        val low = Keys.mercuryPadMidis(MercuryVoice.SING).first()
+        assertContentEquals(Keys.mercuryPad(MercuryVoice.SING, hard, low).snip.samples, Keys.mercuryPad(MercuryVoice.SING, hard, low).snip.samples, "SING hard corner, MIDI $low")
     }
 
     // GYRE seeds each string's pluck from Dsp.seedFor per voice, note and string, and its rotor

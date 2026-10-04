@@ -22,17 +22,8 @@ class MercuryHeldTest {
 
     private val rate = Dsp.RATE
 
-    private val zones get() = ZONES
-
-    private companion object {
-        /**
-         * Every zone of every voice at the voice's own defaults, rendered once for the whole class (JUnit makes a
-         * new instance per test, so an instance `lazy` would render the 27 zones again in every test).
-         */
-        val ZONES: Map<Pair<MercuryVoice, Int>, KeyNote> by lazy {
-            MercuryVoice.entries.flatMap { v -> Keys.mercuryPadMidis(v).map { midi -> (v to midi) to Keys.mercuryPad(v, emptyMap(), midi) } }.toMap()
-        }
-    }
+    /** Every zone of every voice at the voice's own defaults, shared across the test classes that read them ([MercuryPadZones]). */
+    private val zones get() = MercuryPadZones.all()
 
     private fun halves(note: KeyNote): Pair<FloatArray, FloatArray> {
         val s = note.snip.samples
@@ -61,8 +52,7 @@ class MercuryHeldTest {
 
     /**
      * The render is two bit-identical copies with the marker at the second, and the copy is exactly
-     * [Mercury.renderLoop]'s own output for the same recipe: the pad adds the marker, not new audio. HOLD is forced
-     * to its top step, so a patch's own HOLD (here the bottom) plays no part.
+     * [Mercury.renderLoop]'s own output for the same recipe: the pad adds the marker, not new audio.
      */
     @Test
     fun `the render is two bit-identical copies, the marker at the second, and the loop itself`() {
@@ -77,8 +67,20 @@ class MercuryHeldTest {
             val tune = (midi - Keys.mercuryPadMidis(v).first()) / Mercury.TUNE_SEMITONES.toFloat()
             val direct = Mercury.renderLoop(v, Mercury.defaults(v) + mapOf("TUNE" to tune, "HOLD" to 1f))
             assertContentEquals(direct, two, "$v: copy two must be Mercury.renderLoop's own render, unchanged")
-            val lowHold = Keys.mercuryPad(v, mapOf("HOLD" to 0f), midi)
-            assertContentEquals(note.snip.samples, lowHold.snip.samples, "$v: a patch's own HOLD must not change a held key")
+        }
+    }
+
+    /**
+     * The key and the top step win over a patch's own: TUNE is fixed by the key (a patch's TUNE plays no part in a
+     * held render) and HOLD is forced to its top step. The loop path never reads HOLD, so the HOLD half of this can
+     * only guard a future change that makes it; the TUNE half is the one that bites today.
+     */
+    @Test
+    fun `the key and the top step win over a patch's own TUNE and HOLD`() {
+        for (v in MercuryVoice.entries) {
+            val midi = Keys.mercuryPadMidis(v)[4]
+            val other = Keys.mercuryPad(v, mapOf("TUNE" to 0.9f, "HOLD" to 0f), midi)
+            assertContentEquals(MercuryPadZones.note(v, midi).snip.samples, other.snip.samples, "$v: a patch's own TUNE or HOLD changed a held key")
         }
     }
 
@@ -115,8 +117,8 @@ class MercuryHeldTest {
     }
 
     /**
-     * Decision 10, the loop sets the level: every zone is levelled where it is held, so a keyboard run is even. All
-     * 27 zones land within 1 dB of the melodic target.
+     * The loop sets the level, as the RESIN held pad's decision 10 has it (`Keys.resinPad`): every zone is levelled
+     * where it is held, so a keyboard run is even. All 27 zones land within 1 dB of the melodic target.
      */
     @Test
     fun `every zone is levelled where it is held`() {
@@ -133,21 +135,52 @@ class MercuryHeldTest {
     }
 
     /**
-     * Each zone plays its MIDI pitch: with WATER still, read over the loop, within 3 cents. (Under WATER the pitch
-     * moves by design, `MercuryLoopTest`'s drift test.) The pad fits the loop's whole periods to the note, not the
-     * note to the loop, so this is the same 0.3 cent claim the loop makes, kept per key.
+     * Each zone plays its MIDI pitch: with WATER still, read over the loop, within 3 cents (the loop's own bar,
+     * `MercuryLoopTest`; 0.3 measured). The pad fits the loop's whole periods to the note, not the note to the loop.
+     * The two ends and the middle of each voice's keyboard; `MercuryLoopTest` holds the rest of TUNE. (Under WATER
+     * the pitch moves by design: the next test.)
      */
     @Test
-    fun `every zone plays its midi pitch`() {
+    fun `the zones play their midi pitch`() {
         var worst = 0.0
-        for (v in MercuryVoice.entries) for (midi in Keys.mercuryPadMidis(v)) {
-            val note = Keys.mercuryPad(v, mapOf("WATER" to 0f), midi)
-            val hz = Keys.midiHz(midi)
-            val cents = FineTuning.cents(FineTuning.measuredHz(note.snip, hz, 0.1f, 1.4f), hz.toDouble())
-            worst = maxOf(worst, abs(cents))
-            assertTrue(abs(cents) < 3.0, "$v MIDI $midi: plays $cents cents off")
+        for (v in MercuryVoice.entries) {
+            val midis = Keys.mercuryPadMidis(v)
+            for (midi in listOf(midis.first(), midis[4], midis.last())) {
+                val note = Keys.mercuryPad(v, mapOf("WATER" to 0f), midi)
+                val hz = Keys.midiHz(midi)
+                val cents = FineTuning.cents(FineTuning.measuredHz(note.snip, hz, 0.1f, 1.4f), hz.toDouble())
+                worst = maxOf(worst, abs(cents))
+                assertTrue(abs(cents) < 3.0, "$v MIDI $midi: plays $cents cents off")
+            }
         }
-        println("MERCURY HELD: worst pitch ${"%.2f".format(worst)} cents over 27 zones")
+        println("MERCURY HELD: worst pitch ${"%.2f".format(worst)} cents at WATER 0, ends and middle of each voice")
+    }
+
+    /**
+     * The factory instruments are the voices at their defaults, WATER included, and under WATER the pitch moves by
+     * design (about 8 cents of swing at the defaults) while the retune locks the loop to the whole cycles nearest the
+     * model's own mean, which can sit a few cents from the plan (BLADE's top zone, measured about 3 cents sharp, as
+     * the one-shot is). So the claim at the defaults is the mean pitch over the whole loop within 6 cents of the key:
+     * wide enough for that, narrow enough to catch a zone a quarter tone off. The mean is of windows hopped across
+     * one loop of the doubled file, so the WATER orbit is covered evenly.
+     */
+    @Test
+    fun `every zone at its defaults is near its midi pitch on average`() {
+        var worst = 0.0
+        for ((key, note) in zones) {
+            val hz = Keys.midiHz(key.second)
+            val loopSeconds = (note.snip.samples.size / 2).toDouble() / rate
+            val reads = ArrayList<Double>()
+            var t = 0.0
+            while (t < loopSeconds) {
+                reads += FineTuning.cents(FineTuning.measuredHz(note.snip, hz, t.toFloat(), 0.5f), hz.toDouble())
+                t += 0.1
+            }
+            val mean = reads.average()
+            worst = maxOf(worst, abs(mean))
+            assertTrue(abs(mean) < 6.0, "${key.first} MIDI ${key.second}: averages ${"%.2f".format(mean)} cents off over the loop at its defaults")
+        }
+        println("MERCURY HELD: worst mean pitch ${"%.2f".format(worst)} cents at the defaults, over ${zones.size} zones")
     }
 
     @Test
