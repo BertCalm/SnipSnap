@@ -19,8 +19,9 @@ import kotlin.math.cos
 object GlintRosterListenGenerator {
 
     /**
-     * The least a pad runs. In practice the first whole breath after the onset sets it: 3.45 s on every voice but
-     * STEP, and longer after a STEP climb ([padFor]).
+     * The least a pad runs. In practice the first whole breath after the onset sets it ([padFor]): 3.45 s on every
+     * voice but STEP, whose onset is its ladder at 0.15 s a rung, so a STEP pad is 3.15 s with one rung and longer
+     * after a climb.
      */
     private const val PAD_SECONDS = 3f
     private const val GAP_SECONDS = 0.6f
