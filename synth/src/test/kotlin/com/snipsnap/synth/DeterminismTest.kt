@@ -220,4 +220,15 @@ class DeterminismTest {
             assertContentEquals(a.render().samples, b.render().samples, "$voice")
         }
     }
+
+    // TREMOR seeds its drummers, its bead placement and its fault thresholds from the voice and
+    // the note, and the bead/contact solver is ordered by index. A saved recipe regenerates bit for bit.
+    @Test
+    fun `TREMOR is byte-identical across renders, every voice`() {
+        for (voice in TremorVoice.entries) {
+            val a = TremorPatch("Canary", voice, Tremor.defaults(voice))
+            val b = TremorPatch("Canary", voice, Tremor.defaults(voice))
+            assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
 }
