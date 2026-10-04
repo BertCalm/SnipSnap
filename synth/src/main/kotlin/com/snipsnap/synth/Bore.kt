@@ -532,7 +532,7 @@ object Bore {
     /**
      * The most times the loop's pitch is corrected so its whole periods fill its whole frames, and
      * how close to 1 the measured length over the wanted one must be to stop early. The measure,
-     * taken at the join ([measureLoopSamples]), is 1000-2000 ppm off on the first render, 0.4-12 ppm on
+     * taken at the join ([measureLoopSamples]), is up to 2100 ppm off on the first render, under 6 ppm on
      * the second and under 0.15 ppm on the third, where it stops at about 0.05-0.1 ppm: the floor is the
      * float the tuned pitch is carried in (6e-8). 0.1 ppm is 0.009 frames over a loop of 88,326, and
      * the rasp and the voicing, which weight the edges and the top partials, make a seam of that size
@@ -1081,7 +1081,7 @@ object Bore {
      * The one-shot's plateau is lower than that, about two-thirds of it at the default knobs, because it follows
      * the loudness and its ceiling is the attack's accent; a loop is steady from the first sample and has no
      * accent, so at 1 it reads 13.8 dB of bite at C3 where the one-shot reads 6.2. A listening value: the
-     * audition puts it beside 0.67, which would match.
+     * audition puts it beside 0.67, which matches the one-shot at C3 with the default knobs and sits under it elsewhere.
      */
     const val LOOP_VOICE_SHARE = 1f
 

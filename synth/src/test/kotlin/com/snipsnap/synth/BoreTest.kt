@@ -579,7 +579,7 @@ class BoreTest {
         // The one-shot's voicing follows the note's loudness (the test above this one's neighbour), because the
         // classifier's first 93 ms must not read as a snare. A LOOP is filed by length and its wrap cannot repeat
         // a gain that ripples out of step with its length, so it takes the plateau as a plain filter: the
-        // same 0.4 s ramp, and in its first 30 ms the 130 Hz is already 20 dB down and the 4 kHz 8 up.
+        // same 0.4 s ramp, and in its first 30 ms the 130 Hz is already 20 dB down and the 4 kHz lifted.
         val rate = Dsp.RATE
         val x = FloatArray(rate) { i ->
             val t = i.toDouble() / rate
