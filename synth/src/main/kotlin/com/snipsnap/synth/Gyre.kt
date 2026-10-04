@@ -38,7 +38,19 @@ import kotlin.random.Random
  * reserved for the LOOP (R4) and renders as the step below it here. Every constant marked "shape"
  * is a first value from Phase-0 measurements, not a sourced one; the audition gate decides.
  */
-enum class GyreVoice { FLICK, HALO }
+enum class GyreVoice {
+    /** A dry, plucked string on a small body; bowed, a bright one. */
+    FLICK,
+
+    /** Softer, longer, a cloud of sympathetic strings. */
+    HALO,
+
+    /** Round two: a bowed string with a pluck's attack in it, on a medium body. Defaults to TOUCH .85. */
+    DRAWN,
+
+    /** Round two: a low drone, a bowed string on a large body with its sympathetic strings up. Defaults to TOUCH .9. */
+    BOURDON,
+}
 
 object Gyre {
 
@@ -374,7 +386,15 @@ object Gyre {
      * A voice: its range, how long and bright its strings ring, how hard they are plucked, how
      * long its sympathetic strings ring after the damper, and its macro defaults (HOLD's sit near
      * the open end, where the voices were approved: the hand lands about 38 dB down). Tension is
-     * part of the voice (decision 2): brighter, faster strings are a tighter instrument.
+     * part of the voice (decision 2): brighter, faster strings are a tighter instrument. The bow is
+     * part of it too: [Shape.touch] is where TOUCH starts (0 for the two plucked voices, so a
+     * round-one recipe stays a pluck), [Shape.bowSpeed] is how fast it is drawn and [Shape.stroke] how
+     * long it is drawn at HOLD's top. [Shape.measured] is whether the note is measured onto its key at
+     * every TOUCH ([calibratedTrim]) and not only when bowed: false for the two round-one voices, whose
+     * TOUCH 0 is round one's bit for bit, and for DRAWN (plucked, it is within 2.9 cents on its own and the
+     * measurement of a decaying pluck made some cells worse, 5.9), true for BOURDON (plucked, 10.7 cents at
+     * BODY 1 uncorrected, 7.8 to 10.4 corrected: its lowest notes sit on a membrane mode). [Shape.bowShareDb] moves the sympathetic
+     * trim for a bowed voice whose strings are not FLICK's and HALO's (0 for them).
      */
     internal class Shape(
         val rootMidi: Int,
@@ -390,11 +410,16 @@ object Gyre {
         val touch: Float,
         val bowSpeed: Float,
         val stroke: Float,
+        val measured: Boolean,
+        val bowShareDb: Float,
     )
 
     internal fun shapeOf(voice: GyreVoice): Shape = when (voice) {
-        GyreVoice.FLICK -> Shape(48, 2.5f, 14f, 4_000f, floatArrayOf(1f, 0.35f, 0.25f, 0.18f), 0.3f, 0.25f, 0.05f, 0.4f, 0.9f, 0f, 0.3f, 3f)
-        GyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 1.5f, 0.8f, 0.15f, 0.65f, 0.92f, 0f, 0.3f, 6f)
+        GyreVoice.FLICK -> Shape(48, 2.5f, 14f, 4_000f, floatArrayOf(1f, 0.35f, 0.25f, 0.18f), 0.3f, 0.25f, 0.05f, 0.4f, 0.9f, 0f, 0.3f, 3f, false, 0f)
+        GyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 1.5f, 0.8f, 0.15f, 0.65f, 0.92f, 0f, 0.3f, 6f, false, 0f)
+        // The source document's table (decision 2): first shapes, each value to be re-measured and the gate deciding.
+        GyreVoice.DRAWN -> Shape(48, 4f, 10f, 2_500f, floatArrayOf(1f, 0.45f, 0.3f, 0.2f), 1f, 0.45f, 0.12f, 0.45f, 0.95f, 0.85f, 0.3f, 4f, false, 0f)
+        GyreVoice.BOURDON -> Shape(36, 6f, 6f, 1_200f, floatArrayOf(1f, 0.6f, 0.45f, 0.35f), 2f, 0.65f, 0.3f, 0.75f, 0.95f, 0.9f, 0.3f, 6f, true, 2.5f)
     }
 
     fun macrosFor(voice: GyreVoice): List<MacroSpec> {
@@ -434,9 +459,9 @@ object Gyre {
     /** SPIN's depth: 0 at 0, most of the way by [SPIN_DEPTH_KNEE], so the knob's low end is never dead (G9). */
     internal fun spinDepth(spin: Float): Float = SPIN_DEPTH * (1f - exp(-spin / SPIN_DEPTH_KNEE))
 
-    internal fun sympathyGain(sympathy: Float, touch: Float = 0f): Float {
+    internal fun sympathyGain(sympathy: Float, touch: Float = 0f, bowShareDb: Float = 0f): Float {
         val full = smoothstep((contactFor(touch) - BOW_FULL_FROM) / (BOW_FULL_TO - BOW_FULL_FROM))
-        val trimDb = BOW_SYMPATHY_TRIM_DB * bowHold(touch) + BOW_SYMPATHY_FULL_DB * full
+        val trimDb = BOW_SYMPATHY_TRIM_DB * bowHold(touch) + BOW_SYMPATHY_FULL_DB * full + bowShareDb * bowHold(touch)
         return SYMPATHY_GAIN * sympathy.coerceIn(0f, 1f).pow(SYMPATHY_CURVE) * 10f.pow(trimDb / 20f)
     }
 
@@ -582,7 +607,7 @@ object Gyre {
 
     internal fun play(voice: GyreVoice, macros: Map<String, Float>, probe: Probe = Probe()): Played {
         val m = settled(macros, voice)
-        val trim = probe.trim ?: if (bowAmount(m.getValue("TOUCH")) > 0f) calibratedTrim(voice, m, probe) else 1f
+        val trim = probe.trim ?: if (bowAmount(m.getValue("TOUCH")) > 0f || shapeOf(voice).measured) calibratedTrim(voice, m, probe) else 1f
         return pass(voice, m, probe, trim)
     }
 
@@ -684,7 +709,7 @@ object Gyre {
         // The hand on the played strings: each loop's gain once stopped, so it falls to DAMPER_T60
         // at its own pitch. Never above 1 (the hand only takes energy away).
         val stopped = FloatArray(STRINGS) { k -> (10f.pow(-3f / (DAMPER_T60 * f * RATIOS[k])) / loopFb[k]).coerceAtMost(1f) }
-        val gSym = if (probe.sympathy) sympathyGain(sympathy, touch) else 0f
+        val gSym = if (probe.sympathy) sympathyGain(sympathy, touch, shape.bowShareDb) else 0f
         val beta = Dsp.lin(body, SYMPATHY_BODY_SMALL, SYMPATHY_BODY_LARGE)
         val gRad = Dsp.lin(body, RADIATION_SMALL, RADIATION_LARGE)
         val size = boxSize(body)
