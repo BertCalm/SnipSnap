@@ -400,6 +400,16 @@ tasks.register<JavaExec>("generateMagnetAudition") {
     args("${rootDir}/testkit/magnet-audition")
 }
 
+/** Render BALLAST's dry voice, glass and HOLD listening set. */
+tasks.register<JavaExec>("generateBallastAudition") {
+    group = "distribution"
+    description = "Render the BALLAST audition clips and manifest under testkit/ballast-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-audition")
+}
+
 /** Render the TERRA world-percussion acceptance kit into testkit/. See TerraKitGenerator. */
 tasks.register<JavaExec>("generateTerraKit") {
     group = "distribution"
