@@ -791,6 +791,12 @@ corners reads as a drum (the classifier test already covers HOLD 0 at every note
 The audition is re-rendered for a third listen (82 clips: HOLD at five settings), saving under
 `verdicts/gyre_r1c_*`.
 
+**The third listen passed HOLD** (2026-10-04, in chat, recorded as `verdicts/gyre_r1c_overall`):
+"Sounds good", confirming it runs from choked to open with each step heard. With SYMPATHY and HOLD
+kept on the first listen, BODY and SPIN passed on the second and HOLD on the third, every round-one
+knob on FLICK and HALO has passed the audition gate. Still open from R1b: the pluck's random
+fundamental (R2's TOUCH replaces the exciter).
+
 ## Decisions taken (2026-10-01)
 
 The owner took every recommendation:
