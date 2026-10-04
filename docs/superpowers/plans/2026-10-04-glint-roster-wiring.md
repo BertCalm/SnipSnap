@@ -748,7 +748,7 @@ testkit/glint-roster-final/
 
 - [ ] **Step 7: Commit**
 
-`git add` the four files, one per call. Title: `Render the roster's final listen: each preset as a one-shot and two pads`. Body: the spec's last gate before the PR is the owner hearing the final 32 as pads and as one-shots. The roster audition rendered every candidate at one key, the middle one, where FOLLOW changes nothing, so the final listen is where FOLLOW can be heard at all: each file is the one-shot a kit pad plays, then the held pad at the lowest and the top key (the middle key was already heard), each part levelled by the audition rule, a pad running to the end of the first whole breath after a long STEP climb. The file names are the roster audition's pattern so its cleaner serves this folder too. The tests pin the file's parts, its ending at silence and the names; each guard was shown to fail when undone.
+`git add` the four files, one per call. Title: `Render the roster's final listen: each preset as a one-shot and two pads`. Body: the spec's last gate before the PR is the owner hearing the final 32 as pads and as one-shots. The roster audition rendered every candidate at one key, the middle one, where FOLLOW changes nothing, so the final listen is where FOLLOW can be heard at all: each file is the one-shot a kit pad plays, then the held pad at the lowest and the top key (the middle key was left out here, and put back after the final review: see As built), each part levelled by the audition rule, a pad running to the end of the first whole breath after a long STEP climb. The file names are the roster audition's pattern so its cleaner serves this folder too. The tests pin the file's parts, its ending at silence and the names; each guard was shown to fail when undone.
 
 ---
 
@@ -794,7 +794,7 @@ Expected: `1`, `1`, `0`.
 
 - [ ] **Step 4: Commit**
 
-`git add` the two files, one per call. Title: `Record how GLINT's roster was made`. Body: the roadmap row still said DEPTH was awaiting its listen and the roster was the next phase; both are done. The spec's §6.2 said no value comes from anyone's taste, which stopped being true of this step when the owner chose to have the eight per voice ranked for him and keep the veto; the paragraph records that waiver, the rule that did the ranking and what it can and cannot claim, so a reader of the roster knows what was heard and what was measured.
+`git add` the two files, one per call. Title: `Record how GLINT's roster was made`. Body: the roadmap row still said DEPTH was awaiting its listen and the roster was the next phase; both are done. The spec's §6.2 said no value comes from anyone's taste, which stopped being true of this step when the owner chose to have the eight per voice ranked for him and keep the veto; the paragraph records that waiver, the rule that did the ranking and what it can and cannot claim, so a reader of the roster knows what was sent and what was measured.
 
 ---
 
@@ -831,3 +831,14 @@ Record his reply in the ledger. A veto of a preset or a name is a one-line chang
 ## Where this plan stops
 
 The PR is opened after the owner's say. Merging is his.
+
+---
+
+## As built
+
+Where the run differed from this plan. Tasks 1 to 5 followed it; the differences came from the final review.
+
+1. **The final listen has three pads, not two (Task 4).** The review pointed out that spec §6.2.5 asks for pads at a low, a middle and a top zone, and that the plan's reason for leaving the middle one out, that it was already heard in the audition, was never established: the clips were sent, and he said 64 of them was too much work. The middle key is also where FOLLOW changes nothing, so it is the reference the two ends are heard against. `GlintRosterListenGenerator` now writes the one-shot, then the pad at the lowest, the middle and the top key, a gap before each. A third pad would have made each file four and a half seconds longer, so the pad's floor went from 4 s to 3 s (a pad already runs to the end of the first whole breath after its onset, 3.45 s on every voice but STEP, so the floor only added half a second to each). The test named an order it did not check; it now compares the file part by part with what the generator renders, on SWEEP and on STEP, and was red first. Read Task 4's code, its test and the line in its commit text about the middle key as first written; this entry supersedes them.
+2. **GYRE joined the taken-words list** in `GlintPresetsTest` (the list was copied from MERCURY's test and omitted it); a preset named GYRE DRIFT fails.
+3. **Wording, in two commits.** The owner was sent the clips and reels and approved the picks; that he listened to each is not known, so the roster's comments, the roadmap row, the spec's "As run" paragraph and this plan say sent and approved. The KDoc states the rule's thresholds as the spec does (over 85% of the power above 4 kHz, over 45% in the fundamental). The roadmap says "as every engine with a roster does" (SILK, GYRE and SNAP have none) and that the real engine's DEPTH pads went to him with his verdict "good". The spec's "As run" says that, as run, no value of the roster was chosen by ear, which line 173 above it did not. Where Task 5's text here differs from those files on these points, the files are the record.
+4. **What was left as it is:** the future-tense "is heard at the final listen" wording (it says what the listen is for); three commit messages that say "heard" (history is not rewritten, and the PR body says sent); the reviewer's seven declined-to-judge items, each ruled on in the ledger (the plural STEPS in two names, other engines' voice words in names, a possible duplicate chip for a user preset saved under a name that is now a factory name, no CLI test for `snipsnap synth GLINT`, no non-silence assertion in the pad test).
