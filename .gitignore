@@ -113,3 +113,7 @@ testkit/become-audition/
 # The MAGNET audition clips and manifest, rendered by :synth:generateMagnetAudition
 # and published as the listening artifact; never committed.
 testkit/magnet-audition/
+
+# The BALLAST dry listening set, rendered by :synth:generateBallastAudition
+# and published as the listening artifact; never committed.
+testkit/ballast-audition/
