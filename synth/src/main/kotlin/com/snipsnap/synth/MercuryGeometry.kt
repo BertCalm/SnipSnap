@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
@@ -125,4 +126,195 @@ internal object BeamGeometry : Geometry() {
 
     override fun bendA(i: Int, primaries: Int) = stockBendA(i)
     override fun bendB(i: Int, n: Int, primaries: Int) = stockBendB(i, n)
+}
+
+/**
+ * EDDY's object: a rubbed singing bowl. Six azimuthal families, (n, 0) for n = 2 to 7, each a cos/sin **doublet** split
+ * by the bowl's small asymmetry, so 6 families x 2 = the 12 primaries. The table is measured: Inácio, Henrique and
+ * Antunes, "The Dynamics of Tibetan Singing Bowls" (Acta Acustica united with Acustica 92(4), 637-653, 2006), Table I,
+ * bowl 1 (180 mm, 934 g), whose partials sit 0, 2, 5, 7, 10 and 12% under the thin ring's (thick-shell lowering).
+ *
+ * The doublet is the point, and friction locks a pair to one winner, so a rubbed EDDY does not beat steadily (no
+ * loop-safe way to make it was found: a weak partner contact or a spinning contact both failed the seam bar at
+ * COUPLE .6). It drifts and swells as the mass loads the two members in antiphase, and a struck one beats in its
+ * tail at a rate COUPLE sets through the vessel. The vessels hang from the *lower* member of the first four families
+ * by one spring each: hosted by both, the anchor fix would calibrate the wrong normal mode and the note would come out
+ * 60 cents sharp.
+ */
+internal object BowlGeometry : Geometry() {
+    // Bowl 1's measured doublets, Hz: the lower member of each family, then the upper.
+    private val LOWER = doubleArrayOf(219.6, 609.1, 1135.9, 1787.6, 2555.2, 3427.0)
+    private val UPPER = doubleArrayOf(220.6, 609.9, 1139.7, 1787.9, 2564.8, 3428.3)
+
+    override val ratios: DoubleArray =
+        DoubleArray(Mercury.PRIMARIES) { i -> (if (i % 2 == 0) LOWER[i / 2] else UPPER[i / 2]) / LOWER[0] }
+
+    /** A doublet's own spring, a small share of kappa: its split is the bowl's, and COUPLE moves it only through the vessel. */
+    const val PAIR_KAPPA = 0.04
+
+    /** The upper member's grip on the contact against the lower's: a pair that locks must still be excited, a struck one must still beat. */
+    const val PARTNER_CONTACT = 0.7
+
+    /** The pickup's angle round the rim, radians. The members must differ here or the water's complementary swing cancels in a locked pair. */
+    const val PICKUP_THETA = 0.15
+
+    /** How far the mass swings a pair apart: its loads are 0.5 +/- 0.5 times this times the mass's reach, so the pair's mean stays one half. */
+    const val PAIR_SWING = 0.5
+
+    override fun vesselHost(v: Int) = 2 * v
+
+    /** The first vessel sits 4.05% above its host, not 3.5: the host's upper member is 0.455% above it, and the rule is 3.5% from every primary. */
+    override val vesselDetune = doubleArrayOf(0.0405, -0.045, 0.06, -0.07)
+    override val vesselSpringsToNext = false
+    override val vesselKappaScale = 0.5
+
+    override fun neighbourScale(i: Int) = if (i % 2 == 0) PAIR_KAPPA else 1.0
+
+    override fun contact(i: Int, ratio: Double) = ratio.pow(-Mercury.CONTACT_TAPER) * (if (i % 2 == 1) PARTNER_CONTACT else 1.0)
+
+    override fun pickup(i: Int, ratio: Double, tilt: Double): Double {
+        val n = i / 2 + 2
+        return (if (i % 2 == 0) cos(n * PICKUP_THETA) else sin(n * PICKUP_THETA)) * ratio.pow(-tilt)
+    }
+
+    override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
+        val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
+        val swing = 0.5 * PAIR_SWING * reach * cos(2 * (ang - Mercury.RING_LOAD_PHASE * (i / 2)))
+        return if (i % 2 == 0) 0.5 + swing else 0.5 - swing
+    }
+
+    // A family's BEND, shared by its two members so a doublet's split never moves with BEND and no identity crosses.
+    // The fundamental pair is pinned. A vessel follows its host's family.
+    private fun familyOf(i: Int, primaries: Int) = (if (i < primaries) i else vesselHost(i - primaries)) / 2
+
+    override fun bendA(i: Int, primaries: Int): Double {
+        val f = familyOf(i, primaries)
+        return if (f == 0) 0.0 else 0.12 * sin(1.3 * f + 0.4)
+    }
+
+    override fun bendB(i: Int, n: Int, primaries: Int): Double {
+        val f = familyOf(i, primaries)
+        return if (f == 0) 0.0 else 0.05 * f / 6
+    }
+}
+
+/**
+ * VESSEL's object: a thin steel cylindrical shell, a short fat pipe or tank (L/R 6, h/R 0.04, nu 0.3, simply supported
+ * ends), struck on the side. The 12 primaries are one axial half-wave at every circumferential order n = 0 to 11,
+ * sorted by frequency (n = 2, 3, 1, 4, 5, 6, 7, 8, 9, 0, 10, 11), so one object holds the ring modes, the tube's own
+ * flexure (n = 1) and the breathing mode (n = 0). The four vessel modes are the sin(n theta) **quadrature partners** of
+ * the first four, the other half of each doublet: a strike at theta 0 drives only the cos member, so COUPLE is the one
+ * way the partner is fed.
+ *
+ * The ratios are from our own Love/Sanders energy derivation (a 3x3 u, v, w eigenproblem per order, the lowest
+ * root for n >= 1 and the top one for n = 0), frozen here as numbers and recomputed by `MercuryGeometryTest`.
+ * The source family is Leissa, *Vibration of Shells* (NASA SP-288, 1973) and Soedel; the long-shell limit reproduces
+ * [Mercury.ringRatios] for k = 2 to 7, and the n = 1 mode lands within 2.3% of a Timoshenko tube. The 1/n weight of the
+ * water's added mass is the long-wavelength limit of the fluid-loaded shell (Lindholm, Kana and Abramson 1962).
+ * Designed, in the design doc's sense.
+ */
+internal object ShellGeometry : Geometry() {
+    /** Each sorted primary's circumferential order. */
+    private val ORDER = intArrayOf(2, 3, 1, 4, 5, 6, 7, 8, 9, 0, 10, 11)
+
+    override val ratios = doubleArrayOf(1.0, 1.4797, 2.2144, 2.6993, 4.3255, 6.3219, 8.6835, 11.4091, 14.4983, 15.9969, 17.9511, 21.7673)
+
+    /** Every vessel above its partner, the physical sign (a seam or the water lowers the struck cos mode), ascending so the beat rates climb. */
+    override val vesselDetune = doubleArrayOf(0.035, 0.045, 0.055, 0.065)
+
+    /** A vessel rings 0.9 as long as its partner: a lossier one is a damper on the partner it is coupled to. */
+    override fun vesselT60(glass: Double, hostT60: Double) = 0.9 * hostT60
+
+    /** The pickup hears the sin partners at the angle it sits at, 0.35 rad round the shell. */
+    override fun vesselPickup(v: Int) = 0.4 * sin(PICKUP_THETA * ORDER[v])
+
+    override fun pickup(i: Int, ratio: Double, tilt: Double) = cos(PICKUP_THETA * ORDER[i]) * ratio.pow(-tilt)
+
+    override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double): Double {
+        val reach = min(1.0, rho2 / Mercury.RING_ORBIT_LOAD)
+        // The breathing mode has no angle to read the mass at.
+        return if (ORDER[i] == 0) 0.5 * reach else reach * cos(ang - Mercury.RING_LOAD_PHASE * i).let { it * it }
+    }
+
+    /** The partner's exact complement: the pair's loads sum to the mass's reach, so the doublet's split swings with the water. */
+    override fun vesselUnitLoad(v: Int, rho2: Double, ang: Double) =
+        min(1.0, rho2 / Mercury.RING_ORBIT_LOAD) * sin(ang - Mercury.RING_LOAD_PHASE * v).let { it * it }
+
+    /** The fluid's added mass falls as about 1/n, scaled to 0.75 at the fundamental so its drift matches SING's. */
+    override fun loadWeight(primary: Int) = 1.5 / max(ORDER[primary], 2)
+
+    /** The fundamental's mean load: its weight times the half every unit load averages. */
+    override val anchorMeanLoad = 0.375
+
+    // The signs alternate so BEND reshapes the spacing between neighbours (the object changes) and does not stretch
+    // the table. Order-preserving by construction (the smallest successive gap over BEND is 6.3%); the top four share
+    // one sign so the 10 and 12% gaps cannot cross. A vessel follows its partner's, plus a little, which opens its split.
+    private val SIGN = doubleArrayOf(0.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0)
+
+    private fun hostOf(i: Int, primaries: Int) = if (i < primaries) i else vesselHost(i - primaries)
+
+    override fun bendA(i: Int, primaries: Int) = 0.09 * SIGN[hostOf(i, primaries)]
+
+    override fun bendB(i: Int, n: Int, primaries: Int) = 0.02 * hostOf(i, primaries) / 11 + (if (i >= primaries) 0.015 else 0.0)
+
+    const val PICKUP_THETA = 0.35
+}
+
+/**
+ * SHARD's object: a free rectangular plate (a Chladni plate), a/b 1.13, Poisson 0.33, all four edges free, cut a little
+ * off square so the square plate's degenerate pairs split into irregular, unequal partners. Dense (the 12th ratio is
+ * 8, against 62 for the ring and 69 for the beam), irregular, and with a loose skeleton of near-harmonics (the (0,2)
+ * mode 49 cents under an octave) that carries the pitch.
+ *
+ * The ratios are a converged Rayleigh-Ritz on Legendre polynomials, which reproduces the published free-square-plate
+ * values (13.468, 19.596, 24.270, 34.801 at nu 0.3; 13.169, 19.224, 24.423, 34.233 at 0.333: Leissa 1969, NASA SP-160;
+ * Narita 2023, EPI Int. J. Eng. 5(1) 26-36, Table 2). The mode labels are the (nodal lines in x, in y) of each. The
+ * 12-mode truncation cuts through the near-degenerate (4,0) and (2,3), 2% apart, which cross near a/b 1.11.
+ *
+ * The contact, pickup and load tables below are **designed**: a product of free-free beam functions at a contact
+ * point, a pickup point and round the mass's orbit, with the mean load held at one half for every mode so the pitch
+ * anchor still centres. The exact Ritz fields differ from the product shape at those points, by a lot for two modes.
+ */
+internal object PlateGeometry : Geometry() {
+    override val ratios = doubleArrayOf(1.0, 1.3849, 1.951, 2.4916, 2.7251, 4.1032, 4.7801, 4.9697, 5.2128, 6.1156, 7.6833, 7.9962)
+
+    /** Each mode's grip on a finger pad near the corner, (0.06, 0.07): no dead mode, and the fundamental largest so the rub locks on it. */
+    private val CONTACT = doubleArrayOf(1.0, 0.636, 0.595, 0.947, 0.907, 0.467, 0.858, 0.696, 0.399, 0.609, 0.631, 0.306)
+
+    /** Each mode's shape at the pickup, on the plate's right edge (1.00, 0.33). The fundamental's low weight keeps the cluster audible over the rub. */
+    private val PICKUP = doubleArrayOf(-0.451, 0.884, -0.320, 0.521, 0.554, -0.884, -0.639, -0.521, -0.577, 1.0, 0.639, 0.884)
+
+    /** The load's second angular harmonic as the mass circles the centre: its depth, and its phase. Modes in x and in y are loaded in antiphase. */
+    private val DEPTH = doubleArrayOf(0.6, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+    private val PHASE = doubleArrayOf(PI / 2, PI, 0.0, PI, 0.0, 0.0, 3 * PI / 2, PI, PI, 0.0, 0.0, 0.0)
+
+    /** BEND is a saddle bend: the sign of a mode's A follows (nodal lines in x) - (in y). Gaps stay over 3% for BEND over the whole knob. */
+    private val BEND_A = doubleArrayOf(0.0, 0.072, -0.040, 0.019, -0.005, 0.108, 0.0, 0.002, -0.007, -0.076, 0.108, 0.118)
+
+    /** Vessels hang from modes 1, 3, 5 and 9, clear of the fundamental: a vessel on it would put a beating doublet on the note. */
+    private val HOSTS = intArrayOf(1, 3, 5, 9)
+    override fun vesselHost(v: Int) = HOSTS[v]
+
+    /** A finger pad averages a mode's shape over an area, so its grip falls as ratio^-1, where a line patch's falls as ratio^-0.5. */
+    override fun contact(i: Int, ratio: Double) = CONTACT[i] * ratio.pow(-1.0)
+
+    /** The pickup acts like an accelerometer: acceleration is w^2 times displacement, so the 4-8x partials are heard. */
+    override fun pickup(i: Int, ratio: Double, tilt: Double) = PICKUP[i] * ratio.pow(1 - tilt)
+
+    override fun unitLoad(i: Int, rho2: Double, ang: Double, xm: Double) =
+        min(1.0, rho2 / Mercury.RING_ORBIT_LOAD) * (0.5 + 0.5 * DEPTH[i] * cos(2 * ang - PHASE[i]))
+
+    private fun hostOf(i: Int, primaries: Int) = if (i < primaries) i else vesselHost(i - primaries)
+
+    override fun bendA(i: Int, primaries: Int) = BEND_A[hostOf(i, primaries)]
+
+    /** A uniform 2% stiffening of every upper mode against the anchor: a common factor leaves the gaps alone. */
+    override fun bendB(i: Int, n: Int, primaries: Int) = if (hostOf(i, primaries) == 0) 0.0 else 0.02
+
+    /** A bigger excursion than the other voices' two semitones, as the external spec allows a shard (a plate is struck hard and bends hard), and a quick gesture. */
+    override val bendExcursionSemitones = 4.0
+
+    /** A shorter strike pulse: a plate is struck by something hard, and the half-sine's first null at 1.5 over its length would otherwise take the top. */
+    override val strikeMsHard = 0.10
+    override val strikeMsSoft = 0.50
 }

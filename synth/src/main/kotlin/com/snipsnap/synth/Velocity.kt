@@ -259,7 +259,7 @@ object Velocity {
         // brightens PING at every step`; the owner heard it and kept it
         // (2026-10-02). SING and BLADE take velocity as a number instead
         // ([touchedVelocity]).
-        patch is MercuryPatch && patch.voice == MercuryVoice.PING -> "GLASS"
+        patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.GLASS -> "GLASS"
         // MAGNET's PICK is a thumb to a wire: the string exciter's low-pass
         // corner (150 to 16000 Hz, pinned at the voice's default) with a
         // second pole below the default and the loop's and the pickup's
@@ -287,7 +287,7 @@ object Velocity {
      * (2026-10-02).
      */
     private fun touchedVelocity(patch: Patch): Boolean =
-        patch is MercuryPatch && patch.voice != MercuryVoice.PING
+        patch is MercuryPatch && Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH
 
     /**
      * [patch] rendered *as struck at* [velocity] — the timbre macro moves and

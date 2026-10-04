@@ -22,6 +22,9 @@ object MercuryPresets {
         MercuryVoice.PING -> pingPresets
         MercuryVoice.SING -> singPresets
         MercuryVoice.BLADE -> bladePresets
+        MercuryVoice.EDDY -> eddyPresets
+        MercuryVoice.VESSEL -> vesselPresets
+        MercuryVoice.SHARD -> shardPresets
     }
 
     fun all(): List<MercuryPatch> = MercuryVoice.entries.flatMap { forVoice(it) }
@@ -61,4 +64,9 @@ object MercuryPresets {
         p(MercuryVoice.BLADE, "LOW STEEL", "TUNE" to 2 / 24f, "BEND" to 0.6f, "RUB" to 0.85f, "WATER" to 0.15f, "GLASS" to 0.35f, "COUPLE" to 0.3f, "HOLD" to 0.7f), // A3
         p(MercuryVoice.BLADE, "TAPPED STEEL", "TUNE" to 14 / 24f, "BEND" to 0.65f, "RUB" to 0.3f, "WATER" to 0.1f, "GLASS" to 0.5f, "COUPLE" to 0.3f, "HOLD" to 0.35f), // A4
     )
+
+    // R2c: the three new voices' presets are written once their defaults have been measured.
+    private val eddyPresets: List<MercuryPatch> = emptyList()
+    private val vesselPresets: List<MercuryPatch> = emptyList()
+    private val shardPresets: List<MercuryPatch> = emptyList()
 }

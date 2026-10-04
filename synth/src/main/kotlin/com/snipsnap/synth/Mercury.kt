@@ -55,7 +55,7 @@ import kotlin.random.Random
  * the note and whole orbits of the WATER mass, retuned until it closes and checked against the seam bar
  * ([renderLoopNudged]). Below the step HOLD is the contact length of a one-shot, as in R1.
  */
-enum class MercuryVoice { PING, SING, BLADE }
+enum class MercuryVoice { PING, SING, BLADE, EDDY, VESSEL, SHARD }
 
 object Mercury {
 
@@ -65,6 +65,11 @@ object Mercury {
     const val PING_ROOT_MIDI = 60
     const val SING_ROOT_MIDI = 55
     const val BLADE_ROOT_MIDI = 55
+
+    /** EDDY's and VESSEL's two octaves start at A2, 110 Hz: the rub locks to within 4 cents from there up, and the default note is above the classifier's 200 Hz low band. */
+    const val EDDY_ROOT_MIDI = 45
+    const val VESSEL_ROOT_MIDI = 45
+    const val SHARD_ROOT_MIDI = 60
 
     // ---- the object --------------------------------------------------------
 
@@ -192,6 +197,9 @@ object Mercury {
         MercuryVoice.PING -> 0.08
         MercuryVoice.SING -> 0.6
         MercuryVoice.BLADE -> 0.4
+        MercuryVoice.EDDY -> 0.6
+        MercuryVoice.VESSEL -> 0.25
+        MercuryVoice.SHARD -> 0.12
     }
 
     // ---- WATER --------------------------------------------------------------
@@ -299,16 +307,19 @@ object Mercury {
         MercuryVoice.PING -> specs(bend = 0.5f, rub = 0.08f, water = 0.10f, glass = 0.75f, couple = 0.20f)
         MercuryVoice.SING -> specs(bend = 0.5f, rub = 0.85f, water = 0.12f, glass = 0.85f, couple = 0.25f)
         MercuryVoice.BLADE -> specs(bend = 0.65f, rub = 0.80f, water = 0.15f, glass = 0.45f, couple = 0.30f)
+        MercuryVoice.EDDY -> specs(bend = 0.50f, rub = 0.70f, water = 0.65f, glass = 0.65f, couple = 0.60f, hold = 0.75f)
+        MercuryVoice.VESSEL -> specs(bend = 0.40f, rub = 0.30f, water = 0.40f, glass = 0.40f, couple = 0.65f)
+        MercuryVoice.SHARD -> specs(bend = 0.75f, rub = 0.45f, water = 0.75f, glass = 0.80f, couple = 0.75f)
     }
 
-    private fun specs(bend: Float, rub: Float, water: Float, glass: Float, couple: Float) = listOf(
+    private fun specs(bend: Float, rub: Float, water: Float, glass: Float, couple: Float, hold: Float = DEFAULT_HOLD) = listOf(
         MacroSpec("TUNE", 0.5f, neutral = 0.5f),
         MacroSpec("BEND", bend, neutral = 0.5f),
         MacroSpec("RUB", rub, neutral = 0.35f),
         MacroSpec("WATER", water, neutral = 0f),
         MacroSpec("GLASS", glass, neutral = 0.55f),
         MacroSpec("COUPLE", couple, neutral = 0.25f),
-        MacroSpec("HOLD", DEFAULT_HOLD),
+        MacroSpec("HOLD", hold),
     )
 
     fun defaults(voice: MercuryVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
@@ -323,6 +334,23 @@ object Mercury {
         MercuryVoice.PING -> PING_ROOT_MIDI
         MercuryVoice.SING -> SING_ROOT_MIDI
         MercuryVoice.BLADE -> BLADE_ROOT_MIDI
+        MercuryVoice.EDDY -> EDDY_ROOT_MIDI
+        MercuryVoice.VESSEL -> VESSEL_ROOT_MIDI
+        MercuryVoice.SHARD -> SHARD_ROOT_MIDI
+    }
+
+    /**
+     * How a voice takes velocity. A struck object's is [GLASS]: a harder hit is a harder mallet and a brighter ring
+     * (`Velocity.brightnessOverride`). A rubbed one's is the [TOUCH]: a soft rub swells in and a hard one catches with a
+     * scrape, a render parameter ([VELOCITY_RAMP], [SCRAPE_DB]), since a rubbed body is close to a pure tone and cannot
+     * be heard as brighter. The new voices' kinds follow how much of their default is a tap (the tap's weight at the
+     * default RUB: PING .99, VESSEL .89, SHARD .76, EDDY .45, BLADE .31, SING .23).
+     */
+    enum class VelocityKind { GLASS, TOUCH }
+
+    fun velocityKind(voice: MercuryVoice): VelocityKind = when (voice) {
+        MercuryVoice.PING, MercuryVoice.VESSEL, MercuryVoice.SHARD -> VelocityKind.GLASS
+        MercuryVoice.SING, MercuryVoice.BLADE, MercuryVoice.EDDY -> VelocityKind.TOUCH
     }
 
     /** The snapped MIDI note TUNE lands on. */
@@ -396,6 +424,9 @@ object Mercury {
     internal fun geometryOf(voice: MercuryVoice): Geometry = when (voice) {
         MercuryVoice.PING, MercuryVoice.SING -> RingGeometry
         MercuryVoice.BLADE -> BeamGeometry
+        MercuryVoice.EDDY -> BowlGeometry
+        MercuryVoice.VESSEL -> ShellGeometry
+        MercuryVoice.SHARD -> PlateGeometry
     }
 
     // ---- the render ---------------------------------------------------------
@@ -409,7 +440,7 @@ object Mercury {
         val m = settled(macros, voice)
         if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
-        val touch = if (voice == MercuryVoice.PING) 1.0 else velocity.coerceIn(0f, 1f).toDouble()
+        val touch = if (velocityKind(voice) == VelocityKind.GLASS) 1.0 else velocity.coerceIn(0f, 1f).toDouble()
         return Snip(finish(sound(voice, hz, m, touch), tailSeconds(m.getValue("GLASS"))), channels = 1, sampleRate = RATE)
     }
 
@@ -597,7 +628,7 @@ object Mercury {
             }
             out[t] = bank.velocityAlong(pickup).toFloat()
         }
-        if (steady == null && scrape && voice != MercuryVoice.PING && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
+        if (steady == null && scrape && velocityKind(voice) == VelocityKind.TOUCH && rub > 0.0) addScrape(out, voice, hz, velocity, rate)
         return out
     }
 
