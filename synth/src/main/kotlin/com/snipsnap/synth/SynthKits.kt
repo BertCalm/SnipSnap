@@ -394,4 +394,16 @@ object SynthKits {
             lead.forEachIndexed { i, s -> add(magnetNote(MagnetVoice.CHUG, s, "Lead ${i + 1}", mapOf("BLEND" to 0.35f), leadChain)) }
         }
     }
+
+    /** BALLAST's dry acceptance kit: the twelve listening presets, then a playable ROOT bass row. */
+    fun ballast(): List<ArrangedPad?> {
+        val presets = BallastPresets.all().map { patch ->
+            pad(patch, Ballast.drumClassFor(patch.voice, patch.macros))
+        }
+        val notes = intArrayOf(36, 39, 43, 48).mapIndexed { i, midi ->
+            val patch = BallastPatch("Root ${i + 1}", BallastVoice.ROOT, Ballast.defaults(BallastVoice.ROOT), midi)
+            pad(patch, Ballast.drumClassFor(patch.voice, patch.macros))
+        }
+        return presets + notes
+    }
 }
