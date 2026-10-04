@@ -222,9 +222,12 @@ object Gyre {
      * spec's contact weight): the string it faces keeps the whole TOUCH contact and those behind it ease off
      * by up to `depth * SWING_CONTACT` of it, a quarter turn apart like [SWING_HEARD], so the contact never
      * goes above the TOUCH curve's own and the push stays the bow's. The first string holds its contact, as
-     * it holds the level there: the rotor moves the timbre and never the loudness. Shape.
+     * it holds the level there: the rotor moves the timbre and never the loudness. The plan's first value
+     * was 0.5: it moved the timbre little (DRAWN's centroid swing 155 Hz against 176 with none) and
+     * modulated the drawn note's pitch, so one FLICK cell at BODY 0.5 read 7.0 cents where 0.35 and under
+     * read within 5. 0.35 is the largest value measured clean. Shape.
      */
-    const val SWING_CONTACT = 0.5f
+    const val SWING_CONTACT = 0.35f
 
     /**
      * The strings are built this far below their note so the rotor can retune them either way: each
@@ -428,7 +431,7 @@ object Gyre {
         GyreVoice.HALO -> Shape(48, 5f, 8f, 1_800f, floatArrayOf(1f, 0.5f, 0.4f, 0.3f), 1.5f, 0.8f, 0.15f, 0.65f, 0.92f, 0f, 0.3f, 6f, false, 0f)
         // The source document's table (decision 2): first shapes, each value to be re-measured and the gate deciding.
         GyreVoice.DRAWN -> Shape(48, 4f, 10f, 2_500f, floatArrayOf(1f, 0.45f, 0.3f, 0.2f), 1f, 0.45f, 0.12f, 0.45f, 0.95f, 0.85f, 0.3f, 4f, false, 0f)
-        GyreVoice.BOURDON -> Shape(36, 6f, 6f, 1_200f, floatArrayOf(1f, 0.6f, 0.45f, 0.35f), 2f, 0.65f, 0.3f, 0.75f, 0.95f, 0.9f, 0.3f, 6f, true, 2.5f)
+        GyreVoice.BOURDON -> Shape(36, 6f, 6f, 1_200f, floatArrayOf(1f, 0.6f, 0.45f, 0.35f), 2f, 0.65f, 0.3f, 0.75f, 0.95f, 0.9f, 0.3f, 6f, true, 4f)
     }
 
     fun macrosFor(voice: GyreVoice): List<MacroSpec> {
