@@ -394,4 +394,31 @@ object SynthKits {
             lead.forEachIndexed { i, s -> add(magnetNote(MagnetVoice.CHUG, s, "Lead ${i + 1}", mapOf("BLEND" to 0.35f), leadChain)) }
         }
     }
+
+    /**
+     * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
+     * every other knob at its default, so the row is the instrument before anyone
+     * touches it. A09–A13 are the five factory presets. A14 and A15 climb two
+     * more notes, and A16 is the held loop (the strike is not in that buffer).
+     * Every pad is dry: the whistle and the vessel are the engine, not a rack
+     * section. Filed by [Aerostat.drumClassFor], which is PERC or LOOP and never
+     * a drum class.
+     */
+    fun aerostat(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int, extra: Map<String, Float> = emptyMap()) = AerostatPatch(
+            "Float $n", AerostatVoice.FLOAT,
+            Aerostat.defaults(AerostatVoice.FLOAT) + mapOf("TUNE" to semitone / Aerostat.TUNE_SEMITONES.toFloat()) + extra,
+        ).let { pad(it, Aerostat.drumClassFor(it.voice, it.macros)) }
+        fun preset(name: String) = AerostatPresets.forVoice(AerostatVoice.FLOAT).first { it.name == name }
+            .let { pad(it, Aerostat.drumClassFor(it.voice, it.macros)) }
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),
+            preset("SOFT CATCH"), preset("TWIN PIPES"), preset("HEAVY ROTOR"), preset("DRIFTING STEAM"),
+            preset("HIGH ENVELOPE"),
+            note(9, 14),
+            note(10, 19),
+            note(11, 24, mapOf("HOLD" to 1f)),
+        )
+    }
 }
