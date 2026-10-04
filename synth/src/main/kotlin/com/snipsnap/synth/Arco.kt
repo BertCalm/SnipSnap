@@ -28,12 +28,18 @@ import kotlin.random.Random
  * friction law shapes the corner.
  *
  * [Strings.Bow] is the string and the friction junction (R1a). This file is the player: the
- * stroke, the grip, the box, and the stop.
+ * stroke, the grip, the box, the lift that BODY adds above the middle of the knob, and the stop.
  *
  * Two voices, one string each:
  *  - [ArcoVoice.CELLO]: C2 to C4, the bottom string up two octaves, into a two-mode box (an air
  *    resonance and a plate resonance).
  *  - [ArcoVoice.ERHU]: D4 to A5, a two-stringed fiddle's inner string into a membrane box.
+ *
+ * BODY is two things, split at [Arco.BODY_KNEE] (R1g). Up to the middle of the knob it is how loud
+ * the box rings against the string. Above it the box stays at its middle size and BODY adds a low
+ * shelf and a broad bell on the note, at the plain's own gain, backed off per note only where the
+ * finished peak would pass [Arco.PEAK_CAP] ([Arco.finished], [Arco.liftDbFor]). Nothing is turned
+ * down at the top.
  *
  * What is *not* modelled, on purpose (the design's "Simplifications the model makes, stated"):
  * the string's stiffness and its dispersion (the partials are exactly harmonic), a bow's width
@@ -45,9 +51,13 @@ import kotlin.random.Random
  * raw 176.4 kHz rate and then again on the finished render: how long the string takes to lock into
  * one slip a period (read on the string's velocity under the bow, as the gaps between slips), the
  * autocorrelation pitch, the onset and the ring-down, at every TUNE step of both voices. Nothing here
- * was *listened to* when R1b was written. The owner has since heard R1b's held notes, a stab and the knob ends (the bowed note was
- * picked out six times in six; BODY 1, CELLO's BOW 1 and CELLO's vibrato were "nearly", which R1c retunes), and has not heard the
- * retune, the presets, the kit or the loops; every value marked "listening" is a first guess for the ears that have not.
+ * was *listened to* when R1b was written. The owner has since heard R1b's held notes, a stab and
+ * the knob ends (the bowed note was picked out six times in six; BODY 1, CELLO's BOW 1 and CELLO's
+ * vibrato were "nearly"), R1c's retune of those three (the bite, the stab and the vibrato yes;
+ * BODY 1 still "doesn't seem to do anything"), and three BODY pages (R1d, R1e and R1h; R1g rebuilt
+ * BODY from the answers, and the design record's R1h paragraph says the last page came back void
+ * by its own rules). The owner has not heard the presets, the kit or the loops; every value marked
+ * "listening" is a first guess for the ears that have not.
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
@@ -583,8 +593,9 @@ object Arco {
 
     /**
      * What BODY adds above [BODY_KNEE]: a *lift* on top of the conditioned note, a low shelf and then a broad bell in series, each [liftDbFor] dB, at the plain's own gain (R1e's warmth page played this shape on the plain).
-     * Its two sizes are R1e's rungs, per element: [LIFT_HALF_DB] at BODY 0.75 (R1e's small rung) and [LIFT_TOP_DB] at BODY 1 (its large rung). The owner marked some of those clips FULLER and some SAME, with low confidence
-     * in his own words, and nobody has listened to this curve. Listening values.
+     * Its two sizes are R1e's rungs, per element: [LIFT_HALF_DB] at BODY 0.75 (R1e's small rung) and [LIFT_TOP_DB] at BODY 1 (its large rung). The owner marked some of those clips FULLER and some SAME on R1e's page, with low
+     * confidence in the owner's own words. R1h then played this curve on a blind page (CELLO C3 at BODY 0.6, 0.75, 0.9 and 1.0; BODY 0.75 and 1.0 at ERHU C5 and CELLO C2; BODY 1.0 at ERHU A5) that came back void by its own
+     * rules (the design record's R1h paragraph); with that caveat the owner called BODY 1.0 FULLER at C3, C5 and A5 and kept BODY 1.0 at the top of the knob for both voices. Listening values.
      */
     const val LIFT_HALF_DB = 3.5f
     const val LIFT_TOP_DB = 6.0f
