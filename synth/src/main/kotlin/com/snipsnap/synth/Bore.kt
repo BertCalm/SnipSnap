@@ -1060,8 +1060,9 @@ object Bore {
     internal class LoopRender(val loop: FloatArray, val seam: Double, val attempts: Int = 1)
 
     /**
-     * [carry] false is the loop as the first rounds shipped it, the presence bell and nothing after: for the audition's
-     * before-and-after and for a test that the rasp and the voicing are really in the loop.
+     * [carry] false is the first rounds' chain, the presence bell and nothing after, built with this round's pitch match and
+     * retry (so it is their timbre and not their wrap): for the audition's comparison and for a test that the rasp and the
+     * voicing are really in the loop.
      */
     internal fun renderLoopMeasured(voice: BoreVoice, macros: Map<String, Float>, carry: Boolean = true, voiceShare: Float = LOOP_VOICE_SHARE): LoopRender {
         val first = renderLoopAttempt(voice, macros, carry, voiceShare, 1f)

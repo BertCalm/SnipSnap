@@ -17,7 +17,8 @@ import kotlin.math.roundToInt
  * `./gradlew :synth:generateBoreAudition`, then publish the folder as the listening artifact.
  *
  * The first section is the reed's loop (round 1.5, after the kit card's note "Solo loop sounds like a cheap keyboard"):
- * the SOLO LOOP and the PAD REED as they were (the bell and nothing after), with the rasp and two thirds of the
+ * the SOLO LOOP and the PAD REED with the bell and nothing after (the first rounds' chain, built with this round's
+ * pitch match: their timbre, not their wrap), with the rasp and two thirds of the
  * voicing (the one-shot's bite at C3 with the default knobs) and the whole of it (shipped), and the loops of the defaults at three notes,
  * with the one-shot of the same note beside them. Each clip's description carries the bite and the seam measured on
  * that very render.
@@ -85,7 +86,7 @@ object BoreAuditionGenerator {
         }
         val matched = 0.67f
         fun threeWays(tag: String, macros: Map<String, Float>) = listOf(
-            loopClip("${tag}_0_before", "BEFORE", "the loop as it was: the bell and nothing after", macros, carry = false, share = Bore.LOOP_VOICE_SHARE),
+            loopClip("${tag}_0_before", "BELL ONLY", "the first rounds' chain, the bell and nothing after (built with this round's pitch match, so it is their timbre, not their wrap)", macros, carry = false, share = Bore.LOOP_VOICE_SHARE),
             loopClip("${tag}_1_matched", "TWO-THIRDS", "the rasp and %.2f of the voicing: the one-shot's bite at C3 with the default knobs, under it elsewhere".format(java.util.Locale.ROOT, matched), macros, carry = true, share = matched),
             loopClip("${tag}_2_full", "SHIPPED", "the rasp and the voicing whole", macros, carry = true, share = Bore.LOOP_VOICE_SHARE),
         )
@@ -97,7 +98,7 @@ object BoreAuditionGenerator {
         val noteClips = notes.flatMap { (name, tune) ->
             val m = Bore.defaults(BoreVoice.SAX) + mapOf("TUNE" to tune)
             listOf(
-                loopClip("note_${name.lowercase()}_0_before", "$name BEFORE", "the default knobs' loop as it was", m, carry = false, share = Bore.LOOP_VOICE_SHARE),
+                loopClip("note_${name.lowercase()}_0_before", "$name BELL ONLY", "the default knobs' loop with the bell and nothing after (this round's pitch match)", m, carry = false, share = Bore.LOOP_VOICE_SHARE),
                 loopClip("note_${name.lowercase()}_1_full", "$name SHIPPED", "the default knobs' loop now", m, carry = true, share = Bore.LOOP_VOICE_SHARE),
                 shotClip("note_${name.lowercase()}_2_oneshot", "$name ONE-SHOT", m),
             )

@@ -2186,7 +2186,7 @@ one-shot's +4.5; whole is +7.8; before, -14.3).
 **What it cost, said plainly.**
 
 - **Not heard.** The numbers say a loop carries the one-shot's rasp and voicing; whether it stops sounding like a cheap
-  keyboard is the audition's question (the new first section: BEFORE, TWO-THIRDS and SHIPPED for the SOLO LOOP and the
+  keyboard is the audition's question (the new first section: BELL ONLY, TWO-THIRDS and SHIPPED for the SOLO LOOP and the
   PAD REED, the defaults at three notes, each with its one-shot).
 - **A loop is brighter than its one-shot at low notes** (above), by choice of the constant and the prototype's strength,
   and the one-shot may be the one that is low.
